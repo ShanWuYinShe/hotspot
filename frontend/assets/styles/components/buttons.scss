@@ -1,0 +1,646 @@
+/**
+ * 统一的按钮组件样式
+ * 合并了传统按钮和现代按钮的最佳实践
+ */
+
+@use '../mixins' as *;
+
+// ============== 基础按钮样式 ==============
+
+.btn {
+  @include button-base;
+  
+  // 基础尺寸
+  &--xs {
+    padding: var(--spacing-1) var(--spacing-2);
+    font-size: var(--font-size-xs);
+    min-height: 24px;
+    gap: var(--spacing-1);
+  }
+  
+  &--sm {
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: var(--font-size-sm);
+    min-height: 32px;
+    gap: var(--spacing-1-5);
+  }
+  
+  &--md {
+    padding: var(--spacing-3) var(--spacing-4);
+    font-size: var(--font-size-base);
+    min-height: 40px;
+    gap: var(--spacing-2);
+  }
+  
+  &--lg {
+    padding: var(--spacing-4) var(--spacing-6);
+    font-size: var(--font-size-lg);
+    min-height: 48px;
+    gap: var(--spacing-2);
+  }
+  
+  &--xl {
+    padding: var(--spacing-5) var(--spacing-8);
+    font-size: var(--font-size-xl);
+    min-height: 56px;
+    gap: var(--spacing-3);
+  }
+  
+  // 宽度变体
+  &--full {
+    width: 100%;
+  }
+  
+  &--fit {
+    width: fit-content;
+  }
+  
+  // 形状变体
+  &--square {
+    aspect-ratio: 1;
+    padding: var(--spacing-3);
+    
+    &.btn--sm {
+      padding: var(--spacing-2);
+    }
+    
+    &.btn--lg {
+      padding: var(--spacing-4);
+    }
+  }
+  
+  &--circle {
+    @extend .btn--square !optional;
+    @include rounded('full');
+  }
+  
+  // 状态
+  &:disabled,
+  &--disabled {
+    @include disabled;
+  }
+  
+  // 加载状态
+  &--loading {
+    @include loading;
+  }
+  
+  // 按钮变体
+  &--primary {
+    @include gradient-primary;
+    color: white;
+    border: 1px solid var(--color-primary-600);
+    @include shadow('sm');
+    
+    &:hover:not(:disabled) {
+      @include shadow('md');
+      transform: translateY(-1px);
+      background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-700));
+    }
+    
+    &:active:not(:disabled) {
+      transform: translateY(0);
+      @include shadow('sm');
+    }
+  }
+  
+  &--secondary {
+    @include gradient-secondary;
+    color: white;
+    border: 1px solid var(--color-secondary-600);
+    @include shadow('sm');
+    
+    &:hover:not(:disabled) {
+      @include shadow('md');
+      transform: translateY(-1px);
+      background: linear-gradient(135deg, var(--color-secondary-600), var(--color-secondary-700));
+    }
+    
+    &:active:not(:disabled) {
+      transform: translateY(0);
+      @include shadow('sm');
+    }
+  }
+  
+  &--success {
+    @include gradient-success;
+    color: white;
+    border: 1px solid var(--color-success-600);
+    @include shadow('sm');
+    
+    &:hover:not(:disabled) {
+      @include shadow('md');
+      transform: translateY(-1px);
+      background: linear-gradient(135deg, var(--color-success-600), var(--color-success-700));
+    }
+    
+    &:active:not(:disabled) {
+      transform: translateY(0);
+      @include shadow('sm');
+    }
+  }
+  
+  &--warning {
+    @include gradient-warning;
+    color: var(--color-warning-900);
+    border: 1px solid var(--color-warning-600);
+    @include shadow('sm');
+    
+    &:hover:not(:disabled) {
+      @include shadow('md');
+      transform: translateY(-1px);
+      background: linear-gradient(135deg, var(--color-warning-600), var(--color-warning-700));
+      color: white;
+    }
+    
+    &:active:not(:disabled) {
+      transform: translateY(0);
+      @include shadow('sm');
+    }
+  }
+  
+  &--danger,
+  &--error {
+    @include gradient-error;
+    color: white;
+    border: 1px solid var(--color-error-600);
+    @include shadow('sm');
+    
+    &:hover:not(:disabled) {
+      @include shadow('md');
+      transform: translateY(-1px);
+      background: linear-gradient(135deg, var(--color-error-600), var(--color-error-700));
+    }
+    
+    &:active:not(:disabled) {
+      transform: translateY(0);
+      @include shadow('sm');
+    }
+  }
+  
+  &--info {
+    background: linear-gradient(135deg, var(--color-secondary-500), var(--color-secondary-600));
+    color: white;
+    border: 1px solid var(--color-secondary-600);
+    @include shadow('sm');
+    
+    &:hover:not(:disabled) {
+      @include shadow('md');
+      transform: translateY(-1px);
+      background: linear-gradient(135deg, var(--color-secondary-600), var(--color-secondary-700));
+    }
+    
+    &:active:not(:disabled) {
+      transform: translateY(0);
+      @include shadow('sm');
+    }
+  }
+  
+  // 轮廓按钮
+  &--outline {
+    background: transparent;
+    color: var(--color-primary-500);
+    border: 1px solid var(--color-primary-500);
+    
+    &:hover:not(:disabled) {
+      background: var(--color-primary-500);
+      color: white;
+    }
+    
+    &.btn--secondary {
+      color: var(--color-secondary-500);
+      border-color: var(--color-secondary-500);
+      
+      &:hover:not(:disabled) {
+        background: var(--color-secondary-500);
+        color: white;
+      }
+    }
+    
+    &.btn--success {
+      color: var(--color-success-500);
+      border-color: var(--color-success-500);
+      
+      &:hover:not(:disabled) {
+        background: var(--color-success-500);
+        color: white;
+      }
+    }
+    
+    &.btn--warning {
+      color: var(--color-warning-500);
+      border-color: var(--color-warning-500);
+      
+      &:hover:not(:disabled) {
+        background: var(--color-warning-500);
+        color: white;
+      }
+    }
+    
+    &.btn--danger,
+    &.btn--error {
+      color: var(--color-error-500);
+      border-color: var(--color-error-500);
+      
+      &:hover:not(:disabled) {
+        background: var(--color-error-500);
+        color: white;
+      }
+    }
+  }
+  
+  // 幽灵按钮
+  &--ghost {
+    background: transparent;
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-primary);
+    
+    &:hover:not(:disabled) {
+      background: var(--color-bg-secondary);
+      border-color: var(--color-border-secondary);
+    }
+    
+    &:active:not(:disabled) {
+      background: var(--color-bg-tertiary);
+    }
+  }
+  
+  // 文本按钮
+  &--text {
+    background: transparent;
+    color: var(--color-text-link);
+    border: none;
+    padding: var(--spacing-1) var(--spacing-2);
+    min-height: auto;
+    
+    &:hover:not(:disabled) {
+      color: var(--color-text-link-hover);
+      text-decoration: underline;
+    }
+    
+    &:active:not(:disabled) {
+      opacity: 0.8;
+    }
+  }
+  
+  // 链接按钮
+  &--link {
+    @extend .btn--text !optional;
+    color: var(--color-text-link);
+    text-decoration: underline;
+    
+    &:hover:not(:disabled) {
+      color: var(--color-text-link-hover);
+      text-decoration: none;
+    }
+  }
+}
+
+// ============== 按钮组 ==============
+
+.btn-group {
+  @include flex-start;
+  
+  .btn {
+    @include rounded('none');
+    
+    &:first-child {
+      border-top-left-radius: var(--radius-md);
+      border-bottom-left-radius: var(--radius-md);
+    }
+    
+    &:last-child {
+      border-top-right-radius: var(--radius-md);
+      border-bottom-right-radius: var(--radius-md);
+    }
+    
+    &:not(:first-child) {
+      border-left: none;
+    }
+    
+    &:hover {
+      z-index: var(--z-content);
+    }
+  }
+  
+  &--vertical {
+    @include flex-column;
+    
+    .btn {
+      @include rounded('none');
+      
+      &:first-child {
+        border-top-left-radius: var(--radius-md);
+        border-top-right-radius: var(--radius-md);
+      }
+      
+      &:last-child {
+        border-bottom-left-radius: var(--radius-md);
+        border-bottom-right-radius: var(--radius-md);
+      }
+      
+      &:not(:first-child) {
+        border-top: none;
+        border-left: 1px solid;
+      }
+    }
+  }
+}
+
+// ============== 浮动操作按钮 ==============
+
+.fab {
+  @include button-base;
+  position: fixed;
+  bottom: var(--spacing-8);
+  right: var(--spacing-8);
+  width: 56px;
+  height: 56px;
+  @include rounded('full');
+  @include gradient-primary;
+  color: white;
+  @include shadow('lg');
+  z-index: var(--z-fixed);
+  
+  &:hover:not(:disabled) {
+    transform: scale(1.1);
+    @include shadow('xl');
+  }
+  
+  &:active:not(:disabled) {
+    transform: scale(1.05);
+  }
+  
+  &--extended {
+    width: auto;
+    padding: 0 var(--spacing-6);
+    gap: var(--spacing-2);
+    
+    .fab__text {
+      font-weight: var(--font-weight-medium);
+    }
+  }
+  
+  &--mini {
+    width: 40px;
+    height: 40px;
+    bottom: var(--spacing-6);
+    right: var(--spacing-6);
+  }
+}
+
+// ============== 特殊按钮样式 ==============
+
+// 游戏风格开关样式
+.game-toggle {
+  position: relative;
+  @include flex-center;
+  height: 32px;
+  width: 56px;
+  flex-shrink: 0;
+  cursor: pointer;
+  @include rounded('full');
+  border: 2px solid transparent;
+  @include transition(all);
+  outline: none;
+  background: transparent;
+  
+  &:focus {
+    @include focus-ring();
+  }
+  
+  // 开启状态
+  &--on {
+    @include gradient-success;
+    border-color: var(--color-success-500);
+    @include shadow('sm');
+    
+    &:hover {
+      background: linear-gradient(135deg, var(--color-success-600), var(--color-success-700));
+      @include shadow('md');
+    }
+  }
+  
+  // 关闭状态
+  &--off {
+    background: linear-gradient(135deg, var(--color-neutral-500), var(--color-neutral-600));
+    border-color: var(--color-neutral-500);
+    @include shadow('sm');
+    
+    &:hover {
+      background: linear-gradient(135deg, var(--color-neutral-600), var(--color-neutral-700));
+      @include shadow('md');
+    }
+  }
+  
+  // 开关滑块
+  &__slider {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 24px;
+    height: 24px;
+    background: white;
+    @include rounded('full');
+    @include transition(all);
+    @include shadow('sm');
+  }
+  
+  &--on &__slider {
+    transform: translateX(24px);
+  }
+}
+
+// 上传按钮
+.upload-btn {
+  @extend .btn !optional;
+  @extend .btn--outline !optional;
+  position: relative;
+  overflow: hidden;
+  
+  input[type="file"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+  
+  &--drag-over {
+    background: var(--color-primary-50);
+    border-color: var(--color-primary-500);
+    color: var(--color-primary-600);
+  }
+}
+
+// 分页按钮
+.pagination-btn {
+  @extend .btn !optional;
+  @extend .btn--ghost !optional;
+  min-width: 40px;
+  height: 40px;
+  
+  &--active {
+    background: var(--color-primary-500);
+    color: white;
+    border-color: var(--color-primary-500);
+  }
+  
+  &--disabled {
+    @include disabled;
+  }
+}
+
+// 标签按钮
+.tag-btn {
+  @extend .btn !optional;
+  @extend .btn--sm !optional;
+  @include rounded('full');
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border-primary);
+  
+  &:hover:not(:disabled) {
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+  }
+  
+  &--active {
+    background: var(--color-primary-500);
+    color: white;
+    border-color: var(--color-primary-500);
+  }
+  
+  &--closable {
+    padding-right: var(--spacing-1);
+    
+    .close-icon {
+      margin-left: var(--spacing-1);
+      cursor: pointer;
+      
+      &:hover {
+        color: var(--color-error-500);
+      }
+    }
+  }
+}
+
+// 社交按钮
+.social-btn {
+  @extend .btn !optional;
+  @extend .btn--outline !optional;
+  
+  &--facebook {
+    color: #1877f2;
+    border-color: #1877f2;
+    
+    &:hover:not(:disabled) {
+      background: #1877f2;
+      color: white;
+    }
+  }
+  
+  &--twitter {
+    color: #1da1f2;
+    border-color: #1da1f2;
+    
+    &:hover:not(:disabled) {
+      background: #1da1f2;
+      color: white;
+    }
+  }
+  
+  &--google {
+    color: #db4437;
+    border-color: #db4437;
+    
+    &:hover:not(:disabled) {
+      background: #db4437;
+      color: white;
+    }
+  }
+  
+  &--github {
+    color: #333;
+    border-color: #333;
+    
+    &:hover:not(:disabled) {
+      background: #333;
+      color: white;
+    }
+  }
+}
+
+// ============== 响应式优化 ==============
+
+@include respond-below(md) {
+  .btn {
+    &--lg {
+      padding: var(--spacing-3) var(--spacing-4);
+      font-size: var(--font-size-base);
+      min-height: 44px;
+    }
+    
+    &--xl {
+      padding: var(--spacing-4) var(--spacing-5);
+      font-size: var(--font-size-lg);
+      min-height: 48px;
+    }
+  }
+  
+  .btn-group {
+    &--responsive {
+      @include flex-column;
+      
+      .btn {
+        width: 100%;
+        @include rounded('md');
+        border: 1px solid;
+        
+        &:not(:first-child) {
+          margin-top: var(--spacing-2);
+        }
+      }
+    }
+  }
+  
+  .fab {
+    bottom: var(--spacing-6);
+    right: var(--spacing-6);
+    width: 48px;
+    height: 48px;
+    
+    &--extended {
+      padding: 0 var(--spacing-4);
+    }
+  }
+}
+
+// ============== 深色模式适配 ==============
+
+@media (prefers-color-scheme: dark) {
+  .btn--ghost {
+    color: var(--color-text-primary);
+    border-color: var(--color-border-primary);
+    
+    &:hover:not(:disabled) {
+      background: var(--color-bg-secondary);
+      border-color: var(--color-border-secondary);
+    }
+  }
+  
+  .social-btn {
+    &--github {
+      color: #f0f6fc;
+      border-color: #f0f6fc;
+      
+      &:hover:not(:disabled) {
+        background: #f0f6fc;
+        color: #0d1117;
+      }
+    }
+  }
+}
+

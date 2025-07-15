@@ -1,0 +1,425 @@
+/**
+ * 导航栏布局样式
+ */
+
+// 应用导航栏
+.app-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-navigation);
+  background: var(--el-bg-color);
+  border-bottom: 1px solid var(--el-border-color-light);
+  backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
+
+  &.scrolled {
+    box-shadow: var(--el-box-shadow-light);
+  }
+
+  .navbar-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+
+    @media (max-width: 768px) {
+      padding: 0 0.75rem;
+      height: 50px;
+    }
+  }
+
+  .navbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    color: var(--el-text-color-primary);
+    font-weight: 700;
+    font-size: 1.25rem;
+
+    .brand-logo {
+      font-size: 1.5rem;
+    }
+
+    .brand-text {
+      @media (max-width: 480px) {
+        display: none;
+      }
+    }
+  }
+
+  .navbar-nav {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    @media (max-width: 768px) {
+      gap: 0.5rem;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      padding: 0.5rem;
+      border-radius: 8px;
+      color: var(--el-text-color-secondary);
+      text-decoration: none;
+      transition: all 0.3s ease;
+      position: relative;
+
+      &:hover {
+        color: var(--el-color-primary);
+        background: var(--el-color-primary-light-9);
+      }
+
+      &.active {
+        color: var(--el-color-primary);
+        background: var(--el-color-primary-light-9);
+
+        &::after {
+          content: '';
+          position: absolute;
+          bottom: -1px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 20px;
+          height: 2px;
+          background: var(--el-color-primary);
+          border-radius: 1px;
+        }
+      }
+
+      .nav-icon {
+        font-size: 1.125rem;
+      }
+
+      .nav-text {
+        margin-left: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+
+        @media (max-width: 768px) {
+          display: none;
+        }
+      }
+
+      .nav-badge {
+        position: absolute;
+        top: 0.25rem;
+        right: 0.25rem;
+        background: var(--el-color-danger);
+        color: white;
+        border-radius: 50%;
+        width: 16px;
+        height: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.625rem;
+        font-weight: 500;
+      }
+    }
+  }
+
+  .navbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+
+    .action-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      color: var(--el-text-color-secondary);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:hover {
+        color: var(--el-color-primary);
+        background: var(--el-color-primary-light-9);
+      }
+
+      &.primary {
+        background: var(--el-color-primary);
+        color: white;
+
+        &:hover {
+          background: var(--el-color-primary-dark-2);
+        }
+      }
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--el-color-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      overflow: hidden;
+
+      &:hover {
+        transform: scale(1.1);
+      }
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    }
+  }
+}
+
+// 响应式底部导航
+.compact-navbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-navigation);
+  background: var(--el-bg-color);
+  border-top: 1px solid var(--el-border-color-light);
+  padding: 0.5rem 0;
+  backdrop-filter: blur(8px);
+
+  @media (min-width: 769px) {
+    display: none;
+  }
+
+  .navbar-container {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem;
+    color: var(--el-text-color-secondary);
+    text-decoration: none;
+    transition: all 0.3s ease;
+    position: relative;
+    min-width: 50px;
+
+    &:hover,
+    &.active {
+      color: var(--el-color-primary);
+    }
+
+    .nav-icon {
+      font-size: 1.25rem;
+    }
+
+    .nav-text {
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .nav-badge {
+      position: absolute;
+      top: 0.25rem;
+      right: 0.75rem;
+      background: var(--el-color-danger);
+      color: white;
+      border-radius: 50%;
+      width: 14px;
+      height: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.625rem;
+      font-weight: 500;
+    }
+  }
+}
+
+// 侧边栏导航
+.sidebar-nav {
+  width: 250px;
+  height: 100vh;
+  background: var(--el-bg-color);
+  border-right: 1px solid var(--el-border-color-light);
+  overflow-y: auto;
+  transition: all 0.3s ease;
+
+  &.collapsed {
+    width: 60px;
+
+    .nav-text {
+      display: none;
+    }
+
+    .nav-item {
+      justify-content: center;
+    }
+  }
+
+  .sidebar-header {
+    padding: 1.5rem 1rem;
+    border-bottom: 1px solid var(--el-border-color-lighter);
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: var(--el-text-color-primary);
+      text-decoration: none;
+
+      .brand-logo {
+        font-size: 1.5rem;
+      }
+
+      .brand-text {
+        font-weight: 700;
+        font-size: 1.125rem;
+      }
+    }
+  }
+
+  .sidebar-menu {
+    padding: 1rem 0;
+
+    .menu-group {
+      margin-bottom: 1.5rem;
+
+      .group-title {
+        padding: 0 1rem 0.5rem;
+        color: var(--el-text-color-secondary);
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .menu-items {
+        .nav-item {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          padding: 0.75rem 1rem;
+          color: var(--el-text-color-secondary);
+          text-decoration: none;
+          transition: all 0.3s ease;
+          border-radius: 0 20px 20px 0;
+          margin-right: 1rem;
+
+          &:hover {
+            color: var(--el-color-primary);
+            background: var(--el-color-primary-light-9);
+          }
+
+          &.active {
+            color: var(--el-color-primary);
+            background: var(--el-color-primary-light-9);
+            font-weight: 600;
+          }
+
+          .nav-icon {
+            font-size: 1.125rem;
+            width: 20px;
+            text-align: center;
+          }
+
+          .nav-text {
+            flex: 1;
+            font-size: 0.875rem;
+          }
+
+          .nav-badge {
+            background: var(--el-color-danger);
+            color: white;
+            border-radius: 10px;
+            padding: 0.125rem 0.375rem;
+            font-size: 0.625rem;
+            font-weight: 500;
+            min-width: 16px;
+            text-align: center;
+          }
+        }
+      }
+    }
+  }
+}
+
+// 面包屑导航
+.breadcrumb-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 0;
+  color: var(--el-text-color-secondary);
+  font-size: 0.875rem;
+
+  .breadcrumb-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    &:not(:last-child)::after {
+      content: '/';
+      color: var(--el-text-color-placeholder);
+      margin-left: 0.5rem;
+    }
+
+    a {
+      color: var(--el-text-color-secondary);
+      text-decoration: none;
+      transition: color 0.3s ease;
+
+      &:hover {
+        color: var(--el-color-primary);
+      }
+    }
+
+    &.active {
+      color: var(--el-text-color-primary);
+      font-weight: 500;
+    }
+  }
+}
+
+// 标签页导航
+.tab-nav {
+  display: flex;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+
+  .tab-item {
+    padding: 1rem 1.5rem;
+    color: var(--el-text-color-secondary);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s ease;
+    font-weight: 500;
+
+    &:hover {
+      color: var(--el-color-primary);
+    }
+
+    &.active {
+      color: var(--el-color-primary);
+      border-bottom-color: var(--el-color-primary);
+    }
+  }
+}

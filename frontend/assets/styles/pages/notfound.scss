@@ -1,0 +1,200 @@
+// 404 页面样式
+
+.error-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100%;
+  background: linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%);
+  color: var(--color-text-primary);
+  padding: 1rem;
+}
+
+.error-container {
+  text-align: center;
+  padding: 2rem;
+  max-width: 90%;
+  background: var(--color-bg-primary);
+  border-radius: 12px;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--color-border-primary);
+  
+  &.with-compact-header {
+    margin-top: 60px; // Account for compact header
+  }
+  
+  .error-icon {
+    margin-bottom: 1rem;
+    color: var(--color-warning);
+    opacity: 0.8;
+  }
+  
+  h1 {
+    font-size: 6rem;
+    margin: 0;
+    color: var(--color-primary);
+    line-height: 1;
+    font-weight: var(--font-bold);
+    background: linear-gradient(45deg, var(--color-primary), var(--color-secondary));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    
+    @media (max-width: 768px) {
+      font-size: 4rem;
+    }
+  }
+  
+  h2 {
+    font-size: 1.5rem;
+    margin: 1rem 0;
+    color: var(--color-text-primary);
+    font-weight: var(--font-medium);
+  }
+  
+  p {
+    font-size: 1rem;
+    color: var(--color-text-secondary);
+    margin: 1rem 0 2rem;
+    line-height: var(--leading-relaxed);
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  .actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 2rem;
+    
+    .n-button {
+      padding: 12px 24px;
+      border-radius: var(--radius-lg);
+      font-weight: var(--font-medium);
+      transition: all 0.3s ease;
+      
+      &--primary {
+        background: var(--color-primary);
+        border-color: var(--color-primary);
+        
+        &:hover {
+          background: var(--color-primary-dark);
+          border-color: var(--color-primary-dark);
+          transform: translateY(-2px);
+          box-shadow: var(--shadow-lg);
+        }
+      }
+      
+      &--default {
+        background: var(--color-bg-secondary);
+        border-color: var(--color-border-primary);
+        color: var(--color-text-primary);
+        
+        &:hover {
+          background: var(--color-bg-tertiary);
+          transform: translateY(-2px);
+          box-shadow: var(--shadow-md);
+        }
+      }
+    }
+  }
+  
+  .suggestions {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--color-border-primary);
+    
+    h3 {
+      font-size: 1.1rem;
+      color: var(--color-text-primary);
+      margin-bottom: 1rem;
+      font-weight: var(--font-medium);
+    }
+    
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 0.5rem;
+      
+      li {
+        text-align: left;
+        
+        a {
+          display: block;
+          padding: 0.75rem 1rem;
+          background: var(--color-bg-secondary);
+          border: 1px solid var(--color-border-primary);
+          border-radius: var(--radius-md);
+          color: var(--color-text-primary);
+          text-decoration: none;
+          transition: all 0.2s ease;
+          
+          &:hover {
+            background: var(--color-bg-tertiary);
+            border-color: var(--color-primary);
+            transform: translateX(4px);
+          }
+          
+          .icon {
+            margin-right: 0.5rem;
+            color: var(--color-primary);
+          }
+        }
+      }
+    }
+  }
+}
+
+// 动画
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.error-icon {
+  animation: float 3s ease-in-out infinite;
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .error-container {
+    padding: 1.5rem;
+    
+    h1 {
+      font-size: 4rem;
+    }
+    
+    h2 {
+      font-size: 1.25rem;
+    }
+    
+    .actions {
+      flex-direction: column;
+      align-items: center;
+      
+      .n-button {
+        width: 100%;
+        max-width: 200px;
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .error-container {
+    padding: 1rem;
+    
+    h1 {
+      font-size: 3rem;
+    }
+  }
+}

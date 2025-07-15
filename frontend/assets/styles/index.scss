@@ -1,0 +1,247 @@
+// HotSpot 样式系统主入口
+
+// 1. 设计令牌和基础系统
+@use './design-tokens';
+@use './mixins' as *;
+@use './reset';
+@use './z-index';
+
+// 2. 字体系统
+@use './typography';
+
+// 3. 第三方库样式
+@use './vendors/naive-ui';
+
+// 4. 工具类
+@use './utilities/display';
+@use './utilities/text';
+@use './utilities/animations';
+@use './utilities/background';
+@use './utilities/border';
+@use './utilities/shadow';
+@use './utilities/browser-fixes';
+
+// 5. 布局系统
+@use './layout/navigation';
+@use './layout/responsive';
+
+// 6. 组件系统
+@use './components/buttons';
+@use './components/forms';
+@use './components/modals';
+@use './components/unified';
+
+// 7. 页面样式
+@use './pages/base';
+
+// 8. 全局样式
+:root {
+  // 全局字体设置
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+
+  // 全局颜色设置
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+
+  // 全局动画设置
+  scroll-behavior: smooth;
+}
+
+// 全局样式重置
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+
+  @include scrollbar();
+}
+
+// 交互样式
+a {
+  color: var(--color-text-link);
+  text-decoration: none;
+  @include transition(color);
+
+  &:hover {
+    color: var(--color-text-link-hover);
+  }
+
+  &:focus-visible {
+    @include focus-ring();
+  }
+}
+
+button {
+  @include button-reset;
+  @include focus-ring();
+}
+
+input,
+textarea,
+select {
+  @include focus-ring();
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+ul,
+ol {
+  @include list-reset;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+code,
+pre {
+  font-family: var(--font-family-mono);
+  font-size: 0.9em;
+}
+
+blockquote {
+  margin: 0;
+  padding: var(--spacing-4);
+  border-left: 4px solid var(--color-primary-500);
+  background-color: var(--color-bg-secondary);
+  @include rounded();
+}
+
+hr {
+  border: none;
+  height: 1px;
+  background-color: var(--color-border-primary);
+  margin: var(--spacing-8) 0;
+}
+
+// 辅助类
+.sr-only {
+  @include sr-only;
+}
+
+.visually-hidden {
+  @include sr-only;
+}
+
+.container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-4);
+
+  @include respond-to(sm) {
+    padding: 0 var(--spacing-6);
+  }
+
+  @include respond-to(lg) {
+    padding: 0 var(--spacing-8);
+  }
+}
+
+.container-fluid {
+  width: 100%;
+  padding: 0 var(--spacing-4);
+
+  @include respond-to(sm) {
+    padding: 0 var(--spacing-6);
+  }
+}
+
+.grid {
+  display: grid;
+  gap: var(--spacing-4);
+}
+
+.grid-cols-1 {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.grid-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.grid-cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.grid-cols-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.grid-cols-5 {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.grid-cols-6 {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.grid-cols-12 {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+// 现代化间距工具类
+.space-y-2>*+* {
+  margin-top: var(--spacing-2);
+}
+
+.space-y-3>*+* {
+  margin-top: var(--spacing-3);
+}
+
+.space-y-4>*+* {
+  margin-top: var(--spacing-4);
+}
+
+.space-y-6>*+* {
+  margin-top: var(--spacing-6);
+}
+
+.space-y-8>*+* {
+  margin-top: var(--spacing-8);
+}
+
+.space-x-2>*+* {
+  margin-left: var(--spacing-2);
+}
+
+.space-x-3>*+* {
+  margin-left: var(--spacing-3);
+}
+
+.space-x-4>*+* {
+  margin-left: var(--spacing-4);
+}
+
+.space-x-6>*+* {
+  margin-left: var(--spacing-6);
+}
+
+.space-x-8>*+* {
+  margin-left: var(--spacing-8);
+}

@@ -1,0 +1,41 @@
+{
+  "name": "nuxt-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "start": "nuxt start"
+  },
+  "dependencies": {
+    "@amap/amap-jsapi-loader": "^1.0.1",
+    "@css-render/vue3-ssr": "^0.15.14",
+    "@pinia/nuxt": "^0.11.1",
+    "@vicons/antd": "^0.13.0",
+    "@vicons/carbon": "^0.13.0",
+    "@vicons/ionicons5": "^0.13.0",
+    "@vicons/material": "^0.13.0",
+    "@vueuse/core": "^13.5.0",
+    "dayjs": "^1.11.13",
+    "naive-ui": "^2.42.0",
+    "pinia": "^3.0.3",
+    "pinia-plugin-persistedstate": "^4.4.1",
+    "qrcode": "^1.5.4",
+    "sass": "^1.89.2",
+    "vue": "^3.5.17",
+    "weixin-js-sdk": "^1.6.5"
+  },
+  "devDependencies": {
+    "@iconify-json/mdi": "^1.2.3",
+    "@nuxt/devtools": "^2.6.2",
+    "@nuxt/icon": "^1.15.0",
+    "@types/qrcode": "^1.5.5",
+    "nuxt": "^3.17.7",
+    "typescript": "^5.8.3",
+    "vue-tsc": "^2.2.12"
+  },
+  "packageManager": "pnpm@10.6.2+sha512.47870716bea1572b53df34ad8647b42962bc790ce2bf4562ba0f643237d7302a3d6a8ecef9e4bdfc01d23af1969aa90485d4cebb0b9638fa5ef1daef656f6c1b"
+}
