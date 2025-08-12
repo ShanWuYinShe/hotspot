@@ -40,6 +40,15 @@ pub struct AppMetrics {
     // WebSocket消息接收计数
     #[allow(dead_code)]
     pub ws_messages_received: Counter,
+    // WebSocket订阅计数
+    #[allow(dead_code)]
+    pub ws_subscriptions_total: CounterVec,
+    // 离线通知计数
+    #[allow(dead_code)]
+    pub ws_offline_notifications_total: CounterVec,
+    // 连接清理移除计数
+    #[allow(dead_code)]
+    pub ws_cleanup_removed_total: Counter,
     // 消息队列任务计数
     #[allow(dead_code)]
     pub job_queue_tasks: CounterVec,
@@ -111,6 +120,20 @@ impl AppMetrics {
         let ws_messages_received = register_counter!(
             opts!("ws_messages_received", "WebSocket消息接收总数")
         )?;
+        // WebSocket订阅统计
+        let ws_subscriptions_total = register_counter_vec!(
+            opts!("ws_subscriptions_total", "WebSocket订阅事件计数"),
+            &["type", "result"]
+        )?;
+        // 离线通知统计
+        let ws_offline_notifications_total = register_counter_vec!(
+            opts!("ws_offline_notifications_total", "WebSocket离线通知计数"),
+            &["result"]
+        )?;
+        // 连接清理移除计数
+        let ws_cleanup_removed_total = register_counter!(
+            opts!("ws_cleanup_removed_total", "WebSocket清理移除连接计数")
+        )?;
         
         // 消息队列任务计数
         let job_queue_tasks = register_counter_vec!(
@@ -160,6 +183,9 @@ impl AppMetrics {
             ws_connections,
             ws_messages_sent,
             ws_messages_received,
+            ws_subscriptions_total,
+            ws_offline_notifications_total,
+            ws_cleanup_removed_total,
             job_queue_tasks,
             location_query_count,
             location_query_duration_seconds,
@@ -260,6 +286,27 @@ impl AppMetrics {
     #[allow(dead_code)]
     pub fn record_ws_message_received(&self) {
         self.ws_messages_received.inc();
+    }
+
+    #[allow(dead_code)]
+    pub fn record_ws_subscription(&self, room_type: &str, result: &str) {
+        self.ws_subscriptions_total
+            .with_label_values(&[room_type, result])
+            .inc();
+    }
+
+    #[allow(dead_code)]
+    pub fn record_offline_notification(&self, result: &str) {
+        self.ws_offline_notifications_total
+            .with_label_values(&[result])
+            .inc();
+    }
+
+    #[allow(dead_code)]
+    pub fn record_ws_cleanup_removed(&self, removed_count: usize) {
+        if removed_count > 0 {
+            self.ws_cleanup_removed_total.inc_by(removed_count as f64);
+        }
     }
     
     /// 记录任务队列任务

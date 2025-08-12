@@ -4,6 +4,7 @@ use std::sync::Arc;
 use axum::{Extension, Json, debug_handler, extract::State};
 
 use crate::ws::message_types::RoomType;
+use crate::utils::events::DomainEvent;
 use crate::{
     middleware::auth::AppState,
     models::api::message::{
@@ -66,52 +67,21 @@ pub async fn send_group_message(
         )
         .await?;
 
-    // 新的通知方式
-    let ws_notification_service = state.websocket_notification_service.clone();
-    let message_id_for_notification = send_group_message_result.message_id;
-    let group_id_for_notification = group_id;
-    let sender_id_for_notification = current_user.user_id;
-    let sender_nickname_for_notification = current_user.nickname.clone();
-    let content_for_notification = payload.content.clone();
-    let message_type_for_notification = payload.message_type.clone();
-    // 消息的创建时间应该从 message_service 的结果中获取，如果它返回的话，
-    // 否则，使用Utc::now()。假设 send_group_message_result 包含 created_at
-    // 如果 send_group_message_result.created_at 不存在，则需要调整
-    let created_at_for_notification = send_group_message_result.created_at; // 假设有这个字段
-
-    let location_payload_lat = payload.latitude;
-    let location_payload_lon = payload.longitude;
-
-    tokio::spawn(async move {
-        let location_data = if location_payload_lat.abs() > 0.0 || location_payload_lon.abs() > 0.0
-        {
-            Some((location_payload_lat, location_payload_lon, None)) // location_name is not in payload here, might need to fetch or pass as None
-        } else {
-            None
-        };
-
-        if let Err(e) = ws_notification_service
-            .notify_new_message(
-                message_id_for_notification,
-                group_id_for_notification,
-                RoomType::Group, // 使用定义好的 RoomType
-                sender_id_for_notification,
-                sender_nickname_for_notification,
-                content_for_notification,
-                message_type_for_notification, // 期望是 String
-                created_at_for_notification,   // 期望是 DateTime<Utc>
-                location_data,
-            )
-            .await
-        {
-            tracing::warn!(
-                "Failed to send group message notification via WebSocketNotificationService: {:?}",
-                e
-            );
-        }
-    });
+    // 发布领域事件（事件处理器负责WS与作业等副作用）
+    state.event_bus.publish(DomainEvent::MessageSent {
+        room: crate::utils::types::RoomKey::new(RoomType::Group, group_id),
+        message_id: send_group_message_result.message_id.into(),
+        sender_id: current_user.user_id.into(),
+        sender_nickname: current_user.nickname.clone(),
+        content: payload.content.clone(),
+        message_type: payload.message_type.clone(),
+        created_at: send_group_message_result.created_at,
+        latitude: if payload.latitude.abs() > 0.0 { Some(payload.latitude) } else { None },
+        longitude: if payload.longitude.abs() > 0.0 { Some(payload.longitude) } else { None },
+    }).await;
 
     // 触发群组成员活跃度更新任务
+    #[cfg(feature = "jobs")]
     if let (Ok(group_uuid), Some(job_service)) =
         (uuid::Uuid::parse_str(&payload.group_id), &state.job_service)
     {
@@ -166,6 +136,7 @@ pub async fn group_history(
         .await?;
 
     // 当用户查看群组消息时，更新活跃度
+    #[cfg(feature = "jobs")]
     if let Some(job_service) = &state.job_service {
         if let Err(e) = job_service
             .dispatch_group_member_activity(group_id, current_user.user_id, "message_read")
@@ -214,7 +185,7 @@ pub async fn send_direct_message(
     // 获取或创建私信会话ID
     let conversation_id = state
         .message_service
-        .get_or_create_direct_conversation(current_user.user_id, recipient_id)
+        .get_or_create_conversation(current_user.user_id, recipient_id)
         .await?;
 
     let message = state
@@ -230,47 +201,18 @@ pub async fn send_direct_message(
         )
         .await?;
 
-    // 新的通知方式
-    let ws_notification_service = state.websocket_notification_service.clone();
-    let message_id_for_notification = message.message_id;
-    let conversation_id_for_notification = conversation_id;
-    let sender_id_for_notification = current_user.user_id;
-    let sender_nickname_for_notification = current_user.nickname.clone();
-    let content_for_notification = payload.content.clone();
-    let message_type_for_notification = payload.message_type.clone();
-    let created_at_for_notification = message.created_at;
-
-    let location_payload_lat = payload.latitude;
-    let location_payload_lon = payload.longitude;
-
-    tokio::spawn(async move {
-        let location_data = if location_payload_lat.abs() > 0.0 || location_payload_lon.abs() > 0.0
-        {
-            Some((location_payload_lat, location_payload_lon, None))
-        } else {
-            None
-        };
-
-        if let Err(e) = ws_notification_service
-            .notify_new_message(
-                message_id_for_notification,
-                conversation_id_for_notification,
-                RoomType::Conversation,
-                sender_id_for_notification,
-                sender_nickname_for_notification,
-                content_for_notification,
-                message_type_for_notification,
-                created_at_for_notification,
-                location_data,
-            )
-            .await
-        {
-            tracing::warn!(
-                "Failed to send direct message notification via WebSocketNotificationService: {:?}",
-                e
-            );
-        }
-    });
+    // 发布领域事件（事件处理器负责WS与作业等副作用）
+    state.event_bus.publish(DomainEvent::MessageSent {
+        room: crate::utils::types::RoomKey::new(RoomType::Conversation, conversation_id),
+        message_id: message.message_id.into(),
+        sender_id: current_user.user_id.into(),
+        sender_nickname: current_user.nickname.clone(),
+        content: payload.content.clone(),
+        message_type: payload.message_type.clone(),
+        created_at: message.created_at,
+        latitude: if payload.latitude.abs() > 0.0 { Some(payload.latitude) } else { None },
+        longitude: if payload.longitude.abs() > 0.0 { Some(payload.longitude) } else { None },
+    }).await;
 
     let response = SendDirectMessageResponse {
         message_id: message.message_id.to_string(),
@@ -405,22 +347,9 @@ pub async fn delete_group_message(
         .delete_group_message(message_id_to_delete, current_user.user_id)
         .await?;
 
-    // 发送消息删除通知
-    let ws_notification_service = state.websocket_notification_service.clone();
-    let actor_id = current_user.user_id;
-    tokio::spawn(async move {
-        if let Err(e) = ws_notification_service
-            .notify_message_deleted(
-                message_id_to_delete,
-                group_id_of_deleted_message,
-                RoomType::Group,
-                Some(actor_id),
-            )
-            .await
-        {
-            tracing::warn!("Failed to send group message deleted notification: {:?}", e);
-        }
-    });
+    // 发布事件（WS 推送由事件处理器负责）
+    // no-op: actor_id handled in event payload; keep if needed later
+    state.event_bus.publish(DomainEvent::MessageDeleted { room: crate::utils::types::RoomKey::new(RoomType::Group, group_id_of_deleted_message), message_id: message_id_to_delete.into(), actor_id: Some(current_user.user_id.into()) }).await;
 
     Ok(success_response(DeleteMessageResponse { success: true }))
 }
@@ -452,25 +381,9 @@ pub async fn delete_direct_message(
         .delete_direct_message(message_id_to_delete, current_user.user_id)
         .await?;
 
-    // 发送消息删除通知
-    let ws_notification_service = state.websocket_notification_service.clone();
-    let actor_id = current_user.user_id;
-    tokio::spawn(async move {
-        if let Err(e) = ws_notification_service
-            .notify_message_deleted(
-                message_id_to_delete,
-                conversation_id_of_deleted_message,
-                RoomType::Conversation,
-                Some(actor_id),
-            )
-            .await
-        {
-            tracing::warn!(
-                "Failed to send direct message deleted notification: {:?}",
-                e
-            );
-        }
-    });
+    // 发布事件（WS 推送由事件处理器负责）
+    // no-op: actor_id handled in event payload; keep if needed later
+    state.event_bus.publish(DomainEvent::MessageDeleted { room: crate::utils::types::RoomKey::new(RoomType::Conversation, conversation_id_of_deleted_message), message_id: message_id_to_delete.into(), actor_id: Some(current_user.user_id.into()) }).await;
 
     Ok(success_response(DeleteMessageResponse { success: true }))
 }
@@ -517,28 +430,8 @@ pub async fn mark_direct_messages_read(
         .mark_direct_messages_read(conversation_id, current_user.user_id, message_id)
         .await?;
 
-    // 发送已读通知
-    // 只要操作成功就发送通知
-    let ws_notification_service = state.websocket_notification_service.clone();
-    let reader_id_for_notification = current_user.user_id;
-
-    tokio::spawn(async move {
-        if let Err(e) = ws_notification_service
-            .notify_message_read_to_recipient(
-                reader_id_for_notification,
-                conversation_id,    // Uuid
-                message_id,         // Option<Uuid>
-                chrono::Utc::now(), // read_at
-            )
-            .await
-        {
-            tracing::warn!(
-                "Failed to send message read notification for conversation {}: {:?}",
-                conversation_id,
-                e
-            );
-        }
-    });
+    // 发布事件（WS 推送由事件处理器负责）
+    state.event_bus.publish(DomainEvent::DirectMessagesRead { conversation_id: conversation_id.into(), reader_id: current_user.user_id.into(), message_id: message_id.map(Into::into) }).await;
 
     // 构建响应
     let response = MarkReadResponse {
@@ -593,10 +486,8 @@ pub async fn mark_group_messages_read(
         .mark_group_messages_read(group_id, current_user.user_id, message_id)
         .await?;
 
-    // 发送已读通知给群组成员
-    // 只要操作成功就发送通知
-    // WebSocket通知功能暂时注释掉，待实现获取群组会话ID的逻辑
-    // let _ws_notification_service = state.websocket_notification_service.clone();
+    // 发布事件（预留：如需群组已读通知，可在事件处理器实现）
+    state.event_bus.publish(DomainEvent::GroupMessagesRead { group_id: group_id.into(), reader_id: current_user.user_id.into(), message_id: message_id.map(Into::into) }).await;
     // let _reader_id = current_user.user_id;
 
     // tokio::spawn(async move {

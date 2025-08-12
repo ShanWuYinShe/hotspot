@@ -217,15 +217,6 @@ impl MessageService {
             .map_repository_error("获取或创建私信会话")
     }
 
-    /// 获取或创建私信会话的别名方法
-    pub async fn get_or_create_direct_conversation(
-        &self,
-        user1_id: i64,
-        user2_id: i64,
-    ) -> Result<Uuid, AppError> {
-        self.get_or_create_conversation(user1_id, user2_id).await
-    }
-
     /// 获取私信会话列表
     pub async fn get_conversations(&self, user_id: i64) -> Result<Vec<ConversationRow>, AppError> {
         self.repo

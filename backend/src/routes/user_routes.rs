@@ -6,19 +6,24 @@ use crate::{
 };
 use std::sync::Arc;
 
-// 合并的用户路由（认证由中间件统一判断）
+/// 用户数据管理路由
+/// 处理用户资料、设置、搜索等用户数据相关功能（需要认证）
 pub fn user_routes() -> Router<Arc<AppState>> {
     Router::new()
-        // 公开路由（不需要认证，由auth_middleware自动判断）
-        .route("/register", post(user_controller::register))
-        .route("/login", post(user_controller::login))
-        .route("/temp", post(user_controller::create_temp_user))
-        .route("/refresh_token", post(user_controller::refresh_token))
-        // 需要认证的路由
+        // 用户搜索和发现功能
         .route("/search_by_name", post(user_controller::search_user_by_name))
         .route("/search_by_id", post(user_controller::search_user_by_id))
         .route("/search_by_location", post(user_controller::search_user_by_location))
+        
+        // 用户位置管理
         .route("/update_location", post(user_controller::update_location))
-        .route("/set_password", post(user_controller::set_password))
-        .route("/auth/status", post(user_controller::check_auth_status))
+        
+        // 用户资料管理
+        .route("/update_profile", post(user_controller::update_nickname))
+        .route("/upgrade_account", post(user_controller::upgrade_account))
+        .route("/delete_account", post(user_controller::delete_account))
+        
+        // 用户设置管理
+        .route("/get_settings", post(user_controller::get_user_settings))
+        .route("/update_settings", post(user_controller::update_user_settings))
 }

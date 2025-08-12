@@ -2,28 +2,31 @@
 
 use sqlx::PgPool;
 use tracing::error;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, NaiveTime};
 
 use crate::repositories::{Repository, RepositoryError, RepositoryResult};
 use crate::utils::constants::{DEFAULT_LATITUDE, DEFAULT_LONGITUDE, DEFAULT_LOCATION_NAME};
 use crate::utils::{UserIdPartition, UserType};
+use crate::models::user_settings::{UserSettings, NotificationLevel};
 
-/// 用户基本信息
+/// 用户基本信息查询结果
 #[derive(Debug, Clone)]
-pub struct UserInfo {
+pub struct UserInfoRow {
     pub id: i64,
     pub nickname: String,
+    #[allow(dead_code)]
     pub created_at: DateTime<Utc>,
 }
 
 /// 用户仓库接口
 pub trait UserRepository: Repository {
-    async fn get_user_info(&self, user_id: i64) -> RepositoryResult<UserInfo>;
+    async fn get_user_info(&self, user_id: i64) -> RepositoryResult<UserInfoRow>;
     async fn get_auth_info(&self, user_id: i64) -> RepositoryResult<crate::services::user::AuthUserRow>;
-    async fn find_user_friends(&self, user_id: i64) -> RepositoryResult<Vec<UserInfo>>;
+    async fn find_user_friends(&self, user_id: i64) -> RepositoryResult<Vec<UserInfoRow>>;
     async fn is_login_id_taken(&self, login_id: &str) -> RepositoryResult<bool>;
     async fn is_password_set(&self, user_id: i64) -> RepositoryResult<bool>;
     async fn hash_password(&self, password: &str) -> RepositoryResult<String>;
+    #[allow(dead_code)]
     async fn update_user_presence(&self, user_id: i64, latitude: f64, longitude: f64, location_name: &str) -> RepositoryResult<()>;
     /// 更新用户位置
     async fn update_user_location(
@@ -57,6 +60,8 @@ pub trait UserRepository: Repository {
     
     /// 获取用户昵称
     async fn get_user_nickname(&self, user_id: i64) -> RepositoryResult<String>;
+    /// 获取用户当前位置信息（纬度，经度）
+    async fn get_user_location(&self, user_id: i64) -> RepositoryResult<Option<(f64, f64)>>;
     
     /// 创建新用户并返回用户ID（正式用户必须有密码）
     async fn create_user(
@@ -112,10 +117,29 @@ pub trait UserRepository: Repository {
     /// 用户统计相关方法
     async fn get_total_user_count(&self) -> RepositoryResult<i64>;
     async fn get_user_count_by_type(&self, user_type: UserType) -> RepositoryResult<i64>;
+    #[allow(dead_code)]
     async fn get_user_count_by_id_range(&self, start_id: i64, end_id: i64) -> RepositoryResult<i64>;
     
     /// 获取群组成员ID列表（用于通知系统）
+    #[allow(dead_code)]
     async fn get_group_member_ids(&self, group_id: uuid::Uuid) -> RepositoryResult<Vec<i64>>;
+    
+    // =============== 用户资料和设置管理 ===============
+    
+    /// 更新用户昵称
+    async fn update_nickname(&self, user_id: i64, nickname: &str) -> RepositoryResult<()>;
+    
+    /// 升级临时用户为正式用户，返回新的用户ID
+    async fn upgrade_temp_user(&self, user_id: i64, login_id: &str, password_hash: &str) -> RepositoryResult<i64>;
+    
+    /// 获取用户设置
+    async fn get_user_settings(&self, user_id: i64) -> RepositoryResult<crate::models::user_settings::UserSettings>;
+    
+    /// 更新用户设置
+    async fn update_user_settings(&self, user_id: i64, settings: crate::models::api::user::UserSettingsRequest) -> RepositoryResult<()>;
+    
+    /// 删除用户账户
+    async fn delete_user(&self, user_id: i64) -> RepositoryResult<()>;
 }
 
 /// PostgreSQL实现的用户仓库
@@ -138,17 +162,59 @@ impl Repository for PgUserRepository {
     }
 }
 
+impl PgUserRepository {
+    /// 内部方法：为用户创建默认设置
+    async fn create_user_settings_internal(&self, user_id: i64) -> RepositoryResult<()> {
+        sqlx::query!(
+            r#"
+            INSERT INTO user_settings (
+                user_id, 
+                notification_level,
+                message_notifications,
+                group_notifications,
+                system_notifications,
+                location_notifications,
+                quiet_hours_enabled,
+                quiet_hours_start,
+                quiet_hours_end,
+                notification_radius_km,
+                sound_enabled,
+                vibration_enabled
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            ON CONFLICT (user_id) DO NOTHING
+            "#,
+            user_id,
+            NotificationLevel::All as NotificationLevel,
+            true,
+            true,
+            true,
+            true,
+            false,
+            NaiveTime::from_hms_opt(22, 0, 0),
+            NaiveTime::from_hms_opt(8, 0, 0),
+            5.0,
+            true,
+            true
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(RepositoryError::Database)?;
+        
+        Ok(())
+    }
+}
+
 impl UserRepository for PgUserRepository {
-    async fn get_user_info(&self, user_id: i64) -> RepositoryResult<UserInfo> {
+    async fn get_user_info(&self, user_id: i64) -> RepositoryResult<UserInfoRow> {
         #[derive(sqlx::FromRow)]
-        struct UserInfoRow {
+        struct UserInfoQuery {
             id: i64,
             nickname: String,
             created_at: chrono::DateTime<Utc>,
         }
         
         let row = sqlx::query_as!(
-            UserInfoRow,
+            UserInfoQuery,
             "SELECT id, nickname, created_at
              FROM users
              WHERE id = $1",
@@ -161,7 +227,7 @@ impl UserRepository for PgUserRepository {
             err => RepositoryError::Database(err)
         })?;
         
-        Ok(UserInfo {
+        Ok(UserInfoRow {
             id: row.id,
             nickname: row.nickname,
             created_at: row.created_at,
@@ -189,7 +255,7 @@ impl UserRepository for PgUserRepository {
         Ok(user)
     }
     
-    async fn find_user_friends(&self, _user_id: i64) -> RepositoryResult<Vec<UserInfo>> {
+    async fn find_user_friends(&self, _user_id: i64) -> RepositoryResult<Vec<UserInfoRow>> {
         // 简化：好友功能暂未实现，返回空列表
         Ok(vec![])
     }
@@ -440,6 +506,24 @@ impl UserRepository for PgUserRepository {
         .ok_or(RepositoryError::NotFound)?;
         
         Ok(nickname)
+    }
+    
+    async fn get_user_location(&self, user_id: i64) -> RepositoryResult<Option<(f64, f64)>> {
+        #[derive(sqlx::FromRow)]
+        struct LocRow { latitude: Option<f64>, longitude: Option<f64> }
+        let row = sqlx::query_as!(
+            LocRow,
+            r#"
+            SELECT latitude, longitude
+            FROM user_locations
+            WHERE user_id = $1
+            "#,
+            user_id
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(RepositoryError::Database)?;
+        Ok(row.and_then(|r| match (r.latitude, r.longitude) { (Some(lat), Some(lon)) => Some((lat, lon)), _ => None }))
     }
     
     /// 创建新用户并返回用户ID（正式用户必须有密码）
@@ -838,5 +922,438 @@ impl UserRepository for PgUserRepository {
         .unwrap_or_else(|| vec![]);
 
         Ok(member_ids)
+    }
+
+    // =============== 用户资料和设置管理实现 ===============
+
+    async fn update_nickname(&self, user_id: i64, nickname: &str) -> RepositoryResult<()> {
+        sqlx::query!(
+            "UPDATE users SET nickname = $1, updated_at = NOW() WHERE user_id = $2",
+            nickname,
+            user_id
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(RepositoryError::Database)?;
+
+        Ok(())
+    }
+
+    async fn upgrade_temp_user(&self, user_id: i64, login_id: &str, password_hash: &str) -> RepositoryResult<i64> {
+        // 开启事务
+        let mut tx = self.pool.begin().await.map_err(RepositoryError::Database)?;
+        
+        // 1. 验证是否为临时用户
+        let user_type = UserIdPartition::parse_user_id(user_id)
+            .map_err(|e| RepositoryError::InvalidArgument(format!("无效的用户ID: {}", e)))?
+            .0;
+            
+        if user_type != UserType::Temporary {
+            return Err(RepositoryError::InvalidArgument("只能升级临时用户".to_string()));
+        }
+        
+        // 2. 获取临时用户的当前信息
+        let temp_user = sqlx::query!(
+            "SELECT nickname, email, avatar_url, created_at FROM users WHERE user_id = $1",
+            user_id
+        )
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(RepositoryError::Database)?;
+        
+        // 3. 生成新的正式用户ID
+        let (min_id, max_id) = UserIdPartition::get_type_range(UserType::Regular);
+        let current_max = sqlx::query_scalar!(
+            r#"
+            SELECT COALESCE(MAX(user_id), $1) as "max_id!"
+            FROM users 
+            WHERE user_id BETWEEN $1 AND $2
+            "#,
+            min_id,
+            max_id
+        )
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(RepositoryError::Database)?;
+        
+        let new_user_id = if current_max < max_id {
+            current_max + 1
+        } else {
+            return Err(RepositoryError::InvalidArgument("正式用户ID已达到上限".to_string()));
+        };
+        
+        // 4. 创建新的正式用户记录
+        sqlx::query!(
+            r#"
+            INSERT INTO users (user_id, login_id, nickname, password_hash, email, avatar_url, created_at, updated_at, last_active_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+            "#,
+            new_user_id,
+            login_id,
+            temp_user.nickname,
+            password_hash,
+            temp_user.email,
+            temp_user.avatar_url,
+            temp_user.created_at
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(RepositoryError::Database)?;
+        
+        // 5. 迁移用户位置信息
+        sqlx::query!(
+            r#"
+            UPDATE user_locations 
+            SET user_id = $1 
+            WHERE user_id = $2
+            "#,
+            new_user_id,
+            user_id
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(RepositoryError::Database)?;
+        
+        // 6. 迁移用户设置
+        sqlx::query!(
+            r#"
+            UPDATE user_settings 
+            SET user_id = $1 
+            WHERE user_id = $2
+            "#,
+            new_user_id,
+            user_id
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(RepositoryError::Database)?;
+        
+        // 7. 迁移群组成员关系
+        sqlx::query!(
+            r#"
+            UPDATE group_members 
+            SET user_id = $1 
+            WHERE user_id = $2
+            "#,
+            new_user_id,
+            user_id
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(RepositoryError::Database)?;
+        
+        // 8. 迁移私聊消息记录
+        sqlx::query!(
+            r#"
+            UPDATE direct_messages 
+            SET sender_id = $1 
+            WHERE sender_id = $2
+            "#,
+            new_user_id,
+            user_id
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(RepositoryError::Database)?;
+        
+        sqlx::query!(
+            r#"
+            UPDATE direct_messages 
+            SET recipient_id = $1 
+            WHERE recipient_id = $2
+            "#,
+            new_user_id,
+            user_id
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(RepositoryError::Database)?;
+        
+        // 迁移群组消息记录
+        sqlx::query!(
+            r#"
+            UPDATE group_messages 
+            SET sender_id = $1 
+            WHERE sender_id = $2
+            "#,
+            new_user_id,
+            user_id
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(RepositoryError::Database)?;
+        
+        // 9. 迁移动态记录
+        sqlx::query!(
+            r#"
+            UPDATE moments 
+            SET user_id = $1 
+            WHERE user_id = $2
+            "#,
+            new_user_id,
+            user_id
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(RepositoryError::Database)?;
+        
+        // 10. 迁移好友关系
+        sqlx::query!(
+            r#"
+            UPDATE friendships 
+            SET requester_id = $1 
+            WHERE requester_id = $2
+            "#,
+            new_user_id,
+            user_id
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(RepositoryError::Database)?;
+        
+        sqlx::query!(
+            r#"
+            UPDATE friendships 
+            SET addressee_id = $1 
+            WHERE addressee_id = $2
+            "#,
+            new_user_id,
+            user_id
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(RepositoryError::Database)?;
+        
+        // 11. 迁移会话记录
+        sqlx::query!(
+            r#"
+            UPDATE conversations 
+            SET user1_id = $1 
+            WHERE user1_id = $2
+            "#,
+            new_user_id,
+            user_id
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(RepositoryError::Database)?;
+        
+        sqlx::query!(
+            r#"
+            UPDATE conversations 
+            SET user2_id = $1 
+            WHERE user2_id = $2
+            "#,
+            new_user_id,
+            user_id
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(RepositoryError::Database)?;
+        
+        // 12. 迁移消息已读状态
+        sqlx::query!(
+            r#"
+            UPDATE user_message_read_status 
+            SET user_id = $1 
+            WHERE user_id = $2
+            "#,
+            new_user_id,
+            user_id
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(RepositoryError::Database)?;
+        
+        // 13. 删除旧的临时用户记录
+        sqlx::query!(
+            "DELETE FROM users WHERE user_id = $1",
+            user_id
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(RepositoryError::Database)?;
+        
+        // 提交事务
+        tx.commit().await.map_err(RepositoryError::Database)?;
+
+        Ok(new_user_id)
+    }
+
+    async fn get_user_settings(&self, user_id: i64) -> RepositoryResult<crate::models::user_settings::UserSettings> {
+        let settings = sqlx::query_as!(
+            UserSettings,
+            r#"
+            SELECT 
+                id,
+                user_id,
+                notification_level as "notification_level: NotificationLevel",
+                message_notifications,
+                group_notifications,
+                system_notifications,
+                location_notifications,
+                quiet_hours_enabled,
+                quiet_hours_start,
+                quiet_hours_end,
+                notification_radius_km,
+                sound_enabled,
+                vibration_enabled
+            FROM user_settings 
+            WHERE user_id = $1
+            "#,
+            user_id
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(RepositoryError::Database)?;
+
+        match settings {
+            Some(settings) => Ok(settings),
+            None => {
+                // 如果不存在设置，创建默认设置
+                self.create_user_settings_internal(user_id).await?;
+                // 再次查询返回新创建的设置
+                sqlx::query_as!(
+                    UserSettings,
+                    r#"
+                    SELECT 
+                        id,
+                        user_id,
+                        notification_level as "notification_level: NotificationLevel",
+                        message_notifications,
+                        group_notifications,
+                        system_notifications,
+                        location_notifications,
+                        quiet_hours_enabled,
+                        quiet_hours_start,
+                        quiet_hours_end,
+                        notification_radius_km,
+                        sound_enabled,
+                        vibration_enabled
+                    FROM user_settings 
+                    WHERE user_id = $1
+                    "#,
+                    user_id
+                )
+                .fetch_one(&self.pool)
+                .await
+                .map_err(RepositoryError::Database)
+            }
+        }
+    }
+
+    async fn update_user_settings(&self, user_id: i64, settings: crate::models::api::user::UserSettingsRequest) -> RepositoryResult<()> {
+        use crate::models::user_settings::NotificationLevel;
+        use chrono::NaiveTime;
+
+        // 将可选字符串级别映射为枚举的 Option
+        let level_opt: Option<NotificationLevel> = settings.notification_level.as_deref().map(|level| match level {
+            "all" => NotificationLevel::All,
+            "mention" => NotificationLevel::Mention,
+            "important" => NotificationLevel::Important,
+            "muted" => NotificationLevel::Muted,
+            _ => NotificationLevel::All,
+        });
+
+        // 解析时间字符串为 NaiveTime（支持 HH:MM 或 HH:MM:SS）
+        let parse_time = |s: &str| {
+            NaiveTime::parse_from_str(s, "%H:%M:%S")
+                .or_else(|_| NaiveTime::parse_from_str(s, "%H:%M"))
+                .ok()
+        };
+        let quiet_start_opt: Option<NaiveTime> = settings
+            .quiet_hours_start
+            .as_deref()
+            .and_then(parse_time);
+        let quiet_end_opt: Option<NaiveTime> = settings
+            .quiet_hours_end
+            .as_deref()
+            .and_then(parse_time);
+
+        sqlx::query!(
+            r#"
+            UPDATE user_settings
+            SET
+                notification_level       = COALESCE($1, notification_level),
+                message_notifications    = COALESCE($2, message_notifications),
+                group_notifications      = COALESCE($3, group_notifications),
+                system_notifications     = COALESCE($4, system_notifications),
+                location_notifications   = COALESCE($5, location_notifications),
+                quiet_hours_enabled      = COALESCE($6, quiet_hours_enabled),
+                quiet_hours_start        = COALESCE($7, quiet_hours_start),
+                quiet_hours_end          = COALESCE($8, quiet_hours_end),
+                notification_radius_km   = COALESCE($9, notification_radius_km),
+                sound_enabled            = COALESCE($10, sound_enabled),
+                vibration_enabled        = COALESCE($11, vibration_enabled)
+            WHERE user_id = $12
+            "#,
+            level_opt as Option<NotificationLevel>,
+            settings.message_notifications,
+            settings.group_notifications,
+            settings.system_notifications,
+            settings.location_notifications,
+            settings.quiet_hours_enabled,
+            quiet_start_opt,
+            quiet_end_opt,
+            settings.notification_radius_km,
+            settings.sound_enabled,
+            settings.vibration_enabled,
+            user_id
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(RepositoryError::Database)?;
+
+        Ok(())
+    }
+
+    async fn delete_user(&self, user_id: i64) -> RepositoryResult<()> {
+        // 在事务中删除用户及相关数据
+        let mut tx = self.pool.begin().await.map_err(RepositoryError::Database)?;
+
+        // 删除用户设置
+        sqlx::query!("DELETE FROM user_settings WHERE user_id = $1", user_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(RepositoryError::Database)?;
+
+        // 删除群组成员关系
+        sqlx::query!("DELETE FROM group_members WHERE user_id = $1", user_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(RepositoryError::Database)?;
+
+        // 删除私聊消息
+        sqlx::query!("DELETE FROM direct_messages WHERE sender_id = $1 OR recipient_id = $1", user_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(RepositoryError::Database)?;
+
+        // 删除群聊消息
+        sqlx::query!("DELETE FROM group_messages WHERE sender_id = $1", user_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(RepositoryError::Database)?;
+
+        // 删除动态记录
+        sqlx::query!("DELETE FROM moments WHERE user_id = $1", user_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(RepositoryError::Database)?;
+
+        // 删除会话记录
+        sqlx::query!("DELETE FROM conversations WHERE user1_id = $1 OR user2_id = $1", user_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(RepositoryError::Database)?;
+
+        // 最后删除用户
+        sqlx::query!("DELETE FROM users WHERE user_id = $1", user_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(RepositoryError::Database)?;
+
+        tx.commit().await.map_err(RepositoryError::Database)?;
+        Ok(())
     }
 }

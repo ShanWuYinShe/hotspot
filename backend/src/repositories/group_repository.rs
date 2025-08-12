@@ -2,7 +2,7 @@
 
 use sqlx::PgPool;
 use uuid::Uuid;
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use tracing::error;
 use serde::{Deserialize, Serialize};
 
@@ -13,14 +13,14 @@ use crate::services::group::{GroupSearchResult};
 
 /// 活跃用户统计查询结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ActiveUserStats {
+pub struct ActiveUserStatsRow {
     pub nickname: String,
     pub message_count: i64,
 }
 
 /// 最近消息摘要查询结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RecentMessageSummary {
+pub struct RecentMessageSummaryRow {
     pub nickname: String,
     pub content: String,
     pub created_at: DateTime<Utc>,
@@ -47,6 +47,7 @@ impl Repository for PgGroupRepository {
 }
 
 impl GroupRepository for PgGroupRepository {
+    #[cfg(feature = "group_digest_scheduler")]
     async fn find_inactive_members(
         &self,
         group_id: Uuid,
@@ -55,7 +56,7 @@ impl GroupRepository for PgGroupRepository {
         let min_joined_at = Utc::now() - Duration::days(min_inactivity_days as i64);
         let members = sqlx::query!(
             r#"
-            SELECT gm.user_id, u.nickname
+            SELECT gm.user_id, u.nickname as "nickname!"
             FROM group_members gm
             JOIN users u ON gm.user_id = u.user_id
             WHERE gm.group_id = $1
@@ -73,6 +74,7 @@ impl GroupRepository for PgGroupRepository {
         Ok(members)
     }
     
+    #[cfg(feature = "group_digest_scheduler")]
     async fn generate_message_digest(
         &self,
         group_id: Uuid,
@@ -118,7 +120,7 @@ impl GroupRepository for PgGroupRepository {
             let pool = self.pool.clone();
             async move {
                 let rows = sqlx::query_as!(
-                    ActiveUserStats,
+                    ActiveUserStatsRow,
                     r#"
                     SELECT u.nickname as "nickname!", COUNT(*) as "message_count!"
                     FROM group_messages gm
@@ -146,7 +148,7 @@ impl GroupRepository for PgGroupRepository {
             let pool = self.pool.clone();
             async move {
                 let rows = sqlx::query_as!(
-                    RecentMessageSummary,
+                    RecentMessageSummaryRow,
                     r#"
                     SELECT u.nickname as "nickname!", gm.content, gm.created_at
                     FROM group_messages gm
@@ -205,6 +207,7 @@ impl GroupRepository for PgGroupRepository {
         }
         Ok(digest)
     }
+    #[cfg(feature = "group_digest_scheduler")]
     async fn find_groups_needing_digest(
         &self,
         activity_days: i32,
@@ -302,6 +305,7 @@ impl GroupRepository for PgGroupRepository {
         Ok(result)
     }
 
+    #[cfg(feature = "group_digest_scheduler")]
     async fn count_group_admins(&self, group_id: Uuid) -> RepositoryResult<i64> {
         use crate::models::group::GroupRole;
         let count = sqlx::query_scalar!(
@@ -398,6 +402,7 @@ impl GroupRepository for PgGroupRepository {
         Ok(need_password)
     }
     
+    #[cfg(feature = "group_digest_scheduler")]
     async fn count_group_members(&self, group_id: Uuid) -> RepositoryResult<i64> {
         let count = sqlx::query_scalar!(
             "SELECT COUNT(*) FROM group_members WHERE group_id = $1",

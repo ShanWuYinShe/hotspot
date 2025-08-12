@@ -58,6 +58,15 @@ impl WsError {
         )
     }
     
+    /// 禁止访问（权限不足）
+    pub fn forbidden(details: &str) -> Self {
+        Self::with_details(
+            error_codes::FORBIDDEN,
+            error_messages::FORBIDDEN,
+            details,
+        )
+    }
+    
     /// 房间不存在错误
     #[allow(dead_code)]
     pub fn room_not_found(room_id: &str) -> Self {

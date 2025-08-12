@@ -1,4 +1,4 @@
-pub mod checkin_controller;
+pub mod moment_controller;
 pub mod group_controller;
 pub mod health_controller;
 pub mod message_controller;

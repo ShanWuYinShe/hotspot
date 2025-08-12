@@ -27,15 +27,6 @@ pub trait LocationCache: Cache {
         radius_meters: f64
     ) -> impl Future<Output = Result<Vec<(i64, f64, f64)>, CacheError>> + Send;
     
-    /// 存储签到位置
-    fn store_checkin_location(
-        &self,
-        checkin_id: String,
-        user_id: i64,
-        latitude: f64,
-        longitude: f64,
-        expire_days: u32
-    ) -> impl Future<Output = Result<(), CacheError>> + Send;
 }
 
 /// Redis实现的位置缓存
@@ -150,54 +141,5 @@ impl LocationCache for RedisLocationCache {
         Ok(nearby_users)
     }
     
-    async fn store_checkin_location(
-        &self,
-        checkin_id: String,
-        user_id: i64,
-        latitude: f64,
-        longitude: f64,
-        expire_days: u32
-    ) -> Result<(), CacheError> {
-        let key = format!("checkin:location:{}", checkin_id);
-        let mut conn = self.client.get_multiplexed_async_connection().await
-            .map_err(CacheError::Redis)?;
-        
-        // 使用Redis GEO添加签到位置
-        // 使用"checkins_geo"作为签到地理空间集合名称
-        let _: () = redis::cmd("GEOADD")
-            .arg("checkins_geo")
-            .arg(longitude)
-            .arg(latitude)
-            .arg(&checkin_id)
-            .query_async(&mut conn)
-            .await
-            .map_err(CacheError::Redis)?;
-        
-        // 同时保存详细信息
-        let json_data = json!({
-            "checkin_id": checkin_id,
-            "user_id": user_id,
-            "latitude": latitude,
-            "longitude": longitude,
-            "created_at": chrono::Utc::now().timestamp(),
-        });
-        
-        let _: () = redis::cmd("SET")
-            .arg(&key)
-            .arg(json_data.to_string())
-            .query_async(&mut conn)
-            .await
-            .map_err(CacheError::Redis)?;
-        
-        // 设置过期时间（天为单位）
-        let expire_seconds = expire_days as i64 * 24 * 60 * 60;
-        let _: () = redis::cmd("EXPIRE")
-            .arg(&key)
-            .arg(expire_seconds)
-            .query_async(&mut conn)
-            .await
-            .map_err(CacheError::Redis)?;
-        
-        Ok(())
-    }
+    
 }

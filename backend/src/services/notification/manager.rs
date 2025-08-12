@@ -21,6 +21,7 @@ impl NotificationManager {
         group_repository: Arc<PgGroupRepository>,
         initial_policy: Option<NotificationPolicy>,
         initial_group_policy: Option<GroupNotificationPolicy>,
+        notification_cache: Option<Arc<dyn NotificationCache>>,
     ) -> Self {
         let policy_service = Arc::new(NotificationPolicyService::new(
             user_repository.clone(),
@@ -29,41 +30,6 @@ impl NotificationManager {
         ));
 
         let websocket_service = Arc::new(WebSocketNotificationService::new(
-            message_router.clone(),
-            user_repository.clone(),
-            Some(policy_service.get_policy().clone()),
-        ));
-
-        let group_service = Arc::new(GroupNotificationService::new(
-            message_router,
-            user_repository,
-            group_repository,
-            Some(policy_service.get_group_policy().clone()),
-        ));
-
-        Self {
-            websocket_service,
-            group_service,
-            policy_service,
-        }
-    }
-
-    /// 创建带有缓存的通知管理器
-    pub fn with_cache(
-        message_router: Arc<MessageRouter>,
-        user_repository: Arc<PgUserRepository>,
-        group_repository: Arc<PgGroupRepository>,
-        initial_policy: Option<NotificationPolicy>,
-        initial_group_policy: Option<GroupNotificationPolicy>,
-        notification_cache: Arc<dyn NotificationCache>,
-    ) -> Self {
-        let policy_service = Arc::new(NotificationPolicyService::new(
-            user_repository.clone(),
-            initial_policy,
-            initial_group_policy,
-        ));
-
-        let websocket_service = Arc::new(WebSocketNotificationService::with_cache(
             message_router.clone(),
             user_repository.clone(),
             Some(policy_service.get_policy().clone()),
@@ -83,6 +49,8 @@ impl NotificationManager {
             policy_service,
         }
     }
+
+    // 兼容性构造器已移除（with_cache）
 
     /// 获取 WebSocket 通知服务
     pub fn websocket_service(&self) -> Arc<WebSocketNotificationService> {

@@ -29,10 +29,38 @@ use crate::ws::{
     room_manager::RoomManager,
     message_router::MessageRouter,
 };
+use crate::utils::permission::PermissionService;
+#[cfg(feature = "audit")]
+use crate::utils::audit::{AuditService, AuditEvent, NoopAuditSink};
+use crate::services::notification::WebSocketNotificationService;
+use crate::ws::hooks::{WsHookService, NoopWsHooks, WsHooks};
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 use tracing::{info, debug, error, warn};
+use crate::utils::metrics::AppMetrics;
+use sqlx::PgPool;
+#[cfg(feature = "ws_offline_notifications")]
+#[derive(Clone)]
+struct WebSocketManagerForTasks {
+    notification_service: Arc<WebSocketNotificationService>,
+}
+
+#[cfg(feature = "ws_offline_notifications")]
+impl WebSocketManagerForTasks {
+    async fn deliver_offline_notifications(&self, user_id: i64) {
+        if let Ok(notifications) = self.notification_service.get_offline_notifications(user_id).await {
+            for n in notifications {
+                if let Ok(value) = serde_json::from_str::<serde_json::Value>(&n) {
+                    if let Ok(data) = serde_json::from_value::<crate::ws::message_types::SystemNotificationData>(value.clone()) {
+                        let _ = self.notification_service.notify_system_event_to_user(user_id, data).await;
+                    }
+                }
+            }
+            let _ = self.notification_service.clear_offline_notifications(user_id).await;
+        }
+    }
+}
 
 /// WebSocket管理器统计信息
 #[derive(Debug, Clone)]
@@ -65,23 +93,65 @@ pub struct WebSocketManager {
     /// 消息路由器
     #[allow(dead_code)]
     message_router: Arc<MessageRouter>,
+    /// WebSocket 通知服务（用于在订阅用户房间后下发离线通知）
+    #[cfg(feature = "ws_offline_notifications")]
+    notification_service: Arc<WebSocketNotificationService>,
+    /// 指标
+    #[allow(dead_code)]
+    metrics: Option<Arc<AppMetrics>>,
+    /// 权限服务
+    permission_service: PermissionService,
+    /// 审计服务（可选，默认None，通过 feature gate 控制）
+    #[cfg(feature = "audit")]
+    audit: Option<AuditService<NoopAuditSink>>,
+    /// WebSocket 事件钩子（默认 Noop）
+    hooks: WsHookService<NoopWsHooks>,
 }
 
 impl WebSocketManager {
+    #[cfg(feature = "ws_offline_notifications")]
+    fn clone_for_tasks(&self) -> WebSocketManagerForTasks {
+        WebSocketManagerForTasks {
+            notification_service: self.notification_service.clone(),
+        }
+    }
+
+    // 仅用于审计时启用的内部事件记录等，其他辅助方法通过 feature gate 控制
     /// 创建新的WebSocket管理器
     pub fn new(
         message_router: Arc<MessageRouter>,
         connection_manager: Arc<ConnectionManager>,
         room_manager: Arc<RoomManager>,
+        db_pool: PgPool,
+        notification_service: Arc<WebSocketNotificationService>,
+        metrics: Option<Arc<AppMetrics>>,
+        #[cfg(feature = "audit")]
+        audit: Option<AuditService<NoopAuditSink>>,
     ) -> Self {
+        let permission_service = PermissionService::new(db_pool.clone());
+        #[cfg(not(feature = "ws_offline_notifications"))]
+        let _ = &notification_service;
         Self {
             connection_manager,
             room_manager,
             message_router,
+            #[cfg(feature = "ws_offline_notifications")]
+            notification_service,
+            metrics,
+            permission_service,
+            #[cfg(feature = "audit")]
+            audit,
+            hooks: WsHookService::new(Arc::new(NoopWsHooks::default())),
         }
     }
 
-
+    /// 指标：记录收到一条客户端消息
+    #[allow(dead_code)]
+    pub fn record_ws_message_received(&self) {
+        if let Some(m) = &self.metrics {
+            m.record_ws_message_received();
+        }
+    }
 
     /// 添加新连接
     /// 
@@ -103,6 +173,19 @@ impl WebSocketManager {
             .await?;
 
         info!("WebSocket连接已添加: connection_id={}, user_id={}", connection_id, user_id);
+        // 审计：连接建立
+        #[cfg(feature = "audit")]
+        if let Some(audit) = &self.audit {
+            let ev = AuditEvent::now("ws_connection", "connect")
+                .with_actor(user_id)
+                .with_target(connection_id.to_string());
+            audit.submit(ev).await;
+        }
+        // 更新连接数量指标
+        if let Some(m) = &self.metrics {
+            let stats = self.connection_manager.get_stats().await;
+            m.update_ws_metrics(stats.total_connections);
+        }
         Ok(())
     }
 
@@ -137,6 +220,20 @@ impl WebSocketManager {
         self.connection_manager.remove_connection(connection_id).await;
 
         info!("WebSocket连接已移除: connection_id={}", connection_id);
+        // 钩子
+        self.hooks.inner().on_disconnect(connection_id);
+        // 审计：连接断开
+        #[cfg(feature = "audit")]
+        if let Some(audit) = &self.audit {
+            let ev = AuditEvent::now("ws_connection", "disconnect")
+                .with_target(connection_id.to_string());
+            audit.submit(ev).await;
+        }
+        // 更新连接数量指标
+        if let Some(m) = &self.metrics {
+            let stats = self.connection_manager.get_stats().await;
+            m.update_ws_metrics(stats.total_connections);
+        }
         Ok(())
     }
 
@@ -165,6 +262,8 @@ impl WebSocketManager {
         //     .await?;
 
         info!("连接 {} 已订阅房间 {:?}", connection_id, room_id);
+        // 钩子
+        self.hooks.inner().on_subscribe(connection_id, &room_id);
         Ok(())
     }
 
@@ -193,6 +292,8 @@ impl WebSocketManager {
         //     .await?;
 
         info!("连接 {} 已取消订阅房间 {:?}", connection_id, room_id);
+        // 钩子
+        self.hooks.inner().on_unsubscribe(connection_id, room_id);
         Ok(())
     }
 
@@ -200,9 +301,15 @@ impl WebSocketManager {
     /// 
     /// 注意：业务逻辑应该使用 WebSocketNotificationService
     pub(crate) async fn send_to_connection(&self, connection_id: Uuid, message: ServerMessage) -> WsResult<()> {
-        self.connection_manager
+        let res = self.connection_manager
             .send_to_connection(connection_id, message)
-            .await
+            .await;
+        if res.is_ok() {
+            if let Some(m) = &self.metrics {
+                m.record_ws_message_sent();
+            }
+        }
+        res
     }
 
     /// 获取消息路由器引用 (供 WebSocketNotificationService 使用)
@@ -243,6 +350,25 @@ impl WebSocketManager {
         connections.len()
     }
 
+    /// 提交一个审计事件（未启用 audit 特性时为空操作）
+    pub async fn audit_ws(
+        &self,
+        _category: &'static str,
+        _action: &'static str,
+        _actor_user_id: Option<i64>,
+        _target: Option<String>,
+        _metadata: Option<serde_json::Value>,
+    ) {
+        #[cfg(feature = "audit")]
+        if let Some(audit) = &self.audit {
+            let mut ev = AuditEvent::now(_category, _action);
+            if let Some(uid) = _actor_user_id { ev = ev.with_actor(uid); }
+            if let Some(tgt) = _target { ev = ev.with_target(tgt); }
+            if let Some(meta) = _metadata { ev = ev.with_metadata(meta); }
+            audit.submit(ev).await;
+        }
+    }
+
     /// 处理客户端连接管理相关消息
     /// 
     /// 专注处理：ping/pong、房间订阅/取消订阅
@@ -278,23 +404,128 @@ impl WebSocketManager {
             // 房间管理
             ClientMessage::JoinGroup { group_id } => {
                 debug!("用户加入群组房间: group_id={}, connection_id={}", group_id, connection_id);
+                // 权限校验：必须是群组成员
+                let conn_info = self.connection_manager.get_connection(connection_id).await
+                    .ok_or_else(|| WsError::internal_error(&format!("连接不存在: {}", connection_id)))?;
+                // 直接使用 DB 权限校验
+                if let Err(e) = self.permission_service.require_group_member(&group_id, conn_info.user_id).await {
+                    warn!("群组订阅拒绝: user_id={}, group_id={}, error={:?}", conn_info.user_id, group_id, e);
+                    if let Some(m) = &self.metrics { m.record_ws_subscription("group", "forbidden"); }
+                    #[cfg(feature = "audit")]
+                    if let Some(audit) = &self.audit {
+                        let ev = AuditEvent::now("ws_permission", "deny")
+                            .with_actor(conn_info.user_id)
+                            .with_target(format!("group:{}", group_id))
+                            .with_metadata(serde_json::json!({"reason": "not_member"}));
+                        audit.submit(ev).await;
+                    }
+                    return Err(WsError::forbidden("需要群组成员权限"));
+                }
                 let room_id = RoomId::Group(group_id);
                 self.subscribe_to_room(connection_id, room_id).await?;
+                if let Some(m) = &self.metrics { m.record_ws_subscription("group", "ok"); }
+                #[cfg(feature = "audit")]
+                if let Some(audit) = &self.audit {
+                    let ev = AuditEvent::now("ws_subscription", "subscribe")
+                        .with_actor(conn_info.user_id)
+                        .with_target(format!("group:{}", group_id));
+                    audit.submit(ev).await;
+                }
             }
             ClientMessage::LeaveGroup { group_id } => {
                 debug!("用户离开群组房间: group_id={}, connection_id={}", group_id, connection_id);
                 let room_id = RoomId::Group(group_id);
                 self.unsubscribe_from_room(connection_id, &room_id).await?;
+                if let Some(_conn_info) = self.connection_manager.get_connection(connection_id).await {
+                    #[cfg(feature = "audit")]
+                    if let Some(audit) = &self.audit {
+                        let ev = AuditEvent::now("ws_subscription", "unsubscribe")
+                            .with_actor(conn_info.user_id)
+                            .with_target(format!("group:{}", group_id));
+                        audit.submit(ev).await;
+                    }
+                }
             }
             ClientMessage::JoinConversation { conversation_id } => {
                 debug!("用户加入对话房间: conversation_id={}, connection_id={}", conversation_id, connection_id);
+                // 权限校验：必须是会话参与者
+                let conn_info = self.connection_manager.get_connection(connection_id).await
+                    .ok_or_else(|| WsError::internal_error(&format!("连接不存在: {}", connection_id)))?;
+                if let Err(e) = self.permission_service.require_conversation_member(&conversation_id, conn_info.user_id).await {
+                    warn!("会话订阅拒绝: user_id={}, conversation_id={}, error={:?}", conn_info.user_id, conversation_id, e);
+                    if let Some(m) = &self.metrics { m.record_ws_subscription("conversation", "forbidden"); }
+                    #[cfg(feature = "audit")]
+                    if let Some(audit) = &self.audit {
+                        let ev = AuditEvent::now("ws_permission", "deny")
+                            .with_actor(conn_info.user_id)
+                            .with_target(format!("conversation:{}", conversation_id))
+                            .with_metadata(serde_json::json!({"reason": "not_participant"}));
+                        audit.submit(ev).await;
+                    }
+                    return Err(WsError::forbidden("需要会话参与者权限"));
+                }
                 let room_id = RoomId::Conversation(conversation_id);
                 self.subscribe_to_room(connection_id, room_id).await?;
+                if let Some(m) = &self.metrics { m.record_ws_subscription("conversation", "ok"); }
+                #[cfg(feature = "audit")]
+                if let Some(audit) = &self.audit {
+                    let ev = AuditEvent::now("ws_subscription", "subscribe")
+                        .with_actor(conn_info.user_id)
+                        .with_target(format!("conversation:{}", conversation_id));
+                    audit.submit(ev).await;
+                }
             }
             ClientMessage::LeaveConversation { conversation_id } => {
                 debug!("用户离开对话房间: conversation_id={}, connection_id={}", conversation_id, connection_id);
                 let room_id = RoomId::Conversation(conversation_id);
                 self.unsubscribe_from_room(connection_id, &room_id).await?;
+                if let Some(_conn_info) = self.connection_manager.get_connection(connection_id).await {
+                    #[cfg(feature = "audit")]
+                    if let Some(audit) = &self.audit {
+                        let ev = AuditEvent::now("ws_subscription", "unsubscribe")
+                            .with_actor(conn_info.user_id)
+                            .with_target(format!("conversation:{}", conversation_id));
+                        audit.submit(ev).await;
+                    }
+                }
+            }
+            ClientMessage::JoinUserRoom => {
+                debug!("用户加入私有房间: connection_id={}", connection_id);
+                let conn_info = self.connection_manager.get_connection(connection_id).await
+                    .ok_or_else(|| WsError::internal_error(&format!("连接不存在: {}", connection_id)))?;
+                let room_id = RoomId::User(conn_info.user_id);
+                self.subscribe_to_room(connection_id, room_id).await?;
+                if let Some(m) = &self.metrics { m.record_ws_subscription("user", "ok"); }
+                 #[cfg(feature = "audit")]
+                 if let Some(audit) = &self.audit {
+                    let ev = AuditEvent::now("ws_subscription", "subscribe")
+                        .with_actor(conn_info.user_id)
+                        .with_target(format!("user:{}", conn_info.user_id));
+                    audit.submit(ev).await;
+                 }
+                // 订阅后尝试下发并清理离线通知
+                #[cfg(feature = "ws_offline_notifications")]
+                let this = self.clone_for_tasks();
+                #[cfg(feature = "ws_offline_notifications")]
+                let uid = conn_info.user_id;
+                tokio::spawn(async move {
+                    #[cfg(feature = "ws_offline_notifications")]
+                    this.deliver_offline_notifications(uid).await;
+                });
+            }
+            ClientMessage::LeaveUserRoom => {
+                debug!("用户离开私有房间: connection_id={}", connection_id);
+                if let Some(conn_info) = self.connection_manager.get_connection(connection_id).await {
+                    let room_id = RoomId::User(conn_info.user_id);
+                    self.unsubscribe_from_room(connection_id, &room_id).await?;
+                    #[cfg(feature = "audit")]
+                    if let Some(audit) = &self.audit {
+                        let ev = AuditEvent::now("ws_subscription", "unsubscribe")
+                            .with_actor(conn_info.user_id)
+                            .with_target(format!("user:{}", conn_info.user_id));
+                        audit.submit(ev).await;
+                    }
+                }
             }
         }
 
@@ -374,17 +605,26 @@ impl WebSocketManager {
     /// 返回清理的连接数
     #[allow(dead_code)]
     pub async fn cleanup_inactive_connections(&self, inactive_timeout_ms: u64) -> usize {
-        // 直接调用连接管理器的清理方法
         let timeout_secs = inactive_timeout_ms / 1000; // 转换为秒
-        let cleaned_count = self.connection_manager
-            .cleanup_inactive_connections(timeout_secs)
-            .await;
-
-        if cleaned_count > 0 {
-            info!("清理了 {} 个非活跃连接", cleaned_count);
+        // 先由 ConnectionManager 计算出需要移除的连接，再通过 WebSocketManager 完整移除（包含房间订阅）
+        let to_remove = self.connection_manager.find_inactive_connections(timeout_secs).await;
+        let mut removed = 0usize;
+        for connection_id in to_remove {
+            if self.remove_connection(connection_id).await.is_ok() {
+                removed += 1;
+            }
         }
+        if removed > 0 {
+            info!("清理了 {} 个非活跃连接", removed);
+            if let Some(m) = &self.metrics { m.record_ws_cleanup_removed(removed); }
+        }
+        removed
+    }
 
-        cleaned_count
+    /// 清理空房间（无订阅者）
+    #[allow(dead_code)]
+    pub async fn cleanup_empty_rooms(&self) -> usize {
+        self.room_manager.cleanup_empty_rooms().await
     }
 
     /// 检查是否达到连接限制

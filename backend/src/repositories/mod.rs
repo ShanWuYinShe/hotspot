@@ -6,20 +6,19 @@ use crate::services::group::GroupSearchResult;
 
 // 导出子模块
 pub mod group_repository;
-pub mod location_repository;
 pub mod user_repository;
 pub mod message_repository;
-pub mod checkin_repository;
+pub mod moment_repository;
 pub mod health_repository;
 
+#[cfg(feature = "jobs")]
 pub mod scheduler_repository;
 
 // 从子模块中重新导出具体实现
 pub use group_repository::PgGroupRepository;
-pub use location_repository::PgLocationRepository;
 pub use user_repository::PgUserRepository;
 pub use message_repository::PgMessageRepository;
-pub use checkin_repository::PgCheckinRepository;
+pub use moment_repository::PgMomentRepository;
 pub use health_repository::PgHealthRepository;
 
 
@@ -28,6 +27,8 @@ pub use health_repository::PgHealthRepository;
 pub enum RepositoryError {
     #[error("数据库错误: {0}")]
     Database(#[from] sqlx::Error),
+    #[error("UUID解析错误: {0}")]
+    UuidParse(#[from] uuid::Error),
     #[error("未找到记录")]
     NotFound,
     #[error("参数无效: {0}")]
@@ -49,12 +50,14 @@ pub trait Repository: Send + Sync {
 /// 群组仓库接口
 pub trait GroupRepository: Repository {
     /// 查找不活跃的群组成员
+    #[cfg(feature = "group_digest_scheduler")]
     fn find_inactive_members(
         &self,
         group_id: Uuid,
         min_inactivity_days: i32
     ) -> impl std::future::Future<Output = RepositoryResult<Vec<(i64, String)>>> + Send;
     /// 生成群组消息摘要
+    #[cfg(feature = "group_digest_scheduler")]
     fn generate_message_digest(
         &self,
         group_id: Uuid,
@@ -69,7 +72,7 @@ pub trait GroupRepository: Repository {
         timestamp: DateTime<Utc>
     ) -> impl std::future::Future<Output = RepositoryResult<()>> + Send;
     /// 查找需要发送摘要的群组
-    #[allow(dead_code)]
+    #[cfg(feature = "group_digest_scheduler")]
     fn find_groups_needing_digest(
         &self,
         activity_days: i32,
@@ -91,10 +94,10 @@ pub trait GroupRepository: Repository {
     /// 检查群组是否需要密码
     fn check_group_need_password(&self, group_id: Uuid) -> impl std::future::Future<Output = RepositoryResult<bool>> + Send;
     /// 获取群组管理员数量
-    #[allow(dead_code)]
+    #[cfg(feature = "group_digest_scheduler")]
     fn count_group_admins(&self, group_id: Uuid) -> impl std::future::Future<Output = RepositoryResult<i64>> + Send;
     /// 获取群组成员数量
-    #[allow(dead_code)]
+    #[cfg(feature = "group_digest_scheduler")]
     fn count_group_members(&self, group_id: Uuid) -> impl std::future::Future<Output = RepositoryResult<i64>> + Send;
     /// 哈希密码
     fn hash_password(&self, password: &str) -> impl std::future::Future<Output = RepositoryResult<String>> + Send;

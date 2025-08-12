@@ -114,3 +114,48 @@ pub struct SetPasswordRequest {
     /// 新密码（明文，必填，长度8-64，服务端自动加密存储）
     pub new_password: String,
 }
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct UpdateNicknameRequest {
+    /// 用户昵称（必填，长度1-32）
+    pub nickname: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct UpgradeAccountRequest {
+    /// 登录ID（邮箱/手机号，必填，唯一，长度1-100）
+    pub login_id: String,
+    /// 明文密码（必填，长度8-64，服务端自动加密存储）
+    pub password: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct UserSettingsRequest {
+    /// 通知级别
+    pub notification_level: Option<String>,
+    /// 消息通知开关
+    pub message_notifications: Option<bool>,
+    /// 群组通知开关
+    pub group_notifications: Option<bool>,
+    /// 系统通知开关
+    pub system_notifications: Option<bool>,
+    /// 位置通知开关
+    pub location_notifications: Option<bool>,
+    /// 免打扰模式开关
+    pub quiet_hours_enabled: Option<bool>,
+    /// 免打扰开始时间
+    pub quiet_hours_start: Option<String>,
+    /// 免打扰结束时间
+    pub quiet_hours_end: Option<String>,
+    /// 通知半径（公里）
+    pub notification_radius_km: Option<f64>,
+    /// 声音开关
+    pub sound_enabled: Option<bool>,
+    /// 震动开关
+    pub vibration_enabled: Option<bool>,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct PasswordStatusResponse {
+    pub is_password_set: bool,
+}

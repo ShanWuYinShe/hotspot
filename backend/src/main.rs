@@ -5,6 +5,7 @@ mod models;
 mod routes;
 mod services;
 mod repositories;
+#[cfg(feature = "jobs")]
 mod jobs;
 mod cache;
 mod utils;
@@ -17,19 +18,22 @@ use config::app_config::AppConfig;
 use config::db::Database;
 use controllers::{health_check, metrics_handler};
 use middleware::auth::{AppState, auth_middleware};
-use routes::{admin_routes, checkin_routes, group_routes, message_routes, user_routes};
+use middleware::app_state_builder::AppStateBuilder;
+use routes::{admin_routes, auth_routes, moment_routes, group_routes, message_routes, user_routes};
+use routes::auth_routes::auth_protected_routes;
 use services::{
-    CheckinService, ConfigService, GroupService, HealthService, MessageService, 
+    MomentService, ConfigService, GroupService, HealthService, MessageService, 
     UserService,
 };
 
+#[cfg(feature = "jobs")]
 use jobs::JobService;
-use repositories::{PgUserRepository, PgGroupRepository, PgHealthRepository};
+use repositories::{PgUserRepository, PgGroupRepository, PgHealthRepository, PgMomentRepository};
 use std::{net::SocketAddr, sync::Arc};
 use tokio::net::TcpListener;
 use tower_http::cors::{CorsLayer, Any};
 use tower_http::trace::TraceLayer;
-use tracing::{info, warn};
+use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::cache::CacheManager;
@@ -38,9 +42,16 @@ use ws::manager::WebSocketManager;
 use ws::message_router::MessageRouter;
 use ws::connection_manager::ConnectionManager;
 use ws::room_manager::RoomManager;
-// use crate::services::notification::events::GroupEvent; // Removed EventBus related import
-// use crate::services::event_bus::EventBus; // Removed EventBus related import
-// use ws::session::SessionManager; // Commented out if not used
+use utils::metrics::AppMetrics;
+#[cfg(feature = "audit")]
+use utils::audit::{AuditService, NoopAuditSink};
+// use utils::events::EventBus; // 保留注释以提示可用导入，但避免未使用警告
+#[cfg(feature = "audit")]
+use utils::events::audit_handler::AuditEventsHandler;
+#[cfg(feature = "ws_hooks")]
+use utils::events::ws_handler::WsEventsHandler;
+#[cfg(feature = "jobs")]
+use utils::events::jobs_handler::JobsEventsHandler;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -108,26 +119,43 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let group_repository = Arc::new(PgGroupRepository::new(db.pg_pool.clone()));
     
     // 创建通知管理器
+    // 构建离线通知缓存（如果可用）并注入
+    let notification_cache: Option<Arc<dyn crate::cache::NotificationCache>> =
+        cache_manager
+            .get_redis_connection_manager()
+            .map(|conn| {
+                let cm_arc: Arc<redis::aio::ConnectionManager> = (*conn).clone().into();
+                Arc::new(crate::cache::notification_cache::RedisNotificationCache::new(Some(cm_arc))) as Arc<dyn crate::cache::NotificationCache>
+            });
+
     let notification_manager = Arc::new(crate::services::notification::NotificationManager::new(
         message_router.clone(),
         user_repository.clone(),
         group_repository.clone(),
         Some(notification_policy),
         Some(group_notification_policy),
+        notification_cache,
     ));
     
     let websocket_notification_service = notification_manager.websocket_service();
     
     info!("通知策略: {}", notification_manager.get_policy_summary());
     
+    // 注意：metrics 尚未创建，先用 None，稍后在 state 创建后可按需替换/注入
     let ws_manager = Arc::new(WebSocketManager::new(
         message_router.clone(),
         connection_manager.clone(),
         room_manager.clone(),
+        db.pg_pool.clone(),
+        websocket_notification_service.clone(),
+        None,
+        #[cfg(feature = "audit")]
+        Some(AuditService::new(Arc::new(NoopAuditSink::new()))),
     ));
     // --- WebSocket组件初始化完成 ---
 
     // 初始化作业队列 (JobService)
+    #[cfg(feature = "jobs")]
     let job_service = if app_config.job_queue.enabled {
         let amqp_url = app_config.job_queue.amqp_url.as_ref()
             .expect("AMQP URL is required when job queue is enabled");
@@ -139,7 +167,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ).await {
             Ok(service) => Some(Arc::new(service)),
             Err(e) => {
-                warn!("Failed to initialize JobService: {}. Async jobs will be disabled.", e);
+                 tracing::warn!("Failed to initialize JobService: {}. Async jobs will be disabled.", e);
                 None
             }
         }
@@ -147,17 +175,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         info!("异步任务队列已禁用");
         None
     };
+    #[cfg(not(feature = "jobs"))]
+    let _job_service = None::<()>;
 
     // 服务初始化 (Business Services)
-    let mut user_service = UserService::new(config_service.clone(), user_repository.clone());
-    if let Some(ref job_service) = job_service {
-        user_service = user_service.with_job_dispatcher(job_service.get_dispatcher());
-    }
-    let user_service = Arc::new(user_service);
+    let user_service = {
+        let service = UserService::new(config_service.clone(), user_repository.clone());
+        #[cfg(feature = "jobs")]
+        if let Some(ref job_service) = job_service {
+            service = service.with_job_dispatcher(job_service.get_dispatcher());
+        }
+        Arc::new(service)
+    };
     
     let group_service = Arc::new(GroupService::new(db.clone())); 
     let message_service = Arc::new(MessageService::new(db.clone(), group_repository.clone()));
-    let checkin_service = Arc::new(CheckinService::new(db.clone()));
+    
+    // 创建moment repository和service
+    let moment_repository = Arc::new(PgMomentRepository::new(db.pg_pool.clone()));
+    let moment_service = Arc::new(MomentService::new(moment_repository));
     
     let health_repository = Arc::new(PgHealthRepository::new(
         db.pg_pool.clone(), 
@@ -165,32 +201,53 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ));
     let health_service = Arc::new(HealthService::new(health_repository));
 
-    // 创建统一的应用状态
-    let state = Arc::new(AppState {
-        config_service,
-        user_service,
-        user_repository,
-        group_service,
-        message_service,
-        checkin_service,
-        health_service,
-        websocket_notification_service,
-        ws_manager,
-        job_service: job_service.clone(),
-    });
+    // 创建统一的应用状态（Builder）
+    let metrics = Arc::new(AppMetrics::new()?);
+    let builder = AppStateBuilder::new(
+        config_service.clone(),
+        user_service.clone(),
+        user_repository.clone(),
+        group_service.clone(),
+        message_service.clone(),
+        moment_service.clone(),
+        health_service.clone(),
+        websocket_notification_service.clone(),
+        ws_manager.clone(),
+        metrics.clone(),
+    );
+    #[cfg(feature = "jobs")]
+    let builder = builder.with_job_service(job_service.clone());
+    let state: Arc<AppState> = builder.build();
+
+    // 注册事件处理器（按 feature）
+    #[cfg(feature = "audit")]
+    {
+        let audit_handler = Arc::new(AuditEventsHandler::new(Arc::new(AuditService::new(Arc::new(NoopAuditSink::new())))));
+        state.event_bus.register_audit_handler(audit_handler);
+    }
+    #[cfg(feature = "ws_hooks")]
+    {
+        let ws_handler = Arc::new(WsEventsHandler::new(websocket_notification_service.clone()));
+        state.event_bus.register_ws_handler(ws_handler);
+    }
+    #[cfg(feature = "jobs")]
+    if let Some(ref jobs) = job_service {
+        let jobs_handler = Arc::new(JobsEventsHandler::new(jobs.clone()));
+        state.event_bus.register_jobs_handler(jobs_handler);
+    }
     
     // 启动定时任务调度器
+    #[cfg(feature = "jobs")]
     if let Some(ref jobs) = job_service { // Changed to ref jobs
         info!("启动定时任务调度器...");
-        if let Some(redis_conn_manager) = cache_manager.get_redis_connection_manager() { // Use CacheManager
-            utils::scheduler::start_scheduler(
-                jobs.clone(), // Pass the entire JobService
-                db.pg_pool.clone(),
-                Some((*redis_conn_manager).clone()),
-            ).await;
-        } else {
-            warn!("Redis Connection Manager 不可用，跳过定时任务调度器");
-        }
+        let redis_opt = cache_manager.get_redis_connection_manager().map(|m| (*m).clone());
+        utils::scheduler::start_scheduler(
+            jobs.clone(),
+            db.pg_pool.clone(),
+            redis_opt,
+            Some(state.ws_manager.clone()),
+            state.config_service.clone(),
+        ).await;
     }
 
     // CORS 配置 - 从ConfigService获取
@@ -213,16 +270,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/v1/user", user_routes())
         .nest("/api/v1/group", group_routes())
         .nest("/api/v1/chat", message_routes())
-        .nest("/api/v1/checkin", checkin_routes())
+        .nest("/api/v1/moments", moment_routes())
         .nest("/api/v1/admin", admin_routes())
+        .nest("/api/v1/auth", auth_protected_routes())  // 需要认证的auth相关路由
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             auth_middleware,
         ));
 
+    // 公开路由（不需要认证的认证相关接口）
+    let public_routes = Router::new()
+        .nest("/api/v1/auth", auth_routes());
+
     // 完整应用路由 - WebSocket路由不经过认证中间件
     let app = Router::new()
         .merge(protected_routes)
+        .merge(public_routes)
         .route("/ws/", get(ws_handler)) // WebSocket需要保留GET方法
         .route("/health", post(health_check)) // 改为POST方法
         .route("/metrics", post(metrics_handler)) // 改为POST方法

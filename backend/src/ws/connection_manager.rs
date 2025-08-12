@@ -2,7 +2,7 @@
 //! 
 //! 专门负责WebSocket连接的生命周期管理
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::{RwLock, mpsc};
 use uuid::Uuid;
@@ -35,8 +35,8 @@ pub struct ConnectionInfo {
 pub struct ConnectionManager {
     /// 活跃连接 connection_id -> ConnectionInfo
     connections: Arc<RwLock<HashMap<Uuid, ConnectionInfo>>>,
-    /// 用户到连接的映射 user_id -> Vec<connection_id>
-    user_connections: Arc<RwLock<HashMap<i64, Vec<Uuid>>>>,
+    /// 用户到连接的映射 user_id -> Set<connection_id>
+    user_connections: Arc<RwLock<HashMap<i64, HashSet<Uuid>>>>,
     /// 消息发送通道 connection_id -> Sender<ServerMessage>
     message_senders: Arc<RwLock<HashMap<Uuid, mpsc::UnboundedSender<ServerMessage>>>>,
 }
@@ -82,8 +82,8 @@ impl ConnectionManager {
             .write()
             .await
             .entry(user_id)
-            .or_insert_with(Vec::new)
-            .push(connection_id);
+            .or_insert_with(HashSet::new)
+            .insert(connection_id);
 
         // 存储消息发送器
         self.message_senders.write().await.insert(connection_id, sender);
@@ -103,7 +103,7 @@ impl ConnectionManager {
             // 从用户连接映射中移除
             let mut user_connections = self.user_connections.write().await;
             if let Some(user_conns) = user_connections.get_mut(&info.user_id) {
-                user_conns.retain(|&id| id != connection_id);
+                user_conns.remove(&connection_id);
                 if user_conns.is_empty() {
                     user_connections.remove(&info.user_id);
                 }
@@ -135,10 +135,14 @@ impl ConnectionManager {
     /// 获取用户的所有连接
     pub async fn get_user_connections(&self, user_id: i64) -> Vec<Uuid> {
         let user_connections = self.user_connections.read().await;
-        user_connections.get(&user_id).cloned().unwrap_or_default()
+        user_connections
+            .get(&user_id)
+            .map(|set| set.iter().copied().collect())
+            .unwrap_or_default()
     }
 
-    /// 获取所有在线用户
+    /// 获取所有在线用户（预留：监控/运维用途）
+    #[allow(dead_code)]
     pub async fn get_online_users(&self) -> Vec<i64> {
         let user_connections = self.user_connections.read().await;
         user_connections.keys().copied().collect()
@@ -205,6 +209,21 @@ impl ConnectionManager {
         }
 
         to_remove.len()
+    }
+
+    /// 查找不活跃连接（仅返回ID，不做移除）
+    pub async fn find_inactive_connections(&self, timeout_secs: u64) -> Vec<Uuid> {
+        let timeout = chrono::Duration::seconds(timeout_secs as i64);
+        let now = chrono::Utc::now();
+        let mut to_remove = Vec::new();
+
+        let connections = self.connections.read().await;
+        for (connection_id, info) in connections.iter() {
+            if now.signed_duration_since(info.last_activity) > timeout {
+                to_remove.push(*connection_id);
+            }
+        }
+        to_remove
     }
 
     /// 获取连接统计信息

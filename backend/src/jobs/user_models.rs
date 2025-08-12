@@ -34,7 +34,7 @@ pub struct NotificationJob {
 pub enum NotificationType {
     Message,        // 聊天消息
     System,         // 系统通知
-    Checkin,        // 签到通知
+    Moment,         // 动态通知
     GroupInvite,    // 群组邀请
     FriendRequest,  // 好友请求
     Welcome,        // 欢迎通知

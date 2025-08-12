@@ -55,12 +55,21 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
     let user_id = match parse_auth_message(&auth_message, &state).await {
         Ok(id) => id,
         Err(err_msg) => {
+            // 审计：认证失败
+            state.ws_manager.audit_ws(
+                "ws_auth", "fail", None, None,
+                Some(serde_json::json!({"path": "/ws/"}))
+            ).await;
             let _ = send_message(&mut sender, &err_msg).await;
             return;
         }
     };
 
     info!("用户 {} 认证成功，连接ID: {}", user_id, connection_id);
+    // 审计：认证成功
+    state.ws_manager.audit_ws(
+        "ws_auth", "success", Some(user_id), Some(connection_id.to_string()), None
+    ).await;
 
     // 创建消息通道用于接收要发送给客户端的消息
     let (msg_tx, msg_rx) = tokio::sync::mpsc::unbounded_channel::<ServerMessage>();
@@ -84,6 +93,10 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
         }
         return;
     }
+
+    // 不进行默认房间订阅，交由前端根据需要选择订阅
+
+    // 不在连接阶段下发离线通知。订阅用户私有房间（JoinUserRoom）后再下发，避免未订阅时的无感投递。
 
     // 开始处理消息循环
     handle_message_loop(sender, receiver, connection_id, user_id, ws_manager, msg_rx).await;
@@ -151,7 +164,16 @@ async fn handle_message_loop(
                         debug!("收到客户端消息: {}", text);
                         if let Err(e) = handle_client_message(&text, connection_id, ws_manager).await {
                             error!("处理客户端消息失败: {:?}", e);
+                            // 将错误回传给客户端
+                            let err_msg = ServerMessage::Error { code: e.code.clone(), message: e.message.clone() };
+                            if let Err(se) = ws_manager.send_to_connection(connection_id, err_msg).await {
+                                error!("回传错误消息失败: {:?}", se);
+                            }
                         }
+                        // 任何有效文本消息都视为活动，更新连接活跃时间（包括订阅/心跳等）
+                        ws_manager.connection_manager().update_activity(connection_id).await;
+                        // 指标：记录收到消息
+                        ws_manager.record_ws_message_received();
                     }
                     Some(Ok(Message::Close(_))) => {
                         info!("客户端主动关闭连接");

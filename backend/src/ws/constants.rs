@@ -53,6 +53,7 @@ pub mod message {
 /// WebSocket错误码
 pub mod error_codes {
     pub const INVALID_JSON: &str = "INVALID_JSON";
+    pub const FORBIDDEN: &str = "FORBIDDEN";
     #[allow(dead_code)]
     pub const INVALID_TOKEN: &str = "INVALID_TOKEN";
     #[allow(dead_code)]
@@ -74,6 +75,7 @@ pub mod error_codes {
 /// WebSocket错误消息
 pub mod error_messages {
     pub const INVALID_JSON_FORMAT: &str = "无效的JSON格式";
+    pub const FORBIDDEN: &str = "禁止访问";
     #[allow(dead_code)]
     pub const INVALID_TOKEN: &str = "无效的认证令牌";
     #[allow(dead_code)]

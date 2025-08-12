@@ -2,7 +2,7 @@
 //! 
 //! 专门负责房间订阅和取消订阅管理
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
@@ -21,10 +21,10 @@ use crate::ws::{
 /// - 提供房间查询和统计功能
 #[derive(Debug)]
 pub struct RoomManager {
-    /// 房间订阅 room_id -> Vec<connection_id>
-    room_subscriptions: Arc<RwLock<HashMap<RoomId, Vec<Uuid>>>>,
-    /// 连接订阅的房间 connection_id -> Vec<room_id>
-    connection_rooms: Arc<RwLock<HashMap<Uuid, Vec<RoomId>>>>,
+    /// 房间订阅 room_id -> Set<connection_id>
+    room_subscriptions: Arc<RwLock<HashMap<RoomId, HashSet<Uuid>>>>,
+    /// 连接订阅的房间 connection_id -> Set<room_id>
+    connection_rooms: Arc<RwLock<HashMap<Uuid, HashSet<RoomId>>>>,
 }
 
 impl RoomManager {
@@ -41,19 +41,15 @@ impl RoomManager {
         // 更新房间订阅映射
         {
             let mut room_subscriptions = self.room_subscriptions.write().await;
-            let subscribers = room_subscriptions.entry(room_id.clone()).or_insert_with(Vec::new);
-            if !subscribers.contains(&connection_id) {
-                subscribers.push(connection_id);
-            }
+            let subscribers = room_subscriptions.entry(room_id.clone()).or_insert_with(HashSet::new);
+            subscribers.insert(connection_id);
         }
 
         // 更新连接房间映射
         {
             let mut connection_rooms = self.connection_rooms.write().await;
-            let rooms = connection_rooms.entry(connection_id).or_insert_with(Vec::new);
-            if !rooms.contains(&room_id) {
-                rooms.push(room_id.clone());
-            }
+            let rooms = connection_rooms.entry(connection_id).or_insert_with(HashSet::new);
+            rooms.insert(room_id.clone());
         }
 
         debug!("连接已订阅房间: connection_id={}, room_id={:?}", connection_id, room_id);
@@ -66,7 +62,7 @@ impl RoomManager {
         {
             let mut room_subscriptions = self.room_subscriptions.write().await;
             if let Some(subscribers) = room_subscriptions.get_mut(room_id) {
-                subscribers.retain(|&id| id != connection_id);
+                subscribers.remove(&connection_id);
                 if subscribers.is_empty() {
                     room_subscriptions.remove(room_id);
                 }
@@ -77,7 +73,7 @@ impl RoomManager {
         {
             let mut connection_rooms = self.connection_rooms.write().await;
             if let Some(rooms) = connection_rooms.get_mut(&connection_id) {
-                rooms.retain(|r| r != room_id);
+                rooms.remove(room_id);
                 if rooms.is_empty() {
                     connection_rooms.remove(&connection_id);
                 }
@@ -91,10 +87,11 @@ impl RoomManager {
     /// 连接断开时清理所有房间订阅
     #[allow(dead_code)]
     pub async fn cleanup_connection_subscriptions(&self, connection_id: Uuid) -> Vec<RoomId> {
-        let rooms = {
+        let rooms_set = {
             let mut connection_rooms = self.connection_rooms.write().await;
             connection_rooms.remove(&connection_id).unwrap_or_default()
         };
+        let rooms: Vec<RoomId> = rooms_set.iter().cloned().collect();
 
         // 从所有房间中移除该连接
         {
@@ -103,7 +100,7 @@ impl RoomManager {
 
             for room_id in &rooms {
                 if let Some(subscribers) = room_subscriptions.get_mut(room_id) {
-                    subscribers.retain(|&id| id != connection_id);
+                    subscribers.remove(&connection_id);
                     if subscribers.is_empty() {
                         empty_rooms.push(room_id.clone());
                     }
@@ -126,13 +123,19 @@ impl RoomManager {
     /// 获取房间的所有订阅者
     pub async fn get_room_subscribers(&self, room_id: &RoomId) -> Vec<Uuid> {
         let room_subscriptions = self.room_subscriptions.read().await;
-        room_subscriptions.get(room_id).cloned().unwrap_or_default()
+        room_subscriptions
+            .get(room_id)
+            .map(|set| set.iter().copied().collect())
+            .unwrap_or_default()
     }
 
     /// 获取连接订阅的所有房间
     pub async fn get_connection_rooms(&self, connection_id: Uuid) -> Vec<RoomId> {
         let connection_rooms = self.connection_rooms.read().await;
-        connection_rooms.get(&connection_id).cloned().unwrap_or_default()
+        connection_rooms
+            .get(&connection_id)
+            .map(|set| set.iter().cloned().collect())
+            .unwrap_or_default()
     }
 
     /// 检查连接是否订阅了指定房间
@@ -152,7 +155,7 @@ impl RoomManager {
         let room_subscriptions = self.room_subscriptions.read().await;
         let connection_rooms = self.connection_rooms.read().await;
 
-        let total_subscriptions: usize = room_subscriptions.values().map(|v| v.len()).sum();
+        let total_subscriptions: usize = room_subscriptions.values().map(|s| s.len()).sum();
 
         RoomStats {
             active_rooms: room_subscriptions.len(),

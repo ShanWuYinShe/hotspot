@@ -37,6 +37,10 @@ pub enum AppError {
     
     #[error("第三方服务错误: {0}")]
     ExternalServiceError(String),
+    
+    #[error("功能未实现: {0}")]
+    #[allow(dead_code)]
+    NotImplemented(String),
 }
 
 // 将具体的错误映射到AppError
@@ -71,6 +75,7 @@ impl From<crate::repositories::RepositoryError> for AppError {
             crate::repositories::RepositoryError::NotFound => Self::NotFound("请求的资源不存在".into()),
             crate::repositories::RepositoryError::Database(e) => Self::DatabaseError(format!("数据库操作失败: {}", e)),
             crate::repositories::RepositoryError::InvalidArgument(msg) => Self::BadRequest(msg),
+            crate::repositories::RepositoryError::UuidParse(err) => Self::BadRequest(format!("UUID格式错误: {}", err)),
             crate::repositories::RepositoryError::Other(msg) => Self::InternalServerError(msg),
         }
     }
@@ -120,6 +125,10 @@ impl IntoResponse for AppError {
             AppError::ExternalServiceError(message) => {
                 error!("第三方服务错误: {}", message);
                 (StatusCode::OK, 5002, "外部服务调用失败".into())
+            },
+            AppError::NotImplemented(message) => {
+                warn!("功能未实现: {}", message);
+                (StatusCode::OK, 1006, message.clone())
             },
         };
 

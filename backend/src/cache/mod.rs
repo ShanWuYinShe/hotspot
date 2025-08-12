@@ -9,8 +9,8 @@ pub mod group_activity_cache;
 pub mod notification_cache;
 pub mod location_cache;
 
-// 从子模块中重新导出具体实现
-pub use group_activity_cache::RedisGroupActivityCache;
+// 从子模块中重新导出具体实现（暂不导出未使用实现，避免未使用警告）
+// pub use group_activity_cache::RedisGroupActivityCache;
 
 
 /// 缓存错误类型
@@ -26,6 +26,7 @@ pub enum CacheError {
     #[allow(dead_code)]
     KeyNotFound,
     #[error("其他缓存错误: {0}")]
+    #[allow(dead_code)]
     Other(String),
 }
 
@@ -85,6 +86,7 @@ pub trait GroupActivityCache: Cache {
     
     /// 获取群组活跃度排行
     #[allow(dead_code)]
+    #[cfg(feature = "group_digest_scheduler")]
     fn get_group_activity_ranking(
         &self, 
         group_id: Uuid,

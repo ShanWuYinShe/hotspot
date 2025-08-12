@@ -17,7 +17,6 @@ pub use websocket_notification::WebSocketNotificationService;
 
 /// 通知错误类型
 #[derive(Debug, thiserror::Error)]
-#[allow(dead_code)]
 pub enum NotificationError {
     #[error("WebSocket错误: {0}")]
     WebSocket(String),
@@ -27,13 +26,17 @@ pub enum NotificationError {
     Database(#[from] sqlx::Error),
     #[error("仓库错误: {0}")]
     Repository(#[from] crate::repositories::RepositoryError),
+    #[allow(dead_code)]
     #[error("内部错误: {0}")]
     Internal(String),
+    #[allow(dead_code)]
     #[error("通知服务不可用")]
     ServiceUnavailable,
+    #[allow(dead_code)]
     #[error("用户不在线")]
     UserOffline,
     #[error("其他通知错误: {0}")]
+    #[allow(dead_code)]
     Other(String),
 }
 
@@ -41,12 +44,14 @@ pub enum NotificationError {
 pub type NotificationResult<T> = Result<T, NotificationError>;
 
 /// 通知服务接口
+#[allow(dead_code)]
 pub trait NotificationService: Send + Sync {
     /// 获取服务名称
     #[allow(dead_code)]
     fn name(&self) -> &str;
 
     /// 发送通知
+    #[allow(dead_code)]
     fn send_notification(
         &self,
         user_id: i64,

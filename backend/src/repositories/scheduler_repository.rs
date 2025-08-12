@@ -36,14 +36,22 @@ impl SchedulerRepository for PgSchedulerRepository {
         let pool = self.pool.clone();
         async move {
             // 查询标准:
-            // 1. 群组中至少有一条消息在最近7天内
+            // 1. 群组在最近7天内有活动
             // 2. 群组有至少1个成员超过3天没活动
             let three_days_ago = Utc::now() - Duration::days(3);
             let seven_days_ago = Utc::now() - Duration::days(7);
-            
-            let rows = sqlx::query!(
+
+            #[derive(Debug)]
+            struct InactiveGroupRow {
+                group_id: uuid::Uuid,
+                name: String,
+                last_active_at: chrono::DateTime<Utc>,
+            }
+
+            let rows = sqlx::query_as!(
+                InactiveGroupRow,
                 r#"
-                SELECT DISTINCT g.group_id, g.name, g.last_active_at
+                SELECT DISTINCT g.group_id as "group_id!", g.name as "name!", g.last_active_at as "last_active_at!"
                 FROM groups g
                 JOIN group_members gm ON g.group_id = gm.group_id
                 WHERE 
@@ -66,7 +74,7 @@ impl SchedulerRepository for PgSchedulerRepository {
                 error!("查询需要发送摘要的群组失败: {:?}", e);
                 RepositoryError::Database(e)
             })?;
-            
+
             Ok(rows
                 .into_iter()
                 .map(|row| (row.group_id, row.name, row.last_active_at))

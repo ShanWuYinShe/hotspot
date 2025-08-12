@@ -105,7 +105,7 @@ impl Database {
     /// 检查数据库健康状态
     pub async fn check_health(&self) -> Result<(), Box<dyn std::error::Error>> {
         // 检查PostgreSQL连接
-        match sqlx::query("SELECT 1").execute(&self.pg_pool).await {
+        match sqlx::query_scalar!("SELECT 1 as health_check").fetch_one(&self.pg_pool).await {
             Ok(_) => info!("PostgreSQL健康检查成功"),
             Err(e) => {
                 error!("PostgreSQL健康检查失败: {}", e);

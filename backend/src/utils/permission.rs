@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 use crate::utils::response::AppError;
 use crate::models::constants::group_roles;
+use std::sync::Arc;
 
 /// 检查用户是否是群组成员
 pub async fn check_group_member(
@@ -32,6 +33,7 @@ pub async fn check_group_member(
 }
 
 /// 验证用户是否群主或管理员
+#[allow(dead_code)]
 pub async fn check_group_admin(
     db: &PgPool,
     group_id: &Uuid,
@@ -41,7 +43,7 @@ pub async fn check_group_admin(
         r#"
         SELECT EXISTS (
             SELECT 1 FROM group_members 
-            WHERE group_id = $1 AND user_id = $2 AND role IN ($3, $4)
+            WHERE group_id = $1 AND user_id = $2 AND role::text IN ($3, $4)
         ) as "exists!"
         "#,
         group_id,
@@ -60,6 +62,7 @@ pub async fn check_group_admin(
 }
 
 /// 验证用户是否群主
+#[allow(dead_code)]
 pub async fn check_group_owner(
     db: &PgPool,
     group_id: &Uuid,
@@ -85,33 +88,8 @@ pub async fn check_group_owner(
     Ok(is_owner)
 }
 
-/// 检查用户是否有权操作签到（验证是否是该签到的创建者）
-pub async fn check_checkin_owner(
-    db: &PgPool,
-    checkin_id: &Uuid,
-    user_id: i64,
-) -> Result<bool, AppError> {
-    let is_owner = sqlx::query_scalar!(
-        r#"
-        SELECT EXISTS (
-            SELECT 1 FROM checkins 
-            WHERE checkin_id = $1 AND user_id = $2
-        ) as "exists!"
-        "#,
-        checkin_id,
-        user_id
-    )
-    .fetch_one(db)
-    .await
-    .map_err(|e| {
-        error!("检查签到所有权失败: {:?}", e);
-        AppError::InternalServerError("检查签到权限失败".to_string())
-    })?;
-
-    Ok(is_owner)
-}
-
 /// 检查用户是否有权操作群组消息（验证是否是该消息的发送者）
+#[allow(dead_code)]
 pub async fn check_group_message_owner(
     db: &PgPool,
     message_id: &Uuid,
@@ -138,6 +116,7 @@ pub async fn check_group_message_owner(
 }
 
 /// 检查用户是否有权操作私聊消息（验证是否是该消息的发送者）
+#[allow(dead_code)]
 pub async fn check_direct_message_owner(
     db: &PgPool,
     message_id: &Uuid,
@@ -203,6 +182,7 @@ pub async fn require_group_member(
 }
 
 /// 要求用户是群组管理员，否则返回错误
+#[allow(dead_code)]
 pub async fn require_group_admin(
     db: &PgPool,
     group_id: &Uuid,
@@ -216,6 +196,7 @@ pub async fn require_group_admin(
 }
 
 /// 要求用户是群主，否则返回错误
+#[allow(dead_code)]
 pub async fn require_group_owner(
     db: &PgPool,
     group_id: &Uuid,
@@ -228,20 +209,8 @@ pub async fn require_group_owner(
     Ok(())
 }
 
-/// 要求用户是签到创建者，否则返回错误
-pub async fn require_checkin_owner(
-    db: &PgPool,
-    checkin_id: &Uuid,
-    user_id: i64,
-) -> Result<(), AppError> {
-    let is_owner = check_checkin_owner(db, checkin_id, user_id).await?;
-    if !is_owner {
-        return Err(AppError::Forbidden("您不是该签到的创建者".to_string()));
-    }
-    Ok(())
-}
-
 /// 要求用户是群组消息发送者，否则返回错误
+#[allow(dead_code)]
 pub async fn require_group_message_owner(
     db: &PgPool,
     message_id: &Uuid,
@@ -255,6 +224,7 @@ pub async fn require_group_message_owner(
 }
 
 /// 要求用户是私聊消息发送者，否则返回错误
+#[allow(dead_code)]
 pub async fn require_direct_message_owner(
     db: &PgPool,
     message_id: &Uuid,
@@ -278,4 +248,24 @@ pub async fn require_conversation_member(
         return Err(AppError::Forbidden("您不是该对话的参与者".to_string()));
     }
     Ok(())
+}
+
+/// 权限服务：封装基于数据库的权限校验，便于注入与测试
+#[derive(Clone)]
+pub struct PermissionService {
+    db: Arc<PgPool>,
+}
+
+impl PermissionService {
+    pub fn new(db: PgPool) -> Self {
+        Self { db: Arc::new(db) }
+    }
+
+    pub async fn require_group_member(&self, group_id: &Uuid, user_id: i64) -> Result<(), AppError> {
+        require_group_member(&self.db, group_id, user_id).await
+    }
+
+    pub async fn require_conversation_member(&self, conversation_id: &Uuid, user_id: i64) -> Result<(), AppError> {
+        require_conversation_member(&self.db, conversation_id, user_id).await
+    }
 }

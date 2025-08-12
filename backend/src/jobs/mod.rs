@@ -1,5 +1,4 @@
 //! 作业服务模块
-//! 作业处理模块 - 使用模块化架构实现
 
 pub mod handler;
 pub mod dispatcher;
@@ -14,17 +13,16 @@ use std::sync::Arc;
 
 use tracing::{info, warn};
 
-use crate::cache::RedisGroupActivityCache;
+use crate::cache::group_activity_cache::RedisGroupActivityCache;
 use crate::cache::location_cache::RedisLocationCache;
 use crate::services::notification::WebSocketNotificationService;
 
 use crate::repositories::PgGroupRepository;
-use crate::repositories::PgLocationRepository;
 use crate::repositories::user_repository::PgUserRepository;
 
 use crate::utils::job_queue::JobQueue;
 use self::group_handlers::{GroupDigestHandler, GroupMemberActivityHandler};
-use self::location_handlers::{CheckinIndexHandler, NearbyCheckinNotificationHandler};
+use self::location_handlers::MomentIndexHandler;
 use self::user_handlers::{WelcomeEmailHandler, NotificationHandler, LocationIndexHandler};
 use self::group_models::GroupActivityType;
 use self::dispatcher::JobDispatcher;
@@ -53,7 +51,7 @@ impl JobService {
         let pg_pool = db.pg_pool.clone();
 
         let group_repository = Arc::new(PgGroupRepository::new(pg_pool.clone()));
-        let _location_repository = Arc::new(PgLocationRepository::new(pg_pool.clone()));
+        // 旧的 PgLocationRepository 已弃用
         let user_repository = Arc::new(PgUserRepository::new(pg_pool.clone()));
         
         let group_activity_cache = Arc::new(RedisGroupActivityCache::new(
@@ -77,11 +75,8 @@ impl JobService {
         let group_activity_handler = Arc::new(GroupMemberActivityHandler::new(
             group_activity_cache.clone(),
         ));
-        let checkin_index_handler = Arc::new(CheckinIndexHandler::new(
-            location_cache.clone(), // Pass Option<Arc<RedisLocationCache>>
-        ));
-        let nearby_checkin_notification_handler = Arc::new(NearbyCheckinNotificationHandler::new(
-            notification_service.clone(),
+        let moment_index_handler = Arc::new(MomentIndexHandler::new(
+            location_cache.clone(),
         ));
         let welcome_email_handler = Arc::new(WelcomeEmailHandler::new(
             user_repository.clone(),
@@ -97,8 +92,7 @@ impl JobService {
             job_queue.clone(),
             Some(group_digest_handler),
             Some(group_activity_handler),
-            Some(checkin_index_handler),
-            Some(nearby_checkin_notification_handler),
+            Some(moment_index_handler),
             Some(welcome_email_handler),
             Some(notification_handler),
             Some(location_index_handler),
@@ -154,43 +148,23 @@ impl JobService {
         ).await
     }
     
-    /// 分派签到索引任务
-    pub async fn dispatch_checkin_index(
+    /// 分派生活瞬间索引任务
+    pub async fn dispatch_moment_index(
         &self,
-        checkin_id: String,
+        moment_id: String,
         user_id: i64,
         latitude: f64,
         longitude: f64,
     ) -> Result<(), lapin::Error> {
-        self.dispatcher.dispatch_checkin_index(
-            checkin_id,
+        self.dispatcher.dispatch_moment_index(
+            moment_id,
             user_id,
             latitude,
             longitude
         ).await
     }
     
-    /// 分派附近签到通知任务
-    pub async fn dispatch_nearby_checkin_notification(
-        &self,
-        checkin_id: String,
-        creator_id: i64,
-        creator_nickname: String,
-        nearby_user_ids: Vec<i64>,
-        latitude: f64,
-        longitude: f64,
-        content: String,
-    ) -> Result<(), lapin::Error> {
-        self.dispatcher.dispatch_nearby_checkin_notification(
-            checkin_id,
-            creator_id,
-            creator_nickname,
-            nearby_user_ids,
-            latitude,
-            longitude,
-            content
-        ).await
-    }
+    // 旧的“附近生活瞬间通知任务”分派接口已移除
     
     /// 分派欢迎邮件任务
     pub async fn dispatch_welcome_email(
@@ -226,6 +200,7 @@ impl JobService {
     }
     
     /// 分派位置索引任务
+    #[allow(dead_code)]
     pub async fn dispatch_location_index(
         &self,
         user_id: i64,

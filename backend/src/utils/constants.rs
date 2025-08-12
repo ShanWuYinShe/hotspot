@@ -17,8 +17,10 @@ pub mod defaults {
 
     /// 默认分页设置
     pub const DEFAULT_PAGE_SIZE: i64 = 10;
+    #[allow(dead_code)]
     pub const DEFAULT_LARGE_PAGE_SIZE: i64 = 20;
     pub const MAX_PAGE_SIZE: i64 = 50;
+    #[allow(dead_code)]
     pub const MAX_LARGE_PAGE_SIZE: i64 = 100;
 
     /// 搜索限制
@@ -26,8 +28,11 @@ pub mod defaults {
     pub const MAX_SEARCH_KEYWORD_LENGTH: usize = 50;
 
     /// 用户设置默认值
+    #[allow(dead_code)]
     pub const DEFAULT_QUIET_HOURS_START: &str = "22:00";
+    #[allow(dead_code)]
     pub const DEFAULT_QUIET_HOURS_END: &str = "08:00";
+    #[allow(dead_code)]
     pub const DEFAULT_NOTIFICATION_RADIUS_KM: f64 = 5.0;
 }
 
@@ -37,6 +42,7 @@ pub mod validation {
     pub const MAX_PASSWORD_LENGTH: usize = 20;
     pub const MAX_LOGIN_ID_LENGTH: usize = 50;
     pub const MAX_NICKNAME_LENGTH: usize = 50;
+    #[allow(dead_code)]
     pub const MAX_LOCATION_NAME_LENGTH: usize = 100;
 }
 

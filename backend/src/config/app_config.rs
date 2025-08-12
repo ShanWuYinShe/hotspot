@@ -14,6 +14,10 @@ mod config_defaults {
     pub const DEFAULT_DB_IDLE_TIMEOUT_SECS: u64 = 600;  // 10分钟
     pub const DEFAULT_DB_CONNECT_TIMEOUT_SECS: u64 = 10;
     
+    // WebSocket清理默认配置
+    pub const DEFAULT_WS_CLEANUP_INTERVAL_SECS: u64 = 600; // 10分钟
+    pub const DEFAULT_WS_INACTIVE_TIMEOUT_SECS: u64 = 1800; // 30分钟
+    
     // JWT默认配置
     pub const DEFAULT_JWT_ACCESS_TOKEN_EXPIRY_SECS: u64 = 3600;    // 1小时
     pub const DEFAULT_JWT_REFRESH_TOKEN_EXPIRY_SECS: u64 = 2592000; // 30天
@@ -21,19 +25,24 @@ mod config_defaults {
     // 服务器默认配置
     pub const DEFAULT_HOST: &str = "0.0.0.0";
     pub const DEFAULT_PORT: u16 = 8080;
+    #[allow(dead_code)]
     pub const DEFAULT_CORS_ENABLED: bool = true;
     
     // 环境默认值
+    #[allow(dead_code)]
     pub const DEFAULT_ENVIRONMENT: &str = "development";
     
+    #[allow(dead_code)]
     pub fn default_db_max_lifetime() -> Duration {
         Duration::from_secs(DEFAULT_DB_MAX_LIFETIME_SECS)
     }
     
+    #[allow(dead_code)]
     pub fn default_db_idle_timeout() -> Duration {
         Duration::from_secs(DEFAULT_DB_IDLE_TIMEOUT_SECS)
     }
     
+    #[allow(dead_code)]
     pub fn default_db_connect_timeout() -> Duration {
         Duration::from_secs(DEFAULT_DB_CONNECT_TIMEOUT_SECS)
     }
@@ -95,6 +104,15 @@ pub struct ServerConfig {
     pub port: u16,
 }
 
+/// WebSocket 配置
+#[derive(Debug, Clone)]
+pub struct WebSocketConfig {
+    /// 调度器清理间隔（秒）
+    pub cleanup_interval_secs: u64,
+    /// 判定为不活跃并清理的超时（秒）
+    pub inactive_timeout_secs: u64,
+}
+
 /// 作业队列配置
 #[derive(Debug, Clone)]
 pub struct JobQueueConfig {
@@ -139,6 +157,7 @@ pub struct AppConfig {
     pub auth: AuthConfig,
     pub server: ServerConfig,
     pub job_queue: JobQueueConfig,
+    pub websocket: WebSocketConfig,
 }
 
 impl AppConfig {
@@ -231,6 +250,18 @@ impl AppConfig {
                 .unwrap_or(config_defaults::DEFAULT_PORT),
         };
         
+        // WebSocket 配置
+        let websocket_config = WebSocketConfig {
+            cleanup_interval_secs: env::var("WS_CLEANUP_INTERVAL_SECS")
+                .unwrap_or_else(|_| config_defaults::DEFAULT_WS_CLEANUP_INTERVAL_SECS.to_string())
+                .parse()
+                .unwrap_or(config_defaults::DEFAULT_WS_CLEANUP_INTERVAL_SECS),
+            inactive_timeout_secs: env::var("WS_INACTIVE_TIMEOUT_SECS")
+                .unwrap_or_else(|_| config_defaults::DEFAULT_WS_INACTIVE_TIMEOUT_SECS.to_string())
+                .parse()
+                .unwrap_or(config_defaults::DEFAULT_WS_INACTIVE_TIMEOUT_SECS),
+        };
+        
         // 作业队列配置
         let job_queue_config = JobQueueConfig {
             amqp_url: env::var("AMQP_URL").ok(),
@@ -247,6 +278,7 @@ impl AppConfig {
             auth: auth_config,
             server: server_config,
             job_queue: job_queue_config,
+            websocket: websocket_config,
         })
     }
     
@@ -264,6 +296,11 @@ impl AppConfig {
         }
         
         info!("服务器: {}:{}", self.server.host, self.server.port);
+        info!(
+            "WebSocket清理: interval={}s, inactive_timeout={}s",
+            self.websocket.cleanup_interval_secs,
+            self.websocket.inactive_timeout_secs
+        );
         
         if !self.environment.is_prod() && self.auth.jwt_secret == "unsafe_jwt_secret_please_change_in_production" {
             warn!("使用默认JWT密钥，不建议在生产环境中使用");

@@ -3,6 +3,7 @@
 //! 专门负责消息的路由和分发
 
 use std::sync::Arc;
+use futures::stream::{FuturesUnordered, StreamExt};
 use tracing::{debug, warn};
 
 use crate::ws::{
@@ -58,11 +59,15 @@ impl MessageRouter {
             return Ok(());
         }
 
-        let mut errors = Vec::new();
+        let mut tasks = FuturesUnordered::new();
         for connection_id in subscribers {
-            if let Err(e) = self.connection_manager.send_to_connection(connection_id, message.clone()).await {
-                errors.push((connection_id, e));
-            }
+            let msg = message.clone();
+            let cm = self.connection_manager.clone();
+            tasks.push(async move { (connection_id, cm.send_to_connection(connection_id, msg).await) });
+        }
+        let mut errors = Vec::new();
+        while let Some((connection_id, res)) = tasks.next().await {
+            if let Err(e) = res { errors.push((connection_id, e)); }
         }
 
         if !errors.is_empty() {
@@ -72,29 +77,7 @@ impl MessageRouter {
         Ok(())
     }
 
-    /// 广播消息给所有连接
-    pub async fn broadcast(&self, message: ServerMessage) -> WsResult<()> {
-        debug!("广播消息: {:?}", message);
-        
-        let online_users = self.connection_manager.get_online_users().await;
-        if online_users.is_empty() {
-            debug!("没有在线用户");
-            return Ok(());
-        }
-
-        let mut errors = Vec::new();
-        for user_id in online_users {
-            if let Err(e) = self.connection_manager.send_to_user(user_id, message.clone()).await {
-                errors.push((user_id, e));
-            }
-        }
-
-        if !errors.is_empty() {
-            warn!("广播消息时部分用户发送失败: {:?}", errors);
-        }
-
-        Ok(())
-    }
+    // 全局广播已在项目规范中禁用，如需恢复请在策略层精确选择目标用户
 
     /// 发送消息给房间内除指定用户外的所有用户
     pub async fn send_to_room_except(&self, room_id: &RoomId, message: ServerMessage, except_user_id: i64) -> WsResult<()> {
@@ -109,16 +92,16 @@ impl MessageRouter {
         // 获取要排除的用户的连接
         let except_connections = self.connection_manager.get_user_connections(except_user_id).await;
 
-        let mut errors = Vec::new();
+        let mut tasks = FuturesUnordered::new();
         for connection_id in subscribers {
-            // 跳过指定用户的连接
-            if except_connections.contains(&connection_id) {
-                continue;
-            }
-
-            if let Err(e) = self.connection_manager.send_to_connection(connection_id, message.clone()).await {
-                errors.push((connection_id, e));
-            }
+            if except_connections.contains(&connection_id) { continue; }
+            let msg = message.clone();
+            let cm = self.connection_manager.clone();
+            tasks.push(async move { (connection_id, cm.send_to_connection(connection_id, msg).await) });
+        }
+        let mut errors = Vec::new();
+        while let Some((connection_id, res)) = tasks.next().await {
+            if let Err(e) = res { errors.push((connection_id, e)); }
         }
 
         if !errors.is_empty() {

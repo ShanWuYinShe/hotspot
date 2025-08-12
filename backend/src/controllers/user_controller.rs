@@ -3,7 +3,7 @@ use axum::{
     extract::{Extension, State},
 };
 use std::sync::Arc;
-use tracing::{debug, info, error};
+use tracing::{debug, info};
 
 use crate::{
     middleware::auth::AppState,
@@ -13,11 +13,9 @@ use crate::{
             DEFAULT_USER_NICKNAME, DEFAULT_TEMP_USER_NICKNAME, 
             MAX_SEARCH_RADIUS_METERS, MAX_SEARCH_KEYWORD_LENGTH,
             DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE,
-            DEFAULT_QUIET_HOURS_START, DEFAULT_QUIET_HOURS_END
         },
-        constants::messages::WELCOME_TEMP_USER_MESSAGE
+        // constants::messages::WELCOME_TEMP_USER_MESSAGE
     },
-    repositories::RepositoryError,
     models::{
         api::user::AuthUser,
         api::user::{
@@ -28,10 +26,12 @@ use crate::{
         },
         user_settings::UserSettings,
     },
-    repositories::user_repository::UserRepository,
     utils::response::{ApiResponse, AppError, PaginatedResponse, PaginationMeta, success_response},
     validators::{common_validator, user_validator},
 };
+
+use serde_json::json;
+use crate::utils::events::{DomainEvent};
 
 /// 用户注册
 ///
@@ -87,7 +87,11 @@ pub async fn register(
         expires_at: user_login_result.expires_at,
     };
 
+    // 发布领域事件（默认 Noop）
+    state.event_bus.publish(DomainEvent::UserRegistered { user_id: user_login_result.user_id.into() }).await;
+
     // 分派欢迎邮件任务
+    #[cfg(feature = "jobs")]
     if let Some(job_service) = &state.job_service {
         if let Err(e) = job_service.dispatch_welcome_email(
             user_login_result.user_id,
@@ -172,6 +176,7 @@ pub async fn create_temp_user(
     };
 
     // 分派欢迎通知任务
+    #[cfg(feature = "jobs")]
     if let Some(job_service) = &state.job_service {
         if let Err(e) = job_service.dispatch_notification(
             user_login_result.user_id,
@@ -183,6 +188,9 @@ pub async fn create_temp_user(
             info!("已分派欢迎通知任务: user_id={}", user_login_result.user_id);
         }
     }
+
+    // 发布领域事件（默认 Noop）
+    state.event_bus.publish(DomainEvent::TempUserCreated { user_id: user_login_result.user_id.into() }).await;
 
     info!(
         "【Controller】临时用户创建成功: user_id={}",
@@ -396,11 +404,12 @@ pub async fn update_location(
         .await?;
 
     // 分派位置索引更新任务
+    #[cfg(feature = "jobs")]
     if let Some(job_service) = &state.job_service {
-        // 生成一个虚拟的检查点ID用于位置更新
-        let virtual_checkin_id = format!("location_update_{}", current_user.user_id);
-        if let Err(e) = job_service.dispatch_checkin_index(
-            virtual_checkin_id,
+        // 生成一个虚拟的生活瞬间ID用于位置更新
+        let virtual_moment_id = format!("location_update_{}", current_user.user_id);
+        if let Err(e) = job_service.dispatch_moment_index(
+            virtual_moment_id,
             current_user.user_id,
             payload.longitude,
             payload.latitude,
@@ -538,4 +547,236 @@ pub async fn check_auth_status(
     }))
 }
 
+/// 公开健康检查
+/// 
+/// 检查服务状态，不需要认证
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/health",
+    tag = "认证",
+    responses(
+        (status = 200, description = "服务状态正常", body = ApiResponse<serde_json::Value>)
+    )
+)]
+#[debug_handler]
+pub async fn public_health_check(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    info!("【Controller】公开健康检查");
+    
+    // 检查数据库连接
+    let _db_health = state.health_service.check_database().await
+        .map_err(|e| AppError::InternalServerError(format!("数据库健康检查失败: {:?}", e)))?;
+    
+    Ok(success_response(json!({
+        "status": "healthy",
+        "service": "hotspot-api",
+        "timestamp": chrono::Utc::now(),
+        "version": env!("CARGO_PKG_VERSION")
+    })))
+}
+
 // 通知历史和未读数量相关功能已移除，这些应该通过WebSocket实时获取，而非HTTP API
+
+/// 更新用户昵称
+///
+/// 更新当前用户的昵称
+#[utoipa::path(
+    post,
+    path = "/api/v1/user/update_nickname",
+    tag = "用户",
+    request_body = UpdateNicknameRequest,
+    responses(
+        (status = 200, description = "昵称更新成功", body = ApiResponse<()>),
+        (status = 400, description = "请求参数错误", body = ApiResponse<()>),
+        (status = 401, description = "未认证", body = ApiResponse<()>)
+    )
+)]
+#[debug_handler]
+pub async fn update_nickname(
+    Extension(current_user): Extension<AuthUser>,
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<crate::models::api::user::UpdateNicknameRequest>,
+) -> Result<Json<ApiResponse<()>>, AppError> {
+    info!("【Controller】更新昵称: user_id={}, new_nickname={}", 
+          current_user.user_id, payload.nickname);
+
+    // 验证昵称
+    user_validator::validate_nickname(&payload.nickname)?;
+
+    // 更新昵称
+    state
+        .user_service
+        .update_nickname(current_user.user_id, &payload.nickname)
+        .await
+        .map_err(|e| AppError::InternalServerError(format!("更新昵称失败: {:?}", e)))?;
+
+    info!("【Controller】昵称更新成功: user_id={}", current_user.user_id);
+    Ok(success_response(()))
+}
+
+/// 升级临时账户
+///
+/// 将临时用户升级为正式用户
+#[utoipa::path(
+    post,
+    path = "/api/v1/user/upgrade",
+    tag = "用户",
+    request_body = UpgradeAccountRequest,
+    responses(
+        (status = 200, description = "账户升级成功", body = ApiResponse<AuthResponse>),
+        (status = 400, description = "请求参数错误", body = ApiResponse<()>),
+        (status = 401, description = "未认证", body = ApiResponse<()>),
+        (status = 409, description = "登录ID已存在", body = ApiResponse<()>)
+    )
+)]
+#[debug_handler]
+pub async fn upgrade_account(
+    Extension(current_user): Extension<AuthUser>,
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<crate::models::api::user::UpgradeAccountRequest>,
+) -> Result<Json<ApiResponse<AuthResponse>>, AppError> {
+    info!("【Controller】升级账户: user_id={}, login_id={}", 
+          current_user.user_id, payload.login_id);
+
+    // 验证请求参数
+    user_validator::validate_user_registration(
+        &payload.login_id,
+        Some(&payload.password),
+        None,
+    )?;
+
+    // 升级账户
+    let auth_response = state
+        .user_service
+        .upgrade_temp_user(current_user.user_id, &payload.login_id, &payload.password)
+        .await
+        .map_err(|e| AppError::InternalServerError(format!("升级账户失败: {:?}", e)))?;
+
+    info!("【Controller】账户升级成功: user_id={}", current_user.user_id);
+    Ok(success_response(auth_response))
+}
+
+/// 获取用户设置
+///
+/// 获取当前用户的设置信息
+#[utoipa::path(
+    get,
+    path = "/api/v1/user/get_settings",
+    tag = "用户",
+    responses(
+        (status = 200, description = "获取设置成功", body = ApiResponse<UserSettings>),
+        (status = 401, description = "未认证", body = ApiResponse<()>)
+    )
+)]
+#[debug_handler]
+pub async fn get_user_settings(
+    Extension(current_user): Extension<AuthUser>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<ApiResponse<UserSettings>>, AppError> {
+    info!("【Controller】获取用户设置: user_id={}", current_user.user_id);
+
+    let settings = state
+        .user_service
+        .get_user_settings(current_user.user_id)
+        .await
+        .map_err(|e| AppError::InternalServerError(format!("获取用户设置失败: {:?}", e)))?;
+
+    info!("【Controller】获取用户设置成功: user_id={}", current_user.user_id);
+    Ok(success_response(settings))
+}
+
+/// 更新用户设置
+///
+/// 更新当前用户的设置信息
+#[utoipa::path(
+    post,
+    path = "/api/v1/user/update_settings",
+    tag = "用户",
+    request_body = UserSettingsRequest,
+    responses(
+        (status = 200, description = "设置更新成功", body = ApiResponse<()>),
+        (status = 400, description = "请求参数错误", body = ApiResponse<()>),
+        (status = 401, description = "未认证", body = ApiResponse<()>)
+    )
+)]
+#[debug_handler]
+pub async fn update_user_settings(
+    Extension(current_user): Extension<AuthUser>,
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<crate::models::api::user::UserSettingsRequest>,
+) -> Result<Json<ApiResponse<()>>, AppError> {
+    info!("【Controller】更新用户设置: user_id={}", current_user.user_id);
+
+    // 更新设置
+    state
+        .user_service
+        .update_user_settings(current_user.user_id, payload)
+        .await
+        .map_err(|e| AppError::InternalServerError(format!("更新用户设置失败: {:?}", e)))?;
+
+    info!("【Controller】用户设置更新成功: user_id={}", current_user.user_id);
+    Ok(success_response(()))
+}
+
+/// 检查密码状态
+///
+/// 检查用户是否已设置密码
+#[utoipa::path(
+    get,
+    path = "/api/v1/user/password-status",
+    tag = "用户",
+    responses(
+        (status = 200, description = "检查成功", body = ApiResponse<PasswordStatusResponse>),
+        (status = 401, description = "未认证", body = ApiResponse<()>)
+    )
+)]
+#[debug_handler]
+pub async fn check_password_status(
+    Extension(current_user): Extension<AuthUser>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<ApiResponse<crate::models::api::user::PasswordStatusResponse>>, AppError> {
+    info!("【Controller】检查密码状态: user_id={}", current_user.user_id);
+
+    let is_password_set = state
+        .user_service
+        .is_password_set(current_user.user_id)
+        .await
+        .map_err(|e| AppError::InternalServerError(format!("检查密码状态失败: {:?}", e)))?;
+
+    let response = crate::models::api::user::PasswordStatusResponse { is_password_set };
+    
+    info!("【Controller】密码状态检查成功: user_id={}, is_password_set={}", 
+          current_user.user_id, is_password_set);
+    Ok(success_response(response))
+}
+
+/// 删除用户账户
+///
+/// 删除当前用户账户及所有相关数据
+#[utoipa::path(
+    post,
+    path = "/api/v1/user/delete",
+    tag = "用户",
+    responses(
+        (status = 200, description = "账户删除成功", body = ApiResponse<()>),
+        (status = 401, description = "未认证", body = ApiResponse<()>)
+    )
+)]
+#[debug_handler]
+pub async fn delete_account(
+    Extension(current_user): Extension<AuthUser>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<ApiResponse<()>>, AppError> {
+    info!("【Controller】删除账户: user_id={}", current_user.user_id);
+
+    // 删除用户账户
+    state
+        .user_service
+        .delete_user(current_user.user_id)
+        .await
+        .map_err(|e| AppError::InternalServerError(format!("删除账户失败: {:?}", e)))?;
+
+    info!("【Controller】账户删除成功: user_id={}", current_user.user_id);
+    Ok(success_response(()))
+}

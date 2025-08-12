@@ -18,6 +18,10 @@ pub enum ClientMessage {
     Connect { token: String },
     /// 心跳检测
     Ping,
+    /// 加入当前用户的私有房间（用于接收系统通知等）
+    JoinUserRoom,
+    /// 离开当前用户的私有房间
+    LeaveUserRoom,
     /// 加入群组房间
     JoinGroup { group_id: Uuid },
     /// 离开群组房间
@@ -48,7 +52,7 @@ pub struct MessageData {
 }
 
 /// 房间类型
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
 pub enum RoomType {
     Group,
@@ -65,6 +69,20 @@ pub enum MessageType {
     Video,
     Location,
     File,
+}
+
+impl MessageType {
+    pub fn from_string_or_default(s: &str) -> Self {
+        match s.to_lowercase().as_str() {
+            "text" => MessageType::Text,
+            "image" => MessageType::Image,
+            "voice" => MessageType::Voice,
+            "video" => MessageType::Video,
+            "file" => MessageType::File,
+            "location" => MessageType::Location,
+            _ => MessageType::Text,
+        }
+    }
 }
 
 // ==================== 服务器到客户端的消息 ====================
@@ -156,7 +174,7 @@ pub enum SystemNotificationType {
     GroupInvitation,
     System,
     Announcement,
-    NewCheckIn,
+    NewMoment,
     GroupDigest,
 }
 
@@ -226,6 +244,13 @@ impl RoomId {
     pub fn from_user(user_id: i64) -> Self {
         RoomId::User(user_id)
     }
+    
+    pub fn from_room_type(id: Uuid, room_type: super::message_types::RoomType) -> Self {
+        match room_type {
+            RoomType::Group => RoomId::Group(id),
+            RoomType::Conversation => RoomId::Conversation(id),
+        }
+    }
 }
 
 impl std::fmt::Display for RoomId {
@@ -238,43 +263,4 @@ impl std::fmt::Display for RoomId {
     }
 }
 
-/// WebSocket错误类型
-#[derive(Debug, Clone, Serialize)]
-pub struct WsError {
-    pub code: String,
-    pub message: String,
-}
-
-impl WsError {
-    #[allow(dead_code)]
-    pub fn invalid_message(message: &str) -> Self {
-        Self {
-            code: "INVALID_MESSAGE".to_string(),
-            message: message.to_string(),
-        }
-    }
-    
-    #[allow(dead_code)]
-    pub fn unauthorized() -> Self {
-        Self {
-            code: "UNAUTHORIZED".to_string(),
-            message: "未授权访问".to_string(),
-        }
-    }
-    
-    #[allow(dead_code)]
-    pub fn room_not_found() -> Self {
-        Self {
-            code: "ROOM_NOT_FOUND".to_string(),
-            message: "房间不存在".to_string(),
-        }
-    }
-    
-    #[allow(dead_code)]
-    pub fn internal_error() -> Self {
-        Self {
-            code: "INTERNAL_ERROR".to_string(),
-            message: "服务器内部错误".to_string(),
-        }
-    }
-}
+// 移除重复的 WsError 定义，请使用 crate::ws::errors::WsError

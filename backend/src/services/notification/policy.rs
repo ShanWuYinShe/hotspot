@@ -107,20 +107,31 @@ impl NotificationPolicyService {
 
         // 2. 获取附近用户
         if self.policy.enable_nearby_notifications {
-            // TODO: 需要获取用户的当前位置才能查找附近用户
-            // match self.user_repository.find_nearby_users(longitude, latitude, self.policy.nearby_radius_km, 0, 100, user_id).await {
-            //     Ok((nearby_users, _, _)) => {
-            //         let before_count = target_users.len();
-            //         for user in nearby_users {
-            //             target_users.insert(user.user_id);
-            //         }
-            //         info!("已添加 {} 个附近用户到状态通知目标", target_users.len() - before_count);
-            //     }
-            //     Err(e) => {
-            //         warn!("获取附近用户失败: {:?}", e);
-            //     }
-            // }
-            warn!("附近用户通知暂时禁用，需要用户位置信息");
+            match self.user_repository.get_user_location(user_id).await {
+                Ok(Some((lat, lon))) => {
+                    match self.user_repository
+                        .find_nearby_users(lon, lat, self.policy.nearby_radius_km * 1000.0, 0, 100, user_id)
+                        .await
+                    {
+                        Ok((nearby_users, _, _)) => {
+                            let before_count = target_users.len();
+                            for user in nearby_users {
+                                target_users.insert(user.user_id);
+                            }
+                            info!("已添加 {} 个附近用户到状态通知目标", target_users.len() - before_count);
+                        }
+                        Err(e) => {
+                            warn!("获取附近用户失败: {:?}", e);
+                        }
+                    }
+                }
+                Ok(None) => {
+                    warn!("用户 {} 的位置信息缺失，跳过附近用户通知", user_id);
+                }
+                Err(e) => {
+                    warn!("查询用户位置信息失败: {:?}", e);
+                }
+            }
         }
 
         let final_targets: Vec<i64> = target_users.into_iter().collect();
@@ -153,16 +164,19 @@ impl NotificationPolicyService {
         group_id: Option<uuid::Uuid>,
     ) -> RepositoryResult<Vec<i64>> {
         // 如果指定了群组ID，获取该群组的所有成员
-        if let Some(_gid) = group_id {
-            // TODO: 需要实现获取群组成员的方法
-            return Ok(vec![]);  // 临时修复
-            // return self.group_repository.get_group_members(gid, 0, 1000).await
-            //     .map(|(members, _, _)| members.into_iter().map(|(user_id, _, _, _, _, _)| user_id).collect());
+        if let Some(gid) = group_id {
+            // 通过用户仓库获取群组成员ID列表
+            match self.user_repository.get_group_member_ids(gid).await {
+                Ok(member_ids) => return Ok(member_ids),
+                Err(e) => {
+                    warn!("获取群组成员失败: {:?}", e);
+                    return Ok(vec![]);
+                }
+            }
         }
 
-        // 否则获取用户所在所有群组的成员
-        // TODO: 需要实现获取用户群组成员的方法
-        Ok(vec![])  // 临时修复
+        // 否则获取用户所在所有群组的成员（暂未实现，保持为空以避免过度通知）
+        Ok(vec![])
         // self.user_repository.find_group_members_for_user(user_id).await
     }
 

@@ -51,9 +51,9 @@ pub struct ConversationRow {
     pub last_message_preview: Option<String>,
 }
 
-/// 带有ID字段的群组消息查询结果（用于分页）
+/// 群组消息查询结果（带ID用于分页）
 #[derive(Debug, Clone)]
-pub struct GroupMessageWithId {
+pub struct GroupMessageWithIdRow {
     pub message_id: Uuid,
     pub group_id: Uuid,
     pub sender_id: i64,
@@ -84,21 +84,7 @@ impl Repository for PgMessageRepository {
 }
 
 impl PgMessageRepository {
-    #[allow(dead_code)]
-    pub async fn check_conversation_exists(&self, conversation_id: Uuid) -> RepositoryResult<bool> {
-        let exists = sqlx::query_scalar!(
-            r#"SELECT EXISTS(SELECT 1 FROM conversations WHERE conversation_id = $1) as "exists!""#,
-            conversation_id
-        )
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|e| {
-            error!("查询私信会话失败: {:?}", e);
-            RepositoryError::Database(e)
-        })?;
-
-        Ok(exists)
-    }
+    
 
     pub async fn check_user_in_conversation(
         &self,
@@ -148,21 +134,7 @@ impl PgMessageRepository {
         Ok(exists)
     }
 
-    #[allow(dead_code)]
-    pub async fn check_group_exists(&self, group_id: Uuid) -> RepositoryResult<bool> {
-        let exists = sqlx::query_scalar!(
-            r#"SELECT EXISTS(SELECT 1 FROM groups WHERE group_id = $1) as "exists!""#,
-            group_id
-        )
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|e| {
-            error!("查询群组失败: {:?}", e);
-            RepositoryError::Database(e)
-        })?;
-
-        Ok(exists)
-    }
+    
 
     pub async fn get_other_user_in_conversation(
         &self,
@@ -200,57 +172,7 @@ impl PgMessageRepository {
         Ok(other_user_id)
     }
 
-    #[allow(dead_code)]
-    pub async fn create_dm_session(&self, user_1: i64, user_2: i64) -> RepositoryResult<Uuid> {
-        // 确保 user_1 总是较小的用户ID，保证一致性
-        let (smaller_id, larger_id) = if user_1 < user_2 {
-            (user_1, user_2)
-        } else {
-            (user_2, user_1)
-        };
-
-        // 首先查找是否已存在会话
-        let existing_session = sqlx::query_scalar!(
-            r#"
-            SELECT conversation_id FROM conversations 
-            WHERE (user1_id = $1 AND user2_id = $2) OR (user1_id = $2 AND user2_id = $1)
-            "#,
-            smaller_id,
-            larger_id
-        )
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| {
-            error!("查询私信会话失败: {:?}", e);
-            RepositoryError::Database(e)
-        })?;
-
-        if let Some(session) = existing_session {
-            return Ok(session);
-        }
-
-        // 创建新会话，设置初始时间
-        let conversation_id = Uuid::new_v4();
-        let now = Utc::now();
-        sqlx::query!(
-            r#"
-            INSERT INTO conversations (conversation_id, user1_id, user2_id, created_at, updated_at, last_message_at)
-            VALUES ($1, $2, $3, $4, $4, $4)
-            "#,
-            conversation_id,
-            smaller_id,
-            larger_id,
-            now
-        )
-        .execute(&self.pool)
-        .await
-        .map_err(|e| {
-            error!("创建私信会话失败: {:?}", e);
-            RepositoryError::Database(e)
-        })?;
-
-        Ok(conversation_id)
-    }
+    
 
     pub async fn save_direct_message(
         &self,
@@ -604,7 +526,7 @@ impl PgMessageRepository {
         limit: i64,
     ) -> RepositoryResult<(Vec<GroupMessageRow>, bool, Option<i64>)> {
         let messages = sqlx::query_as!(
-            GroupMessageWithId,
+            GroupMessageWithIdRow,
             r#"
             SELECT 
                 message_id as "message_id!",
@@ -615,7 +537,7 @@ impl PgMessageRepository {
                 created_at as "created_at!",
                 latitude as "latitude!: f64",
                 longitude as "longitude!: f64",
-                id
+                id as "id!: i64"
             FROM group_messages
             WHERE group_id = $1 
             AND ($2 = 0 OR id < $2)
@@ -787,71 +709,9 @@ impl PgMessageRepository {
         Ok(())
     }
 
-    #[allow(dead_code)]
-    pub async fn get_direct_message(&self, message_id: Uuid) -> RepositoryResult<MessageRow> {
-        let row = sqlx::query_as!(
-            MessageRow,
-            r#"
-            SELECT 
-                message_id as "message_id!",
-                conversation_id as "conversation_id!",
-                sender_id as "sender_id!",
-                recipient_id as "recipient_id!",
-                content as "content!",
-                message_type as "message_type!",
-                created_at as "created_at!",
-                read_at,
-                latitude as "latitude!: f64",
-                longitude as "longitude!: f64"
-            FROM direct_messages
-            WHERE message_id = $1
-            "#,
-            message_id
-        )
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|e| {
-            error!("获取消息详情失败: {:?}", e);
-            match e {
-                sqlx::Error::RowNotFound => RepositoryError::NotFound,
-                _ => RepositoryError::Database(e),
-            }
-        })?;
+    
 
-        Ok(row)
-    }
-
-    #[allow(dead_code)]
-    pub async fn get_group_message(&self, message_id: Uuid) -> RepositoryResult<GroupMessageRow> {
-        let row = sqlx::query_as!(
-            GroupMessageRow,
-            r#"
-            SELECT 
-                message_id as "message_id!",
-                group_id as "group_id!",
-                sender_id as "sender_id!",
-                content as "content!",
-                message_type as "message_type!",
-                created_at as "created_at!",
-                latitude as "latitude!: f64",
-                longitude as "longitude!: f64"
-            FROM group_messages
-            WHERE message_id = $1
-            "#,
-            message_id
-        )
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|e| {
-            error!("获取消息详情失败: {:?}", e);
-            match e {
-                sqlx::Error::RowNotFound => RepositoryError::NotFound,
-                _ => RepositoryError::Database(e),
-            }
-        })?;
-
-        Ok(row)
-    }
+    
 
     pub async fn get_direct_message_unread_count(&self, user_id: i64) -> RepositoryResult<i64> {
         let total_unread = sqlx::query_scalar!(

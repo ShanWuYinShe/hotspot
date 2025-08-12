@@ -38,11 +38,14 @@ pub async fn health_check(
     };
     
     // 检查消息队列
+    #[cfg(feature = "jobs")]
     let mq_status = if state.job_service.is_some() {
         "healthy"
     } else {
         "disabled"
     };
+    #[cfg(not(feature = "jobs"))]
+    let mq_status = "disabled";
     
     Json(HealthCheckResponse {
         status: "ok".to_string(),

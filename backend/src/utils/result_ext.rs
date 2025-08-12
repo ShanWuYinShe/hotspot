@@ -19,6 +19,7 @@ impl<T> ResultExt<T> for Result<T, RepositoryError> {
                 RepositoryError::NotFound => AppError::NotFound(format!("{}失败: 资源不存在", operation)),
                 RepositoryError::Database(_) => AppError::InternalServerError(format!("{}失败", operation)),
                 RepositoryError::InvalidArgument(msg) => AppError::BadRequest(msg),
+                RepositoryError::UuidParse(err) => AppError::BadRequest(format!("UUID格式错误: {}", err)),
                 RepositoryError::Other(_) => AppError::InternalServerError(format!("{}失败", operation)),
             }
         })
@@ -31,6 +32,7 @@ impl<T> ResultExt<T> for Result<T, RepositoryError> {
                 RepositoryError::NotFound => AppError::NotFound(user_msg.to_string()),
                 RepositoryError::Database(_) => AppError::InternalServerError(user_msg.to_string()),
                 RepositoryError::InvalidArgument(_) => AppError::BadRequest(user_msg.to_string()),
+                RepositoryError::UuidParse(_) => AppError::BadRequest(user_msg.to_string()),
                 RepositoryError::Other(_) => AppError::InternalServerError(user_msg.to_string()),
             }
         })

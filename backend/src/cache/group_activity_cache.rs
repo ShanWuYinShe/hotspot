@@ -103,6 +103,7 @@ impl GroupActivityCache for RedisGroupActivityCache {
         Ok(())
     }
     
+    #[cfg(feature = "group_digest_scheduler")]
     async fn get_group_activity_ranking(
         &self, 
         group_id: Uuid,

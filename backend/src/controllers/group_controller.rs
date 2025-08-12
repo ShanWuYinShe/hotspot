@@ -12,6 +12,7 @@ use crate::{
     ws::message_types::{GroupEventData, GroupEventType as WsGroupEventType},
 };
 use chrono::Utc;
+use crate::utils::events::DomainEvent;
 
 
 
@@ -62,34 +63,8 @@ pub async fn create_group(
         )
         .await?;
 
-    // 发送群组创建和成员加入通知 (实际上是成员加入通知，因为创建者自动加入)
-    let ws_notification_service = state.websocket_notification_service.clone();
-    let actor_id_for_notification = current_user.user_id;
-    let actor_nickname_for_notification = current_user.nickname.clone();
-    let group_id_for_notification = group_id; // group_id from service call
-    // payload is moved, so if group name is needed for notification, clone it before moving into service call
-    // let group_name_for_notification = payload.name.clone(); 
-
-    tokio::spawn(async move {
-        let event_data = GroupEventData {
-            group_id: group_id_for_notification,
-            event_type: WsGroupEventType::MemberJoined, 
-            actor_id: actor_id_for_notification,
-            actor_nickname: actor_nickname_for_notification,
-            target_id: None,
-            target_nickname: None,
-            created_at: Utc::now(),
-            // group_name: Some(group_name_for_notification), // If GroupEventData includes group_name
-            // message: Some(format!("{} 创建了群组并加入", actor_nickname_for_notification)), // If GroupEventData includes a message field
-        };
-
-        // Notify all members of the group including the creator (actor_id is not excluded here for MemberJoined)
-        // Or, if the actor should be excluded from this specific auto-join notification:
-        // if let Err(e) = ws_notification_service.notify_group_event(event_data, Some(actor_id_for_notification)).await {
-        if let Err(e) = ws_notification_service.notify_group_event(event_data, None).await { // Send to all including actor
-            tracing::warn!("Failed to send group member joined notification after creation: {:?}", e);
-        }
-    });
+    // 发布领域事件（WS 推送由事件处理器承担）
+    state.event_bus.publish(DomainEvent::GroupJoined { group_id: group_id.into(), user_id: current_user.user_id.into() }).await;
 
     Ok(success_response(CreateGroupResponse { group_id }))
 }
@@ -363,6 +338,11 @@ pub async fn join_group(
         });
     }
 
+    // 发布领域事件
+    if result.success {
+        state.event_bus.publish(DomainEvent::GroupJoined { group_id: payload.group_id.into(), user_id: current_user.user_id.into() }).await;
+    }
+
     let role = result.role.unwrap_or_default();
     // 验证返回的角色是否有效
     group_validator::validate_group_role(&role)?;
@@ -452,7 +432,12 @@ pub async fn leave_group(
         });
     }
 
+    if result.success {
+        state.event_bus.publish(DomainEvent::GroupLeft { group_id: payload.group_id.into(), user_id: current_user.user_id.into() }).await;
+    }
+
     // 群组成员活跃度更新任务 - 暂时跳过，功能未实现
+    #[cfg(feature = "jobs")]
     if let Some(_job_service) = &state.job_service {
         tracing::debug!("群组成员活跃度更新任务功能暂未实现");
     }
@@ -630,6 +615,10 @@ pub async fn kick_member(
         });
     }
 
+    if result.success {
+        state.event_bus.publish(DomainEvent::GroupKicked { group_id: payload.group_id.into(), actor_id: current_user.user_id.into(), target_id: payload.user_id.into() }).await;
+    }
+
     let response = KickMemberResponse {
         success: result.success,
     };
@@ -724,6 +713,10 @@ pub async fn transfer_ownership(
                 tracing::warn!("Failed to send group ownership transferred notification: {:?}", e);
             }
         });
+    }
+
+    if result.success {
+        state.event_bus.publish(DomainEvent::GroupOwnershipTransferred { group_id: payload.group_id.into(), from_user_id: current_user.user_id.into(), to_user_user_id: payload.new_owner_id.into() }).await;
     }
 
     let response = TransferOwnershipResponse {

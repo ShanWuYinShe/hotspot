@@ -1,7 +1,6 @@
 ---
-alwaysApply: false
+alwaysApply: true
 ---
-
 # HotSpot 项目前端开发规范
 
 ---
@@ -21,6 +20,7 @@ alwaysApply: false
 - 使用 `pnpm add -D xxx` 增加开发依赖
 - 使用 `pnpm remove xxx` 删除依赖
 - 使用包管理器确保添加的依赖和特性是真实存在的，避免安装不存在的包或版本
+- **框架功能验证**：使用 Nuxt v4 和 Nuxt UI v3 的功能前，必须先联网搜索确认功能存在性和正确用法
 
 ### 依赖安全与兼容性要求
 - 引入新依赖前，需联网查询该依赖包的最新信息，确认是否仍在维护、是否有安全问题
@@ -81,37 +81,98 @@ alwaysApply: false
 - 布局通过 `layouts` 目录下文件定义
 
 ## 4. 布局与样式规范
-- 使用 SCSS 作为 CSS 预处理器
-- 使用 Naive UI 主题系统
-- 组件样式使用 `scoped` 属性隔离
-- 公共样式放在 `assets/scss` 目录下
-- **SCSS导入策略**：
-  - 组件级样式：在 Vue 组件中通过 `@use` 手动导入
-  - 全局基础样式（重置样式、字体等）：可在 `nuxt.config.ts` 中注册
-  - 变量和混入：在实际使用处手动导入，明确依赖关系
-- 使用 CSS 变量定义颜色和尺寸，避免硬编码
-- 样式文件组织简洁，按功能分类
+
+### Nuxt UI v3 使用规范
+- **本项目采用 Nuxt UI v3**：项目必须使用 Nuxt UI v3 版本及其配套生态
+- **组件验证要求**：使用 Nuxt UI v3 的组件时必须先联网查询确认组件是否存在，并验证组件的属性和用法是否正确
+- **Nuxt 框架验证要求**：使用 Nuxt v4的组件或功能时应该先联网搜索确认用法是否正确、功能是否存在
+- 使用 Tailwind CSS 作为主要样式方案（Nuxt UI v3 基于 Tailwind CSS）
+- 使用 Nuxt UI v3 主题系统和设计令牌
+- 组件样式优先使用 Tailwind CSS 类，必要时使用 `scoped` 样式
+- 公共样式和自定义样式放在 `assets/css` 目录下
+
+### Nuxt UI v3 架构特性
+
+#### 核心架构优势
+- **基于 Radix Vue**：完全重写，基于 Radix Vue 和 Tailwind CSS，提供更好的无障碍支持和组件一致性
+- **7色语义化设计系统**：采用语义化设计系统，提供更灵活的主题定制能力
+- **完善的TypeScript支持**：内置更完善的TypeScript支持和类型推断
+- **统一的组件API**：组件API更统一，减少学习成本
+
+#### 组件命名与API特性
+- **组件前缀**：所有组件使用 `U` 前缀，API统一性更强
+- **属性命名**：统一了属性命名规范，如颜色属性统一为 `color`，尺寸属性统一为 `size`
+- **插槽命名**：标准化了插槽命名，减少了不一致性
+- **事件命名**：采用更语义化的事件命名规范
+
+#### 主题系统特性
+- **设计令牌系统**：通过 `app.config.ts` 进行主题配置
+- **7色语义化颜色系统**：提供primary、secondary、success、info、warning、error、neutral颜色系统
+- **深色模式支持**：更好的深色模式支持和自动切换机制
+
+#### 表单组件特性
+- **UForm组件**：内置表单组件，集成 `zod` 和 `yup` 验证，提供统一的表单处理方案
+- **UFormField组件**：提供更好的字段组织和标签管理
+- **表单状态管理**：更完善的表单状态管理和错误显示机制
+
+### 样式导入策略
+- 主要使用 Tailwind CSS 类进行样式定义
+- 自定义 CSS 通过 `@apply` 指令重用 Tailwind 类
+- 全局样式在 `nuxt.config.ts` 中注册或使用 `app.vue` 定义
+- Nuxt UI 主题配置通过 `app.config.ts` 进行
+- 使用 Nuxt UI 的设计令牌和 CSS 变量系统
+- 遵循 Nuxt UI v3 的设计规范和最佳实践
+
+### Nuxt UI v3 组件使用规范
+- **组件命名约定**：所有 Nuxt UI 组件以 `U` 为前缀
+- **组件分类**：
+  - Element：UAlert、UAvatar、UBadge、UButton、UCalendar、UChip、UIcon、UProgress等
+  - Form：UCheckbox、UForm、UInput、USelect、UTextarea、URadioGroup、USwitch等
+  - Data：UAccordion、UCard、UCarousel、UTable、UTabs、UTimeline、UTree等
+  - Navigation：UBreadcrumb、ULink、UNavigationMenu、UPagination、UStepper等
+  - Overlay：UModal、UDrawer、UPopover、UTooltip、UToast、UContextMenu、UDropdownMenu等
+  - Layout：UApp、UContainer、UCard、USeparator、USkeleton等
+- **主题定制**：通过 `app.config.ts` 配置7色语义化设计系统
+- **响应式设计**：支持 Tailwind CSS 响应式前缀和内置响应式属性
+
+#### 强制文档校验与优先使用规则（新增）
+- **文档先行（强制）**：使用任何 Nuxt UI v3 组件/Composables 前，必须查阅 Nuxt UI 官方文档核对：组件存在性、Props/Emits/Slots、用法差异（如 `UModal` 的 `v-model:open`、`#body/#footer`、`close` slot props）。
+- **组件优先（强制）**：能用 Nuxt UI v3 组件实现的场景，禁止用原生 HTML + 自行样式拼接替代。例如：菜单用 `UDropdownMenu`/`UPopover`，按钮用 `UButton`，输入用 `UInput`/`USelect`，弹层用 `UModal`/`UPopover`/`UTooltip`。
+- **交互一致性**：应充分使用组件提供的交互与无障碍能力（如键盘导航、焦点管理、ARIA 属性），避免自造轮子导致可访问性问题。
+- **替换策略**：发现自定义的原生实现（如下拉、弹窗、提示、按钮）时，应优先替换为 Nuxt UI v3 对应组件，并统一样式/交互。
+- **浏览器权限请求（强制）**：浏览器通知、地理位置等权限必须由“用户手势”触发（如按钮点击），严禁在插件、页面挂载或无用户操作的生命周期中自动调用（如 `Notification.requestPermission()`）。
+ - **组件存在性强校验（新增）**：严禁使用 Nuxt UI v3 未提供的组件名（如 `UFormGroup`）。提交前必须自检：
+   - 仅允许使用 Nuxt UI v3 官方文档列出的组件名，表单分组一律使用 `UFormField`。
+   - 遇到“Failed to resolve component”类报错时，必须改为 Nuxt UI v3 存在的组件或移除。
+ - **优先使用 Nuxt UI v3（新增）**：在页面与组件中，应尽可能使用 Nuxt UI v3 提供的组件替代原生 HTML 元素实现常用 UI（按钮、输入框、选择器、弹窗、抽屉、Popover/Tooltip、菜单、列表/卡片等），仅在 Nuxt UI v3 无对应组件时才使用原生元素并配合 Tailwind 样式。
+
+
+### Nuxt UI v3 表单处理规范
+- **表单验证**：使用 `UForm` 组件结合 `zod` 或 `yup` 进行表单验证
+- **表单状态管理**：利用 `UForm` 的内置状态管理，减少手动状态处理
+- **错误显示**：使用组件内置的错误显示机制，保持一致的用户体验
+- **字段组织**：使用 `UFormField` 组织表单字段，提供标签和验证显示
+- **类型安全**：充分利用 TypeScript 类型推断和验证
 
 ### 样式变量和主题规范
-- **CSS变量优先**：所有颜色、尺寸、阴影等样式属性优先使用CSS变量
-- **语义化命名**：变量名应反映用途而非具体值（如 `--color-text-primary` 而非 `--color-white`）
-- **对比度要求**：文字与背景对比度必须满足WCAG AA标准
-- **深色主题适配**：所有组件必须在深色主题下保持良好的可读性
-- **阴影使用规范**：
-  - 文字阴影用于提升可读性：`text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8)`
-  - 盒子阴影用于层次感：使用变量定义的标准阴影值
-- **边框规范**：重要边界使用2px边框，状态变化使用颜色区分
+- **Nuxt UI 设计令牌优先**：使用 Nuxt UI v3 内置的设计令牌系统
+- **Tailwind CSS 变量**：利用 Tailwind CSS 的颜色调色板和间距系统
+- **主题配置**：通过 `app.config.ts` 定义应用主题，支持深色/浅色模式
+- **语义化颜色**：使用语义化的颜色名称（primary、secondary、success、warning、error）
+- **响应式设计**：使用 Tailwind 的响应式前缀（sm:、md:、lg:、xl:）
+- **深色主题适配**：使用 `dark:` 前缀定义深色模式样式
+- **组件变体**：利用 Nuxt UI 的 variant 和 color props 实现设计一致性
 
 ### 图标使用规范
-- **主要图标库**：使用 Naive UI 内置图标系统和 `@vicons` 生态系统
-- **使用方式**：通过通用 Icon 组件调用图标，不直接使用图标组件
-- **命名规范**：优先使用 `@vicons/ionicons5` 图标，格式为 `ion:xxx-outline`
-- **图标生态**：支持多个图标库
-  - `@vicons/ionicons5` - 主要图标库
-  - `@vicons/material` - Material Design 图标
-  - `@vicons/antd` - Ant Design 图标
-  - `@vicons/carbon` - Carbon Design 图标
-- **文档参考**：图标使用参考 `frontend/docs/icon-usage.md` 文档
+- **主要图标库**：使用 Nuxt UI v3 内置的 UIcon 组件系统
+- **使用方式**：通过 `<UIcon>` 组件调用图标，支持多种图标集
+- **命名规范**：使用标准图标名称格式，如 `i-heroicons-home`、`i-lucide-user` 等
+- **图标生态**：Nuxt UI v3 内置支持多个图标库
+  - Heroicons - 主要图标库（默认）
+  - Lucide - 现代简洁图标
+  - Tabler Icons - 丰富的图标集
+  - Phosphor Icons - 灵活多样的图标
+- **图标规范**：图标命名遵循 `i-[库名]-[图标名]` 格式，确保图标存在性验证
 
 ## 5. 状态管理规范
 - 使用 Pinia 进行状态管理
@@ -180,11 +241,29 @@ alwaysApply: false
 - 使用 Composition API 和 `<script setup lang="ts">` 语法
 - 遵循 ESLint 规则
 - **零警告政策**：项目必须保持编译和 lint 无警告状态
+- **功能验证要求**：使用任何 Nuxt 框架功能或第三方组件前，必须先验证其存在性和正确用法
 - 所有属性、方法、变量用驼峰命名法
 - 方法名用动词开头（如：`fetchData`、`updateUser`）
 - 保持代码简洁，避免过度嵌套和复杂逻辑
 - 禁止定义未被使用的函数或组件，定义的功能必须有实际调用处（允许导出供外部调用的工具函数/类型）
 - 积极解决编译警告和错误，不允许屏蔽警告，优先修复问题根源
+
+### Composition API 强制要求
+- **全面采用 Composition API**：所有新代码必须使用 Composition API 模式，禁止使用 Options API
+- **服务层 Composition API 化**：所有 `services/` 目录下的服务必须使用 Composition API 格式编写
+  - 禁止使用 class 类写法（如 `class ApiService`、`class AuthService` 等）
+  - 必须使用函数式 Composition API
+- **组件 Composition API 化**：所有 Vue 组件必须使用 `<script setup lang="ts">` 语法
+- **状态管理 Composition API 化**：Pinia stores 必须使用 Composition API 语法（`defineStore(() => {})`）
+- **兼容性零容忍**：严禁保留任何 Options API 或 class 写法的兼容代码
+- **函数命名规范**：
+  - 服务层函数：`use*`（如 `useLogin`、`useGetUsers`、`useSendMessage`）
+  - 工具函数：`use*`（如 `useFormatDate`、`useValidateEmail`）
+  - 状态管理：`use*Store`（如 `useAuthStore`、`useUserStore`）
+- **UI 库集成规范**：
+  - Nuxt UI v3 的 Composables（如 `useToast`、`useModal`）只能在 Vue 组件的 `<script setup>` 中调用
+  - 服务层需要 UI 库 API 时，通过参数传递方式获取（如 `initializeWebSocket(config, toastApi)`）
+  - 禁止在服务层直接调用 UI 库的 Composables
 
 ### 假数据和演示代码管理规范
 - **生产代码禁用假数据**：生产环境的页面和组件不允许使用 mock 数据、演示数据或硬编码的测试数据
@@ -194,10 +273,15 @@ alwaysApply: false
   - 群组ID：统一使用 `group_id` 
   - 点赞数：统一使用 `like_count`
   - 评论数：统一使用 `comment_count`
+- **禁止硬编码数据**：组件不应包含硬编码的用户列表、选项数据等，应通过API动态获取
 - **合理例外情况**：
   - 专门的组件演示页面（如 `demo.vue`）可以包含演示数据
   - 开发调试工具（如 `useMockDynamicWebSocket.ts`）可以保留
   - 单元测试和集成测试中的测试数据
+- **Composition API 集成要求**：
+  - 所有业务逻辑必须通过 `use*` 函数实现
+  - 数据获取统一使用 `useFetch` 或 `useLazyFetch` 调用服务层
+  - 状态管理统一使用 `use*Store` 函数
 
 ### UI可读性和对比度规范
 - **文字对比度**：确保文字与背景有足够的对比度，主文本使用纯白色 `#ffffff`
@@ -231,21 +315,21 @@ alwaysApply: false
 ## 7. 导入与组件使用规范
 
 ### 组件导入规范
-- **组件导入**：所有组件必须手动导入，禁用组件自动导入
-  - 手动导入组件有助于提高代码可移植性和版本兼容性
-  - 明确组件依赖关系，便于代码维护和重构
-  - 避免因 Nuxt 版本更新导致的组件导入不兼容问题
-- **Naive UI 导入**：所有 Naive UI  组件和图标必须手动导入
-  - Naive UI 组件需要手动导入（如：`import { NButton } from 'naive-ui'`）
-  - Naive UI 图标需要手动导入
-  - 禁止使用自动导入，确保明确的依赖关系
+- **Nuxt UI v3 组件自动导入**：Nuxt UI v3 组件支持自动导入，无需手动引入
+  - 所有 Nuxt UI 组件（如 `UButton`、`UCard`、`UInput` 等）可直接在模板中使用
+  - Nuxt UI 组件前缀为 `U`，如 `<UButton>`、`<UModal>`、`<UForm>`
+  - 图标组件 `<UIcon>` 可直接使用，无需导入
+- **项目组件导入**：自定义组件需要手动导入或配置自动导入
+  - 项目组件使用相对路径或 `~/components` 路径导入
+  - 可在 `nuxt.config.ts` 中配置组件自动导入目录
+  - 组件名应为多个单词，避免与 HTML 元素冲突
 - **API 导入**：保留 Vue 3、Nuxt 3、Composables 等 API 的自动导入
   - Vue 3 API（`ref`、`computed`、`watch`、`onMounted` 等）自动导入
   - Nuxt 3 API（`useAsyncData`、`useFetch`、`navigateTo` 等）自动导入
   - 项目 Composables（`~/composables` 下的函数）自动导入
-- **组件引用规范**：
-  - 所有 Vue 组件必须在 `<script setup>` 中显式导入
-  - 项目组件使用相对路径或 `~/components` 路径导入
+- **第三方库导入**：其他第三方组件库需要手动导入
+  - 明确组件依赖关系，便于代码维护和重构
+  - 确保导入的组件和特性是真实存在的
 
 ## 8. API 调用规范
 - **使用 Nuxt 的 Fetch API 发起请求**：优先使用 `$fetch`、`useFetch`、`useLazyFetch` 等 Nuxt 3 原生 API
@@ -258,6 +342,11 @@ alwaysApply: false
   - 统一错误处理和响应格式化
   - 支持请求拦截器和响应拦截器
   - 页面层使用 `useFetch` 或 `useLazyFetch` 调用服务层函数
+- **Composition API 服务层架构**：
+  - 所有服务必须采用函数式 Composition API 写法
+  - 每个 API 端点对应一个 `use*` 函数（如 `useLogin`、`useGetUserProfile`、`useCreateGroup`）
+  - 服务函数返回响应式数据和状态管理（loading、error、data）
+  - 复杂服务可以组合多个基础 `use*` 函数实现
 
 ## 9. 性能优化规范
 - 组件合理拆分，避免过大组件
@@ -278,13 +367,22 @@ alwaysApply: false
 - 合理配置构建选项，优化打包体积
 - 使用按需导入减少不必要代码
 
+### Nuxt 与 Nuxt UI 官方文档校验要求（强制）
+- 使用任何 Nuxt 核心 API（如 `definePageMeta`、`useRoute`、`navigateTo`、`useFetch` 等）前，必须到 Nuxt 官方文档核对正确用法与最新行为。
+- 使用任何 Nuxt UI v3 组件/Composables（如 `UModal`、`UButton`、`UTabs`、`useToast` 等）前，必须到 Nuxt UI 官方文档核对：
+  - 组件名与存在性
+  - Props/Emits/Slots 正确性与范式（例如 `UModal` 使用默认插槽作为触发器，内容应使用 `#body`/`#footer` 等插槽，支持 `v-model:open` 控制）
+  - 重要用法差异（如 `#content` 与 `#body/#footer` 的差异、`close` slot props 的使用方式）
+- 文档链接示例：
+  - Nuxt UI `UModal` 组件用法参考：`https://ui.nuxt.com/components/modal`
+- 代码评审前需自查上述规则，避免因不合规用法导致的运行时错误或可访问性问题。
+
 ### Nuxt 文件处理规范
 - **不要直接替换** Nuxt 自动生成的文件
 - 在 Nuxt 生成文件基础上修改和扩展，保留原始结构和元数据
 - 修改生成文件时，确保不影响 Nuxt 核心功能
 - 使用 `<script setup>` 和 `<template>` 添加自定义功能
 - 如需添加中间件或页面元数据，使用 `definePageMeta` 而非替换文件
-
 
 ## 11. Nuxt 文件命名与使用规范
 
@@ -325,22 +423,9 @@ alwaysApply: false
 - **容错设计**: 异步任务失败时不影响用户正常使用，提供重试选项
 
 #### 后端任务队列感知设计
-```typescript
-// 注册成功后的处理逻辑
-const handleRegistrationSuccess = async (userData: UserLoginResult) => {
-  // 1. 立即更新用户状态
-  authStore.setAuthData(userData)
-  
-  // 2. 显示注册成功消息
-  ElMessage.success('注册成功！正在为您初始化账户...')
-  
-  // 3. 导航到主页面（不等待异步任务）
-  await navigateTo('/')
-  
-  // 4. 通过WebSocket监听位置初始化完成通知（可选）
-  // websocketStore.subscribe('location_initialized', handleLocationReady)
-}
-```
+- 注册成功后立即更新用户状态和显示成功消息
+- 导航到主页面不等待异步任务完成
+- 通过WebSocket监听位置初始化完成通知
 
 #### WebSocket通知处理
 - **任务状态通知**: 监听后端任务队列发送的状态更新通知
@@ -354,53 +439,11 @@ const handleRegistrationSuccess = async (userData: UserLoginResult) => {
 - **容错处理**: API调用失败时提供降级方案，避免功能完全不可用
 - **状态管理**: 合理管理加载状态，区分主要操作和辅助操作的加载状态
 
-#### 异步状态展示
-```vue
-<template>
-  <div class="registration-status">
-    <!-- 主要状态：注册是否完成 -->
-    <div v-if="registrationLoading" class="loading">
-      正在注册您的账户...
-    </div>
-    
-    <!-- 成功状态 -->
-    <div v-else-if="registrationSuccess" class="success">
-      <h3>注册成功！</h3>
-      
-      <!-- 辅助状态：异步任务进度 -->
-      <div class="async-tasks">
-        <div class="task-item">
-          <span>位置初始化</span>
-          <TaskStatus :status="locationStatus" />
-        </div>
-        <div class="task-item">
-          <span>欢迎通知</span>
-          <TaskStatus :status="notificationStatus" />
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
-<script setup lang="ts">
-// 主要状态
-const registrationLoading = ref(false)
-const registrationSuccess = ref(false)
-
-// 异步任务状态
-const locationStatus = ref('pending') // pending | processing | completed | failed
-const notificationStatus = ref('pending')
-
-// WebSocket监听异步任务状态
-const { wsStatus } = useWebSocket()
-watch(wsStatus, (message) => {
-  if (message.type === 'location_initialized') {
-    locationStatus.value = 'completed'
-  }
-  // 处理其他异步任务状态...
-})
-</script>
-```
+#### 异步状态展示规范
+- 区分主要状态（注册是否完成）和辅助状态（异步任务进度）
+- 异步任务状态包括：pending、processing、completed、failed
+- 通过WebSocket监听异步任务状态变更
+- 为不同任务类型提供相应的状态显示组件
 
 ### 错误处理与用户体验
 
@@ -409,81 +452,23 @@ watch(wsStatus, (message) => {
 - **辅助功能错误**: 不影响主要功能的错误（如位置初始化失败）应友好提示但不阻断
 - **重试机制**: 为异步任务失败提供手动重试选项
 
-#### 用户反馈设计
-```typescript
-// 错误处理示例
-const handleAsyncTaskError = (taskType: string, error: Error) => {
-  switch (taskType) {
-    case 'location_init':
-      // 位置初始化失败 - 不阻断用户使用
-      ElNotification({
-        title: '位置初始化失败',
-        message: '您可以稍后在设置中手动设置位置',
-        type: 'warning',
-        duration: 5000,
-        showClose: true
-      })
-      break
-      
-    case 'welcome_notification':
-      // 欢迎通知发送失败 - 静默处理
-      console.warn('欢迎通知发送失败:', error)
-      break
-      
-    default:
-      // 其他异步任务错误
-      ElMessage.warning('某些后台任务执行失败，但不影响正常使用')
-  }
-}
-```
+#### 用户反馈设计原则
+- 位置初始化失败：不阻断用户使用，提供稍后手动设置选项
+- 欢迎通知发送失败：静默处理，记录日志
+- 其他异步任务错误：友好提示但不影响正常使用
+- 提供统一的错误处理机制和用户反馈策略
 
-### 状态同步与数据一致性
+### 状态同步与数据一致性规范
 
 #### 乐观更新策略
 - **即时响应**: 用户操作后立即更新UI状态，不等待所有异步任务完成
 - **状态回滚**: 如果关键异步任务失败，提供状态回滚机制
 - **数据同步**: 定期从服务器同步数据，确保客户端状态准确
 
-#### Store状态管理
-```typescript
-// 异步任务感知的状态管理
-export const useAsyncTaskStore = defineStore('asyncTask', () => {
-  const pendingTasks = ref<Map<string, AsyncTask>>(new Map())
-  
-  const addTask = (taskId: string, taskType: string) => {
-    pendingTasks.value.set(taskId, {
-      id: taskId,
-      type: taskType,
-      status: 'pending',
-      createdAt: Date.now()
-    })
-  }
-  
-  const updateTaskStatus = (taskId: string, status: AsyncTaskStatus) => {
-    const task = pendingTasks.value.get(taskId)
-    if (task) {
-      task.status = status
-      task.updatedAt = Date.now()
-    }
-  }
-  
-  const removeCompletedTasks = () => {
-    pendingTasks.value.forEach((task, id) => {
-      if (task.status === 'completed' && 
-          Date.now() - task.updatedAt > 30000) { // 30秒后清理
-        pendingTasks.value.delete(id)
-      }
-    })
-  }
-  
-  return {
-    pendingTasks: readonly(pendingTasks),
-    addTask,
-    updateTaskStatus,
-    removeCompletedTasks
-  }
-})
-```
+#### Store状态管理要求
+- 异步任务感知的状态管理：维护待处理任务映射表
+- 任务状态更新：支持任务状态变更和完成时间记录
+- 自动清理机制：定期清理已完成的任务记录
 
 ### 性能优化考虑
 
@@ -492,40 +477,10 @@ export const useAsyncTaskStore = defineStore('asyncTask', () => {
 - **智能轮询**: 如果WebSocket不可用，使用指数退避的轮询策略
 - **状态缓存**: 合理缓存异步任务状态，避免重复查询
 
-#### 渐进式功能激活
-```typescript
-// 功能渐进式激活示例
-export const useProgressiveFeatures = () => {
-  const featuresReady = ref({
-    location: false,
-    notifications: false,
-    recommendations: false
-  })
-  
-  const checkFeatureReadiness = async () => {
-    try {
-      const status = await $fetch('/api/user/features-status')
-      featuresReady.value = status
-    } catch (error) {
-      console.warn('无法获取功能状态，使用默认配置')
-    }
-  }
-  
-  const enableFeatureWhenReady = (feature: string, callback: () => void) => {
-    watch(() => featuresReady.value[feature], (ready) => {
-      if (ready) {
-        callback()
-      }
-    }, { immediate: true })
-  }
-  
-  return {
-    featuresReady: readonly(featuresReady),
-    checkFeatureReadiness,
-    enableFeatureWhenReady
-  }
-}
-```
+#### 渐进式功能激活规范
+- 功能状态检查：定期检查用户功能就绪状态
+- 条件激活：根据功能就绪状态动态启用相应功能
+- 默认配置：功能状态获取失败时使用安全的默认配置
 
 ### 开发调试支持
 
@@ -534,29 +489,58 @@ export const useProgressiveFeatures = () => {
 - **手动重试**: 提供手动触发异步任务的调试接口
 - **模拟失败**: 测试环境下模拟异步任务失败场景
 
-#### 监控和日志
-```typescript
-// 异步任务监控
-export const useAsyncTaskMonitoring = () => {
-  const logTaskEvent = (event: 'start' | 'success' | 'error', taskType: string, details?: any) => {
-    if (process.dev) {
-      console.log(`[AsyncTask] ${event.toUpperCase()}: ${taskType}`, details)
-    }
-    
-    // 生产环境下发送到监控系统
-    if (process.env.NODE_ENV === 'production') {
-      // 发送监控数据...
-    }
-  }
-  
-  return { logTaskEvent }
-}
-```
+#### 监控和日志规范
+- 事件日志记录：记录任务开始、成功、错误等关键事件
+- 开发环境调试：详细控制台日志输出
+- 生产环境监控：向监控系统发送关键指标数据
 
----
+### 终端管理规范
+- **单终端操作**: 前端开发过程中尽量在同一终端中操作，避免开启多个终端
+- **服务器管理**: 开发者自行管理前端服务器启动，工具不主动启动服务器
 
-*规范版本：v1.4*  
-*最后更新：2025年7月14日*
+
+
+## 12.1 后端架构合理性协作规范
+
+### 前后端架构优化协作原则
+
+#### 架构合理性验证参与
+- **业务逻辑审查**：前端开发过程中发现后端设计不合理时，主动提出优化建议
+- **真实场景验证**：基于前端用户体验需求，验证后端架构设计的合理性
+- **功能重复识别**：在API调用过程中识别重复功能，建议后端简化
+
+#### 已完成的协作优化案例（2025年7月15日）
+
+**notification存储系统优化**：
+- **问题识别**：通知需要同时调用WebSocket和数据库API，增加复杂度
+- **优化方案**：只需要实时WebSocket通知，无需数据库操作
+- **优化收益**：
+  - 前端代码简化：减少了通知相关的API调用复杂度
+  - 实时性提升：通知推送更加及时，无需等待数据库操作
+  - 状态管理简化：前端无需管理通知的持久化状态
+
+#### 前端驱动的架构优化原则
+
+**用户体验驱动后端设计**：
+- **API简洁性**：复杂的后端逻辑应该封装在单一API中，避免前端调用多个API组合功能
+- **实时性优先**：对于需要实时反馈的功能，优先使用WebSocket而非轮询数据库
+- **错误处理统一**：后端应提供一致的错误响应格式，便于前端统一处理
+
+**协作沟通机制**：
+- **周期性架构审查**：前后端定期（月度）进行架构合理性联合审查
+- **问题及时反馈**：前端发现后端设计问题时，通过规范化流程反馈
+- **优化方案共同制定**：重大架构调整前，前后端共同评估影响和实施方案
+
+### 前端代码中的后端协作最佳实践
+
+#### API调用合理性判断
+- **合理的API设计**：单一职责，功能明确，一次调用完成完整业务逻辑
+- **不合理的设计模式**：需要多次API调用完成单一业务逻辑，增加前端复杂度和错误处理难度
+
+#### 状态管理与后端状态同步规范
+- **乐观更新模式**：立即更新UI状态，提升用户体验
+- **单一API调用**：调用优化的后端API，单次调用完成复杂逻辑
+- **错误回滚机制**：API调用失败时回滚UI状态并处理错误
 
 ---
 
@@ -572,410 +556,59 @@ export const useAsyncTaskMonitoring = () => {
 #### 实现规范
 
 ##### 自动检测与注册逻辑
-```typescript
-// composables/useAutoUserRegistration.ts
-export const useAutoUserRegistration = () => {
-  const authStore = useAuthStore()
-  const router = useRouter()
-  
-  const checkAndCreateTempUser = async () => {
-    // 检测用户登录状态
-    if (authStore.isAuthenticated) {
-      return authStore.currentUser
-    }
-    
-    // 检查本地是否有临时用户信息
-    const tempUserData = localStorage.getItem('temp_user_backup')
-    if (tempUserData) {
-      try {
-        const userData = JSON.parse(tempUserData)
-        await authStore.setAuthData(userData)
-        console.log('恢复本地临时用户身份')
-        return userData
-      } catch (error) {
-        console.warn('临时用户数据无效，将创建新的临时用户')
-      }
-    }
-    
-    // 自动创建临时用户
-    try {
-      console.log('检测到新用户，正在创建临时账户...')
-      const tempUser = await authStore.createTempUser()
-      
-      if (tempUser) {
-        ElMessage({
-          message: '欢迎使用 HotSpot！已为您创建临时账户，您可以立即开始探索',
-          type: 'success',
-          duration: 4000,
-          showClose: true
-        })
-        return tempUser
-      }
-    } catch (error) {
-      console.error('创建临时用户失败:', error)
-      // 创建失败时的降级处理
-      ElMessage({
-        message: '欢迎使用 HotSpot！您可以浏览公开内容或注册账户享受完整功能',
-        type: 'info',
-        duration: 5000,
-        showClose: true
-      })
-    }
-    
-    return null
-  }
-  
-  return {
-    checkAndCreateTempUser
-  }
-}
-```
+- 检测用户登录状态，已认证用户直接返回
+- 检查本地临时用户信息，存在则恢复
+- 自动创建临时用户并显示欢迎消息
+- 创建失败时提供降级体验（浏览公开内容）
 
 ##### 页面级集成规范
-```typescript
-// layouts/default.vue 或 app.vue 中的集成
-export default {
-  async setup() {
-    const { checkAndCreateTempUser } = useAutoUserRegistration()
-    const authStore = useAuthStore()
-    
-    // 页面加载时自动检查用户状态
-    onMounted(async () => {
-      // 仅在客户端执行
-      if (process.client) {
-        await checkAndCreateTempUser()
-      }
-    })
-    
-    // 监听路由变化，确保关键页面有用户身份
-    const router = useRouter()
-    router.beforeEach(async (to) => {
-      // 需要用户身份的页面列表
-      const requiresUser = ['/profile', '/my-groups', '/settings']
-      
-      if (requiresUser.some(path => to.path.startsWith(path))) {
-        if (!authStore.isAuthenticated) {
-          await checkAndCreateTempUser()
-        }
-      }
-    })
-  }
-}
-```
+- 页面加载时自动检查用户状态（仅客户端）
+- 监听路由变化，确保关键页面有用户身份
+- 需要用户身份的页面：个人资料、我的群组、设置等
 
 #### 临时用户功能权限管理
 
 ##### 功能分级策略
-```typescript
-// stores/userCapability.ts
-export const useUserCapabilityStore = defineStore('userCapability', () => {
-  const authStore = useAuthStore()
-  
-  const capabilities = computed(() => {
-    const user = authStore.currentUser
-    
-    if (!user) {
-      // 游客权限
-      return {
-        canViewPublicContent: true,
-        canCreateGroups: false,
-        canSendMessages: false,
-        canCreateMoments: false,
-        canLikeContent: false,
-        maxGroupJoins: 0
-      }
-    }
-    
-    if (user.is_temporary) {
-      // 临时用户权限
-      return {
-        canViewPublicContent: true,
-        canCreateGroups: true,
-        canSendMessages: true,
-        canCreateMoments: true,
-        canLikeContent: true,
-        maxGroupJoins: 3, // 限制加入群组数量
-        hasExpiryReminder: true // 显示升级提醒
-      }
-    }
-    
-    // 正式用户权限
-    return {
-      canViewPublicContent: true,
-      canCreateGroups: true,
-      canSendMessages: true,
-      canCreateMoments: true,
-      canLikeContent: true,
-      maxGroupJoins: Infinity,
-      canInviteUsers: true,
-      canManageGroups: true
-    }
-  })
-  
-  return { capabilities }
-})
-```
+- **游客权限**：仅可查看公开内容，无交互功能
+- **临时用户权限**：完整功能体验，限制群组加入数量（如3个），显示升级提醒
+- **正式用户权限**：无限制使用，包含邀请用户、管理群组等高级功能
 
 ##### 升级引导策略
-```typescript
-// composables/useUserUpgradeGuide.ts
-export const useUserUpgradeGuide = () => {
-  const authStore = useAuthStore()
-  const { capabilities } = useUserCapabilityStore()
-  
-  const showUpgradePrompt = (trigger: 'time' | 'action' | 'limit') => {
-    if (!authStore.currentUser?.is_temporary) return
-    
-    const messages = {
-      time: '您已使用临时账户一段时间，升级为正式用户可享受更多功能！',
-      action: '升级为正式用户，解锁完整的社交功能！',
-      limit: '您已达到临时账户限制，升级后可享受无限制使用！'
-    }
-    
-    ElNotification({
-      title: '升级账户',
-      message: messages[trigger],
-      type: 'info',
-      duration: 0, // 不自动关闭
-      showClose: true,
-      customClass: 'upgrade-notification',
-      onClick: () => {
-        navigateTo('/auth?mode=upgrade')
-      }
-    })
-  }
-  
-  const checkUpgradeOpportunities = () => {
-    if (!authStore.currentUser?.is_temporary) return
-    
-    // 基于使用时长的提醒
-    const registerTime = new Date(authStore.currentUser.created_at).getTime()
-    const hoursSinceRegister = (Date.now() - registerTime) / (1000 * 60 * 60)
-    
-    if (hoursSinceRegister > 2) { // 使用超过2小时
-      showUpgradePrompt('time')
-    }
-  }
-  
-  return {
-    showUpgradePrompt,
-    checkUpgradeOpportunities
-  }
-}
-```
+- **多触发机制**：基于使用时长、功能限制、用户行为触发升级提醒
+- **分层提醒消息**：根据触发场景提供不同的升级理由
+- **使用时长检测**：用户使用超过2小时自动显示升级提醒
+- **限制到达提醒**：达到功能限制时引导升级
 
 #### 数据迁移与保留策略
 
 ##### 临时用户数据保护
-```typescript
-// stores/auth.ts 中的升级方法扩展
-export const useAuthStore = defineStore('auth', () => {
-  // ...existing code...
-  
-  const upgradeTempUser = async (upgradeData: {
-    loginId: string
-    nickname: string
-    password: string
-  }) => {
-    if (!currentUser.value?.is_temporary) {
-      throw new Error('当前用户不是临时用户')
-    }
-    
-    try {
-      // 调用升级接口，后端会保留临时用户的所有数据
-      const upgradeResult = await authApi.upgradeTempUser({
-        temp_user_id: currentUser.value.user_id,
-        login_id: upgradeData.loginId,
-        nickname: upgradeData.nickname,
-        password: upgradeData.password
-      })
-      
-      if (upgradeResult) {
-        // 更新本地用户信息
-        await setAuthData(upgradeResult)
-        
-        // 清理临时用户备份数据
-        localStorage.removeItem('temp_user_backup')
-        
-        ElMessage.success('升级成功！您的所有数据已保留，现在可以享受完整功能！')
-        return upgradeResult
-      }
-    } catch (error) {
-      console.error('升级账户失败:', error)
-      throw error
-    }
-  }
-  
-  return {
-    // ...existing returns...
-    upgradeTempUser
-  }
-})
-```
+- 升级接口保留临时用户的所有数据（群组、消息、位置等）
+- 升级成功后清理本地临时用户备份数据
+- 提供升级成功确认和数据保留提示
 
 #### 用户界面优化
 
-##### 状态指示器
-```vue
-<!-- components/common/UserStatusIndicator.vue -->
-<template>
-  <div class="user-status-indicator">
-    <div v-if="authStore.currentUser?.is_temporary" class="temp-user-badge">
-      <Icon name="ep:user" class="icon" />
-      <span>临时用户</span>
-      <el-button 
-        type="primary" 
-        size="small" 
-        @click="navigateTo('/auth?mode=upgrade')"
-        class="upgrade-btn"
-      >
-        升级
-      </el-button>
-    </div>
-    <div v-else-if="authStore.currentUser" class="regular-user-badge">
-      <Icon name="ep:user-filled" class="icon" />
-      <span>{{ authStore.currentUser.nickname }}</span>
-    </div>
-  </div>
-</template>
+##### 状态指示器规范
+- 临时用户：显示用户图标、"临时用户"标识、升级按钮
+- 正式用户：显示用户头像和昵称
+- 使用合适的视觉设计区分用户状态
 
-<script setup lang="ts">
-import { NButton } from 'naive-ui'
-import Icon from '~/components/common/Icon.vue'
-
-const authStore = useAuthStore()
-</script>
-
-<style scoped>
-.temp-user-badge {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
-  background: rgba(255, 193, 7, 0.1);
-  border: 1px solid rgba(255, 193, 7, 0.3);
-  border-radius: 16px;
-  font-size: 12px;
-}
-
-.upgrade-btn {
-  padding: 2px 8px;
-  height: 20px;
-  font-size: 10px;
-}
-</style>
-```
-
-##### 功能限制提示
-```vue
-<!-- components/common/FeatureGate.vue -->
-<template>
-  <div class="feature-gate">
-    <slot v-if="hasPermission" />
-    <div v-else class="permission-prompt">
-      <Icon name="ep:lock" class="lock-icon" />
-      <p>{{ promptMessage }}</p>
-      <el-button 
-        type="primary" 
-        size="small"
-        @click="handleUpgradeClick"
-      >
-        {{ upgradeButtonText }}
-      </el-button>
-    </div>
-  </div>
-</template>
-
-<script setup lang="ts">
-interface Props {
-  feature: string
-  promptMessage?: string
-  upgradeButtonText?: string
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  promptMessage: '升级账户以使用此功能',
-  upgradeButtonText: '立即升级'
-})
-
-const { capabilities } = useUserCapabilityStore()
-const authStore = useAuthStore()
-
-const hasPermission = computed(() => {
-  // 根据不同功能检查权限
-  switch (props.feature) {
-    case 'createGroup':
-      return capabilities.value.canCreateGroups
-    case 'sendMessage':
-      return capabilities.value.canSendMessages
-    // 添加更多功能检查...
-    default:
-      return true
-  }
-})
-
-const handleUpgradeClick = () => {
-  if (authStore.currentUser?.is_temporary) {
-    navigateTo('/auth?mode=upgrade')
-  } else {
-    navigateTo('/auth?mode=register')
-  }
-}
-</script>
-```
+##### 功能限制提示规范
+- 权限检查：根据用户类型和功能要求进行权限验证
+- 友好提示：无权限时显示锁定图标和提示消息
+- 升级引导：提供明确的升级按钮和路径
+- 组件封装：通过 FeatureGate 组件统一管理功能权限
 
 ### 性能与安全考虑
 
 ##### 防重复创建机制
-```typescript
-// 防止短时间内重复创建临时用户
-let tempUserCreationPromise: Promise<any> | null = null
-
-export const createTempUserSafely = async () => {
-  if (tempUserCreationPromise) {
-    return tempUserCreationPromise
-  }
-  
-  tempUserCreationPromise = authStore.createTempUser()
-  
-  try {
-    const result = await tempUserCreationPromise
-    return result
-  } finally {
-    tempUserCreationPromise = null
-  }
-}
-```
+- 使用 Promise 机制防止短时间内重复创建临时用户
+- 确保创建过程的原子性和一致性
 
 ##### 数据清理策略
-```typescript
-// 定期清理过期的临时用户数据
-export const useTempUserCleanup = () => {
-  const cleanupExpiredData = () => {
-    const tempUserData = localStorage.getItem('temp_user_backup')
-    if (tempUserData) {
-      try {
-        const userData = JSON.parse(tempUserData)
-        const createTime = new Date(userData.created_at).getTime()
-        const daysSinceCreate = (Date.now() - createTime) / (1000 * 60 * 60 * 24)
-        
-        // 临时用户数据超过7天自动清理
-        if (daysSinceCreate > 7) {
-          localStorage.removeItem('temp_user_backup')
-          console.log('已清理过期的临时用户数据')
-        }
-      } catch (error) {
-        localStorage.removeItem('temp_user_backup')
-      }
-    }
-  }
-  
-  // 页面加载时检查
-  onMounted(cleanupExpiredData)
-  
-  return { cleanupExpiredData }
-}
-```
+- 定期检查本地临时用户数据有效性
+- 自动清理超过7天的过期临时用户数据
+- 页面加载时执行数据清理检查
 
 ### 实施指导原则
 
@@ -987,12 +620,12 @@ export const useTempUserCleanup = () => {
 
 ### 测试验证要点
 
-- [ ] 新用户首次访问自动创建临时账户
-- [ ] 临时用户功能权限正确限制
-- [ ] 升级流程数据完整保留
-- [ ] 页面刷新后临时用户身份正确恢复
-- [ ] 过期数据自动清理
-- [ ] 网络异常时的降级体验
+- 新用户首次访问自动创建临时账户
+- 临时用户功能权限正确限制
+- 升级流程数据完整保留
+- 页面刷新后临时用户身份正确恢复
+- 过期数据自动清理
+- 网络异常时的降级体验
 
 ---
 
@@ -1001,7 +634,7 @@ export const useTempUserCleanup = () => {
 ### 游戏UI设计规范
 
 #### 技能栏设计原则
-- **图标一致性**：技能栏中的所有按钮必须有有效的图标，使用MDI图标库
+- **图标一致性**：技能栏中的所有按钮必须有有效的图标，使用Heroicons图标库
 - **功能模块化**：每个技能按钮对应一个明确的功能模块
 - **交互反馈**：技能按钮应有明确的激活/非激活状态，支持拖拽排序
 - **弹窗式操作**：复杂功能（如地图）采用弹窗形式，避免占用固定屏幕空间
@@ -1013,144 +646,45 @@ export const useTempUserCleanup = () => {
 - **位置优先**：minimap弹窗应提供更好的位置信息展示和交互
 
 #### 技能栏图标配置要求
-- **location**: `mdi:map-marker-radius` - 位置管理
-- **users**: `mdi:account-group` - 附近用户  
-- **messages**: `mdi:message-text` - 消息中心
-- **groups**: `mdi:account-multiple` - 我的群组
-- **profile**: `mdi:account-circle` - 个人资料
-- **settings**: `mdi:cog` - 设置
-- **map**: `mdi:map` - 地图视图（新增，替代固定minimap）
-- **create**: `mdi:plus` - 创建群组
+- **location**: `i-heroicons-map-pin` - 位置管理
+- **users**: `i-heroicons-users` - 附近用户  
+- **messages**: `i-heroicons-chat-bubble-left-right` - 消息中心
+- **groups**: `i-heroicons-user-group` - 我的群组
+- **profile**: `i-heroicons-user-circle` - 个人资料
+- **settings**: `i-heroicons-cog-6-tooth` - 设置
+- **map**: `i-heroicons-map` - 地图视图（新增，替代固定minimap）
+- **create**: `i-heroicons-plus` - 创建群组
 
 #### 功能整合原则
 - **去重化**：移除重复功能，如"探索附近"功能已被minimap覆盖
 - **模块化**：每个功能模块有独立的入口和界面
 - **响应式**：所有UI组件支持移动端和桌面端适配
 
-### SCSS/CSS响应式设计规范
-- **断点系统**：使用项目中预定义的SCSS混入处理响应式设计
-  ```scss
-  // 使用现有的SCSS混入
-  @use '~/assets/scss/mixins' as *;
-  
-  .component {
-    // 默认样式（桌面端）
-    width: 400px;
-    
-    // 平板端
-    @include respond-below(1024px) {
-      width: 300px;
-    }
-    
-    // 手机端
-    @include respond-below(768px) {
-      width: 100%;
-    }
-  }
-  ```
+### Tailwind CSS响应式设计规范
+- **断点系统**：使用 Tailwind CSS 内置的响应式前缀
+- **Tailwind 断点定义**：
+  - `sm:` - 640px 及以上（手机横屏及以上）
+  - `md:` - 768px 及以上（平板竖屏及以上）
+  - `lg:` - 1024px 及以上（平板横屏及以上）
+  - `xl:` - 1280px 及以上（桌面端）
+  - `2xl:` - 1536px 及以上（大桌面端）
 
-- **CSS类控制策略**：使用CSS类而非JavaScript控制元素显示
-  ```scss
-  // 响应式显示类
-  .compact-only {
-    display: block;
-    
-    @include respond-above(768px) {
-      display: none;
-    }
-  }
-  
-  .full-only {
-    display: none;
-    
-    @include respond-above(768px) {
-      display: block;
-    }
-  }
-  
-  .tablet-only {
-    display: none;
-    
-    @include respond-between(768px, 1024px) {
-      display: block;
-    }
-  }
-  ```
+- **CSS类控制策略**：使用 Tailwind CSS 响应式显示类而非JavaScript控制元素显示
+  - 响应式宽度：根据断点调整元素宽度
+  - 显示控制：通过 `block`、`hidden` 等类控制元素显示
+  - 布局变化：通过 `flex`、`flex-col` 等类实现响应式布局
 
-- **组件响应式样式模式**：在Vue组件中的标准响应式写法
-  ```vue
-  <template>
-    <div class="responsive-component">
-      <div class="content">内容</div>
-      <div class="sidebar desktop-only">侧边栏</div>
-    </div>
-  </template>
-  
-  <style scoped lang="scss">
-  @use '~/assets/scss/mixins' as *;
-  
-  .responsive-component {
-    display: flex;
-    gap: 1rem;
-    
-    @include respond-below(768px) {
-      flex-direction: column;
-    }
-    
-    .content {
-      flex: 1;
-      
-      @include respond-below(768px) {
-        order: 2;
-      }
-    }
-    
-    .sidebar {
-      width: 300px;
-      
-      @include respond-below(1024px) {
-        width: 250px;
-      }
-    }
-  }
-  </style>
-  ```
+- **组件响应式样式模式**：在Vue组件中使用 Tailwind CSS 响应式类
+  - 优先使用 Tailwind CSS 内置的响应式类
+  - 必要时使用 `@apply` 指令重用 Tailwind 类
+  - 保持组件样式的一致性和可维护性
 
-- **禁止的响应式模式**：严禁使用以下JavaScript响应式检测方式
-  ```javascript
-  // ❌ 禁止的做法
-  const isCompact = ref(window.innerWidth < 768)
-  const isTablet = computed(() => screen.width >= 768 && screen.width < 1024)
-  
-  // ❌ 禁止的组件属性
-  :fullscreen="isCompact"
-  :class="{ 'compact-layout': isCompact }"
-  v-if="!isFullScreen"
-  ```
+- **禁止的响应式模式**：严禁使用JavaScript进行响应式检测，优先使用CSS
+  - 禁止使用 `window.innerWidth` 或 `screen.width` 进行响应式判断
+  - 禁止使用 `v-if` 配合屏幕尺寸变量控制显示
+  - 禁止在组件中定义基于屏幕尺寸的计算属性
 
 - **推荐的响应式模式**：正确的CSS优先响应式设计
-  ```vue
-  <template>
-    <!-- ✅ 推荐的做法 -->
-    <n-modal class="responsive-modal">
-      <div class="modal-content">内容</div>
-    </n-modal>
-  </template>
-  
-  <style scoped lang="scss">
-  @use '~/assets/scss/mixins' as *;
-  
-  .responsive-modal {
-    :deep(.n-modal) {
-      width: 80%;
-      max-width: 600px;
-      
-      @include respond-below(768px) {
-        width: 95%;
-        height: 90vh;
-        margin: 5vh auto;
-      }
-    }
-  }
-  </style>
-  ```
+  - 使用 Tailwind CSS 响应式类实现布局适配
+  - 通过 CSS 媒体查询而非 JavaScript 控制响应式行为
+  - 保持样式声明的原子性和可预测性

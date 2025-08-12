@@ -86,13 +86,13 @@ impl<R: GroupRepository + ?Sized> JobHandler<GroupMessageDigestJob> for GroupDig
 /// 群组成员活跃度更新任务处理器
 pub struct GroupMemberActivityHandler {
     /// 群组活跃度缓存
-    group_activity_cache: Arc<crate::cache::RedisGroupActivityCache>,
+    group_activity_cache: Arc<crate::cache::group_activity_cache::RedisGroupActivityCache>,
 }
 
 impl GroupMemberActivityHandler {
     /// 创建新的群组成员活跃度更新任务处理器
     pub fn new(
-        group_activity_cache: Arc<crate::cache::RedisGroupActivityCache>,
+        group_activity_cache: Arc<crate::cache::group_activity_cache::RedisGroupActivityCache>,
     ) -> Self {
         Self {
             group_activity_cache,

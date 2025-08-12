@@ -2,14 +2,15 @@ use crate::{
     models::api::user::AuthUser,
     repositories::PgUserRepository,
     services::{
-        CheckinService, ConfigService, GroupService, HealthService, MessageService, 
+        MomentService, ConfigService, GroupService, HealthService, MessageService, 
         UserService,
         notification::WebSocketNotificationService,
     },
-    jobs::JobService,
     utils::{jwt::verify_jwt_token, response::AppError},
     ws::manager::WebSocketManager,
 };
+#[cfg(feature = "jobs")]
+use crate::jobs::JobService;
 use axum::{
     body::Body,
     extract::{Request, State},
@@ -19,6 +20,8 @@ use axum::{
 };
 use std::sync::Arc;
 use tracing::error;
+use crate::utils::metrics::AppMetrics;
+use crate::utils::events::EventBus;
 
 pub struct AppState {
     pub config_service: Arc<ConfigService>,
@@ -26,11 +29,14 @@ pub struct AppState {
     pub user_repository: Arc<PgUserRepository>,
     pub group_service: Arc<GroupService>,
     pub message_service: Arc<MessageService>,
-    pub checkin_service: Arc<CheckinService>,
+    pub moment_service: Arc<MomentService>,
     pub ws_manager: Arc<WebSocketManager>,
     pub websocket_notification_service: Arc<WebSocketNotificationService>,
+    #[cfg(feature = "jobs")]
     pub job_service: Option<Arc<JobService>>,
     pub health_service: Arc<HealthService>,
+    pub metrics: Arc<AppMetrics>,
+    pub event_bus: Arc<EventBus>,
 }
 
 // 认证中间件，用于验证请求中的JWT令牌

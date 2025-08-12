@@ -7,7 +7,7 @@ use crate::{
     repositories::{RepositoryError, user_repository::UserRepository},
     services::ConfigService,
     utils::{
-        constants::{DEFAULT_LATITUDE, DEFAULT_LOCATION_NAME, DEFAULT_LONGITUDE},
+        // constants::{DEFAULT_LATITUDE, DEFAULT_LOCATION_NAME, DEFAULT_LONGITUDE},
         jwt::{generate_jwt_token, verify_jwt_token},
         response::AppError,
         result_ext::ResultExt,
@@ -48,6 +48,7 @@ pub struct AuthUserRow {
 pub struct UserService {
     config_service: Arc<ConfigService>,
     user_repository: Arc<crate::repositories::PgUserRepository>,
+    #[cfg(feature = "jobs")]
     job_dispatcher: Option<Arc<crate::jobs::dispatcher::JobDispatcher>>,
 }
 
@@ -59,11 +60,13 @@ impl UserService {
         Self {
             config_service,
             user_repository,
+            #[cfg(feature = "jobs")]
             job_dispatcher: None,
         }
     }
 
     /// 设置任务调度器
+    #[cfg(feature = "jobs")]
     pub fn with_job_dispatcher(mut self, job_dispatcher: Arc<crate::jobs::dispatcher::JobDispatcher>) -> Self {
         self.job_dispatcher = Some(job_dispatcher);
         self
@@ -284,6 +287,7 @@ impl UserService {
         // 异步设置初始位置（不阻断注册流程）
         // 设计思路：用户注册是核心业务逻辑，不应该因为位置设置失败而导致注册失败
         // 位置设置作为辅助功能，通过任务队列异步执行，失败时只记录日志而不影响注册结果
+        #[cfg(feature = "jobs")]
         if let Some(job_dispatcher) = &self.job_dispatcher {
             if let Err(e) = job_dispatcher
                 .dispatch_location_index(
@@ -298,7 +302,9 @@ impl UserService {
             } else {
                 debug!("位置初始化任务调度成功: user_id={}", user_id);
             }
-        } else {
+        }
+        #[cfg(not(feature = "jobs"))]
+        {
             warn!("任务调度器未配置，跳过位置初始化: user_id={}", user_id);
         }
 
@@ -342,6 +348,7 @@ impl UserService {
         // 异步设置初始位置（不阻断创建流程）
         // 设计思路：临时用户创建也是核心业务逻辑，不应该因为位置设置失败而导致创建失败
         // 客户端可以稍后通过专门的位置更新接口来设置真实位置
+        #[cfg(feature = "jobs")]
         if let Some(job_dispatcher) = &self.job_dispatcher {
             if let Err(e) = job_dispatcher
                 .dispatch_location_index(
@@ -356,7 +363,9 @@ impl UserService {
             } else {
                 debug!("临时用户位置初始化任务调度成功: user_id={}", user_id);
             }
-        } else {
+        }
+        #[cfg(not(feature = "jobs"))]
+        {
             warn!("任务调度器未配置，跳过临时用户位置初始化: user_id={}", user_id);
         }
 
@@ -540,6 +549,7 @@ impl UserService {
     }
 
     /// 获取用户ID分区信息
+    #[allow(dead_code)]
     pub fn get_user_id_partition_info(&self, user_id: i64) -> Result<(UserType, i64), AppError> {
         UserIdPartition::parse_user_id(user_id).map_err(|e| {
             AppError::BadRequest(format!("无效的用户ID: {}", e))
@@ -583,6 +593,111 @@ impl UserService {
     /// 验证用户ID是否有效
     pub fn is_valid_user_id(&self, user_id: i64) -> bool {
         UserIdPartition::is_valid_user_id(user_id)
+    }
+
+    /// 生成访问令牌
+    fn generate_access_token(&self, user_id: i64) -> Result<(String, chrono::DateTime<chrono::Utc>), AppError> {
+        let (access_token, _, expires_at) = self.generate_tokens(user_id, false)?;
+        Ok((access_token, expires_at))
+    }
+
+    /// 生成刷新令牌
+    fn generate_refresh_token(&self, user_id: i64) -> Result<String, AppError> {
+        let (_, refresh_token, _) = self.generate_tokens(user_id, false)?;
+        Ok(refresh_token)
+    }
+
+    // =============== 用户资料和设置管理 ===============
+
+    /// 更新用户昵称
+    pub async fn update_nickname(&self, user_id: i64, nickname: &str) -> Result<(), AppError> {
+        info!("【Service】更新用户昵称: user_id={}, nickname={}", user_id, nickname);
+
+        self.user_repository
+            .update_nickname(user_id, nickname)
+            .await
+            .map_repository_error("更新昵称")
+    }
+
+    /// 升级临时用户为正式用户
+    pub async fn upgrade_temp_user(
+        &self, 
+        user_id: i64, 
+        login_id: &str, 
+        password: &str
+    ) -> Result<crate::models::api::user::AuthResponse, AppError> {
+        info!("【Service】升级临时用户: user_id={}, login_id={}", user_id, login_id);
+
+        // 检查是否为临时用户
+        let is_temp = self.user_repository
+            .is_temp_user(user_id)
+            .await
+            .map_repository_error("检查用户类型")?;
+        
+        if !is_temp {
+            return Err(AppError::BadRequest("只有临时用户可以升级".to_string()));
+        }
+
+        // 检查login_id是否已存在
+        if self.is_login_id_taken(login_id).await? {
+            return Err(AppError::Conflict("登录ID已存在".to_string()));
+        }
+
+        // 加密密码
+        let password_hash = self.hash_password(password).await?;
+
+        // 升级用户，获取新的user_id
+        let new_user_id = self.user_repository
+            .upgrade_temp_user(user_id, login_id, &password_hash)
+            .await
+            .map_repository_error("升级账户")?;
+
+        // 生成新的认证令牌 (使用新的user_id)
+        let user_info = self.get_auth_info(new_user_id).await?;
+        let (access_token, expires_at) = self.generate_access_token(new_user_id)?;
+        let refresh_token = self.generate_refresh_token(new_user_id)?;
+
+        Ok(crate::models::api::user::AuthResponse {
+            user_id: new_user_id, // 返回新的user_id
+            nickname: user_info.nickname,
+            access_token,
+            refresh_token,
+            expires_at,
+        })
+    }
+
+    /// 获取用户设置
+    pub async fn get_user_settings(&self, user_id: i64) -> Result<crate::models::user_settings::UserSettings, AppError> {
+        info!("【Service】获取用户设置: user_id={}", user_id);
+
+        self.user_repository
+            .get_user_settings(user_id)
+            .await
+            .map_repository_error("获取用户设置")
+    }
+
+    /// 更新用户设置
+    pub async fn update_user_settings(
+        &self, 
+        user_id: i64, 
+        settings: crate::models::api::user::UserSettingsRequest
+    ) -> Result<(), AppError> {
+        info!("【Service】更新用户设置: user_id={}", user_id);
+
+        self.user_repository
+            .update_user_settings(user_id, settings)
+            .await
+            .map_repository_error("更新用户设置")
+    }
+
+    /// 删除用户账户
+    pub async fn delete_user(&self, user_id: i64) -> Result<(), AppError> {
+        info!("【Service】删除用户账户: user_id={}", user_id);
+
+        self.user_repository
+            .delete_user(user_id)
+            .await
+            .map_repository_error("删除用户账户")
     }
 }
 

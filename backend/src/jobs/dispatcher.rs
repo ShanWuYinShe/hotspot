@@ -8,9 +8,7 @@ use crate::utils::job_queue::{Job, JobPriority, JobQueue};
 use crate::jobs::group_models::{
     GroupMessageDigestJob, GroupMemberActivityJob, GroupActivityType
 };
-use crate::jobs::location_models::{
-    CheckinIndexJob, NearbyCheckinNotificationJob
-};
+use crate::jobs::location_models::MomentIndexJob;
 use crate::jobs::user_models::{
     WelcomeEmailJob, NotificationJob, LocationIndexJob
 };
@@ -24,10 +22,9 @@ pub struct JobDispatcher {
     group_digest_handler: Option<Arc<crate::jobs::group_handlers::GroupDigestHandler<crate::repositories::PgGroupRepository>>>,
     /// 群组成员活跃度更新任务处理器
     group_activity_handler: Option<Arc<crate::jobs::group_handlers::GroupMemberActivityHandler>>,
-    /// 签到索引任务处理器
-    checkin_index_handler: Option<Arc<crate::jobs::location_handlers::CheckinIndexHandler<crate::cache::location_cache::RedisLocationCache>>>,
-    /// 附近签到通知任务处理器
-    nearby_checkin_notification_handler: Option<Arc<crate::jobs::location_handlers::NearbyCheckinNotificationHandler>>,
+    /// 动态索引任务处理器
+    moment_index_handler: Option<Arc<crate::jobs::location_handlers::MomentIndexHandler<crate::cache::location_cache::RedisLocationCache>>>,
+    
     /// 欢迎邮件任务处理器
     welcome_email_handler: Option<Arc<crate::jobs::user_handlers::WelcomeEmailHandler<crate::services::notification::WebSocketNotificationService>>>,
     /// 通知推送任务处理器
@@ -42,8 +39,8 @@ impl JobDispatcher {
         job_queue: Arc<JobQueue>,
         group_digest_handler: Option<Arc<crate::jobs::group_handlers::GroupDigestHandler<crate::repositories::PgGroupRepository>>>,
         group_activity_handler: Option<Arc<crate::jobs::group_handlers::GroupMemberActivityHandler>>,
-        checkin_index_handler: Option<Arc<crate::jobs::location_handlers::CheckinIndexHandler<crate::cache::location_cache::RedisLocationCache>>>,
-        nearby_checkin_notification_handler: Option<Arc<crate::jobs::location_handlers::NearbyCheckinNotificationHandler>>,
+        moment_index_handler: Option<Arc<crate::jobs::location_handlers::MomentIndexHandler<crate::cache::location_cache::RedisLocationCache>>>,
+        
         welcome_email_handler: Option<Arc<crate::jobs::user_handlers::WelcomeEmailHandler<crate::services::notification::WebSocketNotificationService>>>,
         notification_handler: Option<Arc<crate::jobs::user_handlers::NotificationHandler>>,
         location_index_handler: Option<Arc<crate::jobs::user_handlers::LocationIndexHandler>>,
@@ -52,8 +49,8 @@ impl JobDispatcher {
             job_queue,
             group_digest_handler,
             group_activity_handler,
-            checkin_index_handler,
-            nearby_checkin_notification_handler,
+            moment_index_handler,
+            
             welcome_email_handler,
             notification_handler,
             location_index_handler,
@@ -67,8 +64,8 @@ impl JobDispatcher {
         self.register_group_member_activity_handler().await?;
         
         // Location related handlers
-        self.register_checkin_index_handler().await?;
-        self.register_nearby_checkin_notification_handler().await?;
+        self.register_moment_index_handler().await?;
+        
         
         // User related handlers
         self.register_welcome_email_handler().await?;
@@ -120,19 +117,19 @@ impl JobDispatcher {
         Ok(())
     }
     
-    /// 注册签到索引任务处理器
-    async fn register_checkin_index_handler(&self) -> Result<(), LapinError> {
-        let handler = self.checkin_index_handler.clone();
+    /// 注册动态索引任务处理器
+    async fn register_moment_index_handler(&self) -> Result<(), LapinError> {
+        let handler = self.moment_index_handler.clone();
         
-        self.job_queue.register_handler(move |job: Job<CheckinIndexJob>| {
+        self.job_queue.register_handler(move |job: Job<MomentIndexJob>| {
             let handler = handler.clone();
             async move {
                 if let Some(h) = handler {
                     if let Err(e) = h.handle(&job).await {
-                        error!("Failed to handle checkin index job: {:?}", e);
+                        error!("Failed to handle moment index job: {:?}", e);
                     }
                 } else {
-                    error!("Checkin index job handler not configured.");
+                    error!("Moment index job handler not configured.");
                 }
                 Ok(())
             }
@@ -141,26 +138,7 @@ impl JobDispatcher {
         Ok(())
     }
     
-    /// 注册附近签到通知任务处理器
-    async fn register_nearby_checkin_notification_handler(&self) -> Result<(), LapinError> {
-        let handler = self.nearby_checkin_notification_handler.clone();
-        
-        self.job_queue.register_handler(move |job: Job<NearbyCheckinNotificationJob>| {
-            let handler = handler.clone();
-            async move {
-                if let Some(h) = handler {
-                    if let Err(e) = h.handle(&job).await {
-                        error!("Failed to handle nearby checkin notification job: {:?}", e);
-                    }
-                } else {
-                    error!("Nearby checkin notification job handler not configured.");
-                }
-                Ok(())
-            }
-        }).await?;
-        
-        Ok(())
-    }
+    
     
     /// 注册欢迎邮件任务处理器
     async fn register_welcome_email_handler(&self) -> Result<(), LapinError> {
@@ -270,57 +248,26 @@ impl JobDispatcher {
         self.job_queue.enqueue(job).await
     }
     
-    /// 分派签到索引任务
-    pub async fn dispatch_checkin_index(
+    /// 分派生活瞬间索引任务
+    pub async fn dispatch_moment_index(
         &self,
-        checkin_id: String,
+        moment_id: String,
         user_id: i64,
         latitude: f64,
         longitude: f64,
-    ) -> Result<(), LapinError> {
-        let timestamp = chrono::Utc::now().timestamp();
-        let job = Job::new(
-            "checkin_index",
-            CheckinIndexJob {
-                checkin_id,
-                user_id,
-                latitude,
-                longitude,
-                timestamp,
-            },
-        )
-        .with_priority(JobPriority::Normal);
-        
-        self.job_queue.enqueue(job).await
-    }
-    
-    /// 分派附近签到通知任务
-    pub async fn dispatch_nearby_checkin_notification(
-        &self,
-        checkin_id: String,
-        creator_id: i64,
-        creator_nickname: String,
-        nearby_user_ids: Vec<i64>,
-        latitude: f64,
-        longitude: f64,
-        content: String,
-    ) -> Result<(), LapinError> {
-        let timestamp = chrono::Utc::now().timestamp();
-        let job = Job::new(
-            "nearby_checkin_notification",
-            NearbyCheckinNotificationJob {
-                checkin_id,
-                creator_id,
-                creator_nickname,
-                nearby_user_ids,
-                latitude,
-                longitude,
-                content,
-                timestamp,
-            },
-        )
-        .with_priority(JobPriority::Normal);
-        
+    ) -> Result<(), lapin::Error> {
+        let moment_index_job = MomentIndexJob {
+            moment_id,
+            user_id,
+            latitude,
+            longitude,
+            timestamp: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs() as i64,
+        };
+
+        let job = Job::new("moment.index", moment_index_job);
         self.job_queue.enqueue(job).await
     }
     
@@ -386,7 +333,7 @@ impl JobDispatcher {
         let notification_type = match notification_type {
             "message" => NotificationType::Message,
             "system" => NotificationType::System,
-            "checkin" => NotificationType::Checkin,
+            "moment" => NotificationType::Moment,
             "group_invite" => NotificationType::GroupInvite,
             "friend_request" => NotificationType::FriendRequest,
             _ => NotificationType::System, // 默认
@@ -415,8 +362,8 @@ impl std::fmt::Debug for JobDispatcher {
                 let mut handlers = Vec::new();
                 if self.group_digest_handler.is_some() { handlers.push("GroupDigest"); }
                 if self.group_activity_handler.is_some() { handlers.push("GroupActivity"); }
-                if self.checkin_index_handler.is_some() { handlers.push("CheckinIndex"); }
-                if self.nearby_checkin_notification_handler.is_some() { handlers.push("NearbyCheckinNotification"); }
+                if self.moment_index_handler.is_some() { handlers.push("MomentIndex"); }
+                
                 if self.welcome_email_handler.is_some() { handlers.push("WelcomeEmail"); }
                 if self.notification_handler.is_some() { handlers.push("Notification"); }
                 if self.location_index_handler.is_some() { handlers.push("LocationIndex"); }

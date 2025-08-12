@@ -77,8 +77,10 @@ impl fmt::Display for UserType {
 pub struct UserIdPartition;
 
 impl UserIdPartition {
+    #[allow(dead_code)]
     /// 64位ID的位段配置
     const TYPE_BITS: u8 = 10;         // 类型标识符位数
+    #[allow(dead_code)]
     const SEQUENCE_BITS: u8 = 54;     // 序列号位数
     const TYPE_SHIFT: u8 = 54;        // 类型标识符左移位数
     const SEQUENCE_MASK: i64 = 0x003F_FFFF_FFFF_FFFF; // 序列号掩码 (54位)
@@ -205,6 +207,7 @@ impl UserIdPartition {
     }
 
     /// 生成系统管理员用户ID（用于管理功能）
+    #[allow(dead_code)]
     pub fn generate_admin_user_id(sequence: i64) -> Result<i64, String> {
         Self::generate_user_id(UserType::Admin, sequence)
     }

@@ -47,33 +47,22 @@ pub struct SystemNotificationData {
 // pub use crate::ws::message_types::SystemNotificationType;
 
 
-impl WebSocketNotificationService {    pub fn new(
+impl WebSocketNotificationService {
+    pub fn new(
         message_router: Arc<MessageRouter>,
         user_repository: Arc<PgUserRepository>,
         notification_policy: Option<NotificationPolicy>,
+        notification_cache: Option<Arc<dyn NotificationCache>>, 
     ) -> Self {
         let policy_service = NotificationPolicyService::new(user_repository, notification_policy, None);
         Self { 
             message_router,
             policy_service,
-            notification_cache: None,
+            notification_cache,
         }
     }
 
-    /// 创建带缓存的 WebSocket 通知服务
-    pub fn with_cache(
-        message_router: Arc<MessageRouter>,
-        user_repository: Arc<PgUserRepository>,
-        notification_policy: Option<NotificationPolicy>,
-        notification_cache: Arc<dyn NotificationCache>,
-    ) -> Self {
-        let policy_service = NotificationPolicyService::new(user_repository, notification_policy, None);
-        Self { 
-            message_router,
-            policy_service,
-            notification_cache: Some(notification_cache),
-        }
-    }/// 更新通知策略
+    /// 更新通知策略
     #[allow(dead_code)]
     pub fn update_notification_policy(&mut self, policy: NotificationPolicy) {
         self.policy_service.update_policy(policy);
@@ -102,6 +91,7 @@ impl WebSocketNotificationService {    pub fn new(
         }
     }
 
+    #[allow(dead_code)]
     pub async fn notify_new_message(
         &self,
         message_id: Uuid,
@@ -172,7 +162,9 @@ impl WebSocketNotificationService {    pub fn new(
             .send_to_room(&RoomId::from_room_type(room_id, room_type), typing_event)
             .await
             .map_err(|e| NotificationError::WebSocket(e.to_string()))
-    }    pub async fn notify_message_read_to_recipient(
+    }
+    #[allow(dead_code)]
+    pub async fn notify_message_read_to_recipient(
         &self,
         reader_id: i64,
         conversation_id: Uuid,
@@ -193,7 +185,9 @@ impl WebSocketNotificationService {    pub fn new(
             .send_to_room(&room_key, read_receipt)
             .await
             .map_err(|e| NotificationError::WebSocket(e.to_string()))
-    }    pub async fn notify_group_event(
+    }
+    #[allow(dead_code)]
+    pub async fn notify_group_event(
         &self,
         event_data: GroupEventData,
         actor_id_to_exclude: Option<i64>,
@@ -222,6 +216,7 @@ impl WebSocketNotificationService {    pub fn new(
     }
 
     /// Sends a system event notification to a specific user.
+    #[allow(dead_code)]
     pub async fn notify_system_event_to_user(
         &self,
         user_id: i64,
@@ -233,12 +228,15 @@ impl WebSocketNotificationService {    pub fn new(
         );
 
         let message = ServerMessage::SystemNotification(event_data);
+        // 基于订阅模型：发送到用户私有房间，仅订阅者可接收
         let user_room = RoomId::from_user(user_id);
-        // 直接发送系统通知，不进行过滤
-        self.message_router.send_to_room(&user_room, message)
+        self.message_router
+            .send_to_room(&user_room, message)
             .await
-            .map_err(|e| NotificationError::WebSocket(e.to_string()))    }
+            .map_err(|e| NotificationError::WebSocket(e.to_string()))
+    }
 
+    #[allow(dead_code)]
     #[allow(dead_code)]
     pub async fn send_direct_success_confirmation_to_connection(
         &self,
@@ -256,6 +254,7 @@ impl WebSocketNotificationService {    pub fn new(
             .await
             .map_err(|e| NotificationError::WebSocket(e.to_string()))
     }
+    #[allow(dead_code)]
     #[allow(dead_code)]
     pub async fn send_direct_error_message_to_connection(
         &self,
@@ -276,17 +275,20 @@ impl WebSocketNotificationService {    pub fn new(
             .map_err(|e| NotificationError::WebSocket(e.to_string()))
     }
     
+    #[allow(dead_code)]
     pub async fn notify_system_event(
         &self,
         user_id: i64,
         notification_data: SystemNotificationData,
     ) -> NotificationResult<()> {
         let user_room = RoomId::from_user(user_id);
-        self.message_router.send_to_room(&user_room, ServerMessage::SystemNotification(notification_data))
+        self.message_router
+            .send_to_room(&user_room, ServerMessage::SystemNotification(notification_data))
             .await
             .map_err(|e| NotificationError::WebSocket(e.to_string()))
     }
 
+    #[allow(dead_code)]
     pub async fn notify_message_deleted(        &self,
         message_id: Uuid,
         room_id: Uuid,
@@ -312,6 +314,7 @@ impl WebSocketNotificationService {    pub fn new(
     }
 
     /// 获取用户的离线通知
+    #[allow(dead_code)]
     pub async fn get_offline_notifications(&self, user_id: i64) -> NotificationResult<Vec<String>> {
         match &self.notification_cache {
             Some(cache) => {
@@ -346,6 +349,7 @@ impl WebSocketNotificationService {    pub fn new(
     }
 
     /// 发送通知，不进行设置检查
+    #[allow(dead_code)]
     pub async fn send_notification_with_settings(
         &self,
         user_id: i64,
@@ -358,23 +362,7 @@ impl WebSocketNotificationService {    pub fn new(
     // ...existing code...
 }
 
-// Ensure WsMessageType has from_string_or_default or similar
-// This should ideally live in ws/message_types.rs with WsMessageType definition
-// For now, adding it here to make the service compile.
-// Consider moving this to the WsMessageType impl block in its original file.
-impl WsMessageType {
-    pub fn from_string_or_default(s: &str) -> Self {
-        match s.to_lowercase().as_str() {
-            "text" => WsMessageType::Text,
-            "image" => WsMessageType::Image,
-            "voice" => WsMessageType::Voice,
-            "video" => WsMessageType::Video,
-            "file" => WsMessageType::File,
-            "location" => WsMessageType::Location,
-            _ => WsMessageType::Text, // Default to Text if unknown
-        }
-    }
-}
+// 移除重复的 from_string_or_default，使用 ws::message_types 中的实现
 
 impl NotificationService for WebSocketNotificationService {
     fn name(&self) -> &str {
@@ -459,12 +447,4 @@ impl NotificationService for WebSocketNotificationService {
     }
 } 
 
-// Helper to create RoomId from Uuid and RoomType
-impl RoomId {
-    fn from_room_type(id: Uuid, room_type: RoomType) -> Self {
-        match room_type {
-            RoomType::Group => RoomId::Group(id),
-            RoomType::Conversation => RoomId::Conversation(id),
-        }
-    }
-}
+// 移除重复 from_room_type，使用 ws::message_types 中的实现

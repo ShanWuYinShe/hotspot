@@ -27,3 +27,17 @@ tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter", "json"] }
 utoipa = { version = "4.2.0", features = ["axum_extras"] }
 uuid = { version = "1.16.0", features = ["v4", "serde"] }
+
+[features]
+default = []
+# 控制是否在用户订阅私有房间后自动派发离线通知
+ws_offline_notifications = []
+# 控制是否启用审计埋点（提交到注入的 AuditSink）
+audit = []
+# 启用 WebSocket 相关的定时清理任务（连接/空房间）
+ws_scheduler = []
+# 启用群组消息摘要的定时任务
+group_digest_scheduler = []
+# 控制是否编译与任务队列/调度相关的代码（便于裁剪构建）
+jobs = []
+ws_hooks = []
