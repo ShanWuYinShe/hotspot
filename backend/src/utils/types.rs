@@ -1,6 +1,19 @@
 use uuid::Uuid;
 use serde::{Serialize, Deserialize};
-use crate::ws::message_types::{RoomType, RoomId};
+
+/// 房间类型枚举（本地定义，避免对ws模块的依赖）
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum RoomType {
+    Group,
+    Conversation,
+}
+
+/// 房间ID枚举（本地定义，避免对ws模块的依赖）
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum RoomId {
+    Group(Uuid),
+    Conversation(Uuid),
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct UserId(pub i64);

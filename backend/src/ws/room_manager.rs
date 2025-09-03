@@ -85,7 +85,6 @@ impl RoomManager {
     }
 
     /// 连接断开时清理所有房间订阅
-    #[allow(dead_code)]
     pub async fn cleanup_connection_subscriptions(&self, connection_id: Uuid) -> Vec<RoomId> {
         let rooms_set = {
             let mut connection_rooms = self.connection_rooms.write().await;
@@ -139,7 +138,6 @@ impl RoomManager {
     }
 
     /// 检查连接是否订阅了指定房间
-    #[allow(dead_code)]
     pub async fn is_subscribed(&self, connection_id: Uuid, room_id: &RoomId) -> bool {
         let connection_rooms = self.connection_rooms.read().await;
         if let Some(rooms) = connection_rooms.get(&connection_id) {
@@ -150,7 +148,6 @@ impl RoomManager {
     }
 
     /// 获取房间统计信息
-    #[allow(dead_code)]
     pub async fn get_stats(&self) -> RoomStats {
         let room_subscriptions = self.room_subscriptions.read().await;
         let connection_rooms = self.connection_rooms.read().await;
@@ -165,7 +162,6 @@ impl RoomManager {
     }
 
     /// 清理空房间
-    #[allow(dead_code)]
     pub async fn cleanup_empty_rooms(&self) -> usize {
         let mut room_subscriptions = self.room_subscriptions.write().await;
         let initial_count = room_subscriptions.len();
@@ -183,7 +179,6 @@ impl RoomManager {
 
 /// 房间统计信息
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct RoomStats {
     pub active_rooms: usize,
     pub total_subscriptions: usize,

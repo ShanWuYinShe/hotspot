@@ -3,7 +3,7 @@ use tracing::error;
 use uuid::Uuid;
 
 use crate::utils::response::AppError;
-use crate::models::constants::group_roles;
+use crate::domain::constants::group_roles;
 use std::sync::Arc;
 
 /// 检查用户是否是群组成员

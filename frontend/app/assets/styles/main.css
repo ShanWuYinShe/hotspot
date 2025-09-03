@@ -1,2 +1,686 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
+
+/* 响应式基础字体大小设置 - 提升阅读体验 */
+html {
+    /* 移动端基础字体大小 - 提升至18px */
+    font-size: 18px;
+}
+
+@media (min-width: 640px) {
+    html {
+        /* 平板及以上设备 */
+        font-size: 19px;
+    }
+}
+
+@media (min-width: 1024px) {
+    html {
+        /* 桌面设备 */
+        font-size: 20px;
+    }
+}
+
+@media (min-width: 1280px) {
+    html {
+        /* 大屏设备 */
+        font-size: 21px;
+    }
+}
+
+/* Apple Human Interface Guidelines inspired design system */
+/* Nuxt UI container override */
+:root {
+    /* 将全局容器设为 8xl，参考 Nuxt UI Theme Container 文档 */
+    /* https://ui.nuxt.com/getting-started/theme */
+    --ui-container: var(--container-8xl);
+}
+/* 苹果人机界面设计规范风格系统 */
+
+/* Design tokens */
+:root {
+    /* Glass */
+    --glass-blur: 12px;
+    --glass-saturation: 1.15;
+    --glass-bg: rgba(255, 255, 255, 0.64);
+    --glass-border: rgba(0, 0, 0, 0.06);
+
+    /* Brand (Apple HIG inspired) */
+    --brand-primary: #0a84ff;
+    --brand-primary-rgb: 10, 132, 255;
+    --brand-purple-rgb: 191, 90, 242;
+    --brand-green-rgb: 48, 209, 88;
+
+    /* Semantic */
+    --semantic-success: #34c759;
+    --semantic-warning: #ffcc00;
+    --semantic-error: #ff3b30;
+    --semantic-info: #64d2ff;
+
+    /* Text labels */
+    --label-high: rgba(0, 0, 0, 0.88);
+    --label-muted: rgba(0, 0, 0, 0.64);
+
+    /* Shadows (depth scale) */
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 1px rgba(0, 0, 0, 0.04);
+    --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+    --shadow-3: 0 6px 16px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.06);
+    --shadow-4: 0 12px 28px rgba(0, 0, 0, 0.12), 0 6px 12px rgba(0, 0, 0, 0.08);
+    --shadow-5: 0 20px 44px rgba(0, 0, 0, 0.16), 0 10px 20px rgba(0, 0, 0, 0.1);
+
+    /* Focus ring */
+    --ring-apple: 0 0 0 3px rgba(var(--brand-primary-rgb), 0.28); /* toned-down focus ring for better comfort */
+
+    /* Motion tokens */
+    --motion-duration-fast: 150ms;
+    --motion-duration-normal: 200ms;
+    --motion-duration-slow: 300ms;
+    --motion-ease: cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --glass-bg: rgba(17, 17, 20, 0.4);
+        --glass-border: rgba(255, 255, 255, 0.1);
+
+        /* Text labels (dark) */
+        --label-high: rgba(255, 255, 255, 0.92);
+        --label-muted: rgba(255, 255, 255, 0.72);
+
+        /* Maintain the same shadow stack for consistency across themes */
+    }
+}
+
+/* Typography Scale System */
+@layer base {
+    /* 建立清晰的字体层次系统 */
+    
+    /* 主标题 - 页面最重要标题 */
+    .text-display-lg {
+        font-size: 3.5rem;      /* 56px */
+        line-height: 1.1;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+    }
+    
+    .text-display-md {
+        font-size: 2.75rem;     /* 44px */
+        line-height: 1.2;
+        font-weight: 700;
+        letter-spacing: -0.015em;
+    }
+    
+    .text-display-sm {
+        font-size: 2.25rem;     /* 36px */
+        line-height: 1.2;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+    }
+    
+    /* 标题层次 */
+    .text-title-xl {
+        font-size: 1.875rem;    /* 30px */
+        line-height: 1.3;
+        font-weight: 600;
+    }
+    
+    .text-title-lg {
+        font-size: 1.5rem;      /* 24px */
+        line-height: 1.33;
+        font-weight: 600;
+    }
+    
+    .text-title-md {
+        font-size: 1.25rem;     /* 20px */
+        line-height: 1.4;
+        font-weight: 600;
+    }
+    
+    .text-title-sm {
+        font-size: 1.125rem;    /* 18px */
+        line-height: 1.44;
+        font-weight: 500;
+    }
+    
+    /* 正文层次 - 大幅提升可读性 */
+    .text-body-xl {
+        font-size: 1.375rem;    /* 22px (相对于18px基础) */
+        line-height: 1.6;
+        font-weight: 400;
+    }
+    
+    .text-body-lg {
+        font-size: 1.25rem;     /* 20px - 主要正文内容 */
+        line-height: 1.6;
+        font-weight: 400;
+    }
+    
+    .text-body-md {
+        font-size: 1.125rem;    /* 18px - 标准正文 */
+        line-height: 1.56;
+        font-weight: 400;
+    }
+    
+    .text-body-sm {
+        font-size: 1rem;        /* 16px - 辅助正文 */
+        line-height: 1.5;
+        font-weight: 400;
+    }
+    
+    /* 按钮和交互元素 - 同步提升 */
+    .text-button-lg {
+        font-size: 1.25rem;     /* 20px - 大按钮 */
+        line-height: 1.4;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+    }
+    
+    .text-button-md {
+        font-size: 1.125rem;    /* 18px - 标准按钮 */
+        line-height: 1.33;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+    }
+    
+    .text-button-sm {
+        font-size: 1rem;        /* 16px - 小按钮 */
+        line-height: 1.25;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+    }
+    
+    /* 标签和辅助文本 */
+    .text-label-lg {
+        font-size: 0.875rem;    /* 14px */
+        line-height: 1.43;
+        font-weight: 500;
+    }
+    
+    .text-label-md {
+        font-size: 0.75rem;     /* 12px */
+        line-height: 1.33;
+        font-weight: 500;
+    }
+    
+    .text-label-sm {
+        font-size: 0.6875rem;   /* 11px */
+        line-height: 1.27;
+        font-weight: 500;
+    }
+    
+    /* 说明文字和次要信息 */
+    .text-caption-lg {
+        font-size: 0.75rem;     /* 12px */
+        line-height: 1.33;
+        font-weight: 400;
+        opacity: 0.75;
+    }
+    
+    .text-caption-md {
+        font-size: 0.6875rem;   /* 11px */
+        line-height: 1.27;
+        font-weight: 400;
+        opacity: 0.7;
+    }
+    
+    .text-caption-sm {
+        font-size: 0.625rem;    /* 10px */
+        line-height: 1.2;
+        font-weight: 400;
+        opacity: 0.65;
+    }
+    
+    /* 移动端响应式调整 */
+    @media (max-width: 640px) {
+        .text-display-lg { font-size: 2.5rem; }    /* 40px */
+        .text-display-md { font-size: 2rem; }      /* 32px */
+        .text-display-sm { font-size: 1.75rem; }   /* 28px */
+        .text-title-xl { font-size: 1.5rem; }      /* 24px */
+    }
+}
+
+/* Utilities */
+@layer utilities {
+    /* Glass backgrounds */
+    .bg-glass {
+        background: var(--glass-bg);
+        -webkit-backdrop-filter: saturate(var(--glass-saturation))
+            blur(var(--glass-blur));
+        backdrop-filter: saturate(var(--glass-saturation))
+            blur(var(--glass-blur));
+        border: 1px solid var(--glass-border);
+    }
+
+    /* Navigation glass (stronger separation) */
+    .nav-glass {
+        background: var(--glass-bg);
+        -webkit-backdrop-filter: saturate(calc(var(--glass-saturation) + 0.2))
+            blur(calc(var(--glass-blur) + 4px));
+        backdrop-filter: saturate(calc(var(--glass-saturation) + 0.2))
+            blur(calc(var(--glass-blur) + 4px));
+        border-bottom: 1px solid var(--glass-border);
+        box-shadow: var(--shadow-1);
+    }
+
+    /* Depth/elevation scale */
+    .depth-1 {
+        box-shadow: var(--shadow-1);
+    }
+    .depth-2 {
+        box-shadow: var(--shadow-2);
+    }
+    .depth-3 {
+        box-shadow: var(--shadow-3);
+    }
+    .depth-4 {
+        box-shadow: var(--shadow-4);
+    }
+    .depth-5 {
+        box-shadow: var(--shadow-5);
+    }
+
+    /* Apple-like rounded corners */
+    .rounded-apple {
+        border-radius: 16px;
+    }
+    .rounded-apple-lg {
+        border-radius: 20px;
+    }
+
+    /* Unobtrusive focus ring */
+    .focus-ring-apple {
+        outline: none;
+        box-shadow: var(--ring-apple);
+    }
+
+    /* Radial hero/spotlight background (light) */
+    .bg-radial-hero {
+        background:
+            radial-gradient(
+                900px circle at 15% 10%,
+                rgba(var(--brand-primary-rgb), 0.08),
+                transparent 55%
+            ),
+            radial-gradient(
+                600px circle at 85% 20%,
+                rgba(var(--brand-purple-rgb), 0.06),
+                transparent 45%
+            ),
+            radial-gradient(
+                800px circle at 50% 100%,
+                rgba(var(--brand-green-rgb), 0.06),
+                transparent 50%
+            );
+    }
+
+    /* Dark theme radial background variant */
+    @media (prefers-color-scheme: dark) {
+        .bg-radial-hero {
+            background:
+                radial-gradient(
+                    900px circle at 15% 10%,
+                    rgba(var(--brand-primary-rgb), 0.12),
+                    transparent 55%
+                ),
+                radial-gradient(
+                    600px circle at 85% 20%,
+                    rgba(var(--brand-purple-rgb), 0.1),
+                    transparent 45%
+                ),
+                radial-gradient(
+                    800px circle at 50% 100%,
+                    rgba(var(--brand-green-rgb), 0.1),
+                    transparent 50%
+                );
+        }
+    }
+
+    /* Subtle hairline separators for bars (theme-aware) */
+    .hairline-top {
+        box-shadow: inset 0 1px 0 0 rgba(0, 0, 0, 0.08);
+    }
+    .hairline-bottom {
+        box-shadow: inset 0 -1px 0 0 rgba(0, 0, 0, 0.08);
+    }
+    @media (prefers-color-scheme: dark) {
+        .hairline-top {
+            box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+        }
+        .hairline-bottom {
+            box-shadow: inset 0 -1px 0 0 rgba(255, 255, 255, 0.12);
+        }
+    }
+
+    /* Subtle highlight for depth on hover (minimal motion) */
+    .hover:depth-raise:hover {
+        box-shadow: var(--shadow-3);
+    }
+
+    /* Motion utilities (HIG: subtle, comfortable) */
+    .motion-default {
+        transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+        transition-duration: var(--motion-duration-normal);
+        transition-timing-function: var(--motion-ease);
+    }
+    .motion-fast {
+        transition-duration: var(--motion-duration-fast);
+    }
+    .motion-slow {
+        transition-duration: var(--motion-duration-slow);
+    }
+
+    /* Accent and semantic helpers (Apple palette) */
+    .u-accent-text {
+        color: rgb(var(--brand-primary-rgb));
+    }
+    .u-accent-bg-soft {
+        background-color: rgba(var(--brand-primary-rgb), 0.1);
+    }
+    .u-accent-border {
+        border-color: rgba(var(--brand-primary-rgb), 0.35);
+    }
+
+    .u-text-success {
+        color: var(--semantic-success);
+    }
+    .u-text-warning {
+        color: var(--semantic-warning);
+    }
+    .u-text-error {
+        color: var(--semantic-error);
+    }
+    .u-text-info {
+        color: var(--semantic-info);
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    /* Disable animations and smooth scrolling when users prefer less motion */
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Modern primary tuning: curated palettes with quick switching
+   Options:
+   - Indigo:      500 #6366f1, 600 #4f46e5  (Default)
+   - Royal Blue:  500 #2563eb, 600 #1d4ed8
+   - Violet:      500 #7c3aed, 600 #6d28d9
+   - Teal:        500 #14b8a6, 600 #0d9488
+   - Emerald:     500 #10b981, 600 #059669
+   - Amber:       500 #f59e0b, 600 #d97706
+*/
+:root {
+    /* Apple Blue */
+    --primary-500: #0a84ff;
+    --primary-600: #0066cc;
+
+    /* Alternates (toggle as needed) */
+    /* --primary-500: #2563eb; --primary-600: #1d4ed8; */ /* Royal Blue */
+    /* --primary-500: #7c3aed; --primary-600: #6d28d9; */ /* Violet */
+    /* --primary-500: #14b8a6; --primary-600: #0d9488; */ /* Teal */
+    /* --primary-500: #10b981; --primary-600: #059669; */ /* Emerald */
+    /* --primary-500: #f59e0b; --primary-600: #d97706; */ /* Amber */
+}
+
+/* Utility aliases to ensure Tailwind primary utilities use our tuned shades */
+@layer utilities {
+    /* Text colors */
+    .text-primary-500 {
+        color: var(--primary-500) !important;
+    }
+    .text-primary-600 {
+        color: var(--primary-600) !important;
+    }
+
+    /* Background colors */
+    .bg-primary-500 {
+        background-color: var(--primary-500) !important;
+    }
+    .bg-primary-600 {
+        background-color: var(--primary-600) !important;
+    }
+
+    /* Border colors */
+    .border-primary-500 {
+        border-color: var(--primary-500) !important;
+    }
+    .border-primary-600 {
+        border-color: var(--primary-600) !important;
+    }
+
+    /* Ring colors */
+    .ring-primary-500 {
+        --tw-ring-color: var(--primary-500) !important;
+    }
+    .ring-primary-600 {
+        --tw-ring-color: var(--primary-600) !important;
+    }
+    
+    /* Modern Navigation Enhancements */
+    .nav-blur {
+        backdrop-filter: blur(20px) saturate(120%);
+        background: rgba(255, 255, 255, 0.8);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+    
+    .dark .nav-blur {
+        background: rgba(16, 16, 16, 0.8);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    /* Enhanced hover effects */
+    .nav-item-hover {
+        transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .nav-item-hover:hover {
+        transform: translateY(-1px);
+        background: rgba(0, 0, 0, 0.04);
+    }
+    
+    .dark .nav-item-hover:hover {
+        background: rgba(255, 255, 255, 0.08);
+    }
+    
+    /* Toast 智能位置调整 */
+    .toast-smart-position {
+        /* 桌面端：右下角位置 */
+        bottom: 1rem;
+        right: 1rem;
+        z-index: 50;
+    }
+    
+    /* 移动端调整 - 避开底部导航栏 */
+    @media (max-width: 768px) {
+        .toast-smart-position {
+            bottom: 5.5rem !important; /* 底部导航栏高度 + 边距 */
+            right: 1rem;
+            left: 1rem; /* 移动端全宽但保持边距 */
+            max-width: calc(100vw - 2rem);
+        }
+        
+        /* 移动端 toast 样式优化 */
+        .toast-smart-position [data-sonner-toaster] {
+            width: 100% !important;
+        }
+        
+        .toast-smart-position [data-sonner-toast] {
+            margin: 0.25rem 0 !important;
+            border-radius: 0.75rem !important;
+        }
+    }
+    
+    /* Subtle animations */
+    .fade-in {
+        animation: fadeIn 300ms ease-out;
+    }
+    
+    /* Mobile navigation enhancements */
+    .mobile-nav-item {
+        transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .mobile-nav-item:active {
+        transform: scale(0.95);
+    }
+    
+    /* Badge animations */
+    .badge-pulse {
+        animation: badgePulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes badgePulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* 🎯 优雅的Tailwind CSS 4字体系统重定义 + Nuxt UI 容器/主题扩展 */
+@theme {
+    /* 扩容 Nuxt UI 容器，避免过多水平留白（参考官方 Theme 文档） */
+    /* https://ui.nuxt.com/getting-started/theme */
+    --container-7xl: 80rem; /* 默认 80rem，保留 */
+    --container-8xl: 90rem; /* 新增 1440 级别容器 */
+
+    /* 重新定义Tailwind的字体尺寸 - 无需!important */
+    --font-size-xs: 0.875rem;     /* 14px - 辅助信息 */
+    --font-size-sm: 1rem;         /* 16px - 次要内容 */
+    --font-size-base: 1.125rem;   /* 18px - 标准正文 */
+    --font-size-lg: 1.25rem;      /* 20px - 重要内容 */
+    --font-size-xl: 1.375rem;     /* 22px - 突出内容 */
+    --font-size-2xl: 1.5rem;      /* 24px - h2级标题 */
+    --font-size-3xl: 1.875rem;    /* 30px - h1级标题 */
+    --font-size-4xl: 2.25rem;     /* 36px - 页面主标题 */
+    --font-size-5xl: 3rem;        /* 48px - 大标题 */
+    --font-size-6xl: 3.5rem;      /* 56px - 超大标题 */
+    --font-size-7xl: 3.5rem;      
+    --font-size-8xl: 3.5rem;      
+    --font-size-9xl: 3.5rem;      
+    
+    /* 同时定义对应的行高 */
+    --line-height-xs: 1.43;
+    --line-height-sm: 1.5;
+    --line-height-base: 1.56;
+    --line-height-lg: 1.6;
+    --line-height-xl: 1.64;
+    --line-height-2xl: 1.33;
+    --line-height-3xl: 1.3;
+    --line-height-4xl: 1.2;
+    --line-height-5xl: 1.1;
+    --line-height-6xl: 1.1;
+    --line-height-7xl: 1.1;
+    --line-height-8xl: 1.1;
+    --line-height-9xl: 1.1;
+}
+
+/* 字体统一应用规则 - 确保相同作用的文字大小一致 */
+@layer components {
+    /* 主要内容文字 */
+    .content-text,
+    p.content,
+    .post-content,
+    .description-text,
+    .main-text {
+        font-size: 1.25rem;     /* 20px - 主要正文内容 */
+        line-height: 1.6;
+        font-weight: 400;
+    }
+    
+    /* 标准正文 */
+    .body-text,
+    p,
+    .normal-text,
+    .regular-text {
+        font-size: 1.125rem;    /* 18px - 标准正文 */
+        line-height: 1.56;
+        font-weight: 400;
+    }
+    
+    /* 辅助信息文字 */
+    .meta-text,
+    .secondary-text,
+    .helper-text,
+    .caption-text,
+    .time-text,
+    .location-text {
+        font-size: 1rem;        /* 16px - 辅助正文 */
+        line-height: 1.5;
+        font-weight: 400;
+    }
+    
+    /* 按钮文字统一 */
+    .btn-lg, .button-large {
+        font-size: 1.25rem;     /* 20px - 大按钮 */
+        line-height: 1.4;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+    }
+    
+    .btn, .button, .btn-md, .button-medium {
+        font-size: 1.125rem;    /* 18px - 标准按钮 */
+        line-height: 1.33;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+    }
+    
+    .btn-sm, .button-small {
+        font-size: 1rem;        /* 16px - 小按钮 */
+        line-height: 1.25;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+    }
+    
+    /* 统一默认段落字体 */
+    p:not([class]) {
+        font-size: 1.125rem;    /* 18px - 默认段落 */
+        line-height: 1.56;
+        font-weight: 400;
+    }
+    
+    /* 统一默认标题字体 */
+    h1:not([class]) {
+        font-size: 1.875rem;    /* 30px */
+        line-height: 1.3;
+        font-weight: 600;
+    }
+    
+    h2:not([class]) {
+        font-size: 1.5rem;      /* 24px */
+        line-height: 1.33;
+        font-weight: 600;
+    }
+    
+    h3:not([class]) {
+        font-size: 1.25rem;     /* 20px */
+        line-height: 1.4;
+        font-weight: 600;
+    }
+    
+    h4:not([class]),
+    h5:not([class]),
+    h6:not([class]) {
+        font-size: 1.125rem;    /* 18px */
+        line-height: 1.44;
+        font-weight: 500;
+    }
+}

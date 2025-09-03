@@ -1,8 +1,8 @@
-# GeoTalk 项目需求文档
+# HotSpot 项目需求文档
 
 ## 文档结构
 
-- [GeoTalk 项目需求文档](#geotalk-项目需求文档)
+- [HotSpot 项目需求文档](#HotSpot-项目需求文档)
   - [文档结构](#文档结构)
   - [1. 项目概览](#1-项目概览)
     - [1.1 项目简介](#11-项目简介)
@@ -29,6 +29,7 @@
     - [7.6 管理接口（前缀：/api/v1/admin，需管理员认证）](#76-管理接口前缀apiv1admin需管理员认证)
       - [2.3.2 命名规范](#232-命名规范)
       - [2.3.3 架构优势](#233-架构优势)
+    - [2.4 后端重构方案（端口/适配器 + 能力装配）](#24-后端重构方案端口适配器--能力装配)
   - [3. 功能需求](#3-功能需求)
     - [3.1 用户管理功能](#31-用户管理功能)
       - [3.1.1 功能需求](#311-功能需求)
@@ -104,7 +105,7 @@
 
 ### 1.1 项目简介
 
-GeoTalk（HotSpot）是一个基于地理位置的社交应用，允许用户在特定地理位置发布动态、发现附近的用户和群组，以及进行实时聊天交流。该项目采用现代化的技术栈，提供流畅的用户体验和强大的社交功能。
+HotSpot（HotSpot）是一个基于地理位置的社交应用，允许用户在特定地理位置发布动态、发现附近的用户和群组，以及进行实时聊天交流。该项目采用现代化的技术栈，提供流畅的用户体验和强大的社交功能。
 
 ### 1.2 当前实现状态 ✅
 
@@ -185,7 +186,7 @@ GeoTalk（HotSpot）是一个基于地理位置的社交应用，允许用户在
 
 所有核心API接口已实现并可用：
 - 用户模块：10个接口 ✅
-- 群组模块：9个接口 ✅  
+- 群组模块：9个接口 ✅
 - 动态模块：8个接口 ✅
 - 消息模块：10个接口 ✅
 - WebSocket通知：完整实现 ✅
@@ -458,6 +459,52 @@ GeoTalk（HotSpot）是一个基于地理位置的社交应用，允许用户在
 **可维护性**: 语义化路径便于理解和维护
 **可扩展性**: 模块化设计为未来功能扩展提供清晰架构
 
+### 2.4 后端重构方案（端口/适配器 + 能力装配）
+
+#### 核心理念
+- 采用 Hexagonal（端口/适配器）架构：`domain`（纯领域）→ `application`（用例服务）→ `ports`（接口）→ `adapters`（实现）。
+- 启动时通过 `CapabilityRegistry` 统一装配“通知通道、缓存、任务队列、策略”等能力。
+- 编译期通过 feature 选择适配器，运行时通过配置控制行为。
+
+#### 模块/目录结构（描述）
+- `domain/`：领域模型、值对象、领域事件、错误（模块内 `thiserror`，统一转 `AppError`）。
+- `application/`：用例服务（User/Group/Message/Moment）、通知策略聚合、CQRS 命令与查询模型。
+- `ports/`：抽象接口（Repository、Cache、Dispatcher、NotificationTransport、Policy、GeoService 等）。
+- `adapters/`：
+  - `adapters-pg/`：PostgreSQL（仅用 sqlx 宏；NOT NULL/聚合/COALESCE/布尔表达式字段 SQL 必加 `!`；Option 极简）。
+  - `adapters-cache-memory/`（默认）、`adapters-cache-redis/`（可选）。
+  - `adapters-jobs-lite/`（默认）、`adapters-jobs-redis/`（可选）。
+  - `adapters-notify-ws/`（默认唯一实时通道；SSE/轮询仅预留端口，暂不实现）。
+- `presentation/`：
+  - `http/`：controllers/routes/validators/middleware。
+  - `ws/`：连接/房间/消息路由/消息类型/错误；禁止全局广播，遵循“策略选人→定向推送”。
+- `bootstrap/`：`AppState` 组装、依赖注入、配置加载、能力注册、路由挂载（最终 bin）。
+
+#### Feature 与默认能力
+- 默认：`ws`, `jobs-lite`, `cache_in_memory`, `policy_friend`, `policy_group`, `metrics_basic`。
+- 可选：`policy_nearby`、`cache_redis`、`jobs-redis`、`prometheus_metrics`、`email_channel`。
+- 说明：本阶段仅实现 WebSocket；SSE/长轮询/Web Push 为规划，未实现（详见 4.4.4）。
+
+#### 数据访问与分页规范（强制）
+- 仅用 `sqlx::query!|query_as!|query_scalar!`；NOT NULL/聚合/COALESCE/布尔表达式字段 SQL 一律加 `!`。
+- Option 极简：仅数据库真实可 NULL 使用 `Option<T>`。
+- 统一游标分页：游标与主键 `id` 比较，请求 `limit+1` 判断 `has_more`，返回最后一条 `id` 作为 `next_cursor`。
+
+#### 实时通道与策略
+- 当前仅 `WebSocketTransport`：握手放行，首条消息鉴权（3–5s 超时），心跳/空闲超时，粘性会话或外部状态确保订阅稳定。
+- `NotificationPolicyService`：好友/群组（默认），附近（可选），自动去重后定向发送。
+
+#### 任务队列与缓存
+- 默认 `jobs-lite` 与 `cache_in_memory`；失败不阻断主路径。
+- 可选 `jobs-redis` 与 `cache_redis` 替换注入。
+
+#### 迁移步骤（低风险）
+1. 抽象 `ports/`，保留原实现。
+2. 迁移现有实现至 `adapters-*`，`application` 仅依赖 `ports`。
+3. 引入 `CapabilityRegistry` 与强类型 `AppState` 装配（非 trait object，优先泛型 + 类型别名）。
+4. 统一收敛 sqlx 宏/“!”/游标分页规范。
+5. 按需开启可选适配器；SSE/轮询仅保留端口不实现。
+
 ## 3. 功能需求
 
 ### 3.1 用户管理功能
@@ -558,7 +605,7 @@ GeoTalk（HotSpot）是一个基于地理位置的社交应用，允许用户在
 **群组管理API（9个端点）**：
 - `/api/v1/group/create` - 创建群组
 - `/api/v1/group/search_by_location` - 按位置搜索群组
-- `/api/v1/group/search_by_name` - 按名称搜索群组  
+- `/api/v1/group/search_by_name` - 按名称搜索群组
 - `/api/v1/group/search_by_id` - 按ID获取群组详情
 - `/api/v1/group/join` - 加入群组
 - `/api/v1/group/leave` - 离开群组
@@ -752,7 +799,7 @@ WebSocket系统已完全实现并集成到项目中，包含以下核心组件�
 
 **实时功能覆盖**：
 - ✅ 私聊消息实时推送
-- ✅ 群组消息实时分发  
+- ✅ 群组消息实时分发
 - ✅ 用户在线状态同步
 - ✅ 群组事件通知（加入/退出/角色变更）
 - ✅ 新生活瞬间通知
@@ -777,6 +824,21 @@ WebSocket系统已完全实现并集成到项目中，包含以下核心组件�
 - **扩展模块**：定期验证编译完整性，保持依赖包版本更新
 - **文档同步**：保持架构文档与实际代码实现状态同步
 
+
+#### 4.4.4 实时通道策略（当前与规划）
+
+当前状态（2025-08）：
+- 仅启用并支持 WebSocket 实时通道；生产环境必须启用 WS，作为唯一实时通知与消息分发方式。
+- SSE（Server‑Sent Events）、长轮询（Long Polling）、Web Push 等替代/补充通道暂未实现，计划在后续迭代中补充，作为在特定网络或平台限制下的降级方案。
+
+规划与原则（未实现，后续迭代）：
+- 优先级：WebSocket > SSE > Long Polling；Web Push 仅用于离线/回流提醒，不承担高频聊天。
+- 策略一致性：无论采用何种通道，均遵循“策略服务选人 → 精准推送 → 禁止全局广播”的架构原则。
+- 运行时策略：默认启用 WS；当环境确实无法建立/维持 WS 时，前端与后端将按优先级自动降级（待实现）。
+- 状态与指标：各通道需暴露连接数、心跳、降级次数、队列长度等指标（待实现）。
+
+注意：
+- 本阶段不引入 SSE/轮询 的服务端与路由实现；文档仅记录架构规划，后续按版本里程碑逐步落地。
 
 ## 5. 测试架构设计
 
@@ -1352,7 +1414,7 @@ Response:
 - `POST /api/v1/chat/user/send` - 发送私聊消息
 
 **消息历史**：
-- `POST /api/v1/chat/group/history` - 获取群组消息历史  
+- `POST /api/v1/chat/group/history` - 获取群组消息历史
 - `POST /api/v1/chat/user/history` - 获取私聊消息历史
 
 **消息管理**：
@@ -1471,7 +1533,7 @@ Response:
 
 **用户状态类**：
 - `UserOnline` - 用户上线通知
-- `UserOffline` - 用户下线通知  
+- `UserOffline` - 用户下线通知
 - `UserLocationUpdate` - 用户位置更新
 
 **群组消息类**：
@@ -1560,7 +1622,7 @@ WebSocket 一致性与可靠性建议：
 
 **生活瞬间搜索**：
 - `POST /api/v1/moments/search_by_location` - 按位置搜索生活瞬间
-- `POST /api/v1/moments/search_by_tags` - 按标签搜索生活瞬间  
+- `POST /api/v1/moments/search_by_tags` - 按标签搜索生活瞬间
 - `POST /api/v1/moments/search_by_id` - 按ID搜索生活瞬间
 
 **生活瞬间互动**：
@@ -1883,7 +1945,7 @@ Response:
 
 ## 总结
 
-GeoTalk (HotSpot) 项目已经完成了核心功能的实现，具备了完整的LBS社交平台基础架构。通过Nuxt3+Vue3的现代前端技术栈和Rust+Axum的高性能后端架构，项目实现了：
+HotSpot (HotSpot) 项目已经完成了核心功能的实现，具备了完整的LBS社交平台基础架构。通过Nuxt3+Vue3的现代前端技术栈和Rust+Axum的高性能后端架构，项目实现了：
 
 **核心功能完成度**：
 - ✅ **用户系统**：完整的临时用户/注册用户双轨制
@@ -1906,4 +1968,3 @@ GeoTalk (HotSpot) 项目已经完成了核心功能的实现，具备了完整�
 4. **社区建设**：用户反馈收集、功能迭代优化
 
 项目已具备商业化部署的技术基础，可根据用户反馈和业务需求进行功能扩展和性能优化
-

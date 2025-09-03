@@ -43,7 +43,6 @@ impl MessageRouter {
     }
 
     /// 向用户的所有连接发送消息
-    #[allow(dead_code)]
     pub async fn send_to_user(&self, user_id: i64, message: ServerMessage) -> WsResult<()> {
         debug!("向用户 {} 发送消息: {:?}", user_id, message);
         self.connection_manager.send_to_user(user_id, message).await
@@ -112,7 +111,6 @@ impl MessageRouter {
     }
 
     /// 发送消息给多个用户
-    #[allow(dead_code)]
     pub async fn send_to_users(&self, user_ids: &[i64], message: ServerMessage) -> WsResult<()> {
         debug!("向 {} 个用户发送消息: {:?}", user_ids.len(), message);
 

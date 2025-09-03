@@ -26,11 +26,16 @@
 #### 死代码处理策略
 - **零警告政策**：项目必须保持 `cargo check` 无警告状态
 - **架构保留原则**：对于未来有价值的代码架构，使用 `#[allow(dead_code)]` 注解标记而不删除
+- **架构合理性原则**：定期检查代码设计是否符合真实业务场景，清理不合理的存储和处理逻辑
 - **分类标记**：
   - 完整的功能模块（如 WebSocket 系统）：在模块级别添加 `#[allow(dead_code)]`
   - 单独的函数/结构体：在项目级别添加注解
   - 临时未使用代码：添加 TODO 注释说明预期使用时间
 - **定期审查**：每个版本发布前审查已标记的死代码，决定激活或清理
+- **不合理设计清理**：
+  - 通知系统应使用实时WebSocket，避免数据库持久化存储
+  - API设计应简洁单一，避免多次调用组合完成单一业务逻辑
+  - 数据库表设计应基于真实业务需求，避免"可能有用"的冗余存储
 - **保留的核心架构**：
   - WebSocket 实时通信系统（连接管理、房间管理、消息路由）
   - 智能通知系统（多策略通知分发）
@@ -42,40 +47,16 @@
 - 所有提交必须通过 `cargo check` 无警告检查
 - 使用 `cargo clippy` 进行代码质量检查
 
-#### 项目清理规范
-
-##### Agent模式代码生成清理要求
-- **中间文件零保留**：Agent模式生成代码完成后，必须清理所有过程中产生的临时文件
+#### 后端特定清理要求
 - **测试文件归位**：所有测试文件必须放在 `src/tests/` 目录下，不得散布在业务代码目录中
-- **占位代码清理**：删除仅含TODO注释或占位逻辑的文件，妥善处理相关引用
-- **重构残留清理**：彻底删除重构过程中遗留的旧代码目录（如backend-go/等）
-
-##### 严禁保留的后端文件类型
-- **测试完成文件**：test_completion.rs等验证性临时文件
-- **重复测试代码**：散布在业务目录中的测试文件
-- **过渡性模块**：仅含基础结构、无实际功能的模块文件
-- **重构残留**：旧版本的代码目录和重构过程文件
-- **临时验证脚本**：专门为验证功能而创建的一次性脚本
-
-##### 清理验证标准
-- **编译通过**：执行 `cargo check` 确保无编译错误和警告
-- **测试结构**：确认所有测试文件在正确的 `src/tests/` 目录下
 - **依赖清理**：移除未使用的依赖包和feature
-- **功能完整**：确保清理过程不影响核心功能的完整性
-
-##### 文件结构整理
-- **目录结构优化**：移除重构过程中遗留的旧代码目录
-- **编译产物管理**：及时清理临时编译输出文件  
-- **重复文件清理**：定期检查并清理重复的源代码文件、测试文件和文档
-- **文档结构优化**：避免重复文档，保持文档层次清晰
+- **编译产物管理**：及时清理临时编译输出文件
 
 ## 3. 项目架构规范
 
-### 代码组织原则
-- 后端代码在 `backend` 目录下
+### 后端代码组织原则
+- 严格分层架构设计（Controller/Service/Repository/Model）
 - 数据库表定义在 `migrations` 目录下
-- 严格分层架构设计
-- 生成/修改文件时需使用全路径，确保在正确目录下
 
 ### 分层架构
 
@@ -125,26 +106,20 @@
   - 地理位置通知：向附近用户发送通知（可配置距离半径）
   - 智能组合：支持多种策略同时启用，自动去重
 
-##### 环境配置策略
-```rust
-// 生产环境：精确通知
-NotificationPolicy {
-    enable_friend_notifications: true,
-    enable_group_notifications: true,
-    enable_nearby_notifications: true,
-    nearby_radius_km: 3.0,
-    enable_global_broadcast: false, // 生产环境禁用全局广播
-}
+##### 环境配置策略（字段与类型）
+- 生产环境推荐：
+  - enable_friend_notifications: bool
+  - enable_group_notifications: bool
+  - enable_nearby_notifications: bool
+  - nearby_radius_km: f64
+  - enable_global_broadcast: bool（建议为 false）
 
-// 开发环境：便于调试  
-NotificationPolicy {
-    enable_friend_notifications: true,
-    enable_group_notifications: true,
-    enable_nearby_notifications: true,
-    nearby_radius_km: 10.0,
-    enable_global_broadcast: true, // 开发环境可选启用
-}
-```
+- 开发环境推荐：
+  - enable_friend_notifications: bool
+  - enable_group_notifications: bool
+  - enable_nearby_notifications: bool
+  - nearby_radius_km: f64（可更大便于调试）
+  - enable_global_broadcast: bool（可选启用）
 
 #### 通知发送规范
 - **禁止全局广播**：严禁使用 `broadcast()` 方法向所有在线用户发送通知
@@ -192,41 +167,13 @@ NotificationPolicy {
 - 布尔表达式（EXISTS、比较运算等）：结构体用非 Option，SQL 用 `"expression as result!"`
 - 数据库 NULL 字段且业务逻辑确实需要 NULL 值：结构体用 Option<T>，SQL 不加 `!`
 
-**代码示例：**
-```rust
-// 正确示例：NOT NULL 字段用非 Option + ! 语法
-struct UserRow {
-    id: i64,           // NOT NULL 主键
-    username: String,  // NOT NULL 字段
-    email: Option<String>, // 可为 NULL 字段
-    is_active: bool,   // 布尔表达式结果
-    message_count: i64, // COUNT 聚合结果
-}
-
-sqlx::query_as!(
-    UserRow,
-    r#"
-    SELECT 
-        "id!",
-        "username!",
-        email,
-        "($1 IS NOT NULL) as is_active!",
-        "COUNT(*) as message_count!"
-    FROM users u
-    LEFT JOIN messages m ON u.id = m.user_id
-    WHERE u.id = $1
-    GROUP BY u.id, u.username, u.email
-    "#,
-    user_id
-)
-
-// 错误示例：NOT NULL 字段用 Option（禁止）
-struct UserRow {
-    id: Option<i64>,     // 错误：主键不可能为 NULL
-    username: Option<String>, // 错误：NOT NULL 字段用 Option
-    message_count: Option<i64>, // 错误：COUNT 结果用 Option
-}
-```
+字段规范示例（结构与类型）：
+- UserRow：
+  - id: i64（NOT NULL 主键，对应 SQL 标注 "id!"）
+  - username: String（NOT NULL，对应 "username!"）
+  - email: Option<String>（可为 NULL）
+  - is_active: bool（布尔表达式结果）
+  - message_count: i64（聚合结果）
 
 #### 参数绑定顺序
 - 业务参数（ID、关键词等）
@@ -260,16 +207,9 @@ struct UserRow {
 3. 返回的下一页游标值必须是查询结果中最后一条记录的 `id` 字段值
 4. 所有消息、群组等相关分页必须用游标分页，且游标字段为表的自增主键 id
 
-#### SQL 查询模式
-
-- 降序（最新优先）：
-  ```sql
-  WHERE id < $cursor ORDER BY id DESC LIMIT $limit + 1
-  ```
-- 升序（最早优先）：
-  ```sql
-  WHERE id > $cursor ORDER BY id ASC LIMIT $limit + 1
-  ```
+#### SQL 查询模式（描述）
+- 降序：id < cursor，按 id DESC 排序，取 limit + 1 条
+- 升序：id > cursor，按 id ASC 排序，取 limit + 1 条
 
 #### 游标初始值处理
 - 首次加载（无游标）时，默认游标值为 0，即：`cursor = 0 OR cursor IS NULL`
@@ -282,31 +222,13 @@ struct UserRow {
 3. 返回给客户端的记录不包括额外查询的一条记录
 4. 下一页游标应设置为最后一条返回记录的 `id` 字段值
 
-#### 复杂排序情况处理
-- 需要按非 `id` 字段排序时，必须同时按 `id` 进行次级排序以保证分页稳定性
-- 正确写法示例（按时间戳降序）：
-  ```sql
-  WHERE (created_at = $timestamp AND id < $cursor) OR created_at < $timestamp
-  ORDER BY created_at DESC, id DESC
-  ```
+#### 复杂排序情况处理（描述）
+- 使用主排序字段 + id 次级排序，保证分页稳定性
 
-#### 分页数据模型
-```rust
-pub struct PaginationParams {
-    pub cursor: Option<i64>,
-    pub limit: Option<i64>,
-}
-
-pub struct PaginatedResponse<T> {
-    pub items: Vec<T>,
-    pub pagination: PaginationMeta,
-}
-
-pub struct PaginationMeta {
-    pub has_more: bool,
-    pub next_cursor: Option<i64>,
-}
-```
+#### 分页数据模型（字段说明）
+- PaginationParams: cursor: Option<i64>；limit: Option<i64>
+- PaginatedResponse<T>: items: Vec<T>；pagination: PaginationMeta
+- PaginationMeta: has_more: bool；next_cursor: Option<i64>
 
 #### 参考实现
 - `user_service.rs`：`find_nearby_users`、`find_users_by_name`
@@ -327,28 +249,34 @@ pub struct PaginationMeta {
 
 ## 8. Trait/泛型与异步接口规范
 
-- 所有异步 trait（如 Repository、Service、JobHandler 等）必须直接采用 Rust 原生 async fn 语法（即 trait/impl 里直接写 async fn ... -> Result<T, E>），禁止使用 async-trait 宏、Pin<Box<dyn Future<...>>>、Box::pin 等旧写法。
-- trait/impl 中只允许直接写 async fn，不允许任何 Future/Pin/Box 包裹。
-- 禁止在 trait/impl 中使用 `async_trait` 宏。
-- 函数签名应尽量不显式声明生命周期，除非必要（如参数/返回值确实涉及引用类型且需指定生命周期）。
-- Service、Repository、JobHandler、Cache、Notification 等分层依赖注入时，优先使用具体类型或泛型参数，避免 trait object。
-- 代码中如需扩展通用性，推荐使用泛型 trait bound（如 `T: GroupRepository + Send + Sync`），而不是 trait object。
-- 发现 trait object 用法（如 `dyn Trait`、`Box<dyn Trait>`、`Arc<dyn Trait>`）时，必须重构为具体类型或泛型。
-- 相关代码示例和重构方式请参考 `group_service.rs`、`PgGroupRepository` 等文件。
+- 所有异步 trait（如 Repository、Service、JobHandler 等）目前使用 `async-trait` crate 来处理 trait 中的 async fn
+- trait 定义必须添加 `#[async_trait]` 注解
+- trait 实现（impl 块）也必须添加 `#[async_trait]` 注解
+- trait/impl 中直接写 `async fn`，由 async-trait 宏处理底层的 Future/Pin/Box 包裹
+- 函数签名应尽量不显式声明生命周期，除非必要（如参数/返回值确实涉及引用类型且需指定生命周期）
+- Service、Repository、JobHandler、Cache、Notification 等分层依赖注入时，优先使用具体类型或泛型参数，避免 trait object
+- 代码中如需扩展通用性，推荐使用泛型 trait bound（如 `T: GroupRepository + Send + Sync`），而不是 trait object
+- 发现 trait object 用法（如 `dyn Trait`、`Box<dyn Trait>`、`Arc<dyn Trait>`）时，必须重构为具体类型或泛型
+- 相关代码示例和重构方式请参考 `group_service.rs`、`PgGroupRepository` 等文件
 
-#### 代码示例
+#### 接口定义规范（字段/签名说明，不含代码）
+- UserRepository：
+  - find_by_id(user_id: i64) -> Result<Option<UserModel>, AppError>
+  - set_password(user_id: i64, password_hash: &str) -> Result<(), AppError>
 
-正确写法：
+#### async-trait 使用示例
 ```rust
+use async_trait::async_trait;
+
+// trait 定义必须添加 #[async_trait]
+#[async_trait]
 pub trait UserRepository: Send + Sync {
     async fn find_by_id(&self, user_id: i64) -> Result<Option<UserModel>, AppError>;
     async fn set_password(&self, user_id: i64, password_hash: &str) -> Result<(), AppError>;
 }
 
-pub struct PostgresUserRepository {
-    db: Database,
-}
-
+// trait 实现也必须添加 #[async_trait]
+#[async_trait]
 impl UserRepository for PostgresUserRepository {
     async fn find_by_id(&self, user_id: i64) -> Result<Option<UserModel>, AppError> {
         // ...实现...
@@ -359,26 +287,7 @@ impl UserRepository for PostgresUserRepository {
 }
 ```
 
-错误写法（禁止）：
-```rust
-// 错误：禁止使用 async-trait 宏
-#[async_trait]
-pub trait UserRepository {
-    async fn find_by_id(&self, user_id: i64) -> Result<Option<UserModel>, AppError>;
-}
-
-// 错误：禁止返回 Pin<Box<dyn Future<...>>> 或 impl Future
-pub trait UserRepository {
-    fn find_by_id(&self, user_id: i64) -> Pin<Box<dyn Future<Output = Result<Option<UserModel>, AppError>> + Send>>;
-}
-
-// 错误：不必要的显式生命周期
-pub trait UserRepository {
-    async fn find_by_id<'a>(&'a self, user_id: i64) -> Result<Option<UserModel>, AppError>;
-}
-```
-
-> 说明：Rust 1.87 已原生支持 trait 里的 async fn，直接写 async fn 即可，无需任何宏或 Future/Pin/Box 包裹。函数签名应尽量简洁，无需显式生命周期。
+> 说明：虽然 Rust 1.75+ 已原生支持 trait 里的 async fn，但在复杂场景下（如auto trait bounds、生命周期推断等）仍有一些限制。在Rust编译器完全支持trait中async fn的自动推断之前，使用成熟的 async-trait crate 可以避免这些问题，提供更好的兼容性和稳定性。未来当Rust编译器完全支持时，可以逐步迁移到原生语法。
 
 ## 9. 异步任务队列规范
 
@@ -412,72 +321,19 @@ pub trait UserRepository {
 
 #### 任务队列集成规范
 
-##### Service层集成模式
-```rust
-// Service结构体必须包含任务调度器
-pub struct UserService {
-    config_service: Arc<ConfigService>,
-    user_repository: Arc<PgUserRepository>,
-    job_dispatcher: Option<Arc<JobDispatcher>>, // 必需字段
-}
+##### Service层集成模式（字段说明）
+- UserService 必须包含：
+  - config_service: ConfigService
+  - user_repository: PgUserRepository
+  - job_dispatcher: Option<JobDispatcher>
 
-// 构造器模式支持任务调度器注入
-impl UserService {
-    pub fn new(...) -> Self { /* 基础构造 */ }
-    
-    pub fn with_job_dispatcher(mut self, dispatcher: Arc<JobDispatcher>) -> Self {
-        self.job_dispatcher = Some(dispatcher);
-        self
-    }
-}
-```
-
-##### 任务提交模式
-```rust
-// 在业务流程中提交任务而非直接执行
-if let Some(job_dispatcher) = &self.job_dispatcher {
-    if let Err(e) = job_dispatcher
-        .dispatch_location_index(user_id, lat, lng, location_name)
-        .await
-    {
-        error!("任务调度失败: user_id={}, error={:?}", user_id, e);
-        // 记录错误但不影响主流程
-    }
-} else {
-    warn!("任务调度器未配置，跳过异步任务: user_id={}", user_id);
-}
-```
+##### 任务提交模式（描述）
+- 业务流程中检查 `job_dispatcher` 是否存在，存在则提交任务；失败记录日志但不阻断主流程
 
 #### 任务处理器实现规范
 
-##### Handler接口实现
-```rust
-impl JobHandler<LocationIndexJob> for LocationIndexHandler {
-    async fn handle(&self, job: &Job<LocationIndexJob>) -> JobHandlerResult {
-        let job_data = &job.data;
-        
-        // 1. 记录任务开始日志
-        info!("处理位置索引任务: user_id={}", job_data.user_id);
-        
-        // 2. 执行业务逻辑
-        match self.user_repository.set_initial_user_location(
-            job_data.user_id,
-            job_data.latitude,
-            job_data.longitude,
-            job_data.location_name.as_deref().unwrap_or("Unknown"),
-        ).await {
-            Ok(_) => {
-                info!("任务执行成功: user_id={}", job_data.user_id);
-                Ok(())
-            }
-            Err(e) => {
-                error!("任务执行失败: user_id={}, error={:?}", job_data.user_id, e);
-                Err(JobHandlerError::Repository(e))
-            }
-        }
-    }
-}
-```
+##### Handler接口实现（描述）
+- handle(&self, job: &Job<T>) -> JobHandlerResult：读取 job.data 执行业务逻辑；成功返回 Ok，失败分类记录错误
 
 ##### 错误处理规范
 - **分类错误**: 区分临时错误（可重试）和永久错误（不可重试）
@@ -503,21 +359,8 @@ impl JobHandler<LocationIndexJob> for LocationIndexHandler {
 
 #### 任务队列配置管理
 
-##### 应用启动时集成
-```rust
-// main.rs中的任务队列初始化
-let job_service = if app_config.job_queue.enabled {
-    Some(Arc::new(JobService::new(db, cache_manager, notification_service, amqp_url).await?))
-} else {
-    None
-};
-
-// 为Service注入任务调度器
-let mut user_service = UserService::new(config_service, user_repository);
-if let Some(ref job_service) = job_service {
-    user_service = user_service.with_job_dispatcher(job_service.get_dispatcher());
-}
-```
+##### 应用启动时集成（描述）
+- JobService：基于配置条件初始化；UserService 通过 with_job_dispatcher 注入 dispatcher
 
 ##### 环境配置要求
 - **开发环境**: 任务队列可选，允许禁用以简化开发
@@ -560,5 +403,5 @@ if let Some(ref job_service) = job_service {
 
 ---
 
-*规范版本：v1.3*  
-*最后更新：2025年6月21日*
+*规范版本：v1.4*  
+*最后更新：2025年7月15日*

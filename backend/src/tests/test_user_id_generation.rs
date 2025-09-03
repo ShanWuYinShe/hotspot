@@ -64,13 +64,12 @@ mod user_id_generation_tests {
         let temp_range = UserIdPartition::get_type_range(UserType::Temporary);
         let admin_range = UserIdPartition::get_type_range(UserType::Admin);
         let system_range = UserIdPartition::get_type_range(UserType::System);
-        let test_range = UserIdPartition::get_type_range(UserType::Test);
         
         // 验证范围不重叠
         assert!(regular_range.1 < temp_range.0, "正式用户和临时用户范围不应重叠");
         assert!(temp_range.1 < admin_range.0, "临时用户和管理员范围不应重叠");
         assert!(admin_range.1 < system_range.0, "管理员和系统用户范围不应重叠");
-        assert!(system_range.1 < test_range.0, "系统用户和测试用户范围不应重叠");
+        // 系统用户是最高范围，不需要与其他范围比较
         
         // 验证范围大小
         let regular_size = regular_range.1 - regular_range.0 + 1;
@@ -80,7 +79,7 @@ mod user_id_generation_tests {
         assert!(temp_size > 0, "临时用户范围应该大于0");
         
         println!("正式用户范围: {:?}, 临时用户范围: {:?}", regular_range, temp_range);
-        println!("管理员范围: {:?}, 系统用户范围: {:?}, 测试用户范围: {:?}", admin_range, system_range, test_range);
+        println!("管理员范围: {:?}, 系统用户范围: {:?}", admin_range, system_range);
     }
 
     #[test]

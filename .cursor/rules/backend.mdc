@@ -50,40 +50,16 @@ alwaysApply: true
 - 所有提交必须通过 `cargo check` 无警告检查
 - 使用 `cargo clippy` 进行代码质量检查
 
-#### 项目清理规范
-
-##### Agent模式代码生成清理要求
-- **中间文件零保留**：Agent模式生成代码完成后，必须清理所有过程中产生的临时文件
+#### 后端特定清理要求
 - **测试文件归位**：所有测试文件必须放在 `src/tests/` 目录下，不得散布在业务代码目录中
-- **占位代码清理**：删除仅含TODO注释或占位逻辑的文件，妥善处理相关引用
-- **重构残留清理**：彻底删除重构过程中遗留的旧代码目录（如backend-go/等）
-
-##### 严禁保留的后端文件类型
-- **测试完成文件**：test_completion.rs等验证性临时文件
-- **重复测试代码**：散布在业务目录中的测试文件
-- **过渡性模块**：仅含基础结构、无实际功能的模块文件
-- **重构残留**：旧版本的代码目录和重构过程文件
-- **临时验证脚本**：专门为验证功能而创建的一次性脚本
-
-##### 清理验证标准
-- **编译通过**：执行 `cargo check` 确保无编译错误和警告
-- **测试结构**：确认所有测试文件在正确的 `src/tests/` 目录下
 - **依赖清理**：移除未使用的依赖包和feature
-- **功能完整**：确保清理过程不影响核心功能的完整性
-
-##### 文件结构整理
-- **目录结构优化**：移除重构过程中遗留的旧代码目录
-- **编译产物管理**：及时清理临时编译输出文件  
-- **重复文件清理**：定期检查并清理重复的源代码文件、测试文件和文档
-- **文档结构优化**：避免重复文档，保持文档层次清晰
+- **编译产物管理**：及时清理临时编译输出文件
 
 ## 3. 项目架构规范
 
-### 代码组织原则
-- 后端代码在 `backend` 目录下
+### 后端代码组织原则
+- 严格分层架构设计（Controller/Service/Repository/Model）
 - 数据库表定义在 `migrations` 目录下
-- 严格分层架构设计
-- 生成/修改文件时需使用全路径，确保在正确目录下
 
 ### 分层架构
 
@@ -276,21 +252,45 @@ alwaysApply: true
 
 ## 8. Trait/泛型与异步接口规范
 
-- 所有异步 trait（如 Repository、Service、JobHandler 等）必须直接采用 Rust 原生 async fn 语法（即 trait/impl 里直接写 async fn ... -> Result<T, E>），禁止使用 async-trait 宏、Pin<Box<dyn Future<...>>>、Box::pin 等旧写法。
-- trait/impl 中只允许直接写 async fn，不允许任何 Future/Pin/Box 包裹。
-- 禁止在 trait/impl 中使用 `async_trait` 宏。
-- 函数签名应尽量不显式声明生命周期，除非必要（如参数/返回值确实涉及引用类型且需指定生命周期）。
-- Service、Repository、JobHandler、Cache、Notification 等分层依赖注入时，优先使用具体类型或泛型参数，避免 trait object。
-- 代码中如需扩展通用性，推荐使用泛型 trait bound（如 `T: GroupRepository + Send + Sync`），而不是 trait object。
-- 发现 trait object 用法（如 `dyn Trait`、`Box<dyn Trait>`、`Arc<dyn Trait>`）时，必须重构为具体类型或泛型。
-- 相关代码示例和重构方式请参考 `group_service.rs`、`PgGroupRepository` 等文件。
+- 所有异步 trait（如 Repository、Service、JobHandler 等）目前使用 `async-trait` crate 来处理 trait 中的 async fn
+- trait 定义必须添加 `#[async_trait]` 注解
+- trait 实现（impl 块）也必须添加 `#[async_trait]` 注解
+- trait/impl 中直接写 `async fn`，由 async-trait 宏处理底层的 Future/Pin/Box 包裹
+- 函数签名应尽量不显式声明生命周期，除非必要（如参数/返回值确实涉及引用类型且需指定生命周期）
+- Service、Repository、JobHandler、Cache、Notification 等分层依赖注入时，优先使用具体类型或泛型参数，避免 trait object
+- 代码中如需扩展通用性，推荐使用泛型 trait bound（如 `T: GroupRepository + Send + Sync`），而不是 trait object
+- 发现 trait object 用法（如 `dyn Trait`、`Box<dyn Trait>`、`Arc<dyn Trait>`）时，必须重构为具体类型或泛型
+- 相关代码示例和重构方式请参考 `group_service.rs`、`PgGroupRepository` 等文件
 
 #### 接口定义规范（字段/签名说明，不含代码）
 - UserRepository：
   - find_by_id(user_id: i64) -> Result<Option<UserModel>, AppError>
   - set_password(user_id: i64, password_hash: &str) -> Result<(), AppError>
 
-> 说明：Rust 1.87 已原生支持 trait 里的 async fn，直接写 async fn 即可，无需任何宏或 Future/Pin/Box 包裹。函数签名应尽量简洁，无需显式生命周期。
+#### async-trait 使用示例
+```rust
+use async_trait::async_trait;
+
+// trait 定义必须添加 #[async_trait]
+#[async_trait]
+pub trait UserRepository: Send + Sync {
+    async fn find_by_id(&self, user_id: i64) -> Result<Option<UserModel>, AppError>;
+    async fn set_password(&self, user_id: i64, password_hash: &str) -> Result<(), AppError>;
+}
+
+// trait 实现也必须添加 #[async_trait]
+#[async_trait]
+impl UserRepository for PostgresUserRepository {
+    async fn find_by_id(&self, user_id: i64) -> Result<Option<UserModel>, AppError> {
+        // ...实现...
+    }
+    async fn set_password(&self, user_id: i64, password_hash: &str) -> Result<(), AppError> {
+        // ...实现...
+    }
+}
+```
+
+> 说明：虽然 Rust 1.75+ 已原生支持 trait 里的 async fn，但在复杂场景下（如auto trait bounds、生命周期推断等）仍有一些限制。在Rust编译器完全支持trait中async fn的自动推断之前，使用成熟的 async-trait crate 可以避免这些问题，提供更好的兼容性和稳定性。未来当Rust编译器完全支持时，可以逐步迁移到原生语法。
 
 ## 9. 异步任务队列规范
 

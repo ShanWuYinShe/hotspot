@@ -26,8 +26,7 @@
 
 ## 2. 项目架构规范
 
-### 目录结构和代码组织原则
-- 前端代码在 `frontend` 目录下
+### 前端目录结构规范
 - 组件放在 `components` 目录，按功能分类
 - 页面放在 `pages` 目录
 - 布局放在 `layouts` 目录
@@ -35,32 +34,13 @@
 - 公共工具函数在 `utils` 目录
 - 类型定义在 `types` 目录
 - 钩子函数在 `composables` 目录
+- **i18n locale文件**：必须放在 `i18n/locales/` 目录下，永远不要更改这个配置
 
-### 前端项目清理规范
-
-#### Agent模式代码生成清理要求
-- **总结文档清理**：删除Agent模式生成的所有总结文档（如*README*.md、*COMPLETION*.md等）
+### 前端特定清理要求
 - **演示页面清理**：删除为验证功能而创建的临时演示页面（如auto-user-demo.vue）
 - **占位服务清理**：删除仅含TODO注释或占位代码的服务文件，妥善处理相关组件引用
 - **构建验证**：清理后必须确保 `npm run build` 无错误
-
-#### 严禁保留的前端文件类型
-- **Agent总结文档**：AUTO_USER_REGISTRATION_README.md等功能总结文档
-- **临时演示组件**：auto-user-demo.vue等验证性页面组件
-- **占位服务文件**：comment.service.ts等仅含基础结构的服务文件
-- **测试验证页面**：debug-*.vue、test-*.vue等临时调试组件
-- **过渡性配置**：临时的路由配置、中间件配置等
-
-#### 组件引用清理原则
-- **引用完整性检查**：删除服务文件时，检查所有引用该服务的组件
-- **功能降级处理**：将引用已删除服务的功能改为"功能暂未开放"提示
-- **类型定义清理**：清理未使用的类型定义和接口
-- **导入语句清理**：移除无效的import语句
-
-#### 清理验证标准
-- **构建成功**：执行 `npm run build` 确保无编译错误
 - **类型检查**：确保TypeScript类型检查通过
-- **运行时测试**：验证关键页面和功能正常运行
 - **依赖清理**：移除package.json中未使用的依赖包
 
 ## 3. 命名规范
@@ -83,10 +63,143 @@
 - **本项目采用 Nuxt UI v3**：项目必须使用 Nuxt UI v3 版本及其配套生态
 - **组件验证要求**：使用 Nuxt UI v3 的组件时必须先联网查询确认组件是否存在，并验证组件的属性和用法是否正确
 - **Nuxt 框架验证要求**：使用 Nuxt v4的组件或功能时应该先联网搜索确认用法是否正确、功能是否存在
+- **强制使用 Nuxt UI v3 组件**：页面和组件要尽可能使用 Nuxt UI v3 提供的组件来实现，禁止使用原生 HTML 元素替代现有的 UI 组件
+- **优先使用组件内置功能**：尽可能使用 Nuxt UI v3 组件提供的功能，而不是自己实现相同功能
+- **文档先行原则**：使用任何 Nuxt UI v3 组件前，必须先查阅官方文档 (ui.nuxt.com) 确保使用正确
 - 使用 Tailwind CSS 作为主要样式方案（Nuxt UI v3 基于 Tailwind CSS）
 - 使用 Nuxt UI v3 主题系统和设计令牌
 - 组件样式优先使用 Tailwind CSS 类，必要时使用 `scoped` 样式
 - 公共样式和自定义样式放在 `assets/css` 目录下
+
+#### Nuxt UI v3 完整组件列表
+
+**Element 组件**：
+- `UAlert` - 警告提示组件
+- `UAvatar` - 头像组件
+- `UAvatarGroup` - 头像组组件
+- `UBadge` - 徽章组件
+- `UButton` - 按钮组件
+- `UButtonGroup` - 按钮组组件
+- `UCalendar` - 日历组件
+- `UChip` - 芯片组件
+- `UCollapsible` - 折叠组件
+- `UIcon` - 图标组件
+- `UKbd` - 键盘按键组件
+- `UProgress` - 进度条组件
+
+**Form 组件**：
+- `UCheckbox` - 复选框组件
+- `UCheckboxGroup` - 复选框组组件
+- `UColorPicker` - 颜色选择器组件
+- `UFileUpload` - 文件上传组件（支持拖拽、多文件、预览等功能）
+- `UForm` - 表单组件（内置验证）
+- `UFormField` - 表单字段组件
+- `UInput` - 输入框组件
+- `UInputMenu` - 输入菜单组件
+- `UInputNumber` - 数字输入组件
+- `UInputTags` - 标签输入组件
+- `UPinInput` - PIN码输入组件
+- `URadioGroup` - 单选按钮组组件
+- `USelect` - 选择器组件
+- `USelectMenu` - 选择菜单组件
+- `USlider` - 滑块组件
+- `USwitch` - 开关组件
+- `UTextarea` - 文本域组件
+
+**Data 组件**：
+- `UAccordion` - 手风琴组件
+- `UCard` - 卡片组件
+- `UCarousel` - 轮播图组件
+- `UPagination` - 分页组件
+- `USeparator` - 分隔符组件
+- `USkeleton` - 骨架屏组件
+- `UStepper` - 步骤器组件
+- `UTable` - 表格组件
+- `UTabs` - 标签页组件
+- `UTimeline` - 时间线组件
+- `UTree` - 树形组件
+
+**Navigation 组件**：
+- `UBreadcrumb` - 面包屑导航组件
+- `ULink` - 链接组件
+- `UNavigationMenu` - 导航菜单组件
+- `UCommandPalette` - 命令面板组件
+
+**Overlay 组件**：
+- `UModal` - 模态框组件
+- `UDrawer` - 抽屉组件
+- `UPopover` - 弹出框组件
+- `UTooltip` - 工具提示组件
+- `UToast` - 消息提示组件
+- `UContextMenu` - 右键菜单组件
+- `UDropdownMenu` - 下拉菜单组件
+- `USlideover` - 侧边栏组件
+
+#### Overlay组件使用规范
+- **组件分离原则**：模态框内容应该分离为独立的Vue组件，提高代码的可维护性和复用性
+- **统一管理**：使用 `v-model:open` 控制模态框的显示和隐藏
+- **清晰的交互**：模态框组件应该通过props接收数据，通过emit发送事件
+
+**推荐使用方式**：
+```vue
+<!-- 父组件 -->
+<template>
+  <UButton @click="showModal = true">打开模态框</UButton>
+  
+  <UModal v-model:open="showModal">
+    <MyModalContent 
+      :title="modalTitle"
+      :on-confirm="handleConfirm"
+      @close="showModal = false"
+    />
+  </UModal>
+</template>
+
+<script setup lang="ts">
+const showModal = ref(false)
+const modalTitle = ref('标题')
+
+const handleConfirm = async () => {
+  // 处理确认逻辑
+  showModal.value = false
+}
+</script>
+```
+
+```vue
+<!-- MyModalContent.vue - 独立的模态框内容组件 -->
+<template>
+  <div class="space-y-4">
+    <h3 class="text-lg font-semibold">{{ title }}</h3>
+    <!-- 模态框内容 -->
+    <div class="flex justify-end gap-3">
+      <UButton @click="$emit('close')" variant="ghost">取消</UButton>
+      <UButton @click="handleConfirm">确认</UButton>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+interface Props {
+  title?: string
+  onConfirm?: () => Promise<void>
+}
+
+const props = defineProps<Props>()
+const emit = defineEmits<{ close: [] }>()
+
+const handleConfirm = async () => {
+  if (props.onConfirm) {
+    await props.onConfirm()
+  }
+  emit('close')
+}
+</script>
+```
+
+**Layout 组件**：
+- `UApp` - 应用根组件
+- `UContainer` - 容器组件
 
 ### Nuxt UI v3 架构特性
 
@@ -131,6 +244,133 @@
   - Layout：UApp、UContainer、UCard、USeparator、USkeleton等
 - **主题定制**：通过 `app.config.ts` 配置7色语义化设计系统
 - **响应式设计**：支持 Tailwind CSS 响应式前缀和内置响应式属性
+
+### Modal 和 Overlay 组件使用规范
+
+#### useOverlay 优先原则（强制）
+- **强制使用 useOverlay**：所有 Modal、Drawer、Popover 等覆盖层组件必须通过 `useOverlay` 管理，禁止直接在模板中使用 `<UModal>` 节点
+- **程序化控制**：使用 `overlay.create()` 创建实例，通过 `modal.open()`、`modal.close()` 等方法控制
+- **组件化设计**：每个 Modal 内容应独立为组件，便于复用和维护
+- **生命周期管理**：利用 useOverlay 的自动生命周期管理，避免手动状态管理
+
+#### Modal 使用最佳实践
+```typescript
+// ✅ 正确：使用 useOverlay 管理 Modal
+const overlay = useOverlay()
+const LoginModal = defineAsyncComponent(() => import('~/components/LoginModal.vue'))
+const loginModal = overlay.create(LoginModal)
+
+// 打开 Modal
+const openLogin = () => {
+  loginModal.open()
+}
+
+// 事件处理
+loginModal.patch({
+  onSuccess: () => {
+    // 处理登录成功
+  },
+  onCancel: () => {
+    // 处理取消
+  }
+})
+```
+
+```vue
+<!-- ❌ 错误：直接在模板中使用 Modal -->
+<UModal v-model:open="showModal">
+  <!-- 内容 -->
+</UModal>
+
+<!-- ✅ 正确：Modal 内容独立为组件 -->
+<!-- LoginModal.vue -->
+<template>
+  <UModal v-model:open="isOpen" title="登录">
+    <template #body>
+      <!-- 登录表单 -->
+    </template>
+  </UModal>
+</template>
+```
+
+#### 用户提示和引导规范
+- **Modal 优先原则**：所有用户提示、引导、确认对话框都必须使用 Modal，禁止在页面内联显示
+- **用户控制权**：用户必须能够主动关闭任何提示 Modal，提供"稍后再说"、"不再提醒"等选项
+- **智能显示**：根据用户行为和偏好智能显示提示，避免过度打扰
+- **渐进式引导**：首次访问显示欢迎 Modal，后续访问显示简化的登录提示 Modal
+
+#### Modal 设计原则
+- **内容组织**：使用 `#header`、`#body`、`#footer` 插槽合理组织内容
+- **交互设计**：提供清晰的主要操作和次要操作按钮
+- **键盘支持**：支持 ESC 关闭、数字键快速选择等快捷键
+- **响应式适配**：确保 Modal 在各种设备上都有良好的显示效果
+
+#### Nuxt UI v3 强制使用与文档校验规则
+- **🔍 文档先行原则（强制）**：
+  - 使用任何 Nuxt UI v3 组件前，必须先到 Nuxt UI 官方文档 (ui.nuxt.com) 查询完整用法
+  - 验证组件存在性、所有可用的 Props/Emits/Slots/Methods
+  - 理解组件设计意图和最佳实践，避免错误使用
+  - 特别注意组件间的用法差异（如 `UModal` vs `UPopover` vs `UDrawer`）
+
+- **⚡ 功能优先原则（强制）**：
+  - 充分利用组件内置功能，严禁重复实现组件已支持的特性
+  - 优先使用组件提供的事件、方法、插槽等 API
+  - 避免通过 DOM 操作或第三方库实现组件原生支持的功能
+  - 例如：使用 `UInput` 的验证功能而不是自建验证逻辑
+
+- **🎯 组件替代原则（强制）**：
+  - 能用 Nuxt UI v3 组件实现的场景，禁止使用原生 HTML 元素
+  - 常用替代方案：
+    - 按钮：使用 `UButton` 代替 `<button>`
+    - 输入：使用 `UInput/USelect/UTextarea` 代替原生表单元素
+    - 文件上传：使用 `UFileUpload` 代替原生 `<input type="file">` 和自定义实现
+    - 弹窗：使用 `UModal/UDrawer/UPopover` 代替自定义弹窗
+    - 菜单：使用 `UDropdownMenu/UContextMenu` 代替自定义菜单
+    - 提示：使用 `UTooltip/UToast/UAlert` 代替自定义提示
+    - 卡片：使用 `UCard` 代替 `<div>` 组合
+
+- **📁 文件上传专项规范**：
+  - **强制使用 `UFileUpload` 组件**：所有文件上传功能必须使用 `UFileUpload` 组件
+  - **功能完整性**：`UFileUpload` 支持拖拽上传、多文件选择、文件预览、进度显示、文件验证等功能
+  - **禁止自定义实现**：严禁使用原生 `<input type="file">` + 自定义样式的方式实现文件上传
+  - **配置示例**：
+    ```vue
+    <UFileUpload
+      v-model="files"
+      multiple
+      accept="image/*"
+      :max-files="9"
+      icon="i-heroicons-photo"
+      label="点击上传或拖拽文件到这里"
+      description="支持 JPG, PNG, GIF 格式"
+      layout="grid"
+      @change="handleFileChange"
+    />
+    ```
+
+- **♿ 无障碍一致性（强制）**：
+  - 充分使用组件提供的无障碍功能（键盘导航、ARIA 属性、焦点管理）
+  - 禁止自行实现已有的无障碍特性
+  - 保持整个应用的交互模式一致性
+
+- **🔧 组件存在性校验（强制）**：
+  - 严禁使用 Nuxt UI v3 未提供的组件名（如 `UFormGroup`）
+  - 表单分组统一使用 `UFormField`
+  - 遇到"Failed to resolve component"错误必须立即修复
+  - 使用前验证组件名称的正确性
+
+- **🚫 禁止行为**：
+  - 禁止为了"个性化"而放弃使用现有组件
+  - 禁止因为"太简单"而不查文档直接使用
+  - 禁止混用多种 UI 库的组件
+  - 禁止通过复杂的 CSS 覆盖来"修复"组件，应寻找正确的配置方式
+
+- **📋 代码审查检查点**：
+  - 每个 Nuxt UI 组件的使用是否查阅了官方文档
+  - 是否充分利用了组件的内置功能
+  - 是否存在可以用 Nuxt UI 组件替代的原生实现
+  - 组件配置是否遵循官方推荐的最佳实践
+
 
 ### Nuxt UI v3 表单处理规范
 - **表单验证**：使用 `UForm` 组件结合 `zod` 或 `yup` 进行表单验证
@@ -333,7 +573,198 @@
   - 服务函数返回响应式数据和状态管理（loading、error、data）
   - 复杂服务可以组合多个基础 `use*` 函数实现
 
-## 9. 性能优化规范
+## 9. 优雅错误处理系统规范
+
+### 核心设计原则
+- **零侵入设计**：不破坏现有代码结构，完全向后兼容
+- **统一化处理**：所有错误通过统一的错误处理器处理
+- **用户友好**：提供智能、分级的用户通知系统
+- **开发友好**：完善的开发调试和错误日志系统
+
+### 错误处理架构
+
+#### 三层架构设计
+```
+types/errors.ts           # 错误类型定义系统
+├── ErrorType (枚举)       # 12种标准化错误类型
+├── StandardError (接口)   # 统一错误对象格式
+├── 地理位置错误详情
+├── 权限错误详情
+├── 文件操作错误详情
+└── WebSocket错误详情
+
+utils/error-factory.ts    # 智能错误工厂
+├── createGeolocationError()   # 地理位置错误转换
+├── createPermissionError()    # 权限错误转换
+├── createFileError()          # 文件操作错误转换
+├── createWebSocketError()     # WebSocket错误转换
+├── createApiStandardError()   # API错误转换
+└── createStandardError()      # 智能错误识别转换
+
+composables/useErrorHandler.ts  # 统一错误处理器
+├── handleError()              # 核心错误处理函数
+├── 特殊错误处理逻辑
+├── 智能通知系统
+└── 全局错误边界
+```
+
+### 错误类型标准化
+
+#### 12种标准错误类型
+- **GEOLOCATION_ERROR**: 地理位置相关错误
+- **PERMISSION_ERROR**: 权限请求错误  
+- **FILE_ERROR**: 文件操作错误
+- **WEBSOCKET_ERROR**: WebSocket连接错误
+- **NETWORK_ERROR**: 网络连接错误
+- **API_ERROR**: API调用错误
+- **BUSINESS_ERROR**: 业务逻辑错误
+- **UNAUTHORIZED**: 未授权访问
+- **FORBIDDEN**: 权限不足
+- **VALIDATION_ERROR**: 数据验证错误
+- **TIMEOUT_ERROR**: 请求超时
+- **CLIENT_ERROR**: 客户端错误
+
+#### StandardError 统一格式
+```typescript
+interface StandardError {
+  type: ErrorType;                    // 错误类型
+  message: string;                    // 原始错误信息
+  userFriendlyMessage: string;        // 用户友好提示
+  source: string;                     // 错误来源
+  operation: string;                  // 操作名称
+  canRetry: boolean;                  // 是否可重试
+  requiresUserAction: boolean;        // 是否需要用户行动
+  shouldNotify: boolean;              // 是否显示通知
+  notificationLevel: 'info' | 'warning' | 'error';
+  actionText?: string;                // 用户行动指导
+  originalError: any;                 // 原始错误对象
+  dedupeKey: string;                  // 去重键
+  // 特定错误类型的详细信息
+  geolocation?: GeolocationErrorInfo;
+  permission?: PermissionErrorInfo;
+  file?: FileErrorInfo;
+  websocket?: WebSocketErrorInfo;
+}
+```
+
+### 使用规范
+
+#### 基础用法
+```typescript
+// 在组件或服务中使用
+const errorHandler = useErrorHandler();
+
+try {
+  const result = await someApiCall();
+} catch (error) {
+  // 统一错误处理
+  await errorHandler.handleError(error, 'ComponentName', 'operationName');
+}
+```
+
+#### 高级用法（可选使用）
+```typescript
+// 零侵入装饰器模式（预留，不强制使用）
+const result = await withErrorHandling(
+  () => someApiCall(),
+  'ComponentName',
+  'operationName'
+);
+```
+
+#### Service层最佳实践
+```typescript
+// services/user.service.ts 示例
+export const useUserService = () => {
+  const api = useApi();
+  
+  const login = async (loginId: string, password: string) => {
+    // 所有service方法统一使用POST
+    return await api.post('/login', { login_id: loginId, password });
+  };
+  
+  // 错误处理在调用层统一处理，service层专注业务逻辑
+};
+```
+
+### 特殊错误处理逻辑
+
+#### 自动化处理
+- **UNAUTHORIZED**: 自动清除认证状态，跳转登录页
+- **GEOLOCATION_ERROR**: 根据错误码提供精确的用户指导
+- **WEBSOCKET_ERROR**: 支持自动重连机制
+
+#### 通知系统
+- **智能去重**: 相同错误不重复通知
+- **分级显示**: info/warning/error 不同颜色和持续时间
+- **用户引导**: 提供明确的解决方案文本
+
+### API调用错误处理规范
+
+#### useApi 只支持POST方法
+```typescript
+// ✅ 正确：只使用POST相关方法
+const api = useApi();
+await api.post(url, data, options);          // 标准POST请求
+await api.postPublic(url, data, options);    // 公开POST请求
+await api.postForm(formData, options);       // 表单POST请求
+
+// ❌ 错误：不使用GET/DELETE/PUT等方法
+// 所有API调用都通过POST实现，符合后端架构设计
+```
+
+#### 错误处理集成
+```typescript
+// useApi 自动集成错误处理
+const api = useApi();
+// API调用失败时会自动触发 useErrorHandler().handleError()
+```
+
+### 渐进式升级策略
+
+#### 向后兼容
+- 现有代码无需修改，继续正常工作
+- 新的错误处理系统在后台静默工作
+- 提供更好的用户体验和开发调试
+
+#### 可选升级
+- 可选择性地在关键组件中使用 `useErrorHandler()`
+- 可选择性地使用 `withErrorHandling()` 装饰器
+- 不强制全面重构现有代码
+
+### 开发调试增强
+
+#### 开发环境特性
+```typescript
+// 开发环境自动提供详细错误日志
+if (import.meta.dev) {
+  console.group(`🚨 [${error.type}] ${source}.${operation}`);
+  console.error('User Message:', error.userFriendlyMessage);
+  console.error('Original Error:', error.originalError);
+  console.groupEnd();
+}
+```
+
+#### 全局错误边界
+```typescript
+// 自动捕获未处理的错误
+const errorHandler = useErrorHandler();
+errorHandler.setupGlobalErrorHandler(); // 在app.vue中调用
+```
+
+### 性能和用户体验优化
+
+#### 智能通知
+- 防重复：相同错误不重复显示
+- 智能定时：根据错误严重程度自动调整显示时长
+- 用户引导：提供具体的解决方案
+
+#### 零性能损耗
+- 只在错误发生时才激活处理逻辑
+- 不影响正常业务流程的性能
+- 轻量级设计，最小化内存占用
+
+## 10. 性能优化规范
 - 组件合理拆分，避免过大组件
 - 列表使用虚拟滚动优化
 - 大数据操作用 Web Worker
@@ -342,7 +773,7 @@
 - 删除不必要依赖，减少打包体积
 - 使用轻量级工具函数，避免引入大型库
 
-## 10. Nuxt 配置与框架规范
+## 11. Nuxt 配置与框架规范
 
 ### Nuxt 配置规范
 - 使用 `nuxt.config.ts` 进行全局配置
@@ -352,6 +783,16 @@
 - 合理配置构建选项，优化打包体积
 - 使用按需导入减少不必要代码
 
+### Nuxt 与 Nuxt UI 官方文档校验要求（强制）
+- 使用任何 Nuxt 核心 API（如 `definePageMeta`、`useRoute`、`navigateTo`、`useFetch` 等）前，必须到 Nuxt 官方文档核对正确用法与最新行为。
+- 使用任何 Nuxt UI v3 组件/Composables（如 `UModal`、`UButton`、`UTabs`、`useToast` 等）前，必须到 Nuxt UI 官方文档核对：
+  - 组件名与存在性
+  - Props/Emits/Slots 正确性与范式（例如 `UModal` 使用默认插槽作为触发器，内容应使用 `#body`/`#footer` 等插槽，支持 `v-model:open` 控制）
+  - 重要用法差异（如 `#content` 与 `#body/#footer` 的差异、`close` slot props 的使用方式）
+- 文档链接示例：
+  - Nuxt UI `UModal` 组件用法参考：`https://ui.nuxt.com/components/modal`
+- 代码评审前需自查上述规则，避免因不合规用法导致的运行时错误或可访问性问题。
+
 ### Nuxt 文件处理规范
 - **不要直接替换** Nuxt 自动生成的文件
 - 在 Nuxt 生成文件基础上修改和扩展，保留原始结构和元数据
@@ -359,7 +800,7 @@
 - 使用 `<script setup>` 和 `<template>` 添加自定义功能
 - 如需添加中间件或页面元数据，使用 `definePageMeta` 而非替换文件
 
-## 11. Nuxt 文件命名与使用规范
+## 12. Nuxt 文件命名与使用规范
 
 #### 适用目录
 - 仅允许在 Nuxt 约定的以下目录下使用 `.client.ts`、`.server.ts`、`.client.vue`、`.server.vue` 等后缀：
@@ -388,138 +829,36 @@
   - 服务端渲染用 `.server` 版本
   - 客户端渲染/激活用 `.client` 版本
 
-## 12. 后端异步任务系统协作规范
+#### 运行时后缀强约束（新增）
+- 命名只能三选一：
+  1) 仅有通用实现：`useX.ts`
+  2) 成对实现：`useX.client.ts` 与 `useX.server.ts` 同时存在
+  3) 仅单端实现：`useX.client.ts` 或 `useX.server.ts`（另一端不存在）
+- 一旦存在 `useX.client.ts`，同路径同名的 `useX.ts` 禁止存在（避免解析冲突/不可预期行为）
+- 若需要在另一端提供占位实现，请新增与之配对的 `useX.server.ts`（或反之）并返回安全占位（默认值、空函数）
 
-### 异步操作处理原则
+#### SSR 安全用法（新增统一策略）
+- 任何在 SSR 阶段可能访问浏览器 API（`window`、`document`、`matchMedia`、`navigator` 等）的逻辑：
+  - 优先采用成对实现：`.client.ts`（真实实现）+ `.server.ts`（安全占位实现）
+  - 或仅 `.client.ts`，并在使用端组件中采用“setup 默认值 + onMounted 注入真实实现 + watch 同步”的方式，避免水合不匹配
+- 组件侧推荐示例：
+  ```ts
+  const isDark = ref(false)
+  let toggleTheme: () => void = () => {}
+  onMounted(() => {
+    const theme = useTheme() // .client 实现
+    toggleTheme = theme.toggleTheme
+    watch(theme.isDark, v => (isDark.value = v), { immediate: true })
+  })
+  ```
 
-#### 用户注册流程优化
-- **立即反馈**: 用户注册完成后立即显示成功状态，不等待位置初始化等异步任务
-- **渐进增强**: 异步任务完成后通过WebSocket或轮询更新用户状态
-- **容错设计**: 异步任务失败时不影响用户正常使用，提供重试选项
-
-#### 后端任务队列感知设计
-- 注册成功后立即更新用户状态和显示成功消息
-- 导航到主页面不等待异步任务完成
-- 通过WebSocket监听位置初始化完成通知
-
-#### WebSocket通知处理
-- **任务状态通知**: 监听后端任务队列发送的状态更新通知
-- **用户体验增强**: 异步任务完成时显示相应的成功消息或状态更新
-- **错误处理**: 监听任务失败通知，提供重试或替代方案
-
-### API调用优化规范
-
-#### 非阻塞接口设计
-- **分离关注点**: 主要业务操作（注册、登录）与辅助功能（位置初始化、通知发送）分离
-- **容错处理**: API调用失败时提供降级方案，避免功能完全不可用
-- **状态管理**: 合理管理加载状态，区分主要操作和辅助操作的加载状态
-
-#### 异步状态展示规范
-- 区分主要状态（注册是否完成）和辅助状态（异步任务进度）
-- 异步任务状态包括：pending、processing、completed、failed
-- 通过WebSocket监听异步任务状态变更
-- 为不同任务类型提供相应的状态显示组件
-
-### 错误处理与用户体验
-
-#### 分层错误处理
-- **主要流程错误**: 直接影响用户操作的错误（如注册失败）必须阻断流程并显示错误
-- **辅助功能错误**: 不影响主要功能的错误（如位置初始化失败）应友好提示但不阻断
-- **重试机制**: 为异步任务失败提供手动重试选项
-
-#### 用户反馈设计原则
-- 位置初始化失败：不阻断用户使用，提供稍后手动设置选项
-- 欢迎通知发送失败：静默处理，记录日志
-- 其他异步任务错误：友好提示但不影响正常使用
-- 提供统一的错误处理机制和用户反馈策略
-
-### 状态同步与数据一致性规范
-
-#### 乐观更新策略
-- **即时响应**: 用户操作后立即更新UI状态，不等待所有异步任务完成
-- **状态回滚**: 如果关键异步任务失败，提供状态回滚机制
-- **数据同步**: 定期从服务器同步数据，确保客户端状态准确
-
-#### Store状态管理要求
-- 异步任务感知的状态管理：维护待处理任务映射表
-- 任务状态更新：支持任务状态变更和完成时间记录
-- 自动清理机制：定期清理已完成的任务记录
-
-### 性能优化考虑
-
-#### 避免过度轮询
-- **WebSocket优先**: 优先使用WebSocket接收异步任务状态更新
-- **智能轮询**: 如果WebSocket不可用，使用指数退避的轮询策略
-- **状态缓存**: 合理缓存异步任务状态，避免重复查询
-
-#### 渐进式功能激活规范
-- 功能状态检查：定期检查用户功能就绪状态
-- 条件激活：根据功能就绪状态动态启用相应功能
-- 默认配置：功能状态获取失败时使用安全的默认配置
-
-### 开发调试支持
-
-#### 异步任务调试工具
-- **任务状态面板**: 开发环境下显示当前用户的异步任务执行状态
-- **手动重试**: 提供手动触发异步任务的调试接口
-- **模拟失败**: 测试环境下模拟异步任务失败场景
-
-#### 监控和日志规范
-- 事件日志记录：记录任务开始、成功、错误等关键事件
-- 开发环境调试：详细控制台日志输出
-- 生产环境监控：向监控系统发送关键指标数据
-
-### 终端管理规范
+## 13. 终端管理规范
 - **单终端操作**: 前端开发过程中尽量在同一终端中操作，避免开启多个终端
 - **服务器管理**: 开发者自行管理前端服务器启动，工具不主动启动服务器
 
-
-
-## 12.1 后端架构合理性协作规范
-
-### 前后端架构优化协作原则
-
-#### 架构合理性验证参与
-- **业务逻辑审查**：前端开发过程中发现后端设计不合理时，主动提出优化建议
-- **真实场景验证**：基于前端用户体验需求，验证后端架构设计的合理性
-- **功能重复识别**：在API调用过程中识别重复功能，建议后端简化
-
-#### 已完成的协作优化案例（2025年7月15日）
-
-**notification存储系统优化**：
-- **问题识别**：通知需要同时调用WebSocket和数据库API，增加复杂度
-- **优化方案**：只需要实时WebSocket通知，无需数据库操作
-- **优化收益**：
-  - 前端代码简化：减少了通知相关的API调用复杂度
-  - 实时性提升：通知推送更加及时，无需等待数据库操作
-  - 状态管理简化：前端无需管理通知的持久化状态
-
-#### 前端驱动的架构优化原则
-
-**用户体验驱动后端设计**：
-- **API简洁性**：复杂的后端逻辑应该封装在单一API中，避免前端调用多个API组合功能
-- **实时性优先**：对于需要实时反馈的功能，优先使用WebSocket而非轮询数据库
-- **错误处理统一**：后端应提供一致的错误响应格式，便于前端统一处理
-
-**协作沟通机制**：
-- **周期性架构审查**：前后端定期（月度）进行架构合理性联合审查
-- **问题及时反馈**：前端发现后端设计问题时，通过规范化流程反馈
-- **优化方案共同制定**：重大架构调整前，前后端共同评估影响和实施方案
-
-### 前端代码中的后端协作最佳实践
-
-#### API调用合理性判断
-- **合理的API设计**：单一职责，功能明确，一次调用完成完整业务逻辑
-- **不合理的设计模式**：需要多次API调用完成单一业务逻辑，增加前端复杂度和错误处理难度
-
-#### 状态管理与后端状态同步规范
-- **乐观更新模式**：立即更新UI状态，提升用户体验
-- **单一API调用**：调用优化的后端API，单次调用完成复杂逻辑
-- **错误回滚机制**：API调用失败时回滚UI状态并处理错误
-
 ---
 
-## 13. 用户体验优化规范
+## 14. 用户体验优化规范
 
 ### 自动临时用户注册策略
 
@@ -604,7 +943,7 @@
 
 ---
 
-## 14. 样式规范
+## 15. 样式规范
 
 ### 游戏UI设计规范
 

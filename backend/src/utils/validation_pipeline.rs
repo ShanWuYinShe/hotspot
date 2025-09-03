@@ -1,15 +1,15 @@
-use crate::utils::response::AppError;
+use crate::utils::error::AppError;
 
 /// 常用验证函数
 pub mod validators {
     use super::*;
-    use crate::validators::common_validator;
+    use crate::presentation::http::validators::common_validator;
     use uuid::Uuid;
     
     /// 验证可选的分页参数
     pub fn validate_pagination_if_provided(cursor: Option<i64>, limit: Option<i64>, max_limit: i64) -> Result<(), AppError> {
         if let (Some(c), Some(l)) = (cursor, limit) {
-            common_validator::validate_pagination(c, l, max_limit)
+            Ok(common_validator::validate_pagination(c, l, max_limit)?)
         } else {
             Ok(())
         }
@@ -26,20 +26,21 @@ pub mod validators {
     
     /// 验证UUID并返回解析后的UUID
     pub fn validate_uuid(uuid_str: &str, param_name: &str) -> Result<Uuid, AppError> {
-        common_validator::validate_uuid(uuid_str, param_name)
+        Ok(common_validator::validate_uuid(uuid_str, param_name)?)
     }
     
     /// 验证位置参数的便捷函数
     pub fn validate_location(latitude: f64, longitude: f64) -> Result<(), AppError> {
-        common_validator::validate_location_params(latitude, longitude)
+        Ok(common_validator::validate_location_params(latitude, longitude)?)
     }
     
     /// 验证搜索关键词
     pub fn validate_search_keyword(keyword: &str, max_length: usize) -> Result<(), AppError> {
-        common_validator::validate_string_length(keyword, "搜索关键词", 1, max_length)
+        Ok(common_validator::validate_string_length(keyword, "搜索关键词", 1, max_length)?)
     }
     
     /// 验证位置搜索请求的组合验证函数
+    #[allow(clippy::too_many_arguments)]
     pub fn validate_location_search(
         latitude: f64, 
         longitude: f64, 

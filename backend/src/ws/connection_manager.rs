@@ -18,9 +18,7 @@ use crate::ws::{
 #[derive(Debug, Clone)]
 pub struct ConnectionInfo {
     pub user_id: i64,
-    #[allow(dead_code)]
     pub connection_id: Uuid,
-    #[allow(dead_code)]
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub last_activity: chrono::DateTime<chrono::Utc>,
 }
@@ -142,7 +140,6 @@ impl ConnectionManager {
     }
 
     /// 获取所有在线用户（预留：监控/运维用途）
-    #[allow(dead_code)]
     pub async fn get_online_users(&self) -> Vec<i64> {
         let user_connections = self.user_connections.read().await;
         user_connections.keys().copied().collect()
@@ -189,7 +186,6 @@ impl ConnectionManager {
     }
 
     /// 清理不活跃的连接
-    #[allow(dead_code)]
     pub async fn cleanup_inactive_connections(&self, timeout_secs: u64) -> usize {
         let timeout = chrono::Duration::seconds(timeout_secs as i64);
         let now = chrono::Utc::now();
@@ -227,7 +223,6 @@ impl ConnectionManager {
     }
 
     /// 获取连接统计信息
-    #[allow(dead_code)]
     pub async fn get_stats(&self) -> ConnectionStats {
         let connections = self.connections.read().await;
         let user_connections = self.user_connections.read().await;
@@ -241,7 +236,6 @@ impl ConnectionManager {
 
 /// 连接统计信息
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct ConnectionStats {
     pub total_connections: usize,
     pub active_users: usize,

@@ -22,22 +22,61 @@ sysinfo = "0.30"
 thiserror = "2.0.12"
 tokio = { version = "1.44.2", features = ["full"] }
 tokio-tungstenite = "0.26.2"
-tower-http = { version = "0.6.2", features = ["cors", "trace"] }
+tower-http = { version = "0.6.2", features = ["cors", "fs", "timeout", "trace"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter", "json"] }
 utoipa = { version = "4.2.0", features = ["axum_extras"] }
 uuid = { version = "1.16.0", features = ["v4", "serde"] }
+toml = "0.8"
+async-trait = "0.1.83"
+log = "0.4"
+tower = "0.5"
+once_cell = "1.21.3"
+num_cpus = "1.17.0"
+lettre = { version = "0.11.18", features = ["smtp-transport", "tokio1-native-tls", "builder"] }
+multer = "3.1.0"
 
 [features]
-default = []
-# 控制是否在用户订阅私有房间后自动派发离线通知
+default = ["postgres", "ws", "cache_in_memory", "jobs_lite", "policy_friend", "policy_group", "metrics_basic"]
+
+# === 新架构Feature Flags ===
+
+# 数据库适配器
+postgres = []
+
+# WebSocket相关
+ws = []
 ws_offline_notifications = []
-# 控制是否启用审计埋点（提交到注入的 AuditSink）
-audit = []
-# 启用 WebSocket 相关的定时清理任务（连接/空房间）
 ws_scheduler = []
+ws_hooks = []
+
+# 缓存适配器
+cache_in_memory = []
+cache_redis = []
+
+# 任务队列适配器
+jobs_lite = []
+jobs_redis = []
+
+# 通知策略
+policy_friend = []
+policy_group = []
+policy_nearby = []
+
+# 监控指标
+metrics_basic = []
+prometheus_metrics = []
+
+# 可选功能
+email_channel = []
+
+# === 传统Feature Flags（待重构） ===
 # 启用群组消息摘要的定时任务
 group_digest_scheduler = []
+# 控制是否启用审计埋点（提交到注入的 AuditSink）
+audit = []
 # 控制是否编译与任务队列/调度相关的代码（便于裁剪构建）
 jobs = []
-ws_hooks = []
+
+[dev-dependencies]
+tower = "0.5"

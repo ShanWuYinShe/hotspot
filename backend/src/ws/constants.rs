@@ -1,6 +1,7 @@
 //! WebSocket系统常量定义
 
 use crate::utils::user_id_partition::UserIdPartition;
+use crate::utils::JsSafeI64;
 
 /// WebSocket连接相关常量
 pub mod connection {
@@ -34,16 +35,23 @@ pub mod connection {
 
 /// WebSocket消息相关常量
 pub mod message {
+    use super::JsSafeI64;
     /// 未知用户昵称
     #[allow(dead_code)]
     pub const UNKNOWN_USER_NICKNAME: &str = "未知用户";
     
     /// 系统用户ID
     #[allow(dead_code)]
-    pub const SYSTEM_USER_ID: i64 = {
+    pub const SYSTEM_USER_ID_RAW: i64 = {
         // 使用系统用户类型，序列号为0
         4611686018427387904i64 // 预计算的系统用户ID
     };
+    
+    /// 系统用户ID（JavaScript安全）
+    #[allow(dead_code)]
+    pub fn system_user_id() -> JsSafeI64 {
+        JsSafeI64::new(SYSTEM_USER_ID_RAW)
+    }
     
     /// 消息重试次数
     #[allow(dead_code)]

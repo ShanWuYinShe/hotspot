@@ -1,10 +1,16 @@
 use crate::{
-    middleware::auth::AppState, 
     ws::message_types::{ClientMessage, ServerMessage},
     ws::errors::{WsError, WsResult},
     ws::manager::WebSocketManager,
     utils::jwt::verify_jwt_token,
+    utils::JsSafeI64,
 };
+
+// 临时的WebSocket状态类型
+pub struct WebSocketState {
+    pub ws_manager: Arc<WebSocketManager>,
+    pub jwt_secret: String,
+}
 use axum::{
     extract::{
         State, WebSocketUpgrade,
@@ -19,12 +25,12 @@ use serde_json;
 use uuid::Uuid;
 
 // WebSocket连接处理函数
-pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<Arc<AppState>>) -> Response {
+pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<Arc<WebSocketState>>) -> Response {
     ws.on_upgrade(|socket| handle_socket(socket, state))
 }
 
 // 处理WebSocket连接
-async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
+async fn handle_socket(socket: WebSocket, state: Arc<WebSocketState>) {
     let (mut sender, mut receiver) = socket.split();
     let connection_id = Uuid::new_v4();
     
@@ -83,7 +89,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
 
     // 发送连接成功消息
     let connected_msg = ServerMessage::Connected { 
-        user_id, 
+        user_id: JsSafeI64::new(user_id), 
         session_id: connection_id.to_string()
     };
     if let Err(e) = send_message(&mut sender, &connected_msg).await {
@@ -111,7 +117,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
 // 解析认证消息
 async fn parse_auth_message(
     message: &str, 
-    state: &AppState
+    state: &WebSocketState
 ) -> Result<i64, ServerMessage> {
     let client_msg: ClientMessage = serde_json::from_str(message)
         .map_err(|_| ServerMessage::Error { 
@@ -121,8 +127,7 @@ async fn parse_auth_message(
 
     match client_msg {
         ClientMessage::Connect { token } => {
-            let config = state.config_service.get_config();
-            let claims = verify_jwt_token(&token, &config.auth.jwt_secret)
+            let claims = verify_jwt_token(&token, &state.jwt_secret)
                 .map_err(|_| ServerMessage::Error { 
                     code: "INVALID_TOKEN".to_string(),
                     message: "无效的认证令牌".to_string() 

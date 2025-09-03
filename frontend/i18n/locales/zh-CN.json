@@ -1,0 +1,370 @@
+{
+  "app": {
+    "title": "HotSpot",
+    "actions": {
+      "search": "搜索",
+      "refresh": "刷新",
+      "apply": "应用",
+      "invite": "邀请"
+    }
+  },
+  "nav": {
+    "home": "首页",
+    "map": "地图",
+    "moments": "动态",
+    "messages": "消息",
+    "groups": "群组",
+    "users": "用户",
+    "my": "我的",
+    "myGroups": "我的群组",
+    "ownedGroups": "已拥有的群组",
+    "discoverGroups": "发现群组",
+    "nearbyUsers": "附近的人",
+    "searchUsers": "查找用户",
+    "settings": "设置",
+    "profile": "我的资料",
+    "create": "创建",
+    "search": "搜索"
+  },
+  "common": {
+    "user": "用户",
+    "actions": "操作",
+    "back": "返回",
+    "cancel": "取消",
+    "close": "关闭",
+    "confirm": "确认",
+    "save": "保存",
+    "edit": "编辑",
+    "delete": "删除",
+    "loading": "加载中...",
+    "loadFailed": "加载失败",
+    "actionFailed": "操作失败",
+    "success": "成功",
+    "error": "错误",
+    "warning": "警告",
+    "info": "信息"
+  },
+  "notFound": {
+    "title": "页面未找到",
+    "description": "抱歉，您访问的页面不存在或已被移动。请检查网址是否正确，或返回首页继续浏览。",
+    "actions": {
+      "goHome": "返回首页",
+      "goBack": "返回上页"
+    },
+    "help": {
+      "title": "需要帮助？",
+      "contactSupport": "联系客服",
+      "feedback": "意见反馈"
+    }
+  },
+  "time": {
+    "justNow": "刚刚",
+    "yesterday": "昨天",
+    "daysAgo": "{n}天前",
+    "minutesAgo": "{n}分钟前",
+    "hoursAgo": "{n}小时前"
+  },
+  "date": {
+    "yearMonth": "{y}年{m}月"
+  },
+  "distance": {
+    "meters": "{n}米",
+    "kilometers": "{n}公里"
+  },
+  "profile": {
+    "title": "个人资料",
+    "temporary": {
+      "title": "当前为临时用户",
+      "description": "升级为正式用户以保存数据并解锁全部功能。",
+      "actionText": "立即升级",
+      "secondaryActionText": "了解权益"
+    },
+    "actions": {
+      "edit": "编辑资料",
+      "settings": "设置",
+      "logout": "退出登录"
+    },
+    "stats": {
+      "friends": "好友",
+      "groups": "群组",
+      "moments": "动态"
+    },
+    "menu": {
+      "title": "功能菜单"
+    },
+    "logout": {
+      "confirmTitle": "确认退出登录",
+      "confirmBody": "确定要退出登录吗？",
+      "confirmButton": "确认退出"
+    },
+    "toasts": {
+      "featureUnavailableTitle": "功能暂未开放",
+      "featureUnavailableDesc": "敬请期待：个人资料编辑即将上线",
+      "logoutSuccess": "已退出登录",
+      "logoutFailedTitle": "退出失败",
+      "logoutFailedDesc": "请重试"
+    },
+    "benefits": {
+      "title": "权益说明",
+      "description": "升级可解锁持久化、更多群组、更多互动能力"
+    }
+  },
+  "moments": {
+    "moreActions": "更多操作",
+    "actions": {
+      "report": "举报"
+    },
+    "toasts": {
+      "reportedTitle": "举报已提交",
+      "reportedDesc": "我们会尽快处理您的举报"
+    }
+  },
+  "friends": {
+    "requests": {
+      "title": "好友请求",
+      "subtitle": "管理收到和发送的好友请求",
+      "tabs": {
+        "received": "收到的请求",
+        "sent": "发送的请求"
+      },
+      "status": {
+        "pending": "待处理",
+        "accepted": "已接受",
+        "rejected": "已拒绝"
+      },
+      "sent_request": " 发来",
+      "sent": " 已发送",
+      "responded": " 已回应",
+      "i_said": "我说：",
+      "actions": {
+        "accept": "接受",
+        "reject": "拒绝",
+        "view": "查看",
+        "cancel": "撤销",
+        "chat": "聊天",
+        "acceptAll": "接受全部",
+        "rejectAll": "拒绝全部"
+      },
+      "empty": {
+        "received": {
+          "title": "暂无收到的请求",
+          "description": "你暂时没有好友请求。",
+          "actionText": "去找人"
+        },
+        "sent": {
+          "title": "暂无发送的请求",
+          "description": "你还没有发送任何好友请求。",
+          "actionText": "搜索用户"
+        }
+      },
+      "modal": {
+        "title": {
+          "cancel": "撤销好友请求",
+          "batch_accept": "接受所有请求",
+          "batch_reject": "拒绝所有请求"
+        },
+        "body": {
+          "cancel": "确定要撤销这条好友请求吗？",
+          "batch_accept": "确定要接受所有收到的好友请求吗？",
+          "batch_reject": "确定要拒绝所有收到的好友请求吗？"
+        },
+        "buttons": {
+          "confirmCancel": "确认撤销",
+          "confirmAccept": "确认接受",
+          "confirmReject": "确认拒绝"
+        }
+      },
+      "errors": {
+        "loadFailed": {
+          "title": "好友请求加载失败",
+          "description": "无法获取好友请求，请稍后重试。"
+        },
+        "loadReceived": "无法加载收到的好友请求",
+        "loadSent": "无法加载发送的好友请求"
+      },
+      "toasts": {
+        "acceptedOne": "已接受 {name} 的好友请求",
+        "rejectedOne": "已拒绝 {name} 的好友请求",
+        "canceledOne": "已撤销对 {name} 的好友请求",
+        "acceptedAll": "已接受 {count} 个好友请求",
+        "rejectedAll": "已拒绝 {count} 个好友请求",
+        "batchFailed": "批量操作失败"
+      }
+    }
+  },
+  "userMenu": {
+    "loggedInAs": "已登录为",
+    "profile": "个人资料",
+    "settings": "设置",
+    "sessions": "会话",
+    "tempExperience": "临时体验",
+    "addAccount": "添加账户",
+    "switchAccount": "切换账户",
+    "logout": "登出",
+    "loginRegister": "登录/注册",
+    "notLoggedIn": "未登录",
+    "loginToAccess": "登录以访问更多功能",
+    "tempUser": "临时用户",
+    "temporary": "临时",
+    "verified": "正式",
+    "upgradeAccount": "升级账户",
+    "tempModal": {
+      "title": "一键临时体验",
+      "infoTitle": "临时体验说明",
+      "infoDescription": "临时账户可以体验大部分功能，升级后可保存数据并解锁全部功能。",
+      "nicknameLabel": "临时昵称（可选）",
+      "nicknamePlaceholder": "不填则自动生成",
+      "nicknameHelp": "最多20个字符",
+      "nicknameTooLong": "昵称不能超过20个字符",
+      "cancel": "取消",
+      "startExperience": "开始体验"
+    },
+    "switchModal": {
+      "title": "切换账户",
+      "description": "确定要切换到 {name} 吗？",
+      "tempWarningTitle": "临时账户提醒",
+      "tempWarningDescription": "这是一个临时账户，数据可能不会永久保存。",
+      "cancel": "取消",
+      "confirm": "确认切换"
+    },
+    "toasts": {
+      "tempCreated": "临时账户创建成功",
+      "welcomeTemp": "欢迎 {name}，开始体验吧！",
+      "tempFailed": "创建临时账户失败",
+      "tryAgain": "请重试",
+      "switchSuccess": "切换成功",
+      "switchedTo": "已切换到 {name}",
+      "switchFailed": "切换失败",
+      "accountExpired": "账户可能已过期",
+      "loggedOut": "已登出",
+      "redirectingToLogin": "正在跳转到登录页"
+    }
+  },
+  "users": {
+    "detail": {
+      "title": "用户详情",
+      "empty": {
+        "title": "用户不存在",
+        "description": "该用户可能已被删除或不存在",
+        "actionText": "返回搜索"
+      },
+      "joinedSuffix": "加入",
+      "actions": {
+        "addFriend": "添加好友",
+        "message": "发消息"
+      },
+      "status": {
+        "pendingSent": "已发送请求",
+        "pendingReceived": "待接受请求",
+        "accepted": "好友"
+      },
+      "moments": {
+        "title": "TA的动态",
+        "loadMore": "加载更多动态",
+        "empty": "TA还没有发布任何动态",
+        "loadFailed": "加载动态失败"
+      },
+      "remove": {
+        "confirmTitle": "确认删除好友",
+        "confirmBody": "确定要删除这个好友吗？",
+        "confirmButton": "确认删除"
+      },
+      "errors": {
+        "loadStats": "无法加载用户统计信息"
+      },
+      "more": {
+        "removeFriend": "删除好友",
+        "report": "举报用户"
+      },
+      "toasts": {
+        "requestSent": "好友请求已发送",
+        "sendFailed": "发送失败",
+        "added": "已添加为好友",
+        "rejected": "已拒绝好友请求",
+        "removed": "已删除好友"
+      }
+    },
+    "search": {
+      "title": "查找用户",
+      "subtitle": "搜索用户并添加好友",
+      "placeholder": "输入用户名、昵称或手机号...",
+      "searchType": "搜索类型:",
+      "type": {
+        "name": "用户名",
+        "phone": "手机号",
+        "all": "全部"
+      },
+      "actions": {
+        "sent": "已发送",
+        "chat": "聊天",
+        "view": "查看"
+      },
+      "empty": {
+        "title": "未找到用户",
+        "description": "尝试使用不同的关键词或搜索类型",
+        "actionText": "重新搜索"
+      },
+      "recommended": {
+        "title": "推荐用户",
+        "empty": "暂无推荐用户"
+      },
+      "status": {
+        "sent": "已发送",
+        "pending": "待接受"
+      },
+      "toasts": {
+        "searchFailed": "搜索失败",
+        "recommendLoadFailed": "加载推荐失败",
+        "recommendUnable": "无法获取推荐用户，请稍后重试",
+        "unableToSend": "无法发送好友请求"
+      },
+      "defaultRequestMessage": "你好，我想加你为好友"
+    }
+  },
+  "shortcuts": {
+    "help": {
+      "title": "快捷键帮助",
+      "empty": "暂无可用的快捷键",
+      "tip": "按 Esc 键关闭此窗口"
+    }
+  },
+  "auth": {
+    "login": "登录",
+    "register": "注册",
+    "logout": "退出登录",
+    "loginRequired": "请先登录",
+    "loginSuccess": "登录成功",
+    "loginFailed": "登录失败",
+    "registerSuccess": "注册成功",
+    "registerFailed": "注册失败",
+    "logoutSuccess": "退出成功",
+    "username": "用户名",
+    "password": "密码",
+    "nickname": "昵称",
+    "email": "邮箱",
+    "phone": "手机号",
+    "confirmPassword": "确认密码",
+    "forgotPassword": "忘记密码？",
+    "rememberMe": "记住我",
+    "alreadyHaveAccount": "已有账号？",
+    "noAccount": "还没有账号？",
+    "clickToLogin": "点击登录",
+    "clickToRegister": "点击注册"
+  },
+  "validation": {
+    "required": "此字段为必填项",
+    "minLength": "至少需要 {min} 个字符",
+    "maxLength": "不能超过 {max} 个字符",
+    "email": "请输入有效的邮箱地址",
+    "phone": "请输入有效的手机号",
+    "passwordMismatch": "两次输入的密码不一致",
+    "invalidFormat": "格式不正确"
+  },
+  "network": {
+    "offline": "网络连接已断开",
+    "online": "网络连接已恢复",
+    "error": "网络请求失败",
+    "timeout": "请求超时",
+    "retry": "重试"
+  }
+}

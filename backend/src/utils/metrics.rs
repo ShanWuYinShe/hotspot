@@ -1,7 +1,8 @@
 //! 应用监控指标模块
 
 use std::sync::Arc;
-use tracing::info;
+use std::time::{SystemTime, UNIX_EPOCH, Instant};
+use tracing::{info, warn, error};
 use prometheus::{
     Encoder, TextEncoder, 
     Gauge, 
@@ -10,8 +11,10 @@ use prometheus::{
     opts, register_counter_vec, register_histogram_vec,
     register_counter, register_gauge, register_histogram,
 };
+use serde::{Serialize, Deserialize};
+use tokio::time::{interval, Duration};
 
-use crate::config::db::Database;
+use crate::bootstrap::config_adapter::Database;
 
 /// 应用监控指标
 #[derive(Debug, Clone)]
@@ -67,6 +70,33 @@ pub struct AppMetrics {
     pub cpu_usage_percent: Gauge,
     // JVM运行时间
     pub uptime_seconds: Gauge,
+    
+    // 业务指标
+    // 用户注册数
+    pub user_registrations_total: Counter,
+    // 临时用户创建数
+    pub temp_users_created_total: Counter,
+    // 群组创建数
+    pub groups_created_total: Counter,
+    // 消息发送数
+    pub messages_sent_total: CounterVec,
+    // 生活瞬间创建数
+    pub moments_created_total: Counter,
+    // 生活瞬间点赞数
+    pub moment_likes_total: Counter,
+    // 用户登录数
+    pub user_logins_total: CounterVec,
+    // API错误率
+    pub api_errors_total: CounterVec,
+    // 数据库查询延迟
+    pub db_query_duration_seconds: HistogramVec,
+    // 地理位置查询数
+    pub geo_queries_total: CounterVec,
+    // 缓存操作计数
+    pub cache_operations_total: CounterVec,
+    // 任务队列指标
+    pub job_queue_size: Gauge,
+    pub job_processing_duration_seconds: HistogramVec,
 }
 
 impl AppMetrics {
@@ -173,6 +203,70 @@ impl AppMetrics {
             opts!("uptime_seconds", "应用运行时间（秒）")
         )?;
         
+        // 业务指标
+        let user_registrations_total = register_counter!(
+            opts!("user_registrations_total", "用户注册总数")
+        )?;
+        
+        let temp_users_created_total = register_counter!(
+            opts!("temp_users_created_total", "临时用户创建总数")
+        )?;
+        
+        let groups_created_total = register_counter!(
+            opts!("groups_created_total", "群组创建总数")
+        )?;
+        
+        let messages_sent_total = register_counter_vec!(
+            opts!("messages_sent_total", "消息发送总数"),
+            &["message_type", "channel"]
+        )?;
+        
+        let moments_created_total = register_counter!(
+            opts!("moments_created_total", "生活瞬间创建总数")
+        )?;
+        
+        let moment_likes_total = register_counter!(
+            opts!("moment_likes_total", "生活瞬间点赞总数")
+        )?;
+        
+        let user_logins_total = register_counter_vec!(
+            opts!("user_logins_total", "用户登录总数"),
+            &["user_type", "result"]
+        )?;
+        
+        let api_errors_total = register_counter_vec!(
+            opts!("api_errors_total", "API错误总数"),
+            &["method", "path", "error_type"]
+        )?;
+        
+        let db_query_duration_seconds = register_histogram_vec!(
+            "db_query_duration_seconds",
+            "数据库查询延迟（秒）",
+            &["operation", "table"],
+            vec![0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0]
+        )?;
+        
+        let geo_queries_total = register_counter_vec!(
+            opts!("geo_queries_total", "地理位置查询总数"),
+            &["query_type", "result"]
+        )?;
+        
+        let cache_operations_total = register_counter_vec!(
+            opts!("cache_operations_total", "缓存操作总数"),
+            &["operation", "result"]
+        )?;
+        
+        let job_queue_size = register_gauge!(
+            opts!("job_queue_size", "任务队列大小")
+        )?;
+        
+        let job_processing_duration_seconds = register_histogram_vec!(
+            "job_processing_duration_seconds",
+            "任务处理延迟（秒）",
+            &["job_type", "result"],
+            vec![0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 300.0]
+        )?;
+        
         Ok(Self {
             http_requests_total,
             http_request_duration_seconds,
@@ -193,6 +287,20 @@ impl AppMetrics {
             memory_usage_bytes,
             cpu_usage_percent,
             uptime_seconds,
+            // 业务指标
+            user_registrations_total,
+            temp_users_created_total,
+            groups_created_total,
+            messages_sent_total,
+            moments_created_total,
+            moment_likes_total,
+            user_logins_total,
+            api_errors_total,
+            db_query_duration_seconds,
+            geo_queries_total,
+            cache_operations_total,
+            job_queue_size,
+            job_processing_duration_seconds,
         })
     }
     
@@ -340,6 +448,91 @@ impl AppMetrics {
     pub fn set_cache_hit_ratio(&self, ratio: f64) {
         self.cache_hit_ratio.set(ratio);
     }
+    
+    // 业务指标记录方法
+    
+    /// 记录用户注册
+    pub fn record_user_registration(&self) {
+        self.user_registrations_total.inc();
+    }
+    
+    /// 记录临时用户创建
+    pub fn record_temp_user_creation(&self) {
+        self.temp_users_created_total.inc();
+    }
+    
+    /// 记录群组创建
+    pub fn record_group_creation(&self) {
+        self.groups_created_total.inc();
+    }
+    
+    /// 记录消息发送
+    pub fn record_message_sent(&self, message_type: &str, channel: &str) {
+        self.messages_sent_total
+            .with_label_values(&[message_type, channel])
+            .inc();
+    }
+    
+    /// 记录生活瞬间创建
+    pub fn record_moment_creation(&self) {
+        self.moments_created_total.inc();
+    }
+    
+    /// 记录生活瞬间点赞
+    pub fn record_moment_like(&self) {
+        self.moment_likes_total.inc();
+    }
+    
+    /// 记录用户登录
+    pub fn record_user_login(&self, user_type: &str, success: bool) {
+        let result = if success { "success" } else { "failed" };
+        self.user_logins_total
+            .with_label_values(&[user_type, result])
+            .inc();
+    }
+    
+    /// 记录API错误
+    pub fn record_api_error(&self, method: &str, path: &str, error_type: &str) {
+        self.api_errors_total
+            .with_label_values(&[method, path, error_type])
+            .inc();
+    }
+    
+    /// 记录数据库查询
+    pub fn record_db_query(&self, operation: &str, table: &str, duration: f64) {
+        self.db_query_duration_seconds
+            .with_label_values(&[operation, table])
+            .observe(duration);
+    }
+    
+    /// 记录地理位置查询
+    pub fn record_geo_query(&self, query_type: &str, success: bool) {
+        let result = if success { "success" } else { "failed" };
+        self.geo_queries_total
+            .with_label_values(&[query_type, result])
+            .inc();
+    }
+    
+    /// 记录缓存操作
+    pub fn record_cache_operation(&self, operation: &str, success: bool) {
+        let result = if success { "hit" } else { "miss" };
+        self.cache_operations_total
+            .with_label_values(&[operation, result])
+            .inc();
+    }
+    
+    /// 设置任务队列大小
+    pub fn set_job_queue_size(&self, size: u64) {
+        self.job_queue_size.set(size as f64);
+    }
+    
+    /// 记录任务处理
+    pub fn record_job_processing(&self, job_type: &str, duration: f64, success: bool) {
+        let result = if success { "success" } else { "failed" };
+        self.job_processing_duration_seconds
+            .with_label_values(&[job_type, result])
+            .observe(duration);
+    }
 }
 
 /// 指标服务
@@ -388,6 +581,371 @@ impl MetricsService {
 
 /// 创建指标中间件
 #[allow(dead_code)]
+/// 全局应用指标实例
+use std::sync::OnceLock;
+static GLOBAL_APP_METRICS: OnceLock<AppMetrics> = OnceLock::new();
+
+/// 获取全局应用指标实例
+pub fn get_app_metrics() -> &'static AppMetrics {
+    GLOBAL_APP_METRICS.get_or_init(|| {
+        AppMetrics::new().unwrap_or_else(|_| {
+            // 如果创建失败，创建一个默认实例
+            AppMetrics::new().expect("Failed to create AppMetrics")
+        })
+    })
+}
+
+/// 告警规则
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AlertRule {
+    pub name: String,
+    pub metric_name: String,
+    pub threshold: f64,
+    pub comparison: AlertComparison,
+    pub duration_seconds: u64,
+    pub severity: AlertSeverity,
+    pub enabled: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AlertComparison {
+    GreaterThan,
+    LessThan,
+    Equal,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AlertSeverity {
+    Info,
+    Warning,
+    Critical,
+}
+
+/// 告警事件
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AlertEvent {
+    pub rule_name: String,
+    pub metric_name: String,
+    pub current_value: f64,
+    pub threshold: f64,
+    pub severity: AlertSeverity,
+    pub message: String,
+    pub timestamp: SystemTime,
+}
+
+/// 健康检查状态
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HealthStatus {
+    pub status: HealthState,
+    pub checks: Vec<HealthCheck>,
+    pub timestamp: SystemTime,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum HealthState {
+    Healthy,
+    Degraded,
+    Unhealthy,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HealthCheck {
+    pub name: String,
+    pub status: HealthState,
+    pub message: Option<String>,
+    pub response_time_ms: Option<u64>,
+}
+
+/// 告警管理器
+#[derive(Debug)]
+pub struct AlertManager {
+    rules: Vec<AlertRule>,
+    alert_history: Vec<AlertEvent>,
+    max_history_size: usize,
+}
+
+impl AlertManager {
+    pub fn new() -> Self {
+        Self {
+            rules: Self::default_rules(),
+            alert_history: Vec::new(),
+            max_history_size: 1000,
+        }
+    }
+    
+    /// 默认告警规则
+    fn default_rules() -> Vec<AlertRule> {
+        vec![
+            AlertRule {
+                name: "高CPU使用率".to_string(),
+                metric_name: "cpu_usage_percent".to_string(),
+                threshold: 80.0,
+                comparison: AlertComparison::GreaterThan,
+                duration_seconds: 300,
+                severity: AlertSeverity::Warning,
+                enabled: true,
+            },
+            AlertRule {
+                name: "高内存使用率".to_string(),
+                metric_name: "memory_usage_bytes".to_string(),
+                threshold: 0.85, // 85%
+                comparison: AlertComparison::GreaterThan,
+                duration_seconds: 300,
+                severity: AlertSeverity::Warning,
+                enabled: true,
+            },
+            AlertRule {
+                name: "API错误率过高".to_string(),
+                metric_name: "api_error_rate".to_string(),
+                threshold: 0.05, // 5%
+                comparison: AlertComparison::GreaterThan,
+                duration_seconds: 60,
+                severity: AlertSeverity::Critical,
+                enabled: true,
+            },
+            AlertRule {
+                name: "数据库连接池耗尽".to_string(),
+                metric_name: "db_pool_utilization".to_string(),
+                threshold: 0.9, // 90%
+                comparison: AlertComparison::GreaterThan,
+                duration_seconds: 60,
+                severity: AlertSeverity::Critical,
+                enabled: true,
+            },
+        ]
+    }
+    
+    /// 检查告警规则
+    pub fn check_alerts(&mut self, metrics: &AppMetrics) -> Vec<AlertEvent> {
+        let mut triggered_alerts = Vec::new();
+        let mut alerts_to_add = Vec::new();
+        
+        for rule in &self.rules {
+            if !rule.enabled {
+                continue;
+            }
+            
+            let current_value = Self::get_metric_value_static(metrics, &rule.metric_name);
+            let should_alert = match rule.comparison {
+                AlertComparison::GreaterThan => current_value > rule.threshold,
+                AlertComparison::LessThan => current_value < rule.threshold,
+                AlertComparison::Equal => (current_value - rule.threshold).abs() < f64::EPSILON,
+            };
+            
+            if should_alert {
+                let alert = AlertEvent {
+                    rule_name: rule.name.clone(),
+                    metric_name: rule.metric_name.clone(),
+                    current_value,
+                    threshold: rule.threshold,
+                    severity: rule.severity.clone(),
+                    message: format!(
+                        "指标 {} 当前值 {:.2} 超过阈值 {:.2}",
+                        rule.metric_name, current_value, rule.threshold
+                    ),
+                    timestamp: SystemTime::now(),
+                };
+                
+                triggered_alerts.push(alert.clone());
+                alerts_to_add.push(alert);
+            }
+        }
+        
+        // 批量添加告警到历史记录
+        for alert in alerts_to_add {
+            self.add_alert_to_history(alert);
+        }
+        
+        triggered_alerts
+    }
+    
+    /// 获取指标值（静态方法）
+    fn get_metric_value_static(metrics: &AppMetrics, metric_name: &str) -> f64 {
+        match metric_name {
+            "cpu_usage_percent" => {
+                // 从Prometheus获取当前值
+                // 这里简化为直接从gauge获取
+                0.0 // 实际实现需要从Prometheus查询
+            }
+            "memory_usage_bytes" => 0.0,
+            "api_error_rate" => 0.0,
+            "db_pool_utilization" => {
+                let current = metrics.db_connections.get();
+                let max = metrics.db_pool_capacity.get();
+                if max > 0.0 { current / max } else { 0.0 }
+            }
+            _ => 0.0,
+        }
+    }
+    
+    /// 添加告警到历史记录
+    fn add_alert_to_history(&mut self, alert: AlertEvent) {
+        self.alert_history.push(alert);
+        
+        // 限制历史记录大小
+        if self.alert_history.len() > self.max_history_size {
+            self.alert_history.remove(0);
+        }
+    }
+    
+    /// 获取告警历史
+    pub fn get_alert_history(&self) -> &[AlertEvent] {
+        &self.alert_history
+    }
+}
+
+/// 健康检查管理器
+pub struct HealthCheckManager {
+    checks: Vec<DatabaseHealthChecker>,
+}
+
+#[async_trait::async_trait]
+pub trait HealthChecker: Send + Sync {
+    fn name(&self) -> &str;
+    async fn check(&self) -> HealthCheck;
+}
+
+impl HealthCheckManager {
+    pub fn new() -> Self {
+        Self {
+            checks: Vec::new(),
+        }
+    }
+    
+    pub fn add_checker(&mut self, checker: DatabaseHealthChecker) {
+        self.checks.push(checker);
+    }
+    
+    /// 执行所有健康检查
+    pub async fn check_health(&self) -> HealthStatus {
+        let mut checks = Vec::new();
+        let mut overall_status = HealthState::Healthy;
+        
+        for checker in &self.checks {
+            let check = checker.check().await;
+            
+            match check.status {
+                HealthState::Degraded if matches!(overall_status, HealthState::Healthy) => {
+                    overall_status = HealthState::Degraded;
+                }
+                HealthState::Unhealthy => {
+                    overall_status = HealthState::Unhealthy;
+                }
+                _ => {}
+            }
+            
+            checks.push(check);
+        }
+        
+        HealthStatus {
+            status: overall_status,
+            checks,
+            timestamp: SystemTime::now(),
+        }
+    }
+}
+
+/// 数据库健康检查器
+pub struct DatabaseHealthChecker {
+    db: Arc<Database>,
+}
+
+impl DatabaseHealthChecker {
+    pub fn new(db: Arc<Database>) -> Self {
+        Self { db }
+    }
+}
+
+#[async_trait::async_trait]
+impl HealthChecker for DatabaseHealthChecker {
+    fn name(&self) -> &str {
+        "database"
+    }
+    
+    async fn check(&self) -> HealthCheck {
+        let start = Instant::now();
+        
+        // 简单的数据库连接检查
+        let metrics = self.db.get_db_metrics();
+        let response_time = start.elapsed().as_millis() as u64;
+        
+        let status = if metrics.pg_pool_size > 0 {
+            HealthState::Healthy
+        } else {
+            HealthState::Unhealthy
+        };
+        
+        HealthCheck {
+            name: "database".to_string(),
+            status,
+            message: Some(format!("连接池大小: {}/{}", metrics.pg_pool_size, metrics.pg_pool_max_size)),
+            response_time_ms: Some(response_time),
+        }
+    }
+}
+
+/// 增强的指标服务
+impl MetricsService {
+    /// 创建带告警的指标服务
+    pub fn with_alerting(db: Arc<Database>) -> Result<(Self, AlertManager, HealthCheckManager), prometheus::Error> {
+        let metrics_service = Self::new(db.clone())?;
+        let alert_manager = AlertManager::new();
+        
+        let mut health_manager = HealthCheckManager::new();
+        health_manager.add_checker(DatabaseHealthChecker::new(db));
+        
+        Ok((metrics_service, alert_manager, health_manager))
+    }
+    
+    /// 启动指标收集和告警检查
+    pub async fn start_monitoring(&self, mut alert_manager: AlertManager, health_manager: HealthCheckManager) {
+        let mut interval = interval(Duration::from_secs(30));
+        
+        loop {
+            interval.tick().await;
+            
+            // 更新所有指标
+            self.update_all_metrics();
+            
+            // 检查告警
+            let alerts = alert_manager.check_alerts(&self.metrics);
+            for alert in alerts {
+                match alert.severity {
+                    AlertSeverity::Info => {
+                        info!("告警: {} - {}", alert.rule_name, alert.message);
+                    }
+                    AlertSeverity::Warning => {
+                        warn!("告警: {} - {}", alert.rule_name, alert.message);
+                    }
+                    AlertSeverity::Critical => {
+                        error!("严重告警: {} - {}", alert.rule_name, alert.message);
+                    }
+                }
+            }
+            
+            // 执行健康检查（每5分钟一次）
+            if SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs() % 300 == 0 
+            {
+                let health_status = health_manager.check_health().await;
+                match health_status.status {
+                    HealthState::Healthy => {
+                        info!("健康检查: 系统状态良好");
+                    }
+                    HealthState::Degraded => {
+                        warn!("健康检查: 系统性能下降");
+                    }
+                    HealthState::Unhealthy => {
+                        error!("健康检查: 系统状态异常");
+                    }
+                }
+            }
+        }
+    }
+}
+
 pub fn metrics_middleware() -> tower_http::trace::TraceLayer<
     tower_http::classify::SharedClassifier<tower_http::classify::ServerErrorsAsFailures>
 > {

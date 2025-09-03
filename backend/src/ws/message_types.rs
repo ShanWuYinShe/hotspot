@@ -7,6 +7,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
+use crate::utils::JsSafeI64;
 
 // ==================== 客户端到服务器的消息 ====================
 
@@ -40,7 +41,7 @@ pub struct MessageData {
     #[allow(dead_code)]
     pub room_type: RoomType,
     #[allow(dead_code)]
-    pub recipient_id: Option<i64>,
+    pub recipient_id: Option<JsSafeI64>,
     #[allow(dead_code)]
     pub content: String,
     #[allow(dead_code)]
@@ -94,7 +95,7 @@ pub enum ServerMessage {
     /// 心跳响应
     Pong,
     /// 连接成功
-    Connected { user_id: i64, session_id: String },
+    Connected { user_id: JsSafeI64, session_id: String },
     /// 错误消息
     Error { code: String, message: String },
     /// 成功消息
@@ -102,11 +103,11 @@ pub enum ServerMessage {
     /// 新消息通知
     NewMessage(MessageNotification),
     /// 用户开始输入
-    UserStartedTyping { room_id: Uuid, user_id: i64, nickname: String },
+    UserStartedTyping { room_id: Uuid, user_id: JsSafeI64, nickname: String },
     /// 用户停止输入
-    UserStoppedTyping { room_id: Uuid, user_id: i64 },
+    UserStoppedTyping { room_id: Uuid, user_id: JsSafeI64 },
     /// 消息已读通知
-    MessageRead { room_id: Uuid, user_id: i64, message_id: Option<Uuid> },
+    MessageRead { room_id: Uuid, user_id: JsSafeI64, message_id: Option<Uuid> },
     /// 群组事件通知
     GroupEvent(GroupEventData),
     /// 系统通知
@@ -121,7 +122,7 @@ pub struct MessageNotification {
     pub message_id: Uuid,
     pub room_id: Uuid,
     pub room_type: RoomType,
-    pub sender_id: i64,
+    pub sender_id: JsSafeI64,
     pub sender_nickname: String,
     pub content: String,
     pub message_type: MessageType,
@@ -135,9 +136,9 @@ pub struct MessageNotification {
 pub struct GroupEventData {
     pub group_id: Uuid,
     pub event_type: GroupEventType,
-    pub actor_id: i64,
+    pub actor_id: JsSafeI64,
     pub actor_nickname: String,
-    pub target_id: Option<i64>,
+    pub target_id: Option<JsSafeI64>,
     pub target_nickname: Option<String>,
     pub created_at: DateTime<Utc>,
 }
@@ -176,6 +177,9 @@ pub enum SystemNotificationType {
     Announcement,
     NewMoment,
     GroupDigest,
+    UserDigest,
+    Welcome,
+    NewMessage,
 }
 
 // ==================== 系统内部事件 ====================
@@ -185,15 +189,15 @@ pub enum SystemNotificationType {
 #[allow(dead_code)]
 pub enum InternalEvent {
     /// 用户连接
-    UserConnected { user_id: i64, session_id: String },
+    UserConnected { user_id: JsSafeI64, session_id: String },
     /// 用户断开连接
-    UserDisconnected { user_id: i64, session_id: String },
+    UserDisconnected { user_id: JsSafeI64, session_id: String },
     /// 消息发送事件
     MessageSent {
         message_id: Uuid,
         room_id: Uuid,
         room_type: RoomType,
-        sender_id: i64,
+        sender_id: JsSafeI64,
         content: String,
         message_type: MessageType,
     },
@@ -201,12 +205,12 @@ pub enum InternalEvent {
     GroupEvent {
         group_id: Uuid,
         event_type: GroupEventType,
-        actor_id: i64,
-        target_id: Option<i64>,
+        actor_id: JsSafeI64,
+        target_id: Option<JsSafeI64>,
     },
     /// 用户位置更新
     UserLocationUpdate {
-        user_id: i64,
+        user_id: JsSafeI64,
         latitude: f64,
         longitude: f64,
         location_name: String,
@@ -224,14 +228,6 @@ pub enum RoomId {
 }
 
 impl RoomId {
-    #[allow(dead_code)]
-    pub fn to_string(&self) -> String {
-        match self {
-            RoomId::Group(id) => format!("group:{}", id),
-            RoomId::Conversation(id) => format!("conversation:{}", id),
-            RoomId::User(id) => format!("user:{}", id),
-        }
-    }
     
     pub fn from_group(group_id: Uuid) -> Self {
         RoomId::Group(group_id)

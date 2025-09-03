@@ -8,6 +8,14 @@ pub mod message_types;
 pub mod manager;
 pub mod types;
 
+// 重新导出主要类型
+pub use connection_manager::{ConnectionManager, ConnectionStats};
+pub use room_manager::{RoomManager, RoomStats};
+pub use message_router::MessageRouter;
+pub use manager::WebSocketStats;
+pub use message_types::{ServerMessage, ClientMessage, RoomId, RoomType};
+pub use errors::WsError;
+
 /// WebSocket 扩展钩子（默认 Noop）。
 /// 使用 feature gate `ws_hooks` 启用具体实现。
 #[cfg_attr(not(feature = "ws_hooks"), allow(dead_code))]

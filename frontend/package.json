@@ -8,27 +8,33 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "start": "nuxt start"
+    "start": "nuxt start",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:report": "playwright show-report",
+    "test:e2e:install": "playwright install",
+    "test:e2e:run": "./scripts/run-e2e-tests.sh"
   },
   "dependencies": {
-    "@amap/amap-jsapi-loader": "^1.0.1",
     "@nuxt/ui": "^3.2.0",
+    "@nuxtjs/color-mode": "^3.5.2",
+    "@nuxtjs/i18n": "^10.0.6",
     "@pinia/nuxt": "^0.11.1",
-    "@vueuse/core": "^13.5.0",
-    "dayjs": "^1.11.13",
+    "@vueuse/core": "^13.9.0",
     "pinia": "^3.0.3",
     "pinia-plugin-persistedstate": "^4.4.1",
-    "qrcode": "^1.5.4",
     "tailwindcss": "^4.1.11",
     "vue": "^3.5.17",
-    "weixin-js-sdk": "^1.6.5"
+    "vue-virtual-scroller": "2.0.0-beta.8",
+    "zod": "^3"
   },
   "devDependencies": {
     "@iconify-json/heroicons": "^1.2.2",
-    "@iconify-json/mdi": "^1.2.3",
+    "@iconify-json/lucide": "^1.2.64",
     "@nuxt/devtools": "^2.6.2",
     "@nuxt/icon": "^1.15.0",
-    "@types/qrcode": "^1.5.5",
+    "@vite-pwa/nuxt": "^1.0.4",
     "nuxt": "^4.0.1",
     "typescript": "^5.8.3",
     "vue-tsc": "^2.2.12"

@@ -95,7 +95,7 @@ impl UserIdPartition {
     /// # 返回
     /// 64位用户ID
     pub fn generate_user_id(user_type: UserType, sequence: i64) -> Result<i64, String> {
-        if sequence < 0 || sequence > Self::SEQUENCE_MASK {
+        if !(0..=Self::SEQUENCE_MASK).contains(&sequence) {
             return Err(format!(
                 "序列号超出范围: {} (有效范围: 0-{})", 
                 sequence, 

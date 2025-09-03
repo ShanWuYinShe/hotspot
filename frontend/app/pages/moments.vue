@@ -1,437 +1,802 @@
 <template>
-  <div class="container mx-auto px-4 py-8">
-    <div class="max-w-2xl mx-auto">
-      <!-- 页面标题 -->
-      <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-gray-900">动态广场</h1>
-        <UButton @click="createMoment">
-          <UIcon name="i-heroicons-plus" class="w-4 h-4 mr-2" />
-          发布动态
-        </UButton>
-      </div>
-
-      <!-- 发布动态框 -->
-      <UCard class="mb-6">
-        <div class="flex space-x-3">
-          <UAvatar 
-            :src="currentUser?.avatar_url" 
-            :alt="currentUser?.nickname"
-            size="md"
-          >
-            {{ currentUser?.nickname?.charAt(0) || 'U' }}
-          </UAvatar>
-          <div class="flex-1">
-            <UTextarea
-              v-model="newMoment"
-              placeholder="分享你的精彩时刻..."
-              :rows="3"
-              class="mb-3"
-            />
-            <div class="flex justify-between items-center">
-              <div class="flex space-x-2">
-                <UButton variant="ghost" size="sm" @click="addImage">
-                  <UIcon name="i-heroicons-photo" class="w-4 h-4 mr-1" />
-                  图片
-                </UButton>
-                <UButton variant="ghost" size="sm" @click="addLocation">
-                  <UIcon name="i-heroicons-map-pin" class="w-4 h-4 mr-1" />
-                  位置
-                </UButton>
-              </div>
-              <UButton 
-                :disabled="!newMoment.trim()"
-                @click="publishMoment"
-                :loading="publishing"
-              >
-                发布
-              </UButton>
-            </div>
-          </div>
-        </div>
-      </UCard>
-
-      <!-- 动态列表 -->
-      <div class="space-y-6">
-        <UCard 
-          v-for="moment in moments" 
-          :key="moment.id"
-          class="hover:shadow-md transition-shadow"
+    <!-- Moments: apply glass and depth (HIG) -->
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+        <!-- 页面标题和操作栏 -->
+        <div
+            class="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center mb-6"
         >
-          <!-- 用户信息 -->
-          <div class="flex items-center space-x-3 mb-3">
-            <UAvatar 
-              :src="moment.user.avatar_url" 
-              :alt="moment.user.nickname"
-              size="md"
-            >
-              {{ moment.user.nickname.charAt(0) }}
-            </UAvatar>
-            <div class="flex-1">
-              <h3 class="font-semibold text-gray-900">
-                {{ moment.user.nickname }}
-              </h3>
-              <p class="text-sm text-gray-600">
-                {{ formatTime(moment.created_at) }}
-                <span v-if="moment.location" class="ml-2">
-                  <UIcon name="i-heroicons-map-pin" class="w-3 h-3 inline" />
-                  {{ moment.location }}
-                </span>
-              </p>
-            </div>
-            <UDropdown :items="getMomentActions(moment)">
-              <UButton 
-                variant="ghost" 
-                size="sm" 
-                icon="i-heroicons-ellipsis-horizontal"
-              />
-            </UDropdown>
-          </div>
-
-          <!-- 动态内容 -->
-          <div class="mb-4">
-            <p class="text-gray-900 leading-relaxed whitespace-pre-wrap">
-              {{ moment.content }}
-            </p>
-          </div>
-
-          <!-- 图片网格 -->
-          <div v-if="moment.images && moment.images.length > 0" class="mb-4">
-            <div 
-              :class="[
-                'grid gap-2',
-                moment.images.length === 1 ? 'grid-cols-1' : 
-                moment.images.length === 2 ? 'grid-cols-2' :
-                'grid-cols-3'
-              ]"
-            >
-              <div 
-                v-for="(image, index) in moment.images.slice(0, 9)" 
-                :key="index"
-                class="relative aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer"
-                @click="previewImage(moment.images, index)"
-              >
-                <img 
-                  :src="image.url" 
-                  :alt="`图片 ${index + 1}`"
-                  class="w-full h-full object-cover hover:scale-105 transition-transform"
-                />
-                <div 
-                  v-if="index === 8 && moment.images.length > 9"
-                  class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center text-white font-semibold"
-                >
-                  +{{ moment.images.length - 9 }}
+            <h1 class="text-2xl font-bold">动态广场</h1>
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div class="order-2 sm:order-1 flex gap-2">
+                    <UButton @click="scrollToEditor" variant="ghost" size="sm">
+                        <UIcon
+                            name="i-heroicons-pencil"
+                            class="w-4 h-4 mr-1"
+                        />快速发布
+                    </UButton>
+                    <UButton @click="navigateTo('/moments/create')">
+                        <UIcon
+                            name="i-heroicons-plus"
+                            class="w-4 h-4 mr-2"
+                        />发布动态
+                    </UButton>
                 </div>
-              </div>
+                <!-- 使用 UTabs 组件替代手动按钮 -->
+                <UTabs
+                    :items="tabItems"
+                    v-model="currentView"
+                    class="order-1 sm:order-2"
+                />
             </div>
-          </div>
+        </div>
 
-          <!-- 互动按钮 -->
-          <div class="flex items-center space-x-6 pt-3 border-t">
-            <UButton 
-              variant="ghost" 
-              size="sm"
-              :class="moment.is_liked ? 'text-red-500' : 'text-gray-600'"
-              @click="toggleLike(moment)"
-            >
-              <UIcon :name="moment.is_liked ? 'i-heroicons-heart-solid' : 'i-heroicons-heart'" class="w-4 h-4 mr-1" />
-              {{ moment.like_count }}
-            </UButton>
-            
-            <UButton variant="ghost" size="sm" @click="showComments(moment)">
-              <UIcon name="i-heroicons-chat-bubble-left-right" class="w-4 h-4 mr-1" />
-              {{ moment.comment_count }}
-            </UButton>
-            
-            <UButton variant="ghost" size="sm" @click="shareMoment(moment)">
-              <UIcon name="i-heroicons-share" class="w-4 h-4 mr-1" />
-              分享
-            </UButton>
-          </div>
+        <!-- 搜索和筛选栏 -->
+        <div v-if="currentView === 'search'" class="mb-6 space-y-4">
+            <div class="flex gap-4">
+                <UInput
+                    v-model="searchQuery"
+                    placeholder="搜索动态内容或标签..."
+                    icon="i-heroicons-magnifying-glass"
+                    class="flex-1"
+                    @keyup.enter="performSearch"
+                />
+                <UButton @click="performSearch" :loading="searching"
+                    >搜索</UButton
+                >
+            </div>
+
+            <!-- 标签筛选 -->
+            <div class="flex flex-wrap gap-2">
+                <span
+                    class="text-sm text-neutral-600 dark:text-neutral-400 mr-2"
+                    >热门标签:</span
+                >
+                <UButton
+                    v-for="tag in popularTags"
+                    :key="tag"
+                    variant="ghost"
+                    size="xs"
+                    :class="{
+                        'bg-primary/10 text-primary':
+                            selectedTags.includes(tag),
+                    }"
+                    @click="toggleTag(tag)"
+                >
+                    #{{ tag }}
+                </UButton>
+            </div>
+        </div>
+
+        <UCard class="mb-6" ref="editorCard">
+            <div class="flex gap-3">
+                <UAvatar :alt="authStore.user?.nickname" size="md">
+                    {{ authStore.user?.nickname?.charAt(0) || "U" }}
+                </UAvatar>
+                <div class="flex-1">
+                    <UTextarea
+                        v-model="content"
+                        :rows="8"
+                        placeholder="分享你的精彩时刻..."
+                        class="mb-3 w-5/6"
+                    />
+                    <div class="flex justify-between items-center">
+                        <div class="flex gap-2">
+                            <UButton variant="ghost" size="sm" disabled>
+                                <UIcon
+                                    name="i-heroicons-photo"
+                                    class="w-4 h-4 mr-1"
+                                />图片
+                            </UButton>
+                            <UButton variant="ghost" size="sm" disabled>
+                                <UIcon
+                                    name="i-heroicons-map-pin"
+                                    class="w-4 h-4 mr-1"
+                                />位置
+                            </UButton>
+                        </div>
+                        <UButton
+                            :disabled="!content.trim() || publishing"
+                            :loading="publishing"
+                            @click="onPublish"
+                            >发布</UButton
+                        >
+                    </div>
+                </div>
+            </div>
         </UCard>
-      </div>
 
-      <!-- 加载更多 -->
-      <div v-if="hasMoreMoments" class="text-center mt-8">
-        <UButton 
-          variant="outline" 
-          @click="loadMoreMoments"
-          :loading="loadingMore"
+        <!-- 加载中状态 -->
+        <div v-if="loading && displayMoments.length === 0">
+            <LoadingState 
+              :title="getLoadingTitle()"
+              :description="getLoadingDescription()"
+              icon="i-heroicons-photo"
+            />
+        </div>
+
+        <!-- 空状态 -->
+        <UCard v-else-if="displayMoments.length === 0">
+            <!-- 附近动态但没有位置权限时的特殊状态 -->
+            <div
+                v-if="currentView === 'nearby' && !coordinates"
+                class="text-center py-8"
+            >
+                <div
+                    class="w-20 h-20 mx-auto mb-4 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center"
+                >
+                    <UIcon
+                        name="i-heroicons-map-pin"
+                        class="h-10 w-10 text-orange-600 dark:text-orange-400"
+                    />
+                </div>
+                <h3
+                    class="text-title-md font-semibold text-neutral-900 dark:text-white mb-2"
+                >
+                    获取位置权限
+                </h3>
+                <p
+                    class="text-body-md text-neutral-600 dark:text-neutral-400 mb-6 max-w-sm mx-auto"
+                >
+                    需要获取您的位置信息才能显示附近的动态内容
+                </p>
+                <div class="space-y-3">
+                    <UButton
+                        @click="requestLocationPermission"
+                        :loading="locationRequesting"
+                        size="lg"
+                        class="px-6"
+                    >
+                        <UIcon
+                            name="i-heroicons-map-pin"
+                            class="h-4 w-4 mr-2"
+                        />
+                        获取位置
+                    </UButton>
+                    <UButton
+                        @click="currentView = 'mine'"
+                        variant="ghost"
+                        size="sm"
+                    >
+                        查看我的动态
+                    </UButton>
+                </div>
+            </div>
+
+            <!-- 常规空状态 -->
+            <EmptyState
+                v-else
+                :icon="getEmptyStateIcon()"
+                :title="getEmptyStateTitle()"
+                :description="getEmptyStateDescription()"
+                :action-text="
+                    currentView === 'search'
+                        ? '尝试其他关键词'
+                        : '发布第一条动态'
+                "
+                :action-handler="
+                    currentView === 'search' ? clearSearch : scrollToEditor
+                "
+            >
+                <template #illustration>
+                    <EmptyMoments size="md" />
+                </template>
+            </EmptyState>
+        </UCard>
+
+        <!-- 列表 -->
+        <div v-else class="space-y-6">
+            <UCard
+                v-for="m in displayMoments"
+                :key="m.moment_id"
+                class="transition-all duration-200 cursor-pointer hover:shadow-md"
+                @click="goToMomentDetail(m.moment_id)"
+            >
+                <div class="flex items-center gap-3 mb-3">
+                    <UAvatar :alt="m.nickname">{{
+                        m.nickname?.charAt(0)
+                    }}</UAvatar>
+                    <div class="flex-1 min-w-0">
+                        <div class="font-semibold truncate">
+                            {{ m.nickname }}
+                        </div>
+                        <div
+                            class="text-xs text-neutral-600 dark:text-neutral-400"
+                        >
+                            {{ formatTime(m.created_at) }}
+                            <span
+                                v-if="m.location_name"
+                                class="ml-2 inline-flex items-center gap-1"
+                            >
+                                <UIcon
+                                    name="i-heroicons-map-pin"
+                                    class="w-3 h-3"
+                                />{{ m.location_name }}
+                            </span>
+                        </div>
+                    </div>
+                    <UDropdownMenu :items="getMomentActions(m)">
+                        <UButton
+                            icon="i-heroicons-ellipsis-horizontal"
+                            variant="ghost"
+                            size="sm"
+                            @click.stop
+                        />
+                    </UDropdownMenu>
+                </div>
+                <div class="mb-2 whitespace-pre-wrap">
+                    {{ m.description }}
+                </div>
+                <div
+                    class="flex items-center gap-6 pt-2 border-t border-neutral-200 dark:border-neutral-700"
+                >
+                    <UButton
+                        variant="ghost"
+                        size="sm"
+                        :class="
+                            m.liked_by_me
+                                ? 'text-red-600'
+                                : 'text-neutral-700 dark:text-neutral-300'
+                        "
+                        @click="toggleLike(m)"
+                    >
+                        <UIcon
+                            :name="
+                                m.liked_by_me
+                                    ? 'i-heroicons-heart-solid'
+                                    : 'i-heroicons-heart'
+                            "
+                            class="w-4 h-4 mr-1"
+                        />{{ m.likes_count }}
+                    </UButton>
+                    <UButton variant="ghost" size="sm" @click="showComments"
+                        ><UIcon
+                            name="i-heroicons-chat-bubble-left-right"
+                            class="w-4 h-4 mr-1"
+                        />{{ m.comments_count }}</UButton
+                    >
+                    <UButton variant="ghost" size="sm" @click="shareMoment"
+                        ><UIcon
+                            name="i-heroicons-share"
+                            class="w-4 h-4 mr-1"
+                        />分享</UButton
+                    >
+                </div>
+            </UCard>
+        </div>
+
+        <!-- 加载更多 -->
+        <div
+            v-if="hasMore && displayMoments.length > 0"
+            class="text-center mt-6"
         >
-          加载更多
-        </UButton>
-      </div>
-
-      <!-- 空状态 -->
-      <div v-if="moments.length === 0" class="text-center py-12">
-        <UIcon name="i-heroicons-photo" class="w-16 h-16 text-gray-400 mx-auto mb-4" />
-        <h3 class="text-lg font-medium text-gray-900 mb-2">暂无动态</h3>
-        <p class="text-gray-600 mb-6">成为第一个分享精彩时刻的人吧！</p>
-        <UButton @click="createMoment">发布第一条动态</UButton>
-      </div>
+            <UButton variant="outline" :loading="loadingMore" @click="loadMore"
+                >加载更多</UButton
+            >
+        </div>
     </div>
-  </div>
 </template>
 
-<script setup>
-// 页面元数据
-definePageMeta({
-  title: '动态广场',
-  requiresAuth: true
-})
+<script setup lang="ts">
+import { useUserService } from "~/services/user.service";
+import { DEFAULTS } from "~/config/defaults";
+definePageMeta({ title: "动态广场", requiresAuth: true });
 
-const authStore = useAuthStore()
-const toast = useToast()
+import EmptyMoments from "~/components/illustrations/EmptyMoments.vue";
 
-// 当前用户
-const currentUser = computed(() => authStore.currentUser)
+const authStore = useAuthStore();
+const momentsStore = useMomentsStore();
+const userService = useUserService();
+const toast = useSmartToast();
+const { coordinates, getCurrentPosition } = useGeolocation();
+const { requestGeolocation } = usePermissions();
 
-// 数据状态
-const newMoment = ref('')
-const publishing = ref(false)
-const loadingMore = ref(false)
-const hasMoreMoments = ref(true)
+const content = ref("");
+const publishing = ref(false);
+const loading = ref(true);
+const loadingMore = ref(false);
+const editorCard = ref();
+const locationRequesting = ref(false);
 
-// 模拟动态数据
-const moments = ref([
-  {
-    id: 1,
-    user: {
-      id: 1,
-      nickname: '张小明',
-      avatar_url: ''
+// 视图状态
+const currentView = ref<"nearby" | "search" | "mine">("nearby");
+
+// UTabs 配置
+const tabItems = computed(() => [
+    {
+        key: "nearby",
+        label: "附近",
+        icon: "i-heroicons-map-pin",
     },
-    content: '今天天气真不错，和朋友们一起去公园野餐了！生活真美好 ✨',
-    images: [
-      { url: 'https://picsum.photos/400/400?random=1', alt: '野餐照片1' },
-      { url: 'https://picsum.photos/400/400?random=2', alt: '野餐照片2' },
-      { url: 'https://picsum.photos/400/400?random=3', alt: '野餐照片3' }
-    ],
-    location: '中央公园',
-    created_at: new Date(Date.now() - 1000 * 60 * 30),
-    like_count: 15,
-    comment_count: 3,
-    is_liked: false
-  },
-  {
-    id: 2,
-    user: {
-      id: 2,
-      nickname: '李小红',
-      avatar_url: ''
+    {
+        key: "search",
+        label: "搜索",
+        icon: "i-heroicons-magnifying-glass",
     },
-    content: '刚刚完成了5公里的晨跑，感觉整个人都充满了活力！💪',
-    images: [],
-    location: '江滨公园',
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 2),
-    like_count: 8,
-    comment_count: 1,
-    is_liked: true
-  },
-  {
-    id: 3,
-    user: {
-      id: 3,
-      nickname: '王大强',
-      avatar_url: ''
+    {
+        key: "mine",
+        label: "我的",
+        icon: "i-heroicons-user",
     },
-    content: '新学了一道菜，味道还不错！下次请大家来品尝 🍝',
-    images: [
-      { url: 'https://picsum.photos/400/400?random=4', alt: '美食照片' }
-    ],
-    location: null,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 5),
-    like_count: 12,
-    comment_count: 5,
-    is_liked: false
-  }
-])
+]);
+const searchQuery = ref("");
+const searching = ref(false);
+const selectedTags = ref<string[]>([]);
 
-// 格式化时间
-const formatTime = (date) => {
-  const now = new Date()
-  const diff = now - date
-  const minutes = Math.floor(diff / (1000 * 60))
-  const hours = Math.floor(diff / (1000 * 60 * 60))
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+// 热门标签（可以从后端API获取，这里暂时硬编码）
+const popularTags = ref([
+    "美食",
+    "风景",
+    "生活",
+    "心情",
+    "旅行",
+    "摄影",
+    "健身",
+    "音乐",
+    "电影",
+    "读书",
+]);
 
-  if (minutes < 60) {
-    return `${minutes}分钟前`
-  } else if (hours < 24) {
-    return `${hours}小时前`
-  } else {
-    return `${days}天前`
-  }
-}
-
-// 获取动态操作菜单
-const getMomentActions = (moment) => {
-  const actions = []
-  
-  if (moment.user.id === currentUser.value?.user_id) {
-    actions.push([{
-      label: '删除',
-      icon: 'i-heroicons-trash',
-      click: () => deleteMoment(moment)
-    }])
-  } else {
-    actions.push([{
-      label: '举报',
-      icon: 'i-heroicons-flag',
-      click: () => reportMoment(moment)
-    }])
-  }
-  
-  return actions
-}
-
-// 发布动态
-const publishMoment = async () => {
-  if (!newMoment.value.trim() || publishing.value) return
-  
-  publishing.value = true
-  
-  try {
-    // 模拟发布动态
-    const moment = {
-      id: Date.now(),
-      user: {
-        id: currentUser.value?.user_id,
-        nickname: currentUser.value?.nickname || '用户',
-        avatar_url: currentUser.value?.avatar_url
-      },
-      content: newMoment.value.trim(),
-      images: [],
-      location: null,
-      created_at: new Date(),
-      like_count: 0,
-      comment_count: 0,
-      is_liked: false
+// 动态计算属性
+const moments = computed(() => {
+    switch (currentView.value) {
+        case "nearby":
+            return momentsStore.nearbyMoments;
+        case "search":
+            return momentsStore.searchResults;
+        case "mine":
+            return momentsStore.myMoments;
+        default:
+            return momentsStore.nearbyMoments;
     }
-    
-    moments.value.unshift(moment)
-    newMoment.value = ''
-    
+});
+
+const hasMore = computed(() => {
+    switch (currentView.value) {
+        case "nearby":
+            return momentsStore.pagination.nearbyMoments.hasMore;
+        case "search":
+            return momentsStore.pagination.searchResults.hasMore;
+        case "mine":
+            return momentsStore.pagination.myMoments.hasMore;
+        default:
+            return false;
+    }
+});
+
+const displayMoments = computed(() => moments.value);
+
+// 监听视图切换
+watch(currentView, async (newView, oldView) => {
+    if (newView !== oldView) {
+        await loadCurrentView();
+    }
+});
+
+onMounted(async () => {
+    try {
+        await loadCurrentView();
+    } catch (error: any) {
+        console.error("[Moments] Failed to load initial data:", error);
+        toast.add({
+            title: "加载失败",
+            description: error?.message || "初始数据加载失败，请刷新页面重试",
+            color: "error",
+        });
+    } finally {
+        loading.value = false;
+    }
+});
+
+// 获取加载标题
+function getLoadingTitle() {
+    switch (currentView.value) {
+        case "nearby":
+            return "正在加载附近动态...";
+        case "mine":
+            return "正在加载我的动态...";
+        case "search":
+            return "正在搜索动态...";
+        default:
+            return "正在加载动态...";
+    }
+}
+
+// 获取加载描述
+function getLoadingDescription() {
+    switch (currentView.value) {
+        case "nearby":
+            return "为您获取附近用户的精彩内容";
+        case "mine":
+            return "加载您发布的所有动态";
+        case "search":
+            return "正在搜索相关内容";
+        default:
+            return "为您获取最新的精彩内容";
+    }
+}
+
+// 根据当前视图加载数据
+async function loadCurrentView() {
+    loading.value = true;
+    try {
+        switch (currentView.value) {
+            case "nearby":
+                await refreshNearby();
+                break;
+            case "mine":
+                await momentsStore.fetchMyMoments();
+                break;
+            case "search":
+                // 搜索页面不自动加载，需要用户手动搜索
+                break;
+        }
+    } finally {
+        loading.value = false;
+    }
+}
+
+async function refreshNearby(userTriggered = false) {
+    type Coords = { latitude: number; longitude: number };
+    let pos: Coords | null = null;
+
+    // 安全地处理坐标类型转换
+    if (
+        coordinates.value &&
+        typeof coordinates.value === "object" &&
+        "latitude" in coordinates.value &&
+        "longitude" in coordinates.value
+    ) {
+        pos = coordinates.value as Coords;
+    }
+
+    // 只有在用户主动触发时才尝试获取位置
+    if (!pos && userTriggered) {
+        try {
+            const granted = await requestGeolocation();
+            if (granted) {
+                const newPos = await getCurrentPosition();
+                if (
+                    newPos &&
+                    typeof newPos === "object" &&
+                    "latitude" in newPos &&
+                    "longitude" in newPos
+                ) {
+                    pos = newPos as Coords;
+                }
+            }
+        } catch (error) {
+            console.warn("获取位置失败:", error);
+        }
+    }
+
+    // 先更新后端定位（若未登录会在内部保证）
+    try {
+        // 传递有效坐标或让服务使用默认值
+        await userService.updateLocation(pos?.latitude, pos?.longitude);
+    } catch {}
+
+    await momentsStore.fetchNearbyMoments({
+        latitude: pos?.latitude ?? DEFAULTS.latitude,
+        longitude: pos?.longitude ?? DEFAULTS.longitude,
+    });
+}
+
+async function loadMore() {
+    loadingMore.value = true;
+    try {
+        switch (currentView.value) {
+            case "nearby":
+                type Coords = { latitude: number; longitude: number };
+                let pos: Coords | null = null;
+                if (
+                    coordinates.value &&
+                    typeof coordinates.value === "object" &&
+                    "latitude" in coordinates.value &&
+                    "longitude" in coordinates.value
+                ) {
+                    pos = coordinates.value as Coords;
+                }
+                await momentsStore.fetchNearbyMoments({
+                    latitude: pos?.latitude ?? 0,
+                    longitude: pos?.longitude ?? 0,
+                    loadMore: true,
+                });
+                break;
+            case "search":
+                // 继续搜索结果
+                if (selectedTags.value.length > 0) {
+                    let pos2: Coords | null = null;
+                    if (
+                        coordinates.value &&
+                        typeof coordinates.value === "object" &&
+                        "latitude" in coordinates.value &&
+                        "longitude" in coordinates.value
+                    ) {
+                        pos2 = coordinates.value as Coords;
+                    }
+                    await momentsStore.searchMomentsByTags({
+                        tags: selectedTags.value,
+                        latitude: pos2?.latitude ?? 0,
+                        longitude: pos2?.longitude ?? 0,
+                        loadMore: true,
+                    });
+                }
+                break;
+            case "mine":
+                await momentsStore.fetchMyMoments(true);
+                break;
+        }
+    } finally {
+        loadingMore.value = false;
+    }
+}
+
+async function onPublish() {
+    if (!content.value.trim() || publishing.value) return;
+    publishing.value = true;
+    try {
+        type Coords = { latitude: number; longitude: number };
+        let pos: Coords | null = null;
+
+        // 安全地处理坐标类型转换
+        if (
+            coordinates.value &&
+            typeof coordinates.value === "object" &&
+            "latitude" in coordinates.value &&
+            "longitude" in coordinates.value
+        ) {
+            pos = coordinates.value as Coords;
+        }
+
+        if (!pos) {
+            try {
+                const newPos = await getCurrentPosition();
+                if (
+                    newPos &&
+                    typeof newPos === "object" &&
+                    "latitude" in newPos &&
+                    "longitude" in newPos
+                ) {
+                    pos = newPos as Coords;
+                }
+            } catch {}
+        }
+        const payload = {
+            description: content.value.trim(),
+            latitude: pos?.latitude ?? 0,
+            longitude: pos?.longitude ?? 0,
+            location_name: "",
+            tags: [] as string[],
+        };
+        await momentsStore.createMoment(payload);
+        content.value = "";
+        toast.add({ title: "发布成功", color: "success" });
+    } catch (e: any) {
+        toast.add({
+            title: "发布失败",
+            description: e?.message,
+            color: "error",
+        });
+    } finally {
+        publishing.value = false;
+    }
+}
+
+function toggleLike(m: import("~/types").MomentInfo) {
+    const action = m.liked_by_me
+        ? momentsStore.unlikeMoment
+        : momentsStore.likeMoment;
+    action(m.moment_id).catch(() => {
+        // 回滚由 store 内部完成（此处简单提示即可）
+        toast.add({ title: "操作失败", color: "error" });
+    });
+}
+
+function showComments() {
     toast.add({
-      title: '发布成功',
-      color: 'success'
-    })
-    
-  } catch (error) {
+        title: "功能暂未开放",
+        description: "评论功能即将上线",
+        color: "info",
+    });
+}
+function shareMoment() {
     toast.add({
-      title: '发布失败',
-      description: '请重试',
-      color: 'error'
-    })
-  } finally {
-    publishing.value = false
-  }
+        title: "功能暂未开放",
+        description: "分享功能即将上线",
+        color: "info",
+    });
+}
+function scrollToEditor() {
+    editorCard.value?.$el?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+    });
 }
 
-// 切换点赞
-const toggleLike = async (moment) => {
-  try {
-    moment.is_liked = !moment.is_liked
-    moment.like_count += moment.is_liked ? 1 : -1
-    
-    // 这里应该调用 API 更新点赞状态
-    
-  } catch (error) {
-    toast.add({
-      title: '操作失败',
-      description: '请重试',
-      color: 'error'
-    })
-  }
+function getMomentActions(m: import("~/types").MomentInfo) {
+    const isOwner = m.user_id === authStore.user?.user_id;
+    const items: any[] = [];
+    if (isOwner) {
+        items.push([
+            {
+                label: "删除",
+                icon: "i-heroicons-trash",
+                click: () => onDelete(m),
+            },
+        ]);
+    } else {
+        items.push([
+            {
+                label: "举报",
+                icon: "i-heroicons-flag",
+                click: () => reportMoment(),
+            },
+        ]);
+    }
+    return items;
 }
 
-// 显示评论
-const showComments = (moment) => {
-  toast.add({
-    title: '功能开发中',
-    description: '评论功能即将上线',
-    color: 'info'
-  })
+async function onDelete(m: import("~/types").MomentInfo) {
+    try {
+        await momentsStore.deleteMoment(m.moment_id);
+        toast.add({ title: "已删除", color: "success" });
+    } catch (e: any) {
+        toast.add({
+            title: "操作失败",
+            description: e?.message,
+            color: "error",
+        });
+    }
 }
 
-// 分享动态
-const shareMoment = (moment) => {
-  toast.add({
-    title: '功能开发中',
-    description: '分享功能即将上线',
-    color: 'info'
-  })
+function reportMoment() {
+    toast.add({ title: "功能暂未开放", color: "info" });
 }
 
-// 创建动态
-const createMoment = () => {
-  // 滚动到发布框
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+function formatTime(s: string) {
+    const t = new Date(s);
+    const d = Date.now() - t.getTime();
+    const m = Math.floor(d / 60000),
+        h = Math.floor(d / 3600000),
+        day = Math.floor(d / 86400000);
+    if (m < 60) return `${m}分钟前`;
+    if (h < 24) return `${h}小时前`;
+    return `${day}天前`;
 }
 
-// 添加图片
-const addImage = () => {
-  toast.add({
-    title: '功能开发中',
-    description: '图片上传功能即将上线',
-    color: 'info'
-  })
+// 搜索相关功能
+async function performSearch() {
+    if (!searchQuery.value.trim() && selectedTags.value.length === 0) {
+        toast.add({ title: "请输入搜索关键词或选择标签", color: "warning" });
+        return;
+    }
+
+    searching.value = true;
+    try {
+        if (selectedTags.value.length > 0) {
+            // 按标签搜索
+            type Coords = { latitude: number; longitude: number };
+            let pos: Coords | null = null;
+            if (
+                coordinates.value &&
+                typeof coordinates.value === "object" &&
+                "latitude" in coordinates.value &&
+                "longitude" in coordinates.value
+            ) {
+                pos = coordinates.value as Coords;
+            }
+            await momentsStore.searchMomentsByTags({
+                tags: selectedTags.value,
+                latitude: pos?.latitude ?? 0,
+                longitude: pos?.longitude ?? 0,
+            });
+        } else {
+            // 这里可以实现按内容搜索的功能
+            // 由于后端API目前只支持按标签搜索，这里暂时显示提示
+            toast.add({
+                title: "功能提示",
+                description: "目前只支持标签搜索，请选择下方的热门标签",
+                color: "info",
+            });
+        }
+    } catch (e: any) {
+        toast.add({
+            title: "搜索失败",
+            description: e?.message,
+            color: "error",
+        });
+    } finally {
+        searching.value = false;
+    }
 }
 
-// 添加位置
-const addLocation = () => {
-  toast.add({
-    title: '功能开发中',
-    description: '位置选择功能即将上线',
-    color: 'info'
-  })
+function toggleTag(tag: string) {
+    const index = selectedTags.value.indexOf(tag);
+    if (index > -1) {
+        selectedTags.value.splice(index, 1);
+    } else {
+        selectedTags.value.push(tag);
+    }
 }
 
-// 预览图片
-const previewImage = (images, index) => {
-  toast.add({
-    title: '功能开发中',
-    description: '图片预览功能即将上线',
-    color: 'info'
-  })
+function clearSearch() {
+    searchQuery.value = "";
+    selectedTags.value = [];
+    momentsStore.clearSearchResults();
 }
 
-// 删除动态
-const deleteMoment = (moment) => {
-  toast.add({
-    title: '确认删除',
-    description: '确定要删除这条动态吗？',
-    color: 'warning'
-  })
+// 导航功能
+function goToMomentDetail(momentId: string) {
+    navigateTo(`/moments/${momentId}`);
 }
 
-// 举报动态
-const reportMoment = (moment) => {
-  toast.add({
-    title: '功能开发中',
-    description: '举报功能即将上线',
-    color: 'info'
-  })
+// 位置权限处理
+async function requestLocationPermission() {
+    locationRequesting.value = true;
+    try {
+        const granted = await requestGeolocation();
+        if (granted) {
+            await getCurrentPosition();
+            toast.success({
+                title: "位置获取成功",
+                description: "正在加载附近动态..."
+            });
+            // 重新加载附近动态，用户主动触发
+            await refreshNearby(true);
+        } else {
+            toast.warning(
+                "位置权限被拒绝",
+                "无法获取附近动态，可以查看其他内容",
+            );
+        }
+    } catch (error) {
+        console.error("获取位置权限失败:", error);
+        toast.error({
+            title: "位置获取失败",
+            description: "请检查浏览器设置并重试"
+        });
+    } finally {
+        locationRequesting.value = false;
+    }
 }
 
-// 加载更多动态
-const loadMoreMoments = async () => {
-  if (loadingMore.value) return
-  
-  loadingMore.value = true
-  
-  try {
-    // 模拟加载更多
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    hasMoreMoments.value = false
-    
-  } catch (error) {
-    toast.add({
-      title: '加载失败',
-      description: '请重试',
-      color: 'error'
-    })
-  } finally {
-    loadingMore.value = false
-  }
+// 空状态相关
+function getEmptyStateIcon() {
+    switch (currentView.value) {
+        case "nearby":
+            return "i-heroicons-map-pin";
+        case "search":
+            return "i-heroicons-magnifying-glass";
+        case "mine":
+            return "i-heroicons-user";
+        default:
+            return "i-heroicons-photo";
+    }
+}
+
+function getEmptyStateTitle() {
+    switch (currentView.value) {
+        case "nearby":
+            return "附近暂无动态";
+        case "search":
+            return "没有找到相关动态";
+        case "mine":
+            return "您还没有发布动态";
+        default:
+            return "暂无动态";
+    }
+}
+
+function getEmptyStateDescription() {
+    switch (currentView.value) {
+        case "nearby":
+            return "成为这个区域第一个分享精彩时刻的人吧";
+        case "search":
+            return "尝试使用其他关键词或标签搜索";
+        case "mine":
+            return "分享您的精彩时刻，记录生活的美好";
+        default:
+            return "成为第一个分享精彩时刻的人吧";
+    }
 }
 </script>

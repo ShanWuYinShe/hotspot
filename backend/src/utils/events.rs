@@ -50,7 +50,15 @@ impl EventBus {
         #[cfg(feature = "jobs")]
         jobs: RwLock::new(None),
     } }
+}
 
+impl Default for EventBus {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl EventBus {
     #[cfg(feature = "audit")]
     pub fn register_audit_handler(&self, handler: Arc<audit_handler::AuditEventsHandler>) {
         *self.audit.write().unwrap() = Some(handler);
@@ -95,6 +103,7 @@ pub mod audit_handler {
     use super::DomainEvent;
     use crate::utils::audit::{AuditEvent, AuditService, NoopAuditSink};
     use std::sync::Arc;
+    use uuid::Uuid;
 
     #[derive(Clone)]
     pub struct AuditEventsHandler {
@@ -144,7 +153,7 @@ pub mod audit_handler {
 #[cfg(feature = "ws_hooks")]
 pub mod ws_handler {
     use super::DomainEvent;
-    use crate::services::notification::WebSocketNotificationService;
+    use crate::ws::manager::WebSocketNotificationService;
     use crate::ws::message_types::{SystemNotificationData, SystemNotificationType};
     use chrono::Utc;
     use std::sync::Arc;
@@ -171,26 +180,26 @@ pub mod ws_handler {
                     };
                     let _ = self.ws.notify_system_event_to_user(user_id.into(), data).await;
                 }
-                DomainEvent::MessageSent { room, message_id, sender_id, sender_nickname, content, message_type, created_at, latitude, longitude } => {
+                DomainEvent::MessageSent { room, message_id: _, sender_id, sender_nickname, content, message_type, created_at, latitude, longitude } => {
                     let location = match (latitude, longitude) {
                         (Some(lat), Some(lon)) => Some((lat, lon, None)),
                         _ => None,
                     };
-                    let _ = self.ws
-                        .notify_new_message(
-                            message_id.into(), room.room_id, room.room_type, sender_id.into(), sender_nickname,
-                            content, message_type, created_at, location,
-                        )
-                        .await;
+                                    let _ = self.ws
+                    .notify_new_message(
+                        room, sender_id, sender_nickname,
+                        content, message_type, created_at, location,
+                    )
+                    .await;
                 }
-                DomainEvent::MessageDeleted { room, message_id, .. } => {
-                    let _ = self.ws.notify_message_deleted(message_id.into(), room.room_id, room.room_type, None).await;
+                DomainEvent::MessageDeleted { room, actor_id, .. } => {
+                    let _ = self.ws.notify_message_deleted(room, actor_id).await;
                 }
                 DomainEvent::GroupJoined { group_id, user_id } => {
                     let data = crate::ws::message_types::GroupEventData {
                         group_id: group_id.into(),
                         event_type: crate::ws::message_types::GroupEventType::MemberJoined,
-                        actor_id: user_id.into(),
+                        actor_id: user_id.0.into(),
                         actor_nickname: String::new(),
                         target_id: None,
                         target_nickname: None,
@@ -202,7 +211,7 @@ pub mod ws_handler {
                     let data = crate::ws::message_types::GroupEventData {
                         group_id: group_id.into(),
                         event_type: crate::ws::message_types::GroupEventType::MemberLeft,
-                        actor_id: user_id.into(),
+                        actor_id: user_id.0.into(),
                         actor_nickname: String::new(),
                         target_id: None,
                         target_nickname: None,
@@ -214,9 +223,9 @@ pub mod ws_handler {
                     let data = crate::ws::message_types::GroupEventData {
                         group_id: group_id.into(),
                         event_type: crate::ws::message_types::GroupEventType::MemberKicked,
-                        actor_id: actor_id.into(),
+                        actor_id: actor_id.0.into(),
                         actor_nickname: String::new(),
-                        target_id: Some(target_id.into()),
+                        target_id: Some(target_id.0.into()),
                         target_nickname: None,
                         created_at: Utc::now(),
                     };
@@ -226,9 +235,9 @@ pub mod ws_handler {
                     let data = crate::ws::message_types::GroupEventData {
                         group_id: group_id.into(),
                         event_type: crate::ws::message_types::GroupEventType::OwnerTransferred,
-                        actor_id: from_user_id.into(),
+                        actor_id: from_user_id.0.into(),
                         actor_nickname: String::new(),
-                        target_id: Some(to_user_id.into()),
+                        target_id: Some(to_user_id.0.into()),
                         target_nickname: None,
                         created_at: Utc::now(),
                     };
@@ -237,17 +246,15 @@ pub mod ws_handler {
                 DomainEvent::DirectMessagesRead { conversation_id, reader_id, message_id } => {
                     let _ = self.ws
                         .notify_message_read_to_recipient(
-                            reader_id.into(),
-                            conversation_id.into(),
-                            message_id.map(Into::into),
-                            Utc::now(),
+                            reader_id,
+                            conversation_id,
+                            message_id,
                         )
                         .await;
                 }
                 DomainEvent::GroupMessagesRead { group_id: _gid, reader_id: _reader, message_id: _mid } => {
                     // 预留：如需群组已读通知，可在此实现（当前消息模型未定义群已读 ServerMessage）
                 }
-                _ => {}
             }
         }
     }
@@ -257,25 +264,22 @@ pub mod ws_handler {
 #[cfg(feature = "jobs")]
 pub mod jobs_handler {
     use super::DomainEvent;
-    use crate::jobs::JobService;
+    use crate::ports::JobDispatcherPort;
     use std::sync::Arc;
 
     #[derive(Clone)]
     pub struct JobsEventsHandler {
-        jobs: Arc<JobService>,
+        jobs: Arc<dyn JobDispatcherPort>,
     }
 
     impl JobsEventsHandler {
-        pub fn new(jobs: Arc<JobService>) -> Self { Self { jobs } }
+        pub fn new(jobs: Arc<dyn JobDispatcherPort>) -> Self { Self { jobs } }
         pub fn name(&self) -> &'static str { "jobs_events" }
 
         pub async fn handle(&self, event: &DomainEvent) {
-            match event.clone() {
-                DomainEvent::TempUserCreated { user_id } => {
-                    // 可派发欢迎邮件或初始化位置等任务（示例：欢迎邮件）
-                    let _ = self.jobs.dispatch_welcome_email(user_id, "用户".to_string(), None).await;
-                }
-                _ => {}
+            if let DomainEvent::TempUserCreated { user_id } = event.clone() {
+                // 可派发欢迎邮件或初始化位置等任务（示例：欢迎邮件）
+                let _ = self.jobs.dispatch_welcome_email(user_id.into(), "用户".to_string(), None).await;
             }
         }
     }
