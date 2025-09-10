@@ -1,444 +1,307 @@
 <template>
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
-        <div class="max-w-4xl mx-auto">
-            <!-- 页面标题 -->
-            <div class="mb-6">
-                <h1 class="text-2xl font-bold text-neutral-900">设置</h1>
+    <div class="min-h-screen bg-neutral-50 dark:bg-neutral-900">
+        <!-- 移动端头部 -->
+        <div class="lg:hidden sticky top-0 z-10">
+            <UCard class="rounded-none border-x-0 border-t-0">
+                <div class="flex items-center justify-between">
+                    <h1 class="text-xl font-semibold">设置</h1>
+                    <!-- 保存状态指示器 -->
+                    <div v-if="isSaving" class="flex items-center gap-2 text-sm text-neutral-600">
+                        <UIcon name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
+                        <span class="hidden sm:inline">保存中...</span>
+                    </div>
+                    <div v-else-if="lastSaved" class="flex items-center gap-2 text-sm text-green-600">
+                        <UIcon name="i-heroicons-check-circle" class="w-4 h-4" />
+                        <span class="hidden sm:inline">已保存</span>
+                    </div>
+                </div>
+                
+                <!-- 移动端搜索 -->
+                <div class="mt-3">
+                    <UInput
+                        v-model="searchQuery"
+                        placeholder="搜索设置..."
+                        icon="i-heroicons-magnifying-glass"
+                        size="sm"
+                        class="w-full"
+                    />
+                </div>
+            </UCard>
+        </div>
+            
+            <!-- 移动端标签导航 -->
+            <div class="px-4 pb-3">
+                <div class="flex overflow-x-auto gap-2 scrollbar-hide overscroll-x-contain">
+                    <UButton
+                        v-for="section in filteredSections"
+                        :key="section.id"
+                        @click="activeSection = section.id"
+                        :variant="activeSection === section.id ? 'soft' : 'ghost'"
+                        :color="activeSection === section.id ? 'primary' : 'neutral'"
+                        size="sm"
+                        class="whitespace-nowrap touch-manipulation min-h-[44px] flex-shrink-0"
+                    >
+                        <template #leading>
+                            <UIcon :name="section.icon" class="w-4 h-4" />
+                        </template>
+                        {{ section.title }}
+                        <template #trailing v-if="section.badge">
+                            <UBadge
+                                :label="section.badge"
+                                color="error"
+                                size="xs"
+                            />
+                        </template>
+                    </UButton>
+                </div>
             </div>
 
-            <!-- 设置选项 -->
-            <UAccordion :items="settingsAccordionItems" multiple>
-                <template #account="{ item, open }">
-                    <div class="flex items-center gap-2">
-                        <UIcon name="i-heroicons-user-circle" class="w-5 h-5" />
-                        <span class="font-medium">账户设置</span>
-                    </div>
-                </template>
-                
-                <template #account-content>
-
-                <div class="space-y-4">
-                    <!-- 昵称设置 -->
+        <!-- 桌面端布局 -->
+        <div class="hidden lg:block mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+            <div class="max-w-6xl mx-auto">
+                <!-- 桌面端页面头部 -->
+                <div class="mb-8">
                     <div class="flex items-center justify-between">
                         <div>
-                            <div class="font-medium">昵称</div>
-                            <div class="text-sm text-neutral-600">
-                                {{ user?.nickname || "未设置" }}
+                            <h1 class="text-3xl font-bold text-neutral-900 dark:text-white">设置</h1>
+                            <p class="mt-2 text-neutral-600 dark:text-neutral-400">管理您的账户和应用偏好设置</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <!-- 搜索设置 -->
+                            <UInput
+                                v-model="searchQuery"
+                                placeholder="搜索设置..."
+                                icon="i-heroicons-magnifying-glass"
+                                size="sm"
+                                class="w-64"
+                            />
+                            <!-- 保存状态指示器 -->
+                            <div v-if="isSaving" class="flex items-center gap-2 text-sm text-neutral-600">
+                                <UIcon name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
+                                <span>保存中...</span>
+                            </div>
+                            <div v-else-if="lastSaved" class="flex items-center gap-2 text-sm text-green-600">
+                                <UIcon name="i-heroicons-check-circle" class="w-4 h-4" />
+                                <span>已保存</span>
                             </div>
                         </div>
-                        <UButton variant="soft" size="sm" @click="showNicknameModal = true">
-                            编辑
-                        </UButton>
                     </div>
+                </div>
 
-                    <!-- 头像设置 -->
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <div class="font-medium">头像</div>
-                            <div class="text-sm text-neutral-600">
-                                点击更换头像
-                            </div>
-                        </div>
-                        <UButton variant="soft" size="sm" @click="showAvatarModal = true">
-                            更换
-                        </UButton>
-                    </div>
-
-                    <!-- 绑定状态 -->
-                    <div v-if="false" class="border-t pt-4">
-                        <UCard>
-                            <EmptyState
-                                icon="i-heroicons-envelope-open"
-                                title="尚未绑定账号"
-                                description="绑定手机号或邮箱以保存数据并提高安全性"
-                                action-text="立即绑定"
-                                :action-handler="bindAccount"
-                                secondary-action-text="了解绑定"
-                                :secondary-action-handler="
-                                    () =>
-                                        toast.add({
-                                            title: '绑定说明',
-                                            description:
-                                                '绑定可提升找回与安全能力',
-                                            color: 'info',
-                                        })
-                                "
+                <!-- 桌面端设置内容 -->
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                    <!-- 左侧导航 -->
+                    <div class="lg:col-span-1">
+                        <nav class="space-y-1 sticky top-6">
+                            <UButton
+                                v-for="section in filteredSections"
+                                :key="section.id"
+                                @click="activeSection = section.id"
+                                :variant="activeSection === section.id ? 'soft' : 'ghost'"
+                                :color="activeSection === section.id ? 'primary' : 'neutral'"
+                                class="w-full justify-start gap-3 px-4 py-3"
                             >
-                                <template #illustration>
-                                    <EmptyAccount size="md" />
-                                </template>
-                            </EmptyState>
-                        </UCard>
-                    </div>
-                </div>
-                </template>
-                
-                <template #privacy="{ item, open }">
-                    <div class="flex items-center gap-2">
-                        <UIcon name="i-heroicons-shield-check" class="w-5 h-5" />
-                        <span class="font-medium">隐私设置</span>
-                    </div>
-                </template>
-                
-                <template #privacy-content>
-
-                <div class="space-y-4">
-                    <!-- 位置共享 -->
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <div class="font-medium">位置共享</div>
-                            <div class="text-sm text-neutral-600">
-                                允许其他用户查看我的位置
-                            </div>
-                        </div>
-                        <USwitch v-model="settings.shareLocation" />
+                                <UIcon :name="section.icon" class="w-5 h-5 flex-shrink-0" />
+                                <span class="font-medium">{{ section.title }}</span>
+                                <UBadge
+                                    v-if="section.badge"
+                                    :label="section.badge"
+                                    color="error"
+                                    variant="soft"
+                                    size="xs"
+                                    class="ml-auto"
+                                />
+                            </UButton>
+                        </nav>
                     </div>
 
-                    <!-- 在线状态 -->
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <div class="font-medium">在线状态</div>
-                            <div class="text-sm text-neutral-600">
-                                显示我的在线状态
-                            </div>
-                        </div>
-                        <USwitch v-model="settings.showOnlineStatus" />
-                    </div>
-
-                    <!-- 消息通知设置 -->
-                    <div
-                        class="space-y-4 pt-4 border-t border-neutral-200 dark:border-neutral-700"
-                    >
-                        <h4
-                            class="font-medium text-neutral-900 dark:text-neutral-100"
-                        >
-                            消息通知设置
-                        </h4>
-
-                        <!-- 私聊消息提示 -->
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <div class="font-medium">私聊消息提示</div>
-                                <div class="text-sm text-neutral-600">
-                                    接收到私聊消息时显示弹窗提醒
-                                </div>
-                            </div>
-                            <USwitch v-model="settings.directMessageToast" />
-                        </div>
-
-                        <!-- 群组消息提示 -->
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <div class="font-medium">群组消息提示</div>
-                                <div class="text-sm text-neutral-600">
-                                    接收到群组消息时显示弹窗提醒
-                                </div>
-                            </div>
-                            <USwitch v-model="settings.groupMessageToast" />
-                        </div>
-
-                        <!-- 系统通知提示 -->
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <div class="font-medium">系统通知提示</div>
-                                <div class="text-sm text-neutral-600">
-                                    系统重要通知弹窗提醒
-                                </div>
-                            </div>
-                            <USwitch
-                                v-model="settings.systemNotificationToast"
-                            />
-                        </div>
-
-                        <!-- 错误通知 -->
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <div class="font-medium">错误提示</div>
-                                <div class="text-sm text-neutral-600">
-                                    显示操作错误提示
-                                </div>
-                            </div>
-                            <USwitch v-model="settings.errorNotifications" />
-                        </div>
-
-                        <!-- 成功通知 -->
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <div class="font-medium">成功提示</div>
-                                <div class="text-sm text-neutral-600">
-                                    显示操作成功提示
-                                </div>
-                            </div>
-                            <USwitch v-model="settings.successNotifications" />
-                        </div>
-                    </div>
-                </div>
-                </template>
-                
-                <template #features="{ item, open }">
-                    <div class="flex items-center gap-2">
-                        <UIcon name="i-heroicons-cog-6-tooth" class="w-5 h-5" />
-                        <span class="font-medium">功能设置</span>
-                    </div>
-                </template>
-                
-                <template #features-content>
-
-                <div class="space-y-4">
-                    <!-- 主题模式 -->
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <div class="font-medium">主题模式</div>
-                            <div class="text-sm text-neutral-600">
-                                切换明暗主题
-                            </div>
-                        </div>
-                        <USelect
-                            v-model="settings.theme"
-                            :options="themeOptions"
-                            size="sm"
-                            class="w-32"
-                        />
-                    </div>
-
-                    <!-- 语言设置 -->
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <div class="font-medium">语言</div>
-                            <div class="text-sm text-neutral-600">
-                                界面显示语言
-                            </div>
-                        </div>
-                        <USelect
-                            v-model="settings.language"
-                            :options="languageOptions"
-                            size="sm"
-                            class="w-32"
-                        />
-                    </div>
-
-                    <!-- 地图提供商 -->
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <div class="font-medium">地图提供商</div>
-                            <div class="text-sm text-neutral-600">
-                                选择地图服务
-                            </div>
-                        </div>
-                        <USelect
-                            v-model="settings.mapProvider"
-                            :options="mapProviderOptions"
-                            size="sm"
-                            class="w-32"
+                    <!-- 桌面端设置面板 -->
+                    <div class="lg:col-span-3">
+                        <SettingsContent 
+                            :active-section="activeSection"
+                            :local-settings="localSettings"
+                            :user="user"
+                            @save-nickname="onSaveNickname"
+                            @avatar-uploaded="onAvatarUploaded"
+                            @upgrade-account="upgradeAccount"
+                            @change-password="changePassword"
+                            @setup-2fa="setup2FA"
+                            @clear-cache="clearCache"
+                            @show-help="showHelp"
+                            @show-privacy-policy="showPrivacyPolicy"
+                            @show-terms="showTerms"
+                            @delete-account="deleteAccount"
+                            @edit-nickname="editNickname"
+                            @change-avatar="changeAvatar"
                         />
                     </div>
                 </div>
-                </template>
-                
-                <template #other="{ item, open }">
-                    <div class="flex items-center gap-2">
-                        <UIcon name="i-heroicons-information-circle" class="w-5 h-5" />
-                        <span class="font-medium">其他设置</span>
-                    </div>
-                </template>
-                
-                <template #other-content>
-                    <div class="space-y-1">
-                        <UButton
-                            variant="ghost"
-                            block
-                            justify="start"
-                            @click="clearCache"
-                        >
-                            <UIcon name="i-heroicons-trash" class="w-5 h-5 mr-3" />
-                            清除缓存
-                        </UButton>
+            </div>
+        </div>
 
-                        <UButton
-                            variant="ghost"
-                            block
-                            justify="start"
-                            @click="showAbout"
-                        >
-                            <UIcon
-                                name="i-heroicons-information-circle"
-                                class="w-5 h-5 mr-3"
-                            />
-                            关于应用
-                        </UButton>
-
-                        <UButton
-                            variant="ghost"
-                            block
-                            justify="start"
-                            @click="showHelp"
-                        >
-                            <UIcon
-                                name="i-heroicons-question-mark-circle"
-                                class="w-5 h-5 mr-3"
-                            />
-                            帮助与支持
-                        </UButton>
-                    </div>
-                </template>
-                
-                <template #danger="{ item, open }">
-                    <div class="flex items-center gap-2">
-                        <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-red-600" />
-                        <span class="font-medium text-red-600">危险操作</span>
-                    </div>
-                </template>
-                
-                <template #danger-content>
-                    <div class="space-y-1">
-                        <UButton
-                            variant="ghost"
-                            color="error"
-                            block
-                            justify="start"
-                            @click="showDeleteConfirm = true"
-                        >
-                            <UIcon name="i-heroicons-trash" class="w-5 h-5 mr-3" />
-                            删除账户
-                        </UButton>
-                    </div>
-                </template>
-            </UAccordion>
+        <!-- 移动端内容 -->
+        <div class="lg:hidden">
+            <div class="px-4 py-4">
+                <SettingsContent 
+                    :active-section="activeSection"
+                    :local-settings="localSettings"
+                    :user="user"
+                    :is-mobile="true"
+                    @save-nickname="onSaveNickname"
+                    @avatar-uploaded="onAvatarUploaded"
+                    @upgrade-account="upgradeAccount"
+                    @change-password="changePassword"
+                    @setup-2fa="setup2FA"
+                    @clear-cache="clearCache"
+                    @show-help="showHelp"
+                    @show-privacy-policy="showPrivacyPolicy"
+                    @show-terms="showTerms"
+                    @delete-account="deleteAccount"
+                    @edit-nickname="editNickname"
+                    @change-avatar="changeAvatar"
+                />
+            </div>
         </div>
     </div>
-
-    <!-- 昵称编辑 -->
-    <UModal v-model:open="showNicknameModal" title="编辑昵称">
-        <template #body>
-            <UForm :state="nicknameForm" :validate="validateNickname" @submit="onSaveNickname" class="space-y-4">
-                <UFormField label="昵称" name="nickname" required>
-                    <UInput v-model="nicknameForm.nickname" placeholder="请输入新的昵称" :maxlength="20" />
-                </UFormField>
-                <div class="flex justify-end gap-2">
-                    <UButton variant="ghost" @click="showNicknameModal = false">取消</UButton>
-                    <UButton type="submit" :loading="savingNickname">保存</UButton>
-                </div>
-            </UForm>
-        </template>
-    </UModal>
-
-    <!-- 头像上传 -->
-    <UModal v-model:open="showAvatarModal" title="更换头像">
-        <template #body>
-            <AvatarUpload :user="user" @uploaded="onAvatarUploaded" />
-        </template>
-        <template #footer>
-            <div class="flex justify-end">
-                <UButton variant="ghost" @click="showAvatarModal = false">关闭</UButton>
-            </div>
-        </template>
-    </UModal>
-
-    <!-- 删除账户确认 -->
-    <UModal v-model:open="showDeleteConfirm" title="确认删除账户">
-        <template #body>
-            <p class="text-neutral-600 dark:text-neutral-300">此操作不可恢复，确定要删除账户吗？</p>
-        </template>
-        <template #footer>
-            <div class="flex justify-end gap-2">
-                <UButton variant="ghost" @click="showDeleteConfirm = false">取消</UButton>
-                <UButton color="error" :loading="deletingAccount" @click="confirmDeleteAccount">确认删除</UButton>
-            </div>
-        </template>
-    </UModal>
 </template>
 
 <script setup lang="ts">
+import type { UserSettings } from '~/types';
+import { useDebounceFn } from "@vueuse/core";
+import { useUserService } from '~/services/user.service';
+
 // 页面元数据
 definePageMeta({
     title: "设置",
     requiresAuth: true,
 });
-import EmptyAccount from "~/components/illustrations/EmptyAccount.vue";
 
 const authStore = useAuthStore();
 const toast = useSmartToast();
 const settingsStore = useSettingsStore();
+const { openNicknameEditModal, openAvatarUploadModal, openConfirmModal } = useModals();
 
 // 当前用户信息
 const user = computed(() => authStore.user);
 
-// 设置数据
-const settings = reactive({
-    shareLocation: true,
-    showOnlineStatus: true,
-    messageNotifications: true,
-    directMessageToast: true,
-    groupMessageToast: true,
-    systemNotificationToast: true,
-    errorNotifications: true,
-    successNotifications: false,
-    theme: "auto",
-    language: "zh-CN",
-    mapProvider: "gaode",
+// 搜索功能
+const searchQuery = ref('');
+
+// 活动的设置分区
+const activeSection = ref('account');
+
+// 保存状态
+const isSaving = ref(false);
+const lastSaved = ref<Date | null>(null);
+
+// 本地设置状态
+const localSettings = ref<UserSettings>({
+    notifications: {
+        push_enabled: true,
+        email_enabled: true,
+        sms_enabled: false,
+        group_notifications: true,
+        message_notifications: true,
+        friend_requests: true,
+        direct_message_toast: true,
+        group_message_toast: true,
+        system_notification_toast: true,
+        error_notifications: true,
+        success_notifications: true,
+    },
+    privacy: {
+        profile_visibility: "public",
+        location_sharing: true,
+        online_status: true,
+        show_in_search: true,
+    },
+    preferences: {
+        language: "zh-CN",
+        theme: "auto",
+        distance_unit: "km",
+        time_format: "24h",
+    },
+    account: {
+        nickname: user.value?.nickname || "",
+        bio: "",
+        email: user.value?.email || "",
+        phone: "",
+        avatar_url: user.value?.avatar_url || "",
+    },
 });
 
-// UAccordion 配置
-const settingsAccordionItems = computed(() => [
+// 设置分区配置
+const sections = [
     {
-        label: '账户设置',
+        id: 'account',
+        title: '账户',
         icon: 'i-heroicons-user-circle',
-        slot: 'account',
-        defaultOpen: true,
-        content: 'account-content'
+        keywords: ['账户', '个人资料', '昵称', '头像', '安全', '密码']
     },
     {
-        label: '隐私设置',
+        id: 'privacy',
+        title: '隐私',
         icon: 'i-heroicons-shield-check',
-        slot: 'privacy',
-        defaultOpen: false,
-        content: 'privacy-content'
+        keywords: ['隐私', '位置', '在线状态', '可见性', '搜索']
     },
     {
-        label: '功能设置',
-        icon: 'i-heroicons-cog-6-tooth',
-        slot: 'features',
-        defaultOpen: false,
-        content: 'features-content'
+        id: 'notifications',
+        title: '通知',
+        icon: 'i-heroicons-bell',
+        keywords: ['通知', '消息', '推送', '提醒', '群组']
     },
     {
-        label: '其他设置',
+        id: 'appearance',
+        title: '外观',
+        icon: 'i-heroicons-paint-brush',
+        keywords: ['外观', '主题', '语言', '界面', '显示']
+    },
+    {
+        id: 'about',
+        title: '关于',
         icon: 'i-heroicons-information-circle',
-        slot: 'other',
-        defaultOpen: false,
-        content: 'other-content'
+        keywords: ['关于', '帮助', '支持', '版本', '缓存']
     },
     {
-        label: '危险操作',
+        id: 'danger',
+        title: '危险操作',
         icon: 'i-heroicons-exclamation-triangle',
-        slot: 'danger',
-        defaultOpen: false,
-        content: 'danger-content'
+        keywords: ['删除', '账户', '危险'],
+        badge: '!'
     }
-]);
+];
 
-// 与全局主题设置联动（从全局 -> 本地选择器）
-watch(
-    () => settingsStore.theme,
-    (val) => {
-        settings.theme = val as any;
-    },
-    { immediate: true },
-);
-
-// 当本地主题选择变化时，更新到全局并持久化（从本地 -> 全局）
-watch(
-    () => settings.theme,
-    (val) => {
-        settingsStore.setTheme(val as "light" | "dark" | "auto");
-    },
-);
+// 过滤的设置分区
+const filteredSections = computed(() => {
+    if (!searchQuery.value) return sections;
+    
+    const query = searchQuery.value.toLowerCase();
+    return sections.filter(section => 
+        section.title.toLowerCase().includes(query) ||
+        section.keywords.some(keyword => keyword.toLowerCase().includes(query))
+    );
+});
 
 // 选项数据
 const themeOptions = [
-    { label: "跟随系统", value: "auto" },
-    { label: "浅色模式", value: "light" },
-    { label: "深色模式", value: "dark" },
+    { 
+        label: "跟随系统", 
+        value: "auto",
+        icon: "i-heroicons-computer-desktop",
+        description: "根据系统设置自动切换"
+    },
+    { 
+        label: "浅色模式", 
+        value: "light",
+        icon: "i-heroicons-sun",
+        description: "始终使用浅色主题"
+    },
+    { 
+        label: "深色模式", 
+        value: "dark",
+        icon: "i-heroicons-moon",
+        description: "始终使用深色主题"
+    },
 ];
 
 const languageOptions = [
@@ -446,47 +309,105 @@ const languageOptions = [
     { label: "English", value: "en-US" },
 ];
 
-const mapProviderOptions = [
-    { label: "高德地图", value: "gaode" },
-    { label: "百度地图", value: "baidu" },
-    { label: "腾讯地图", value: "tencent" },
+const profileVisibilityOptions = [
+    { label: "公开", value: "public" },
+    { label: "仅好友", value: "friends" },
+    { label: "私密", value: "private" },
 ];
 
+const distanceUnitOptions = [
+    { label: "公里 (km)", value: "km" },
+    { label: "英里 (miles)", value: "miles" },
+];
+
+const timeFormatOptions = [
+    { label: "24小时制", value: "24h" },
+    { label: "12小时制", value: "12h" },
+];
+
+// 初始化设置
+onMounted(async () => {
+    try {
+        await settingsStore.fetchSettings();
+        if (settingsStore.settings) {
+            localSettings.value = { ...settingsStore.settings } as unknown as UserSettings;
+        }
+    } catch (error) {
+        console.error('加载设置失败:', error);
+    }
+});
+
+// 监听设置变化并自动保存
+const debouncedSave = useDebounceFn(async () => {
+    if (isSaving.value) return;
+    
+    try {
+        isSaving.value = true;
+        await settingsStore.updateSettings(localSettings.value as any);
+        lastSaved.value = new Date();
+        
+        // 3秒后清除保存状态
+        setTimeout(() => {
+            lastSaved.value = null;
+        }, 3000);
+    } catch (error) {
+        console.error('保存设置失败:', error);
+        toast.add({
+            title: '保存失败',
+            description: '设置保存失败，请稍后重试',
+            color: 'error'
+        });
+    } finally {
+        isSaving.value = false;
+    }
+}, 1000);
+
+watch(localSettings, debouncedSave, { deep: true });
+
+// 与全局主题设置联动
+watch(
+    () => localSettings.value.preferences.theme,
+    (newTheme) => {
+        settingsStore.setTheme(newTheme);
+    }
+);
+
 // 昵称编辑
-const showNicknameModal = ref(false);
+const editNickname = () => {
+    openNicknameEditModal({
+        currentNickname: user.value?.nickname || '',
+        onSuccess: onSaveNickname
+    });
+};
+
+// 更换头像
+const changeAvatar = () => {
+    openAvatarUploadModal({
+        user: user.value,
+        onUploaded: onAvatarUploaded
+    });
+};
+
+// 保存昵称
 const savingNickname = ref(false);
-const nicknameForm = ref({ nickname: '' });
-watch(user, (u) => { nicknameForm.value.nickname = (u?.nickname || '').trim(); }, { immediate: true });
-
-// 头像上传
-const showAvatarModal = ref(false);
-
-type ValidateResult = { path: string; message: string }[];
-function validateNickname(): ValidateResult | void {
-    const errors: ValidateResult = [];
-    const n = (nicknameForm.value.nickname || '').trim();
-    if (!n) errors.push({ path: 'nickname', message: '昵称为必填项' });
-    if (n.length > 20) errors.push({ path: 'nickname', message: '昵称不能超过20个字符' });
-    return errors.length ? errors : undefined;
-}
-
-async function onSaveNickname() {
+async function onSaveNickname(nickname: string) {
     if (savingNickname.value) return;
     savingNickname.value = true;
     try {
         const userService = useUserService();
         await userService.updateUserProfile({ 
-            nickname: nicknameForm.value.nickname.trim() 
+            nickname: nickname.trim() 
         });
         
         toast.add({ title: '已更新昵称', color: 'success' });
         
         // 更新本地store中的用户信息
         if (authStore.user) {
-            authStore.user.nickname = nicknameForm.value.nickname.trim();
+            authStore.user.nickname = nickname.trim();
         }
         
-        showNicknameModal.value = false;
+        // 更新本地设置
+        localSettings.value.account.nickname = nickname.trim();
     } catch (e: any) {
         toast.add({ title: '更新失败', description: e?.message, color: 'error' });
     } finally {
@@ -501,20 +422,39 @@ const onAvatarUploaded = (avatarUrl: string) => {
         authStore.user.avatar_url = avatarUrl;
     }
     
+    // 更新本地设置
+    localSettings.value.account.avatar_url = avatarUrl;
+    
     toast.add({
         title: "头像更新成功",
         description: "您的头像已更新",
         color: "success",
     });
-    
-    showAvatarModal.value = false;
 };
 
-// 绑定账户
-const bindAccount = () => {
+// 升级账户
+const upgradeAccount = () => {
     toast.add({
-        title: "功能暂未开放",
-        description: "绑定账号功能即将上线",
+        title: "功能开发中",
+        description: "账户升级功能即将上线",
+        color: "info",
+    });
+};
+
+// 修改密码
+const changePassword = () => {
+    toast.add({
+        title: "功能开发中",
+        description: "密码修改功能即将上线",
+        color: "info",
+    });
+};
+
+// 设置双重认证
+const setup2FA = () => {
+    toast.add({
+        title: "功能开发中",
+        description: "双重认证功能即将上线",
         color: "info",
     });
 };
@@ -523,16 +463,8 @@ const bindAccount = () => {
 const clearCache = () => {
     toast.add({
         title: "缓存已清除",
+        description: "应用缓存数据已清除",
         color: "success",
-    });
-};
-
-// 显示关于
-const showAbout = () => {
-    toast.add({
-        title: "HotSpot v1.0.0",
-        description: "基于位置的社交平台",
-        color: "info",
     });
 };
 
@@ -545,9 +477,36 @@ const showHelp = () => {
     });
 };
 
+// 显示隐私政策
+const showPrivacyPolicy = () => {
+    toast.add({
+        title: "隐私政策",
+        description: "隐私政策页面建设中",
+        color: "info",
+    });
+};
+
+// 显示服务条款
+const showTerms = () => {
+    toast.add({
+        title: "服务条款",
+        description: "服务条款页面建设中",
+        color: "info",
+    });
+};
+
 // 删除账户
-const showDeleteConfirm = ref(false);
 const deletingAccount = ref(false);
+const deleteAccount = () => {
+    openConfirmModal({
+        title: '确认删除账户',
+        message: '此操作不可恢复，确定要删除账户吗？您的所有数据将被永久删除。',
+        confirmText: '确认删除',
+        confirmColor: 'error',
+        onConfirm: confirmDeleteAccount
+    });
+};
+
 async function confirmDeleteAccount() {
     if (deletingAccount.value) return;
     deletingAccount.value = true;
@@ -560,8 +519,6 @@ async function confirmDeleteAccount() {
             description: '您的账户和所有数据已被永久删除',
             color: 'success' 
         });
-        
-        showDeleteConfirm.value = false;
         
         // 清除本地认证状态并跳转
         authStore.logout();
@@ -576,14 +533,4 @@ async function confirmDeleteAccount() {
         deletingAccount.value = false;
     }
 }
-
-// 监听设置变化并保存
-watch(
-    settings,
-    (newSettings) => {
-        // 这里可以保存设置到本地存储或服务器
-        // Settings updated successfully
-    },
-    { deep: true },
-);
 </script>

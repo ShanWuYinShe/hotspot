@@ -9,11 +9,11 @@ interface ToastMessage {
     description?: string;
     color?: 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral';
     icon?: string;
-    timeout?: number;
+    duration?: number;
     actions?: Array<{
         label: string;
-        color?: string;
-        variant?: string;
+        color?: 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral';
+        variant?: 'solid' | 'outline' | 'soft' | 'subtle' | 'ghost' | 'link';
         click?: () => void;
     }>;
 }

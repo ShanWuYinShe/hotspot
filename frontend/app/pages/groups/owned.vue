@@ -7,7 +7,7 @@
 
             <USkeleton v-if="loading" class="h-32" />
             <div v-else>
-                <UTable :rows="items" :columns="columns as any">
+                <UTable :rows="items" :columns="columns">
                         <template #name-cell="{ row }">
                             <div class="flex items-center gap-3 min-w-[220px]">
                                 <UAvatar :alt="(row as any).name">{{ (row as any).name?.charAt(0) }}</UAvatar>
@@ -15,7 +15,7 @@
                                     <div class="flex items-center gap-2">
                                         <span class="font-medium truncate">{{ (row as any).name }}</span>
                                         <UBadge color="primary" variant="soft" size="xs">群主</UBadge>
-                                        <UBadge v-if="ownedUnreadMap[(row as any).group_id] > 0" variant="soft" size="xs">未读 {{ ownedUnreadMap[(row as any).group_id] }}</UBadge>
+                                        <UBadge v-if="(ownedUnreadMap[String((row as any).group_id)] || 0) > 0" variant="soft" size="xs">未读 {{ ownedUnreadMap[String((row as any).group_id)] || 0 }}</UBadge>
                                     </div>
                                     <p class="text-xs text-neutral-500 truncate">{{ (row as any).description || '—' }}</p>
                                 </div>
@@ -58,12 +58,14 @@
 
 <script setup lang="ts">
 import { defineAsyncComponent } from 'vue'
+import type { GroupInfo } from "~/types";
+import { useMessageService } from '~/services/message.service';
+import { formatTime } from '~/utils/formatters';
+
 definePageMeta({ title: "我创建的群组", requiresAuth: true });
 const groupsStore = useGroupsStore();
 const toast = useSmartToast();
 const EmptyGroups = defineAsyncComponent(() => import("~/components/illustrations/EmptyGroups.vue"));
-import type { GroupInfo } from "~/types";
-import { useMessageService } from "~/services/message.service";
 const items = ref<GroupInfo[]>([]);
 const loading = ref(true);
 const columns = [
@@ -93,7 +95,7 @@ onMounted(async () => {
         await Promise.all(list.map(async (g) => {
             try {
                 const r: any = await ms.getGroupUnreadCount(String(g.group_id));
-                ownedUnreadMap[g.group_id] = Number(r?.unread_count ?? r?.total_unread_count ?? 0);
+                ownedUnreadMap[String(g.group_id)] = Number(r?.unread_count ?? r?.total_unread_count ?? 0);
             } catch {}
         }));
     } catch {}
@@ -104,25 +106,16 @@ const enterGroup = (g: GroupInfo) => {
     try {
         const ms = useMessageService();
         void ms.markAsRead(String(g.group_id), 'group');
-        ownedUnreadMap[g.group_id] = 0;
+        ownedUnreadMap[String(g.group_id)] = 0;
     } catch {}
-    navigateTo(`/chat/group/${g.group_id}`);
+    navigateTo(`/chat/groups/${g.group_id}`);
 };
 const manageGroup = (g: GroupInfo) => {
     navigateTo(`/groups/${g.group_id}/settings`);
 };
 
-const formatTime = (s: string) => {
-    const t = new Date(s);
-    const d = Date.now() - t.getTime();
-    const m = Math.floor(d / 60000);
-    const h = Math.floor(d / 3600000);
-    const day = Math.floor(d / 86400000);
-    if (m < 60) return `${m}分钟前`;
-    if (h < 24) return `${h}小时前`;
-    return `${day}天前`;
-};
+// formatTime 函数已从统一工具函数导入
 
 // 我创建的群未读映射
-const ownedUnreadMap = reactive<Record<number, number>>({});
+const ownedUnreadMap = reactive<Record<string, number>>({});
 </script>

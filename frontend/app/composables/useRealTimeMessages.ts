@@ -154,10 +154,10 @@ export const useRealTimeMessages = () => {
       );
 
       // 更新消息ID
-      messagesStore.updateMessageId(
-        optimisticId,
-        sentMessage.message_id || sentMessage.id,
-      );
+      const messageId = sentMessage.message_id || sentMessage.id;
+      if (messageId) {
+        messagesStore.updateMessageId(optimisticId, messageId);
+      }
 
       return sentMessage;
     } catch (error) {

@@ -38,7 +38,7 @@ export const useErrorHandler = () => {
       title,
       description,
       color: 'error',
-      timeout: 5000
+      duration: 5000
     })
   }
 
@@ -52,7 +52,7 @@ export const useErrorHandler = () => {
       title: '网络连接失败',
       description: '请检查网络连接后重试',
       color: 'error',
-      timeout: 5000
+      duration: 5000
     })
   }
 
@@ -71,7 +71,7 @@ export const useErrorHandler = () => {
       title: `${permissionNames[type]}权限被拒绝`,
       description: `请在浏览器设置中允许${permissionNames[type]}访问`,
       color: 'warning',
-      timeout: 8000
+      duration: 8000
     })
   }
 
@@ -95,7 +95,7 @@ export const useErrorHandler = () => {
       title: '文件错误',
       description,
       color: 'error',
-      timeout: 5000
+      duration: 5000
     })
   }
 
@@ -109,7 +109,7 @@ export const useErrorHandler = () => {
         title: '输入有误',
         description: firstError,
         color: 'warning',
-        timeout: 4000
+        duration: 4000
       })
     }
   }
@@ -153,7 +153,7 @@ export const useErrorHandler = () => {
       title: '操作失败',
       description: error?.message || '发生未知错误，请重试',
       color: 'error',
-      timeout: 5000
+      duration: 5000
     })
   }
 
@@ -165,7 +165,7 @@ export const useErrorHandler = () => {
       title,
       description,
       color: 'success',
-      timeout: 3000
+      duration: 3000
     })
   }
 
@@ -177,7 +177,7 @@ export const useErrorHandler = () => {
       title,
       description,
       color: 'warning',
-      timeout: 4000
+      duration: 4000
     })
   }
 
@@ -189,7 +189,7 @@ export const useErrorHandler = () => {
       title,
       description,
       color: 'info',
-      timeout: 3000
+      duration: 3000
     })
   }
 

@@ -1,7 +1,6 @@
 /// 用户凭证值对象
 /// 
 /// 封装用户认证相关的数据和验证逻辑
-
 use serde::{Deserialize, Serialize};
 use std::fmt;
 

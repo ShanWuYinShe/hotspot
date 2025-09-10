@@ -1,7 +1,7 @@
 /// 健康检查HTTP控制器
-
-use super::{Controller, ok_response, error_response};
-use axum::response::Response;
+use super::{Controller, ok_response};
+use axum::Json;
+use axum::response::{Response, IntoResponse};
 use serde_json::json;
 use std::time::Instant;
 
@@ -88,7 +88,14 @@ impl HealthController {
         });
 
         if overall_status == "unhealthy" {
-            error_response(axum::http::StatusCode::SERVICE_UNAVAILABLE, "System unhealthy", Some(response))
+            {
+                let error_response = json!({
+                    "code": 5000,
+                    "msg": "System unhealthy",
+                    "data": response
+                });
+                (axum::http::StatusCode::OK, Json(error_response)).into_response()
+            }
         } else {
             ok_response(response)
         }

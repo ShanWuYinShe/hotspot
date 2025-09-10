@@ -1,7 +1,6 @@
 /// 用户相关HTTP模型
 /// 
 /// 迁移自models/api/user.rs，适配新架构
-
 use super::{PaginatedResponse, LocationInfo, TimestampInfo};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -57,6 +56,7 @@ pub struct AuthResponse {
     pub access_token: String,
     pub refresh_token: String,
     pub expires_at: DateTime<Utc>,
+    pub is_temp: Option<bool>,
 }
 
 /// 刷新令牌响应
@@ -129,8 +129,19 @@ pub struct SearchUsersRequest {
     pub pagination: super::Pagination,
 }
 
+/// 用户搜索结果（轻量级，仅包含必要字段）
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct UserSearchResult {
+    pub user_id: JsSafeI64,
+    pub nickname: String,
+    pub avatar_url: Option<String>,
+    pub last_active_at: DateTime<Utc>,
+    /// 是否为临时用户
+    pub is_temp: bool,
+}
+
 /// 用户搜索响应
-pub type SearchUsersResponse = PaginatedResponse<UserInfo>;
+pub type SearchUsersResponse = PaginatedResponse<UserSearchResult>;
 
 /// 用户设置
 #[derive(Debug, Serialize, Deserialize, ToSchema)]

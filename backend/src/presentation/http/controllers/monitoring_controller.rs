@@ -1,7 +1,6 @@
 /// 监控仪表板控制器
 /// 
 /// 提供系统监控和业务指标的HTTP接口
-
 use super::{Controller, ok_response};
 use axum::response::Response;
 use serde_json::json;

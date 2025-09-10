@@ -95,18 +95,18 @@ const groupForm = ref<GroupForm>({
 const isCreating = ref(false)
 
 // 表单校验
-type ValidateResult = { path: string; message: string }[]
-
-function validateGroup(): ValidateResult | void {
-  const errs: ValidateResult = []
-  const name = groupForm.value.name.trim()
-  const desc = groupForm.value.description.trim()
-  const pwd = groupForm.value.password.trim()
-  if (!name) errs.push({ path: 'name', message: '群组名称为必填项' })
-  if (name.length > 50) errs.push({ path: 'name', message: '群组名称不能超过50个字符' })
-  if (desc.length > 200) errs.push({ path: 'description', message: '群组描述不能超过200个字符' })
-  if (pwd.length > 20) errs.push({ path: 'password', message: '群组密码不能超过20个字符' })
-  return errs.length ? errs : undefined
+function validateGroup(state: any) {
+  const errors = []
+  const name = state.name?.trim() || ''
+  const desc = state.description?.trim() || ''
+  const pwd = state.password?.trim() || ''
+  
+  if (!name) errors.push({ path: 'name', message: '群组名称为必填项' })
+  if (name.length > 50) errors.push({ path: 'name', message: '群组名称不能超过50个字符' })
+  if (desc.length > 200) errors.push({ path: 'description', message: '群组描述不能超过200个字符' })
+  if (pwd.length > 20) errors.push({ path: 'password', message: '群组密码不能超过20个字符' })
+  
+  return errors
 }
 
 // 获取位置

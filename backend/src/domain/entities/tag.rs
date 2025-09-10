@@ -1,7 +1,6 @@
 /// 标签领域实体
 /// 
 /// 表示动态中使用的标签
-
 use serde::{Deserialize, Serialize};
 
 /// 标签实体

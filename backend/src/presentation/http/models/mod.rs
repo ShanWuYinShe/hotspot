@@ -2,7 +2,6 @@
 /// 
 /// 定义HTTP请求和响应的数据结构
 /// 迁移自传统models/api模块，适配新的端口适配器架构
-
 pub mod user;
 pub mod group;
 pub mod message;

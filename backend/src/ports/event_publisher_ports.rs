@@ -1,7 +1,6 @@
 /// 事件发布器端口定义
 /// 
 /// 定义领域事件发布相关的抽象接口
-
 use async_trait::async_trait;
 use crate::domain::{DomainResult, UserEvent, GroupEvent, MessageEvent, MomentEvent};
 use crate::domain::events::DomainEvent;

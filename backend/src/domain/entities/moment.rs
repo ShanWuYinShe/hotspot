@@ -1,7 +1,17 @@
 /// 生活瞬间领域实体
 /// 
-/// 包含瞬间的核心业务逻辑和状态
-
+/// 功能职责：
+/// - 定义生活瞬间核心业务实体和属性
+/// - 实现瞬间发布、编辑、删除的业务规则
+/// - 管理瞬间的地理位置和标签系统
+/// - 提供瞬间互动（点赞、评论）的业务逻辑
+/// 
+/// 业务规则：
+/// - 瞬间必须包含地理位置信息
+/// - 瞬间内容和图片的格式验证
+/// - 瞬间标签的数量和格式限制
+/// - 瞬间隐私和可见性控制
+/// - 瞬间点赞和评论的权限管理
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -50,7 +60,7 @@ pub struct Moment {
     pub id: i64,
     pub moment_id: String, // UUID as String
     pub user_id: i64,
-    pub content: Option<String>,
+    pub content: String,
     pub latitude: f64,
     pub longitude: f64,
     pub location_name: String,

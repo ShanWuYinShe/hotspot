@@ -5,6 +5,7 @@
  */
 
 import { ref, computed } from 'vue'
+import { formatDistance as formatDistanceUtil } from '~/utils/formatters'
 
 export interface Coordinates {
   latitude: number
@@ -172,14 +173,8 @@ export const useGeolocation = () => {
     return R * c
   }
 
-  // 格式化距离显示
-  const formatDistance = (distance: number): string => {
-    if (distance < 1000) {
-      return `${Math.round(distance)}m`
-    } else {
-      return `${(distance / 1000).toFixed(1)}km`
-    }
-  }
+  // 格式化距离显示（使用统一工具函数）
+  const formatDistance = formatDistanceUtil
 
   // 权限相关统一走 usePermissions
   // 移除权限请求方法：请使用 usePermissions().requestGeolocation()

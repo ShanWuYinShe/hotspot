@@ -1,12 +1,11 @@
 <template>
     <UCard
         @click="openConversation"
-        class="cursor-pointer group transition-colors"
+        class="cursor-pointer group"
         :ui="{ body: 'p-4 sm:p-5' }"
         :class="{
             'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-900/10':
                 conversation.unread_count > 0,
-            'hover:border-neutral-300 dark:hover:border-neutral-600': true,
         }"
     >
         <div class="flex items-center space-x-4">
@@ -43,7 +42,7 @@
                     </h3>
                     <div class="flex flex-col items-end space-y-1">
                         <span class="text-sm text-neutral-500 flex-shrink-0">
-                            {{ formatTime(conversation.last_message_time) }}
+                            {{ formatTimeWrapper(conversation.last_message_time) }}
                         </span>
                         <!-- 未读消息数 -->
                         <UBadge
@@ -100,30 +99,14 @@
                 </UDropdownMenu>
             </div>
         </div>
-        <!-- 删除对话确认 -->
-        <UModal v-model:open="showDelete" title="确认删除">
-            <template #body>
-                <p class="text-gray-600 dark:text-gray-300">
-                    确定要删除该对话吗？此操作不可撤销。
-                </p>
-            </template>
-            <template #footer>
-                <div class="flex justify-end space-x-2">
-                    <UButton variant="ghost" @click="showDelete = false"
-                        >取消</UButton
-                    >
-                    <UButton color="error" @click="confirmDelete">删除</UButton>
-                </div>
-            </template>
-        </UModal>
     </UCard>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { useSmartToast } from "~/composables/useSmartToast";
 import { useMessagesStore } from "~/stores/messages.store";
 import type { Conversation } from "~/types/message";
+import { formatTime } from '~/utils/formatters';
 
 interface Props {
     conversation: Conversation;
@@ -138,6 +121,8 @@ const emit = defineEmits<{
     (e: "mute", conversation: Conversation): void;
     (e: "delete", conversation: Conversation): void;
 }>();
+
+const { openConfirmModal } = useModals();
 
 const toast = useSmartToast();
 
@@ -192,21 +177,10 @@ const conversationActions = computed(() => [
     ],
 ]);
 
-// 格式化时间
-const formatTime = (timeString?: string) => {
+// 格式化时间（使用统一工具函数）
+const formatTimeWrapper = (timeString?: string) => {
     if (!timeString) return "";
-    const time = new Date(timeString);
-    const now = new Date();
-    const diff = now.getTime() - time.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-
-    if (minutes < 1) return "刚刚";
-    if (minutes < 60) return `${minutes}分钟前`;
-    if (hours < 24) return `${hours}小时前`;
-    if (days < 7) return `${days}天前`;
-    return time.toLocaleDateString();
+    return formatTime(timeString);
 };
 
 // 格式化成员数量
@@ -310,13 +284,19 @@ const clearHistory = () => {
     });
 };
 
-const showDelete = ref(false);
 const deleteConversation = () => {
-    showDelete.value = true;
+    openConfirmModal({
+        title: "确认删除",
+        message: "确定要删除该对话吗？此操作不可撤销。",
+        confirmText: "删除",
+        cancelText: "取消",
+        confirmColor: "error",
+        onConfirm: confirmDelete
+    });
 };
+
 const confirmDelete = () => {
     emit("delete", props.conversation);
     toast.add({ title: "对话已删除", color: "success" });
-    showDelete.value = false;
 };
 </script>

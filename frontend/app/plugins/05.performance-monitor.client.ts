@@ -66,9 +66,24 @@ const usePerformanceMonitor = () => {
         }
       })
 
-      observer.observe({ 
-        entryTypes: ['navigation', 'resource', 'paint', 'largest-contentful-paint', 'first-input', 'layout-shift']
-      })
+      // 分别观察不同类型的性能条目，避免不支持的 entryTypes
+      const supportedEntryTypes = ['navigation', 'resource', 'paint', 'largest-contentful-paint', 'first-input']
+      
+      // 检查并添加支持的条目类型
+      for (const entryType of supportedEntryTypes) {
+        try {
+          observer.observe({ entryTypes: [entryType] })
+        } catch (error) {
+          console.warn(`[PerformanceMonitor] 不支持的 entryType: ${entryType}`)
+        }
+      }
+      
+      // 单独尝试 layout-shift，因为某些浏览器可能不支持
+      try {
+        observer.observe({ entryTypes: ['layout-shift'] })
+      } catch (error) {
+        console.warn('[PerformanceMonitor] layout-shift 不被支持，跳过 CLS 监控')
+      }
     } catch (error) {
       console.warn('[PerformanceMonitor] Performance Observer 初始化失败:', error)
     }

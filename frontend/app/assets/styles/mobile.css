@@ -1,0 +1,118 @@
+/* 移动端专用样式 */
+
+/* 隐藏滚动条但保持滚动功能 */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
+/* 移动端触摸优化 */
+@media (max-width: 1023px) {
+  /* 增大触摸目标 */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* 移动端按钮优化 */
+  button, .button {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+  
+  /* 移动端输入框优化 */
+  input, select, textarea {
+    font-size: 16px; /* 防止iOS缩放 */
+  }
+  
+  /* 移动端卡片间距优化 */
+  .mobile-card-spacing {
+    margin-bottom: 1rem;
+  }
+  
+  /* 移动端标签导航优化 */
+  .mobile-tabs {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+  
+  /* 移动端模态框优化 */
+  .mobile-modal {
+    margin: 0;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+  
+  /* 移动端安全区域适配 */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  /* 移动端文字大小优化 */
+  .mobile-text-sm {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+  
+  .mobile-text-base {
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+  
+  .mobile-text-lg {
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+  }
+}
+
+/* 移动端横屏适配 */
+@media (max-width: 1023px) and (orientation: landscape) {
+  .landscape-compact {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+}
+
+/* 移动端深色模式优化 */
+@media (max-width: 1023px) and (prefers-color-scheme: dark) {
+  .mobile-dark-bg {
+    background-color: rgb(23 23 23); /* neutral-900 */
+  }
+  
+  .mobile-dark-card {
+    background-color: rgb(38 38 38); /* neutral-800 */
+    border-color: rgb(64 64 64); /* neutral-700 */
+  }
+}
+
+/* 移动端手势优化 */
+.mobile-swipe-area {
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 移动端性能优化 */
+.mobile-gpu-accelerated {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform;
+}
+
+/* 移动端焦点状态优化 */
+@media (max-width: 1023px) {
+  button:focus,
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: 2px solid rgb(59 130 246); /* blue-500 */
+    outline-offset: 2px;
+  }
+}

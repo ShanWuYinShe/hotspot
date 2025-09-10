@@ -1,9 +1,8 @@
 /// 结果扩展工具
 /// 
 /// 提供Result类型的扩展方法，兼容新架构
-
 use crate::domain::{DomainError, DomainResult};
-use crate::ports::repositories::RepoPortError;
+// RepoPortError 已移除，现在直接使用 DomainError
 use crate::utils::response::AppError;
 
 /// 结果扩展trait
@@ -25,29 +24,10 @@ pub trait ResultExt<T> {
         Self: Sized;
 }
 
-// 为 RepoPortError 提供专门的实现
-impl<T> ResultExt<T> for Result<T, RepoPortError> {
+// 为 DomainError 提供专门的实现
+impl<T> ResultExt<T> for DomainResult<T> {
     fn to_domain_result(self) -> DomainResult<T> {
-        self.map_err(|e| match e {
-            RepoPortError::NotFound(msg) => DomainError::BusinessRuleViolation {
-                rule: format!("Resource not found: {}", msg),
-            },
-            RepoPortError::Database(db_err) => DomainError::BusinessRuleViolation {
-                rule: format!("Database error: {}", db_err),
-            },
-            RepoPortError::InvalidArgument(msg) => DomainError::BusinessRuleViolation {
-                rule: format!("Invalid argument: {}", msg),
-            },
-            RepoPortError::Other(msg) => DomainError::BusinessRuleViolation {
-                rule: format!("Repository error: {}", msg),
-            },
-            RepoPortError::Connection(msg) => DomainError::BusinessRuleViolation {
-                rule: format!("Connection error: {}", msg),
-            },
-            RepoPortError::Timeout(msg) => DomainError::BusinessRuleViolation {
-                rule: format!("Timeout error: {}", msg),
-            },
-        })
+        self
     }
     
     fn to_domain_result_with_message(self, message: &str) -> DomainResult<T> {
@@ -58,23 +38,28 @@ impl<T> ResultExt<T> for Result<T, RepoPortError> {
     
     fn map_repository_error(self, operation: &str) -> Result<T, AppError> {
         self.map_err(|e| match e {
-            RepoPortError::NotFound(msg) => AppError::NotFound(format!("{}: {}", operation, msg)),
-            RepoPortError::Database(db_err) => {
-                tracing::error!("{}: 数据库错误: {}", operation, db_err);
-                AppError::InternalServerError(format!("{}: 数据库操作失败", operation))
+            DomainError::BusinessRuleViolation { rule } => {
+                if rule.contains("not found") || rule.contains("未找到") {
+                    AppError::NotFound(format!("{}: 资源未找到", operation))
+                } else if rule.contains("invalid") || rule.contains("无效") {
+                    AppError::BadRequest(format!("{}: {}", operation, rule))
+                } else {
+                    tracing::error!("{}: {}", operation, rule);
+                    AppError::InternalServerError(format!("{}: 操作失败", operation))
+                }
             },
-            RepoPortError::InvalidArgument(msg) => AppError::BadRequest(format!("{}: {}", operation, msg)),
-            RepoPortError::Other(msg) => {
-                tracing::error!("{}: {}", operation, msg);
+            DomainError::ValidationError { field, reason } => {
+                AppError::BadRequest(format!("{}: 字段 {} 验证失败: {}", operation, field, reason))
+            },
+            DomainError::NotFound { resource } => {
+                AppError::NotFound(format!("{}: {} 未找到", operation, resource))
+            },
+            DomainError::Unauthorized { reason } => {
+                AppError::Unauthorized(format!("{}: {}", operation, reason))
+            },
+            _ => {
+                tracing::error!("{}: 未处理的领域错误: {:?}", operation, e);
                 AppError::InternalServerError(format!("{}: 操作失败", operation))
-            },
-            RepoPortError::Connection(msg) => {
-                tracing::error!("{}: 连接错误: {}", operation, msg);
-                AppError::InternalServerError(format!("{}: 连接失败", operation))
-            },
-            RepoPortError::Timeout(msg) => {
-                tracing::error!("{}: 超时错误: {}", operation, msg);
-                AppError::InternalServerError(format!("{}: 请求超时", operation))
             },
         })
     }
@@ -83,8 +68,8 @@ impl<T> ResultExt<T> for Result<T, RepoPortError> {
         self.map_err(|e| {
             tracing::error!("{}: {:?}", operation, e);
             match e {
-                RepoPortError::NotFound(_) => AppError::NotFound(user_msg.to_string()),
-                RepoPortError::InvalidArgument(_) => AppError::BadRequest(user_msg.to_string()),
+                DomainError::NotFound { .. } => AppError::NotFound(user_msg.to_string()),
+                DomainError::ValidationError { .. } => AppError::BadRequest(user_msg.to_string()),
                 _ => AppError::InternalServerError(user_msg.to_string()),
             }
         })

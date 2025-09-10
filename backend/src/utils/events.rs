@@ -107,11 +107,11 @@ pub mod audit_handler {
 
     #[derive(Clone)]
     pub struct AuditEventsHandler {
-        audit: Arc<AuditService<NoopAuditSink>>, // 默认 Noop，可在未来替换为具体实现
+        audit: Arc<AuditService>, // 默认 Noop，可在未来替换为具体实现
     }
 
     impl AuditEventsHandler {
-        pub fn new(audit: Arc<AuditService<NoopAuditSink>>) -> Self { Self { audit } }
+        pub fn new(audit: Arc<AuditService>) -> Self { Self { audit } }
         pub fn name(&self) -> &'static str { "audit_events" }
     }
 
@@ -269,11 +269,11 @@ pub mod jobs_handler {
 
     #[derive(Clone)]
     pub struct JobsEventsHandler {
-        jobs: Arc<dyn JobDispatcherPort>,
+        jobs: Option<Arc<crate::adapters::adapters_jobs_redis::RedisJobDispatcher>>,
     }
 
     impl JobsEventsHandler {
-        pub fn new(jobs: Arc<dyn JobDispatcherPort>) -> Self { Self { jobs } }
+        pub fn new(jobs: Option<Arc<crate::adapters::adapters_jobs_redis::RedisJobDispatcher>>) -> Self { Self { jobs } }
         pub fn name(&self) -> &'static str { "jobs_events" }
 
         pub async fn handle(&self, event: &DomainEvent) {

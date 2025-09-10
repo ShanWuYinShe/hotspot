@@ -11,6 +11,9 @@
         <NuxtLayout>
             <NuxtPage />
         </NuxtLayout>
+        
+        <!-- 全局 PIN 输入模态框 -->
+        <GlobalPinModal />
     </UApp>
 </template>
 

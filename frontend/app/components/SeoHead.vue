@@ -77,11 +77,11 @@ useSeoMeta({
   twitterCreator: props.author,
   
   // 文章特定元数据
-  articleAuthor: props.type === 'article' ? props.author : undefined,
+  articleAuthor: props.type === 'article' && props.author ? [props.author] : undefined,
   articlePublishedTime: props.type === 'article' ? props.publishedTime : undefined,
   articleModifiedTime: props.type === 'article' ? props.modifiedTime : undefined,
   articleSection: props.type === 'article' ? props.section : undefined,
-  articleTag: props.type === 'article' ? tagsString : undefined,
+  articleTag: props.type === 'article' && tagsString.value ? [tagsString.value] : undefined,
   
   // 个人资料特定元数据
   profileFirstName: props.type === 'profile' ? props.author?.split(' ')[0] : undefined,
@@ -89,13 +89,15 @@ useSeoMeta({
   profileUsername: props.type === 'profile' ? props.author : undefined,
   
   // 技术元数据
-  robots: 'index, follow',
-  googlebot: 'index, follow',
+  robots: { index: true, follow: true },
+  // googlebot: { index: true, follow: true }, // 暂时注释掉，类型不匹配
   viewport: 'width=device-width, initial-scale=1',
   charset: 'utf-8'
 })
 
 // 设置结构化数据
+// 注意：useJsonld 功能暂未实现，保留代码作为未来参考
+/*
 useJsonld(() => {
   const baseSchema = {
     '@context': 'https://schema.org',
@@ -141,6 +143,7 @@ useJsonld(() => {
     }
   }
 })
+*/
 
 function getSchemaType() {
   switch (props.type) {

@@ -1,9 +1,211 @@
-/// 用户领域实体
+/// 用户领域实体 - 三层数据结构设计
 /// 
-/// 包含用户的核心业务逻辑和状态
-
+/// 架构说明：
+/// 1. Row结构体：仅在Repository层使用，对应数据库字段
+/// 2. Domain模型：核心业务模型，在Application和Presentation层传递
+/// 3. API模型：在Presentation层定义，用于HTTP响应序列化
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use crate::domain::{values::*, events::*, DomainError, DomainResult};
+
+// ===== 核心实体 =====
+
+
+/// 用户实体 - 用户聚合根
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct User {
+    /// 用户ID（聚合根标识）
+    pub id: UserId,
+    /// 登录ID（可选，临时用户无登录ID）
+    pub login_id: Option<String>,
+    /// 用户昵称
+    pub nickname: Nickname,
+    /// 邮箱地址
+    pub email: Option<String>,
+    /// 头像URL
+    pub avatar_url: Option<String>,
+    /// 个人简介
+    pub bio: Option<String>,
+    /// 密码哈希（可选，临时用户无密码）
+    pub password_hash: Option<String>,
+    /// 用户类型
+    pub user_type: UserType,
+    /// 过期时间（临时用户）
+    pub expires_at: Option<DateTime<Utc>>,
+    /// 创建时间
+    pub created_at: DateTime<Utc>,
+    /// 最后活跃时间
+    pub last_active_at: DateTime<Utc>,
+    /// 当前位置
+    pub location: Option<UserLocation>,
+    /// 领域事件（待发布）
+    #[serde(skip)]
+    pub events: Vec<DomainEvent>,
+}
+
+impl User {
+    /// 创建新用户
+    pub fn new(
+        id: UserId,
+        nickname: Nickname,
+        user_type: UserType,
+    ) -> Self {
+        let now = Utc::now();
+        
+        let mut user = Self {
+            id,
+            login_id: None,
+            nickname,
+            email: None,
+            avatar_url: None,
+            bio: None,
+            password_hash: None,
+            user_type,
+            expires_at: if user_type == UserType::Temporary {
+                Some(now + chrono::Duration::days(7)) // 临时用户7天后过期
+            } else {
+                None
+            },
+            created_at: now,
+            last_active_at: now,
+            location: None,
+            events: Vec::new(),
+        };
+        
+        // 发布用户创建事件
+        user.add_event(DomainEvent::UserRegistered {
+            user_id: id,
+            user_type,
+            created_at: now,
+        });
+        
+        user
+    }
+    
+    /// 添加领域事件
+    pub fn add_event(&mut self, event: DomainEvent) {
+        self.events.push(event);
+    }
+    
+    /// 获取并清空领域事件
+    pub fn take_events(&mut self) -> Vec<DomainEvent> {
+        std::mem::take(&mut self.events)
+    }
+    
+    /// 更新用户资料
+    pub fn update_profile(
+        &mut self,
+        nickname: Option<Nickname>,
+        email: Option<String>,
+        bio: Option<String>,
+        avatar_url: Option<String>,
+    ) -> DomainResult<()> {
+        let mut updated = false;
+        
+        if let Some(new_nickname) = nickname {
+            if self.nickname != new_nickname {
+                self.nickname = new_nickname;
+                updated = true;
+            }
+        }
+        
+        if email.is_some() && self.email != email {
+            self.email = email;
+            updated = true;
+        }
+        
+        if bio.is_some() && self.bio != bio {
+            self.bio = bio;
+            updated = true;
+        }
+        
+        if avatar_url.is_some() && self.avatar_url != avatar_url {
+            self.avatar_url = avatar_url;
+            updated = true;
+        }
+        
+        if updated {
+            self.add_event(DomainEvent::UserProfileUpdated {
+                user_id: self.id,
+                updated_at: Utc::now(),
+            });
+        }
+        
+        Ok(())
+    }
+    
+    /// 设置密码
+    pub fn set_password(&mut self, password_hash: String) -> DomainResult<()> {
+        self.password_hash = Some(password_hash);
+        
+        self.add_event(DomainEvent::UserPasswordSet {
+            user_id: self.id,
+            updated_at: Utc::now(),
+        });
+        
+        Ok(())
+    }
+    
+    /// 更新位置
+    pub fn update_location(&mut self, location: UserLocation) -> DomainResult<()> {
+        self.location = Some(location);
+        self.last_active_at = Utc::now();
+        
+        self.add_event(DomainEvent::UserLocationUpdated {
+            user_id: self.id,
+            coordinates: location.coordinates,
+            updated_at: Utc::now(),
+        });
+        
+        Ok(())
+    }
+    
+    /// 升级临时用户为正式用户
+    pub fn upgrade_to_regular(&mut self, login_id: String, password_hash: String) -> DomainResult<()> {
+        if self.user_type != UserType::Temporary {
+            return Err(DomainError::BusinessRuleViolation {
+                rule: "Only temporary users can be upgraded".to_string(),
+            });
+        }
+        
+        self.user_type = UserType::Regular;
+        self.login_id = Some(login_id);
+        self.password_hash = Some(password_hash);
+        self.expires_at = None;
+        
+        self.add_event(DomainEvent::UserUpgraded {
+            user_id: self.id,
+            upgraded_at: Utc::now(),
+        });
+        
+        Ok(())
+    }
+    
+    /// 检查用户是否过期
+    pub fn is_expired(&self) -> bool {
+        if let Some(expires_at) = self.expires_at {
+            Utc::now() > expires_at
+        } else {
+            false
+        }
+    }
+    
+    /// 检查是否为临时用户
+    pub fn is_temporary(&self) -> bool {
+        self.user_type == UserType::Temporary
+    }
+}
+
+/// 用户位置信息
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserLocation {
+    /// 地理坐标
+    pub coordinates: Coordinates,
+    /// 位置名称
+    pub location_name: String,
+    /// 更新时间
+    pub updated_at: DateTime<Utc>,
+}
 
 /// 用户类型枚举
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -22,103 +224,233 @@ impl UserType {
         }
     }
     
+    pub fn from_str(s: &str) -> Result<Self, String> {
+        match s {
+            "regular" => Ok(UserType::Regular),
+            "temporary" => Ok(UserType::Temporary),
+            _ => Err(format!("Invalid user type: {}", s)),
+        }
+    }
+    
     pub fn is_temporary(&self) -> bool {
         matches!(self, UserType::Temporary)
     }
 }
 
-/// 用户实体
+// sqlx类型映射
+#[cfg(feature = "postgres")]
+impl sqlx::Type<sqlx::Postgres> for UserType {
+    fn type_info() -> sqlx::postgres::PgTypeInfo {
+        sqlx::postgres::PgTypeInfo::with_name("user_type_enum")
+    }
+}
+
+#[cfg(feature = "postgres")]
+impl<'r> sqlx::Decode<'r, sqlx::Postgres> for UserType {
+    fn decode(value: sqlx::postgres::PgValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
+        match value.as_str()? {
+            "regular" => Ok(UserType::Regular),
+            "temporary" => Ok(UserType::Temporary),
+            other => Err(format!("Unknown user type: {}", other).into()),
+        }
+    }
+}
+
+#[cfg(feature = "postgres")]
+impl<'q> sqlx::Encode<'q, sqlx::Postgres> for UserType {
+    fn encode_by_ref(&self, buf: &mut sqlx::postgres::PgArgumentBuffer) -> Result<sqlx::encode::IsNull, Box<dyn std::error::Error + Send + Sync + 'static>> {
+        <&str as sqlx::Encode<sqlx::Postgres>>::encode_by_ref(&self.as_str(), buf)
+    }
+}
+
+// ===== 领域模型层 (Domain Models) =====
+// 这些是核心业务模型，在Application和Presentation层之间传递
+
+/// 用户基础资料（最常用的轻量级模型）
+/// 用途：用户列表、搜索结果、资料展示、聊天显示等90%的场景
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct User {
-    /// 数据库自增主键
-    pub id: i64,
+pub struct UserProfile {
+    /// 业务用户ID
+    pub user_id: i64,
+    /// 用户昵称
+    pub nickname: String,
+    /// 头像URL
+    pub avatar_url: Option<String>,
+    /// 用户类型
+    pub user_type: UserType,
+    /// 最后活跃时间
+    pub last_active_at: DateTime<Utc>,
+}
+
+/// 用户认证信息（仅用于认证场景）
+/// 用途：登录验证、密码检查等认证相关操作
+/// 注意：不实现Serialize，防止意外序列化敏感信息
+#[derive(Debug, Clone)]
+pub struct UserAuth {
     /// 业务用户ID
     pub user_id: i64,
     /// 登录ID（用户名）
     pub login_id: Option<String>,
     /// 用户昵称
     pub nickname: String,
-    /// 密码哈希
+    /// 密码哈希（仅认证时需要）
     pub password_hash: Option<String>,
-    /// 用户类型（通过expires_at判断）
+    /// 用户类型
     pub user_type: UserType,
+    /// 头像URL
+    pub avatar_url: Option<String>,
+}
+
+/// 用户详细信息（包含敏感信息，仅特定场景使用）
+/// 用途：用户设置页面、账户管理等需要完整信息的场景
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserDetail {
+    /// 业务用户ID
+    pub user_id: i64,
+    /// 登录ID（用户名）
+    pub login_id: Option<String>,
+    /// 用户昵称
+    pub nickname: String,
     /// 邮箱
     pub email: Option<String>,
     /// 头像URL
     pub avatar_url: Option<String>,
-    /// 过期时间（临时用户使用）
-    pub expires_at: Option<DateTime<Utc>>,
-    /// 创建时间
-    pub created_at: DateTime<Utc>,
-    /// 更新时间
-    pub updated_at: DateTime<Utc>,
+    /// 用户类型
+    pub user_type: UserType,
     /// 最后活跃时间
     pub last_active_at: DateTime<Utc>,
+    /// 创建时间
+    pub created_at: DateTime<Utc>,
+    /// 过期时间（临时用户）
+    pub expires_at: Option<DateTime<Utc>>,
 }
 
-impl User {
-    /// 创建新的正式用户
-    pub fn new_regular(user_id: i64, login_id: String, nickname: String, password_hash: String) -> Self {
-        let now = Utc::now();
+/// 用户搜索结果（专用于搜索场景）
+/// 用途：搜索API返回，包含距离等搜索相关字段
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserSearchResult {
+    /// 业务用户ID
+    pub user_id: i64,
+    /// 用户昵称
+    pub nickname: String,
+    /// 头像URL
+    pub avatar_url: Option<String>,
+    /// 用户类型
+    pub user_type: UserType,
+    /// 最后活跃时间
+    pub last_active_at: DateTime<Utc>,
+    /// 距离（米，仅地理位置搜索时有值）
+    pub distance: Option<f64>,
+    /// 是否有位置信息
+    pub has_location: bool,
+}
+
+// ===== 领域模型实现 =====
+
+impl UserProfile {
+    /// 创建新的用户资料
+    pub fn new(
+        user_id: i64,
+        nickname: String,
+        avatar_url: Option<String>,
+        user_type: UserType,
+        last_active_at: DateTime<Utc>,
+    ) -> Self {
         Self {
-            id: 0, // 将由数据库生成
             user_id,
-            login_id: Some(login_id),
             nickname,
-            password_hash: Some(password_hash),
-            user_type: UserType::Regular,
-            email: None,
-            avatar_url: None,
-            expires_at: None,
-            created_at: now,
-            updated_at: now,
-            last_active_at: now,
+            avatar_url,
+            user_type,
+            last_active_at,
         }
     }
-    
-    /// 更新用户昵称
-    pub fn update_nickname(&mut self, nickname: String) -> Result<(), String> {
-        if nickname.is_empty() {
-            return Err("昵称不能为空".to_string());
-        }
-        if nickname.len() > 32 {
-            return Err("昵称长度不能超过32个字符".to_string());
-        }
-        self.nickname = nickname;
-        self.updated_at = Utc::now();
-        Ok(())
-    }
-    
-    /// 创建新的临时用户
-    pub fn new_temporary(user_id: i64, nickname: String, expires_at: DateTime<Utc>) -> Self {
-        let now = Utc::now();
-        Self {
-            id: 0, // 将由数据库生成
-            user_id,
-            login_id: None,
-            nickname,
-            password_hash: None,
-            user_type: UserType::Temporary,
-            email: None,
-            avatar_url: None,
-            expires_at: Some(expires_at),
-            created_at: now,
-            updated_at: now,
-            last_active_at: now,
-        }
-    }
-    
-    /// 检查用户是否有密码
-    pub fn has_password(&self) -> bool {
-        self.password_hash.is_some()
-    }
-    
-    /// 检查用户是否为临时用户
+
+    /// 判断是否为临时用户
     pub fn is_temporary(&self) -> bool {
         self.user_type.is_temporary()
     }
-    
-    /// 检查用户是否已过期（仅对临时用户有效）
+}
+
+impl UserAuth {
+    /// 创建新的用户认证信息
+    pub fn new(
+        user_id: i64,
+        login_id: Option<String>,
+        nickname: String,
+        password_hash: Option<String>,
+        user_type: UserType,
+        avatar_url: Option<String>,
+    ) -> Self {
+        Self {
+            user_id,
+            login_id,
+            nickname,
+            password_hash,
+            user_type,
+            avatar_url,
+        }
+    }
+
+    /// 验证密码哈希是否存在
+    pub fn has_password(&self) -> bool {
+        self.password_hash.is_some()
+    }
+
+    /// 获取密码哈希（仅用于验证）
+    pub fn get_password_hash(&self) -> Option<&str> {
+        self.password_hash.as_deref()
+    }
+
+    /// 转换为用户资料（移除敏感信息）
+    pub fn to_profile(&self) -> UserProfile {
+        UserProfile {
+            user_id: self.user_id,
+            nickname: self.nickname.clone(),
+            avatar_url: self.avatar_url.clone(),
+            user_type: self.user_type,
+            last_active_at: Utc::now(), // 认证时更新活跃时间
+        }
+    }
+}
+
+impl UserDetail {
+    /// 创建新的用户详细信息
+    pub fn new(
+        user_id: i64,
+        login_id: Option<String>,
+        nickname: String,
+        email: Option<String>,
+        avatar_url: Option<String>,
+        user_type: UserType,
+        last_active_at: DateTime<Utc>,
+        created_at: DateTime<Utc>,
+        expires_at: Option<DateTime<Utc>>,
+    ) -> Self {
+        Self {
+            user_id,
+            login_id,
+            nickname,
+            email,
+            avatar_url,
+            user_type,
+            last_active_at,
+            created_at,
+            expires_at,
+        }
+    }
+
+    /// 转换为用户资料
+    pub fn to_profile(&self) -> UserProfile {
+        UserProfile {
+            user_id: self.user_id,
+            nickname: self.nickname.clone(),
+            avatar_url: self.avatar_url.clone(),
+            user_type: self.user_type,
+            last_active_at: self.last_active_at,
+        }
+    }
+
+    /// 判断是否已过期（仅临时用户）
     pub fn is_expired(&self) -> bool {
         if let Some(expires_at) = self.expires_at {
             Utc::now() > expires_at
@@ -126,87 +458,71 @@ impl User {
             false
         }
     }
-    
-    /// 更新最后活跃时间
-    pub fn update_last_active(&mut self) {
-        self.last_active_at = Utc::now();
+}
+
+impl UserSearchResult {
+    /// 创建新的用户搜索结果
+    pub fn new(
+        user_id: i64,
+        nickname: String,
+        avatar_url: Option<String>,
+        user_type: UserType,
+        last_active_at: DateTime<Utc>,
+        distance: Option<f64>,
+        has_location: bool,
+    ) -> Self {
+        Self {
+            user_id,
+            nickname,
+            avatar_url,
+            user_type,
+            last_active_at,
+            distance,
+            has_location,
+        }
     }
-    
-    /// 更新邮箱
-    pub fn update_email(&mut self, email: Option<String>) -> Result<(), String> {
-        if let Some(ref email) = email {
-            if !email.contains('@') {
-                return Err("邮箱格式无效".to_string());
-            }
-            if email.len() > 255 {
-                return Err("邮箱长度不能超过255个字符".to_string());
-            }
+
+    /// 从用户资料创建搜索结果
+    pub fn from_profile(profile: UserProfile, distance: Option<f64>, has_location: bool) -> Self {
+        Self {
+            user_id: profile.user_id,
+            nickname: profile.nickname,
+            avatar_url: profile.avatar_url,
+            user_type: profile.user_type,
+            last_active_at: profile.last_active_at,
+            distance,
+            has_location,
         }
-        self.email = email;
-        self.updated_at = Utc::now();
-        Ok(())
     }
-    
-    /// 更新头像URL
-    pub fn update_avatar_url(&mut self, avatar_url: Option<String>) {
-        self.avatar_url = avatar_url;
-        self.updated_at = Utc::now();
-    }
-    
-    /// 升级临时用户为正式用户
-    pub fn upgrade_to_regular(&mut self, login_id: String, password_hash: String) -> Result<(), String> {
-        if !self.is_temporary() {
-            return Err("只有临时用户可以升级为正式用户".to_string());
-        }
-        
-        self.login_id = Some(login_id);
-        self.password_hash = Some(password_hash);
-        self.user_type = UserType::Regular;
-        self.updated_at = Utc::now();
-        
-        Ok(())
-    }
-    
-    /// 设置用户密码
-    pub fn set_password(&mut self, password_hash: String) -> Result<(), String> {
-        self.password_hash = Some(password_hash);
-        self.updated_at = Utc::now();
-        Ok(())
-    }
-    
-    /// 验证用户数据的完整性
-    pub fn validate(&self) -> Result<(), Vec<String>> {
-        let mut errors = Vec::new();
-        
-        if self.nickname.is_empty() {
-            errors.push("昵称不能为空".to_string());
-        }
-        
-        if self.nickname.len() > 32 {
-            errors.push("昵称长度不能超过32个字符".to_string());
-        }
-        
-        if self.user_type == UserType::Regular {
-            if self.login_id.is_none() {
-                errors.push("正式用户必须有登录ID".to_string());
-            }
-            
-            if self.password_hash.is_none() {
-                errors.push("正式用户必须有密码".to_string());
-            }
-        }
-        
-        if let Some(ref login_id) = self.login_id {
-            if login_id.is_empty() || login_id.len() > 100 {
-                errors.push("登录ID长度必须在1-100个字符之间".to_string());
-            }
-        }
-        
-        if errors.is_empty() {
-            Ok(())
-        } else {
-            Err(errors)
+
+    /// 转换为用户资料
+    pub fn to_profile(&self) -> UserProfile {
+        UserProfile {
+            user_id: self.user_id,
+            nickname: self.nickname.clone(),
+            avatar_url: self.avatar_url.clone(),
+            user_type: self.user_type,
+            last_active_at: self.last_active_at,
         }
     }
 }
 
+// ===== 类型转换实现 =====
+
+impl From<UserDetail> for UserProfile {
+    fn from(detail: UserDetail) -> Self {
+        detail.to_profile()
+    }
+}
+
+impl From<UserAuth> for UserProfile {
+    fn from(auth: UserAuth) -> Self {
+        auth.to_profile()
+    }
+}
+
+impl From<UserSearchResult> for UserProfile {
+    fn from(result: UserSearchResult) -> Self {
+        result.to_profile()
+    }
+}

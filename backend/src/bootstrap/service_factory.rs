@@ -1,27 +1,56 @@
 /// 统一服务工厂
 /// 
 /// 负责创建和组装所有应用服务、基础设施服务和WebSocket服务
-
+/// 服务工厂模块
+/// 
+/// 功能职责：
+/// - 实现应用程序的服务工厂模式
+/// - 管理所有服务的创建和依赖注入
+/// - 协调各层组件的初始化和装配
+/// - 提供统一的服务容器和生命周期管理
+/// - 实现模块化的系统架构和组件解耦
+/// 
+/// 服务层次：
+/// - 适配器层：数据库、缓存、通知等基础设施
+/// - 应用服务层：业务用例和应用逻辑实现
+/// - 控制器层：HTTP API 和 WebSocket 接口处理
+/// - 中间件层：认证、限流、日志等横切关注
+/// 
+/// 依赖管理：
+/// - 使用强类型系统和泛型约束
+/// - 实现依赖倒置原则和接口隔离
+/// - 支持可插拔的组件实现和配置切换
+/// - 提供统一的错误处理和资源管理
+/// 
+/// 初始化流程：
+/// 1. 加载配置和环境变量
+/// 2. 创建数据库连接池和基础设施
+/// 3. 初始化适配器层组件
+/// 4. 创建应用服务和业务逻辑
+/// 5. 装配控制器和路由系统
+/// 6. 启动后台任务和监控服务
 use std::sync::Arc;
 use tracing::info;
 
 use crate::adapters::{
-    PgUserRepository, 
+    PostgresUserRepository, 
     PgGroupRepository, 
     PgMessageRepository, 
     PgMomentRepository,
     PgFriendRepository,
+    PgCommentRepository,
     Argon2PasswordService,
     LogEventPublisher,
 };
-use crate::application::services::{
+use crate::application::{
     UserApplicationService,
     GroupApplicationService, 
     MessageApplicationService,
     MomentApplicationService,
     SearchApplicationServiceImpl,
     ActivityApplicationService,
-    FriendApplicationService,
+    FriendApplicationServiceImpl,
+    CommentApplicationServiceImpl,
 };
 use crate::presentation::http::{
     UserController,
@@ -30,16 +59,17 @@ use crate::presentation::http::{
     SearchController,
     ActivityController,
     FriendController,
+    CommentController,
 };
 use crate::presentation::http::controllers::MessageController;
 use crate::presentation::ws::WebSocketManager;
 use crate::ports::{
-    UserRepositoryPort,
-    GroupRepositoryPort,
+    UserRepository,
+    GroupRepository,
     // 移除了MessageRepositoryPort
-    MomentRepositoryPort,
-    PasswordServicePort,
-    EventPublisherPort,
+    MomentRepository,
+    PasswordService,
+    EventPublisher,
 };
 use crate::bootstrap::HybridConfigManager;
 
@@ -48,11 +78,12 @@ use crate::bootstrap::HybridConfigManager;
 /// 包含所有已创建的服务实例
 pub struct ServiceContainer {
     // 仓储层
-    pub user_repository: Arc<PgUserRepository>,
+    pub user_repository: Arc<PostgresUserRepository>,
     pub group_repository: Arc<PgGroupRepository>,
     pub message_repository: Arc<PgMessageRepository>,
     pub moment_repository: Arc<PgMomentRepository>,
     pub friend_repository: Arc<PgFriendRepository>,
+    pub comment_repository: Arc<PgCommentRepository>,
     
     // 基础设施服务
     pub password_service: Arc<Argon2PasswordService>,
@@ -63,7 +94,8 @@ pub struct ServiceContainer {
     pub group_app_service: GroupApplicationService,
     pub message_app_service: MessageApplicationService,
     pub moment_app_service: MomentApplicationService,
-    pub friend_app_service: FriendApplicationService<PgFriendRepository, PgUserRepository>,
+    pub friend_app_service: FriendApplicationServiceImpl<PgFriendRepository, PostgresUserRepository>,
+    pub comment_app_service: CommentApplicationServiceImpl<PgCommentRepository>,
     
     // 控制器
     pub user_controller: UserController<UserApplicationService>,
@@ -71,12 +103,13 @@ pub struct ServiceContainer {
     pub message_controller: MessageController,
     pub moment_controller: MomentController<MomentApplicationService>,
     pub search_controller: SearchController,
-    pub activity_controller: ActivityController<PgUserRepository, PgGroupRepository, PgMomentRepository>,
-    pub friend_controller: FriendController<PgFriendRepository, PgUserRepository>,
+    pub activity_controller: ActivityController<PostgresUserRepository, PgGroupRepository, PgMomentRepository>,
+    pub friend_controller: FriendController<FriendApplicationServiceImpl<PgFriendRepository, PostgresUserRepository>>,
+    pub comment_controller: CommentController<PgCommentRepository>,
     pub upload_controller: crate::presentation::http::controllers::UploadController,
     
     // WebSocket系统
-    pub websocket_manager: Arc<WebSocketManager<PgUserRepository>>,
+    pub websocket_manager: Arc<WebSocketManager<PostgresUserRepository>>,
 }
 
 /// 服务工厂
@@ -93,7 +126,7 @@ impl ServiceFactory {
         info!("📦 创建仓储层服务...");
         let database = config_manager.database();
         let pool = database.pg_pool().clone();
-        let user_repository = Arc::new(PgUserRepository::new(pool.clone()));
+        let user_repository = Arc::new(PostgresUserRepository::new(pool.clone()));
         let group_repository = Arc::new(PgGroupRepository::new(pool.clone()));
         let message_repository = Arc::new(PgMessageRepository::new(pool.clone()));
         let moment_repository = Arc::new(PgMomentRepository::new(pool.clone()));
@@ -102,34 +135,40 @@ impl ServiceFactory {
         // 创建基础设施服务
         info!("🔧 创建基础设施服务...");
         let password_service = Arc::new(Argon2PasswordService::new());
-        let event_publisher = Arc::new(LogEventPublisher::default());
+        let event_publisher = Arc::new(LogEventPublisher);
         
         // 创建应用服务
         info!("⚙️ 创建应用服务...");
         let user_app_service = UserApplicationService::new(
-            user_repository.clone() as Arc<dyn UserRepositoryPort>,
-            password_service.clone() as Arc<dyn PasswordServicePort>,
-            event_publisher.clone() as Arc<dyn EventPublisherPort>,
+            user_repository.clone() as Arc<dyn UserRepository>,
+            password_service.clone() as Arc<dyn PasswordService>,
+            event_publisher.clone() as Arc<dyn EventPublisher>,
         );
         
         let group_app_service = GroupApplicationService::new(
-            group_repository.clone() as Arc<dyn GroupRepositoryPort>,
-            password_service.clone() as Arc<dyn PasswordServicePort>,
+            group_repository.clone() as Arc<dyn GroupRepository>,
+            password_service.clone() as Arc<dyn PasswordService>,
+            user_repository.clone() as Arc<dyn UserRepository>,
+            event_publisher.clone() as Arc<dyn EventPublisher>,
         );
         
         let message_app_service = MessageApplicationService::new(
             message_repository.clone(),
+            user_repository.clone() as Arc<dyn UserRepository>,
+            event_publisher.clone() as Arc<dyn EventPublisher>,
         );
         
         let moment_app_service = MomentApplicationService::new(
-            moment_repository.clone() as Arc<dyn MomentRepositoryPort>,
+            moment_repository.clone() as Arc<dyn MomentRepository>,
+            user_repository.clone() as Arc<dyn UserRepository>,
+            event_publisher.clone() as Arc<dyn EventPublisher>,
         );
         
         // 创建搜索应用服务
         let search_app_service = Arc::new(SearchApplicationServiceImpl::new(
-            user_repository.clone() as Arc<dyn UserRepositoryPort>,
-            group_repository.clone() as Arc<dyn GroupRepositoryPort>,
-            moment_repository.clone() as Arc<dyn MomentRepositoryPort>,
+            user_repository.clone() as Arc<dyn UserRepository>,
+            group_repository.clone() as Arc<dyn GroupRepository>,
+            moment_repository.clone() as Arc<dyn MomentRepository>,
         ));
         
         // 创建活动应用服务
@@ -140,10 +179,10 @@ impl ServiceFactory {
         );
         
         // 创建好友应用服务
-        let friend_app_service = FriendApplicationService::new(
+        let friend_app_service = FriendApplicationServiceImpl::new(
             friend_repository.clone(),
             user_repository.clone(),
-            pool.clone(),
+            event_publisher.clone() as Arc<dyn EventPublisher>,
         );
         
         // 创建控制器
@@ -152,9 +191,22 @@ impl ServiceFactory {
         let group_controller = GroupController::new(group_app_service.clone());
         let message_controller = MessageController::new(message_app_service.clone());
         let moment_controller = MomentController::new(moment_app_service.clone());
-        let search_controller = SearchController::new(search_app_service.clone() as Arc<dyn crate::application::services::SearchApplicationService>);
+        let search_controller = SearchController::new(search_app_service.clone() as Arc<dyn crate::application::SearchApplicationService>);
         let activity_controller = ActivityController::new(activity_app_service);
         let friend_controller = FriendController::new(friend_app_service.clone());
+        
+        // 创建评论应用服务和控制器
+        info!("💬 创建评论系统...");
+        let comment_repository = Arc::new(crate::adapters::PgCommentRepository::new(pool.clone()));
+        let comment_repository_for_controller = comment_repository.as_ref().clone();
+        let comment_app_service = crate::application::CommentApplicationServiceImpl::new(
+            comment_repository.clone(),
+            user_repository.clone() as Arc<dyn UserRepository>,
+            event_publisher.clone() as Arc<dyn EventPublisher>,
+        );
+        let comment_controller = crate::presentation::http::controllers::CommentController::new(
+            comment_repository_for_controller
+        );
         
         // 创建文件上传控制器
         info!("📁 创建文件上传控制器...");
@@ -172,6 +224,7 @@ impl ServiceFactory {
             message_repository,
             moment_repository,
             friend_repository,
+            comment_repository,
             password_service,
             event_publisher,
             user_app_service,
@@ -179,6 +232,7 @@ impl ServiceFactory {
             message_app_service,
             moment_app_service,
             friend_app_service,
+            comment_app_service,
             user_controller,
             group_controller,
             message_controller,
@@ -186,6 +240,7 @@ impl ServiceFactory {
             search_controller,
             activity_controller,
             friend_controller,
+            comment_controller,
             upload_controller,
             websocket_manager,
         })
@@ -247,34 +302,33 @@ impl ServiceFactory {
 /// 服务容器扩展trait
 pub trait ServiceContainerExt {
     /// 获取用户仓储的端口引用
-    fn user_repository_port(&self) -> Arc<dyn UserRepositoryPort>;
+    fn user_repository_port(&self) -> Arc<dyn UserRepository>;
     
     /// 获取群组仓储的端口引用
-    fn group_repository_port(&self) -> Arc<dyn GroupRepositoryPort>;
+    fn group_repository_port(&self) -> Arc<dyn GroupRepository>;
     
     /// 获取消息仓储的端口引用
     // 移除了MessageRepositoryPort方法
-    
     /// 获取瞬间仓储的端口引用
-    fn moment_repository_port(&self) -> Arc<dyn MomentRepositoryPort>;
+    fn moment_repository_port(&self) -> Arc<dyn MomentRepository>;
     
     /// 检查WebSocket系统是否可用
     fn is_websocket_available(&self) -> bool;
 }
 
 impl ServiceContainerExt for ServiceContainer {
-    fn user_repository_port(&self) -> Arc<dyn UserRepositoryPort> {
-        self.user_repository.clone() as Arc<dyn UserRepositoryPort>
+    fn user_repository_port(&self) -> Arc<dyn UserRepository> {
+        self.user_repository.clone() as Arc<dyn UserRepository>
     }
     
-    fn group_repository_port(&self) -> Arc<dyn GroupRepositoryPort> {
-        self.group_repository.clone() as Arc<dyn GroupRepositoryPort>
+    fn group_repository_port(&self) -> Arc<dyn GroupRepository> {
+        self.group_repository.clone() as Arc<dyn GroupRepository>
     }
     
     // 移除了MessageRepositoryPort实现
     
-    fn moment_repository_port(&self) -> Arc<dyn MomentRepositoryPort> {
-        self.moment_repository.clone() as Arc<dyn MomentRepositoryPort>
+    fn moment_repository_port(&self) -> Arc<dyn MomentRepository> {
+        self.moment_repository.clone() as Arc<dyn MomentRepository>
     }
     
     fn is_websocket_available(&self) -> bool {
@@ -287,7 +341,7 @@ trait RepositoryExt {
     fn is_null(&self) -> bool;
 }
 
-impl RepositoryExt for PgUserRepository {
+impl RepositoryExt for PostgresUserRepository {
     fn is_null(&self) -> bool {
         // 简单检查，实际实现可能需要检查内部连接状态
         false

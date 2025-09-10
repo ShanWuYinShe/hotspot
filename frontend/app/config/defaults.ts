@@ -6,6 +6,8 @@ export const DEFAULTS = {
   // 后端 DEFAULT_LATITUDE / DEFAULT_LONGITUDE
   latitude: 35.16,
   longitude: 112.68,
+  defaultLatitude: 35.16,
+  defaultLongitude: 112.68,
   // 后端 DEFAULT_LOCATION_NAME
   locationName: '南天门',
   // 后端 DEFAULT_NOTIFICATION_RADIUS_KM 约定的常用半径（5km）

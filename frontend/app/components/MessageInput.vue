@@ -64,7 +64,7 @@
                     </div>
                     <div class="flex items-center space-x-2">
                         <!-- 表情按钮（使用 UPopover） -->
-                        <UPopover v-model:open="showEmojiPicker">
+                        <UPopover>
                             <UTooltip text="选择表情">
                                 <UButton
                                     variant="ghost"

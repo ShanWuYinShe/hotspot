@@ -2,7 +2,6 @@
 /// 
 /// 迁移自传统validators/user_validator.rs，适配新架构
 /// 提供用户相关的参数验证功能
-
 use super::{ValidationError, ValidationResult, validate_string_length, validate_non_empty_string};
 
 /// 验证常量

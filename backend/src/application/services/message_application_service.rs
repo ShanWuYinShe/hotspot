@@ -1,27 +1,53 @@
 /// 消息应用服务
 /// 
 /// 处理消息相关的业务逻辑，使用新的实体和仓库架构
-
-use crate::application::queries::{PaginatedResult};
+use crate::application::handlers::PaginatedResult;
 use crate::domain::{
     DirectMessage, DirectMessageType, DomainResult, GroupMessage, 
     GroupMessageType
 };
 use crate::adapters::adapters_pg::message_repository::PgMessageRepository;
+/// 消息应用服务
+/// 
+/// 功能职责：
+/// - 实现消息通讯相关的业务用例和应用逻辑
+/// - 协调消息领域实体和仓储层的交互
+/// - 管理私聊和群聊消息的发送、接收、存储
+/// - 处理消息历史查询和分页显示
+/// - 管理消息状态和已读回执机制
+/// 
+/// 主要用例：
+/// - 私聊消息的发送和接收
+/// - 群组消息的广播和分发
+/// - 消息历史的查询和分页加载
+/// - 会话列表的管理和维护
+/// - 消息已读状态的更新和同步
+/// - 未读消息数量的统计和查询
+/// 
+/// 实时通信：
+/// - 与WebSocket系统集成实现实时消息推送
+/// - 管理消息的即时通知和状态同步
+/// - 处理消息发送失败的重试和容错机制
 use std::sync::Arc;
 use uuid::Uuid;
 use chrono::Utc;
 
 #[derive(Clone)]
 pub struct MessageApplicationService {
+    base: super::BaseApplicationService,
     pg_message_repository: Arc<PgMessageRepository>,
 }
 
 impl MessageApplicationService {
     pub fn new(
         pg_message_repository: Arc<PgMessageRepository>,
+        user_repository: Arc<dyn crate::ports::UserRepository>,
+        event_publisher: Arc<dyn crate::ports::EventPublisher>,
     ) -> Self {
         Self { 
+            base: super::BaseApplicationService::new("MessageApplicationService")
+                .with_user_repository(user_repository)
+                .with_event_publisher(event_publisher),
             pg_message_repository,
         }
     }
@@ -43,6 +69,14 @@ impl MessageApplicationService {
         latitude: f64,
         longitude: f64,
     ) -> DomainResult<DirectMessage> {
+        // 使用基类验证用户存在
+        self.base.validate_users_exist(&[sender_id, recipient_id]).await?;
+        
+        // 验证消息内容
+        super::ValidationRules::validate_text_content(&content, 1000, "消息内容")?;
+        
+        // 记录操作日志
+        self.base.log_operation("create_direct_message", Some(sender_id), Some(&format!("to: {}", recipient_id)));
         // 获取或创建会话
         let conversation = self.pg_message_repository
             .get_or_create_conversation(sender_id, recipient_id)

@@ -3,8 +3,8 @@
  * 封装统一的 HTTP 请求逻辑
  */
 
-import { useSystemStatus } from "./useSystemStatus";
 import { processApiResponse, processApiRequest } from "~/utils/bigint-json";
+import { handleApiError } from "~/utils/api-error-handler";
 
 export const useApi = () => {
   // 预加载依赖，避免动态导入的性能开销
@@ -12,27 +12,33 @@ export const useApi = () => {
   const { handleError: handleAppError } = useErrorHandler();
   const config = useRuntimeConfig();
 
-  // 统一处理服务端包裹响应：当 code!=0 时抛出标准错误对象
+  // 🎯 最优雅的响应处理：统一处理后端的 { code, msg/message, data } 格式
   const processEnvelope = (resp: unknown, meta: { url: string; method: string }) => {
-    // 仅当响应形如 { code, msg, data } 时启用包裹处理
+    // 检查是否为标准API响应格式
     if (resp && typeof resp === "object" && "code" in resp) {
-      const code = (resp as any).code;
-      if (code === 0 && "data" in resp) {
-        return (resp as any).data;
+      const envelope = resp as any;
+      
+      // ✅ 成功：code === 0，返回数据
+      if (envelope.code === 0) {
+        return envelope.data;
       }
 
-      // code 非 0：按统一规范抛错（status:200，data: 原始包裹）
-      const message = (resp as any).msg || (resp as any).message || "请求失败";
+      // ❌ 失败：code !== 0，创建统一的业务错误
+      const message = envelope.msg || envelope.message || "操作失败";
       const error: any = new Error(message);
-      error.status = 200;
-      error.code = code;
-      error.data = resp;
+      
+      // 标记为业务错误，便于错误处理器识别
+      error.isBusinessError = true;
+      error.businessCode = envelope.code;
+      error.status = 200; // HTTP成功，业务失败
+      error.data = envelope;
       error.endpoint = meta.url;
       error.method = meta.method;
+      
       throw error;
     }
 
-    // 非包裹响应（尽量保持兼容）
+    // 非标准格式，直接返回
     return resp;
   };
 
@@ -48,52 +54,48 @@ export const useApi = () => {
       : {};
   };
 
-  // 错误处理
+  // 统一错误处理
   const handleError = async (
     error: any,
     endpoint?: string,
     method?: string,
   ) => {
-
+    // 使用统一的错误处理器获取准确的错误信息
+    const errorInfo = handleApiError(error, endpoint);
+    
     // 增强错误信息
-    if (error?.status) {
-      error.endpoint = endpoint;
-      error.method = method;
-    }
-
-    // 统一为错误补充 message（优先从后端 data.msg / data.message 读取）
-    if (!error?.message) {
-      const msg = error?.data?.msg || error?.data?.message;
-      if (msg) error.message = msg;
-    }
+    const enhancedError = {
+      ...error,
+      endpoint,
+      method,
+      title: errorInfo.title,
+      message: errorInfo.message,
+      type: errorInfo.type,
+      canRetry: errorInfo.canRetry,
+      actionText: errorInfo.actionText
+    };
 
     // 更新系统状态
-    if (
-      error?.status >= 500 ||
-      error?.status === 0 ||
-      error?.name === "TypeError"
-    ) {
+    if (errorInfo.type === 'network' || errorInfo.type === 'server') {
       systemStatus.updateApiStatus("error");
-    } else if (error?.status >= 400) {
+    } else if (errorInfo.type === 'client' || errorInfo.type === 'validation') {
       systemStatus.updateApiStatus("warning");
-    } else if (error?.status === 200 && error?.data && error?.data?.code !== 0) {
-      // 业务层错误但 HTTP 200：标记为 warning
+    } else if (errorInfo.type === 'auth') {
       systemStatus.updateApiStatus("warning");
     }
 
-    // 使用统一错误处理器
-    await handleAppError(error, 'useApi', 'handleError');
+    // 只使用一套错误处理系统，避免重复处理
+    if (import.meta.dev) {
+      console.error(`[API Error - ${endpoint}]:`, enhancedError);
+    }
 
-    // 仅在明确未授权时清除认证，避免误登出（交由调用层或全局中间件处理跳转）
-    try {
-      const authStore = useAuthStore();
-      if (error?.status === 401) {
-        // 不在这里清除，以便调用层可进行提示或补救；保持最小侵入
-        // 可在中间件/页面层按需处理
-      }
-    } catch (_) {}
+    // 处理认证错误（不在这里清除token，交由中间件处理）
+    if (error?.status === 401 || errorInfo.type === 'auth') {
+      // 可以在这里发送事件通知认证状态变化
+      // 但不直接操作认证store，保持职责分离
+    }
 
-    throw error;
+    throw enhancedError;
   };
 
   // 预校验是否需要登录

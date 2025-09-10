@@ -3,7 +3,6 @@
 /// JavaScript的Number类型只能安全表示到2^53-1（约9千万亿），
 /// 而Rust的i64可以表示到2^63-1。为了确保前后端数据一致性，
 /// 我们需要将64位整数序列化为字符串传输给前端。
-
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 use std::str::FromStr;

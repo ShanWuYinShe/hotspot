@@ -28,32 +28,28 @@ export type {
   DirectMessageHistoryItem,
   GroupMessageHistoryItem,
   ConversationItem,
+  ConversationSummary,
 
   // 基础类型
   ApiResponse,
   PaginatedResponse,
 } from "~/types";
 
-// 消息类型（基于最新 API 设计）
+// 消息类型（统一的消息接口）
 export interface Message {
-  id: string;
-  message_id?: string;
-  sender_id: string;
+  id?: string; // 兼容字段，通常等于 message_id
+  message_id: string; // UUID 转换为字符串
+  sender_id: string; // 64位整数转换为字符串
   sender_name: string;
-  sender_avatar?: string;
   content: string;
-  message_type: string;
-  sent_at: string;
-  created_at: string;
-  read_at?: string;
-  is_read?: boolean;
-  latitude: number;
-  longitude: number;
-  // 群组消息字段
-  group_id?: string;
-  // 私聊消息字段
-  conversation_id?: string;
-  recipient_id?: string;
+  message_type: 'text' | 'image' | 'voice' | 'video' | 'location' | 'file';
+  sent_at: string; // ISO 8601 datetime string
+  created_at?: string; // 兼容字段，通常等于 sent_at
+  group_id?: string; // UUID 转换为字符串
+  conversation_id?: string; // UUID 转换为字符串
+  latitude?: number;
+  longitude?: number;
+  recipient_id?: string; // 私聊消息的接收者ID
 }
 
 // 会话类型（基于最新 API 设计）
@@ -72,4 +68,17 @@ export interface Conversation {
   // 群组会话字段
   group_id?: string;
   member_count?: number;
+}
+
+// 转换函数：ConversationSummary 到 Conversation
+export function convertConversationSummary(summary: import("~/types").ConversationSummary): Conversation {
+  return {
+    id: summary.conversation_id,
+    name: summary.peer_nickname,
+    last_message: summary.last_message_preview,
+    last_message_time: summary.last_message_at,
+    unread_count: summary.unread_count,
+    type: "user", // ConversationSummary 通常是私聊会话
+    participant_id: summary.peer_user_id,
+  };
 }

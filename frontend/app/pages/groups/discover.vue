@@ -74,7 +74,7 @@
                 </UAlert>
 
                 <div v-if="items.length > 0">
-                    <UTable :rows="items" :columns="columns as any">
+                    <UTable :rows="items" :columns="columns">
                         <template #group-cell="{ row }">
                             <div class="flex items-center gap-3 min-w-[240px]">
                                 <UAvatar :alt="(row as any).name">{{
@@ -86,10 +86,7 @@
                                             (row as any).name
                                         }}</span>
                                         <UBadge
-                                            v-if="
-                                                (row as any)
-                                                    .is_password_required
-                                            "
+                                            v-if="(row as any).is_password_required"
                                             variant="soft"
                                             size="xs"
                                             >私有</UBadge
@@ -200,7 +197,7 @@
                                 <UButton
                                     variant="ghost"
                                     size="xs"
-                                    @click="whyOpen = true"
+                                    @click="showWhyPermission"
                                     >为什么需要？</UButton
                                 >
                                 <div class="text-xs text-neutral-500">
@@ -213,42 +210,14 @@
             </div>
         </UCard>
     </div>
-    <!-- 权限说明对话框（仅解释，不主动请求权限） -->
-    <UModal
-        v-model:open="whyOpen"
-        title="为什么需要位置权限"
-        description="根据您的当前位置展示附近的群组。仅在你同意后请求权限，可随时在浏览器设置中更改。"
-    >
-        <template #body>
-            <ul
-                class="list-disc pl-5 space-y-1 text-sm text-neutral-600 dark:text-neutral-300"
-            >
-                <li>根据您的当前位置展示"附近的群组"。</li>
-                <li>
-                    仅在您点击授权时才会向浏览器请求权限，未经授权不会采集位置。
-                </li>
-                <li>您可随时在浏览器地址栏位置图标中撤销授权。</li>
-                <li>为避免每次弹窗，请在浏览器权限提示中勾选"记住此决定"。</li>
-            </ul>
-        </template>
-        <template #footer>
-            <div class="flex justify-end space-x-2">
-                <UButton variant="ghost" @click="whyOpen = false"
-                    >知道了</UButton
-                >
-                <UButton color="primary" @click="authorizeAndSearch"
-                    >允许位置访问并搜索</UButton
-                >
-            </div>
-        </template>
-    </UModal>
+    <!-- 权限说明对话框改为程序化 useOverlay 管理（见脚本中的 showWhyPermission） -->
 </template>
 
 <script setup lang="ts">
 import { defineAsyncComponent } from "vue";
-definePageMeta({ title: "发现群组", requiresAuth: true });
+// TableColumn 类型已在组件内部定义
 import type { GroupInfo } from "~/types";
-import { useUserService } from "~/services/user.service";
+definePageMeta({ title: "发现群组", requiresAuth: true });
 
 const EmptyGroups = defineAsyncComponent(
     () => import("~/components/illustrations/EmptyGroups.vue"),
@@ -256,9 +225,23 @@ const EmptyGroups = defineAsyncComponent(
 const groupsStore = useGroupsStore();
 // 本地UI配置，不需要从设置中获取
 const preferCardOnDenied = ref(true);
-const userService = useUserService();
+
+const { openConfirmModal } = useModals();
+const showWhyPermission = () => {
+    openConfirmModal({
+        title: "为什么需要位置权限",
+        message:
+            "根据您的当前位置展示附近的群组。仅在你同意后请求权限，可随时在浏览器设置中更改。",
+        confirmText: "允许位置访问并搜索",
+        cancelText: "知道了",
+        confirmColor: "primary",
+        onConfirm: async () => {
+            await authorizeAndSearch();
+        },
+    });
+};
 const toast = useSmartToast();
-const { coordinates, getCurrentPosition } = useGeolocation();
+const locationManager = useLocationManager();
 const { checkGeolocation, requestGeolocation, onGeolocationChange } =
     usePermissions();
 
@@ -293,21 +276,19 @@ const sortOptions = [
 
 // UTable 列
 const columns = [
-    { id: "group", key: "group", label: "群组" },
+    { id: "group", label: "群组" },
     {
         id: "members",
-        key: "members",
         label: "成员数",
         class: "hidden sm:table-cell w-32",
     },
     {
         id: "distance",
-        key: "distance",
         label: "距离",
         class: "hidden md:table-cell w-32",
     },
-    { id: "actions", key: "actions", label: "操作", class: "w-28 text-right" },
-] as any;
+    { id: "actions", label: "操作", class: "w-28 text-right" },
+];
 
 // 虚拟化窗口逻辑移除，统一表格渲染
 
@@ -315,45 +296,35 @@ const loadNearbyGroups = async () => {
     loading.value = true;
     loadError.value = false;
     try {
-        type Coords = { latitude: number; longitude: number };
-        let pos: Coords | null = null;
+        // 获取当前位置（优先使用位置管理器的缓存位置）
+        let location = locationManager.getLocation();
 
-        if (
-            coordinates.value &&
-            typeof coordinates.value === "object" &&
-            "latitude" in coordinates.value &&
-            "longitude" in coordinates.value
-        ) {
-            pos = coordinates.value as Coords;
-        }
-
-        if (!pos) {
-            const newPos = await getCurrentPosition();
-            if (
-                newPos &&
-                typeof newPos === "object" &&
-                "latitude" in newPos &&
-                "longitude" in newPos
-            ) {
-                pos = newPos as Coords;
+        // 如果没有缓存位置，尝试获取当前位置
+        if (!location) {
+            try {
+                location = await locationManager.getLocationWithFallback();
+            } catch (error) {
+                // 如果获取失败，使用默认位置
+                location = locationManager.getLocationOrDefault();
+                toast.add({
+                    title: "位置获取失败",
+                    description: "使用默认位置进行搜索",
+                    color: "warning",
+                });
             }
         }
-        if (!pos) {
-            throw new Error("无法获取位置信息，请确保已开启位置权限");
-        }
 
-        await userService.updateLocation(pos.latitude, pos.longitude, "");
         const resp = await groupsStore.searchNearbyGroups({
-            latitude: pos.latitude,
-            longitude: pos.longitude,
+            latitude: location.latitude,
+            longitude: location.longitude,
             radius: 5000,
         });
-        items.value = resp as GroupInfo[];
+        items.value = resp;
     } catch (e: any) {
         loadError.value = true;
         toast.add({
             title: "搜索失败",
-            description: e?.message,
+            description: e?.message || "搜索群组时发生错误",
             color: "error",
         });
     } finally {
@@ -432,7 +403,7 @@ const joinGroup = async (g: GroupInfo) => {
             description: `已加入群组 ${g.name}`,
             color: "success",
         });
-        navigateTo(`/chat/group/${g.group_id}`);
+        navigateTo(`/chat/groups/${g.group_id}`);
     } catch (e: unknown) {
         toast.add({
             title: "加入失败",

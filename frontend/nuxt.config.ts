@@ -52,7 +52,10 @@ export default defineNuxtConfig({
   },
 
   // 样式配置
-  css: ["~/assets/styles/main.css"],
+  css: [
+    "~/assets/styles/main.css",
+    "~/assets/styles/mobile.css"
+  ],
 
   // TypeScript 配置
   typescript: {

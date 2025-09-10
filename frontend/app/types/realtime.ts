@@ -36,7 +36,6 @@ export interface WsUserStatusUpdatePayload {
 
 export interface WsErrorPayload {
   code: string | number
-  message?: string
   msg?: string
   details?: any
 }

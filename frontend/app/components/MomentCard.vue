@@ -1,13 +1,17 @@
 <template>
     <ContextMenuWrapper 
       type="moment" 
-      :data="moment" 
+      :data="moment as unknown as Record<string, unknown>" 
       @action="handleContextAction"
     >
       <UCard>
         <!-- 用户信息 -->
         <div class="flex items-start gap-3 mb-4">
-            <UAvatar :alt="moment.nickname" size="md">
+            <UAvatar 
+                :alt="moment.nickname" 
+                size="md"
+                color="success"
+            >
                 {{ moment.nickname?.charAt(0) }}
             </UAvatar>
 
@@ -81,10 +85,8 @@
                 <UButton
                     variant="ghost"
                     size="xs"
+                    :color="moment.liked_by_me ? 'error' : 'neutral'"
                     @click="$emit('like', moment)"
-                    :class="{
-                        'text-red-500': moment.liked_by_me,
-                    }"
                 >
                     <UIcon
                         :name="
@@ -101,6 +103,7 @@
                 <UButton
                     variant="ghost"
                     size="xs"
+                    color="neutral"
                     @click="$emit('comment', moment)"
                 >
                     <UIcon
@@ -122,12 +125,19 @@ interface Props {
     moment: MomentInfo;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
-defineEmits<{
+const emit = defineEmits<{
     like: [moment: MomentInfo];
     comment: [moment: MomentInfo];
+    share: [moment: MomentInfo];
+    edit: [moment: MomentInfo];
+    delete: [moment: MomentInfo];
+    report: [moment: MomentInfo];
 }>();
+
+// 创建响应式引用
+const moment = toRef(props, 'moment');
 
 // 计算属性
 const { t } = useI18n();
@@ -150,37 +160,8 @@ function handleReport() {
     });
 }
 
-// 格式化时间
-function formatTime(dateString: string) {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInMinutes = Math.floor(
-        (now.getTime() - date.getTime()) / (1000 * 60),
-    );
-
-    if (diffInMinutes < 1) {
-        return t('time.justNow') as string;
-    } else if (diffInMinutes < 60) {
-        return t('time.minutesAgo', { n: diffInMinutes }) as string;
-    } else if (diffInMinutes < 1440) {
-        return t('time.hoursAgo', { n: Math.floor(diffInMinutes / 60) }) as string;
-    } else if (diffInMinutes < 10080) {
-        return t('time.daysAgo', { n: Math.floor(diffInMinutes / 1440) }) as string;
-    } else {
-        return date.toLocaleDateString();
-    }
-}
-
-// 格式化距离
-function formatDistance(distanceKm: number) {
-    if (distanceKm < 1) {
-        return `${Math.round(distanceKm * 1000)}m`;
-    } else if (distanceKm < 10) {
-        return `${distanceKm.toFixed(1)}km`;
-    } else {
-        return `${Math.round(distanceKm)}km`;
-    }
-}
+// 导入统一的格式化工具函数
+import { formatTime, formatDistance } from '~/utils/formatters';
 
 // 处理右键菜单操作
 const handleContextAction = (action: string, data?: any) => {

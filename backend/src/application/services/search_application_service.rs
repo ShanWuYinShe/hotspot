@@ -1,21 +1,33 @@
 /// 搜索应用服务
 /// 
 /// 提供跨模块的统一搜索功能
-
 use async_trait::async_trait;
+/// 搜索应用服务
+/// 
+/// 功能职责：
+/// - 实现统一的搜索功能和搜索体验
+/// - 协调多个领域实体的跨领域搜索
+/// - 管理搜索索引和搜索结果的排序逻辑
+/// - 处理搜索历史和热门搜索的统计分析
+/// - 提供智能搜索推荐和自动补全功能
+/// 
+/// 搜索类型：
+/// - 用户搜索：按昵称、ID、位置搜索用户
+/// - 群组搜索：按名称、位置、标签搜索群组
+/// - 瞬间搜索：按内容、标签、位置搜索瞬间
+/// - 消息搜索：在聊天记录中搜索消息内容
+/// - 综合搜索：跨多个类型的综合搜索结果
+/// 
+/// 搜索优化：
+/// - 搜索结果的相关性排序和权重计算
+/// - 搜索缓存和性能优化策略
+/// - 搜索关键词的分词和模糊匹配
 use std::sync::Arc;
 use serde::{Serialize, Deserialize};
 
-use crate::domain::{DomainResult, User, Group, Moment};
-use crate::ports::{UserRepositoryPort, GroupRepositoryPort, MomentRepositoryPort};
-
-/// 搜索结果类型
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum SearchResultType {
-    User,
-    Group,
-    Moment,
-}
+use crate::domain::{DomainResult, UserProfile, GroupProfile, Moment};
+use crate::ports::{UserRepository, GroupRepository, MomentRepository};
+use crate::application::queries::SearchResultType;
 
 /// 统一搜索结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -46,7 +58,7 @@ pub trait SearchApplicationService: Send + Sync {
         &self,
         query: String,
         limit: i32,
-    ) -> DomainResult<Vec<User>>;
+    ) -> DomainResult<Vec<UserProfile>>;
     
     /// 搜索群组
     async fn search_groups(
@@ -56,7 +68,7 @@ pub trait SearchApplicationService: Send + Sync {
         longitude: Option<f64>,
         radius_km: Option<f64>,
         limit: i32,
-    ) -> DomainResult<Vec<Group>>;
+    ) -> DomainResult<Vec<GroupProfile>>;
     
     /// 搜索生活瞬间
     async fn search_moments(
@@ -71,24 +83,24 @@ pub trait SearchApplicationService: Send + Sync {
     /// 全局搜索（兼容现有控制器）
     async fn global_search(
         &self,
-        query: crate::application::GlobalSearchQuery,
+        query: crate::application::SearchByGlobalQuery,
         user_id: i64,
     ) -> DomainResult<serde_json::Value>;
 }
 
 /// 搜索应用服务实现
 pub struct SearchApplicationServiceImpl {
-    user_repository: Arc<dyn UserRepositoryPort>,
-    group_repository: Arc<dyn GroupRepositoryPort>,
-    moment_repository: Arc<dyn MomentRepositoryPort>,
+    user_repository: Arc<dyn UserRepository>,
+    group_repository: Arc<dyn GroupRepository>,
+    moment_repository: Arc<dyn MomentRepository>,
 }
 
 impl SearchApplicationServiceImpl {
     /// 创建新的搜索应用服务
     pub fn new(
-        user_repository: Arc<dyn UserRepositoryPort>,
-        group_repository: Arc<dyn GroupRepositoryPort>,
-        moment_repository: Arc<dyn MomentRepositoryPort>,
+        user_repository: Arc<dyn UserRepository>,
+        group_repository: Arc<dyn GroupRepository>,
+        moment_repository: Arc<dyn MomentRepository>,
     ) -> Self {
         Self {
             user_repository,
@@ -127,7 +139,7 @@ impl SearchApplicationServiceImpl {
     }
 
     /// 将用户转换为统一搜索结果
-    fn user_to_search_result(&self, user: User, query: &str) -> UnifiedSearchResult {
+    fn user_to_search_result(&self, user: UserProfile, query: &str) -> UnifiedSearchResult {
         let score = self.calculate_relevance_score(query, &user.nickname, None);
         
         UnifiedSearchResult {
@@ -141,7 +153,7 @@ impl SearchApplicationServiceImpl {
     }
 
     /// 将群组转换为统一搜索结果
-    fn group_to_search_result(&self, group: Group, query: &str) -> UnifiedSearchResult {
+    fn group_to_search_result(&self, group: GroupProfile, query: &str) -> UnifiedSearchResult {
         let score = self.calculate_relevance_score(query, &group.name, group.description.as_deref());
         
         UnifiedSearchResult {
@@ -215,8 +227,17 @@ impl SearchApplicationService for SearchApplicationServiceImpl {
         Ok(results)
     }
 
-    async fn search_users(&self, query: String, limit: i32) -> DomainResult<Vec<User>> {
-        self.user_repository.search_users_by_nickname(&query, 0, limit).await
+    async fn search_users(&self, query: String, limit: i32) -> DomainResult<Vec<UserProfile>> {
+        let search_results = self.user_repository.search_user_profiles_by_name(&query, 0, limit).await?;
+        // 将 UserSearchResult 转换为 UserProfile
+        let profiles = search_results.into_iter().map(|result| UserProfile {
+            user_id: result.user_id,
+            nickname: result.nickname,
+            avatar_url: result.avatar_url,
+            user_type: result.user_type,
+            last_active_at: result.last_active_at,
+        }).collect();
+        Ok(profiles)
     }
 
     async fn search_groups(
@@ -226,14 +247,29 @@ impl SearchApplicationService for SearchApplicationServiceImpl {
         longitude: Option<f64>,
         radius_km: Option<f64>,
         limit: i32,
-    ) -> DomainResult<Vec<Group>> {
-        if let (Some(lat), Some(lng), Some(radius)) = (latitude, longitude, radius_km) {
+    ) -> DomainResult<Vec<GroupProfile>> {
+        let search_results = if let (Some(lat), Some(lng), Some(radius)) = (latitude, longitude, radius_km) {
             // 如果提供了位置信息，优先进行地理位置搜索
-            self.group_repository.find_nearby_groups(lat, lng, radius, 0, limit).await
+            self.group_repository.find_nearby_groups_with_distance(lat, lng, radius * 1000.0, 0, limit).await?
         } else {
             // 否则按名称搜索
-            self.group_repository.search_groups_by_name(&query, 0, limit).await
-        }
+            self.group_repository.search_groups_by_name(&query, 0, limit).await?
+        };
+        
+        // 将 GroupSearchResult 转换为 GroupProfile
+        let profiles = search_results.into_iter().map(|result| GroupProfile {
+            group_id: result.group_id,
+            name: result.name,
+            description: result.description,
+            owner_id: result.owner_id,
+            latitude: result.latitude,
+            longitude: result.longitude,
+            location_name: result.location_name,
+            is_public: result.is_public,
+            member_count: result.member_count,
+            last_active_at: result.last_active_at,
+        }).collect();
+        Ok(profiles)
     }
 
     async fn search_moments(
@@ -250,13 +286,13 @@ impl SearchApplicationService for SearchApplicationServiceImpl {
         } else {
             // 否则按标签搜索（将查询词作为标签）
             let tags = vec![query];
-            self.moment_repository.search_by_tags(tags, 0, limit).await
+            self.moment_repository.search_by_tags(&tags, 0, limit).await
         }
     }
     
     async fn global_search(
         &self,
-        query: crate::application::GlobalSearchQuery,
+        query: crate::application::SearchByGlobalQuery,
         _user_id: i64,
     ) -> DomainResult<serde_json::Value> {
         // 简化实现，返回统一搜索结果
@@ -286,9 +322,9 @@ pub struct SearchManager {
 impl SearchManager {
     /// 创建新的搜索管理器
     pub fn new(
-        user_repository: Arc<dyn UserRepositoryPort>,
-        group_repository: Arc<dyn GroupRepositoryPort>,
-        moment_repository: Arc<dyn MomentRepositoryPort>,
+        user_repository: Arc<dyn UserRepository>,
+        group_repository: Arc<dyn GroupRepository>,
+        moment_repository: Arc<dyn MomentRepository>,
     ) -> Self {
         let search_service = Arc::new(SearchApplicationServiceImpl::new(
             user_repository,

@@ -1,7 +1,6 @@
 /// 配置适配器
 /// 
 /// 提供统一的配置管理，直接使用新架构
-
 use std::sync::Arc;
 use std::env;
 use sqlx::PgPool;

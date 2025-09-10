@@ -42,9 +42,9 @@
 
                                 <div class="flex items-start gap-4">
                                     <div
-                                        class="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/40 flex items-center justify-center shadow-sm flex-shrink-0">
+                                        class="w-12 h-12 rounded-xl bg-success-100 dark:bg-success-900/40 flex items-center justify-center shadow-sm flex-shrink-0">
                                         <UIcon name="i-heroicons-chat-bubble-left-right"
-                                            class="w-6 h-6 text-green-600 dark:text-green-300" />
+                                            class="w-6 h-6 text-success-600 dark:text-success-300" />
                                     </div>
                                     <div>
                                         <div class="font-semibold text-lg text-neutral-900 dark:text-neutral-100">
@@ -58,9 +58,9 @@
 
                                 <div class="flex items-start gap-4">
                                     <div
-                                        class="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center shadow-sm flex-shrink-0">
+                                        class="w-12 h-12 rounded-xl bg-info-100 dark:bg-info-900/40 flex items-center justify-center shadow-sm flex-shrink-0">
                                         <UIcon name="i-heroicons-photo"
-                                            class="w-6 h-6 text-blue-600 dark:text-blue-300" />
+                                            class="w-6 h-6 text-info-600 dark:text-info-300" />
                                     </div>
                                     <div>
                                         <div class="font-semibold text-lg text-neutral-900 dark:text-neutral-100">
@@ -96,7 +96,7 @@
                         </div>
 
                         <!-- 使用 UTabs 切换 登录 / 注册 -->
-                        <UTabs :items="authTabs" v-model="mode" class="mb-8" />
+                        <UTabs :items="authTabs" v-model:selected="mode" class="mb-8" />
 
                         <!-- 登录表单 -->
                         <div v-if="mode === 'login'" class="space-y-6">
@@ -117,7 +117,7 @@
 
 
                                 <div class="flex items-center justify-end text-sm">
-                                    <UButton variant="ghost" size="sm" class="px-2" @click="forgotOpen = true">
+                                    <UButton variant="ghost" size="sm" class="px-2" @click="showForgotPassword">
                                         <span>忘记密码？</span>
                                     </UButton>
                                 </div>
@@ -229,46 +229,13 @@
                 </div>
             </UCard>
 
-            <!-- 注册完成后的提示 -->
-            <UModal v-model:open="showPostRegisterModal" title="注册成功">
-                <template #body>
-                    <p class="text-gray-600 dark:text-gray-300">
-                        现在登录以开始使用你的账户。
-                    </p>
-                </template>
-                <template #footer>
-                    <div class="flex justify-end gap-2">
-                        <UButton variant="ghost" color="primary" size="md" @click="onPostRegisterChoice(false)"
-                            aria-label="稍后再说">
-                            <span>稍后</span>
-                        </UButton>
-
-                        <UButton color="primary" size="md" class="min-w-[96px]" autofocus
-                            @click="onPostRegisterChoice(true)" aria-label="登录">
-                            <span>登录</span>
-                        </UButton>
-                    </div>
-                </template>
-            </UModal>
-
-            <!-- 忘记密码说明 -->
-            <UModal v-model:open="forgotOpen" title="重置密码">
-                <template #body>
-                    <p class="text-neutral-600 dark:text-neutral-300">
-                        当前版本暂未开放密码找回服务，请联系管理员或使用临时用户体验。
-                    </p>
-                </template>
-                <template #footer>
-                    <div class="flex justify-end">
-                        <UButton color="primary" @click="forgotOpen = false">我知道了</UButton>
-                    </div>
-                </template>
-            </UModal>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
+import { useUserService } from '~/services/user.service';
+
 definePageMeta({ layout: "auth" });
 
 const authStore = useAuthStore();
@@ -276,6 +243,7 @@ const userService = useUserService();
 const isLoading = ref(false);
 const toast = useSmartToast();
 const route = useRoute();
+const { openConfirmModal } = useModals();
 
 // 表单模式 - 检查是否是升级模式
 const isUpgradeMode = computed(() => route.query.upgrade === '1');
@@ -297,17 +265,9 @@ const authTabs = computed(() => {
   return tabs;
 });
 
-// 忘记密码弹窗
-const forgotOpen = ref(false);
 
 // defineShortcuts：快速切换登录/注册（统一在 onMounted 中初始化，避免 SSR/CSR 分叉）
-onMounted(() => {
-    const dispose = defineShortcuts({
-        meta_j: { usingInput: true, handler: () => (mode.value = 'login') },
-        meta_r: { usingInput: true, handler: () => (mode.value = 'register') }
-    });
-    onUnmounted(() => dispose());
-});
+// 移除了可能与系统快捷键冲突的快捷键定义
 
 // 登录表单
 const loginForm = ref({
@@ -333,25 +293,33 @@ const upgradeForm = ref({
 // 前端生成昵称（未提供时）
 const genNickname = () => `用户${Math.floor(Date.now() % 100000)}`;
 
+// 显示忘记密码说明
+const showForgotPassword = () => {
+    openConfirmModal({
+        title: "重置密码",
+        message: "当前版本暂未开放密码找回服务，请联系管理员或使用临时用户体验。",
+        confirmText: "我知道了",
+        cancelText: "",
+        confirmColor: "primary",
+        onConfirm: () => {}
+    });
+};
+
 // 如果已经登录，重定向到首页
 
-// 使用 Nuxt UI 弹窗询问是否立即登录（替代 window.confirm）
-const showPostRegisterModal = ref(false);
-let postRegisterResolve: ((choice: boolean) => void) | null = null;
-
+// 使用 useModals 询问是否立即登录
 function askLoginNow(): Promise<boolean> {
     return new Promise((resolve) => {
-        postRegisterResolve = resolve;
-        showPostRegisterModal.value = true;
+        openConfirmModal({
+            title: "注册成功",
+            message: "现在登录以开始使用你的账户。",
+            confirmText: "登录",
+            cancelText: "稍后",
+            confirmColor: "primary",
+            onConfirm: () => resolve(true),
+            onCancel: () => resolve(false)
+        });
     });
-}
-
-function onPostRegisterChoice(choice: boolean) {
-    showPostRegisterModal.value = false;
-    if (postRegisterResolve) {
-        postRegisterResolve(choice);
-        postRegisterResolve = null;
-    }
 }
 
 // 处理登录
@@ -466,31 +434,19 @@ watch(
     { immediate: true },
 );
 
-// UForm 校验
-type FormErrors = { path: string; message: string }[];
+// 使用通用表单验证
+const { validateRequired, createFormValidator } = useFormValidation();
 
-function validateRequired(value: string, label: string): string | undefined {
-    return (value || "").trim() ? undefined : `${label}为必填项`;
-}
+// 创建验证器
+const validateLogin = createFormValidator({
+    loginId: [(value) => validateRequired(value, "用户名")],
+    password: [(value) => validateRequired(value, "密码")]
+});
 
-function validateLogin(state: any): FormErrors {
-    const errors: FormErrors = [];
-    const r1 = validateRequired(state.loginId, "用户名");
-    if (r1) errors.push({ path: "loginId", message: r1 });
-    const r2 = validateRequired(state.password, "密码");
-    if (r2) errors.push({ path: "password", message: r2 });
-    return errors;
-}
-
-function validateRegister(state: any): FormErrors {
-    const errors: FormErrors = [];
-    const r1 = validateRequired(state.loginId, "用户名");
-    if (r1) errors.push({ path: "loginId", message: r1 });
-    const r2 = validateRequired(state.password, "密码");
-    if (r2) errors.push({ path: "password", message: r2 });
-    const r3 = validateRequired(state.nickname, "昵称");
-    if (r3) errors.push({ path: "nickname", message: r3 });
-    return errors;
-}
+const validateRegister = createFormValidator({
+    loginId: [(value) => validateRequired(value, "用户名")],
+    password: [(value) => validateRequired(value, "密码")],
+    nickname: [(value) => validateRequired(value, "昵称")]
+});
 
 </script>

@@ -1,91 +1,86 @@
-/// CQRS 查询模块
-/// 
-/// 定义系统中所有的读操作查询和查询处理器
+/// 查询模块 - 重新导出所有查询类型
 
-pub mod user_queries;
-pub mod group_queries;
-pub mod message_queries;
-pub mod moment_queries;
-pub mod search_queries;
-pub mod activity_queries;
+use serde::{Deserialize, Serialize};
+use crate::domain::{UserId, GroupId, MomentId, Coordinates};
 
-// 重新导出查询类型
-pub use user_queries::*;
-pub use group_queries::*;
-pub use message_queries::*;
-pub use moment_queries::*;
-pub use search_queries::*;
-pub use activity_queries::*;
+// === 基础查询类型 ===
 
-use crate::domain::DomainResult;
-use async_trait::async_trait;
-
-/// 查询处理器基础trait
-#[async_trait]
-pub trait QueryHandler<TQuery> {
+/// 查询特征
+pub trait Query {
+    /// 查询结果类型
     type Result;
-    
-    /// 处理查询
-    async fn handle_query(&self, query: TQuery) -> DomainResult<Self::Result>;
 }
 
-/// 分页查询参数
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+/// 分页请求参数
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PaginationQuery {
     pub cursor: Option<i64>,
-    pub limit: Option<i32>,
+    pub limit: Option<usize>,
 }
 
-impl Default for PaginationQuery {
-    fn default() -> Self {
+impl PaginationQuery {
+    /// 创建默认分页查询
+    pub fn default() -> Self {
         Self {
             cursor: None,
             limit: Some(20),
         }
     }
-}
-
-impl PaginationQuery {
-    /// 创建默认分页查询
-    pub fn new() -> Self {
-        Self::default()
+    
+    /// 获取有效的限制数量
+    pub fn effective_limit(&self) -> usize {
+        self.limit.unwrap_or(20).min(100)
     }
     
-    /// 获取实际的limit值
-    pub fn get_limit(&self) -> i32 {
-        self.limit.unwrap_or(20).clamp(1, 100) // 限制在1-100之间
+    /// 获取限制数量
+    pub fn get_limit(&self) -> i64 {
+        self.effective_limit() as i64
     }
     
-    /// 获取实际的cursor值
+    /// 获取游标值
     pub fn get_cursor(&self) -> i64 {
         self.cursor.unwrap_or(0)
     }
 }
 
-/// 分页查询结果
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct PaginatedResult<T> {
-    pub items: Vec<T>,
-    pub has_more: bool,
-    pub next_cursor: Option<i64>,
+/// 位置查询参数
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LocationQuery {
+    /// 中心坐标
+    pub center: Coordinates,
+    /// 搜索半径（米）
+    pub radius: f64,
 }
 
-impl<T> PaginatedResult<T> {
-    /// 创建分页结果
-    pub fn new(items: Vec<T>, has_more: bool, next_cursor: Option<i64>) -> Self {
-        Self {
-            items,
-            has_more,
-            next_cursor,
-        }
-    }
-    
-    /// 创建空结果
-    pub fn empty() -> Self {
-        Self {
-            items: Vec::new(),
-            has_more: false,
-            next_cursor: None,
-        }
+impl LocationQuery {
+    /// 创建位置查询
+    pub fn new(center: Coordinates, radius: f64) -> Self {
+        Self { center, radius }
     }
 }
+
+// 用户查询
+pub mod user_queries;
+pub use user_queries::*;
+
+// 群组查询
+pub mod group_queries;
+pub use group_queries::*;
+
+// 消息查询
+pub mod message_queries;
+pub use message_queries::*;
+
+// 瞬间查询
+pub mod moment_queries;
+pub use moment_queries::*;
+
+// 搜索查询
+pub mod search_queries;
+pub use search_queries::*;
+
+// 活动查询
+pub mod activity_queries;
+pub use activity_queries::*;
+
+// 额外的查询类型已合并到各自的模块中

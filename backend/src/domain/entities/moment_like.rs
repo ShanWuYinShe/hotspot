@@ -1,7 +1,6 @@
 /// 动态点赞领域实体
 /// 
 /// 表示用户对动态的点赞记录
-
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 

@@ -2,7 +2,7 @@
 
 ## 文档结构
 
-- [HotSpot 项目需求文档](#HotSpot-项目需求文档)
+- [HotSpot 项目需求文档](#hotspot-项目需求文档)
   - [文档结构](#文档结构)
   - [1. 项目概览](#1-项目概览)
     - [1.1 项目简介](#11-项目简介)
@@ -26,10 +26,17 @@
       - [2.2.3 开发工具与环境](#223-开发工具与环境)
     - [2.3 路由架构设计](#23-路由架构设计)
       - [2.3.1 路由分层策略](#231-路由分层策略)
-    - [7.6 管理接口（前缀：/api/v1/admin，需管理员认证）](#76-管理接口前缀apiv1admin需管理员认证)
       - [2.3.2 命名规范](#232-命名规范)
       - [2.3.3 架构优势](#233-架构优势)
     - [2.4 后端重构方案（端口/适配器 + 能力装配）](#24-后端重构方案端口适配器--能力装配)
+      - [核心理念](#核心理念)
+      - [模块/目录结构（描述）](#模块目录结构描述)
+      - [Feature 与默认能力](#feature-与默认能力)
+      - [数据访问与分页规范（强制）](#数据访问与分页规范强制)
+      - [实时通道与策略](#实时通道与策略)
+      - [任务队列与缓存](#任务队列与缓存)
+      - [密码安全实现架构](#密码安全实现架构)
+      - [迁移步骤（低风险）](#迁移步骤低风险)
   - [3. 功能需求](#3-功能需求)
     - [3.1 用户管理功能](#31-用户管理功能)
       - [3.1.1 功能需求](#311-功能需求)
@@ -48,9 +55,10 @@
       - [3.4.2 API 接口](#342-api-接口)
   - [4. 代码质量管理](#4-代码质量管理)
     - [4.1 代码质量标准](#41-代码质量标准)
-      - [4.1.1 编译质量要求](#411-编译质量要求)
-      - [4.1.2 后端代码合理性检查规范](#412-后端代码合理性检查规范)
-      - [4.1.3 死代码处理原则](#413-死代码处理原则)
+      - [4.1.1 官方文档优先原则（强制）](#411-官方文档优先原则强制)
+      - [4.1.2 编译质量要求](#412-编译质量要求)
+      - [4.1.3 后端代码合理性检查规范](#413-后端代码合理性检查规范)
+      - [4.1.4 死代码处理原则](#414-死代码处理原则)
     - [4.2 项目清理规范](#42-项目清理规范)
       - [4.2.1 Agent模式代码生成清理要求](#421-agent模式代码生成清理要求)
       - [4.2.2 清理执行标准](#422-清理执行标准)
@@ -64,6 +72,7 @@
       - [4.4.1 WebSocket实时通信系统（已完整实现并激活）](#441-websocket实时通信系统已完整实现并激活)
       - [4.4.2 保留的扩展架构](#442-保留的扩展架构)
       - [4.4.3 维护策略](#443-维护策略)
+      - [4.4.4 实时通道策略（当前与规划）](#444-实时通道策略当前与规划)
   - [5. 测试架构设计](#5-测试架构设计)
     - [5.1 后端测试架构](#51-后端测试架构)
       - [5.1.1 当前测试状态与改进方向](#511-当前测试状态与改进方向)
@@ -83,12 +92,23 @@
   - [7. API接口设计](#7-api接口设计)
     - [7.1 API设计原则](#71-api设计原则)
       - [7.1.1 统一响应格式（与当前实现保持一致）](#711-统一响应格式与当前实现保持一致)
-    - [7.4 消息通讯API（前缀：/api/v1/chat）](#74-消息通讯api前缀apiv1chat)
-      - [7.4.1 消息操作 (10个端点)](#741-消息操作-10个端点)
-    - [7.6 API性能与安全](#76-api性能与安全)
-      - [7.6.1 性能优化](#761-性能优化)
-      - [7.6.2 安全措施](#762-安全措施)
-    - [7.7 接口与 WebSocket 速查表](#77-接口与-websocket-速查表)
+      - [7.1.2 API 类型定义规范](#712-api-类型定义规范)
+      - [7.1.3 公共数据模型（API 与 WebSocket 复用）](#713-公共数据模型api-与-websocket-复用)
+    - [7.2 认证与用户API](#72-认证与用户api)
+      - [7.2.1 认证接口（8个端点，前缀：/api/v1/auth）](#721-认证接口8个端点前缀apiv1auth)
+      - [7.2.2 用户数据接口（9个端点）](#722-用户数据接口9个端点)
+    - [7.3 群组管理API](#73-群组管理api)
+      - [7.3.1 群组操作 (9个端点)](#731-群组操作-9个端点)
+    - [7.6 管理接口](#76-管理接口)
+      - [7.6.1 用户ID分区管理 (6个端点，前缀：/api/v1/protected/admin，需管理员认证）](#761-用户id分区管理-6个端点前缀apiv1protectedadmin需管理员认证)
+    - [7.7 API性能与安全](#77-api性能与安全)
+      - [7.7.1 性能优化](#771-性能优化)
+      - [7.7.2 安全措施](#772-安全措施)
+    - [7.8 后端密码安全实现指南](#78-后端密码安全实现指南)
+      - [7.8.1 核心组件实现](#781-核心组件实现)
+      - [7.8.2 认证流程实现](#782-认证流程实现)
+      - [7.8.3 安全注意事项](#783-安全注意事项)
+    - [7.9 接口与 WebSocket 速查表](#79-接口与-websocket-速查表)
   - [8. 部署与运维](#8-部署与运维)
     - [8.1 部署架构](#81-部署架构)
       - [8.1.1 生产环境部署](#811-生产环境部署)
@@ -344,7 +364,8 @@ HotSpot（HotSpot）是一个基于地理位置的社交应用，允许用户在
 - **缓存**: Redis + 连接池管理
 - **认证**: JWT令牌验证 (jsonwebtoken)
 - **WebSocket**: Axum内置WebSocket支持 (tokio-tungstenite)
-- **密码哈希**: Argon2
+- **密码哈希**: Argon2（用户密码存储）+ SHA-256（动态认证哈希）
+- **加密库**: sha2 crate（SHA-256 计算）、rand crate（nonce 生成）
 - **任务队列**: RabbitMQ客户端 (lapin)
 - **监控**: Prometheus指标
 
@@ -386,57 +407,23 @@ HotSpot（HotSpot）是一个基于地理位置的社交应用，允许用户在
 - **认证相关**: `/api/v1/auth/*` - 处理用户登录、注册、临时用户创建、token操作等
 - **系统状态**: `/health`, `/metrics` - 系统健康检查和监控指标
 - **WebSocket连接**: `/ws/` - 实时通信连接
+- **查询类API**: 所有搜索、查看、获取类API均为公开访问，提升用户体验
+  - **用户查询**: `/api/v1/user/search_*`, `/api/v1/user/get_profile`, `/api/v1/user/find_nearby`
+  - **群组查询**: `/api/v1/group/search_*`, `/api/v1/group/members`
+  - **生活瞬间查询**: `/api/v1/moments/search_*`, `/api/v1/moments/history`
+  - **全局搜索**: `/api/v1/search/*`
+  - **活动查询**: `/api/v1/activities/*`
+  - **评论查询**: `/api/v1/comments/moment/*`, `/api/v1/comments/user`
 
 **受保护路由**（需要JWT认证）:
-- **用户数据**: `/api/v1/user/*` - 用户资料、设置、搜索等用户数据管理
-- **群组管理**: `/api/v1/group/*` - 群组创建、加入、管理等
-- **消息通讯**: `/api/v1/chat/*` - 私聊、群聊、消息历史等（当前路由具体定义见 7.4）
-- **生活瞬间系统**: `/api/v1/moments/*` - 瞬间分享、搜索、点赞等
-- **管理功能**: `/api/v1/admin/*` - 系统管理和监控功能
-
-### 7.6 管理接口（前缀：/api/v1/admin，需管理员认证）
-
-用户ID分区管理（全部为 POST）：
-- /admin/user-id/stats
-  - 请求字段：无
-  - 响应 data：{ total_partitions: i32；active_partitions: i32；ranges: Array<{ start: i64；end: i64；type: string }> }
-- /admin/user-id/validate
-  - 请求字段：user_id: i64
-  - 响应 data：{ valid: bool；type?: string；reason?: string }
-- /admin/user-id/info
-  - 请求字段：user_id: i64
-  - 响应 data：{ type: string；partition: i32；created_at?: string }
-- /admin/user-id/ranges
-  - 请求字段：无
-  - 响应 data：Array<{ type: string；start: i64；end: i64 }>
-- /admin/user-id/generate
-  - 请求字段：count: i32；type?: string
-  - 响应 data：Array<{ user_id: i64；type: string }>
-- /admin/user-id/format
-  - 请求字段：user_id: i64
-  - 响应 data：{ formatted: string }
-
-字段校验与业务规则（管理）：
-- /admin/user-id/stats：
-  - 需管理员认证；用于查看用户ID分区总体状态；
-  - ranges 项内字段含义：start/end 为闭区间 i64，type 为分区类型标识（如 normal/test 等）。
-- /admin/user-id/validate：
-  - user_id 必填 i64；校验其是否落入有效分区，是否被占用或保留；
-  - 返回 valid=false 时给出 reason（如 out_of_range/reserved/invalid_format）。
-- /admin/user-id/info：
-  - user_id 必填 i64；返回其分区类型与分区编号；
-  - 若未分配或非法，返回相应提示。
-- /admin/user-id/ranges：
-  - 无请求体；返回当前所有分区范围清单；
-  - 用于离线校验与观测。
-- /admin/user-id/generate：
-  - count 必填，1-1000；type 可选（默认为 normal）；
-  - 分配的 user_id 唯一且不与已存在冲突；批量生成需具备幂等保障（重复请求不重复分配或返回相同结果）。
-- /admin/user-id/format：
-  - user_id 必填 i64；返回格式化字符串（如带分区前缀/分隔符），仅用于展示。
-
-典型错误码（管理）：
-- 1002 未授权（缺少管理员身份）；1003 权限不足；1000 参数错误；5000 服务器内部错误。
+- **用户管理**: `/api/v1/user/update_*`, `/api/v1/user/delete_*`, `/api/v1/user/upgrade_*` - 用户数据修改操作
+- **群组管理**: `/api/v1/group/create`, `/api/v1/group/join`, `/api/v1/group/leave`, `/api/v1/group/kick` - 群组管理操作
+- **消息通讯**: `/api/v1/chat/*` - 私聊、群聊、消息历史等（全部需认证）
+- **生活瞬间管理**: `/api/v1/moments/create`, `/api/v1/moments/delete`, `/api/v1/moments/like` - 瞬间创建和互动
+- **好友系统**: `/api/v1/friends/*` - 好友请求、管理等
+- **评论管理**: `/api/v1/comments/create`, `/api/v1/comments/delete` - 评论创建和删除
+- **文件上传**: `/api/v1/upload/*` - 文件上传功能
+- **管理功能**: `/api/v1/admin/*` - 系统管理和监控功能（需管理员权限）
 
 #### 2.3.2 命名规范
 
@@ -498,12 +485,25 @@ HotSpot（HotSpot）是一个基于地理位置的社交应用，允许用户在
 - 默认 `jobs-lite` 与 `cache_in_memory`；失败不阻断主路径。
 - 可选 `jobs-redis` 与 `cache_redis` 替换注入。
 
+#### 密码安全实现架构
+- **认证服务层**：
+  - `AuthService`：处理 nonce 生成、密码哈希验证、用户认证逻辑
+  - `NonceManager`：管理 nonce 生命周期，基于 Redis 实现
+  - `PasswordHasher`：封装 Argon2 和 SHA-256 哈希算法
+- **数据层**：
+  - `UserRepository`：用户密码存储和验证（Argon2 哈希）
+  - `NonceRepository`：nonce 存储和验证（Redis TTL）
+- **控制器层**：
+  - `AuthController`：处理认证相关 HTTP 请求
+  - 验证请求参数、调用认证服务、返回标准响应
+
 #### 迁移步骤（低风险）
 1. 抽象 `ports/`，保留原实现。
 2. 迁移现有实现至 `adapters-*`，`application` 仅依赖 `ports`。
 3. 引入 `CapabilityRegistry` 与强类型 `AppState` 装配（非 trait object，优先泛型 + 类型别名）。
-4. 统一收敛 sqlx 宏/“!”/游标分页规范。
-5. 按需开启可选适配器；SSE/轮询仅保留端口不实现。
+4. 统一收敛 sqlx 宏/"!"/游标分页规范。
+5. **实现密码安全机制**：添加 nonce 管理、SHA-256 哈希验证、防重放攻击。
+6. 按需开启可选适配器；SSE/轮询仅保留端口不实现。
 
 ## 3. 功能需求
 
@@ -537,15 +537,19 @@ HotSpot（HotSpot）是一个基于地理位置的社交应用，允许用户在
 #### 3.1.3 用户数据API
 
 **用户数据管理API（9个端点）**：
-- `/api/v1/user/search_users` - 按昵称搜索用户
-- `/api/v1/user/get_profile` - 获取用户资料
-- `/api/v1/user/find_nearby` - 搜索附近用户
-- `/api/v1/user/update_location` - 更新用户位置
-- `/api/v1/user/update_profile` - 更新用户资料
-- `/api/v1/user/upgrade_account` - 账户升级
-- `/api/v1/user/get_settings` - 获取用户设置
-- `/api/v1/user/update_settings` - 更新用户设置
-- `/api/v1/user/delete_account` - 删除账户
+
+**查询类接口（公开访问，无需认证）**：
+- `/api/v1/public/user/search_by_name` - 按昵称搜索用户
+- `/api/v1/public/user/search_by_id` - 获取用户资料
+- `/api/v1/public/user/search_by_location` - 搜索附近用户
+
+**管理类接口（需要认证：Authorization: Bearer <jwt>）**：
+- `/api/v1/protected/user/update_location` - 更新用户位置
+- `/api/v1/protected/user/update_profile` - 更新用户资料
+- `/api/v1/protected/user/upgrade_account` - 账户升级
+- `/api/v1/protected/user/get_settings` - 获取用户设置
+- `/api/v1/protected/user/update_settings` - 更新用户设置
+- `/api/v1/protected/user/delete_account` - 删除账户
 
 ### 3.2 地理位置服务
 
@@ -603,15 +607,19 @@ HotSpot（HotSpot）是一个基于地理位置的社交应用，允许用户在
 #### 3.3.2 API 接口
 
 **群组管理API（9个端点）**：
-- `/api/v1/group/create` - 创建群组
-- `/api/v1/group/search_by_location` - 按位置搜索群组
-- `/api/v1/group/search_by_name` - 按名称搜索群组
-- `/api/v1/group/search_by_id` - 按ID获取群组详情
-- `/api/v1/group/join` - 加入群组
-- `/api/v1/group/leave` - 离开群组
-- `/api/v1/group/members` - 获取群组成员
-- `/api/v1/group/kick` - 踢出群组成员
-- `/api/v1/group/transfer_ownership` - 转移群组所有权
+
+**查询类接口（公开访问，无需认证）**：
+- `/api/v1/public/group/search_by_location` - 按位置搜索群组
+- `/api/v1/public/group/search_by_name` - 按名称搜索群组
+- `/api/v1/public/group/search_by_id` - 按ID获取群组详情
+- `/api/v1/public/group/members` - 获取群组成员
+
+**管理类接口（需要认证：Authorization: Bearer <jwt>）**：
+- `/api/v1/protected/group/create` - 创建群组
+- `/api/v1/protected/group/join` - 加入群组
+- `/api/v1/protected/group/leave` - 离开群组
+- `/api/v1/protected/group/kick` - 踢出群组成员
+- `/api/v1/protected/group/transfer_ownership` - 转移群组所有权
 
 ### 3.4 消息通讯系统
 
@@ -631,18 +639,18 @@ HotSpot（HotSpot）是一个基于地理位置的社交应用，允许用户在
 
 #### 3.4.2 API 接口
 
-**消息通讯API（按当前实现的路径命名）**：
-- `/api/v1/chat/group/send` - 发送群组消息
-- `/api/v1/chat/group/history` - 获取群组消息历史
-- `/api/v1/chat/group/delete` - 删除群组消息
-- `/api/v1/chat/group/mark-read` - 标记群组消息已读
-- `/api/v1/chat/group/unread_count` - 获取群组未读消息数
-- `/api/v1/chat/user/send` - 发送私聊消息
-- `/api/v1/chat/user/history` - 获取私聊消息历史
-- `/api/v1/chat/user/conversations` - 获取会话列表
-- `/api/v1/chat/user/delete` - 删除私聊消息
-- `/api/v1/chat/user/mark-read` - 标记私聊消息已读
-- `/api/v1/chat/user/unread_count` - 获取私聊未读消息数
+**消息通讯API（需要认证：Authorization: Bearer <jwt>，前缀：/api/v1/protected/chat）**：
+- `/api/v1/protected/chat/group/send` - 发送群组消息
+- `/api/v1/protected/chat/group/history` - 获取群组消息历史
+- `/api/v1/protected/chat/group/delete` - 删除群组消息
+- `/api/v1/protected/chat/group/mark-read` - 标记群组消息已读
+- `/api/v1/protected/chat/group/unread_count` - 获取群组未读消息数
+- `/api/v1/protected/chat/user/send` - 发送私聊消息
+- `/api/v1/protected/chat/user/history` - 获取私聊消息历史
+- `/api/v1/protected/chat/user/conversations` - 获取会话列表
+- `/api/v1/protected/chat/user/delete` - 删除私聊消息
+- `/api/v1/protected/chat/user/mark-read` - 标记私聊消息已读
+- `/api/v1/protected/chat/user/unread_count` - 获取私聊未读消息数
 
 **WebSocket实时通信**：
 - **连接端点**: `/ws/` - WebSocket连接入口
@@ -654,12 +662,48 @@ HotSpot（HotSpot）是一个基于地理位置的社交应用，允许用户在
 
 ### 4.1 代码质量标准
 
-#### 4.1.1 编译质量要求
+#### 4.1.1 官方文档优先原则（强制）
+
+**核心原则**：
+- **文档优先验证**：使用任何第三方库、框架、组件前，必须先查阅官方文档确认正确用法
+- **零假设开发**：不得基于经验或猜测使用API，所有用法必须有官方文档支撑
+- **实时验证要求**：在编写代码时立即验证API的存在性和正确性
+
+**前端开发强制要求**：
+- **Nuxt UI v3 组件**：使用任何 UButton、UModal、UPopover、UDropdownMenu 等组件前，必须到 ui.nuxt.com 查阅官方文档
+  - 验证组件名称是否存在
+  - 确认所有 Props、Emits、Slots 的正确用法
+  - 理解组件的设计意图和最佳实践
+  - 特别注意插槽命名（如 UPopover 使用 `#content` 而非 `#panel`）
+- **Nuxt 框架 API**：使用 definePageMeta、useRoute、navigateTo、useFetch 等 API 前，必须验证最新用法
+- **Vue 3 API**：确认 Composition API、响应式 API 的正确使用方式
+- **第三方库**：任何 npm 包的使用都必须基于官方文档或 README
+
+**后端开发强制要求**：
+- **Rust Crate**：使用任何 crate 前必须查阅 docs.rs 或官方文档
+  - 验证 crate 版本兼容性
+  - 确认 API 方法和参数的正确用法
+  - 理解 feature flags 的作用和启用方式
+- **sqlx 查询**：确认 query!、query_as!、query_scalar! 宏的正确用法
+- **异步编程**：验证 async-trait、tokio 等异步相关 API 的最新用法
+- **数据库操作**：确认 PostgreSQL 语法和 PostGIS 扩展的正确用法
+
+**违规处理**：
+- **编译错误**：因未查阅文档导致的编译错误必须立即修复
+- **运行时错误**：因 API 误用导致的运行时错误视为严重质量问题
+- **代码审查**：代码审查时必须验证是否遵循了文档优先原则
+
+**文档查阅工具和资源**：
+- 前端：ui.nuxt.com、nuxt.com、vuejs.org、developer.mozilla.org
+- 后端：docs.rs、doc.rust-lang.org、postgresql.org、postgis.net
+- 通用：GitHub README、官方示例代码、Stack Overflow（仅作参考）
+
+#### 4.1.2 编译质量要求
 - **零警告政策**：项目必须保持 `cargo check` 无警告状态
 - **编译速度**：后端项目编译时间应控制在1秒以内（开发环境）
 - **代码规范**：使用 `cargo clippy` 进行代码质量检查
 
-#### 4.1.2 后端代码合理性检查规范
+#### 4.1.3 后端代码合理性检查规范
 
 **架构合理性验证原则**：
 - **真实世界合理性**：定期检查后端设计是否符合真实世界的业务逻辑和使用场景
@@ -680,7 +724,7 @@ HotSpot（HotSpot）是一个基于地理位置的社交应用，允许用户在
 - **功能下线检查**：当业务需求变化时，及时清理过时的代码
 - **性能导向重构**：基于实际使用数据优化代码结构
 
-#### 4.1.3 死代码处理原则
+#### 4.1.4 死代码处理原则
 - **架构保留原则**：对于未来有价值的代码架构，使用 `#[allow(dead_code)]` 注解标记而不删除
 - **分类标记策略**：
   - 完整的功能模块（如 WebSocket 系统）：在模块级别添加注解
@@ -992,13 +1036,11 @@ CREATE TABLE user_locations (
 #### 7.1.1 统一响应格式（与当前实现保持一致）
 
 **标准响应结构**：
-（结构字段说明，示例省略）
-{
-  "code": 0,          // 业务状态码：0-成功，非0-错误
-  "msg": "success",  // 响应消息（字段名为 msg）
-  "data": {           // 成功时为具体业务数据；失败时通常为 null 或省略
-        // 具体业务数据
-  }
+```typescript
+interface ApiResponse<T> {
+  code: number;    // 业务状态码：0-成功，非0-错误
+  msg: string;     // 响应消息（字段名为 msg）
+  data: T | null;  // 成功时为具体业务数据；失败时通常为 null 或省略
 }
 ```
 
@@ -1007,25 +1049,7 @@ CREATE TABLE user_locations (
 - 通过响应体中的`code`字段区分业务处理结果
 - 便于前端统一处理和错误管理
 
-#### 7.1.2 认证机制
-
-**前端适配建议**：
-- HTTP 与 WS 错误统一处理：优先读取 `code`（字符串或数字），非 0/非空即错误；再读取 `msg/message` 展示；
-- data 为空时按失败处理；对需要表单联动的错误，前端可基于 `details`（若存在）做字段级提示；
-- WS 错误码与 HTTP 业务码维度不同，建议在前端适配层建立映射（如 INVALID_TOKEN → 重新登录、FORBIDDEN → 权限提示）。
-
-#### 7.1.2 认证机制
-
-**JWT Token认证**：
-- 7.1.3 统一错误响应与错误码
-
-错误响应结构（HTTP 状态码统一 200，业务错误码在 body.code）：
-- 响应体字段：
-  - code: i32（业务错误码；0 表示成功；非 0 表示错误）
-  - msg: string（错误描述信息）
-  - data: null（错误时为 null）
-
-错误码分组与含义：
+**错误码分组与含义**：
 - 1000 参数错误（BadRequest）
 - 1002 未授权（Unauthorized）
 - 1003 权限不足（Forbidden）
@@ -1036,130 +1060,360 @@ CREATE TABLE user_locations (
 - 5001 数据库错误（DatabaseError）
 - 5002 外部服务错误（ExternalServiceError）
 
-可选字段（调试/排错建议）：
-- request_id: string（请求追踪ID）
-- details: string[]（详细错误信息列表）
+#### 7.1.2 API 类型定义规范
 
-- Header格式：`Authorization: Bearer <jwt_token>`
-- Token包含用户ID、过期时间等信息
-- 支持Token刷新机制
+**类型定义原则**：
+- 所有 API 端点必须有明确的请求类型（Request）和响应类型（Response）定义
+- 使用 TypeScript 接口定义，包含详细的字段注释和验证规则
+- 请求类型以 `Request` 结尾，响应类型以 `Response` 结尾或直接使用公共模型
+- 所有类型定义与前端 `types/index.ts` 保持完全一致
 
-**用户类型支持**：
-- 临时用户：无需密码，Token有时间限制
-- 注册用户：密码认证，长期有效Token
-
-### 7.2 用户与认证API（端点路径与代码保持一致）
+**安全设计原则**：
+- **敏感信息保护**：API 响应中不得包含用户登录凭据（邮箱/手机号/密码）
+- **最小权限原则**：响应只包含业务必需的字段，避免过度暴露用户信息
+- **传输安全**：所有包含敏感信息的请求必须通过 HTTPS 传输
+- **位置隐私**：地理位置信息应适当降低精度以保护用户隐私
+- **密码安全机制**：
+  - **禁止明文传输**：API 请求中严禁出现明文密码
+  - **动态哈希认证**：使用 SHA-256 + 动态盐值的哈希机制
+  - **防重放攻击**：每次认证使用服务端返回的随机 nonce 和时间戳
+  - **哈希算法**：`hash = SHA256(password + nonce + timestamp + login_id)`
+  - **有效期控制**：nonce 有效期为 5 分钟，防止长时间重放攻击
+  - **前端实现**：使用 Web Crypto API 或 crypto-js 库进行 SHA-256 计算
+  - **认证流程**：
+    1. 调用 `get_nonce` 获取 nonce_id、nonce 和 timestamp
+    2. 前端计算 `SHA256(password + nonce + timestamp + login_id)`
+    3. 发送哈希值、nonce_id、timestamp 到认证接口（不发送 nonce）
+    4. 服务端通过 nonce_id 从 Redis 获取 nonce，重新计算哈希进行比对
+  - **后端实现要求**：
+    - **Nonce 管理**：使用 Redis 存储 nonce，key 为 `auth_nonce:{login_id}:{nonce_id}`，TTL 为 5 分钟
+    - **多设备支持**：每个 nonce 有唯一 ID，支持同一用户多设备同时获取不同 nonce
+    - **哈希验证**：服务端重新计算 `SHA256(stored_password + nonce + timestamp + login_id)` 与请求哈希比对
+    - **时间戳验证**：验证 timestamp 在 nonce 有效期内且不超过服务器时间 ±30 秒
+    - **密码存储**：用户密码使用 Argon2 算法存储，不存储明文或简单哈希
+    - **防重放机制**：同一 nonce 只能使用一次，使用后立即从 Redis 删除
+- **文件上传安全**：
+  - 严格限制文件类型（仅允许图片格式：JPG、PNG、GIF、WebP）
+  - 限制文件大小（单文件≤10MB，总大小≤100MB）
+  - 文件名随机化，避免路径遍历攻击
+  - 图片自动压缩和格式标准化
+  - 恶意文件扫描和内容验证
 
 #### 7.1.3 公共数据模型（API 与 WebSocket 复用）
-- AuthResponse：
-  - user_id: i64；nickname: string；login_id?: string；access_token: string；refresh_token: string；expires_at: string；is_temp?: bool
-- User：
-  - user_id: i64；login_id?: string；nickname: string；avatar_url?: string；email?: string；bio?: string；is_temp?: bool；created_at?: string；last_active_at?: string；latitude?: f64；longitude?: f64；location_name?: string；distance?: f64
-- Group：
-  - group_id: uuid；name: string；description?: string；owner_id: i64；creator_name: string；created_at: string；last_active_at: string；latitude: f64；longitude: f64；member_count: i64；distance?: f64；location_name: string；is_password_required: bool；is_member: bool；user_role: string；avatar_url?: string
-- Message：
-  - message_id: uuid；sender_id: i64；sender_name: string；content: string；message_type: 'text'|'image'|'location'；sent_at: string；group_id?: uuid；conversation_id?: uuid；latitude?: f64；longitude?: f64
-- Moment：
-  - moment_id: uuid；user_id: i64；nickname: string；user_avatar?: string；description: string；latitude: f64；longitude: f64；location_name: string；created_at: string；likes_count: i64；comments_count: i64；liked_by_me: bool；distance?: f64；tags: string[]
-- PaginatedResponse<T>：
-  - items: T[]；has_more: bool；next_cursor?: i64
-- PasswordStatusResult：
-  - has_password: bool
-- BasicSuccess：
-  - success: bool
 
-扩展公共模型（供各 API 与 WebSocket 复用）：
-- Coordinates（地理坐标）：
-  - latitude: f64；longitude: f64（范围：纬度 [-90,90]，经度 [-180,180]）
-- PaginationParams（请求分页参数）：
-  - cursor?: i64；limit?: i64（1-100，默认 20）
-- PaginationMeta（响应分页元信息）：
-  - has_more: bool；next_cursor?: i64（为本页最后一条记录的 id）
-- ConversationSummary（会话概要）：
-  - conversation_id: uuid；peer_user_id: i64；peer_nickname: string；last_message_preview: string；last_message_at: string；unread_count: i64
-- UnreadCount（未读计数模型）：
-  - group 未读：{ group_id: uuid, unread_count: i64 }
-  - 私聊未读：{ conversation_id: uuid, unread_count: i64 }
-  - 汇总未读：{ total_unread_count: i64 }
-- MessageType（消息类型，字符串枚举）：
-  - 允许值：'text' | 'image' | 'voice' | 'video' | 'location' | 'file'
-- RoomType（房间类型，字符串枚举）：
-  - 允许值：'group' | 'conversation'
-- WsMessageNotification（WebSocket 消息通知负载）：
-  - message_id: uuid；room_id: uuid；room_type: RoomType；sender_id: i64；sender_nickname: string；content: string；message_type: MessageType；created_at: string；latitude?: f64；longitude?: f64
-- GroupEvent（群组事件负载）：
-  - group_id: uuid；event_type: 'member_joined'|'member_left'|'member_kicked'|'owner_transferred'|'group_updated'；actor_id: i64；actor_nickname: string；target_id?: i64；target_nickname?: string；created_at: string
-- SystemNotification（系统通知负载）：
-  - notification_id: uuid；notification_type: 'friend_request'|'group_invitation'|'system'|'announcement'|'new_moment'|'group_digest'；title: string；content: string；data?: object；created_at: string
+**类型转换规范**：
+由于 JavaScript 无法安全处理大整数和高精度浮点数，以下类型在 API 传输层需要特殊处理：
+- **64位整数 (`i64`)**: 转换为 `string` 类型
+  - **需要转换的字段**：`user_id`、`id`（数据库主键）、`cursor`/`next_cursor`（分页游标）
+  - **原因**：这些字段可能超出 JavaScript 安全整数范围（2^53-1）
+- **32位整数 (`i32`)**: 转换为 `number` 类型
+  - **包含字段**：`member_count`、`likes_count`、`comments_count`、`unread_count`、`code`（错误码）等
+  - **原因**：32位整数在 JavaScript 安全范围内，可直接使用 number
+- **64位浮点数 (`f64`)**: 转换为 `number` 类型，但注意精度限制
+  - **包含字段**：`latitude`、`longitude`、`distance`、`radius`（地理坐标和距离）
 
-说明：以上数据模型为统一定义，REST API 的 data 字段与 WebSocket 推送消息的 data 负载均应尽量复用这些模型，避免重复定义与歧义。
+后端内部使用原始类型存储，但在 JSON 序列化时进行适当转换。
 
-WS 专用错误码（与 HTTP 业务码并行，字段为字符串 code）：
-- INVALID_JSON：无效的 JSON 格式
-- INVALID_MESSAGE_TYPE：消息类型错误（握手阶段仅接受文本）
-- INVALID_AUTH_MESSAGE：首条消息非认证消息
-- INVALID_TOKEN：无效认证令牌
-- UNAUTHORIZED：未授权访问
-- FORBIDDEN：权限不足/禁止访问
-- ROOM_NOT_FOUND：房间不存在
-- CONNECTION_LIMIT_EXCEEDED：连接数量超限
-- MESSAGE_TOO_LARGE：消息大小超限
-- INTERNAL_ERROR：服务器内部错误
+**核心数据模型**：
 
-#### 7.2.1 认证接口（7个端点，前缀：/api/v1/auth）
+```typescript
+// 认证响应
+interface AuthResponse {
+  user_id: string;          // 64位整数转字符串
+  nickname: string;         // 用户昵称
+  access_token: string;     // 访问令牌
+  refresh_token: string;    // 刷新令牌
+  expires_at: string;       // 过期时间（ISO 8601）
+  is_temp?: boolean;        // 是否临时用户
+}
+
+// 用户信息
+interface User {
+  user_id: string;          // 64位整数转字符串
+  nickname: string;         // 用户昵称
+  avatar_url?: string;      // 头像URL
+  bio?: string;             // 个人简介
+  is_temp?: boolean;        // 是否临时用户
+  created_at?: string;      // 创建时间（ISO 8601）
+  last_active_at?: string;  // 最后活跃时间（ISO 8601）
+  latitude?: number;        // 纬度
+  longitude?: number;       // 经度
+  location_name?: string;   // 位置名称
+  distance?: number;        // 距离（米）
+}
+
+// 群组信息
+interface Group {
+  group_id: string;         // UUID转字符串
+  name: string;             // 群组名称
+  description?: string;     // 群组描述
+  owner_id: string;         // 群主ID（64位整数转字符串）
+  creator_name: string;     // 创建者昵称
+  created_at: string;       // 创建时间（ISO 8601）
+  last_active_at: string;   // 最后活跃时间（ISO 8601）
+  latitude: number;         // 纬度
+  longitude: number;        // 经度
+  member_count: number;     // 成员数量（32位整数）
+  distance?: number;        // 距离（米）
+  location_name: string;    // 位置名称
+  is_password_required: boolean; // 是否需要密码
+  is_member: boolean;       // 当前用户是否为成员
+  user_role: string;        // 当前用户角色
+  avatar_url?: string;      // 群组头像URL
+}
+
+// 消息信息
+interface Message {
+  message_id: string;       // UUID转字符串
+  sender_id: string;        // 发送者ID（64位整数转字符串）
+  sender_name: string;      // 发送者昵称
+  content: string;          // 消息内容
+  message_type: MessageType; // 消息类型枚举
+  sent_at: string;          // 发送时间（ISO 8601）
+  group_id?: string;        // 群组ID（UUID转字符串）
+  conversation_id?: string; // 会话ID（UUID转字符串）
+  latitude?: number;        // 纬度
+  longitude?: number;       // 经度
+}
+
+// 生活瞬间
+interface Moment {
+  moment_id: string;        // UUID转字符串
+  user_id: string;          // 用户ID（64位整数转字符串）
+  nickname: string;         // 用户昵称
+  user_avatar?: string;     // 用户头像URL
+  description: string;      // 瞬间描述
+  latitude: number;         // 纬度
+  longitude: number;        // 经度
+  location_name: string;    // 位置名称
+  created_at: string;       // 创建时间（ISO 8601）
+  likes_count: number;      // 点赞数（32位整数）
+  comments_count: number;   // 评论数（32位整数）
+  liked_by_me: boolean;     // 当前用户是否已点赞
+  distance?: number;        // 距离（米）
+  tags: string[];           // 标签数组
+}
+
+// 分页响应
+interface PaginatedResponse<T> {
+  items: T[];               // 数据项数组
+  has_more: boolean;        // 是否有更多数据
+  next_cursor?: string;     // 下一页游标（64位整数转字符串）
+}
+
+// 密码状态结果
+interface PasswordStatusResult {
+  has_password: boolean;    // 是否已设置密码
+}
+
+// 基础成功响应
+interface BasicSuccess {
+  success: boolean;         // 操作是否成功
+}
+```
+
+**扩展公共模型**：
+
+```typescript
+// 地理坐标
+interface Coordinates {
+  latitude: number;         // 纬度，范围：[-90, 90]，精度可适当降低以保护隐私
+  longitude: number;        // 经度，范围：[-180, 180]，精度可适当降低以保护隐私
+}
+
+// 请求分页参数
+interface PaginationParams {
+  cursor?: string;          // 游标分页，字符串类型
+  limit?: number;           // 每页数量，范围：1-100，默认20
+}
+
+// 响应分页元信息
+interface PaginationMeta {
+  has_more: boolean;        // 是否有更多数据
+  next_cursor?: string;     // 下一页游标（64位整数转字符串）
+}
+
+// 会话概要
+interface ConversationSummary {
+  conversation_id: string;  // 会话ID（UUID转字符串）
+  peer_user_id: string;     // 对方用户ID（64位整数转字符串）
+  peer_nickname: string;    // 对方昵称
+  last_message_preview: string; // 最后消息预览
+  last_message_at: string;  // 最后消息时间（ISO 8601）
+  unread_count: number;     // 未读消息数（32位整数）
+}
+
+// 未读计数模型
+interface UnreadCount {
+  group_id?: string;        // 群组ID（UUID转字符串）
+  conversation_id?: string; // 会话ID（UUID转字符串）
+  unread_count?: number;    // 具体未读数（32位整数）
+  total_unread_count?: number; // 汇总未读数（32位整数）
+}
+
+// 消息类型枚举
+type MessageType = 'text' | 'image' | 'voice' | 'video' | 'location' | 'file';
+
+// 房间类型枚举
+type RoomType = 'group' | 'conversation';
+
+// WebSocket 消息通知负载
+interface WsMessageNotification {
+  message_id: string;       // 消息ID（UUID转字符串）
+  room_id: string;          // 房间ID（UUID转字符串）
+  room_type: RoomType;      // 房间类型
+  sender_id: string;        // 发送者ID（64位整数转字符串）
+  sender_nickname: string;  // 发送者昵称
+  content: string;          // 消息内容
+  message_type: MessageType; // 消息类型
+  created_at: string;       // 创建时间（ISO 8601）
+  latitude?: number;        // 纬度
+  longitude?: number;       // 经度
+}
+
+// 群组事件负载
+interface GroupEvent {
+  group_id: string;         // 群组ID（UUID转字符串）
+  event_type: 'member_joined' | 'member_left' | 'member_kicked' | 'owner_transferred' | 'group_updated';
+  actor_id: string;         // 操作者ID（64位整数转字符串）
+  actor_nickname: string;   // 操作者昵称
+  target_id?: string;       // 目标用户ID（64位整数转字符串）
+  target_nickname?: string; // 目标用户昵称
+  created_at: string;       // 事件时间（ISO 8601）
+}
+
+// 系统通知负载
+interface SystemNotification {
+  notification_id: string;  // 通知ID（UUID转字符串）
+  notification_type: 'friend_request' | 'group_invitation' | 'system' | 'announcement' | 'new_moment' | 'group_digest';
+  title: string;            // 通知标题
+  content: string;          // 通知内容
+  data?: object;            // 附加数据
+  created_at: string;       // 创建时间（ISO 8601）
+}
+```
+
+**WebSocket 专用错误码**：
+- `INVALID_JSON` - 无效的 JSON 格式
+- `INVALID_MESSAGE_TYPE` - 消息类型错误（握手阶段仅接受文本）
+- `INVALID_AUTH_MESSAGE` - 首条消息非认证消息
+- `INVALID_TOKEN` - 无效认证令牌
+- `UNAUTHORIZED` - 未授权访问
+- `FORBIDDEN` - 权限不足/禁止访问
+- `ROOM_NOT_FOUND` - 房间不存在
+- `CONNECTION_LIMIT_EXCEEDED` - 连接数量超限
+- `MESSAGE_TOO_LARGE` - 消息大小超限
+- `INTERNAL_ERROR` - 服务器内部错误
+
+### 7.2 认证与用户API
+
+#### 7.2.1 认证接口（8个端点，前缀：/api/v1/auth）
+
+- `POST /api/v1/auth/get_nonce` - 获取认证随机数（认证预处理）
+  - 请求类型：GetNonceRequest
+    ```typescript
+    interface GetNonceRequest {
+      login_id: string;    // 邮箱/手机号，用于生成专用nonce
+    }
+    ```
+  - 认证：无需
+  - 响应 data：NonceResponse
+    ```typescript
+    interface NonceResponse {
+      nonce_id: string;    // nonce唯一标识符（UUID）
+      nonce: string;       // 32位随机字符串
+      timestamp: number;   // 服务器时间戳（毫秒）
+      expires_at: number;  // nonce过期时间戳（毫秒）
+    }
+    ```
 
 - `POST /api/v1/auth/register` - 用户注册
-  - 请求字段：
-    - login_id: string
-    - nickname: string
-    - password: string
+  - 请求类型：RegisterRequest
+    ```typescript
+    interface RegisterRequest {
+      login_id: string;    // 3-32字符，字母/数字/下划线，唯一
+      nickname: string;    // 2-32字符，去首尾空格
+      password_hash: string; // SHA256(password + nonce + timestamp + login_id)
+      nonce_id: string;    // 从 get_nonce 接口获取的nonce标识符
+      timestamp: number;   // 从 get_nonce 接口获取的时间戳
+    }
+    ```
   - 认证：无需
   - 响应 data：AuthResponse
 
 - `POST /api/v1/auth/login` - 用户登录
-  - 请求字段：
-    - login_id: string
-    - password: string
+  - 请求类型：LoginRequest
+    ```typescript
+    interface LoginRequest {
+      login_id: string;    // 邮箱/手机号，必填
+      password_hash: string; // SHA256(password + nonce + timestamp + login_id)
+      nonce_id: string;    // 从 get_nonce 接口获取的nonce标识符
+      timestamp: number;   // 从 get_nonce 接口获取的时间戳
+    }
+    ```
   - 认证：无需
   - 响应 data：AuthResponse
 
 - `POST /api/v1/auth/create_temp` - 创建临时用户
-  - 请求字段：
-    - nickname?: string
+  - 请求类型：CreateTempUserRequest
+    ```typescript
+    interface CreateTempUserRequest {
+      nickname?: string;   // 可选，2-32字符
+    }
+    ```
   - 认证：无需
   - 响应 data：AuthResponse
 
 - `POST /api/v1/auth/refresh_token` - 刷新Token
-  - 请求字段：
-    - refresh_token: string
+  - 请求类型：RefreshTokenRequest
+    ```typescript
+    interface RefreshTokenRequest {
+      refresh_token: string;  // 刷新令牌，必填
+    }
+    ```
   - 认证：无需
   - 响应 data：AuthResponse
 
 - `POST /api/v1/auth/check_status` - 检查认证状态
-  - 请求字段：无
+  - 请求类型：无请求体
   - 认证：需要（Authorization: Bearer <jwt>)
   - 响应 data：AuthResponse
 
 - `POST /api/v1/auth/set_password` - 设置密码
-  - 请求字段：
-    - new_password: string
-    - old_password?: string
+  - 请求类型：SetPasswordRequest
+    ```typescript
+    interface SetPasswordRequest {
+      new_password_hash: string; // SHA256(new_password + nonce + timestamp + user_id)
+      old_password_hash?: string; // SHA256(old_password + nonce + timestamp + user_id)，首次设置可为空
+      nonce_id: string;        // 从 get_nonce 接口获取的nonce标识符
+      timestamp: number;       // 从 get_nonce 接口获取的时间戳
+    }
+    ```
   - 认证：需要
-  - 响应 data：BasicSuccess 或空
+  - 响应 data：BasicSuccess
 
 - `POST /api/v1/auth/password_status` - 检查密码状态
-  - 请求字段：无
+  - 请求类型：无请求体
   - 认证：需要
   - 响应 data：PasswordStatusResult
 
 字段校验与业务规则（认证）：
+- /auth/get_nonce：
+  - login_id 必填，用于生成用户专用的 nonce；
+  - 每次请求生成新的 nonce_id 和 nonce，支持多设备同时获取；
+  - 返回的 nonce 有效期为 5 分钟，超时需重新获取；
+  - 同一用户可同时持有多个有效 nonce（不同 nonce_id）。
 - /auth/register：
   - login_id 必填，3-32 个字符，允许字母/数字/下划线，需唯一（区分大小写）；
   - nickname 必填，2-32 个字符，去首尾空格，禁止仅空白；
-  - password 必填，最少 8 位，至少包含字母与数字；
+  - password_hash 必填，使用 SHA256(password + nonce + timestamp + login_id) 算法；
+  - nonce_id 和 timestamp 必须来自有效的 get_nonce 响应；
+  - 服务端通过 nonce_id 从 Redis 获取对应的 nonce 进行验证；
   - 成功后立即返回 AuthResponse，并可异步派发位置初始化任务（不阻塞响应）。
 - /auth/login：
-  - login_id、password 均必填；错误不区分具体原因，统一返回未授权；
+  - login_id、password_hash 均必填；错误不区分具体原因，统一返回未授权；
+  - password_hash 使用 SHA256(password + nonce + timestamp + login_id) 算法；
+  - 服务端重新计算哈希值进行比对验证；
   - 多次失败可能触发风控（节流/限流）。
 - /auth/create_temp：
   - nickname 可选，提供时 2-32 个字符；
@@ -1171,83 +1425,140 @@ WS 专用错误码（与 HTTP 业务码并行，字段为字符串 code）：
   - 需携带有效 Bearer Token；
   - 返回当前身份信息与 token 剩余有效期。
 - /auth/set_password：
-  - new_password 必填，规则同注册密码；若已设置密码且要求校验，需提供 old_password；
+  - new_password_hash 必填，使用 SHA256(new_password + nonce + timestamp + user_id) 算法；
+  - old_password_hash 可选，若已设置密码且要求校验，需提供；
+  - nonce_id 和 timestamp 必须来自有效的 get_nonce 响应；
+  - 服务端通过 nonce_id 从 Redis 获取对应的 nonce 进行验证；
   - 成功后建议使旧 access_token 失效并下发新 token（实现可选）。
 - /auth/password_status：
   - 返回 has_password 用于前端引导设置/修改密码。
 
-#### 7.2.2 用户数据接口（9个端点，前缀：/api/v1/user）
+#### 7.2.2 用户数据接口（9个端点）
 
-- `POST /api/v1/user/search_by_name` - 按昵称搜索用户
-- `POST /api/v1/user/search_by_id` - 获取用户资料
-- `POST /api/v1/user/search_by_location` - 按位置搜索附近用户
-- `POST /api/v1/user/update_location` - 更新用户位置
-- `POST /api/v1/user/update_profile` - 更新用户资料
-- `POST /api/v1/user/upgrade_account` - 账户升级
-- `POST /api/v1/user/get_settings` - 获取用户设置
-- `POST /api/v1/user/update_settings` - 更新用户设置
-- `POST /api/v1/user/delete_account` - 删除账户
+**查询类接口（公开访问，无需认证，前缀：/api/v1/public/user）**：
+- `POST /api/v1/public/user/search_by_name` - 按昵称搜索用户
+- `POST /api/v1/public/user/search_by_id` - 获取用户资料
+- `POST /api/v1/public/user/search_by_location` - 按位置搜索附近用户
 
-通用要求：以上端点均需要认证（Authorization: Bearer <jwt>）
+**管理类接口（需要认证：Authorization: Bearer <jwt>，前缀：/api/v1/protected/user）**：
+- `POST /api/v1/protected/user/update_location` - 更新用户位置
+- `POST /api/v1/protected/user/update_profile` - 更新用户资料
+- `POST /api/v1/protected/user/upgrade_account` - 账户升级
+- `POST /api/v1/protected/user/get_settings` - 获取用户设置
+- `POST /api/v1/protected/user/update_settings` - 更新用户设置
+- `POST /api/v1/protected/user/delete_account` - 删除账户
 
-请求字段说明：
-- 本节涉及的游标分页参数统一复用公共模型：PaginationParams（cursor、limit）。
-- /user/search_by_name：
-  - query: string
-  - cursor?: i64
-  - limit?: i64
-- /user/search_by_id：
-  - user_id: i64
-- /user/search_by_location：
-  - latitude: f64
-  - longitude: f64
-  - radius: f64（单位：米）
-  - cursor?: i64
-  - limit?: i64
-- /user/update_location：
-  - latitude: f64
-  - longitude: f64
-  - location_name: string
-- /user/update_profile：
-  - nickname: string
-- /user/upgrade_account：
-  - login_id: string
-  - password: string
-- /user/get_settings：
-  - 无
-- /user/update_settings：
-  - 可更新字段（部分）：
-    - notification_level: enum('all','mention','important','muted')
-    - message_notifications?: bool
-    - group_notifications?: bool
-    - system_notifications?: bool
-    - location_notifications?: bool
-    - quiet_hours_enabled?: bool
-    - quiet_hours_start?: string(‘HH:MM:SS’)
-    - quiet_hours_end?: string(‘HH:MM:SS’)
-    - notification_radius_km?: f64
-    - sound_enabled?: bool
-    - vibration_enabled?: bool
-- /user/delete_account：
-  - 无
+**请求类型定义：**
 
--响应 data 类型说明：
-- /user/search_by_name：PaginatedResponse<User>（元素模型复用：User）
-- /user/search_by_id：复用公共模型：User
-- /user/search_by_location：PaginatedResponse<User>（元素模型复用：User）
-- /user/update_location：BasicSuccess 或空
-- /user/update_profile：{ nickname: string } 或 BasicSuccess
-- /user/upgrade_account：复用公共模型：AuthResponse
-- /user/get_settings：用户设置对象（字段见“/user/update_settings 可更新字段”）
-- /user/update_settings：最新用户设置对象 或 BasicSuccess
-- /user/delete_account：BasicSuccess 或空
+- **SearchUserByNameRequest**：
+  ```typescript
+  interface SearchUserByNameRequest {
+    query: string;        // 搜索关键词，1-32字符
+    cursor?: string;      // 游标分页
+    limit?: number;       // 1-100，默认20
+  }
+  ```
+
+- **SearchUserByIdRequest**：
+  ```typescript
+  interface SearchUserByIdRequest {
+    user_id: string;      // 用户ID（64位整数转字符串）
+  }
+  ```
+
+- **SearchUserByLocationRequest**：
+  ```typescript
+  interface SearchUserByLocationRequest {
+    latitude: number;     // 纬度，-90~90
+    longitude: number;    // 经度，-180~180
+    radius: number;       // 搜索半径，单位米，>0且≤100000
+    cursor?: string;      // 游标分页
+    limit?: number;       // 1-100，默认20
+  }
+  ```
+
+- **UpdateLocationRequest**：
+  ```typescript
+  interface UpdateLocationRequest {
+    latitude: number;     // 纬度，-90~90
+    longitude: number;    // 经度，-180~180
+    location_name: string; // 位置名称，1-120字符
+  }
+  ```
+
+- **UpdateProfileRequest**：
+  ```typescript
+  interface UpdateProfileRequest {
+    nickname: string;     // 用户昵称，2-32字符
+  }
+  ```
+
+- **UpgradeAccountRequest**：
+  ```typescript
+  interface UpgradeAccountRequest {
+    login_id: string;     // 邮箱/手机号，3-32字符，唯一
+    password_hash: string; // SHA256(password + nonce + timestamp + login_id)
+    nonce_id: string;    // 从 get_nonce 接口获取的nonce标识符
+    timestamp: number;   // 从 get_nonce 接口获取的时间戳
+  }
+  ```
+
+- **UserSettingsRequest**：
+  ```typescript
+  interface UserSettingsRequest {
+    notification_level?: 'all' | 'mention' | 'important' | 'muted';
+    message_notifications?: boolean;
+    group_notifications?: boolean;
+    system_notifications?: boolean;
+    location_notifications?: boolean;
+    quiet_hours_enabled?: boolean;
+    quiet_hours_start?: string;      // 格式：'HH:MM:SS'
+    quiet_hours_end?: string;        // 格式：'HH:MM:SS'
+    notification_radius_km?: number;
+    sound_enabled?: boolean;
+    vibration_enabled?: boolean;
+  }
+  ```
+
+**响应类型定义：**
+
+```typescript
+// 搜索用户响应
+interface SearchUserByNameResponse extends PaginatedResponse<User> {}
+interface SearchUserByIdResponse extends User {}
+interface SearchUserByLocationResponse extends PaginatedResponse<User> {}
+
+// 用户操作响应
+interface UpdateLocationResponse extends BasicSuccess {}
+interface UpdateProfileResponse {
+  nickname: string;         // 更新后的昵称
+}
+interface UpgradeAccountResponse extends AuthResponse {}
+
+// 用户设置响应（仅返回给用户本人，不对外暴露）
+interface UserSettingsResponse {
+  notification_level: 'all' | 'mention' | 'important' | 'muted';
+  message_notifications: boolean;
+  group_notifications: boolean;
+  system_notifications: boolean;
+  location_notifications: boolean;
+  quiet_hours_enabled: boolean;
+  quiet_hours_start?: string;      // 格式：'HH:MM:SS'
+  quiet_hours_end?: string;        // 格式：'HH:MM:SS'
+  notification_radius_km: number;
+  sound_enabled: boolean;
+  vibration_enabled: boolean;
+}
+interface UpdateSettingsResponse extends UserSettingsResponse {}
+interface DeleteAccountResponse extends BasicSuccess {}
+```
 
 字段校验与业务规则（用户）：
 - /user/search_by_name：
   - query 必填，1-32 字符，模糊匹配昵称，统一大小写与空白处理；
   - 游标分页：limit 1-100，缺省 20；cursor 缺省 0。
 - /user/search_by_id：
-  - user_id 必填，为平台内 i64 用户号；
+  - user_id 必填，为平台内用户号（API传输层为string，后端内部为i64）；
   - 若请求自身资料，可直接返回完整信息；他人资料按隐私策略裁剪（如隐藏邮箱）。
 - /user/search_by_location：
   - latitude/longitude 必填，范围：纬度 [-90,90]，经度 [-180,180]；
@@ -1263,7 +1574,9 @@ WS 专用错误码（与 HTTP 业务码并行，字段为字符串 code）：
   - 若为临时用户，允许更新昵称；正式用户同样允许，需去重策略视实现；
   - 成功后可通过 WebSocket 推送 UserProfileUpdated（如需）。
 - /user/upgrade_account：
-  - 登录名与密码规则同注册；
+  - login_id 规则同注册；password_hash 使用 SHA256(password + nonce + timestamp + login_id) 算法；
+  - nonce_id 和 timestamp 必须来自有效的 get_nonce 响应；
+  - 服务端通过 nonce_id 从 Redis 获取对应的 nonce 进行验证；
   - 临时用户升级后 user_id 保持不变，数据应无缝迁移；
   - 若 login_id 已占用，返回冲突错误码。
 - /user/get_settings & /user/update_settings：
@@ -1274,83 +1587,129 @@ WS 专用错误码（与 HTTP 业务码并行，字段为字符串 code）：
   - 删除为不可逆操作，触发数据清理与会话失效；
   - 若存在未完成的任务（如异步迁移），采用延迟删除策略。
 
-### 7.3 群组管理API（前缀：/api/v1/group）
+### 7.3 群组管理API
 
 #### 7.3.1 群组操作 (9个端点)
 
-**群组基础操作**：
-- `POST /api/v1/group/create` - 创建群组
-- `POST /api/v1/group/search_by_name` - 按名称搜索群组
-- `POST /api/v1/group/search_by_location` - 按位置搜索附近群组
-- `POST /api/v1/group/search_by_id` - 按ID搜索群组
+**查询类接口（公开访问，无需认证，前缀：/api/v1/public/group）**：
+- `POST /api/v1/public/group/search_by_name` - 按名称搜索群组
+- `POST /api/v1/public/group/search_by_location` - 按位置搜索附近群组
+- `POST /api/v1/public/group/search_by_id` - 按ID搜索群组
+- `POST /api/v1/public/group/members` - 获取群组成员列表
 
-**群组成员管理**：
-- `POST /api/v1/group/join` - 加入群组
-- `POST /api/v1/group/leave` - 退出群组
-- `POST /api/v1/group/members` - 获取群组成员列表
-- `POST /api/v1/group/transfer_ownership` - 转让群主权限
-- `POST /api/v1/group/kick` - 踢出群组成员
-（可选补充）
-- `POST /api/v1/group/user_groups` - 获取当前用户加入的群组列表
-- `POST /api/v1/group/owned_groups` - 获取当前用户拥有的群组列表
+**管理类接口（需要认证：Authorization: Bearer <jwt>，前缀：/api/v1/protected/group）**：
+- `POST /api/v1/protected/group/create` - 创建群组
+- `POST /api/v1/protected/group/join` - 加入群组
+- `POST /api/v1/protected/group/leave` - 退出群组
+- `POST /api/v1/protected/group/transfer_ownership` - 转让群主权限
+- `POST /api/v1/protected/group/kick` - 踢出群组成员
 
-通用要求：以上端点均需要认证（Authorization: Bearer <jwt>）
+**请求类型定义：**
 
-请求字段说明：
-（分页端点统一复用公共模型：PaginationParams（cursor、limit）；坐标字段 latitude/longitude 遵循公共模型 Coordinates 的范围规范）
-- /group/create：
-  - name: string
-  - description?: string
-  - latitude: f64
-  - longitude: f64
-  - radius: f64（米）
-  - is_public: bool
-- /group/search_by_name：
-  - query: string
-  - cursor?: i64
-  - limit?: i64
-- /group/search_by_location：
-  - latitude: f64
-  - longitude: f64
-  - radius: f64（米）
-  - cursor?: i64
-  - limit?: i64
-- /group/search_by_id：
-  - group_id: uuid
-- /group/join：
-  - group_id: uuid
-- /group/leave：
-  - group_id: uuid
-- /group/members：
-  - group_id: uuid
-- /group/transfer_ownership：
-  - group_id: uuid
-  - target_user_id: i64
-- /group/kick：
-  - group_id: uuid
-  - target_user_id: i64
-- /group/user_groups：
-  - 无
-- /group/owned_groups：
-  - 无
+- **CreateGroupRequest**：
+  ```typescript
+  interface CreateGroupRequest {
+    name: string;         // 群组名称，2-32字符
+    description?: string; // 群组描述，≤300字符
+    latitude: number;     // 纬度，-90~90
+    longitude: number;    // 经度，-180~180
+    radius: number;       // 群组半径，单位米，>0且≤100000
+    is_public: boolean;   // 是否公开群组
+    password?: string;    // 群组密码，可选，1-32字符
+  }
+  ```
 
--响应 data 类型说明：
-- /group/create：复用公共模型：Group
-- /group/search_by_name：PaginatedResponse<Group>（元素模型复用：Group）
-- /group/search_by_location：PaginatedResponse<Group>（元素模型复用：Group）
-- /group/search_by_id：复用公共模型：Group
-- /group/join：BasicSuccess 或 { group: Group }
-- /group/leave：BasicSuccess
-- /group/members：PaginatedResponse<User>（元素模型复用：User）
-- /group/transfer_ownership：BasicSuccess
-- /group/kick：BasicSuccess
-- /group/user_groups：PaginatedResponse<Group>
-- /group/owned_groups：PaginatedResponse<Group>
+- **SearchGroupByNameRequest**：
+  ```typescript
+  interface SearchGroupByNameRequest {
+    query: string;        // 搜索关键词，1-32字符
+    cursor?: string;      // 游标分页
+    limit?: number;       // 1-100，默认20
+  }
+  ```
+
+- **SearchGroupByLocationRequest**：
+  ```typescript
+  interface SearchGroupByLocationRequest {
+    latitude: number;     // 纬度，-90~90
+    longitude: number;    // 经度，-180~180
+    radius: number;       // 搜索半径，单位米，>0且≤100000
+    cursor?: string;      // 游标分页
+    limit?: number;       // 1-100，默认20
+  }
+  ```
+
+- **SearchGroupByIdRequest**：
+  ```typescript
+  interface SearchGroupByIdRequest {
+    group_id: string;     // 群组ID（UUID转字符串）
+  }
+  ```
+
+- **JoinGroupRequest**：
+  ```typescript
+  interface JoinGroupRequest {
+    group_id: string;     // 群组ID（UUID转字符串）
+    password?: string;    // 群组密码，当群组需要密码时必填，1-32字符
+  }
+  ```
+
+- **LeaveGroupRequest**：
+  ```typescript
+  interface LeaveGroupRequest {
+    group_id: string;     // 群组ID（UUID转字符串）
+  }
+  ```
+
+- **GroupMembersRequest**：
+  ```typescript
+  interface GroupMembersRequest {
+    group_id: string;     // 群组ID（UUID转字符串）
+    cursor?: string;      // 游标分页
+    limit?: number;       // 1-100，默认20
+  }
+  ```
+
+- **TransferOwnershipRequest**：
+  ```typescript
+  interface TransferOwnershipRequest {
+    group_id: string;     // 群组ID（UUID转字符串）
+    target_user_id: string; // 目标用户ID（64位整数转字符串）
+  }
+  ```
+
+- **KickMemberRequest**：
+  ```typescript
+  interface KickMemberRequest {
+    group_id: string;     // 群组ID（UUID转字符串）
+    target_user_id: string; // 目标用户ID（64位整数转字符串）
+  }
+  ```
+
+**响应类型定义：**
+
+```typescript
+// 群组查询响应
+interface SearchGroupByNameResponse extends PaginatedResponse<Group> {}
+interface SearchGroupByLocationResponse extends PaginatedResponse<Group> {}
+interface SearchGroupByIdResponse extends Group {}
+interface GroupMembersResponse extends PaginatedResponse<User> {}
+
+// 群组操作响应
+interface CreateGroupResponse extends Group {}
+interface JoinGroupResponse extends BasicSuccess {
+  group?: Group;            // 可选，加入成功后的群组信息
+}
+interface LeaveGroupResponse extends BasicSuccess {}
+interface TransferOwnershipResponse extends BasicSuccess {}
+interface KickMemberResponse extends BasicSuccess {}
+```
 
 字段校验与业务规则（群组）：
 - /group/create：
   - name 必填，2-32 字符；description 可选，≤ 300 字符；
   - 经纬度与 radius（>0 且 ≤ 100000 米）必填；is_public 必填；
+  - password 可选，1-32 字符；设置密码后群组需要密码才能加入；
   - 创建者自动加入为群主；可异步派发欢迎/摘要任务；
   - 名称可做去重或相似度检测（实现可选）。
 - /group/search_by_name：
@@ -1365,6 +1724,7 @@ WS 专用错误码（与 HTTP 业务码并行，字段为字符串 code）：
   - 若群组为私有且用户非成员，限制返回内容。
 - /group/join 与 /group/leave：
   - group_id 必填；加入/退出需校验成员状态与容量限制；
+  - 若群组设置了密码（is_password_required=true），则 password 字段必填且需验证正确；
   - 私有群需额外权限/口令（如有）；
   - 成功后通过 WebSocket 广播 GroupEvent（MemberJoined/MemberLeft）。
 - /group/members：
@@ -1380,104 +1740,171 @@ WS 专用错误码（与 HTTP 业务码并行，字段为字符串 code）：
 
 **示例：创建群组**
 （结构字段说明，示例省略）
-POST /api/v1/group/create
+POST /api/v1/protected/group/create
 {
     "name": "咖啡爱好者",
     "description": "分享咖啡文化，探讨咖啡制作技巧",
     "longitude": 116.397128,
     "latitude": 39.916527,
     "radius": 2000,
-    "is_public": true
+    "is_public": true,
+    "password": "coffee123"
 }
 
 Response:
 {
     "code": 0,
-    "message": "群组创建成功",
+    "msg": "群组创建成功",
     "data": {
         "group_id": 9876543210,
         "name": "咖啡爱好者",
         "description": "分享咖啡文化，探讨咖啡制作技巧",
         "creator_id": 1234567890,
         "member_count": 1,
+        "is_password_required": true,
         "created_at": "2024-01-15T10:30:00Z"
+    }
+}
+
+**示例：加入需要密码的群组**
+POST /api/v1/protected/group/join
+{
+    "group_id": "9876543210",
+    "password": "coffee123"
+}
+
+Response:
+{
+    "code": 0,
+    "msg": "成功加入群组",
+    "data": {
+        "success": true,
+        "group": {
+            "group_id": "9876543210",
+            "name": "咖啡爱好者",
+            "member_count": 2,
+            "is_member": true,
+            "user_role": "member"
+        }
     }
 }
 ```
 
-### 7.4 消息通讯API（前缀：/api/v1/chat）
+### 7.4 消息通讯API
 
-#### 7.4.1 消息操作 (10个端点)
+#### 7.4.1 消息操作 (11个端点，前缀：/api/v1/protected/chat）
 
 **消息发送**：
-- `POST /api/v1/chat/group/send` - 发送群组消息
-- `POST /api/v1/chat/user/send` - 发送私聊消息
+- `POST /api/v1/protected/chat/group/send` - 发送群组消息
+- `POST /api/v1/protected/chat/user/send` - 发送私聊消息
 
 **消息历史**：
-- `POST /api/v1/chat/group/history` - 获取群组消息历史
-- `POST /api/v1/chat/user/history` - 获取私聊消息历史
+- `POST /api/v1/protected/chat/group/history` - 获取群组消息历史
+- `POST /api/v1/protected/chat/user/history` - 获取私聊消息历史
 
 **消息管理**：
-- `POST /api/v1/chat/group/delete` - 删除群组消息
-- `POST /api/v1/chat/user/delete` - 删除私聊消息
-- `POST /api/v1/chat/user/conversations` - 获取会话列表
-- `POST /api/v1/chat/group/mark-read` - 标记群组消息已读
-- `POST /api/v1/chat/user/mark-read` - 标记私聊消息已读
-- `POST /api/v1/chat/group/unread_count` - 获取群组未读消息数
-- `POST /api/v1/chat/user/unread_count` - 获取私聊未读消息数
+- `POST /api/v1/protected/chat/group/delete` - 删除群组消息
+- `POST /api/v1/protected/chat/user/delete` - 删除私聊消息
+- `POST /api/v1/protected/chat/user/conversations` - 获取会话列表
+- `POST /api/v1/protected/chat/group/mark-read` - 标记群组消息已读
+- `POST /api/v1/protected/chat/user/mark-read` - 标记私聊消息已读
+- `POST /api/v1/protected/chat/group/unread_count` - 获取群组未读消息数
+- `POST /api/v1/protected/chat/user/unread_count` - 获取私聊未读消息数
 
 通用要求：以上端点均需要认证（Authorization: Bearer <jwt>）
 
-请求字段说明：
-（分页端点统一复用公共模型：PaginationParams（cursor、limit））
-- /chat/group/send：
-  - group_id: uuid
-  - content: string
-  - message_type?: string（默认 'text'）
-- /chat/user/send：
-  - recipient_id: i64
-  - content: string
-  - message_type?: string（默认 'text'）
-- /chat/group/history：
-  - group_id: uuid
-  - cursor?: i64
-  - limit?: i64
-- /chat/user/history：
-  - conversation_id?: uuid（优先）
-  - recipient_id?: i64（当未提供 conversation_id 时可用）
-  - cursor?: i64
-  - limit?: i64
-- /chat/group/delete：
-  - message_id: uuid
-- /chat/user/delete：
-  - message_id: uuid
-- /chat/user/conversations：
-  - cursor?: i64
-  - limit?: i64
-- /chat/group/mark-read：
-  - group_id: uuid
-  - last_read_message_id?: uuid
-- /chat/user/mark-read：
-  - conversation_id: uuid
-  - last_read_message_id?: uuid
-- /chat/group/unread_count：
-  - group_id: uuid
-- /chat/user/unread_count：
-  - 无（返回汇总）或 conversation_id: uuid（返回指定会话）
+**请求类型定义：**
 
--响应 data 类型说明：
-- /chat/group/send：复用公共模型：Message
-- /chat/user/send：复用公共模型：Message
-- /chat/group/history：PaginatedResponse<Message>（元素模型复用：Message）
-- /chat/user/history：PaginatedResponse<Message>（元素模型复用：Message）
-- /chat/group/delete：BasicSuccess
-- /chat/user/delete：BasicSuccess
-- /chat/user/conversations：PaginatedResponse<ConversationSummary>
-  - 复用公共模型：ConversationSummary
-- /chat/group/mark-read：BasicSuccess
-- /chat/user/mark-read：BasicSuccess
-- /chat/group/unread_count：复用公共模型：UnreadCount（群组未读）
-- /chat/user/unread_count：复用公共模型：UnreadCount
+- **SendGroupMessageRequest**：
+  ```typescript
+  interface SendGroupMessageRequest {
+    group_id: string;     // 群组ID（UUID转字符串）
+    content: string;      // 消息内容，1-2000字符
+    message_type?: MessageType; // 消息类型，默认'text'
+  }
+  ```
+
+- **SendDirectMessageRequest**：
+  ```typescript
+  interface SendDirectMessageRequest {
+    recipient_id: string; // 接收者ID（64位整数转字符串）
+    content: string;      // 消息内容，1-2000字符
+    message_type?: MessageType; // 消息类型，默认'text'
+  }
+  ```
+
+- **GroupMessageHistoryRequest**：
+  ```typescript
+  interface GroupMessageHistoryRequest {
+    group_id: string;     // 群组ID（UUID转字符串）
+    cursor?: string;      // 游标分页
+    limit?: number;       // 1-100，默认20
+  }
+  ```
+
+- **DirectMessageHistoryRequest**：
+  ```typescript
+  interface DirectMessageHistoryRequest {
+    conversation_id?: string; // 会话ID（UUID转字符串），优先使用
+    recipient_id?: string;    // 接收者ID（64位整数转字符串），备用
+    cursor?: string;          // 游标分页
+    limit?: number;           // 1-100，默认20
+  }
+  ```
+
+- **DeleteMessageRequest**：
+  ```typescript
+  interface DeleteMessageRequest {
+    message_id: string;   // 消息ID（UUID转字符串）
+  }
+  ```
+
+- **ConversationsRequest**：
+  ```typescript
+  interface ConversationsRequest {
+    cursor?: string;      // 游标分页
+    limit?: number;       // 1-100，默认20
+  }
+  ```
+
+- **MarkReadRequest**：
+  ```typescript
+  interface MarkReadRequest {
+    group_id?: string;    // 群组ID（UUID转字符串），群组消息时使用
+    conversation_id?: string; // 会话ID（UUID转字符串），私聊消息时使用
+    last_read_message_id?: string; // 最后已读消息ID（UUID转字符串）
+  }
+  ```
+
+- **GetUnreadCountRequest**：
+  ```typescript
+  interface GetUnreadCountRequest {
+    group_id?: string;        // 群组ID（UUID转字符串），获取群组未读数
+    conversation_id?: string; // 会话ID（UUID转字符串），获取私聊未读数
+    // 两者都为空时返回汇总未读数
+  }
+  ```
+
+**响应类型定义：**
+
+```typescript
+// 消息发送响应
+interface SendGroupMessageResponse extends Message {}
+interface SendDirectMessageResponse extends Message {}
+
+// 消息历史响应
+interface GroupMessageHistoryResponse extends PaginatedResponse<Message> {}
+interface DirectMessageHistoryResponse extends PaginatedResponse<Message> {}
+
+// 消息管理响应
+interface DeleteMessageResponse extends BasicSuccess {}
+interface ConversationsResponse extends PaginatedResponse<ConversationSummary> {}
+interface MarkReadResponse extends BasicSuccess {}
+
+// 未读计数响应
+interface GroupUnreadCountResponse extends UnreadCount {}
+interface UserUnreadCountResponse extends UnreadCount {}
+```
 
 字段校验与业务规则（聊天/消息）：
 - /chat/*/send：
@@ -1503,7 +1930,7 @@ Response:
 
 **示例：发送群组消息**
 （结构字段说明，示例省略）
-POST /api/v1/chat/group/send
+POST /api/v1/protected/chat/group/send
 {
     "group_id": 9876543210,
     "content": "大家好！欢迎来到咖啡爱好者群组",
@@ -1513,7 +1940,7 @@ POST /api/v1/chat/group/send
 Response:
 {
     "code": 0,
-    "message": "消息发送成功",
+    "msg": "消息发送成功",
     "data": {
         "message_id": 1111111111,
         "group_id": 9876543210,
@@ -1576,25 +2003,25 @@ Response:
 
 服务器 → 客户端（推送消息）需求说明：
 - ServerMessage.Connected：
-  - 字段：user_id: i64；session_id: string；
+  - 字段：user_id: string；session_id: string；
   - 在 Connect 校验通过后下发，标识连接就绪。
 - ServerMessage.Error：
-  - 字段：code: string；message: string；
+  - 字段：code: string；msg: string；
   - 用于协议或权限错误（如未认证加入房间、参数无效）。
 - ServerMessage.Success：
-  - 字段：message: string；
+  - 字段：msg: string；
   - 用于通用成功反馈。
 - ServerMessage.NewMessage：
-  - 字段：message_id: uuid；room_id: uuid；room_type: 'group'|'conversation'；sender_id: i64；sender_nickname: string；content: string；message_type: 'text'|'image'|'voice'|'video'|'location'|'file'；created_at: string；latitude?: f64；longitude?: f64；
+  - 字段：message_id: uuid；room_id: uuid；room_type: 'group'|'conversation'；sender_id: string；sender_nickname: string；content: string；message_type: 'text'|'image'|'voice'|'video'|'location'|'file'；created_at: string；latitude?: number；longitude?: number；
   - 在群聊/私聊新消息产生时向对应房间广播。
 - ServerMessage.UserStartedTyping / UserStoppedTyping：
-  - 字段：room_id: uuid；user_id: i64；nickname: string（仅 StartedTyping）；
+  - 字段：room_id: uuid；user_id: string；nickname: string（仅 StartedTyping）；
   - 用于输入状态展示；客户端应设置超时兜底。
 - ServerMessage.MessageRead：
-  - 字段：room_id: uuid；user_id: i64；message_id?: uuid；
+  - 字段：room_id: uuid；user_id: string；message_id?: uuid；
   - 标识对方已读到某条消息或整段历史已读。
 - ServerMessage.GroupEvent：
-  - 字段：group_id: uuid；event_type: 'member_joined'|'member_left'|'member_kicked'|'owner_transferred'|'group_updated'；actor_id: i64；actor_nickname: string；target_id?: i64；target_nickname?: string；created_at: string；
+  - 字段：group_id: uuid；event_type: 'member_joined'|'member_left'|'member_kicked'|'owner_transferred'|'group_updated'；actor_id: string；actor_nickname: string；target_id?: string；target_nickname?: string；created_at: string；
   - 用于成员变更与群信息变更广播。
 - ServerMessage.SystemNotification：
   - 字段：notification_id: uuid；notification_type: 'friend_request'|'group_invitation'|'system'|'announcement'|'new_moment'|'group_digest'；title: string；content: string；data?: object；created_at: string；
@@ -1611,66 +2038,117 @@ WebSocket 一致性与可靠性建议：
 - 幂等性：重复 Join*/Leave* 为幂等操作；
 - 错误对齐：WS 协议错误码与 HTTP 业务码不同维度，前端适配层需统一映射与展示。
 
-### 7.5 生活瞬间系统API（前缀：/api/v1/moments）
+### 7.5 生活瞬间API
 
 #### 7.5.1 生活瞬间操作 (8个端点)
 
-**生活瞬间管理**：
-- `POST /api/v1/moments/create` - 创建生活瞬间
-- `POST /api/v1/moments/delete` - 删除生活瞬间
-- `POST /api/v1/moments/history` - 获取生活瞬间历史
+**查询类接口（公开访问，无需认证，前缀：/api/v1/public/moments）**：
+- `POST /api/v1/public/moments/history` - 获取生活瞬间历史
+- `POST /api/v1/public/moments/search_by_location` - 按位置搜索生活瞬间
+- `POST /api/v1/public/moments/search_by_tags` - 按标签搜索生活瞬间
+- `POST /api/v1/public/moments/search_by_id` - 按ID搜索生活瞬间
 
-**生活瞬间搜索**：
-- `POST /api/v1/moments/search_by_location` - 按位置搜索生活瞬间
-- `POST /api/v1/moments/search_by_tags` - 按标签搜索生活瞬间
-- `POST /api/v1/moments/search_by_id` - 按ID搜索生活瞬间
+**管理类接口（需要认证：Authorization: Bearer <jwt>，前缀：/api/v1/protected/moments）**：
+- `POST /api/v1/protected/moments/create` - 创建生活瞬间
+- `POST /api/v1/protected/moments/delete` - 删除生活瞬间
+- `POST /api/v1/protected/moments/like` - 点赞生活瞬间
+- `POST /api/v1/protected/moments/unlike` - 取消点赞
 
-**生活瞬间互动**：
-- `POST /api/v1/moments/like` - 点赞生活瞬间
-- `POST /api/v1/moments/unlike` - 取消点赞
+**请求类型定义：**
 
-通用要求：以上端点均需要认证（Authorization: Bearer <jwt>）
+- **CreateMomentRequest**：
+  ```typescript
+  interface CreateMomentRequest {
+    latitude: number;     // 纬度，-90~90
+    longitude: number;    // 经度，-180~180
+    description?: string; // 瞬间描述，≤500字符
+    tags?: string[];      // 标签数组，单个标签1-20字符，总数≤10
+    image_urls?: string[]; // 图片URL数组，总数≤9
+  }
+  ```
 
-请求字段说明：
-（分页端点统一复用公共模型：PaginationParams（cursor、limit）；坐标字段 latitude/longitude 遵循公共模型 Coordinates 的范围规范）
-- /moments/create：
-  - longitude: f64
-  - latitude: f64
-  - description?: string
-  - tags?: string[]
-  - image_urls?: string[]
-- /moments/delete：
-  - moment_id: uuid
-- /moments/history：
-  - user_id?: i64（缺省表示当前用户）
-  - cursor?: i64
-  - limit?: i64
-- /moments/search_by_location：
-  - longitude: f64
-  - latitude: f64
-  - radius: f64（米）
-  - cursor?: i64
-  - limit?: i64
-- /moments/search_by_tags：
-  - tags: string[]
-  - cursor?: i64
-  - limit?: i64
-- /moments/search_by_id：
-  - moment_id: uuid
-- /moments/like：
-  - moment_id: uuid
-- /moments/unlike：
-  - moment_id: uuid
+- **DeleteMomentRequest**：
+  ```typescript
+  interface DeleteMomentRequest {
+    moment_id: string;    // 瞬间ID（UUID转字符串）
+  }
+  ```
 
--响应 data 类型说明：
-- /moments/create：复用公共模型：Moment
-- /moments/delete：复用公共模型：BasicSuccess
-- /moments/history：PaginatedResponse<Moment>（元素模型复用：Moment）
-- /moments/search_by_location：PaginatedResponse<Moment>（元素模型复用：Moment）
-- /moments/search_by_tags：PaginatedResponse<Moment>（元素模型复用：Moment）
-- /moments/search_by_id：复用公共模型：Moment
-- /moments/like：{ moment_id: uuid, likes_count: i64, liked_by_me: bool }
-- /moments/unlike：{ moment_id: uuid, likes_count: i64, liked_by_me: bool }
+- **MomentHistoryRequest**：
+  ```typescript
+  interface MomentHistoryRequest {
+    user_id?: string;     // 用户ID（64位整数转字符串），缺省表示当前用户
+    cursor?: string;      // 游标分页
+    limit?: number;       // 1-100，默认20
+  }
+  ```
+
+- **SearchMomentsByLocationRequest**：
+  ```typescript
+  interface SearchMomentsByLocationRequest {
+    latitude: number;     // 纬度，-90~90
+    longitude: number;    // 经度，-180~180
+    radius: number;       // 搜索半径，单位米，>0且≤100000
+    cursor?: string;      // 游标分页
+    limit?: number;       // 1-100，默认20
+  }
+  ```
+
+- **SearchMomentsByTagsRequest**：
+  ```typescript
+  interface SearchMomentsByTagsRequest {
+    tags: string[];       // 标签数组，至少1个，最多10个
+    cursor?: string;      // 游标分页
+    limit?: number;       // 1-100，默认20
+  }
+  ```
+
+- **SearchMomentByIdRequest**：
+  ```typescript
+  interface SearchMomentByIdRequest {
+    moment_id: string;    // 瞬间ID（UUID转字符串）
+  }
+  ```
+
+- **LikeMomentRequest**：
+  ```typescript
+  interface LikeMomentRequest {
+    moment_id: string;    // 瞬间ID（UUID转字符串）
+  }
+  ```
+
+- **UnlikeMomentRequest**：
+  ```typescript
+  interface UnlikeMomentRequest {
+    moment_id: string;    // 瞬间ID（UUID转字符串）
+  }
+  ```
+
+**响应类型定义：**
+
+```typescript
+// 生活瞬间查询响应
+interface MomentHistoryResponse extends PaginatedResponse<Moment> {}
+interface SearchMomentsByLocationResponse extends PaginatedResponse<Moment> {}
+interface SearchMomentsByTagsResponse extends PaginatedResponse<Moment> {}
+interface SearchMomentByIdResponse extends Moment {}
+
+// 生活瞬间操作响应
+interface CreateMomentResponse extends Moment {}
+interface DeleteMomentResponse extends BasicSuccess {}
+
+// 点赞操作响应
+interface LikeMomentResponse {
+  moment_id: string;        // 瞬间ID（UUID转字符串）
+  likes_count: number;      // 点赞数（32位整数）
+  liked_by_me: boolean;     // 当前用户是否已点赞
+}
+interface UnlikeMomentResponse {
+  moment_id: string;        // 瞬间ID（UUID转字符串）
+  likes_count: number;      // 点赞数（32位整数）
+  liked_by_me: boolean;     // 当前用户是否已点赞
+}
+```
 
 字段校验与业务规则（生活瞬间）：
 - /moments/create：
@@ -1695,7 +2173,7 @@ WebSocket 一致性与可靠性建议：
 
 **示例：创建生活瞬间**
 （结构字段说明，示例省略）
-POST /api/v1/moments/create
+POST /api/v1/protected/moments/create
 {
     "longitude": 116.397128,
     "latitude": 39.916527,
@@ -1724,19 +2202,19 @@ Response:
 
 **示例：按位置搜索生活瞬间**
 （结构字段说明，示例省略）
-POST /api/v1/moments/search_by_location
+POST /api/v1/public/moments/search_by_location
 {
     "longitude": 116.397128,
     "latitude": 39.916527,
     "radius": 1000,
-  "limit": 20,
-  "cursor": 0
+    "limit": 20,
+    "cursor": 0
 }
 
 Response:
 {
     "code": 0,
-  "msg": "success",
+    "msg": "success",
     "data": {
     "items": [
       {
@@ -1756,28 +2234,146 @@ Response:
 }
 ```
 
-### 7.6 API性能与安全
+### 7.6 管理接口
 
-#### 7.6.1 性能优化
+#### 7.6.1 用户ID分区管理 (6个端点，前缀：/api/v1/protected/admin，需管理员认证）
+
+**权限要求**：
+- 需要有效的 JWT Token（Authorization: Bearer <jwt>）
+- Token 中必须包含管理员角色标识
+- 管理员权限通过后端角色验证系统确认
+- 所有管理操作需记录审计日志
+
+**用户ID分区管理接口（全部为 POST）**：
+- `POST /api/v1/protected/admin/user-id/stats` - 获取分区统计信息
+- `POST /api/v1/protected/admin/user-id/validate` - 验证用户ID有效性
+- `POST /api/v1/protected/admin/user-id/info` - 获取用户ID信息
+- `POST /api/v1/protected/admin/user-id/ranges` - 获取分区范围列表
+- `POST /api/v1/protected/admin/user-id/generate` - 批量生成用户ID
+- `POST /api/v1/protected/admin/user-id/format` - 格式化用户ID显示
+
+**请求类型定义：**
+
+```typescript
+// 验证用户ID请求
+interface ValidateUserIdRequest {
+  user_id: string;          // 用户ID（64位整数转字符串）
+}
+
+// 获取用户ID信息请求
+interface GetUserIdInfoRequest {
+  user_id: string;          // 用户ID（64位整数转字符串）
+}
+
+// 生成用户ID请求
+interface GenerateUserIdsRequest {
+  count: number;            // 生成数量，1-1000
+  type?: string;            // 用户类型，默认为 'normal'
+}
+
+// 格式化用户ID请求
+interface FormatUserIdRequest {
+  user_id: string;          // 用户ID（64位整数转字符串）
+}
+
+// 获取分区统计和范围无需请求体
+```
+
+**响应类型定义：**
+
+```typescript
+// 分区统计响应
+interface PartitionStatsResponse {
+  total_partitions: number;     // 总分区数（32位整数）
+  active_partitions: number;    // 活跃分区数（32位整数）
+  ranges: PartitionRange[];     // 分区范围数组
+}
+
+// 分区范围
+interface PartitionRange {
+  start: string;                // 起始ID（64位整数转字符串）
+  end: string;                  // 结束ID（64位整数转字符串）
+  type: string;                 // 分区类型（如 'normal', 'test', 'admin'）
+}
+
+// 用户ID验证响应
+interface ValidateUserIdResponse {
+  valid: boolean;               // 是否有效
+  type?: string;                // 用户类型
+  reason?: string;              // 无效原因
+}
+
+// 用户ID信息响应
+interface UserIdInfoResponse {
+  type: string;                 // 用户类型
+  partition: number;            // 分区编号（32位整数）
+  created_at?: string;          // 创建时间（ISO 8601）
+}
+
+// 分区范围列表响应
+interface UserTypeRangesResponse extends Array<PartitionRange> {}
+
+// 生成用户ID响应
+interface GenerateUserIdsResponse {
+  user_ids: GeneratedUserId[];  // 生成的用户ID数组
+}
+
+interface GeneratedUserId {
+  user_id: string;              // 用户ID（64位整数转字符串）
+  type: string;                 // 用户类型
+}
+
+// 格式化用户ID响应
+interface FormatUserIdResponse {
+  formatted: string;            // 格式化后的显示字符串
+}
+```
+
+字段校验与业务规则（管理）：
+- /admin/user-id/stats：
+  - 需管理员认证；用于查看用户ID分区总体状态；
+  - ranges 项内字段含义：start/end 为闭区间（API传输层为string，后端内部为i64），type 为分区类型标识（如 normal/test 等）。
+- /admin/user-id/validate：
+  - user_id 必填 string（API传输层为字符串，后端内部转换为i64处理）；校验其是否落入有效分区，是否被占用或保留；
+  - 返回 valid=false 时给出 reason（如 out_of_range/reserved/invalid_format）。
+- /admin/user-id/info：
+  - user_id 必填 string（API传输层为字符串，后端内部转换为i64处理）；返回其分区类型与分区编号；
+  - 若未分配或非法，返回相应提示。
+- /admin/user-id/ranges：
+  - 无请求体；返回当前所有分区范围清单；
+  - 用于离线校验与观测。
+- /admin/user-id/generate：
+  - count 必填，1-1000；type 可选（默认为 normal）；
+  - 分配的 user_id 唯一且不与已存在冲突；批量生成需具备幂等保障（重复请求不重复分配或返回相同结果）。
+- /admin/user-id/format：
+  - user_id 必填 string（API传输层为字符串，后端内部转换为i64处理）；返回格式化字符串（如带分区前缀/分隔符），仅用于展示。
+
+典型错误码（管理）：
+- 1002 未授权（缺少管理员身份）；1003 权限不足；1000 参数错误；5000 服务器内部错误。
+
+### 7.7 API性能与安全
+
+#### 7.7.1 性能优化
 
 **分页策略（游标分页，当前实现）**：
 - 默认每页20条记录，最大100条
-- 全量采用游标分页，游标字段固定为各表的自增主键 `id`（i64）
+- 全量采用游标分页，游标字段固定为各表的自增主键 `id`（后端内部为i64，API传输层转换为string）
 - 查询时请求 `limit + 1` 条以判断是否还有下一页
-- 返回 `has_more` 与 `next_cursor`，其中 `next_cursor` 为本次返回最后一条记录的 `id`
+- 返回 `has_more` 与 `next_cursor`，其中 `next_cursor` 为本次返回最后一条记录的 `id`（转换为字符串）
 
 （分页 SQL 模式描述，示例省略）
 
 **缓存策略**：
 - 热点数据Redis缓存，TTL 5-30分钟
 - 地理位置查询结果缓存优化
+- **认证 nonce 缓存**：Redis 存储认证随机数，TTL 5分钟，key 格式：`auth_nonce:{login_id}:{nonce_id}`，支持多设备并发
 
 **限流机制**：
 - 按用户限流：普通接口 100次/分钟
 - 按IP限流：防止恶意请求
 - WebSocket连接数限制
 
-#### 7.6.2 安全措施
+#### 7.7.2 安全措施
 
 **输入验证**：
 - 所有参数严格类型检查和范围验证
@@ -1789,11 +2385,152 @@ Response:
 - 操作权限检查（如群组管理员权限）
 - 敏感操作二次验证
 
-### 7.7 接口与 WebSocket 速查表
+### 7.8 后端密码安全实现指南
+
+#### 7.8.1 核心组件实现
+
+**NonceManager 实现要求**：
+```rust
+// 伪代码示例，实际实现需要完整的错误处理
+pub struct NonceManager {
+    redis_client: RedisClient,
+}
+
+impl NonceManager {
+    // 生成并存储 nonce（支持多设备）
+    pub async fn generate_nonce(&self, login_id: &str) -> Result<(String, String, i64), Error> {
+        let nonce_id = generate_uuid(); // 生成唯一标识符
+        let nonce = generate_random_string(32); // 使用 rand crate
+        let timestamp = current_timestamp_millis();
+        let key = format!("auth_nonce:{}:{}", login_id, nonce_id);
+        
+        // 存储到 Redis，TTL 5分钟，支持同一用户多个nonce
+        self.redis_client.setex(&key, 300, &format!("{}:{}", nonce, timestamp)).await?;
+        
+        Ok((nonce_id, nonce, timestamp))
+    }
+    
+    // 验证并消费 nonce（通过 nonce_id 精确定位）
+    pub async fn verify_and_consume_nonce(&self, login_id: &str, nonce_id: &str, timestamp: i64) -> Result<Option<String>, Error> {
+        let key = format!("auth_nonce:{}:{}", login_id, nonce_id);
+        let stored_value = self.redis_client.get(&key).await?;
+        
+        if let Some(value) = stored_value {
+            let parts: Vec<&str> = value.split(':').collect();
+            if parts.len() == 2 {
+                let stored_nonce = parts[0];
+                let stored_timestamp: i64 = parts[1].parse().unwrap_or(0);
+                
+                // 验证时间戳匹配和有效性（±30秒容差）
+                if stored_timestamp == timestamp {
+                    let now = current_timestamp_millis();
+                    if (now - timestamp).abs() <= 30000 {
+                        // 验证成功，立即删除 nonce（防重放）
+                        self.redis_client.del(&key).await?;
+                        return Ok(Some(stored_nonce.to_string()));
+                    }
+                }
+            }
+        }
+        
+        Ok(None)
+    }
+    
+    // 清理用户的所有过期 nonce（可选功能）
+    pub async fn cleanup_expired_nonces(&self, login_id: &str) -> Result<(), Error> {
+        let pattern = format!("auth_nonce:{}:*", login_id);
+        let keys = self.redis_client.keys(&pattern).await?;
+        
+        for key in keys {
+            // Redis TTL 会自动清理，这里只是提供手动清理接口
+            if self.redis_client.ttl(&key).await? <= 0 {
+                self.redis_client.del(&key).await?;
+            }
+        }
+        
+        Ok(())
+    }
+}
+```
+
+**PasswordHasher 实现要求**：
+```rust
+// 伪代码示例
+pub struct PasswordHasher;
+
+impl PasswordHasher {
+    // 用于存储的密码哈希（Argon2）
+    pub fn hash_for_storage(password: &str) -> Result<String, Error> {
+        // 使用 Argon2 算法哈希密码用于数据库存储
+        argon2::hash_encoded(password.as_bytes(), &salt, &config)
+    }
+    
+    // 用于认证的动态哈希（SHA-256）
+    pub fn hash_for_auth(password: &str, nonce: &str, timestamp: i64, login_id: &str) -> String {
+        let input = format!("{}{}{}{}", password, nonce, timestamp, login_id);
+        sha256::digest(input.as_bytes())
+    }
+    
+    // 验证存储的密码
+    pub fn verify_stored_password(password: &str, hash: &str) -> Result<bool, Error> {
+        argon2::verify_encoded(hash, password.as_bytes())
+    }
+}
+```
+
+#### 7.8.2 认证流程实现
+
+**get_nonce 接口实现**：
+1. 验证 login_id 格式
+2. 调用 NonceManager::generate_nonce()
+3. 返回 nonce_id、nonce、timestamp、expires_at
+
+**register/login 接口实现**：
+1. 验证请求参数格式（包括 nonce_id 和 timestamp）
+2. 调用 NonceManager::verify_and_consume_nonce() 获取对应的 nonce
+3. 使用获取到的 nonce 重新计算哈希：PasswordHasher::hash_for_auth(password, nonce, timestamp, login_id)
+4. 对于注册：
+   - 验证哈希匹配后，使用 PasswordHasher::hash_for_storage() 存储密码
+5. 对于登录：
+   - 从数据库获取用户存储的密码哈希
+   - 使用 PasswordHasher::verify_stored_password() 验证原密码
+   - 比对重新计算的哈希与请求中的哈希
+6. 生成 JWT token 返回
+
+**set_password 接口实现**：
+1. 验证 JWT token 获取 user_id
+2. 通过 nonce_id 从 Redis 获取对应的 nonce
+3. 使用获取到的 nonce 验证新密码哈希的正确性
+4. 如果提供了 old_password_hash，同样验证原密码
+5. 使用 PasswordHasher::hash_for_storage() 存储新密码
+
+#### 7.8.3 安全注意事项
+
+**时间同步**：
+- 服务器时间戳验证容差设置为 ±30 秒
+- 建议使用 NTP 同步服务器时间
+
+**错误处理**：
+- nonce 验证失败统一返回 "认证失败" 错误
+- 不暴露具体失败原因（nonce 过期、无效等）
+- 记录详细错误日志用于调试
+
+**性能优化**：
+- Redis 连接池管理
+- nonce 生成使用加密安全的随机数生成器
+- 批量清理过期 nonce（可选）
+
+**监控指标**：
+- nonce 生成/验证成功率
+- 认证失败次数和原因分布
+- Redis 连接状态和性能指标
+
+### 7.9 接口与 WebSocket 速查表
 
 注：完整字段与校验规则见各自小节；此处为快捷索引。响应模型均为“复用公共模型：X”。
 
 【认证（/api/v1/auth）】
+- POST /get_nonce → 响应：NonceResponse；错误：1000, 5000
 - POST /register → 响应：AuthResponse；错误：1000, 1005, 5001, 5000
 - POST /login → 响应：AuthResponse；错误：1000, 1002, 5000
 - POST /create_temp → 响应：AuthResponse；错误：5000
@@ -1802,60 +2539,58 @@ Response:
 - POST /set_password → 响应：BasicSuccess/空；错误：1000, 1002, 5000
 - POST /password_status → 响应：PasswordStatusResult；错误：1002, 5000
 
-【用户（/api/v1/user）】
-- POST /search_by_name → 响应：PaginatedResponse<User>；错误：1000, 5001, 5000
-- POST /search_by_id → 响应：User；错误：1000, 1004, 5000
-- POST /search_by_location → 响应：PaginatedResponse<User>；错误：1000, 5001, 5000
-- POST /update_location → 响应：BasicSuccess/空；错误：1000, 5000
-- POST /update_profile → 响应：{ nickname }/BasicSuccess；错误：1000, 5000
-- POST /upgrade_account → 响应：AuthResponse；错误：1000, 1005, 1002, 5000
-- POST /get_settings → 响应：用户设置对象；错误：1002, 5000
-- POST /update_settings → 响应：用户设置对象/BasicSuccess；错误：1000, 5000
-- POST /delete_account → 响应：BasicSuccess/空；错误：1002, 5000
+【用户（/api/v1/public/user & /api/v1/protected/user）】
+- POST /public/user/search_by_name → 响应：PaginatedResponse<User>；错误：1000, 5001, 5000 **（公开）**
+- POST /public/user/search_by_id → 响应：User；错误：1000, 1004, 5000 **（公开）**
+- POST /public/user/search_by_location → 响应：PaginatedResponse<User>；错误：1000, 5001, 5000 **（公开）**
+- POST /protected/user/update_location → 响应：BasicSuccess/空；错误：1000, 5000 **（需认证）**
+- POST /protected/user/update_profile → 响应：{ nickname }/BasicSuccess；错误：1000, 5000 **（需认证）**
+- POST /protected/user/upgrade_account → 响应：AuthResponse；错误：1000, 1005, 1002, 5000 **（需认证）**
+- POST /protected/user/get_settings → 响应：用户设置对象；错误：1002, 5000 **（需认证）**
+- POST /protected/user/update_settings → 响应：用户设置对象/BasicSuccess；错误：1000, 5000 **（需认证）**
+- POST /protected/user/delete_account → 响应：BasicSuccess/空；错误：1002, 5000 **（需认证）**
 
-【群组（/api/v1/group）】
-- POST /create → 响应：Group；错误：1000, 5001, 5000
-- POST /search_by_name → 响应：PaginatedResponse<Group>；错误：1000, 5001, 5000
-- POST /search_by_location → 响应：PaginatedResponse<Group>；错误：1000, 5001, 5000
-- POST /search_by_id → 响应：Group；错误：1000, 1004, 5000
-- POST /join → 响应：BasicSuccess/{ group }；错误：1000, 1004, 1003, 5000
-- POST /leave → 响应：BasicSuccess；错误：1000, 1004, 5000
-- POST /members → 响应：PaginatedResponse<User>；错误：1000, 1004, 5000
-- POST /transfer_ownership → 响应：BasicSuccess；错误：1000, 1003, 1004, 5000
-- POST /kick → 响应：BasicSuccess；错误：1000, 1003, 1004, 5000
-- POST /user_groups → 响应：PaginatedResponse<Group>；错误：1002, 5000
-- POST /owned_groups → 响应：PaginatedResponse<Group>；错误：1002, 5000
+【群组（/api/v1/public/group & /api/v1/protected/group）】
+- POST /public/group/search_by_name → 响应：PaginatedResponse<Group>；错误：1000, 5001, 5000 **（公开）**
+- POST /public/group/search_by_location → 响应：PaginatedResponse<Group>；错误：1000, 5001, 5000 **（公开）**
+- POST /public/group/search_by_id → 响应：Group；错误：1000, 1004, 5000 **（公开）**
+- POST /public/group/members → 响应：PaginatedResponse<User>；错误：1000, 1004, 5000 **（公开）**
+- POST /protected/group/create → 响应：Group；错误：1000, 5001, 5000 **（需认证）**
+- POST /protected/group/join → 响应：BasicSuccess/{ group }；错误：1000, 1004, 1003, 1002（密码错误）, 5000 **（需认证）**
+- POST /protected/group/leave → 响应：BasicSuccess；错误：1000, 1004, 5000 **（需认证）**
+- POST /protected/group/transfer_ownership → 响应：BasicSuccess；错误：1000, 1003, 1004, 5000 **（需认证）**
+- POST /protected/group/kick → 响应：BasicSuccess；错误：1000, 1003, 1004, 5000 **（需认证）**
 
-【消息（/api/v1/chat）】
-- POST /group/send → 响应：Message；错误：1000, 1003, 1004, 5000
-- POST /user/send → 响应：Message；错误：1000, 1004, 5000
-- POST /group/history → 响应：PaginatedResponse<Message>；错误：1000, 1004, 5000
-- POST /user/history → 响应：PaginatedResponse<Message>；错误：1000, 1004, 5000
-- POST /group/delete → 响应：BasicSuccess；错误：1000, 1003, 1004, 5000
-- POST /user/delete → 响应：BasicSuccess；错误：1000, 1003, 1004, 5000
-- POST /user/conversations → 响应：PaginatedResponse<ConversationSummary>；错误：1002, 5000
-- POST /group/mark-read → 响应：BasicSuccess；错误：1000, 1004, 5000
-- POST /user/mark-read → 响应：BasicSuccess；错误：1000, 1004, 5000
-- POST /group/unread_count → 响应：UnreadCount（群组未读）；错误：1000, 1004, 5000
-- POST /user/unread_count → 响应：UnreadCount；错误：1000, 5000
+【消息（/api/v1/protected/chat）】
+- POST /protected/chat/group/send → 响应：Message；错误：1000, 1003, 1004, 5000
+- POST /protected/chat/user/send → 响应：Message；错误：1000, 1004, 5000
+- POST /protected/chat/group/history → 响应：PaginatedResponse<Message>；错误：1000, 1004, 5000
+- POST /protected/chat/user/history → 响应：PaginatedResponse<Message>；错误：1000, 1004, 5000
+- POST /protected/chat/group/delete → 响应：BasicSuccess；错误：1000, 1003, 1004, 5000
+- POST /protected/chat/user/delete → 响应：BasicSuccess；错误：1000, 1003, 1004, 5000
+- POST /protected/chat/user/conversations → 响应：PaginatedResponse<ConversationSummary>；错误：1002, 5000
+- POST /protected/chat/group/mark-read → 响应：BasicSuccess；错误：1000, 1004, 5000
+- POST /protected/chat/user/mark-read → 响应：BasicSuccess；错误：1000, 1004, 5000
+- POST /protected/chat/group/unread_count → 响应：UnreadCount（群组未读）；错误：1000, 1004, 5000
+- POST /protected/chat/user/unread_count → 响应：UnreadCount；错误：1000, 5000
 
-【生活瞬间（/api/v1/moments）】
-- POST /create → 响应：Moment；错误：1000, 5000
-- POST /delete → 响应：BasicSuccess；错误：1000, 1003, 1004, 5000
-- POST /history → 响应：PaginatedResponse<Moment>；错误：1000, 5000
-- POST /search_by_location → 响应：PaginatedResponse<Moment>；错误：1000, 5000
-- POST /search_by_tags → 响应：PaginatedResponse<Moment>；错误：1000, 5000
-- POST /search_by_id → 响应：Moment；错误：1000, 1004, 5000
-- POST /like → 响应：{ moment_id, likes_count, liked_by_me }；错误：1000, 1004, 1005, 5000
-- POST /unlike → 响应：{ moment_id, likes_count, liked_by_me }；错误：1000, 1004, 1005, 5000
+【生活瞬间（/api/v1/public/moments & /api/v1/protected/moments）】
+- POST /public/moments/history → 响应：PaginatedResponse<Moment>；错误：1000, 5000 **（公开）**
+- POST /public/moments/search_by_location → 响应：PaginatedResponse<Moment>；错误：1000, 5000 **（公开）**
+- POST /public/moments/search_by_tags → 响应：PaginatedResponse<Moment>；错误：1000, 5000 **（公开）**
+- POST /public/moments/search_by_id → 响应：Moment；错误：1000, 1004, 5000 **（公开）**
+- POST /protected/moments/create → 响应：Moment；错误：1000, 5000 **（需认证）**
+- POST /protected/moments/delete → 响应：BasicSuccess；错误：1000, 1003, 1004, 5000 **（需认证）**
+- POST /protected/moments/like → 响应：{ moment_id, likes_count, liked_by_me }；错误：1000, 1004, 1005, 5000 **（需认证）**
+- POST /protected/moments/unlike → 响应：{ moment_id, likes_count, liked_by_me }；错误：1000, 1004, 1005, 5000 **（需认证）**
 
-【管理（/api/v1/admin）】
-- POST /user-id/stats → 响应：{ total_partitions, active_partitions, ranges[] }；错误：1002, 1003, 1000, 5000
-- POST /user-id/validate → 响应：{ valid, type?, reason? }；错误：1002, 1003, 1000, 5000
-- POST /user-id/info → 响应：{ type, partition, created_at? }；错误：1002, 1003, 1000, 5000
-- POST /user-id/ranges → 响应：ranges[]；错误：1002, 1003, 1000, 5000
-- POST /user-id/generate → 响应：[{ user_id, type }]；错误：1002, 1003, 1000, 5000
-- POST /user-id/format → 响应：{ formatted }；错误：1002, 1003, 1000, 5000
+【管理（/api/v1/protected/admin）】
+- POST /protected/admin/user-id/stats → 响应：{ total_partitions, active_partitions, ranges[] }；错误：1002, 1003, 1000, 5000
+- POST /protected/admin/user-id/validate → 响应：{ valid, type?, reason? }；错误：1002, 1003, 1000, 5000
+- POST /protected/admin/user-id/info → 响应：{ type, partition, created_at? }；错误：1002, 1003, 1000, 5000
+- POST /protected/admin/user-id/ranges → 响应：ranges[]；错误：1002, 1003, 1000, 5000
+- POST /protected/admin/user-id/generate → 响应：[{ user_id, type }]；错误：1002, 1003, 1000, 5000
+- POST /protected/admin/user-id/format → 响应：{ formatted }；错误：1002, 1003, 1000, 5000
 
 【WebSocket 快速索引】
 - 客户端 → 服务器：
@@ -1866,8 +2601,8 @@ Response:
   - JoinConversation{ conversation_id }/LeaveConversation{ conversation_id } → 错误：FORBIDDEN
 - 服务器 → 客户端：
   - Connected{ user_id, session_id }
-  - Error{ code, message }（WS 专用错误码见 7.1.3）
-  - Success{ message }
+  - Error{ code, msg }（WS 专用错误码见 7.1.3）
+  - Success{ msg }
   - NewMessage → 负载：WsMessageNotification
   - UserStartedTyping/UserStoppedTyping → { room_id, user_id, nickname? }
   - MessageRead → { room_id, user_id, message_id? }

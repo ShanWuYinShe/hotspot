@@ -24,7 +24,9 @@
     "settings": "Settings",
     "profile": "My Profile",
     "create": "Create",
-    "search": "Search"
+    "search": "Search",
+    "languageSwitch": "Language Switch",
+    "themeSwitch": "Theme Switch"
   },
   "common": {
     "user": "User",

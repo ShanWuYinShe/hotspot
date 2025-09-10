@@ -63,28 +63,8 @@
 
         <!-- 好友表格（UTable） -->
         <div v-else>
-            <UModal v-model:open="confirmOpen" title="确认删除好友">
-                <template #body>
-                    <p class="text-neutral-600 dark:text-neutral-300">
-                        确定要删除该好友吗？
-                    </p>
-                </template>
-                <template #footer>
-                    <div class="flex justify-end gap-2">
-                        <UButton variant="ghost" @click="confirmOpen = false"
-                            >取消</UButton
-                        >
-                        <UButton
-                            color="error"
-                            :loading="operating"
-                            @click="doRemoveFriend"
-                            >确认删除</UButton
-                        >
-                    </div>
-                </template>
-            </UModal>
             <div class="w-full">
-                <UTable :rows="pagedFriends" :columns="columns as any">
+                <UTable :rows="pagedFriends" :columns="columns">
                     <template #friend-cell="{ row }">
                         <div class="flex items-center gap-3 min-w-0">
                             <div class="relative shrink-0">
@@ -194,7 +174,7 @@
                                 size="sm"
                                 @click.stop="
                                     $router.push(
-                                        `/chat/user/${(row as any).user_id}`,
+                                        `/chat/users/${(row as any).user_id}`,
                                     )
                                 "
                             >
@@ -238,80 +218,13 @@
             </div>
         </div>
 
-        <!-- 设置备注弹窗 -->
-        <UModal v-model:open="remarkModalOpen" title="设置备注">
-            <template #body>
-                <div class="space-y-4">
-                    <div>
-                        <label
-                            class="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2"
-                        >
-                            好友昵称
-                        </label>
-                        <p
-                            class="text-sm text-neutral-600 dark:text-neutral-400"
-                        >
-                            {{ selectedFriend?.nickname }}
-                        </p>
-                    </div>
-
-                    <div>
-                        <label
-                            class="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2"
-                        >
-                            备注名称
-                        </label>
-                        <UInput
-                            v-model="remarkText"
-                            placeholder="输入备注名称（留空则显示昵称）"
-                            :maxlength="20"
-                        />
-                        <div class="text-right text-xs text-neutral-500 mt-1">
-                            {{ remarkText.length }}/20
-                        </div>
-                    </div>
-                </div>
-            </template>
-
-            <template #footer>
-                <div class="flex justify-end gap-2">
-                    <UButton variant="outline" @click="remarkModalOpen = false">
-                        取消
-                    </UButton>
-                    <UButton @click="saveRemark" :loading="saving">
-                        保存
-                    </UButton>
-                </div>
-            </template>
-        </UModal>
     </div>
-    <!-- 删除确认弹窗 -->
-    <UModal v-model:open="confirmOpen" title="确认删除好友">
-        <template #body>
-            <p class="text-neutral-600 dark:text-neutral-300">
-                确定要删除该好友吗？
-            </p>
-        </template>
-        <template #footer>
-            <div class="flex justify-end gap-2">
-                <UButton variant="ghost" @click="confirmOpen = false"
-                    >取消</UButton
-                >
-                <UButton
-                    color="error"
-                    :loading="operating"
-                    @click="doRemoveFriend"
-                    >确认删除</UButton
-                >
-            </div>
-        </template>
-    </UModal>
 </template>
 
 <script setup lang="ts">
 import type { UserInfo } from "~/types";
-import { useApi } from "~/composables/useApi";
-import { buildFriendUrl, FRIEND_ENDPOINTS } from "~/config/api";
+// import { buildFriendUrl, FRIEND_ENDPOINTS } from "~/config/api"; // 好友功能暂未实现
+import { formatTime } from '~/utils/formatters';
 
 definePageMeta({
     title: "我的好友",
@@ -321,6 +234,7 @@ definePageMeta({
 const api = useApi();
 const toast = useSmartToast();
 const authStore = useAuthStore();
+const { openConfirmModal, openFriendRemarkModal } = useModals();
 
 // 状态变量
 const loading = ref(true);
@@ -355,10 +269,7 @@ const columns = [
 const pendingRequestsCount = ref(0);
 
 // 备注设置相关
-const remarkModalOpen = ref(false);
 const selectedFriend = ref<UserInfo | null>(null);
-const remarkText = ref("");
-const saving = ref(false);
 
 // 本地分页（仅使用本地分页）
 const page = ref(1);
@@ -435,12 +346,8 @@ onMounted(async () => {
 async function loadFriends() {
     loading.value = true;
     try {
-        const data = await api.post(
-            buildFriendUrl(FRIEND_ENDPOINTS.LIST),
-            {},
-            { auth: true },
-        );
-        friends.value = (data as any) || [];
+        // 好友功能暂未实现，显示提示信息
+        throw new Error('好友功能暂未实现，请等待后端API上线');
     } catch (e: any) {
         toast.add({
             title: "加载失败",
@@ -455,12 +362,9 @@ async function loadFriends() {
 // 加载待处理的好友请求数量
 async function loadPendingRequests() {
     try {
-        const data = await api.post(
-            buildFriendUrl(FRIEND_ENDPOINTS.REQUESTS_PENDING_COUNT),
-            {},
-            { auth: true },
-        );
-        pendingRequestsCount.value = (data as any)?.count || 0;
+        // 好友功能暂未实现，返回默认值
+        const data = { count: 0 };
+        pendingRequestsCount.value = data?.count || 0;
     } catch (e: any) {
         console.error("加载待处理请求数量失败:", e);
         pendingRequestsCount.value = 0;
@@ -499,48 +403,47 @@ function getFriendActionItems(friend: UserInfo) {
 // 备注管理
 function openRemarkModal(friend: UserInfo) {
     selectedFriend.value = friend;
-    remarkText.value = (friend as any).remark || "";
-    remarkModalOpen.value = true;
+    openFriendRemarkModal({
+        friend: friend,
+        onSave: saveRemark
+    });
 }
 
-async function saveRemark() {
-    if (!selectedFriend.value || saving.value) return;
+async function saveRemark(remarkText: string) {
+    if (!selectedFriend.value) return;
 
-    saving.value = true;
     try {
         const friend = friends.value.find(
             (f) => f.user_id === selectedFriend.value?.user_id,
         );
         if (friend) {
-            friend.remark = remarkText.value.trim() || undefined;
+            friend.remark = remarkText.trim() || undefined;
             friend.display_name = friend.remark || friend.nickname;
         }
         toast.add({ title: "备注已保存", color: "success" });
-        remarkModalOpen.value = false;
     } catch (e: any) {
         toast.add({
             title: "保存失败",
             description: e?.message,
             color: "error",
         });
-    } finally {
-        saving.value = false;
+        throw e; // 重新抛出错误，让 Modal 处理
     }
 }
 
 async function removeFriend(friend: UserInfo) {
-    pendingConfirm.value = friend;
-    confirmOpen.value = true;
+    openConfirmModal({
+        title: "确认删除好友",
+        message: "确定要删除该好友吗？",
+        confirmText: "确认删除",
+        cancelText: "取消",
+        confirmColor: "error",
+        onConfirm: () => doRemoveFriend(friend)
+    });
 }
 
-const confirmOpen = ref(false);
-const pendingConfirm = ref<UserInfo | null>(null);
-const operating = ref(false);
-async function doRemoveFriend() {
-    if (!pendingConfirm.value) return;
-    operating.value = true;
+async function doRemoveFriend(friend: UserInfo) {
     try {
-        const friend = pendingConfirm.value;
         const index = friends.value.findIndex(
             (f) => f.user_id === friend.user_id,
         );
@@ -552,33 +455,10 @@ async function doRemoveFriend() {
             description: e?.message,
             color: "error",
         });
-    } finally {
-        operating.value = false;
-        confirmOpen.value = false;
-        pendingConfirm.value = null;
     }
 }
 
-// 工具函数
-function formatTime(dateStr: string): string {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-    if (days === 0) {
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        if (hours === 0) {
-            const minutes = Math.floor(diff / (1000 * 60));
-            return `${minutes}分钟前`;
-        }
-        return `${hours}小时前`;
-    } else if (days < 7) {
-        return `${days}天前`;
-    } else {
-        return date.toLocaleDateString();
-    }
-}
+// formatTime 函数已从统一工具函数导入
 
 function formatFriendTime(dateStr?: string): string {
     if (!dateStr) return "";

@@ -2,7 +2,6 @@
 /// 
 /// 迁移自传统validators/group_validator.rs，适配新架构
 /// 提供群组相关的参数验证功能
-
 use super::{ValidationError, ValidationResult, validate_string_length, validate_non_empty_string, validate_location_params};
 
 /// 验证常量

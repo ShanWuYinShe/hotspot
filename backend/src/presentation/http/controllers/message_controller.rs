@@ -1,13 +1,13 @@
 /// 消息HTTP控制器 - 新架构
 /// 
 /// 处理消息相关的HTTP请求，使用新的实体和仓库架构
-
 use axum::extract::State;
 use axum::response::Response;
 use axum::Json;
 use serde::{Deserialize, Serialize};
+use crate::utils::JsSafeI64;
 
-use crate::application::services::MessageApplicationService;
+use crate::application::MessageApplicationService;
 use crate::domain::{DirectMessage, GroupMessage};
 
 use super::{ok_response, created_response, map_domain_error_to_http_response, paginated_response};
@@ -29,12 +29,12 @@ impl MessageController {
     /// 发送私聊消息
     pub async fn send_direct_message(
         State(controller): State<Self>,
-        Json(request): Json<SendDirectMessageRequest>,
+        Json(request): Json<UserSendRequest>,
     ) -> Response {
         let result = controller.message_service
             .create_direct_message(
-                request.sender_id,
-                request.recipient_id,
+                request.sender_id.value(),
+                request.recipient_id.value(),
                 request.content,
                 request.message_type.unwrap_or_default().into(),
                 request.latitude.unwrap_or(35.16),
@@ -51,14 +51,14 @@ impl MessageController {
     /// 获取私聊消息历史
     pub async fn get_direct_messages(
         State(controller): State<Self>,
-        Json(request): Json<GetDirectMessagesRequest>,
+        Json(request): Json<UserHistoryRequest>,
     ) -> Response {
         let conversation_id = if let Some(id) = request.conversation_id {
             id
         } else {
             // 根据用户ID获取或创建会话
             match controller.message_service.get_pg_repository()
-                .get_or_create_conversation(request.user_id, request.peer_id)
+                .get_or_create_conversation(request.user_id.value(), request.peer_id.value())
                 .await {
                 Ok(conv) => conv.conversation_id,
                 Err(error) => return map_domain_error_to_http_response(error),
@@ -68,7 +68,7 @@ impl MessageController {
         let result = controller.message_service
             .get_direct_messages_by_conversation(
                 &conversation_id,
-                request.cursor.unwrap_or(0),
+                request.cursor.map(|c| c.value()).unwrap_or(0),
                 request.limit.unwrap_or(20),
             )
             .await;
@@ -88,10 +88,10 @@ impl MessageController {
     /// 删除私聊消息
     pub async fn delete_direct_message(
         State(controller): State<Self>,
-        Json(request): Json<DeleteMessageRequest>,
+        Json(request): Json<DeleteRequest>,
     ) -> Response {
         let result = controller.message_service.get_pg_repository()
-            .delete_message(request.message_id)
+            .delete_message(request.message_id.value())
             .await;
         
         match result {
@@ -105,12 +105,12 @@ impl MessageController {
     /// 发送群组消息
     pub async fn send_group_message(
         State(controller): State<Self>,
-        Json(request): Json<SendGroupMessageRequest>,
+        Json(request): Json<GroupSendRequest>,
     ) -> Response {
         let result = controller.message_service
             .create_group_message(
                 request.group_id,
-                request.sender_id,
+                request.sender_id.value(),
                 request.content,
                 request.message_type.unwrap_or_default().into(),
                 request.latitude.unwrap_or(35.16),
@@ -127,12 +127,12 @@ impl MessageController {
     /// 获取群组消息历史
     pub async fn get_group_messages(
         State(controller): State<Self>,
-        Json(request): Json<GetGroupMessagesRequest>,
+        Json(request): Json<GroupHistoryRequest>,
     ) -> Response {
         let result = controller.message_service
             .get_group_messages_by_group(
                 &request.group_id,
-                request.cursor.unwrap_or(0),
+                request.cursor.map(|c| c.value()).unwrap_or(0),
                 request.limit.unwrap_or(20),
             )
             .await;
@@ -152,10 +152,10 @@ impl MessageController {
     /// 删除群组消息
     pub async fn delete_group_message(
         State(controller): State<Self>,
-        Json(request): Json<DeleteMessageRequest>,
+        Json(request): Json<DeleteRequest>,
     ) -> Response {
         let result = controller.message_service.get_pg_repository()
-            .delete_message(request.message_id)
+            .delete_message(request.message_id.value())
             .await;
         
         match result {
@@ -169,28 +169,25 @@ impl MessageController {
     /// 获取会话列表
     pub async fn get_conversations(
         State(controller): State<Self>,
-        Json(request): Json<GetConversationsRequest>,
+        Json(request): Json<ConversationsRequest>,
     ) -> Response {
         let result = controller.message_service.get_pg_repository()
             .list_conversations(
-                request.user_id,
-                request.cursor.unwrap_or(0),
+                request.user_id.value(),
+                request.cursor.map(|c| c.value()).unwrap_or(0),
                 request.limit.unwrap_or(20),
             )
             .await;
         
         match result {
             Ok((conversations, has_more, next_cursor)) => {
-                let responses: Vec<ConversationResponse> = conversations
+                let responses: Vec<ConversationSummaryResponse> = conversations
                     .into_iter()
-                    .map(|conv_summary| ConversationResponse {
+                    .map(|conv_summary| ConversationSummaryResponse {
                         conversation_id: conv_summary.conversation_id,
-                        user1_id: conv_summary.user1_id,
-                        user2_id: conv_summary.user2_id,
-                        created_at: conv_summary.created_at.to_rfc3339(),
-                        updated_at: conv_summary.last_message_at.to_rfc3339(), // 使用last_message_at作为updated_at
-                        last_message_at: Some(conv_summary.last_message_at.to_rfc3339()),
+                        peer_id: JsSafeI64::new(conv_summary.peer_id),
                         last_message_preview: conv_summary.last_message_preview,
+                        last_message_at: conv_summary.last_message_at.to_rfc3339(),
                     })
                     .collect();
                 
@@ -205,12 +202,12 @@ impl MessageController {
     /// 标记群组消息已读
     pub async fn mark_group_messages_read(
         State(controller): State<Self>,
-        Json(request): Json<MarkGroupMessagesReadRequest>,
+        Json(request): Json<GroupMarkReadRequest>,
     ) -> Response {
         let result = controller.message_service.get_pg_repository()
             .mark_group_messages_read(
                 &request.group_id,
-                request.user_id,
+                request.user_id.value(),
                 request.last_read_message_id.as_deref(),
             )
             .await;
@@ -224,12 +221,12 @@ impl MessageController {
     /// 标记私聊消息已读
     pub async fn mark_user_messages_read(
         State(controller): State<Self>,
-        Json(request): Json<MarkUserMessagesReadRequest>,
+        Json(request): Json<UserMarkReadRequest>,
     ) -> Response {
         let result = controller.message_service.get_pg_repository()
             .mark_direct_messages_read(
                 &request.conversation_id,
-                request.user_id,
+                request.user_id.value(),
                 request.last_read_message_id.as_deref(),
             )
             .await;
@@ -243,10 +240,10 @@ impl MessageController {
     /// 获取群组未读消息数
     pub async fn get_group_unread_count(
         State(controller): State<Self>,
-        Json(request): Json<GetGroupUnreadCountRequest>,
+        Json(request): Json<GroupUnreadCountRequest>,
     ) -> Response {
         let result = controller.message_service.get_pg_repository()
-            .get_group_unread_count(&request.group_id, request.user_id)
+            .get_group_unread_count(&request.group_id, request.user_id.value())
             .await;
         
         match result {
@@ -261,12 +258,12 @@ impl MessageController {
     /// 获取私聊未读消息数
     pub async fn get_user_unread_count(
         State(controller): State<Self>,
-        Json(request): Json<GetUserUnreadCountRequest>,
+        Json(request): Json<UserUnreadCountRequest>,
     ) -> Response {
         if let Some(conversation_id) = request.conversation_id {
             // 获取指定会话的未读数
             let result = controller.message_service.get_pg_repository()
-                .get_conversation_unread_count(&conversation_id, request.user_id)
+                .get_conversation_unread_count(&conversation_id, request.user_id.value())
                 .await;
             
             match result {
@@ -279,7 +276,7 @@ impl MessageController {
         } else {
             // 获取用户所有会话的总未读数
             let result = controller.message_service.get_pg_repository()
-                .get_user_total_unread_count(request.user_id)
+                .get_user_total_unread_count(request.user_id.value())
                 .await;
             
             match result {
@@ -295,9 +292,9 @@ impl MessageController {
 // ===== 请求结构体 =====
 
 #[derive(Debug, Deserialize)]
-pub struct SendDirectMessageRequest {
-    pub sender_id: i64,
-    pub recipient_id: i64,
+pub struct UserSendRequest {
+    pub sender_id: JsSafeI64,
+    pub recipient_id: JsSafeI64,
     pub content: String,
     pub message_type: Option<MessageTypeRequest>,
     pub latitude: Option<f64>,
@@ -305,9 +302,9 @@ pub struct SendDirectMessageRequest {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct SendGroupMessageRequest {
+pub struct GroupSendRequest {
     pub group_id: String,
-    pub sender_id: i64,
+    pub sender_id: JsSafeI64,
     pub content: String,
     pub message_type: Option<MessageTypeRequest>,
     pub latitude: Option<f64>,
@@ -315,56 +312,56 @@ pub struct SendGroupMessageRequest {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct GetDirectMessagesRequest {
-    pub user_id: i64,
-    pub peer_id: i64,
+pub struct UserHistoryRequest {
+    pub user_id: JsSafeI64,
+    pub peer_id: JsSafeI64,
     pub conversation_id: Option<String>,
-    pub cursor: Option<i64>,
+    pub cursor: Option<JsSafeI64>,
     pub limit: Option<i32>,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct GetGroupMessagesRequest {
+pub struct GroupHistoryRequest {
     pub group_id: String,
-    pub cursor: Option<i64>,
+    pub cursor: Option<JsSafeI64>,
     pub limit: Option<i32>,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct DeleteMessageRequest {
-    pub message_id: i64,
+pub struct DeleteRequest {
+    pub message_id: JsSafeI64,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct GetConversationsRequest {
-    pub user_id: i64,
-    pub cursor: Option<i64>,
+pub struct ConversationsRequest {
+    pub user_id: JsSafeI64,
+    pub cursor: Option<JsSafeI64>,
     pub limit: Option<i32>,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct MarkGroupMessagesReadRequest {
+pub struct GroupMarkReadRequest {
     pub group_id: String,
-    pub user_id: i64,
+    pub user_id: JsSafeI64,
     pub last_read_message_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct MarkUserMessagesReadRequest {
+pub struct UserMarkReadRequest {
     pub conversation_id: String,
-    pub user_id: i64,
+    pub user_id: JsSafeI64,
     pub last_read_message_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct GetGroupUnreadCountRequest {
+pub struct GroupUnreadCountRequest {
     pub group_id: String,
-    pub user_id: i64,
+    pub user_id: JsSafeI64,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct GetUserUnreadCountRequest {
-    pub user_id: i64,
+pub struct UserUnreadCountRequest {
+    pub user_id: JsSafeI64,
     pub conversation_id: Option<String>,
 }
 
@@ -403,8 +400,8 @@ impl From<MessageTypeRequest> for crate::domain::GroupMessageType {
 pub struct DirectMessageResponse {
     pub message_id: String,
     pub conversation_id: String,
-    pub sender_id: i64,
-    pub recipient_id: i64,
+    pub sender_id: JsSafeI64,
+    pub recipient_id: JsSafeI64,
     pub content: String,
     pub message_type: String,
     pub created_at: String,
@@ -418,8 +415,8 @@ impl From<DirectMessage> for DirectMessageResponse {
         Self {
             message_id: message.message_id,
             conversation_id: message.conversation_id,
-            sender_id: message.sender_id,
-            recipient_id: message.recipient_id,
+            sender_id: JsSafeI64::new(message.sender_id),
+            recipient_id: JsSafeI64::new(message.recipient_id),
             content: message.content,
             message_type: message.message_type.as_str().to_string(),
             created_at: message.created_at.to_rfc3339(),
@@ -434,7 +431,7 @@ impl From<DirectMessage> for DirectMessageResponse {
 pub struct GroupMessageResponse {
     pub message_id: String,
     pub group_id: String,
-    pub sender_id: i64,
+    pub sender_id: JsSafeI64,
     pub content: String,
     pub message_type: String,
     pub created_at: String,
@@ -447,7 +444,7 @@ impl From<GroupMessage> for GroupMessageResponse {
         Self {
             message_id: message.message_id,
             group_id: message.group_id,
-            sender_id: message.sender_id,
+            sender_id: JsSafeI64::new(message.sender_id),
             content: message.content,
             message_type: message.message_type.as_str().to_string(),
             created_at: message.created_at.to_rfc3339(),
@@ -460,8 +457,8 @@ impl From<GroupMessage> for GroupMessageResponse {
 #[derive(Debug, Serialize)]
 pub struct ConversationResponse {
     pub conversation_id: String,
-    pub user1_id: i64,
-    pub user2_id: i64,
+    pub user1_id: JsSafeI64,
+    pub user2_id: JsSafeI64,
     pub created_at: String,
     pub updated_at: String,
     pub last_message_at: Option<String>,
@@ -472,12 +469,20 @@ impl From<crate::domain::Conversation> for ConversationResponse {
     fn from(conversation: crate::domain::Conversation) -> Self {
         Self {
             conversation_id: conversation.conversation_id,
-            user1_id: conversation.user1_id,
-            user2_id: conversation.user2_id,
+            user1_id: JsSafeI64::new(conversation.user1_id),
+            user2_id: JsSafeI64::new(conversation.user2_id),
             created_at: conversation.created_at.to_rfc3339(),
             updated_at: conversation.updated_at.to_rfc3339(),
             last_message_at: Some(conversation.last_message_at.to_rfc3339()),
             last_message_preview: conversation.last_message_preview,
         }
     }
+}
+
+#[derive(Debug, Serialize)]
+pub struct ConversationSummaryResponse {
+    pub conversation_id: String,
+    pub peer_id: JsSafeI64,
+    pub last_message_preview: Option<String>,
+    pub last_message_at: String,
 }

@@ -11,7 +11,7 @@ import type { ContextMenuItem } from '@nuxt/ui'
 // Props
 interface Props {
   type: 'user' | 'group' | 'moment' | 'message' | 'general'
-  data?: any
+  data?: Record<string, unknown>
   customItems?: ContextMenuItem[][]
 }
 
@@ -21,7 +21,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 // Emits
 const emit = defineEmits<{
-  action: [action: string, data?: any]
+  action: [action: string, data?: Record<string, unknown>]
 }>()
 
 const { t } = useI18n()
@@ -325,7 +325,7 @@ const handleCopyMomentLink = async () => {
 // 复制消息内容
 const handleCopyMessage = async () => {
   if (props.data?.content) {
-    const success = await copyToClipboard(props.data.content)
+    const success = await copyToClipboard(String(props.data.content))
     if (success) {
       toast.success({
         title: '已复制',

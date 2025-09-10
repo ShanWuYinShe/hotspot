@@ -1,6 +1,5 @@
 <template>
   <UModal 
-    v-model:open="isOpen" 
     :title="t('shortcuts.help.title')"
     size="lg"
   >
@@ -57,7 +56,7 @@
         <div class="text-sm text-neutral-500">
           {{ t('shortcuts.help.tip') }}
         </div>
-        <UButton @click="isOpen = false" color="primary">
+        <UButton @click="handleClose" color="primary">
           {{ t('common.close') }}
         </UButton>
       </div>
@@ -69,16 +68,11 @@
 const { t } = useI18n()
 const { getShortcutsByCategory, formatShortcut, isHelpVisible } = useGlobalShortcuts()
 
-// 响应式绑定
-const isOpen = computed({
-  get: () => isHelpVisible.value,
-  set: (value: boolean) => {
-    if (!value) {
-      const { hideHelp } = useGlobalShortcuts()
-      hideHelp()
-    }
-  }
-})
+// 处理关闭
+const handleClose = () => {
+  const { hideHelp } = useGlobalShortcuts()
+  hideHelp()
+}
 
 const shortcutsByCategory = getShortcutsByCategory
 </script>

@@ -1,7 +1,6 @@
 /// 动态标签关联领域实体
 /// 
 /// 表示动态和标签之间的多对多关系
-
 use serde::{Deserialize, Serialize};
 
 /// 动态标签关联实体

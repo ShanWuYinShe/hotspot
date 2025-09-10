@@ -148,7 +148,7 @@ async function simulateImageUpload(): Promise<string[]> {
         setTimeout(() => {
           isUploading.value = false
           uploadProgress.value = 0
-          // TODO: 实现真实的图片上传API
+          // 注意：图片上传功能需要后端 API 支持
           // const formData = new FormData()
           // uploadedFiles.value.forEach(file => formData.append('files', file))
           // const response = await $fetch('/api/upload/images', { method: 'POST', body: formData })

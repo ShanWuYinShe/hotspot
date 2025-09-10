@@ -1,12 +1,11 @@
 /// 密码服务适配器
 /// 
 /// 基于argon2的密码哈希和验证实现
-
 use async_trait::async_trait;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use argon2::password_hash::{rand_core::OsRng, SaltString};
 use crate::domain::{DomainResult, DomainError};
-use crate::ports::PasswordServicePort;
+use crate::ports::PasswordService;
 
 /// Argon2密码服务实现
 #[derive(Clone)]
@@ -30,7 +29,7 @@ impl Default for Argon2PasswordService {
 }
 
 #[async_trait]
-impl PasswordServicePort for Argon2PasswordService {
+impl PasswordService for Argon2PasswordService {
     async fn hash_password(&self, password: &str) -> DomainResult<String> {
         let salt = SaltString::generate(&mut OsRng);
         
@@ -55,6 +54,24 @@ impl PasswordServicePort for Argon2PasswordService {
             .is_ok();
         
         Ok(is_valid)
+    }
+
+    async fn generate_random_password(&self, length: usize) -> DomainResult<String> {
+        use rand::Rng;
+        
+        const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
+                                 abcdefghijklmnopqrstuvwxyz\
+                                 0123456789";
+        
+        let mut rng = rand::thread_rng();
+        let password: String = (0..length)
+            .map(|_| {
+                let idx = rng.gen_range(0..CHARSET.len());
+                CHARSET[idx] as char
+            })
+            .collect();
+        
+        Ok(password)
     }
 }
 

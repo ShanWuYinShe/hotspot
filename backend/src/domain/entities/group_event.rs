@@ -1,7 +1,6 @@
 /// 群组事件记录领域实体
 /// 
 /// 记录群组内的各种事件（创建、加入、离开、更新、踢出、转让）
-
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;

@@ -2,7 +2,6 @@
 /// 
 /// 处理WebSocket协议相关的实时通信，包括连接管理、消息路由等
 /// 遵循"策略选人→定向推送"原则，禁止全局广播
-
 pub mod connection_handler;
 pub mod message_handler;
 pub mod event_handler;
@@ -45,7 +44,7 @@ pub enum WSMessageType {
 /// 消息数据结构
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MessageData {
-    pub id: i64,
+    pub id: String,
     pub sender_id: i64,
     pub sender_nickname: String,
     pub content: String,
@@ -62,13 +61,13 @@ pub enum WSEventType {
     /// 用户下线
     UserOffline { user_id: i64 },
     /// 用户加入群组
-    UserJoinedGroup { user_id: i64, group_id: i64, nickname: String },
+    UserJoinedGroup { user_id: i64, group_id: String, nickname: String },
     /// 用户离开群组
-    UserLeftGroup { user_id: i64, group_id: i64 },
+    UserLeftGroup { user_id: i64, group_id: String },
     /// 新消息通知
-    NewMessage { group_id: i64, message: MessageData },
+    NewMessage { group_id: String, message: MessageData },
     /// 群组信息更新
-    GroupInfoUpdated { group_id: i64, name: String },
+    GroupInfoUpdated { group_id: String, name: String },
 }
 
 /// WebSocket连接状态

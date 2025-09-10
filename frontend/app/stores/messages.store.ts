@@ -1,7 +1,8 @@
 import { defineStore } from "pinia";
 import { useMessageService } from "~/services/message.service";
 import type { Conversation, Message } from "~/types/message";
-import type { ConversationItem } from "~/types";
+import { convertConversationSummary } from "~/types/message";
+import type { ConversationItem, UserInfo, MessageType, ConversationSummary } from "~/types";
 import { useUserService } from "~/services/user.service";
 import { useGroupService } from "~/services/group.service";
 
@@ -19,9 +20,9 @@ export const useMessagesStore = defineStore("messages", () => {
   const pagination = ref({
     conversations: {
       hasMore: false,
-      nextCursor: undefined as number | undefined,
+      nextCursor: undefined as string | undefined,
     },
-    messages: { hasMore: false, nextCursor: undefined as number | undefined },
+    messages: { hasMore: false, nextCursor: undefined as string | undefined },
   });
 
   // 加载状态
@@ -50,7 +51,7 @@ export const useMessagesStore = defineStore("messages", () => {
         ? pagination.value.conversations.nextCursor
         : undefined;
       const response = await messageService.getConversations(cursor);
-      const convertedItems = response.items.map(convertConversationItem);
+      const convertedItems = response.items.map((item: ConversationSummary) => convertConversationSummary(item));
 
       if (loadMore) {
         conversations.value.push(...convertedItems);
@@ -84,7 +85,7 @@ export const useMessagesStore = defineStore("messages", () => {
       const filtered = allConversations.items.filter((item: any) =>
         item.peer_name.toLowerCase().includes(query.toLowerCase()),
       );
-      const convertedItems = filtered.map(convertConversationItem);
+      const convertedItems = filtered.map((item: ConversationSummary) => convertConversationSummary(item));
 
       if (loadMore) {
         conversations.value.push(...convertedItems);
@@ -149,7 +150,7 @@ export const useMessagesStore = defineStore("messages", () => {
               cursor,
             );
 
-      const convertedItems = response.items.map(convertMessageItem);
+      const convertedItems = response.items; // 直接使用后端数据
       if (loadMore) {
         messages.value.push(...convertedItems);
       } else {
@@ -173,7 +174,7 @@ export const useMessagesStore = defineStore("messages", () => {
   async function sendMessage(
     conversationId: string,
     content: string,
-    messageType: "text" | "image" | "file" = "text",
+    messageType: MessageType = "text",
   ) {
     const messageService = useMessageService();
     const authStore = useAuthStore();
@@ -188,7 +189,7 @@ export const useMessagesStore = defineStore("messages", () => {
       content,
       message_type: messageType,
       created_at: new Date().toISOString(),
-      is_read: true,
+      // is_read: true, // Message 类型不包含此字段
       // @ts-ignore 扩展状态字段
       status: "sending",
     };
@@ -205,6 +206,7 @@ export const useMessagesStore = defineStore("messages", () => {
       if (index !== -1) {
         const newMessage: Message = {
           id: String(resp.message_id) || tempId,
+          message_id: String(resp.message_id) || tempId,
           conversation_id: resp.conversation_id,
           sender_id: String(authStore.user?.user_id || "0"),
           sender_name: authStore.user?.nickname || "",
@@ -212,7 +214,7 @@ export const useMessagesStore = defineStore("messages", () => {
           message_type: resp.message_type,
           created_at: resp.sent_at,
           sent_at: resp.sent_at,
-          is_read: false,
+          // is_read: false, // Message 类型不包含此字段
           latitude: 0,
           longitude: 0,
         };
@@ -236,7 +238,7 @@ export const useMessagesStore = defineStore("messages", () => {
           last_message_time: resp.sent_at,
           unread_count: 0,
           type: "user",
-          participant_id: String(resp.recipient_id),
+          participant_id: String((resp as any).recipient_id),
           is_pinned: false,
           is_muted: false,
         };
@@ -245,8 +247,8 @@ export const useMessagesStore = defineStore("messages", () => {
         try {
           const userService = useUserService();
           const profile = await userService.getUserProfile(
-            String(resp.recipient_id),
-          );
+            String((resp as any).recipient_id),
+          ) as UserInfo;
           const target = conversations.value.find(
             (c) => c.id === String(resp.conversation_id),
           );
@@ -268,11 +270,14 @@ export const useMessagesStore = defineStore("messages", () => {
       // 失败：标记乐观消息为失败
       const idx = messages.value.findIndex((m) => m.id === tempId);
       if (idx !== -1) {
-        // @ts-ignore
-        (messages.value[idx] as any).status = "failed";
-        // @ts-ignore
-        (messages.value[idx] as any).retry_count =
-          (messages.value[idx] as any).retry_count || 0;
+        // 安全地更新消息状态
+        const message = messages.value[idx];
+        if (message) {
+          Object.assign(message, {
+            status: "failed" as const,
+            retry_count: (message as any).retry_count ? (message as any).retry_count + 1 : 1
+          });
+        }
       }
       throw e;
     } finally {
@@ -283,7 +288,7 @@ export const useMessagesStore = defineStore("messages", () => {
   async function sendGroupMessage(
     groupId: string,
     content: string,
-    messageType: "text" | "image" | "file" = "text",
+    messageType: MessageType = "text",
   ) {
     const messageService = useMessageService();
     const authStore = useAuthStore();
@@ -297,7 +302,7 @@ export const useMessagesStore = defineStore("messages", () => {
       content,
       message_type: messageType,
       created_at: new Date().toISOString(),
-      is_read: true,
+      // is_read: true, // Message 类型不包含此字段
       // @ts-ignore
       status: "sending",
     };
@@ -312,6 +317,7 @@ export const useMessagesStore = defineStore("messages", () => {
       if (index !== -1) {
         const newMessage: Message = {
           id: String((resp as any).message_id) || tempId,
+          message_id: String((resp as any).message_id) || tempId,
           group_id: resp.group_id,
           sender_id: String(authStore.user?.user_id || "0"),
           sender_name: authStore.user?.nickname || "",
@@ -319,7 +325,7 @@ export const useMessagesStore = defineStore("messages", () => {
           message_type: messageType,
           created_at: resp.sent_at,
           sent_at: resp.sent_at,
-          is_read: true,
+          // is_read: true, // Message 类型不包含此字段
           latitude: 0,
           longitude: 0,
         };
@@ -488,7 +494,7 @@ export const useMessagesStore = defineStore("messages", () => {
       // 按时间顺序插入消息
       const insertIndex = messages.value.findIndex(
         (m) =>
-          new Date(m.sent_at || m.created_at) > new Date(message.created_at),
+          new Date(m.sent_at || m.created_at || new Date()) > new Date(message.created_at || message.sent_at || new Date()),
       );
       if (insertIndex === -1) {
         messages.value.push(message);
@@ -597,37 +603,11 @@ export const useMessagesStore = defineStore("messages", () => {
   }
 
   // 类型转换函数
-  function convertConversationItem(item: ConversationItem): Conversation {
-    return {
-      id: item.conversation_id,
-      name: item.peer_name,
-      last_message: item.last_message_preview,
-      last_message_time: item.last_message_time,
-      unread_count: item.unread_count,
-      type: "user",
-      participant_id: String(item.peer_id),
-    };
-  }
-
-  function convertMessageItem(item: any): Message {
-    return {
-      id: item.message_id || String(Date.now() + Math.random()),
-      message_id: item.message_id,
-      conversation_id: item.conversation_id,
-      group_id: item.group_id,
-      sender_id: String(item.sender_id),
-      sender_name: item.sender_name,
-      content: item.content,
-      message_type: item.message_type,
-      sent_at: item.sent_at,
-      created_at: item.sent_at,
-      read_at: item.read_at,
-      is_read: !!item.read_at,
-      latitude: item.latitude || 0,
-      longitude: item.longitude || 0,
-      recipient_id: item.recipient_id,
-    };
-  }
+  // 移除数据转换函数 - 直接信任后端数据
+  // 原则：接收后直接使用，不做额外处理和验证
+  // 
+  // ❌ 错误做法：重新生成ID、强制类型转换、提供默认值
+  // ✅ 正确做法：直接使用后端返回的数据结构
 
   function removeOptimisticMessage(messageId: string) {
     const index = messages.value.findIndex((m) => m.id === messageId);

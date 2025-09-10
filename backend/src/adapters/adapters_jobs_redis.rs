@@ -1,7 +1,6 @@
 /// Redis任务队列适配器
 /// 
 /// 基于Redis的任务队列实现
-
 use crate::ports::{JobDispatcherPort, Job, JobId, JobStatus, QueueStats, JobPayload};
 use crate::domain::DomainResult;
 use async_trait::async_trait;

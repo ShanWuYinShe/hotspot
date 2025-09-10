@@ -1,26 +1,25 @@
-/// CQRS 命令模块
-/// 
-/// 定义系统中所有的写操作命令和命令处理器
+/// 命令模块 - 重新导出所有命令类型
 
+/// 命令特征
+pub trait Command {
+    /// 命令结果类型
+    type Result;
+}
+
+// 用户命令
 pub mod user_commands;
-pub mod group_commands;
-pub mod message_commands;
-pub mod moment_commands;
-
-// 重新导出命令类型
 pub use user_commands::*;
+
+// 群组命令
+pub mod group_commands;
 pub use group_commands::*;
+
+// 消息命令
+pub mod message_commands;
 pub use message_commands::*;
+
+// 瞬间命令
+pub mod moment_commands;
 pub use moment_commands::*;
 
-use crate::domain::DomainResult;
-use async_trait::async_trait;
-
-/// 命令处理器基础trait
-#[async_trait]
-pub trait CommandHandler<TCommand> {
-    type Result;
-    
-    /// 处理命令
-    async fn handle_command(&self, command: TCommand) -> DomainResult<Self::Result>;
-}
+// 额外的命令类型已合并到各自的模块中

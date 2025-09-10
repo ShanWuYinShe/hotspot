@@ -98,4 +98,52 @@ export async function decryptTextAesGcm(
   return textDecoder.decode(new Uint8Array(dec));
 }
 
+// ============ 密码安全相关函数 ============
+
+/**
+ * 计算 SHA-256 哈希值
+ * @param input 要哈希的字符串
+ * @returns 十六进制格式的哈希值
+ */
+export async function sha256Hash(input: string): Promise<string> {
+  const subtle = getSubtle();
+  const data = textEncoder.encode(input);
+  const hashBuffer = await subtle.digest('SHA-256', data);
+  const hashArray = new Uint8Array(hashBuffer);
+  
+  // 转换为十六进制字符串
+  return Array.from(hashArray)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+/**
+ * 计算认证用的密码哈希
+ * 根据需求文档：hash = SHA256(password + nonce + timestamp + login_id)
+ * @param password 原始密码
+ * @param nonce 服务端返回的随机数
+ * @param timestamp 时间戳
+ * @param loginId 登录ID
+ * @returns SHA256 哈希值
+ */
+export async function computePasswordHash(
+  password: string,
+  nonce: string,
+  timestamp: number,
+  loginId: string
+): Promise<string> {
+  const input = password + nonce + timestamp.toString() + loginId;
+  return await sha256Hash(input);
+}
+
+/**
+ * 验证浏览器是否支持 Web Crypto API
+ * @returns 是否支持
+ */
+export function isWebCryptoSupported(): boolean {
+  return typeof window !== 'undefined' && 
+         window.crypto && 
+         window.crypto.subtle !== undefined;
+}
+
 

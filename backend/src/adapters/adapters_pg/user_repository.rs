@@ -1,309 +1,328 @@
-use crate::domain::{DomainError, DomainResult, User, UserDomainError, UserType};
-// 移除未使用的导入
-use crate::ports::UserRepositoryPort;
-/// 用户仓储PostgreSQL适配器
-///
-/// 实现用户数据的PostgreSQL存储和查询
-use async_trait::async_trait;
+/// 用户数据访问层 - 三层数据结构实现
+/// 
+/// 架构说明：
+/// 1. Row结构体：仅在此文件内使用，对应数据库字段
+/// 2. Domain模型：返回给上层的业务模型
+/// 3. 查询优化：只查询必要字段，使用sqlx!宏和非NULL标记
 use sqlx::PgPool;
+use chrono::{DateTime, Utc};
+use crate::domain::{
+    DomainError, DomainResult, UserProfile, UserAuth, UserDetail, UserSearchResult, UserType
+};
+use crate::ports::UserRepository;
+use super::query_optimizer::PgQueryOptimizer;
 
+// ===== 数据库行结构体 (Repository层专用) =====
 
-/// PostgreSQL用户仓储实现
-#[derive(Clone)]
-pub struct PgUserRepository {
-    pool: PgPool,
+/// 用户资料查询的轻量级数据库行结构
+#[derive(Debug, sqlx::FromRow)]
+struct UserProfileRow {
+    user_id: String,
+    nickname: String,
+    avatar_url: Option<String>,
+    last_active_at: Option<DateTime<Utc>>,
+    expires_at: Option<DateTime<Utc>>, // 用于判断是否为临时用户
 }
 
-impl PgUserRepository {
-    /// 创建新的PostgreSQL用户仓储
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+
+/// 用户认证查询的数据库行结构（仅用于认证场景）
+#[derive(Debug, sqlx::FromRow)]
+struct UserAuthRow {
+    user_id: i64,
+    login_id: Option<String>,
+    nickname: String,
+    password_hash: Option<String>,
+    expires_at: Option<DateTime<Utc>>,
+    avatar_url: Option<String>,
+}
+
+/// 用户详细信息查询的数据库行结构
+#[derive(Debug, sqlx::FromRow)]
+struct UserDetailRow {
+    user_id: i64,
+    login_id: Option<String>,
+    nickname: String,
+    email: Option<String>,
+    avatar_url: Option<String>,
+    expires_at: Option<DateTime<Utc>>,
+    created_at: DateTime<Utc>,
+    last_active_at: DateTime<Utc>,
+}
+
+/// 用户搜索结果的数据库行结构
+#[derive(Debug, sqlx::FromRow)]
+struct UserSearchRow {
+    user_id: i64,
+    nickname: String,
+    avatar_url: Option<String>,
+    last_active_at: DateTime<Utc>,
+    expires_at: Option<DateTime<Utc>>,
+    distance: Option<f64>, // 仅地理位置搜索时有值
+}
+
+// ===== Row到Domain的转换实现 =====
+
+impl UserProfileRow {
+    fn to_domain(self) -> UserProfile {
+        let user_type = if self.expires_at.is_some() {
+            UserType::Temporary
+        } else {
+            UserType::Regular
+        };
+
+        UserProfile::new(
+            self.user_id,
+            self.nickname,
+            self.avatar_url,
+            user_type,
+            self.last_active_at,
+        )
     }
 }
 
-#[async_trait]
-impl UserRepositoryPort for PgUserRepository {
-    async fn find_by_id(&self, user_id: i64) -> DomainResult<Option<User>> {
-        let user_row = sqlx::query!(
+impl UserAuthRow {
+    fn to_domain(self) -> UserAuth {
+        let user_type = if self.expires_at.is_some() {
+            UserType::Temporary
+        } else {
+            UserType::Regular
+        };
+
+        UserAuth::new(
+            self.user_id,
+            self.login_id,
+            self.nickname,
+            self.password_hash,
+            user_type,
+            self.avatar_url,
+        )
+    }
+}
+
+impl UserDetailRow {
+    fn to_domain(self) -> UserDetail {
+        let user_type = if self.expires_at.is_some() {
+            UserType::Temporary
+        } else {
+            UserType::Regular
+        };
+
+        UserDetail::new(
+            self.user_id,
+            self.login_id,
+            self.nickname,
+            self.email,
+            self.avatar_url,
+            user_type,
+            self.last_active_at,
+            self.created_at,
+            self.expires_at,
+        )
+    }
+}
+
+impl UserSearchRow {
+    fn to_domain(self, has_location: bool) -> UserSearchResult {
+        let user_type = if self.expires_at.is_some() {
+            UserType::Temporary
+        } else {
+            UserType::Regular
+        };
+
+        UserSearchResult::new(
+            self.user_id,
+            self.nickname,
+            self.avatar_url,
+            user_type,
+            self.last_active_at,
+            self.distance,
+            has_location,
+        )
+    }
+}
+
+// ===== Repository实现 =====
+
+#[derive(Clone)]
+pub struct PostgresUserRepository {
+    pool: PgPool,
+    query_optimizer: PgQueryOptimizer,
+}
+
+impl PostgresUserRepository {
+    pub fn new(pool: PgPool) -> Self {
+        // 强制启用查询优化器
+        let query_optimizer = PgQueryOptimizer::new(pool.clone());
+        Self {
+            pool,
+            query_optimizer,
+        }
+    }
+    
+    /// 执行查询并进行性能监控
+    async fn execute_query_with_monitoring<F, T>(
+        &self,
+        operation_name: &str,
+        query_fn: F,
+    ) -> DomainResult<T>
+    where
+        F: std::future::Future<Output = DomainResult<T>>,
+    {
+        // 强制使用查询优化器进行监控和优化
+        let params_summary = std::collections::HashMap::new(); // 可以根据需要添加参数信息
+        
+        let (result, metrics) = self.query_optimizer.execute_with_monitoring(
+            operation_name,
+            params_summary,
+            query_fn
+        ).await?;
+        
+        // 记录位置查询监控（如果是位置相关查询）
+        if operation_name.contains("location") || operation_name.contains("nearby") {
+            let metrics_collector = crate::utils::metrics::get_app_metrics();
+            if let Some(ref perf_metrics) = metrics {
+                metrics_collector.record_location_query(perf_metrics.execution_time_ms as f64 / 1000.0);
+            }
+        }
+        
+        // 记录性能指标
+        if let Some(ref perf_metrics) = metrics {
+            if perf_metrics.execution_time_ms > 100 {
+                tracing::warn!(
+                    operation = operation_name,
+                    duration_ms = perf_metrics.execution_time_ms,
+                    query_type = perf_metrics.query_type,
+                    used_index = perf_metrics.used_index,
+                    repository = "user_repository",
+                    "慢查询检测"
+                );
+            } else {
+                tracing::debug!(
+                    operation = operation_name,
+                    duration_ms = perf_metrics.execution_time_ms,
+                    query_type = perf_metrics.query_type,
+                    used_index = perf_metrics.used_index,
+                    repository = "user_repository",
+                    "查询完成"
+                );
+            }
+        }
+        
+        Ok(result)
+    }
+
+    /// 🔒 专门的密码验证方法：只在需要验证密码时查询密码哈希
+    pub async fn find_user_password_hash(&self, user_id: i64) -> DomainResult<Option<String>> {
+        let password_hash = sqlx::query_scalar!(
             r#"
-            SELECT id, user_id, login_id, nickname, password_hash, expires_at, 
-                   created_at, updated_at, last_active_at, email, avatar_url
+            SELECT password_hash
             FROM users
-            WHERE user_id = $1
+            WHERE id = $1
             "#,
             user_id
         )
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("Database error: {}", e)
+            rule: format!("Database error: {}", e),
         })?;
 
-        if let Some(user_row) = user_row {
-            // 判断用户类型：有expires_at的是临时用户
-            let user_type = if user_row.expires_at.is_some() {
-                UserType::Temporary
-            } else {
-                UserType::Regular
-            };
-
-            Ok(Some(User {
-                id: user_row.id,
-                user_id: user_row.user_id,
-                login_id: user_row.login_id,
-                nickname: user_row.nickname,
-                password_hash: user_row.password_hash,
-                user_type,
-                email: user_row.email,
-                avatar_url: user_row.avatar_url,
-                expires_at: user_row.expires_at,
-                created_at: user_row.created_at,
-                updated_at: user_row.updated_at,
-                last_active_at: user_row.last_active_at,
-            }))
-        } else {
-            Ok(None)
-        }
+        Ok(password_hash.flatten())
     }
 
-    async fn find_by_login_id(&self, login_id: &str) -> DomainResult<Option<User>> {
-        let user_row = sqlx::query!(
+    /// 检查用户位置是否存在
+    async fn check_user_location(&self, user_id: i64) -> DomainResult<bool> {
+        let exists = sqlx::query_scalar!(
             r#"
-            SELECT id, user_id, login_id, nickname, password_hash, expires_at, 
-                   created_at, updated_at, last_active_at, email, avatar_url
-            FROM users
-            WHERE login_id = $1
+            SELECT EXISTS(
+                SELECT 1 FROM user_locations 
+                WHERE id = $1
+            ) as "exists!"
             "#,
-            login_id
+            user_id
         )
-        .fetch_optional(&self.pool)
+        .fetch_one(&self.pool)
         .await
         .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("Database error: {}", e)
+            rule: format!("Database error: {}", e),
         })?;
 
-        if let Some(user_row) = user_row {
-            // 判断用户类型：有expires_at的是临时用户
-            let user_type = if user_row.expires_at.is_some() {
-                UserType::Temporary
-            } else {
-                UserType::Regular
-            };
-
-            Ok(Some(User {
-                id: user_row.id,
-                user_id: user_row.user_id,
-                login_id: user_row.login_id,
-                nickname: user_row.nickname,
-                password_hash: user_row.password_hash,
-                user_type,
-                email: user_row.email,
-                avatar_url: user_row.avatar_url,
-                expires_at: user_row.expires_at,
-                created_at: user_row.created_at,
-                updated_at: user_row.updated_at,
-                last_active_at: user_row.last_active_at,
-            }))
-        } else {
-            Ok(None)
-        }
+        Ok(exists)
     }
+}
 
-    async fn create_user(&self, user: &User) -> DomainResult<User> {
-        // 开始事务
-        let mut tx = self
-            .pool
-            .begin()
-            .await
-            .map_err(|e| DomainError::BusinessRuleViolation {
-                rule: format!("Failed to start transaction: {}", e),
-            })?;
-
-        // 插入用户记录
-        let user_row = sqlx::query!(
-            r#"
-            INSERT INTO users (user_id, login_id, nickname, password_hash, expires_at, 
-                             email, avatar_url, created_at, updated_at, last_active_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            RETURNING id, user_id, login_id, nickname, password_hash, expires_at, 
-                     email, avatar_url, created_at, updated_at, last_active_at
-            "#,
-            user.user_id,
-            user.login_id,
-            user.nickname,
-            user.password_hash,
-            user.expires_at,
-            user.email,
-            user.avatar_url,
-            user.created_at,
-            user.updated_at,
-            user.last_active_at
-        )
-        .fetch_one(&mut *tx)
-        .await
-        .map_err(|e| {
-            // 处理唯一约束违反错误
-            if let sqlx::Error::Database(db_err) = &e {
-                if db_err.constraint().is_some() {
-                    return DomainError::User(UserDomainError::LoginIdAlreadyExists {
-                        login_id: user.login_id.clone().unwrap_or_default(),
-                    });
-                }
-            }
-            DomainError::BusinessRuleViolation {
-                rule: format!("Database error: {}", e)
-            }
-        })?;
-
-        // 提交事务
-        tx.commit()
-            .await
-            .map_err(|e| DomainError::BusinessRuleViolation {
-                rule: format!("Failed to commit transaction: {}", e),
-            })?;
-
-        // 返回创建的用户
-        Ok(User {
-            id: user_row.id,
-            user_id: user_row.user_id,
-            login_id: user_row.login_id,
-            nickname: user_row.nickname,
-            password_hash: user_row.password_hash,
-            user_type: user.user_type.clone(),
-            email: user_row.email,
-            avatar_url: user_row.avatar_url,
-            expires_at: user_row.expires_at,
-            created_at: user_row.created_at,
-            updated_at: user_row.updated_at,
-            last_active_at: user_row.last_active_at,
-        })
-    }
-
-    async fn update_user(&self, user: &User) -> DomainResult<User> {
-        // 开始事务
-        let mut tx = self
-            .pool
-            .begin()
-            .await
-            .map_err(|e| DomainError::BusinessRuleViolation {
-                rule: format!("Failed to start transaction: {}", e),
-            })?;
-
-        // 更新用户记录
-        let user_row = sqlx::query!(
-            r#"
-            UPDATE users
-            SET login_id = $2, nickname = $3, password_hash = $4, email = $5, 
-                avatar_url = $6, expires_at = $7, updated_at = $8, last_active_at = $9
-            WHERE user_id = $1
-            RETURNING id, user_id, login_id, nickname, password_hash, expires_at, 
-                     email, avatar_url, created_at, updated_at, last_active_at
-            "#,
-            user.user_id,
-            user.login_id,
-            user.nickname,
-            user.password_hash,
-            user.email,
-            user.avatar_url,
-            user.expires_at,
-            user.updated_at,
-            user.last_active_at
-        )
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("Database error: {}", e)
-        })?;
-
-        if let Some(user_row) = user_row {
-
-
-            // 提交事务
-            tx.commit()
-                .await
-                .map_err(|e| DomainError::BusinessRuleViolation {
-                    rule: format!("Failed to commit transaction: {}", e),
-                })?;
-
-            // 判断用户类型
-            let user_type = if user_row.expires_at.is_some() {
-                UserType::Temporary
-            } else {
-                UserType::Regular
-            };
-
-            Ok(User {
-                id: user_row.id,
-                user_id: user_row.user_id,
-                login_id: user_row.login_id,
-                nickname: user_row.nickname,
-                password_hash: user_row.password_hash,
-                user_type,
-                email: user_row.email,
-                avatar_url: user_row.avatar_url,
-                expires_at: user_row.expires_at,
-                created_at: user_row.created_at,
-                updated_at: user_row.updated_at,
-                last_active_at: user_row.last_active_at,
-            })
-        } else {
-            Err(DomainError::User(UserDomainError::UserNotFound {
-                user_id: user.user_id,
-            }))
-        }
-    }
-
-    async fn delete_user(&self, user_id: i64) -> DomainResult<()> {
-        let rows_affected = sqlx::query!("DELETE FROM users WHERE user_id = $1", user_id)
-            .execute(&self.pool)
+#[async_trait::async_trait]
+impl UserRepository for PostgresUserRepository {
+    /// 获取用户基础资料（轻量级）
+    async fn find_user_profile(&self, user_id: i64) -> DomainResult<Option<UserProfile>> {
+        self.execute_query_with_monitoring("find_user_profile", async {
+            let user_row = sqlx::query_as!(
+                UserProfileRow,
+                r#"
+                SELECT user_id as "user_id!", nickname as "nickname!", 
+                       avatar_url, last_login_at as last_active_at, expires_at
+                FROM users
+                WHERE id = $1
+                "#,
+                user_id
+            )
+            .fetch_optional(&self.pool)
             .await
             .map_err(|e| DomainError::BusinessRuleViolation {
                 rule: format!("Database error: {}", e),
-            })?
-            .rows_affected();
+            })?;
 
-        if rows_affected == 0 {
-            Err(DomainError::User(UserDomainError::UserNotFound { user_id }))
-        } else {
-            Ok(())
-        }
+            Ok(user_row.map(|row| row.to_domain()))
+        }).await
     }
 
-    async fn find_nearby_users(
+    /// 获取用户认证信息（仅用于认证）
+    async fn find_user_auth(&self, login_id: &str) -> DomainResult<Option<UserAuth>> {
+        self.execute_query_with_monitoring("find_user_auth", async {
+            let user_row = sqlx::query_as!(
+                UserAuthRow,
+                r#"
+                SELECT user_id as "user_id!", username as login_id, nickname as "nickname!", 
+                       password_hash, expires_at, avatar_url
+                FROM users
+                WHERE username = $1
+                "#,
+                login_id
+            )
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| DomainError::BusinessRuleViolation {
+                rule: format!("Database error: {}", e),
+            })?;
+
+            Ok(user_row.map(|row| row.to_domain()))
+        }).await
+    }
+
+    /// 按昵称搜索用户资料（轻量级）
+    async fn search_user_profiles_by_name(
         &self,
-        latitude: f64,
-        longitude: f64,
-        radius_km: f64,
+        keyword: &str,
         cursor: i64,
         limit: i32,
-    ) -> DomainResult<Vec<User>> {
-        // 使用PostGIS扩展进行地理位置查询
-        let rows = sqlx::query!(
+    ) -> DomainResult<Vec<UserSearchResult>> {
+        let search_pattern = format!("%{}%", keyword);
+
+        let user_rows = sqlx::query_as!(
+            UserSearchRow,
             r#"
-            SELECT u.id, u.user_id, u.login_id, u.nickname, u.password_hash, u.expires_at,
-                   u.email, u.avatar_url, u.created_at, u.updated_at, u.last_active_at,
-                   ST_Distance(
-                       ST_Point(COALESCE(ul.longitude, 0.0), COALESCE(ul.latitude, 0.0))::geography,
-                       ST_Point($2, $1)::geography
-                   ) / 1000.0 as distance_km
-            FROM users u
-            LEFT JOIN user_locations ul ON u.user_id = ul.user_id
-            WHERE ul.latitude IS NOT NULL
-              AND ul.longitude IS NOT NULL
-              AND ($4 = 0 OR u.user_id < $4)
-              AND ST_DWithin(
-                  ST_Point(COALESCE(ul.longitude, 0.0), COALESCE(ul.latitude, 0.0))::geography,
-                  ST_Point($2, $1)::geography,
-                  $3 * 1000
-              )
-            ORDER BY u.user_id DESC
-            LIMIT $5
+            SELECT id as "user_id!", nickname as "nickname!", 
+                   avatar_url, last_login_at as last_active_at, expires_at,
+                   NULL::DOUBLE PRECISION as distance
+            FROM users
+            WHERE nickname ILIKE $1
+              AND ($2 = 0 OR id < $2)
+            ORDER BY id DESC
+            LIMIT $3
             "#,
-            latitude,
-            longitude,
-            radius_km as i32, // 类型转换
+            search_pattern,
             cursor as i32,
-            limit as i64 // 类型转换
+            limit as i64
         )
         .fetch_all(&self.pool)
         .await
@@ -311,96 +330,278 @@ impl UserRepositoryPort for PgUserRepository {
             rule: format!("Database error: {}", e),
         })?;
 
-        let users = rows
-            .into_iter()
-            .map(|r| {
-                let user_type = if r.expires_at.is_some() {
-                    UserType::Temporary
-                } else {
-                    UserType::Regular
-                };
+        let mut results = Vec::new();
+        for user_row in user_rows {
+            let has_location = self.check_user_location(user_row.user_id).await?;
+            results.push(user_row.to_domain(has_location));
+        }
 
-                User {
-                    id: r.id,
-                    user_id: r.user_id,
-                    login_id: r.login_id,
-                    nickname: r.nickname,
-                    password_hash: r.password_hash,
-                    user_type,
-                    email: r.email,
-                    avatar_url: r.avatar_url,
-                    expires_at: r.expires_at,
-                    created_at: r.created_at,
-                    updated_at: r.updated_at,
-                    last_active_at: r.last_active_at,
-                }
-            })
-            .collect();
-
-        Ok(users)
+        Ok(results)
     }
 
-    async fn search_users_by_nickname(
+    /// 按位置搜索附近用户
+    async fn find_nearby_users_with_distance(
         &self,
-        keyword: &str,
+        latitude: f64,
+        longitude: f64,
+        radius_meters: f64,
         cursor: i64,
         limit: i32,
-    ) -> DomainResult<Vec<User>> {
-        let search_pattern = format!("%{}%", keyword);
-
-        let user_rows = sqlx::query!(
+    ) -> DomainResult<Vec<UserSearchResult>> {
+        let user_rows = sqlx::query_as!(
+            UserSearchRow,
             r#"
-            SELECT id, user_id, login_id, nickname, password_hash, expires_at, 
-                   email, avatar_url, created_at, updated_at, last_active_at
-            FROM users
-            WHERE nickname ILIKE $1
-              AND ($2 = 0 OR user_id < $2)
-            ORDER BY user_id DESC
-            LIMIT $3
+            SELECT 
+                u.id as "user_id!",
+                u.nickname as "nickname!",
+                u.avatar_url,
+                u.last_login_at as last_active_at,
+                u.expires_at,
+                ST_Distance(ul.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) as distance
+            FROM users u
+            INNER JOIN user_locations ul ON u.id = ul.user_id
+            WHERE ST_DWithin(ul.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, $3)
+              AND ($4 = 0 OR u.id < $4)
+            ORDER BY distance ASC, u.id DESC
+            LIMIT $5
             "#,
-            search_pattern,
-            (cursor as i32),
+            longitude,
+            latitude,
+            radius_meters,
+            cursor as i32,
             limit as i64
         )
         .fetch_all(&self.pool)
         .await
         .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("Database error: {}", e)
+            rule: format!("Database error: {}", e),
         })?;
 
-        let users = user_rows
-            .into_iter()
-            .map(|user_row| {
-                let user_type = if user_row.expires_at.is_some() {
-                    UserType::Temporary
-                } else {
-                    UserType::Regular
-                };
-
-                User {
-                    id: user_row.id,
-                    user_id: user_row.user_id,
-                    login_id: user_row.login_id,
-                    nickname: user_row.nickname,
-                    password_hash: user_row.password_hash,
-                    user_type,
-                    email: user_row.email,
-                    avatar_url: user_row.avatar_url,
-                    expires_at: user_row.expires_at,
-                    created_at: user_row.created_at,
-                    updated_at: user_row.updated_at,
-                    last_active_at: user_row.last_active_at,
-                }
-            })
-            .collect();
-
-        Ok(users)
+        Ok(user_rows.into_iter().map(|row| row.to_domain(true)).collect())
     }
 
+    /// 获取用户详细信息
+    async fn find_user_detail(&self, user_id: i64) -> DomainResult<Option<UserDetail>> {
+        self.execute_query_with_monitoring("find_user_detail", async {
+            let user_row = sqlx::query_as!(
+                UserDetailRow,
+                r#"
+                SELECT user_id as "user_id!", username as login_id, nickname as "nickname!", 
+                       email, avatar_url, expires_at, 
+                       created_at as "created_at!", 
+                       last_login_at as last_active_at
+                FROM users
+                WHERE id = $1
+                "#,
+                user_id
+            )
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| DomainError::BusinessRuleViolation {
+                rule: format!("Database error: {}", e),
+            })?;
+
+            Ok(user_row.map(|row| row.to_domain()))
+        }).await
+    }
+
+    /// 创建新用户
+    async fn create_user(
+        &self,
+        login_id: Option<&str>,
+        nickname: &str,
+        password_hash: Option<&str>,
+        email: Option<&str>,
+        expires_at: Option<DateTime<Utc>>,
+    ) -> DomainResult<UserProfile> {
+        self.execute_query_with_monitoring("create_user", async {
+            let user_row = sqlx::query_as!(
+                UserProfileRow,
+                r#"
+                INSERT INTO users (username, nickname, password_hash, email, expires_at)
+                VALUES ($1, $2, $3, $4, $5)
+                RETURNING user_id as "user_id!", nickname as "nickname!", 
+                          avatar_url, last_login_at as last_active_at, expires_at
+                "#,
+                login_id,
+                nickname,
+                password_hash,
+                email,
+                expires_at
+            )
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|e| DomainError::BusinessRuleViolation {
+                rule: format!("Database error: {}", e),
+            })?;
+
+            Ok(user_row.to_domain())
+        }).await
+    }
+
+    /// 更新用户资料
+    async fn update_user_profile(
+        &self,
+        user_id: i64,
+        nickname: Option<&str>,
+        avatar_url: Option<&str>,
+    ) -> DomainResult<UserProfile> {
+        let user_row = sqlx::query_as!(
+            UserProfileRow,
+            r#"
+            UPDATE users 
+            SET nickname = COALESCE($2, nickname),
+                avatar_url = COALESCE($3, avatar_url),
+                updated_at = NOW()
+            WHERE id = $1
+            RETURNING user_id as "user_id!", nickname as "nickname!", 
+                      avatar_url, last_login_at as last_active_at, expires_at
+            "#,
+            user_id,
+            nickname,
+            avatar_url
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRuleViolation {
+            rule: format!("Database error: {}", e),
+        })?;
+
+        Ok(user_row.to_domain())
+    }
+
+    /// 设置用户密码
+    async fn set_user_password(&self, user_id: i64, password_hash: &str) -> DomainResult<()> {
+        sqlx::query!(
+            r#"
+            UPDATE users 
+            SET password_hash = $2, updated_at = NOW()
+            WHERE id = $1
+            "#,
+            user_id,
+            password_hash
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRuleViolation {
+            rule: format!("Database error: {}", e),
+        })?;
+
+        Ok(())
+    }
+
+    /// 升级临时用户为正式用户
+    async fn upgrade_temp_user(
+        &self,
+        user_id: i64,
+        login_id: &str,
+        password_hash: &str,
+    ) -> DomainResult<UserProfile> {
+        let user_row = sqlx::query_as!(
+            UserProfileRow,
+            r#"
+            UPDATE users 
+            SET username = $2, 
+                password_hash = $3, 
+                expires_at = NULL,
+                updated_at = NOW()
+            WHERE id = $1 AND expires_at IS NOT NULL
+            RETURNING user_id as "user_id!", nickname as "nickname!", 
+                      avatar_url, last_login_at as last_active_at, expires_at
+            "#,
+            user_id,
+            login_id,
+            password_hash
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRuleViolation {
+            rule: format!("Database error: {}", e),
+        })?;
+
+        Ok(user_row.to_domain())
+    }
+
+    /// 删除用户
+    async fn delete_user(&self, user_id: i64) -> DomainResult<()> {
+        sqlx::query!(
+            r#"
+            DELETE FROM users WHERE user_id = $1
+            "#,
+            user_id
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRuleViolation {
+            rule: format!("Database error: {}", e),
+        })?;
+
+        Ok(())
+    }
+
+    /// 更新用户位置
+    async fn update_user_location(
+        &self,
+        user_id: i64,
+        latitude: f64,
+        longitude: f64,
+        location_name: &str,
+    ) -> DomainResult<()> {
+        self.execute_query_with_monitoring("update_user_location", async {
+            sqlx::query!(
+                r#"
+                INSERT INTO user_locations (user_id, latitude, longitude, address, updated_at)
+                VALUES ($1, $2, $3, $4, NOW())
+                ON CONFLICT (user_id) 
+                DO UPDATE SET 
+                    latitude = EXCLUDED.latitude,
+                    longitude = EXCLUDED.longitude,
+                    address = EXCLUDED.address,
+                    updated_at = EXCLUDED.updated_at
+                "#,
+                user_id,
+                latitude,
+                longitude,
+                location_name
+            )
+            .execute(&self.pool)
+            .await
+            .map_err(|e| DomainError::BusinessRuleViolation {
+                rule: format!("Database error: {}", e),
+            })?;
+
+            Ok(())
+        }).await
+    }
+
+    /// 查找用户位置
+    async fn find_user_location(&self, user_id: i64) -> DomainResult<Option<(f64, f64, String)>> {
+        self.execute_query_with_monitoring("find_user_location", async {
+            let location = sqlx::query!(
+                r#"
+                SELECT latitude as "latitude!", longitude as "longitude!", 
+                       COALESCE(address, '') as "location_name!"
+                FROM user_locations
+                WHERE user_id = $1
+                "#,
+                user_id
+            )
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| DomainError::BusinessRuleViolation {
+                rule: format!("Database error: {}", e),
+            })?;
+
+            Ok(location.map(|loc| (loc.latitude, loc.longitude, loc.location_name)))
+        }).await
+    }
+
+    /// 获取用户总数
     async fn get_total_user_count(&self) -> DomainResult<i64> {
         let count = sqlx::query_scalar!(
             r#"
-            SELECT COUNT(*) FROM users
+            SELECT COUNT(*) as "count!"
+            FROM users
             "#
         )
         .fetch_one(&self.pool)
@@ -408,13 +609,17 @@ impl UserRepositoryPort for PgUserRepository {
         .map_err(|e| DomainError::BusinessRuleViolation {
             rule: format!("Database error: {}", e),
         })?;
-        Ok(count.unwrap_or(0))
+
+        Ok(count)
     }
 
+    /// 按ID范围获取用户数量
     async fn get_user_count_by_id_range(&self, start_id: i64, end_id: i64) -> DomainResult<i64> {
         let count = sqlx::query_scalar!(
             r#"
-            SELECT COUNT(*) FROM users WHERE user_id BETWEEN $1 AND $2
+            SELECT COUNT(*) as "count!"
+            FROM users
+            WHERE user_id >= $1 AND user_id <= $2
             "#,
             start_id,
             end_id
@@ -424,16 +629,17 @@ impl UserRepositoryPort for PgUserRepository {
         .map_err(|e| DomainError::BusinessRuleViolation {
             rule: format!("Database error: {}", e),
         })?;
-        Ok(count.unwrap_or(0))
+
+        Ok(count)
     }
-    async fn get_max_user_id_by_range(
-        &self,
-        start_id: i64,
-        end_id: i64,
-    ) -> DomainResult<Option<i64>> {
+
+    /// 获取指定范围内的最大用户ID
+    async fn get_max_user_id_by_range(&self, start_id: i64, end_id: i64) -> DomainResult<Option<i64>> {
         let max_id = sqlx::query_scalar!(
             r#"
-            SELECT MAX(user_id) FROM users WHERE user_id BETWEEN $1 AND $2
+            SELECT MAX(id)
+            FROM users
+            WHERE id >= $1 AND id <= $2
             "#,
             start_id,
             end_id
@@ -443,133 +649,7 @@ impl UserRepositoryPort for PgUserRepository {
         .map_err(|e| DomainError::BusinessRuleViolation {
             rule: format!("Database error: {}", e),
         })?;
+
         Ok(max_id)
     }
-
-    async fn find_user_location(&self, user_id: i64) -> DomainResult<Option<crate::domain::UserLocation>> {
-        let location_row = sqlx::query!(
-            r#"
-            SELECT id as "id!", user_id as "user_id!", latitude as "latitude!", 
-                   longitude as "longitude!", location_name as "location_name!", updated_at as "updated_at!"
-            FROM user_locations
-            WHERE user_id = $1
-            ORDER BY updated_at DESC
-            LIMIT 1
-            "#,
-            user_id
-        )
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("Database error: {}", e),
-        })?;
-
-        if let Some(row) = location_row {
-            Ok(Some(crate::domain::UserLocation {
-                id: row.id,
-                user_id: row.user_id,
-                latitude: row.latitude,
-                longitude: row.longitude,
-                location_name: row.location_name,
-                updated_at: row.updated_at,
-            }))
-        } else {
-            Ok(None)
-        }
-    }
-
-    async fn upsert_user_location(&self, user_location: &crate::domain::UserLocation) -> DomainResult<crate::domain::UserLocation> {
-        let location_row = sqlx::query!(
-            r#"
-            INSERT INTO user_locations (user_id, latitude, longitude, location_name, updated_at)
-            VALUES ($1, $2, $3, $4, $5)
-            ON CONFLICT (user_id) 
-            DO UPDATE SET 
-                latitude = EXCLUDED.latitude,
-                longitude = EXCLUDED.longitude,
-                location_name = EXCLUDED.location_name,
-                updated_at = EXCLUDED.updated_at
-            RETURNING id as "id!", user_id as "user_id!", latitude as "latitude!", 
-                      longitude as "longitude!", location_name as "location_name!", updated_at as "updated_at!"
-            "#,
-            user_location.user_id,
-            user_location.latitude,
-            user_location.longitude,
-            user_location.location_name,
-            user_location.updated_at
-        )
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("Database error: {}", e),
-        })?;
-
-        Ok(crate::domain::UserLocation {
-            id: location_row.id,
-            user_id: location_row.user_id,
-            latitude: location_row.latitude,
-            longitude: location_row.longitude,
-            location_name: location_row.location_name,
-            updated_at: location_row.updated_at,
-        })
-    }
-
-    async fn find_nearby_users_with_distance(
-        &self,
-        latitude: f64,
-        longitude: f64,
-        radius_km: f64,
-        cursor: i64,
-        limit: i32,
-    ) -> DomainResult<Vec<crate::application::NearbyUser>> {
-        let rows = sqlx::query!(
-            r#"
-            SELECT u.user_id as "user_id!", u.nickname as "nickname!", u.created_at as "created_at!",
-                   ul.latitude as "latitude!", ul.longitude as "longitude!", ul.location_name as "location_name!",
-                   ST_Distance(
-                       ST_Point(ul.longitude, ul.latitude)::geography,
-                       ST_Point($2, $1)::geography
-                   ) / 1000.0 as "distance_km!"
-            FROM users u
-            INNER JOIN user_locations ul ON u.user_id = ul.user_id
-            WHERE ($4 = 0 OR u.user_id < $4)
-              AND ST_DWithin(
-                  ST_Point(ul.longitude, ul.latitude)::geography,
-                  ST_Point($2, $1)::geography,
-                  $3 * 1000
-              )
-            ORDER BY u.user_id DESC
-            LIMIT $5
-            "#,
-            latitude,
-            longitude,
-            radius_km as f32,
-            cursor as i32,
-            limit as i64
-        )
-        .fetch_all(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("Database error: {}", e),
-        })?;
-
-        let nearby_users = rows
-            .into_iter()
-            .map(|r| crate::application::NearbyUser {
-                user_id: r.user_id,
-                nickname: r.nickname,
-                location: crate::application::UserLocation {
-                    latitude: r.latitude,
-                    longitude: r.longitude,
-                    address: Some(r.location_name),
-                },
-                distance_km: r.distance_km,
-                created_at: r.created_at,
-            })
-            .collect();
-
-        Ok(nearby_users)
-    }
 }
-
-

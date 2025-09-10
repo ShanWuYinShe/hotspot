@@ -1,5 +1,4 @@
 /// 瞬间相关命令定义
-
 use serde::{Deserialize, Serialize};
 use crate::domain::{DomainResult, DomainError};
 

@@ -135,7 +135,7 @@ pub struct WebSocketManager {
     // permission_service: PermissionService, // 暂时禁用
     /// 审计服务（可选，默认None，通过 feature gate 控制）
     #[cfg(feature = "audit")]
-    audit: Option<AuditService<NoopAuditSink>>,
+    audit: Option<AuditService>,
     /// WebSocket 事件钩子（默认 Noop）
     hooks: WsHookService<NoopWsHooks>,
 }
@@ -159,7 +159,7 @@ impl WebSocketManager {
         notification_service: Arc<WebSocketNotificationService>,
         metrics: Option<Arc<AppMetrics>>,
         #[cfg(feature = "audit")]
-        audit: Option<AuditService<NoopAuditSink>>,
+        audit: Option<AuditService>,
     ) -> Self {
         // let permission_service = PermissionService::new(db_pool.clone()); // 暂时禁用
         // 暂时禁用通知服务引用

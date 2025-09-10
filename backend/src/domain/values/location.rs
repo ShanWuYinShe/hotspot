@@ -1,68 +1,22 @@
 /// 位置值对象
 /// 
 /// 封装地理位置相关的逻辑和验证
-
+/// 位置值对象
+/// 
+/// 功能职责：
+/// - 定义地理位置的值对象和坐标系统
+/// - 实现位置计算和距离测量算法
+/// - 提供位置验证和格式化功能
+/// - 管理位置精度和误差处理
+/// 
+/// 设计原则：
+/// - 不可变性：值对象创建后不可修改
+/// - 自我验证：内部包含数据有效性检查
+/// - 值语义：基于内容而非身份的相等性
+/// - 无副作用：操作不会改变外部状态
 use serde::{Deserialize, Serialize};
+use super::coordinates::Coordinates;
 
-/// 地理位置坐标
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Coordinates {
-    pub latitude: f64,
-    pub longitude: f64,
-}
-
-impl Coordinates {
-    /// 创建新的坐标
-    pub fn new(latitude: f64, longitude: f64) -> Result<Self, String> {
-        let coords = Self { latitude, longitude };
-        coords.validate()?;
-        Ok(coords)
-    }
-    
-    /// 验证坐标有效性
-    pub fn validate(&self) -> Result<(), String> {
-        if self.latitude < -90.0 || self.latitude > 90.0 {
-            return Err("纬度必须在-90到90之间".to_string());
-        }
-        
-        if self.longitude < -180.0 || self.longitude > 180.0 {
-            return Err("经度必须在-180到180之间".to_string());
-        }
-        
-        Ok(())
-    }
-    
-    /// 计算与另一个坐标点的距离（使用Haversine公式，返回米）
-    pub fn distance_to(&self, other: &Coordinates) -> f64 {
-        let earth_radius = 6371000.0; // 地球半径，单位：米
-        
-        let lat1_rad = self.latitude.to_radians();
-        let lat2_rad = other.latitude.to_radians();
-        let delta_lat = (other.latitude - self.latitude).to_radians();
-        let delta_lon = (other.longitude - self.longitude).to_radians();
-        
-        let a = (delta_lat / 2.0).sin().powi(2)
-            + lat1_rad.cos() * lat2_rad.cos() * (delta_lon / 2.0).sin().powi(2);
-        let c = 2.0 * a.sqrt().atan2((1.0 - a).sqrt());
-        
-        earth_radius * c
-    }
-    
-    /// 计算与另一个坐标点的距离（返回公里）
-    pub fn distance_to_km(&self, other: &Coordinates) -> f64 {
-        self.distance_to(other) / 1000.0
-    }
-    
-    /// 检查是否在指定半径范围内（米）
-    pub fn is_within_radius(&self, other: &Coordinates, radius_meters: f64) -> bool {
-        self.distance_to(other) <= radius_meters
-    }
-    
-    /// 检查是否在指定半径范围内（公里）
-    pub fn is_within_radius_km(&self, other: &Coordinates, radius_km: f64) -> bool {
-        self.distance_to_km(other) <= radius_km
-    }
-}
 
 /// 完整的位置信息
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -74,7 +28,8 @@ pub struct Location {
 impl Location {
     /// 创建新的位置
     pub fn new(latitude: f64, longitude: f64, address: Option<String>) -> Result<Self, String> {
-        let coordinates = Coordinates::new(latitude, longitude)?;
+        let coordinates = Coordinates::new(latitude, longitude)
+            .map_err(|e| format!("坐标错误: {}", e))?;
         
         if let Some(ref addr) = address {
             if addr.len() > 200 {
@@ -98,12 +53,12 @@ impl Location {
     
     /// 获取纬度
     pub fn latitude(&self) -> f64 {
-        self.coordinates.latitude
+        self.coordinates.lat()
     }
     
     /// 获取经度
     pub fn longitude(&self) -> f64 {
-        self.coordinates.longitude
+        self.coordinates.lon()
     }
     
     /// 获取地址
@@ -124,22 +79,26 @@ impl Location {
     
     /// 计算与另一个位置的距离（米）
     pub fn distance_to(&self, other: &Location) -> f64 {
-        self.coordinates.distance_to(&other.coordinates)
+        self.coordinates.distance_to(&other.coordinates).meters()
     }
     
     /// 计算与另一个位置的距离（公里）
     pub fn distance_to_km(&self, other: &Location) -> f64 {
-        self.coordinates.distance_to_km(&other.coordinates)
+        self.coordinates.distance_to(&other.coordinates).kilometers()
     }
     
     /// 检查是否在指定范围内
     pub fn is_within_radius(&self, other: &Location, radius_meters: f64) -> bool {
-        self.coordinates.is_within_radius(&other.coordinates, radius_meters)
+        use super::coordinates::Distance;
+        let radius = Distance::from_meters(radius_meters);
+        self.coordinates.is_within_radius(&other.coordinates, &radius)
     }
     
     /// 检查是否在指定范围内（公里）
     pub fn is_within_radius_km(&self, other: &Location, radius_km: f64) -> bool {
-        self.coordinates.is_within_radius_km(&other.coordinates, radius_km)
+        use super::coordinates::Distance;
+        let radius = Distance::from_kilometers(radius_km);
+        self.coordinates.is_within_radius(&other.coordinates, &radius)
     }
 }
 
@@ -169,23 +128,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_coordinates_validation() {
-        // 有效坐标
-        assert!(Coordinates::new(40.7128, -74.0060).is_ok());
+    fn test_location_creation() {
+        // 有效位置
+        assert!(Location::new(40.7128, -74.0060, Some("New York".to_string())).is_ok());
         
         // 无效纬度
-        assert!(Coordinates::new(91.0, -74.0060).is_err());
-        assert!(Coordinates::new(-91.0, -74.0060).is_err());
+        assert!(Location::new(91.0, -74.0060, None).is_err());
+        assert!(Location::new(-91.0, -74.0060, None).is_err());
         
         // 无效经度
-        assert!(Coordinates::new(40.7128, 181.0).is_err());
-        assert!(Coordinates::new(40.7128, -181.0).is_err());
+        assert!(Location::new(40.7128, 181.0, None).is_err());
+        assert!(Location::new(40.7128, -181.0, None).is_err());
     }
 
     #[test]
-    fn test_distance_calculation() {
-        let nyc = Coordinates::new(40.7128, -74.0060).unwrap();
-        let la = Coordinates::new(34.0522, -118.2437).unwrap();
+    fn test_location_distance_calculation() {
+        let nyc = Location::new(40.7128, -74.0060, Some("New York".to_string())).unwrap();
+        let la = Location::new(34.0522, -118.2437, Some("Los Angeles".to_string())).unwrap();
         
         let distance_km = nyc.distance_to_km(&la);
         
@@ -194,10 +153,10 @@ mod tests {
     }
 
     #[test]
-    fn test_within_radius() {
-        let center = Coordinates::new(40.7128, -74.0060).unwrap();
-        let nearby = Coordinates::new(40.7228, -74.0160).unwrap(); // 大约1.4公里
-        let far = Coordinates::new(41.7128, -74.0060).unwrap(); // 大约111公里
+    fn test_location_within_radius() {
+        let center = Location::new(40.7128, -74.0060, None).unwrap();
+        let nearby = Location::new(40.7228, -74.0160, None).unwrap(); // 大约1.4公里
+        let far = Location::new(41.7128, -74.0060, None).unwrap(); // 大约111公里
         
         assert!(center.is_within_radius_km(&nearby, 2.0));
         assert!(!center.is_within_radius_km(&far, 100.0));

@@ -1,11 +1,10 @@
 /// 文件上传控制器
 /// 
 /// 处理头像上传、图片上传等文件上传功能
-
 use axum::{
     extract::{Multipart, State},
     http::StatusCode,
-    response::{IntoResponse, Response},
+    response::{Response, IntoResponse},
     Extension, Json,
 };
 use serde::{Deserialize, Serialize};
@@ -16,7 +15,8 @@ use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
 use crate::presentation::http::auth::CurrentUser;
-use crate::presentation::http::controllers::{ok_response, error_response};
+use crate::presentation::http::controllers::ok_response;
+use serde_json::json;
 
 /// 文件上传控制器
 #[derive(Clone)]
@@ -36,6 +36,16 @@ impl Default for UploadController {
 }
 
 impl UploadController {
+    /// 创建简单错误响应
+    fn simple_error_response(message: &str) -> Response {
+        let response = json!({
+            "code": 1000,
+            "msg": message,
+            "data": null
+        });
+        (StatusCode::OK, Json(response)).into_response()
+    }
+
     /// 创建新的上传控制器
     pub fn new() -> Self {
         Self {
@@ -144,7 +154,7 @@ impl UploadController {
         // 确保上传目录存在
         if let Err(e) = controller.ensure_upload_dir().await {
             error!("创建上传目录失败: {:?}", e);
-            return error_response(StatusCode::OK, "服务器配置错误", None);
+            return Self::simple_error_response("服务器配置错误");
         }
         
         // 处理单个文件上传
@@ -160,7 +170,7 @@ impl UploadController {
             // 验证文件类型
             if !controller.is_allowed_type(&content_type) {
                 warn!("不支持的文件类型: {}", content_type);
-                return error_response(StatusCode::OK, "不支持的文件类型", None);
+                return Self::simple_error_response("不支持的文件类型");
             }
             
             // 读取文件数据
@@ -168,14 +178,14 @@ impl UploadController {
                 Ok(data) => data,
                 Err(e) => {
                     error!("读取文件数据失败: {:?}", e);
-                    return error_response(StatusCode::OK, "读取文件失败", None);
+                    return Self::simple_error_response("读取文件失败");
                 }
             };
             
             // 检查文件大小
             if data.len() > controller.max_file_size {
                 warn!("文件大小超限: {} bytes", data.len());
-                return error_response(StatusCode::OK, "文件大小超过限制", None);
+                return Self::simple_error_response("文件大小超过限制");
             }
             
             // 生成文件名
@@ -187,12 +197,12 @@ impl UploadController {
                 Ok(mut file) => {
                     if let Err(e) = file.write_all(&data).await {
                         error!("写入文件失败: {:?}", e);
-                        return error_response(StatusCode::OK, "保存文件失败", None);
+                        return Self::simple_error_response("保存文件失败");
                     }
                 }
                 Err(e) => {
                     error!("创建文件失败: {:?}", e);
-                    return error_response(StatusCode::OK, "创建文件失败", None);
+                    return Self::simple_error_response("创建文件失败");
                 }
             }
             
@@ -208,7 +218,7 @@ impl UploadController {
             return ok_response(response);
         }
         
-        error_response(StatusCode::OK, "未找到有效的头像文件", None)
+        Self::simple_error_response("未找到有效的头像文件")
     }
     
     /// 批量上传图片
@@ -222,7 +232,7 @@ impl UploadController {
         // 确保上传目录存在
         if let Err(e) = controller.ensure_upload_dir().await {
             error!("创建上传目录失败: {:?}", e);
-            return error_response(StatusCode::OK, "服务器配置错误", None);
+            return Self::simple_error_response("服务器配置错误");
         }
         
         let mut uploaded_files = Vec::new();
@@ -328,14 +338,14 @@ impl UploadController {
         // 验证文件名安全性（防止路径遍历攻击）
         if request.filename.contains("..") || request.filename.contains("/") || request.filename.contains("\\") {
             warn!("不安全的文件名: {}", request.filename);
-            return error_response(StatusCode::OK, "无效的文件名", None);
+            return Self::simple_error_response("无效的文件名");
         }
         
         let file_path = controller.upload_dir.join(&request.filename);
         
         // 检查文件是否存在
         if !file_path.exists() {
-            return error_response(StatusCode::OK, "文件不存在", None);
+            return Self::simple_error_response("文件不存在");
         }
         
         // 删除文件
@@ -346,7 +356,7 @@ impl UploadController {
             }
             Err(e) => {
                 error!("删除文件失败: {} - {:?}", request.filename, e);
-                error_response(StatusCode::OK, "删除文件失败", None)
+                Self::simple_error_response("删除文件失败")
             }
         }
     }

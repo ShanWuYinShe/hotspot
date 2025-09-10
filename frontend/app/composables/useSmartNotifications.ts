@@ -44,7 +44,7 @@ export const useSmartNotifications = () => {
   // 检查是否应该显示通知
   const shouldShowNotification = (options: NotificationOptions): boolean => {
     const settings = settingsStore.settings;
-    if (!settings || !settings.notifications) return true; // 如果没有设置，默认显示
+    if (!settings) return true; // 如果没有设置，默认显示
 
     // 检查用户设置
     switch (options.category) {
@@ -56,8 +56,8 @@ export const useSmartNotifications = () => {
         if (options.type === 'info') {
           // 新消息通知
           return options.priority === 'high' ?
-            settings.notifications.direct_message_toast ?? true :
-            settings.notifications.group_message_toast ?? true;
+            settings.notifications.message_notifications ?? true :
+            settings.notifications.group_notifications ?? true;
         }
         return settings.notifications.message_notifications ?? true;
 
@@ -235,11 +235,11 @@ export const useSmartNotifications = () => {
   // 特殊的消息通知
   const messageReceived = (senderName: string, content: string, isGroup: boolean = false) => {
     const settings = settingsStore.settings;
-    if (!settings || !settings.notifications) return;
+    if (!settings) return;
 
     const shouldShow = isGroup ?
-      (settings.notifications.group_message_toast ?? true) :
-      (settings.notifications.direct_message_toast ?? true);
+      (settings.notifications.group_notifications ?? true) :
+      (settings.notifications.message_notifications ?? true);
 
     if (shouldShow) {
       notify({

@@ -17,7 +17,7 @@
 
                     <!-- 基本信息 -->
                     <h1 class="text-2xl font-bold text-neutral-900 mb-2">
-                        {{ user?.nickname || $t('common.user') }}
+                        {{ user?.nickname || $t("common.user") }}
                     </h1>
                     <p class="text-neutral-600 mb-4">ID: {{ user?.user_id }}</p>
 
@@ -27,10 +27,16 @@
                             <EmptyState
                                 icon="i-heroicons-user"
                                 :title="$t('profile.temporary.title')"
-                                :description="$t('profile.temporary.description')"
-                                :action-text="$t('profile.temporary.actionText')"
+                                :description="
+                                    $t('profile.temporary.description')
+                                "
+                                :action-text="
+                                    $t('profile.temporary.actionText')
+                                "
                                 :action-handler="goUpgrade"
-                                :secondary-action-text="$t('profile.temporary.secondaryActionText')"
+                                :secondary-action-text="
+                                    $t('profile.temporary.secondaryActionText')
+                                "
                                 :secondary-action-handler="showBenefits"
                             >
                                 <template #illustration>
@@ -47,14 +53,14 @@
                                 name="i-heroicons-pencil-square"
                                 class="w-4 h-4 mr-2"
                             />
-                            {{ $t('profile.actions.edit') }}
+                            {{ $t("profile.actions.edit") }}
                         </UButton>
                         <UButton variant="outline" @click="viewSettings">
                             <UIcon
                                 name="i-heroicons-cog-6-tooth"
                                 class="w-4 h-4 mr-2"
                             />
-                            {{ $t('profile.actions.settings') }}
+                            {{ $t("profile.actions.settings") }}
                         </UButton>
                     </div>
                 </div>
@@ -67,7 +73,9 @@
                         <div class="text-2xl font-bold text-neutral-900 mb-1">
                             0
                         </div>
-                        <div class="text-sm text-neutral-600">{{ $t('profile.stats.friends') }}</div>
+                        <div class="text-sm text-neutral-600">
+                            {{ $t("profile.stats.friends") }}
+                        </div>
                     </div>
                 </UCard>
                 <UCard class="text-center">
@@ -75,7 +83,9 @@
                         <div class="text-2xl font-bold text-neutral-900 mb-1">
                             0
                         </div>
-                        <div class="text-sm text-neutral-600">{{ $t('profile.stats.groups') }}</div>
+                        <div class="text-sm text-neutral-600">
+                            {{ $t("profile.stats.groups") }}
+                        </div>
                     </div>
                 </UCard>
                 <UCard class="text-center">
@@ -83,7 +93,9 @@
                         <div class="text-2xl font-bold text-neutral-900 mb-1">
                             0
                         </div>
-                        <div class="text-sm text-neutral-600">{{ $t('profile.stats.moments') }}</div>
+                        <div class="text-sm text-neutral-600">
+                            {{ $t("profile.stats.moments") }}
+                        </div>
                     </div>
                 </UCard>
             </div>
@@ -91,7 +103,9 @@
             <!-- 功能菜单 -->
             <UCard>
                 <template #header>
-                    <h3 class="font-semibold">{{ $t('profile.menu.title') }}</h3>
+                    <h3 class="font-semibold">
+                        {{ $t("profile.menu.title") }}
+                    </h3>
                 </template>
 
                 <div class="space-y-1">
@@ -105,7 +119,7 @@
                             name="i-heroicons-user-group"
                             class="w-5 h-5 mr-3"
                         />
-                        {{ $t('nav.myGroups') }}
+                        {{ $t("nav.myGroups") }}
                     </UButton>
 
                     <UButton
@@ -115,7 +129,7 @@
                         @click="navigateTo('/moments')"
                     >
                         <UIcon name="i-heroicons-photo" class="w-5 h-5 mr-3" />
-                        {{ $t('nav.moments') }}
+                        {{ $t("nav.moments") }}
                     </UButton>
 
                     <UButton
@@ -128,7 +142,7 @@
                             name="i-heroicons-cog-6-tooth"
                             class="w-5 h-5 mr-3"
                         />
-                        {{ $t('nav.settings') }}
+                        {{ $t("nav.settings") }}
                     </UButton>
 
                     <UButton
@@ -136,40 +150,30 @@
                         block
                         justify="start"
                         color="error"
-                        @click="showLogoutConfirm = true"
+                        @click="openLogoutConfirm"
                     >
                         <UIcon
                             name="i-heroicons-arrow-right-on-rectangle"
                             class="w-5 h-5 mr-3"
                         />
-                        {{ $t('profile.actions.logout') }}
+                        {{ $t("profile.actions.logout") }}
                     </UButton>
                 </div>
             </UCard>
         </div>
     </div>
 
-    <!-- 退出登录确认 -->
-    <UModal v-model:open="showLogoutConfirm" :title="$t('profile.logout.confirmTitle')">
-        <template #body>
-            <p class="text-neutral-600 dark:text-neutral-300">{{ $t('profile.logout.confirmBody') }}</p>
-        </template>
-        <template #footer>
-            <div class="flex justify-end gap-2">
-                <UButton variant="ghost" @click="showLogoutConfirm = false">{{ $t('common.cancel') }}</UButton>
-                <UButton color="warning" :loading="loggingOut" @click="confirmLogout">{{ $t('profile.logout.confirmButton') }}</UButton>
-            </div>
-        </template>
-    </UModal>
+    <!-- 退出登录确认由 useModals.openConfirmModal 管理 -->
 </template>
 
 <script setup lang="ts">
 // 页面元数据
 definePageMeta({
-    title: 'profile.title',
+    title: "profile.title",
     requiresAuth: true,
 });
-import EmptyAccount from "~/components/illustrations/EmptyAccount.vue";
+import { defineAsyncComponent } from "vue";
+const EmptyAccount = defineAsyncComponent(() => import("~/components/illustrations/EmptyAccount.vue"));
 
 const authStore = useAuthStore();
 const toast = useSmartToast();
@@ -181,8 +185,8 @@ const user = computed(() => authStore.user);
 // 编辑资料
 const editProfile = () => {
     toast.add({
-    title: t('profile.toasts.featureUnavailableTitle'),
-    description: t('profile.toasts.featureUnavailableDesc'),
+        title: t("profile.toasts.featureUnavailableTitle"),
+        description: t("profile.toasts.featureUnavailableDesc"),
         color: "info",
     });
 };
@@ -198,25 +202,42 @@ const goUpgrade = () => {
 };
 const showBenefits = () => {
     toast.add({
-    title: t('profile.benefits.title'),
-    description: t('profile.benefits.description'),
+        title: t("profile.benefits.title"),
+        description: t("profile.benefits.description"),
         color: "info",
     });
 };
 
 // 退出登录
-const showLogoutConfirm = ref(false);
+const { openConfirmModal } = useModals();
+const openLogoutConfirm = () => {
+    openConfirmModal({
+        title: t("profile.logout.confirmTitle"),
+        message: t("profile.logout.confirmBody"),
+        confirmText: t("profile.logout.confirmButton"),
+        cancelText: t("common.cancel"),
+        confirmColor: "warning",
+        onConfirm: () => confirmLogout(),
+    });
+};
 const loggingOut = ref(false);
 const confirmLogout = async () => {
     if (loggingOut.value) return;
     loggingOut.value = true;
     try {
         await authStore.logout();
-    toast.add({ title: t('profile.toasts.logoutSuccess'), color: 'success' });
-        showLogoutConfirm.value = false;
-        await navigateTo('/auth');
+        toast.add({
+            title: t("profile.toasts.logoutSuccess"),
+            color: "success",
+        });
+
+        await navigateTo("/auth");
     } catch (error) {
-    toast.add({ title: t('profile.toasts.logoutFailedTitle'), description: t('profile.toasts.logoutFailedDesc'), color: 'error' });
+        toast.add({
+            title: t("profile.toasts.logoutFailedTitle"),
+            description: t("profile.toasts.logoutFailedDesc"),
+            color: "error",
+        });
     } finally {
         loggingOut.value = false;
     }

@@ -1,15 +1,14 @@
 /// 活动控制器
 /// 
 /// 处理系统活动数据相关的HTTP请求
-
-use axum::{extract::Query, response::Response};
+use axum::{extract::Query, response::{Response, IntoResponse}, Json};
 use serde::Deserialize;
 use serde_json::json;
 use tracing::{info, warn, error};
 
 use crate::{
     application::{ActivityApplicationService, GetRecentActivitiesQuery, ActivityType},
-    presentation::http::controllers::{Controller, ok_response, error_response},
+    presentation::http::controllers::{Controller, ok_response, map_domain_error_to_http_response},
     presentation::http::auth::CurrentUser,
 };
 
@@ -30,18 +29,18 @@ pub struct GetRecentActivitiesRequest {
 #[derive(Clone)]
 pub struct ActivityController<U, G, M> 
 where
-    U: crate::ports::UserRepositoryPort,
-    G: crate::ports::GroupRepositoryPort,
-    M: crate::ports::MomentRepositoryPort,
+    U: crate::ports::UserRepository,
+    G: crate::ports::GroupRepository,
+    M: crate::ports::MomentRepository,
 {
     activity_service: ActivityApplicationService<U, G, M>,
 }
 
 impl<U, G, M> ActivityController<U, G, M>
 where
-    U: crate::ports::UserRepositoryPort,
-    G: crate::ports::GroupRepositoryPort,
-    M: crate::ports::MomentRepositoryPort,
+    U: crate::ports::UserRepository,
+    G: crate::ports::GroupRepository,
+    M: crate::ports::MomentRepository,
 {
     /// 创建新的活动控制器
     pub fn new(activity_service: ActivityApplicationService<U, G, M>) -> Self {
@@ -51,9 +50,9 @@ where
 
 impl<U, G, M> Controller for ActivityController<U, G, M>
 where
-    U: crate::ports::UserRepositoryPort,
-    G: crate::ports::GroupRepositoryPort,
-    M: crate::ports::MomentRepositoryPort,
+    U: crate::ports::UserRepository,
+    G: crate::ports::GroupRepository,
+    M: crate::ports::MomentRepository,
 {
     fn name(&self) -> &'static str {
         "ActivityController"
@@ -62,9 +61,9 @@ where
 
 impl<U, G, M> ActivityController<U, G, M>
 where
-    U: crate::ports::UserRepositoryPort,
-    G: crate::ports::GroupRepositoryPort,
-    M: crate::ports::MomentRepositoryPort,
+    U: crate::ports::UserRepository,
+    G: crate::ports::GroupRepository,
+    M: crate::ports::MomentRepository,
 {
     /// 获取最近活动
     pub async fn get_recent_activities(
@@ -94,11 +93,12 @@ where
                 Ok(_) => None,
                 Err(e) => {
                     warn!("解析活动类型失败: {}", e);
-                    return error_response(
-                        axum::http::StatusCode::BAD_REQUEST,
-                        &format!("无效的活动类型: {}", e),
-                        None,
-                    );
+                    let error_response = json!({
+                        "code": 1000,
+                        "msg": format!("无效的活动类型: {}", e),
+                        "data": null
+                    });
+                    return (axum::http::StatusCode::OK, Json(error_response)).into_response();
                 }
             }
         } else {
@@ -142,14 +142,9 @@ where
             Err(e) => {
                 error!("获取活动失败: {:?}", e);
                 
-                let (status_code, message) = match e {
-                    crate::domain::errors::DomainError::BusinessRuleViolation { rule } => {
-                        (axum::http::StatusCode::BAD_REQUEST, format!("请求参数错误: {}", rule))
-                    }
-                    _ => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "获取活动数据失败".to_string()),
-                };
+                // 直接使用统一的错误处理
                 
-                error_response(status_code, &message, None)
+                map_domain_error_to_http_response(e)
             }
         }
     }
@@ -186,11 +181,14 @@ where
             }
             Err(e) => {
                 error!("生成演示活动失败: {:?}", e);
-                error_response(
-                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                    "生成演示活动失败",
-                    None,
-                )
+                {
+                    let error_response = json!({
+                        "code": 5000,
+                        "msg": "生成演示活动失败",
+                        "data": null
+                    });
+                    (axum::http::StatusCode::OK, Json(error_response)).into_response()
+                }
             }
         }
     }

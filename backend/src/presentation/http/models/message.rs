@@ -1,7 +1,6 @@
 /// 消息相关HTTP模型
 /// 
 /// 迁移自models/api/message.rs，适配新架构
-
 use super::{PaginatedResponse, LocationInfo, Pagination};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -140,10 +139,10 @@ pub struct MessageInfo {
 pub struct ConversationInfo {
     pub conversation_id: String,
     pub conversation_type: String, // "direct" 或 "group"
-    pub participant_id: Option<i64>, // 私聊对方ID
+    pub participant_id: Option<JsSafeI64>, // 私聊对方ID
     pub group_id: Option<String>,    // 群组ID
     pub last_message: Option<MessageInfo>,
-    pub unread_count: i64,
+    pub unread_count: i32,  // 32位整数在JavaScript中是安全的
     pub updated_at: DateTime<Utc>,
 }
 

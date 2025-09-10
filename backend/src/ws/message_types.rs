@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use crate::utils::JsSafeI64;
+use sqlx::Type;
 
 // ==================== 客户端到服务器的消息 ====================
 
@@ -144,16 +145,22 @@ pub struct GroupEventData {
 }
 
 /// 群组事件类型
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Type)]
+#[sqlx(type_name = "group_event_type")]
 #[serde(rename_all = "snake_case")]
 pub enum GroupEventType {
+    #[sqlx(rename = "create")]
+    Create,
+    #[sqlx(rename = "join")]
     MemberJoined,
+    #[sqlx(rename = "leave")]
     MemberLeft,
+    #[sqlx(rename = "kick")]
     MemberKicked,
+    #[sqlx(rename = "transfer")]
     OwnerTransferred,
+    #[sqlx(rename = "update")]
     GroupUpdated,
-    #[allow(dead_code)]
-    GroupDeleted,
 }
 
 /// 系统通知数据

@@ -1,12 +1,27 @@
 /// 群组消息领域实体
 /// 
 /// 表示群组内的消息
-
+/// 群组消息领域实体
+/// 
+/// 功能职责：
+/// - 定义群组消息的核心业务实体
+/// - 实现群聊消息的发送和管理逻辑
+/// - 管理消息在群组中的可见性和权限
+/// - 提供群组消息的统计和分析功能
+/// 
+/// 业务规则：
+/// - 消息发送者必须是群组成员
+/// - 群组消息的广播和通知机制
+/// - 消息删除的管理员权限控制
+/// - 群组消息的历史记录和搜索
+/// - 消息内容的审核和过滤机制
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::Type;
 
 /// 群组消息类型枚举
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[sqlx(type_name = "message_type", rename_all = "lowercase")]
 pub enum GroupMessageType {
     /// 文本消息
     Text,

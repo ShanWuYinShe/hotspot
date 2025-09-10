@@ -1,5 +1,4 @@
 /// 瞬间相关查询定义
-
 use serde::{Deserialize, Serialize};
 use crate::domain::{DomainResult, DomainError};
 use crate::application::queries::PaginationQuery;
@@ -12,9 +11,9 @@ pub struct SearchMomentsByTagsQuery {
     pub pagination: PaginationQuery,
 }
 
-/// 按ID获取瞬间查询
+/// 按ID搜索瞬间查询
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GetMomentByIdQuery {
+pub struct SearchMomentsByIdQuery {
     pub moment_id: i64,
     pub requester_id: i64,
 }
@@ -29,9 +28,9 @@ pub struct SearchMomentsByLocationQuery {
     pub pagination: PaginationQuery,
 }
 
-/// 获取用户瞬间历史查询
+/// 按用户ID搜索瞬间查询
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GetUserMomentsQuery {
+pub struct SearchMomentsByUserIdQuery {
     pub user_id: i64,
     pub requester_id: i64,
     pub pagination: PaginationQuery,

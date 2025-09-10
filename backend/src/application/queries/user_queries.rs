@@ -1,8 +1,6 @@
 /// 用户相关查询定义
 /// 
 /// 包含所有用户查询操作的查询模型
-
-use crate::domain::User;
 use super::PaginationQuery;
 use serde::{Deserialize, Serialize};
 
@@ -18,9 +16,9 @@ pub struct GetUserByLoginIdQuery {
     pub login_id: String,
 }
 
-/// 搜索附近用户查询
+/// 按位置搜索用户查询
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FindNearbyUsersQuery {
+pub struct SearchUsersByLocationQuery {
     pub user_id: i64,
     pub latitude: f64,
     pub longitude: f64,
@@ -30,15 +28,15 @@ pub struct FindNearbyUsersQuery {
 
 /// 按昵称搜索用户查询
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SearchUsersByNicknameQuery {
+pub struct SearchUsersByNameQuery {
     pub keyword: String,
     pub requester_id: i64,
     pub pagination: PaginationQuery,
 }
 
-/// 获取用户资料查询
+/// 按ID搜索用户查询
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GetUserProfileQuery {
+pub struct SearchUsersByIdQuery {
     pub user_id: i64,
     pub requester_id: i64, // 请求者ID，用于权限控制
 }
@@ -56,7 +54,6 @@ pub struct GetUserSettingsQuery {
 }
 
 /// 用户查询结果
-
 /// 用户基本信息结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserBasicInfo {
@@ -67,9 +64,9 @@ pub struct UserBasicInfo {
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
-/// 用户详细资料结果
+/// 用户详细资料查询结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UserProfile {
+pub struct UserProfileQuery {
     pub user_id: i64,
     pub login_id: Option<String>,
     pub nickname: String,
@@ -140,7 +137,7 @@ pub struct NotificationSettings {
 }
 
 // 查询验证方法
-impl FindNearbyUsersQuery {
+impl SearchUsersByLocationQuery {
     /// 验证搜索附近用户查询
     pub fn validate(&self) -> Result<(), Vec<String>> {
         let mut errors = Vec::new();
@@ -176,7 +173,7 @@ impl FindNearbyUsersQuery {
     }
 }
 
-impl SearchUsersByNicknameQuery {
+impl SearchUsersByNameQuery {
     /// 验证按昵称搜索用户查询
     pub fn validate(&self) -> Result<(), Vec<String>> {
         let mut errors = Vec::new();
@@ -206,39 +203,55 @@ impl SearchUsersByNicknameQuery {
 }
 
 // 结果转换方法
-impl From<User> for UserBasicInfo {
-    fn from(user: User) -> Self {
+impl From<crate::domain::UserProfile> for UserBasicInfo {
+    fn from(user: crate::domain::UserProfile) -> Self {
         Self {
-            user_id: user.id,
+            user_id: user.user_id,
             nickname: user.nickname.clone(),
             user_type: user.user_type.as_str().to_string(),
             has_location: false, // 位置信息现在在单独的表中，需要单独查询
-            created_at: user.created_at,
+            created_at: user.last_active_at, // 使用 last_active_at 作为 created_at 的替代
         }
     }
 }
 
-impl From<User> for UserProfile {
-    fn from(user: User) -> Self {
+impl From<crate::domain::UserProfile> for UserProfileQuery {
+    fn from(user: crate::domain::UserProfile) -> Self {
         let location = None; // 位置信息现在在单独的表中，需要单独查询
         
         Self {
-            user_id: user.id,
-            login_id: user.login_id,
+            user_id: user.user_id,
+            login_id: None, // UserProfile 没有 login_id 字段
             nickname: user.nickname,
             user_type: user.user_type.as_str().to_string(),
             location,
-            created_at: user.created_at,
-            updated_at: user.updated_at,
+            created_at: user.last_active_at, // 使用 last_active_at 作为 created_at 的替代
+            updated_at: user.last_active_at, // 使用 last_active_at 作为 updated_at 的替代
         }
     }
 }
 
-impl From<User> for PasswordStatus {
-    fn from(user: User) -> Self {
+impl UserProfileQuery {
+    /// 🆕 从领域UserProfile转换（轻量级）
+    pub fn from_domain_profile(domain_profile: crate::domain::UserProfile) -> Self {
+        let now = chrono::Utc::now();
         Self {
-            has_password: user.has_password(),
-            is_temporary: user.is_temporary(),
+            user_id: domain_profile.user_id,
+            login_id: None, // UserProfile不包含登录ID
+            nickname: domain_profile.nickname,
+            user_type: domain_profile.user_type.as_str().to_string(),
+            location: None, // 位置信息需要单独查询
+            created_at: now, // 使用当前时间作为默认值
+            updated_at: now, // 使用当前时间作为默认值
+        }
+    }
+}
+
+impl From<crate::domain::UserProfile> for PasswordStatus {
+    fn from(user: crate::domain::UserProfile) -> Self {
+        Self {
+            has_password: false, // UserProfile 不包含密码信息，需要单独查询
+            is_temporary: user.user_type == crate::domain::UserType::Temporary,
         }
     }
 }

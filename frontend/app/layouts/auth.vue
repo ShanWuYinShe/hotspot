@@ -9,14 +9,7 @@
             </div>
             <USeparator />
             <footer class="py-4 text-center text-sm text-neutral-600 dark:text-neutral-300 flex items-center justify-center gap-3">
-                <UButton
-                    variant="ghost"
-                    color="neutral"
-                    size="sm"
-                    :icon="iconName"
-                    @click="toggleColor()"
-                    aria-label="切换主题"
-                />
+                <ThemeToggle size="sm" />
                 <span>© {{ new Date().getFullYear() }} HotSpot</span>
             </footer>
         </UContainer>
@@ -25,14 +18,4 @@
 
 <script setup>
 // 认证页专用布局，无导航
-const colorMode = useColorMode();
-const iconName = ref('i-heroicons-sun');
-function syncIcon() {
-    iconName.value = colorMode.value === 'dark' ? 'i-heroicons-moon' : 'i-heroicons-sun';
-}
-function toggleColor() {
-    colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark';
-    syncIcon();
-}
-onMounted(() => { syncIcon(); });
 </script>

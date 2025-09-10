@@ -20,13 +20,10 @@ use crate::bootstrap::config_adapter::Database;
 #[derive(Debug, Clone)]
 pub struct AppMetrics {
     // API请求计数
-    #[allow(dead_code)]
     pub http_requests_total: CounterVec,
     // API请求延迟
-    #[allow(dead_code)]
     pub http_request_duration_seconds: HistogramVec,
     // 活跃用户数
-    #[allow(dead_code)]
     pub active_users: Gauge,
     // 数据库连接数
     pub db_connections: Gauge,
@@ -35,16 +32,12 @@ pub struct AppMetrics {
     // Redis连接状态
     pub redis_connected: Gauge,
     // WebSocket连接数
-    #[allow(dead_code)]
     pub ws_connections: Gauge,
     // WebSocket消息发送计数
-    #[allow(dead_code)]
     pub ws_messages_sent: Counter,
     // WebSocket消息接收计数
-    #[allow(dead_code)]
     pub ws_messages_received: Counter,
     // WebSocket订阅计数
-    #[allow(dead_code)]
     pub ws_subscriptions_total: CounterVec,
     // 离线通知计数
     #[allow(dead_code)]
@@ -56,10 +49,8 @@ pub struct AppMetrics {
     #[allow(dead_code)]
     pub job_queue_tasks: CounterVec,
     // 位置查询计数
-    #[allow(dead_code)]
     pub location_query_count: Counter,
     // 位置查询延迟
-    #[allow(dead_code)]
     pub location_query_duration_seconds: Histogram,
     // 缓存命中率
     #[allow(dead_code)]
@@ -68,6 +59,8 @@ pub struct AppMetrics {
     pub memory_usage_bytes: Gauge,
     // 系统CPU使用
     pub cpu_usage_percent: Gauge,
+    // 应用运行时间
+    pub uptime: Gauge,
     // JVM运行时间
     pub uptime_seconds: Gauge,
     
@@ -198,6 +191,11 @@ impl AppMetrics {
             opts!("cpu_usage_percent", "系统CPU使用率（百分比）")
         )?;
         
+        // 应用运行时间
+        let uptime = register_gauge!(
+            opts!("app_uptime", "应用运行时间（秒）")
+        )?;
+        
         // JVM运行时间
         let uptime_seconds = register_gauge!(
             opts!("uptime_seconds", "应用运行时间（秒）")
@@ -286,6 +284,7 @@ impl AppMetrics {
             cache_hit_ratio,
             memory_usage_bytes,
             cpu_usage_percent,
+            uptime,
             uptime_seconds,
             // 业务指标
             user_registrations_total,
@@ -374,7 +373,6 @@ impl AppMetrics {
     }
     
     /// 记录HTTP请求
-    #[allow(dead_code)]
     pub fn record_http_request(&self, method: &str, path: &str, status: u16, duration: f64) {
         self.http_requests_total
             .with_label_values(&[method, path, &status.to_string()])
@@ -386,17 +384,14 @@ impl AppMetrics {
     }
     
     /// 记录WebSocket消息
-    #[allow(dead_code)]
     pub fn record_ws_message_sent(&self) {
         self.ws_messages_sent.inc();
     }
     
-    #[allow(dead_code)]
     pub fn record_ws_message_received(&self) {
         self.ws_messages_received.inc();
     }
 
-    #[allow(dead_code)]
     pub fn record_ws_subscription(&self, room_type: &str, result: &str) {
         self.ws_subscriptions_total
             .with_label_values(&[room_type, result])
@@ -426,7 +421,6 @@ impl AppMetrics {
     }
     
     /// 记录位置查询
-    #[allow(dead_code)]
     pub fn record_location_query(&self, duration: f64) {
         self.location_query_count.inc();
         self.location_query_duration_seconds.observe(duration);

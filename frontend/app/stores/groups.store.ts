@@ -18,18 +18,18 @@ export const useGroupsStore = defineStore(
 
     // 分页状态
     const pagination = ref({
-      myGroups: { hasMore: false, nextCursor: undefined as number | undefined },
+      myGroups: { hasMore: false, nextCursor: undefined as string | undefined },
       ownedGroups: {
         hasMore: false,
-        nextCursor: undefined as number | undefined,
+        nextCursor: undefined as string | undefined,
       },
       nearbyGroups: {
         hasMore: false,
-        nextCursor: undefined as number | undefined,
+        nextCursor: undefined as string | undefined,
       },
       searchResults: {
         hasMore: false,
-        nextCursor: undefined as number | undefined,
+        nextCursor: undefined as string | undefined,
       },
     });
 
@@ -60,7 +60,7 @@ export const useGroupsStore = defineStore(
 
         return fullGroup;
       } catch (error) {
-        await errorHandler.handleError(error, 'GroupStore', 'createGroup');
+        await errorHandler.handleError(error, 'GroupStore');
         return null;
       }
     }
@@ -93,7 +93,7 @@ export const useGroupsStore = defineStore(
       const cursor = loadMore
         ? pagination.value.myGroups.nextCursor
         : undefined;
-      const response = await groupService.getMyGroups(cursor);
+      const response = await groupService.getMyGroups(cursor ? parseInt(cursor) : undefined);
 
       if (loadMore) {
         myGroups.value.push(...response.items);
@@ -114,7 +114,7 @@ export const useGroupsStore = defineStore(
       const cursor = loadMore
         ? pagination.value.ownedGroups.nextCursor
         : undefined;
-      const response = await groupService.getOwnedGroups(cursor);
+      const response = await groupService.getOwnedGroups(cursor ? parseInt(cursor) : undefined);
 
       if (loadMore) {
         ownedGroups.value.push(...response.items);
@@ -145,7 +145,7 @@ export const useGroupsStore = defineStore(
         params.latitude,
         params.longitude,
         params.radius,
-        cursor,
+        cursor ? parseInt(cursor) : undefined,
       );
 
       if (params.loadMore) {
@@ -168,7 +168,7 @@ export const useGroupsStore = defineStore(
         ? pagination.value.searchResults.nextCursor
         : undefined;
 
-      const response = await groupService.searchGroupsByName(query, cursor);
+      const response = await groupService.searchGroupsByName(query, cursor ? parseInt(cursor) : undefined);
 
       if (loadMore) {
         searchResults.value.push(...response.items);
@@ -193,7 +193,7 @@ export const useGroupsStore = defineStore(
 
     // 群成员分页与搜索
     const groupMembers = ref<
-      Record<string, { items: any[]; hasMore: boolean; nextCursor?: number }>
+      Record<string, { items: any[]; hasMore: boolean; nextCursor?: string }>
     >({});
     const memberSearchKeyword = ref("");
 
@@ -202,7 +202,7 @@ export const useGroupsStore = defineStore(
       const state = groupMembers.value[groupId] || {
         items: [],
         hasMore: false,
-        nextCursor: undefined as number | undefined,
+        nextCursor: undefined as string | undefined,
       };
       const cursor = loadMore ? state.nextCursor : undefined;
       const res = await groupService.getGroupMembers(groupId, cursor);
@@ -223,7 +223,7 @@ export const useGroupsStore = defineStore(
       const groupService = useGroupService();
       const response = await groupService.transferOwnership(
         groupId,
-        parseInt(newOwnerId),
+        newOwnerId,
       );
 
       // TransferOwnershipResponse只包含success，需要获取更新后的群组信息
@@ -237,7 +237,7 @@ export const useGroupsStore = defineStore(
 
     async function kickMember(groupId: string, memberId: string) {
       const groupService = useGroupService();
-      await groupService.kickMember(groupId, parseInt(memberId));
+      await groupService.kickMember(groupId, memberId);
 
       // 更新群组成员数量
       const lists = [myGroups, ownedGroups, nearbyGroups, searchResults];

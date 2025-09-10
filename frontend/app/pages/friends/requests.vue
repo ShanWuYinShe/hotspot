@@ -19,7 +19,7 @@
 
         <!-- 标签页：改用 UTabs -->
         <div class="mb-6">
-            <UTabs :items="tabItems" v-model="activeTab" />
+            <UTabs :items="tabItems" v-model:selected="activeTab" />
         </div>
 
         <!-- 收到的请求 -->
@@ -33,7 +33,7 @@
 
             <!-- 表格列表 -->
             <div v-else>
-                <UTable :rows="pagedReceived" :columns="columnsReceived as any">
+                <UTable :rows="pagedReceived" :columns="columnsReceived">
                     <template #avatar_name-cell="{ row }">
                         <div class="flex items-center gap-3 min-w-[220px]">
                             <UAvatar
@@ -178,7 +178,7 @@
 
             <!-- 表格列表 -->
             <div v-else>
-                <UTable :rows="pagedSent" :columns="columnsSent as any">
+                <UTable :rows="pagedSent" :columns="columnsSent">
                     <template #avatar_name-cell="{ row }">
                         <div class="flex items-center gap-3 min-w-[220px]">
                             <UAvatar
@@ -292,7 +292,7 @@
                                 size="sm"
                                 @click="
                                     $router.push(
-                                        `/chat/user/${(row as any).user_id}`,
+                                        `/chat/users/${(row as any).user_id}`,
                                     )
                                 "
                             >
@@ -365,62 +365,16 @@
             </UButton>
         </div>
     </div>
-    <!-- 确认弹窗 -->
-    <UModal
-        v-model:open="confirmOpen"
-        :title="
-            pendingConfirm?.type === 'cancel'
-                ? $t('friends.requests.modal.title.cancel')
-                : pendingConfirm?.type === 'batch_accept'
-                  ? $t('friends.requests.modal.title.batch_accept')
-                  : $t('friends.requests.modal.title.batch_reject')
-        "
-    >
-        <template #body>
-            <p class="text-neutral-600 dark:text-neutral-300">
-                {{
-                    pendingConfirm?.type === "cancel"
-                        ? $t("friends.requests.modal.body.cancel")
-                        : pendingConfirm?.type === "batch_accept"
-                          ? $t("friends.requests.modal.body.batch_accept")
-                          : $t("friends.requests.modal.body.batch_reject")
-                }}
-            </p>
-        </template>
-        <template #footer>
-            <div class="flex justify-end gap-2">
-                <UButton variant="ghost" @click="confirmOpen = false">{{
-                    $t("common.cancel")
-                }}</UButton>
-                <UButton
-                    color="warning"
-                    v-if="pendingConfirm?.type === 'cancel'"
-                    @click="onConfirmCancel"
-                    >{{
-                        $t("friends.requests.modal.buttons.confirmCancel")
-                    }}</UButton
-                >
-                <UButton
-                    color="primary"
-                    v-else-if="pendingConfirm?.type === 'batch_accept'"
-                    @click="onConfirmBatchAccept"
-                    >{{
-                        $t("friends.requests.modal.buttons.confirmAccept")
-                    }}</UButton
-                >
-                <UButton color="error" v-else @click="onConfirmBatchReject">{{
-                    $t("friends.requests.modal.buttons.confirmReject")
-                }}</UButton>
-            </div>
-        </template>
-    </UModal>
+    <!-- 确认弹窗（移除组件，使用 useModals.openConfirmModal 程序化管理） -->
+    <!-- 确认弹窗改为 useModals.openConfirmModal 程序化管理 -->
 </template>
 
 <script setup lang="ts">
-import type { TableColumn } from "@nuxt/ui";
+// import type { TableColumn } from "@nuxt/ui";
 import type { UserInfo } from "~/types";
 
-import { buildFriendUrl, FRIEND_ENDPOINTS } from "~/config/api";
+// import { buildFriendUrl, FRIEND_ENDPOINTS } from "~/config/api"; // 好友功能暂未实现
+import { formatTime } from '~/utils/formatters';
 
 interface FriendRequest extends UserInfo {
     request_time: string;
@@ -478,25 +432,29 @@ const pagedSent = computed(() => {
     return sentRequests.value.slice(start, start + pageSize.value);
 });
 
-// 表格列
-const columnsReceived: TableColumn<any>[] = [
-    { id: "avatar_name", key: "avatar_name", label: t("common.user") },
+// 表格列定义
+interface TableColumn {
+    id: string;
+    label: string;
+    class?: string;
+}
+
+const columnsReceived: TableColumn[] = [
+    { id: "avatar_name", label: t("common.user") },
     {
         id: "actions",
-        key: "actions",
         label: t("common.actions"),
         class: "w-48 text-right",
     },
-] as any;
-const columnsSent: TableColumn<any>[] = [
-    { id: "avatar_name", key: "avatar_name", label: t("common.user") },
+];
+const columnsSent: TableColumn[] = [
+    { id: "avatar_name", label: t("common.user") },
     {
         id: "actions",
-        key: "actions",
         label: t("common.actions"),
         class: "w-48 text-right",
     },
-] as any;
+];
 
 // 生命周期
 onMounted(async () => {
@@ -525,13 +483,8 @@ watch(activeTab, async (newTab) => {
 async function loadReceivedRequests() {
     loadingReceived.value = true;
     try {
-        const data = await api.post(
-            buildFriendUrl(FRIEND_ENDPOINTS.REQUESTS_RECEIVED),
-            {},
-            { auth: true },
-        );
-        receivedRequests.value = (data as any) || [];
-        receivedPage.value = 1;
+        // 好友功能暂未实现，显示提示信息
+        throw new Error('好友功能暂未实现，请等待后端API上线');
     } catch (e: any) {
         toast.add({
             title: t("common.loadFailed"),
@@ -548,13 +501,8 @@ async function loadReceivedRequests() {
 async function loadSentRequests() {
     loadingSent.value = true;
     try {
-        const data = await api.post(
-            buildFriendUrl(FRIEND_ENDPOINTS.REQUESTS_SENT),
-            {},
-            { auth: true },
-        );
-        sentRequests.value = (data as any) || [];
-        sentPage.value = 1;
+        // 好友功能暂未实现，显示提示信息
+        throw new Error('好友功能暂未实现，请等待后端API上线');
     } catch (e: any) {
         toast.add({
             title: t("common.loadFailed"),
@@ -571,17 +519,8 @@ async function acceptRequest(request: FriendRequest) {
     if (request.processing) return;
     request.processing = true;
     try {
-        await api.post(
-            buildFriendUrl(`${FRIEND_ENDPOINTS.ACCEPT}/${request.user_id}`),
-            {},
-            { auth: true },
-        );
-        const index = receivedRequests.value.findIndex(
-            (r) => r.user_id === request.user_id,
-        );
-        if (index > -1) {
-            receivedRequests.value.splice(index, 1);
-        }
+        // 好友功能暂未实现，显示提示信息
+        throw new Error('好友功能暂未实现，请等待后端API上线');
         toast.add({
             title: t("friends.requests.toasts.acceptedOne", {
                 name: request.nickname,
@@ -630,25 +569,22 @@ async function rejectRequest(request: FriendRequest) {
 // 处理发送的请求
 function cancelRequest(request: FriendRequest) {
     if (request.processing) return;
-    pendingConfirm.value = { type: "cancel", payload: request };
-    confirmOpen.value = true;
+    useModals().openConfirmModal({
+        title: "取消好友请求",
+        message: "确定要撤销该好友请求吗？",
+        confirmText: "确认撤销",
+        cancelText: "取消",
+        confirmColor: "warning",
+        onConfirm: () => performCancelRequest(request),
+    });
 }
 
 async function performCancelRequest(request: FriendRequest) {
     if (request.processing) return;
     request.processing = true;
     try {
-        await api.post(
-            buildFriendUrl(`${FRIEND_ENDPOINTS.CANCEL}/${request.user_id}`),
-            {},
-            { auth: true },
-        );
-        const index = sentRequests.value.findIndex(
-            (r) => r.user_id === request.user_id,
-        );
-        if (index > -1) {
-            sentRequests.value.splice(index, 1);
-        }
+        // 好友功能暂未实现，显示提示信息
+        throw new Error('好友功能暂未实现，请等待后端API上线');
         toast.add({
             title: t("friends.requests.toasts.canceledOne", {
                 name: request.nickname,
@@ -669,8 +605,14 @@ async function performCancelRequest(request: FriendRequest) {
 // 批量操作
 function batchAcceptAll() {
     if (receivedRequests.value.length === 0 || batchProcessing.value) return;
-    pendingConfirm.value = { type: "batch_accept" };
-    confirmOpen.value = true;
+    useModals().openConfirmModal({
+        title: "批量同意好友请求",
+        message: "确定要同意所有收到的好友请求吗？",
+        confirmText: "确认同意全部",
+        cancelText: "取消",
+        confirmColor: "primary",
+        onConfirm: () => performBatchAcceptAll(),
+    });
 }
 
 async function performBatchAcceptAll() {
@@ -697,8 +639,14 @@ async function performBatchAcceptAll() {
 
 function batchRejectAll() {
     if (receivedRequests.value.length === 0 || batchProcessing.value) return;
-    pendingConfirm.value = { type: "batch_reject" };
-    confirmOpen.value = true;
+    useModals().openConfirmModal({
+        title: "批量拒绝好友请求",
+        message: "确定要拒绝所有收到的好友请求吗？",
+        confirmText: "确认拒绝全部",
+        cancelText: "取消",
+        confirmColor: "error",
+        onConfirm: () => performBatchRejectAll(),
+    });
 }
 
 async function performBatchRejectAll() {
@@ -751,49 +699,13 @@ function getRequestStatusChipColor(status: string): any {
 }
 
 // 统一确认弹窗
-const confirmOpen = ref(false);
-const pendingConfirm = ref<{
-    type: "cancel" | "batch_accept" | "batch_reject";
-    payload?: any;
-} | null>(null);
+/* 确认弹窗改为 useModals.openConfirmModal 程序化管理，移除本地状态 */
 
-function onConfirmCancel() {
-    const payload = pendingConfirm.value?.payload as FriendRequest | undefined;
-    confirmOpen.value = false;
-    pendingConfirm.value = null;
-    if (payload) {
-        performCancelRequest(payload);
-    }
-}
+/* 已改为 useModals.openConfirmModal 程序化处理（onConfirmCancel 不再需要） */
 
-function onConfirmBatchAccept() {
-    confirmOpen.value = false;
-    pendingConfirm.value = null;
-    performBatchAcceptAll();
-}
+/* 已改为 useModals.openConfirmModal 程序化处理（onConfirmBatchAccept 不再需要） */
 
-function onConfirmBatchReject() {
-    confirmOpen.value = false;
-    pendingConfirm.value = null;
-    performBatchRejectAll();
-}
+/* 已改为 useModals.openConfirmModal 程序化处理（onConfirmBatchReject 不再需要） */
 
-function formatTime(dateStr: string): string {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    if (days === 0) {
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        if (hours === 0) {
-            const minutes = Math.floor(diff / (1000 * 60));
-            return t("time.minutesAgo", { n: minutes });
-        }
-        return t("time.hoursAgo", { n: hours });
-    } else if (days < 7) {
-        return t("time.daysAgo", { n: days });
-    } else {
-        return date.toLocaleDateString();
-    }
-}
+// formatTime 函数已从统一工具函数导入
 </script>

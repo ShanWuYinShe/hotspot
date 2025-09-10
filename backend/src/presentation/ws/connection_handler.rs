@@ -1,7 +1,6 @@
 /// WebSocket连接处理器
 /// 
 /// 处理WebSocket连接的生命周期管理
-
 use axum::extract::ws::{WebSocket, Message};
 use tokio::sync::mpsc;
 use crate::presentation::ws::{WSMessageType, ConnectionState, WSError};

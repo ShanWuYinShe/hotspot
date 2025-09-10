@@ -1,14 +1,13 @@
 /// 活动应用服务
 /// 
 /// 提供系统活动数据的查询和管理功能
-
 use std::sync::Arc;
 use tracing::{info, warn};
 use chrono::{DateTime, Utc, Duration};
 
 use crate::{
     domain::DomainResult,
-    ports::{UserRepositoryPort, GroupRepositoryPort, MomentRepositoryPort},
+    ports::{UserRepository, GroupRepository, MomentRepository},
     application::queries::{
         GetRecentActivitiesQuery, ActivitiesResult, ActivityItem, ActivityType,
     },
@@ -18,9 +17,9 @@ use crate::{
 #[derive(Clone)]
 pub struct ActivityApplicationService<U, G, M> 
 where
-    U: UserRepositoryPort,
-    G: GroupRepositoryPort,
-    M: MomentRepositoryPort,
+    U: UserRepository,
+    G: GroupRepository,
+    M: MomentRepository,
 {
     user_repository: Arc<U>,
     group_repository: Arc<G>,
@@ -29,9 +28,9 @@ where
 
 impl<U, G, M> ActivityApplicationService<U, G, M>
 where
-    U: UserRepositoryPort,
-    G: GroupRepositoryPort,
-    M: MomentRepositoryPort,
+    U: UserRepository,
+    G: GroupRepository,
+    M: MomentRepository,
 {
     /// 创建新的活动服务
     pub fn new(
@@ -119,14 +118,14 @@ where
         
         // 获取最近注册的用户
         // 注意：这里简化实现，实际应该有专门的查询方法
-        match self.user_repository.search_users_by_nickname("", 0, 50).await {
+        match self.user_repository.search_user_profiles_by_name("", 0, 50).await {
             Ok(users) => {
                 for user in users {
-                    if user.created_at >= start_time {
+                    if user.last_active_at >= start_time {
                         activities.push(ActivityItem::user_registered(
                             user.user_id,
                             user.nickname,
-                            user.created_at,
+                            user.last_active_at,
                         ));
                     }
                 }
@@ -147,13 +146,13 @@ where
         match self.group_repository.search_groups_by_name("", 0, 50).await {
             Ok(groups) => {
                 for group in groups {
-                    if group.created_at >= start_time {
+                    if group.last_active_at >= start_time {
                         // GroupSearchResult没有creator_name，使用占位符
                         activities.push(ActivityItem::group_created(
                             group.group_id.to_string(),
                             group.name,
                             "群主".to_string(), // 占位符，实际应该查询用户信息
-                            group.created_at,
+                            group.last_active_at,
                         ));
                     }
                 }

@@ -1,8 +1,7 @@
 /// 用户相关命令定义和处理器
 /// 
 /// 包含所有用户操作的命令模型
-
-use crate::domain::{User, UserEvent, DomainResult, DomainError, UserDomainError};
+use crate::domain::{UserEvent, DomainResult, DomainError, UserDomainError};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -102,14 +101,14 @@ impl UserCommandResult {
 /// 用户注册结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserRegistrationResult {
-    pub user: User,
+    pub user: crate::domain::UserProfile,
     pub events: Vec<UserEvent>,
 }
 
 /// 用户认证结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserAuthResult {
-    pub user: User,
+    pub user: crate::domain::UserProfile,
     pub access_token: String,
     pub refresh_token: String,
     pub expires_at: DateTime<Utc>,
@@ -160,7 +159,10 @@ impl RegisterUserCommand {
         if errors.is_empty() {
             Ok(())
         } else {
-            Err(DomainError::User(UserDomainError::ValidationFailed { errors }))
+            Err(DomainError::ValidationError { 
+                field: "user_validation".to_string(),
+                reason: format!("Validation errors: {:?}", errors),
+            })
         }
     }
 }
@@ -170,14 +172,16 @@ impl CreateTempUserCommand {
     pub fn validate(&self) -> DomainResult<()> {
         if let Some(ref nickname) = self.nickname {
             if nickname.is_empty() {
-                return Err(DomainError::User(UserDomainError::ValidationFailed {
-                    errors: vec!["昵称不能为空".to_string()],
-                }));
+                return Err(DomainError::ValidationError {
+                    field: "nickname".to_string(),
+                    reason: "昵称不能为空".to_string(),
+                });
             }
             if nickname.len() > 32 {
-                return Err(DomainError::User(UserDomainError::ValidationFailed {
-                    errors: vec!["昵称长度不能超过32个字符".to_string()],
-                }));
+                return Err(DomainError::ValidationError {
+                    field: "nickname".to_string(),
+                    reason: "昵称长度不能超过32个字符".to_string(),
+                });
             }
         }
         Ok(())
@@ -212,7 +216,10 @@ impl UpgradeUserCommand {
         if errors.is_empty() {
             Ok(())
         } else {
-            Err(DomainError::User(UserDomainError::ValidationFailed { errors }))
+            Err(DomainError::ValidationError { 
+                field: "user_validation".to_string(),
+                reason: format!("Validation errors: {:?}", errors),
+            })
         }
     }
 }
@@ -242,7 +249,10 @@ impl UpdateUserLocationCommand {
         if errors.is_empty() {
             Ok(())
         } else {
-            Err(DomainError::User(UserDomainError::ValidationFailed { errors }))
+            Err(DomainError::ValidationError { 
+                field: "user_validation".to_string(),
+                reason: format!("Validation errors: {:?}", errors),
+            })
         }
     }
 }
@@ -268,7 +278,10 @@ impl UpdateUserProfileCommand {
         if errors.is_empty() {
             Ok(())
         } else {
-            Err(DomainError::User(UserDomainError::ValidationFailed { errors }))
+            Err(DomainError::ValidationError { 
+                field: "user_validation".to_string(),
+                reason: format!("Validation errors: {:?}", errors),
+            })
         }
     }
 }

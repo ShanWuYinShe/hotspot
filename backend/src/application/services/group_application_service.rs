@@ -1,56 +1,100 @@
 use crate::application::commands::{
-    CommandHandler, CreateGroupCommand, DeleteGroupCommand, GroupCommandResult, JoinGroupCommand,
+    CreateGroupCommand, DeleteGroupCommand, GroupCommandResult, JoinGroupCommand,
     JoinGroupResult, KickMemberCommand, KickMemberResult, LeaveGroupCommand, LeaveGroupResult,
     TransferOwnershipCommand, TransferOwnershipResult, UpdateGroupInfoCommand,
 };
+use crate::application::handlers::CommandHandler;
 use crate::application::queries::{
-    FindNearbyGroupsQuery, GroupMemberInfo, GroupMembersQuery, GroupSearchResult, NearbyGroup,
-    PaginatedResult, QueryHandler, SearchGroupsByNameQuery, GetGroupByIdQuery, GetUserGroupsQuery, GetOwnedGroupsQuery,
+    SearchGroupsByLocationQuery, GroupMemberInfo, GroupMembersQuery, GroupSearchResult, NearbyGroup,
+    SearchGroupsByNameQuery, SearchGroupsByIdQuery, SearchGroupsByUserIdQuery, SearchGroupsByOwnerIdQuery,
 };
-use crate::domain::{DomainError, DomainResult, Group, GroupDomainError};
-use crate::ports::{GroupMemberInfo as PortGroupMemberInfo, GroupRepositoryPort, PasswordServicePort};
+use crate::application::handlers::{QueryHandler, PaginatedResult};
+use crate::domain::{DomainError, GroupProfile, GroupDomainError};
+use crate::application::{ApplicationResult, ApplicationError};
+use crate::ports::{GroupRepository, PasswordService};
 /// 群组应用服务（骨架）
 use async_trait::async_trait;
+/// 群组应用服务
+/// 
+/// 功能职责：
+/// - 实现群组相关的业务用例和应用逻辑
+/// - 协调群组领域实体和仓储层的交互
+/// - 管理群组创建、成员管理、权限控制等流程
+/// - 处理基于地理位置的群组搜索和推荐
+/// - 提供群组数据的统计和分析功能
+/// 
+/// 主要用例：
+/// - 群组创建和初始化设置
+/// - 群组成员的加入、退出、踢出管理
+/// - 群组角色和权限的分配和变更
+/// - 群主转让和管理员任免
+/// - 附近群组搜索和按名称查找
+/// 
+/// 事务管理：
+/// - 管理群组数据一致性和成员关系
+/// - 协调群组相关的通知和事件分发
+/// - 处理群组操作的并发和冲突解决
 use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct GroupApplicationService {
-    group_repository: Arc<dyn GroupRepositoryPort>,
-    password_service: Arc<dyn PasswordServicePort>,
+    base: super::BaseApplicationService,
+    group_repository: Arc<dyn GroupRepository>,
+    password_service: Arc<dyn PasswordService>,
 }
 
 impl GroupApplicationService {
-    pub fn new(group_repository: Arc<dyn GroupRepositoryPort>, password_service: Arc<dyn PasswordServicePort>) -> Self {
-        Self { group_repository, password_service }
+    pub fn new(
+        group_repository: Arc<dyn GroupRepository>, 
+        password_service: Arc<dyn PasswordService>,
+        user_repository: Arc<dyn crate::ports::UserRepository>,
+        event_publisher: Arc<dyn crate::ports::EventPublisher>,
+    ) -> Self {
+        let base = super::BaseApplicationService::new("GroupApplicationService")
+            .with_user_repository(user_repository)
+            .with_event_publisher(event_publisher);
+            
+        Self { 
+            base,
+            group_repository, 
+            password_service 
+        }
     }
 }
 
 #[async_trait]
 impl CommandHandler<CreateGroupCommand> for GroupApplicationService {
     type Result = GroupCommandResult;
-    async fn handle_command(&self, command: CreateGroupCommand) -> DomainResult<Self::Result> {
+    async fn handle(&self, command: CreateGroupCommand) -> ApplicationResult<Self::Result> {
         command.validate()?;
         
-        let group_id = uuid::Uuid::new_v4().to_string(); // 生成UUID作为group_id
+        // 使用基类验证坐标和用户
+        super::ValidationRules::validate_coordinates(command.latitude, command.longitude)?;
+        self.base.validate_user_exists(command.owner_id).await?;
+        
+        // 记录操作日志
+        self.base.log_operation("create_group", Some(command.owner_id), Some(&format!("name: {}", command.name)));
+        
+        let _group_id = uuid::Uuid::new_v4().to_string(); // 生成UUID作为group_id（当前未使用）
+        let has_password = command.password.is_some();
         let password_hash = if let Some(password) = command.password {
             Some(self.password_service.hash_password(&password).await?)
         } else {
             None
         };
         
-        let group = Group::new(
-            group_id,
-            command.name,
-            command.description,
+        let saved = self.group_repository.create_group(
+            &command.name,
+            command.description.as_deref(),
             command.owner_id,
             command.latitude,
             command.longitude,
-            command.location_name,
-            password_hash,
-        );
-        let saved = self.group_repository.create_group(&group).await?;
+            &command.location_name,
+            !has_password, // 没有密码的群组为公开群组
+            password_hash.as_deref(),
+        ).await?;
         Ok(GroupCommandResult::success_with_message(
-            saved.id,
+            saved.group_id,
             "群组创建成功".to_string(),
         ))
     }
@@ -59,19 +103,22 @@ impl CommandHandler<CreateGroupCommand> for GroupApplicationService {
 #[async_trait]
 impl CommandHandler<UpdateGroupInfoCommand> for GroupApplicationService {
     type Result = GroupCommandResult;
-    async fn handle_command(&self, command: UpdateGroupInfoCommand) -> DomainResult<Self::Result> {
+    async fn handle(&self, command: UpdateGroupInfoCommand) -> ApplicationResult<Self::Result> {
         command.validate()?;
-        let mut group = self
+        let _group = self
             .group_repository
-            .find_by_id(command.group_id)
+            .find_group_profile(&command.group_id)
             .await?
             .ok_or_else(|| DomainError::BusinessRuleViolation {
                 rule: "Group not found".to_string(),
             })?;
-        group.update_info(command.name, command.description);
-        let saved = self.group_repository.update_group(&group).await?;
+        let saved = self.group_repository.update_group(
+            &command.group_id,
+            command.name.as_deref(),
+            command.description.as_deref(),
+        ).await?;
         Ok(GroupCommandResult::success_with_message(
-            saved.id,
+            saved.group_id,
             "群组更新成功".to_string(),
         ))
     }
@@ -80,9 +127,9 @@ impl CommandHandler<UpdateGroupInfoCommand> for GroupApplicationService {
 #[async_trait]
 impl CommandHandler<DeleteGroupCommand> for GroupApplicationService {
     type Result = GroupCommandResult;
-    async fn handle_command(&self, command: DeleteGroupCommand) -> DomainResult<Self::Result> {
+    async fn handle(&self, command: DeleteGroupCommand) -> ApplicationResult<Self::Result> {
         command.validate()?;
-        self.group_repository.delete_group(command.group_id).await?;
+        self.group_repository.delete_group(&command.group_id).await?;
         Ok(GroupCommandResult::success_with_message(
             command.group_id,
             "群组已删除".to_string(),
@@ -91,14 +138,14 @@ impl CommandHandler<DeleteGroupCommand> for GroupApplicationService {
 }
 
 #[async_trait]
-impl QueryHandler<FindNearbyGroupsQuery> for GroupApplicationService {
+impl QueryHandler<SearchGroupsByLocationQuery> for GroupApplicationService {
     type Result = PaginatedResult<NearbyGroup>;
-    async fn handle_query(&self, query: FindNearbyGroupsQuery) -> DomainResult<Self::Result> {
+    async fn handle(&self, query: SearchGroupsByLocationQuery) -> ApplicationResult<Self::Result> {
         let limit = query.pagination.get_limit();
         let cursor = query.pagination.get_cursor();
         let rows = self
             .group_repository
-            .find_nearby_groups(
+            .find_nearby_groups_with_distance(
                 query.latitude,
                 query.longitude,
                 query
@@ -117,22 +164,22 @@ impl QueryHandler<FindNearbyGroupsQuery> for GroupApplicationService {
             .into_iter()
             .map(|g| {
                 // 计算距离（与用户服务一致的近似计算）
-                let distance = crate::domain::values::location::Coordinates::new(
+                let distance = crate::domain::values::coordinates::Coordinates::new(
                     query.latitude,
                     query.longitude,
                 )
                 .and_then(|q| {
-                    crate::domain::values::location::Coordinates::new(g.latitude, g.longitude)
-                        .map(|c| q.distance_to_km(&c))
+                    crate::domain::values::coordinates::Coordinates::new(g.latitude, g.longitude)
+                        .map(|c| q.distance_to(&c).kilometers())
                 })
                 .unwrap_or(0.0);
-                NearbyGroup {
-                    group_id: g.id,
+                crate::application::queries::group_queries::NearbyGroup {
+                    group_id: g.group_id,
                     name: g.name,
                     latitude: g.latitude,
                     longitude: g.longitude,
                     distance_km: distance,
-                    created_at: g.created_at,
+                    created_at: chrono::Utc::now(), // TODO: 需要从领域对象获取创建时间
                 }
             })
             .collect::<Vec<_>>();
@@ -148,7 +195,7 @@ impl QueryHandler<FindNearbyGroupsQuery> for GroupApplicationService {
 #[async_trait]
 impl QueryHandler<SearchGroupsByNameQuery> for GroupApplicationService {
     type Result = PaginatedResult<GroupSearchResult>;
-    async fn handle_query(&self, query: SearchGroupsByNameQuery) -> DomainResult<Self::Result> {
+    async fn handle(&self, query: SearchGroupsByNameQuery) -> ApplicationResult<Self::Result> {
         let limit = query.pagination.get_limit();
         let cursor = query.pagination.get_cursor();
         let rows = self
@@ -162,11 +209,10 @@ impl QueryHandler<SearchGroupsByNameQuery> for GroupApplicationService {
         }
         let result = items
             .into_iter()
-            .map(|g| GroupSearchResult {
-                group_id: g.id,
+            .map(|g| crate::application::queries::group_queries::GroupSearchResult {
                 name: g.name,
                 has_location: true,
-                created_at: g.created_at,
+                created_at: chrono::Utc::now(), // TODO: 需要从领域对象获取创建时间
             })
             .collect::<Vec<_>>();
         let next_cursor = if has_more && !result.is_empty() {
@@ -181,39 +227,35 @@ impl QueryHandler<SearchGroupsByNameQuery> for GroupApplicationService {
 #[async_trait]
 impl CommandHandler<JoinGroupCommand> for GroupApplicationService {
     type Result = JoinGroupResult;
-    async fn handle_command(&self, command: JoinGroupCommand) -> DomainResult<Self::Result> {
+    async fn handle(&self, command: JoinGroupCommand) -> ApplicationResult<Self::Result> {
         command.validate()?;
-        if !self
+        if self
             .group_repository
-            .check_group_exists(command.group_id)
+            .find_group_profile(&command.group_id)
             .await?
+            .is_none()
         {
             return Err(GroupDomainError::GroupNotFound {
-                group_id: command.group_id,
             }
             .into());
         }
         if self
             .group_repository
-            .check_user_in_group(command.group_id, command.user_id)
+            .is_group_member(&command.group_id, command.user_id)
             .await?
         {
             return Err(GroupDomainError::UserAlreadyMember {
                 user_id: command.user_id,
-                group_id: command.group_id,
             }
             .into());
         }
-        let (_ok, role) = self
-            .group_repository
-            .join_group(
-                command.group_id,
-                command.user_id,
-                command.password.as_deref(),
-            )
+        // 添加用户到群组，默认角色为 member
+        self.group_repository
+            .add_group_member(&command.group_id, command.user_id, "member")
             .await?;
+        let role = "member".to_string();
         Ok(JoinGroupResult {
-            group_id: command.group_id,
+            group_id: 0, // TODO: 需要数字ID，暂时使用0
             user_id: command.user_id,
             role,
         })
@@ -223,37 +265,31 @@ impl CommandHandler<JoinGroupCommand> for GroupApplicationService {
 #[async_trait]
 impl CommandHandler<LeaveGroupCommand> for GroupApplicationService {
     type Result = LeaveGroupResult;
-    async fn handle_command(&self, command: LeaveGroupCommand) -> DomainResult<Self::Result> {
+    async fn handle(&self, command: LeaveGroupCommand) -> ApplicationResult<Self::Result> {
         command.validate()?;
-        if !self
+        if self
             .group_repository
-            .check_group_exists(command.group_id)
-            .await?
+            .find_group_profile(&command.group_id)            .await?
+            .is_none()
         {
             return Err(GroupDomainError::GroupNotFound {
-                group_id: command.group_id,
             }
             .into());
         }
-        if !self
+        if self
             .group_repository
-            .check_user_in_group(command.group_id, command.user_id)
+            .is_group_member(&command.group_id, command.user_id)
             .await?
         {
-            return Err(GroupDomainError::UserNotMember {
-                user_id: command.user_id,
-                group_id: command.group_id,
-            }
-            .into());
+            return Err(GroupDomainError::UserNotMember.into());
         }
-        let ok = self
-            .group_repository
-            .leave_group(command.group_id, command.user_id)
+        self.group_repository
+            .remove_group_member(&command.group_id, command.user_id)
             .await?;
         Ok(LeaveGroupResult {
-            group_id: command.group_id,
+            group_id: 0, // TODO: 需要数字ID，暂时使用0
             user_id: command.user_id,
-            success: ok,
+            success: true,
         })
     }
 }
@@ -261,57 +297,54 @@ impl CommandHandler<LeaveGroupCommand> for GroupApplicationService {
 #[async_trait]
 impl CommandHandler<KickMemberCommand> for GroupApplicationService {
     type Result = KickMemberResult;
-    async fn handle_command(&self, command: KickMemberCommand) -> DomainResult<Self::Result> {
+    async fn handle(&self, command: KickMemberCommand) -> ApplicationResult<Self::Result> {
         command.validate()?;
-        if !self
+        if self
             .group_repository
-            .check_group_exists(command.group_id)
-            .await?
+            .find_group_profile(&command.group_id)            .await?
+            .is_none()
         {
             return Err(GroupDomainError::GroupNotFound {
-                group_id: command.group_id,
             }
             .into());
         }
         // 需要管理员权限
-        if !self
+        let admin_role = self
             .group_repository
-            .check_user_is_group_admin(command.group_id, command.admin_id)
-            .await?
-        {
+            .get_user_role_in_group(&command.group_id, command.admin_id)
+            .await?;
+        
+        if !matches!(admin_role.as_deref(), Some("admin") | Some("owner")) {
             return Err(GroupDomainError::InsufficientPermission {
                 required_role: "admin".to_string(),
             }
             .into());
         }
         // 目标必须是成员
-        if !self
-            .group_repository
-            .check_user_in_group(command.group_id, command.target_user_id)
-            .await?
-        {
-            return Err(GroupDomainError::UserNotMember {
-                user_id: command.target_user_id,
-                group_id: command.group_id,
-            }
-            .into());
-        }
-        // 不能移除群主
         if self
             .group_repository
-            .check_user_is_group_owner(command.group_id, command.target_user_id)
+            .is_group_member(&command.group_id, command.target_user_id)
             .await?
         {
+            return Err(GroupDomainError::UserNotMember.into());
+        }
+        // 不能移除群主
+        let target_role = self
+            .group_repository
+            .get_user_role_in_group(&command.group_id, command.target_user_id)
+            .await?;
+        
+        if matches!(target_role.as_deref(), Some("owner")) {
             return Err(GroupDomainError::CannotRemoveOwner.into());
         }
-        let ok = self
+        self
             .group_repository
-            .kick_member(command.group_id, command.target_user_id, command.admin_id)
+            .remove_group_member(&command.group_id, command.target_user_id)
             .await?;
         Ok(KickMemberResult {
-            group_id: command.group_id,
+            group_id: 0, // TODO: 需要数字ID，暂时使用0
             user_id: command.target_user_id,
-            success: ok,
+            success: true,
         })
     }
 }
@@ -319,56 +352,51 @@ impl CommandHandler<KickMemberCommand> for GroupApplicationService {
 #[async_trait]
 impl CommandHandler<TransferOwnershipCommand> for GroupApplicationService {
     type Result = TransferOwnershipResult;
-    async fn handle_command(
+    async fn handle(
         &self,
         command: TransferOwnershipCommand,
-    ) -> DomainResult<Self::Result> {
+    ) -> ApplicationResult<Self::Result> {
         command.validate()?;
-        if !self
+        if self
             .group_repository
-            .check_group_exists(command.group_id)
-            .await?
+            .find_group_profile(&command.group_id)            .await?
+            .is_none()
         {
             return Err(GroupDomainError::GroupNotFound {
-                group_id: command.group_id,
             }
             .into());
         }
         // 只有现任群主可以转让
-        if !self
+        let current_owner_role = self
             .group_repository
-            .check_user_is_group_owner(command.group_id, command.current_owner_id)
-            .await?
-        {
+            .get_user_role_in_group(&command.group_id, command.current_owner_id)
+            .await?;
+        
+        if !matches!(current_owner_role.as_deref(), Some("owner")) {
             return Err(GroupDomainError::InsufficientPermission {
                 required_role: "owner".to_string(),
             }
             .into());
         }
         // 新群主必须是成员
-        if !self
+        if self
             .group_repository
-            .check_user_in_group(command.group_id, command.new_owner_id)
+            .is_group_member(&command.group_id, command.new_owner_id)
             .await?
         {
             return Err(GroupDomainError::UserNotMember {
                 user_id: command.new_owner_id,
-                group_id: command.group_id,
             }
             .into());
         }
-        let ok = self
+        self
             .group_repository
-            .transfer_ownership(
-                command.group_id,
-                command.new_owner_id,
-                command.current_owner_id,
-            )
+            .transfer_group_ownership(&command.group_id, command.new_owner_id)
             .await?;
         Ok(TransferOwnershipResult {
-            group_id: command.group_id,
+            group_id: 0, // TODO: 需要数字ID，暂时使用0
             new_owner_id: command.new_owner_id,
-            success: ok,
+            success: true,
         })
     }
 }
@@ -376,42 +404,51 @@ impl CommandHandler<TransferOwnershipCommand> for GroupApplicationService {
 #[async_trait]
 impl QueryHandler<GroupMembersQuery> for GroupApplicationService {
     type Result = PaginatedResult<GroupMemberInfo>;
-    async fn handle_query(&self, query: GroupMembersQuery) -> DomainResult<Self::Result> {
+    async fn handle(&self, query: GroupMembersQuery) -> ApplicationResult<Self::Result> {
         let limit = query.pagination.get_limit();
         let cursor = query.pagination.get_cursor();
-        let (items, has_more, next_cursor): (Vec<PortGroupMemberInfo>, bool, Option<i64>) = self
+        let members = self
             .group_repository
-            .get_group_members(query.group_id, cursor, limit)
+            .get_group_members(&query.group_id.to_string(), cursor, limit)
             .await?;
-        let mapped = items
+        let mapped = members
             .into_iter()
             .map(|m| GroupMemberInfo {
-                member_id: m.member_id,
+                member_id: 0, // TODO: 需要从群组成员表获取
                 user_id: m.user_id,
                 nickname: m.nickname,
-                role: m.role,
+                role: "member".to_string(), // TODO: 需要从群组成员表获取角色
                 last_active_at: m.last_active_at,
-                joined_at: m.joined_at,
+                joined_at: chrono::Utc::now(), // TODO: 需要从群组成员表获取加入时间
             })
             .collect::<Vec<_>>();
+        
+        // TODO: 实现正确的分页逻辑
+        let has_more = mapped.len() >= limit as usize;
+        let next_cursor = if has_more && !mapped.is_empty() {
+            Some(mapped.last().unwrap().user_id)
+        } else {
+            None
+        };
+        
         Ok(PaginatedResult::new(mapped, has_more, next_cursor))
     }
 }
 
 #[async_trait]
-impl QueryHandler<GetGroupByIdQuery> for GroupApplicationService {
-    type Result = Option<Group>;
+impl QueryHandler<SearchGroupsByIdQuery> for GroupApplicationService {
+    type Result = Option<GroupProfile>;
     
-    async fn handle_query(&self, query: GetGroupByIdQuery) -> DomainResult<Self::Result> {
-        self.group_repository.find_by_id(query.group_id).await
+    async fn handle(&self, query: SearchGroupsByIdQuery) -> ApplicationResult<Self::Result> {
+        self.group_repository.find_group_profile(&query.group_id.to_string()).await
     }
 }
 
 #[async_trait]
-impl QueryHandler<GetUserGroupsQuery> for GroupApplicationService {
-    type Result = PaginatedResult<Group>;
+impl QueryHandler<SearchGroupsByUserIdQuery> for GroupApplicationService {
+    type Result = PaginatedResult<GroupProfile>;
     
-    async fn handle_query(&self, query: GetUserGroupsQuery) -> DomainResult<Self::Result> {
+    async fn handle(&self, query: SearchGroupsByUserIdQuery) -> ApplicationResult<Self::Result> {
         let _limit = query.pagination.get_limit();
         let _cursor = query.pagination.get_cursor();
         
@@ -423,7 +460,7 @@ impl QueryHandler<GetUserGroupsQuery> for GroupApplicationService {
         
         let has_more = groups.len() as i32 >= query.pagination.limit.unwrap_or(20);
         let next_cursor = if has_more && !groups.is_empty() {
-            Some(groups.last().unwrap().id)
+            Some(groups.len() as i64) // TODO: 使用正确的游标逻辑
         } else {
             None
         };
@@ -437,10 +474,10 @@ impl QueryHandler<GetUserGroupsQuery> for GroupApplicationService {
 }
 
 #[async_trait]
-impl QueryHandler<GetOwnedGroupsQuery> for GroupApplicationService {
-    type Result = PaginatedResult<Group>;
+impl QueryHandler<SearchGroupsByOwnerIdQuery> for GroupApplicationService {
+    type Result = PaginatedResult<GroupProfile>;
     
-    async fn handle_query(&self, query: GetOwnedGroupsQuery) -> DomainResult<Self::Result> {
+    async fn handle(&self, query: SearchGroupsByOwnerIdQuery) -> ApplicationResult<Self::Result> {
         let _limit = query.pagination.get_limit();
         let _cursor = query.pagination.get_cursor();
         
@@ -452,7 +489,7 @@ impl QueryHandler<GetOwnedGroupsQuery> for GroupApplicationService {
         
         let has_more = groups.len() as i32 >= query.pagination.limit.unwrap_or(20);
         let next_cursor = if has_more && !groups.is_empty() {
-            Some(groups.last().unwrap().id)
+            Some(groups.len() as i64) // TODO: 使用正确的游标逻辑
         } else {
             None
         };

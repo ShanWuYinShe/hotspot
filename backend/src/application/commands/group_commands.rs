@@ -15,39 +15,39 @@ pub struct CreateGroupCommand {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateGroupInfoCommand {
-    pub group_id: i64,
+    pub group_id: String,
     pub name: Option<String>,
     pub description: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeleteGroupCommand {
-    pub group_id: i64,
+    pub group_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GroupCommandResult {
-    pub group_id: i64,
+    pub group_id: String,
     pub success: bool,
     pub message: Option<String>,
 }
 
 impl GroupCommandResult {
-    pub fn success(group_id: i64) -> Self {
+    pub fn success(group_id: String) -> Self {
         Self {
             group_id,
             success: true,
             message: None,
         }
     }
-    pub fn success_with_message(group_id: i64, message: String) -> Self {
+    pub fn success_with_message(group_id: String, message: String) -> Self {
         Self {
             group_id,
             success: true,
             message: Some(message),
         }
     }
-    pub fn failure(group_id: i64, message: String) -> Self {
+    pub fn failure(group_id: String, message: String) -> Self {
         Self {
             group_id,
             success: false,
@@ -100,7 +100,7 @@ impl CreateGroupCommand {
 
 impl UpdateGroupInfoCommand {
     pub fn validate(&self) -> DomainResult<()> {
-        if self.group_id <= 0 {
+        if self.group_id.is_empty() {
             return Err(DomainError::BusinessRuleViolation {
                 rule: "无效群组ID".to_string(),
             });
@@ -117,7 +117,7 @@ impl UpdateGroupInfoCommand {
 
 impl DeleteGroupCommand {
     pub fn validate(&self) -> DomainResult<()> {
-        if self.group_id <= 0 {
+        if self.group_id.is_empty() {
             return Err(DomainError::BusinessRuleViolation {
                 rule: "无效群组ID".to_string(),
             });
@@ -129,7 +129,7 @@ impl DeleteGroupCommand {
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JoinGroupCommand {
-    pub group_id: i64,
+    pub group_id: String,
     pub user_id: i64,
     pub password: Option<String>,
 }
@@ -137,7 +137,7 @@ pub struct JoinGroupCommand {
 #[allow(dead_code)]
 impl JoinGroupCommand {
     pub fn validate(&self) -> DomainResult<()> {
-        if self.group_id <= 0 {
+        if self.group_id.is_empty() {
             return Err(DomainError::BusinessRuleViolation {
                 rule: "无效群组ID".to_string(),
             });
@@ -161,14 +161,14 @@ impl JoinGroupCommand {
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LeaveGroupCommand {
-    pub group_id: i64,
+    pub group_id: String,
     pub user_id: i64,
 }
 
 #[allow(dead_code)]
 impl LeaveGroupCommand {
     pub fn validate(&self) -> DomainResult<()> {
-        if self.group_id <= 0 {
+        if self.group_id.is_empty() {
             return Err(DomainError::BusinessRuleViolation {
                 rule: "无效群组ID".to_string(),
             });
@@ -185,7 +185,7 @@ impl LeaveGroupCommand {
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KickMemberCommand {
-    pub group_id: i64,
+    pub group_id: String,
     pub target_user_id: i64,
     pub admin_id: i64,
 }
@@ -193,7 +193,7 @@ pub struct KickMemberCommand {
 #[allow(dead_code)]
 impl KickMemberCommand {
     pub fn validate(&self) -> DomainResult<()> {
-        if self.group_id <= 0 {
+        if self.group_id.is_empty() {
             return Err(DomainError::BusinessRuleViolation {
                 rule: "无效群组ID".to_string(),
             });
@@ -220,7 +220,7 @@ impl KickMemberCommand {
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransferOwnershipCommand {
-    pub group_id: i64,
+    pub group_id: String,
     pub new_owner_id: i64,
     pub current_owner_id: i64,
 }
@@ -228,7 +228,7 @@ pub struct TransferOwnershipCommand {
 #[allow(dead_code)]
 impl TransferOwnershipCommand {
     pub fn validate(&self) -> DomainResult<()> {
-        if self.group_id <= 0 {
+        if self.group_id.is_empty() {
             return Err(DomainError::BusinessRuleViolation {
                 rule: "无效群组ID".to_string(),
             });
@@ -283,3 +283,5 @@ pub struct TransferOwnershipResult {
     pub new_owner_id: i64,
     pub success: bool,
 }
+
+// 注意：KickMemberCommand、TransferOwnershipCommand、KickMemberResult 已在文件前面定义

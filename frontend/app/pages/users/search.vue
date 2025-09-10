@@ -8,7 +8,7 @@
                     icon="i-heroicons-arrow-left"
                     @click="$router.back()"
                 />
-                <h1 class="text-3xl font-bold text-neutral-900 dark:text-white">
+                <h1 class="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
                     {{ $t("users.search.title") }}
                 </h1>
             </div>
@@ -90,7 +90,7 @@
 
             <!-- 搜索结果表格 -->
             <div v-else>
-                <UTable :rows="pagedResults" :columns="columns as any">
+                <UTable :rows="pagedResults" :columns="columns">
                     <template #avatar_name-cell="{ row }">
                         <div class="flex items-center gap-3 min-w-[220px]">
                             <UAvatar
@@ -217,7 +217,7 @@
                                 variant="ghost"
                                 @click.stop="
                                     $router.push(
-                                        `/chat/user/${(row as any).user_id}`,
+                                        `/chat/users/${(row as any).user_id}`,
                                     )
                                 "
                             >
@@ -319,7 +319,7 @@
                             size="sm"
                             variant="outline"
                             @click.stop="sendFriendRequest(user)"
-                            :loading="user.requesting"
+                            :loading="(user as any).requesting"
                         >
                             {{ $t("app.actions.apply") }}
                         </UButton>
@@ -336,11 +336,9 @@
 </template>
 
 <script setup lang="ts">
-import type { TableColumn } from "@nuxt/ui";
-import { useUserService } from "~/services/user.service";
+// TableColumn 类型已在组件内部定义
 import type { UserInfo } from "~/types";
-import { useApi } from "~/composables/useApi";
-import { buildFriendUrl, FRIEND_ENDPOINTS } from "~/config/api";
+// import { buildFriendUrl, FRIEND_ENDPOINTS } from "~/config/api"; // 好友功能暂未实现
 
 definePageMeta({
     title: "users.search.title",
@@ -348,6 +346,8 @@ definePageMeta({
 });
 
 const api = useApi();
+import { useUserService } from '~/services/user.service';
+
 const userService = useUserService();
 const toast = useSmartToast();
 const authStore = useAuthStore();
@@ -398,7 +398,7 @@ async function performSearch() {
     page.value = 1;
     try {
         const response = await userService.searchUsers(searchQuery.value);
-        searchResults.value = (response.users || []).map((u: any) => ({
+        searchResults.value = (response.items || []).map((u: any) => ({
             ...u,
             requesting: false,
         }));
@@ -453,15 +453,8 @@ async function sendFriendRequest(user: UserInfo) {
     if ((user as any).requesting) return;
     (user as any).requesting = true;
     try {
-        await api.post(
-            buildFriendUrl(FRIEND_ENDPOINTS.REQUESTS),
-            {
-                user_id: user.user_id,
-                message: tt("users.search.defaultRequestMessage"),
-            },
-            { auth: true },
-        );
-        (user as any).friendship_status = "pending_sent";
+        // 好友功能暂未实现，显示提示信息
+        throw new Error('好友功能暂未实现，请等待后端API上线');
         toast.add({
             title: tt("users.detail.toasts.requestSent"),
             color: "success",
@@ -479,12 +472,8 @@ async function sendFriendRequest(user: UserInfo) {
 
 async function handleFriendRequest(user: UserInfo) {
     try {
-        await api.post(
-            buildFriendUrl(`${FRIEND_ENDPOINTS.ACCEPT}/${user.user_id}`),
-            {},
-            { auth: true },
-        );
-        (user as any).friendship_status = "accepted";
+        // 好友功能暂未实现，显示提示信息
+        throw new Error('好友功能暂未实现，请等待后端API上线');
         toast.add({ title: tt("users.detail.toasts.added"), color: "success" });
     } catch (e: any) {
         toast.add({

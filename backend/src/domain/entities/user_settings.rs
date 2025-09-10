@@ -1,7 +1,6 @@
 /// 用户设置领域实体
 /// 
 /// 管理用户的个性化设置和通知偏好
-
 use serde::{Deserialize, Serialize};
 
 /// 用户通知级别枚举
@@ -27,7 +26,7 @@ impl UserNotificationLevel {
         }
     }
     
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse(s: &str) -> Option<Self> {
         match s {
             "all" => Some(UserNotificationLevel::All),
             "mention" => Some(UserNotificationLevel::Mention),

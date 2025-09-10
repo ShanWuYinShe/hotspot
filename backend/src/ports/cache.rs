@@ -1,252 +1,352 @@
-//! 缓存端口定义
-//! 
-//! 定义缓存操作的抽象接口，支持不同的缓存实现（Redis、内存缓存等）
+/// 缓存接口定义 - 高性能数据访问抽象
+/// 
+/// 缓存特征：
+/// - 键值存储
+/// - 过期时间管理
+/// - 批量操作
+/// - 统计信息
 
-use std::future::Future;
-use std::pin::Pin;
+use async_trait::async_trait;
 use std::time::Duration;
-use thiserror::Error;
-use serde::{Serialize, Deserialize};
+use crate::domain::DomainResult;
 
-// =============== 类型别名定义 ===============
+// === 缓存接口 ===
 
-/// 批量获取结果类型
-#[allow(dead_code)]
-type MgetResult<'a> = Pin<Box<dyn Future<Output = CachePortResult<Vec<Option<String>>>> + Send + 'a>>;
-
-/// 缓存端口错误类型
-#[derive(Debug, Error)]
-pub enum CachePortError {
-    #[error("connection error: {0}")]
-    Connection(String),
-    #[error("serialization error: {0}")]
-    Serialization(String),
-    #[error("key not found: {key}")]
-    KeyNotFound { key: String },
-    #[error("cache full: {0}")]
-    CacheFull(String),
-    #[error("invalid ttl: {0}")]
-    InvalidTtl(String),
-    #[error("other error: {0}")]
-    Other(String),
-}
-
-pub type CachePortResult<T> = Result<T, CachePortError>;
-
-/// 缓存端口 - 定义缓存操作的抽象接口
-pub trait CachePort: Send + Sync {
-    /// 获取端口名称
-    fn name(&self) -> &str;
-
+/// 缓存接口
+#[async_trait]
+pub trait Cache: Send + Sync {
     /// 获取缓存值
-    fn get<'a>(
-        &'a self,
-        key: &'a str,
-    ) -> Pin<Box<dyn Future<Output = CachePortResult<Option<String>>> + Send + 'a>>;
-
+    async fn get<T>(&self, key: &str) -> DomainResult<Option<T>>
+    where
+        T: serde::de::DeserializeOwned + Send;
+    
     /// 设置缓存值
-    fn set<'a>(
-        &'a self,
-        key: &'a str,
-        value: &'a str,
-        ttl: Option<Duration>,
-    ) -> Pin<Box<dyn Future<Output = CachePortResult<()>> + Send + 'a>>;
-
+    async fn set<T>(&self, key: &str, value: &T, ttl: Option<Duration>) -> DomainResult<()>
+    where
+        T: serde::Serialize + Send + Sync;
+    
     /// 删除缓存值
-    fn delete<'a>(
-        &'a self,
-        key: &'a str,
-    ) -> Pin<Box<dyn Future<Output = CachePortResult<bool>> + Send + 'a>>;
-
+    async fn delete(&self, key: &str) -> DomainResult<bool>;
+    
     /// 检查键是否存在
-    fn exists<'a>(
-        &'a self,
-        key: &'a str,
-    ) -> Pin<Box<dyn Future<Output = CachePortResult<bool>> + Send + 'a>>;
-
+    async fn exists(&self, key: &str) -> DomainResult<bool>;
+    
     /// 设置过期时间
-    fn expire<'a>(
-        &'a self,
-        key: &'a str,
-        ttl: Duration,
-    ) -> Pin<Box<dyn Future<Output = CachePortResult<bool>> + Send + 'a>>;
-
+    async fn expire(&self, key: &str, ttl: Duration) -> DomainResult<bool>;
+    
     /// 获取剩余过期时间
-    fn ttl<'a>(
-        &'a self,
-        key: &'a str,
-    ) -> Pin<Box<dyn Future<Output = CachePortResult<Option<Duration>>> + Send + 'a>>;
-
+    async fn ttl(&self, key: &str) -> DomainResult<Option<Duration>>;
+    
     /// 批量获取
-    fn mget<'a>(
-        &'a self,
-        keys: &'a [String],
-    ) -> MgetResult<'a>;
-
+    async fn mget<T>(&self, keys: &[String]) -> DomainResult<Vec<Option<T>>>
+    where
+        T: serde::de::DeserializeOwned + Send;
+    
     /// 批量设置
-    fn mset<'a>(
-        &'a self,
-        pairs: &'a [(String, String)],
-        ttl: Option<Duration>,
-    ) -> Pin<Box<dyn Future<Output = CachePortResult<()>> + Send + 'a>>;
-
-    /// 原子递增
-    fn incr<'a>(
-        &'a self,
-        key: &'a str,
-        delta: i64,
-    ) -> Pin<Box<dyn Future<Output = CachePortResult<i64>> + Send + 'a>>;
-
-    /// 原子递减
-    fn decr<'a>(
-        &'a self,
-        key: &'a str,
-        delta: i64,
-    ) -> Pin<Box<dyn Future<Output = CachePortResult<i64>> + Send + 'a>>;
-
+    async fn mset<T>(&self, items: &[(String, T)], ttl: Option<Duration>) -> DomainResult<()>
+    where
+        T: serde::Serialize + Send + Sync;
+    
+    /// 批量删除
+    async fn mdel(&self, keys: &[String]) -> DomainResult<u64>;
+    
     /// 清空所有缓存
-    fn flush_all<'a>(
-        &'a self,
-    ) -> Pin<Box<dyn Future<Output = CachePortResult<()>> + Send + 'a>>;
-
+    async fn flush_all(&self) -> DomainResult<()>;
+    
     /// 获取缓存统计信息
-    fn stats<'a>(
-        &'a self,
-    ) -> Pin<Box<dyn Future<Output = CachePortResult<CacheStats>> + Send + 'a>>;
+    async fn stats(&self) -> DomainResult<CacheStats>;
+    
+    /// 批量删除（别名方法）
+    async fn delete_batch(&self, keys: &[&str]) -> DomainResult<()>;
+    
+    /// 清空所有缓存（别名方法）
+    async fn clear_all(&self) -> DomainResult<()>;
+    
+    /// 获取统计信息（别名方法）
+    async fn get_stats(&self) -> DomainResult<CacheStats>;
 }
 
 /// 缓存统计信息
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct CacheStats {
-    /// 总键数
-    pub total_keys: usize,
-    /// 命中次数
-    pub hits: u64,
-    /// 未命中次数
-    pub misses: u64,
-    /// 命中率
+    pub total_keys: u64,
+    pub memory_usage: u64, // 字节
+    pub hit_count: u64,
+    pub miss_count: u64,
     pub hit_rate: f64,
-    /// 内存使用量（字节）
-    pub memory_usage: usize,
-    /// 最大内存限制（字节）
-    pub max_memory: Option<usize>,
-    /// 过期键数
-    pub expired_keys: u64,
-    /// 驱逐键数
     pub evicted_keys: u64,
+    pub expired_keys: u64,
 }
 
 impl CacheStats {
-    /// 创建默认统计信息
-    pub fn new() -> Self {
-        Self {
-            total_keys: 0,
-            hits: 0,
-            misses: 0,
-            hit_rate: 0.0,
-            memory_usage: 0,
-            max_memory: None,
-            expired_keys: 0,
-            evicted_keys: 0,
-        }
-    }
-
     /// 计算命中率
     pub fn calculate_hit_rate(&mut self) {
-        let total = self.hits + self.misses;
-        if total > 0 {
-            self.hit_rate = self.hits as f64 / total as f64;
+        let total = self.hit_count + self.miss_count;
+        self.hit_rate = if total > 0 {
+            self.hit_count as f64 / total as f64
         } else {
-            self.hit_rate = 0.0;
-        }
+            0.0
+        };
     }
 }
 
-impl CachePortError {
-    /// 从连接错误创建
-    pub fn from_connection_error(err: impl std::fmt::Display) -> Self {
-        Self::Connection(err.to_string())
-    }
+// === 分布式缓存接口 ===
 
-    /// 从序列化错误创建
-    pub fn from_serialization_error(err: impl std::fmt::Display) -> Self {
-        Self::Serialization(err.to_string())
-    }
-
-    /// 创建键未找到错误
-    pub fn key_not_found(key: impl Into<String>) -> Self {
-        Self::KeyNotFound { key: key.into() }
-    }
-
-    /// 创建缓存已满错误
-    pub fn cache_full(msg: impl Into<String>) -> Self {
-        Self::CacheFull(msg.into())
-    }
-
-    /// 创建无效TTL错误
-    pub fn invalid_ttl(msg: impl Into<String>) -> Self {
-        Self::InvalidTtl(msg.into())
-    }
-
-    /// 从缓存管理器错误转换
-    pub fn from_cache_error(err: crate::cache::CacheError) -> Self {
-        match err {
-            crate::cache::CacheError::Redis(e) => Self::Connection(e.to_string()),
-            crate::cache::CacheError::Serialization(e) => Self::Serialization(e.to_string()),
-            crate::cache::CacheError::ConnectionUnavailable => Self::Connection("Cache connection unavailable".to_string()),
-            crate::cache::CacheError::KeyNotFound => Self::KeyNotFound { key: "unknown".to_string() },
-            crate::cache::CacheError::Other(msg) => Self::Other(msg),
-        }
-    }
+/// 分布式缓存接口
+#[async_trait]
+pub trait DistributedCache: Cache {
+    /// 分布式锁
+    async fn lock(&self, key: &str, ttl: Duration) -> DomainResult<Option<LockGuard>>;
+    
+    /// 释放锁
+    async fn unlock(&self, guard: LockGuard) -> DomainResult<bool>;
+    
+    /// 原子递增
+    async fn incr(&self, key: &str, delta: i64) -> DomainResult<i64>;
+    
+    /// 原子递减
+    async fn decr(&self, key: &str, delta: i64) -> DomainResult<i64>;
+    
+    /// 发布消息
+    async fn publish(&self, channel: &str, message: &str) -> DomainResult<u64>;
+    
+    /// 订阅频道
+    async fn subscribe(&self, channels: &[String]) -> DomainResult<SubscriptionHandle>;
+    
+    /// 取消订阅
+    async fn unsubscribe(&self, handle: SubscriptionHandle) -> DomainResult<()>;
 }
 
-impl Default for CacheStats {
-    fn default() -> Self {
-        Self::new()
-    }
+/// 锁守卫
+#[derive(Debug, Clone)]
+pub struct LockGuard {
+    pub key: String,
+    pub token: String,
+    pub acquired_at: chrono::DateTime<chrono::Utc>,
+    pub expires_at: chrono::DateTime<chrono::Utc>,
 }
 
-/// 缓存键构建器 - 提供统一的缓存键命名规范
-pub struct CacheKeyBuilder;
+/// 订阅句柄
+#[derive(Debug, Clone)]
+pub struct SubscriptionHandle {
+    pub subscription_id: String,
+    pub channels: Vec<String>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+// === 缓存层接口 ===
+
+/// 多层缓存接口
+#[async_trait]
+pub trait LayeredCache: Send + Sync + Clone {
+    /// 从L1缓存获取
+    async fn get_l1<T>(&self, key: &str) -> DomainResult<Option<T>>
+    where
+        T: serde::de::DeserializeOwned + Send;
+    
+    /// 从L2缓存获取
+    async fn get_l2<T>(&self, key: &str) -> DomainResult<Option<T>>
+    where
+        T: serde::de::DeserializeOwned + Send;
+    
+    /// 设置到所有层
+    async fn set_all_layers<T>(&self, key: &str, value: &T, l1_ttl: Duration, l2_ttl: Duration) -> DomainResult<()>
+    where
+        T: serde::Serialize + Send + Sync;
+    
+    /// 从所有层删除
+    async fn delete_all_layers(&self, key: &str) -> DomainResult<()>;
+    
+    /// 预热缓存
+    async fn warm_up<T>(&self, key: &str, loader: Box<dyn CacheLoader<T>>) -> DomainResult<T>
+    where
+        T: serde::Serialize + serde::de::DeserializeOwned + Send + Sync;
+    
+    /// 获取层级统计
+    async fn layer_stats(&self) -> DomainResult<LayeredCacheStats>;
+}
+
+/// 缓存加载器
+#[async_trait]
+pub trait CacheLoader<T>: Send + Sync {
+    async fn load(&self, key: &str) -> DomainResult<T>;
+}
+
+/// 多层缓存统计
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct LayeredCacheStats {
+    pub l1_stats: CacheStats,
+    pub l2_stats: CacheStats,
+    pub l1_hit_rate: f64,
+    pub l2_hit_rate: f64,
+    pub overall_hit_rate: f64,
+}
+
+// === 缓存策略接口 ===
+
+/// 缓存策略接口
+pub trait CacheStrategy: Send + Sync + Clone {
+    /// 生成缓存键
+    fn generate_key(&self, prefix: &str, params: &[&str]) -> String;
+    
+    /// 获取默认TTL
+    fn default_ttl(&self) -> Duration;
+    
+    /// 获取键的TTL
+    fn key_ttl(&self, key: &str) -> Duration;
+    
+    /// 检查是否应该缓存
+    fn should_cache(&self, key: &str, value_size: usize) -> bool;
+    
+    /// 获取缓存优先级
+    fn cache_priority(&self, key: &str) -> CachePriority;
+}
+
+/// 缓存优先级
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum CachePriority {
+    Low = 1,
+    Normal = 2,
+    High = 3,
+    Critical = 4,
+}
+
+// === 缓存装饰器接口 ===
+
+/// 缓存装饰器 - 为方法调用添加缓存
+#[async_trait]
+pub trait CacheDecorator<T>: Send + Sync + Clone {
+    /// 缓存方法调用结果
+    async fn cached_call<F, R>(&self, key: &str, ttl: Duration, func: F) -> DomainResult<R>
+    where
+        F: FnOnce() -> std::pin::Pin<Box<dyn std::future::Future<Output = DomainResult<R>> + Send>> + Send,
+        R: serde::Serialize + serde::de::DeserializeOwned + Send + Sync;
+    
+    /// 缓存方法调用结果（带条件）
+    async fn cached_call_if<F, R, P>(&self, key: &str, ttl: Duration, predicate: P, func: F) -> DomainResult<R>
+    where
+        F: FnOnce() -> std::pin::Pin<Box<dyn std::future::Future<Output = DomainResult<R>> + Send>> + Send,
+        P: FnOnce(&R) -> bool + Send,
+        R: serde::Serialize + serde::de::DeserializeOwned + Send + Sync;
+    
+    /// 刷新缓存
+    async fn refresh_cache<F, R>(&self, key: &str, ttl: Duration, func: F) -> DomainResult<R>
+    where
+        F: FnOnce() -> std::pin::Pin<Box<dyn std::future::Future<Output = DomainResult<R>> + Send>> + Send,
+        R: serde::Serialize + serde::de::DeserializeOwned + Send + Sync;
+}
+
+// === 缓存工厂接口 ===
+
+/// 缓存工厂 - 创建和管理缓存实例
+pub trait CacheFactory: Send + Sync + Clone {
+    type Cache: Cache;
+    type DistributedCache: DistributedCache;
+    type LayeredCache: LayeredCache;
+    type Strategy: CacheStrategy;
+    
+    /// 创建基础缓存
+    fn cache(&self) -> Self::Cache;
+    
+    /// 创建分布式缓存
+    fn distributed_cache(&self) -> Self::DistributedCache;
+    
+    /// 创建多层缓存
+    fn layered_cache(&self) -> Self::LayeredCache;
+    
+    /// 创建缓存策略
+    fn cache_strategy(&self) -> Self::Strategy;
+    
+    /// 创建缓存装饰器
+    fn cache_decorator<T>(&self) -> Box<dyn CacheDecorator<T>>
+    where
+        T: Send + Sync + 'static;
+}
+
+// === 缓存键生成器 ===
+
+/// 缓存键生成器
+pub struct CacheKeyBuilder {
+    prefix: String,
+    parts: Vec<String>,
+}
 
 impl CacheKeyBuilder {
-    /// 用户相关缓存键
-    pub fn user_key(user_id: i64, suffix: &str) -> String {
-        format!("user:{}:{}", user_id, suffix)
+    /// 创建新的键生成器
+    pub fn new(prefix: &str) -> Self {
+        Self {
+            prefix: prefix.to_string(),
+            parts: Vec::new(),
+        }
     }
-
-    /// 群组相关缓存键
-    pub fn group_key(group_id: &str, suffix: &str) -> String {
-        format!("group:{}:{}", group_id, suffix)
+    
+    /// 添加键部分
+    pub fn part(mut self, part: &str) -> Self {
+        self.parts.push(part.to_string());
+        self
     }
-
-    /// 消息相关缓存键
-    pub fn message_key(conversation_id: &str, suffix: &str) -> String {
-        format!("message:{}:{}", conversation_id, suffix)
+    
+    /// 添加用户ID部分
+    pub fn user_id(mut self, user_id: crate::domain::UserId) -> Self {
+        self.parts.push(user_id.value().to_string());
+        self
     }
-
-    /// 动态相关缓存键
-    pub fn moment_key(moment_id: &str, suffix: &str) -> String {
-        format!("moment:{}:{}", moment_id, suffix)
+    
+    /// 添加群组ID部分
+    pub fn group_id(mut self, group_id: crate::domain::GroupId) -> Self {
+        self.parts.push(group_id.value().to_string());
+        self
     }
-
-    /// 会话相关缓存键
-    pub fn session_key(session_id: &str) -> String {
-        format!("session:{}", session_id)
-    }
-
-    /// 权限相关缓存键
-    pub fn permission_key(user_id: i64, resource: &str) -> String {
-        format!("permission:{}:{}", user_id, resource)
-    }
-
-    /// 统计相关缓存键
-    pub fn stats_key(category: &str, period: &str) -> String {
-        format!("stats:{}:{}", category, period)
-    }
-
-    /// 临时数据缓存键
-    pub fn temp_key(category: &str, id: &str) -> String {
-        format!("temp:{}:{}", category, id)
+    
+    /// 构建最终键
+    pub fn build(self) -> String {
+        if self.parts.is_empty() {
+            self.prefix
+        } else {
+            format!("{}:{}", self.prefix, self.parts.join(":"))
+        }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cache_stats() {
+        let mut stats = CacheStats {
+            total_keys: 100,
+            memory_usage: 1024,
+            hit_count: 80,
+            miss_count: 20,
+            hit_rate: 0.0,
+            evicted_keys: 5,
+            expired_keys: 10,
+        };
+        
+        stats.calculate_hit_rate();
+        assert_eq!(stats.hit_rate, 0.8);
+    }
+    
+    #[test]
+    fn test_cache_key_builder() {
+        let key = CacheKeyBuilder::new("user")
+            .part("profile")
+            .user_id(crate::domain::UserId::new(123).unwrap())
+            .build();
+        
+        assert_eq!(key, "user:profile:123");
+    }
+    
+    #[test]
+    fn test_cache_priority_ordering() {
+        assert!(CachePriority::Critical > CachePriority::High);
+        assert!(CachePriority::High > CachePriority::Normal);
+        assert!(CachePriority::Normal > CachePriority::Low);
+    }
+}
+
+// === 类型别名（向后兼容） ===
+
+/// 缓存端口（向后兼容别名）
+pub type CachePort = dyn Cache;

@@ -1,11 +1,10 @@
 /// WebSocket事件处理器
 /// 
 /// 处理来自领域层的事件，转换为WebSocket通知
-
 use async_trait::async_trait;
 use std::sync::Arc;
 use crate::domain::{UserEvent, GroupEvent, MessageEvent, MomentEvent};
-use crate::ports::GroupRepositoryPort;
+use crate::ports::GroupRepository;
 use crate::presentation::ws::{WSEventType, MessageData};
 
 /// 事件处理器trait
@@ -26,12 +25,13 @@ pub trait EventHandler: Send + Sync {
 
 /// WebSocket事件处理器实现
 pub struct WebSocketEventHandler {
-    group_repo: Arc<dyn GroupRepositoryPort>,
+    group_repo: Arc<dyn GroupRepository>,
+    user_repo: Arc<dyn crate::ports::UserRepository>,
 }
 
 impl WebSocketEventHandler {
-    pub fn new(group_repo: Arc<dyn GroupRepositoryPort>) -> Self {
-        Self { group_repo }
+    pub fn new(group_repo: Arc<dyn GroupRepository>, user_repo: Arc<dyn crate::ports::UserRepository>) -> Self {
+        Self { group_repo, user_repo }
     }
 }
 
@@ -41,11 +41,13 @@ impl WebSocketEventHandler {
 impl EventHandler for WebSocketEventHandler {
     async fn handle_user_event(&self, event: UserEvent) -> Result<Option<WSEventType>, EventHandlerError> {
         let ws_event = match event {
-            UserEvent::UserRegistered { user_id, nickname, .. } => {
-                Some(WSEventType::UserOnline { user_id, nickname })
-            }
-            UserEvent::TempUserCreated { user_id, nickname, .. } => {
-                Some(WSEventType::UserOnline { user_id, nickname })
+            UserEvent::UserCreated { user_id, .. } => {
+                // 用户创建事件，需要获取用户昵称
+                let nickname = match self.user_repo.find_user_profile(user_id.value()).await {
+                    Ok(Some(user)) => user.nickname,
+                    _ => "新用户".to_string(),
+                };
+                Some(WSEventType::UserOnline { user_id: user_id.value(), nickname })
             }
             UserEvent::UserUpgraded { .. } => {
                 // 用户升级事件可能不需要实时通知
@@ -67,6 +69,7 @@ impl EventHandler for WebSocketEventHandler {
                 // 用户删除事件不需要实时通知
                 None
             }
+            _ => None, // 其他用户事件暂不处理
         };
         
         Ok(ws_event)
@@ -74,24 +77,30 @@ impl EventHandler for WebSocketEventHandler {
     
     async fn handle_group_event(&self, event: GroupEvent) -> Result<Option<WSEventType>, EventHandlerError> {
         let ws_event = match event {
-            GroupEvent::GroupCreated { group_id, name, .. } => {
-                Some(WSEventType::GroupInfoUpdated { group_id, name })
+            GroupEvent::GroupCreated { group_id, .. } => {
+                // 查询群组名称
+                let name = match self.group_repo.find_group_profile(&group_id.to_string()).await {
+                    Ok(Some(group)) => group.name,
+                    _ => "新群组".to_string(),
+                };
+                Some(WSEventType::GroupInfoUpdated { group_id: group_id.value().to_string(), name })
             }
-            GroupEvent::MemberJoined { group_id, user_id, .. } => {
+            GroupEvent::GroupMemberJoined { group_id, user_id, .. } => {
                 // 获取用户昵称需要额外查询，这里使用默认值
-                Some(WSEventType::UserJoinedGroup { user_id, group_id, nickname: "用户".to_string() })
+                Some(WSEventType::UserJoinedGroup { user_id: user_id.value(), group_id: group_id.value().to_string(), nickname: "用户".to_string() })
             }
-            GroupEvent::MemberLeft { group_id, user_id, .. } => {
-                Some(WSEventType::UserLeftGroup { user_id, group_id })
+            GroupEvent::GroupMemberLeft { group_id, user_id, .. } => {
+                Some(WSEventType::UserLeftGroup { user_id: user_id.value(), group_id: group_id.value().to_string() })
             }
-            GroupEvent::GroupInfoUpdated { group_id, .. } => {
+            GroupEvent::GroupUpdated { group_id, .. } => {
                 // 查询群组最新名称，遵循最佳实践，不使用占位值
-                let name = match self.group_repo.find_by_id(group_id).await {
+                let name = match self.group_repo.find_group_profile(&group_id.to_string()).await {
                     Ok(Some(group)) => group.name,
                     _ => "群组信息已更新".to_string(),
                 };
-                Some(WSEventType::GroupInfoUpdated { group_id, name })
+                Some(WSEventType::GroupInfoUpdated { group_id: group_id.value().to_string(), name })
             }
+            _ => None, // 其他群组事件暂不处理
         };
         
         Ok(ws_event)
@@ -101,25 +110,40 @@ impl EventHandler for WebSocketEventHandler {
         let ws_event = match event {
             MessageEvent::MessageSent { 
                 message_id, 
-                group_id, 
                 sender_id,
+                recipient_type,
+                recipient_id,
                 .. 
             } => {
                 let message_data = MessageData {
-                    id: message_id,
-                    sender_id,
+                    id: message_id.value().to_string(),
+                    sender_id: sender_id.value(),
                     sender_nickname: "用户".to_string(), // 需要额外查询获取昵称
                     content: "新消息".to_string(), // 需要额外查询获取内容
                     message_type: "text".to_string(), // 需要额外查询获取消息类型
                     created_at: chrono::Utc::now(), // 使用当前时间
                 };
                 
-                Some(WSEventType::NewMessage { group_id, message: message_data })
+                // 根据接收者类型决定事件类型
+                match recipient_type {
+                    crate::domain::events::MessageRecipientType::Group => {
+                        // 群组消息，recipient_id 是群组ID
+                        Some(WSEventType::NewMessage { 
+                            group_id: recipient_id, 
+                            message: message_data 
+                        })
+                    }
+                    crate::domain::events::MessageRecipientType::User => {
+                        // 私聊消息，可以考虑其他处理方式
+                        None
+                    }
+                }
             }
             MessageEvent::MessageDeleted { .. } => {
                 // 消息删除事件可根据需要决定是否通知
                 None
             }
+            _ => None, // 其他消息事件暂不处理
         };
         
         Ok(ws_event)

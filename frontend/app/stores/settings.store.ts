@@ -1,8 +1,6 @@
 import { defineStore } from "pinia";
-import {
-  useSettingsService,
-  type UserSettings,
-} from "~/services/settings.service";
+import type { UserSettings } from "~/types";
+import { useSettingsService } from "~/services/settings.service";
 
 // 默认设置
 const getDefaultSettings = (): UserSettings => ({
@@ -32,7 +30,7 @@ const getDefaultSettings = (): UserSettings => ({
     time_format: "24h",
   },
   account: {
-    nickname: "用户",
+    nickname: "",
     bio: "",
     email: "",
     phone: "",
@@ -69,14 +67,10 @@ export const useSettingsStore = defineStore(
         isLoading.value = true;
         const settingsService = useSettingsService();
         const userSettings = await settingsService.getUserSettings();
-        settings.value = userSettings;
+        settings.value = userSettings as any;
 
-        if (userSettings.preferences?.theme) {
-          theme.value = userSettings.preferences.theme;
-        }
-        if (userSettings.preferences?.language) {
-          preferredLocale.value = userSettings.preferences.language;
-        }
+        // 主题和语言设置通过前端本地管理
+        // userSettings 仅包含后端通知设置等
         return userSettings;
       } catch (error) {
         console.error("获取设置失败:", error);
@@ -90,7 +84,7 @@ export const useSettingsStore = defineStore(
       try {
         isLoading.value = true;
         const settingsService = useSettingsService();
-        await settingsService.updateUserSettings(newSettings);
+        await settingsService.updateUserSettings(newSettings as any);
 
         // 重新获取设置
         await fetchSettings();
@@ -110,12 +104,8 @@ export const useSettingsStore = defineStore(
 
       // 如果有设置，更新到服务器
       if (settings.value) {
-        updateSettings({
-          preferences: {
-            ...settings.value.preferences,
-            theme: newTheme,
-          },
-        });
+        // 主题设置通过前端本地管理，不需要调用后端API
+        // updateSettings 仅用于后端设置同步
       }
     }
 

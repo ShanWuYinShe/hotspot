@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { useMomentService } from "../services/moment.service";
+import { useMomentService } from "~/services/moment.service";
 import { DEFAULTS } from "~/config/defaults";
 import type {
   MomentInfo,
@@ -26,15 +26,15 @@ export const useMomentsStore = defineStore(
     const pagination = ref({
       myMoments: {
         hasMore: false,
-        nextCursor: undefined as number | undefined,
+        nextCursor: undefined as string | undefined,
       },
       nearbyMoments: {
         hasMore: false,
-        nextCursor: undefined as number | undefined,
+        nextCursor: undefined as string | undefined,
       },
       searchResults: {
         hasMore: false,
-        nextCursor: undefined as number | undefined,
+        nextCursor: undefined as string | undefined,
       },
     });
 
@@ -85,7 +85,7 @@ export const useMomentsStore = defineStore(
       latitude: number;
       longitude: number;
       radius?: number;
-      cursor?: number;
+      cursor?: string;
       limit?: number;
       loadMore?: boolean;
     }) {
@@ -120,7 +120,7 @@ export const useMomentsStore = defineStore(
       tags: string[];
       latitude?: number;
       longitude?: number;
-      cursor?: number;
+      cursor?: string;
       limit?: number;
       loadMore?: boolean;
     }) {

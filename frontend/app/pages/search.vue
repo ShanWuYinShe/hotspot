@@ -17,7 +17,7 @@
       />
     </div>
 
-    <UTabs v-model="tab" :items="tabs" class="mb-6" />
+    <UTabs v-model:selected="tab" :items="tabs" class="mb-6" />
 
     <div v-if="tab === 'groups'" class="space-y-4">
       <UCard>
@@ -50,7 +50,7 @@
             <UButton to="/users/search" color="primary" icon="i-heroicons-magnifying-glass">
               搜索用户
             </UButton>
-            <UButton to="/nearby-users" variant="outline" icon="i-heroicons-map-pin">
+            <UButton to="/users/nearby" variant="outline" icon="i-heroicons-map-pin">
               附近用户
             </UButton>
           </div>
@@ -66,6 +66,21 @@ const tabs = [
   { label: '群组', value: 'groups' },
   { label: '用户', value: 'users' }
 ]
+
+// 搜索相关状态
+const searchQuery = ref('')
+
+// 搜索功能
+const performSearch = () => {
+  if (!searchQuery.value.trim()) return
+  
+  // 根据当前选中的标签页进行搜索
+  if (tab.value === 'groups') {
+    navigateTo(`/groups/discover?search=${encodeURIComponent(searchQuery.value)}`)
+  } else {
+    navigateTo(`/users/search?q=${encodeURIComponent(searchQuery.value)}`)
+  }
+}
 </script>
 
 

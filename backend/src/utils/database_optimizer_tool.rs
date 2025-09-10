@@ -1,7 +1,6 @@
 /// 数据库优化工具
 /// 
 /// 提供数据库性能分析、索引优化、查询优化等功能
-
 use sqlx::PgPool;
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;

@@ -3,7 +3,7 @@ use super::PaginationQuery;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FindNearbyGroupsQuery {
+pub struct SearchGroupsByLocationQuery {
     pub user_id: i64,
     pub latitude: f64,
     pub longitude: f64,
@@ -51,23 +51,23 @@ pub struct GroupMemberInfo {
     pub joined_at: chrono::DateTime<chrono::Utc>,
 }
 
-/// 按ID获取群组查询
+/// 按ID搜索群组查询
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GetGroupByIdQuery {
+pub struct SearchGroupsByIdQuery {
     pub group_id: i64,
     pub requester_id: i64,
 }
 
-/// 获取用户加入的群组查询
+/// 按用户ID搜索用户加入的群组查询
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GetUserGroupsQuery {
+pub struct SearchGroupsByUserIdQuery {
     pub user_id: i64,
     pub pagination: PaginationQuery,
 }
 
-/// 获取用户拥有的群组查询
+/// 按拥有者ID搜索群组查询
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GetOwnedGroupsQuery {
+pub struct SearchGroupsByOwnerIdQuery {
     pub owner_id: i64,
     pub pagination: PaginationQuery,
 }

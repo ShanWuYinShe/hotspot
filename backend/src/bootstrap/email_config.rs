@@ -1,7 +1,6 @@
 /// 邮件配置模块
 /// 
 /// 提供邮件服务的配置管理和环境变量解析
-
 use std::env;
 use tracing::{debug, warn};
 
@@ -108,11 +107,10 @@ impl EmailSettings {
         }
         
         // 验证必需的配置
-        if settings.enabled {
-            if settings.username.is_empty() || settings.password.is_empty() {
-                warn!("邮件功能已启用但缺少认证信息，将禁用邮件功能");
-                settings.enabled = false;
-            }
+        if settings.enabled
+            && (settings.username.is_empty() || settings.password.is_empty()) {
+            warn!("邮件功能已启用但缺少认证信息，将禁用邮件功能");
+            settings.enabled = false;
         }
         
         debug!("邮件配置加载完成: enabled={}, host={}:{}", 
@@ -264,12 +262,12 @@ impl EmailServiceFactory {
     pub fn create_email_job_handler<T, U>(
         transport: std::sync::Arc<T>,
         user_repository: std::sync::Arc<U>,
-    ) -> crate::application::services::EmailJobHandler<T, U>
+    ) -> crate::application::EmailJobHandler<T, U>
     where
         T: crate::ports::NotificationTransportPort,
         U: crate::ports::UserRepositoryPort,
     {
-        crate::application::services::EmailJobHandler::new(transport, user_repository)
+        crate::application::EmailJobHandler::new(transport, user_repository)
     }
 }
 

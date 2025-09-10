@@ -1,28 +1,28 @@
 <template>
   <div class="min-h-screen bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-950">
-    <UContainer class="py-8">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
       <!-- 用户状态卡片 -->
-      <div v-if="displayedUser" class="mb-8">
+      <div v-if="displayedUser" class="mb-6 sm:mb-8">
         <UCard>
-          <div class="flex items-center space-x-4">
-            <UAvatar :alt="displayedUser?.nickname" size="lg">
+          <div class="flex items-center space-x-3 sm:space-x-4">
+            <UAvatar :alt="displayedUser?.nickname" size="md" class="sm:w-12 sm:h-12">
               {{ displayedUser?.nickname?.charAt(0) || "U" }}
             </UAvatar>
-            <div class="flex-1">
-              <h3 class="text-xl font-semibold text-neutral-900 dark:text-neutral-100">
+            <div class="flex-1 min-w-0">
+              <h3 class="text-lg sm:text-xl font-semibold text-neutral-900 dark:text-neutral-100 truncate">
                 你好，{{ displayedUser?.nickname || "用户" }}！
               </h3>
-              <p class="text-neutral-600 dark:text-neutral-400">
+              <p class="text-sm sm:text-base text-neutral-600 dark:text-neutral-400 truncate">
                 今天想要做什么呢？
               </p>
             </div>
-            <div class="flex space-x-3">
-              <UButton to="/map" size="lg" class="hidden sm:flex">
-                <UIcon name="i-heroicons-map-pin" class="w-5 h-5 mr-2" />
+            <div class="flex space-x-2 sm:space-x-3 flex-shrink-0">
+              <UButton to="/map" size="md" class="hidden sm:flex sm:size-lg">
+                <UIcon name="i-heroicons-map-pin" class="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
                 探索附近
               </UButton>
-              <UButton to="/chat" variant="outline" size="lg">
-                <UIcon name="i-heroicons-chat-bubble-left-right" class="w-5 h-5 mr-2" />
+              <UButton to="/chat" variant="outline" size="md" class="touch-manipulation sm:size-lg">
+                <UIcon name="i-heroicons-chat-bubble-left-right" class="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
                 <span class="hidden sm:inline">查看消息</span>
                 <span class="sm:hidden">消息</span>
               </UButton>
@@ -32,90 +32,80 @@
       </div>
 
       <!-- 快速操作区域 -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
         <!-- 附近用户 -->
-        <UTooltip text="发现附近的用户和朋友 (Alt+U)" :content="{ side: 'bottom' }">
-          <UCard class="hover:shadow-lg transition-shadow cursor-pointer" @click="navigateTo('/nearby-users')">
-            <div class="flex items-center space-x-3">
-              <div class="w-12 h-12 bg-primary-100 dark:bg-primary-900 rounded-lg flex items-center justify-center">
-                <UIcon name="i-heroicons-users" class="w-6 h-6 text-primary-600 dark:text-primary-400" />
-              </div>
-              <div class="flex-1">
-                <div class="flex items-center justify-between">
-                  <h3 class="font-semibold text-neutral-900 dark:text-neutral-100">附近用户</h3>
-                  <UKbd size="xs" class="ml-2">Alt+U</UKbd>
-                </div>
-                <p class="text-sm text-neutral-600 dark:text-neutral-400">发现周围的朋友</p>
-              </div>
+        <UCard 
+          class="hover:shadow-lg active:scale-95 transition-all duration-200 cursor-pointer touch-manipulation" 
+          @click="navigateTo('/users/nearby')"
+        >
+          <div class="flex items-center space-x-3 p-1">
+            <div class="w-12 h-12 bg-primary-100 dark:bg-primary-900 rounded-lg flex items-center justify-center flex-shrink-0">
+              <UIcon name="i-heroicons-users" class="w-6 h-6 text-primary-600 dark:text-primary-400" />
             </div>
-          </UCard>
-        </UTooltip>
+            <div class="flex-1 min-w-0">
+              <h3 class="font-semibold text-neutral-900 dark:text-neutral-100 truncate">附近用户</h3>
+              <p class="text-sm text-neutral-600 dark:text-neutral-400 truncate">发现周围的朋友</p>
+            </div>
+          </div>
+        </UCard>
 
         <!-- 我的群组 -->
-        <UTooltip text="管理和查看我的群组 (⌘G)" :content="{ side: 'bottom' }">
-          <UCard class="hover:shadow-lg transition-shadow cursor-pointer" @click="navigateTo('/groups')">
-            <div class="flex items-center space-x-3">
-              <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
-                <UIcon name="i-heroicons-user-group" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div class="flex-1">
-                <div class="flex items-center justify-between">
-                  <h3 class="font-semibold text-neutral-900 dark:text-neutral-100">我的群组</h3>
-                  <UKbd size="xs" class="ml-2">⌘G</UKbd>
-                </div>
-                <p class="text-sm text-neutral-600 dark:text-neutral-400">管理群组聊天</p>
-              </div>
+        <UCard 
+          class="hover:shadow-lg active:scale-95 transition-all duration-200 cursor-pointer touch-manipulation" 
+          @click="navigateTo('/groups')"
+        >
+          <div class="flex items-center space-x-3 p-1">
+            <div class="w-12 h-12 bg-group-100 dark:bg-group-900 rounded-lg flex items-center justify-center flex-shrink-0">
+              <UIcon name="i-heroicons-user-group" class="w-6 h-6 text-group-600 dark:text-group-400" />
             </div>
-          </UCard>
-        </UTooltip>
+            <div class="flex-1 min-w-0">
+              <h3 class="font-semibold text-neutral-900 dark:text-neutral-100 truncate">我的群组</h3>
+              <p class="text-sm text-neutral-600 dark:text-neutral-400 truncate">管理群组聊天</p>
+            </div>
+          </div>
+        </UCard>
 
         <!-- 动态分享 -->
-        <UTooltip text="分享和查看精彩动态 (Alt+M)" :content="{ side: 'bottom' }">
-          <UCard class="hover:shadow-lg transition-shadow cursor-pointer" @click="navigateTo('/moments')">
-            <div class="flex items-center space-x-3">
-              <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
-                <UIcon name="i-heroicons-photo" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div class="flex-1">
-                <div class="flex items-center justify-between">
-                  <h3 class="font-semibold text-neutral-900 dark:text-neutral-100">动态分享</h3>
-                  <UKbd size="xs" class="ml-2">Alt+M</UKbd>
-                </div>
-                <p class="text-sm text-neutral-600 dark:text-neutral-400">分享精彩瞬间</p>
-              </div>
+        <UCard 
+          class="hover:shadow-lg active:scale-95 transition-all duration-200 cursor-pointer touch-manipulation" 
+          @click="navigateTo('/moments')"
+        >
+          <div class="flex items-center space-x-3 p-1">
+            <div class="w-12 h-12 bg-moment-100 dark:bg-moment-900 rounded-lg flex items-center justify-center flex-shrink-0">
+              <UIcon name="i-heroicons-photo" class="w-6 h-6 text-moment-600 dark:text-moment-400" />
             </div>
-          </UCard>
-        </UTooltip>
+            <div class="flex-1 min-w-0">
+              <h3 class="font-semibold text-neutral-900 dark:text-neutral-100 truncate">动态分享</h3>
+              <p class="text-sm text-neutral-600 dark:text-neutral-400 truncate">分享精彩瞬间</p>
+            </div>
+          </div>
+        </UCard>
 
         <!-- 地图探索 -->
-        <UTooltip text="探索周边热点和地点 (⌘M)" :content="{ side: 'bottom' }">
-          <UCard class="hover:shadow-lg transition-shadow cursor-pointer" @click="navigateTo('/map')">
-            <div class="flex items-center space-x-3">
-              <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
-                <UIcon name="i-heroicons-map" class="w-6 h-6 text-green-600 dark:text-green-400" />
-              </div>
-              <div class="flex-1">
-                <div class="flex items-center justify-between">
-                  <h3 class="font-semibold text-neutral-900 dark:text-neutral-100">地图探索</h3>
-                  <UKbd size="xs" class="ml-2">⌘M</UKbd>
-                </div>
-                <p class="text-sm text-neutral-600 dark:text-neutral-400">查看周边热点</p>
-              </div>
+        <UCard 
+          class="hover:shadow-lg active:scale-95 transition-all duration-200 cursor-pointer touch-manipulation" 
+          @click="navigateTo('/map')"
+        >
+          <div class="flex items-center space-x-3 p-1">
+            <div class="w-12 h-12 bg-location-100 dark:bg-location-900 rounded-lg flex items-center justify-center flex-shrink-0">
+              <UIcon name="i-heroicons-map" class="w-6 h-6 text-location-600 dark:text-location-400" />
             </div>
-          </UCard>
-        </UTooltip>
+            <div class="flex-1 min-w-0">
+              <h3 class="font-semibold text-neutral-900 dark:text-neutral-100 truncate">地图探索</h3>
+              <p class="text-sm text-neutral-600 dark:text-neutral-400 truncate">查看周边热点</p>
+            </div>
+          </div>
+        </UCard>
       </div>
 
       <!-- 最近活动 -->
       <div class="mb-8">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-xl font-semibold text-neutral-900 dark:text-neutral-100">最近活动</h2>
-          <UTooltip text="刷新活动 (⌘R)">
-            <UButton variant="ghost" size="sm" @click="refreshActivities" class="flex items-center gap-2">
-              <UIcon name="i-heroicons-arrow-path" class="w-4 h-4" :class="{ 'animate-spin': refreshing }" />
-              <UKbd size="xs">⌘R</UKbd>
-            </UButton>
-          </UTooltip>
+          <UButton variant="ghost" size="sm" @click="refreshActivities" class="flex items-center gap-2">
+            <UIcon name="i-heroicons-arrow-path" class="w-4 h-4" :class="{ 'animate-spin': refreshing }" />
+            刷新
+          </UButton>
         </div>
         
         <!-- 加载状态 -->
@@ -143,7 +133,7 @@
       </div>
 
       <!-- 未登录用户提示 - 现在通过 Modal 显示 -->
-    </UContainer>
+    </div>
 
     <!-- Modal 组件现在通过 useOverlay 管理 -->
   </div>
@@ -155,44 +145,47 @@ definePageMeta({
   title: "首页",
 });
 
-// 导入组件
-const WelcomeModal = defineAsyncComponent(() => import('~/components/WelcomeModal.vue'));
-const TempUserModal = defineAsyncComponent(() => import('~/components/TempUserModal.vue'));
-const LoginPromptModal = defineAsyncComponent(() => import('~/components/LoginPromptModal.vue'));
-
 const authStore = useAuthStore();
-const overlay = useOverlay();
-
-// 创建 Modal 实例
-const welcomeModal = overlay.create(WelcomeModal);
-const tempUserModal = overlay.create(TempUserModal);
-const loginPromptModal = overlay.create(LoginPromptModal);
+const { openWelcomeModal, openLoginPromptModal } = useModals();
 
 // 认证状态
-const displayedUser = ref<any | null>(null);
+import type { User } from '~/types';
+const displayedUser = ref<User | null>(null);
 onMounted(async () => { 
   displayedUser.value = authStore.user || null;
   
-  // 设置 Modal 事件处理
-  handleWelcomeModalEvents();
-  handleLoginPromptEvents();
-  
-  // 首次访问显示欢迎弹窗
+  // 智能化用户引导逻辑
   const hasVisited = localStorage.getItem('has-visited-hotspot');
+  const lastVisit = localStorage.getItem('last-visit-time');
+  const currentTime = Date.now();
+  
   if (!hasVisited && !displayedUser.value) {
-    // 延迟显示，确保页面加载完成
+    // 首次访问：延迟显示欢迎弹窗
     setTimeout(() => {
-      welcomeModal.open();
-    }, 500);
+      openWelcomeModal();
+    }, 1000); // 增加延迟，让用户先浏览页面
     localStorage.setItem('has-visited-hotspot', 'true');
+    localStorage.setItem('last-visit-time', currentTime.toString());
   } else if (!displayedUser.value) {
-    // 非首次访问的未登录用户，显示登录提示
+    // 非首次访问的未登录用户
     const neverShow = localStorage.getItem('never-show-login-prompt');
-    if (!neverShow) {
+    const lastPromptTime = localStorage.getItem('last-login-prompt-time');
+    
+    // 智能提示：24小时内不重复提示
+    const shouldShowPrompt = !neverShow && 
+      (!lastPromptTime || (currentTime - parseInt(lastPromptTime)) > 24 * 60 * 60 * 1000);
+    
+    if (shouldShowPrompt) {
       setTimeout(() => {
-        loginPromptModal.open();
-      }, 2000); // 2秒后显示，给用户时间浏览页面
+        openLoginPromptModal();
+        localStorage.setItem('last-login-prompt-time', currentTime.toString());
+      }, 3000); // 3秒后显示，给用户更多浏览时间
     }
+  }
+  
+  // 更新最后访问时间
+  if (lastVisit) {
+    localStorage.setItem('last-visit-time', currentTime.toString());
   }
   
   // 获取活动数据
@@ -234,7 +227,7 @@ const fetchActivities = async () => {
     activitiesLoading.value = true;
     activitiesError.value = null;
     
-    // TODO: 实现真实的活动API调用
+    // 注意：活动功能需要后端 API 支持，当前使用模拟数据
     // const response = await $fetch('/api/activities/recent');
     // activities.value = response.data;
     
@@ -256,42 +249,7 @@ const refreshActivities = async () => {
   refreshing.value = false;
 };
 
-// Modal 事件处理
-const handleWelcomeModalEvents = () => {
-  // 监听欢迎弹窗事件
-  welcomeModal.patch({
-    'onTemp-experience': () => {
-      tempUserModal.open();
-    },
-    onRegister: () => {
-      navigateTo('/auth');
-    },
-    onLogin: () => {
-      navigateTo('/auth');
-    },
-    onSkip: () => {
-      // 用户选择跳过，什么都不做
-    }
-  });
-};
-
-const handleLoginPromptEvents = () => {
-  // 监听登录提示弹窗事件
-  loginPromptModal.patch({
-    'onTemp-experience': () => {
-      tempUserModal.open();
-    },
-    onLogin: () => {
-      navigateTo('/auth');
-    },
-    onSkip: () => {
-      // 用户选择跳过，什么都不做
-    },
-    'onNever-show': () => {
-      // 用户选择不再显示，已在组件内处理 localStorage
-    }
-  });
-};
+// Modal 事件处理现在在 useModals composable 中管理
 
 // 快捷键管理
 const { registerShortcut } = useGlobalShortcuts()
@@ -333,7 +291,7 @@ onMounted(() => {
   registerShortcut({
     key: 'alt_u',
     description: '附近用户',
-    handler: () => navigateTo('/nearby-users'),
+    handler: () => navigateTo('/users/nearby'),
     category: '功能',
     visible: true
   })
@@ -354,44 +312,6 @@ onMounted(() => {
     visible: true
   })
 
-  // 设置快捷键监听
-  const dispose = defineShortcuts({
-    meta_h: {
-      usingInput: true,
-      handler: () => navigateTo('/'),
-    },
-    meta_m: {
-      usingInput: true,
-      handler: () => navigateTo('/map'),
-    },
-    meta_g: {
-      usingInput: true,
-      handler: () => navigateTo('/groups'),
-    },
-    meta_c: {
-      usingInput: true,
-      handler: () => navigateTo('/chat'),
-    },
-    alt_u: {
-      usingInput: true,
-      handler: () => navigateTo('/nearby-users'),
-    },
-    alt_m: {
-      usingInput: true,
-      handler: () => navigateTo('/moments'),
-    },
-    meta_r: {
-      usingInput: true,
-      handler: refreshActivities,
-    },
-  })
-
-  onUnmounted(() => {
-    try {
-      dispose()
-    } catch {
-      /* noop */
-    }
-  })
+  // 移除了与系统快捷键冲突的快捷键定义
 })
 </script>

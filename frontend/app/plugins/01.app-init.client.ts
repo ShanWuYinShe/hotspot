@@ -43,7 +43,7 @@ export default defineNuxtPlugin(async () => {
   settingsStore.initThemeWatcher();
   settingsStore.applyTheme();
 
-  // 5) 监听认证状态：同步设置 + 初始化/清理实时消息
+  // 5) 监听认证状态：同步设置 + 初始化/清理实时消息 + 位置管理
   watch(
     () => authStore.isAuthenticated,
     (isAuth, wasAuth) => {
@@ -62,9 +62,19 @@ export default defineNuxtPlugin(async () => {
             console.error("实时消息初始化失败:", e);
           }
         });
+
+        // 启动位置管理器
+        nextTick(() => {
+          try {
+            const locationManager = useLocationManager();
+            locationManager.startLocationTracking();
+          } catch (e) {
+            console.error("位置管理器启动失败:", e);
+          }
+        });
       }
 
-      // 退出登录 → 清理实时消息
+      // 退出登录 → 清理实时消息和位置管理
       if (!isAuth && wasAuth) {
         try {
           const rt = useRealTimeMessages();
@@ -77,12 +87,19 @@ export default defineNuxtPlugin(async () => {
         } catch {
           /* ignore */
         }
+
+        try {
+          const locationManager = useLocationManager();
+          locationManager.stopLocationTracking();
+        } catch {
+          /* ignore */
+        }
       }
     },
     { immediate: true },
   );
 
-  if (import.meta.dev) console.debug("✅ 应用初始化完成（认证/主题/实时）");
+  if (import.meta.dev) console.debug("✅ 应用初始化完成（认证/主题/实时/位置）");
 });
 
 

@@ -1,7 +1,6 @@
 /// 群组相关HTTP模型
 /// 
 /// 迁移自models/api/group.rs，适配新架构
-
 use super::{PaginatedResponse, LocationInfo, TimestampInfo, Pagination};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -39,7 +38,7 @@ pub struct GroupInfo {
     pub description: Option<String>,
     pub creator_id: JsSafeI64,
     pub creator_nickname: String,
-    pub member_count: JsSafeI64,
+    pub member_count: i32,  // 32位整数在JavaScript中是安全的
     pub distance: f64,
     #[serde(flatten)]
     pub location: LocationInfo,
@@ -142,7 +141,7 @@ pub type MyGroupsResponse = PaginatedResponse<GroupInfo>;
 /// 群组成员信息
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct GroupMember {
-    pub user_id: i64,
+    pub user_id: JsSafeI64,
     pub nickname: String,
     pub role: String,
     pub joined_at: DateTime<Utc>,
@@ -165,21 +164,21 @@ pub type GroupMembersResponse = PaginatedResponse<GroupMember>;
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct InviteUserRequest {
     pub group_id: String,
-    pub user_id: i64,
+    pub user_id: JsSafeI64,
 }
 
 /// 移除群组成员请求
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct RemoveMemberRequest {
     pub group_id: String,
-    pub user_id: i64,
+    pub user_id: JsSafeI64,
 }
 
 /// 更新成员角色请求
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct UpdateMemberRoleRequest {
     pub group_id: String,
-    pub user_id: i64,
+    pub user_id: JsSafeI64,
     pub role: String,
 }
 

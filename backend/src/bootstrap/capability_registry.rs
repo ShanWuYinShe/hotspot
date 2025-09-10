@@ -1,7 +1,6 @@
 /// 能力注册表
 /// 
 /// 统一管理和装配系统能力，支持编译期feature选择和运行时配置控制
-
 use std::collections::HashMap;
 use crate::domain::DomainResult;
 use serde::{Deserialize, Serialize};
@@ -83,6 +82,7 @@ impl Default for CapabilityRegistryConfig {
 
 /// 能力注册表
 #[derive(Debug)]
+#[derive(Clone)]
 pub struct CapabilityRegistry {
     capabilities: HashMap<CapabilityType, CapabilityMetadata>,
     config: CapabilityRegistryConfig,

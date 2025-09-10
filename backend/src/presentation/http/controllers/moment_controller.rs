@@ -1,4 +1,4 @@
-use super::{Controller, map_domain_error_to_http_response, ok_response, paginated_response};
+use super::{Controller, map_domain_error_to_http_response, map_application_error_to_http_response, ok_response, paginated_response};
 use crate::application::{CommandHandler, QueryHandler};
 use crate::presentation::http::auth::CurrentUser;
 /// 生活瞬间HTTP控制器
@@ -6,10 +6,11 @@ use crate::presentation::http::auth::CurrentUser;
 /// 实现hotspot.md中定义的8个生活瞬间API端点
 use axum::{Json, response::Response, extract::State};
 use serde::{Deserialize, Serialize};
+use crate::utils::JsSafeI64;
 
 // MomentApplicationService 通过泛型参数使用，不需要直接导入
 use crate::application::commands::{CreateMomentCommand, DeleteMomentCommand, LikeMomentCommand, UnlikeMomentCommand};
-use crate::application::queries::{SearchMomentsByTagsQuery, GetMomentByIdQuery, SearchMomentsByLocationQuery, GetUserMomentsQuery};
+use crate::application::queries::{SearchMomentsByTagsQuery, SearchMomentsByIdQuery, SearchMomentsByLocationQuery, SearchMomentsByUserIdQuery};
 
 #[derive(Clone)]
 pub struct MomentController<MomentAppService> {
@@ -21,7 +22,7 @@ where
     MomentAppService: CommandHandler<CreateMomentCommand, Result = crate::domain::Moment>
         + CommandHandler<DeleteMomentCommand, Result = ()>
         + QueryHandler<
-            GetUserMomentsQuery,
+            SearchMomentsByUserIdQuery,
             Result = crate::application::PaginatedResult<crate::domain::Moment>,
         > + QueryHandler<
             SearchMomentsByLocationQuery,
@@ -30,7 +31,7 @@ where
             SearchMomentsByTagsQuery,
             Result = crate::application::PaginatedResult<crate::domain::Moment>,
         > + QueryHandler<
-            GetMomentByIdQuery,
+            SearchMomentsByIdQuery,
             Result = Option<crate::domain::Moment>,
         > + CommandHandler<LikeMomentCommand, Result = ()>
         + CommandHandler<UnlikeMomentCommand, Result = ()> + Clone
@@ -56,9 +57,9 @@ where
             tags: req.tags,
             image_urls: req.image_urls,
         };
-        match controller.moment_service.handle_command(cmd).await {
+        match CommandHandler::<CreateMomentCommand>::handle(&controller.moment_service, cmd).await {
             Ok(m) => ok_response(m),
-            Err(e) => map_domain_error_to_http_response(e),
+            Err(e) => map_application_error_to_http_response(e),
         }
     }
 
@@ -68,18 +69,18 @@ where
         axum::extract::Extension(current_user): axum::extract::Extension<CurrentUser>,
         Json(req): Json<ListUserMomentsRequest>,
     ) -> Response {
-        let user_id = req.user_id.unwrap_or(current_user.user_id);
-        let q = GetUserMomentsQuery {
+        let user_id = req.user_id.and_then(|id| id.parse().ok()).unwrap_or(current_user.user_id);
+        let q = SearchMomentsByUserIdQuery {
             user_id,
             requester_id: current_user.user_id,
             pagination: crate::application::queries::PaginationQuery {
-                cursor: req.cursor,
-                limit: req.limit.map(|v| v as i32),
+                cursor: req.cursor.and_then(|c| c.parse().ok()),
+                limit: req.limit.map(|l| l as usize),
             },
         };
-        match controller.moment_service.handle_query(q).await {
+        match QueryHandler::<SearchMomentsByUserIdQuery>::handle(&controller.moment_service, q).await {
             Ok(result) => paginated_response(result.items, result.has_more, result.next_cursor),
-            Err(e) => map_domain_error_to_http_response(e),
+            Err(e) => map_application_error_to_http_response(e),
         }
     }
 
@@ -95,13 +96,13 @@ where
             radius_km: req.radius / 1000.0, // 转换米为公里
             requester_id: current_user.user_id,
             pagination: crate::application::queries::PaginationQuery {
-                cursor: req.cursor,
-                limit: req.limit.map(|v| v as i32),
+                cursor: req.cursor.and_then(|c| c.parse().ok()),
+                limit: req.limit.map(|l| l as usize),
             },
         };
-        match controller.moment_service.handle_query(q).await {
+        match QueryHandler::<SearchMomentsByLocationQuery>::handle(&controller.moment_service, q).await {
             Ok(result) => paginated_response(result.items, result.has_more, result.next_cursor),
-            Err(e) => map_domain_error_to_http_response(e),
+            Err(e) => map_application_error_to_http_response(e),
         }
     }
 
@@ -112,12 +113,12 @@ where
     ) -> Response {
         // 简单权限校验：瞬间作者才能删除
         let cmd = DeleteMomentCommand {
-            moment_id: req.moment_id,
+            moment_id: req.moment_id.value(),
             requester_id: current_user.user_id,
         };
-        match controller.moment_service.handle_command(cmd).await {
+        match CommandHandler::<DeleteMomentCommand>::handle(&controller.moment_service, cmd).await {
             Ok(_) => ok_response(serde_json::json!({"deleted": true})),
-            Err(e) => map_domain_error_to_http_response(e),
+            Err(e) => map_application_error_to_http_response(e),
         }
     }
 
@@ -131,12 +132,12 @@ where
             tags: request.tags,
             requester_id: current_user.user_id,
             pagination: crate::application::queries::PaginationQuery {
-                cursor: request.cursor,
-                limit: request.limit.map(|v| v as i32),
+                cursor: request.cursor.and_then(|c| c.parse().ok()),
+                limit: request.limit,
             },
         };
         
-        match controller.moment_service.handle_query(query).await {
+        match QueryHandler::<SearchMomentsByTagsQuery>::handle(&controller.moment_service, query).await {
             Ok(result) => paginated_response(result.items, result.has_more, result.next_cursor),
             Err(error) => map_domain_error_to_http_response(error),
         }
@@ -148,17 +149,15 @@ where
         axum::extract::Extension(current_user): axum::extract::Extension<CurrentUser>,
         Json(request): Json<MomentSearchByIdRequest>,
     ) -> Response {
-        let query = GetMomentByIdQuery {
-            moment_id: request.moment_id,
+        let query = SearchMomentsByIdQuery {
+            moment_id: request.moment_id.value(),
             requester_id: current_user.user_id,
         };
         
-        match controller.moment_service.handle_query(query).await {
+        match QueryHandler::<SearchMomentsByIdQuery>::handle(&controller.moment_service, query).await {
             Ok(Some(moment)) => ok_response(moment),
             Ok(None) => map_domain_error_to_http_response(
-                crate::domain::DomainError::Moment(crate::domain::MomentDomainError::MomentNotFound { 
-                    moment_id: request.moment_id 
-                })
+                crate::domain::DomainError::MomentNotFound
             ),
             Err(error) => map_domain_error_to_http_response(error),
         }
@@ -171,13 +170,13 @@ where
         Json(request): Json<LikeMomentRequest>,
     ) -> Response {
         let command = LikeMomentCommand {
-            moment_id: request.moment_id,
+            moment_id: request.moment_id.value(),
             user_id: current_user.user_id,
         };
         
-        match controller.moment_service.handle_command(command).await {
+        match CommandHandler::<LikeMomentCommand>::handle(&controller.moment_service, command).await {
             Ok(_) => ok_response(serde_json::json!({
-                "moment_id": request.moment_id,
+                "moment_id": request.moment_id.value(),
                 "liked": true
             })),
             Err(error) => map_domain_error_to_http_response(error),
@@ -191,13 +190,13 @@ where
         Json(request): Json<UnlikeMomentRequest>,
     ) -> Response {
         let command = UnlikeMomentCommand {
-            moment_id: request.moment_id,
+            moment_id: request.moment_id.value(),
             user_id: current_user.user_id,
         };
         
-        match controller.moment_service.handle_command(command).await {
+        match CommandHandler::<UnlikeMomentCommand>::handle(&controller.moment_service, command).await {
             Ok(_) => ok_response(serde_json::json!({
-                "moment_id": request.moment_id,
+                "moment_id": request.moment_id.value(),
                 "liked": false
             })),
             Err(error) => map_domain_error_to_http_response(error),
@@ -227,9 +226,9 @@ pub struct CreateMomentRequest {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ListUserMomentsRequest {
-    pub user_id: Option<i64>,
-    pub cursor: Option<i64>,
-    pub limit: Option<i64>,
+    pub user_id: Option<String>,
+    pub cursor: Option<String>,
+    pub limit: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -237,33 +236,33 @@ pub struct MomentSearchByLocationRequest {
     pub longitude: f64,
     pub latitude: f64,
     pub radius: f64, // 以米为单位
-    pub cursor: Option<i64>,
-    pub limit: Option<i64>,
+    pub cursor: Option<String>,
+    pub limit: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeleteMomentRequest {
-    pub moment_id: i64, // 注意：hotspot.md要求使用UUID，但当前实现使用i64
+    pub moment_id: JsSafeI64, // 注意：hotspot.md要求使用UUID，但当前实现使用i64
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchByTagsRequest {
     pub tags: Vec<String>, // 至少1个，最多10个
-    pub cursor: Option<i64>,
-    pub limit: Option<i64>,
+    pub cursor: Option<String>,
+    pub limit: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MomentSearchByIdRequest {
-    pub moment_id: i64, // 注意：hotspot.md要求使用UUID，但当前实现使用i64
+    pub moment_id: JsSafeI64, // 注意：hotspot.md要求使用UUID，但当前实现使用i64
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LikeMomentRequest {
-    pub moment_id: i64, // 注意：hotspot.md要求使用UUID，但当前实现使用i64
+    pub moment_id: JsSafeI64, // 注意：hotspot.md要求使用UUID，但当前实现使用i64
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UnlikeMomentRequest {
-    pub moment_id: i64, // 注意：hotspot.md要求使用UUID，但当前实现使用i64
+    pub moment_id: JsSafeI64, // 注意：hotspot.md要求使用UUID，但当前实现使用i64
 }

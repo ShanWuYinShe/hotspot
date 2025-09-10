@@ -24,7 +24,9 @@
     "settings": "设置",
     "profile": "我的资料",
     "create": "创建",
-    "search": "搜索"
+    "search": "搜索",
+    "languageSwitch": "语言切换",
+    "themeSwitch": "主题切换"
   },
   "common": {
     "user": "用户",

@@ -24,7 +24,33 @@
 - 特别注意检查依赖包是否被弃用或有替代方案，避免使用过时技术
 - 定期检查并更新项目依赖，保持与生态系统同步
 
-## 2. 项目架构规范
+## 2. 官方文档优先原则（强制）
+
+**核心原则**：
+- **文档优先验证**：使用任何第三方库、框架、组件前，必须先查阅官方文档确认正确用法
+- **零假设开发**：不得基于经验或猜测使用API，所有用法必须有官方文档支撑
+- **实时验证要求**：在编写代码时立即验证API的存在性和正确性
+
+**前端开发强制要求**：
+- **Nuxt UI v3 组件**：使用任何 UButton、UModal、UPopover、UDropdownMenu 等组件前，必须到 ui.nuxt.com 查阅官方文档
+  - 验证组件名称是否存在
+  - 确认所有 Props、Emits、Slots 的正确用法
+  - 理解组件的设计意图和最佳实践
+  - 特别注意插槽命名（如 UPopover 使用 `#content` 而非 `#panel`）
+- **Nuxt 框架 API**：使用 definePageMeta、useRoute、navigateTo、useFetch 等 API 前，必须验证最新用法
+- **Vue 3 API**：确认 Composition API、响应式 API 的正确使用方式
+- **第三方库**：任何 npm 包的使用都必须基于官方文档或 README
+
+**违规处理**：
+- **编译错误**：因未查阅文档导致的编译错误必须立即修复
+- **运行时错误**：因 API 误用导致的运行时错误视为严重质量问题
+- **代码审查**：代码审查时必须验证是否遵循了文档优先原则
+
+**文档查阅工具和资源**：
+- ui.nuxt.com、nuxt.com、vuejs.org、developer.mozilla.org
+- GitHub README、官方示例代码、Stack Overflow（仅作参考）
+
+## 3. 项目架构规范
 
 ### 前端目录结构规范
 - 组件放在 `components` 目录，按功能分类
@@ -43,7 +69,7 @@
 - **类型检查**：确保TypeScript类型检查通过
 - **依赖清理**：移除package.json中未使用的依赖包
 
-## 3. 命名规范
+## 4. 命名规范
 
 ### 组件命名规范
 - 组件文件使用 PascalCase 命名（如：`UserProfile.vue`）
@@ -57,7 +83,7 @@
 - 路由命名用 kebab-case（如：`user-profile`）
 - 布局通过 `layouts` 目录下文件定义
 
-## 4. 布局与样式规范
+## 5. 布局与样式规范
 
 ### Nuxt UI v3 使用规范
 - **本项目采用 Nuxt UI v3**：项目必须使用 Nuxt UI v3 版本及其配套生态
@@ -71,69 +97,78 @@
 - 组件样式优先使用 Tailwind CSS 类，必要时使用 `scoped` 样式
 - 公共样式和自定义样式放在 `assets/css` 目录下
 
-#### Nuxt UI v3 完整组件列表
+#### Nuxt UI v3 完整组件列表及官方文档路径
 
 **Element 组件**：
-- `UAlert` - 警告提示组件
-- `UAvatar` - 头像组件
-- `UAvatarGroup` - 头像组组件
-- `UBadge` - 徽章组件
-- `UButton` - 按钮组件
-- `UButtonGroup` - 按钮组组件
-- `UCalendar` - 日历组件
-- `UChip` - 芯片组件
-- `UCollapsible` - 折叠组件
-- `UIcon` - 图标组件
-- `UKbd` - 键盘按键组件
-- `UProgress` - 进度条组件
+- `UAlert` - 警告提示组件 - [文档](https://ui.nuxt.com/components/alert)
+- `UAvatar` - 头像组件 - [文档](https://ui.nuxt.com/components/avatar)
+- `UAvatarGroup` - 头像组组件 - [文档](https://ui.nuxt.com/components/avatar-group)
+- `UBadge` - 徽章组件 - [文档](https://ui.nuxt.com/components/badge)
+- `UButton` - 按钮组件 - [文档](https://ui.nuxt.com/components/button)
+- `UButtonGroup` - 按钮组组件 - [文档](https://ui.nuxt.com/components/button-group)
+- `UCalendar` - 日历组件 - [文档](https://ui.nuxt.com/components/calendar)
+- `UChip` - 芯片组件 - [文档](https://ui.nuxt.com/components/chip)
+- `UCollapsible` - 折叠组件 - [文档](https://ui.nuxt.com/components/collapsible)
+- `UIcon` - 图标组件 - [文档](https://ui.nuxt.com/components/icon)
+- `UKbd` - 键盘按键组件 - [文档](https://ui.nuxt.com/components/kbd)
+- `UProgress` - 进度条组件 - [文档](https://ui.nuxt.com/components/progress)
 
 **Form 组件**：
-- `UCheckbox` - 复选框组件
-- `UCheckboxGroup` - 复选框组组件
-- `UColorPicker` - 颜色选择器组件
-- `UFileUpload` - 文件上传组件（支持拖拽、多文件、预览等功能）
-- `UForm` - 表单组件（内置验证）
-- `UFormField` - 表单字段组件
-- `UInput` - 输入框组件
-- `UInputMenu` - 输入菜单组件
-- `UInputNumber` - 数字输入组件
-- `UInputTags` - 标签输入组件
-- `UPinInput` - PIN码输入组件
-- `URadioGroup` - 单选按钮组组件
-- `USelect` - 选择器组件
-- `USelectMenu` - 选择菜单组件
-- `USlider` - 滑块组件
-- `USwitch` - 开关组件
-- `UTextarea` - 文本域组件
+- `UCheckbox` - 复选框组件 - [文档](https://ui.nuxt.com/components/checkbox)
+- `UCheckboxGroup` - 复选框组组件 - [文档](https://ui.nuxt.com/components/checkbox-group)
+- `UColorPicker` - 颜色选择器组件 - [文档](https://ui.nuxt.com/components/color-picker)
+- `UFileUpload` - 文件上传组件（支持拖拽、多文件、预览等功能） - [文档](https://ui.nuxt.com/components/file-upload)
+- `UForm` - 表单组件（内置验证） - [文档](https://ui.nuxt.com/components/form)
+- `UFormField` - 表单字段组件 - [文档](https://ui.nuxt.com/components/form-field)
+- `UInput` - 输入框组件 - [文档](https://ui.nuxt.com/components/input)
+- `UInputMenu` - 输入菜单组件 - [文档](https://ui.nuxt.com/components/input-menu)
+- `UInputNumber` - 数字输入组件 - [文档](https://ui.nuxt.com/components/input-number)
+- `UInputTags` - 标签输入组件 - [文档](https://ui.nuxt.com/components/input-tags)
+- `UPinInput` - PIN码输入组件 - [文档](https://ui.nuxt.com/components/pin-input)
+- `URadioGroup` - 单选按钮组组件 - [文档](https://ui.nuxt.com/components/radio-group)
+- `USelect` - 选择器组件 - [文档](https://ui.nuxt.com/components/select)
+- `USelectMenu` - 选择菜单组件 - [文档](https://ui.nuxt.com/components/select-menu)
+- `USlider` - 滑块组件 - [文档](https://ui.nuxt.com/components/slider)
+- `USwitch` - 开关组件 - [文档](https://ui.nuxt.com/components/switch)
+- `UTextarea` - 文本域组件 - [文档](https://ui.nuxt.com/components/textarea)
 
 **Data 组件**：
-- `UAccordion` - 手风琴组件
-- `UCard` - 卡片组件
-- `UCarousel` - 轮播图组件
-- `UPagination` - 分页组件
-- `USeparator` - 分隔符组件
-- `USkeleton` - 骨架屏组件
-- `UStepper` - 步骤器组件
-- `UTable` - 表格组件
-- `UTabs` - 标签页组件
-- `UTimeline` - 时间线组件
-- `UTree` - 树形组件
+- `UAccordion` - 手风琴组件 - [文档](https://ui.nuxt.com/components/accordion)
+- `UCard` - 卡片组件 - [文档](https://ui.nuxt.com/components/card)
+- `UCarousel` - 轮播图组件 - [文档](https://ui.nuxt.com/components/carousel)
+- `UPagination` - 分页组件 - [文档](https://ui.nuxt.com/components/pagination)
+- `USeparator` - 分隔符组件 - [文档](https://ui.nuxt.com/components/separator)
+- `USkeleton` - 骨架屏组件 - [文档](https://ui.nuxt.com/components/skeleton)
+- `UStepper` - 步骤器组件 - [文档](https://ui.nuxt.com/components/stepper)
+- `UTable` - 表格组件 - [文档](https://ui.nuxt.com/components/table)
+- `UTabs` - 标签页组件 - [文档](https://ui.nuxt.com/components/tabs)
+- `UTimeline` - 时间线组件 - [文档](https://ui.nuxt.com/components/timeline)
+- `UTree` - 树形组件 - [文档](https://ui.nuxt.com/components/tree)
 
 **Navigation 组件**：
-- `UBreadcrumb` - 面包屑导航组件
-- `ULink` - 链接组件
-- `UNavigationMenu` - 导航菜单组件
-- `UCommandPalette` - 命令面板组件
+- `UBreadcrumb` - 面包屑导航组件 - [文档](https://ui.nuxt.com/components/breadcrumb)
+- `ULink` - 链接组件 - [文档](https://ui.nuxt.com/components/link)
+- `UNavigationMenu` - 导航菜单组件 - [文档](https://ui.nuxt.com/components/navigation-menu)
+- `UCommandPalette` - 命令面板组件 - [文档](https://ui.nuxt.com/components/command-palette)
 
 **Overlay 组件**：
-- `UModal` - 模态框组件
-- `UDrawer` - 抽屉组件
-- `UPopover` - 弹出框组件
-- `UTooltip` - 工具提示组件
-- `UToast` - 消息提示组件
-- `UContextMenu` - 右键菜单组件
-- `UDropdownMenu` - 下拉菜单组件
-- `USlideover` - 侧边栏组件
+- `UModal` - 模态框组件 - [文档](https://ui.nuxt.com/components/modal)
+- `UDrawer` - 抽屉组件 - [文档](https://ui.nuxt.com/components/drawer)
+- `UPopover` - 弹出框组件 - [文档](https://ui.nuxt.com/components/popover)
+- `UTooltip` - 工具提示组件 - [文档](https://ui.nuxt.com/components/tooltip)
+- `UToast` - 消息提示组件 - [文档](https://ui.nuxt.com/components/toast)
+- `UContextMenu` - 右键菜单组件 - [文档](https://ui.nuxt.com/components/context-menu)
+- `UDropdownMenu` - 下拉菜单组件 - [文档](https://ui.nuxt.com/components/dropdown-menu)
+- `USlideover` - 侧边栏组件 - [文档](https://ui.nuxt.com/components/slideover)
+
+**Layout 组件**：
+- `UApp` - 应用根组件 - [文档](https://ui.nuxt.com/components/app)
+- `UContainer` - 容器组件 - [文档](https://ui.nuxt.com/components/container)
+
+**Composables**：
+- `useOverlay` - 覆盖层管理 - [文档](https://ui.nuxt.com/composables/use-overlay)
+- `useToast` - 消息提示管理 - [文档](https://ui.nuxt.com/composables/use-toast)
+- `defineShortcuts` - 快捷键定义 - [文档](https://ui.nuxt.com/composables/define-shortcuts)
 
 #### Overlay组件使用规范
 - **组件分离原则**：模态框内容应该分离为独立的Vue组件，提高代码的可维护性和复用性
@@ -197,9 +232,6 @@ const handleConfirm = async () => {
 </script>
 ```
 
-**Layout 组件**：
-- `UApp` - 应用根组件
-- `UContainer` - 容器组件
 
 ### Nuxt UI v3 架构特性
 
@@ -248,21 +280,43 @@ const handleConfirm = async () => {
 ### Modal 和 Overlay 组件使用规范
 
 #### useOverlay 优先原则（强制）
-- **强制使用 useOverlay**：所有 Modal、Drawer、Popover 等覆盖层组件必须通过 `useOverlay` 管理，禁止直接在模板中使用 `<UModal>` 节点
+- **强制使用 useOverlay**：所有 Modal、Drawer、Popover、Slideover 等覆盖层组件必须通过 `useOverlay` 管理，禁止直接在模板中使用 `<UModal>`、`<UDrawer>`、`<UPopover>`、`<USlideover>` 节点
 - **程序化控制**：使用 `overlay.create()` 创建实例，通过 `modal.open()`、`modal.close()` 等方法控制
 - **组件化设计**：每个 Modal 内容应独立为组件，便于复用和维护
 - **生命周期管理**：利用 useOverlay 的自动生命周期管理，避免手动状态管理
+- **支持的组件类型**：UModal、UDrawer、UPopover、USlideover、UContextMenu、UDropdownMenu 等所有覆盖层组件都必须通过 useOverlay 管理
 
-#### Modal 使用最佳实践
+#### useOverlay 使用最佳实践
 ```typescript
-// ✅ 正确：使用 useOverlay 管理 Modal
+// ✅ 正确：使用 useOverlay 管理所有覆盖层组件
 const overlay = useOverlay()
+
+// Modal 示例
 const LoginModal = defineAsyncComponent(() => import('~/components/LoginModal.vue'))
 const loginModal = overlay.create(LoginModal)
 
-// 打开 Modal
+// Drawer 示例
+const NavigationDrawer = defineAsyncComponent(() => import('~/components/NavigationDrawer.vue'))
+const navDrawer = overlay.create(NavigationDrawer)
+
+// Popover 示例
+const UserPopover = defineAsyncComponent(() => import('~/components/UserPopover.vue'))
+const userPopover = overlay.create(UserPopover)
+
+// 打开覆盖层
 const openLogin = () => {
-  loginModal.open()
+  loginModal.open({ title: '登录' })
+}
+
+const openNavigation = () => {
+  navDrawer.open({ side: 'left' })
+}
+
+const openUserMenu = (event: Event) => {
+  userPopover.open({ 
+    target: event.target,
+    placement: 'bottom-end'
+  })
 }
 
 // 事件处理
@@ -277,12 +331,20 @@ loginModal.patch({
 ```
 
 ```vue
-<!-- ❌ 错误：直接在模板中使用 Modal -->
+<!-- ❌ 错误：直接在模板中使用覆盖层组件 -->
 <UModal v-model:open="showModal">
   <!-- 内容 -->
 </UModal>
 
-<!-- ✅ 正确：Modal 内容独立为组件 -->
+<UDrawer v-model:open="showDrawer">
+  <!-- 内容 -->
+</UDrawer>
+
+<UPopover v-model:open="showPopover">
+  <!-- 内容 -->
+</UPopover>
+
+<!-- ✅ 正确：覆盖层内容独立为组件，通过 useOverlay 管理 -->
 <!-- LoginModal.vue -->
 <template>
   <UModal v-model:open="isOpen" title="登录">
@@ -291,13 +353,32 @@ loginModal.patch({
     </template>
   </UModal>
 </template>
+
+<!-- NavigationDrawer.vue -->
+<template>
+  <UDrawer v-model:open="isOpen" :side="side">
+    <template #body>
+      <!-- 导航内容 -->
+    </template>
+  </UDrawer>
+</template>
+
+<!-- UserPopover.vue -->
+<template>
+  <UPopover v-model:open="isOpen" :target="target" :placement="placement">
+    <template #body>
+      <!-- 用户菜单内容 -->
+    </template>
+  </UPopover>
+</template>
 ```
 
 #### 用户提示和引导规范
-- **Modal 优先原则**：所有用户提示、引导、确认对话框都必须使用 Modal，禁止在页面内联显示
+- **useOverlay 优先原则**：所有用户提示、引导、确认对话框都必须通过 useOverlay 管理，禁止在页面内联显示或直接使用 UModal
 - **用户控制权**：用户必须能够主动关闭任何提示 Modal，提供"稍后再说"、"不再提醒"等选项
 - **智能显示**：根据用户行为和偏好智能显示提示，避免过度打扰
 - **渐进式引导**：首次访问显示欢迎 Modal，后续访问显示简化的登录提示 Modal
+- **程序化管理**：所有提示和引导都通过 useOverlay 的程序化接口管理，便于统一控制和状态管理
 
 #### Modal 设计原则
 - **内容组织**：使用 `#header`、`#body`、`#footer` 插槽合理组织内容
@@ -364,12 +445,17 @@ loginModal.patch({
   - 禁止因为"太简单"而不查文档直接使用
   - 禁止混用多种 UI 库的组件
   - 禁止通过复杂的 CSS 覆盖来"修复"组件，应寻找正确的配置方式
+  - **禁止直接使用覆盖层组件**：严禁在模板中直接使用 `<UModal>`、`<UDrawer>`、`<UPopover>`、`<USlideover>` 等，必须通过 useOverlay 管理
+  - **禁止手动状态管理**：禁止使用 `v-model:open` 等方式手动管理覆盖层状态，应使用 useOverlay 的程序化接口
 
 - **📋 代码审查检查点**：
   - 每个 Nuxt UI 组件的使用是否查阅了官方文档
   - 是否充分利用了组件的内置功能
   - 是否存在可以用 Nuxt UI 组件替代的原生实现
   - 组件配置是否遵循官方推荐的最佳实践
+  - **覆盖层组件检查**：是否所有 Modal、Drawer、Popover 等都通过 useOverlay 管理
+  - **状态管理检查**：是否避免了手动的 `v-model:open` 状态管理
+  - **程序化接口检查**：是否正确使用了 `overlay.create()` 和相关方法
 
 
 ### Nuxt UI v3 表单处理规范
@@ -399,7 +485,7 @@ loginModal.patch({
   - Phosphor Icons - 灵活多样的图标
 - **图标规范**：图标命名遵循 `i-[库名]-[图标名]` 格式，确保图标存在性验证
 
-## 5. 状态管理规范
+## 6. 状态管理规范
 - 使用 Pinia 进行状态管理
 - Store 命名应为具体领域名词（如：`auth`、`user`）
 - 每个 Store 单独一个文件，职责单一
@@ -459,7 +545,7 @@ loginModal.patch({
 #### 终端管理规范
 - **单终端操作**: 前端开发过程中尽量在同一终端中操作，避免开启多个终端
 - **服务器管理**: 开发者自行管理前端服务器启动，工具不主动启动服务器
-## 6. 代码质量管理规范
+## 7. 代码质量管理规范
 
 ### 代码风格规范
 - 使用 TypeScript 编写代码
@@ -537,7 +623,7 @@ loginModal.patch({
 - **错误状态处理**：API调用失败时要有合适的错误提示和重试机制
 - **加载状态管理**：所有异步操作都要有加载状态指示器
 
-## 7. 导入与组件使用规范
+## 8. 导入与组件使用规范
 
 ### 组件导入规范
 - **Nuxt UI v3 组件自动导入**：Nuxt UI v3 组件支持自动导入，无需手动引入
@@ -556,7 +642,7 @@ loginModal.patch({
   - 明确组件依赖关系，便于代码维护和重构
   - 确保导入的组件和特性是真实存在的
 
-## 8. API 调用规范
+## 9. API 调用规范
 - **使用 Nuxt 的 Fetch API 发起请求**：优先使用 `$fetch`、`useFetch`、`useLazyFetch` 等 Nuxt 3 原生 API
 - API 调用统一在 `services` 目录下封装，页面/组件禁止直接写 fetch/axios 请求
 - 接口基础 URL 通过环境变量配置
@@ -573,7 +659,7 @@ loginModal.patch({
   - 服务函数返回响应式数据和状态管理（loading、error、data）
   - 复杂服务可以组合多个基础 `use*` 函数实现
 
-## 9. 优雅错误处理系统规范
+## 10. 优雅错误处理系统规范
 
 ### 核心设计原则
 - **零侵入设计**：不破坏现有代码结构，完全向后兼容
@@ -764,7 +850,7 @@ errorHandler.setupGlobalErrorHandler(); // 在app.vue中调用
 - 不影响正常业务流程的性能
 - 轻量级设计，最小化内存占用
 
-## 10. 性能优化规范
+## 11. 性能优化规范
 - 组件合理拆分，避免过大组件
 - 列表使用虚拟滚动优化
 - 大数据操作用 Web Worker
@@ -773,7 +859,7 @@ errorHandler.setupGlobalErrorHandler(); // 在app.vue中调用
 - 删除不必要依赖，减少打包体积
 - 使用轻量级工具函数，避免引入大型库
 
-## 11. Nuxt 配置与框架规范
+## 12. Nuxt 配置与框架规范
 
 ### Nuxt 配置规范
 - 使用 `nuxt.config.ts` 进行全局配置
@@ -800,7 +886,7 @@ errorHandler.setupGlobalErrorHandler(); // 在app.vue中调用
 - 使用 `<script setup>` 和 `<template>` 添加自定义功能
 - 如需添加中间件或页面元数据，使用 `definePageMeta` 而非替换文件
 
-## 12. Nuxt 文件命名与使用规范
+## 13. Nuxt 文件命名与使用规范
 
 #### 适用目录
 - 仅允许在 Nuxt 约定的以下目录下使用 `.client.ts`、`.server.ts`、`.client.vue`、`.server.vue` 等后缀：
@@ -852,13 +938,13 @@ errorHandler.setupGlobalErrorHandler(); // 在app.vue中调用
   })
   ```
 
-## 13. 终端管理规范
+## 14. 终端管理规范
 - **单终端操作**: 前端开发过程中尽量在同一终端中操作，避免开启多个终端
 - **服务器管理**: 开发者自行管理前端服务器启动，工具不主动启动服务器
 
 ---
 
-## 14. 用户体验优化规范
+## 15. 用户体验优化规范
 
 ### 自动临时用户注册策略
 
@@ -943,7 +1029,7 @@ errorHandler.setupGlobalErrorHandler(); // 在app.vue中调用
 
 ---
 
-## 15. 样式规范
+## 16. 样式规范
 
 ### 游戏UI设计规范
 

@@ -64,7 +64,7 @@
 
                     <!-- 成员表格 -->
                     <div>
-                        <UTable :rows="pagedMembers" :columns="columns as any">
+                        <UTable :rows="pagedMembers" :columns="columns">
                             <template #member-cell="{ row }">
                                 <div class="flex items-center gap-3 px-1">
                                     <UAvatar :alt="(row as any).nickname">{{
@@ -145,132 +145,17 @@
             </div>
         </UCard>
 
-        <!-- 确认对话框：踢出成员 -->
-        <UModal v-model:open="showKick" title="确认操作">
-            <template #body>
-                <p class="text-gray-600 dark:text-gray-300">
-                    确定要将该成员移出群组吗？
-                </p>
-            </template>
-            <template #footer>
-                <div class="flex justify-end space-x-2">
-                    <UButton variant="ghost" @click="showKick = false"
-                        >取消</UButton
-                    >
-                    <UButton color="error" @click="doKick">确认踢出</UButton>
-                </div>
-            </template>
-        </UModal>
 
-        <!-- 确认对话框：转让群主 -->
-        <UModal v-model:open="showTransfer" title="确认操作">
-            <template #body>
-                <p class="text-gray-600 dark:text-gray-300">
-                    将该成员设为新群主？
-                </p>
-            </template>
-            <template #footer>
-                <div class="flex justify-end space-x-2">
-                    <UButton variant="ghost" @click="showTransfer = false"
-                        >取消</UButton
-                    >
-                    <UButton color="warning" @click="doTransfer"
-                        >确认转让</UButton
-                    >
-                </div>
-            </template>
-        </UModal>
 
-        <!-- 邀请成员模态框 -->
-        <UModal v-model:open="showInviteModal" title="邀请新成员">
-            <template #body>
-                <div class="space-y-4">
-                    <div>
-                        <UFormField label="搜索用户" name="search">
-                            <UInput
-                                v-model="inviteSearchQuery"
-                                placeholder="输入用户昵称或ID进行搜索"
-                                icon="i-heroicons-magnifying-glass"
-                                @input="searchUsers"
-                            />
-                        </UFormField>
-                    </div>
-
-                    <!-- 搜索结果 -->
-                    <div v-if="searchedUsers.length > 0" class="space-y-2">
-                        <h4 class="font-medium text-sm">搜索结果</h4>
-                        <UScrollArea class="h-60">
-                            <div class="space-y-2">
-                                <div
-                                    v-for="user in searchedUsers"
-                                    :key="user.user_id"
-                                    class="flex items-center justify-between p-3 bg-neutral-50 dark:bg-neutral-800 rounded-lg"
-                                >
-                                    <div class="flex items-center gap-3">
-                                        <UAvatar :alt="user.nickname">
-                                            {{ user.nickname?.charAt(0) }}
-                                        </UAvatar>
-                                        <div>
-                                            <div class="font-medium">
-                                                {{ user.nickname }}
-                                            </div>
-                                            <div
-                                                class="text-xs text-neutral-500"
-                                            >
-                                                ID: {{ user.user_id }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <UButton
-                                        size="sm"
-                                        @click="inviteUser(user.user_id)"
-                                        :loading="
-                                            invitingUserId === user.user_id
-                                        "
-                                    >
-                                        邀请
-                                    </UButton>
-                                </div>
-                            </div>
-                        </UScrollArea>
-                    </div>
-
-                    <!-- 快捷邀请选项 -->
-                    <div class="border-t pt-4">
-                        <h4 class="font-medium text-sm mb-3">快捷分享</h4>
-                        <div class="grid grid-cols-2 gap-3">
-                            <UButton variant="outline" @click="shareViaLink">
-                                <UIcon name="i-heroicons-link" class="mr-2" />
-                                复制邀请链接
-                            </UButton>
-                            <UButton variant="outline" @click="shareViaQR">
-                                <UIcon
-                                    name="i-heroicons-qr-code"
-                                    class="mr-2"
-                                />
-                                生成二维码
-                            </UButton>
-                        </div>
-                    </div>
-                </div>
-            </template>
-            <template #footer>
-                <div class="flex justify-end">
-                    <UButton variant="outline" @click="showInviteModal = false">
-                        关闭
-                    </UButton>
-                </div>
-            </template>
-        </UModal>
     </div>
 </template>
 
 <!-- 合并到同一个 <script setup> 内，保持单一 <template> 规则 -->
 <script setup lang="ts">
-import type { TableColumn } from "@nuxt/ui";
+// TableColumn 类型已在组件内部定义
 import type { GroupInfo } from "~/types";
-import { useUserService } from "~/services/user.service";
-import { useGroupService } from "~/services/group.service";
+import { useGroupService } from '~/services/group.service';
+import { useUserService } from '~/services/user.service';
 
 definePageMeta({ title: "群组管理", requiresAuth: true });
 
@@ -296,11 +181,19 @@ const members = ref<
     }>
 >([]);
 
+// 表格列定义
+interface TableColumn {
+    id: string;
+    key: string;
+    label: string;
+    class?: string;
+}
+
 // 表格列 & 分页
-const columns: TableColumn<any>[] = [
+const columns: TableColumn[] = [
     { id: "member", key: "member", label: "成员" },
     { id: "actions", key: "actions", label: "操作", class: "w-48 text-right" },
-] as any;
+];
 
 const page = ref(1);
 const pageSize = ref(10);
@@ -423,7 +316,7 @@ const searchUsers = async () => {
     }
     try {
         const resp = await userService.searchUsers(inviteSearchQuery.value);
-        searchedUsers.value = resp?.users || [];
+        searchedUsers.value = resp?.items || [];
     } catch (error: any) {
         console.error("搜索用户失败:", error);
         searchedUsers.value = [];

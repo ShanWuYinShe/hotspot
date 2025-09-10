@@ -3,7 +3,6 @@
  * 设置全局错误处理器
  */
 
-import { useErrorHandler } from "~/composables/useErrorHandler";
 
 export default defineNuxtPlugin(async () => {
   // 获取错误处理器
@@ -14,7 +13,7 @@ export default defineNuxtPlugin(async () => {
     console.warn("[ErrorHandler] Unhandled promise rejection:", event.reason);
 
     try {
-      await handleGlobalError(event.reason, 'GlobalErrorHandler', 'unhandledrejection');
+      await handleGlobalError(event.reason, 'GlobalErrorHandler');
       event.preventDefault(); // 阻止默认的错误处理
     } catch (handlerError) {
       console.error("[ErrorHandler] Error in error handler:", handlerError);
@@ -36,7 +35,7 @@ export default defineNuxtPlugin(async () => {
           lineno: event.lineno,
           colno: event.colno,
         };
-        await handleGlobalError(error, 'GlobalErrorHandler', 'javascript-error');
+        await handleGlobalError(error, 'GlobalErrorHandler');
       }
     } catch (handlerError) {
       console.error("[ErrorHandler] Error in error handler:", handlerError);
@@ -59,7 +58,7 @@ export default defineNuxtPlugin(async () => {
           href: (target as any).href,
         };
 
-        handleGlobalError(error, 'GlobalErrorHandler', 'resource-load-error');
+        handleGlobalError(error, 'GlobalErrorHandler');
       }
     },
     true,
@@ -70,7 +69,7 @@ export default defineNuxtPlugin(async () => {
     const error = new Error("网络连接已断开");
     error.name = "NetworkOfflineError";
     (error as any).status = 0;
-    handleGlobalError(error, 'GlobalErrorHandler', 'network-offline');
+    handleGlobalError(error, 'GlobalErrorHandler');
   });
 
   if (import.meta.dev) {

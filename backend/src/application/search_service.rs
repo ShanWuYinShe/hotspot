@@ -1,7 +1,6 @@
 /// 全局搜索应用服务
 /// 
 /// 提供统一的搜索功能，整合用户、群组、生活瞬间的搜索结果
-
 use std::sync::Arc;
 use async_trait::async_trait;
 use tracing::{info, warn, error};
@@ -10,8 +9,8 @@ use crate::{
     domain::{DomainResult, DomainError},
     ports::{UserRepositoryPort, GroupRepositoryPort, MomentRepositoryPort},
     application::queries::{
-        GlobalSearchQuery, SearchResult, SearchResultItem, SearchType,
-        UserSearchByNameQuery, GroupSearchByNameQuery, MomentSearchByLocationQuery,
+        SearchByGlobalQuery, SearchResult, SearchResultItem, SearchType,
+        SearchUsersByNameQuery, SearchGroupsByNameQuery, SearchMomentsByLocationQuery,
     },
 };
 
@@ -47,7 +46,7 @@ where
     }
     
     /// 执行全局搜索
-    pub async fn global_search(&self, query: GlobalSearchQuery) -> DomainResult<SearchResult> {
+    pub async fn global_search(&self, query: SearchByGlobalQuery) -> DomainResult<SearchResult> {
         let start_time = std::time::Instant::now();
         
         // 验证查询
@@ -136,8 +135,8 @@ where
     }
     
     /// 搜索用户
-    async fn search_users(&self, query: &GlobalSearchQuery) -> DomainResult<(Vec<SearchResultItem>, i64)> {
-        let user_query = UserSearchByNameQuery {
+    async fn search_users(&self, query: &SearchByGlobalQuery) -> DomainResult<(Vec<SearchResultItem>, i64)> {
+        let user_query = SearchUsersByNameQuery {
             query: query.query.clone(),
             pagination: query.pagination.clone(),
         };
@@ -175,8 +174,8 @@ where
     }
     
     /// 搜索群组
-    async fn search_groups(&self, query: &GlobalSearchQuery) -> DomainResult<(Vec<SearchResultItem>, i64)> {
-        let group_query = GroupSearchByNameQuery {
+    async fn search_groups(&self, query: &SearchByGlobalQuery) -> DomainResult<(Vec<SearchResultItem>, i64)> {
+        let group_query = SearchGroupsByNameQuery {
             query: query.query.clone(),
             pagination: query.pagination.clone(),
         };
@@ -218,10 +217,10 @@ where
     }
     
     /// 搜索生活瞬间
-    async fn search_moments(&self, query: &GlobalSearchQuery) -> DomainResult<(Vec<SearchResultItem>, i64)> {
+    async fn search_moments(&self, query: &SearchByGlobalQuery) -> DomainResult<(Vec<SearchResultItem>, i64)> {
         // 如果有位置信息，按位置搜索；否则搜索所有
         if let (Some(lat), Some(lng)) = (query.latitude, query.longitude) {
-            let moment_query = MomentSearchByLocationQuery {
+            let moment_query = SearchMomentsByLocationQuery {
                 latitude: lat,
                 longitude: lng,
                 radius_km: Some(50.0), // 默认50公里范围

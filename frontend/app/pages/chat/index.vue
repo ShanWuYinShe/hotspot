@@ -10,7 +10,21 @@
                 </div>
             </template>
 
-            <UTable :rows="pagedConversations" :columns="columns as any">
+            <!-- 加载状态 -->
+            <div v-if="loading" class="space-y-4">
+                <SkeletonLoader type="table-row" :count="5" />
+            </div>
+
+            <!-- 错误状态 -->
+            <div v-else-if="error" class="text-center py-8">
+                <UIcon name="i-heroicons-exclamation-triangle" class="w-12 h-12 mx-auto text-error-500 mb-4" />
+                <h3 class="text-lg font-semibold mb-2">加载失败</h3>
+                <p class="text-neutral-500 mb-4">{{ error }}</p>
+                <UButton @click="loadConversations" variant="outline">重试</UButton>
+            </div>
+
+            <!-- 会话列表 -->
+            <UTable v-else :rows="pagedConversations" :columns="columns">
                 <template #conversation_info-cell="{ row }">
                     <div class="flex items-center gap-3 min-w-0">
                         <UAvatar :alt="(row as any).name">{{
@@ -65,11 +79,23 @@
 </template>
 
 <script setup lang="ts">
-import type { TableColumn } from "@nuxt/ui";
-import EmptyMessages from "~/components/illustrations/EmptyMessages.vue";
-import { useMessageService } from "~/services/message.service";
+// TableColumn 类型已在组件内部定义
+import { defineAsyncComponent } from 'vue';
+import { useMessageService } from '~/services/message.service';
+import { formatTime } from '~/utils/formatters';
+
+// 懒加载组件
+const EmptyMessages = defineAsyncComponent(() => import("~/components/illustrations/EmptyMessages.vue"));
+const SkeletonLoader = defineAsyncComponent(() => import("~/components/SkeletonLoader.vue"));
+
+definePageMeta({ 
+    title: '消息', 
+    requiresAuth: true 
+});
 
 const conversations = ref<any[]>([]);
+const loading = ref(true);
+const error = ref<string | null>(null);
 const page = ref(1);
 const pageSize = ref(10);
 const pageCount = computed(() =>
@@ -91,24 +117,20 @@ const columns = [
     { id: "actions", key: "actions", label: "操作", class: "w-28 text-right" },
 ] as any;
 
-function formatTime(t?: string) {
-    if (!t) return "";
-    const d = new Date(t);
-    return d.toLocaleString();
-}
+// formatTime 函数已从统一工具函数导入
 
 async function openConversation(row: any) {
     try {
         if (row.type === "user") {
             await messageService.markAsRead(String(row.id), "user");
-            navigateTo(`/chat/user/${row.id}`);
+            navigateTo(`/chat/users/${row.id}`);
         } else {
             await messageService.markAsRead(String(row.id), "group");
-            navigateTo(`/chat/group/${row.id}`);
+            navigateTo(`/chat/groups/${row.id}`);
         }
     } catch (_) {
-        if (row.type === "user") navigateTo(`/chat/user/${row.id}`);
-        else navigateTo(`/chat/group/${row.id}`);
+        if (row.type === "user") navigateTo(`/chat/users/${row.id}`);
+        else navigateTo(`/chat/groups/${row.id}`);
     }
 }
 
@@ -127,12 +149,55 @@ function getActions(row: any) {
 // 显示汇总未读：进入页面即获取
 const messageService = useMessageService();
 const totalUnread = ref<number>(0);
-onMounted(async () => {
+const toast = useSmartToast();
+
+async function loadConversations() {
+    loading.value = true;
+    error.value = null;
+    
     try {
+        // 注意：会话列表功能需要后端 API 支持，当前使用模拟数据
+        // const response = await messageService.getConversations();
+        // conversations.value = response.items || [];
+        
+        // 模拟数据，实际应该从 API 获取
+        conversations.value = [
+            {
+                id: 1,
+                type: 'user',
+                name: '张三',
+                last_message: { content: '你好，最近怎么样？' },
+                last_message_time: new Date(Date.now() - 3600000).toISOString(),
+                unread_count: 2
+            },
+            {
+                id: 2,
+                type: 'group',
+                name: '工作群',
+                last_message: { content: '明天的会议改到下午3点' },
+                last_message_time: new Date(Date.now() - 7200000).toISOString(),
+                unread_count: 0
+            }
+        ];
+        
+        // 获取未读消息总数
         const resp = await messageService.getUserUnreadCount();
         totalUnread.value = Number(resp?.total_unread_count || 0);
-    } catch (_) {
-        totalUnread.value = 0;
+        
+    } catch (e: any) {
+        error.value = e?.message || '加载会话列表失败';
+        console.error('[ChatIndex] Failed to load conversations:', e);
+        toast.add({
+            title: '加载失败',
+            description: error.value || '未知错误',
+            color: 'error'
+        });
+    } finally {
+        loading.value = false;
     }
+}
+
+onMounted(() => {
+    loadConversations();
 });
 </script>

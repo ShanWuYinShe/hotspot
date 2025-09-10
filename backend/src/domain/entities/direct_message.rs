@@ -1,12 +1,27 @@
 /// 私聊消息领域实体
 /// 
 /// 表示两个用户之间的私聊消息
-
+/// 私聊消息领域实体
+/// 
+/// 功能职责：
+/// - 定义私聊消息的核心业务实体
+/// - 实现消息发送、接收、删除的业务规则
+/// - 管理消息状态和已读回执
+/// - 提供消息内容的验证和加密逻辑
+/// 
+/// 业务规则：
+/// - 消息必须属于特定的会话
+/// - 消息内容的类型和长度限制
+/// - 消息已读状态的维护和同步
+/// - 消息删除的权限和影响范围
+/// - 消息历史的保存和清理策略
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::Type;
 
 /// 直接消息类型枚举
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[sqlx(type_name = "message_type", rename_all = "lowercase")]
 pub enum DirectMessageType {
     /// 文本消息
     Text,

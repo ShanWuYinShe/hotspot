@@ -2,7 +2,6 @@
 /// 
 /// 迁移自传统ws模块，整合连接管理、房间管理、消息路由等功能
 /// 适配新的端口适配器架构
-
 use std::sync::Arc;
 use std::collections::{HashMap, HashSet};
 use axum::{
@@ -19,9 +18,12 @@ use chrono::Utc;
 use crate::domain::DomainResult;
 use crate::presentation::ws::{WSMessageType, WSError};
 use crate::ws::manager::WebSocketStats;
+use crate::presentation::http::middleware::metrics::{
+    record_ws_connection_opened, record_ws_connection_closed
+};
 use crate::ws::connection_manager::ConnectionStats;
 use crate::ws::room_manager::RoomStats;
-use crate::ports::UserRepositoryPort;
+use crate::ports::UserRepository;
 
 /// WebSocket连接信息
 #[derive(Debug, Clone)]
@@ -126,6 +128,8 @@ impl ConnectionManager {
         user_id: i64,
         sender: mpsc::UnboundedSender<WSMessageType>,
     ) -> DomainResult<()> {
+        // 记录连接打开监控
+        record_ws_connection_opened();
         let connection_info = ConnectionInfo {
             user_id,
             connection_id,
@@ -151,6 +155,9 @@ impl ConnectionManager {
     
     /// 移除连接
     pub async fn remove_connection(&self, connection_id: Uuid) -> DomainResult<()> {
+        // 记录连接关闭监控
+        record_ws_connection_closed();
+        
         let mut connections = self.connections.write().await;
         let mut user_connections = self.user_connections.write().await;
         let mut message_senders = self.message_senders.write().await;
@@ -374,13 +381,13 @@ impl RoomManager {
 /// WebSocket管理器
 /// 
 /// 整合连接管理、房间管理、消息路由等功能
-pub struct WebSocketManager<U: UserRepositoryPort> {
+pub struct WebSocketManager<U: UserRepository> {
     connection_manager: Arc<ConnectionManager>,
     room_manager: Arc<RoomManager>,
     user_repository: Arc<U>,
 }
 
-impl<U: UserRepositoryPort + 'static> WebSocketManager<U> {
+impl<U: UserRepository + 'static> WebSocketManager<U> {
     /// 创建新的WebSocket管理器
     pub fn new(user_repository: Arc<U>) -> Self {
         Self {
@@ -549,7 +556,7 @@ impl<U: UserRepositoryPort + 'static> WebSocketManager<U> {
         let user_id = Self::verify_jwt_token(&token)?;
         
         // 验证用户是否存在
-        match user_repository.find_by_id(user_id).await {
+        match user_repository.as_ref().find_user_profile(user_id).await {
             Ok(Some(_)) => Ok(user_id),
             Ok(None) => Err(WSError::AuthenticationFailed {
                 reason: "用户不存在".to_string(),
@@ -671,7 +678,7 @@ impl<U: UserRepositoryPort + 'static> WebSocketManager<U> {
     }
 }
 
-impl<U: UserRepositoryPort + 'static> Clone for WebSocketManager<U> {
+impl<U: UserRepository + 'static> Clone for WebSocketManager<U> {
     fn clone(&self) -> Self {
         Self {
             connection_manager: self.connection_manager.clone(),

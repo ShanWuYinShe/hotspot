@@ -5,14 +5,14 @@
             <template #header>
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
-                        <UButton 
-                            variant="ghost" 
-                            icon="i-heroicons-arrow-left" 
+                        <UButton
+                            variant="ghost"
+                            icon="i-heroicons-arrow-left"
                             @click="handleBack"
                         />
                         <h1 class="text-2xl font-bold">发布动态</h1>
                     </div>
-                    <UButton 
+                    <UButton
                         :disabled="!canPublish"
                         :loading="publishing"
                         @click="handlePublish"
@@ -27,15 +27,16 @@
             <div class="space-y-6">
                 <!-- 用户信息 -->
                 <div class="flex items-center gap-3">
-                    <UAvatar 
-                        :alt="authStore.user?.nickname"
-                        size="md"
-                    >
+                    <UAvatar :alt="authStore.user?.nickname" size="md">
                         {{ authStore.user?.nickname?.charAt(0) || "U" }}
                     </UAvatar>
                     <div>
-                        <div class="font-semibold">{{ authStore.user?.nickname }}</div>
-                        <div class="text-sm text-neutral-600 dark:text-neutral-400">
+                        <div class="font-semibold">
+                            {{ authStore.user?.nickname }}
+                        </div>
+                        <div
+                            class="text-sm text-neutral-600 dark:text-neutral-400"
+                        >
                             {{ formatCurrentTime() }}
                         </div>
                     </div>
@@ -62,9 +63,11 @@
                     <div class="flex items-center gap-2">
                         <UIcon name="i-heroicons-photo" class="w-5 h-5" />
                         <span class="font-medium">图片</span>
-                        <span class="text-sm text-neutral-500">（最多9张）</span>
+                        <span class="text-sm text-neutral-500"
+                            >（最多9张）</span
+                        >
                     </div>
-                    
+
                     <UFileUpload
                         v-model="uploadedFiles"
                         multiple
@@ -85,7 +88,7 @@
                         <UIcon name="i-heroicons-map-pin" class="w-5 h-5" />
                         <span class="font-medium">位置</span>
                     </div>
-                    
+
                     <div class="flex gap-3">
                         <UInput
                             v-model="locationName"
@@ -98,13 +101,20 @@
                             :loading="gettingLocation"
                             @click="getCurrentLocation"
                         >
-                            {{ coordinates ? '重新定位' : '获取位置' }}
+                            {{ coordinates ? "重新定位" : "获取位置" }}
                         </UButton>
                     </div>
-                    
-                    <div v-if="coordinates" class="text-sm text-neutral-600 dark:text-neutral-400">
-                        <UIcon name="i-heroicons-check-circle" class="w-4 h-4 inline mr-1 text-green-500" />
-                        位置已获取: {{ coordinates.latitude.toFixed(6) }}, {{ coordinates.longitude.toFixed(6) }}
+
+                    <div
+                        v-if="coordinates"
+                        class="text-sm text-neutral-600 dark:text-neutral-400"
+                    >
+                        <UIcon
+                            name="i-heroicons-check-circle"
+                            class="w-4 h-4 inline mr-1 text-green-500"
+                        />
+                        位置已获取: {{ coordinates.latitude.toFixed(6) }},
+                        {{ coordinates.longitude.toFixed(6) }}
                     </div>
                 </div>
 
@@ -114,9 +124,12 @@
                         <UIcon name="i-heroicons-hashtag" class="w-5 h-5" />
                         <span class="font-medium">标签</span>
                     </div>
-                    
+
                     <!-- 已选标签 -->
-                    <div v-if="selectedTags.length > 0" class="flex flex-wrap gap-2">
+                    <div
+                        v-if="selectedTags.length > 0"
+                        class="flex flex-wrap gap-2"
+                    >
                         <UBadge
                             v-for="tag in selectedTags"
                             :key="tag"
@@ -128,7 +141,7 @@
                             #{{ tag }}
                         </UBadge>
                     </div>
-                    
+
                     <!-- 添加标签 -->
                     <div class="flex gap-2">
                         <UInput
@@ -146,10 +159,13 @@
                             添加
                         </UButton>
                     </div>
-                    
+
                     <!-- 推荐标签 -->
                     <div class="space-y-2">
-                        <span class="text-sm text-neutral-600 dark:text-neutral-400">推荐标签:</span>
+                        <span
+                            class="text-sm text-neutral-600 dark:text-neutral-400"
+                            >推荐标签:</span
+                        >
                         <div class="flex flex-wrap gap-2">
                             <UButton
                                 v-for="tag in recommendTags"
@@ -171,71 +187,68 @@
                         <UIcon name="i-heroicons-eye" class="w-5 h-5" />
                         <span class="font-medium">隐私设置</span>
                     </div>
-                    
+
                     <!-- 使用 URadioGroup 替代原生 radio 输入 -->
                     <URadioGroup v-model="privacy" :options="privacyOptions" />
                 </div>
             </div>
         </UCard>
-        <!-- 离开确认 -->
-        <UModal v-model:open="showLeaveConfirm" title="确认离开">
-            <template #body>
-                <p class="text-neutral-600 dark:text-neutral-300">
-                    确定要离开吗？未保存的内容将丢失。
-                </p>
-            </template>
-            <template #footer>
-                <div class="flex justify-end gap-2">
-                    <UButton variant="ghost" @click="cancelLeave">取消</UButton>
-                    <UButton color="warning" @click="confirmLeave">确认离开</UButton>
-                </div>
-            </template>
-        </UModal>
+        <!-- 离开确认弹窗已改为 useModals.openConfirmModal 程序化管理 -->
     </div>
 </template>
 
 <script setup lang="ts">
-definePageMeta({ 
-    title: '发布动态', 
-    requiresAuth: true 
+definePageMeta({
+    title: "发布动态",
+    requiresAuth: true,
 });
 
 const authStore = useAuthStore();
 const router = useRouter();
 const momentsStore = useMomentsStore();
 const toast = useSmartToast();
+const { openConfirmModal } = useModals();
 const { coordinates, getCurrentPosition } = useGeolocation();
 
 // 表单状态
-const content = ref('');
-const locationName = ref('');
+const content = ref("");
+const locationName = ref("");
 const selectedTags = ref<string[]>([]);
-const newTag = ref('');
-const privacy = ref('public');
+const newTag = ref("");
+const privacy = ref("public");
 const publishing = ref(false);
 const gettingLocation = ref(false);
-const showLeaveConfirm = ref(false);
-const pendingNavigation = ref<any>(null);
+// leave confirm handled via useModals.openConfirmModal
+// pending navigation state no longer required
 
 // 隐私选项配置
 const privacyOptions = [
     {
-        value: 'public',
-        label: '公开',
-        description: '所有人都可以看到'
+        value: "public",
+        label: "公开",
+        description: "所有人都可以看到",
     },
     {
-        value: 'friends', 
-        label: '好友可见',
-        description: '仅好友可以看到'
-    }
+        value: "friends",
+        label: "好友可见",
+        description: "仅好友可以看到",
+    },
 ];
 
 // 图片相关
 const uploadedFiles = ref<File[]>([]);
 
 // 推荐标签
-const recommendTags = ref(['美食', '风景', '生活', '心情', '旅行', '摄影', '健身', '音乐']);
+const recommendTags = ref([
+    "美食",
+    "风景",
+    "生活",
+    "心情",
+    "旅行",
+    "摄影",
+    "健身",
+    "音乐",
+]);
 
 // 计算属性
 const canPublish = computed(() => {
@@ -254,14 +267,14 @@ async function getCurrentLocation() {
     try {
         await getCurrentPosition();
         toast.add({
-            title: '定位成功',
-            color: 'success'
+            title: "定位成功",
+            color: "success",
         });
     } catch (error) {
         toast.add({
-            title: '定位失败',
-            description: '请检查位置权限设置',
-            color: 'error'
+            title: "定位失败",
+            description: "请检查位置权限设置",
+            color: "error",
         });
     } finally {
         gettingLocation.value = false;
@@ -272,26 +285,26 @@ async function getCurrentLocation() {
 function addTag() {
     const tag = newTag.value.trim();
     if (!tag) return;
-    
+
     if (selectedTags.value.includes(tag)) {
         toast.add({
-            title: '标签已存在',
-            color: 'warning'
+            title: "标签已存在",
+            color: "warning",
         });
         return;
     }
-    
+
     if (selectedTags.value.length >= 10) {
         toast.add({
-            title: '标签过多',
-            description: '最多只能添加10个标签',
-            color: 'warning'
+            title: "标签过多",
+            description: "最多只能添加10个标签",
+            color: "warning",
         });
         return;
     }
-    
+
     selectedTags.value.push(tag);
-    newTag.value = '';
+    newTag.value = "";
 }
 
 function addRecommendTag(tag: string) {
@@ -310,12 +323,12 @@ function removeTag(tag: string) {
 // 发布处理
 async function handlePublish() {
     if (!canPublish.value || publishing.value) return;
-    
+
     publishing.value = true;
     try {
-        // TODO: 上传图片到服务器
+        // 注意：图片上传功能需要后端 API 支持，暂时使用占位逻辑
         // 这里应该先上传图片，获取图片URL
-        
+
         const payload = {
             description: content.value.trim(),
             latitude: coordinates.value?.latitude || 0,
@@ -323,21 +336,21 @@ async function handlePublish() {
             location_name: locationName.value.trim(),
             tags: selectedTags.value,
         };
-        
+
         await momentsStore.createMoment(payload);
-        
+
         toast.add({
-            title: '发布成功',
-            color: 'success'
+            title: "发布成功",
+            color: "success",
         });
-        
+
         // 返回动态广场
-        navigateTo('/moments');
+        navigateTo("/moments");
     } catch (e: any) {
         toast.add({
-            title: '发布失败',
+            title: "发布失败",
             description: e?.message,
-            color: 'error'
+            color: "error",
         });
     } finally {
         publishing.value = false;
@@ -347,49 +360,52 @@ async function handlePublish() {
 // 返回处理
 function handleBack() {
     if (content.value.trim() || uploadedFiles.value.length > 0) {
-        showLeaveConfirm.value = true;
+        openConfirmModal({
+            title: "确认离开",
+            message: "确定要离开吗？未保存的内容将丢失。",
+            confirmText: "确认离开",
+            cancelText: "取消",
+            confirmColor: "warning",
+            onConfirm: async () => { await navigateTo("/moments"); },
+        });
     } else {
-        navigateTo('/moments');
+        navigateTo("/moments");
     }
 }
 
 function formatCurrentTime() {
-    return new Date().toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+    return new Date().toLocaleString("zh-CN", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
     });
 }
 
 // 页面离开确认
 onBeforeRouteLeave((to) => {
     if (content.value.trim() || uploadedFiles.value.length > 0) {
-        pendingNavigation.value = to;
-        showLeaveConfirm.value = true;
+        openConfirmModal({
+            title: "确认离开",
+            message: "确定要离开吗？未保存的内容将丢失。",
+            confirmText: "确认离开",
+            cancelText: "取消",
+            confirmColor: "warning",
+            onConfirm: () => {
+                if (to?.fullPath) router.push(to.fullPath);
+                else if (typeof to === "string") router.push(to);
+                else navigateTo("/moments");
+            },
+        });
         return false;
     }
     return true;
 });
 
-function confirmLeave() {
-    showLeaveConfirm.value = false;
-    if (pendingNavigation.value) {
-        const to = pendingNavigation.value;
-        pendingNavigation.value = null;
-        if (to?.fullPath) router.push(to.fullPath);
-        else if (typeof to === 'string') router.push(to);
-        else navigateTo('/moments');
-    } else {
-        navigateTo('/moments');
-    }
-}
+// handled by useModals.openConfirmModal
 
-function cancelLeave() {
-    showLeaveConfirm.value = false;
-    pendingNavigation.value = null;
-}
+// handled by useModals.openConfirmModal
 
 // 清理文件引用
 onUnmounted(() => {
@@ -397,5 +413,3 @@ onUnmounted(() => {
     uploadedFiles.value = [];
 });
 </script>
-
-

@@ -1,22 +1,51 @@
 /// 用户HTTP控制器
 /// 
-/// 处理用户相关的HTTP请求，调用用户应用服务
-
+/// 功能职责：
+/// - 处理用户相关的 HTTP API 请求
+/// - 实现用户认证、注册、资料管理等接口
+/// - 管理用户位置更新和附近用户搜索
+/// - 提供用户设置和隐私控制功能
+/// - 协调用户应用服务和领域逻辑
+/// 
+/// API 端点：
+/// - POST /auth/register - 用户注册
+/// - POST /auth/login - 用户登录
+/// - POST /auth/create_temp - 创建临时用户
+/// - POST /auth/refresh_token - 刷新令牌
+/// - POST /user/search_users - 搜索用户
+/// - POST /user/find_nearby - 附近用户搜索
+/// - POST /user/update_location - 更新用户位置
+/// - POST /user/update_profile - 更新用户资料
+/// 
+/// 请求处理：
+/// - 参数验证和格式检查
+/// - JWT 令牌验证和用户身份识别
+/// - 业务逻辑调用和结果处理
+/// - 统一的错误处理和响应格式化
+/// - 分页查询和游标管理
 use axum::extract::State;
 use axum::response::Response;
 use axum::Json;
 use serde::{Deserialize, Serialize};
+use crate::utils::JsSafeI64;
 
 use crate::application::{
     CommandHandler, QueryHandler,
     RegisterUserCommand, CreateTempUserCommand, UpgradeUserCommand,
     UpdateUserLocationCommand, UpdateUserProfileCommand, SetUserPasswordCommand,
     DeleteUserAccountCommand,
-    GetUserByIdQuery, GetUserProfileQuery, FindNearbyUsersQuery,
-    SearchUsersByNicknameQuery, CheckPasswordStatusQuery,
+    GetUserByIdQuery, SearchUsersByIdQuery, SearchUsersByLocationQuery,
+    SearchUsersByNameQuery, CheckPasswordStatusQuery,
     PaginationQuery, UserApplicationServicePort,
+    UserRegistrationResult, UserCommandResult, LocationUpdateResult,
+    NearbyUser, UserSearchResult, PasswordStatus, PaginatedResult,
 };
 use super::{Controller, ok_response, created_response, map_domain_error_to_http_response, paginated_response};
+use crate::presentation::http::models::user::AuthResponse;
+use crate::presentation::http::validators::{
+    validate_login_id, validate_password, validate_nickname, validate_location_params,
+    ValidationError,
+};
 
 /// 用户控制器
 #[derive(Clone)]
@@ -26,18 +55,18 @@ pub struct UserController<UserAppService> {
 
 impl<UserAppService> UserController<UserAppService>
 where
-    UserAppService: CommandHandler<RegisterUserCommand, Result = crate::application::UserRegistrationResult> + 
-                   CommandHandler<CreateTempUserCommand, Result = crate::application::UserRegistrationResult> +
-                   CommandHandler<UpgradeUserCommand, Result = crate::application::UserCommandResult> +
-                   CommandHandler<UpdateUserLocationCommand, Result = crate::application::LocationUpdateResult> +
-                   CommandHandler<UpdateUserProfileCommand, Result = crate::application::UserCommandResult> +
-                   CommandHandler<SetUserPasswordCommand, Result = crate::application::UserCommandResult> +
-                   CommandHandler<DeleteUserAccountCommand, Result = crate::application::UserCommandResult> +
-                   QueryHandler<GetUserByIdQuery, Result = Option<crate::domain::User>> +
-                   QueryHandler<GetUserProfileQuery, Result = crate::application::UserProfile> +
-                   QueryHandler<FindNearbyUsersQuery, Result = crate::application::PaginatedResult<crate::application::NearbyUser>> +
-                   QueryHandler<SearchUsersByNicknameQuery, Result = crate::application::PaginatedResult<crate::application::UserSearchResult>> +
-                   QueryHandler<CheckPasswordStatusQuery, Result = crate::application::PasswordStatus> +
+    UserAppService: CommandHandler<RegisterUserCommand, Result = UserRegistrationResult> + 
+                   CommandHandler<CreateTempUserCommand, Result = UserRegistrationResult> +
+                   CommandHandler<UpgradeUserCommand, Result = UserCommandResult> +
+                   CommandHandler<UpdateUserLocationCommand, Result = LocationUpdateResult> +
+                   CommandHandler<UpdateUserProfileCommand, Result = UserCommandResult> +
+                   CommandHandler<SetUserPasswordCommand, Result = UserCommandResult> +
+                   CommandHandler<DeleteUserAccountCommand, Result = UserCommandResult> +
+                   QueryHandler<GetUserByIdQuery, Result = Option<crate::domain::UserProfile>> +
+                   QueryHandler<SearchUsersByIdQuery, Result = crate::application::queries::user_queries::UserProfileQuery> +
+                   QueryHandler<SearchUsersByLocationQuery, Result = PaginatedResult<NearbyUser>> +
+                   QueryHandler<SearchUsersByNameQuery, Result = PaginatedResult<UserSearchResult>> +
+                   QueryHandler<CheckPasswordStatusQuery, Result = PasswordStatus> +
                    UserApplicationServicePort +
                    Clone + Send + Sync + 'static,
 {
@@ -45,24 +74,54 @@ where
     pub fn new(user_service: UserAppService) -> Self {
         Self { user_service }
     }
+
+    /// 验证注册请求参数
+    fn validate_register_request(request: &RegisterRequest) -> Result<(), ValidationError> {
+        validate_login_id(&request.login_id)?;
+        validate_nickname(&request.nickname)?;
+        validate_password(&request.password)?;
+        Ok(())
+    }
+
+    /// 验证位置更新请求参数
+    #[allow(dead_code)]
+    fn validate_location_request(request: &UpdateLocationRequest) -> Result<(), ValidationError> {
+        validate_location_params(request.latitude, request.longitude)?;
+        if request.location_name.len() > 100 {
+            return Err(ValidationError::InvalidParameter {
+                message: "位置名称不能超过100个字符".to_string(),
+            });
+        }
+        Ok(())
+    }
     
     // ===== 认证API接口 (7个端点) =====
     
     /// 用户注册
     pub async fn register_user(
         State(controller): State<Self>,
-        Json(request): Json<RegisterUserRequest>,
+        Json(request): Json<RegisterRequest>,
     ) -> Response {
+        // 验证请求参数
+        if let Err(validation_error) = Self::validate_register_request(&request) {
+            return map_domain_error_to_http_response(
+                crate::domain::DomainError::BusinessRuleViolation {
+                    rule: validation_error.to_string(),
+                }
+            );
+        }
+
+        let login_id = request.login_id.clone();
         let command = RegisterUserCommand {
             login_id: request.login_id,
             nickname: Some(request.nickname),
             password: request.password,
         };
         
-        match controller.user_service.handle_command(command).await {
+        match controller.user_service.handle(command).await {
             Ok(result) => {
                 let (access_token, expires_at) = match crate::utils::jwt::generate_jwt_token(
-                    result.user.id,
+                    result.user.user_id,
                     &std::env::var("JWT_SECRET").unwrap_or_else(|_| "your-secret-key-change-in-production".to_string()),
                     3600, // 1小时
                     result.user.user_type == crate::domain::UserType::Temporary,
@@ -74,9 +133,8 @@ where
                 };
                 
                 let response = AuthResponse {
-                    user_id: result.user.id,
+                    user_id: JsSafeI64::new(result.user.user_id),
                     nickname: result.user.nickname.clone(),
-                    login_id: result.user.login_id.clone(),
                     access_token,
                     refresh_token: "refresh_token_placeholder".to_string(),
                     expires_at,
@@ -101,7 +159,7 @@ where
                 let is_temp = user.user_type == crate::domain::UserType::Temporary;
                 
                 let (access_token, refresh_token, expires_at, _refresh_expires_at) = 
-                    match crate::utils::jwt::generate_token_pair(user.id, &jwt_secret, is_temp) {
+                    match crate::utils::jwt::generate_token_pair(user.user_id, &jwt_secret, is_temp) {
                         Ok(tokens) => tokens,
                         Err(_) => return map_domain_error_to_http_response(
                             crate::domain::DomainError::BusinessRuleViolation { rule: "Token generation failed".to_string() }
@@ -109,9 +167,8 @@ where
                     };
                 
                 let response = AuthResponse {
-                    user_id: user.id,
+                    user_id: JsSafeI64::new(user.user_id),
                     nickname: user.nickname,
-                    login_id: user.login_id,
                     access_token,
                     refresh_token,
                     expires_at,
@@ -126,19 +183,19 @@ where
     /// 创建临时用户
     pub async fn create_temp_user(
         State(controller): State<Self>,
-        Json(request): Json<CreateTempUserRequest>,
+        Json(request): Json<CreateTempRequest>,
     ) -> Response {
         let command = CreateTempUserCommand {
             nickname: request.nickname,
         };
         
-        match controller.user_service.handle_command(command).await {
+        match controller.user_service.handle(command).await {
             Ok(result) => {
                 let jwt_secret = std::env::var("JWT_SECRET")
                     .unwrap_or_else(|_| "your-secret-key-change-in-production".to_string());
                 
                 let (access_token, refresh_token, expires_at, _refresh_expires_at) = 
-                    match crate::utils::jwt::generate_token_pair(result.user.id, &jwt_secret, true) {
+                    match crate::utils::jwt::generate_token_pair(result.user.user_id, &jwt_secret, true) {
                         Ok(tokens) => tokens,
                         Err(_) => return map_domain_error_to_http_response(
                             crate::domain::DomainError::BusinessRuleViolation { rule: "Token generation failed".to_string() }
@@ -146,9 +203,8 @@ where
                     };
                 
                 let response = AuthResponse {
-                    user_id: result.user.id,
+                    user_id: JsSafeI64::new(result.user.user_id),
                     nickname: result.user.nickname.clone(),
-                    login_id: result.user.login_id.clone(),
                     access_token,
                     refresh_token,
                     expires_at,
@@ -172,16 +228,16 @@ where
         let refresh_claims = match crate::utils::jwt::verify_refresh_token(&request.refresh_token, &jwt_secret) {
             Ok(claims) => claims,
             Err(_) => return map_domain_error_to_http_response(
-                crate::domain::DomainError::User(crate::domain::UserDomainError::InvalidCredentials)
+                crate::domain::DomainError::InvalidCredentials
             ),
         };
         
         // 验证用户是否存在
         let query = crate::application::GetUserByIdQuery { user_id: refresh_claims.sub };
-        let user = match controller.user_service.handle_query(query).await {
+        let user = match controller.user_service.handle(query).await {
             Ok(Some(user)) => user,
             Ok(None) => return map_domain_error_to_http_response(
-                crate::domain::DomainError::User(crate::domain::UserDomainError::UserNotFound { user_id: refresh_claims.sub })
+                crate::domain::DomainError::UserNotFound
             ),
             Err(error) => return map_domain_error_to_http_response(error),
         };
@@ -189,7 +245,7 @@ where
         // 生成新的token对
         let is_temp = user.user_type == crate::domain::UserType::Temporary;
         let (access_token, refresh_token, expires_at, _refresh_expires_at) = 
-            match crate::utils::jwt::generate_token_pair(user.id, &jwt_secret, is_temp) {
+            match crate::utils::jwt::generate_token_pair(user.user_id, &jwt_secret, is_temp) {
                 Ok(tokens) => tokens,
                 Err(_) => return map_domain_error_to_http_response(
                     crate::domain::DomainError::BusinessRuleViolation { rule: "Token generation failed".to_string() }
@@ -197,9 +253,8 @@ where
             };
         
         let response = AuthResponse {
-            user_id: user.id,
+            user_id: JsSafeI64::new(user.user_id),
             nickname: user.nickname,
-            login_id: user.login_id,
             access_token,
             refresh_token,
             expires_at,
@@ -215,14 +270,14 @@ where
     ) -> Response {
         let query = GetUserByIdQuery { user_id: current_user.user_id };
         
-        match controller.user_service.handle_query(query).await {
+        match controller.user_service.handle(query).await {
             Ok(Some(user)) => {
                 let jwt_secret = std::env::var("JWT_SECRET")
                     .unwrap_or_else(|_| "your-secret-key-change-in-production".to_string());
                 let is_temp = user.user_type == crate::domain::UserType::Temporary;
                 
                 let (access_token, refresh_token, expires_at, _refresh_expires_at) = 
-                    match crate::utils::jwt::generate_token_pair(user.id, &jwt_secret, is_temp) {
+                    match crate::utils::jwt::generate_token_pair(user.user_id, &jwt_secret, is_temp) {
                         Ok(tokens) => tokens,
                         Err(_) => return map_domain_error_to_http_response(
                             crate::domain::DomainError::BusinessRuleViolation { rule: "Token generation failed".to_string() }
@@ -230,9 +285,8 @@ where
                     };
                 
                 let response = AuthResponse {
-                    user_id: user.id,
+                    user_id: JsSafeI64::new(user.user_id),
                     nickname: user.nickname,
-                    login_id: user.login_id,
                     access_token,
                     refresh_token,
                     expires_at,
@@ -241,7 +295,7 @@ where
                 ok_response(response)
             }
             Ok(None) => map_domain_error_to_http_response(
-                crate::domain::DomainError::User(crate::domain::UserDomainError::UserNotFound { user_id: current_user.user_id })
+                crate::domain::DomainError::UserNotFound
             ),
             Err(error) => map_domain_error_to_http_response(error),
         }
@@ -258,7 +312,7 @@ where
             password: request.new_password,
         };
         
-        match controller.user_service.handle_command(command).await {
+        match controller.user_service.handle(command).await {
             Ok(_result) => ok_response(serde_json::json!({"success": true, "message": "密码设置成功"})),
             Err(error) => map_domain_error_to_http_response(error),
         }
@@ -271,7 +325,7 @@ where
     ) -> Response {
         let query = CheckPasswordStatusQuery { user_id: current_user.user_id };
         
-        match controller.user_service.handle_query(query).await {
+        match controller.user_service.handle(query).await {
             Ok(status) => ok_response(PasswordStatusResult { has_password: status.has_password }),
             Err(error) => map_domain_error_to_http_response(error),
         }
@@ -285,16 +339,16 @@ where
         axum::extract::Extension(current_user): axum::extract::Extension<crate::presentation::http::auth::CurrentUser>,
         Json(request): Json<SearchByNameRequest>,
     ) -> Response {
-        let query = SearchUsersByNicknameQuery {
+        let query = SearchUsersByNameQuery {
             keyword: request.query,
             requester_id: current_user.user_id,
             pagination: PaginationQuery {
-                cursor: request.cursor,
-                limit: request.limit.map(|v| v as i32),
+                cursor: request.cursor.and_then(|c| c.parse().ok()),
+                limit: request.limit,
             },
         };
         
-        match controller.user_service.handle_query(query).await {
+        match controller.user_service.handle(query).await {
             Ok(result) => paginated_response(result.items, result.has_more, result.next_cursor),
             Err(error) => map_domain_error_to_http_response(error),
         }
@@ -306,12 +360,19 @@ where
         axum::extract::Extension(current_user): axum::extract::Extension<crate::presentation::http::auth::CurrentUser>,
         Json(request): Json<SearchByIdRequest>,
     ) -> Response {
-        let query = GetUserProfileQuery {
-            user_id: request.user_id,
+        let user_id = match request.user_id.parse::<i64>() {
+            Ok(id) => id,
+            Err(_) => return map_domain_error_to_http_response(crate::domain::DomainError::BusinessRuleViolation { 
+                rule: "Invalid user_id format".to_string() 
+            }),
+        };
+        
+        let query = SearchUsersByIdQuery {
+            user_id,
             requester_id: current_user.user_id,
         };
         
-        match controller.user_service.handle_query(query).await {
+        match controller.user_service.handle(query).await {
             Ok(profile) => ok_response(profile),
             Err(error) => map_domain_error_to_http_response(error),
         }
@@ -323,18 +384,18 @@ where
         axum::extract::Extension(current_user): axum::extract::Extension<crate::presentation::http::auth::CurrentUser>,
         Json(request): Json<SearchByLocationRequest>,
     ) -> Response {
-        let query = FindNearbyUsersQuery {
+        let query = SearchUsersByLocationQuery {
             user_id: current_user.user_id,
             latitude: request.latitude,
             longitude: request.longitude,
             radius_km: Some(request.radius / 1000.0), // 转换米到公里
             pagination: PaginationQuery {
-                cursor: request.cursor,
-                limit: request.limit.map(|v| v as i32),
+                cursor: request.cursor.and_then(|c| c.parse().ok()),
+                limit: request.limit,
             },
         };
         
-        match controller.user_service.handle_query(query).await {
+        match controller.user_service.handle(query).await {
             Ok(result) => paginated_response(result.items, result.has_more, result.next_cursor),
             Err(error) => map_domain_error_to_http_response(error),
         }
@@ -350,10 +411,10 @@ where
             user_id: current_user.user_id,
             latitude: request.latitude,
             longitude: request.longitude,
-            address: Some(request.location_name.unwrap_or_default()),
+            address: Some(request.location_name),
         };
         
-        match controller.user_service.handle_command(command).await {
+        match controller.user_service.handle(command).await {
             Ok(_) => ok_response(serde_json::json!({"success": true})),
             Err(error) => map_domain_error_to_http_response(error),
         }
@@ -367,11 +428,11 @@ where
     ) -> Response {
         let command = UpdateUserProfileCommand {
             user_id: current_user.user_id,
-            nickname: request.nickname.clone(),
+            nickname: Some(request.nickname.clone()),
         };
         
-        match controller.user_service.handle_command(command).await {
-            Ok(_) => ok_response(serde_json::json!({"nickname": request.nickname.unwrap_or_default()})),
+        match controller.user_service.handle(command).await {
+            Ok(_) => ok_response(serde_json::json!({"nickname": request.nickname})),
             Err(error) => map_domain_error_to_http_response(error),
         }
     }
@@ -388,14 +449,14 @@ where
             password: request.password,
         };
         
-        match controller.user_service.handle_command(command).await {
+        match controller.user_service.handle(command).await {
             Ok(_result) => {
                 // 获取升级后的用户信息
                 let query = GetUserByIdQuery { user_id: current_user.user_id };
-                let updated_user = match controller.user_service.handle_query(query).await {
+                let updated_user = match controller.user_service.handle(query).await {
                     Ok(Some(user)) => user,
                     Ok(None) => return map_domain_error_to_http_response(
-                        crate::domain::DomainError::User(crate::domain::UserDomainError::UserNotFound { user_id: current_user.user_id })
+                        crate::domain::DomainError::UserNotFound
                     ),
                     Err(error) => return map_domain_error_to_http_response(error),
                 };
@@ -414,9 +475,8 @@ where
                 };
                 
                 let response = AuthResponse {
-                    user_id: current_user.user_id,
+                    user_id: JsSafeI64::new(current_user.user_id),
                     nickname: updated_user.nickname,
-                    login_id: Some(request.login_id),
                     access_token,
                     refresh_token: "refresh_token_placeholder".to_string(),
                     expires_at,
@@ -487,7 +547,7 @@ where
             requester_id: current_user.user_id,
         };
         
-        match controller.user_service.handle_command(command).await {
+        match controller.user_service.handle(command).await {
             Ok(_result) => ok_response(serde_json::json!({"success": true, "message": "账户删除成功"})),
             Err(error) => map_domain_error_to_http_response(error),
         }
@@ -513,14 +573,14 @@ pub struct LoginRequest {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct RegisterUserRequest {
+pub struct RegisterRequest {
     pub login_id: String,
     pub nickname: String,
     pub password: String,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct CreateTempUserRequest {
+pub struct CreateTempRequest {
     pub nickname: Option<String>,
 }
 
@@ -538,15 +598,13 @@ pub struct SetPasswordRequest {
 #[derive(Debug, Deserialize)]
 pub struct SearchByNameRequest {
     pub query: String,
-    pub cursor: Option<i64>,
-    pub limit: Option<i64>,
-    pub requester_id: Option<i64>,
+    pub cursor: Option<String>,
+    pub limit: Option<i32>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct SearchByIdRequest {
-    pub user_id: i64,
-    pub requester_id: Option<i64>,
+    pub user_id: String,  // 前端发送字符串格式的64位整数
 }
 
 #[derive(Debug, Deserialize)]
@@ -554,21 +612,20 @@ pub struct SearchByLocationRequest {
     pub latitude: f64,
     pub longitude: f64,
     pub radius: f64, // 单位：米
-    pub cursor: Option<i64>,
-    pub limit: Option<i64>,
-    pub requester_id: Option<i64>,
+    pub cursor: Option<String>,
+    pub limit: Option<i32>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct UpdateLocationRequest {
     pub latitude: f64,
     pub longitude: f64,
-    pub location_name: Option<String>,
+    pub location_name: String,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct UpdateProfileRequest {
-    pub nickname: Option<String>,
+    pub nickname: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -594,16 +651,6 @@ pub struct UpdateSettingsRequest {
 
 // ===== 响应数据结构 =====
 
-#[derive(Debug, Serialize)]
-pub struct AuthResponse {
-    pub user_id: i64,
-    pub nickname: String,
-    pub login_id: Option<String>,
-    pub access_token: String,
-    pub refresh_token: String,
-    pub expires_at: chrono::DateTime<chrono::Utc>,
-    pub is_temp: Option<bool>,
-}
 
 #[derive(Debug, Serialize)]
 pub struct PasswordStatusResult {

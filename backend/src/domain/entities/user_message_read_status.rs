@@ -1,7 +1,6 @@
 /// 用户消息已读状态领域实体
 /// 
 /// 记录每个用户在每个会话/群组中最后已读的消息位置
-
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 

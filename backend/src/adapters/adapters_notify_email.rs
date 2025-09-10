@@ -1,7 +1,6 @@
 /// 邮件通知传输适配器
 /// 
 /// 基于SMTP的邮件通知发送实现，支持HTML模板和异步发送
-
 use async_trait::async_trait;
 use lettre::{
     AsyncSmtpTransport, AsyncTransport, Tokio1Executor,

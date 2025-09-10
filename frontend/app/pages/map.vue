@@ -1,76 +1,33 @@
 <template>
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         <div class="mb-8 sm:mb-10">
-            <h1 class="text-3xl font-bold text-neutral-900 mb-1">地图</h1>
+            <h1 class="text-2xl font-bold text-neutral-900 dark:text-neutral-100 mb-1">地图</h1>
             <p class="text-neutral-600 dark:text-neutral-300">发现附近的用户、群组和动态</p>
         </div>
 
         <!-- 筛选标签页 -->
-        <div class="mb-6">
-            <div class="flex flex-wrap gap-2">
-                <UButton 
-                    variant="ghost" 
-                    size="sm"
-                    :class="{ 'bg-primary/10 text-primary': activeFilters.includes('users') }"
-                    @click="toggleFilter('users')"
-                >
-                    <UIcon name="i-heroicons-users" class="w-4 h-4 mr-1" />
-                    用户 ({{ nearbyUsers.length }})
-                </UButton>
-                <UButton 
-                    variant="ghost" 
-                    size="sm"
-                    :class="{ 'bg-primary/10 text-primary': activeFilters.includes('groups') }"
-                    @click="toggleFilter('groups')"
-                >
-                    <UIcon name="i-heroicons-user-group" class="w-4 h-4 mr-1" />
-                    群组 ({{ nearbyGroups.length }})
-                </UButton>
-                <UButton 
-                    variant="ghost" 
-                    size="sm"
-                    :class="{ 'bg-primary/10 text-primary': activeFilters.includes('moments') }"
-                    @click="toggleFilter('moments')"
-                >
-                    <UIcon name="i-heroicons-photo" class="w-4 h-4 mr-1" />
-                    动态 ({{ nearbyMoments.length }})
-                </UButton>
-            </div>
-        </div>
+        <MapFilters 
+            :active-filters="activeFilters"
+            :user-count="nearbyUsers.length"
+            :group-count="nearbyGroups.length"
+            :moment-count="nearbyMoments.length"
+            @toggle-filter="toggleFilter"
+        />
 
-        <!-- 地图容器（SSR/CSR统一渲染，onMounted 初始化真实地图） -->
-        <UCard class="h-96 mb-6 overflow-hidden" aria-label="地图容器">
-            <div
-                v-if="!amapEnabled"
-                class="h-full flex items-center justify-center"
-            >
-                <EmptyState
-                    icon="i-heroicons-map"
-                    title="地图未启用"
-                    description="未检测到高德地图 Key，请在环境变量中配置 NUXT_PUBLIC_AMAP_KEY 后刷新。"
-                >
-                    <template #illustration>
-                        <EmptyNearby size="lg" />
-                    </template>
-                </EmptyState>
-            </div>
-            <div v-else ref="mapEl" class="h-full w-full"></div>
-        </UCard>
+        <!-- 地图容器 -->
+        <MapContainer 
+            :amap-enabled="amapEnabled"
+            ref="mapContainerRef"
+        />
 
         <!-- 操作按钮与状态提示 -->
-        <div class="flex flex-wrap items-center gap-3 mb-6">
-            <UButton size="lg" :loading="isLoading" @click="refreshLocation">
-                <UIcon name="i-heroicons-arrow-path" class="w-4 h-4 mr-2" />
-                刷新位置
-            </UButton>
-            <UButton size="lg" variant="outline" @click="toggleLocationSharing">
-                <UIcon name="i-heroicons-map-pin" class="w-4 h-4 mr-2" />
-                {{ isLocationSharing ? "关闭共享" : "开启共享" }}
-            </UButton>
-            <UAlert v-if="permissionDenied" color="warning" variant="soft" class="text-sm">
-                已拒绝位置权限，请在浏览器地址栏位置图标中重新授权
-            </UAlert>
-        </div>
+        <MapControls 
+            :is-loading="isLoading"
+            :is-location-sharing="isLocationSharing"
+            :permission-denied="permissionDenied"
+            @refresh-location="refreshLocation"
+            @toggle-location-sharing="toggleLocationSharing"
+        />
 
         <!-- 内容列表区域 -->
         <UCard>
@@ -287,13 +244,15 @@ import { defineAsyncComponent } from 'vue'
 definePageMeta({ title: "地图", requiresAuth: true });
 
 import { DEFAULTS as defaults } from "~/config/defaults";
-import { useUserService } from "~/services/user.service";
 import type { UserInfo, GroupInfo, MomentInfo } from "~/types";
+import type { Coordinates } from "~/composables/useGeolocation.client";
 const EmptyNearby = defineAsyncComponent(() => import("~/components/illustrations/EmptyNearby.vue"));
 
 // stores & services
 const groupsStore = useGroupsStore();
 const momentsStore = useMomentsStore();
+import { useUserService } from '~/services/user.service';
+
 const userService = useUserService();
 
 // geolocation & permissions
@@ -303,24 +262,31 @@ const {
     reverseGeocode,
     formatDistance,
     watchPosition,
-    clearWatch,
+    clearWatch: clearGeolocationWatch,
 } = useGeolocation();
 const { checkGeolocation, requestGeolocation } = usePermissions();
 
 // UI state
 const toast = useSmartToast();
-const isLoading = ref(false);
-const mapEl = ref<HTMLDivElement | null>(null);
+const mapContainerRef = ref();
 let map: any = null;
 let markers: any[] = [];
 const isLocationSharing = ref(false);
 const permissionDenied = ref(false);
-const loadingUsers = ref(false);
-const loadingMoreUsers = ref(false);
-const loadingGroups = ref(false);
-const loadingMoreGroups = ref(false);
-const loadingMoments = ref(false);
-const loadingMoreMoments = ref(false);
+
+// 使用组合式函数管理加载状态
+const {
+    isLoading,
+    loadingUsers,
+    loadingMoreUsers,
+    loadingGroups,
+    loadingMoreGroups,
+    loadingMoments,
+    loadingMoreMoments,
+    getCurrentTabLoading,
+    setTabLoading,
+    setTabLoadingMore
+} = useMapLoadingStates();
 
 // 筛选状态
 const activeFilters = ref<('users' | 'groups' | 'moments')[]>(['users']);
@@ -333,7 +299,8 @@ const config = useRuntimeConfig();
 const amapEnabled = computed(() => !!config.public.amapKey);
 
 async function ensureMap() {
-    if (!amapEnabled.value || !mapEl.value) return;
+    const mapEl = mapContainerRef.value?.mapEl;
+    if (!amapEnabled.value || !mapEl) return;
     if (map) return;
     // 动态加载 AMap JS SDK（不引入额外依赖，简单 script 注入）
     await new Promise<void>((resolve, reject) => {
@@ -384,7 +351,7 @@ function renderMarkers() {
                     lng: u.longitude,
                     lat: u.latitude,
                     label: u.nickname || String(u.user_id),
-                    color: "#10B981",
+                    color: "success", // 用户使用成功色
                     type: 'user',
                     data: u
                 });
@@ -403,7 +370,7 @@ function renderMarkers() {
                     lng: (g as any).longitude,
                     lat: (g as any).latitude,
                     label: g.name,
-                    color: "#6366F1",
+                    color: "primary", // 群组使用主色
                     type: 'group',
                     data: g
                 });
@@ -419,7 +386,7 @@ function renderMarkers() {
                     lng: m.longitude,
                     lat: m.latitude,
                     label: m.nickname || `动态`,
-                    color: "#F59E0B",
+                    color: "warning", // 动态使用警告色
                     type: 'moment',
                     data: m
                 });
@@ -451,7 +418,7 @@ const nearbyGroups = computed<GroupInfo[]>(() => groupsStore.nearbyGroups);
 const nearbyMoments = computed<MomentInfo[]>(() => momentsStore.nearbyMoments);
 
 const hasMoreUsers = ref(false);
-const nextUsersCursor = ref<number | undefined>(undefined);
+const nextUsersCursor = ref<string | undefined>(undefined);
 const hasMoreGroups = computed(() => groupsStore.pagination.nearbyGroups.hasMore);
 const hasMoreMoments = computed(() => momentsStore.pagination.nearbyMoments.hasMore);
 
@@ -469,18 +436,7 @@ const currentTabTitle = computed(() => {
     }
 });
 
-const loadingCurrent = computed(() => {
-    switch (currentTab.value) {
-        case 'users':
-            return loadingUsers.value;
-        case 'groups':
-            return loadingGroups.value;
-        case 'moments':
-            return loadingMoments.value;
-        default:
-            return false;
-    }
-});
+const loadingCurrent = getCurrentTabLoading(currentTab);
 
 // helpers
 const ensureLocation = async () => {
@@ -493,12 +449,6 @@ const ensureLocation = async () => {
         }
     }
     const pos = await getCurrentPosition();
-    try {
-        const name = await reverseGeocode(pos.latitude, pos.longitude);
-        await userService.updateLocation(pos.latitude, pos.longitude, name);
-    } catch {
-        /* 后端更新失败不阻断 */
-    }
     return pos;
 };
 
@@ -527,7 +477,7 @@ const refreshLocation = async () => {
 const radiusMeters = ref<number>(defaults.nearbyRadiusMeters);
 
 const refreshUsers = async (pos?: { latitude: number; longitude: number }) => {
-    loadingUsers.value = true;
+    setTabLoading('users', true);
     try {
         const p = pos || (await getCurrentPosition());
         const response = await userService.findNearbyUsers({
@@ -545,12 +495,12 @@ const refreshUsers = async (pos?: { latitude: number; longitude: number }) => {
             color: "error",
         });
     } finally {
-        loadingUsers.value = false;
+        setTabLoading('users', false);
     }
 };
 
 const loadMoreUsers = async () => {
-    loadingMoreUsers.value = true;
+    setTabLoadingMore('users', true);
     try {
         const p = coords.value || (await getCurrentPosition());
         const response = await userService.findNearbyUsers({
@@ -569,12 +519,12 @@ const loadMoreUsers = async () => {
             color: "error",
         });
     } finally {
-        loadingMoreUsers.value = false;
+        setTabLoadingMore('users', false);
     }
 };
 
 const refreshGroups = async (pos?: { latitude: number; longitude: number }) => {
-    loadingGroups.value = true;
+        setTabLoading('groups', true);
     try {
         const p = pos || (await getCurrentPosition());
         await groupsStore.searchNearbyGroups({
@@ -589,12 +539,12 @@ const refreshGroups = async (pos?: { latitude: number; longitude: number }) => {
             color: "error",
         });
     } finally {
-        loadingGroups.value = false;
+        setTabLoading('groups', false);
     }
 };
 
 const loadMoreGroups = async () => {
-    loadingMoreGroups.value = true;
+        setTabLoadingMore('groups', true);
     try {
         const p = coords.value || (await getCurrentPosition());
         await groupsStore.searchNearbyGroups({
@@ -610,12 +560,12 @@ const loadMoreGroups = async () => {
             color: "error",
         });
     } finally {
-        loadingMoreGroups.value = false;
+        setTabLoadingMore('groups', false);
     }
 };
 
 const refreshMoments = async (pos?: { latitude: number; longitude: number }) => {
-    loadingMoments.value = true;
+        setTabLoading('moments', true);
     try {
         const p = pos || (await getCurrentPosition());
         await momentsStore.fetchNearbyMoments({
@@ -630,12 +580,12 @@ const refreshMoments = async (pos?: { latitude: number; longitude: number }) => 
             color: "error",
         });
     } finally {
-        loadingMoments.value = false;
+        setTabLoading('moments', false);
     }
 };
 
 const loadMoreMoments = async () => {
-    loadingMoreMoments.value = true;
+        setTabLoadingMore('moments', true);
     try {
         const p = coords.value || (await getCurrentPosition());
         await momentsStore.fetchNearbyMoments({
@@ -651,12 +601,12 @@ const loadMoreMoments = async () => {
             color: "error",
         });
     } finally {
-        loadingMoreMoments.value = false;
+        setTabLoadingMore('moments', false);
     }
 };
 
 // 交互
-const goChatUser = (userId: number) => navigateTo(`/chat/user/${userId}`);
+const goChatUser = (userId: string) => navigateTo(`/chat/users/${userId}`);
 const enterGroupOrJoin = async (g: GroupInfo) => {
     try {
         if (!g.is_member) {
@@ -664,7 +614,7 @@ const enterGroupOrJoin = async (g: GroupInfo) => {
             toast.success("加入成功");
             await refreshGroups();
         }
-        navigateTo(`/chat/group/${g.group_id}`);
+        navigateTo(`/chat/groups/${g.group_id}`);
     } catch (e: any) {
         toast.add({
             title: "操作失败",
@@ -679,7 +629,7 @@ let watchId: number | null = null;
 const toggleLocationSharing = async () => {
     if (isLocationSharing.value) {
         if (watchId != null) {
-            clearWatch(watchId);
+            (clearGeolocationWatch as (id: number) => void)(watchId);
             watchId = null;
         }
         isLocationSharing.value = false;
@@ -690,14 +640,9 @@ const toggleLocationSharing = async () => {
     try {
         const pos = await ensureLocation();
         await ensureMap();
-        watchId = watchPosition(async (coords) => {
-            try {
-                await userService.updateLocation(
-                    coords.latitude,
-                    coords.longitude,
-                    await reverseGeocode(coords.latitude, coords.longitude),
-                );
-            } catch {}
+        watchId = (watchPosition as unknown as (callback: (coords: Coordinates) => void) => number)((coords) => {
+            // 异步处理位置更新
+            (async () => {
             // 增量刷新附近数据（可按需节流，这里简单触发刷新）
             const [usersResponse] = await Promise.all([
                 userService.findNearbyUsers({
@@ -716,7 +661,7 @@ const toggleLocationSharing = async () => {
                     radius: radiusMeters.value,
                 })
             ]);
-            nearbyUsers.value = usersResponse.items;
+            nearbyUsers.value = usersResponse.items as UserInfo[];
             hasMoreUsers.value = usersResponse.has_more;
             nextUsersCursor.value = usersResponse.next_cursor;
             if (map) {
@@ -724,6 +669,7 @@ const toggleLocationSharing = async () => {
                 map.setCenter([coords.longitude, coords.latitude]);
                 renderMarkers();
             }
+            })().catch(console.error);
         });
         isLocationSharing.value = true;
         toast.info("位置共享已开启");
@@ -743,13 +689,6 @@ onMounted(async () => {
         if (state === "granted") {
             try {
                 const pos = await getCurrentPosition();
-                try {
-                    await userService.updateLocation(
-                        pos.latitude,
-                        pos.longitude,
-                        await reverseGeocode(pos.latitude, pos.longitude),
-                    );
-                } catch {}
                 await ensureMap();
                 if (map && pos) {
                     // @ts-ignore
@@ -767,7 +706,7 @@ onMounted(async () => {
                         radius: radiusMeters.value,
                     }),
                 ]);
-                nearbyUsers.value = usersResponse.items;
+                nearbyUsers.value = usersResponse.items as UserInfo[];
                 hasMoreUsers.value = usersResponse.has_more;
                 nextUsersCursor.value = usersResponse.next_cursor;
                 renderMarkers();
@@ -845,7 +784,7 @@ function handleMarkerClick(point: { type: string; data: any }) {
 // 详情显示函数
 function showUserDetail(user: UserInfo) {
     // 可以显示用户详情弹窗，这里简单导航到聊天
-    navigateTo(`/chat/user/${user.user_id}`);
+    navigateTo(`/chat/users/${user.user_id}`);
 }
 
 function showGroupDetail(group: GroupInfo) {

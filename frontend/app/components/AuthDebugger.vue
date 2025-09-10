@@ -59,7 +59,7 @@
             <div class="space-y-1">
               <div>ID: {{ authStore.user.user_id }}</div>
               <div>昵称: {{ authStore.user.nickname }}</div>
-              <div>类型: {{ authStore.user.is_temporary ? '临时' : '正式' }}</div>
+              <div>类型: {{ authStore.user.is_temp ? '临时' : '正式' }}</div>
             </div>
           </div>
           
@@ -102,7 +102,7 @@ const testAuth = async () => {
   try {
     isTesting.value = true
     await authStore.checkAuth()
-    console.log('认证测试成功')
+    if (import.meta.dev) console.log('认证测试成功')
   } catch (error) {
     console.error('认证测试失败:', error)
   } finally {
@@ -112,6 +112,6 @@ const testAuth = async () => {
 
 const clearAuth = () => {
   authStore.clearAuth()
-  console.log('认证状态已清除')
+  if (import.meta.dev) console.log('认证状态已清除')
 }
 </script>

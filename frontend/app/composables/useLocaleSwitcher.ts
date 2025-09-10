@@ -27,12 +27,9 @@ export const useLocaleSwitcher = () => {
       // 如果用户已登录，同步到服务器
       if (settingsStore.settings) {
         try {
-          await settingsStore.updateSettings({
-            preferences: {
-              ...settingsStore.settings.preferences,
-              language: code
-            }
-          })
+          // 注意：当前 UserSettings 接口不包含 language 字段
+          // 这里暂时跳过服务器同步，只在本地存储
+          console.warn('语言设置暂时只在本地存储，服务器同步功能待实现')
         } catch (error) {
           console.warn('同步语言设置到服务器失败:', error)
           // 不影响本地切换

@@ -1,9 +1,8 @@
 /// 全局搜索查询
 /// 
 /// 提供统一的搜索接口，支持搜索用户、群组、生活瞬间等内容
-
 use serde::{Deserialize, Serialize};
-use crate::domain::errors::{DomainError, DomainResult};
+use crate::domain::{DomainError, DomainResult};
 use super::PaginationQuery;
 
 /// 搜索类型
@@ -22,7 +21,7 @@ pub enum SearchType {
 
 /// 全局搜索查询
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GlobalSearchQuery {
+pub struct SearchByGlobalQuery {
     /// 搜索关键词
     pub query: String,
     /// 搜索类型
@@ -83,7 +82,7 @@ pub struct SearchResult {
     pub search_time_ms: u64,
 }
 
-impl GlobalSearchQuery {
+impl SearchByGlobalQuery {
     /// 验证搜索查询
     pub fn validate(&self) -> DomainResult<()> {
         let mut errors = Vec::new();

@@ -19,7 +19,6 @@ import type {
   WsMessageReadPayload,
   WsUserTypingPayload,
 } from "~/types/realtime";
-import { useErrorHandler } from "~/composables/useErrorHandler";
 
 type EventMap = {
   connected: WsConnectedData | undefined;
@@ -81,7 +80,16 @@ export const useWebSocket = () => {
       return `${proto}://${u.host}${OTHER_ENDPOINTS.WS}`;
     }
 
-    return "ws://localhost:8080/realtime/ws";
+    // 默认配置（应通过环境变量配置，避免硬编码）
+    const defaultWsUrl = process.env.NODE_ENV === 'development' 
+      ? "ws://localhost:8080/ws"
+      : "wss://api.hotspot.com/ws";
+    
+    if (import.meta.dev) {
+      console.warn('WebSocket URL 使用默认配置，建议在 nuxt.config.ts 中配置 wsBaseUrl');
+    }
+    
+    return defaultWsUrl;
   };
 
   // 添加消息监听器

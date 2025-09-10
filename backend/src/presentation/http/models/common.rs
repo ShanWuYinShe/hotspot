@@ -1,7 +1,6 @@
 /// 通用HTTP模型
 /// 
 /// 定义通用的请求/响应结构
-
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;

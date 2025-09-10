@@ -6,7 +6,7 @@
     variant="ghost"
     color="neutral"
     square
-    class="relative overflow-hidden hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all duration-200"
+    class="relative overflow-hidden"
     :class="buttonClass"
   >
     <!-- 太阳图标 (浅色模式) -->
@@ -138,6 +138,11 @@ onMounted(() => {
     
     // 初始设置
     handleMediaChange()
+    
+    // 组件销毁时清理事件监听器
+    onBeforeUnmount(() => {
+      mediaQuery.removeEventListener('change', handleMediaChange)
+    })
     
   } catch (error) {
     console.warn('Theme system not available, using default light theme:', error)

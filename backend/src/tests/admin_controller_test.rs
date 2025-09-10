@@ -88,6 +88,7 @@ async fn test_validate_user_id_success() {
         CurrentUser {
             user_id: get_admin_user(),
             is_temporary: false,
+            nickname: None,
         },
     )
     .await;
@@ -112,6 +113,7 @@ async fn test_validate_user_id_invalid() {
         CurrentUser {
             user_id: get_admin_user(),
             is_temporary: false,
+            nickname: None,
         },
     )
     .await;
@@ -135,6 +137,7 @@ async fn test_format_user_id() {
         CurrentUser {
             user_id: get_admin_user(),
             is_temporary: false,
+            nickname: None,
         },
     )
     .await;
@@ -158,6 +161,7 @@ async fn test_generate_user_ids() {
         CurrentUser {
             user_id: get_admin_user(),
             is_temporary: false,
+            nickname: None,
         },
     )
     .await;
@@ -182,6 +186,7 @@ async fn test_get_user_type_ranges() {
         CurrentUser {
             user_id: get_admin_user(),
             is_temporary: false,
+            nickname: None,
         },
     )
     .await;
@@ -213,6 +218,7 @@ async fn test_get_partition_stats_without_repo_fallback() {
         CurrentUser {
             user_id: get_admin_user(),
             is_temporary: false,
+            nickname: None,
         },
     )
     .await;
@@ -242,6 +248,7 @@ async fn test_next_regular_sequence() {
         CurrentUser {
             user_id: get_admin_user(),
             is_temporary: false,
+            nickname: None,
         },
     )
     .await;
@@ -267,6 +274,7 @@ async fn test_preview_allocate_admin() {
         CurrentUser {
             user_id: get_admin_user(),
             is_temporary: false,
+            nickname: None,
         },
     )
     .await;
@@ -299,6 +307,7 @@ async fn test_get_user_id_info() {
         CurrentUser {
             user_id: get_admin_user(),
             is_temporary: false,
+            nickname: None,
         },
     )
     .await;

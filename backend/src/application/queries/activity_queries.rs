@@ -1,10 +1,9 @@
 /// 活动数据查询
 /// 
 /// 提供系统活动数据的查询功能，包括最近活动、用户活动等
-
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
-use crate::domain::errors::{DomainError, DomainResult};
+use crate::domain::{DomainError, DomainResult};
 use super::PaginationQuery;
 
 /// 获取最近活动查询

@@ -1,6 +1,6 @@
 /**
- * 动态相关 API 服务
- * 使用与后端完全对齐的类型定义
+ * 动态服务 - Composition API 风格
+ * 提供动态相关的所有 API 调用功能
  */
 
 import { MOMENT_ENDPOINTS, buildMomentUrl } from "~/config/api";
@@ -46,34 +46,28 @@ export const useMomentService = () => {
 
   // 创建动态
   const createMoment = async (
-    description: string,
-    latitude?: number,
-    longitude?: number,
-    locationName?: string,
+    latitude: number,
+    longitude: number,
+    description?: string,
     tags?: string[],
+    imageUrls?: string[],
   ): Promise<CreateMomentResponse> => {
-    try {
-      const request: CreateMomentRequest = {
-        description,
-        latitude: latitude || DEFAULTS.latitude,
-        longitude: longitude || DEFAULTS.longitude,
-        location_name: locationName || DEFAULTS.locationName,
-        tags,
-      };
-      const response = await api.post(
-        buildMomentUrl(MOMENT_ENDPOINTS.CREATE),
-        request,
-        { auth: true },
-      );
-      return response as CreateMomentResponse;
-    } catch (e: any) {
-      throw createApiError({
-        status: e?.status || 400,
-        code: e?.code || "CREATE_MOMENT_FAILED",
-        message: e?.message || "创建动态失败",
-        details: e?.details,
-      });
-    }
+    const request: CreateMomentRequest = {
+      latitude,
+      longitude,
+      description,
+      tags,
+      image_urls: imageUrls,
+    };
+    
+    // 直接使用useApi的统一错误处理和响应处理
+    const response = await api.post(
+      buildMomentUrl(MOMENT_ENDPOINTS.PROTECTED.CREATE),
+      request,
+      { auth: true },
+    );
+    
+    return response as CreateMomentResponse;
   };
 
   // 删除动态
@@ -85,7 +79,7 @@ export const useMomentService = () => {
         moment_id: momentId,
       };
       const response = await api.post(
-        buildMomentUrl(MOMENT_ENDPOINTS.DELETE),
+        buildMomentUrl(MOMENT_ENDPOINTS.PROTECTED.DELETE),
         request,
         { auth: true },
       );
@@ -100,16 +94,15 @@ export const useMomentService = () => {
     }
   };
 
-  // 根据ID搜索动态
+  // 根据ID搜索动态（公开访问，无需认证）
   const getMomentById = async (momentId: string): Promise<MomentInfo> => {
     try {
       const request: SearchMomentByIdRequest = {
         moment_id: momentId,
       };
-      const response = await api.post(
-        buildMomentUrl(MOMENT_ENDPOINTS.SEARCH_BY_ID),
+      const response = await api.postPublic(
+        buildMomentUrl(MOMENT_ENDPOINTS.PUBLIC.SEARCH_BY_ID, true),
         request,
-        { auth: true },
       );
       return response as MomentInfo;
     } catch (e: any) {
@@ -127,7 +120,7 @@ export const useMomentService = () => {
     latitude: number,
     longitude: number,
     radius?: number,
-    cursor?: number,
+    cursor?: string,
     limit?: number,
   ): Promise<SearchMomentsByLocationResponse> => {
     try {
@@ -138,10 +131,9 @@ export const useMomentService = () => {
         limit: limit || DEFAULTS.pageSize,
         cursor,
       };
-      const response = await api.post(
-        buildMomentUrl(MOMENT_ENDPOINTS.SEARCH_BY_LOCATION),
+      const response = await api.postPublic(
+        buildMomentUrl(MOMENT_ENDPOINTS.PUBLIC.SEARCH_BY_LOCATION, true),
         request,
-        { auth: true },
       );
       return response as SearchMomentsByLocationResponse;
     } catch (e: any) {
@@ -156,20 +148,19 @@ export const useMomentService = () => {
 
   // 获取用户动态历史
   const getUserMomentsHistory = async (
-    userId?: number,
-    cursor?: number,
+    userId?: string,
+    cursor?: string,
     limit?: number,
   ): Promise<UserMomentsHistoryResponse> => {
     try {
       const request: UserMomentsHistoryRequest = {
-        user_id: userId,
+        user_id: userId?.toString(),
         limit: limit || DEFAULTS.pageSize,
         cursor,
       };
-      const response = await api.post(
-        buildMomentUrl(MOMENT_ENDPOINTS.USER_HISTORY),
+      const response = await api.postPublic(
+        buildMomentUrl(MOMENT_ENDPOINTS.PUBLIC.HISTORY, true),
         request,
-        { auth: true },
       );
       return response as UserMomentsHistoryResponse;
     } catch (e: any) {
@@ -187,7 +178,7 @@ export const useMomentService = () => {
     tags: string[],
     latitude: number,
     longitude: number,
-    cursor?: number,
+    cursor?: string,
     limit?: number,
   ): Promise<SearchMomentsByTagsResponse> => {
     try {
@@ -198,10 +189,9 @@ export const useMomentService = () => {
         limit: limit || DEFAULTS.pageSize,
         cursor,
       };
-      const response = await api.post(
-        buildMomentUrl(MOMENT_ENDPOINTS.SEARCH_BY_TAGS),
+      const response = await api.postPublic(
+        buildMomentUrl(MOMENT_ENDPOINTS.PUBLIC.SEARCH_BY_TAGS, true),
         request,
-        { auth: true },
       );
       return response as SearchMomentsByTagsResponse;
     } catch (e: any) {
@@ -221,7 +211,7 @@ export const useMomentService = () => {
         moment_id: momentId,
       };
       const response = await api.post(
-        buildMomentUrl(MOMENT_ENDPOINTS.LIKE),
+        buildMomentUrl(MOMENT_ENDPOINTS.PROTECTED.LIKE),
         request,
         { auth: true },
       );
@@ -245,7 +235,7 @@ export const useMomentService = () => {
         moment_id: momentId,
       };
       const response = await api.post(
-        buildMomentUrl(MOMENT_ENDPOINTS.UNLIKE),
+        buildMomentUrl(MOMENT_ENDPOINTS.PROTECTED.UNLIKE),
         request,
         { auth: true },
       );
@@ -265,7 +255,7 @@ export const useMomentService = () => {
     latitude?: number,
     longitude?: number,
     radius?: number,
-    cursor?: number,
+    cursor?: string,
     limit?: number,
   ): Promise<SearchMomentsByLocationResponse> => {
     return await searchMomentsByLocation(
@@ -279,7 +269,7 @@ export const useMomentService = () => {
 
   // 获取我的动态
   const getMyMoments = async (
-    cursor?: number,
+    cursor?: string,
     limit?: number,
   ): Promise<UserMomentsHistoryResponse> => {
     return await getUserMomentsHistory(undefined, cursor, limit);
@@ -305,9 +295,9 @@ export const useMomentService = () => {
       longitude?: number;
       radius?: number;
       tags?: string[];
-      userId?: number;
+      userId?: string;
     },
-    cursor?: number,
+    cursor?: string,
     limit?: number,
   ): Promise<
     | SearchMomentsByLocationResponse

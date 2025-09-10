@@ -88,7 +88,7 @@ const scanQRCode = () => {
 }
 
 const findNearbyPeople = () => {
-  navigateTo('/nearby-users')
+  navigateTo('/users/nearby')
 }
 
 const showMessageRequests = () => {

@@ -1,7 +1,6 @@
 /// 邮件任务处理器
 /// 
 /// 处理各种邮件发送任务，包括欢迎邮件、密码重置邮件等
-
 use async_trait::async_trait;
 use std::sync::Arc;
 use tracing::{debug, error, info, warn};

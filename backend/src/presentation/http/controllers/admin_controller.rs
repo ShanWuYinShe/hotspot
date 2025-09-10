@@ -2,6 +2,7 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::{Extension, Json, extract::State};
 use serde::{Deserialize, Serialize};
+use crate::utils::JsSafeI64;
 
 use crate::presentation::http::auth::CurrentUser;
 use crate::presentation::http::controllers::ok_response;
@@ -11,7 +12,7 @@ use crate::utils::{UserIdPartition, UserType};
 /// 提供：验证、格式化、范围查询、批量生成
 #[derive(Clone, Default)]
 pub struct AdminController {
-    pub(crate) user_repo: Option<std::sync::Arc<dyn crate::ports::UserRepositoryPort>>,
+    pub(crate) user_repo: Option<std::sync::Arc<dyn crate::ports::UserRepository>>,
 }
 
 impl AdminController {
@@ -19,7 +20,7 @@ impl AdminController {
         Self::default()
     }
 
-    pub fn with_user_repo(user_repo: std::sync::Arc<dyn crate::ports::UserRepositoryPort>) -> Self {
+    pub fn with_user_repo(user_repo: std::sync::Arc<dyn crate::ports::UserRepository>) -> Self {
         Self {
             user_repo: Some(user_repo),
         }
@@ -63,7 +64,7 @@ impl AdminController {
 /// 验证用户ID请求
 #[derive(Debug, Clone, Deserialize)]
 pub struct ValidateUserIdRequest {
-    pub user_id: i64,
+    pub user_id: JsSafeI64,
 }
 
 /// 验证用户ID响应
@@ -91,8 +92,8 @@ pub struct GenerateUserIdsRequest {
 /// 生成的用户ID信息
 #[derive(Debug, Clone, Serialize)]
 pub struct GeneratedUserId {
-    pub user_id: i64,
-    pub sequence: i64,
+    pub user_id: JsSafeI64,
+    pub sequence: JsSafeI64,
     pub formatted: String,
 }
 
@@ -108,13 +109,13 @@ pub struct GenerateUserIdsResponse {
 /// 格式化用户ID请求
 #[derive(Debug, Clone, Deserialize)]
 pub struct FormatUserIdRequest {
-    pub user_id: i64,
+    pub user_id: JsSafeI64,
 }
 
 /// 格式化用户ID响应
 #[derive(Debug, Clone, Serialize)]
 pub struct FormatUserIdResponse {
-    pub user_id: i64,
+    pub user_id: JsSafeI64,
     pub formatted: String,
     pub user_type_key: String,
     pub user_type_name: String,
@@ -126,9 +127,9 @@ pub struct UserTypeRangeInfo {
     pub user_type_key: String,
     pub user_type_name: String,
     pub identifier: u16,
-    pub min_id: i64,
-    pub max_id: i64,
-    pub capacity: i64,
+    pub min_id: JsSafeI64,
+    pub max_id: JsSafeI64,
+    pub capacity: JsSafeI64,
 }
 
 /// 分区统计信息（不访问数据库，仅根据ID分区定义计算）
@@ -136,28 +137,28 @@ pub struct UserTypeRangeInfo {
 pub struct UserIdPartitionStats {
     pub total_partitions: usize,
     pub active_partitions: usize,
-    pub total_users: i64,
-    pub regular_users: i64,
-    pub temporary_users: i64,
-    pub admin_users: i64,
-    pub system_users: i64,
+    pub total_users: JsSafeI64,
+    pub regular_users: JsSafeI64,
+    pub temporary_users: JsSafeI64,
+    pub admin_users: JsSafeI64,
+    pub system_users: JsSafeI64,
     pub ranges: Vec<UserTypeRangeInfo>,
 }
 
 /// 用户ID信息请求
 #[derive(Debug, Clone, Deserialize)]
 pub struct UserIdInfoRequest {
-    pub user_id: i64,
+    pub user_id: JsSafeI64,
 }
 
 /// 用户ID信息响应
 #[derive(Debug, Clone, Serialize)]
 pub struct UserIdInfoResponse {
-    pub user_id: i64,
+    pub user_id: JsSafeI64,
     pub user_type_key: String,
     pub user_type_name: String,
     pub identifier: u16,
-    pub sequence: i64,
+    pub sequence: JsSafeI64,
     pub formatted: String,
 }
 
@@ -166,10 +167,10 @@ pub struct UserIdInfoResponse {
 pub struct NextSequenceResponse {
     pub user_type_key: String,
     pub user_type_name: String,
-    pub next_sequence: i64,
-    pub next_user_id: i64,
+    pub next_sequence: JsSafeI64,
+    pub next_user_id: JsSafeI64,
     pub formatted: String,
-    pub capacity_remaining: i64,
+    pub capacity_remaining: JsSafeI64,
 }
 
 /// 批量预分配请求（基于DB中当前最大ID推导起始序列）
@@ -186,9 +187,9 @@ pub struct PreviewAllocateRequest {
 pub struct PreviewAllocateResponse {
     pub user_type_key: String,
     pub user_type_name: String,
-    pub start_sequence: i64,
+    pub start_sequence: JsSafeI64,
     pub preview_ids: Vec<GeneratedUserId>,
-    pub capacity_remaining: i64,
+    pub capacity_remaining: JsSafeI64,
 }
 
 #[async_trait::async_trait]
@@ -210,13 +211,13 @@ impl AdminController {
             return Self::forbidden("权限不足：需要管理员权限");
         }
 
-        match UserIdPartition::parse_user_id(req.user_id) {
+        match UserIdPartition::parse_user_id(req.user_id.value()) {
             Ok((t, seq)) => ok_response(ValidateUserIdResponse {
                 is_valid: true,
                 user_type_key: Some(Self::map_user_type_key(t).to_string()),
                 user_type_name: Some(t.name().to_string()),
                 sequence: Some(seq),
-                formatted: Some(UserIdPartition::format_user_id(req.user_id)),
+                formatted: Some(UserIdPartition::format_user_id(req.user_id.value())),
                 error: None,
             }),
             Err(e) => ok_response(ValidateUserIdResponse {
@@ -262,8 +263,8 @@ impl AdminController {
             match UserIdPartition::generate_user_id(user_type, seq) {
                 Ok(uid) => {
                     generated.push(GeneratedUserId {
-                        user_id: uid,
-                        sequence: seq,
+                        user_id: JsSafeI64::new(uid),
+                        sequence: JsSafeI64::new(seq),
                         formatted: UserIdPartition::format_user_id(uid),
                     });
                     success += 1;
@@ -292,10 +293,10 @@ impl AdminController {
             return Self::forbidden("权限不足：需要管理员权限");
         }
 
-        match UserIdPartition::parse_user_id(req.user_id) {
+        match UserIdPartition::parse_user_id(req.user_id.value()) {
             Ok((t, _)) => ok_response(FormatUserIdResponse {
                 user_id: req.user_id,
-                formatted: UserIdPartition::format_user_id(req.user_id),
+                formatted: UserIdPartition::format_user_id(req.user_id.value()),
                 user_type_key: Self::map_user_type_key(t).to_string(),
                 user_type_name: t.name().to_string(),
             }),
@@ -330,9 +331,9 @@ impl AdminController {
                 user_type_key: Self::map_user_type_key(t).to_string(),
                 user_type_name: t.name().to_string(),
                 identifier: t.identifier(),
-                min_id,
-                max_id,
-                capacity,
+                min_id: JsSafeI64::new(min_id),
+                max_id: JsSafeI64::new(max_id),
+                capacity: JsSafeI64::new(capacity),
             });
         }
 
@@ -364,9 +365,9 @@ impl AdminController {
                 user_type_key: Self::map_user_type_key(t).to_string(),
                 user_type_name: t.name().to_string(),
                 identifier: t.identifier(),
-                min_id,
-                max_id,
-                capacity,
+                min_id: JsSafeI64::new(min_id),
+                max_id: JsSafeI64::new(max_id),
+                capacity: JsSafeI64::new(capacity),
             });
         }
 
@@ -404,11 +405,11 @@ impl AdminController {
         let stats = UserIdPartitionStats {
             total_partitions: ranges.len(),
             active_partitions: ranges.len(),
-            total_users,
-            regular_users,
-            temporary_users,
-            admin_users,
-            system_users,
+            total_users: JsSafeI64::new(total_users),
+            regular_users: JsSafeI64::new(regular_users),
+            temporary_users: JsSafeI64::new(temporary_users),
+            admin_users: JsSafeI64::new(admin_users),
+            system_users: JsSafeI64::new(system_users),
             ranges,
         };
 
@@ -427,15 +428,15 @@ impl AdminController {
             return Self::forbidden("权限不足：需要管理员权限");
         }
 
-        match UserIdPartition::parse_user_id(req.user_id) {
+        match UserIdPartition::parse_user_id(req.user_id.value()) {
             Ok((t, seq)) => {
                 let resp = UserIdInfoResponse {
                     user_id: req.user_id,
                     user_type_key: Self::map_user_type_key(t).to_string(),
                     user_type_name: t.name().to_string(),
                     identifier: t.identifier(),
-                    sequence: seq,
-                    formatted: UserIdPartition::format_user_id(req.user_id),
+                    sequence: JsSafeI64::new(seq),
+                    formatted: UserIdPartition::format_user_id(req.user_id.value()),
                 };
                 ok_response(resp)
             }
@@ -445,7 +446,7 @@ impl AdminController {
 
     /// 计算下一个序列与容量（含DB查询）
     async fn compute_next_from_db(
-        repo: &Option<std::sync::Arc<dyn crate::ports::UserRepositoryPort>>,
+        repo: &Option<std::sync::Arc<dyn crate::ports::UserRepository>>,
         t: UserType,
     ) -> (i64, i64, i64) {
         let (min_id, max_id) = UserIdPartition::get_type_range(t);
@@ -478,10 +479,10 @@ impl AdminController {
         ok_response(NextSequenceResponse {
             user_type_key: Self::map_user_type_key(t).to_string(),
             user_type_name: t.name().to_string(),
-            next_sequence: next_seq,
-            next_user_id,
+            next_sequence: JsSafeI64::new(next_seq),
+            next_user_id: JsSafeI64::new(next_user_id),
             formatted: UserIdPartition::format_user_id(next_user_id),
-            capacity_remaining,
+            capacity_remaining: JsSafeI64::new(capacity_remaining),
         })
     }
 
@@ -573,8 +574,8 @@ impl AdminController {
             match UserIdPartition::generate_user_id(t, seq) {
                 Ok(uid) => {
                     preview_ids.push(GeneratedUserId {
-                        user_id: uid,
-                        sequence: seq,
+                        user_id: JsSafeI64::new(uid),
+                        sequence: JsSafeI64::new(seq),
                         formatted: UserIdPartition::format_user_id(uid),
                     });
                 }
@@ -587,9 +588,9 @@ impl AdminController {
         ok_response(PreviewAllocateResponse {
             user_type_key: Self::map_user_type_key(t).to_string(),
             user_type_name: t.name().to_string(),
-            start_sequence,
+            start_sequence: JsSafeI64::new(start_sequence),
             preview_ids,
-            capacity_remaining,
+            capacity_remaining: JsSafeI64::new(capacity_remaining),
         })
     }
 }

@@ -1,27 +1,30 @@
 /// 增强的健康检查HTTP控制器
 /// 
 /// 提供详细的系统健康状态检查，包括数据库、缓存、任务队列等组件
-
-use super::{Controller, ok_response, error_response};
-use axum::response::Response;
+use super::{Controller, ok_response};
+use axum::Json;
+use axum::response::{Response, IntoResponse};
 use serde_json::json;
 use std::sync::Arc;
 use std::time::Instant;
 use tracing::warn;
 
 use crate::bootstrap::HybridConfigManager;
-use crate::ports::{CachePort, JobDispatcherPort};
+use crate::ports::cache::Cache;
+use crate::ports::jobs::JobDispatcher;
+
+// 使用 JobDispatcher trait 而不是 JobDispatcherPort 类型别名
 use crate::utils::performance_monitor;
 
 /// 增强的健康检查控制器
 #[derive(Clone)]
-pub struct EnhancedHealthController<C: CachePort, J: JobDispatcherPort> {
+pub struct EnhancedHealthController<C: Cache, J: JobDispatcher> {
     config_manager: Arc<HybridConfigManager>,
     cache: Option<Arc<C>>,
     job_dispatcher: Option<Arc<J>>,
 }
 
-impl<C: CachePort, J: JobDispatcherPort> EnhancedHealthController<C, J> {
+impl<C: Cache, J: JobDispatcher> EnhancedHealthController<C, J> {
     /// 创建新的增强健康检查控制器
     pub fn new(
         config_manager: Arc<HybridConfigManager>,
@@ -96,7 +99,14 @@ impl<C: CachePort, J: JobDispatcherPort> EnhancedHealthController<C, J> {
         });
 
         if overall_status == "unhealthy" {
-            error_response(axum::http::StatusCode::SERVICE_UNAVAILABLE, "System unhealthy", Some(response))
+            {
+                let error_response = json!({
+                    "code": 5000,
+                    "msg": "System unhealthy",
+                    "data": response
+                });
+                (axum::http::StatusCode::OK, Json(error_response)).into_response()
+            }
         } else {
             ok_response(response)
         }
@@ -122,7 +132,14 @@ impl<C: CachePort, J: JobDispatcherPort> EnhancedHealthController<C, J> {
                 "timestamp": chrono::Utc::now().to_rfc3339(),
                 "reason": "Database not available"
             });
-            error_response(axum::http::StatusCode::SERVICE_UNAVAILABLE, "Service not ready", Some(response))
+            {
+                let error_response = json!({
+                    "code": 5000,
+                    "msg": "Service not ready",
+                    "data": response
+                });
+                (axum::http::StatusCode::OK, Json(error_response)).into_response()
+            }
         }
     }
 
@@ -188,10 +205,14 @@ impl<C: CachePort, J: JobDispatcherPort> EnhancedHealthController<C, J> {
                         status: "healthy".to_string(),
                         response_time_ms: duration.as_millis() as u64,
                         details: Some(json!({
-                            "hits": stats.hits,
-                            "misses": stats.misses,
-                            "entries": stats.entries,
-                            "hit_rate": stats.hit_rate(),
+                            "hits": stats.hit_count,
+                            "misses": stats.miss_count,
+                            "entries": stats.total_keys,
+                            "hit_rate": if stats.hit_count + stats.miss_count > 0 { 
+                       stats.hit_count as f64 / (stats.hit_count + stats.miss_count) as f64 
+                   } else { 
+                       0.0 
+                   },
                             "memory_usage": stats.memory_usage
                         })),
                         error: None,
@@ -344,7 +365,7 @@ impl serde::Serialize for HealthCheckResult {
 }
 
 #[async_trait::async_trait]
-impl<C: CachePort, J: JobDispatcherPort> Controller for EnhancedHealthController<C, J> {
+impl<C: Cache, J: JobDispatcher> Controller for EnhancedHealthController<C, J> {
     fn name(&self) -> &'static str {
         "EnhancedHealthController"
     }

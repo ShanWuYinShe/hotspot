@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 argon2 = "0.5.3"
-axum = { version = "0.8.3", features = ["macros", "ws"] }
+axum = { version = "0.8.3", features = ["macros", "multipart", "ws"] }
 chrono = { version = "0.4.40", features = ["serde"] }
 dotenv = "0.15.0"
 futures = "0.3.31"
@@ -13,11 +13,11 @@ futures-util = "0.3.31"
 jsonwebtoken = "9.3.1"
 lapin = "2.3.1"  # RabbitMQ 客户端
 prometheus = "0.13.3"
-rand = "0.9.0"
+rand = { version = "0.9.0", features = ["std"] }
 redis = { version = "0.29.5", features = ["aio", "tokio-comp", "connection-manager"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
-sqlx = { version = "0.8.4", features = ["runtime-tokio-native-tls", "postgres", "uuid", "chrono", "migrate", "macros", "bigdecimal"] }
+sqlx = { version = "0.8.4", features = ["runtime-tokio-native-tls", "postgres", "uuid", "chrono", "migrate", "bigdecimal"] }
 sysinfo = "0.30"
 thiserror = "2.0.12"
 tokio = { version = "1.44.2", features = ["full"] }
@@ -34,25 +34,31 @@ tower = "0.5"
 once_cell = "1.21.3"
 num_cpus = "1.17.0"
 lettre = { version = "0.11.18", features = ["smtp-transport", "tokio1-native-tls", "builder"] }
-multer = "3.1.0"
+serde_yaml = "0.9.34"
+reqwest = "0.12.23"
 
 [features]
-default = ["postgres", "ws", "cache_in_memory", "jobs_lite", "policy_friend", "policy_group", "metrics_basic"]
+default = ["postgres", "websocket", "cache", "events", "metrics", "jobs_lite", "policy_friend", "policy_group"]
 
 # === 新架构Feature Flags ===
 
 # 数据库适配器
 postgres = []
 
-# WebSocket相关
+# WebSocket相关（统一为websocket）
+websocket = ["ws"]
 ws = []
 ws_offline_notifications = []
 ws_scheduler = []
 ws_hooks = []
 
-# 缓存适配器
+# 缓存适配器（统一为cache）
+cache = ["cache_in_memory"]
 cache_in_memory = []
 cache_redis = []
+
+# 事件系统
+events = []
 
 # 任务队列适配器
 jobs_lite = []
@@ -63,12 +69,15 @@ policy_friend = []
 policy_group = []
 policy_nearby = []
 
-# 监控指标
+# 监控指标（统一为metrics）
+metrics = ["metrics_basic"]
 metrics_basic = []
 prometheus_metrics = []
 
 # 可选功能
+email = ["email_channel"]
 email_channel = []
+notifications = []
 
 # === 传统Feature Flags（待重构） ===
 # 启用群组消息摘要的定时任务

@@ -104,19 +104,6 @@ impl From<sqlx::Error> for AppError {
     }
 }
 
-impl From<crate::ports::repositories::RepoPortError> for AppError {
-    fn from(err: crate::ports::repositories::RepoPortError) -> Self {
-        error!("仓库错误: {:?}", err);
-        match err {
-            crate::ports::repositories::RepoPortError::NotFound(msg) => Self::NotFound(msg),
-            crate::ports::repositories::RepoPortError::Database(db_err) => Self::DatabaseError(format!("数据库操作失败: {}", db_err)),
-            crate::ports::repositories::RepoPortError::InvalidArgument(msg) => Self::BadRequest(msg),
-            crate::ports::repositories::RepoPortError::Connection(msg) => Self::InternalServerError(format!("连接错误: {}", msg)),
-            crate::ports::repositories::RepoPortError::Timeout(msg) => Self::Timeout(format!("超时: {}", msg)),
-            crate::ports::repositories::RepoPortError::Other(msg) => Self::InternalServerError(msg),
-        }
-    }
-}
 
 impl From<redis::RedisError> for AppError {
     fn from(err: redis::RedisError) -> Self {

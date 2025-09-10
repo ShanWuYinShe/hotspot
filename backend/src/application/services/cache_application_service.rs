@@ -1,13 +1,12 @@
 /// 缓存应用服务
 /// 
 /// 提供高级缓存功能，基于缓存端口实现业务相关的缓存策略
-
 use async_trait::async_trait;
 use std::sync::Arc;
 use serde::{Serialize, Deserialize};
 
 use crate::domain::DomainResult;
-use crate::ports::CachePort;
+use crate::ports::cache::Cache;
 use std::time::Duration;
 
 /// 缓存应用服务接口
@@ -52,11 +51,11 @@ pub struct CacheStats {
 }
 
 /// 缓存应用服务实现
-pub struct CacheApplicationServiceImpl<C: CachePort> {
+pub struct CacheApplicationServiceImpl<C: Cache> {
     cache: Arc<C>,
 }
 
-impl<C: CachePort> CacheApplicationServiceImpl<C> {
+impl<C: Cache> CacheApplicationServiceImpl<C> {
     /// 创建新的缓存应用服务
     pub fn new(cache: Arc<C>) -> Self {
         Self { cache }
@@ -79,11 +78,11 @@ impl<C: CachePort> CacheApplicationServiceImpl<C> {
 }
 
 #[async_trait]
-impl<C: CachePort> CacheApplicationService for CacheApplicationServiceImpl<C> {
+impl<C: Cache> CacheApplicationService for CacheApplicationServiceImpl<C> {
     async fn cache_user_info(&self, user_id: i64, user_data: serde_json::Value, ttl_seconds: u64) -> DomainResult<()> {
         let key = self.user_cache_key(user_id);
         let value = serde_json::to_string(&user_data)
-            .map_err(|e| crate::domain::DomainError::Cache(crate::domain::CacheDomainError::SerializationError(e.to_string())))?;
+            .map_err(|e| crate::domain::DomainError::CacheSerializationError)?;
         
         self.cache.set(&key, &value, Some(Duration::from_secs(ttl_seconds))).await
     }
@@ -93,7 +92,7 @@ impl<C: CachePort> CacheApplicationService for CacheApplicationServiceImpl<C> {
         match self.cache.get::<String>(&key).await? {
             Some(value) => {
                 let data: serde_json::Value = serde_json::from_str(&value)
-                    .map_err(|e| crate::domain::DomainError::Cache(crate::domain::CacheDomainError::DeserializationError(e.to_string())))?;
+                    .map_err(|e| crate::domain::DomainError::CacheDeserializationError)?;
                 Ok(Some(data))
             }
             None => Ok(None),
@@ -103,7 +102,7 @@ impl<C: CachePort> CacheApplicationService for CacheApplicationServiceImpl<C> {
     async fn cache_group_info(&self, group_id: i64, group_data: serde_json::Value, ttl_seconds: u64) -> DomainResult<()> {
         let key = self.group_cache_key(group_id);
         let value = serde_json::to_string(&group_data)
-            .map_err(|e| crate::domain::DomainError::Cache(crate::domain::CacheDomainError::SerializationError(e.to_string())))?;
+            .map_err(|e| crate::domain::DomainError::CacheSerializationError)?;
         
         self.cache.set(&key, &value, Some(Duration::from_secs(ttl_seconds))).await
     }
@@ -113,7 +112,7 @@ impl<C: CachePort> CacheApplicationService for CacheApplicationServiceImpl<C> {
         match self.cache.get::<String>(&key).await? {
             Some(value) => {
                 let data: serde_json::Value = serde_json::from_str(&value)
-                    .map_err(|e| crate::domain::DomainError::Cache(crate::domain::CacheDomainError::DeserializationError(e.to_string())))?;
+                    .map_err(|e| crate::domain::DomainError::CacheDeserializationError)?;
                 Ok(Some(data))
             }
             None => Ok(None),
@@ -123,7 +122,7 @@ impl<C: CachePort> CacheApplicationService for CacheApplicationServiceImpl<C> {
     async fn cache_search_results(&self, search_key: String, results: serde_json::Value, ttl_seconds: u64) -> DomainResult<()> {
         let key = self.search_cache_key(&search_key);
         let value = serde_json::to_string(&results)
-            .map_err(|e| crate::domain::DomainError::Cache(crate::domain::CacheDomainError::SerializationError(e.to_string())))?;
+            .map_err(|e| crate::domain::DomainError::CacheSerializationError)?;
         
         self.cache.set(&key, &value, Some(Duration::from_secs(ttl_seconds))).await
     }
@@ -133,7 +132,7 @@ impl<C: CachePort> CacheApplicationService for CacheApplicationServiceImpl<C> {
         match self.cache.get::<String>(&key).await? {
             Some(value) => {
                 let data: serde_json::Value = serde_json::from_str(&value)
-                    .map_err(|e| crate::domain::DomainError::Cache(crate::domain::CacheDomainError::DeserializationError(e.to_string())))?;
+                    .map_err(|e| crate::domain::DomainError::CacheDeserializationError)?;
                 Ok(Some(data))
             }
             None => Ok(None),
@@ -153,8 +152,8 @@ impl<C: CachePort> CacheApplicationService for CacheApplicationServiceImpl<C> {
     async fn get_cache_stats(&self) -> DomainResult<CacheStats> {
         let stats = self.cache.get_stats().await?;
         
-        let hit_ratio = if stats.hits + stats.misses > 0 {
-            stats.hits as f64 / (stats.hits + stats.misses) as f64
+        let hit_ratio = if stats.hit_count + stats.miss_count > 0 {
+            stats.hit_count as f64 / (stats.hit_count + stats.miss_count) as f64
         } else {
             0.0
         };
@@ -163,7 +162,7 @@ impl<C: CachePort> CacheApplicationService for CacheApplicationServiceImpl<C> {
             hit_count: stats.hits,
             miss_count: stats.misses,
             hit_ratio,
-            total_keys: stats.entries,
+            total_keys: stats.total_keys,
             memory_usage_bytes: stats.memory_usage,
         })
     }
@@ -173,12 +172,12 @@ impl<C: CachePort> CacheApplicationService for CacheApplicationServiceImpl<C> {
 /// 
 /// 提供缓存相关的管理功能
 #[derive(Clone)]
-pub struct CacheManager<C: CachePort> {
+pub struct CacheManager<C: Cache> {
     cache: Arc<C>,
     cache_service: Arc<CacheApplicationServiceImpl<C>>,
 }
 
-impl<C: CachePort> CacheManager<C> {
+impl<C: Cache> CacheManager<C> {
     /// 创建新的缓存管理器
     pub fn new(cache: Arc<C>) -> Self {
         let cache_service = Arc::new(CacheApplicationServiceImpl::new(cache.clone()));

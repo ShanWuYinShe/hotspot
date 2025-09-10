@@ -149,14 +149,14 @@
                             class="flex gap-3 p-4 rounded-lg bg-neutral-50 dark:bg-neutral-900"
                         >
                             <UAvatar 
-                                :alt="comment.user.nickname"
+                                :alt="comment.nickname"
                                 size="sm"
                             >
-                                {{ comment.user.nickname?.charAt(0) }}
+                                {{ comment.nickname?.charAt(0) }}
                             </UAvatar>
                             <div class="flex-1">
                                 <div class="flex items-center gap-2 mb-1">
-                                    <span class="font-medium">{{ comment.user.nickname }}</span>
+                                    <span class="font-medium">{{ comment.nickname }}</span>
                                     <span class="text-xs text-neutral-500">{{ formatTime(comment.created_at) }}</span>
                                 </div>
                                 <p class="text-sm">{{ comment.content }}</p>
@@ -183,6 +183,7 @@
 
 <script setup lang="ts">
 import type { MomentInfo } from '~/types';
+import { formatTime } from '~/utils/formatters';
 
 definePageMeta({ 
     title: '动态详情', 
@@ -227,8 +228,18 @@ const likingState = ref({
     liked: false
 });
 
+// 评论类型定义
+interface Comment {
+  id: string;
+  user_id: string;
+  nickname: string;
+  avatar_url?: string;
+  content: string;
+  created_at: string;
+}
+
 // Mock 评论数据（实际项目中应从API获取）
-const comments = ref([]);
+const comments = ref<Comment[]>([]);
 
 const hasMoreComments = ref(false);
 const commentCount = computed(() => comments.value.length);
@@ -296,16 +307,15 @@ async function submitComment() {
     
     commenting.value = true;
     try {
-        // TODO: 调用实际的评论API
+        // 注意：评论功能需要后端 API 支持
         // await commentService.createComment(momentId, commentText.value);
         
         // 模拟添加评论
         const newComment = {
             id: Date.now().toString(),
-            user: { 
-                nickname: authStore.user?.nickname || '我', 
-                avatar: '' 
-            },
+            user_id: authStore.user?.user_id || '',
+            nickname: authStore.user?.nickname || '我',
+            avatar_url: authStore.user?.avatar_url,
             content: commentText.value.trim(),
             created_at: new Date().toISOString(),
         };
@@ -331,7 +341,7 @@ async function submitComment() {
 async function loadMoreComments() {
     loadingMoreComments.value = true;
     try {
-        // TODO: 实现加载更多评论的逻辑
+        // 注意：加载更多评论功能需要后端分页 API 支持
         await new Promise(resolve => setTimeout(resolve, 1000));
         hasMoreComments.value = false;
     } finally {
@@ -405,17 +415,7 @@ function reportMoment() {
     });
 }
 
-function formatTime(s: string) {
-    const t = new Date(s);
-    const d = Date.now() - t.getTime();
-    const m = Math.floor(d / 60000);
-    const h = Math.floor(d / 3600000);
-    const day = Math.floor(d / 86400000);
-    
-    if (m < 60) return `${m}分钟前`;
-    if (h < 24) return `${h}小时前`;
-    return `${day}天前`;
-}
+// formatTime 函数已从统一工具函数导入
 
 // onMounted 和数据加载逻辑已在下方的现有代码中处理
 </script>

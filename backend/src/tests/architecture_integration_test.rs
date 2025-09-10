@@ -1,8 +1,6 @@
 /// 架构集成测试
 /// 
 /// 验证新架构的核心组件能够正确集成和工作
-
-
 use crate::domain::{User, UserType};
 
 #[cfg(test)]

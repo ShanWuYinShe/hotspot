@@ -1,8 +1,22 @@
-/// 适配器层模块
+/// HotSpot 适配器层模块
 /// 
-/// 实现端口接口的具体适配器，连接外部系统和技术栈
-/// 包括数据库、缓存、消息队列、通知等基础设施的实现
-
+/// 功能职责：
+/// - 实现端口层定义的所有抽象接口
+/// - 连接外部系统和第三方服务
+/// - 处理数据持久化和基础设施集成
+/// - 提供可插拔的技术栈实现
+/// 
+/// 适配器类型：
+/// - 数据库适配器：PostgreSQL + PostGIS（地理位置查询）
+/// - 缓存适配器：内存缓存（默认）、Redis缓存（可选）
+/// - 任务队列适配器：轻量级队列（默认）、Redis队列（可选）
+/// - 通知适配器：WebSocket通知（默认）
+/// 
+/// 设计特点：
+/// - 通过 feature flags 控制适配器启用
+/// - 支持运行时配置切换不同实现
+/// - 完全实现端口接口契约
+/// - 独立的错误处理和日志记录
 // PostgreSQL 适配器（默认）
 #[cfg(feature = "postgres")]
 pub mod adapters_pg;
@@ -15,9 +29,6 @@ pub mod adapters_cache_memory;
 #[cfg(feature = "cache_redis")]
 pub mod adapters_cache_redis;
 
-// 轻量级任务队列适配器（默认）
-#[cfg(any(feature = "jobs_lite", not(feature = "jobs_redis")))]
-pub mod adapters_jobs_lite;
 
 // Redis 任务队列适配器（可选）
 #[cfg(feature = "jobs_redis")]
@@ -47,8 +58,6 @@ pub use adapters_cache_memory::*;
 #[cfg(feature = "cache_redis")]
 pub use adapters_cache_redis::*;
 
-#[cfg(any(feature = "jobs_lite", not(feature = "jobs_redis")))]
-pub use adapters_jobs_lite::*;
 
 #[cfg(feature = "jobs_redis")]
 pub use adapters_jobs_redis::*;

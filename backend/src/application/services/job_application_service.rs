@@ -1,14 +1,13 @@
 /// 任务应用服务
 /// 
 /// 提供高级任务管理功能，基于任务调度端口实现业务相关的异步任务处理
-
 use async_trait::async_trait;
 use std::sync::Arc;
 use uuid::Uuid;
 use serde::{Deserialize, Serialize};
 
 use crate::domain::DomainResult;
-use crate::ports::{JobDispatcherPort, Job, JobId, JobStatus, QueueStats, job_types};
+use crate::ports::{JobDispatcher, Job, JobId, JobStatus, QueueStats, job_types};
 
 /// 任务应用服务接口
 #[async_trait]
@@ -75,7 +74,6 @@ pub trait JobApplicationService: Send + Sync {
 }
 
 /// 任务载荷定义
-
 /// 欢迎邮件任务载荷
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WelcomeEmailPayload {
@@ -128,11 +126,11 @@ pub struct CleanupExpiredSessionsPayload {
 }
 
 /// 任务应用服务实现
-pub struct JobApplicationServiceImpl<J: JobDispatcherPort> {
+pub struct JobApplicationServiceImpl<J: JobDispatcher> {
     job_dispatcher: Arc<J>,
 }
 
-impl<J: JobDispatcherPort> JobApplicationServiceImpl<J> {
+impl<J: JobDispatcher> JobApplicationServiceImpl<J> {
     /// 创建新的任务应用服务
     pub fn new(job_dispatcher: Arc<J>) -> Self {
         Self { job_dispatcher }
@@ -140,7 +138,7 @@ impl<J: JobDispatcherPort> JobApplicationServiceImpl<J> {
 }
 
 #[async_trait]
-impl<J: JobDispatcherPort> JobApplicationService for JobApplicationServiceImpl<J> {
+impl<J: JobDispatcher> JobApplicationService for JobApplicationServiceImpl<J> {
     async fn dispatch_welcome_email(
         &self,
         user_id: i64,
@@ -156,7 +154,7 @@ impl<J: JobDispatcherPort> JobApplicationService for JobApplicationServiceImpl<J
         let job = Job::new(job_types::USER_WELCOME_EMAIL.to_string(), payload)
             .with_retry(3, 60); // 重试3次，每次间隔60秒
 
-        self.job_dispatcher.dispatch_job(job).await
+        self.job_dispatcher.dispatch(job).await
     }
 
     async fn dispatch_location_index(
@@ -176,7 +174,7 @@ impl<J: JobDispatcherPort> JobApplicationService for JobApplicationServiceImpl<J
         let job = Job::new(job_types::USER_LOCATION_INDEX.to_string(), payload)
             .with_retry(2, 30); // 重试2次，每次间隔30秒
 
-        self.job_dispatcher.dispatch_job(job).await
+        self.job_dispatcher.dispatch(job).await
     }
 
     async fn dispatch_group_member_notification(
@@ -196,7 +194,7 @@ impl<J: JobDispatcherPort> JobApplicationService for JobApplicationServiceImpl<J
         let job = Job::new(job_types::GROUP_MEMBER_NOTIFICATION.to_string(), payload)
             .with_retry(2, 15); // 重试2次，每次间隔15秒
 
-        self.job_dispatcher.dispatch_job(job).await
+        self.job_dispatcher.dispatch(job).await
     }
 
     async fn dispatch_moment_content_index(
@@ -218,7 +216,7 @@ impl<J: JobDispatcherPort> JobApplicationService for JobApplicationServiceImpl<J
         let job = Job::new(job_types::MOMENT_CONTENT_INDEX.to_string(), payload)
             .with_retry(2, 30); // 重试2次，每次间隔30秒
 
-        self.job_dispatcher.dispatch_job(job).await
+        self.job_dispatcher.dispatch(job).await
     }
 
     async fn dispatch_message_notification(
@@ -238,7 +236,7 @@ impl<J: JobDispatcherPort> JobApplicationService for JobApplicationServiceImpl<J
         let job = Job::new(job_types::MESSAGE_NOTIFICATION.to_string(), payload)
             .with_retry(3, 10); // 重试3次，每次间隔10秒
 
-        self.job_dispatcher.dispatch_job(job).await
+        self.job_dispatcher.dispatch(job).await
     }
 
     async fn dispatch_cleanup_expired_sessions(&self) -> DomainResult<JobId> {
@@ -249,7 +247,7 @@ impl<J: JobDispatcherPort> JobApplicationService for JobApplicationServiceImpl<J
         let job = Job::new(job_types::CLEANUP_EXPIRED_SESSIONS.to_string(), payload)
             .with_retry(1, 300); // 重试1次，间隔5分钟
 
-        self.job_dispatcher.dispatch_job(job).await
+        self.job_dispatcher.dispatch(job).await
     }
 
     async fn get_job_status(&self, job_id: &JobId) -> DomainResult<Option<JobStatus>> {
@@ -273,12 +271,12 @@ impl<J: JobDispatcherPort> JobApplicationService for JobApplicationServiceImpl<J
 /// 
 /// 提供任务相关的管理功能
 #[derive(Clone)]
-pub struct JobManager<J: JobDispatcherPort> {
+pub struct JobManager<J: JobDispatcher> {
     job_dispatcher: Arc<J>,
     job_service: Arc<JobApplicationServiceImpl<J>>,
 }
 
-impl<J: JobDispatcherPort> JobManager<J> {
+impl<J: JobDispatcher> JobManager<J> {
     /// 创建新的任务管理器
     pub fn new(job_dispatcher: Arc<J>) -> Self {
         let job_service = Arc::new(JobApplicationServiceImpl::new(job_dispatcher.clone()));
@@ -320,41 +318,41 @@ pub struct JobFactory;
 
 impl JobFactory {
     /// 创建用户相关任务
-    pub fn create_user_task<T>(task_type: &str, payload: T) -> Job<T> 
+    pub fn create_user_task<T>(task_type: &str, payload: T) -> crate::ports::job_dispatcher_ports::Job<T>
     where
         T: serde::Serialize + for<'de> serde::Deserialize<'de> + Send + Sync + std::fmt::Debug,
     {
-        Job::new(task_type.to_string(), payload)
+        crate::ports::job_dispatcher_ports::Job::new(task_type.to_string(), payload)
             .with_retry(3, 60)
             .with_metadata("category".to_string(), "user".to_string())
     }
 
     /// 创建群组相关任务
-    pub fn create_group_task<T>(task_type: &str, payload: T) -> Job<T>
+    pub fn create_group_task<T>(task_type: &str, payload: T) -> crate::ports::job_dispatcher_ports::Job<T>
     where
         T: serde::Serialize + for<'de> serde::Deserialize<'de> + Send + Sync + std::fmt::Debug,
     {
-        Job::new(task_type.to_string(), payload)
+        crate::ports::job_dispatcher_ports::Job::new(task_type.to_string(), payload)
             .with_retry(2, 30)
             .with_metadata("category".to_string(), "group".to_string())
     }
 
     /// 创建消息相关任务
-    pub fn create_message_task<T>(task_type: &str, payload: T) -> Job<T>
+    pub fn create_message_task<T>(task_type: &str, payload: T) -> impl Job<T>
     where
         T: serde::Serialize + for<'de> serde::Deserialize<'de> + Send + Sync + std::fmt::Debug,
     {
-        Job::new(task_type.to_string(), payload)
+        crate::ports::job_dispatcher_ports::Job::new(task_type.to_string(), payload)
             .with_retry(3, 10)
             .with_metadata("category".to_string(), "message".to_string())
     }
 
     /// 创建系统维护任务
-    pub fn create_maintenance_task<T>(task_type: &str, payload: T) -> Job<T>
+    pub fn create_maintenance_task<T>(task_type: &str, payload: T) -> impl Job<T>
     where
         T: serde::Serialize + for<'de> serde::Deserialize<'de> + Send + Sync + std::fmt::Debug,
     {
-        Job::new(task_type.to_string(), payload)
+        crate::ports::job_dispatcher_ports::Job::new(task_type.to_string(), payload)
             .with_retry(1, 300)
             .with_metadata("category".to_string(), "maintenance".to_string())
     }

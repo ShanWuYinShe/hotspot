@@ -5,22 +5,54 @@ use super::{
 use crate::application::commands::{
     CreateGroupCommand, DeleteGroupCommand, JoinGroupCommand, KickMemberCommand, LeaveGroupCommand,
     TransferOwnershipCommand, UpdateGroupInfoCommand,
+    GroupCommandResult, JoinGroupResult, LeaveGroupResult, KickMemberResult, TransferOwnershipResult,
 };
 use crate::application::queries::{
-    FindNearbyGroupsQuery, GroupMembersQuery, PaginationQuery, SearchGroupsByNameQuery,
-    GetGroupByIdQuery, GetUserGroupsQuery, GetOwnedGroupsQuery,
+    SearchGroupsByLocationQuery, GroupMembersQuery, PaginationQuery, SearchGroupsByNameQuery,
+    SearchGroupsByIdQuery, SearchGroupsByUserIdQuery, SearchGroupsByOwnerIdQuery,
+    NearbyGroup, GroupSearchResult, GroupMemberInfo,
 };
-use crate::application::{CommandHandler, QueryHandler};
+use crate::application::{CommandHandler, QueryHandler, PaginatedResult};
 use crate::presentation::http::auth::CurrentUser;
 /// 群组HTTP控制器
-///
-/// 处理群组相关的HTTP请求，实现hotspot.md中定义的9个群组API端点
+/// 
+/// 功能职责：
+/// - 处理群组相关的 HTTP API 请求
+/// - 实现群组创建、管理、成员操作等接口
+/// - 管理群组权限和角色分配功能
+/// - 提供基于地理位置的群组搜索和推荐
+/// - 协调群组应用服务和领域逻辑
+/// 
+/// API 端点：
+/// - POST /group/create - 创建群组
+/// - POST /group/search_by_name - 按名称搜索群组
+/// - POST /group/search_by_location - 按位置搜索群组
+/// - POST /group/join - 加入群组
+/// - POST /group/leave - 退出群组
+/// - POST /group/members - 获取群组成员
+/// - POST /group/transfer_ownership - 转让群主
+/// - POST /group/kick - 踢出成员
+/// 
+/// 权限管理：
+/// - 群主权限：群组设置、成员管理、权限分配
+/// - 管理员权限：成员管理、内容审核
+/// - 普通成员权限：基础参与和互动功能
+/// - 访客权限：查看公开群组信息
 use axum::{
     Json,
     extract::{Path, State},
     response::Response,
 };
 use serde::{Deserialize, Serialize};
+
+/// 辅助函数：将字符串转换为i64，处理错误
+fn parse_id_string(id_str: &str, field_name: &str) -> Result<i64, crate::domain::DomainError> {
+    id_str.parse::<i64>().map_err(|_| {
+        crate::domain::DomainError::BusinessRuleViolation {
+            rule: format!("Invalid {} format", field_name)
+        }
+    })
+}
 
 /// 群组控制器
 #[derive(Clone)]
@@ -30,36 +62,36 @@ pub struct GroupController<GroupAppService> {
 
 impl<GroupAppService> GroupController<GroupAppService>
 where
-    GroupAppService: CommandHandler<CreateGroupCommand, Result = crate::application::GroupCommandResult>
-        + CommandHandler<UpdateGroupInfoCommand, Result = crate::application::GroupCommandResult>
-        + CommandHandler<DeleteGroupCommand, Result = crate::application::GroupCommandResult>
+    GroupAppService: CommandHandler<CreateGroupCommand, Result = GroupCommandResult>
+        + CommandHandler<UpdateGroupInfoCommand, Result = GroupCommandResult>
+        + CommandHandler<DeleteGroupCommand, Result = GroupCommandResult>
         // member management commands
-        + CommandHandler<JoinGroupCommand, Result = crate::application::JoinGroupResult>
-        + CommandHandler<LeaveGroupCommand, Result = crate::application::LeaveGroupResult>
-        + CommandHandler<KickMemberCommand, Result = crate::application::KickMemberResult>
+        + CommandHandler<JoinGroupCommand, Result = JoinGroupResult>
+        + CommandHandler<LeaveGroupCommand, Result = LeaveGroupResult>
+        + CommandHandler<KickMemberCommand, Result = KickMemberResult>
         + CommandHandler<
             TransferOwnershipCommand,
-            Result = crate::application::TransferOwnershipResult,
+            Result = TransferOwnershipResult,
         >
         // queries
         + QueryHandler<
-            FindNearbyGroupsQuery,
-            Result = crate::application::PaginatedResult<crate::application::NearbyGroup>,
+            SearchGroupsByLocationQuery,
+            Result = PaginatedResult<NearbyGroup>,
         > + QueryHandler<
             SearchGroupsByNameQuery,
-            Result = crate::application::PaginatedResult<crate::application::GroupSearchResult>,
+            Result = PaginatedResult<GroupSearchResult>,
         > + QueryHandler<
             GroupMembersQuery,
-            Result = crate::application::PaginatedResult<crate::application::GroupMemberInfo>,
+            Result = PaginatedResult<GroupMemberInfo>,
         > + QueryHandler<
-            GetGroupByIdQuery,
-            Result = Option<crate::domain::Group>,
+            SearchGroupsByIdQuery,
+            Result = Option<crate::domain::GroupProfile>,
         > + QueryHandler<
-            GetUserGroupsQuery,
-            Result = crate::application::PaginatedResult<crate::domain::Group>,
+            SearchGroupsByUserIdQuery,
+            Result = crate::application::PaginatedResult<crate::domain::GroupProfile>,
         > + QueryHandler<
-            GetOwnedGroupsQuery,
-            Result = crate::application::PaginatedResult<crate::domain::Group>,
+            SearchGroupsByOwnerIdQuery,
+            Result = crate::application::PaginatedResult<crate::domain::GroupProfile>,
         > + Clone
         + Send
         + Sync
@@ -72,7 +104,7 @@ where
     pub async fn create_group(
         State(controller): State<Self>,
         axum::extract::Extension(current_user): axum::extract::Extension<CurrentUser>,
-        Json(req): Json<CreateGroupRequest>,
+        Json(req): Json<CreateRequest>,
     ) -> Response {
         let cmd = CreateGroupCommand {
             name: req.name,
@@ -83,7 +115,7 @@ where
             location_name: req.location_name.unwrap_or_else(|| "未知位置".to_string()),
             password: if req.is_public { None } else { req.password },
         };
-        match controller.group_service.handle_command(cmd).await {
+        match CommandHandler::<CreateGroupCommand>::handle(&controller.group_service, cmd).await {
             Ok(result) => created_response(result),
             Err(e) => map_domain_error_to_http_response(e),
         }
@@ -95,11 +127,11 @@ where
         Json(req): Json<UpdateGroupRequest>,
     ) -> Response {
         let cmd = UpdateGroupInfoCommand {
-            group_id,
+            group_id: group_id.to_string(),
             name: req.name,
             description: req.description,
         };
-        match controller.group_service.handle_command(cmd).await {
+        match CommandHandler::<UpdateGroupInfoCommand>::handle(&controller.group_service, cmd).await {
             Ok(result) => ok_response(result),
             Err(e) => map_domain_error_to_http_response(e),
         }
@@ -109,48 +141,48 @@ where
         axum::extract::State(controller): axum::extract::State<Self>,
         Path(group_id): Path<i64>,
     ) -> Response {
-        let cmd = DeleteGroupCommand { group_id };
-        match controller.group_service.handle_command(cmd).await {
+        let cmd = DeleteGroupCommand { group_id: group_id.to_string() };
+        match CommandHandler::<DeleteGroupCommand>::handle(&controller.group_service, cmd).await {
             Ok(_) => no_content_response(),
             Err(e) => map_domain_error_to_http_response(e),
         }
     }
 
-    pub async fn find_nearby_groups(
+    pub async fn search_by_location(
         State(controller): State<Self>,
         axum::extract::Extension(current_user): axum::extract::Extension<CurrentUser>,
         Json(request): Json<SearchByLocationRequest>,
     ) -> Response {
         let pagination = PaginationQuery {
-            cursor: request.cursor,
-            limit: request.limit.map(|v| v as i32),
+            cursor: request.cursor.and_then(|c| c.parse().ok()),
+            limit: request.limit,
         };
-        let q = FindNearbyGroupsQuery {
+        let q = SearchGroupsByLocationQuery {
             user_id: current_user.user_id,
             latitude: request.latitude,
             longitude: request.longitude,
             radius_km: Some(request.radius / 1000.0), // 转换米为公里
             pagination,
         };
-        match controller.group_service.handle_query(q).await {
+        match QueryHandler::<SearchGroupsByLocationQuery>::handle(&controller.group_service, q).await {
             Ok(result) => paginated_response(result.items, result.has_more, result.next_cursor),
             Err(e) => map_domain_error_to_http_response(e),
         }
     }
 
-    pub async fn search_groups(
+    pub async fn search_by_name(
         axum::extract::State(controller): axum::extract::State<Self>,
         Json(request): Json<SearchByNameRequest>,
     ) -> Response {
         let pagination = PaginationQuery {
-            cursor: request.cursor,
-            limit: request.limit.map(|v| v as i32),
+            cursor: request.cursor.and_then(|c| c.parse().ok()),
+            limit: request.limit,
         };
         let q = SearchGroupsByNameQuery {
             keyword: request.query,
             pagination,
         };
-        match controller.group_service.handle_query(q).await {
+        match QueryHandler::<SearchGroupsByNameQuery>::handle(&controller.group_service, q).await {
             Ok(result) => paginated_response(result.items, result.has_more, result.next_cursor),
             Err(e) => map_domain_error_to_http_response(e),
         }
@@ -162,17 +194,20 @@ where
         axum::extract::Extension(current_user): axum::extract::Extension<CurrentUser>,
         Json(request): Json<SearchByIdRequest>,
     ) -> Response {
-        let query = GetGroupByIdQuery {
-            group_id: request.group_id,
+        let group_id = match parse_id_string(&request.group_id, "group_id") {
+            Ok(id) => id,
+            Err(error) => return map_domain_error_to_http_response(error),
+        };
+        
+        let query = SearchGroupsByIdQuery {
+            group_id,
             requester_id: current_user.user_id,
         };
         
-        match controller.group_service.handle_query(query).await {
+        match QueryHandler::<SearchGroupsByIdQuery>::handle(&controller.group_service, query).await {
             Ok(Some(group)) => ok_response(group),
             Ok(None) => map_domain_error_to_http_response(
-                crate::domain::DomainError::Group(crate::domain::GroupDomainError::GroupNotFound { 
-                    group_id: request.group_id 
-                })
+                crate::domain::DomainError::GroupNotFound
             ),
             Err(error) => map_domain_error_to_http_response(error),
         }
@@ -183,14 +218,14 @@ where
     pub async fn join_group(
         axum::extract::State(controller): axum::extract::State<Self>,
         axum::extract::Extension(current_user): axum::extract::Extension<CurrentUser>,
-        Json(req): Json<JoinGroupRequest>,
+        Json(req): Json<JoinRequest>,
     ) -> Response {
         let cmd = JoinGroupCommand {
-            group_id: req.group_id,
+            group_id: req.group_id.to_string(),
             user_id: current_user.user_id,
             password: req.password,
         };
-        match controller.group_service.handle_command(cmd).await {
+        match CommandHandler::<JoinGroupCommand>::handle(&controller.group_service, cmd).await {
             Ok(result) => ok_response(result),
             Err(e) => map_domain_error_to_http_response(e),
         }
@@ -199,13 +234,13 @@ where
     pub async fn leave_group(
         axum::extract::State(controller): axum::extract::State<Self>,
         axum::extract::Extension(current_user): axum::extract::Extension<CurrentUser>,
-        Json(req): Json<LeaveGroupRequest>,
+        Json(req): Json<LeaveRequest>,
     ) -> Response {
         let cmd = LeaveGroupCommand {
-            group_id: req.group_id,
+            group_id: req.group_id.to_string(),
             user_id: current_user.user_id,
         };
-        match controller.group_service.handle_command(cmd).await {
+        match CommandHandler::<LeaveGroupCommand>::handle(&controller.group_service, cmd).await {
             Ok(result) => ok_response(result),
             Err(e) => map_domain_error_to_http_response(e),
         }
@@ -213,17 +248,22 @@ where
 
     pub async fn group_members(
         axum::extract::State(controller): axum::extract::State<Self>,
-        Json(req): Json<GroupMembersRequest>,
+        Json(req): Json<MembersRequest>,
     ) -> Response {
         let pagination = PaginationQuery {
             cursor: req.cursor,
             limit: req.limit.map(|v| v as i32),
         };
+        let group_id = match parse_id_string(&req.group_id, "group_id") {
+            Ok(id) => id,
+            Err(error) => return map_domain_error_to_http_response(error),
+        };
+        
         let q = GroupMembersQuery {
-            group_id: req.group_id,
+            group_id,
             pagination,
         };
-        match controller.group_service.handle_query(q).await {
+        match QueryHandler::<GroupMembersQuery>::handle(&controller.group_service, q).await {
             Ok(result) => paginated_response(result.items, result.has_more, result.next_cursor),
             Err(e) => map_domain_error_to_http_response(e),
         }
@@ -234,12 +274,17 @@ where
         axum::extract::Extension(current_user): axum::extract::Extension<CurrentUser>,
         Json(req): Json<TransferOwnershipRequest>,
     ) -> Response {
+        let new_owner_id = match parse_id_string(&req.new_owner_id, "new_owner_id") {
+            Ok(id) => id,
+            Err(error) => return map_domain_error_to_http_response(error),
+        };
+        
         let cmd = TransferOwnershipCommand {
-            group_id: req.group_id,
-            new_owner_id: req.new_owner_id,
+            group_id: req.group_id.to_string(),
+            new_owner_id,
             current_owner_id: current_user.user_id,
         };
-        match controller.group_service.handle_command(cmd).await {
+        match CommandHandler::<TransferOwnershipCommand>::handle(&controller.group_service, cmd).await {
             Ok(result) => ok_response(result),
             Err(e) => map_domain_error_to_http_response(e),
         }
@@ -248,14 +293,19 @@ where
     pub async fn kick_member(
         axum::extract::State(controller): axum::extract::State<Self>,
         axum::extract::Extension(current_user): axum::extract::Extension<CurrentUser>,
-        Json(req): Json<KickMemberRequest>,
+        Json(req): Json<KickRequest>,
     ) -> Response {
+        let target_user_id = match parse_id_string(&req.target_user_id, "target_user_id") {
+            Ok(id) => id,
+            Err(error) => return map_domain_error_to_http_response(error),
+        };
+        
         let cmd = KickMemberCommand {
-            group_id: req.group_id,
-            target_user_id: req.target_user_id,
+            group_id: req.group_id.to_string(),
+            target_user_id,
             admin_id: current_user.user_id,
         };
-        match controller.group_service.handle_command(cmd).await {
+        match CommandHandler::<KickMemberCommand>::handle(&controller.group_service, cmd).await {
             Ok(result) => ok_response(result),
             Err(e) => map_domain_error_to_http_response(e),
         }
@@ -267,7 +317,7 @@ where
         axum::extract::Extension(current_user): axum::extract::Extension<CurrentUser>,
         Json(request): Json<UserGroupsRequest>,
     ) -> Response {
-        let query = GetUserGroupsQuery {
+        let query = SearchGroupsByUserIdQuery {
             user_id: current_user.user_id,
             pagination: crate::application::queries::PaginationQuery {
                 cursor: request.cursor,
@@ -275,7 +325,7 @@ where
             },
         };
         
-        match controller.group_service.handle_query(query).await {
+        match QueryHandler::<SearchGroupsByUserIdQuery>::handle(&controller.group_service, query).await {
             Ok(result) => paginated_response(result.items, result.has_more, result.next_cursor),
             Err(error) => map_domain_error_to_http_response(error),
         }
@@ -287,7 +337,7 @@ where
         axum::extract::Extension(current_user): axum::extract::Extension<CurrentUser>,
         Json(request): Json<OwnedGroupsRequest>,
     ) -> Response {
-        let query = GetOwnedGroupsQuery {
+        let query = SearchGroupsByOwnerIdQuery {
             owner_id: current_user.user_id,
             pagination: crate::application::queries::PaginationQuery {
                 cursor: request.cursor,
@@ -295,7 +345,7 @@ where
             },
         };
         
-        match controller.group_service.handle_query(query).await {
+        match QueryHandler::<SearchGroupsByOwnerIdQuery>::handle(&controller.group_service, query).await {
             Ok(result) => paginated_response(result.items, result.has_more, result.next_cursor),
             Err(error) => map_domain_error_to_http_response(error),
         }
@@ -312,7 +362,7 @@ where
     }
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CreateGroupRequest {
+pub struct CreateRequest {
     pub name: String,
     pub description: Option<String>,
     pub latitude: f64,
@@ -336,62 +386,62 @@ pub struct SearchByLocationRequest {
     pub latitude: f64,
     pub longitude: f64,
     pub radius: f64, // 以米为单位
-    pub cursor: Option<i64>,
-    pub limit: Option<i64>,
+    pub cursor: Option<String>,
+    pub limit: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchByNameRequest {
     pub query: String,
-    pub cursor: Option<i64>,
-    pub limit: Option<i64>,
+    pub cursor: Option<String>,
+    pub limit: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchByIdRequest {
-    pub group_id: i64, // 注意：hotspot.md要求使用UUID，但当前实现使用i64
+    pub group_id: String, // 前端发送字符串格式的64位整数
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct JoinGroupRequest {
-    pub group_id: i64,
+pub struct JoinRequest {
+    pub group_id: String,
     pub password: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LeaveGroupRequest {
-    pub group_id: i64,
+pub struct LeaveRequest {
+    pub group_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GroupMembersRequest {
-    pub group_id: i64,
-    pub cursor: Option<i64>,
-    pub limit: Option<i64>,
+pub struct MembersRequest {
+    pub group_id: String,
+    pub cursor: Option<String>,
+    pub limit: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransferOwnershipRequest {
-    pub group_id: i64,
-    pub new_owner_id: i64,
+    pub group_id: String,
+    pub new_owner_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct KickMemberRequest {
-    pub group_id: i64,
-    pub target_user_id: i64, // 修改字段名以匹配hotspot.md
+pub struct KickRequest {
+    pub group_id: String,
+    pub target_user_id: String, // 前端发送字符串格式的64位整数
 }
 
 // ===== 用户群组列表请求结构 =====
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserGroupsRequest {
-    pub cursor: Option<i64>,
-    pub limit: Option<i64>,
+    pub cursor: Option<String>,
+    pub limit: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OwnedGroupsRequest {
-    pub cursor: Option<i64>,
-    pub limit: Option<i64>,
+    pub cursor: Option<String>,
+    pub limit: Option<i32>,
 }

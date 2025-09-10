@@ -1,22 +1,21 @@
 /// 搜索控制器
 /// 
 /// 处理全局搜索相关的HTTP请求
-
-use axum::{extract::Query, response::Response};
-use serde::{Deserialize, Serialize};
+use axum::{extract::State, response::Response, Json};
+use serde::Deserialize;
 use serde_json::json;
 use tracing::{info, warn, error};
 use std::sync::Arc;
 
 use crate::{
-    application::{SearchApplicationService, GlobalSearchQuery, SearchType},
-    presentation::http::controllers::{Controller, ok_response, error_response},
+    application::{SearchApplicationService, SearchByGlobalQuery, SearchType},
+    presentation::http::controllers::{Controller, ok_response, map_domain_error_to_http_response},
     presentation::http::auth::CurrentUser,
 };
 
-/// 搜索请求参数
+/// 全局搜索请求参数
 #[derive(Debug, Deserialize)]
-pub struct SearchRequest {
+pub struct SearchByGlobalRequest {
     /// 搜索关键词
     pub q: String,
     /// 搜索类型
@@ -28,6 +27,15 @@ pub struct SearchRequest {
     /// 用户位置（用于地理位置相关的搜索排序）
     pub lat: Option<f64>,
     pub lng: Option<f64>,
+}
+
+/// 搜索建议请求参数
+#[derive(Debug, Deserialize)]
+pub struct SearchBySuggestionsRequest {
+    /// 搜索关键词
+    pub q: String,
+    /// 建议数量限制
+    pub limit: Option<i32>,
 }
 
 /// 搜索控制器
@@ -51,10 +59,10 @@ impl Controller for SearchController {
 
 impl SearchController {
     /// 全局搜索
-    pub async fn global_search(
-        axum::extract::State(controller): axum::extract::State<SearchController>,
+    pub async fn search_by_global(
+        State(controller): State<SearchController>,
         axum::extract::Extension(current_user): axum::extract::Extension<CurrentUser>,
-        Query(params): Query<SearchRequest>,
+        Json(params): Json<SearchByGlobalRequest>,
     ) -> Response {
         info!("用户 {} 执行全局搜索: '{}'", current_user.user_id, params.q);
         
@@ -71,7 +79,7 @@ impl SearchController {
         };
         
         // 构建搜索查询
-        let search_query = GlobalSearchQuery {
+        let search_query = SearchByGlobalQuery {
             query: params.q.clone(),
             search_type,
             pagination: crate::application::queries::PaginationQuery {
@@ -98,23 +106,18 @@ impl SearchController {
             Err(e) => {
                 error!("搜索失败: {:?}", e);
                 
-                let (status_code, message) = match e {
-                    crate::domain::errors::DomainError::BusinessRuleViolation { rule } => {
-                        (axum::http::StatusCode::BAD_REQUEST, format!("搜索参数错误: {}", rule))
-                    }
-                    _ => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "搜索服务内部错误".to_string()),
-                };
+                // 直接使用统一的错误处理
                 
-                error_response(status_code, &message, None)
+                map_domain_error_to_http_response(e)
             }
         }
     }
     
     /// 搜索建议（快速搜索）
-    pub async fn search_suggestions(
-        &self,
+    pub async fn search_by_suggestions(
+        State(controller): State<SearchController>,
         axum::extract::Extension(current_user): axum::extract::Extension<CurrentUser>,
-        Query(params): Query<SearchSuggestionsRequest>,
+        Json(params): Json<SearchBySuggestionsRequest>,
     ) -> Response {
         info!("用户 {} 请求搜索建议: '{}'", current_user.user_id, params.q);
         
@@ -131,27 +134,25 @@ impl SearchController {
         }
         
         // 构建限制性搜索查询（只返回前5个结果）
-        let search_query = GlobalSearchQuery {
+        let search_query = SearchByGlobalQuery {
             query: params.q.clone(),
             search_type: Some(SearchType::All),
             pagination: crate::application::queries::PaginationQuery {
                 cursor: None,
-                limit: Some(5), // 只返回5个建议
+                limit: params.limit.or(Some(5)), // 默认返回5个建议
             },
-            latitude: params.lat,
-            longitude: params.lng,
+            latitude: None, // 建议搜索不需要位置信息
+            longitude: None,
         };
         
-        match self.search_service.global_search(search_query, current_user.user_id).await {
-            Ok(_result) => {
-                // 转换为建议格式
-                let suggestions: Vec<SearchSuggestion> = vec![];
-                
+        match controller.search_service.global_search(search_query, current_user.user_id).await {
+            Ok(result) => {
+                // 简化建议格式，直接返回搜索结果
                 let response = json!({
                     "code": 0,
                     "msg": "获取建议成功",
                     "data": {
-                        "suggestions": suggestions
+                        "suggestions": result
                     }
                 });
                 
@@ -173,30 +174,4 @@ impl SearchController {
             }
         }
     }
-}
-
-/// 搜索建议请求参数
-#[derive(Debug, Deserialize)]
-pub struct SearchSuggestionsRequest {
-    /// 搜索关键词
-    pub q: String,
-    /// 用户位置
-    pub lat: Option<f64>,
-    pub lng: Option<f64>,
-}
-
-/// 搜索建议项
-#[derive(Debug, Serialize)]
-pub struct SearchSuggestion {
-    /// 项目ID
-    pub id: String,
-    /// 标题
-    pub title: String,
-    /// 副标题
-    pub subtitle: String,
-    /// 类型
-    #[serde(rename = "type")]
-    pub type_: String,
-    /// 图标
-    pub icon: String,
 }

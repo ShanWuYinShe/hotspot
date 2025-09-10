@@ -1,7 +1,6 @@
 /// 地理位置计算模块测试
 /// 
 /// 测试PostGIS地理位置查询和距离计算功能
-
 #[cfg(test)]
 mod geolocation_tests {
     use crate::presentation::http::response_mappers::{PaginatedResponse, PaginationMeta};

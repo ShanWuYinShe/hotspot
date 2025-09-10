@@ -1,14 +1,13 @@
 /// WebSocket路由定义
 /// 
 /// 处理WebSocket连接升级和路由
-
 use axum::{
-    routing::get,
+    routing::{get, post},
     Router,
 };
 use std::sync::Arc;
 
-use crate::ports::UserRepositoryPort;
+use crate::ports::UserRepository;
 use crate::ws::handler::{ws_handler, WebSocketState};
 use crate::ws::manager::WebSocketManager;
 use crate::ws::connection_manager::ConnectionManager;
@@ -16,7 +15,10 @@ use crate::ws::room_manager::RoomManager;
 use crate::ws::message_router::MessageRouter;
 
 /// 创建WebSocket路由
-pub fn create_websocket_routes(_user_repo: Arc<dyn UserRepositoryPort>, db_pool: sqlx::PgPool) -> Router {
+pub fn create_websocket_routes<R>(_user_repo: Arc<R>, db_pool: sqlx::PgPool) -> Router 
+where
+    R: UserRepository + 'static + ?Sized,
+{
     let jwt_secret = std::env::var("JWT_SECRET")
         .unwrap_or_else(|_| "default_jwt_secret_for_development".to_string());
     
@@ -75,5 +77,5 @@ pub async fn websocket_info() -> axum::Json<WebSocketInfo> {
 /// 创建WebSocket信息路由
 pub fn create_websocket_info_routes() -> Router {
     Router::new()
-        .route("/ws/info", get(websocket_info))
+        .route("/ws/info", post(websocket_info))
 }

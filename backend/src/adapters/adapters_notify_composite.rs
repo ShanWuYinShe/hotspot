@@ -1,16 +1,16 @@
 /// 复合通知传输适配器
 /// 
 /// 支持多种通知渠道的复合传输器，可以同时通过WebSocket和邮件发送通知
-
 use async_trait::async_trait;
 use std::sync::Arc;
 use tracing::{debug, error, info, warn};
 
 use crate::domain::DomainResult;
 use crate::ports::{
-    NotificationTransportPort, Notification, NotificationChannel,
-    TransportStats,
+    NotificationTransport,
 };
+use crate::ports::services::{Notification, NotificationPriority};
+use crate::ports::services::TransportStats;
 
 /// 复合通知传输器
 #[derive(Clone)]
@@ -62,7 +62,7 @@ impl CompositeNotificationTransport {
                         let mut ws_notification = notification.clone();
                         ws_notification.channels = vec![NotificationChannel::WebSocket];
                         
-                        match ws_transport.send_notification(ws_notification).await {
+                        match ws_transport.send_notification(ws_notification.user_id, &ws_notification).await {
                             Ok(_) => {
                                 sent_count += 1;
                                 debug!("WebSocket通知发送成功: 用户{}", notification.user_id);
@@ -138,24 +138,18 @@ impl Default for CompositeNotificationTransport {
 }
 
 #[async_trait]
-impl NotificationTransportPort for CompositeNotificationTransport {
+impl NotificationTransport for CompositeNotificationTransport {
     async fn send_notification(&self, notification: Notification) -> DomainResult<()> {
-        if notification.channels.is_empty() {
-            warn!("通知没有指定任何渠道，使用默认WebSocket渠道: {}", notification.title);
-            let mut default_notification = notification;
-            default_notification.channels = vec![NotificationChannel::WebSocket];
-            return self.dispatch_by_channel(default_notification).await;
-        }
-        
-        self.dispatch_by_channel(notification).await
+        // 新的 Notification 结构体没有 channels 字段，直接通过 WebSocket 发送
+        self.broadcast_notification(notification).await
     }
     
-    async fn send_notifications(&self, notifications: Vec<Notification>) -> DomainResult<()> {
+    async fn send_notifications(&self, notifications: &[(i64, Notification)]) -> DomainResult<()> {
         let mut errors = Vec::new();
         let mut success_count = 0;
         
-        for notification in notifications {
-            match self.send_notification(notification).await {
+        for (user_id, notification) in notifications {
+            match self.send_notification(*user_id, notification).await {
                 Ok(_) => success_count += 1,
                 Err(e) => errors.push(e),
             }
@@ -164,7 +158,7 @@ impl NotificationTransportPort for CompositeNotificationTransport {
         info!(
             "批量通知发送完成: 成功{}/总共{}个通知",
             success_count,
-            success_count + errors.len()
+            notifications.len()
         );
         
         // 如果有错误但也有成功的，只记录警告
@@ -184,9 +178,7 @@ impl NotificationTransportPort for CompositeNotificationTransport {
         // 广播通知只通过WebSocket发送，不发送邮件
         #[cfg(feature = "ws")]
         if let Some(ws_transport) = &self.websocket_transport {
-            let mut ws_notification = notification;
-            ws_notification.channels = vec![NotificationChannel::WebSocket];
-            return ws_transport.broadcast_notification(ws_notification).await;
+            return ws_transport.broadcast_notification(&notification).await;
         }
         
         warn!("WebSocket传输器不可用，无法广播通知: {}", notification.title);
@@ -196,39 +188,28 @@ impl NotificationTransportPort for CompositeNotificationTransport {
     async fn get_transport_stats(&self) -> DomainResult<TransportStats> {
         let mut total_sent = 0;
         let mut total_failed = 0;
-        let mut total_time = 0;
-        let mut transport_count = 0;
         
         #[cfg(feature = "ws")]
         if let Some(ws_transport) = &self.websocket_transport {
             if let Ok(stats) = ws_transport.get_transport_stats().await {
-                total_sent += stats.sent_notifications;
-                total_failed += stats.failed_notifications;
-                total_time += stats.avg_send_time_ms;
-                transport_count += 1;
+                total_sent += stats.total_sent;
+                total_failed += stats.total_failed;
             }
         }
         
         #[cfg(feature = "email_channel")]
         if let Some(email_transport) = &self.email_transport {
             if let Ok(stats) = email_transport.get_transport_stats().await {
-                total_sent += stats.sent_notifications;
-                total_failed += stats.failed_notifications;
-                total_time += stats.avg_send_time_ms;
-                transport_count += 1;
+                total_sent += stats.total_sent;
+                total_failed += stats.total_failed;
             }
         }
         
-        let avg_time = if transport_count > 0 {
-            total_time / transport_count
-        } else {
-            0
-        };
-        
         Ok(TransportStats {
-            sent_notifications: total_sent,
-            failed_notifications: total_failed,
-            avg_send_time_ms: avg_time,
+            total_sent,
+            total_failed,
+            active_connections: 0, // TODO: Calculate actual active connections
+            last_activity: None, // TODO: Track last activity
         })
     }
 }

@@ -1,7 +1,6 @@
 /// 瞬间相关HTTP模型
 /// 
 /// 迁移自models/api/moment.rs，适配新架构
-
 use super::{PaginatedResponse, LocationInfo, TimestampInfo, Pagination};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -93,19 +92,19 @@ pub struct UnlikeMomentRequest {
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct UnlikeMomentResponse {
     pub success: bool,
-    pub likes_count: i64,
+    pub likes_count: JsSafeI64,
 }
 
 /// 瞬间信息
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct MomentInfo {
-    pub id: i64,
+    pub id: JsSafeI64,
     pub moment_id: String,
-    pub user_id: i64,
+    pub user_id: JsSafeI64,
     pub user_nickname: String,
     pub description: String,
-    pub likes_count: i64,
-    pub comments_count: i64,
+    pub likes_count: JsSafeI64,
+    pub comments_count: i32,  // 32位整数在JavaScript中是安全的
     pub is_liked: bool,
     #[serde(flatten)]
     pub location: LocationInfo,
@@ -126,10 +125,10 @@ pub struct MomentDetail {
 /// 瞬间评论
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct MomentComment {
-    pub id: i64,
+    pub id: JsSafeI64,
     pub comment_id: String,
     pub moment_id: String,
-    pub user_id: i64,
+    pub user_id: JsSafeI64,
     pub user_nickname: String,
     pub content: String,
     pub created_at: DateTime<Utc>,

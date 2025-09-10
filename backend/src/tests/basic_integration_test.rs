@@ -1,7 +1,6 @@
 /// 基础集成测试
 /// 
 /// 测试当前可用模块的基本功能
-
 #[cfg(test)]
 mod basic_integration_tests {
     use crate::utils::error::AppError;

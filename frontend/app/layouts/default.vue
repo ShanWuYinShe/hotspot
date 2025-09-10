@@ -37,7 +37,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import AppNavigation from "~/components/AppNavigation.vue";
-import { useSystemStatus } from "~/composables/useSystemStatus";
 
 // 导入组件
 const ShortcutHelp = defineAsyncComponent(() => import('~/components/ShortcutHelp.vue'));

@@ -2,7 +2,6 @@
 /// 
 /// 负责根据配置和feature flags组装具体的依赖实现
 /// 使用编译期和运行期相结合的方式进行依赖选择
-
 use crate::domain::DomainResult;
 use crate::bootstrap::{CapabilityRegistry, CapabilityType, CapabilityMetadata, CapabilityStatus, AppConfig, AppStateBuilder};
 
@@ -34,119 +33,130 @@ impl DependencyContainer {
         // 数据库能力（必需）
         #[cfg(feature = "postgres")]
         {
-            let metadata = crate::capability_metadata!(
-                CapabilityType::Database,
-                "PostgreSQL Database",
-                "1.0.0",
-                "PostgreSQL database adapter with sqlx",
-                feature: "postgres"
-            );
-            registry.register_capability(metadata)?;
+            registry.register_capability(CapabilityMetadata {
+                capability_type: CapabilityType::Database,
+                name: "PostgreSQL".to_string(),
+                version: "1.0.0".to_string(),
+                description: "PostgreSQL数据库连接".to_string(),
+                dependencies: vec![],
+                feature_flag: Some("postgres".to_string()),
+                status: CapabilityStatus::Registered,
+            })?;
         }
-        
-        // 缓存能力
+
+        // 缓存能力（默认内存缓存）
         #[cfg(any(feature = "cache_in_memory", not(feature = "cache_redis")))]
         {
-            let metadata = crate::capability_metadata!(
-                CapabilityType::Cache,
-                "In-Memory Cache",
-                "1.0.0",
-                "Fast in-memory cache implementation",
-                feature: "cache_in_memory"
-            );
-            registry.register_capability(metadata)?;
+            registry.register_capability(CapabilityMetadata {
+                capability_type: CapabilityType::Cache,
+                name: "MemoryCache".to_string(),
+                version: "1.0.0".to_string(),
+                description: "内存缓存服务".to_string(),
+                dependencies: vec![],
+                feature_flag: Some("cache_in_memory".to_string()),
+                status: CapabilityStatus::Registered,
+            })?;
         }
-        
+
+        // Redis缓存能力（可选）
         #[cfg(feature = "cache_redis")]
         {
-            let metadata = crate::capability_metadata!(
-                CapabilityType::Cache,
-                "Redis Cache",
-                "1.0.0",
-                "Distributed Redis cache implementation",
-                feature: "cache_redis"
-            );
-            registry.register_capability(metadata)?;
+            registry.register_capability(CapabilityMetadata {
+                capability_type: CapabilityType::Cache,
+                name: "RedisCache".to_string(),
+                version: "1.0.0".to_string(),
+                description: "Redis缓存服务".to_string(),
+                dependencies: vec![],
+                feature_flag: Some("cache_redis".to_string()),
+                status: CapabilityStatus::Registered,
+            })?;
         }
-        
-        // 任务队列能力
+
+        // 任务队列能力（默认轻量级）
         #[cfg(any(feature = "jobs_lite", not(feature = "jobs_redis")))]
         {
-            let metadata = crate::capability_metadata!(
-                CapabilityType::JobQueue,
-                "Lite Job Queue",
-                "1.0.0",
-                "Simple in-memory job queue",
-                feature: "jobs_lite"
-            );
-            registry.register_capability(metadata)?;
+            registry.register_capability(CapabilityMetadata {
+                capability_type: CapabilityType::JobQueue,
+                name: "LiteJobQueue".to_string(),
+                version: "1.0.0".to_string(),
+                description: "轻量级任务队列".to_string(),
+                dependencies: vec![],
+                feature_flag: Some("jobs_lite".to_string()),
+                status: CapabilityStatus::Registered,
+            })?;
         }
-        
+
+        // Redis任务队列能力（可选）
         #[cfg(feature = "jobs_redis")]
         {
-            let metadata = crate::capability_metadata!(
-                CapabilityType::JobQueue,
-                "Redis Job Queue",
-                "1.0.0",
-                "Distributed Redis job queue",
-                feature: "jobs_redis"
-            );
-            registry.register_capability(metadata)?;
+            registry.register_capability(CapabilityMetadata {
+                capability_type: CapabilityType::JobQueue,
+                name: "RedisJobQueue".to_string(),
+                version: "1.0.0".to_string(),
+                description: "Redis任务队列".to_string(),
+                dependencies: vec![],
+                feature_flag: Some("jobs_redis".to_string()),
+                status: CapabilityStatus::Registered,
+            })?;
         }
-        
-        // WebSocket能力
+
+        // WebSocket通知能力（默认且必需）
         #[cfg(feature = "ws")]
         {
-            let metadata = crate::capability_metadata!(
-                CapabilityType::WebSocket,
-                "WebSocket Manager",
-                "1.0.0",
-                "Real-time WebSocket communication",
-                feature: "ws"
-            );
-            registry.register_capability(metadata)?;
+            registry.register_capability(CapabilityMetadata {
+                capability_type: CapabilityType::NotificationTransport,
+                name: "WebSocketNotification".to_string(),
+                version: "1.0.0".to_string(),
+                description: "WebSocket实时通知".to_string(),
+                dependencies: vec![],
+                feature_flag: Some("ws".to_string()),
+                status: CapabilityStatus::Registered,
+            })?;
+
+            registry.register_capability(CapabilityMetadata {
+                capability_type: CapabilityType::WebSocket,
+                name: "WebSocketManager".to_string(),
+                version: "1.0.0".to_string(),
+                description: "WebSocket连接管理".to_string(),
+                dependencies: vec![],
+                feature_flag: Some("ws".to_string()),
+                status: CapabilityStatus::Registered,
+            })?;
         }
-        
-        // 通知传输能力
-        #[cfg(feature = "ws")]
-        {
-            let metadata = crate::capability_metadata!(
-                CapabilityType::NotificationTransport,
-                "WebSocket Notification Transport",
-                "1.0.0",
-                "WebSocket-based notification delivery",
-                deps: [CapabilityType::WebSocket],
-                feature: "ws"
-            );
-            registry.register_capability(metadata)?;
-        }
-        
-        // 通知策略能力
-        #[cfg(feature = "policy_friend")]
-        {
-            let metadata = crate::capability_metadata!(
-                CapabilityType::NotificationPolicy,
-                "Friend Notification Policy",
-                "1.0.0",
-                "Friend-based notification targeting",
-                feature: "policy_friend"
-            );
-            registry.register_capability(metadata)?;
-        }
-        
-        // 监控指标能力
-        #[cfg(feature = "metrics_basic")]
-        {
-            let metadata = crate::capability_metadata!(
-                CapabilityType::Metrics,
-                "Basic Metrics",
-                "1.0.0",
-                "Basic application metrics collection",
-                feature: "metrics_basic"
-            );
-            registry.register_capability(metadata)?;
-        }
-        
+
+        // 通知策略能力（默认启用好友和群组策略）
+        registry.register_capability(CapabilityMetadata {
+            capability_type: CapabilityType::NotificationPolicy,
+            name: "FriendGroupPolicy".to_string(),
+            version: "1.0.0".to_string(),
+            description: "好友和群组通知策略".to_string(),
+            dependencies: vec![CapabilityType::NotificationTransport],
+            feature_flag: None,
+            status: CapabilityStatus::Registered,
+        })?;
+
+        // 地理位置服务能力
+        registry.register_capability(CapabilityMetadata {
+            capability_type: CapabilityType::GeoService,
+            name: "PostGISGeoService".to_string(),
+            version: "1.0.0".to_string(),
+            description: "PostGIS地理位置服务".to_string(),
+            dependencies: vec![CapabilityType::Database],
+            feature_flag: Some("postgres".to_string()),
+            status: CapabilityStatus::Registered,
+        })?;
+
+        // 基础监控指标能力
+        registry.register_capability(CapabilityMetadata {
+            capability_type: CapabilityType::Metrics,
+            name: "BasicMetrics".to_string(),
+            version: "1.0.0".to_string(),
+            description: "基础监控指标".to_string(),
+            dependencies: vec![],
+            feature_flag: None,
+            status: CapabilityStatus::Registered,
+        })?;
+
         Ok(())
     }
     
@@ -162,10 +172,12 @@ impl DependencyContainer {
         registry.enable_capability(CapabilityType::Cache)?;
         
         // 根据配置启用任务队列
-        registry.enable_capability(CapabilityType::JobQueue)?;
+        if config.job_queue.queue_type != "disabled" {
+            registry.enable_capability(CapabilityType::JobQueue)?;
+        }
         
         // 启用WebSocket（如果可用）
-        if registry.is_capability_available(&CapabilityType::WebSocket) {
+        if config.websocket.auth_timeout_seconds > 0 {
             registry.enable_capability(CapabilityType::WebSocket)?;
             registry.enable_capability(CapabilityType::NotificationTransport)?;
         }
@@ -173,162 +185,33 @@ impl DependencyContainer {
         // 根据通知配置启用策略
         if config.notification.enable_friend_notifications || 
            config.notification.enable_group_notifications {
-            if registry.is_capability_available(&CapabilityType::NotificationPolicy) {
-                registry.enable_capability(CapabilityType::NotificationPolicy)?;
-            }
+            registry.enable_capability(CapabilityType::NotificationPolicy)?;
         }
         
         // 启用监控（如果可用）
-        if registry.is_capability_available(&CapabilityType::Metrics) {
+        if config.metrics.enable_basic_metrics {
             registry.enable_capability(CapabilityType::Metrics)?;
         }
+        
+        // 启用地理位置服务
+        registry.enable_capability(CapabilityType::GeoService)?;
         
         Ok(())
     }
     
-    /// 获取能力注册表的引用
-    pub fn capability_registry(&self) -> &CapabilityRegistry {
+    /// 构建应用状态
+    pub fn build_app_state(&self) -> DomainResult<AppStateBuilder> {
+        let builder = AppStateBuilder::new(self.config.clone());
+        Ok(builder)
+    }
+    
+    /// 获取能力注册表
+    pub fn get_capability_registry(&self) -> &CapabilityRegistry {
         &self.capability_registry
     }
     
-    /// 获取配置的引用
-    pub fn config(&self) -> &AppConfig {
+    /// 获取配置
+    pub fn get_config(&self) -> &AppConfig {
         &self.config
-    }
-    
-    /// 创建应用状态构建器
-    pub fn create_app_state_builder(self) -> AppStateBuilder {
-        AppStateBuilder::new(self.config)
-            .with_capability_registry(self.capability_registry)
-    }
-    
-    /// 验证依赖完整性
-    pub fn validate_dependencies(&self) -> DomainResult<Vec<String>> {
-        let mut issues = Vec::new();
-        
-        // 检查必需的能力
-        let required_capabilities = vec![
-            CapabilityType::Database,
-            CapabilityType::Cache,
-            CapabilityType::JobQueue,
-        ];
-        
-        for capability in required_capabilities {
-            if !self.capability_registry.is_capability_enabled(&capability) {
-                issues.push(format!("Required capability not enabled: {:?}", capability));
-            }
-        }
-        
-        // 检查配置一致性
-        if self.config.cache.cache_type == "redis" && 
-           !self.capability_registry.is_capability_enabled(&CapabilityType::Cache) {
-            issues.push("Redis cache configured but cache capability not enabled".to_string());
-        }
-        
-        if self.config.job_queue.queue_type == "redis" && 
-           !self.capability_registry.is_capability_enabled(&CapabilityType::JobQueue) {
-            issues.push("Redis job queue configured but job queue capability not enabled".to_string());
-        }
-        
-        // 检查WebSocket依赖
-        if self.capability_registry.is_capability_enabled(&CapabilityType::NotificationTransport) &&
-           !self.capability_registry.is_capability_enabled(&CapabilityType::WebSocket) {
-            issues.push("Notification transport enabled but WebSocket not available".to_string());
-        }
-        
-        Ok(issues)
-    }
-    
-    /// 生成依赖注入报告
-    pub fn generate_injection_report(&self) -> DependencyInjectionReport {
-        let status_report = self.capability_registry.generate_status_report();
-        let validation_issues = self.validate_dependencies().unwrap_or_default();
-        
-        DependencyInjectionReport {
-            capability_status: status_report,
-            validation_issues,
-            config_summary: ConfigSummary {
-                database_type: "postgresql".to_string(),
-                cache_type: self.config.cache.cache_type.clone(),
-                job_queue_type: self.config.job_queue.queue_type.clone(),
-                websocket_enabled: self.capability_registry.is_capability_enabled(&CapabilityType::WebSocket),
-                metrics_enabled: self.capability_registry.is_capability_enabled(&CapabilityType::Metrics),
-            },
-        }
-    }
-}
-
-/// 依赖注入报告
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct DependencyInjectionReport {
-    pub capability_status: crate::bootstrap::CapabilityStatusReport,
-    pub validation_issues: Vec<String>,
-    pub config_summary: ConfigSummary,
-}
-
-/// 配置摘要
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct ConfigSummary {
-    pub database_type: String,
-    pub cache_type: String,
-    pub job_queue_type: String,
-    pub websocket_enabled: bool,
-    pub metrics_enabled: bool,
-}
-
-/// 依赖注入助手函数
-pub mod injection_helpers {
-    use super::*;
-    
-    /// 创建默认的依赖注入容器
-    pub fn create_default_container() -> DomainResult<DependencyContainer> {
-        let config = AppConfig::from_env()?;
-        DependencyContainer::new(config)
-    }
-    
-    /// 创建基于文件的依赖注入容器
-    pub fn create_container_from_file(config_path: &str) -> DomainResult<DependencyContainer> {
-        let config = AppConfig::from_file(config_path)?;
-        DependencyContainer::new(config)
-    }
-    
-    /// 创建测试用的依赖注入容器
-    #[cfg(test)]
-    pub fn create_test_container() -> DomainResult<DependencyContainer> {
-        let mut config = AppConfig::default();
-        
-        // 测试环境配置
-        config.database.url = "postgresql://test:test@localhost:5432/test_hotspot".to_string();
-        config.cache.cache_type = "memory".to_string();
-        config.job_queue.queue_type = "lite".to_string();
-        config.notification.enable_global_broadcast = false;
-        
-        DependencyContainer::new(config)
-    }
-    
-    /// 验证运行环境
-    pub fn validate_runtime_environment() -> DomainResult<Vec<String>> {
-        let mut warnings = Vec::new();
-        
-        // 检查环境变量
-        if std::env::var("DATABASE_URL").is_err() {
-            warnings.push("DATABASE_URL not set, using default".to_string());
-        }
-        
-        // 检查必需的feature
-        #[cfg(not(feature = "postgres"))]
-        {
-            return Err(crate::domain::DomainError::BusinessRuleViolation {
-                rule: "postgres feature is required".to_string(),
-            });
-        }
-        
-        // 检查可选feature的一致性
-        #[cfg(feature = "cache_redis")]
-        {
-            // 占位：仅在启用 cache_redis 时提示，但不检查不存在的 redis feature
-        }
-        
-        Ok(warnings)
     }
 }

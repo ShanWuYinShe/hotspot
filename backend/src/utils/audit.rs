@@ -7,7 +7,7 @@ use std::sync::Arc;
 use std::path::Path;
 use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
-use tracing::{debug, warn, error};
+use tracing::{debug, error};
 use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
 

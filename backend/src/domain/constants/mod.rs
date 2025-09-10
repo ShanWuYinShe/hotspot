@@ -1,11 +1,10 @@
-/// 领域常量模块
-/// 
-/// 定义业务领域中的常量和枚举值
+/// 领域常量定义
 
-pub mod group_roles;
-pub mod location_constants;
+// 重新导出所有常量模块
+pub mod app_constants;
+pub mod geo_constants;
+pub mod user_constants;
 
-// 重新导出常用常量
-pub use group_roles::*;
-pub use location_constants::*;
-pub use location_constants::radius::*;
+pub use app_constants::*;
+pub use geo_constants::*;
+pub use user_constants::*;

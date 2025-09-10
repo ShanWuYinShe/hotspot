@@ -86,26 +86,30 @@
 //! - `/alive` - 存活状态检查
 
 // 新架构模块
-pub mod adapters;
-pub mod application;
-pub mod bootstrap;
 pub mod domain;
+pub mod application;
 pub mod ports;
+pub mod infrastructure;
+pub mod adapters;
+pub mod bootstrap;
 pub mod presentation;
+pub mod services;
 
-// 架构迁移完成：
-// - 旧的services -> application/services
-// - 旧的repositories -> adapters
-// - 旧的models -> domain/entities + presentation/http/models  
-// - 旧的controllers -> presentation/http
-// - 旧的middleware -> presentation/http/middleware
-// - 旧的validators -> presentation/http/validators
-// - 旧的jobs -> application/services/job_application_service
-// - 旧的cache -> application/services/cache_application_service
-// - 旧的config -> bootstrap/config_adapter
-// WebSocket系统核心模块
+/// HotSpot 后端核心模块
+/// 
+/// 采用六边形架构（端口适配器模式）：
+/// - domain: 领域模型和业务规则
+/// - application: 应用服务和用例
+/// - ports: 抽象接口定义
+/// - adapters: 具体实现适配器
+/// - presentation: 表现层（HTTP/WebSocket）
+/// - bootstrap: 应用启动和依赖注入
+/// WebSocket 实时通信系统
+/// 提供连接管理、消息路由、房间管理等功能
 pub mod ws;
-// utils模块，提供通用工具函数
+
+/// 通用工具模块
+/// 提供跨模块使用的工具函数和辅助类型
 pub mod utils {
     // 核心工具模块
     pub mod user_id_partition;
@@ -117,7 +121,7 @@ pub mod utils {
     pub mod audit;
     pub mod events;
     pub mod capabilities;
-    pub mod validation_pipeline; // 已修复类型转换问题
+    pub mod validation_pipeline;
     pub mod query_monitor;
     pub mod permission;
     
@@ -131,8 +135,7 @@ pub mod utils {
     // JWT工具
     pub mod jwt;
     
-    // 响应映射器
-    // response_mapper已删除，功能迁移到presentation层
+    // 响应处理
     pub mod response;
     
     // 结果扩展
@@ -141,8 +144,6 @@ pub mod utils {
     // 任务队列相关（按需启用）
     #[cfg(feature = "jobs")]
     pub mod job_queue;
-    // #[cfg(feature = "jobs")]
-    // pub mod scheduler; // 已删除，调度功能迁移到新架构
     
     // JavaScript兼容性类型
     pub mod js_safe_types;
@@ -151,11 +152,8 @@ pub mod utils {
     // 重新导出常用类型
     pub use user_id_partition::{UserIdPartition, UserType};
     pub use types::{UserId, GroupId, ConversationId, MessageId};
-    // ResponseMapper已删除，功能迁移到presentation层
     pub use js_safe_types::JsSafeI64;
 }
-// 验证器已迁移到presentation/http/validators
-// 已迁移到新架构的presentation/ws层
 
 #[cfg(test)]
 pub mod tests;
@@ -164,13 +162,18 @@ pub mod tests;
 pub mod prelude {
     // 领域层核心类型
     pub use crate::domain::{
-        Coordinates, DomainError, DomainResult, Group, GroupEvent, GroupRole, Location,
-        MessageEvent, Moment, MomentEvent, User, UserEvent,
+        DomainError, DomainResult, 
+        UserProfile, UserAuth, UserDetail, UserSearchResult, UserEvent,
+        GroupProfile, GroupAuth, GroupDetail, GroupSearchResult, GroupEvent,
+        MessageEvent, Moment, MomentEvent,
+        // 值对象
+        Coordinates, UserId, Nickname, MessageContent, GroupName,
+        PaginationRequest, PaginatedResponse, Cursor, PageSize,
     };
 
     // 应用层核心类型
     pub use crate::application::{
-        CommandHandler, CreateTempUserCommand, GetUserByIdQuery, GetUserProfileQuery,
+        CommandHandler, CreateTempUserCommand, GetUserByIdQuery, SearchUsersByIdQuery,
         PaginatedResult, PaginationQuery, QueryHandler, RegisterUserCommand,
         UserApplicationService, GroupApplicationService, MessageApplicationService,
         MomentApplicationService, NotificationApplicationService,
@@ -179,20 +182,18 @@ pub mod prelude {
 
     // 端口层接口
     pub use crate::ports::{
-        CachePort, EventPublisherPort, JobDispatcherPort, NotificationTransportPort,
-        PasswordServicePort, UserRepositoryPort, GroupRepositoryPort,
-        MomentRepositoryPort, CacheStats, Job, JobId, JobStatus, QueueStats,
+        CachePort, EventPublisherPort, JobDispatcherPort,
+        PasswordService, UserRepository, GroupRepository,
+        MomentRepository, CacheStats, Job, JobId, JobStatus, QueueStats,
     };
 
     // 适配器实现
     pub use crate::adapters::{
-        Argon2PasswordService, PgUserRepository,
+        Argon2PasswordService, PostgresUserRepository,
         PgGroupRepository, PgMessageRepository, PgMomentRepository,
         LogEventPublisher,
     };
     
-    #[cfg(feature = "jobs_lite")]
-    pub use crate::adapters::LiteJobDispatcher;
     
     #[cfg(feature = "cache_in_memory")]
     pub use crate::adapters::MemoryCache;
@@ -212,7 +213,7 @@ pub mod prelude {
     
     // HTTP相关类型
     pub use crate::presentation::http::{
-        create_routes,
+        create_application_routes,
     };
     pub use crate::presentation::http::auth::JwtConfig;
 
@@ -226,8 +227,7 @@ pub mod prelude {
 
     // 工具类型
     pub use crate::utils::{
-        UserIdPartition, UserType, UserId, GroupId, ConversationId, MessageId,
-        // ResponseMapper已迁移到presentation层
+        UserIdPartition, UserType, GroupId, ConversationId, MessageId,
     };
     
     // 错误处理和监控
@@ -241,32 +241,21 @@ pub mod prelude {
         DEFAULT_NEARBY_RADIUS_KM, MEMBER, ADMIN, OWNER,
     };
 
-    // 新架构WebSocket系统
+    // WebSocket系统
     pub use crate::presentation::ws::{
         WebSocketManager as NewWebSocketManager,
         WebSocketConnectionHandler,
     };
     
-    // 通知系统（新架构）- 补充导出
-    pub use crate::ports::{
-        NotificationPolicyPort, Notification, 
-        NotificationPolicy, NotificationContext, NotificationType, NotificationChannel,
-        TransportStats, PolicyStats, LocationContext,
+    // 通知系统
+    pub use crate::ports::services::{
+        NotificationTransport, NotificationPolicy as NotificationPolicyTrait,
+        Notification, NotificationContext, NotificationChannel, LocationContext,
     };
     #[cfg(feature = "ws")]
     pub use crate::adapters::BasicNotificationPolicy;
     
-    // 增强健康检查系统（暂时禁用，等待services模块适配）
-    // pub use crate::services::health::{
-    //     EnhancedHealthService, EnhancedHealthResponse, HealthStatus,
-    // };
-    
-    // WebSocket核心组件（暂时禁用，等待ws模块适配）
-    // pub use crate::ws::{
-    //     MessageRouter, ConnectionManager, RoomManager,
-    //     WebSocketStats, ConnectionStats, RoomStats,
-    // };
 }
 
-// 新架构主要组件
+// 主要组件导出
 pub use crate::bootstrap::config_adapter::{Database, HybridConfigManager};
