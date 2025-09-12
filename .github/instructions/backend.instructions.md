@@ -285,8 +285,11 @@
 - 相关代码示例和重构方式请参考 `group_service.rs`、`PgGroupRepository` 等文件
 
 #### 接口定义规范（字段/签名说明，不含代码）
+
+**重要说明**：后端在 API 传输层必须进行类型转换以适配前端 JavaScript 环境，具体的数据类型映射规则参考 `hotspot.md` 需求文档中的公共数据模型定义。后端内部继续使用原始类型进行数据库操作和业务逻辑处理。
+
 - UserRepository：
-  - find_by_id(user_id: i64) -> Result<Option<UserModel>, AppError>
+  - find_by_id(user_id: i64) -> Result<Option<UserModel>, AppError>  // 内部处理使用 i64
   - set_password(user_id: i64, password_hash: &str) -> Result<(), AppError>
 
 #### async-trait 使用示例

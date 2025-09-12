@@ -11,10 +11,10 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use crate::domain::{
     DomainResult, User, Group, UserId, GroupId, MessageId, MomentId, Moment,
-    UserProfile, UserAuth, UserDetail, UserSearchResult, Comment, CommentDetail,
+    UserProfile, UserAuth, UserDetail, UserSearchResult, Comment,
     GroupProfile, GroupAuth, GroupDetail, GroupSearchResult,
-    FriendProfile, FriendRequest, FriendshipStatus, Friendship,
-    Block, BlockSettings, BlockStats, BlockType, BlockReason,
+    /* FriendProfile, FriendRequest, FriendshipStatus, Friendship,
+    Block, BlockSettings, BlockStats, BlockType, BlockReason, */
 };
 use crate::domain::entities::{
     user::UserProfile as EntityUserProfile,
@@ -391,10 +391,10 @@ pub trait CommentRepository: Send + Sync {
     async fn find_comment_by_id(&self, comment_id: &str) -> DomainResult<Option<EntityComment>>;
     
     /// 查找瞬间的评论
-    async fn find_comments_by_moment(&self, moment_id: &str, cursor: i64, limit: i32) -> DomainResult<Vec<CommentDetail>>;
+    async fn find_comments_by_moment(&self, moment_id: &str, cursor: i64, limit: i32) -> DomainResult<Vec<Comment>>;
     
     /// 查找用户的评论
-    async fn find_comments_by_user(&self, user_id: i64, cursor: i64, limit: i32) -> DomainResult<Vec<CommentDetail>>;
+    async fn find_comments_by_user(&self, user_id: i64, cursor: i64, limit: i32) -> DomainResult<Vec<Comment>>;
     
     /// 删除评论
     async fn delete_comment(&self, comment_id: &str, user_id: i64) -> DomainResult<()>;
@@ -403,13 +403,15 @@ pub trait CommentRepository: Send + Sync {
     async fn update_comment(&self, comment_id: &str, user_id: i64, content: &str) -> DomainResult<EntityComment>;
     
     /// 查找评论的回复
-    async fn find_comment_replies(&self, parent_comment_id: &str, cursor: i64, limit: i32) -> DomainResult<Vec<CommentDetail>>;
+    async fn find_comment_replies(&self, parent_comment_id: &str, cursor: i64, limit: i32) -> DomainResult<Vec<Comment>>;
     
     /// 获取瞬间评论数
     async fn get_moment_comments_count(&self, moment_id: &str) -> DomainResult<i64>;
 }
 
-/// 好友仓储接口
+// 好友仓储接口
+// 暂时禁用，等待重新设计
+/*
 #[async_trait]
 pub trait FriendRepository: Send + Sync + Clone {
     /// 保存好友关系
@@ -445,8 +447,11 @@ pub trait FriendRepository: Send + Sync + Clone {
     /// 获取待处理请求数量
     async fn get_pending_requests_count(&self, user_id: i64) -> DomainResult<i64>;
 }
+*/
 
-/// 屏蔽仓储接口
+// 屏蔽仓储接口
+// 暂时禁用，等待重新设计
+/*
 #[async_trait]
 pub trait BlockRepository: Send + Sync + Clone {
     /// 保存屏蔽记录
@@ -485,5 +490,6 @@ pub trait BlockRepository: Send + Sync + Clone {
     /// 批量检查屏蔽状态
     async fn batch_check_blocked(&self, blocker_id: i64, user_ids: &[i64]) -> DomainResult<Vec<(i64, bool)>>;
 }
+*/
 
 // 注意：所有类型定义已从 crate::domain 导入，无需重复定义

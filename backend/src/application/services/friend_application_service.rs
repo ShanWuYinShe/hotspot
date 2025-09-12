@@ -1,10 +1,12 @@
-/// 好友应用服务
-/// 
-/// 功能职责：
-/// - 实现好友相关的业务逻辑
-/// - 协调好友仓储和其他服务
-/// - 处理好友请求的权限验证和业务规则
-/// - 提供好友关系管理功能
+// 好友应用服务
+// 
+// 功能职责：
+// - 实现好友相关的业务逻辑
+// - 协调好友仓储和其他服务
+// - 处理好友请求的权限验证和业务规则
+// - 提供好友关系管理功能
+// 暂时禁用，等待重新设计
+/*
 use async_trait::async_trait;
 use std::sync::Arc;
 
@@ -12,7 +14,10 @@ use crate::{
     domain::{DomainResult, DomainError, FriendRequest, Friendship, FriendProfile, FriendshipStatus},
     ports::repository_ports::{FriendRepository, UserRepository},
 };
+*/
 
+// 暂时禁用，等待重新设计
+/*
 /// 好友应用服务接口
 #[async_trait]
 pub trait FriendApplicationService: Send + Sync {
@@ -243,3 +248,4 @@ where
         self.friend_repository.get_pending_requests_count(user_id).await
     }
 }
+*/

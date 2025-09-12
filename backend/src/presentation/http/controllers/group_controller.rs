@@ -1,5 +1,5 @@
 use super::{
-    Controller, created_response, map_domain_error_to_http_response, no_content_response,
+    Controller, created_response, map_domain_error_to_http_response, map_application_error_to_http_response, no_content_response,
     ok_response, paginated_response,
 };
 use crate::application::commands::{
@@ -117,7 +117,7 @@ where
         };
         match CommandHandler::<CreateGroupCommand>::handle(&controller.group_service, cmd).await {
             Ok(result) => created_response(result),
-            Err(e) => map_domain_error_to_http_response(e),
+            Err(e) => map_application_error_to_http_response(e),
         }
     }
 
@@ -133,7 +133,7 @@ where
         };
         match CommandHandler::<UpdateGroupInfoCommand>::handle(&controller.group_service, cmd).await {
             Ok(result) => ok_response(result),
-            Err(e) => map_domain_error_to_http_response(e),
+            Err(e) => map_application_error_to_http_response(e),
         }
     }
 
@@ -144,7 +144,7 @@ where
         let cmd = DeleteGroupCommand { group_id: group_id.to_string() };
         match CommandHandler::<DeleteGroupCommand>::handle(&controller.group_service, cmd).await {
             Ok(_) => no_content_response(),
-            Err(e) => map_domain_error_to_http_response(e),
+            Err(e) => map_application_error_to_http_response(e),
         }
     }
 
@@ -155,7 +155,7 @@ where
     ) -> Response {
         let pagination = PaginationQuery {
             cursor: request.cursor.and_then(|c| c.parse().ok()),
-            limit: request.limit,
+            limit: request.limit.map(|l| l as usize),
         };
         let q = SearchGroupsByLocationQuery {
             user_id: current_user.user_id,
@@ -166,7 +166,7 @@ where
         };
         match QueryHandler::<SearchGroupsByLocationQuery>::handle(&controller.group_service, q).await {
             Ok(result) => paginated_response(result.items, result.has_more, result.next_cursor),
-            Err(e) => map_domain_error_to_http_response(e),
+            Err(e) => map_application_error_to_http_response(e),
         }
     }
 
@@ -176,7 +176,7 @@ where
     ) -> Response {
         let pagination = PaginationQuery {
             cursor: request.cursor.and_then(|c| c.parse().ok()),
-            limit: request.limit,
+            limit: request.limit.map(|l| l as usize),
         };
         let q = SearchGroupsByNameQuery {
             keyword: request.query,
@@ -184,7 +184,7 @@ where
         };
         match QueryHandler::<SearchGroupsByNameQuery>::handle(&controller.group_service, q).await {
             Ok(result) => paginated_response(result.items, result.has_more, result.next_cursor),
-            Err(e) => map_domain_error_to_http_response(e),
+            Err(e) => map_application_error_to_http_response(e),
         }
     }
 
@@ -196,7 +196,7 @@ where
     ) -> Response {
         let group_id = match parse_id_string(&request.group_id, "group_id") {
             Ok(id) => id,
-            Err(error) => return map_domain_error_to_http_response(error),
+            Err(error) => return map_application_error_to_http_response(crate::application::ApplicationError::Domain(error)),
         };
         
         let query = SearchGroupsByIdQuery {
@@ -209,7 +209,7 @@ where
             Ok(None) => map_domain_error_to_http_response(
                 crate::domain::DomainError::GroupNotFound
             ),
-            Err(error) => map_domain_error_to_http_response(error),
+            Err(error) => map_application_error_to_http_response(error),
         }
     }
 
@@ -227,7 +227,7 @@ where
         };
         match CommandHandler::<JoinGroupCommand>::handle(&controller.group_service, cmd).await {
             Ok(result) => ok_response(result),
-            Err(e) => map_domain_error_to_http_response(e),
+            Err(e) => map_application_error_to_http_response(e),
         }
     }
 
@@ -242,7 +242,7 @@ where
         };
         match CommandHandler::<LeaveGroupCommand>::handle(&controller.group_service, cmd).await {
             Ok(result) => ok_response(result),
-            Err(e) => map_domain_error_to_http_response(e),
+            Err(e) => map_application_error_to_http_response(e),
         }
     }
 
@@ -251,12 +251,12 @@ where
         Json(req): Json<MembersRequest>,
     ) -> Response {
         let pagination = PaginationQuery {
-            cursor: req.cursor,
-            limit: req.limit.map(|v| v as i32),
+            cursor: req.cursor.and_then(|c| c.parse().ok()),
+            limit: req.limit.map(|v| v as usize),
         };
         let group_id = match parse_id_string(&req.group_id, "group_id") {
             Ok(id) => id,
-            Err(error) => return map_domain_error_to_http_response(error),
+            Err(error) => return map_application_error_to_http_response(crate::application::ApplicationError::Domain(error)),
         };
         
         let q = GroupMembersQuery {
@@ -265,7 +265,7 @@ where
         };
         match QueryHandler::<GroupMembersQuery>::handle(&controller.group_service, q).await {
             Ok(result) => paginated_response(result.items, result.has_more, result.next_cursor),
-            Err(e) => map_domain_error_to_http_response(e),
+            Err(e) => map_application_error_to_http_response(e),
         }
     }
 
@@ -276,7 +276,7 @@ where
     ) -> Response {
         let new_owner_id = match parse_id_string(&req.new_owner_id, "new_owner_id") {
             Ok(id) => id,
-            Err(error) => return map_domain_error_to_http_response(error),
+            Err(error) => return map_application_error_to_http_response(crate::application::ApplicationError::Domain(error)),
         };
         
         let cmd = TransferOwnershipCommand {
@@ -286,7 +286,7 @@ where
         };
         match CommandHandler::<TransferOwnershipCommand>::handle(&controller.group_service, cmd).await {
             Ok(result) => ok_response(result),
-            Err(e) => map_domain_error_to_http_response(e),
+            Err(e) => map_application_error_to_http_response(e),
         }
     }
 
@@ -297,7 +297,7 @@ where
     ) -> Response {
         let target_user_id = match parse_id_string(&req.target_user_id, "target_user_id") {
             Ok(id) => id,
-            Err(error) => return map_domain_error_to_http_response(error),
+            Err(error) => return map_application_error_to_http_response(crate::application::ApplicationError::Domain(error)),
         };
         
         let cmd = KickMemberCommand {
@@ -307,7 +307,7 @@ where
         };
         match CommandHandler::<KickMemberCommand>::handle(&controller.group_service, cmd).await {
             Ok(result) => ok_response(result),
-            Err(e) => map_domain_error_to_http_response(e),
+            Err(e) => map_application_error_to_http_response(e),
         }
     }
 
@@ -320,14 +320,14 @@ where
         let query = SearchGroupsByUserIdQuery {
             user_id: current_user.user_id,
             pagination: crate::application::queries::PaginationQuery {
-                cursor: request.cursor,
-                limit: request.limit.map(|v| v as i32),
+                cursor: request.cursor.and_then(|c| c.parse().ok()),
+                limit: request.limit.map(|v| v as usize),
             },
         };
         
         match QueryHandler::<SearchGroupsByUserIdQuery>::handle(&controller.group_service, query).await {
             Ok(result) => paginated_response(result.items, result.has_more, result.next_cursor),
-            Err(error) => map_domain_error_to_http_response(error),
+            Err(error) => map_application_error_to_http_response(error),
         }
     }
 
@@ -340,14 +340,14 @@ where
         let query = SearchGroupsByOwnerIdQuery {
             owner_id: current_user.user_id,
             pagination: crate::application::queries::PaginationQuery {
-                cursor: request.cursor,
-                limit: request.limit.map(|v| v as i32),
+                cursor: request.cursor.and_then(|c| c.parse().ok()),
+                limit: request.limit.map(|v| v as usize),
             },
         };
         
         match QueryHandler::<SearchGroupsByOwnerIdQuery>::handle(&controller.group_service, query).await {
             Ok(result) => paginated_response(result.items, result.has_more, result.next_cursor),
-            Err(error) => map_domain_error_to_http_response(error),
+            Err(error) => map_application_error_to_http_response(error),
         }
     }
 }

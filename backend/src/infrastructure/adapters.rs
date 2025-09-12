@@ -114,18 +114,6 @@ impl PostgresUserRepository {
         }
     }
     
-    // 这些方法不在 UserRepository trait 中，但保留作为实用方法
-    #[allow(dead_code)]
-    async fn save(&self, user: &User) -> DomainResult<()> {
-        // 实现保留但标记为未使用
-        todo!("save method implementation")
-    }
-    
-    #[allow(dead_code)]
-    async fn delete_by_id(&self, user_id: UserId) -> DomainResult<bool> {
-        // 实现保留但标记为未使用
-        todo!("delete_by_id method implementation")
-    }
 }
 
 impl PostgresUserRepository {
@@ -140,10 +128,10 @@ impl PostgresUserRepository {
                 sqlx::query!(
                     r#"
                     INSERT INTO users (
-                        user_id, username, nickname, email, avatar_url,
+                        id, username, nickname, email, avatar_url,
                         password_hash, user_type, expires_at, created_at, last_login_at
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-                    ON CONFLICT (user_id) DO UPDATE SET
+                    ON CONFLICT (id) DO UPDATE SET
                         username = EXCLUDED.username,
                         nickname = EXCLUDED.nickname,
                         email = EXCLUDED.email,
@@ -202,7 +190,7 @@ impl PostgresUserRepository {
             
             Box::pin(async move {
                 let result = sqlx::query!(
-                    "DELETE FROM users WHERE user_id = $1",
+                    "DELETE FROM users WHERE id = $1",
                     user_id.value()
                 )
                 .execute(&pool)
@@ -221,11 +209,11 @@ impl PostgresUserRepository {
                 let row = sqlx::query!(
                     r#"
                     SELECT 
-                        user_id, username as login_id, nickname, email, avatar_url,
+                        id as user_id, username as login_id, nickname, email, avatar_url,
                         password_hash, user_type::text as "user_type!", expires_at, 
                         created_at, last_login_at as last_active_at
                     FROM users 
-                    WHERE user_id = $1
+                    WHERE id = $1
                     "#,
                     user_id.value()
                 )
@@ -238,7 +226,7 @@ impl PostgresUserRepository {
                         r#"
                         SELECT latitude, longitude, address as location_name, updated_at
                         FROM user_locations
-                        WHERE user_id = $1
+                        WHERE id = $1
                         "#,
                         user_id.value()
                     )
@@ -247,10 +235,9 @@ impl PostgresUserRepository {
                     
                     let location = if let Some(loc) = location_row {
                         Some(crate::domain::entities::UserLocation {
-                            coordinates: crate::domain::Coordinates::new(loc.latitude, loc.longitude)
-                                .map_err(|e| sqlx::Error::Protocol(format!("Invalid coordinates: {}", e)))?,
-                            location_name: loc.location_name,
-                            updated_at: loc.updated_at,
+                            coordinates: crate::domain::Coordinates::new(loc.latitude, loc.longitude),
+                            location_name: loc.location_name.unwrap_or_default(),
+                            updated_at: loc.updated_at.unwrap_or_else(|| chrono::Utc::now()),
                         })
                     } else {
                         None
@@ -259,15 +246,16 @@ impl PostgresUserRepository {
                     let mut user = User {
                         id: user_id,
                         login_id: row.login_id,
-                        nickname: crate::domain::Nickname::new(&row.nickname)?,
+                        nickname: crate::domain::Nickname::new(row.nickname)
+                            .map_err(|e| sqlx::Error::Protocol(format!("Invalid nickname: {}", e)))?,
                         email: row.email,
                         avatar_url: row.avatar_url,
                         bio: None, // 暂时设为None，后续可以从数据库添加bio字段
                         password_hash: row.password_hash,
-                        user_type: crate::domain::UserType::from_str(&row.user_type).map_err(|e| sqlx::Error::Decode(e.into()))?,
+                        user_type: crate::domain::entities::UserType::from_str(&row.user_type).map_err(|e| sqlx::Error::Decode(e.into()))?,
                         expires_at: row.expires_at,
-                        created_at: row.created_at,
-                        last_active_at: row.last_active_at,
+                        created_at: row.created_at.unwrap_or_else(|| chrono::Utc::now()),
+                        last_active_at: row.last_active_at.unwrap_or_else(|| chrono::Utc::now()),
                         location,
                         events: Vec::new(),
                     };
@@ -289,7 +277,7 @@ impl PostgresUserRepository {
                 let row = sqlx::query!(
                     r#"
                     SELECT 
-                        user_id, username as login_id, nickname, email, avatar_url,
+                        id as user_id, username as login_id, nickname, email, avatar_url,
                         password_hash, user_type::text as "user_type!", expires_at, 
                         created_at, last_login_at as last_active_at
                     FROM users 
@@ -307,15 +295,16 @@ impl PostgresUserRepository {
                     let mut user = User {
                         id: user_id,
                         login_id: row.login_id,
-                        nickname: crate::domain::Nickname::new(&row.nickname)?,
+                        nickname: crate::domain::Nickname::new(row.nickname)
+                            .map_err(|e| sqlx::Error::Protocol(format!("Invalid nickname: {}", e)))?,
                         email: row.email,
                         avatar_url: row.avatar_url,
                         bio: None, // 暂时设为None，后续可以从数据库添加bio字段
                         password_hash: row.password_hash,
-                        user_type: crate::domain::UserType::from_str(&row.user_type).map_err(|e| sqlx::Error::Decode(e.into()))?,
+                        user_type: crate::domain::entities::UserType::from_str(&row.user_type).map_err(|e| sqlx::Error::Decode(e.into()))?,
                         expires_at: row.expires_at,
-                        created_at: row.created_at,
-                        last_active_at: row.last_active_at,
+                        created_at: row.created_at.unwrap_or_else(|| chrono::Utc::now()),
+                        last_active_at: row.last_active_at.unwrap_or_else(|| chrono::Utc::now()),
                         location: None, // 简化实现，不加载位置
                         events: Vec::new(),
                     };

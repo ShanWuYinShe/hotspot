@@ -188,7 +188,7 @@
             <UCard
                 v-for="m in displayMoments"
                 :key="m.moment_id"
-                class="transition-all duration-200 cursor-pointer hover:shadow-md"
+                class="transition-colors duration-200 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800"
                 @click="goToMomentDetail(m.moment_id)"
             >
                 <div class="flex items-center gap-3 mb-3">

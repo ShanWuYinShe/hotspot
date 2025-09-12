@@ -25,6 +25,21 @@ pub enum DomainEvent {
         created_at: DateTime<Utc>,
     },
     
+    /// 用户注册事件
+    UserRegistered {
+        user_id: UserId,
+        login_id: String,
+        nickname: String,
+        registered_at: DateTime<Utc>,
+    },
+    
+    /// 临时用户创建事件
+    TempUserCreated {
+        user_id: UserId,
+        nickname: String,
+        created_at: DateTime<Utc>,
+    },
+    
     /// 用户升级事件（临时用户 -> 注册用户）
     UserUpgraded {
         user_id: UserId,
@@ -250,6 +265,8 @@ impl DomainEvent {
             
             Self::SystemNotificationSent { sent_at, .. } => *sent_at,
             Self::DataCleanupPerformed { performed_at, .. } => *performed_at,
+            Self::UserRegistered { registered_at, .. } => *registered_at,
+            Self::TempUserCreated { created_at, .. } => *created_at,
         }
     }
     
@@ -284,6 +301,8 @@ impl DomainEvent {
             
             Self::SystemNotificationSent { .. } => "SystemNotificationSent",
             Self::DataCleanupPerformed { .. } => "DataCleanupPerformed",
+            Self::UserRegistered { .. } => "UserRegistered",
+            Self::TempUserCreated { .. } => "TempUserCreated",
         }
     }
     
@@ -320,6 +339,8 @@ impl DomainEvent {
             Self::MomentDeleted { deleted_by, .. } => vec![*deleted_by],
             
             Self::DataCleanupPerformed { .. } => vec![],
+            Self::UserRegistered { user_id, .. } => vec![*user_id],
+            Self::TempUserCreated { user_id, .. } => vec![*user_id],
         }
     }
     

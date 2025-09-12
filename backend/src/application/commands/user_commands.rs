@@ -1,7 +1,7 @@
 /// 用户相关命令定义和处理器
 /// 
 /// 包含所有用户操作的命令模型
-use crate::domain::{UserEvent, DomainResult, DomainError, UserDomainError};
+use crate::domain::{UserEvent, DomainResult, DomainError};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 

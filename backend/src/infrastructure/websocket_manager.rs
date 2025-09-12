@@ -104,7 +104,7 @@ impl WebSocketManager {
         
         let manager = Arc::new(Self {
             actor_system,
-            config,
+            config: config.clone(),
             connections: Arc::new(RwLock::new(HashMap::new())),
             user_connections: Arc::new(RwLock::new(HashMap::new())),
             rooms: Arc::new(RwLock::new(HashMap::new())),
@@ -508,7 +508,7 @@ impl WebSocketManager {
             let message = WebSocketActorMessage {
                 message_type: WebSocketMessageType::UserStatusUpdate {
                     user_id,
-                    status,
+                    status: status.clone(),
                 },
                 connection_id: None,
                 timestamp: Utc::now(),
@@ -587,7 +587,7 @@ impl WebSocketManager {
                 interval.tick().await;
                 
                 // 清理断开的连接
-                let mut disconnected_connections = Vec::new();
+                let mut disconnected_connections: Vec<String> = Vec::new();
                 {
                     let connections_guard = connections.read().await;
                     for (connection_id, _) in connections_guard.iter() {
@@ -597,7 +597,7 @@ impl WebSocketManager {
                 }
                 
                 // 清理空房间
-                let mut empty_rooms = Vec::new();
+                let mut empty_rooms: Vec<String> = Vec::new();
                 {
                     let rooms_guard = rooms.read().await;
                     for (room_id, _) in rooms_guard.iter() {

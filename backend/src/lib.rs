@@ -163,19 +163,19 @@ pub mod prelude {
     // 领域层核心类型
     pub use crate::domain::{
         DomainError, DomainResult, 
-        UserProfile, UserAuth, UserDetail, UserSearchResult, UserEvent,
-        GroupProfile, GroupAuth, GroupDetail, GroupSearchResult, GroupEvent,
+        UserProfile, UserAuth, UserDetail, /* UserSearchResult, */ UserEvent,
+        GroupProfile, /* GroupAuth, GroupDetail, GroupSearchResult, */ GroupEvent,
         MessageEvent, Moment, MomentEvent,
         // 值对象
-        Coordinates, UserId, Nickname, MessageContent, GroupName,
-        PaginationRequest, PaginatedResponse, Cursor, PageSize,
+        Coordinates, UserId, Nickname, /* MessageContent, GroupName, */
+        PaginationRequest, PaginatedResponse, /* Cursor, PageSize, */
     };
 
     // 应用层核心类型
     pub use crate::application::{
         CommandHandler, CreateTempUserCommand, GetUserByIdQuery, SearchUsersByIdQuery,
         PaginatedResult, PaginationQuery, QueryHandler, RegisterUserCommand,
-        UserApplicationService, GroupApplicationService, MessageApplicationService,
+        UserApplicationService, GroupApplicationService, /* MessageApplicationService, */
         MomentApplicationService, NotificationApplicationService,
         CacheApplicationService, JobApplicationService,
     };
@@ -190,13 +190,13 @@ pub mod prelude {
     // 适配器实现
     pub use crate::adapters::{
         Argon2PasswordService, PostgresUserRepository,
-        PgGroupRepository, PgMessageRepository, PgMomentRepository,
+        PgGroupRepository, /* PgMessageRepository, */ PgMomentRepository,
         LogEventPublisher,
     };
     
     
     #[cfg(feature = "cache_in_memory")]
-    pub use crate::adapters::MemoryCache;
+    // pub use crate::adapters::MemoryCache;  // 暂时禁用
     
     #[cfg(feature = "ws")]
     pub use crate::adapters::WebSocketNotificationTransport;
@@ -207,7 +207,7 @@ pub mod prelude {
 
     // 表现层类型
     pub use crate::presentation::{
-        HealthController, UserController, GroupController, MessageController, MomentController,
+        HealthController, UserController, GroupController, /* MessageController, */ MomentController,
         WSError, WSMessageType, WebSocketManager, AdminController, EnhancedHealthController,
     };
     
@@ -252,8 +252,8 @@ pub mod prelude {
         NotificationTransport, NotificationPolicy as NotificationPolicyTrait,
         Notification, NotificationContext, NotificationChannel, LocationContext,
     };
-    #[cfg(feature = "ws")]
-    pub use crate::adapters::BasicNotificationPolicy;
+    // #[cfg(feature = "ws")]
+    // pub use crate::adapters::BasicNotificationPolicy;
     
 }
 

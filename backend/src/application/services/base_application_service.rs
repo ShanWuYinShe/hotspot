@@ -205,7 +205,7 @@ impl BaseApplicationService {
     /// 发布用户事件
     pub async fn publish_user_event(&self, event: crate::domain::UserEvent) -> DomainResult<()> {
         if let Some(ref publisher) = self.event_publisher {
-            publisher.publish_user_event(event).await?;
+            publisher.publish(&event).await?;
         }
         Ok(())
     }
@@ -213,7 +213,7 @@ impl BaseApplicationService {
     /// 发布群组事件
     pub async fn publish_group_event(&self, event: crate::domain::GroupEvent) -> DomainResult<()> {
         if let Some(ref publisher) = self.event_publisher {
-            publisher.publish_group_event(event).await?;
+            publisher.publish(&event).await?;
         }
         Ok(())
     }
@@ -221,7 +221,7 @@ impl BaseApplicationService {
     /// 发布消息事件
     pub async fn publish_message_event(&self, event: crate::domain::MessageEvent) -> DomainResult<()> {
         if let Some(ref publisher) = self.event_publisher {
-            publisher.publish_message_event(event).await?;
+            publisher.publish(&event).await?;
         }
         Ok(())
     }
@@ -229,7 +229,7 @@ impl BaseApplicationService {
     /// 发布瞬间事件
     pub async fn publish_moment_event(&self, event: crate::domain::MomentEvent) -> DomainResult<()> {
         if let Some(ref publisher) = self.event_publisher {
-            publisher.publish_moment_event(event).await?;
+            publisher.publish(&event).await?;
         }
         Ok(())
     }

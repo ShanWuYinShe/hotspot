@@ -49,6 +49,7 @@
                             size="lg"
                             square
                             aria-label="打开全局搜索"
+                            class="hover:bg-neutral-100 dark:hover:bg-neutral-600 transition-colors duration-200 rounded-lg"
                             @click="openSearch"
                         />
                     </UTooltip>
@@ -60,7 +61,7 @@
                         color="neutral"
                         size="lg"
                         square
-                        class="relative"
+                        class="relative hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors duration-200 rounded-lg"
                         :aria-label="unreadCount > 0 ? `消息中心，有 ${unreadCount} 条未读消息` : '消息中心'"
                     >
                         <UIcon
@@ -71,7 +72,7 @@
                             v-if="unreadCount > 0"
                             size="xs"
                             color="error"
-                            class="absolute -top-1 -right-1 min-w-5 h-5 flex items-center justify-center animate-pulse"
+                            class="absolute -top-1 -right-1 min-w-5 h-5 flex items-center justify-center"
                             :aria-label="`${unreadCount} 条未读消息`"
                         >
                             {{ unreadCount > 99 ? "99+" : unreadCount }}
@@ -85,7 +86,7 @@
                             color="neutral"
                             size="lg"
                             square
-                            class="relative"
+                            class="relative hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors duration-200 rounded-lg"
                             @click="toggleNotifications"
                         >
                             <UIcon name="i-heroicons-bell" class="w-5 h-5" />
@@ -242,7 +243,7 @@
                         size="lg"
                         square
                         :color="$route.path === '/' ? 'primary' : 'neutral'"
-                        class="flex flex-col items-center gap-1 py-2 min-h-[56px] touch-manipulation"
+                        class="flex flex-col items-center gap-1 py-2 min-h-[56px] touch-manipulation hover:bg-neutral-100 dark:hover:bg-neutral-600 transition-colors duration-200 rounded-lg"
                     >
                         <UIcon name="i-heroicons-home" class="w-5 h-5" />
                         <span class="text-xs">{{ t("nav.home") }}</span>
@@ -264,7 +265,7 @@
                                 ? 'primary'
                                 : 'neutral'
                         "
-                        class="flex flex-col items-center gap-1 py-2 min-h-[56px] touch-manipulation"
+                        class="flex flex-col items-center gap-1 py-2 min-h-[56px] touch-manipulation hover:bg-neutral-100 dark:hover:bg-neutral-600 transition-colors duration-200 rounded-lg"
                     >
                         <UIcon name="i-heroicons-user-group" class="w-5 h-5" />
                         <span class="text-xs">{{ t("nav.groups") }}</span>
@@ -282,7 +283,7 @@
                         size="lg"
                         square
                         :color="$route.path === '/map' ? 'primary' : 'neutral'"
-                        class="flex flex-col items-center gap-1 py-2 min-h-[56px] touch-manipulation"
+                        class="flex flex-col items-center gap-1 py-2 min-h-[56px] touch-manipulation hover:bg-neutral-100 dark:hover:bg-neutral-600 transition-colors duration-200 rounded-lg"
                     >
                         <UIcon name="i-heroicons-map" class="w-5 h-5" />
                         <span class="text-xs">{{ t("nav.map") }}</span>
@@ -376,7 +377,7 @@
                     <div
                         v-for="notification in notifications"
                         :key="notification.id"
-                        class="flex items-start space-x-3 p-3 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                        class="flex items-start space-x-3 p-3 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
                         :class="{
                             'bg-primary-50 dark:bg-primary-900/20':
                                 !notification.read,

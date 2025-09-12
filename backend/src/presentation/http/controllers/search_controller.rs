@@ -84,7 +84,7 @@ impl SearchController {
             search_type,
             pagination: crate::application::queries::PaginationQuery {
                 cursor: params.cursor,
-                limit: params.limit,
+                limit: params.limit.map(|l| l as usize),
             },
             latitude: params.lat,
             longitude: params.lng,
@@ -139,7 +139,7 @@ impl SearchController {
             search_type: Some(SearchType::All),
             pagination: crate::application::queries::PaginationQuery {
                 cursor: None,
-                limit: params.limit.or(Some(5)), // 默认返回5个建议
+                limit: params.limit.or(Some(5)).map(|l| l as usize), // 默认返回5个建议
             },
             latitude: None, // 建议搜索不需要位置信息
             longitude: None,

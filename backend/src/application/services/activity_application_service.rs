@@ -183,7 +183,7 @@ where
                         activities.push(ActivityItem::moment_created(
                             moment.moment_id,
                             moment.user_id.to_string(), // 使用user_id作为用户名占位符
-                            moment.content.clone().unwrap_or_default(),
+                            moment.content.clone(),
                             moment.created_at,
                         ));
                     }

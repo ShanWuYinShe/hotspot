@@ -90,7 +90,7 @@ impl Group {
         let now = Utc::now();
         
         let mut group = Self {
-            id,
+            id: id.clone(),
             name: name.clone(),
             description: None,
             owner_id,
@@ -114,7 +114,6 @@ impl Group {
         group.add_event(DomainEvent::GroupCreated {
             group_id: id,
             owner_id,
-            name: name.value().to_string(),
             created_at: now,
         });
         
@@ -158,8 +157,8 @@ impl Group {
         self.member_count += 1;
         self.last_active_at = now;
         
-        self.add_event(DomainEvent::UserJoinedGroup {
-            group_id: self.id,
+        self.add_event(DomainEvent::GroupMemberJoined {
+            group_id: self.id.clone(),
             user_id,
             joined_at: now,
         });
@@ -182,8 +181,8 @@ impl Group {
             self.member_count -= 1;
             self.last_active_at = Utc::now();
             
-            self.add_event(DomainEvent::UserLeftGroup {
-                group_id: self.id,
+            self.add_event(DomainEvent::GroupMemberLeft {
+                group_id: self.id.clone(),
                 user_id,
                 left_at: Utc::now(),
             });

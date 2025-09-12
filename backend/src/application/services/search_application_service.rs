@@ -168,7 +168,7 @@ impl SearchApplicationServiceImpl {
 
     /// 将生活瞬间转换为统一搜索结果
     fn moment_to_search_result(&self, moment: Moment, query: &str) -> UnifiedSearchResult {
-        let title = moment.content.clone().unwrap_or_else(|| "无标题".to_string());
+        let title = if moment.content.is_empty() { "无标题".to_string() } else { moment.content.clone() };
         let score = self.calculate_relevance_score(query, &title, None);
         
         UnifiedSearchResult {
@@ -301,7 +301,7 @@ impl SearchApplicationService for SearchApplicationServiceImpl {
             query.latitude,
             query.longitude,
             Some(5.0), // 默认搜索半径5公里
-            query.pagination.limit.unwrap_or(20),
+            query.pagination.limit.unwrap_or(20) as i32,
         ).await?;
         
         Ok(serde_json::json!({

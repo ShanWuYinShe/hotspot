@@ -73,7 +73,7 @@ impl GetRecentActivitiesQuery {
     /// 创建默认查询
     pub fn new() -> Self {
         Self {
-            pagination: PaginationQuery::new(),
+            pagination: PaginationQuery::default(),
             activity_types: None,
             hours_range: Some(24), // 默认24小时内的活动
         }

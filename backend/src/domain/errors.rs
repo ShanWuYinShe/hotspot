@@ -10,6 +10,9 @@ pub enum DomainError {
     #[error("用户不存在")]
     UserNotFound,
     
+    #[error("用户不存在: {user_id}")]
+    UserNotFoundWithId { user_id: i64 },
+    
     #[error("用户已存在")]
     UserAlreadyExists,
     
@@ -27,6 +30,9 @@ pub enum DomainError {
     
     #[error("用户权限不足")]
     InsufficientPermissions,
+    
+    #[error("权限不足，需要角色: {required_role}")]
+    InsufficientPermission { required_role: String },
     
     // === 群组领域错误 ===
     #[error("群组不存在")]
@@ -47,8 +53,20 @@ pub enum DomainError {
     #[error("用户已是群组成员")]
     UserAlreadyMember,
     
+    #[error("用户已是群组成员: {user_id}")]
+    UserAlreadyMemberWithId { user_id: i64 },
+    
     #[error("用户不是群组成员")]
     UserNotMember,
+    
+    #[error("用户不是群组成员: {user_id}")]
+    UserNotMemberWithId { user_id: i64 },
+    
+    #[error("不能移除群主")]
+    CannotRemoveOwner,
+    
+    #[error("无效的用户类型转换")]
+    InvalidUserTypeConversion,
     
     #[error("无法离开自己创建的群组")]
     CannotLeaveOwnGroup,
@@ -121,7 +139,7 @@ pub enum DomainError {
     ValidationError { field: String, reason: String },
     
     #[error("验证失败")]
-    ValidationFailed,
+    ValidationFailed { errors: Vec<String> },
     
     #[error("数据格式错误")]
     InvalidFormat,
@@ -164,7 +182,7 @@ impl DomainError {
             Self::GroupNotFound => "群组不存在".to_string(),
             Self::MomentNotFound => "瞬间不存在".to_string(),
             Self::ValidationError { field, reason } => format!("{}: {}", field, reason),
-            Self::ValidationFailed => "数据验证失败".to_string(),
+            Self::ValidationFailed { errors: _ } => "数据验证失败".to_string(),
             _ => self.to_string(),
         }
     }
@@ -195,7 +213,7 @@ impl DomainError {
     
     /// 检查是否为验证错误
     pub fn is_validation_error(&self) -> bool {
-        matches!(self, Self::ValidationError { .. } | Self::ValidationFailed | Self::InvalidFormat)
+        matches!(self, Self::ValidationError { .. } | Self::ValidationFailed { errors: _ } | Self::InvalidFormat)
     }
     
     /// 检查是否为权限错误

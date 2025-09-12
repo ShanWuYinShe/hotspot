@@ -122,7 +122,7 @@ export const useGroupService = () => {
     // 发送前验证参数
     validateCoordinates(latitude, longitude);
     const validRadius = validateRadius(radiusMeters ?? DEFAULTS.nearbyRadiusMeters);
-    const validPagination = validatePaginationParams({ cursor, limit: DEFAULTS.pageSize });
+    const validPagination = validatePaginationParams({ cursor: cursor ? String(cursor) : undefined, limit: DEFAULTS.pageSize });
     
     const response = await api.postPublic(buildGroupUrl(GROUP_ENDPOINTS.PUBLIC.SEARCH_BY_LOCATION, true), {
       latitude,
@@ -138,7 +138,7 @@ export const useGroupService = () => {
   const searchGroupsByName = async (query: string, cursor?: number): Promise<SearchGroupByNameResponse> => {
     // 发送前验证参数
     const validKeyword = validateSearchKeyword(query);
-    const validPagination = validatePaginationParams({ cursor, limit: DEFAULTS.pageSize });
+    const validPagination = validatePaginationParams({ cursor: cursor ? String(cursor) : undefined, limit: DEFAULTS.pageSize });
     
     const response = await api.postPublic(buildGroupUrl(GROUP_ENDPOINTS.PUBLIC.SEARCH_BY_NAME, true), {
       keyword: validKeyword,

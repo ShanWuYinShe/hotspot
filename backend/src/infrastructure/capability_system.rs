@@ -269,7 +269,6 @@ pub struct CapabilityStats {
 }
 
 /// 能力注册表项
-#[derive(Debug)]
 pub struct CapabilityRegistration {
     /// 能力实例
     pub capability: Box<dyn Capability>,
@@ -392,7 +391,13 @@ impl CapabilityRegistry {
         
         if let Some(registration) = capabilities.get_mut(capability_id) {
             // 检查依赖
-            self.check_dependencies(&registration.capability.metadata().dependencies, &capabilities).await?;
+            let dependencies = registration.capability.metadata().dependencies.clone();
+            drop(capabilities); // 释放可变借用
+            let capabilities_read = self.capabilities.read().await;
+            self.check_dependencies(&dependencies, &capabilities_read).await?;
+            drop(capabilities_read); // 释放不可变借用
+            let mut capabilities = self.capabilities.write().await; // 重新获取可变借用
+            let registration = capabilities.get_mut(capability_id).unwrap();
             
             // 初始化能力
             match registration.capability.initialize(&registration.config).await {

@@ -26,14 +26,13 @@ interface PinModalState {
 /**
  * 安全且简洁的认证Store
  * 核心理念：安全第一，简洁体验
- * 保持与原有API的向后兼容性
  */
 export const useAuthStore = defineStore(
   "auth",
   () => {
     // 当前用户状态
     const currentUser = ref<SecureAccount | null>(null);
-    const token = ref<string | null>(null); // access_token，保持向后兼容命名
+    const token = ref<string | null>(null); // access_token
     const refreshToken = ref<string | null>(null); // 当前用户的refresh_token（解密后的）
     const expiresAt = ref<string | null>(null);
     const sessionActive = ref(false); // 本次会话是否已验证
@@ -47,7 +46,7 @@ export const useAuthStore = defineStore(
       isSetup: false,
     });
     
-    // 向后兼容的计算属性
+    // 计算属性
     const isAuthenticated = computed(() => !!token.value);
     const user = computed(() => currentUser.value ? {
       user_id: currentUser.value.user_id,
@@ -56,11 +55,13 @@ export const useAuthStore = defineStore(
       is_temp: currentUser.value.is_temp, // 🔥 修复：统一使用 is_temp 字段
     } as User : null);
     
+    // 设备认证状态
+    const needsDeviceAuth = computed(() => !sessionActive.value && accounts.value.length > 1);
+    
     // 兼容性属性
     const needsUnlock = computed(() => false); // 新系统不需要解锁概念
     const requiresPassphrase = computed(() => false); // 不再需要口令
     const pendingCredential = computed(() => null);
-    const needsDeviceAuth = computed(() => !sessionActive.value && accounts.value.length > 1);
 
     const userService = useUserService();
     
@@ -456,12 +457,12 @@ export const useAuthStore = defineStore(
       }
     }
 
-    // 删除账户（向后兼容）
+    // 删除账户
     function deleteAccount(userId: string) {
       removeAccount(userId);
     }
 
-    // 向后兼容的方法存根
+    // 设置会话
     function setSession(authData: AuthResponse, persistAccount: boolean = true) {
       if (persistAccount) {
         saveAuthData(authData);
@@ -482,27 +483,14 @@ export const useAuthStore = defineStore(
       }
     }
 
-    // 向后兼容方法（简化实现）
+    const switchUser = (userId: string) => switchToAccount(userId);
+    
+    // 兼容性方法
     const getAccountByUserId = (userId: string) => 
       accounts.value.find(a => a.user_id === userId) || null;
 
-    const addOrUpdateAccount = (authData: AuthResponse) => {
-      // 新系统中通过saveAuthData自动处理
-    };
-
-    const cleanupInvalidAccounts = () => {
-      accounts.value = accounts.value.filter(a => a.user_id && a.nickname);
-    };
-
-    // 不再需要的复杂方法（返回成功以保持兼容性）
-    const savePassphrase = async (passphrase: string) => Promise.resolve();
-    const unlockWithPassphrase = async (passphrase: string) => Promise.resolve();
-    const switchUser = (userId: string) => switchToAccount(userId);
-    const saveEncryptedCredential = async () => Promise.resolve();
-    const unlockCredential = async () => Promise.resolve(null);
-
     return {
-      // 状态（保持向后兼容）
+      // 状态
       user,
       token,
       refreshToken,
@@ -521,7 +509,6 @@ export const useAuthStore = defineStore(
       
       // 账户管理
       accounts: computed(() => accounts.value),
-      getAccountByUserId,
 
       // 认证方法
       login,
@@ -545,16 +532,11 @@ export const useAuthStore = defineStore(
       handlePinConfirm,
       handlePinCancel,
       
-      // 向后兼容方法
-      savePassphrase,
-      unlockWithPassphrase,
+      // 账户管理方法
       switchUser,
       deleteAccount,
-      addOrUpdateAccount,
       removeAccount,
-      cleanupInvalidAccounts,
-      saveEncryptedCredential,
-      unlockCredential,
+      getAccountByUserId,
     };
   },
   {

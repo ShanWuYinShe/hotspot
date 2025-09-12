@@ -109,7 +109,7 @@ where
         let query = GetRecentActivitiesQuery {
             pagination: crate::application::queries::PaginationQuery {
                 cursor: params.cursor,
-                limit: params.limit,
+                limit: params.limit.map(|l| l as usize),
             },
             activity_types,
             hours_range: params.hours,

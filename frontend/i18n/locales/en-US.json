@@ -368,5 +368,17 @@
     "error": "Network request failed",
     "timeout": "Request timeout",
     "retry": "Retry"
+  },
+  "settings": {
+    "searchPlaceholder": "Search...",
+    "noResults": "No results",
+    "language": "Language",
+    "theme": "Theme",
+    "distanceUnit": "Distance Unit",
+    "timeFormat": "Time Format",
+    "select": {
+      "hintMulti": "Multiple selection allowed, press Enter to confirm",
+      "errorRequired": "This field cannot be empty"
+    }
   }
 }

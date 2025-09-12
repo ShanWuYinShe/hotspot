@@ -17,10 +17,10 @@ export default defineAppConfig({
       error: "red",
     },
 
-    // 现代按钮设计 - 44pt 最小触摸目标
+    // 交互式按钮设计 - 明确的交互反馈
     button: {
       slots: {
-        base: "rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 transition-all duration-200 ease-out min-h-[44px] font-semibold hover:-translate-y-0.5",
+        base: "rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 transition-colors duration-150 ease-out min-h-[44px] font-semibold cursor-pointer",
         label: "font-medium",
         leadingIcon: "",
         trailingIcon: "",
@@ -32,11 +32,11 @@ export default defineAppConfig({
       },
       variants: {
         variant: {
-          solid: "shadow-sm hover:shadow-lg",
-          outline: "border-2 hover:bg-{color}-50 dark:hover:bg-{color}-950/20",
-          ghost: "border-0 hover:bg-{color}-100 dark:hover:bg-{color}-900/30",
-          soft: "bg-{color}-100 hover:bg-{color}-200 dark:bg-{color}-900/30 dark:hover:bg-{color}-800/40",
-          subtle: "bg-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800/50"
+          solid: "shadow-sm hover:brightness-110 active:brightness-90 hover:shadow-md",
+          outline: "border-2 hover:bg-{color}-100 dark:hover:bg-{color}-950/30 active:bg-{color}-200 dark:active:bg-{color}-900/50",
+          ghost: "border-0 hover:bg-{color}-100 dark:hover:bg-{color}-900/40 active:bg-{color}-200 dark:active:bg-{color}-800/60",
+          soft: "bg-{color}-100 hover:bg-{color}-200 dark:bg-{color}-900/40 dark:hover:bg-{color}-800/60 active:bg-{color}-300 dark:active:bg-{color}-700/70",
+          subtle: "bg-transparent hover:bg-neutral-100 dark:hover:bg-neutral-700 active:bg-neutral-200 dark:active:bg-neutral-600"
         },
         size: {
           xs: "min-h-[32px] px-3 text-sm",
@@ -69,10 +69,10 @@ export default defineAppConfig({
       }
     },
 
-    // 现代卡片设计 - 分组背景风格
+    // 卡片设计 - 区分交互式和展示式
     card: {
       slots: {
-        root: "bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-neutral-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 ease-out",
+        root: "bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-neutral-100 shadow-sm",
         header: "pb-4 border-b border-neutral-200 dark:border-neutral-700 font-semibold text-lg",
         body: "p-6 text-base leading-relaxed",
         footer: "pt-4 border-t border-neutral-200 dark:border-neutral-700",
@@ -80,9 +80,11 @@ export default defineAppConfig({
       variants: {
         variant: {
           default: "",
-          elevated: "shadow-md hover:shadow-xl",
+          elevated: "shadow-md",
           outlined: "border-2 border-neutral-300 dark:border-neutral-600",
-          filled: "bg-neutral-50 dark:bg-neutral-800 border-0"
+          filled: "bg-neutral-50 dark:bg-neutral-800 border-0",
+          // 只有交互式卡片才有hover效果
+          interactive: "cursor-pointer transition-colors duration-150 hover:bg-neutral-100 dark:hover:bg-neutral-800 active:bg-neutral-200 dark:active:bg-neutral-700 hover:border-primary-200 dark:hover:border-primary-700"
         }
       }
     },
@@ -148,10 +150,10 @@ export default defineAppConfig({
       }
     },
 
-    // 现代头像设计 - 增强交互效果
+    // 头像设计 - 纯展示，无交互效果
     avatar: {
       slots: {
-        root: "rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-lg ring-2 ring-transparent hover:ring-primary-500/20",
+        root: "rounded-xl",
         image: "object-cover",
         fallback: "bg-gradient-to-br from-primary-500 to-primary-600 text-white font-semibold flex items-center justify-center",
         icon: "",
@@ -175,27 +177,27 @@ export default defineAppConfig({
       },
     },
 
-    // 现代下拉菜单设计 - 增强交互效果
+    // 下拉菜单设计 - 清晰的交互层次
     dropdown: {
       slots: {
         content: "border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-lg bg-white dark:bg-neutral-900 backdrop-blur-sm text-neutral-900 dark:text-neutral-100 p-1 min-w-[160px]",
-        item: "rounded-lg px-3 py-2 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all duration-150 cursor-pointer flex items-center gap-2",
+        item: "rounded-lg px-3 py-2 text-sm hover:bg-primary-100 dark:hover:bg-primary-900/20 active:bg-primary-200 dark:active:bg-primary-800/30 transition-colors duration-150 cursor-pointer flex items-center gap-2 focus:bg-primary-100 dark:focus:bg-primary-900/20",
         divider: "my-1 border-t border-neutral-200 dark:border-neutral-700",
         label: "px-3 py-2 text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider",
       },
     },
 
-    // 现代标签页设计
+    // 标签页设计 - 明确的状态区分
     tabs: {
       slots: {
         root: "",
         list: "flex gap-1 p-1 bg-neutral-100 dark:bg-neutral-800 rounded-lg",
-        trigger: "rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-neutral-900",
+        trigger: "rounded-md px-3 py-2 text-sm font-medium transition-colors duration-150 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-700 data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-neutral-900 data-[state=active]:text-primary-600 dark:data-[state=active]:text-primary-400",
         content: "mt-4",
       },
     },
 
-    // 现代表格设计
+    // 现代表格设计 - 优化hover对比度
     table: {
       slots: {
         root: "min-w-full table-fixed text-sm text-neutral-900 dark:text-neutral-100 border-collapse",
@@ -203,7 +205,7 @@ export default defineAppConfig({
         caption: "text-sm text-neutral-600 dark:text-neutral-400 mb-4",
         thead: "bg-neutral-50 dark:bg-neutral-800",
         tbody: "divide-y divide-neutral-200 dark:divide-neutral-700",
-        tr: "hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors duration-150",
+        tr: "", // 默认无交互效果，需要时通过variant添加
         th: "text-left font-semibold py-3 px-4 text-neutral-900 dark:text-neutral-100",
         td: "py-3 px-4 text-neutral-700 dark:text-neutral-300",
         tfoot: "bg-neutral-50 dark:bg-neutral-800",
@@ -213,18 +215,18 @@ export default defineAppConfig({
       },
     },
 
-    // 现代分页设计 - 增强交互效果
+    // 现代分页设计 - 增强交互效果，优化对比度
     pagination: {
       slots: {
         root: "inline-flex items-center gap-2",
         list: "flex items-center gap-1",
         ellipsis: "px-2 text-neutral-500",
         label: "text-sm text-neutral-600 dark:text-neutral-400",
-        first: "min-w-10 h-10 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 transition-all duration-200 flex items-center justify-center",
-        prev: "min-w-10 h-10 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 transition-all duration-200 flex items-center justify-center",
-        item: "min-w-10 h-10 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 transition-all duration-200 flex items-center justify-center data-[active=true]:bg-primary-500 data-[active=true]:text-white data-[active=true]:border-primary-500",
-        next: "min-w-10 h-10 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 transition-all duration-200 flex items-center justify-center",
-        last: "min-w-10 h-10 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 transition-all duration-200 flex items-center justify-center",
+        first: "min-w-10 h-10 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600 active:bg-neutral-200 dark:active:bg-neutral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 transition-all duration-200 flex items-center justify-center",
+        prev: "min-w-10 h-10 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600 active:bg-neutral-200 dark:active:bg-neutral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 transition-all duration-200 flex items-center justify-center",
+        item: "min-w-10 h-10 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600 active:bg-neutral-200 dark:active:bg-neutral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 transition-all duration-200 flex items-center justify-center data-[active=true]:bg-primary-500 data-[active=true]:text-white data-[active=true]:border-primary-500",
+        next: "min-w-10 h-10 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600 active:bg-neutral-200 dark:active:bg-neutral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 transition-all duration-200 flex items-center justify-center",
+        last: "min-w-10 h-10 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600 active:bg-neutral-200 dark:active:bg-neutral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 transition-all duration-200 flex items-center justify-center",
       },
     },
 
@@ -258,5 +260,37 @@ export default defineAppConfig({
         help: "text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed",
       },
     },
+
+    // 自定义交互状态类 - 统一的hover/active对比度
+    interactiveStates: {
+      // 导航按钮交互状态
+      navigation: {
+        base: "transition-colors duration-200 rounded-lg",
+        hover: "hover:bg-neutral-100 dark:hover:bg-neutral-700",
+        active: "active:bg-neutral-200 dark:active:bg-neutral-600",
+        focus: "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
+      },
+      // 列表项交互状态
+      listItem: {
+        base: "transition-colors duration-200 cursor-pointer",
+        hover: "hover:bg-neutral-100 dark:hover:bg-neutral-700",
+        active: "active:bg-neutral-200 dark:active:bg-neutral-600",
+        focus: "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
+      },
+      // 设置项交互状态
+      settingsItem: {
+        base: "transition-all duration-200 rounded-lg",
+        hover: "hover:bg-neutral-100 dark:hover:bg-neutral-700",
+        active: "active:bg-neutral-200 dark:active:bg-neutral-600",
+        selected: "bg-primary-50 dark:bg-primary-950/30 border-primary-200 dark:border-primary-800"
+      },
+      // 卡片交互状态
+      cardInteractive: {
+        base: "transition-colors duration-200 cursor-pointer",
+        hover: "hover:bg-neutral-50 dark:hover:bg-neutral-800",
+        active: "active:bg-neutral-100 dark:active:bg-neutral-700",
+        focus: "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
+      }
+    }
   },
 });

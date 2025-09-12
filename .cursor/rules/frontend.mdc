@@ -926,7 +926,7 @@ errorHandler.setupGlobalErrorHandler(); // 在app.vue中调用
 #### SSR 安全用法（新增统一策略）
 - 任何在 SSR 阶段可能访问浏览器 API（`window`、`document`、`matchMedia`、`navigator` 等）的逻辑：
   - 优先采用成对实现：`.client.ts`（真实实现）+ `.server.ts`（安全占位实现）
-  - 或仅 `.client.ts`，并在使用端组件中采用“setup 默认值 + onMounted 注入真实实现 + watch 同步”的方式，避免水合不匹配
+  - 或仅 `.client.ts`，并在使用端组件中采用"setup 默认值 + onMounted 注入真实实现 + watch 同步"的方式，避免水合不匹配
 - 组件侧推荐示例：
   ```ts
   const isDark = ref(false)
@@ -937,6 +937,69 @@ errorHandler.setupGlobalErrorHandler(); // 在app.vue中调用
     watch(theme.isDark, v => (isDark.value = v), { immediate: true })
   })
   ```
+
+#### 环境检查优化规范（强制）
+
+**禁止使用 `process.client` 进行环境检查**：
+- **核心原则**：使用 Nuxt 的文件后缀系统和生命周期钩子来处理客户端/服务端逻辑分离，而不是运行时环境检查
+- **性能优势**：避免运行时检查，提升代码执行效率
+- **类型安全**：TypeScript 可以更好地推断环境特定的 API
+
+**替代方案**：
+
+1. **Composables 分离**：
+   ```ts
+   // ❌ 错误：使用 process.client 检查
+   export const useExample = () => {
+     if (process.client) {
+       // 客户端逻辑
+     }
+   }
+   
+   // ✅ 正确：分离为客户端和服务端版本
+   // useExample.client.ts - 完整实现
+   // useExample.server.ts - 占位实现
+   ```
+
+2. **中间件文件**：
+   ```ts
+   // ❌ 错误：在 .client.ts 文件中仍使用 process.client
+   // auth.global.client.ts
+   if (process.client) {
+     // 逻辑处理
+   }
+   
+   // ✅ 正确：.client.ts 后缀已确保只在客户端运行
+   // auth.global.client.ts
+   // 直接编写客户端逻辑，无需检查
+   ```
+
+3. **Vue 组件中的客户端逻辑**：
+   ```ts
+   // ❌ 错误：使用 process.client 检查
+   const loadData = () => {
+     if (process.client) {
+       localStorage.getItem('key')
+     }
+   }
+   
+   // ✅ 正确：使用 onMounted 确保客户端执行
+   onMounted(() => {
+     const data = localStorage.getItem('key')
+     // 处理数据
+   })
+   ```
+
+**迁移指南**：
+- **已有 `.client.ts` 文件**：直接移除 `process.client` 检查
+- **通用文件需要环境分离**：拆分为 `.client.ts` 和 `.server.ts` 版本
+- **Vue 组件中的客户端逻辑**：使用 `onMounted` 生命周期钩子
+- **服务端占位实现**：为客户端特定功能提供空实现或默认值
+
+**代码质量要求**：
+- 所有新代码必须遵循此规范
+- 现有代码发现 `process.client` 使用时必须重构
+- 代码审查时验证是否正确使用了文件后缀和生命周期钩子
 
 ## 14. 终端管理规范
 - **单终端操作**: 前端开发过程中尽量在同一终端中操作，避免开启多个终端
@@ -1059,6 +1122,7 @@ errorHandler.setupGlobalErrorHandler(); // 在app.vue中调用
 - **去重化**：移除重复功能，如"探索附近"功能已被minimap覆盖
 - **模块化**：每个功能模块有独立的入口和界面
 - **响应式**：所有UI组件支持移动端和桌面端适配
+
 
 ### Tailwind CSS响应式设计规范
 - **断点系统**：使用 Tailwind CSS 内置的响应式前缀

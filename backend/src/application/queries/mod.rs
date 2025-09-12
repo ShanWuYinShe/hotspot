@@ -1,7 +1,7 @@
 /// 查询模块 - 重新导出所有查询类型
 
 use serde::{Deserialize, Serialize};
-use crate::domain::{UserId, GroupId, MomentId, Coordinates};
+use crate::domain::Coordinates;
 
 // === 基础查询类型 ===
 

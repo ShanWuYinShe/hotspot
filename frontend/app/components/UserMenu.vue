@@ -163,7 +163,7 @@ const user = computed(() => authStore.user)
 
 // 其他账户列表
 const otherAccounts = computed(() => 
-  authStore.accounts.filter(a => a.user_id !== user.value?.user_id)
+  authStore.accounts.filter((a: any) => a.user_id !== user.value?.user_id)
 )
 
 // 创建临时用户

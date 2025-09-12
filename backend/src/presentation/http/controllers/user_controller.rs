@@ -40,7 +40,7 @@ use crate::application::{
     UserRegistrationResult, UserCommandResult, LocationUpdateResult,
     NearbyUser, UserSearchResult, PasswordStatus, PaginatedResult,
 };
-use super::{Controller, ok_response, created_response, map_domain_error_to_http_response, paginated_response};
+use super::{Controller, ok_response, created_response, map_domain_error_to_http_response, map_application_error_to_http_response, paginated_response};
 use crate::presentation::http::models::user::AuthResponse;
 use crate::presentation::http::validators::{
     validate_login_id, validate_password, validate_nickname, validate_location_params,
@@ -118,13 +118,13 @@ where
             password: request.password,
         };
         
-        match controller.user_service.handle(command).await {
+        match CommandHandler::handle(&controller.user_service, command).await {
             Ok(result) => {
                 let (access_token, expires_at) = match crate::utils::jwt::generate_jwt_token(
                     result.user.user_id,
                     &std::env::var("JWT_SECRET").unwrap_or_else(|_| "your-secret-key-change-in-production".to_string()),
                     3600, // 1小时
-                    result.user.user_type == crate::domain::UserType::Temporary,
+                    result.user.user_type == crate::domain::entities::UserType::Temporary,
                 ) {
                     Ok(token_data) => token_data,
                     Err(_) => return map_domain_error_to_http_response(
@@ -138,11 +138,11 @@ where
                     access_token,
                     refresh_token: "refresh_token_placeholder".to_string(),
                     expires_at,
-                    is_temp: Some(result.user.user_type == crate::domain::UserType::Temporary),
+                    is_temp: Some(result.user.user_type == crate::domain::entities::UserType::Temporary),
                 };
                 created_response(response)
             }
-            Err(error) => map_domain_error_to_http_response(error),
+            Err(error) => map_application_error_to_http_response(error),
         }
     }
     
@@ -156,13 +156,13 @@ where
                 // 生成JWT token对
                 let jwt_secret = std::env::var("JWT_SECRET")
                     .unwrap_or_else(|_| "your-secret-key-change-in-production".to_string());
-                let is_temp = user.user_type == crate::domain::UserType::Temporary;
+                let is_temp = user.user_type == crate::domain::entities::UserType::Temporary;
                 
                 let (access_token, refresh_token, expires_at, _refresh_expires_at) = 
                     match crate::utils::jwt::generate_token_pair(user.user_id, &jwt_secret, is_temp) {
                         Ok(tokens) => tokens,
-                        Err(_) => return map_domain_error_to_http_response(
-                            crate::domain::DomainError::BusinessRuleViolation { rule: "Token generation failed".to_string() }
+                        Err(_) => return map_application_error_to_http_response(
+                            crate::application::ApplicationError::Domain(crate::domain::DomainError::BusinessRuleViolation { rule: "Token generation failed".to_string() })
                         ),
                     };
                 
@@ -176,7 +176,7 @@ where
                 };
                 ok_response(response)
             }
-            Err(error) => map_domain_error_to_http_response(error),
+            Err(error) => map_application_error_to_http_response(error),
         }
     }
     
@@ -189,7 +189,7 @@ where
             nickname: request.nickname,
         };
         
-        match controller.user_service.handle(command).await {
+        match CommandHandler::handle(&controller.user_service, command).await {
             Ok(result) => {
                 let jwt_secret = std::env::var("JWT_SECRET")
                     .unwrap_or_else(|_| "your-secret-key-change-in-production".to_string());
@@ -197,8 +197,8 @@ where
                 let (access_token, refresh_token, expires_at, _refresh_expires_at) = 
                     match crate::utils::jwt::generate_token_pair(result.user.user_id, &jwt_secret, true) {
                         Ok(tokens) => tokens,
-                        Err(_) => return map_domain_error_to_http_response(
-                            crate::domain::DomainError::BusinessRuleViolation { rule: "Token generation failed".to_string() }
+                        Err(_) => return map_application_error_to_http_response(
+                            crate::application::ApplicationError::Domain(crate::domain::DomainError::BusinessRuleViolation { rule: "Token generation failed".to_string() })
                         ),
                     };
                 
@@ -212,7 +212,7 @@ where
                 };
                 created_response(response)
             }
-            Err(error) => map_domain_error_to_http_response(error),
+            Err(error) => map_application_error_to_http_response(error),
         }
     }
     
@@ -234,16 +234,16 @@ where
         
         // 验证用户是否存在
         let query = crate::application::GetUserByIdQuery { user_id: refresh_claims.sub };
-        let user = match controller.user_service.handle(query).await {
+        let user = match QueryHandler::handle(&controller.user_service, query).await {
             Ok(Some(user)) => user,
             Ok(None) => return map_domain_error_to_http_response(
                 crate::domain::DomainError::UserNotFound
             ),
-            Err(error) => return map_domain_error_to_http_response(error),
+            Err(error) => return map_application_error_to_http_response(error),
         };
         
         // 生成新的token对
-        let is_temp = user.user_type == crate::domain::UserType::Temporary;
+        let is_temp = user.user_type == crate::domain::entities::UserType::Temporary;
         let (access_token, refresh_token, expires_at, _refresh_expires_at) = 
             match crate::utils::jwt::generate_token_pair(user.user_id, &jwt_secret, is_temp) {
                 Ok(tokens) => tokens,
@@ -270,17 +270,17 @@ where
     ) -> Response {
         let query = GetUserByIdQuery { user_id: current_user.user_id };
         
-        match controller.user_service.handle(query).await {
+        match QueryHandler::handle(&controller.user_service, query).await {
             Ok(Some(user)) => {
                 let jwt_secret = std::env::var("JWT_SECRET")
                     .unwrap_or_else(|_| "your-secret-key-change-in-production".to_string());
-                let is_temp = user.user_type == crate::domain::UserType::Temporary;
+                let is_temp = user.user_type == crate::domain::entities::UserType::Temporary;
                 
                 let (access_token, refresh_token, expires_at, _refresh_expires_at) = 
                     match crate::utils::jwt::generate_token_pair(user.user_id, &jwt_secret, is_temp) {
                         Ok(tokens) => tokens,
-                        Err(_) => return map_domain_error_to_http_response(
-                            crate::domain::DomainError::BusinessRuleViolation { rule: "Token generation failed".to_string() }
+                        Err(_) => return map_application_error_to_http_response(
+                            crate::application::ApplicationError::Domain(crate::domain::DomainError::BusinessRuleViolation { rule: "Token generation failed".to_string() })
                         ),
                     };
                 
@@ -297,7 +297,7 @@ where
             Ok(None) => map_domain_error_to_http_response(
                 crate::domain::DomainError::UserNotFound
             ),
-            Err(error) => map_domain_error_to_http_response(error),
+            Err(error) => map_application_error_to_http_response(error),
         }
     }
     
@@ -312,9 +312,9 @@ where
             password: request.new_password,
         };
         
-        match controller.user_service.handle(command).await {
+        match CommandHandler::handle(&controller.user_service, command).await {
             Ok(_result) => ok_response(serde_json::json!({"success": true, "message": "密码设置成功"})),
-            Err(error) => map_domain_error_to_http_response(error),
+            Err(error) => map_application_error_to_http_response(error),
         }
     }
     
@@ -325,9 +325,9 @@ where
     ) -> Response {
         let query = CheckPasswordStatusQuery { user_id: current_user.user_id };
         
-        match controller.user_service.handle(query).await {
+        match QueryHandler::handle(&controller.user_service, query).await {
             Ok(status) => ok_response(PasswordStatusResult { has_password: status.has_password }),
-            Err(error) => map_domain_error_to_http_response(error),
+            Err(error) => map_application_error_to_http_response(error),
         }
     }
     
@@ -344,13 +344,13 @@ where
             requester_id: current_user.user_id,
             pagination: PaginationQuery {
                 cursor: request.cursor.and_then(|c| c.parse().ok()),
-                limit: request.limit,
+                limit: request.limit.map(|l| l as usize),
             },
         };
         
-        match controller.user_service.handle(query).await {
+        match QueryHandler::handle(&controller.user_service, query).await {
             Ok(result) => paginated_response(result.items, result.has_more, result.next_cursor),
-            Err(error) => map_domain_error_to_http_response(error),
+            Err(error) => map_application_error_to_http_response(error),
         }
     }
     
@@ -372,9 +372,9 @@ where
             requester_id: current_user.user_id,
         };
         
-        match controller.user_service.handle(query).await {
+        match QueryHandler::handle(&controller.user_service, query).await {
             Ok(profile) => ok_response(profile),
-            Err(error) => map_domain_error_to_http_response(error),
+            Err(error) => map_application_error_to_http_response(error),
         }
     }
     
@@ -391,13 +391,13 @@ where
             radius_km: Some(request.radius / 1000.0), // 转换米到公里
             pagination: PaginationQuery {
                 cursor: request.cursor.and_then(|c| c.parse().ok()),
-                limit: request.limit,
+                limit: request.limit.map(|l| l as usize),
             },
         };
         
-        match controller.user_service.handle(query).await {
+        match QueryHandler::handle(&controller.user_service, query).await {
             Ok(result) => paginated_response(result.items, result.has_more, result.next_cursor),
-            Err(error) => map_domain_error_to_http_response(error),
+            Err(error) => map_application_error_to_http_response(error),
         }
     }
     
@@ -414,9 +414,9 @@ where
             address: Some(request.location_name),
         };
         
-        match controller.user_service.handle(command).await {
+        match CommandHandler::handle(&controller.user_service, command).await {
             Ok(_) => ok_response(serde_json::json!({"success": true})),
-            Err(error) => map_domain_error_to_http_response(error),
+            Err(error) => map_application_error_to_http_response(error),
         }
     }
     
@@ -431,9 +431,9 @@ where
             nickname: Some(request.nickname.clone()),
         };
         
-        match controller.user_service.handle(command).await {
+        match CommandHandler::handle(&controller.user_service, command).await {
             Ok(_) => ok_response(serde_json::json!({"nickname": request.nickname})),
-            Err(error) => map_domain_error_to_http_response(error),
+            Err(error) => map_application_error_to_http_response(error),
         }
     }
     
@@ -449,16 +449,16 @@ where
             password: request.password,
         };
         
-        match controller.user_service.handle(command).await {
+        match CommandHandler::handle(&controller.user_service, command).await {
             Ok(_result) => {
                 // 获取升级后的用户信息
                 let query = GetUserByIdQuery { user_id: current_user.user_id };
-                let updated_user = match controller.user_service.handle(query).await {
+                let updated_user = match QueryHandler::handle(&controller.user_service, query).await {
                     Ok(Some(user)) => user,
                     Ok(None) => return map_domain_error_to_http_response(
                         crate::domain::DomainError::UserNotFound
                     ),
-                    Err(error) => return map_domain_error_to_http_response(error),
+                    Err(error) => return map_application_error_to_http_response(error),
                 };
                 
                 // 生成新的JWT token
@@ -484,7 +484,7 @@ where
                 };
                 ok_response(response)
             }
-            Err(error) => map_domain_error_to_http_response(error),
+            Err(error) => map_application_error_to_http_response(error),
         }
     }
     
@@ -547,9 +547,9 @@ where
             requester_id: current_user.user_id,
         };
         
-        match controller.user_service.handle(command).await {
+        match CommandHandler::handle(&controller.user_service, command).await {
             Ok(_result) => ok_response(serde_json::json!({"success": true, "message": "账户删除成功"})),
-            Err(error) => map_domain_error_to_http_response(error),
+            Err(error) => map_application_error_to_http_response(error),
         }
     }
 }

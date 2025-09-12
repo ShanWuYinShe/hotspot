@@ -126,7 +126,7 @@ impl WebSocketService {
         let service = Arc::new(Self {
             manager,
             event_integrator,
-            config,
+            config: config.clone(),
             rate_limiter: Arc::new(RwLock::new(RateLimiter::new())),
         });
         
@@ -233,7 +233,7 @@ impl WebSocketService {
     /// 创建群组房间
     pub async fn create_group_room(&self, group_id: GroupId, max_members: Option<usize>) -> DomainResult<()> {
         let room_id = format!("group_{}", group_id.value());
-        let room_type = RoomType::Group { group_id };
+        let room_type = RoomType::Group { group_id: group_id.clone() };
         
         self.manager.get_or_create_room(&room_id, room_type, max_members).await?;
         
@@ -279,7 +279,7 @@ impl WebSocketService {
         let room_id = format!("group_{}", group_id.value());
         
         // 确保房间存在
-        let room_type = RoomType::Group { group_id };
+        let room_type = RoomType::Group { group_id: group_id.clone() };
         self.manager.get_or_create_room(&room_id, room_type, None).await?;
         
         // 用户加入房间
@@ -287,7 +287,7 @@ impl WebSocketService {
         
         // 发布事件
         if let Some(integrator) = &self.event_integrator {
-            integrator.publish_user_joined_group(user_id, group_id, "member".to_string()).await?;
+            integrator.publish_user_joined_group(user_id, group_id.clone(), "member".to_string()).await?;
         }
         
         tracing::info!(
@@ -341,7 +341,7 @@ impl WebSocketService {
     
     /// 更新用户在线状态
     pub async fn update_user_presence(&self, user_id: UserId, status: UserPresenceStatus) -> DomainResult<()> {
-        self.manager.update_user_status(user_id, status).await?;
+        self.manager.update_user_status(user_id, status.clone()).await?;
         
         tracing::debug!(
             user_id = %user_id.value(),

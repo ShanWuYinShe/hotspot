@@ -47,10 +47,9 @@ export const useMomentsStore = defineStore(
     async function createMoment(momentData: CreateMomentRequest) {
       const momentService = useMomentService();
       const newMoment = await momentService.createMoment(
-        momentData.description,
         momentData.latitude,
         momentData.longitude,
-        momentData.location_name,
+        momentData.description,
         momentData.tags,
       );
 

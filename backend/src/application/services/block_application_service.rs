@@ -1,10 +1,12 @@
-/// 屏蔽应用服务
-/// 
-/// 功能职责：
-/// - 实现屏蔽相关的业务逻辑
-/// - 协调屏蔽仓储和其他服务
-/// - 处理屏蔽操作的权限验证和业务规则
-/// - 提供屏蔽设置管理功能
+// 屏蔽应用服务
+// 
+// 功能职责：
+// - 实现屏蔽相关的业务逻辑
+// - 协调屏蔽仓储和其他服务
+// - 处理屏蔽操作的权限验证和业务规则
+// - 提供屏蔽设置管理功能
+// 暂时禁用，等待重新设计
+/*
 use async_trait::async_trait;
 use std::sync::Arc;
 
@@ -12,7 +14,10 @@ use crate::{
     domain::{DomainResult, Block, BlockSettings, BlockStats, BlockType, BlockReason},
     ports::repository_ports::{BlockRepository, UserRepository, FriendRepository},
 };
+*/
 
+// 暂时禁用，等待重新设计
+/*
 /// 屏蔽应用服务接口
 #[async_trait]
 pub trait BlockApplicationService: Send + Sync {
@@ -262,3 +267,4 @@ where
         Ok(false)
     }
 }
+*/

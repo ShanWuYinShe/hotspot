@@ -7,17 +7,20 @@ use axum::Json;
 use serde::{Deserialize, Serialize};
 use crate::utils::JsSafeI64;
 
-use crate::application::MessageApplicationService;
+// use crate::application::MessageApplicationService; // 暂时禁用
 use crate::domain::{DirectMessage, GroupMessage};
 
 use super::{ok_response, created_response, map_domain_error_to_http_response, paginated_response};
 
 /// 消息控制器
-#[derive(Clone)]
-pub struct MessageController {
-    message_service: MessageApplicationService,
-}
+// 暂时禁用，等待重新设计
+// #[derive(Clone)]
+// pub struct MessageController {
+//     message_service: MessageApplicationService,
+// }
 
+// 暂时禁用，等待重新设计
+/*
 impl MessageController {
     /// 创建消息控制器
     pub fn new(message_service: MessageApplicationService) -> Self {
@@ -478,6 +481,7 @@ impl From<crate::domain::Conversation> for ConversationResponse {
         }
     }
 }
+*/
 
 #[derive(Debug, Serialize)]
 pub struct ConversationSummaryResponse {

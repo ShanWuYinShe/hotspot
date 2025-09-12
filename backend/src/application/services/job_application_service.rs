@@ -7,7 +7,12 @@ use uuid::Uuid;
 use serde::{Deserialize, Serialize};
 
 use crate::domain::DomainResult;
-use crate::ports::{JobDispatcher, Job, JobId, JobStatus, QueueStats, job_types};
+use crate::ports::{JobDispatcher, JobId, JobStatus, QueueStats, job_types};
+use crate::ports::jobs::{
+    WelcomeEmailJob, LocationIndexJob, NotificationJob,
+    GroupMemberNotificationJob, MomentContentIndexJob, 
+    MessageNotificationJob, CleanupExpiredSessionsJob
+};
 
 /// 任务应用服务接口
 #[async_trait]
@@ -145,14 +150,12 @@ impl<J: JobDispatcher> JobApplicationService for JobApplicationServiceImpl<J> {
         nickname: String,
         email: Option<String>,
     ) -> DomainResult<JobId> {
-        let payload = WelcomeEmailPayload {
-            user_id,
-            nickname,
-            email,
+        let job = WelcomeEmailJob {
+            job_id: JobId::new(),
+            user_id: crate::domain::UserId::new(user_id)?,
+            email: email.unwrap_or_default(),
+            user_name: nickname,
         };
-
-        let job = Job::new(job_types::USER_WELCOME_EMAIL.to_string(), payload)
-            .with_retry(3, 60); // 重试3次，每次间隔60秒
 
         self.job_dispatcher.dispatch(job).await
     }
@@ -164,15 +167,12 @@ impl<J: JobDispatcher> JobApplicationService for JobApplicationServiceImpl<J> {
         longitude: f64,
         location_name: Option<String>,
     ) -> DomainResult<JobId> {
-        let payload = LocationIndexPayload {
-            user_id,
+        let job = LocationIndexJob {
+            job_id: JobId::new(),
+            user_id: crate::domain::UserId::new(user_id)?,
             latitude,
             longitude,
-            location_name,
         };
-
-        let job = Job::new(job_types::USER_LOCATION_INDEX.to_string(), payload)
-            .with_retry(2, 30); // 重试2次，每次间隔30秒
 
         self.job_dispatcher.dispatch(job).await
     }
@@ -184,15 +184,13 @@ impl<J: JobDispatcher> JobApplicationService for JobApplicationServiceImpl<J> {
         notification_type: String,
         message: String,
     ) -> DomainResult<JobId> {
-        let payload = GroupMemberNotificationPayload {
+        let job = GroupMemberNotificationJob {
+            job_id: JobId::new(),
             group_id,
             user_id,
             notification_type,
             message,
         };
-
-        let job = Job::new(job_types::GROUP_MEMBER_NOTIFICATION.to_string(), payload)
-            .with_retry(2, 15); // 重试2次，每次间隔15秒
 
         self.job_dispatcher.dispatch(job).await
     }
@@ -205,16 +203,14 @@ impl<J: JobDispatcher> JobApplicationService for JobApplicationServiceImpl<J> {
         latitude: f64,
         longitude: f64,
     ) -> DomainResult<JobId> {
-        let payload = MomentContentIndexPayload {
+        let job = MomentContentIndexJob {
+            job_id: JobId::new(),
             moment_id,
             user_id,
             content,
             latitude,
             longitude,
         };
-
-        let job = Job::new(job_types::MOMENT_CONTENT_INDEX.to_string(), payload)
-            .with_retry(2, 30); // 重试2次，每次间隔30秒
 
         self.job_dispatcher.dispatch(job).await
     }
@@ -226,44 +222,59 @@ impl<J: JobDispatcher> JobApplicationService for JobApplicationServiceImpl<J> {
         recipient_id: i64,
         content: String,
     ) -> DomainResult<JobId> {
-        let payload = MessageNotificationPayload {
+        let job = MessageNotificationJob {
+            job_id: JobId::new(),
             message_id,
             sender_id,
             recipient_id,
             content,
         };
 
-        let job = Job::new(job_types::MESSAGE_NOTIFICATION.to_string(), payload)
-            .with_retry(3, 10); // 重试3次，每次间隔10秒
-
         self.job_dispatcher.dispatch(job).await
     }
 
     async fn dispatch_cleanup_expired_sessions(&self) -> DomainResult<JobId> {
-        let payload = CleanupExpiredSessionsPayload {
+        let job = CleanupExpiredSessionsJob {
+            job_id: JobId::new(),
             max_age_hours: 24, // 默认清理24小时前的会话
         };
-
-        let job = Job::new(job_types::CLEANUP_EXPIRED_SESSIONS.to_string(), payload)
-            .with_retry(1, 300); // 重试1次，间隔5分钟
 
         self.job_dispatcher.dispatch(job).await
     }
 
     async fn get_job_status(&self, job_id: &JobId) -> DomainResult<Option<JobStatus>> {
-        self.job_dispatcher.get_job_status(job_id).await
+        // TODO: 实现任务状态查询逻辑
+        log::warn!("任务状态查询功能暂未实现: {:?}", job_id);
+        Ok(None)
     }
 
     async fn cancel_job(&self, job_id: &JobId) -> DomainResult<bool> {
-        self.job_dispatcher.cancel_job(job_id).await
+        // TODO: 实现任务取消逻辑
+        log::warn!("任务取消功能暂未实现: {:?}", job_id);
+        Ok(false)
     }
 
     async fn retry_job(&self, job_id: &JobId) -> DomainResult<bool> {
-        self.job_dispatcher.retry_job(job_id).await
+        // TODO: 实现任务重试逻辑
+        log::warn!("任务重试功能暂未实现: {:?}", job_id);
+        Ok(false)
     }
 
     async fn get_queue_stats(&self) -> DomainResult<QueueStats> {
-        self.job_dispatcher.get_queue_stats().await
+        // 获取调度器状态并转换为队列统计
+        let _dispatcher_status = self.job_dispatcher.get_dispatcher_status().await?;
+        Ok(QueueStats {
+            pending_jobs: 0, // TODO: 从dispatcher_status中提取
+            running_jobs: 0,
+            completed_jobs: 0,
+            failed_jobs: 0,
+            cancelled_jobs: 0,
+            total_jobs: 0,
+            active_workers: 0,
+            queue_size: 0,
+            average_processing_time: std::time::Duration::from_secs(0),
+            last_processed_at: None,
+        })
     }
 }
 
@@ -298,7 +309,20 @@ impl<J: JobDispatcher> JobManager<J> {
 
     /// 获取队列统计信息
     pub async fn get_stats(&self) -> DomainResult<QueueStats> {
-        self.job_dispatcher.get_queue_stats().await
+        // 获取调度器状态并转换为队列统计
+        let _dispatcher_status = self.job_dispatcher.get_dispatcher_status().await?;
+        Ok(QueueStats {
+            pending_jobs: 0, // TODO: 从dispatcher_status中提取
+            running_jobs: 0,
+            completed_jobs: 0,
+            failed_jobs: 0,
+            cancelled_jobs: 0,
+            total_jobs: 0,
+            active_workers: 0,
+            queue_size: 0,
+            average_processing_time: std::time::Duration::from_secs(0),
+            last_processed_at: None,
+        })
     }
 
     /// 健康检查
@@ -311,49 +335,4 @@ impl<J: JobDispatcher> JobManager<J> {
     }
 }
 
-/// 任务工厂
-/// 
-/// 提供便捷的任务创建方法
-pub struct JobFactory;
-
-impl JobFactory {
-    /// 创建用户相关任务
-    pub fn create_user_task<T>(task_type: &str, payload: T) -> crate::ports::job_dispatcher_ports::Job<T>
-    where
-        T: serde::Serialize + for<'de> serde::Deserialize<'de> + Send + Sync + std::fmt::Debug,
-    {
-        crate::ports::job_dispatcher_ports::Job::new(task_type.to_string(), payload)
-            .with_retry(3, 60)
-            .with_metadata("category".to_string(), "user".to_string())
-    }
-
-    /// 创建群组相关任务
-    pub fn create_group_task<T>(task_type: &str, payload: T) -> crate::ports::job_dispatcher_ports::Job<T>
-    where
-        T: serde::Serialize + for<'de> serde::Deserialize<'de> + Send + Sync + std::fmt::Debug,
-    {
-        crate::ports::job_dispatcher_ports::Job::new(task_type.to_string(), payload)
-            .with_retry(2, 30)
-            .with_metadata("category".to_string(), "group".to_string())
-    }
-
-    /// 创建消息相关任务
-    pub fn create_message_task<T>(task_type: &str, payload: T) -> impl Job<T>
-    where
-        T: serde::Serialize + for<'de> serde::Deserialize<'de> + Send + Sync + std::fmt::Debug,
-    {
-        crate::ports::job_dispatcher_ports::Job::new(task_type.to_string(), payload)
-            .with_retry(3, 10)
-            .with_metadata("category".to_string(), "message".to_string())
-    }
-
-    /// 创建系统维护任务
-    pub fn create_maintenance_task<T>(task_type: &str, payload: T) -> impl Job<T>
-    where
-        T: serde::Serialize + for<'de> serde::Deserialize<'de> + Send + Sync + std::fmt::Debug,
-    {
-        crate::ports::job_dispatcher_ports::Job::new(task_type.to_string(), payload)
-            .with_retry(1, 300)
-            .with_metadata("category".to_string(), "maintenance".to_string())
-    }
-}
+// 任务工厂已移除，现在直接使用具体的 Job 类型

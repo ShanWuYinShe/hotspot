@@ -6,13 +6,13 @@
 /// - 通知服务：多渠道通知管理
 /// - 任务服务：异步任务处理和调度
 pub mod apm_service;
-pub mod cache_service;
+// pub mod cache_service;  // 暂时禁用，依赖MemoryCache
 pub mod dashboard_service;
 pub mod geo_optimization_service;
 pub mod metrics_service;
 
 pub use apm_service::*;
-pub use cache_service::*;
+// pub use cache_service::*;  // 暂时禁用
 pub use dashboard_service::*;
 pub use geo_optimization_service::*;
 pub use metrics_service::*;

@@ -119,14 +119,12 @@ export interface User {
   distance?: number; // 距离，64位浮点数转换为number
 }
 
-// 兼容性类型别名
-export type UserInfo = User;
 
 export interface SearchUserByLocationRequest {
   latitude: number; // 纬度，-90~90
   longitude: number; // 经度，-180~180
-  radius?: number; // 搜索半径，单位米，建议100~10000
-  radius_meters?: number; // 兼容后端字段名
+  radius: number; // 搜索半径，单位米，建议100~10000
+  radius_meters?: number; // 兼容字段，等于radius
   limit?: number;
   cursor?: string; // 游标分页，字符串类型
 }
@@ -320,11 +318,8 @@ export interface Group {
   avatar_url?: string;
 }
 
-// 兼容性类型别名
-export type GroupInfo = Group;
-
 export interface GetGroupResponse {
-  group: GroupInfo;
+  group: Group;
 }
 
 export interface GroupMembersRequest {
@@ -457,21 +452,22 @@ export interface UnreadCountResponse {
 
 // 基于 hotspot.md 中的 Message 定义
 export interface Message {
+  id?: string; // 兼容字段，通常等于 message_id
   message_id: string; // UUID
   sender_id: string; // 64位整数转换为字符串
   sender_name: string;
   content: string;
-  message_type: 'text' | 'image' | 'location'; // MessageType 枚举
+  message_type: 'text' | 'image' | 'voice' | 'video' | 'location' | 'file'; // MessageType 枚举
   sent_at: string;
+  created_at?: string; // 兼容字段，通常等于 sent_at
   group_id?: string; // UUID，群组消息时存在
   conversation_id?: string; // UUID，私聊消息时存在
   latitude?: number; // 地理坐标，64位浮点数转换为number
   longitude?: number; // 地理坐标，64位浮点数转换为number
+  status?: 'sending' | 'sent' | 'failed'; // 前端状态字段，用于乐观更新
+  retry_count?: number; // 重试次数，前端状态字段
 }
 
-// 兼容性类型别名
-export type DirectMessageHistoryItem = Message;
-export type GroupMessageHistoryItem = Message;
 
 export interface DeleteMessageResponse {
   success: boolean;
@@ -492,21 +488,20 @@ export interface ConversationSummary {
   unread_count: number; // 32位整数，使用number类型
 }
 
-// 兼容性类型别名
-export type ConversationItem = ConversationSummary;
 
 // 类型别名
 export type GroupMessageHistoryResponse =
-  PaginatedResponse<GroupMessageHistoryItem>;
+  PaginatedResponse<Message>;
 export type DirectMessageHistoryResponse =
-  PaginatedResponse<DirectMessageHistoryItem>;
-export type ConversationsResponse = PaginatedResponse<ConversationItem>;
+  PaginatedResponse<Message>;
+export type ConversationsResponse = PaginatedResponse<ConversationSummary>;
 
 // ============ 动态相关类型 ============
 export interface CreateMomentRequest {
   latitude: number;     // 纬度，-90~90
   longitude: number;    // 经度，-180~180
   description?: string; // 瞬间描述，≤500字符
+  location_name?: string; // 位置名称
   tags?: string[];      // 标签数组，单个标签1-20字符，总数≤10
   image_urls?: string[]; // 图片URL数组，总数≤9
 }
@@ -587,13 +582,15 @@ export interface Moment {
   tags: string[];
 }
 
-// 兼容性类型别名
+// 类型别名（保持向后兼容）
+export type UserInfo = User;
+export type GroupInfo = Group;
 export type MomentInfo = Moment;
+export type ConversationItem = ConversationSummary;
 
-// 类型别名
-export type UserMomentsHistoryResponse = PaginatedResponse<MomentInfo>;
-export type SearchMomentsByLocationResponse = PaginatedResponse<MomentInfo>;
-export type SearchMomentsByTagsResponse = PaginatedResponse<MomentInfo>;
+export type UserMomentsHistoryResponse = PaginatedResponse<Moment>;
+export type SearchMomentsByLocationResponse = PaginatedResponse<Moment>;
+export type SearchMomentsByTagsResponse = PaginatedResponse<Moment>;
 
 // ============ 位置相关类型 ============
 export interface Location {

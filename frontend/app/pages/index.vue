@@ -3,28 +3,57 @@
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
       <!-- 用户状态卡片 -->
       <div v-if="displayedUser" class="mb-6 sm:mb-8">
-        <UCard>
+        <UCard class="bg-gradient-to-r from-primary-50 to-blue-50 dark:from-primary-900/20 dark:to-blue-900/20 border-primary-200 dark:border-primary-800">
           <div class="flex items-center space-x-3 sm:space-x-4">
-            <UAvatar :alt="displayedUser?.nickname" size="md" class="sm:w-12 sm:h-12">
-              {{ displayedUser?.nickname?.charAt(0) || "U" }}
-            </UAvatar>
+            <div class="relative">
+              <UAvatar :alt="displayedUser?.nickname" size="lg" class="ring-2 ring-white dark:ring-neutral-700 shadow-lg">
+                {{ displayedUser?.nickname?.charAt(0) || "U" }}
+              </UAvatar>
+              <!-- 在线状态指示器 -->
+              <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-neutral-800"></div>
+            </div>
             <div class="flex-1 min-w-0">
               <h3 class="text-lg sm:text-xl font-semibold text-neutral-900 dark:text-neutral-100 truncate">
                 你好，{{ displayedUser?.nickname || "用户" }}！
               </h3>
               <p class="text-sm sm:text-base text-neutral-600 dark:text-neutral-400 truncate">
-                今天想要做什么呢？
+                {{ getGreetingMessage() }}
               </p>
+              <!-- 用户类型徽章 -->
+              <UBadge 
+                v-if="displayedUser?.is_temp" 
+                color="warning" 
+                variant="soft" 
+                size="xs" 
+                class="mt-1"
+              >
+                临时用户
+              </UBadge>
             </div>
             <div class="flex space-x-2 sm:space-x-3 flex-shrink-0">
-              <UButton to="/map" size="md" class="hidden sm:flex sm:size-lg">
+              <UButton 
+                to="/map" 
+                size="md" 
+                class="hidden sm:flex"
+                color="primary"
+                variant="soft"
+              >
                 <UIcon name="i-heroicons-map-pin" class="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
                 探索附近
               </UButton>
-              <UButton to="/chat" variant="outline" size="md" class="touch-manipulation sm:size-lg">
+              <UButton 
+                to="/chat" 
+                variant="outline" 
+                size="md" 
+                class="touch-manipulation relative"
+              >
                 <UIcon name="i-heroicons-chat-bubble-left-right" class="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
                 <span class="hidden sm:inline">查看消息</span>
                 <span class="sm:hidden">消息</span>
+                <!-- 未读消息指示器 -->
+                <div v-if="unreadCount > 0" class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                  {{ unreadCount > 99 ? '99+' : unreadCount }}
+                </div>
               </UButton>
             </div>
           </div>
@@ -35,12 +64,12 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
         <!-- 附近用户 -->
         <UCard 
-          class="hover:shadow-lg active:scale-95 transition-all duration-200 cursor-pointer touch-manipulation" 
+          class="cursor-pointer transition-colors duration-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 active:bg-neutral-200 dark:active:bg-neutral-700"
           @click="navigateTo('/users/nearby')"
         >
           <div class="flex items-center space-x-3 p-1">
-            <div class="w-12 h-12 bg-primary-100 dark:bg-primary-900 rounded-lg flex items-center justify-center flex-shrink-0">
-              <UIcon name="i-heroicons-users" class="w-6 h-6 text-primary-600 dark:text-primary-400" />
+            <div class="w-12 h-12 bg-primary-100 dark:bg-primary-900/50 rounded-lg flex items-center justify-center flex-shrink-0 border border-primary-200 dark:border-primary-700">
+              <UIcon name="i-heroicons-users" class="w-6 h-6 text-primary-600 dark:text-primary-300" />
             </div>
             <div class="flex-1 min-w-0">
               <h3 class="font-semibold text-neutral-900 dark:text-neutral-100 truncate">附近用户</h3>
@@ -51,49 +80,52 @@
 
         <!-- 我的群组 -->
         <UCard 
-          class="hover:shadow-lg active:scale-95 transition-all duration-200 cursor-pointer touch-manipulation" 
+          class="cursor-pointer transition-colors duration-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 active:bg-neutral-200 dark:active:bg-neutral-700"
           @click="navigateTo('/groups')"
         >
-          <div class="flex items-center space-x-3 p-1">
-            <div class="w-12 h-12 bg-group-100 dark:bg-group-900 rounded-lg flex items-center justify-center flex-shrink-0">
-              <UIcon name="i-heroicons-user-group" class="w-6 h-6 text-group-600 dark:text-group-400" />
+          <div class="flex items-center space-x-4">
+            <div class="w-14 h-14 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/50 dark:to-blue-800/50 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm border border-blue-200 dark:border-blue-700">
+              <UIcon name="i-heroicons-user-group" class="w-7 h-7 text-blue-600 dark:text-blue-300" />
             </div>
             <div class="flex-1 min-w-0">
-              <h3 class="font-semibold text-neutral-900 dark:text-neutral-100 truncate">我的群组</h3>
+              <h3 class="font-semibold text-lg text-neutral-900 dark:text-neutral-100 truncate mb-1">我的群组</h3>
               <p class="text-sm text-neutral-600 dark:text-neutral-400 truncate">管理群组聊天</p>
             </div>
+            <UIcon name="i-heroicons-chevron-right" class="w-5 h-5 text-neutral-400 dark:text-neutral-500" />
           </div>
         </UCard>
 
         <!-- 动态分享 -->
         <UCard 
-          class="hover:shadow-lg active:scale-95 transition-all duration-200 cursor-pointer touch-manipulation" 
+          class="cursor-pointer transition-colors duration-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 active:bg-neutral-200 dark:active:bg-neutral-700"
           @click="navigateTo('/moments')"
         >
-          <div class="flex items-center space-x-3 p-1">
-            <div class="w-12 h-12 bg-moment-100 dark:bg-moment-900 rounded-lg flex items-center justify-center flex-shrink-0">
-              <UIcon name="i-heroicons-photo" class="w-6 h-6 text-moment-600 dark:text-moment-400" />
+          <div class="flex items-center space-x-4">
+            <div class="w-14 h-14 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/50 dark:to-purple-800/50 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm border border-purple-200 dark:border-purple-700">
+              <UIcon name="i-heroicons-photo" class="w-7 h-7 text-purple-600 dark:text-purple-300" />
             </div>
             <div class="flex-1 min-w-0">
-              <h3 class="font-semibold text-neutral-900 dark:text-neutral-100 truncate">动态分享</h3>
+              <h3 class="font-semibold text-lg text-neutral-900 dark:text-neutral-100 truncate mb-1">动态分享</h3>
               <p class="text-sm text-neutral-600 dark:text-neutral-400 truncate">分享精彩瞬间</p>
             </div>
+            <UIcon name="i-heroicons-chevron-right" class="w-5 h-5 text-neutral-400 dark:text-neutral-500" />
           </div>
         </UCard>
 
         <!-- 地图探索 -->
         <UCard 
-          class="hover:shadow-lg active:scale-95 transition-all duration-200 cursor-pointer touch-manipulation" 
+          class="cursor-pointer transition-colors duration-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 active:bg-neutral-200 dark:active:bg-neutral-700"
           @click="navigateTo('/map')"
         >
-          <div class="flex items-center space-x-3 p-1">
-            <div class="w-12 h-12 bg-location-100 dark:bg-location-900 rounded-lg flex items-center justify-center flex-shrink-0">
-              <UIcon name="i-heroicons-map" class="w-6 h-6 text-location-600 dark:text-location-400" />
+          <div class="flex items-center space-x-4">
+            <div class="w-14 h-14 bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/50 dark:to-green-800/50 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm border border-green-200 dark:border-green-700">
+              <UIcon name="i-heroicons-map" class="w-7 h-7 text-green-600 dark:text-green-300" />
             </div>
             <div class="flex-1 min-w-0">
-              <h3 class="font-semibold text-neutral-900 dark:text-neutral-100 truncate">地图探索</h3>
+              <h3 class="font-semibold text-lg text-neutral-900 dark:text-neutral-100 truncate mb-1">地图探索</h3>
               <p class="text-sm text-neutral-600 dark:text-neutral-400 truncate">查看周边热点</p>
             </div>
+            <UIcon name="i-heroicons-chevron-right" class="w-5 h-5 text-neutral-400 dark:text-neutral-500" />
           </div>
         </UCard>
       </div>
@@ -151,6 +183,19 @@ const { openWelcomeModal, openLoginPromptModal } = useModals();
 // 认证状态
 import type { User } from '~/types';
 const displayedUser = ref<User | null>(null);
+
+// 未读消息数量（示例）
+const unreadCount = ref(0);
+
+// 问候消息
+const getGreetingMessage = () => {
+  const hour = new Date().getHours();
+  if (hour < 6) return '夜深了，注意休息哦';
+  if (hour < 12) return '早上好！新的一天开始了';
+  if (hour < 18) return '下午好！今天过得怎么样？';
+  if (hour < 22) return '晚上好！放松一下吧';
+  return '夜深了，早点休息哦';
+};
 onMounted(async () => { 
   displayedUser.value = authStore.user || null;
   

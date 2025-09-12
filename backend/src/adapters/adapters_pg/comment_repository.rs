@@ -12,7 +12,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::{
-    domain::{DomainResult, DomainError, Comment, CommentDetail},
+    domain::{DomainResult, DomainError, Comment},
     ports::repository_ports::CommentRepository,
 };
 use super::query_optimizer::PgQueryOptimizer;
@@ -137,7 +137,7 @@ impl CommentRepository for PgCommentRepository {
                 r#"
                 INSERT INTO comments (moment_id, user_id, content, parent_comment_id, created_at, updated_at)
                 VALUES ($1, $2, $3, $4, $5, $6)
-                RETURNING comment_id!, moment_id!, user_id!, content!, parent_comment_id, created_at!, updated_at!
+                RETURNING comment_id as "comment_id!", moment_id as "moment_id!", user_id as "user_id!", content as "content!", parent_comment_id, created_at as "created_at!", updated_at as "updated_at!"
                 "#,
                 moment_id_i64,
                 user_id,
@@ -165,7 +165,7 @@ impl CommentRepository for PgCommentRepository {
             let row = sqlx::query_as!(
                 CommentRow,
                 r#"
-                SELECT comment_id!, moment_id!, user_id!, content!, parent_comment_id, created_at!, updated_at!
+                SELECT comment_id as "comment_id!", moment_id as "moment_id!", user_id as "user_id!", content as "content!", parent_comment_id, created_at as "created_at!", updated_at as "updated_at!"
                 FROM comments
                 WHERE comment_id = $1
                 "#,
@@ -190,7 +190,7 @@ impl CommentRepository for PgCommentRepository {
         moment_id: &str,
         cursor: i64,
         limit: i32,
-    ) -> DomainResult<Vec<CommentDetail>> {
+    ) -> DomainResult<Vec<Comment>> {
         let moment_id_i64 = moment_id.parse::<i64>()
             .map_err(|_| DomainError::BusinessRuleViolation {
                 rule: "无效的生活瞬间ID格式".to_string(),
@@ -199,16 +199,16 @@ impl CommentRepository for PgCommentRepository {
         let rows = sqlx::query!(
             r#"
             SELECT 
-                c.comment_id!,
-                c.moment_id!,
-                c.user_id!,
-                c.content!,
-                c.created_at!,
-                c.updated_at!,
-                u.nickname! as user_nickname,
+                c.comment_id as "comment_id!",
+                c.moment_id as "moment_id!",
+                c.user_id as "user_id!",
+                c.content as "content!",
+                c.created_at as "created_at!",
+                c.updated_at as "updated_at!",
+                u.nickname as "user_nickname!",
                 u.avatar_url as user_avatar
             FROM comments c
-            JOIN users u ON c.user_id = u.user_id
+            JOIN users u ON c.user_id = u.id
             WHERE c.moment_id = $1 
             AND ($2 = 0 OR c.user_id > $2)
             ORDER BY c.created_at ASC
@@ -229,12 +229,10 @@ impl CommentRepository for PgCommentRepository {
 
         let comments = rows
             .into_iter()
-            .map(|row| CommentDetail {
-                comment_id: row.comment_id,
-                moment_id: row.moment_id,
+            .map(|row| Comment {
+                comment_id: uuid::Uuid::parse_str(&row.comment_id).unwrap_or_default(),
+                moment_id: uuid::Uuid::from_u128(row.moment_id as u128),
                 user_id: row.user_id,
-                user_nickname: row.user_nickname,
-                user_avatar: row.user_avatar,
                 content: row.content,
                 created_at: row.created_at,
                 updated_at: row.updated_at,
@@ -250,7 +248,7 @@ impl CommentRepository for PgCommentRepository {
         user_id: i64,
         cursor: i64,
         limit: i32,
-    ) -> DomainResult<Vec<CommentDetail>> {
+    ) -> DomainResult<Vec<Comment>> {
         let rows = sqlx::query!(
             r#"
             SELECT 
@@ -263,7 +261,7 @@ impl CommentRepository for PgCommentRepository {
                 u.nickname as user_nickname,
                 u.avatar_url as user_avatar
             FROM comments c
-            JOIN users u ON c.user_id = u.user_id
+            JOIN users u ON c.user_id = u.id
             WHERE c.user_id = $1 
             AND ($2 = 0 OR c.user_id > $2)
             ORDER BY c.created_at DESC
@@ -284,12 +282,10 @@ impl CommentRepository for PgCommentRepository {
 
         let comments = rows
             .into_iter()
-            .map(|row| CommentDetail {
-                comment_id: row.comment_id,
-                moment_id: row.moment_id,
+            .map(|row| Comment {
+                comment_id: uuid::Uuid::parse_str(&row.comment_id).unwrap_or_default(),
+                moment_id: uuid::Uuid::from_u128(row.moment_id as u128),
                 user_id: row.user_id,
-                user_nickname: row.user_nickname,
-                user_avatar: row.user_avatar,
                 content: row.content,
                 created_at: row.created_at,
                 updated_at: row.updated_at,
@@ -340,7 +336,7 @@ impl CommentRepository for PgCommentRepository {
             UPDATE comments
             SET content = $3, updated_at = $4
             WHERE comment_id = $1 AND user_id = $2
-            RETURNING comment_id!, moment_id!, user_id!, content!, parent_comment_id, created_at!, updated_at!
+            RETURNING comment_id as "comment_id!", moment_id as "moment_id!", user_id as "user_id!", content as "content!", parent_comment_id, created_at as "created_at!", updated_at as "updated_at!"
             "#,
             comment_id,
             user_id,
@@ -370,7 +366,7 @@ impl CommentRepository for PgCommentRepository {
         parent_comment_id: &str,
         cursor: i64,
         limit: i32,
-    ) -> DomainResult<Vec<CommentDetail>> {
+    ) -> DomainResult<Vec<Comment>> {
         let parent_uuid = Uuid::parse_str(parent_comment_id)
             .map_err(|_| DomainError::BusinessRuleViolation {
                 rule: "无效的父评论ID格式".to_string(),
@@ -388,13 +384,13 @@ impl CommentRepository for PgCommentRepository {
                 u.nickname as user_nickname,
                 u.avatar_url as user_avatar
             FROM comments c
-            JOIN users u ON c.user_id = u.user_id
+            JOIN users u ON c.user_id = u.id
             WHERE c.parent_comment_id = $1 
             AND ($2 = 0 OR c.user_id > $2)
             ORDER BY c.created_at ASC
             LIMIT $3
             "#,
-            parent_uuid,
+            parent_comment_id.parse::<i64>().unwrap_or(0),
             cursor as i32,
             limit as i64
         )
@@ -409,12 +405,10 @@ impl CommentRepository for PgCommentRepository {
 
         let comments = rows
             .into_iter()
-            .map(|row| CommentDetail {
-                comment_id: row.comment_id,
-                moment_id: row.moment_id,
+            .map(|row| Comment {
+                comment_id: uuid::Uuid::parse_str(&row.comment_id).unwrap_or_default(),
+                moment_id: uuid::Uuid::from_u128(row.moment_id as u128),
                 user_id: row.user_id,
-                user_nickname: row.user_nickname,
-                user_avatar: row.user_avatar,
                 content: row.content,
                 created_at: row.created_at,
                 updated_at: row.updated_at,

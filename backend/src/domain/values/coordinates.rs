@@ -3,11 +3,13 @@
 /// 提供类型安全的地理坐标，包含验证和计算功能
 use serde::{Deserialize, Serialize};
 use std::fmt::{self, Display};
+use sqlx::{Postgres, Type, Encode, Decode};
 
 use crate::domain::DomainError;
 
 /// 纬度值对象
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Type)]
+#[sqlx(transparent)]
 pub struct Latitude(f64);
 
 impl Latitude {
@@ -39,7 +41,8 @@ impl Display for Latitude {
 }
 
 /// 经度值对象
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Type)]
+#[sqlx(transparent)]
 pub struct Longitude(f64);
 
 impl Longitude {

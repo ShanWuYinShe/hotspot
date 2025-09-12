@@ -141,12 +141,12 @@ impl<C: Cache> CacheApplicationService for CacheApplicationServiceImpl<C> {
 
     async fn clear_user_cache(&self, user_id: i64) -> DomainResult<()> {
         let key = self.user_cache_key(user_id);
-        self.cache.delete(&key).await
+        self.cache.delete(&key).await.map(|_| ())
     }
 
     async fn clear_group_cache(&self, group_id: i64) -> DomainResult<()> {
         let key = self.group_cache_key(group_id);
-        self.cache.delete(&key).await
+        self.cache.delete(&key).await.map(|_| ())
     }
 
     async fn get_cache_stats(&self) -> DomainResult<CacheStats> {
@@ -159,8 +159,8 @@ impl<C: Cache> CacheApplicationService for CacheApplicationServiceImpl<C> {
         };
 
         Ok(CacheStats {
-            hit_count: stats.hits,
-            miss_count: stats.misses,
+            hit_count: stats.hit_count,
+            miss_count: stats.miss_count,
             hit_ratio,
             total_keys: stats.total_keys,
             memory_usage_bytes: stats.memory_usage,

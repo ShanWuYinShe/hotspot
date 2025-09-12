@@ -22,8 +22,8 @@ impl From<UserProfile> for UserResponse {
             id: JsSafeI64::new(user.user_id),
             nickname: user.nickname.clone(),
             user_type: match user.user_type {
-                crate::domain::UserType::Temporary => "temporary".to_string(),
-                crate::domain::UserType::Regular => "registered".to_string(),
+                crate::domain::entities::UserType::Temporary => "temporary".to_string(),
+                crate::domain::entities::UserType::Regular => "registered".to_string(),
             },
             has_location: false, // 默认为false，需要通过with_location方法设置
             created_at: user.last_active_at.to_rfc3339(),
@@ -57,8 +57,8 @@ impl From<crate::domain::UserDetail> for UserProfileResponse {
             id: JsSafeI64::new(user.user_id),
             nickname: user.nickname,
             user_type: match user.user_type {
-                crate::domain::UserType::Temporary => "temporary".to_string(),
-                crate::domain::UserType::Regular => "registered".to_string(),
+                crate::domain::entities::UserType::Temporary => "temporary".to_string(),
+                crate::domain::entities::UserType::Regular => "registered".to_string(),
             },
             location: None, // 默认为None，需要通过with_location方法设置
             created_at: user.created_at.to_rfc3339(),
@@ -83,12 +83,12 @@ pub struct LocationResponse {
     pub address: Option<String>,
 }
 
-impl From<crate::domain::UserLocation> for LocationResponse {
-    fn from(location: crate::domain::UserLocation) -> Self {
+impl From<crate::domain::Location> for LocationResponse {
+    fn from(location: crate::domain::Location) -> Self {
         Self {
             latitude: location.coordinates.latitude.value(),
             longitude: location.coordinates.longitude.value(),
-            address: Some(location.location_name),
+            address: location.address,
         }
     }
 }

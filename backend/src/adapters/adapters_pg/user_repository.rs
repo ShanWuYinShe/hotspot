@@ -7,8 +7,9 @@
 use sqlx::PgPool;
 use chrono::{DateTime, Utc};
 use crate::domain::{
-    DomainError, DomainResult, UserProfile, UserAuth, UserDetail, UserSearchResult, UserType
+    DomainError, DomainResult, UserProfile, UserAuth, UserDetail, UserSearchResult
 };
+use crate::domain::entities::UserType;
 use crate::ports::UserRepository;
 use super::query_optimizer::PgQueryOptimizer;
 
@@ -17,7 +18,7 @@ use super::query_optimizer::PgQueryOptimizer;
 /// 用户资料查询的轻量级数据库行结构
 #[derive(Debug, sqlx::FromRow)]
 struct UserProfileRow {
-    user_id: String,
+    user_id: i64,  // 修改为i64类型，与数据库表结构一致
     nickname: String,
     avatar_url: Option<String>,
     last_active_at: Option<DateTime<Utc>>,
@@ -46,7 +47,7 @@ struct UserDetailRow {
     avatar_url: Option<String>,
     expires_at: Option<DateTime<Utc>>,
     created_at: DateTime<Utc>,
-    last_active_at: DateTime<Utc>,
+    last_active_at: Option<DateTime<Utc>>,
 }
 
 /// 用户搜索结果的数据库行结构
@@ -55,7 +56,7 @@ struct UserSearchRow {
     user_id: i64,
     nickname: String,
     avatar_url: Option<String>,
-    last_active_at: DateTime<Utc>,
+    last_active_at: Option<DateTime<Utc>>,  // 修改为Option类型
     expires_at: Option<DateTime<Utc>>,
     distance: Option<f64>, // 仅地理位置搜索时有值
 }
@@ -75,7 +76,7 @@ impl UserProfileRow {
             self.nickname,
             self.avatar_url,
             user_type,
-            self.last_active_at,
+            self.last_active_at.unwrap_or_else(|| chrono::Utc::now()),  // 提供默认值
         )
     }
 }
@@ -114,7 +115,7 @@ impl UserDetailRow {
             self.email,
             self.avatar_url,
             user_type,
-            self.last_active_at,
+            self.last_active_at.unwrap_or_else(|| chrono::Utc::now()),
             self.created_at,
             self.expires_at,
         )
@@ -134,7 +135,7 @@ impl UserSearchRow {
             self.nickname,
             self.avatar_url,
             user_type,
-            self.last_active_at,
+            self.last_active_at.unwrap_or_else(|| chrono::Utc::now()),  // 提供默认值
             self.distance,
             has_location,
         )
@@ -259,7 +260,7 @@ impl UserRepository for PostgresUserRepository {
             let user_row = sqlx::query_as!(
                 UserProfileRow,
                 r#"
-                SELECT user_id as "user_id!", nickname as "nickname!", 
+                SELECT id as "user_id!", nickname as "nickname!", 
                        avatar_url, last_login_at as last_active_at, expires_at
                 FROM users
                 WHERE id = $1
@@ -282,7 +283,7 @@ impl UserRepository for PostgresUserRepository {
             let user_row = sqlx::query_as!(
                 UserAuthRow,
                 r#"
-                SELECT user_id as "user_id!", username as login_id, nickname as "nickname!", 
+                SELECT id as "user_id!", username as login_id, nickname as "nickname!", 
                        password_hash, expires_at, avatar_url
                 FROM users
                 WHERE username = $1
@@ -386,7 +387,7 @@ impl UserRepository for PostgresUserRepository {
             let user_row = sqlx::query_as!(
                 UserDetailRow,
                 r#"
-                SELECT user_id as "user_id!", username as login_id, nickname as "nickname!", 
+                SELECT id as "user_id!", username as login_id, nickname as "nickname!", 
                        email, avatar_url, expires_at, 
                        created_at as "created_at!", 
                        last_login_at as last_active_at
@@ -420,7 +421,7 @@ impl UserRepository for PostgresUserRepository {
                 r#"
                 INSERT INTO users (username, nickname, password_hash, email, expires_at)
                 VALUES ($1, $2, $3, $4, $5)
-                RETURNING user_id as "user_id!", nickname as "nickname!", 
+                RETURNING id as "user_id!", nickname as "nickname!", 
                           avatar_url, last_login_at as last_active_at, expires_at
                 "#,
                 login_id,
@@ -454,7 +455,7 @@ impl UserRepository for PostgresUserRepository {
                 avatar_url = COALESCE($3, avatar_url),
                 updated_at = NOW()
             WHERE id = $1
-            RETURNING user_id as "user_id!", nickname as "nickname!", 
+            RETURNING id as "user_id!", nickname as "nickname!", 
                       avatar_url, last_login_at as last_active_at, expires_at
             "#,
             user_id,
@@ -506,7 +507,7 @@ impl UserRepository for PostgresUserRepository {
                 expires_at = NULL,
                 updated_at = NOW()
             WHERE id = $1 AND expires_at IS NOT NULL
-            RETURNING user_id as "user_id!", nickname as "nickname!", 
+            RETURNING id as "user_id!", nickname as "nickname!", 
                       avatar_url, last_login_at as last_active_at, expires_at
             "#,
             user_id,
@@ -526,7 +527,7 @@ impl UserRepository for PostgresUserRepository {
     async fn delete_user(&self, user_id: i64) -> DomainResult<()> {
         sqlx::query!(
             r#"
-            DELETE FROM users WHERE user_id = $1
+            DELETE FROM users WHERE id = $1
             "#,
             user_id
         )
@@ -619,7 +620,7 @@ impl UserRepository for PostgresUserRepository {
             r#"
             SELECT COUNT(*) as "count!"
             FROM users
-            WHERE user_id >= $1 AND user_id <= $2
+            WHERE id >= $1 AND id <= $2
             "#,
             start_id,
             end_id

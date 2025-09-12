@@ -316,7 +316,7 @@ impl HandlerRegistry {
         &mut self,
         _handler: Arc<THandler>,
     ) where
-        THandler: CommandHandler<TCommand, TResult> + 'static,
+        THandler: CommandHandler<TCommand> + 'static,
         TCommand: 'static,
         TResult: 'static,
     {
@@ -328,7 +328,7 @@ impl HandlerRegistry {
         &mut self,
         _handler: Arc<THandler>,
     ) where
-        THandler: QueryHandler<TQuery, TResult> + 'static,
+        THandler: QueryHandler<TQuery> + 'static,
         TQuery: 'static,
         TResult: 'static,
     {

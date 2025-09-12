@@ -1,52 +1,43 @@
 <template>
-  <div class="flex flex-col items-center justify-center py-12 px-4">
+  <div class="flex flex-col items-center justify-center py-8 md:py-12 space-y-4">
     <!-- 加载动画 -->
-    <div class="relative mb-4">
-      <div class="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-      <UIcon v-if="icon" :name="icon" class="absolute inset-0 m-auto w-6 h-6 text-primary/60" />
+    <div class="relative">
+      <div class="w-12 h-12 md:w-16 md:h-16 border-4 border-primary-200 dark:border-primary-800 rounded-full animate-spin">
+        <div class="absolute top-0 left-0 w-full h-full border-4 border-transparent border-t-primary-500 rounded-full animate-spin"></div>
+      </div>
     </div>
     
     <!-- 加载文本 -->
-    <h3 class="text-lg font-medium text-neutral-900 dark:text-neutral-100 mb-2">
-      {{ title || '加载中...' }}
-    </h3>
-    
-    <!-- 描述文本 -->
-    <p v-if="description" class="text-sm text-neutral-600 dark:text-neutral-400 text-center max-w-sm">
-      {{ description }}
-    </p>
-    
-    <!-- 进度条（可选） -->
-    <div v-if="showProgress && progress !== undefined" class="w-full max-w-xs mt-4">
-      <UProgress :value="progress" :max="100" size="sm" />
-      <p class="text-xs text-neutral-500 text-center mt-1">{{ Math.round(progress) }}%</p>
+    <div class="text-center space-y-2">
+      <p class="text-sm md:text-base font-medium text-neutral-700 dark:text-neutral-300">
+        {{ title || '加载中...' }}
+      </p>
+      <p v-if="description" class="text-xs md:text-sm text-neutral-500 dark:text-neutral-400">
+        {{ description }}
+      </p>
     </div>
     
-    <!-- 取消按钮（可选） -->
-    <UButton 
-      v-if="showCancel" 
-      @click="$emit('cancel')" 
-      variant="ghost" 
-      size="sm" 
-      class="mt-4"
-    >
-      取消
-    </UButton>
+    <!-- 进度条（可选） -->
+    <div v-if="showProgress && progress !== undefined" class="w-full max-w-xs">
+      <UProgress 
+        :value="progress" 
+        :max="100"
+        class="h-2 [&>div]:bg-primary-500 [&>div]:dark:bg-primary-400 [&>div]:transition-all [&>div]:duration-300 [&>div]:ease-out"
+      />
+      <p class="text-xs text-center mt-2 text-neutral-500 dark:text-neutral-400">
+        {{ Math.round(progress) }}%
+      </p>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 interface Props {
-  title?: string
-  description?: string
-  icon?: string
-  showProgress?: boolean
-  progress?: number
-  showCancel?: boolean
+  title?: string;
+  description?: string;
+  showProgress?: boolean;
+  progress?: number;
 }
 
-defineProps<Props>()
-defineEmits<{
-  cancel: []
-}>()
+defineProps<Props>();
 </script>

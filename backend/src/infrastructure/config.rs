@@ -186,13 +186,15 @@ impl ConfigLoader {
                 ContextualError::new(infra_error, context.clone())
             })?;
         
-        let config: AppConfig = if path.ends_with(".toml") {
-            toml::from_str(&content)
+        let result: Result<AppConfig, Box<dyn std::error::Error>> = if path.ends_with(".toml") {
+            toml::from_str(&content).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
         } else if path.ends_with(".yaml") || path.ends_with(".yml") {
-            serde_yaml::from_str(&content)
+            serde_yaml::from_str(&content).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
         } else {
-            serde_json::from_str(&content)
-        }.map_err(|e| {
+            serde_json::from_str(&content).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+        };
+        
+        let config: AppConfig = result.map_err(|e| {
             let infra_error = InfrastructureError::Configuration {
                 key: "config_file".to_string(),
                 message: e.to_string(),
@@ -212,19 +214,19 @@ impl ConfigLoader {
             port: std::env::var("SERVER_PORT")
                 .unwrap_or_else(|_| "8080".to_string())
                 .parse()
-                .map_err(|e| Self::env_parse_error("SERVER_PORT", &e.to_string()))?,
+                .map_err(|e: std::num::ParseIntError| Self::env_parse_error("SERVER_PORT", &e.to_string()))?,
             workers: std::env::var("SERVER_WORKERS")
                 .ok()
-                .map(|v| v.parse().map_err(|e| Self::env_parse_error("SERVER_WORKERS", &e.to_string())))
+                .map(|v| v.parse().map_err(|e: std::num::ParseIntError| Self::env_parse_error("SERVER_WORKERS", &e.to_string())))
                 .transpose()?,
             max_connections: std::env::var("SERVER_MAX_CONNECTIONS")
                 .unwrap_or_else(|_| "1000".to_string())
                 .parse()
-                .map_err(|e| Self::env_parse_error("SERVER_MAX_CONNECTIONS", &e.to_string()))?,
+                .map_err(|e: std::num::ParseIntError| Self::env_parse_error("SERVER_MAX_CONNECTIONS", &e.to_string()))?,
             timeout_seconds: std::env::var("SERVER_TIMEOUT_SECONDS")
                 .unwrap_or_else(|_| "30".to_string())
                 .parse()
-                .map_err(|e| Self::env_parse_error("SERVER_TIMEOUT_SECONDS", &e.to_string()))?,
+                .map_err(|e: std::num::ParseIntError| Self::env_parse_error("SERVER_TIMEOUT_SECONDS", &e.to_string()))?,
             cors_origins: std::env::var("CORS_ORIGINS")
                 .unwrap_or_else(|_| "*".to_string())
                 .split(',')
@@ -243,27 +245,27 @@ impl ConfigLoader {
             max_connections: std::env::var("DATABASE_MAX_CONNECTIONS")
                 .unwrap_or_else(|_| "20".to_string())
                 .parse()
-                .map_err(|e| Self::env_parse_error("DATABASE_MAX_CONNECTIONS", &e.to_string()))?,
+                .map_err(|e: std::num::ParseIntError| Self::env_parse_error("DATABASE_MAX_CONNECTIONS", &e.to_string()))?,
             min_connections: std::env::var("DATABASE_MIN_CONNECTIONS")
                 .unwrap_or_else(|_| "5".to_string())
                 .parse()
-                .map_err(|e| Self::env_parse_error("DATABASE_MIN_CONNECTIONS", &e.to_string()))?,
+                .map_err(|e: std::num::ParseIntError| Self::env_parse_error("DATABASE_MIN_CONNECTIONS", &e.to_string()))?,
             connection_timeout_seconds: std::env::var("DATABASE_CONNECTION_TIMEOUT")
                 .unwrap_or_else(|_| "30".to_string())
                 .parse()
-                .map_err(|e| Self::env_parse_error("DATABASE_CONNECTION_TIMEOUT", &e.to_string()))?,
+                .map_err(|e: std::num::ParseIntError| Self::env_parse_error("DATABASE_CONNECTION_TIMEOUT", &e.to_string()))?,
             idle_timeout_seconds: std::env::var("DATABASE_IDLE_TIMEOUT")
                 .unwrap_or_else(|_| "600".to_string())
                 .parse()
-                .map_err(|e| Self::env_parse_error("DATABASE_IDLE_TIMEOUT", &e.to_string()))?,
+                .map_err(|e: std::num::ParseIntError| Self::env_parse_error("DATABASE_IDLE_TIMEOUT", &e.to_string()))?,
             max_lifetime_seconds: std::env::var("DATABASE_MAX_LIFETIME")
                 .unwrap_or_else(|_| "3600".to_string())
                 .parse()
-                .map_err(|e| Self::env_parse_error("DATABASE_MAX_LIFETIME", &e.to_string()))?,
+                .map_err(|e: std::num::ParseIntError| Self::env_parse_error("DATABASE_MAX_LIFETIME", &e.to_string()))?,
             auto_migrate: std::env::var("DATABASE_AUTO_MIGRATE")
                 .unwrap_or_else(|_| "false".to_string())
                 .parse()
-                .map_err(|e| Self::env_parse_error("DATABASE_AUTO_MIGRATE", &e.to_string()))?,
+                .map_err(|e: std::str::ParseBoolError| Self::env_parse_error("DATABASE_AUTO_MIGRATE", &e.to_string()))?,
         })
     }
     
@@ -279,15 +281,15 @@ impl ConfigLoader {
             default_ttl_seconds: std::env::var("CACHE_DEFAULT_TTL")
                 .unwrap_or_else(|_| "300".to_string())
                 .parse()
-                .map_err(|e| Self::env_parse_error("CACHE_DEFAULT_TTL", &e.to_string()))?,
+                .map_err(|e: std::num::ParseIntError| Self::env_parse_error("CACHE_DEFAULT_TTL", &e.to_string()))?,
             max_key_size: std::env::var("CACHE_MAX_KEY_SIZE")
                 .unwrap_or_else(|_| "1024".to_string())
                 .parse()
-                .map_err(|e| Self::env_parse_error("CACHE_MAX_KEY_SIZE", &e.to_string()))?,
+                .map_err(|e: std::num::ParseIntError| Self::env_parse_error("CACHE_MAX_KEY_SIZE", &e.to_string()))?,
             max_value_size: std::env::var("CACHE_MAX_VALUE_SIZE")
                 .unwrap_or_else(|_| "1048576".to_string()) // 1MB
                 .parse()
-                .map_err(|e| Self::env_parse_error("CACHE_MAX_VALUE_SIZE", &e.to_string()))?,
+                .map_err(|e: std::num::ParseIntError| Self::env_parse_error("CACHE_MAX_VALUE_SIZE", &e.to_string()))?,
         })
     }
     
@@ -301,23 +303,23 @@ impl ConfigLoader {
             jwt_expiry_seconds: std::env::var("JWT_EXPIRY_SECONDS")
                 .unwrap_or_else(|_| "3600".to_string()) // 1 hour
                 .parse()
-                .map_err(|e| Self::env_parse_error("JWT_EXPIRY_SECONDS", &e.to_string()))?,
+                .map_err(|e: std::num::ParseIntError| Self::env_parse_error("JWT_EXPIRY_SECONDS", &e.to_string()))?,
             refresh_token_expiry_seconds: std::env::var("REFRESH_TOKEN_EXPIRY_SECONDS")
                 .unwrap_or_else(|_| "2592000".to_string()) // 30 days
                 .parse()
-                .map_err(|e| Self::env_parse_error("REFRESH_TOKEN_EXPIRY_SECONDS", &e.to_string()))?,
+                .map_err(|e: std::num::ParseIntError| Self::env_parse_error("REFRESH_TOKEN_EXPIRY_SECONDS", &e.to_string()))?,
             password_min_length: std::env::var("PASSWORD_MIN_LENGTH")
                 .unwrap_or_else(|_| "8".to_string())
                 .parse()
-                .map_err(|e| Self::env_parse_error("PASSWORD_MIN_LENGTH", &e.to_string()))?,
+                .map_err(|e: std::num::ParseIntError| Self::env_parse_error("PASSWORD_MIN_LENGTH", &e.to_string()))?,
             password_max_length: std::env::var("PASSWORD_MAX_LENGTH")
                 .unwrap_or_else(|_| "128".to_string())
                 .parse()
-                .map_err(|e| Self::env_parse_error("PASSWORD_MAX_LENGTH", &e.to_string()))?,
+                .map_err(|e: std::num::ParseIntError| Self::env_parse_error("PASSWORD_MAX_LENGTH", &e.to_string()))?,
             session_timeout_seconds: std::env::var("SESSION_TIMEOUT_SECONDS")
                 .unwrap_or_else(|_| "86400".to_string()) // 24 hours
                 .parse()
-                .map_err(|e| Self::env_parse_error("SESSION_TIMEOUT_SECONDS", &e.to_string()))?,
+                .map_err(|e: std::num::ParseIntError| Self::env_parse_error("SESSION_TIMEOUT_SECONDS", &e.to_string()))?,
         })
     }
     

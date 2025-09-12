@@ -40,8 +40,7 @@ export const useGeolocation = () => {
       // 必须由用户手势触发（由调用方保证）。此处仅封装调用。
       // 若未授权，则直接抛错，避免浏览器弹出权限提示导致违规日志。
       try {
-        // @ts-ignore
-        const perm: PermissionStatus = await (navigator.permissions?.query?.({ name: 'geolocation' as any }))
+        const perm: PermissionStatus | undefined = await navigator.permissions?.query?.({ name: 'geolocation' as any })
         if (perm && perm.state !== 'granted') {
           throw new Error('尚未授权位置权限，请在用户操作中调用权限请求后再获取位置')
         }

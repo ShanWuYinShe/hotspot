@@ -42,7 +42,7 @@
             transform: `translateY(${start}px)`
           }"
           :class="[
-            'hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors cursor-pointer',
+            'hover:bg-neutral-100 dark:hover:bg-neutral-800/50 transition-colors cursor-pointer',
             ui.body.base,
             {
               [ui.body.background.even]: striped && index % 2 === 0,
@@ -135,7 +135,7 @@
 </template>
 
 <script setup lang="ts">
-// 自定义 TableColumn 接口，兼容 Nuxt UI v3
+// 自定义 TableColumn 接口
 interface CustomTableColumn {
   id: string;
   key: string;
@@ -144,7 +144,7 @@ interface CustomTableColumn {
   width?: string | number;
 }
 
-// Props 接口（兼容 UTable API）
+// Props 接口
 interface Props {
   // 数据
   rows: Record<string, unknown>[]
@@ -170,7 +170,7 @@ interface Props {
   overscan?: number
   // 是否启用动态高度
   enableDynamicSize?: boolean
-  // UI 配置（兼容 Nuxt UI）
+  // UI 配置
   ui?: Record<string, unknown>
 }
 

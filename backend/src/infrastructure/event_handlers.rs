@@ -259,7 +259,7 @@ impl GroupMembershipHandler {
         
         // 更新群组成员统计
         self.stats_service
-            .increment_member_count(event.group_id)
+            .increment_member_count(event.group_id.clone())
             .await?;
         
         // 记录活动
@@ -455,7 +455,7 @@ pub trait WelcomeService: Send + Sync {
 /// 用户统计服务特征
 #[async_trait]
 pub trait UserStatsService: Send + Sync {
-    async fn increment_user_count(&self, user_type: crate::domain::UserType) -> DomainResult<()>;
+    async fn increment_user_count(&self, user_type: crate::domain::entities::UserType) -> DomainResult<()>;
 }
 
 /// 通知服务特征
@@ -602,7 +602,7 @@ mod tests {
     
     #[async_trait]
     impl UserStatsService for MockUserStatsService {
-        async fn increment_user_count(&self, _user_type: crate::domain::UserType) -> DomainResult<()> {
+        async fn increment_user_count(&self, _user_type: crate::domain::entities::UserType) -> DomainResult<()> {
             Ok(())
         }
     }

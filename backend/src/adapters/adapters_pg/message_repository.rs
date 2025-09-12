@@ -15,16 +15,12 @@ use super::query_optimizer::PgQueryOptimizer;
 #[derive(Debug)]
 struct DirectMessageRow {
     pub id: i64,
-    pub message_id: Uuid,
-    pub conversation_id: Uuid,
+    pub message_id: String,
+    pub conversation_id: i64,
     pub sender_id: i64,
-    pub recipient_id: i64,
-    pub content: String,
+    pub content: Option<String>,
     pub message_type: String,
     pub created_at: DateTime<Utc>,
-    pub read_at: Option<DateTime<Utc>>,
-    pub latitude: f64,
-    pub longitude: f64,
 }
 
 
@@ -95,10 +91,9 @@ impl PgMessageRepository {
                     DirectMessageRow,
                     r#"
                     SELECT id as "id!", message_id as "message_id!", conversation_id as "conversation_id!", 
-                           sender_id as "sender_id!", recipient_id as "recipient_id!", content as "content!", 
-                           message_type::text as "message_type!", created_at as "created_at!", read_at,
-                           latitude as "latitude!", longitude as "longitude!"
-                    FROM direct_messages
+                           sender_id as "sender_id!", content, 
+                           message_type::text as "message_type!", created_at as "created_at!"
+                    FROM messages
                     WHERE id = $1
                     "#,
                     message_id

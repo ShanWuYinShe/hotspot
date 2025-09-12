@@ -368,5 +368,17 @@
     "error": "网络请求失败",
     "timeout": "请求超时",
     "retry": "重试"
+  },
+  "settings": {
+    "searchPlaceholder": "搜索...",
+    "noResults": "无匹配结果",
+    "language": "语言",
+    "theme": "主题",
+    "distanceUnit": "距离单位",
+    "timeFormat": "时间格式",
+    "select": {
+      "hintMulti": "可多选，按回车确认",
+      "errorRequired": "此字段不能为空"
+    }
   }
 }

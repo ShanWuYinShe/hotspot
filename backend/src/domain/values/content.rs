@@ -173,6 +173,11 @@ impl Nickname {
     pub fn nickname(&self) -> &str {
         self.0.value()
     }
+    
+    /// 获取昵称值（与nickname()相同，为了API一致性）
+    pub fn value(&self) -> &str {
+        self.0.value()
+    }
 
     /// 检查是否为有效昵称格式
     pub fn is_valid_format(&self) -> bool {

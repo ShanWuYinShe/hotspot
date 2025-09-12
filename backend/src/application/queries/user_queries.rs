@@ -251,7 +251,7 @@ impl From<crate::domain::UserProfile> for PasswordStatus {
     fn from(user: crate::domain::UserProfile) -> Self {
         Self {
             has_password: false, // UserProfile 不包含密码信息，需要单独查询
-            is_temporary: user.user_type == crate::domain::UserType::Temporary,
+            is_temporary: user.user_type == crate::domain::entities::UserType::Temporary,
         }
     }
 }

@@ -1,12 +1,15 @@
 /// 消息应用服务
 /// 
 /// 处理消息相关的业务逻辑，使用新的实体和仓库架构
+// 暂时禁用，等待重新设计
+/*
 use crate::application::handlers::PaginatedResult;
 use crate::domain::{
     DirectMessage, DirectMessageType, DomainResult, GroupMessage, 
     GroupMessageType
 };
-use crate::adapters::adapters_pg::message_repository::PgMessageRepository;
+// use crate::adapters::adapters_pg::message_repository::PgMessageRepository; // 暂时禁用
+*/
 /// 消息应用服务
 /// 
 /// 功能职责：
@@ -32,12 +35,15 @@ use std::sync::Arc;
 use uuid::Uuid;
 use chrono::Utc;
 
-#[derive(Clone)]
-pub struct MessageApplicationService {
-    base: super::BaseApplicationService,
-    pg_message_repository: Arc<PgMessageRepository>,
-}
+// 暂时禁用，等待重新设计
+// #[derive(Clone)]
+// pub struct MessageApplicationService {
+//     base: super::BaseApplicationService,
+//     pg_message_repository: Arc<PgMessageRepository>,
+// }
 
+// 暂时禁用，等待重新设计
+/*
 impl MessageApplicationService {
     pub fn new(
         pg_message_repository: Arc<PgMessageRepository>,
@@ -181,3 +187,4 @@ impl MessageApplicationService {
         Ok(PaginatedResult::new(items, has_more, next_cursor))
     }
 }
+*/

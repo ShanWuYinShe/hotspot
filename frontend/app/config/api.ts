@@ -70,10 +70,6 @@ export const USER_ENDPOINTS = {
     DELETE_ACCOUNT: "/delete_account",
   },
 
-  // 兼容性：用户详情相关端点
-  DETAILS: "/details",
-
-  // 兼容性：保留旧的基础路径
   BASE: API_CONFIG.MODULES.USER,
 } as const;
 
@@ -98,7 +94,6 @@ export const GROUP_ENDPOINTS = {
     KICK: "/kick",
   },
 
-  // 兼容性：保留旧的基础路径
   BASE: API_CONFIG.MODULES.GROUP,
 } as const;
 
@@ -128,7 +123,6 @@ export const MOMENT_ENDPOINTS = {
     UNLIKE: "/unlike",
   },
 
-  // 兼容性：保留旧的基础路径
   BASE: API_CONFIG.MODULES.MOMENT,
 } as const;
 
@@ -145,7 +139,6 @@ export const ADMIN_ENDPOINTS = {
     USER_ID_FORMAT: "/user-id/format",
   },
 
-  // 兼容性：保留旧的基础路径
   BASE: API_CONFIG.MODULES.ADMIN,
 } as const;
 
@@ -169,7 +162,6 @@ export const CHAT_ENDPOINTS = {
     CONVERSATIONS: "/user/conversations",
   },
 
-  // 兼容性：保留旧的基础路径
   BASE: API_CONFIG.MODULES.CHAT,
 } as const;
 

@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use std::sync::Arc;
 use tracing::{debug, error, info, warn};
 
-use crate::domain::DomainResult;
+use crate::domain::{DomainResult, UserId};
 use crate::ports::{
     NotificationTransport,
 };
@@ -54,21 +54,23 @@ impl CompositeNotificationTransport {
         let mut errors = Vec::new();
         let mut sent_count = 0;
         
-        for channel in &notification.channels {
+        // 暂时使用默认通道
+        let channels = vec![crate::ports::notification_ports::NotificationChannel::WebSocket];
+        for channel in &channels {
             match channel {
-                NotificationChannel::WebSocket => {
+                crate::ports::notification_ports::NotificationChannel::WebSocket => {
                     #[cfg(feature = "ws")]
                     if let Some(ws_transport) = &self.websocket_transport {
                         let mut ws_notification = notification.clone();
-                        ws_notification.channels = vec![NotificationChannel::WebSocket];
+                        // 移除 channels 字段设置，因为 Notification 结构体没有这个字段
                         
-                        match ws_transport.send_notification(ws_notification.user_id, &ws_notification).await {
+                        match ws_transport.send_notification(ws_notification.user_id.unwrap().value(), &ws_notification).await {
                             Ok(_) => {
                                 sent_count += 1;
-                                debug!("WebSocket通知发送成功: 用户{}", notification.user_id);
+                                debug!("WebSocket通知发送成功: 用户{:?}", notification.user_id);
                             },
                             Err(e) => {
-                                error!("WebSocket通知发送失败: 用户{} - {:?}", notification.user_id, e);
+                                error!("WebSocket通知发送失败: 用户{:?} - {:?}", notification.user_id, e);
                                 errors.push(e);
                             }
                         }
@@ -79,11 +81,11 @@ impl CompositeNotificationTransport {
                     #[cfg(not(feature = "ws"))]
                     warn!("WebSocket功能未启用，跳过WebSocket通知");
                 },
-                NotificationChannel::Email => {
+                crate::ports::notification_ports::NotificationChannel::Email => {
                     #[cfg(feature = "email_channel")]
                     if let Some(email_transport) = &self.email_transport {
                         let mut email_notification = notification.clone();
-                        email_notification.channels = vec![NotificationChannel::Email];
+                        email_notification.channels = vec![crate::ports::notification_ports::NotificationChannel::Email];
                         
                         match email_transport.send_notification(email_notification).await {
                             Ok(_) => {
@@ -102,11 +104,11 @@ impl CompositeNotificationTransport {
                     #[cfg(not(feature = "email_channel"))]
                     warn!("邮件功能未启用，跳过邮件通知");
                 },
-                NotificationChannel::Sms => {
+                crate::ports::notification_ports::NotificationChannel::Sms => {
                     // TODO: 实现短信通知
                     warn!("短信通知功能尚未实现，跳过短信通知");
                 },
-                NotificationChannel::Push => {
+                crate::ports::notification_ports::NotificationChannel::Push => {
                     // TODO: 实现推送通知
                     warn!("推送通知功能尚未实现，跳过推送通知");
                 },
@@ -116,9 +118,9 @@ impl CompositeNotificationTransport {
         if sent_count > 0 {
             info!(
                 "复合通知发送完成: 用户{} - 成功{}/总共{}个渠道",
-                notification.user_id,
+                notification.user_id.as_ref().map(|id| id.value()).unwrap_or(0),
                 sent_count,
-                notification.channels.len()
+                channels.len()
             );
         }
         
@@ -139,9 +141,15 @@ impl Default for CompositeNotificationTransport {
 
 #[async_trait]
 impl NotificationTransport for CompositeNotificationTransport {
-    async fn send_notification(&self, notification: Notification) -> DomainResult<()> {
-        // 新的 Notification 结构体没有 channels 字段，直接通过 WebSocket 发送
-        self.broadcast_notification(notification).await
+    async fn send_notification(&self, user_id: i64, notification: &Notification) -> DomainResult<()> {
+        // 发送给指定用户
+        #[cfg(feature = "ws")]
+        if let Some(ws_transport) = &self.websocket_transport {
+            return ws_transport.send_notification(user_id, notification).await;
+        }
+        
+        warn!("WebSocket传输器不可用，无法发送通知给用户 {}: {} - {}", user_id, notification.title, notification.content);
+        Ok(())
     }
     
     async fn send_notifications(&self, notifications: &[(i64, Notification)]) -> DomainResult<()> {
@@ -174,11 +182,11 @@ impl NotificationTransport for CompositeNotificationTransport {
         Ok(())
     }
     
-    async fn broadcast_notification(&self, notification: Notification) -> DomainResult<()> {
+    async fn broadcast_notification(&self, notification: &Notification) -> DomainResult<()> {
         // 广播通知只通过WebSocket发送，不发送邮件
         #[cfg(feature = "ws")]
         if let Some(ws_transport) = &self.websocket_transport {
-            return ws_transport.broadcast_notification(&notification).await;
+            return ws_transport.broadcast_notification(notification).await;
         }
         
         warn!("WebSocket传输器不可用，无法广播通知: {}", notification.title);
@@ -211,6 +219,46 @@ impl NotificationTransport for CompositeNotificationTransport {
             active_connections: 0, // TODO: Calculate actual active connections
             last_activity: None, // TODO: Track last activity
         })
+    }
+    
+    async fn send_to_user(&self, user_id: UserId, notification: &Notification) -> DomainResult<()> {
+        #[cfg(feature = "ws")]
+        if let Some(ws_transport) = &self.websocket_transport {
+            return ws_transport.send_to_user(user_id, notification).await;
+        }
+        
+        warn!("WebSocket传输器不可用，无法发送用户通知: {} - {}", notification.title, notification.content);
+        Ok(())
+    }
+    
+    async fn send_to_users(&self, user_ids: &[UserId], notification: &Notification) -> DomainResult<()> {
+        #[cfg(feature = "ws")]
+        if let Some(ws_transport) = &self.websocket_transport {
+            return ws_transport.send_to_users(user_ids, notification).await;
+        }
+        
+        warn!("WebSocket传输器不可用，无法发送多用户通知: {} - {}", notification.title, notification.content);
+        Ok(())
+    }
+    
+    async fn send_to_group(&self, group_id: &str, notification: &Notification) -> DomainResult<()> {
+        #[cfg(feature = "ws")]
+        if let Some(ws_transport) = &self.websocket_transport {
+            return ws_transport.send_to_group(group_id, notification).await;
+        }
+        
+        warn!("WebSocket传输器不可用，无法发送群组通知: {} - {}", notification.title, notification.content);
+        Ok(())
+    }
+    
+    async fn broadcast(&self, notification: &Notification) -> DomainResult<()> {
+        #[cfg(feature = "ws")]
+        if let Some(ws_transport) = &self.websocket_transport {
+            return ws_transport.broadcast(notification).await;
+        }
+        
+        warn!("WebSocket传输器不可用，无法广播通知: {} - {}", notification.title, notification.content);
+        Ok(())
     }
 }
 

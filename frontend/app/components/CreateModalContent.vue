@@ -7,11 +7,11 @@
         <UButton
           @click="switchToView('group')"
           variant="ghost"
-          class="w-full justify-start p-4 h-auto min-h-[60px] touch-manipulation active:scale-98 transition-transform"
+          class="w-full justify-start p-4 h-auto min-h-[60px] touch-manipulation transition-colors duration-200"
         >
           <div class="flex items-center space-x-3">
-            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-group-100 dark:bg-group-900 flex-shrink-0">
-              <UIcon name="i-heroicons-user-group" class="h-5 w-5 text-group-600 dark:text-group-400" />
+            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30 flex-shrink-0">
+              <UIcon name="i-heroicons-user-group" class="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div class="text-left flex-1 min-w-0">
               <div class="font-medium text-neutral-900 dark:text-white truncate">创建群组</div>
@@ -24,11 +24,11 @@
         <UButton
           @click="switchToView('moment')"
           variant="ghost"
-          class="w-full justify-start p-4 h-auto min-h-[60px] touch-manipulation active:scale-98 transition-transform"
+          class="w-full justify-start p-4 h-auto min-h-[60px] touch-manipulation transition-colors duration-200"
         >
           <div class="flex items-center space-x-3">
-            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-moment-100 dark:bg-moment-900 flex-shrink-0">
-              <UIcon name="i-heroicons-photo" class="h-5 w-5 text-moment-600 dark:text-moment-400" />
+            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30 flex-shrink-0">
+              <UIcon name="i-heroicons-photo" class="h-5 w-5 text-purple-600 dark:text-purple-400" />
             </div>
             <div class="text-left flex-1 min-w-0">
               <div class="font-medium text-neutral-900 dark:text-white truncate">发布动态</div>
@@ -41,11 +41,11 @@
         <UButton
           @click="handleNearbyClick"
           variant="ghost"
-          class="w-full justify-start p-4 h-auto min-h-[60px] touch-manipulation active:scale-98 transition-transform"
+          class="w-full justify-start p-4 h-auto min-h-[60px] touch-manipulation transition-colors duration-200"
         >
           <div class="flex items-center space-x-3">
-            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-location-100 dark:bg-location-900 flex-shrink-0">
-              <UIcon name="i-heroicons-map-pin" class="h-5 w-5 text-location-600 dark:text-location-400" />
+            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30 flex-shrink-0">
+              <UIcon name="i-heroicons-map-pin" class="h-5 w-5 text-green-600 dark:text-green-400" />
             </div>
             <div class="text-left flex-1 min-w-0">
               <div class="font-medium text-neutral-900 dark:text-white truncate">寻找附近</div>

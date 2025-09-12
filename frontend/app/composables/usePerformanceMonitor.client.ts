@@ -1,7 +1,9 @@
 /**
- * 性能监控 Composable
+ * 性能监控 Composable (客户端版本)
  * 监控关键性能指标和用户体验指标
  */
+
+import { ref, nextTick } from 'vue'
 
 interface PerformanceMetrics {
   // Core Web Vitals
@@ -21,15 +23,7 @@ interface PerformanceMetrics {
 
 export const usePerformanceMonitor = () => {
   const metrics = ref<PerformanceMetrics>({})
-  const isSupported = ref(false)
-  
-  // 检查浏览器支持
-  onMounted(() => {
-    isSupported.value = 'PerformanceObserver' in window
-    if (isSupported.value) {
-      initPerformanceObserver()
-    }
-  })
+  const isSupported = ref('PerformanceObserver' in window)
   
   // 初始化性能观察器
   const initPerformanceObserver = () => {
@@ -173,6 +167,13 @@ export const usePerformanceMonitor = () => {
     }
   }
   
+  // 初始化性能监控
+  if (isSupported.value) {
+    nextTick(() => {
+      initPerformanceObserver()
+    })
+  }
+  
   return {
     metrics: readonly(metrics),
     isSupported: readonly(isSupported),
@@ -183,4 +184,3 @@ export const usePerformanceMonitor = () => {
     reportMetric
   }
 }
-

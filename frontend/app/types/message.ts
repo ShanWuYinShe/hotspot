@@ -25,32 +25,13 @@ export type {
   ConversationsResponse,
 
   // 消息项类型
-  DirectMessageHistoryItem,
-  GroupMessageHistoryItem,
-  ConversationItem,
   ConversationSummary,
 
   // 基础类型
   ApiResponse,
   PaginatedResponse,
+  Message, // 使用统一的Message接口
 } from "~/types";
-
-// 消息类型（统一的消息接口）
-export interface Message {
-  id?: string; // 兼容字段，通常等于 message_id
-  message_id: string; // UUID 转换为字符串
-  sender_id: string; // 64位整数转换为字符串
-  sender_name: string;
-  content: string;
-  message_type: 'text' | 'image' | 'voice' | 'video' | 'location' | 'file';
-  sent_at: string; // ISO 8601 datetime string
-  created_at?: string; // 兼容字段，通常等于 sent_at
-  group_id?: string; // UUID 转换为字符串
-  conversation_id?: string; // UUID 转换为字符串
-  latitude?: number;
-  longitude?: number;
-  recipient_id?: string; // 私聊消息的接收者ID
-}
 
 // 会话类型（基于最新 API 设计）
 export interface Conversation {

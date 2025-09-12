@@ -28,7 +28,7 @@ export const useWebAuthn = () => {
     return !!(
       window.PublicKeyCredential &&
       navigator.credentials &&
-      navigator.credentials.create &&
+      typeof navigator.credentials?.create === 'function' &&
       navigator.credentials.get
     )
   })
@@ -47,7 +47,7 @@ export const useWebAuthn = () => {
 
   // 生成随机挑战
   const generateChallenge = (): ArrayBuffer => {
-    return crypto.getRandomValues(new Uint8Array(32))
+    return crypto.getRandomValues(new Uint8Array(32)).buffer
   }
 
   // 将 ArrayBuffer 转换为 Base64URL
@@ -55,7 +55,7 @@ export const useWebAuthn = () => {
     const bytes = new Uint8Array(buffer)
     let binary = ''
     for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i])
+      binary += String.fromCharCode(bytes[i] || 0)
     }
     return btoa(binary)
       .replace(/\+/g, '-')
@@ -79,10 +79,11 @@ export const useWebAuthn = () => {
   }
 
   // 生成用户ID
-  const generateUserId = (userIdentifier: string): ArrayBuffer => {
+  const generateUserId = async (userIdentifier: string): Promise<ArrayBuffer> => {
     const encoder = new TextEncoder()
     const data = encoder.encode(`hotspot_device_${userIdentifier}_${Date.now()}`)
-    return crypto.subtle.digest('SHA-256', data).then(hash => hash.slice(0, 16))
+    const hash = await crypto.subtle.digest('SHA-256', data)
+    return hash.slice(0, 16)
   }
 
   // 获取存储的凭证
@@ -164,7 +165,7 @@ export const useWebAuthn = () => {
       const webAuthnCredential: WebAuthnCredential = {
         id: credential.id,
         publicKey: response.getPublicKey()!,
-        counter: response.getAuthenticatorData ? 0 : 0, // 简化处理
+        counter: 0, // 简化处理，不使用 getAuthenticatorData
         createdAt: new Date().toISOString(),
       }
 
@@ -300,4 +301,5 @@ export const useWebAuthn = () => {
     getStoredCredentials,
   }
 }
+
 

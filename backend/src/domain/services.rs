@@ -87,11 +87,11 @@ impl UserDomainService {
         // 位置相近性加成
         if let (Some(loc1), Some(loc2)) = (&user1.location, &user2.location) {
             let distance = loc1.coordinates.distance_to(&loc2.coordinates);
-            if distance < 1000.0 {
+            if distance.meters() < 1000.0 {
                 strength += 0.5; // 1公里内
-            } else if distance < 5000.0 {
+            } else if distance.meters() < 5000.0 {
                 strength += 0.3; // 5公里内
-            } else if distance < 10000.0 {
+            } else if distance.meters() < 10000.0 {
                 strength += 0.1; // 10公里内
             }
         }
@@ -143,7 +143,7 @@ impl GroupDomainService {
     /// 检查用户是否在群组活动范围内
     pub fn is_user_in_group_range(user_location: &Coordinates, group: &Group) -> bool {
         let distance = user_location.distance_to(&group.location.coordinates);
-        distance <= group.location.radius
+        distance.meters() <= group.location.radius
     }
     
     /// 计算群组推荐分数
@@ -160,7 +160,7 @@ impl GroupDomainService {
         // 地理位置相关性
         if let Some(user_location) = &user.location {
             let distance = user_location.coordinates.distance_to(&group.location.coordinates);
-            let location_score = (1.0 / (1.0 + distance / 1000.0)).max(0.1); // 距离越近分数越高
+            let location_score = (1.0 / (1.0 + distance.meters() / 1000.0)).max(0.1); // 距离越近分数越高
             score += location_score * 0.4;
         }
         
@@ -178,11 +178,11 @@ pub struct MessageDomainService;
 impl MessageDomainService {
     /// 验证消息内容
     pub fn validate_message_content(content: &MessageContent) -> DomainResult<()> {
-        if content.is_empty() {
+        if content.content().is_empty() {
             return Err(DomainError::EmptyMessageContent);
         }
         
-        if content.len() > 2000 {
+        if content.content().len() > 2000 {
             return Err(DomainError::MessageTooLong);
         }
         
@@ -197,7 +197,7 @@ impl MessageDomainService {
         }
         
         // 检查消息长度（过长的消息可能需要审核）
-        if content.len() > 1000 {
+        if content.content().len() > 1000 {
             return true;
         }
         
@@ -214,7 +214,7 @@ impl MessageDomainService {
         let mut priority = 5; // 基础优先级
         
         // 注册用户的消息优先级更高
-        if sender.user_type == UserType::Registered {
+        if sender.user_type == UserType::Regular {
             priority += 2;
         }
         
@@ -311,7 +311,7 @@ impl MomentDomainService {
         
         // 检查距离
         let distance = user_location.coordinates.distance_to(moment_location);
-        distance <= max_distance
+        distance.meters() <= max_distance
     }
 }
 
@@ -321,7 +321,7 @@ pub struct GeolocationDomainService;
 impl GeolocationDomainService {
     /// 计算两点之间的距离（米）
     pub fn calculate_distance(point1: &Coordinates, point2: &Coordinates) -> f64 {
-        point1.distance_to(point2)
+        point1.distance_to(point2).meters()
     }
     
     /// 检查坐标是否在指定区域内

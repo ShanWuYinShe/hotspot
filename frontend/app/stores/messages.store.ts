@@ -1,8 +1,8 @@
 import { defineStore } from "pinia";
 import { useMessageService } from "~/services/message.service";
-import type { Conversation, Message } from "~/types/message";
+import type { Conversation } from "~/types/message";
 import { convertConversationSummary } from "~/types/message";
-import type { ConversationItem, UserInfo, MessageType, ConversationSummary } from "~/types";
+import type { ConversationItem, UserInfo, MessageType, ConversationSummary, Message } from "~/types";
 import { useUserService } from "~/services/user.service";
 import { useGroupService } from "~/services/group.service";
 
@@ -183,15 +183,15 @@ export const useMessagesStore = defineStore("messages", () => {
     const tempId = String(Date.now());
     const optimistic: Message = {
       id: tempId,
+      message_id: tempId,
       conversation_id: String(conversationId),
       sender_id: String(authStore.user?.user_id || "0"),
       sender_name: authStore.user?.nickname || "",
       content,
       message_type: messageType,
+      sent_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
-      // is_read: true, // Message 类型不包含此字段
-      // @ts-ignore 扩展状态字段
-      status: "sending",
+      status: "sending" as const,
     };
     messages.value.push(optimistic);
 
@@ -214,11 +214,10 @@ export const useMessagesStore = defineStore("messages", () => {
           message_type: resp.message_type,
           created_at: resp.sent_at,
           sent_at: resp.sent_at,
-          // is_read: false, // Message 类型不包含此字段
           latitude: 0,
           longitude: 0,
         };
-        messages.value.splice(index, 1, newMessage as any);
+        messages.value.splice(index, 1, newMessage);
       }
 
       // 更新对话的最后消息
@@ -296,15 +295,15 @@ export const useMessagesStore = defineStore("messages", () => {
     const tempId = String(Date.now());
     const optimistic: Message = {
       id: tempId,
+      message_id: tempId,
       group_id: String(groupId),
       sender_id: String(authStore.user?.user_id || "0"),
       sender_name: authStore.user?.nickname || "",
       content,
       message_type: messageType,
+      sent_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
-      // is_read: true, // Message 类型不包含此字段
-      // @ts-ignore
-      status: "sending",
+      status: "sending" as const,
     };
     messages.value.push(optimistic);
     try {
@@ -325,11 +324,10 @@ export const useMessagesStore = defineStore("messages", () => {
           message_type: messageType,
           created_at: resp.sent_at,
           sent_at: resp.sent_at,
-          // is_read: true, // Message 类型不包含此字段
           latitude: 0,
           longitude: 0,
         };
-        messages.value.splice(index, 1, newMessage as any);
+        messages.value.splice(index, 1, newMessage);
       }
       // 若会话列表中没有该群会话，插入占位
       const hasGroupConv = conversations.value.some(
@@ -375,11 +373,11 @@ export const useMessagesStore = defineStore("messages", () => {
     } catch (e) {
       const idx = messages.value.findIndex((m) => m.id === tempId);
       if (idx !== -1) {
-        // @ts-ignore
-        (messages.value[idx] as any).status = "failed";
-        // @ts-ignore
-        (messages.value[idx] as any).retry_count =
-          (messages.value[idx] as any).retry_count || 0;
+        const message = messages.value[idx];
+        if (message) {
+          message.status = "failed";
+          message.retry_count = (message.retry_count || 0) + 1;
+        }
       }
       throw e;
     } finally {

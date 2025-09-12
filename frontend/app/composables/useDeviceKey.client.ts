@@ -26,7 +26,7 @@ export const useDeviceKey = () => {
       screen.colorDepth,
       new Date().getTimezoneOffset(),
       navigator.hardwareConcurrency || 0,
-      navigator.deviceMemory || 0,
+      (navigator as any).deviceMemory || 0,
       navigator.maxTouchPoints || 0,
     ]
 
@@ -98,7 +98,7 @@ export const useDeviceKey = () => {
     const storedKeyInfo = getStoredKeyInfo()
     
     if (storedKeyInfo) {
-      // 检查版本兼容性
+      // 检查版本更新
       if (storedKeyInfo.version < CURRENT_VERSION) {
         if (import.meta.dev) {
           console.log('Device key version outdated, regenerating...')
@@ -262,4 +262,5 @@ export const useDeviceKey = () => {
     verifyFingerprint,
   }
 }
+
 

@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use std::sync::Arc;
 
 use crate::{
-    domain::{DomainResult, Comment, CommentDetail},
+    domain::{DomainResult, Comment},
     ports::repository_ports::CommentRepository,
 };
 
@@ -42,7 +42,7 @@ pub trait CommentApplicationService: Send + Sync {
         moment_id: &str,
         cursor: i64,
         limit: i32,
-    ) -> DomainResult<Vec<CommentDetail>>;
+    ) -> DomainResult<Vec<Comment>>;
 
     /// 获取用户评论历史
     async fn get_user_comments(
@@ -50,7 +50,7 @@ pub trait CommentApplicationService: Send + Sync {
         user_id: i64,
         cursor: i64,
         limit: i32,
-    ) -> DomainResult<Vec<CommentDetail>>;
+    ) -> DomainResult<Vec<Comment>>;
 
     /// 获取评论回复
     async fn get_comment_replies(
@@ -58,7 +58,7 @@ pub trait CommentApplicationService: Send + Sync {
         parent_comment_id: &str,
         cursor: i64,
         limit: i32,
-    ) -> DomainResult<Vec<CommentDetail>>;
+    ) -> DomainResult<Vec<Comment>>;
 
     /// 获取生活瞬间评论数
     async fn get_moment_comments_count(&self, moment_id: &str) -> DomainResult<i64>;
@@ -155,7 +155,7 @@ where
         moment_id: &str,
         cursor: i64,
         limit: i32,
-    ) -> DomainResult<Vec<CommentDetail>> {
+    ) -> DomainResult<Vec<Comment>> {
         // 限制分页大小
         let limit = limit.min(100).max(1);
         
@@ -170,7 +170,7 @@ where
         user_id: i64,
         cursor: i64,
         limit: i32,
-    ) -> DomainResult<Vec<CommentDetail>> {
+    ) -> DomainResult<Vec<Comment>> {
         // 限制分页大小
         let limit = limit.min(100).max(1);
         
@@ -185,7 +185,7 @@ where
         parent_comment_id: &str,
         cursor: i64,
         limit: i32,
-    ) -> DomainResult<Vec<CommentDetail>> {
+    ) -> DomainResult<Vec<Comment>> {
         // 限制分页大小
         let limit = limit.min(100).max(1);
         

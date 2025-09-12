@@ -9,7 +9,7 @@ use tracing::info;
 
 use crate::domain::DomainResult;
 use crate::services::{
-    ApmService, MetricsService, CacheService, GeoOptimizationService,
+    ApmService, MetricsService, /* CacheService, */ GeoOptimizationService,
     PerformanceMetrics, DatabaseMetrics, CacheMetrics, SystemResourceMetrics,
     RealtimeMetricsSnapshot, EventStatistics, BusinessEventType,
     TraceContext, TraceSearchQuery, GeoQueryStats, SpatialIndexStatus,
@@ -423,7 +423,7 @@ pub struct ComprehensiveDashboardService {
     apm_service: Option<Arc<dyn ApmService>>,
     metrics_service: Option<Arc<dyn MetricsService>>,
     #[allow(dead_code)]
-    cache_service: Option<Arc<dyn CacheService>>,
+    // cache_service: Option<Arc<dyn CacheService>>,  // 暂时禁用
     geo_service: Option<Arc<dyn GeoOptimizationService>>,
     alerts: Arc<tokio::sync::RwLock<Vec<Alert>>>,
 }
@@ -434,14 +434,14 @@ impl ComprehensiveDashboardService {
         config: DashboardConfig,
         apm_service: Option<Arc<dyn ApmService>>,
         metrics_service: Option<Arc<dyn MetricsService>>,
-        cache_service: Option<Arc<dyn CacheService>>,
+        // cache_service: Option<Arc<dyn CacheService>>,  // 暂时禁用
         geo_service: Option<Arc<dyn GeoOptimizationService>>,
     ) -> Self {
         Self {
             config,
             apm_service,
             metrics_service,
-            cache_service,
+            // cache_service,  // 暂时禁用
             geo_service,
             alerts: Arc::new(tokio::sync::RwLock::new(Vec::new())),
         }

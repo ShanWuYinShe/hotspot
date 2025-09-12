@@ -37,12 +37,12 @@ struct GroupProfileRow {
     name: String,
     description: Option<String>,
     created_by: i64,
-    latitude: f64,
-    longitude: f64,
-    location_name: String,
+    latitude: Option<f64>,  // 修改为Option类型，因为查询中可能为NULL
+    longitude: Option<f64>, // 修改为Option类型，因为查询中可能为NULL
+    location_name: Option<String>, // 修改为Option类型
     member_count: i32,
     is_public: bool,
-    last_active_at: DateTime<Utc>,
+    last_active_at: Option<DateTime<Utc>>, // 修改为Option类型
 }
 
 /// 群组认证查询的数据库行结构（仅用于密码验证）
@@ -62,15 +62,15 @@ struct GroupDetailRow {
     name: String,
     description: Option<String>,
     created_by: i64,
-    latitude: f64,
-    longitude: f64,
-    location_name: String,
+    latitude: Option<f64>,  // 修改为Option类型
+    longitude: Option<f64>, // 修改为Option类型
+    location_name: Option<String>, // 修改为Option类型
     member_count: i32,
     max_members: i32,
     is_public: bool,
-    created_at: DateTime<Utc>,
-    updated_at: DateTime<Utc>,
-    last_active_at: DateTime<Utc>,
+    created_at: Option<DateTime<Utc>>, // 修改为Option类型
+    updated_at: Option<DateTime<Utc>>, // 修改为Option类型
+    last_active_at: Option<DateTime<Utc>>, // 修改为Option类型
 }
 
 /// 群组搜索结果的数据库行结构
@@ -80,12 +80,12 @@ struct GroupSearchRow {
     name: String,
     description: Option<String>,
     created_by: i64,
-    latitude: f64,
-    longitude: f64,
-    location_name: String,
+    latitude: Option<f64>,  // 修改为Option类型
+    longitude: Option<f64>, // 修改为Option类型
+    location_name: Option<String>, // 修改为Option类型
     member_count: i32,
     is_public: bool,
-    last_active_at: DateTime<Utc>,
+    last_active_at: Option<DateTime<Utc>>, // 修改为Option类型
     distance: Option<f64>, // 仅地理位置搜索时有值
 }
 
@@ -108,12 +108,12 @@ impl GroupProfileRow {
             self.name,
             self.description,
             self.created_by,
-            self.latitude,
-            self.longitude,
-            self.location_name,
+            self.latitude.unwrap_or(0.0),  // 提供默认值
+            self.longitude.unwrap_or(0.0), // 提供默认值
+            self.location_name.unwrap_or_default(), // 提供默认值
             self.member_count,
             self.is_public,
-            self.last_active_at,
+            self.last_active_at.unwrap_or_else(|| chrono::Utc::now()), // 提供默认值
         )
     }
 }
@@ -137,15 +137,15 @@ impl GroupDetailRow {
             self.name,
             self.description,
             self.created_by,
-            self.latitude,
-            self.longitude,
-            self.location_name,
+            self.latitude.unwrap_or(0.0),  // 提供默认值
+            self.longitude.unwrap_or(0.0), // 提供默认值
+            self.location_name.unwrap_or_default(), // 提供默认值
             self.member_count,
             self.max_members,
             self.is_public,
-            self.created_at,
-            self.updated_at,
-            self.last_active_at,
+            self.created_at.unwrap_or_else(|| chrono::Utc::now()), // 提供默认值
+            self.updated_at.unwrap_or_else(|| chrono::Utc::now()), // 提供默认值
+            self.last_active_at.unwrap_or_else(|| chrono::Utc::now()), // 提供默认值
         )
     }
 }
@@ -157,12 +157,12 @@ impl GroupSearchRow {
             self.name,
             self.description,
             self.created_by,
-            self.latitude,
-            self.longitude,
-            self.location_name,
+            self.latitude.unwrap_or(0.0),  // 提供默认值
+            self.longitude.unwrap_or(0.0), // 提供默认值
+            self.location_name.unwrap_or_default(), // 提供默认值
             self.member_count,
             self.is_public,
-            self.last_active_at,
+            self.last_active_at.unwrap_or_else(|| chrono::Utc::now()), // 提供默认值
             self.distance,
             is_password_required,
             is_member,
@@ -173,7 +173,7 @@ impl GroupSearchRow {
 
 impl UserProfileRow {
     fn to_domain(self) -> UserProfile {
-        use crate::domain::UserType;
+        use crate::domain::entities::UserType;
         
         let user_type = if self.expires_at.is_some() {
             UserType::Temporary
@@ -307,8 +307,8 @@ impl GroupRepository for PgGroupRepository {
                 GroupProfileRow,
                 r#"
                 SELECT group_id as "group_id!", name as "name!", description,
-                       created_by as "created_by!", 0.0 as "latitude!", 0.0 as "longitude!",
-                       '' as "location_name!", member_count as "member_count!",
+                       created_by as "created_by!", NULL::DOUBLE PRECISION as latitude, NULL::DOUBLE PRECISION as longitude,
+                       NULL::TEXT as location_name, member_count as "member_count!",
                        (visibility = 'public') as "is_public!", updated_at as last_active_at
                 FROM groups
                 WHERE group_id = $1
@@ -359,8 +359,8 @@ impl GroupRepository for PgGroupRepository {
             GroupDetailRow,
             r#"
             SELECT group_id as "group_id!", name as "name!", description,
-                   created_by as "created_by!", 0.0 as "latitude!", 0.0 as "longitude!",
-                   '' as "location_name!", member_count as "member_count!",
+                   created_by as "created_by!", NULL::DOUBLE PRECISION as latitude, NULL::DOUBLE PRECISION as longitude,
+                   NULL::TEXT as location_name, member_count as "member_count!",
                    max_members as "max_members!", (visibility = 'public') as "is_public!",
                    created_at as "created_at!", updated_at as "updated_at!", updated_at as last_active_at
             FROM groups
@@ -390,8 +390,8 @@ impl GroupRepository for PgGroupRepository {
             GroupSearchRow,
             r#"
             SELECT group_id as "group_id!", name as "name!", description,
-                   created_by as "created_by!", 0.0 as "latitude!", 0.0 as "longitude!",
-                   '' as "location_name!", member_count as "member_count!",
+                   created_by as "created_by!", NULL::DOUBLE PRECISION as latitude, NULL::DOUBLE PRECISION as longitude,
+                   NULL::TEXT as location_name, member_count as "member_count!",
                    (visibility = 'public') as "is_public!", updated_at as last_active_at,
                    NULL::DOUBLE PRECISION as distance
             FROM groups
@@ -442,13 +442,13 @@ impl GroupRepository for PgGroupRepository {
                 g.name as "name!",
                 g.description,
                 g.created_by as "created_by!",
-                0.0 as "latitude!",
-                0.0 as "longitude!",
-                '' as "location_name!",
+                NULL::DOUBLE PRECISION as latitude,
+                NULL::DOUBLE PRECISION as longitude,
+                NULL::TEXT as location_name,
                 g.member_count as "member_count!",
                 (g.visibility = 'public') as "is_public!",
                 g.updated_at as last_active_at,
-                0.0 as distance
+                NULL::DOUBLE PRECISION as distance
             FROM groups g
             WHERE ($1 = 0 OR g.id < $1)
             ORDER BY g.id DESC
@@ -483,8 +483,8 @@ impl GroupRepository for PgGroupRepository {
             GroupProfileRow,
             r#"
             SELECT g.group_id as "group_id!", g.name as "name!", g.description,
-                   g.created_by as "created_by!", 0.0 as "latitude!", 0.0 as "longitude!",
-                   '' as "location_name!", g.member_count as "member_count!",
+                   g.created_by as "created_by!", NULL::DOUBLE PRECISION as latitude, NULL::DOUBLE PRECISION as longitude,
+                   NULL::TEXT as location_name, g.member_count as "member_count!",
                    (g.visibility = 'public') as "is_public!", g.updated_at as last_active_at
             FROM groups g
             INNER JOIN group_members gm ON g.id = gm.group_id
@@ -512,8 +512,8 @@ impl GroupRepository for PgGroupRepository {
             GroupProfileRow,
             r#"
             SELECT group_id as "group_id!", name as "name!", description,
-                   created_by as "created_by!", 0.0 as "latitude!", 0.0 as "longitude!",
-                   '' as "location_name!", member_count as "member_count!",
+                   created_by as "created_by!", NULL::DOUBLE PRECISION as latitude, NULL::DOUBLE PRECISION as longitude,
+                   NULL::TEXT as location_name, member_count as "member_count!",
                    (visibility = 'public') as "is_public!", updated_at as last_active_at
             FROM groups
             WHERE created_by = $1
@@ -550,18 +550,15 @@ impl GroupRepository for PgGroupRepository {
             GroupProfileRow,
             r#"
             INSERT INTO groups (name, description, created_by, visibility, password_hash)
-            VALUES ($1, $2, $3, CASE WHEN $7 THEN 'public'::group_visibility_enum ELSE 'members_only'::group_visibility_enum END, $8)
+            VALUES ($1, $2, $3, CASE WHEN $4 THEN 'public'::group_visibility_enum ELSE 'members_only'::group_visibility_enum END, $5)
             RETURNING group_id as "group_id!", name as "name!", description,
-                      created_by as "created_by!", $4 as "latitude!", $5 as "longitude!",
-                      $6 as "location_name!", member_count as "member_count!",
+                      created_by as "created_by!", NULL::DOUBLE PRECISION as latitude, NULL::DOUBLE PRECISION as longitude,
+                      NULL::TEXT as location_name, member_count as "member_count!",
                       (visibility = 'public') as "is_public!", updated_at as last_active_at
             "#,
             name,
             description,
             created_by,
-            latitude,
-            longitude,
-            location_name,
             is_public,
             password_hash
         )
@@ -594,8 +591,8 @@ impl GroupRepository for PgGroupRepository {
                 updated_at = NOW()
             WHERE group_id = $1
             RETURNING group_id as "group_id!", name as "name!", description,
-                      created_by as "created_by!", 0.0 as "latitude!", 0.0 as "longitude!",
-                      '' as "location_name!", member_count as "member_count!",
+                      created_by as "created_by!", NULL::DOUBLE PRECISION as latitude, NULL::DOUBLE PRECISION as longitude,
+                      NULL::TEXT as location_name, member_count as "member_count!",
                       (visibility = 'public') as "is_public!", updated_at as last_active_at
             "#,
             group_uuid.to_string(),
@@ -631,10 +628,19 @@ impl GroupRepository for PgGroupRepository {
 
     /// 添加群组成员
     async fn add_group_member(&self, group_id: &str, user_id: i64, role: &str) -> DomainResult<()> {
-        let group_uuid = uuid::Uuid::parse_str(group_id)
-            .map_err(|_| DomainError::BusinessRuleViolation {
-                rule: "Invalid group ID format".to_string(),
-            })?;
+        // 首先获取群组的数字ID
+        let group_numeric_id = sqlx::query_scalar!(
+            "SELECT id FROM groups WHERE group_id = $1",
+            group_id
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRuleViolation {
+            rule: format!("Database error: {}", e),
+        })?
+        .ok_or_else(|| DomainError::BusinessRuleViolation {
+            rule: "Group not found".to_string(),
+        })?;
             
         sqlx::query!(
             r#"
@@ -642,7 +648,7 @@ impl GroupRepository for PgGroupRepository {
             VALUES ($1, $2, $3)
             ON CONFLICT (group_id, user_id) DO NOTHING
             "#,
-            group_uuid.to_string(),
+            group_numeric_id,
             user_id,
             match role {
                 "owner" => GroupRole::Owner,
@@ -662,13 +668,26 @@ impl GroupRepository for PgGroupRepository {
 
     /// 移除群组成员
     async fn remove_group_member(&self, group_id: &str, user_id: i64) -> DomainResult<()> {
-        let group_uuid = self.parse_group_id(group_id)?;
+        // 首先获取群组的数字ID
+        let group_numeric_id = sqlx::query_scalar!(
+            "SELECT id FROM groups WHERE group_id = $1",
+            group_id
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRuleViolation {
+            rule: format!("Database error: {}", e),
+        })?
+        .ok_or_else(|| DomainError::BusinessRuleViolation {
+            rule: "Group not found".to_string(),
+        })?;
+        
         sqlx::query!(
             r#"
             DELETE FROM group_members 
             WHERE group_id = $1 AND user_id = $2
             "#,
-            group_uuid.to_string(),
+            group_numeric_id,
             user_id
         )
         .execute(&self.pool)
@@ -682,7 +701,20 @@ impl GroupRepository for PgGroupRepository {
 
     /// 检查用户是否为群组成员
     async fn is_group_member(&self, group_id: &str, user_id: i64) -> DomainResult<bool> {
-        let group_uuid = self.parse_group_id(group_id)?;
+        // 首先获取群组的数字ID
+        let group_numeric_id = sqlx::query_scalar!(
+            "SELECT id FROM groups WHERE group_id = $1",
+            group_id
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRuleViolation {
+            rule: format!("Database error: {}", e),
+        })?
+        .ok_or_else(|| DomainError::BusinessRuleViolation {
+            rule: "Group not found".to_string(),
+        })?;
+        
         let exists = sqlx::query_scalar!(
             r#"
             SELECT EXISTS(
@@ -690,7 +722,7 @@ impl GroupRepository for PgGroupRepository {
                 WHERE group_id = $1 AND user_id = $2
             ) as "exists!"
             "#,
-            group_uuid.to_string(),
+            group_numeric_id,
             user_id
         )
         .fetch_one(&self.pool)
@@ -704,14 +736,27 @@ impl GroupRepository for PgGroupRepository {
 
     /// 获取用户在群组中的角色
     async fn get_user_role_in_group(&self, group_id: &str, user_id: i64) -> DomainResult<Option<String>> {
-        let group_uuid = self.parse_group_id(group_id)?;
+        // 首先获取群组的数字ID
+        let group_numeric_id = sqlx::query_scalar!(
+            "SELECT id FROM groups WHERE group_id = $1",
+            group_id
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRuleViolation {
+            rule: format!("Database error: {}", e),
+        })?
+        .ok_or_else(|| DomainError::BusinessRuleViolation {
+            rule: "Group not found".to_string(),
+        })?;
+        
         let role: Option<GroupRole> = sqlx::query_scalar!(
             r#"
             SELECT role as "role: GroupRole"
             FROM group_members
             WHERE group_id = $1 AND user_id = $2
             "#,
-            group_uuid.to_string(),
+            group_numeric_id,
             user_id
         )
         .fetch_optional(&self.pool)
@@ -729,7 +774,20 @@ impl GroupRepository for PgGroupRepository {
 
     /// 转移群组所有权
     async fn transfer_group_ownership(&self, group_id: &str, new_created_by: i64) -> DomainResult<()> {
-        let group_uuid = self.parse_group_id(group_id)?;
+        // 首先获取群组的数字ID
+        let group_numeric_id = sqlx::query_scalar!(
+            "SELECT id FROM groups WHERE group_id = $1",
+            group_id
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRuleViolation {
+            rule: format!("Database error: {}", e),
+        })?
+        .ok_or_else(|| DomainError::BusinessRuleViolation {
+            rule: "Group not found".to_string(),
+        })?;
+        
         // 开启事务
         let mut tx = self.pool.begin().await.map_err(|e| DomainError::BusinessRuleViolation {
             rule: format!("Database error: {}", e),
@@ -742,7 +800,7 @@ impl GroupRepository for PgGroupRepository {
             SET created_by = $2, updated_at = NOW()
             WHERE group_id = $1
             "#,
-            group_uuid.to_string(),
+            group_id,
             new_created_by
         )
         .execute(&mut *tx)
@@ -758,7 +816,7 @@ impl GroupRepository for PgGroupRepository {
             SET role = 'owner'
             WHERE group_id = $1 AND user_id = $2
             "#,
-            group_uuid.to_string(),
+            group_numeric_id,
             new_created_by
         )
         .execute(&mut *tx)
@@ -798,8 +856,8 @@ impl GroupRepository for PgGroupRepository {
         let user_rows = sqlx::query_as!(
             UserProfileRow,
             r#"
-            SELECT u.user_id as "user_id!", u.nickname as "nickname!", 
-                   u.avatar_url, u.last_login_at as last_active_at, u.expires_at
+            SELECT u.id as "user_id!", u.nickname as "nickname!", 
+                   u.avatar_url, COALESCE(u.last_login_at, u.created_at) as "last_active_at!", u.expires_at
             FROM users u
             INNER JOIN group_members gm ON u.id = gm.user_id
             WHERE gm.group_id = $1

@@ -80,7 +80,7 @@ impl Moment {
             id: 0, // 将由数据库生成
             moment_id: uuid::Uuid::new_v4().to_string(),
             user_id,
-            content,
+            content: content.unwrap_or_default(),
             latitude,
             longitude,
             location_name,
@@ -90,12 +90,12 @@ impl Moment {
     
     /// 检查是否有内容
     pub fn has_content(&self) -> bool {
-        self.content.is_some() && !self.content.as_ref().unwrap().is_empty()
+        !self.content.is_empty()
     }
     
     /// 更新内容
     pub fn update_content(&mut self, content: Option<String>) {
-        self.content = content;
+        self.content = content.unwrap_or_default();
     }
     
     /// 验证瞬间数据的完整性
@@ -106,10 +106,8 @@ impl Moment {
             errors.push("用户ID必须为正数".to_string());
         }
         
-        if let Some(content) = &self.content {
-            if content.len() > 1000 {
-                errors.push("瞬间内容长度不能超过1000个字符".to_string());
-            }
+        if self.content.len() > 1000 {
+            errors.push("瞬间内容长度不能超过1000个字符".to_string());
         }
         
         if self.latitude < -90.0 || self.latitude > 90.0 {

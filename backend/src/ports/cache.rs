@@ -257,10 +257,10 @@ pub trait CacheFactory: Send + Sync + Clone {
     /// 创建缓存策略
     fn cache_strategy(&self) -> Self::Strategy;
     
-    /// 创建缓存装饰器
-    fn cache_decorator<T>(&self) -> Box<dyn CacheDecorator<T>>
-    where
-        T: Send + Sync + 'static;
+    // /// 创建缓存装饰器
+    // fn cache_decorator<T>(&self) -> Box<dyn CacheDecorator<T>>
+    // where
+    //     T: Send + Sync + 'static;
 }
 
 // === 缓存键生成器 ===

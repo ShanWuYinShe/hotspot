@@ -3,9 +3,11 @@
 /// 定义群组的类型分类
 use serde::{Deserialize, Serialize};
 use std::fmt::{self, Display};
+use sqlx::{Type};
 
 /// 群组类型枚举
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
+#[sqlx(type_name = "group_type", rename_all = "lowercase")]
 pub enum GroupType {
     /// 公开群组
     Public,
@@ -55,7 +57,8 @@ impl Default for GroupType {
 }
 
 /// 群组可见性枚举
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
+#[sqlx(type_name = "group_visibility", rename_all = "lowercase")]
 pub enum GroupVisibility {
     /// 公开可见
     Public,

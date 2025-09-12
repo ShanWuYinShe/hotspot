@@ -193,7 +193,7 @@ pub struct UserRegisteredEvent {
     pub login_id: String,
     pub nickname: String,
     pub email: Option<String>,
-    pub user_type: crate::domain::UserType,
+    pub user_type: crate::domain::entities::UserType,
     pub registered_at: DateTime<Utc>,
 }
 
@@ -400,7 +400,7 @@ pub struct EventPublisher {
 }
 
 /// 事件处理统计
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct EventStats {
     pub total_published: u64,
     pub total_processed: u64,

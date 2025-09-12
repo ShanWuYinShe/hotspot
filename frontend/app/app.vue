@@ -24,3 +24,7 @@ useSeoMeta({
     description: "发现身边有趣的人和事",
 });
 </script>
+
+<style>
+html { scroll-behavior: smooth; }
+</style>

@@ -12,11 +12,11 @@
 use async_trait::async_trait;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use tokio::sync::{RwLock, Mutex};
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 use axum::extract::ws::{WebSocket, Message as WsMessage};
-use futures::{SinkExt, StreamExt};
+use futures::SinkExt;
 
 use crate::domain::{DomainResult, DomainError, UserId, GroupId};
 use crate::infrastructure::actor_system::{
@@ -129,6 +129,10 @@ impl ActorMessage for WebSocketActorMessage {
             _ => 128, // 默认优先级
         }
     }
+    
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 // === 连接Actor ===
@@ -138,7 +142,7 @@ pub struct ConnectionActor {
     actor_id: ActorId,
     connection_id: String,
     user_id: Option<UserId>,
-    websocket: Option<Arc<RwLock<WebSocket>>>,
+    websocket: Option<Arc<Mutex<WebSocket>>>,  // 使用Arc<Mutex<>>包装以实现Sync
     connected_at: DateTime<Utc>,
     last_activity: DateTime<Utc>,
     rooms: HashSet<String>,
@@ -152,7 +156,7 @@ impl ConnectionActor {
             actor_id: ActorId::new(),
             connection_id,
             user_id,
-            websocket: Some(Arc::new(RwLock::new(websocket))),
+            websocket: Some(Arc::new(Mutex::new(websocket))),  // 使用Arc<Mutex<>>包装
             connected_at: Utc::now(),
             last_activity: Utc::now(),
             rooms: HashSet::new(),
@@ -163,9 +167,8 @@ impl ConnectionActor {
     /// 发送WebSocket消息
     async fn send_websocket_message(&mut self, message: &str) -> DomainResult<()> {
         if let Some(websocket_arc) = &self.websocket {
-            let mut websocket = websocket_arc.write().await;
-            
-            match websocket.send(WsMessage::Text(message.to_string())).await {
+            let mut websocket = websocket_arc.lock().await;
+            match websocket.send(WsMessage::Text(message.to_string().into())).await {
                 Ok(()) => {
                     self.message_count += 1;
                     self.last_activity = Utc::now();
@@ -242,7 +245,7 @@ impl Actor for ConnectionActor {
     }
     
     async fn handle_message(&mut self, envelope: MessageEnvelope) -> DomainResult<Option<ActorResponse>> {
-        if let Ok(ws_message) = envelope.message.downcast::<WebSocketActorMessage>() {
+        if let Some(ws_message) = envelope.message.as_any().downcast_ref::<WebSocketActorMessage>() {
             match &ws_message.message_type {
                 WebSocketMessageType::JoinRoom { room_id, .. } => {
                     self.join_room(room_id.clone()).await?;
@@ -250,14 +253,14 @@ impl Actor for ConnectionActor {
                 }
                 
                 WebSocketMessageType::LeaveRoom { room_id, .. } => {
-                    self.leave_room(room_id).await?;
+                    self.leave_room(&room_id).await?;
                     Ok(Some(ActorResponse::Success(None)))
                 }
                 
                 WebSocketMessageType::SendToRoom { message, .. } |
                 WebSocketMessageType::SendPrivate { message, .. } |
                 WebSocketMessageType::Notification { content: message, .. } => {
-                    self.send_websocket_message(message).await?;
+                    self.send_websocket_message(&message).await?;
                     Ok(Some(ActorResponse::Success(None)))
                 }
                 
@@ -300,7 +303,7 @@ impl Actor for ConnectionActor {
     async fn on_stop(&mut self) -> DomainResult<()> {
         // 清理WebSocket连接
         if let Some(websocket_arc) = &self.websocket {
-            let mut websocket = websocket_arc.write().await;
+            let mut websocket = websocket_arc.lock().await;
             let _ = websocket.close().await;
         }
         
@@ -475,7 +478,7 @@ impl Actor for RoomActor {
     }
     
     async fn handle_message(&mut self, envelope: MessageEnvelope) -> DomainResult<Option<ActorResponse>> {
-        if let Ok(ws_message) = envelope.message.downcast::<WebSocketActorMessage>() {
+        if let Some(ws_message) = envelope.message.as_any().downcast_ref::<WebSocketActorMessage>() {
             match &ws_message.message_type {
                 WebSocketMessageType::JoinRoom { user_id, .. } => {
                     let connection_id = ws_message.connection_id
@@ -492,7 +495,7 @@ impl Actor for RoomActor {
                 }
                 
                 WebSocketMessageType::SendToRoom { message, sender_id, .. } => {
-                    let sent_count = self.broadcast_to_room(message, Some(*sender_id), &[]).await?;
+                    let sent_count = self.broadcast_to_room(&message, Some(*sender_id), &[]).await?;
                     
                     Ok(Some(ActorResponse::Success(Some(serde_json::json!({
                         "sent_count": sent_count
@@ -706,7 +709,7 @@ impl Actor for PresenceActor {
     }
     
     async fn handle_message(&mut self, envelope: MessageEnvelope) -> DomainResult<Option<ActorResponse>> {
-        if let Ok(ws_message) = envelope.message.downcast::<WebSocketActorMessage>() {
+        if let Some(ws_message) = envelope.message.as_any().downcast_ref::<WebSocketActorMessage>() {
             match &ws_message.message_type {
                 WebSocketMessageType::Connected { user_id: Some(user_id), .. } => {
                     self.user_connected(*user_id, None).await?;

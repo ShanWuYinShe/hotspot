@@ -135,7 +135,7 @@ impl EventSystemIntegrator {
         
         // 注册群组创建处理器
         if let (Some(notification_service), Some(group_stats_service), Some(recommendation_service)) = 
-            (services.notification_service, services.group_stats_service, services.recommendation_service) {
+            (services.notification_service, services.group_stats_service.clone(), services.recommendation_service) {
             
             let handler = EventHandlerFactory::create_group_creation_handler(
                 notification_service,
@@ -196,7 +196,7 @@ impl EventSystemIntegrator {
         login_id: String,
         nickname: String,
         email: Option<String>,
-        user_type: crate::domain::UserType,
+        user_type: crate::domain::entities::UserType,
     ) -> DomainResult<()> {
         if let Some(publisher) = &self.event_publisher {
             let event = UserRegisteredEvent {
@@ -229,7 +229,7 @@ impl EventSystemIntegrator {
     ) -> DomainResult<()> {
         if let Some(publisher) = &self.event_publisher {
             let event = GroupCreatedEvent {
-                group_id,
+                group_id: group_id.clone(),
                 name,
                 creator_id,
                 group_type,
@@ -239,7 +239,7 @@ impl EventSystemIntegrator {
             publisher.publish(Box::new(event)).await?;
             
             tracing::info!(
-                group_id = %group_id.value(),
+                group_id = %group_id.clone().value(),
                 creator_id = %creator_id.value(),
                 "Group created event published"
             );
@@ -258,7 +258,7 @@ impl EventSystemIntegrator {
         if let Some(publisher) = &self.event_publisher {
             let event = UserJoinedGroupEvent {
                 user_id,
-                group_id,
+                group_id: group_id.clone(),
                 role,
                 joined_at: chrono::Utc::now(),
             };
@@ -267,7 +267,7 @@ impl EventSystemIntegrator {
             
             tracing::info!(
                 user_id = %user_id.value(),
-                group_id = %group_id.value(),
+                group_id = %group_id.clone().value(),
                 "User joined group event published"
             );
         }
@@ -385,7 +385,7 @@ impl EventDrivenApplicationService {
         login_id: String,
         nickname: String,
         email: Option<String>,
-        user_type: crate::domain::UserType,
+        user_type: crate::domain::entities::UserType,
     ) -> DomainResult<()> {
         // 这里可以添加业务逻辑验证
         

@@ -247,7 +247,7 @@ impl<C: Cache, J: JobDispatcher> EnhancedHealthController<C, J> {
         let start_time = Instant::now();
         
         if let Some(job_dispatcher) = &self.job_dispatcher {
-            match job_dispatcher.get_queue_stats().await {
+            match job_dispatcher.get_dispatcher_status().await {
                 Ok(stats) => {
                     let duration = start_time.elapsed();
                     
@@ -256,11 +256,10 @@ impl<C: Cache, J: JobDispatcher> EnhancedHealthController<C, J> {
                         status: "healthy".to_string(),
                         response_time_ms: duration.as_millis() as u64,
                         details: Some(json!({
-                            "queued_jobs": stats.queued_jobs,
-                            "running_jobs": stats.running_jobs,
-                            "completed_jobs": stats.completed_jobs,
-                            "failed_jobs": stats.failed_jobs,
-                            "avg_processing_time_ms": stats.avg_processing_time_ms
+                            "is_active": stats.is_active,
+                            "dispatched_jobs": stats.dispatched_jobs,
+                            "failed_dispatches": stats.failed_dispatches,
+                            "queue_health": format!("{:?}", stats.queue_health)
                         })),
                         error: None,
                     }

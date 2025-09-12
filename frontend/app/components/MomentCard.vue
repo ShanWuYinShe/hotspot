@@ -4,7 +4,12 @@
       :data="moment as unknown as Record<string, unknown>" 
       @action="handleContextAction"
     >
-      <UCard>
+      <UCard 
+        class="border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800"
+        :ui="{ 
+          body: 'p-6'
+        }"
+      >
         <!-- 用户信息 -->
         <div class="flex items-start gap-3 mb-4">
             <UAvatar 
@@ -48,6 +53,7 @@
                         icon="i-heroicons-ellipsis-horizontal"
                         size="md"
                         :aria-label="$t('moments.moreActions')"
+                        class="hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors duration-200"
                     />
                 </UTooltip>
             </UDropdownMenu>
@@ -84,9 +90,11 @@
                 <!-- 点赞 -->
                 <UButton
                     variant="ghost"
-                    size="xs"
+                    size="sm"
                     :color="moment.liked_by_me ? 'error' : 'neutral'"
                     @click="$emit('like', moment)"
+                    class="px-3 py-2 transition-colors duration-200 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    :class="moment.liked_by_me ? 'text-red-600 dark:text-red-400' : 'text-neutral-600 dark:text-neutral-400'"
                 >
                     <UIcon
                         :name="
@@ -94,23 +102,25 @@
                                 ? 'i-heroicons-heart-solid'
                                 : 'i-heroicons-heart'
                         "
-                        class="w-4 h-4"
+                        class="w-4 h-4 mr-1.5"
+                        :class="moment.liked_by_me ? 'text-red-500' : ''"
                     />
-                    <span class="ml-1">{{ moment.likes_count }}</span>
+                    <span class="font-medium">{{ moment.likes_count }}</span>
                 </UButton>
 
                 <!-- 评论 -->
                 <UButton
                     variant="ghost"
-                    size="xs"
+                    size="sm"
                     color="neutral"
                     @click="$emit('comment', moment)"
+                    class="px-3 py-2 transition-colors duration-200 hover:bg-blue-100 dark:hover:bg-blue-900/20 text-neutral-600 dark:text-neutral-400"
                 >
                     <UIcon
                         name="i-heroicons-chat-bubble-left"
-                        class="w-4 h-4"
+                        class="w-4 h-4 mr-1.5"
                     />
-                    <span class="ml-1">{{ moment.comments_count }}</span>
+                    <span class="font-medium">{{ moment.comments_count }}</span>
                 </UButton>
             </div>
         </div>

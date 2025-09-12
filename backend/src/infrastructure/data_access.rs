@@ -10,7 +10,7 @@
 use async_trait::async_trait;
 use sqlx::PgPool;
 use chrono::{DateTime, Utc};
-use crate::domain::{DomainResult, DomainError, UserId, User, UserType};
+use crate::domain::{DomainResult, DomainError, UserId, User};
 use crate::ports::UserRepository;
 use crate::infrastructure::errors::{ErrorContext, ContextualError, ErrorConverter};
 
@@ -37,7 +37,7 @@ struct UserRow {
     /// 密码哈希 - 可为NULL（临时用户可能没有密码）
     password_hash: Option<String>,
     /// 用户类型 - NOT NULL枚举
-    user_type: UserType,
+    user_type: crate::domain::entities::UserType,
     /// 过期时间 - 可为NULL（正式用户为NULL）
     expires_at: Option<DateTime<Utc>>,
     /// 创建时间 - NOT NULL，有默认值
@@ -88,7 +88,7 @@ struct UserSearchRow {
     /// 最后活跃时间 - NOT NULL
     last_active_at: DateTime<Utc>,
     /// 用户类型 - NOT NULL
-    user_type: UserType,
+    user_type: crate::domain::entities::UserType,
     /// 距离（米）- 地理搜索时非NULL，名称搜索时为NULL
     distance_meters: Option<f64>,
 }
@@ -100,8 +100,8 @@ impl UserRow {
     fn to_domain(self, location: Option<crate::domain::entities::UserLocation>) -> Result<User, sqlx::Error> {
         Ok(User {
             id: UserId::new(self.user_id).map_err(|e| sqlx::Error::Protocol(format!("Invalid user_id: {}", e)))?,
-            login_id: self.login_id,
-            nickname: crate::domain::Nickname::from_string(self.nickname),
+            login_id: Some(self.login_id),
+            nickname: crate::domain::Nickname::new(self.nickname).map_err(|e| sqlx::Error::Protocol(format!("Invalid nickname: {}", e)))?,
             email: self.email,
             avatar_url: self.avatar_url,
             bio: None, // 当前数据库表没有bio字段
@@ -132,10 +132,10 @@ impl UserStatsRow {
     /// 转换为用户统计信息
     fn to_domain(self) -> crate::ports::UserStats {
         crate::ports::UserStats {
-            total_groups: self.group_count as u64,
-            total_messages: self.message_count as u64,
-            total_moments: self.moment_count as u64,
-            total_likes_received: self.likes_received as u64,
+            total_groups: self.group_count as u32,
+            total_messages: self.message_count as u32,
+            total_moments: self.moment_count as u32,
+            total_likes_received: self.likes_received as u32,
         }
     }
 }
@@ -144,12 +144,19 @@ impl UserSearchRow {
     /// 转换为用户搜索结果
     fn to_domain(self) -> crate::application::UserView {
         crate::application::UserView {
-            user_id: self.user_id,
+            user_id: self.user_id.to_string(),
+            login_id: None, // 搜索结果不包含敏感信息
             nickname: self.nickname,
             avatar_url: self.avatar_url,
-            user_type: self.user_type,
-            last_active_at: self.last_active_at,
-            distance_meters: self.distance_meters,
+            email: None, // 搜索结果不包含敏感信息
+            bio: None,
+            is_temp: false, // 默认值
+            created_at: chrono::Utc::now().to_rfc3339(),
+            last_active_at: self.last_active_at.to_rfc3339(),
+            latitude: None,
+            longitude: None,
+            location_name: None,
+            distance: self.distance_meters,
         }
     }
 }
@@ -244,10 +251,10 @@ impl PgUserRepository {
             sqlx::query!(
                 r#"
                 INSERT INTO users (
-                    user_id, username, nickname, email, avatar_url,
+                    id, username, nickname, email, avatar_url,
                     password_hash, user_type, expires_at, created_at, last_login_at
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-                ON CONFLICT (user_id) DO UPDATE SET
+                ON CONFLICT (id) DO UPDATE SET
                     username = EXCLUDED.username,
                     nickname = EXCLUDED.nickname,
                     email = EXCLUDED.email,
@@ -301,7 +308,7 @@ impl PgUserRepository {
     async fn delete_by_id(&self, user_id: UserId) -> DomainResult<bool> {
         self.execute_query("delete_user_by_id", async {
             let result = sqlx::query!(
-                "DELETE FROM users WHERE user_id = $1",
+                "DELETE FROM users WHERE id = $1",
                 user_id.value()
             )
             .execute(&self.pool)
@@ -319,18 +326,18 @@ impl PgUserRepository {
                 UserRow,
                 r#"
                 SELECT 
-                    user_id as "user_id!",
+                    id as "user_id!",
                     username as "login_id!",
                     nickname as "nickname!",
                     email,
                     avatar_url,
                     password_hash,
-                    user_type as "user_type!: UserType",
+                    user_type as "user_type!: crate::domain::entities::UserType",
                     expires_at,
                     created_at as "created_at!",
                     last_login_at as "last_active_at!"
                 FROM users 
-                WHERE user_id = $1
+                WHERE id = $1
                 "#,
                 user_id.value()
             )
@@ -343,13 +350,13 @@ impl PgUserRepository {
                     UserLocationRow,
                     r#"
                     SELECT 
-                        user_id as "user_id!",
+                        id as "user_id!",
                         latitude as "latitude!",
                         longitude as "longitude!",
                         address as "location_name!",
                         updated_at as "updated_at!"
                     FROM user_locations
-                    WHERE user_id = $1
+                    WHERE id = $1
                     "#,
                     user_id.value()
                 )
@@ -373,13 +380,13 @@ impl PgUserRepository {
                 UserRow,
                 r#"
                 SELECT 
-                    user_id as "user_id!",
+                    id as "user_id!",
                     username as "login_id!",
                     nickname as "nickname!",
                     email,
                     avatar_url,
                     password_hash,
-                    user_type as "user_type!: UserType",
+                    user_type as "user_type!: crate::domain::entities::UserType",
                     expires_at,
                     created_at as "created_at!",
                     last_login_at as "last_active_at!"
@@ -435,7 +442,7 @@ impl PgUserRepository {
                     nickname as "nickname!",
                     avatar_url,
                     last_login_at as "last_active_at!",
-                    user_type as "user_type!: UserType",
+                    user_type as "user_type!: crate::domain::entities::UserType",
                     NULL::FLOAT8 as distance_meters
                 FROM users 
                 WHERE nickname ILIKE $1 
@@ -444,7 +451,7 @@ impl PgUserRepository {
                 LIMIT $3
                 "#,
                 format!("%{}%", query),
-                cursor,
+                cursor as i32,
                 limit + 1 // 多查询一条判断是否有更多数据
             )
             .fetch_all(&self.pool)
@@ -464,11 +471,8 @@ impl PgUserRepository {
             
             Ok(crate::application::PaginatedResult {
                 items,
-                pagination: crate::application::PaginationMeta::new(
-                    has_more,
-                    next_cursor,
-                    pagination.get_limit() as usize,
-                ),
+                has_more,
+                next_cursor: next_cursor.map(|c| c as i64),
             })
         }).await
     }
@@ -494,7 +498,7 @@ impl PgUserRepository {
                     u.nickname as "nickname!",
                     u.avatar_url,
                     u.last_login_at as "last_active_at!",
-                    u.user_type as "user_type!: UserType",
+                    u.user_type as "user_type!: crate::domain::entities::UserType",
                     ST_Distance(
                         ul.location,
                         ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
@@ -511,11 +515,11 @@ impl PgUserRepository {
                 ORDER BY distance_meters ASC, u.id ASC
                 LIMIT $6
                 "#,
-                location.longitude,
-                location.latitude,
+                location.center.longitude.value(),
+                location.center.latitude.value(),
                 exclude_id,
-                cursor,
-                location.radius_km * 1000.0, // 转换为米
+                cursor as i32,
+                location.radius * 1000.0, // 转换为米
                 limit + 1
             )
             .fetch_all(&self.pool)
@@ -535,11 +539,8 @@ impl PgUserRepository {
             
             Ok(crate::application::PaginatedResult {
                 items,
-                pagination: crate::application::PaginationMeta::new(
-                    has_more,
-                    next_cursor,
-                    pagination.get_limit() as usize,
-                ),
+                has_more,
+                next_cursor: next_cursor.map(|c| c as i64),
             })
         }).await
     }
@@ -592,7 +593,7 @@ mod tests {
             email: Some("test@example.com".to_string()),
             avatar_url: None,
             password_hash: Some("hashed_password".to_string()),
-            user_type: UserType::Regular,
+            user_type: crate::domain::entities::UserType::Regular,
             expires_at: None,
             created_at: Utc::now(),
             last_active_at: Utc::now(),
@@ -603,7 +604,7 @@ mod tests {
         assert_eq!(user.login_id, "test_user");
         assert_eq!(user.nickname.value(), "测试用户");
         assert_eq!(user.email, Some("test@example.com".to_string()));
-        assert_eq!(user.user_type, UserType::Regular);
+        assert_eq!(user.user_type, crate::domain::entities::UserType::Regular);
     }
     
     #[test]

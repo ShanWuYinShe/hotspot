@@ -56,19 +56,17 @@ impl LogEventPublisher {
     #[allow(dead_code)]
     async fn publish_events(&self, events: Vec<DomainEventEnvelope>) -> DomainResult<()> {
         for e in events {
-            log::info!("publish_event: type={} aggregate_id={}", e.event_type(), e.aggregate_id());
+            log::info!("publish_event: type={} aggregate_id={}", e.event_type, e.aggregate_id);
         }
         Ok(())
     }
 
     #[allow(dead_code)]
     async fn get_publisher_stats(&self) -> DomainResult<PublisherStats> {
-        Ok(PublisherStats {
-            total_published: 0,
-            failed_published: 0,
-            by_type: Default::default(),
-            avg_publish_latency_ms: 0.0,
-            last_published_at: None,
+        Ok(        PublisherStats {
+            published_count: 0,
+            failed_count: 0,
+            avg_publish_time_ms: 0.0,
         })
     }
 }

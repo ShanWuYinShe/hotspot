@@ -156,7 +156,7 @@ export const useUserService = () => {
   const searchUsers = async (query: string, cursor?: number): Promise<PaginatedResponse<User>> => {
     // 发送前验证参数
     const validQuery = validateContent(query, 1, 32, '搜索关键词');
-    const paginationParams = validatePaginationParams({ cursor, limit: DEFAULTS.pageSize });
+    const paginationParams = validatePaginationParams({ cursor: cursor ? String(cursor) : undefined, limit: DEFAULTS.pageSize });
     
     const response = await api.postPublic(buildUserUrl(USER_ENDPOINTS.PUBLIC.SEARCH_BY_NAME, true), {
       query: validQuery,
@@ -175,7 +175,7 @@ export const useUserService = () => {
     validateCoordinates(lat, lng);
     const validRadius = validateRadius(params.radius ?? DEFAULTS.nearbyRadiusMeters);
     const paginationParams = validatePaginationParams({ 
-      cursor: params.cursor ? parseInt(params.cursor) : undefined, 
+      cursor: params.cursor, 
       limit: params.limit 
     });
     

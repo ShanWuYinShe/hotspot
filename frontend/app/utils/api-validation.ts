@@ -112,7 +112,7 @@ export const validateRadius = (radius: number): number => {
  */
 export const validatePaginationParams = (params: {
   limit?: number;
-  cursor?: string | number; // 兼容旧代码，但优先使用 string
+  cursor?: string;
 }): { limit: number; cursor?: string } => {
   const result: { limit: number; cursor?: string } = {
     limit: params.limit || 20
@@ -135,20 +135,13 @@ export const validatePaginationParams = (params: {
   }
   
   if (params.cursor !== undefined) {
-    // 🔥 修复：支持 string 类型的游标（符合 hotspot.md 规范）
     if (typeof params.cursor === 'string') {
       if (params.cursor.trim() === '') {
         throw new Error('分页游标不能为空字符串');
       }
       result.cursor = params.cursor.trim();
-    } else if (typeof params.cursor === 'number') {
-      // 兼容旧代码：number 类型转换为 string
-      if (isNaN(params.cursor) || params.cursor < 0) {
-        throw new Error('分页游标必须是有效的非负数字');
-      }
-      result.cursor = params.cursor.toString();
     } else {
-      throw new Error('分页游标必须是字符串或数字类型');
+      throw new Error('分页游标必须是字符串类型');
     }
   }
   

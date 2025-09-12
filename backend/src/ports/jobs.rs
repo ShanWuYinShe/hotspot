@@ -499,6 +499,100 @@ impl Job for NotificationJob {
     }
 }
 
+/// 群组成员通知任务
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GroupMemberNotificationJob {
+    pub job_id: JobId,
+    pub group_id: uuid::Uuid,
+    pub user_id: i64,
+    pub notification_type: String,
+    pub message: String,
+}
+
+impl Job for GroupMemberNotificationJob {
+    fn job_type(&self) -> &'static str {
+        "group_member_notification"
+    }
+    
+    fn job_id(&self) -> JobId {
+        self.job_id
+    }
+    
+    fn priority(&self) -> JobPriority {
+        JobPriority::Normal
+    }
+}
+
+/// 瞬间内容索引任务
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MomentContentIndexJob {
+    pub job_id: JobId,
+    pub moment_id: i64,
+    pub user_id: i64,
+    pub content: String,
+    pub latitude: f64,
+    pub longitude: f64,
+}
+
+impl Job for MomentContentIndexJob {
+    fn job_type(&self) -> &'static str {
+        "moment_content_index"
+    }
+    
+    fn job_id(&self) -> JobId {
+        self.job_id
+    }
+    
+    fn priority(&self) -> JobPriority {
+        JobPriority::Normal
+    }
+}
+
+/// 消息通知任务
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageNotificationJob {
+    pub job_id: JobId,
+    pub message_id: i64,
+    pub sender_id: i64,
+    pub recipient_id: i64,
+    pub content: String,
+}
+
+impl Job for MessageNotificationJob {
+    fn job_type(&self) -> &'static str {
+        "message_notification"
+    }
+    
+    fn job_id(&self) -> JobId {
+        self.job_id
+    }
+    
+    fn priority(&self) -> JobPriority {
+        JobPriority::High
+    }
+}
+
+/// 清理过期会话任务
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CleanupExpiredSessionsJob {
+    pub job_id: JobId,
+    pub max_age_hours: u32,
+}
+
+impl Job for CleanupExpiredSessionsJob {
+    fn job_type(&self) -> &'static str {
+        "cleanup_expired_sessions"
+    }
+    
+    fn job_id(&self) -> JobId {
+        self.job_id
+    }
+    
+    fn priority(&self) -> JobPriority {
+        JobPriority::Low
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -214,7 +214,7 @@ async function refresh() {
         const response = await userService.findNearbyUsers({
             latitude: (pos as any).latitude,
             longitude: (pos as any).longitude,
-            radius_meters: radiusMeters.value,
+            radius: radiusMeters.value,
             cursor: undefined, // 重新开始
             limit: 20
         });
@@ -245,7 +245,7 @@ async function loadMore() {
         const response = await userService.findNearbyUsers({
             latitude: (pos as any).latitude,
             longitude: (pos as any).longitude,
-            radius_meters: radiusMeters.value,
+            radius: radiusMeters.value,
             cursor: nextCursor.value,
             limit: 20
         });

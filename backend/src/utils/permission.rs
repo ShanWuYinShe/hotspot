@@ -19,7 +19,7 @@ pub async fn check_group_member(
             WHERE group_id = $1 AND user_id = $2
         ) as "exists!"
         "#,
-        group_id,
+        &group_id.to_string(),
         user_id
     )
     .fetch_one(db)
@@ -46,7 +46,7 @@ pub async fn check_group_admin(
             WHERE group_id = $1 AND user_id = $2 AND role::text IN ($3, $4)
         ) as "exists!"
         "#,
-        group_id,
+        &group_id.to_string(),
         user_id,
         group_roles::ADMIN,
         group_roles::OWNER
@@ -72,10 +72,10 @@ pub async fn check_group_owner(
         r#"
         SELECT EXISTS (
             SELECT 1 FROM groups 
-            WHERE group_id = $1 AND owner_id = $2
+            WHERE group_id = $1 AND created_by = $2
         ) as "exists!"
         "#,
-        group_id,
+        &group_id.to_string(),
         user_id
     )
     .fetch_one(db)
@@ -98,11 +98,11 @@ pub async fn check_group_message_owner(
     let is_owner = sqlx::query_scalar!(
         r#"
         SELECT EXISTS (
-            SELECT 1 FROM group_messages 
+            SELECT 1 FROM messages 
             WHERE message_id = $1 AND sender_id = $2
         ) as "exists!"
         "#,
-        message_id,
+        &message_id.to_string(),
         user_id
     )
     .fetch_one(db)
@@ -125,11 +125,11 @@ pub async fn check_direct_message_owner(
     let is_owner = sqlx::query_scalar!(
         r#"
         SELECT EXISTS (
-            SELECT 1 FROM direct_messages 
+            SELECT 1 FROM messages 
             WHERE message_id = $1 AND sender_id = $2
         ) as "exists!"
         "#,
-        message_id,
+        &message_id.to_string(),
         user_id
     )
     .fetch_one(db)
@@ -151,11 +151,12 @@ pub async fn check_conversation_member(
     let is_member = sqlx::query_scalar!(
         r#"
         SELECT EXISTS (
-            SELECT 1 FROM conversations 
-            WHERE conversation_id = $1 AND (user1_id = $2 OR user2_id = $2)
+            SELECT 1 FROM conversation_participants cp
+            JOIN conversations c ON cp.conversation_id = c.id
+            WHERE c.conversation_id = $1 AND cp.user_id = $2 AND cp.status = 'active'
         ) as "exists!"
         "#,
-        conversation_id,
+        &conversation_id.to_string(),
         user_id
     )
     .fetch_one(db)

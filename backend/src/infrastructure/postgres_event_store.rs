@@ -189,18 +189,12 @@ impl PostgresEventStore {
     }
     
     /// 将事件包装器转换为数据库行
-    fn envelope_to_row(&self, envelope: &EventEnvelope) -> DomainResult<EventRowInsert> {
+    fn envelope_to_row(&self, envelope: &EventEnvelope) -> Result<EventRowInsert, sqlx::Error> {
         let event_data = serde_json::from_slice::<serde_json::Value>(&envelope.data)
-            .map_err(|e| crate::domain::DomainError::ValidationError {
-                field: "event_data".to_string(),
-                reason: format!("Failed to parse event data as JSON: {}", e),
-            })?;
+            .map_err(|e| sqlx::Error::Protocol(format!("Failed to parse event data as JSON: {}", e)))?;
         
         let metadata = serde_json::to_value(&envelope.metadata.metadata)
-            .map_err(|e| crate::domain::DomainError::ValidationError {
-                field: "metadata".to_string(),
-                reason: format!("Failed to serialize metadata: {}", e),
-            })?;
+            .map_err(|e| sqlx::Error::Protocol(format!("Failed to serialize metadata: {}", e)))?;
         
         Ok(EventRowInsert {
             event_id: envelope.metadata.event_id.value().to_string(),
@@ -219,12 +213,9 @@ impl PostgresEventStore {
     }
     
     /// 将数据库行转换为事件包装器
-    fn row_to_envelope(&self, row: EventRow) -> DomainResult<EventEnvelope> {
+    fn row_to_envelope(&self, row: EventRow) -> Result<EventEnvelope, sqlx::Error> {
         let event_data = serde_json::to_vec(&row.event_data)
-            .map_err(|e| crate::domain::DomainError::ValidationError {
-                field: "event_data".to_string(),
-                reason: format!("Failed to serialize event data: {}", e),
-            })?;
+            .map_err(|e| sqlx::Error::Protocol(format!("Failed to serialize event data: {}", e)))?;
         
         let metadata_map: std::collections::HashMap<String, String> = 
             serde_json::from_value(row.metadata)
@@ -563,7 +554,7 @@ impl PostgresEventStore {
                     updated_at = NOW()
                 "#,
                 handler_name,
-                last_processed_event_id.value()
+                last_processed_event_id.value().to_string().parse::<i64>().unwrap_or(0)
             )
             .execute(&self.pool)
             .await?;
@@ -583,11 +574,8 @@ impl PostgresEventStore {
             .await?;
             
             if let Some(row) = row {
-                if let Some(event_id) = row.last_processed_event_id {
-                    Ok(Some(EventId::from_uuid(event_id)))
-                } else {
-                    Ok(None)
-                }
+                let event_id = row.last_processed_event_id;
+                Ok(Some(EventId::from_uuid(uuid::Uuid::parse_str(&event_id.to_string()).unwrap())))
             } else {
                 Ok(None)
             }

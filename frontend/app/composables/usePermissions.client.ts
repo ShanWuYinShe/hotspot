@@ -11,8 +11,7 @@ const queryGeolocationPermission = async (): Promise<PermissionState> => {
   if (typeof navigator === 'undefined') return 'unsupported'
   try {
     if ('permissions' in navigator) {
-      // @ts-ignore
-      const status = await navigator.permissions.query({ name: 'geolocation' })
+      const status = await navigator.permissions.query({ name: 'geolocation' as any })
       return status.state as PermissionState
     }
     return 'prompt'
@@ -93,10 +92,8 @@ export const usePermissions = () => {
         cb(await check(name))
         return () => {}
       }
-      // @ts-ignore
       const queryName = name === 'notification' ? 'notifications' : name
-      // @ts-ignore
-      const status: PermissionStatus = await navigator.permissions.query({ name: queryName })
+      const status: PermissionStatus = await navigator.permissions.query({ name: queryName as any })
       const handler = () => cb(status.state as PermissionState)
       status.addEventListener?.('change', handler)
       cb(status.state as PermissionState)

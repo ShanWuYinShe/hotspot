@@ -57,7 +57,7 @@ impl std::fmt::Display for ActorId {
 }
 
 /// Actor消息特征 - 所有Actor消息必须实现此特征
-pub trait ActorMessage: Send + Sync + std::fmt::Debug {
+pub trait ActorMessage: Send + Sync + std::fmt::Debug + std::any::Any {
     /// 获取消息类型名称
     fn message_type(&self) -> &'static str;
     
@@ -70,6 +70,9 @@ pub trait ActorMessage: Send + Sync + std::fmt::Debug {
     fn requires_response(&self) -> bool {
         false
     }
+    
+    /// 转换为Any trait以支持downcast
+    fn as_any(&self) -> &dyn std::any::Any;
 }
 
 /// Actor消息包装器
@@ -268,7 +271,7 @@ impl ActorContext {
     
     /// 向其他Actor发送消息
     pub async fn send_to(&self, actor_id: ActorId, message: Box<dyn ActorMessage>) -> DomainResult<()> {
-        if let Some(actor_ref) = self.get_actor_ref(actor_id).await {
+        if let Some(actor_ref) = self.get_actor_ref(actor_id.clone()).await {
             actor_ref.send(message).await
         } else {
             Err(DomainError::BusinessRuleViolation {

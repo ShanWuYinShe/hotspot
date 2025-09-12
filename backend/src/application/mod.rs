@@ -26,9 +26,9 @@ pub use queries::{
 };
 pub use handlers::{CommandHandler, QueryHandler, EventHandler, UserView, GroupView, MessageView, PaginatedResult, PaginationMeta};
 pub use services::{
-    UserApplicationService, GroupApplicationService, MessageApplicationService, MomentApplicationService,
+    UserApplicationService, GroupApplicationService, /* MessageApplicationService, */ MomentApplicationService,
     SearchApplicationServiceImpl, SearchApplicationService, ActivityApplicationService, 
-    FriendApplicationServiceImpl, CommentApplicationServiceImpl, UserApplicationServicePort,
+    /* FriendApplicationServiceImpl, */ CommentApplicationServiceImpl, UserApplicationServicePort,
     NotificationApplicationService, CacheApplicationService, JobApplicationService
 };
 

@@ -133,13 +133,13 @@ where
             requester_id: current_user.user_id,
             pagination: crate::application::queries::PaginationQuery {
                 cursor: request.cursor.and_then(|c| c.parse().ok()),
-                limit: request.limit,
+                limit: request.limit.map(|l| l as usize),
             },
         };
         
         match QueryHandler::<SearchMomentsByTagsQuery>::handle(&controller.moment_service, query).await {
             Ok(result) => paginated_response(result.items, result.has_more, result.next_cursor),
-            Err(error) => map_domain_error_to_http_response(error),
+            Err(error) => map_application_error_to_http_response(error),
         }
     }
 
@@ -159,7 +159,7 @@ where
             Ok(None) => map_domain_error_to_http_response(
                 crate::domain::DomainError::MomentNotFound
             ),
-            Err(error) => map_domain_error_to_http_response(error),
+            Err(error) => map_application_error_to_http_response(error),
         }
     }
 
@@ -179,7 +179,7 @@ where
                 "moment_id": request.moment_id.value(),
                 "liked": true
             })),
-            Err(error) => map_domain_error_to_http_response(error),
+            Err(error) => map_application_error_to_http_response(error),
         }
     }
 
@@ -199,7 +199,7 @@ where
                 "moment_id": request.moment_id.value(),
                 "liked": false
             })),
-            Err(error) => map_domain_error_to_http_response(error),
+            Err(error) => map_application_error_to_http_response(error),
         }
     }
 }

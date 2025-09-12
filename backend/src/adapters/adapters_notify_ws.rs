@@ -30,13 +30,13 @@
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::Arc;
-use crate::domain::DomainResult;
+use crate::domain::{DomainResult, UserId};
 use crate::ports::NotificationTransport;
 use crate::ports::services::{TransportStats, PolicyStats};
 use crate::ports::services::{Notification, NotificationContext};
 use crate::ports::services::NotificationPolicy as NotificationPolicyTrait;
 use crate::ports::services::NotificationType;
-use crate::ports::repository_ports::{FriendRepository, UserRepository, GroupRepository};
+use crate::ports::repository_ports::{/* FriendRepository, */ UserRepository, GroupRepository};
 
 /// WebSocket通知传输实现
 #[derive(Clone)]
@@ -132,6 +132,29 @@ impl NotificationTransport for WebSocketNotificationTransport {
         Ok(())
     }
 
+    async fn send_to_user(&self, user_id: UserId, notification: &Notification) -> DomainResult<()> {
+        self.send_notification(user_id.value(), notification).await
+    }
+
+    async fn send_to_users(&self, user_ids: &[UserId], notification: &Notification) -> DomainResult<()> {
+        for user_id in user_ids {
+            self.send_notification(user_id.value(), notification).await?;
+        }
+        Ok(())
+    }
+
+    async fn send_to_group(&self, _group_id: &str, notification: &Notification) -> DomainResult<()> {
+        // TODO: 实现群组通知逻辑
+        log::warn!("群组通知暂未实现: {} - {}", notification.title, notification.content);
+        Ok(())
+    }
+
+    async fn broadcast(&self, notification: &Notification) -> DomainResult<()> {
+        // 谨慎使用广播，建议通过策略来获取目标用户
+        log::warn!("广播通知: {} - {}", notification.title, notification.content);
+        Ok(())
+    }
+
     async fn get_transport_stats(&self) -> DomainResult<TransportStats> {
         Ok(        TransportStats {
             total_sent: 0,
@@ -142,54 +165,54 @@ impl NotificationTransport for WebSocketNotificationTransport {
     }
 }
 
-/// 基本通知策略实现
-#[derive(Clone)]
-pub struct BasicNotificationPolicy<U, G, F> 
-where
-    U: UserRepository,
-    G: GroupRepository,
-    F: FriendRepository,
-{
-    user_repository: Arc<U>,
-    group_repository: Arc<G>,
-    friend_repository: Arc<F>,
-}
+// /// 基本通知策略实现
+// #[derive(Clone)]
+// pub struct BasicNotificationPolicy<U, G, F> 
+// where
+//     U: UserRepository,
+//     G: GroupRepository,
+//     F: FriendRepository,
+// {
+//     user_repository: Arc<U>,
+//     group_repository: Arc<G>,
+//     friend_repository: Arc<F>,
+// }
 
-impl<U, G, F> BasicNotificationPolicy<U, G, F>
-where
-    U: UserRepository,
-    G: GroupRepository,
-    F: FriendRepository,
-{
-    pub fn new(user_repository: Arc<U>, group_repository: Arc<G>, friend_repository: Arc<F>) -> Self {
-        Self {
-            user_repository,
-            group_repository,
-            friend_repository,
-        }
-    }
-}
+// impl<U, G, F> BasicNotificationPolicy<U, G, F>
+// where
+//     U: UserRepository,
+//     G: GroupRepository,
+//     F: FriendRepository,
+// {
+//     pub fn new(user_repository: Arc<U>, group_repository: Arc<G>, friend_repository: Arc<F>) -> Self {
+//         Self {
+//             user_repository,
+//             group_repository,
+//             friend_repository,
+//         }
+//     }
+// }
 
-#[async_trait]
-impl<U, G, F> NotificationPolicyTrait for BasicNotificationPolicy<U, G, F>
-where
-    U: UserRepository,
-    G: GroupRepository,
-    F: FriendRepository,
-{
-    async fn should_notify(&self, _context: &NotificationContext) -> DomainResult<bool> {
-        // 基础策略总是允许通知
-        Ok(true)
-    }
+// #[async_trait]
+// impl<U, G, F> NotificationPolicyTrait for BasicNotificationPolicy<U, G, F>
+// where
+//     U: UserRepository,
+//     G: GroupRepository,
+//     F: FriendRepository,
+// {
+//     async fn should_notify(&self, _context: &NotificationContext) -> DomainResult<bool> {
+//         // 基础策略总是允许通知
+//         Ok(true)
+//     }
 
-    async fn get_recipients(&self, context: &NotificationContext) -> DomainResult<Vec<i64>> {
-        // 基础实现：返回触发用户自己
-        Ok(vec![context.user_id.value()])
-    }
+//     async fn get_recipients(&self, context: &NotificationContext) -> DomainResult<Vec<i64>> {
+//         // 基础实现：返回触发用户自己
+//         Ok(vec![context.user_id.value()])
+//     }
 
-    async fn filter_notification(&self, notification: &Notification, _context: &NotificationContext) -> DomainResult<Option<Notification>> {
-        // 基础实现：不过滤通知
-        Ok(Some(notification.clone()))
-    }
+//     async fn filter_notification(&self, notification: &Notification, _context: &NotificationContext) -> DomainResult<Option<Notification>> {
+//         // 基础实现：不过滤通知
+//         Ok(Some(notification.clone()))
+//     }
 
-}
+// }

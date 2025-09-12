@@ -290,8 +290,8 @@ where
                         comment_id: comment.comment_id.to_string(),
                         moment_id: comment.moment_id.to_string(),
                         user_id: JsSafeI64::new(comment.user_id),
-                        user_nickname: comment.user_nickname,
-                        user_avatar: comment.user_avatar,
+                        user_nickname: "".to_string(), // TODO: 需要从用户服务获取
+                        user_avatar: None, // TODO: 需要从用户服务获取
                         content: comment.content,
                         created_at: comment.created_at.to_rfc3339(),
                         updated_at: comment.updated_at.to_rfc3339(),
@@ -347,8 +347,8 @@ where
                         comment_id: comment.comment_id.to_string(),
                         moment_id: comment.moment_id.to_string(),
                         user_id: JsSafeI64::new(comment.user_id),
-                        user_nickname: comment.user_nickname,
-                        user_avatar: comment.user_avatar,
+                        user_nickname: "".to_string(), // TODO: 需要从用户服务获取
+                        user_avatar: None, // TODO: 需要从用户服务获取
                         content: comment.content,
                         created_at: comment.created_at.to_rfc3339(),
                         updated_at: comment.updated_at.to_rfc3339(),

@@ -73,7 +73,7 @@ impl User {
         };
         
         // 发布用户创建事件
-        user.add_event(DomainEvent::UserRegistered {
+        user.add_event(DomainEvent::UserCreated {
             user_id: id,
             user_type,
             created_at: now,
@@ -140,7 +140,7 @@ impl User {
         
         self.add_event(DomainEvent::UserPasswordSet {
             user_id: self.id,
-            updated_at: Utc::now(),
+            set_at: Utc::now(),
         });
         
         Ok(())
@@ -148,13 +148,14 @@ impl User {
     
     /// 更新位置
     pub fn update_location(&mut self, location: UserLocation) -> DomainResult<()> {
-        self.location = Some(location);
+        self.location = Some(location.clone());
         self.last_active_at = Utc::now();
         
         self.add_event(DomainEvent::UserLocationUpdated {
             user_id: self.id,
-            coordinates: location.coordinates,
-            updated_at: Utc::now(),
+            old_location: None, // TODO: 需要保存旧位置
+            new_location: location,
+            updated_at: chrono::Utc::now(),
         });
         
         Ok(())

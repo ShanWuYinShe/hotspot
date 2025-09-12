@@ -536,7 +536,7 @@ export const useWebSocket = () => {
   };
 
   // 启动心跳定时器（外部可调用但实际内部自管）
-  const startHeartbeatLegacy = () => {
+  const startHeartbeatExternal = () => {
     startHeartbeat();
   };
 
@@ -604,6 +604,6 @@ export const useWebSocket = () => {
     leaveRoom,
     addEventListener,
     removeEventListener,
-    startHeartbeat: startHeartbeatLegacy,
+    startHeartbeat: startHeartbeatExternal,
   };
 };

@@ -84,7 +84,7 @@ impl CommandHandler<CreateMomentCommand> for MomentApplicationService {
             longitude,
             &address,
             &tags,
-        ).await
+        ).await.map_err(ApplicationError::Domain)
     }
 }
 
@@ -95,12 +95,12 @@ impl CommandHandler<DeleteMomentCommand> for MomentApplicationService {
         // 权限校验：仅作者可删除
         if let Some(moment) = self.moment_repository.find_by_id(&command.moment_id.to_string()).await? {
             if moment.user_id != command.requester_id {
-                return Err(crate::domain::DomainError::NotMomentAuthor);
+                return Err(ApplicationError::Domain(crate::domain::DomainError::NotMomentAuthor));
             }
         } else {
-            return Err(crate::domain::DomainError::MomentNotFound);
+            return Err(ApplicationError::Domain(crate::domain::DomainError::MomentNotFound));
         }
-        self.moment_repository.delete_moment(&command.moment_id.to_string(), command.requester_id).await
+        self.moment_repository.delete_moment(&command.moment_id.to_string(), command.requester_id).await.map_err(ApplicationError::Domain)
     }
 }
 
@@ -110,7 +110,7 @@ impl CommandHandler<LikeMomentCommand> for MomentApplicationService {
     async fn handle(&self, command: LikeMomentCommand) -> ApplicationResult<Self::Result> {
         // 检查moment是否存在
         if self.moment_repository.find_by_id(&command.moment_id.to_string()).await?.is_none() {
-            return Err(crate::domain::DomainError::MomentNotFound);
+            return Err(ApplicationError::Domain(crate::domain::DomainError::MomentNotFound));
         }
         
         self.moment_repository.like_moment(&command.moment_id.to_string(), command.user_id).await?;
@@ -124,7 +124,7 @@ impl CommandHandler<UnlikeMomentCommand> for MomentApplicationService {
     async fn handle(&self, command: UnlikeMomentCommand) -> ApplicationResult<Self::Result> {
         // 检查moment是否存在
         if self.moment_repository.find_by_id(&command.moment_id.to_string()).await?.is_none() {
-            return Err(crate::domain::DomainError::MomentNotFound);
+            return Err(ApplicationError::Domain(crate::domain::DomainError::MomentNotFound));
         }
         
         self.moment_repository.unlike_moment(&command.moment_id.to_string(), command.user_id).await?;
@@ -141,10 +141,10 @@ impl QueryHandler<SearchMomentsByTagsQuery> for MomentApplicationService {
         let moments = self.moment_repository.search_by_tags(
             &query.tags,
             query.pagination.cursor.unwrap_or(0),
-            query.pagination.limit.unwrap_or(20),
+            query.pagination.limit.unwrap_or(20) as i32,
         ).await?;
         
-        let has_more = moments.len() as i32 >= query.pagination.limit.unwrap_or(20);
+        let has_more = moments.len() as i32 >= query.pagination.limit.unwrap_or(20) as i32;
         let next_cursor = if has_more && !moments.is_empty() {
             Some(moments.last().unwrap().id)
         } else {
@@ -154,7 +154,7 @@ impl QueryHandler<SearchMomentsByTagsQuery> for MomentApplicationService {
         Ok(PaginatedResult {
             items: moments,
             has_more,
-            next_cursor,
+            next_cursor: next_cursor.map(|c| c.to_string()),
         })
     }
 }
@@ -163,7 +163,7 @@ impl QueryHandler<SearchMomentsByTagsQuery> for MomentApplicationService {
 impl QueryHandler<SearchMomentsByIdQuery> for MomentApplicationService {
     type Result = Option<Moment>;
     async fn handle(&self, query: SearchMomentsByIdQuery) -> ApplicationResult<Self::Result> {
-        self.moment_repository.find_by_id(&query.moment_id.to_string()).await
+        self.moment_repository.find_by_id(&query.moment_id.to_string()).await.map_err(ApplicationError::Domain)
     }
 }
 
@@ -181,7 +181,7 @@ impl QueryHandler<SearchMomentsByLocationQuery> for MomentApplicationService {
             query.longitude, 
             query.radius_km, 
             cursor, 
-            limit + 1
+            (limit + 1) as i32
         ).await?;
         
         let has_more = rows.len() > limit as usize;
@@ -207,7 +207,7 @@ impl QueryHandler<SearchMomentsByUserIdQuery> for MomentApplicationService {
         let rows = self.moment_repository.find_user_moments(
             query.user_id, 
             cursor, 
-            limit + 1
+            (limit + 1) as i32
         ).await?;
         
         let has_more = rows.len() > limit as usize;

@@ -35,9 +35,9 @@ use tracing::info;
 use crate::adapters::{
     PostgresUserRepository, 
     PgGroupRepository, 
-    PgMessageRepository, 
+    // PgMessageRepository, // 暂时禁用
     PgMomentRepository,
-    PgFriendRepository,
+    // PgFriendRepository, // 暂时禁用
     PgCommentRepository,
     Argon2PasswordService,
     LogEventPublisher,
@@ -45,11 +45,11 @@ use crate::adapters::{
 use crate::application::{
     UserApplicationService,
     GroupApplicationService, 
-    MessageApplicationService,
+    // MessageApplicationService, // 暂时禁用
     MomentApplicationService,
     SearchApplicationServiceImpl,
     ActivityApplicationService,
-    FriendApplicationServiceImpl,
+    // FriendApplicationServiceImpl, // 暂时禁用
     CommentApplicationServiceImpl,
 };
 use crate::presentation::http::{
@@ -58,10 +58,10 @@ use crate::presentation::http::{
     MomentController,
     SearchController,
     ActivityController,
-    FriendController,
+    // FriendController, // 暂时禁用
     CommentController,
 };
-use crate::presentation::http::controllers::MessageController;
+// use crate::presentation::http::controllers::MessageController; // 暂时禁用
 use crate::presentation::ws::WebSocketManager;
 use crate::ports::{
     UserRepository,
@@ -80,9 +80,9 @@ pub struct ServiceContainer {
     // 仓储层
     pub user_repository: Arc<PostgresUserRepository>,
     pub group_repository: Arc<PgGroupRepository>,
-    pub message_repository: Arc<PgMessageRepository>,
+    // pub message_repository: Arc<PgMessageRepository>, // 暂时禁用
     pub moment_repository: Arc<PgMomentRepository>,
-    pub friend_repository: Arc<PgFriendRepository>,
+    // pub friend_repository: Arc<PgFriendRepository>, // 暂时禁用
     pub comment_repository: Arc<PgCommentRepository>,
     
     // 基础设施服务
@@ -92,19 +92,19 @@ pub struct ServiceContainer {
     // 应用服务
     pub user_app_service: UserApplicationService,
     pub group_app_service: GroupApplicationService,
-    pub message_app_service: MessageApplicationService,
+    // pub message_app_service: MessageApplicationService, // 暂时禁用
     pub moment_app_service: MomentApplicationService,
-    pub friend_app_service: FriendApplicationServiceImpl<PgFriendRepository, PostgresUserRepository>,
+    // pub friend_app_service: FriendApplicationServiceImpl<PgFriendRepository, PostgresUserRepository>, // 暂时禁用
     pub comment_app_service: CommentApplicationServiceImpl<PgCommentRepository>,
     
     // 控制器
     pub user_controller: UserController<UserApplicationService>,
     pub group_controller: GroupController<GroupApplicationService>,
-    pub message_controller: MessageController,
+    // pub message_controller: MessageController, // 暂时禁用
     pub moment_controller: MomentController<MomentApplicationService>,
     pub search_controller: SearchController,
     pub activity_controller: ActivityController<PostgresUserRepository, PgGroupRepository, PgMomentRepository>,
-    pub friend_controller: FriendController<FriendApplicationServiceImpl<PgFriendRepository, PostgresUserRepository>>,
+    // pub friend_controller: FriendController<FriendApplicationServiceImpl<PgFriendRepository, PostgresUserRepository>>, // 暂时禁用
     pub comment_controller: CommentController<PgCommentRepository>,
     pub upload_controller: crate::presentation::http::controllers::UploadController,
     
@@ -128,9 +128,9 @@ impl ServiceFactory {
         let pool = database.pg_pool().clone();
         let user_repository = Arc::new(PostgresUserRepository::new(pool.clone()));
         let group_repository = Arc::new(PgGroupRepository::new(pool.clone()));
-        let message_repository = Arc::new(PgMessageRepository::new(pool.clone()));
+        // let message_repository = Arc::new(PgMessageRepository::new(pool.clone())); // 暂时禁用
         let moment_repository = Arc::new(PgMomentRepository::new(pool.clone()));
-        let friend_repository = Arc::new(PgFriendRepository::new(pool.clone()));
+        // let friend_repository = Arc::new(PgFriendRepository::new(pool.clone())); // 暂时禁用
         
         // 创建基础设施服务
         info!("🔧 创建基础设施服务...");
@@ -152,11 +152,11 @@ impl ServiceFactory {
             event_publisher.clone() as Arc<dyn EventPublisher>,
         );
         
-        let message_app_service = MessageApplicationService::new(
-            message_repository.clone(),
-            user_repository.clone() as Arc<dyn UserRepository>,
-            event_publisher.clone() as Arc<dyn EventPublisher>,
-        );
+        // let message_app_service = MessageApplicationService::new(
+        //     message_repository.clone(),
+        //     user_repository.clone() as Arc<dyn UserRepository>,
+        //     event_publisher.clone() as Arc<dyn EventPublisher>,
+        // ); // 暂时禁用
         
         let moment_app_service = MomentApplicationService::new(
             moment_repository.clone() as Arc<dyn MomentRepository>,
@@ -179,21 +179,21 @@ impl ServiceFactory {
         );
         
         // 创建好友应用服务
-        let friend_app_service = FriendApplicationServiceImpl::new(
-            friend_repository.clone(),
-            user_repository.clone(),
-            event_publisher.clone() as Arc<dyn EventPublisher>,
-        );
+        // let friend_app_service = FriendApplicationServiceImpl::new(
+        //     friend_repository.clone(),
+        //     user_repository.clone(),
+        //     event_publisher.clone() as Arc<dyn EventPublisher>,
+        // ); // 暂时禁用
         
         // 创建控制器
         info!("🎮 创建控制器层...");
         let user_controller = UserController::new(user_app_service.clone());
         let group_controller = GroupController::new(group_app_service.clone());
-        let message_controller = MessageController::new(message_app_service.clone());
+        // let message_controller = MessageController::new(message_app_service.clone()); // 暂时禁用
         let moment_controller = MomentController::new(moment_app_service.clone());
         let search_controller = SearchController::new(search_app_service.clone() as Arc<dyn crate::application::SearchApplicationService>);
         let activity_controller = ActivityController::new(activity_app_service);
-        let friend_controller = FriendController::new(friend_app_service.clone());
+        // let friend_controller = FriendController::new(friend_app_service.clone()); // 暂时禁用
         
         // 创建评论应用服务和控制器
         info!("💬 创建评论系统...");
@@ -205,7 +205,7 @@ impl ServiceFactory {
             event_publisher.clone() as Arc<dyn EventPublisher>,
         );
         let comment_controller = crate::presentation::http::controllers::CommentController::new(
-            comment_repository_for_controller
+            std::sync::Arc::new(comment_repository_for_controller)
         );
         
         // 创建文件上传控制器
@@ -221,25 +221,25 @@ impl ServiceFactory {
         Ok(ServiceContainer {
             user_repository,
             group_repository,
-            message_repository,
+            // message_repository, // 暂时禁用
             moment_repository,
-            friend_repository,
+            // friend_repository, // 暂时禁用
             comment_repository,
             password_service,
             event_publisher,
             user_app_service,
             group_app_service,
-            message_app_service,
+            // message_app_service, // 暂时禁用
             moment_app_service,
-            friend_app_service,
+            // friend_app_service, // 暂时禁用
             comment_app_service,
             user_controller,
             group_controller,
-            message_controller,
+            // message_controller, // 暂时禁用
             moment_controller,
             search_controller,
             activity_controller,
-            friend_controller,
+            // friend_controller, // 暂时禁用
             comment_controller,
             upload_controller,
             websocket_manager,

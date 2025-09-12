@@ -161,7 +161,7 @@ import type { Message } from '~/types/message'
 
 // 扩展 Message 类型以支持聊天特性
 interface ChatMessage extends Message {
-  status?: 'sending' | 'sent' | 'delivered' | 'read'
+  status?: 'sending' | 'sent' | 'failed'
   type?: 'text' | 'image' | 'file' | 'system'
 }
 

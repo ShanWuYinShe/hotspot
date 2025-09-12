@@ -1,21 +1,23 @@
-/// 好友控制器
-/// 
-/// 功能职责：
-/// - 处理好友相关的HTTP请求
-/// - 实现好友请求发送、接受、拒绝功能
-/// - 管理好友关系和好友列表
-/// - 提供好友状态查询功能
-/// 
-/// API端点：
-/// - POST /api/v1/protected/friends/send_request - 发送好友请求
-/// - POST /api/v1/protected/friends/accept_request - 接受好友请求
-/// - POST /api/v1/protected/friends/reject_request - 拒绝好友请求
-/// - POST /api/v1/protected/friends/remove_friendship - 移除好友关系
-/// - POST /api/v1/protected/friends/list - 获取好友列表
-/// - POST /api/v1/protected/friends/received_requests - 获取收到的好友请求
-/// - POST /api/v1/protected/friends/sent_requests - 获取发送的好友请求
-/// - POST /api/v1/protected/friends/check_friendship - 检查好友关系状态
-/// - POST /api/v1/protected/friends/pending_count - 获取待处理请求数量
+// 好友控制器
+// 
+// 功能职责：
+// - 处理好友相关的HTTP请求
+// - 实现好友请求发送、接受、拒绝功能
+// - 管理好友关系和好友列表
+// - 提供好友状态查询功能
+// 
+// API端点：
+// - POST /api/v1/protected/friends/send_request - 发送好友请求
+// - POST /api/v1/protected/friends/accept_request - 接受好友请求
+// - POST /api/v1/protected/friends/reject_request - 拒绝好友请求
+// - POST /api/v1/protected/friends/remove_friendship - 移除好友关系
+// - POST /api/v1/protected/friends/list - 获取好友列表
+// - POST /api/v1/protected/friends/received_requests - 获取收到的好友请求
+// - POST /api/v1/protected/friends/sent_requests - 获取发送的好友请求
+// - POST /api/v1/protected/friends/check_friendship - 检查好友关系状态
+// - POST /api/v1/protected/friends/pending_count - 获取待处理请求数量
+// 暂时禁用，等待重新设计
+/*
 use axum::{
     extract::{State, Extension},
     http::StatusCode,
@@ -472,3 +474,4 @@ where
         }
     }
 }
+*/

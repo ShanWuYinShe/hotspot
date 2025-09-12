@@ -1,7 +1,7 @@
 <template>
   <!-- 主题切换按钮 - 使用 Nuxt UI v3 最佳实践 -->
   <UButton 
-    @click="enhancedToggleTheme"
+    @click="handleToggleTheme"
     :size="size" 
     variant="ghost"
     color="neutral"
@@ -36,10 +36,10 @@
       <UIcon name="i-heroicons-sun" :class="iconClass" />
     </div>
 
-    <!-- 切换动画效果 -->
+    <!-- 切换状态指示 -->
     <div 
       v-if="isToggling"
-      class="absolute inset-0 bg-gradient-to-r from-orange-400 to-yellow-400 dark:from-blue-600 dark:to-purple-600 opacity-20 animate-pulse rounded-md"
+      class="absolute inset-0 bg-primary-100 dark:bg-primary-900/50 opacity-30 rounded-md"
     />
   </UButton>
 </template>
@@ -53,10 +53,9 @@ const props = withDefaults(defineProps<Props>(), {
   size: 'lg'
 })
 
-// SSR 安全：提供默认值，客户端挂载后再注入真实实现，避免水合不匹配
+// SSR 安全：只对响应式状态提供默认值
 const isDark = ref(false)
 const isToggling = ref(false)
-let toggleTheme: () => void = () => {}
 
 // 根据尺寸计算样式类
 const iconClass = computed(() => {
@@ -81,14 +80,28 @@ const buttonClass = computed(() => {
   return sizeMap[props.size]
 })
 
-// 增强的切换函数，添加动画效果
-const enhancedToggleTheme = async () => {
+// 主题切换处理函数
+const handleToggleTheme = () => {
   if (isToggling.value) return
   
   isToggling.value = true
   
-  // 执行主题切换
-  toggleTheme()
+  try {
+    const settingsStore = useSettingsStore()
+    const currentTheme = settingsStore.theme
+    
+    if (currentTheme === 'auto') {
+      // 从 auto 切换到与当前系统主题相反的主题
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+      settingsStore.setTheme(prefersDark ? 'light' : 'dark')
+    } else if (currentTheme === 'light') {
+      settingsStore.setTheme('dark')
+    } else {
+      settingsStore.setTheme('light')
+    }
+  } catch (error) {
+    console.warn('Theme toggle failed:', error)
+  }
   
   // 动画持续时间
   setTimeout(() => {
@@ -102,20 +115,6 @@ onMounted(() => {
     
     // 初始化主题监听器
     settingsStore.initThemeWatcher()
-    
-    // 设置切换函数
-    toggleTheme = () => {
-      const currentTheme = settingsStore.theme
-      if (currentTheme === 'auto') {
-        // 从 auto 切换到与当前系统主题相反的主题
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-        settingsStore.setTheme(prefersDark ? 'light' : 'dark')
-      } else if (currentTheme === 'light') {
-        settingsStore.setTheme('dark')
-      } else {
-        settingsStore.setTheme('light')
-      }
-    }
     
     // 监听主题变化
     watch(() => settingsStore.theme, (newTheme) => {
@@ -148,8 +147,4 @@ onMounted(() => {
     console.warn('Theme system not available, using default light theme:', error)
   }
 })
-
-// 导出增强的切换函数
-const toggleThemeWithAnimation = enhancedToggleTheme
-defineExpose({ toggleTheme: toggleThemeWithAnimation })
 </script>

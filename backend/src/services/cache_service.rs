@@ -8,7 +8,7 @@ use std::time::Duration;
 use tracing::debug;
 
 use crate::domain::{DomainResult, UserProfile};
-use crate::adapters::adapters_cache_memory::{MemoryCache, MemoryCacheConfig};
+// use crate::adapters::adapters_cache_memory::{MemoryCache, MemoryCacheConfig};  // 暂时禁用
 use crate::ports::cache_ports::CachePort;
 use crate::ports::cache::Cache;
 
@@ -180,13 +180,13 @@ pub struct CacheStats {
     pub miss_rate: f64,
 }
 
-/// 基于内存缓存的缓存服务实现
-pub struct InMemoryCacheService {
-    cache: Arc<MemoryCache>,
-    strategy: CacheStrategy,
-}
+// /// 基于内存缓存的缓存服务实现 - 暂时禁用
+// pub struct InMemoryCacheService {
+//     cache: Arc<MemoryCache>,
+//     strategy: CacheStrategy,
+// }
 
-impl InMemoryCacheService {
+// impl InMemoryCacheService {
     pub fn new(strategy: CacheStrategy) -> Self {
         let config = MemoryCacheConfig::default();
         Self { 

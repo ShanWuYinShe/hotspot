@@ -1,14 +1,14 @@
 <template>
-  <UModal v-model:open="isOpen" :prevent-close="true">
-    <UCard>
-      <template #header>
-        <div class="flex items-center justify-between">
-          <h3 class="text-lg font-semibold">
-            {{ isSetup ? '设置设备PIN' : '输入设备PIN' }}
-          </h3>
-        </div>
-      </template>
+  <UModal :prevent-close="true">
+    <template #header>
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-semibold">
+          {{ isSetup ? '设置设备PIN' : '输入设备PIN' }}
+        </h3>
+      </div>
+    </template>
 
+    <template #body>
       <div class="space-y-4">
         <p class="text-sm text-gray-600 dark:text-gray-400">
           {{ isSetup 
@@ -21,7 +21,7 @@
           <input
             v-for="(digit, index) in pinDigits"
             :key="index"
-            :ref="el => pinInputs[index] = el"
+            :ref="el => pinInputs[index] = el as HTMLInputElement"
             v-model="pinDigits[index]"
             type="password"
             inputmode="numeric"
@@ -50,53 +50,47 @@
           </p>
         </div>
       </div>
+    </template>
 
-      <template #footer>
-        <div class="flex justify-end space-x-3">
-          <UButton 
-            variant="ghost" 
-            @click="handleCancel"
-            :disabled="isProcessing"
-          >
-            取消
-          </UButton>
-          <UButton 
-            :disabled="!isComplete || isProcessing"
-            :loading="isProcessing"
-            @click="handleConfirm"
-          >
-            {{ isSetup ? '设置' : '确认' }}
-          </UButton>
-        </div>
-      </template>
-    </UCard>
+    <template #footer>
+      <div class="flex justify-end space-x-3">
+        <UButton 
+          variant="ghost" 
+          @click="handleCancel"
+          :disabled="isProcessing"
+        >
+          取消
+        </UButton>
+        <UButton 
+          :disabled="!isComplete || isProcessing"
+          :loading="isProcessing"
+          @click="handleConfirm"
+        >
+          {{ isSetup ? '设置' : '确认' }}
+        </UButton>
+      </div>
+    </template>
   </UModal>
 </template>
 
 <script setup lang="ts">
 interface Props {
   isSetup?: boolean
-  open?: boolean
 }
 
 interface Emits {
-  (e: 'update:open', value: boolean): void
   (e: 'confirm', pin: string): void
   (e: 'cancel'): void
+  (e: 'close'): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  isSetup: false,
-  open: false
+  isSetup: false
 })
 
 const emit = defineEmits<Emits>()
 
-// 响应式状态
-const isOpen = computed({
-  get: () => props.open,
-  set: (value) => emit('update:open', value)
-})
+// useOverlay 会自动管理 Modal 状态，无需手动绑定 isOpen
 
 const pinDigits = ref(['', '', '', ''])
 const pinInputs = ref<HTMLInputElement[]>([])
@@ -111,14 +105,12 @@ const isComplete = computed(() =>
 
 const pinValue = computed(() => pinDigits.value.join(''))
 
-// 监听器
-watch(isOpen, (newValue) => {
-  if (newValue) {
-    resetForm()
-    nextTick(() => {
-      pinInputs.value[0]?.focus()
-    })
-  }
+// 组件挂载时重置表单并聚焦
+onMounted(() => {
+  resetForm()
+  nextTick(() => {
+    pinInputs.value[0]?.focus()
+  })
 })
 
 watch(pinDigits, () => {
@@ -145,7 +137,7 @@ function handleInput(index: number, event: Event) {
     const digits = value.slice(0, 4).split('')
     for (let i = 0; i < Math.min(digits.length, 4); i++) {
       if (index + i < 4) {
-        pinDigits.value[index + i] = digits[i]
+        pinDigits.value[index + i] = digits[i] || ''
       }
     }
     
@@ -183,7 +175,7 @@ function handlePaste(event: ClipboardEvent) {
   const digits = pastedData.replace(/\D/g, '').slice(0, 4).split('')
   
   for (let i = 0; i < Math.min(digits.length, 4); i++) {
-    pinDigits.value[i] = digits[i]
+    pinDigits.value[i] = digits[i] || ''
   }
   
   // 聚焦到最后一个填充的输入框
@@ -198,6 +190,7 @@ async function handleConfirm() {
   
   try {
     emit('confirm', pinValue.value)
+    emit('close') // 通知 useOverlay 关闭
   } catch (error) {
     hasError.value = true
     errorMessage.value = '处理失败，请重试'
@@ -208,6 +201,7 @@ async function handleConfirm() {
 function handleCancel() {
   if (isProcessing.value) return
   emit('cancel')
+  emit('close') // 通知 useOverlay 关闭
 }
 
 function showError(message: string) {
@@ -239,4 +233,5 @@ input[type="password"]::-webkit-textfield-decoration-container {
   display: none;
 }
 </style>
+
 

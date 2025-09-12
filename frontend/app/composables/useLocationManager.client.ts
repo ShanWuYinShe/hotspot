@@ -3,6 +3,7 @@
  * 负责自动化的位置获取、更新和管理
  */
 
+import { getCurrentInstance, onUnmounted, readonly, ref } from 'vue'
 import { useUserService } from '~/services/user.service'
 import { useAuthStore } from '~/stores/auth.store'
 import { DEFAULTS } from '~/config/defaults'
@@ -126,8 +127,6 @@ export const useLocationManager = () => {
    * 启动自动位置更新
    */
   const startLocationTracking = async () => {
-    if (!process.client) return
-
     if (import.meta.dev) console.log('启动自动位置跟踪')
     
     // 立即获取一次位置
@@ -200,10 +199,12 @@ export const useLocationManager = () => {
     }
   }
 
-  // 组件卸载时清理
-  onUnmounted(() => {
-    stopLocationTracking()
-  })
+  // 组件卸载时清理（仅在组件上下文中）
+  if (getCurrentInstance()) {
+    onUnmounted(() => {
+      stopLocationTracking()
+    })
+  }
 
   return {
     // 状态

@@ -23,7 +23,7 @@ pub mod adapters_pg;
 
 // 内存缓存适配器（默认）
 #[cfg(any(feature = "cache_in_memory", not(feature = "cache_redis")))]
-pub mod adapters_cache_memory;
+// pub mod adapters_cache_memory;  // 暂时禁用，trait实现不完整
 
 // Redis 缓存适配器（可选）
 #[cfg(feature = "cache_redis")]
@@ -53,7 +53,7 @@ pub mod adapters_events_log;
 pub use adapters_pg::*;
 
 #[cfg(any(feature = "cache_in_memory", not(feature = "cache_redis")))]
-pub use adapters_cache_memory::*;
+// pub use adapters_cache_memory::*;  // 暂时禁用
 
 #[cfg(feature = "cache_redis")]
 pub use adapters_cache_redis::*;

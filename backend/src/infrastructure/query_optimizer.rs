@@ -137,14 +137,14 @@ impl QueryOptimizer {
                 nickname as "nickname!",
                 email,
                 avatar_url,
-                user_type as "user_type!: crate::domain::UserType",
+                user_type as "user_type!: crate::domain::entities::UserType",
                 expires_at,
                 last_login_at as "last_active_at!"
             FROM users 
             WHERE user_id = ANY($1)
             ORDER BY user_id
             "#,
-            &user_ids
+            &user_ids.iter().map(|id| id.to_string()).collect::<Vec<String>>()
         )
         .fetch_all(&self.pool)
         .await?;
@@ -210,14 +210,14 @@ impl QueryOptimizer {
             )
             SELECT 
                 $1 as "user_id!",
-                COALESCE(SUM(daily_messages), 0) as "total_messages!",
-                COALESCE(SUM(daily_moments), 0) as "total_moments!",
-                COALESCE(SUM(daily_group_joins), 0) as "total_group_joins!",
-                COALESCE(AVG(daily_messages), 0) as "avg_daily_messages!",
-                COALESCE(AVG(daily_moments), 0) as "avg_daily_moments!",
-                COALESCE(MAX(daily_messages), 0) as "max_daily_messages!",
-                COALESCE(MAX(daily_moments), 0) as "max_daily_moments!",
-                COUNT(DISTINCT activity_date) as "active_days!",
+                COALESCE(SUM(daily_messages)::bigint, 0) as "total_messages!",
+                COALESCE(SUM(daily_moments)::bigint, 0) as "total_moments!",
+                COALESCE(SUM(daily_group_joins)::bigint, 0) as "total_group_joins!",
+                COALESCE(AVG(daily_messages)::float8, 0) as "avg_daily_messages!",
+                COALESCE(AVG(daily_moments)::float8, 0) as "avg_daily_moments!",
+                COALESCE(MAX(daily_messages)::bigint, 0) as "max_daily_messages!",
+                COALESCE(MAX(daily_moments)::bigint, 0) as "max_daily_moments!",
+                COUNT(DISTINCT activity_date)::bigint as "active_days!",
                 -- 计算活动趋势（正数表示增长，负数表示下降）
                 COALESCE(
                     AVG(CASE 
@@ -226,7 +226,7 @@ impl QueryOptimizer {
                         ELSE 0 
                     END), 
                     0
-                ) as "message_trend!",
+                )::float8 as "message_trend!",
                 COALESCE(
                     AVG(CASE 
                         WHEN prev_moments IS NOT NULL 
@@ -234,11 +234,11 @@ impl QueryOptimizer {
                         ELSE 0 
                     END), 
                     0
-                ) as "moment_trend!"
+                )::float8 as "moment_trend!"
             FROM activity_trends
             "#,
             user_id,
-            days
+            days as f64
         )
         .fetch_one(&self.pool)
         .await?;
@@ -367,7 +367,7 @@ impl QueryOptimizer {
                 SELECT $1::jsonb as plan
             ) t
             "#,
-            &explain_sql
+            serde_json::Value::String(explain_sql.clone())
         )
         .fetch_all(&self.pool)
         .await?;
@@ -387,7 +387,7 @@ pub struct BatchUserInsert {
     pub email: Option<String>,
     pub avatar_url: Option<String>,
     pub password_hash: Option<String>,
-    pub user_type: crate::domain::UserType,
+    pub user_type: crate::domain::entities::UserType,
     pub expires_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub last_active_at: DateTime<Utc>,
@@ -401,7 +401,7 @@ pub struct BatchUserResult {
     pub nickname: String,
     pub email: Option<String>,
     pub avatar_url: Option<String>,
-    pub user_type: crate::domain::UserType,
+    pub user_type: crate::domain::entities::UserType,
     pub expires_at: Option<DateTime<Utc>>,
     pub last_active_at: DateTime<Utc>,
 }
@@ -426,7 +426,7 @@ pub struct UserActivityStats {
 #[derive(Debug, Clone, Default)]
 pub struct UserSearchCriteria {
     pub nickname_pattern: Option<String>,
-    pub user_type: Option<crate::domain::UserType>,
+    pub user_type: Option<crate::domain::entities::UserType>,
     pub active_since: Option<DateTime<Utc>>,
     pub has_email: Option<bool>,
     pub exclude_user_ids: Option<Vec<i64>>,
@@ -456,7 +456,7 @@ mod tests {
             email: Some("test@example.com".to_string()),
             avatar_url: None,
             password_hash: Some("hashed".to_string()),
-            user_type: crate::domain::UserType::Regular,
+            user_type: crate::domain::entities::UserType::Regular,
             expires_at: None,
             created_at: Utc::now(),
             last_active_at: Utc::now(),
@@ -471,12 +471,12 @@ mod tests {
     fn test_user_search_criteria() {
         let mut criteria = UserSearchCriteria::default();
         criteria.nickname_pattern = Some("测试".to_string());
-        criteria.user_type = Some(crate::domain::UserType::Regular);
+        criteria.user_type = Some(crate::domain::entities::UserType::Regular);
         criteria.has_email = Some(true);
         criteria.limit = Some(50);
         
         assert_eq!(criteria.nickname_pattern, Some("测试".to_string()));
-        assert_eq!(criteria.user_type, Some(crate::domain::UserType::Regular));
+        assert_eq!(criteria.user_type, Some(crate::domain::entities::UserType::Regular));
         assert_eq!(criteria.has_email, Some(true));
         assert_eq!(criteria.limit, Some(50));
     }

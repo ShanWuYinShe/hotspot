@@ -182,7 +182,7 @@ impl CapabilityManager {
     
     /// 启用配置的能力
     async fn enable_configured_capabilities(&self) -> DomainResult<()> {
-        let capability_ids_to_enable = if self.config.auto_enable_all {
+        let capability_ids_to_enable: Vec<CapabilityId> = if self.config.auto_enable_all {
             // 获取所有已注册的能力
             let all_status = self.registry.get_all_capability_status().await;
             all_status.keys().cloned().collect()
@@ -318,7 +318,7 @@ impl CapabilityManager {
         CapabilityManagerHealth {
             is_healthy: registry_health.is_healthy,
             registry_health,
-            manager_stats,
+            manager_stats: manager_stats.clone(),
             uptime_seconds: chrono::Utc::now()
                 .signed_duration_since(manager_stats.started_at)
                 .num_seconds() as u64,

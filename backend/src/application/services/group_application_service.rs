@@ -152,7 +152,7 @@ impl QueryHandler<SearchGroupsByLocationQuery> for GroupApplicationService {
                     .radius_km
                     .unwrap_or(crate::domain::constants::DEFAULT_NEARBY_RADIUS_KM),
                 cursor,
-                limit + 1,
+                (limit + 1) as i32,
             )
             .await?;
         let has_more = rows.len() > limit as usize;
@@ -174,7 +174,7 @@ impl QueryHandler<SearchGroupsByLocationQuery> for GroupApplicationService {
                 })
                 .unwrap_or(0.0);
                 crate::application::queries::group_queries::NearbyGroup {
-                    group_id: g.group_id,
+                    group_id: g.group_id.parse().unwrap_or(0),
                     name: g.name,
                     latitude: g.latitude,
                     longitude: g.longitude,
@@ -200,7 +200,7 @@ impl QueryHandler<SearchGroupsByNameQuery> for GroupApplicationService {
         let cursor = query.pagination.get_cursor();
         let rows = self
             .group_repository
-            .search_groups_by_name(&query.keyword, cursor, limit + 1)
+            .search_groups_by_name(&query.keyword, cursor, (limit + 1) as i32)
             .await?;
         let has_more = rows.len() > limit as usize;
         let mut items = rows;
@@ -210,6 +210,7 @@ impl QueryHandler<SearchGroupsByNameQuery> for GroupApplicationService {
         let result = items
             .into_iter()
             .map(|g| crate::application::queries::group_queries::GroupSearchResult {
+                group_id: g.group_id.parse().unwrap_or(0),
                 name: g.name,
                 has_location: true,
                 created_at: chrono::Utc::now(), // TODO: 需要从领域对象获取创建时间
@@ -244,7 +245,7 @@ impl CommandHandler<JoinGroupCommand> for GroupApplicationService {
             .is_group_member(&command.group_id, command.user_id)
             .await?
         {
-            return Err(GroupDomainError::UserAlreadyMember {
+            return Err(GroupDomainError::UserAlreadyMemberWithId {
                 user_id: command.user_id,
             }
             .into());
@@ -281,7 +282,10 @@ impl CommandHandler<LeaveGroupCommand> for GroupApplicationService {
             .is_group_member(&command.group_id, command.user_id)
             .await?
         {
-            return Err(GroupDomainError::UserNotMember.into());
+            return Err(GroupDomainError::UserNotMemberWithId {
+                user_id: command.user_id,
+            }
+            .into());
         }
         self.group_repository
             .remove_group_member(&command.group_id, command.user_id)
@@ -321,12 +325,15 @@ impl CommandHandler<KickMemberCommand> for GroupApplicationService {
             .into());
         }
         // 目标必须是成员
-        if self
+        if !self
             .group_repository
             .is_group_member(&command.group_id, command.target_user_id)
             .await?
         {
-            return Err(GroupDomainError::UserNotMember.into());
+            return Err(GroupDomainError::UserNotMemberWithId {
+                user_id: command.target_user_id,
+            }
+            .into());
         }
         // 不能移除群主
         let target_role = self
@@ -384,7 +391,7 @@ impl CommandHandler<TransferOwnershipCommand> for GroupApplicationService {
             .is_group_member(&command.group_id, command.new_owner_id)
             .await?
         {
-            return Err(GroupDomainError::UserNotMember {
+            return Err(GroupDomainError::UserNotMemberWithId {
                 user_id: command.new_owner_id,
             }
             .into());
@@ -409,7 +416,7 @@ impl QueryHandler<GroupMembersQuery> for GroupApplicationService {
         let cursor = query.pagination.get_cursor();
         let members = self
             .group_repository
-            .get_group_members(&query.group_id.to_string(), cursor, limit)
+            .get_group_members(&query.group_id.to_string(), cursor, limit as i32)
             .await?;
         let mapped = members
             .into_iter()
@@ -440,7 +447,7 @@ impl QueryHandler<SearchGroupsByIdQuery> for GroupApplicationService {
     type Result = Option<GroupProfile>;
     
     async fn handle(&self, query: SearchGroupsByIdQuery) -> ApplicationResult<Self::Result> {
-        self.group_repository.find_group_profile(&query.group_id.to_string()).await
+        self.group_repository.find_group_profile(&query.group_id.to_string()).await.map_err(ApplicationError::Domain)
     }
 }
 
@@ -455,10 +462,10 @@ impl QueryHandler<SearchGroupsByUserIdQuery> for GroupApplicationService {
         let groups = self.group_repository.find_user_groups(
             query.user_id,
             query.pagination.cursor.unwrap_or(0),
-            query.pagination.limit.unwrap_or(20),
+            query.pagination.limit.unwrap_or(20) as i32,
         ).await?;
         
-        let has_more = groups.len() as i32 >= query.pagination.limit.unwrap_or(20);
+        let has_more = groups.len() as i32 >= query.pagination.limit.unwrap_or(20) as i32;
         let next_cursor = if has_more && !groups.is_empty() {
             Some(groups.len() as i64) // TODO: 使用正确的游标逻辑
         } else {
@@ -468,7 +475,7 @@ impl QueryHandler<SearchGroupsByUserIdQuery> for GroupApplicationService {
         Ok(PaginatedResult {
             items: groups,
             has_more,
-            next_cursor,
+            next_cursor: next_cursor.map(|c| c.to_string()),
         })
     }
 }
@@ -484,10 +491,10 @@ impl QueryHandler<SearchGroupsByOwnerIdQuery> for GroupApplicationService {
         let groups = self.group_repository.find_owned_groups(
             query.owner_id,
             query.pagination.cursor.unwrap_or(0),
-            query.pagination.limit.unwrap_or(20),
+            query.pagination.limit.unwrap_or(20) as i32,
         ).await?;
         
-        let has_more = groups.len() as i32 >= query.pagination.limit.unwrap_or(20);
+        let has_more = groups.len() as i32 >= query.pagination.limit.unwrap_or(20) as i32;
         let next_cursor = if has_more && !groups.is_empty() {
             Some(groups.len() as i64) // TODO: 使用正确的游标逻辑
         } else {
@@ -497,7 +504,7 @@ impl QueryHandler<SearchGroupsByOwnerIdQuery> for GroupApplicationService {
         Ok(PaginatedResult {
             items: groups,
             has_more,
-            next_cursor,
+            next_cursor: next_cursor.map(|c| c.to_string()),
         })
     }
 }

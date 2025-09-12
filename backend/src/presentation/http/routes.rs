@@ -24,8 +24,8 @@ use tower_http::services::ServeDir;
 use std::sync::Arc;
 
 use super::controllers::{
-    AdminController, GroupController, HealthController, MessageController, MomentController,
-    UserController, MonitoringController, SearchController, ActivityController, FriendController,
+    AdminController, GroupController, HealthController, /* MessageController, */ MomentController,
+    UserController, MonitoringController, SearchController, ActivityController, /* FriendController, */
     CommentController, UploadController, metrics_controller, unified_monitoring_controller,
 };
 use super::middleware::metrics::metrics_middleware;
@@ -40,11 +40,11 @@ use crate::ports::UserRepository;
 pub struct ServiceContainer {
     pub user_controller: UserController<UserApplicationService>,
     pub group_controller: GroupController<crate::application::GroupApplicationService>,
-    pub message_controller: MessageController,
+    // pub message_controller: MessageController, // 暂时禁用
     pub moment_controller: MomentController<MomentApplicationService>,
     pub search_controller: SearchController,
     pub activity_controller: ActivityController<crate::adapters::PostgresUserRepository, crate::adapters::PgGroupRepository, crate::adapters::PgMomentRepository>,
-    pub friend_controller: FriendController<crate::application::FriendApplicationServiceImpl<crate::adapters::PgFriendRepository, crate::adapters::PostgresUserRepository>>,
+    // pub friend_controller: FriendController<crate::application::FriendApplicationServiceImpl<crate::adapters::PgFriendRepository, crate::adapters::PostgresUserRepository>>, // 暂时禁用
     pub comment_controller: CommentController<crate::adapters::PgCommentRepository>,
     pub upload_controller: UploadController,
     pub admin_controller: AdminController,
@@ -221,21 +221,21 @@ fn create_protected_routes(services: ServiceContainer, jwt_config: JwtConfig) ->
             .with_state(services.group_controller.clone())
         )
         
-        // 消息通讯子路由
-        .nest("/chat", Router::new()
-            .route("/group/send", post(MessageController::send_group_message))
-            .route("/group/history", post(MessageController::get_group_messages))
-            .route("/group/delete", post(MessageController::delete_group_message))
-            .route("/group/mark-read", post(MessageController::mark_group_messages_read))
-            .route("/group/unread_count", post(MessageController::get_group_unread_count))
-            .route("/user/send", post(MessageController::send_direct_message))
-            .route("/user/history", post(MessageController::get_direct_messages))
-            .route("/user/conversations", post(MessageController::get_conversations))
-            .route("/user/delete", post(MessageController::delete_direct_message))
-            .route("/user/mark-read", post(MessageController::mark_user_messages_read))
-            .route("/user/unread_count", post(MessageController::get_user_unread_count))
-            .with_state(services.message_controller.clone())
-        )
+        // // 消息通讯子路由 - 暂时禁用
+        // .nest("/chat", Router::new()
+        //     .route("/group/send", post(MessageController::send_group_message))
+        //     .route("/group/history", post(MessageController::get_group_messages))
+        //     .route("/group/delete", post(MessageController::delete_group_message))
+        //     .route("/group/mark-read", post(MessageController::mark_group_messages_read))
+        //     .route("/group/unread_count", post(MessageController::get_group_unread_count))
+        //     .route("/user/send", post(MessageController::send_direct_message))
+        //     .route("/user/history", post(MessageController::get_direct_messages))
+        //     .route("/user/conversations", post(MessageController::get_conversations))
+        //     .route("/user/delete", post(MessageController::delete_direct_message))
+        //     .route("/user/mark-read", post(MessageController::mark_user_messages_read))
+        //     .route("/user/unread_count", post(MessageController::get_user_unread_count))
+        //     .with_state(services.message_controller.clone())
+        // )
         
         // 生活瞬间管理子路由
         .nest("/moments", Router::new()
@@ -246,19 +246,19 @@ fn create_protected_routes(services: ServiceContainer, jwt_config: JwtConfig) ->
             .with_state(services.moment_controller.clone())
         )
         
-        // 好友系统子路由
-        .nest("/friends", Router::new()
-            .route("/send_request", post(FriendController::send_friend_request))
-            .route("/accept_request", post(FriendController::accept_friend_request))
-            .route("/reject_request", post(FriendController::reject_friend_request))
-            .route("/remove_friendship", post(FriendController::remove_friendship))
-            .route("/list", post(FriendController::get_friends))
-            .route("/received_requests", post(FriendController::get_received_friend_requests))
-            .route("/sent_requests", post(FriendController::get_sent_friend_requests))
-            .route("/check_friendship", post(FriendController::check_friendship))
-            .route("/pending_count", post(FriendController::get_pending_requests_count))
-            .with_state(services.friend_controller.clone())
-        )
+        // // 好友系统子路由 - 暂时禁用
+        // .nest("/friends", Router::new()
+        //     .route("/send_request", post(FriendController::send_friend_request))
+        //     .route("/accept_request", post(FriendController::accept_friend_request))
+        //     .route("/reject_request", post(FriendController::reject_friend_request))
+        //     .route("/remove_friendship", post(FriendController::remove_friendship))
+        //     .route("/list", post(FriendController::get_friends))
+        //     .route("/received_requests", post(FriendController::get_received_friend_requests))
+        //     .route("/sent_requests", post(FriendController::get_sent_friend_requests))
+        //     .route("/check_friendship", post(FriendController::check_friendship))
+        //     .route("/pending_count", post(FriendController::get_pending_requests_count))
+        //     .with_state(services.friend_controller.clone())
+        // )
         
         // 评论管理子路由
         .nest("/comments", Router::new()

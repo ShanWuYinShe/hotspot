@@ -24,16 +24,29 @@
                     <UInput
                         v-model="searchQuery"
                         :placeholder="$t('users.search.placeholder')"
-                        icon="i-heroicons-magnifying-glass"
                         class="flex-1"
-                        @keyup.enter="performSearch"
+                        size="md"
                         :loading="searching"
-                    />
+                        :ui="{ 
+                            base: 'bg-white dark:bg-neutral-800 shadow-sm border border-neutral-200 dark:border-neutral-700 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:shadow-lg focus:shadow-primary-500/25 transition-colors duration-200 rounded-lg px-12 py-3'
+                        }"
+                        @keyup.enter="performSearch"
+                    >
+                        <template #leading>
+                            <UIcon name="i-heroicons-magnifying-glass" class="text-neutral-500 dark:text-neutral-400 w-5 h-5 ml-1" />
+                        </template>
+                    </UInput>
                     <UButton
                         @click="performSearch"
                         :loading="searching"
                         :disabled="!searchQuery.trim()"
+                        color="primary"
+                        size="md"
+                        class="px-6 py-3 shadow-sm transition-colors duration-200 font-medium"
                     >
+                        <template #leading>
+                            <UIcon name="i-heroicons-magnifying-glass" class="w-4 h-4" />
+                        </template>
                         {{ $t("app.actions.search") }}
                     </UButton>
                 </div>
@@ -82,11 +95,11 @@
         <!-- 搜索结果 -->
         <div v-if="hasSearched">
             <!-- 加载中 -->
-            <div v-if="searching" class="space-y-4">
-                <USkeleton class="h-20" />
-                <USkeleton class="h-20" />
-                <USkeleton class="h-20" />
-            </div>
+            <LoadingState 
+              v-if="searching"
+              title="搜索用户中..."
+              description="正在查找匹配的用户"
+            />
 
             <!-- 搜索结果表格 -->
             <div v-else>
@@ -246,7 +259,7 @@
                             :title="$t('users.search.empty.title')"
                             :description="$t('users.search.empty.description')"
                             :action-text="$t('users.search.empty.actionText')"
-                            :action-handler="clearSearch"
+                            @action="clearSearch"
                         />
                     </template>
                 </UTable>
@@ -283,18 +296,18 @@
                 </template>
 
                 <!-- 推荐用户加载中 -->
-                <div v-if="loadingRecommended" class="space-y-4">
-                    <USkeleton class="h-16" />
-                    <USkeleton class="h-16" />
-                    <USkeleton class="h-16" />
-                </div>
+                <LoadingState 
+                  v-if="loadingRecommended"
+                  title="加载推荐用户..."
+                  description="正在为您寻找可能认识的人"
+                />
 
                 <!-- 推荐用户列表 -->
                 <div v-else-if="recommendedUsers.length > 0" class="divide-y">
                     <div
                         v-for="user in recommendedUsers"
                         :key="user.user_id"
-                        class="py-4 first:pt-0 last:pb-0 flex items-center gap-3 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-900 rounded-lg px-2"
+                        class="py-4 first:pt-0 last:pb-0 flex items-center gap-3 cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg px-2"
                         @click="viewUserProfile(user)"
                     >
                         <UAvatar :alt="user.nickname">{{
@@ -327,9 +340,14 @@
                 </div>
 
                 <!-- 推荐用户为空 -->
-                <div v-else class="py-8 text-center text-neutral-500">
-                    {{ $t("users.search.recommended.empty") }}
-                </div>
+                <EmptyState
+                  v-else
+                  icon="i-heroicons-users"
+                  :title="$t('users.search.recommended.empty.title')"
+                  :description="$t('users.search.recommended.empty.description')"
+                  :action-text="$t('users.search.recommended.empty.actionText')"
+                  @action="loadRecommendations"
+                />
             </UCard>
         </div>
     </div>

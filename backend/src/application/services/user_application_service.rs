@@ -129,9 +129,7 @@ impl CommandHandler<RegisterUserCommand> for UserApplicationService {
         
         // 检查登录ID是否已存在
         if self.check_login_id_exists(&command.login_id).await? {
-            return Err(DomainError::LoginIdAlreadyExists {
-                login_id: command.login_id,
-            });
+            return Err(ApplicationError::Domain(DomainError::LoginIdAlreadyExists));
         }
         
         // 加密密码
@@ -150,11 +148,12 @@ impl CommandHandler<RegisterUserCommand> for UserApplicationService {
         ).await?;
         
         // 创建事件
-        let event = crate::domain::events::EventFactory::user_registered(
-            saved_user.user_id,
-            command.login_id,
+        let event = crate::domain::events::DomainEvent::UserRegistered {
+            user_id: crate::domain::UserId::new(saved_user.user_id).unwrap(),
+            login_id: command.login_id,
             nickname,
-        );
+            registered_at: chrono::Utc::now(),
+        };
         
         // 发布事件（异步，不阻塞主流程）
         self.publish_event_ignore_error(event.clone()).await;
@@ -188,10 +187,11 @@ impl CommandHandler<CreateTempUserCommand> for UserApplicationService {
         ).await?;
         
         // 创建事件
-        let event = crate::domain::events::EventFactory::temp_user_created(
-            saved_user.user_id,
+        let event = crate::domain::events::DomainEvent::TempUserCreated {
+            user_id: crate::domain::UserId::new(saved_user.user_id).unwrap(),
             nickname,
-        );
+            created_at: chrono::Utc::now(),
+        };
         
         // 发布事件
         self.publish_event_ignore_error(event.clone()).await;
@@ -221,16 +221,12 @@ impl CommandHandler<UpgradeUserCommand> for UserApplicationService {
         
         // 检查是否为临时用户
         if !user.is_temporary() {
-            return Err(DomainError::InvalidUserTypeConversion {
-                reason: "只有临时用户可以升级".to_string(),
-            });
+            return Err(ApplicationError::Domain(DomainError::InvalidUserTypeConversion));
         }
         
         // 检查登录ID是否已存在
         if self.check_login_id_exists(&command.login_id).await? {
-            return Err(DomainError::LoginIdAlreadyExists {
-                login_id: command.login_id,
-            });
+            return Err(ApplicationError::Domain(DomainError::LoginIdAlreadyExists));
         }
         
         // 加密密码
@@ -244,11 +240,9 @@ impl CommandHandler<UpgradeUserCommand> for UserApplicationService {
         ).await?;
         
         // 创建事件
-        let event = crate::domain::events::UserEvent::UserUpgraded {
-            event_id: crate::domain::events::EventFactory::generate_event_id(),
-            user_id: saved_user.user_id,
-            login_id: command.login_id,
-            occurred_at: chrono::Utc::now(),
+        let event = crate::domain::events::DomainEvent::UserUpgraded {
+            user_id: crate::domain::UserId::new(saved_user.user_id).unwrap(),
+            upgraded_at: chrono::Utc::now(),
         };
         
         // 发布事件
@@ -294,13 +288,17 @@ impl CommandHandler<UpdateUserLocationCommand> for UserApplicationService {
         let saved_user = user;
         
         // 创建事件
-        let event = crate::domain::events::UserEvent::UserLocationUpdated {
-            event_id: crate::domain::events::EventFactory::generate_event_id(),
-            user_id: saved_user.user_id,
-            latitude: command.latitude,
-            longitude: command.longitude,
-            address: command.address.clone(),
-            occurred_at: chrono::Utc::now(),
+        let new_location = crate::domain::entities::UserLocation {
+            coordinates: crate::domain::values::Coordinates::new(command.latitude, command.longitude)
+                .unwrap_or_else(|_| crate::domain::values::Coordinates::new(0.0, 0.0).unwrap()),
+            location_name: command.address.clone().unwrap_or_default(),
+            updated_at: chrono::Utc::now(),
+        };
+        let event = crate::domain::events::DomainEvent::UserLocationUpdated {
+            user_id: crate::domain::UserId::new(saved_user.user_id).unwrap(),
+            old_location: None, // TODO: 需要从数据库获取旧位置
+            new_location,
+            updated_at: chrono::Utc::now(),
         };
         
         // 发布事件
@@ -330,10 +328,9 @@ impl CommandHandler<UpdateUserProfileCommand> for UserApplicationService {
             command.nickname.as_deref(),
             None, // avatar_url 暂时不支持更新
         ).await?;
-        let event = crate::domain::events::UserEvent::UserProfileUpdated {
-            event_id: crate::domain::events::EventFactory::generate_event_id(),
-            user_id: saved_user.user_id,
-            occurred_at: chrono::Utc::now(),
+        let event = crate::domain::events::DomainEvent::UserProfileUpdated {
+            user_id: crate::domain::UserId::new(saved_user.user_id).unwrap(),
+            updated_at: chrono::Utc::now(),
         };
         self.publish_event_ignore_error(event.clone()).await;
         
@@ -361,10 +358,9 @@ impl CommandHandler<SetUserPasswordCommand> for UserApplicationService {
             .ok_or(DomainError::UserNotFound)?;
         
         // 创建事件
-        let event = crate::domain::events::UserEvent::UserPasswordSet {
-            event_id: crate::domain::events::EventFactory::generate_event_id(),
-            user_id: saved_user.user_id,
-            occurred_at: chrono::Utc::now(),
+        let event = crate::domain::events::DomainEvent::UserPasswordSet {
+            user_id: crate::domain::UserId::new(saved_user.user_id).unwrap(),
+            set_at: chrono::Utc::now(),
         };
         
         // 发布事件
@@ -385,9 +381,9 @@ impl CommandHandler<DeleteUserAccountCommand> for UserApplicationService {
     async fn handle(&self, command: DeleteUserAccountCommand) -> ApplicationResult<Self::Result> {
         // 验证权限：只能删除自己的账户
         if command.user_id != command.requester_id {
-            return Err(DomainError::InsufficientPermissions {
-                required: "删除账户权限".to_string(),
-            });
+            return Err(ApplicationError::Domain(DomainError::InsufficientPermission {
+                required_role: "删除账户权限".to_string(),
+            }));
         }
         
         // 查找用户
@@ -398,10 +394,9 @@ impl CommandHandler<DeleteUserAccountCommand> for UserApplicationService {
         self.user_repository.delete_user(command.user_id).await?;
         
         // 创建事件
-        let event = crate::domain::events::UserEvent::UserDeleted {
-            event_id: crate::domain::events::EventFactory::generate_event_id(),
-            user_id: user.user_id,
-            occurred_at: chrono::Utc::now(),
+        let event = crate::domain::events::DomainEvent::UserDeleted {
+            user_id: crate::domain::UserId::new(user.user_id).unwrap(),
+            deleted_at: chrono::Utc::now(),
         };
         
         // 发布事件
@@ -421,7 +416,7 @@ impl QueryHandler<GetUserByIdQuery> for UserApplicationService {
     type Result = Option<UserProfile>;
     
     async fn handle(&self, query: GetUserByIdQuery) -> ApplicationResult<Self::Result> {
-        self.user_repository.find_user_profile(query.user_id).await
+        self.user_repository.find_user_profile(query.user_id).await.map_err(ApplicationError::Domain)
     }
 }
 
@@ -432,7 +427,7 @@ impl QueryHandler<SearchUsersByIdQuery> for UserApplicationService {
     async fn handle(&self, query: SearchUsersByIdQuery) -> ApplicationResult<Self::Result> {
         // 🆕 使用新的轻量级查询方法
         let user_profile = self.user_repository.find_user_profile(query.user_id).await?
-            .ok_or(DomainError::UserNotFound { user_id: query.user_id })?;
+            .ok_or(DomainError::UserNotFoundWithId { user_id: query.user_id })?;
         
         // 获取用户位置信息
         let location = self.user_repository.find_user_location(query.user_id).await?;
@@ -440,7 +435,7 @@ impl QueryHandler<SearchUsersByIdQuery> for UserApplicationService {
         // 🚀 性能优化：直接从UserProfile转换，避免创建完整User实体
         let mut profile = crate::application::queries::user_queries::UserProfileQuery::from_domain_profile(user_profile);
         if let Some((latitude, longitude, location_name)) = location {
-            profile.location = Some(crate::domain::UserLocation {
+            profile.location = Some(crate::application::queries::user_queries::UserLocation {
                 latitude,
                 longitude,
                 address: Some(location_name),
@@ -469,7 +464,7 @@ impl QueryHandler<SearchUsersByLocationQuery> for UserApplicationService {
             query.longitude,
             radius,
             cursor,
-            limit + 1,
+            (limit + 1) as i32,
         ).await?;
         
         let has_more = nearby_users.len() > limit as usize;
@@ -484,10 +479,10 @@ impl QueryHandler<SearchUsersByLocationQuery> for UserApplicationService {
             .map(|user| crate::application::queries::user_queries::NearbyUser {
                 user_id: user.user_id,
                 nickname: user.nickname,
-                location: crate::domain::UserLocation {
+                location: crate::application::queries::user_queries::UserLocation {
                     latitude: 0.0, // TODO: 需要从实际位置数据获取
                     longitude: 0.0, // TODO: 需要从实际位置数据获取
-                    address: None,
+                    address: Some("未知位置".to_string()), // TODO: 需要从实际位置数据获取
                 },
                 distance_km: 0.0, // TODO: 需要从实际距离数据获取
                 created_at: chrono::Utc::now(), // UserSearchResult 没有 created_at 字段，使用当前时间
@@ -515,7 +510,7 @@ impl QueryHandler<SearchUsersByNameQuery> for UserApplicationService {
         
         // 🆕 使用新的轻量级查询方法
         let user_profiles = self.user_repository
-            .search_user_profiles_by_name(&query.keyword, cursor, limit + 1)
+            .search_user_profiles_by_name(&query.keyword, cursor, (limit + 1) as i32)
             .await?;
         
         let has_more = user_profiles.len() > limit as usize;
@@ -546,7 +541,7 @@ impl QueryHandler<CheckPasswordStatusQuery> for UserApplicationService {
     
     async fn handle(&self, query: CheckPasswordStatusQuery) -> ApplicationResult<Self::Result> {
         let user = self.user_repository.find_user_profile(query.user_id).await?
-            .ok_or(DomainError::UserNotFound { user_id: query.user_id })?;
+            .ok_or(DomainError::UserNotFoundWithId { user_id: query.user_id })?;
         
         Ok(PasswordStatus::from(user))
     }

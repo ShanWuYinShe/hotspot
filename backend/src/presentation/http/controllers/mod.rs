@@ -30,16 +30,17 @@ pub use metrics_controller::*;
 // pub use query_stats_controller::*;
 // pub use cache_monitor_controller::*;
 pub use unified_monitoring_controller::*;
-pub use message_controller::MessageController;
+// pub use message_controller::MessageController; // 暂时禁用
 pub use moment_controller::*;
 pub use user_controller::UserController;
 pub use search_controller::*;
 pub use activity_controller::*;
 pub use upload_controller::*;
 pub use comment_controller::*;
-pub use friend_controller::*;
+// pub use friend_controller::*; // 暂时禁用
 
 use crate::domain::DomainError;
+use crate::application::ApplicationError;
 use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
@@ -51,6 +52,7 @@ pub trait Controller: Send + Sync {
     /// 控制器名称
     fn name(&self) -> &'static str;
 }
+
 
 /// HTTP错误响应处理 - 根据hotspot.md规范统一使用HTTP 200和业务错误码
 pub fn map_domain_error_to_http_response(error: DomainError) -> Response {
@@ -73,7 +75,7 @@ pub fn map_domain_error_to_http_response(error: DomainError) -> Response {
 
         // 验证错误 -> 1000
         DomainError::ValidationError { .. }
-        | DomainError::ValidationFailed
+        | DomainError::ValidationFailed { errors: _ }
         | DomainError::InvalidFormat => {
             (1000, error.user_message())
         }
@@ -198,7 +200,7 @@ pub fn no_content_response() -> Response {
 pub fn paginated_response<T: serde::Serialize>(
     items: Vec<T>,
     has_more: bool,
-    next_cursor: Option<i64>,
+    next_cursor: Option<String>,
 ) -> Response {
     let response = json!({
         "code": 0,
