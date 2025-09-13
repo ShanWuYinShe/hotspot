@@ -209,9 +209,9 @@ impl PostgresUserRepository {
                 let row = sqlx::query!(
                     r#"
                     SELECT 
-                        id as user_id, username as login_id, nickname, email, avatar_url,
+                        id as "user_id!", username as "login_id!", nickname as "nickname!", email, avatar_url,
                         password_hash, user_type::text as "user_type!", expires_at, 
-                        created_at, last_login_at as last_active_at
+                        created_at as "created_at!", last_login_at as last_active_at
                     FROM users 
                     WHERE id = $1
                     "#,
@@ -235,7 +235,8 @@ impl PostgresUserRepository {
                     
                     let location = if let Some(loc) = location_row {
                         Some(crate::domain::entities::UserLocation {
-                            coordinates: crate::domain::Coordinates::new(loc.latitude, loc.longitude),
+                            coordinates: crate::domain::Coordinates::new(loc.latitude, loc.longitude)
+                                .expect("数据库中的坐标应该是有效的"),
                             location_name: loc.location_name.unwrap_or_default(),
                             updated_at: loc.updated_at.unwrap_or_else(|| chrono::Utc::now()),
                         })
@@ -245,7 +246,7 @@ impl PostgresUserRepository {
                     
                     let mut user = User {
                         id: user_id,
-                        login_id: row.login_id,
+                        login_id: Some(row.login_id),
                         nickname: crate::domain::Nickname::new(row.nickname)
                             .map_err(|e| sqlx::Error::Protocol(format!("Invalid nickname: {}", e)))?,
                         email: row.email,
@@ -254,7 +255,7 @@ impl PostgresUserRepository {
                         password_hash: row.password_hash,
                         user_type: crate::domain::entities::UserType::from_str(&row.user_type).map_err(|e| sqlx::Error::Decode(e.into()))?,
                         expires_at: row.expires_at,
-                        created_at: row.created_at.unwrap_or_else(|| chrono::Utc::now()),
+                        created_at: row.created_at,
                         last_active_at: row.last_active_at.unwrap_or_else(|| chrono::Utc::now()),
                         location,
                         events: Vec::new(),
@@ -277,9 +278,9 @@ impl PostgresUserRepository {
                 let row = sqlx::query!(
                     r#"
                     SELECT 
-                        id as user_id, username as login_id, nickname, email, avatar_url,
+                        id as "user_id!", username as "login_id!", nickname as "nickname!", email, avatar_url,
                         password_hash, user_type::text as "user_type!", expires_at, 
-                        created_at, last_login_at as last_active_at
+                        created_at as "created_at!", last_login_at as last_active_at
                     FROM users 
                     WHERE username = $1
                     "#,
@@ -294,7 +295,7 @@ impl PostgresUserRepository {
                     
                     let mut user = User {
                         id: user_id,
-                        login_id: row.login_id,
+                        login_id: Some(row.login_id),
                         nickname: crate::domain::Nickname::new(row.nickname)
                             .map_err(|e| sqlx::Error::Protocol(format!("Invalid nickname: {}", e)))?,
                         email: row.email,
@@ -303,7 +304,7 @@ impl PostgresUserRepository {
                         password_hash: row.password_hash,
                         user_type: crate::domain::entities::UserType::from_str(&row.user_type).map_err(|e| sqlx::Error::Decode(e.into()))?,
                         expires_at: row.expires_at,
-                        created_at: row.created_at.unwrap_or_else(|| chrono::Utc::now()),
+                        created_at: row.created_at,
                         last_active_at: row.last_active_at.unwrap_or_else(|| chrono::Utc::now()),
                         location: None, // 简化实现，不加载位置
                         events: Vec::new(),
@@ -495,16 +496,16 @@ impl PasswordService for Argon2PasswordService {
         }
         
         let password = tokio::task::spawn_blocking(move || {
-            use rand::{Rng, thread_rng};
+            use rand::{Rng, rng};
             
             const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
                                     abcdefghijklmnopqrstuvwxyz\
                                     0123456789";
-            let mut rng = thread_rng();
+            let mut rng = rng();
             
             (0..length)
                 .map(|_| {
-                    let idx = rng.gen_range(0..CHARSET.len());
+                    let idx = rng.random_range(0..CHARSET.len());
                     CHARSET[idx] as char
                 })
                 .collect::<String>()

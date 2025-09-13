@@ -194,7 +194,7 @@ const emit = defineEmits<{
   'scroll': [offset: number]
 }>()
 
-// 默认 UI 配置（继承 UTable 样式）
+// 默认 UI 配置（继承 UTable 样式并简化）
 const defaultUI = {
   root: 'relative overflow-hidden',
   body: {
@@ -210,7 +210,7 @@ const defaultUI = {
   },
   loading: {
     wrapper: 'flex justify-center items-center py-4',
-    icon: 'animate-spin w-5 h-5 text-neutral-500',
+    icon: 'animate-spin w-5 h-5 text-neutral-500', // 与 app.config.ts 保持一致
     text: 'ml-2 text-sm text-neutral-500 dark:text-neutral-400'
   },
   empty: {

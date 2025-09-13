@@ -15,8 +15,9 @@ pub async fn check_group_member(
     let is_member = sqlx::query_scalar!(
         r#"
         SELECT EXISTS (
-            SELECT 1 FROM group_members 
-            WHERE group_id = $1 AND user_id = $2
+            SELECT 1 FROM group_members gm
+            INNER JOIN groups g ON gm.group_id = g.id
+            WHERE g.group_id = $1 AND gm.user_id = $2
         ) as "exists!"
         "#,
         &group_id.to_string(),
@@ -42,8 +43,9 @@ pub async fn check_group_admin(
     let is_admin = sqlx::query_scalar!(
         r#"
         SELECT EXISTS (
-            SELECT 1 FROM group_members 
-            WHERE group_id = $1 AND user_id = $2 AND role::text IN ($3, $4)
+            SELECT 1 FROM group_members gm
+            INNER JOIN groups g ON gm.group_id = g.id
+            WHERE g.group_id = $1 AND gm.user_id = $2 AND gm.role::text IN ($3, $4)
         ) as "exists!"
         "#,
         &group_id.to_string(),

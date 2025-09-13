@@ -48,10 +48,6 @@ interface Props {
   
   // 样式增强
   gradient?: boolean; // 渐变背景
-  shadow?: boolean; // 阴影效果
-  pulse?: boolean; // 脉冲动画
-  bounce?: boolean; // 弹跳效果
-  scale?: boolean; // 缩放效果
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -125,17 +121,12 @@ const iconClass = computed(() => {
 });
 
 const computedClass = computed(() => {
-  const classes = ['transition-colors duration-200'];
+  const classes: string[] = [];
   
-  // 基础效果 - 仅保留必要的交互反馈
-  if (props.shadow) {
-    classes.push('shadow-sm hover:shadow-md');
-  }
+  // 基础效果已在 app.config.ts 的 button 配置中定义
+  // 只保留必要的增强样式
   
-  // 移除缩放效果 - 按钮不需要位移特效
-  // 移除动画效果 - 按钮应该简洁明了
-  
-  // 渐变背景
+  // 渐变背景（可选增强）
   if (props.gradient && props.variant === 'solid') {
     switch (props.color) {
       case 'primary':

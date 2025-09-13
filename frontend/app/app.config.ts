@@ -39,7 +39,7 @@ export default defineAppConfig({
           subtle: "bg-transparent hover:bg-neutral-100 dark:hover:bg-neutral-700 active:bg-neutral-200 dark:active:bg-neutral-600"
         },
         size: {
-          xs: "min-h-[32px] px-3 text-sm",
+          xs: "min-h-[32px] px-3 text-sm mr-1", // 小按钮默认右边距
           sm: "min-h-[36px] px-4 text-sm", 
           md: "min-h-[44px] px-6 text-base", // 标准触摸目标
           lg: "min-h-[50px] px-8 text-lg",
@@ -53,9 +53,9 @@ export default defineAppConfig({
       slots: {
         base: "rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all duration-200 ease-out min-h-[44px]",
         leading: "",
-        leadingIcon: "text-neutral-500 dark:text-neutral-400",
+        leadingIcon: "text-neutral-500 dark:text-neutral-400 w-5 h-5", // 统一图标尺寸
         trailing: "",
-        trailingIcon: "text-neutral-500 dark:text-neutral-400",
+        trailingIcon: "text-neutral-500 dark:text-neutral-400 w-5 h-5", // 统一图标尺寸
       },
       defaultVariants: {
         size: "md",
@@ -146,7 +146,17 @@ export default defineAppConfig({
           outline: "border-2 bg-transparent",
           soft: "bg-opacity-20",
           subtle: "bg-opacity-10"
+        },
+        size: {
+          xs: "px-2 py-0.5 text-xs",
+          sm: "px-2.5 py-1 text-xs",
+          md: "px-3 py-1.5 text-sm",
+          lg: "px-4 py-2 text-base"
         }
+      },
+      defaultVariants: {
+        size: "sm",
+        variant: "soft"
       }
     },
 
@@ -290,7 +300,52 @@ export default defineAppConfig({
         hover: "hover:bg-neutral-50 dark:hover:bg-neutral-800",
         active: "active:bg-neutral-100 dark:active:bg-neutral-700",
         focus: "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
+      },
+    },
+
+    // 页面布局样式 - 统一管理页面级别的样式
+    pageLayouts: {
+      // 标准页面背景
+      pageBackground: "min-h-screen bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-950",
+      // 认证页面背景
+      authBackground: "min-h-screen antialiased bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-950 bg-radial-hero",
+      // 页面容器
+      pageContainer: "mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10",
+      // 聊天页面背景
+      chatBackground: "min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-100 dark:from-neutral-900 dark:via-neutral-950 dark:to-neutral-900"
+    },
+
+    // 语义化颜色配置 - 用于设置项等组件
+    semanticColors: {
+      blue: {
+        wrapper: 'bg-blue-100 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700',
+        icon: 'text-blue-600 dark:text-blue-300'
+      },
+      green: {
+        wrapper: 'bg-green-100 dark:bg-green-900/50 border border-green-200 dark:border-green-700',
+        icon: 'text-green-600 dark:text-green-300'
+      },
+      purple: {
+        wrapper: 'bg-purple-100 dark:bg-purple-900/50 border border-purple-200 dark:border-purple-700',
+        icon: 'text-purple-600 dark:text-purple-300'
+      },
+      yellow: {
+        wrapper: 'bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-200 dark:border-yellow-700',
+        icon: 'text-yellow-600 dark:text-yellow-300'
+      },
+      neutral: {
+        wrapper: 'bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600',
+        icon: 'text-neutral-600 dark:text-neutral-300'
+      },
+      red: {
+        wrapper: 'bg-red-100 dark:bg-red-900/50 border border-red-200 dark:border-red-700',
+        icon: 'text-red-600 dark:text-red-300'
+      },
+      pink: {
+        wrapper: 'bg-pink-100 dark:bg-pink-900/50 border border-pink-200 dark:border-pink-700',
+        icon: 'text-pink-600 dark:text-pink-300'
       }
-    }
+    },
+
   },
 });

@@ -418,7 +418,7 @@ mod tests {
         let user_id = UserId::new(1).unwrap();
         let event = DomainEvent::UserCreated {
             user_id,
-            user_type: UserType::Registered,
+            user_type: UserType::Regular,
             created_at: Utc::now(),
         };
         
@@ -428,7 +428,7 @@ mod tests {
         // 相同事件应该产生相同的ID
         let same_event = DomainEvent::UserCreated {
             user_id,
-            user_type: UserType::Registered,
+            user_type: UserType::Regular,
             created_at: event.occurred_at(),
         };
         assert_eq!(event.event_id(), same_event.event_id());
@@ -437,18 +437,18 @@ mod tests {
     #[test]
     fn test_event_classification() {
         let user_id = UserId::new(1).unwrap();
-        let group_id = GroupId::new();
+        let group_id = GroupId::new("test-group-id".to_string()).unwrap();
         
         let user_event = DomainEvent::UserCreated {
             user_id,
-            user_type: UserType::Registered,
+            user_type: UserType::Regular,
             created_at: Utc::now(),
         };
         assert!(user_event.is_user_event());
         assert!(!user_event.is_group_event());
         
         let group_event = DomainEvent::GroupCreated {
-            group_id,
+            group_id: group_id.clone(),
             owner_id: user_id,
             created_at: Utc::now(),
         };
@@ -462,7 +462,7 @@ mod tests {
         let other_user_id = UserId::new(2).unwrap();
         
         let transfer_event = DomainEvent::GroupOwnershipTransferred {
-            group_id: GroupId::new(),
+            group_id: GroupId::new("test-group-id-2".to_string()).unwrap(),
             old_owner_id: user_id,
             new_owner_id: other_user_id,
             transferred_at: Utc::now(),

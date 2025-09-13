@@ -256,8 +256,8 @@ impl CommentRepository for PgCommentRepository {
                 c.moment_id,
                 c.user_id,
                 c.content,
-                c.created_at,
-                c.updated_at,
+                c.created_at as "created_at!",
+                c.updated_at as "updated_at!",
                 u.nickname as user_nickname,
                 u.avatar_url as user_avatar
             FROM comments c
@@ -379,8 +379,8 @@ impl CommentRepository for PgCommentRepository {
                 c.moment_id,
                 c.user_id,
                 c.content,
-                c.created_at,
-                c.updated_at,
+                c.created_at as "created_at!",
+                c.updated_at as "updated_at!",
                 u.nickname as user_nickname,
                 u.avatar_url as user_avatar
             FROM comments c

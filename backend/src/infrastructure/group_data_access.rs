@@ -21,7 +21,7 @@ use crate::infrastructure::errors::{ErrorContext, ContextualError, ErrorConverte
 #[derive(Debug, sqlx::FromRow)]
 struct GroupRow {
     /// 群组ID - NOT NULL主键
-    group_id: Uuid,
+    group_id: String,
     /// 群组名称 - NOT NULL
     name: String,
     /// 群组描述 - 可为NULL
@@ -46,7 +46,7 @@ struct GroupRow {
 #[derive(Debug, sqlx::FromRow)]
 struct GroupLocationRow {
     /// 群组ID - NOT NULL
-    group_id: Uuid,
+    group_id: i64,
     /// 纬度 - NOT NULL
     latitude: f64,
     /// 经度 - NOT NULL
@@ -63,7 +63,7 @@ struct GroupLocationRow {
 #[derive(Debug, sqlx::FromRow)]
 struct GroupMemberStatsRow {
     /// 群组ID - NOT NULL
-    group_id: Uuid,
+    group_id: String,
     /// 总成员数 - COUNT结果，必定非NULL
     total_members: i64,
     /// 活跃成员数（最近7天有活动）- COUNT结果，必定非NULL
@@ -80,7 +80,7 @@ struct GroupMemberStatsRow {
 #[derive(Debug, sqlx::FromRow)]
 struct GroupSearchRow {
     /// 群组ID - NOT NULL
-    group_id: Uuid,
+    group_id: String,
     /// 群组名称 - NOT NULL
     name: String,
     /// 群组描述 - 可为NULL
@@ -303,7 +303,10 @@ impl PgGroupRepository {
                     INSERT INTO group_locations (
                         group_id, latitude, longitude, location_name, 
                         radius_meters, updated_at
-                    ) VALUES ($1, $2, $3, $4, $5, $6)
+                    ) VALUES (
+                        (SELECT id FROM groups WHERE group_id = $1), 
+                        $2, $3, $4, $5, $6
+                    )
                     ON CONFLICT (group_id) DO UPDATE SET
                         latitude = EXCLUDED.latitude,
                         longitude = EXCLUDED.longitude,
@@ -311,7 +314,7 @@ impl PgGroupRepository {
                         radius_meters = EXCLUDED.radius_meters,
                         updated_at = EXCLUDED.updated_at
                     "#,
-                    uuid::Uuid::parse_str(group.id.value()).unwrap(),
+                    group.id.value(),
                     location.coordinates.latitude.value(),
                     location.coordinates.longitude.value(),
                     location.location_name,
@@ -359,14 +362,15 @@ impl PgGroupRepository {
                     GroupLocationRow,
                     r#"
                     SELECT 
-                        group_id as "group_id!",
-                        latitude as "latitude!",
-                        longitude as "longitude!",
-                        location_name as "location_name!",
-                        radius_meters as "radius_meters!",
-                        updated_at as "updated_at!"
-                    FROM group_locations
-                    WHERE group_id = $1
+                        gl.group_id as "group_id!",
+                        gl.latitude as "latitude!",
+                        gl.longitude as "longitude!",
+                        gl.location_name as "location_name!",
+                        gl.radius_meters as "radius_meters!",
+                        gl.updated_at as "updated_at!"
+                    FROM group_locations gl
+                    JOIN groups g ON gl.group_id = g.id
+                    WHERE g.group_id = $1
                     "#,
                     group_id.value()
                 )
@@ -379,7 +383,7 @@ impl PgGroupRepository {
                     GroupMemberStatsRow,
                     r#"
                     SELECT 
-                        $1 as group_id,
+                        $1 as "group_id!",
                         COUNT(*) as "total_members!",
                         COUNT(*) FILTER (
                             WHERE u.last_login_at > NOW() - INTERVAL '7 days'
@@ -429,8 +433,8 @@ impl PgGroupRepository {
         pagination: &crate::application::PaginationQuery,
     ) -> DomainResult<crate::application::PaginatedResult<crate::application::GroupView>> {
         self.execute_query("search_nearby_groups", async {
-            let limit = pagination.limit.unwrap_or(20).min(100) as i64;
-            let cursor = pagination.cursor.unwrap_or(0) as i64;
+            let limit = pagination.limit.unwrap_or(20).min(100) as i32;
+            let cursor = pagination.cursor.unwrap_or(0) as i32;
             
             // 复杂的地理位置查询 - 展示PostGIS函数的使用
             let rows = sqlx::query_as!(
@@ -470,7 +474,7 @@ impl PgGroupRepository {
                 location.center.latitude.value(),
                 cursor,
                 location.radius * 1000.0, // 转换为米
-                limit + 1
+                (limit + 1) as i64
             )
             .fetch_all(&self.pool)
             .await?;
@@ -503,7 +507,7 @@ impl PgGroupRepository {
         pagination: &crate::application::PaginationQuery,
     ) -> DomainResult<crate::application::PaginatedResult<crate::application::GroupView>> {
         self.execute_query("search_groups_by_name", async {
-            let limit = pagination.limit.unwrap_or(20).min(100) as i64;
+            let limit = pagination.limit.unwrap_or(20).min(100) as i32;
             let cursor = pagination.cursor.unwrap_or(0);
             
             // 使用PostgreSQL的全文搜索功能
@@ -545,7 +549,7 @@ impl PgGroupRepository {
                 format!("%{}%", query),
                 cursor as i32,
                 query,
-                limit + 1
+                (limit + 1) as i64
             )
             .fetch_all(&self.pool)
             .await?;
@@ -576,11 +580,12 @@ impl PgGroupRepository {
             let is_member = sqlx::query_scalar!(
                 r#"
                 SELECT EXISTS(
-                    SELECT 1 FROM group_members 
-                    WHERE group_id = $1 AND user_id = $2
+                    SELECT 1 FROM group_members gm
+                    JOIN groups g ON gm.group_id = g.id
+                    WHERE g.group_id = $1 AND gm.user_id = $2
                 ) as "is_member!"
                 "#,
-                uuid::Uuid::parse_str(group_id.value()).unwrap().parse::<i64>().unwrap_or(0),
+                group_id.value(),
                 user_id.value()
             )
             .fetch_one(&self.pool)
@@ -596,7 +601,7 @@ impl PgGroupRepository {
         self.execute_query("delete_group", async {
             let result = sqlx::query!(
                 "DELETE FROM groups WHERE group_id = $1",
-                uuid::Uuid::parse_str(group_id.value()).unwrap()
+                group_id.value()
             )
             .execute(&self.pool)
             .await?;
@@ -613,7 +618,7 @@ mod tests {
     #[test]
     fn test_group_row_conversion() {
         let group_row = GroupRow {
-            group_id: Uuid::new_v4(),
+            group_id: Uuid::new_v4().to_string(),
             name: "测试群组".to_string(),
             description: Some("这是一个测试群组".to_string()),
             avatar_url: None,
@@ -625,7 +630,7 @@ mod tests {
             updated_at: Utc::now(),
         };
         
-        let group = group_row.to_domain(None, None);
+        let group = group_row.to_domain(None, None).unwrap();
         assert_eq!(group.name.value(), "测试群组");
         assert_eq!(group.description, Some("这是一个测试群组".to_string()));
         assert_eq!(group.group_type, GroupType::Public);
@@ -635,7 +640,7 @@ mod tests {
     #[test]
     fn test_group_member_stats_conversion() {
         let stats_row = GroupMemberStatsRow {
-            group_id: Uuid::new_v4(),
+            group_id: Uuid::new_v4().to_string(),
             total_members: 50,
             active_members: 30,
             online_members: 10,

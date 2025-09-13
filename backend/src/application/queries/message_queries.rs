@@ -7,8 +7,8 @@
 /// - 性能优化
 
 use serde::{Deserialize, Serialize};
-use crate::domain::{UserId, GroupId, MessageId};
-use crate::application::queries::{Query, PaginationQuery, LocationQuery};
+use crate::domain::{UserId, GroupId};
+use crate::application::queries::{Query, PaginationQuery};
 
 // === 消息查询 ===
 

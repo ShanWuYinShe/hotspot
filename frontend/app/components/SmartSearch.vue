@@ -15,7 +15,7 @@
       @blur="handleBlur"
     >
       <template #leading>
-        <UIcon :name="leadingIcon" class="text-neutral-500 dark:text-neutral-400 w-5 h-5" />
+        <UIcon :name="leadingIcon" />
       </template>
       
       <template #trailing>

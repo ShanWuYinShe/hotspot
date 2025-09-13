@@ -42,8 +42,8 @@ struct UserRow {
     expires_at: Option<DateTime<Utc>>,
     /// 创建时间 - NOT NULL，有默认值
     created_at: DateTime<Utc>,
-    /// 最后活跃时间 - NOT NULL，有默认值
-    last_active_at: DateTime<Utc>,
+    /// 最后活跃时间 - 可为NULL
+    last_active_at: Option<DateTime<Utc>>,
 }
 
 /// 用户位置信息行结构 - 对应user_locations表
@@ -85,8 +85,8 @@ struct UserSearchRow {
     nickname: String,
     /// 头像URL - 可为NULL
     avatar_url: Option<String>,
-    /// 最后活跃时间 - NOT NULL
-    last_active_at: DateTime<Utc>,
+    /// 最后活跃时间 - 可为NULL
+    last_active_at: Option<DateTime<Utc>>,
     /// 用户类型 - NOT NULL
     user_type: crate::domain::entities::UserType,
     /// 距离（米）- 地理搜索时非NULL，名称搜索时为NULL
@@ -109,7 +109,7 @@ impl UserRow {
             user_type: self.user_type,
             expires_at: self.expires_at,
             created_at: self.created_at,
-            last_active_at: self.last_active_at,
+            last_active_at: self.last_active_at.unwrap_or_else(|| chrono::Utc::now()),
             location,
             events: Vec::new(), // 新创建的用户没有待处理事件
         })
@@ -152,7 +152,7 @@ impl UserSearchRow {
             bio: None,
             is_temp: false, // 默认值
             created_at: chrono::Utc::now().to_rfc3339(),
-            last_active_at: self.last_active_at.to_rfc3339(),
+            last_active_at: self.last_active_at.unwrap_or_else(|| chrono::Utc::now()).to_rfc3339(),
             latitude: None,
             longitude: None,
             location_name: None,
@@ -335,7 +335,7 @@ impl PgUserRepository {
                     user_type as "user_type!: crate::domain::entities::UserType",
                     expires_at,
                     created_at as "created_at!",
-                    last_login_at as "last_active_at!"
+                    last_login_at as "last_active_at"
                 FROM users 
                 WHERE id = $1
                 "#,
@@ -364,7 +364,7 @@ impl PgUserRepository {
                 .await?;
                 
                 let location = location_row.map(|row| row.to_domain());
-                let user = user_row.to_domain(location);
+                let user = user_row.to_domain(location)?;
                 
                 Ok(Some(user))
             } else {
@@ -389,7 +389,7 @@ impl PgUserRepository {
                     user_type as "user_type!: crate::domain::entities::UserType",
                     expires_at,
                     created_at as "created_at!",
-                    last_login_at as "last_active_at!"
+                    last_login_at as "last_active_at"
                 FROM users 
                 WHERE username = $1
                 "#,
@@ -400,7 +400,7 @@ impl PgUserRepository {
             
             if let Some(user_row) = user_row {
                 // 简化实现：不加载位置信息
-                let user = user_row.to_domain(None);
+                let user = user_row.to_domain(None)?;
                 Ok(Some(user))
             } else {
                 Ok(None)
@@ -441,7 +441,7 @@ impl PgUserRepository {
                     id as "user_id!",
                     nickname as "nickname!",
                     avatar_url,
-                    last_login_at as "last_active_at!",
+                    last_login_at as "last_active_at",
                     user_type as "user_type!: crate::domain::entities::UserType",
                     NULL::FLOAT8 as distance_meters
                 FROM users 
@@ -464,7 +464,7 @@ impl PgUserRepository {
                 .collect();
             
             let next_cursor = if has_more && !items.is_empty() {
-                Some(items.last().unwrap().user_id)
+                Some(items.last().unwrap().user_id.clone())
             } else {
                 None
             };
@@ -472,7 +472,7 @@ impl PgUserRepository {
             Ok(crate::application::PaginatedResult {
                 items,
                 has_more,
-                next_cursor: next_cursor.map(|c| c as i64),
+                next_cursor: next_cursor.map(|c| c.to_string()),
             })
         }).await
     }
@@ -532,7 +532,7 @@ impl PgUserRepository {
                 .collect();
             
             let next_cursor = if has_more && !items.is_empty() {
-                Some(items.last().unwrap().user_id)
+                Some(items.last().unwrap().user_id.clone())
             } else {
                 None
             };
@@ -540,7 +540,7 @@ impl PgUserRepository {
             Ok(crate::application::PaginatedResult {
                 items,
                 has_more,
-                next_cursor: next_cursor.map(|c| c as i64),
+                next_cursor: next_cursor.map(|c| c.to_string()),
             })
         }).await
     }
@@ -548,29 +548,27 @@ impl PgUserRepository {
     /// 获取用户统计信息 - 聚合查询
     async fn get_user_stats(&self, user_id: UserId) -> DomainResult<crate::ports::UserStats> {
         self.execute_query("get_user_stats", async {
+            let user_id_val = user_id.value();
             let stats = sqlx::query_as!(
                 UserStatsRow,
                 r#"
                 SELECT 
-                    $1 as "user_id!",
+                    $1::BIGINT as "user_id!",
                     COALESCE(
-                        (SELECT COUNT(*) FROM group_members WHERE user_id = $2), 
+                        (SELECT COUNT(*) FROM group_members WHERE user_id = $1), 
                         0
                     ) as "group_count!",
                     COALESCE(
-                        (SELECT COUNT(*) FROM messages WHERE sender_id = $3), 
+                        (SELECT COUNT(*) FROM messages WHERE sender_id = $1), 
                         0
                     ) as "message_count!",
                     COALESCE(
-                        (SELECT COUNT(*) FROM moments WHERE user_id = $4), 
+                        (SELECT COUNT(*) FROM moments WHERE user_id = $1), 
                         0
                     ) as "moment_count!",
                     0 as "likes_received!"
                 "#,
-                user_id.value(),
-                user_id.value(),
-                user_id.value(),
-                user_id.value()
+                user_id_val
             )
             .fetch_one(&self.pool)
             .await?;
@@ -596,12 +594,12 @@ mod tests {
             user_type: crate::domain::entities::UserType::Regular,
             expires_at: None,
             created_at: Utc::now(),
-            last_active_at: Utc::now(),
+            last_active_at: Some(Utc::now()),
         };
         
-        let user = user_row.to_domain(None);
+        let user = user_row.to_domain(None).unwrap();
         assert_eq!(user.id.value(), 123);
-        assert_eq!(user.login_id, "test_user");
+        assert_eq!(user.login_id, Some("test_user".to_string()));
         assert_eq!(user.nickname.value(), "测试用户");
         assert_eq!(user.email, Some("test@example.com".to_string()));
         assert_eq!(user.user_type, crate::domain::entities::UserType::Regular);

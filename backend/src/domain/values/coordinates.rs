@@ -3,7 +3,7 @@
 /// 提供类型安全的地理坐标，包含验证和计算功能
 use serde::{Deserialize, Serialize};
 use std::fmt::{self, Display};
-use sqlx::{Postgres, Type, Encode, Decode};
+use sqlx::Type;
 
 use crate::domain::DomainError;
 

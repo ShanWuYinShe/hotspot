@@ -63,7 +63,7 @@ impl PasswordService for Argon2PasswordService {
                                  abcdefghijklmnopqrstuvwxyz\
                                  0123456789";
         
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let password: String = (0..length)
             .map(|_| {
                 let idx = rng.random_range(0..CHARSET.len());

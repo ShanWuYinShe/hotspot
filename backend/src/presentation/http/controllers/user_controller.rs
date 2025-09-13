@@ -176,7 +176,7 @@ where
                 };
                 ok_response(response)
             }
-            Err(error) => map_application_error_to_http_response(error),
+            Err(error) => map_application_error_to_http_response(crate::application::ApplicationError::Domain(error)),
         }
     }
     

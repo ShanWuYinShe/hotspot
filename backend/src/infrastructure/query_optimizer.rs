@@ -132,19 +132,19 @@ impl QueryOptimizer {
             BatchUserResult,
             r#"
             SELECT 
-                user_id as "user_id!",
+                id as "user_id!",
                 username as "login_id!",
                 nickname as "nickname!",
                 email,
                 avatar_url,
                 user_type as "user_type!: crate::domain::entities::UserType",
                 expires_at,
-                last_login_at as "last_active_at!"
+                last_login_at as "last_active_at"
             FROM users 
-            WHERE user_id = ANY($1)
-            ORDER BY user_id
+            WHERE id = ANY($1)
+            ORDER BY id
             "#,
-            &user_ids.iter().map(|id| id.to_string()).collect::<Vec<String>>()
+            &user_ids
         )
         .fetch_all(&self.pool)
         .await?;
@@ -390,7 +390,7 @@ pub struct BatchUserInsert {
     pub user_type: crate::domain::entities::UserType,
     pub expires_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
-    pub last_active_at: DateTime<Utc>,
+    pub last_active_at: Option<DateTime<Utc>>,
 }
 
 /// 批量查询用户结果
@@ -403,7 +403,7 @@ pub struct BatchUserResult {
     pub avatar_url: Option<String>,
     pub user_type: crate::domain::entities::UserType,
     pub expires_at: Option<DateTime<Utc>>,
-    pub last_active_at: DateTime<Utc>,
+    pub last_active_at: Option<DateTime<Utc>>,
 }
 
 /// 用户活动统计

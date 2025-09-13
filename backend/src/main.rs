@@ -128,11 +128,9 @@ fn create_unified_service_container(
     Ok(ServiceContainer {
         user_controller: service_container.user_controller.clone(),
         group_controller: service_container.group_controller.clone(),
-        message_controller: service_container.message_controller.clone(),
         moment_controller: service_container.moment_controller.clone(),
         search_controller: service_container.search_controller.clone(),
         activity_controller: service_container.activity_controller.clone(),
-        friend_controller: service_container.friend_controller.clone(),
         comment_controller: service_container.comment_controller.clone(),
         upload_controller: service_container.upload_controller.clone(),
         admin_controller: backend::presentation::http::controllers::AdminController::with_user_repo(user_repo),

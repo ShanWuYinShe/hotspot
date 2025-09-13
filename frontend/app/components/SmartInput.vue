@@ -16,7 +16,7 @@
       ref="inputRef"
     >
       <template v-if="leadingIcon" #leading>
-        <UIcon :name="leadingIcon" class="text-neutral-500 dark:text-neutral-400 w-5 h-5" />
+        <UIcon :name="leadingIcon" />
       </template>
       
       <template #trailing>
@@ -27,9 +27,8 @@
           size="xs"
           color="neutral"
           @click="clearInput"
-          class="hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-full mr-1"
         >
-          <UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
+          <UIcon name="i-heroicons-x-mark" />
         </UButton>
         
         <!-- 密码显示切换 -->
@@ -39,13 +38,12 @@
           size="xs"
           color="neutral"
           @click="togglePasswordVisibility"
-          class="hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-full mr-1"
         >
-          <UIcon :name="showPassword ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'" class="w-4 h-4" />
+          <UIcon :name="showPassword ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'" />
         </UButton>
         
         <!-- 自定义尾部图标 -->
-        <UIcon v-if="trailingIcon" :name="trailingIcon" class="text-neutral-500 dark:text-neutral-400 w-5 h-5" />
+        <UIcon v-if="trailingIcon" :name="trailingIcon" />
       </template>
     </UInput>
     
@@ -187,22 +185,21 @@ const validationMessageClass = computed(() => {
 });
 
 const computedUi = computed(() => {
-  let baseClasses = 'transition-all duration-200 px-12 py-3';
+  // 只添加验证状态相关的样式，基础样式由 app.config.ts 提供
+  let validationClasses = '';
   
   // 根据验证状态调整样式
   if (props.variant === 'success' || isValid.value === true) {
-    baseClasses += ' border-green-500 focus:border-green-500 focus:ring-green-500';
+    validationClasses = 'border-green-500 focus:border-green-500 focus:ring-green-500';
   } else if (props.variant === 'error' || isValid.value === false) {
-    baseClasses += ' border-red-500 focus:border-red-500 focus:ring-red-500';
+    validationClasses = 'border-red-500 focus:border-red-500 focus:ring-red-500';
   } else if (props.variant === 'warning') {
-    baseClasses += ' border-yellow-500 focus:border-yellow-500 focus:ring-yellow-500';
-  } else {
-    baseClasses += ' border-neutral-200 dark:border-neutral-700 focus:border-primary-500 focus:ring-primary-500';
+    validationClasses = 'border-yellow-500 focus:border-yellow-500 focus:ring-yellow-500';
   }
   
-  return {
-    base: baseClasses
-  };
+  return validationClasses ? {
+    base: validationClasses
+  } : undefined;
 });
 
 // 防抖验证

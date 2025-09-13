@@ -221,7 +221,7 @@ impl Capability for CacheCapability {
     async fn start(&mut self) -> DomainResult<()> {
         if let Some(client) = &self.redis_client {
             // 测试Redis连接
-            let mut conn = client.get_async_connection().await
+            let mut conn = client.get_multiplexed_async_connection().await
                 .map_err(|e| crate::domain::DomainError::BusinessRuleViolation {
                     rule: format!("Failed to connect to Redis: {}", e),
                 })?;
@@ -245,7 +245,7 @@ impl Capability for CacheCapability {
     
     async fn health_check(&self) -> CapabilityHealthStatus {
         if let Some(client) = &self.redis_client {
-            match client.get_async_connection().await {
+            match client.get_multiplexed_async_connection().await {
                 Ok(mut conn) => {
                     match redis::cmd("PING").query_async::<String>(&mut conn).await {
                         Ok(_) => {

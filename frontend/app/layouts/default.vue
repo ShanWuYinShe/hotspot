@@ -1,6 +1,7 @@
 <template>
     <div
-        class="min-h-screen antialiased font-sans text-neutral-900 dark:text-neutral-100 bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-950 bg-radial-hero overflow-x-hidden"
+        class="antialiased font-sans text-neutral-900 dark:text-neutral-100 overflow-x-hidden"
+        :class="$ui.ui.pageLayouts.authBackground"
     >
         <!-- 统一导航栏组件（含桌面顶部与移动底部导航） -->
             <nav>

@@ -388,21 +388,18 @@ mod tests {
 
     #[test]
     fn test_user_can_create_group() {
-        let nickname = Nickname::new("TestUser").unwrap();
-        let user = User::create_registered(
-            "testuser".to_string(),
-            nickname,
-            "password_hash".to_string(),
-            None,
-        ).unwrap();
+        let nickname = Nickname::new("TestUser".to_string()).unwrap();
+        let user_id = UserId::new(1).unwrap();
+        let user = User::new(user_id, nickname, UserType::Regular);
         
         assert!(UserDomainService::can_create_group(&user).is_ok());
     }
     
     #[test]
     fn test_expired_user_cannot_create_group() {
-        let nickname = Nickname::new("TestUser").unwrap();
-        let mut user = User::create_temporary(nickname).unwrap();
+        let nickname = Nickname::new("TestUser".to_string()).unwrap();
+        let user_id = UserId::new(2).unwrap();
+        let mut user = User::new(user_id, nickname, UserType::Temporary);
         
         // 手动设置过期时间为过去
         user.expires_at = Some(chrono::Utc::now() - chrono::Duration::days(1));
@@ -412,19 +409,20 @@ mod tests {
     
     #[test]
     fn test_group_activity_score() {
-        let group_name = GroupName::new("Test Group").unwrap();
+        let group_name = GroupName::new("Test Group".to_string()).unwrap();
         let owner_id = UserId::new(1).unwrap();
         let coordinates = Coordinates::new(39.9, 116.4).unwrap();
+        let group_id = GroupId::new("test-group-123".to_string()).unwrap();
+        let location = GroupLocation::new(coordinates, "Beijing".to_string(), 1000.0);
         
-        let group = Group::create(
+        let group = Group::new(
+            group_id,
             group_name,
-            None,
             owner_id,
-            coordinates,
-            "Beijing".to_string(),
-            1000.0,
-            true,
-        ).unwrap();
+            location,
+            GroupType::Public,
+            GroupVisibility::Public,
+        );
         
         let score = GroupDomainService::calculate_activity_score(&group);
         assert!(score > 0.0);
@@ -432,15 +430,12 @@ mod tests {
     
     #[test]
     fn test_message_priority_calculation() {
-        let nickname = Nickname::new("TestUser").unwrap();
-        let registered_user = User::create_registered(
-            "testuser".to_string(),
-            nickname.clone(),
-            "password_hash".to_string(),
-            None,
-        ).unwrap();
+        let nickname = Nickname::new("TestUser".to_string()).unwrap();
+        let user_id1 = UserId::new(3).unwrap();
+        let registered_user = User::new(user_id1, nickname.clone(), UserType::Regular);
         
-        let temp_user = User::create_temporary(nickname).unwrap();
+        let user_id2 = UserId::new(4).unwrap();
+        let temp_user = User::new(user_id2, nickname, UserType::Temporary);
         
         let registered_priority = MessageDomainService::calculate_message_priority(
             &registered_user,

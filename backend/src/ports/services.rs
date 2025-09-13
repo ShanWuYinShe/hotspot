@@ -135,7 +135,7 @@ impl Notification {
 }
 
 /// 通知类型
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum NotificationType {
     System,
     Message,
@@ -343,6 +343,7 @@ mod tests {
     fn test_notification_creation() {
         let notification = Notification {
             notification_id: "test-123".to_string(),
+            user_id: Some(UserId::new(1).unwrap()),
             notification_type: NotificationType::Message,
             title: "Test Notification".to_string(),
             content: "This is a test".to_string(),
