@@ -1,5 +1,5 @@
 <template>
-  <UModal>
+  <UModal title="设置备注">
     <template #header>
       <h3 class="text-lg font-semibold">设置备注</h3>
     </template>

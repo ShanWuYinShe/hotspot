@@ -59,8 +59,6 @@
 <script setup lang="ts">
 import { defineAsyncComponent } from 'vue'
 import type { GroupInfo } from "~/types";
-import { useMessageService } from '~/services/message.service';
-import { formatTime } from '~/utils/formatters';
 
 definePageMeta({ title: "我创建的群组", requiresAuth: true });
 const groupsStore = useGroupsStore();

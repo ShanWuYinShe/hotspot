@@ -3,7 +3,7 @@
     <UCard :ui="cardDangerUi">
       <template #header>
         <div class="flex items-center gap-4 md:gap-5">
-          <div class="p-4 md:p-5 rounded-xl bg-error-100 dark:bg-error-900/40 flex-shrink-0">
+          <div class="p-4 md:p-5 rounded-xl bg-red-100 dark:bg-red-900/40 border border-red-200 dark:border-red-700 flex-shrink-0">
             <UIcon name="i-heroicons-exclamation-triangle" class="w-7 h-7 md:w-9 md:h-9 text-error-600 dark:text-error-400" />
           </div>
           <div class="min-w-0 flex-1">
@@ -32,7 +32,7 @@
         <div class="space-y-3 md:space-y-4">
           <UCard :ui="dangerItemUi">
             <div class="flex flex-col sm:flex-row items-start gap-3 md:gap-4">
-              <div class="p-4 md:p-5 rounded-lg bg-error-100 dark:bg-error-900/30 flex-shrink-0">
+              <div class="p-4 md:p-5 rounded-lg bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-600 flex-shrink-0">
                 <UIcon name="i-heroicons-trash" class="w-6 h-6 md:w-7 md:h-7 text-error-600 dark:text-error-400" />
               </div>
               <div class="flex-1 min-w-0">
@@ -62,7 +62,6 @@
 
 <script setup lang="ts">
 interface Props {
-  isMobile?: boolean;
 }
 
 defineProps<Props>();

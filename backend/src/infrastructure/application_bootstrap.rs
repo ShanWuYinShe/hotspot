@@ -362,7 +362,7 @@ impl ApplicationBootstrap {
     }
     
     /// 提取已启用的服务
-    async fn extract_enabled_services(context: &mut ApplicationContext) -> DomainResult<()> {
+    async fn extract_enabled_services(_context: &mut ApplicationContext) -> DomainResult<()> {
         // 提取数据库连接池
         // 这里需要从能力管理器中获取数据库能力并提取连接池
         // 简化实现，暂时跳过

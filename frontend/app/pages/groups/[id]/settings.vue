@@ -154,8 +154,6 @@
 <script setup lang="ts">
 // TableColumn 类型已在组件内部定义
 import type { GroupInfo } from "~/types";
-import { useGroupService } from '~/services/group.service';
-import { useUserService } from '~/services/user.service';
 
 definePageMeta({ title: "群组管理", requiresAuth: true });
 

@@ -7,11 +7,9 @@
 /// - 分层数据结构：Row结构体 → Domain模型转换
 /// - 查询优化：只查询必要字段，避免SELECT *
 
-use async_trait::async_trait;
 use sqlx::PgPool;
 use chrono::{DateTime, Utc};
 use crate::domain::{DomainResult, DomainError, UserId, User};
-use crate::ports::UserRepository;
 use crate::infrastructure::errors::{ErrorContext, ContextualError, ErrorConverter};
 
 // === 数据库行结构体（Repository层专用）===
@@ -458,7 +456,7 @@ impl PgUserRepository {
             .await?;
             
             let has_more = rows.len() > limit as usize;
-            let mut items: Vec<_> = rows.into_iter()
+            let items: Vec<_> = rows.into_iter()
                 .take(limit as usize)
                 .map(|row| row.to_domain())
                 .collect();
@@ -526,7 +524,7 @@ impl PgUserRepository {
             .await?;
             
             let has_more = rows.len() > limit as usize;
-            let mut items: Vec<_> = rows.into_iter()
+            let items: Vec<_> = rows.into_iter()
                 .take(limit as usize)
                 .map(|row| row.to_domain())
                 .collect();

@@ -66,13 +66,13 @@
 
 <script setup lang="ts">
 const { t } = useI18n()
-const { getShortcutsByCategory, formatShortcut, isHelpVisible } = useGlobalShortcuts()
+const shortcuts = useShortcuts()
 
 // 处理关闭
 const handleClose = () => {
-  const { hideHelp } = useGlobalShortcuts()
-  hideHelp()
+  shortcuts.hideHelp()
 }
 
-const shortcutsByCategory = getShortcutsByCategory
+const shortcutsByCategory = computed(() => shortcuts.getByCategory())
+const isHelpVisible = computed(() => shortcuts.isHelpVisible.value)
 </script>

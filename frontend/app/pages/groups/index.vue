@@ -57,31 +57,36 @@
                                     <span class="font-medium truncate text-primary-900 dark:text-primary-100">{{
                                         (row as any).name || "未命名群组"
                                     }}</span>
-                                    <UBadge
-                                        v-if="
-                                            (row as any).user_role === 'owner'
-                                        "
-                                        color="primary"
-                                        variant="soft"
-                                        size="xs"
-                                        >群主</UBadge
+                                    <UTooltip
+                                        v-if="(row as any).user_role === 'owner'"
+                                        text="您是该群组的群主，拥有所有管理权限"
                                     >
-                                    <UBadge
-                                        v-else-if="
-                                            (row as any).user_role === 'admin'
-                                        "
-                                        color="success"
-                                        variant="soft"
-                                        size="xs"
-                                        >管理员</UBadge
+                                        <UBadge
+                                            color="primary"
+                                            variant="soft"
+                                            size="xs"
+                                        >群主</UBadge>
+                                    </UTooltip>
+                                    <UTooltip
+                                        v-else-if="(row as any).user_role === 'admin'"
+                                        text="您是该群组的管理员，拥有部分管理权限"
                                     >
-                                    <UBadge
+                                        <UBadge
+                                            color="success"
+                                            variant="soft"
+                                            size="xs"
+                                        >管理员</UBadge>
+                                    </UTooltip>
+                                    <UTooltip
                                         v-if="getUnreadCount(row as any) > 0"
-                                        color="warning"
-                                        variant="soft"
-                                        size="xs"
-                                        >未读 {{ getUnreadCount(row as any) }}</UBadge
+                                        :text="`该群组有 ${getUnreadCount(row as any)} 条未读消息`"
                                     >
+                                        <UBadge
+                                            color="warning"
+                                            variant="soft"
+                                            size="xs"
+                                        >未读 {{ getUnreadCount(row as any) }}</UBadge>
+                                    </UTooltip>
                                 </div>
                                 <p class="text-xs text-neutral-600 dark:text-neutral-400 truncate">
                                     {{
@@ -197,7 +202,6 @@ const filterOptions = [
 ];
 
 import type { GroupInfo } from "~/types";
-import { useMessageService } from "~/services/message.service";
 const filteredGroups = computed<GroupInfo[]>(() => {
     let result = groupsStore.myGroups;
     

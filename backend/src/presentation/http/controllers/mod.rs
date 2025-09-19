@@ -18,7 +18,6 @@ pub mod search_controller;
 pub mod activity_controller;
 pub mod upload_controller;
 pub mod comment_controller;
-pub mod friend_controller;
 
 // 重新导出控制器类型
 pub use admin_controller::*;
@@ -30,17 +29,16 @@ pub use metrics_controller::*;
 // pub use query_stats_controller::*;
 // pub use cache_monitor_controller::*;
 pub use unified_monitoring_controller::*;
-// pub use message_controller::MessageController; // 暂时禁用
+pub use message_controller::MessageController;
 pub use moment_controller::*;
 pub use user_controller::UserController;
 pub use search_controller::*;
 pub use activity_controller::*;
 pub use upload_controller::*;
 pub use comment_controller::*;
-// pub use friend_controller::*; // 暂时禁用
 
 use crate::domain::DomainError;
-use crate::application::ApplicationError;
+// use crate::application::ApplicationError;
 use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};

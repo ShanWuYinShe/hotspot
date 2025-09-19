@@ -1,5 +1,5 @@
 #![allow(async_fn_in_trait)]
-#[cfg(any(feature = "audit", feature = "ws_hooks", feature = "jobs"))]
+#[cfg(any(feature = "audit_logging", feature = "ws_hooks", feature = "jobs_memory"))]
 use std::sync::{Arc, RwLock};
 use futures::stream::{FuturesUnordered, StreamExt};
 use chrono::{DateTime, Utc};
@@ -33,21 +33,21 @@ pub enum DomainEvent {
 
 /// 事件总线（支持多处理器并发）
 pub struct EventBus {
-    #[cfg(feature = "audit")]
+    #[cfg(feature = "audit_logging")]
     audit: RwLock<Option<Arc<audit_handler::AuditEventsHandler>>>,
     #[cfg(feature = "ws_hooks")]
     ws: RwLock<Option<Arc<ws_handler::WsEventsHandler>>>,
-    #[cfg(feature = "jobs")]
+    #[cfg(feature = "jobs_memory")]
     jobs: RwLock<Option<Arc<jobs_handler::JobsEventsHandler>>>,
 }
 
 impl EventBus {
     pub fn new() -> Self { Self { 
-        #[cfg(feature = "audit")]
+        #[cfg(feature = "audit_logging")]
         audit: RwLock::new(None),
         #[cfg(feature = "ws_hooks")]
         ws: RwLock::new(None),
-        #[cfg(feature = "jobs")]
+        #[cfg(feature = "jobs_memory")]
         jobs: RwLock::new(None),
     } }
 }
@@ -59,7 +59,7 @@ impl Default for EventBus {
 }
 
 impl EventBus {
-    #[cfg(feature = "audit")]
+    #[cfg(feature = "audit_logging")]
     pub fn register_audit_handler(&self, handler: Arc<audit_handler::AuditEventsHandler>) {
         *self.audit.write().unwrap() = Some(handler);
     }
@@ -69,7 +69,7 @@ impl EventBus {
         *self.ws.write().unwrap() = Some(handler);
     }
 
-    #[cfg(feature = "jobs")]
+    #[cfg(feature = "jobs_memory")]
     pub fn register_jobs_handler(&self, handler: Arc<jobs_handler::JobsEventsHandler>) {
         *self.jobs.write().unwrap() = Some(handler);
     }
@@ -78,7 +78,7 @@ impl EventBus {
         // 避免在无处理器特性时的未使用参数警告
         let _ = &event;
         let mut tasks: FuturesUnordered<futures::future::BoxFuture<'static, ()>> = FuturesUnordered::new();
-        #[cfg(feature = "audit")]
+        #[cfg(feature = "audit_logging")]
         if let Some(h) = self.audit.read().unwrap().clone() {
             let ev = event.clone();
             tasks.push(Box::pin(async move { h.handle(&ev).await; }));
@@ -88,7 +88,7 @@ impl EventBus {
             let ev = event.clone();
             tasks.push(Box::pin(async move { h.handle(&ev).await; }));
         }
-        #[cfg(feature = "jobs")]
+        #[cfg(feature = "jobs_memory")]
         if let Some(h) = self.jobs.read().unwrap().clone() {
             let ev = event.clone();
             tasks.push(Box::pin(async move { h.handle(&ev).await; }));
@@ -98,10 +98,10 @@ impl EventBus {
 }
 
 /// 审计事件处理器（特性开启时启用）
-#[cfg(feature = "audit")]
+#[cfg(feature = "audit_logging")]
 pub mod audit_handler {
     use super::DomainEvent;
-    use crate::utils::audit::{AuditEvent, AuditService, NoopAuditSink};
+    use crate::utils::audit::{AuditEvent, AuditService};
     use std::sync::Arc;
     use uuid::Uuid;
 
@@ -261,25 +261,76 @@ pub mod ws_handler {
 }
 
 /// 作业队列事件处理器（特性开启时启用）
-#[cfg(feature = "jobs")]
+#[cfg(any(feature = "jobs_memory", feature = "jobs_redis"))]
 pub mod jobs_handler {
     use super::DomainEvent;
-    use crate::ports::JobDispatcherPort;
     use std::sync::Arc;
+
+    #[cfg(feature = "jobs_redis")]
+    use crate::adapters::adapters_jobs_redis::RedisJobDispatcher;
+    
+    #[cfg(feature = "jobs_memory")]
+    use crate::adapters::adapters_jobs_memory::MemoryJobDispatcher;
 
     #[derive(Clone)]
     pub struct JobsEventsHandler {
-        jobs: Option<Arc<crate::adapters::adapters_jobs_redis::RedisJobDispatcher>>,
+        #[cfg(feature = "jobs_redis")]
+        redis_jobs: Option<Arc<RedisJobDispatcher>>,
+        #[cfg(feature = "jobs_memory")]
+        memory_jobs: Option<Arc<MemoryJobDispatcher>>,
     }
 
     impl JobsEventsHandler {
-        pub fn new(jobs: Option<Arc<crate::adapters::adapters_jobs_redis::RedisJobDispatcher>>) -> Self { Self { jobs } }
+        #[cfg(feature = "jobs_redis")]
+        pub fn new_redis(jobs: Option<Arc<RedisJobDispatcher>>) -> Self { 
+            Self { redis_jobs: jobs } 
+        }
+        
+        #[cfg(feature = "jobs_memory")]
+        pub fn new_memory(jobs: Option<Arc<MemoryJobDispatcher>>) -> Self { 
+            Self { memory_jobs: jobs } 
+        }
         pub fn name(&self) -> &'static str { "jobs_events" }
 
         pub async fn handle(&self, event: &DomainEvent) {
             if let DomainEvent::TempUserCreated { user_id } = event.clone() {
                 // 可派发欢迎邮件或初始化位置等任务（示例：欢迎邮件）
-                let _ = self.jobs.dispatch_welcome_email(user_id.into(), "用户".to_string(), None).await;
+                
+                #[cfg(feature = "jobs_redis")]
+                let jobs_ref = &self.redis_jobs;
+                #[cfg(feature = "jobs_memory")]
+                let jobs_ref = &self.memory_jobs;
+                
+                if let Some(jobs) = jobs_ref {
+                    // 创建一个简单的欢迎邮件任务
+                    use crate::ports::{Job, JobId, JobDispatcher};
+                    use serde::{Serialize, Deserialize};
+                    
+                    #[derive(Debug, Clone, Serialize, Deserialize)]
+                    struct WelcomeEmailJob {
+                        user_id: i64,
+                        nickname: String,
+                        job_id: JobId,
+                    }
+                    
+                    impl Job for WelcomeEmailJob {
+                        fn job_type(&self) -> &'static str {
+                            "welcome_email"
+                        }
+                        
+                        fn job_id(&self) -> JobId {
+                            self.job_id
+                        }
+                    }
+                    
+                    let job = WelcomeEmailJob {
+                        user_id: user_id.into(),
+                        nickname: "用户".to_string(),
+                        job_id: JobId::new(),
+                    };
+                    
+                    let _ = jobs.dispatch(job).await;
+                }
             }
         }
     }

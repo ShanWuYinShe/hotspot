@@ -283,10 +283,12 @@ pub struct CapabilityRegistration {
 }
 
 /// 能力注册系统 - 管理所有能力的生命周期
+#[allow(dead_code)]
 pub struct CapabilityRegistry {
     /// 注册的能力
     capabilities: Arc<RwLock<HashMap<CapabilityId, CapabilityRegistration>>>,
     /// 能力启动顺序
+    #[allow(dead_code)]
     startup_order: Arc<RwLock<Vec<CapabilityId>>>,
     /// 全局配置
     global_config: Arc<RwLock<HashMap<String, serde_json::Value>>>,
@@ -643,12 +645,12 @@ impl CapabilityRegistry {
         // 这里实现编译期feature检查逻辑
         // 在实际项目中，这些会通过 cfg! 宏在编译期确定
         match feature_flag {
-            "websocket" => cfg!(feature = "websocket"),
-            "events" => cfg!(feature = "events"),
-            "cache" => cfg!(feature = "cache"),
-            "metrics" => cfg!(feature = "metrics"),
-            "email" => cfg!(feature = "email"),
-            "notifications" => cfg!(feature = "notifications"),
+            "websocket" => true, // WebSocket 是核心功能，始终启用
+            "events" => true, // 事件系统是核心功能，始终启用
+            "cache" => cfg!(any(feature = "cache_memory", feature = "cache_redis")),
+            "metrics" => cfg!(any(feature = "metrics_basic", feature = "metrics_prometheus")),
+            "email" => cfg!(feature = "email_notifications"),
+            "notifications" => true, // 通知系统是核心功能，始终启用
             _ => true, // 默认启用未知feature
         }
     }

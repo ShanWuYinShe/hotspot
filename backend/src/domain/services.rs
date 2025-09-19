@@ -106,9 +106,9 @@ pub struct GroupDomainService;
 impl GroupDomainService {
     /// 验证群组创建参数
     pub fn validate_group_creation(
-        name: &GroupName,
+        _name: &GroupName,
         description: &Option<String>,
-        location: &Coordinates,
+        _location: &Coordinates,
         radius: f64,
     ) -> DomainResult<()> {
         // 验证半径
@@ -413,7 +413,11 @@ mod tests {
         let owner_id = UserId::new(1).unwrap();
         let coordinates = Coordinates::new(39.9, 116.4).unwrap();
         let group_id = GroupId::new("test-group-123".to_string()).unwrap();
-        let location = GroupLocation::new(coordinates, "Beijing".to_string(), 1000.0);
+        let location = GroupLocation {
+            coordinates,
+            location_name: "Beijing".to_string(),
+            radius: 1000.0,
+        };
         
         let group = Group::new(
             group_id,

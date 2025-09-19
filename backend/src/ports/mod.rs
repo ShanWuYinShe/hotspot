@@ -9,6 +9,7 @@
 pub mod repositories;
 pub mod repository_ports;
 pub mod services;
+pub mod adapters;
 pub mod events;
 pub mod cache;
 pub mod cache_ports;
@@ -28,5 +29,4 @@ pub use cache::{CachePort, CacheKeyBuilder, CacheStats};
 // 只导出 job_types 中的类型，避免与 jobs 中的重复
 pub use job_types::{JobStatus as JobStatusType, JobPriority as JobPriorityType};
 pub use jobs::*;
-pub use notification_ports::*;
 pub use notification::*;

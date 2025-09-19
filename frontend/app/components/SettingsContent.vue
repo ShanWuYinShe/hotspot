@@ -5,7 +5,6 @@
                 <AccountSection
                     v-if="activeSection==='account'"
                     :user="user"
-                    :is-mobile="isMobile"
                     :local-settings="localSettings"
                     @change-avatar="emit('changeAvatar')"
                     @edit-nickname="emit('editNickname')"
@@ -16,21 +15,17 @@
                 <PrivacySection
                     v-else-if="activeSection==='privacy'"
                     :local-settings="localSettings"
-                    :is-mobile="isMobile"
                 />
                 <NotificationsSection
                     v-else-if="activeSection==='notifications'"
                     :local-settings="localSettings"
-                    :is-mobile="isMobile"
                 />
                 <AppearanceSection
                     v-else-if="activeSection==='appearance'"
                     :local-settings="localSettings"
-                    :is-mobile="isMobile"
                 />
                 <AboutSection
                     v-else-if="activeSection==='about'"
-                    :is-mobile="isMobile"
                     @clear-cache="emit('clearCache')"
                     @show-help="emit('showHelp')"
                     @show-privacy-policy="emit('showPrivacyPolicy')"
@@ -38,7 +33,6 @@
                 />
                 <DangerSection
                     v-else-if="activeSection==='danger'"
-                    :is-mobile="isMobile"
                     @delete-account="emit('deleteAccount')"
                 />
             </div>
@@ -53,7 +47,6 @@ interface Props {
     activeSection: string;
     localSettings: UserSettings;
     user: any;
-    isMobile?: boolean;
 }
 
 defineProps<Props>();

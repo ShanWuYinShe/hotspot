@@ -38,11 +38,11 @@ export const useRealTimeMessages = () => {
   // 处理新消息
   const handleNewMessage = (data: any) => {
     try {
-      // 适配消息格式 - 修正类型一致性，使用 string 避免大整数精度问题
+      // 适配消息格式
       const message = {
         id: String(Date.now()),
         conversation_id: String(data.room_id || ""),
-        sender_id: String(data.sender_id), // 修正：使用 string 避免大整数精度问题
+        sender_id: String(data.sender_id), // 转换为字符串
         sender_name: String(data.sender_nickname || ""),
         content: String(data.content || ""),
         message_type: "text" as const,

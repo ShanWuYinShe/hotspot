@@ -47,6 +47,9 @@ use crate::ports::{UserRepository, PasswordService, EventPublisher};
 pub trait UserApplicationServicePort: Send + Sync {
     /// 验证用户密码
     async fn verify_user_password(&self, login_id: &str, password: &str) -> DomainResult<UserAuth>;
+    
+    /// 通过login_id查找用户
+    async fn find_user_by_login_id(&self, login_id: &str) -> ApplicationResult<Option<UserAuth>>;
 }
 
 /// 用户应用服务
@@ -72,6 +75,14 @@ impl UserApplicationService {
             base,
             user_repository,
             password_service,
+        }
+    }
+    
+    /// 通过login_id查找用户
+    pub async fn find_user_by_login_id(&self, login_id: &str) -> ApplicationResult<Option<UserAuth>> {
+        match self.user_repository.find_user_auth(login_id).await {
+            Ok(user_auth) => Ok(user_auth),
+            Err(error) => Err(ApplicationError::Domain(error)),
         }
     }
     
@@ -115,6 +126,10 @@ impl UserApplicationService {
 impl UserApplicationServicePort for UserApplicationService {
     async fn verify_user_password(&self, login_id: &str, password: &str) -> DomainResult<UserAuth> {
         self.verify_user_password(login_id, password).await
+    }
+    
+    async fn find_user_by_login_id(&self, login_id: &str) -> ApplicationResult<Option<UserAuth>> {
+        self.find_user_by_login_id(login_id).await
     }
 }
 

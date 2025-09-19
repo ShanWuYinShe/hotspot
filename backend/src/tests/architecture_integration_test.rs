@@ -1,7 +1,7 @@
 /// 架构集成测试
 /// 
 /// 验证新架构的核心组件能够正确集成和工作
-use crate::domain::{User, UserType};
+use crate::domain::{User, entities::UserType};
 
 #[cfg(test)]
 mod tests {
@@ -37,15 +37,16 @@ mod tests {
     #[test]
     fn test_domain_entity_creation() {
         // 测试用户实体创建
-        let user = User::new_regular(
-            1,
-            "test@example.com".to_string(),
-            "test_user".to_string(),
-            "hashed_password".to_string(),
+        let user_id = crate::domain::values::UserId::from_trusted(1);
+        let nickname = crate::domain::values::Nickname::new("test_user".to_string()).unwrap();
+        let user = User::new(
+            user_id,
+            nickname,
+            UserType::Regular,
         );
         
         assert_eq!(user.user_type, UserType::Regular);
-        assert_eq!(user.nickname, "test_user");
+        assert_eq!(user.nickname.nickname(), "test_user");
         assert!(user.login_id.is_some());
         assert!(user.password_hash.is_some());
     }
@@ -63,13 +64,13 @@ mod tests {
     /// 测试错误处理
     #[test]
     fn test_error_handling() {
-        use crate::domain::{DomainError, UserDomainError};
+        use crate::domain::DomainError;
         
-        let error = DomainError::User(UserDomainError::UserNotFound { user_id: 123 });
+        let error = DomainError::UserNotFound;
         
         match error {
-            DomainError::User(UserDomainError::UserNotFound { user_id }) => {
-                assert_eq!(user_id, 123);
+            DomainError::UserNotFound => {
+                // 测试通过
             }
             other => {
                 assert!(false, "错误类型不匹配，期望UserNotFound，实际得到: {:?}", other);
@@ -129,6 +130,6 @@ mod tests {
         
         assert_eq!(paginated.items, items);
         assert_eq!(paginated.has_more, has_more);
-        assert_eq!(paginated.next_cursor, next_cursor);
+        assert_eq!(paginated.next_cursor, next_cursor.map(|c| c.to_string()));
     }
 }

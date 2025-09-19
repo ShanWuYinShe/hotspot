@@ -3,7 +3,6 @@
 /// 提供高性能的Redis缓存服务，支持热点数据缓存和分布式缓存
 use async_trait::async_trait;
 use redis::{AsyncCommands, Client, RedisResult};
-use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tracing::{debug, error, warn};
 

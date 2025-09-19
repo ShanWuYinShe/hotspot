@@ -5,17 +5,16 @@
  */
 
 import { ref, computed } from 'vue'
-import { formatDistance as formatDistanceUtil } from '~/utils/formatters'
+import type { Coordinates } from '~/types/geolocation'
 
-export interface Coordinates {
-  latitude: number
-  longitude: number
+// 扩展坐标接口，添加客户端特有属性
+export interface ExtendedCoordinates extends Coordinates {
   accuracy?: number
   timestamp?: number
 }
 
 export const useGeolocation = () => {
-  const coordinates = ref<Coordinates | null>(null)
+  const coordinates = ref<ExtendedCoordinates | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
   const isSupported = ref(typeof navigator !== 'undefined' && 'geolocation' in navigator)
@@ -172,8 +171,14 @@ export const useGeolocation = () => {
     return R * c
   }
 
-  // 格式化距离显示（使用统一工具函数）
-  const formatDistance = formatDistanceUtil
+  // 格式化距离显示
+  const formatDistance = (distance: number): string => {
+    if (distance < 1000) {
+      return `${Math.round(distance)}m`
+    } else {
+      return `${(distance / 1000).toFixed(1)}km`
+    }
+  }
 
   // 权限相关统一走 usePermissions
   // 移除权限请求方法：请使用 usePermissions().requestGeolocation()

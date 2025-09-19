@@ -37,46 +37,60 @@
                         <!-- 操作按钮 -->
                         <div class="flex gap-2 w-full sm:w-auto">
                             <!-- 私聊按钮 -->
-                            <UButton
-                                icon="i-heroicons-chat-bubble-left-right"
-                                @click="$router.push(`/chat/users/${user.user_id}`)"
-                                class="flex-1 sm:flex-none"
-                            >
-                                私聊
-                            </UButton>
+                            <UTooltip :text="`与 ${user.nickname} 开始私聊`" :kbds="['enter']">
+                                <UButton
+                                    icon="i-heroicons-chat-bubble-left-right"
+                                    @click="$router.push(`/chat/users/${user.user_id}`)"
+                                    class="flex-1 sm:flex-none"
+                                >
+                                    私聊
+                                </UButton>
+                            </UTooltip>
                             
                             <!-- 好友操作按钮 -->
-                            <UButton
+                            <UTooltip
                                 v-if="friendshipStatus === 'none'"
-                                variant="outline"
-                                icon="i-heroicons-user-plus"
-                                :loading="operating"
-                                @click="sendFriendRequest"
-                                class="flex-1 sm:flex-none"
+                                :text="`向 ${user.nickname} 发送好友请求`"
                             >
-                                加好友
-                            </UButton>
+                                <UButton
+                                    variant="outline"
+                                    icon="i-heroicons-user-plus"
+                                    :loading="operating"
+                                    @click="sendFriendRequest"
+                                    class="flex-1 sm:flex-none"
+                                >
+                                    加好友
+                                </UButton>
+                            </UTooltip>
                             
-                            <UButton
+                            <UTooltip
                                 v-else-if="friendshipStatus === 'pending'"
-                                variant="outline"
-                                icon="i-heroicons-clock"
-                                disabled
-                                class="flex-1 sm:flex-none"
+                                text="好友请求已发送，等待对方确认"
                             >
-                                已发送
-                            </UButton>
+                                <UButton
+                                    variant="outline"
+                                    icon="i-heroicons-clock"
+                                    disabled
+                                    class="flex-1 sm:flex-none"
+                                >
+                                    已发送
+                                </UButton>
+                            </UTooltip>
                             
-                            <UButton
+                            <UTooltip
                                 v-else-if="friendshipStatus === 'friends'"
-                                variant="outline"
-                                icon="i-heroicons-user-minus"
-                                :loading="operating"
-                                @click="removeFriend"
-                                class="flex-1 sm:flex-none"
+                                :text="`从好友列表中移除 ${user.nickname}`"
                             >
-                                取消好友
-                            </UButton>
+                                <UButton
+                                    variant="outline"
+                                    icon="i-heroicons-user-minus"
+                                    :loading="operating"
+                                    @click="removeFriend"
+                                    class="flex-1 sm:flex-none"
+                                >
+                                    取消好友
+                                </UButton>
+                            </UTooltip>
                         </div>
                     </div>
                     
@@ -240,9 +254,6 @@
 <script setup lang="ts">
 import { buildUserUrl, USER_ENDPOINTS } from '~/config/api';
 import type { UserInfo, MomentInfo } from '~/types';
-import { useUserService } from '~/services/user.service';
-import { useFriendService } from '~/services/friend.service';
-import { useMomentService } from '~/services/moment.service';
 
 definePageMeta({ 
     title: '用户详情', 
@@ -339,7 +350,11 @@ async function loadUserProfile() {
                 user.value = foundUser;
                 friendshipStatus.value = foundUser.friendship_status || 'none';
             }
-        } catch {}
+        } catch (error) {
+            if (import.meta.dev) {
+                console.warn('Failed to find user in store:', error);
+            }
+        }
         
         await loadUserStats();
         await loadUserMoments();
@@ -358,10 +373,8 @@ async function loadUserProfile() {
 // 加载用户统计信息（TODO: 需要后端实现统计API或通过现有API计算）
 async function loadUserStats() {
     try {
-        // 暂时使用默认值，等待后端实现统计API
         userStats.value = { momentsCount: 0, friendsCount: 0, groupsCount: 0 };
         
-        // TODO: 实现统计功能
         // 可能的实现方式：
         // 1. 通过 moments/history API 获取用户动态数量
         // 2. 通过 friends API 获取好友数量（当好友功能实现时）

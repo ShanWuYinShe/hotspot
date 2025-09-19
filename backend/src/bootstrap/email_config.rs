@@ -4,7 +4,7 @@
 use std::env;
 use tracing::{debug, warn};
 
-#[cfg(feature = "email_channel")]
+#[cfg(feature = "email_notifications")]
 use crate::adapters::{EmailConfig, EmailConfigBuilder};
 
 /// 邮件配置结构
@@ -120,7 +120,7 @@ impl EmailSettings {
     }
     
     /// 转换为EmailConfig（仅在启用email_channel功能时可用）
-    #[cfg(feature = "email_channel")]
+    #[cfg(feature = "email_notifications")]
     pub fn to_email_config(&self) -> EmailConfig {
         EmailConfigBuilder::new()
             .smtp_host(self.smtp_host.clone())
@@ -200,7 +200,7 @@ pub struct EmailServiceFactory;
 
 impl EmailServiceFactory {
     /// 创建邮件传输器（仅在启用email_channel功能时可用）
-    #[cfg(feature = "email_channel")]
+    #[cfg(feature = "email_notifications")]
     pub fn create_email_transport(
         settings: &EmailSettings,
     ) -> Result<Option<crate::adapters::EmailNotificationTransport>, Box<dyn std::error::Error>> {
@@ -217,7 +217,7 @@ impl EmailServiceFactory {
     }
     
     /// 创建占位邮件传输器（功能未启用时）
-    #[cfg(not(feature = "email_channel"))]
+    #[cfg(not(feature = "email_notifications"))]
     pub fn create_email_transport(
         _settings: &EmailSettings,
     ) -> Result<Option<()>, Box<dyn std::error::Error>> {
@@ -226,7 +226,8 @@ impl EmailServiceFactory {
     }
     
     /// 创建复合通知传输器
-    #[cfg(all(feature = "ws", feature = "email_channel"))]
+    // WebSocket 是核心功能，始终启用
+    #[cfg(feature = "email_notifications")]
     pub fn create_composite_transport(
         email_settings: &EmailSettings,
         websocket_transport: std::sync::Arc<crate::adapters::WebSocketNotificationTransport>,
@@ -244,7 +245,8 @@ impl EmailServiceFactory {
     }
     
     /// 创建仅WebSocket的传输器（email功能未启用时）
-    #[cfg(all(feature = "ws", not(feature = "email_channel")))]
+    // WebSocket 是核心功能，始终启用
+    #[cfg(not(feature = "email_notifications"))]
     pub fn create_composite_transport(
         _email_settings: &EmailSettings,
         websocket_transport: std::sync::Arc<crate::adapters::WebSocketNotificationTransport>,
@@ -258,7 +260,7 @@ impl EmailServiceFactory {
     }
     
     /// 创建邮件任务处理器（仅在启用email_channel功能时可用）
-    #[cfg(feature = "email_channel")]
+    #[cfg(feature = "email_notifications")]
     pub fn create_email_job_handler<T, U>(
         transport: std::sync::Arc<T>,
         user_repository: std::sync::Arc<U>,

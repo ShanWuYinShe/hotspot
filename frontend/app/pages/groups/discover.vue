@@ -85,12 +85,15 @@
                                         <span class="font-medium truncate">{{
                                             (row as any).name
                                         }}</span>
-                                        <UBadge
+                                        <UTooltip
                                             v-if="(row as any).is_password_required"
-                                            variant="soft"
-                                            size="xs"
-                                            >私有</UBadge
+                                            text="私有群组，需要密码或邀请才能加入"
                                         >
+                                            <UBadge
+                                                variant="soft"
+                                                size="xs"
+                                            >私有</UBadge>
+                                        </UTooltip>
                                     </div>
                                     <p
                                         class="text-xs text-neutral-500 truncate"

@@ -7,16 +7,19 @@
 /// - 性能监控
 /// - 连接池优化
 
-use sqlx::{PgPool, Postgres, QueryBuilder, Arguments};
+use sqlx::{PgPool, Postgres, QueryBuilder /* , Arguments */};
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
-use crate::domain::{DomainResult, UserId, GroupId};
+use crate::domain::DomainResult;
+// use crate::domain::{UserId, GroupId}; // 暂时未使用
 use crate::infrastructure::errors::{ErrorContext, ContextualError, ErrorConverter};
 
 /// 查询优化器 - 提供高性能的数据库查询方法
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct QueryOptimizer {
     pool: PgPool,
+    #[allow(dead_code)]
     query_cache: std::sync::Arc<tokio::sync::RwLock<HashMap<String, String>>>,
 }
 
@@ -459,7 +462,7 @@ mod tests {
             user_type: crate::domain::entities::UserType::Regular,
             expires_at: None,
             created_at: Utc::now(),
-            last_active_at: Utc::now(),
+            last_active_at: Some(Utc::now()),
         };
         
         assert_eq!(user.user_id, 123);

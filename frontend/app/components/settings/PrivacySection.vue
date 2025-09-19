@@ -87,9 +87,10 @@
 </template>
 
 <script setup lang="ts">
+import type { UserSettings } from '~/types';
+
 interface Props {
-  localSettings: any;
-  isMobile?: boolean;
+  localSettings: UserSettings;
 }
 
 defineProps<Props>();

@@ -1,7 +1,6 @@
 <template>
     <div
-        class="antialiased font-sans text-neutral-900 dark:text-neutral-100 overflow-x-hidden"
-        :class="$ui.ui.pageLayouts.authBackground"
+        class="antialiased font-sans text-neutral-900 dark:text-neutral-100 overflow-x-hidden bg-neutral-50 dark:bg-neutral-950"
     >
         <!-- 统一导航栏组件（含桌面顶部与移动底部导航） -->
             <nav>
@@ -37,7 +36,6 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import AppNavigation from "~/components/AppNavigation.vue";
 
 // 导入组件
 const ShortcutHelp = defineAsyncComponent(() => import('~/components/ShortcutHelp.vue'));

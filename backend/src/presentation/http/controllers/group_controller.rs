@@ -311,7 +311,13 @@ where
         }
     }
 
-    /// 获取当前用户加入的群组列表
+    /// 获取当前用户加入的群组列表（包含用户角色信息）
+    /// 
+    /// 优化说明：
+    /// - 返回用户参与的所有群组（包括创建的和加入的）
+    /// - 每个群组包含用户在该群组中的角色信息
+    /// - 前端可根据角色判断是否有管理权限
+    /// - 替代了原来的 owned_groups API，简化了接口设计
     pub async fn user_groups(
         State(controller): State<Self>,
         axum::extract::Extension(current_user): axum::extract::Extension<CurrentUser>,
@@ -326,26 +332,6 @@ where
         };
         
         match QueryHandler::<SearchGroupsByUserIdQuery>::handle(&controller.group_service, query).await {
-            Ok(result) => paginated_response(result.items, result.has_more, result.next_cursor),
-            Err(error) => map_application_error_to_http_response(error),
-        }
-    }
-
-    /// 获取当前用户拥有的群组列表
-    pub async fn owned_groups(
-        State(controller): State<Self>,
-        axum::extract::Extension(current_user): axum::extract::Extension<CurrentUser>,
-        Json(request): Json<OwnedGroupsRequest>,
-    ) -> Response {
-        let query = SearchGroupsByOwnerIdQuery {
-            owner_id: current_user.user_id,
-            pagination: crate::application::queries::PaginationQuery {
-                cursor: request.cursor.and_then(|c| c.parse().ok()),
-                limit: request.limit.map(|v| v as usize),
-            },
-        };
-        
-        match QueryHandler::<SearchGroupsByOwnerIdQuery>::handle(&controller.group_service, query).await {
             Ok(result) => paginated_response(result.items, result.has_more, result.next_cursor),
             Err(error) => map_application_error_to_http_response(error),
         }

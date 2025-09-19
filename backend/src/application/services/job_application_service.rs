@@ -7,9 +7,9 @@ use uuid::Uuid;
 use serde::{Deserialize, Serialize};
 
 use crate::domain::DomainResult;
-use crate::ports::{JobDispatcher, JobId, JobStatus, QueueStats, job_types};
+use crate::ports::{JobDispatcher, JobId, JobStatus, QueueStats};
 use crate::ports::jobs::{
-    WelcomeEmailJob, LocationIndexJob, NotificationJob,
+    WelcomeEmailJob, LocationIndexJob,
     GroupMemberNotificationJob, MomentContentIndexJob, 
     MessageNotificationJob, CleanupExpiredSessionsJob
 };
@@ -165,7 +165,7 @@ impl<J: JobDispatcher> JobApplicationService for JobApplicationServiceImpl<J> {
         user_id: i64,
         latitude: f64,
         longitude: f64,
-        location_name: Option<String>,
+        _location_name: Option<String>,
     ) -> DomainResult<JobId> {
         let job = LocationIndexJob {
             job_id: JobId::new(),
@@ -243,34 +243,64 @@ impl<J: JobDispatcher> JobApplicationService for JobApplicationServiceImpl<J> {
     }
 
     async fn get_job_status(&self, job_id: &JobId) -> DomainResult<Option<JobStatus>> {
-        // TODO: 实现任务状态查询逻辑
-        log::warn!("任务状态查询功能暂未实现: {:?}", job_id);
-        Ok(None)
+        // 通过调度器获取任务状态
+        match self.job_dispatcher.get_job_status(job_id).await {
+            Ok(status) => Ok(status),
+            Err(e) => {
+                log::error!("获取任务状态失败: {:?} - {:?}", job_id, e);
+                Err(e)
+            }
+        }
     }
 
     async fn cancel_job(&self, job_id: &JobId) -> DomainResult<bool> {
-        // TODO: 实现任务取消逻辑
-        log::warn!("任务取消功能暂未实现: {:?}", job_id);
-        Ok(false)
+        // 通过调度器取消任务
+        match self.job_dispatcher.cancel_job(job_id).await {
+            Ok(cancelled) => {
+                if cancelled {
+                    log::info!("任务取消成功: {:?}", job_id);
+                } else {
+                    log::warn!("任务取消失败或任务不存在: {:?}", job_id);
+                }
+                Ok(cancelled)
+            }
+            Err(e) => {
+                log::error!("任务取消操作失败: {:?} - {:?}", job_id, e);
+                Err(e)
+            }
+        }
     }
 
     async fn retry_job(&self, job_id: &JobId) -> DomainResult<bool> {
-        // TODO: 实现任务重试逻辑
-        log::warn!("任务重试功能暂未实现: {:?}", job_id);
-        Ok(false)
+        // 通过调度器重试任务
+        match self.job_dispatcher.retry_job(job_id).await {
+            Ok(retried) => {
+                if retried {
+                    log::info!("任务重试成功: {:?}", job_id);
+                } else {
+                    log::warn!("任务重试失败或任务不符合重试条件: {:?}", job_id);
+                }
+                Ok(retried)
+            }
+            Err(e) => {
+                log::error!("任务重试操作失败: {:?} - {:?}", job_id, e);
+                Err(e)
+            }
+        }
     }
 
     async fn get_queue_stats(&self) -> DomainResult<QueueStats> {
         // 获取调度器状态并转换为队列统计
-        let _dispatcher_status = self.job_dispatcher.get_dispatcher_status().await?;
+        let dispatcher_status = self.job_dispatcher.get_dispatcher_status().await?;
+        
         Ok(QueueStats {
-            pending_jobs: 0, // TODO: 从dispatcher_status中提取
+            pending_jobs: 0, // 基础实现暂时返回0，具体实现需要根据调度器类型
             running_jobs: 0,
-            completed_jobs: 0,
-            failed_jobs: 0,
+            completed_jobs: dispatcher_status.dispatched_jobs.max(0) as u64,
+            failed_jobs: dispatcher_status.failed_dispatches.max(0) as u64,
             cancelled_jobs: 0,
-            total_jobs: 0,
-            active_workers: 0,
+            total_jobs: dispatcher_status.dispatched_jobs.max(0) as u64,
+            active_workers: if dispatcher_status.is_active { 1 } else { 0 },
             queue_size: 0,
             average_processing_time: std::time::Duration::from_secs(0),
             last_processed_at: None,
@@ -312,7 +342,7 @@ impl<J: JobDispatcher> JobManager<J> {
         // 获取调度器状态并转换为队列统计
         let _dispatcher_status = self.job_dispatcher.get_dispatcher_status().await?;
         Ok(QueueStats {
-            pending_jobs: 0, // TODO: 从dispatcher_status中提取
+            pending_jobs: 0,
             running_jobs: 0,
             completed_jobs: 0,
             failed_jobs: 0,

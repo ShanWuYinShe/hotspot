@@ -8,8 +8,8 @@ use std::time::Duration;
 use tracing::debug;
 
 use crate::domain::{DomainResult, UserProfile};
-// use crate::adapters::adapters_cache_memory::{MemoryCache, MemoryCacheConfig};  // 暂时禁用
-use crate::ports::cache_ports::CachePort;
+use crate::adapters::adapters_cache_memory::{MemoryCache, MemoryCacheConfig};
+// use crate::ports::cache_ports::CachePort;
 use crate::ports::cache::Cache;
 
 /// 缓存键生成器
@@ -180,13 +180,13 @@ pub struct CacheStats {
     pub miss_rate: f64,
 }
 
-// /// 基于内存缓存的缓存服务实现 - 暂时禁用
-// pub struct InMemoryCacheService {
-//     cache: Arc<MemoryCache>,
-//     strategy: CacheStrategy,
-// }
+/// 基于内存缓存的缓存服务实现
+pub struct InMemoryCacheService {
+    cache: Arc<MemoryCache>,
+    strategy: CacheStrategy,
+}
 
-// impl InMemoryCacheService {
+impl InMemoryCacheService {
     pub fn new(strategy: CacheStrategy) -> Self {
         let config = MemoryCacheConfig::default();
         Self { 
@@ -490,21 +490,13 @@ mod tests {
         let cache_service = InMemoryCacheService::new(strategy);
         
         // 测试用户缓存
-        let user = User {
-            user_id: 123,
-            login_id: Some("test_user".to_string()),
-            nickname: "Test User".to_string(),
-            avatar_url: None,
-            email: None,
-            bio: None,
-            is_temp: false,
-            created_at: chrono::Utc::now(),
-            last_active_at: chrono::Utc::now(),
-            latitude: Some(39.916527),
-            longitude: Some(116.397128),
-            location_name: Some("Beijing".to_string()),
-            distance: None,
-        };
+        let user = crate::domain::entities::UserProfile::new(
+            123,
+            "Test User".to_string(),
+            None,
+            crate::domain::entities::UserType::Regular,
+            chrono::Utc::now(),
+        );
         
         // 设置缓存
         cache_service.set_user(&user).await.unwrap();
@@ -528,21 +520,13 @@ mod tests {
         let result = cache_service.get_user(123).await.unwrap();
         assert!(result.is_none());
         
-        let user = User {
-            user_id: 123,
-            login_id: Some("test".to_string()),
-            nickname: "Test".to_string(),
-            avatar_url: None,
-            email: None,
-            bio: None,
-            is_temp: false,
-            created_at: chrono::Utc::now(),
-            last_active_at: chrono::Utc::now(),
-            latitude: None,
-            longitude: None,
-            location_name: None,
-            distance: None,
-        };
+        let user = crate::domain::entities::UserProfile::new(
+            123,
+            "Test".to_string(),
+            None,
+            crate::domain::entities::UserType::Regular,
+            chrono::Utc::now(),
+        );
         
         cache_service.set_user(&user).await.unwrap();
         cache_service.invalidate_user(123).await.unwrap();

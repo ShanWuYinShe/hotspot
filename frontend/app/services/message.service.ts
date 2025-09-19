@@ -30,7 +30,7 @@ export const useMessageService = () => {
   const getGroupMessageHistory = async (groupId: string, cursor?: string): Promise<PaginatedResponse<Message>> => {
     return await api.post(buildChatUrl(CHAT_ENDPOINTS.PROTECTED.GROUP_HISTORY), {
       group_id: groupId,
-      cursor: cursor, // 🔥 修复：首次加载时不传递cursor，让后端处理默认值
+      cursor: cursor, // 游标分页
       limit: DEFAULTS.pageSize,
     }, { auth: true });
   };
@@ -53,7 +53,7 @@ export const useMessageService = () => {
     return await api.post(buildChatUrl(CHAT_ENDPOINTS.PROTECTED.USER_HISTORY), {
       conversation_id: params.conversationId,
       recipient_id: params.recipientId,
-      cursor: cursor, // 🔥 修复：首次加载时不传递cursor，让后端处理默认值
+      cursor: cursor, // 游标分页
       limit: DEFAULTS.pageSize,
     }, { auth: true });
   };

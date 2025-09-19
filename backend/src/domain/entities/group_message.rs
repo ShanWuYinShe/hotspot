@@ -20,10 +20,11 @@ use serde::{Deserialize, Serialize};
 use sqlx::Type;
 
 /// 群组消息类型枚举
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type, Default)]
 #[sqlx(type_name = "message_type", rename_all = "lowercase")]
 pub enum GroupMessageType {
     /// 文本消息
+    #[default]
     Text,
     /// 图片消息
     Image,

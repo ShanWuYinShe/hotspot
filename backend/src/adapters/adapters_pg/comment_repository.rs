@@ -8,7 +8,7 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use crate::{
@@ -92,14 +92,14 @@ impl PgCommentRepository {
     }
 
     /// 将数据库行转换为领域模型
-    fn row_to_comment(row: CommentRow) -> Comment {
+    fn row_to_comment(row: sqlx::postgres::PgRow) -> Comment {
         Comment {
-            comment_id: Uuid::parse_str(&row.comment_id).unwrap_or_else(|_| Uuid::new_v4()),
-            moment_id: Uuid::parse_str(&row.moment_id.to_string()).unwrap_or_else(|_| Uuid::new_v4()),
-            user_id: row.user_id,
-            content: row.content,
-            created_at: row.created_at,
-            updated_at: row.updated_at,
+            comment_id: row.get::<Uuid, _>("comment_id"),
+            moment_id: row.get::<i64, _>("moment_id"),
+            user_id: row.get("user_id"),
+            content: row.get("content"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
         }
     }
 }
@@ -132,20 +132,19 @@ impl CommentRepository for PgCommentRepository {
 
             let now = Utc::now();
 
-            let row = sqlx::query_as!(
-                CommentRow,
+            let row = sqlx::query(
                 r#"
                 INSERT INTO comments (moment_id, user_id, content, parent_comment_id, created_at, updated_at)
                 VALUES ($1, $2, $3, $4, $5, $6)
-                RETURNING comment_id as "comment_id!", moment_id as "moment_id!", user_id as "user_id!", content as "content!", parent_comment_id, created_at as "created_at!", updated_at as "updated_at!"
-                "#,
-                moment_id_i64,
-                user_id,
-                content,
-                parent_id_i64,
-                now,
-                now
+                RETURNING comment_id, moment_id, user_id, content, parent_comment_id, created_at, updated_at
+                "#
             )
+            .bind(moment_id_i64)
+            .bind(user_id)
+            .bind(content)
+            .bind(parent_id_i64)
+            .bind(now)
+            .bind(now)
             .fetch_one(&self.pool)
             .await
             .map_err(|e| {
@@ -162,15 +161,14 @@ impl CommentRepository for PgCommentRepository {
     /// 按ID查找评论
     async fn find_comment_by_id(&self, comment_id: &str) -> DomainResult<Option<Comment>> {
         self.execute_query_with_monitoring("find_comment_by_id", async {
-            let row = sqlx::query_as!(
-                CommentRow,
+            let row = sqlx::query(
                 r#"
-                SELECT comment_id as "comment_id!", moment_id as "moment_id!", user_id as "user_id!", content as "content!", parent_comment_id, created_at as "created_at!", updated_at as "updated_at!"
+                SELECT comment_id, moment_id, user_id, content, parent_comment_id, created_at, updated_at
                 FROM comments
                 WHERE comment_id = $1
-                "#,
-                comment_id
+                "#
             )
+            .bind(comment_id)
             .fetch_optional(&self.pool)
             .await
             .map_err(|e| {
@@ -231,7 +229,7 @@ impl CommentRepository for PgCommentRepository {
             .into_iter()
             .map(|row| Comment {
                 comment_id: uuid::Uuid::parse_str(&row.comment_id).unwrap_or_default(),
-                moment_id: uuid::Uuid::from_u128(row.moment_id as u128),
+                moment_id: row.moment_id,
                 user_id: row.user_id,
                 content: row.content,
                 created_at: row.created_at,
@@ -284,7 +282,7 @@ impl CommentRepository for PgCommentRepository {
             .into_iter()
             .map(|row| Comment {
                 comment_id: uuid::Uuid::parse_str(&row.comment_id).unwrap_or_default(),
-                moment_id: uuid::Uuid::from_u128(row.moment_id as u128),
+                moment_id: row.moment_id,
                 user_id: row.user_id,
                 content: row.content,
                 created_at: row.created_at,
@@ -330,19 +328,18 @@ impl CommentRepository for PgCommentRepository {
         user_id: i64,
         content: &str,
     ) -> DomainResult<Comment> {
-        let row = sqlx::query_as!(
-            CommentRow,
+        let row = sqlx::query(
             r#"
             UPDATE comments
             SET content = $3, updated_at = $4
             WHERE comment_id = $1 AND user_id = $2
-            RETURNING comment_id as "comment_id!", moment_id as "moment_id!", user_id as "user_id!", content as "content!", parent_comment_id, created_at as "created_at!", updated_at as "updated_at!"
-            "#,
-            comment_id,
-            user_id,
-            content,
-            Utc::now()
+            RETURNING comment_id, moment_id, user_id, content, parent_comment_id, created_at, updated_at
+            "#
         )
+        .bind(comment_id)
+        .bind(user_id)
+        .bind(content)
+        .bind(Utc::now())
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| {
@@ -367,7 +364,7 @@ impl CommentRepository for PgCommentRepository {
         cursor: i64,
         limit: i32,
     ) -> DomainResult<Vec<Comment>> {
-        let parent_uuid = Uuid::parse_str(parent_comment_id)
+        let _parent_uuid = Uuid::parse_str(parent_comment_id)
             .map_err(|_| DomainError::BusinessRuleViolation {
                 rule: "无效的父评论ID格式".to_string(),
             })?;
@@ -407,7 +404,7 @@ impl CommentRepository for PgCommentRepository {
             .into_iter()
             .map(|row| Comment {
                 comment_id: uuid::Uuid::parse_str(&row.comment_id).unwrap_or_default(),
-                moment_id: uuid::Uuid::from_u128(row.moment_id as u128),
+                moment_id: row.moment_id,
                 user_id: row.user_id,
                 content: row.content,
                 created_at: row.created_at,

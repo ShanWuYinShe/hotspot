@@ -147,16 +147,16 @@ pub enum DomainError {
 
 impl DomainError {
     /// 用户相关错误的关联项
-    pub const User: DomainError = DomainError::UserNotFound;
+    pub const USER: DomainError = DomainError::UserNotFound;
     
     /// 群组相关错误的关联项
-    pub const Group: DomainError = DomainError::GroupNotFound;
+    pub const GROUP: DomainError = DomainError::GroupNotFound;
     
     /// 瞬间相关错误的关联项
-    pub const Moment: DomainError = DomainError::MomentNotFound;
+    pub const MOMENT: DomainError = DomainError::MomentNotFound;
     
     /// 缓存相关错误的关联项
-    pub const Cache: DomainError = DomainError::CacheError;
+    pub const CACHE: DomainError = DomainError::CacheError;
     
     /// 创建验证错误
     pub fn validation(field: &str, reason: &str) -> Self {

@@ -17,7 +17,7 @@
       />
     </div>
 
-    <UTabs v-model:selected="tab" :items="tabs" class="mb-6" />
+    <UTabs v-model="tab" :items="tabs" :default-index="0" class="mb-6" />
 
     <div v-if="tab === 'groups'" class="space-y-4">
       <UCard>

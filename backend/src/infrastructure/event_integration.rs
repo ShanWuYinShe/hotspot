@@ -12,12 +12,13 @@ use sqlx::PgPool;
 use crate::domain::{DomainResult, UserId, GroupId};
 use crate::infrastructure::{
     EventPublisher, EventStore, PostgresEventStore, InMemoryEventStore,
-    EventHandlerFactory, GenericEventHandler,
-    event_handlers::WebSocketService,
+    event_handlers::{
+        EventHandlerFactory, WebSocketService,
+        EmailService, WelcomeService, UserStatsService, NotificationService,
+        GroupStatsService, RecommendationService, ActivityService,
+        AuditService, StatisticsService
+    },
     UserRegisteredEvent, GroupCreatedEvent, UserJoinedGroupEvent,
-    EmailService, WelcomeService, UserStatsService, NotificationService,
-    GroupStatsService, RecommendationService, ActivityService,
-    AuditService, StatisticsService,
 };
 
 /// 事件系统配置

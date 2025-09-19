@@ -60,7 +60,7 @@ export const useWebSocket = () => {
   // 消息事件监听器 - 使用 WeakMap 避免内存泄漏
   const messageListeners = ref<
     Map<keyof EventMap | string, Array<(data: unknown) => void>>
-  >(new Map());
+  >(markRaw(new Map()));
   
   // 清理监听器的方法
   const clearAllListeners = () => {

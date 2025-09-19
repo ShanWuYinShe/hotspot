@@ -24,8 +24,8 @@ use uuid::Uuid;
 pub struct Comment {
     /// 评论ID (UUID)
     pub comment_id: Uuid,
-    /// 生活瞬间ID
-    pub moment_id: Uuid,
+    /// 生活瞬间ID (数据库中的BIGINT ID)
+    pub moment_id: i64,
     /// 评论用户ID
     pub user_id: i64,
     /// 评论内容
@@ -41,8 +41,8 @@ pub struct Comment {
 pub struct CommentDetail {
     /// 评论ID
     pub comment_id: Uuid,
-    /// 生活瞬间ID
-    pub moment_id: Uuid,
+    /// 生活瞬间ID (数据库中的BIGINT ID)
+    pub moment_id: i64,
     /// 评论用户ID
     pub user_id: i64,
     /// 评论用户昵称
@@ -59,7 +59,7 @@ pub struct CommentDetail {
 
 impl Comment {
     /// 创建新评论
-    pub fn new(moment_id: Uuid, user_id: i64, content: String) -> Self {
+    pub fn new(moment_id: i64, user_id: i64, content: String) -> Self {
         let now = Utc::now();
         Self {
             comment_id: Uuid::new_v4(),

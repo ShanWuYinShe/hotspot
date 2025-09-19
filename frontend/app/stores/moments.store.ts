@@ -1,5 +1,4 @@
 import { defineStore } from "pinia";
-import { useMomentService } from "~/services/moment.service";
 import { DEFAULTS } from "~/config/defaults";
 import type {
   MomentInfo,
@@ -168,7 +167,7 @@ export const useMomentsStore = defineStore(
           likes_count: response.likes_count,
         });
       } catch (error) {
-        console.error("点赞失败:", error);
+        // 点赞失败，保持原状态
       }
     }
 
@@ -183,7 +182,7 @@ export const useMomentsStore = defineStore(
           likes_count: response.likes_count,
         });
       } catch (error) {
-        console.error("取消点赞失败:", error);
+        // 取消点赞失败，保持原状态
       }
     }
 

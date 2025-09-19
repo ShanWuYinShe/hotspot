@@ -10,7 +10,7 @@
 use async_trait::async_trait;
 use sqlx::PgPool;
 use chrono::{DateTime, Utc};
-use uuid::Uuid;
+// use uuid::Uuid; // 暂时未使用
 use crate::domain::DomainResult;
 use crate::infrastructure::event_system::{EventStore, EventEnvelope, EventId};
 use crate::infrastructure::errors::{ErrorContext, ContextualError, ErrorConverter};

@@ -228,12 +228,14 @@ impl ActorRef {
 }
 
 /// Actor上下文 - 提供Actor运行时环境
+#[allow(dead_code)]
 pub struct ActorContext {
     /// Actor系统引用
     system: Arc<ActorSystem>,
     /// 当前Actor ID
     actor_id: ActorId,
     /// 消息发送器
+    #[allow(dead_code)]
     message_sender: mpsc::UnboundedSender<MessageEnvelope>,
 }
 
@@ -257,7 +259,7 @@ impl ActorContext {
     }
     
     /// 创建子Actor
-    pub async fn spawn_child<A>(&self, mut actor: A) -> DomainResult<ActorRef>
+    pub async fn spawn_child<A>(&self, actor: A) -> DomainResult<ActorRef>
     where
         A: Actor + 'static,
     {
@@ -352,7 +354,7 @@ impl ActorSystem {
         }
         
         // 创建Actor上下文
-        let context = ActorContext::new(self.clone(), actor_id.clone(), message_sender);
+        let _context = ActorContext::new(self.clone(), actor_id.clone(), message_sender);
         
         // 启动Actor消息处理循环
         let system_clone = self.clone();

@@ -23,23 +23,26 @@
         label="点击上传或拖拽图片到这里"
         description="支持 JPG, PNG, GIF 格式，最多9张图片"
         class="min-h-32"
-        @change="handleFileChange"
       />
     </UFormField>
     
     <!-- 标签选择 -->
     <UFormField label="添加标签">
       <div class="flex flex-wrap gap-2">
-        <UBadge
+        <UTooltip
           v-for="tag in recommendTags"
           :key="tag"
-          :variant="selectedTags.includes(tag) ? 'solid' : 'outline'"
-          class="cursor-pointer"
-          @click="toggleTag(tag)"
-          size="xs"
+          :text="selectedTags.includes(tag) ? `点击移除标签 ${tag}` : `点击添加标签 ${tag}`"
         >
-          {{ tag }}
-        </UBadge>
+          <UBadge
+            :variant="selectedTags.includes(tag) ? 'solid' : 'outline'"
+            class="cursor-pointer"
+            @click="toggleTag(tag)"
+            size="xs"
+          >
+            {{ tag }}
+          </UBadge>
+        </UTooltip>
       </div>
     </UFormField>
     
@@ -63,16 +66,23 @@
     
     <!-- 发布按钮 -->
     <div class="flex justify-end space-x-3 pt-4">
-      <UButton variant="ghost" @click="$emit('cancel')" :disabled="isUploading">
-        取消
-      </UButton>
-      <UButton
-        @click="publishMoment"
-        :loading="publishing || isUploading"
-        :disabled="!canPublish || isUploading"
+      <UTooltip text="取消发布" :kbds="['escape']">
+        <UButton variant="ghost" @click="$emit('cancel')" :disabled="isUploading">
+          取消
+        </UButton>
+      </UTooltip>
+      <UTooltip 
+        :text="!canPublish ? '请添加内容或图片' : isUploading ? '正在上传图片...' : '发布你的精彩时刻'"
+        :kbds="canPublish && !isUploading ? ['meta', 'enter'] : undefined"
       >
-        发布动态
-      </UButton>
+        <UButton
+          @click="publishMoment"
+          :loading="publishing || isUploading"
+          :disabled="!canPublish || isUploading"
+        >
+          发布动态
+        </UButton>
+      </UTooltip>
     </div>
   </div>
 </template>
@@ -114,11 +124,8 @@ const canPublish = computed(() => {
   return content.value.trim().length > 0 || uploadedFiles.value.length > 0
 })
 
-// 文件处理
-function handleFileChange(files: File[]) {
-  // UFileUpload 组件已经处理了文件验证和限制
-  uploadedFiles.value = files
-}
+// 文件处理 - 使用 watch 监听 v-model 变化
+// UFileUpload 组件通过 v-model 自动更新 uploadedFiles
 
 // 标签处理
 function toggleTag(tag: string) {
@@ -154,7 +161,6 @@ async function simulateImageUpload(): Promise<string[]> {
           // const response = await $fetch('/api/upload/images', { method: 'POST', body: formData })
           // resolve(response.data.urls)
           
-          // 暂时返回空数组，等待后端API实现
           resolve([])
         }, 500)
       }
@@ -200,10 +206,7 @@ async function publishMoment() {
     // 调用服务发布动态（这里简化处理，实际需要调用后端API）
     await momentsStore.createMoment(momentData)
     
-    toast.success({
-      title: '动态发布成功',
-      description: '图片已上传，动态已发布'
-    })
+    toast.success('动态发布成功')
     
     // 清空表单
     content.value = ''
@@ -216,10 +219,7 @@ async function publishMoment() {
     
   } catch (error: any) {
     console.error('发布动态失败:', error)
-    toast.error({
-      title: '发布失败',
-      description: error.message || '请重试'
-    })
+    toast.error('发布失败: ' + (error.message || '请重试'))
   } finally {
     publishing.value = false
   }

@@ -31,7 +31,7 @@ impl DependencyContainer {
     /// 注册默认能力
     fn register_default_capabilities(registry: &mut CapabilityRegistry) -> DomainResult<()> {
         // 数据库能力（必需）
-        #[cfg(feature = "postgres")]
+        // PostgreSQL 是核心功能，始终启用
         {
             registry.register_capability(CapabilityMetadata {
                 capability_type: CapabilityType::Database,
@@ -45,7 +45,7 @@ impl DependencyContainer {
         }
 
         // 缓存能力（默认内存缓存）
-        #[cfg(any(feature = "cache_in_memory", not(feature = "cache_redis")))]
+        #[cfg(any(feature = "cache_memory", not(feature = "cache_redis")))]
         {
             registry.register_capability(CapabilityMetadata {
                 capability_type: CapabilityType::Cache,
@@ -73,7 +73,7 @@ impl DependencyContainer {
         }
 
         // 任务队列能力（默认轻量级）
-        #[cfg(any(feature = "jobs_lite", not(feature = "jobs_redis")))]
+        #[cfg(any(feature = "jobs_memory", not(feature = "jobs_redis")))]
         {
             registry.register_capability(CapabilityMetadata {
                 capability_type: CapabilityType::JobQueue,
@@ -101,7 +101,7 @@ impl DependencyContainer {
         }
 
         // WebSocket通知能力（默认且必需）
-        #[cfg(feature = "ws")]
+        // WebSocket 是核心功能，始终启用
         {
             registry.register_capability(CapabilityMetadata {
                 capability_type: CapabilityType::NotificationTransport,

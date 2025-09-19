@@ -111,7 +111,6 @@
 
 <script setup lang="ts">
 interface Props {
-  isMobile?: boolean;
 }
 
 defineProps<Props>();

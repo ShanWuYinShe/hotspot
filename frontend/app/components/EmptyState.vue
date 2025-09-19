@@ -2,15 +2,20 @@
   <div class="flex flex-col items-center justify-center py-8 md:py-12 lg:py-16 space-y-4 md:space-y-6">
     <!-- 图标或插图 -->
     <div class="relative">
-      <div class="w-16 h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
+      <!-- 自定义插图插槽 -->
+      <div v-if="$slots.illustration" class="mb-4">
+        <slot name="illustration" />
+      </div>
+      <!-- 默认图标 -->
+      <div v-else class="w-16 h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
         <UIcon 
           :name="icon" 
           class="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 text-neutral-400 dark:text-neutral-500" 
         />
+        <!-- 装饰性元素 -->
+        <div class="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-primary-100 dark:bg-primary-900/50 rounded-full"></div>
+        <div class="absolute -bottom-2 -left-2 w-3 h-3 md:w-4 md:h-4 bg-secondary-100 dark:bg-secondary-900/50 rounded-full"></div>
       </div>
-      <!-- 装饰性元素 -->
-      <div class="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-primary-100 dark:bg-primary-900/50 rounded-full"></div>
-      <div class="absolute -bottom-2 -left-2 w-3 h-3 md:w-4 md:h-4 bg-secondary-100 dark:bg-secondary-900/50 rounded-full"></div>
     </div>
     
     <!-- 标题和描述 -->

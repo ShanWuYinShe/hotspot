@@ -67,7 +67,7 @@ pub enum FriendRequestStatus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FriendRequest {
     /// 请求ID
-    pub request_id: Uuid,
+    pub request_id: String,
     /// 发送者ID
     pub requester_id: i64,
     /// 目标用户ID
@@ -88,7 +88,7 @@ pub struct FriendRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Friendship {
     /// 关系ID
-    pub friendship_id: Uuid,
+    pub friendship_id: String,
     /// 用户1 ID（较小的用户ID）
     pub user1_id: i64,
     /// 用户2 ID（较大的用户ID）
@@ -118,7 +118,7 @@ pub struct FriendProfile {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FriendRequestDetail {
     /// 请求ID
-    pub request_id: Uuid,
+    pub request_id: String,
     /// 发送者ID
     pub requester_id: i64,
     /// 发送者昵称
@@ -146,7 +146,7 @@ impl FriendRequest {
         let expires_at = now + chrono::Duration::days(30); // 30天过期
         
         Self {
-            request_id: Uuid::new_v4(),
+            request_id: Uuid::new_v4().to_string(),
             requester_id,
             target_id,
             message,
@@ -212,7 +212,7 @@ impl Friendship {
         };
         
         Self {
-            friendship_id: Uuid::new_v4(),
+            friendship_id: Uuid::new_v4().to_string(),
             user1_id: user1,
             user2_id: user2,
             created_at: Utc::now(),

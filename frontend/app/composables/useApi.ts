@@ -3,8 +3,6 @@
  * 封装统一的 HTTP 请求逻辑
  */
 
-import { processApiResponse, processApiRequest } from "~/utils/bigint-json";
-import { handleApiError } from "~/utils/api-error-handler";
 
 export const useApi = () => {
   // 预加载依赖，避免动态导入的性能开销

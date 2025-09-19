@@ -36,56 +36,43 @@ num_cpus = "1.17.0"
 lettre = { version = "0.11.18", features = ["smtp-transport", "tokio1-native-tls", "builder"] }
 serde_yaml = "0.9.34"
 reqwest = "0.12.23"
+sha2 = "0.10.9"
 
 [features]
-default = ["postgres", "websocket", "cache", "events", "metrics", "jobs_lite", "policy_friend", "policy_group"]
+# 默认配置：使用内存缓存和轻量级任务队列
+default = ["cache_memory", "jobs_memory", "metrics_basic"]
 
-# === 新架构Feature Flags ===
+# === 替代实现 Feature Flags ===
 
-# 数据库适配器
-postgres = []
+# 缓存系统（二选一）
+cache_memory = []     # 默认：内存缓存
+cache_redis = []      # 替代：Redis缓存
 
-# WebSocket相关（统一为websocket）
-websocket = ["ws"]
-ws = []
-ws_offline_notifications = []
-ws_scheduler = []
+# 任务队列系统（二选一）
+jobs_memory = []      # 默认：内存队列（轻量级）
+jobs_redis = []       # 替代：Redis队列（持久化）
+
+# 监控指标系统（二选一）
+metrics_basic = []    # 默认：基础指标
+metrics_prometheus = [] # 替代：Prometheus指标
+
+# === 可选增强功能 ===
+
+# 邮件通知（可选增强）
+email_notifications = []
+
+# WebSocket 钩子扩展（可选增强）
 ws_hooks = []
 
-# 缓存适配器（统一为cache）
-cache = ["cache_in_memory"]
-cache_in_memory = []
-cache_redis = []
+# 审计日志（可选增强）
+audit_logging = []
 
-# 事件系统
-events = []
+# === 临时兼容性 Feature（待清理） ===
+# 这些 feature 用于兼容现有代码，将在后续版本中清理
+ws_offline_notifications = []
 
-# 任务队列适配器
-jobs_lite = []
-jobs_redis = []
-
-# 通知策略
-policy_friend = []
-policy_group = []
-policy_nearby = []
-
-# 监控指标（统一为metrics）
-metrics = ["metrics_basic"]
-metrics_basic = []
-prometheus_metrics = []
-
-# 可选功能
-email = ["email_channel"]
-email_channel = []
-notifications = []
-
-# === 传统Feature Flags（待重构） ===
-# 启用群组消息摘要的定时任务
-group_digest_scheduler = []
-# 控制是否启用审计埋点（提交到注入的 AuditSink）
-audit = []
-# 控制是否编译与任务队列/调度相关的代码（便于裁剪构建）
-jobs = []
+# 注意：PostgreSQL、WebSocket、通知等是核心功能，始终启用
+# 不再使用 feature gate 控制核心业务功能
 
 [dev-dependencies]
 tower = "0.5"

@@ -25,7 +25,7 @@
 use std::sync::Arc;
 use crate::domain::DomainResult;
 use crate::ports::NotificationTransport;
-use crate::ports::services::{Notification, NotificationContext};
+use crate::ports::services::Notification;
 use crate::ports::services::NotificationPolicy as NotificationPolicyTrait;
 use crate::ports::services::NotificationType;
 
@@ -66,10 +66,26 @@ impl NotificationApplicationService {
         title: String,
         content: String,
     ) -> DomainResult<()> {
-        // 根据策略获取目标用户列表
-        let target_users = match policy {
+        // 转换上下文类型
+        let services_context = crate::ports::services::NotificationContext {
+            user_id: crate::domain::UserId::new(context.trigger_user_id)
+                .map_err(|e| crate::domain::DomainError::ValidationError { 
+                    field: "user_id".to_string(), 
+                    reason: e.to_string() 
+                })?,
+            context_data: std::collections::HashMap::new(), // 可以根据需要填充
+        };
+        
+        // 使用实例的策略服务来获取目标用户列表
+        let target_users = self.policy.get_recipients(&services_context).await
+            .map_err(|e| crate::domain::DomainError::BusinessRuleViolation { 
+                rule: format!("通知策略服务错误: {}", e)
+            })?;
+        
+        // 备用逻辑：如果策略服务失败，使用简单的策略匹配
+        let fallback_users = match policy {
             crate::ports::notification_ports::NotificationPolicy::Specific { user_ids } => user_ids,
-            crate::ports::notification_ports::NotificationPolicy::GroupMembers { group_id } => {
+            crate::ports::notification_ports::NotificationPolicy::GroupMembers { group_id: _ } => {
                 // TODO: 从群组仓库获取成员列表
                 vec![context.trigger_user_id] // 临时返回触发用户
             },
@@ -91,9 +107,15 @@ impl NotificationApplicationService {
             _ => crate::ports::services::NotificationType::System, // 默认为系统通知
         };
 
-        // 为每个用户创建通知
+        // 为每个用户创建通知（优先使用策略服务的结果）
         let mut notifications = Vec::new();
-        for user_id in target_users {
+        let final_users = if !target_users.is_empty() { 
+            target_users 
+        } else { 
+            fallback_users 
+        };
+        
+        for user_id in final_users {
             // 直接创建通知（策略已经在上面处理过了）
             let user_id_domain = crate::domain::UserId::new(user_id).map_err(|e| crate::domain::DomainError::ValidationError { field: "user_id".to_string(), reason: e.to_string() })?;
             let notification = Notification::new(Some(user_id_domain), services_notification_type.clone(), title.clone(), content.clone());

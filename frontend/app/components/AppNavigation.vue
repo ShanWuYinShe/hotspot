@@ -55,29 +55,31 @@
                     </UTooltip>
 
                     <!-- 消息按钮 -->
-                    <UButton
-                        to="/chat"
-                        variant="ghost"
-                        color="neutral"
-                        size="lg"
-                        square
-                        class="relative hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors duration-200 rounded-lg"
-                        :aria-label="unreadCount > 0 ? `消息中心，有 ${unreadCount} 条未读消息` : '消息中心'"
-                    >
-                        <UIcon
-                            name="i-heroicons-chat-bubble-left-right"
-                            class="w-5 h-5"
-                        />
-                        <UBadge
-                            v-if="unreadCount > 0"
-                            size="xs"
-                            color="error"
-                            class="absolute -top-1 -right-1 min-w-5 h-5 flex items-center justify-center"
-                            :aria-label="`${unreadCount} 条未读消息`"
+                    <UTooltip :text="unreadCount > 0 ? `消息中心 (${unreadCount} 条未读)` : '消息中心'" :kbds="['meta', 'm']">
+                        <UButton
+                            to="/chat"
+                            variant="ghost"
+                            color="neutral"
+                            size="lg"
+                            square
+                            class="relative hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors duration-200 rounded-lg"
+                            :aria-label="unreadCount > 0 ? `消息中心，有 ${unreadCount} 条未读消息` : '消息中心'"
                         >
-                            {{ unreadCount > 99 ? "99+" : unreadCount }}
-                        </UBadge>
-                    </UButton>
+                            <UIcon
+                                name="i-heroicons-chat-bubble-left-right"
+                                class="w-5 h-5"
+                            />
+                            <UBadge
+                                v-if="unreadCount > 0"
+                                size="xs"
+                                color="error"
+                                class="absolute -top-1 -right-1 min-w-5 h-5 flex items-center justify-center"
+                                :aria-label="`${unreadCount} 条未读消息`"
+                            >
+                                {{ unreadCount > 99 ? "99+" : unreadCount }}
+                            </UBadge>
+                        </UButton>
+                    </UTooltip>
 
                     <!-- 通知按钮 -->
                     <UTooltip text="查看通知">
@@ -138,21 +140,23 @@
         <nav class="hidden md:block lg:hidden" role="navigation" aria-label="平板端主导航">
             <div class="flex items-center justify-between py-3">
                 <!-- Logo -->
-                <NuxtLink to="/" class="flex items-center gap-2" aria-label="返回首页">
-                    <div
-                        class="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center"
-                    >
-                        <UIcon
-                            name="i-heroicons-fire"
-                            class="w-5 h-5 text-white"
-                        />
-                    </div>
-                    <span
-                        class="text-lg font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent"
-                    >
-                        HotSpot
-                    </span>
-                </NuxtLink>
+                <UTooltip text="返回首页" :kbds="['alt', 'h']">
+                    <NuxtLink to="/" class="flex items-center gap-2" aria-label="返回首页">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center"
+                        >
+                            <UIcon
+                                name="i-heroicons-fire"
+                                class="w-5 h-5 text-white"
+                            />
+                        </div>
+                        <span
+                            class="text-lg font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent"
+                        >
+                            HotSpot
+                        </span>
+                    </NuxtLink>
+                </UTooltip>
 
                 <!-- 右侧按钮组 -->
                 <div class="flex items-center gap-1">
@@ -322,6 +326,7 @@
                         </UBadge>
                     </UButton>
                 </UTooltip>
+
 
                 <!-- 个人中心 -->
                 <UTooltip text="个人中心" :content="{ side: 'top' }">
@@ -634,7 +639,21 @@ const mobileSettingsItems = computed(() => [
 
 // 搜索功能
 const openSearch = () => {
-    openSearchModal();
+    openSearchModal({
+        onCreateMoment: () => {
+            // 这里需要根据当前页面上下文来处理
+            // 如果在moments页面，可以直接打开创建Modal
+            // 否则跳转到moments页面
+            const route = useRoute()
+            if (route.path === '/moments') {
+                // 在moments页面，需要通知moments页面打开Modal
+                // 这里暂时跳转到moments页面，让moments页面处理
+                navigateTo('/moments')
+            } else {
+                navigateTo('/moments')
+            }
+        }
+    });
 };
 
 // 通知面板状态
@@ -657,46 +676,15 @@ const toggleNotifications = () => {
     notificationPanelOpen.value = !notificationPanelOpen.value;
 };
 
-// 全局快捷键管理
-const { registerShortcut, setupGlobalShortcuts } = useGlobalShortcuts();
+// 快捷键管理
+const shortcuts = useShortcuts();
 
 // 注册导航相关快捷键
 onMounted(() => {
     // 注册快捷键
-    registerShortcut({
-        key: "meta_k",
-        description: "全局搜索",
-        handler: openSearch,
-        category: "导航",
-        visible: true,
-    });
-
-    registerShortcut({
-        key: "alt_n",
-        description: "查看通知",
-        handler: toggleNotifications,
-        category: "导航",
-        visible: true,
-    });
-
-    registerShortcut({
-        key: "alt_l",
-        description: "切换语言",
-        handler: () => {
-            // 触发语言选择菜单
-            const selectElement = document.querySelector(
-                "[data-headlessui-state]",
-            );
-            if (selectElement) {
-                (selectElement as HTMLElement).click();
-            }
-        },
-        category: "导航",
-        visible: true,
-    });
-
-    // 设置全局快捷键监听
-    const disposeGlobal = setupGlobalShortcuts();
+    shortcuts.register('meta+k', openSearch, '全局搜索', '导航');
+    shortcuts.register('alt+n', toggleNotifications, '查看通知', '导航');
+    shortcuts.register('meta+m', () => navigateTo('/chat'), '消息中心', '导航');
 
     // 设置导航快捷键
     const disposeNav = defineShortcuts({
@@ -704,11 +692,17 @@ onMounted(() => {
             usingInput: true,
             handler: () => openSearch(),
         },
+        meta_m: {
+            handler: () => navigateTo('/chat'),
+        },
+        alt_n: {
+            handler: () => toggleNotifications(),
+        }
     });
 
     onUnmounted(() => {
         try {
-            disposeGlobal();
+            shortcuts.cleanup();
             disposeNav();
         } catch {
             /* noop */

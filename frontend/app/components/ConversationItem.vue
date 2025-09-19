@@ -22,13 +22,13 @@
                 <!-- 在线状态指示器 (仅私聊显示) -->
                 <div
                     v-if="conversation.type === 'user' && isOnline"
-                    class="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white rounded-full"
+                    class="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white dark:border-neutral-900 rounded-full"
                 />
 
                 <!-- 群组成员数量指示器 -->
                 <div
                     v-if="conversation.type === 'group'"
-                    class="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center"
+                    class="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center font-medium"
                 >
                     {{ formatMemberCount(conversation.member_count || 0) }}
                 </div>
@@ -58,11 +58,15 @@
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-2 flex-1 min-w-0">
                         <!-- 消息类型图标 -->
-                        <UIcon
+                        <UTooltip 
                             v-if="lastMessageType !== 'text'"
-                            :name="getMessageTypeIcon(lastMessageType)"
-                            class="w-4 h-4 text-neutral-400 flex-shrink-0"
-                        />
+                            :text="getMessageTypeTooltip(lastMessageType)"
+                        >
+                            <UIcon
+                                :name="getMessageTypeIcon(lastMessageType)"
+                                class="w-4 h-4 text-neutral-400 flex-shrink-0"
+                            />
+                        </UTooltip>
 
                         <!-- 最后一条消息 -->
                         <p class="text-sm text-neutral-600 truncate">
@@ -76,11 +80,12 @@
                     </div>
 
                     <!-- 置顶图标 -->
-                    <UIcon
-                        v-if="conversation.is_pinned"
-                        name="i-heroicons-bookmark-solid"
-                        class="w-4 h-4 text-yellow-500 flex-shrink-0 ml-2"
-                    />
+                    <UTooltip v-if="conversation.is_pinned" text="已置顶会话">
+                        <UIcon
+                            name="i-heroicons-bookmark-solid"
+                            class="w-4 h-4 text-yellow-500 flex-shrink-0 ml-2"
+                        />
+                    </UTooltip>
                 </div>
             </div>
 
@@ -104,9 +109,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { useMessagesStore } from "~/stores/messages.store";
 import type { Conversation } from "~/types/message";
-import { formatTime } from '~/utils/formatters';
 
 interface Props {
     conversation: Conversation;
@@ -210,6 +213,24 @@ const getMessageTypeIcon = (type: string) => {
             return "i-heroicons-video-camera";
         default:
             return "i-heroicons-chat-bubble-left-right";
+    }
+};
+
+// 获取消息类型提示文本
+const getMessageTypeTooltip = (type: string) => {
+    switch (type) {
+        case "image":
+            return "图片消息";
+        case "file":
+            return "文件消息";
+        case "location":
+            return "位置消息";
+        case "voice":
+            return "语音消息";
+        case "video":
+            return "视频消息";
+        default:
+            return "文本消息";
     }
 };
 

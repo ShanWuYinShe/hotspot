@@ -621,22 +621,74 @@ loginModal.patch({
 
 ## 8. 导入与组件使用规范
 
+### Nuxt 自动导入规范（强制）
+
+**核心原则**：
+- **禁止手动导入自动导入目录的文件**：Nuxt项目中支持自动导入的目录都不应该有手动导入操作
+- **自动导入目录**：`composables/`、`utils/`、`stores/`、`components/`、`plugins/`、`middleware/` 等
+- **零手动导入政策**：这些目录下的文件应该通过Nuxt的自动导入机制使用，不得使用 `import` 语句
+
+**自动导入支持的内容**：
+- **Composables**：`~/composables` 下的所有 `use*` 函数自动导入
+  - ✅ 正确：直接使用 `useAuthStore()`、`useUserService()`、`useApi()`
+  - ❌ 错误：`import { useAuthStore } from '~/stores/auth.store'`
+- **Utils**：`~/utils` 下的工具函数自动导入
+  - ✅ 正确：直接使用 `formatTime()`、`formatDistance()`、`extractApiData()`
+  - ❌ 错误：`import { formatTime } from '~/utils/formatters'`
+- **Stores**：Pinia stores 自动导入
+  - ✅ 正确：直接使用 `useAuthStore()`、`useMessagesStore()`
+  - ❌ 错误：`import { useAuthStore } from '~/stores/auth.store'`
+- **Components**：`~/components` 下的组件自动导入
+  - ✅ 正确：直接在模板中使用 `<AppNavigation>`
+  - ❌ 错误：`import AppNavigation from '~/components/AppNavigation.vue'`
+
+### 允许的手动导入
+
+**类型导入**（必须保留）：
+```typescript
+// ✅ 正确：类型导入必须手动导入
+import type { UserInfo, GroupInfo } from '~/types'
+import type { Message } from '~/types/message'
+import type { Coordinates } from '~/types/geolocation'
+```
+
+**配置文件导入**（必须保留）：
+```typescript
+// ✅ 正确：配置文件不在自动导入范围内
+import { DEFAULTS } from '~/config/defaults'
+import { USER_ENDPOINTS, buildUserUrl } from '~/config/api'
+```
+
+**特殊组件导入**（按需保留）：
+```typescript
+// ✅ 正确：特定插图组件可以手动导入
+import EmptyState from '~/components/illustrations/EmptyState.vue'
+```
+
+**Vue/Nuxt 核心API**（自动导入）：
+```typescript
+// ✅ 正确：这些API自动导入，无需手动导入
+// ref, computed, watch, onMounted, definePageMeta, useRoute, navigateTo, useFetch 等
+```
+
 ### 组件导入规范
 - **Nuxt UI v3 组件自动导入**：Nuxt UI v3 组件支持自动导入，无需手动引入
   - 所有 Nuxt UI 组件（如 `UButton`、`UCard`、`UInput` 等）可直接在模板中使用
   - Nuxt UI 组件前缀为 `U`，如 `<UButton>`、`<UModal>`、`<UForm>`
   - 图标组件 `<UIcon>` 可直接使用，无需导入
-- **项目组件导入**：自定义组件需要手动导入或配置自动导入
-  - 项目组件使用相对路径或 `~/components` 路径导入
-  - 可在 `nuxt.config.ts` 中配置组件自动导入目录
+- **项目组件自动导入**：`~/components` 下的组件自动导入
+  - 组件可直接在模板中使用，无需手动导入
   - 组件名应为多个单词，避免与 HTML 元素冲突
-- **API 导入**：保留 Vue 3、Nuxt 3、Composables 等 API 的自动导入
-  - Vue 3 API（`ref`、`computed`、`watch`、`onMounted` 等）自动导入
-  - Nuxt 3 API（`useAsyncData`、`useFetch`、`navigateTo` 等）自动导入
-  - 项目 Composables（`~/composables` 下的函数）自动导入
+  - 使用 `defineAsyncComponent` 进行懒加载的组件除外
 - **第三方库导入**：其他第三方组件库需要手动导入
   - 明确组件依赖关系，便于代码维护和重构
   - 确保导入的组件和特性是真实存在的
+
+### 代码审查要点
+- **检查手动导入**：审查代码时必须检查是否存在不必要的手动导入
+- **自动导入验证**：确认所有自动导入的函数和组件都能正常工作
+- **类型导入分离**：确保类型导入使用 `import type` 语法
+- **配置导入合理性**：验证配置文件导入的必要性
 
 ## 9. API 调用规范
 - **使用 Nuxt 的 Fetch API 发起请求**：优先使用 `$fetch`、`useFetch`、`useLazyFetch` 等 Nuxt 3 原生 API

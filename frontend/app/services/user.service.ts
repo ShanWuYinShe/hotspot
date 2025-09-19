@@ -19,7 +19,6 @@ import {
   validatePaginationParams,
   validateRadius
 } from "~/utils/api-validation";
-import { extractApiData, extractPaginatedData } from "~/utils/api-response";
 import type { 
   ApiResponse, 
   UpdateNicknameRequest, 
@@ -37,10 +36,10 @@ import type {
 export const useUserService = () => {
   const api = useApi();
   
-  // 🔥 使用安全认证服务
+  // 使用安全认证服务
   const secureAuth = useSecureAuth();
 
-  // 🔥 安全认证方法（与需求文档对齐：使用 SHA256 + nonce 机制）
+  // 安全认证方法（使用 SHA256 + nonce 机制）
   const login = async (loginId: string, password: string): Promise<AuthResponse> => {
     // 发送前验证参数
     const validLoginId = validateLoginId(loginId);
@@ -64,7 +63,7 @@ export const useUserService = () => {
     // 发送前验证参数（如果提供了昵称）
     const validNickname = nickname ? validateNickname(nickname) : `临时用户${Math.floor(Math.random() * 10000)}`;
     
-    const response = await api.postPublic(buildAuthUrl(AUTH_ENDPOINTS.CREATE_TEMP), { 
+    const response = await api.postPublic(buildAuthUrl(AUTH_ENDPOINTS.PUBLIC.CREATE_TEMP), { 
       nickname: validNickname,
     });
     
@@ -78,7 +77,7 @@ export const useUserService = () => {
       throw new Error('刷新令牌不能为空');
     }
     
-    const response = await api.postPublic(buildAuthUrl(AUTH_ENDPOINTS.REFRESH_TOKEN), { 
+    const response = await api.postPublic(buildAuthUrl(AUTH_ENDPOINTS.PUBLIC.REFRESH_TOKEN), { 
       refresh_token: refreshToken.trim() 
     });
     
@@ -87,7 +86,7 @@ export const useUserService = () => {
   };
 
   const checkAuthStatus = async (): Promise<AuthResponse> => {
-    const response = await api.post(buildAuthUrl(AUTH_ENDPOINTS.CHECK_STATUS), {}, { auth: true });
+    const response = await api.post(buildAuthUrl(AUTH_ENDPOINTS.PUBLIC.CHECK_STATUS), {}, { auth: true });
     
     // 接收后直接信任并返回数据
     return extractApiData(response);
@@ -206,7 +205,7 @@ export const useUserService = () => {
     });
   };
 
-  // 🔥 安全密码设置方法
+  // 安全密码设置方法
   const setPassword = async (currentPassword: string, newPassword: string, userId: string): Promise<BasicSuccess> => {
     // 发送前验证参数
     const validNewPassword = validatePassword(newPassword);
@@ -221,7 +220,7 @@ export const useUserService = () => {
     return await api.post(buildAuthUrl(AUTH_ENDPOINTS.PASSWORD_STATUS), {}, { auth: true });
   };
 
-  // 🔥 安全账户升级方法
+  // 安全账户升级方法
   const upgradeAccount = async (loginId: string, password: string): Promise<AuthResponse> => {
     // 发送前验证参数
     const validLoginId = validateLoginId(loginId);

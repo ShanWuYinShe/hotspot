@@ -224,7 +224,6 @@
 <script setup lang="ts">
 import type { UserInfo } from "~/types";
 // import { buildFriendUrl, FRIEND_ENDPOINTS } from "~/config/api"; // 好友功能暂未实现
-import { formatTime } from '~/utils/formatters';
 
 definePageMeta({
     title: "我的好友",

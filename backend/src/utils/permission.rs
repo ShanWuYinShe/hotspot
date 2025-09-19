@@ -3,7 +3,7 @@ use tracing::error;
 use uuid::Uuid;
 
 use crate::utils::response::AppError;
-use crate::domain::constants::group_roles;
+// use crate::domain::constants::group_roles;
 use std::sync::Arc;
 
 /// 检查用户是否是群组成员
@@ -12,17 +12,17 @@ pub async fn check_group_member(
     group_id: &Uuid,
     user_id: i64,
 ) -> Result<bool, AppError> {
-    let is_member = sqlx::query_scalar!(
+    let is_member = sqlx::query_scalar::<_, bool>(
         r#"
         SELECT EXISTS (
             SELECT 1 FROM group_members gm
             INNER JOIN groups g ON gm.group_id = g.id
             WHERE g.group_id = $1 AND gm.user_id = $2
-        ) as "exists!"
-        "#,
-        &group_id.to_string(),
-        user_id
+        )
+        "#
     )
+    .bind(&group_id.to_string())
+    .bind(user_id)
     .fetch_one(db)
     .await
     .map_err(|e| {
@@ -40,19 +40,19 @@ pub async fn check_group_admin(
     group_id: &Uuid,
     user_id: i64,
 ) -> Result<bool, AppError> {
-    let is_admin = sqlx::query_scalar!(
+    let is_admin = sqlx::query_scalar::<_, bool>(
         r#"
         SELECT EXISTS (
             SELECT 1 FROM group_members gm
             INNER JOIN groups g ON gm.group_id = g.id
             WHERE g.group_id = $1 AND gm.user_id = $2 AND gm.role::text IN ($3, $4)
-        ) as "exists!"
-        "#,
-        &group_id.to_string(),
-        user_id,
-        group_roles::ADMIN,
-        group_roles::OWNER
+        )
+        "#
     )
+    .bind(&group_id.to_string())
+    .bind(user_id)
+    .bind("admin")
+    .bind("owner")
     .fetch_one(db)
     .await
     .map_err(|e| {
@@ -70,16 +70,16 @@ pub async fn check_group_owner(
     group_id: &Uuid,
     user_id: i64,
 ) -> Result<bool, AppError> {
-    let is_owner = sqlx::query_scalar!(
+    let is_owner = sqlx::query_scalar::<_, bool>(
         r#"
         SELECT EXISTS (
             SELECT 1 FROM groups 
             WHERE group_id = $1 AND created_by = $2
-        ) as "exists!"
-        "#,
-        &group_id.to_string(),
-        user_id
+        )
+        "#
     )
+    .bind(&group_id.to_string())
+    .bind(user_id)
     .fetch_one(db)
     .await
     .map_err(|e| {
@@ -97,16 +97,16 @@ pub async fn check_group_message_owner(
     message_id: &Uuid,
     user_id: i64,
 ) -> Result<bool, AppError> {
-    let is_owner = sqlx::query_scalar!(
+    let is_owner = sqlx::query_scalar::<_, bool>(
         r#"
         SELECT EXISTS (
             SELECT 1 FROM messages 
             WHERE message_id = $1 AND sender_id = $2
-        ) as "exists!"
-        "#,
-        &message_id.to_string(),
-        user_id
+        )
+        "#
     )
+    .bind(&message_id.to_string())
+    .bind(user_id)
     .fetch_one(db)
     .await
     .map_err(|e| {
@@ -124,16 +124,16 @@ pub async fn check_direct_message_owner(
     message_id: &Uuid,
     user_id: i64,
 ) -> Result<bool, AppError> {
-    let is_owner = sqlx::query_scalar!(
+    let is_owner = sqlx::query_scalar::<_, bool>(
         r#"
         SELECT EXISTS (
             SELECT 1 FROM messages 
             WHERE message_id = $1 AND sender_id = $2
-        ) as "exists!"
-        "#,
-        &message_id.to_string(),
-        user_id
+        )
+        "#
     )
+    .bind(&message_id.to_string())
+    .bind(user_id)
     .fetch_one(db)
     .await
     .map_err(|e| {
@@ -150,17 +150,17 @@ pub async fn check_conversation_member(
     conversation_id: &Uuid,
     user_id: i64,
 ) -> Result<bool, AppError> {
-    let is_member = sqlx::query_scalar!(
+    let is_member = sqlx::query_scalar::<_, bool>(
         r#"
         SELECT EXISTS (
             SELECT 1 FROM conversation_participants cp
             JOIN conversations c ON cp.conversation_id = c.id
             WHERE c.conversation_id = $1 AND cp.user_id = $2 AND cp.status = 'active'
-        ) as "exists!"
-        "#,
-        &conversation_id.to_string(),
-        user_id
+        )
+        "#
     )
+    .bind(&conversation_id.to_string())
+    .bind(user_id)
     .fetch_one(db)
     .await
     .map_err(|e| {

@@ -19,7 +19,7 @@
 
         <!-- 标签页：改用 UTabs -->
         <div class="mb-6">
-            <UTabs :items="tabItems" v-model:selected="activeTab" />
+            <UTabs :items="tabItems" v-model="activeTab" :default-index="0" />
         </div>
 
         <!-- 收到的请求 -->
@@ -374,7 +374,6 @@
 import type { UserInfo } from "~/types";
 
 // import { buildFriendUrl, FRIEND_ENDPOINTS } from "~/config/api"; // 好友功能暂未实现
-import { formatTime } from '~/utils/formatters';
 
 interface FriendRequest extends UserInfo {
     request_time: string;
@@ -398,11 +397,11 @@ const activeTab = ref<"received" | "sent">("received");
 const { t } = useI18n();
 const tabItems = computed(() => [
     {
-        key: "received",
+        value: "received",
         label: `${t("friends.requests.tabs.received")} (${receivedRequests.value.length})`,
     },
     {
-        key: "sent",
+        value: "sent",
         label: `${t("friends.requests.tabs.sent")} (${sentRequests.value.length})`,
     },
 ]);

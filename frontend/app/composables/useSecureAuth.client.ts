@@ -5,7 +5,6 @@
 
 import { computePasswordHash, isWebCryptoSupported } from './useCrypto.client';
 import { AUTH_ENDPOINTS, USER_ENDPOINTS, buildAuthUrl, buildUserUrl } from '~/config/api';
-import { extractApiData } from '~/utils/api-response';
 import type { 
   GetNonceRequest, 
   NonceResponse, 
@@ -38,7 +37,7 @@ export const useSecureAuth = () => {
     checkCryptoSupport();
     
     const request: GetNonceRequest = { login_id: loginId };
-    const response = await api.postPublic(buildAuthUrl(AUTH_ENDPOINTS.GET_NONCE), request);
+    const response = await api.postPublic(buildAuthUrl(AUTH_ENDPOINTS.PUBLIC.GET_NONCE), request);
     
     return extractApiData(response);
   };
@@ -59,8 +58,7 @@ export const useSecureAuth = () => {
     const passwordHash = await computePasswordHash(
       password,
       nonceData.nonce,
-      nonceData.timestamp,
-      loginId
+      nonceData.timestamp
     );
     
     // 3. 发送安全登录请求
@@ -71,7 +69,7 @@ export const useSecureAuth = () => {
       timestamp: nonceData.timestamp
     };
     
-    const response = await api.postPublic(buildAuthUrl(AUTH_ENDPOINTS.LOGIN), request);
+    const response = await api.postPublic(buildAuthUrl(AUTH_ENDPOINTS.PUBLIC.LOGIN), request);
     return extractApiData(response);
   };
 
@@ -96,8 +94,7 @@ export const useSecureAuth = () => {
     const passwordHash = await computePasswordHash(
       password,
       nonceData.nonce,
-      nonceData.timestamp,
-      loginId
+      nonceData.timestamp
     );
     
     // 3. 发送安全注册请求
@@ -109,7 +106,7 @@ export const useSecureAuth = () => {
       timestamp: nonceData.timestamp
     };
     
-    const response = await api.postPublic(buildAuthUrl(AUTH_ENDPOINTS.REGISTER), request);
+    const response = await api.postPublic(buildAuthUrl(AUTH_ENDPOINTS.PUBLIC.REGISTER), request);
     return extractApiData(response);
   };
 
@@ -134,8 +131,7 @@ export const useSecureAuth = () => {
     const newPasswordHash = await computePasswordHash(
       newPassword,
       nonceData.nonce,
-      nonceData.timestamp,
-      userId
+      nonceData.timestamp
     );
     
     // 3. 计算旧密码哈希（如果提供）
@@ -144,8 +140,7 @@ export const useSecureAuth = () => {
       oldPasswordHash = await computePasswordHash(
         oldPassword,
         nonceData.nonce,
-        nonceData.timestamp,
-        userId
+        nonceData.timestamp
       );
     }
     
@@ -157,7 +152,7 @@ export const useSecureAuth = () => {
       timestamp: nonceData.timestamp
     };
     
-    const response = await api.post(buildAuthUrl(AUTH_ENDPOINTS.SET_PASSWORD), request, { auth: true });
+    const response = await api.post(buildAuthUrl(AUTH_ENDPOINTS.PROTECTED.SET_PASSWORD, true), request, { auth: true });
     return extractApiData(response);
   };
 
@@ -180,8 +175,7 @@ export const useSecureAuth = () => {
     const passwordHash = await computePasswordHash(
       password,
       nonceData.nonce,
-      nonceData.timestamp,
-      loginId
+      nonceData.timestamp
     );
     
     // 3. 发送安全升级请求

@@ -652,25 +652,23 @@ impl CapabilityFactory {
     }
     
     /// 创建缓存能力
-    #[cfg(feature = "cache")]
+    #[cfg(any(feature = "cache_memory", feature = "cache_redis"))]
     pub fn create_cache_capability() -> Box<dyn Capability> {
         Box::new(CacheCapability::new())
     }
     
-    /// 创建WebSocket能力
-    #[cfg(feature = "websocket")]
+    /// 创建WebSocket能力（核心功能，始终启用）
     pub fn create_websocket_capability() -> Box<dyn Capability> {
         Box::new(WebSocketCapability::new())
     }
     
-    /// 创建事件系统能力
-    #[cfg(feature = "events")]
+    /// 创建事件系统能力（核心功能，始终启用）
     pub fn create_event_capability() -> Box<dyn Capability> {
         Box::new(EventCapability::new())
     }
     
     /// 创建监控指标能力
-    #[cfg(feature = "metrics")]
+    #[cfg(any(feature = "metrics_basic", feature = "metrics_prometheus"))]
     pub fn create_metrics_capability() -> Box<dyn Capability> {
         Box::new(MetricsCapability::new())
     }
@@ -682,17 +680,15 @@ impl CapabilityFactory {
         // 核心能力（总是创建）
         capabilities.push(Self::create_database_capability());
         
-        // 可选能力（基于编译期feature）
-        #[cfg(feature = "cache")]
-        capabilities.push(Self::create_cache_capability());
-        
-        #[cfg(feature = "websocket")]
+        // 核心能力（总是创建）
         capabilities.push(Self::create_websocket_capability());
-        
-        #[cfg(feature = "events")]
         capabilities.push(Self::create_event_capability());
         
-        #[cfg(feature = "metrics")]
+        // 可选能力（基于编译期feature）
+        #[cfg(any(feature = "cache_memory", feature = "cache_redis"))]
+        capabilities.push(Self::create_cache_capability());
+        
+        #[cfg(any(feature = "metrics_basic", feature = "metrics_prometheus"))]
         capabilities.push(Self::create_metrics_capability());
         
         capabilities
@@ -702,13 +698,11 @@ impl CapabilityFactory {
     pub fn create_capability_by_name(name: &str) -> Option<Box<dyn Capability>> {
         match name {
             "database" => Some(Self::create_database_capability()),
-            #[cfg(feature = "cache")]
-            "cache" => Some(Self::create_cache_capability()),
-            #[cfg(feature = "websocket")]
             "websocket" => Some(Self::create_websocket_capability()),
-            #[cfg(feature = "events")]
             "events" => Some(Self::create_event_capability()),
-            #[cfg(feature = "metrics")]
+            #[cfg(any(feature = "cache_memory", feature = "cache_redis"))]
+            "cache" => Some(Self::create_cache_capability()),
+            #[cfg(any(feature = "metrics_basic", feature = "metrics_prometheus"))]
             "metrics" => Some(Self::create_metrics_capability()),
             _ => None,
         }

@@ -14,7 +14,6 @@ pub use group_application_service::*;
 
 // 消息服务
 pub mod message_application_service;
-pub use message_application_service::*;
 
 // 瞬间服务
 pub mod moment_application_service;
@@ -27,10 +26,6 @@ pub use search_application_service::*;
 // 活动服务
 pub mod activity_application_service;
 pub use activity_application_service::*;
-
-// 好友服务
-pub mod friend_application_service;
-pub use friend_application_service::*;
 
 // 评论服务
 pub mod comment_application_service;
@@ -47,9 +42,5 @@ pub use cache_application_service::*;
 // 作业服务
 pub mod job_application_service;
 pub use job_application_service::*;
-
-// 屏蔽服务
-pub mod block_application_service;
-pub use block_application_service::*;
 
 // 额外的服务类型已合并到各自的模块中

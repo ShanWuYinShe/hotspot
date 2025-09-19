@@ -236,10 +236,11 @@
 </template>
 
 <script setup lang="ts">
+import type { UserSettings } from '~/types';
+
 interface Props {
   user: any;
-  isMobile?: boolean;
-  localSettings: any;
+  localSettings: UserSettings;
   isChangingAvatar?: boolean;
   isEditingNickname?: boolean;
 }
@@ -261,7 +262,8 @@ const displayNickname = computed(() => props.user?.nickname || '未设置昵称'
 
 const displayLoginId = computed(() => props.user?.login_id || '临时用户');
 
-const avatarSize = computed(() => props.isMobile ? 'lg' : 'xl');
+// 使用CSS响应式设计而非JavaScript检测
+const avatarSize = 'xl'; // 在移动端通过CSS类控制大小
 
 const accountTypeLabel = computed(() => 
   isTemporaryUser.value ? '临时用户' : '正式用户'
@@ -294,7 +296,7 @@ const cardDefaultUi = {
 };
 
 const securityItemUi = {
-  root: 'p-3 md:p-4 rounded-lg bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors duration-200',
+  root: 'p-3 md:p-4 rounded-lg bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700',
   body: 'p-0'
 };
 </script>

@@ -108,7 +108,7 @@ export const validateRadius = (radius: number): number => {
 
 /**
  * 验证分页参数
- * 🔥 修复：cursor 应为 string 类型，符合 hotspot.md 游标分页规范
+ * cursor 应为 string 类型，符合游标分页规范
  */
 export const validatePaginationParams = (params: {
   limit?: number;

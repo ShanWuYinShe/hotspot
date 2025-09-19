@@ -15,7 +15,7 @@ use tokio::sync::RwLock;
 use crate::domain::DomainResult;
 use crate::infrastructure::{
     CapabilityRegistry, CapabilityId, CapabilityConfig, CapabilityRegistryHealth,
-    CapabilityRegistryStats, CapabilityFactory, Capability,
+    CapabilityRegistryStats, capabilities::CapabilityFactory, /* Capability, */ // 暂时未使用
 };
 
 /// 能力管理器配置
@@ -276,7 +276,7 @@ impl CapabilityManager {
     }
     
     /// 重新加载配置
-    pub async fn reload_config(&self, new_config: CapabilityManagerConfig) -> DomainResult<()> {
+    pub async fn reload_config(&self, _new_config: CapabilityManagerConfig) -> DomainResult<()> {
         tracing::info!("Reloading capability manager configuration");
         
         // 这里应该实现配置热重载逻辑

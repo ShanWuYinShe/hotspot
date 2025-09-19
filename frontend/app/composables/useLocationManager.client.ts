@@ -4,8 +4,6 @@
  */
 
 import { getCurrentInstance, onUnmounted, readonly, ref } from 'vue'
-import { useUserService } from '~/services/user.service'
-import { useAuthStore } from '~/stores/auth.store'
 import { DEFAULTS } from '~/config/defaults'
 
 interface LocationState {

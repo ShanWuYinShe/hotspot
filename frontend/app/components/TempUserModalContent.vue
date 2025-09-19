@@ -1,5 +1,5 @@
 <template>
-  <UModal>
+  <UModal title="创建临时用户">
     <template #header>
       <div class="flex items-center gap-2">
         <UIcon name="i-heroicons-rocket-launch" class="w-5 h-5 text-primary-500" />

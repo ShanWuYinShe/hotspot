@@ -24,18 +24,12 @@
                     <UInput
                         v-model="searchQuery"
                         :placeholder="$t('users.search.placeholder')"
+                        icon="i-heroicons-magnifying-glass"
                         class="flex-1"
                         size="md"
                         :loading="searching"
-                        :ui="{ 
-                            base: 'bg-white dark:bg-neutral-800 shadow-sm border border-neutral-200 dark:border-neutral-700 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:shadow-lg focus:shadow-primary-500/25 transition-colors duration-200 rounded-lg px-12 py-3'
-                        }"
                         @keyup.enter="performSearch"
-                    >
-                        <template #leading>
-                            <UIcon name="i-heroicons-magnifying-glass" class="text-neutral-500 dark:text-neutral-400 w-5 h-5 ml-1" />
-                        </template>
-                    </UInput>
+                    />
                     <UButton
                         @click="performSearch"
                         :loading="searching"
@@ -364,7 +358,6 @@ definePageMeta({
 });
 
 const api = useApi();
-import { useUserService } from '~/services/user.service';
 
 const userService = useUserService();
 const toast = useSmartToast();

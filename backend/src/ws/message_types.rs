@@ -37,19 +37,12 @@ pub enum ClientMessage {
 /// 消息数据
 #[derive(Debug, Clone, Deserialize)]
 pub struct MessageData {
-    #[allow(dead_code)]
     pub room_id: Uuid,
-    #[allow(dead_code)]
     pub room_type: RoomType,
-    #[allow(dead_code)]
     pub recipient_id: Option<JsSafeI64>,
-    #[allow(dead_code)]
     pub content: String,
-    #[allow(dead_code)]
     pub message_type: MessageType,
-    #[allow(dead_code)]
     pub latitude: Option<f64>,
-    #[allow(dead_code)]
     pub longitude: Option<f64>,
 }
 
@@ -193,7 +186,6 @@ pub enum SystemNotificationType {
 
 /// 系统内部事件（用于服务间通信）
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub enum InternalEvent {
     /// 用户连接
     UserConnected { user_id: JsSafeI64, session_id: String },

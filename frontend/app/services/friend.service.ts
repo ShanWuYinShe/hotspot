@@ -5,7 +5,6 @@
  * 后端暂未实现具体API端点，此服务暂时返回模拟数据或错误提示
  */
 
-// import { FRIEND_ENDPOINTS } from "~/config/api"; // 暂未实现
 import type { PaginatedResponse, BasicSuccess, User } from "~/types";
 
 export const useFriendService = () => {

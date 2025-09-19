@@ -299,17 +299,17 @@ impl CapabilityRegistry {
     fn is_feature_enabled(&self, feature_flag: &str) -> bool {
         // 检查编译时feature
         match feature_flag {
-            "postgres" => cfg!(feature = "postgres"),
-            "cache_in_memory" => cfg!(any(feature = "cache_in_memory", not(feature = "cache_redis"))),
+            "postgres" => true, // PostgreSQL 是核心功能，始终启用
+            "cache_memory" => cfg!(any(feature = "cache_memory", not(feature = "cache_redis"))),
             "cache_redis" => cfg!(feature = "cache_redis"),
-            "jobs_lite" => cfg!(any(feature = "jobs_lite", not(feature = "jobs_redis"))),
+            "jobs_memory" => cfg!(any(feature = "jobs_memory", not(feature = "jobs_redis"))),
             "jobs_redis" => cfg!(feature = "jobs_redis"),
-            "ws" => cfg!(feature = "ws"),
-            "policy_friend" => cfg!(feature = "policy_friend"),
-            "policy_group" => cfg!(feature = "policy_group"),
-            "policy_nearby" => cfg!(feature = "policy_nearby"),
+            "ws" => true, // WebSocket 是核心功能，始终启用
+            "policy_friend" => true, // 通知策略是核心功能，始终启用
+            "policy_group" => true, // 通知策略是核心功能，始终启用
+            "policy_nearby" => true, // 通知策略是核心功能，始终启用
             "metrics_basic" => cfg!(feature = "metrics_basic"),
-            "prometheus_metrics" => cfg!(feature = "prometheus_metrics"),
+            "metrics_prometheus" => cfg!(feature = "metrics_prometheus"),
             _ => {
                 log::warn!("Unknown feature flag: {}", feature_flag);
                 false

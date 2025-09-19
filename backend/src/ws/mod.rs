@@ -40,6 +40,11 @@ pub mod manager;
 pub mod types;
 pub mod connection_optimizer;
 pub mod notification_policy;
+pub mod performance_optimizer;
+
+// 新的统一实现模块
+pub mod unified_message_types;
+pub mod unified_connection_manager;
 
 // 重新导出主要类型
 pub use connection_manager::{ConnectionManager, ConnectionStats};
@@ -52,6 +57,18 @@ pub use notification_policy::{
     NotificationPolicyService, NotificationPolicy, NotificationPolicyConfig,
     NotificationResult, SmartNotificationScheduler, MessagePriority
 };
+pub use performance_optimizer::{
+    WebSocketPerformanceOptimizer, PerformanceStats, OptimizationConfig,
+    PerformanceOptimizationSuggestion, ConnectionHealth
+};
+
+// 重新导出统一实现的类型
+pub use unified_message_types::{
+    WebSocketMessage, ClientMessage as UnifiedClientMessage, ServerMessage as UnifiedServerMessage,
+    ConnectionInfo, RoomInfo, RoomType as UnifiedRoomType, MessageRoute, MessagePriority as UnifiedMessagePriority,
+    WebSocketError, ConnectionStats as UnifiedConnectionStats, RoomStats as UnifiedRoomStats
+};
+pub use unified_connection_manager::UnifiedConnectionManager;
 
 /// WebSocket 扩展钩子（默认 Noop）。
 /// 使用 feature gate `ws_hooks` 启用具体实现。

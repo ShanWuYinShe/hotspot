@@ -31,22 +31,32 @@ export const API_CONFIG = {
 
 // 认证相关API端点
 export const AUTH_ENDPOINTS = {
-  // 基础路径
-  BASE: API_CONFIG.MODULES.AUTH,
+  // 公开认证端点（不需要认证）- 路径：/api/v1/public/auth/*
+  PUBLIC: {
+    BASE: "/public/auth",
+    GET_NONCE: "/get_nonce",          // 获取认证随机数
+    LOGIN: "/login",
+    REGISTER: "/register",
+    CREATE_TEMP: "/create_temp",
+    REFRESH_TOKEN: "/refresh_token",
+    CHECK_STATUS: "/check_status",
+  },
 
-  // 公开端点（不需要认证）
-  GET_NONCE: "/get_nonce",          // 🔥 新增：获取认证随机数
+  // 受保护认证端点（需要认证）- 路径：/api/v1/protected/auth/*
+  PROTECTED: {
+    BASE: "/protected/auth",
+    SET_PASSWORD: "/set_password",
+  },
+
+  // 兼容性：保留旧的端点定义（将逐步废弃）
+  BASE: "/public/auth",  // 默认指向公开认证
+  GET_NONCE: "/get_nonce",
   LOGIN: "/login",
   REGISTER: "/register",
   CREATE_TEMP: "/create_temp",
   REFRESH_TOKEN: "/refresh_token",
-  HEALTH: "/health",
-
-  // 需要认证的端点
   CHECK_STATUS: "/check_status",
-  SET_PASSWORD: "/set_password",
-  PASSWORD_STATUS: "/password_status",
-  LOGOUT: "/logout",
+  SET_PASSWORD: "/set_password",  // 注意：这个实际在protected路径下
 } as const;
 
 // 用户相关API端点（与hotspot.md 7.2.2对齐）
@@ -68,6 +78,15 @@ export const USER_ENDPOINTS = {
     GET_SETTINGS: "/get_settings",
     UPDATE_SETTINGS: "/update_settings",
     DELETE_ACCOUNT: "/delete_account",
+    // 用户关系管理API（根据backend_doc.mdc 5.2.2）
+    ADD_FRIEND: "/add_friend",
+    ACCEPT_FRIEND: "/accept_friend",
+    REJECT_FRIEND: "/reject_friend",
+    FOLLOW_USER: "/follow_user",
+    UNFOLLOW_USER: "/unfollow_user",
+    BLOCK_USER: "/block_user",
+    FRIENDS_LIST: "/friends_list",
+    BLOCKED_LIST: "/blocked_list",
   },
 
   BASE: API_CONFIG.MODULES.USER,
@@ -92,6 +111,7 @@ export const GROUP_ENDPOINTS = {
     LEAVE: "/leave",
     TRANSFER_OWNERSHIP: "/transfer_ownership",
     KICK: "/kick",
+    MY_GROUPS: "/my_groups",
   },
 
   BASE: API_CONFIG.MODULES.GROUP,
@@ -142,37 +162,53 @@ export const ADMIN_ENDPOINTS = {
   BASE: API_CONFIG.MODULES.ADMIN,
 } as const;
 
-// 聊天/消息端点（与 hotspot.md 7.4 对齐，模块前缀：/protected/chat）
+// 统一消息端点（与 backend_doc.mdc 5.2.4 对齐，统一消息架构）
 export const CHAT_ENDPOINTS = {
-  // 受保护聊天接口（需要认证）
+  // 受保护聊天接口（需要认证）- 统一架构：群聊和私聊使用相同接口
   PROTECTED: {
     BASE: `${API_CONFIG.MODULES.PROTECTED}/chat`,
-    // 群组
-    GROUP_SEND: "/group/send",
-    GROUP_HISTORY: "/group/history",
-    GROUP_DELETE: "/group/delete",
-    GROUP_MARK_READ: "/group/mark-read",
-    GROUP_UNREAD_COUNT: "/group/unread_count",
-    // 私聊（user/*）
-    USER_SEND: "/user/send",
-    USER_HISTORY: "/user/history",
-    USER_DELETE: "/user/delete",
-    USER_MARK_READ: "/user/mark-read",
-    USER_UNREAD_COUNT: "/user/unread_count",
-    CONVERSATIONS: "/user/conversations",
+    // 统一消息接口（支持群聊和私聊）
+    SEND: "/send",                    // 发送消息（统一接口）
+    HISTORY: "/history",              // 获取消息历史（统一接口）
+    DELETE: "/delete",                // 删除消息（统一接口）
+    MARK_READ: "/mark-read",          // 标记消息已读（统一接口）
+    UNREAD_COUNT: "/unread_count",    // 获取未读消息数（统一接口）
+    CONVERSATIONS: "/conversations",   // 获取会话列表（统一接口）
   },
 
   BASE: API_CONFIG.MODULES.CHAT,
 } as const;
 
-// 好友相关API端点（预留功能，暂未实现 - 参考 hotspot.md 3.3.1）
-// 注意：好友系统在 hotspot.md 中标记为"预留"功能，后端暂未实现具体API端点
-export const FRIEND_ENDPOINTS = {
-  // 预留：当后端实现好友功能时启用
-  // BASE: API_CONFIG.MODULES.FRIEND,
-  // LIST: "/list",
-  // REQUESTS: "/requests",
-  // ... 其他端点待后端实现
+// 内容安全API端点（根据backend_doc.mdc 5.2.7）
+export const REPORT_ENDPOINTS = {
+  PROTECTED: {
+    BASE: `${API_CONFIG.MODULES.PROTECTED}/reports`,
+    CREATE: "/create",              // 提交举报
+    MY_REPORTS: "/my_reports",      // 我的举报记录
+    LIST: "/list",                  // 举报列表（管理员）
+    HANDLE: "/handle",              // 处理举报（管理员）
+  },
+} as const;
+
+// 通知推送API端点（根据backend_doc.mdc 5.2.8）
+export const NOTIFICATION_ENDPOINTS = {
+  PROTECTED: {
+    BASE: `${API_CONFIG.MODULES.PROTECTED}/notifications`,
+    SEND: "/send",                  // 发送通知
+    LIST: "/list",                  // 获取通知列表
+    MARK_READ: "/mark_read",        // 标记通知已读
+    UNREAD_COUNT: "/unread_count",  // 获取未读通知数
+    SETTINGS: "/settings",          // 获取通知设置
+    UPDATE_SETTINGS: "/update_settings", // 更新通知设置
+  },
+} as const;
+
+// 系统状态API端点（根据backend_doc.mdc 5.2.9）
+export const STATUS_ENDPOINTS = {
+  PUBLIC: {
+    BASE: `${API_CONFIG.MODULES.PUBLIC}/status`,
+    HEALTH: "/health",              // 系统健康检查
+  },
 } as const;
 
 // 其他端点
@@ -188,8 +224,9 @@ export const buildUrl = (base: string, endpoint: string): string => {
 };
 
 // 快捷构建函数
-export const buildAuthUrl = (endpoint: string): string => {
-  return buildUrl(AUTH_ENDPOINTS.BASE, endpoint);
+export const buildAuthUrl = (endpoint: string, isProtected: boolean = false): string => {
+  const base = isProtected ? AUTH_ENDPOINTS.PROTECTED.BASE : AUTH_ENDPOINTS.PUBLIC.BASE;
+  return buildUrl(base, endpoint);
 };
 
 export const buildUserUrl = (endpoint: string, isPublic: boolean = false): string => {
@@ -230,10 +267,11 @@ export const API_ENDPOINTS = {
   AUTH: AUTH_ENDPOINTS,
   USER: USER_ENDPOINTS,
   GROUP: GROUP_ENDPOINTS,
-  // MESSAGE: MESSAGE_ENDPOINTS, // 已废弃，使用 CHAT
   MOMENT: MOMENT_ENDPOINTS,
   CHAT: CHAT_ENDPOINTS,
-  // FRIEND: FRIEND_ENDPOINTS, // 预留功能，暂未实现
+  REPORT: REPORT_ENDPOINTS,
+  NOTIFICATION: NOTIFICATION_ENDPOINTS,
+  STATUS: STATUS_ENDPOINTS,
   ADMIN: ADMIN_ENDPOINTS,
   OTHER: OTHER_ENDPOINTS,
 } as const;
@@ -242,8 +280,6 @@ export const API_ENDPOINTS = {
 export type AuthEndpoint = keyof typeof AUTH_ENDPOINTS;
 export type UserEndpoint = keyof typeof USER_ENDPOINTS;
 export type GroupEndpoint = keyof typeof GROUP_ENDPOINTS;
-// export type MessageEndpoint = keyof typeof MESSAGE_ENDPOINTS; // 已废弃，使用 ChatEndpoint
 export type MomentEndpoint = keyof typeof MOMENT_ENDPOINTS;
 export type ChatEndpoint = keyof typeof CHAT_ENDPOINTS;
-// export type FriendEndpoint = keyof typeof FRIEND_ENDPOINTS; // 预留功能，暂未实现
 export type AdminEndpoint = keyof typeof ADMIN_ENDPOINTS;

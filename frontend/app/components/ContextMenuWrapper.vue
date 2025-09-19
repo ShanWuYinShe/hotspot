@@ -26,7 +26,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const toast = useSmartToast()
-const { copyToClipboard } = useUXEnhancements()
+const { copyToClipboard } = useUtils()
 
 // 根据类型生成菜单项
 const contextMenuItems = computed((): ContextMenuItem[][] => {

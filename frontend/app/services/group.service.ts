@@ -23,8 +23,7 @@ import type {
   GroupMembersResponse,
   SearchGroupByLocationResponse,
   SearchGroupByNameResponse,
-  GetUserGroupsResponse,
-  GetOwnedGroupsResponse
+  GetUserGroupsResponse
 } from "~/types";
 import { 
   validateGroupId, 
@@ -35,7 +34,6 @@ import {
   validatePaginationParams,
   validateSearchKeyword
 } from "~/utils/api-validation";
-import { extractApiData, extractPaginatedData } from "~/utils/api-response";
 
 export const useGroupService = () => {
   const api = useApi();
@@ -128,7 +126,7 @@ export const useGroupService = () => {
       latitude,
       longitude,
       radius: validRadius,
-      cursor: validPagination.cursor, // 🔥 修复：首次加载时不传递cursor，让后端处理默认值
+      cursor: validPagination.cursor, // 游标分页
       limit: validPagination.limit,
     });
     
@@ -190,16 +188,26 @@ export const useGroupService = () => {
     return extractApiData(response);
   };
 
-  // 获取我的群组（暂未实现 - hotspot.md 中未定义此端点）
+  // 获取我的群组（包含用户角色信息）
+  // 优化说明：
+  // - 返回用户参与的所有群组（包括创建的和加入的）
+  // - 每个群组包含用户在该群组中的角色信息（user_role字段）
+  // - 前端可根据角色判断是否有管理权限（owner/admin可管理，member只能查看）
+  // - 替代了原来的 getOwnedGroups 方法，简化了API设计
   const getMyGroups = async (cursor?: number): Promise<GetUserGroupsResponse> => {
-    throw new Error('获取我的群组功能暂未实现，请等待后端API上线');
-    // 注意：hotspot.md 7.3.1 中只定义了9个群组端点，不包含此功能
-  };
-
-  // 获取拥有的群组（暂未实现 - hotspot.md 中未定义此端点）
-  const getOwnedGroups = async (cursor?: number): Promise<GetOwnedGroupsResponse> => {
-    throw new Error('获取拥有的群组功能暂未实现，请等待后端API上线');
-    // 注意：hotspot.md 7.3.1 中只定义了9个群组端点，不包含此功能
+    // 发送前验证参数
+    const paginationParams = validatePaginationParams({ 
+      cursor: cursor ? String(cursor) : undefined, 
+      limit: DEFAULTS.pageSize 
+    });
+    
+    const response = await api.post(buildGroupUrl(GROUP_ENDPOINTS.PROTECTED.MY_GROUPS), {
+      cursor: paginationParams.cursor || undefined,
+      limit: paginationParams.limit || DEFAULTS.pageSize,
+    }, { auth: true });
+    
+    // 接收后直接信任并返回分页数据
+    return extractPaginatedData(response);
   };
 
   return {
@@ -223,6 +231,5 @@ export const useGroupService = () => {
     
     // 用户群组关系
     getMyGroups,
-    getOwnedGroups,
   };
 };

@@ -577,7 +577,7 @@ impl WebSocketManager {
     async fn start_cleanup_task(&self) {
         let connections = self.connections.clone();
         let rooms = self.rooms.clone();
-        let stats = self.stats.clone();
+        let _stats = self.stats.clone();
         let cleanup_interval = std::time::Duration::from_secs(60); // 每分钟清理一次
         
         tokio::spawn(async move {
@@ -587,20 +587,20 @@ impl WebSocketManager {
                 interval.tick().await;
                 
                 // 清理断开的连接
-                let mut disconnected_connections: Vec<String> = Vec::new();
+                let disconnected_connections: Vec<String> = Vec::new();
                 {
                     let connections_guard = connections.read().await;
-                    for (connection_id, _) in connections_guard.iter() {
+                    for (_connection_id, _) in connections_guard.iter() {
                         // 这里应该检查连接是否仍然活跃
                         // 简化实现，暂不清理
                     }
                 }
                 
                 // 清理空房间
-                let mut empty_rooms: Vec<String> = Vec::new();
+                let empty_rooms: Vec<String> = Vec::new();
                 {
                     let rooms_guard = rooms.read().await;
-                    for (room_id, _) in rooms_guard.iter() {
+                    for (_room_id, _) in rooms_guard.iter() {
                         // 这里应该检查房间是否为空
                         // 简化实现，暂不清理
                     }

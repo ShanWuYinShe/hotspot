@@ -112,12 +112,13 @@ pub mod ws;
 /// 提供跨模块使用的工具函数和辅助类型
 pub mod utils {
     // 核心工具模块
+    pub mod async_batch_processor;
     pub mod user_id_partition;
     pub mod types;
     pub mod constants;
     
     // 基础设施工具（按需启用）
-    #[cfg(feature = "audit")]
+    #[cfg(feature = "audit_logging")]
     pub mod audit;
     pub mod events;
     pub mod capabilities;
@@ -141,13 +142,16 @@ pub mod utils {
     // 结果扩展
     pub mod result_ext;
     
-    // 任务队列相关（按需启用）
-    #[cfg(feature = "jobs")]
+    // 任务队列相关（内存队列默认启用，Redis队列可选）
+    #[cfg(any(feature = "jobs_memory", not(feature = "jobs_redis")))]
     pub mod job_queue;
     
     // JavaScript兼容性类型
     pub mod js_safe_types;
     pub mod conversion_helpers;
+    
+    // 路由分析工具
+    pub mod route_introspector;
     
     // 重新导出常用类型
     pub use user_id_partition::{UserIdPartition, UserType};
@@ -195,10 +199,10 @@ pub mod prelude {
     };
     
     
-    #[cfg(feature = "cache_in_memory")]
-    // pub use crate::adapters::MemoryCache;  // 暂时禁用
+    #[cfg(feature = "cache_memory")]
+    pub use crate::adapters::MemoryCache;
     
-    #[cfg(feature = "ws")]
+    // WebSocket 是核心功能，始终启用
     pub use crate::adapters::WebSocketNotificationTransport;
     
     // 缓存系统
@@ -252,7 +256,7 @@ pub mod prelude {
         NotificationTransport, NotificationPolicy as NotificationPolicyTrait,
         Notification, NotificationContext, NotificationChannel, LocationContext,
     };
-    // #[cfg(feature = "ws")]
+    // // WebSocket 是核心功能，始终启用
     // pub use crate::adapters::BasicNotificationPolicy;
     
 }

@@ -12,7 +12,7 @@
 use async_trait::async_trait;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use tokio::sync::{RwLock, Mutex};
+use tokio::sync::{/* RwLock, */ Mutex}; // RwLock 暂时未使用
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 use axum::extract::ws::{WebSocket, Message as WsMessage};
@@ -410,7 +410,7 @@ impl RoomActor {
     /// 广播消息到房间所有成员
     async fn broadcast_to_room(
         &mut self,
-        message: &str,
+        _message: &str,
         sender_id: Option<UserId>,
         exclude_users: &[UserId],
     ) -> DomainResult<u32> {
@@ -794,7 +794,7 @@ mod tests {
     #[test]
     fn test_room_actor_creation() {
         let room_type = RoomType::Group {
-            group_id: GroupId::new(),
+            group_id: GroupId::new("test-group".to_string()).unwrap(),
         };
         
         let room_actor = RoomActor::new(

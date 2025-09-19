@@ -4,8 +4,16 @@
             <!-- 页面标题 -->
             <div class="flex items-center justify-between mb-8">
                 <div>
-                    <h1 class="text-3xl font-bold text-neutral-900 dark:text-white">消息</h1>
-                    <p class="text-neutral-600 dark:text-neutral-400 mt-1">与朋友和群组保持联系</p>
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                            <UIcon name="i-heroicons-chat-bubble-left-right" class="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                            <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">消息中心</h1>
+                            <div class="w-16 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mt-1"></div>
+                        </div>
+                    </div>
+                    <p class="text-secondary text-lg leading-relaxed">与朋友和群组保持联系，分享生活的精彩时刻</p>
                 </div>
                 <div class="flex items-center gap-3">
                     <UBadge 
@@ -83,7 +91,9 @@
                 </template>
 
                 <!-- 加载状态 -->
-                <LoadingState v-if="loading" message="正在加载会话列表..." />
+                <div v-if="loading" class="p-4">
+                    <ConversationListSkeleton :count="6" />
+                </div>
 
                 <!-- 错误状态 -->
                 <ErrorState 
@@ -226,8 +236,6 @@
 <script setup lang="ts">
 // TableColumn 类型已在组件内部定义
 import { defineAsyncComponent } from 'vue';
-import { useMessageService } from '~/services/message.service';
-import { formatTime } from '~/utils/formatters';
 
 // 懒加载组件
 const EmptyMessages = defineAsyncComponent(() => import("~/components/illustrations/EmptyMessages.vue"));

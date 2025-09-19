@@ -96,7 +96,7 @@
                         </div>
 
                         <!-- 使用 UTabs 切换 登录 / 注册 -->
-                        <UTabs :items="authTabs" v-model:selected="mode" class="mb-8" />
+                        <UTabs :items="authTabs" v-model="mode" :default-index="0" class="mb-8" />
 
                         <!-- 登录表单 -->
                         <div v-if="mode === 'login'" class="space-y-6">
@@ -104,14 +104,18 @@
                             <UForm :state="loginForm" :validate="validateLogin" @submit="handleLogin" class="space-y-5"
                                 aria-label="登录表单">
                                 <UFormField label="用户名" name="loginId" required class="space-y-2">
-                                    <UInput v-model="loginForm.loginId" placeholder="请输入用户名" :disabled="isLoading"
-                                        size="lg" class="h-12 w-full" />
+                                    <UTooltip text="输入您注册时使用的用户名或邮箱">
+                                        <UInput v-model="loginForm.loginId" placeholder="请输入用户名" :disabled="isLoading"
+                                            size="lg" class="h-12 w-full" />
+                                    </UTooltip>
                                 </UFormField>
 
                                 <UFormField label="密码" name="password" required class="space-y-2">
-                                    <UInput v-model="loginForm.password" type="password" placeholder="请输入密码"
-                                        :disabled="isLoading" autocomplete="new-password" size="lg"
-                                        class="h-12 w-full" />
+                                    <UTooltip text="输入您的账户密码">
+                                        <UInput v-model="loginForm.password" type="password" placeholder="请输入密码"
+                                            :disabled="isLoading" autocomplete="new-password" size="lg"
+                                            class="h-12 w-full" />
+                                    </UTooltip>
                                 </UFormField>
 
 
@@ -189,19 +193,25 @@
                             <UForm :state="registerForm" :validate="validateRegister" @submit="handleRegister"
                                 class="space-y-5" aria-label="注册表单">
                                 <UFormField label="用户名" name="loginId" required class="space-y-2">
-                                    <UInput v-model="registerForm.loginId" placeholder="请输入用户名" :disabled="isLoading"
-                                        size="lg" class="h-12 w-full" />
+                                    <UTooltip text="3-32个字符，支持字母、数字和下划线">
+                                        <UInput v-model="registerForm.loginId" placeholder="请输入用户名" :disabled="isLoading"
+                                            size="lg" class="h-12 w-full" />
+                                    </UTooltip>
                                 </UFormField>
 
                                 <UFormField label="昵称" name="nickname" class="space-y-2">
-                                    <UInput v-model="registerForm.nickname" placeholder="请输入昵称" :disabled="isLoading"
-                                        size="lg" class="h-12 w-full" />
+                                    <UTooltip text="2-32个字符，用于显示的友好名称">
+                                        <UInput v-model="registerForm.nickname" placeholder="请输入昵称" :disabled="isLoading"
+                                            size="lg" class="h-12 w-full" />
+                                    </UTooltip>
                                 </UFormField>
 
                                 <UFormField label="密码" name="password" required class="space-y-2">
-                                    <UInput v-model="registerForm.password" type="password" placeholder="请输入密码"
-                                        :disabled="isLoading" autocomplete="new-password" size="lg"
-                                        class="h-12 w-full" />
+                                    <UTooltip text="请设置一个安全的密码">
+                                        <UInput v-model="registerForm.password" type="password" placeholder="请输入密码"
+                                            :disabled="isLoading" autocomplete="new-password" size="lg"
+                                            class="h-12 w-full" />
+                                    </UTooltip>
                                 </UFormField>
 
 
@@ -234,7 +244,6 @@
 </template>
 
 <script setup lang="ts">
-import { useUserService } from '~/services/user.service';
 
 definePageMeta({ layout: "auth" });
 
@@ -254,12 +263,12 @@ const mode = ref<"login" | "register" | "upgrade">(
 // UTabs items（键值需与 mode 匹配）
 const authTabs = computed(() => {
   const tabs = [
-    { key: 'login', label: '登录', icon: 'i-heroicons-arrow-right-on-rectangle' },
-    { key: 'register', label: '注册', icon: 'i-heroicons-user-plus' }
+    { value: 'login', label: '登录', icon: 'i-heroicons-arrow-right-on-rectangle' },
+    { value: 'register', label: '注册', icon: 'i-heroicons-user-plus' }
   ];
   
   if (isUpgradeMode.value) {
-    tabs.unshift({ key: 'upgrade', label: '升级账户', icon: 'i-heroicons-arrow-up-circle' });
+    tabs.unshift({ value: 'upgrade', label: '升级账户', icon: 'i-heroicons-arrow-up-circle' });
   }
   
   return tabs;

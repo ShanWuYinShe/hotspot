@@ -28,15 +28,15 @@
 /// - 连接断线的自动恢复和消息补发
 /// - 通知发送失败的重试和容错机制
 use async_trait::async_trait;
-use std::collections::HashMap;
+// use std::collections::HashMap; // 暂时未使用
 use std::sync::Arc;
 use crate::domain::{DomainResult, UserId};
 use crate::ports::NotificationTransport;
-use crate::ports::services::{TransportStats, PolicyStats};
-use crate::ports::services::{Notification, NotificationContext};
-use crate::ports::services::NotificationPolicy as NotificationPolicyTrait;
+use crate::ports::services::{TransportStats, /* PolicyStats */}; // PolicyStats 暂时未使用
+use crate::ports::services::{Notification, /* NotificationContext */}; // NotificationContext 暂时未使用
+// use crate::ports::services::NotificationPolicy as NotificationPolicyTrait; // 暂时未使用
 use crate::ports::services::NotificationType;
-use crate::ports::repository_ports::{/* FriendRepository, */ UserRepository, GroupRepository};
+// use crate::ports::repository_ports::{/* FriendRepository, UserRepository, GroupRepository */};
 
 /// WebSocket通知传输实现
 #[derive(Clone)]
@@ -143,24 +143,116 @@ impl NotificationTransport for WebSocketNotificationTransport {
         Ok(())
     }
 
-    async fn send_to_group(&self, _group_id: &str, notification: &Notification) -> DomainResult<()> {
-        // TODO: 实现群组通知逻辑
-        log::warn!("群组通知暂未实现: {} - {}", notification.title, notification.content);
-        Ok(())
+    async fn send_to_group(&self, group_id: &str, notification: &Notification) -> DomainResult<()> {
+        log::info!("发送群组通知: 群组 {} - {} - {}", group_id, notification.title, notification.content);
+        
+        // 通过WebSocket管理器发送群组通知
+        if let Some(ws_manager) = &self.ws_manager {
+            // 构建WebSocket消息
+            let notification_uuid = match uuid::Uuid::parse_str(&notification.notification_id) {
+                Ok(uuid) => uuid,
+                Err(_) => uuid::Uuid::new_v4(), // 如果解析失败，生成新的UUID
+            };
+            
+            let ws_message = crate::ws::message_types::ServerMessage::SystemNotification(
+                crate::ws::message_types::SystemNotificationData {
+                    notification_id: notification_uuid,
+                    title: notification.title.clone(),
+                    content: notification.content.clone(),
+                    notification_type: crate::ws::message_types::SystemNotificationType::System,
+                    data: notification.data.clone(),
+                    created_at: chrono::Utc::now(),
+                }
+            );
+            
+            // 发送到群组房间
+            let group_uuid = match uuid::Uuid::parse_str(group_id) {
+                Ok(uuid) => uuid,
+                Err(_) => {
+                    log::error!("无效的群组ID格式: {}", group_id);
+                    return Err(crate::domain::DomainError::BusinessRuleViolation {
+                        rule: "无效的群组ID格式".to_string(),
+                    });
+                }
+            };
+            
+            let room_id = crate::ws::message_types::RoomId::Group(group_uuid);
+            match ws_manager.message_router().send_to_room(&room_id, ws_message).await {
+                Ok(_) => {
+                    log::debug!("群组通知发送成功: 群组 {}", group_id);
+                    Ok(())
+                }
+                Err(e) => {
+                    log::error!("群组通知发送失败: 群组 {} - {:?}", group_id, e);
+                    Err(crate::domain::DomainError::BusinessRuleViolation {
+                        rule: format!("群组通知发送失败: {}", e),
+                    })
+                }
+            }
+        } else {
+            log::warn!("WebSocket管理器不可用，跳过群组通知");
+            Ok(())
+        }
     }
 
     async fn broadcast(&self, notification: &Notification) -> DomainResult<()> {
-        // 谨慎使用广播，建议通过策略来获取目标用户
-        log::warn!("广播通知: {} - {}", notification.title, notification.content);
-        Ok(())
+        log::warn!("广播通知: {} - {} (谨慎使用，建议通过策略获取目标用户)", notification.title, notification.content);
+        
+        // 通过WebSocket管理器发送广播通知
+        if let Some(ws_manager) = &self.ws_manager {
+            // 构建WebSocket消息
+            let notification_uuid = match uuid::Uuid::parse_str(&notification.notification_id) {
+                Ok(uuid) => uuid,
+                Err(_) => uuid::Uuid::new_v4(), // 如果解析失败，生成新的UUID
+            };
+            
+            let _ws_message = crate::ws::message_types::ServerMessage::SystemNotification(
+                crate::ws::message_types::SystemNotificationData {
+                    notification_id: notification_uuid,
+                    title: notification.title.clone(),
+                    content: notification.content.clone(),
+                    notification_type: crate::ws::message_types::SystemNotificationType::System,
+                    data: notification.data.clone(),
+                    created_at: chrono::Utc::now(),
+                }
+            );
+            
+            // 广播功能已在项目规范中禁用，建议通过策略获取目标用户
+            log::warn!("广播功能已禁用，建议通过通知策略获取目标用户列表");
+            // 如果确实需要广播，可以通过获取所有在线用户来实现
+            // let online_users = ws_manager.connection_manager().get_all_online_users().await;
+            // match ws_manager.message_router().send_to_users(&online_users, ws_message).await {
+            //     Ok(_) => {
+            //         log::info!("广播通知发送成功");
+            //         Ok(())
+            //     }
+            //     Err(e) => {
+            //         log::error!("广播通知发送失败: {:?}", e);
+            //         Err(crate::domain::DomainError::BusinessRuleViolation {
+            //             rule: format!("广播通知发送失败: {}", e),
+            //         })
+            //     }
+            // }
+            Ok(())
+        } else {
+            log::warn!("WebSocket管理器不可用，跳过广播通知");
+            Ok(())
+        }
     }
 
     async fn get_transport_stats(&self) -> DomainResult<TransportStats> {
-        Ok(        TransportStats {
-            total_sent: 0,
-            total_failed: 0,
-            active_connections: 0,
-            last_activity: None,
+        // 获取WebSocket连接统计信息
+        let active_connections = if let Some(ws_manager) = &self.ws_manager {
+            ws_manager.connection_manager().get_stats().await.total_connections as u64
+        } else {
+            0
+        };
+        
+        Ok(TransportStats {
+            total_sent: 0, // 暂时返回0，需要实现统计计数器
+            total_failed: 0, // 暂时返回0，需要实现统计计数器
+            active_connections,
+            last_activity: None, // 暂时返回None，需要实现活动时间跟踪
         })
     }
 }

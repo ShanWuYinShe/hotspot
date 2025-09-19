@@ -1,14 +1,13 @@
-import { useUserService } from "~/services/user.service";
 import { DEFAULTS } from "~/config/defaults";
 import type { AuthResponse, UserInfo, User } from "~/types";
 
 // 安全且简洁的账户信息
 interface SecureAccount {
-  user_id: string; // 修正：使用 string 避免大整数精度问题
+  user_id: string; // 用户ID，使用字符串避免大整数精度问题
   nickname: string;
   avatar_url?: string;
   last_login: string;
-  is_temp?: boolean; // 🔥 修复：统一使用 is_temp 字段，与 AuthResponse 保持一致
+  is_temp?: boolean; // 是否为临时用户
   // 安全存储：只保存加密后的refresh_token
   encrypted_token: string;
   // 设备密钥（用于解密）
@@ -52,7 +51,7 @@ export const useAuthStore = defineStore(
       user_id: currentUser.value.user_id,
       nickname: currentUser.value.nickname,
       avatar_url: currentUser.value.avatar_url,
-      is_temp: currentUser.value.is_temp, // 🔥 修复：统一使用 is_temp 字段
+      is_temp: currentUser.value.is_temp, // 是否为临时用户
     } as User : null);
     
     // 设备认证状态
@@ -244,7 +243,7 @@ export const useAuthStore = defineStore(
           last_login: new Date().toISOString(),
           encrypted_token: encryptedToken,
           device_key: deviceKeyString,
-          is_temp: auth.is_temp || false, // 🔥 修复：统一使用 is_temp 字段
+          is_temp: auth.is_temp || false, // 是否为临时用户
         };
 
         // 更新当前状态
@@ -254,11 +253,8 @@ export const useAuthStore = defineStore(
         expiresAt.value = auth.expires_at || null;
         
         // 保存到账户历史（去重、限制数量）
-        accounts.value = accounts.value.filter(a => a.user_id !== auth.user_id);
-        accounts.value.unshift(account);
-        if (accounts.value.length > 5) {
-          accounts.value = accounts.value.slice(0, 5);
-        }
+        const filteredAccounts = accounts.value.filter(a => a.user_id !== auth.user_id);
+        accounts.value = [account, ...filteredAccounts].slice(0, 5);
         
         sessionActive.value = true; // 刚登录无需重新验证
         
@@ -266,7 +262,7 @@ export const useAuthStore = defineStore(
           console.log('认证数据已保存:', { 
             user_id: auth.user_id, 
             nickname: auth.nickname, 
-            is_temp: auth.is_temp // 🔥 修复：统一使用 is_temp 字段 
+            is_temp: auth.is_temp // 是否为临时用户 
           });
         }
       } catch (error) {
@@ -302,12 +298,12 @@ export const useAuthStore = defineStore(
       await saveAuthData(auth);
       // 更新当前用户的临时状态
       if (currentUser.value) {
-        currentUser.value.is_temp = false; // 🔥 修复：统一使用 is_temp 字段
+        currentUser.value.is_temp = false; // 升级后不再是临时用户
       }
       return auth;
     }
 
-    // 🚀 安全的账户切换（新的核心功能）
+    // 安全的账户切换
     async function switchToAccount(userId: string) {
       // 如果有多个账户且本次会话未验证，需要设备验证
       if (needsDeviceAuth.value) {

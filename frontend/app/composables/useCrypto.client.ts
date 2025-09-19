@@ -119,20 +119,18 @@ export async function sha256Hash(input: string): Promise<string> {
 
 /**
  * 计算认证用的密码哈希
- * 根据需求文档：hash = SHA256(password + nonce + timestamp + login_id)
+ * 根据需求文档：传输哈希 = SHA256(password + nonce + timestamp)
  * @param password 原始密码
  * @param nonce 服务端返回的随机数
  * @param timestamp 时间戳
- * @param loginId 登录ID
  * @returns SHA256 哈希值
  */
 export async function computePasswordHash(
   password: string,
   nonce: string,
-  timestamp: number,
-  loginId: string
+  timestamp: number
 ): Promise<string> {
-  const input = password + nonce + timestamp.toString() + loginId;
+  const input = password + nonce + timestamp.toString();
   return await sha256Hash(input);
 }
 

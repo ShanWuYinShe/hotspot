@@ -36,7 +36,7 @@
     "@nuxt/devtools": "^2.6.3",
     "@nuxt/icon": "^1.15.0",
     "@vite-pwa/nuxt": "^1.0.4",
-    "nuxt": "^4.1.1",
+    "nuxt": "^4.1.2",
     "typescript": "^5.9.2",
     "vue-tsc": "^2.2.12"
   },

@@ -82,7 +82,7 @@ impl<C: Cache> CacheApplicationService for CacheApplicationServiceImpl<C> {
     async fn cache_user_info(&self, user_id: i64, user_data: serde_json::Value, ttl_seconds: u64) -> DomainResult<()> {
         let key = self.user_cache_key(user_id);
         let value = serde_json::to_string(&user_data)
-            .map_err(|e| crate::domain::DomainError::CacheSerializationError)?;
+            .map_err(|_e| crate::domain::DomainError::CacheSerializationError)?;
         
         self.cache.set(&key, &value, Some(Duration::from_secs(ttl_seconds))).await
     }
@@ -92,7 +92,7 @@ impl<C: Cache> CacheApplicationService for CacheApplicationServiceImpl<C> {
         match self.cache.get::<String>(&key).await? {
             Some(value) => {
                 let data: serde_json::Value = serde_json::from_str(&value)
-                    .map_err(|e| crate::domain::DomainError::CacheDeserializationError)?;
+                    .map_err(|_e| crate::domain::DomainError::CacheDeserializationError)?;
                 Ok(Some(data))
             }
             None => Ok(None),
@@ -102,7 +102,7 @@ impl<C: Cache> CacheApplicationService for CacheApplicationServiceImpl<C> {
     async fn cache_group_info(&self, group_id: i64, group_data: serde_json::Value, ttl_seconds: u64) -> DomainResult<()> {
         let key = self.group_cache_key(group_id);
         let value = serde_json::to_string(&group_data)
-            .map_err(|e| crate::domain::DomainError::CacheSerializationError)?;
+            .map_err(|_e| crate::domain::DomainError::CacheSerializationError)?;
         
         self.cache.set(&key, &value, Some(Duration::from_secs(ttl_seconds))).await
     }
@@ -112,7 +112,7 @@ impl<C: Cache> CacheApplicationService for CacheApplicationServiceImpl<C> {
         match self.cache.get::<String>(&key).await? {
             Some(value) => {
                 let data: serde_json::Value = serde_json::from_str(&value)
-                    .map_err(|e| crate::domain::DomainError::CacheDeserializationError)?;
+                    .map_err(|_e| crate::domain::DomainError::CacheDeserializationError)?;
                 Ok(Some(data))
             }
             None => Ok(None),
@@ -122,7 +122,7 @@ impl<C: Cache> CacheApplicationService for CacheApplicationServiceImpl<C> {
     async fn cache_search_results(&self, search_key: String, results: serde_json::Value, ttl_seconds: u64) -> DomainResult<()> {
         let key = self.search_cache_key(&search_key);
         let value = serde_json::to_string(&results)
-            .map_err(|e| crate::domain::DomainError::CacheSerializationError)?;
+            .map_err(|_e| crate::domain::DomainError::CacheSerializationError)?;
         
         self.cache.set(&key, &value, Some(Duration::from_secs(ttl_seconds))).await
     }
@@ -132,7 +132,7 @@ impl<C: Cache> CacheApplicationService for CacheApplicationServiceImpl<C> {
         match self.cache.get::<String>(&key).await? {
             Some(value) => {
                 let data: serde_json::Value = serde_json::from_str(&value)
-                    .map_err(|e| crate::domain::DomainError::CacheDeserializationError)?;
+                    .map_err(|_e| crate::domain::DomainError::CacheDeserializationError)?;
                 Ok(Some(data))
             }
             None => Ok(None),

@@ -1,42 +1,53 @@
 <template>
-    <div class="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-100 dark:from-neutral-900 dark:via-neutral-950 dark:to-neutral-900">
+    <div class="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100/50 to-slate-50 dark:from-slate-900 dark:via-slate-800/30 dark:to-slate-900">
+        <!-- 背景装饰 -->
+        <div class="absolute inset-0 overflow-hidden pointer-events-none">
+            <div class="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-slate-300/10 to-slate-400/10 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-slate-300/10 to-slate-400/10 rounded-full blur-3xl"></div>
+        </div>
+
         <!-- 无障碍状态区域 (保存状态) -->
         <div class="sr-only" aria-live="polite" aria-atomic="true">
             <span v-if="isSaving">设置保存中</span>
             <span v-else-if="lastSaved">设置已保存</span>
         </div>
-        <!-- 移动端粘性头部（标题 + 搜索 + 横向分类导航合集） -->
-        <div class="lg:hidden sticky top-0 z-30 backdrop-blur-xl bg-white/85 dark:bg-neutral-900/85 border-b border-neutral-200 dark:border-neutral-800 shadow-sm">
-            <div class="px-4 pt-4 pb-3 space-y-3">
+
+        <!-- 移动端粘性头部 -->
+        <div class="lg:hidden sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 border-b border-slate-200/50 dark:border-slate-700/50">
+            <div class="px-4 pt-4 pb-3 space-y-4">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h1 class="text-xl font-bold text-neutral-900 dark:text-white leading-tight">设置</h1>
-                        <p class="text-xs text-neutral-600 dark:text-neutral-400">账户 · 隐私 · 通知 · 外观</p>
+                        <h1 class="text-xl font-bold text-slate-800 dark:text-slate-100 leading-tight">设置中心</h1>
+                        <p class="text-xs text-slate-600 dark:text-slate-400">账户 · 隐私 · 通知 · 外观</p>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <UButton v-if="isDirty && !isSaving" size="xs" color="primary" @click="saveSettings" class="shadow-sm">保存</UButton>
-                        <div v-if="isSaving" class="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400">
-                            <UIcon name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
-                            <span>保存中</span>
+                    <div class="flex items-center gap-3">
+                        <UButton 
+                            v-if="isDirty && !isSaving" 
+                            size="sm" 
+                            color="primary" 
+                            @click="saveSettings"
+                        >
+                            <UIcon name="i-heroicons-check" class="w-4 h-4 mr-1" />
+                            保存
+                        </UButton>
+                        <div v-if="isSaving" class="flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-blue-100 dark:bg-blue-900/50">
+                            <UIcon name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin text-blue-600" />
+                            <span class="font-medium text-blue-700 dark:text-blue-400">保存中</span>
                         </div>
-                        <div v-else-if="lastSaved" class="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
-                            <UIcon name="i-heroicons-check-circle" class="w-4 h-4" />
-                            <span>已保存</span>
+                        <div v-else-if="lastSaved" class="flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-green-100 dark:bg-green-900/50">
+                            <UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-green-600" />
+                            <span class="font-medium text-green-700 dark:text-green-400">已保存</span>
                         </div>
                     </div>
                 </div>
+                
                 <UInput
                     v-model="searchQuery"
                     placeholder="搜索设置项..."
                     size="sm"
-                        :ui="{ 
-                            base: 'bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 px-12 py-3'
-                        }"
-                >
-                    <template #leading>
-                        <UIcon name="i-heroicons-magnifying-glass" class="text-neutral-500 dark:text-neutral-400 w-4 h-4 ml-1" />
-                    </template>
-                </UInput>
+                    icon="i-heroicons-magnifying-glass"
+                />
+                
                 <div
                     class="flex overflow-x-auto gap-2 scrollbar-hide -mx-1 px-1 pb-1"
                     role="tablist"
@@ -50,95 +61,119 @@
                         @click="activeSection = section.id"
                         :variant="activeSection === section.id ? 'solid' : 'soft'"
                         :color="activeSection === section.id ? 'primary' : 'neutral'"
-                        size="xs"
-                        class="whitespace-nowrap flex-shrink-0 px-3 py-2 rounded-full transition-all duration-200"
+                        size="sm"
+                        class="whitespace-nowrap flex-shrink-0 px-4 py-2 rounded-full transition-all duration-300 shadow-sm hover:shadow-lg"
+                        :class="activeSection === section.id ? 'shadow-lg shadow-emerald-500/25 scale-105 bg-gradient-to-r from-emerald-500 to-teal-500' : 'hover:scale-105 hover:shadow-emerald-500/10'"
                         :id="'tab-' + section.id"
                         :aria-controls="`settings-panel-${section.id}`"
-                        :class="activeSection === section.id ? 'shadow-md bg-primary-100 dark:bg-primary-900/20' : 'hover:bg-neutral-100 dark:hover:bg-neutral-800'"
                         role="tab"
                         :aria-selected="activeSection === section.id"
                         :tabindex="activeSection === section.id ? 0 : -1"
                     >
-                        <UIcon :name="section.icon" class="w-4 h-4 mr-1" />
+                        <UIcon :name="section.icon" class="w-4 h-4 mr-2" />
                         {{ section.title }}
-                        <UBadge v-if="section.badge" :label="section.badge" color="error" size="xs" class="ml-1" />
+                        <UBadge v-if="section.badge" :label="section.badge" color="error" size="xs" class="ml-2 animate-pulse" />
                     </UButton>
                 </div>
             </div>
         </div>
 
         <!-- 主内容区域 -->
-        <div class="mx-auto max-w-7xl px-4 lg:px-8 pt-4 lg:pt-10 pb-10">
+        <div class="relative mx-auto max-w-7xl px-4 lg:px-8 pt-6 lg:pt-12 pb-12">
             <!-- 桌面端标题区 -->
-            <div class="hidden lg:flex items-end justify-between mb-8">
-                <div class="space-y-3">
-                    <h1 class="text-4xl font-bold tracking-tight text-neutral-900 dark:text-white">设置</h1>
-                    <p class="text-neutral-600 dark:text-neutral-400 max-w-2xl text-base leading-relaxed">管理您的账户信息、隐私权限、通知偏好以及应用外观与行为。</p>
+            <div class="hidden lg:flex items-end justify-between mb-12">
+                <div class="space-y-6">
+                    <div class="space-y-2">
+                        <h1 class="text-5xl font-bold bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent">设置中心</h1>
+                        <div class="w-24 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"></div>
+                    </div>
+                    <p class="text-slate-600 dark:text-slate-400 max-w-2xl text-xl leading-relaxed">
+                        个性化定制您的体验，管理账户信息、隐私权限、通知偏好以及应用外观。
+                    </p>
                 </div>
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-6">
                     <UInput
                         v-model="searchQuery"
                         placeholder="搜索设置项..."
-                        size="md"
+                        icon="i-heroicons-magnifying-glass"
+                        size="lg"
                         class="w-80"
-                        :ui="{ 
-                            base: 'bg-white dark:bg-neutral-800 shadow-sm border border-neutral-200 dark:border-neutral-700 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:shadow-lg focus:shadow-primary-500/25 transition-all duration-200 rounded-lg px-12 py-3.5'
-                        }"
+                    />
+                    
+                    <UButton 
+                        v-if="isDirty && !isSaving" 
+                        color="primary" 
+                        @click="saveSettings" 
+                        :loading="isSaving" 
+                        size="lg"
+                        class="shadow-xl hover:shadow-2xl hover:shadow-emerald-500/25 hover:scale-105 transition-all duration-300 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600"
                     >
-                        <template #leading>
-                            <UIcon name="i-heroicons-magnifying-glass" class="text-neutral-500 dark:text-neutral-400 w-5 h-5 ml-1" />
-                        </template>
-                    </UInput>
-                    <UButton v-if="isDirty && !isSaving" color="primary" @click="saveSettings" :loading="isSaving" class="shadow-sm">保存更改</UButton>
-                    <div v-if="isSaving" class="flex items-center gap-2 text-sm px-3 py-2 rounded-md bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-                        <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin text-blue-600" />
-                        <span class="font-medium text-blue-700 dark:text-blue-400">保存中</span>
+                        <UIcon name="i-heroicons-check" class="w-5 h-5 mr-2" />
+                        保存更改
+                    </UButton>
+                    
+                    <div v-if="isSaving" class="flex items-center gap-3 text-sm px-6 py-4 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-700 shadow-xl">
+                        <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin text-emerald-600" />
+                        <span class="font-medium text-emerald-700 dark:text-emerald-400">保存中</span>
                     </div>
-                    <div v-else-if="lastSaved" class="flex items-center gap-2 text-sm px-3 py-2 rounded-md bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+                    
+                    <div v-else-if="lastSaved" class="flex items-center gap-3 text-sm px-6 py-4 rounded-xl bg-green-100 dark:bg-green-900/50 border border-green-200 dark:border-green-700 shadow-xl">
                         <UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-green-600" />
                         <span class="font-medium text-green-700 dark:text-green-400">已保存</span>
                     </div>
                 </div>
             </div>
 
-            <div class="grid lg:grid-cols-[240px_minmax(0,1fr)] gap-6 lg:gap-10">
+            <div class="grid lg:grid-cols-[280px_minmax(0,1fr)] gap-8 lg:gap-12">
                 <!-- 侧边分类导航（桌面） -->
                 <aside class="hidden lg:block" aria-label="设置分类">
-                    <div class="sticky top-28 space-y-4">
-                        <h3 class="text-xs font-semibold tracking-wider text-neutral-500 dark:text-neutral-400 uppercase px-1">设置分类</h3>
-                        <nav class="space-y-2" role="tablist" aria-orientation="vertical"
-                             @keydown.up.prevent="focusPrevSection()"
-                             @keydown.down.prevent="focusNextSection()"
-                        >
-                            <UButton
+                    <div class="sticky top-32 space-y-6">
+                        <div class="backdrop-blur-xl bg-white/70 dark:bg-slate-800/70 rounded-3xl p-8 shadow-2xl ring-1 ring-emerald-200/30 dark:ring-emerald-700/30">
+                            <div class="space-y-2 mb-6">
+                                <h3 class="text-lg font-bold text-emerald-600 dark:text-emerald-400">设置分类</h3>
+                                <div class="w-12 h-0.5 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"></div>
+                            </div>
+                            <nav class="space-y-3" role="tablist" aria-orientation="vertical"
+                                 @keydown.up.prevent="focusPrevSection()"
+                                 @keydown.down.prevent="focusNextSection()"
+                            >
+                            <UTooltip 
                                 v-for="section in filteredSections"
                                 :key="section.id"
-                                @click="activeSection = section.id"
-                                :variant="activeSection === section.id ? 'solid' : 'ghost'"
-                                :color="activeSection === section.id ? 'primary' : 'neutral'"
-                                size="md"
-                                class="w-full justify-start gap-3 px-4 py-3 rounded-xl transition-all duration-150 group"
-                                :class="activeSection === section.id ? 'shadow-sm ring-1 ring-primary-400/40' : 'hover:bg-neutral-100 dark:hover:bg-neutral-600'"
-                                role="tab"
-                                :aria-selected="activeSection === section.id"
-                                :tabindex="activeSection === section.id ? 0 : -1"
-                                :aria-controls="`settings-panel-${section.id}`"
-                                :id="'tab-' + section.id"
+                                :text="`切换到${section.title}设置`"
+                                :disabled="activeSection === section.id"
                             >
-                                <div class="flex items-center justify-center w-8 h-8 rounded-lg"
-                                     :class="activeSection === section.id ? 'bg-white/20' : 'bg-neutral-100 dark:bg-neutral-600'">
-                                    <UIcon :name="section.icon" class="w-5 h-5" />
-                                </div>
-                                <span class="font-medium">{{ section.title }}</span>
-                                <UBadge v-if="section.badge" :label="section.badge" color="error" size="xs" class="ml-auto" />
-                            </UButton>
-                        </nav>
+                                    <UButton
+                                        @click="activeSection = section.id"
+                                        :variant="activeSection === section.id ? 'solid' : 'ghost'"
+                                        :color="activeSection === section.id ? 'primary' : 'neutral'"
+                                        size="lg"
+                                        class="w-full justify-start gap-4 px-5 py-4 rounded-2xl transition-all duration-300 group"
+                                        :class="activeSection === section.id ? 'shadow-xl shadow-emerald-500/25 scale-105 bg-gradient-to-r from-emerald-500 to-teal-500' : 'hover:scale-105 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/20 hover:shadow-lg hover:shadow-emerald-500/10'"
+                                        role="tab"
+                                        :aria-selected="activeSection === section.id"
+                                        :tabindex="activeSection === section.id ? 0 : -1"
+                                        :aria-controls="`settings-panel-${section.id}`"
+                                        :id="'tab-' + section.id"
+                                    >
+                                        <div class="flex items-center justify-center w-12 h-12 rounded-2xl transition-all duration-300"
+                                             :class="activeSection === section.id ? 'bg-white/20 shadow-lg' : 'bg-emerald-100 dark:bg-emerald-900/50 group-hover:bg-emerald-200 dark:group-hover:bg-emerald-800/50'">
+                                            <UIcon :name="section.icon" class="w-6 h-6" :class="activeSection === section.id ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'" />
+                                        </div>
+                                        <div class="flex-1 text-left">
+                                            <span class="font-semibold text-base" :class="activeSection === section.id ? 'text-white' : 'text-slate-700 dark:text-slate-300'">{{ section.title }}</span>
+                                        </div>
+                                        <UBadge v-if="section.badge" :label="section.badge" color="error" size="xs" class="ml-auto animate-pulse shadow-lg" />
+                                    </UButton>
+                                </UTooltip>
+                            </nav>
+                        </div>
                     </div>
                 </aside>
 
                 <!-- 内容面板 -->
                 <main>
-                    <div class="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white/70 dark:bg-neutral-800/50 backdrop-blur-md shadow-lg ring-1 ring-black/5 dark:ring-white/5 overflow-hidden">
+                    <div class="backdrop-blur-xl bg-white/70 dark:bg-slate-800/70 rounded-3xl shadow-2xl ring-1 ring-emerald-200/30 dark:ring-emerald-700/30 overflow-hidden">
                         <SettingsContent
                             :id="`settings-panel-${activeSection}`"
                             role="tabpanel"
@@ -146,7 +181,6 @@
                             :active-section="activeSection"
                             :local-settings="localSettings"
                             :user="user"
-                            :is-mobile="isMobileScreen"
                             @save-nickname="onSaveNickname"
                             @avatar-uploaded="onAvatarUploaded"
                             @upgrade-account="upgradeAccount"
@@ -170,8 +204,6 @@
 <script setup lang="ts">
 import type { UserSettings } from '~/types';
 import { useDebounceFn } from "@vueuse/core";
-import { useBreakpoints, breakpointsTailwind } from '@vueuse/core';
-import { useUserService } from '~/services/user.service';
 
 // 页面元数据
 definePageMeta({
@@ -221,7 +253,11 @@ watch(activeSection, (val) => {
     // 记录最近使用的分区
     try {
         localStorage.setItem('settings:lastSection', val);
-    } catch {}
+    } catch (error) {
+        if (import.meta.dev) {
+            console.warn('Failed to save last section to localStorage:', error);
+        }
+    }
 });
 
 // 当前 section 标题（供 aria-label）
@@ -246,9 +282,7 @@ function focusPrevSection() {
 const isSaving = ref(false);
 const lastSaved = ref<Date | null>(null);
 
-// 响应式断点（供 SettingsContent 使用）
-const breakpoints = useBreakpoints(breakpointsTailwind);
-const isMobileScreen = breakpoints.smaller('lg');
+// 移除JavaScript响应式检测，改用CSS响应式设计
 
 // 本地设置状态
 const localSettings = ref<UserSettings>({
@@ -276,6 +310,13 @@ const localSettings = ref<UserSettings>({
         theme: "auto",
         distance_unit: "km",
         time_format: "24h",
+    },
+    appearance: {
+        theme: "system",
+        language: "zh-CN",
+        animations: true,
+        compact_mode: false,
+        high_contrast: false,
     },
     account: {
         nickname: user.value?.nickname || "",

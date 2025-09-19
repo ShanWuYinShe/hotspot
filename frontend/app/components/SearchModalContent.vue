@@ -1,5 +1,6 @@
 <template>
     <UModal
+        title="搜索"
         :overlay="false"
         :transition="false"
         class="search-modal"
@@ -27,7 +28,7 @@
                         </UAvatar>
                         <div
                             v-else-if="item.type === 'group'"
-                            class="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center"
+                            class="w-8 h-8 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center"
                         >
                             <UIcon
                                 name="i-heroicons-user-group"
@@ -36,7 +37,7 @@
                         </div>
                         <div
                             v-else-if="item.type === 'moment'"
-                            class="w-8 h-8 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center"
+                            class="w-8 h-8 bg-purple-100 dark:bg-purple-900/50 rounded-lg flex items-center justify-center"
                         >
                             <UIcon
                                 name="i-heroicons-photo"
@@ -83,16 +84,12 @@
 import { useDebounceFn } from "@vueuse/core";
 
 // 导入服务
-import { useUserService } from '~/services/user.service';
-import { useGroupService } from '~/services/group.service';
-import { useMomentService } from '~/services/moment.service';
 
 const userService = useUserService();
 const groupService = useGroupService();
 const momentService = useMomentService();
 
 // 导入统一的格式化工具函数
-import { formatTime } from '~/utils/formatters';
 
 interface SearchItem {
     id: string;
@@ -153,7 +150,8 @@ const searchGroups = ref<SearchGroup[]>([
                 icon: "i-heroicons-camera",
                 click: () => {
                     handleClose();
-                    navigateTo("/moments/create");
+                    // 发出事件让父组件处理创建动态
+                    emit('create-moment');
                 },
             },
             {
@@ -287,6 +285,7 @@ const handleSearch = useDebounceFn(async (query: string) => {
 // 定义 emit
 const emit = defineEmits<{
     close: [];
+    'create-moment': [];
 }>();
 
 // 关闭弹窗 - useOverlay 会自动管理关闭状态

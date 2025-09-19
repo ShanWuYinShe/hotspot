@@ -173,7 +173,6 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui';
 import type { GroupInfo } from "~/types";
-import { useMessageService } from '~/services/message.service';
 
 definePageMeta({ title: "群组详情", requiresAuth: true });
 

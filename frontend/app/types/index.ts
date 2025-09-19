@@ -51,7 +51,7 @@ export interface AuthUser {
   nickname: string;
 }
 
-// 🔥 获取 nonce 请求和响应（密码安全机制）
+// 获取 nonce 请求和响应（密码安全机制）
 export interface GetNonceRequest {
   login_id: string; // 邮箱/手机号，用于生成专用nonce
 }
@@ -63,7 +63,7 @@ export interface NonceResponse {
   expires_at: number;  // nonce过期时间戳（毫秒）
 }
 
-// 🔥 更新：使用安全的密码哈希机制
+// 使用安全的密码哈希机制
 export interface RegisterRequest {
   login_id: string;        // 邮箱/手机号，必填，唯一，长度1-100
   nickname: string;        // 必填，长度1-32
@@ -145,7 +145,7 @@ export interface UpdateLocationRequest {
   location_name: string; // 位置名称，长度1-100
 }
 
-// 🔥 更新：设置密码请求（使用安全哈希）
+// 设置密码请求（使用安全哈希）
 export interface SetPasswordRequest {
   new_password_hash: string;    // SHA256(new_password + nonce + timestamp + user_id)
   old_password_hash?: string;   // SHA256(old_password + nonce + timestamp + user_id)，首次设置可为空
@@ -157,7 +157,7 @@ export interface UpdateNicknameRequest {
   nickname: string; // 用户昵称，长度1-32
 }
 
-// 🔥 更新：账户升级请求（使用安全哈希）
+// 账户升级请求（使用安全哈希）
 export interface UpgradeAccountRequest {
   login_id: string;        // 邮箱/手机号，唯一，长度1-100
   password_hash: string;   // SHA256(password + nonce + timestamp + login_id)
@@ -206,6 +206,13 @@ export interface UserSettings {
     theme: "light" | "dark" | "auto";
     distance_unit: "km" | "miles";
     time_format: "12h" | "24h";
+  };
+  appearance: {
+    theme: "system" | "light" | "dark";
+    language: "zh-CN" | "en-US";
+    animations: boolean;
+    compact_mode: boolean;
+    high_contrast: boolean;
   };
   account: {
     nickname: string;
@@ -381,7 +388,6 @@ export type SearchGroupByLocationResponse = PaginatedResponse<GroupInfo>;
 export type SearchGroupByNameResponse = PaginatedResponse<GroupInfo>;
 export type SearchGroupByIdResponse = GroupInfo;
 export type GetUserGroupsResponse = PaginatedResponse<GroupInfo>;
-export type GetOwnedGroupsResponse = PaginatedResponse<GroupInfo>;
 
 // ============ 消息相关类型 ============
 export interface SendGroupMessageRequest {

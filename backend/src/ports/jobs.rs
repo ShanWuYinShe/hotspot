@@ -661,6 +661,15 @@ pub trait JobDispatcher: Send + Sync {
     
     /// 获取调度器状态
     async fn get_dispatcher_status(&self) -> DomainResult<DispatcherStatus>;
+    
+    /// 获取任务状态
+    async fn get_job_status(&self, job_id: &JobId) -> DomainResult<Option<JobStatus>>;
+    
+    /// 取消任务
+    async fn cancel_job(&self, job_id: &JobId) -> DomainResult<bool>;
+    
+    /// 重试任务
+    async fn retry_job(&self, job_id: &JobId) -> DomainResult<bool>;
 }
 
 /// 调度器状态

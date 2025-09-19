@@ -1,27 +1,31 @@
-/// PostgreSQL消息仓库实现
+/// PostgreSQL消息仓库完整实现
 /// 
-/// 实现新架构的消息存储，支持私聊消息、群组消息和会话管理
+/// 实现新架构的消息存储，支持私聊消息、群组消息、会话管理、消息反应、已读状态等完整功能
+/// 基于新的数据库表结构：conversations, messages, conversation_participants, message_media, message_reactions, message_read_status
+
 use crate::domain::{
-    Conversation, DirectMessage, DirectMessageType, DomainError, DomainResult, 
-    GroupEventRecord, GroupMessage, GroupMessageType
+    DirectMessage, GroupMessage, DomainError, DomainResult
 };
-use crate::application::queries::message_queries::ConversationSummary;
-use sqlx::PgPool;
+use crate::domain::entities::{DirectMessageType, GroupMessageType};
+use crate::application::queries::message_queries::{ConversationSummary, MessageView, UnreadMessageCount};
+use sqlx::{PgPool, Row};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
+use std::collections::HashMap;
 use super::query_optimizer::PgQueryOptimizer;
 
-/// 私聊消息查询结果行结构体
+/// 消息反应行结构体（保留，用于未来的消息反应功能）
 #[derive(Debug)]
-struct DirectMessageRow {
+pub struct MessageReactionRow {
     pub id: i64,
-    pub message_id: String,
-    pub conversation_id: i64,
-    pub sender_id: i64,
-    pub content: Option<String>,
-    pub message_type: String,
+    pub message_id: i64,
+    pub user_id: i64,
+    pub reaction_type: String,
+    pub emoji: Option<String>,
     pub created_at: DateTime<Utc>,
 }
+
+// UserConversationRow 已删除，现在直接使用动态查询结果
 
 
 #[derive(Clone)]
@@ -80,6 +84,160 @@ impl PgMessageRepository {
         }
     }
 
+    // ===== 会话管理操作 =====
+    
+    /// 获取或创建私聊会话ID
+    pub async fn get_or_create_conversation_id(&self, user1_id: i64, user2_id: i64) -> DomainResult<i64> {
+        self.execute_query_with_optional_monitoring(
+            "get_or_create_conversation_id",
+            async {
+                // 首先尝试查找现有会话
+                let existing = sqlx::query!(
+                    r#"
+                    SELECT c.id
+                    FROM conversations c
+                    JOIN conversation_participants cp1 ON c.id = cp1.conversation_id AND cp1.user_id = $1
+                    JOIN conversation_participants cp2 ON c.id = cp2.conversation_id AND cp2.user_id = $2
+                    WHERE c.conversation_type = 'private' AND c.is_active = true
+                    LIMIT 1
+                    "#,
+                    user1_id,
+                    user2_id
+                )
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
+
+                if let Some(row) = existing {
+                    return Ok(row.id);
+                }
+
+                // 创建新会话
+                let conversation_uuid = Uuid::new_v4().to_string();
+                let conversation_row = sqlx::query!(
+                    r#"
+                    INSERT INTO conversations (conversation_id, conversation_type, participant_count, created_by)
+                    VALUES ($1, 'private', 2, $2)
+                    RETURNING id
+                    "#,
+                    conversation_uuid,
+                    user1_id
+                )
+                .fetch_one(&self.pool)
+                .await
+                .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
+
+                // 添加参与者
+                sqlx::query!(
+                    r#"
+                    INSERT INTO conversation_participants (conversation_id, user_id, role, status)
+                    VALUES ($1, $2, 'member', 'active'), ($1, $3, 'member', 'active')
+                    "#,
+                    conversation_row.id,
+                    user1_id,
+                    user2_id
+                )
+                .execute(&self.pool)
+                .await
+                .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
+
+                Ok(conversation_row.id)
+            }
+        ).await
+    }
+
+    /// 获取群组对应的会话ID
+    pub async fn get_group_conversation_id(&self, group_id: &str) -> DomainResult<i64> {
+        let group_id_i64 = group_id.parse::<i64>()
+            .map_err(|_| DomainError::BusinessRuleViolation { rule: "Invalid group ID format".to_string() })?;
+        
+        let row = sqlx::query!(
+            r#"
+            SELECT id FROM conversations 
+            WHERE conversation_type = 'group' AND group_id = $1 AND is_active = true
+            "#,
+            group_id_i64
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
+
+        row.map(|r| r.id)
+            .ok_or_else(|| DomainError::BusinessRuleViolation { 
+                rule: "Group conversation not found".to_string() 
+            })
+    }
+
+    /// 获取会话中的对方用户ID
+    pub async fn get_conversation_recipient_id(&self, conversation_id: i64, sender_id: i64) -> DomainResult<i64> {
+        let row = sqlx::query!(
+            r#"
+            SELECT user_id
+            FROM conversation_participants 
+            WHERE conversation_id = $1 AND user_id != $2 AND status = 'active'
+            LIMIT 1
+            "#,
+            conversation_id,
+            sender_id
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
+
+        row.map(|r| r.user_id)
+            .ok_or_else(|| DomainError::BusinessRuleViolation { 
+                rule: "Recipient not found in conversation".to_string() 
+            })
+    }
+
+    /// 获取用户的会话列表
+    pub async fn list_conversations(&self, user_id: i64, cursor: i64, limit: i32) -> DomainResult<Vec<ConversationSummary>> {
+        self.execute_query_with_optional_monitoring(
+            "list_conversations",
+            async {
+                let rows = sqlx::query!(
+                    r#"
+                    SELECT c.conversation_id, c.conversation_type, c.name, c.last_message_at,
+                           COALESCE(cp.unread_count, 0) as "unread_count!", c.participant_count,
+                           CASE 
+                               WHEN c.conversation_type = 'private' THEN 
+                                   (SELECT ARRAY_AGG(cp2.user_id) FROM conversation_participants cp2 
+                                    WHERE cp2.conversation_id = c.id AND cp2.status = 'active')
+                               ELSE ARRAY[c.created_by]
+                           END as "participant_ids!",
+                           (SELECT content FROM messages m WHERE m.conversation_id = c.id 
+                            AND m.is_deleted = false ORDER BY m.id DESC LIMIT 1) as last_message_content
+                    FROM conversations c
+                    JOIN conversation_participants cp ON c.id = cp.conversation_id
+                    WHERE cp.user_id = $1 AND cp.status = 'active' AND c.is_active = true
+                          AND ($2::bigint = 0 OR c.id < $2::bigint)
+                    ORDER BY c.last_activity_at DESC, c.id DESC
+                    LIMIT $3
+                    "#,
+                    user_id,
+                    cursor,
+                    limit as i64
+                )
+                .fetch_all(&self.pool)
+                .await
+                .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
+
+                let mut conversations = Vec::new();
+                for row in rows {
+                    conversations.push(ConversationSummary {
+                        conversation_id: row.conversation_id,
+                        participant_ids: row.participant_ids,
+                        last_message_content: row.last_message_content,
+                        last_message_at: row.last_message_at,
+                        unread_count: row.unread_count as u64,
+                    });
+                }
+                
+                Ok(conversations)
+            }
+        ).await
+    }
+
     // ===== 私聊消息操作 =====
     
     /// 根据ID查找私聊消息
@@ -87,14 +245,21 @@ impl PgMessageRepository {
         self.execute_query_with_optional_monitoring(
             "find_direct_message_by_id",
             async {
-                let row = sqlx::query_as!(
-                    DirectMessageRow,
+                let row = sqlx::query!(
                     r#"
-                    SELECT id as "id!", message_id as "message_id!", conversation_id as "conversation_id!", 
-                           sender_id as "sender_id!", content, 
-                           message_type::text as "message_type!", created_at as "created_at!"
-                    FROM messages
-                    WHERE id = $1
+                    SELECT m.id, m.message_id, m.conversation_id, 
+                           m.sender_id, m.content, 
+                           m.message_type::text as "message_type!", m.created_at as "created_at!",
+                           m.is_deleted, m.is_edited, m.edited_at,
+                           m.reply_to_message_id, m.thread_id,
+                           m.reaction_count, m.reply_count, m.mentions,
+                           mrs.read_at,
+                           COALESCE(mm.latitude, 0.0) as "latitude!",
+                           COALESCE(mm.longitude, 0.0) as "longitude!"
+                    FROM messages m
+                    LEFT JOIN message_read_status mrs ON m.id = mrs.message_id
+                    LEFT JOIN message_media mm ON m.id = mm.message_id AND mm.media_type = 'location'
+                    WHERE m.id = $1 AND m.is_deleted = false
                     "#,
                     message_id
                 )
@@ -102,19 +267,26 @@ impl PgMessageRepository {
                 .await
                 .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
 
-                Ok(row.map(|r| DirectMessage {
-                    id: r.id,
-                    message_id: r.message_id.to_string(),
-                    conversation_id: r.conversation_id.to_string(),
-                    sender_id: r.sender_id,
-                    recipient_id: r.recipient_id,
-                    content: r.content,
-                    message_type: DirectMessageType::from_str(&r.message_type),
-                    created_at: r.created_at,
-                    read_at: r.read_at,
-                    latitude: r.latitude,
-                    longitude: r.longitude,
-                }))
+                if let Some(r) = row {
+                    // 获取对话参与者信息以确定recipient_id
+                    let recipient_id = self.get_conversation_recipient_id(r.conversation_id, r.sender_id).await?;
+                    
+                    Ok(Some(DirectMessage {
+                        id: r.id,
+                        message_id: r.message_id,
+                        conversation_id: r.conversation_id.to_string(),
+                        sender_id: r.sender_id,
+                        recipient_id,
+                        content: r.content.unwrap_or_default(),
+                        message_type: DirectMessageType::from_str(&r.message_type),
+                        created_at: r.created_at,
+                        read_at: r.read_at,
+                        latitude: r.latitude,
+                        longitude: r.longitude,
+                    }))
+                } else {
+                    Ok(None)
+                }
             }
         ).await
     }
@@ -126,64 +298,82 @@ impl PgMessageRepository {
             async {
                 let message_uuid = Uuid::parse_str(&message.message_id)
                     .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Invalid message UUID: {}", e) })?;
-                let conversation_uuid = Uuid::parse_str(&message.conversation_id)
-                    .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Invalid conversation UUID: {}", e) })?;
+                
+                // 获取或创建会话
+                let conversation_id = self.get_or_create_conversation_id(message.sender_id, message.recipient_id).await?;
                     
-                let row = sqlx::query_as!(
-            DirectMessageRow,
-            r#"
-            INSERT INTO direct_messages (message_id, conversation_id, sender_id, recipient_id, 
-                                       content, message_type, created_at, latitude, longitude)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            RETURNING id as "id!", message_id as "message_id!", conversation_id as "conversation_id!", 
-                      sender_id as "sender_id!", recipient_id as "recipient_id!", content as "content!", 
-                      message_type::text as "message_type!", created_at as "created_at!", read_at,
-                      latitude as "latitude!", longitude as "longitude!"
-            "#,
-            message_uuid,
-            conversation_uuid,
-            message.sender_id,
-            message.recipient_id,
-            message.content,
-            message.message_type.as_str() as &str,
-            message.created_at,
-            message.latitude,
-            message.longitude
+                let row = sqlx::query!(
+                    r#"
+                    INSERT INTO messages (message_id, conversation_id, sender_id, 
+                                         content, message_type, created_at)
+                    VALUES ($1, $2, $3, $4, $5, $6)
+                    RETURNING id, message_id, conversation_id, 
+                              sender_id, content, 
+                              message_type::text as "message_type!", created_at as "created_at!"
+                    "#,
+                    message_uuid.to_string(),
+                    conversation_id,
+                    message.sender_id,
+                    message.content,
+                    message.message_type.as_str() as &str,
+                    message.created_at
                 )
                 .fetch_one(&self.pool)
                 .await
                 .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
 
+                // 如果有位置信息，插入到message_media表
+                if message.latitude != 0.0 || message.longitude != 0.0 {
+                    let _ = sqlx::query!(
+                        r#"
+                        INSERT INTO message_media (message_id, media_type, file_url, latitude, longitude)
+                        VALUES ($1, 'location', '', $2, $3)
+                        "#,
+                        row.id,
+                        message.latitude,
+                        message.longitude
+                    )
+                    .execute(&self.pool)
+                    .await;
+                }
+
                 Ok(DirectMessage {
                     id: row.id,
-                    message_id: row.message_id.to_string(),
+                    message_id: row.message_id,
                     conversation_id: row.conversation_id.to_string(),
                     sender_id: row.sender_id,
-                    recipient_id: row.recipient_id,
-                    content: row.content,
+                    recipient_id: message.recipient_id,
+                    content: row.content.unwrap_or_default(),
                     message_type: DirectMessageType::from_str(&row.message_type),
                     created_at: row.created_at,
-                    read_at: row.read_at,
-                    latitude: row.latitude,
-                    longitude: row.longitude,
+                    read_at: None,
+                    latitude: message.latitude,
+                    longitude: message.longitude,
                 })
             }
         ).await
     }
 
-    /// 删除私聊消息
+    /// 删除私聊消息（软删除）
     pub async fn delete_direct_message(&self, message_id: i64) -> DomainResult<()> {
-        let rows = sqlx::query!("DELETE FROM direct_messages WHERE id = $1", message_id)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| DomainError::BusinessRuleViolation {
-                rule: format!("Database error: {}", e),
-            })?
-            .rows_affected();
+        let rows = sqlx::query!(
+            r#"
+            UPDATE messages 
+            SET is_deleted = true, deleted_at = CURRENT_TIMESTAMP
+            WHERE id = $1 AND is_deleted = false
+            "#,
+            message_id
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRuleViolation {
+            rule: format!("Database error: {}", e),
+        })?
+        .rows_affected();
         
         if rows == 0 {
             return Err(DomainError::BusinessRuleViolation {
-                rule: "Message not found".to_string(),
+                rule: "Message not found or already deleted".to_string(),
             });
         }
         Ok(())
@@ -196,129 +386,205 @@ impl PgMessageRepository {
         cursor: i64,
         limit: i32,
     ) -> DomainResult<Vec<DirectMessage>> {
-        let conversation_uuid = Uuid::parse_str(conversation_id)
-            .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Invalid conversation UUID: {}", e) })?;
-            
-        let rows = sqlx::query!(
-            r#"
-            SELECT id as "id!", message_id as "message_id!", conversation_id as "conversation_id!", 
-                   sender_id as "sender_id!", recipient_id as "recipient_id!", content as "content!", 
-                   message_type as "message_type: DirectMessageType", created_at as "created_at!", read_at,
-                   latitude as "latitude!", longitude as "longitude!"
-            FROM direct_messages
-            WHERE conversation_id = $1 AND ($2 = 0 OR id < $2)
-            ORDER BY id DESC
-            LIMIT $3
-            "#,
-            conversation_uuid,
-            cursor as i32,
-            limit as i64
-        )
-        .fetch_all(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
+        self.execute_query_with_optional_monitoring(
+            "find_direct_messages_by_conversation",
+            async {
+                // 首先通过conversation_id获取内部ID
+                let conv_row = sqlx::query!(
+                    r#"
+                    SELECT id FROM conversations WHERE conversation_id = $1 AND is_active = true
+                    "#,
+                    conversation_id
+                )
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
 
-        Ok(rows.into_iter().map(|r| DirectMessage {
-            id: r.id,
-            message_id: r.message_id.to_string(),
-            conversation_id: r.conversation_id.to_string(),
-            sender_id: r.sender_id,
-            recipient_id: r.recipient_id,
-            content: r.content,
-            message_type: DirectMessageType::from_str("text"), // TODO: 修复枚举类型映射
-            created_at: r.created_at,
-            read_at: r.read_at,
-            latitude: r.latitude,
-            longitude: r.longitude,
-        }).collect())
+                let conv_internal_id = conv_row
+                    .ok_or_else(|| DomainError::BusinessRuleViolation { rule: "Conversation not found".to_string() })?
+                    .id;
+                
+                let rows = sqlx::query!(
+                    r#"
+                    SELECT m.id, m.message_id, m.conversation_id, 
+                           m.sender_id, m.content, 
+                           m.message_type::text as "message_type!", m.created_at as "created_at!",
+                           m.is_deleted, m.is_edited, m.edited_at,
+                           m.reply_to_message_id, m.thread_id,
+                           m.reaction_count, m.reply_count, m.mentions,
+                           mrs.read_at,
+                           COALESCE(mm.latitude, 0.0) as "latitude!",
+                           COALESCE(mm.longitude, 0.0) as "longitude!"
+                    FROM messages m
+                    LEFT JOIN message_read_status mrs ON m.id = mrs.message_id
+                    LEFT JOIN message_media mm ON m.id = mm.message_id AND mm.media_type = 'location'
+                    WHERE m.conversation_id = $1 AND m.is_deleted = false 
+                          AND ($2::bigint = 0 OR m.id < $2::bigint)
+                    ORDER BY m.id DESC
+                    LIMIT $3
+                    "#,
+                    conv_internal_id,
+                    cursor,
+                    limit as i64
+                )
+                .fetch_all(&self.pool)
+                .await
+                .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
+
+                let mut messages = Vec::new();
+                for row in rows {
+                    // 获取对话参与者信息以确定recipient_id
+                    let recipient_id = self.get_conversation_recipient_id(row.conversation_id, row.sender_id).await?;
+                    
+                    messages.push(DirectMessage {
+                        id: row.id,
+                        message_id: row.message_id,
+                        conversation_id: conversation_id.to_string(),
+                        sender_id: row.sender_id,
+                        recipient_id,
+                        content: row.content.unwrap_or_default(),
+                        message_type: DirectMessageType::from_str(&row.message_type),
+                        created_at: row.created_at,
+                        read_at: row.read_at,
+                        latitude: row.latitude,
+                        longitude: row.longitude,
+                    });
+                }
+                
+                Ok(messages)
+            }
+        ).await
     }
 
     // ===== 群组消息操作 =====
     
     /// 根据ID查找群组消息
     pub async fn find_group_message_by_id(&self, message_id: i64) -> DomainResult<Option<GroupMessage>> {
-        let row = sqlx::query!(
-            r#"
-            SELECT id as "id!", message_id as "message_id!", group_id as "group_id!", 
-                   sender_id as "sender_id!", content as "content!", message_type::text as "message_type!", 
-                   created_at as "created_at!", latitude as "latitude!", longitude as "longitude!"
-            FROM group_messages
-            WHERE id = $1
-            "#,
-            message_id
-        )
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
+        self.execute_query_with_optional_monitoring(
+            "find_group_message_by_id",
+            async {
+                let row = sqlx::query!(
+                    r#"
+                    SELECT m.id, m.message_id, m.conversation_id, 
+                           m.sender_id, m.content, 
+                           m.message_type::text as "message_type!", m.created_at as "created_at!",
+                           c.group_id,
+                           COALESCE(mm.latitude, 0.0) as "latitude!",
+                           COALESCE(mm.longitude, 0.0) as "longitude!"
+                    FROM messages m
+                    JOIN conversations c ON m.conversation_id = c.id
+                    LEFT JOIN message_media mm ON m.id = mm.message_id AND mm.media_type = 'location'
+                    WHERE m.id = $1 AND m.is_deleted = false AND c.conversation_type = 'group'
+                    "#,
+                    message_id
+                )
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
 
-        Ok(row.map(|r| GroupMessage {
-            id: r.id,
-            message_id: r.message_id.to_string(),
-            group_id: r.group_id.to_string(),
-            sender_id: r.sender_id,
-            content: r.content,
-            message_type: GroupMessageType::from_str("text"), // TODO: 修复枚举类型映射
-            created_at: r.created_at,
-            latitude: r.latitude,
-            longitude: r.longitude,
-        }))
+                if let Some(r) = row {
+                    let group_id = r.group_id
+                        .ok_or_else(|| DomainError::BusinessRuleViolation { rule: "Group ID not found".to_string() })?;
+                    
+                    Ok(Some(GroupMessage {
+                        id: r.id,
+                        message_id: r.message_id,
+                        group_id: group_id.to_string(),
+                        sender_id: r.sender_id,
+                        content: r.content.unwrap_or_default(),
+                        message_type: GroupMessageType::from_str(&r.message_type),
+                        created_at: r.created_at,
+                        latitude: r.latitude,
+                        longitude: r.longitude,
+                    }))
+                } else {
+                    Ok(None)
+                }
+            }
+        ).await
     }
 
     /// 创建群组消息
     pub async fn create_group_message(&self, message: &GroupMessage) -> DomainResult<GroupMessage> {
-        let message_uuid = Uuid::parse_str(&message.message_id)
-            .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Invalid message UUID: {}", e) })?;
-        let group_uuid = Uuid::parse_str(&message.group_id)
-            .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Invalid group UUID: {}", e) })?;
-            
-        let row = sqlx::query!(
-            r#"
-            INSERT INTO group_messages (message_id, group_id, sender_id, content, message_type, 
-                                      created_at, latitude, longitude)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING id as "id!", message_id as "message_id!", group_id as "group_id!", 
-                      sender_id as "sender_id!", content as "content!", message_type::text as "message_type!", 
-                      created_at as "created_at!", latitude as "latitude!", longitude as "longitude!"
-            "#,
-            message_uuid,
-            group_uuid,
-            message.sender_id,
-            message.content,
-            message.message_type.as_str() as &str,
-            message.created_at,
-            message.latitude,
-            message.longitude
-        )
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
+        self.execute_query_with_optional_monitoring(
+            "create_group_message",
+            async {
+                let message_uuid = Uuid::parse_str(&message.message_id)
+                    .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Invalid message UUID: {}", e) })?;
+                
+                // 获取群组对应的会话ID
+                let conversation_id = self.get_group_conversation_id(&message.group_id).await?;
+                    
+                let row = sqlx::query!(
+                    r#"
+                    INSERT INTO messages (message_id, conversation_id, sender_id, 
+                                         content, message_type, created_at)
+                    VALUES ($1, $2, $3, $4, $5, $6)
+                    RETURNING id, message_id, conversation_id, 
+                              sender_id, content, 
+                              message_type::text as "message_type!", created_at as "created_at!"
+                    "#,
+                    message_uuid.to_string(),
+                    conversation_id,
+                    message.sender_id,
+                    message.content,
+                    message.message_type.as_str() as &str,
+                    message.created_at
+                )
+                .fetch_one(&self.pool)
+                .await
+                .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
 
-        Ok(GroupMessage {
-            id: row.id,
-            message_id: row.message_id.to_string(),
-            group_id: row.group_id.to_string(),
-            sender_id: row.sender_id,
-            content: row.content,
-            message_type: GroupMessageType::from_str(&row.message_type),
-            created_at: row.created_at,
-            latitude: row.latitude,
-            longitude: row.longitude,
-        })
+                // 如果有位置信息，插入到message_media表
+                if message.latitude != 0.0 || message.longitude != 0.0 {
+                    let _ = sqlx::query!(
+                        r#"
+                        INSERT INTO message_media (message_id, media_type, file_url, latitude, longitude)
+                        VALUES ($1, 'location', '', $2, $3)
+                        "#,
+                        row.id,
+                        message.latitude,
+                        message.longitude
+                    )
+                    .execute(&self.pool)
+                    .await;
+                }
+
+                Ok(GroupMessage {
+                    id: row.id,
+                    message_id: row.message_id,
+                    group_id: message.group_id.clone(),
+                    sender_id: row.sender_id,
+                    content: row.content.unwrap_or_default(),
+                    message_type: GroupMessageType::from_str(&row.message_type),
+                    created_at: row.created_at,
+                    latitude: message.latitude,
+                    longitude: message.longitude,
+                })
+            }
+        ).await
     }
 
-    /// 删除群组消息
+    /// 删除群组消息（软删除）
     pub async fn delete_group_message(&self, message_id: i64) -> DomainResult<()> {
-        let rows = sqlx::query!("DELETE FROM group_messages WHERE id = $1", message_id)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| DomainError::BusinessRuleViolation {
-                rule: format!("Database error: {}", e),
-            })?
-            .rows_affected();
+        let rows = sqlx::query!(
+            r#"
+            UPDATE messages 
+            SET is_deleted = true, deleted_at = CURRENT_TIMESTAMP
+            WHERE id = $1 AND is_deleted = false
+            "#,
+            message_id
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRuleViolation {
+            rule: format!("Database error: {}", e),
+        })?
+        .rows_affected();
         
         if rows == 0 {
             return Err(DomainError::BusinessRuleViolation {
-                rule: "Message not found".to_string(),
+                rule: "Message not found or already deleted".to_string(),
             });
         }
         Ok(())
@@ -331,343 +597,578 @@ impl PgMessageRepository {
         cursor: i64,
         limit: i32,
     ) -> DomainResult<Vec<GroupMessage>> {
-        let group_uuid = Uuid::parse_str(group_id)
-            .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Invalid group UUID: {}", e) })?;
-            
-        let rows = sqlx::query!(
-            r#"
-            SELECT id as "id!", message_id as "message_id!", group_id as "group_id!", 
-                   sender_id as "sender_id!", content as "content!", message_type::text as "message_type!", 
-                   created_at as "created_at!", latitude as "latitude!", longitude as "longitude!"
-            FROM group_messages
-            WHERE group_id = $1 AND ($2 = 0 OR id < $2)
-            ORDER BY id DESC
-            LIMIT $3
-            "#,
-            group_uuid,
-            cursor as i32,
-            limit as i64
-        )
-        .fetch_all(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
+        self.execute_query_with_optional_monitoring(
+            "find_group_messages",
+            async {
+                // 获取群组对应的会话ID
+                let conversation_id = self.get_group_conversation_id(group_id).await?;
+                
+                let rows = sqlx::query!(
+                    r#"
+                    SELECT m.id, m.message_id, m.conversation_id, 
+                           m.sender_id, m.content, 
+                           m.message_type::text as "message_type!", m.created_at as "created_at!",
+                           COALESCE(mm.latitude, 0.0) as "latitude!",
+                           COALESCE(mm.longitude, 0.0) as "longitude!"
+                    FROM messages m
+                    LEFT JOIN message_media mm ON m.id = mm.message_id AND mm.media_type = 'location'
+                    WHERE m.conversation_id = $1 AND m.is_deleted = false 
+                          AND ($2::bigint = 0 OR m.id < $2::bigint)
+                    ORDER BY m.id DESC
+                    LIMIT $3
+                    "#,
+                    conversation_id,
+                    cursor,
+                    limit as i64
+                )
+                .fetch_all(&self.pool)
+                .await
+                .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
 
-        Ok(rows.into_iter().map(|r| GroupMessage {
-            id: r.id,
-            message_id: r.message_id.to_string(),
-            group_id: r.group_id.to_string(),
-            sender_id: r.sender_id,
-            content: r.content,
-            message_type: GroupMessageType::from_str("text"), // TODO: 修复枚举类型映射
-            created_at: r.created_at,
-            latitude: r.latitude,
-            longitude: r.longitude,
-        }).collect())
+                let mut messages = Vec::new();
+                for row in rows {
+                    messages.push(GroupMessage {
+                        id: row.id,
+                        message_id: row.message_id,
+                        group_id: group_id.to_string(),
+                        sender_id: row.sender_id,
+                        content: row.content.unwrap_or_default(),
+                        message_type: GroupMessageType::from_str(&row.message_type),
+                        created_at: row.created_at,
+                        latitude: row.latitude,
+                        longitude: row.longitude,
+                    });
+                }
+                
+                Ok(messages)
+            }
+        ).await
     }
 
-    // ===== 会话管理 =====
+    // ===== 消息已读状态操作 =====
     
-    /// 获取或创建会话
-    pub async fn get_or_create_conversation(&self, user1_id: i64, user2_id: i64) -> DomainResult<Conversation> {
-        // 确保user1_id < user2_id
-        let (user1, user2) = if user1_id < user2_id {
-            (user1_id, user2_id)
-        } else {
-            (user2_id, user1_id)
-        };
-
-        // 先尝试查找现有会话
-        let existing = sqlx::query!(
+    /// 标记消息为已读
+    pub async fn mark_message_as_read(&self, message_id: i64, user_id: i64) -> DomainResult<()> {
+        sqlx::query!(
             r#"
-            SELECT id as "id!", conversation_id as "conversation_id!", user1_id as "user1_id!", 
-                   user2_id as "user2_id!", created_at as "created_at!", updated_at as "updated_at!",
-                   last_message_at as "last_message_at!", last_message_preview
-            FROM conversations
-            WHERE user1_id = $1 AND user2_id = $2
+            INSERT INTO message_read_status (message_id, user_id, read_at)
+            VALUES ($1, $2, CURRENT_TIMESTAMP)
+            ON CONFLICT (message_id, user_id) DO UPDATE SET read_at = CURRENT_TIMESTAMP
             "#,
-            user1,
-            user2
+            message_id,
+            user_id
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRuleViolation {
+            rule: format!("Database error: {}", e),
+        })?;
+
+        Ok(())
+    }
+
+    /// 标记会话中所有消息为已读
+    pub async fn mark_conversation_as_read(&self, conversation_id: &str, user_id: i64) -> DomainResult<()> {
+        // 首先通过conversation_id获取内部ID
+        let conv_row = sqlx::query!(
+            r#"
+            SELECT id FROM conversations WHERE conversation_id = $1 AND is_active = true
+            "#,
+            conversation_id
         )
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
 
-        if let Some(row) = existing {
-            return Ok(Conversation {
-                id: row.id,
-                conversation_id: row.conversation_id.to_string(),
-                user1_id: row.user1_id,
-                user2_id: row.user2_id,
-                created_at: row.created_at,
-                updated_at: row.updated_at,
-                last_message_at: row.last_message_at,
-                last_message_preview: row.last_message_preview,
-            });
-        }
+        let conv_internal_id = conv_row
+            .ok_or_else(|| DomainError::BusinessRuleViolation { rule: "Conversation not found".to_string() })?
+            .id;
 
-        // 创建新会话
-        let conversation_uuid = Uuid::new_v4();
-        let row = sqlx::query!(
+        // 标记所有未读消息为已读
+        sqlx::query!(
             r#"
-            INSERT INTO conversations (conversation_id, user1_id, user2_id, created_at, updated_at, last_message_at)
-            VALUES ($1, $2, $3, NOW(), NOW(), NOW())
-            RETURNING id as "id!", conversation_id as "conversation_id!", user1_id as "user1_id!", 
-                      user2_id as "user2_id!", created_at as "created_at!", updated_at as "updated_at!",
-                      last_message_at as "last_message_at!", last_message_preview
+            INSERT INTO message_read_status (message_id, user_id, read_at)
+            SELECT m.id, $2, CURRENT_TIMESTAMP
+            FROM messages m
+            LEFT JOIN message_read_status mrs ON m.id = mrs.message_id AND mrs.user_id = $2
+            WHERE m.conversation_id = $1 AND m.is_deleted = false AND mrs.id IS NULL
             "#,
-            conversation_uuid,
-            user1,
-            user2
+            conv_internal_id,
+            user_id
         )
-        .fetch_one(&self.pool)
+        .execute(&self.pool)
         .await
-        .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
+        .map_err(|e| DomainError::BusinessRuleViolation {
+            rule: format!("Database error: {}", e),
+        })?;
 
-        Ok(Conversation {
-            id: row.id,
-            conversation_id: row.conversation_id.to_string(),
-            user1_id: row.user1_id,
-            user2_id: row.user2_id,
-            created_at: row.created_at,
-            updated_at: row.updated_at,
-            last_message_at: row.last_message_at,
-            last_message_preview: row.last_message_preview,
-        })
+        // 更新会话参与者的未读计数
+        sqlx::query!(
+            r#"
+            UPDATE conversation_participants 
+            SET unread_count = 0, last_read_at = CURRENT_TIMESTAMP
+            WHERE conversation_id = $1 AND user_id = $2
+            "#,
+            conv_internal_id,
+            user_id
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRuleViolation {
+            rule: format!("Database error: {}", e),
+        })?;
+
+        Ok(())
     }
 
-    /// 获取用户的会话列表
-    pub async fn list_conversations(
-        &self,
-        user_id: i64,
-        cursor: i64,
-        limit: i32,
-    ) -> DomainResult<(Vec<ConversationSummary>, bool, Option<i64>)> {
-        let rows = sqlx::query!(
+    /// 获取用户的未读消息数量
+    pub async fn get_unread_message_count(&self, user_id: i64) -> DomainResult<UnreadMessageCount> {
+        self.execute_query_with_optional_monitoring(
+            "get_unread_message_count",
+            async {
+                let rows = sqlx::query!(
+                    r#"
+                    SELECT c.conversation_id, COALESCE(cp.unread_count, 0) as "unread_count!"
+                    FROM conversation_participants cp
+                    JOIN conversations c ON cp.conversation_id = c.id
+                    WHERE cp.user_id = $1 AND cp.status = 'active' AND c.is_active = true
+                    "#,
+                    user_id
+                )
+                .fetch_all(&self.pool)
+                .await
+                .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
+
+                let mut by_conversation = HashMap::new();
+                let mut total_count = 0u64;
+
+                for row in rows {
+                    let count = row.unread_count as u64;
+                    by_conversation.insert(row.conversation_id, count);
+                    total_count += count;
+                }
+
+                Ok(UnreadMessageCount {
+                    total_count,
+                    by_conversation,
+                })
+            }
+        ).await
+    }
+
+    // ===== 消息反应操作 =====
+    
+    /// 添加消息反应
+    pub async fn add_message_reaction(&self, message_id: i64, user_id: i64, reaction_type: &str, emoji: Option<&str>) -> DomainResult<()> {
+        sqlx::query!(
             r#"
-            SELECT c.id as "id!", c.conversation_id as "conversation_id!", 
-                   c.user1_id as "user1_id!", c.user2_id as "user2_id!",
-                   c.created_at as "created_at!", c.last_message_at as "last_message_at!", 
-                   c.last_message_preview,
-                   CASE 
-                       WHEN c.user1_id = $1 THEN c.user2_id 
-                       ELSE c.user1_id 
-                   END as "peer_id!"
-            FROM conversations c
-            WHERE (c.user1_id = $1 OR c.user2_id = $1) AND ($2 = 0 OR c.id < $2)
-            ORDER BY c.id DESC
-            LIMIT $3
+            INSERT INTO message_reactions (message_id, user_id, reaction_type, emoji)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (message_id, user_id) DO UPDATE SET 
+                reaction_type = EXCLUDED.reaction_type,
+                emoji = EXCLUDED.emoji,
+                created_at = CURRENT_TIMESTAMP
             "#,
+            message_id,
             user_id,
-            cursor as i32,
-            (limit + 1) as i64
+            reaction_type,
+            emoji
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRuleViolation {
+            rule: format!("Database error: {}", e),
+        })?;
+
+        Ok(())
+    }
+
+    /// 移除消息反应
+    pub async fn remove_message_reaction(&self, message_id: i64, user_id: i64) -> DomainResult<()> {
+        sqlx::query!(
+            r#"
+            DELETE FROM message_reactions 
+            WHERE message_id = $1 AND user_id = $2
+            "#,
+            message_id,
+            user_id
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRuleViolation {
+            rule: format!("Database error: {}", e),
+        })?;
+
+        Ok(())
+    }
+
+    /// 获取消息的所有反应
+    pub async fn get_message_reactions(&self, message_id: i64) -> DomainResult<Vec<MessageReactionRow>> {
+        let rows = sqlx::query_as!(
+            MessageReactionRow,
+            r#"
+            SELECT id, message_id, user_id, reaction_type, emoji, created_at as "created_at!"
+            FROM message_reactions 
+            WHERE message_id = $1
+            ORDER BY created_at ASC
+            "#,
+            message_id
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
+        .map_err(|e| DomainError::BusinessRuleViolation {
+            rule: format!("Database error: {}", e),
+        })?;
 
-        let has_more = rows.len() > limit as usize;
-        let mut items = rows;
-        if has_more {
-            items.pop();
-        }
-
-        let next_cursor = if has_more && !items.is_empty() {
-            Some(items.last().unwrap().id)
-        } else {
-            None
-        };
-
-        let summaries = items.into_iter().map(|row| ConversationSummary {
-            conversation_id: row.conversation_id.to_string(),
-            peer_id: row.peer_id,
-            last_message_preview: row.last_message_preview,
-            last_message_at: row.last_message_at,
-        }).collect();
-
-        Ok((summaries, has_more, next_cursor))
+        Ok(rows)
     }
 
-    // ===== 群组事件操作 =====
+    // ===== 消息搜索操作 =====
     
-    /// 创建群组事件
-    /// TODO: 修复 sqlx 枚举映射问题
-    #[allow(dead_code)]
-    pub async fn create_group_event(&self, _event: &GroupEventRecord) -> DomainResult<GroupEventRecord> {
-        // 暂时返回一个占位实现，避免编译错误
-        // 这个方法需要在运行时修复 sqlx 枚举映射问题
-        Err(DomainError::BusinessRuleViolation {
-            rule: "create_group_event 方法暂未实现，需要修复 sqlx 枚举映射".to_string()
-        })
-    }
-
-    // ===== 通用删除方法（兼容旧控制器） =====
-    
-    /// 删除消息（尝试私聊和群组消息）
-    pub async fn delete_message(&self, message_id: i64) -> DomainResult<()> {
-        // 先尝试从私聊消息表删除
-        let direct_rows = sqlx::query!("DELETE FROM direct_messages WHERE id = $1", message_id)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| DomainError::BusinessRuleViolation {
-                rule: format!("Database error: {}", e),
-            })?
-            .rows_affected();
-
-        if direct_rows > 0 {
-            return Ok(());
-        }
-
-        // 再尝试从群组消息表删除
-        let group_rows = sqlx::query!("DELETE FROM group_messages WHERE id = $1", message_id)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| DomainError::BusinessRuleViolation {
-                rule: format!("Database error: {}", e),
-            })?
-            .rows_affected();
-
-        if group_rows == 0 {
-            return Err(DomainError::BusinessRuleViolation {
-                rule: "Message not found".to_string(),
-            });
-        }
-        Ok(())
-    }
-    
-    // ===== 消息状态管理方法 =====
-    
-    /// 标记群组消息已读
-    pub async fn mark_group_messages_read(
+    /// 搜索消息
+    pub async fn search_messages(
         &self,
-        group_id: &str,
         user_id: i64,
-        last_read_message_id: Option<&str>,
-    ) -> DomainResult<()> {
-        let group_uuid = uuid::Uuid::parse_str(group_id)
-            .map_err(|e| DomainError::BusinessRuleViolation {
-                rule: format!("Invalid group_id format: {}", e),
-            })?;
+        keyword: &str,
+        conversation_id: Option<&str>,
+        cursor: i64,
+        limit: i32,
+    ) -> DomainResult<Vec<MessageView>> {
+        self.execute_query_with_optional_monitoring(
+            "search_messages",
+            async {
+                let conversation_filter = if let Some(conv_id) = conversation_id {
+                    // 获取会话内部ID
+                    let conv_row = sqlx::query!(
+                        r#"SELECT id FROM conversations WHERE conversation_id = $1"#,
+                        conv_id
+                    )
+                    .fetch_optional(&self.pool)
+                    .await
+                    .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
+                    
+                    conv_row.map(|r| r.id)
+                } else {
+                    None
+                };
 
-        if let Some(message_id) = last_read_message_id {
-            // 获取消息的自增ID
-            let message_uuid = uuid::Uuid::parse_str(message_id)
-                .map_err(|e| DomainError::BusinessRuleViolation {
-                    rule: format!("Invalid message_id format: {}", e),
-                })?;
-            
-            let message_row = sqlx::query!(
-                "SELECT id FROM group_messages WHERE message_id = $1",
-                message_uuid
-            )
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(|e| DomainError::BusinessRuleViolation {
-                rule: format!("Database error: {}", e),
-            })?;
-            
-            if let Some(row) = message_row {
-                // 更新用户已读状态表
-                sqlx::query!(
-                    "INSERT INTO user_message_read_status (user_id, group_id, last_read_message_id)
-                     VALUES ($1, $2, $3)
-                     ON CONFLICT (user_id, group_id)
-                     DO UPDATE SET last_read_message_id = $3, updated_at = NOW()",
-                    user_id,
-                    group_uuid,
-                    row.id
-                )
-                .execute(&self.pool)
-                .await
-                .map_err(|e| DomainError::BusinessRuleViolation {
-                    rule: format!("Database error: {}", e),
-                })?;
+                // 构建基础查询
+                let base_query = r#"
+                    SELECT m.message_id, m.sender_id, u.nickname as sender_nickname,
+                           m.content, m.message_type::text as message_type, m.created_at as "created_at!",
+                           CASE WHEN mrs.read_at IS NOT NULL THEN true ELSE false END as is_read
+                    FROM messages m
+                    JOIN users u ON m.sender_id = u.id
+                    JOIN conversation_participants cp ON m.conversation_id = cp.conversation_id
+                    LEFT JOIN message_read_status mrs ON m.id = mrs.message_id AND mrs.user_id = $1
+                    WHERE cp.user_id = $1 AND cp.status = 'active'
+                          AND m.is_deleted = false
+                          AND m.content ILIKE $2
+                "#;
+
+                let rows = if let Some(conv_id) = conversation_filter {
+                    let query_with_conv = format!("{} AND m.conversation_id = $3 AND ($4::bigint = 0 OR m.id < $4::bigint) ORDER BY m.id DESC LIMIT $5", base_query);
+                    sqlx::query(&query_with_conv)
+                        .bind(user_id)
+                        .bind(format!("%{}%", keyword))
+                        .bind(conv_id)
+                        .bind(cursor)
+                        .bind(limit as i64)
+                        .fetch_all(&self.pool)
+                        .await
+                } else {
+                    let query_without_conv = format!("{} AND ($3::bigint = 0 OR m.id < $3::bigint) ORDER BY m.id DESC LIMIT $4", base_query);
+                    sqlx::query(&query_without_conv)
+                        .bind(user_id)
+                        .bind(format!("%{}%", keyword))
+                        .bind(cursor)
+                        .bind(limit as i64)
+                        .fetch_all(&self.pool)
+                        .await
+                };
+
+                let rows = rows.map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
+
+                let mut messages = Vec::new();
+                for row in rows {
+                    let message_id: Uuid = row.get("message_id");
+                    let sender_id: i64 = row.get("sender_id");
+                    let sender_nickname: String = row.get("sender_nickname");
+                    let content: String = row.get("content");
+                    let message_type_str: String = row.get("message_type");
+                    let created_at: DateTime<Utc> = row.get("created_at");
+                    let is_read: bool = row.get("is_read");
+
+                    messages.push(MessageView {
+                        message_id: message_id.to_string(),
+                        sender_id,
+                        sender_nickname,
+                        content,
+                        message_type: message_type_str,
+                        created_at,
+                        is_read,
+                    });
+                }
+                
+                Ok(messages)
             }
-        } else {
-            // 获取该群组最新消息的ID
-            let latest_message = sqlx::query!(
-                "SELECT id FROM group_messages WHERE group_id = $1 ORDER BY id DESC LIMIT 1",
-                group_uuid
-            )
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(|e| DomainError::BusinessRuleViolation {
-                rule: format!("Database error: {}", e),
-            })?;
-            
-            if let Some(row) = latest_message {
-                // 更新用户已读状态表
-                sqlx::query!(
-                    "INSERT INTO user_message_read_status (user_id, group_id, last_read_message_id)
-                     VALUES ($1, $2, $3)
-                     ON CONFLICT (user_id, group_id)
-                     DO UPDATE SET last_read_message_id = $3, updated_at = NOW()",
-                    user_id,
-                    group_uuid,
-                    row.id
-                )
-                .execute(&self.pool)
-                .await
-                .map_err(|e| DomainError::BusinessRuleViolation {
-                    rule: format!("Database error: {}", e),
-                })?;
-            }
-        }
-        
-        Ok(())
+        ).await
     }
     
     /// 标记私聊消息已读
     pub async fn mark_direct_messages_read(
         &self,
-        conversation_id: &str,
         user_id: i64,
-        last_read_message_id: Option<&str>,
+        conversation_id: &str,
+        message_id: Option<&str>,
     ) -> DomainResult<()> {
-        let conversation_uuid = uuid::Uuid::parse_str(conversation_id)
-            .map_err(|e| DomainError::BusinessRuleViolation {
-                rule: format!("Invalid conversation_id format: {}", e),
-            })?;
+        // 获取会话ID
+        let conv_id: i64 = sqlx::query_scalar(
+            "SELECT id FROM conversations WHERE conversation_id = $1"
+        )
+        .bind(conversation_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRuleViolation {
+            rule: format!("Database error: {}", e),
+        })?
+        .ok_or_else(|| DomainError::BusinessRuleViolation {
+            rule: "Conversation not found".to_string(),
+        })?;
 
-        if let Some(message_id) = last_read_message_id {
-            // 获取消息的自增ID
-            let message_uuid = uuid::Uuid::parse_str(message_id)
-                .map_err(|e| DomainError::BusinessRuleViolation {
-                    rule: format!("Invalid message_id format: {}", e),
-                })?;
-            
-            let message_row = sqlx::query!(
-                "SELECT id FROM direct_messages WHERE message_id = $1",
-                message_uuid
+        if let Some(msg_id) = message_id {
+            // 标记特定消息已读
+            // 1. 插入或更新 message_read_status
+            sqlx::query(
+                r#"
+                INSERT INTO message_read_status (message_id, user_id, read_at)
+                SELECT m.id, $2, CURRENT_TIMESTAMP
+                FROM messages m
+                WHERE m.conversation_id = $1 AND m.message_id = $3
+                ON CONFLICT (message_id, user_id) DO UPDATE SET read_at = CURRENT_TIMESTAMP
+                "#
             )
-            .fetch_optional(&self.pool)
+            .bind(conv_id)
+            .bind(user_id)
+            .bind(msg_id)
+            .execute(&self.pool)
             .await
             .map_err(|e| DomainError::BusinessRuleViolation {
                 rule: format!("Database error: {}", e),
             })?;
-            
-            if let Some(row) = message_row {
-                // 更新该消息及之前的消息为已读
-                sqlx::query!(
-                    "UPDATE direct_messages SET read_at = NOW() 
-                     WHERE conversation_id = $1 AND recipient_id = $2 AND id <= $3 AND read_at IS NULL",
-                    conversation_uuid,
-                    user_id,
-                    row.id
-                )
-                .execute(&self.pool)
-                .await
-                .map_err(|e| DomainError::BusinessRuleViolation {
-                    rule: format!("Database error: {}", e),
-                })?;
-            }
-        } else {
-            // 标记该会话中用户接收的所有未读消息为已读
-            sqlx::query!(
-                "UPDATE direct_messages SET read_at = NOW() 
-                 WHERE conversation_id = $1 AND recipient_id = $2 AND read_at IS NULL",
-                conversation_uuid,
-                user_id
+
+            // 2. 更新 conversation_participants 中的 last_read_message_id
+            sqlx::query(
+                r#"
+                UPDATE conversation_participants 
+                SET last_read_message_id = (
+                    SELECT id FROM messages WHERE conversation_id = $1 AND message_id = $3
+                ), last_read_at = CURRENT_TIMESTAMP
+                WHERE conversation_id = $1 AND user_id = $2
+                "#
             )
+            .bind(conv_id)
+            .bind(user_id)
+            .bind(msg_id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| DomainError::BusinessRuleViolation {
+                rule: format!("Database error: {}", e),
+            })?;
+        } else {
+            // 标记会话中所有消息已读
+            // 1. 插入所有未读消息的已读状态
+            sqlx::query(
+                r#"
+                INSERT INTO message_read_status (message_id, user_id, read_at)
+                SELECT m.id, $2, CURRENT_TIMESTAMP
+                FROM messages m
+                LEFT JOIN message_read_status mrs ON m.id = mrs.message_id AND mrs.user_id = $2
+                WHERE m.conversation_id = $1 AND m.sender_id != $2 AND mrs.id IS NULL
+                ON CONFLICT (message_id, user_id) DO UPDATE SET read_at = CURRENT_TIMESTAMP
+                "#
+            )
+            .bind(conv_id)
+            .bind(user_id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| DomainError::BusinessRuleViolation {
+                rule: format!("Database error: {}", e),
+            })?;
+
+            // 2. 更新 conversation_participants 中的未读数量和最后已读消息
+            sqlx::query(
+                r#"
+                UPDATE conversation_participants 
+                SET unread_count = 0,
+                    last_read_message_id = (
+                        SELECT id FROM messages 
+                        WHERE conversation_id = $1 
+                        ORDER BY created_at DESC 
+                        LIMIT 1
+                    ),
+                    last_read_at = CURRENT_TIMESTAMP
+                WHERE conversation_id = $1 AND user_id = $2
+                "#
+            )
+            .bind(conv_id)
+            .bind(user_id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| DomainError::BusinessRuleViolation {
+                rule: format!("Database error: {}", e),
+            })?;
+        }
+        
+        Ok(())
+    }
+    
+    /// 获取私聊未读消息数
+    pub async fn get_direct_unread_count(
+        &self,
+        user_id: i64,
+        conversation_id: Option<&str>,
+    ) -> DomainResult<i32> {
+        let count: i64 = if let Some(conv_id) = conversation_id {
+            // 获取特定会话的未读消息数
+            sqlx::query_scalar(
+                r#"
+                SELECT COALESCE(cp.unread_count, 0)
+                FROM conversation_participants cp
+                JOIN conversations c ON c.id = cp.conversation_id
+                WHERE c.conversation_id = $1 AND cp.user_id = $2 AND c.conversation_type = 'private'
+                "#
+            )
+            .bind(conv_id)
+            .bind(user_id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| DomainError::BusinessRuleViolation {
+                rule: format!("Database error: {}", e),
+            })?
+            .unwrap_or(0)
+        } else {
+            // 获取用户所有私聊未读消息数
+            sqlx::query_scalar(
+                r#"
+                SELECT COALESCE(SUM(cp.unread_count), 0)
+                FROM conversation_participants cp
+                JOIN conversations c ON c.id = cp.conversation_id
+                WHERE cp.user_id = $1 AND c.conversation_type = 'private' AND cp.status = 'active'
+                "#
+            )
+            .bind(user_id)
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|e| DomainError::BusinessRuleViolation {
+                rule: format!("Database error: {}", e),
+            })?
+        };
+        
+        Ok(count as i32)
+    }
+    
+    /// 标记群组消息已读
+    pub async fn mark_group_messages_read(
+        &self,
+        user_id: i64,
+        group_id: &str,
+        message_id: Option<&str>,
+    ) -> DomainResult<()> {
+        // 获取群组会话ID
+        let conv_id: i64 = sqlx::query_scalar(
+            r#"
+            SELECT c.id 
+            FROM conversations c
+            JOIN groups g ON g.id = c.group_id
+            WHERE g.group_id = $1 AND c.conversation_type = 'group'
+            "#
+        )
+        .bind(group_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRuleViolation {
+            rule: format!("Database error: {}", e),
+        })?
+        .ok_or_else(|| DomainError::BusinessRuleViolation {
+            rule: "Group conversation not found".to_string(),
+        })?;
+
+        if let Some(msg_id) = message_id {
+            // 标记特定消息已读
+            sqlx::query(
+                r#"
+                INSERT INTO message_read_status (message_id, user_id, read_at)
+                SELECT m.id, $2, CURRENT_TIMESTAMP
+                FROM messages m
+                WHERE m.conversation_id = $1 AND m.message_id = $3
+                ON CONFLICT (message_id, user_id) DO UPDATE SET read_at = CURRENT_TIMESTAMP
+                "#
+            )
+            .bind(conv_id)
+            .bind(user_id)
+            .bind(msg_id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| DomainError::BusinessRuleViolation {
+                rule: format!("Database error: {}", e),
+            })?;
+
+            // 更新 conversation_participants 中的 last_read_message_id
+            sqlx::query(
+                r#"
+                UPDATE conversation_participants 
+                SET last_read_message_id = (
+                    SELECT id FROM messages WHERE conversation_id = $1 AND message_id = $3
+                ), last_read_at = CURRENT_TIMESTAMP
+                WHERE conversation_id = $1 AND user_id = $2
+                "#
+            )
+            .bind(conv_id)
+            .bind(user_id)
+            .bind(msg_id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| DomainError::BusinessRuleViolation {
+                rule: format!("Database error: {}", e),
+            })?;
+        } else {
+            // 标记群组中所有消息已读
+            sqlx::query(
+                r#"
+                INSERT INTO message_read_status (message_id, user_id, read_at)
+                SELECT m.id, $2, CURRENT_TIMESTAMP
+                FROM messages m
+                LEFT JOIN message_read_status mrs ON m.id = mrs.message_id AND mrs.user_id = $2
+                WHERE m.conversation_id = $1 AND m.sender_id != $2 AND mrs.id IS NULL
+                ON CONFLICT (message_id, user_id) DO UPDATE SET read_at = CURRENT_TIMESTAMP
+                "#
+            )
+            .bind(conv_id)
+            .bind(user_id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| DomainError::BusinessRuleViolation {
+                rule: format!("Database error: {}", e),
+            })?;
+
+            // 更新 conversation_participants 中的未读数量和最后已读消息
+            sqlx::query(
+                r#"
+                UPDATE conversation_participants 
+                SET unread_count = 0,
+                    last_read_message_id = (
+                        SELECT id FROM messages 
+                        WHERE conversation_id = $1 
+                        ORDER BY created_at DESC 
+                        LIMIT 1
+                    ),
+                    last_read_at = CURRENT_TIMESTAMP
+                WHERE conversation_id = $1 AND user_id = $2
+                "#
+            )
+            .bind(conv_id)
+            .bind(user_id)
             .execute(&self.pool)
             .await
             .map_err(|e| DomainError::BusinessRuleViolation {
@@ -681,113 +1182,131 @@ impl PgMessageRepository {
     /// 获取群组未读消息数
     pub async fn get_group_unread_count(
         &self,
-        group_id: &str,
         user_id: i64,
-    ) -> DomainResult<i64> {
-        let group_uuid = uuid::Uuid::parse_str(group_id)
-            .map_err(|e| DomainError::BusinessRuleViolation {
-                rule: format!("Invalid group_id format: {}", e),
-            })?;
-
-        // 获取用户在该群组的已读状态
-        let last_read_id = sqlx::query!(
-            "SELECT last_read_message_id FROM user_message_read_status 
-             WHERE user_id = $1 AND group_id = $2",
-            user_id,
-            group_uuid
-        )
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("Database error: {}", e),
-        })?;
-
-        let unread_count = if let Some(read_status) = last_read_id {
-            // 计算比最后已读消息ID更大的消息数量
-            sqlx::query!(
-                "SELECT COUNT(*) as \"count!\"
-                 FROM group_messages gm
-                 WHERE gm.group_id = $1 
-                 AND gm.sender_id != $2 
-                 AND gm.id > $3",
-                group_uuid,
-                user_id,
-                read_status.last_read_message_id
+        group_id: Option<&str>,
+    ) -> DomainResult<i32> {
+        let count: i64 = if let Some(grp_id) = group_id {
+            // 获取特定群组的未读消息数
+            sqlx::query_scalar(
+                r#"
+                SELECT COALESCE(cp.unread_count, 0)
+                FROM conversation_participants cp
+                JOIN conversations c ON c.id = cp.conversation_id
+                JOIN groups g ON g.id = c.group_id
+                WHERE g.group_id = $1 AND cp.user_id = $2 AND c.conversation_type = 'group'
+                "#
             )
-            .fetch_one(&self.pool)
+            .bind(grp_id)
+            .bind(user_id)
+            .fetch_optional(&self.pool)
             .await
             .map_err(|e| DomainError::BusinessRuleViolation {
                 rule: format!("Database error: {}", e),
             })?
-            .count
+            .unwrap_or(0)
         } else {
-            // 用户从未读过该群组消息，计算所有非自己发送的消息
-            sqlx::query!(
-                "SELECT COUNT(*) as \"count!\"
-                 FROM group_messages gm
-                 WHERE gm.group_id = $1 
-                 AND gm.sender_id != $2",
-                group_uuid,
-                user_id
+            // 获取用户所有群组未读消息数
+            sqlx::query_scalar(
+                r#"
+                SELECT COALESCE(SUM(cp.unread_count), 0)
+                FROM conversation_participants cp
+                JOIN conversations c ON c.id = cp.conversation_id
+                WHERE cp.user_id = $1 AND c.conversation_type = 'group' AND cp.status = 'active'
+                "#
             )
+            .bind(user_id)
             .fetch_one(&self.pool)
             .await
             .map_err(|e| DomainError::BusinessRuleViolation {
                 rule: format!("Database error: {}", e),
             })?
-            .count
         };
         
-        Ok(unread_count)
+        Ok(count as i32)
     }
     
-    /// 获取会话未读消息数
-    pub async fn get_conversation_unread_count(
+    /// 获取用户会话列表
+    pub async fn find_conversations_by_user(
         &self,
-        conversation_id: &str,
         user_id: i64,
-    ) -> DomainResult<i64> {
-        let conversation_uuid = uuid::Uuid::parse_str(conversation_id)
-            .map_err(|e| DomainError::BusinessRuleViolation {
-                rule: format!("Invalid conversation_id format: {}", e),
-            })?;
-
-        let row = sqlx::query!(
-            "SELECT COUNT(*) as \"count!\"
-             FROM direct_messages dm
-             WHERE dm.conversation_id = $1 
-             AND dm.recipient_id = $2 
-             AND dm.read_at IS NULL",
-            conversation_uuid,
-            user_id
+        cursor: i64,
+        limit: i32,
+    ) -> DomainResult<Vec<crate::domain::Conversation>> {
+        let rows = sqlx::query(
+            r#"
+            SELECT 
+                c.id,
+                c.conversation_id,
+                c.conversation_type,
+                c.name,
+                c.description,
+                c.avatar_url,
+                c.is_active,
+                c.message_count,
+                c.participant_count,
+                c.last_message_at,
+                c.created_at,
+                c.updated_at,
+                cp.unread_count,
+                cp.last_read_at,
+                -- 获取最后一条消息的预览
+                (SELECT content FROM messages m 
+                 WHERE m.conversation_id = c.id 
+                 ORDER BY m.created_at DESC 
+                 LIMIT 1) as last_message_preview,
+                -- 对于私聊，获取对方用户信息
+                CASE 
+                    WHEN c.conversation_type = 'private' THEN
+                        (SELECT u.nickname FROM users u 
+                         JOIN conversation_participants cp2 ON cp2.user_id = u.id
+                         WHERE cp2.conversation_id = c.id AND cp2.user_id != $1
+                         LIMIT 1)
+                    ELSE c.name
+                END as display_name
+            FROM conversations c
+            JOIN conversation_participants cp ON cp.conversation_id = c.id
+            WHERE cp.user_id = $1 
+                AND cp.status = 'active'
+                AND c.is_active = true
+                AND ($2 = 0 OR c.id < $2)
+            ORDER BY c.last_activity_at DESC, c.id DESC
+            LIMIT $3
+            "#
         )
-        .fetch_one(&self.pool)
+        .bind(user_id)
+        .bind(cursor)
+        .bind(limit)
+        .fetch_all(&self.pool)
         .await
         .map_err(|e| DomainError::BusinessRuleViolation {
             rule: format!("Database error: {}", e),
         })?;
         
-        Ok(row.count)
-    }
-    
-    /// 获取用户所有会话的总未读消息数
-    pub async fn get_user_total_unread_count(
-        &self,
-        user_id: i64,
-    ) -> DomainResult<i64> {
-        let row = sqlx::query!(
-            "SELECT COUNT(*) as \"count!\"
-             FROM direct_messages dm
-             WHERE dm.recipient_id = $1 
-             AND dm.read_at IS NULL",
-            user_id
-        )
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("Database error: {}", e),
-        })?;
+        let mut conversations = Vec::new();
+        for row in rows {
+            // 为了兼容现有的 Conversation 结构，我们需要适配数据
+            // 注意：这里需要根据实际的 Conversation 结构进行调整
+            let id: i64 = row.get("id");
+            let conversation_id: String = row.get("conversation_id");
+            let created_at: DateTime<Utc> = row.get("created_at");
+            let updated_at: DateTime<Utc> = row.get("updated_at");
+            let last_message_at: Option<DateTime<Utc>> = row.get("last_message_at");
+            let last_message_preview: Option<String> = row.get("last_message_preview");
+            
+            conversations.push(crate::domain::Conversation {
+                id,
+                conversation_id,
+                // 对于兼容性，我们暂时使用占位符值
+                // 实际应用中应该根据 conversation_type 来设置这些字段
+                user1_id: user_id, // 当前用户
+                user2_id: user_id, // 占位符，实际应该是对方用户ID（仅对私聊有效）
+                created_at,
+                updated_at,
+                last_message_at: last_message_at.unwrap_or(created_at), // 如果没有消息，使用创建时间
+                last_message_preview,
+            });
+        }
         
-        Ok(row.count)
+        Ok(conversations)
     }
 }

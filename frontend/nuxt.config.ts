@@ -20,6 +20,16 @@ export default defineNuxtConfig({
     { path: "~/components/illustrations", pathPrefix: false },
   ],
 
+  // 自动导入配置
+  imports: {
+    dirs: [
+      'composables/**',
+      'utils/**',
+      'stores/**',
+      'services/**'
+    ]
+  },
+
   // Pinia 持久化配置
   piniaPluginPersistedstate: {
     storage: "localStorage",

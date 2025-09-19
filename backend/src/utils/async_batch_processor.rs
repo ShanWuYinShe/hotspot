@@ -49,7 +49,6 @@ pub struct BatchItem<T, R> {
 /// 批处理器
 pub struct AsyncBatchProcessor<T, R> {
     config: BatchConfig,
-    processor_fn: Arc<dyn Fn(Vec<T>) -> Box<dyn Future<Output = DomainResult<Vec<R>>> + Send + Sync>>,
     sender: mpsc::UnboundedSender<BatchItem<T, R>>,
     _handle: tokio::task::JoinHandle<()>,
 }
@@ -64,22 +63,18 @@ where
     where
         F: Fn(Vec<T>) -> Fut + Send + Sync + 'static,
         Fut: Future<Output = DomainResult<Vec<R>>> + Send + 'static,
+        T: Clone,
     {
         let (sender, receiver) = mpsc::unbounded_channel();
         
-        let processor_fn = Arc::new(move |items: Vec<T>| -> Box<dyn Future<Output = DomainResult<Vec<R>>> + Send> {
-            Box::new(processor_fn(items))
-        });
-        
         let handle = tokio::spawn(Self::batch_worker(
             config.clone(),
-            processor_fn.clone(),
+            processor_fn,
             receiver,
         ));
 
         Self {
-            config,
-            processor_fn,
+            config: config.clone(),
             sender,
             _handle: handle,
         }
@@ -105,11 +100,16 @@ where
     }
 
     /// 批处理工作线程
-    async fn batch_worker(
+    async fn batch_worker<F, Fut>(
         config: BatchConfig,
-        processor_fn: Arc<dyn Fn(Vec<T>) -> Box<dyn Future<Output = DomainResult<Vec<R>>> + Send + Sync>>,
+        processor_fn: F,
         mut receiver: mpsc::UnboundedReceiver<BatchItem<T, R>>,
-    ) {
+    ) 
+    where
+        F: Fn(Vec<T>) -> Fut + Send + Sync + 'static,
+        Fut: Future<Output = DomainResult<Vec<R>>> + Send + 'static,
+        T: Clone,
+    {
         let mut batch = Vec::new();
         let mut batch_start = Instant::now();
         let semaphore = Arc::new(Semaphore::new(config.max_concurrency));
@@ -126,8 +126,8 @@ where
                         Self::process_batch(
                             &config,
                             &processor_fn,
-                            &semaphore,
                             std::mem::take(&mut batch),
+                            semaphore.clone(),
                         ).await;
                         batch_start = Instant::now();
                     }
@@ -138,8 +138,8 @@ where
                         Self::process_batch(
                             &config,
                             &processor_fn,
-                            &semaphore,
                             batch,
+                            semaphore.clone(),
                         ).await;
                     }
                     break;
@@ -150,8 +150,8 @@ where
                         Self::process_batch(
                             &config,
                             &processor_fn,
-                            &semaphore,
                             std::mem::take(&mut batch),
+                            semaphore.clone(),
                         ).await;
                         batch_start = Instant::now();
                     }
@@ -161,12 +161,17 @@ where
     }
 
     /// 处理单个批次
-    async fn process_batch(
+    async fn process_batch<F, Fut>(
         config: &BatchConfig,
-        processor_fn: &Arc<dyn Fn(Vec<T>) -> Box<dyn Future<Output = DomainResult<Vec<R>>> + Send + Sync>>,
-        semaphore: &Arc<Semaphore>,
+        processor_fn: &F,
         batch: Vec<BatchItem<T, R>>,
-    ) {
+        semaphore: Arc<Semaphore>,
+    ) 
+    where
+        F: Fn(Vec<T>) -> Fut + Send + Sync + 'static,
+        Fut: Future<Output = DomainResult<Vec<R>>> + Send + 'static,
+        T: Clone,
+    {
         let _permit = semaphore.acquire().await.unwrap();
         
         let batch_size = batch.len();
@@ -211,11 +216,16 @@ where
     }
 
     /// 带重试机制的执行
-    async fn execute_with_retry(
+    async fn execute_with_retry<F, Fut>(
         config: &BatchConfig,
-        processor_fn: &Arc<dyn Fn(Vec<T>) -> Box<dyn Future<Output = DomainResult<Vec<R>>> + Send + Sync>>,
+        processor_fn: &F,
         data: Vec<T>,
-    ) -> DomainResult<Vec<R>> {
+    ) -> DomainResult<Vec<R>>
+    where
+        F: Fn(Vec<T>) -> Fut + Send + Sync + 'static,
+        Fut: Future<Output = DomainResult<Vec<R>>> + Send + 'static,
+        T: Clone,
+    {
         let mut last_error = None;
         
         for attempt in 0..=config.max_retries {

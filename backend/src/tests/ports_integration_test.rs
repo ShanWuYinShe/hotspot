@@ -2,6 +2,7 @@
 //! 
 //! 测试端口与适配器的集成工作，确保架构正确性
 
+// PostgreSQL 是核心功能，始终启用
 #[cfg(test)]
 mod tests {
 
@@ -85,11 +86,11 @@ mod tests {
         use crate::domain::DomainError;
         
         // 测试领域错误的基本功能
-        let error = DomainError::User(crate::domain::errors::UserDomainError::UserNotFound { user_id: 123 });
+        let error = DomainError::UserNotFound;
         
         match error {
-            DomainError::User(crate::domain::errors::UserDomainError::UserNotFound { user_id }) => {
-                assert_eq!(user_id, 123);
+            DomainError::UserNotFound => {
+                // 测试通过
             },
             other => {
                 assert!(false, "期望UserNotFound错误，实际得到: {:?}", other);
@@ -114,15 +115,15 @@ mod tests {
     /// 测试端口架构的类型安全性
     #[test]
     fn test_port_type_safety() {
-        use crate::ports::{UserRepositoryPort, GroupRepositoryPort};
+        use crate::ports::{UserRepository, GroupRepository};
         
         // 编译时类型检查测试
         // 验证端口 trait 的基本约束
         fn assert_send_sync<T: Send + Sync>() {}
         
         // 这些调用在编译时验证 trait 约束
-        assert_send_sync::<Box<dyn UserRepositoryPort>>();
-        assert_send_sync::<Box<dyn GroupRepositoryPort>>();
+        assert_send_sync::<Box<dyn UserRepository>>();
+        assert_send_sync::<Box<dyn GroupRepository>>();
         
         println!("端口类型安全性测试通过");
     }

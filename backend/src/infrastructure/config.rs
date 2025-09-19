@@ -157,7 +157,7 @@ pub struct ConfigLoader;
 impl ConfigLoader {
     /// 从环境变量加载配置
     pub fn load_from_env() -> Result<AppConfig, ContextualError> {
-        let context = ErrorContext::new("load_config_from_env");
+        let _context = ErrorContext::new("load_config_from_env");
         
         let config = AppConfig {
             server: Self::load_server_config()?,
@@ -440,8 +440,8 @@ impl ConfigLoader {
     fn validate_config(config: &AppConfig) -> Result<(), ContextualError> {
         let context = ErrorContext::new("validate_config");
         
-        // 验证端口范围
-        if config.server.port == 0 || config.server.port > 65535 {
+        // 验证端口范围 (u16类型最大值就是65535，所以只需检查是否为0)
+        if config.server.port == 0 {
             return Err(ContextualError::new(
                 InfrastructureError::Configuration {
                     key: "server.port".to_string(),
@@ -513,7 +513,6 @@ impl ConfigLoader {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::env;
 
     #[test]
     fn test_config_validation() {

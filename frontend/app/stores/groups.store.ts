@@ -1,5 +1,4 @@
 import { defineStore } from "pinia";
-import { useGroupService } from "~/services/group.service";
 import type { GroupInfo as Group } from "~/types";
 
 /**
@@ -11,7 +10,6 @@ export const useGroupsStore = defineStore(
   () => {
     // 缓存状态 - 不持久化
     const myGroups = ref<Group[]>([]);
-    const ownedGroups = ref<Group[]>([]);
     const nearbyGroups = ref<Group[]>([]);
     const searchResults = ref<Group[]>([]);
     const currentGroup = ref<Group | null>(null);
@@ -19,10 +17,6 @@ export const useGroupsStore = defineStore(
     // 分页状态
     const pagination = ref({
       myGroups: { hasMore: false, nextCursor: undefined as string | undefined },
-      ownedGroups: {
-        hasMore: false,
-        nextCursor: undefined as string | undefined,
-      },
       nearbyGroups: {
         hasMore: false,
         nextCursor: undefined as string | undefined,
@@ -35,7 +29,10 @@ export const useGroupsStore = defineStore(
 
     // 计算属性
     const totalGroupsCount = computed(() => myGroups.value.length);
-    const ownedGroupsCount = computed(() => ownedGroups.value.length);
+    // 拥有的群组数量：从 myGroups 中筛选用户角色为 owner 的群组
+    const ownedGroupsCount = computed(() => 
+      myGroups.value.filter(group => group.user_role === 'owner').length
+    );
 
     // 业务方法 - 使用 Service 层
     async function createGroup(groupData: {
@@ -55,7 +52,7 @@ export const useGroupsStore = defineStore(
         // CreateGroupResponse只包含group_id，需要获取完整群组信息
         const fullGroup = await groupService.getGroupDetails(newGroup.group_id);
 
-        ownedGroups.value.unshift(fullGroup);
+        // 新创建的群组会包含 user_role: 'owner'，直接添加到 myGroups
         myGroups.value.unshift(fullGroup);
 
         return fullGroup;
@@ -109,25 +106,10 @@ export const useGroupsStore = defineStore(
       return response.items;
     }
 
-    async function fetchOwnedGroups(loadMore = false) {
-      const groupService = useGroupService();
-      const cursor = loadMore
-        ? pagination.value.ownedGroups.nextCursor
-        : undefined;
-      const response = await groupService.getOwnedGroups(cursor ? parseInt(cursor) : undefined);
-
-      if (loadMore) {
-        ownedGroups.value.push(...response.items);
-      } else {
-        ownedGroups.value = response.items;
-      }
-
-      pagination.value.ownedGroups = {
-        hasMore: response.has_more,
-        nextCursor: response.next_cursor,
-      };
-
-      return response.items;
+    // 获取拥有的群组：从 myGroups 中筛选用户角色为 owner 的群组
+    // 注意：不再需要单独的 fetchOwnedGroups 方法，因为 fetchMyGroups 已包含角色信息
+    function getOwnedGroups() {
+      return myGroups.value.filter(group => group.user_role === 'owner');
     }
 
     async function searchNearbyGroups(params: {
@@ -240,7 +222,7 @@ export const useGroupsStore = defineStore(
       await groupService.kickMember(groupId, memberId);
 
       // 更新群组成员数量
-      const lists = [myGroups, ownedGroups, nearbyGroups, searchResults];
+      const lists = [myGroups, nearbyGroups, searchResults];
       lists.forEach((list) => {
         const group = list.value.find((g: Group) => g.group_id === groupId);
         if (group && group.member_count > 0) {
@@ -258,7 +240,7 @@ export const useGroupsStore = defineStore(
 
     // 辅助函数
     function updateGroupInLists(groupId: string, updates: Partial<Group>) {
-      const lists = [myGroups, ownedGroups, nearbyGroups, searchResults];
+      const lists = [myGroups, nearbyGroups, searchResults];
 
       lists.forEach((list) => {
         const group = list.value.find((g: Group) => g.group_id === groupId);
@@ -301,13 +283,11 @@ export const useGroupsStore = defineStore(
     // 用户切换时清理本地缓存，避免跨账号数据串扰
     function resetAll() {
       myGroups.value = [];
-      ownedGroups.value = [];
       nearbyGroups.value = [];
       searchResults.value = [];
       currentGroup.value = null;
       pagination.value = {
         myGroups: { hasMore: false, nextCursor: undefined },
-        ownedGroups: { hasMore: false, nextCursor: undefined },
         nearbyGroups: { hasMore: false, nextCursor: undefined },
         searchResults: { hasMore: false, nextCursor: undefined },
       };
@@ -324,7 +304,6 @@ export const useGroupsStore = defineStore(
     return {
       // 只读选择器（返回拷贝）
       myGroups: computed(() => myGroups.value.slice()),
-      ownedGroups: computed(() => ownedGroups.value.slice()),
       nearbyGroups: computed(() => nearbyGroups.value.slice()),
       searchResults: computed(() => searchResults.value.slice()),
       currentGroup: computed(() =>
@@ -332,7 +311,6 @@ export const useGroupsStore = defineStore(
       ),
       pagination: computed(() => ({
         myGroups: { ...pagination.value.myGroups },
-        ownedGroups: { ...pagination.value.ownedGroups },
         nearbyGroups: { ...pagination.value.nearbyGroups },
         searchResults: { ...pagination.value.searchResults },
       })),
@@ -346,7 +324,7 @@ export const useGroupsStore = defineStore(
       joinGroup,
       leaveGroup,
       fetchMyGroups,
-      fetchOwnedGroups,
+      getOwnedGroups, // 替代 fetchOwnedGroups，从 myGroups 中筛选
       searchNearbyGroups,
       searchGroupsByName,
       fetchGroupDetails,

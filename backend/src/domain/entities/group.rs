@@ -269,6 +269,9 @@ pub struct GroupProfile {
     pub is_public: bool,
     /// 最后活跃时间
     pub last_active_at: DateTime<Utc>,
+    /// 用户在群组中的角色（仅在用户群组列表中返回）
+    /// 可能的值：owner, admin, member
+    pub user_role: Option<String>,
 }
 
 /// 群组认证信息（仅用于加入群组时的密码验证）
@@ -381,6 +384,7 @@ impl GroupProfile {
             member_count,
             is_public,
             last_active_at,
+            user_role: None, // 默认不包含用户角色信息
         }
     }
 
@@ -476,6 +480,7 @@ impl GroupDetail {
             member_count: self.member_count,
             is_public: self.is_public,
             last_active_at: self.last_active_at,
+            user_role: None, // 默认不包含用户角色信息
         }
     }
 
@@ -565,6 +570,7 @@ impl GroupSearchResult {
             member_count: self.member_count,
             is_public: self.is_public,
             last_active_at: self.last_active_at,
+            user_role: None, // 默认不包含用户角色信息
         }
     }
 

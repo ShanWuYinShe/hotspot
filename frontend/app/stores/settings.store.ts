@@ -1,6 +1,5 @@
 import { defineStore } from "pinia";
 import type { UserSettings } from "~/types";
-import { useSettingsService } from "~/services/settings.service";
 
 // 默认设置
 const getDefaultSettings = (): UserSettings => ({
@@ -73,7 +72,7 @@ export const useSettingsStore = defineStore(
         // userSettings 仅包含后端通知设置等
         return userSettings;
       } catch (error) {
-        console.error("获取设置失败:", error);
+        // 获取设置失败，使用默认设置
         return null;
       } finally {
         isLoading.value = false;
@@ -90,7 +89,7 @@ export const useSettingsStore = defineStore(
         await fetchSettings();
         return settings.value;
       } catch (error) {
-        console.error("更新设置失败:", error);
+        // 更新设置失败，保持原状态
         throw error;
       } finally {
         isLoading.value = false;

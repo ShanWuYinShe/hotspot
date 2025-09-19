@@ -24,7 +24,7 @@ use tower_http::services::ServeDir;
 use std::sync::Arc;
 
 use super::controllers::{
-    AdminController, GroupController, HealthController, /* MessageController, */ MomentController,
+    AdminController, GroupController, HealthController, MessageController, MomentController,
     UserController, MonitoringController, SearchController, ActivityController, /* FriendController, */
     CommentController, UploadController, metrics_controller, unified_monitoring_controller,
 };
@@ -34,13 +34,14 @@ use super::auth::{JwtConfig, require_auth};
 
 use crate::application::{UserApplicationService, MomentApplicationService};
 use crate::ports::UserRepository;
+use crate::utils::route_introspector::RouteIntrospector;
 
 /// 服务容器 - 统一管理所有控制器
 #[derive(Clone)]
 pub struct ServiceContainer {
     pub user_controller: UserController<UserApplicationService>,
     pub group_controller: GroupController<crate::application::GroupApplicationService>,
-    // pub message_controller: MessageController, // 暂时禁用
+    pub message_controller: MessageController,
     pub moment_controller: MomentController<MomentApplicationService>,
     pub search_controller: SearchController,
     pub activity_controller: ActivityController<crate::adapters::PostgresUserRepository, crate::adapters::PgGroupRepository, crate::adapters::PgMomentRepository>,
@@ -87,6 +88,13 @@ pub fn create_application_routes(
 
 /// 创建健康检查路由（公开）
 fn create_health_routes() -> Router {
+    // 收集路由信息
+    RouteIntrospector::register_route("/health", "POST", "服务健康检查");
+    RouteIntrospector::register_route("/health/detailed", "POST", "详细健康检查");
+    RouteIntrospector::register_route("/ready", "POST", "服务就绪检查");
+    RouteIntrospector::register_route("/alive", "POST", "服务存活检查");
+    RouteIntrospector::register_route("/metrics", "POST", "Prometheus监控指标");
+    
     Router::new()
         .route("/health", post(HealthController::health_check))
         .route("/health/detailed", post(HealthController::detailed_health_check))
@@ -136,9 +144,6 @@ fn create_monitoring_routes(jwt_config: JwtConfig) -> Router {
 /// 创建API v1路由 - 使用 public/protected 前缀明确区分认证要求
 fn create_api_v1_routes(services: ServiceContainer, jwt_config: JwtConfig) -> Router {
     Router::new()
-        // 认证路由（公开） - 7个端点
-        .nest("/auth", create_auth_routes(services.user_controller.clone()))
-        
         // 公开API路由（无需认证）
         .nest("/public", create_public_routes(services.clone()))
         
@@ -150,6 +155,9 @@ fn create_api_v1_routes(services: ServiceContainer, jwt_config: JwtConfig) -> Ro
 /// 路径：/api/v1/public/*
 fn create_public_routes(services: ServiceContainer) -> Router {
     Router::new()
+        // 认证路由（公开） - 6个端点，除了set_password
+        .nest("/auth", create_public_auth_routes(services.user_controller.clone()))
+        
         // 用户查询子路由
         .nest("/user", Router::new()
             .route("/search_by_name", post(UserController::<UserApplicationService>::search_by_name))
@@ -168,13 +176,22 @@ fn create_public_routes(services: ServiceContainer) -> Router {
         )
         
         // 生活瞬间查询子路由
-        .nest("/moments", Router::new()
-            .route("/history", post(MomentController::<MomentApplicationService>::history))
-            .route("/search_by_location", post(MomentController::<MomentApplicationService>::search_by_location))
-            .route("/search_by_tags", post(MomentController::<MomentApplicationService>::search_by_tags))
-            .route("/search_by_id", post(MomentController::<MomentApplicationService>::search_by_id))
-            .with_state(services.moment_controller.clone())
-        )
+        .nest("/moments", {
+            RouteIntrospector::set_prefix("/api/v1/public/moments");
+            RouteIntrospector::set_auth_required(false);
+            
+            RouteIntrospector::register_route("/history", "POST", "获取生活瞬间历史");
+            RouteIntrospector::register_route("/search_by_location", "POST", "按位置搜索生活瞬间");
+            RouteIntrospector::register_route("/search_by_tags", "POST", "按标签搜索生活瞬间");
+            RouteIntrospector::register_route("/search_by_id", "POST", "按ID搜索生活瞬间");
+            
+            Router::new()
+                .route("/history", post(MomentController::<MomentApplicationService>::history))
+                .route("/search_by_location", post(MomentController::<MomentApplicationService>::search_by_location))
+                .route("/search_by_tags", post(MomentController::<MomentApplicationService>::search_by_tags))
+                .route("/search_by_id", post(MomentController::<MomentApplicationService>::search_by_id))
+                .with_state(services.moment_controller.clone())
+        })
         
         // 搜索功能子路由
         .nest("/search", Router::new()
@@ -199,7 +216,22 @@ fn create_public_routes(services: ServiceContainer) -> Router {
 /// 创建受保护API路由（需要认证）
 /// 路径：/api/v1/protected/*
 fn create_protected_routes(services: ServiceContainer, jwt_config: JwtConfig) -> Router {
+    // 收集受保护的用户管理路由
+    RouteIntrospector::set_prefix("/api/v1/protected/user");
+    RouteIntrospector::set_auth_required(true);
+    RouteIntrospector::register_route("/update_location", "POST", "更新用户位置");
+    RouteIntrospector::register_route("/update_profile", "POST", "更新用户资料");
+    RouteIntrospector::register_route("/upgrade_account", "POST", "账户升级");
+    RouteIntrospector::register_route("/get_settings", "POST", "获取用户设置");
+    RouteIntrospector::register_route("/update_settings", "POST", "更新用户设置");
+    RouteIntrospector::register_route("/delete_account", "POST", "删除账户");
+    RouteIntrospector::clear_prefix();
+    RouteIntrospector::set_auth_required(false);
+    
     Router::new()
+        // 受保护认证路由 - 1个端点
+        .nest("/auth", create_protected_auth_routes(services.user_controller.clone()))
+        
         // 用户管理子路由
         .nest("/user", Router::new()
             .route("/update_location", post(UserController::<UserApplicationService>::update_location))
@@ -212,39 +244,70 @@ fn create_protected_routes(services: ServiceContainer, jwt_config: JwtConfig) ->
         )
         
         // 群组管理子路由
-        .nest("/group", Router::new()
-            .route("/create", post(GroupController::<crate::application::GroupApplicationService>::create_group))
-            .route("/join", post(GroupController::<crate::application::GroupApplicationService>::join_group))
-            .route("/leave", post(GroupController::<crate::application::GroupApplicationService>::leave_group))
-            .route("/kick", post(GroupController::<crate::application::GroupApplicationService>::kick_member))
-            .route("/transfer_ownership", post(GroupController::<crate::application::GroupApplicationService>::transfer_ownership))
-            .with_state(services.group_controller.clone())
-        )
+        .nest("/group", {
+            // 收集群组管理路由
+            RouteIntrospector::set_prefix("/api/v1/protected/group");
+            RouteIntrospector::set_auth_required(true);
+            RouteIntrospector::register_route("/create", "POST", "创建群组");
+            RouteIntrospector::register_route("/join", "POST", "加入群组");
+            RouteIntrospector::register_route("/leave", "POST", "离开群组");
+            RouteIntrospector::register_route("/kick", "POST", "踢出群组成员");
+            RouteIntrospector::register_route("/transfer_ownership", "POST", "转移群组所有权");
+            RouteIntrospector::register_route("/my_groups", "POST", "获取我的群组");
+            RouteIntrospector::clear_prefix();
+            RouteIntrospector::set_auth_required(false);
+            
+            Router::new()
+                .route("/create", post(GroupController::<crate::application::GroupApplicationService>::create_group))
+                .route("/join", post(GroupController::<crate::application::GroupApplicationService>::join_group))
+                .route("/leave", post(GroupController::<crate::application::GroupApplicationService>::leave_group))
+                .route("/kick", post(GroupController::<crate::application::GroupApplicationService>::kick_member))
+                .route("/transfer_ownership", post(GroupController::<crate::application::GroupApplicationService>::transfer_ownership))
+                .route("/my_groups", post(GroupController::<crate::application::GroupApplicationService>::user_groups))
+                .with_state(services.group_controller.clone())
+        })
         
-        // // 消息通讯子路由 - 暂时禁用
-        // .nest("/chat", Router::new()
-        //     .route("/group/send", post(MessageController::send_group_message))
-        //     .route("/group/history", post(MessageController::get_group_messages))
-        //     .route("/group/delete", post(MessageController::delete_group_message))
-        //     .route("/group/mark-read", post(MessageController::mark_group_messages_read))
-        //     .route("/group/unread_count", post(MessageController::get_group_unread_count))
-        //     .route("/user/send", post(MessageController::send_direct_message))
-        //     .route("/user/history", post(MessageController::get_direct_messages))
-        //     .route("/user/conversations", post(MessageController::get_conversations))
-        //     .route("/user/delete", post(MessageController::delete_direct_message))
-        //     .route("/user/mark-read", post(MessageController::mark_user_messages_read))
-        //     .route("/user/unread_count", post(MessageController::get_user_unread_count))
-        //     .with_state(services.message_controller.clone())
-        // )
+        // 统一消息通讯子路由 - 6个端点（统一群聊和私聊）
+        .nest("/chat", {
+            // 收集统一消息通讯路由
+            RouteIntrospector::set_prefix("/api/v1/protected/chat");
+            RouteIntrospector::set_auth_required(true);
+            RouteIntrospector::register_route("/send", "POST", "发送消息（统一接口）");
+            RouteIntrospector::register_route("/history", "POST", "获取消息历史（统一接口）");
+            RouteIntrospector::register_route("/delete", "POST", "删除消息（统一接口）");
+            RouteIntrospector::register_route("/mark-read", "POST", "标记消息已读（统一接口）");
+            RouteIntrospector::register_route("/unread_count", "POST", "获取未读消息数（统一接口）");
+            RouteIntrospector::register_route("/conversations", "POST", "获取会话列表");
+            RouteIntrospector::clear_prefix();
+            RouteIntrospector::set_auth_required(false);
+            
+            Router::new()
+                .route("/send", post(MessageController::send_message))
+                .route("/history", post(MessageController::get_message_history))
+                .route("/delete", post(MessageController::delete_message))
+                .route("/mark-read", post(MessageController::mark_messages_read))
+                .route("/unread_count", post(MessageController::get_unread_count))
+                .route("/conversations", post(MessageController::get_conversations))
+                .with_state(services.message_controller.clone())
+        })
         
         // 生活瞬间管理子路由
-        .nest("/moments", Router::new()
-            .route("/create", post(MomentController::<MomentApplicationService>::create))
-            .route("/delete", post(MomentController::<MomentApplicationService>::delete))
-            .route("/like", post(MomentController::<MomentApplicationService>::like_moment))
-            .route("/unlike", post(MomentController::<MomentApplicationService>::unlike_moment))
-            .with_state(services.moment_controller.clone())
-        )
+        .nest("/moments", {
+            RouteIntrospector::set_prefix("/api/v1/protected/moments");
+            RouteIntrospector::set_auth_required(true);
+            
+            RouteIntrospector::register_route("/create", "POST", "创建生活瞬间");
+            RouteIntrospector::register_route("/delete", "POST", "删除生活瞬间");
+            RouteIntrospector::register_route("/like", "POST", "点赞生活瞬间");
+            RouteIntrospector::register_route("/unlike", "POST", "取消点赞生活瞬间");
+            
+            Router::new()
+                .route("/create", post(MomentController::<MomentApplicationService>::create))
+                .route("/delete", post(MomentController::<MomentApplicationService>::delete))
+                .route("/like", post(MomentController::<MomentApplicationService>::like_moment))
+                .route("/unlike", post(MomentController::<MomentApplicationService>::unlike_moment))
+                .with_state(services.moment_controller.clone())
+        })
         
         // // 好友系统子路由 - 暂时禁用
         // .nest("/friends", Router::new()
@@ -301,16 +364,46 @@ fn create_protected_routes(services: ServiceContainer, jwt_config: JwtConfig) ->
         .route_layer(middleware::from_fn_with_state(jwt_config, require_auth))
 }
 
-/// 1. 认证路由（公开） - 7个端点
-/// 路径：/api/v1/auth/*
-fn create_auth_routes(user_controller: UserController<UserApplicationService>) -> Router {
+/// 创建公开认证路由（无需认证） - 6个端点
+/// 路径：/api/v1/public/auth/*
+fn create_public_auth_routes(user_controller: UserController<UserApplicationService>) -> Router {
+    // 设置认证路由前缀
+    RouteIntrospector::set_prefix("/api/v1/public/auth");
+    
+    // 收集公开认证路由信息
+    RouteIntrospector::register_route("/get_nonce", "POST", "获取认证随机数");
+    RouteIntrospector::register_route("/register", "POST", "用户注册");
+    RouteIntrospector::register_route("/login", "POST", "用户登录");
+    RouteIntrospector::register_route("/create_temp", "POST", "创建临时用户");
+    RouteIntrospector::register_route("/refresh_token", "POST", "刷新Token");
+    RouteIntrospector::register_route("/check_status", "POST", "检查认证状态");
+    
+    // 清除前缀
+    RouteIntrospector::clear_prefix();
+    
     Router::new()
+        .route("/get_nonce", post(UserController::<UserApplicationService>::get_nonce))
         .route("/register", post(UserController::<UserApplicationService>::register_user))
         .route("/login", post(UserController::<UserApplicationService>::login))
         .route("/create_temp", post(UserController::<UserApplicationService>::create_temp_user))
         .route("/refresh_token", post(UserController::<UserApplicationService>::refresh_token))
         .route("/check_status", post(UserController::<UserApplicationService>::check_auth_status))
+        .with_state(user_controller)
+}
+
+/// 创建受保护认证路由（需要认证） - 1个端点
+/// 路径：/api/v1/protected/auth/*
+fn create_protected_auth_routes(user_controller: UserController<UserApplicationService>) -> Router {
+    // 设置认证路由前缀
+    RouteIntrospector::set_prefix("/api/v1/protected/auth");
+    
+    // 收集受保护认证路由信息
+    RouteIntrospector::register_route("/set_password", "POST", "设置密码");
+    
+    // 清除前缀
+    RouteIntrospector::clear_prefix();
+    
+    Router::new()
         .route("/set_password", post(UserController::<UserApplicationService>::set_password))
-        .route("/password_status", post(UserController::<UserApplicationService>::password_status))
         .with_state(user_controller)
 }

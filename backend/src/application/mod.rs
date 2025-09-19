@@ -6,7 +6,6 @@
 /// - 编排业务用例
 /// - 处理事务边界
 /// - 发布领域事件
-
 pub mod commands;
 pub mod queries;
 pub mod handlers;

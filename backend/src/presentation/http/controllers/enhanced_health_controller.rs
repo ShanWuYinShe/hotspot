@@ -311,22 +311,22 @@ impl<C: Cache, J: JobDispatcher> EnhancedHealthController<C, J> {
     fn get_enabled_features(&self) -> Vec<&'static str> {
         let mut features = vec![];
         
-        #[cfg(feature = "postgres")]
+        // PostgreSQL 是核心功能，始终启用
         features.push("postgres");
         
         #[cfg(feature = "cache_redis")]
         features.push("cache_redis");
         
-        #[cfg(feature = "cache_in_memory")]
+        #[cfg(feature = "cache_memory")]
         features.push("cache_in_memory");
         
-        #[cfg(feature = "jobs_lite")]
+        #[cfg(feature = "jobs_memory")]
         features.push("jobs_lite");
         
         #[cfg(feature = "jobs_redis")]
         features.push("jobs_redis");
         
-        #[cfg(feature = "ws")]
+        // WebSocket 是核心功能，始终启用
         features.push("ws");
         
         features

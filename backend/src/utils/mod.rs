@@ -4,10 +4,8 @@ pub mod error;
 pub mod error_monitor;
 pub mod performance_monitor;
 pub mod business_metrics;
-pub mod db_optimizer;
-pub mod advanced_geo_optimizer;
-pub mod advanced_cache_strategy;
 pub mod async_batch_processor;
+pub mod db_optimizer;
 pub mod database_optimizer_tool;
 #[cfg(feature = "jobs")]
 pub mod job_queue;
@@ -34,6 +32,7 @@ pub mod error_tracker;
 pub mod high_performance_logger;
 #[allow(dead_code)]
 pub mod capabilities;
+pub mod route_introspector;
 
 // 重新导出常用结构
 pub use user_id_partition::{UserIdPartition, UserType};
@@ -42,6 +41,7 @@ pub use types::{UserId, GroupId, ConversationId, MessageId};
 pub use js_safe_types::{JsSafeI64, JsSafeOptionalI64};
 
 // 重新导出监控模块
+pub use async_batch_processor;
 pub use error_monitor;
 pub use performance_monitor;
 pub use business_metrics;
@@ -50,3 +50,4 @@ pub use cache_monitor;
 pub use db_monitor;
 pub use error_tracker;
 pub use high_performance_logger;
+pub use route_introspector;

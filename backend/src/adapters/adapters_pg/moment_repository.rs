@@ -1,10 +1,9 @@
 /// 瞬间仓储PostgreSQL适配器（待实现）
 use async_trait::async_trait;
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 use crate::domain::{Moment, DomainResult, DomainError};
 use crate::ports::MomentRepository;
 use chrono::{DateTime, Utc};
-use uuid::Uuid;
 use super::query_optimizer::PgQueryOptimizer;
 
 /// 瞬间查询结果行结构体
@@ -182,33 +181,33 @@ impl MomentRepository for PgMomentRepository {
                 rule: "Invalid moment ID format".to_string(),
             })?;
             
-        let row = sqlx::query!(
+        let row = sqlx::query(
             r#"
             UPDATE moments
             SET content = COALESCE($2, content)
             WHERE moment_id = $1 AND user_id = $3
-            RETURNING id as "id!", moment_id as "moment_id!", user_id as "user_id!", content, 
-                      latitude as "latitude!", longitude as "longitude!", location_name as "location_name!", 
-                      created_at as "created_at!"
-            "#,
-            moment_uuid.to_string(),
-            description,
-            user_id
+            RETURNING id, moment_id, user_id, content, 
+                      latitude, longitude, location_name, 
+                      created_at
+            "#
         )
+        .bind(moment_uuid.to_string())
+        .bind(description)
+        .bind(user_id)
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
 
         if let Some(r) = row {
             Ok(Moment {
-                id: r.id,
-                moment_id: r.moment_id.to_string(),
-                user_id: r.user_id,
-                content: r.content,
-                latitude: r.latitude,
-                longitude: r.longitude,
-                location_name: r.location_name,
-                created_at: r.created_at,
+                id: r.get("id"),
+                moment_id: r.get::<uuid::Uuid, _>("moment_id").to_string(),
+                user_id: r.get("user_id"),
+                content: r.get("content"),
+                latitude: r.get("latitude"),
+                longitude: r.get("longitude"),
+                location_name: r.get("location_name"),
+                created_at: r.get("created_at"),
             })
         } else {
             Err(DomainError::BusinessRuleViolation { rule: "Moment not found".to_string() })
@@ -221,11 +220,11 @@ impl MomentRepository for PgMomentRepository {
                 rule: "Invalid moment ID format".to_string(),
             })?;
             
-        let rows = sqlx::query!(
-            "DELETE FROM moments WHERE moment_id = $1 AND user_id = $2",
-            moment_uuid.to_string(),
-            user_id
+        let rows = sqlx::query(
+            "DELETE FROM moments WHERE moment_id = $1 AND user_id = $2"
         )
+        .bind(moment_uuid.to_string())
+        .bind(user_id)
         .execute(&self.pool)
         .await
         .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?
@@ -242,33 +241,33 @@ impl MomentRepository for PgMomentRepository {
         cursor: i64,
         limit: i32,
     ) -> DomainResult<Vec<Moment>> {
-        let rows = sqlx::query!(
+        let rows = sqlx::query(
             r#"
-            SELECT id as "id!", moment_id as "moment_id!", user_id as "user_id!", content, 
-                   latitude as "latitude!", longitude as "longitude!", location_name as "location_name!", 
-                   created_at as "created_at!"
+            SELECT id, moment_id, user_id, content, 
+                   latitude, longitude, location_name, 
+                   created_at
             FROM moments
             WHERE user_id = $1 AND ($2 = 0 OR id < $2)
             ORDER BY id DESC
             LIMIT $3
-            "#,
-            user_id,
-            (cursor as i32),
-            (limit as i64)
+            "#
         )
+        .bind(user_id)
+        .bind(cursor as i32)
+        .bind(limit as i64)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
 
         let items = rows.into_iter().map(|r| Moment {
-            id: r.id,
-            moment_id: r.moment_id.to_string(),
-            user_id: r.user_id,
-            content: r.content,
-            latitude: r.latitude,
-            longitude: r.longitude,
-            location_name: r.location_name,
-            created_at: r.created_at,
+            id: r.get("id"),
+            moment_id: r.get::<uuid::Uuid, _>("moment_id").to_string(),
+            user_id: r.get("user_id"),
+            content: r.get("content"),
+            latitude: r.get("latitude"),
+            longitude: r.get("longitude"),
+            location_name: r.get("location_name"),
+            created_at: r.get("created_at"),
         }).collect();
         Ok(items)
     }
@@ -281,11 +280,11 @@ impl MomentRepository for PgMomentRepository {
         cursor: i64,
         limit: i32,
     ) -> DomainResult<Vec<Moment>> {
-        let rows = sqlx::query!(
+        let rows = sqlx::query(
             r#"
-            SELECT id as "id!", moment_id as "moment_id!", user_id as "user_id!", content, 
-                   latitude as "latitude!", longitude as "longitude!", location_name as "location_name!", 
-                   created_at as "created_at!",
+            SELECT id, moment_id, user_id, content, 
+                   latitude, longitude, location_name, 
+                   created_at,
                    ST_Distance(
                        location,
                        ST_Point($2, $1)::geography
@@ -299,41 +298,41 @@ impl MomentRepository for PgMomentRepository {
               )
             ORDER BY id DESC
             LIMIT $5
-            "#,
-            latitude,
-            longitude,
-            (radius_km as i32),
-            (cursor as i32),
-            (limit as i64)
+            "#
         )
+        .bind(latitude)
+        .bind(longitude)
+        .bind(radius_km as i32)
+        .bind(cursor as i32)
+        .bind(limit as i64)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
 
         let items = rows.into_iter().map(|r| Moment {
-            id: r.id,
-            moment_id: r.moment_id.to_string(),
-            user_id: r.user_id,
-            content: r.content,
-            latitude: r.latitude,
-            longitude: r.longitude,
-            location_name: r.location_name,
-            created_at: r.created_at,
+            id: r.get("id"),
+            moment_id: r.get::<uuid::Uuid, _>("moment_id").to_string(),
+            user_id: r.get("user_id"),
+            content: r.get("content"),
+            latitude: r.get("latitude"),
+            longitude: r.get("longitude"),
+            location_name: r.get("location_name"),
+            created_at: r.get("created_at"),
         }).collect();
         Ok(items)
     }
 
-    async fn like_moment(&self, moment_id: &str, user_id: i64) -> DomainResult<()> {
+    async fn like_moment(&self, moment_id: &str, _user_id: i64) -> DomainResult<()> {
         let moment_uuid = uuid::Uuid::parse_str(moment_id)
             .map_err(|_| DomainError::BusinessRuleViolation {
                 rule: "Invalid moment ID format".to_string(),
             })?;
             
         // 更新点赞计数（简化实现，不记录具体点赞用户）
-        sqlx::query!(
-            "UPDATE moments SET like_count = like_count + 1 WHERE moment_id = $1",
-            moment_uuid.to_string()
+        sqlx::query(
+            "UPDATE moments SET like_count = like_count + 1 WHERE moment_id = $1"
         )
+        .bind(moment_uuid.to_string())
         .execute(&self.pool)
         .await
         .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
@@ -341,17 +340,17 @@ impl MomentRepository for PgMomentRepository {
         Ok(())
     }
 
-    async fn unlike_moment(&self, moment_id: &str, user_id: i64) -> DomainResult<()> {
+    async fn unlike_moment(&self, moment_id: &str, _user_id: i64) -> DomainResult<()> {
         let moment_uuid = uuid::Uuid::parse_str(moment_id)
             .map_err(|_| DomainError::BusinessRuleViolation {
                 rule: "Invalid moment ID format".to_string(),
             })?;
             
         // 减少点赞计数（简化实现，不记录具体点赞用户）
-        sqlx::query!(
-            "UPDATE moments SET like_count = GREATEST(like_count - 1, 0) WHERE moment_id = $1",
-            moment_uuid.to_string()
+        sqlx::query(
+            "UPDATE moments SET like_count = GREATEST(like_count - 1, 0) WHERE moment_id = $1"
         )
+        .bind(moment_uuid.to_string())
         .execute(&self.pool)
         .await
         .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
@@ -386,10 +385,10 @@ impl MomentRepository for PgMomentRepository {
                 rule: "Invalid moment ID format".to_string(),
             })?;
             
-        let count = sqlx::query_scalar!(
-            "SELECT like_count::bigint as \"count!\" FROM moments WHERE moment_id = $1",
-            moment_uuid.to_string()
+        let count = sqlx::query_scalar::<_, i64>(
+            "SELECT like_count FROM moments WHERE moment_id = $1"
         )
+        .bind(moment_uuid.to_string())
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?

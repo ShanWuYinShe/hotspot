@@ -6,39 +6,16 @@
 /// - 支持好友关系查询和状态检查
 /// - 管理好友请求的生命周期
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use chrono::Utc;
 use sqlx::PgPool;
-use uuid::Uuid;
 
 use crate::{
-    domain::{DomainResult, DomainError, FriendRequest, Friendship, FriendProfile, FriendshipStatus, FriendRequestStatus, DbFriendshipStatus, UserId},
-    ports::repository_ports::FriendRepository,
+    domain::{DomainResult, DomainError, UserId},
+    domain::entities::{FriendRequest, Friendship, FriendProfile, FriendshipStatus, FriendRequestStatus},
+    ports::repositories::FriendRepository,
 };
 use super::query_optimizer::PgQueryOptimizer;
 
-/// 好友请求数据库行结构
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FriendRequestRow {
-    pub request_id: Uuid,
-    pub requester_id: i64,
-    pub target_id: i64,
-    pub status: String, // 对应FriendRequestStatus
-    pub message: Option<String>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: Option<DateTime<Utc>>,
-}
-
-/// 好友关系数据库行结构
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FriendshipRow {
-    pub friendship_id: Uuid,
-    pub requester_id: i64,
-    pub addressee_id: i64,
-    pub status: String, // 对应FriendshipStatus
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
 
 /// PostgreSQL好友仓储
 #[derive(Clone)]
@@ -102,29 +79,6 @@ impl PgFriendRepository {
         Ok(result)
     }
 
-    /// 将数据库行转换为好友请求领域模型
-    fn row_to_friend_request(&self, row: FriendRequestRow) -> DomainResult<FriendRequest> {
-        let status = match row.status.as_str() {
-            "pending" => FriendRequestStatus::Pending,
-            "accepted" => FriendRequestStatus::Accepted,
-            "rejected" => FriendRequestStatus::Rejected,
-            "expired" => FriendRequestStatus::Expired,
-            _ => return Err(DomainError::BusinessRuleViolation {
-                rule: "无效的好友请求状态".to_string(),
-            }),
-        };
-
-        Ok(FriendRequest {
-            request_id: row.request_id,
-            requester_id: row.requester_id,
-            target_id: row.target_id,
-            status,
-            message: row.message,
-            created_at: row.created_at,
-            updated_at: row.updated_at.unwrap_or(row.created_at),
-            expires_at: row.created_at + chrono::Duration::days(7), // 7天过期
-        })
-    }
 
 }
 
@@ -140,8 +94,8 @@ impl FriendRepository for PgFriendRepository {
         self.execute_query_with_monitoring("send_friend_request", async {
             // 检查是否已存在待处理的请求
             let existing = sqlx::query!(
-                "SELECT request_id FROM friend_requests 
-                 WHERE requester_id = $1 AND target_id = $2 AND status = 'pending'",
+                "SELECT id FROM friendships 
+                 WHERE user_id = $1 AND friend_id = $2 AND status = 'pending'",
                 requester_id,
                 target_id
             )
@@ -158,26 +112,24 @@ impl FriendRepository for PgFriendRepository {
             }
 
         // 创建新的好友请求
-        let request_id = Uuid::new_v4();
         let now = Utc::now();
 
-        sqlx::query!(
-            "INSERT INTO friend_requests (request_id, requester_id, target_id, status, message, created_at)
-             VALUES ($1, $2, $3, 'pending', $4, $5)",
-            request_id,
+        let result = sqlx::query!(
+            "INSERT INTO friendships (user_id, friend_id, status, notes, created_at)
+             VALUES ($1, $2, 'pending', $3, $4) RETURNING id",
             requester_id,
             target_id,
             message,
             now
         )
-        .execute(&self.pool)
+        .fetch_one(&self.pool)
         .await
         .map_err(|e| DomainError::BusinessRuleViolation {
             rule: format!("数据库错误: {}", e),
         })?;
 
             Ok(FriendRequest {
-                request_id,
+                request_id: result.id.to_string(),
                 requester_id,
                 target_id,
                 status: FriendRequestStatus::Pending,
@@ -191,7 +143,7 @@ impl FriendRepository for PgFriendRepository {
 
     /// 接受好友请求
     async fn accept_friend_request(&self, request_id: &str, target_id: i64) -> DomainResult<Friendship> {
-        let request_uuid = Uuid::parse_str(request_id)
+        let request_id_num: i64 = request_id.parse()
             .map_err(|_| DomainError::BusinessRuleViolation {
                 rule: "无效的请求ID格式".to_string(),
             })?;
@@ -203,11 +155,11 @@ impl FriendRepository for PgFriendRepository {
 
         // 更新好友请求状态
         let request = sqlx::query!(
-            "UPDATE friend_requests 
+            "UPDATE friendships 
              SET status = 'accepted', updated_at = NOW()
-             WHERE request_id = $1 AND target_id = $2 AND status = 'pending'
-             RETURNING requester_id, target_id",
-            request_uuid,
+             WHERE id = $1 AND friend_id = $2 AND status = 'pending'
+             RETURNING user_id, friend_id",
+            request_id_num,
             target_id
         )
         .fetch_optional(&mut *tx)
@@ -221,50 +173,31 @@ impl FriendRepository for PgFriendRepository {
                 rule: "好友请求不存在或已处理".to_string(),
             })?;
 
-        // 创建好友关系
-        let friendship_id = Uuid::new_v4();
-        let now = Utc::now();
-
-        sqlx::query!(
-            "INSERT INTO friendships (friendship_id, requester_id, addressee_id, status, created_at, updated_at)
-             VALUES ($1, $2, $3, 'accepted', $4, $5)",
-            friendship_id,
-            request.requester_id.min(request.target_id),
-            request.requester_id.max(request.target_id),
-            now,
-            now
-        )
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("数据库错误: {}", e),
-        })?;
-
         tx.commit().await
             .map_err(|e| DomainError::BusinessRuleViolation {
             rule: format!("数据库错误: {}", e),
         })?;
 
         Ok(Friendship {
-            friendship_id,
-            user1_id: request.requester_id.min(request.target_id),
-            user2_id: request.requester_id.max(request.target_id),
-            created_at: now,
+            friendship_id: request_id_num.to_string(),
+            user1_id: request.user_id.min(request.friend_id),
+            user2_id: request.user_id.max(request.friend_id),
+            created_at: Utc::now(),
         })
     }
 
     /// 拒绝好友请求
     async fn reject_friend_request(&self, request_id: &str, target_id: i64) -> DomainResult<()> {
-        let request_uuid = Uuid::parse_str(request_id)
+        let request_id_num: i64 = request_id.parse()
             .map_err(|_| DomainError::BusinessRuleViolation {
                 rule: "无效的请求ID格式".to_string(),
             })?;
 
         let result = sqlx::query!(
-            "UPDATE friend_requests 
-             SET status = 'rejected', updated_at = NOW()
-             WHERE request_id = $1 AND target_id = $2 AND status = 'pending'",
-            request_uuid,
+            "UPDATE friendships 
+             SET status = 'declined', updated_at = NOW()
+             WHERE id = $1 AND friend_id = $2 AND status = 'pending'",
+            request_id_num,
             target_id
         )
         .execute(&self.pool)
@@ -286,9 +219,9 @@ impl FriendRepository for PgFriendRepository {
     async fn remove_friendship(&self, user_id: i64, friend_id: i64) -> DomainResult<()> {
         let result = sqlx::query!(
             "DELETE FROM friendships 
-             WHERE (requester_id = $1 AND addressee_id = $2) OR (requester_id = $2 AND addressee_id = $1)",
-            user_id.min(friend_id),
-            user_id.max(friend_id)
+             WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)",
+            user_id,
+            friend_id
         )
         .execute(&self.pool)
         .await
@@ -309,19 +242,19 @@ impl FriendRepository for PgFriendRepository {
     async fn get_friends(&self, user_id: i64, cursor: i64, limit: i32) -> DomainResult<Vec<FriendProfile>> {
         let friends = sqlx::query!(
             r#"
-            SELECT u.user_id as "user_id!", u.nickname as "nickname!", u.avatar_url, u.last_active_at as "last_active_at!", f.created_at as "created_at!"
+            SELECT u.id as "user_id!", u.nickname as "nickname!", u.avatar_url, f.created_at as "created_at!"
             FROM (
-                SELECT f.addressee_id as friend_id, f.created_at
+                SELECT f.friend_id, f.created_at
                 FROM friendships f
-                WHERE f.requester_id = $1
+                WHERE f.user_id = $1 AND f.status = 'accepted'
                 UNION
-                SELECT f.requester_id as friend_id, f.created_at
+                SELECT f.user_id as friend_id, f.created_at
                 FROM friendships f
-                WHERE f.addressee_id = $1
+                WHERE f.friend_id = $1 AND f.status = 'accepted'
             ) f
-            JOIN users u ON u.user_id = f.friend_id
-            WHERE ($2 = 0 OR u.user_id > $2)
-            ORDER BY u.user_id ASC
+            JOIN users u ON u.id = f.friend_id
+            WHERE ($2 = 0 OR u.id > $2)
+            ORDER BY u.id ASC
             LIMIT $3
             "#,
             user_id,
@@ -340,7 +273,7 @@ impl FriendRepository for PgFriendRepository {
                 user_id: row.user_id,
                 nickname: row.nickname,
                 avatar_url: row.avatar_url,
-                last_active_at: Some(row.last_active_at),
+                last_active_at: None, // TODO: 实现在线状态检测
                 friendship_created_at: row.created_at,
                 is_online: false, // TODO: 实现在线状态检测
             })
@@ -351,13 +284,12 @@ impl FriendRepository for PgFriendRepository {
 
     /// 获取收到的好友请求
     async fn get_received_friend_requests(&self, user_id: i64, cursor: i64, limit: i32) -> DomainResult<Vec<FriendRequest>> {
-        let requests = sqlx::query_as!(
-            FriendRequestRow,
-            "SELECT request_id, requester_id, target_id, status, message, created_at, updated_at
-             FROM friend_requests
-             WHERE target_id = $1 AND status = 'pending'
-               AND ($2 = 0 OR requester_id > $2)
-             ORDER BY requester_id ASC
+        let requests = sqlx::query!(
+            "SELECT id, user_id, friend_id, status, notes, created_at, updated_at
+             FROM friendships
+             WHERE friend_id = $1 AND status = 'pending'
+               AND ($2 = 0 OR user_id > $2)
+             ORDER BY user_id ASC
              LIMIT $3",
             user_id,
             cursor as i32,
@@ -369,23 +301,31 @@ impl FriendRepository for PgFriendRepository {
             rule: format!("数据库错误: {}", e),
         })?;
 
-        let mut friend_requests = Vec::new();
-        for row in requests {
-            friend_requests.push(self.row_to_friend_request(row)?);
-        }
+        let friend_requests: Vec<FriendRequest> = requests
+            .into_iter()
+            .map(|row| FriendRequest {
+                request_id: row.id.to_string(),
+                requester_id: row.user_id,
+                target_id: row.friend_id,
+                status: FriendRequestStatus::Pending,
+                message: row.notes,
+                created_at: row.created_at.unwrap_or_else(|| Utc::now()),
+                updated_at: row.updated_at.unwrap_or_else(|| row.created_at.unwrap_or_else(|| Utc::now())),
+                expires_at: row.created_at.unwrap_or_else(|| Utc::now()) + chrono::Duration::days(7),
+            })
+            .collect();
 
         Ok(friend_requests)
     }
 
     /// 获取发送的好友请求
     async fn get_sent_friend_requests(&self, user_id: i64, cursor: i64, limit: i32) -> DomainResult<Vec<FriendRequest>> {
-        let requests = sqlx::query_as!(
-            FriendRequestRow,
-            "SELECT request_id, requester_id, target_id, status, message, created_at, updated_at
-             FROM friend_requests
-             WHERE requester_id = $1 AND status = 'pending'
-               AND ($2 = 0 OR target_id > $2)
-             ORDER BY target_id ASC
+        let requests = sqlx::query!(
+            "SELECT id, user_id, friend_id, status, notes, created_at, updated_at
+             FROM friendships
+             WHERE user_id = $1 AND status = 'pending'
+               AND ($2 = 0 OR friend_id > $2)
+             ORDER BY friend_id ASC
              LIMIT $3",
             user_id,
             cursor as i32,
@@ -397,10 +337,19 @@ impl FriendRepository for PgFriendRepository {
             rule: format!("数据库错误: {}", e),
         })?;
 
-        let mut friend_requests = Vec::new();
-        for row in requests {
-            friend_requests.push(self.row_to_friend_request(row)?);
-        }
+        let friend_requests: Vec<FriendRequest> = requests
+            .into_iter()
+            .map(|row| FriendRequest {
+                request_id: row.id.to_string(),
+                requester_id: row.user_id,
+                target_id: row.friend_id,
+                status: FriendRequestStatus::Pending,
+                message: row.notes,
+                created_at: row.created_at.unwrap_or_else(|| Utc::now()),
+                updated_at: row.updated_at.unwrap_or_else(|| row.created_at.unwrap_or_else(|| Utc::now())),
+                expires_at: row.created_at.unwrap_or_else(|| Utc::now()) + chrono::Duration::days(7),
+            })
+            .collect();
 
         Ok(friend_requests)
     }
@@ -408,31 +357,9 @@ impl FriendRepository for PgFriendRepository {
     /// 检查好友关系状态
     async fn check_friendship(&self, user_id: i64, other_user_id: i64) -> DomainResult<FriendshipStatus> {
         // 检查是否是好友
-        let friendship: Option<DbFriendshipStatus> = sqlx::query_scalar!(
-            "SELECT status as \"status: DbFriendshipStatus\" FROM friendships 
-             WHERE (requester_id = $1 AND addressee_id = $2) OR (requester_id = $2 AND addressee_id = $1)",
-            user_id.min(other_user_id),
-            user_id.max(other_user_id)
-        )
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("数据库错误: {}", e),
-        })?;
-
-        if let Some(db_status) = friendship {
-            return match db_status {
-                DbFriendshipStatus::Accepted => Ok(FriendshipStatus::Friends),
-                DbFriendshipStatus::Blocked => Ok(FriendshipStatus::Blocked),
-                _ => Ok(FriendshipStatus::NotFriends),
-            };
-        }
-
-        // 检查是否有待处理的好友请求
-        let request = sqlx::query!(
-            "SELECT requester_id FROM friend_requests 
-             WHERE ((requester_id = $1 AND target_id = $2) OR (requester_id = $2 AND target_id = $1))
-               AND status = 'pending'",
+        let friendship: Option<String> = sqlx::query_scalar!(
+            "SELECT status FROM friendships 
+             WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)",
             user_id,
             other_user_id
         )
@@ -440,14 +367,17 @@ impl FriendRepository for PgFriendRepository {
         .await
         .map_err(|e| DomainError::BusinessRuleViolation {
             rule: format!("数据库错误: {}", e),
-        })?;
+        })?
+        .flatten();
 
-        if let Some(request) = request {
-            if request.requester_id == user_id {
-                return Ok(FriendshipStatus::RequestSent);
-            } else {
-                return Ok(FriendshipStatus::RequestReceived);
-            }
+        if let Some(status) = friendship {
+            return match status.as_str() {
+                "accepted" => Ok(FriendshipStatus::Friends),
+                "blocked" => Ok(FriendshipStatus::Blocked),
+                "pending" => Ok(FriendshipStatus::RequestSent),
+                "declined" => Ok(FriendshipStatus::NotFriends),
+                _ => Ok(FriendshipStatus::NotFriends),
+            };
         }
 
         Ok(FriendshipStatus::NotFriends)
@@ -456,7 +386,7 @@ impl FriendRepository for PgFriendRepository {
     /// 获取待处理的好友请求数量
     async fn get_pending_requests_count(&self, user_id: i64) -> DomainResult<i64> {
         let count = sqlx::query_scalar!(
-            "SELECT COUNT(*)::bigint as \"count!\" FROM friend_requests WHERE target_id = $1 AND status = 'pending'",
+            "SELECT COUNT(*)::bigint as \"count!\" FROM friendships WHERE friend_id = $1 AND status = 'pending'",
             user_id
         )
         .fetch_one(&self.pool)
@@ -471,12 +401,47 @@ impl FriendRepository for PgFriendRepository {
     // === 缺失的 trait 方法实现 ===
     
     async fn save(&self, friendship: &Friendship) -> DomainResult<()> {
-        // TODO: 实现好友关系保存逻辑
-        todo!("Implement save method")
+        sqlx::query!(
+            "INSERT INTO friendships (user_id, friend_id, status, created_at)
+             VALUES ($1, $2, 'accepted', $3)
+             ON CONFLICT (user_id, friend_id) 
+             DO UPDATE SET status = 'accepted', updated_at = NOW()",
+            friendship.user1_id,
+            friendship.user2_id,
+            friendship.created_at
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRuleViolation {
+            rule: format!("数据库错误: {}", e),
+        })?;
+
+        Ok(())
     }
 
     async fn find_friends_by_user_id(&self, user_id: UserId) -> DomainResult<Vec<Friendship>> {
-        // TODO: 实现根据用户ID查找好友关系逻辑
-        todo!("Implement find_friends_by_user_id method")
+        let friendships = sqlx::query!(
+            "SELECT id, user_id, friend_id, created_at
+             FROM friendships
+             WHERE (user_id = $1 OR friend_id = $1) AND status = 'accepted'",
+            *user_id
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRuleViolation {
+            rule: format!("数据库错误: {}", e),
+        })?;
+
+        let result: Vec<Friendship> = friendships
+            .into_iter()
+            .map(|row| Friendship {
+                friendship_id: row.id.to_string(),
+                user1_id: row.user_id.min(row.friend_id),
+                user2_id: row.user_id.max(row.friend_id),
+                created_at: row.created_at.unwrap_or_else(|| Utc::now()),
+            })
+            .collect();
+
+        Ok(result)
     }
 }

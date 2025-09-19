@@ -27,7 +27,7 @@
 
             <!-- 加载状态 -->
             <div v-if="loading" class="space-y-4">
-                <SkeletonLoader type="table-row" :count="5" />
+                <UserCardSkeleton v-for="i in 5" :key="i" />
             </div>
 
             <!-- 表格视图 -->
@@ -124,8 +124,6 @@
 import { defineAsyncComponent } from "vue";
 import { DEFAULTS as defaults } from "~/config/defaults";
 import type { UserInfo } from "~/types";
-import { useUserService } from '~/services/user.service';
-import { formatDistance } from '~/utils/formatters';
 
 const EmptyNearby = defineAsyncComponent(
     () => import("~/components/illustrations/EmptyNearby.vue"),

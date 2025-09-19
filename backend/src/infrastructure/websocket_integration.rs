@@ -197,7 +197,7 @@ impl WebSocketService {
             }
             
             // 发布连接事件
-            if let (Some(integrator), Some(uid)) = (event_integrator, user_id) {
+            if let (Some(_integrator), Some(uid)) = (event_integrator, user_id) {
                 // 这里可以发布用户连接事件
                 tracing::debug!(
                     user_id = %uid.value(),
@@ -489,7 +489,7 @@ mod tests {
     #[test]
     fn test_rate_limiter() {
         let mut limiter = RateLimiter::new();
-        let user_id = UserId::from_i64(123);
+        let user_id = UserId::from_trusted(123);
         
         // 测试正常情况
         assert!(limiter.check_rate_limit(user_id, 10));

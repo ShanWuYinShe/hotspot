@@ -1,5 +1,4 @@
 /// 用户相关常量
-
 /// 群组角色：成员
 pub const MEMBER: &str = "member";
 

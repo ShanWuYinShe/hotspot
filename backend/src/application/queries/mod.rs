@@ -1,5 +1,4 @@
 /// 查询模块 - 重新导出所有查询类型
-
 use serde::{Deserialize, Serialize};
 use crate::domain::Coordinates;
 

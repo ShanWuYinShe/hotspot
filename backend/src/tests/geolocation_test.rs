@@ -109,8 +109,8 @@ mod postgis_performance_tests {
             let lat2 = 31.2304 + (i as f64) * 0.001;
             let lng2 = 121.4737 + (i as f64) * 0.001;
             
-            let coords1 = crate::domain::values::location::Coordinates::new(lat1, lng1).unwrap();
-            let coords2 = crate::domain::values::location::Coordinates::new(lat2, lng2).unwrap();
+            let coords1 = crate::prelude::Coordinates::new(lat1, lng1).unwrap();
+            let coords2 = crate::prelude::Coordinates::new(lat2, lng2).unwrap();
             
             let _distance = coords1.distance_to(&coords2);
         }
@@ -127,13 +127,13 @@ mod postgis_performance_tests {
         // 性能基准测试：半径检查
         let center_lat = 39.9042_f64;
         let center_lng = 116.4074_f64;
-        let _center = crate::domain::values::location::Coordinates::new(center_lat, center_lng).unwrap();
+        let _center = crate::prelude::Coordinates::new(center_lat, center_lng).unwrap();
         let start = Instant::now();
         
         for i in 0..1000 {
             let lat = 39.9042 + (i as f64) * 0.0001;
             let lng = 116.4074 + (i as f64) * 0.0001;
-            let _point = crate::domain::values::location::Coordinates::new(lat, lng).unwrap();
+            let _point = crate::prelude::Coordinates::new(lat, lng).unwrap();
             
             // 模拟within_radius逻辑
             let distance = ((lat - center_lat).powi(2) + (lng - center_lng).powi(2)).sqrt();

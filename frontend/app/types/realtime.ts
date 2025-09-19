@@ -1,9 +1,12 @@
 /**
  * WebSocket 实时消息类型定义
- * 仅包含前端实际用到的字段，保持与后端事件语义一致
+ * 根据需求文档统一的WebSocket消息类型系统
+ * 与后端unified_message_types.rs保持一致
  */
 
-export type RoomType = 'group' | 'conversation'
+export type RoomType = 'user' | 'group' | 'private_chat' | 'global'
+export type UserStatus = 'online' | 'away' | 'busy' | 'offline'
+export type MessagePriority = 'low' | 'normal' | 'high' | 'critical'
 
 // 服务器 -> 客户端 载荷
 export interface WsConnectedData {

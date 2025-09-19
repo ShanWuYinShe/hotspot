@@ -412,7 +412,7 @@ impl BaseQueryHandler {
     }
     
     /// 设置缓存
-    pub async fn set_cache<T>(&self, cache_key: &str, value: &T, ttl: u32) -> ApplicationResult<()>
+    pub async fn set_cache<T>(&self, cache_key: &str, _value: &T, ttl: u32) -> ApplicationResult<()>
     where
         T: serde::Serialize,
     {
@@ -449,7 +449,7 @@ mod tests {
     
     #[test]
     fn test_handler_registry() {
-        let mut registry = HandlerRegistry::new();
+        let _registry = HandlerRegistry::new();
         
         // 测试注册表创建
         // 实际测试中会验证处理器的注册和查找

@@ -342,7 +342,7 @@ impl Cache for MemoryCache {
         Ok(())
     }
     
-    async fn delete(&self, key: &str) -> DomainResult<()> {
+    async fn delete(&self, key: &str) -> DomainResult<bool> {
         let mut store_guard = self.store.write().await;
         let mut stats_guard = self.stats.write().await;
         
@@ -353,7 +353,7 @@ impl Cache for MemoryCache {
             debug!("缓存已删除: {}", key);
         }
         
-        Ok(())
+        Ok(removed)
     }
     
     async fn exists(&self, key: &str) -> DomainResult<bool> {
@@ -363,6 +363,28 @@ impl Cache for MemoryCache {
             Ok(!entry.is_expired())
         } else {
             Ok(false)
+        }
+    }
+    
+    async fn ttl(&self, key: &str) -> DomainResult<Option<Duration>> {
+        let store_guard = self.store.read().await;
+        
+        if let Some(entry) = store_guard.get(key) {
+            if entry.is_expired() {
+                Ok(None)
+            } else if let Some(expires_at) = entry.expires_at {
+                let now = Instant::now();
+                if expires_at > now {
+                    Ok(Some(expires_at.duration_since(now)))
+                } else {
+                    Ok(None)
+                }
+            } else {
+                // 永不过期
+                Ok(None)
+            }
+        } else {
+            Ok(None)
         }
     }
     
@@ -404,6 +426,46 @@ impl Cache for MemoryCache {
         }
     }
     
+    async fn mget<T>(&self, keys: &[String]) -> DomainResult<Vec<Option<T>>>
+    where
+        T: DeserializeOwned + Send,
+    {
+        let mut results = Vec::with_capacity(keys.len());
+        for key in keys {
+            let value = self.get::<T>(key).await?;
+            results.push(value);
+        }
+        Ok(results)
+    }
+    
+    async fn mset<T>(&self, items: &[(String, T)], ttl: Option<Duration>) -> DomainResult<()>
+    where
+        T: Serialize + Send + Sync,
+    {
+        for (key, value) in items {
+            self.set(key, value, ttl).await?;
+        }
+        Ok(())
+    }
+    
+    async fn mdel(&self, keys: &[String]) -> DomainResult<u64> {
+        let mut deleted_count = 0u64;
+        for key in keys {
+            if self.delete(key).await? {
+                deleted_count += 1;
+            }
+        }
+        Ok(deleted_count)
+    }
+    
+    async fn flush_all(&self) -> DomainResult<()> {
+        self.clear_all().await
+    }
+    
+    async fn stats(&self) -> DomainResult<crate::ports::cache::CacheStats> {
+        self.get_stats().await
+    }
+    
     async fn clear_all(&self) -> DomainResult<()> {
         let mut store_guard = self.store.write().await;
         let mut stats_guard = self.stats.write().await;
@@ -417,18 +479,28 @@ impl Cache for MemoryCache {
         Ok(())
     }
     
-    async fn get_stats(&self) -> DomainResult<crate::ports::cache_ports::CacheStats> {
+    async fn get_stats(&self) -> DomainResult<crate::ports::cache::CacheStats> {
         let store_guard = self.store.read().await;
         let stats_guard = self.stats.read().await;
         
         let entries = store_guard.len() as u64;
         let memory_usage = Self::estimate_memory_usage(&store_guard) as u64;
         
-        Ok(crate::ports::cache_ports::CacheStats {
-            hits: stats_guard.hits,
-            misses: stats_guard.misses,
-            entries,
+        Ok(crate::ports::cache::CacheStats {
+            total_keys: entries,
             memory_usage,
+            hit_count: stats_guard.hits,
+            miss_count: stats_guard.misses,
+            hit_rate: {
+                let total = stats_guard.hits + stats_guard.misses;
+                if total > 0 {
+                    stats_guard.hits as f64 / total as f64
+                } else {
+                    0.0
+                }
+            },
+            evicted_keys: 0, // MemoryCache 暂不支持驱逐统计
+            expired_keys: 0, // MemoryCache 暂不支持过期统计
         })
     }
 }

@@ -8,13 +8,14 @@
 
 use async_trait::async_trait;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 use crate::domain::{
-    DomainResult, User, Group, UserId, GroupId, MessageId, MomentId, Moment,
+    DomainResult, Group, UserId, GroupId, MessageId, Moment,
     UserProfile, UserAuth, UserDetail, UserSearchResult, Comment,
     GroupProfile, GroupAuth, GroupDetail, GroupSearchResult,
-    /* FriendProfile, FriendRequest, FriendshipStatus, Friendship,
-    Block, BlockSettings, BlockStats, BlockType, BlockReason, */
+};
+use crate::domain::entities::{
+    FriendProfile, FriendRequest, FriendshipStatus, Friendship,
+    /* Block, BlockSettings, BlockStats, BlockType, BlockReason, */
 };
 use crate::domain::entities::{
     user::UserProfile as EntityUserProfile,
@@ -24,7 +25,7 @@ use crate::application::{
     PaginationQuery, LocationQuery, PaginatedResult,
     UserView, GroupView, MessageView,
 };
-use crate::application::handlers::{MomentView, ConversationView};
+use crate::application::handlers::ConversationView;
 
 // === 用户仓储接口 ===
 
@@ -410,10 +411,8 @@ pub trait CommentRepository: Send + Sync {
 }
 
 // 好友仓储接口
-// 暂时禁用，等待重新设计
-/*
 #[async_trait]
-pub trait FriendRepository: Send + Sync + Clone {
+pub trait FriendRepository: Send + Sync {
     /// 保存好友关系
     async fn save(&self, friendship: &Friendship) -> DomainResult<()>;
     
@@ -447,7 +446,6 @@ pub trait FriendRepository: Send + Sync + Clone {
     /// 获取待处理请求数量
     async fn get_pending_requests_count(&self, user_id: i64) -> DomainResult<i64>;
 }
-*/
 
 // 屏蔽仓储接口
 // 暂时禁用，等待重新设计

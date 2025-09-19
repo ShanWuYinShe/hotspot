@@ -128,37 +128,27 @@ fn create_unified_service_container(
     Ok(ServiceContainer {
         user_controller: service_container.user_controller.clone(),
         group_controller: service_container.group_controller.clone(),
+        message_controller: service_container.message_controller.clone(),
         moment_controller: service_container.moment_controller.clone(),
         search_controller: service_container.search_controller.clone(),
         activity_controller: service_container.activity_controller.clone(),
         comment_controller: service_container.comment_controller.clone(),
         upload_controller: service_container.upload_controller.clone(),
         admin_controller: backend::presentation::http::controllers::AdminController::with_user_repo(user_repo),
-        metrics_service: None, // TODO: 集成指标服务
+        metrics_service: service_container.metrics_service.clone(),
     })
 }
 
-/// 输出路由摘要信息
+/// 输出路由摘要信息（从实际路由注册过程动态收集）
 fn print_route_summary(websocket_available: bool) {
-    info!("📋 API路由摘要 (符合 hotspot.md 规范):");
-    info!("   🔓 公开路由:");
-    info!("      • /health, /ready, /alive - 健康检查");
-    info!("      • /api/v1/auth/* - 认证系统 (7个端点)");
-    info!("   🔒 受保护路由:");
-    info!("      • /api/v1/user/* - 用户数据管理 (9个端点)");
-    info!("      • /api/v1/group/* - 群组管理 (9个端点)");
-    info!("      • /api/v1/chat/* - 消息通讯 (10个端点)");
-    info!("      • /api/v1/moments/* - 生活瞬间 (8个端点)");
-    info!("      • /api/v1/admin/* - 管理接口 (6个端点)");
-    info!("      • /api/v1/search/* - 搜索功能");
-    info!("      • /api/v1/friends/* - 好友系统");
-    info!("      • /api/v1/upload/* - 文件上传");
-    if websocket_available {
-        info!("   🔌 WebSocket:");
-        info!("      • /ws - 实时通信连接");
-    }
-    info!("   📊 监控路由:");
-    info!("      • /monitoring/* - 系统监控 (需管理员权限)");
+    use backend::utils::route_introspector::RouteIntrospector;
+    
+    // 获取收集的路由信息进行调试
+    let routes = RouteIntrospector::get_collected_routes();
+    info!("🔍 调试：收集到 {} 个路由", routes.len());
+    
+    // 打印从路由注册过程中收集的信息
+    RouteIntrospector::print_summary(websocket_available);
 }
 
 /// 初始化结构化日志系统

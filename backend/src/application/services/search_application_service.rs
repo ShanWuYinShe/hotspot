@@ -268,6 +268,7 @@ impl SearchApplicationService for SearchApplicationServiceImpl {
             is_public: result.is_public,
             member_count: result.member_count,
             last_active_at: result.last_active_at,
+            user_role: None, // 搜索结果不包含用户角色信息
         }).collect();
         Ok(profiles)
     }

@@ -1,10 +1,7 @@
 import { defineStore } from "pinia";
-import { useMessageService } from "~/services/message.service";
 import type { Conversation } from "~/types/message";
 import { convertConversationSummary } from "~/types/message";
 import type { ConversationItem, UserInfo, MessageType, ConversationSummary, Message } from "~/types";
-import { useUserService } from "~/services/user.service";
-import { useGroupService } from "~/services/group.service";
 
 /**
  * 消息 Store
@@ -33,8 +30,8 @@ export const useMessagesStore = defineStore("messages", () => {
   });
 
   // 实时消息支持
-  const optimisticMessages = ref<Map<string, Message>>(new Map());
-  const userOnlineStatus = ref<Map<string, boolean>>(new Map());
+  const optimisticMessages = ref<Map<string, Message>>(markRaw(new Map()));
+  const userOnlineStatus = ref<Map<string, boolean>>(markRaw(new Map()));
 
   // 计算属性
   const totalUnreadCount = computed(() =>
@@ -51,7 +48,7 @@ export const useMessagesStore = defineStore("messages", () => {
         ? pagination.value.conversations.nextCursor
         : undefined;
       const response = await messageService.getConversations(cursor);
-      const convertedItems = response.items.map((item: ConversationSummary) => convertConversationSummary(item));
+      const convertedItems = (response.items || []).map((item: ConversationSummary) => convertConversationSummary(item));
 
       if (loadMore) {
         conversations.value.push(...convertedItems);

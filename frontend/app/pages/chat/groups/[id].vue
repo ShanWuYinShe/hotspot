@@ -185,10 +185,7 @@ import {
     nextTick,
 } from "vue";
 import { useRoute, navigateTo } from "nuxt/app";
-import { useMessagesStore } from "~/stores/messages.store";
-import { useAuthStore } from "~/stores/auth.store";
 import type { Message } from "~/types/message";
-import { useGroupService } from '~/services/group.service';
 
 const EmptyMessages = defineAsyncComponent(
     () => import("~/components/illustrations/EmptyMessages.vue"),
@@ -376,7 +373,6 @@ const onUploadFile = async (file: File) => {
     try {
         sending.value = true;
         
-        // 暂时模拟上传
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         // 发送文件消息

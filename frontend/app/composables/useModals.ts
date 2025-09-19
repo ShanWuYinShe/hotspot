@@ -315,11 +315,19 @@ export const useModals = () => {
   }
 
   // 打开搜索 Modal
-  const openSearchModal = () => {
+  const openSearchModal = (options?: {
+    onCreateMoment?: () => void;
+  }) => {
     const instance = searchModal.open()
     
     // 设置事件处理器
     searchModal.patch({
+      'onCreate-moment': () => {
+        // 处理创建动态事件
+        if (options?.onCreateMoment) {
+          options.onCreateMoment()
+        }
+      },
       onClose: () => {
         // 搜索 Modal 关闭时的处理逻辑
         if (import.meta.dev) {

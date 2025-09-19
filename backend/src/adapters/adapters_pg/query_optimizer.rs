@@ -304,7 +304,7 @@ impl PgQueryOptimizer {
         let mut suggestions = Vec::new();
         
         // 检查主要表的空间索引
-        let tables = vec!["users", "groups", "moments", "direct_messages", "group_messages"];
+        let tables = vec!["users", "groups", "moments", "messages", "conversations"];
         
         for table in tables {
             let index_info = self.check_spatial_index_usage(table).await?;

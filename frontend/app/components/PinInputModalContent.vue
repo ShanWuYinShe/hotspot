@@ -1,5 +1,5 @@
 <template>
-  <UModal :prevent-close="true">
+  <UModal title="PIN验证" :prevent-close="true">
     <template #header>
       <div class="flex items-center justify-between">
         <h3 class="text-lg font-semibold">
@@ -17,24 +17,14 @@
           }}
         </p>
 
-        <div class="flex justify-center space-x-2">
-          <input
-            v-for="(digit, index) in pinDigits"
-            :key="index"
-            :ref="el => pinInputs[index] = el as HTMLInputElement"
-            v-model="pinDigits[index]"
-            type="password"
-            inputmode="numeric"
-            pattern="[0-9]"
-            maxlength="1"
-            class="w-12 h-12 text-center text-xl font-mono border-2 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 dark:bg-gray-800 dark:border-gray-600"
-            :class="{
-              'border-red-500': hasError,
-              'border-green-500': isComplete && !hasError
-            }"
-            @input="handleInput(index, $event)"
-            @keydown="handleKeydown(index, $event)"
-            @paste="handlePaste"
+        <div class="flex justify-center">
+          <UPinInput
+            v-model="pinValue"
+            :length="4"
+            mask
+            :error="hasError"
+            placeholder="●"
+            @complete="handlePinComplete"
           />
         </div>
 
@@ -92,96 +82,45 @@ const emit = defineEmits<Emits>()
 
 // useOverlay 会自动管理 Modal 状态，无需手动绑定 isOpen
 
-const pinDigits = ref(['', '', '', ''])
-const pinInputs = ref<HTMLInputElement[]>([])
+const pinValue = ref<string[]>(['', '', '', ''])
 const hasError = ref(false)
 const errorMessage = ref('')
 const isProcessing = ref(false)
 
 // 计算属性
 const isComplete = computed(() => 
-  pinDigits.value.every(digit => digit.length === 1 && /^\d$/.test(digit))
+  pinValue.value.length === 4 && pinValue.value.every(digit => /^\d$/.test(digit))
 )
 
-const pinValue = computed(() => pinDigits.value.join(''))
+// 计算完整的PIN字符串
+const pinString = computed(() => pinValue.value.join(''))
 
-// 组件挂载时重置表单并聚焦
+// 组件挂载时重置表单
 onMounted(() => {
   resetForm()
-  nextTick(() => {
-    pinInputs.value[0]?.focus()
-  })
 })
 
-watch(pinDigits, () => {
+// 监听PIN值变化，清除错误状态
+watch(pinValue, () => {
   if (hasError.value) {
     hasError.value = false
     errorMessage.value = ''
   }
-}, { deep: true })
+})
+
+// 处理PIN输入完成
+const handlePinComplete = (pins: string[]) => {
+  pinValue.value = pins
+}
 
 // 方法
 function resetForm() {
-  pinDigits.value = ['', '', '', '']
+  pinValue.value = ['', '', '', '']
   hasError.value = false
   errorMessage.value = ''
   isProcessing.value = false
 }
 
-function handleInput(index: number, event: Event) {
-  const target = event.target as HTMLInputElement
-  const value = target.value.replace(/\D/g, '') // 只保留数字
-  
-  if (value.length > 1) {
-    // 处理粘贴或快速输入多个字符的情况
-    const digits = value.slice(0, 4).split('')
-    for (let i = 0; i < Math.min(digits.length, 4); i++) {
-      if (index + i < 4) {
-        pinDigits.value[index + i] = digits[i] || ''
-      }
-    }
-    
-    // 聚焦到下一个空的输入框或最后一个
-    const nextIndex = Math.min(index + digits.length, 3)
-    pinInputs.value[nextIndex]?.focus()
-  } else if (value.length === 1) {
-    pinDigits.value[index] = value
-    
-    // 自动聚焦到下一个输入框
-    if (index < 3) {
-      pinInputs.value[index + 1]?.focus()
-    }
-  } else {
-    pinDigits.value[index] = ''
-  }
-}
-
-function handleKeydown(index: number, event: KeyboardEvent) {
-  if (event.key === 'Backspace' && !pinDigits.value[index] && index > 0) {
-    // 如果当前输入框为空且按下退格键，聚焦到前一个输入框
-    pinInputs.value[index - 1]?.focus()
-  } else if (event.key === 'ArrowLeft' && index > 0) {
-    pinInputs.value[index - 1]?.focus()
-  } else if (event.key === 'ArrowRight' && index < 3) {
-    pinInputs.value[index + 1]?.focus()
-  } else if (event.key === 'Enter' && isComplete.value) {
-    handleConfirm()
-  }
-}
-
-function handlePaste(event: ClipboardEvent) {
-  event.preventDefault()
-  const pastedData = event.clipboardData?.getData('text') || ''
-  const digits = pastedData.replace(/\D/g, '').slice(0, 4).split('')
-  
-  for (let i = 0; i < Math.min(digits.length, 4); i++) {
-    pinDigits.value[i] = digits[i] || ''
-  }
-  
-  // 聚焦到最后一个填充的输入框
-  const lastIndex = Math.min(digits.length - 1, 3)
-  pinInputs.value[lastIndex]?.focus()
-}
 
 async function handleConfirm() {
   if (!isComplete.value || isProcessing.value) return
@@ -189,7 +128,7 @@ async function handleConfirm() {
   isProcessing.value = true
   
   try {
-    emit('confirm', pinValue.value)
+    emit('confirm', pinString.value)
     emit('close') // 通知 useOverlay 关闭
   } catch (error) {
     hasError.value = true
@@ -209,11 +148,8 @@ function showError(message: string) {
   errorMessage.value = message
   isProcessing.value = false
   
-  // 清空输入并聚焦到第一个输入框
-  pinDigits.value = ['', '', '', '']
-  nextTick(() => {
-    pinInputs.value[0]?.focus()
-  })
+  // 清空输入
+  resetForm()
 }
 
 // 暴露方法给父组件

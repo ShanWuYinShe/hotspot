@@ -15,11 +15,13 @@
         </div>
       </div>
       <div class="flex-shrink-0">
-        <USwitch 
-          v-model="model" 
-          :size="switchSize" 
-          :color="switchColor"
-        />
+        <UTooltip :text="model ? `关闭 ${title}` : `开启 ${title}`">
+          <USwitch 
+            v-model="model" 
+            :size="switchSize" 
+            :color="switchColor"
+          />
+        </UTooltip>
       </div>
     </div>
   </UCard>

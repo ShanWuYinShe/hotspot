@@ -209,7 +209,8 @@ pub struct UserLocation {
 }
 
 /// 用户类型枚举
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "user_type", rename_all = "lowercase")]
 pub enum UserType {
     /// 正式用户
     Regular,
@@ -238,31 +239,8 @@ impl UserType {
     }
 }
 
-// sqlx类型映射
-#[cfg(feature = "postgres")]
-impl sqlx::Type<sqlx::Postgres> for UserType {
-    fn type_info() -> sqlx::postgres::PgTypeInfo {
-        sqlx::postgres::PgTypeInfo::with_name("user_type_enum")
-    }
-}
-
-#[cfg(feature = "postgres")]
-impl<'r> sqlx::Decode<'r, sqlx::Postgres> for UserType {
-    fn decode(value: sqlx::postgres::PgValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
-        match value.as_str()? {
-            "regular" => Ok(UserType::Regular),
-            "temporary" => Ok(UserType::Temporary),
-            other => Err(format!("Unknown user type: {}", other).into()),
-        }
-    }
-}
-
-#[cfg(feature = "postgres")]
-impl<'q> sqlx::Encode<'q, sqlx::Postgres> for UserType {
-    fn encode_by_ref(&self, buf: &mut sqlx::postgres::PgArgumentBuffer) -> Result<sqlx::encode::IsNull, Box<dyn std::error::Error + Send + Sync + 'static>> {
-        <&str as sqlx::Encode<sqlx::Postgres>>::encode_by_ref(&self.as_str(), buf)
-    }
-}
+// sqlx类型映射由 derive(sqlx::Type) 自动生成
+// PostgreSQL 是核心功能，始终启用
 
 // ===== 领域模型层 (Domain Models) =====
 // 这些是核心业务模型，在Application和Presentation层之间传递
