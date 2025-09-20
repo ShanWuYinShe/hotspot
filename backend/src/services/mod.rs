@@ -9,10 +9,14 @@ pub mod batch_notification_service;
 pub mod cache_service;
 pub mod metrics_service;
 pub mod nonce_service;
+pub mod password_security_service;
 pub mod simple_cache_adapter;
+pub mod user_id_service;
 
 pub use batch_notification_service::*;
 pub use cache_service::*;
 pub use metrics_service::*;
 pub use nonce_service::*;
+pub use password_security_service::*;
 pub use simple_cache_adapter::*;
+pub use user_id_service::*;

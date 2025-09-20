@@ -212,35 +212,107 @@ pub struct UserLocation {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "user_type", rename_all = "lowercase")]
 pub enum UserType {
-    /// 正式用户
-    Regular,
-    /// 临时用户
+    /// 临时用户 (类型码: 1)
     Temporary,
+    /// 正式用户 (类型码: 2)
+    Regular,
+    /// 系统用户 (类型码: 3)
+    System,
 }
 
 impl UserType {
     pub fn as_str(&self) -> &'static str {
         match self {
-            UserType::Regular => "regular",
             UserType::Temporary => "temporary",
+            UserType::Regular => "regular",
+            UserType::System => "system",
         }
     }
     
     pub fn from_str(s: &str) -> Result<Self, String> {
         match s {
-            "regular" => Ok(UserType::Regular),
             "temporary" => Ok(UserType::Temporary),
+            "regular" => Ok(UserType::Regular),
+            "system" => Ok(UserType::System),
             _ => Err(format!("Invalid user type: {}", s)),
+        }
+    }
+    
+    /// 获取用户类型编码（用于用户ID编码）
+    pub fn type_code(&self) -> u8 {
+        match self {
+            UserType::Temporary => 1,
+            UserType::Regular => 2,
+            UserType::System => 3,
+        }
+    }
+    
+    /// 从类型编码创建用户类型
+    pub fn from_type_code(code: u8) -> Result<Self, String> {
+        match code {
+            1 => Ok(UserType::Temporary),
+            2 => Ok(UserType::Regular),
+            3 => Ok(UserType::System),
+            _ => Err(format!("Invalid user type code: {}", code)),
         }
     }
     
     pub fn is_temporary(&self) -> bool {
         matches!(self, UserType::Temporary)
     }
+    
+    pub fn is_regular(&self) -> bool {
+        matches!(self, UserType::Regular)
+    }
+    
+    pub fn is_system(&self) -> bool {
+        matches!(self, UserType::System)
+    }
 }
 
 // sqlx类型映射由 derive(sqlx::Type) 自动生成
 // PostgreSQL 是核心功能，始终启用
+
+// ===== 用户ID编码工具函数 =====
+
+/// 用户ID编码工具
+pub struct UserIdEncoder;
+
+impl UserIdEncoder {
+    /// 从用户ID中提取用户类型
+    /// 用户ID的高8位表示用户类型
+    pub fn get_user_type(user_id: i64) -> Result<UserType, String> {
+        let type_code = ((user_id as u64) >> 56) as u8;
+        UserType::from_type_code(type_code)
+    }
+    
+    /// 判断是否为临时用户
+    pub fn is_temp_user(user_id: i64) -> bool {
+        matches!(Self::get_user_type(user_id), Ok(UserType::Temporary))
+    }
+    
+    /// 判断是否为正式用户
+    pub fn is_regular_user(user_id: i64) -> bool {
+        matches!(Self::get_user_type(user_id), Ok(UserType::Regular))
+    }
+    
+    /// 判断是否为系统用户
+    pub fn is_system_user(user_id: i64) -> bool {
+        matches!(Self::get_user_type(user_id), Ok(UserType::System))
+    }
+    
+    /// 编码用户ID（将用户类型编码到高8位）
+    pub fn encode_user_id(base_id: i64, user_type: UserType) -> i64 {
+        let type_code = user_type.type_code() as u64;
+        let encoded = (type_code << 56) | (base_id as u64 & 0x00FFFFFFFFFFFFFF);
+        encoded as i64
+    }
+    
+    /// 从用户ID中提取基础ID（去除类型编码）
+    pub fn extract_base_id(user_id: i64) -> i64 {
+        (user_id as u64 & 0x00FFFFFFFFFFFFFF) as i64
+    }
+}
 
 // ===== 领域模型层 (Domain Models) =====
 // 这些是核心业务模型，在Application和Presentation层之间传递

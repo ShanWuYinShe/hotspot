@@ -26,9 +26,9 @@ pub struct Group {
     /// 群组类型
     pub group_type: GroupType,
     /// 群组可见性
-    pub visibility: GroupVisibility,
-    /// 是否公开
-    pub is_public: bool,
+    pub visibility: Visibility,
+    /// 密码哈希（私有群组）
+    pub password_hash: Option<String>,
     /// 最大成员数
     pub max_members: u32,
     /// 当前成员数
@@ -66,15 +66,141 @@ pub struct GroupMember {
     pub joined_at: DateTime<Utc>,
 }
 
-/// 群组角色
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum GroupRole {
+/// 群组类型枚举（根据需求文档）
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "group_type", rename_all = "lowercase")]
+pub enum GroupType {
+    /// 普通群聊
+    Normal,
+    /// 私聊（两人群组）
+    Private,
+}
+
+/// 群组可见性枚举
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "visibility", rename_all = "lowercase")]
+pub enum Visibility {
+    /// 公开
+    Public,
+    /// 私有
+    Private,
+}
+
+/// 成员角色枚举
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "member_role", rename_all = "lowercase")]
+pub enum MemberRole {
     /// 群主
     Owner,
     /// 管理员
     Admin,
     /// 普通成员
     Member,
+}
+
+/// 成员状态枚举
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "member_status", rename_all = "lowercase")]
+pub enum MemberStatus {
+    /// 活跃
+    Active,
+    /// 已退出
+    Left,
+    /// 被踢出
+    Kicked,
+}
+
+/// 群组角色（兼容性别名）
+pub type GroupRole = MemberRole;
+
+// ===== 枚举实现 =====
+
+impl GroupType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            GroupType::Normal => "normal",
+            GroupType::Private => "private",
+        }
+    }
+    
+    pub fn from_str(s: &str) -> Result<Self, String> {
+        match s {
+            "normal" => Ok(GroupType::Normal),
+            "private" => Ok(GroupType::Private),
+            _ => Err(format!("Invalid group type: {}", s)),
+        }
+    }
+    
+    pub fn is_private(&self) -> bool {
+        matches!(self, GroupType::Private)
+    }
+}
+
+impl Visibility {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Visibility::Public => "public",
+            Visibility::Private => "private",
+        }
+    }
+    
+    pub fn from_str(s: &str) -> Result<Self, String> {
+        match s {
+            "public" => Ok(Visibility::Public),
+            "private" => Ok(Visibility::Private),
+            _ => Err(format!("Invalid visibility: {}", s)),
+        }
+    }
+    
+    pub fn is_public(&self) -> bool {
+        matches!(self, Visibility::Public)
+    }
+}
+
+impl MemberRole {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            MemberRole::Owner => "owner",
+            MemberRole::Admin => "admin",
+            MemberRole::Member => "member",
+        }
+    }
+    
+    pub fn from_str(s: &str) -> Result<Self, String> {
+        match s {
+            "owner" => Ok(MemberRole::Owner),
+            "admin" => Ok(MemberRole::Admin),
+            "member" => Ok(MemberRole::Member),
+            _ => Err(format!("Invalid member role: {}", s)),
+        }
+    }
+    
+    pub fn is_admin_or_owner(&self) -> bool {
+        matches!(self, MemberRole::Owner | MemberRole::Admin)
+    }
+}
+
+impl MemberStatus {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            MemberStatus::Active => "active",
+            MemberStatus::Left => "left",
+            MemberStatus::Kicked => "kicked",
+        }
+    }
+    
+    pub fn from_str(s: &str) -> Result<Self, String> {
+        match s {
+            "active" => Ok(MemberStatus::Active),
+            "left" => Ok(MemberStatus::Left),
+            "kicked" => Ok(MemberStatus::Kicked),
+            _ => Err(format!("Invalid member status: {}", s)),
+        }
+    }
+    
+    pub fn is_active(&self) -> bool {
+        matches!(self, MemberStatus::Active)
+    }
 }
 
 impl Group {
@@ -85,7 +211,7 @@ impl Group {
         owner_id: UserId,
         location: GroupLocation,
         group_type: GroupType,
-        visibility: GroupVisibility,
+        visibility: Visibility,
     ) -> Self {
         let now = Utc::now();
         
@@ -97,7 +223,7 @@ impl Group {
             location,
             group_type,
             visibility,
-            is_public: visibility.is_public(),
+            password_hash: None,
             max_members: 500,
             member_count: 1, // 创建者自动成为成员
             created_at: now,
@@ -265,8 +391,10 @@ pub struct GroupProfile {
     pub location_name: String,
     /// 成员数量
     pub member_count: i32,
-    /// 是否公开
-    pub is_public: bool,
+    /// 群组类型
+    pub group_type: GroupType,
+    /// 群组可见性
+    pub visibility: Visibility,
     /// 最后活跃时间
     pub last_active_at: DateTime<Utc>,
     /// 用户在群组中的角色（仅在用户群组列表中返回）
@@ -285,8 +413,10 @@ pub struct GroupAuth {
     pub name: String,
     /// 群组密码哈希（仅验证时需要）
     pub password_hash: Option<String>,
-    /// 是否公开
-    pub is_public: bool,
+    /// 群组类型
+    pub group_type: GroupType,
+    /// 群组可见性
+    pub visibility: Visibility,
     /// 群主ID
     pub owner_id: i64,
 }
@@ -313,8 +443,10 @@ pub struct GroupDetail {
     pub member_count: i32,
     /// 最大成员数
     pub max_members: i32,
-    /// 是否公开
-    pub is_public: bool,
+    /// 群组类型
+    pub group_type: GroupType,
+    /// 群组可见性
+    pub visibility: Visibility,
     /// 创建时间
     pub created_at: DateTime<Utc>,
     /// 更新时间
@@ -343,8 +475,10 @@ pub struct GroupSearchResult {
     pub location_name: String,
     /// 成员数量
     pub member_count: i32,
-    /// 是否公开
-    pub is_public: bool,
+    /// 群组类型
+    pub group_type: GroupType,
+    /// 群组可见性
+    pub visibility: Visibility,
     /// 最后活跃时间
     pub last_active_at: DateTime<Utc>,
     /// 距离（米，仅地理位置搜索时有值）
@@ -370,7 +504,8 @@ impl GroupProfile {
         longitude: f64,
         location_name: String,
         member_count: i32,
-        is_public: bool,
+        group_type: GroupType,
+        visibility: Visibility,
         last_active_at: DateTime<Utc>,
     ) -> Self {
         Self {
@@ -382,7 +517,8 @@ impl GroupProfile {
             longitude,
             location_name,
             member_count,
-            is_public,
+            group_type,
+            visibility,
             last_active_at,
             user_role: None, // 默认不包含用户角色信息
         }
@@ -390,7 +526,7 @@ impl GroupProfile {
 
     /// 判断是否为公开群组
     pub fn is_public(&self) -> bool {
-        self.is_public
+        self.visibility.is_public()
     }
 
     /// 判断用户是否为群主
@@ -405,21 +541,23 @@ impl GroupAuth {
         group_id: String,
         name: String,
         password_hash: Option<String>,
-        is_public: bool,
+        group_type: GroupType,
+        visibility: Visibility,
         owner_id: i64,
     ) -> Self {
         Self {
             group_id,
             name,
             password_hash,
-            is_public,
+            group_type,
+            visibility,
             owner_id,
         }
     }
 
     /// 验证是否需要密码
     pub fn requires_password(&self) -> bool {
-        !self.is_public && self.password_hash.is_some()
+        !self.visibility.is_public() && self.password_hash.is_some()
     }
 
     /// 获取密码哈希（仅用于验证）
@@ -445,7 +583,8 @@ impl GroupDetail {
         location_name: String,
         member_count: i32,
         max_members: i32,
-        is_public: bool,
+        group_type: GroupType,
+        visibility: Visibility,
         created_at: DateTime<Utc>,
         updated_at: DateTime<Utc>,
         last_active_at: DateTime<Utc>,
@@ -460,7 +599,8 @@ impl GroupDetail {
             location_name,
             member_count,
             max_members,
-            is_public,
+            group_type,
+            visibility,
             created_at,
             updated_at,
             last_active_at,
@@ -478,7 +618,8 @@ impl GroupDetail {
             longitude: self.longitude,
             location_name: self.location_name.clone(),
             member_count: self.member_count,
-            is_public: self.is_public,
+            group_type: self.group_type,
+            visibility: self.visibility,
             last_active_at: self.last_active_at,
             user_role: None, // 默认不包含用户角色信息
         }
@@ -506,7 +647,8 @@ impl GroupSearchResult {
         longitude: f64,
         location_name: String,
         member_count: i32,
-        is_public: bool,
+        group_type: GroupType,
+        visibility: Visibility,
         last_active_at: DateTime<Utc>,
         distance: Option<f64>,
         is_password_required: bool,
@@ -522,7 +664,8 @@ impl GroupSearchResult {
             longitude,
             location_name,
             member_count,
-            is_public,
+            group_type,
+            visibility,
             last_active_at,
             distance,
             is_password_required,
@@ -548,7 +691,8 @@ impl GroupSearchResult {
             longitude: profile.longitude,
             location_name: profile.location_name,
             member_count: profile.member_count,
-            is_public: profile.is_public,
+            group_type: profile.group_type,
+            visibility: profile.visibility,
             last_active_at: profile.last_active_at,
             distance,
             is_password_required,
@@ -568,7 +712,8 @@ impl GroupSearchResult {
             longitude: self.longitude,
             location_name: self.location_name.clone(),
             member_count: self.member_count,
-            is_public: self.is_public,
+            group_type: self.group_type,
+            visibility: self.visibility,
             last_active_at: self.last_active_at,
             user_role: None, // 默认不包含用户角色信息
         }

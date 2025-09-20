@@ -1,14 +1,38 @@
 /**
- * API 类型定义 - 与后端完全对齐
- * 基于后端 Rust API 模型生成
+ * 统一类型定义导出 - 与后端需求文档完全对齐
+ * 基于 backend_doc.mdc 中的 API 类型定义
  */
 
-// DateTime类型使用string表示（ISO 8601格式）
-type DateTime = string;
+// 导出新的统一API类型
+export * from './api';
 
-// 基于 hotspot.md 中的枚举定义
-export type MessageType = 'text' | 'image' | 'voice' | 'video' | 'location' | 'file';
-export type RoomType = 'group' | 'conversation';
+// 导出其他类型定义
+export * from './realtime';
+export * from './geolocation';
+export * from './message';
+export * from './errors';
+
+// DateTime类型使用string表示（ISO 8601格式）
+export type DateTime = string;
+
+// 基于需求文档的枚举定义
+export type MessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'location' | 'system';
+export type GroupType = 'public_chat' | 'private_chat';
+export type MemberRole = 'owner' | 'admin' | 'member';
+export type MemberStatus = 'active' | 'muted' | 'banned' | 'left';
+export type MediaType = 'image' | 'video' | 'audio' | 'file' | 'location';
+export type ReactionType = 'like' | 'love' | 'laugh' | 'angry' | 'sad' | 'wow';
+export type Visibility = 'public' | 'friends' | 'private';
+export type RelationshipType = 'friend' | 'follow' | 'block';
+export type RelationshipStatus = 'pending' | 'accepted' | 'rejected' | 'active';
+export type ReportTarget = 'user' | 'moment' | 'comment' | 'message' | 'group';
+export type ReportReason = 'spam' | 'harassment' | 'inappropriate_content' | 'fake_account' | 'violence' | 'other';
+export type ReportStatus = 'pending' | 'reviewing' | 'resolved' | 'dismissed';
+export type NotificationType = 
+  | 'friend_request' | 'friend_accepted' | 'new_follower'
+  | 'moment_liked' | 'moment_commented' | 'comment_replied'
+  | 'group_invited' | 'group_joined' | 'group_message'
+  | 'system_announcement' | 'account_warning';
 
 // 基础成功响应类型
 export interface BasicSuccess {

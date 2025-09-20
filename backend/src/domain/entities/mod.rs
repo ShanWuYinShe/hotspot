@@ -14,13 +14,9 @@ pub use user::*;
 pub mod group;
 pub use group::*;
 
-// 消息相关实体
-pub mod conversation;
-pub mod direct_message;
-pub mod group_message;
-pub use conversation::*;
-pub use direct_message::*;
-pub use group_message::*;
+// 统一消息实体
+pub mod message;
+pub use message::*;
 
 // 瞬间相关实体
 pub mod moment;

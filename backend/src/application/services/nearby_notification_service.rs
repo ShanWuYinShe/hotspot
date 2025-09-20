@@ -16,14 +16,12 @@ use crate::ports::{
     NotificationContext,
     LocationContext,
 };
-use crate::domain::constants::location_constants::{
+use crate::domain::constants::{
     DEFAULT_LATITUDE, 
     DEFAULT_LONGITUDE,
-    notification::{
-        DEFAULT_NOTIFICATION_RADIUS_KM, 
-        MAX_NOTIFICATION_RADIUS_KM, 
-        MIN_NOTIFICATION_RADIUS_KM
-    }
+    DEFAULT_NOTIFICATION_RADIUS_KM, 
+    MAX_NOTIFICATION_RADIUS_KM, 
+    MIN_NOTIFICATION_RADIUS_KM
 };
 
 /// 附近通知配置

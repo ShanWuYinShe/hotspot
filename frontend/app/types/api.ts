@@ -2,6 +2,12 @@
  * 统一API类型定义 - 与后端需求文档完全对齐
  * 基于 backend_doc.mdc 中的 API 类型定义
  * 严格遵循 XxxRequest/XxxResponse 命名规范
+ * 
+ * 重要说明：
+ * - 所有API响应都使用统一的 ApiResponse<T> 格式
+ * - 所有API的request和response都必须按照 XxxRequest 和 XxxResponse 的命名规范
+ * - ApiResponse<T> 中的 T 就是 XxxResponse 类型
+ * - 对于分页查询，T 为 PaginatedResponse<XxxResponse>
  */
 
 // ============================================================================
@@ -21,6 +27,37 @@ export interface PaginatedResponse<T> {
 }
 
 // ============================================================================
+// 用户ID编码规范工具函数
+// ============================================================================
+
+/**
+ * 用户ID编码规范：
+ * - 用户ID结构: 64位整数，高8位表示用户类型，低56位表示用户序号
+ * - 用户类型编码:
+ *   - 0x01 (1) - 临时用户
+ *   - 0x02 (2) - 普通用户  
+ *   - 0x03 (3) - 系统用户（官方账号等）
+ *   - 0x04-0xFF - 预留给未来用户类型
+ */
+
+export function getUserType(userId: string): number {
+  const userIdBigInt = BigInt(userId);
+  return Number(userIdBigInt >> 56n);
+}
+
+export function isTempUser(userId: string): boolean {
+  return getUserType(userId) === 1;
+}
+
+export function isRegularUser(userId: string): boolean {
+  return getUserType(userId) === 2;
+}
+
+export function isSystemUser(userId: string): boolean {
+  return getUserType(userId) === 3;
+}
+
+// ============================================================================
 // 认证API类型
 // ============================================================================
 
@@ -33,7 +70,7 @@ export interface AuthResponse {
   expires_at: string;       // 过期时间（ISO 8601）
 }
 
-// 1. 获取认证随机数
+// 1. POST /api/v1/public/auth/get_nonce - 获取认证随机数
 export interface GetNonceRequest {
   // 无请求参数
 }
@@ -45,7 +82,7 @@ export interface GetNonceResponse {
   expires_in: number;       // 有效期（秒）
 }
 
-// 2. 用户注册
+// 2. POST /api/v1/public/auth/register - 用户注册
 export interface RegisterRequest {
   login_id: string;         // 登录ID（邮箱/手机号）
   nickname: string;         // 用户昵称
@@ -58,7 +95,7 @@ export interface RegisterRequest {
 
 export interface RegisterResponse extends AuthResponse {}
 
-// 3. 用户登录
+// 3. POST /api/v1/public/auth/login - 用户登录
 export interface LoginRequest {
   login_id: string;         // 登录ID（邮箱/手机号）
   password_hash: string;    // SHA256(password + nonce + timestamp)
@@ -68,7 +105,7 @@ export interface LoginRequest {
 
 export interface LoginResponse extends AuthResponse {}
 
-// 4. 创建临时用户
+// 4. POST /api/v1/public/auth/create_temp - 创建临时用户
 export interface CreateTempRequest {
   nickname: string;         // 用户昵称
   latitude?: number;        // 纬度（可选）
@@ -77,7 +114,7 @@ export interface CreateTempRequest {
 
 export interface CreateTempResponse extends AuthResponse {}
 
-// 5. 刷新Token
+// 5. POST /api/v1/public/auth/refresh_token - 刷新Token
 export interface RefreshTokenRequest {
   refresh_token: string;    // 刷新令牌
   latitude?: number;        // 纬度（可选）
@@ -86,7 +123,7 @@ export interface RefreshTokenRequest {
 
 export interface RefreshTokenResponse extends AuthResponse {}
 
-// 6. 检查认证状态
+// 6. POST /api/v1/public/auth/check_status - 检查认证状态
 export interface CheckStatusRequest {
   // 无请求参数，通过JWT token验证
 }
@@ -98,7 +135,7 @@ export interface CheckStatusResponse {
   expires_at: string;       // 过期时间（ISO 8601）
 }
 
-// 7. 设置密码
+// 7. POST /api/v1/protected/auth/set_password - 设置密码
 export interface SetPasswordRequest {
   password_hash: string;    // SHA256(password + nonce + timestamp)
   nonce_id: string;         // nonce标识符
@@ -129,7 +166,7 @@ export interface UserResponse {
   distance?: number;        // 距离（米）
 }
 
-// 1. 按昵称搜索用户
+// 1. POST /api/v1/public/user/search_by_name - 按昵称搜索用户
 export interface SearchUserByNameRequest {
   name: string;             // 搜索关键词
   limit?: number;           // 返回数量限制，默认20
@@ -138,14 +175,14 @@ export interface SearchUserByNameRequest {
 
 export interface SearchUserByNameResponse extends UserResponse {}
 
-// 2. 获取用户资料
+// 2. POST /api/v1/public/user/search_by_id - 获取用户资料
 export interface SearchUserByIdRequest {
   user_id: string;          // 用户ID
 }
 
 export interface SearchUserByIdResponse extends UserResponse {}
 
-// 3. 搜索附近用户
+// 3. POST /api/v1/public/user/search_by_location - 搜索附近用户
 export interface SearchUserByLocationRequest {
   latitude: number;         // 纬度
   longitude: number;        // 经度
@@ -158,7 +195,7 @@ export interface SearchUserByLocationResponse extends UserResponse {
   distance: number;         // 距离（米，必填）
 }
 
-// 4. 更新用户位置
+// 4. POST /api/v1/protected/user/update_location - 更新用户位置
 export interface UpdateLocationRequest {
   latitude: number;         // 纬度
   longitude: number;        // 经度
@@ -170,7 +207,7 @@ export interface UpdateLocationResponse {
   message: string;          // 响应消息
 }
 
-// 5. 更新用户资料
+// 5. POST /api/v1/protected/user/update_profile - 更新用户资料
 export interface UpdateProfileRequest {
   nickname?: string;        // 用户昵称
   avatar_url?: string;      // 头像URL
@@ -182,7 +219,7 @@ export interface UpdateProfileResponse {
   message: string;          // 响应消息
 }
 
-// 6. 账户升级
+// 6. POST /api/v1/protected/user/upgrade_account - 账户升级
 export interface UpgradeAccountRequest {
   login_id: string;         // 新的登录ID（邮箱/手机号）
   password_hash: string;    // SHA256(password + nonce + timestamp)
@@ -192,7 +229,7 @@ export interface UpgradeAccountRequest {
 
 export interface UpgradeAccountResponse extends AuthResponse {}
 
-// 7. 获取用户设置
+// 7. POST /api/v1/protected/user/get_settings - 获取用户设置
 export interface GetSettingsRequest {
   // 无请求参数，通过JWT token验证
 }
@@ -206,7 +243,7 @@ export interface GetSettingsResponse {
   moment_notifications: boolean; // 生活瞬间通知开关
 }
 
-// 8. 更新用户设置
+// 8. POST /api/v1/protected/user/update_settings - 更新用户设置
 export interface UpdateSettingsRequest {
   privacy_level?: string;   // 隐私级别：'public'|'friends'|'private'
   location_sharing?: boolean; // 位置分享开关
@@ -221,7 +258,7 @@ export interface UpdateSettingsResponse {
   message: string;          // 响应消息
 }
 
-// 9. 删除账户
+// 9. POST /api/v1/protected/user/delete_account - 删除账户
 export interface DeleteAccountRequest {
   confirmation: string;     // 确认字符串，必须为 "DELETE_MY_ACCOUNT"
 }
@@ -235,7 +272,7 @@ export interface DeleteAccountResponse {
 // 用户关系管理API类型
 // ============================================================================
 
-// 10. 发送好友申请
+// 10. POST /api/v1/protected/user/add_friend - 发送好友申请
 export interface AddFriendRequest {
   to_user_id: string;       // 目标用户ID
   message?: string;         // 申请消息（可选）
@@ -247,7 +284,7 @@ export interface AddFriendResponse {
   relationship_id: string;  // 关系记录ID
 }
 
-// 11. 接受好友申请
+// 11. POST /api/v1/protected/user/accept_friend - 接受好友申请
 export interface AcceptFriendRequest {
   relationship_id: string;  // 关系记录ID
 }
@@ -257,7 +294,7 @@ export interface AcceptFriendResponse {
   message: string;          // 响应消息
 }
 
-// 12. 拒绝好友申请
+// 12. POST /api/v1/protected/user/reject_friend - 拒绝好友申请
 export interface RejectFriendRequest {
   relationship_id: string;  // 关系记录ID
 }
@@ -267,7 +304,7 @@ export interface RejectFriendResponse {
   message: string;          // 响应消息
 }
 
-// 13. 关注用户
+// 13. POST /api/v1/protected/user/follow_user - 关注用户
 export interface FollowRequest {
   to_user_id: string;       // 目标用户ID
 }
@@ -278,7 +315,7 @@ export interface FollowResponse {
   relationship_id: string;  // 关系记录ID
 }
 
-// 14. 取消关注
+// 14. POST /api/v1/protected/user/unfollow_user - 取消关注
 export interface UnfollowRequest {
   to_user_id: string;       // 目标用户ID
 }
@@ -288,7 +325,7 @@ export interface UnfollowResponse {
   message: string;          // 响应消息
 }
 
-// 15. 拉黑用户
+// 15. POST /api/v1/protected/user/block_user - 拉黑用户
 export interface BlockRequest {
   to_user_id: string;       // 目标用户ID
   reason?: string;          // 拉黑原因（可选）
@@ -300,7 +337,7 @@ export interface BlockResponse {
   relationship_id: string;  // 关系记录ID
 }
 
-// 16. 获取好友列表
+// 16. POST /api/v1/protected/user/friends_list - 获取好友列表
 export interface GetFriendsListRequest {
   limit?: number;           // 返回数量限制，默认20
   cursor?: string;          // 分页游标
@@ -319,7 +356,7 @@ export interface GetFriendsListResponse {
   is_online?: boolean;      // 是否在线（可选）
 }
 
-// 17. 获取拉黑列表
+// 17. POST /api/v1/protected/user/blocked_list - 获取拉黑列表
 export interface GetBlockedListRequest {
   limit?: number;           // 返回数量限制，默认20
   cursor?: string;          // 分页游标
@@ -358,7 +395,7 @@ export interface GroupResponse {
   avatar_url?: string;      // 群组头像URL
 }
 
-// 1. 按位置搜索群组
+// 1. POST /api/v1/public/group/search_by_location - 按位置搜索群组
 export interface SearchGroupByLocationRequest {
   latitude: number;         // 纬度
   longitude: number;        // 经度
@@ -371,7 +408,7 @@ export interface SearchGroupByLocationResponse extends GroupResponse {
   distance: number;         // 距离（米，必填）
 }
 
-// 2. 按名称搜索群组
+// 2. POST /api/v1/public/group/search_by_name - 按名称搜索群组
 export interface SearchGroupByNameRequest {
   name: string;             // 搜索关键词
   limit?: number;           // 返回数量限制，默认20
@@ -380,14 +417,14 @@ export interface SearchGroupByNameRequest {
 
 export interface SearchGroupByNameResponse extends GroupResponse {}
 
-// 3. 按ID获取群组详情
+// 3. POST /api/v1/public/group/search_by_id - 按ID获取群组详情
 export interface SearchGroupByIdRequest {
   group_id: string;         // 群组ID
 }
 
 export interface SearchGroupByIdResponse extends GroupResponse {}
 
-// 4. 获取群组成员
+// 4. POST /api/v1/public/group/members - 获取群组成员
 export interface GetMembersRequest {
   group_id: string;         // 群组ID
   limit?: number;           // 返回数量限制，默认20
@@ -402,7 +439,7 @@ export interface GetMembersResponse {
   joined_at: string;        // 加入时间（ISO 8601）
 }
 
-// 5. 创建群组
+// 5. POST /api/v1/protected/group/create - 创建群组
 export interface CreateGroupRequest {
   name: string;             // 群组名称
   description?: string;     // 群组描述
@@ -420,7 +457,7 @@ export interface CreateGroupResponse {
   message: string;          // 响应消息
 }
 
-// 6. 加入群组
+// 6. POST /api/v1/protected/group/join - 加入群组
 export interface JoinGroupRequest {
   group_id: string;         // 群组ID
   password?: string;        // 群组密码（如需要）
@@ -433,7 +470,7 @@ export interface JoinGroupResponse {
   user_role: string;        // 用户在群组中的角色
 }
 
-// 7. 离开群组
+// 7. POST /api/v1/protected/group/leave - 离开群组
 export interface LeaveGroupRequest {
   group_id: string;         // 群组ID
 }
@@ -443,7 +480,7 @@ export interface LeaveGroupResponse {
   message: string;          // 响应消息
 }
 
-// 8. 踢出群组成员
+// 8. POST /api/v1/protected/group/kick - 踢出群组成员
 export interface KickGroupRequest {
   group_id: string;         // 群组ID
   user_id: string;          // 被踢出的用户ID
@@ -455,7 +492,7 @@ export interface KickGroupResponse {
   message: string;          // 响应消息
 }
 
-// 9. 转移群组所有权
+// 9. POST /api/v1/protected/group/transfer_ownership - 转移群组所有权
 export interface TransferOwnershipRequest {
   group_id: string;         // 群组ID
   new_owner_id: string;     // 新群主用户ID
@@ -467,7 +504,7 @@ export interface TransferOwnershipResponse {
   new_owner_id: string;     // 新群主用户ID
 }
 
-// 10. 获取用户参与的群组列表
+// 10. POST /api/v1/protected/group/my_groups - 获取用户参与的群组列表
 export interface MyGroupsRequest {
   limit?: number;           // 返回数量限制，默认20
   cursor?: string;          // 分页游标
@@ -505,7 +542,7 @@ export interface MyGroupsResponse {
 // 统一消息通讯API类型
 // ============================================================================
 
-// 1. 发送消息（统一接口）
+// 1. POST /api/v1/protected/chat/send - 发送消息（统一接口）
 export interface SendMessageRequest {
   group_id: string;         // 群组ID（统一架构：私聊和群聊都是群组）
   content: string;          // 消息内容
@@ -523,7 +560,7 @@ export interface SendMessageResponse {
   message: string;          // 响应消息
 }
 
-// 2. 获取消息历史（统一接口）
+// 2. POST /api/v1/protected/chat/history - 获取消息历史（统一接口）
 export interface GetHistoryRequest {
   group_id: string;         // 群组ID（统一架构）
   limit?: number;           // 返回数量限制，默认50
@@ -550,7 +587,7 @@ export interface GetHistoryResponse {
   longitude?: number;       // 经度（位置消息）
 }
 
-// 3. 删除消息（统一接口）
+// 3. POST /api/v1/protected/chat/delete - 删除消息（统一接口）
 export interface DeleteMessageRequest {
   message_id: string;       // 消息ID
   delete_for_everyone?: boolean; // 是否为所有人删除，默认false
@@ -561,7 +598,7 @@ export interface DeleteMessageResponse {
   message: string;          // 响应消息
 }
 
-// 4. 标记消息已读（统一接口）
+// 4. POST /api/v1/protected/chat/mark-read - 标记消息已读（统一接口）
 export interface MarkReadRequest {
   group_id: string;         // 群组ID
   message_id?: string;      // 最后已读消息ID（可选，不提供则标记所有消息为已读）
@@ -572,7 +609,7 @@ export interface MarkReadResponse {
   message: string;          // 响应消息
 }
 
-// 5. 获取未读消息数（统一接口）
+// 5. POST /api/v1/protected/chat/unread_count - 获取未读消息数（统一接口）
 export interface UnreadCountRequest {
   group_id?: string;        // 群组ID（可选，不提供则获取所有群组的未读数）
 }
@@ -585,7 +622,7 @@ export interface UnreadCountResponse {
   }>;
 }
 
-// 6. 获取会话列表（统一接口）
+// 6. POST /api/v1/protected/chat/conversations - 获取会话列表（统一接口）
 export interface ConversationsRequest {
   limit?: number;           // 返回数量限制，默认20
   cursor?: string;          // 分页游标
@@ -634,7 +671,7 @@ export interface MomentResponse {
   tags: string[];           // 标签数组
 }
 
-// 1. 创建生活瞬间
+// 1. POST /api/v1/protected/moments/create - 创建生活瞬间
 export interface CreateMomentRequest {
   description: string;      // 瞬间描述
   latitude: number;         // 纬度
@@ -651,7 +688,7 @@ export interface CreateMomentResponse {
   message: string;          // 响应消息
 }
 
-// 2. 按位置搜索生活瞬间
+// 2. POST /api/v1/public/moments/search_by_location - 按位置搜索生活瞬间
 export interface SearchMomentsByLocationRequest {
   latitude: number;         // 纬度
   longitude: number;        // 经度
@@ -664,7 +701,7 @@ export interface SearchMomentsByLocationResponse extends MomentResponse {
   distance: number;         // 距离（米，必填）
 }
 
-// 3. 按标签搜索生活瞬间
+// 3. POST /api/v1/public/moments/search_by_tags - 按标签搜索生活瞬间
 export interface SearchMomentsByTagsRequest {
   tags: string[];           // 标签数组
   limit?: number;           // 返回数量限制，默认20
@@ -673,14 +710,14 @@ export interface SearchMomentsByTagsRequest {
 
 export interface SearchMomentsByTagsResponse extends MomentResponse {}
 
-// 4. 按ID搜索生活瞬间
+// 4. POST /api/v1/public/moments/search_by_id - 按ID搜索生活瞬间
 export interface SearchMomentByIdRequest {
   moment_id: string;        // 瞬间ID
 }
 
 export interface SearchMomentByIdResponse extends MomentResponse {}
 
-// 5. 获取生活瞬间历史
+// 5. POST /api/v1/public/moments/history - 获取生活瞬间历史
 export interface GetMomentsHistoryRequest {
   user_id?: string;         // 用户ID（可选，不提供则获取所有用户）
   limit?: number;           // 返回数量限制，默认20
@@ -689,7 +726,7 @@ export interface GetMomentsHistoryRequest {
 
 export interface GetMomentsHistoryResponse extends MomentResponse {}
 
-// 6. 删除生活瞬间
+// 6. POST /api/v1/protected/moments/delete - 删除生活瞬间
 export interface DeleteMomentRequest {
   moment_id: string;        // 瞬间ID
 }
@@ -699,7 +736,7 @@ export interface DeleteMomentResponse {
   message: string;          // 响应消息
 }
 
-// 7. 点赞生活瞬间
+// 7. POST /api/v1/protected/moments/like - 点赞生活瞬间
 export interface LikeMomentRequest {
   moment_id: string;        // 瞬间ID
 }
@@ -710,7 +747,7 @@ export interface LikeMomentResponse {
   likes_count: number;      // 更新后的点赞数
 }
 
-// 8. 取消点赞
+// 8. POST /api/v1/protected/moments/unlike - 取消点赞
 export interface UnlikeMomentRequest {
   moment_id: string;        // 瞬间ID
 }
@@ -738,7 +775,7 @@ export interface CommentResponse {
   replies_count: number;    // 回复数量
 }
 
-// 1. 添加评论
+// 1. POST /api/v1/protected/comments/add - 添加评论
 export interface AddCommentRequest {
   moment_id: string;        // 瞬间ID
   content: string;          // 评论内容
@@ -751,7 +788,7 @@ export interface AddCommentResponse {
   message: string;          // 响应消息
 }
 
-// 2. 回复评论
+// 2. POST /api/v1/protected/comments/reply - 回复评论
 export interface ReplyCommentRequest {
   comment_id: string;       // 父评论ID
   content: string;          // 回复内容
@@ -765,7 +802,7 @@ export interface ReplyCommentResponse {
   message: string;          // 响应消息
 }
 
-// 3. 删除评论
+// 3. POST /api/v1/protected/comments/delete - 删除评论
 export interface DeleteCommentRequest {
   comment_id: string;       // 评论ID
 }
@@ -775,7 +812,7 @@ export interface DeleteCommentResponse {
   message: string;          // 响应消息
 }
 
-// 4. 获取评论列表
+// 4. POST /api/v1/public/comments/list - 获取评论列表
 export interface GetCommentsRequest {
   moment_id: string;        // 瞬间ID
   limit?: number;           // 返回数量限制，默认20
@@ -802,7 +839,7 @@ export interface ReportResponse {
   handler_note?: string;    // 处理备注
 }
 
-// 1. 提交举报
+// 1. POST /api/v1/protected/reports/create - 提交举报
 export interface CreateReportRequest {
   target_type: string;      // 举报目标类型：'user'|'moment'|'comment'|'message'|'group'
   target_id: string;        // 举报目标ID
@@ -816,7 +853,7 @@ export interface CreateReportResponse {
   created_at: string;       // 创建时间（ISO 8601）
 }
 
-// 2. 我的举报记录
+// 2. POST /api/v1/protected/reports/my_reports - 我的举报记录
 export interface GetMyReportsRequest {
   limit?: number;           // 返回数量限制，默认20
   cursor?: string;          // 分页游标
@@ -824,7 +861,7 @@ export interface GetMyReportsRequest {
 
 export interface GetMyReportsResponse extends ReportResponse {}
 
-// 3. 举报列表（管理员）
+// 3. POST /api/v1/protected/reports/list - 举报列表（管理员）
 export interface GetReportsRequest {
   status?: string;          // 状态过滤：'pending'|'reviewing'|'resolved'|'dismissed'
   target_type?: string;     // 目标类型过滤
@@ -834,7 +871,7 @@ export interface GetReportsRequest {
 
 export interface GetReportsResponse extends ReportResponse {}
 
-// 4. 处理举报（管理员）
+// 4. POST /api/v1/protected/reports/handle - 处理举报（管理员）
 export interface HandleReportRequest {
   report_id: string;        // 举报记录ID
   action: string;           // 处理动作：'resolve'|'dismiss'|'escalate'
@@ -847,7 +884,7 @@ export interface HandleReportResponse {
   handled_at: string;       // 处理时间（ISO 8601）
 }
 
-// 5. 屏蔽用户
+// 5. POST /api/v1/protected/users/block - 屏蔽用户
 export interface BlockUserRequest {
   user_id: string;          // 要屏蔽的用户ID
 }
@@ -874,7 +911,7 @@ export interface NotificationResponse {
   read_at?: string;         // 已读时间（ISO 8601）
 }
 
-// 1. 发送通知
+// 1. POST /api/v1/protected/notifications/send - 发送通知
 export interface SendNotificationRequest {
   user_ids: string[];       // 接收者ID数组
   type: string;             // 通知类型
@@ -889,7 +926,7 @@ export interface SendNotificationResponse {
   sent_count: number;       // 成功发送数量
 }
 
-// 2. 获取通知列表
+// 2. POST /api/v1/protected/notifications/list - 获取通知列表
 export interface GetNotificationsRequest {
   type?: string;            // 通知类型过滤
   is_read?: boolean;        // 已读状态过滤
@@ -899,7 +936,7 @@ export interface GetNotificationsRequest {
 
 export interface GetNotificationsResponse extends NotificationResponse {}
 
-// 3. 标记通知已读
+// 3. POST /api/v1/protected/notifications/mark_read - 标记通知已读
 export interface MarkNotificationReadRequest {
   notification_ids: string[]; // 通知ID数组
 }
@@ -910,7 +947,7 @@ export interface MarkNotificationReadResponse {
   marked_count: number;     // 标记数量
 }
 
-// 4. 获取未读通知数
+// 4. POST /api/v1/protected/notifications/unread_count - 获取未读通知数
 export interface GetUnreadNotificationCountRequest {
   type?: string;            // 通知类型过滤
 }
@@ -923,7 +960,7 @@ export interface GetUnreadNotificationCountResponse {
   }>;
 }
 
-// 5. 获取通知设置
+// 5. POST /api/v1/protected/notifications/settings - 获取通知设置
 export interface GetNotificationSettingsRequest {
   // 空请求体
 }
@@ -939,7 +976,7 @@ export interface GetNotificationSettingsResponse {
   system: boolean;          // 系统通知
 }
 
-// 6. 更新通知设置
+// 6. POST /api/v1/protected/notifications/update_settings - 更新通知设置
 export interface UpdateNotificationSettingsRequest {
   push_enabled?: boolean;   // 推送通知开关
   email_enabled?: boolean;  // 邮件通知开关
@@ -960,7 +997,7 @@ export interface UpdateNotificationSettingsResponse {
 // 系统状态API类型
 // ============================================================================
 
-// 1. 系统健康检查
+// 1. POST /api/v1/public/status/health - 系统健康检查
 export interface HealthCheckRequest {
   // 空请求体
 }
@@ -986,3 +1023,72 @@ export interface HealthCheckResponse {
     error_rate: number;     // 错误率（0-100）
   };
 }
+
+// ============================================================================
+// 兼容性类型别名（保持向后兼容）
+// ============================================================================
+
+// 基础类型别名
+export type User = UserResponse;
+export type Group = GroupResponse;
+export type Moment = MomentResponse;
+export type Comment = CommentResponse;
+export type Message = GetHistoryResponse;
+export type Notification = NotificationResponse;
+
+// 请求类型别名
+export type CreateTempUserRequest = CreateTempRequest;
+export type SearchUserByLocationRequest = SearchUserByLocationRequest;
+export type SearchUserByNameRequest = SearchUserByNameRequest;
+export type SearchUserByIdRequest = SearchUserByIdRequest;
+
+// 响应类型别名
+export type AuthUser = Pick<AuthResponse, 'user_id' | 'nickname'>;
+export type UserInfo = UserResponse;
+export type GroupInfo = GroupResponse;
+export type MomentInfo = MomentResponse;
+export type ConversationSummary = ConversationsResponse;
+
+// 分页响应类型别名
+export type SearchUserByLocationResponse = PaginatedResponse<SearchUserByLocationResponse>;
+export type SearchUserByNameResponse = PaginatedResponse<SearchUserByNameResponse>;
+export type SearchGroupByLocationResponse = PaginatedResponse<SearchGroupByLocationResponse>;
+export type SearchGroupByNameResponse = PaginatedResponse<SearchGroupByNameResponse>;
+export type GetMembersResponse = PaginatedResponse<GetMembersResponse>;
+export type MyGroupsResponse = PaginatedResponse<MyGroupsResponse>;
+export type GetHistoryResponse = PaginatedResponse<GetHistoryResponse>;
+export type ConversationsResponse = PaginatedResponse<ConversationsResponse>;
+export type SearchMomentsByLocationResponse = PaginatedResponse<SearchMomentsByLocationResponse>;
+export type SearchMomentsByTagsResponse = PaginatedResponse<SearchMomentsByTagsResponse>;
+export type GetMomentsHistoryResponse = PaginatedResponse<GetMomentsHistoryResponse>;
+export type GetCommentsResponse = PaginatedResponse<GetCommentsResponse>;
+export type GetFriendsListResponse = PaginatedResponse<GetFriendsListResponse>;
+export type GetBlockedListResponse = PaginatedResponse<GetBlockedListResponse>;
+export type GetMyReportsResponse = PaginatedResponse<GetMyReportsResponse>;
+export type GetReportsResponse = PaginatedResponse<GetReportsResponse>;
+export type GetNotificationsResponse = PaginatedResponse<GetNotificationsResponse>;
+
+// ============================================================================
+// 密码安全工具函数
+// ============================================================================
+
+/**
+ * 计算传输哈希
+ * @param password 原始密码
+ * @param nonce 随机数
+ * @param timestamp 时间戳
+ * @returns SHA256哈希值
+ */
+export async function calculatePasswordHash(
+  password: string,
+  nonce: string,
+  timestamp: number
+): Promise<string> {
+  const input = `${password}${nonce}${timestamp}`;
+  const encoder = new TextEncoder();
+  const data = encoder.encode(input);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
