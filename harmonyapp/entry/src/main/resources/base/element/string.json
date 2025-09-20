@@ -1,0 +1,44 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "基于地理位置的社交应用"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "GeoTalk - 地理位置社交"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "GeoTalk"
+    },
+    {
+      "name": "location_reason",
+      "value": "需要获取您的位置信息以提供基于地理位置的社交服务"
+    },
+    {
+      "name": "internet_reason",
+      "value": "需要网络权限以连接服务器进行数据同步"
+    },
+    {
+      "name": "network_reason",
+      "value": "需要获取网络状态以优化数据传输"
+    },
+    {
+      "name": "camera_reason",
+      "value": "需要相机权限以拍摄和分享生活瞬间"
+    },
+    {
+      "name": "media_reason",
+      "value": "需要媒体权限以保存和分享图片"
+    },
+    {
+      "name": "vibrate_reason",
+      "value": "需要震动权限以提供触觉反馈"
+    },
+    {
+      "name": "microphone_reason",
+      "value": "需要麦克风权限以录制语音消息"
+    }
+  ]
+}

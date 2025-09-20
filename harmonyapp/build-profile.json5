@@ -1,0 +1,56 @@
+{
+  "app": {
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "/Users/liyou/.ohos/config/default_GeoTalk_-MpjdihNfdASPlIilTVYZSQhuyk6wrLeFOe3e9hlm90=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001BB3AC2E4B3EFC19A586B5FD54862F1B634C61F720CC89515B81670106FFDFB82663B99F414E4D8C",
+          "profile": "/Users/liyou/.ohos/config/default_GeoTalk_-MpjdihNfdASPlIilTVYZSQhuyk6wrLeFOe3e9hlm90=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "/Users/liyou/.ohos/config/default_GeoTalk_-MpjdihNfdASPlIilTVYZSQhuyk6wrLeFOe3e9hlm90=.p12",
+          "storePassword": "0000001BCBC83BA92F49010071EB0A8DC3DBA71792821EC49B8E87611628F31FC0F542F3A3FD13F6DA62B3"
+        }
+      }
+    ],
+    "products": [
+      {
+        "name": "default",
+        "signingConfig": "default",
+        "targetSdkVersion": "5.1.1(19)",
+        "compatibleSdkVersion": "5.0.5(17)",
+        "runtimeOS": "HarmonyOS",
+        "buildOption": {
+          "strictMode": {
+            "caseSensitiveCheck": true,
+            "useNormalizedOHMUrl": true
+          }
+        }
+      }
+    ],
+    "buildModeSet": [
+      {
+        "name": "debug",
+      },
+      {
+        "name": "release"
+      }
+    ]
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    }
+  ]
+}

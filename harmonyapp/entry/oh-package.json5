@@ -1,0 +1,10 @@
+{
+  "name": "geotalk",
+  "version": "1.0.0",
+  "description": "基于地理位置的社交应用 - HarmonyOS版本",
+  "main": "",
+  "author": "GeoTalk Team",
+  "license": "MIT",
+  "dependencies": {}
+}
+

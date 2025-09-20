@@ -1,0 +1,17 @@
+{
+  "src": [
+    "pages/Index",
+    "pages/GroupPage",
+    "pages/MessagePage",
+    "pages/MomentPage",
+    "pages/ProfilePage",
+    "pages/LoginPage",
+    "pages/GroupDetailPage",
+    "pages/CreateGroupPage",
+    "pages/CreateMomentPage",
+    "pages/ChatPage",
+    "pages/MapPage",
+    "pages/SearchPage",
+    "pages/SettingsPage"
+  ]
+}
