@@ -37,7 +37,6 @@ impl AdminController {
         match t {
             UserType::Regular => "regular",
             UserType::Temporary => "temporary",
-            UserType::Admin => "admin",
             UserType::System => "system",
         }
     }
@@ -91,7 +90,7 @@ pub struct GenerateUserIdsRequest {
 
 /// 生成的用户ID信息
 #[derive(Debug, Clone, Serialize)]
-pub struct GeneratedUserId {
+pub struct GeneratedUserIdResponse {
     pub user_id: JsSafeI64,
     pub sequence: JsSafeI64,
     pub formatted: String,
@@ -101,7 +100,7 @@ pub struct GeneratedUserId {
 #[derive(Debug, Clone, Serialize)]
 pub struct GenerateUserIdsResponse {
     pub user_type_key: String,
-    pub generated_ids: Vec<GeneratedUserId>,
+    pub generated_ids: Vec<GeneratedUserIdResponse>,
     pub success_count: usize,
     pub error_count: usize,
 }
@@ -123,7 +122,7 @@ pub struct FormatUserIdResponse {
 
 /// 用户类型范围信息
 #[derive(Debug, Clone, Serialize)]
-pub struct UserTypeRangeInfo {
+pub struct UserTypeRangeInfoResponse {
     pub user_type_key: String,
     pub user_type_name: String,
     pub identifier: u16,
@@ -134,7 +133,7 @@ pub struct UserTypeRangeInfo {
 
 /// 分区统计信息（不访问数据库，仅根据ID分区定义计算）
 #[derive(Debug, Clone, Serialize)]
-pub struct UserIdPartitionStats {
+pub struct UserIdPartitionStatsResponse {
     pub total_partitions: usize,
     pub active_partitions: usize,
     pub total_users: JsSafeI64,
@@ -142,7 +141,7 @@ pub struct UserIdPartitionStats {
     pub temporary_users: JsSafeI64,
     pub admin_users: JsSafeI64,
     pub system_users: JsSafeI64,
-    pub ranges: Vec<UserTypeRangeInfo>,
+    pub ranges: Vec<UserTypeRangeInfoResponse>,
 }
 
 /// 用户ID信息请求
@@ -188,7 +187,7 @@ pub struct PreviewAllocateResponse {
     pub user_type_key: String,
     pub user_type_name: String,
     pub start_sequence: JsSafeI64,
-    pub preview_ids: Vec<GeneratedUserId>,
+    pub preview_ids: Vec<GeneratedUserIdResponse>,
     pub capacity_remaining: JsSafeI64,
 }
 
@@ -248,9 +247,9 @@ impl AdminController {
         let user_type = match req.user_type.as_str() {
             "regular" => UserType::Regular,
             "temporary" => UserType::Temporary,
-            "admin" => UserType::Admin,
             "system" => UserType::System,
-            _ => return Self::bad_request("无效的用户类型（regular|temporary|admin|system）"),
+            "system" => UserType::System,
+            _ => return Self::bad_request("无效的用户类型（regular|temporary|system）"),
         };
 
         let start_seq = req.start_sequence.unwrap_or(1);
@@ -262,7 +261,7 @@ impl AdminController {
             let seq = start_seq + i as i64;
             match UserIdPartition::generate_user_id(user_type, seq) {
                 Ok(uid) => {
-                    generated.push(GeneratedUserId {
+                    generated.push(GeneratedUserIdResponse {
                         user_id: JsSafeI64::new(uid),
                         sequence: JsSafeI64::new(seq),
                         formatted: UserIdPartition::format_user_id(uid),
@@ -317,7 +316,7 @@ impl AdminController {
         let types = [
             UserType::Regular,
             UserType::Temporary,
-            UserType::Admin,
+            UserType::System,
             UserType::System,
         ];
         let mut ranges = Vec::with_capacity(types.len());
@@ -327,10 +326,10 @@ impl AdminController {
             // 容量 = 54位序列空间，或根据范围直接计算（包含端点）
             let capacity = max_id - min_id + 1;
 
-            ranges.push(UserTypeRangeInfo {
+            ranges.push(UserTypeRangeInfoResponse {
                 user_type_key: Self::map_user_type_key(t).to_string(),
                 user_type_name: t.name().to_string(),
-                identifier: t.identifier(),
+                identifier: t.identifier() as u16,
                 min_id: JsSafeI64::new(min_id),
                 max_id: JsSafeI64::new(max_id),
                 capacity: JsSafeI64::new(capacity),
@@ -353,7 +352,7 @@ impl AdminController {
         let types = [
             UserType::Regular,
             UserType::Temporary,
-            UserType::Admin,
+            UserType::System,
             UserType::System,
         ];
         let mut ranges = Vec::with_capacity(types.len());
@@ -361,10 +360,10 @@ impl AdminController {
         for t in types {
             let (min_id, max_id) = UserIdPartition::get_type_range(t);
             let capacity = max_id - min_id + 1;
-            ranges.push(UserTypeRangeInfo {
+            ranges.push(UserTypeRangeInfoResponse {
                 user_type_key: Self::map_user_type_key(t).to_string(),
                 user_type_name: t.name().to_string(),
-                identifier: t.identifier(),
+                identifier: t.identifier() as u16,
                 min_id: JsSafeI64::new(min_id),
                 max_id: JsSafeI64::new(max_id),
                 capacity: JsSafeI64::new(capacity),
@@ -386,7 +385,7 @@ impl AdminController {
             let type_list = [
                 UserType::Regular,
                 UserType::Temporary,
-                UserType::Admin,
+                UserType::System,
                 UserType::System,
             ];
             for t in type_list {
@@ -395,14 +394,13 @@ impl AdminController {
                     match t {
                         UserType::Regular => regular_users = v,
                         UserType::Temporary => temporary_users = v,
-                        UserType::Admin => admin_users = v,
                         UserType::System => system_users = v,
                     }
                 }
             }
         }
 
-        let stats = UserIdPartitionStats {
+        let stats = UserIdPartitionStatsResponse {
             total_partitions: ranges.len(),
             active_partitions: ranges.len(),
             total_users: JsSafeI64::new(total_users),
@@ -434,7 +432,7 @@ impl AdminController {
                     user_id: req.user_id,
                     user_type_key: Self::map_user_type_key(t).to_string(),
                     user_type_name: t.name().to_string(),
-                    identifier: t.identifier(),
+                    identifier: t.identifier() as u16,
                     sequence: JsSafeI64::new(seq),
                     formatted: UserIdPartition::format_user_id(req.user_id.value()),
                 };
@@ -519,7 +517,7 @@ impl AdminController {
         if !Self::is_admin_user(current_user.user_id) {
             return Self::forbidden("权限不足：需要管理员权限");
         }
-        Self::next_sequence_core(&controller, UserType::Admin).await
+        Self::next_sequence_core(&controller, UserType::System).await
     }
 
     /// 下一个序列（system）
@@ -551,9 +549,9 @@ impl AdminController {
         let t = match req.user_type.as_str() {
             "regular" => UserType::Regular,
             "temporary" => UserType::Temporary,
-            "admin" => UserType::Admin,
             "system" => UserType::System,
-            _ => return Self::bad_request("无效的用户类型（regular|temporary|admin|system）"),
+            "system" => UserType::System,
+            _ => return Self::bad_request("无效的用户类型（regular|temporary|system）"),
         };
 
         let (_min_id, max_id, current_max_id) =
@@ -573,7 +571,7 @@ impl AdminController {
             let seq = start_sequence + i as i64;
             match UserIdPartition::generate_user_id(t, seq) {
                 Ok(uid) => {
-                    preview_ids.push(GeneratedUserId {
+                    preview_ids.push(GeneratedUserIdResponse {
                         user_id: JsSafeI64::new(uid),
                         sequence: JsSafeI64::new(seq),
                         formatted: UserIdPartition::format_user_id(uid),

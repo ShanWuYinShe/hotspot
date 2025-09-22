@@ -28,16 +28,10 @@ struct UserRow {
     login_id: String,
     /// 昵称 - NOT NULL，有默认值
     nickname: String,
-    /// 邮箱 - 可为NULL
-    email: Option<String>,
     /// 头像URL - 可为NULL
     avatar_url: Option<String>,
     /// 密码哈希 - 可为NULL（临时用户可能没有密码）
     password_hash: Option<String>,
-    /// 用户类型 - NOT NULL枚举
-    user_type: crate::domain::entities::UserType,
-    /// 过期时间 - 可为NULL（正式用户为NULL）
-    expires_at: Option<DateTime<Utc>>,
     /// 创建时间 - NOT NULL，有默认值
     created_at: DateTime<Utc>,
     /// 最后活跃时间 - 可为NULL
@@ -85,8 +79,7 @@ struct UserSearchRow {
     avatar_url: Option<String>,
     /// 最后活跃时间 - 可为NULL
     last_active_at: Option<DateTime<Utc>>,
-    /// 用户类型 - NOT NULL
-    user_type: crate::domain::entities::UserType,
+    // 用户类型字段在实际数据库表中不存在，暂时移除
     /// 距离（米）- 地理搜索时非NULL，名称搜索时为NULL
     distance_meters: Option<f64>,
 }
@@ -95,20 +88,21 @@ struct UserSearchRow {
 
 impl UserRow {
     /// 转换为领域用户模型
-    fn to_domain(self, location: Option<crate::domain::entities::UserLocation>) -> Result<User, sqlx::Error> {
+    fn to_domain(self) -> Result<User, sqlx::Error> {
         Ok(User {
             id: UserId::new(self.user_id).map_err(|e| sqlx::Error::Protocol(format!("Invalid user_id: {}", e)))?,
             login_id: Some(self.login_id),
             nickname: crate::domain::Nickname::new(self.nickname).map_err(|e| sqlx::Error::Protocol(format!("Invalid nickname: {}", e)))?,
-            email: self.email,
+            email: None, // 当前简化版本不包含email
             avatar_url: self.avatar_url,
             bio: None, // 当前数据库表没有bio字段
             password_hash: self.password_hash,
-            user_type: self.user_type,
-            expires_at: self.expires_at,
+            user_type: crate::domain::entities::UserType::Temporary, // 暂时设为临时用户
+            expires_at: None,
             created_at: self.created_at,
+            updated_at: self.last_active_at.unwrap_or_else(|| chrono::Utc::now()),
             last_active_at: self.last_active_at.unwrap_or_else(|| chrono::Utc::now()),
-            location,
+            location: None, // 暂时不处理位置信息
             events: Vec::new(), // 新创建的用户没有待处理事件
         })
     }
@@ -249,44 +243,37 @@ impl PgUserRepository {
             sqlx::query!(
                 r#"
                 INSERT INTO users (
-                    id, username, nickname, email, avatar_url,
-                    password_hash, user_type, expires_at, created_at, last_login_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                    id, login_id, nickname, avatar_url,
+                    password_hash, created_at, updated_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7)
                 ON CONFLICT (id) DO UPDATE SET
-                    username = EXCLUDED.username,
+                    login_id = EXCLUDED.login_id,
                     nickname = EXCLUDED.nickname,
-                    email = EXCLUDED.email,
                     avatar_url = EXCLUDED.avatar_url,
                     password_hash = EXCLUDED.password_hash,
-                    user_type = EXCLUDED.user_type,
-                    expires_at = EXCLUDED.expires_at,
-                    last_login_at = EXCLUDED.last_login_at
+                    updated_at = EXCLUDED.updated_at
                 "#,
                 user.id.value(),
                 user.login_id,
                 user.nickname.value(),
-                user.email,
                 user.avatar_url,
                 user.password_hash,
-                user.user_type as _,
-                user.expires_at,
                 user.created_at,
-                user.last_active_at
+                user.updated_at
             )
             .execute(&self.pool)
             .await?;
             
-            // 保存用户位置（如果有）
+            // 更新用户位置信息（位置信息存储在users表中）
             if let Some(location) = &user.location {
                 sqlx::query!(
                     r#"
-                    INSERT INTO user_locations (user_id, latitude, longitude, address, updated_at)
-                    VALUES ($1, $2, $3, $4, $5)
-                    ON CONFLICT (user_id) DO UPDATE SET
-                        latitude = EXCLUDED.latitude,
-                        longitude = EXCLUDED.longitude,
-                        address = EXCLUDED.address,
-                        updated_at = EXCLUDED.updated_at
+                    UPDATE users SET 
+                        latitude = $2,
+                        longitude = $3,
+                        location_name = $4,
+                        location_updated_at = $5
+                    WHERE id = $1
                     "#,
                     user.id.value(),
                     location.coordinates.latitude.value(),
@@ -325,15 +312,12 @@ impl PgUserRepository {
                 r#"
                 SELECT 
                     id as "user_id!",
-                    username as "login_id!",
+                    login_id as "login_id!",
                     nickname as "nickname!",
-                    email,
                     avatar_url,
                     password_hash,
-                    user_type as "user_type!: crate::domain::entities::UserType",
-                    expires_at,
                     created_at as "created_at!",
-                    last_login_at as "last_active_at"
+                    updated_at as "last_active_at"
                 FROM users 
                 WHERE id = $1
                 "#,
@@ -343,26 +327,8 @@ impl PgUserRepository {
             .await?;
             
             if let Some(user_row) = user_row {
-                // 查询用户位置信息
-                let location_row = sqlx::query_as!(
-                    UserLocationRow,
-                    r#"
-                    SELECT 
-                        id as "user_id!",
-                        latitude as "latitude!",
-                        longitude as "longitude!",
-                        address as "location_name!",
-                        updated_at as "updated_at!"
-                    FROM user_locations
-                    WHERE id = $1
-                    "#,
-                    user_id.value()
-                )
-                .fetch_optional(&self.pool)
-                .await?;
-                
-                let location = location_row.map(|row| row.to_domain());
-                let user = user_row.to_domain(location)?;
+                // 位置信息已经在users表中，直接从user_row构建用户对象
+                let user = user_row.to_domain()?;
                 
                 Ok(Some(user))
             } else {
@@ -379,17 +345,14 @@ impl PgUserRepository {
                 r#"
                 SELECT 
                     id as "user_id!",
-                    username as "login_id!",
+                    login_id as "login_id!",
                     nickname as "nickname!",
-                    email,
                     avatar_url,
                     password_hash,
-                    user_type as "user_type!: crate::domain::entities::UserType",
-                    expires_at,
                     created_at as "created_at!",
-                    last_login_at as "last_active_at"
+                    updated_at as "last_active_at"
                 FROM users 
-                WHERE username = $1
+                WHERE login_id = $1
                 "#,
                 login_id
             )
@@ -410,7 +373,7 @@ impl PgUserRepository {
     async fn exists_by_login_id(&self, login_id: &str) -> DomainResult<bool> {
         self.execute_query("check_login_id_exists", async {
             let count = sqlx::query_scalar!(
-                "SELECT COUNT(*) as count FROM users WHERE username = $1",
+                "SELECT COUNT(*) as count FROM users WHERE login_id = $1",
                 login_id
             )
             .fetch_one(&self.pool)
@@ -439,8 +402,7 @@ impl PgUserRepository {
                     id as "user_id!",
                     nickname as "nickname!",
                     avatar_url,
-                    last_login_at as "last_active_at",
-                    user_type as "user_type!: crate::domain::entities::UserType",
+                    updated_at as "last_active_at",
                     NULL::FLOAT8 as distance_meters
                 FROM users 
                 WHERE nickname ILIKE $1 
@@ -495,18 +457,17 @@ impl PgUserRepository {
                     u.id as "user_id!",
                     u.nickname as "nickname!",
                     u.avatar_url,
-                    u.last_login_at as "last_active_at!",
-                    u.user_type as "user_type!: crate::domain::entities::UserType",
+                    u.updated_at as "last_active_at!",
                     ST_Distance(
-                        ul.location,
+                        u.location,
                         ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
                     ) as distance_meters
                 FROM users u
-                INNER JOIN user_locations ul ON u.id = ul.user_id
                 WHERE u.id != $3
                   AND ($4 = 0 OR u.id > $4)
+                  AND u.latitude IS NOT NULL AND u.longitude IS NOT NULL
                   AND ST_DWithin(
-                      ul.location,
+                      u.location,
                       ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
                       $5
                   )

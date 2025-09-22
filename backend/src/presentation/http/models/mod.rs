@@ -7,6 +7,7 @@ pub mod group;
 pub mod message;
 pub mod moment;
 pub mod common;
+pub mod common_responses;
 
 // 重新导出所有API模型
 pub use user::*;
@@ -14,3 +15,4 @@ pub use group::*;
 pub use message::*;
 pub use moment::*;
 pub use common::*;
+pub use common_responses::*;

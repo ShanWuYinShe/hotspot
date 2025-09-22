@@ -173,6 +173,14 @@ export const getBusinessErrorInfo = (code: number, msg: string): ApiErrorInfo =>
         canRetry: false
       };
       
+    case 1001:
+      return {
+        title: '验证失败',
+        message: msg || '数据验证失败',
+        type: 'validation',
+        canRetry: false
+      };
+      
     case 1002:
       return {
         title: '未授权访问',
@@ -212,6 +220,15 @@ export const getBusinessErrorInfo = (code: number, msg: string): ApiErrorInfo =>
         message: msg || '该功能暂未开放',
         type: 'client',
         canRetry: false
+      };
+      
+    case 1007:
+      return {
+        title: '请求超时',
+        message: msg || '请求处理超时，请稍后重试',
+        type: 'timeout',
+        canRetry: true,
+        actionText: '重试'
       };
       
     case 5000:

@@ -25,8 +25,9 @@ use std::sync::Arc;
 
 use super::controllers::{
     AdminController, GroupController, HealthController, MessageController, MomentController,
-    UserController, MonitoringController, SearchController, ActivityController, /* FriendController, */
+    UserController, MonitoringController, SearchController, ActivityController,
     CommentController, UploadController, metrics_controller, unified_monitoring_controller,
+    FriendController, SecurityController, NotificationController, SystemHealthController,
 };
 use super::middleware::metrics::metrics_middleware;
 use super::websocket_routes::{create_websocket_info_routes, create_websocket_routes};
@@ -45,8 +46,11 @@ pub struct ServiceContainer {
     pub moment_controller: MomentController<MomentApplicationService>,
     pub search_controller: SearchController,
     pub activity_controller: ActivityController<crate::adapters::PostgresUserRepository, crate::adapters::PgGroupRepository, crate::adapters::PgMomentRepository>,
-    // pub friend_controller: FriendController<crate::application::FriendApplicationServiceImpl<crate::adapters::PgFriendRepository, crate::adapters::PostgresUserRepository>>, // 暂时禁用
+    pub friend_controller: FriendController,
     pub comment_controller: CommentController<crate::adapters::PgCommentRepository>,
+    pub security_controller: SecurityController,
+    pub notification_controller: NotificationController,
+    pub system_health_controller: SystemHealthController,
     pub upload_controller: UploadController,
     pub admin_controller: AdminController,
     pub metrics_service: Option<std::sync::Arc<dyn crate::services::MetricsService>>,
@@ -94,6 +98,7 @@ fn create_health_routes() -> Router {
     RouteIntrospector::register_route("/ready", "POST", "服务就绪检查");
     RouteIntrospector::register_route("/alive", "POST", "服务存活检查");
     RouteIntrospector::register_route("/metrics", "POST", "Prometheus监控指标");
+    RouteIntrospector::register_route("/api/v1/public/status/health", "POST", "系统健康检查");
     
     Router::new()
         .route("/health", post(HealthController::health_check))
@@ -102,6 +107,9 @@ fn create_health_routes() -> Router {
         .route("/alive", post(HealthController::liveness_check))
         // Prometheus 监控指标端点
         .route("/metrics", post(metrics_controller::get_metrics))
+        // 系统健康检查API端点
+        .route("/api/v1/public/status/health", post(SystemHealthController::health_check))
+        .with_state(SystemHealthController::new())
         // TODO: 查询统计端点（暂时禁用）
         // .route("/query-stats/report", get(query_stats_controller::get_query_performance_report))
         // .route("/query-stats/slow", get(query_stats_controller::get_slow_queries))
@@ -207,9 +215,8 @@ fn create_public_routes(services: ServiceContainer) -> Router {
         
         // 评论查询子路由
         .nest("/comments", Router::new()
-            .route("/moment/{moment_id}", post(CommentController::get_moment_comments))
-            .route("/user", post(CommentController::get_user_comments))
-            .with_state(services.comment_controller)
+            .route("/list", post(CommentController::get_comments))
+            .with_state(services.comment_controller.clone())
         )
 }
 
@@ -240,7 +247,29 @@ fn create_protected_routes(services: ServiceContainer, jwt_config: JwtConfig) ->
             .route("/get_settings", post(UserController::<UserApplicationService>::get_settings))
             .route("/update_settings", post(UserController::<UserApplicationService>::update_settings))
             .route("/delete_account", post(UserController::<UserApplicationService>::delete_account))
+            // 好友关系管理API
+            .route("/add_friend", post(FriendController::add_friend))
+            .route("/accept_friend", post(FriendController::accept_friend))
+            .route("/reject_friend", post(FriendController::reject_friend))
+            .route("/follow_user", post(FriendController::follow_user))
+            .route("/unfollow_user", post(FriendController::unfollow_user))
+            .route("/block_user", post(FriendController::block_user))
+            .route("/friends_list", post(FriendController::get_friends_list))
+            .route("/blocked_list", post(FriendController::get_blocked_list))
             .with_state(services.user_controller.clone())
+        )
+        
+        // 好友关系管理子路由（使用独立的控制器状态）
+        .nest("/friends", Router::new()
+            .route("/add", post(FriendController::add_friend))
+            .route("/accept", post(FriendController::accept_friend))
+            .route("/reject", post(FriendController::reject_friend))
+            .route("/follow", post(FriendController::follow_user))
+            .route("/unfollow", post(FriendController::unfollow_user))
+            .route("/block", post(FriendController::block_user))
+            .route("/list", post(FriendController::get_friends_list))
+            .route("/blocked", post(FriendController::get_blocked_list))
+            .with_state(services.friend_controller.clone())
         )
         
         // 群组管理子路由
@@ -325,10 +354,36 @@ fn create_protected_routes(services: ServiceContainer, jwt_config: JwtConfig) ->
         
         // 评论管理子路由
         .nest("/comments", Router::new()
-            .route("/create", post(CommentController::create_comment))
-            .route("/{comment_id}", post(CommentController::delete_comment))
-            .route("/{comment_id}/update", post(CommentController::update_comment))
+            .route("/add", post(CommentController::add_comment))
+            .route("/reply", post(CommentController::reply_comment))
+            .route("/delete", post(CommentController::delete_comment))
             .with_state(services.comment_controller.clone())
+        )
+        
+        // 内容安全子路由
+        .nest("/reports", Router::new()
+            .route("/create", post(SecurityController::create_report))
+            .route("/my_reports", post(SecurityController::get_my_reports))
+            .route("/list", post(SecurityController::get_reports))
+            .route("/handle", post(SecurityController::handle_report))
+            .with_state(services.security_controller.clone())
+        )
+        
+        // 用户屏蔽子路由
+        .nest("/users", Router::new()
+            .route("/block", post(SecurityController::block_user))
+            .with_state(services.security_controller.clone())
+        )
+        
+        // 通知推送子路由
+        .nest("/notifications", Router::new()
+            .route("/send", post(NotificationController::send_notification))
+            .route("/list", post(NotificationController::get_notifications))
+            .route("/mark_read", post(NotificationController::mark_notification_read))
+            .route("/unread_count", post(NotificationController::get_unread_notification_count))
+            .route("/settings", post(NotificationController::get_notification_settings))
+            .route("/update_settings", post(NotificationController::update_notification_settings))
+            .with_state(services.notification_controller.clone())
         )
         
         // 文件上传子路由

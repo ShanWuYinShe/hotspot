@@ -118,7 +118,8 @@ export interface AuthResponse {
   access_token: string;
   refresh_token: string;
   expires_at: string; // ISO 8601 datetime string
-  is_temp?: boolean; // 是否为临时用户
+  user_type: number; // 用户类型：1-临时用户，2-普通用户，3-系统用户
+  is_temp?: boolean; // 兼容字段，可通过user_type计算得出
 }
 
 export interface RefreshTokenResponse {
@@ -127,20 +128,24 @@ export interface RefreshTokenResponse {
   expires_at: string;
 }
 
-// 前端 User 类型 - 不包含敏感信息如 login_id
+// 前端 User 类型 - 基于后端domain/entities/user.rs的UserProfile定义
 export interface User {
   user_id: string; // 64位整数转换为字符串
   nickname: string;
   avatar_url?: string;
   email?: string; // 用于显示，不是登录凭据
   bio?: string;
-  is_temp?: boolean;
+  user_type: number; // 用户类型：1-临时用户，2-普通用户，3-系统用户
+  is_temp?: boolean; // 兼容字段，可通过user_type计算得出
   created_at?: string;
   last_active_at?: string;
+  expires_at?: string; // 过期时间（临时用户）
+  // 位置信息
   latitude?: number; // 地理坐标，64位浮点数转换为number
   longitude?: number; // 地理坐标，64位浮点数转换为number
   location_name?: string;
-  distance?: number; // 距离，64位浮点数转换为number
+  distance?: number; // 距离，64位浮点数转换为number（仅搜索结果）
+  has_location?: boolean; // 是否有位置信息（仅搜索结果）
 }
 
 
@@ -480,20 +485,28 @@ export interface UnreadCountResponse {
   unread_count: number; // 32位整数，使用number类型
 }
 
-// 基于 hotspot.md 中的 Message 定义
+// 基于后端domain/entities/message.rs的Message定义
 export interface Message {
   id?: string; // 兼容字段，通常等于 message_id
   message_id: string; // UUID
+  group_id: string; // UUID，统一消息架构：私聊也通过群组管理
   sender_id: string; // 64位整数转换为字符串
-  sender_name: string;
+  sender_name?: string; // 前端扩展字段，从用户信息获取
   content: string;
-  message_type: 'text' | 'image' | 'voice' | 'video' | 'location' | 'file'; // MessageType 枚举
-  sent_at: string;
-  created_at?: string; // 兼容字段，通常等于 sent_at
-  group_id?: string; // UUID，群组消息时存在
-  conversation_id?: string; // UUID，私聊消息时存在
-  latitude?: number; // 地理坐标，64位浮点数转换为number
-  longitude?: number; // 地理坐标，64位浮点数转换为number
+  message_type: 'text' | 'image' | 'video' | 'audio' | 'file' | 'location' | 'system'; // 与后端MessageType枚举保持一致
+  media_type?: 'image' | 'video' | 'audio'; // 媒体类型，仅媒体消息
+  media_url?: string; // 媒体URL，仅媒体消息
+  media_size?: number; // 媒体大小（字节），仅媒体消息
+  reply_to_message_id?: string; // 回复的消息ID
+  created_at: string; // 创建时间，与后端保持一致
+  updated_at?: string; // 更新时间
+  is_deleted?: boolean; // 是否已删除（软删除）
+  deleted_at?: string; // 删除时间
+  // 前端扩展字段
+  sent_at?: string; // 兼容字段，通常等于 created_at
+  conversation_id?: string; // 兼容字段，私聊时可能使用
+  latitude?: number; // 位置消息的地理坐标
+  longitude?: number; // 位置消息的地理坐标
   status?: 'sending' | 'sent' | 'failed'; // 前端状态字段，用于乐观更新
   retry_count?: number; // 重试次数，前端状态字段
 }
@@ -610,6 +623,34 @@ export interface Moment {
   liked_by_me: boolean;
   distance?: number; // 距离，64位浮点数转换为number
   tags: string[];
+}
+
+// ============================================================================
+// 文件上传相关类型 - 与后端upload_controller.rs保持一致
+// ============================================================================
+
+export interface UploadResponse {
+  filename: string;     // 生成的文件名
+  url: string;         // 文件访问URL
+  size: number;        // 文件大小（字节）
+  content_type: string; // 文件MIME类型
+}
+
+export interface UploadError {
+  filename: string;    // 原始文件名
+  error: string;       // 错误信息
+}
+
+export interface BatchUploadResponse {
+  uploaded_files: UploadResponse[];  // 成功上传的文件
+  upload_errors: UploadError[];      // 上传失败的文件
+}
+
+// 文件上传配置
+export interface UploadConfig {
+  maxFileSize: number;              // 最大文件大小（字节）
+  allowedTypes: string[];           // 允许的MIME类型
+  maxFiles?: number;                // 最大文件数量（批量上传）
 }
 
 // 类型别名（保持向后兼容）

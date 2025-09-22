@@ -140,7 +140,7 @@ impl ServiceFactory {
         let pool = database.pg_pool().clone();
         let user_repository = Arc::new(PostgresUserRepository::new(pool.clone()));
         let group_repository = Arc::new(PgGroupRepository::new(pool.clone()));
-        let message_repository = Arc::new(PgMessageRepository::new(pool.clone()));
+        let message_repository = Arc::new(PgMessageRepository::new(Arc::new(pool.clone())));
         let moment_repository = Arc::new(PgMomentRepository::new(pool.clone()));
         // let friend_repository = Arc::new(PgFriendRepository::new(pool.clone())); // 暂时禁用
         
@@ -170,6 +170,7 @@ impl ServiceFactory {
         
         let message_app_service = MessageApplicationService::new(
             message_repository.clone(),
+            group_repository.clone() as Arc<dyn GroupRepository>,
             user_repository.clone() as Arc<dyn UserRepository>,
             event_publisher.clone() as Arc<dyn EventPublisher>,
         );

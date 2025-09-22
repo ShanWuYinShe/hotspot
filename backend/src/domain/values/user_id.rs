@@ -26,6 +26,12 @@ impl UserId {
     pub fn from_trusted(id: i64) -> Self {
         UserId(id)
     }
+    
+    /// 创建系统用户ID
+    pub fn system() -> Self {
+        // 使用系统用户类型（3）和固定序列号（0）
+        Self::from_trusted(3i64 << 56)
+    }
 
     /// 获取原始值
     pub fn value(&self) -> i64 {
@@ -65,13 +71,14 @@ impl From<UserId> for i64 {
     }
 }
 
-impl TryFrom<i64> for UserId {
-    type Error = DomainError;
-
-    fn try_from(id: i64) -> Result<Self, Self::Error> {
-        UserId::new(id)
+impl From<i64> for UserId {
+    fn from(id: i64) -> Self {
+        UserId::from_trusted(id)
     }
 }
+
+// TryFrom 实现已移除，避免与 From 冲突
+// 如需验证，请使用 UserId::new(id)
 
 /// 用户ID集合
 #[derive(Debug, Clone, Serialize, Deserialize)]

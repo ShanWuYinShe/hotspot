@@ -23,6 +23,26 @@ pub use moment_application_service::*;
 pub mod search_application_service;
 pub use search_application_service::*;
 
+// 增强搜索服务
+pub mod enhanced_search_service;
+pub use enhanced_search_service::*;
+
+// 搜索优化服务
+pub mod search_optimization_service;
+pub use search_optimization_service::*;
+
+// 内容安全服务
+pub mod content_security_service;
+pub use content_security_service::*;
+
+// 搜索分析服务
+pub mod search_analytics_service;
+pub use search_analytics_service::*;
+
+// 实时通知推送服务
+pub mod realtime_notification_service;
+pub use realtime_notification_service::*;
+
 // 活动服务
 pub mod activity_application_service;
 pub use activity_application_service::*;
@@ -31,9 +51,25 @@ pub use activity_application_service::*;
 pub mod comment_application_service;
 pub use comment_application_service::*;
 
+// 好友服务
+pub mod friend_application_service;
+pub use friend_application_service::*;
+
+// 安全服务
+pub mod security_application_service;
+pub use security_application_service::*;
+
 // 通知服务
 pub mod notification_application_service;
 pub use notification_application_service::*;
+
+// WebSocket通知集成服务
+pub mod websocket_notification_service;
+pub use websocket_notification_service::*;
+
+// 统一通知协调器
+pub mod unified_notification_coordinator;
+pub use unified_notification_coordinator::*;
 
 // 缓存服务
 pub mod cache_application_service;

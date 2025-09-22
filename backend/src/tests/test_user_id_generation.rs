@@ -47,13 +47,13 @@ mod user_id_generation_tests {
         assert!(temp_id_2 > temp_id_1, "临时用户ID应该递增");
         
         // 测试管理员用户ID生成
-        let admin_id = UserIdPartition::generate_user_id(UserType::Admin, 1).unwrap();
-        let (admin_min, admin_max) = UserIdPartition::get_type_range(UserType::Admin);
-        assert!(admin_id >= admin_min && admin_id <= admin_max, "管理员ID应该在正确范围内");
+        let system_id = UserIdPartition::generate_user_id(UserType::System, 1).unwrap();
+        let (system_min, system_max) = UserIdPartition::get_type_range(UserType::System);
+        assert!(system_id >= system_min && system_id <= system_max, "系统用户ID应该在正确范围内");
         
         println!(
-            "正式用户ID: {} -> {}, 临时用户ID: {} -> {}, 管理员ID: {}",
-            regular_id_1, regular_id_2, temp_id_1, temp_id_2, admin_id
+            "正式用户ID: {} -> {}, 临时用户ID: {} -> {}, 系统用户ID: {}",
+            regular_id_1, regular_id_2, temp_id_1, temp_id_2, system_id
         );
     }
 

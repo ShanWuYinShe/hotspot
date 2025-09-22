@@ -22,12 +22,9 @@ pub mod pagination {
         Ok((cursor, limit))
     }
     
-    /// 创建JavaScript安全的分页元信息
-    pub fn create_js_safe_meta(has_more: bool, next_cursor: Option<i64>) -> crate::presentation::http::models::PaginationMeta {
-        crate::presentation::http::models::PaginationMeta {
-            has_more,
-            next_cursor: next_cursor.map(JsSafeI64::new),
-        }
+    /// 创建JavaScript安全的游标字符串
+    pub fn create_js_safe_cursor(cursor: Option<i64>) -> Option<String> {
+        cursor.map(|c| c.to_string())
     }
 }
 
@@ -143,8 +140,7 @@ pub mod request_validation {
 
 /// 响应数据转换
 pub mod response_conversion {
-    use super::*;
-    use crate::presentation::http::models::{PaginatedResponse, PaginationMeta};
+    use crate::presentation::http::models::PaginatedResponse;
     
     /// 创建JavaScript安全的分页响应
     pub fn create_paginated_response<T>(
@@ -154,10 +150,8 @@ pub mod response_conversion {
     ) -> PaginatedResponse<T> {
         PaginatedResponse {
             items,
-            pagination: PaginationMeta {
-                has_more,
-                next_cursor: next_cursor.map(JsSafeI64::new),
-            },
+            has_more,
+            next_cursor: next_cursor.map(|cursor| cursor.to_string()),
         }
     }
 }

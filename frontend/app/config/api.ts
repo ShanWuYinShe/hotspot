@@ -211,6 +211,15 @@ export const STATUS_ENDPOINTS = {
   },
 } as const;
 
+// 文件上传API端点
+export const UPLOAD_ENDPOINTS = {
+  PROTECTED: {
+    BASE: `${API_CONFIG.MODULES.PROTECTED}/upload`,
+    AVATAR: "/avatar",              // 上传头像
+    IMAGES: "/images",              // 批量上传图片
+  },
+} as const;
+
 // 其他端点
 export const OTHER_ENDPOINTS = {
   HEALTH: "/health",
@@ -262,6 +271,25 @@ export const buildAdminUrl = (endpoint: string): string => {
   return buildUrl(ADMIN_ENDPOINTS.PROTECTED.BASE, endpoint);
 };
 
+export const buildUploadUrl = (endpoint: string): string => {
+  return buildUrl(UPLOAD_ENDPOINTS.PROTECTED.BASE, endpoint);
+};
+
+export const buildReportUrl = (endpoint: string, isPublic: boolean = false): string => {
+  const base = REPORT_ENDPOINTS.PROTECTED.BASE; // 举报功能只有受保护的端点
+  return buildUrl(base, endpoint);
+};
+
+export const buildNotificationUrl = (endpoint: string, isPublic: boolean = false): string => {
+  const base = NOTIFICATION_ENDPOINTS.PROTECTED.BASE; // 通知功能只有受保护的端点
+  return buildUrl(base, endpoint);
+};
+
+export const buildStatusUrl = (endpoint: string, isPublic: boolean = true): string => {
+  const base = STATUS_ENDPOINTS.PUBLIC.BASE; // 状态检查通常是公开的
+  return buildUrl(base, endpoint);
+};
+
 // 导出所有端点配置
 export const API_ENDPOINTS = {
   AUTH: AUTH_ENDPOINTS,
@@ -273,6 +301,7 @@ export const API_ENDPOINTS = {
   NOTIFICATION: NOTIFICATION_ENDPOINTS,
   STATUS: STATUS_ENDPOINTS,
   ADMIN: ADMIN_ENDPOINTS,
+  UPLOAD: UPLOAD_ENDPOINTS,
   OTHER: OTHER_ENDPOINTS,
 } as const;
 
@@ -283,3 +312,4 @@ export type GroupEndpoint = keyof typeof GROUP_ENDPOINTS;
 export type MomentEndpoint = keyof typeof MOMENT_ENDPOINTS;
 export type ChatEndpoint = keyof typeof CHAT_ENDPOINTS;
 export type AdminEndpoint = keyof typeof ADMIN_ENDPOINTS;
+export type UploadEndpoint = keyof typeof UPLOAD_ENDPOINTS;

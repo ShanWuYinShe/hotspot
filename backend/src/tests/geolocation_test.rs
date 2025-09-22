@@ -3,7 +3,7 @@
 /// 测试PostGIS地理位置查询和距离计算功能
 #[cfg(test)]
 mod geolocation_tests {
-    use crate::presentation::http::response_mappers::{PaginatedResponse, PaginationMeta};
+    use crate::presentation::http::models::common::PaginatedResponse;
     
     #[test]
     fn test_coordinates_validation() {
@@ -60,16 +60,18 @@ mod geolocation_tests {
         let paginated = PaginatedResponse::new(items.clone(), true, Some(123));
         
         assert_eq!(paginated.items.len(), 2);
-        assert!(paginated.pagination.has_more);
-        assert_eq!(paginated.pagination.next_cursor, Some(123));
+        assert!(paginated.has_more);
+        assert_eq!(paginated.next_cursor, Some("123".to_string()));
         
-        // 测试分页元数据
-        let meta = PaginationMeta {
+        // 测试分页响应
+        let paginated = PaginatedResponse {
+            items: vec![1, 2, 3],
             has_more: true,
-            next_cursor: Some(123),
+            next_cursor: Some("123".to_string()),
         };
-        assert!(meta.has_more);
-        assert_eq!(meta.next_cursor, Some(123));
+        assert!(paginated.has_more);
+        assert_eq!(paginated.next_cursor, Some("123".to_string()));
+        assert_eq!(paginated.items.len(), 3);
     }
     
     #[test]

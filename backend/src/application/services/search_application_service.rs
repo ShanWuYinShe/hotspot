@@ -265,8 +265,9 @@ impl SearchApplicationService for SearchApplicationServiceImpl {
             latitude: result.latitude,
             longitude: result.longitude,
             location_name: result.location_name,
-            is_public: result.is_public,
             member_count: result.member_count,
+            group_type: result.group_type,
+            visibility: result.visibility,
             last_active_at: result.last_active_at,
             user_role: None, // 搜索结果不包含用户角色信息
         }).collect();

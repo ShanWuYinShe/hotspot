@@ -28,6 +28,24 @@ pub enum DomainError {
     #[error("临时用户已过期")]
     TempUserExpired,
     
+    #[error("权限不足: {action} - {reason}")]
+    PermissionDenied { action: String, reason: String },
+    
+    #[error("安全违规: {reason}")]
+    SecurityViolation { reason: String },
+    
+    #[error("认证失败: {reason}")]
+    AuthenticationError { reason: String },
+    
+    #[error("序列化错误: {reason}")]
+    SerializationError { reason: String },
+    
+    #[error("数据库错误: {operation} - {details}")]
+    DatabaseError { operation: String, details: String },
+    
+    #[error("验证错误: {field} - {reason}")]
+    ValidationError { field: String, reason: String },
+    
     #[error("用户权限不足")]
     InsufficientPermissions,
     
@@ -124,6 +142,9 @@ pub enum DomainError {
     #[error("未授权访问: {reason}")]
     Unauthorized { reason: String },
     
+    #[error("内部错误: {reason}")]
+    InternalError { reason: String },
+    
     // === 缓存错误 ===
     #[error("缓存操作失败")]
     CacheError,
@@ -134,9 +155,7 @@ pub enum DomainError {
     #[error("缓存反序列化失败")]
     CacheDeserializationError,
     
-    // === 验证错误 ===
-    #[error("字段验证失败: {field} - {reason}")]
-    ValidationError { field: String, reason: String },
+    // 重复定义已移除，使用上面的 ValidationError
     
     #[error("验证失败")]
     ValidationFailed { errors: Vec<String> },

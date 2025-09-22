@@ -62,6 +62,37 @@ pub enum MessageType {
     System,
 }
 
+impl std::str::FromStr for MessageType {
+    type Err = String;
+    
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "text" => Ok(MessageType::Text),
+            "image" => Ok(MessageType::Image),
+            "video" => Ok(MessageType::Video),
+            "audio" => Ok(MessageType::Audio),
+            "file" => Ok(MessageType::File),
+            "location" => Ok(MessageType::Location),
+            "system" => Ok(MessageType::System),
+            _ => Err(format!("未知的消息类型: {}", s)),
+        }
+    }
+}
+
+impl std::fmt::Display for MessageType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MessageType::Text => write!(f, "text"),
+            MessageType::Image => write!(f, "image"),
+            MessageType::Video => write!(f, "video"),
+            MessageType::Audio => write!(f, "audio"),
+            MessageType::File => write!(f, "file"),
+            MessageType::Location => write!(f, "location"),
+            MessageType::System => write!(f, "system"),
+        }
+    }
+}
+
 /// 媒体类型枚举
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "media_type", rename_all = "lowercase")]
@@ -74,6 +105,31 @@ pub enum MediaType {
     Audio,
     /// 文档
     Document,
+}
+
+impl std::str::FromStr for MediaType {
+    type Err = String;
+    
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "image" => Ok(MediaType::Image),
+            "video" => Ok(MediaType::Video),
+            "audio" => Ok(MediaType::Audio),
+            "document" => Ok(MediaType::Document),
+            _ => Err(format!("未知的媒体类型: {}", s)),
+        }
+    }
+}
+
+impl std::fmt::Display for MediaType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MediaType::Image => write!(f, "image"),
+            MediaType::Video => write!(f, "video"),
+            MediaType::Audio => write!(f, "audio"),
+            MediaType::Document => write!(f, "document"),
+        }
+    }
 }
 
 impl Message {
@@ -106,9 +162,9 @@ impl Message {
         // 发布消息创建事件
         message.add_event(DomainEvent::MessageSent {
             message_id: id,
-            group_id,
             sender_id,
-            message_type: MessageType::Text,
+            recipient_type: crate::domain::events::MessageRecipientType::Group,
+            recipient_id: group_id.to_string(),
             sent_at: now,
         });
         
@@ -159,9 +215,9 @@ impl Message {
         // 发布消息创建事件
         message.add_event(DomainEvent::MessageSent {
             message_id: id,
-            group_id,
             sender_id,
-            message_type,
+            recipient_type: crate::domain::events::MessageRecipientType::Group,
+            recipient_id: group_id.to_string(),
             sent_at: now,
         });
         
@@ -200,9 +256,9 @@ impl Message {
         // 发布消息创建事件
         message.add_event(DomainEvent::MessageSent {
             message_id: id,
-            group_id,
             sender_id,
-            message_type: MessageType::Location,
+            recipient_type: crate::domain::events::MessageRecipientType::Group,
+            recipient_id: group_id.to_string(),
             sent_at: now,
         });
         
@@ -237,9 +293,9 @@ impl Message {
         // 发布消息创建事件
         message.add_event(DomainEvent::MessageSent {
             message_id: id,
-            group_id,
             sender_id: UserId::system(),
-            message_type: MessageType::System,
+            recipient_type: crate::domain::events::MessageRecipientType::Group,
+            recipient_id: group_id.to_string(),
             sent_at: now,
         });
         
@@ -285,7 +341,7 @@ impl Message {
         
         self.add_event(DomainEvent::MessageDeleted {
             message_id: self.id.clone(),
-            group_id: self.group_id.clone(),
+            deleted_by: self.sender_id, // 简化实现，使用发送者作为删除者
             deleted_at: now,
         });
         

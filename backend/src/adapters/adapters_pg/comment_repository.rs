@@ -134,7 +134,7 @@ impl CommentRepository for PgCommentRepository {
 
             let row = sqlx::query(
                 r#"
-                INSERT INTO comments (moment_id, user_id, content, parent_comment_id, created_at, updated_at)
+                INSERT INTO moment_comments (moment_id, user_id, content, parent_comment_id, created_at, updated_at)
                 VALUES ($1, $2, $3, $4, $5, $6)
                 RETURNING comment_id, moment_id, user_id, content, parent_comment_id, created_at, updated_at
                 "#
@@ -164,7 +164,7 @@ impl CommentRepository for PgCommentRepository {
             let row = sqlx::query(
                 r#"
                 SELECT comment_id, moment_id, user_id, content, parent_comment_id, created_at, updated_at
-                FROM comments
+                FROM moment_comments
                 WHERE comment_id = $1
                 "#
             )
@@ -205,7 +205,7 @@ impl CommentRepository for PgCommentRepository {
                 c.updated_at as "updated_at!",
                 u.nickname as "user_nickname!",
                 u.avatar_url as user_avatar
-            FROM comments c
+            FROM moment_comments c
             JOIN users u ON c.user_id = u.id
             WHERE c.moment_id = $1 
             AND ($2 = 0 OR c.user_id > $2)
@@ -258,7 +258,7 @@ impl CommentRepository for PgCommentRepository {
                 c.updated_at as "updated_at!",
                 u.nickname as user_nickname,
                 u.avatar_url as user_avatar
-            FROM comments c
+            FROM moment_comments c
             JOIN users u ON c.user_id = u.id
             WHERE c.user_id = $1 
             AND ($2 = 0 OR c.user_id > $2)
@@ -297,7 +297,7 @@ impl CommentRepository for PgCommentRepository {
     async fn delete_comment(&self, comment_id: &str, user_id: i64) -> DomainResult<()> {
         let result = sqlx::query!(
             r#"
-            DELETE FROM comments
+            DELETE FROM moment_comments
             WHERE comment_id = $1 AND user_id = $2
             "#,
             comment_id,
@@ -330,7 +330,7 @@ impl CommentRepository for PgCommentRepository {
     ) -> DomainResult<Comment> {
         let row = sqlx::query(
             r#"
-            UPDATE comments
+            UPDATE moment_comments
             SET content = $3, updated_at = $4
             WHERE comment_id = $1 AND user_id = $2
             RETURNING comment_id, moment_id, user_id, content, parent_comment_id, created_at, updated_at
@@ -380,7 +380,7 @@ impl CommentRepository for PgCommentRepository {
                 c.updated_at as "updated_at!",
                 u.nickname as user_nickname,
                 u.avatar_url as user_avatar
-            FROM comments c
+            FROM moment_comments c
             JOIN users u ON c.user_id = u.id
             WHERE c.parent_comment_id = $1 
             AND ($2 = 0 OR c.user_id > $2)
@@ -425,7 +425,7 @@ impl CommentRepository for PgCommentRepository {
         let count = sqlx::query_scalar!(
             r#"
             SELECT COUNT(*)::bigint as "count!"
-            FROM comments
+            FROM moment_comments
             WHERE moment_id = $1
             "#,
             moment_id_i64

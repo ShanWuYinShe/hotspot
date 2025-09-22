@@ -45,7 +45,7 @@ struct EventRow {
     /// 相关性ID
     correlation_id: Option<String>,
     /// 用户ID
-    user_id: Option<String>,
+    user_id: Option<i64>,
     /// 会话ID
     session_id: Option<String>,
 }
@@ -207,7 +207,7 @@ impl PostgresEventStore {
             occurred_at: envelope.metadata.occurred_at,
             causation_id: envelope.metadata.causation_id.as_ref().map(|id| id.value().to_string()),
             correlation_id: envelope.metadata.correlation_id.clone(),
-            user_id: envelope.metadata.user_id.as_ref().map(|id| id.value().to_string()),
+            user_id: envelope.metadata.user_id.as_ref().map(|id| id.value()),
             session_id: envelope.metadata.session_id.clone(),
         })
     }
@@ -230,7 +230,7 @@ impl PostgresEventStore {
             occurred_at: row.occurred_at,
             causation_id: row.causation_id.map(EventId::from_string),
             correlation_id: row.correlation_id,
-            user_id: row.user_id.and_then(|id| id.parse().ok()).map(crate::domain::UserId::from_trusted),
+            user_id: row.user_id.map(crate::domain::UserId::from_trusted),
             session_id: row.session_id,
             metadata: metadata_map,
         };
@@ -255,7 +255,7 @@ struct EventRowInsert {
     occurred_at: DateTime<Utc>,
     causation_id: Option<String>,
     correlation_id: Option<String>,
-    user_id: Option<String>,
+    user_id: Option<i64>,
     session_id: Option<String>,
 }
 

@@ -24,7 +24,7 @@ pub mod defaults {
     pub const MAX_LARGE_PAGE_SIZE: i64 = 100;
 
     /// 搜索限制
-    pub const MAX_SEARCH_RADIUS_METERS: f64 = 10000.0; // 10公里
+    pub const MAX_SEARCH_RADIUS_METERS: f64 = 50000.0; // 50公里，与domain/values/location.rs保持一致
     pub const MAX_SEARCH_KEYWORD_LENGTH: usize = 50;
 
     /// 用户设置默认值

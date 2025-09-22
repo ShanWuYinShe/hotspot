@@ -125,6 +125,18 @@ fn create_unified_service_container(
     // 从原始服务容器中提取控制器
     let user_repo = service_container.user_repository_port();
     
+    // 创建新的控制器实例
+    let friend_controller = backend::presentation::http::controllers::FriendController::new(
+        service_container.user_app_service.clone().into()
+    );
+    let security_controller = backend::presentation::http::controllers::SecurityController::new(
+        service_container.user_app_service.clone().into()
+    );
+    let notification_controller = backend::presentation::http::controllers::NotificationController::new(
+        service_container.user_app_service.clone().into()
+    );
+    let system_health_controller = backend::presentation::http::controllers::SystemHealthController::new();
+    
     Ok(ServiceContainer {
         user_controller: service_container.user_controller.clone(),
         group_controller: service_container.group_controller.clone(),
@@ -132,7 +144,11 @@ fn create_unified_service_container(
         moment_controller: service_container.moment_controller.clone(),
         search_controller: service_container.search_controller.clone(),
         activity_controller: service_container.activity_controller.clone(),
+        friend_controller,
         comment_controller: service_container.comment_controller.clone(),
+        security_controller,
+        notification_controller,
+        system_health_controller,
         upload_controller: service_container.upload_controller.clone(),
         admin_controller: backend::presentation::http::controllers::AdminController::with_user_repo(user_repo),
         metrics_service: service_container.metrics_service.clone(),

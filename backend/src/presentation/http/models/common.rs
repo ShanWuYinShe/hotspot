@@ -24,31 +24,24 @@ impl Default for Pagination {
     }
 }
 
-/// 分页响应
+/// 分页响应 - 扁平化结构，与前端保持一致
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PaginatedResponse<T> {
     /// 数据列表
     pub items: Vec<T>,
-    /// 分页元信息
-    pub pagination: PaginationMeta,
-}
-
-/// 分页元信息
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct PaginationMeta {
     /// 是否有更多数据
     pub has_more: bool,
     /// 下一页游标
-    pub next_cursor: Option<JsSafeI64>,
+    pub next_cursor: Option<String>,
 }
 
-/// 标准API响应
+/// 标准API响应 - 与前端保持一致
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ApiResponse<T> {
     /// 响应码，0表示成功
     pub code: i32,
     /// 响应消息
-    pub message: String,
+    pub msg: String,
     /// 响应数据
     pub data: Option<T>,
 }
@@ -58,7 +51,7 @@ impl<T> ApiResponse<T> {
     pub fn success(data: T) -> Self {
         Self {
             code: 0,
-            message: "success".to_string(),
+            msg: "success".to_string(),
             data: Some(data),
         }
     }
@@ -67,16 +60,16 @@ impl<T> ApiResponse<T> {
     pub fn success_empty() -> ApiResponse<()> {
         ApiResponse {
             code: 0,
-            message: "success".to_string(),
+            msg: "success".to_string(),
             data: Some(()),
         }
     }
     
     /// 创建错误响应
-    pub fn error(code: i32, message: String) -> ApiResponse<()> {
+    pub fn error(code: i32, msg: String) -> ApiResponse<()> {
         ApiResponse {
             code,
-            message,
+            msg,
             data: None,
         }
     }

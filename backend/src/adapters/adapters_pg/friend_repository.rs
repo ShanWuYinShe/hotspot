@@ -1,447 +1,445 @@
-/// PostgreSQL好友仓储实现
+/// PostgreSQL好友关系仓储实现
 /// 
 /// 功能职责：
-/// - 实现好友关系的数据库CRUD操作
-/// - 提供好友请求管理功能
-/// - 支持好友关系查询和状态检查
-/// - 管理好友请求的生命周期
+/// - 实现好友关系的数据库持久化操作
+/// - 处理好友请求的创建、查询和状态更新
+/// - 管理好友关系的建立和删除
+/// - 提供好友列表和好友请求列表的分页查询
 use async_trait::async_trait;
-use chrono::Utc;
-use sqlx::PgPool;
+use chrono::{DateTime, Utc};
+use sqlx::{PgPool, Row};
+use tracing::{debug, error, warn};
 
-use crate::{
-    domain::{DomainResult, DomainError, UserId},
-    domain::entities::{FriendRequest, Friendship, FriendProfile, FriendshipStatus, FriendRequestStatus},
-    ports::repositories::FriendRepository,
+use crate::domain::entities::friend::{
+    Friendship, FriendRequest, FriendProfile, FriendRequestStatus, DbFriendshipStatus
 };
-use super::query_optimizer::PgQueryOptimizer;
+use crate::domain::errors::{DomainError, DomainResult};
+use crate::domain::values::user_id::UserId;
+use crate::ports::repositories::FriendRepository;
 
-
-/// PostgreSQL好友仓储
-#[derive(Clone)]
+/// PostgreSQL好友关系仓储
 pub struct PgFriendRepository {
     pool: PgPool,
-    query_optimizer: PgQueryOptimizer,
 }
 
 impl PgFriendRepository {
-    /// 创建新的好友仓储实例
+    /// 创建新的PostgreSQL好友关系仓储实例
     pub fn new(pool: PgPool) -> Self {
-        // 强制启用查询优化器
-        let query_optimizer = PgQueryOptimizer::new(pool.clone());
-        Self { 
-            pool,
-            query_optimizer,
-        }
+        Self { pool }
     }
-    
-    /// 执行查询并进行性能监控
-    async fn execute_query_with_monitoring<F, T>(
-        &self,
-        operation_name: &str,
-        query_fn: F,
-    ) -> DomainResult<T>
-    where
-        F: std::future::Future<Output = DomainResult<T>>,
-    {
-        // 强制使用查询优化器进行监控和优化
-        let params_summary = std::collections::HashMap::new();
-        
-        let (result, metrics) = self.query_optimizer.execute_with_monitoring(
-            operation_name,
-            params_summary,
-            query_fn
-        ).await?;
-        
-        // 记录性能指标
-        if let Some(ref perf_metrics) = metrics {
-            if perf_metrics.execution_time_ms > 100 {
-                tracing::warn!(
-                    operation = operation_name,
-                    duration_ms = perf_metrics.execution_time_ms,
-                    query_type = perf_metrics.query_type,
-                    used_index = perf_metrics.used_index,
-                    repository = "friend_repository",
-                    "慢查询检测"
-                );
-            } else {
-                tracing::debug!(
-                    operation = operation_name,
-                    duration_ms = perf_metrics.execution_time_ms,
-                    query_type = perf_metrics.query_type,
-                    used_index = perf_metrics.used_index,
-                    repository = "friend_repository",
-                    "查询完成"
-                );
-            }
-        }
-        
-        Ok(result)
-    }
-
-
 }
 
 #[async_trait]
 impl FriendRepository for PgFriendRepository {
-    /// 发送好友请求
-    async fn send_friend_request(
-        &self,
-        requester_id: i64,
-        target_id: i64,
-        message: Option<&str>,
-    ) -> DomainResult<FriendRequest> {
-        self.execute_query_with_monitoring("send_friend_request", async {
-            // 检查是否已存在待处理的请求
-            let existing = sqlx::query!(
-                "SELECT id FROM friendships 
-                 WHERE user_id = $1 AND friend_id = $2 AND status = 'pending'",
-                requester_id,
-                target_id
-            )
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(|e| DomainError::BusinessRuleViolation {
-                rule: format!("数据库错误: {}", e),
-            })?;
-
-            if existing.is_some() {
-                return Err(DomainError::BusinessRuleViolation {
-                    rule: "已存在待处理的好友请求".to_string(),
-                });
+    /// 保存好友关系
+    async fn save(&self, friendship: &Friendship) -> DomainResult<()> {
+        debug!("保存好友关系: 用户1={}, 用户2={}", 
+               friendship.user1_id, friendship.user2_id);
+        
+        let mut tx = self.pool.begin().await.map_err(|e| {
+            error!("开始事务失败: {}", e);
+            DomainError::DatabaseError { 
+                operation: "begin_transaction".to_string(),
+                details: e.to_string()
             }
-
-        // 创建新的好友请求
-        let now = Utc::now();
-
-        let result = sqlx::query!(
-            "INSERT INTO friendships (user_id, friend_id, status, notes, created_at)
-             VALUES ($1, $2, 'pending', $3, $4) RETURNING id",
-            requester_id,
-            target_id,
-            message,
-            now
-        )
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("数据库错误: {}", e),
         })?;
-
-            Ok(FriendRequest {
-                request_id: result.id.to_string(),
-                requester_id,
-                target_id,
-                status: FriendRequestStatus::Pending,
-                message: message.map(|s| s.to_string()),
-                created_at: now,
-                updated_at: now,
-                expires_at: now + chrono::Duration::days(7),
-            })
-        }).await
-    }
-
-    /// 接受好友请求
-    async fn accept_friend_request(&self, request_id: &str, target_id: i64) -> DomainResult<Friendship> {
-        let request_id_num: i64 = request_id.parse()
-            .map_err(|_| DomainError::BusinessRuleViolation {
-                rule: "无效的请求ID格式".to_string(),
-            })?;
-
-        let mut tx = self.pool.begin().await
-            .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("数据库错误: {}", e),
-        })?;
-
-        // 更新好友请求状态
-        let request = sqlx::query!(
-            "UPDATE friendships 
-             SET status = 'accepted', updated_at = NOW()
-             WHERE id = $1 AND friend_id = $2 AND status = 'pending'
-             RETURNING user_id, friend_id",
-            request_id_num,
-            target_id
+        
+        // 检查关系是否已存在
+        let existing = sqlx::query!(
+            "SELECT relationship_id FROM user_relationships 
+             WHERE (from_user_id = $1 AND to_user_id = $2 AND relationship_type = 'friend') 
+                OR (from_user_id = $2 AND to_user_id = $1 AND relationship_type = 'friend')",
+            friendship.user1_id,
+            friendship.user2_id
         )
         .fetch_optional(&mut *tx)
         .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("数据库错误: {}", e),
+        .map_err(|e| {
+            error!("查询现有关系失败: {}", e);
+            DomainError::DatabaseError { 
+                operation: "check_existing_friendship".to_string(),
+                details: e.to_string()
+            }
         })?;
-
-        let request = request.ok_or_else(|| 
-            DomainError::BusinessRuleViolation {
-                rule: "好友请求不存在或已处理".to_string(),
+        
+        if existing.is_some() {
+            // 更新现有关系
+            sqlx::query!(
+                "UPDATE user_relationships 
+                 SET relationship_status = 'accepted', updated_at = NOW()
+                 WHERE (from_user_id = $1 AND to_user_id = $2 AND relationship_type = 'friend')
+                    OR (from_user_id = $2 AND to_user_id = $1 AND relationship_type = 'friend')",
+                friendship.user1_id,
+                friendship.user2_id
+            )
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| {
+                error!("更新好友关系失败: {}", e);
+                DomainError::DatabaseError { 
+                    operation: "update_friendship".to_string(),
+                    details: e.to_string()
+                }
             })?;
-
-        tx.commit().await
-            .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("数据库错误: {}", e),
-        })?;
-
-        Ok(Friendship {
-            friendship_id: request_id_num.to_string(),
-            user1_id: request.user_id.min(request.friend_id),
-            user2_id: request.user_id.max(request.friend_id),
-            created_at: Utc::now(),
-        })
-    }
-
-    /// 拒绝好友请求
-    async fn reject_friend_request(&self, request_id: &str, target_id: i64) -> DomainResult<()> {
-        let request_id_num: i64 = request_id.parse()
-            .map_err(|_| DomainError::BusinessRuleViolation {
-                rule: "无效的请求ID格式".to_string(),
+        } else {
+            // 插入新关系
+            sqlx::query!(
+                "INSERT INTO user_relationships (from_user_id, to_user_id, relationship_type, relationship_status, created_at, updated_at)
+                 VALUES ($1, $2, 'friend', 'accepted', $3, $3)",
+                friendship.user1_id,
+                friendship.user2_id,
+                friendship.created_at
+            )
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| {
+                error!("插入好友关系失败: {}", e);
+                DomainError::DatabaseError { 
+                    operation: "insert_friendship".to_string(),
+                    details: e.to_string()
+                }
             })?;
-
-        let result = sqlx::query!(
-            "UPDATE friendships 
-             SET status = 'declined', updated_at = NOW()
-             WHERE id = $1 AND friend_id = $2 AND status = 'pending'",
-            request_id_num,
-            target_id
-        )
-        .execute(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("数据库错误: {}", e),
-        })?;
-
-        if result.rows_affected() == 0 {
-            return Err(DomainError::BusinessRuleViolation {
-                rule: "好友请求不存在或已处理".to_string(),
-            });
         }
-
+        
+        tx.commit().await.map_err(|e| {
+            error!("提交事务失败: {}", e);
+            DomainError::DatabaseError { 
+                operation: "commit_transaction".to_string(),
+                details: e.to_string()
+            }
+        })?;
+        
+        debug!("好友关系保存成功");
         Ok(())
     }
 
-    /// 移除好友关系
-    async fn remove_friendship(&self, user_id: i64, friend_id: i64) -> DomainResult<()> {
-        let result = sqlx::query!(
-            "DELETE FROM friendships 
-             WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)",
-            user_id,
-            friend_id
-        )
-        .execute(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("数据库错误: {}", e),
-        })?;
-
-        if result.rows_affected() == 0 {
-            return Err(DomainError::BusinessRuleViolation {
-                rule: "好友关系不存在".to_string(),
-            });
-        }
-
-        Ok(())
-    }
-
-    /// 获取用户的好友列表 - 优化版本使用UNION避免复杂CASE语句
-    async fn get_friends(&self, user_id: i64, cursor: i64, limit: i32) -> DomainResult<Vec<FriendProfile>> {
-        let friends = sqlx::query!(
-            r#"
-            SELECT u.id as "user_id!", u.nickname as "nickname!", u.avatar_url, f.created_at as "created_at!"
-            FROM (
-                SELECT f.friend_id, f.created_at
-                FROM friendships f
-                WHERE f.user_id = $1 AND f.status = 'accepted'
-                UNION
-                SELECT f.user_id as friend_id, f.created_at
-                FROM friendships f
-                WHERE f.friend_id = $1 AND f.status = 'accepted'
-            ) f
-            JOIN users u ON u.id = f.friend_id
-            WHERE ($2 = 0 OR u.id > $2)
-            ORDER BY u.id ASC
-            LIMIT $3
-            "#,
-            user_id,
-            cursor as i32,
-            limit as i64
+    /// 根据用户ID查找好友关系
+    async fn find_friends_by_user_id(&self, user_id: &UserId) -> DomainResult<Vec<Friendship>> {
+        debug!("查找用户好友关系: user_id={}", user_id.value());
+        
+        let rows = sqlx::query!(
+            "SELECT from_user_id, to_user_id, created_at
+             FROM user_relationships 
+             WHERE (from_user_id = $1 OR to_user_id = $1) 
+               AND relationship_type = 'friend' 
+               AND relationship_status = 'accepted'",
+            user_id.value()
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("数据库错误: {}", e),
+        .map_err(|e| {
+            error!("查询好友关系失败: {}", e);
+            DomainError::DatabaseError { 
+                operation: "find_friends_by_user_id".to_string(),
+                details: e.to_string()
+            }
         })?;
+        
+        let friendships = rows.into_iter().map(|row| {
+            // 确定friend_id（对方用户ID）
+            let friend_id = if row.from_user_id == user_id.value() {
+                row.to_user_id
+            } else {
+                row.from_user_id
+            };
+            
+            // 确保user1_id < user2_id
+            let (user1_id, user2_id) = if user_id.value() < friend_id {
+                (user_id.value(), friend_id)
+            } else {
+                (friend_id, user_id.value())
+            };
+            
+            Friendship {
+                friendship_id: format!("{}_{}", user1_id, user2_id),
+                user1_id,
+                user2_id,
+                created_at: row.created_at.unwrap_or_else(|| Utc::now()),
+            }
+        }).collect();
+        
+        debug!("找到{}个好友关系", friendships.len());
+        Ok(friendships)
+    }
 
-        let friend_profiles: Vec<FriendProfile> = friends
-            .into_iter()
-            .map(|row| FriendProfile {
-                user_id: row.user_id,
-                nickname: row.nickname,
-                avatar_url: row.avatar_url,
-                last_active_at: None, // TODO: 实现在线状态检测
-                friendship_created_at: row.created_at,
-                is_online: false, // TODO: 实现在线状态检测
-            })
-            .collect();
+    /// 发送好友请求
+    async fn send_friend_request(&self, requester_id: &UserId, target_id: &UserId, message: Option<String>) -> DomainResult<()> {
+        debug!("发送好友请求: 发送者={}, 目标={}", requester_id.value(), target_id.value());
+        
+        // 检查是否是自己
+        if requester_id.value() == target_id.value() {
+            return Err(DomainError::ValidationError {
+                field: "target_id".to_string(),
+                reason: "不能向自己发送好友请求".to_string(),
+            });
+        }
+        
+        let mut tx = self.pool.begin().await.map_err(|e| {
+            error!("开始事务失败: {}", e);
+            DomainError::DatabaseError { 
+                operation: "begin_transaction".to_string(),
+                details: e.to_string()
+            }
+        })?;
+        
+        // 检查目标用户是否存在
+        let target_exists = sqlx::query!(
+            "SELECT id FROM users WHERE id = $1",
+            target_id.value()
+        )
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| {
+            error!("检查目标用户失败: {}", e);
+            DomainError::DatabaseError { 
+                operation: "check_target_user".to_string(),
+                details: e.to_string()
+            }
+        })?;
+        
+        if target_exists.is_none() {
+            return Err(DomainError::NotFound {
+                resource: "目标用户".to_string(),
+            });
+        }
+        
+        // 检查是否已经是好友或有待处理的请求
+        let existing_relation = sqlx::query!(
+            "SELECT relationship_status::text as \"relationship_status!\" FROM user_relationships 
+             WHERE ((from_user_id = $1 AND to_user_id = $2) OR (from_user_id = $2 AND to_user_id = $1))
+               AND relationship_type = 'friend'",
+            requester_id.value(),
+            target_id.value()
+        )
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| {
+            error!("检查现有关系失败: {}", e);
+            DomainError::DatabaseError { 
+                operation: "check_existing_relation".to_string(),
+                details: e.to_string()
+            }
+        })?;
+        
+        if let Some(relation) = existing_relation {
+            match relation.relationship_status.as_str() {
+                "accepted" => return Err(DomainError::ValidationError {
+                    field: "target_id".to_string(),
+                    reason: "已经是好友关系".to_string(),
+                }),
+                "pending" => return Err(DomainError::ValidationError {
+                    field: "target_id".to_string(),
+                    reason: "已有待处理的好友请求".to_string(),
+                }),
+                "blocked" => return Err(DomainError::ValidationError {
+                    field: "target_id".to_string(),
+                    reason: "用户已被屏蔽".to_string(),
+                }),
+                _ => {}
+            }
+        }
+        
+        // 插入好友请求
+        sqlx::query!(
+            "INSERT INTO user_relationships (from_user_id, to_user_id, relationship_type, relationship_status, message, created_at, updated_at)
+             VALUES ($1, $2, 'friend', 'pending', $3, NOW(), NOW())",
+            requester_id.value(),
+            target_id.value(),
+            message
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| {
+            error!("插入好友请求失败: {}", e);
+            DomainError::DatabaseError { 
+                operation: "insert_friend_request".to_string(),
+                details: e.to_string()
+            }
+        })?;
+        
+        tx.commit().await.map_err(|e| {
+            error!("提交事务失败: {}", e);
+            DomainError::DatabaseError { 
+                operation: "commit_transaction".to_string(),
+                details: e.to_string()
+            }
+        })?;
+        
+        debug!("好友请求发送成功");
+        Ok(())
+    }
 
-        Ok(friend_profiles)
+    /// 接受好友请求
+    async fn accept_friend_request(&self, requester_id: &UserId, target_id: &UserId) -> DomainResult<()> {
+        debug!("接受好友请求: 请求者={}, 目标={}", requester_id.value(), target_id.value());
+        
+        let mut tx = self.pool.begin().await.map_err(|e| {
+            error!("开始事务失败: {}", e);
+            DomainError::DatabaseError { 
+                operation: "begin_transaction".to_string(),
+                details: e.to_string()
+            }
+        })?;
+        
+        // 检查是否有待处理的好友请求
+        let request = sqlx::query!(
+            "SELECT relationship_id FROM user_relationships 
+             WHERE from_user_id = $1 AND to_user_id = $2 
+               AND relationship_type = 'friend' AND relationship_status = 'pending'",
+            requester_id.value(),
+            target_id.value()
+        )
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| {
+            error!("查询好友请求失败: {}", e);
+            DomainError::DatabaseError { 
+                operation: "find_friend_request".to_string(),
+                details: e.to_string()
+            }
+        })?;
+        
+        if request.is_none() {
+            return Err(DomainError::NotFound {
+                resource: "好友请求".to_string(),
+            });
+        }
+        
+        // 更新请求状态为已接受
+        sqlx::query!(
+            "UPDATE user_relationships 
+             SET relationship_status = 'accepted', updated_at = NOW()
+             WHERE from_user_id = $1 AND to_user_id = $2 
+               AND relationship_type = 'friend' AND relationship_status = 'pending'",
+            requester_id.value(),
+            target_id.value()
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| {
+            error!("更新好友请求状态失败: {}", e);
+            DomainError::DatabaseError { 
+                operation: "accept_friend_request".to_string(),
+                details: e.to_string()
+            }
+        })?;
+        
+        tx.commit().await.map_err(|e| {
+            error!("提交事务失败: {}", e);
+            DomainError::DatabaseError { 
+                operation: "commit_transaction".to_string(),
+                details: e.to_string()
+            }
+        })?;
+        
+        debug!("好友请求接受成功");
+        Ok(())
+    }
+
+    /// 获取好友列表
+    async fn get_friends(&self, user_id: &UserId, cursor: Option<i64>, limit: i32) -> DomainResult<Vec<FriendProfile>> {
+        debug!("获取好友列表: user_id={}, cursor={:?}, limit={}", 
+               user_id.value(), cursor, limit);
+        
+        let cursor_condition = cursor.map(|c| format!("AND u.id > {}", c)).unwrap_or_default();
+        
+        let query = format!(
+            "SELECT u.id as user_id, u.nickname, u.avatar_url, u.updated_at as last_active_at,
+                    ur.created_at as friendship_created_at
+             FROM user_relationships ur
+             JOIN users u ON (
+                 CASE 
+                     WHEN ur.from_user_id = $1 THEN u.id = ur.to_user_id
+                     ELSE u.id = ur.from_user_id
+                 END
+             )
+             WHERE (ur.from_user_id = $1 OR ur.to_user_id = $1)
+               AND ur.relationship_type = 'friend' 
+               AND ur.relationship_status = 'accepted'
+               {}
+             ORDER BY u.id ASC
+             LIMIT $2",
+            cursor_condition
+        );
+        
+        let rows = sqlx::query(&query)
+            .bind(user_id.value())
+            .bind(limit)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| {
+                error!("查询好友列表失败: {}", e);
+                DomainError::DatabaseError { 
+                    operation: "get_friends".to_string(),
+                    details: e.to_string()
+                }
+            })?;
+        
+        let friends = rows.into_iter().map(|row| {
+            FriendProfile {
+                user_id: row.get("user_id"),
+                nickname: row.get("nickname"),
+                avatar_url: row.get("avatar_url"),
+                last_active_at: row.get("last_active_at"),
+                friendship_created_at: row.get("friendship_created_at"),
+                is_online: false, // TODO: 实现在线状态检查
+            }
+        }).collect();
+        
+        debug!("获取到{}个好友", friends.len());
+        Ok(friends)
     }
 
     /// 获取收到的好友请求
-    async fn get_received_friend_requests(&self, user_id: i64, cursor: i64, limit: i32) -> DomainResult<Vec<FriendRequest>> {
-        let requests = sqlx::query!(
-            "SELECT id, user_id, friend_id, status, notes, created_at, updated_at
-             FROM friendships
-             WHERE friend_id = $1 AND status = 'pending'
-               AND ($2 = 0 OR user_id > $2)
-             ORDER BY user_id ASC
-             LIMIT $3",
-            user_id,
-            cursor as i32,
-            limit as i64
-        )
-        .fetch_all(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("数据库错误: {}", e),
-        })?;
-
-        let friend_requests: Vec<FriendRequest> = requests
-            .into_iter()
-            .map(|row| FriendRequest {
-                request_id: row.id.to_string(),
-                requester_id: row.user_id,
-                target_id: row.friend_id,
+    async fn get_received_friend_requests(&self, user_id: &UserId, cursor: Option<i64>, limit: i32) -> DomainResult<Vec<FriendRequest>> {
+        debug!("获取收到的好友请求: user_id={}, cursor={:?}, limit={}", 
+               user_id.value(), cursor, limit);
+        
+        let cursor_condition = cursor.map(|c| format!("AND ur.relationship_id > {}", c)).unwrap_or_default();
+        
+        let query = format!(
+            "SELECT ur.relationship_id, ur.from_user_id as requester_id, ur.message, 
+                    ur.created_at, ur.updated_at
+             FROM user_relationships ur
+             WHERE ur.to_user_id = $1 
+               AND ur.relationship_type = 'friend' 
+               AND ur.relationship_status = 'pending'
+               {}
+             ORDER BY ur.relationship_id ASC
+             LIMIT $2",
+            cursor_condition
+        );
+        
+        let rows = sqlx::query(&query)
+            .bind(user_id.value())
+            .bind(limit)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| {
+                error!("查询好友请求失败: {}", e);
+                DomainError::DatabaseError { 
+                    operation: "get_received_friend_requests".to_string(),
+                    details: e.to_string()
+                }
+            })?;
+        
+        let requests = rows.into_iter().map(|row| {
+            let created_at: DateTime<Utc> = row.get("created_at");
+            let expires_at = created_at + chrono::Duration::days(30);
+            
+            FriendRequest {
+                request_id: row.get::<i64, _>("relationship_id").to_string(),
+                requester_id: row.get("requester_id"),
+                target_id: user_id.value(),
+                message: row.get("message"),
                 status: FriendRequestStatus::Pending,
-                message: row.notes,
-                created_at: row.created_at.unwrap_or_else(|| Utc::now()),
-                updated_at: row.updated_at.unwrap_or_else(|| row.created_at.unwrap_or_else(|| Utc::now())),
-                expires_at: row.created_at.unwrap_or_else(|| Utc::now()) + chrono::Duration::days(7),
-            })
-            .collect();
-
-        Ok(friend_requests)
-    }
-
-    /// 获取发送的好友请求
-    async fn get_sent_friend_requests(&self, user_id: i64, cursor: i64, limit: i32) -> DomainResult<Vec<FriendRequest>> {
-        let requests = sqlx::query!(
-            "SELECT id, user_id, friend_id, status, notes, created_at, updated_at
-             FROM friendships
-             WHERE user_id = $1 AND status = 'pending'
-               AND ($2 = 0 OR friend_id > $2)
-             ORDER BY friend_id ASC
-             LIMIT $3",
-            user_id,
-            cursor as i32,
-            limit as i64
-        )
-        .fetch_all(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("数据库错误: {}", e),
-        })?;
-
-        let friend_requests: Vec<FriendRequest> = requests
-            .into_iter()
-            .map(|row| FriendRequest {
-                request_id: row.id.to_string(),
-                requester_id: row.user_id,
-                target_id: row.friend_id,
-                status: FriendRequestStatus::Pending,
-                message: row.notes,
-                created_at: row.created_at.unwrap_or_else(|| Utc::now()),
-                updated_at: row.updated_at.unwrap_or_else(|| row.created_at.unwrap_or_else(|| Utc::now())),
-                expires_at: row.created_at.unwrap_or_else(|| Utc::now()) + chrono::Duration::days(7),
-            })
-            .collect();
-
-        Ok(friend_requests)
-    }
-
-    /// 检查好友关系状态
-    async fn check_friendship(&self, user_id: i64, other_user_id: i64) -> DomainResult<FriendshipStatus> {
-        // 检查是否是好友
-        let friendship: Option<String> = sqlx::query_scalar!(
-            "SELECT status FROM friendships 
-             WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)",
-            user_id,
-            other_user_id
-        )
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("数据库错误: {}", e),
-        })?
-        .flatten();
-
-        if let Some(status) = friendship {
-            return match status.as_str() {
-                "accepted" => Ok(FriendshipStatus::Friends),
-                "blocked" => Ok(FriendshipStatus::Blocked),
-                "pending" => Ok(FriendshipStatus::RequestSent),
-                "declined" => Ok(FriendshipStatus::NotFriends),
-                _ => Ok(FriendshipStatus::NotFriends),
-            };
-        }
-
-        Ok(FriendshipStatus::NotFriends)
-    }
-
-    /// 获取待处理的好友请求数量
-    async fn get_pending_requests_count(&self, user_id: i64) -> DomainResult<i64> {
-        let count = sqlx::query_scalar!(
-            "SELECT COUNT(*)::bigint as \"count!\" FROM friendships WHERE friend_id = $1 AND status = 'pending'",
-            user_id
-        )
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("数据库错误: {}", e),
-        })?;
-
-        Ok(count)
-    }
-
-    // === 缺失的 trait 方法实现 ===
-    
-    async fn save(&self, friendship: &Friendship) -> DomainResult<()> {
-        sqlx::query!(
-            "INSERT INTO friendships (user_id, friend_id, status, created_at)
-             VALUES ($1, $2, 'accepted', $3)
-             ON CONFLICT (user_id, friend_id) 
-             DO UPDATE SET status = 'accepted', updated_at = NOW()",
-            friendship.user1_id,
-            friendship.user2_id,
-            friendship.created_at
-        )
-        .execute(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("数据库错误: {}", e),
-        })?;
-
-        Ok(())
-    }
-
-    async fn find_friends_by_user_id(&self, user_id: UserId) -> DomainResult<Vec<Friendship>> {
-        let friendships = sqlx::query!(
-            "SELECT id, user_id, friend_id, created_at
-             FROM friendships
-             WHERE (user_id = $1 OR friend_id = $1) AND status = 'accepted'",
-            *user_id
-        )
-        .fetch_all(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("数据库错误: {}", e),
-        })?;
-
-        let result: Vec<Friendship> = friendships
-            .into_iter()
-            .map(|row| Friendship {
-                friendship_id: row.id.to_string(),
-                user1_id: row.user_id.min(row.friend_id),
-                user2_id: row.user_id.max(row.friend_id),
-                created_at: row.created_at.unwrap_or_else(|| Utc::now()),
-            })
-            .collect();
-
-        Ok(result)
+                created_at,
+                updated_at: row.get("updated_at"),
+                expires_at,
+            }
+        }).collect();
+        
+        debug!("获取到{}个好友请求", requests.len());
+        Ok(requests)
     }
 }

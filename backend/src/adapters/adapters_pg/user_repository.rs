@@ -22,7 +22,7 @@ struct UserProfileRow {
     nickname: String,
     avatar_url: Option<String>,
     last_active_at: Option<DateTime<Utc>>,
-    expires_at: Option<DateTime<Utc>>, // 用于判断是否为临时用户
+    // expires_at字段在实际数据库表中不存在，临时用户通过其他方式判断
 }
 
 
@@ -33,7 +33,6 @@ struct UserAuthRow {
     login_id: Option<String>,
     nickname: String,
     password_hash: Option<String>,
-    expires_at: Option<DateTime<Utc>>,
     avatar_url: Option<String>,
 }
 
@@ -45,7 +44,6 @@ struct UserDetailRow {
     nickname: String,
     email: Option<String>,
     avatar_url: Option<String>,
-    expires_at: Option<DateTime<Utc>>,
     created_at: DateTime<Utc>,
     last_active_at: Option<DateTime<Utc>>,
 }
@@ -57,7 +55,6 @@ struct UserSearchRow {
     nickname: String,
     avatar_url: Option<String>,
     last_active_at: Option<DateTime<Utc>>,  // 修改为Option类型
-    expires_at: Option<DateTime<Utc>>,
     distance: Option<f64>, // 仅地理位置搜索时有值
 }
 
@@ -65,11 +62,8 @@ struct UserSearchRow {
 
 impl UserProfileRow {
     fn to_domain(self) -> UserProfile {
-        let user_type = if self.expires_at.is_some() {
-            UserType::Temporary
-        } else {
-            UserType::Regular
-        };
+        // 暂时将所有用户设为Regular类型，后续可通过其他字段判断
+        let user_type = UserType::Regular;
 
         UserProfile::new(
             self.user_id,
@@ -83,11 +77,8 @@ impl UserProfileRow {
 
 impl UserAuthRow {
     fn to_domain(self) -> UserAuth {
-        let user_type = if self.expires_at.is_some() {
-            UserType::Temporary
-        } else {
-            UserType::Regular
-        };
+        // 暂时将所有用户设为Regular类型，后续可通过其他字段判断
+        let user_type = UserType::Regular;
 
         UserAuth::new(
             self.user_id,
@@ -102,11 +93,8 @@ impl UserAuthRow {
 
 impl UserDetailRow {
     fn to_domain(self) -> UserDetail {
-        let user_type = if self.expires_at.is_some() {
-            UserType::Temporary
-        } else {
-            UserType::Regular
-        };
+        // 暂时将所有用户设为Regular类型，后续可通过其他字段判断
+        let user_type = UserType::Regular;
 
         UserDetail::new(
             self.user_id,
@@ -124,11 +112,8 @@ impl UserDetailRow {
 
 impl UserSearchRow {
     fn to_domain(self, has_location: bool) -> UserSearchResult {
-        let user_type = if self.expires_at.is_some() {
-            UserType::Temporary
-        } else {
-            UserType::Regular
-        };
+        // 暂时将所有用户设为Regular类型，后续可通过其他字段判断
+        let user_type = UserType::Regular;
 
         UserSearchResult::new(
             self.user_id,
@@ -236,8 +221,8 @@ impl PostgresUserRepository {
         let exists = sqlx::query_scalar!(
             r#"
             SELECT EXISTS(
-                SELECT 1 FROM user_locations 
-                WHERE id = $1
+                SELECT 1 FROM users 
+                WHERE id = $1 AND latitude IS NOT NULL AND longitude IS NOT NULL
             ) as "exists!"
             "#,
             user_id
@@ -261,7 +246,7 @@ impl UserRepository for PostgresUserRepository {
                 UserProfileRow,
                 r#"
                 SELECT id as "user_id!", nickname as "nickname!", 
-                       avatar_url, last_login_at as last_active_at, expires_at
+                       avatar_url, updated_at as last_active_at
                 FROM users
                 WHERE id = $1
                 "#,
@@ -283,10 +268,10 @@ impl UserRepository for PostgresUserRepository {
             let user_row = sqlx::query_as!(
                 UserAuthRow,
                 r#"
-                SELECT id as "user_id!", username as login_id, nickname as "nickname!", 
-                       password_hash, expires_at, avatar_url
+                SELECT id as "user_id!", login_id, nickname as "nickname!", 
+                       password_hash, avatar_url
                 FROM users
-                WHERE username = $1
+                WHERE login_id = $1
                 "#,
                 login_id
             )
@@ -313,7 +298,7 @@ impl UserRepository for PostgresUserRepository {
             UserSearchRow,
             r#"
             SELECT id as "user_id!", nickname as "nickname!", 
-                   avatar_url, last_login_at as last_active_at, expires_at,
+                   avatar_url, updated_at as last_active_at,
                    NULL::DOUBLE PRECISION as distance
             FROM users
             WHERE nickname ILIKE $1
@@ -356,12 +341,11 @@ impl UserRepository for PostgresUserRepository {
                 u.id as "user_id!",
                 u.nickname as "nickname!",
                 u.avatar_url,
-                u.last_login_at as last_active_at,
-                u.expires_at,
-                ST_Distance(ul.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) as distance
+                u.updated_at as last_active_at,
+                ST_Distance(u.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) as distance
             FROM users u
-            INNER JOIN user_locations ul ON u.id = ul.user_id
-            WHERE ST_DWithin(ul.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, $3)
+            WHERE u.latitude IS NOT NULL AND u.longitude IS NOT NULL
+              AND ST_DWithin(u.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, $3)
               AND ($4 = 0 OR u.id < $4)
             ORDER BY distance ASC, u.id DESC
             LIMIT $5
@@ -387,10 +371,10 @@ impl UserRepository for PostgresUserRepository {
             let user_row = sqlx::query_as!(
                 UserDetailRow,
                 r#"
-                SELECT id as "user_id!", username as login_id, nickname as "nickname!", 
-                       email, avatar_url, expires_at, 
+                SELECT id as "user_id!", login_id, nickname as "nickname!", 
+                       NULL::TEXT as email, avatar_url, 
                        created_at as "created_at!", 
-                       last_login_at as last_active_at
+                       updated_at as last_active_at
                 FROM users
                 WHERE id = $1
                 "#,
@@ -413,22 +397,19 @@ impl UserRepository for PostgresUserRepository {
         nickname: &str,
         password_hash: Option<&str>,
         email: Option<&str>,
-        expires_at: Option<DateTime<Utc>>,
     ) -> DomainResult<UserProfile> {
         self.execute_query_with_monitoring("create_user", async {
             let user_row = sqlx::query_as!(
                 UserProfileRow,
                 r#"
-                INSERT INTO users (username, nickname, password_hash, email, expires_at)
-                VALUES ($1, $2, $3, $4, $5)
+                INSERT INTO users (login_id, nickname, password_hash)
+                VALUES ($1, $2, $3)
                 RETURNING id as "user_id!", nickname as "nickname!", 
-                          avatar_url, last_login_at as last_active_at, expires_at
+                          avatar_url, updated_at as last_active_at
                 "#,
                 login_id,
                 nickname,
-                password_hash,
-                email,
-                expires_at
+                password_hash
             )
             .fetch_one(&self.pool)
             .await
@@ -456,7 +437,7 @@ impl UserRepository for PostgresUserRepository {
                 updated_at = NOW()
             WHERE id = $1
             RETURNING id as "user_id!", nickname as "nickname!", 
-                      avatar_url, last_login_at as last_active_at, expires_at
+                      avatar_url, updated_at as last_active_at
             "#,
             user_id,
             nickname,
@@ -502,13 +483,12 @@ impl UserRepository for PostgresUserRepository {
             UserProfileRow,
             r#"
             UPDATE users 
-            SET username = $2, 
+            SET login_id = $2, 
                 password_hash = $3, 
-                expires_at = NULL,
                 updated_at = NOW()
-            WHERE id = $1 AND expires_at IS NOT NULL
+            WHERE id = $1
             RETURNING id as "user_id!", nickname as "nickname!", 
-                      avatar_url, last_login_at as last_active_at, expires_at
+                      avatar_url, updated_at as last_active_at
             "#,
             user_id,
             login_id,
@@ -551,14 +531,13 @@ impl UserRepository for PostgresUserRepository {
         self.execute_query_with_monitoring("update_user_location", async {
             sqlx::query!(
                 r#"
-                INSERT INTO user_locations (user_id, latitude, longitude, address, updated_at)
-                VALUES ($1, $2, $3, $4, NOW())
-                ON CONFLICT (user_id) 
-                DO UPDATE SET 
-                    latitude = EXCLUDED.latitude,
-                    longitude = EXCLUDED.longitude,
-                    address = EXCLUDED.address,
-                    updated_at = EXCLUDED.updated_at
+                UPDATE users SET 
+                    latitude = $2,
+                    longitude = $3,
+                    location_name = $4,
+                    location_updated_at = NOW(),
+                    location = ST_SetSRID(ST_MakePoint($3, $2), 4326)
+                WHERE id = $1
                 "#,
                 user_id,
                 latitude,
@@ -581,9 +560,9 @@ impl UserRepository for PostgresUserRepository {
             let location = sqlx::query!(
                 r#"
                 SELECT latitude as "latitude!", longitude as "longitude!", 
-                       COALESCE(address, '') as "location_name!"
-                FROM user_locations
-                WHERE user_id = $1
+                       COALESCE(location_name, '') as "location_name!"
+                FROM users
+                WHERE id = $1 AND latitude IS NOT NULL AND longitude IS NOT NULL
                 "#,
                 user_id
             )

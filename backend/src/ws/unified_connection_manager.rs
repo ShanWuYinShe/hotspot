@@ -129,7 +129,7 @@ impl UnifiedConnectionManager {
                 while let Some(msg) = receiver.next().await {
                     match msg {
                         Ok(Message::Text(text)) => {
-                            if let Err(e) = manager.handle_text_message(&connection_id, text).await {
+                            if let Err(e) = manager.handle_text_message(&connection_id, text.to_string()).await {
                                 error!("处理文本消息失败: {}", e);
                             }
                         }
@@ -137,7 +137,7 @@ impl UnifiedConnectionManager {
                             debug!("收到二进制消息 (连接: {}): {} bytes", connection_id, data.len());
                         }
                         Ok(Message::Ping(data)) => {
-                            if let Err(e) = manager.handle_ping(&connection_id, data).await {
+                            if let Err(e) = manager.handle_ping(&connection_id, data.to_vec()).await {
                                 error!("处理Ping消息失败: {}", e);
                             }
                         }
@@ -190,7 +190,7 @@ impl UnifiedConnectionManager {
         
         // 解析客户端消息
         let client_message: ClientMessage = serde_json::from_str(&text)
-            .map_err(|e| crate::domain::DomainError::ValidationError(format!("消息格式错误: {}", e)))?;
+            .map_err(|e| crate::domain::DomainError::ValidationError { field: "message".to_string(), reason: format!("消息格式错误: {}", e) })?;
         
         // 处理不同类型的消息
         match client_message {
@@ -291,7 +291,7 @@ impl UnifiedConnectionManager {
             let connections = self.connections.read().await;
             connections.get(connection_id)
                 .and_then(|conn| conn.user_id.clone())
-                .ok_or_else(|| crate::domain::DomainError::AuthenticationError("未认证的连接".to_string()))?
+                .ok_or_else(|| crate::domain::DomainError::AuthenticationError { reason: "未认证的连接".to_string() })?
         };
         
         // 加入群组房间
@@ -316,7 +316,7 @@ impl UnifiedConnectionManager {
             let connections = self.connections.read().await;
             connections.get(connection_id)
                 .and_then(|conn| conn.user_id.clone())
-                .ok_or_else(|| crate::domain::DomainError::AuthenticationError("未认证的连接".to_string()))?
+                .ok_or_else(|| crate::domain::DomainError::AuthenticationError { reason: "未认证的连接".to_string() })?
         };
         
         // 离开群组房间
@@ -350,10 +350,10 @@ impl UnifiedConnectionManager {
         let (user_id, nickname) = {
             let connections = self.connections.read().await;
             let conn = connections.get(connection_id)
-                .ok_or_else(|| crate::domain::DomainError::AuthenticationError("连接不存在".to_string()))?;
+                .ok_or_else(|| crate::domain::DomainError::AuthenticationError { reason: "连接不存在".to_string() })?;
             
             let user_id = conn.user_id.clone()
-                .ok_or_else(|| crate::domain::DomainError::AuthenticationError("未认证的连接".to_string()))?;
+                .ok_or_else(|| crate::domain::DomainError::AuthenticationError { reason: "未认证的连接".to_string() })?;
             
             // TODO: 从数据库获取真实昵称
             let nickname = format!("User_{}", user_id);
@@ -401,7 +401,7 @@ impl UnifiedConnectionManager {
             let connections = self.connections.read().await;
             connections.get(connection_id)
                 .and_then(|conn| conn.user_id.clone())
-                .ok_or_else(|| crate::domain::DomainError::AuthenticationError("未认证的连接".to_string()))?
+                .ok_or_else(|| crate::domain::DomainError::AuthenticationError { reason: "未认证的连接".to_string() })?
         };
         
         // 广播已读状态
@@ -430,10 +430,10 @@ impl UnifiedConnectionManager {
         let (user_id, nickname) = {
             let connections = self.connections.read().await;
             let conn = connections.get(connection_id)
-                .ok_or_else(|| crate::domain::DomainError::AuthenticationError("连接不存在".to_string()))?;
+                .ok_or_else(|| crate::domain::DomainError::AuthenticationError { reason: "连接不存在".to_string() })?;
             
             let user_id = conn.user_id.clone()
-                .ok_or_else(|| crate::domain::DomainError::AuthenticationError("未认证的连接".to_string()))?;
+                .ok_or_else(|| crate::domain::DomainError::AuthenticationError { reason: "未认证的连接".to_string() })?;
             
             let nickname = format!("User_{}", user_id);
             
@@ -464,10 +464,10 @@ impl UnifiedConnectionManager {
         let (user_id, nickname) = {
             let connections = self.connections.read().await;
             let conn = connections.get(connection_id)
-                .ok_or_else(|| crate::domain::DomainError::AuthenticationError("连接不存在".to_string()))?;
+                .ok_or_else(|| crate::domain::DomainError::AuthenticationError { reason: "连接不存在".to_string() })?;
             
             let user_id = conn.user_id.clone()
-                .ok_or_else(|| crate::domain::DomainError::AuthenticationError("未认证的连接".to_string()))?;
+                .ok_or_else(|| crate::domain::DomainError::AuthenticationError { reason: "未认证的连接".to_string() })?;
             
             let nickname = format!("User_{}", user_id);
             
@@ -533,7 +533,7 @@ impl UnifiedConnectionManager {
         // 发送Pong响应
         let senders = self.senders.read().await;
         if let Some(sender) = senders.get(connection_id) {
-            let _ = sender.send(Message::Pong(Vec::new()));
+            let _ = sender.send(Message::Pong(Vec::new().into()));
         }
         
         Ok(())
@@ -571,7 +571,7 @@ impl UnifiedConnectionManager {
             let connections = self.connections.read().await;
             connections.get(connection_id)
                 .and_then(|conn| conn.user_id.clone())
-                .ok_or_else(|| crate::domain::DomainError::AuthenticationError("未认证的连接".to_string()))?
+                .ok_or_else(|| crate::domain::DomainError::AuthenticationError { reason: "未认证的连接".to_string() })?
         };
         
         // 创建或更新房间
@@ -591,7 +591,7 @@ impl UnifiedConnectionManager {
             let connections = self.connections.read().await;
             connections.get(connection_id)
                 .and_then(|conn| conn.user_id.clone())
-                .ok_or_else(|| crate::domain::DomainError::AuthenticationError("未认证的连接".to_string()))?
+                .ok_or_else(|| crate::domain::DomainError::AuthenticationError { reason: "未认证的连接".to_string() })?
         };
         
         // 从房间移除用户
@@ -621,9 +621,9 @@ impl UnifiedConnectionManager {
         let senders = self.senders.read().await;
         if let Some(sender) = senders.get(connection_id) {
             let json_message = serde_json::to_string(&message)
-                .map_err(|e| crate::domain::DomainError::SerializationError(e.to_string()))?;
+                .map_err(|e| crate::domain::DomainError::SerializationError { reason: e.to_string() })?;
             
-            let _ = sender.send(Message::Text(json_message));
+            let _ = sender.send(Message::Text(json_message.into()));
         }
         
         Ok(())
@@ -689,6 +689,7 @@ impl UnifiedConnectionManager {
         }
         
         // 清理用户连接映射
+        let has_user = user_id.is_some();
         if let Some(user_id) = user_id {
             let mut user_connections = self.user_connections.write().await;
             if let Some(connections) = user_connections.get_mut(&user_id) {
@@ -703,7 +704,7 @@ impl UnifiedConnectionManager {
         {
             let mut stats = self.stats.write().await;
             stats.total_connections = stats.total_connections.saturating_sub(1);
-            if user_id.is_some() {
+            if has_user {
                 stats.authenticated_connections = stats.authenticated_connections.saturating_sub(1);
             }
         }

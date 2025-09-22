@@ -18,6 +18,10 @@ pub mod search_controller;
 pub mod activity_controller;
 pub mod upload_controller;
 pub mod comment_controller;
+pub mod friend_controller;
+pub mod security_controller;
+pub mod notification_controller;
+pub mod system_health_controller;
 
 // 重新导出控制器类型
 pub use admin_controller::*;
@@ -36,6 +40,10 @@ pub use search_controller::*;
 pub use activity_controller::*;
 pub use upload_controller::*;
 pub use comment_controller::*;
+pub use friend_controller::*;
+pub use security_controller::*;
+pub use notification_controller::*;
+pub use system_health_controller::*;
 
 use crate::domain::DomainError;
 // use crate::application::ApplicationError;
@@ -194,7 +202,7 @@ pub fn no_content_response() -> Response {
     (StatusCode::OK, Json(response)).into_response()
 }
 
-/// 分页响应帮助函数
+/// 分页响应帮助函数 - 使用扁平化结构符合需求文档
 pub fn paginated_response<T: serde::Serialize>(
     items: Vec<T>,
     has_more: bool,
@@ -205,29 +213,12 @@ pub fn paginated_response<T: serde::Serialize>(
         "msg": "success",
         "data": {
             "items": items,
-            "pagination": {
-                "has_more": has_more,
-                "next_cursor": next_cursor
-            }
+            "has_more": has_more,
+            "next_cursor": next_cursor
         }
     });
 
     (StatusCode::OK, Json(response)).into_response()
 }
 
-/// 错误响应帮助函数 - 已弃用，请使用 map_domain_error_to_http_response
-#[deprecated(note = "使用 map_domain_error_to_http_response 代替，以遵循统一的错误码规范")]
-pub fn error_response(
-    _status_code: StatusCode,
-    message: &str,
-    data: Option<serde_json::Value>,
-) -> Response {
-    let response = json!({
-        "code": 5000, // 使用通用服务器错误码
-        "msg": message,
-        "data": data
-    });
-
-    // 根据hotspot.md规范，统一返回HTTP 200状态码
-    (StatusCode::OK, Json(response)).into_response()
-}
+// 废弃的错误响应函数已移除，请使用 map_domain_error_to_http_response

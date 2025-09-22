@@ -82,6 +82,7 @@ impl UserDomainService {
             (UserType::Regular, UserType::Temporary) | 
             (UserType::Temporary, UserType::Regular) => strength += 0.5,
             (UserType::Temporary, UserType::Temporary) => strength += 0.3,
+            (UserType::System, _) | (_, UserType::System) => strength += 0.1, // 系统用户匹配度较低
         }
         
         // 位置相近性加成

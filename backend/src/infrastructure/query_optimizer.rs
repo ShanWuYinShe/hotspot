@@ -136,13 +136,11 @@ impl QueryOptimizer {
             r#"
             SELECT 
                 id as "user_id!",
-                username as "login_id!",
+                login_id as "login_id!",
                 nickname as "nickname!",
-                email,
                 avatar_url,
-                user_type as "user_type!: crate::domain::entities::UserType",
-                expires_at,
-                last_login_at as "last_active_at"
+                created_at,
+                updated_at as "last_active_at"
             FROM users 
             WHERE id = ANY($1)
             ORDER BY id
@@ -402,10 +400,8 @@ pub struct BatchUserResult {
     pub user_id: i64,
     pub login_id: String,
     pub nickname: String,
-    pub email: Option<String>,
     pub avatar_url: Option<String>,
-    pub user_type: crate::domain::entities::UserType,
-    pub expires_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
     pub last_active_at: Option<DateTime<Utc>>,
 }
 

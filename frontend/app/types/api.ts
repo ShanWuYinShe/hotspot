@@ -27,35 +27,20 @@ export interface PaginatedResponse<T> {
 }
 
 // ============================================================================
-// 用户ID编码规范工具函数
+// 用户ID编码规范 - 重新导出工具函数
 // ============================================================================
 
-/**
- * 用户ID编码规范：
- * - 用户ID结构: 64位整数，高8位表示用户类型，低56位表示用户序号
- * - 用户类型编码:
- *   - 0x01 (1) - 临时用户
- *   - 0x02 (2) - 普通用户  
- *   - 0x03 (3) - 系统用户（官方账号等）
- *   - 0x04-0xFF - 预留给未来用户类型
- */
-
-export function getUserType(userId: string): number {
-  const userIdBigInt = BigInt(userId);
-  return Number(userIdBigInt >> 56n);
-}
-
-export function isTempUser(userId: string): boolean {
-  return getUserType(userId) === 1;
-}
-
-export function isRegularUser(userId: string): boolean {
-  return getUserType(userId) === 2;
-}
-
-export function isSystemUser(userId: string): boolean {
-  return getUserType(userId) === 3;
-}
+// 用户ID编码工具函数统一从 utils/userTypes.ts 导出
+export { 
+  getUserType, 
+  isTempUser, 
+  isRegularUser, 
+  isSystemUser,
+  getUserTypeDisplayName,
+  getUserTypeTagStyle,
+  UserType,
+  EXAMPLE_USER_IDS
+} from '~/utils/userTypes'
 
 // ============================================================================
 // 认证API类型

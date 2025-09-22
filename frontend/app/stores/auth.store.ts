@@ -7,7 +7,8 @@ interface SecureAccount {
   nickname: string;
   avatar_url?: string;
   last_login: string;
-  is_temp?: boolean; // 是否为临时用户
+  user_type: number; // 用户类型：1-临时用户，2-普通用户，3-系统用户
+  is_temp?: boolean; // 兼容字段，可通过user_type计算得出
   // 安全存储：只保存加密后的refresh_token
   encrypted_token: string;
   // 设备密钥（用于解密）
@@ -51,7 +52,8 @@ export const useAuthStore = defineStore(
       user_id: currentUser.value.user_id,
       nickname: currentUser.value.nickname,
       avatar_url: currentUser.value.avatar_url,
-      is_temp: currentUser.value.is_temp, // 是否为临时用户
+      user_type: currentUser.value.user_type,
+      is_temp: currentUser.value.user_type === 1, // 通过user_type计算是否为临时用户
     } as User : null);
     
     // 设备认证状态

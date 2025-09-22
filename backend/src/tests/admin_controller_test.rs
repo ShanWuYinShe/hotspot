@@ -74,7 +74,7 @@ async fn post_with_current_user(
 
 fn get_admin_user() -> i64 {
     // 生成一个管理员类型的用户ID，保证具备管理员权限
-    UserIdPartition::generate_user_id(UserType::Admin, 42).expect("generate admin id")
+    UserIdPartition::generate_user_id(UserType::System, 42).expect("generate system id")
 }
 
 #[tokio::test]

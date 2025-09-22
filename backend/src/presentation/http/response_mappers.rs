@@ -2,7 +2,8 @@
 /// 
 /// 负责将领域模型转换为HTTP响应格式
 use serde::{Deserialize, Serialize};
-use crate::domain::{UserProfile, GroupProfile, DirectMessage, GroupMessage, Moment};
+use crate::domain::{UserProfile, GroupProfile, Moment};
+use crate::domain::entities::message::Message;
 use crate::utils::JsSafeI64;
 
 /// 用户响应模型
@@ -24,6 +25,7 @@ impl From<UserProfile> for UserResponse {
             user_type: match user.user_type {
                 crate::domain::entities::UserType::Temporary => "temporary".to_string(),
                 crate::domain::entities::UserType::Regular => "registered".to_string(),
+                crate::domain::entities::UserType::System => "system".to_string(),
             },
             has_location: false, // 默认为false，需要通过with_location方法设置
             created_at: user.last_active_at.to_rfc3339(),
@@ -59,6 +61,7 @@ impl From<crate::domain::UserDetail> for UserProfileResponse {
             user_type: match user.user_type {
                 crate::domain::entities::UserType::Temporary => "temporary".to_string(),
                 crate::domain::entities::UserType::Regular => "registered".to_string(),
+                crate::domain::entities::UserType::System => "system".to_string(),
             },
             location: None, // 默认为None，需要通过with_location方法设置
             created_at: user.created_at.to_rfc3339(),
@@ -147,30 +150,18 @@ pub struct MessageResponse {
     pub updated_at: String,
 }
 
-impl From<DirectMessage> for MessageResponse {
-    fn from(message: DirectMessage) -> Self {
-        Self {
-            id: JsSafeI64::new(0), // DirectMessage使用UUID，这里需要转换
-            group_id: JsSafeI64::new(0), // 私聊消息没有group_id
-            sender_id: JsSafeI64::new(message.sender_id),
-            message_type: message.message_type.as_str().to_string(),
-            content: message.content,
-            created_at: message.created_at.to_rfc3339(),
-            updated_at: message.created_at.to_rfc3339(),
-        }
-    }
-}
+// 旧的DirectMessage From实现已移除
 
-impl From<GroupMessage> for MessageResponse {
-    fn from(message: GroupMessage) -> Self {
+impl From<Message> for MessageResponse {
+    fn from(message: Message) -> Self {
         Self {
-            id: JsSafeI64::new(0), // GroupMessage使用UUID，这里需要转换
-            group_id: JsSafeI64::new(0), // GroupMessage使用UUID group_id，这里需要转换
-            sender_id: JsSafeI64::new(message.sender_id),
-            message_type: message.message_type.as_str().to_string(),
+            id: JsSafeI64::new(0), // 简化实现，使用0作为ID
+            group_id: JsSafeI64::new(0), // 简化实现
+            sender_id: JsSafeI64::new(message.sender_id.value()),
+            message_type: message.message_type.to_string(),
             content: message.content,
             created_at: message.created_at.to_rfc3339(),
-            updated_at: message.created_at.to_rfc3339(),
+            updated_at: message.updated_at.to_rfc3339(),
         }
     }
 }
@@ -231,28 +222,15 @@ impl MomentResponse {
     }
 }
 
-/// 分页响应包装器
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PaginatedResponse<T> {
-    pub items: Vec<T>,
-    pub pagination: PaginationMeta,
-}
-
-/// 分页元数据
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PaginationMeta {
-    pub has_more: bool,
-    pub next_cursor: Option<i64>,
-}
+// 重新导出标准分页响应类型
+pub use crate::presentation::http::models::common::PaginatedResponse;
 
 impl<T> PaginatedResponse<T> {
     pub fn new(items: Vec<T>, has_more: bool, next_cursor: Option<i64>) -> Self {
         Self {
             items,
-            pagination: PaginationMeta {
-                has_more,
-                next_cursor,
-            },
+            has_more,
+            next_cursor: next_cursor.map(|cursor| cursor.to_string()),
         }
     }
 }

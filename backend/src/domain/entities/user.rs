@@ -34,6 +34,8 @@ pub struct User {
     pub expires_at: Option<DateTime<Utc>>,
     /// 创建时间
     pub created_at: DateTime<Utc>,
+    /// 更新时间
+    pub updated_at: DateTime<Utc>,
     /// 最后活跃时间
     pub last_active_at: DateTime<Utc>,
     /// 当前位置
@@ -67,6 +69,7 @@ impl User {
                 None
             },
             created_at: now,
+            updated_at: now,
             last_active_at: now,
             location: None,
             events: Vec::new(),

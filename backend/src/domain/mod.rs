@@ -28,7 +28,6 @@ pub use entities::{
     User, UserProfile, UserDetail, UserAuth, UserSearchResult,
     Group, GroupProfile, GroupAuth, GroupDetail, GroupSearchResult, GroupMember,
     Moment,
-    DirectMessage, GroupMessage, Conversation,
     Comment,
     GroupRole as EntityGroupRole, // 使用entities中的GroupRole
     Tag as EntityTag, // 使用entities中的Tag

@@ -105,6 +105,21 @@ pub trait GroupRepository: Send + Sync {
     /// 根据ID查找群组
     async fn find_by_id(&self, group_id: GroupId, viewer_user_id: Option<UserId>) -> DomainResult<Option<Group>>;
     
+    /// 检查用户是否为群组成员
+    async fn is_member(&self, group_id: &GroupId, user_id: &UserId) -> DomainResult<bool>;
+    
+    /// 根据用户ID查找群组列表
+    async fn find_by_user_id(&self, user_id: &UserId) -> DomainResult<Vec<Group>>;
+    
+    /// 根据用户ID查找群组列表（包含最后消息信息）
+    async fn find_by_user_id_with_last_message(
+        &self,
+        user_id: &UserId,
+        cursor: Option<&str>,
+        limit: i32,
+        include_archived: bool,
+    ) -> DomainResult<crate::application::handlers::PaginatedResult<crate::application::services::message_application_service::GroupWithLastMessage>>;
+    
     /// 按名称搜索群组（分页）
     async fn search_by_name(
         &self,
@@ -140,8 +155,7 @@ pub trait GroupRepository: Send + Sync {
         pagination: &PaginationQuery,
     ) -> DomainResult<PaginatedResult<GroupView>>;
     
-    /// 检查用户是否为群组成员
-    async fn is_member(&self, group_id: GroupId, user_id: UserId) -> DomainResult<bool>;
+    // 重复定义已移除，使用上面的 is_member 方法
     
     /// 获取群组统计信息
     async fn get_group_stats(&self, group_id: GroupId) -> DomainResult<GroupStats>;
@@ -218,105 +232,59 @@ pub struct GroupStats {
 
 /// 消息仓储接口
 #[async_trait]
-pub trait MessageRepository: Send + Sync + Clone {
+pub trait MessageRepository: Send + Sync {
     // === 命令操作（写） ===
     
-    /// 保存群组消息
-    async fn save_group_message(&self, message: &GroupMessage) -> DomainResult<MessageId>;
+    /// 创建消息（统一接口）
+    async fn create(&self, message: crate::domain::entities::message::Message) -> DomainResult<crate::domain::entities::message::Message>;
     
-    /// 保存私聊消息
-    async fn save_direct_message(&self, message: &DirectMessage) -> DomainResult<MessageId>;
+    /// 更新消息
+    async fn update(&self, message: crate::domain::entities::message::Message) -> DomainResult<crate::domain::entities::message::Message>;
     
     /// 删除消息
     async fn delete_message(&self, message_id: MessageId) -> DomainResult<bool>;
     
-    /// 标记消息已读
-    async fn mark_message_read(&self, message_id: MessageId, user_id: UserId) -> DomainResult<()>;
+    /// 根据ID查找消息
+    async fn find_by_id(&self, message_id: &MessageId) -> DomainResult<Option<crate::domain::entities::message::Message>>;
     
-    /// 标记群组消息已读
-    async fn mark_group_messages_read(
+    /// 根据群组ID分页查找消息
+    async fn find_by_group_id_paginated(
         &self,
-        group_id: GroupId,
-        user_id: UserId,
-        last_read_message_id: Option<MessageId>,
+        group_id: &GroupId,
+        cursor: Option<&str>,
+        limit: i32,
+        include_system_messages: bool,
+    ) -> DomainResult<crate::application::handlers::PaginatedResult<crate::domain::entities::message::Message>>;
+    
+    /// 标记群组消息已读到指定消息
+    async fn mark_read_until_message(
+        &self,
+        group_id: &GroupId,
+        user_id: &UserId,
+        message_id: &MessageId,
     ) -> DomainResult<()>;
     
-    /// 标记会话消息已读
-    async fn mark_conversation_messages_read(
+    /// 标记群组所有消息已读
+    async fn mark_all_read(
         &self,
-        conversation_id: Uuid,
-        user_id: UserId,
-        last_read_message_id: Option<MessageId>,
+        group_id: &GroupId,
+        user_id: &UserId,
     ) -> DomainResult<()>;
+    
+    /// 获取群组未读消息数
+    async fn get_unread_count(
+        &self,
+        group_id: &GroupId,
+        user_id: &UserId,
+    ) -> DomainResult<i32>;
     
     // === 查询操作（读） ===
     
-    /// 获取群组消息历史（分页）
-    async fn get_group_messages(
-        &self,
-        group_id: GroupId,
-        viewer_user_id: UserId,
-        pagination: &PaginationQuery,
-    ) -> DomainResult<PaginatedResult<MessageView>>;
-    
-    /// 获取私聊消息历史（分页）
-    async fn get_direct_messages(
-        &self,
-        conversation_id: Option<Uuid>,
-        sender_id: Option<UserId>,
-        recipient_id: Option<UserId>,
-        viewer_user_id: UserId,
-        pagination: &PaginationQuery,
-    ) -> DomainResult<PaginatedResult<MessageView>>;
-    
-    /// 获取用户会话列表（分页）
-    async fn get_user_conversations(
-        &self,
-        user_id: UserId,
-        pagination: &PaginationQuery,
-    ) -> DomainResult<PaginatedResult<ConversationView>>;
-    
-    /// 获取群组未读消息数
-    async fn get_group_unread_count(
-        &self,
-        group_id: GroupId,
-        user_id: UserId,
-    ) -> DomainResult<u32>;
-    
-    /// 获取用户未读消息数
-    async fn get_user_unread_count(
-        &self,
-        user_id: UserId,
-        conversation_id: Option<Uuid>,
-    ) -> DomainResult<u32>;
+    // 旧的查询方法已移除，使用统一的消息架构方法
 }
 
-/// 群组消息实体
-#[derive(Debug, Clone)]
-pub struct GroupMessage {
-    pub message_id: MessageId,
-    pub group_id: GroupId,
-    pub sender_id: UserId,
-    pub content: String,
-    pub message_type: String,
-    pub sent_at: chrono::DateTime<chrono::Utc>,
-    pub latitude: Option<f64>,
-    pub longitude: Option<f64>,
-}
-
-/// 私聊消息实体
-#[derive(Debug, Clone)]
-pub struct DirectMessage {
-    pub message_id: MessageId,
-    pub conversation_id: Uuid,
-    pub sender_id: UserId,
-    pub recipient_id: UserId,
-    pub content: String,
-    pub message_type: String,
-    pub sent_at: chrono::DateTime<chrono::Utc>,
-    pub latitude: Option<f64>,
-    pub longitude: Option<f64>,
-}
+// 兼容性消息类型已移除，请使用统一的 Message 实体
+// 根据需求文档的统一消息架构，所有消息都通过 group_id 管理
 
 // === 瞬间仓储接口 ===
 
@@ -489,5 +457,97 @@ pub trait BlockRepository: Send + Sync + Clone {
     async fn batch_check_blocked(&self, blocker_id: i64, user_ids: &[i64]) -> DomainResult<Vec<(i64, bool)>>;
 }
 */
+
+// 举报仓储接口
+#[async_trait]
+pub trait ReportRepository: Send + Sync {
+    /// 创建举报记录
+    async fn create_report(
+        &self,
+        reporter_id: i64,
+        target_type: crate::adapters::adapters_pg::report_repository::ReportTargetType,
+        target_id: String,
+        reason: crate::adapters::adapters_pg::report_repository::ReportReason,
+        description: Option<String>,
+    ) -> DomainResult<crate::adapters::adapters_pg::report_repository::Report>;
+    
+    /// 获取用户的举报记录
+    async fn get_user_reports(&self, user_id: i64, cursor: i64, limit: i32) -> DomainResult<Vec<crate::adapters::adapters_pg::report_repository::Report>>;
+    
+    /// 获取举报列表（管理员）
+    async fn get_reports(
+        &self,
+        status: Option<crate::adapters::adapters_pg::report_repository::ReportStatus>,
+        target_type: Option<crate::adapters::adapters_pg::report_repository::ReportTargetType>,
+        cursor: i64,
+        limit: i32,
+    ) -> DomainResult<Vec<crate::adapters::adapters_pg::report_repository::Report>>;
+    
+    /// 处理举报
+    async fn handle_report(
+        &self,
+        report_id: String,
+        handler_id: i64,
+        action: String,
+        note: Option<String>,
+    ) -> DomainResult<crate::adapters::adapters_pg::report_repository::Report>;
+    
+    /// 根据ID查找举报
+    async fn find_by_id(&self, report_id: String) -> DomainResult<Option<crate::adapters::adapters_pg::report_repository::Report>>;
+    
+    /// 检查重复举报
+    async fn check_duplicate_report(
+        &self,
+        reporter_id: i64,
+        target_type: crate::adapters::adapters_pg::report_repository::ReportTargetType,
+        target_id: String,
+    ) -> DomainResult<bool>;
+}
+
+// 通知仓储接口
+#[async_trait]
+pub trait NotificationRepository: Send + Sync {
+    /// 创建通知
+    async fn create_notification(&self, notification: crate::adapters::adapters_pg::notification_repository::Notification) -> DomainResult<crate::adapters::adapters_pg::notification_repository::Notification>;
+    
+    /// 批量创建通知
+    async fn create_notifications(&self, notifications: Vec<crate::adapters::adapters_pg::notification_repository::Notification>) -> DomainResult<Vec<crate::adapters::adapters_pg::notification_repository::Notification>>;
+    
+    /// 获取用户通知列表
+    async fn get_user_notifications(
+        &self,
+        user_id: i64,
+        status: Option<crate::adapters::adapters_pg::notification_repository::NotificationStatus>,
+        cursor: i64,
+        limit: i32,
+    ) -> DomainResult<Vec<crate::adapters::adapters_pg::notification_repository::Notification>>;
+    
+    /// 标记通知为已读
+    async fn mark_notification_read(&self, notification_id: String, user_id: i64) -> DomainResult<()>;
+    
+    /// 批量标记通知为已读
+    async fn mark_notifications_read(&self, notification_ids: Vec<String>, user_id: i64) -> DomainResult<()>;
+    
+    /// 标记所有通知为已读
+    async fn mark_all_notifications_read(&self, user_id: i64) -> DomainResult<()>;
+    
+    /// 获取未读通知数量
+    async fn get_unread_count(&self, user_id: i64) -> DomainResult<i64>;
+    
+    /// 删除通知
+    async fn delete_notification(&self, notification_id: String, user_id: i64) -> DomainResult<()>;
+    
+    /// 清理过期通知
+    async fn cleanup_expired_notifications(&self) -> DomainResult<i64>;
+    
+    /// 获取通知设置
+    async fn get_notification_settings(&self, user_id: i64) -> DomainResult<Option<crate::adapters::adapters_pg::notification_repository::NotificationSettings>>;
+    
+    /// 更新通知设置
+    async fn update_notification_settings(&self, settings: crate::adapters::adapters_pg::notification_repository::NotificationSettings) -> DomainResult<crate::adapters::adapters_pg::notification_repository::NotificationSettings>;
+    
+    /// 根据ID查找通知
+    async fn find_by_id(&self, notification_id: String) -> DomainResult<Option<crate::adapters::adapters_pg::notification_repository::Notification>>;
+}
 
 // 注意：所有类型定义已从 crate::domain 导入，无需重复定义
