@@ -4,6 +4,8 @@
  * 遵循命名规范：XxxRequest 和 XxxResponse
  */
 
+import { UserTypeUtil, UserType } from '../utils/UserTypeUtil';
+
 // ==================== 基础类型 ====================
 
 // 统一响应格式
@@ -411,6 +413,7 @@ export interface GetMembersResponse {
   nickname: string;         // 用户昵称
   avatar_url?: string;      // 用户头像URL
   role: string;             // 用户角色：'owner'|'admin'|'member'
+  user_role: string;        // 用户角色别名（与role相同，为了兼容性）
   joined_at: string;        // 加入时间（ISO 8601）
 }
 
@@ -854,4 +857,59 @@ export interface HealthCheckResponse {
   redis: RedisStatus;       // Redis状态
   metrics: SystemMetrics;   // 系统指标
 }
+
+// ==================== 用户类型判断辅助函数 ====================
+
+/**
+ * 获取用户类型
+ * 根据用户ID的高8位编码判断用户类型
+ */
+export function getUserType(userId: string): UserType {
+  return UserTypeUtil.getUserType(userId);
+}
+
+/**
+ * 判断是否为临时用户
+ */
+export function isTempUser(userId: string): boolean {
+  return UserTypeUtil.isTempUser(userId);
+}
+
+/**
+ * 判断是否为普通用户
+ */
+export function isRegularUser(userId: string): boolean {
+  return UserTypeUtil.isRegularUser(userId);
+}
+
+/**
+ * 判断是否为系统用户
+ */
+export function isSystemUser(userId: string): boolean {
+  return UserTypeUtil.isSystemUser(userId);
+}
+
+/**
+ * 获取用户类型名称
+ */
+export function getUserTypeName(userId: string): string {
+  return UserTypeUtil.getUserTypeName(userId);
+}
+
+/**
+ * 验证用户ID格式
+ */
+export function validateUserId(userId: string): boolean {
+  return UserTypeUtil.validateUserId(userId);
+}
+
+/**
+ * 检查用户权限
+ */
+export function hasUserPermission(userId: string, permission: string): boolean {
+  return UserTypeUtil.hasPermission(userId, permission);
+}
+
+// 导出UserType枚举供外部使用
+export { UserType } from '../utils/UserTypeUtil';
 

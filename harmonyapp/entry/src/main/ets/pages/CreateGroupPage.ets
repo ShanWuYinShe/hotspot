@@ -140,9 +140,9 @@ struct CreateGroupPage {
       Row() {
         IconButton({
           icon: AppIcon.BACK,
-          size: IconSize.LARGE,
-          backgroundColor: Color.Transparent,
-          onClick: () => {
+          iconSize: IconSize.LARGE,
+          bgColor: Color.Transparent,
+          onButtonClick: () => {
             const routerInstance = this.getUIContext().getRouter();
             routerInstance.back();
           }
@@ -156,7 +156,7 @@ struct CreateGroupPage {
 
         Button('创建')
           .type(ButtonType.Normal)
-          .backgroundColor(Color.Transparent)
+          .backgroundColor('#00000000')
           .fontColor($r('sys.color.ohos_id_color_emphasize'))
           .fontSize(16)
           .enabled(!this.isCreating)

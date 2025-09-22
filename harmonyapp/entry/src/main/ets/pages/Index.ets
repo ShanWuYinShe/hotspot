@@ -13,9 +13,17 @@ import { PreferencesUtil } from '../common/storage/PreferencesUtil';
 import { LocationUtil } from '../common/location/LocationUtil';
 import { WebSocketService } from '../common/websocket/WebSocketService';
 import { UserResponse } from '../common/types/BackendApiTypes';
+import { PermissionManager } from '../common/permission/PermissionManager';
 import { NotificationComponent } from '../components/NotificationComponent';
 import { NavIcon, AppIcon } from '../components/SystemIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { AIRecommendationService, RecommendationItem } from '../common/services/AIRecommendationService';
+import { SmartNotificationService } from '../common/services/SmartNotificationService';
+import { PerformanceOptimizer } from '../common/performance/PerformanceOptimizer';
+import { RecommendationCard } from '../components/RecommendationCard';
+import { NotificationCenter } from '../components/NotificationCenter';
+import { PerformanceIndicator } from '../components/PerformanceIndicator';
+import { SystemToast } from '../common/utils/SystemToast';
 
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG: string = 'IndexPage';
@@ -34,18 +42,24 @@ struct Index {
   @State isInitialized: boolean = false;
   @State lastError: string = '';
   @State wsConnectionStatus: string = '未连接';
+  @State recommendations: RecommendationItem[] = [];
+  @State showNotificationCenter: boolean = false;
+  @State showPerformanceDetails: boolean = false;
   private stateManager = GlobalStateManager.getInstance();
   private persistentStateManager = PersistentStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
+  private aiRecommendationService = AIRecommendationService.getInstance();
+  private smartNotificationService = SmartNotificationService.getInstance();
+  private performanceOptimizer = PerformanceOptimizer.getInstance();
   private uiContext: UIContext | null = null;
   private abilityContext: common.UIAbilityContext | null = null;
   // 标签配置
   private readonly tabs: TabItem[] = [
     { name: '群组', icon: AppIcon.GROUP, page: PageNames.GROUP },
     { name: '消息', icon: AppIcon.MESSAGE, page: PageNames.MESSAGE },
-    { name: '瞬间', icon: AppIcon.MOMENT, page: PageNames.MOMENT },
+    { name: '瞬间', icon: AppIcon.CAMERA, page: PageNames.MOMENT },
     { name: '地图', icon: AppIcon.MAP, page: PageNames.MAP },
-    { name: '个人', icon: AppIcon.PROFILE, page: PageNames.PROFILE }
+    { name: '个人', icon: AppIcon.PERSON, page: PageNames.PROFILE }
   ];
 
   async aboutToAppear() {
@@ -94,6 +108,10 @@ struct Index {
       await this.persistentStateManager.initialize();
       hilog.info(DOMAIN_NUMBER, TAG, '✅ 持久化状态管理器初始化完成');
 
+      // 3. 初始化智能服务
+      await this.initializeSmartServices();
+      hilog.info(DOMAIN_NUMBER, TAG, '✅ 智能服务初始化完成');
+
       // 初始化导航工具
       // NavigationUtil 已删除，无需初始化
       hilog.info(DOMAIN_NUMBER, TAG, '✅ 导航工具初始化完成');
@@ -108,24 +126,26 @@ struct Index {
         this.stateManager.updateLocation(persistentState.currentLocation as LocationInfo);
       }
 
-      // 3. 请求位置权限
-      const hasPermission = await LocationUtil.requestPermission(this.abilityContext);
-      if (hasPermission) {
-        try {
+      // 3. 请求位置权限并获取位置信息
+      try {
+        const hasPermission: boolean = await PermissionManager.getInstance().checkLocationPermission();
+        if (hasPermission) {
           const location = await LocationUtil.getCurrentLocation();
-          const locationName = await LocationUtil.getAddressFromLocation(
-            location.latitude,
-            location.longitude
-          );
-          const locationInfo: LocationInfo = {
-            latitude: location.latitude,
-            longitude: location.longitude,
-            locationName: locationName
-          };
-          this.stateManager.updateLocation(locationInfo);
-        } catch (error) {
-          console.warn('获取位置失败:', error);
+          if (location) {
+            // 获取位置名称
+            const locationName: string | null = await LocationUtil.getLocationName(location.latitude, location.longitude);
+            const locationInfo = {
+              latitude: location.latitude,
+              longitude: location.longitude,
+              locationName: locationName || '未知位置'
+            };
+            this.stateManager.updateLocation(locationInfo);
+          }
+        } else {
+          console.warn('位置权限未授予');
         }
+      } catch (error) {
+        console.warn('获取位置失败:', error);
       }
 
       // 初始化WebSocket连接
@@ -222,6 +242,34 @@ struct Index {
       .height('100%')
       .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
 
+      // 通知中心弹窗
+      if (this.showNotificationCenter) {
+        Column() {
+          NotificationCenter()
+        }
+        .width('100%')
+        .height('100%')
+        .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .onClick(() => {
+          this.showNotificationCenter = false;
+        })
+      }
+
+      // 性能详情弹窗
+      if (this.showPerformanceDetails) {
+        Column() {
+          PerformanceIndicator({
+            showDetails: true,
+            compact: false
+          })
+        }
+        .width('100%')
+        .height('100%')
+        .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .onClick(() => {
+          this.showPerformanceDetails = false;
+        })
+      }
     }
     .width('100%')
     .height('100%')
@@ -322,21 +370,172 @@ struct Index {
       .backgroundColor($r('sys.color.ohos_id_color_background'))
 
       // 主要内容区域
-      Column() {
-        Text(`当前页面: ${this.tabs[this.currentTabIndex].name}`)
-          .fontSize(18)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          .margin({ bottom: 20 })
+      Scroll() {
+        Column({ space: 16 }) {
+          // 性能监控指示器
+          Row() {
+            Text('系统状态')
+              .fontSize(16)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('sys.color.ohos_id_color_text_primary'))
+              .layoutWeight(1)
 
-        Button(`进入${this.tabs[this.currentTabIndex].name}`)
-          .fontSize(16)
-          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-          .onClick(async () => {
-            await this.switchTab(this.currentTabIndex);
-          })
+            PerformanceIndicator({
+              compact: true,
+              showDetails: this.showPerformanceDetails
+            })
+            .onClick(() => this.togglePerformanceDetails())
+          }
+          .width('100%')
+          .padding({ left: 16, right: 16 })
+
+          // 智能推荐内容
+          if (this.recommendations.length > 0) {
+            Column({ space: 12 }) {
+              Row() {
+                Text('为您推荐')
+                  .fontSize(18)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                  .layoutWeight(1)
+
+                Button('刷新')
+                  .type(ButtonType.Normal)
+                  .fontSize(12)
+                  .padding({ left: 12, right: 12, top: 4, bottom: 4 })
+                  .onClick(() => this.loadRecommendations())
+              }
+              .width('100%')
+              .padding({ left: 16, right: 16 })
+
+              // 推荐卡片列表
+              ForEach(this.recommendations.slice(0, 3), (recommendation: RecommendationItem) => {
+                RecommendationCard({ recommendation: recommendation })
+                  .margin({ left: 16, right: 16 })
+              })
+
+              if (this.recommendations.length > 3) {
+                Button(`查看全部 ${this.recommendations.length} 条推荐`)
+                  .type(ButtonType.Normal)
+                  .width('calc(100% - 32vp)')
+                  .margin({ left: 16, right: 16 })
+                  .onClick(() => {
+                    // 跳转到推荐页面
+                    SystemToast.showInfo('跳转到推荐页面');
+                  })
+              }
+            }
+            .width('100%')
+          }
+
+          // 快捷功能区域
+          Column({ space: 12 }) {
+            Text('快捷功能')
+              .fontSize(18)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('sys.color.ohos_id_color_text_primary'))
+              .alignSelf(ItemAlign.Start)
+              .margin({ left: 16 })
+
+            Grid() {
+              GridItem() {
+                this.buildQuickActionCard(
+                  '通知中心',
+                  AppIcon.NOTIFICATION,
+                  () => this.toggleNotificationCenter()
+                )
+              }
+
+              GridItem() {
+                this.buildQuickActionCard(
+                  '性能监控',
+                  AppIcon.CHART,
+                  () => this.togglePerformanceDetails()
+                )
+              }
+
+              GridItem() {
+                this.buildQuickActionCard(
+                  '高级设置',
+                  AppIcon.SETTINGS,
+                  () => {
+                    // 跳转到高级设置页面
+                    SystemToast.showInfo('跳转到高级设置');
+                  }
+                )
+              }
+
+              GridItem() {
+                this.buildQuickActionCard(
+                  '调试面板',
+                  AppIcon.DEBUG,
+                  () => {
+                    // 跳转到调试面板
+                    this.getUIContext().getRouter().pushUrl({
+                      url: 'pages/DebugPanel'
+                    });
+                  }
+                )
+              }
+
+              GridItem() {
+                this.buildQuickActionCard(
+                  '服务状态',
+                  AppIcon.CHART,
+                  () => {
+                    // 跳转到服务状态页面
+                    this.getUIContext().getRouter().pushUrl({
+                      url: 'pages/ServiceStatusPage'
+                    });
+                  }
+                )
+              }
+
+              GridItem() {
+                this.buildQuickActionCard(
+                  '推荐中心',
+                  AppIcon.RECOMMEND,
+                  () => {
+                    // 跳转到推荐页面
+                    this.getUIContext().getRouter().pushUrl({
+                      url: 'pages/RecommendationPage'
+                    });
+                  }
+                )
+              }
+            }
+            .columnsTemplate('1fr 1fr 1fr')
+            .rowsGap(12)
+            .columnsGap(12)
+            .width('calc(100% - 32vp)')
+            .margin({ left: 16, right: 16 })
+          }
+          .width('100%')
+
+          // 当前标签页内容
+          Column({ space: 16 }) {
+            Text(`${this.tabs[this.currentTabIndex].name}页面`)
+              .fontSize(18)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('sys.color.ohos_id_color_text_primary'))
+              .alignSelf(ItemAlign.Start)
+              .margin({ left: 16 })
+
+            Button(`进入${this.tabs[this.currentTabIndex].name}`)
+              .fontSize(16)
+              .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+              .width('calc(100% - 32vp)')
+              .margin({ left: 16, right: 16 })
+              .onClick(async () => {
+                await this.switchTab(this.currentTabIndex);
+              })
+          }
+          .width('100%')
+        }
+        .padding({ bottom: 16 })
       }
       .layoutWeight(1)
-      .justifyContent(FlexAlign.Center)
+      .scrollBar(BarState.Auto)
     }
     .layoutWeight(1)
   }
@@ -347,9 +546,7 @@ struct Index {
       ForEach(this.tabs, (tab: TabItem, index: number) => {
         NavIcon({
           icon: tab.icon,
-          label: tab.name,
-          isActive: this.currentTabIndex === index,
-          onClick: () => {
+          onNavClick: () => {
             this.switchTab(index);
           }
         })
@@ -364,6 +561,116 @@ struct Index {
       width: { top: 1 },
       color: $r('sys.color.ohos_id_color_list_separator')
     })
+  }
+
+  /**
+   * 初始化智能服务
+   */
+  private async initializeSmartServices(): Promise<void> {
+    try {
+      // 记录页面访问行为
+      if (this.globalState.currentUser?.user_id) {
+        await this.aiRecommendationService.recordUserBehavior({
+          userId: this.globalState.currentUser.user_id,
+          action: 'view',
+          targetType: 'user',
+          targetId: 'main_page',
+          timestamp: Date.now()
+        });
+      }
+
+      // 设置性能告警监听
+      this.performanceOptimizer.onPerformanceAlert((alert) => {
+        hilog.warn(DOMAIN_NUMBER, TAG, `性能告警: ${alert.message}`);
+      });
+
+      // 设置通知监听
+      this.smartNotificationService.addListener((notification) => {
+        hilog.info(DOMAIN_NUMBER, TAG, `收到通知: ${notification.title}`);
+      });
+
+      // 如果用户已登录，加载推荐内容和生成推荐通知
+      if (this.globalState.currentUser?.user_id) {
+        // 加载推荐内容
+        this.loadRecommendations();
+        
+        // 生成推荐通知
+        setTimeout(async () => {
+          await this.smartNotificationService.createRecommendationNotification(
+            this.globalState.currentUser!.user_id
+          );
+        }, 5000); // 5秒后生成推荐
+      }
+
+    } catch (error) {
+      hilog.error(DOMAIN_NUMBER, TAG, `智能服务初始化失败: ${JSON.stringify(error)}`);
+    }
+  }
+
+  /**
+   * 加载推荐内容
+   */
+  private async loadRecommendations(): Promise<void> {
+    try {
+      if (this.globalState.currentUser?.user_id) {
+        this.recommendations = await this.aiRecommendationService.getRecommendations(
+          this.globalState.currentUser.user_id,
+          6 // 加载6条推荐
+        );
+        hilog.info(DOMAIN_NUMBER, TAG, `加载了 ${this.recommendations.length} 条推荐内容`);
+      }
+    } catch (error) {
+      hilog.error(DOMAIN_NUMBER, TAG, `加载推荐内容失败: ${JSON.stringify(error)}`);
+    }
+  }
+
+  /**
+   * 切换通知中心显示
+   */
+  private toggleNotificationCenter(): void {
+    this.showNotificationCenter = !this.showNotificationCenter;
+  }
+
+  /**
+   * 切换性能详情显示
+   */
+  private togglePerformanceDetails(): void {
+    this.showPerformanceDetails = !this.showPerformanceDetails;
+  }
+
+  /**
+   * 构建快捷操作卡片
+   */
+  @Builder
+  private buildQuickActionCard(title: string, icon: AppIcon, onClick: () => void) {
+    Column({ space: 8 }) {
+      SystemIcon({
+        icon: icon,
+        iconSize: 32,
+        iconColor: $r('sys.color.ohos_id_color_emphasize')
+      })
+
+      Text(title)
+        .fontSize(14)
+        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .textAlign(TextAlign.Center)
+    }
+    .width('100%')
+    .height(80)
+    .justifyContent(FlexAlign.Center)
+    .backgroundColor($r('sys.color.ohos_id_color_background'))
+    .borderRadius(12)
+    .shadow({
+      radius: 4,
+      color: $r('sys.color.ohos_id_color_shadow'),
+      offsetX: 0,
+      offsetY: 2
+    })
+    .onClick(onClick)
+    // 无障碍属性
+    .accessibilityGroup(true)
+    .accessibilityText(`${title}功能`)
+    .accessibilityDescription(`点击进入${title}`)
   }
 
 }

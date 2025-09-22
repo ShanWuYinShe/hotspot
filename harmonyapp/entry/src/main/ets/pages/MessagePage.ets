@@ -82,7 +82,7 @@ struct MessagePage {
     this.errorMessage = '';
 
     try {
-      const response = await ApiClient.getConversations({ limit: 50 });
+      const response = await ApiClient.conversations({ limit: 50 });
       
       if (response.code === 0 && response.data) {
         // 转换 GetConversationsResponse 到 Conversation 格式
@@ -164,7 +164,7 @@ struct MessagePage {
     }
 
     try {
-      const response = await ApiClient.searchUsersByLocation({
+      const response = await ApiClient.searchUserByLocation({
         latitude: this.globalState.currentLocation.latitude,
         longitude: this.globalState.currentLocation.longitude,
         radius: 1000, // 1km 范围

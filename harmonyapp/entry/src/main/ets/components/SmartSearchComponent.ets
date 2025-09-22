@@ -110,7 +110,7 @@ export struct SmartSearchComponent {
    */
   private async searchUsers(query: string) {
     try {
-      const response = await ApiClient.searchUsersByName({ name: query, limit: 10 });
+      const response = await ApiClient.searchUserByName({ name: query, limit: 10 });
 
       if (response.code === 0 && response.data) {
         const userResults: SearchResult[] = response.data.items.map((user): SearchResult => ({
@@ -133,7 +133,7 @@ export struct SmartSearchComponent {
    */
   private async searchGroups(query: string) {
     try {
-      const response = await ApiClient.searchGroupsByName({
+      const response = await ApiClient.searchGroupByName({
         name: query,
         limit: 10
       });
@@ -164,7 +164,7 @@ export struct SmartSearchComponent {
 
     try {
       // 先按位置搜索，然后在客户端过滤
-      const response = await ApiClient.searchMomentsByLocation({
+      const response = await ApiClient.searchMomentByLocation({
         latitude: this.globalState.currentLocation.latitude,
         longitude: this.globalState.currentLocation.longitude,
         radius: 10000, // 10km 范围

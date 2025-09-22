@@ -210,7 +210,9 @@ export struct NativeMapComponent {
       // const snapshot = await this.mapInstance?.takeSnapshot();
       // return snapshot;
       
-      return null; // 模拟实现
+      // 地图快照功能需要实际的地图SDK支持
+      hilog.warn(DOMAIN_NUMBER, TAG, '地图快照功能需要集成实际的地图SDK');
+      return null;
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `❌ 截取地图快照失败: ${JSON.stringify(error)}`);
       return null;

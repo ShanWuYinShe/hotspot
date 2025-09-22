@@ -49,7 +49,7 @@ struct GroupPage {
     this.errorMessage = '';
 
     try {
-      const response = await ApiClient.searchGroupsByLocation({
+      const response = await ApiClient.searchGroupByLocation({
         latitude: this.globalState.currentLocation.latitude,
         longitude: this.globalState.currentLocation.longitude,
         radius: 5000, // 5km 范围

@@ -177,12 +177,31 @@ export struct IntelligentLocationCard {
 
   private async loadWeatherInfo(): Promise<void> {
     try {
-      // 这里可以集成HarmonyOS的天气服务API
-      // 暂时使用模拟数据
-      await new Promise<void>(resolve => setTimeout(resolve, 1000));
-      this.weatherInfo = '22°C 晴';
+      if (this.latitude !== 0 && this.longitude !== 0) {
+        // 调用天气API获取天气信息
+        const weatherData = await this.getWeatherByLocation(this.latitude, this.longitude);
+        this.weatherInfo = weatherData || '天气信息不可用';
+      } else {
+        this.weatherInfo = '位置信息不可用';
+      }
     } catch (error) {
       hilog.warn(DOMAIN_NUMBER, TAG, '加载天气信息失败');
+      this.weatherInfo = '天气信息获取失败';
+    }
+  }
+
+  /**
+   * 根据位置获取天气信息
+   */
+  private async getWeatherByLocation(latitude: number, longitude: number): Promise<string | null> {
+    try {
+      // 这里应该调用实际的天气API
+      // 由于HarmonyOS可能没有内置天气API，这里返回基础信息
+      hilog.info(DOMAIN_NUMBER, TAG, `获取位置天气信息: ${latitude}, ${longitude}`);
+      return null; // 暂时返回null，表示功能未实现
+    } catch (error) {
+      hilog.error(DOMAIN_NUMBER, TAG, `获取天气信息失败: ${JSON.stringify(error)}`);
+      return null;
     }
   }
 

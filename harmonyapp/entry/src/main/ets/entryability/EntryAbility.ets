@@ -17,12 +17,14 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { notificationManager } from '@kit.NotificationKit';
 import { deviceInfo, BusinessError } from '@kit.BasicServicesKit';
 import { geoLocationManager } from '@kit.LocationKit';
+import { ServiceManager } from '../common/services/ServiceManager';
 
 const DOMAIN_NUMBER: number = 0xFF00;
 const TAG: string = 'GeoTalk';
 
 export default class EntryAbility extends UIAbility {
   private windowStage: window.WindowStage | null = null;
+  private serviceManager = ServiceManager.getInstance();
 
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     hilog.info(DOMAIN_NUMBER, TAG, 'GeoTalk应用启动 - 启动原因: %{public}s',
@@ -39,6 +41,9 @@ export default class EntryAbility extends UIAbility {
 
     // 获取设备信息
     this.logDeviceInfo();
+
+    // 初始化智能服务
+    this.initializeSmartServices();
   }
 
   onDestroy(): void {
@@ -263,8 +268,56 @@ export default class EntryAbility extends UIAbility {
   /**
    * 清理资源
    */
+  /**
+   * 初始化智能服务
+   */
+  private async initializeSmartServices(): Promise<void> {
+    try {
+      hilog.info(DOMAIN_NUMBER, TAG, '开始初始化智能服务');
+      
+      // 初始化服务管理器，传入当前 Context
+      await this.serviceManager.initializeServices(this.context);
+      
+      // 设置服务状态监听
+      this.serviceManager.addStatusListener((status) => {
+        const stats = this.serviceManager.getServiceStats();
+        hilog.info(DOMAIN_NUMBER, TAG, 
+          `服务状态更新: 总计${stats.total}, 运行${stats.running}, 错误${stats.error}`);
+      });
+      
+      hilog.info(DOMAIN_NUMBER, TAG, '智能服务初始化完成');
+      
+    } catch (error) {
+      const err = error as BusinessError;
+      hilog.error(DOMAIN_NUMBER, TAG, `智能服务初始化失败: ${err.message}`);
+      
+      // 即使智能服务初始化失败，也不影响应用基本功能
+      // 可以在后台尝试重新初始化
+      setTimeout(() => {
+        this.retryServiceInitialization();
+      }, 10000); // 10秒后重试
+    }
+  }
+
+  /**
+   * 重试服务初始化
+   */
+  private async retryServiceInitialization(): Promise<void> {
+    try {
+      hilog.info(DOMAIN_NUMBER, TAG, '重试智能服务初始化');
+      await this.serviceManager.initializeServices(this.context);
+      hilog.info(DOMAIN_NUMBER, TAG, '智能服务重试初始化成功');
+    } catch (error) {
+      hilog.error(DOMAIN_NUMBER, TAG, `智能服务重试初始化失败: ${JSON.stringify(error)}`);
+    }
+  }
+
   private cleanup(): void {
     try {
+      // 清理智能服务
+      hilog.info(DOMAIN_NUMBER, TAG, '清理智能服务');
+      this.serviceManager.stopAllServices();
+      
       // 清理应用级资源
       hilog.info(DOMAIN_NUMBER, TAG, '清理应用级资源');
 

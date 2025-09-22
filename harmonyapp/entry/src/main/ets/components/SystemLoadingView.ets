@@ -15,9 +15,13 @@ export struct SystemLoadingView {
   @Prop message: string = '加载中...';
   @Prop showProgress: boolean = true;
   @Prop showSystemInfo: boolean = true;
+  @Prop progressType: 'indeterminate' | 'determinate' = 'indeterminate';
+  @Prop maxProgress: number = 100;
+  @Prop externalProgress: number;
   @State private rotationAngle: number = 0;
   @State private systemTime: string = '';
   @State private loadingProgress: number = 0;
+  @State private progressDirection: number = 1; // 1 for forward, -1 for backward
   private animationId: number = -1;
   private timeUpdateId: number = -1;
 
@@ -55,19 +59,33 @@ export struct SystemLoadingView {
 
         // 内圈进度
         if (this.showProgress) {
-          Progress({
-            value: this.loadingProgress,
-            total: 100,
-            type: ProgressType.Ring
-          })
-          .width(60)
-          .height(60)
-          .color($r('sys.color.ohos_id_color_emphasize'))
-          .style({
-            strokeWidth: 4,
-            scaleCount: 0,
-            enableScanEffect: true
-          })
+          if (this.progressType === 'indeterminate') {
+            // 不确定进度 - 使用呼吸效果
+            Circle({ width: 60, height: 60 })
+              .stroke($r('sys.color.ohos_id_color_emphasize'))
+              .strokeWidth(4)
+              .opacity(0.3 + 0.7 * (this.loadingProgress / 100))
+              .animation({
+                duration: 2000,
+                iterations: -1,
+                curve: Curve.EaseInOut
+              })
+          } else {
+            // 确定进度 - 显示实际进度
+            Progress({
+              value: this.externalProgress !== undefined ? this.externalProgress : this.loadingProgress,
+              total: this.maxProgress,
+              type: ProgressType.Ring
+            })
+            .width(60)
+            .height(60)
+            .color($r('sys.color.ohos_id_color_emphasize'))
+            .style({
+              strokeWidth: 4,
+              scaleCount: 0,
+              enableScanEffect: false
+            })
+          }
         }
 
         // 中心图标
@@ -92,8 +110,8 @@ export struct SystemLoadingView {
             .textAlign(TextAlign.Center)
         }
 
-        if (this.showProgress) {
-          Text(`${Math.round(this.loadingProgress)}%`)
+        if (this.showProgress && this.progressType === 'determinate') {
+          Text(`${Math.round(this.externalProgress !== undefined ? this.externalProgress : this.loadingProgress)}%`)
             .fontSize(14)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .textAlign(TextAlign.Center)
@@ -109,16 +127,45 @@ export struct SystemLoadingView {
 
   private startAnimation(): void {
     this.animationId = setInterval(() => {
+      // 旋转动画
       this.rotationAngle += 10;
       if (this.rotationAngle >= 360) {
         this.rotationAngle = 0;
       }
       
-      // 模拟进度更新
+      // 进度更新逻辑
       if (this.showProgress) {
-        this.loadingProgress = (this.loadingProgress + 2) % 100;
+        if (this.progressType === 'indeterminate') {
+          // 不确定进度 - 使用呼吸效果（0-100来回）
+          this.loadingProgress += this.progressDirection * 3;
+          if (this.loadingProgress >= 100) {
+            this.loadingProgress = 100;
+            this.progressDirection = -1;
+          } else if (this.loadingProgress <= 0) {
+            this.loadingProgress = 0;
+            this.progressDirection = 1;
+          }
+        }
+        // 确定进度模式下，进度由外部控制，这里不自动更新
       }
     }, 50);
+  }
+
+  /**
+   * 设置确定进度值（仅在 determinate 模式下有效）
+   */
+  setProgress(progress: number): void {
+    if (this.progressType === 'determinate') {
+      this.loadingProgress = Math.min(Math.max(progress, 0), this.maxProgress);
+    }
+  }
+
+  /**
+   * 重置进度
+   */
+  resetProgress(): void {
+    this.loadingProgress = 0;
+    this.progressDirection = 1;
   }
 
   private startTimeUpdate(): void {

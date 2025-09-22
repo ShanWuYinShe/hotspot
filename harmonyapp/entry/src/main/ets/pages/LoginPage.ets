@@ -10,7 +10,8 @@ import { WebSocketService } from '../common/websocket/WebSocketService';
 import { PageNames } from '../constants/AppConstants';
 import { SystemLoadingView } from '../components/SystemLoadingView';
 import { SystemToast } from '../components/SystemToast';
-import { AuthResponse, CreateTempRequest, UserResponse } from '../common/types/BackendApiTypes';
+import { PasswordSecurityUtil } from '../common/security/PasswordSecurityUtil';
+import { AuthResponse, CreateTempRequest, UserResponse, LoginRequest } from '../common/types/BackendApiTypes';
 
 
 @Entry
@@ -21,9 +22,12 @@ struct LoginPage {
   @State loginId: string = '';
   @State password: string = '';
   @State isLoading: boolean = false;
+  @State loadingStage: string = '';
+  @State loadingProgress: number = 0;
   @State loginMode: 'temp' | 'register' | 'login' = 'temp';
   private stateManager = GlobalStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
+  private loadingViewRef: SystemLoadingView | null = null;
 
   aboutToAppear() {
     // 订阅状态变化
@@ -37,10 +41,22 @@ struct LoginPage {
     this.stateManager.unsubscribe('login_page');
   }
 
+  /**
+   * 延迟辅助方法
+   */
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
   build() {
     Column() {
       if (this.isLoading) {
-        SystemLoadingView({ message: '正在登录...' })
+        SystemLoadingView({ 
+          message: this.loadingStage || '正在登录...', 
+          progressType: 'determinate',
+          showProgress: true,
+          externalProgress: this.loadingProgress
+        })
       } else {
         Column({ space: 32 }) {
           // 标题
@@ -114,14 +130,28 @@ struct LoginPage {
     }
 
     this.isLoading = true;
+    this.loadingProgress = 0;
 
     try {
-      const request: CreateTempRequest = {
+      // 阶段1：准备创建临时用户
+      this.loadingStage = '正在准备创建临时用户...';
+      this.loadingProgress = 20;
+      await this.delay(300);
+
+      // 阶段2：发送创建请求
+      this.loadingStage = '正在创建临时用户...';
+      this.loadingProgress = 50;
+      const request = {
         nickname: this.nickname.trim()
       };
-      const response = await ApiClient.createTempUser(request);
+      const response = await ApiClient.createTemp(request);
+      
       if (response.code === 0 && response.data) {
+        // 阶段3：处理登录成功
+        this.loadingStage = '登录成功，正在初始化...';
+        this.loadingProgress = 80;
         await this.handleAuthSuccess(response.data);
+        this.loadingProgress = 100;
       } else {
         SystemToast.showError(response.msg || '创建临时用户失败');
       }
@@ -129,6 +159,8 @@ struct LoginPage {
       SystemToast.showError(error instanceof Error ? error.message : '创建临时用户失败');
     } finally {
       this.isLoading = false;
+      this.loadingStage = '';
+      this.loadingProgress = 0;
     }
   }
 
@@ -142,30 +174,63 @@ struct LoginPage {
     }
 
     this.isLoading = true;
+    this.loadingProgress = 0;
 
     try {
-      // 注意：这里需要实现完整的密码哈希流程
-      // 1. 获取 nonce
-      // 2. 计算密码哈希
-      // 3. 发送登录请求
-
-      // 1. 获取nonce用于密码哈希计算
+      // 阶段1：获取安全令牌
+      this.loadingStage = '正在获取安全令牌...';
+      this.loadingProgress = 15;
       const nonceResponse = await ApiClient.getNonce();
       if (nonceResponse.code !== 0 || !nonceResponse.data) {
         throw new Error(nonceResponse.msg || '获取nonce失败');
       }
 
-      // 2. 计算传输哈希: SHA256(password + nonce + timestamp)
-      // 注意：这里使用明文密码是正确的，因为传输哈希的目的是防重放攻击
-      // 服务端会使用Argon2计算存储哈希进行验证
-      const response = await ApiClient.login({
+      const nonceData = nonceResponse.data;
+      const nonce_id = nonceData.nonce_id;
+      const nonce = nonceData.nonce;
+      const timestamp = nonceData.timestamp;
+      const expires_in = nonceData.expires_in;
+
+      // 阶段2：验证安全令牌
+      this.loadingStage = '正在验证安全令牌...';
+      this.loadingProgress = 30;
+      await this.delay(200);
+      if (!PasswordSecurityUtil.validateNonce(nonce, timestamp, expires_in)) {
+        throw new Error('nonce无效或已过期');
+      }
+
+      // 阶段3：加密密码
+      this.loadingStage = '正在加密密码...';
+      this.loadingProgress = 50;
+      const passwordHash = await PasswordSecurityUtil.calculateTransportHash(
+        this.password,
+        nonce,
+        timestamp
+      );
+
+      // 阶段4：发送登录请求
+      this.loadingStage = '正在验证登录信息...';
+      this.loadingProgress = 70;
+      const loginRequest = {
         login_id: this.loginId,
-        password_hash: this.password, // 传输哈希，服务端会验证并计算存储哈希
-        nonce_id: nonceResponse.data.nonce_id,
-        timestamp: nonceResponse.data.timestamp
-      });
+        password_hash: passwordHash,
+        nonce_id: nonce_id,
+        timestamp: timestamp
+      };
+
+      // 5. 发送登录请求
+      const response = await ApiClient.login(loginRequest);
       if (response.code === 0 && response.data) {
+        // 阶段5：登录成功，正在初始化
+        this.loadingStage = '登录成功，正在初始化...';
+        this.loadingProgress = 90;
+        
+        // 清除敏感数据
+        PasswordSecurityUtil.clearSensitiveString(this.password);
+        PasswordSecurityUtil.clearSensitiveString(passwordHash);
+        
         await this.handleAuthSuccess(response.data);
+        this.loadingProgress = 100;
       } else {
         SystemToast.showError(response.msg || '登录失败');
       }
@@ -173,6 +238,8 @@ struct LoginPage {
       SystemToast.showError(error instanceof Error ? error.message : '登录失败');
     } finally {
       this.isLoading = false;
+      this.loadingStage = '';
+      this.loadingProgress = 0;
     }
   }
 
@@ -184,7 +251,7 @@ struct LoginPage {
     await PreferencesUtil.set('access_token', response.access_token);
 
     // 更新全局状态
-    const userInfo: UserResponse = {
+    const userInfo = {
       user_id: response.user_id,
       nickname: response.nickname
     };

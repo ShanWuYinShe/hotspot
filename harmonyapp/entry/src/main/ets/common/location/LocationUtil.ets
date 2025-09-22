@@ -1,377 +1,472 @@
 /**
- * HarmonyOS原生位置服务增强版
- * 深度集成HarmonyOS位置服务的完整能力
+ * 位置工具类
+ * 提供位置获取、地址解析、距离计算等功能
  */
 
-import geoLocationManager from '@ohos.geoLocationManager';
-import abilityAccessCtrl, { Permissions } from '@ohos.abilityAccessCtrl';
-import { common } from '@kit.AbilityKit';
+import { geoLocationManager } from '@kit.LocationKit';
+import { abilityAccessCtrl, Permissions } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { systemDateTime } from '@kit.BasicServicesKit';
+import { common } from '@kit.AbilityKit';
 
-const DOMAIN_NUMBER: number = 0xFF03;
+const DOMAIN_NUMBER: number = 0xFF16;
 const TAG: string = 'LocationUtil';
 
+/**
+ * 位置信息接口
+ */
 export interface LocationInfo {
   latitude: number;
   longitude: number;
   accuracy?: number;
-  locationName: string;
   altitude?: number;
   speed?: number;
-  direction?: number;
+  bearing?: number;
   timestamp?: number;
-  provider?: string;
+  locationName?: string;
 }
 
-export interface LocationOptions {
-  priority: 'high' | 'balanced' | 'low';
-  timeout: number;
-  maxAge: number;
-  enableHighAccuracy: boolean;
+/**
+ * 地址信息接口
+ */
+export interface AddressInfo {
+  country?: string;
+  province?: string;
+  city?: string;
+  district?: string;
+  street?: string;
+  streetNumber?: string;
+  fullAddress?: string;
 }
 
-export interface GeofenceConfig {
-  latitude: number;
-  longitude: number;
-  radius: number;
-  expiration?: number;
-  dwellDelay?: number;
-}
+/**
+ * 位置监听回调接口
+ */
+export type LocationCallback = (location: LocationInfo) => void;
 
-export interface LocationServiceStatus {
-  isEnabled: boolean;
-  isGpsEnabled: boolean;
-  isNetworkEnabled: boolean;
-  isPassiveEnabled: boolean;
-}
-
-interface GeofenceStatusResult {
-  type: number;
-}
-
+/**
+ * 位置工具类
+ */
 export class LocationUtil {
-  private static locationCallbacks: Map<string, (location: LocationInfo) => void> = new Map();
-  private static geofenceCallbacks: Map<string, (event: string) => void> = new Map();
+  private static isListening: boolean = false;
+  private static locationCallback: LocationCallback | null = null;
+
   /**
    * 请求位置权限
    */
-  static async requestPermission(context: common.UIAbilityContext): Promise<boolean> {
-    const atManager = abilityAccessCtrl.createAtManager();
-    const permissions: Array<Permissions> = [
-      'ohos.permission.APPROXIMATELY_LOCATION',
-      'ohos.permission.LOCATION'
-    ];
-
+  static async requestLocationPermission(context: common.UIAbilityContext): Promise<boolean> {
     try {
-      await atManager.requestPermissionsFromUser(context, permissions);
-      return true;
-    } catch {
+      const atManager = abilityAccessCtrl.createAtManager();
+      
+      // 优先请求精确位置权限
+      let result = await atManager.checkAccessToken(
+        context.applicationInfo.accessTokenId, 
+        'ohos.permission.LOCATION'
+      );
+      
+      if (result === abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED) {
+        hilog.info(DOMAIN_NUMBER, TAG, '精确位置权限已授权');
+        return true;
+      }
+
+      // 请求精确位置权限
+      const requestResult = await atManager.requestPermissionsFromUser(
+        context, 
+        ['ohos.permission.LOCATION']
+      );
+      
+      if (requestResult.authResults[0] === abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED) {
+        hilog.info(DOMAIN_NUMBER, TAG, '精确位置权限授权成功');
+        return true;
+      }
+
+      // 如果精确位置被拒绝，尝试请求大概位置权限
+      result = await atManager.checkAccessToken(
+        context.applicationInfo.accessTokenId, 
+        'ohos.permission.APPROXIMATELY_LOCATION'
+      );
+      
+      if (result === abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED) {
+        hilog.info(DOMAIN_NUMBER, TAG, '大概位置权限已授权');
+        return true;
+      }
+
+      const approximateResult = await atManager.requestPermissionsFromUser(
+        context, 
+        ['ohos.permission.APPROXIMATELY_LOCATION']
+      );
+      
+      const granted = approximateResult.authResults[0] === abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED;
+      hilog.info(DOMAIN_NUMBER, TAG, `大概位置权限请求结果: ${granted}`);
+      return granted;
+    } catch (error) {
+      hilog.error(DOMAIN_NUMBER, TAG, `请求位置权限失败: ${JSON.stringify(error)}`);
       return false;
     }
   }
 
   /**
-   * 获取当前位置（增强版）
+   * 获取当前位置
    */
-  static async getCurrentLocation(options?: LocationOptions): Promise<LocationInfo> {
-    return new Promise((resolve, reject) => {
-      const requestInfo: geoLocationManager.CurrentLocationRequest = {
+  static async getCurrentLocation(): Promise<LocationInfo | null> {
+    try {
+      hilog.info(DOMAIN_NUMBER, TAG, '开始获取当前位置');
+
+      // 配置位置请求参数
+      const requestInfo = {
         priority: geoLocationManager.LocationRequestPriority.FIRST_FIX,
         scenario: geoLocationManager.LocationRequestScenario.UNSET,
         maxAccuracy: 100,
         timeoutMs: 10000
       };
 
-      geoLocationManager.getCurrentLocation(requestInfo, (err, location) => {
-        if (err) {
-          reject(new Error(`获取位置失败: ${err.message}`));
-          return;
-        }
-
-        resolve({
-          latitude: location.latitude || 35.16,
-          longitude: location.longitude || 112.68,
-          accuracy: location.accuracy,
-          locationName: '南天门'
-        });
-      });
-    });
-  }
-
-  /**
-   * 获取地址信息
-   */
-  static async getAddressFromLocation(latitude: number, longitude: number): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reverseGeoCodeRequest: geoLocationManager.ReverseGeoCodeRequest = {
-        latitude,
-        longitude,
-        maxItems: 1
+      // 获取位置
+      const location = await geoLocationManager.getCurrentLocation(requestInfo);
+      
+      const locationInfo = {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        accuracy: location.accuracy,
+        altitude: location.altitude,
+        speed: location.speed,
+        bearing: location.direction,
+        timestamp: location.timeStamp
       };
 
-      geoLocationManager.getAddressesFromLocation(reverseGeoCodeRequest, (err, data) => {
-        if (err || !data || data.length === 0) {
-          resolve('南天门');
-          return;
+      // 尝试获取地址信息
+      try {
+        const addressInfo = await LocationUtil.reverseGeocode(location.latitude, location.longitude);
+        if (addressInfo && addressInfo.fullAddress) {
+          locationInfo.locationName = addressInfo.fullAddress;
         }
+      } catch (error) {
+        hilog.warn(DOMAIN_NUMBER, TAG, `获取地址信息失败: ${JSON.stringify(error)}`);
+        locationInfo.locationName = '未知位置';
+      }
 
-        const address = data[0];
-        const addressStr = [
-          address.countryName,
-          address.administrativeArea,
-          address.locality,
-          address.subLocality
-        ].filter(Boolean).join(' ');
-
-        resolve(addressStr || '南天门');
-      });
-    });
-  }
-
-  /**
-   * 计算两点间距离（米）
-   */
-  static calculateDistance(
-    lat1: number, lon1: number,
-    lat2: number, lon2: number
-  ): number {
-    const R = 6371e3; // 地球半径（米）
-    const φ1 = lat1 * Math.PI / 180;
-    const φ2 = lat2 * Math.PI / 180;
-    const Δφ = (lat2 - lat1) * Math.PI / 180;
-    const Δλ = (lon2 - lon1) * Math.PI / 180;
-
-    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-      Math.cos(φ1) * Math.cos(φ2) *
-      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    return R * c;
+      hilog.info(DOMAIN_NUMBER, TAG, `位置获取成功: ${locationInfo.latitude}, ${locationInfo.longitude}`);
+      return locationInfo;
+    } catch (error) {
+      hilog.error(DOMAIN_NUMBER, TAG, `获取当前位置失败: ${JSON.stringify(error)}`);
+      return null;
+    }
   }
 
   /**
    * 开始位置监听
    */
-  static async startLocationUpdates(
-    callbackId: string,
-    callback: (location: LocationInfo) => void,
-    options?: LocationOptions
-  ): Promise<void> {
+  static async startLocationListening(callback: LocationCallback): Promise<boolean> {
     try {
-      LocationUtil.locationCallbacks.set(callbackId, callback);
+      if (LocationUtil.isListening) {
+        hilog.warn(DOMAIN_NUMBER, TAG, '位置监听已在进行中');
+        return false;
+      }
 
-      const requestInfo: geoLocationManager.LocationRequest = {
-        priority: LocationUtil.getPriority(options?.priority || 'balanced'),
+      hilog.info(DOMAIN_NUMBER, TAG, '开始位置监听');
+
+      const requestInfo = {
+        priority: geoLocationManager.LocationRequestPriority.ACCURACY,
         scenario: geoLocationManager.LocationRequestScenario.UNSET,
-        timeInterval: 5,
-        distanceInterval: 10,
-        maxAccuracy: options?.enableHighAccuracy ? 1 : 100
+        timeInterval: 5000, // 5秒更新一次
+        distanceInterval: 10, // 移动10米更新一次
+        maxAccuracy: 100
       };
 
-      await geoLocationManager.on('locationChange', requestInfo, (location) => {
-        const locationInfo: LocationInfo = {
-          latitude: location.latitude || 35.16,
-          longitude: location.longitude || 112.68,
+      LocationUtil.locationCallback = callback;
+
+      await geoLocationManager.on('locationChange', requestInfo, (location: geoLocationManager.Location) => {
+        const locationInfo = {
+          latitude: location.latitude,
+          longitude: location.longitude,
           accuracy: location.accuracy,
           altitude: location.altitude,
           speed: location.speed,
-          direction: location.direction,
-          timestamp: location.timeStamp,
-          provider: 'gps',
-          locationName: '南天门'
+          bearing: location.direction,
+          timestamp: location.timeStamp
         };
-        
-        callback(locationInfo);
-        hilog.info(DOMAIN_NUMBER, TAG, '位置更新: %{public}f, %{public}f', 
-          location.latitude, location.longitude);
+
+        // 异步获取地址信息
+        LocationUtil.reverseGeocode(location.latitude, location.longitude)
+          .then(addressInfo => {
+            if (addressInfo && addressInfo.fullAddress) {
+              locationInfo.locationName = addressInfo.fullAddress;
+            }
+          })
+          .catch((error: Error) => {
+            hilog.warn(DOMAIN_NUMBER, TAG, `获取地址信息失败: ${JSON.stringify(error)}`);
+          })
+          .finally(() => {
+            if (LocationUtil.locationCallback) {
+              LocationUtil.locationCallback(locationInfo);
+            }
+          });
       });
 
+      LocationUtil.isListening = true;
+      hilog.info(DOMAIN_NUMBER, TAG, '位置监听已开始');
+      return true;
     } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, '开始位置监听失败: %{public}s', JSON.stringify(error));
-      throw new Error(`开始位置监听失败: ${JSON.stringify(error)}`);
+      hilog.error(DOMAIN_NUMBER, TAG, `开始位置监听失败: ${JSON.stringify(error)}`);
+      return false;
     }
   }
 
   /**
    * 停止位置监听
    */
-  static async stopLocationUpdates(callbackId: string): Promise<void> {
+  static async stopLocationListening(): Promise<boolean> {
     try {
-      LocationUtil.locationCallbacks.delete(callbackId);
+      if (!LocationUtil.isListening) {
+        hilog.warn(DOMAIN_NUMBER, TAG, '位置监听未在进行中');
+        return false;
+      }
+
       await geoLocationManager.off('locationChange');
-      hilog.info(DOMAIN_NUMBER, TAG, '停止位置监听: %{public}s', callbackId);
+      LocationUtil.isListening = false;
+      LocationUtil.locationCallback = null;
+      
+      hilog.info(DOMAIN_NUMBER, TAG, '位置监听已停止');
+      return true;
     } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, '停止位置监听失败: %{public}s', JSON.stringify(error));
+      hilog.error(DOMAIN_NUMBER, TAG, `停止位置监听失败: ${JSON.stringify(error)}`);
+      return false;
     }
   }
 
   /**
-   * 添加地理围栏
+   * 反向地理编码（坐标转地址）
    */
-  static async addGeofence(
-    geofenceId: string,
-    config: GeofenceConfig,
-    callback: (event: string) => void
-  ): Promise<void> {
+  static async reverseGeocode(latitude: number, longitude: number): Promise<AddressInfo | null> {
     try {
-      LocationUtil.geofenceCallbacks.set(geofenceId, callback);
+      hilog.debug(DOMAIN_NUMBER, TAG, `反向地理编码: ${latitude}, ${longitude}`);
 
-      const geofenceRequest: geoLocationManager.GeofenceRequest = {
-        scenario: geoLocationManager.LocationRequestScenario.UNSET,
-        geofence: {
-          latitude: config.latitude,
-          longitude: config.longitude,
-          radius: config.radius,
-          expiration: config.expiration || -1
-        }
+      const reverseRequest = {
+        latitude: latitude,
+        longitude: longitude,
+        maxItems: 1
       };
 
-      await geoLocationManager.on('gnssFenceStatusChange', geofenceRequest, (result: GeofenceStatusResult) => {
-        const event = result.type === 1 ? 'enter' : result.type === 2 ? 'exit' : 'dwell';
-        callback(event);
-        hilog.info(DOMAIN_NUMBER, TAG, '地理围栏事件: %{public}s', event);
-      });
-
-    } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, '添加地理围栏失败: %{public}s', JSON.stringify(error));
-      throw new Error(`添加地理围栏失败: ${JSON.stringify(error)}`);
-    }
-  }
-
-  /**
-   * 移除地理围栏
-   */
-  static async removeGeofence(geofenceId: string): Promise<void> {
-    try {
-      LocationUtil.geofenceCallbacks.delete(geofenceId);
-      // 简化地理围栏移除逻辑
-      hilog.info(DOMAIN_NUMBER, TAG, '移除地理围栏: %{public}s', geofenceId);
-    } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, '移除地理围栏失败: %{public}s', JSON.stringify(error));
-    }
-  }
-
-  /**
-   * 获取位置服务状态
-   */
-  static async getLocationServiceStatus(): Promise<LocationServiceStatus> {
-    try {
-      const isEnabled: boolean = await geoLocationManager.isLocationEnabled();
-      const isGpsEnabled: boolean = true; // 简化处理，实际应用中可以根据需要调整
-      const isNetworkEnabled: boolean = true;
-      const isPassiveEnabled: boolean = true;
-
-      const status: LocationServiceStatus = {
-        isEnabled,
-        isGpsEnabled,
-        isNetworkEnabled,
-        isPassiveEnabled
-      };
-      return status;
-    } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, '获取位置服务状态失败: %{public}s', JSON.stringify(error));
-      const errorStatus: LocationServiceStatus = {
-        isEnabled: false,
-        isGpsEnabled: false,
-        isNetworkEnabled: false,
-        isPassiveEnabled: false
-      };
-      return errorStatus;
-    }
-  }
-
-  /**
-   * 获取最后已知位置
-   */
-  static async getLastKnownLocation(): Promise<LocationInfo | null> {
-    try {
-      const location = await geoLocationManager.getLastLocation();
-      if (!location) {
+      const geoAddresses = await geoLocationManager.getAddressesFromLocation(reverseRequest);
+      
+      if (!geoAddresses || geoAddresses.length === 0) {
+        hilog.warn(DOMAIN_NUMBER, TAG, '未找到地址信息');
         return null;
       }
 
-      return {
-        latitude: location.latitude || 35.16,
-        longitude: location.longitude || 112.68,
-        accuracy: location.accuracy,
-        altitude: location.altitude,
-        speed: location.speed,
-        direction: location.direction,
-        timestamp: location.timeStamp,
-        provider: 'cached',
-        locationName: '南天门'
+      const geoAddress = geoAddresses[0];
+      const addressInfo = {
+        country: geoAddress.countryName,
+        province: geoAddress.administrativeArea,
+        city: geoAddress.locality,
+        district: geoAddress.subLocality,
+        street: geoAddress.roadName,
+        streetNumber: geoAddress.subRoadName,
+        fullAddress: geoAddress.placeName
       };
+
+      hilog.debug(DOMAIN_NUMBER, TAG, `地址解析成功: ${addressInfo.fullAddress}`);
+      return addressInfo;
     } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, '获取最后已知位置失败: %{public}s', JSON.stringify(error));
+      hilog.error(DOMAIN_NUMBER, TAG, `反向地理编码失败: ${JSON.stringify(error)}`);
       return null;
     }
   }
 
   /**
-   * 批量地理编码
+   * 正向地理编码（地址转坐标）
    */
-  static async batchGeocode(addresses: string[]): Promise<LocationInfo[]> {
-    const results: LocationInfo[] = [];
-    
-    for (const address of addresses) {
-      try {
-        const geocodeRequest: geoLocationManager.GeoCodeRequest = {
-          description: address,
-          maxItems: 1
-        };
+  static async geocode(address: string): Promise<LocationInfo | null> {
+    try {
+      hilog.debug(DOMAIN_NUMBER, TAG, `正向地理编码: ${address}`);
 
-        const locations = await geoLocationManager.getAddressesFromLocationName(geocodeRequest);
-        if (locations && locations.length > 0) {
-          const location = locations[0];
-          results.push({
-            latitude: location.latitude ?? 35.16,
-            longitude: location.longitude ?? 112.68,
-            locationName: address || '南天门'
-          });
-        }
-      } catch (error) {
-        hilog.error(DOMAIN_NUMBER, TAG, '地理编码失败: %{public}s', address);
+      const geocodeRequest: geoLocationManager.GeoCodeRequest = {
+        description: address,
+        maxItems: 1
+      };
+
+      const geoAddresses = await geoLocationManager.getAddressesFromLocationName(geocodeRequest);
+      
+      if (!geoAddresses || geoAddresses.length === 0) {
+        hilog.warn(DOMAIN_NUMBER, TAG, '未找到位置信息');
+        return null;
       }
-    }
 
-    return results;
+      const geoAddress = geoAddresses[0];
+      const locationInfo: LocationInfo = {
+        latitude: geoAddress.latitude || 0,
+        longitude: geoAddress.longitude || 0,
+        locationName: geoAddress.placeName
+      };
+
+      hilog.debug(DOMAIN_NUMBER, TAG, `位置解析成功: ${locationInfo.latitude}, ${locationInfo.longitude}`);
+      return locationInfo;
+    } catch (error) {
+      hilog.error(DOMAIN_NUMBER, TAG, `正向地理编码失败: ${JSON.stringify(error)}`);
+      return null;
+    }
   }
 
   /**
-   * 获取位置优先级
+   * 计算两点之间的距离（米）
    */
-  private static getPriority(priority: string): geoLocationManager.LocationRequestPriority {
-    switch (priority) {
-      case 'high':
-        return geoLocationManager.LocationRequestPriority.ACCURACY;
-      case 'balanced':
-        return geoLocationManager.LocationRequestPriority.FIRST_FIX;
-      case 'low':
-        return geoLocationManager.LocationRequestPriority.LOW_POWER;
-      default:
-        return geoLocationManager.LocationRequestPriority.FIRST_FIX;
+  static calculateDistance(
+    lat1: number, 
+    lon1: number, 
+    lat2: number, 
+    lon2: number
+  ): number {
+    try {
+      const R = 6371000; // 地球半径（米）
+      const dLat = LocationUtil.toRadians(lat2 - lat1);
+      const dLon = LocationUtil.toRadians(lon2 - lon1);
+      
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(LocationUtil.toRadians(lat1)) * Math.cos(LocationUtil.toRadians(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const distance = R * c;
+      
+      return Math.round(distance);
+    } catch (error) {
+      hilog.error(DOMAIN_NUMBER, TAG, `计算距离失败: ${JSON.stringify(error)}`);
+      return 0;
     }
   }
 
   /**
-   * 清理所有监听器
+   * 角度转弧度
+   */
+  private static toRadians(degrees: number): number {
+    return degrees * (Math.PI / 180);
+  }
+
+  /**
+   * 弧度转角度
+   */
+  private static toDegrees(radians: number): number {
+    return radians * (180 / Math.PI);
+  }
+
+  /**
+   * 格式化距离显示
+   */
+  static formatDistance(distance: number): string {
+    if (distance < 1000) {
+      return `${distance}m`;
+    } else if (distance < 10000) {
+      return `${(distance / 1000).toFixed(1)}km`;
+    } else {
+      return `${Math.round(distance / 1000)}km`;
+    }
+  }
+
+  /**
+   * 判断位置是否在指定范围内
+   */
+  static isLocationInRange(
+    centerLat: number,
+    centerLon: number,
+    targetLat: number,
+    targetLon: number,
+    radiusMeters: number
+  ): boolean {
+    const distance = LocationUtil.calculateDistance(centerLat, centerLon, targetLat, targetLon);
+    return distance <= radiusMeters;
+  }
+
+  /**
+   * 获取位置精度描述
+   */
+  static getAccuracyDescription(accuracy: number): string {
+    if (accuracy <= 5) {
+      return '高精度';
+    } else if (accuracy <= 20) {
+      return '中等精度';
+    } else if (accuracy <= 100) {
+      return '低精度';
+    } else {
+      return '精度较差';
+    }
+  }
+
+  /**
+   * 验证坐标有效性
+   */
+  static isValidCoordinate(latitude: number, longitude: number): boolean {
+    return latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180;
+  }
+
+  /**
+   * 生成位置摘要
+   */
+  static generateLocationSummary(location: LocationInfo): string {
+    const parts: string[] = [];
+    
+    if (location.locationName) {
+      parts.push(location.locationName);
+    }
+    
+    parts.push(`${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`);
+    
+    if (location.accuracy) {
+      parts.push(`精度: ${location.accuracy}m`);
+    }
+    
+    return parts.join(' | ');
+  }
+
+  /**
+   * 清理位置服务资源
    */
   static async cleanup(): Promise<void> {
     try {
-      // 清理位置监听
-      for (const callbackId of LocationUtil.locationCallbacks.keys()) {
-        await LocationUtil.stopLocationUpdates(callbackId);
+      if (LocationUtil.isListening) {
+        await LocationUtil.stopLocationListening();
       }
-
-      // 清理地理围栏
-      for (const geofenceId of LocationUtil.geofenceCallbacks.keys()) {
-        await LocationUtil.removeGeofence(geofenceId);
-      }
-
-      hilog.info(DOMAIN_NUMBER, TAG, '位置服务清理完成');
+      hilog.info(DOMAIN_NUMBER, TAG, '位置服务资源清理完成');
     } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, '位置服务清理失败: %{public}s', JSON.stringify(error));
+      hilog.error(DOMAIN_NUMBER, TAG, `清理位置服务资源失败: ${JSON.stringify(error)}`);
+    }
+  }
+
+  /**
+   * 根据经纬度获取位置名称
+   */
+  static async getLocationName(latitude: number, longitude: number): Promise<string | null> {
+    try {
+      const reverseGeoCodeRequest: geoLocationManager.ReverseGeoCodeRequest = {
+        latitude: latitude,
+        longitude: longitude,
+        maxItems: 1
+      };
+
+      const addressInfo = await geoLocationManager.getAddressesFromLocation(reverseGeoCodeRequest);
+      
+      if (addressInfo && addressInfo.length > 0) {
+        const address = addressInfo[0];
+        // 构建位置名称
+        let locationName = '';
+        
+        if (address.subAdministrativeArea) {
+          locationName += address.subAdministrativeArea;
+        }
+        if (address.locality && address.locality !== address.subAdministrativeArea) {
+          locationName += (locationName ? ', ' : '') + address.locality;
+        }
+        if (address.subLocality) {
+          locationName += (locationName ? ', ' : '') + address.subLocality;
+        }
+        if (address.roadName) {
+          locationName += (locationName ? ', ' : '') + address.roadName;
+        }
+        
+        return locationName || '未知位置';
+      }
+      
+      return null;
+    } catch (error) {
+      hilog.error(DOMAIN_NUMBER, TAG, `获取位置名称失败: ${JSON.stringify(error)}`);
+      return null;
     }
   }
 }

@@ -1,80 +1,124 @@
 /**
  * 系统图标组件
- * 基于SymbolSpan的统一图标系统
+ * 提供统一的图标显示和交互功能
  */
+
 
 /**
  * 应用图标枚举
  */
 export enum AppIcon {
   // 导航图标
-  GROUP = 'sys.symbol.person_3_fill',
-  MESSAGE = 'sys.symbol.message_fill',
-  MOMENT = 'sys.symbol.camera_fill',
-  MAP = 'sys.symbol.map_fill',
-  PROFILE = 'sys.symbol.person_crop_circle_fill',
+  BACK = 'sys.symbol.chevron_left',
+  FORWARD = 'sys.symbol.chevron_right',
+  UP = 'sys.symbol.chevron_up',
+  DOWN = 'sys.symbol.chevron_down',
   
   // 操作图标
-  BACK = 'sys.symbol.chevron_left',
-  MORE = 'sys.symbol.ellipsis',
-  SEND = 'sys.symbol.paperplane_right_fill',
   ADD = 'sys.symbol.plus',
-  SEARCH = 'sys.symbol.magnifyingglass',
-  CLOSE = 'sys.symbol.xmark',
-  EDIT = 'sys.symbol.pencil',
+  REMOVE = 'sys.symbol.minus',
   DELETE = 'sys.symbol.trash',
-  SHARE = 'sys.symbol.square_and_arrow_up',
-  SETTINGS = 'sys.symbol.gearshape_fill',
+  EDIT = 'sys.symbol.pencil',
+  SAVE = 'sys.symbol.checkmark',
+  CANCEL = 'sys.symbol.xmark',
+  CLOSE = 'sys.symbol.xmark',
   
   // 功能图标
-  LOCATION = 'sys.symbol.location_fill',
-  CAMERA = 'sys.symbol.camera_fill',
-  PHOTO = 'sys.symbol.photo_fill',
-  VOICE = 'sys.symbol.mic_fill',
-  VIDEO = 'sys.symbol.video_fill',
-  FILE = 'sys.symbol.doc_fill',
-  LINK = 'sys.symbol.link',
+  SEARCH = 'sys.symbol.magnifyingglass',
+  FILTER = 'sys.symbol.line_3_horizontal_decrease',
+  SORT = 'sys.symbol.arrow_up_arrow_down',
+  REFRESH = 'sys.symbol.arrow_clockwise',
+  SETTINGS = 'sys.symbol.gear',
+  MORE = 'sys.symbol.ellipsis',
+  
+  // 通信图标
+  MESSAGE = 'sys.symbol.message',
+  SEND = 'sys.symbol.paperplane',
+  CALL = 'sys.symbol.phone',
+  VIDEO = 'sys.symbol.video',
+  
+  // 媒体图标
+  CAMERA = 'sys.symbol.camera',
+  PHOTO = 'sys.symbol.photo',
+  PLAY = 'sys.symbol.play',
+  PAUSE = 'sys.symbol.pause',
+  
+  // 位置图标
+  LOCATION = 'sys.symbol.location',
+  MAP = 'sys.symbol.map',
+  
+  // 用户图标
+  PERSON = 'sys.symbol.person',
+  GROUP = 'sys.symbol.person_2',
   
   // 状态图标
-  ONLINE = 'sys.symbol.circle_fill',
-  OFFLINE = 'sys.symbol.circle',
-  TYPING = 'sys.symbol.ellipsis_bubble_fill',
-  READ = 'sys.symbol.checkmark_circle_fill',
-  UNREAD = 'sys.symbol.circle_badge_fill',
-  NOTIFICATION = 'sys.symbol.bell_fill',
-  MUTE = 'sys.symbol.bell_slash_fill',
-  
-  // 社交图标
-  LIKE = 'sys.symbol.heart_fill',
-  UNLIKE = 'sys.symbol.heart',
-  COMMENT = 'sys.symbol.bubble_left_fill',
-  MENTION = 'sys.symbol.at',
-  FOLLOW = 'sys.symbol.person_badge_plus_fill',
-  UNFOLLOW = 'sys.symbol.person_badge_minus_fill',
-  BLOCK = 'sys.symbol.person_crop_circle_badge_xmark',
+  HEART = 'sys.symbol.heart',
+  HEART_FILL = 'sys.symbol.heart_fill',
+  STAR = 'sys.symbol.star',
+  STAR_FILL = 'sys.symbol.star_fill',
   
   // 系统图标
-  WARNING = 'sys.symbol.exclamationmark_triangle_fill',
-  ERROR = 'sys.symbol.xmark_circle_fill',
-  SUCCESS = 'sys.symbol.checkmark_circle_fill',
-  INFO = 'sys.symbol.info_circle_fill',
-  LOADING = 'sys.symbol.arrow_clockwise',
+  INFO = 'sys.symbol.info_circle',
+  WARNING = 'sys.symbol.exclamationmark_triangle',
+  ERROR = 'sys.symbol.xmark_circle',
+  SUCCESS = 'sys.symbol.checkmark_circle',
   
-  // 权限图标
-  LOCK = 'sys.symbol.lock_fill',
-  UNLOCK = 'sys.symbol.lock_open_fill',
-  PRIVACY = 'sys.symbol.eye_slash_fill',
-  PUBLIC = 'sys.symbol.eye_fill'
+  // 新增智能功能图标
+  NOTIFICATION = 'sys.symbol.bell',
+  NOTIFICATION_FILL = 'sys.symbol.bell_fill',
+  CHART = 'sys.symbol.chart_bar',
+  PERFORMANCE = 'sys.symbol.speedometer',
+  AI = 'sys.symbol.brain',
+  RECOMMEND = 'sys.symbol.lightbulb',
+  SYNC = 'sys.symbol.arrow_triangle_2_circlepath',
+  DISTRIBUTED = 'sys.symbol.network',
+  
+  // 箭头图标
+  ARROW_UP = 'sys.symbol.chevron_up',
+  ARROW_DOWN = 'sys.symbol.chevron_down',
+  ARROW_LEFT = 'sys.symbol.chevron_left',
+  ARROW_RIGHT = 'sys.symbol.chevron_right',
+  
+  // 操作图标补充
+  LIKE = 'sys.symbol.heart',
+  SHARE = 'sys.symbol.square_and_arrow_up',
+  CHECK = 'sys.symbol.checkmark',
+  CHECK_ALL = 'sys.symbol.checkmark_circle',
+  CLEAN = 'sys.symbol.trash',
+  CLEAR = 'sys.symbol.clear',
+  
+  // 状态图标补充
+  EMPTY = 'sys.symbol.tray',
+  LOADING = 'sys.symbol.arrow_clockwise',
+  QUESTION = 'sys.symbol.questionmark_circle',
+  SHIELD = 'sys.symbol.shield',
+  
+  // 系统功能图标
+  MEMORY = 'sys.symbol.memorychip',
+  CPU = 'sys.symbol.cpu',
+  BATTERY = 'sys.symbol.battery_100',
+  SPEED = 'sys.symbol.speedometer',
+  CACHE = 'sys.symbol.externaldrive',
+  
+  // 调试和开发图标
+  DEBUG = 'sys.symbol.hammer',
+  CODE = 'sys.symbol.curlybraces',
+  BUG = 'sys.symbol.ant',
+  
+  // 通用图标
+  ALL = 'sys.symbol.square_grid_2x2',
+  HOME = 'sys.symbol.house',
+  PROFILE = 'sys.symbol.person_circle'
 }
 
 /**
- * 图标大小枚举
+ * 图标尺寸枚举
  */
 export enum IconSize {
   SMALL = 16,
-  MEDIUM = 20,
-  LARGE = 24,
-  XLARGE = 32
+  MEDIUM = 24,
+  LARGE = 32,
+  EXTRA_LARGE = 48
 }
 
 /**
@@ -92,25 +136,51 @@ export enum IconColor {
 }
 
 /**
+ * 系统图标组件参数接口
+ */
+export interface SystemIconParams {
+  icon: AppIcon;
+  size?: IconSize;
+  color?: string;
+  clickable?: boolean;
+  onClick?: () => void;
+}
+
+/**
+ * 图标按钮组件参数接口
+ */
+export interface IconButtonParams {
+  icon: AppIcon;
+  size?: IconSize;
+  iconColor?: string;
+  backgroundColor?: ResourceColor;
+  borderRadius?: number;
+  padding?: number;
+  onClick?: () => void;
+}
+
+/**
  * 系统图标组件
  */
 @Component
 export struct SystemIcon {
   @Prop icon: AppIcon;
-  @Prop size: IconSize = IconSize.MEDIUM;
-  @Prop color: string = IconColor.PRIMARY;
+  @Prop iconSize: IconSize = IconSize.MEDIUM;
+  @Prop iconColor: string = IconColor.PRIMARY;
   @Prop clickable: boolean = false;
-  onClick?: () => void;
+  onIconClick?: () => void;
 
   build() {
-    SymbolSpan($r(this.icon))
-      .fontSize(this.size)
-      .fontColor(this.color)
-      .onClick(() => {
-        if (this.clickable && this.onClick) {
-          this.onClick();
-        }
-      })
+    Text() {
+      SymbolSpan($r(this.icon))
+        .fontSize(this.iconSize)
+        .fontColor([this.iconColor as ResourceColor])
+    }
+    .onClick(() => {
+      if (this.clickable && this.onIconClick) {
+        this.onIconClick();
+      }
+    })
   }
 }
 
@@ -120,105 +190,89 @@ export struct SystemIcon {
 @Component
 export struct IconButton {
   @Prop icon: AppIcon;
-  @Prop size: IconSize = IconSize.MEDIUM;
+  @Prop iconSize: IconSize = IconSize.MEDIUM;
   @Prop iconColor: string = IconColor.PRIMARY;
-  @Prop backgroundColor: string = '#F2F2F7';
-  @Prop borderRadius: number = 8;
-  @Prop padding: number = 8;
-  onClick?: () => void;
+  @Prop bgColor: ResourceColor = '#F2F2F7';
+  @Prop radius: number = 8;
+  @Prop paddingSize: number = 8;
+  onButtonClick?: () => void;
 
   build() {
-    Row() {
-      SystemIcon({
-        icon: this.icon,
-        size: this.size,
-        color: this.iconColor,
-        clickable: true,
-        onClick: this.onClick
-      })
+    Button() {
+      Text() {
+        SymbolSpan($r(this.icon))
+          .fontSize(this.iconSize)
+          .fontColor([this.iconColor as ResourceColor])
+      }
     }
-    .width(this.size + this.padding * 2)
-    .height(this.size + this.padding * 2)
-    .backgroundColor(this.backgroundColor)
-    .borderRadius(this.borderRadius)
-    .justifyContent(FlexAlign.Center)
-    .alignItems(VerticalAlign.Center)
+    .type(ButtonType.Normal)
+    .backgroundColor(this.bgColor)
+    .borderRadius(this.radius)
+    .padding(this.paddingSize)
     .onClick(() => {
-      if (this.onClick) {
-        this.onClick();
+      if (this.onButtonClick) {
+        this.onButtonClick();
       }
     })
   }
 }
 
 /**
- * 导航栏图标组件
+ * 导航图标组件
  */
 @Component
 export struct NavIcon {
   @Prop icon: AppIcon;
-  @Prop label: string;
-  @Prop isActive: boolean = false;
-  @Prop activeColor: string = IconColor.PRIMARY;
-  @Prop inactiveColor: string = IconColor.SECONDARY;
-  onClick?: () => void;
+  @Prop iconSize: IconSize = IconSize.LARGE;
+  @Prop iconColor: string = IconColor.PRIMARY;
+  onNavClick?: () => void;
 
   build() {
-    Column({ space: 4 }) {
-      SystemIcon({
-        icon: this.icon,
-        size: IconSize.LARGE,
-        color: this.isActive ? this.activeColor : this.inactiveColor,
-        clickable: true,
-        onClick: this.onClick
-      })
-      
-      Text(this.label)
-        .fontSize(12)
-        .fontColor(this.isActive ? this.activeColor : this.inactiveColor)
-        .fontWeight(this.isActive ? FontWeight.Medium : FontWeight.Normal)
+    Button() {
+      Text() {
+        SymbolSpan($r(this.icon))
+          .fontSize(this.iconSize)
+          .fontColor([this.iconColor as ResourceColor])
+      }
     }
-    .alignItems(HorizontalAlign.Center)
+    .type(ButtonType.Normal)
+    .backgroundColor('#00000000')
+    .padding(8)
     .onClick(() => {
-      if (this.onClick) {
-        this.onClick();
+      if (this.onNavClick) {
+        this.onNavClick();
       }
     })
   }
 }
 
 /**
- * 状态指示图标组件
+ * 状态图标组件
  */
 @Component
 export struct StatusIcon {
-  @Prop status: 'online' | 'offline' | 'typing' | 'read' | 'unread';
-  @Prop size: IconSize = IconSize.SMALL;
+  @Prop icon: AppIcon;
+  @Prop iconSize: IconSize = IconSize.MEDIUM;
+  @Prop status: 'normal' | 'success' | 'warning' | 'error' = 'normal';
 
-  private getIconAndColor(): { icon: AppIcon, color: string } {
+  private getStatusColor(): string {
     switch (this.status) {
-      case 'online':
-        return { icon: AppIcon.ONLINE, color: IconColor.SUCCESS };
-      case 'offline':
-        return { icon: AppIcon.OFFLINE, color: IconColor.SECONDARY };
-      case 'typing':
-        return { icon: AppIcon.TYPING, color: IconColor.PRIMARY };
-      case 'read':
-        return { icon: AppIcon.READ, color: IconColor.SUCCESS };
-      case 'unread':
-        return { icon: AppIcon.UNREAD, color: IconColor.ERROR };
+      case 'success':
+        return IconColor.SUCCESS;
+      case 'warning':
+        return IconColor.WARNING;
+      case 'error':
+        return IconColor.ERROR;
       default:
-        return { icon: AppIcon.OFFLINE, color: IconColor.SECONDARY };
+        return IconColor.PRIMARY;
     }
   }
 
   build() {
-    const { icon, color } = this.getIconAndColor();
-    
-    SystemIcon({
-      icon: icon,
-      size: this.size,
-      color: color
-    })
+    Text() {
+      SymbolSpan($r(this.icon))
+        .fontSize(this.iconSize)
+        .fontColor([this.getStatusColor() as ResourceColor])
+    }
   }
 }

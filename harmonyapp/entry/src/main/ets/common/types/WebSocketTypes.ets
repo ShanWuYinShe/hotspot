@@ -281,34 +281,6 @@ export function isSystemNotificationData(data: Record<string, Object>): boolean 
 }
 
 /**
- * 类型检查函数：检查数据是否为用户位置更新类型
- */
-export function isUserLocationUpdateData(data: Record<string, Object>): boolean {
-  return typeof data.user_id === 'string' && 
-         typeof data.nickname === 'string' && 
-         typeof data.latitude === 'number' && 
-         typeof data.longitude === 'number';
-}
-
-/**
- * 类型检查函数：检查数据是否为群组成员加入类型
- */
-export function isGroupMemberJoinedData(data: Record<string, Object>): boolean {
-  return typeof data.group_id === 'string' && 
-         typeof data.user_id === 'string' && 
-         typeof data.nickname === 'string';
-}
-
-/**
- * 类型检查函数：检查数据是否为群组成员离开类型
- */
-export function isGroupMemberLeftData(data: Record<string, Object>): boolean {
-  return typeof data.group_id === 'string' && 
-         typeof data.user_id === 'string' && 
-         typeof data.nickname === 'string';
-}
-
-/**
  * 类型检查函数：检查数据是否为附近新瞬间类型
  */
 export function isNewMomentNearbyData(data: Record<string, Object>): boolean {
@@ -489,12 +461,13 @@ export class WebSocketMessageConverter {
     if (isGroupMemberJoinedData(data)) {
       const joinedData: GroupMemberJoinedData = {
         group_id: data.group_id as string,
+        group_name: data.group_name as string,
         user_id: data.user_id as string,
         nickname: data.nickname as string,
         avatar_url: data.avatar_url as string,
         joined_at: data.joined_at as string,
         invited_by: data.invited_by as string,
-        invited_by_name: data.invited_by_name as string
+        user_role: data.user_role as string
       };
       return joinedData;
     }
@@ -505,12 +478,11 @@ export class WebSocketMessageConverter {
     if (isGroupMemberLeftData(data)) {
       const leftData: GroupMemberLeftData = {
         group_id: data.group_id as string,
+        group_name: data.group_name as string,
         user_id: data.user_id as string,
         nickname: data.nickname as string,
         left_at: data.left_at as string,
-        reason: data.reason as string,
-        kicked_by: data.kicked_by as string,
-        kicked_by_name: data.kicked_by_name as string
+        reason: data.reason as string
       };
       return leftData;
     }

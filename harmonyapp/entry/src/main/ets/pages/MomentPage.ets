@@ -46,7 +46,7 @@ struct MomentPage {
     this.errorMessage = '';
 
     try {
-      const response = await ApiClient.searchMomentsByLocation({
+      const response = await ApiClient.searchMomentByLocation({
         latitude: this.globalState.currentLocation.latitude,
         longitude: this.globalState.currentLocation.longitude,
         radius: 2000,
@@ -71,7 +71,7 @@ struct MomentPage {
    */
   private async likeMoment(moment: SearchMomentsByLocationResponse, index: number) {
     try {
-      const request: LikeMomentRequest = {
+      const request = {
         moment_id: moment.moment_id
       };
       const response = await ApiClient.likeMoment(request);

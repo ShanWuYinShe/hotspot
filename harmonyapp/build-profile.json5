@@ -5,13 +5,13 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "certpath": "/Users/liyou/.ohos/config/default_GeoTalk_-MpjdihNfdASPlIilTVYZSQhuyk6wrLeFOe3e9hlm90=.cer",
+          "certpath": "/Users/liyou/.ohos/config/default_harmonyapp_B9Uv_-vddcTKAoWc3LuP-S_-NldVKoukY5K_Xa_ccCI=.cer",
           "keyAlias": "debugKey",
-          "keyPassword": "0000001BB3AC2E4B3EFC19A586B5FD54862F1B634C61F720CC89515B81670106FFDFB82663B99F414E4D8C",
-          "profile": "/Users/liyou/.ohos/config/default_GeoTalk_-MpjdihNfdASPlIilTVYZSQhuyk6wrLeFOe3e9hlm90=.p7b",
+          "keyPassword": "0000001B5D06F32638E82D22A78C0A98627FDA989D0C025F781CF0850765A0CD82D2E0124E047B103B5AC7",
+          "profile": "/Users/liyou/.ohos/config/default_harmonyapp_B9Uv_-vddcTKAoWc3LuP-S_-NldVKoukY5K_Xa_ccCI=.p7b",
           "signAlg": "SHA256withECDSA",
-          "storeFile": "/Users/liyou/.ohos/config/default_GeoTalk_-MpjdihNfdASPlIilTVYZSQhuyk6wrLeFOe3e9hlm90=.p12",
-          "storePassword": "0000001BCBC83BA92F49010071EB0A8DC3DBA71792821EC49B8E87611628F31FC0F542F3A3FD13F6DA62B3"
+          "storeFile": "/Users/liyou/.ohos/config/default_harmonyapp_B9Uv_-vddcTKAoWc3LuP-S_-NldVKoukY5K_Xa_ccCI=.p12",
+          "storePassword": "0000001B2A0E1C5A46CFEDE8E9B369B3BF9BB36CCBA0EDA66F2C8742C24825E63D66CACED3DD330C4BF127"
         }
       }
     ],

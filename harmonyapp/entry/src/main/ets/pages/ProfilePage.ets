@@ -11,7 +11,7 @@ import { PageNames } from '../constants/AppConstants';
 import { SystemAvatar } from '../components/SystemAvatar';
 import { SystemToast } from '../components/SystemToast';
 import { SystemLoadingView } from '../components/SystemLoadingView';
-import { UserResponse } from '../common/types/BackendApiTypes';
+import { UserResponse, isTempUser } from '../common/types/BackendApiTypes';
 
 @Entry
 @Component
@@ -49,16 +49,13 @@ struct ProfilePage {
 
   /**
    * 检查是否为临时用户
-   * 根据后端文档，用户类型通过 user_id 的高8位编码
+   * 使用 UserTypeUtil 工具类进行用户类型判断
    */
   private isTemporaryUser(user: UserResponse | null): boolean {
     if (!user || !user.user_id) return false;
     
     try {
-      // 将字符串 user_id 转换为数字，检查高8位
-      const userId = BigInt(user.user_id);
-      const userType = Number(userId >> 56n); // 获取高8位
-      return userType === 1; // 假设1表示临时用户
+      return isTempUser(user.user_id);
     } catch (error) {
       return false;
     }
@@ -74,7 +71,7 @@ struct ProfilePage {
 
     try {
       // 加载我的瞬间数量
-      const momentsResponse = await ApiClient.searchMomentsByLocation({
+      const momentsResponse = await ApiClient.searchMomentByLocation({
         latitude: this.globalState.currentLocation.latitude,
         longitude: this.globalState.currentLocation.longitude,
         radius: 50000 // 大范围搜索
@@ -87,7 +84,7 @@ struct ProfilePage {
       }
 
       // 加载我的群组数量
-      const groupsResponse = await ApiClient.searchGroupsByLocation({
+      const groupsResponse = await ApiClient.searchGroupByLocation({
         latitude: this.globalState.currentLocation.latitude,
         longitude: this.globalState.currentLocation.longitude,
         radius: 50000, // 大范围搜索
@@ -135,11 +132,11 @@ struct ProfilePage {
 
     try {
       // 注意：这个API需要在后端实现
-      // await ApiClient.updateUserProfile(this.editNickname, this.editBio);
+      // await ApiClient.updateProfile(this.editNickname, this.editBio);
 
       // 临时更新本地状态
       if (this.globalState.currentUser) {
-        const updatedUser: UserResponse = {
+        const updatedUser = {
           user_id: this.globalState.currentUser.user_id,
           nickname: this.editNickname,
           bio: this.editBio,
@@ -173,7 +170,7 @@ struct ProfilePage {
     }
 
     try {
-      await ApiClient.updateUserLocation({
+      await ApiClient.updateLocation({
         latitude: this.globalState.currentLocation.latitude,
         longitude: this.globalState.currentLocation.longitude,
         location_name: this.globalState.currentLocation.locationName || '南天门'

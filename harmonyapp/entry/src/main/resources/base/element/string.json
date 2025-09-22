@@ -2,7 +2,11 @@
   "string": [
     {
       "name": "module_desc",
-      "value": "基于地理位置的社交应用"
+      "value": "GeoTalk - 基于地理位置的社交应用"
+    },
+    {
+      "name": "app_name",
+      "value": "GeoTalk"
     },
     {
       "name": "EntryAbility_desc",

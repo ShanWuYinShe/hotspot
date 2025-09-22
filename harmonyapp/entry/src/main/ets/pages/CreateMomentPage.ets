@@ -8,7 +8,8 @@ import { ApiClient } from '../common/api/ApiClient';
 import { LocationUtil } from '../common/location/LocationUtil';
 import { SystemToast } from '../components/SystemToast';
 import { IconButton, AppIcon, IconSize } from '../components/SystemIcon';
-import { selectPhotos, capturePhoto, requestMediaPermissions } from '../common/media/MediaServiceManager';
+// 临时移除引用，等待用户提供正确的媒体服务实现
+// import { selectPhotos, capturePhoto, requestMediaPermissions } from '../common/media/MediaServiceManager';
 import { common } from '@kit.AbilityKit';
 import { LocationInfo } from '../common/location/LocationUtil';
 
@@ -42,10 +43,12 @@ struct CreateMomentPage {
    */
   private async requestPermissions(): Promise<void> {
     try {
-      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-      if (context) {
-        await requestMediaPermissions(context);
-      }
+      // 临时注释，等待用户提供正确的媒体权限实现
+      // const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      // if (context) {
+      //   await requestMediaPermissions(context);
+      // }
+      console.log('媒体权限请求功能待实现');
     } catch (error) {
       console.error('请求权限失败:', error);
     }
@@ -122,15 +125,14 @@ struct CreateMomentPage {
         return;
       }
 
-      // 使用HarmonyOS原生图片选择器
-      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-      const mediaResults = await selectPhotos(context, maxCount);
-
-      for (const result of mediaResults) {
-        this.imageUrls.push(result.uri);
-      }
-
-      SystemToast.show(`已选择 ${mediaResults.length} 张图片`);
+      // 临时注释，等待用户提供正确的图片选择实现
+      // const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      // const mediaResults = await selectPhotos(context, maxCount);
+      // for (const result of mediaResults) {
+      //   this.imageUrls.push(result.uri);
+      // }
+      
+      SystemToast.show('图片选择功能待实现');
     } catch (error) {
       console.error('选择图片失败:', error);
       SystemToast.show('选择图片失败，请重试');
@@ -147,12 +149,12 @@ struct CreateMomentPage {
         return;
       }
 
-      // 使用HarmonyOS原生相机拍照
-      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-      const mediaResult = await capturePhoto(context, { quality: 'high' });
-      this.imageUrls.push(mediaResult.uri);
+      // 临时注释，等待用户提供正确的拍照实现
+      // const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      // const mediaResult = await capturePhoto(context, { quality: 'high' });
+      // this.imageUrls.push(mediaResult.uri);
 
-      SystemToast.show('拍照成功');
+      SystemToast.show('拍照功能待实现');
     } catch (error) {
       console.error('拍照失败:', error);
       SystemToast.show('拍照失败，请重试');
@@ -239,11 +241,11 @@ struct CreateMomentPage {
 
       IconButton({
         icon: AppIcon.CLOSE,
-        size: IconSize.SMALL,
-        backgroundColor: Color.Transparent,
-        padding: 2
+        iconSize: IconSize.SMALL,
+        bgColor: '#00000000',
+        paddingSize: 2,
+        onButtonClick: (): void => this.removeTag(index)
       })
-      .onClick(() => this.removeTag(index))
       .margin({ left: 4 })
     }
     .padding({
@@ -294,9 +296,9 @@ struct CreateMomentPage {
       Row() {
         IconButton({
           icon: AppIcon.BACK,
-          size: IconSize.LARGE,
-          backgroundColor: Color.Transparent,
-          onClick: () => {
+          iconSize: IconSize.LARGE,
+          bgColor: '#00000000',
+          onButtonClick: () => {
             const routerInstance = this.getUIContext().getRouter();
             routerInstance.back();
           }
@@ -310,7 +312,7 @@ struct CreateMomentPage {
 
         Button('发布')
           .type(ButtonType.Normal)
-          .backgroundColor(Color.Transparent)
+          .backgroundColor('#00000000')
           .fontColor($r('sys.color.ohos_id_color_emphasize'))
           .fontSize(16)
           .enabled(!this.isPublishing)

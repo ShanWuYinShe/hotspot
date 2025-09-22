@@ -136,7 +136,7 @@ struct MapPage {
     }
 
     try {
-      const response = await ApiClient.searchUsersByLocation({
+      const response = await ApiClient.searchUserByLocation({
         latitude: this.mapCenter.latitude,
         longitude: this.mapCenter.longitude,
         radius: 2000,
@@ -169,7 +169,7 @@ struct MapPage {
     }
 
     try {
-      const response = await ApiClient.searchGroupsByLocation({
+      const response = await ApiClient.searchGroupByLocation({
         latitude: this.mapCenter.latitude,
         longitude: this.mapCenter.longitude,
         radius: 5000,
@@ -202,7 +202,7 @@ struct MapPage {
     }
 
     try {
-      const response = await ApiClient.searchMomentsByLocation({
+      const response = await ApiClient.searchMomentByLocation({
         latitude: this.mapCenter.latitude,
         longitude: this.mapCenter.longitude,
         radius: 3000,

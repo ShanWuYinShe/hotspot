@@ -150,7 +150,7 @@ export class ApiClient {
    * 系统健康检查
    */
   static async healthCheck(): Promise<ApiResponse<HealthCheckResponse>> {
-    const request: HealthCheckRequest = {};
+    const request = {};
     return HttpUtil.post<ApiResponse<HealthCheckResponse>, HealthCheckRequest>('/api/v1/public/status/health', request);
   }
 
@@ -160,7 +160,7 @@ export class ApiClient {
    * 获取认证随机数
    */
   static async getNonce(): Promise<ApiResponse<GetNonceResponse>> {
-    const request: GetNonceRequest = {};
+    const request = {};
     return HttpUtil.post<ApiResponse<GetNonceResponse>, GetNonceRequest>('/api/v1/public/auth/get_nonce', request);
   }
 
@@ -181,7 +181,7 @@ export class ApiClient {
   /**
    * 创建临时用户
    */
-  static async createTempUser(params: CreateTempRequest): Promise<ApiResponse<CreateTempResponse>> {
+  static async createTemp(params: CreateTempRequest): Promise<ApiResponse<CreateTempResponse>> {
     return HttpUtil.post<ApiResponse<CreateTempResponse>, CreateTempRequest>('/api/v1/public/auth/create_temp', params);
   }
 
@@ -197,7 +197,7 @@ export class ApiClient {
    * 检查认证状态
    */
   static async checkAuthStatus(): Promise<ApiResponse<CheckStatusResponse>> {
-    const request: CheckStatusRequest = {};
+    const request = {};
     return HttpUtil.post<ApiResponse<CheckStatusResponse>, CheckStatusRequest>('/api/v1/public/auth/check_status',
       request);
   }
@@ -215,7 +215,7 @@ export class ApiClient {
   /**
    * 按昵称搜索用户
    */
-  static async searchUsersByName(params: SearchUserByNameRequest): Promise<ApiResponse<PaginatedResponse<SearchUserByNameResponse>>> {
+  static async searchUserByName(params: SearchUserByNameRequest): Promise<ApiResponse<PaginatedResponse<SearchUserByNameResponse>>> {
     return HttpUtil.post<ApiResponse<PaginatedResponse<SearchUserByNameResponse>>, SearchUserByNameRequest>('/api/v1/public/user/search_by_name',
       params);
   }
@@ -223,7 +223,7 @@ export class ApiClient {
   /**
    * 按ID获取用户资料
    */
-  static async getUserById(params: SearchUserByIdRequest): Promise<ApiResponse<SearchUserByIdResponse>> {
+  static async searchUserById(params: SearchUserByIdRequest): Promise<ApiResponse<SearchUserByIdResponse>> {
     return HttpUtil.post<ApiResponse<SearchUserByIdResponse>, SearchUserByIdRequest>('/api/v1/public/user/search_by_id',
       params);
   }
@@ -231,7 +231,7 @@ export class ApiClient {
   /**
    * 搜索附近用户
    */
-  static async searchUsersByLocation(params: SearchUserByLocationRequest): Promise<ApiResponse<PaginatedResponse<SearchUserByLocationResponse>>> {
+  static async searchUserByLocation(params: SearchUserByLocationRequest): Promise<ApiResponse<PaginatedResponse<SearchUserByLocationResponse>>> {
     return HttpUtil.post<ApiResponse<PaginatedResponse<SearchUserByLocationResponse>>, SearchUserByLocationRequest>('/api/v1/public/user/search_by_location',
       params);
   }
@@ -239,7 +239,7 @@ export class ApiClient {
   /**
    * 更新用户位置
    */
-  static async updateUserLocation(params: UpdateLocationRequest): Promise<ApiResponse<UpdateLocationResponse>> {
+  static async updateLocation(params: UpdateLocationRequest): Promise<ApiResponse<UpdateLocationResponse>> {
     return HttpUtil.post<ApiResponse<UpdateLocationResponse>, UpdateLocationRequest>('/api/v1/protected/user/update_location',
       params);
   }
@@ -247,7 +247,7 @@ export class ApiClient {
   /**
    * 更新用户资料
    */
-  static async updateUserProfile(params: UpdateProfileRequest): Promise<ApiResponse<UpdateProfileResponse>> {
+  static async updateProfile(params: UpdateProfileRequest): Promise<ApiResponse<UpdateProfileResponse>> {
     return HttpUtil.post<ApiResponse<UpdateProfileResponse>, UpdateProfileRequest>('/api/v1/protected/user/update_profile',
       params);
   }
@@ -263,8 +263,8 @@ export class ApiClient {
   /**
    * 获取用户设置
    */
-  static async getUserSettings(): Promise<ApiResponse<GetSettingsResponse>> {
-    const request: GetSettingsRequest = {};
+  static async getSettings(): Promise<ApiResponse<GetSettingsResponse>> {
+    const request = {};
     return HttpUtil.post<ApiResponse<GetSettingsResponse>, GetSettingsRequest>('/api/v1/protected/user/get_settings',
       request);
   }
@@ -272,7 +272,7 @@ export class ApiClient {
   /**
    * 更新用户设置
    */
-  static async updateUserSettings(params: UpdateSettingsRequest): Promise<ApiResponse<UpdateSettingsResponse>> {
+  static async updateSettings(params: UpdateSettingsRequest): Promise<ApiResponse<UpdateSettingsResponse>> {
     return HttpUtil.post<ApiResponse<UpdateSettingsResponse>, UpdateSettingsRequest>('/api/v1/protected/user/update_settings',
       params);
   }
@@ -332,14 +332,14 @@ export class ApiClient {
   /**
    * 获取好友列表
    */
-  static async getFriendsList(params: GetFriendsListRequest): Promise<ApiResponse<PaginatedResponse<GetFriendsListResponse>>> {
+  static async friendsList(params: GetFriendsListRequest): Promise<ApiResponse<PaginatedResponse<GetFriendsListResponse>>> {
     return HttpUtil.post<ApiResponse<PaginatedResponse<GetFriendsListResponse>>, GetFriendsListRequest>('/api/v1/protected/user/friends_list', params);
   }
 
   /**
    * 获取拉黑列表
    */
-  static async getBlockedList(params: GetBlockedListRequest): Promise<ApiResponse<PaginatedResponse<GetBlockedListResponse>>> {
+  static async blockedList(params: GetBlockedListRequest): Promise<ApiResponse<PaginatedResponse<GetBlockedListResponse>>> {
     return HttpUtil.post<ApiResponse<PaginatedResponse<GetBlockedListResponse>>, GetBlockedListRequest>('/api/v1/protected/user/blocked_list', params);
   }
 
@@ -348,7 +348,7 @@ export class ApiClient {
   /**
    * 按位置搜索群组
    */
-  static async searchGroupsByLocation(params: SearchGroupByLocationRequest): Promise<ApiResponse<PaginatedResponse<SearchGroupByLocationResponse>>> {
+  static async searchGroupByLocation(params: SearchGroupByLocationRequest): Promise<ApiResponse<PaginatedResponse<SearchGroupByLocationResponse>>> {
     return HttpUtil.post<ApiResponse<PaginatedResponse<SearchGroupByLocationResponse>>, SearchGroupByLocationRequest>('/api/v1/public/group/search_by_location',
       params);
   }
@@ -356,7 +356,7 @@ export class ApiClient {
   /**
    * 按名称搜索群组
    */
-  static async searchGroupsByName(params: SearchGroupByNameRequest): Promise<ApiResponse<PaginatedResponse<SearchGroupByNameResponse>>> {
+  static async searchGroupByName(params: SearchGroupByNameRequest): Promise<ApiResponse<PaginatedResponse<SearchGroupByNameResponse>>> {
     return HttpUtil.post<ApiResponse<PaginatedResponse<SearchGroupByNameResponse>>, SearchGroupByNameRequest>('/api/v1/public/group/search_by_name',
       params);
   }
@@ -364,7 +364,7 @@ export class ApiClient {
   /**
    * 按ID获取群组详情
    */
-  static async getGroupById(params: SearchGroupByIdRequest): Promise<ApiResponse<SearchGroupByIdResponse>> {
+  static async searchGroupById(params: SearchGroupByIdRequest): Promise<ApiResponse<SearchGroupByIdResponse>> {
     return HttpUtil.post<ApiResponse<SearchGroupByIdResponse>, SearchGroupByIdRequest>('/api/v1/public/group/search_by_id',
       params);
   }
@@ -372,7 +372,7 @@ export class ApiClient {
   /**
    * 获取群组成员
    */
-  static async getGroupMembers(params: GetMembersRequest): Promise<ApiResponse<PaginatedResponse<GetMembersResponse>>> {
+  static async getMembers(params: GetMembersRequest): Promise<ApiResponse<PaginatedResponse<GetMembersResponse>>> {
     return HttpUtil.post<ApiResponse<PaginatedResponse<GetMembersResponse>>, GetMembersRequest>('/api/v1/public/group/members',
       params);
   }
@@ -403,7 +403,7 @@ export class ApiClient {
    * 踢出群组成员
    */
   static async kickMember(params: KickMemberRequest): Promise<ApiResponse<KickMemberResponse>> {
-    return HttpUtil.post<ApiResponse<KickMemberResponse>, KickMemberRequest>('/api/v1/protected/group/kick_member', params);
+    return HttpUtil.post<ApiResponse<KickMemberResponse>, KickMemberRequest>('/api/v1/protected/group/kick', params);
   }
 
   /**
@@ -416,7 +416,7 @@ export class ApiClient {
   /**
    * 获取用户参与的群组列表
    */
-  static async getMyGroups(params: GetMyGroupsRequest): Promise<ApiResponse<PaginatedResponse<GetMyGroupsResponse>>> {
+  static async myGroups(params: GetMyGroupsRequest): Promise<ApiResponse<PaginatedResponse<GetMyGroupsResponse>>> {
     return HttpUtil.post<ApiResponse<PaginatedResponse<GetMyGroupsResponse>>, GetMyGroupsRequest>('/api/v1/protected/group/my_groups', params);
   }
 
@@ -432,7 +432,7 @@ export class ApiClient {
   /**
    * 获取消息历史（统一接口）
    */
-  static async getMessageHistory(params: GetHistoryRequest): Promise<ApiResponse<PaginatedResponse<GetHistoryResponse>>> {
+  static async getHistory(params: GetHistoryRequest): Promise<ApiResponse<PaginatedResponse<GetHistoryResponse>>> {
     return HttpUtil.post<ApiResponse<PaginatedResponse<GetHistoryResponse>>, GetHistoryRequest>('/api/v1/protected/chat/history',
       params);
   }
@@ -447,21 +447,21 @@ export class ApiClient {
   /**
    * 标记消息已读
    */
-  static async markMessagesRead(params: MarkMessagesReadRequest): Promise<ApiResponse<MarkMessagesReadResponse>> {
+  static async markRead(params: MarkMessagesReadRequest): Promise<ApiResponse<MarkMessagesReadResponse>> {
     return HttpUtil.post<ApiResponse<MarkMessagesReadResponse>, MarkMessagesReadRequest>('/api/v1/protected/chat/mark-read', params);
   }
 
   /**
    * 获取未读消息数
    */
-  static async getUnreadCount(params: GetUnreadCountRequest): Promise<ApiResponse<GetUnreadCountResponse>> {
+  static async unreadCount(params: GetUnreadCountRequest): Promise<ApiResponse<GetUnreadCountResponse>> {
     return HttpUtil.post<ApiResponse<GetUnreadCountResponse>, GetUnreadCountRequest>('/api/v1/protected/chat/unread_count', params);
   }
 
   /**
    * 获取会话列表
    */
-  static async getConversations(params: GetConversationsRequest): Promise<ApiResponse<PaginatedResponse<GetConversationsResponse>>> {
+  static async conversations(params: GetConversationsRequest): Promise<ApiResponse<PaginatedResponse<GetConversationsResponse>>> {
     return HttpUtil.post<ApiResponse<PaginatedResponse<GetConversationsResponse>>, GetConversationsRequest>('/api/v1/protected/chat/conversations', params);
   }
 
@@ -478,7 +478,7 @@ export class ApiClient {
   /**
    * 按位置搜索生活瞬间
    */
-  static async searchMomentsByLocation(params: SearchMomentsByLocationRequest): Promise<ApiResponse<PaginatedResponse<SearchMomentsByLocationResponse>>> {
+  static async searchMomentByLocation(params: SearchMomentsByLocationRequest): Promise<ApiResponse<PaginatedResponse<SearchMomentsByLocationResponse>>> {
     return HttpUtil.post<ApiResponse<PaginatedResponse<SearchMomentsByLocationResponse>>, SearchMomentsByLocationRequest>('/api/v1/public/moments/search_by_location',
       params);
   }
@@ -508,21 +508,21 @@ export class ApiClient {
   /**
    * 按标签搜索生活瞬间
    */
-  static async searchMomentsByTag(params: SearchMomentsByTagRequest): Promise<ApiResponse<PaginatedResponse<SearchMomentsByTagResponse>>> {
+  static async searchMomentByTag(params: SearchMomentsByTagRequest): Promise<ApiResponse<PaginatedResponse<SearchMomentsByTagResponse>>> {
     return HttpUtil.post<ApiResponse<PaginatedResponse<SearchMomentsByTagResponse>>, SearchMomentsByTagRequest>('/api/v1/public/moments/search_by_tag', params);
   }
 
   /**
    * 按ID获取生活瞬间详情
    */
-  static async getMomentById(params: SearchMomentByIdRequest): Promise<ApiResponse<SearchMomentByIdResponse>> {
+  static async searchMomentById(params: SearchMomentByIdRequest): Promise<ApiResponse<SearchMomentByIdResponse>> {
     return HttpUtil.post<ApiResponse<SearchMomentByIdResponse>, SearchMomentByIdRequest>('/api/v1/public/moments/search_by_id', params);
   }
 
   /**
    * 获取用户历史瞬间
    */
-  static async getMomentsHistory(params: GetMomentsHistoryRequest): Promise<ApiResponse<PaginatedResponse<GetMomentsHistoryResponse>>> {
+  static async momentsHistory(params: GetMomentsHistoryRequest): Promise<ApiResponse<PaginatedResponse<GetMomentsHistoryResponse>>> {
     return HttpUtil.post<ApiResponse<PaginatedResponse<GetMomentsHistoryResponse>>, GetMomentsHistoryRequest>('/api/v1/public/moments/history', params);
   }
 
@@ -552,7 +552,7 @@ export class ApiClient {
   /**
    * 获取评论列表
    */
-  static async getCommentsList(params: GetCommentsListRequest): Promise<ApiResponse<PaginatedResponse<GetCommentsListResponse>>> {
+  static async commentsList(params: GetCommentsListRequest): Promise<ApiResponse<PaginatedResponse<GetCommentsListResponse>>> {
     return HttpUtil.post<ApiResponse<PaginatedResponse<GetCommentsListResponse>>, GetCommentsListRequest>('/api/v1/public/comments/list', params);
   }
 
@@ -561,14 +561,14 @@ export class ApiClient {
   /**
    * 获取通知列表
    */
-  static async getNotifications(params: GetNotificationsRequest): Promise<ApiResponse<PaginatedResponse<GetNotificationsResponse>>> {
+  static async notifications(params: GetNotificationsRequest): Promise<ApiResponse<PaginatedResponse<GetNotificationsResponse>>> {
     return HttpUtil.post<ApiResponse<PaginatedResponse<GetNotificationsResponse>>, GetNotificationsRequest>('/api/v1/protected/notifications/list', params);
   }
 
   /**
    * 标记通知已读
    */
-  static async markNotificationsRead(params: MarkNotificationsReadRequest): Promise<ApiResponse<MarkNotificationsReadResponse>> {
+  static async markNotificationRead(params: MarkNotificationsReadRequest): Promise<ApiResponse<MarkNotificationsReadResponse>> {
     return HttpUtil.post<ApiResponse<MarkNotificationsReadResponse>, MarkNotificationsReadRequest>('/api/v1/protected/notifications/mark_read', params);
   }
 

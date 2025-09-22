@@ -1,7 +1,7 @@
 {
   "app": {
-    "bundleName": "com.lsyb.social",
-    "vendor": "example",
+    "bundleName": "com.lsyb.geotalk",
+    "vendor": "GeoTalk Team",
     "versionCode": 1000000,
     "versionName": "1.0.0",
     "icon": "$media:layered_image",

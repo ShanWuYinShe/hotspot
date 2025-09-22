@@ -122,7 +122,7 @@ struct ChatPage {
     this.isLoading = true;
     try {
       // 统一使用群组ID获取消息历史，不再区分私聊和群聊
-      const response = await ApiClient.getMessageHistory({
+      const response = await ApiClient.getHistory({
         group_id: this.chatParams.groupId,
         limit: 50,
         include_system_messages: true
@@ -153,7 +153,7 @@ struct ChatPage {
     try {
       if (this.messages.length > 0) {
         const lastMessage = this.messages[this.messages.length - 1];
-        await ApiClient.markMessagesRead({
+        await ApiClient.markRead({
           group_id: this.chatParams.groupId,
           message_ids: [lastMessage.message_id]
         });
@@ -237,7 +237,7 @@ struct ChatPage {
   private handleNewMessage(messageData: NewMessageData): void {
     if (this.isRelevantMessage(messageData)) {
       // 将WebSocket消息转换为ChatMessage格式
-      const message: ChatMessage = {
+      const message = {
         message_id: messageData.message_id,
         group_id: messageData.group_id,
         sender_id: messageData.sender_id,
@@ -463,9 +463,9 @@ struct ChatPage {
       Row() {
         IconButton({
           icon: AppIcon.BACK,
-          size: IconSize.LARGE,
-          backgroundColor: Color.Transparent,
-          onClick: () => {
+          iconSize: IconSize.LARGE,
+          bgColor: '#00000000',
+          onButtonClick: () => {
             const routerInstance = this.getUIContext().getRouter();
             routerInstance.back();
           }
@@ -480,9 +480,9 @@ struct ChatPage {
         // 更多操作按钮
         IconButton({
           icon: AppIcon.MORE,
-          size: IconSize.LARGE,
-          backgroundColor: Color.Transparent,
-          onClick: () => {
+          iconSize: IconSize.LARGE,
+          bgColor: '#00000000',
+          onButtonClick: () => {
             SystemToast.show('更多功能待开发');
           }
         })
@@ -551,12 +551,12 @@ struct ChatPage {
 
         IconButton({
           icon: AppIcon.SEND,
-          size: IconSize.MEDIUM,
-          iconColor: Color.White,
-          backgroundColor: this.inputText.trim().length > 0 && !this.isSending ? 
+          iconSize: IconSize.MEDIUM,
+          iconColor: '#FFFFFF',
+          bgColor: this.inputText.trim().length > 0 && !this.isSending ? 
             $r('sys.color.ohos_id_color_emphasize') : 
             $r('sys.color.ohos_id_color_secondary'),
-          onClick: () => {
+          onButtonClick: () => {
             if (this.inputText.trim().length > 0 && !this.isSending) {
               this.sendMessage();
             }
