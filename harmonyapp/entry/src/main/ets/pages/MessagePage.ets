@@ -137,7 +137,7 @@ struct MessagePage {
         }
       });
     } catch (error) {
-      SystemToast.showError('打开聊天页面失败');
+      SystemToast.showError('打开聊天页面失败', this.getUIContext());
     }
   }
 
@@ -159,7 +159,7 @@ struct MessagePage {
    */
   private async searchNearbyUsers() {
     if (!this.globalState.currentLocation) {
-      SystemToast.show('请先获取位置信息');
+      SystemToast.show('请先获取位置信息', this.getUIContext());
       return;
     }
 
@@ -173,14 +173,14 @@ struct MessagePage {
       
       if (response.code === 0 && response.data && response.data.items.length > 0) {
         // 打开用户列表选择对话
-        SystemToast.show(`发现 ${response.data.items.length} 个附近用户`);
+        SystemToast.show(`发现 ${response.data.items.length} 个附近用户`, this.getUIContext());
         // 显示用户选择对话框
         this.showNearbyUsersDialog(response.data.items);
       } else {
-        SystemToast.show('附近暂无其他用户');
+        SystemToast.show('附近暂无其他用户', this.getUIContext());
       }
     } catch (error) {
-      SystemToast.showError('搜索用户失败');
+      SystemToast.showError('搜索用户失败', this.getUIContext());
     }
   }
 
@@ -191,7 +191,7 @@ struct MessagePage {
     // 这里可以实现用户选择对话框
     // 暂时使用简单的提示，实际项目中可以实现自定义对话框
     const userNames = users.map(user => user.nickname).join(', ');
-    SystemToast.show(`附近用户: ${userNames}`);
+    SystemToast.show(`附近用户: ${userNames}`, this.getUIContext());
     
     // 可以在这里添加导航到聊天页面的逻辑
     // 例如：选择第一个用户开始聊天
@@ -244,7 +244,7 @@ struct MessagePage {
                   const routerInstance = this.getUIContext().getRouter();
                   await routerInstance.pushUrl({ url: `pages/${PageNames.LOGIN}` });
                 } catch (error) {
-                  SystemToast.showError('跳转失败');
+                  SystemToast.showError('跳转失败', this.getUIContext());
                 }
               })
         }

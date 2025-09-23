@@ -3,10 +3,20 @@
  * 实时显示应用性能指标和状态
  */
 import { PerformanceOptimizer, PerformanceMetrics, PerformanceAlert } from '../common/performance/PerformanceOptimizer';
-import { SystemIcon } from './SystemIcon';
-import { AppIcon } from '../common/constants/AppIcon';
-import { SystemToast } from '../common/utils/SystemToast';
+import { SystemIcon, AppIcon } from './SystemIcon';
+import { SystemToast } from './SystemToast';
 import { AccessibilityManager } from '../common/accessibility/AccessibilityManager';
+
+interface PerformanceLevel {
+  level: string;
+  color: ResourceColor;
+  icon: AppIcon;
+}
+
+interface MetricThresholds {
+  good: number;
+  warning: number;
+}
 
 @Component
 export struct PerformanceIndicator {
@@ -39,7 +49,7 @@ export struct PerformanceIndicator {
       this.metrics = this.performanceOptimizer.getPerformanceMetrics();
       this.alerts = this.performanceOptimizer.getPerformanceAlerts().slice(0, 3);
     } catch (error) {
-      SystemToast.showError(`加载性能数据失败: ${error}`);
+      SystemToast.showError(`加载性能数据失败: ${error}`, this.getUIContext());
     }
   }
 
@@ -47,14 +57,19 @@ export struct PerformanceIndicator {
    * 设置性能监听器
    */
   private setupPerformanceListener(): void {
-    this.performanceOptimizer.onPerformanceAlert((alert: PerformanceAlert) => {
-      this.loadMetrics();
-      
-      // 无障碍播报严重告警
-      if (alert.level === 'critical') {
-        this.accessibilityManager.announceText(`严重性能告警：${alert.message}`, 'high');
+    // 使用轮询方式检查性能告警
+    setInterval(() => {
+      const alerts = this.performanceOptimizer.getPerformanceAlerts();
+      if (alerts.length > 0) {
+        const latestAlert = alerts[alerts.length - 1];
+        this.loadMetrics();
+        
+        // 无障碍播报严重告警
+        if (latestAlert.level === 'critical') {
+          this.accessibilityManager.announceText(`严重性能告警：${latestAlert.message}`, 'high');
+        }
       }
-    });
+    }, 5000); // 每5秒检查一次
   }
 
   /**
@@ -86,7 +101,7 @@ export struct PerformanceIndicator {
     // 模拟刷新延迟
     setTimeout(() => {
       this.refreshing = false;
-      SystemToast.showSuccess('性能数据已刷新');
+      SystemToast.showSuccess('性能数据已刷新', this.getUIContext());
     }, 500);
   }
 
@@ -96,25 +111,28 @@ export struct PerformanceIndicator {
   private onClearCache(): void {
     try {
       this.performanceOptimizer.clearCache();
-      SystemToast.showSuccess('缓存已清理');
+      SystemToast.showSuccess('缓存已清理', this.getUIContext());
       this.loadMetrics();
       
       // 无障碍播报
       this.accessibilityManager.announceText('缓存已清理，性能可能有所改善');
     } catch (error) {
-      SystemToast.showError(`清理缓存失败: ${error}`);
+      SystemToast.showError(`清理缓存失败: ${error}`, this.getUIContext());
     }
   }
 
   /**
    * 获取性能等级
    */
-  private getPerformanceLevel(): { level: string; color: ResourceColor; icon: AppIcon } {
+  private getPerformanceLevel(): PerformanceLevel {
     if (!this.metrics) {
-      return { level: '未知', color: Color.Gray, icon: AppIcon.QUESTION };
+      const unknownLevel: PerformanceLevel = { level: '未知', color: Color.Gray, icon: AppIcon.QUESTION };
+      return unknownLevel;
     }
 
-    const { memoryUsage, errorRate, averageResponseTime } = this.metrics;
+    const memoryUsage = this.metrics.memoryUsage;
+    const errorRate = this.metrics.errorRate;
+    const averageResponseTime = this.metrics.averageResponseTime;
     
     // 综合评分
     let score = 100;
@@ -123,20 +141,24 @@ export struct PerformanceIndicator {
     score -= Math.min(averageResponseTime / 1000, 1) * 30; // 响应时间影响30分
 
     if (score >= 80) {
-      return { level: '优秀', color: Color.Green, icon: AppIcon.CHECK };
+      const excellentLevel: PerformanceLevel = { level: '优秀', color: Color.Green, icon: AppIcon.CHECK };
+      return excellentLevel;
     } else if (score >= 60) {
-      return { level: '良好', color: Color.Blue, icon: AppIcon.INFO };
+      const goodLevel: PerformanceLevel = { level: '良好', color: Color.Blue, icon: AppIcon.INFO };
+      return goodLevel;
     } else if (score >= 40) {
-      return { level: '一般', color: Color.Orange, icon: AppIcon.WARNING };
+      const averageLevel: PerformanceLevel = { level: '一般', color: Color.Orange, icon: AppIcon.WARNING };
+      return averageLevel;
     } else {
-      return { level: '较差', color: Color.Red, icon: AppIcon.ERROR };
+      const poorLevel: PerformanceLevel = { level: '较差', color: Color.Red, icon: AppIcon.ERROR };
+      return poorLevel;
     }
   }
 
   /**
    * 获取指标颜色
    */
-  private getMetricColor(value: number, thresholds: { good: number; warning: number }): ResourceColor {
+  private getMetricColor(value: number, thresholds: MetricThresholds): ResourceColor {
     if (value <= thresholds.good) return Color.Green;
     if (value <= thresholds.warning) return Color.Orange;
     return Color.Red;
@@ -160,18 +182,16 @@ export struct PerformanceIndicator {
     Row({ space: 8 }) {
       // 性能等级指示器
       if (this.metrics) {
-        const performance = this.getPerformanceLevel();
-        
         Row({ space: 4 }) {
           SystemIcon({
-            icon: performance.icon,
+            icon: this.getPerformanceLevel().icon,
             iconSize: 16,
-            iconColor: performance.color
+            iconColor: this.getPerformanceLevel().color
           })
           
-          Text(performance.level)
+          Text(this.getPerformanceLevel().level)
             .fontSize(12)
-            .fontColor(performance.color)
+            .fontColor(this.getPerformanceLevel().color)
         }
       }
 
@@ -265,13 +285,11 @@ export struct PerformanceIndicator {
 
       // 性能概览
       if (this.metrics) {
-        const performance = this.getPerformanceLevel();
-        
         Row({ space: 12 }) {
           SystemIcon({
-            icon: performance.icon,
+            icon: this.getPerformanceLevel().icon,
             iconSize: 32,
-            iconColor: performance.color
+            iconColor: this.getPerformanceLevel().color
           })
 
           Column({ space: 4 }) {
@@ -280,10 +298,10 @@ export struct PerformanceIndicator {
               .fontColor($r('sys.color.ohos_id_color_text_secondary'))
               .alignSelf(ItemAlign.Start)
 
-            Text(performance.level)
+            Text(this.getPerformanceLevel().level)
               .fontSize(20)
               .fontWeight(FontWeight.Bold)
-              .fontColor(performance.color)
+              .fontColor(this.getPerformanceLevel().color)
               .alignSelf(ItemAlign.Start)
           }
           .alignItems(HorizontalAlign.Start)
@@ -302,7 +320,7 @@ export struct PerformanceIndicator {
             this.buildMetricCard(
               '内存使用',
               `${(this.metrics.memoryUsage * 100).toFixed(1)}%`,
-              this.getMetricColor(this.metrics.memoryUsage, { good: 0.6, warning: 0.8 }),
+              this.getMetricColor(this.metrics.memoryUsage, { good: 0.6, warning: 0.8 } as MetricThresholds),
               AppIcon.MEMORY
             )
           }
@@ -311,7 +329,7 @@ export struct PerformanceIndicator {
             this.buildMetricCard(
               '缓存命中率',
               `${(this.metrics.cacheHitRate * 100).toFixed(1)}%`,
-              this.getMetricColor(1 - this.metrics.cacheHitRate, { good: 0.3, warning: 0.5 }),
+              this.getMetricColor(1 - this.metrics.cacheHitRate, { good: 0.3, warning: 0.5 } as MetricThresholds),
               AppIcon.CACHE
             )
           }
@@ -320,7 +338,7 @@ export struct PerformanceIndicator {
             this.buildMetricCard(
               '响应时间',
               `${this.metrics.averageResponseTime.toFixed(0)}ms`,
-              this.getMetricColor(this.metrics.averageResponseTime, { good: 500, warning: 1000 }),
+              this.getMetricColor(this.metrics.averageResponseTime, { good: 500, warning: 1000 } as MetricThresholds),
               AppIcon.SPEED
             )
           }
@@ -329,7 +347,7 @@ export struct PerformanceIndicator {
             this.buildMetricCard(
               '错误率',
               `${(this.metrics.errorRate * 100).toFixed(1)}%`,
-              this.getMetricColor(this.metrics.errorRate, { good: 0.01, warning: 0.05 }),
+              this.getMetricColor(this.metrics.errorRate, { good: 0.01, warning: 0.05 } as MetricThresholds),
               AppIcon.ERROR
             )
           }
@@ -340,7 +358,7 @@ export struct PerformanceIndicator {
               this.buildMetricCard(
                 'CPU使用',
                 `${(this.metrics.cpuUsage * 100).toFixed(1)}%`,
-                this.getMetricColor(this.metrics.cpuUsage, { good: 0.5, warning: 0.8 }),
+                this.getMetricColor(this.metrics.cpuUsage, { good: 0.5, warning: 0.8 } as MetricThresholds),
                 AppIcon.CPU
               )
             }
@@ -351,7 +369,7 @@ export struct PerformanceIndicator {
               this.buildMetricCard(
                 '电池电量',
                 `${(this.metrics.batteryLevel * 100).toFixed(0)}%`,
-                this.getMetricColor(1 - this.metrics.batteryLevel, { good: 0.5, warning: 0.8 }),
+                this.getMetricColor(1 - this.metrics.batteryLevel, { good: 0.5, warning: 0.8 } as MetricThresholds),
                 AppIcon.BATTERY
               )
             }
@@ -459,7 +477,7 @@ export struct PerformanceIndicator {
 
           Text(`${(this.metrics.memoryUsage * 100).toFixed(1)}%`)
             .fontSize(12)
-            .fontColor(this.getMetricColor(this.metrics.memoryUsage, { good: 0.6, warning: 0.8 }))
+            .fontColor(this.getMetricColor(this.metrics.memoryUsage, { good: 0.6, warning: 0.8 } as MetricThresholds))
         }
         .width('100%')
 
@@ -471,7 +489,7 @@ export struct PerformanceIndicator {
 
           Text(`${this.metrics.averageResponseTime.toFixed(0)}ms`)
             .fontSize(12)
-            .fontColor(this.getMetricColor(this.metrics.averageResponseTime, { good: 500, warning: 1000 }))
+            .fontColor(this.getMetricColor(this.metrics.averageResponseTime, { good: 500, warning: 1000 } as MetricThresholds))
         }
         .width('100%')
 

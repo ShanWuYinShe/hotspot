@@ -12,6 +12,10 @@ import { IconButton, AppIcon, IconSize } from '../components/SystemIcon';
 // import { selectPhotos, capturePhoto, requestMediaPermissions } from '../common/media/MediaServiceManager';
 import { common } from '@kit.AbilityKit';
 import { LocationInfo } from '../common/location/LocationUtil';
+import { hilog } from '@kit.PerformanceAnalysisKit';
+
+const DOMAIN_NUMBER: number = 0xFF06;
+const TAG: string = 'CreateMomentPage';
 
 @Entry
 @Component
@@ -48,9 +52,9 @@ struct CreateMomentPage {
       // if (context) {
       //   await requestMediaPermissions(context);
       // }
-      console.log('媒体权限请求功能待实现');
+      hilog.info(DOMAIN_NUMBER, TAG, '媒体权限请求功能待实现');
     } catch (error) {
-      console.error('请求权限失败:', error);
+      hilog.error(DOMAIN_NUMBER, TAG, `请求权限失败: ${JSON.stringify(error)}`);
     }
   }
 
@@ -80,7 +84,7 @@ struct CreateMomentPage {
         }
       }
     } catch (error) {
-      SystemToast.showError('获取位置信息失败');
+      SystemToast.showError('获取位置信息失败', this.getUIContext());
     }
   }
 
@@ -94,12 +98,12 @@ struct CreateMomentPage {
     }
 
     if (this.tags.length >= 10) {
-      SystemToast.show('最多只能添加10个标签');
+      SystemToast.show('最多只能添加10个标签', this.getUIContext());
       return;
     }
 
     if (this.tags.includes(tag)) {
-      SystemToast.show('标签已存在');
+      SystemToast.show('标签已存在', this.getUIContext());
       return;
     }
 
@@ -121,7 +125,7 @@ struct CreateMomentPage {
     try {
       const maxCount = 9 - this.imageUrls.length;
       if (maxCount <= 0) {
-        SystemToast.show('最多只能选择9张图片');
+        SystemToast.show('最多只能选择9张图片', this.getUIContext());
         return;
       }
 
@@ -132,10 +136,10 @@ struct CreateMomentPage {
       //   this.imageUrls.push(result.uri);
       // }
       
-      SystemToast.show('图片选择功能待实现');
+      SystemToast.show('图片选择功能待实现', this.getUIContext());
     } catch (error) {
-      console.error('选择图片失败:', error);
-      SystemToast.show('选择图片失败，请重试');
+      hilog.error(DOMAIN_NUMBER, TAG, `选择图片失败: ${JSON.stringify(error)}`);
+      SystemToast.show('选择图片失败，请重试', this.getUIContext());
     }
   }
 
@@ -145,7 +149,7 @@ struct CreateMomentPage {
   private async capturePhoto(): Promise<void> {
     try {
       if (this.imageUrls.length >= 9) {
-        SystemToast.show('最多只能选择9张图片');
+        SystemToast.show('最多只能选择9张图片', this.getUIContext());
         return;
       }
 
@@ -154,10 +158,10 @@ struct CreateMomentPage {
       // const mediaResult = await capturePhoto(context, { quality: 'high' });
       // this.imageUrls.push(mediaResult.uri);
 
-      SystemToast.show('拍照功能待实现');
+      SystemToast.show('拍照功能待实现', this.getUIContext());
     } catch (error) {
-      console.error('拍照失败:', error);
-      SystemToast.show('拍照失败，请重试');
+      hilog.error(DOMAIN_NUMBER, TAG, `拍照失败: ${JSON.stringify(error)}`);
+      SystemToast.show('拍照失败，请重试', this.getUIContext());
     }
   }
 
@@ -174,12 +178,12 @@ struct CreateMomentPage {
   private async publishMoment(): Promise<void> {
     // 验证输入
     if (!this.description.trim()) {
-      SystemToast.show('请输入瞬间描述');
+      SystemToast.show('请输入瞬间描述', this.getUIContext());
       return;
     }
 
     if (!this.currentLocation) {
-      SystemToast.show('请先获取位置信息');
+      SystemToast.show('请先获取位置信息', this.getUIContext());
       return;
     }
 
@@ -195,16 +199,16 @@ struct CreateMomentPage {
       });
 
       if (response.code === 0) {
-        SystemToast.showSuccess('瞬间发布成功');
+        SystemToast.showSuccess('瞬间发布成功', this.getUIContext());
 
         // 返回上一页
         const routerInstance = this.getUIContext().getRouter();
         routerInstance.back();
       } else {
-        SystemToast.showError(response.msg || '发布瞬间失败');
+        SystemToast.showError(response.msg || '发布瞬间失败', this.getUIContext());
       }
     } catch (error) {
-      SystemToast.showError('发布瞬间失败');
+      SystemToast.showError('发布瞬间失败', this.getUIContext());
     } finally {
       this.isPublishing = false;
     }
@@ -222,10 +226,10 @@ struct CreateMomentPage {
           longitude: location.longitude,
           locationName: location.locationName || '南天门'
         };
-        SystemToast.show('位置已更新');
+        SystemToast.show('位置已更新', this.getUIContext());
       }
     } catch (error) {
-      SystemToast.showError('获取位置失败');
+      SystemToast.showError('获取位置失败', this.getUIContext());
     }
   }
 

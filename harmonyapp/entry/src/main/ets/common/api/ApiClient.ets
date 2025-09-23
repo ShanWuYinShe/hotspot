@@ -150,7 +150,7 @@ export class ApiClient {
    * 系统健康检查
    */
   static async healthCheck(): Promise<ApiResponse<HealthCheckResponse>> {
-    const request = {};
+    const request: HealthCheckRequest = {};
     return HttpUtil.post<ApiResponse<HealthCheckResponse>, HealthCheckRequest>('/api/v1/public/status/health', request);
   }
 
@@ -160,7 +160,7 @@ export class ApiClient {
    * 获取认证随机数
    */
   static async getNonce(): Promise<ApiResponse<GetNonceResponse>> {
-    const request = {};
+    const request: GetNonceRequest = {};
     return HttpUtil.post<ApiResponse<GetNonceResponse>, GetNonceRequest>('/api/v1/public/auth/get_nonce', request);
   }
 
@@ -197,7 +197,7 @@ export class ApiClient {
    * 检查认证状态
    */
   static async checkAuthStatus(): Promise<ApiResponse<CheckStatusResponse>> {
-    const request = {};
+    const request: CheckStatusRequest = {};
     return HttpUtil.post<ApiResponse<CheckStatusResponse>, CheckStatusRequest>('/api/v1/public/auth/check_status',
       request);
   }
@@ -264,7 +264,7 @@ export class ApiClient {
    * 获取用户设置
    */
   static async getSettings(): Promise<ApiResponse<GetSettingsResponse>> {
-    const request = {};
+    const request: GetSettingsRequest = {};
     return HttpUtil.post<ApiResponse<GetSettingsResponse>, GetSettingsRequest>('/api/v1/protected/user/get_settings',
       request);
   }

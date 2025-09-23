@@ -257,7 +257,7 @@ struct MapPage {
     switch (marker.type) {
       case 'user':
         // 导航到用户资料页面或开始聊天
-        SystemToast.show(`查看用户: ${marker.title}`);
+        SystemToast.show(`查看用户: ${marker.title}`, this.getUIContext());
         break;
       case 'group':
         // 导航到群组详情页面
@@ -268,7 +268,7 @@ struct MapPage {
         break;
       case 'moment':
         // 显示瞬间详情
-        SystemToast.show(`查看瞬间: ${marker.title}`);
+        SystemToast.show(`查看瞬间: ${marker.title}`, this.getUIContext());
         break;
     }
   }

@@ -12,6 +12,10 @@ import { SystemAvatar } from '../components/SystemAvatar';
 import { SystemToast } from '../components/SystemToast';
 import { SystemLoadingView } from '../components/SystemLoadingView';
 import { UserResponse, isTempUser } from '../common/types/BackendApiTypes';
+import { hilog } from '@kit.PerformanceAnalysisKit';
+
+const DOMAIN_NUMBER: number = 0xFF03;
+const TAG: string = 'ProfilePage';
 
 @Entry
 @Component
@@ -97,7 +101,7 @@ struct ProfilePage {
         ).length;
       }
     } catch (error) {
-      console.error('加载用户统计失败:', error);
+      hilog.error(DOMAIN_NUMBER, TAG, `加载用户统计失败: ${JSON.stringify(error)}`);
     }
   }
 
@@ -124,7 +128,7 @@ struct ProfilePage {
    */
   private async saveEdit(): Promise<void> {
     if (!this.editNickname.trim()) {
-      SystemToast.showWarning('昵称不能为空');
+      SystemToast.showWarning('昵称不能为空', this.getUIContext());
       return;
     }
 
@@ -136,7 +140,7 @@ struct ProfilePage {
 
       // 临时更新本地状态
       if (this.globalState.currentUser) {
-        const updatedUser = {
+        const updatedUser: UserResponse = {
           user_id: this.globalState.currentUser.user_id,
           nickname: this.editNickname,
           bio: this.editBio,
@@ -152,9 +156,9 @@ struct ProfilePage {
       }
 
       this.isEditing = false;
-      SystemToast.showSuccess('资料更新成功');
+      SystemToast.showSuccess('资料更新成功', this.getUIContext());
     } catch (error) {
-      SystemToast.showError('更新失败');
+      SystemToast.showError('更新失败', this.getUIContext());
     } finally {
       this.isLoading = false;
     }
@@ -165,7 +169,7 @@ struct ProfilePage {
    */
   private async updateLocation(): Promise<void> {
     if (!this.globalState.currentLocation) {
-      SystemToast.show('请先获取位置信息');
+      SystemToast.show('请先获取位置信息', this.getUIContext());
       return;
     }
 
@@ -175,9 +179,9 @@ struct ProfilePage {
         longitude: this.globalState.currentLocation.longitude,
         location_name: this.globalState.currentLocation.locationName || '南天门'
       });
-      SystemToast.showSuccess('位置更新成功');
+      SystemToast.showSuccess('位置更新成功', this.getUIContext());
     } catch (error) {
-      SystemToast.showError('位置更新失败');
+      SystemToast.showError('位置更新失败', this.getUIContext());
     }
   }
 
@@ -197,9 +201,9 @@ struct ProfilePage {
       const routerInstance = this.getUIContext().getRouter();
       routerInstance.clear();
       await routerInstance.pushUrl({ url: `pages/${PageNames.INDEX}` });
-      SystemToast.show('已退出登录');
+      SystemToast.show('已退出登录', this.getUIContext());
     } catch (error) {
-      SystemToast.show('退出失败');
+      SystemToast.show('退出失败', this.getUIContext());
     }
   }
 
@@ -255,7 +259,7 @@ struct ProfilePage {
                   const routerInstance = this.getUIContext().getRouter();
                   await routerInstance.pushUrl({ url: `pages/${PageNames.LOGIN}` });
                 } catch (error) {
-                  SystemToast.showError('跳转失败');
+                  SystemToast.showError('跳转失败', this.getUIContext());
                 }
               })
           }

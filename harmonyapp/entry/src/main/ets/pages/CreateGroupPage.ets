@@ -61,7 +61,7 @@ struct CreateGroupPage {
         }
       }
     } catch (error) {
-      SystemToast.showError('获取位置信息失败');
+      SystemToast.showError('获取位置信息失败', this.getUIContext());
     }
   }
 
@@ -71,17 +71,17 @@ struct CreateGroupPage {
   private async createGroup(): Promise<void> {
     // 验证输入
     if (!this.groupName.trim()) {
-      SystemToast.show('请输入群组名称');
+      SystemToast.show('请输入群组名称', this.getUIContext());
       return;
     }
 
     if (!this.currentLocation) {
-      SystemToast.show('请先获取位置信息');
+      SystemToast.show('请先获取位置信息', this.getUIContext());
       return;
     }
 
     if (this.isPasswordRequired && !this.groupPassword.trim()) {
-      SystemToast.show('请输入群组密码');
+      SystemToast.show('请输入群组密码', this.getUIContext());
       return;
     }
 
@@ -97,7 +97,7 @@ struct CreateGroupPage {
       });
 
       if (response.code === 0 && response.data) {
-        SystemToast.showSuccess('群组创建成功');
+        SystemToast.showSuccess('群组创建成功', this.getUIContext());
         
         // 跳转到群组详情页
         const routerInstance = this.getUIContext().getRouter();
@@ -106,10 +106,10 @@ struct CreateGroupPage {
           params: { groupId: response.data.group_id }
         });
       } else {
-        SystemToast.showError(response.msg || '创建群组失败');
+        SystemToast.showError(response.msg || '创建群组失败', this.getUIContext());
       }
     } catch (error) {
-      SystemToast.showError('创建群组失败');
+      SystemToast.showError('创建群组失败', this.getUIContext());
     } finally {
       this.isCreating = false;
     }
@@ -127,10 +127,10 @@ struct CreateGroupPage {
           longitude: location.longitude,
           locationName: location.locationName || '南天门'
         };
-        SystemToast.show('位置已更新');
+        SystemToast.show('位置已更新', this.getUIContext());
       }
     } catch (error) {
-      SystemToast.showError('获取位置失败');
+      SystemToast.showError('获取位置失败', this.getUIContext());
     }
   }
 

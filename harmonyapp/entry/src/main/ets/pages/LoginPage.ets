@@ -12,6 +12,10 @@ import { SystemLoadingView } from '../components/SystemLoadingView';
 import { SystemToast } from '../components/SystemToast';
 import { PasswordSecurityUtil } from '../common/security/PasswordSecurityUtil';
 import { AuthResponse, CreateTempRequest, UserResponse, LoginRequest } from '../common/types/BackendApiTypes';
+import { hilog } from '@kit.PerformanceAnalysisKit';
+
+const DOMAIN_NUMBER: number = 0xFF02;
+const TAG: string = 'LoginPage';
 
 
 @Entry
@@ -125,7 +129,7 @@ struct LoginPage {
    */
   private async createTempUser() {
     if (!this.nickname.trim()) {
-      SystemToast.showWarning('请输入昵称');
+      SystemToast.showWarning('请输入昵称', this.getUIContext());
       return;
     }
 
@@ -141,7 +145,7 @@ struct LoginPage {
       // 阶段2：发送创建请求
       this.loadingStage = '正在创建临时用户...';
       this.loadingProgress = 50;
-      const request = {
+      const request: CreateTempRequest = {
         nickname: this.nickname.trim()
       };
       const response = await ApiClient.createTemp(request);
@@ -153,10 +157,10 @@ struct LoginPage {
         await this.handleAuthSuccess(response.data);
         this.loadingProgress = 100;
       } else {
-        SystemToast.showError(response.msg || '创建临时用户失败');
+        SystemToast.showError(response.msg || '创建临时用户失败', this.getUIContext());
       }
     } catch (error) {
-      SystemToast.showError(error instanceof Error ? error.message : '创建临时用户失败');
+      SystemToast.showError(error instanceof Error ? error.message : '创建临时用户失败', this.getUIContext());
     } finally {
       this.isLoading = false;
       this.loadingStage = '';
@@ -169,7 +173,7 @@ struct LoginPage {
    */
   private async userLogin() {
     if (!this.loginId.trim() || !this.password.trim()) {
-      SystemToast.showWarning('请输入邮箱和密码');
+      SystemToast.showWarning('请输入邮箱和密码', this.getUIContext());
       return;
     }
 
@@ -211,7 +215,7 @@ struct LoginPage {
       // 阶段4：发送登录请求
       this.loadingStage = '正在验证登录信息...';
       this.loadingProgress = 70;
-      const loginRequest = {
+      const loginRequest: LoginRequest = {
         login_id: this.loginId,
         password_hash: passwordHash,
         nonce_id: nonce_id,
@@ -232,10 +236,10 @@ struct LoginPage {
         await this.handleAuthSuccess(response.data);
         this.loadingProgress = 100;
       } else {
-        SystemToast.showError(response.msg || '登录失败');
+        SystemToast.showError(response.msg || '登录失败', this.getUIContext());
       }
     } catch (error) {
-      SystemToast.showError(error instanceof Error ? error.message : '登录失败');
+      SystemToast.showError(error instanceof Error ? error.message : '登录失败', this.getUIContext());
     } finally {
       this.isLoading = false;
       this.loadingStage = '';
@@ -251,7 +255,7 @@ struct LoginPage {
     await PreferencesUtil.set('access_token', response.access_token);
 
     // 更新全局状态
-    const userInfo = {
+    const userInfo: UserResponse = {
       user_id: response.user_id,
       nickname: response.nickname
     };
@@ -262,13 +266,13 @@ struct LoginPage {
     try {
       await this.webSocketService.connect(response.access_token);
     } catch (error) {
-      console.warn('WebSocket连接失败:', error);
+      hilog.warn(DOMAIN_NUMBER, TAG, `WebSocket连接失败: ${JSON.stringify(error)}`);
     }
 
     // 导航到主页
     const routerInstance = this.getUIContext().getRouter();
     await routerInstance.replaceUrl({ url: `pages/${PageNames.INDEX}` });
-    SystemToast.showSuccess('登录成功');
+    SystemToast.showSuccess('登录成功', this.getUIContext());
   }
 
   @Builder

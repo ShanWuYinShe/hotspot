@@ -22,6 +22,7 @@ export enum AppIcon {
   SAVE = 'sys.symbol.checkmark',
   CANCEL = 'sys.symbol.xmark',
   CLOSE = 'sys.symbol.xmark',
+  CONFIRM = 'sys.symbol.checkmark_circle',
   
   // 功能图标
   SEARCH = 'sys.symbol.magnifyingglass',
@@ -141,7 +142,7 @@ export enum IconColor {
 export interface SystemIconParams {
   icon: AppIcon;
   size?: IconSize;
-  color?: string;
+  color?: string | ResourceColor;
   clickable?: boolean;
   onClick?: () => void;
 }
@@ -152,7 +153,7 @@ export interface SystemIconParams {
 export interface IconButtonParams {
   icon: AppIcon;
   size?: IconSize;
-  iconColor?: string;
+  iconColor?: string | ResourceColor;
   backgroundColor?: ResourceColor;
   borderRadius?: number;
   padding?: number;
@@ -166,7 +167,7 @@ export interface IconButtonParams {
 export struct SystemIcon {
   @Prop icon: AppIcon;
   @Prop iconSize: IconSize = IconSize.MEDIUM;
-  @Prop iconColor: string = IconColor.PRIMARY;
+  @Prop iconColor: string | ResourceColor = IconColor.PRIMARY;
   @Prop clickable: boolean = false;
   onIconClick?: () => void;
 
@@ -191,7 +192,7 @@ export struct SystemIcon {
 export struct IconButton {
   @Prop icon: AppIcon;
   @Prop iconSize: IconSize = IconSize.MEDIUM;
-  @Prop iconColor: string = IconColor.PRIMARY;
+  @Prop iconColor: string | ResourceColor = IconColor.PRIMARY;
   @Prop bgColor: ResourceColor = '#F2F2F7';
   @Prop radius: number = 8;
   @Prop paddingSize: number = 8;
@@ -224,7 +225,7 @@ export struct IconButton {
 export struct NavIcon {
   @Prop icon: AppIcon;
   @Prop iconSize: IconSize = IconSize.LARGE;
-  @Prop iconColor: string = IconColor.PRIMARY;
+  @Prop iconColor: string | ResourceColor = IconColor.PRIMARY;
   onNavClick?: () => void;
 
   build() {

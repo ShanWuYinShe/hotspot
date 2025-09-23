@@ -99,7 +99,7 @@ export struct SmartSearchComponent {
 
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `搜索失败: ${error}`);
-      SystemToast.showError('搜索失败，请重试');
+      SystemToast.showError('搜索失败，请重试', this.getUIContext());
     } finally {
       this.isSearching = false;
     }
@@ -235,7 +235,7 @@ export struct SmartSearchComponent {
     switch (result.type) {
       case 'user':
         // 导航到用户资料或开始聊天
-        SystemToast.show(`查看用户: ${result.title}`);
+        SystemToast.show(`查看用户: ${result.title}`, this.getUIContext());
         break;
       case 'group':
         // 导航到群组详情
@@ -247,7 +247,7 @@ export struct SmartSearchComponent {
         break;
       case 'moment':
         // 显示瞬间详情
-        SystemToast.show(`查看瞬间: ${result.title}`);
+        SystemToast.show(`查看瞬间: ${result.title}`, this.getUIContext());
         break;
     }
   }

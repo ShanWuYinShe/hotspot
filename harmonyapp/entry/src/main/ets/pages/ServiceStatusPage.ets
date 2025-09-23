@@ -5,7 +5,7 @@
 import { ServiceManager, ServiceStatus } from '../common/services/ServiceManager';
 import { SystemIcon } from '../components/SystemIcon';
 import { AppIcon } from '../components/SystemIcon';
-import { SystemToast } from '../common/utils/SystemToast';
+import { SystemToast } from '../components/SystemToast';
 import { AccessibilityManager } from '../common/accessibility/AccessibilityManager';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
@@ -16,7 +16,7 @@ const TAG: string = 'ServiceStatusPage';
 @Component
 struct ServiceStatusPage {
   @State private serviceStatus: Map<string, ServiceStatus> = new Map();
-  @State private serviceStats: any = null;
+  @State private serviceStats: Record<string, Object> | null = null;
   @State private isRefreshing: boolean = false;
   @State private autoRefresh: boolean = true;
   @State private selectedService: string | null = null;
@@ -48,7 +48,7 @@ struct ServiceStatusPage {
       
       hilog.info(DOMAIN_NUMBER, TAG, `加载了 ${this.serviceStatus.size} 个服务状态`);
     } catch (error) {
-      SystemToast.showError(`加载服务状态失败: ${error}`);
+      SystemToast.showError(`加载服务状态失败: ${error}`, this.getUIContext());
       hilog.error(DOMAIN_NUMBER, TAG, `加载服务状态失败: ${JSON.stringify(error)}`);
     }
   }
@@ -100,7 +100,7 @@ struct ServiceStatusPage {
     
     setTimeout(() => {
       this.isRefreshing = false;
-      SystemToast.showSuccess('服务状态已刷新');
+      SystemToast.showSuccess('服务状态已刷新', this.getUIContext());
     }, 500);
   }
 
@@ -116,7 +116,7 @@ struct ServiceStatusPage {
       this.stopAutoRefresh();
     }
     
-    SystemToast.showInfo(`自动刷新已${this.autoRefresh ? '开启' : '关闭'}`);
+    SystemToast.showInfo(`自动刷新已${this.autoRefresh ? '开启' : '关闭'}`, this.getUIContext());
   }
 
   /**
@@ -124,7 +124,7 @@ struct ServiceStatusPage {
    */
   private async restartService(serviceName: string): Promise<void> {
     try {
-      SystemToast.showInfo(`正在重启服务: ${serviceName}`);
+      SystemToast.showInfo(`正在重启服务: ${serviceName}`, this.getUIContext());
       
       // 停止服务
       await this.serviceManager.stopService(serviceName);
@@ -132,14 +132,14 @@ struct ServiceStatusPage {
       // 等待一秒后重新初始化
       setTimeout(async () => {
         await this.serviceManager.initializeServices();
-        SystemToast.showSuccess(`服务 ${serviceName} 重启成功`);
+        SystemToast.showSuccess(`服务 ${serviceName} 重启成功`, this.getUIContext());
         
         // 无障碍播报
         await this.accessibilityManager.announceText(`服务 ${serviceName} 已重启`);
       }, 1000);
       
     } catch (error) {
-      SystemToast.showError(`重启服务失败: ${error}`);
+      SystemToast.showError(`重启服务失败: ${error}`, this.getUIContext());
     }
   }
 

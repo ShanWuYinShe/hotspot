@@ -132,7 +132,7 @@ export struct NotificationComponent {
     this.updateUnreadCount();
     
     // 显示Toast提示
-    SystemToast.show(notification.title);
+    SystemToast.show(notification.title, this.getUIContext());
     
     // 保存到本地存储
     this.saveNotifications();

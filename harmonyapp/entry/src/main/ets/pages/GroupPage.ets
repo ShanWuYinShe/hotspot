@@ -75,10 +75,10 @@ struct GroupPage {
   private async joinGroup(group: SearchGroupByLocationResponse) {
     try {
       await ApiClient.joinGroup({ group_id: group.group_id });
-      SystemToast.show('加入群组成功');
+      SystemToast.show('加入群组成功', this.getUIContext());
       await this.loadNearbyGroups(); // 刷新列表
     } catch (error) {
-      SystemToast.showError(error instanceof Error ? error.message : '加入群组失败');
+      SystemToast.showError(error instanceof Error ? error.message : '加入群组失败', this.getUIContext());
     }
   }
 
@@ -87,7 +87,7 @@ struct GroupPage {
    */
   private async createGroup() {
     if (!this.globalState.currentLocation) {
-      SystemToast.show('请先获取位置信息');
+      SystemToast.show('请先获取位置信息', this.getUIContext());
       return;
     }
 
@@ -95,7 +95,7 @@ struct GroupPage {
       const routerInstance = this.getUIContext().getRouter();
       await routerInstance.pushUrl({ url: `pages/${PageNames.CREATE_GROUP}` });
     } catch (error) {
-      SystemToast.showError('跳转失败');
+      SystemToast.showError('跳转失败', this.getUIContext());
     }
   }
 
@@ -276,7 +276,7 @@ struct GroupPage {
           params: { groupId: group.group_id }
         });
       } catch (error) {
-        SystemToast.showError('跳转失败');
+        SystemToast.showError('跳转失败', this.getUIContext());
       }
     })
   }

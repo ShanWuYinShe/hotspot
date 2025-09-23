@@ -62,7 +62,7 @@ export struct NativeMapComponent {
   // 内部状态
   @State private isMapReady: boolean = false;
   @State private currentUserLocation: LocationInfo | null = null;
-  @State private mapInstance: any = null; // 地图实例，类型根据实际HarmonyOS地图API确定
+  @State private mapInstance: Object | null = null; // 地图实例，类型根据实际HarmonyOS地图API确定
 
   aboutToAppear() {
     this.initializeMap();

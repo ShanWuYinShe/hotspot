@@ -10,6 +10,10 @@ import { LikeMomentRequest, SearchMomentsByLocationResponse } from '../common/ty
 import { SystemAvatar } from '../components/SystemAvatar';
 import { IntelligentLocationCard } from '../components/IntelligentLocationCard';
 import { SystemLoadingView } from '../components/SystemLoadingView';
+import { hilog } from '@kit.PerformanceAnalysisKit';
+
+const DOMAIN_NUMBER: number = 0xFF05;
+const TAG: string = 'MomentPage';
 
 @Entry
 @Component
@@ -71,7 +75,7 @@ struct MomentPage {
    */
   private async likeMoment(moment: SearchMomentsByLocationResponse, index: number) {
     try {
-      const request = {
+      const request: LikeMomentRequest = {
         moment_id: moment.moment_id
       };
       const response = await ApiClient.likeMoment(request);
@@ -96,10 +100,10 @@ struct MomentPage {
           likes_count: response.data.likes_count
         };
       } else {
-        console.error('点赞失败:', response.msg);
+        hilog.error(DOMAIN_NUMBER, TAG, `点赞失败: ${response.msg}`);
       }
     } catch (error) {
-      console.error('点赞失败:', error);
+      hilog.error(DOMAIN_NUMBER, TAG, `点赞失败: ${JSON.stringify(error)}`);
     }
   }
 
@@ -124,7 +128,7 @@ struct MomentPage {
               const routerInstance = this.getUIContext().getRouter();
               await routerInstance.pushUrl({ url: `pages/${PageNames.CREATE_MOMENT}` });
             } catch (error) {
-              console.error('跳转失败:', error);
+              hilog.error(DOMAIN_NUMBER, TAG, `跳转失败: ${JSON.stringify(error)}`);
             }
           })
       }

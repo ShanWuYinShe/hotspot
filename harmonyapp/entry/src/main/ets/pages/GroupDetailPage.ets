@@ -17,10 +17,16 @@ import {
   hasUserPermission 
 } from '../common/types/BackendApiTypes';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { DistributedSyncService } from '../common/services/DistributedSyncService';
-import { AIRecommendationService } from '../common/services/AIRecommendationService';
+import { DistributedSyncService, SyncData } from '../common/services/DistributedSyncService';
 import { SmartNotificationService } from '../common/services/SmartNotificationService';
 import { AccessibilityManager } from '../common/accessibility/AccessibilityManager';
+
+interface GroupSyncData {
+  groupId: string;
+  groupInfo: Object;
+  members: Object[];
+  lastViewed: number;
+}
 
 const DOMAIN_NUMBER: number = 0xFF17;
 const TAG: string = 'GroupDetailPage';
@@ -35,7 +41,6 @@ struct GroupDetailPage {
   @State globalState: GlobalState = GlobalStateManager.getInstance().getState();
   private stateManager = GlobalStateManager.getInstance();
   private distributedSyncService = DistributedSyncService.getInstance();
-  private aiRecommendationService = AIRecommendationService.getInstance();
   private smartNotificationService = SmartNotificationService.getInstance();
   private accessibilityManager = AccessibilityManager.getInstance();
   @State groupInfo: SearchGroupByIdResponse | null = null;
@@ -96,8 +101,6 @@ struct GroupDetailPage {
         // 同步群组数据到分布式存储
         await this.syncGroupData();
         
-        // 记录用户行为
-        await this.recordUserBehavior('view', 'group');
         
         // 无障碍播报
         await this.accessibilityManager.announceText(`已加载群组：${this.groupInfo.name}`);
@@ -132,10 +135,10 @@ struct GroupDetailPage {
         this.showMemberList = true;
         hilog.info(DOMAIN_NUMBER, TAG, `群组成员加载成功: ${this.members.length}个成员`);
       } else {
-        SystemToast.showError(response.msg || '加载成员列表失败');
+        SystemToast.showError(response.msg || '加载成员列表失败', this.getUIContext());
       }
     } catch (error) {
-      SystemToast.showError('加载成员列表失败');
+      SystemToast.showError('加载成员列表失败', this.getUIContext());
       hilog.error(DOMAIN_NUMBER, TAG, `加载群组成员失败: ${JSON.stringify(error)}`);
     } finally {
       this.isLoadingMembers = false;
@@ -151,7 +154,7 @@ struct GroupDetailPage {
     // 检查临时用户权限
     if (isTempUser(this.globalState.currentUser.user_id) && 
         !hasUserPermission(this.globalState.currentUser.user_id, 'join_group')) {
-      SystemToast.showWarning('临时用户功能受限，请升级为正式用户');
+      SystemToast.showWarning('临时用户功能受限，请升级为正式用户', this.getUIContext());
       return;
     }
 
@@ -163,14 +166,14 @@ struct GroupDetailPage {
       });
 
       if (response.code === 0) {
-        SystemToast.showSuccess('加入群组成功');
+        SystemToast.showSuccess('加入群组成功', this.getUIContext());
         // 重新加载群组信息
         await this.loadGroupDetail();
       } else {
-        SystemToast.showError(response.msg || '加入群组失败');
+        SystemToast.showError(response.msg || '加入群组失败', this.getUIContext());
       }
     } catch (error) {
-      SystemToast.showError('加入群组失败');
+      SystemToast.showError('加入群组失败', this.getUIContext());
       hilog.error(DOMAIN_NUMBER, TAG, `加入群组失败: ${JSON.stringify(error)}`);
     } finally {
       this.isJoining = false;
@@ -190,15 +193,15 @@ struct GroupDetailPage {
       });
 
       if (response.code === 0) {
-        SystemToast.showSuccess('已离开群组');
+        SystemToast.showSuccess('已离开群组', this.getUIContext());
         // 返回上一页
         const routerInstance = this.getUIContext().getRouter();
         routerInstance.back();
       } else {
-        SystemToast.showError(response.msg || '离开群组失败');
+        SystemToast.showError(response.msg || '离开群组失败', this.getUIContext());
       }
     } catch (error) {
-      SystemToast.showError('离开群组失败');
+      SystemToast.showError('离开群组失败', this.getUIContext());
       hilog.error(DOMAIN_NUMBER, TAG, `离开群组失败: ${JSON.stringify(error)}`);
     } finally {
       this.isLeaving = false;
@@ -222,7 +225,7 @@ struct GroupDetailPage {
         }
       });
     } catch (error) {
-      SystemToast.showError('跳转聊天页面失败');
+      SystemToast.showError('跳转聊天页面失败', this.getUIContext());
       hilog.error(DOMAIN_NUMBER, TAG, `跳转聊天页面失败: ${JSON.stringify(error)}`);
     }
   }
@@ -324,7 +327,7 @@ struct GroupDetailPage {
           iconSize: IconSize.LARGE,
           bgColor: Color.Transparent,
           onButtonClick: () => {
-            SystemToast.show('更多功能待开发');
+            SystemToast.show('更多功能待开发', this.getUIContext());
           }
         })
       }
@@ -620,18 +623,22 @@ struct GroupDetailPage {
     if (!this.groupInfo || !this.globalState.currentUser?.user_id) return;
 
     try {
-      await this.distributedSyncService.syncUserData({
+      const syncDataObject: GroupSyncData = {
+        groupId: this.groupId,
+        groupInfo: this.groupInfo,
+        members: this.members,
+        lastViewed: Date.now()
+      };
+      
+      const syncData: SyncData = {
         userId: this.globalState.currentUser.user_id,
         dataType: 'groups',
-        data: {
-          groupId: this.groupId,
-          groupInfo: this.groupInfo,
-          members: this.members,
-          lastViewed: Date.now()
-        },
+        data: syncDataObject,
         timestamp: Date.now(),
         deviceId: 'current_device' // 这里应该获取实际的设备ID
-      });
+      };
+      
+      await this.distributedSyncService.syncUserData(syncData);
 
       hilog.info(DOMAIN_NUMBER, TAG, `群组数据已同步到分布式存储: ${this.groupInfo.name}`);
     } catch (error) {
@@ -639,30 +646,6 @@ struct GroupDetailPage {
     }
   }
 
-  /**
-   * 记录用户行为
-   */
-  private async recordUserBehavior(action: 'view' | 'join' | 'leave' | 'like', targetType: 'group' | 'user'): Promise<void> {
-    if (!this.globalState.currentUser?.user_id) return;
-
-    try {
-      await this.aiRecommendationService.recordUserBehavior({
-        userId: this.globalState.currentUser.user_id,
-        action: action,
-        targetType: targetType,
-        targetId: targetType === 'group' ? this.groupId : this.groupId,
-        timestamp: Date.now(),
-        location: this.globalState.currentLocation ? {
-          latitude: this.globalState.currentLocation.latitude,
-          longitude: this.globalState.currentLocation.longitude
-        } : undefined
-      });
-
-      hilog.info(DOMAIN_NUMBER, TAG, `用户行为已记录: ${action} ${targetType}`);
-    } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, `记录用户行为失败: ${JSON.stringify(error)}`);
-    }
-  }
 
   /**
    * 发送社交通知
@@ -671,15 +654,17 @@ struct GroupDetailPage {
     if (!this.globalState.currentUser?.nickname || !this.groupInfo) return;
 
     try {
-      const messageMap = {
-        'join': `${this.globalState.currentUser.nickname} 加入了群组 ${this.groupInfo.name}`,
-        'leave': `${this.globalState.currentUser.nickname} 离开了群组 ${this.groupInfo.name}`
-      };
+      let message: string;
+      if (type === 'join') {
+        message = `${this.globalState.currentUser.nickname} 加入了群组 ${this.groupInfo.name}`;
+      } else {
+        message = `${this.globalState.currentUser.nickname} 离开了群组 ${this.groupInfo.name}`;
+      }
 
       await this.smartNotificationService.createSocialNotification(
         type === 'join' ? 'group_invite' : 'follow',
         this.globalState.currentUser.nickname,
-        messageMap[type],
+        message,
         this.groupId
       );
 

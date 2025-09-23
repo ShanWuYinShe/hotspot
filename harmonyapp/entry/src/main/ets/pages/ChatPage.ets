@@ -7,8 +7,7 @@ import { GlobalStateManager, GlobalState } from '../common/state/GlobalStateMana
 import { ApiClient } from '../common/api/ApiClient';
 import { WebSocketService } from '../common/websocket/WebSocketService';
 import { 
-  WebSocketMessage, 
-  NewMessageData, 
+  NewMessageData,
   TypingIndicatorData, 
   MessageReadData,
   UserOnlineData,
@@ -101,12 +100,12 @@ struct ChatPage {
         await this.loadChatHistory();
         this.setupWebSocketListeners();
       } else {
-        SystemToast.showError('缺少群组参数');
+        SystemToast.showError('缺少群组参数', this.getUIContext());
         const routerInstance = this.getUIContext().getRouter();
         routerInstance.back();
       }
     } catch (error) {
-      SystemToast.showError('初始化聊天失败');
+      SystemToast.showError('初始化聊天失败', this.getUIContext());
     }
   }
 
@@ -135,12 +134,12 @@ struct ChatPage {
         // 标记消息为已读
         await this.markMessagesAsRead();
       } else if (response) {
-        console.error('加载聊天记录失败:', response.msg);
-        SystemToast.showError(response.msg || '加载聊天记录失败');
+        hilog.error(DOMAIN_NUMBER, TAG, `加载聊天记录失败: ${response.msg}`);
+        SystemToast.showError(response.msg || '加载聊天记录失败', this.getUIContext());
       }
     } catch (error) {
-      console.error('加载聊天记录异常:', error);
-      SystemToast.showError('加载聊天记录失败');
+      hilog.error(DOMAIN_NUMBER, TAG, `加载聊天记录异常: ${JSON.stringify(error)}`);
+      SystemToast.showError('加载聊天记录失败', this.getUIContext());
     } finally {
       this.isLoading = false;
     }
@@ -159,7 +158,7 @@ struct ChatPage {
         });
       }
     } catch (error) {
-      console.error('标记已读失败:', error);
+      hilog.error(DOMAIN_NUMBER, TAG, `标记已读失败: ${JSON.stringify(error)}`);
     }
   }
 
@@ -237,7 +236,7 @@ struct ChatPage {
   private handleNewMessage(messageData: NewMessageData): void {
     if (this.isRelevantMessage(messageData)) {
       // 将WebSocket消息转换为ChatMessage格式
-      const message = {
+      const message: NewMessageData = {
         message_id: messageData.message_id,
         group_id: messageData.group_id,
         sender_id: messageData.sender_id,
@@ -259,7 +258,7 @@ struct ChatPage {
         longitude: messageData.longitude,
         location_name: messageData.location_name
       };
-      this.messages.push(message);
+      this.messages.push(message as ChatMessage);
       this.scrollToBottom();
     }
   }
@@ -338,7 +337,7 @@ struct ChatPage {
     if (!content || this.isSending) return;
 
     if (!this.globalState.currentUser) {
-      SystemToast.show('请先登录');
+      SystemToast.show('请先登录', this.getUIContext());
       return;
     }
 
@@ -359,12 +358,12 @@ struct ChatPage {
         // 这里不需要手动添加到消息列表
         hilog.info(DOMAIN_NUMBER, TAG, `消息发送成功: ${response.data.message_id}`);
       } else if (response) {
-        SystemToast.showError(response.msg || '发送失败');
+        SystemToast.showError(response.msg || '发送失败', this.getUIContext());
         this.inputText = originalText; // 恢复输入内容
       }
     } catch (error) {
-      console.error('发送消息异常:', error);
-      SystemToast.showError('发送失败');
+      hilog.error(DOMAIN_NUMBER, TAG, `发送消息异常: ${JSON.stringify(error)}`);
+      SystemToast.showError('发送失败', this.getUIContext());
       this.inputText = originalText; // 恢复输入内容
     } finally {
       this.isSending = false;
@@ -483,7 +482,7 @@ struct ChatPage {
           iconSize: IconSize.LARGE,
           bgColor: '#00000000',
           onButtonClick: () => {
-            SystemToast.show('更多功能待开发');
+            SystemToast.show('更多功能待开发', this.getUIContext());
           }
         })
       }

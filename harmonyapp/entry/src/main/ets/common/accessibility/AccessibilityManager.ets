@@ -19,10 +19,50 @@ export interface AccessibilityConfig {
   animationDuration: 'normal' | 'slow' | 'disabled';
 }
 
+interface AccessibilityAttributes {
+  label?: string;
+  hint?: string;
+  role?: string;
+  value?: string;
+  selected?: boolean;
+  expanded?: boolean;
+  disabled?: boolean;
+}
+
+interface AccessibilityAction {
+  name: string;
+  label: string;
+  handler: () => void;
+}
+
+interface TouchTargetSize {
+  width: number;
+  height: number;
+}
+
+interface ColorContrast {
+  normal: number;
+  large: number;
+}
+
+interface AccessibilityReport {
+  config: AccessibilityConfig;
+  recommendations: string[];
+  issues: string[];
+}
+
+interface RgbColor {
+  r: number;
+  g: number;
+  b: number;
+}
+
 export interface AccessibilityEvent {
   type: 'focus' | 'click' | 'scroll' | 'text_change' | 'page_change';
   element: string;
   description: string;
+  target?: string;
+  data?: Record<string, Object>;
   timestamp: number;
 }
 
@@ -112,15 +152,51 @@ export class AccessibilityManager {
    * 获取当前无障碍配置
    */
   public getConfig(): AccessibilityConfig {
-    return { ...this.config };
+    const configCopy: AccessibilityConfig = {
+      screenReaderEnabled: this.config.screenReaderEnabled,
+      highContrastEnabled: this.config.highContrastEnabled,
+      largeTextEnabled: this.config.largeTextEnabled,
+      reduceMotionEnabled: this.config.reduceMotionEnabled,
+      voiceOverEnabled: this.config.voiceOverEnabled,
+      magnificationEnabled: this.config.magnificationEnabled,
+      colorInversionEnabled: this.config.colorInversionEnabled,
+      fontSize: this.config.fontSize,
+      colorScheme: this.config.colorScheme,
+      animationDuration: this.config.animationDuration
+    };
+    return configCopy;
   }
 
   /**
    * 更新无障碍配置
    */
   public async updateConfig(updates: Partial<AccessibilityConfig>): Promise<void> {
-    const oldConfig = { ...this.config };
-    this.config = { ...this.config, ...updates };
+    const oldConfig: AccessibilityConfig = {
+      screenReaderEnabled: this.config.screenReaderEnabled,
+      highContrastEnabled: this.config.highContrastEnabled,
+      largeTextEnabled: this.config.largeTextEnabled,
+      reduceMotionEnabled: this.config.reduceMotionEnabled,
+      voiceOverEnabled: this.config.voiceOverEnabled,
+      magnificationEnabled: this.config.magnificationEnabled,
+      colorInversionEnabled: this.config.colorInversionEnabled,
+      fontSize: this.config.fontSize,
+      colorScheme: this.config.colorScheme,
+      animationDuration: this.config.animationDuration
+    };
+    
+    // 手动合并配置
+    this.config = {
+      screenReaderEnabled: updates.screenReaderEnabled !== undefined ? updates.screenReaderEnabled : this.config.screenReaderEnabled,
+      highContrastEnabled: updates.highContrastEnabled !== undefined ? updates.highContrastEnabled : this.config.highContrastEnabled,
+      largeTextEnabled: updates.largeTextEnabled !== undefined ? updates.largeTextEnabled : this.config.largeTextEnabled,
+      reduceMotionEnabled: updates.reduceMotionEnabled !== undefined ? updates.reduceMotionEnabled : this.config.reduceMotionEnabled,
+      voiceOverEnabled: updates.voiceOverEnabled !== undefined ? updates.voiceOverEnabled : this.config.voiceOverEnabled,
+      magnificationEnabled: updates.magnificationEnabled !== undefined ? updates.magnificationEnabled : this.config.magnificationEnabled,
+      colorInversionEnabled: updates.colorInversionEnabled !== undefined ? updates.colorInversionEnabled : this.config.colorInversionEnabled,
+      fontSize: updates.fontSize !== undefined ? updates.fontSize : this.config.fontSize,
+      colorScheme: updates.colorScheme !== undefined ? updates.colorScheme : this.config.colorScheme,
+      animationDuration: updates.animationDuration !== undefined ? updates.animationDuration : this.config.animationDuration
+    };
     
     // 应用配置变更
     await this.applyConfigChanges(oldConfig, this.config);
@@ -171,7 +247,7 @@ export class AccessibilityManager {
     try {
       // 这里需要调用 HarmonyOS API 来改变全局字体大小
       // 或者通过 CSS 变量来控制
-      const fontSizeMap = {
+      const fontSizeMap: Record<string, string> = {
         'small': '0.875rem',
         'normal': '1rem',
         'large': '1.25rem',
@@ -179,7 +255,8 @@ export class AccessibilityManager {
       };
       
       // 模拟应用字体大小变更
-      hilog.info(0x0000, 'AccessibilityManager', `应用字体大小变更: ${fontSize} -> ${fontSizeMap[fontSize]}`);
+      const targetSize = fontSizeMap[fontSize] || '1rem';
+      hilog.info(0x0000, 'AccessibilityManager', `应用字体大小变更: ${fontSize} -> ${targetSize}`);
     } catch (error) {
       hilog.error(0x0000, 'AccessibilityManager', `应用字体大小变更失败: ${JSON.stringify(error)}`);
     }
@@ -202,14 +279,15 @@ export class AccessibilityManager {
    */
   private async applyAnimationDurationChange(animationDuration: string): Promise<void> {
     try {
-      const durationMap = {
+      const durationMap: Record<string, number> = {
         'normal': 1.0,
         'slow': 2.0,
         'disabled': 0.0
       };
       
       // 模拟应用动画持续时间变更
-      hilog.info(0x0000, 'AccessibilityManager', `应用动画持续时间变更: ${animationDuration} -> ${durationMap[animationDuration]}x`);
+      const targetDuration = durationMap[animationDuration] || 1.0;
+      hilog.info(0x0000, 'AccessibilityManager', `应用动画持续时间变更: ${animationDuration} -> ${targetDuration}x`);
     } catch (error) {
       hilog.error(0x0000, 'AccessibilityManager', `应用动画持续时间变更失败: ${JSON.stringify(error)}`);
     }
@@ -260,13 +338,7 @@ export class AccessibilityManager {
   /**
    * 设置元素的无障碍属性
    */
-  public setAccessibilityAttributes(elementId: string, attributes: {
-    label?: string;
-    hint?: string;
-    role?: string;
-    state?: string;
-    value?: string;
-  }): void {
+  public setAccessibilityAttributes(elementId: string, attributes: AccessibilityAttributes): void {
     try {
       // 这里需要调用 HarmonyOS API 设置元素的无障碍属性
       hilog.info(0x0000, 'AccessibilityManager', `设置无障碍属性 ${elementId}: ${JSON.stringify(attributes)}`);
@@ -288,12 +360,13 @@ export class AccessibilityManager {
       }
       
       // 触发焦点事件
-      this.emitEvent({
+      const event: AccessibilityEvent = {
         type: 'focus',
         element: elementId,
         description: `焦点移动到 ${elementId}`,
         timestamp: Date.now()
-      });
+      };
+      this.emitEvent(event);
     } catch (error) {
       hilog.error(0x0000, 'AccessibilityManager', `设置焦点失败: ${JSON.stringify(error)}`);
     }
@@ -302,7 +375,7 @@ export class AccessibilityManager {
   /**
    * 获取推荐的触摸目标大小
    */
-  public getRecommendedTouchTargetSize(): { width: number; height: number } {
+  public getRecommendedTouchTargetSize(): TouchTargetSize {
     // 根据无障碍指南，触摸目标最小应为 44dp x 44dp
     const baseSize = 44;
     
@@ -318,17 +391,20 @@ export class AccessibilityManager {
     }
     
     const size = Math.round(baseSize * multiplier);
-    return { width: size, height: size };
+    const result: TouchTargetSize = { width: size, height: size };
+    return result;
   }
 
   /**
    * 获取推荐的颜色对比度
    */
-  public getRecommendedColorContrast(): { normal: number; large: number } {
+  public getRecommendedColorContrast(): ColorContrast {
     if (this.config.highContrastEnabled) {
-      return { normal: 7.0, large: 4.5 }; // AAA 级别
+      const aaaLevel: ColorContrast = { normal: 7.0, large: 4.5 }; // AAA 级别
+      return aaaLevel;
     } else {
-      return { normal: 4.5, large: 3.0 }; // AA 级别
+      const aaLevel: ColorContrast = { normal: 4.5, large: 3.0 }; // AA 级别
+      return aaLevel;
     }
   }
 
@@ -336,14 +412,72 @@ export class AccessibilityManager {
    * 检查颜色对比度是否符合要求
    */
   public checkColorContrast(foreground: string, background: string, isLargeText: boolean = false): boolean {
-    // 这里需要实现颜色对比度计算算法
-    // 暂时返回模拟结果
-    const requiredContrast = this.getRecommendedColorContrast();
-    const threshold = isLargeText ? requiredContrast.large : requiredContrast.normal;
-    
-    // 模拟对比度检查
-    const mockContrast = Math.random() * 10;
-    return mockContrast >= threshold;
+    try {
+      // 实现真实的颜色对比度计算算法
+      const contrast = this.calculateColorContrast(foreground, background);
+      const requiredContrast = this.getRecommendedColorContrast();
+      const threshold = isLargeText ? requiredContrast.large : requiredContrast.normal;
+      
+      return contrast >= threshold;
+    } catch (error) {
+      hilog.error(0x0000, 'AccessibilityManager', '颜色对比度检查失败，返回false');
+      return false;
+    }
+  }
+
+  /**
+   * 计算两个颜色之间的对比度
+   */
+  private calculateColorContrast(foreground: string, background: string): number {
+    try {
+      // 将颜色转换为RGB值
+      const fgRgb = this.hexToRgb(foreground);
+      const bgRgb = this.hexToRgb(background);
+      
+      if (!fgRgb || !bgRgb) {
+        return 0;
+      }
+      
+      // 计算相对亮度
+      const fgLuminance = this.getRelativeLuminance(fgRgb);
+      const bgLuminance = this.getRelativeLuminance(bgRgb);
+      
+      // 计算对比度
+      const lighter = Math.max(fgLuminance, bgLuminance);
+      const darker = Math.min(fgLuminance, bgLuminance);
+      
+      return (lighter + 0.05) / (darker + 0.05);
+    } catch (error) {
+      hilog.error(0x0000, 'AccessibilityManager', '计算颜色对比度失败');
+      return 0;
+    }
+  }
+
+  /**
+   * 将十六进制颜色转换为RGB
+   */
+  private hexToRgb(hex: string): RgbColor | null {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } as RgbColor : null;
+  }
+
+  /**
+   * 计算相对亮度
+   */
+  private getRelativeLuminance(rgb: RgbColor): number {
+    const rsRGB = rgb.r / 255;
+    const gsRGB = rgb.g / 255;
+    const bsRGB = rgb.b / 255;
+
+    const r = rsRGB <= 0.03928 ? rsRGB / 12.92 : Math.pow((rsRGB + 0.055) / 1.055, 2.4);
+    const g = gsRGB <= 0.03928 ? gsRGB / 12.92 : Math.pow((gsRGB + 0.055) / 1.055, 2.4);
+    const b = bsRGB <= 0.03928 ? bsRGB / 12.92 : Math.pow((bsRGB + 0.055) / 1.055, 2.4);
+
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
   }
 
   /**
@@ -409,11 +543,7 @@ export class AccessibilityManager {
   /**
    * 生成无障碍报告
    */
-  public generateAccessibilityReport(): {
-    config: AccessibilityConfig;
-    recommendations: string[];
-    issues: string[];
-  } {
+  public generateAccessibilityReport(): AccessibilityReport {
     const recommendations: string[] = [];
     const issues: string[] = [];
     
@@ -434,11 +564,12 @@ export class AccessibilityManager {
       recommendations.push('如果您对动画敏感，可以考虑减少动画效果');
     }
     
-    return {
+    const report: AccessibilityReport = {
       config: this.config,
       recommendations,
       issues
     };
+    return report;
   }
 
   /**
@@ -446,7 +577,7 @@ export class AccessibilityManager {
    */
   private async saveConfig(): Promise<void> {
     try {
-      await StorageUtil.setItem(this.storageKey, JSON.stringify(this.config));
+      await StorageUtil.setString(this.storageKey, JSON.stringify(this.config));
     } catch (error) {
       hilog.error(0x0000, 'AccessibilityManager', `保存无障碍配置失败: ${JSON.stringify(error)}`);
     }
@@ -457,10 +588,23 @@ export class AccessibilityManager {
    */
   private async loadConfig(): Promise<void> {
     try {
-      const configStr = await StorageUtil.getItem(this.storageKey);
+      const configStr = await StorageUtil.getString(this.storageKey, '');
       if (configStr) {
-        const savedConfig = JSON.parse(configStr);
-        this.config = { ...this.config, ...savedConfig };
+        const savedConfig: Record<string, Object> = JSON.parse(configStr) as Record<string, Object>;
+        // 手动合并配置对象
+        const mergedConfig: AccessibilityConfig = {
+          screenReaderEnabled: (savedConfig.screenReaderEnabled as boolean) || this.config.screenReaderEnabled,
+          highContrastEnabled: (savedConfig.highContrastEnabled as boolean) || this.config.highContrastEnabled,
+          largeTextEnabled: (savedConfig.largeTextEnabled as boolean) || this.config.largeTextEnabled,
+          reduceMotionEnabled: (savedConfig.reduceMotionEnabled as boolean) || this.config.reduceMotionEnabled,
+          voiceOverEnabled: (savedConfig.voiceOverEnabled as boolean) || this.config.voiceOverEnabled,
+          magnificationEnabled: (savedConfig.magnificationEnabled as boolean) || this.config.magnificationEnabled,
+          colorInversionEnabled: (savedConfig.colorInversionEnabled as boolean) || this.config.colorInversionEnabled,
+          fontSize: (savedConfig.fontSize as 'small' | 'normal' | 'large' | 'extra_large') || this.config.fontSize,
+          colorScheme: (savedConfig.colorScheme as 'light' | 'dark' | 'high_contrast') || this.config.colorScheme,
+          animationDuration: (savedConfig.animationDuration as 'normal' | 'slow' | 'disabled') || this.config.animationDuration
+        };
+        this.config = mergedConfig;
       }
     } catch (error) {
       hilog.warn(0x0000, 'AccessibilityManager', '加载无障碍配置失败，使用默认配置');

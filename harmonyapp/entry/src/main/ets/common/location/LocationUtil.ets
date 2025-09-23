@@ -112,7 +112,7 @@ export class LocationUtil {
       hilog.info(DOMAIN_NUMBER, TAG, '开始获取当前位置');
 
       // 配置位置请求参数
-      const requestInfo = {
+      const requestInfo: geoLocationManager.CurrentLocationRequest = {
         priority: geoLocationManager.LocationRequestPriority.FIRST_FIX,
         scenario: geoLocationManager.LocationRequestScenario.UNSET,
         maxAccuracy: 100,
@@ -122,14 +122,15 @@ export class LocationUtil {
       // 获取位置
       const location = await geoLocationManager.getCurrentLocation(requestInfo);
       
-      const locationInfo = {
+      const locationInfo: LocationInfo = {
         latitude: location.latitude,
         longitude: location.longitude,
         accuracy: location.accuracy,
         altitude: location.altitude,
         speed: location.speed,
         bearing: location.direction,
-        timestamp: location.timeStamp
+        timestamp: location.timeStamp,
+        locationName: '当前位置'
       };
 
       // 尝试获取地址信息
@@ -163,7 +164,7 @@ export class LocationUtil {
 
       hilog.info(DOMAIN_NUMBER, TAG, '开始位置监听');
 
-      const requestInfo = {
+      const requestInfo: geoLocationManager.LocationRequest = {
         priority: geoLocationManager.LocationRequestPriority.ACCURACY,
         scenario: geoLocationManager.LocationRequestScenario.UNSET,
         timeInterval: 5000, // 5秒更新一次
@@ -174,14 +175,15 @@ export class LocationUtil {
       LocationUtil.locationCallback = callback;
 
       await geoLocationManager.on('locationChange', requestInfo, (location: geoLocationManager.Location) => {
-        const locationInfo = {
+        const locationInfo: LocationInfo = {
           latitude: location.latitude,
           longitude: location.longitude,
           accuracy: location.accuracy,
           altitude: location.altitude,
           speed: location.speed,
           bearing: location.direction,
-          timestamp: location.timeStamp
+          timestamp: location.timeStamp,
+          locationName: '实时位置'
         };
 
         // 异步获取地址信息
@@ -239,7 +241,7 @@ export class LocationUtil {
     try {
       hilog.debug(DOMAIN_NUMBER, TAG, `反向地理编码: ${latitude}, ${longitude}`);
 
-      const reverseRequest = {
+      const reverseRequest: geoLocationManager.ReverseGeoCodeRequest = {
         latitude: latitude,
         longitude: longitude,
         maxItems: 1
@@ -253,7 +255,7 @@ export class LocationUtil {
       }
 
       const geoAddress = geoAddresses[0];
-      const addressInfo = {
+      const addressInfo: AddressInfo = {
         country: geoAddress.countryName,
         province: geoAddress.administrativeArea,
         city: geoAddress.locality,

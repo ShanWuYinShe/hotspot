@@ -408,11 +408,11 @@ import geoLocationManager from '@ohos.geoLocationManager';
 import abilityAccessCtrl from '@ohos.abilityAccessCtrl';
 
 class LocationService {
-  async requestLocationPermission(): Promise<boolean> {
+  async requestLocationPermission(context: Context): Promise<boolean> {
     const atManager = abilityAccessCtrl.createAtManager();
     
     try {
-      await atManager.requestPermissionsFromUser(getContext(), [
+      await atManager.requestPermissionsFromUser(context, [
         'ohos.permission.APPROXIMATELY_LOCATION',
         'ohos.permission.LOCATION'
       ]);
@@ -452,9 +452,9 @@ import preferences from '@ohos.data.preferences';
 class StorageService {
   private prefs: preferences.Preferences | null = null;
   
-  async initialize(): Promise<void> {
+  async initialize(context: Context): Promise<void> {
     try {
-      this.prefs = await preferences.getPreferences(getContext(), 'hotspot_storage');
+      this.prefs = await preferences.getPreferences(context, 'hotspot_storage');
     } catch (error) {
       console.error('存储初始化失败:', error);
       throw error;
@@ -537,14 +537,54 @@ class ErrorHandler {
 ### 8.1 Context 获取原则
 
 **严格的 Context 获取规范**：
-- **页面组件专用**：只有 `@Entry` 标记的页面组件才能直接调用 `getUIContext().getHostContext()`
-- **服务类禁用**：所有服务类、工具类、管理器类禁止直接调用 `getContext()这样类似的函数去获取context`
-- **依赖注入原则**：非页面类需要 Context 时，必须通过构造函数或方法参数传入
+- **@Component 组件专用**：只有使用 `@Component` 装饰器的组件类才能直接调用 `getUIContext().getHostContext()`
+- **服务类禁用**：所有服务类、工具类、管理器类禁止直接调用 `getContext()` 这样类似的函数去获取 context
+- **依赖注入原则**：非组件类需要 Context 时，必须通过构造函数或方法参数传入
 
 **Context 使用要点**：
-- 页面组件使用 `this.getUIContext().getHostContext()` 获取 Context
+- 所有 `@Component` 组件（包括 `@Entry` 页面组件和普通组件）都可以使用 `this.getUIContext().getHostContext()` 获取 Context
 - 服务类通过构造函数或方法参数接收 Context
 - 禁止服务类直接调用 `getContext()` 等函数获取 Context
+
+**正确的使用示例**：
+```typescript
+// ✅ 正确：@Entry 页面组件获取 Context
+@Entry
+@Component
+struct MainPage {
+  private locationService = new LocationService();
+  
+  aboutToAppear() {
+    const context = this.getUIContext().getHostContext();
+    this.locationService.requestLocationPermission(context);
+  }
+}
+
+// ✅ 正确：普通 @Component 组件也可以获取 Context
+@Component
+struct UserProfile {
+  private storageService = new StorageService();
+  
+  aboutToAppear() {
+    const context = this.getUIContext().getHostContext();
+    this.storageService.initialize(context);
+  }
+}
+
+// ✅ 正确：服务类通过参数接收 Context
+class LocationService {
+  async requestLocationPermission(context: Context): Promise<boolean> {
+    // 使用传入的 context
+  }
+}
+
+// ❌ 错误：服务类直接获取 Context
+class LocationService {
+  async requestLocationPermission(): Promise<boolean> {
+    const context = getContext(); // 禁止！
+  }
+}
+```
 
 ### 8.2 Context 传递模式
 
@@ -565,7 +605,7 @@ class ErrorHandler {
 - **及时释放**：在组件销毁时清理 Context 引用
 
 **使用要点**：
-- 页面组件在 aboutToAppear 中获取 Context 并传递给服务
+- `@Component` 组件在 aboutToAppear 中获取 Context 并传递给服务
 - 工具类使用静态方法接收 Context 参数
 - 服务类通过方法参数接收 Context
 - 如需在类中保存 Context，必须提供 cleanup 方法及时清理引用
@@ -583,7 +623,7 @@ class ErrorHandler {
 - [ ] 是否有内存泄漏风险
 - [ ] 是否正确处理了权限申请
 - [ ] 是否有性能问题（如不必要的重渲染）
-- [ ] **是否正确管理 Context（非页面类不得直接获取 Context）**
+- [ ] **是否正确管理 Context（非组件类不得直接获取 Context）**
 - [ ] **是否通过依赖注入方式传递 Context**
 - [ ] **是否避免了不必要的显式类型声明**
 - [ ] **是否充分利用了 TypeScript 结构类型检查**

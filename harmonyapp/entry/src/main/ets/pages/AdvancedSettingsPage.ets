@@ -5,10 +5,8 @@
 import { PerformanceOptimizer, AdaptiveConfig } from '../common/performance/PerformanceOptimizer';
 import { SmartNotificationService, NotificationConfig } from '../common/services/SmartNotificationService';
 import { AccessibilityManager, AccessibilityConfig } from '../common/accessibility/AccessibilityManager';
-import { AIRecommendationService } from '../common/services/AIRecommendationService';
-import { SystemToast } from '../common/utils/SystemToast';
-import { SystemIcon } from '../components/SystemIcon';
-import { AppIcon } from '../common/constants/AppIcon';
+import { SystemToast } from '../components/SystemToast';
+import { SystemIcon, AppIcon } from '../components/SystemIcon';
 
 @Entry
 @Component
@@ -22,7 +20,6 @@ struct AdvancedSettingsPage {
   private performanceOptimizer = PerformanceOptimizer.getInstance();
   private notificationService = SmartNotificationService.getInstance();
   private accessibilityManager = AccessibilityManager.getInstance();
-  private aiService = AIRecommendationService.getInstance();
 
   aboutToAppear() {
     this.loadConfigs();
@@ -40,7 +37,7 @@ struct AdvancedSettingsPage {
       this.accessibilityConfig = this.accessibilityManager.getConfig();
       
     } catch (error) {
-      SystemToast.showError(`加载配置失败: ${error}`);
+      SystemToast.showError(`加载配置失败: ${error}`, this.getUIContext());
     } finally {
       this.loading = false;
     }
@@ -591,9 +588,9 @@ struct AdvancedSettingsPage {
     try {
       this.performanceOptimizer.setAdaptiveConfig(updates);
       this.adaptiveConfig = this.performanceOptimizer.getAdaptiveConfig();
-      SystemToast.showSuccess('配置已更新');
+      SystemToast.showSuccess('配置已更新', this.getUIContext());
     } catch (error) {
-      SystemToast.showError(`更新配置失败: ${error}`);
+      SystemToast.showError(`更新配置失败: ${error}`, this.getUIContext());
     }
   }
 
@@ -601,9 +598,9 @@ struct AdvancedSettingsPage {
     try {
       await this.notificationService.updateConfig(updates);
       this.notificationConfig = this.notificationService.getConfig();
-      SystemToast.showSuccess('通知配置已更新');
+      SystemToast.showSuccess('通知配置已更新', this.getUIContext());
     } catch (error) {
-      SystemToast.showError(`更新通知配置失败: ${error}`);
+      SystemToast.showError(`更新通知配置失败: ${error}`, this.getUIContext());
     }
   }
 
@@ -611,9 +608,9 @@ struct AdvancedSettingsPage {
     try {
       await this.accessibilityManager.updateConfig(updates);
       this.accessibilityConfig = this.accessibilityManager.getConfig();
-      SystemToast.showSuccess('无障碍配置已更新');
+      SystemToast.showSuccess('无障碍配置已更新', this.getUIContext());
     } catch (error) {
-      SystemToast.showError(`更新无障碍配置失败: ${error}`);
+      SystemToast.showError(`更新无障碍配置失败: ${error}`, this.getUIContext());
     }
   }
 
@@ -624,70 +621,70 @@ struct AdvancedSettingsPage {
         quietHours: { ...currentConfig.quietHours, ...updates }
       });
       this.notificationConfig = this.notificationService.getConfig();
-      SystemToast.showSuccess('静默时间配置已更新');
+      SystemToast.showSuccess('静默时间配置已更新', this.getUIContext());
     } catch (error) {
-      SystemToast.showError(`更新静默时间配置失败: ${error}`);
+      SystemToast.showError(`更新静默时间配置失败: ${error}`, this.getUIContext());
     }
   }
 
   // 对话框方法（简化实现）
   private showImageQualityDialog(): void {
-    SystemToast.showInfo('图片质量设置对话框');
+    SystemToast.showInfo('图片质量设置对话框', this.getUIContext());
   }
 
   private showCacheSizeDialog(): void {
-    SystemToast.showInfo('缓存大小设置对话框');
+    SystemToast.showInfo('缓存大小设置对话框', this.getUIContext());
   }
 
   private showNetworkTimeoutDialog(): void {
-    SystemToast.showInfo('网络超时设置对话框');
+    SystemToast.showInfo('网络超时设置对话框', this.getUIContext());
   }
 
   private showConcurrentRequestsDialog(): void {
-    SystemToast.showInfo('并发请求数设置对话框');
+    SystemToast.showInfo('并发请求数设置对话框', this.getUIContext());
   }
 
   private showFontSizeDialog(): void {
-    SystemToast.showInfo('字体大小设置对话框');
+    SystemToast.showInfo('字体大小设置对话框', this.getUIContext());
   }
 
   private showColorSchemeDialog(): void {
-    SystemToast.showInfo('颜色方案设置对话框');
+    SystemToast.showInfo('颜色方案设置对话框', this.getUIContext());
   }
 
   private showAnimationDurationDialog(): void {
-    SystemToast.showInfo('动画速度设置对话框');
+    SystemToast.showInfo('动画速度设置对话框', this.getUIContext());
   }
 
   private showTimePickerDialog(type: 'start' | 'end'): void {
-    SystemToast.showInfo(`${type === 'start' ? '开始' : '结束'}时间设置对话框`);
+    SystemToast.showInfo(`${type === 'start' ? '开始' : '结束'}时间设置对话框`, this.getUIContext());
   }
 
   // 操作方法
   private showPerformanceReport(): void {
-    SystemToast.showInfo('查看性能报告');
+    SystemToast.showInfo('查看性能报告', this.getUIContext());
   }
 
   private clearCache(): void {
     this.performanceOptimizer.clearCache();
-    SystemToast.showSuccess('缓存已清理');
+    SystemToast.showSuccess('缓存已清理', this.getUIContext());
   }
 
   private resetPerformanceStats(): void {
     this.performanceOptimizer.resetPerformanceStats();
-    SystemToast.showSuccess('性能统计已重置');
+    SystemToast.showSuccess('性能统计已重置', this.getUIContext());
   }
 
   private showRecommendationAnalysis(): void {
-    SystemToast.showInfo('查看推荐分析');
+    SystemToast.showInfo('查看推荐分析', this.getUIContext());
   }
 
   private async clearRecommendationData(): Promise<void> {
     try {
       // 这里需要实现清除推荐数据的逻辑
-      SystemToast.showSuccess('推荐数据已清除');
+      SystemToast.showSuccess('推荐数据已清除', this.getUIContext());
     } catch (error) {
-      SystemToast.showError(`清除推荐数据失败: ${error}`);
+      SystemToast.showError(`清除推荐数据失败: ${error}`, this.getUIContext());
     }
   }
 }

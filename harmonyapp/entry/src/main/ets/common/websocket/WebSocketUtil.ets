@@ -54,7 +54,7 @@ export class WebSocketUtil {
 
       this.ws.on('message', (err, value) => {
         if (err) {
-          console.error('WebSocket消息错误:', err);
+          hilog.error(DOMAIN_NUMBER, TAG, `WebSocket消息错误: ${JSON.stringify(err)}`);
           return;
         }
         
@@ -65,7 +65,7 @@ export class WebSocketUtil {
             handler(message.data);
           }
         } catch (error) {
-          console.error('WebSocket消息解析失败:', error);
+          hilog.error(DOMAIN_NUMBER, TAG, `WebSocket消息解析失败: ${JSON.stringify(error)}`);
         }
       });
 
@@ -74,7 +74,7 @@ export class WebSocketUtil {
       });
 
       this.ws.on('error', (err) => {
-        console.error('WebSocket错误:', err);
+        hilog.error(DOMAIN_NUMBER, TAG, `WebSocket错误: ${JSON.stringify(err)}`);
         reject(err);
       });
 
@@ -87,7 +87,7 @@ export class WebSocketUtil {
    */
   send(type: string, data: Record<string, Object>): void {
     if (!this.ws) {
-      console.error('WebSocket未连接');
+      hilog.error(DOMAIN_NUMBER, TAG, 'WebSocket未连接');
       return;
     }
 

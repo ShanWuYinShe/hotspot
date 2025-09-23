@@ -2,16 +2,20 @@
  * 智能通知中心组件
  * 展示和管理所有类型的智能通知
  */
-import { SmartNotification, SmartNotificationService } from '../common/services/SmartNotificationService';
-import { SystemIcon } from './SystemIcon';
-import { AppIcon } from '../common/constants/AppIcon';
-import { SystemToast } from '../common/utils/SystemToast';
+import { SmartNotification, SmartNotificationService, NotificationFilter, NotificationAction } from '../common/services/SmartNotificationService';
+import { SystemIcon, AppIcon } from './SystemIcon';
+import { SystemToast } from './SystemToast';
 import { AccessibilityManager } from '../common/accessibility/AccessibilityManager';
+
+interface FilterOption {
+  key: string;
+  label: string;
+}
 
 @Component
 export struct NotificationCenter {
   @State private notifications: SmartNotification[] = [];
-  @State private selectedFilter: 'all' | 'unread' | 'performance' | 'social' | 'recommendation' = 'all';
+  @State private selectedFilter: 'all' | 'unread' | 'performance' | 'social' = 'all';
   @State private isLoading: boolean = false;
   @State private showActions: boolean = false;
 
@@ -30,15 +34,18 @@ export struct NotificationCenter {
     try {
       this.isLoading = true;
       
-      const filter = this.selectedFilter === 'all' ? undefined : {
-        type: this.selectedFilter === 'unread' ? undefined : this.selectedFilter as SmartNotification['type'],
-        read: this.selectedFilter === 'unread' ? false : undefined
-      };
+      let filter: NotificationFilter | undefined = undefined;
+      if (this.selectedFilter !== 'all') {
+        filter = {
+          type: this.selectedFilter === 'unread' ? undefined : this.selectedFilter as ('system' | 'performance' | 'social' | 'security'),
+          read: this.selectedFilter === 'unread' ? false : undefined
+        };
+      }
       
       this.notifications = this.notificationService.getNotifications(filter);
       
     } catch (error) {
-      SystemToast.showError(`加载通知失败: ${error}`);
+      SystemToast.showError(`加载通知失败: ${error}`, this.getUIContext());
     } finally {
       this.isLoading = false;
     }
@@ -83,7 +90,7 @@ export struct NotificationCenter {
       }
       
     } catch (error) {
-      SystemToast.showError(`处理通知失败: ${error}`);
+      SystemToast.showError(`处理通知失败: ${error}`, this.getUIContext());
     }
   }
 
@@ -95,11 +102,11 @@ export struct NotificationCenter {
       const action = notification.actions?.find(a => a.id === actionId);
       if (action) {
         await action.handler();
-        SystemToast.showSuccess(`已执行操作：${action.label}`);
+        SystemToast.showSuccess(`已执行操作：${action.label}`, this.getUIContext());
         this.loadNotifications();
       }
     } catch (error) {
-      SystemToast.showError(`执行操作失败: ${error}`);
+      SystemToast.showError(`执行操作失败: ${error}`, this.getUIContext());
     }
   }
 
@@ -110,13 +117,13 @@ export struct NotificationCenter {
     try {
       await this.notificationService.deleteNotification(notification.id);
       this.loadNotifications();
-      SystemToast.showSuccess('通知已删除');
+      SystemToast.showSuccess('通知已删除', this.getUIContext());
       
       // 无障碍播报
       await this.accessibilityManager.announceText('通知已删除');
       
     } catch (error) {
-      SystemToast.showError(`删除通知失败: ${error}`);
+      SystemToast.showError(`删除通知失败: ${error}`, this.getUIContext());
     }
   }
 
@@ -127,17 +134,17 @@ export struct NotificationCenter {
     try {
       const filterType = this.selectedFilter === 'all' || this.selectedFilter === 'unread' 
         ? undefined 
-        : this.selectedFilter as SmartNotification['type'];
+        : this.selectedFilter as ('system' | 'performance' | 'social' | 'security');
       
       await this.notificationService.markAllAsRead(filterType);
       this.loadNotifications();
-      SystemToast.showSuccess('已全部标记为已读');
+      SystemToast.showSuccess('已全部标记为已读', this.getUIContext());
       
       // 无障碍播报
       await this.accessibilityManager.announceText('所有通知已标记为已读');
       
     } catch (error) {
-      SystemToast.showError(`标记失败: ${error}`);
+      SystemToast.showError(`标记失败: ${error}`, this.getUIContext());
     }
   }
 
@@ -145,55 +152,68 @@ export struct NotificationCenter {
    * 获取通知类型图标
    */
   private getNotificationIcon(notification: SmartNotification): AppIcon {
-    const iconMap = {
-      'system': AppIcon.SETTINGS,
-      'performance': AppIcon.CHART,
-      'recommendation': AppIcon.STAR,
-      'social': AppIcon.PERSON,
-      'security': AppIcon.SHIELD
-    };
-    return iconMap[notification.type] || AppIcon.INFO;
+    switch (notification.type) {
+      case 'system':
+        return AppIcon.SETTINGS;
+      case 'performance':
+        return AppIcon.CHART;
+      case 'social':
+        return AppIcon.PERSON;
+      case 'security':
+        return AppIcon.SHIELD;
+      default:
+        return AppIcon.INFO;
+    }
   }
 
   /**
    * 获取优先级颜色
    */
-  private getPriorityColor(priority: SmartNotification['priority']): ResourceColor {
-    const colorMap = {
-      'low': Color.Gray,
-      'medium': Color.Blue,
-      'high': Color.Orange,
-      'critical': Color.Red
-    };
-    return colorMap[priority];
+  private getPriorityColor(priority: 'low' | 'medium' | 'high' | 'critical'): ResourceColor {
+    switch (priority) {
+      case 'low':
+        return Color.Gray;
+      case 'medium':
+        return Color.Blue;
+      case 'high':
+        return Color.Orange;
+      case 'critical':
+        return Color.Red;
+      default:
+        return Color.Gray;
+    }
   }
 
   /**
    * 获取类型文本
    */
-  private getTypeText(type: SmartNotification['type']): string {
-    const typeMap = {
-      'system': '系统',
-      'performance': '性能',
-      'recommendation': '推荐',
-      'social': '社交',
-      'security': '安全'
-    };
-    return typeMap[type];
+  private getTypeText(type: 'system' | 'performance' | 'social' | 'security'): string {
+    switch (type) {
+      case 'system':
+        return '系统';
+      case 'performance':
+        return '性能';
+      case 'social':
+        return '社交';
+      case 'security':
+        return '安全';
+      default:
+        return '未知';
+    }
   }
 
   /**
    * 显示通知操作菜单
    */
   private showNotificationActions(notification: SmartNotification): void {
-    SystemToast.showInfo(`显示${notification.title}的操作菜单`);
+    SystemToast.showInfo(`显示${notification.title}的操作菜单`, this.getUIContext());
   }
 
   /**
    * 显示通知详情
    */
   private showNotificationDetail(notification: SmartNotification): void {
-    SystemToast.showInfo(`显示${notification.title}的详情`);
+    SystemToast.showInfo(`显示${notification.title}的详情`, this.getUIContext());
   }
 
   build() {
@@ -232,8 +252,7 @@ export struct NotificationCenter {
             { key: 'unread', label: '未读' },
             { key: 'performance', label: '性能' },
             { key: 'social', label: '社交' },
-            { key: 'recommendation', label: '推荐' }
-          ], (filter) => {
+          ], (filter: FilterOption) => {
             Button(filter.label)
               .type(this.selectedFilter === filter.key ? ButtonType.Capsule : ButtonType.Normal)
               .backgroundColor(this.selectedFilter === filter.key 
@@ -245,7 +264,7 @@ export struct NotificationCenter {
               .fontSize(14)
               .padding({ left: 16, right: 16, top: 8, bottom: 8 })
               .onClick(() => {
-                this.selectedFilter = filter.key as any;
+                this.selectedFilter = filter.key as ('all' | 'unread' | 'performance' | 'social');
                 this.loadNotifications();
               })
           })
@@ -302,7 +321,7 @@ export struct NotificationCenter {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('sys.color.ohos_id_color_background_light'))
+    .backgroundColor($r('sys.color.ohos_id_color_background'))
   }
 
   /**
@@ -351,7 +370,7 @@ export struct NotificationCenter {
             .fontSize(12)
             .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
             .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-            .backgroundColor($r('sys.color.ohos_id_color_background_light'))
+            .backgroundColor($r('sys.color.ohos_id_color_background'))
             .borderRadius(4)
         }
         .width('100%')
@@ -372,7 +391,7 @@ export struct NotificationCenter {
           // 操作按钮
           if (notification.actionable && notification.actions) {
             Row({ space: 8 }) {
-              ForEach(notification.actions.slice(0, 2), (action) => {
+              ForEach(notification.actions.slice(0, 2), (action: NotificationAction) => {
                 Button(action.label)
                   .type(ButtonType.Capsule)
                   .backgroundColor(action.type === 'primary' 

@@ -231,7 +231,7 @@ struct SettingsPage {
       hilog.info(DOMAIN_NUMBER, TAG, '设置已保存');
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `保存设置失败: ${error}`);
-      SystemToast.showError('保存设置失败');
+      SystemToast.showError('保存设置失败', this.getUIContext());
     }
   }
 
@@ -253,18 +253,18 @@ struct SettingsPage {
     switch (key) {
       case 'theme_mode':
         // 应用主题变更
-        SystemToast.show(`主题已切换为: ${this.getThemeDisplayName(value as string)}`);
+        SystemToast.showInfo(`主题已切换为: ${this.getThemeDisplayName(value as string)}`, this.getUIContext());
         break;
       case 'font_size':
         // 应用字体大小变更
-        SystemToast.show(`字体大小已调整为: ${this.getFontSizeDisplayName(value as string)}`);
+        SystemToast.showInfo(`字体大小已调整为: ${this.getFontSizeDisplayName(value as string)}`, this.getUIContext());
         break;
       case 'location_sharing':
         // 位置共享设置变更
-        SystemToast.show((value as boolean) ? '已开启位置共享' : '已关闭位置共享');
+        SystemToast.showInfo((value as boolean) ? '已开启位置共享' : '已关闭位置共享', this.getUIContext());
         break;
       default:
-        SystemToast.show('设置已更新');
+        SystemToast.show('设置已更新', this.getUIContext());
         break;
     }
   }
@@ -299,11 +299,11 @@ struct SettingsPage {
       // 清理应用缓存
       // 这里应该清理实际的缓存数据
       
-      SystemToast.show('正在清理缓存...');
+      SystemToast.show('正在清理缓存...', this.getUIContext());
       
       // 模拟清理过程
       setTimeout(() => {
-        SystemToast.showSuccess('缓存清理完成');
+        SystemToast.showSuccess('缓存清理完成', this.getUIContext());
         
         // 更新缓存大小显示
         const cacheItem = this.settingsGroups
@@ -317,7 +317,7 @@ struct SettingsPage {
       
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `清理缓存失败: ${error}`);
-      SystemToast.showError('清理缓存失败');
+      SystemToast.showError('清理缓存失败', this.getUIContext());
     }
   }
 
@@ -325,18 +325,18 @@ struct SettingsPage {
    * 导出数据
    */
   private async exportData(): Promise<void> {
-    SystemToast.show('数据导出功能开发中...');
+    SystemToast.show('数据导出功能开发中...', this.getUIContext());
   }
 
   /**
    * 检查更新
    */
   private async checkUpdate(): Promise<void> {
-    SystemToast.show('检查更新中...');
+    SystemToast.show('检查更新中...', this.getUIContext());
     
     // 模拟检查更新
     setTimeout(() => {
-      SystemToast.showSuccess('当前已是最新版本');
+      SystemToast.showSuccess('当前已是最新版本', this.getUIContext());
     }, 2000);
   }
 
@@ -344,14 +344,14 @@ struct SettingsPage {
    * 显示用户协议
    */
   private showUserAgreement(): void {
-    SystemToast.show('用户协议页面开发中...');
+    SystemToast.show('用户协议页面开发中...', this.getUIContext());
   }
 
   /**
    * 显示隐私政策
    */
   private showPrivacyPolicy(): void {
-    SystemToast.show('隐私政策页面开发中...');
+    SystemToast.show('隐私政策页面开发中...', this.getUIContext());
   }
 
   /**
@@ -547,7 +547,7 @@ struct SettingsPage {
 
     // 这里应该显示选择对话框
     // 由于HarmonyOS的对话框API可能不同，这里使用Toast作为示例
-    SystemToast.show(`选择 ${item.title}: ${item.options.join(', ')}`);
+    SystemToast.showInfo(`选择 ${item.title}: ${item.options.join(', ')}`, this.getUIContext());
   }
 }
 

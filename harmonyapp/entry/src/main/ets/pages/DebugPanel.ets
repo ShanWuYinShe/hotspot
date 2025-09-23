@@ -3,11 +3,10 @@
  * 提供性能监控、服务状态、配置管理等调试功能
  */
 import { PerformanceOptimizer, PerformanceMetrics, PerformanceAlert } from '../common/performance/PerformanceOptimizer';
-import { AIRecommendationService } from '../common/services/AIRecommendationService';
 import { SmartNotificationService } from '../common/services/SmartNotificationService';
 import { AccessibilityManager } from '../common/accessibility/AccessibilityManager';
 import { DistributedSyncService } from '../common/services/DistributedSyncService';
-import { SystemToast } from '../common/utils/SystemToast';
+import { SystemToast } from '../components/SystemToast';
 
 @Entry
 @Component
@@ -16,12 +15,10 @@ struct DebugPanel {
   @State private performanceAlerts: PerformanceAlert[] = [];
   @State private notificationCount: number = 0;
   @State private syncServiceStatus: string = '未知';
-  @State private aiServiceStatus: string = '未知';
   @State private selectedTab: number = 0;
   @State private refreshing: boolean = false;
 
   private performanceOptimizer = PerformanceOptimizer.getInstance();
-  private aiService = AIRecommendationService.getInstance();
   private notificationService = SmartNotificationService.getInstance();
   private accessibilityManager = AccessibilityManager.getInstance();
   private syncService = DistributedSyncService.getInstance();
@@ -54,10 +51,9 @@ struct DebugPanel {
       
       // 检查服务状态
       this.syncServiceStatus = '运行中';
-      this.aiServiceStatus = '运行中';
       
     } catch (error) {
-      SystemToast.showError(`加载调试数据失败: ${error}`);
+      SystemToast.showError(`加载调试数据失败: ${error}`, this.getUIContext());
     } finally {
       this.refreshing = false;
     }
@@ -87,7 +83,7 @@ struct DebugPanel {
    */
   private async onRefresh(): Promise<void> {
     await this.loadDebugData();
-    SystemToast.showSuccess('数据已刷新');
+    SystemToast.showSuccess('数据已刷新', this.getUIContext());
   }
 
   /**
@@ -96,10 +92,10 @@ struct DebugPanel {
   private onClearCache(): void {
     try {
       this.performanceOptimizer.clearCache();
-      SystemToast.showSuccess('缓存已清理');
+      SystemToast.showSuccess('缓存已清理', this.getUIContext());
       this.loadDebugData();
     } catch (error) {
-      SystemToast.showError(`清理缓存失败: ${error}`);
+      SystemToast.showError(`清理缓存失败: ${error}`, this.getUIContext());
     }
   }
 
@@ -109,34 +105,13 @@ struct DebugPanel {
   private onResetPerformanceStats(): void {
     try {
       this.performanceOptimizer.resetPerformanceStats();
-      SystemToast.showSuccess('性能统计已重置');
+      SystemToast.showSuccess('性能统计已重置', this.getUIContext());
       this.loadDebugData();
     } catch (error) {
-      SystemToast.showError(`重置性能统计失败: ${error}`);
+      SystemToast.showError(`重置性能统计失败: ${error}`, this.getUIContext());
     }
   }
 
-  /**
-   * 测试推荐系统
-   */
-  private async onTestRecommendations(): Promise<void> {
-    try {
-      // 模拟用户行为
-      await this.aiService.recordUserBehavior({
-        userId: 'debug_user',
-        action: 'view',
-        targetType: 'moment',
-        targetId: 'test_moment',
-        timestamp: Date.now()
-      });
-      
-      // 获取推荐
-      const recommendations = await this.aiService.getRecommendations('debug_user', 5);
-      SystemToast.showSuccess(`生成了 ${recommendations.length} 条推荐`);
-    } catch (error) {
-      SystemToast.showError(`测试推荐系统失败: ${error}`);
-    }
-  }
 
   /**
    * 测试通知系统
@@ -149,10 +124,10 @@ struct DebugPanel {
         '这是一条测试通知',
         'test_target'
       );
-      SystemToast.showSuccess('测试通知已发送');
+      SystemToast.showSuccess('测试通知已发送', this.getUIContext());
       this.loadDebugData();
     } catch (error) {
-      SystemToast.showError(`测试通知失败: ${error}`);
+      SystemToast.showError(`测试通知失败: ${error}`, this.getUIContext());
     }
   }
 
@@ -162,9 +137,9 @@ struct DebugPanel {
   private async onTestAccessibility(): Promise<void> {
     try {
       await this.accessibilityManager.announceText('这是无障碍功能测试');
-      SystemToast.showSuccess('无障碍功能测试完成');
+      SystemToast.showSuccess('无障碍功能测试完成', this.getUIContext());
     } catch (error) {
-      SystemToast.showError(`测试无障碍功能失败: ${error}`);
+      SystemToast.showError(`测试无障碍功能失败: ${error}`, this.getUIContext());
     }
   }
 
@@ -369,7 +344,6 @@ struct DebugPanel {
             .alignSelf(ItemAlign.Start)
           
           this.buildServiceItem('性能优化器', '运行中', Color.Green)
-          this.buildServiceItem('AI推荐服务', this.aiServiceStatus, Color.Green)
           this.buildServiceItem('智能通知服务', '运行中', Color.Green)
           this.buildServiceItem('无障碍管理器', '运行中', Color.Green)
           this.buildServiceItem('分布式同步服务', this.syncServiceStatus, Color.Green)
@@ -424,9 +398,6 @@ struct DebugPanel {
             .fontWeight(FontWeight.Medium)
             .alignSelf(ItemAlign.Start)
           
-          Button('测试推荐系统')
-            .width('100%')
-            .onClick(() => this.onTestRecommendations())
           
           Button('测试通知系统')
             .width('100%')

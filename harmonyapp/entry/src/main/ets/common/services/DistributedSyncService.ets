@@ -10,7 +10,7 @@ import { common } from '@kit.AbilityKit';
 export interface SyncData {
   userId: string;
   dataType: 'user_profile' | 'messages' | 'moments' | 'groups';
-  data: any;
+  data: object;
   timestamp: number;
   deviceId: string;
 }
@@ -20,6 +20,7 @@ export class DistributedSyncService {
   private kvManager: distributedKVStore.KVManager | null = null;
   private kvStore: distributedKVStore.SingleKVStore | null = null;
   private readonly storeId = 'hotspot_distributed_store';
+  private readonly appId = 'com.hotspot.app';
 
   private constructor() {
   }
@@ -44,7 +45,7 @@ export class DistributedSyncService {
       });
 
       // 正确的 KVStore 选项配置
-      const options = {
+      const options: distributedKVStore.Options = {
         createIfMissing: true,
         encrypt: true,
         backup: false,
@@ -63,7 +64,7 @@ export class DistributedSyncService {
     } catch (error) {
       const err = error as BusinessError;
       hilog.error(0x0000, 'DistributedSync', `分布式存储初始化失败: ${err.message}`);
-      throw error;
+      throw new Error(`初始化分布式同步服务失败: ${JSON.stringify(error)}`);
     }
   }
 
@@ -85,7 +86,7 @@ export class DistributedSyncService {
     } catch (error) {
       const err = error as BusinessError;
       hilog.error(0x0000, 'DistributedSync', `数据同步失败: ${err.message}`);
-      throw error;
+      throw new Error(`初始化分布式同步服务失败: ${JSON.stringify(error)}`);
     }
   }
 
@@ -116,7 +117,7 @@ export class DistributedSyncService {
     } catch (error) {
       const err = error as BusinessError;
       hilog.error(0x0000, 'DistributedSync', `获取同步数据失败: ${err.message}`);
-      throw error;
+      throw new Error(`初始化分布式同步服务失败: ${JSON.stringify(error)}`);
     }
   }
 
@@ -163,7 +164,7 @@ export class DistributedSyncService {
 
       if (this.kvManager && this.kvStore) {
         // 关闭 KVStore
-        await this.kvManager.closeKVStore(this.storeId);
+        await this.kvManager.closeKVStore(this.appId, this.storeId);
         // 注意：通常不需要删除 KVStore，除非确实要清除所有数据
         // await this.kvManager.deleteKVStore(this.storeId);
       }

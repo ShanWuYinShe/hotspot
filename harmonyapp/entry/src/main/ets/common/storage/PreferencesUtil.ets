@@ -3,7 +3,7 @@
  * 直接使用HarmonyOS Preferences API，去除复杂的封装层
  */
 
-import preferences from '@ohos.data.preferences';
+import { preferences } from '@kit.ArkData';
 import { common } from '@kit.AbilityKit';
 
 export class PreferencesUtil {

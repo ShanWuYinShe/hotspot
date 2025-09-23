@@ -17,13 +17,11 @@ import { PermissionManager } from '../common/permission/PermissionManager';
 import { NotificationComponent } from '../components/NotificationComponent';
 import { NavIcon, AppIcon } from '../components/SystemIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { AIRecommendationService, RecommendationItem } from '../common/services/AIRecommendationService';
 import { SmartNotificationService } from '../common/services/SmartNotificationService';
 import { PerformanceOptimizer } from '../common/performance/PerformanceOptimizer';
-import { RecommendationCard } from '../components/RecommendationCard';
 import { NotificationCenter } from '../components/NotificationCenter';
 import { PerformanceIndicator } from '../components/PerformanceIndicator';
-import { SystemToast } from '../common/utils/SystemToast';
+import { SystemToast } from '../components/SystemToast';
 
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG: string = 'IndexPage';
@@ -42,13 +40,11 @@ struct Index {
   @State isInitialized: boolean = false;
   @State lastError: string = '';
   @State wsConnectionStatus: string = '未连接';
-  @State recommendations: RecommendationItem[] = [];
   @State showNotificationCenter: boolean = false;
   @State showPerformanceDetails: boolean = false;
   private stateManager = GlobalStateManager.getInstance();
   private persistentStateManager = PersistentStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
-  private aiRecommendationService = AIRecommendationService.getInstance();
   private smartNotificationService = SmartNotificationService.getInstance();
   private performanceOptimizer = PerformanceOptimizer.getInstance();
   private uiContext: UIContext | null = null;
@@ -69,7 +65,7 @@ struct Index {
       // 通过UIContext获取UIAbilityContext
       this.abilityContext = this.uiContext.getHostContext() as common.UIAbilityContext;
     } catch (error) {
-      console.error('获取UIContext失败:', error);
+      hilog.error(DOMAIN_NUMBER, TAG, `获取UIContext失败: ${JSON.stringify(error)}`);
     }
 
     // 订阅状态变化
@@ -134,18 +130,23 @@ struct Index {
           if (location) {
             // 获取位置名称
             const locationName: string | null = await LocationUtil.getLocationName(location.latitude, location.longitude);
-            const locationInfo = {
+            const locationInfo: LocationInfo = {
               latitude: location.latitude,
               longitude: location.longitude,
-              locationName: locationName || '未知位置'
+              locationName: locationName || '未知位置',
+              accuracy: location.accuracy || 0,
+              altitude: location.altitude || 0,
+              speed: location.speed || 0,
+              bearing: location.bearing || 0,
+              timestamp: location.timestamp || Date.now()
             };
             this.stateManager.updateLocation(locationInfo);
           }
         } else {
-          console.warn('位置权限未授予');
+          hilog.warn(DOMAIN_NUMBER, TAG, '位置权限未授予');
         }
       } catch (error) {
-        console.warn('获取位置失败:', error);
+        hilog.warn(DOMAIN_NUMBER, TAG, `获取位置失败: ${JSON.stringify(error)}`);
       }
 
       // 初始化WebSocket连接
@@ -389,44 +390,6 @@ struct Index {
           .width('100%')
           .padding({ left: 16, right: 16 })
 
-          // 智能推荐内容
-          if (this.recommendations.length > 0) {
-            Column({ space: 12 }) {
-              Row() {
-                Text('为您推荐')
-                  .fontSize(18)
-                  .fontWeight(FontWeight.Medium)
-                  .fontColor($r('sys.color.ohos_id_color_text_primary'))
-                  .layoutWeight(1)
-
-                Button('刷新')
-                  .type(ButtonType.Normal)
-                  .fontSize(12)
-                  .padding({ left: 12, right: 12, top: 4, bottom: 4 })
-                  .onClick(() => this.loadRecommendations())
-              }
-              .width('100%')
-              .padding({ left: 16, right: 16 })
-
-              // 推荐卡片列表
-              ForEach(this.recommendations.slice(0, 3), (recommendation: RecommendationItem) => {
-                RecommendationCard({ recommendation: recommendation })
-                  .margin({ left: 16, right: 16 })
-              })
-
-              if (this.recommendations.length > 3) {
-                Button(`查看全部 ${this.recommendations.length} 条推荐`)
-                  .type(ButtonType.Normal)
-                  .width('calc(100% - 32vp)')
-                  .margin({ left: 16, right: 16 })
-                  .onClick(() => {
-                    // 跳转到推荐页面
-                    SystemToast.showInfo('跳转到推荐页面');
-                  })
-              }
-            }
-            .width('100%')
-          }
 
           // 快捷功能区域
           Column({ space: 12 }) {
@@ -460,7 +423,7 @@ struct Index {
                   AppIcon.SETTINGS,
                   () => {
                     // 跳转到高级设置页面
-                    SystemToast.showInfo('跳转到高级设置');
+                    SystemToast.showInfo('跳转到高级设置', this.getUIContext());
                   }
                 )
               }
@@ -568,61 +531,27 @@ struct Index {
    */
   private async initializeSmartServices(): Promise<void> {
     try {
-      // 记录页面访问行为
-      if (this.globalState.currentUser?.user_id) {
-        await this.aiRecommendationService.recordUserBehavior({
-          userId: this.globalState.currentUser.user_id,
-          action: 'view',
-          targetType: 'user',
-          targetId: 'main_page',
-          timestamp: Date.now()
-        });
-      }
 
-      // 设置性能告警监听
-      this.performanceOptimizer.onPerformanceAlert((alert) => {
-        hilog.warn(DOMAIN_NUMBER, TAG, `性能告警: ${alert.message}`);
-      });
+      // 设置性能告警监听 - 使用轮询方式检查告警
+      setInterval(() => {
+        const alerts = this.performanceOptimizer.getPerformanceAlerts();
+        if (alerts.length > 0) {
+          const latestAlert = alerts[alerts.length - 1];
+          hilog.warn(DOMAIN_NUMBER, TAG, `性能告警: ${latestAlert.message}`);
+        }
+      }, 5000); // 每5秒检查一次
 
       // 设置通知监听
       this.smartNotificationService.addListener((notification) => {
         hilog.info(DOMAIN_NUMBER, TAG, `收到通知: ${notification.title}`);
       });
 
-      // 如果用户已登录，加载推荐内容和生成推荐通知
-      if (this.globalState.currentUser?.user_id) {
-        // 加载推荐内容
-        this.loadRecommendations();
-        
-        // 生成推荐通知
-        setTimeout(async () => {
-          await this.smartNotificationService.createRecommendationNotification(
-            this.globalState.currentUser!.user_id
-          );
-        }, 5000); // 5秒后生成推荐
-      }
 
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `智能服务初始化失败: ${JSON.stringify(error)}`);
     }
   }
 
-  /**
-   * 加载推荐内容
-   */
-  private async loadRecommendations(): Promise<void> {
-    try {
-      if (this.globalState.currentUser?.user_id) {
-        this.recommendations = await this.aiRecommendationService.getRecommendations(
-          this.globalState.currentUser.user_id,
-          6 // 加载6条推荐
-        );
-        hilog.info(DOMAIN_NUMBER, TAG, `加载了 ${this.recommendations.length} 条推荐内容`);
-      }
-    } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, `加载推荐内容失败: ${JSON.stringify(error)}`);
-    }
-  }
 
   /**
    * 切换通知中心显示
@@ -644,11 +573,9 @@ struct Index {
   @Builder
   private buildQuickActionCard(title: string, icon: AppIcon, onClick: () => void) {
     Column({ space: 8 }) {
-      SystemIcon({
-        icon: icon,
-        iconSize: 32,
-        iconColor: $r('sys.color.ohos_id_color_emphasize')
-      })
+              Text(icon)
+                .fontSize(24)
+                .fontColor($r('sys.color.ohos_id_color_emphasize'))
 
       Text(title)
         .fontSize(14)
@@ -662,7 +589,7 @@ struct Index {
     .borderRadius(12)
     .shadow({
       radius: 4,
-      color: $r('sys.color.ohos_id_color_shadow'),
+      color: $r('sys.color.ohos_id_color_foreground_contrary'),
       offsetX: 0,
       offsetY: 2
     })
