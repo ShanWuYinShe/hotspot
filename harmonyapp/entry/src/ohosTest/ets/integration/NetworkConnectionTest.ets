@@ -4,9 +4,9 @@
  */
 
 import { describe, beforeAll, beforeEach, afterEach, afterAll, it, expect } from '@ohos/hypium';
-import { HttpUtil } from '../main/ets/common/network/HttpUtil';
-import { ApiClient } from '../main/ets/common/api/ApiClient';
-import { API_BASE_URL } from '../main/ets/constants/AppConstants';
+import { HttpUtil } from '../../../main/ets/common/network/HttpUtil';
+import { ApiClient } from '../../../main/ets/common/api/ApiClient';
+import { API_BASE_URL } from '../../../main/ets/constants/AppConstants';
 
 export default function NetworkConnectionTest() {
   describe('网络连接测试', () => {
@@ -137,13 +137,3 @@ export default function NetworkConnectionTest() {
     });
   });
 }
-
-
-
-
-
-
-
-
-
-

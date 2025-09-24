@@ -77,20 +77,19 @@ export struct NativeMapComponent {
    */
   private async initializeMap(): Promise<void> {
     try {
-      hilog.info(DOMAIN_NUMBER, TAG, '开始初始化地图组件');
+      hilog.info(DOMAIN_NUMBER, TAG, '开始初始化HarmonyOS地图组件');
       
-      // 这里需要根据HarmonyOS实际的地图API进行实现
-      // 由于HarmonyOS的地图API可能会变化，这里提供一个基础框架
+      // 模拟地图初始化过程
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // 模拟地图初始化
-      setTimeout(() => {
-        this.isMapReady = true;
-        this.onMapReady?.();
-        hilog.info(DOMAIN_NUMBER, TAG, '✅ 地图初始化完成');
-      }, 1000);
+      this.isMapReady = true;
+      hilog.info(DOMAIN_NUMBER, TAG, '地图初始化完成');
       
+      if (this.onMapReady) {
+        this.onMapReady();
+      }
     } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, `❌ 地图初始化失败: ${JSON.stringify(error)}`);
+      hilog.error(DOMAIN_NUMBER, TAG, `地图初始化失败: ${JSON.stringify(error)}`);
     }
   }
 

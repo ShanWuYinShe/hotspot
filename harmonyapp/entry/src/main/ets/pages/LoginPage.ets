@@ -13,6 +13,7 @@ import { SystemToast } from '../components/SystemToast';
 import { PasswordSecurityUtil } from '../common/security/PasswordSecurityUtil';
 import { AuthResponse, CreateTempRequest, UserResponse, LoginRequest } from '../common/types/BackendApiTypes';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { I18nManager } from '../common/i18n/I18nManager';
 
 const DOMAIN_NUMBER: number = 0xFF02;
 const TAG: string = 'LoginPage';
@@ -31,6 +32,7 @@ struct LoginPage {
   @State loginMode: 'temp' | 'register' | 'login' = 'temp';
   private stateManager = GlobalStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
+  private i18nManager = I18nManager.getInstance();
   private loadingViewRef: SystemLoadingView | null = null;
 
   aboutToAppear() {
@@ -56,7 +58,7 @@ struct LoginPage {
     Column() {
       if (this.isLoading) {
         SystemLoadingView({ 
-          message: this.loadingStage || '正在登录...', 
+          message: this.loadingStage || this.i18nManager.t('auth.login'), 
           progressType: 'determinate',
           showProgress: true,
           externalProgress: this.loadingProgress
@@ -65,19 +67,19 @@ struct LoginPage {
         Column({ space: 32 }) {
           // 标题
           Column({ space: 16 }) {
-            Text('欢迎使用 GeoTalk')
+            Text(this.i18nManager.t('app.name'))
               .fontSize(28)
               .fontWeight(FontWeight.Bold)
               .fontColor($r('sys.color.ohos_id_color_text_primary'))
 
-            Text('基于地理位置的社交应用')
+            Text(this.i18nManager.t('app.description'))
               .fontSize(16)
               .fontColor($r('sys.color.ohos_id_color_text_secondary'))
           }
 
           // 登录模式切换
           Row() {
-            Button('快速体验')
+            Button(this.i18nManager.t('auth.tempUser'))
               .type(this.loginMode === 'temp' ? ButtonType.Capsule : ButtonType.Normal)
               .backgroundColor(this.loginMode === 'temp' ?
               $r('sys.color.ohos_id_color_emphasize') :
@@ -90,7 +92,7 @@ struct LoginPage {
                 this.loginMode = 'temp';
               })
 
-            Button('用户登录')
+            Button(this.i18nManager.t('auth.login'))
               .type(this.loginMode === 'login' ? ButtonType.Capsule : ButtonType.Normal)
               .backgroundColor(this.loginMode === 'login' ?
               $r('sys.color.ohos_id_color_emphasize') :
@@ -129,7 +131,7 @@ struct LoginPage {
    */
   private async createTempUser() {
     if (!this.nickname.trim()) {
-      SystemToast.showWarning('请输入昵称', this.getUIContext());
+      SystemToast.showWarning(this.i18nManager.t('auth.nickname'), this.getUIContext());
       return;
     }
 
@@ -138,12 +140,12 @@ struct LoginPage {
 
     try {
       // 阶段1：准备创建临时用户
-      this.loadingStage = '正在准备创建临时用户...';
+      this.loadingStage = this.i18nManager.t('common.loading');
       this.loadingProgress = 20;
       await this.delay(300);
 
       // 阶段2：发送创建请求
-      this.loadingStage = '正在创建临时用户...';
+      this.loadingStage = this.i18nManager.t('auth.register');
       this.loadingProgress = 50;
       const request: CreateTempRequest = {
         nickname: this.nickname.trim()
@@ -152,15 +154,15 @@ struct LoginPage {
       
       if (response.code === 0 && response.data) {
         // 阶段3：处理登录成功
-        this.loadingStage = '登录成功，正在初始化...';
+        this.loadingStage = this.i18nManager.t('auth.loginSuccess');
         this.loadingProgress = 80;
         await this.handleAuthSuccess(response.data);
         this.loadingProgress = 100;
       } else {
-        SystemToast.showError(response.msg || '创建临时用户失败', this.getUIContext());
+        SystemToast.showError(response.msg || this.i18nManager.t('auth.registerFailed'), this.getUIContext());
       }
     } catch (error) {
-      SystemToast.showError(error instanceof Error ? error.message : '创建临时用户失败', this.getUIContext());
+      SystemToast.showError(error instanceof Error ? error.message : this.i18nManager.t('auth.registerFailed'), this.getUIContext());
     } finally {
       this.isLoading = false;
       this.loadingStage = '';

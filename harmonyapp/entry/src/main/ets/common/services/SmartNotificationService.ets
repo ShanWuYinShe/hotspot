@@ -1,12 +1,17 @@
 /**
- * 智能通知服务
- * 整合性能告警、推荐内容、系统通知等多种通知类型
+ * 智能通知服务（重构版）
+ * 使用新的基础设施：单例基类、统一日志、定时器管理器、错误处理、统一存储
  */
-import { hilog } from '@kit.PerformanceAnalysisKit';
 import { BusinessError } from '@kit.BasicServicesKit';
-import { StorageUtil } from '../utils/StorageUtil';
+import { BaseSingleton } from '../base/Singleton';
+import { createLogger } from '../utils/LogManager';
+import { TimerManager } from '../utils/TimerManager';
+import { ErrorHandler, ErrorType, ErrorLevel } from '../utils/ErrorHandler';
+import { UnifiedStorageUtil } from '../utils/UnifiedStorageUtil';
 import { PerformanceOptimizer, PerformanceAlert } from '../performance/PerformanceOptimizer';
 import { AccessibilityManager } from '../accessibility/AccessibilityManager';
+
+const logger = createLogger('SmartNotificationService');
 
 export interface SmartNotification {
   id: string;
@@ -62,18 +67,22 @@ export interface NotificationConfig {
   autoCleanupDays: number;
 }
 
-export class SmartNotificationService {
-  private static instance: SmartNotificationService;
+export class SmartNotificationService extends BaseSingleton {
+  private static instance: SmartNotificationService | null = null;
   private notifications: Map<string, SmartNotification> = new Map();
   private config: NotificationConfig;
   private listeners: ((notification: SmartNotification) => void)[] = [];
   private performanceOptimizer: PerformanceOptimizer;
   private accessibilityManager: AccessibilityManager;
+  private storage: UnifiedStorageUtil | null = null;
   private readonly storageKey = 'smart_notifications';
   private readonly configKey = 'notification_config';
+  private cleanupTimerId: number = -1;
+  private performanceCheckTimerId: number = -1;
   private cleanupInterval: number = -1;
 
   private constructor() {
+    super();
     this.config = {
       enablePerformanceAlerts: true,
       enableRecommendations: true,
@@ -90,10 +99,11 @@ export class SmartNotificationService {
 
     this.performanceOptimizer = PerformanceOptimizer.getInstance();
     this.accessibilityManager = AccessibilityManager.getInstance();
-
-    this.initialize();
   }
 
+  /**
+   * 获取单例实例
+   */
   public static getInstance(): SmartNotificationService {
     if (!SmartNotificationService.instance) {
       SmartNotificationService.instance = new SmartNotificationService();
@@ -102,18 +112,79 @@ export class SmartNotificationService {
   }
 
   /**
-   * 初始化服务
+   * 异步获取单例实例
    */
-  private async initialize(): Promise<void> {
+  public static async getInstanceAsync(): Promise<SmartNotificationService> {
+    const instance = SmartNotificationService.getInstance();
+    await instance.initialize();
+    return instance;
+  }
+
+  /**
+   * 实现基类的初始化方法
+   */
+  protected async onInitialize(): Promise<void> {
+    try {
+      logger.info('智能通知服务初始化开始');
+      
+      // 获取存储实例
+      this.storage = UnifiedStorageUtil.getInstance();
+      
+      // 加载配置和通知
+      await this.loadConfig();
+      await this.loadNotifications();
+      
+      // 启动性能监听
+      this.setupPerformanceListener();
+      
+      // 启动清理任务
+      this.startCleanupTask();
+      
+      logger.info('智能通知服务初始化完成');
+    } catch (error) {
+      ErrorHandler.handle(error, 'SmartNotificationService.onInitialize', ErrorType.SYSTEM, ErrorLevel.HIGH);
+      throw new Error('SmartNotificationService初始化失败');
+    }
+  }
+
+  /**
+   * 实现基类的清理方法
+   */
+  protected async onCleanup(): Promise<void> {
+    try {
+      // 停止定时任务
+      this.stopCleanupTask();
+      this.stopPerformanceListener();
+      
+      // 保存数据
+      await this.saveNotifications();
+      await this.saveConfig();
+      
+      // 清理资源
+      this.notifications.clear();
+      this.listeners = [];
+      
+      logger.info('智能通知服务清理完成');
+    } catch (error) {
+      ErrorHandler.handle(error, 'SmartNotificationService.onCleanup', ErrorType.SYSTEM);
+    }
+  }
+
+  /**
+   * 重写基类的初始化方法
+   */
+  async initialize(): Promise<void> {
+    await super.initialize();
+    
     try {
       await this.loadConfig();
       await this.loadNotifications();
       this.setupPerformanceAlertListener();
       this.startAutoCleanup();
       
-      hilog.info(0x0000, 'SmartNotification', '智能通知服务初始化完成');
+      logger.info('智能通知服务初始化完成');
     } catch (error) {
-      hilog.error(0x0000, 'SmartNotification', `初始化失败: ${JSON.stringify(error)}`);
+      ErrorHandler.handle(error, 'SmartNotificationService.initialize', ErrorType.SYSTEM, ErrorLevel.HIGH);
     }
   }
 
@@ -170,7 +241,7 @@ export class SmartNotificationService {
           type: 'primary',
           handler: async () => {
             // 注意：setAdaptiveConfig方法不存在，这里只记录处理
-            hilog.info(0x0000, 'SmartNotification', '用户选择启用省电模式');
+            logger.info('用户选择启用省电模式');
             await this.markAsHandled(alert.type + '_' + alert.timestamp);
           }
         });
@@ -229,7 +300,7 @@ export class SmartNotificationService {
         type: 'primary' as 'primary',
         handler: async () => {
           // 跳转到相关页面
-          hilog.info(0x0000, 'SmartNotification', `查看社交通知详情: ${targetId}`);
+          logger.info(`查看社交通知详情: ${targetId}`);
           await this.markAsRead(`social_${type}_${Date.now()}`);
         }
       } as NotificationAction],
@@ -271,7 +342,7 @@ export class SmartNotificationService {
         type: 'danger' as 'danger',
         handler: async () => {
           // 跳转到安全设置页面
-          hilog.info(0x0000, 'SmartNotification', '查看安全设置');
+          logger.info('查看安全设置');
           await this.markAsRead(`security_${type}_${Date.now()}`);
         }
       }],
@@ -288,7 +359,7 @@ export class SmartNotificationService {
   private async addNotification(notification: SmartNotification): Promise<void> {
     // 检查是否在静默时间
     if (this.isInQuietHours() && notification.priority !== 'critical') {
-      hilog.info(0x0000, 'SmartNotification', '当前为静默时间，跳过非关键通知');
+      logger.info('当前为静默时间，跳过非关键通知');
       return;
     }
 
@@ -313,7 +384,7 @@ export class SmartNotificationService {
     // 通知监听器
     this.notifyListeners(notification);
     
-    hilog.info(0x0000, 'SmartNotification', `添加通知: ${notification.title}`);
+    logger.info(`添加通知: ${notification.title}`);
   }
 
   /**
@@ -382,7 +453,7 @@ export class SmartNotificationService {
     if (notification) {
       notification.read = true;
       await this.saveNotifications();
-      hilog.info(0x0000, 'SmartNotification', `标记通知为已读: ${notificationId}`);
+      logger.info(`标记通知为已读: ${notificationId}`);
     }
   }
 
@@ -396,7 +467,7 @@ export class SmartNotificationService {
       }
     }
     await this.saveNotifications();
-    hilog.info(0x0000, 'SmartNotification', `标记所有${type || ''}通知为已读`);
+    logger.info(`标记所有${type || ''}通知为已读`);
   }
 
   /**
@@ -413,7 +484,7 @@ export class SmartNotificationService {
   public async deleteNotification(notificationId: string): Promise<void> {
     if (this.notifications.delete(notificationId)) {
       await this.saveNotifications();
-      hilog.info(0x0000, 'SmartNotification', `删除通知: ${notificationId}`);
+      logger.info(`删除通知: ${notificationId}`);
     }
   }
 
@@ -437,7 +508,7 @@ export class SmartNotificationService {
     
     if (cleanedCount > 0) {
       await this.saveNotifications();
-      hilog.info(0x0000, 'SmartNotification', `清理过期通知: ${cleanedCount} 条`);
+      logger.info(`清理过期通知: ${cleanedCount} 条`);
     }
   }
 
@@ -459,7 +530,7 @@ export class SmartNotificationService {
     
     if (toDelete.length > 0) {
       await this.saveNotifications();
-      hilog.info(0x0000, 'SmartNotification', `清理旧通知: ${toDelete.length} 条`);
+      logger.info(`清理旧通知: ${toDelete.length} 条`);
     }
   }
 
@@ -509,7 +580,7 @@ export class SmartNotificationService {
       }
     }
     
-    hilog.info(0x0000, 'SmartNotification', `通知配置已更新: ${JSON.stringify(updates)}`);
+    logger.info(`通知配置已更新`, updates);
   }
 
   /**
@@ -553,7 +624,7 @@ export class SmartNotificationService {
       try {
         listener(notification);
       } catch (error) {
-        hilog.error(0x0000, 'SmartNotification', `通知监听器执行失败: ${JSON.stringify(error)}`);
+        ErrorHandler.handle(error, 'notifyListeners', ErrorType.SYSTEM, ErrorLevel.LOW);
       }
     });
   }
@@ -562,75 +633,137 @@ export class SmartNotificationService {
    * 保存通知到本地存储
    */
   private async saveNotifications(): Promise<void> {
-    try {
+    return ErrorHandler.safeExecute(async () => {
+      if (!this.storage) {
+        throw new Error('存储未初始化');
+      }
       const notificationsArray = Array.from(this.notifications.entries());
-      await StorageUtil.setString(this.storageKey, JSON.stringify(notificationsArray));
-    } catch (error) {
-      hilog.error(0x0000, 'SmartNotification', `保存通知失败: ${JSON.stringify(error)}`);
-    }
+      await this.storage.setObject(this.storageKey, notificationsArray);
+      logger.debug(`保存了 ${notificationsArray.length} 条通知`);
+    }, 'saveNotifications', undefined, ErrorType.STORAGE);
   }
 
   /**
    * 从本地存储加载通知
    */
   private async loadNotifications(): Promise<void> {
-    try {
-      const data = await StorageUtil.getString(this.storageKey, '');
-      if (data) {
-        const notificationsArray: [string, SmartNotification][] = JSON.parse(data) as [string, SmartNotification][];
+    return ErrorHandler.safeExecute(async () => {
+      if (!this.storage) {
+        throw new Error('存储未初始化');
+      }
+      
+      const notificationsArray = await this.storage.getObject<[string, SmartNotification][]>(this.storageKey);
+      if (notificationsArray && Array.isArray(notificationsArray)) {
         this.notifications = new Map(notificationsArray);
+        logger.debug(`加载了 ${notificationsArray.length} 条通知`);
         
         // 清理过期通知
         await this.cleanupExpiredNotifications();
       }
-    } catch (error) {
-      hilog.warn(0x0000, 'SmartNotification', '加载通知失败，使用空列表');
-    }
+    }, 'loadNotifications', undefined, ErrorType.STORAGE);
   }
 
   /**
    * 保存配置到本地存储
    */
   private async saveConfig(): Promise<void> {
-    try {
-      await StorageUtil.setString(this.configKey, JSON.stringify(this.config));
-    } catch (error) {
-      hilog.error(0x0000, 'SmartNotification', `保存配置失败: ${JSON.stringify(error)}`);
-    }
+    return ErrorHandler.safeExecute(async () => {
+      if (!this.storage) {
+        throw new Error('存储未初始化');
+      }
+      await this.storage.setObject(this.configKey, this.config);
+      logger.debug('配置已保存');
+    }, 'saveConfig', undefined, ErrorType.STORAGE);
   }
 
   /**
    * 从本地存储加载配置
    */
   private async loadConfig(): Promise<void> {
-    try {
-      const data = await StorageUtil.getString(this.configKey, '');
-      if (data) {
-        const savedConfig: Record<string, Object> = JSON.parse(data) as Record<string, Object>;
-        // 手动合并配置
-        const mergedConfig: NotificationConfig = {
-          enablePerformanceAlerts: (savedConfig.enablePerformanceAlerts as boolean) !== undefined ? (savedConfig.enablePerformanceAlerts as boolean) : this.config.enablePerformanceAlerts,
-          enableRecommendations: (savedConfig.enableRecommendations as boolean) !== undefined ? (savedConfig.enableRecommendations as boolean) : this.config.enableRecommendations,
-          enableSocialNotifications: (savedConfig.enableSocialNotifications as boolean) !== undefined ? (savedConfig.enableSocialNotifications as boolean) : this.config.enableSocialNotifications,
-          enableSecurityAlerts: (savedConfig.enableSecurityAlerts as boolean) !== undefined ? (savedConfig.enableSecurityAlerts as boolean) : this.config.enableSecurityAlerts,
-          quietHours: (savedConfig.quietHours as QuietHours) || this.config.quietHours,
-          maxNotifications: (savedConfig.maxNotifications as number) !== undefined ? (savedConfig.maxNotifications as number) : this.config.maxNotifications,
-          autoCleanupDays: (savedConfig.autoCleanupDays as number) !== undefined ? (savedConfig.autoCleanupDays as number) : this.config.autoCleanupDays
-        };
-        this.config = mergedConfig;
+    return ErrorHandler.safeExecute(async () => {
+      if (!this.storage) {
+        throw new Error('存储未初始化');
       }
-    } catch (error) {
-      hilog.warn(0x0000, 'SmartNotification', '加载配置失败，使用默认配置');
+      
+      const savedConfig = await this.storage.getObject<NotificationConfig>(this.configKey);
+      if (savedConfig) {
+        // 合并配置，保留默认值
+        this.config = {
+          enablePerformanceAlerts: savedConfig.enablePerformanceAlerts ?? this.config.enablePerformanceAlerts,
+          enableRecommendations: savedConfig.enableRecommendations ?? this.config.enableRecommendations,
+          enableSocialNotifications: savedConfig.enableSocialNotifications ?? this.config.enableSocialNotifications,
+          enableSecurityAlerts: savedConfig.enableSecurityAlerts ?? this.config.enableSecurityAlerts,
+          quietHours: savedConfig.quietHours || this.config.quietHours,
+          maxNotifications: savedConfig.maxNotifications ?? this.config.maxNotifications,
+          autoCleanupDays: savedConfig.autoCleanupDays ?? this.config.autoCleanupDays
+        };
+        logger.debug('配置已加载');
+      }
+    }, 'loadConfig', undefined, ErrorType.STORAGE);
+  }
+
+  /**
+   * 设置性能监听器
+   */
+  private setupPerformanceListener(): void {
+    if (!this.config.enablePerformanceAlerts) return;
+
+    // 使用TimerManager管理定时器
+    this.performanceCheckTimerId = TimerManager.setInterval(() => {
+      const alerts = this.performanceOptimizer.getPerformanceAlerts();
+      if (alerts.length > 0) {
+        const latestAlert = alerts[alerts.length - 1];
+        this.createPerformanceNotification(latestAlert);
+      }
+    }, 5000, '性能告警检查');
+    
+    logger.debug('性能监听器已启动');
+  }
+
+  /**
+   * 停止性能监听器
+   */
+  private stopPerformanceListener(): void {
+    if (this.performanceCheckTimerId !== -1) {
+      TimerManager.clearInterval(this.performanceCheckTimerId);
+      this.performanceCheckTimerId = -1;
+      logger.debug('性能监听器已停止');
+    }
+  }
+
+  /**
+   * 启动清理任务
+   */
+  private startCleanupTask(): void {
+    if (this.cleanupTimerId !== -1) return;
+    
+    // 每小时清理一次过期通知
+    this.cleanupTimerId = TimerManager.setInterval(() => {
+      this.cleanupExpiredNotifications();
+      this.cleanupOldNotifications();
+    }, 60 * 60 * 1000, '通知清理任务');
+    
+    logger.debug('清理任务已启动');
+  }
+
+  /**
+   * 停止清理任务
+   */
+  private stopCleanupTask(): void {
+    if (this.cleanupTimerId !== -1) {
+      TimerManager.clearInterval(this.cleanupTimerId);
+      this.cleanupTimerId = -1;
+      logger.debug('清理任务已停止');
     }
   }
 
   /**
    * 清理资源
    */
-  public cleanup(): void {
+  public async cleanup(): Promise<void> {
     this.stopAutoCleanup();
     this.notifications.clear();
     this.listeners = [];
-    hilog.info(0x0000, 'SmartNotification', '智能通知服务资源清理完成');
+    logger.info('智能通知服务资源清理完成');
   }
 }

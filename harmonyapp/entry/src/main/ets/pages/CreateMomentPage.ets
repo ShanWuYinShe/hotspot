@@ -8,8 +8,7 @@ import { ApiClient } from '../common/api/ApiClient';
 import { LocationUtil } from '../common/location/LocationUtil';
 import { SystemToast } from '../components/SystemToast';
 import { IconButton, AppIcon, IconSize } from '../components/SystemIcon';
-// 临时移除引用，等待用户提供正确的媒体服务实现
-// import { selectPhotos, capturePhoto, requestMediaPermissions } from '../common/media/MediaServiceManager';
+import { selectImages, capturePhoto } from '../common/utils/MediaUtils';
 import { common } from '@kit.AbilityKit';
 import { LocationInfo } from '../common/location/LocationUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -129,14 +128,15 @@ struct CreateMomentPage {
         return;
       }
 
-      // 临时注释，等待用户提供正确的图片选择实现
-      // const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-      // const mediaResults = await selectPhotos(context, maxCount);
-      // for (const result of mediaResults) {
-      //   this.imageUrls.push(result.uri);
-      // }
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      const selectedImages = await selectImages(context, maxCount);
+      for (const imageUri of selectedImages) {
+        this.imageUrls.push(imageUri);
+      }
       
-      SystemToast.show('图片选择功能待实现', this.getUIContext());
+      if (selectedImages.length > 0) {
+        SystemToast.show(`已选择${selectedImages.length}张图片`, this.getUIContext());
+      }
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `选择图片失败: ${JSON.stringify(error)}`);
       SystemToast.show('选择图片失败，请重试', this.getUIContext());
@@ -153,12 +153,12 @@ struct CreateMomentPage {
         return;
       }
 
-      // 临时注释，等待用户提供正确的拍照实现
-      // const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-      // const mediaResult = await capturePhoto(context, { quality: 'high' });
-      // this.imageUrls.push(mediaResult.uri);
-
-      SystemToast.show('拍照功能待实现', this.getUIContext());
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      const capturedImageUri = await capturePhoto(context);
+      if (capturedImageUri) {
+        this.imageUrls.push(capturedImageUri);
+        SystemToast.show('拍照成功', this.getUIContext());
+      }
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `拍照失败: ${JSON.stringify(error)}`);
       SystemToast.show('拍照失败，请重试', this.getUIContext());

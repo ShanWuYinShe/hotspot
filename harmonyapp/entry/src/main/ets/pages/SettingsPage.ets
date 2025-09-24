@@ -7,6 +7,7 @@ import { GlobalStateManager, GlobalState } from '../common/state/GlobalStateMana
 import { PreferencesUtil } from '../common/storage/PreferencesUtil';
 import { SystemToast } from '../components/SystemToast';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { I18nManager, SupportedLanguage } from '../common/i18n/I18nManager';
 
 const DOMAIN_NUMBER: number = 0xFF16;
 const TAG: string = 'SettingsPage';
@@ -33,37 +34,54 @@ interface SettingsGroup {
 struct SettingsPage {
   @State globalState: GlobalState = GlobalStateManager.getInstance().getState();
   private stateManager = GlobalStateManager.getInstance();
+  private i18nManager = I18nManager.getInstance();
   @State settings: Record<string, SettingsValue> = {};
   @State isLoading: boolean = false;
+  @State currentLanguage: SupportedLanguage = SupportedLanguage.ZH_CN;
 
-  // 设置项配置
-  private settingsGroups: SettingsGroup[] = [
-    {
-      title: '通知设置',
-      items: [
-        {
-          title: '推送通知',
-          subtitle: '接收新消息和活动通知',
-          type: 'switch',
-          key: 'push_notifications',
-          value: true
-        },
-        {
-          title: '声音提醒',
-          subtitle: '消息到达时播放提示音',
-          type: 'switch',
-          key: 'sound_notifications',
-          value: true
-        },
-        {
-          title: '振动提醒',
-          subtitle: '消息到达时振动提醒',
-          type: 'switch',
-          key: 'vibration_notifications',
-          value: true
-        }
-      ]
-    },
+  // 获取设置项配置
+  private getSettingsGroups(): SettingsGroup[] {
+    return [
+      {
+        title: this.i18nManager.t('settings.language'),
+        items: [
+          {
+            title: this.i18nManager.t('settings.language'),
+            subtitle: '选择应用语言 / Select App Language',
+            type: 'select',
+            key: 'app_language',
+            value: this.currentLanguage,
+            options: this.i18nManager.getSupportedLanguages().map(lang => lang.nativeName),
+            action: () => this.showLanguageSelector()
+          }
+        ]
+      },
+      {
+        title: this.i18nManager.t('settings.notification'),
+        items: [
+          {
+            title: this.i18nManager.t('settings.notification'),
+            subtitle: '接收新消息和活动通知',
+            type: 'switch',
+            key: 'push_notifications',
+            value: true
+          },
+          {
+            title: '声音提醒',
+            subtitle: '消息到达时播放提示音',
+            type: 'switch',
+            key: 'sound_notifications',
+            value: true
+          },
+          {
+            title: '振动提醒',
+            subtitle: '消息到达时振动提醒',
+            type: 'switch',
+            key: 'vibration_notifications',
+            value: true
+          }
+        ]
+      },
     {
       title: '隐私设置',
       items: [
@@ -170,10 +188,15 @@ struct SettingsPage {
         }
       ]
     }
-  ];
+    ];
+  }
 
   async aboutToAppear() {
     hilog.info(DOMAIN_NUMBER, TAG, '设置页面初始化');
+    
+    // 初始化国际化
+    await this.i18nManager.initialize();
+    this.currentLanguage = this.i18nManager.getCurrentLanguage();
     
     // 订阅状态变化
     this.stateManager.subscribe('settings_page', (state: GlobalState) => {
@@ -206,7 +229,7 @@ struct SettingsPage {
         this.settings = savedSettings;
         
         // 更新设置项的值
-        this.settingsGroups.forEach(group => {
+        this.getSettingsGroups().forEach(group => {
           group.items.forEach(item => {
             if (item.key && this.settings[item.key] !== undefined) {
               item.value = this.settings[item.key];
@@ -277,9 +300,8 @@ struct SettingsPage {
       // 这里应该计算实际的缓存大小
       // 由于HarmonyOS的文件系统API限制，这里使用模拟数据
       setTimeout(() => {
-        const cacheItem = this.settingsGroups
-          .find(g => g.title === '数据管理')
-          ?.items.find(i => i.title === '缓存大小');
+        const dataGroup = this.getSettingsGroups().find(g => g.title === '数据管理');
+        const cacheItem = dataGroup ? dataGroup.items.find(i => i.title === '缓存大小') : null;
         
         if (cacheItem) {
           cacheItem.value = '12.5 MB';
@@ -306,9 +328,8 @@ struct SettingsPage {
         SystemToast.showSuccess('缓存清理完成', this.getUIContext());
         
         // 更新缓存大小显示
-        const cacheItem = this.settingsGroups
-          .find(g => g.title === '数据管理')
-          ?.items.find(i => i.title === '缓存大小');
+        const dataGroup = this.getSettingsGroups().find(g => g.title === '数据管理');
+        const cacheItem = dataGroup ? dataGroup.items.find(i => i.title === '缓存大小') : null;
         
         if (cacheItem) {
           cacheItem.value = '0 MB';
@@ -394,8 +415,57 @@ struct SettingsPage {
           case 'terrain': return '地形';
           default: return value;
         }
+      case 'app_language':
+        const langInfo = this.i18nManager.getLanguageInfo(value as SupportedLanguage);
+        return langInfo ? langInfo.nativeName : value;
       default:
         return value;
+    }
+  }
+
+  /**
+   * 显示语言选择器
+   */
+  private async showLanguageSelector(): Promise<void> {
+    try {
+      const languages = this.i18nManager.getSupportedLanguages();
+      const languageNames = languages.map(lang => lang.nativeName);
+      const currentIndex = languages.findIndex(lang => lang.code === this.currentLanguage);
+
+      // 这里应该显示一个选择器对话框
+      // 由于HarmonyOS的对话框API比较复杂，这里简化为直接切换到下一个语言
+      const nextIndex = (currentIndex + 1) % languages.length;
+      const nextLanguage = languages[nextIndex];
+      
+      await this.changeLanguage(nextLanguage.code);
+      
+      SystemToast.showSuccess(
+        `${this.i18nManager.t('settings.language')}: ${nextLanguage.nativeName}`, 
+        this.getUIContext()
+      );
+      
+    } catch (error) {
+      hilog.error(DOMAIN_NUMBER, TAG, `语言选择失败: ${JSON.stringify(error)}`);
+      SystemToast.showError(this.i18nManager.t('error.unknownError'), this.getUIContext());
+    }
+  }
+
+  /**
+   * 切换语言
+   */
+  private async changeLanguage(language: SupportedLanguage): Promise<void> {
+    try {
+      await this.i18nManager.setLanguage(language);
+      this.currentLanguage = language;
+      
+      // 保存语言设置
+      await PreferencesUtil.set('app_language', language);
+      
+      hilog.info(DOMAIN_NUMBER, TAG, `语言已切换到: ${language}`);
+      
+    } catch (error) {
+      hilog.error(DOMAIN_NUMBER, TAG, `语言切换失败: ${JSON.stringify(error)}`);
+      throw new Error(String(error));
     }
   }
 
@@ -447,7 +517,7 @@ struct SettingsPage {
         .alignItems(HorizontalAlign.Center)
       } else {
         List() {
-          ForEach(this.settingsGroups, (group: SettingsGroup) => {
+          ForEach(this.getSettingsGroups(), (group: SettingsGroup) => {
             // 分组标题
             ListItem() {
               Text(group.title)

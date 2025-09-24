@@ -1,5 +1,4 @@
-import abilityTest from './Ability.test';
+import testsuite from '../AllTests';
 
-export default function testsuite() {
-  abilityTest();
-}
+// 导出统一的测试套件
+export default testsuite;

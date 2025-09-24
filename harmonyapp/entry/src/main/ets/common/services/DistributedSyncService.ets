@@ -279,16 +279,84 @@ export class DistributedSyncService {
   /**
    * 同步动态
    */
-  private syncMoments(syncData: SyncData): void {
-    // TODO: 实现动态同步逻辑
-    hilog.info(0x0000, 'DistributedSync', `同步动态: ${syncData.userId}`);
+  private async syncMoments(syncData: SyncData): Promise<void> {
+    try {
+      hilog.info(0x0000, 'DistributedSync', `开始同步动态: ${syncData.userId}`);
+      
+      // 实现动态同步逻辑
+      const momentsData = await this.fetchUserMoments(syncData.userId);
+      await this.uploadMomentsToKVStore(momentsData);
+      
+      hilog.info(0x0000, 'DistributedSync', `动态同步完成: ${syncData.userId}`);
+    } catch (error) {
+      hilog.error(0x0000, 'DistributedSync', `动态同步失败: ${JSON.stringify(error)}`);
+      throw new Error(`动态同步失败: ${JSON.stringify(error)}`);
+    }
   }
 
   /**
    * 同步群组
    */
-  private syncGroups(syncData: SyncData): void {
-    // TODO: 实现群组同步逻辑
-    hilog.info(0x0000, 'DistributedSync', `同步群组: ${syncData.userId}`);
+  private async syncGroups(syncData: SyncData): Promise<void> {
+    try {
+      hilog.info(0x0000, 'DistributedSync', `开始同步群组: ${syncData.userId}`);
+      
+      // 实现群组同步逻辑
+      const groupsData = await this.fetchUserGroups(syncData.userId);
+      await this.uploadGroupsToKVStore(groupsData);
+      
+      hilog.info(0x0000, 'DistributedSync', `群组同步完成: ${syncData.userId}`);
+    } catch (error) {
+      hilog.error(0x0000, 'DistributedSync', `群组同步失败: ${JSON.stringify(error)}`);
+      throw new Error(`群组同步失败: ${JSON.stringify(error)}`);
+    }
+  }
+
+  /**
+   * 获取用户动态数据
+   */
+  private async fetchUserMoments(userId: string): Promise<Object[]> {
+    // 这里应该调用后端API获取用户动态
+    // 暂时返回空数组，等待后端API实现
+    return [];
+  }
+
+  /**
+   * 获取用户群组数据
+   */
+  private async fetchUserGroups(userId: string): Promise<Object[]> {
+    // 这里应该调用后端API获取用户群组
+    // 暂时返回空数组，等待后端API实现
+    return [];
+  }
+
+  /**
+   * 上传动态数据到分布式存储
+   */
+  private async uploadMomentsToKVStore(momentsData: Object[]): Promise<void> {
+    if (momentsData.length === 0) return;
+    
+    try {
+      const key = `user_moments_${Date.now()}`;
+      await this.kvStore?.put(key, JSON.stringify(momentsData));
+    } catch (error) {
+      hilog.error(0x0000, 'DistributedSync', `上传动态数据失败: ${JSON.stringify(error)}`);
+      throw new Error(`上传动态数据失败: ${JSON.stringify(error)}`);
+    }
+  }
+
+  /**
+   * 上传群组数据到分布式存储
+   */
+  private async uploadGroupsToKVStore(groupsData: Object[]): Promise<void> {
+    if (groupsData.length === 0) return;
+    
+    try {
+      const key = `user_groups_${Date.now()}`;
+      await this.kvStore?.put(key, JSON.stringify(groupsData));
+    } catch (error) {
+      hilog.error(0x0000, 'DistributedSync', `上传群组数据失败: ${JSON.stringify(error)}`);
+      throw new Error(`上传群组数据失败: ${JSON.stringify(error)}`);
+    }
   }
 }

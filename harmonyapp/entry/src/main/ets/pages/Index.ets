@@ -18,10 +18,11 @@ import { NotificationComponent } from '../components/NotificationComponent';
 import { NavIcon, AppIcon } from '../components/SystemIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { SmartNotificationService } from '../common/services/SmartNotificationService';
-import { PerformanceOptimizer } from '../common/performance/PerformanceOptimizer';
+import { CacheManager } from '../common/cache/CacheManager';
 import { NotificationCenter } from '../components/NotificationCenter';
 import { PerformanceIndicator } from '../components/PerformanceIndicator';
 import { SystemToast } from '../components/SystemToast';
+import { I18nManager } from '../common/i18n/I18nManager';
 
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG: string = 'IndexPage';
@@ -39,24 +40,28 @@ struct Index {
   @State currentTabIndex: number = 0;
   @State isInitialized: boolean = false;
   @State lastError: string = '';
-  @State wsConnectionStatus: string = '未连接';
+  @State wsConnectionStatus: string = '';
+  @State tabsData: TabItem[] = [];
   @State showNotificationCenter: boolean = false;
   @State showPerformanceDetails: boolean = false;
   private stateManager = GlobalStateManager.getInstance();
   private persistentStateManager = PersistentStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
   private smartNotificationService = SmartNotificationService.getInstance();
-  private performanceOptimizer = PerformanceOptimizer.getInstance();
+  private cacheManager = CacheManager.getInstance();
+  private i18nManager = I18nManager.getInstance();
   private uiContext: UIContext | null = null;
   private abilityContext: common.UIAbilityContext | null = null;
-  // 标签配置
-  private readonly tabs: TabItem[] = [
-    { name: '群组', icon: AppIcon.GROUP, page: PageNames.GROUP },
-    { name: '消息', icon: AppIcon.MESSAGE, page: PageNames.MESSAGE },
-    { name: '瞬间', icon: AppIcon.CAMERA, page: PageNames.MOMENT },
-    { name: '地图', icon: AppIcon.MAP, page: PageNames.MAP },
-    { name: '个人', icon: AppIcon.PERSON, page: PageNames.PROFILE }
-  ];
+  // 标签配置 - 使用国际化
+  private getTabs(): TabItem[] {
+    return [
+      { name: this.i18nManager.t('tabs.group'), icon: AppIcon.GROUP, page: PageNames.GROUP },
+      { name: this.i18nManager.t('tabs.message'), icon: AppIcon.MESSAGE, page: PageNames.MESSAGE },
+      { name: this.i18nManager.t('tabs.moment'), icon: AppIcon.CAMERA, page: PageNames.MOMENT },
+      { name: this.i18nManager.t('tabs.map'), icon: AppIcon.MAP, page: PageNames.MAP },
+      { name: this.i18nManager.t('tabs.profile'), icon: AppIcon.PERSON, page: PageNames.PROFILE }
+    ];
+  }
 
   async aboutToAppear() {
     // 初始化UIContext - 使用推荐的UIContext方式 (API Version 10+)
@@ -67,6 +72,16 @@ struct Index {
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `获取UIContext失败: ${JSON.stringify(error)}`);
     }
+
+    // 初始化国际化
+    if (this.abilityContext) {
+      this.i18nManager.setContext(this.abilityContext);
+      await this.i18nManager.initialize();
+    }
+
+    // 初始化标签数据
+    this.tabsData = this.getTabs();
+    this.wsConnectionStatus = this.i18nManager.t('common.loading');
 
     // 订阅状态变化
     this.stateManager.subscribe('index_page', (state: GlobalState) => {
@@ -133,7 +148,7 @@ struct Index {
             const locationInfo: LocationInfo = {
               latitude: location.latitude,
               longitude: location.longitude,
-              locationName: locationName || '未知位置',
+              locationName: locationName || this.i18nManager.t('error.locationUnavailable'),
               accuracy: location.accuracy || 0,
               altitude: location.altitude || 0,
               speed: location.speed || 0,
@@ -181,7 +196,7 @@ struct Index {
    */
   private async initializeWebSocket() {
     try {
-      this.wsConnectionStatus = '连接中...';
+      this.wsConnectionStatus = this.i18nManager.t('common.loading');
       hilog.info(DOMAIN_NUMBER, TAG, '🔌 初始化WebSocket连接');
 
       // 如果用户已登录，尝试连接WebSocket
@@ -190,15 +205,15 @@ struct Index {
         const token = await this.getAccessToken();
         if (token) {
           await this.webSocketService.connect(token);
-          this.wsConnectionStatus = '已连接';
+          this.wsConnectionStatus = this.i18nManager.t('common.success');
         } else {
-          this.wsConnectionStatus = '无令牌';
+          this.wsConnectionStatus = this.i18nManager.t('auth.loginFailed');
         }
       } else {
-        this.wsConnectionStatus = '未登录';
+        this.wsConnectionStatus = this.i18nManager.t('auth.loginFailed');
       }
     } catch (error) {
-      this.wsConnectionStatus = '连接失败';
+      this.wsConnectionStatus = this.i18nManager.t('error.networkError');
       hilog.error(DOMAIN_NUMBER, TAG, `WebSocket初始化失败: ${error}`);
     }
   }
@@ -393,7 +408,7 @@ struct Index {
 
           // 快捷功能区域
           Column({ space: 12 }) {
-            Text('快捷功能')
+            Text(this.i18nManager.t('common.more'))
               .fontSize(18)
               .fontWeight(FontWeight.Medium)
               .fontColor($r('sys.color.ohos_id_color_text_primary'))
@@ -403,7 +418,7 @@ struct Index {
             Grid() {
               GridItem() {
                 this.buildQuickActionCard(
-                  '通知中心',
+                  this.i18nManager.t('settings.notification'),
                   AppIcon.NOTIFICATION,
                   () => this.toggleNotificationCenter()
                 )
@@ -411,7 +426,7 @@ struct Index {
 
               GridItem() {
                 this.buildQuickActionCard(
-                  '性能监控',
+                  this.i18nManager.t('common.info'),
                   AppIcon.CHART,
                   () => this.togglePerformanceDetails()
                 )
@@ -419,11 +434,11 @@ struct Index {
 
               GridItem() {
                 this.buildQuickActionCard(
-                  '高级设置',
+                  this.i18nManager.t('settings.about'),
                   AppIcon.SETTINGS,
                   () => {
                     // 跳转到高级设置页面
-                    SystemToast.showInfo('跳转到高级设置', this.getUIContext());
+                    SystemToast.showInfo(this.i18nManager.t('settings.about'), this.getUIContext());
                   }
                 )
               }
@@ -477,14 +492,14 @@ struct Index {
 
           // 当前标签页内容
           Column({ space: 16 }) {
-            Text(`${this.tabs[this.currentTabIndex].name}页面`)
+            Text(`${this.tabsData[this.currentTabIndex]?.name || ''}页面`)
               .fontSize(18)
               .fontWeight(FontWeight.Medium)
               .fontColor($r('sys.color.ohos_id_color_text_primary'))
               .alignSelf(ItemAlign.Start)
               .margin({ left: 16 })
 
-            Button(`进入${this.tabs[this.currentTabIndex].name}`)
+            Button(`${this.i18nManager.t('common.next')}${this.tabsData[this.currentTabIndex]?.name || ''}`)
               .fontSize(16)
               .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
               .width('calc(100% - 32vp)')
@@ -506,7 +521,7 @@ struct Index {
   @Builder
   private buildTabBar() {
     Row() {
-      ForEach(this.tabs, (tab: TabItem, index: number) => {
+      ForEach(this.tabsData, (tab: TabItem, index: number) => {
         NavIcon({
           icon: tab.icon,
           onNavClick: () => {
@@ -532,14 +547,13 @@ struct Index {
   private async initializeSmartServices(): Promise<void> {
     try {
 
-      // 设置性能告警监听 - 使用轮询方式检查告警
+      // 设置缓存统计监听 - 使用轮询方式检查缓存状态
       setInterval(() => {
-        const alerts = this.performanceOptimizer.getPerformanceAlerts();
-        if (alerts.length > 0) {
-          const latestAlert = alerts[alerts.length - 1];
-          hilog.warn(DOMAIN_NUMBER, TAG, `性能告警: ${latestAlert.message}`);
+        const stats = this.cacheManager.getStats();
+        if (stats.hitRate < 50 && stats.totalRequests > 100) {
+          hilog.warn(DOMAIN_NUMBER, TAG, `缓存命中率较低: ${stats.hitRate}%`);
         }
-      }, 5000); // 每5秒检查一次
+      }, 30000); // 每30秒检查一次
 
       // 设置通知监听
       this.smartNotificationService.addListener((notification) => {

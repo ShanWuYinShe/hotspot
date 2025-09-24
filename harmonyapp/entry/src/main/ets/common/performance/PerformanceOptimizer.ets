@@ -1,14 +1,17 @@
 /**
- * 性能优化管理器（简化版）
- * 提供基础的性能监控和优化功能
+ * 性能优化管理器（重构版）
+ * 使用新的基础设施：单例基类、统一日志、定时器管理器、错误处理
  */
 
-import { hilog } from '@kit.PerformanceAnalysisKit';
 import { display } from '@kit.ArkUI';
 import { deviceInfo } from '@kit.BasicServicesKit';
+import { BaseSingleton } from '../base/Singleton';
+import { createLogger } from '../utils/LogManager';
+import { TimerManager } from '../utils/TimerManager';
+import { ErrorHandler, ErrorType, ErrorLevel } from '../utils/ErrorHandler';
+import { PERFORMANCE_CONSTANTS } from '../constants/SystemConstants';
 
-const DOMAIN_NUMBER: number = 0xFF12;
-const TAG: string = 'PerformanceOptimizer';
+const logger = createLogger('PerformanceOptimizer');
 
 /**
  * 缓存项接口
@@ -77,20 +80,21 @@ export interface DeviceAdaptationInfo {
   performanceLevel: 'low' | 'medium' | 'high';
 }
 
-export class PerformanceOptimizer {
+export class PerformanceOptimizer extends BaseSingleton {
   private static instance: PerformanceOptimizer | null = null;
   private cache: Map<string, CacheItem<object>> = new Map();
-  private maxCacheSize: number = 100;
-  private defaultExpiry: number = 5 * 60 * 1000; // 5分钟
+  private maxCacheSize: number = PERFORMANCE_CONSTANTS.CACHE.DEFAULT_SIZE;
+  private defaultExpiry: number = PERFORMANCE_CONSTANTS.CACHE.DEFAULT_EXPIRY;
   private performanceMetrics: PerformanceMetrics;
   private alerts: PerformanceAlert[] = [];
   private config: AdaptiveConfig;
   private isMonitoring: boolean = false;
-  private monitoringInterval: number | null = null;
+  private monitoringTimerId: number = -1;
   private cacheHits: number = 0;
   private cacheMisses: number = 0;
 
   private constructor() {
+    super();
     this.performanceMetrics = {
       memoryUsage: 0,
       cpuUsage: 0,
@@ -103,20 +107,61 @@ export class PerformanceOptimizer {
     };
 
     this.config = {
-      maxCacheSize: 100,
+      maxCacheSize: PERFORMANCE_CONSTANTS.CACHE.DEFAULT_SIZE,
       imageQuality: 80,
       animationEnabled: true,
       maxConcurrentRequests: 5,
-      networkTimeout: 10000,
+      networkTimeout: PERFORMANCE_CONSTANTS.INTERVALS.PERFORMANCE_CHECK,
       backgroundSyncEnabled: true
     };
   }
 
+  /**
+   * 获取单例实例
+   */
   static getInstance(): PerformanceOptimizer {
     if (!PerformanceOptimizer.instance) {
       PerformanceOptimizer.instance = new PerformanceOptimizer();
     }
     return PerformanceOptimizer.instance;
+  }
+
+  /**
+   * 异步获取单例实例
+   */
+  static async getInstanceAsync(): Promise<PerformanceOptimizer> {
+    const instance = PerformanceOptimizer.getInstance();
+    await instance.initialize();
+    return instance;
+  }
+
+  /**
+   * 实现基类的初始化方法
+   */
+  protected async onInitialize(): Promise<void> {
+    try {
+      logger.info('性能优化器初始化开始');
+      // 初始化性能监控
+      this.updatePerformanceMetrics();
+      logger.info('性能优化器初始化完成');
+    } catch (error) {
+      ErrorHandler.handle(error, 'PerformanceOptimizer.onInitialize', ErrorType.SYSTEM, ErrorLevel.HIGH);
+      throw new Error('PerformanceOptimizer初始化失败');
+    }
+  }
+
+  /**
+   * 实现基类的清理方法
+   */
+  protected async onCleanup(): Promise<void> {
+    try {
+      this.stopMonitoring();
+      this.clearCache();
+      this.clearAlerts();
+      logger.info('性能优化器清理完成');
+    } catch (error) {
+      ErrorHandler.handle(error, 'PerformanceOptimizer.onCleanup', ErrorType.SYSTEM);
+    }
   }
 
   /**
@@ -138,9 +183,9 @@ export class PerformanceOptimizer {
       };
 
       this.cache.set(key, cacheItem as CacheItem<Object>);
-      hilog.debug(DOMAIN_NUMBER, TAG, `缓存设置成功: ${key}`);
+      logger.debug(`缓存设置成功: ${key}`);
     } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, `设置缓存失败: ${key}, error: ${JSON.stringify(error)}`);
+      ErrorHandler.handle(error, `setCache(${key})`, ErrorType.SYSTEM, ErrorLevel.LOW);
     }
   }
 
@@ -169,7 +214,7 @@ export class PerformanceOptimizer {
 
       return cacheItem.data as T;
     } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, `获取缓存失败: ${key}, error: ${JSON.stringify(error)}`);
+      ErrorHandler.handle(error, `getCache(${key})`, ErrorType.SYSTEM, ErrorLevel.LOW);
       this.cacheMisses++;
       return null;
     }
@@ -191,7 +236,7 @@ export class PerformanceOptimizer {
 
     if (leastUsedKey) {
       this.cache.delete(leastUsedKey);
-      hilog.debug(DOMAIN_NUMBER, TAG, `清理最少使用缓存: ${leastUsedKey}`);
+      logger.debug(`清理最少使用缓存: ${leastUsedKey}`);
     }
   }
 
@@ -200,7 +245,7 @@ export class PerformanceOptimizer {
    */
   clearCache(): void {
     this.cache.clear();
-    hilog.info(DOMAIN_NUMBER, TAG, '缓存已清空');
+    logger.info('缓存已清空');
   }
 
   /**
@@ -233,10 +278,10 @@ export class PerformanceOptimizer {
         performanceLevel: this.getPerformanceLevel()
       };
 
-      hilog.debug(DOMAIN_NUMBER, TAG, `设备适配信息: ${JSON.stringify(adaptationInfo)}`);
+      logger.debug(`设备适配信息: ${JSON.stringify(adaptationInfo)}`);
       return adaptationInfo;
     } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, `获取设备适配信息失败: ${JSON.stringify(error)}`);
+      ErrorHandler.handle(error, 'getDeviceAdaptationInfo', ErrorType.SYSTEM, ErrorLevel.LOW);
       // 返回默认值
       return {
         screenWidth: 360,
@@ -266,7 +311,7 @@ export class PerformanceOptimizer {
         return 'low';
       }
     } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, `获取性能等级失败: ${JSON.stringify(error)}`);
+      ErrorHandler.handle(error, 'getPerformanceLevel', ErrorType.SYSTEM, ErrorLevel.LOW);
       return 'medium';
     }
   }
@@ -321,11 +366,11 @@ export class PerformanceOptimizer {
     }
 
     this.isMonitoring = true;
-    this.monitoringInterval = setInterval(() => {
+    this.monitoringTimerId = TimerManager.setInterval(() => {
       this.updatePerformanceMetrics();
-    }, 2000);
+    }, 2000, '性能监控');
 
-    hilog.info(DOMAIN_NUMBER, TAG, '性能监控已启动');
+    logger.info('性能监控已启动');
   }
 
   /**
@@ -337,12 +382,12 @@ export class PerformanceOptimizer {
     }
 
     this.isMonitoring = false;
-    if (this.monitoringInterval) {
-      clearInterval(this.monitoringInterval);
-      this.monitoringInterval = null;
+    if (this.monitoringTimerId !== -1) {
+      TimerManager.clearInterval(this.monitoringTimerId);
+      this.monitoringTimerId = -1;
     }
 
-    hilog.info(DOMAIN_NUMBER, TAG, '性能监控已停止');
+    logger.info('性能监控已停止');
   }
 
   /**
@@ -365,7 +410,7 @@ export class PerformanceOptimizer {
       // 检查告警条件
       this.checkAlerts();
     } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, `更新性能指标失败: ${JSON.stringify(error)}`);
+      ErrorHandler.handle(error, 'updatePerformanceMetrics', ErrorType.SYSTEM, ErrorLevel.MEDIUM);
     }
   }
 
@@ -424,7 +469,7 @@ export class PerformanceOptimizer {
       this.alerts = this.alerts.slice(-30);
     }
 
-    hilog.warn(DOMAIN_NUMBER, TAG, `性能告警: ${alert.message}`);
+    logger.warn(`性能告警: ${alert.message}`);
   }
 
   /**
@@ -432,7 +477,7 @@ export class PerformanceOptimizer {
    */
   clearAlerts(): void {
     this.alerts = [];
-    hilog.info(DOMAIN_NUMBER, TAG, '性能告警已清空');
+    logger.info('性能告警已清空');
   }
 
   /**
@@ -442,8 +487,7 @@ export class PerformanceOptimizer {
     this.stopMonitoring();
     this.clearCache();
     this.clearAlerts();
-    PerformanceOptimizer.instance = null;
-    hilog.info(DOMAIN_NUMBER, TAG, '性能优化器已销毁');
+    logger.info('性能优化器已销毁');
   }
 
   /**
@@ -453,10 +497,10 @@ export class PerformanceOptimizer {
     try {
       // 这里应该使用HarmonyOS的真实内存API
       // 由于API可能需要特殊权限，暂时返回0表示无法获取
-      hilog.warn(DOMAIN_NUMBER, TAG, '内存使用率API需要系统权限，返回默认值');
+      logger.warn('内存使用率API需要系统权限，返回默认值');
       return 0;
     } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, '获取内存使用率失败');
+      ErrorHandler.handle(error, 'getRealMemoryUsage', ErrorType.SYSTEM, ErrorLevel.LOW);
       return 0;
     }
   }
@@ -468,10 +512,10 @@ export class PerformanceOptimizer {
     try {
       // 这里应该使用HarmonyOS的真实CPU API
       // 由于API可能需要特殊权限，暂时返回0表示无法获取
-      hilog.warn(DOMAIN_NUMBER, TAG, 'CPU使用率API需要系统权限，返回默认值');
+      logger.warn('CPU使用率API需要系统权限，返回默认值');
       return 0;
     } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, '获取CPU使用率失败');
+      ErrorHandler.handle(error, 'getRealCpuUsage', ErrorType.SYSTEM, ErrorLevel.LOW);
       return 0;
     }
   }
@@ -503,7 +547,7 @@ export class PerformanceOptimizer {
       // 暂时返回100表示满电
       return 100;
     } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, '获取电池电量失败');
+      ErrorHandler.handle(error, 'getBatteryLevel', ErrorType.SYSTEM, ErrorLevel.LOW);
       return 100;
     }
   }
