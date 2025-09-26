@@ -236,7 +236,7 @@
 </template>
 
 <script setup lang="ts">
-import type { UserSettings } from '~/types';
+import type { UserSettings } from '~/types/api';
 
 interface Props {
   user: any;

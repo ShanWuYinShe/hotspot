@@ -39,10 +39,10 @@
 </template>
 
 <script setup lang="ts">
-import type { UserInfo } from "~/types";
+import type { UserResponse } from "~/types/api";
 
 interface Props {
-  friend?: UserInfo | null
+  friend?: UserResponse | null
   onSave?: (remarkText: string) => Promise<void>
 }
 
@@ -61,7 +61,7 @@ const saving = ref(false)
 // 监听 friend 变化，更新备注文本
 watch(() => props.friend, (friend) => {
   if (friend) {
-    remarkText.value = (friend as UserInfo & { remark?: string }).remark || ''
+    remarkText.value = (friend as UserResponse & { remark?: string }).remark || ''
   }
 }, { immediate: true })
 

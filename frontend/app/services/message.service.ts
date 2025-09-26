@@ -8,18 +8,18 @@ import { CHAT_ENDPOINTS, buildChatUrl } from "~/config/api";
 import { DEFAULTS } from "~/config/defaults";
 import type { 
   MessageType, 
-  Message, 
+  SendMessageResponse, 
   PaginatedResponse, 
-  ConversationSummary, 
+  ConversationsResponse, 
   UnreadCount, 
   BasicSuccess 
-} from "~/types";
+} from "~/types/api";
 
 export const useMessageService = () => {
   const api = useApi();
 
   // 群组消息（使用统一消息接口）
-  const sendGroupMessage = async (groupId: string, content: string, messageType: MessageType = "text"): Promise<Message> => {
+  const sendGroupMessage = async (groupId: string, content: string, messageType: MessageType = "text"): Promise<SendMessageResponse> => {
     return await api.post(buildChatUrl(CHAT_ENDPOINTS.PROTECTED.SEND), {
       group_id: groupId,
       content,
@@ -27,7 +27,7 @@ export const useMessageService = () => {
     }, { auth: true });
   };
 
-  const getGroupMessageHistory = async (groupId: string, cursor?: string): Promise<PaginatedResponse<Message>> => {
+  const getGroupMessageHistory = async (groupId: string, cursor?: string): Promise<PaginatedResponse<SendMessageResponse>> => {
     return await api.post(buildChatUrl(CHAT_ENDPOINTS.PROTECTED.HISTORY), {
       group_id: groupId,
       cursor: cursor, // 游标分页
@@ -36,7 +36,7 @@ export const useMessageService = () => {
   };
 
   // 私聊消息（使用统一消息接口）
-  const sendDirectMessage = async (recipientId: string, content: string, messageType: MessageType = "text"): Promise<Message> => {
+  const sendDirectMessage = async (recipientId: string, content: string, messageType: MessageType = "text"): Promise<SendMessageResponse> => {
     return await api.post(buildChatUrl(CHAT_ENDPOINTS.PROTECTED.SEND), {
       recipient_id: recipientId,
       content,
@@ -48,7 +48,7 @@ export const useMessageService = () => {
   const getDirectMessageHistory = async (
     params: { conversationId?: string; recipientId?: string },
     cursor?: string,
-  ): Promise<PaginatedResponse<Message>> => {
+  ): Promise<PaginatedResponse<SendMessageResponse>> => {
     return await api.post(buildChatUrl(CHAT_ENDPOINTS.PROTECTED.HISTORY), {
       conversation_id: params.conversationId,
       recipient_id: params.recipientId,
@@ -61,13 +61,13 @@ export const useMessageService = () => {
   const markAsRead = async (
     id: string,
     type: 'user' | 'group' = 'user',
-    lastReadMessageId?: string,
+    lastReadSendMessageResponseId?: string,
   ): Promise<BasicSuccess> => {
     return await api.post(
       buildChatUrl(CHAT_ENDPOINTS.PROTECTED.MARK_READ),
       { 
         [type === 'group' ? 'group_id' : 'conversation_id']: id, 
-        last_read_message_id: lastReadMessageId 
+        last_read_message_id: lastReadSendMessageResponseId 
       },
       { auth: true },
     );
@@ -80,7 +80,7 @@ export const useMessageService = () => {
   };
 
   // 搜索消息（暂未实现 - hotspot.md 中未定义此端点）
-  const searchMessages = async (data: any): Promise<PaginatedResponse<Message>> => {
+  const searchMessages = async (data: any): Promise<PaginatedResponse<SendMessageResponse>> => {
     throw new Error('消息搜索功能暂未实现，请等待后端API上线');
     // 注意：hotspot.md 7.4.1 中只定义了11个消息端点，不包含搜索功能
   };
@@ -102,7 +102,7 @@ export const useMessageService = () => {
     );
   };
 
-  const getConversations = async (cursor?: string): Promise<PaginatedResponse<ConversationSummary>> => {
+  const getConversations = async (cursor?: string): Promise<PaginatedResponse<ConversationsResponse>> => {
     return await api.post(buildChatUrl(CHAT_ENDPOINTS.PROTECTED.CONVERSATIONS), {
       cursor: cursor ? parseInt(cursor) : 0,
       limit: DEFAULTS.pageSize,

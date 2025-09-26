@@ -1,5 +1,5 @@
 ---
-description: 这是HotSpot前端项目的功能需求文档，包含项目概览、技术架构选择、功能模块需求和用户体验设计要求。
+description: 前端项目的需求文档，包含前端开发的所有技术要求和功能规范。
 alwaysApply: false
 ---
 # HotSpot 前端项目需求文档
@@ -41,12 +41,14 @@ alwaysApply: false
   - [7. 质量保证要求](#7-质量保证要求)
     - [7.1 测试覆盖要求](#71-测试覆盖要求)
     - [7.2 部署要求](#72-部署要求)
+  - [8. 升级指南](#8-升级指南)
+    - [8.1 Nuxt UI v4 升级](#81-nuxt-ui-v4-升级)
 
 ## 1. 项目概览
 
 ### 1.1 项目简介
 
-HotSpot 前端是一个基于地理位置的社交应用前端，采用 Nuxt 4 + Vue 3 + Nuxt UI v3 技术栈，提供流畅的用户体验和现代化的界面设计。
+HotSpot 前端是一个基于地理位置的社交应用前端，采用 Nuxt 4 + Vue 3 + Nuxt UI v4 技术栈，提供流畅的用户体验和现代化的界面设计。
 
 ### 1.2 前端目标与愿景
 
@@ -87,7 +89,7 @@ HotSpot 前端是一个基于地理位置的社交应用前端，采用 Nuxt 4 +
 
 **核心框架与库**：
 - **框架**: Nuxt 4 + Vue 3
-- **UI组件**: Nuxt UI v3 + Tailwind CSS
+- **UI组件**: Nuxt UI v4 + Tailwind CSS
 - **状态管理**: Pinia + pinia-plugin-persistedstate
 - **类型检查**: TypeScript
 - **工具库**: @vueuse/core, dayjs, crypto-js
@@ -98,7 +100,7 @@ HotSpot 前端是一个基于地理位置的社交应用前端，采用 Nuxt 4 +
 - **地图服务**: 高德地图 API
 - **微信集成**: weixin-js-sdk
 - **二维码**: qrcode
-- **图标系统**: Nuxt UI v3 内置图标系统（Heroicons、Lucide、Tabler等）
+- **图标系统**: Nuxt UI v4 内置图标系统（Heroicons、Lucide、Tabler等）
 - **包管理**: pnpm
 
 ### 2.2 代码组织架构
@@ -118,7 +120,7 @@ HotSpot 前端是一个基于地理位置的社交应用前端，采用 Nuxt 4 +
 
 **代码组织原则**：
 - **自动导入**: Nuxt自动导入系统，支持组件、API和工具函数
-- **按需加载**: Nuxt UI v3组件按需导入优化
+- **按需加载**: Nuxt UI v4组件按需导入优化
 - **职责分离**: 业务逻辑与UI组件分离
 - **类型安全**: 完整的TypeScript类型定义和自动类型生成
 - **响应式设计**: 移动优先的设计原则
@@ -145,42 +147,7 @@ HotSpot 前端是一个基于地理位置的社交应用前端，采用 Nuxt 4 +
 - 支持动态路由、嵌套路由、布局路由
 - 使用 TypeScript 进行路由类型安全
 
-**路由结构设计**：
-```
-pages/
-├── index.vue                    # 首页 /
-├── auth/
-│   ├── login.vue               # 登录页 /auth/login
-│   ├── register.vue            # 注册页 /auth/register
-│   └── temp.vue                # 临时用户创建 /auth/temp
-├── profile/
-│   ├── index.vue               # 个人资料 /profile
-│   ├── settings.vue            # 设置页面 /profile/settings
-│   └── upgrade.vue             # 账户升级 /profile/upgrade
-├── map/
-│   ├── index.vue               # 地图主页 /map
-│   └── location/
-│       └── [id].vue            # 位置详情 /map/location/:id
-├── groups/
-│   ├── index.vue               # 群组列表 /groups
-│   ├── create.vue              # 创建群组 /groups/create
-│   ├── search.vue              # 搜索群组 /groups/search
-│   └── [id]/
-│       ├── index.vue           # 群组详情 /groups/:id
-│       ├── members.vue         # 成员管理 /groups/:id/members
-│       └── settings.vue       # 群组设置 /groups/:id/settings
-├── chat/
-│   ├── index.vue               # 会话列表 /chat
-│   └── [conversationId].vue   # 聊天界面 /chat/:conversationId
-├── moments/
-│   ├── index.vue               # 瞬间列表 /moments
-│   ├── create.vue              # 创建瞬间 /moments/create
-│   ├── search.vue              # 搜索瞬间 /moments/search
-│   └── [id].vue                # 瞬间详情 /moments/:id
-└── users/
-    ├── search.vue              # 用户搜索 /users/search
-    └── [id].vue                # 用户资料 /users/:id
-```
+**路由结构设计**：以 `pages/` 自动路由为准，涵盖首页、认证、资料、地图、群组、聊天、瞬间、用户等模块，采用动态与嵌套路由组织。
 
 **路由中间件要求**：
 - 认证中间件：保护需要登录的页面
@@ -565,3 +532,89 @@ pages/
 - 实现静态资源压缩
 - 提供TypeScript类型检查
 - 支持环境变量配置
+
+## 8. 升级指南
+
+### 8.1 Nuxt UI v4 升级
+
+**升级概述**：
+- Nuxt UI v4.0.0 于 2025年1月发布，带来了重要的架构改进和新功能
+- 本项目已成功升级到 Nuxt UI v4.0.0，确保与 Nuxt 4.1.2+ 的完全兼容
+- 升级过程包括依赖更新、代码适配和构建验证
+- 项目当前使用版本：@nuxt/ui@4.0.0 + @nuxt/icon@2.0.0
+
+**主要变化**：
+
+**1. 组件架构改进**：
+- 基于最新的 Radix Vue 组件库重构，提供更好的无障碍支持
+- 组件 API 更加统一和一致，减少学习成本
+- 改进的 TypeScript 支持和类型推断
+
+**2. 表单组件行为变更**：
+- 在启用转换功能时，表单组件不再自动修改其状态
+- 开发者需要更明确地管理表单状态变化
+- 提供了更好的表单验证和错误处理机制
+
+**3. 模块兼容性**：
+- 完全兼容 Nuxt 4.1.2+ 版本
+- 改进的构建性能和开发体验
+- 更好的 SSR 和 SSG 支持
+
+**4. 图标系统升级**：
+- 升级到 @nuxt/icon v2.0.0
+- 支持更多图标集合和更好的性能
+- 改进的图标加载和缓存机制
+
+**升级步骤**：
+
+**1. 依赖升级**：升级 `@nuxt/ui@4` 与 `@nuxt/icon@2`，确保框架版本兼容。
+
+**2. 代码适配**：
+- 检查并更新 `defineProps` 的默认值处理，避免在默认值中引用局部变量
+- 更新表单组件的状态管理逻辑
+- 验证所有组件的 TypeScript 类型定义
+
+**3. 构建验证**：执行构建与本地开发验证，确保无错误与关键功能可用。
+
+**兼容性注意事项**：
+
+**1. Vue 3.5+ 兼容性**：
+- `defineProps` 的默认值不能引用局部声明的变量
+- 需要使用计算属性或其他方式处理动态默认值
+- 示例修复：
+```typescript
+// ❌ 错误：默认值引用局部变量
+const { t } = useI18n()
+const props = withDefaults(defineProps<Props>(), {
+  title: () => t('common.title')
+})
+
+// ✅ 正确：使用计算属性
+const props = withDefaults(defineProps<Props>(), {})
+const { t } = useI18n()
+const title = computed(() => props.title || t('common.title'))
+```
+
+**2. 组件使用最佳实践**：
+- 继续使用 `useOverlay` 管理 Modal 和 Slideover 组件
+- 保持现有的组件结构和使用模式
+- 充分利用改进的 TypeScript 支持
+
+**性能改进**：
+- 更好的代码分割和懒加载支持
+- 改进的构建时间和运行时性能
+- 更小的包体积和更快的加载速度
+
+**迁移验证**：
+- ✅ 项目构建成功，无编译错误
+- ✅ 所有 Modal 组件正常工作
+- ✅ 表单组件功能完整
+- ✅ 图标系统正常显示（Heroicons + Lucide）
+- ✅ TypeScript 类型检查通过
+- ✅ 依赖更新完成：Vue 3.5.22, @nuxt/devtools 2.6.5
+- ✅ 构建性能优化，包体积控制良好
+
+**后续维护**：
+- 定期关注 Nuxt UI v4 的更新和改进
+- 持续优化组件使用和性能表现
+- 保持与 Nuxt 4 生态系统的同步更新

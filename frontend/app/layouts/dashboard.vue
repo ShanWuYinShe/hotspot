@@ -2,7 +2,6 @@
   <UDashboardGroup>
     <!-- 侧边栏 -->
     <UDashboardSidebar 
-      mode="drawer"
       collapsible
       resizable
       :min-size="15"
@@ -60,7 +59,7 @@
             <div class="flex-1 min-w-0">
               <p class="text-sm font-medium truncate">{{ currentUser.nickname || "用户" }}</p>
               <p class="text-xs text-neutral-500 truncate">
-                {{ currentUser.is_temp ? "临时用户" : "正式用户" }}
+                {{ (currentUser as any)?.is_temp ? "临时用户" : "正式用户" }}
               </p>
             </div>
           </div>
@@ -78,21 +77,33 @@
             </UTooltip>
             
             <UTooltip text="通知">
-              <UButton
-                variant="ghost"
-                icon="i-heroicons-bell"
-                size="sm"
-                square
-                class="relative"
-                @click="toggleNotifications"
-              >
-                <UBadge
-                  v-if="hasSystemAlerts"
-                  size="xs"
-                  color="error"
-                  class="absolute -top-1 -right-1 w-2 h-2"
-                />
-              </UButton>
+              <UPopover v-model:open="showNotifications" :popper="{ placement: 'bottom-end' }">
+                <UButton
+                  variant="ghost"
+                  icon="i-heroicons-bell"
+                  size="sm"
+                  square
+                  class="relative"
+                >
+                  <UBadge
+                    v-if="notificationPanelRef?.unreadCount > 0"
+                    size="xs"
+                    color="error"
+                    class="absolute -top-1 -right-1 w-2 h-2"
+                  />
+                </UButton>
+                
+                <template #panel>
+                  <Suspense>
+                    <NotificationPanel ref="notificationPanelRef" />
+                    <template #fallback>
+                      <div class="w-96 h-64 flex items-center justify-center">
+                        <USkeleton class="w-full h-full" />
+                      </div>
+                    </template>
+                  </Suspense>
+                </template>
+              </UPopover>
             </UTooltip>
 
             <ThemeToggle size="sm" />
@@ -194,6 +205,7 @@ const route = useRoute();
 const { t } = useI18n();
 const toast = useToast();
 
+
 // 用户状态
 const authStore = useAuthStore();
 const currentUser = computed(() => authStore.user);
@@ -202,20 +214,18 @@ const currentUser = computed(() => authStore.user);
 const messagesStore = useMessagesStore();
 const unreadCount = computed(() => messagesStore.totalUnreadCount);
 
-// 系统通知
-const hasSystemAlerts = computed(() => false);
+// 通知系统
+const showNotifications = ref(false)
+const notificationPanelRef = ref()
 
-// 页面标题
+// 系统通知
+const hasSystemAlerts = computed(() => {
+  return notificationPanelRef.value?.unreadCount > 0
+});
+
+// 页面标题 - 从 route.meta 获取
 const pageTitle = computed(() => {
-  const path = route.path;
-  if (path === '/') return t("nav.home");
-  if (path === '/map') return t("nav.map");
-  if (path.startsWith('/groups')) return t("nav.groups");
-  if (path.startsWith('/chat')) return t("nav.messages");
-  if (path.startsWith('/users')) return t("nav.users");
-  if (path === '/profile') return t("nav.profile");
-  if (path === '/settings') return t("nav.settings");
-  return "HotSpot";
+  return route.meta.title || "HotSpot";
 });
 
 // 导航菜单项
@@ -340,8 +350,7 @@ const openSearch = () => {
 
 // 通知功能
 const toggleNotifications = () => {
-  // TODO: 实现通知面板功能
-  console.log('通知功能待实现');
+  showNotifications.value = !showNotifications.value
 };
 
 // 快捷键

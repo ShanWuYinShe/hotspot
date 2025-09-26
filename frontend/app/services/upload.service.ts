@@ -8,7 +8,7 @@ import type {
   UploadResponse, 
   BatchUploadResponse, 
   UploadConfig 
-} from "~/types";
+} from "~/types/api";
 
 export const useUploadService = () => {
   const api = useApi();
@@ -16,14 +16,23 @@ export const useUploadService = () => {
 
   // 默认上传配置 - 与后端保持一致
   const DEFAULT_CONFIG: UploadConfig = {
-    maxFileSize: 10 * 1024 * 1024, // 10MB
+    max_file_size: 10 * 1024 * 1024, // 10MB
+    allowed_types: [
+      'image/jpeg',
+      'image/png', 
+      'image/gif',
+      'image/webp'
+    ],
+    max_files_per_batch: 9, // 批量上传最多9张图片
+    // 兼容属性
+    maxFileSize: 10 * 1024 * 1024,
     allowedTypes: [
       'image/jpeg',
       'image/png', 
       'image/gif',
       'image/webp'
     ],
-    maxFiles: 9 // 批量上传最多9张图片
+    maxFiles: 9
   };
 
   /**
@@ -118,11 +127,11 @@ export const useUploadService = () => {
   const uploadImage = async (file: File): Promise<UploadResponse> => {
     const result = await uploadImages([file]);
     
-    if (result.upload_errors.length > 0) {
-      throw new Error(result.upload_errors[0].error);
+    if (result.upload_errors && result.upload_errors.length > 0) {
+      throw new Error(result.upload_errors[0]);
     }
     
-    if (result.uploaded_files.length === 0) {
+    if (!result.uploaded_files || result.uploaded_files.length === 0) {
       throw new Error('上传失败');
     }
     

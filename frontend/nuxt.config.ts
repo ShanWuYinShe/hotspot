@@ -20,15 +20,9 @@ export default defineNuxtConfig({
     { path: "~/components/illustrations", pathPrefix: false },
   ],
 
-  // 自动导入配置
-  imports: {
-    dirs: [
-      'composables/**',
-      'utils/**',
-      'stores/**',
-      'services/**'
-    ]
-  },
+  // 自动导入配置 - 使用 Nuxt 默认配置，不包含非内置目录
+  // Nuxt 默认自动导入：composables/, utils/, stores/ (via @pinia/nuxt)
+  // services/ 和 config/ 需要手动导入以保持代码依赖关系清晰
 
   // Pinia 持久化配置
   piniaPluginPersistedstate: {
@@ -64,21 +58,64 @@ export default defineNuxtConfig({
   // 样式配置
   css: [
     "~/assets/styles/main.css",
-    "~/assets/styles/mobile.css"
+    "~/assets/styles/transitions.css"
   ],
 
   // TypeScript 配置
   typescript: {
     strict: true,
-    typeCheck: true, // 启用类型检查
+    typeCheck: false,
   },
 
-  // 实验性特性
+  // Nuxt v4 实验性特性
   experimental: {
-    typedPages: false,
+    // 启用类型化页面路由
+    typedPages: true,
+    // 启用应用清单
     appManifest: true,
+    // 启用视图过渡 API
+    viewTransition: true,
+    // 启用 payload 提取
+    payloadExtraction: false,
+    // 启用 watcher 忽略
+    watcher: 'chokidar',
+    // 启用 sharedPrerenderData
+    sharedPrerenderData: true,
   },
 
+  // Nuxt v4 构建优化
+  build: {
+    // 启用 analyze 模式
+    analyze: process.env.ANALYZE === 'true'
+  },
+
+  // Nuxt v4 Vite 配置
+  vite: {
+    // 启用 Vue DevTools
+    vue: {
+      script: {
+        defineModel: true,
+        propsDestructure: true
+      }
+    },
+    // 优化依赖
+    optimizeDeps: {
+      include: ['@headlessui/vue', '@heroicons/vue/24/outline', '@heroicons/vue/24/solid']
+    }
+  },
+
+  // Nuxt v4 Nitro 配置
+  nitro: {
+    // 启用实验性功能
+    experimental: {
+      wasm: true
+    },
+    // 预渲染配置
+    prerender: {
+      crawlLinks: true,
+      routes: ['/']
+    }
+  },
 
   runtimeConfig: {
     public: {

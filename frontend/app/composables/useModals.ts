@@ -3,15 +3,12 @@
  */
 export const useModals = () => {
   const overlay = useOverlay()
+  const toast = useSmartToast()
 
   // 懒加载 Modal 组件
-  const CreateModalContent = defineAsyncComponent(() => import('~/components/CreateModalContent.vue'))
   const LoginPromptModalContent = defineAsyncComponent(() => import('~/components/LoginPromptModalContent.vue'))
   const WelcomeModalContent = defineAsyncComponent(() => import('~/components/WelcomeModalContent.vue'))
-  const CreateGroupModalContent = defineAsyncComponent(() => import('~/components/CreateGroupModalContent.vue'))
-  const ConfirmModalContent = defineAsyncComponent(() => import('~/components/ConfirmModalContent.vue'))
   const NicknameEditModalContent = defineAsyncComponent(() => import('~/components/NicknameEditModalContent.vue'))
-  const AvatarUploadModalContent = defineAsyncComponent(() => import('~/components/AvatarUploadModalContent.vue'))
   const MobileDrawerContent = defineAsyncComponent(() => import('~/components/MobileDrawerContent.vue'))
   const DetailSlideoverContent = defineAsyncComponent(() => import('~/components/DetailSlideoverContent.vue'))
   const TempUserModalContent = defineAsyncComponent(() => import('~/components/TempUserModalContent.vue'))
@@ -20,13 +17,9 @@ export const useModals = () => {
   const FriendRemarkModalContent = defineAsyncComponent(() => import('~/components/FriendRemarkModalContent.vue'))
 
   // 创建 Modal 实例
-  const createModal = overlay.create(CreateModalContent)
   const loginPromptModal = overlay.create(LoginPromptModalContent)
   const welcomeModal = overlay.create(WelcomeModalContent)
-  const createGroupModal = overlay.create(CreateGroupModalContent)
-  const confirmModal = overlay.create(ConfirmModalContent)
   const nicknameEditModal = overlay.create(NicknameEditModalContent)
-  const avatarUploadModal = overlay.create(AvatarUploadModalContent)
   const mobileDrawer = overlay.create(MobileDrawerContent)
   const detailSlideover = overlay.create(DetailSlideoverContent)
   const tempUserModal = overlay.create(TempUserModalContent)
@@ -34,10 +27,6 @@ export const useModals = () => {
   const searchModal = overlay.create(SearchModalContent)
   const friendRemarkModal = overlay.create(FriendRemarkModalContent)
 
-  // 打开创建内容 Modal
-  const openCreateModal = () => {
-    return createModal.open()
-  }
 
   // 打开登录提示 Modal
   const openLoginPromptModal = () => {
@@ -49,7 +38,6 @@ export const useModals = () => {
         // 处理临时体验 - 自动创建临时用户
         try {
           const authStore = useAuthStore()
-          const toast = useSmartToast()
           
           if (import.meta.dev) {
             // console.log('用户选择临时体验，正在创建临时用户...')
@@ -65,7 +53,6 @@ export const useModals = () => {
           // 跳转到首页
           await navigateTo('/')
         } catch (error: any) {
-          const toast = useSmartToast()
           toast.error({
             title: '临时体验开启失败',
             description: error?.message || '请稍后重试'
@@ -74,7 +61,7 @@ export const useModals = () => {
       },
       onLogin: () => {
         // 处理登录 - 跳转到认证页面
-        navigateTo('/auth')
+        navigateTo('/auth/login')
       },
       onSkip: () => {
         // 处理跳过
@@ -103,7 +90,6 @@ export const useModals = () => {
         // 处理临时体验 - 自动创建临时用户
         try {
           const authStore = useAuthStore()
-          const toast = useSmartToast()
           
           if (import.meta.dev) {
             // console.log('用户选择临时体验，正在创建临时用户...')
@@ -119,7 +105,6 @@ export const useModals = () => {
           // 跳转到首页
           await navigateTo('/')
         } catch (error: any) {
-          const toast = useSmartToast()
           toast.error({
             title: '临时体验开启失败',
             description: error?.message || '请稍后重试'
@@ -128,11 +113,11 @@ export const useModals = () => {
       },
       onRegister: () => {
         // 处理注册 - 跳转到认证页面
-        navigateTo('/auth')
+        navigateTo('/auth/login')
       },
       onLogin: () => {
         // 处理登录 - 跳转到认证页面
-        navigateTo('/auth')
+        navigateTo('/auth/login')
       },
       onSkip: () => {
         // 处理跳过
@@ -145,74 +130,7 @@ export const useModals = () => {
     return instance
   }
 
-  // 打开创建群组 Modal
-  const openCreateGroupModal = (options?: {
-    onSuccess?: (group: any) => void | Promise<void>;
-    onCancel?: () => void;
-  }) => {
-    const instance = createGroupModal.open()
-    
-    // 设置事件处理器
-    createGroupModal.patch({
-      onSuccess: async (group: any) => {
-        // 处理创建成功
-        // console.log('群组创建成功:', group)
-        if (options?.onSuccess) {
-          await options.onSuccess(group)
-        }
-      },
-      onCancel: () => {
-        // 处理取消
-        // console.log('用户取消创建群组')
-        if (options?.onCancel) {
-          options.onCancel()
-        }
-      }
-    })
-    
-    return instance
-  }
 
-  // 打开确认 Modal
-  const openConfirmModal = (options: {
-    title?: string;
-    message?: string;
-    confirmText?: string;
-    cancelText?: string;
-    confirmColor?: 'primary' | 'error' | 'warning' | 'success';
-    onConfirm?: () => void | Promise<void>;
-    onCancel?: () => void;
-  }) => {
-    const instance = confirmModal.open({
-      title: options.title,
-      message: options.message,
-      confirmText: options.confirmText,
-      cancelText: options.cancelText,
-      confirmColor: options.confirmColor
-    })
-    
-    // 设置事件处理器
-    confirmModal.patch({
-      onConfirm: async () => {
-        if (options.onConfirm) {
-          await options.onConfirm()
-        }
-      },
-      onCancel: () => {
-        if (options.onCancel) {
-          options.onCancel()
-        }
-      },
-      onClose: () => {
-        // Modal 关闭时的清理逻辑
-        if (import.meta.dev) {
-          // console.log('确认 Modal 已关闭')
-        }
-      }
-    })
-    
-    return instance
-  }
 
   // 打开昵称编辑 Modal
   const openNicknameEditModal = (options: {
@@ -241,26 +159,6 @@ export const useModals = () => {
     return instance
   }
 
-  // 打开头像上传 Modal
-  const openAvatarUploadModal = (options: {
-    user?: any;
-    onUploaded?: (data: any) => void | Promise<void>;
-  }) => {
-    const instance = avatarUploadModal.open({
-      user: options.user
-    })
-    
-    // 设置事件处理器
-    avatarUploadModal.patch({
-      onUploaded: async (data: any) => {
-        if (options.onUploaded) {
-          await options.onUploaded(data)
-        }
-      }
-    })
-    
-    return instance
-  }
 
   // 打开移动端抽屉
   const openMobileDrawer = () => {
@@ -351,31 +249,50 @@ export const useModals = () => {
     return instance
   }
 
+  // 通用确认对话框
+  const openConfirmModal = (options: {
+    title: string
+    message: string
+    confirmText?: string
+    cancelText?: string
+    confirmColor?: string
+    onConfirm?: () => void | Promise<void>
+    onCancel?: () => void
+  }) => {
+    // 使用浏览器原生确认对话框作为简单实现
+    const confirmed = confirm(`${options.title}\n\n${options.message}`)
+    
+    if (confirmed && options.onConfirm) {
+      options.onConfirm()
+    } else if (!confirmed && options.onCancel) {
+      options.onCancel()
+    }
+    
+    return confirmed
+  }
+
   return {
     // Modal 实例
-    createModal,
     loginPromptModal,
     welcomeModal,
-    createGroupModal,
-    confirmModal,
     nicknameEditModal,
-    avatarUploadModal,
     mobileDrawer,
     detailSlideover,
+    tempUserModal,
+    switchAccountModal,
+    searchModal,
+    friendRemarkModal,
     
     // 打开方法
-    openCreateModal,
     openLoginPromptModal,
     openWelcomeModal,
-    openCreateGroupModal,
-    openConfirmModal,
     openNicknameEditModal,
-    openAvatarUploadModal,
     openMobileDrawer,
     openDetailSlideover,
     openTempUserModal,
     openSwitchAccountModal,
     openSearchModal,
-    openFriendRemarkModal
+    openFriendRemarkModal,
+    openConfirmModal
   }
 }

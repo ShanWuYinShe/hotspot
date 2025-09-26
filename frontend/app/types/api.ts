@@ -1,11 +1,9 @@
 /**
- * 统一API类型定义 - 与后端需求文档完全对齐
- * 基于 backend_doc.mdc 中的 API 类型定义
- * 严格遵循 XxxRequest/XxxResponse 命名规范
+ * 统一API类型定义 - 严格按照 backend_doc.mdc 规范
  * 
  * 重要说明：
  * - 所有API响应都使用统一的 ApiResponse<T> 格式
- * - 所有API的request和response都必须按照 XxxRequest 和 XxxResponse 的命名规范
+ * - 严格遵循 XxxRequest/XxxResponse 命名规范
  * - ApiResponse<T> 中的 T 就是 XxxResponse 类型
  * - 对于分页查询，T 为 PaginatedResponse<XxxResponse>
  */
@@ -24,13 +22,13 @@ export interface PaginatedResponse<T> {
   items: T[];          // 数据项数组
   has_more: boolean;   // 是否有更多数据
   next_cursor?: string; // 下一页游标（64位整数转字符串）
+  total_count: number; // 总数量
 }
 
 // ============================================================================
-// 用户ID编码规范 - 重新导出工具函数
+// 用户ID编码规范工具函数
 // ============================================================================
 
-// 用户ID编码工具函数统一从 utils/userTypes.ts 导出
 export { 
   getUserType, 
   isTempUser, 
@@ -43,6 +41,41 @@ export {
 } from '~/utils/userTypes'
 
 // ============================================================================
+// 地理位置类型
+// ============================================================================
+
+export interface Coordinates {
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+  timestamp?: number;
+}
+
+// ============================================================================
+// 密码安全工具函数
+// ============================================================================
+
+/**
+ * 计算传输哈希
+ * @param password 原始密码
+ * @param nonce 随机数
+ * @param timestamp 时间戳
+ * @returns SHA256哈希值
+ */
+export async function calculatePasswordHash(
+  password: string,
+  nonce: string,
+  timestamp: number
+): Promise<string> {
+  const input = `${password}${nonce}${timestamp}`;
+  const encoder = new TextEncoder();
+  const data = encoder.encode(input);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// ============================================================================
 // 认证API类型
 // ============================================================================
 
@@ -53,6 +86,7 @@ export interface AuthResponse {
   access_token: string;     // 访问令牌
   refresh_token: string;    // 刷新令牌
   expires_at: string;       // 过期时间（ISO 8601）
+  is_temp?: boolean;        // 是否为临时用户
 }
 
 // 1. POST /api/v1/public/auth/get_nonce - 获取认证随机数
@@ -125,6 +159,7 @@ export interface SetPasswordRequest {
   password_hash: string;    // SHA256(password + nonce + timestamp)
   nonce_id: string;         // nonce标识符
   timestamp: number;        // 时间戳
+  new_password_hash?: string; // 兼容属性
 }
 
 export interface SetPasswordResponse {
@@ -149,6 +184,8 @@ export interface UserResponse {
   longitude?: number;       // 经度
   location_name?: string;   // 位置名称
   distance?: number;        // 距离（米）
+  is_temp?: boolean;        // 是否为临时用户
+  email?: string;           // 邮箱地址
 }
 
 // 1. POST /api/v1/public/user/search_by_name - 按昵称搜索用户
@@ -252,10 +289,6 @@ export interface DeleteAccountResponse {
   success: boolean;         // 是否删除成功
   message: string;          // 响应消息
 }
-
-// ============================================================================
-// 用户关系管理API类型
-// ============================================================================
 
 // 10. POST /api/v1/protected/user/add_friend - 发送好友申请
 export interface AddFriendRequest {
@@ -376,7 +409,7 @@ export interface GroupResponse {
   location_name: string;    // 位置名称
   is_password_required: boolean; // 是否需要密码
   is_member: boolean;       // 当前用户是否为成员
-  user_role?: string;       // 当前用户在群组中的角色（owner/admin/member，仅当is_member为true时有值）
+  user_role?: string;       // 当前用户在群组中的角色（owner/admin/member）
   avatar_url?: string;      // 群组头像URL
 }
 
@@ -389,8 +422,16 @@ export interface SearchGroupByLocationRequest {
   cursor?: string;          // 分页游标
 }
 
-export interface SearchGroupByLocationResponse extends GroupResponse {
+export interface SearchGroupByLocationResponseData extends GroupResponse {
   distance: number;         // 距离（米，必填）
+}
+
+// 分页响应
+export interface SearchGroupByLocationResponse {
+  items: SearchGroupByLocationResponseData[];
+  has_more: boolean;
+  next_cursor?: string;
+  total_count: number;
 }
 
 // 2. POST /api/v1/public/group/search_by_name - 按名称搜索群组
@@ -400,7 +441,15 @@ export interface SearchGroupByNameRequest {
   cursor?: string;          // 分页游标
 }
 
-export interface SearchGroupByNameResponse extends GroupResponse {}
+export interface SearchGroupByNameResponseData extends GroupResponse {}
+
+// 分页响应
+export interface SearchGroupByNameResponse {
+  items: SearchGroupByNameResponseData[];
+  has_more: boolean;
+  next_cursor?: string;
+  total_count: number;
+}
 
 // 3. POST /api/v1/public/group/search_by_id - 按ID获取群组详情
 export interface SearchGroupByIdRequest {
@@ -416,13 +465,14 @@ export interface GetMembersRequest {
   cursor?: string;          // 分页游标
 }
 
-export interface GetMembersResponse {
+export interface GroupMemberResponseData {
   user_id: string;          // 用户ID
   nickname: string;         // 用户昵称
   avatar_url?: string;      // 用户头像URL
   role: string;             // 用户角色：'owner'|'admin'|'member'
   joined_at: string;        // 加入时间（ISO 8601）
 }
+
 
 // 5. POST /api/v1/protected/group/create - 创建群组
 export interface CreateGroupRequest {
@@ -543,6 +593,16 @@ export interface SendMessageResponse {
   group_id: string;         // 群组ID
   sent_at: string;          // 发送时间（ISO 8601）
   message: string;          // 响应消息
+  // 兼容属性
+  id?: string;              // 消息ID别名
+  content?: string;         // 消息内容别名
+  sender_id?: string;       // 发送者ID
+  sender_name?: string;     // 发送者名称
+  conversation_id?: string; // 对话ID
+  message_type?: string;    // 消息类型
+  status?: string;          // 消息状态
+  retry_count?: number;     // 重试次数
+  created_at?: string;      // 创建时间别名
 }
 
 // 2. POST /api/v1/protected/chat/history - 获取消息历史（统一接口）
@@ -682,8 +742,16 @@ export interface SearchMomentsByLocationRequest {
   cursor?: string;          // 分页游标
 }
 
-export interface SearchMomentsByLocationResponse extends MomentResponse {
+export interface SearchMomentsByLocationResponseData extends MomentResponse {
   distance: number;         // 距离（米，必填）
+}
+
+// 分页响应
+export interface SearchMomentsByLocationResponse {
+  items: SearchMomentsByLocationResponseData[];
+  has_more: boolean;
+  next_cursor?: string;
+  total_count: number;
 }
 
 // 3. POST /api/v1/public/moments/search_by_tags - 按标签搜索生活瞬间
@@ -691,9 +759,19 @@ export interface SearchMomentsByTagsRequest {
   tags: string[];           // 标签数组
   limit?: number;           // 返回数量限制，默认20
   cursor?: string;          // 分页游标
+  latitude?: number;        // 纬度（可选）
+  longitude?: number;       // 经度（可选）
 }
 
-export interface SearchMomentsByTagsResponse extends MomentResponse {}
+export interface SearchMomentsByTagsResponseData extends MomentResponse {}
+
+// 分页响应
+export interface SearchMomentsByTagsResponse {
+  items: SearchMomentsByTagsResponseData[];
+  has_more: boolean;
+  next_cursor?: string;
+  total_count: number;
+}
 
 // 4. POST /api/v1/public/moments/search_by_id - 按ID搜索生活瞬间
 export interface SearchMomentByIdRequest {
@@ -887,7 +965,7 @@ export interface BlockUserResponse {
 export interface NotificationResponse {
   notification_id: string;  // 通知ID
   user_id: string;          // 接收者ID
-  type: string;             // 通知类型：'friend_request'|'group_invite'|'message'|'moment_like'|'comment'|'system'
+  type: string;             // 通知类型
   title: string;            // 通知标题
   content: string;          // 通知内容
   data?: object;            // 扩展数据（JSON）
@@ -1009,71 +1087,163 @@ export interface HealthCheckResponse {
   };
 }
 
-// ============================================================================
-// 兼容性类型别名（保持向后兼容）
-// ============================================================================
+// ===== 兼容性类型别名 =====
+// 为了保持向后兼容，提供一些常用的类型别名
 
-// 基础类型别名
-export type User = UserResponse;
-export type Group = GroupResponse;
-export type Moment = MomentResponse;
-export type Comment = CommentResponse;
-export type Message = GetHistoryResponse;
-export type Notification = NotificationResponse;
+// 基础类型定义
+export type MessageType = 'text' | 'image' | 'file' | 'location' | 'system';
 
-// 请求类型别名
-export type CreateTempUserRequest = CreateTempRequest;
-export type SearchUserByLocationRequest = SearchUserByLocationRequest;
-export type SearchUserByNameRequest = SearchUserByNameRequest;
-export type SearchUserByIdRequest = SearchUserByIdRequest;
-
-// 响应类型别名
-export type AuthUser = Pick<AuthResponse, 'user_id' | 'nickname'>;
-export type UserInfo = UserResponse;
-export type GroupInfo = GroupResponse;
-export type MomentInfo = MomentResponse;
-export type ConversationSummary = ConversationsResponse;
-
-// 分页响应类型别名
-export type SearchUserByLocationResponse = PaginatedResponse<SearchUserByLocationResponse>;
-export type SearchUserByNameResponse = PaginatedResponse<SearchUserByNameResponse>;
-export type SearchGroupByLocationResponse = PaginatedResponse<SearchGroupByLocationResponse>;
-export type SearchGroupByNameResponse = PaginatedResponse<SearchGroupByNameResponse>;
-export type GetMembersResponse = PaginatedResponse<GetMembersResponse>;
-export type MyGroupsResponse = PaginatedResponse<MyGroupsResponse>;
-export type GetHistoryResponse = PaginatedResponse<GetHistoryResponse>;
-export type ConversationsResponse = PaginatedResponse<ConversationsResponse>;
-export type SearchMomentsByLocationResponse = PaginatedResponse<SearchMomentsByLocationResponse>;
-export type SearchMomentsByTagsResponse = PaginatedResponse<SearchMomentsByTagsResponse>;
-export type GetMomentsHistoryResponse = PaginatedResponse<GetMomentsHistoryResponse>;
-export type GetCommentsResponse = PaginatedResponse<GetCommentsResponse>;
-export type GetFriendsListResponse = PaginatedResponse<GetFriendsListResponse>;
-export type GetBlockedListResponse = PaginatedResponse<GetBlockedListResponse>;
-export type GetMyReportsResponse = PaginatedResponse<GetMyReportsResponse>;
-export type GetReportsResponse = PaginatedResponse<GetReportsResponse>;
-export type GetNotificationsResponse = PaginatedResponse<GetNotificationsResponse>;
-
-// ============================================================================
-// 密码安全工具函数
-// ============================================================================
-
-/**
- * 计算传输哈希
- * @param password 原始密码
- * @param nonce 随机数
- * @param timestamp 时间戳
- * @returns SHA256哈希值
- */
-export async function calculatePasswordHash(
-  password: string,
-  nonce: string,
-  timestamp: number
-): Promise<string> {
-  const input = `${password}${nonce}${timestamp}`;
-  const encoder = new TextEncoder();
-  const data = encoder.encode(input);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+// 用户设置类型
+export interface UserSettings {
+  notifications: {
+    push_enabled: boolean;
+    email_enabled: boolean;
+    sms_enabled: boolean;
+    message_notifications: boolean;
+    group_notifications: boolean;
+    friend_requests: boolean;
+    direct_message_toast: boolean;
+    group_message_toast: boolean;
+    system_notification_toast: boolean;
+  };
+  privacy: {
+    location_sharing: boolean;
+    online_status: boolean;
+    show_in_search: boolean;
+    profile_visibility: 'public' | 'friends' | 'private';
+  };
+  appearance: {
+    theme: 'light' | 'dark' | 'auto';
+    language: string;
+    animations: boolean;
+    compact_mode: boolean;
+    high_contrast: boolean;
+  };
+  preferences: {
+    language: string;
+    theme: 'light' | 'dark' | 'auto';
+    distance_unit: string;
+    time_format: string;
+  };
+  account: {
+    auto_save: boolean;
+    backup_enabled: boolean;
+  };
 }
 
+// 上传相关类型
+export interface UploadResponse {
+  file_id: string;
+  file_url: string;
+  file_name: string;
+  file_size: number;
+  file_type: string;
+  upload_time: string;
+}
+
+export interface BatchUploadResponse {
+  files: UploadResponse[];
+  total_count: number;
+  success_count: number;
+  failed_count: number;
+  upload_errors?: string[]; // 兼容属性
+  uploaded_files?: UploadResponse[]; // 兼容属性
+}
+
+export interface UploadConfig {
+  max_file_size: number;
+  allowed_types: string[];
+  max_files_per_batch: number;
+  maxFileSize: number; // 兼容属性
+  maxFiles: number; // 兼容属性
+  allowedTypes: string[]; // 兼容属性
+}
+
+// 基础成功响应
+export interface BasicSuccess {
+  success: boolean;
+  message?: string;
+}
+
+// 未读消息数量
+export interface UnreadCount {
+  total_unread: number;
+  conversation_unread: number;
+  group_unread: number;
+}
+
+
+// 缺失的群组管理类型
+export interface UpdateGroupRequest {
+  group_id: string;
+  name?: string;
+  description?: string;
+  is_public?: boolean;
+  password?: string;
+}
+
+export interface UpdateGroupResponse {
+  group_id: string;
+  name: string;
+  description: string;
+  is_public: boolean;
+  updated_at: string;
+}
+
+export interface DeleteGroupRequest {
+  group_id: string;
+}
+
+export interface DeleteGroupResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface InviteUserRequest {
+  group_id: string;
+  user_id: string;
+}
+
+export interface InviteUserResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface KickMemberResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface GroupMembersResponse {
+  items: GroupMemberResponseData[];
+  has_more: boolean;
+  next_cursor?: string;
+  total_count: number;
+  // 兼容属性
+  members?: GroupMemberResponseData[];
+}
+
+export interface GetUserGroupsResponse {
+  items: GroupResponse[];
+  has_more: boolean;
+  next_cursor?: string;
+  total_count: number;
+  // 兼容属性
+  groups?: GroupResponse[];
+}
+
+// 缺失的动态相关类型
+export interface UserMomentsHistoryRequest {
+  user_id: string;
+  limit?: number;
+  cursor?: string;
+}
+
+export interface UserMomentsHistoryResponse {
+  items: MomentResponse[];
+  has_more: boolean;
+  next_cursor?: string;
+  total_count: number;
+  // 兼容属性
+  moments?: MomentResponse[];
+}

@@ -28,11 +28,12 @@
             主题
           </h4>
           <UFormField label="主题模式" class="space-y-2">
-            <USelect 
+            <URadioGroup 
               v-model="localSettings.appearance.theme" 
-              :options="themeOptions" 
-              class="w-full" 
-              size="md" 
+              :items="themeRadioOptions"
+              variant="card"
+              color="primary"
+              size="md"
             />
           </UFormField>
         </div>
@@ -68,7 +69,6 @@
               color="purple" 
               description="启用界面动画和过渡效果" 
               v-model:modelValue="localSettings.appearance.animations" 
-              :is-mobile="isMobile" 
             />
             <SettingToggleItem 
               title="紧凑模式" 
@@ -76,7 +76,6 @@
               color="blue" 
               description="使用更紧凑的界面布局" 
               v-model:modelValue="localSettings.appearance.compact_mode" 
-              :is-mobile="isMobile" 
             />
             <SettingToggleItem 
               title="高对比度" 
@@ -84,7 +83,6 @@
               color="neutral" 
               description="提高界面对比度以改善可读性" 
               v-model:modelValue="localSettings.appearance.high_contrast" 
-              :is-mobile="isMobile" 
             />
           </div>
         </div>
@@ -94,7 +92,7 @@
 </template>
 
 <script setup lang="ts">
-import type { UserSettings } from '~/types';
+import type { UserSettings } from '~/types/api';
 
 interface Props {
   localSettings: UserSettings;
@@ -107,6 +105,24 @@ const themeOptions = [
   { label: '跟随系统', value: 'system' },
   { label: '浅色模式', value: 'light' },
   { label: '深色模式', value: 'dark' }
+];
+
+const themeRadioOptions = [
+  { 
+    label: '跟随系统', 
+    value: 'system',
+    description: '根据系统设置自动切换主题'
+  },
+  { 
+    label: '浅色模式', 
+    value: 'light',
+    description: '使用浅色主题界面'
+  },
+  { 
+    label: '深色模式', 
+    value: 'dark',
+    description: '使用深色主题界面'
+  }
 ];
 
 const languageOptions = [

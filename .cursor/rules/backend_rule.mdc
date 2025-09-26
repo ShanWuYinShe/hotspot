@@ -1,5 +1,5 @@
 ---
-description: HotSpot后端开发规范，专注于Rust/PostgreSQL代码实现、数据库操作、API开发等具体技术约束，用于指导后端代码生成和开发工作。
+description: 后端项目的rule文件，包含AI Agent给后端项目生成代码时必须遵循的规范。
 alwaysApply: false
 ---
 # HotSpot 项目后端开发规范
@@ -56,151 +56,71 @@ alwaysApply: false
 
 #### Feature Flags 配置规范
 
-**Cargo.toml 配置结构**：
-```toml
-[features]
-# 默认配置：使用轻量级实现，适合开发环境
-default = ["cache_memory", "jobs_memory", "metrics_basic"]
-
-# === 替代实现 Feature Flags ===
-
-# 缓存系统（二选一）
-cache_memory = []     # 默认：内存缓存
-cache_redis = []      # 替代：Redis缓存
-
-# 任务队列系统（二选一）
-jobs_memory = []      # 默认：内存队列（轻量级）
-jobs_redis = []       # 替代：Redis队列（持久化）
-
-# 监控指标系统（二选一）
-metrics_basic = []    # 默认：基础指标
-metrics_prometheus = [] # 替代：Prometheus指标
-
-# === 可选增强功能 ===
-
-# 邮件通知（可选增强）
-email_notifications = []
-
-# WebSocket 钩子扩展（可选增强）
-ws_hooks = []
-
-# 审计日志（可选增强）
-audit_logging = []
-
-# === 临时兼容性 Feature（待清理） ===
-ws_offline_notifications = []
-```
+**Cargo.toml 配置结构（说明）**：
+- 使用 features 控制同一能力的不同实现（如缓存/队列/指标）。
+- 核心能力（PostgreSQL/WebSocket/事件/通知策略）始终启用，不使用 feature gates。
+- 互斥 features 不可同时开启（如 `cache_memory` 与 `cache_redis`）。
 
 #### 代码中的 Feature 使用规范
 
 **核心功能（禁止使用 feature gates）**：
-```rust
-// ❌ 错误：核心功能不应使用 feature gates
-#[cfg(feature = "postgres")]
-pub mod database;
-
-#[cfg(feature = "websocket")]
-pub mod websocket;
-
-// ✅ 正确：核心功能始终启用
-pub mod database;        // PostgreSQL 始终启用
-pub mod websocket;       // WebSocket 始终启用
-pub mod events;          // 事件系统始终启用
-pub mod notifications;   // 通知策略始终启用
-```
+- 数据库、WebSocket、事件系统、通知策略必须常驻启用。
+- 不允许以 feature 方式裁剪上述核心模块。
 
 **可替代实现（正确使用 feature gates）**：
-```rust
-// ✅ 正确：可替代实现的互斥选择
-#[cfg(any(feature = "cache_memory", not(feature = "cache_redis")))]
-pub mod adapters_cache_memory;
-
-#[cfg(feature = "cache_redis")]
-pub mod adapters_cache_redis;
-
-#[cfg(any(feature = "jobs_memory", not(feature = "jobs_redis")))]
-pub mod adapters_jobs_memory;
-
-#[cfg(feature = "jobs_redis")]
-pub mod adapters_jobs_redis;
-```
+- 缓存：`cache_memory` 或 `cache_redis`（二选一）。
+- 任务队列：`jobs_memory` 或 `jobs_redis`（二选一）。
+- 指标：`metrics_basic` 或 `metrics_prometheus`（二选一）。
 
 **可选增强功能（条件编译）**：
-```rust
-// ✅ 正确：可选功能的条件编译
-#[cfg(feature = "email_notifications")]
-pub mod adapters_notify_email;
-
-#[cfg(feature = "audit_logging")]
-pub mod audit_logger;
-
-#[cfg(feature = "ws_hooks")]
-pub mod websocket_hooks;
-```
+- 邮件通知：`email_notifications`
+- WebSocket 钩子：`ws_hooks`
+- 审计日志：`audit_logging`
 
 #### 环境配置策略
 
-**开发环境配置**：
+**开发环境配置（命令）**：
 ```bash
-# 使用默认轻量级实现
+# 默认轻量
 cargo build
 
-# 或显式指定开发特性
+# 或显式：内存缓存 + 内存队列 + 基础指标
 cargo build --features "cache_memory,jobs_memory,metrics_basic"
 ```
 
-**生产环境配置**：
+**生产环境配置（命令）**：
 ```bash
-# 生产环境使用高性能实现
+# Redis 缓存 + Redis 队列 + Prometheus 指标 + 可选增强
 cargo build --release --features "cache_redis,jobs_redis,metrics_prometheus,email_notifications,audit_logging"
 ```
 
-**测试环境配置**：
+**测试环境配置（命令）**：
 ```bash
-# 测试环境可以混合使用
-cargo test --features "cache_memory,jobs_redis,metrics_basic,audit_logging"
+# 混合使用：Redis 缓存 + 内存队列 + 基础指标 + 审计日志
+cargo test --features "cache_redis,jobs_memory,metrics_basic,audit_logging"
 ```
 
 #### 模块依赖注入规范
 
-**依赖注入模式**：
-```rust
-// 在 bootstrap/dependency_injection.rs 中
-pub struct AppState {
-    // 核心服务（始终存在）
-    pub user_service: UserService,
-    pub websocket_manager: WebSocketManager,
-    
-    // 可替代实现（编译时选择）
-    #[cfg(any(feature = "cache_memory", not(feature = "cache_redis")))]
-    pub cache: MemoryCache,
-    
-    #[cfg(feature = "cache_redis")]
-    pub cache: RedisCache,
-    
-    // 可选功能（条件存在）
-    #[cfg(feature = "email_notifications")]
-    pub email_service: Option<EmailService>,
-}
-```
+**依赖注入模式（说明）**：
+- AppState 中保留核心服务（用户服务、WebSocket 管理等）。
+- 可替代实现以相同字段名注入，在编译期由 feature 选择其具体类型。
+- 可选增强以可空字段或 Option 包裹，按 feature 决定是否存在。
 
 #### Feature 验证与测试
 
-**编译验证脚本**：
+**编译验证脚本（命令）**：
 ```bash
-#!/bin/bash
-# 验证不同 feature 组合的编译正确性
-
 # 默认配置
 cargo check
 
-# 生产配置
+# 生产组合
 cargo check --features "cache_redis,jobs_redis,metrics_prometheus"
 
-# 混合配置
+# 混合组合
 cargo check --features "cache_redis,jobs_memory,metrics_basic,email_notifications"
 
-# 最小配置（仅核心功能）
+# 最小组合（仅核心功能）
 cargo check --no-default-features
 ```
 
@@ -309,6 +229,23 @@ cargo check --no-default-features
 - 提供通用工具函数和配置
 - 实现跨服务的共享功能
 - 提供中间件和辅助组件
+
+### 迁移与文档同步（命令）
+- 所有数据库结构变更必须通过 migrations 管理，并同步更新 `@backend_doc.mdc` 对应章节。
+- 常用命令：
+```bash
+# 生成迁移（示例命令，按所用迁移工具替换）
+sqlx migrate add "add_new_table_or_index"
+
+# 应用迁移
+sqlx migrate run
+
+# 回滚最近一次迁移
+sqlx migrate revert
+
+# 校验数据库与查询宏（离线/在线模式按项目配置）
+cargo sqlx prepare -- --all-targets
+```
 
 ## 4. WebSocket 系统架构规范
 
@@ -495,27 +432,7 @@ cargo check --no-default-features
   - set_password(user_id: i64, password_hash: &str) -> Result<(), AppError>
 
 #### async-trait 使用示例
-```rust
-use async_trait::async_trait;
-
-// trait 定义必须添加 #[async_trait]
-#[async_trait]
-pub trait UserRepository: Send + Sync {
-    async fn find_by_id(&self, user_id: i64) -> Result<Option<UserModel>, AppError>;
-    async fn set_password(&self, user_id: i64, password_hash: &str) -> Result<(), AppError>;
-}
-
-// trait 实现也必须添加 #[async_trait]
-#[async_trait]
-impl UserRepository for PostgresUserRepository {
-    async fn find_by_id(&self, user_id: i64) -> Result<Option<UserModel>, AppError> {
-        // ...实现...
-    }
-    async fn set_password(&self, user_id: i64, password_hash: &str) -> Result<(), AppError> {
-        // ...实现...
-    }
-}
-```
+为避免在规范中出现 Rust 代码示例，请按“接口规范与约束”执行：trait 定义与实现均加注解，异步函数直接书写，由宏处理底层 Future 封装。
 
 > 说明：虽然 Rust 1.75+ 已原生支持 trait 里的 async fn，但在复杂场景下（如auto trait bounds、生命周期推断等）仍有一些限制。在Rust编译器完全支持trait中async fn的自动推断之前，使用成熟的 async-trait crate 可以避免这些问题，提供更好的兼容性和稳定性。未来当Rust编译器完全支持时，可以逐步迁移到原生语法。
 

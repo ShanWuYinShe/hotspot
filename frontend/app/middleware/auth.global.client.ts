@@ -61,7 +61,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
       redirect: to.fullPath || '/',
       reason: hadCreds ? 'expired' : 'login_required'
     }).toString()
-    return navigateTo(`/auth?${params}`)
+    return navigateTo(`/auth/login?${params}`)
   }
 })
 

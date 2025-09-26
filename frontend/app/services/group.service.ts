@@ -19,12 +19,12 @@ import type {
   LeaveGroupResponse,
   KickMemberResponse,
   TransferOwnershipResponse,
-  GroupInfo,
+  GroupResponse,
   GroupMembersResponse,
   SearchGroupByLocationResponse,
   SearchGroupByNameResponse,
   GetUserGroupsResponse
-} from "~/types";
+} from "~/types/api";
 import { 
   validateGroupId, 
   validateUserId, 
@@ -55,7 +55,7 @@ export const useGroupService = () => {
       location_name: validLocationName
     }, { auth: true });
     
-    return extractApiData(response);
+    return response;
   };
 
   const joinGroup = async (groupId: string, password?: string): Promise<JoinGroupResponse> => {
@@ -67,7 +67,7 @@ export const useGroupService = () => {
       password 
     }, { auth: true });
     
-    return extractApiData(response);
+    return response;
   };
 
   const leaveGroup = async (groupId: string): Promise<LeaveGroupResponse> => {
@@ -78,10 +78,10 @@ export const useGroupService = () => {
       group_id: validGroupId 
     }, { auth: true });
     
-    return extractApiData(response);
+    return response;
   };
 
-  const getGroupDetails = async (groupId: string): Promise<GroupInfo> => {
+  const getGroupDetails = async (groupId: string): Promise<GroupResponse> => {
     // 发送前验证参数
     const validGroupId = validateGroupId(groupId);
     
@@ -89,7 +89,7 @@ export const useGroupService = () => {
       group_id: validGroupId 
     });
     
-    return extractApiData(response);
+    return response;
   };
 
   // 更新群组（暂未实现 - hotspot.md 中未定义此端点）
@@ -130,7 +130,7 @@ export const useGroupService = () => {
       limit: validPagination.limit,
     });
     
-    return extractPaginatedData(response);
+    return response;
   };
 
   const searchGroupsByName = async (query: string, cursor?: number): Promise<SearchGroupByNameResponse> => {
@@ -144,7 +144,7 @@ export const useGroupService = () => {
       limit: validPagination.limit,
     });
     
-    return extractPaginatedData(response);
+    return response;
   };
 
   // 成员管理（公开访问，无需认证）
@@ -159,7 +159,7 @@ export const useGroupService = () => {
       limit: validPagination.limit,
     });
     
-    return extractPaginatedData(response);
+    return response;
   };
 
   const kickMember = async (groupId: string, userId: string): Promise<KickMemberResponse> => {
@@ -172,7 +172,7 @@ export const useGroupService = () => {
       user_id: validUserId 
     }, { auth: true });
     
-    return extractApiData(response);
+    return response;
   };
 
   const transferOwnership = async (groupId: string, newOwnerId: string): Promise<TransferOwnershipResponse> => {
@@ -185,7 +185,7 @@ export const useGroupService = () => {
       new_owner_id: validUserId 
     }, { auth: true });
     
-    return extractApiData(response);
+    return response;
   };
 
   // 获取我的群组（包含用户角色信息）
@@ -207,7 +207,7 @@ export const useGroupService = () => {
     }, { auth: true });
     
     // 接收后直接信任并返回分页数据
-    return extractPaginatedData(response);
+    return response;
   };
 
   return {

@@ -139,13 +139,26 @@
               <p class="text-neutral-700 dark:text-neutral-300">{{ data.content }}</p>
               
               <!-- 动态图片 -->
-              <div v-if="data.images && data.images.length > 0" class="grid grid-cols-2 gap-2">
+              <div v-if="data.images && data.images.length > 0">
+                <UCarousel
+                  v-if="data.images.length > 1"
+                  v-slot="{ item }"
+                  :items="data.images"
+                  arrows
+                  dots
+                  class="w-full"
+                >
+                  <img 
+                    :src="String(item)" 
+                    :alt="'动态图片'"
+                    class="w-full h-48 object-cover rounded-lg"
+                  />
+                </UCarousel>
                 <img 
-                  v-for="(image, index) in data.images" 
-                  :key="index"
-                  :src="image" 
-                  :alt="`动态图片 ${index + 1}`"
-                  class="w-full h-24 object-cover rounded-lg"
+                  v-else
+                  :src="data.images[0]" 
+                  alt="动态图片"
+                  class="w-full h-48 object-cover rounded-lg"
                 />
               </div>
             </div>

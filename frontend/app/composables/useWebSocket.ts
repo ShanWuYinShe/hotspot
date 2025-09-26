@@ -1,6 +1,6 @@
 /**
  * WebSocket连接管理composable
- * 处理实时消息通信
+ * 处理实时消息通信 - 基于新的 websocket.ts 类型定义
  */
 
 import { OTHER_ENDPOINTS } from "~/config/api";
@@ -8,602 +8,447 @@ import type {
   ServerMessage,
   ClientMessage,
   RoomType,
-  WsConnectedData,
-  WsNewMessagePayload,
-  WsMessageStatusUpdatePayload,
-  WsUserStatusUpdatePayload,
-  WsErrorPayload,
-  WsGroupEventPayload,
-  WsSystemNotificationPayload,
-  WsMessageDeletedPayload,
-  WsMessageReadPayload,
-  WsUserTypingPayload,
-} from "~/types/realtime";
+  ConnectedData,
+  NewMessageData,
+  MessageReadData,
+  UserOnlineData,
+  UserOfflineData,
+  ErrorData,
+  GroupMemberJoinedData,
+  SystemNotificationData,
+  TypingIndicatorData,
+  ClientMessageType,
+  ServerMessageType,
+  WebSocketConnectionState,
+  WebSocketEventHandlers,
+  AuthenticateData,
+  JoinRoomData,
+  LeaveRoomData,
+  SendMessageData,
+  TypingData,
+  MarkReadData,
+} from "~/types/websocket";
 
 type EventMap = {
-  connected: WsConnectedData | undefined;
-  newMessage: WsNewMessagePayload;
-  messageStatusUpdate: WsMessageStatusUpdatePayload;
-  userStatusUpdate: WsUserStatusUpdatePayload;
-  groupEvent: WsGroupEventPayload | undefined;
-  systemNotification: WsSystemNotificationPayload | undefined;
-  messageDeleted: WsMessageDeletedPayload | undefined;
-  messageRead: WsMessageReadPayload | undefined;
-  userTyping: (WsUserTypingPayload & { typing: boolean }) | undefined;
+  connected: ConnectedData | undefined;
+  authenticated: any | undefined;
+  newMessage: NewMessageData;
+  messageRead: MessageReadData;
+  userOnline: UserOnlineData;
+  userOffline: UserOfflineData;
+  groupMemberJoined: GroupMemberJoinedData | undefined;
+  systemNotification: SystemNotificationData | undefined;
+  typingIndicator: TypingIndicatorData | undefined;
+  error: ErrorData | undefined;
 };
 
 export const useWebSocket = () => {
   const config = useRuntimeConfig();
   const authStore = useAuthStore();
-  const toast = useSmartToast();
-  const { handleError } = useErrorHandler();
+  const toast = useToast();
 
-  // WebSocket连接状态
-  const isConnected = ref(false);
-  const isConnecting = ref(false);
-  const connState = ref<
-    "idle" | "connecting" | "authenticating" | "connected" | "closing"
-  >("idle");
+  // 状态管理
   const socket = ref<WebSocket | null>(null);
-  // 去重订阅集：记录已订阅的房间，避免重复 Join
-  const currentSubscriptions = new Set<string>();
+  const connectionState = ref<WebSocketConnectionState>('disconnected');
+  const isConnected = computed(() => connectionState.value === 'connected');
+  const isAuthenticated = computed(() => connectionState.value === 'authenticated');
   const reconnectAttempts = ref(0);
-  const maxReconnectAttempts = 3;
-  const reconnectInterval = ref<NodeJS.Timeout | null>(null);
-  // 心跳/看门狗
-  const HEARTBEAT_MS = 30000;
-  let heartbeatTimer: NodeJS.Timeout | null = null;
-  let watchdogTimer: NodeJS.Timeout | null = null;
-  let lastPongAt = Date.now();
-  const outboundQueue: ClientMessage[] = [];
+  const maxReconnectAttempts = 5;
+  const reconnectDelay = ref(1000);
+  const heartbeatInterval = ref<NodeJS.Timeout | null>(null);
+  const reconnectTimeout = ref<NodeJS.Timeout | null>(null);
 
-  // 消息事件监听器 - 使用 WeakMap 避免内存泄漏
-  const messageListeners = ref<
-    Map<keyof EventMap | string, Array<(data: unknown) => void>>
-  >(markRaw(new Map()));
-  
-  // 清理监听器的方法
-  const clearAllListeners = () => {
-    messageListeners.value.clear();
-  };
+  // 事件监听器
+  const eventListeners = ref<Map<keyof EventMap, Set<Function>>>(new Map());
 
-  // WebSocket URL
-  const getWebSocketUrl = () => {
-    const pub: any = config.public as any;
-    const wsUrl = pub?.wsBaseUrl;
-    if (wsUrl) return wsUrl;
+  // 消息队列（连接断开时缓存消息）
+  const messageQueue = ref<ClientMessage[]>([]);
 
-    const apiUrl = pub?.apiBaseUrl;
-    if (apiUrl) {
-      const u = new URL(apiUrl);
-      const proto = u.protocol === "https:" ? "wss" : "ws";
-      return `${proto}://${u.host}${OTHER_ENDPOINTS.WS}`;
-    }
+  // 订阅的房间
+  const subscribedRooms = ref<Set<string>>(new Set());
 
-    // 默认配置（应通过环境变量配置，避免硬编码）
-    const defaultWsUrl = process.env.NODE_ENV === 'development' 
-      ? "ws://localhost:8080/ws"
-      : "wss://api.hotspot.com/ws";
-    
-    if (import.meta.dev) {
-      console.warn('WebSocket URL 使用默认配置，建议在 nuxt.config.ts 中配置 wsBaseUrl');
-    }
-    
-    return defaultWsUrl;
-  };
-
-  // 添加消息监听器
-  function addEventListener<T extends keyof EventMap>(
-    type: T,
-    listener: (data: EventMap[T]) => void,
-  ): void;
-  function addEventListener(
-    type: string,
-    listener: (data: unknown) => void,
-  ): void;
-  function addEventListener(type: string, listener: (data: unknown) => void) {
-    if (!messageListeners.value.has(type)) {
-      messageListeners.value.set(type, []);
-    }
-    messageListeners.value.get(type)!.push(listener as any);
-  }
-
-  // 移除消息监听器
-  function removeEventListener<T extends keyof EventMap>(
-    type: T,
-    listener: (data: EventMap[T]) => void,
-  ): void;
-  function removeEventListener(
-    type: string,
-    listener: (data: unknown) => void,
-  ): void;
-  function removeEventListener(
-    type: string,
-    listener: (data: unknown) => void,
-  ) {
-    const listeners = messageListeners.value.get(type);
-    if (listeners) {
-      const index = listeners.indexOf(listener as any);
-      if (index > -1) {
-        listeners.splice(index, 1);
-      }
-    }
-  }
-
-  // 触发消息事件
-  const triggerEvent = <T extends keyof EventMap>(
-    type: T,
-    data: EventMap[T],
-  ) => {
-    const listeners = messageListeners.value.get(type as string);
-    if (listeners) {
-      listeners.forEach((listener) =>
-        (listener as (d: EventMap[T]) => void)(data),
-      );
-    }
+  // 获取WebSocket URL
+  const getWebSocketUrl = (): string => {
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const apiBase = config.public.apiBase as string;
+    const baseUrl = apiBase || window.location.host;
+    return `${wsProtocol}//${baseUrl.replace(/^https?:\/\//, '')}/ws/`;
   };
 
   // 发送消息
-  const sendRaw = (message: ClientMessage) => {
-    if (!socket.value || socket.value.readyState !== WebSocket.OPEN)
-      return false;
-    try {
+  const sendMessage = (message: ClientMessage): void => {
+    if (socket.value && socket.value.readyState === WebSocket.OPEN) {
       socket.value.send(JSON.stringify(message));
-      if (import.meta.dev) console.debug("发送WebSocket消息:", message);
-      return true;
-    } catch (error) {
-      console.error("发送WebSocket消息失败:", error);
-      return false;
+    } else {
+      // 如果连接断开，将消息加入队列
+      messageQueue.value.push(message);
+      console.warn('[WebSocket] 连接断开，消息已加入队列:', message);
     }
   };
 
-  const sendMessage = (message: ClientMessage) => {
-    // 仅在已通过认证后直接发送，其余阶段入队
-    if (connState.value === "connected" && sendRaw(message)) return;
-    outboundQueue.push(message);
-    if (import.meta.dev) console.debug("消息入队等待连接:", message);
-  };
-
-  const flushQueue = () => {
-    if (connState.value !== "connected") return;
-    while (outboundQueue.length) {
-      const msg = outboundQueue.shift()!;
-      if (!sendRaw(msg)) {
-        // 发送失败则放回队列尾部并中止，待下次机会
-        outboundQueue.unshift(msg);
-        break;
+  // 处理队列中的消息
+  const processMessageQueue = (): void => {
+    while (messageQueue.value.length > 0) {
+      const message = messageQueue.value.shift();
+      if (message) {
+        sendMessage(message);
       }
     }
   };
 
-  // 连接WebSocket
-  const connect = () => {
-    if (isConnecting.value || isConnected.value) {
-      return;
+  // 事件监听
+  const on = <K extends keyof EventMap>(
+    event: K,
+    callback: (data: EventMap[K]) => void
+  ): void => {
+    if (!eventListeners.value.has(event)) {
+      eventListeners.value.set(event, new Set());
     }
+    eventListeners.value.get(event)?.add(callback);
+  };
 
-    if (!authStore.token) {
-      console.warn("未找到认证token，无法连接WebSocket");
-      return;
-    }
+  // 移除事件监听
+  const off = <K extends keyof EventMap>(
+    event: K,
+    callback: (data: EventMap[K]) => void
+  ): void => {
+    eventListeners.value.get(event)?.delete(callback);
+  };
 
-    isConnecting.value = true;
-
-    try {
-      const wsUrl = getWebSocketUrl();
-      if (import.meta.dev) console.debug("连接WebSocket:", wsUrl);
-
-      connState.value = "connecting";
-      socket.value = new WebSocket(wsUrl);
-
-      socket.value.onopen = () => {
-        if (import.meta.dev) console.debug("WebSocket连接已建立");
-        isConnecting.value = false;
-        reconnectAttempts.value = 0;
-        connState.value = "authenticating";
-        // 启动心跳/看门狗
-        startHeartbeat();
-        startWatchdog();
-
-        // 发送认证消息
-        sendRaw({
-          type: "Connect",
-          data: { token: authStore.token as string },
-        });
-        // 注意：isConnected 在收到服务端 Connected 消息后才置true
-      };
-
-      socket.value.onmessage = (event) => {
+  // 触发事件
+  const emit = <K extends keyof EventMap>(event: K, data: EventMap[K]): void => {
+    const listeners = eventListeners.value.get(event);
+    if (listeners) {
+      listeners.forEach((callback) => {
         try {
-          const message: ServerMessage = JSON.parse(event.data);
-          if (import.meta.dev) console.debug("收到WebSocket消息:", message);
-
-          handleServerMessage(message);
+          callback(data);
         } catch (error) {
-          console.error("解析WebSocket消息失败:", error);
+          console.error(`[WebSocket] 事件处理器错误 (${event}):`, error);
         }
-      };
+      });
+    }
+  };
 
-      socket.value.onclose = (event) => {
-        if (import.meta.dev)
-          console.debug("WebSocket连接已关闭:", event.code, event.reason);
-        
-        // 只在非正常关闭且开发模式下记录错误
-        // 1000: 正常关闭, 1001: 端点离开, 1005: 无状态码
-        const isNormalClose = [1000, 1001, 1005].includes(event.code);
-        if (import.meta.dev && !isNormalClose && event.code !== 1006) {
-          handleError({
-            status: event.code,
-            message: `WebSocket已关闭: ${event.code} ${event.reason || ""}`.trim(),
-          }, "WebSocket连接");
-        }
-        
-        isConnected.value = false;
-        isConnecting.value = false;
-        connState.value = "idle";
-        currentSubscriptions.clear();
-        socket.value = null;
-        stopHeartbeat();
-        stopWatchdog();
+  // 处理连接打开
+  const handleOpen = (): void => {
+    console.log('[WebSocket] 连接已建立');
+    connectionState.value = 'connected';
+    reconnectAttempts.value = 0;
+    reconnectDelay.value = 1000;
 
-        // 只有在异常关闭且有token时才尝试重连
-        if (!isNormalClose && event.code !== 1006 && authStore.token) {
-          scheduleReconnect();
-        }
-      };
+    // 发送认证消息
+    if (authStore.token) {
+      authenticate();
+    }
 
-      socket.value.onerror = (error) => {
-        if (import.meta.dev) console.error("WebSocket连接错误:", error);
-        // 只在开发模式下或重连次数较多时显示错误
-        if (import.meta.dev || reconnectAttempts.value >= 2) {
-          handleError({
-            name: "NetworkError",
-            message: "WebSocket连接错误",
-          }, "WebSocket连接");
-        }
-        isConnecting.value = false;
-        connState.value = "idle";
-        stopHeartbeat();
-        stopWatchdog();
+    // 开始心跳
+    startHeartbeat();
+  };
 
-        if (authStore.token) {
-          scheduleReconnect();
-        }
-      };
+  // 处理消息接收
+  const handleMessage = (event: MessageEvent): void => {
+    try {
+      const message: ServerMessage = JSON.parse(event.data);
+      
+      switch (message.type) {
+        case 'connected':
+          emit('connected', message.data as ConnectedData);
+          break;
+          
+        case 'authenticated':
+          connectionState.value = 'authenticated';
+          emit('authenticated', message.data);
+          // 认证成功后处理队列中的消息
+          processMessageQueue();
+          // 重新加入之前订阅的房间
+          resubscribeRooms();
+          break;
+          
+        case 'NewMessage':
+          emit('newMessage', message.data as NewMessageData);
+          break;
+          
+        case 'MessageRead':
+          emit('messageRead', message.data as MessageReadData);
+          break;
+          
+        case 'TypingIndicator':
+          emit('typingIndicator', message.data as TypingIndicatorData);
+          break;
+          
+        case 'UserOnline':
+          emit('userOnline', message.data as UserOnlineData);
+          break;
+          
+        case 'UserOffline':
+          emit('userOffline', message.data as UserOfflineData);
+          break;
+          
+        case 'GroupMemberJoined':
+          emit('groupMemberJoined', message.data as GroupMemberJoinedData);
+          break;
+          
+        case 'SystemNotification':
+          emit('systemNotification', message.data as SystemNotificationData);
+          break;
+          
+        case 'error':
+          const errorData = message.data as ErrorData;
+          emit('error', errorData);
+          console.error('[WebSocket] 服务器错误:', errorData);
+          toast.add({
+            title: '连接错误',
+            description: errorData.message,
+            color: 'error'
+          });
+          break;
+          
+        case 'pong':
+          // 心跳响应，更新最后心跳时间
+          break;
+          
+        default:
+          console.warn('[WebSocket] 未知消息类型:', message);
+      }
     } catch (error) {
-      console.error("创建WebSocket连接失败:", error);
-      handleError({
-        name: "NetworkError",
-        message: "创建WebSocket连接失败",
-      }, "WebSocket连接");
-      isConnecting.value = false;
+      console.error('[WebSocket] 消息解析错误:', error);
+    }
+  };
+
+  // 处理连接关闭
+  const handleClose = (event: CloseEvent): void => {
+    console.log('[WebSocket] 连接已关闭:', event.code, event.reason);
+    connectionState.value = 'disconnected';
+    
+    // 停止心跳
+    stopHeartbeat();
+    
+    // 如果不是正常关闭，尝试重连
+    if (event.code !== 1000 && reconnectAttempts.value < maxReconnectAttempts) {
       scheduleReconnect();
     }
   };
 
-  // 处理服务器消息
-  const handleServerMessage = (message: ServerMessage) => {
-    switch (message.type) {
-      case "Connected":
-        isConnected.value = true;
-        connState.value = "connected";
-        if (import.meta.dev) console.debug("WebSocket认证成功:", message.data);
-        triggerEvent("connected", message.data);
-        // 认证成功后默认订阅用户私有房间，接收系统/私有通知
-        if (!currentSubscriptions.has("user:self")) {
-          sendRaw({ type: "JoinUserRoom" });
-          currentSubscriptions.add("user:self");
-        }
-        // 刷新发送队列
-        flushQueue();
-        break;
+  // 处理连接错误
+  const handleError = (event: Event): void => {
+    console.error('[WebSocket] 连接错误:', event);
+    connectionState.value = 'error';
+    
+    const errorData: ErrorData = {
+      code: 1001, // CONNECTION_ERROR
+      message: '连接失败',
+      details: event
+    };
+    
+    emit('error', errorData);
+  };
 
-      case "Pong":
-        if (import.meta.dev) console.debug("收到心跳响应");
-        lastPongAt = Date.now();
-        break;
-
-      case "NewMessage":
-        if (import.meta.dev) console.debug("收到新消息:", message.data);
-        triggerEvent("newMessage", message.data);
-        break;
-
-      case "MessageStatusUpdate":
-        if (import.meta.dev) console.debug("消息状态更新:", message.data);
-        triggerEvent("messageStatusUpdate", message.data);
-        break;
-
-      case "UserStatusUpdate":
-        if (import.meta.dev) console.debug("用户状态更新:", message.data);
-        triggerEvent("userStatusUpdate", message.data);
-        break;
-
-      case "Error": {
-        const anyData = message.data as any;
-        const code = anyData?.code ?? anyData?.error ?? "";
-        const msg = anyData?.message ?? anyData?.msg ?? "连接出现错误";
-        console.error("WebSocket错误:", code, msg);
-        handleError({
-          status: code,
-          message: String(msg || "WebSocket错误"),
-        }, "WebSocket服务器");
-        // 令牌失效时，优先尝试静默刷新并重连
-        if (
-          String(code).toUpperCase() === "INVALID_TOKEN" &&
-          authStore.refreshToken
-        ) {
-          (async () => {
-            try {
-              await authStore.refreshAuth();
-              // 使用新token重连
-              disconnect();
-              connect();
-            } catch (e) {
-              // 刷新失败，清理认证并提示
-              authStore.clearAuth();
-              toast.warning({
-                title: "登录已过期",
-                description: "请重新登录"
-              });
-            }
-          })();
-        } else {
-          toast.error({
-            title: "WebSocket错误",
-            description: msg
-          });
-        }
-        break;
+  // 开始心跳
+  const startHeartbeat = (): void => {
+    stopHeartbeat();
+    heartbeatInterval.value = setInterval(() => {
+      if (socket.value && socket.value.readyState === WebSocket.OPEN) {
+        sendMessage({
+          type: 'ping',
+          timestamp: Date.now(),
+          data: {}
+        });
       }
+    }, 30000) as any; // 30秒心跳间隔
+  };
 
-      case "GroupEvent":
-        if (import.meta.dev) console.debug("群组事件:", message.data);
-        triggerEvent("groupEvent", message.data);
-        break;
-
-      case "SystemNotification":
-        if (import.meta.dev) console.debug("系统通知:", message.data);
-        triggerEvent("systemNotification", message.data);
-        break;
-
-      case "MessageDeleted":
-        if (import.meta.dev) console.debug("消息删除:", message.data);
-        triggerEvent("messageDeleted", message.data);
-        break;
-
-      case "MessageRead":
-        if (import.meta.dev) console.debug("消息已读:", message.data);
-        triggerEvent("messageRead", message.data);
-        break;
-
-      case "UserStartedTyping": {
-        if (import.meta.dev) console.debug("用户输入中:", message.data);
-        const payload =
-          message.data as import("~/types/realtime").WsUserTypingPayload;
-        triggerEvent("userTyping", { ...payload, typing: true });
-        break;
-      }
-      case "UserStoppedTyping": {
-        if (import.meta.dev) console.debug("用户停止输入:", message.data);
-        const payload =
-          message.data as import("~/types/realtime").WsUserTypingPayload;
-        triggerEvent("userTyping", { ...payload, typing: false });
-        break;
-      }
-
-      // no default: 让 TypeScript 保持穷尽检查
+  // 停止心跳
+  const stopHeartbeat = (): void => {
+    if (heartbeatInterval.value) {
+      clearInterval(heartbeatInterval.value);
+      heartbeatInterval.value = null;
     }
   };
 
   // 安排重连
-  const scheduleReconnect = () => {
-    if (reconnectAttempts.value >= maxReconnectAttempts) {
-      if (import.meta.dev) console.error("WebSocket重连次数达到上限，停止重连");
-      handleError({
-        name: "NetworkError",
-        message: "WebSocket重连次数达到上限，停止重连",
-      }, "WebSocket重连");
-      toast.error({
-        title: "连接失败",
-        description: "无法连接到服务器，请检查网络连接"
-      });
-      return;
+  const scheduleReconnect = (): void => {
+    if (reconnectTimeout.value) {
+      clearTimeout(reconnectTimeout.value);
     }
-
-    if (reconnectInterval.value) {
-      clearTimeout(reconnectInterval.value);
-    }
-
-    const base = Math.min(1000 * Math.pow(2, reconnectAttempts.value), 30000);
-    const jitter = base * (0.8 + Math.random() * 0.4);
-    const delay = Math.round(jitter);
-    if (import.meta.dev) console.log(`${delay}ms后尝试重连WebSocket`);
-
-    reconnectInterval.value = setTimeout(() => {
-      reconnectAttempts.value++;
+    
+    reconnectAttempts.value++;
+    const delay = Math.min(reconnectDelay.value * Math.pow(2, reconnectAttempts.value - 1), 30000);
+    
+    console.log(`[WebSocket] 将在 ${delay}ms 后尝试重连 (${reconnectAttempts.value}/${maxReconnectAttempts})`);
+    
+    reconnectTimeout.value = setTimeout(() => {
       connect();
     }, delay);
   };
 
-  // 心跳/看门狗
-  const startHeartbeat = () => {
-    stopHeartbeat();
-    lastPongAt = Date.now();
-    heartbeatTimer = setInterval(() => {
-      if (isConnected.value) sendHeartbeat();
-    }, HEARTBEAT_MS);
+  // 重新订阅房间
+  const resubscribeRooms = (): void => {
+    subscribedRooms.value.forEach(roomId => {
+      // 这里需要根据房间ID的格式判断房间类型
+      // 简化处理，假设都是群组房间
+      joinRoom('group', roomId);
+    });
   };
-  const stopHeartbeat = () => {
-    if (heartbeatTimer) {
-      clearInterval(heartbeatTimer);
-      heartbeatTimer = null;
+
+  // 连接WebSocket
+  const connect = (): void => {
+    if (socket.value && socket.value.readyState === WebSocket.OPEN) {
+      return;
     }
-  };
-  const startWatchdog = () => {
-    stopWatchdog();
-    watchdogTimer = setInterval(
-      () => {
-        const timeoutMs = HEARTBEAT_MS * 2.5;
-        if (isConnected.value && Date.now() - lastPongAt > timeoutMs) {
-          if (import.meta.dev) console.warn("心跳超时，准备重连");
-          handleError({
-            name: "NetworkError",
-            message: "WebSocket心跳超时",
-          }, "WebSocket心跳");
-          try {
-            socket.value?.close();
-          } catch {}
-          isConnected.value = false;
-          isConnecting.value = false;
-          socket.value = null;
-          stopHeartbeat();
-          scheduleReconnect();
-        }
-      },
-      Math.max(HEARTBEAT_MS, 10000),
-    );
-  };
-  const stopWatchdog = () => {
-    if (watchdogTimer) {
-      clearInterval(watchdogTimer);
-      watchdogTimer = null;
+
+    try {
+      connectionState.value = 'connecting';
+      socket.value = new WebSocket(getWebSocketUrl());
+      
+      socket.value.onopen = handleOpen;
+      socket.value.onmessage = handleMessage;
+      socket.value.onclose = handleClose;
+      socket.value.onerror = handleError;
+      
+    } catch (error) {
+      console.error('[WebSocket] 连接创建失败:', error);
+      connectionState.value = 'error';
     }
   };
 
   // 断开连接
-  const disconnect = () => {
-    if (reconnectInterval.value) {
-      clearTimeout(reconnectInterval.value);
-      reconnectInterval.value = null;
+  const disconnect = (): void => {
+    if (reconnectTimeout.value) {
+      clearTimeout(reconnectTimeout.value);
+      reconnectTimeout.value = null;
     }
-
+    
+    stopHeartbeat();
+    
     if (socket.value) {
-      socket.value.close(1000, "主动断开连接");
+      socket.value.close(1000, '用户主动断开');
       socket.value = null;
     }
-
-    isConnected.value = false;
-    isConnecting.value = false;
-    reconnectAttempts.value = 0;
-    stopHeartbeat();
-    stopWatchdog();
     
-    // 清理所有监听器避免内存泄漏
-    clearAllListeners();
-    currentSubscriptions.clear();
-    outboundQueue.length = 0;
+    connectionState.value = 'disconnected';
+    reconnectAttempts.value = 0;
+  };
+
+  // 认证
+  const authenticate = (): void => {
+    if (!authStore.token) {
+      console.error('[WebSocket] 没有认证令牌');
+      return;
+    }
+
+    const authMessage: ClientMessage = {
+      type: 'authenticate',
+      timestamp: Date.now(),
+      data: {
+        token: authStore.token
+      } as AuthenticateData
+    };
+
+    sendMessage(authMessage);
   };
 
   // 加入房间
-  const joinRoom = (roomId: string, roomType: "group" | "conversation") => {
-    const key = `${roomType}:${roomId}`;
-    if (socket.value && socket.value.readyState === WebSocket.OPEN) {
-      if (currentSubscriptions.has(key)) return;
-      currentSubscriptions.add(key);
-    }
-    if (roomType === "group") {
-      sendMessage({
-        type: "JoinGroup",
-        data: { group_id: roomId },
-      });
-    } else {
-      sendMessage({
-        type: "JoinConversation",
-        data: { conversation_id: roomId },
-      });
-    }
+  const joinRoom = (roomType: RoomType, roomId: string): void => {
+    const joinMessage: ClientMessage = {
+      type: 'join_room',
+      timestamp: Date.now(),
+      data: {
+        room_type: roomType,
+        room_id: roomId
+      } as JoinRoomData
+    };
+
+    sendMessage(joinMessage);
+    subscribedRooms.value.add(roomId);
   };
 
   // 离开房间
-  const leaveRoom = (roomId: string, roomType: "group" | "conversation") => {
-    currentSubscriptions.delete(`${roomType}:${roomId}`);
-    if (roomType === "group") {
-      sendMessage({
-        type: "LeaveGroup",
-        data: { group_id: roomId },
-      });
-    } else {
-      sendMessage({
-        type: "LeaveConversation",
-        data: { conversation_id: roomId },
-      });
-    }
+  const leaveRoom = (roomType: RoomType, roomId: string): void => {
+    const leaveMessage: ClientMessage = {
+      type: 'leave_room',
+      timestamp: Date.now(),
+      data: {
+        room_type: roomType,
+        room_id: roomId
+      } as LeaveRoomData
+    };
+
+    sendMessage(leaveMessage);
+    subscribedRooms.value.delete(roomId);
   };
 
-  // 发送心跳
-  const sendHeartbeat = () => {
-    sendMessage({ type: "Ping" });
+  // 发送聊天消息
+  const sendChatMessage = (groupId: string, content: string, messageType: string = 'text'): void => {
+    const chatMessage: ClientMessage = {
+      type: 'send_message',
+      timestamp: Date.now(),
+      data: {
+        group_id: groupId,
+        content,
+        message_type: messageType
+      } as SendMessageData
+    };
+
+    sendMessage(chatMessage);
   };
 
-  // 启动心跳定时器（外部可调用但实际内部自管）
-  const startHeartbeatExternal = () => {
-    startHeartbeat();
+  // 发送输入状态
+  const sendTyping = (groupId: string, isTyping: boolean): void => {
+    const typingMessage: ClientMessage = {
+      type: isTyping ? 'typing_start' : 'typing_stop',
+      timestamp: Date.now(),
+      data: {
+        group_id: groupId
+      } as TypingData
+    };
+
+    sendMessage(typingMessage);
   };
 
-  // 监听认证状态变化
-  watch(
-    () => authStore.token,
-    (newToken, oldToken) => {
-      if (newToken && !isConnected.value && !isConnecting.value) {
-        // 有token且未连接时，自动连接
-        connect();
-      } else if (!newToken && oldToken && (isConnected.value || isConnecting.value)) {
-        // 从有token变为无token时，优雅断开连接（避免错误提示）
-        if (socket.value && socket.value.readyState === WebSocket.OPEN) {
-          socket.value.close(1000, "用户注销");
-        } else {
-          disconnect();
-        }
-      } else if (newToken && oldToken && newToken !== oldToken) {
-        // token变化（用户切换），先断开再重连
-        if (socket.value) {
-          socket.value.close(1000, "用户切换");
-        }
-        // 短暂延迟后重连，给旧连接时间完全关闭
-        setTimeout(() => {
-          if (newToken === authStore.token) { // 确保token仍然有效
-            connect();
-          }
-        }, 100);
-      }
-    },
-    { immediate: true },
-  );
+  // 标记消息已读
+  const markAsRead = (groupId: string, messageId?: string): void => {
+    const markReadMessage: ClientMessage = {
+      type: 'mark_read',
+      timestamp: Date.now(),
+      data: {
+        group_id: groupId,
+        message_id: messageId
+      } as MarkReadData
+    };
 
-  // 页面可见性变化处理（仅在客户端）
-  if (typeof document !== "undefined") {
-    document.addEventListener("visibilitychange", () => {
-      if (
-        document.visibilityState === "visible" &&
-        authStore.token &&
-        !isConnected.value &&
-        !isConnecting.value
-      ) {
-        connect();
-      }
-    });
-  }
+    sendMessage(markReadMessage);
+  };
 
-  // 组件卸载时清理（仅在组件上下文且客户端执行）
-  if (typeof window !== "undefined" && getCurrentInstance()) {
-    onUnmounted(() => {
-      disconnect();
-    });
-  }
+  // 组件卸载时清理
+  onUnmounted(() => {
+    disconnect();
+    eventListeners.value.clear();
+  });
 
   return {
     // 状态
-    isConnected: readonly(isConnected),
-    isConnecting: readonly(isConnecting),
-
-    // 方法
+    connectionState: readonly(connectionState),
+    isConnected,
+    isAuthenticated,
+    
+    // 连接管理
     connect,
     disconnect,
-    sendMessage,
+    
+    // 房间管理
     joinRoom,
     leaveRoom,
-    addEventListener,
-    removeEventListener,
-    startHeartbeat: startHeartbeatExternal,
+    
+    // 消息发送
+    sendChatMessage,
+    sendTyping,
+    markAsRead,
+    
+    // 事件监听
+    on,
+    off,
+    
+    // 原始发送方法（高级用法）
+    sendMessage,
   };
 };

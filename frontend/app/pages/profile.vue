@@ -232,7 +232,7 @@ const confirmLogout = async () => {
             color: "success",
         });
 
-        await navigateTo("/auth");
+        await navigateTo("/auth/login");
     } catch (error) {
         toast.add({
             title: t("profile.toasts.logoutFailedTitle"),

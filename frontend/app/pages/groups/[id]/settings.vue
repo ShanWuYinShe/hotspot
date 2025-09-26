@@ -153,7 +153,7 @@
 <!-- 合并到同一个 <script setup> 内，保持单一 <template> 规则 -->
 <script setup lang="ts">
 // TableColumn 类型已在组件内部定义
-import type { GroupInfo } from "~/types";
+import type { GroupResponse } from "~/types/api";
 
 definePageMeta({ title: "群组管理", requiresAuth: true, layout: 'dashboard' });
 
@@ -169,7 +169,7 @@ const groupId = computed(() =>
     ),
 );
 
-const group = ref<GroupInfo | null>(null);
+const group = ref<GroupResponse | null>(null);
 const members = ref<
     Array<{
         user_id: string;

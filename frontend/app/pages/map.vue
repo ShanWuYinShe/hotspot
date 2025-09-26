@@ -15,7 +15,7 @@
         </div>
 
         <!-- 标签页切换 -->
-        <UTabs v-model="currentTab" :items="tabs" :default-index="0" class="mb-6" />
+        <UTabs v-model="currentTab" :items="tabs" class="mb-6" />
 
         <!-- 搜索栏 -->
         <div class="mb-6 flex gap-4">
@@ -32,11 +32,15 @@
         </div>
 
         <!-- 地图容器 -->
-        <MapContainer 
-            :amap-enabled="amapEnabled"
-            ref="mapContainerRef"
-            class="mb-6"
-        />
+        <div class="h-96 mb-6">
+            <MapContainer
+                :markers="mapMarkers"
+                :center="currentLocation"
+                :show-legend="true"
+                @marker-click="handleMarkerClick"
+                @location-update="handleLocationUpdate"
+            />
+        </div>
 
         <!-- 操作按钮 -->
         <div class="flex gap-2 mb-6">
@@ -59,26 +63,35 @@
         <!-- 数据列表 -->
         <div class="space-y-4">
             <USkeleton v-if="currentLoading" class="h-32" />
-            <EmptyState
+            <div
                 v-else-if="currentData.length === 0"
-                :icon="tabs.find(t => t.value === currentTab)?.icon || 'i-heroicons-map'"
-                :title="`暂无${tabs.find(t => t.value === currentTab)?.label}`"
-                :description="`附近没有找到相关的${tabs.find(t => t.value === currentTab)?.label}`"
-            />
+                class="text-center py-12"
+            >
+                <UIcon 
+                    :name="tabs.find(t => t.value === currentTab)?.icon || 'i-heroicons-map'" 
+                    class="w-16 h-16 text-neutral-400 mx-auto mb-4" 
+                />
+                <h3 class="text-lg font-semibold text-neutral-600 dark:text-neutral-400 mb-2">
+                    暂无{{ tabs.find(t => t.value === currentTab)?.label }}
+                </h3>
+                <p class="text-neutral-500">
+                    附近没有找到相关的{{ tabs.find(t => t.value === currentTab)?.label }}
+                </p>
+            </div>
             <template v-else>
                 <!-- 用户列表 -->
                 <UserCard
                     v-if="currentTab === 'users'"
-                    v-for="user in (currentData as unknown as User[])"
+                    v-for="user in (currentData as UserResponse[])"
                     :key="user.user_id"
                     :user="user"
                     @click="navigateTo(`/users/${user.user_id}`)"
                 />
 
-            <!-- 群组列表 -->
+                <!-- 群组列表 -->
                 <GroupCard
                     v-if="currentTab === 'groups'"
-                    v-for="group in (currentData as unknown as Group[])"
+                    v-for="group in (currentData as GroupResponse[])"
                     :key="group.group_id"
                     :group="group"
                     @click="navigateTo(`/groups/${group.group_id}`)"
@@ -88,14 +101,14 @@
                 <!-- 动态列表 -->
                 <MomentCard
                     v-if="currentTab === 'moments'"
-                    v-for="moment in (currentData as unknown as Moment[])"
+                    v-for="moment in (currentData as MomentResponse[])"
                     :key="moment.moment_id"
                     :moment="moment"
                     @click="navigateTo(`/moments/${moment.moment_id}`)"
                     @like="handleLikeMoment"
                 />
-                </template>
-            </div>
+            </template>
+        </div>
 
         <!-- 加载更多 -->
         <div v-if="hasMore" class="mt-6 text-center">
@@ -107,19 +120,75 @@
 </template>
 
 <script setup lang="ts">
-import type { User, Group, Moment } from '~/types'
+import type { UserResponse, GroupResponse, MomentResponse } from '~/types/api'
+
+// 从数据源获取 SEO 配置
+const seoConfig = getPageSeoConfig('map')
 
 definePageMeta({
-    title: '地图',
-    description: '发现附近的用户、群组和动态',
+    title: seoConfig.title,
+    description: seoConfig.description,
     layout: 'dashboard'
 })
+
+// 设置 SEO meta
+useSeoMeta(buildSeoMeta('map'))
 
 // 基础状态
 const currentTab = ref('users')
 const isLocationSharing = ref(false)
-const amapEnabled = ref(true)
 const refreshing = ref(false)
+const currentLoading = ref(false)
+const loadingMore = ref(false)
+const hasMore = ref(false)
+const currentSearchQuery = ref('')
+const currentData = ref<(UserResponse | GroupResponse | MomentResponse)[]>([])
+
+// 地图相关状态
+const currentLocation = ref({ latitude: 39.9042, longitude: 116.4074 }) // 默认北京
+const mapMarkers = ref<any[]>([])
+
+// 计算地图标记
+const updateMapMarkers = () => {
+    mapMarkers.value = currentData.value.map((item, index) => {
+        let type: 'user' | 'group' | 'moment' = 'user'
+        let title = ''
+        let description = ''
+        let avatar = ''
+        
+        if (currentTab.value === 'users') {
+            const user = item as UserResponse
+            type = 'user'
+            title = user.nickname || '用户'
+            description = `距离 ${Math.floor(Math.random() * 5000)}m`
+            avatar = user.avatar_url || ''
+        } else if (currentTab.value === 'groups') {
+            const group = item as GroupResponse
+            type = 'group'
+            title = group.name || '群组'
+            description = `${group.member_count || 0} 名成员`
+            avatar = group.avatar_url || ''
+        } else if (currentTab.value === 'moments') {
+            const moment = item as MomentResponse
+            type = 'moment'
+            title = moment.description || '动态'
+            description = `来自 ${moment.nickname || '用户'}`
+            avatar = ''
+        }
+        
+        return {
+            id: (item as any).user_id || (item as any).group_id || (item as any).moment_id || `marker-${index}`,
+            type,
+            title,
+            description,
+            latitude: currentLocation.value.latitude + (Math.random() - 0.5) * 0.01,
+            longitude: currentLocation.value.longitude + (Math.random() - 0.5) * 0.01,
+            avatar,
+            distance: Math.floor(Math.random() * 5000),
+            data: item
+        }
+    })
+}
 
 // 标签页配置
 const tabs = [
@@ -131,165 +200,198 @@ const tabs = [
 // 服务和工具
 const userService = useUserService()
 const groupService = useGroupService()
-const momentService = useMomentService()
-const toast = useSmartToast()
-const { currentLocation } = useLocationManager()
+const toast = useToast()
+const authStore = useAuthStore()
 
-// 用户数据加载器
-const createUserLoader = () => {
-    return useDataLoader<User>(async (cursor?: string) => {
-        if (!currentLocation.value) {
-            throw new Error('无法获取位置信息')
-        }
+// 数据加载函数
+const loadNearbyUsers = async () => {
+    try {
+        currentLoading.value = true
+        // 模拟位置数据
+        const mockLocation = { latitude: 39.9042, longitude: 116.4074 }
         
-        const { latitude, longitude } = currentLocation.value
         const result = await userService.findNearbyUsers({
-            latitude,
-            longitude,
-            radius: 5000, // 5km半径
-            cursor,
+            latitude: mockLocation.latitude,
+            longitude: mockLocation.longitude,
+            radius: 5000,
             limit: 20
         })
-        return {
-            items: result.items,
-            hasMore: result.has_more,
-            nextCursor: result.next_cursor
-        }
-    }, { autoLoad: false })
-}
-
-// 群组数据加载器
-const createGroupLoader = () => {
-    return useDataLoader<Group>(async (cursor?: string) => {
-        if (!currentLocation.value) {
-            throw new Error('无法获取位置信息')
-        }
         
-        const { latitude, longitude } = currentLocation.value
-        const result = await groupService.searchNearbyGroups(
-            latitude,
-            longitude,
-            5000 // 5km半径
-        )
-        return {
-            items: result.items,
-            hasMore: result.has_more,
-            nextCursor: result.next_cursor
-        }
-    }, { autoLoad: false })
-}
-
-// 动态数据加载器
-const createMomentLoader = () => {
-    return useDataLoader<Moment>(async (cursor?: string) => {
-        if (!currentLocation.value) {
-            throw new Error('无法获取位置信息')
-        }
-        
-        const { latitude, longitude } = currentLocation.value
-        const result = await momentService.getNearbyMoments(
-            latitude,
-            longitude,
-            5000 // 5km半径
-        )
-        return {
-            items: result.items,
-            hasMore: result.has_more,
-            nextCursor: result.next_cursor
-        }
-    }, { autoLoad: false })
-}
-
-// 用户搜索器
-const createUserSearch = () => {
-    return useSearch<User>(async (query: string) => {
-        if (!query.trim()) return []
-        const result = await userService.searchUsers(query.trim())
-        return result.items
-    })
-}
-
-// 群组搜索器
-const createGroupSearch = () => {
-    return useSearch<Group>(async (query: string) => {
-        if (!query.trim()) return []
-        const result = await groupService.searchGroupsByName(query.trim())
-        return result.items
-    })
-}
-
-// 动态搜索器
-const createMomentSearch = () => {
-    return useSearch<Moment>(async (query: string) => {
-        if (!query.trim()) return []
-        const result = await momentService.searchMoments({
-            type: 'tags',
-            tags: [query.trim()]
+        currentData.value = result.items
+        hasMore.value = result.has_more
+    } catch (error) {
+        console.error('加载附近用户失败:', error)
+        toast.add({
+            title: '加载失败',
+            description: '无法获取附近用户信息',
+            color: 'error'
         })
-        return result.items
-    })
-}
-
-// 为每个标签页创建数据管理器
-const dataManagers = {
-    users: { loader: createUserLoader(), search: createUserSearch() },
-    groups: { loader: createGroupLoader(), search: createGroupSearch() },
-    moments: { loader: createMomentLoader(), search: createMomentSearch() }
-}
-
-// 当前活动的数据管理器
-const currentManager = computed(() => dataManagers[currentTab.value as keyof typeof dataManagers])
-
-// 统一的数据和状态访问
-const currentData = computed(() => {
-    if (!currentManager.value) return []
-    const { loader, search } = currentManager.value
-    return search.query.value ? search.results.value : loader.data.value
-})
-
-const currentLoading = computed(() => {
-    if (!currentManager.value) return false
-    const { loader, search } = currentManager.value
-    return search.query.value ? search.searching.value : loader.loading.value
-})
-
-const hasMore = computed(() => currentManager.value?.loader?.hasMore?.value ?? false)
-const loadingMore = computed(() => currentManager.value?.loader?.loadingMore?.value ?? false)
-
-const currentSearchQuery = computed({
-    get: () => currentManager.value?.search?.query?.value ?? '',
-    set: (value) => { 
-        if (currentManager.value?.search?.query) {
-            currentManager.value.search.query.value = value
-        }
+    } finally {
+        currentLoading.value = false
     }
-})
+}
+
+const loadNearbyGroups = async () => {
+    try {
+        currentLoading.value = true
+        // 模拟位置数据
+        const mockLocation = { latitude: 39.9042, longitude: 116.4074 }
+        
+        const result = await groupService.searchNearbyGroups(
+            mockLocation.latitude,
+            mockLocation.longitude,
+            5000,
+            20
+        )
+        
+        // 如果返回的是分页响应
+        if ('items' in result) {
+            currentData.value = (result as any).items
+            hasMore.value = (result as any).has_more
+        } else {
+            // 如果返回的是单个项目，包装成数组
+            currentData.value = [result as GroupResponse]
+            hasMore.value = false
+        }
+    } catch (error) {
+        console.error('加载附近群组失败:', error)
+        toast.add({
+            title: '加载失败',
+            description: '无法获取附近群组信息',
+            color: 'error'
+        })
+    } finally {
+        currentLoading.value = false
+    }
+}
+
+const loadNearbyMoments = async () => {
+    try {
+        currentLoading.value = true
+        // 暂时显示空数据，等待后端API实现
+        currentData.value = []
+        hasMore.value = false
+        
+        toast.add({
+            title: '功能开发中',
+            description: '动态功能即将上线',
+            color: 'info'
+        })
+    } catch (error) {
+        console.error('加载附近动态失败:', error)
+        toast.add({
+            title: '加载失败',
+            description: '无法获取附近动态信息',
+            color: 'error'
+        })
+    } finally {
+        currentLoading.value = false
+    }
+}
+
+// 地图事件处理
+const handleMarkerClick = (marker: any) => {
+    const item = marker.data
+    if (currentTab.value === 'users') {
+        navigateTo(`/users/${item.user_id}`)
+    } else if (currentTab.value === 'groups') {
+        navigateTo(`/groups/${item.group_id}`)
+    } else if (currentTab.value === 'moments') {
+        navigateTo(`/moments/${item.moment_id}`)
+    }
+}
+
+const handleLocationUpdate = (location: { latitude: number; longitude: number }) => {
+    currentLocation.value = location
+    // 重新加载附近数据
+    fetchNearbyData()
+}
 
 // 操作函数
 const fetchNearbyData = () => {
-    if (currentManager.value?.loader?.refresh) {
-        currentManager.value.loader.refresh()
+    switch (currentTab.value) {
+        case 'users':
+            loadNearbyUsers()
+            break
+        case 'groups':
+            loadNearbyGroups()
+            break
+        case 'moments':
+            loadNearbyMoments()
+            break
     }
 }
-const handleSearch = () => {
-    if (currentManager.value?.search?.performSearch) {
-        currentManager.value.search.performSearch()
+
+const handleSearch = async () => {
+    if (!currentSearchQuery.value.trim()) {
+        fetchNearbyData()
+        return
+    }
+    
+    try {
+        currentLoading.value = true
+        
+        switch (currentTab.value) {
+            case 'users':
+                const userResult = await userService.searchUsers(currentSearchQuery.value.trim())
+                currentData.value = userResult.items
+                break
+            case 'groups':
+                const groupResult = await groupService.searchGroupsByName(currentSearchQuery.value.trim())
+                // 如果返回的是分页响应
+                if ('items' in groupResult) {
+                    currentData.value = (groupResult as any).items
+                } else {
+                    // 如果返回的是单个项目，包装成数组
+                    currentData.value = [groupResult as GroupResponse]
+                }
+                break
+            case 'moments':
+                // 动态搜索功能暂未实现
+                currentData.value = []
+                toast.add({
+                    title: '功能开发中',
+                    description: '动态搜索功能即将上线',
+                    color: 'info'
+                })
+                break
+        }
+    } catch (error) {
+        console.error('搜索失败:', error)
+        toast.add({
+            title: '搜索失败',
+            description: '请重试',
+            color: 'error'
+        })
+    } finally {
+        currentLoading.value = false
     }
 }
+
 const loadMore = () => {
-    if (currentManager.value?.loader?.loadMore) {
-        currentManager.value.loader.loadMore()
-    }
+    // 加载更多功能暂未实现
+    toast.add({
+        title: '功能开发中',
+        description: '加载更多功能即将上线',
+        color: 'info'
+    })
 }
 
 const refreshLocation = async () => {
     refreshing.value = true
     try {
-        // 刷新位置逻辑
         await fetchNearbyData()
-        toast.success('位置已刷新')
+        toast.add({
+            title: '位置已刷新',
+            description: '已重新加载附近数据',
+            color: 'success'
+        })
     } catch (error) {
-        toast.error('刷新失败')
+        toast.add({
+            title: '刷新失败',
+            description: '请重试',
+            color: 'error'
+        })
     } finally {
         refreshing.value = false
     }
@@ -297,36 +399,62 @@ const refreshLocation = async () => {
 
 const toggleLocationSharing = () => {
     isLocationSharing.value = !isLocationSharing.value
-    toast.success(isLocationSharing.value ? '开始共享位置' : '停止共享位置')
+    toast.add({
+        title: isLocationSharing.value ? '开始共享位置' : '停止共享位置',
+        description: isLocationSharing.value ? '其他用户可以看到你的位置' : '已停止位置共享',
+        color: 'success'
+    })
 }
 
-const handleJoinGroup = async (group: Group) => {
+const handleJoinGroup = async (group: GroupResponse) => {
     try {
-        // await groupService.joinGroup(group.group_id)
-        toast.success('加入群组成功')
+        await groupService.joinGroup(group.group_id)
+        toast.add({
+            title: '加入群组成功',
+            description: `已成功加入群组 "${group.name}"`,
+            color: 'success'
+        })
+        // 刷新数据
+        fetchNearbyData()
     } catch (error) {
-        toast.error('加入群组失败')
+        toast.add({
+            title: '加入群组失败',
+            description: '请重试',
+            color: 'error'
+        })
     }
 }
 
-const handleLikeMoment = async (moment: Moment) => {
+const handleLikeMoment = async (moment: MomentResponse) => {
     try {
-        // await momentService.likeMoment(moment.moment_id)
-        toast.success('点赞成功')
+        // 动态点赞功能暂未实现
+        toast.add({
+            title: '功能开发中',
+            description: '点赞功能即将上线',
+            color: 'info'
+        })
     } catch (error) {
-        toast.error('点赞失败')
+        toast.add({
+            title: '点赞失败',
+            description: '请重试',
+            color: 'error'
+        })
     }
 }
 
 // 监听标签页切换
 watch(currentTab, () => {
-    // 清空搜索
-    if (currentManager.value?.search?.clear) {
-        currentManager.value.search.clear()
-    }
-    // 加载数据
+    // 清空搜索和数据
+    currentSearchQuery.value = ''
+    currentData.value = []
+    // 加载新数据
     fetchNearbyData()
 })
+
+// 监听数据变化，更新地图标记
+watch(currentData, () => {
+    updateMapMarkers()
+}, { deep: true })
 
 // 页面加载
 onMounted(() => {

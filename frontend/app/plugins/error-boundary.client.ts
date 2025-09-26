@@ -1,21 +1,38 @@
 /**
  * 全局错误边界插件
- * 集成高级错误处理和恢复机制
+ * 使用 Nuxt 3 内置错误处理
  */
 
 export default defineNuxtPlugin(() => {
-  const { handleError } = useErrorBoundary({
-    enableReporting: true,
-    reportingEndpoint: '/api/v1/errors',
-    recoveryStrategy: 'retry',
-    showDetailInDev: true
-  })
+  const nuxtApp = useNuxtApp()
+  
+  // 错误处理函数
+  const handleError = (error: Error, context?: Record<string, any>) => {
+    console.error('Global error caught:', error, context)
+    
+    // 在开发环境显示详细错误
+    if (process.dev) {
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        context
+      })
+    }
+    
+    // 使用 Nuxt 的错误处理
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Internal Server Error',
+      message: process.dev ? error.message : 'Something went wrong'
+    })
+  }
 
   // 设置全局错误处理
   if (process.client) {
     // JavaScript 错误
     window.addEventListener('error', (event) => {
-      handleError(event.error || new Error(event.message), {
+      const error = event.error || new Error(event.message)
+      handleError(error, {
         type: 'javascript',
         filename: event.filename,
         lineno: event.lineno,
@@ -35,9 +52,9 @@ export default defineNuxtPlugin(() => {
     })
 
     // Vue 错误处理
-    const nuxtApp = useNuxtApp()
     nuxtApp.hook('vue:error', (error, instance, info) => {
-      handleError(error, {
+      const errorObj = error instanceof Error ? error : new Error(String(error))
+      handleError(errorObj, {
         type: 'vue',
         component: instance?.$options.name || 'Unknown',
         info

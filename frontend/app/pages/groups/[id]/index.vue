@@ -172,7 +172,7 @@
 
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui';
-import type { GroupInfo } from "~/types";
+import type { GroupResponse } from "~/types/api";
 
 definePageMeta({ title: "群组详情", requiresAuth: true, layout: 'dashboard' });
 
@@ -186,7 +186,7 @@ const groupId = computed(() =>
     ),
 );
 
-const group = ref<GroupInfo | null>(null);
+const group = ref<GroupResponse | null>(null);
 const groupUnread = ref<number>(0);
 const members = ref<
     Array<{

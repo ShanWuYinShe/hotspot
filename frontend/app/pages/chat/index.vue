@@ -233,10 +233,17 @@
 </template>
 
 <script setup lang="ts">
+// 从数据源获取 SEO 配置
+const seoConfig = getPageSeoConfig('chat')
+
 definePageMeta({
-  title: "消息中心",
+  title: seoConfig.title,
+  description: seoConfig.description,
   layout: "dashboard"
 });
+
+// 设置 SEO meta
+useSeoMeta(buildSeoMeta('chat'));
 
 // 使用现有的 stores 和 composables
 const messagesStore = useMessagesStore();

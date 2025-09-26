@@ -1,5 +1,5 @@
 import { DEFAULTS } from "~/config/defaults";
-import type { AuthResponse, UserInfo, User } from "~/types";
+import type { AuthResponse, UserResponse } from "~/types/api";
 
 // 安全且简洁的账户信息
 interface SecureAccount {
@@ -54,7 +54,7 @@ export const useAuthStore = defineStore(
       avatar_url: currentUser.value.avatar_url,
       user_type: currentUser.value.user_type,
       is_temp: currentUser.value.user_type === 1, // 通过user_type计算是否为临时用户
-    } as User : null);
+    } as UserResponse : null);
     
     // 设备认证状态
     const needsDeviceAuth = computed(() => !sessionActive.value && accounts.value.length > 1);
@@ -243,6 +243,7 @@ export const useAuthStore = defineStore(
           nickname: auth.nickname,
           avatar_url: undefined, // AuthResponse中不包含头像
           last_login: new Date().toISOString(),
+          user_type: auth.is_temp ? 1 : 2, // 1-临时用户，2-普通用户
           encrypted_token: encryptedToken,
           device_key: deviceKeyString,
           is_temp: auth.is_temp || false, // 是否为临时用户
@@ -475,7 +476,7 @@ export const useAuthStore = defineStore(
       await saveAuthData(authData);
     }
 
-    function updateUser(userData: Partial<User>) {
+    function updateUser(userData: Partial<UserResponse>) {
       if (currentUser.value) {
         Object.assign(currentUser.value, userData);
       }

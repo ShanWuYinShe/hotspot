@@ -25,7 +25,7 @@ export function useForm<T extends Record<string, any>>(
 
   // 设置字段值
   const setValue = (field: keyof T, value: any) => {
-    values[field] = value
+    (values as any)[field] = value
     // 清除该字段的错误
     if (errors.value[field as string]) {
       delete errors.value[field as string]
@@ -36,7 +36,7 @@ export function useForm<T extends Record<string, any>>(
   const validateForm = () => {
     if (!validate) return true
     
-    const validationErrors = validate(values)
+    const validationErrors = validate(toRaw(values) as T)
     if (validationErrors) {
       errors.value = validationErrors
       return false
@@ -57,7 +57,7 @@ export function useForm<T extends Record<string, any>>(
 
     submitting.value = true
     try {
-      const result = await submitFunction(values)
+      const result = await submitFunction(toRaw(values) as T)
       onSuccess?.(result)
       toast.success('操作成功')
       return result

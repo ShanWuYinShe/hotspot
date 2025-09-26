@@ -7,14 +7,14 @@ import { computePasswordHash, isWebCryptoSupported } from './useCrypto.client';
 import { AUTH_ENDPOINTS, USER_ENDPOINTS, buildAuthUrl, buildUserUrl } from '~/config/api';
 import type { 
   GetNonceRequest, 
-  NonceResponse, 
+  GetNonceResponse, 
   LoginRequest, 
   RegisterRequest, 
   SetPasswordRequest,
   UpgradeAccountRequest,
   AuthResponse,
   BasicSuccess
-} from '~/types';
+} from '~/types/api';
 
 export const useSecureAuth = () => {
   const api = useApi();
@@ -33,13 +33,13 @@ export const useSecureAuth = () => {
    * @param loginId 登录ID（邮箱/手机号）
    * @returns nonce 信息
    */
-  const getNonce = async (loginId: string): Promise<NonceResponse> => {
+  const getNonce = async (loginId: string): Promise<GetNonceResponse> => {
     checkCryptoSupport();
     
     const request: GetNonceRequest = { login_id: loginId };
     const response = await api.postPublic(buildAuthUrl(AUTH_ENDPOINTS.PUBLIC.GET_NONCE), request);
     
-    return extractApiData(response);
+    return response;
   };
 
   /**
@@ -70,7 +70,7 @@ export const useSecureAuth = () => {
     };
     
     const response = await api.postPublic(buildAuthUrl(AUTH_ENDPOINTS.PUBLIC.LOGIN), request);
-    return extractApiData(response);
+    return response;
   };
 
   /**
@@ -107,7 +107,7 @@ export const useSecureAuth = () => {
     };
     
     const response = await api.postPublic(buildAuthUrl(AUTH_ENDPOINTS.PUBLIC.REGISTER), request);
-    return extractApiData(response);
+    return response;
   };
 
   /**
@@ -146,14 +146,13 @@ export const useSecureAuth = () => {
     
     // 4. 发送安全设置密码请求
     const request: SetPasswordRequest = {
-      new_password_hash: newPasswordHash,
-      old_password_hash: oldPasswordHash,
+      password_hash: newPasswordHash,
       nonce_id: nonceData.nonce_id,
       timestamp: nonceData.timestamp
     };
     
     const response = await api.post(buildAuthUrl(AUTH_ENDPOINTS.PROTECTED.SET_PASSWORD, true), request, { auth: true });
-    return extractApiData(response);
+    return response;
   };
 
   /**
@@ -187,7 +186,7 @@ export const useSecureAuth = () => {
     };
     
     const response = await api.post(buildUserUrl(USER_ENDPOINTS.PROTECTED.UPGRADE_ACCOUNT), request, { auth: true });
-    return extractApiData(response);
+    return response;
   };
 
   return {

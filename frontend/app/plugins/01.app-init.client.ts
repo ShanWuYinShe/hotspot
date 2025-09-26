@@ -53,13 +53,13 @@ export default defineNuxtPlugin(async () => {
           .fetchSettings()
           .catch((err) => console.warn("⚠️ 用户设置同步失败:", err));
 
-        // 初始化实时消息（不在此处请求通知权限）
+        // 初始化 WebSocket 连接（不在此处请求通知权限）
         nextTick(() => {
           try {
-            const rt = useRealTimeMessages();
-            rt.initializeRealTime();
+            const webSocket = useWebSocket();
+            webSocket.connect();
           } catch (e) {
-            console.error("实时消息初始化失败:", e);
+            console.error("WebSocket 连接初始化失败:", e);
           }
         });
 

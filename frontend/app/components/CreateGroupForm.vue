@@ -153,7 +153,16 @@ async function createGroup() {
       })
       
       try {
-        currentCoords = await getCurrentPosition()
+        const position = await getCurrentPosition()
+        currentCoords = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+          altitude: position.coords.altitude,
+          altitudeAccuracy: position.coords.altitudeAccuracy,
+          heading: position.coords.heading,
+          speed: position.coords.speed
+        }
       } catch (locationError) {
         console.warn('位置获取失败:', locationError)
         
@@ -161,7 +170,11 @@ async function createGroup() {
         currentCoords = {
           latitude: 39.9042,
           longitude: 116.4074,
-          accuracy: 0
+          accuracy: 0,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: null,
+          speed: null
         }
         
         toast.warning({
@@ -182,8 +195,8 @@ async function createGroup() {
       name: groupForm.value.name.trim(),
       description: groupForm.value.description.trim() || undefined,
       password: groupForm.value.password.trim() || undefined,
-      latitude: currentCoords.latitude,
-      longitude: currentCoords.longitude,
+      latitude: currentCoords?.latitude || 39.9042,
+      longitude: currentCoords?.longitude || 116.4074,
       location_name: "默认位置" // 后端会根据坐标自动获取位置名称
     })
 

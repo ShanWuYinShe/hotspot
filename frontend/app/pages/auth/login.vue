@@ -55,14 +55,20 @@
 import * as z from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
 
+// 从数据源获取 SEO 配置
+const seoConfig = getPageSeoConfig('auth-login')
+
 definePageMeta({ 
   layout: "auth",
-  title: "登录"
+  title: seoConfig.title,
+  description: seoConfig.description
 });
+
+// 设置 SEO meta
+useSeoMeta(buildSeoMeta('auth-login'));
 
 const authStore = useAuthStore();
 const toast = useToast();
-const { openConfirmModal } = useModals();
 
 // 表单状态
 const isLoading = ref(false);
@@ -167,6 +173,7 @@ const handleLogin = async (event: FormSubmitEvent<LoginSchema>) => {
 
 // 忘记密码处理
 const showForgotPassword = () => {
+  const { openConfirmModal } = useModals();
   openConfirmModal({
     title: "重置密码",
     message: "当前版本暂未开放密码找回服务，请联系管理员或使用临时用户体验。",

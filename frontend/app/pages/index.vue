@@ -1,14 +1,14 @@
 <template>
-  <div class="space-y-6">
+  <div class="space-y-6" :style="{ viewTransitionName: 'main-content' }">
     <!-- 用户欢迎区域 -->
-    <div v-if="displayedUser" class="bg-gradient-to-r from-primary-50 to-blue-50 dark:from-primary-950 dark:to-blue-950 rounded-xl p-6 border border-primary-200 dark:border-primary-800">
+    <div v-if="displayedUserResponse" class="bg-gradient-to-r from-primary-50 to-blue-50 dark:from-primary-950 dark:to-blue-950 rounded-xl p-6 border border-primary-200 dark:border-primary-800">
       <div class="flex items-center gap-4">
         <div class="relative flex-shrink-0">
-          <UAvatar :alt="displayedUser.nickname" size="xl" :src="displayedUser.avatar_url">
-            {{ displayedUser.nickname?.charAt(0) || "U" }}
-          </UAvatar>
-          <!-- 在线状态指示器 -->
-          <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-neutral-800"></div>
+          <UChip color="success" size="lg" position="bottom-right">
+            <UAvatar :alt="displayedUserResponse.nickname" size="xl" :src="displayedUserResponse.avatar_url">
+              {{ displayedUserResponse.nickname?.charAt(0) || "U" }}
+            </UAvatar>
+          </UChip>
         </div>
         
         <div class="flex-1">
@@ -21,7 +21,7 @@
           
           <div class="flex items-center gap-3">
             <UBadge 
-              v-if="displayedUser.is_temp" 
+              v-if="displayedUserResponse.is_temp" 
               color="warning" 
               variant="soft" 
               size="sm"
@@ -194,7 +194,7 @@
           <h2 class="text-xl font-semibold text-neutral-900 dark:text-white">最近活动</h2>
         </div>
         <UButton 
-          v-if="displayedUser"
+          v-if="displayedUserResponse"
           variant="outline" 
           size="sm" 
           @click="refreshActivities" 
@@ -256,7 +256,7 @@
     </div>
 
     <!-- 功能特色 -->
-    <div v-if="!displayedUser">
+    <div v-if="!displayedUserResponse">
       <div class="flex items-center gap-3 mb-4">
         <UIcon name="i-heroicons-star" class="w-5 h-5 text-primary-500" />
         <h2 class="text-xl font-semibold text-neutral-900 dark:text-white">为什么选择 HotSpot</h2>
@@ -324,7 +324,7 @@
     </div>
 
     <!-- CTA 区域 -->
-    <div v-if="!displayedUser" class="bg-gradient-to-r from-primary-500 to-blue-600 rounded-xl p-8 text-center text-white">
+    <div v-if="!displayedUserResponse" class="bg-gradient-to-r from-primary-500 to-blue-600 rounded-xl p-8 text-center text-white">
       <div class="max-w-2xl mx-auto">
         <h2 class="text-3xl font-bold mb-4">准备开始了吗？</h2>
         <p class="text-xl text-primary-100 mb-8">立即加入 HotSpot，开始您的社交之旅</p>
@@ -355,17 +355,33 @@
 </template>
 
 <script setup lang="ts">
+import { getPageSeoConfig, buildSeoMeta } from '~/config/seo'
+
+// 从数据源获取 SEO 配置
+const seoConfig = getPageSeoConfig('home')
+
+// 使用 Nuxt v4 的 definePageMeta
 definePageMeta({
-  title: "首页",
-  layout: "dashboard"
+  title: seoConfig.title,
+  description: seoConfig.description,
+  layout: 'dashboard',
+  // 启用视图过渡
+  viewTransition: true,
+  // 页面级别的 keepalive
+  keepalive: true,
+  // 预加载策略
+  prerender: true
 });
+
+// 直接使用 Nuxt v4 的 useSeoMeta
+useSeoMeta(buildSeoMeta('home'));
 
 const authStore = useAuthStore();
 const { openWelcomeModal, openLoginPromptModal } = useModals();
 
 // 认证状态
-import type { User } from '~/types';
-const displayedUser = ref<User | null>(null);
+import type { UserResponse } from '~/types/api';
+const displayedUserResponse = ref<UserResponse | null>(null);
 
 // 未读消息数量
 const messagesStore = useMessagesStore();
@@ -374,15 +390,15 @@ const unreadCount = computed(() => messagesStore.totalUnreadCount);
 
 // 问候消息
 const getGreetingTitle = () => {
-  if (displayedUser.value) {
-    return `你好，${displayedUser.value.nickname}！`;
+  if (displayedUserResponse.value) {
+    return `你好，${displayedUserResponse.value.nickname}！`;
   }
   return '发现身边的精彩';
 };
 
 const getGreetingMessage = () => {
   const hour = new Date().getHours();
-  if (displayedUser.value) {
+  if (displayedUserResponse.value) {
     if (hour < 6) return '夜深了，注意休息哦';
     if (hour < 12) return '早上好！新的一天开始了';
     if (hour < 18) return '下午好！今天过得怎么样？';
@@ -442,21 +458,21 @@ const refreshActivities = async () => {
 
 // 生命周期
 onMounted(async () => { 
-  displayedUser.value = authStore.user || null;
+  displayedUserResponse.value = authStore.user || null;
   
   // 智能化用户引导逻辑
   const hasVisited = localStorage.getItem('has-visited-hotspot');
   const lastVisit = localStorage.getItem('last-visit-time');
   const currentTime = Date.now();
   
-  if (!hasVisited && !displayedUser.value) {
+  if (!hasVisited && !displayedUserResponse.value) {
     // 首次访问：延迟显示欢迎弹窗
     setTimeout(() => {
       openWelcomeModal();
     }, 1000);
     localStorage.setItem('has-visited-hotspot', 'true');
     localStorage.setItem('last-visit-time', currentTime.toString());
-  } else if (!displayedUser.value) {
+  } else if (!displayedUserResponse.value) {
     // 非首次访问的未登录用户
     const neverShow = localStorage.getItem('never-show-login-prompt');
     const lastPromptTime = localStorage.getItem('last-login-prompt-time');

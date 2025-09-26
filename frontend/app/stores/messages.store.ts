@@ -1,7 +1,41 @@
 import { defineStore } from "pinia";
-import type { Conversation } from "~/types/message";
-import { convertConversationSummary } from "~/types/message";
-import type { ConversationItem, UserInfo, MessageType, ConversationSummary, Message } from "~/types";
+import type { MessageType, UserResponse, ConversationsResponse, SendMessageResponse } from "~/types/api";
+import { useMessageService } from "~/services/message.service";
+
+// 会话类型（基于最新 API 设计）
+interface Conversation {
+  id: string;
+  name: string;
+  avatar?: string;
+  last_message: string;
+  last_message_time: string;
+  unread_count: number;
+  type: "user" | "group";
+  is_pinned?: boolean;
+  is_muted?: boolean;
+  // 私聊会话字段
+  participant_id?: string;
+  // 群组会话字段
+  group_id?: string;
+  member_count?: number;
+}
+
+// 转换函数：ConversationsResponse 到 Conversation
+function convertConversationSummary(summary: ConversationsResponse): Conversation {
+  return {
+    id: summary.group_id,
+    name: summary.group_name,
+    last_message: summary.last_message?.content || "",
+    last_message_time: summary.last_message?.sent_at || summary.last_activity_at,
+    unread_count: summary.unread_count,
+    type: summary.group_type === "private_chat" ? "user" : "group",
+    participant_id: summary.group_type === "private_chat" ? summary.group_id : undefined,
+    group_id: summary.group_type === "public_chat" ? summary.group_id : undefined,
+    member_count: summary.member_count,
+    is_pinned: false,
+    is_muted: summary.is_muted,
+  };
+}
 
 /**
  * 消息 Store
@@ -11,7 +45,7 @@ export const useMessagesStore = defineStore("messages", () => {
   // 缓存状态 - 不持久化
   const conversations = ref<Conversation[]>([]);
   const currentConversation = ref<Conversation | null>(null);
-  const messages = ref<Message[]>([]);
+  const messages = ref<SendMessageResponse[]>([]);
 
   // 分页状态
   const pagination = ref({
@@ -30,7 +64,7 @@ export const useMessagesStore = defineStore("messages", () => {
   });
 
   // 实时消息支持
-  const optimisticMessages = ref<Map<string, Message>>(markRaw(new Map()));
+  const optimisticMessages = ref<Map<string, SendMessageResponse>>(markRaw(new Map()));
   const userOnlineStatus = ref<Map<string, boolean>>(markRaw(new Map()));
 
   // 计算属性
@@ -48,7 +82,7 @@ export const useMessagesStore = defineStore("messages", () => {
         ? pagination.value.conversations.nextCursor
         : undefined;
       const response = await messageService.getConversations(cursor);
-      const convertedItems = (response.items || []).map((item: ConversationSummary) => convertConversationSummary(item));
+      const convertedItems = (response.items || []).map((item: ConversationsResponse) => convertConversationSummary(item));
 
       if (loadMore) {
         conversations.value.push(...convertedItems);
@@ -82,7 +116,7 @@ export const useMessagesStore = defineStore("messages", () => {
       const filtered = allConversations.items.filter((item: any) =>
         item.peer_name.toLowerCase().includes(query.toLowerCase()),
       );
-      const convertedItems = filtered.map((item: ConversationSummary) => convertConversationSummary(item));
+      const convertedItems = filtered.map((item: ConversationsResponse) => convertConversationSummary(item));
 
       if (loadMore) {
         conversations.value.push(...convertedItems);
@@ -178,15 +212,18 @@ export const useMessagesStore = defineStore("messages", () => {
     loading.value.sending = true;
     // 乐观消息
     const tempId = String(Date.now());
-    const optimistic: Message = {
-      id: tempId,
+    const optimistic: SendMessageResponse = {
       message_id: tempId,
+      group_id: String(conversationId),
+      sent_at: new Date().toISOString(),
+      message: content,
+      // 兼容属性
+      id: tempId,
       conversation_id: String(conversationId),
       sender_id: String(authStore.user?.user_id || "0"),
       sender_name: authStore.user?.nickname || "",
       content,
       message_type: messageType,
-      sent_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
       status: "sending" as const,
     };
@@ -199,20 +236,21 @@ export const useMessagesStore = defineStore("messages", () => {
         messageType,
       );
       // 覆盖乐观消息
-      const index = messages.value.findIndex((m) => m.id === tempId);
+      const index = messages.value.findIndex((m: SendMessageResponse) => m.id === tempId);
       if (index !== -1) {
-        const newMessage: Message = {
-          id: String(resp.message_id) || tempId,
+        const newMessage: SendMessageResponse = {
           message_id: String(resp.message_id) || tempId,
+          group_id: resp.group_id,
+          sent_at: resp.sent_at,
+          message: resp.message,
+          // 兼容属性
+          id: String(resp.message_id) || tempId,
           conversation_id: resp.conversation_id,
           sender_id: String(authStore.user?.user_id || "0"),
           sender_name: authStore.user?.nickname || "",
           content,
           message_type: resp.message_type,
           created_at: resp.sent_at,
-          sent_at: resp.sent_at,
-          latitude: 0,
-          longitude: 0,
         };
         messages.value.splice(index, 1, newMessage);
       }
@@ -244,7 +282,7 @@ export const useMessagesStore = defineStore("messages", () => {
           const userService = useUserService();
           const profile = await userService.getUserProfile(
             String((resp as any).recipient_id),
-          ) as UserInfo;
+          ) as UserResponse;
           const target = conversations.value.find(
             (c) => c.id === String(resp.conversation_id),
           );
@@ -261,10 +299,10 @@ export const useMessagesStore = defineStore("messages", () => {
         (m) =>
           m.conversation_id === String(resp.conversation_id) &&
           m.sent_at === resp.sent_at,
-      ) as Message;
+      ) as SendMessageResponse;
     } catch (e) {
       // 失败：标记乐观消息为失败
-      const idx = messages.value.findIndex((m) => m.id === tempId);
+      const idx = messages.value.findIndex((m: SendMessageResponse) => m.id === tempId);
       if (idx !== -1) {
         // 安全地更新消息状态
         const message = messages.value[idx];
@@ -290,15 +328,17 @@ export const useMessagesStore = defineStore("messages", () => {
     const authStore = useAuthStore();
     loading.value.sending = true;
     const tempId = String(Date.now());
-    const optimistic: Message = {
-      id: tempId,
+    const optimistic: SendMessageResponse = {
       message_id: tempId,
       group_id: String(groupId),
+      sent_at: new Date().toISOString(),
+      message: content,
+      // 兼容属性
+      id: tempId,
       sender_id: String(authStore.user?.user_id || "0"),
       sender_name: authStore.user?.nickname || "",
       content,
       message_type: messageType,
-      sent_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
       status: "sending" as const,
     };
@@ -309,20 +349,20 @@ export const useMessagesStore = defineStore("messages", () => {
         content,
         messageType,
       );
-      const index = messages.value.findIndex((m) => m.id === tempId);
+      const index = messages.value.findIndex((m: SendMessageResponse) => m.id === tempId);
       if (index !== -1) {
-        const newMessage: Message = {
-          id: String((resp as any).message_id) || tempId,
+        const newMessage: SendMessageResponse = {
           message_id: String((resp as any).message_id) || tempId,
           group_id: resp.group_id,
+          sent_at: resp.sent_at,
+          message: resp.message,
+          // 兼容属性
+          id: String((resp as any).message_id) || tempId,
           sender_id: String(authStore.user?.user_id || "0"),
           sender_name: authStore.user?.nickname || "",
           content,
           message_type: messageType,
           created_at: resp.sent_at,
-          sent_at: resp.sent_at,
-          latitude: 0,
-          longitude: 0,
         };
         messages.value.splice(index, 1, newMessage);
       }
@@ -365,10 +405,10 @@ export const useMessagesStore = defineStore("messages", () => {
         }
       }
       return messages.value.find(
-        (m) => m.group_id === String(groupId) && m.sent_at === resp.sent_at,
-      ) as Message;
+        (m: SendMessageResponse) => m.group_id === String(groupId) && m.sent_at === resp.sent_at,
+      ) as SendMessageResponse;
     } catch (e) {
-      const idx = messages.value.findIndex((m) => m.id === tempId);
+      const idx = messages.value.findIndex((m: SendMessageResponse) => m.id === tempId);
       if (idx !== -1) {
         const message = messages.value[idx];
         if (message) {
@@ -387,7 +427,7 @@ export const useMessagesStore = defineStore("messages", () => {
     messageId: string,
     type: "user" | "group" = "user",
   ) {
-    const m = messages.value.find((mm) => mm.id === messageId) as any;
+    const m = messages.value.find((mm: SendMessageResponse) => mm.id === messageId) as any;
     if (!m || m.status !== "failed") return;
     m.status = "sending";
     try {
@@ -484,11 +524,11 @@ export const useMessagesStore = defineStore("messages", () => {
   // 实时消息功能
   function addRealtimeMessage(message: any) {
     // 检查消息是否已存在
-    const existingIndex = messages.value.findIndex((m) => m.id === message.id);
+    const existingIndex = messages.value.findIndex((m: SendMessageResponse) => m.id === message.id);
     if (existingIndex === -1) {
       // 按时间顺序插入消息
       const insertIndex = messages.value.findIndex(
-        (m) =>
+        (m: SendMessageResponse) =>
           new Date(m.sent_at || m.created_at || new Date()) > new Date(message.created_at || message.sent_at || new Date()),
       );
       if (insertIndex === -1) {
@@ -579,7 +619,7 @@ export const useMessagesStore = defineStore("messages", () => {
   }
 
   function updateMessageStatus(messageId: string, status: string) {
-    const message = messages.value.find((m) => m.id === messageId);
+    const message = messages.value.find((m: SendMessageResponse) => m.id === messageId);
     if (message) {
       // 更新消息状态
     }
@@ -590,7 +630,7 @@ export const useMessagesStore = defineStore("messages", () => {
   }
 
   function updateMessageId(oldId: string, newId: string) {
-    const message = messages.value.find((m) => m.id === oldId);
+    const message = messages.value.find((m: SendMessageResponse) => m.id === oldId);
     if (message) {
       message.id = newId;
     }

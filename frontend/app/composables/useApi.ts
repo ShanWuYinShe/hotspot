@@ -6,7 +6,6 @@
 
 export const useApi = () => {
   // 预加载依赖，避免动态导入的性能开销
-  const systemStatus = useSystemStatus();
   const { handleError: handleAppError } = useErrorHandler();
   const config = useRuntimeConfig();
 
@@ -75,11 +74,11 @@ export const useApi = () => {
 
     // 更新系统状态
     if (errorInfo.type === 'network' || errorInfo.type === 'server') {
-      systemStatus.updateApiStatus("error");
+      // 系统状态更新已移除
     } else if (errorInfo.type === 'client' || errorInfo.type === 'validation') {
-      systemStatus.updateApiStatus("warning");
+      // 系统状态更新已移除
     } else if (errorInfo.type === 'auth') {
-      systemStatus.updateApiStatus("warning");
+      // 系统状态更新已移除
     }
 
     // 只使用一套错误处理系统，避免重复处理
@@ -132,7 +131,7 @@ export const useApi = () => {
       const result = await fn();
 
       // 成功请求，更新API状态
-      systemStatus.updateApiStatus("good");
+      // 系统状态更新已移除
 
       return result;
     } catch (error: any) {
@@ -148,6 +147,7 @@ export const useApi = () => {
         }
       }
       await handleError(error, opts.url, opts.method);
+      return undefined;
     }
   };
 
@@ -193,7 +193,7 @@ export const useApi = () => {
         }).then((resp: any) => processEnvelope(resp, { url, method: "POST" }));
 
         // 成功请求，更新API状态
-        systemStatus.updateApiStatus("good");
+        // 系统状态更新已移除
 
         return result;
       } catch (error) {

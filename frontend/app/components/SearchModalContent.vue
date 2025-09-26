@@ -8,7 +8,7 @@
                 v-model="searchQuery"
                 :groups="searchGroups"
                 :loading="isSearching"
-                placeholder="搜索用户、群组、动态..."
+                placeholder="搜索用户、群组、动态... (输入 '/' 查看高级选项)"
                 :empty-state="emptyState"
                 @update:search-term="handleSearch"
                 @close="handleClose"
@@ -146,7 +146,6 @@ const searchGroups = ref<SearchGroup[]>([
                 icon: "i-heroicons-camera",
                 click: () => {
                     handleClose();
-                    // 发出事件让父组件处理创建动态
                     emit('create-moment');
                 },
             },
@@ -159,6 +158,39 @@ const searchGroups = ref<SearchGroup[]>([
                 click: () => {
                     handleClose();
                     navigateTo("/users/nearby");
+                },
+            },
+            {
+                id: "search-users",
+                label: "搜索用户",
+                description: "按用户类型、在线状态筛选",
+                type: "action",
+                icon: "i-heroicons-user-circle",
+                click: () => {
+                    handleClose();
+                    navigateTo("/users/search");
+                },
+            },
+            {
+                id: "search-groups",
+                label: "搜索群组",
+                description: "按成员数、类型筛选群组",
+                type: "action",
+                icon: "i-heroicons-magnifying-glass",
+                click: () => {
+                    handleClose();
+                    navigateTo("/groups");
+                },
+            },
+            {
+                id: "map-explore",
+                label: "地图探索",
+                description: "在地图上发现附近内容",
+                type: "action",
+                icon: "i-heroicons-map",
+                click: () => {
+                    handleClose();
+                    navigateTo("/map");
                 },
             },
         ],
@@ -190,6 +222,12 @@ const handleSearch = useDebounceFn(async (query: string) => {
         if (searchGroups.value[1]) searchGroups.value[1].commands = [];
         if (searchGroups.value[2]) searchGroups.value[2].commands = [];
         if (searchGroups.value[3]) searchGroups.value[3].commands = [];
+        return;
+    }
+
+    // 处理高级搜索命令
+    if (query.startsWith('/')) {
+        handleAdvancedCommands(query);
         return;
     }
 
@@ -278,6 +316,152 @@ const handleSearch = useDebounceFn(async (query: string) => {
     }
 }, 300);
 
+// 高级搜索命令处理
+const handleAdvancedCommands = (query: string) => {
+    const command = query.toLowerCase();
+    const advancedCommands: SearchItem[] = [];
+
+    // 用户相关命令
+    if (command.includes('user') || command.includes('用户') || command === '/') {
+        advancedCommands.push(
+            {
+                id: "users-online",
+                label: "在线用户",
+                description: "查看当前在线的用户",
+                type: "action",
+                icon: "i-heroicons-signal",
+                click: () => {
+                    handleClose();
+                    navigateTo("/users/search?status=online");
+                },
+            },
+            {
+                id: "users-nearby",
+                label: "附近用户",
+                description: "基于位置搜索用户",
+                type: "action",
+                icon: "i-heroicons-map-pin",
+                click: () => {
+                    handleClose();
+                    navigateTo("/users/nearby");
+                },
+            }
+        );
+    }
+
+    // 群组相关命令
+    if (command.includes('group') || command.includes('群组') || command === '/') {
+        advancedCommands.push(
+            {
+                id: "groups-public",
+                label: "公开群组",
+                description: "浏览所有公开群组",
+                type: "action",
+                icon: "i-heroicons-globe-alt",
+                click: () => {
+                    handleClose();
+                    navigateTo("/groups?filter=public");
+                },
+            },
+            {
+                id: "groups-owned",
+                label: "我的群组",
+                description: "管理我创建的群组",
+                type: "action",
+                icon: "i-heroicons-crown",
+                click: () => {
+                    handleClose();
+                    navigateTo("/groups/owned");
+                },
+            }
+        );
+    }
+
+    // 动态相关命令
+    if (command.includes('moment') || command.includes('动态') || command === '/') {
+        advancedCommands.push(
+            {
+                id: "moments-trending",
+                label: "热门动态",
+                description: "查看最受欢迎的动态",
+                type: "action",
+                icon: "i-heroicons-fire",
+                click: () => {
+                    handleClose();
+                    navigateTo("/moments?sort=trending");
+                },
+            },
+            {
+                id: "moments-nearby",
+                label: "附近动态",
+                description: "查看附近的动态",
+                type: "action",
+                icon: "i-heroicons-map",
+                click: () => {
+                    handleClose();
+                    navigateTo("/moments?filter=nearby");
+                },
+            }
+        );
+    }
+
+    // 系统功能命令
+    if (command.includes('setting') || command.includes('设置') || command === '/') {
+        advancedCommands.push(
+            {
+                id: "settings-profile",
+                label: "个人资料",
+                description: "编辑个人信息和设置",
+                type: "action",
+                icon: "i-heroicons-user-circle",
+                click: () => {
+                    handleClose();
+                    navigateTo("/settings/profile");
+                },
+            },
+            {
+                id: "notifications",
+                label: "通知中心",
+                description: "查看所有通知消息",
+                type: "action",
+                icon: "i-heroicons-bell",
+                click: () => {
+                    handleClose();
+                    navigateTo("/notifications");
+                },
+            }
+        );
+    }
+
+    // 数据分析命令
+    if (command.includes('dashboard') || command.includes('仪表板') || command.includes('统计') || command === '/') {
+        advancedCommands.push(
+            {
+                id: "dashboard",
+                label: "数据仪表板",
+                description: "查看统计数据和分析",
+                type: "action",
+                icon: "i-heroicons-chart-bar",
+                click: () => {
+                    handleClose();
+                    navigateTo("/dashboard");
+                },
+            }
+        );
+    }
+
+    // 更新搜索结果为高级命令
+    if (searchGroups.value[0]) {
+        searchGroups.value[0].label = command === '/' ? '所有命令' : '匹配的命令';
+        searchGroups.value[0].commands = advancedCommands;
+    }
+    
+    // 清空其他分组
+    if (searchGroups.value[1]) searchGroups.value[1].commands = [];
+    if (searchGroups.value[2]) searchGroups.value[2].commands = [];
+    if (searchGroups.value[3]) searchGroups.value[3].commands = [];
+};
+
 // 定义 emit
 const emit = defineEmits<{
     close: [];
@@ -288,6 +472,80 @@ const emit = defineEmits<{
 const handleClose = () => {
     // 重置搜索状态
     searchQuery.value = "";
+    
+    // 重置所有分组
+    if (searchGroups.value[0]) {
+        searchGroups.value[0].label = "快速操作";
+        searchGroups.value[0].commands = [
+            {
+                id: "create-group",
+                label: "创建群组",
+                description: "创建一个新的群组",
+                type: "action",
+                icon: "i-heroicons-plus",
+                click: () => {
+                    handleClose();
+                    navigateTo("/groups/create");
+                },
+            },
+            {
+                id: "create-moment",
+                label: "发布动态",
+                description: "分享你的精彩瞬间",
+                type: "action",
+                icon: "i-heroicons-camera",
+                click: () => {
+                    handleClose();
+                    emit('create-moment');
+                },
+            },
+            {
+                id: "users-nearby",
+                label: "附近用户",
+                description: "发现周围的朋友",
+                type: "action",
+                icon: "i-heroicons-users",
+                click: () => {
+                    handleClose();
+                    navigateTo("/users/nearby");
+                },
+            },
+            {
+                id: "search-users",
+                label: "搜索用户",
+                description: "按用户类型、在线状态筛选",
+                type: "action",
+                icon: "i-heroicons-user-circle",
+                click: () => {
+                    handleClose();
+                    navigateTo("/users/search");
+                },
+            },
+            {
+                id: "search-groups",
+                label: "搜索群组",
+                description: "按成员数、类型筛选群组",
+                type: "action",
+                icon: "i-heroicons-magnifying-glass",
+                click: () => {
+                    handleClose();
+                    navigateTo("/groups");
+                },
+            },
+            {
+                id: "map-explore",
+                label: "地图探索",
+                description: "在地图上发现附近内容",
+                type: "action",
+                icon: "i-heroicons-map",
+                click: () => {
+                    handleClose();
+                    navigateTo("/map");
+                },
+            },
+        ];
+    }
+    
     if (searchGroups.value[1]) searchGroups.value[1].commands = [];
     if (searchGroups.value[2]) searchGroups.value[2].commands = [];
     if (searchGroups.value[3]) searchGroups.value[3].commands = [];

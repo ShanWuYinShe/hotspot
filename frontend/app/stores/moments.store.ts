@@ -1,12 +1,12 @@
 import { defineStore } from "pinia";
 import { DEFAULTS } from "~/config/defaults";
 import type {
-  MomentInfo,
+  MomentResponse,
   PaginatedResponse,
   CreateMomentRequest,
-} from "~/types";
+} from "~/types/api";
 
-type Moment = MomentInfo;
+// 直接使用 MomentResponse，不需要别名
 
 /**
  * 动态 Store
@@ -16,10 +16,10 @@ export const useMomentsStore = defineStore(
   "moments",
   () => {
     // 缓存状态 - 不持久化
-    const myMoments = ref<MomentInfo[]>([]);
-    const nearbyMoments = ref<MomentInfo[]>([]);
-    const searchResults = ref<MomentInfo[]>([]);
-    const currentMoment = ref<MomentInfo | null>(null);
+    const myMoments = ref<MomentResponse[]>([]);
+    const nearbyMoments = ref<MomentResponse[]>([]);
+    const searchResults = ref<MomentResponse[]>([]);
+    const currentMoment = ref<MomentResponse | null>(null);
 
     // 分页状态
     const pagination = ref({
@@ -192,13 +192,13 @@ export const useMomentsStore = defineStore(
 
       // 从所有列表中移除
       myMoments.value = myMoments.value.filter(
-        (m: Moment) => m.moment_id !== momentId,
+        (m: MomentResponse) => m.moment_id !== momentId,
       );
       nearbyMoments.value = nearbyMoments.value.filter(
-        (m: Moment) => m.moment_id !== momentId,
+        (m: MomentResponse) => m.moment_id !== momentId,
       );
       searchResults.value = searchResults.value.filter(
-        (m: Moment) => m.moment_id !== momentId,
+        (m: MomentResponse) => m.moment_id !== momentId,
       );
 
       // 清空当前动态
@@ -210,12 +210,12 @@ export const useMomentsStore = defineStore(
     // 辅助函数
     function updateMomentInLists(
       momentId: string,
-      updates: Partial<MomentInfo>,
+      updates: Partial<MomentResponse>,
     ) {
       const lists = [myMoments, nearbyMoments, searchResults];
 
       lists.forEach((list) => {
-        const moment = list.value.find((m: Moment) => m.moment_id === momentId);
+        const moment = list.value.find((m: MomentResponse) => m.moment_id === momentId);
         if (moment) {
           Object.assign(moment, updates);
         }
@@ -227,11 +227,11 @@ export const useMomentsStore = defineStore(
       }
     }
 
-    function getMomentFromLists(momentId: string): MomentInfo | undefined {
+    function getMomentFromLists(momentId: string): MomentResponse | undefined {
       const lists = [myMoments, nearbyMoments, searchResults];
 
       for (const list of lists) {
-        const moment = list.value.find((m: Moment) => m.moment_id === momentId);
+        const moment = list.value.find((m: MomentResponse) => m.moment_id === momentId);
         if (moment) return moment;
       }
 

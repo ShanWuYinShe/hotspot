@@ -39,7 +39,7 @@ const tagStyle = computed(() => {
   } else {
     return {
       text: '普通',
-      color: 'gray' as const
+      color: 'neutral' as const
     }
   }
 })

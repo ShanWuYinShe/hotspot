@@ -1,5 +1,5 @@
 ---
-description: 这是HotSpot后端项目的功能需求文档，包含系统架构设计、功能模块需求、数据库设计和API接口规范。
+description: 后端项目的需求文档,包含后端开发的所有技术要求和功能规范。
 alwaysApply: false
 ---
 # HotSpot 后端项目需求文档
@@ -449,7 +449,6 @@ HotSpot 后端是一个高性能的地理位置社交应用后端服务，采用
 -- 群组类型枚举
 CREATE TYPE group_type_enum AS ENUM ('public_chat', 'private_chat');
 
-
 -- 成员角色枚举
 CREATE TYPE member_role_enum AS ENUM ('owner', 'admin', 'member');
 
@@ -468,8 +467,28 @@ CREATE TYPE reaction_type_enum AS ENUM ('like', 'love', 'laugh', 'angry', 'sad',
 -- 可见性枚举（用于生活瞬间）
 CREATE TYPE visibility_enum AS ENUM ('public', 'friends', 'private');
 
--- 登录类型枚举
--- 用户类型通过user_id高8位编码，不再需要单独的枚举类型
+-- 举报目标类型枚举
+CREATE TYPE report_target_enum AS ENUM ('user', 'moment', 'comment', 'message', 'group');
+
+-- 举报原因枚举
+CREATE TYPE report_reason_enum AS ENUM ('spam', 'harassment', 'inappropriate_content', 'fake_account', 'violence', 'other');
+
+-- 举报状态枚举
+CREATE TYPE report_status_enum AS ENUM ('pending', 'reviewing', 'resolved', 'dismissed');
+
+-- 通知类型枚举
+CREATE TYPE notification_type_enum AS ENUM (
+    'friend_request', 'friend_accepted', 'new_follower',
+    'moment_liked', 'moment_commented', 'comment_replied',
+    'group_invited', 'group_joined', 'group_message',
+    'system_announcement', 'account_warning'
+);
+
+-- 关系类型枚举
+CREATE TYPE relationship_type_enum AS ENUM ('friend', 'follow', 'block');
+
+-- 关系状态枚举
+CREATE TYPE relationship_status_enum AS ENUM ('pending', 'accepted', 'rejected', 'active');
 
 -- 通用函数：生成唯一ID
 CREATE OR REPLACE FUNCTION generate_unique_id() RETURNS TEXT AS $$
@@ -478,19 +497,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 生成带用户类型编码的用户ID
+-- 生成带用户类型编码的用户ID（高8位为用户类型）
 CREATE OR REPLACE FUNCTION generate_user_id(user_type INTEGER) RETURNS BIGINT AS $$
 DECLARE
     sequence_id BIGINT;
     type_prefix BIGINT;
 BEGIN
-    -- 获取序列号（56位）
     sequence_id := nextval('users_id_seq');
-    
-    -- 用户类型左移56位作为前缀（高8位）
     type_prefix := user_type::BIGINT << 56;
-    
-    -- 合并类型前缀和序列号
     RETURN type_prefix | sequence_id;
 END;
 $$ LANGUAGE plpgsql;
@@ -501,164 +515,146 @@ $$ LANGUAGE plpgsql;
 
 **users表** - 用户基础信息（包含位置信息）
 ```sql
-CREATE TABLE users (
-    id BIGINT PRIMARY KEY DEFAULT generate_user_id(1), -- 编码用户类型的主键（默认临时用户）
-    login_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(), -- 登录标识符（临时用户为UUID，正式用户为邮箱/手机号）
-    nickname TEXT NOT NULL,                      -- 用户昵称
-    avatar_url TEXT,                             -- 头像URL
-    bio TEXT,                                    -- 个人简介
-    password_hash TEXT,                          -- 密码哈希（临时用户为NULL）
-    -- 用户类型通过user_id高8位编码，不再需要单独字段
-    is_verified BOOLEAN NOT NULL DEFAULT false, -- 是否已验证
-    verified_at TIMESTAMP WITH TIME ZONE,       -- 验证时间
-    is_active BOOLEAN NOT NULL DEFAULT true,    -- 账户是否激活
-    is_deleted BOOLEAN NOT NULL DEFAULT false,  -- 软删除标记
-    -- 位置信息
-    latitude DOUBLE PRECISION,                   -- 当前纬度
-    longitude DOUBLE PRECISION,                  -- 当前经度
-    location GEOGRAPHY(POINT, 4326),            -- PostGIS地理位置点
-    location_name TEXT,                          -- 当前位置名称/地址
-    location_accuracy DOUBLE PRECISION,         -- 位置精度（米）
-    location_updated_at TIMESTAMP WITH TIME ZONE, -- 位置更新时间
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), -- 创建时间
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), -- 更新时间
-    deleted_at TIMESTAMP WITH TIME ZONE         -- 删除时间
+CREATE TABLE IF NOT EXISTS users (
+    id BIGINT PRIMARY KEY DEFAULT generate_user_id(1),
+    login_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(),
+    nickname TEXT NOT NULL,
+    avatar_url TEXT,
+    bio TEXT,
+    password_hash TEXT,
+    is_verified BOOLEAN NOT NULL DEFAULT false,
+    verified_at TIMESTAMP WITH TIME ZONE,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    is_deleted BOOLEAN NOT NULL DEFAULT false,
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
+    location GEOGRAPHY(POINT, 4326),
+    location_name TEXT,
+    location_accuracy DOUBLE PRECISION,
+    location_updated_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMP WITH TIME ZONE
 );
 
--- 添加索引
-CREATE INDEX CONCURRENTLY idx_users_login_id ON users(login_id) WHERE is_deleted = false;
--- 用户类型通过user_id编码，不再需要单独索引
-CREATE INDEX CONCURRENTLY idx_users_active ON users(updated_at DESC) WHERE is_deleted = false AND is_active = true;
-CREATE INDEX CONCURRENTLY idx_users_location ON users USING GIST(location) WHERE is_deleted = false AND location IS NOT NULL;
+-- 索引
+CREATE INDEX IF NOT EXISTS idx_users_login_id ON users(login_id) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_users_active ON users(updated_at DESC) WHERE is_deleted = false AND is_active = true;
+CREATE INDEX IF NOT EXISTS idx_users_location ON users USING GIST(location) WHERE is_deleted = false AND location IS NOT NULL;
 ```
 
 **user_settings表** - 用户设置信息
 ```sql
-CREATE TABLE user_settings (
-    id BIGSERIAL PRIMARY KEY,                    -- 设置ID（自增主键，用于高性能分页）
-    setting_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(), -- 设置唯一标识符（对外API使用，保护数据隐私）
-    user_id BIGINT NOT NULL,                    -- 用户ID（移除外键约束）
-    privacy_level TEXT DEFAULT 'public',        -- 隐私级别：'public'|'friends'|'private'
-    location_sharing BOOLEAN DEFAULT true,      -- 位置分享开关
-    notification_enabled BOOLEAN DEFAULT true,  -- 通知开关
-    mention_notifications BOOLEAN DEFAULT true, -- 提及通知开关
-    group_invite_notifications BOOLEAN DEFAULT true, -- 群组邀请通知开关
-    moment_notifications BOOLEAN DEFAULT true,  -- 生活瞬间通知开关
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), -- 创建时间
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), -- 更新时间
-    
-    UNIQUE(user_id)                             -- 唯一约束
+CREATE TABLE IF NOT EXISTS user_settings (
+    id BIGSERIAL PRIMARY KEY,
+    setting_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(),
+    user_id BIGINT NOT NULL,
+    privacy_level TEXT DEFAULT 'public',
+    location_sharing BOOLEAN DEFAULT true,
+    notification_enabled BOOLEAN DEFAULT true,
+    mention_notifications BOOLEAN DEFAULT true,
+    group_invite_notifications BOOLEAN DEFAULT true,
+    moment_notifications BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    UNIQUE(user_id)
 );
 
--- 添加索引
-CREATE INDEX CONCURRENTLY idx_user_settings_setting_id ON user_settings(setting_id) WHERE is_deleted = false;
-CREATE INDEX CONCURRENTLY idx_user_settings_user_id ON user_settings(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_settings_setting_id ON user_settings(setting_id);
+CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id);
 ```
 
 **说明**：用户位置信息直接存储在`users`表中，简化了架构设计。每个用户只保存当前位置，历史位置通过`user_activity`表记录。
 
 **user_activity表** - 用户活动记录
 ```sql
-CREATE TABLE user_activity (
-    id BIGSERIAL PRIMARY KEY,                    -- 活动记录ID（自增主键，用于高性能分页）
-    activity_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(), -- 活动唯一标识符（对外API使用，保护数据隐私）
-    user_id BIGINT NOT NULL,                    -- 用户ID（移除外键约束）
-    activity_type TEXT NOT NULL,               -- 活动类型：'login'|'logout'|'create_group'|'join_group'|'leave_group'|'create_moment'|'like_moment'|'send_message'|'update_profile'|'update_location'等
-    target_type TEXT,                          -- 目标类型：'group'|'moment'|'message'|'user'
-    target_id TEXT,                            -- 目标ID（群组ID、瞬间ID、消息ID等）
-    description TEXT,                          -- 活动描述
-    metadata JSONB NOT NULL DEFAULT '{}',     -- 完整元数据（包含IP地址、设备信息、位置信息、用户代理等）
-    is_deleted BOOLEAN NOT NULL DEFAULT false, -- 软删除标记
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), -- 活动时间
-    deleted_at TIMESTAMP WITH TIME ZONE       -- 删除时间
+CREATE TABLE IF NOT EXISTS user_activity (
+    id BIGSERIAL PRIMARY KEY,
+    activity_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(),
+    user_id BIGINT NOT NULL,
+    activity_type TEXT NOT NULL,
+    target_type TEXT,
+    target_id TEXT,
+    description TEXT,
+    metadata JSONB NOT NULL DEFAULT '{}',
+    is_deleted BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMP WITH TIME ZONE
 ) PARTITION BY RANGE (created_at);
 
--- 创建分区表（按月分区）
-CREATE TABLE user_activity_2024_01 PARTITION OF user_activity
-    FOR VALUES FROM ('2024-01-01') TO ('2024-02-01');
-CREATE TABLE user_activity_2024_02 PARTITION OF user_activity
-    FOR VALUES FROM ('2024-02-01') TO ('2024-03-01');
-CREATE TABLE user_activity_2024_03 PARTITION OF user_activity
-    FOR VALUES FROM ('2024-03-01') TO ('2024-04-01');
--- 后续分区通过自动化脚本管理
-
--- 添加索引
-CREATE INDEX CONCURRENTLY idx_user_activity_activity_id ON user_activity(activity_id) WHERE is_deleted = false;
-CREATE INDEX CONCURRENTLY idx_user_activity_user_id ON user_activity(user_id, created_at DESC) WHERE is_deleted = false;
-CREATE INDEX CONCURRENTLY idx_user_activity_type ON user_activity(activity_type, created_at DESC) WHERE is_deleted = false;
-CREATE INDEX CONCURRENTLY idx_user_activity_target ON user_activity(target_type, target_id) WHERE is_deleted = false AND target_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_user_activity_activity_id ON user_activity(activity_id) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_user_activity_user_id ON user_activity(user_id, created_at DESC) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_user_activity_type ON user_activity(activity_type, created_at DESC) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_user_activity_target ON user_activity(target_type, target_id) WHERE is_deleted = false AND target_id IS NOT NULL;
 ```
 
 #### 4.2.2 群组系统表
 
 **groups表** - 群组基础信息（包含私聊群组）
 ```sql
-CREATE TABLE groups (
-    id BIGSERIAL PRIMARY KEY,                    -- 群组ID（自增主键，用于高性能分页）
-    group_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(), -- 群组唯一标识符（对外API使用，保护数据隐私）
-    name TEXT,                                  -- 群组名称（私聊群组可为NULL）
-    description TEXT,                           -- 群组描述
-    avatar_url TEXT,                            -- 群组头像URL
-    creator_id BIGINT NOT NULL,                 -- 创建者ID（移除外键约束）
-    owner_id BIGINT,                            -- 群主ID（私聊群组可为NULL，移除外键约束）
-    latitude DOUBLE PRECISION,                  -- 纬度（私聊群组可为NULL）
-    longitude DOUBLE PRECISION,                 -- 经度（私聊群组可为NULL）
-    location GEOGRAPHY(POINT, 4326),           -- PostGIS地理位置点（私聊群组可为NULL）
-    location_name TEXT,                         -- 位置名称（私聊群组可为NULL）
-    group_type group_type_enum NOT NULL DEFAULT 'public_chat', -- 群组类型：'public_chat'（可搜索群聊）|'private_chat'（不可搜索私聊）
-    max_members INTEGER DEFAULT 500,            -- 最大成员数
-    password_hash TEXT,                         -- 群组密码哈希（可选）
-    is_active BOOLEAN NOT NULL DEFAULT true,   -- 是否活跃
-    is_deleted BOOLEAN NOT NULL DEFAULT false, -- 软删除标记
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), -- 创建时间
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), -- 更新时间
-    last_active_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),      -- 最后活跃时间
-    deleted_at TIMESTAMP WITH TIME ZONE        -- 删除时间
+CREATE TABLE IF NOT EXISTS groups (
+    id BIGSERIAL PRIMARY KEY,
+    group_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(),
+    name TEXT,
+    description TEXT,
+    avatar_url TEXT,
+    creator_id BIGINT NOT NULL,
+    owner_id BIGINT,
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
+    location GEOGRAPHY(POINT, 4326),
+    location_name TEXT,
+    group_type group_type_enum NOT NULL DEFAULT 'public_chat',
+    max_members INTEGER DEFAULT 500,
+    password_hash TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    is_deleted BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    last_active_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    deleted_at TIMESTAMP WITH TIME ZONE
 );
 
--- 索引策略
-CREATE INDEX CONCURRENTLY idx_groups_group_id ON groups(group_id) WHERE is_deleted = false;
-CREATE INDEX CONCURRENTLY idx_groups_creator ON groups(creator_id) WHERE is_deleted = false;
-CREATE INDEX CONCURRENTLY idx_groups_location_active ON groups USING GIST(location) WHERE is_deleted = false AND is_active = true;
-CREATE INDEX CONCURRENTLY idx_groups_type_active ON groups(group_type, is_active, last_active_at DESC) WHERE is_deleted = false;
-CREATE INDEX CONCURRENTLY idx_groups_searchable ON groups(group_type, latitude, longitude) WHERE is_deleted = false AND group_type = 'public_chat';
+CREATE INDEX IF NOT EXISTS idx_groups_group_id ON groups(group_id) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_groups_creator ON groups(creator_id) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_groups_location_active ON groups USING GIST(location) WHERE is_deleted = false AND is_active = true;
+CREATE INDEX IF NOT EXISTS idx_groups_type_active ON groups(group_type, is_active, last_active_at DESC) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_groups_searchable ON groups(group_type, latitude, longitude) WHERE is_deleted = false AND group_type = 'public_chat';
 ```
 
 **group_members表** - 群组成员关系（包含私聊参与者）
 ```sql
-CREATE TABLE group_members (
-    id BIGSERIAL PRIMARY KEY,                    -- 成员关系ID（自增主键，用于高性能分页）
-    member_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(), -- 成员关系唯一标识符（对外API使用，保护数据隐私）
-    group_id BIGINT NOT NULL,                   -- 群组ID（移除外键约束）
-    user_id BIGINT NOT NULL,                    -- 用户ID（移除外键约束）
-    role member_role_enum NOT NULL DEFAULT 'member', -- 成员角色：'owner'|'admin'|'member'
-    status member_status_enum NOT NULL DEFAULT 'active', -- 成员状态：'active'|'muted'|'banned'|'left'
-    permissions TEXT[] DEFAULT '{}',             -- 权限列表
-    can_send_messages BOOLEAN NOT NULL DEFAULT true, -- 发送消息权限
-    can_add_participants BOOLEAN NOT NULL DEFAULT false, -- 添加参与者权限
-    muted_until TIMESTAMP WITH TIME ZONE,       -- 静音截止时间
-    last_read_message_id BIGINT,                -- 最后已读消息ID
-    last_read_at TIMESTAMP WITH TIME ZONE,     -- 最后已读时间
-    unread_count INTEGER NOT NULL DEFAULT 0,   -- 未读消息数
-    notifications_enabled BOOLEAN NOT NULL DEFAULT true, -- 通知开关
-    mention_notifications BOOLEAN NOT NULL DEFAULT true, -- 提及通知开关
-    is_deleted BOOLEAN NOT NULL DEFAULT false, -- 软删除标记
-    joined_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), -- 加入时间
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), -- 更新时间
-    left_at TIMESTAMP WITH TIME ZONE,          -- 离开时间
-    deleted_at TIMESTAMP WITH TIME ZONE,       -- 删除时间
-    invited_by BIGINT,                          -- 邀请者ID（移除外键约束）
-    
-    UNIQUE(group_id, user_id)                   -- 唯一约束
+CREATE TABLE IF NOT EXISTS group_members (
+    id BIGSERIAL PRIMARY KEY,
+    member_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(),
+    group_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    role member_role_enum NOT NULL DEFAULT 'member',
+    status member_status_enum NOT NULL DEFAULT 'active',
+    permissions TEXT[] DEFAULT '{}',
+    can_send_messages BOOLEAN NOT NULL DEFAULT true,
+    can_add_participants BOOLEAN NOT NULL DEFAULT false,
+    muted_until TIMESTAMP WITH TIME ZONE,
+    last_read_message_id BIGINT,
+    last_read_at TIMESTAMP WITH TIME ZONE,
+    unread_count INTEGER NOT NULL DEFAULT 0,
+    notifications_enabled BOOLEAN NOT NULL DEFAULT true,
+    mention_notifications BOOLEAN NOT NULL DEFAULT true,
+    is_deleted BOOLEAN NOT NULL DEFAULT false,
+    joined_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    left_at TIMESTAMP WITH TIME ZONE,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    invited_by BIGINT,
+    UNIQUE(group_id, user_id)
 );
 
--- 索引策略
-CREATE INDEX CONCURRENTLY idx_group_members_member_id ON group_members(member_id) WHERE is_deleted = false;
-CREATE INDEX CONCURRENTLY idx_group_members_group_user ON group_members(group_id, user_id) WHERE is_deleted = false;
-CREATE INDEX CONCURRENTLY idx_group_members_user_active ON group_members(user_id, status, joined_at DESC) WHERE is_deleted = false AND status = 'active';
-CREATE INDEX CONCURRENTLY idx_group_members_group_role ON group_members(group_id, role) WHERE is_deleted = false;
-CREATE INDEX CONCURRENTLY idx_group_members_unread ON group_members(user_id, unread_count DESC) WHERE is_deleted = false AND unread_count > 0;
-CREATE INDEX CONCURRENTLY idx_group_members_last_read ON group_members(group_id, last_read_message_id) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_group_members_member_id ON group_members(member_id) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_group_members_group_user ON group_members(group_id, user_id) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_group_members_user_active ON group_members(user_id, status, joined_at DESC) WHERE is_deleted = false AND status = 'active';
+CREATE INDEX IF NOT EXISTS idx_group_members_group_role ON group_members(group_id, role) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_group_members_unread ON group_members(user_id, unread_count DESC) WHERE is_deleted = false AND unread_count > 0;
+CREATE INDEX IF NOT EXISTS idx_group_members_last_read ON group_members(group_id, last_read_message_id) WHERE is_deleted = false;
 ```
 
 #### 4.2.3 消息系统表（简化统一架构）
@@ -673,112 +669,99 @@ CREATE INDEX CONCURRENTLY idx_group_members_last_read ON group_members(group_id,
 
 **messages表** - 统一消息存储（直接关联群组）
 ```sql
-CREATE TABLE messages (
-    id BIGSERIAL PRIMARY KEY,                    -- 消息ID（自增主键，用于高性能分页）
-    message_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(), -- 消息唯一标识符（对外API使用，保护数据隐私）
-    group_id BIGINT NOT NULL,                   -- 群组ID（移除外键约束，直接关联，统一架构）
-    sender_id BIGINT,                           -- 发送者ID（系统消息可为NULL，移除外键约束）
-    content TEXT NOT NULL,                      -- 消息内容
-    message_type message_type_enum NOT NULL DEFAULT 'text', -- 消息类型：'text'|'image'|'video'|'audio'|'file'|'location'|'system'
-    system_event_type TEXT,                    -- 系统事件类型：'user_joined'|'user_left'|'user_kicked'|'role_changed'|'group_created'等
-    reply_to_message_id BIGINT,                -- 回复的消息ID（移除外键约束）
-    thread_id BIGINT,                          -- 话题ID（移除外键约束）
-    is_edited BOOLEAN NOT NULL DEFAULT false,  -- 是否已编辑
-    is_deleted BOOLEAN NOT NULL DEFAULT false, -- 软删除标记
-    deleted_for_everyone BOOLEAN NOT NULL DEFAULT false, -- 全员删除标识
-    reaction_count INTEGER NOT NULL DEFAULT 0, -- 反应数量
-    reply_count INTEGER NOT NULL DEFAULT 0,    -- 回复数量
-    metadata JSONB DEFAULT '{}',               -- 扩展元数据（系统消息的详细信息）
-    mentioned_users BIGINT[] DEFAULT '{}',      -- 提及的用户ID数组
-    affected_users BIGINT[] DEFAULT '{}',       -- 受影响的用户ID数组（系统消息用）
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), -- 创建时间
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), -- 更新时间
-    edited_at TIMESTAMP WITH TIME ZONE,        -- 编辑时间
-    deleted_at TIMESTAMP WITH TIME ZONE        -- 删除时间
+CREATE TABLE IF NOT EXISTS messages (
+    id BIGSERIAL PRIMARY KEY,
+    message_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(),
+    group_id BIGINT NOT NULL,
+    sender_id BIGINT,
+    content TEXT NOT NULL,
+    message_type message_type_enum NOT NULL DEFAULT 'text',
+    system_event_type TEXT,
+    reply_to_message_id BIGINT,
+    thread_id BIGINT,
+    is_edited BOOLEAN NOT NULL DEFAULT false,
+    is_deleted BOOLEAN NOT NULL DEFAULT false,
+    deleted_for_everyone BOOLEAN NOT NULL DEFAULT false,
+    reaction_count INTEGER NOT NULL DEFAULT 0,
+    reply_count INTEGER NOT NULL DEFAULT 0,
+    metadata JSONB DEFAULT '{}',
+    mentioned_users BIGINT[] DEFAULT '{}',
+    affected_users BIGINT[] DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    edited_at TIMESTAMP WITH TIME ZONE,
+    deleted_at TIMESTAMP WITH TIME ZONE
 ) PARTITION BY RANGE (created_at);
 
--- 创建分区表（按月分区）
-CREATE TABLE messages_2024_01 PARTITION OF messages
-    FOR VALUES FROM ('2024-01-01') TO ('2024-02-01');
-CREATE TABLE messages_2024_02 PARTITION OF messages
-    FOR VALUES FROM ('2024-02-01') TO ('2024-03-01');
-CREATE TABLE messages_2024_03 PARTITION OF messages
-    FOR VALUES FROM ('2024-03-01') TO ('2024-04-01');
--- 后续分区通过自动化脚本管理
-
--- 索引策略（每个分区都需要创建）
-CREATE INDEX CONCURRENTLY idx_messages_group_time_covering 
+CREATE INDEX IF NOT EXISTS idx_messages_group_time_covering 
 ON messages (group_id, created_at DESC) 
 INCLUDE (id, message_id, sender_id, content, message_type) 
 WHERE is_deleted = false;
 
-CREATE INDEX CONCURRENTLY idx_messages_sender_time 
+CREATE INDEX IF NOT EXISTS idx_messages_sender_time 
 ON messages (sender_id, created_at DESC) 
 WHERE sender_id IS NOT NULL AND is_deleted = false;
 
-CREATE INDEX CONCURRENTLY idx_messages_message_id 
+CREATE INDEX IF NOT EXISTS idx_messages_message_id 
 ON messages (message_id) 
 WHERE is_deleted = false;
 
-CREATE INDEX CONCURRENTLY idx_messages_reply_thread 
+CREATE INDEX IF NOT EXISTS idx_messages_reply_thread 
 ON messages (reply_to_message_id, thread_id) 
 WHERE (reply_to_message_id IS NOT NULL OR thread_id IS NOT NULL) AND is_deleted = false;
 
-CREATE INDEX CONCURRENTLY idx_messages_system_events 
+CREATE INDEX IF NOT EXISTS idx_messages_system_events 
 ON messages (group_id, system_event_type, created_at DESC) 
 WHERE message_type = 'system' AND is_deleted = false;
 ```
 
 **message_media表** - 消息媒体附件
 ```sql
-CREATE TABLE message_media (
-    id BIGSERIAL PRIMARY KEY,                    -- 媒体ID（自增主键，用于高性能分页）
-    media_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(), -- 媒体唯一标识符（对外API使用，保护数据隐私）
-    message_id BIGINT NOT NULL,                 -- 消息ID（移除外键约束）
-    media_type media_type_enum NOT NULL,        -- 媒体类型
-    file_name TEXT,                             -- 文件名
-    file_size BIGINT,                           -- 文件大小（字节）
-    mime_type TEXT,                             -- MIME类型
-    file_url TEXT NOT NULL,                     -- 文件URL
-    thumbnail_url TEXT,                         -- 缩略图URL
-    width INTEGER,                              -- 宽度（图片/视频）
-    height INTEGER,                             -- 高度（图片/视频）
-    duration INTEGER,                           -- 时长（音频/视频，秒）
-    latitude DOUBLE PRECISION,                  -- 纬度（位置类型）
-    longitude DOUBLE PRECISION,                 -- 经度（位置类型）
-    location_name TEXT,                         -- 位置名称（位置类型）
-    metadata JSONB,                             -- 扩展元数据
-    is_deleted BOOLEAN NOT NULL DEFAULT false, -- 软删除标记
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), -- 创建时间
-    deleted_at TIMESTAMP WITH TIME ZONE        -- 删除时间
+CREATE TABLE IF NOT EXISTS message_media (
+    id BIGSERIAL PRIMARY KEY,
+    media_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(),
+    message_id BIGINT NOT NULL,
+    media_type media_type_enum NOT NULL,
+    file_name TEXT,
+    file_size BIGINT,
+    mime_type TEXT,
+    file_url TEXT NOT NULL,
+    thumbnail_url TEXT,
+    width INTEGER,
+    height INTEGER,
+    duration INTEGER,
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
+    location_name TEXT,
+    metadata JSONB,
+    is_deleted BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMP WITH TIME ZONE
 );
 
--- 添加索引
-CREATE INDEX CONCURRENTLY idx_message_media_media_id ON message_media(media_id) WHERE is_deleted = false;
-CREATE INDEX CONCURRENTLY idx_message_media_message_id ON message_media(message_id) WHERE is_deleted = false;
-CREATE INDEX CONCURRENTLY idx_message_media_type ON message_media(media_type) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_message_media_media_id ON message_media(media_id) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_message_media_message_id ON message_media(message_id) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_message_media_type ON message_media(media_type) WHERE is_deleted = false;
 ```
 
 **message_reactions表** - 消息反应
 ```sql
-CREATE TABLE message_reactions (
-    id BIGSERIAL PRIMARY KEY,                    -- 反应ID（自增主键，用于高性能分页）
-    reaction_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(), -- 反应唯一标识符（对外API使用，保护数据隐私）
-    message_id BIGINT NOT NULL,                 -- 消息ID（移除外键约束）
-    user_id BIGINT NOT NULL,                    -- 用户ID（移除外键约束）
-    reaction_type reaction_type_enum NOT NULL,  -- 反应类型
-    emoji TEXT,                                 -- 表情符号
-    is_deleted BOOLEAN NOT NULL DEFAULT false, -- 软删除标记
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), -- 创建时间
-    deleted_at TIMESTAMP WITH TIME ZONE,       -- 删除时间
-    
-    UNIQUE(message_id, user_id, reaction_type)  -- 唯一约束
+CREATE TABLE IF NOT EXISTS message_reactions (
+    id BIGSERIAL PRIMARY KEY,
+    reaction_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(),
+    message_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    reaction_type reaction_type_enum NOT NULL,
+    emoji TEXT,
+    is_deleted BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    UNIQUE(message_id, user_id, reaction_type)
 );
 
--- 添加索引
-CREATE INDEX CONCURRENTLY idx_message_reactions_reaction_id ON message_reactions(reaction_id) WHERE is_deleted = false;
-CREATE INDEX CONCURRENTLY idx_message_reactions_message_id ON message_reactions(message_id) WHERE is_deleted = false;
-CREATE INDEX CONCURRENTLY idx_message_reactions_user_id ON message_reactions(user_id) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_message_reactions_reaction_id ON message_reactions(reaction_id) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_message_reactions_message_id ON message_reactions(message_id) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_message_reactions_user_id ON message_reactions(user_id) WHERE is_deleted = false;
 ```
 
 **说明**：`message_read_status`表已被移除，因为已读状态通过`group_members`表中的`last_read_message_id`、`last_read_at`和`unread_count`字段来管理，避免数据冗余和复杂性。
@@ -787,213 +770,182 @@ CREATE INDEX CONCURRENTLY idx_message_reactions_user_id ON message_reactions(use
 
 **moments表** - 生活瞬间记录
 ```sql
-CREATE TABLE moments (
-    id BIGSERIAL PRIMARY KEY,                    -- 瞬间ID（自增主键，用于高性能分页）
-    moment_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(), -- 瞬间唯一标识符（对外API使用，保护数据隐私）
-    user_id BIGINT NOT NULL,                    -- 用户ID（移除外键约束）
-    description TEXT NOT NULL,                  -- 瞬间描述
-    latitude DOUBLE PRECISION NOT NULL,         -- 纬度
-    longitude DOUBLE PRECISION NOT NULL,        -- 经度
-    location GEOGRAPHY(POINT, 4326) NOT NULL,   -- PostGIS地理位置点
-    location_name TEXT NOT NULL,                -- 位置名称
-    images TEXT[] DEFAULT '{}',                 -- 图片URL数组
-    visibility visibility_enum NOT NULL DEFAULT 'public', -- 可见性
-    likes_count INTEGER NOT NULL DEFAULT 0,     -- 点赞数
-    comments_count INTEGER NOT NULL DEFAULT 0,  -- 评论数
-    shares_count INTEGER NOT NULL DEFAULT 0,    -- 分享数
-    is_active BOOLEAN NOT NULL DEFAULT true,    -- 是否活跃
-    is_deleted BOOLEAN NOT NULL DEFAULT false,  -- 软删除标记
-    expires_at TIMESTAMP WITH TIME ZONE,        -- 过期时间（可选）
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), -- 创建时间
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), -- 更新时间
-    deleted_at TIMESTAMP WITH TIME ZONE         -- 删除时间
+CREATE TABLE IF NOT EXISTS moments (
+    id BIGSERIAL PRIMARY KEY,
+    moment_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(),
+    user_id BIGINT NOT NULL,
+    description TEXT NOT NULL,
+    latitude DOUBLE PRECISION NOT NULL,
+    longitude DOUBLE PRECISION NOT NULL,
+    location GEOGRAPHY(POINT, 4326) NOT NULL,
+    location_name TEXT NOT NULL,
+    images TEXT[] DEFAULT '{}',
+    visibility visibility_enum NOT NULL DEFAULT 'public',
+    likes_count INTEGER NOT NULL DEFAULT 0,
+    comments_count INTEGER NOT NULL DEFAULT 0,
+    shares_count INTEGER NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    is_deleted BOOLEAN NOT NULL DEFAULT false,
+    expires_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMP WITH TIME ZONE
 );
 
--- 添加索引
-CREATE INDEX CONCURRENTLY idx_moments_moment_id ON moments(moment_id) WHERE is_deleted = false;
-CREATE INDEX CONCURRENTLY idx_moments_user_id ON moments(user_id) WHERE is_deleted = false;
-CREATE INDEX CONCURRENTLY idx_moments_location_active ON moments USING GIST(location) WHERE is_deleted = false AND is_active = true;
-CREATE INDEX CONCURRENTLY idx_moments_created_at ON moments(created_at DESC) WHERE is_deleted = false;
-CREATE INDEX CONCURRENTLY idx_moments_visibility ON moments(visibility, created_at DESC) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_moments_moment_id ON moments(moment_id) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_moments_user_id ON moments(user_id) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_moments_location_active ON moments USING GIST(location) WHERE is_deleted = false AND is_active = true;
+CREATE INDEX IF NOT EXISTS idx_moments_created_at ON moments(created_at DESC) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_moments_visibility ON moments(visibility, created_at DESC) WHERE is_deleted = false;
 ```
 
 **tags表** - 标签系统
 ```sql
-CREATE TABLE tags (
-    id BIGSERIAL PRIMARY KEY,                    -- 标签ID（自增主键，用于高性能分页）
-    tag_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(), -- 标签唯一标识符（对外API使用，保护数据隐私）
-    name TEXT UNIQUE NOT NULL,                  -- 标签名称
-    description TEXT,                           -- 标签描述
-    color TEXT DEFAULT '#007bff',               -- 标签颜色
-    usage_count INTEGER NOT NULL DEFAULT 0,    -- 使用计数
-    is_active BOOLEAN NOT NULL DEFAULT true,   -- 是否活跃
-    is_deleted BOOLEAN NOT NULL DEFAULT false, -- 软删除标记
-    created_by BIGINT,                          -- 创建者ID（移除外键约束）
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), -- 创建时间
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), -- 更新时间
-    deleted_at TIMESTAMP WITH TIME ZONE        -- 删除时间
+CREATE TABLE IF NOT EXISTS tags (
+    id BIGSERIAL PRIMARY KEY,
+    tag_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(),
+    name TEXT UNIQUE NOT NULL,
+    description TEXT,
+    color TEXT DEFAULT '#007bff',
+    usage_count INTEGER NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    is_deleted BOOLEAN NOT NULL DEFAULT false,
+    created_by BIGINT,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMP WITH TIME ZONE
 );
 
--- 添加索引
-CREATE INDEX CONCURRENTLY idx_tags_tag_id ON tags(tag_id) WHERE is_deleted = false;
-CREATE INDEX CONCURRENTLY idx_tags_name ON tags(name) WHERE is_deleted = false;
-CREATE INDEX CONCURRENTLY idx_tags_usage_count ON tags(usage_count DESC) WHERE is_deleted = false AND is_active = true;
+CREATE INDEX IF NOT EXISTS idx_tags_tag_id ON tags(tag_id) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_tags_usage_count ON tags(usage_count DESC) WHERE is_deleted = false AND is_active = true;
 ```
 
 **moment_tags表** - 生活瞬间标签关联
 ```sql
-CREATE TABLE moment_tags (
-    id BIGSERIAL PRIMARY KEY,                    -- 关联ID（自增主键，用于高性能分页）
-    moment_tag_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(), -- 关联唯一标识符（对外API使用，保护数据隐私）
-    moment_id BIGINT NOT NULL,                  -- 瞬间ID（移除外键约束）
-    tag_id BIGINT NOT NULL,                     -- 标签ID（移除外键约束）
-    is_deleted BOOLEAN NOT NULL DEFAULT false, -- 软删除标记
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), -- 创建时间
-    deleted_at TIMESTAMP WITH TIME ZONE,       -- 删除时间
-    
-    UNIQUE(moment_id, tag_id)                   -- 唯一约束
+CREATE TABLE IF NOT EXISTS moment_tags (
+    id BIGSERIAL PRIMARY KEY,
+    moment_tag_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(),
+    moment_id BIGINT NOT NULL,
+    tag_id BIGINT NOT NULL,
+    is_deleted BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    UNIQUE(moment_id, tag_id)
 );
 
--- 添加索引
-CREATE INDEX CONCURRENTLY idx_moment_tags_moment_tag_id ON moment_tags(moment_tag_id) WHERE is_deleted = false;
-CREATE INDEX CONCURRENTLY idx_moment_tags_moment_id ON moment_tags(moment_id) WHERE is_deleted = false;
-CREATE INDEX CONCURRENTLY idx_moment_tags_tag_id ON moment_tags(tag_id) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_moment_tags_moment_tag_id ON moment_tags(moment_tag_id) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_moment_tags_moment_id ON moment_tags(moment_id) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_moment_tags_tag_id ON moment_tags(tag_id) WHERE is_deleted = false;
 ```
 
 **moment_likes表** - 生活瞬间点赞
 ```sql
-CREATE TABLE moment_likes (
-    id BIGSERIAL PRIMARY KEY,                    -- 点赞ID（自增主键，用于高性能分页）
-    like_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(), -- 点赞唯一标识符（对外API使用，保护数据隐私）
-    moment_id BIGINT NOT NULL,                  -- 瞬间ID（移除外键约束）
-    user_id BIGINT NOT NULL,                    -- 用户ID（移除外键约束）
-    is_deleted BOOLEAN NOT NULL DEFAULT false, -- 软删除标记（取消点赞）
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), -- 点赞时间
-    deleted_at TIMESTAMP WITH TIME ZONE,       -- 取消点赞时间
-    
-    UNIQUE(moment_id, user_id)                  -- 唯一约束
+CREATE TABLE IF NOT EXISTS moment_likes (
+    id BIGSERIAL PRIMARY KEY,
+    like_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(),
+    moment_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    is_deleted BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    UNIQUE(moment_id, user_id)
 );
 
--- 添加索引
-CREATE INDEX CONCURRENTLY idx_moment_likes_like_id ON moment_likes(like_id) WHERE is_deleted = false;
-CREATE INDEX CONCURRENTLY idx_moment_likes_moment_id ON moment_likes(moment_id) WHERE is_deleted = false;
-CREATE INDEX CONCURRENTLY idx_moment_likes_user_id ON moment_likes(user_id) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_moment_likes_like_id ON moment_likes(like_id) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_moment_likes_moment_id ON moment_likes(moment_id) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_moment_likes_user_id ON moment_likes(user_id) WHERE is_deleted = false;
 ```
 
 #### 4.2.5 用户关系系统表
 
 **user_relationships表** - 用户关系管理（好友、关注、黑名单）
 ```sql
-CREATE TABLE user_relationships (
+CREATE TABLE IF NOT EXISTS user_relationships (
     id BIGSERIAL PRIMARY KEY,
     relationship_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(),
-    from_user_id BIGINT NOT NULL,              -- 发起用户ID
-    to_user_id BIGINT NOT NULL,                -- 目标用户ID
-    relationship_type relationship_type_enum NOT NULL, -- 关系类型
-    status relationship_status_enum NOT NULL DEFAULT 'pending', -- 关系状态
+    from_user_id BIGINT NOT NULL,
+    to_user_id BIGINT NOT NULL,
+    relationship_type relationship_type_enum NOT NULL,
+    status relationship_status_enum NOT NULL DEFAULT 'pending',
     is_deleted BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMP WITH TIME ZONE,
-    
     UNIQUE(from_user_id, to_user_id, relationship_type)
 );
 
--- 关系类型枚举
-CREATE TYPE relationship_type_enum AS ENUM ('friend', 'follow', 'block');
--- 关系状态枚举  
-CREATE TYPE relationship_status_enum AS ENUM ('pending', 'accepted', 'rejected', 'active');
-
--- 添加索引
-CREATE INDEX CONCURRENTLY idx_user_relationships_from_user ON user_relationships(from_user_id, relationship_type) WHERE is_deleted = false;
-CREATE INDEX CONCURRENTLY idx_user_relationships_to_user ON user_relationships(to_user_id, relationship_type) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_user_relationships_from_user ON user_relationships(from_user_id, relationship_type) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_user_relationships_to_user ON user_relationships(to_user_id, relationship_type) WHERE is_deleted = false;
 ```
 
 #### 4.2.6 内容安全系统表
 
 **moment_comments表** - 生活瞬间评论
 ```sql
-CREATE TABLE moment_comments (
+CREATE TABLE IF NOT EXISTS moment_comments (
     id BIGSERIAL PRIMARY KEY,
     comment_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(),
-    moment_id BIGINT NOT NULL,                 -- 瞬间ID
-    user_id BIGINT NOT NULL,                   -- 评论用户ID
-    parent_comment_id BIGINT,                  -- 父评论ID（回复功能）
-    content TEXT NOT NULL,                     -- 评论内容
-    likes_count INTEGER NOT NULL DEFAULT 0,   -- 评论点赞数
-    replies_count INTEGER NOT NULL DEFAULT 0, -- 回复数
+    moment_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    parent_comment_id BIGINT,
+    content TEXT NOT NULL,
+    likes_count INTEGER NOT NULL DEFAULT 0,
+    replies_count INTEGER NOT NULL DEFAULT 0,
     is_deleted BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMP WITH TIME ZONE
 );
 
--- 添加索引
-CREATE INDEX CONCURRENTLY idx_moment_comments_moment_id ON moment_comments(moment_id, created_at) WHERE is_deleted = false;
-CREATE INDEX CONCURRENTLY idx_moment_comments_user_id ON moment_comments(user_id) WHERE is_deleted = false;
-CREATE INDEX CONCURRENTLY idx_moment_comments_parent ON moment_comments(parent_comment_id) WHERE is_deleted = false AND parent_comment_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_moment_comments_moment_id ON moment_comments(moment_id, created_at) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_moment_comments_user_id ON moment_comments(user_id) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS idx_moment_comments_parent ON moment_comments(parent_comment_id) WHERE is_deleted = false AND parent_comment_id IS NOT NULL;
 ```
 
 **reports表** - 举报系统
 ```sql
-CREATE TABLE reports (
+CREATE TABLE IF NOT EXISTS reports (
     id BIGSERIAL PRIMARY KEY,
     report_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(),
-    reporter_id BIGINT NOT NULL,               -- 举报人ID
-    reported_user_id BIGINT,                   -- 被举报用户ID
-    target_type report_target_enum NOT NULL,   -- 举报目标类型
-    target_id BIGINT NOT NULL,                 -- 举报目标ID
-    reason report_reason_enum NOT NULL,        -- 举报原因
-    description TEXT,                          -- 详细描述
-    status report_status_enum NOT NULL DEFAULT 'pending', -- 处理状态
-    handled_by BIGINT,                         -- 处理人ID
-    handled_at TIMESTAMP WITH TIME ZONE,      -- 处理时间
+    reporter_id BIGINT NOT NULL,
+    reported_user_id BIGINT,
+    target_type report_target_enum NOT NULL,
+    target_id BIGINT NOT NULL,
+    reason report_reason_enum NOT NULL,
+    description TEXT,
+    status report_status_enum NOT NULL DEFAULT 'pending',
+    handled_by BIGINT,
+    handled_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
--- 举报目标类型枚举
-CREATE TYPE report_target_enum AS ENUM ('user', 'moment', 'comment', 'message', 'group');
--- 举报原因枚举
-CREATE TYPE report_reason_enum AS ENUM ('spam', 'harassment', 'inappropriate_content', 'fake_account', 'violence', 'other');
--- 举报状态枚举
-CREATE TYPE report_status_enum AS ENUM ('pending', 'reviewing', 'resolved', 'dismissed');
-
--- 添加索引
-CREATE INDEX CONCURRENTLY idx_reports_reporter ON reports(reporter_id, created_at DESC);
-CREATE INDEX CONCURRENTLY idx_reports_target ON reports(target_type, target_id);
-CREATE INDEX CONCURRENTLY idx_reports_status ON reports(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_reports_reporter ON reports(reporter_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_reports_target ON reports(target_type, target_id);
+CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status, created_at DESC);
 ```
 
 #### 4.2.7 通知系统表
 
 **notifications表** - 通知系统
 ```sql
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
     id BIGSERIAL PRIMARY KEY,
     notification_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(),
-    user_id BIGINT NOT NULL,                   -- 接收用户ID
-    type notification_type_enum NOT NULL,      -- 通知类型
-    title TEXT NOT NULL,                       -- 通知标题
-    content TEXT NOT NULL,                     -- 通知内容
-    data JSONB,                               -- 扩展数据
-    is_read BOOLEAN NOT NULL DEFAULT false,   -- 是否已读
-    is_pushed BOOLEAN NOT NULL DEFAULT false, -- 是否已推送
+    user_id BIGINT NOT NULL,
+    type notification_type_enum NOT NULL,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    data JSONB,
+    is_read BOOLEAN NOT NULL DEFAULT false,
+    is_pushed BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    read_at TIMESTAMP WITH TIME ZONE,         -- 阅读时间
-    expires_at TIMESTAMP WITH TIME ZONE       -- 过期时间
+    read_at TIMESTAMP WITH TIME ZONE,
+    expires_at TIMESTAMP WITH TIME ZONE
 );
 
--- 通知类型枚举
-CREATE TYPE notification_type_enum AS ENUM (
-    'friend_request', 'friend_accepted', 'new_follower',
-    'moment_liked', 'moment_commented', 'comment_replied',
-    'group_invited', 'group_joined', 'group_message',
-    'system_announcement', 'account_warning'
-);
-
--- 添加索引
-CREATE INDEX CONCURRENTLY idx_notifications_user_unread ON notifications(user_id, created_at DESC) WHERE is_read = false;
-CREATE INDEX CONCURRENTLY idx_notifications_type ON notifications(type, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications(user_id, created_at DESC) WHERE is_read = false;
+CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(type, created_at DESC);
 ```
 
 ### 4.3 数据库性能设计
@@ -1007,30 +959,7 @@ CREATE INDEX CONCURRENTLY idx_notifications_type ON notifications(type, created_
 
 **方案1：分区表设计**
 
-```sql
--- 按时间分区的messages表
-CREATE TABLE messages (
-    id BIGSERIAL,
-    message_id TEXT UNIQUE NOT NULL DEFAULT generate_unique_id(),
-    group_id BIGINT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
-    sender_id BIGINT REFERENCES users(id),
-    content TEXT NOT NULL,
-    message_type message_type_enum NOT NULL DEFAULT 'text',
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    -- ... 其他字段
-) PARTITION BY RANGE (created_at);
-
--- 创建月度分区（自动化脚本管理）
-CREATE TABLE messages_2024_01 PARTITION OF messages
-    FOR VALUES FROM ('2024-01-01') TO ('2024-02-01');
-CREATE TABLE messages_2024_02 PARTITION OF messages
-    FOR VALUES FROM ('2024-02-01') TO ('2024-03-01');
--- ... 继续创建分区
-
--- 每个分区的索引
-CREATE INDEX idx_messages_2024_01_group_created ON messages_2024_01 (group_id, created_at DESC);
-CREATE INDEX idx_messages_2024_01_sender ON messages_2024_01 (sender_id);
-```
+（示例代码已移除）
 
 **分区优势**：
 - 查询只扫描相关分区，提高查询效率
@@ -1040,57 +969,14 @@ CREATE INDEX idx_messages_2024_01_sender ON messages_2024_01 (sender_id);
 
 **方案2：读写分离 + 缓存策略**
 
-```sql
--- 热数据表（最近30天消息）
-CREATE TABLE messages_hot (
-    id BIGSERIAL PRIMARY KEY,
-    message_id TEXT UNIQUE NOT NULL,
-    group_id BIGINT NOT NULL,
-    sender_id BIGINT,
-    content TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    -- ... 其他字段
-    
-    -- 高性能索引
-    INDEX idx_hot_group_created (group_id, created_at DESC),
-    INDEX idx_hot_sender (sender_id),
-    INDEX idx_hot_message_id (message_id)
-);
-
--- 冷数据表（30天前消息）
-CREATE TABLE messages_cold (
-    -- 相同结构
-    -- 压缩存储，查询频率低
-) WITH (fillfactor = 100); -- 高填充因子，减少存储空间
-```
+（示例代码已移除）
 
 **数据迁移策略**：
-```sql
--- 定时任务：每日将30天前的热数据迁移到冷数据表
-INSERT INTO messages_cold 
-SELECT * FROM messages_hot 
-WHERE created_at < NOW() - INTERVAL '30 days';
-
-DELETE FROM messages_hot 
-WHERE created_at < NOW() - INTERVAL '30 days';
-```
+（示例代码已移除）
 
 **方案3：高性能索引策略**
 
-```sql
--- messages表核心索引设计
-CREATE INDEX CONCURRENTLY idx_messages_group_time_covering 
-ON messages (group_id, created_at DESC) 
-INCLUDE (id, sender_id, content, message_type); -- 覆盖索引
-
-CREATE INDEX CONCURRENTLY idx_messages_sender_time 
-ON messages (sender_id, created_at DESC) 
-WHERE sender_id IS NOT NULL; -- 部分索引
-
-CREATE INDEX CONCURRENTLY idx_messages_group_unread 
-ON messages (group_id, id DESC) 
-WHERE is_deleted = false; -- 条件索引
-```
+（示例代码已移除）
 
 **索引优势**：
 - 覆盖索引避免回表查询
@@ -1100,128 +986,22 @@ WHERE is_deleted = false; -- 条件索引
 #### 4.3.2 并发控制和锁设计
 
 **读写分离架构**：
-```sql
--- 使用PostgreSQL流复制
--- 主库：处理写操作（发送消息、更新状态）
--- 从库：处理读操作（查询消息历史、会话列表）
-
--- 应用层路由策略
--- 写操作 -> 主库
--- 读操作 -> 从库（可配置多个从库负载均衡）
-```
+（示例代码已移除）
 
 **连接池配置**：
-```rust
-// 数据库连接池配置
-sqlx::postgres::PgPoolOptions::new()
-    .max_connections(50)           // 最大连接数
-    .min_connections(10)           // 最小连接数
-    .acquire_timeout(Duration::from_secs(30))
-    .idle_timeout(Duration::from_secs(600))
-    .max_lifetime(Duration::from_secs(1800))
-```
+（示例代码已移除）
 
 **高并发查询策略**：
 
-```sql
--- 1. 使用游标分页避免OFFSET性能问题
-SELECT id, message_id, sender_id, content, created_at
-FROM messages 
-WHERE group_id = $1 
-  AND ($2 = 0 OR id < $2)  -- 游标条件，避免OFFSET
-  AND is_deleted = false
-ORDER BY id DESC 
-LIMIT 51; -- 查询51条，判断是否有更多数据
-
--- 2. 批量操作减少数据库往返
--- 批量标记已读（一次更新多个用户的未读状态）
-UPDATE group_members 
-SET last_read_message_id = $1, 
-    unread_count = GREATEST(0, unread_count - $2),
-    last_read_at = NOW()
-WHERE group_id = $3 AND user_id = ANY($4::bigint[]);
-
--- 3. 使用UPSERT避免竞态条件
-INSERT INTO message_reactions (message_id, user_id, reaction_type, created_at)
-VALUES ($1, $2, $3, NOW())
-ON CONFLICT (message_id, user_id) 
-DO UPDATE SET 
-    reaction_type = EXCLUDED.reaction_type,
-    created_at = NOW(),
-    is_deleted = false;
-
--- 4. 统计查询设计（避免COUNT(*)）
--- 使用实时查询统计字段
-SELECT COUNT(*) FROM group_members WHERE group_id = $1 AND is_deleted = false AND status = 'active';
-
--- 5. 分片查询减少锁竞争
--- 按时间分片查询最近消息
-WITH recent_messages AS (
-    SELECT * FROM messages 
-    WHERE group_id = $1 
-      AND created_at > NOW() - INTERVAL '24 hours'
-      AND is_deleted = false
-    ORDER BY created_at DESC 
-    LIMIT 20
-)
-SELECT * FROM recent_messages ORDER BY created_at ASC;
-```
+（示例代码已移除）
 
 **事务设计策略**：
 
-```sql
--- 1. 短事务原则 - 发送消息的事务设计
-BEGIN;
--- 插入消息
-INSERT INTO messages (message_id, group_id, sender_id, content, message_type, created_at)
-VALUES ($1, $2, $3, $4, $5, NOW());
-
--- 异步统计更新（通过触发器自动处理）
--- 不在事务中进行复杂的统计计算
-COMMIT;
-
--- 2. 乐观锁 - 避免长时间锁定
-UPDATE group_members 
-SET unread_count = unread_count + 1,
-    updated_at = NOW()
-WHERE group_id = $1 
-  AND user_id = $2 
-  AND updated_at = $3  -- 乐观锁版本检查
-  AND is_deleted = false;
-
--- 3. 分布式锁 - 关键操作的并发控制
--- 使用Redis实现分布式锁
-SET group_lock:$group_id "locked" EX 10 NX;
--- 执行关键操作（如群组解散、转让群主）
-DEL group_lock:$group_id;
-```
+（示例代码已移除）
 
 **死锁预防策略**：
 
-```sql
--- 1. 统一锁定顺序 - 按ID升序锁定资源
--- 错误示例：可能导致死锁
-UPDATE groups SET ... WHERE id = $larger_id;
-UPDATE groups SET ... WHERE id = $smaller_id;
-
--- 正确示例：按ID升序锁定
-UPDATE groups SET ... WHERE id = $smaller_id;
-UPDATE groups SET ... WHERE id = $larger_id;
-
--- 2. 减少锁定范围 - 只锁定必要的行
-UPDATE group_members 
-SET last_read_message_id = $1
-WHERE group_id = $2 AND user_id = $3  -- 精确条件，减少锁定范围
-  AND is_deleted = false;
-
--- 3. 使用SELECT FOR UPDATE SKIP LOCKED
--- 处理队列任务时避免锁等待
-SELECT * FROM message_queue 
-WHERE status = 'pending'
-ORDER BY created_at
-LIMIT 10
-FOR UPDATE SKIP LOCKED;
-```
+（示例代码已移除）
 
 #### 4.3.3 缓存策略
 
@@ -1251,254 +1031,19 @@ FOR UPDATE SKIP LOCKED;
 
 **关键性能指标（KPI）监控**：
 
-```sql
--- 1. 数据库性能指标
--- 查询响应时间监控
-SELECT 
-    schemaname,
-    tablename,
-    attname,
-    n_distinct,
-    correlation
-FROM pg_stats 
-WHERE tablename IN ('messages', 'groups', 'group_members');
-
--- 索引使用率监控
-SELECT 
-    schemaname,
-    tablename,
-    indexname,
-    idx_scan,
-    idx_tup_read,
-    idx_tup_fetch
-FROM pg_stat_user_indexes 
-WHERE schemaname = 'public'
-ORDER BY idx_scan DESC;
-
--- 表大小和增长趋势监控
-SELECT 
-    schemaname,
-    tablename,
-    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size,
-    pg_total_relation_size(schemaname||'.'||tablename) as size_bytes
-FROM pg_tables 
-WHERE schemaname = 'public'
-ORDER BY size_bytes DESC;
-
--- 2. 业务指标监控
--- 消息发送量统计
-SELECT 
-    DATE(created_at) as date,
-    COUNT(*) as message_count,
-    COUNT(DISTINCT group_id) as active_groups,
-    COUNT(DISTINCT sender_id) as active_users
-FROM messages 
-WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'
-  AND is_deleted = false
-GROUP BY DATE(created_at)
-ORDER BY date DESC;
-
--- 群组活跃度统计
-SELECT 
-    g.group_id,
-    g.name,
-    (SELECT COUNT(*) FROM group_members gm WHERE gm.group_id = g.id AND gm.is_deleted = false AND gm.status = 'active') as member_count,
-    COUNT(m.id) as message_count_24h,
-    MAX(m.created_at) as last_message_at
-FROM groups g
-LEFT JOIN messages m ON g.id = m.group_id 
-    AND m.created_at >= NOW() - INTERVAL '24 hours'
-    AND m.is_deleted = false
-WHERE g.is_deleted = false
-GROUP BY g.group_id, g.name
-ORDER BY message_count_24h DESC
-LIMIT 20;
-
--- 3. 系统健康检查
--- 连接数监控
-SELECT 
-    state,
-    COUNT(*) as connection_count
-FROM pg_stat_activity 
-WHERE datname = current_database()
-GROUP BY state;
-
--- 锁等待监控
-SELECT 
-    blocked_locks.pid AS blocked_pid,
-    blocked_activity.usename AS blocked_user,
-    blocking_locks.pid AS blocking_pid,
-    blocking_activity.usename AS blocking_user,
-    blocked_activity.query AS blocked_statement,
-    blocking_activity.query AS blocking_statement
-FROM pg_catalog.pg_locks blocked_locks
-JOIN pg_catalog.pg_stat_activity blocked_activity ON blocked_activity.pid = blocked_locks.pid
-JOIN pg_catalog.pg_locks blocking_locks ON blocking_locks.locktype = blocked_locks.locktype
-    AND blocking_locks.database IS NOT DISTINCT FROM blocked_locks.database
-    AND blocking_locks.relation IS NOT DISTINCT FROM blocked_locks.relation
-    AND blocking_locks.page IS NOT DISTINCT FROM blocked_locks.page
-    AND blocking_locks.tuple IS NOT DISTINCT FROM blocked_locks.tuple
-    AND blocking_locks.virtualxid IS NOT DISTINCT FROM blocked_locks.virtualxid
-    AND blocking_locks.transactionid IS NOT DISTINCT FROM blocked_locks.transactionid
-    AND blocking_locks.classid IS NOT DISTINCT FROM blocked_locks.classid
-    AND blocking_locks.objid IS NOT DISTINCT FROM blocked_locks.objid
-    AND blocking_locks.objsubid IS NOT DISTINCT FROM blocked_locks.objsubid
-    AND blocking_locks.pid != blocked_locks.pid
-JOIN pg_catalog.pg_stat_activity blocking_activity ON blocking_activity.pid = blocking_locks.pid
-WHERE NOT blocked_locks.granted;
-```
+（示例代码已移除）
 
 **自动化维护任务**：
 
-```sql
--- 1. 定期统计信息更新（每日执行）
-DO $$
-BEGIN
-    -- 更新表统计信息
-    ANALYZE messages;
-    ANALYZE groups;
-    ANALYZE group_members;
-    ANALYZE user_activity;
-    
-    -- 记录维护日志
-    INSERT INTO maintenance_log (task_type, status, details, created_at)
-    VALUES ('analyze_tables', 'completed', 'Daily table analysis completed', NOW());
-END $$;
-
--- 2. 索引维护（每周执行）
-DO $$
-DECLARE
-    index_name TEXT;
-BEGIN
-    -- 重建碎片化严重的索引
-    FOR index_name IN 
-        SELECT indexname 
-        FROM pg_stat_user_indexes 
-        WHERE schemaname = 'public' 
-          AND idx_scan > 1000  -- 只维护使用频繁的索引
-    LOOP
-        EXECUTE 'REINDEX INDEX CONCURRENTLY ' || index_name;
-    END LOOP;
-    
-    INSERT INTO maintenance_log (task_type, status, details, created_at)
-    VALUES ('reindex', 'completed', 'Weekly index maintenance completed', NOW());
-END $$;
-
--- 3. 分区管理（每月执行）
-DO $$
-BEGIN
-    -- 创建下个月的分区
-    PERFORM auto_create_partitions();
-    
-    -- 清理过期分区（保留2年数据）
-    PERFORM cleanup_old_partitions();
-    
-    INSERT INTO maintenance_log (task_type, status, details, created_at)
-    VALUES ('partition_management', 'completed', 'Monthly partition management completed', NOW());
-END $$;
-
--- 4. 数据清理（每日执行）
-DO $$
-DECLARE
-    deleted_count INTEGER;
-BEGIN
-    -- 清理过期临时用户
-    DELETE FROM users 
-    WHERE (id >> 56) = 1  -- 临时用户类型编码为1
-      AND updated_at < NOW() - INTERVAL '7 days'
-      AND is_deleted = false;
-    GET DIAGNOSTICS deleted_count = ROW_COUNT;
-    
-    -- 物理删除过期的软删除数据
-    DELETE FROM messages 
-    WHERE is_deleted = true 
-      AND deleted_at < NOW() - INTERVAL '1 year';
-    
-    DELETE FROM group_members 
-    WHERE is_deleted = true 
-      AND deleted_at < NOW() - INTERVAL '1 year';
-    
-    INSERT INTO maintenance_log (task_type, status, details, created_at)
-    VALUES ('data_cleanup', 'completed', 
-            'Cleaned up ' || deleted_count || ' expired temp users and old soft-deleted data', 
-            NOW());
-END $$;
-```
+（示例代码已移除）
 
 **性能告警阈值**：
 
-```sql
--- 创建性能监控视图
-CREATE OR REPLACE VIEW performance_metrics AS
-SELECT 
-    'query_response_time' as metric_name,
-    EXTRACT(EPOCH FROM (NOW() - query_start)) as value,
-    'seconds' as unit,
-    CASE 
-        WHEN EXTRACT(EPOCH FROM (NOW() - query_start)) > 5 THEN 'critical'
-        WHEN EXTRACT(EPOCH FROM (NOW() - query_start)) > 2 THEN 'warning'
-        ELSE 'normal'
-    END as status
-FROM pg_stat_activity 
-WHERE state = 'active' AND query NOT LIKE '%pg_stat_activity%'
-
-UNION ALL
-
-SELECT 
-    'connection_usage' as metric_name,
-    (COUNT(*)::float / (SELECT setting::int FROM pg_settings WHERE name = 'max_connections')) * 100 as value,
-    'percentage' as unit,
-    CASE 
-        WHEN (COUNT(*)::float / (SELECT setting::int FROM pg_settings WHERE name = 'max_connections')) * 100 > 80 THEN 'critical'
-        WHEN (COUNT(*)::float / (SELECT setting::int FROM pg_settings WHERE name = 'max_connections')) * 100 > 60 THEN 'warning'
-        ELSE 'normal'
-    END as status
-FROM pg_stat_activity
-
-UNION ALL
-
-SELECT 
-    'table_bloat' as metric_name,
-    pg_total_relation_size('messages') / (1024*1024*1024) as value,
-    'GB' as unit,
-    CASE 
-        WHEN pg_total_relation_size('messages') / (1024*1024*1024) > 100 THEN 'critical'
-        WHEN pg_total_relation_size('messages') / (1024*1024*1024) > 50 THEN 'warning'
-        ELSE 'normal'
-    END as status;
-
--- 告警检查函数
-CREATE OR REPLACE FUNCTION check_performance_alerts()
-RETURNS TABLE(alert_type TEXT, message TEXT, severity TEXT) AS $$
-BEGIN
-    RETURN QUERY
-    SELECT 
-        pm.metric_name,
-        'Metric ' || pm.metric_name || ' is ' || pm.status || ' with value: ' || pm.value || ' ' || pm.unit,
-        pm.status
-    FROM performance_metrics pm
-    WHERE pm.status IN ('warning', 'critical');
-END;
-$$ LANGUAGE plpgsql;
-```
+（示例代码已移除）
 
 **维护日志表**：
 
-```sql
--- 创建维护日志表
-CREATE TABLE IF NOT EXISTS maintenance_log (
-    id BIGSERIAL PRIMARY KEY,
-    task_type TEXT NOT NULL,
-    status TEXT NOT NULL,
-    details TEXT,
-    execution_time INTERVAL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
-);
-
--- 创建索引
-CREATE INDEX IF NOT EXISTS idx_maintenance_log_task_date 
-ON maintenance_log(task_type, created_at DESC);
-```
+（示例代码已移除）
 
 #### 4.3.6 地理位置查询设计
 
@@ -1514,157 +1059,7 @@ ON maintenance_log(task_type, created_at DESC);
 
 **自动维护统计数据的触发器**：
 
-```sql
--- 自动维护群组统计信息的函数
-CREATE OR REPLACE FUNCTION update_group_stats()
-RETURNS TRIGGER AS $$
-BEGIN
-    -- 处理消息插入
-    IF TG_OP = 'INSERT' AND TG_TABLE_NAME = 'messages' THEN
-        -- 维护群组最后活跃时间
-        UPDATE groups 
-        SET last_active_at = NEW.created_at,
-            updated_at = NOW()
-        WHERE id = NEW.group_id;
-        
-        -- 维护群组成员未读数量（除发送者外）
-        UPDATE group_members 
-        SET unread_count = unread_count + 1,
-            updated_at = NOW()
-        WHERE group_id = NEW.group_id 
-          AND user_id != COALESCE(NEW.sender_id, 0)
-          AND is_deleted = false
-          AND status = 'active';
-        
-        RETURN NEW;
-    END IF;
-    
-    -- 处理群组成员变化
-    IF TG_TABLE_NAME = 'group_members' THEN
-        IF TG_OP = 'INSERT' THEN
-            -- 新成员加入，更新群组活跃时间
-            UPDATE groups 
-            SET updated_at = NOW()
-            WHERE id = NEW.group_id;
-            RETURN NEW;
-        ELSIF TG_OP = 'UPDATE' THEN
-            -- 成员状态变化，更新群组活跃时间
-            IF OLD.status != NEW.status THEN
-                UPDATE groups 
-                SET updated_at = NOW()
-                WHERE id = NEW.group_id;
-            END IF;
-            RETURN NEW;
-        ELSIF TG_OP = 'DELETE' THEN
-            -- 成员被删除，更新群组活跃时间
-            UPDATE groups 
-            SET updated_at = NOW()
-            WHERE id = OLD.group_id;
-            RETURN OLD;
-        END IF;
-    END IF;
-    
-    RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
-
--- 创建触发器
-CREATE TRIGGER trigger_update_group_stats_on_message
-    AFTER INSERT ON messages
-    FOR EACH ROW EXECUTE FUNCTION update_group_stats();
-
-CREATE TRIGGER trigger_update_group_stats_on_member_insert
-    AFTER INSERT ON group_members
-    FOR EACH ROW EXECUTE FUNCTION update_group_stats();
-
-CREATE TRIGGER trigger_update_group_stats_on_member_update
-    AFTER UPDATE ON group_members
-    FOR EACH ROW EXECUTE FUNCTION update_group_stats();
-
-CREATE TRIGGER trigger_update_group_stats_on_member_delete
-    AFTER DELETE ON group_members
-    FOR EACH ROW EXECUTE FUNCTION update_group_stats();
-
--- 软删除触发器函数
-CREATE OR REPLACE FUNCTION soft_delete_cascade()
-RETURNS TRIGGER AS $$
-BEGIN
-    -- 当群组被软删除时，软删除相关数据
-    IF TG_TABLE_NAME = 'groups' AND NEW.is_deleted = true AND OLD.is_deleted = false THEN
-        -- 软删除群组成员
-        UPDATE group_members 
-        SET is_deleted = true, deleted_at = NOW()
-        WHERE group_id = NEW.id AND is_deleted = false;
-        
-        -- 软删除群组消息
-        UPDATE messages 
-        SET is_deleted = true, deleted_at = NOW()
-        WHERE group_id = NEW.id AND is_deleted = false;
-    END IF;
-    
-    -- 当用户被软删除时，软删除相关数据
-    IF TG_TABLE_NAME = 'users' AND NEW.is_deleted = true AND OLD.is_deleted = false THEN
-        -- 软删除用户的群组成员关系
-        UPDATE group_members 
-        SET is_deleted = true, deleted_at = NOW()
-        WHERE user_id = NEW.id AND is_deleted = false;
-        
-        -- 软删除用户发送的消息
-        UPDATE messages 
-        SET is_deleted = true, deleted_at = NOW()
-        WHERE sender_id = NEW.id AND is_deleted = false;
-    END IF;
-    
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- 创建软删除触发器
-CREATE TRIGGER trigger_soft_delete_groups
-    AFTER UPDATE ON groups
-    FOR EACH ROW EXECUTE FUNCTION soft_delete_cascade();
-
-CREATE TRIGGER trigger_soft_delete_users
-    AFTER UPDATE ON users
-    FOR EACH ROW EXECUTE FUNCTION soft_delete_cascade();
-
--- 自动分区管理函数
-CREATE OR REPLACE FUNCTION create_monthly_partition(table_name TEXT, start_date DATE)
-RETURNS VOID AS $$
-DECLARE
-    partition_name TEXT;
-    end_date DATE;
-BEGIN
-    partition_name := table_name || '_' || to_char(start_date, 'YYYY_MM');
-    end_date := start_date + INTERVAL '1 month';
-    
-    EXECUTE format('CREATE TABLE IF NOT EXISTS %I PARTITION OF %I 
-                    FOR VALUES FROM (%L) TO (%L)',
-                   partition_name, table_name, start_date, end_date);
-    
-    -- 为新分区创建索引
-    IF table_name = 'messages' THEN
-        EXECUTE format('CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_%s_group_time_covering 
-                        ON %I (group_id, created_at DESC) 
-                        INCLUDE (id, message_id, sender_id, content, message_type) 
-                        WHERE is_deleted = false',
-                       partition_name, partition_name);
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
-
--- 自动创建下个月分区的函数
-CREATE OR REPLACE FUNCTION auto_create_partitions()
-RETURNS VOID AS $$
-DECLARE
-    next_month DATE;
-BEGIN
-    next_month := date_trunc('month', CURRENT_DATE + INTERVAL '1 month');
-    PERFORM create_monthly_partition('messages', next_month);
-    PERFORM create_monthly_partition('user_activity', next_month);
-END;
-$$ LANGUAGE plpgsql;
-```
+（示例代码已移除）
 
 #### 4.3.8 数据清理策略
 
@@ -1674,38 +1069,7 @@ $$ LANGUAGE plpgsql;
 - 日志保留30天后自动清理
 
 **自动化清理脚本**：
-```sql
--- 清理过期临时用户（7天未活跃）
-DELETE FROM users 
-WHERE (id >> 56) = 1  -- 临时用户类型编码为1
-  AND updated_at < NOW() - INTERVAL '7 days'
-  AND is_deleted = false;
-
--- 清理过期的软删除数据（1年后物理删除）
-DELETE FROM messages 
-WHERE is_deleted = true 
-  AND deleted_at < NOW() - INTERVAL '1 year';
-
-DELETE FROM group_members 
-WHERE is_deleted = true 
-  AND deleted_at < NOW() - INTERVAL '1 year';
-
--- 清理过期分区（保留2年数据）
-DO $$
-DECLARE
-    partition_name TEXT;
-    cutoff_date DATE := CURRENT_DATE - INTERVAL '2 years';
-BEGIN
-    FOR partition_name IN 
-        SELECT schemaname||'.'||tablename 
-        FROM pg_tables 
-        WHERE tablename LIKE 'messages_%' 
-          AND tablename < 'messages_' || to_char(cutoff_date, 'YYYY_MM')
-    LOOP
-        EXECUTE 'DROP TABLE IF EXISTS ' || partition_name;
-    END LOOP;
-END $$;
-```
+（示例代码已移除）
 
 #### 4.3.9 无外键约束下的查询设计策略
 
@@ -1715,228 +1079,35 @@ END $$;
 
 **1. 精心设计的索引策略** 🎯
 
-```sql
--- 替代外键的索引设计原则：
--- 1. 为所有关联字段创建索引，提供外键的查询性能效果
--- 2. 使用复合索引支持多表JOIN查询
--- 3. 覆盖索引减少回表查询
-
--- 示例：messages表的关联索引
-CREATE INDEX CONCURRENTLY idx_messages_group_time_covering 
-ON messages (group_id, created_at DESC) 
-INCLUDE (id, message_id, sender_id, content, message_type) 
-WHERE is_deleted = false;
-
--- 这个索引告诉优化器：
--- 1. group_id是高选择性字段，适合作为JOIN条件
--- 2. created_at有序，适合排序和范围查询
--- 3. INCLUDE字段避免回表，提高查询性能
-```
+（示例代码已移除）
 
 **2. 统计信息维护** 📊
 
-```sql
--- 定期维护表统计信息，帮助优化器做出正确决策
-ANALYZE messages;
-ANALYZE groups;
-ANALYZE group_members;
-
--- 自动统计信息更新
-ALTER TABLE messages SET (autovacuum_analyze_scale_factor = 0.02);
-ALTER TABLE groups SET (autovacuum_analyze_scale_factor = 0.1);
-
--- 手动设置列统计信息（针对高基数列）
-ALTER TABLE messages ALTER COLUMN group_id SET STATISTICS 1000;
-ALTER TABLE messages ALTER COLUMN sender_id SET STATISTICS 1000;
-```
+（示例代码已移除）
 
 **3. 查询提示和引导** 💡
 
-```sql
--- 使用查询提示指导优化器选择正确的执行计划
--- 示例：强制使用特定索引
-SELECT /*+ IndexScan(messages idx_messages_group_time_covering) */
-    m.content, m.created_at, u.nickname
-FROM messages m
-JOIN users u ON m.sender_id = u.id
-WHERE m.group_id = $1 AND m.is_deleted = false
-ORDER BY m.created_at DESC
-LIMIT 50;
-
--- 使用CTE简化复杂查询
-WITH recent_messages AS (
-    SELECT group_id, sender_id, content, created_at
-    FROM messages 
-    WHERE group_id = $1 
-      AND created_at > NOW() - INTERVAL '24 hours'
-      AND is_deleted = false
-    ORDER BY created_at DESC 
-    LIMIT 100
-)
-SELECT rm.*, u.nickname, u.avatar_url
-FROM recent_messages rm
-JOIN users u ON rm.sender_id = u.id
-ORDER BY rm.created_at DESC;
-```
+（示例代码已移除）
 
 **4. 应用层关联验证** 🔒
 
-```rust
-// 在应用层实现外键约束的逻辑验证
-pub async fn create_message(
-    pool: &PgPool,
-    group_id: i64,
-    sender_id: i64,
-    content: &str,
-) -> Result<Message, Error> {
-    let mut tx = pool.begin().await?;
-    
-    // 1. 验证群组存在且用户有权限
-    let group_member = sqlx::query!(
-        "SELECT role, can_send_messages 
-         FROM group_members 
-         WHERE group_id = $1 AND user_id = $2 AND is_deleted = false",
-        group_id, sender_id
-    )
-    .fetch_optional(&mut *tx)
-    .await?
-    .ok_or(Error::NotGroupMember)?;
-    
-    if !group_member.can_send_messages {
-        return Err(Error::NoSendPermission);
-    }
-    
-    // 2. 插入消息（优化器知道group_id和sender_id都是有效的）
-    let message = sqlx::query_as!(
-        Message,
-        "INSERT INTO messages (group_id, sender_id, content, created_at)
-         VALUES ($1, $2, $3, NOW())
-         RETURNING *",
-        group_id, sender_id, content
-    )
-    .fetch_one(&mut *tx)
-    .await?;
-    
-    tx.commit().await?;
-    Ok(message)
-}
-```
+（示例代码已移除）
 
 **5. 数据分布统计** 📈
 
-```sql
--- 创建自定义统计视图，帮助优化器理解数据分布
-CREATE VIEW table_relationships AS
-SELECT 
-    'messages_to_groups' as relationship,
-    COUNT(DISTINCT m.group_id) as distinct_groups,
-    COUNT(*) as total_messages,
-    AVG(group_message_count) as avg_messages_per_group
-FROM messages m
-JOIN (
-    SELECT group_id, COUNT(*) as group_message_count
-    FROM messages 
-    WHERE is_deleted = false
-    GROUP BY group_id
-) gmc ON m.group_id = gmc.group_id
-WHERE m.is_deleted = false;
-
--- 定期收集关联统计信息
-CREATE OR REPLACE FUNCTION update_relationship_stats()
-RETURNS void AS $$
-BEGIN
-    -- 维护消息-群组关联统计
-    INSERT INTO relationship_stats (table_pair, selectivity, last_updated)
-    VALUES (
-        'messages_groups',
-        (SELECT COUNT(DISTINCT group_id)::float / COUNT(*) FROM messages),
-        NOW()
-    )
-    ON CONFLICT (table_pair) 
-    DO UPDATE SET 
-        selectivity = EXCLUDED.selectivity,
-        last_updated = EXCLUDED.last_updated;
-END;
-$$ LANGUAGE plpgsql;
-```
+（示例代码已移除）
 
 **6. 查询计划监控** 🔍
 
-```sql
--- 监控查询执行计划，识别性能问题
-CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
-
--- 查找最耗时的查询
-SELECT 
-    query,
-    calls,
-    total_exec_time,
-    mean_exec_time,
-    rows
-FROM pg_stat_statements 
-WHERE query LIKE '%messages%'
-ORDER BY total_exec_time DESC
-LIMIT 10;
-
--- 分析具体查询的执行计划
-EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
-SELECT m.*, u.nickname 
-FROM messages m
-JOIN users u ON m.sender_id = u.id
-WHERE m.group_id = $1 
-  AND m.is_deleted = false
-ORDER BY m.created_at DESC
-LIMIT 50;
-```
+（示例代码已移除）
 
 **7. 分区表设计** 📊
 
-```sql
--- 分区表自动提供了额外的分布信息
--- 优化器知道数据按时间分布，可以做分区修剪
-
--- 查询最近消息时，优化器自动选择相关分区
-SELECT * FROM messages 
-WHERE group_id = $1 
-  AND created_at >= '2024-01-01'
-  AND is_deleted = false
-ORDER BY created_at DESC;
-
--- 执行计划显示只扫描相关分区：
--- Append  (cost=0.43..8.45 rows=1 width=100)
---   ->  Index Scan using messages_2024_01_group_time_covering
---   ->  Index Scan using messages_2024_02_group_time_covering
-```
+（示例代码已移除）
 
 **8. 连接池和预编译语句** ⚡
 
-```rust
-// 使用预编译语句，让优化器缓存执行计划
-pub struct MessageQueries {
-    get_group_messages: sqlx::query::Query<'static, sqlx::Postgres, sqlx::postgres::PgArguments>,
-    create_message: sqlx::query::Query<'static, sqlx::Postgres, sqlx::postgres::PgArguments>,
-}
-
-impl MessageQueries {
-    pub fn new() -> Self {
-        Self {
-            get_group_messages: sqlx::query!(
-                "SELECT m.*, u.nickname, u.avatar_url
-                 FROM messages m
-                 JOIN users u ON m.sender_id = u.id
-                 WHERE m.group_id = $1 AND m.is_deleted = false
-                 ORDER BY m.created_at DESC
-                 LIMIT $2"
-            ),
-            create_message: sqlx::query!(
-                "INSERT INTO messages (group_id, sender_id, content)
-                 VALUES ($1, $2, $3)
-                 RETURNING *"
-            ),
-        }
-    }
-}
-```
+（示例代码已移除）
 
 **性能表现**：
 
@@ -2032,12 +1203,17 @@ impl MessageQueries {
 **统一响应格式**：
 
 **标准响应结构**：
-```rust
-#[derive(Serialize)]
-pub struct ApiResponse<T> {
-    pub code: i32,        // 业务状态码：0-成功，非0-错误
-    pub msg: String,      // 响应消息
-    pub data: Option<T>,  // 成功时为具体业务数据；失败时为 None
+```typescript
+{
+  code: number;      // 业务状态码：0-成功，非0-错误
+  msg: string;       // 响应消息
+  data: T | null;    // 成功为数据；失败通常为 null
+}
+
+{
+  items: T[];            // 数据项
+  has_more: boolean;     // 是否还有更多
+  next_cursor?: string;  // 下一页游标（64位整数转字符串）
 }
 ```
 
@@ -2097,18 +1273,7 @@ pub struct ApiResponse<T> {
 - 所有API的request和response都必须按照 `XxxRequest` 和 `XxxResponse` 的命名规范
 - `ApiResponse<T>` 中的 `T` 就是 `XxxResponse` 类型
 - 对于分页查询，`T` 为 `PaginatedResponse<XxxResponse>`
-- 实际API响应格式：
-  ```typescript
-  // 普通响应
-  ApiResponse<XxxResponse> = { code: number, msg: string, data: XxxResponse | null }
-  
-  // 分页响应  
-  ApiResponse<PaginatedResponse<XxxResponse>> = { 
-    code: number, 
-    msg: string, 
-    data: { items: XxxResponse[], has_more: boolean, next_cursor?: string } | null 
-  }
-  ```
+- 实际API响应格式与 5.1 “标准响应结构”一致，此处不再重复
 
 ### 5.2.1 认证API类型
 
@@ -2606,7 +1771,7 @@ pub struct ApiResponse<T> {
     location_name: string;    // 位置名称
     is_password_required: boolean; // 是否需要密码
     is_member: boolean;       // 当前用户是否为成员
-    user_role?: string;       // 当前用户在群组中的角色（owner/admin/member，仅当is_member为true时有值）
+    user_role?: string;       // 当前用户在群组中的角色（owner/admin/member）
     avatar_url?: string;      // 群组头像URL
   }
   ```
@@ -3350,7 +2515,7 @@ pub struct ApiResponse<T> {
   {
     notification_id: string;  // 通知ID
     user_id: string;          // 接收者ID
-    type: string;             // 通知类型：'friend_request'|'group_invite'|'message'|'moment_like'|'comment'|'system'
+    type: string;             // 通知类型
     title: string;            // 通知标题
     content: string;          // 通知内容
     data?: object;            // 扩展数据（JSON）
@@ -3494,24 +2659,18 @@ pub struct ApiResponse<T> {
 - `HealthCheckResponse` - 系统健康检查响应
   ```typescript
   {
-    status: string;           // 系统状态：'healthy'|'degraded'|'unhealthy'
-    timestamp: string;        // 检查时间（ISO 8601）
-    version: string;          // 系统版本
-    uptime: number;           // 运行时间（秒）
-    database: {               // 数据库状态
-      status: string;         // 连接状态：'connected'|'disconnected'
-      response_time: number;  // 响应时间（毫秒）
-    };
-    redis: {                  // Redis状态
-      status: string;         // 连接状态：'connected'|'disconnected'
-      response_time: number;  // 响应时间（毫秒）
-    };
-    metrics: {                // 系统指标
-      cpu_usage: number;      // CPU使用率（0-100）
-      memory_usage: number;   // 内存使用率（0-100）
-      active_connections: number; // 活跃连接数
-      total_requests: number; // 总请求数
-      error_rate: number;     // 错误率（0-100）
+    status: 'healthy'|'degraded'|'unhealthy';
+    timestamp: string;
+    version: string;
+    uptime: number;
+    database: { status: 'connected'|'disconnected'; response_time: number; };
+    redis: { status: 'connected'|'disconnected'; response_time: number; };
+    metrics: {
+      cpu_usage: number;
+      memory_usage: number;
+      active_connections: number;
+      total_requests: number;
+      error_rate: number;
     };
   }
   ```

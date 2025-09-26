@@ -87,11 +87,11 @@
             </UCard>
             
             <!-- 最近创建的群组 -->
-            <div v-if="recentGroups.length > 0" class="mt-12">
+            <div v-if="recentGroupResponses.length > 0" class="mt-12">
                 <h2 class="text-2xl font-bold text-neutral-900 dark:text-white mb-6">您最近创建的群组</h2>
                 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <UCard 
-                        v-for="group in recentGroups" 
+                        v-for="group in recentGroupResponses" 
                         :key="group.group_id"
                         class="group cursor-pointer transition-colors duration-200"
                         @click="navigateTo(`/groups/${group.group_id}`)"
@@ -121,11 +121,11 @@
 </template>
 
 <script setup lang="ts">
-import type { Group } from '~/types';
+import type { GroupResponse } from '~/types/api';
 
 definePageMeta({ title: "创建群组", requiresAuth: true, layout: 'dashboard' });
 
-const { openCreateGroupModal } = useModals();
+        // 移除已删除的 modal 函数
 const groupsStore = useGroupsStore();
 const toast = useSmartToast();
 const router = useRouter();
@@ -149,22 +149,18 @@ const breadcrumbLinks = [
 ];
 
 // 最近创建的群组
-const recentGroups = ref<Group[]>([]);
+const recentGroupResponses = ref<GroupResponse[]>([]);
 
 // 快速创建群组
 const quickCreate = async () => {
     try {
         const coordinates = await useGeolocation().getCurrentPosition();
         
-        openCreateGroupModal({
-            onSuccess: (group: Group) => {
-                toast.add({
-                    title: '群组创建成功',
-                    description: `群组"${group.name}"已创建，快去邀请朋友加入吧！`,
-                    color: 'success'
-                });
-                router.push(`/groups/${group.group_id}`);
-            }
+        // 暂时移除快速创建功能
+        toast.add({
+            title: '功能开发中',
+            description: '快速创建功能正在开发中',
+            color: 'info'
         });
     } catch (error) {
         toast.add({
@@ -178,33 +174,29 @@ const quickCreate = async () => {
 
 // 自定义创建群组
 const customCreate = () => {
-    openCreateGroupModal({
-        onSuccess: (group: Group) => {
-            toast.add({
-                title: '群组创建成功',
-                description: `群组"${group.name}"已创建`,
-                color: 'success'
-            });
-            router.push(`/groups/${group.group_id}`);
-        }
+    // 暂时移除自定义创建功能
+    toast.add({
+        title: '功能开发中',
+        description: '自定义创建功能正在开发中',
+        color: 'info'
     });
 };
 
 // 加载最近创建的群组
-const loadRecentGroups = async () => {
+const loadRecentGroupResponses = async () => {
     try {
         // 这里应该调用API获取用户最近创建的群组
-        // const groups = await groupsStore.fetchOwnedGroups({ limit: 6 });
-        // recentGroups.value = groups;
+        // const groups = await groupsStore.fetchOwnedGroupResponses({ limit: 6 });
+        // recentGroupResponses.value = groups;
         
         // 临时使用空数组，等待后端API实现
-        recentGroups.value = [];
+        recentGroupResponses.value = [];
     } catch (error) {
         console.error('加载最近群组失败:', error);
     }
 };
 
 onMounted(() => {
-    loadRecentGroups();
+    loadRecentGroupResponses();
 });
 </script>

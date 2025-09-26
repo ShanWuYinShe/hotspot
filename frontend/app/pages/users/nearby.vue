@@ -13,14 +13,19 @@
             </template>
 
             <div class="mb-4 flex gap-3 items-center">
-                <UInput
-                    v-model.number="radiusMeters"
-                    type="number"
-                    min="100"
-                    step="100"
+                <UInputNumber
+                    v-model="radiusMeters"
+                    :min="100"
+                    :max="50000"
+                    :step="100"
                     class="w-44"
                     placeholder="搜索半径(米)"
                     size="lg"
+                    :format-options="{
+                        style: 'unit',
+                        unit: 'meter',
+                        unitDisplay: 'short'
+                    }"
                 />
                 <UButton size="md" @click="refresh">应用</UButton>
             </div>
@@ -123,7 +128,8 @@
 // TableColumn 类型已在组件内部定义
 import { defineAsyncComponent } from "vue";
 import { DEFAULTS as defaults } from "~/config/defaults";
-import type { UserInfo } from "~/types";
+import type { UserResponse } from "~/types/api";
+import { useUserService } from "~/services/user.service";
 
 const EmptyNearby = defineAsyncComponent(
     () => import("~/components/illustrations/EmptyNearby.vue"),
@@ -140,7 +146,7 @@ const userService = useUserService();
 const { coordinates, getCurrentPosition } = useGeolocation();
 
 // 本地状态管理
-const users = ref<UserInfo[]>([]);
+const users = ref<UserResponse[]>([]);
 const loading = ref(false);
 const loadingMore = ref(false);
 const hasMore = ref(true);
@@ -194,12 +200,26 @@ async function getPositionForSearch() {
     let pos = coordinates.value;
     if (!pos) {
         try {
-            pos = await getCurrentPosition();
+            const position = await getCurrentPosition();
+            pos = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy,
+                altitude: position.coords.altitude,
+                altitudeAccuracy: position.coords.altitudeAccuracy,
+                heading: position.coords.heading,
+                speed: position.coords.speed
+            };
         } catch {
             pos = {
                 latitude: defaults.latitude,
                 longitude: defaults.longitude,
-            } as any;
+                accuracy: 0,
+                altitude: null,
+                altitudeAccuracy: null,
+                heading: null,
+                speed: null
+            };
         }
     }
     return pos;

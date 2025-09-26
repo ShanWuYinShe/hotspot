@@ -5,7 +5,7 @@
         <UButton
           icon="i-heroicons-ellipsis-horizontal"
           variant="ghost"
-          color="gray"
+          color="neutral"
           size="sm"
         />
       </slot>
@@ -46,18 +46,18 @@
 </template>
 
 <script setup lang="ts">
-import type { User } from '~/types'
+import type { UserResponse } from '~/types/api'
 
 interface Props {
-  user: User
+  user: UserResponse
 }
 
 interface Emits {
-  chatRequested: [user: User]
-  friendRequested: [user: User]
-  locationRequested: [user: User]
-  profileRequested: [user: User]
-  reportRequested: [user: User]
+  chatRequested: [user: UserResponse]
+  friendRequested: [user: UserResponse]
+  locationRequested: [user: UserResponse]
+  profileRequested: [user: UserResponse]
+  reportRequested: [user: UserResponse]
 }
 
 defineProps<Props>()

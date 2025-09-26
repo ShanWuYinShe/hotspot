@@ -128,13 +128,13 @@ const handleTempExperience = () => {
 const handleRegister = () => {
   emit('register');
   emit('close');
-  navigateTo('/auth');
+  navigateTo('/auth/login');
 };
 
 const handleLogin = () => {
   emit('login');
   emit('close');
-  navigateTo('/auth');
+  navigateTo('/auth/login');
 };
 
 const handleSkip = () => {

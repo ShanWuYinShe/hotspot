@@ -39,7 +39,6 @@
             color="blue" 
             description="接收新消息的推送通知" 
             v-model:modelValue="localSettings.notifications.message_notifications" 
-            :is-mobile="isMobile" 
           />
           <SettingToggleItem 
             title="群组通知" 
@@ -47,7 +46,6 @@
             color="green" 
             description="接收群组活动的推送通知" 
             v-model:modelValue="localSettings.notifications.group_notifications" 
-            :is-mobile="isMobile" 
           />
           <SettingToggleItem 
             title="好友请求" 
@@ -55,7 +53,6 @@
             color="neutral" 
             description="接收好友请求的推送通知" 
             v-model:modelValue="localSettings.notifications.friend_requests" 
-            :is-mobile="isMobile" 
           />
         </div>
         
@@ -73,7 +70,6 @@
               color="neutral" 
               description="在应用内显示私聊消息弹窗" 
               v-model:modelValue="localSettings.notifications.direct_message_toast" 
-              :is-mobile="isMobile" 
             />
             <SettingToggleItem 
               title="群组消息提示" 
@@ -81,7 +77,6 @@
               color="neutral" 
               description="在应用内显示群组消息弹窗" 
               v-model:modelValue="localSettings.notifications.group_message_toast" 
-              :is-mobile="isMobile" 
             />
             <SettingToggleItem 
               title="系统通知" 
@@ -89,7 +84,6 @@
               color="neutral" 
               description="显示系统重要通知" 
               v-model:modelValue="localSettings.notifications.system_notification_toast" 
-              :is-mobile="isMobile" 
             />
           </div>
         </div>
@@ -99,7 +93,7 @@
 </template>
 
 <script setup lang="ts">
-import type { UserSettings } from '~/types';
+import type { UserSettings } from '~/types/api';
 
 interface Props {
   localSettings: UserSettings;

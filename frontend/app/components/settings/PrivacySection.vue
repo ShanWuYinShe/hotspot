@@ -39,7 +39,6 @@
             color="blue" 
             description="允许其他用户查看我的位置" 
             v-model:modelValue="localSettings.privacy.location_sharing" 
-            :is-mobile="isMobile" 
           />
           <SettingToggleItem 
             title="在线状态" 
@@ -47,7 +46,6 @@
             color="green" 
             description="显示我的在线状态给其他用户" 
             v-model:modelValue="localSettings.privacy.online_status" 
-            :is-mobile="isMobile" 
           />
           <SettingToggleItem 
             title="搜索可见性" 
@@ -55,7 +53,6 @@
             color="purple" 
             description="允许其他用户通过搜索找到我" 
             v-model:modelValue="localSettings.privacy.show_in_search" 
-            :is-mobile="isMobile" 
           />
         </div>
       </div>
@@ -87,7 +84,7 @@
 </template>
 
 <script setup lang="ts">
-import type { UserSettings } from '~/types';
+import type { UserSettings } from '~/types/api';
 
 interface Props {
   localSettings: UserSettings;

@@ -1,5 +1,5 @@
 <template>
-  <!-- 全局 PIN 模态框管理器 - 无需渲染内容，仅负责逻辑管理 -->
+  <!-- 全局 PIN 模态框管理器 - 用于解密本地token数据 -->
 </template>
 
 <script setup lang="ts">
@@ -7,32 +7,46 @@
 const overlay = useOverlay()
 const authStore = useAuthStore()
 
-// 懒加载 PIN 输入模态框内容组件
-const PinInputModalContent = defineAsyncComponent(() => import('~/components/PinInputModalContent.vue'))
+// PIN码用于解密本地token数据，在需要访问加密数据时主动触发
+const pinInputModal = overlay.create(defineAsyncComponent(() => import('~/components/PinInputModalContent.vue')))
 
-// 创建 PIN 输入模态框实例
-const pinInputModal = overlay.create(PinInputModalContent)
-
-// 监听 authStore 的 PIN 模态框状态
-watch(() => authStore.pinModalState.isOpen, (isOpen) => {
-  if (isOpen) {
-    // 打开模态框并传递参数
-    pinInputModal.open({
-      isSetup: authStore.pinModalState.isSetup
-    })
-    
-    // 设置事件处理器
-    pinInputModal.patch({
+// 当需要解密本地token数据时调用此方法
+const requestPinForDecryption = async (): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    pinInputModal.open({ 
+      isSetup: false,
       onConfirm: (pin: string) => {
-        authStore.handlePinConfirm(pin)
+        pinInputModal.close()
+        resolve(pin)
       },
       onCancel: () => {
-        authStore.handlePinCancel()
+        pinInputModal.close()
+        reject(new Error('用户取消了PIN输入'))
       }
     })
-  } else {
-    // 关闭模态框
-    pinInputModal.close()
-  }
-}, { immediate: true })
+  })
+}
+
+// 当需要设置PIN码时调用此方法
+const requestPinForSetup = async (): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    pinInputModal.open({ 
+      isSetup: true,
+      onConfirm: (pin: string) => {
+        pinInputModal.close()
+        resolve(pin)
+      },
+      onCancel: () => {
+        pinInputModal.close()
+        reject(new Error('用户取消了PIN设置'))
+      }
+    })
+  })
+}
+
+// 暴露方法供其他组件使用
+defineExpose({
+  requestPinForDecryption,
+  requestPinForSetup
+})
 </script>

@@ -18,7 +18,7 @@
         <UTooltip :text="model ? `关闭 ${title}` : `开启 ${title}`">
           <USwitch 
             v-model="model" 
-            :size="switchSize" 
+            size="md"
             :color="switchColor"
           />
         </UTooltip>
@@ -34,7 +34,6 @@ interface Props {
   description?: string;
   modelValue: boolean;
   color?: 'blue' | 'green' | 'purple' | 'yellow' | 'neutral' | 'red' | 'pink';
-  isMobile?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -51,8 +50,6 @@ const model = computed({
   set: (value) => emit('update:modelValue', value)
 });
 
-// 计算属性
-const switchSize = computed(() => props.isMobile ? 'sm' : 'md');
 
 const switchColor = computed(() => {
   const colorMap: Record<string, 'neutral' | 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error'> = {

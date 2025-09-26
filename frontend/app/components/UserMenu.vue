@@ -41,7 +41,7 @@
             variant="ghost"
             size="sm"
             class="w-full justify-start px-3 py-2 text-sm"
-            @click="navigateTo('/auth')"
+            @click="navigateTo('/auth/login')"
           >
             <UIcon name="i-heroicons-arrow-right-end-on-rectangle" class="w-4 h-4 mr-3" />
             {{ t('userMenu.loginRegister') }}
@@ -102,7 +102,7 @@
               variant="ghost"
               size="sm"
               class="w-full justify-start px-3 py-2 text-sm"
-              @click="navigateTo('/auth?upgrade=1')"
+              @click="navigateTo('/auth/register?upgrade=1')"
             >
               <UIcon name="i-heroicons-arrow-up-circle" class="w-4 h-4 mr-3" />
               {{ t('userMenu.upgradeAccount') }}
@@ -112,7 +112,7 @@
               variant="ghost"
               size="sm"
               class="w-full justify-start px-3 py-2 text-sm"
-              @click="navigateTo('/auth?add=1')"
+              @click="navigateTo('/auth/register?add=1')"
             >
               <UIcon name="i-heroicons-plus-circle" class="w-4 h-4 mr-3" />
               {{ t('userMenu.addAccount') }}
@@ -187,6 +187,6 @@ const switchAccount = async (userId: string) => {
 // 登出
 const logout = () => {
   authStore.logout()
-  navigateTo('/auth')
+  navigateTo('/auth/login')
 }
 </script>

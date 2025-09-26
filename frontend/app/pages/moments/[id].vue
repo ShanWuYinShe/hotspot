@@ -182,7 +182,7 @@
 </template>
 
 <script setup lang="ts">
-import type { MomentInfo } from '~/types';
+import type { MomentResponse } from '~/types/api';
 
 definePageMeta({ 
     title: '动态详情', 
@@ -402,7 +402,7 @@ function shareMoment() {
     }
 }
 
-function getMomentActions(m: MomentInfo) {
+function getMomentActions(m: MomentResponse) {
     const isOwner = m.user_id === authStore.user?.user_id;
     const items: any[] = [];
     
@@ -427,7 +427,7 @@ function getMomentActions(m: MomentInfo) {
     return items;
 }
 
-async function onDelete(m: MomentInfo) {
+async function onDelete(m: MomentResponse) {
     try {
         await momentsStore.deleteMoment(m.moment_id);
         toast.add({ title: "已删除", color: "success" });

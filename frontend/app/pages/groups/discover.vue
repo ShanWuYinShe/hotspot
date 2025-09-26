@@ -219,7 +219,7 @@
 <script setup lang="ts">
 import { defineAsyncComponent } from "vue";
 // TableColumn 类型已在组件内部定义
-import type { GroupInfo } from "~/types";
+import type { GroupResponse } from "~/types/api";
 definePageMeta({ title: "发现群组", requiresAuth: true, layout: 'dashboard' });
 
 const EmptyGroups = defineAsyncComponent(
@@ -229,26 +229,18 @@ const groupsStore = useGroupsStore();
 // 本地UI配置，不需要从设置中获取
 const preferCardOnDenied = ref(true);
 
-const { openConfirmModal } = useModals();
-const showWhyPermission = () => {
-    openConfirmModal({
-        title: "为什么需要位置权限",
-        message:
-            "根据您的当前位置展示附近的群组。仅在你同意后请求权限，可随时在浏览器设置中更改。",
-        confirmText: "允许位置访问并搜索",
-        cancelText: "知道了",
-        confirmColor: "primary",
-        onConfirm: async () => {
-            await authorizeAndSearch();
-        },
-    });
+        // 移除已删除的 modal 函数
+const showWhyPermission = async () => {
+    if (confirm("根据您的当前位置展示附近的群组。仅在你同意后请求权限，可随时在浏览器设置中更改。\n\n点击确定允许位置访问并搜索")) {
+        await authorizeAndSearch();
+    }
 };
 const toast = useSmartToast();
 const locationManager = useLocationManager();
 const { checkGeolocation, requestGeolocation, onGeolocationChange } =
     usePermissions();
 
-const items = ref<GroupInfo[]>([]);
+const items = ref<GroupResponse[]>([]);
 const loading = ref(false);
 const loadError = ref(false);
 const whyOpen = ref(false);
@@ -397,7 +389,7 @@ onMounted(async () => {
     }
 });
 
-const joinGroup = async (g: GroupInfo) => {
+const joinGroup = async (g: GroupResponse) => {
     try {
         const full = await groupsStore.joinGroup(g.group_id);
         await groupsStore.fetchMyGroups();

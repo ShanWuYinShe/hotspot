@@ -1,151 +1,200 @@
 <template>
     <UCard 
-        class="group bg-white/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50 cursor-pointer hover:bg-white/80 dark:hover:bg-slate-800/80 card-hover fade-in-up"
+        class="group cursor-pointer hover:shadow-md transition-all duration-200 card-hover fade-in-up"
         @click="$emit('click', group)"
     >
-        <div class="space-y-4">
-            <!-- 群组头部信息 -->
-            <div class="flex items-start gap-4">
-                <!-- 群组头像 -->
-                <div class="relative">
+        <!-- 群组头部 -->
+        <template #header>
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
                     <UAvatar 
                         :alt="group.name" 
                         :src="group.avatar_url"
-                        size="lg"
+                        size="md"
+                        :chip="group.is_password_required ? { 
+                            color: 'warning', 
+                            position: 'bottom-right',
+                            text: '🔒'
+                        } : false"
                     >
                         {{ group.name?.charAt(0) }}
                     </UAvatar>
-                    <!-- 密码保护指示器 -->
-                    <div 
-                        v-if="group.is_password_required" 
-                        class="absolute -bottom-1 -right-1 w-4 h-4 bg-amber-500 rounded-full border-2 border-white dark:border-slate-800 flex items-center justify-center"
-                    >
-                        <UIcon name="i-heroicons-lock-closed" class="w-2 h-2 text-white" />
-                    </div>
-                </div>
-
-                <!-- 群组信息 -->
-                <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-2">
-                        <h3 class="font-semibold text-slate-900 dark:text-white truncate">
-                            {{ group.name }}
-                        </h3>
-                        <UBadge 
-                            v-if="group.is_member" 
-                            variant="soft" 
-                            size="xs" 
-                            color="primary"
-                        >
-                            已加入
-                        </UBadge>
-                        <UBadge 
-                            v-if="group.user_role === 'owner'" 
-                            variant="soft" 
-                            size="xs" 
-                            color="success"
-                        >
-                            群主
-                        </UBadge>
-                        <UBadge 
-                            v-else-if="group.user_role === 'admin'" 
-                            variant="soft" 
-                            size="xs" 
-                            color="warning"
-                        >
-                            管理员
-                        </UBadge>
-                    </div>
                     
-                    <div class="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400 mt-1">
-                        <!-- 成员数量 -->
-                        <div class="flex items-center gap-1">
-                            <UIcon name="i-heroicons-users" class="w-4 h-4" />
-                            <span>{{ group.member_count }} 人</span>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-semibold text-highlighted truncate">
+                                {{ group.name }}
+                            </h3>
+                            <UBadge 
+                                v-if="group.is_member" 
+                                variant="soft" 
+                                size="xs" 
+                                color="primary"
+                            >
+                                已加入
+                            </UBadge>
                         </div>
                         
-                        <!-- 位置信息 -->
-                        <div v-if="group.location_name" class="flex items-center gap-1">
-                            <UIcon name="i-heroicons-map-pin" class="w-4 h-4" />
-                            <span class="truncate">{{ group.location_name }}</span>
-                        </div>
-                        
-                        <!-- 距离信息 -->
-                        <div v-if="group.distance !== undefined" class="flex items-center gap-1">
-                            <UIcon name="i-heroicons-signal" class="w-4 h-4" />
-                            <span>{{ formatDistance(group.distance) }}</span>
+                        <div class="flex items-center gap-2 text-xs text-muted mt-1">
+                            <UChip 
+                                v-if="group.user_role === 'owner'"
+                                text="群主"
+                                color="success"
+                                size="xs"
+                            />
+                            <UChip 
+                                v-else-if="group.user_role === 'admin'"
+                                text="管理员"
+                                color="warning"
+                                size="xs"
+                            />
+                            
+                            <span class="flex items-center gap-1">
+                                <UIcon name="i-heroicons-users" class="w-3 h-3" />
+                                {{ group.member_count }} 人
+                            </span>
                         </div>
                     </div>
-
-                    <!-- 群组描述 -->
-                    <p v-if="group.description" class="text-sm text-slate-600 dark:text-slate-400 mt-2 line-clamp-2">
-                        {{ group.description }}
-                    </p>
                 </div>
 
                 <!-- 操作按钮 -->
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1">
                     <UButton
                         v-if="!group.is_member"
                         variant="soft"
-                        size="sm"
+                        size="xs"
                         color="primary"
+                        icon="i-heroicons-plus"
                         @click.stop="$emit('join', group)"
                     >
-                        <UIcon name="i-heroicons-plus" class="w-4 h-4 mr-1" />
                         加入
                     </UButton>
                     <UButton
                         v-else
                         variant="ghost"
-                        size="sm"
+                        size="xs"
                         icon="i-heroicons-chat-bubble-left-right"
                         class="opacity-0 group-hover:opacity-100 transition-opacity"
                         @click.stop="$emit('enter', group)"
-                    >
-                        进入
-                    </UButton>
-                    <UButton
-                        variant="ghost"
-                        size="sm"
-                        icon="i-heroicons-ellipsis-horizontal"
-                        class="opacity-0 group-hover:opacity-100 transition-opacity"
-                        @click.stop="$emit('more', group)"
                     />
+                    
+                    <UDropdownMenu :items="groupMenuItems" @click.stop>
+                        <UButton
+                            variant="ghost"
+                            size="xs"
+                            icon="i-heroicons-ellipsis-horizontal"
+                            class="opacity-0 group-hover:opacity-100 transition-opacity"
+                        />
+                    </UDropdownMenu>
                 </div>
             </div>
+        </template>
 
-            <!-- 群组活动信息 -->
-            <div class="flex items-center justify-between pt-3 border-t border-slate-200/50 dark:border-slate-700/50">
-                <div class="flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400">
-                    <UIcon name="i-heroicons-clock" class="w-4 h-4" />
-                    <span>最近活跃: {{ formatTime(group.last_active_at) }}</span>
+        <!-- 群组内容 -->
+        <div class="space-y-3">
+            <!-- 群组描述 -->
+            <p v-if="group.description" class="text-sm text-muted line-clamp-2">
+                {{ group.description }}
+            </p>
+
+            <!-- 位置和距离信息 -->
+            <div class="flex items-center gap-4 text-sm text-muted">
+                <div v-if="group.location_name" class="flex items-center gap-1">
+                    <UIcon name="i-heroicons-map-pin" class="w-3 h-3" />
+                    <span class="truncate">{{ group.location_name }}</span>
                 </div>
                 
-                <div class="flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400">
-                    <UIcon name="i-heroicons-calendar" class="w-4 h-4" />
-                    <span>创建于 {{ formatTime(group.created_at) }}</span>
+                <div v-if="group.distance !== undefined" class="flex items-center gap-1">
+                    <UIcon name="i-heroicons-signal" class="w-3 h-3" />
+                    <span>{{ formatDistance(group.distance) }}</span>
                 </div>
             </div>
         </div>
+
+        <!-- 群组底部信息 -->
+        <template #footer>
+            <div class="flex items-center justify-between text-xs text-muted">
+                <div class="flex items-center gap-1">
+                    <UIcon name="i-heroicons-clock" class="w-3 h-3" />
+                    <span>活跃: {{ formatTime(group.last_active_at) }}</span>
+                </div>
+                
+                <div class="flex items-center gap-1">
+                    <UIcon name="i-heroicons-calendar" class="w-3 h-3" />
+                    <span>{{ formatTime(group.created_at) }}</span>
+                </div>
+            </div>
+        </template>
     </UCard>
 </template>
 
 <script setup lang="ts">
-import type { Group } from '~/types'
+import type { GroupResponse } from '~/types/api'
 
 interface Props {
-    group: Group
+    group: GroupResponse
 }
 
 interface Emits {
-    click: [group: Group]
-    join: [group: Group]
-    enter: [group: Group]
-    more: [group: Group]
+    click: [group: GroupResponse]
+    join: [group: GroupResponse]
+    enter: [group: GroupResponse]
+    more: [group: GroupResponse]
 }
 
-defineProps<Props>()
-defineEmits<Emits>()
+const props = defineProps<Props>()
+const emit = defineEmits<Emits>()
+
+// 群组操作菜单
+const groupMenuItems = computed(() => {
+    const items = []
+    
+    // 基础操作
+    items.push([{
+        label: '查看详情',
+        icon: 'i-heroicons-information-circle',
+        click: () => emit('click', props.group)
+    }])
+    
+    // 成员操作
+    if (props.group.is_member) {
+        items.push([{
+            label: '进入群聊',
+            icon: 'i-heroicons-chat-bubble-left-right',
+            click: () => emit('enter', props.group)
+        }, {
+            label: '群组设置',
+            icon: 'i-heroicons-cog-6-tooth',
+            click: () => handleGroupSettings()
+        }])
+        
+        // 管理员操作
+        if (props.group.user_role === 'owner' || props.group.user_role === 'admin') {
+            items.push([{
+                label: '管理成员',
+                icon: 'i-heroicons-users',
+                click: () => handleManageMembers()
+            }])
+        }
+        
+        // 退出群组
+        items.push([{
+            label: '退出群组',
+            icon: 'i-heroicons-arrow-right-on-rectangle',
+            click: () => handleLeaveGroup(),
+            class: 'text-error-500'
+        }])
+    } else {
+        // 非成员操作
+        items.push([{
+            label: '加入群组',
+            icon: 'i-heroicons-plus',
+            click: () => emit('join', props.group)
+        }])
+    }
+    
+    return items
+})
 
 // 格式化距离
 const formatDistance = (distance: number): string => {
@@ -181,4 +230,23 @@ const formatTime = (time: string): string => {
         })
     }
 }
+
+// 群组设置
+const handleGroupSettings = () => {
+    // TODO: 实现群组设置功能
+    console.log('群组设置:', props.group.group_id)
+}
+
+// 管理成员
+const handleManageMembers = () => {
+    // TODO: 实现管理成员功能
+    console.log('管理成员:', props.group.group_id)
+}
+
+// 退出群组
+const handleLeaveGroup = () => {
+    // TODO: 实现退出群组功能
+    console.log('退出群组:', props.group.group_id)
+}
 </script>
+

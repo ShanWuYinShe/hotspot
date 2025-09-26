@@ -51,11 +51,11 @@ export const useFriendService = () => {
     const validMessage = message ? validateContent(message, 1, 200) : undefined;
 
     const request: AddFriendRequest = {
-      target_user_id: validUserId,
+      to_user_id: validUserId,
       message: validMessage
     };
 
-    const response = await api.post<ApiResponse<AddFriendResponse>>(
+    const response = await api.post(
       buildUserUrl(USER_ENDPOINTS.PROTECTED.ADD_FRIEND, false),
       request,
       { auth: true }
@@ -73,10 +73,10 @@ export const useFriendService = () => {
     const validRequestId = validateUserId(requestId); // 通用ID验证
 
     const request: AcceptFriendRequest = {
-      request_id: validRequestId
+      relationship_id: validRequestId
     };
 
-    const response = await api.post<ApiResponse<AcceptFriendResponse>>(
+    const response = await api.post(
       buildUserUrl(USER_ENDPOINTS.PROTECTED.ACCEPT_FRIEND, false),
       request,
       { auth: true }
@@ -94,10 +94,10 @@ export const useFriendService = () => {
     const validRequestId = validateUserId(requestId); // 通用ID验证
 
     const request: RejectFriendRequest = {
-      request_id: validRequestId
+      relationship_id: validRequestId
     };
 
-    const response = await api.post<ApiResponse<RejectFriendResponse>>(
+    const response = await api.post(
       buildUserUrl(USER_ENDPOINTS.PROTECTED.REJECT_FRIEND, false),
       request,
       { auth: true }
@@ -113,10 +113,10 @@ export const useFriendService = () => {
     const validUserId = validateUserId(userId);
 
     const request: FollowRequest = {
-      target_user_id: validUserId
+      to_user_id: validUserId
     };
 
-    const response = await api.post<ApiResponse<FollowResponse>>(
+    const response = await api.post(
       buildUserUrl(USER_ENDPOINTS.PROTECTED.FOLLOW_USER, false),
       request,
       { auth: true }
@@ -132,10 +132,10 @@ export const useFriendService = () => {
     const validUserId = validateUserId(userId);
 
     const request: UnfollowRequest = {
-      target_user_id: validUserId
+      to_user_id: validUserId
     };
 
-    const response = await api.post<ApiResponse<UnfollowResponse>>(
+    const response = await api.post(
       buildUserUrl(USER_ENDPOINTS.PROTECTED.UNFOLLOW_USER, false),
       request,
       { auth: true }
@@ -155,11 +155,11 @@ export const useFriendService = () => {
     const validReason = reason ? validateContent(reason, 1, 200) : undefined;
 
     const request: BlockRequest = {
-      target_user_id: validUserId,
+      to_user_id: validUserId,
       reason: validReason
     };
 
-    const response = await api.post<ApiResponse<BlockResponse>>(
+    const response = await api.post(
       buildUserUrl(USER_ENDPOINTS.PROTECTED.BLOCK_USER, false),
       request,
       { auth: true }
@@ -172,18 +172,18 @@ export const useFriendService = () => {
    * 获取好友列表
    */
   const getFriendsList = async (
-    cursor?: string,
-    limit: number = 20
-  ): Promise<PaginatedResponse<UserResponse>> => {
+    options?: { cursor?: string; limit?: number; status?: string }
+  ): Promise<PaginatedResponse<GetFriendsListResponse>> => {
     // 发送前验证参数
-    const validLimit = validatePaginationParams(cursor, limit).limit;
+    const validLimit = options?.limit ? validatePaginationParams({ limit: options.limit }).limit : 20;
 
     const request: GetFriendsListRequest = {
-      cursor,
-      limit: validLimit
+      cursor: options?.cursor,
+      limit: validLimit,
+      status: options?.status
     };
 
-    const response = await api.post<ApiResponse<PaginatedResponse<UserResponse>>>(
+    const response = await api.post(
       buildUserUrl(USER_ENDPOINTS.PROTECTED.FRIENDS_LIST, false),
       request,
       { auth: true }
@@ -198,16 +198,16 @@ export const useFriendService = () => {
   const getBlockedList = async (
     cursor?: string,
     limit: number = 20
-  ): Promise<PaginatedResponse<UserResponse>> => {
+  ): Promise<PaginatedResponse<GetBlockedListResponse>> => {
     // 发送前验证参数
-    const validLimit = validatePaginationParams(cursor, limit).limit;
+    const validLimit = validatePaginationParams({ limit, cursor }).limit;
 
     const request: GetBlockedListRequest = {
       cursor,
       limit: validLimit
     };
 
-    const response = await api.post<ApiResponse<PaginatedResponse<UserResponse>>>(
+    const response = await api.post(
       buildUserUrl(USER_ENDPOINTS.PROTECTED.BLOCKED_LIST, false),
       request,
       { auth: true }
@@ -226,7 +226,7 @@ export const useFriendService = () => {
   ): Promise<PaginatedResponse<UserResponse>> => {
     // 注意：这里需要根据实际后端API调整
     // 当前使用好友列表API，实际可能需要单独的好友请求API
-    return await getFriendsList(cursor, limit);
+    return await getFriendsList({ cursor, limit });
   };
 
   /**

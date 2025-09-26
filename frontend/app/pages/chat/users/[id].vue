@@ -2,74 +2,17 @@
   <UDashboardPanel>
     <!-- 聊天头部 -->
     <template #header>
-      <UDashboardNavbar>
-        <template #left>
-          <div class="flex items-center gap-3">
-            <UButton
-              variant="ghost"
-              size="sm"
-              icon="i-heroicons-arrow-left"
-              aria-label="返回"
-              @click="goBack"
-              class="lg:hidden"
-            />
-
-            <UAvatar :alt="userInfo?.nickname" size="md">
-              {{ userInfo?.nickname?.charAt(0) || "U" }}
-            </UAvatar>
-
-            <div>
-              <h1 class="text-lg font-semibold text-neutral-900 dark:text-white">
-                {{ userInfo?.nickname || "私聊" }}
-              </h1>
-              <p class="text-sm text-neutral-500">
-                {{ getOnlineStatus() }}
-              </p>
-            </div>
-          </div>
-        </template>
-
-        <template #right>
-          <div class="flex items-center gap-1">
-            <!-- 搜索按钮 -->
-            <UButton
-              variant="ghost"
-              size="sm"
-              icon="i-heroicons-magnifying-glass"
-              aria-label="搜索聊天记录"
-              @click="toggleSearch"
-            />
-            
-            <!-- 语音通话 -->
-            <UButton
-              variant="ghost"
-              size="sm"
-              icon="i-heroicons-phone"
-              aria-label="语音通话"
-              @click="makeCall"
-            />
-            
-            <!-- 视频通话 -->
-            <UButton
-              variant="ghost"
-              size="sm"
-              icon="i-heroicons-video-camera"
-              aria-label="视频通话"
-              @click="makeVideoCall"
-            />
-            
-            <!-- 更多操作 -->
-            <UDropdownMenu :items="chatMenuItems">
-              <UButton
-                variant="ghost"
-                size="sm"
-                icon="i-heroicons-ellipsis-vertical"
-                aria-label="更多操作"
-              />
-            </UDropdownMenu>
-          </div>
-        </template>
-      </UDashboardNavbar>
+      <ChatHeader
+        :user-info="userInfo"
+        :is-online="isUserOnline"
+        @back="goBack"
+        @toggle-search="toggleSearch"
+        @voice-call="makeCall"
+        @video-call="makeVideoCall"
+        @view-profile="viewUserProfile"
+        @clear-history="clearChatHistory"
+        @block-user="blockUser"
+      />
     </template>
 
     <!-- 搜索栏 -->
@@ -335,7 +278,7 @@ const userId = route.params.id as string;
 const messagesStore = useMessagesStore();
 const authStore = useAuthStore();
 const toast = useToast();
-const { openConfirmModal } = useModals();
+const modals = useModals();
 
 // 响应式状态
 const messageInput = ref('');
@@ -355,7 +298,12 @@ const imageInput = ref<HTMLInputElement>();
 const currentUser = computed(() => authStore.user);
 const userInfo = computed(() => {
   // 需要实现 getUserInfo 方法
-  return { nickname: '用户', isOnline: false, lastActiveAt: null };
+  return { 
+    user_id: route.params.id as string,
+    nickname: '用户', 
+    isOnline: false, 
+    lastActiveAt: null 
+  };
 });
 const messages = computed(() => {
   // 转换消息格式以适配 UChatMessages 组件
@@ -586,21 +534,14 @@ const editMessage = (message: any) => {
   console.log('编辑消息:', message.id);
 };
 
-const deleteMessage = (message: any) => {
-  openConfirmModal({
-    title: '删除消息',
-    message: '确定要删除这条消息吗？',
-    confirmText: '删除',
-    cancelText: '取消',
-    confirmColor: 'error',
-    onConfirm: async () => {
-      try {
-        // await messagesStore.deleteMessage(message.id); // 需要实现此方法
-      } catch (error) {
-        console.error('删除消息失败:', error);
-      }
+const deleteMessage = async (message: any) => {
+  if (confirm('确定要删除这条消息吗？')) {
+    try {
+      // await messagesStore.deleteMessage(message.id); // 需要实现此方法
+    } catch (error) {
+      console.error('删除消息失败:', error);
     }
-  });
+  }
 };
 
 const previewImage = (imageUrl: string) => {
@@ -628,25 +569,18 @@ const openLocation = (latitude: number, longitude: number) => {
   window.open(url, '_blank');
 };
 
-const clearChatHistory = () => {
-  openConfirmModal({
-    title: '清空聊天记录',
-    message: '确定要清空与此用户的所有聊天记录吗？此操作无法撤销。',
-    confirmText: '清空',
-    cancelText: '取消',
-    confirmColor: 'error',
-    onConfirm: async () => {
-      try {
-        // await messagesStore.clearChatHistory(userId); // 需要实现此方法
-        toast.add({
-          title: '聊天记录已清空',
-          color: 'success'
-        });
-      } catch (error) {
-        console.error('清空聊天记录失败:', error);
-      }
+const clearChatHistory = async () => {
+  if (confirm('确定要清空与此用户的所有聊天记录吗？此操作无法撤销。')) {
+    try {
+      // await messagesStore.clearChatHistory(userId); // 需要实现此方法
+      toast.add({
+        title: '聊天记录已清空',
+        color: 'success'
+      });
+    } catch (error) {
+      console.error('清空聊天记录失败:', error);
     }
-  });
+  }
 };
 
 const reportUser = () => {
@@ -658,26 +592,19 @@ const reportUser = () => {
   });
 };
 
-const blockUser = () => {
-  openConfirmModal({
-    title: '屏蔽用户',
-    message: `确定要屏蔽用户 ${userInfo.value?.nickname} 吗？屏蔽后将无法收到对方的消息。`,
-    confirmText: '屏蔽',
-    cancelText: '取消',
-    confirmColor: 'error',
-    onConfirm: async () => {
-      try {
-        // await messagesStore.blockUser(userId); // 需要实现此方法
-        toast.add({
-          title: '用户已屏蔽',
-          color: 'success'
-        });
-        navigateTo('/chat');
-      } catch (error) {
-        console.error('屏蔽用户失败:', error);
-      }
+const blockUser = async () => {
+  if (confirm(`确定要屏蔽用户 ${userInfo.value?.nickname} 吗？屏蔽后将无法收到对方的消息。`)) {
+    try {
+      // await messagesStore.blockUser(userId); // 需要实现此方法
+      toast.add({
+        title: '用户已屏蔽',
+        color: 'success'
+      });
+      navigateTo('/chat');
+    } catch (error) {
+      console.error('屏蔽用户失败:', error);
     }
-  });
+  }
 };
 
 const loadMessages = async () => {
@@ -717,6 +644,17 @@ watch(messageInput, (newValue, oldValue) => {
     }, 3000);
   }
 });
+
+// 缺失的方法实现
+const isUserOnline = computed(() => {
+  // 需要实现在线状态检查
+  return false;
+});
+
+const viewUserProfile = () => {
+  // 查看用户资料
+  navigateTo(`/users/${route.params.id}`);
+};
 
 // 页面离开时清理
 onUnmounted(() => {

@@ -4,7 +4,7 @@
  */
 
 import { USER_ENDPOINTS, buildUserUrl } from "~/config/api";
-import type { UserSettings } from "~/types";
+import type { UserSettings } from "~/types/api";
 
 
 // 临时错误创建函数

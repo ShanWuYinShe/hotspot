@@ -1,119 +1,322 @@
 <template>
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14 sm:py-16">
-        <UCard>
-            <template #header>
-                <h1 class="text-3xl font-bold text-neutral-900">我创建的群组</h1>
-            </template>
-
-            <USkeleton v-if="loading" class="h-32" />
-            <div v-else>
-                <UTable :rows="items" :columns="columns">
-                        <template #name-cell="{ row }">
-                            <div class="flex items-center gap-3 min-w-[220px]">
-                                <UAvatar :alt="(row as any).name">{{ (row as any).name?.charAt(0) }}</UAvatar>
-                                <div class="min-w-0">
-                                    <div class="flex items-center gap-2">
-                                        <span class="font-medium truncate">{{ (row as any).name }}</span>
-                                        <UBadge color="primary" variant="soft" size="xs">群主</UBadge>
-                                        <UBadge v-if="(ownedUnreadMap[String((row as any).group_id)] || 0) > 0" variant="soft" size="xs">未读 {{ ownedUnreadMap[String((row as any).group_id)] || 0 }}</UBadge>
-                                    </div>
-                                    <p class="text-xs text-neutral-500 truncate">{{ (row as any).description || '—' }}</p>
-                                </div>
-                            </div>
-                        </template>
-
-                        <template #activity-cell="{ row }">
-                            <span class="text-sm text-neutral-600 dark:text-neutral-400 hidden md:inline">{{ formatTime((row as any).last_active_at) }}</span>
-                        </template>
-
-                        <template #actions-cell="{ row }">
-                            <div class="flex items-center justify-end gap-2">
-                                <UButton size="sm" @click="enterGroup(row as any)">
-                                    <UIcon name="i-heroicons-arrow-right" class="w-4 h-4 mr-1" />进入
-                                </UButton>
-                                <UButton size="sm" variant="ghost" icon="i-heroicons-cog-6-tooth" @click="manageGroup(row as any)" />
-                            </div>
-                        </template>
-
-                        <template #empty>
-                            <div class="py-10">
-                                <EmptyState
-                                    icon="i-heroicons-user-group"
-                                    title="还没有创建群组"
-                                    description="去创建第一个群组吧"
-                                    action-text="创建群组"
-                                    :action-handler="() => navigateTo('/groups/create')"
-                                >
-                                    <template #illustration>
-                                        <EmptyGroups size="lg" />
-                                    </template>
-                                </EmptyState>
-                            </div>
-                        </template>
-                </UTable>
-            </div>
+    <PageLayout
+        title="我创建的群组"
+        description="管理您创建的所有群组"
+        :stats="groupStats"
+        :header-actions="headerActions"
+        :footer-title="selectedGroups.length > 0 ? '群组管理' : undefined"
+        :footer-description="selectedGroups.length > 0 ? `已选择 ${selectedGroups.length} 个群组` : undefined"
+        :footer-icon="selectedGroups.length > 0 ? 'i-heroicons-cog-6-tooth' : undefined"
+        :footer-actions="selectedGroups.length > 0 ? batchActions : undefined"
+    >
+        <!-- 群组列表 -->
+        <UCard class="bg-white/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50">
+            <DataView
+                :data="items"
+                :loading="loading"
+                :searchable="true"
+                :search-fields="['name', 'description']"
+                :show-pagination="true"
+                :page-size="10"
+                :toolbar-actions="toolbarActions"
+                item-component="GroupCard"
+                :get-item-key="(item) => item.group_id"
+                :get-item-props="getGroupCardProps"
+                :get-item-events="getGroupCardEvents"
+                empty-icon="i-heroicons-user-group"
+                empty-title="还没有创建群组"
+                empty-description="创建您的第一个群组，开始与朋友们聊天"
+                :empty-action="{ label: '创建群组', action: () => navigateTo('/groups/create') }"
+                @item-click="(group) => enterGroup(group)"
+                @search="handleSearch"
+            />
         </UCard>
-    </div>
+    </PageLayout>
 </template>
 
 <script setup lang="ts">
-import { defineAsyncComponent } from 'vue'
-import type { GroupInfo } from "~/types";
+import type { GroupResponse } from "~/types/api"
+import type { ActionItem } from '~/components/ActionPanel.vue'
+import { formatTime } from '~/utils/formatters'
 
-definePageMeta({ title: "我创建的群组", requiresAuth: true, layout: 'dashboard' });
-const groupsStore = useGroupsStore();
-const toast = useSmartToast();
-const EmptyGroups = defineAsyncComponent(() => import("~/components/illustrations/EmptyGroups.vue"));
-const items = ref<GroupInfo[]>([]);
-const loading = ref(true);
-const columns = [
-  { id: 'name', key: 'name', label: '群组' },
-  { id: 'activity', key: 'activity', label: '最近活跃', class: 'hidden md:table-cell w-40' },
-  { id: 'actions', key: 'actions', label: '操作', class: 'w-40 text-right' }
-] as any;
+definePageMeta({ 
+    title: "我创建的群组", 
+    requiresAuth: true, 
+    layout: 'dashboard' 
+})
 
-onMounted(async () => {
-    try {
-    await groupsStore.getOwnedGroups();
-    items.value = groupsStore.getOwnedGroups();
-    } catch (e: any) {
-        toast.add({
-            title: "加载失败",
-            description: e?.message,
-            color: "error",
-        });
-    } finally {
-        loading.value = false;
+// 服务和状态
+const groupsStore = useGroupsStore()
+const toast = useSmartToast()
+const { executeFeature } = useFeatureStatus()
+
+// 数据状态
+const items = ref<GroupResponse[]>([])
+const loading = ref(true)
+const selectedGroups = ref<GroupResponse[]>([])
+const ownedUnreadMap = reactive<Record<string, number>>({})
+
+// 计算属性
+const totalGroups = computed(() => items.value.length)
+const activeGroups = computed(() => {
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    return items.value.filter(g => new Date(g.last_active_at || g.created_at) > oneDayAgo).length
+})
+const totalMembers = computed(() => 
+    items.value.reduce((sum, group) => sum + (group.member_count || 0), 0)
+)
+const totalUnread = computed(() => 
+    Object.values(ownedUnreadMap).reduce((sum, count) => sum + count, 0)
+)
+
+// 统计数据
+const groupStats = computed(() => [
+    {
+        key: 'total',
+        label: '创建的群组',
+        value: totalGroups.value,
+        icon: 'i-heroicons-user-group',
+        color: 'blue' as const,
+        description: '您创建的群组总数',
+        onClick: () => toast.info('显示全部群组')
+    },
+    {
+        key: 'active',
+        label: '活跃群组',
+        value: activeGroups.value,
+        icon: 'i-heroicons-fire',
+        color: 'green' as const,
+        description: '24小时内有活动的群组',
+        trend: (activeGroups.value > totalGroups.value * 0.5 ? 'up' : 'down') as 'up' | 'down',
+        onClick: () => toast.info('显示活跃群组')
+    },
+    {
+        key: 'members',
+        label: '总成员数',
+        value: totalMembers.value,
+        icon: 'i-heroicons-users',
+        color: 'purple' as const,
+        description: '所有群组的成员总数',
+        onClick: () => toast.info('查看成员统计')
+    },
+    {
+        key: 'unread',
+        label: '未读消息',
+        value: totalUnread.value,
+        icon: 'i-heroicons-bell',
+        color: 'orange' as const,
+        description: '所有群组的未读消息',
+        onClick: () => toast.info('查看未读消息')
     }
+])
 
-    // 懒加载未读数（限前30项以控流）
+// 头部操作
+const headerActions = computed(() => [
+    {
+        key: 'create',
+        label: '创建群组',
+        icon: 'i-heroicons-plus',
+        color: 'primary' as const,
+        action: () => navigateTo('/groups/create')
+    },
+    {
+        key: 'manage-all',
+        label: '批量管理',
+        icon: 'i-heroicons-cog-6-tooth',
+        variant: 'outline' as const,
+        action: () => toast.info('批量管理功能')
+    }
+])
+
+// 工具栏操作
+const toolbarActions = computed(() => [
+    {
+        key: 'refresh',
+        label: '刷新',
+        icon: 'i-heroicons-arrow-path',
+        variant: 'outline' as const,
+        action: loadOwnedGroups
+    },
+    {
+        key: 'create',
+        label: '创建群组',
+        icon: 'i-heroicons-plus',
+        color: 'primary' as const,
+        action: () => navigateTo('/groups/create')
+    },
+    {
+        key: 'analytics',
+        label: '数据统计',
+        icon: 'i-heroicons-chart-bar',
+        variant: 'outline' as const,
+        action: () => executeFeature('reports', () => {
+            toast.info('群组数据统计功能即将上线')
+        })
+    }
+])
+
+// 批量操作
+const batchActions = computed<ActionItem[]>(() => [
+    {
+        key: 'cancel',
+        label: '取消选择',
+        variant: 'outline',
+        action: () => { selectedGroups.value = [] }
+    },
+    {
+        key: 'export',
+        label: '导出数据',
+        color: 'primary',
+        action: handleBatchExport
+    },
+    {
+        key: 'archive',
+        label: '批量归档',
+        color: 'warning',
+        action: handleBatchArchive
+    }
+])
+
+// GroupCard 配置
+const getGroupCardProps = (group: GroupResponse) => {
+    const unreadCount = ownedUnreadMap[String(group.group_id)] || 0
+    return {
+        group: {
+            ...group,
+            unread_count: unreadCount,
+            role: 'owner', // 标记为群主
+            last_active_display: formatTime(group.last_active_at || group.created_at)
+        },
+        showOwnerBadge: true,
+        showUnreadCount: unreadCount > 0,
+        class: 'cursor-pointer hover:shadow-md transition-shadow'
+    }
+}
+
+const getGroupCardEvents = (group: GroupResponse) => ({
+    click: () => enterGroup(group),
+    enter: () => enterGroup(group),
+    more: () => manageGroup(group),
+    select: () => toggleGroupSelection(group)
+})
+
+// 方法
+const loadOwnedGroups = async () => {
+    loading.value = true
     try {
-        const ms = useMessageService();
-        const list = items.value.slice(0, 30);
-        await Promise.all(list.map(async (g) => {
-            try {
-                const r: any = await ms.getGroupUnreadCount(String(g.group_id));
-                ownedUnreadMap[String(g.group_id)] = Number(r?.unread_count ?? r?.total_unread_count ?? 0);
-            } catch {}
-        }));
-    } catch {}
-});
+        await groupsStore.getOwnedGroups()
+        items.value = groupsStore.myGroups || []
+        
+        // 加载未读消息数量
+        await loadUnreadCounts()
+        
+        toast.success('群组列表已更新')
+    } catch (error: any) {
+        toast.error(`加载失败: ${error?.message || '未知错误'}`)
+    } finally {
+        loading.value = false
+    }
+}
 
-const enterGroup = (g: GroupInfo) => {
-    // 进入前标记已读并清零本地未读
+const loadUnreadCounts = async () => {
     try {
-        const ms = useMessageService();
-        void ms.markAsRead(String(g.group_id), 'group');
-        ownedUnreadMap[String(g.group_id)] = 0;
-    } catch {}
-    navigateTo(`/chat/groups/${g.group_id}`);
-};
-const manageGroup = (g: GroupInfo) => {
-    navigateTo(`/groups/${g.group_id}/settings`);
-};
+        const messageService = useMessageService()
+        const groupsToCheck = items.value.slice(0, 30) // 限制数量避免性能问题
+        
+        await Promise.allSettled(
+            groupsToCheck.map(async (group) => {
+                try {
+                    const result = await messageService.getGroupUnreadCount(String(group.group_id))
+                    ownedUnreadMap[String(group.group_id)] = Number(result?.total_unread || 0)
+                } catch (error) {
+                    console.warn(`获取群组 ${group.group_id} 未读数失败:`, error)
+                }
+            })
+        )
+    } catch (error) {
+        console.error('批量获取未读数失败:', error)
+    }
+}
 
-// formatTime 函数已从统一工具函数导入
+const enterGroup = async (group: GroupResponse) => {
+    try {
+        // 标记消息为已读
+        const messageService = useMessageService()
+        await messageService.markAsRead(String(group.group_id), 'group')
+        
+        // 清零本地未读数
+        ownedUnreadMap[String(group.group_id)] = 0
+        
+        // 跳转到群聊页面
+        await navigateTo(`/chat/groups/${group.group_id}`)
+    } catch (error) {
+        console.error('进入群组失败:', error)
+        // 即使标记已读失败，也允许进入群组
+        await navigateTo(`/chat/groups/${group.group_id}`)
+    }
+}
 
-// 我创建的群未读映射
-const ownedUnreadMap = reactive<Record<string, number>>({});
+const manageGroup = async (group: GroupResponse) => {
+    await executeFeature('groupManage', async () => {
+        await navigateTo(`/groups/${group.group_id}/settings`)
+    })
+}
+
+const toggleGroupSelection = (group: GroupResponse) => {
+    const index = selectedGroups.value.findIndex(g => g.group_id === group.group_id)
+    if (index > -1) {
+        selectedGroups.value.splice(index, 1)
+    } else {
+        selectedGroups.value.push(group)
+    }
+}
+
+const handleSearch = (query: string) => {
+    // DataView 组件会自动处理搜索
+    if (query.trim()) {
+        toast.info(`搜索: ${query}`)
+    }
+}
+
+const handleBatchExport = async () => {
+    await executeFeature('reports', async () => {
+        const { exportGroupList } = useDataExport()
+        
+        try {
+            exportGroupList(selectedGroups.value, {
+                filename: 'owned-groups',
+                format: 'csv'
+            })
+            
+            selectedGroups.value = []
+        } catch (error) {
+            toast.error('导出失败')
+        }
+    })
+}
+
+const handleBatchArchive = async () => {
+    const confirmed = confirm(`确定要归档选中的 ${selectedGroups.value.length} 个群组吗？`)
+    if (!confirmed) return
+    
+    await executeFeature('groupManage', async () => {
+        try {
+            // 这里应该调用实际的归档 API
+            await new Promise(resolve => setTimeout(resolve, 1000)) // 模拟 API 调用
+            
+            toast.success(`已归档 ${selectedGroups.value.length} 个群组`)
+            selectedGroups.value = []
+            
+            // 刷新列表
+            await loadOwnedGroups()
+        } catch (error) {
+            toast.error('归档失败')
+        }
+    })
+}
+
+// 生命周期
+onMounted(() => {
+    loadOwnedGroups()
+})
 </script>

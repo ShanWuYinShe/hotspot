@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import type { UserSettings } from "~/types";
+import type { UserSettings } from "~/types/api";
 
 // 默认设置
 const getDefaultSettings = (): UserSettings => ({
@@ -13,8 +13,6 @@ const getDefaultSettings = (): UserSettings => ({
     direct_message_toast: true,
     group_message_toast: true,
     system_notification_toast: true,
-    error_notifications: true,
-    success_notifications: true,
   },
   privacy: {
     profile_visibility: "public",
@@ -22,18 +20,22 @@ const getDefaultSettings = (): UserSettings => ({
     online_status: true,
     show_in_search: true,
   },
+  appearance: {
+    theme: "auto" as const,
+    language: "zh-CN",
+    animations: true,
+    compact_mode: false,
+    high_contrast: false,
+  },
   preferences: {
     language: "zh-CN",
-    theme: "auto",
+    theme: "auto" as const,
     distance_unit: "km",
     time_format: "24h",
   },
   account: {
-    nickname: "",
-    bio: "",
-    email: "",
-    phone: "",
-    avatar_url: "",
+    auto_save: true,
+    backup_enabled: false,
   },
 });
 

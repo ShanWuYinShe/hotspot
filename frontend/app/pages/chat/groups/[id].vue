@@ -79,7 +79,7 @@
         </div>
 
         <!-- 消息列表 -->
-        <div class="flex-1">
+        <div class="flex-1 overflow-hidden">
             <!-- 加载中占位 -->
             <div v-if="messagesStore.loading.messages" class="h-full flex items-center justify-center">
                 <div class="space-y-3 w-full max-w-md px-4">
@@ -90,7 +90,7 @@
             </div>
 
             <!-- 空状态 -->
-            <UCard v-else-if="messagesList.length === 0" class="m-4">
+            <div v-else-if="messagesList.length === 0" class="h-full flex items-center justify-center p-4">
                 <EmptyState
                     icon="i-heroicons-user-group"
                     title="暂无群聊消息"
@@ -99,77 +99,95 @@
                     :action-handler="focusComposer"
                 >
                     <template #illustration>
-                        <EmptyMessages size="lg" />
+                        <EmptySendMessageResponses size="lg" />
                     </template>
                 </EmptyState>
-            </UCard>
+            </div>
 
-            <!-- 虚拟滚动聊天消息 -->
-            <UVirtualChatMessages
+            <!-- Nuxt UI ChatSendMessageResponses 组件 -->
+            <UChatSendMessageResponses
                 v-else
-                :messages="messagesList"
-                :current-user-id="String(authStore.user?.user_id || 0)"
-                :container-height="400"
-                :can-load-more="hasMoreMessages"
-                :loading-more="loadingMore"
-                :auto-scroll-to-bottom="true"
-                @load-more="loadMoreMessages"
-                ref="chatMessagesRef"
+                :messages="formattedSendMessageResponses"
+                :status="chatStatus"
+                :should-auto-scroll="true"
+                :should-scroll-to-bottom="true"
+                :assistant="{
+                    side: 'left',
+                    variant: 'soft',
+                    avatar: { icon: 'i-heroicons-user-group' }
+                }"
+                :user="{
+                    side: 'right',
+                    variant: 'soft',
+                    avatar: { icon: 'i-heroicons-user' }
+                }"
+                class="h-full px-4"
             >
-                <template #default="{ message, isOwnMessage, showSender }">
-                    <div
-                        :class="[
-                            'flex mb-4',
-                            isOwnMessage ? 'justify-end' : 'justify-start',
-                        ]"
-                    >
-                        <div
-                            :class="[
-                                'max-w-xs lg:max-w-md px-4 py-2 rounded-lg',
-                                isOwnMessage
-                                    ? 'bg-primary-500 text-white'
-                                    : 'bg-white/80 dark:bg-neutral-800/80 backdrop-blur border border-neutral-200/60 dark:border-neutral-700/60',
-                            ]"
-                        >
-                            <!-- 发送者信息（群聊中显示） -->
-                            <div v-if="!isOwnMessage && showSender" class="text-xs opacity-70 mb-1">
-                                {{ message.sender_name || `用户${message.sender_id}` }}
-                            </div>
-
-                            <!-- 消息内容 -->
-                            <div class="mb-1">
-                                {{ message.content }}
-                            </div>
-
-                            <!-- 消息时间 -->
-                            <div
-                                :class="[
-                                    'text-xs',
-                                    isOwnMessage ? 'text-white/80' : 'opacity-80',
-                                ]"
-                            >
-                                {{
-                                    formatMessageTime(
-                                        message.created_at || message.sent_at || new Date(),
-                                    )
-                                }}
-                            </div>
+                <template #content="{ message }">
+                    <div class="space-y-1">
+                        <!-- 群聊中显示发送者名称 -->
+                        <div v-if="message.role === 'assistant' && (message.metadata as any)?.senderName" 
+                             class="text-xs text-muted font-medium">
+                            {{ (message.metadata as any).senderName }}
+                        </div>
+                        
+                        <!-- 消息内容 -->
+                        <div class="text-sm">
+                            {{ getSendMessageResponseText(message) }}
+                        </div>
+                        
+                        <!-- 消息时间 -->
+                        <div class="text-xs text-muted">
+                            {{ formatSendMessageResponseTime((message.metadata as any)?.timestamp || new Date()) }}
                         </div>
                     </div>
                 </template>
-            </UVirtualChatMessages>
+            </UChatSendMessageResponses>
         </div>
 
         <!-- 消息输入框 -->
-        <div
-            class="p-4 bg-white/80 dark:bg-neutral-900/70 backdrop-blur border-t"
-        >
-            <MessageInput
-                :sending="sending"
+        <div class="p-4 bg-white/80 dark:bg-neutral-900/70 backdrop-blur border-t">
+            <UChatPrompt
+                v-model="messageInput"
                 placeholder="在群里说点什么..."
-                @send="onSend"
-                @upload-file="onUploadFile"
-                @send-location="onSendLocation"
+                :loading="sending"
+                variant="soft"
+                @submit="handleSendSendMessageResponse"
+            >
+                <template #trailing>
+                    <div class="flex items-center gap-1">
+                        <!-- 文件上传 -->
+                        <UTooltip text="发送文件">
+                            <UButton
+                                variant="ghost"
+                                size="xs"
+                                icon="i-heroicons-paper-clip"
+                                @click="triggerFileUpload"
+                                :disabled="sending"
+                            />
+                        </UTooltip>
+                        
+                        <!-- 位置分享 -->
+                        <UTooltip text="分享位置">
+                            <UButton
+                                variant="ghost"
+                                size="xs"
+                                icon="i-heroicons-map-pin"
+                                @click="onSendLocation"
+                                :disabled="sending"
+                            />
+                        </UTooltip>
+                    </div>
+                </template>
+            </UChatPrompt>
+            
+            <!-- 隐藏的文件输入 -->
+            <input
+                ref="fileInputRef"
+                type="file"
+                class="hidden"
+                accept="image/*,.pdf,.doc,.docx,.txt"
+                @change="handleFileSelect"
             />
         </div>
     </div>
@@ -185,14 +203,10 @@ import {
     nextTick,
 } from "vue";
 import { useRoute, navigateTo } from "nuxt/app";
-import type { Message } from "~/types/message";
+import type { SendMessageResponse } from "~/types/api";
 
 const EmptyMessages = defineAsyncComponent(
     () => import("~/components/illustrations/EmptyMessages.vue"),
-);
-
-const UVirtualChatMessages = defineAsyncComponent(
-    () => import("~/components/UVirtualChatMessages.vue"),
 );
 
 // 页面元数据
@@ -218,13 +232,39 @@ type GroupInfo = {
 };
 
 const groupInfo = ref<GroupInfo | null>(null);
-const messagesList = computed<Message[]>(() => messagesStore.messages);
+const messagesList = computed<SendMessageResponse[]>(() => messagesStore.messages);
 
-// 聊天消息组件引用
-const chatMessagesRef = ref<InstanceType<typeof UVirtualChatMessages>>();
-
+// 消息输入和状态
+const messageInput = ref('');
 const sending = ref(false);
 const loadingMore = ref(false);
+const fileInputRef = ref<HTMLInputElement>();
+
+// 聊天状态
+const chatStatus = computed(() => {
+    if (sending.value) return 'submitted';
+    if (loadingMore.value) return 'streaming';
+    return 'ready';
+});
+
+// 格式化消息为ChatSendMessageResponses组件需要的格式
+const formattedSendMessageResponses = computed(() => {
+    return messagesList.value.map(message => ({
+        id: message.message_id || String(Math.random()),
+        role: (isOwn(message) ? 'user' : 'assistant') as 'user' | 'assistant' | 'system',
+        parts: [{ type: 'text' as const, text: message.content || '' }],
+        metadata: {
+            senderName: message.sender_name,
+            timestamp: message.sent_at || new Date().toISOString(),
+            senderId: message.sender_id
+        }
+    }));
+});
+
+// 获取消息文本内容
+const getSendMessageResponseText = (message: any) => {
+    return message.parts?.[0]?.text || message.content || '';
+};
 
 // 搜索相关
 const showSearch = ref(false);
@@ -234,18 +274,18 @@ const searchResults = computed(() => {
     if (!searchQuery.value.trim()) return [];
     const keyword = searchQuery.value.toLowerCase();
     return messagesList.value.filter((message) =>
-        message.content.toLowerCase().includes(keyword),
+        message.content?.toLowerCase().includes(keyword),
     );
 });
 
-const displayMessages = computed(() => {
+const displaySendMessageResponses = computed(() => {
     if (searchQuery.value.trim()) {
         return searchResults.value;
     }
     return messagesList.value;
 });
 
-const hasMoreMessages = computed<boolean>(
+const hasMoreSendMessageResponses = computed<boolean>(
     () => messagesStore.pagination.messages.hasMore,
 );
 const focusComposer = () => {
@@ -259,7 +299,7 @@ const messagesStore = useMessagesStore();
 const authStore = useAuthStore();
 
 // 是否本人消息
-const isOwn = (m: Message) =>
+const isOwn = (m: SendMessageResponse) =>
     String(m.sender_id) === String(authStore.user?.user_id ?? "");
 
 // 群聊操作菜单
@@ -286,7 +326,7 @@ const groupActions = computed(() => [
 ]);
 
 // 格式化消息时间
-const formatMessageTime = (date: string | number | Date): string => {
+const formatSendMessageResponseTime = (date: string | number | Date): string => {
     const d = new Date(date);
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -312,7 +352,6 @@ const initGroupChat = async (): Promise<void> => {
 
         // 获取群聊消息
         await messagesStore.fetchMessages(groupId, false, "group");
-        nextTick(() => scrollToBottom());
     } catch (error) {
         console.error("初始化群聊失败:", error);
         toast.add({
@@ -323,14 +362,16 @@ const initGroupChat = async (): Promise<void> => {
     }
 };
 
-// 发送群聊消息
-const onSend = async (content: string) => {
-    if (!content.trim() || sending.value) return;
+// 处理消息发送（ChatPrompt组件的submit事件）
+const handleSendSendMessageResponse = async (event: Event) => {
+    event.preventDefault();
+    const content = messageInput.value.trim();
+    if (!content || sending.value) return;
     
     sending.value = true;
     try {
         await messagesStore.sendGroupMessage(groupId, content, "text");
-        nextTick(() => scrollToBottom());
+        messageInput.value = ''; // 清空输入框
     } catch (error) {
         toast.add({ 
             title: "发送失败", 
@@ -339,6 +380,39 @@ const onSend = async (content: string) => {
         });
     } finally {
         sending.value = false;
+    }
+};
+
+// 发送群聊消息（保留原方法供其他地方调用）
+const onSend = async (content: string) => {
+    if (!content.trim() || sending.value) return;
+    
+    sending.value = true;
+    try {
+        await messagesStore.sendGroupMessage(groupId, content, "text");
+    } catch (error) {
+        toast.add({ 
+            title: "发送失败", 
+            description: "请重试", 
+            color: "error" 
+        });
+    } finally {
+        sending.value = false;
+    }
+};
+
+// 触发文件上传
+const triggerFileUpload = () => {
+    fileInputRef.value?.click();
+};
+
+// 处理文件选择
+const handleFileSelect = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (file) {
+        onUploadFile(file);
+        target.value = ''; // 清空文件输入
     }
 };
 
@@ -388,8 +462,6 @@ const onUploadFile = async (file: File) => {
             color: "success",
         });
         
-        nextTick(() => scrollToBottom());
-        
     } catch (error) {
         console.error("文件上传失败:", error);
         toast.add({
@@ -423,10 +495,10 @@ const onSendLocation = async () => {
         }
         
         const geolocation = useGeolocation();
-        const coords = await geolocation.getCurrentPosition();
-        const address = await geolocation.reverseGeocode(coords.latitude, coords.longitude);
+        const position = await geolocation.getCurrentPosition();
+        const address = await geolocation.reverseGeocode(position.coords.latitude, position.coords.longitude);
         
-        const locationContent = `📍 我的位置\n${address}\n纬度: ${coords.latitude.toFixed(6)}\n经度: ${coords.longitude.toFixed(6)}`;
+        const locationContent = `📍 我的位置\n${address}\n纬度: ${position.coords.latitude.toFixed(6)}\n经度: ${position.coords.longitude.toFixed(6)}`;
         
         await messagesStore.sendGroupMessage(groupId, locationContent, "location");
         
@@ -436,21 +508,19 @@ const onSendLocation = async () => {
             color: "success",
         });
         
-        nextTick(() => scrollToBottom());
-        
     } catch (error: any) {
         console.error("发送位置失败:", error);
         
-        let errorMessage = "获取位置失败，请重试";
+        let errorSendMessageResponse = "获取位置失败，请重试";
         if (error.message?.includes("权限")) {
-            errorMessage = "位置权限被拒绝，请在浏览器设置中允许位置访问";
+            errorSendMessageResponse = "位置权限被拒绝，请在浏览器设置中允许位置访问";
         } else if (error.message?.includes("超时")) {
-            errorMessage = "获取位置超时，请检查GPS是否开启";
+            errorSendMessageResponse = "获取位置超时，请检查GPS是否开启";
         }
         
         toast.add({
             title: "发送失败",
-            description: errorMessage,
+            description: errorSendMessageResponse,
             color: "error",
         });
     } finally {
@@ -459,7 +529,7 @@ const onSendLocation = async () => {
 };
 
 // 加载更多消息
-const loadMoreMessages = async (): Promise<void> => {
+const loadMoreSendMessageResponses = async (): Promise<void> => {
     if (loadingMore.value) return;
     loadingMore.value = true;
     try {
@@ -475,10 +545,7 @@ const loadMoreMessages = async (): Promise<void> => {
     }
 };
 
-// 滚动到底部
-const scrollToBottom = (): void => {
-    chatMessagesRef.value?.scrollToBottom();
-};
+// 注意：scrollToBottom 方法已由 UChatSendMessageResponses 组件自动处理
 
 // 返回上一页
 const goBack = (): void => {

@@ -1,322 +1,345 @@
 <template>
-    <UModal title="发布动态" :ui="{ width: 'sm:max-w-2xl' }" prevent-close>
-        <UCard>
-            <template #header>
-                <div class="flex items-center justify-between">
-                    <h2 class="text-xl font-semibold">发布动态</h2>
-                    <UButton
-                        variant="ghost"
-                        icon="i-heroicons-x-mark"
-                        @click="handleClose"
-                    />
-                </div>
-            </template>
+  <UModal v-model="isOpen">
+    <UCard>
+      <template #header>
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-semibold">发布动态</h3>
+          <UButton
+            color="neutral"
+            variant="ghost"
+            icon="i-heroicons-x-mark"
+            @click="close"
+          />
+        </div>
+      </template>
 
-            <div class="space-y-6">
-                <!-- 用户信息 -->
-                <div class="flex items-center gap-3">
-                    <UAvatar :alt="authStore.user?.nickname" size="md">
-                        {{ authStore.user?.nickname?.charAt(0) || "U" }}
-                    </UAvatar>
-                    <div>
-                        <div class="font-semibold">
-                            {{ authStore.user?.nickname }}
-                        </div>
-                        <div class="text-sm text-neutral-600 dark:text-neutral-400">
-                            {{ formatCurrentTime() }}
-                        </div>
-                    </div>
-                </div>
+      <form @submit.prevent="handleSubmit" class="space-y-4">
+        <!-- 内容输入 -->
+        <UTextarea
+          v-model="form.description"
+          placeholder="分享你的精彩瞬间..."
+          :rows="4"
+          :maxlength="500"
+          required
+        />
+        
+        <!-- 字数统计 -->
+        <div class="text-right text-sm text-gray-500">
+          {{ form.description.length }}/500
+        </div>
 
-                <!-- 文本内容 -->
-                <div>
-                    <UTextarea
-                        v-model="content"
-                        placeholder="分享你的精彩时刻..."
-                        :rows="4"
-                        :maxlength="500"
-                        class="text-base"
-                    />
-                    <div class="flex justify-end mt-2">
-                        <span class="text-sm text-neutral-500">
-                            {{ content.length }}/500
-                        </span>
-                    </div>
-                </div>
+        <!-- 位置信息 -->
+        <div class="space-y-2">
+          <label class="text-sm font-medium">位置信息</label>
+          <div class="flex items-center gap-2">
+            <UIcon name="i-heroicons-map-pin" class="w-4 h-4 text-primary" />
+            <span class="text-sm">{{ locationText }}</span>
+            <UButton
+              size="xs"
+              variant="outline"
+              @click="refreshLocation"
+              :loading="locationLoading"
+            >
+              刷新
+            </UButton>
+          </div>
+        </div>
 
-                <!-- 图片上传区域 -->
-                <div class="space-y-3">
-                    <div class="flex items-center gap-2">
-                        <UIcon name="i-heroicons-photo" class="w-5 h-5" />
-                        <span class="font-medium">图片</span>
-                        <span class="text-sm text-neutral-500">（最多9张）</span>
-                    </div>
+        <!-- 标签输入 -->
+        <div class="space-y-2">
+          <label class="text-sm font-medium">添加标签</label>
+          
+          <!-- 热门标签快选 -->
+          <div class="flex flex-wrap gap-2 mb-2">
+            <UBadge
+              v-for="tag in popularTags"
+              :key="tag"
+              :color="form.tags.includes(tag) ? 'primary' : 'neutral'"
+              variant="soft"
+              class="cursor-pointer text-xs"
+              @click="toggleTag(tag)"
+            >
+              {{ tag }}
+            </UBadge>
+          </div>
+          
+          <!-- 标签输入组件 -->
+          <UInputTags
+            v-model="form.tags"
+            placeholder="输入标签并按回车添加..."
+            :max="10"
+            :max-length="20"
+            size="md"
+            icon="i-heroicons-hashtag"
+            @add-tag="handleAddTag"
+            @remove-tag="handleRemoveTag"
+          />
+          
+          <p class="text-xs text-gray-500">最多可添加10个标签，每个标签最长20个字符</p>
+        </div>
 
-                    <UFileUpload
-                        v-model="uploadedFiles"
-                        multiple
-                        accept="image/*"
-                        :max-files="9"
-                        icon="i-heroicons-photo"
-                        label="点击上传或拖拽图片到这里"
-                        description="支持 JPG, PNG, GIF 格式"
-                        layout="grid"
-                        class="min-h-24"
-                    />
-                </div>
+        <!-- 图片上传 -->
+        <div class="space-y-2">
+          <label class="text-sm font-medium">添加图片（可选）</label>
+          <UFileUpload
+            v-model="uploadedFiles"
+            accept="image/*"
+            multiple
+            variant="area"
+            layout="grid"
+            class="min-h-32"
+            label="拖拽图片到此处或点击选择"
+            description="支持 JPG, PNG, GIF 格式，最多9张图片"
+            @change="handleImageUpload"
+          />
+          <p class="text-xs text-gray-500">最多可上传9张图片</p>
+        </div>
+      </form>
 
-                <!-- 位置信息 -->
-                <div class="space-y-3">
-                    <div class="flex items-center gap-2">
-                        <UIcon name="i-heroicons-map-pin" class="w-5 h-5" />
-                        <span class="font-medium">位置</span>
-                    </div>
-
-                    <div class="flex gap-3">
-                        <UInput
-                            v-model="locationName"
-                            placeholder="添加位置信息..."
-                            class="flex-1"
-                        />
-                        <UButton
-                            variant="outline"
-                            icon="i-heroicons-map-pin"
-                            :loading="gettingLocation"
-                            @click="getCurrentLocation"
-                        >
-                            {{ coordinates ? "重新定位" : "获取位置" }}
-                        </UButton>
-                    </div>
-
-                    <div
-                        v-if="coordinates"
-                        class="text-sm text-neutral-600 dark:text-neutral-400"
-                    >
-                        <UIcon
-                            name="i-heroicons-check-circle"
-                            class="w-4 h-4 inline mr-1 text-green-500"
-                        />
-                        位置已获取: {{ coordinates.latitude.toFixed(6) }},
-                        {{ coordinates.longitude.toFixed(6) }}
-                    </div>
-                </div>
-
-                <!-- 标签 -->
-                <div class="space-y-3">
-                    <div class="flex items-center gap-2">
-                        <UIcon name="i-heroicons-hashtag" class="w-5 h-5" />
-                        <span class="font-medium">标签</span>
-                    </div>
-
-                    <!-- 已选标签 -->
-                    <div v-if="selectedTags.length > 0" class="flex flex-wrap gap-2">
-                        <UBadge
-                            v-for="tag in selectedTags"
-                            :key="tag"
-                            variant="soft"
-                            size="xs"
-                            class="cursor-pointer"
-                            @click="removeTag(tag)"
-                        >
-                            #{{ tag }}
-                        </UBadge>
-                    </div>
-
-                    <!-- 添加标签 -->
-                    <div class="flex gap-2">
-                        <UInput
-                            v-model="newTag"
-                            placeholder="输入标签..."
-                            class="flex-1"
-                            @keyup.enter="addTag"
-                            @keyup.space="addTag"
-                        />
-                        <UButton
-                            variant="outline"
-                            :disabled="!newTag.trim()"
-                            @click="addTag"
-                        >
-                            添加
-                        </UButton>
-                    </div>
-
-                    <!-- 推荐标签 -->
-                    <div class="space-y-2">
-                        <span class="text-sm text-neutral-600 dark:text-neutral-400">
-                            推荐标签:
-                        </span>
-                        <div class="flex flex-wrap gap-2">
-                            <UButton
-                                v-for="tag in recommendTags"
-                                :key="tag"
-                                variant="ghost"
-                                size="xs"
-                                :disabled="selectedTags.includes(tag)"
-                                @click="addRecommendTag(tag)"
-                            >
-                                #{{ tag }}
-                            </UButton>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <template #footer>
-                <div class="flex justify-end gap-3">
-                    <UButton variant="ghost" @click="handleClose">
-                        取消
-                    </UButton>
-                    <UButton
-                        :disabled="!canPublish"
-                        :loading="publishing"
-                        @click="handlePublish"
-                    >
-                        发布
-                    </UButton>
-                </div>
-            </template>
-        </UCard>
-    </UModal>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <UButton color="neutral" variant="ghost" @click="close">
+            取消
+          </UButton>
+          <UButton
+            type="submit"
+            :loading="submitting"
+            :disabled="!canSubmit"
+            @click="handleSubmit"
+          >
+            发布
+          </UButton>
+        </div>
+      </template>
+    </UCard>
+  </UModal>
 </template>
 
 <script setup lang="ts">
-// useOverlay 会自动管理 Modal 状态，无需手动绑定 isOpen
+import { useMomentService } from '~/services/moment.service'
+import { useFeatureStatus } from '~/composables/useFeatureStatus'
+
+interface Props {
+  open?: boolean
+}
 
 interface Emits {
-    close: []
-    success: []
+  'update:open': [value: boolean]
+  success: [moment: any]
 }
+
+const props = withDefaults(defineProps<Props>(), {
+  open: false
+})
 
 const emit = defineEmits<Emits>()
 
-const authStore = useAuthStore()
-const momentsStore = useMomentsStore()
-const toast = useSmartToast()
-const { coordinates, getCurrentPosition } = useGeolocation()
-
-// 表单状态
-const content = ref("")
-const locationName = ref("")
-const selectedTags = ref<string[]>([])
-const newTag = ref("")
-const publishing = ref(false)
-const gettingLocation = ref(false)
-const uploadedFiles = ref<File[]>([])
-
-// 推荐标签
-const recommendTags = ref([
-    "美食", "风景", "生活", "心情", "旅行", "摄影", "健身", "音乐"
-])
-
-// 计算属性
-const canPublish = computed(() => {
-    return content.value.trim().length > 0 || uploadedFiles.value.length > 0
+// 响应式状态
+const isOpen = computed({
+  get: () => props.open,
+  set: (value) => emit('update:open', value)
 })
 
-// 位置处理
-async function getCurrentLocation() {
-    gettingLocation.value = true
-    try {
-        await getCurrentPosition()
-        toast.success("定位成功")
-    } catch (error) {
-        toast.error("定位失败，请检查位置权限设置")
-    } finally {
-        gettingLocation.value = false
+// 服务和工具
+const momentService = useMomentService()
+const { getCurrentPosition, coordinates } = useGeolocation()
+const toast = useToast()
+const { executeFeature } = useFeatureStatus()
+
+// 表单数据
+const form = reactive({
+  description: '',
+  tags: [] as string[],
+  images: [] as string[]
+})
+
+// 状态管理
+const submitting = ref(false)
+const locationLoading = ref(false)
+const customTag = ref('')
+const uploadedFiles = ref<File[]>([])
+
+// 位置信息
+const location = ref({
+  latitude: 0,
+  longitude: 0,
+  name: '获取位置中...'
+})
+
+// 预设标签
+const popularTags = ['美食', '旅行', '生活', '摄影', '音乐', '运动', '工作', '学习']
+
+// 计算属性
+const locationText = computed(() => {
+  if (location.value.name === '获取位置中...') {
+    return '获取位置中...'
+  }
+  return location.value.name || '未知位置'
+})
+
+const canSubmit = computed(() => {
+  return form.description.trim().length > 0 && 
+         location.value.latitude !== 0 && 
+         location.value.longitude !== 0
+})
+
+// 生命周期
+onMounted(() => {
+  getCurrentLocation()
+})
+
+// 方法
+const getCurrentLocation = async () => {
+  locationLoading.value = true
+  try {
+    const position = await getCurrentPosition()
+    location.value = {
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+      name: '当前位置' // 实际项目中可以调用地理编码API获取地址
     }
-}
-
-// 标签处理
-function addTag() {
-    const tag = newTag.value.trim()
-    if (!tag) return
-
-    if (selectedTags.value.includes(tag)) {
-        toast.warning("标签已存在")
-        return
-    }
-
-    if (selectedTags.value.length >= 10) {
-        toast.warning("最多只能添加10个标签")
-        return
-    }
-
-    selectedTags.value.push(tag)
-    newTag.value = ""
-}
-
-function addRecommendTag(tag: string) {
-    if (!selectedTags.value.includes(tag)) {
-        selectedTags.value.push(tag)
-    }
-}
-
-function removeTag(tag: string) {
-    const index = selectedTags.value.indexOf(tag)
-    if (index > -1) {
-        selectedTags.value.splice(index, 1)
-    }
-}
-
-// 发布处理
-async function handlePublish() {
-    if (!canPublish.value || publishing.value) return
-
-    publishing.value = true
-    try {
-        const payload = {
-            description: content.value.trim(),
-            latitude: coordinates.value?.latitude || 0,
-            longitude: coordinates.value?.longitude || 0,
-            location_name: locationName.value.trim(),
-            tags: selectedTags.value,
-        }
-
-        await momentsStore.createMoment(payload)
-        
-        toast.success("发布成功")
-        resetForm()
-        emit('success')
-        emit('close')
-    } catch (e: any) {
-        toast.error("发布失败", e?.message)
-    } finally {
-        publishing.value = false
-    }
-}
-
-
-// 重置表单
-function resetForm() {
-    content.value = ""
-    locationName.value = ""
-    selectedTags.value = []
-    newTag.value = ""
-    uploadedFiles.value = []
-}
-
-// 处理关闭
-const handleClose = () => {
-    if (content.value.trim() || uploadedFiles.value.length > 0) {
-        // 有内容时确认关闭
-        if (confirm("确定要关闭吗？未保存的内容将丢失。")) {
-            resetForm()
-            emit('close') // 通知 useOverlay 关闭
-        }
-    } else {
-        resetForm()
-        emit('close') // 通知 useOverlay 关闭
-    }
-}
-
-function formatCurrentTime() {
-    return new Date().toLocaleString("zh-CN", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
+  } catch (error) {
+    console.error('获取位置失败:', error)
+    toast.add({
+      title: '位置获取失败',
+      description: '请手动刷新位置或检查位置权限',
+      color: 'error'
     })
+  } finally {
+    locationLoading.value = false
+  }
 }
 
+const refreshLocation = () => {
+  getCurrentLocation()
+}
+
+const toggleTag = (tag: string) => {
+  const index = form.tags.indexOf(tag)
+  if (index > -1) {
+    form.tags.splice(index, 1)
+  } else if (form.tags.length < 10) {
+    form.tags.push(tag)
+  } else {
+    toast.add({
+      title: '标签数量限制',
+      description: '最多只能添加10个标签',
+      color: 'warning'
+    })
+  }
+}
+
+const addCustomTag = () => {
+  const tag = customTag.value.trim()
+  if (tag && !form.tags.includes(tag)) {
+    if (form.tags.length < 10) {
+      form.tags.push(tag)
+      customTag.value = ''
+    } else {
+      toast.add({
+        title: '标签数量限制',
+        description: '最多只能添加10个标签',
+        color: 'warning'
+      })
+    }
+  }
+}
+
+const removeTag = (tag: string) => {
+  const index = form.tags.indexOf(tag)
+  if (index > -1) {
+    form.tags.splice(index, 1)
+  }
+}
+
+const handleImageUpload = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const files = target.files
+  if (!files) return
+
+  Array.from(files).forEach(file => {
+    if (form.images.length >= 9) {
+      toast.add({
+        title: '图片数量限制',
+        description: '最多只能上传9张图片',
+        color: 'warning'
+      })
+      return
+    }
+
+    // 简单的文件读取，实际项目中应该上传到服务器
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      if (e.target?.result) {
+        form.images.push(e.target.result as string)
+      }
+    }
+    reader.readAsDataURL(file)
+  })
+
+  // 清空input
+  target.value = ''
+}
+
+const removeImage = (index: number) => {
+  form.images.splice(index, 1)
+}
+
+// 标签处理函数
+const handleAddTag = (tag: string) => {
+  console.log('添加标签:', tag)
+}
+
+const handleRemoveTag = (tag: string) => {
+  console.log('移除标签:', tag)
+}
+
+const handleSubmit = async () => {
+  await executeFeature('momentCreate', async () => {
+    submitting.value = true
+    
+    try {
+      const result = await momentService.createMoment(
+        location.value.latitude,
+        location.value.longitude,
+        form.description,
+        form.tags,
+        form.images
+      )
+      
+      toast.add({
+        title: '发布成功',
+        description: '你的动态已成功发布',
+        color: 'success'
+      })
+      
+      emit('success', result)
+      close()
+      resetForm()
+    } catch (error) {
+      console.error('发布动态失败:', error)
+      throw error // 让 executeFeature 处理错误显示
+    } finally {
+      submitting.value = false
+    }
+  })
+}
+
+const close = () => {
+  isOpen.value = false
+}
+
+const resetForm = () => {
+  form.description = ''
+  form.tags = []
+  form.images = []
+  customTag.value = ''
+}
+
+// 监听弹窗关闭，重置表单
+watch(isOpen, (newValue) => {
+  if (!newValue) {
+    resetForm()
+  }
+})
 </script>

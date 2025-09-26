@@ -371,11 +371,11 @@
 
 <script setup lang="ts">
 // import type { TableColumn } from "@nuxt/ui";
-import type { UserInfo } from "~/types";
+import type { UserResponse } from "~/types/api";
 
 // import { buildFriendUrl, FRIEND_ENDPOINTS } from "~/config/api"; // 好友功能暂未实现
 
-interface FriendRequest extends UserInfo {
+interface FriendRequest extends UserResponse {
     request_time: string;
     response_time?: string;
     message?: string;

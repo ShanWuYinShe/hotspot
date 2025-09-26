@@ -253,7 +253,7 @@
 
 <script setup lang="ts">
 import { buildUserUrl, USER_ENDPOINTS } from '~/config/api';
-import type { UserInfo, MomentInfo } from '~/types';
+import type { UserResponse, MomentResponse } from '~/types/api';
 
 definePageMeta({ 
     title: '用户详情', 
@@ -275,8 +275,8 @@ const userId = route.params.id as string;
 // 状态变量
 const loading = ref(true);
 const operating = ref(false);
-const user = ref<UserInfo | null>(null);
-const userMoments = ref<MomentInfo[]>([]);
+const user = ref<UserResponse | null>(null);
+const userMoments = ref<MomentResponse[]>([]);
 const loadingMoments = ref(false);
 const loadingMoreMoments = ref(false);
 const hasMoreMoments = ref(false);

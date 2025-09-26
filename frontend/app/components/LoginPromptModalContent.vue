@@ -132,7 +132,7 @@ const handleTempExperience = () => {
 const handleLogin = () => {
   emit('login');
   emit('close');
-  navigateTo('/auth');
+  navigateTo('/auth/login');
 };
 
 const handleSkip = () => {

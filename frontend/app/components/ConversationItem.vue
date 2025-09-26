@@ -11,27 +11,48 @@
         <div class="flex items-center space-x-4">
             <!-- 头像 -->
             <div class="relative">
+                <!-- 在线状态指示器 (仅私聊显示) -->
+                <UChip 
+                    v-if="conversation.type === 'user' && isOnline"
+                    color="success" 
+                    size="sm" 
+                    position="bottom-right"
+                >
+                    <UAvatar
+                        :src="conversation.avatar"
+                        :alt="conversation.name || '会话'"
+                        size="md"
+                    >
+                        {{ conversation.name ? conversation.name.charAt(0) : "聊" }}
+                    </UAvatar>
+                </UChip>
+
+                <!-- 群组成员数量指示器 -->
+                <UChip 
+                    v-else-if="conversation.type === 'group'"
+                    color="info" 
+                    size="md" 
+                    position="bottom-right"
+                    :text="formatMemberCount(conversation.member_count || 0)"
+                >
+                    <UAvatar
+                        :src="conversation.avatar"
+                        :alt="conversation.name || '会话'"
+                        size="md"
+                    >
+                        {{ conversation.name ? conversation.name.charAt(0) : "聊" }}
+                    </UAvatar>
+                </UChip>
+
+                <!-- 普通头像 (无状态指示器) -->
                 <UAvatar
+                    v-else
                     :src="conversation.avatar"
                     :alt="conversation.name || '会话'"
                     size="md"
                 >
                     {{ conversation.name ? conversation.name.charAt(0) : "聊" }}
                 </UAvatar>
-
-                <!-- 在线状态指示器 (仅私聊显示) -->
-                <div
-                    v-if="conversation.type === 'user' && isOnline"
-                    class="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white dark:border-neutral-900 rounded-full"
-                />
-
-                <!-- 群组成员数量指示器 -->
-                <div
-                    v-if="conversation.type === 'group'"
-                    class="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center font-medium"
-                >
-                    {{ formatMemberCount(conversation.member_count || 0) }}
-                </div>
             </div>
 
             <!-- 对话信息 -->
@@ -42,7 +63,7 @@
                     </h3>
                     <div class="flex flex-col items-end space-y-1">
                         <span class="text-sm text-neutral-500 flex-shrink-0">
-                            {{ formatTimeWrapper(conversation.last_message_time) }}
+                            {{ formatTimeWrapper(conversation.last_message_time || conversation.updated_at) }}
                         </span>
                         <!-- 未读消息数 -->
                         <UBadge
@@ -72,7 +93,7 @@
                         <p class="text-sm text-neutral-600 truncate">
                             {{
                                 formatLastMessage(
-                                    conversation.last_message,
+                                    conversation.last_message?.content || '',
                                     lastMessageType,
                                 )
                             }}
@@ -109,7 +130,24 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import type { Conversation } from "~/types/message";
+import type { SendMessageResponse } from "~/types/api";
+
+// 本地 Conversation 类型定义 - 基于后端 ConversationsResponse 规范
+interface Conversation {
+  group_id: string;         // 群组ID
+  name: string;             // 群组名称或对话名称
+  avatar?: string;          // 头像URL
+  type: 'group' | 'user';   // 对话类型
+  group_type?: string;      // 群组类型：'private_chat'|'public_chat'
+  member_count?: number;    // 成员数量
+  last_message?: SendMessageResponse;
+  last_message_time?: string; // 最后消息时间
+  unread_count: number;
+  is_pinned: boolean;
+  is_muted: boolean;
+  updated_at: string;
+  id?: string;              // 兼容属性
+}
 
 interface Props {
     conversation: Conversation;
@@ -125,19 +163,14 @@ const emit = defineEmits<{
     (e: "delete", conversation: Conversation): void;
 }>();
 
-const { openConfirmModal } = useModals();
+// 移除不存在的 openConfirmModal
 
 const toast = useSmartToast();
 
 // 计算最后一条消息的类型
 const lastMessageType = computed(() => {
-    // 这里可以从消息内容中解析出类型
-    try {
-        const parsed = JSON.parse(props.conversation.last_message);
-        return parsed.type || "text";
-    } catch {
-        return "text";
-    }
+    // 从 last_message 对象中获取消息类型
+    return props.conversation.last_message?.message_type || "text";
 });
 
 // 对话操作菜单
@@ -280,9 +313,7 @@ const markAsRead = async () => {
     try {
         const messagesStore = useMessagesStore();
         const isGroup = props.conversation.type === "group";
-        const targetId = isGroup
-            ? props.conversation.group_id || props.conversation.id
-            : props.conversation.id;
+        const targetId = props.conversation.group_id || props.conversation.id;
         await messagesStore.markConversationAsRead(
             String(targetId),
             isGroup ? "group" : "user",
@@ -306,14 +337,9 @@ const clearHistory = () => {
 };
 
 const deleteConversation = () => {
-    openConfirmModal({
-        title: "确认删除",
-        message: "确定要删除该对话吗？此操作不可撤销。",
-        confirmText: "删除",
-        cancelText: "取消",
-        confirmColor: "error",
-        onConfirm: confirmDelete
-    });
+    if (confirm("确定要删除该对话吗？此操作不可撤销。")) {
+        confirmDelete();
+    }
 };
 
 const confirmDelete = () => {

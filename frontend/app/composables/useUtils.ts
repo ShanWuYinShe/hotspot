@@ -100,13 +100,6 @@ export const useUtils = () => {
     return new Promise(resolve => setTimeout(resolve, ms))
   }
 
-  /**
-   * 检查是否为移动设备
-   */
-  const isMobile = computed(() => {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-  })
-
   return {
     debounce,
     throttle,
@@ -114,7 +107,6 @@ export const useUtils = () => {
     formatFileSize,
     truncateText,
     scrollToElement,
-    delay,
-    isMobile
+    delay
   }
 }

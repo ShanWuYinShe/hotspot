@@ -1,458 +1,272 @@
 <template>
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
-        <UCard class="mb-4">
-            <template #header>
-                <div class="flex justify-between items-center">
-                    <h1 class="text-3xl font-bold text-primary-900 dark:text-primary-100">
-                        我的群组
-                    </h1>
-                    <UButton 
-                        size="lg" 
-                        color="primary" 
-                        @click="() => openCreateGroup()"
-                    >
-                        <UIcon name="i-heroicons-plus" />
-                        创建群组
-                    </UButton>
-                </div>
-            </template>
+    <div class="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100/50 to-slate-50 dark:from-slate-900 dark:via-slate-800/30 dark:to-slate-900">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- 页面标题 -->
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-slate-800 dark:text-slate-100 mb-2">
+                    我的群组
+                </h1>
+                <p class="text-slate-600 dark:text-slate-400">
+                    管理您加入和创建的所有群组
+                </p>
+            </div>
 
-            <!-- 搜索与筛选 -->
-            <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6">
-                <UInput
-                    v-model="searchQuery"
-                    placeholder="搜索群组..."
-                    size="md"
-                    color="primary"
-                    class="flex-1 w-full"
-                >
-                    <template #leading>
-                        <UIcon name="i-heroicons-magnifying-glass" class="text-primary-500" />
-                    </template>
-                </UInput>
-                <USelect
-                    v-model="activeFilter"
-                    :items="filterOptions"
-                    placeholder="筛选"
-                    color="primary"
-                    class="w-full sm:w-48"
+            <!-- 统计卡片 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <UCard class="bg-white/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50">
+                    <div class="flex items-center gap-4">
+                        <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                            <UIcon name="i-heroicons-user-group" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                            <p class="text-2xl font-bold text-slate-900 dark:text-white">{{ totalGroups }}</p>
+                            <p class="text-sm text-slate-600 dark:text-slate-400">总群组数</p>
+                        </div>
+                    </div>
+                </UCard>
+                
+                <UCard class="bg-white/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50">
+                    <div class="flex items-center gap-4">
+                        <div class="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                            <UIcon name="i-heroicons-crown" class="w-6 h-6 text-green-600 dark:text-green-400" />
+                        </div>
+                        <div>
+                            <p class="text-2xl font-bold text-slate-900 dark:text-white">{{ ownedGroups }}</p>
+                            <p class="text-sm text-slate-600 dark:text-slate-400">我创建的</p>
+                        </div>
+                    </div>
+                </UCard>
+                
+                <UCard class="bg-white/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50">
+                    <div class="flex items-center gap-4">
+                        <div class="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                            <UIcon name="i-heroicons-bell" class="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                        </div>
+                        <div>
+                            <p class="text-2xl font-bold text-slate-900 dark:text-white">{{ totalUnreadCount }}</p>
+                            <p class="text-sm text-slate-600 dark:text-slate-400">未读消息</p>
+                        </div>
+                    </div>
+                </UCard>
+            </div>
+
+            <!-- 群组列表 -->
+            <UCard class="bg-white/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50">
+                <DataView
+                    :data="filteredGroups"
+                    :loading="loading"
+                    :searchable="true"
+                    :search-fields="['name', 'description']"
+                    :filters="filterOptions"
+                    :show-pagination="true"
+                    :page-size="12"
+                    :toolbar-actions="toolbarActions"
+                    item-component="GroupCard"
+                    :get-item-key="(item) => item.group_id"
+                    :get-item-props="getGroupCardProps"
+                    :get-item-events="getGroupCardEvents"
+                    empty-icon="i-heroicons-user-group"
+                    empty-title="还没有群组"
+                    empty-description="加入或创建您的第一个群组"
+                    :empty-action="{ label: '创建群组', action: openCreateGroup }"
+                    @item-click="(group) => enterGroup(group)"
+                    @search="handleSearch"
+                    @filter-change="handleFilterChange"
                 />
-            </div>
-
-            <!-- 列表 → UTable 风格 -->
-            <div v-if="filteredGroups.length > 0">
-                <UTable :rows="filteredGroups" :columns="columns">
-                    <template #group-cell="{ row }">
-                        <div class="flex items-center gap-3 min-w-[220px]">
-                            <UAvatar
-                                :alt="(row as any).name || '群组'"
-                                size="lg"
-                                color="primary"
-                                >{{
-                                    (row as any).name?.charAt(0) || "群"
-                                }}</UAvatar
-                            >
-                            <div class="min-w-0">
-                                <div class="flex items-center gap-2">
-                                    <span class="font-medium truncate text-primary-900 dark:text-primary-100">{{
-                                        (row as any).name || "未命名群组"
-                                    }}</span>
-                                    <UTooltip
-                                        v-if="(row as any).user_role === 'owner'"
-                                        text="您是该群组的群主，拥有所有管理权限"
-                                    >
-                                        <UBadge
-                                            color="primary"
-                                            variant="soft"
-                                            size="xs"
-                                        >群主</UBadge>
-                                    </UTooltip>
-                                    <UTooltip
-                                        v-else-if="(row as any).user_role === 'admin'"
-                                        text="您是该群组的管理员，拥有部分管理权限"
-                                    >
-                                        <UBadge
-                                            color="success"
-                                            variant="soft"
-                                            size="xs"
-                                        >管理员</UBadge>
-                                    </UTooltip>
-                                    <UTooltip
-                                        v-if="getUnreadCount(row as any) > 0"
-                                        :text="`该群组有 ${getUnreadCount(row as any)} 条未读消息`"
-                                    >
-                                        <UBadge
-                                            color="warning"
-                                            variant="soft"
-                                            size="xs"
-                                        >未读 {{ getUnreadCount(row as any) }}</UBadge>
-                                    </UTooltip>
-                                </div>
-                                <p class="text-xs text-neutral-600 dark:text-neutral-400 truncate">
-                                    {{
-                                        (row as any).description ||
-                                        "暂无群组描述"
-                                    }}
-                                </p>
-                            </div>
-                        </div>
-                    </template>
-                    <template #members-cell="{ row }">
-                        <UBadge 
-                            color="neutral" 
-                            variant="soft" 
-                            size="sm"
-                            class="flex items-center gap-1"
-                        >
-                            <UIcon name="i-heroicons-users" class="w-3 h-3" />
-                            {{ (row as any).member_count }} 人
-                        </UBadge>
-                    </template>
-                    <template #activity-cell="{ row }">
-                        <span
-                            class="text-sm text-neutral-600 dark:text-neutral-400"
-                            >{{
-                                (row as any).last_active_at
-                                    ? formatTime((row as any).last_active_at)
-                                    : "—"
-                            }}</span
-                        >
-                    </template>
-                    <template #actions-cell="{ row }">
-                        <div class="flex items-center justify-end gap-2">
-                            <UButton 
-                                size="sm" 
-                                color="primary" 
-                                variant="soft"
-                                @click="enterGroup(row as any)"
-                            >
-                                <UIcon
-                                    name="i-heroicons-chat-bubble-left-right"
-                                    class="w-4 h-4 mr-1"
-                                />进入
-                            </UButton>
-                            <UDropdownMenu :items="getGroupActions(row as any)">
-                                <UButton
-                                    variant="ghost"
-                                    size="sm"
-                                    color="neutral"
-                                    icon="i-heroicons-ellipsis-vertical"
-                                    @click.stop
-                                />
-                            </UDropdownMenu>
-                        </div>
-                    </template>
-                    <template #empty>
-                        <div class="py-10">
-                            <EmptyState
-                                icon="i-heroicons-user-group"
-                                title="还没有群组"
-                                description="加入或创建您的第一个群组开始聊天吧"
-                                action-text="创建群组"
-                                action-color="primary"
-                                :action-handler="() => openCreateGroup()"
-                            >
-                                <template #illustration>
-                                    <EmptyGroups size="lg" />
-                                </template>
-                            </EmptyState>
-                        </div>
-                    </template>
-                </UTable>
-            </div>
-
-            <!-- 空状态 -->
-            <EmptyState
-                v-else
-                icon="i-heroicons-user-group"
-                title="还没有群组"
-                description="加入或创建您的第一个群组开始聊天吧"
-                action-text="创建群组"
-                action-color="primary"
-                :action-handler="() => openCreateGroup()"
-            >
-                <template #illustration>
-                    <EmptyGroups size="lg" />
-                </template>
-            </EmptyState>
-        </UCard>
-        <!-- 确认弹窗已改为 useModals.openConfirmModal 程序化管理 -->
+            </UCard>
+        </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { defineAsyncComponent } from "vue";
-definePageMeta({ title: "我的群组", requiresAuth: true, layout: 'dashboard' });
+import type { GroupResponse } from "~/types/api"
+import { formatTime } from '~/utils/formatters'
 
-const EmptyGroups = defineAsyncComponent(
-    () => import("~/components/illustrations/EmptyGroups.vue"),
-);
-const groupsStore = useGroupsStore();
-const toast = useSmartToast();
-const { openConfirmModal, openCreateGroupModal } = useModals();
+// 从数据源获取 SEO 配置
+const seoConfig = getPageSeoConfig('groups')
 
-const searchQuery = ref("");
-const activeFilter = ref<"all" | "owned" | "admin" | "active">("all");
+definePageMeta({ 
+    title: seoConfig.title, 
+    description: seoConfig.description,
+    requiresAuth: true, 
+    layout: 'dashboard' 
+})
 
+// 设置 SEO meta
+useSeoMeta(buildSeoMeta('groups'))
+
+// 服务和状态
+const groupsStore = useGroupsStore()
+const toast = useSmartToast()
+const { executeFeature } = useFeatureStatus()
+
+// 数据状态
+const loading = ref(true)
+const searchQuery = ref('')
+const activeFilter = ref('all')
+const unreadCounts = reactive<Record<string, number>>({})
+
+// 计算属性
+const totalGroups = computed(() => groupsStore.myGroups.length)
+const ownedGroups = computed(() => 
+    groupsStore.myGroups.filter(g => g.user_role === 'owner').length
+)
+const totalUnreadCount = computed(() => 
+    Object.values(unreadCounts).reduce((sum, count) => sum + count, 0)
+)
+
+const filteredGroups = computed(() => {
+    let groups = [...groupsStore.myGroups]
+    
+    // 应用筛选
+    if (activeFilter.value !== 'all') {
+        switch (activeFilter.value) {
+            case 'owned':
+                groups = groups.filter(g => g.user_role === 'owner')
+                break
+            case 'joined':
+                groups = groups.filter(g => g.user_role !== 'owner')
+                break
+            case 'unread':
+                groups = groups.filter(g => unreadCounts[g.group_id] > 0)
+                break
+        }
+    }
+    
+    return groups
+})
+
+// 筛选选项
 const filterOptions = [
-    { label: "全部群组", value: "all" },
-    { label: "我创建的", value: "owned" },
-    { label: "我管理的", value: "admin" },
-    { label: "最近活跃", value: "active" },
-];
+    { label: '全部群组', value: 'all' },
+    { label: '我创建的', value: 'owned' },
+    { label: '我加入的', value: 'joined' },
+    { label: '有未读消息', value: 'unread' }
+]
 
-import type { GroupInfo } from "~/types";
-const filteredGroups = computed<GroupInfo[]>(() => {
-    let result = groupsStore.myGroups;
-    
-    // 按筛选类型过滤
-    switch (activeFilter.value) {
-        case "owned":
-            result = groupsStore.getOwnedGroups();
-            break;
-        case "admin":
-            result = result.filter((g) => g.user_role === "admin");
-            break;
-        case "active":
-            const oneDayAgo = new Date(Date.now() - 86400000);
-            result = result.filter((g) => new Date(g.last_active_at) > oneDayAgo);
-            break;
-        default:
-            // "all" - 保持原始结果
-            break;
+// 工具栏操作
+const toolbarActions = computed(() => [
+    {
+        key: 'refresh',
+        label: '刷新',
+        icon: 'i-heroicons-arrow-path',
+        variant: 'outline' as const,
+        action: loadMyGroups
+    },
+    {
+        key: 'create',
+        label: '创建群组',
+        icon: 'i-heroicons-plus',
+        color: 'primary' as const,
+        action: openCreateGroup
+    },
+    {
+        key: 'discover',
+        label: '发现群组',
+        icon: 'i-heroicons-magnifying-glass',
+        variant: 'outline' as const,
+        action: () => navigateTo('/groups/discover')
     }
-    
-    // 按搜索关键词过滤
-    const query = searchQuery.value.trim();
-    if (query) {
-        const lowerQuery = query.toLowerCase();
-        result = result.filter(
-            (g) =>
-                (g.name || "").toLowerCase().includes(lowerQuery) ||
-                (g.description || "").toLowerCase().includes(lowerQuery),
-        );
+])
+
+// GroupCard 配置
+const getGroupCardProps = (group: GroupResponse) => {
+    const unreadCount = unreadCounts[group.group_id] || 0
+    return {
+        group: {
+            ...group,
+            unread_count: unreadCount,
+            last_active_display: formatTime(group.last_active_at || group.created_at)
+        },
+        showRole: true,
+        showUnreadCount: unreadCount > 0,
+        class: 'cursor-pointer hover:shadow-md transition-shadow'
     }
-    
-    return result;
-});
-
-// 群未读本地映射
-const groupUnreadMap = reactive<Record<string, number>>({});
-
-// UTable 列配置
-interface TableColumn {
-    id: string;
-    key: string;
-    label: string;
-    class?: string;
 }
 
-const columns: TableColumn[] = [
-    { 
-        id: "group", 
-        key: "group", 
-        label: "群组" 
-    },
-    {
-        id: "members",
-        key: "members",
-        label: "成员数",
-        class: "hidden sm:table-cell w-32",
-    },
-    {
-        id: "activity",
-        key: "activity",
-        label: "最近活跃",
-        class: "hidden md:table-cell w-40",
-    },
-    { 
-        id: "actions", 
-        key: "actions", 
-        label: "操作", 
-        class: "w-32 text-right" 
-    },
-];
+const getGroupCardEvents = (group: GroupResponse) => ({
+    click: () => enterGroup(group),
+    enter: () => enterGroup(group),
+    more: () => showGroupActions(group)
+})
 
-// 加载群组未读数
-const loadGroupUnreadCounts = async (groups: GroupInfo[]) => {
-    const messageService = useMessageService();
-    const limitedGroups = groups.slice(0, 30); // 限制前30个以控制流量
-    
-    await Promise.allSettled(
-        limitedGroups.map(async (group) => {
-            try {
-                const result = await messageService.getGroupUnreadCount(String(group.group_id));
-                groupUnreadMap[String(group.group_id)] = Number(
-                    result?.unread_count ?? result?.total_unread_count ?? 0,
-                );
-            } catch (error) {
-                // 静默处理单个群组的未读数加载失败
-                if (import.meta.dev) {
-                    console.warn(`加载群组 ${group.group_id} 未读数失败:`, error);
-                }
-            }
-        })
-    );
-};
-
-onMounted(async () => {
+// 方法
+const loadMyGroups = async () => {
+    loading.value = true
     try {
-        await groupsStore.fetchMyGroups();
-        
-        // 懒加载未读数
-        await loadGroupUnreadCounts(groupsStore.myGroups);
-        
-        // 如果当前筛选是"我创建的"，预加载相关数据
-        if (activeFilter.value === "owned") {
-            await groupsStore.getOwnedGroups();
-        }
+        await groupsStore.fetchMyGroups()
+        await loadUnreadCounts()
+        toast.success('群组列表已更新')
     } catch (error: any) {
-        toast.add({
-            title: "加载失败",
-            description: error?.message || "无法加载群组",
-            color: "error",
-        });
+        toast.error(`加载失败: ${error?.message || '未知错误'}`)
+    } finally {
+        loading.value = false
     }
-});
+}
 
-// 监听筛选器变化，按需加载数据
-watch(activeFilter, async (newFilter) => {
-    if (newFilter === "owned" && groupsStore.getOwnedGroups().length === 0) {
-        try {
-            await groupsStore.getOwnedGroups();
-        } catch (error) {
-            if (import.meta.dev) {
-                console.warn("加载我创建的群组失败:", error);
-            }
-        }
-    }
-});
-
-// 获取群组未读数
-const getUnreadCount = (group: any): number => {
-    if (!group?.group_id) return 0;
-    return groupUnreadMap[String(group.group_id)] || 0;
-};
-
-// 格式化时间显示
-const formatTime = (timeString: string): string => {
-    const targetTime = new Date(timeString);
-    const now = Date.now();
-    const diffMs = now - targetTime.getTime();
-    
-    const minutes = Math.floor(diffMs / 60000);
-    const hours = Math.floor(diffMs / 3600000);
-    const days = Math.floor(diffMs / 86400000);
-    
-    if (minutes < 60) return `${minutes}分钟前`;
-    if (hours < 24) return `${hours}小时前`;
-    return `${days}天前`;
-};
-
-// 进入群组聊天
-const enterGroup = async (group: GroupInfo) => {
+const loadUnreadCounts = async () => {
     try {
-        // 进入群聊前标记为已读并清零本地未读
-        const messageService = useMessageService();
-        await messageService.markAsRead(String(group.group_id), "group");
-        groupUnreadMap[String(group.group_id)] = 0;
+        const messageService = useMessageService()
+        const groups = groupsStore.myGroups.slice(0, 30) // 限制数量
+        
+        await Promise.allSettled(
+            groups.map(async (group) => {
+                try {
+                    const result = await messageService.getGroupUnreadCount(String(group.group_id))
+                    unreadCounts[group.group_id] = Number(result?.total_unread || 0)
+                } catch (error) {
+                    console.warn(`获取群组 ${group.group_id} 未读数失败:`, error)
+                }
+            })
+        )
     } catch (error) {
-        if (import.meta.dev) {
-            console.warn("标记群组消息已读失败:", error);
-        }
+        console.error('批量获取未读数失败:', error)
     }
-    
-    await navigateTo(`/chat/group/${group.group_id}`);
-};
+}
 
-// 管理群组
-const manageGroup = async (group: GroupInfo) => {
-    await navigateTo(`/groups/${group.group_id}/settings`);
-};
-
-// 退出群组
-const leaveGroup = (group: GroupInfo) => {
-    openConfirmModal({
-        title: "确认退出",
-        message: `确定要退出群组"${group?.name || ""}"吗？`,
-        confirmText: "确认退出",
-        cancelText: "取消",
-        confirmColor: "error",
-        onConfirm: async () => {
-            try {
-                await groupsStore.leaveGroup(group.group_id);
-                toast.success("已退出群组");
-            } catch (error: any) {
-                toast.error({
-                    title: "退出失败",
-                    description: error?.message || "请稍后重试"
-                });
-            }
-        },
-    });
-};
-// 获取群组操作菜单
-const getGroupActions = (group: GroupInfo) => {
-    const baseActions = [
-        [
-            {
-                label: "进入群聊",
-                icon: "i-heroicons-chat-bubble-left-right",
-                click: () => enterGroup(group),
-            },
-        ]
-    ];
-
-    // 如果是群主，添加管理选项
-    if (group.user_role === "owner") {
-        baseActions.push([
-            {
-                label: "管理群组",
-                icon: "i-heroicons-cog-6-tooth",
-                click: () => manageGroup(group),
-            },
-        ]);
+const enterGroup = async (group: GroupResponse) => {
+    try {
+        // 标记消息为已读
+        const messageService = useMessageService()
+        await messageService.markAsRead(String(group.group_id), 'group')
+        
+        // 清零本地未读数
+        unreadCounts[group.group_id] = 0
+        
+        // 跳转到群聊页面
+        await navigateTo(`/chat/groups/${group.group_id}`)
+    } catch (error) {
+        console.error('进入群组失败:', error)
+        // 即使标记已读失败，也允许进入群组
+        await navigateTo(`/chat/groups/${group.group_id}`)
     }
+}
 
-    // 添加退出群组选项
-    baseActions.push([
-        {
-            label: "退出群组",
-            icon: "i-heroicons-arrow-right-on-rectangle",
-            click: async () => {
-                leaveGroup(group);
-            },
-        },
-    ]);
-
-    return baseActions;
-};
-
-// 触发创建群组弹窗
 const openCreateGroup = () => {
-    openCreateGroupModal({
-        onSuccess: async (group: any) => {
-            try {
-                // 刷新群组列表
-                await groupsStore.fetchMyGroups();
-                
-                // 跳转到新创建的群组聊天
-                await navigateTo(`/chat/group/${group.group_id}`);
-                
-                toast.success({
-                    title: "群组创建成功",
-                    description: `欢迎来到"${group.name}"群组！`
-                });
-            } catch (error: any) {
-                toast.error({
-                    title: "跳转失败",
-                    description: error?.message || "群组已创建，请手动进入"
-                });
-            }
-        },
-        onCancel: () => {
-            // 用户取消创建，无需处理
-        }
-    });
-};
+    executeFeature('groupCreate', () => {
+        navigateTo('/groups/create')
+    })
+}
+
+const showGroupActions = (group: GroupResponse) => {
+    // 这里可以显示群组操作菜单
+    toast.info(`群组操作: ${group.name}`)
+}
+
+const handleSearch = (query: string) => {
+    searchQuery.value = query
+    if (query.trim()) {
+        toast.info(`搜索: ${query}`)
+    }
+}
+
+const handleFilterChange = (filter: string) => {
+    activeFilter.value = filter
+    toast.info(`筛选: ${filterOptions.find(f => f.value === filter)?.label}`)
+}
+
+// 生命周期
+onMounted(() => {
+    loadMyGroups()
+})
 </script>

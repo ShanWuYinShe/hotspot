@@ -349,7 +349,7 @@
 
 <script setup lang="ts">
 // TableColumn 类型已在组件内部定义
-import type { UserInfo } from "~/types";
+import type { UserResponse } from "~/types/api";
 // import { buildFriendUrl, FRIEND_ENDPOINTS } from "~/config/api"; // 好友功能暂未实现
 
 definePageMeta({
@@ -370,7 +370,7 @@ const searchQuery = ref("");
 const searchType = ref<"name" | "phone" | "all">("name");
 const searching = ref(false);
 const hasSearched = ref(false);
-const searchResults = ref<UserInfo[]>([]);
+const searchResults = ref<UserResponse[]>([]);
 
 // 表格列
 const columns = computed(() => [
@@ -399,7 +399,7 @@ const pagedResults = computed(() => {
 });
 
 // 推荐用户状态
-const recommendedUsers = ref<UserInfo[]>([]);
+const recommendedUsers = ref<UserResponse[]>([]);
 const loadingRecommended = ref(false);
 
 // 搜索功能
@@ -440,9 +440,10 @@ async function loadRecommendations() {
     try {
         const { coordinates, getCurrentPosition } = useGeolocation();
         const pos = coordinates.value || (await getCurrentPosition());
+        const coords = 'coords' in pos ? pos.coords : pos;
         const response = await userService.findNearbyUsers({
-            latitude: pos.latitude,
-            longitude: pos.longitude,
+            latitude: coords.latitude,
+            longitude: coords.longitude,
             radius: 1000,
             limit: 5,
         });
@@ -461,7 +462,7 @@ async function loadRecommendations() {
 }
 
 // 好友系统功能
-async function sendFriendRequest(user: UserInfo) {
+async function sendFriendRequest(user: UserResponse) {
     if ((user as any).requesting) return;
     (user as any).requesting = true;
     try {
@@ -482,7 +483,7 @@ async function sendFriendRequest(user: UserInfo) {
     }
 }
 
-async function handleFriendRequest(user: UserInfo) {
+async function handleFriendRequest(user: UserResponse) {
     try {
         // 好友功能暂未实现，显示提示信息
         throw new Error('好友功能暂未实现，请等待后端API上线');
@@ -498,12 +499,12 @@ async function handleFriendRequest(user: UserInfo) {
 
 // 好友状态管理
 function getFriendshipStatus(
-    user: UserInfo,
+    user: UserResponse,
 ): "none" | "pending_sent" | "pending_received" | "accepted" {
     return (user as any).friendship_status || "none";
 }
 
-function getFriendshipStatusText(user: UserInfo): string {
+function getFriendshipStatusText(user: UserResponse): string {
     switch (getFriendshipStatus(user)) {
         case "pending_sent":
             return tt("users.search.status.sent");
@@ -516,7 +517,7 @@ function getFriendshipStatusText(user: UserInfo): string {
     }
 }
 
-function getFriendshipStatusColor(user: UserInfo): any {
+function getFriendshipStatusColor(user: UserResponse): any {
     switch (getFriendshipStatus(user)) {
         case "pending_sent":
             return "info";
@@ -530,7 +531,7 @@ function getFriendshipStatusColor(user: UserInfo): any {
 }
 
 // 用户导航
-function viewUserProfile(user: UserInfo) {
+function viewUserProfile(user: UserResponse) {
     navigateTo(`/users/${user.user_id}`);
 }
 

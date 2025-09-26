@@ -14,7 +14,7 @@ import type {
   DeleteMomentRequest,
   DeleteMomentResponse,
   SearchMomentByIdRequest,
-  MomentInfo,
+  MomentResponse,
   SearchMomentsByLocationRequest,
   SearchMomentsByLocationResponse,
   UserMomentsHistoryRequest,
@@ -25,7 +25,7 @@ import type {
   LikeMomentResponse,
   UnlikeMomentRequest,
   UnlikeMomentResponse,
-} from "~/types";
+} from "~/types/api";
 
 // 临时错误创建函数
 const createApiError = (params: {
@@ -55,9 +55,10 @@ export const useMomentService = () => {
     const request: CreateMomentRequest = {
       latitude,
       longitude,
-      description,
+      description: description || '',
+      location_name: '', // 需要从坐标获取位置名称
       tags,
-      image_urls: imageUrls,
+      images: imageUrls,
     };
     
     // 直接使用useApi的统一错误处理和响应处理
@@ -95,7 +96,7 @@ export const useMomentService = () => {
   };
 
   // 根据ID搜索动态（公开访问，无需认证）
-  const getMomentById = async (momentId: string): Promise<MomentInfo> => {
+  const getMomentById = async (momentId: string): Promise<MomentResponse> => {
     try {
       const request: SearchMomentByIdRequest = {
         moment_id: momentId,
@@ -104,7 +105,7 @@ export const useMomentService = () => {
         buildMomentUrl(MOMENT_ENDPOINTS.PUBLIC.SEARCH_BY_ID, true),
         request,
       );
-      return response as MomentInfo;
+      return response as MomentResponse;
     } catch (e: any) {
       throw createApiError({
         status: e?.status || 400,
@@ -154,7 +155,7 @@ export const useMomentService = () => {
   ): Promise<UserMomentsHistoryResponse> => {
     try {
       const request: UserMomentsHistoryRequest = {
-        user_id: userId?.toString(),
+        user_id: userId?.toString() || '',
         limit: limit || DEFAULTS.pageSize,
         cursor,
       };

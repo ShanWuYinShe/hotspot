@@ -1,96 +1,127 @@
 <template>
     <UCard 
-        class="group bg-white/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50 cursor-pointer hover:bg-white/80 dark:hover:bg-slate-800/80 card-hover fade-in-up"
+        class="group cursor-pointer hover:shadow-md transition-all duration-200 card-hover fade-in-up"
         @click="$emit('click', user)"
     >
-        <div class="flex items-center gap-4">
-            <!-- 用户头像 -->
-            <div class="relative">
-                <UAvatar 
-                    :alt="user.nickname" 
-                    :src="user.avatar_url"
-                    size="lg"
-                >
-                    {{ user.nickname?.charAt(0) }}
-                </UAvatar>
-                <!-- 在线状态指示器 -->
-                <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-slate-800"></div>
-            </div>
+        <div class="flex items-center justify-between">
+            <!-- 使用 Nuxt UI User 组件 -->
+            <UUser
+                :name="user.nickname"
+                :description="userDescription"
+                :avatar="{
+                    src: user.avatar_url,
+                    alt: user.nickname,
+                    size: 'lg',
+                    chip: isOnline ? { color: 'success', position: 'bottom-right' } : false
+                }"
+                :chip="(user as any).is_temp ? { text: '临时', color: 'neutral' } : false"
+                size="lg"
+                class="flex-1 min-w-0"
+            >
+                <!-- 自定义描述内容 -->
+                <template #description>
+                    <div class="space-y-1">
+                        <!-- 位置和距离信息 -->
+                        <div class="flex items-center gap-4 text-sm text-muted">
+                            <div v-if="user.location_name" class="flex items-center gap-1">
+                                <UIcon name="i-heroicons-map-pin" class="w-3 h-3" />
+                                <span class="truncate">{{ user.location_name }}</span>
+                            </div>
+                            
+                            <div v-if="user.distance !== undefined" class="flex items-center gap-1">
+                                <UIcon name="i-heroicons-signal" class="w-3 h-3" />
+                                <span>{{ formatDistance(user.distance) }}</span>
+                            </div>
+                        </div>
 
-            <!-- 用户信息 -->
-            <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2">
-                    <h3 class="font-semibold text-slate-900 dark:text-white truncate">
-                        {{ user.nickname }}
-                    </h3>
-                    <UBadge 
-                        v-if="user.is_temp" 
-                        variant="soft" 
-                        size="xs" 
-                        color="neutral"
-                    >
-                        临时用户
-                    </UBadge>
-                </div>
-                
-                <div class="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400 mt-1">
-                    <!-- 位置信息 -->
-                    <div v-if="user.location_name" class="flex items-center gap-1">
-                        <UIcon name="i-heroicons-map-pin" class="w-4 h-4" />
-                        <span class="truncate">{{ user.location_name }}</span>
+                        <!-- 个人简介 -->
+                        <p v-if="user.bio" class="text-sm text-muted line-clamp-2">
+                            {{ user.bio }}
+                        </p>
                     </div>
-                    
-                    <!-- 距离信息 -->
-                    <div v-if="user.distance !== undefined" class="flex items-center gap-1">
-                        <UIcon name="i-heroicons-signal" class="w-4 h-4" />
-                        <span>{{ formatDistance(user.distance) }}</span>
-                    </div>
-                </div>
-
-                <!-- 个人简介 -->
-                <p v-if="user.bio" class="text-sm text-slate-600 dark:text-slate-400 mt-2 line-clamp-2">
-                    {{ user.bio }}
-                </p>
-            </div>
+                </template>
+            </UUser>
 
             <!-- 操作按钮 -->
-            <div class="flex items-center gap-2">
-                <UButton
-                    variant="ghost"
-                    size="sm"
-                    icon="i-heroicons-chat-bubble-left"
-                    class="opacity-0 group-hover:opacity-100 transition-opacity btn-press"
-                    @click.stop="$emit('message', user)"
-                >
-                    聊天
-                </UButton>
-                <UButton
-                    variant="ghost"
-                    size="sm"
-                    icon="i-heroicons-ellipsis-horizontal"
-                    class="opacity-0 group-hover:opacity-100 transition-opacity btn-press"
-                    @click.stop="$emit('more', user)"
-                />
+            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <UTooltip text="发送消息">
+                    <UButton
+                        variant="ghost"
+                        size="sm"
+                        icon="i-heroicons-chat-bubble-left"
+                        @click.stop="$emit('message', user)"
+                    />
+                </UTooltip>
+                
+                <UDropdownMenu :items="userMenuItems" @click.stop>
+                    <UButton
+                        variant="ghost"
+                        size="sm"
+                        icon="i-heroicons-ellipsis-horizontal"
+                    />
+                </UDropdownMenu>
             </div>
         </div>
     </UCard>
 </template>
 
 <script setup lang="ts">
-import type { User } from '~/types'
+import type { UserResponse } from '~/types/api'
 
 interface Props {
-    user: User
+    user: UserResponse
 }
 
 interface Emits {
-    click: [user: User]
-    message: [user: User]
-    more: [user: User]
+    click: [user: UserResponse]
+    message: [user: UserResponse]
+    more: [user: UserResponse]
 }
 
-defineProps<Props>()
-defineEmits<Emits>()
+const props = defineProps<Props>()
+const emit = defineEmits<Emits>()
+
+// 用户描述（基础信息）
+const userDescription = computed(() => {
+    const parts = []
+    if (props.user.location_name) {
+        parts.push(props.user.location_name)
+    }
+    if (props.user.distance !== undefined) {
+        parts.push(formatDistance(props.user.distance))
+    }
+    return parts.join(' • ')
+})
+
+// 在线状态（示例，实际需要从WebSocket或其他状态管理获取）
+const isOnline = computed(() => {
+    // 这里可以从实时状态管理中获取用户在线状态
+    return Math.random() > 0.5 // 临时随机状态
+})
+
+// 用户操作菜单
+const userMenuItems = computed(() => [
+    [{
+        label: '查看资料',
+        icon: 'i-heroicons-user',
+        click: () => emit('click', props.user)
+    }],
+    [{
+        label: '添加好友',
+        icon: 'i-heroicons-user-plus',
+        click: () => handleAddFriend()
+    }, {
+        label: '关注用户',
+        icon: 'i-heroicons-heart',
+        click: () => handleFollowUser()
+    }],
+    [{
+        label: '举报用户',
+        icon: 'i-heroicons-flag',
+        click: () => handleReportUser(),
+        class: 'text-error-500'
+    }]
+])
 
 // 格式化距离
 const formatDistance = (distance: number): string => {
@@ -99,5 +130,23 @@ const formatDistance = (distance: number): string => {
     } else {
         return `${(distance / 1000).toFixed(1)}km`
     }
+}
+
+// 添加好友
+const handleAddFriend = () => {
+    // TODO: 实现添加好友功能
+    console.log('添加好友:', props.user.user_id)
+}
+
+// 关注用户
+const handleFollowUser = () => {
+    // TODO: 实现关注用户功能
+    console.log('关注用户:', props.user.user_id)
+}
+
+// 举报用户
+const handleReportUser = () => {
+    // TODO: 实现举报用户功能
+    console.log('举报用户:', props.user.user_id)
 }
 </script>

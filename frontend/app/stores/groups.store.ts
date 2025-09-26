@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import type { GroupInfo as Group } from "~/types";
+import type { GroupResponse } from "~/types/api";
 
 /**
  * 群组 Store
@@ -9,10 +9,10 @@ export const useGroupsStore = defineStore(
   "groups",
   () => {
     // 缓存状态 - 不持久化
-    const myGroups = ref<Group[]>([]);
-    const nearbyGroups = ref<Group[]>([]);
-    const searchResults = ref<Group[]>([]);
-    const currentGroup = ref<Group | null>(null);
+    const myGroups = ref<GroupResponse[]>([]);
+    const nearbyGroups = ref<GroupResponse[]>([]);
+    const searchResults = ref<GroupResponse[]>([]);
+    const currentGroup = ref<GroupResponse | null>(null);
 
     // 分页状态
     const pagination = ref({
@@ -80,7 +80,7 @@ export const useGroupsStore = defineStore(
       await groupService.leaveGroup(groupId);
 
       myGroups.value = myGroups.value.filter(
-        (g: Group) => g.group_id !== groupId,
+        (g: GroupResponse) => g.group_id !== groupId,
       );
       updateGroupMembershipStatus(groupId, false);
     }
@@ -224,7 +224,7 @@ export const useGroupsStore = defineStore(
       // 更新群组成员数量
       const lists = [myGroups, nearbyGroups, searchResults];
       lists.forEach((list) => {
-        const group = list.value.find((g: Group) => g.group_id === groupId);
+        const group = list.value.find((g: GroupResponse) => g.group_id === groupId);
         if (group && group.member_count > 0) {
           group.member_count--;
         }
@@ -239,11 +239,11 @@ export const useGroupsStore = defineStore(
     }
 
     // 辅助函数
-    function updateGroupInLists(groupId: string, updates: Partial<Group>) {
+    function updateGroupInLists(groupId: string, updates: Partial<GroupResponse>) {
       const lists = [myGroups, nearbyGroups, searchResults];
 
       lists.forEach((list) => {
-        const group = list.value.find((g: Group) => g.group_id === groupId);
+        const group = list.value.find((g: GroupResponse) => g.group_id === groupId);
         if (group) {
           Object.assign(group, updates);
         }
@@ -260,7 +260,7 @@ export const useGroupsStore = defineStore(
       const lists = [nearbyGroups, searchResults];
 
       lists.forEach((list) => {
-        const group = list.value.find((g: Group) => g.group_id === groupId);
+        const group = list.value.find((g: GroupResponse) => g.group_id === groupId);
         if (group) {
           group.is_member = isMember;
         }
