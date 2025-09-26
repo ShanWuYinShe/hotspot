@@ -240,7 +240,8 @@ import type { Moment } from '~/types'
 
 definePageMeta({
     title: '动态广场',
-    description: '发现和分享生活中的精彩瞬间'
+    description: '发现和分享生活中的精彩瞬间',
+    layout: 'dashboard'
 })
 
 // 基础状态

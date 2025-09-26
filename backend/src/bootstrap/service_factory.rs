@@ -44,7 +44,7 @@ use crate::adapters::{
 };
 use crate::application::{
     UserApplicationService,
-    GroupApplicationService, 
+    GroupApplicationService,
     MomentApplicationService,
     SearchApplicationServiceImpl,
     ActivityApplicationService,
@@ -110,8 +110,10 @@ pub struct ServiceContainer {
     pub moment_controller: MomentController<MomentApplicationService>,
     pub search_controller: SearchController,
     pub activity_controller: ActivityController<PostgresUserRepository, PgGroupRepository, PgMomentRepository>,
-    // pub friend_controller: FriendController<FriendApplicationServiceImpl<PgFriendRepository, PostgresUserRepository>>, // 暂时禁用
-    pub comment_controller: CommentController<PgCommentRepository>,
+    pub friend_controller: crate::presentation::http::controllers::FriendController,
+    pub comment_controller: CommentController,
+    pub security_controller: crate::presentation::http::controllers::SecurityController,
+    pub notification_controller: crate::presentation::http::controllers::NotificationController,
     pub upload_controller: crate::presentation::http::controllers::UploadController,
     
     // WebSocket系统
@@ -122,6 +124,41 @@ pub struct ServiceContainer {
     
     // 指标服务
     pub metrics_service: Option<std::sync::Arc<dyn crate::services::MetricsService>>,
+}
+
+impl ServiceContainer {
+    /// 为路由装配场景提供一个浅克隆（仅克隆控制器等可Clone字段）
+    pub fn clone_for_routing(&self) -> ServiceContainer {
+        ServiceContainer {
+            user_repository: Arc::clone(&self.user_repository),
+            group_repository: Arc::clone(&self.group_repository),
+            message_repository: Arc::clone(&self.message_repository),
+            moment_repository: Arc::clone(&self.moment_repository),
+            comment_repository: Arc::clone(&self.comment_repository),
+            password_service: Arc::clone(&self.password_service),
+            event_publisher: Arc::clone(&self.event_publisher),
+            nonce_service: Arc::clone(&self.nonce_service),
+            user_app_service: self.user_app_service.clone(),
+            group_app_service: self.group_app_service.clone(),
+            message_app_service: self.message_app_service.clone(),
+            moment_app_service: self.moment_app_service.clone(),
+            comment_app_service: self.comment_app_service.clone(),
+            user_controller: self.user_controller.clone(),
+            group_controller: self.group_controller.clone(),
+            message_controller: self.message_controller.clone(),
+            moment_controller: self.moment_controller.clone(),
+            search_controller: self.search_controller.clone(),
+            activity_controller: self.activity_controller.clone(),
+            friend_controller: self.friend_controller.clone(),
+            comment_controller: self.comment_controller.clone(),
+            security_controller: self.security_controller.clone(),
+            notification_controller: self.notification_controller.clone(),
+            upload_controller: self.upload_controller.clone(),
+            websocket_manager: Arc::clone(&self.websocket_manager),
+            batch_notification_service: self.batch_notification_service.as_ref().map(Arc::clone),
+            metrics_service: self.metrics_service.as_ref().map(Arc::clone),
+        }
+    }
 }
 
 /// 服务工厂
@@ -216,14 +253,50 @@ impl ServiceFactory {
         // 创建评论应用服务和控制器
         info!("💬 创建评论系统...");
         let comment_repository = Arc::new(crate::adapters::PgCommentRepository::new(pool.clone()));
-        let comment_repository_for_controller = comment_repository.as_ref().clone();
+        let _comment_repository_for_controller = comment_repository.as_ref().clone();
         let comment_app_service = crate::application::CommentApplicationServiceImpl::new(
             comment_repository.clone(),
             user_repository.clone() as Arc<dyn UserRepository>,
             event_publisher.clone() as Arc<dyn EventPublisher>,
         );
         let comment_controller = crate::presentation::http::controllers::CommentController::new(
-            std::sync::Arc::new(comment_repository_for_controller)
+            Arc::new(comment_app_service.clone()) as Arc<dyn crate::application::services::CommentApplicationService>
+        );
+        
+        // 创建安全管理控制器
+        info!("🔒 创建安全管理控制器...");
+        let report_repository = Arc::new(crate::adapters::adapters_pg::report_repository::PgReportRepository::new(Arc::new(pool.clone())));
+        
+        // 创建好友管理控制器（暂时使用基础实现）
+        info!("👥 创建好友管理控制器...");
+        let friend_repository = Arc::new(crate::adapters::adapters_pg::friend_repository::PgFriendRepository::new(pool.clone()));
+        let friend_app_service = Arc::new(crate::application::services::friend_application_service::FriendApplicationServiceImpl::new(
+            friend_repository,
+            user_repository.clone() as Arc<dyn UserRepository>,
+            report_repository.clone() as Arc<dyn crate::adapters::adapters_pg::report_repository::ReportRepository>,
+            event_publisher.clone() as Arc<dyn EventPublisher>,
+        )) as Arc<dyn crate::application::services::friend_application_service::FriendApplicationService>;
+        let friend_controller = crate::presentation::http::controllers::FriendController::new(friend_app_service);
+        let security_app_service = Arc::new(crate::application::services::security_application_service::SecurityApplicationServiceImpl::new(
+            report_repository as Arc<dyn crate::adapters::adapters_pg::report_repository::ReportRepository>,
+            user_repository.clone() as Arc<dyn UserRepository>,
+            event_publisher.clone() as Arc<dyn EventPublisher>,
+        )) as Arc<dyn crate::application::services::security_application_service::SecurityApplicationService>;
+        let security_controller = crate::presentation::http::controllers::SecurityController::new(
+            security_app_service,
+            Arc::new(user_app_service.clone()) as Arc<dyn crate::application::services::user_application_service::UserApplicationServicePort>
+        );
+        
+        // 创建通知控制器
+        info!("🔔 创建通知控制器...");
+        let notification_repository = Arc::new(crate::adapters::adapters_pg::notification_repository::PgNotificationRepository::new(Arc::new(pool.clone())));
+        let notification_app_service = Arc::new(crate::application::services::notification_application_service::NotificationApplicationServiceImpl::new(
+            notification_repository as Arc<dyn crate::adapters::adapters_pg::notification_repository::NotificationRepository>,
+            user_repository.clone() as Arc<dyn UserRepository>,
+            event_publisher.clone() as Arc<dyn EventPublisher>,
+        )) as Arc<dyn crate::application::services::notification_application_service::NotificationApplicationService>;
+        let notification_controller = crate::presentation::http::controllers::NotificationController::new(
+            notification_app_service
         );
         
         // 创建文件上传控制器
@@ -272,8 +345,10 @@ impl ServiceFactory {
             moment_controller,
             search_controller,
             activity_controller,
-            // friend_controller, // 暂时禁用
+            friend_controller,
             comment_controller,
+            security_controller,
+            notification_controller,
             upload_controller,
             websocket_manager,
             batch_notification_service: Some(batch_notification_service),

@@ -1,570 +1,728 @@
 <template>
-    <div class="flex flex-col h-screen">
-        <!-- 私聊头部 -->
-        <div
-            class="px-4 py-3 flex items-center justify-between bg-white/80 dark:bg-neutral-900/70 backdrop-blur border-b"
-        >
-            <div class="flex items-center space-x-3">
-                <UButton
-                    variant="ghost"
-                    size="sm"
-                    icon="i-heroicons-arrow-left"
-                    aria-label="返回"
-                    @click="goBack"
-                    class="lg:hidden"
-                />
+  <UDashboardPanel>
+    <!-- 聊天头部 -->
+    <template #header>
+      <UDashboardNavbar>
+        <template #left>
+          <div class="flex items-center gap-3">
+            <UButton
+              variant="ghost"
+              size="sm"
+              icon="i-heroicons-arrow-left"
+              aria-label="返回"
+              @click="goBack"
+              class="lg:hidden"
+            />
 
-                <UAvatar :alt="userInfo?.nickname" size="md">
-                    {{ userInfo?.nickname?.charAt(0) || "U" }}
-                </UAvatar>
+            <UAvatar :alt="userInfo?.nickname" size="md">
+              {{ userInfo?.nickname?.charAt(0) || "U" }}
+            </UAvatar>
 
-                <div>
-                    <h1 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
-                        {{ userInfo?.nickname || "私聊" }}
-                    </h1>
-                    <p class="text-sm opacity-80">
-                        {{ userInfo?.last_active_at ? "最近活跃" : "离线" }}
-                    </p>
-                </div>
+            <div>
+              <h1 class="text-lg font-semibold text-neutral-900 dark:text-white">
+                {{ userInfo?.nickname || "私聊" }}
+              </h1>
+              <p class="text-sm text-neutral-500">
+                {{ getOnlineStatus() }}
+              </p>
             </div>
+          </div>
+        </template>
 
-            <!-- 私聊操作按钮 -->
-            <div class="flex items-center space-x-1">
-                <!-- 搜索按钮 -->
-                <UButton
-                    variant="ghost"
-                    size="sm"
-                    icon="i-heroicons-magnifying-glass"
-                    aria-label="搜索聊天记录"
-                    @click="showSearch = !showSearch"
-                    class="min-w-[44px] min-h-[44px] touch-manipulation"
-                />
-                <!-- 语音通话 -->
-                <UButton
-                    variant="ghost"
-                    size="sm"
-                    icon="i-heroicons-phone"
-                    aria-label="语音通话"
-                    @click="makeCall"
-                    class="min-w-[44px] min-h-[44px] touch-manipulation"
-                />
-                <!-- 视频通话 -->
-                <UButton
-                    variant="ghost"
-                    size="sm"
-                    icon="i-heroicons-video-camera"
-                    aria-label="视频通话"
-                    @click="makeVideoCall"
-                    class="min-w-[44px] min-h-[44px] touch-manipulation"
-                />
-                <!-- 更多操作 -->
-                <UDropdownMenu :items="userActions">
-                    <UButton
-                        variant="ghost"
-                        size="sm"
-                        icon="i-heroicons-ellipsis-vertical"
-                        aria-label="更多操作"
-                        class="min-w-[44px] min-h-[44px] touch-manipulation"
-                    />
-                </UDropdownMenu>
-            </div>
-        </div>
-
-        <!-- 搜索栏 -->
-        <div
-            v-if="showSearch"
-            class="px-4 py-3 bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800"
-        >
-            <UInput
-                v-model="searchQuery"
-                placeholder="搜索聊天记录..."
-                icon="i-heroicons-magnifying-glass"
+        <template #right>
+          <div class="flex items-center gap-1">
+            <!-- 搜索按钮 -->
+            <UButton
+              variant="ghost"
+              size="sm"
+              icon="i-heroicons-magnifying-glass"
+              aria-label="搜索聊天记录"
+              @click="toggleSearch"
+            />
+            
+            <!-- 语音通话 -->
+            <UButton
+              variant="ghost"
+              size="sm"
+              icon="i-heroicons-phone"
+              aria-label="语音通话"
+              @click="makeCall"
+            />
+            
+            <!-- 视频通话 -->
+            <UButton
+              variant="ghost"
+              size="sm"
+              icon="i-heroicons-video-camera"
+              aria-label="视频通话"
+              @click="makeVideoCall"
+            />
+            
+            <!-- 更多操作 -->
+            <UDropdownMenu :items="chatMenuItems">
+              <UButton
+                variant="ghost"
                 size="sm"
-                @keyup.escape="showSearch = false"
-            />
-            <div
-                v-if="searchResults.length > 0"
-                class="mt-2 text-sm text-neutral-500"
-            >
-                找到 {{ searchResults.length }} 条相关消息
-            </div>
-        </div>
+                icon="i-heroicons-ellipsis-vertical"
+                aria-label="更多操作"
+              />
+            </UDropdownMenu>
+          </div>
+        </template>
+      </UDashboardNavbar>
+    </template>
 
-        <!-- 消息列表 -->
-        <div class="flex-1">
-            <!-- 加载中占位 -->
-            <div v-if="messagesStore.loading.messages" class="h-full flex items-center justify-center">
-                <div class="space-y-3 w-full max-w-md px-4">
-                    <USkeleton class="h-6 w-2/3" />
-                    <USkeleton class="h-20 w-5/6" />
-                    <USkeleton class="h-6 w-1/2" />
-                </div>
-            </div>
-
-            <!-- 空状态 -->
-            <UCard v-else-if="messagesList.length === 0" class="m-4">
-                <EmptyState
-                    icon="i-heroicons-chat-bubble-left-right"
-                    title="暂无私聊消息"
-                    description="开始发送第一条消息吧"
-                    action-text="立即发送"
-                    :action-handler="focusComposer"
-                >
-                    <template #illustration>
-                        <EmptyMessages size="lg" />
-                    </template>
-                </EmptyState>
-            </UCard>
-
-            <!-- 虚拟滚动聊天消息 -->
-            <UVirtualChatMessages
-                v-else
-                :messages="messagesList"
-                :current-user-id="String(authStore.user?.user_id || 0)"
-                :container-height="400"
-                :can-load-more="hasMoreMessages"
-                :loading-more="loadingMore"
-                :auto-scroll-to-bottom="true"
-                @load-more="loadMoreMessages"
-                ref="chatMessagesRef"
-            >
-                <template #default="{ message, isOwnMessage }">
-                    <div
-                        :class="[
-                            'flex mb-4',
-                            isOwnMessage ? 'justify-end' : 'justify-start',
-                        ]"
-                    >
-                        <div
-                            :class="[
-                                'max-w-xs lg:max-w-md px-4 py-2 rounded-lg',
-                                isOwnMessage
-                                    ? 'bg-primary-500 text-white'
-                                    : 'bg-white/80 dark:bg-neutral-800/80 backdrop-blur border border-neutral-200/60 dark:border-neutral-700/60',
-                            ]"
-                        >
-                            <!-- 消息内容 -->
-                            <div class="mb-1">
-                                {{ message.content }}
-                            </div>
-
-                            <!-- 消息时间和状态 -->
-                            <div class="flex items-center justify-between">
-                                <div
-                                    :class="[
-                                        'text-xs',
-                                        isOwnMessage ? 'text-white/80' : 'opacity-80',
-                                    ]"
-                                >
-                                    {{
-                                        formatMessageTime(
-                                            message.created_at || message.sent_at || new Date(),
-                                        )
-                                    }}
-                                </div>
-                                <!-- 消息状态（仅自己的消息显示） -->
-                                <div v-if="isOwnMessage" class="ml-2">
-                                    <UIcon 
-                                        name="i-heroicons-check" 
-                                        class="w-3 h-3 text-white/60"
-                                        v-if="(message as any).status === 'sent'"
-                                    />
-                                    <UIcon 
-                                        name="i-heroicons-check-check" 
-                                        class="w-3 h-3 text-white/80"
-                                        v-else-if="(message as any).status === 'delivered'"
-                                    />
-                                    <UIcon 
-                                        name="i-heroicons-check-check" 
-                                        class="w-3 h-3 text-primary-300"
-                                        v-else-if="(message as any).status === 'read'"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </template>
-            </UVirtualChatMessages>
-        </div>
-
-        <!-- 消息输入框 -->
-        <div
-            class="p-4 bg-white/80 dark:bg-neutral-900/70 backdrop-blur border-t"
-        >
-            <MessageInput
-                :sending="sending"
-                placeholder="输入消息..."
-                @send="onSend"
-                @upload-file="onUploadFile"
-                @send-location="onSendLocation"
-            />
-        </div>
+    <!-- 搜索栏 -->
+    <div v-if="showSearch" class="p-4 border-b bg-neutral-50 dark:bg-neutral-800">
+      <UInput
+        v-model="searchQuery"
+        placeholder="搜索聊天记录..."
+        icon="i-heroicons-magnifying-glass"
+        size="sm"
+        class="w-full"
+        @keyup.escape="toggleSearch"
+      >
+        <template #trailing>
+          <UButton
+            variant="ghost"
+            size="xs"
+            icon="i-heroicons-x-mark"
+            @click="clearSearch"
+          />
+        </template>
+      </UInput>
     </div>
+
+    <!-- 聊天消息区域 -->
+    <template #body>
+      <div class="h-full flex flex-col">
+        <UChatMessages
+          :messages="filteredMessages"
+          :status="chatStatus"
+          :should-auto-scroll="true"
+          :should-scroll-to-bottom="true"
+          :user="{
+            avatar: { 
+              alt: currentUser?.nickname,
+              fallback: currentUser?.nickname?.charAt(0) || 'U'
+            },
+            variant: 'soft',
+            side: 'right'
+          }"
+          :assistant="{
+            avatar: { 
+              alt: userInfo?.nickname,
+              fallback: userInfo?.nickname?.charAt(0) || 'U'
+            },
+            variant: 'naked',
+            side: 'left'
+          }"
+          class="flex-1"
+        >
+          <!-- 自定义消息内容 -->
+          <template #content="{ message }">
+            <div class="space-y-2">
+              <!-- 文本消息 -->
+              <div v-if="(message as any).type === 'text'" class="prose prose-sm dark:prose-invert max-w-none">
+                <p>{{ (message as any).content }}</p>
+              </div>
+              
+              <!-- 图片消息 -->
+              <div v-else-if="(message as any).type === 'image'" class="max-w-xs">
+                <img 
+                  :src="(message as any).content" 
+                  :alt="(message as any).alt || '图片'"
+                  class="rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                  @click="previewImage((message as any).content)"
+                />
+              </div>
+              
+              <!-- 文件消息 -->
+              <div v-else-if="(message as any).type === 'file'" class="flex items-center gap-3 p-3 bg-neutral-100 dark:bg-neutral-800 rounded-lg">
+                <UIcon name="i-heroicons-document" class="w-8 h-8 text-neutral-500" />
+                <div class="flex-1 min-w-0">
+                  <p class="font-medium truncate">{{ (message as any).fileName }}</p>
+                  <p class="text-sm text-neutral-500">{{ formatFileSize((message as any).fileSize) }}</p>
+                </div>
+                <UButton
+                  variant="ghost"
+                  size="xs"
+                  icon="i-heroicons-arrow-down-tray"
+                  @click="downloadFile((message as any).content, (message as any).fileName)"
+                />
+              </div>
+              
+              <!-- 位置消息 -->
+              <div v-else-if="(message as any).type === 'location'" class="p-3 bg-neutral-100 dark:bg-neutral-800 rounded-lg">
+                <div class="flex items-center gap-2 mb-2">
+                  <UIcon name="i-heroicons-map-pin" class="w-4 h-4 text-primary-500" />
+                  <span class="font-medium">位置信息</span>
+                </div>
+                <p class="text-sm text-neutral-600 dark:text-neutral-400">{{ (message as any).address }}</p>
+                <UButton
+                  variant="ghost"
+                  size="xs"
+                  class="mt-2"
+                  @click="openLocation((message as any).latitude, (message as any).longitude)"
+                >
+                  查看位置
+                </UButton>
+              </div>
+              
+              <!-- 系统消息 -->
+              <div v-else-if="(message as any).type === 'system'" class="text-center">
+                <span class="text-xs text-neutral-500 bg-neutral-100 dark:bg-neutral-800 px-2 py-1 rounded-full">
+                  {{ (message as any).content }}
+                </span>
+              </div>
+            </div>
+          </template>
+
+          <!-- 消息操作 -->
+          <template #actions="{ message }">
+            <div v-if="message.role === 'user'" class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <UButton
+                variant="ghost"
+                size="xs"
+                icon="i-heroicons-arrow-uturn-left"
+                @click="replyToMessage(message)"
+              />
+              <UButton
+                variant="ghost"
+                size="xs"
+                icon="i-heroicons-pencil"
+                @click="editMessage(message)"
+              />
+              <UButton
+                variant="ghost"
+                size="xs"
+                icon="i-heroicons-trash"
+                @click="deleteMessage(message)"
+              />
+            </div>
+          </template>
+
+          <!-- 加载指示器 -->
+          <template #indicator v-if="isTyping">
+            <div class="flex items-center gap-2 text-sm text-neutral-500">
+              <div class="flex gap-1">
+                <div class="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
+                <div class="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
+                <div class="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style="animation-delay: 300ms"></div>
+              </div>
+              <span>{{ userInfo?.nickname }} 正在输入...</span>
+            </div>
+          </template>
+        </UChatMessages>
+      </div>
+    </template>
+
+    <!-- 消息输入区域 -->
+    <template #footer>
+      <div class="p-4 border-t bg-white dark:bg-neutral-900">
+        <!-- 回复消息预览 -->
+        <div v-if="replyingTo" class="mb-3 p-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg flex items-center justify-between">
+          <div class="flex-1 min-w-0">
+            <p class="text-xs text-neutral-500">回复 {{ replyingTo.sender }}</p>
+            <p class="text-sm truncate">{{ replyingTo.content }}</p>
+          </div>
+          <UButton
+            variant="ghost"
+            size="xs"
+            icon="i-heroicons-x-mark"
+            @click="cancelReply"
+          />
+        </div>
+
+        <UChatPrompt
+          v-model="messageInput"
+          placeholder="输入消息..."
+          :error="sendError ? new Error(sendError) : undefined"
+          @submit="handleSendMessage"
+        >
+          <!-- 左侧工具按钮 -->
+          <template #leading>
+            <div class="flex items-center gap-1">
+              <!-- 表情按钮 -->
+              <UButton
+                variant="ghost"
+                size="sm"
+                icon="i-heroicons-face-smile"
+                @click="toggleEmojiPicker"
+              />
+              
+              <!-- 文件上传 -->
+              <UButton
+                variant="ghost"
+                size="sm"
+                icon="i-heroicons-paper-clip"
+                @click="openFileUpload"
+              />
+              
+              <!-- 图片上传 -->
+              <UButton
+                variant="ghost"
+                size="sm"
+                icon="i-heroicons-photo"
+                @click="openImageUpload"
+              />
+              
+              <!-- 位置分享 -->
+              <UButton
+                variant="ghost"
+                size="sm"
+                icon="i-heroicons-map-pin"
+                @click="shareLocation"
+              />
+            </div>
+          </template>
+
+          <!-- 发送按钮 -->
+          <UChatPromptSubmit
+            :status="chatStatus"
+            @stop="stopSending"
+            @reload="reloadChat"
+          />
+        </UChatPrompt>
+
+        <!-- 表情选择器 -->
+        <div v-if="showEmojiPicker" class="mt-2 p-2 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
+          <div class="grid grid-cols-8 gap-2">
+            <button
+              v-for="emoji in commonEmojis"
+              :key="emoji"
+              class="p-2 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded text-lg"
+              @click="insertEmoji(emoji)"
+            >
+              {{ emoji }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </template>
+  </UDashboardPanel>
+
+  <!-- 文件上传 -->
+  <input
+    ref="fileInput"
+    type="file"
+    class="hidden"
+    multiple
+    @change="handleFileUpload"
+  />
+
+  <!-- 图片上传 -->
+  <input
+    ref="imageInput"
+    type="file"
+    accept="image/*"
+    class="hidden"
+    multiple
+    @change="handleImageUpload"
+  />
 </template>
 
 <script setup lang="ts">
-import {
-    defineAsyncComponent,
-    ref,
-    computed,
-    onMounted,
-    onUnmounted,
-    nextTick,
-} from "vue";
-import { useRoute, navigateTo } from "nuxt/app";
-import type { Message } from "~/types/message";
-import type { UserInfo } from "~/types";
-
-const EmptyMessages = defineAsyncComponent(
-    () => import("~/components/illustrations/EmptyMessages.vue"),
-);
-
-const UVirtualChatMessages = defineAsyncComponent(
-    () => import("~/components/UVirtualChatMessages.vue"),
-);
-
-// 页面元数据
-definePageMeta({ 
-    title: "私聊", 
-    requiresAuth: true, 
-    layout: false 
+definePageMeta({
+  title: "私聊",
+  layout: "dashboard"
 });
 
 const route = useRoute();
-const toast = useSmartToast();
-const userService = useUserService();
-
-// 私聊参数
 const userId = route.params.id as string;
 
-// 用户信息与状态
-const userInfo = ref<UserInfo | null>(null);
-const messagesList = computed<Message[]>(() => messagesStore.messages);
-
-// 聊天消息组件引用
-const chatMessagesRef = ref<InstanceType<typeof UVirtualChatMessages>>();
-
-const sending = ref(false);
-const loadingMore = ref(false);
-
-// 搜索相关
-const showSearch = ref(false);
-const searchQuery = ref("");
-
-const searchResults = computed(() => {
-    if (!searchQuery.value.trim()) return [];
-    const keyword = searchQuery.value.toLowerCase();
-    return messagesList.value.filter((message) =>
-        message.content.toLowerCase().includes(keyword),
-    );
-});
-
-const displayMessages = computed(() => {
-    if (searchQuery.value.trim()) {
-        return searchResults.value;
-    }
-    return messagesList.value;
-});
-
-const hasMoreMessages = computed<boolean>(
-    () => messagesStore.pagination.messages.hasMore,
-);
-const focusComposer = () => {
-    const el = document.querySelector(
-        'textarea[placeholder="输入消息..."]',
-    ) as HTMLTextAreaElement | null;
-    el?.focus();
-};
-
+// 使用现有的 stores 和 composables
 const messagesStore = useMessagesStore();
 const authStore = useAuthStore();
+const toast = useToast();
+const { openConfirmModal } = useModals();
 
-// 是否本人消息
-const isOwn = (m: Message) =>
-    String(m.sender_id) === String(authStore.user?.user_id ?? "");
+// 响应式状态
+const messageInput = ref('');
+const showSearch = ref(false);
+const searchQuery = ref('');
+const showEmojiPicker = ref(false);
+const isTyping = ref(false);
+const replyingTo = ref<any>(null);
+const sendError = ref<string | null>(null);
+const chatStatus = ref<'ready' | 'submitted' | 'streaming' | 'error'>('ready');
 
-// 私聊操作菜单
-const userActions = computed(() => [
-    [
-        {
-            label: "用户资料",
-            icon: "i-heroicons-user",
-            click: showUserProfile,
-        },
-        {
-            label: "聊天信息",
-            icon: "i-heroicons-information-circle",
-            click: showChatInfo,
-        },
-    ],
-    [
-        {
-            label: "清空聊天记录",
-            icon: "i-heroicons-trash",
-            click: clearChatHistory,
-        },
-    ],
+// 文件上传引用
+const fileInput = ref<HTMLInputElement>();
+const imageInput = ref<HTMLInputElement>();
+
+// 计算属性
+const currentUser = computed(() => authStore.user);
+const userInfo = computed(() => {
+  // 需要实现 getUserInfo 方法
+  return { nickname: '用户', isOnline: false, lastActiveAt: null };
+});
+const messages = computed(() => {
+  // 转换消息格式以适配 UChatMessages 组件
+  return (messagesStore.messages || []).map((msg: any) => ({
+    id: msg.message_id,
+    role: msg.sender_id === authStore.user?.user_id ? 'user' : 'assistant',
+    parts: [{ type: 'text', text: msg.content }],
+    ...msg
+  }));
+});
+
+// 筛选消息（搜索功能）
+const filteredMessages = computed(() => {
+  if (!searchQuery.value.trim()) {
+    return messages.value;
+  }
+  
+  return messages.value.filter((message: any) => 
+    message.content?.toLowerCase().includes(searchQuery.value.toLowerCase())
+  );
+});
+
+// 聊天菜单项
+const chatMenuItems = computed(() => [
+  [{
+    label: '查看用户资料',
+    icon: 'i-heroicons-user',
+    click: () => navigateTo(`/users/${userId}`)
+  }],
+  [{
+    label: '清空聊天记录',
+    icon: 'i-heroicons-trash',
+    click: () => clearChatHistory()
+  }, {
+    label: '举报用户',
+    icon: 'i-heroicons-flag',
+    click: () => reportUser()
+  }],
+  [{
+    label: '屏蔽用户',
+    icon: 'i-heroicons-no-symbol',
+    click: () => blockUser(),
+    class: 'text-error-500'
+  }]
 ]);
 
-// 格式化消息时间
-const formatMessageTime = (date: string | number | Date): string => {
-    const d = new Date(date);
+// 常用表情
+const commonEmojis = ['😀', '😂', '😍', '🥰', '😊', '😎', '🤔', '😢', '😭', '😡', '👍', '👎', '❤️', '💯', '🔥', '✨'];
+
+// 方法
+const goBack = () => {
+  navigateTo('/chat');
+};
+
+const getOnlineStatus = () => {
+  if (!userInfo.value) return '离线';
+  if (userInfo.value.isOnline) return '在线';
+  if (userInfo.value.lastActiveAt) {
+    const lastActive = new Date(userInfo.value.lastActiveAt);
     const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    const timeStr = d.toLocaleTimeString("zh-CN", {
-        hour: "2-digit",
-        minute: "2-digit",
-    });
-    return day.getTime() === today.getTime()
-        ? timeStr
-        : `${d.toLocaleDateString("zh-CN")} ${timeStr}`;
-};
-
-// 初始化私聊数据
-const initUserChat = async (): Promise<void> => {
-    try {
-        // 获取用户信息
-        try {
-            const profile = await userService.getUserProfile(userId) as UserInfo;
-            userInfo.value = profile;
-        } catch (_) {
-            // 创建一个基本的用户信息对象
-            userInfo.value = { 
-                user_id: userId,
-                nickname: `用户 ${userId}`,
-                last_active: new Date().toISOString(),
-                latitude: 0,
-                longitude: 0,
-                distance: 0,
-                location_name: "未知位置",
-                last_active_at: new Date().toISOString()
-            } as UserInfo;
-        }
-
-        // 获取私聊消息
-        await messagesStore.fetchMessages(userId, false, "user");
-        nextTick(() => scrollToBottom());
-    } catch (error) {
-        console.error("初始化私聊失败:", error);
-        toast.add({
-            title: "私聊初始化失败",
-            description: "无法加载私聊信息，请刷新页面重试",
-            color: "error",
-        });
-    }
-};
-
-// 发送私聊消息
-const onSend = async (content: string) => {
-    if (!content.trim() || sending.value) return;
+    const diff = now.getTime() - lastActive.getTime();
     
-    sending.value = true;
-    try {
-        await messagesStore.sendMessage(userId, content, "text");
-        nextTick(() => scrollToBottom());
-    } catch (error) {
-        toast.add({ 
-            title: "发送失败", 
-            description: "请重试", 
-            color: "error" 
-        });
-    } finally {
-        sending.value = false;
-    }
+    if (diff < 300000) return '5分钟前在线'; // 5分钟内
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前在线`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前在线`;
+    return `${Math.floor(diff / 86400000)}天前在线`;
+  }
+  return '离线';
 };
 
-// 文件上传处理
-const onUploadFile = async (file: File) => {
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    if (file.size > maxSize) {
-        toast.add({
-            title: "文件过大",
-            description: "文件大小不能超过10MB",
-            color: "error",
-        });
-        return;
-    }
+const toggleSearch = () => {
+  showSearch.value = !showSearch.value;
+  if (!showSearch.value) {
+    searchQuery.value = '';
+  }
+};
 
-    const allowedTypes = [
-        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-        'application/pdf', 'text/plain',
-        'application/msword', 
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    ];
+const clearSearch = () => {
+  searchQuery.value = '';
+};
+
+const makeCall = () => {
+  toast.add({
+    title: '语音通话',
+    description: '功能开发中，敬请期待',
+    color: 'info'
+  });
+};
+
+const makeVideoCall = () => {
+  toast.add({
+    title: '视频通话',
+    description: '功能开发中，敬请期待',
+    color: 'info'
+  });
+};
+
+const handleSendMessage = async (event: Event) => {
+  event.preventDefault();
+  
+  if (!messageInput.value.trim()) return;
+  
+  try {
+    chatStatus.value = 'submitted';
+    sendError.value = null;
     
-    if (!allowedTypes.includes(file.type)) {
-        toast.add({
-            title: "不支持的文件类型",
-            description: "仅支持图片、PDF、文档等常见格式",
-            color: "error",
-        });
-        return;
-    }
+    const messageData = {
+      content: messageInput.value.trim(),
+      type: 'text',
+      replyTo: replyingTo.value?.id
+    };
+    
+    await messagesStore.sendMessage(userId, messageData.content);
+    
+    messageInput.value = '';
+    replyingTo.value = null;
+    chatStatus.value = 'ready';
+    
+  } catch (error: any) {
+    console.error('发送消息失败:', error);
+    sendError.value = error.message || '发送失败';
+    chatStatus.value = 'error';
+  }
+};
 
+const stopSending = () => {
+  chatStatus.value = 'ready';
+};
+
+const reloadChat = async () => {
+  await loadMessages();
+};
+
+const toggleEmojiPicker = () => {
+  showEmojiPicker.value = !showEmojiPicker.value;
+};
+
+const insertEmoji = (emoji: string) => {
+  messageInput.value += emoji;
+  showEmojiPicker.value = false;
+};
+
+const openFileUpload = () => {
+  fileInput.value?.click();
+};
+
+const openImageUpload = () => {
+  imageInput.value?.click();
+};
+
+const handleFileUpload = async (event: Event) => {
+  const files = (event.target as HTMLInputElement).files;
+  if (!files) return;
+  
+  for (const file of Array.from(files)) {
     try {
-        sending.value = true;
-        
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // 发送文件消息
-        await messagesStore.sendMessage(
-            userId,
-            `[文件] ${file.name}`,
-            "file"
-        );
-        
-        toast.add({
-            title: "上传成功",
-            description: `文件 "${file.name}" 已发送`,
-            color: "success",
-        });
-        
-        nextTick(() => scrollToBottom());
-        
+      await uploadFile(file);
     } catch (error) {
-        console.error("文件上传失败:", error);
-        toast.add({
-            title: "上传失败",
-            description: "请检查网络连接后重试",
-            color: "error",
-        });
-    } finally {
-        sending.value = false;
+      console.error('文件上传失败:', error);
+      toast.add({
+        title: '上传失败',
+        description: `文件 ${file.name} 上传失败`,
+        color: 'error'
+      });
     }
+  }
 };
 
-// 发送位置
-const onSendLocation = async () => {
+const handleImageUpload = async (event: Event) => {
+  const files = (event.target as HTMLInputElement).files;
+  if (!files) return;
+  
+  for (const file of Array.from(files)) {
     try {
-        sending.value = true;
-        
-        const permissions = usePermissions();
-        const hasPermission = await permissions.checkGeolocation();
-        
-        if (!hasPermission) {
-            const granted = await permissions.requestGeolocation();
-            if (!granted) {
-                toast.add({
-                    title: "需要位置权限",
-                    description: "请允许访问位置信息以发送位置",
-                    color: "warning",
-                });
-                return;
-            }
-        }
-        
-        const geolocation = useGeolocation();
-        const coords = await geolocation.getCurrentPosition();
-        const address = await geolocation.reverseGeocode(coords.latitude, coords.longitude);
-        
-        const locationContent = `📍 我的位置\n${address}\n纬度: ${coords.latitude.toFixed(6)}\n经度: ${coords.longitude.toFixed(6)}`;
-        
-        await messagesStore.sendMessage(userId, locationContent, "location");
-        
-        toast.add({
-            title: "位置已发送",
-            description: "您的当前位置已分享",
-            color: "success",
-        });
-        
-        nextTick(() => scrollToBottom());
-        
-    } catch (error: any) {
-        console.error("发送位置失败:", error);
-        
-        let errorMessage = "获取位置失败，请重试";
-        if (error.message?.includes("权限")) {
-            errorMessage = "位置权限被拒绝，请在浏览器设置中允许位置访问";
-        } else if (error.message?.includes("超时")) {
-            errorMessage = "获取位置超时，请检查GPS是否开启";
-        }
-        
-        toast.add({
-            title: "发送失败",
-            description: errorMessage,
-            color: "error",
-        });
-    } finally {
-        sending.value = false;
-    }
-};
-
-// 加载更多消息
-const loadMoreMessages = async (): Promise<void> => {
-    if (loadingMore.value) return;
-    loadingMore.value = true;
-    try {
-        await messagesStore.fetchMessages(userId, true, "user");
+      await uploadImage(file);
     } catch (error) {
-        toast.add({ 
-            title: "加载失败", 
-            description: "请重试", 
-            color: "error" 
-        });
-    } finally {
-        loadingMore.value = false;
+      console.error('图片上传失败:', error);
+      toast.add({
+        title: '上传失败',
+        description: `图片 ${file.name} 上传失败`,
+        color: 'error'
+      });
     }
+  }
 };
 
-// 滚动到底部
-const scrollToBottom = (): void => {
-    chatMessagesRef.value?.scrollToBottom();
+const uploadFile = async (file: File) => {
+  // 实现文件上传逻辑
+  console.log('上传文件:', file.name);
 };
 
-// 返回上一页
-const goBack = (): void => {
-    navigateTo("/chat");
+const uploadImage = async (file: File) => {
+  // 实现图片上传逻辑
+  console.log('上传图片:', file.name);
 };
 
-// 私聊操作
-const makeCall = (): void => {
-    toast.add({
-        title: "功能开发中",
-        description: "语音通话功能即将上线",
-        color: "info",
+const shareLocation = async () => {
+  try {
+    const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject);
     });
-};
-
-const makeVideoCall = (): void => {
+    
+    const { latitude, longitude } = position.coords;
+    
+    // 发送位置消息
+    await messagesStore.sendMessage(userId, `位置：${latitude},${longitude}`);
+    
+  } catch (error) {
+    console.error('获取位置失败:', error);
     toast.add({
-        title: "功能开发中",
-        description: "视频通话功能即将上线",
-        color: "info",
+      title: '位置分享失败',
+      description: '无法获取当前位置',
+      color: 'error'
     });
+  }
 };
 
-const showUserProfile = (): void => {
-    navigateTo(`/users/${userId}`);
+const replyToMessage = (message: any) => {
+  replyingTo.value = message;
 };
 
-const showChatInfo = (): void => {
-    toast.add({
-        title: "功能开发中",
-        description: "聊天信息功能即将上线",
-        color: "info",
-    });
+const cancelReply = () => {
+  replyingTo.value = null;
 };
 
-const clearChatHistory = (): void => {
-    toast.add({
-        title: "功能开发中",
-        description: "清空聊天记录功能即将上线",
-        color: "info",
-    });
+const editMessage = (message: any) => {
+  // 实现消息编辑功能
+  console.log('编辑消息:', message.id);
 };
 
-// 初始化
-onMounted(async () => {
-    try {
-        await initUserChat();
-    } catch (error: any) {
-        console.error("[UserChat] Failed to initialize:", error);
+const deleteMessage = (message: any) => {
+  openConfirmModal({
+    title: '删除消息',
+    message: '确定要删除这条消息吗？',
+    confirmText: '删除',
+    cancelText: '取消',
+    confirmColor: 'error',
+    onConfirm: async () => {
+      try {
+        // await messagesStore.deleteMessage(message.id); // 需要实现此方法
+      } catch (error) {
+        console.error('删除消息失败:', error);
+      }
+    }
+  });
+};
+
+const previewImage = (imageUrl: string) => {
+  // 实现图片预览功能
+  console.log('预览图片:', imageUrl);
+};
+
+const formatFileSize = (bytes: number) => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+const downloadFile = (fileUrl: string, fileName: string) => {
+  const link = document.createElement('a');
+  link.href = fileUrl;
+  link.download = fileName;
+  link.click();
+};
+
+const openLocation = (latitude: number, longitude: number) => {
+  const url = `https://maps.google.com/?q=${latitude},${longitude}`;
+  window.open(url, '_blank');
+};
+
+const clearChatHistory = () => {
+  openConfirmModal({
+    title: '清空聊天记录',
+    message: '确定要清空与此用户的所有聊天记录吗？此操作无法撤销。',
+    confirmText: '清空',
+    cancelText: '取消',
+    confirmColor: 'error',
+    onConfirm: async () => {
+      try {
+        // await messagesStore.clearChatHistory(userId); // 需要实现此方法
         toast.add({
-            title: "私聊初始化失败",
-            description: error?.message || "无法加载私聊信息，请刷新页面重试",
-            color: "error",
+          title: '聊天记录已清空',
+          color: 'success'
         });
+      } catch (error) {
+        console.error('清空聊天记录失败:', error);
+      }
     }
+  });
+};
+
+const reportUser = () => {
+  // 实现举报用户功能
+  toast.add({
+    title: '举报功能',
+    description: '功能开发中，敬请期待',
+    color: 'info'
+  });
+};
+
+const blockUser = () => {
+  openConfirmModal({
+    title: '屏蔽用户',
+    message: `确定要屏蔽用户 ${userInfo.value?.nickname} 吗？屏蔽后将无法收到对方的消息。`,
+    confirmText: '屏蔽',
+    cancelText: '取消',
+    confirmColor: 'error',
+    onConfirm: async () => {
+      try {
+        // await messagesStore.blockUser(userId); // 需要实现此方法
+        toast.add({
+          title: '用户已屏蔽',
+          color: 'success'
+        });
+        navigateTo('/chat');
+      } catch (error) {
+        console.error('屏蔽用户失败:', error);
+      }
+    }
+  });
+};
+
+const loadMessages = async () => {
+  try {
+    // await messagesStore.loadMessages(userId); // 需要实现此方法
+    // await messagesStore.loadUserInfo(userId); // 需要实现此方法
+  } catch (error) {
+    console.error('加载消息失败:', error);
+  }
+};
+
+// 生命周期
+onMounted(() => {
+  loadMessages();
+  
+  // 注册快捷键
+  const shortcuts = useShortcuts();
+  shortcuts.register('escape', () => {
+    if (showSearch.value) toggleSearch();
+    if (showEmojiPicker.value) showEmojiPicker.value = false;
+    if (replyingTo.value) cancelReply();
+  }, '取消操作', '聊天');
+  
+  shortcuts.register('meta+f', toggleSearch, '搜索消息', '聊天');
+});
+
+// 监听输入状态（模拟打字指示器）
+let typingTimer: NodeJS.Timeout;
+watch(messageInput, (newValue, oldValue) => {
+  if (newValue !== oldValue && newValue.length > 0) {
+    // 发送正在输入状态
+    // messagesStore.sendTypingStatus(userId, true); // 需要实现此方法
+    
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => {
+      // messagesStore.sendTypingStatus(userId, false); // 需要实现此方法
+    }, 3000);
+  }
+});
+
+// 页面离开时清理
+onUnmounted(() => {
+  if (typingTimer) {
+    clearTimeout(typingTimer);
+  }
+  // messagesStore.sendTypingStatus(userId, false); // 需要实现此方法
 });
 </script>

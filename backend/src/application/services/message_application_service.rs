@@ -9,7 +9,6 @@
 use crate::application::handlers::PaginatedResult;
 use crate::domain::{
     entities::message::Message,
-    entities::group::Group,
     values::*,
     DomainResult, DomainError
 };
@@ -51,12 +50,12 @@ impl MessageApplicationService {
         content: String,
         message_type: String,
         reply_to_message_id: Option<String>,
-        mentioned_users: Vec<String>,
-        latitude: Option<f64>,
-        longitude: Option<f64>,
+        _mentioned_users: Vec<String>,
+        _latitude: Option<f64>,
+        _longitude: Option<f64>,
     ) -> DomainResult<Message> {
         // 1. 验证群组存在且用户有权限
-        let group = self.group_repository
+        let _group = self.group_repository
             .find_by_id(GroupId::from(group_id.clone()), Some(UserId::from(sender_id)))
             .await?
             .ok_or_else(|| DomainError::NotFound { 

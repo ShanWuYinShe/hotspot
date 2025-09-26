@@ -171,6 +171,7 @@
 definePageMeta({
     title: "profile.title",
     requiresAuth: true,
+    layout: 'dashboard'
 });
 import { defineAsyncComponent } from "vue";
 const EmptyAccount = defineAsyncComponent(() => import("~/components/illustrations/EmptyAccount.vue"));

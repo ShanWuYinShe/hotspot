@@ -220,7 +220,7 @@
 import { defineAsyncComponent } from "vue";
 // TableColumn 类型已在组件内部定义
 import type { GroupInfo } from "~/types";
-definePageMeta({ title: "发现群组", requiresAuth: true });
+definePageMeta({ title: "发现群组", requiresAuth: true, layout: 'dashboard' });
 
 const EmptyGroups = defineAsyncComponent(
     () => import("~/components/illustrations/EmptyGroups.vue"),

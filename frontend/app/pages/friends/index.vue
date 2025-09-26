@@ -228,6 +228,7 @@ import type { UserInfo } from "~/types";
 definePageMeta({
     title: "我的好友",
     requiresAuth: true,
+    layout: 'dashboard'
 });
 
 const api = useApi();

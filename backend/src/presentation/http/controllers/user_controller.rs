@@ -42,7 +42,6 @@ use crate::application::{
 };
 use chrono::Utc;
 use rand::Rng;
-use sha2::{Sha256, Digest};
 use crate::services::{NonceService, NonceVerification};
 use tracing::warn;
 use super::{Controller, ok_response, created_response, map_domain_error_to_http_response, map_application_error_to_http_response, paginated_response};
@@ -158,7 +157,6 @@ where
             // 临时解决方案：假设provided_hash是传输哈希，我们需要验证nonce的有效性
             // 但无法验证密码本身，这需要重新设计整个认证流程
             
-            use sha2::{Sha256, Digest};
             
             // 验证传输哈希的格式（64个十六进制字符）
             if provided_hash.len() != 64 || !provided_hash.chars().all(|c| c.is_ascii_hexdigit()) {
@@ -337,14 +335,14 @@ where
         Json(request): Json<LoginRequest>,
     ) -> Response {
         // 检查是否使用SHA256哈希认证
-        if let (Some(password_hash), Some(nonce_id), Some(timestamp)) = 
+        if let (Some(_password_hash), Some(_nonce_id), Some(_timestamp)) = 
             (&request.password_hash, &request.nonce_id, &request.timestamp) {
             
             // 使用SHA256哈希认证
             match controller.user_service.find_user_by_login_id(&request.login_id).await {
                 Ok(Some(user)) => {
                     // 验证密码哈希
-                    let stored_password = match &user.password_hash {
+                    let _stored_password = match &user.password_hash {
                         Some(hash) => hash,
                         None => {
                             return map_domain_error_to_http_response(
@@ -938,7 +936,7 @@ fn generate_random_string(length: usize) -> String {
     let mut rng = rand::rng();
     (0..length)
         .map(|_| {
-            let idx = rng.gen_range(0..CHARSET.len());
+                let idx = rng.random_range(0..CHARSET.len());
             CHARSET[idx] as char
         })
         .collect()

@@ -20,9 +20,9 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
 use utoipa::ToSchema;
+use tracing::error;
 
 use crate::{
-    ports::CommentRepository,
     presentation::http::models::{ApiResponse, PaginatedResponse},
     presentation::http::auth::CurrentUser,
 };
@@ -126,21 +126,15 @@ pub struct CommentResponse {
 }
 
 /// 评论控制器
-pub struct CommentController<R>
-where
-    R: CommentRepository,
-{
-    comment_repository: Arc<R>,
+pub struct CommentController {
+    comment_service: Arc<dyn crate::application::services::CommentApplicationService>,
 }
 
-impl<R> CommentController<R>
-where
-    R: CommentRepository,
-{
+impl CommentController {
     /// 创建新的评论控制器
-    pub fn new(comment_repository: Arc<R>) -> Self {
+    pub fn new(comment_service: Arc<dyn crate::application::services::CommentApplicationService>) -> Self {
         Self {
-            comment_repository,
+            comment_service,
         }
     }
 
@@ -152,32 +146,39 @@ where
     ) -> Result<Json<ApiResponse<AddCommentResponse>>, StatusCode> {
         // 验证请求参数
         if request.content.trim().is_empty() {
-            return Ok(Json(ApiResponse::error(1000, "评论内容不能为空")));
+            return Ok(Json(ApiResponse::error_for_type(1000, "评论内容不能为空".to_string())));
         }
 
         if request.content.len() > 1000 {
-            return Ok(Json(ApiResponse::error(1000, "评论内容不能超过1000个字符")));
+            return Ok(Json(ApiResponse::error_for_type(1000, "评论内容不能超过1000个字符".to_string())));
         }
 
         // 验证moment_id格式
         if Uuid::parse_str(&request.moment_id).is_err() {
-            return Ok(Json(ApiResponse::error(1000, "无效的生活瞬间ID格式")));
+            return Ok(Json(ApiResponse::error_for_type(1000, "无效的生活瞬间ID格式".to_string())));
         }
 
-        // TODO: 实现添加评论逻辑
-        // 1. 验证瞬间存在
-        // 2. 创建评论记录
-        // 3. 更新瞬间评论数
-        // 4. 发送通知给瞬间作者
-
-        let response = AddCommentResponse {
-            comment_id: "temp_comment_id".to_string(), // TODO: 使用实际的评论ID
-            content: request.content.trim().to_string(),
-            created_at: chrono::Utc::now().to_rfc3339(),
-            message: "评论添加成功".to_string(),
-        };
-
-        Ok(Json(ApiResponse::success(response)))
+        // 调用应用服务创建评论
+        match controller.comment_service.create_comment(
+            &request.moment_id,
+            current_user.user_id,
+            &request.content,
+            None,
+        ).await {
+            Ok(comment) => {
+                let response = AddCommentResponse {
+                    comment_id: comment.comment_id.to_string(),
+                    content: comment.content,
+                    created_at: comment.created_at.to_rfc3339(),
+                    message: "评论添加成功".to_string(),
+                };
+                Ok(Json(ApiResponse::success(response)))
+            },
+            Err(error) => {
+                error!("添加评论失败: {:?}", error);
+                Ok(Json(ApiResponse::error_for_type(5000, "添加评论失败".to_string())))
+            }
+        }
     }
 
     /// POST /api/v1/protected/comments/reply - 回复评论
@@ -188,33 +189,41 @@ where
     ) -> Result<Json<ApiResponse<ReplyCommentResponse>>, StatusCode> {
         // 验证请求参数
         if request.content.trim().is_empty() {
-            return Ok(Json(ApiResponse::error(1000, "回复内容不能为空")));
+            return Ok(Json(ApiResponse::error_for_type(1000, "回复内容不能为空".to_string())));
         }
 
         if request.content.len() > 1000 {
-            return Ok(Json(ApiResponse::error(1000, "回复内容不能超过1000个字符")));
+            return Ok(Json(ApiResponse::error_for_type(1000, "回复内容不能超过1000个字符".to_string())));
         }
 
         // 验证comment_id格式
         if Uuid::parse_str(&request.comment_id).is_err() {
-            return Ok(Json(ApiResponse::error(1000, "无效的评论ID格式")));
+            return Ok(Json(ApiResponse::error_for_type(1000, "无效的评论ID格式".to_string())));
         }
 
-        // TODO: 实现回复评论逻辑
-        // 1. 验证父评论存在
-        // 2. 创建回复记录
-        // 3. 更新父评论回复数
-        // 4. 发送通知给父评论作者
-
-        let response = ReplyCommentResponse {
-            comment_id: "temp_reply_id".to_string(), // TODO: 使用实际的回复ID
-            parent_comment_id: request.comment_id,
-            content: request.content.trim().to_string(),
-            created_at: chrono::Utc::now().to_rfc3339(),
-            message: "回复添加成功".to_string(),
-        };
-
-        Ok(Json(ApiResponse::success(response)))
+        // 调用应用服务创建回复（需要先获取父评论信息获得moment_id）
+        // 这里简化处理，实际应用中应该有获取父评论的方法
+        match controller.comment_service.create_comment(
+            "", // TODO: 需要从父评论获取moment_id
+            current_user.user_id,
+            &request.content,
+            Some(&request.comment_id),
+        ).await {
+            Ok(comment) => {
+                let response = ReplyCommentResponse {
+                    comment_id: comment.comment_id.to_string(),
+                    parent_comment_id: request.comment_id,
+                    content: comment.content,
+                    created_at: comment.created_at.to_rfc3339(),
+                    message: "回复添加成功".to_string(),
+                };
+                Ok(Json(ApiResponse::success(response)))
+            },
+            Err(error) => {
+                error!("回复评论失败: {:?}", error);
+                Ok(Json(ApiResponse::error_for_type(5000, "回复评论失败".to_string())))
+            }
+        }
     }
 
     /// POST /api/v1/protected/comments/delete - 删除评论
@@ -225,21 +234,23 @@ where
     ) -> Result<Json<ApiResponse<DeleteCommentResponse>>, StatusCode> {
         // 验证comment_id格式
         if Uuid::parse_str(&request.comment_id).is_err() {
-            return Ok(Json(ApiResponse::error(1000, "无效的评论ID格式")));
+            return Ok(Json(ApiResponse::error_for_type(1000, "无效的评论ID格式".to_string())));
         }
 
-        // TODO: 实现删除评论逻辑
-        // 1. 验证评论存在且用户有权限删除
-        // 2. 软删除评论记录
-        // 3. 更新相关统计数据
-        // 4. 级联处理回复（如果有）
-
-        let response = DeleteCommentResponse {
-            success: true,
-            message: "评论删除成功".to_string(),
-        };
-
-        Ok(Json(ApiResponse::success(response)))
+        // 调用应用服务删除评论
+        match controller.comment_service.delete_comment(&request.comment_id, current_user.user_id).await {
+            Ok(_) => {
+                let response = DeleteCommentResponse {
+                    success: true,
+                    message: "评论删除成功".to_string(),
+                };
+                Ok(Json(ApiResponse::success(response)))
+            },
+            Err(error) => {
+                error!("删除评论失败: {:?}", error);
+                Ok(Json(ApiResponse::error_for_type(5000, "删除评论失败".to_string())))
+            }
+        }
     }
 
     /// POST /api/v1/public/comments/list - 获取评论列表
@@ -249,46 +260,65 @@ where
     ) -> Result<Json<ApiResponse<PaginatedResponse<CommentResponse>>>, StatusCode> {
         // 验证moment_id格式
         if Uuid::parse_str(&request.moment_id).is_err() {
-            return Ok(Json(ApiResponse::error(1000, "无效的生活瞬间ID格式")));
+            return Ok(Json(ApiResponse::error_for_type(1000, "无效的生活瞬间ID格式".to_string())));
         }
 
-        // TODO: 实现获取评论列表逻辑
-        // 1. 查询瞬间的评论
-        // 2. 分页处理
-        // 3. 关联用户信息
-        // 4. 返回评论列表
+        // 调用应用服务获取评论列表
+        let cursor = request.cursor.unwrap_or("0".to_string()).parse::<i64>().unwrap_or(0);
+        let limit = request.limit.unwrap_or(20).min(100) as i32;
+        
+        match controller.comment_service.get_moment_comments(
+            &request.moment_id,
+            cursor,
+            limit + 1,
+        ).await {
+            Ok(mut comments) => {
+                let has_more = comments.len() > limit as usize;
+                if has_more {
+                    comments.pop();
+                }
+                
+                let next_cursor = if has_more && !comments.is_empty() {
+                    Some(comments.last().unwrap().comment_id.to_string())
+                } else {
+                    None
+                };
+                
+                let comment_responses: Vec<CommentResponse> = comments
+                    .into_iter()
+                    .map(|comment| CommentResponse {
+                        comment_id: comment.comment_id.to_string(),
+                        moment_id: comment.moment_id.to_string(),
+                        user_id: comment.user_id.to_string(),
+                        nickname: "用户".to_string(), // TODO: 从用户服务获取昵称
+                        user_avatar: None,
+                        content: comment.content,
+                        parent_comment_id: comment.parent_comment_id.map(|id| id.to_string()),
+                        created_at: comment.created_at.to_rfc3339(),
+                        replies_count: 0, // TODO: 计算回复数量
+                    })
+                    .collect();
+                
+                let paginated_response = PaginatedResponse {
+                    items: comment_responses,
+                    has_more,
+                    next_cursor,
+                };
 
-        let comments = vec![
-            CommentResponse {
-                comment_id: "example_comment_id".to_string(),
-                moment_id: request.moment_id.clone(),
-                user_id: "example_user_id".to_string(),
-                nickname: "示例用户".to_string(),
-                user_avatar: Some("https://example.com/avatar.jpg".to_string()),
-                content: "这是一条示例评论".to_string(),
-                parent_comment_id: None,
-                created_at: chrono::Utc::now().to_rfc3339(),
-                replies_count: 2,
+                Ok(Json(ApiResponse::success(paginated_response)))
+            },
+            Err(error) => {
+                error!("获取评论列表失败: {:?}", error);
+                Ok(Json(ApiResponse::error_for_type(5000, "获取评论列表失败".to_string())))
             }
-        ];
-
-        let paginated_response = PaginatedResponse {
-            items: comments,
-            has_more: false,
-            next_cursor: None,
-        };
-
-        Ok(Json(ApiResponse::success(paginated_response)))
+        }
     }
 }
 
-impl<R> Clone for CommentController<R>
-where
-    R: CommentRepository,
-{
+impl Clone for CommentController {
     fn clone(&self) -> Self {
         Self {
-            comment_repository: Arc::clone(&self.comment_repository),
+            comment_service: Arc::clone(&self.comment_service),
         }
     }
 }

@@ -199,7 +199,7 @@ const UVirtualChatMessages = defineAsyncComponent(
 definePageMeta({ 
     title: "群聊", 
     requiresAuth: true, 
-    layout: false 
+    layout: 'dashboard'
 });
 
 const route = useRoute();

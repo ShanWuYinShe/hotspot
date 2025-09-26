@@ -12,7 +12,7 @@ use tokio::sync::RwLock;
 use serde::{Serialize, Deserialize};
 use tracing::{info, warn, debug, error};
 
-use crate::domain::{DomainResult, DomainError};
+use crate::domain::DomainResult;
 
 /// 内存优化器
 #[derive(Clone)]

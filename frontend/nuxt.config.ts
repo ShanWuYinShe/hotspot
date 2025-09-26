@@ -70,7 +70,7 @@ export default defineNuxtConfig({
   // TypeScript 配置
   typescript: {
     strict: true,
-    typeCheck: false,
+    typeCheck: true, // 启用类型检查
   },
 
   // 实验性特性

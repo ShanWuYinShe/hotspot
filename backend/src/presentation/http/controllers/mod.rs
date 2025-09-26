@@ -32,7 +32,7 @@ pub use monitoring_controller::*;
 pub use metrics_controller::*;
 // pub use query_stats_controller::*;
 // pub use cache_monitor_controller::*;
-pub use unified_monitoring_controller::*;
+pub use unified_monitoring_controller::{SystemMetrics as UnifiedSystemMetrics};
 pub use message_controller::MessageController;
 pub use moment_controller::*;
 pub use user_controller::UserController;

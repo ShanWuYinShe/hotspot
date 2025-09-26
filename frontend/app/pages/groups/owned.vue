@@ -60,7 +60,7 @@
 import { defineAsyncComponent } from 'vue'
 import type { GroupInfo } from "~/types";
 
-definePageMeta({ title: "我创建的群组", requiresAuth: true });
+definePageMeta({ title: "我创建的群组", requiresAuth: true, layout: 'dashboard' });
 const groupsStore = useGroupsStore();
 const toast = useSmartToast();
 const EmptyGroups = defineAsyncComponent(() => import("~/components/illustrations/EmptyGroups.vue"));
@@ -74,8 +74,8 @@ const columns = [
 
 onMounted(async () => {
     try {
-        await groupsStore.fetchOwnedGroups();
-        items.value = groupsStore.ownedGroups;
+    await groupsStore.getOwnedGroups();
+    items.value = groupsStore.getOwnedGroups();
     } catch (e: any) {
         toast.add({
             title: "加载失败",

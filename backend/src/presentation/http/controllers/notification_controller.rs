@@ -14,7 +14,7 @@
 /// - POST /api/v1/protected/notifications/settings - 获取通知设置
 /// - POST /api/v1/protected/notifications/update_settings - 更新通知设置
 
-use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use axum::{extract::{State, Extension}, http::StatusCode, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::debug;
@@ -23,7 +23,7 @@ use utoipa::ToSchema;
 use crate::application::services::notification_application_service::NotificationApplicationService;
 use crate::presentation::http::models::ApiResponse;
 use crate::presentation::http::auth::CurrentUser;
-use crate::adapters::adapters_pg::notification_repository::{NotificationType, NotificationStatus, NotificationPriority};
+use crate::adapters::adapters_pg::notification_repository::NotificationPriority;
 
 /// 通知推送控制器
 #[derive(Clone)]
@@ -206,10 +206,10 @@ pub struct UpdateNotificationSettingsResponse {
 impl NotificationController {
     /// POST /api/v1/protected/notifications/send - 发送通知
     pub async fn send_notification(
-        State(controller): State<Self>,
-        user: CurrentUser,
+        State(controller): State<NotificationController>,
+        Extension(user): Extension<CurrentUser>,
         Json(request): Json<SendNotificationRequest>,
-    ) -> impl IntoResponse {
+    ) -> axum::response::Response {
         debug!(
             "用户 {} 发送通知给 {} 个用户，类型：{}",
             user.user_id,
@@ -217,35 +217,77 @@ impl NotificationController {
             request.r#type
         );
 
-        // TODO: 实现发送通知逻辑
-        // 1. 验证发送权限（可能需要管理员权限）
-        // 2. 验证接收者用户存在
-        // 3. 根据用户通知设置过滤
-        // 4. 创建通知记录
-        // 5. 通过WebSocket实时推送
-        // 6. 发送离线推送（APNs/FCM）
-
-        let response = SendNotificationResponse {
-            success: true,
-            message: "通知发送成功".to_string(),
-            sent_count: request.user_ids.len() as u32,
+        // 解析通知类型
+        let notification_type = match request.r#type.parse() {
+            Ok(nt) => nt,
+            Err(_) => {
+                let api_response = ApiResponse {
+                    code: 400,
+                    msg: "无效的通知类型".to_string(),
+                    data: None::<()>,
+                };
+                return (StatusCode::OK, Json(api_response)).into_response();
+            }
         };
 
-        let api_response = ApiResponse {
-            code: 0,
-            msg: "通知发送成功".to_string(),
-            data: Some(response),
-        };
+        // 解析用户ID列表
+        let user_ids: Vec<i64> = request.user_ids
+            .iter()
+            .filter_map(|id| id.parse().ok())
+            .collect();
 
-        (StatusCode::OK, Json(api_response))
+        if user_ids.is_empty() {
+            let api_response = ApiResponse {
+                code: 400,
+                msg: "无效的用户ID列表".to_string(),
+                data: None::<()>,
+            };
+            return (StatusCode::OK, Json(api_response)).into_response();
+        }
+
+        // 调用应用服务批量发送通知
+        match controller.notification_service.send_bulk_notifications(
+            user_ids,
+            notification_type,
+            request.title,
+            request.content,
+            request.data,
+            NotificationPriority::Normal,
+            Some(user.user_id),
+        ).await {
+            Ok(notifications) => {
+                let response = SendNotificationResponse {
+                    success: true,
+                    message: "通知发送成功".to_string(),
+                    sent_count: notifications.len() as u32,
+                };
+
+                let api_response = ApiResponse {
+                    code: 0,
+                    msg: "通知发送成功".to_string(),
+                    data: Some(response),
+                };
+
+                (StatusCode::OK, Json(api_response)).into_response()
+            },
+            Err(err) => {
+                debug!("发送通知失败: {:?}", err);
+                let api_response = ApiResponse {
+                    code: 5000,
+                    msg: "通知发送失败".to_string(),
+                    data: None::<()>,
+                };
+                (StatusCode::OK, Json(api_response)).into_response()
+            }
+        }
     }
 
     /// POST /api/v1/protected/notifications/list - 获取通知列表
     pub async fn get_notifications(
-        State(controller): State<Self>,
-        user: CurrentUser,
+        State(controller): State<NotificationController>,
+        Extension(user): Extension<CurrentUser>,
         Json(request): Json<GetNotificationsRequest>,
-    ) -> impl IntoResponse {
+    ) -> axum::response::Response {
         debug!("用户 {} 获取通知列表", user.user_id);
 
         // TODO: 实现获取通知列表逻辑
@@ -255,15 +297,18 @@ impl NotificationController {
         // 4. 返回通知详情
 
         // 解析状态过滤条件
-        let status_filter = request.status.and_then(|s| match s.as_str() {
-            "unread" => Some(crate::adapters::adapters_pg::notification_repository::NotificationStatus::Unread),
-            "read" => Some(crate::adapters::adapters_pg::notification_repository::NotificationStatus::Read),
-            "dismissed" => Some(crate::adapters::adapters_pg::notification_repository::NotificationStatus::Dismissed),
-            _ => None,
-        });
+        let status_filter = match request.is_read {
+            Some(true) => Some(crate::adapters::adapters_pg::notification_repository::NotificationStatus::Read),
+            Some(false) => Some(crate::adapters::adapters_pg::notification_repository::NotificationStatus::Unread),
+            None => None,
+        };
 
         // 解析游标
-        let cursor = request.cursor.unwrap_or("0".to_string()).parse::<i64>().unwrap_or(0);
+        let cursor = request
+            .cursor
+            .as_deref()
+            .and_then(|s| s.parse::<i64>().ok())
+            .unwrap_or(0);
         let limit = request.limit.unwrap_or(20).min(100) as i32; // 限制最大100条
 
         // 调用通知应用服务获取通知列表
@@ -291,7 +336,7 @@ impl NotificationController {
                         },
                         title: notification.title,
                         content: notification.content,
-                        data: Some(notification.data),
+                        data: notification.data,
                         is_read: matches!(notification.status, crate::adapters::adapters_pg::notification_repository::NotificationStatus::Read),
                         created_at: notification.created_at.to_rfc3339(),
                         read_at: notification.read_at.map(|t| t.to_rfc3339()),
@@ -301,7 +346,8 @@ impl NotificationController {
                 // 判断是否还有更多数据
                 let has_more = notifications.len() == limit as usize;
                 let next_cursor = if has_more && !notifications.is_empty() {
-                    Some((cursor + limit as i64).to_string())
+                    // 使用最后一个通知的ID作为游标
+                    Some(notifications.last().unwrap().notification_id.clone())
                 } else {
                     None
                 };
@@ -318,31 +364,18 @@ impl NotificationController {
                     data: Some(paginated_response),
                 };
 
-                (StatusCode::OK, Json(api_response))
+                (StatusCode::OK, Json(api_response)).into_response()
             }
-            Err(err) => {
-                let (status_code, error_msg) = match err {
-                    crate::domain::DomainError::ValidationError { reason, .. } => (StatusCode::BAD_REQUEST, reason),
-                    _ => (StatusCode::INTERNAL_SERVER_ERROR, "服务器内部错误".to_string()),
-                };
-
-                let error_response = ApiResponse {
-                    code: if status_code == StatusCode::BAD_REQUEST { 400 } else { 500 },
-                    msg: error_msg,
-                    data: None::<()>,
-                };
-
-                (status_code, Json(error_response))
-            }
+            Err(err) => crate::presentation::http::controllers::map_domain_error_to_http_response(err),
         }
     }
 
     /// POST /api/v1/protected/notifications/mark_read - 标记通知已读
     pub async fn mark_notification_read(
-        State(controller): State<Self>,
-        user: CurrentUser,
+        State(controller): State<NotificationController>,
+        Extension(user): Extension<CurrentUser>,
         Json(request): Json<MarkNotificationReadRequest>,
-    ) -> impl IntoResponse {
+    ) -> axum::response::Response {
         debug!(
             "用户 {} 标记 {} 个通知为已读",
             user.user_id,
@@ -367,36 +400,22 @@ impl NotificationController {
                     data: Some(response),
                 };
 
-                (StatusCode::OK, Json(api_response))
+                (StatusCode::OK, Json(api_response)).into_response()
             }
-            Err(err) => {
-                let (status_code, error_msg) = match err {
-                    crate::domain::DomainError::NotFound { resource } => (StatusCode::NOT_FOUND, format!("{}不存在", resource)),
-                    crate::domain::DomainError::ValidationError { reason, .. } => (StatusCode::BAD_REQUEST, reason),
-                    _ => (StatusCode::INTERNAL_SERVER_ERROR, "服务器内部错误".to_string()),
-                };
-
-                let error_response = ApiResponse {
-                    code: if status_code == StatusCode::BAD_REQUEST { 400 } else if status_code == StatusCode::NOT_FOUND { 404 } else { 500 },
-                    msg: error_msg,
-                    data: None::<()>,
-                };
-
-                (status_code, Json(error_response))
-            }
+            Err(err) => crate::presentation::http::controllers::map_domain_error_to_http_response(err),
         }
     }
 
     /// POST /api/v1/protected/notifications/unread_count - 获取未读通知数
     pub async fn get_unread_notification_count(
-        State(controller): State<Self>,
-        user: CurrentUser,
+        State(controller): State<NotificationController>,
+        Extension(user): Extension<CurrentUser>,
         Json(request): Json<GetUnreadNotificationCountRequest>,
-    ) -> impl IntoResponse {
+    ) -> axum::response::Response {
         debug!("用户 {} 获取未读通知数", user.user_id);
 
         // 调用通知应用服务获取未读通知数量
-        match controller.notification_service.get_unread_count(user.user_id).await {
+        match controller.notification_service.get_unread_notification_count(user.user_id).await {
             Ok(total_count) => {
                 // TODO: 如果需要按类型统计，需要在Repository中实现相应方法
                 let by_type = if request.r#type.is_none() {
@@ -417,77 +436,93 @@ impl NotificationController {
                     data: Some(response),
                 };
 
-                (StatusCode::OK, Json(api_response))
+                (StatusCode::OK, Json(api_response)).into_response()
             }
-            Err(err) => {
-                let error_response = ApiResponse {
-                    code: 500,
-                    msg: "服务器内部错误".to_string(),
-                    data: None::<()>,
-                };
-
-                (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
-            }
+            Err(err) => crate::presentation::http::controllers::map_domain_error_to_http_response(err),
         }
     }
 
     /// POST /api/v1/protected/notifications/settings - 获取通知设置
     pub async fn get_notification_settings(
-        State(controller): State<Self>,
-        user: CurrentUser,
+        State(controller): State<NotificationController>,
+        Extension(user): Extension<CurrentUser>,
         Json(_request): Json<GetNotificationSettingsRequest>,
-    ) -> impl IntoResponse {
+    ) -> axum::response::Response {
         debug!("用户 {} 获取通知设置", user.user_id);
 
-        // TODO: 实现获取通知设置逻辑
-        // 1. 查询用户的通知偏好设置
-        // 2. 返回各类通知的开关状态
+        // 调用通知应用服务获取通知设置
+        match controller.notification_service.get_notification_settings(user.user_id).await {
+            Ok(settings) => {
+                let response = GetNotificationSettingsResponse {
+                    push_enabled: settings.push_enabled,
+                    email_enabled: settings.email_enabled,
+                    friend_request: settings.friend_requests,
+                    group_invite: settings.group_invites,
+                    message: settings.messages,
+                    moment_like: settings.moment_interactions,
+                    comment: settings.moment_interactions, // 评论与瞬间交互共享设置
+                    system: settings.system_notifications,
+                };
 
-        let response = GetNotificationSettingsResponse {
-            push_enabled: true,
-            email_enabled: false,
-            friend_request: true,
-            group_invite: true,
-            message: true,
-            moment_like: true,
-            comment: true,
-            system: true,
-        };
+                let api_response = ApiResponse {
+                    code: 0,
+                    msg: "获取通知设置成功".to_string(),
+                    data: Some(response),
+                };
 
-        let api_response = ApiResponse {
-            code: 0,
-            msg: "获取通知设置成功".to_string(),
-            data: Some(response),
-        };
-
-        (StatusCode::OK, Json(api_response))
+                (StatusCode::OK, Json(api_response)).into_response()
+            },
+            Err(error) => crate::presentation::http::controllers::map_domain_error_to_http_response(error),
+        }
     }
 
     /// POST /api/v1/protected/notifications/update_settings - 更新通知设置
     pub async fn update_notification_settings(
-        State(controller): State<Self>,
-        user: CurrentUser,
+        State(controller): State<NotificationController>,
+        Extension(user): Extension<CurrentUser>,
         Json(request): Json<UpdateNotificationSettingsRequest>,
-    ) -> impl IntoResponse {
+    ) -> axum::response::Response {
         debug!("用户 {} 更新通知设置", user.user_id);
 
-        // TODO: 实现更新通知设置逻辑
-        // 1. 验证设置参数
-        // 2. 更新用户的通知偏好
-        // 3. 保存到数据库
-        // 4. 可能需要更新推送服务的订阅
-
-        let response = UpdateNotificationSettingsResponse {
-            success: true,
-            message: "通知设置更新成功".to_string(),
+        // 构建更新的通知设置
+        use crate::adapters::adapters_pg::notification_repository::NotificationSettings;
+        
+        let updated_settings = NotificationSettings {
+            user_id: user.user_id,
+            push_enabled: request.push_enabled.unwrap_or(true),
+            email_enabled: request.email_enabled.unwrap_or(false),
+            friend_requests: request.friend_request.unwrap_or(true),
+            group_invites: request.group_invite.unwrap_or(true),
+            messages: request.message.unwrap_or(true),
+            moment_interactions: request.moment_like.unwrap_or(true),
+            system_notifications: request.system.unwrap_or(true),
+            quiet_hours_enabled: false, // 静默时间功能暂未在API中暴露
+            quiet_hours_start: None,
+            quiet_hours_end: None,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
         };
 
-        let api_response = ApiResponse {
-            code: 0,
-            msg: "通知设置更新成功".to_string(),
-            data: Some(response),
-        };
+        // 调用通知应用服务更新设置
+        match controller.notification_service.update_notification_settings(
+            user.user_id,
+            updated_settings,
+        ).await {
+            Ok(_) => {
+                let response = UpdateNotificationSettingsResponse {
+                    success: true,
+                    message: "通知设置更新成功".to_string(),
+                };
 
-        (StatusCode::OK, Json(api_response))
+                let api_response = ApiResponse {
+                    code: 0,
+                    msg: "通知设置更新成功".to_string(),
+                    data: Some(response),
+                };
+
+                (StatusCode::OK, Json(api_response)).into_response()
+            }
+            Err(error) => crate::presentation::http::controllers::map_domain_error_to_http_response(error),
+        }
     }
 }

@@ -386,11 +386,13 @@ interface FriendRequest extends UserInfo {
 definePageMeta({
     title: "friends.requests.title",
     requiresAuth: true,
+    layout: 'dashboard'
 });
 
 const api = useApi();
 const toast = useSmartToast();
 const authStore = useAuthStore();
+const { openConfirmModal } = useModals();
 
 // 状态变量
 const activeTab = ref<"received" | "sent">("received");
@@ -568,7 +570,7 @@ async function rejectRequest(request: FriendRequest) {
 // 处理发送的请求
 function cancelRequest(request: FriendRequest) {
     if (request.processing) return;
-    useModals().openConfirmModal({
+    openConfirmModal({
         title: "取消好友请求",
         message: "确定要撤销该好友请求吗？",
         confirmText: "确认撤销",
@@ -604,7 +606,7 @@ async function performCancelRequest(request: FriendRequest) {
 // 批量操作
 function batchAcceptAll() {
     if (receivedRequests.value.length === 0 || batchProcessing.value) return;
-    useModals().openConfirmModal({
+    openConfirmModal({
         title: "批量同意好友请求",
         message: "确定要同意所有收到的好友请求吗？",
         confirmText: "确认同意全部",
@@ -638,7 +640,7 @@ async function performBatchAcceptAll() {
 
 function batchRejectAll() {
     if (receivedRequests.value.length === 0 || batchProcessing.value) return;
-    useModals().openConfirmModal({
+    openConfirmModal({
         title: "批量拒绝好友请求",
         message: "确定要拒绝所有收到的好友请求吗？",
         confirmText: "确认拒绝全部",

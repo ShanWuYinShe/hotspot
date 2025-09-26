@@ -182,7 +182,7 @@
 
 <script setup lang="ts">
 import { defineAsyncComponent } from "vue";
-definePageMeta({ title: "我的群组", requiresAuth: true });
+definePageMeta({ title: "我的群组", requiresAuth: true, layout: 'dashboard' });
 
 const EmptyGroups = defineAsyncComponent(
     () => import("~/components/illustrations/EmptyGroups.vue"),
@@ -208,7 +208,7 @@ const filteredGroups = computed<GroupInfo[]>(() => {
     // 按筛选类型过滤
     switch (activeFilter.value) {
         case "owned":
-            result = groupsStore.ownedGroups;
+            result = groupsStore.getOwnedGroups();
             break;
         case "admin":
             result = result.filter((g) => g.user_role === "admin");
@@ -304,7 +304,7 @@ onMounted(async () => {
         
         // 如果当前筛选是"我创建的"，预加载相关数据
         if (activeFilter.value === "owned") {
-            await groupsStore.fetchOwnedGroups();
+            await groupsStore.getOwnedGroups();
         }
     } catch (error: any) {
         toast.add({
@@ -317,9 +317,9 @@ onMounted(async () => {
 
 // 监听筛选器变化，按需加载数据
 watch(activeFilter, async (newFilter) => {
-    if (newFilter === "owned" && groupsStore.ownedGroups.length === 0) {
+    if (newFilter === "owned" && groupsStore.getOwnedGroups().length === 0) {
         try {
-            await groupsStore.fetchOwnedGroups();
+            await groupsStore.getOwnedGroups();
         } catch (error) {
             if (import.meta.dev) {
                 console.warn("加载我创建的群组失败:", error);

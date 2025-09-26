@@ -209,6 +209,7 @@ import { useDebounceFn } from "@vueuse/core";
 definePageMeta({
     title: "设置",
     requiresAuth: true,
+    layout: 'dashboard'
 });
 
 const authStore = useAuthStore();

@@ -7,7 +7,7 @@
     <template #footer>
       <div class="flex justify-end space-x-3">
         <UButton variant="ghost" @click="handleCancel">{{ cancelText }}</UButton>
-        <UButton :color="confirmColor" :loading="loading" @click="handleConfirm">{{ confirmText }}</UButton>
+        <UButton :color="confirmColor" @click="handleConfirm">{{ confirmText }}</UButton>
       </div>
     </template>
   </UModal>
@@ -21,7 +21,6 @@ interface Props {
   confirmText?: string;
   cancelText?: string;
   confirmColor?: 'primary' | 'error' | 'warning' | 'success';
-  loading?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -29,8 +28,7 @@ const props = withDefaults(defineProps<Props>(), {
   message: '确定要执行此操作吗？',
   confirmText: '确认',
   cancelText: '取消',
-  confirmColor: 'primary',
-  loading: false
+  confirmColor: 'primary'
 });
 
 // Emits - 移除 update:open，由 useOverlay 管理

@@ -7,17 +7,13 @@
 /// - 自动化运维支持
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use tokio::sync::RwLock;
 use serde::{Serialize, Deserialize};
 use tracing::{info, warn, debug, error};
 
 use crate::domain::DomainResult;
-use crate::domain::DomainError;
-use crate::infrastructure::{
-    QueryPerformanceOptimizer,
-    monitoring::MetricsCollector
-};
+use crate::infrastructure::QueryPerformanceOptimizer;
 use crate::ws::WebSocketPerformanceOptimizer;
 
 /// 增强监控系统

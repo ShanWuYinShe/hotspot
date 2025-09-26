@@ -7,7 +7,6 @@
 /// - 强类型泛型设计
 
 use async_trait::async_trait;
-use uuid::Uuid;
 use crate::domain::{
     DomainResult, Group, UserId, GroupId, MessageId, Moment,
     UserProfile, UserAuth, UserDetail, UserSearchResult, Comment,
@@ -23,9 +22,8 @@ use crate::domain::entities::{
 };
 use crate::application::{
     PaginationQuery, LocationQuery, PaginatedResult,
-    UserView, GroupView, MessageView,
+    UserView, GroupView,
 };
-use crate::application::handlers::ConversationView;
 
 // === 用户仓储接口 ===
 
@@ -385,7 +383,7 @@ pub trait FriendRepository: Send + Sync {
     async fn save(&self, friendship: &Friendship) -> DomainResult<()>;
     
     /// 根据用户ID查找好友列表
-    async fn find_friends_by_user_id(&self, user_id: UserId) -> DomainResult<Vec<Friendship>>;
+    async fn find_friends_by_user_id(&self, user_id: i64) -> DomainResult<Vec<Friendship>>;
     
     /// 发送好友请求
     async fn send_friend_request(&self, requester_id: i64, target_id: i64, message: Option<&str>) -> DomainResult<FriendRequest>;
@@ -401,6 +399,18 @@ pub trait FriendRepository: Send + Sync {
     
     /// 获取好友列表
     async fn get_friends(&self, user_id: i64, cursor: i64, limit: i32) -> DomainResult<Vec<FriendProfile>>;
+    
+    /// 关注用户（返回关系ID）
+    async fn follow(&self, follower_id: i64, target_id: i64) -> DomainResult<String>;
+    
+    /// 取消关注
+    async fn unfollow(&self, follower_id: i64, target_id: i64) -> DomainResult<()>;
+    
+    /// 拉黑用户（返回关系ID）
+    async fn block_user(&self, blocker_id: i64, blocked_id: i64, reason: Option<&str>) -> DomainResult<String>;
+    
+    /// 获取拉黑列表
+    async fn get_blocked_users(&self, user_id: i64, cursor: i64, limit: i32) -> DomainResult<Vec<FriendProfile>>;
     
     /// 获取收到的好友请求
     async fn get_received_friend_requests(&self, user_id: i64, cursor: i64, limit: i32) -> DomainResult<Vec<FriendRequest>>;

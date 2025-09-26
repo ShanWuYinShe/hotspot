@@ -112,6 +112,12 @@ pub struct FriendProfile {
     pub friendship_created_at: DateTime<Utc>,
     /// 是否在线
     pub is_online: bool,
+    /// 关系记录ID（业务ID）
+    pub relationship_id: String,
+    /// 关系行自增ID（用于游标分页）
+    pub relationship_row_id: i64,
+    /// 拉黑原因（仅拉黑列表使用）
+    pub block_reason: Option<String>,
 }
 
 /// 好友请求详情（包含用户信息）

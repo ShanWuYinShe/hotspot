@@ -26,7 +26,7 @@ use tower_http::{
 
 // 新架构导入
 use backend::bootstrap::{HybridConfigManager, ServiceFactory, ServiceContainerExt};
-use backend::presentation::http::routes::{create_application_routes, ServiceContainer};
+use backend::presentation::http::routes::create_application_routes;
 use backend::presentation::http::auth::JwtConfig;
 
 #[tokio::main]
@@ -60,7 +60,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("✅ 所有服务创建完成");
 
     // 创建统一的服务容器
-    let services = create_unified_service_container(&service_container)?;
+    let services = service_container.clone_for_routing();
     
     // 构建JWT配置
     let config = config_manager.config();
@@ -116,43 +116,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     info!("👋 HotSpot 后端服务已优雅关闭");
     Ok(())
-}
-
-/// 创建统一的服务容器
-fn create_unified_service_container(
-    service_container: &backend::bootstrap::ServiceContainer,
-) -> Result<ServiceContainer, Box<dyn std::error::Error>> {
-    // 从原始服务容器中提取控制器
-    let user_repo = service_container.user_repository_port();
-    
-    // 创建新的控制器实例
-    let friend_controller = backend::presentation::http::controllers::FriendController::new(
-        service_container.user_app_service.clone().into()
-    );
-    let security_controller = backend::presentation::http::controllers::SecurityController::new(
-        service_container.user_app_service.clone().into()
-    );
-    let notification_controller = backend::presentation::http::controllers::NotificationController::new(
-        service_container.user_app_service.clone().into()
-    );
-    let system_health_controller = backend::presentation::http::controllers::SystemHealthController::new();
-    
-    Ok(ServiceContainer {
-        user_controller: service_container.user_controller.clone(),
-        group_controller: service_container.group_controller.clone(),
-        message_controller: service_container.message_controller.clone(),
-        moment_controller: service_container.moment_controller.clone(),
-        search_controller: service_container.search_controller.clone(),
-        activity_controller: service_container.activity_controller.clone(),
-        friend_controller,
-        comment_controller: service_container.comment_controller.clone(),
-        security_controller,
-        notification_controller,
-        system_health_controller,
-        upload_controller: service_container.upload_controller.clone(),
-        admin_controller: backend::presentation::http::controllers::AdminController::with_user_repo(user_repo),
-        metrics_service: service_container.metrics_service.clone(),
-    })
 }
 
 /// 输出路由摘要信息（从实际路由注册过程动态收集）

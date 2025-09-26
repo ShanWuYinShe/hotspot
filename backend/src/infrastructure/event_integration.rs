@@ -10,8 +10,10 @@
 use std::sync::Arc;
 use sqlx::PgPool;
 use crate::domain::{DomainResult, UserId, GroupId};
+#[cfg(feature = "event_store")]
+use crate::infrastructure::PostgresEventStore;
 use crate::infrastructure::{
-    EventPublisher, EventStore, PostgresEventStore, InMemoryEventStore,
+    EventPublisher, EventStore, InMemoryEventStore,
     event_handlers::{
         EventHandlerFactory, WebSocketService,
         EmailService, WelcomeService, UserStatsService, NotificationService,
@@ -80,8 +82,12 @@ impl EventSystemIntegrator {
         
         // 初始化事件存储
         let event_store: Arc<dyn EventStore> = if self.config.use_postgres_store {
-            if let Some(pool) = pool {
+            if let Some(_pool) = pool {
+                #[cfg(feature = "event_store")]
                 let postgres_store = PostgresEventStore::new(pool);
+                #[cfg(not(feature = "event_store"))]
+                let postgres_store = InMemoryEventStore::new();
+                #[cfg(feature = "event_store")]
                 postgres_store.initialize().await?;
                 Arc::new(postgres_store)
             } else {

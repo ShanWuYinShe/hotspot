@@ -9,7 +9,7 @@ use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use argon2::password_hash::{rand_core::OsRng, SaltString};
 use sha2::{Sha256, Digest};
 use std::sync::Arc;
-use tracing::{info, warn, error};
+use tracing::{info, warn};
 
 use crate::domain::{DomainError, DomainResult};
 use crate::services::nonce_service::{NonceService, NonceVerification};
@@ -274,3 +274,7 @@ impl std::fmt::Display for PasswordSecurityError {
 }
 
 impl std::error::Error for PasswordSecurityError {}
+
+
+
+

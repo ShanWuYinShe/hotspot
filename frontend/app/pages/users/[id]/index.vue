@@ -257,7 +257,8 @@ import type { UserInfo, MomentInfo } from '~/types';
 
 definePageMeta({ 
     title: '用户详情', 
-    requiresAuth: true 
+    requiresAuth: true,
+    layout: 'dashboard'
 });
 
 const route = useRoute();
@@ -456,32 +457,32 @@ async function sendFriendRequest() {
 async function removeFriend() {
     if (operating.value) return;
     
-    const confirmed = await openConfirmModal({
+    openConfirmModal({
         title: '确认删除好友',
         message: `确定要删除好友"${user.value?.nickname || '该用户'}"吗？`,
         confirmText: '确认删除',
-        cancelText: '取消'
+        cancelText: '取消',
+        confirmColor: 'error',
+        onConfirm: async () => {
+            operating.value = true;
+            try {
+                await friendService.removeFriend(userId);
+                friendshipStatus.value = 'none';
+                toast.add({
+                    title: '已删除好友',
+                    color: 'success'
+                });
+            } catch (e: any) {
+                toast.add({
+                    title: '操作失败',
+                    description: e?.message || '删除好友失败',
+                    color: 'error'
+                });
+            } finally {
+                operating.value = false;
+            }
+        }
     });
-    
-    if (!confirmed) return;
-    
-    operating.value = true;
-    try {
-        await friendService.removeFriend(userId);
-        friendshipStatus.value = 'none';
-        toast.add({
-            title: '已删除好友',
-            color: 'success'
-        });
-    } catch (e: any) {
-        toast.add({
-            title: '操作失败',
-            description: e?.message || '删除好友失败',
-            color: 'error'
-        });
-    } finally {
-        operating.value = false;
-    }
 }
 
 // 工具函数

@@ -105,7 +105,7 @@ impl UserDetailRow {
             user_type,
             self.last_active_at.unwrap_or_else(|| chrono::Utc::now()),
             self.created_at,
-            self.expires_at,
+            None, // expires_at - 临时用户功能暂未实现
         )
     }
 }
@@ -396,7 +396,8 @@ impl UserRepository for PostgresUserRepository {
         login_id: Option<&str>,
         nickname: &str,
         password_hash: Option<&str>,
-        email: Option<&str>,
+        _email: Option<&str>,
+        _expires_at: Option<chrono::DateTime<chrono::Utc>>,
     ) -> DomainResult<UserProfile> {
         self.execute_query_with_monitoring("create_user", async {
             let user_row = sqlx::query_as!(

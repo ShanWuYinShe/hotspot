@@ -414,12 +414,49 @@ impl BlockRepository for PgBlockRepository {
     // === 缺失的 trait 方法实现 ===
     
     async fn save(&self, block: &Block) -> DomainResult<()> {
-        // TODO: 实现屏蔽关系保存逻辑
-        todo!("Implement save method")
+        let reason_str = block.reason.as_ref().map(|r| match r {
+            BlockReason::Harassment => "harassment",
+            BlockReason::Spam => "spam",
+            BlockReason::InappropriateContent => "inappropriate_content",
+            BlockReason::Other => "other",
+        });
+
+        sqlx::query!(
+            "INSERT INTO blocks (block_id, blocker_id, blocked_id, reason, created_at)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (blocker_id, blocked_id) DO UPDATE SET reason = EXCLUDED.reason",
+            block.block_id,
+            block.blocker_id,
+            block.blocked_id,
+            reason_str,
+            block.created_at
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRuleViolation { rule: e.to_string() })?;
+
+        Ok(())
     }
 
     async fn find_blocks_by_user_id(&self, user_id: UserId) -> DomainResult<Vec<Block>> {
-        // TODO: 实现根据用户ID查找屏蔽关系逻辑
-        todo!("Implement find_blocks_by_user_id method")
+        let rows = sqlx::query_as!(
+            BlockRow,
+            r#"
+            SELECT block_id, blocker_id, blocked_id, reason, created_at
+            FROM blocks
+            WHERE blocker_id = $1
+            ORDER BY created_at DESC
+            "#,
+            user_id.value()
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRuleViolation { rule: e.to_string() })?;
+
+        let mut blocks = Vec::new();
+        for row in rows {
+            blocks.push(self.row_to_block(row)?);
+        }
+        Ok(blocks)
     }
 }

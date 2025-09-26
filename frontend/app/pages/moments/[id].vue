@@ -186,7 +186,8 @@ import type { MomentInfo } from '~/types';
 
 definePageMeta({ 
     title: '动态详情', 
-    requiresAuth: true 
+    requiresAuth: true,
+    layout: 'dashboard'
 });
 
 const route = useRoute();

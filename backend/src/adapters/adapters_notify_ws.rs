@@ -197,9 +197,9 @@ impl NotificationTransport for WebSocketNotificationTransport {
 
     async fn broadcast(&self, notification: &Notification) -> DomainResult<()> {
         log::warn!("广播通知: {} - {} (谨慎使用，建议通过策略获取目标用户)", notification.title, notification.content);
-        
+
         // 通过WebSocket管理器发送广播通知
-        if let Some(ws_manager) = &self.ws_manager {
+        if let Some(_ws_manager) = &self.ws_manager {
             // 构建WebSocket消息
             let notification_uuid = match uuid::Uuid::parse_str(&notification.notification_id) {
                 Ok(uuid) => uuid,

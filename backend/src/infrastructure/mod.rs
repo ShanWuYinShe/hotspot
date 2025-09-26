@@ -60,6 +60,7 @@ pub use event_handlers::{
     WebSocketService as EventWebSocketService
 };
 
+#[cfg(feature = "event_store")]
 pub use postgres_event_store::*;
 pub use event_integration::*;
 pub use actor_system::*;

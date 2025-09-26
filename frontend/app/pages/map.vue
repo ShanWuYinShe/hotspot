@@ -111,7 +111,8 @@ import type { User, Group, Moment } from '~/types'
 
 definePageMeta({
     title: '地图',
-    description: '发现附近的用户、群组和动态'
+    description: '发现附近的用户、群组和动态',
+    layout: 'dashboard'
 })
 
 // 基础状态

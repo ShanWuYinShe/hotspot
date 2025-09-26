@@ -10,11 +10,11 @@ use async_trait::async_trait;
 use std::sync::Arc;
 use std::collections::HashMap;
 use tokio::sync::RwLock;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 use serde::{Serialize, Deserialize};
 
 use crate::domain::DomainResult;
-use crate::application::services::enhanced_search_service::{EnhancedSearchService, SearchStats};
+use crate::application::services::enhanced_search_service::EnhancedSearchService;
 use crate::application::services::search_application_service::UnifiedSearchResult;
 use crate::application::queries::SearchResultType;
 
@@ -273,6 +273,7 @@ impl SearchOptimizationService for SearchOptimizationServiceImpl {
         let cache_key = self.generate_cache_key(&query);
         let now = chrono::Utc::now();
         let expires_at = now + chrono::Duration::seconds(self.config.cache_ttl_seconds as i64);
+        let results_len = results.len(); // 保存长度，避免move后的借用
         
         let entry = SearchCacheEntry {
             query: query.clone(),
@@ -296,7 +297,7 @@ impl SearchOptimizationService for SearchOptimizationServiceImpl {
         }
         
         cache.insert(cache_key, entry);
-        debug!("缓存搜索结果: 查询='{}', 结果数={}", query, results.len());
+        debug!("缓存搜索结果: 查询='{}', 结果数={}", query, results_len);
     }
     
     /// 预热搜索缓存
@@ -350,7 +351,7 @@ impl SearchOptimizationService for SearchOptimizationServiceImpl {
                query, response_time_ms, result_count, is_cache_hit);
         
         // 异步更新性能指标
-        let metrics_clone = Arc::clone(&self.performance_metrics);
+        let _metrics_clone = Arc::clone(&self.performance_metrics);
         tokio::spawn(async move {
             // 这里可以进行更复杂的性能分析
         });

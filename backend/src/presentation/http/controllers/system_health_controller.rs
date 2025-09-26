@@ -93,7 +93,7 @@ pub struct HealthCheckResponse {
 impl SystemHealthController {
     /// POST /api/v1/public/status/health - 系统健康检查
     pub async fn health_check(
-        State(controller): State<Self>,
+        State(_controller): State<Self>,
         Json(_request): Json<HealthCheckRequest>,
     ) -> impl IntoResponse {
         debug!("执行系统健康检查");

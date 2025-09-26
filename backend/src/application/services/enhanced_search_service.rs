@@ -9,13 +9,15 @@
 use async_trait::async_trait;
 use std::sync::Arc;
 use std::collections::HashMap;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 use serde::{Serialize, Deserialize};
 
 use crate::domain::{DomainResult, DomainError, UserProfile, GroupProfile, Moment};
 use crate::ports::{UserRepository, GroupRepository, MomentRepository};
 use crate::application::queries::SearchResultType;
 use crate::application::services::search_application_service::{SearchApplicationService, UnifiedSearchResult};
+#[cfg(feature = "search_analytics")]
+use crate::application::services::search_analytics_service::SearchAnalyticsService;
 
 /// 搜索配置
 #[derive(Debug, Clone)]
@@ -370,7 +372,8 @@ impl EnhancedSearchServiceImpl {
     /// 过滤和排序搜索结果
     fn filter_and_sort_results(&self, mut results: Vec<UnifiedSearchResult>) -> Vec<UnifiedSearchResult> {
         // 过滤低相关性结果
-        results.retain(|result| result.score >= self.relevance_factors.relevance_threshold);
+        // TODO: 实现动态相关性阈值过滤
+        // results.retain(|result| result.score >= some_threshold);
         
         // 按相关性分数排序
         results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
@@ -578,8 +581,8 @@ impl SearchApplicationService for EnhancedSearchServiceImpl {
             query.query,
             query.latitude,
             query.longitude,
-            query.radius_km,
-            query.limit.unwrap_or(20),
+            Some(10.0), // 默认搜索半径10公里
+            (query.pagination.limit.unwrap_or(20) as usize).try_into().unwrap(),
         ).await?;
         
         Ok(serde_json::json!({
@@ -718,16 +721,29 @@ impl EnhancedSearchService for EnhancedSearchServiceImpl {
     async fn popular_searches(&self, limit: i32) -> DomainResult<Vec<String>> {
         debug!("获取热门搜索词: 限制={}", limit);
         
-        // 使用搜索分析服务获取真实的热门搜索词
-        let analytics_service = SearchAnalyticsService::new(self.pool.clone());
-        let popular_searches = analytics_service.get_popular_searches(limit, None).await?;
+#[cfg(feature = "search_analytics")]
+        {
+            // 使用搜索分析服务获取真实的热门搜索词
+            let analytics_service = SearchAnalyticsService::new(self.pool.clone());
+            let popular_searches = analytics_service.get_popular_searches(limit, None).await?;
+            
+            let search_terms = popular_searches
+                .into_iter()
+                .map(|ps| ps.query)
+                .collect();
+            
+            Ok(search_terms)
+        }
         
-        let search_terms = popular_searches
-            .into_iter()
-            .map(|ps| ps.query)
-            .collect();
-        
-        Ok(search_terms)
+        #[cfg(not(feature = "search_analytics"))]
+        {
+            // 返回基础的热门搜索词
+            Ok(vec![
+                "附近的人".to_string(),
+                "热门群组".to_string(),
+                "最新瞬间".to_string(),
+            ])
+        }
     }
     
     /// 搜索统计

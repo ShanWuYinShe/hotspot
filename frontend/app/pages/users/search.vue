@@ -355,6 +355,7 @@ import type { UserInfo } from "~/types";
 definePageMeta({
     title: "users.search.title",
     requiresAuth: true,
+    layout: 'dashboard'
 });
 
 const api = useApi();

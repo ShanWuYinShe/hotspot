@@ -28,6 +28,8 @@ pub struct Comment {
     pub moment_id: i64,
     /// 评论用户ID
     pub user_id: i64,
+    /// 父评论ID (支持回复功能)
+    pub parent_comment_id: Option<Uuid>,
     /// 评论内容
     pub content: String,
     /// 创建时间
@@ -45,6 +47,8 @@ pub struct CommentDetail {
     pub moment_id: i64,
     /// 评论用户ID
     pub user_id: i64,
+    /// 父评论ID (支持回复功能)
+    pub parent_comment_id: Option<Uuid>,
     /// 评论用户昵称
     pub user_nickname: String,
     /// 评论用户头像
@@ -59,12 +63,13 @@ pub struct CommentDetail {
 
 impl Comment {
     /// 创建新评论
-    pub fn new(moment_id: i64, user_id: i64, content: String) -> Self {
+    pub fn new(moment_id: i64, user_id: i64, content: String, parent_comment_id: Option<Uuid>) -> Self {
         let now = Utc::now();
         Self {
             comment_id: Uuid::new_v4(),
             moment_id,
             user_id,
+            parent_comment_id,
             content,
             created_at: now,
             updated_at: now,

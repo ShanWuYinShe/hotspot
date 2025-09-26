@@ -37,6 +37,7 @@ lettre = { version = "0.11.18", features = ["smtp-transport", "tokio1-native-tls
 serde_yaml = "0.9.34"
 reqwest = "0.12.23"
 sha2 = "0.10.9"
+regex = "1.10.6"
 
 [features]
 # 默认配置：使用内存缓存和轻量级任务队列
@@ -66,6 +67,12 @@ ws_hooks = []
 
 # 审计日志（可选增强）
 audit_logging = []
+
+# 高级搜索分析（可选增强）
+search_analytics = []
+
+# 事件存储系统（可选增强）  
+event_store = []
 
 # === 临时兼容性 Feature（待清理） ===
 # 这些 feature 用于兼容现有代码，将在后续版本中清理

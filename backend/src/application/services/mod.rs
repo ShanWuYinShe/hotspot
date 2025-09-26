@@ -37,6 +37,7 @@ pub use content_security_service::*;
 
 // 搜索分析服务
 pub mod search_analytics_service;
+#[cfg(feature = "search_analytics")]
 pub use search_analytics_service::*;
 
 // 实时通知推送服务

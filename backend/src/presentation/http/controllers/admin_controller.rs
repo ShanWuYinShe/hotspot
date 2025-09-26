@@ -248,7 +248,6 @@ impl AdminController {
             "regular" => UserType::Regular,
             "temporary" => UserType::Temporary,
             "system" => UserType::System,
-            "system" => UserType::System,
             _ => return Self::bad_request("无效的用户类型（regular|temporary|system）"),
         };
 
@@ -374,7 +373,7 @@ impl AdminController {
         let mut total_users: i64 = 0;
         let mut regular_users: i64 = 0;
         let mut temporary_users: i64 = 0;
-        let mut admin_users: i64 = 0;
+        let admin_users: i64 = 0;
         let mut system_users: i64 = 0;
 
         if let Some(repo) = &controller.user_repo {
@@ -549,7 +548,6 @@ impl AdminController {
         let t = match req.user_type.as_str() {
             "regular" => UserType::Regular,
             "temporary" => UserType::Temporary,
-            "system" => UserType::System,
             "system" => UserType::System,
             _ => return Self::bad_request("无效的用户类型（regular|temporary|system）"),
         };

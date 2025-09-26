@@ -176,11 +176,9 @@ impl EventEnvelope {
     /// 从事件包装器中提取事件
     pub fn extract_event<T>(&self) -> DomainResult<T>
     where
-        T: DomainEvent + 'static,
+        T: DomainEvent + for<'de> serde::Deserialize<'de> + 'static,
     {
-        // 这里需要一个事件注册表来反序列化具体的事件类型
-        // 简化实现，实际项目中需要更复杂的类型注册机制
-        todo!("需要实现事件类型注册表")
+        serde_json::from_slice::<T>(&self.data).map_err(|e| DomainError::ValidationError { field: "event_deserialization".to_string(), reason: e.to_string() })
     }
 }
 

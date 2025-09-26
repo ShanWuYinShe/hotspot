@@ -9,9 +9,9 @@
 
 use async_trait::async_trait;
 use std::sync::Arc;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info};
 
-use crate::domain::{DomainResult, DomainError, UserId};
+use crate::domain::{DomainResult, DomainError};
 use crate::domain::entities::{
     FriendProfile, FriendRequest, FriendshipStatus, Friendship,
 };
@@ -91,12 +91,10 @@ impl FriendApplicationService for FriendApplicationServiceImpl {
         }
         
         // 验证目标用户存在
-        let target_user = self.user_repository.find_by_id(UserId::from(target_id)).await?;
-        if target_user.is_none() {
-            return Err(DomainError::NotFound {
+        let _target_user = self.user_repository.find_user_profile(target_id).await?
+            .ok_or_else(|| DomainError::NotFound {
                 resource: "目标用户".to_string(),
-            });
-        }
+            })?;
         
         // 检查当前好友关系状态
         let current_status = self.friend_repository.check_friendship(requester_id, target_id).await?;
@@ -107,10 +105,16 @@ impl FriendApplicationService for FriendApplicationServiceImpl {
                     reason: "已经是好友关系".to_string(),
                 });
             }
-            FriendshipStatus::Pending => {
+            FriendshipStatus::RequestSent => {
                 return Err(DomainError::ValidationError {
                     field: "friendship".to_string(),
                     reason: "好友请求已发送，请等待对方回应".to_string(),
+                });
+            }
+            FriendshipStatus::RequestReceived => {
+                return Err(DomainError::ValidationError {
+                    field: "friendship".to_string(),
+                    reason: "该用户已向您发送好友请求，请先处理".to_string(),
                 });
             }
             FriendshipStatus::Blocked => {
@@ -179,12 +183,10 @@ impl FriendApplicationService for FriendApplicationServiceImpl {
         }
         
         // 验证目标用户存在
-        let target_user = self.user_repository.find_by_id(UserId::from(target_id)).await?;
-        if target_user.is_none() {
-            return Err(DomainError::NotFound {
+        let _target_user = self.user_repository.find_user_profile(target_id).await?
+            .ok_or_else(|| DomainError::NotFound {
                 resource: "目标用户".to_string(),
-            });
-        }
+            })?;
         
         // TODO: 实现关注逻辑
         // 1. 检查是否已经关注
@@ -222,12 +224,10 @@ impl FriendApplicationService for FriendApplicationServiceImpl {
         }
         
         // 验证目标用户存在
-        let target_user = self.user_repository.find_by_id(UserId::from(blocked_id)).await?;
-        if target_user.is_none() {
-            return Err(DomainError::NotFound {
+        let _target_user = self.user_repository.find_user_profile(blocked_id).await?
+            .ok_or_else(|| DomainError::NotFound {
                 resource: "目标用户".to_string(),
-            });
-        }
+            })?;
         
         // TODO: 实现拉黑逻辑
         // 1. 检查是否已经拉黑

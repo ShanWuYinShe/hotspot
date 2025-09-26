@@ -14,7 +14,6 @@ use crate::domain::entities::message::{Message, MessageType};
 use crate::domain::values::{MessageId, GroupId, UserId};
 use crate::ports::MessageRepository;
 use crate::application::handlers::PaginatedResult;
-use crate::application::services::message_application_service::GroupWithLastMessage;
 
 /// PostgreSQL消息仓储实现
 #[derive(Clone)]
@@ -173,8 +172,8 @@ impl MessageRepository for PgMessageRepository {
         if !include_system_messages {
             query.push_str(" AND message_type != 'system'");
         }
-        
-        if let Some(cursor) = cursor {
+
+        if let Some(_cursor) = cursor {
             query.push_str(" AND created_at < (SELECT created_at FROM messages WHERE message_id = $3)");
         }
         

@@ -132,6 +132,7 @@ const EmptyNearby = defineAsyncComponent(
 definePageMeta({
     title: "附近的人",
     requiresAuth: true,
+    layout: 'dashboard'
 });
 
 const toast = useSmartToast();

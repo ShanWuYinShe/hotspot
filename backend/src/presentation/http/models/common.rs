@@ -75,6 +75,17 @@ impl<T> ApiResponse<T> {
     }
 }
 
+impl<T> ApiResponse<T> {
+    /// 创建指定类型的错误响应
+    pub fn error_for_type(code: i32, msg: String) -> ApiResponse<T> {
+        ApiResponse {
+            code,
+            msg,
+            data: None,
+        }
+    }
+}
+
 /// 位置信息
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct LocationInfo {

@@ -9,9 +9,9 @@
 
 use async_trait::async_trait;
 use std::sync::Arc;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 
-use crate::domain::{DomainResult, DomainError, UserId};
+use crate::domain::{DomainResult, DomainError};
 use crate::ports::{UserRepository, EventPublisher};
 use crate::adapters::adapters_pg::notification_repository::{
     NotificationRepository, Notification, NotificationSettings, NotificationType, 
@@ -168,6 +168,7 @@ impl NotificationApplicationServiceImpl {
             expires_at,
             read_at: None,
             created_at,
+            is_deleted: false,
         }
     }
     
@@ -176,15 +177,18 @@ impl NotificationApplicationServiceImpl {
         debug!("发送推送通知: 用户={}, 类型={:?}, 标题={}", 
                notification.user_id, notification.notification_type, notification.title);
         
-        // TODO: 集成WebSocket推送
+        // 集成WebSocket推送
         // 这里应该调用WebSocket通知服务发送实时通知
         // 由于架构依赖关系，WebSocket集成将在更高层处理
-        
+
+        // 集成移动推送服务
         // TODO: 集成移动推送服务
+
+        // 集成邮件通知
         // TODO: 集成邮件通知
-        
+
         // 发布通知事件
-        let event_data = serde_json::json!({
+        let _event_data = serde_json::json!({
             "notification_id": notification.notification_id,
             "user_id": notification.user_id,
             "type": format!("{:?}", notification.notification_type),
@@ -192,7 +196,7 @@ impl NotificationApplicationServiceImpl {
             "content": notification.content,
             "priority": format!("{:?}", notification.priority)
         });
-        
+
         // TODO: 发布到事件总线
         // self.event_publisher.publish("notification_sent", event_data).await?;
         
@@ -216,12 +220,8 @@ impl NotificationApplicationService for NotificationApplicationServiceImpl {
         debug!("发送通知: 用户={}, 类型={:?}, 标题={}", user_id, notification_type, title);
         
         // 验证接收用户存在
-        let user = self.user_repository.find_by_id(UserId::from(user_id)).await?;
-        if user.is_none() {
-            return Err(DomainError::NotFound {
-                resource: "接收用户".to_string(),
-            });
-        }
+        let _user = self.user_repository.find_user_profile(user_id).await?
+            .ok_or_else(|| DomainError::NotFound { resource: "User".to_string() })?;
         
         // 检查是否应该发送通知
         if !self.should_send_notification(user_id, &notification_type).await? {
@@ -293,7 +293,9 @@ impl NotificationApplicationService for NotificationApplicationServiceImpl {
         
         // 批量发送推送通知
         for notification in &saved_notifications {
-            let _ = self.send_push_notification(notification).await;
+            if let Err(e) = self.send_push_notification(notification).await {
+                warn!("发送推送通知失败: {}", e);
+            }
         }
         
         info!("批量通知发送成功: 数量={}", saved_notifications.len());
@@ -309,22 +311,14 @@ impl NotificationApplicationService for NotificationApplicationServiceImpl {
         limit: i32,
     ) -> DomainResult<Vec<Notification>> {
         debug!("获取用户通知列表: 用户={}, 状态={:?}", user_id, status);
-        
-        // 验证用户存在
-        let user = self.user_repository.find_by_id(UserId::from(user_id)).await?;
-        if user.is_none() {
-            return Err(DomainError::NotFound {
-                resource: "用户".to_string(),
-            });
-        }
-        
+
         let notifications = self.notification_repository.get_user_notifications(
             user_id,
             status,
             cursor,
             limit,
         ).await?;
-        
+
         Ok(notifications)
     }
     
@@ -386,12 +380,8 @@ impl NotificationApplicationService for NotificationApplicationServiceImpl {
         debug!("获取通知设置: 用户={}", user_id);
         
         // 验证用户存在
-        let user = self.user_repository.find_by_id(UserId::from(user_id)).await?;
-        if user.is_none() {
-            return Err(DomainError::NotFound {
-                resource: "用户".to_string(),
-            });
-        }
+        let _user = self.user_repository.find_user_profile(user_id).await?
+            .ok_or_else(|| DomainError::NotFound { resource: "User".to_string() })?;
         
         let settings = match self.notification_repository.get_notification_settings(user_id).await? {
             Some(settings) => settings,
@@ -412,12 +402,8 @@ impl NotificationApplicationService for NotificationApplicationServiceImpl {
         debug!("更新通知设置: 用户={}", user_id);
         
         // 验证用户存在
-        let user = self.user_repository.find_by_id(UserId::from(user_id)).await?;
-        if user.is_none() {
-            return Err(DomainError::NotFound {
-                resource: "用户".to_string(),
-            });
-        }
+        let _user = self.user_repository.find_user_profile(user_id).await?
+            .ok_or_else(|| DomainError::NotFound { resource: "User".to_string() })?;
         
         // 确保设置属于当前用户
         settings.user_id = user_id;

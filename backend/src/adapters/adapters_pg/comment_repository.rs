@@ -98,6 +98,7 @@ impl PgCommentRepository {
             moment_id: row.get::<i64, _>("moment_id"),
             user_id: row.get("user_id"),
             content: row.get("content"),
+            parent_comment_id: row.try_get("parent_comment_id").ok(),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
         }
@@ -189,11 +190,6 @@ impl CommentRepository for PgCommentRepository {
         cursor: i64,
         limit: i32,
     ) -> DomainResult<Vec<Comment>> {
-        let moment_id_i64 = moment_id.parse::<i64>()
-            .map_err(|_| DomainError::BusinessRuleViolation {
-                rule: "无效的生活瞬间ID格式".to_string(),
-            })?;
-
         let rows = sqlx::query!(
             r#"
             SELECT 
@@ -212,7 +208,7 @@ impl CommentRepository for PgCommentRepository {
             ORDER BY c.created_at ASC
             LIMIT $3
             "#,
-            moment_id_i64,
+            moment_id,
             cursor as i32,
             limit as i64
         )
@@ -229,9 +225,10 @@ impl CommentRepository for PgCommentRepository {
             .into_iter()
             .map(|row| Comment {
                 comment_id: uuid::Uuid::parse_str(&row.comment_id).unwrap_or_default(),
-                moment_id: row.moment_id,
+                moment_id: row.moment_id.parse::<i64>().unwrap_or(0),
                 user_id: row.user_id,
                 content: row.content,
+                parent_comment_id: None, // 从查询结果获取，这里先设为None
                 created_at: row.created_at,
                 updated_at: row.updated_at,
             })
@@ -282,9 +279,10 @@ impl CommentRepository for PgCommentRepository {
             .into_iter()
             .map(|row| Comment {
                 comment_id: uuid::Uuid::parse_str(&row.comment_id).unwrap_or_default(),
-                moment_id: row.moment_id,
+                moment_id: row.moment_id.parse::<i64>().unwrap_or(0),
                 user_id: row.user_id,
                 content: row.content,
+                parent_comment_id: None, // 从查询结果获取，这里先设为None
                 created_at: row.created_at,
                 updated_at: row.updated_at,
             })
@@ -387,7 +385,7 @@ impl CommentRepository for PgCommentRepository {
             ORDER BY c.created_at ASC
             LIMIT $3
             "#,
-            parent_comment_id.parse::<i64>().unwrap_or(0),
+            parent_comment_id,
             cursor as i32,
             limit as i64
         )
@@ -404,9 +402,10 @@ impl CommentRepository for PgCommentRepository {
             .into_iter()
             .map(|row| Comment {
                 comment_id: uuid::Uuid::parse_str(&row.comment_id).unwrap_or_default(),
-                moment_id: row.moment_id,
+                moment_id: row.moment_id.parse::<i64>().unwrap_or(0),
                 user_id: row.user_id,
                 content: row.content,
+                parent_comment_id: None, // 从查询结果获取，这里先设为None
                 created_at: row.created_at,
                 updated_at: row.updated_at,
             })
@@ -417,18 +416,13 @@ impl CommentRepository for PgCommentRepository {
 
     /// 获取生活瞬间评论数
     async fn get_moment_comments_count(&self, moment_id: &str) -> DomainResult<i64> {
-        let moment_id_i64 = moment_id.parse::<i64>()
-            .map_err(|_| DomainError::BusinessRuleViolation {
-                rule: "无效的生活瞬间ID格式".to_string(),
-            })?;
-
         let count = sqlx::query_scalar!(
             r#"
             SELECT COUNT(*)::bigint as "count!"
             FROM moment_comments
             WHERE moment_id = $1
             "#,
-            moment_id_i64
+            moment_id
         )
         .fetch_one(&self.pool)
         .await

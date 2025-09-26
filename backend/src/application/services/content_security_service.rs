@@ -7,7 +7,7 @@
 /// - 支持机器学习模型集成
 
 use std::collections::HashMap;
-use tracing::{debug, warn, error};
+use tracing::{debug, warn};
 use serde::{Serialize, Deserialize};
 use regex::Regex;
 

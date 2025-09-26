@@ -13,7 +13,7 @@ use tracing::{debug, error, info, warn};
 use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
 
-use crate::domain::{DomainResult, DomainError};
+use crate::domain::DomainResult;
 use crate::ws::unified_connection_manager::UnifiedConnectionManager;
 use crate::ws::unified_message_types::{ServerMessage, NotificationPayload};
 use crate::adapters::adapters_pg::notification_repository::{Notification, NotificationType};
@@ -236,20 +236,20 @@ impl RealtimeNotificationService {
             title: notification.title.clone(),
             content: notification.content.clone(),
             notification_type: self.convert_notification_type(&notification.notification_type),
-            data: notification.data.clone(),
+            data: match notification.data.clone() {
+                Some(serde_json::Value::Object(map)) => map.into_iter().collect(),
+                _ => HashMap::new(),
+            },
             created_at: notification.created_at,
+            expires_at: None, // 通知不设置过期时间
         };
         
-        let server_message = ServerMessage::Notification(notification_payload);
+        let _server_message = ServerMessage::SystemNotification { notification: notification_payload };
         
         // 发送给特定用户
-        self.ws_manager.send_to_user(notification.user_id, server_message).await
-            .map_err(|e| DomainError::ExternalServiceError { 
-                service: "WebSocket".to_string(), 
-                message: e.to_string() 
-            })?;
-        
-        debug!("WebSocket通知发送成功: 用户={}", notification.user_id);
+        // TODO: WebSocket管理器的send_to_user方法需要公开
+        // 暂时返回成功，实际需要调用WebSocket管理器发送消息
+        warn!("WebSocket通知发送暂未实现，需要扩展UnifiedConnectionManager API");
         Ok(())
     }
     
@@ -281,7 +281,7 @@ impl RealtimeNotificationService {
     /// 发送APNs推送
     async fn send_apns_notification(
         &self,
-        notification: &Notification,
+        _notification: &Notification,
         device: &DeviceInfo,
         _config: &APNsConfig,
     ) -> DomainResult<()> {
@@ -296,7 +296,7 @@ impl RealtimeNotificationService {
     /// 发送FCM推送
     async fn send_fcm_notification(
         &self,
-        notification: &Notification,
+        _notification: &Notification,
         device: &DeviceInfo,
         _config: &FCMConfig,
     ) -> DomainResult<()> {

@@ -13,26 +13,31 @@
 /// - POST /api/v1/protected/reports/handle - 处理举报（管理员）
 /// - POST /api/v1/protected/users/block - 屏蔽用户
 
-use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use axum::{extract::{State, Extension}, http::StatusCode, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::debug;
 use utoipa::ToSchema;
 
 use crate::application::services::security_application_service::SecurityApplicationService;
+use crate::application::services::user_application_service;
 use crate::presentation::http::models::ApiResponse;
 use crate::presentation::http::auth::CurrentUser;
-use crate::adapters::adapters_pg::report_repository::{ReportTargetType, ReportReason, ReportStatus};
+use crate::adapters::adapters_pg::report_repository::{ReportTargetType, ReportReason};
 
 /// 内容安全控制器
 #[derive(Clone)]
 pub struct SecurityController {
     security_service: Arc<dyn SecurityApplicationService>,
+    user_service: Arc<dyn user_application_service::UserApplicationServicePort>,
 }
 
 impl SecurityController {
-    pub fn new(security_service: Arc<dyn SecurityApplicationService>) -> Self {
-        Self { security_service }
+    pub fn new(
+        security_service: Arc<dyn SecurityApplicationService>,
+        user_service: Arc<dyn user_application_service::UserApplicationServicePort>,
+    ) -> Self {
+        Self { security_service, user_service }
     }
 }
 
@@ -136,6 +141,8 @@ pub struct HandleReportResponse {
 pub struct BlockUserRequest {
     /// 要屏蔽的用户ID
     pub user_id: String,
+    /// 屏蔽原因
+    pub reason: Option<String>,
 }
 
 /// 屏蔽用户响应
@@ -153,9 +160,9 @@ impl SecurityController {
     /// POST /api/v1/protected/reports/create - 提交举报
     pub async fn create_report(
         State(controller): State<Self>,
-        user: CurrentUser,
+        Extension(user): Extension<CurrentUser>,
         Json(request): Json<CreateReportRequest>,
-    ) -> impl IntoResponse {
+    ) -> axum::response::Response {
         debug!(
             "用户 {} 提交举报：类型={}, 目标={}, 原因={}",
             user.user_id, request.target_type, request.target_id, request.reason
@@ -174,7 +181,7 @@ impl SecurityController {
                     msg: "无效的举报目标类型".to_string(),
                     data: None::<()>,
                 };
-                return (StatusCode::BAD_REQUEST, Json(error_response));
+                return (StatusCode::OK, Json(error_response)).into_response();
             }
         };
 
@@ -192,7 +199,7 @@ impl SecurityController {
                     msg: "无效的举报原因".to_string(),
                     data: None::<()>,
                 };
-                return (StatusCode::BAD_REQUEST, Json(error_response));
+                return (StatusCode::OK, Json(error_response)).into_response();
             }
         };
 
@@ -217,7 +224,7 @@ impl SecurityController {
                     data: Some(response),
                 };
 
-                (StatusCode::OK, Json(api_response))
+                (StatusCode::OK, Json(api_response)).into_response()
             }
             Err(err) => {
                 let (status_code, error_msg) = match err {
@@ -232,17 +239,17 @@ impl SecurityController {
                     data: None::<()>,
                 };
 
-                (status_code, Json(error_response))
+                (StatusCode::OK, Json(error_response)).into_response()
             }
         }
     }
 
     /// POST /api/v1/protected/reports/my_reports - 我的举报记录
     pub async fn get_my_reports(
-        State(controller): State<Self>,
-        user: CurrentUser,
-        Json(request): Json<GetMyReportsRequest>,
-    ) -> impl IntoResponse {
+        State(_controller): State<Self>,
+        Extension(user): Extension<CurrentUser>,
+        Json(_request): Json<GetMyReportsRequest>,
+    ) -> axum::response::Response {
         debug!("用户 {} 获取举报记录", user.user_id);
 
         // TODO: 实现获取用户举报记录逻辑
@@ -253,7 +260,7 @@ impl SecurityController {
         let reports = vec![
             ReportResponse {
                 report_id: "example_report_id".to_string(),
-                reporter_id: user.user_id.clone(),
+                reporter_id: user.user_id.to_string(),
                 target_type: "user".to_string(),
                 target_id: "example_target_id".to_string(),
                 reason: "spam".to_string(),
@@ -277,15 +284,15 @@ impl SecurityController {
             data: Some(paginated_response),
         };
 
-        (StatusCode::OK, Json(api_response))
+        (StatusCode::OK, Json(api_response)).into_response()
     }
 
     /// POST /api/v1/protected/reports/list - 举报列表（管理员）
     pub async fn get_reports(
-        State(controller): State<Self>,
-        user: CurrentUser,
-        Json(request): Json<GetReportsRequest>,
-    ) -> impl IntoResponse {
+        State(_controller): State<Self>,
+        Extension(user): Extension<CurrentUser>,
+        Json(_request): Json<GetReportsRequest>,
+    ) -> axum::response::Response {
         debug!("管理员 {} 获取举报列表", user.user_id);
 
         // TODO: 验证管理员权限
@@ -322,15 +329,15 @@ impl SecurityController {
             data: Some(paginated_response),
         };
 
-        (StatusCode::OK, Json(api_response))
+        (StatusCode::OK, Json(api_response)).into_response()
     }
 
     /// POST /api/v1/protected/reports/handle - 处理举报（管理员）
     pub async fn handle_report(
-        State(controller): State<Self>,
-        user: CurrentUser,
+        State(_controller): State<Self>,
+        Extension(user): Extension<CurrentUser>,
         Json(request): Json<HandleReportRequest>,
-    ) -> impl IntoResponse {
+    ) -> axum::response::Response {
         debug!(
             "管理员 {} 处理举报 {}，动作：{}",
             user.user_id, request.report_id, request.action
@@ -357,35 +364,52 @@ impl SecurityController {
             data: Some(response),
         };
 
-        (StatusCode::OK, Json(api_response))
+        (StatusCode::OK, Json(api_response)).into_response()
     }
 
     /// POST /api/v1/protected/users/block - 屏蔽用户
     pub async fn block_user(
         State(controller): State<Self>,
-        user: CurrentUser,
+        Extension(user): Extension<CurrentUser>,
         Json(request): Json<BlockUserRequest>,
-    ) -> impl IntoResponse {
+    ) -> axum::response::Response {
         debug!("用户 {} 屏蔽用户 {}", user.user_id, request.user_id);
 
-        // TODO: 实现屏蔽用户逻辑
-        // 1. 验证目标用户存在
-        // 2. 检查是否已经屏蔽
-        // 3. 创建屏蔽关系
-        // 4. 过滤相关内容（消息、瞬间等）
-        // 5. 不发送通知给被屏蔽用户（隐私保护）
+        // 验证目标用户存在
+        match controller.security_service.get_user_profile(request.user_id.parse::<i64>().unwrap_or(0)).await {
+            Ok(target_user) => {
+                let _target_user = match target_user {
+                    Some(user) => user,
+                    None => {
+                        let api_response = ApiResponse {
+                            code: 404,
+                            msg: "目标用户不存在".to_string(),
+                            data: None::<()>,
+                        };
+                        return (StatusCode::OK, Json(api_response)).into_response();
+                    }
+                };
 
-        let response = BlockUserResponse {
-            success: true,
-            message: "用户已屏蔽".to_string(),
-        };
+                // 调用安全服务屏蔽用户
+                match controller.security_service.block_user(user.user_id, request.user_id.parse::<i64>().unwrap_or(0), request.reason.clone()).await {
+                    Ok(_) => {
+                        let response = BlockUserResponse {
+                            success: true,
+                            message: "用户已屏蔽".to_string(),
+                        };
 
-        let api_response = ApiResponse {
-            code: 0,
-            msg: "用户屏蔽成功".to_string(),
-            data: Some(response),
-        };
+                        let api_response = ApiResponse {
+                            code: 0,
+                            msg: "用户屏蔽成功".to_string(),
+                            data: Some(response),
+                        };
 
-        (StatusCode::OK, Json(api_response))
+                        (StatusCode::OK, Json(api_response)).into_response()
+                    }
+                    Err(err) => crate::presentation::http::controllers::map_domain_error_to_http_response(err),
+                }
+            }
+            Err(err) => crate::presentation::http::controllers::map_domain_error_to_http_response(err),
+        }
     }
 }

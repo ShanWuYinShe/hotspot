@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use std::sync::Arc;
 use tracing::{debug, error, info, warn};
 
-use crate::domain::{DomainResult, DomainError};
+use crate::domain::DomainResult;
 use crate::adapters::adapters_pg::notification_repository::{
     Notification, NotificationType, NotificationPriority, NotificationStatus
 };
@@ -255,6 +255,7 @@ impl UnifiedNotificationCoordinator for UnifiedNotificationCoordinatorImpl {
             expires_at: None,
             read_at: None,
             created_at: chrono::Utc::now(),
+            is_deleted: false,
         };
         
         // 发送群组WebSocket通知

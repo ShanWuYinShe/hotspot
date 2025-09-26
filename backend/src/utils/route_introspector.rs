@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use serde::{Serialize, Deserialize};
 use tracing::info;
-use axum::{Router, routing::MethodRouter};
 
 /// 路由端点信息
 #[derive(Debug, Clone, Serialize, Deserialize)]

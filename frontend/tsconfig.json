@@ -4,8 +4,23 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "~/*": ["app/*"],
-      "@/*": ["app/*"]
-    }
+      "~/*": [
+        "app/*"
+      ],
+      "@/*": [
+        "app/*"
+      ]
+    },
+    // 启用类型检查以检测组件属性错误
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    // 允许一些灵活性以避免过度严格
+    "noUncheckedIndexedAccess": false,
+    "noPropertyAccessFromIndexSignature": false,
+    "noImplicitOverride": false,
+    "exactOptionalPropertyTypes": false
   }
 }

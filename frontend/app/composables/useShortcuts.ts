@@ -55,6 +55,10 @@ export function useShortcuts() {
     return key.replace(/\+/g, ' + ').replace('meta', '⌘').replace('alt', '⌥').replace('ctrl', '⌃')
   }
 
+  const formatShortcutKeys = (key: string) => {
+    return key.split('+').map(k => k.trim().replace('meta', '⌘').replace('alt', '⌥').replace('ctrl', '⌃'))
+  }
+
   // 设置基本快捷键
   const setupShortcuts = () => {
     return defineShortcuts({
@@ -80,6 +84,7 @@ export function useShortcuts() {
     hideHelp,
     toggleHelp,
     formatShortcut,
+    formatShortcutKeys,
     setupShortcuts
   }
 }

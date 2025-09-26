@@ -174,7 +174,7 @@
 import type { TableColumn } from '@nuxt/ui';
 import type { GroupInfo } from "~/types";
 
-definePageMeta({ title: "群组详情", requiresAuth: true });
+definePageMeta({ title: "群组详情", requiresAuth: true, layout: 'dashboard' });
 
 const route = useRoute();
 const toast = useSmartToast();

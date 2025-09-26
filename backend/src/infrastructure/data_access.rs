@@ -361,7 +361,7 @@ impl PgUserRepository {
             
             if let Some(user_row) = user_row {
                 // 简化实现：不加载位置信息
-                let user = user_row.to_domain(None)?;
+                let user = user_row.to_domain()?;
                 Ok(Some(user))
             } else {
                 Ok(None)

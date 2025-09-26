@@ -96,9 +96,14 @@ struct GroupSearchRow {
 #[derive(Debug, sqlx::FromRow)]
 struct UserProfileRow {
     user_id: i64,
+    login_id: String,
     nickname: String,
     avatar_url: Option<String>,
+    bio: Option<String>,
     last_active_at: DateTime<Utc>,
+    member_role: String,
+    joined_at: DateTime<Utc>,
+    created_at: DateTime<Utc>,
 }
 
 // ===== Row到Domain的转换实现 =====
@@ -569,7 +574,7 @@ impl GroupRepository for PgGroupRepository {
                 member_count: row.member_count,
                 group_type: crate::domain::entities::group::GroupType::Normal, // 默认群组类型
                 visibility: if row.is_public { crate::domain::entities::group::Visibility::Public } else { crate::domain::entities::group::Visibility::Private },
-                last_active_at: row.last_active_at.unwrap_or_else(chrono::Utc::now),
+                last_active_at: row.last_active_at,
                 // 新增：用户在群组中的角色
                 user_role: Some(match row.user_role.as_str() {
                     "owner" => "owner".to_string(),
@@ -705,27 +710,13 @@ impl GroupRepository for PgGroupRepository {
 
     /// 添加群组成员
     async fn add_group_member(&self, group_id: &str, user_id: i64, role: &str) -> DomainResult<()> {
-        // 首先获取群组的数字ID
-        let group_numeric_id = sqlx::query_scalar!(
-            "SELECT id FROM groups WHERE group_id = $1",
-            group_id
-        )
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("Database error: {}", e),
-        })?
-        .ok_or_else(|| DomainError::BusinessRuleViolation {
-            rule: "Group not found".to_string(),
-        })?;
-            
         sqlx::query!(
             r#"
             INSERT INTO group_members (group_id, user_id, role)
             VALUES ($1, $2, $3)
             ON CONFLICT (group_id, user_id) DO NOTHING
             "#,
-            group_numeric_id.unwrap(),
+            group_id,
             user_id,
             match role {
                 "owner" => GroupRole::Owner,
@@ -745,26 +736,12 @@ impl GroupRepository for PgGroupRepository {
 
     /// 移除群组成员
     async fn remove_group_member(&self, group_id: &str, user_id: i64) -> DomainResult<()> {
-        // 首先获取群组的数字ID
-        let group_numeric_id = sqlx::query_scalar!(
-            "SELECT id FROM groups WHERE group_id = $1",
-            group_id
-        )
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("Database error: {}", e),
-        })?
-        .ok_or_else(|| DomainError::BusinessRuleViolation {
-            rule: "Group not found".to_string(),
-        })?;
-        
         sqlx::query!(
             r#"
             DELETE FROM group_members 
             WHERE group_id = $1 AND user_id = $2
             "#,
-            group_numeric_id.unwrap(),
+            group_id,
             user_id
         )
         .execute(&self.pool)
@@ -778,29 +755,13 @@ impl GroupRepository for PgGroupRepository {
 
     /// 检查用户是否为群组成员
     async fn is_group_member(&self, group_id: &str, user_id: i64) -> DomainResult<bool> {
-        // 首先获取群组的数字ID
-        let group_numeric_id = sqlx::query_scalar!(
-            "SELECT id FROM groups WHERE group_id = $1",
-            group_id
-        )
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("Database error: {}", e),
-        })?
-        .ok_or_else(|| DomainError::BusinessRuleViolation {
-            rule: "Group not found".to_string(),
-        })?;
+        let group_id_str = group_id.to_string();
+        let user_id_val = user_id;
         
-        let exists = sqlx::query_scalar!(
-            r#"
-            SELECT EXISTS(
-                SELECT 1 FROM group_members 
-                WHERE group_id = $1 AND user_id = $2
-            ) as "exists!"
-            "#,
-            group_numeric_id.unwrap(),
-            user_id
+        let is_member = sqlx::query_scalar!(
+            "SELECT EXISTS(SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2) as \"exists!\"",
+            group_id_str,
+            user_id_val
         )
         .fetch_one(&self.pool)
         .await
@@ -808,32 +769,18 @@ impl GroupRepository for PgGroupRepository {
             rule: format!("Database error: {}", e),
         })?;
 
-        Ok(exists)
+        Ok(is_member)
     }
 
     /// 获取用户在群组中的角色
     async fn get_user_role_in_group(&self, group_id: &str, user_id: i64) -> DomainResult<Option<String>> {
-        // 首先获取群组的数字ID
-        let group_numeric_id = sqlx::query_scalar!(
-            "SELECT id FROM groups WHERE group_id = $1",
-            group_id
-        )
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("Database error: {}", e),
-        })?
-        .ok_or_else(|| DomainError::BusinessRuleViolation {
-            rule: "Group not found".to_string(),
-        })?;
-        
         let role: Option<GroupRole> = sqlx::query_scalar!(
             r#"
             SELECT role as "role: GroupRole"
             FROM group_members
             WHERE group_id = $1 AND user_id = $2
             "#,
-            group_numeric_id.unwrap(),
+            group_id,
             user_id
         )
         .fetch_optional(&self.pool)
@@ -851,20 +798,6 @@ impl GroupRepository for PgGroupRepository {
 
     /// 转移群组所有权
     async fn transfer_group_ownership(&self, group_id: &str, new_owner_id: i64) -> DomainResult<()> {
-        // 首先获取群组的数字ID
-        let group_numeric_id = sqlx::query_scalar!(
-            "SELECT id FROM groups WHERE group_id = $1",
-            group_id
-        )
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("Database error: {}", e),
-        })?
-        .ok_or_else(|| DomainError::BusinessRuleViolation {
-            rule: "Group not found".to_string(),
-        })?;
-        
         // 开启事务
         let mut tx = self.pool.begin().await.map_err(|e| DomainError::BusinessRuleViolation {
             rule: format!("Database error: {}", e),
@@ -893,7 +826,7 @@ impl GroupRepository for PgGroupRepository {
             SET role = 'owner'
             WHERE group_id = $1 AND user_id = $2
             "#,
-            group_numeric_id.unwrap(),
+            group_id,
             new_owner_id
         )
         .execute(&mut *tx)
@@ -916,25 +849,13 @@ impl GroupRepository for PgGroupRepository {
         cursor: i64,
         limit: i32,
     ) -> DomainResult<Vec<UserProfile>> {
-        // 首先获取群组的数字 ID
-        let group_numeric_id = sqlx::query_scalar!(
-            "SELECT id FROM groups WHERE group_id = $1",
-            group_id
-        )
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("Database error: {}", e),
-        })?
-        .ok_or_else(|| DomainError::BusinessRuleViolation {
-            rule: "Group not found".to_string(),
-        })?;
-
         let user_rows = sqlx::query_as!(
             UserProfileRow,
             r#"
-            SELECT u.id as "user_id!", u.nickname as "nickname!", 
-                   u.avatar_url, COALESCE(u.updated_at, u.created_at) as "last_active_at!"
+            SELECT u.id as "user_id!", u.login_id as "login_id!", u.nickname as "nickname!", 
+                   u.avatar_url, u.bio,
+                   COALESCE(u.updated_at, u.created_at) as "last_active_at!",
+                   gm.role::text as "member_role!", gm.joined_at as "joined_at!", u.created_at as "created_at!"
             FROM users u
             INNER JOIN group_members gm ON u.id = gm.user_id
             WHERE gm.group_id = $1
@@ -942,7 +863,7 @@ impl GroupRepository for PgGroupRepository {
             ORDER BY u.id DESC
             LIMIT $3
             "#,
-            group_numeric_id.unwrap(),
+            group_id,
             cursor as i32,
             limit as i64
         )
@@ -957,12 +878,70 @@ impl GroupRepository for PgGroupRepository {
 
     // === 缺失的 trait 方法实现 ===
     
-    async fn save(&self, __group: &Group) -> DomainResult<()> {
-        todo!("Implement save method")
+    async fn save(&self, group: &Group) -> DomainResult<()> {
+        // 将领域实体持久化到 groups 表（UPSERT by group_id）
+        let group_id = group.id.value().to_string();
+        let is_public = matches!(group.visibility, crate::domain::entities::group::Visibility::Public);
+        let (latitude, longitude) = (
+            group.location.coordinates.latitude.value(),
+            group.location.coordinates.longitude.value(),
+        );
+        let location_name = &group.location.location_name;
+        let name = group.name.to_string();
+        let description = group.description.as_deref();
+        let password_hash = group.password_hash.as_deref();
+        let owner_id = group.owner_id.value();
+        let max_members = group.max_members as i32;
+        let member_count = group.member_count as i32;
+
+        sqlx::query!(
+            r#"
+            INSERT INTO groups (group_id, name, description, owner_id, is_public, password_hash,
+                                max_members, member_count, latitude, longitude, location_name, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+            ON CONFLICT (group_id) DO UPDATE SET
+                name = EXCLUDED.name,
+                description = EXCLUDED.description,
+                owner_id = EXCLUDED.owner_id,
+                is_public = EXCLUDED.is_public,
+                password_hash = EXCLUDED.password_hash,
+                max_members = EXCLUDED.max_members,
+                member_count = EXCLUDED.member_count,
+                latitude = EXCLUDED.latitude,
+                longitude = EXCLUDED.longitude,
+                location_name = EXCLUDED.location_name,
+                updated_at = NOW()
+            "#,
+            group_id,
+            name,
+            description,
+            owner_id,
+            is_public,
+            password_hash,
+            max_members,
+            member_count,
+            latitude,
+            longitude,
+            location_name
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
+
+        Ok(())
     }
 
-    async fn delete_by_id(&self, __group_id: GroupId) -> DomainResult<bool> {
-        todo!("Implement delete_by_id method")
+    async fn delete_by_id(&self, group_id: GroupId) -> DomainResult<bool> {
+        let gid = group_id.to_string();
+        let result = sqlx::query!(
+            r#"DELETE FROM groups WHERE group_id = $1"#,
+            gid
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
+
+        Ok(result.rows_affected() > 0)
     }
 
     async fn find_by_id(&self, group_id: GroupId, viewer_user_id: Option<UserId>) -> DomainResult<Option<Group>> {
@@ -996,7 +975,7 @@ impl GroupRepository for PgGroupRepository {
             Some(row) => {
                 // 检查用户是否为成员（如果提供了viewer_user_id）
                 let _is_member = if let Some(user_id) = viewer_user_id {
-                    self.is_member(&group_id, &user_id).await.unwrap_or(false)
+                    self.is_group_member(group_id.value(), user_id.value()).await.unwrap_or(false)
                 } else {
                     false
                 };
@@ -1063,11 +1042,11 @@ impl GroupRepository for PgGroupRepository {
                 name: row.name,
                 description: row.description,
                 owner_id: row.owner_id.to_string(),
-                creator_name: row.creator_name.unwrap_or_else(|| "Unknown".to_string()),
-                created_at: row.last_active_at.map(|dt| dt.to_rfc3339()).unwrap_or_else(|| "".to_string()),
-                last_active_at: row.last_active_at.map(|dt| dt.to_rfc3339()).unwrap_or_else(|| "".to_string()),
-                latitude: row.latitude,
-                longitude: row.longitude,
+                creator_name: row.creator_name,
+                created_at: row.last_active_at.to_rfc3339(),
+                last_active_at: row.last_active_at.to_rfc3339(),
+                latitude: row.latitude.unwrap_or(0.0),
+                longitude: row.longitude.unwrap_or(0.0),
                 location_name: row.location_name.unwrap_or_else(|| "Unknown Location".to_string()),
                 member_count: row.member_count.unwrap_or(0).max(0) as u32,
                 is_password_required: row.is_password_required.unwrap_or(false),
@@ -1147,11 +1126,11 @@ impl GroupRepository for PgGroupRepository {
                 name: row.name,
                 description: row.description,
                 owner_id: row.owner_id.to_string(),
-                creator_name: row.creator_name.unwrap_or_else(|| "Unknown".to_string()),
-                created_at: row.last_active_at.map(|dt| dt.to_rfc3339()).unwrap_or_else(|| "".to_string()),
-                last_active_at: row.last_active_at.map(|dt| dt.to_rfc3339()).unwrap_or_else(|| "".to_string()),
-                latitude: row.latitude,
-                longitude: row.longitude,
+                creator_name: row.creator_name,
+                created_at: row.last_active_at.to_rfc3339(),
+                last_active_at: row.last_active_at.to_rfc3339(),
+                latitude: row.latitude.unwrap_or(0.0),
+                longitude: row.longitude.unwrap_or(0.0),
                 location_name: row.location_name.unwrap_or_else(|| "Unknown Location".to_string()),
                 member_count: row.member_count.unwrap_or(0).max(0) as u32,
                 is_password_required: row.is_password_required.unwrap_or(false),
@@ -1178,25 +1157,12 @@ impl GroupRepository for PgGroupRepository {
         let limit = pagination.limit.unwrap_or(20).min(100) as i64;
         let cursor = pagination.cursor.unwrap_or(0);
         
-        // 首先获取群组的数字ID
-        let group_numeric_id = sqlx::query_scalar!(
-            "SELECT id FROM groups WHERE group_id = $1",
-            group_id_str
-        )
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("Database error: {}", e),
-        })?
-        .ok_or_else(|| DomainError::BusinessRuleViolation {
-            rule: "Group not found".to_string(),
-        })?;
-
-        let member_rows = sqlx::query!(
+        let user_rows = sqlx::query_as!(
+            UserProfileRow,
             r#"
-            SELECT u.id as user_id, u.login_id, u.nickname, u.avatar_url, u.bio,
-                   COALESCE(u.updated_at, u.created_at) as last_active_at,
-                   gm.role::text as member_role, gm.joined_at, u.created_at
+            SELECT u.id as "user_id!", u.login_id as "login_id!", u.nickname as "nickname!", u.avatar_url, u.bio,
+                   COALESCE(u.updated_at, u.created_at) as "last_active_at!",
+                   gm.role::text as "member_role!", gm.joined_at as "joined_at!", u.created_at as "created_at!"
             FROM users u
             INNER JOIN group_members gm ON u.id = gm.user_id
             WHERE gm.group_id = $1
@@ -1204,7 +1170,7 @@ impl GroupRepository for PgGroupRepository {
             ORDER BY u.id DESC
             LIMIT $3
             "#,
-            group_numeric_id.unwrap(),
+            group_id_str,
             cursor as i32,
             limit + 1
         )
@@ -1214,8 +1180,8 @@ impl GroupRepository for PgGroupRepository {
             rule: format!("Database error: {}", e),
         })?;
 
-        let has_more = member_rows.len() > limit as usize;
-        let mut items = member_rows;
+        let has_more = user_rows.len() > limit as usize;
+        let mut items = user_rows;
         if has_more {
             items.pop(); // 移除多查询的一条记录
         }
@@ -1225,14 +1191,14 @@ impl GroupRepository for PgGroupRepository {
         let user_views: Vec<UserView> = items.into_iter()
             .map(|row| UserView {
                 user_id: row.user_id.to_string(),
-                login_id: row.login_id,
-                nickname: row.nickname.unwrap_or_else(|| "Unknown".to_string()),
+                login_id: Some(row.login_id),
+                nickname: row.nickname,
                 avatar_url: row.avatar_url,
-                email: row.email,
+                email: None, // 本查询未选择 email
                 bio: row.bio,
-                is_temp: row.expires_at.is_some(),
-                created_at: row.created_at.map(|dt| dt.to_rfc3339()).unwrap_or_else(|| "".to_string()),
-                last_active_at: row.last_active_at.map(|dt| dt.to_rfc3339()).unwrap_or_else(|| "".to_string()),
+                is_temp: false, // 无 expires_at 字段
+                created_at: row.created_at.to_rfc3339(),
+                last_active_at: row.last_active_at.to_rfc3339(),
                 latitude: None,
                 longitude: None,
                 location_name: None,
@@ -1249,43 +1215,87 @@ impl GroupRepository for PgGroupRepository {
 
     async fn get_user_groups(
         &self,
-        _user_id: UserId,
-        _pagination: &PaginationQuery,
+        user_id: UserId,
+        pagination: &PaginationQuery,
     ) -> DomainResult<PaginatedResult<GroupView>> {
-        // TODO: 实现获取用户群组逻辑
-        todo!("Implement get_user_groups method")
+        let limit = pagination.limit.unwrap_or(20).min(100) as i64;
+        let cursor = pagination.cursor.unwrap_or(0);
+        let profiles = self.find_user_groups(user_id.value(), cursor, limit as i32).await?;
+
+        let has_more = (profiles.len() as i64) > limit;
+        let trimmed: Vec<_> = if has_more { profiles.into_iter().take(limit as usize).collect() } else { profiles };
+
+        let group_views: Vec<GroupView> = trimmed.into_iter()
+            .map(|p| GroupView {
+                group_id: p.group_id,
+                name: p.name,
+                description: p.description,
+                owner_id: p.owner_id.to_string(),
+                creator_name: "".to_string(),
+                created_at: p.last_active_at.to_rfc3339(),
+                last_active_at: p.last_active_at.to_rfc3339(),
+                latitude: p.latitude,
+                longitude: p.longitude,
+                member_count: p.member_count as u32,
+                distance: None,
+                location_name: p.location_name,
+                is_password_required: false,
+                is_member: true,
+                user_role: p.user_role,
+                avatar_url: None,
+            })
+            .collect();
+
+        let next_cursor = None; // 如需严格游标，可选择返回最后一项的内部id
+
+        Ok(PaginatedResult { items: group_views, has_more, next_cursor })
     }
 
     async fn get_user_owned_groups(
         &self,
-        _user_id: UserId,
-        _pagination: &PaginationQuery,
+        user_id: UserId,
+        pagination: &PaginationQuery,
     ) -> DomainResult<PaginatedResult<GroupView>> {
-        // TODO: 实现获取用户拥有的群组逻辑
-        todo!("Implement get_user_owned_groups method")
+        let limit = pagination.limit.unwrap_or(20).min(100) as i64;
+        let cursor = pagination.cursor.unwrap_or(0);
+        let profiles = self.find_owned_groups(user_id.value(), cursor, limit as i32).await?;
+
+        let has_more = (profiles.len() as i64) > limit;
+        let trimmed: Vec<_> = if has_more { profiles.into_iter().take(limit as usize).collect() } else { profiles };
+
+        let group_views: Vec<GroupView> = trimmed.into_iter()
+            .map(|p| GroupView {
+                group_id: p.group_id,
+                name: p.name,
+                description: p.description,
+                owner_id: p.owner_id.to_string(),
+                creator_name: "".to_string(),
+                created_at: p.last_active_at.to_rfc3339(),
+                last_active_at: p.last_active_at.to_rfc3339(),
+                latitude: p.latitude,
+                longitude: p.longitude,
+                member_count: p.member_count as u32,
+                distance: None,
+                location_name: p.location_name,
+                is_password_required: false,
+                is_member: true,
+                user_role: None,
+                avatar_url: None,
+            })
+            .collect();
+
+        let next_cursor = None;
+
+        Ok(PaginatedResult { items: group_views, has_more, next_cursor })
     }
 
     async fn is_member(&self, group_id: &GroupId, user_id: &UserId) -> DomainResult<bool> {
         let group_id_str = group_id.to_string();
         let user_id_val = user_id.value();
         
-        // 首先获取群组的数字ID
-        let group_numeric_id = sqlx::query_scalar!(
-            "SELECT id FROM groups WHERE group_id = $1",
-            group_id_str
-        )
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| DomainError::BusinessRuleViolation {
-            rule: format!("Database error: {}", e),
-        })?
-        .ok_or_else(|| DomainError::BusinessRuleViolation {
-            rule: "Group not found".to_string(),
-        })?;
-
         let is_member = sqlx::query_scalar!(
             "SELECT EXISTS(SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2) as \"exists!\"",
-            group_numeric_id.unwrap(),
+            group_id_str,
             user_id_val
         )
         .fetch_one(&self.pool)
@@ -1299,13 +1309,53 @@ impl GroupRepository for PgGroupRepository {
 
     // 重复的is_member方法已移除，使用上面的实现
     
-    async fn get_group_stats(&self, _group_id: GroupId) -> DomainResult<GroupStats> {
-        // TODO: 实现获取群组统计信息逻辑
-        todo!("Implement get_group_stats method")
+    async fn get_group_stats(&self, group_id: GroupId) -> DomainResult<GroupStats> {
+        let gid = group_id.to_string();
+        let row = sqlx::query!(
+            r#"
+            SELECT member_count as "member_count!", created_at as "created_at!"
+            FROM groups
+            WHERE group_id = $1
+            "#,
+            gid
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?;
+
+        if let Some(r) = row {
+            let member_count: u32 = (r.member_count).max(0) as u32;
+            let created_at = r.created_at.to_rfc3339();
+
+            // 如果有 group_statistics 则读取，否则默认0
+            let message_count_opt: Option<i64> = sqlx::query_scalar!(
+                r#"SELECT total_messages::bigint as "total_messages?" FROM group_statistics WHERE group_id = $1"#,
+                gid
+            )
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?
+            .flatten();
+            let message_count = message_count_opt.unwrap_or(0_i64) as u32;
+
+            let active_members_opt: Option<i32> = sqlx::query_scalar!(
+                r#"SELECT active_members_today as "active_members_today?" FROM group_statistics WHERE group_id = $1"#,
+                gid
+            )
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| DomainError::BusinessRuleViolation { rule: format!("Database error: {}", e) })?
+            .flatten();
+            let active_members_24h = active_members_opt.unwrap_or(0_i32) as u32;
+
+            return Ok(GroupStats { member_count, message_count, active_members_24h, created_at });
+        }
+
+        Err(DomainError::BusinessRuleViolation { rule: "Group not found".to_string() })
     }
     
     /// 根据用户ID查找群组列表
-    async fn find_by_user_id(&self, user_id: &UserId) -> DomainResult<Vec<Group>> {
+    async fn find_by_user_id(&self, _user_id: &UserId) -> DomainResult<Vec<Group>> {
         // 简化实现，返回空列表
         Ok(vec![])
     }
@@ -1313,10 +1363,10 @@ impl GroupRepository for PgGroupRepository {
     /// 根据用户ID查找群组列表（包含最后消息信息）
     async fn find_by_user_id_with_last_message(
         &self,
-        user_id: &UserId,
-        cursor: Option<&str>,
-        limit: i32,
-        include_archived: bool,
+        _user_id: &UserId,
+        _cursor: Option<&str>,
+        _limit: i32,
+        _include_archived: bool,
     ) -> DomainResult<PaginatedResult<GroupWithLastMessage>> {
         // 简化实现，返回空的分页结果
         Ok(PaginatedResult {

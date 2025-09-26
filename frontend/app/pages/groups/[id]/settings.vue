@@ -155,7 +155,7 @@
 // TableColumn 类型已在组件内部定义
 import type { GroupInfo } from "~/types";
 
-definePageMeta({ title: "群组管理", requiresAuth: true });
+definePageMeta({ title: "群组管理", requiresAuth: true, layout: 'dashboard' });
 
 const route = useRoute();
 const toast = useSmartToast();

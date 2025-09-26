@@ -61,6 +61,11 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({
+  title: "搜索",
+  layout: 'dashboard'
+});
+
 const tab = ref<'groups' | 'users'>('groups')
 const tabs = [
   { label: '群组', value: 'groups' },
@@ -82,5 +87,3 @@ const performSearch = () => {
   }
 }
 </script>
-
-

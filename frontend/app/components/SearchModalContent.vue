@@ -1,12 +1,8 @@
 <template>
     <UModal
         title="搜索"
-        :overlay="false"
-        :transition="false"
         class="search-modal"
     >
-        <template #default></template>
-
         <template #body>
             <UCommandPalette
                 v-model="searchQuery"

@@ -123,7 +123,7 @@
 <script setup lang="ts">
 import type { Group } from '~/types';
 
-definePageMeta({ title: "创建群组", requiresAuth: true });
+definePageMeta({ title: "创建群组", requiresAuth: true, layout: 'dashboard' });
 
 const { openCreateGroupModal } = useModals();
 const groupsStore = useGroupsStore();

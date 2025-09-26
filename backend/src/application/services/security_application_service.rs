@@ -9,9 +9,9 @@
 
 use async_trait::async_trait;
 use std::sync::Arc;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 
-use crate::domain::{DomainResult, DomainError, UserId};
+use crate::domain::{DomainResult, DomainError};
 use crate::ports::{UserRepository, EventPublisher};
 use crate::adapters::adapters_pg::report_repository::{
     ReportRepository, Report, ReportTargetType, ReportReason, ReportStatus
@@ -59,6 +59,9 @@ pub trait SecurityApplicationService: Send + Sync {
     
     /// 获取安全统计信息
     async fn get_security_stats(&self, admin_id: i64) -> DomainResult<SecurityStats>;
+
+    /// 获取用户资料
+    async fn get_user_profile(&self, user_id: i64) -> DomainResult<Option<crate::domain::entities::user::UserProfile>>;
 }
 
 /// 安全统计信息
@@ -97,7 +100,7 @@ impl SecurityApplicationServiceImpl {
         match target_type {
             ReportTargetType::User => {
                 if let Ok(user_id) = target_id.parse::<i64>() {
-                    let user = self.user_repository.find_by_id(UserId::from(user_id)).await?;
+                    let user = self.user_repository.find_user_profile(user_id).await?;
                     Ok(user.is_some())
                 } else {
                     Ok(false)
@@ -137,7 +140,7 @@ impl SecurityApplicationServiceImpl {
     }
     
     /// 自动审核内容
-    async fn auto_moderate_content(&self, report: &Report) -> DomainResult<Option<String>> {
+    async fn auto_moderate_content(&self, _report: &Report) -> DomainResult<Option<String>> {
         // TODO: 实现自动审核逻辑
         // 1. 关键词过滤
         // 2. 机器学习模型检测
@@ -174,12 +177,10 @@ impl SecurityApplicationService for SecurityApplicationServiceImpl {
                reporter_id, target_type, target_id, reason);
         
         // 验证举报者存在
-        let reporter = self.user_repository.find_by_id(UserId::from(reporter_id)).await?;
-        if reporter.is_none() {
-            return Err(DomainError::NotFound {
+        let _reporter = self.user_repository.find_user_profile(reporter_id).await?
+            .ok_or_else(|| DomainError::NotFound {
                 resource: "举报者".to_string(),
-            });
-        }
+            })?;
         
         // 验证举报目标存在
         if !self.validate_report_target(&target_type, &target_id).await? {
@@ -230,7 +231,7 @@ impl SecurityApplicationService for SecurityApplicationServiceImpl {
         debug!("获取用户 {} 的举报记录", user_id);
         
         // 验证用户存在
-        let user = self.user_repository.find_by_id(UserId::from(user_id)).await?;
+        let user = self.user_repository.find_user_profile(user_id).await?;
         if user.is_none() {
             return Err(DomainError::NotFound {
                 resource: "用户".to_string(),
@@ -268,7 +269,7 @@ impl SecurityApplicationService for SecurityApplicationServiceImpl {
         debug!("处理举报: ID={}, 处理人={}, 动作={}", report_id, handler_id, action);
         
         // 验证处理人存在且有管理员权限
-        let handler = self.user_repository.find_by_id(UserId::from(handler_id)).await?;
+        let handler = self.user_repository.find_user_profile(handler_id).await?;
         if handler.is_none() {
             return Err(DomainError::NotFound {
                 resource: "处理人".to_string(),
@@ -349,7 +350,7 @@ impl SecurityApplicationService for SecurityApplicationServiceImpl {
         }
         
         // 验证被屏蔽用户存在
-        let blocked_user = self.user_repository.find_by_id(UserId::from(blocked_id)).await?;
+        let blocked_user = self.user_repository.find_user_profile(blocked_id).await?;
         if blocked_user.is_none() {
             return Err(DomainError::NotFound {
                 resource: "被屏蔽用户".to_string(),
@@ -363,13 +364,13 @@ impl SecurityApplicationService for SecurityApplicationServiceImpl {
         // 4. 隐藏相关内容
         
         // 如果提供了屏蔽原因，创建举报记录
-        if let Some(reason_text) = reason {
+        if let Some(ref reason_text) = reason {
             let _ = self.create_report(
                 blocker_id,
                 ReportTargetType::User,
                 blocked_id.to_string(),
                 ReportReason::Other,
-                Some(reason_text),
+                Some(reason_text.clone()),
             ).await;
         }
         
@@ -414,7 +415,7 @@ impl SecurityApplicationService for SecurityApplicationServiceImpl {
         debug!("获取安全统计信息: 管理员={}", admin_id);
         
         // 验证管理员权限
-        let admin = self.user_repository.find_by_id(UserId::from(admin_id)).await?;
+        let admin = self.user_repository.find_user_profile(admin_id).await?;
         if admin.is_none() {
             return Err(DomainError::NotFound {
                 resource: "管理员".to_string(),
@@ -437,6 +438,12 @@ impl SecurityApplicationService for SecurityApplicationServiceImpl {
         };
         
         Ok(stats)
+    }
+
+    /// 获取用户资料
+    async fn get_user_profile(&self, user_id: i64) -> DomainResult<Option<crate::domain::entities::user::UserProfile>> {
+        debug!("获取用户资料: {}", user_id);
+        self.user_repository.find_user_profile(user_id).await
     }
 }
 

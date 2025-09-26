@@ -3,7 +3,7 @@
 /// 根据需求文档的API类型命名规范，定义通用的响应类型
 /// 使用type alias来避免重复定义相同结构的响应类型
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 /// 通用的成功/失败响应类型
 #[derive(Debug, Serialize)]

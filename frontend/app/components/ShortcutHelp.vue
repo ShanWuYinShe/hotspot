@@ -33,7 +33,7 @@
               
               <div class="flex items-center gap-1">
                 <UKbd 
-                  v-for="key in formatShortcut(shortcut.key)" 
+                  v-for="key in shortcutsManager.formatShortcutKeys(shortcut.key)" 
                   :key="key"
                   size="sm"
                 >
@@ -66,13 +66,13 @@
 
 <script setup lang="ts">
 const { t } = useI18n()
-const shortcuts = useShortcuts()
+const shortcutsManager = useShortcuts()
 
 // 处理关闭
 const handleClose = () => {
-  shortcuts.hideHelp()
+  shortcutsManager.hideHelp()
 }
 
-const shortcutsByCategory = computed(() => shortcuts.getByCategory())
-const isHelpVisible = computed(() => shortcuts.isHelpVisible.value)
+const shortcutsByCategory = computed(() => shortcutsManager.getByCategory())
+const isHelpVisible = computed(() => shortcutsManager.isHelpVisible.value)
 </script>
