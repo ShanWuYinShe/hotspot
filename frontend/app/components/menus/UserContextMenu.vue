@@ -1,5 +1,5 @@
 <template>
-  <UDropdownMenu>
+  <UContextMenu>
     <template #trigger>
       <slot name="trigger">
         <UButton
@@ -13,28 +13,28 @@
 
     <template #content>
       <div class="py-1">
-        <UDropdownMenuItem
+        <UContextMenuItem
           icon="i-heroicons-chat-bubble-left"
           label="发送消息"
           @click="$emit('chatRequested', user)"
         />
-        <UDropdownMenuItem
+        <UContextMenuItem
           icon="i-heroicons-user-plus"
           label="添加好友"
           @click="$emit('friendRequested', user)"
         />
-        <UDropdownMenuItem
+        <UContextMenuItem
           icon="i-heroicons-map-pin"
           label="查看位置"
           @click="$emit('locationRequested', user)"
         />
-        <UDropdownMenuItem
+        <UContextMenuItem
           icon="i-heroicons-information-circle"
           label="查看资料"
           @click="$emit('profileRequested', user)"
         />
-        <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
-        <UDropdownMenuItem
+        <USeparator />
+        <UContextMenuItem
           icon="i-heroicons-flag"
           label="举报用户"
           color="red"
@@ -42,7 +42,7 @@
         />
       </div>
     </template>
-  </UDropdownMenu>
+  </UContextMenu>
 </template>
 
 <script setup lang="ts">

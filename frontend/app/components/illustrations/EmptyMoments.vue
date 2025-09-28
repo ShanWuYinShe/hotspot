@@ -1,25 +1,40 @@
 <template>
-  <svg :class="svgClass" viewBox="0 0 200 140" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="empty moments illustration">
-    <defs>
-      <linearGradient id="gmo" x1="0" x2="1" y1="0" y2="1">
-        <stop offset="0%" stop-color="#fbcfe8" />
-        <stop offset="100%" stop-color="#cffafe" />
-      </linearGradient>
-    </defs>
-    <rect x="0" y="0" width="200" height="140" rx="12" fill="url(#gmo)" opacity="0.25" />
-    <g transform="translate(22,22)">
-      <rect x="0" y="0" width="156" height="96" rx="10" fill="#fff" opacity="0.9" />
-      <rect x="18" y="18" width="60" height="44" rx="6" fill="#DBEAFE" />
-      <circle cx="48" cy="40" r="12" fill="#93C5FD" />
-      <rect x="88" y="22" width="50" height="8" rx="4" fill="#E5E7EB" />
-      <rect x="88" y="38" width="36" height="8" rx="4" fill="#E5E7EB" />
-      <rect x="88" y="54" width="44" height="8" rx="4" fill="#E5E7EB" />
-    </g>
-  </svg>
+  <div class="flex flex-col items-center justify-center py-8 md:py-12 space-y-4">
+    <!-- 图标 -->
+    <div class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center">
+      <UIcon name="i-heroicons-photo" class="w-8 h-8 md:w-10 md:h-10 text-primary-600 dark:text-primary-400" />
+    </div>
+    
+    <!-- 标题和描述 -->
+    <div class="text-center space-y-2 max-w-sm mx-auto px-4">
+      <h3 class="text-base md:text-lg lg:text-xl font-semibold text-neutral-800 dark:text-neutral-200">
+        暂无动态
+      </h3>
+      <p class="text-sm md:text-base text-neutral-600 dark:text-neutral-400 leading-relaxed">
+        还没有发布任何动态，分享你的精彩瞬间吧！
+      </p>
+    </div>
+    
+    <!-- 操作按钮 -->
+    <div class="pt-2">
+      <UButton 
+        variant="soft"
+        color="primary"
+        size="sm"
+        @click="$emit('action')"
+        class="transition-colors duration-200"
+      >
+        <template #leading>
+          <UIcon name="i-heroicons-plus" class="w-4 h-4" />
+        </template>
+        发布动态
+      </UButton>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-interface Props { size?: 'sm'|'md'|'lg' }
-const props = withDefaults(defineProps<Props>(), { size: 'md' })
-const svgClass = computed(() => ({ sm: 'w-32 h-24', md: 'w-48 h-36', lg: 'w-64 h-44' } as const)[props.size])
+defineEmits<{
+  action: [];
+}>();
 </script>

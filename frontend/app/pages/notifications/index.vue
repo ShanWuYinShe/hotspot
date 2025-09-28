@@ -44,8 +44,8 @@
 </template>
 
 <script setup lang="ts">
-import type { StatItem } from '~/components/StatsGrid.vue'
-import type { ActionItem } from '~/components/ActionPanel.vue'
+import type { StatItem } from '~/components/data/StatsGrid.vue'
+import type { ActionItem } from '~/components/common/ActionPanel.vue'
 
 definePageMeta({
     title: '通知中心',
@@ -73,8 +73,8 @@ const selectedNotifications = ref<NotificationItem[]>([])
 const notifications = ref<NotificationItem[]>([])
 
 // 服务和工具
-const toast = useSmartToast()
-const { executeFeature } = useFeatureStatus()
+const { success, error, info } = useNotifications()
+const toast = { success, error, info }
 
 // 筛选标签
 const filterTabs = [

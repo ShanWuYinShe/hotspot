@@ -1,25 +1,40 @@
 <template>
-  <svg :class="svgClass" viewBox="0 0 200 140" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="empty messages illustration">
-    <defs>
-      <linearGradient id="gm" x1="0" x2="1" y1="0" y2="1">
-        <stop offset="0%" stop-color="#e0e7ff" />
-        <stop offset="100%" stop-color="#dbeafe" />
-      </linearGradient>
-    </defs>
-    <rect x="0" y="0" width="200" height="140" rx="12" fill="url(#gm)" opacity="0.25" />
-    <g transform="translate(22,24)">
-      <rect x="0" y="0" width="156" height="92" rx="10" fill="#fff" opacity="0.9" />
-      <rect x="16" y="18" width="88" height="10" rx="5" fill="#E5E7EB" />
-      <rect x="16" y="36" width="120" height="10" rx="5" fill="#E5E7EB" />
-      <rect x="16" y="54" width="96" height="10" rx="5" fill="#E5E7EB" />
-      <circle cx="132" cy="20" r="6" fill="#6366F1" opacity="0.2" />
-      <circle cx="144" cy="20" r="6" fill="#10B981" opacity="0.2" />
-    </g>
-  </svg>
-  </template>
+  <div class="flex flex-col items-center justify-center py-8 md:py-12 space-y-4">
+    <!-- 图标 -->
+    <div class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center">
+      <UIcon name="i-heroicons-chat-bubble-left-right" class="w-8 h-8 md:w-10 md:h-10 text-primary-600 dark:text-primary-400" />
+    </div>
+    
+    <!-- 标题和描述 -->
+    <div class="text-center space-y-2 max-w-sm mx-auto px-4">
+      <h3 class="text-base md:text-lg lg:text-xl font-semibold text-neutral-800 dark:text-neutral-200">
+        暂无消息
+      </h3>
+      <p class="text-sm md:text-base text-neutral-600 dark:text-neutral-400 leading-relaxed">
+        还没有收到任何消息，开始与朋友聊天吧！
+      </p>
+    </div>
+    
+    <!-- 操作按钮 -->
+    <div class="pt-2">
+      <UButton 
+        variant="soft"
+        color="primary"
+        size="sm"
+        @click="$emit('action')"
+        class="transition-colors duration-200"
+      >
+        <template #leading>
+          <UIcon name="i-heroicons-chat-bubble-left-right" class="w-4 h-4" />
+        </template>
+        开始聊天
+      </UButton>
+    </div>
+  </div>
+</template>
 
 <script setup lang="ts">
-interface Props { size?: 'sm'|'md'|'lg' }
-const props = withDefaults(defineProps<Props>(), { size: 'md' })
-const svgClass = computed(() => ({ sm: 'w-32 h-24', md: 'w-48 h-36', lg: 'w-64 h-44' } as const)[props.size])
+defineEmits<{
+  action: [];
+}>();
 </script>

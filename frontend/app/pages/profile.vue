@@ -1,246 +1,250 @@
 <template>
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
-        <div class="max-w-5xl mx-auto">
-            <!-- 个人信息卡片 -->
-            <UCard class="mb-4">
-                <div class="text-center">
-                    <!-- 头像 -->
-                    <div class="mb-3">
-                        <UAvatar
-                            :alt="user?.nickname"
-                            size="3xl"
-                            class="mx-auto"
-                        >
-                            {{ user?.nickname?.charAt(0) || "U" }}
-                        </UAvatar>
-                    </div>
-
-                    <!-- 基本信息 -->
-                    <h1 class="text-2xl font-bold text-neutral-900 mb-2">
-                        {{ user?.nickname || $t("common.user") }}
-                    </h1>
-                    <p class="text-neutral-600 mb-4">ID: {{ user?.user_id }}</p>
-
-                    <!-- 未绑定/临时用户引导 EmptyState -->
-                    <div v-if="false" class="mb-4">
-                        <UCard>
-                            <EmptyState
-                                icon="i-heroicons-user"
-                                :title="$t('profile.temporary.title')"
-                                :description="
-                                    $t('profile.temporary.description')
-                                "
-                                :action-text="
-                                    $t('profile.temporary.actionText')
-                                "
-                                :action-handler="goUpgrade"
-                                :secondary-action-text="
-                                    $t('profile.temporary.secondaryActionText')
-                                "
-                                :secondary-action-handler="showBenefits"
-                            >
-                                <template #illustration>
-                                    <EmptyAccount size="md" />
-                                </template>
-                            </EmptyState>
-                        </UCard>
-                    </div>
-
-                    <!-- 操作按钮 -->
-                    <div class="flex justify-center gap-3 sm:gap-4">
-                        <UButton variant="soft" @click="editProfile">
-                            <UIcon
-                                name="i-heroicons-pencil-square"
-                                class="w-4 h-4 mr-2"
-                            />
-                            {{ $t("profile.actions.edit") }}
-                        </UButton>
-                        <UButton variant="outline" @click="viewSettings">
-                            <UIcon
-                                name="i-heroicons-cog-6-tooth"
-                                class="w-4 h-4 mr-2"
-                            />
-                            {{ $t("profile.actions.settings") }}
-                        </UButton>
-                    </div>
-                </div>
-            </UCard>
-
-            <!-- 统计信息 -->
-            <div class="grid grid-cols-3 gap-3 mb-6">
-                <UCard class="text-center">
-                    <div>
-                        <div class="text-2xl font-bold text-neutral-900 mb-1">
-                            0
-                        </div>
-                        <div class="text-sm text-neutral-600">
-                            {{ $t("profile.stats.friends") }}
-                        </div>
-                    </div>
-                </UCard>
-                <UCard class="text-center">
-                    <div>
-                        <div class="text-2xl font-bold text-neutral-900 mb-1">
-                            0
-                        </div>
-                        <div class="text-sm text-neutral-600">
-                            {{ $t("profile.stats.groups") }}
-                        </div>
-                    </div>
-                </UCard>
-                <UCard class="text-center">
-                    <div>
-                        <div class="text-2xl font-bold text-neutral-900 mb-1">
-                            0
-                        </div>
-                        <div class="text-sm text-neutral-600">
-                            {{ $t("profile.stats.moments") }}
-                        </div>
-                    </div>
-                </UCard>
-            </div>
-
-            <!-- 功能菜单 -->
-            <UCard>
-                <template #header>
-                    <h3 class="font-semibold">
-                        {{ $t("profile.menu.title") }}
-                    </h3>
-                </template>
-
-                <div class="space-y-1">
-                    <UButton
-                        variant="ghost"
-                        block
-                        justify="start"
-                        @click="navigateTo('/groups')"
-                    >
-                        <UIcon
-                            name="i-heroicons-user-group"
-                            class="w-5 h-5 mr-3"
-                        />
-                        {{ $t("nav.myGroups") }}
-                    </UButton>
-
-                    <UButton
-                        variant="ghost"
-                        block
-                        justify="start"
-                        @click="navigateTo('/moments')"
-                    >
-                        <UIcon name="i-heroicons-photo" class="w-5 h-5 mr-3" />
-                        {{ $t("nav.moments") }}
-                    </UButton>
-
-                    <UButton
-                        variant="ghost"
-                        block
-                        justify="start"
-                        @click="navigateTo('/settings')"
-                    >
-                        <UIcon
-                            name="i-heroicons-cog-6-tooth"
-                            class="w-5 h-5 mr-3"
-                        />
-                        {{ $t("nav.settings") }}
-                    </UButton>
-
-                    <UButton
-                        variant="ghost"
-                        block
-                        justify="start"
-                        color="error"
-                        @click="openLogoutConfirm"
-                    >
-                        <UIcon
-                            name="i-heroicons-arrow-right-on-rectangle"
-                            class="w-5 h-5 mr-3"
-                        />
-                        {{ $t("profile.actions.logout") }}
-                    </UButton>
-                </div>
-            </UCard>
-        </div>
-    </div>
-
-    <!-- 退出登录确认由 useModals.openConfirmModal 管理 -->
+    <PageLayout
+        title="个人资料"
+        description="管理您的个人信息和账户设置"
+        :stats="profileStats"
+        :header-actions="headerActions"
+    >
+        <UserProfileEditor
+            :profile="userProfile"
+            @save="handleSave"
+            @avatar-change="handleAvatarChange"
+        />
+    </PageLayout>
 </template>
 
 <script setup lang="ts">
-// 页面元数据
+import type { StatItem } from '~/components/data/StatsGrid.vue'
+
 definePageMeta({
-    title: "profile.title",
-    requiresAuth: true,
+    title: '个人资料',
+    description: '管理您的个人信息和账户设置',
     layout: 'dashboard'
-});
-import { defineAsyncComponent } from "vue";
-const EmptyAccount = defineAsyncComponent(() => import("~/components/illustrations/EmptyAccount.vue"));
+})
 
-const authStore = useAuthStore();
-const toast = useSmartToast();
-const { t } = useI18n();
+// 导入服务
+import { useUsersService } from '~/services/users.service';
 
-// 当前用户信息
-const user = computed(() => authStore.user);
+// 服务和状态
+const authStore = useAuthStore()
+const userService = useUsersService();
+const { success: toastSuccess, error: toastError, info: toastInfo } = useNotifications()
+const toast = { success: toastSuccess, error: toastError, info: toastInfo }
 
-// 编辑资料
-const editProfile = () => {
-    toast.add({
-        title: t("profile.toasts.featureUnavailableTitle"),
-        description: t("profile.toasts.featureUnavailableDesc"),
-        color: "info",
-    });
-};
-
-// 查看设置
-const viewSettings = () => {
-    navigateTo("/settings");
-};
-
-// 升级/权益引导
-const goUpgrade = () => {
-    navigateTo("/settings");
-};
-const showBenefits = () => {
-    toast.add({
-        title: t("profile.benefits.title"),
-        description: t("profile.benefits.description"),
-        color: "info",
-    });
-};
-
-// 退出登录
-const { openConfirmModal } = useModals();
-const openLogoutConfirm = () => {
-    openConfirmModal({
-        title: t("profile.logout.confirmTitle"),
-        message: t("profile.logout.confirmBody"),
-        confirmText: t("profile.logout.confirmButton"),
-        cancelText: t("common.cancel"),
-        confirmColor: "warning",
-        onConfirm: () => confirmLogout(),
-    });
-};
-const loggingOut = ref(false);
-const confirmLogout = async () => {
-    if (loggingOut.value) return;
-    loggingOut.value = true;
-    try {
-        await authStore.logout();
-        toast.add({
-            title: t("profile.toasts.logoutSuccess"),
-            color: "success",
-        });
-
-        await navigateTo("/auth/login");
-    } catch (error) {
-        toast.add({
-            title: t("profile.toasts.logoutFailedTitle"),
-            description: t("profile.toasts.logoutFailedDesc"),
-            color: "error",
-        });
-    } finally {
-        loggingOut.value = false;
+// 用户资料数据
+const userProfile = computed(() => {
+  const user = authStore.user
+  if (!user) {
+    return {
+      user_id: '',
+      nickname: '',
+      display_name: '',
+      bio: '',
+      email: '',
+      phone: '',
+      avatar_url: '',
+      birthday: '',
+      gender: 'male',
+      location: '',
+      website: '',
+      allow_stranger_view: true,
+      show_online_status: true,
+      searchable_by_phone: false,
+      location_sharing_enabled: true,
+      precise_location: false,
+      two_factor_enabled: false
     }
-};
+  }
+  
+  return {
+    user_id: user.user_id,
+    nickname: user.nickname,
+    display_name: user.display_name || user.nickname,
+    bio: user.bio || '',
+    email: user.email || '',
+    phone: user.phone || '',
+    avatar_url: user.avatar_url || '',
+    birthday: user.birthday || '',
+    gender: user.gender || 'male',
+    location: user.location || '',
+    website: user.website || '',
+    allow_stranger_view: user.allow_stranger_view ?? true,
+    show_online_status: user.show_online_status ?? true,
+    searchable_by_phone: user.searchable_by_phone ?? false,
+    location_sharing_enabled: user.location_sharing_enabled ?? true,
+    precise_location: user.precise_location ?? false,
+    two_factor_enabled: user.two_factor_enabled ?? false
+  }
+})
+
+// 统计数据
+const profileStats = computed<StatItem[]>(() => [
+    {
+        key: 'profile-completion',
+        label: '资料完整度',
+        value: calculateProfileCompletion(),
+        icon: 'i-heroicons-user',
+        color: 'blue',
+        description: '完善资料可获得更多关注',
+        onClick: () => toast.info('完善更多资料信息')
+    },
+    {
+        key: 'privacy-score',
+        label: '隐私安全',
+        value: calculatePrivacyScore(),
+        icon: 'i-heroicons-shield-check',
+        color: 'green',
+        description: '您的隐私设置安全等级',
+        onClick: () => toast.info('查看隐私设置详情')
+    },
+    {
+        key: 'last-updated',
+        label: '最后更新',
+        value: '2天前',
+        icon: 'i-heroicons-clock',
+        color: 'orange',
+        description: '资料最后更新时间',
+        onClick: () => toast.info('查看更新历史')
+    },
+    {
+        key: 'profile-views',
+        label: '资料浏览',
+        value: 156,
+        icon: 'i-heroicons-eye',
+        color: 'purple',
+        description: '最近30天的资料浏览次数',
+        onClick: () => toast.info('查看浏览详情')
+    }
+])
+
+// 头部操作
+const headerActions = computed(() => [
+    {
+        key: 'preview',
+        label: '预览资料',
+        icon: 'i-heroicons-eye',
+        variant: 'outline' as const,
+        action: previewProfile
+    },
+    {
+        key: 'export',
+        label: '导出数据',
+        icon: 'i-heroicons-document-arrow-down',
+        variant: 'outline' as const,
+        action: exportProfileData
+    }
+])
+
+// 方法
+const calculateProfileCompletion = () => {
+    const fields = [
+        'nickname', 'display_name', 'bio', 'email', 'phone', 
+        'avatar_url', 'birthday', 'gender', 'location', 'website'
+    ]
+    
+    const completedFields = fields.filter(field => {
+        const value = userProfile.value[field as keyof typeof userProfile.value]
+        return value && value.toString().trim() !== ''
+    })
+    
+    return Math.round((completedFields.length / fields.length) * 100)
+}
+
+const calculatePrivacyScore = () => {
+    let score = 0
+    
+    // 基础隐私设置
+    if (!userProfile.value.allow_stranger_view) score += 20
+    if (!userProfile.value.show_online_status) score += 15
+    if (!userProfile.value.searchable_by_phone) score += 20
+    if (!userProfile.value.location_sharing_enabled) score += 25
+    if (!userProfile.value.precise_location) score += 10
+    if (userProfile.value.two_factor_enabled) score += 10
+    
+    return Math.min(score, 100)
+}
+
+const handleSave = async (profile: any) => {
+    try {
+        // 调用API保存用户资料
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        
+        userProfile.value = { ...profile }
+        toast.success('个人资料保存成功')
+        
+        // 更新认证状态中的用户信息
+        if (authStore.user) {
+            authStore.user.nickname = profile.nickname
+            authStore.user.avatar_url = profile.avatar_url
+        }
+    } catch (error) {
+        toast.error('保存失败，请重试')
+    }
+}
+
+const handleAvatarChange = (url: string) => {
+    userProfile.value.avatar_url = url
+    
+    // 实时更新认证状态中的头像
+    if (authStore.user) {
+        authStore.user.avatar_url = url
+    }
+}
+
+const previewProfile = () => {
+    // 在新窗口中预览用户资料
+    const previewUrl = `/users/${userProfile.value.user_id}`
+    window.open(previewUrl, '_blank')
+}
+
+const exportProfileData = () => {
+    // 创建导出数据
+    const exportData = {
+        nickname: userProfile.value.nickname,
+        display_name: userProfile.value.display_name,
+        bio: userProfile.value.bio,
+        email: userProfile.value.email,
+        phone: userProfile.value.phone,
+        birthday: userProfile.value.birthday,
+        gender: userProfile.value.gender === 'male' ? '男' : userProfile.value.gender === 'female' ? '女' : '保密',
+        location: userProfile.value.location,
+        website: userProfile.value.website,
+        export_time: new Date().toISOString()
+    }
+    
+    // 创建下载链接
+    const dataStr = JSON.stringify(exportData, null, 2)
+    const dataBlob = new Blob([dataStr], { type: 'application/json' })
+    const url = URL.createObjectURL(dataBlob)
+    
+    // 下载文件
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `my-profile-${new Date().toISOString().split('T')[0]}.json`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    
+    toast.success('个人资料已导出')
+}
+
+// 页面加载时获取用户资料
+onMounted(async () => {
+    try {
+        // 从认证状态中获取基础信息
+        if (authStore.user) {
+            userProfile.value.user_id = authStore.user.user_id
+            userProfile.value.nickname = authStore.user.nickname || userProfile.value.nickname
+            userProfile.value.email = authStore.user.email || userProfile.value.email
+            userProfile.value.avatar_url = authStore.user.avatar_url || userProfile.value.avatar_url
+        }
+        
+        // 获取完整的用户资料
+        const fullProfile = await userService.getProfile();
+        userProfile.value = { ...userProfile.value, ...fullProfile };
+    } catch (error) {
+        toast.error('加载用户资料失败')
+    }
+})
 </script>

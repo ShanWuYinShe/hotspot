@@ -99,27 +99,27 @@
                     :action-handler="focusComposer"
                 >
                     <template #illustration>
-                        <EmptySendMessageResponses size="lg" />
+                        <EmptyMessages size="lg" />
                     </template>
                 </EmptyState>
             </div>
 
-            <!-- Nuxt UI ChatSendMessageResponses 组件 -->
-            <UChatSendMessageResponses
+            <!-- Nuxt UI v4 ChatMessages 组件 -->
+            <UChatMessages
                 v-else
-                :messages="formattedSendMessageResponses"
+                :messages="formattedMessages"
                 :status="chatStatus"
                 :should-auto-scroll="true"
                 :should-scroll-to-bottom="true"
                 :assistant="{
                     side: 'left',
-                    variant: 'soft',
-                    avatar: { icon: 'i-heroicons-user-group' }
+                    variant: 'outline',
+                    avatar: { fallback: groupInfo?.name?.charAt(0) || 'G', src: groupInfo?.avatar_url }
                 }"
                 :user="{
                     side: 'right',
                     variant: 'soft',
-                    avatar: { icon: 'i-heroicons-user' }
+                    avatar: { fallback: authStore.user?.nickname?.charAt(0) || 'U', src: authStore.user?.avatar_url }
                 }"
                 class="h-full px-4"
             >
@@ -127,22 +127,22 @@
                     <div class="space-y-1">
                         <!-- 群聊中显示发送者名称 -->
                         <div v-if="message.role === 'assistant' && (message.metadata as any)?.senderName" 
-                             class="text-xs text-muted font-medium">
+                             class="text-xs text-neutral-500 dark:text-neutral-400 font-medium">
                             {{ (message.metadata as any).senderName }}
                         </div>
                         
                         <!-- 消息内容 -->
-                        <div class="text-sm">
-                            {{ getSendMessageResponseText(message) }}
+                        <div class="text-sm leading-relaxed">
+                            {{ getMessageText(message) }}
                         </div>
                         
                         <!-- 消息时间 -->
-                        <div class="text-xs text-muted">
-                            {{ formatSendMessageResponseTime((message.metadata as any)?.timestamp || new Date()) }}
+                        <div class="text-xs text-neutral-400 dark:text-neutral-500">
+                            {{ formatMessageTime((message.metadata as any)?.timestamp || new Date()) }}
                         </div>
                     </div>
                 </template>
-            </UChatSendMessageResponses>
+            </UChatMessages>
         </div>
 
         <!-- 消息输入框 -->
@@ -152,7 +152,7 @@
                 placeholder="在群里说点什么..."
                 :loading="sending"
                 variant="soft"
-                @submit="handleSendSendMessageResponse"
+                @submit="handleSendMessage"
             >
                 <template #trailing>
                     <div class="flex items-center gap-1">
@@ -204,6 +204,7 @@ import {
 } from "vue";
 import { useRoute, navigateTo } from "nuxt/app";
 import type { SendMessageResponse } from "~/types/api";
+import { useGroupService } from "~/services/groups.service";
 
 const EmptyMessages = defineAsyncComponent(
     () => import("~/components/illustrations/EmptyMessages.vue"),
@@ -217,8 +218,27 @@ definePageMeta({
 });
 
 const route = useRoute();
-const toast = useSmartToast();
-const groupService = useGroupService();
+const { success, error, info } = useNotifications()
+const toast = { success, error, info };
+const { formatTime: baseFormatTime } = useFormatters();
+
+// 格式化消息时间（群聊特殊显示需求）
+const formatMessageTime = (date: string | number | Date): string => {
+    const d = new Date(date);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const timeStr = d.toLocaleTimeString("zh-CN", {
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+    return day.getTime() === today.getTime()
+        ? timeStr
+        : `${d.toLocaleDateString("zh-CN")} ${timeStr}`;
+};
+
+// 使用服务实例
+const { getGroupDetails, leaveGroup } = useGroupService();
 
 // 群聊参数
 const groupId = route.params.id as string;
@@ -247,8 +267,8 @@ const chatStatus = computed(() => {
     return 'ready';
 });
 
-// 格式化消息为ChatSendMessageResponses组件需要的格式
-const formattedSendMessageResponses = computed(() => {
+// 格式化消息为ChatMessages组件需要的格式
+const formattedMessages = computed(() => {
     return messagesList.value.map(message => ({
         id: message.message_id || String(Math.random()),
         role: (isOwn(message) ? 'user' : 'assistant') as 'user' | 'assistant' | 'system',
@@ -262,7 +282,7 @@ const formattedSendMessageResponses = computed(() => {
 });
 
 // 获取消息文本内容
-const getSendMessageResponseText = (message: any) => {
+const getMessageText = (message: any) => {
     return message.parts?.[0]?.text || message.content || '';
 };
 
@@ -278,14 +298,14 @@ const searchResults = computed(() => {
     );
 });
 
-const displaySendMessageResponses = computed(() => {
+const displayMessages = computed(() => {
     if (searchQuery.value.trim()) {
         return searchResults.value;
     }
     return messagesList.value;
 });
 
-const hasMoreSendMessageResponses = computed<boolean>(
+const hasMoreMessages = computed<boolean>(
     () => messagesStore.pagination.messages.hasMore,
 );
 const focusComposer = () => {
@@ -320,32 +340,19 @@ const groupActions = computed(() => [
         {
             label: "退出群聊",
             icon: "i-heroicons-arrow-right-on-rectangle",
-            click: leaveGroup,
+            click: leaveGroupChat,
         },
     ],
 ]);
 
 // 格式化消息时间
-const formatSendMessageResponseTime = (date: string | number | Date): string => {
-    const d = new Date(date);
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    const timeStr = d.toLocaleTimeString("zh-CN", {
-        hour: "2-digit",
-        minute: "2-digit",
-    });
-    return day.getTime() === today.getTime()
-        ? timeStr
-        : `${d.toLocaleDateString("zh-CN")} ${timeStr}`;
-};
 
 // 初始化群聊数据
 const initGroupChat = async (): Promise<void> => {
     try {
         // 获取群组信息
         try {
-            groupInfo.value = (await groupService.getGroupDetails(groupId)) as any;
+            groupInfo.value = (await getGroupDetails(groupId)) as any;
         } catch (_) {
             groupInfo.value = { name: `群组 ${groupId}`, member_count: 0 };
         }
@@ -363,7 +370,7 @@ const initGroupChat = async (): Promise<void> => {
 };
 
 // 处理消息发送（ChatPrompt组件的submit事件）
-const handleSendSendMessageResponse = async (event: Event) => {
+const handleSendMessage = async (event: Event) => {
     event.preventDefault();
     const content = messageInput.value.trim();
     if (!content || sending.value) return;
@@ -479,11 +486,11 @@ const onSendLocation = async () => {
     try {
         sending.value = true;
         
-        const permissions = usePermissions();
-        const hasPermission = await permissions.checkGeolocation();
+        const deviceAccess = useDeviceAccess();
+        const hasPermission = await deviceAccess.checkGeolocation();
         
-        if (!hasPermission) {
-            const granted = await permissions.requestGeolocation();
+        if (hasPermission !== 'granted') {
+            const granted = await deviceAccess.requestGeolocation();
             if (!granted) {
                 toast.add({
                     title: "需要位置权限",
@@ -494,9 +501,8 @@ const onSendLocation = async () => {
             }
         }
         
-        const geolocation = useGeolocation();
-        const position = await geolocation.getCurrentPosition();
-        const address = await geolocation.reverseGeocode(position.coords.latitude, position.coords.longitude);
+        const position = await deviceAccess.getCurrentPosition();
+        const address = await deviceAccess.reverseGeocode(position.coords.latitude, position.coords.longitude);
         
         const locationContent = `📍 我的位置\n${address}\n纬度: ${position.coords.latitude.toFixed(6)}\n经度: ${position.coords.longitude.toFixed(6)}`;
         
@@ -511,16 +517,16 @@ const onSendLocation = async () => {
     } catch (error: any) {
         console.error("发送位置失败:", error);
         
-        let errorSendMessageResponse = "获取位置失败，请重试";
+        let errorMessage = "获取位置失败，请重试";
         if (error.message?.includes("权限")) {
-            errorSendMessageResponse = "位置权限被拒绝，请在浏览器设置中允许位置访问";
+            errorMessage = "位置权限被拒绝，请在浏览器设置中允许位置访问";
         } else if (error.message?.includes("超时")) {
-            errorSendMessageResponse = "获取位置超时，请检查GPS是否开启";
+            errorMessage = "获取位置超时，请检查GPS是否开启";
         }
         
         toast.add({
             title: "发送失败",
-            description: errorSendMessageResponse,
+            description: errorMessage,
             color: "error",
         });
     } finally {
@@ -529,7 +535,7 @@ const onSendLocation = async () => {
 };
 
 // 加载更多消息
-const loadMoreSendMessageResponses = async (): Promise<void> => {
+const loadMoreMessages = async (): Promise<void> => {
     if (loadingMore.value) return;
     loadingMore.value = true;
     try {
@@ -545,7 +551,7 @@ const loadMoreSendMessageResponses = async (): Promise<void> => {
     }
 };
 
-// 注意：scrollToBottom 方法已由 UChatSendMessageResponses 组件自动处理
+// 注意：scrollToBottom 方法已由 UChatMessages 组件自动处理
 
 // 返回上一页
 const goBack = (): void => {
@@ -573,9 +579,9 @@ const showGroupSettings = (): void => {
     });
 };
 
-const leaveGroup = async (): Promise<void> => {
+const leaveGroupChat = async (): Promise<void> => {
     try {
-        await groupService.leaveGroup(groupId);
+        await leaveGroup(groupId);
         toast.add({
             title: "已退出群聊",
             description: "您已成功退出该群聊",

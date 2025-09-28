@@ -93,7 +93,7 @@
 </template>
 
 <script setup lang="ts">
-import type { StatItem } from '~/components/StatsGrid.vue'
+import type { StatItem } from '~/components/data/StatsGrid.vue'
 
 definePageMeta({
     title: '数据仪表板',
@@ -102,8 +102,8 @@ definePageMeta({
 })
 
 // 服务和状态
-const toast = useSmartToast()
-const { executeFeature } = useFeatureStatus()
+const { success, error, info } = useNotifications()
+const toast = { success, error, info }
 
 // 加载状态
 const loading = reactive({
@@ -267,7 +267,7 @@ const quickActions = [
         icon: 'i-heroicons-user-plus',
         bgClass: 'bg-green-100 dark:bg-green-900/30',
         iconClass: 'text-green-600 dark:text-green-400',
-        action: () => navigateTo('/users/search')
+        action: () => navigateTo('/search')
     },
     {
         key: 'post-moment',

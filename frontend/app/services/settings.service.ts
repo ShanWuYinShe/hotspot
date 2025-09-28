@@ -7,19 +7,7 @@ import { USER_ENDPOINTS, buildUserUrl } from "~/config/api";
 import type { UserSettings } from "~/types/api";
 
 
-// 临时错误创建函数
-const createApiError = (params: {
-  status?: number;
-  code?: string;
-  message: string;
-  details?: any;
-}) => {
-  const error = new Error(params.message) as any;
-  error.status = params.status || 400;
-  error.code = params.code || "API_ERROR";
-  error.details = params.details;
-  return error;
-};
+import { withApiErrorHandling, createApiError } from '~/utils/api-error';
 
 // UserSettings 类型已从 types/index.ts 导入
 

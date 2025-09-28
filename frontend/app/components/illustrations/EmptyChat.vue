@@ -1,65 +1,40 @@
 <template>
-  <svg :class="svgClass" viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="empty chat illustration">
-    <defs>
-      <linearGradient id="chatGradient" x1="0" x2="1" y1="0" y2="1">
-        <stop offset="0%" stop-color="#ddd6fe" />
-        <stop offset="100%" stop-color="#e0e7ff" />
-      </linearGradient>
-      <linearGradient id="bubbleGradient1" x1="0" x2="1" y1="0" y2="1">
-        <stop offset="0%" stop-color="#8b5cf6" />
-        <stop offset="100%" stop-color="#7c3aed" />
-      </linearGradient>
-      <linearGradient id="bubbleGradient2" x1="0" x2="1" y1="0" y2="1">
-        <stop offset="0%" stop-color="#06b6d4" />
-        <stop offset="100%" stop-color="#0891b2" />
-      </linearGradient>
-    </defs>
+  <div class="flex flex-col items-center justify-center py-8 md:py-12 space-y-4">
+    <!-- 图标 -->
+    <div class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center">
+      <UIcon name="i-heroicons-chat-bubble-left-right" class="w-8 h-8 md:w-10 md:h-10 text-primary-600 dark:text-primary-400" />
+    </div>
     
-    <!-- 背景 -->
-    <rect x="0" y="0" width="200" height="160" rx="16" fill="url(#chatGradient)" opacity="0.3" />
+    <!-- 标题和描述 -->
+    <div class="text-center space-y-2 max-w-sm mx-auto px-4">
+      <h3 class="text-base md:text-lg lg:text-xl font-semibold text-neutral-800 dark:text-neutral-200">
+        开始对话
+      </h3>
+      <p class="text-sm md:text-base text-neutral-600 dark:text-neutral-400 leading-relaxed">
+        发送第一条消息开始与朋友的对话吧！
+      </p>
+    </div>
     
-    <!-- 手机框架 -->
-    <g transform="translate(50, 20)">
-      <rect x="0" y="0" width="100" height="120" rx="12" fill="#fff" opacity="0.9" stroke="#e2e8f0" stroke-width="1"/>
-      
-      <!-- 聊天气泡 -->
-      <g opacity="0.6">
-        <!-- 左侧气泡 -->
-        <rect x="8" y="20" width="40" height="16" rx="8" fill="url(#bubbleGradient1)" opacity="0.7"/>
-        <rect x="8" y="40" width="32" height="16" rx="8" fill="url(#bubbleGradient1)" opacity="0.5"/>
-        
-        <!-- 右侧气泡 -->
-        <rect x="52" y="60" width="40" height="16" rx="8" fill="url(#bubbleGradient2)" opacity="0.7"/>
-        <rect x="60" y="80" width="32" height="16" rx="8" fill="url(#bubbleGradient2)" opacity="0.5"/>
-      </g>
-      
-      <!-- 输入框 -->
-      <rect x="8" y="100" width="84" height="12" rx="6" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
-    </g>
-    
-    <!-- 装饰性元素 -->
-    <circle cx="30" cy="40" r="3" fill="#8b5cf6" opacity="0.3">
-      <animate attributeName="opacity" values="0.3;0.7;0.3" dur="2s" repeatCount="indefinite"/>
-    </circle>
-    <circle cx="170" cy="50" r="2" fill="#06b6d4" opacity="0.4">
-      <animate attributeName="opacity" values="0.4;0.8;0.4" dur="2.5s" repeatCount="indefinite"/>
-    </circle>
-    <circle cx="25" cy="130" r="2.5" fill="#f59e0b" opacity="0.3">
-      <animate attributeName="opacity" values="0.3;0.6;0.3" dur="3s" repeatCount="indefinite"/>
-    </circle>
-  </svg>
+    <!-- 操作按钮 -->
+    <div class="pt-2">
+      <UButton 
+        variant="soft"
+        color="primary"
+        size="sm"
+        @click="$emit('action')"
+        class="transition-colors duration-200"
+      >
+        <template #leading>
+          <UIcon name="i-heroicons-paper-airplane" class="w-4 h-4" />
+        </template>
+        发送消息
+      </UButton>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-interface Props { 
-  size?: 'sm' | 'md' | 'lg' 
-}
-
-const props = withDefaults(defineProps<Props>(), { size: 'md' })
-
-const svgClass = computed(() => ({
-  sm: 'w-32 h-26',
-  md: 'w-48 h-38',
-  lg: 'w-64 h-51'
-} as const)[props.size])
+defineEmits<{
+  action: [];
+}>();
 </script>

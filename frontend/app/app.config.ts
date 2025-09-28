@@ -1,44 +1,51 @@
 export default defineAppConfig({
   ui: {
+    // 主题配置
     primary: "blue",
     gray: "neutral",
-    
-    colors: {
-      primary: "blue",
-      secondary: "slate", 
-      neutral: "zinc",
-      info: "blue",
-      success: "green",
-      warning: "orange",
-      error: "red",
-    },
+  },
 
-    button: {
-      slots: {
-        base: "rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 transition-colors duration-150 ease-out font-medium cursor-pointer",
-      },
-      defaultVariants: {
-        color: "primary",
-        variant: "solid",
-        size: "md",
-      },
+  // 主题切换配置
+  theme: {
+    default: 'system',
+    options: ['light', 'dark', 'system'],
+    transition: {
+      duration: '300ms',
+      timing: 'ease-out',
     },
+  },
 
-    card: {
-      slots: {
-        root: "bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-sm",
-        body: "p-4",
-      },
+  // 布局配置
+  layout: {
+    default: 'dashboard',
+    breakpoints: {
+      sm: '640px',
+      md: '768px',
+      lg: '1024px',
+      xl: '1280px',
+      '2xl': '1536px',
     },
+  },
 
-    modal: {
-      slots: {
-        overlay: "backdrop-blur-sm bg-black/30",
-        content: "bg-white dark:bg-neutral-900 rounded-lg shadow-xl border border-neutral-200 dark:border-neutral-700",
-        header: "px-4 py-3 border-b border-neutral-200 dark:border-neutral-700",
-        body: "p-4",
-        footer: "px-4 py-3 border-t border-neutral-200 dark:border-neutral-700 flex gap-2 justify-end",
-      },
+  // 动画配置
+  animation: {
+    pageTransition: {
+      name: 'page',
+      mode: 'out-in',
+      duration: 300,
     },
-  }
+    layoutTransition: {
+      name: 'layout',
+      mode: 'out-in',
+      duration: 300,
+    },
+  },
+
+  // 通知配置
+  notification: {
+    position: 'bottom-right',
+    duration: 5000,
+    progress: true,
+    expand: true,
+  },
 });

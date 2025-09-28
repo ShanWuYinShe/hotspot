@@ -25,8 +25,7 @@
     "profile": "My Profile",
     "create": "Create",
     "search": "Search",
-    "languageSwitch": "Language Switch",
-    "themeSwitch": "Theme Switch"
+    "languageSwitch": "Language Switch"
   },
   "common": {
     "user": "User",
@@ -373,7 +372,6 @@
     "searchPlaceholder": "Search...",
     "noResults": "No results",
     "language": "Language",
-    "theme": "Theme",
     "distanceUnit": "Distance Unit",
     "timeFormat": "Time Format",
     "select": {

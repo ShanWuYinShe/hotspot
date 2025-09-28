@@ -72,12 +72,64 @@
       <div class="p-1 pb-4 md:pb-6">
         <UFormField label="谁可以查看我的资料" class="space-y-3">
           <USelect 
-            v-model="localSettings.privacy.profile_visibility" 
+            v-model="localSettings.privacy.privacy_level" 
             :options="profileVisibilityOptions" 
             class="w-full" 
             size="md" 
           />
         </UFormField>
+      </div>
+    </UCard>
+
+    <!-- 安全与举报 -->
+    <UCard :ui="cardDefaultUi">
+      <template #header>
+        <div class="flex items-center gap-2">
+          <UIcon name="i-heroicons-shield-exclamation" class="w-4 h-4 md:w-5 md:h-5 text-neutral-600 dark:text-neutral-400" />
+          <h3 class="text-base md:text-lg font-semibold text-neutral-900 dark:text-white">
+            安全与举报
+          </h3>
+        </div>
+      </template>
+      
+      <div class="p-1 pb-4 md:pb-6 space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h4 class="text-sm font-medium text-neutral-900 dark:text-white">
+              我的举报记录
+            </h4>
+            <p class="text-xs text-neutral-600 dark:text-neutral-400">
+              查看您提交的举报记录和处理状态
+            </p>
+          </div>
+          <UButton
+            variant="outline"
+            size="sm"
+            icon="i-heroicons-document-text"
+            @click="showReportHistory"
+          >
+            查看记录
+          </UButton>
+        </div>
+        
+        <div class="flex items-center justify-between">
+          <div>
+            <h4 class="text-sm font-medium text-neutral-900 dark:text-white">
+              黑名单管理
+            </h4>
+            <p class="text-xs text-neutral-600 dark:text-neutral-400">
+              管理您拉黑的用户列表
+            </p>
+          </div>
+          <UButton
+            variant="outline"
+            size="sm"
+            icon="i-heroicons-user-minus"
+            @click="openBlockedUsersModal"
+          >
+            管理黑名单
+          </UButton>
+        </div>
       </div>
     </UCard>
   </div>
@@ -92,12 +144,24 @@ interface Props {
 
 defineProps<Props>();
 
+// Modal 功能
+const { showReportHistoryModal, showBlockedUsersModal } = useModal();
+
 // 配置选项
 const profileVisibilityOptions = [
   { label: '公开', value: 'public' },
   { label: '仅好友', value: 'friends' },
   { label: '私密', value: 'private' }
 ];
+
+// 方法
+const showReportHistory = () => {
+  showReportHistoryModal();
+};
+
+const openBlockedUsersModal = () => {
+  showBlockedUsersModal();
+};
 
 // UI 配置
 const cardHeaderUi = {

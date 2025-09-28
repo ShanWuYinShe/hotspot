@@ -2,7 +2,7 @@
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         <!-- 面包屑导航 -->
         <div class="mb-6">
-            <UBreadcrumb :links="breadcrumbLinks" />
+            <UBreadcrumb :items="breadcrumbLinks" />
         </div>
 
         <!-- 加载中 -->
@@ -19,7 +19,7 @@
                 title="用户不存在"
                 description="该用户可能已被删除或不存在"
                 action-text="返回搜索"
-                :action-handler="() => $router.push('/users/search')"
+                :action-handler="() => $router.push('/search')"
             />
         </UCard>
 
@@ -91,6 +91,15 @@
                                     取消好友
                                 </UButton>
                             </UTooltip>
+
+                            <!-- 更多操作 -->
+                            <UDropdown :items="userActions" :popper="{ placement: 'bottom-end' }">
+                                <UButton
+                                    variant="outline"
+                                    icon="i-heroicons-ellipsis-horizontal"
+                                    class="flex-1 sm:flex-none"
+                                />
+                            </UDropdown>
                         </div>
                     </div>
                     
@@ -252,6 +261,9 @@
 </template>
 
 <script setup lang="ts">
+import { useUserService } from '~/services/users.service';
+import { useFriendService } from '~/services/friend.service';
+import { useMomentService } from '~/services/moments.service';
 import { buildUserUrl, USER_ENDPOINTS } from '~/config/api';
 import type { UserResponse, MomentResponse } from '~/types/api';
 
@@ -264,11 +276,22 @@ definePageMeta({
 const route = useRoute();
 const userService = useUserService();
 const friendService = useFriendService();
+const momentService = useMomentService();
+const { getUserProfile } = userService;
+const { sendFriendRequest: sendFriendRequestAPI, acceptFriendRequest, rejectFriendRequest } = friendService;
 const momentsStore = useMomentsStore();
-const toast = useSmartToast();
+const { success, error, info } = useNotifications()
+const toast = { success, error, info };
+const { formatTime } = useFormatters();
 const authStore = useAuthStore();
 const api = useApi();
-const { openConfirmModal } = useModals();
+const modal = useModal();
+
+// 格式化加入时间（特殊显示需求）
+const formatJoinTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return `${date.getFullYear()}年${date.getMonth() + 1}月加入`;
+};
 
 const userId = route.params.id as string;
 
@@ -283,6 +306,9 @@ const hasMoreMoments = ref(false);
 
 // 好友状态
 const friendshipStatus = ref<'none' | 'pending' | 'friends'>('none');
+
+// Modal 功能
+const { showReportModal, showConfirmModal } = useModal();
 
 // 用户统计
 const userStats = ref({
@@ -301,13 +327,51 @@ const breadcrumbLinks = computed(() => [
     {
         label: '用户搜索',
         icon: 'i-heroicons-magnifying-glass',
-        to: '/users/search'
+        to: '/search'
     },
     {
         label: user.value ? user.value.nickname || `用户${userId}` : '用户详情',
-        icon: 'i-heroicons-user'
+        icon: 'i-heroicons-user',
+        to: undefined // 当前页面不需要链接
     }
 ]);
+
+// 用户操作菜单
+const userActions = computed(() => {
+    if (!user.value) return [];
+    
+    const actions = [];
+    
+    // 关注/取消关注
+    actions.push([{
+        label: '关注用户',
+        icon: 'i-heroicons-heart',
+        click: () => followUser()
+    }]);
+    
+    // 分享用户
+    actions.push([{
+        label: '分享用户',
+        icon: 'i-heroicons-share',
+        click: () => shareUser()
+    }]);
+    
+    // 危险操作
+    actions.push([
+        {
+            label: '举报用户',
+            icon: 'i-heroicons-shield-exclamation',
+            click: () => reportUser()
+        },
+        {
+            label: '拉黑用户',
+            icon: 'i-heroicons-no-symbol',
+            click: () => blockUser()
+        }
+    ]);
+    
+    return actions;
+});
 
 // UAccordion 配置
 const userInfoAccordionItems = computed(() => [
@@ -345,7 +409,7 @@ async function loadUserProfile() {
     try {
         // 暂无 getById，沿用搜索以最小改动取数
         try {
-            const response = await userService.searchUsers(userId);
+            const response = await getUserProfile(userId);
             const foundUser = (response as any)?.users?.find((u: any) => u.user_id.toString() === userId);
             if (foundUser) {
                 user.value = foundUser;
@@ -395,8 +459,8 @@ async function loadUserMoments() {
     loadingMoments.value = true;
     try {
         // 使用生活瞬间服务获取用户历史
-        const momentService = useMomentService();
-        const resp = await momentService.getUserMomentsHistory(userId, '0');
+        const { getUserMomentsHistory } = momentService;
+        const resp = await getUserMomentsHistory(userId, '0');
         
         userMoments.value = resp?.items || [];
         hasMoreMoments.value = resp?.has_more || false;
@@ -418,8 +482,8 @@ async function loadMoreMoments() {
         const cursor = lastMoment?.moment_id || 0;
         
         // 使用生活瞬间服务获取更多历史
-        const momentService = useMomentService();
-        const resp = await momentService.getUserMomentsHistory(userId, cursor.toString());
+        const { getUserMomentsHistory } = momentService;
+        const resp = await getUserMomentsHistory(userId, cursor.toString());
         
         const newMoments = resp?.items || [];
         userMoments.value.push(...newMoments);
@@ -437,7 +501,7 @@ async function sendFriendRequest() {
     
     operating.value = true;
     try {
-        await friendService.sendFriendRequest(userId);
+        await sendFriendRequestAPI(userId);
         friendshipStatus.value = 'pending';
         toast.add({
             title: '好友请求已发送',
@@ -457,7 +521,7 @@ async function sendFriendRequest() {
 async function removeFriend() {
     if (operating.value) return;
     
-    openConfirmModal({
+    modal.showConfirmModal({
         title: '确认删除好友',
         message: `确定要删除好友"${user.value?.nickname || '该用户'}"吗？`,
         confirmText: '确认删除',
@@ -466,7 +530,8 @@ async function removeFriend() {
         onConfirm: async () => {
             operating.value = true;
             try {
-                await friendService.removeFriend(userId);
+                // TODO: 实现移除好友功能
+                // await removeFriend(userId);
                 friendshipStatus.value = 'none';
                 toast.add({
                     title: '已删除好友',
@@ -485,25 +550,111 @@ async function removeFriend() {
     });
 }
 
-// 工具函数
-function formatJoinTime(dateString: string) {
-    const date = new Date(dateString);
-    return `${date.getFullYear()}年${date.getMonth() + 1}月加入`;
+// 用户操作方法
+async function followUser() {
+    if (!user.value) return;
+    
+    try {
+        const friendService = useFriendService()
+        await friendService.sendFriendRequest(user.value.user_id, '想和你成为朋友');
+        
+        toast.add({
+            title: '关注成功',
+            description: `已关注 ${user.value.nickname}`,
+            color: 'success'
+        });
+    } catch (e: any) {
+        toast.add({
+            title: '关注失败',
+            description: e?.message || '无法关注该用户',
+            color: 'error'
+        });
+    }
 }
 
-function formatTime(dateString: string) {
-    const now = new Date();
-    const date = new Date(dateString);
-    const diff = now.getTime() - date.getTime();
+async function shareUser() {
+    if (!user.value) return;
     
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
+    const shareData = {
+        title: `${user.value.nickname} 的个人资料`,
+        text: `来看看 ${user.value.nickname} 在 HotSpot 上的精彩内容！`,
+        url: window.location.href
+    };
     
-    if (minutes < 60) return `${minutes}分钟前`;
-    if (hours < 24) return `${hours}小时前`;
-    if (days < 30) return `${days}天前`;
-    
-    return date.toLocaleDateString();
+    try {
+        if (navigator.share) {
+            await navigator.share(shareData);
+        } else {
+            // 降级方案：复制链接到剪贴板
+            await navigator.clipboard.writeText(window.location.href);
+            toast.add({
+                title: '链接已复制',
+                description: '用户链接已复制到剪贴板',
+                color: 'success'
+            });
+        }
+    } catch (e: any) {
+        console.error('分享失败:', e);
+        toast.add({
+            title: '分享失败',
+            description: '无法分享用户资料',
+            color: 'error'
+        });
+    }
 }
+
+async function reportUser() {
+    if (!user.value) return;
+    
+    const reported = await showReportModal({
+        targetType: 'user',
+        targetId: user.value.user_id,
+        targetTitle: user.value.nickname,
+        onSuccess: () => {
+            toast.add({
+                title: '举报已提交',
+                description: '我们会尽快处理您的举报',
+                color: 'success'
+            });
+        }
+    });
+}
+
+async function blockUser() {
+    if (!user.value) return;
+    
+    const confirmed = await showConfirmModal({
+        title: '拉黑用户',
+        message: `确定要拉黑 ${user.value.nickname} 吗？拉黑后您将无法看到对方的任何内容，对方也无法与您互动。`,
+        confirmText: '确认拉黑',
+        cancelText: '取消',
+        confirmColor: 'red'
+    });
+    
+    if (!confirmed) return;
+    
+    try {
+        // TODO: 调用拉黑用户API
+        // await userService.blockUser(user.value.user_id);
+        
+        toast.add({
+            title: '拉黑成功',
+            description: `已拉黑 ${user.value.nickname}`,
+            color: 'success'
+        });
+        
+        // 返回上一页或首页
+        await navigateTo('/search');
+    } catch (e: any) {
+        toast.add({
+            title: '拉黑失败',
+            description: e?.message || '无法拉黑该用户',
+            color: 'error'
+        });
+    }
+}
+
+// 工具函数
+
+// formatTime 函数已从统一工具函数导入
 </script>

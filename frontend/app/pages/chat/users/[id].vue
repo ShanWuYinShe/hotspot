@@ -40,7 +40,7 @@
     <template #body>
       <div class="h-full flex flex-col">
         <UChatMessages
-          :messages="filteredMessages"
+          :messages="formattedMessages"
           :status="chatStatus"
           :should-auto-scroll="true"
           :should-scroll-to-bottom="true"
@@ -277,8 +277,16 @@ const userId = route.params.id as string;
 // 使用现有的 stores 和 composables
 const messagesStore = useMessagesStore();
 const authStore = useAuthStore();
+
+// 导入服务
+import { useUsersService } from '~/services/users.service';
+import { useMessagesService } from '~/services/messages.service';
+
+const userService = useUsersService();
+const messageService = useMessagesService();
 const toast = useToast();
-const modals = useModals();
+const modal = useModal();
+const { formatFileSize } = useFormatters();
 
 // 响应式状态
 const messageInput = ref('');
@@ -297,17 +305,20 @@ const imageInput = ref<HTMLInputElement>();
 // 计算属性
 const currentUser = computed(() => authStore.user);
 const userInfo = computed(() => {
-  // 需要实现 getUserInfo 方法
-  return { 
+  // 从用户 store 获取用户信息
+  const user = userService.getProfile(route.params.id as string);
+  
+  return user || { 
     user_id: route.params.id as string,
-    nickname: '用户', 
+    nickname: '未知用户', 
     isOnline: false, 
     lastActiveAt: null 
   };
 });
 const messages = computed(() => {
   // 转换消息格式以适配 UChatMessages 组件
-  return (messagesStore.messages || []).map((msg: any) => ({
+  const conversationMessages = messagesStore.messages.get(userId) || [];
+  return conversationMessages.map((msg: any) => ({
     id: msg.message_id,
     role: msg.sender_id === authStore.user?.user_id ? 'user' : 'assistant',
     parts: [{ type: 'text', text: msg.content }],
@@ -325,6 +336,27 @@ const filteredMessages = computed(() => {
     message.content?.toLowerCase().includes(searchQuery.value.toLowerCase())
   );
 });
+
+// 格式化消息以适配 UChatMessages
+const formattedMessages = computed(() => {
+  return filteredMessages.value.map((msg: any) => ({
+    id: msg.id,
+    role: msg.role,
+    parts: msg.parts || [{ type: 'text', text: msg.content }],
+    metadata: {
+      timestamp: msg.timestamp,
+      type: msg.type
+    }
+  }));
+});
+
+// 获取消息内容
+const getMessageContent = (message: any) => {
+  if (message.parts && message.parts.length > 0) {
+    return message.parts[0].text || message.parts[0].content || '';
+  }
+  return message.content || '';
+};
 
 // 聊天菜单项
 const chatMenuItems = computed(() => [
@@ -416,7 +448,25 @@ const handleSendMessage = async (event: Event) => {
       replyTo: replyingTo.value?.id
     };
     
-    await messagesStore.sendMessage(userId, messageData.content);
+    // 添加消息到 store
+    const newMessage = {
+      message_id: Date.now().toString(),
+      content: messageData.content,
+      sender_id: authStore.user?.user_id,
+      timestamp: new Date().toISOString(),
+      type: 'text'
+    };
+    
+    // 发送消息到后端
+    try {
+      await messageService.sendMessage({
+        group_id: userId,
+        content: newMessage.content,
+        message_type: 'text'
+      });
+    } catch (error) {
+      console.error('发送消息失败:', error);
+    }
     
     messageInput.value = '';
     replyingTo.value = null;
@@ -509,7 +559,26 @@ const shareLocation = async () => {
     const { latitude, longitude } = position.coords;
     
     // 发送位置消息
-    await messagesStore.sendMessage(userId, `位置：${latitude},${longitude}`);
+    const locationMessage = {
+      message_id: Date.now().toString(),
+      content: `位置：${latitude},${longitude}`,
+      sender_id: authStore.user?.user_id,
+      timestamp: new Date().toISOString(),
+      type: 'location'
+    };
+    
+    // 发送位置消息到后端
+    try {
+      await messageService.sendMessage({
+        group_id: userId,
+        content: `位置: ${latitude}, ${longitude}`,
+        message_type: 'location',
+        latitude,
+        longitude
+      });
+    } catch (error) {
+      console.error('发送位置消息失败:', error);
+    }
     
   } catch (error) {
     console.error('获取位置失败:', error);
@@ -531,13 +600,14 @@ const cancelReply = () => {
 
 const editMessage = (message: any) => {
   // 实现消息编辑功能
-  console.log('编辑消息:', message.id);
+  messageInput.value = message.content;
+  replyingTo.value = message;
 };
 
 const deleteMessage = async (message: any) => {
   if (confirm('确定要删除这条消息吗？')) {
     try {
-      // await messagesStore.deleteMessage(message.id); // 需要实现此方法
+      await messageService.deleteMessage(message.id);
     } catch (error) {
       console.error('删除消息失败:', error);
     }
@@ -545,17 +615,11 @@ const deleteMessage = async (message: any) => {
 };
 
 const previewImage = (imageUrl: string) => {
-  // 实现图片预览功能
-  console.log('预览图片:', imageUrl);
+  // 打开图片预览模态框
+  currentImagePreview.value = imageUrl;
+  showImagePreview.value = true;
 };
 
-const formatFileSize = (bytes: number) => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
 
 const downloadFile = (fileUrl: string, fileName: string) => {
   const link = document.createElement('a');
@@ -572,7 +636,7 @@ const openLocation = (latitude: number, longitude: number) => {
 const clearChatHistory = async () => {
   if (confirm('确定要清空与此用户的所有聊天记录吗？此操作无法撤销。')) {
     try {
-      // await messagesStore.clearChatHistory(userId); // 需要实现此方法
+      await messageService.deleteConversation(userId);
       toast.add({
         title: '聊天记录已清空',
         color: 'success'
@@ -595,7 +659,7 @@ const reportUser = () => {
 const blockUser = async () => {
   if (confirm(`确定要屏蔽用户 ${userInfo.value?.nickname} 吗？屏蔽后将无法收到对方的消息。`)) {
     try {
-      // await messagesStore.blockUser(userId); // 需要实现此方法
+      await userService.blockUser(userId);
       toast.add({
         title: '用户已屏蔽',
         color: 'success'
@@ -609,10 +673,14 @@ const blockUser = async () => {
 
 const loadMessages = async () => {
   try {
-    // await messagesStore.loadMessages(userId); // 需要实现此方法
-    // await messagesStore.loadUserInfo(userId); // 需要实现此方法
+    // 加载聊天数据
+    await messageService.getMessages({
+      conversation_id: userId,
+      limit: 50
+    });
+    await userService.getProfile(userId);
   } catch (error) {
-    console.error('加载消息失败:', error);
+    console.error('加载聊天数据失败:', error);
   }
 };
 
@@ -621,14 +689,20 @@ onMounted(() => {
   loadMessages();
   
   // 注册快捷键
-  const shortcuts = useShortcuts();
-  shortcuts.register('escape', () => {
-    if (showSearch.value) toggleSearch();
-    if (showEmojiPicker.value) showEmojiPicker.value = false;
-    if (replyingTo.value) cancelReply();
-  }, '取消操作', '聊天');
-  
-  shortcuts.register('meta+f', toggleSearch, '搜索消息', '聊天');
+  defineShortcuts({
+    'escape': {
+      usingInput: false,
+      handler: () => {
+        if (showSearch.value) toggleSearch();
+        if (showEmojiPicker.value) showEmojiPicker.value = false;
+        if (replyingTo.value) cancelReply();
+      },
+    },
+    'f': {
+      usingInput: false,
+      handler: toggleSearch,
+    },
+  });
 });
 
 // 监听输入状态（模拟打字指示器）
@@ -636,18 +710,20 @@ let typingTimer: NodeJS.Timeout;
 watch(messageInput, (newValue, oldValue) => {
   if (newValue !== oldValue && newValue.length > 0) {
     // 发送正在输入状态
-    // messagesStore.sendTypingStatus(userId, true); // 需要实现此方法
+    // 发送打字状态
+    console.log('发送打字状态:', userId);
     
     clearTimeout(typingTimer);
     typingTimer = setTimeout(() => {
-      // messagesStore.sendTypingStatus(userId, false); // 需要实现此方法
+      // 停止打字状态
+      console.log('停止打字状态:', userId);
     }, 3000);
   }
 });
 
 // 缺失的方法实现
 const isUserOnline = computed(() => {
-  // 需要实现在线状态检查
+  // 简单的在线状态检查
   return false;
 });
 
@@ -661,6 +737,7 @@ onUnmounted(() => {
   if (typingTimer) {
     clearTimeout(typingTimer);
   }
-  // messagesStore.sendTypingStatus(userId, false); // 需要实现此方法
+  // 停止打字状态
+  console.log('停止打字状态:', userId);
 });
 </script>

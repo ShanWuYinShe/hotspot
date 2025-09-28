@@ -1,25 +1,40 @@
 <template>
-  <svg :class="svgClass" viewBox="0 0 200 140" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="empty illustration">
-    <defs>
-      <linearGradient id="g1" x1="0" x2="1" y1="0" y2="1">
-        <stop offset="0%" stop-color="#d1fae5" />
-        <stop offset="100%" stop-color="#bfdbfe" />
-      </linearGradient>
-    </defs>
-    <rect x="0" y="0" width="200" height="140" rx="12" fill="url(#g1)" opacity="0.25" />
-    <g transform="translate(24,22)">
-      <rect x="0" y="0" width="152" height="84" rx="10" fill="#fff" opacity="0.8" />
-      <circle cx="24" cy="24" r="12" fill="#10B981" opacity="0.15" />
-      <circle cx="48" cy="40" r="8" fill="#6366F1" opacity="0.15" />
-      <circle cx="110" cy="30" r="10" fill="#F59E0B" opacity="0.15" />
-      <rect x="20" y="58" width="112" height="8" rx="4" fill="#E5E7EB" />
-      <rect x="40" y="72" width="72" height="6" rx="3" fill="#E5E7EB" />
-    </g>
-  </svg>
+  <div class="flex flex-col items-center justify-center py-8 md:py-12 space-y-4">
+    <!-- 图标 -->
+    <div class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center">
+      <UIcon name="i-heroicons-map-pin" class="w-8 h-8 md:w-10 md:h-10 text-primary-600 dark:text-primary-400" />
+    </div>
+    
+    <!-- 标题和描述 -->
+    <div class="text-center space-y-2 max-w-sm mx-auto px-4">
+      <h3 class="text-base md:text-lg lg:text-xl font-semibold text-neutral-800 dark:text-neutral-200">
+        附近暂无用户
+      </h3>
+      <p class="text-sm md:text-base text-neutral-600 dark:text-neutral-400 leading-relaxed">
+        您附近暂时没有其他用户，开启位置权限后可以发现更多朋友！
+      </p>
+    </div>
+    
+    <!-- 操作按钮 -->
+    <div class="pt-2">
+      <UButton 
+        variant="soft"
+        color="primary"
+        size="sm"
+        @click="$emit('action')"
+        class="transition-colors duration-200"
+      >
+        <template #leading>
+          <UIcon name="i-heroicons-map" class="w-4 h-4" />
+        </template>
+        开启位置
+      </UButton>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-interface Props { size?: 'sm'|'md'|'lg' }
-const props = withDefaults(defineProps<Props>(), { size: 'md' })
-const svgClass = computed(() => ({ sm: 'w-32 h-24', md: 'w-48 h-36', lg: 'w-64 h-44' } as const)[props.size])
+defineEmits<{
+  action: [];
+}>();
 </script>

@@ -248,20 +248,12 @@ export const buildGroupUrl = (endpoint: string, isPublic: boolean = false): stri
   return buildUrl(base, endpoint);
 };
 
-// 消息URL构建函数（已废弃，使用 buildChatUrl）
-// export const buildMessageUrl = (endpoint: string): string => {
-//   return buildUrl(MESSAGE_ENDPOINTS.BASE, endpoint);
-// };
 
 export const buildMomentUrl = (endpoint: string, isPublic: boolean = false): string => {
   const base = isPublic ? MOMENT_ENDPOINTS.PUBLIC.BASE : MOMENT_ENDPOINTS.PROTECTED.BASE;
   return buildUrl(base, endpoint);
 };
 
-// 好友URL构建函数（预留功能，暂未实现）
-// export const buildFriendUrl = (endpoint: string): string => {
-//   return buildUrl(FRIEND_ENDPOINTS.BASE, endpoint);
-// };
 
 export const buildChatUrl = (endpoint: string): string => {
   return buildUrl(CHAT_ENDPOINTS.PROTECTED.BASE, endpoint);

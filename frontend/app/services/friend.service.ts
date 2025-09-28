@@ -9,11 +9,65 @@ import {
   USER_ENDPOINTS, 
   buildUserUrl 
 } from "~/config/api";
-import { 
-  validateUserId,
-  validateContent,
-  validatePaginationParams 
-} from "~/utils/api-validation";
+
+// 内联验证函数
+const validateUserId = (userId: string): string => {
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('用户ID不能为空');
+  }
+  const trimmed = userId.trim();
+  if (trimmed.length === 0) {
+    throw new Error('用户ID不能为空');
+  }
+  return trimmed;
+};
+
+const validateContent = (content: string, minLength: number, maxLength: number, fieldName: string = '内容'): string => {
+  if (!content || typeof content !== 'string') {
+    throw new Error(`${fieldName}不能为空`);
+  }
+  const trimmed = content.trim();
+  if (trimmed.length < minLength) {
+    throw new Error(`${fieldName}长度不能少于${minLength}个字符`);
+  }
+  if (trimmed.length > maxLength) {
+    throw new Error(`${fieldName}长度不能超过${maxLength}个字符`);
+  }
+  return trimmed;
+};
+
+const validatePaginationParams = (params: { limit?: number; cursor?: string }): { limit: number; cursor?: string } => {
+  const result: { limit: number; cursor?: string } = {
+    limit: params.limit || 20
+  };
+  
+  if (params.limit !== undefined) {
+    if (typeof params.limit !== 'number' || isNaN(params.limit)) {
+      throw new Error('分页限制必须是有效数字');
+    }
+    if (params.limit < 1) {
+      throw new Error('分页限制必须大于0');
+    }
+    if (params.limit > 100) {
+      throw new Error('分页限制不能超过100');
+    }
+    result.limit = params.limit;
+  }
+  
+  if (params.cursor !== undefined) {
+    if (typeof params.cursor === 'string') {
+      if (params.cursor.trim() === '') {
+        throw new Error('分页游标不能为空字符串');
+      }
+      result.cursor = params.cursor.trim();
+    } else {
+      throw new Error('分页游标必须是字符串类型');
+    }
+  }
+  
+  return result;
+};
+
 import type { 
   ApiResponse,
   PaginatedResponse,

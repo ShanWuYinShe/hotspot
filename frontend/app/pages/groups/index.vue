@@ -79,8 +79,8 @@
 </template>
 
 <script setup lang="ts">
+import { getPageSeoConfig, buildSeoMeta } from '~/config/seo';
 import type { GroupResponse } from "~/types/api"
-import { formatTime } from '~/utils/formatters'
 
 // 从数据源获取 SEO 配置
 const seoConfig = getPageSeoConfig('groups')
@@ -97,8 +97,9 @@ useSeoMeta(buildSeoMeta('groups'))
 
 // 服务和状态
 const groupsStore = useGroupsStore()
-const toast = useSmartToast()
-const { executeFeature } = useFeatureStatus()
+const { formatTime } = useFormatters()
+const { success, error, info } = useNotifications()
+const toast = { success, error, info }
 
 // 数据状态
 const loading = ref(true)
@@ -206,19 +207,20 @@ const loadMyGroups = async () => {
 
 const loadUnreadCounts = async () => {
     try {
-        const messageService = useMessageService()
+        const { getGroupUnreadCount } = useStatus()
         const groups = groupsStore.myGroups.slice(0, 30) // 限制数量
+
+        // 批量获取未读数
+        const unreadPromises = groups.map(async (group) => {
+            const count = await getGroupUnreadCount(group.group_id)
+            return { groupId: group.group_id, count }
+        })
+        const unreadResults = await Promise.all(unreadPromises)
         
-        await Promise.allSettled(
-            groups.map(async (group) => {
-                try {
-                    const result = await messageService.getGroupUnreadCount(String(group.group_id))
-                    unreadCounts[group.group_id] = Number(result?.total_unread || 0)
-                } catch (error) {
-                    console.warn(`获取群组 ${group.group_id} 未读数失败:`, error)
-                }
-            })
-        )
+        // 更新未读数映射
+        unreadResults.forEach(({ groupId, count }) => {
+            unreadCounts[groupId] = count
+        })
     } catch (error) {
         console.error('批量获取未读数失败:', error)
     }
@@ -227,8 +229,7 @@ const loadUnreadCounts = async () => {
 const enterGroup = async (group: GroupResponse) => {
     try {
         // 标记消息为已读
-        const messageService = useMessageService()
-        await messageService.markAsRead(String(group.group_id), 'group')
+        // TODO: 实现消息已读标记功能
         
         // 清零本地未读数
         unreadCounts[group.group_id] = 0
@@ -242,9 +243,15 @@ const enterGroup = async (group: GroupResponse) => {
     }
 }
 
-const openCreateGroup = () => {
-    executeFeature('groupCreate', () => {
-        navigateTo('/groups/create')
+const { showCreateGroupModal } = useModal()
+
+const openCreateGroup = async () => {
+    await showCreateGroupModal({
+        onSuccess: (groupId: string) => {
+            // 刷新群组列表
+            loadGroups()
+            toast.success('群组创建成功')
+        }
     })
 }
 

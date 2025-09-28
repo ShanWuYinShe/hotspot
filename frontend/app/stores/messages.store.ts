@@ -1,700 +1,275 @@
-import { defineStore } from "pinia";
-import type { MessageType, UserResponse, ConversationsResponse, SendMessageResponse } from "~/types/api";
-import { useMessageService } from "~/services/message.service";
-
-// 会话类型（基于最新 API 设计）
-interface Conversation {
-  id: string;
-  name: string;
-  avatar?: string;
-  last_message: string;
-  last_message_time: string;
-  unread_count: number;
-  type: "user" | "group";
-  is_pinned?: boolean;
-  is_muted?: boolean;
-  // 私聊会话字段
-  participant_id?: string;
-  // 群组会话字段
-  group_id?: string;
-  member_count?: number;
-}
-
-// 转换函数：ConversationsResponse 到 Conversation
-function convertConversationSummary(summary: ConversationsResponse): Conversation {
-  return {
-    id: summary.group_id,
-    name: summary.group_name,
-    last_message: summary.last_message?.content || "",
-    last_message_time: summary.last_message?.sent_at || summary.last_activity_at,
-    unread_count: summary.unread_count,
-    type: summary.group_type === "private_chat" ? "user" : "group",
-    participant_id: summary.group_type === "private_chat" ? summary.group_id : undefined,
-    group_id: summary.group_type === "public_chat" ? summary.group_id : undefined,
-    member_count: summary.member_count,
-    is_pinned: false,
-    is_muted: summary.is_muted,
-  };
-}
-
 /**
- * 消息 Store
- * 仅负责消息数据的缓存，不持久化（数据应从服务器获取最新状态）
+ * 消息状态存储 - 纯状态版本
+ * 职责：纯粹的消息状态管理，不包含 API 调用和 WebSocket 管理
  */
-export const useMessagesStore = defineStore("messages", () => {
-  // 缓存状态 - 不持久化
-  const conversations = ref<Conversation[]>([]);
-  const currentConversation = ref<Conversation | null>(null);
-  const messages = ref<SendMessageResponse[]>([]);
 
-  // 分页状态
-  const pagination = ref({
-    conversations: {
-      hasMore: false,
-      nextCursor: undefined as string | undefined,
-    },
-    messages: { hasMore: false, nextCursor: undefined as string | undefined },
-  });
+import type { MessageResponse, ConversationsResponse } from '~/types/api'
 
-  // 加载状态
-  const loading = ref({
-    conversations: false,
-    messages: false,
-    sending: false,
-  });
+export interface Message extends MessageResponse {
+  // 本地状态
+  sending?: boolean
+  failed?: boolean
+  optimistic?: boolean
+}
 
-  // 实时消息支持
-  const optimisticMessages = ref<Map<string, SendMessageResponse>>(markRaw(new Map()));
-  const userOnlineStatus = ref<Map<string, boolean>>(markRaw(new Map()));
+export interface Conversation extends ConversationsResponse {
+  // 本地状态
+  draft?: string
+  typing?: boolean
+  unreadCount?: number
+}
 
-  // 计算属性
-  const totalUnreadCount = computed(() =>
-    conversations.value.reduce((total, conv) => total + conv.unread_count, 0),
-  );
+export const useMessagesStore = defineStore('messages', () => {
+  // ============ 状态 ============
+  const conversations = ref<Map<string, Conversation>>(new Map())
+  const messages = ref<Map<string, Message[]>>(new Map())
+  const currentConversationId = ref<string | null>(null)
 
-  // 业务方法 - 使用 Service 层
-  async function fetchConversations(loadMore = false) {
-    const messageService = useMessageService();
-    loading.value.conversations = true;
-
-    try {
-      const cursor = loadMore
-        ? pagination.value.conversations.nextCursor
-        : undefined;
-      const response = await messageService.getConversations(cursor);
-      const convertedItems = (response.items || []).map((item: ConversationsResponse) => convertConversationSummary(item));
-
-      if (loadMore) {
-        conversations.value.push(...convertedItems);
-      } else {
-        conversations.value = convertedItems;
+  // ============ 计算属性 ============
+  const conversationsList = computed(() => {
+    return Array.from(conversations.value.values())
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+  })
+  
+  const currentConversation = computed(() => {
+    if (!currentConversationId.value) return null
+    return conversations.value.get(currentConversationId.value) || null
+  })
+  
+  const currentMessages = computed(() => {
+    if (!currentConversationId.value) return []
+    return messages.value.get(currentConversationId.value) || []
+  })
+  
+  const totalUnreadCount = computed(() => {
+    return Array.from(conversations.value.values())
+      .reduce((total, conv) => total + (conv.unreadCount || 0), 0)
+  })
+  
+  // ============ 会话状态操作 ============
+  
+  /**
+   * 设置会话列表
+   */
+  const setConversations = (conversationsList: Conversation[]) => {
+    conversations.value.clear()
+    conversationsList.forEach(conv => {
+      conversations.value.set(conv.conversation_id, conv)
+    })
+  }
+  
+  /**
+   * 添加或更新会话
+   */
+  const upsertConversation = (conversation: Conversation) => {
+    conversations.value.set(conversation.conversation_id, conversation)
+  }
+  
+  /**
+   * 删除会话
+   */
+  const removeConversation = (conversationId: string) => {
+    conversations.value.delete(conversationId)
+    messages.value.delete(conversationId)
+  }
+  
+  /**
+   * 设置当前会话
+   */
+  const setCurrentConversation = (conversationId: string | null) => {
+    currentConversationId.value = conversationId
+    
+    // 自动标记为已读
+    if (conversationId) {
+      const conversation = conversations.value.get(conversationId)
+      if (conversation && conversation.unreadCount) {
+        conversation.unreadCount = 0
       }
-
-      pagination.value.conversations = {
-        hasMore: response.has_more,
-        nextCursor: response.next_cursor,
-      };
-    } finally {
-      loading.value.conversations = false;
     }
   }
-
-  async function searchConversations(query: string, loadMore = false) {
-    if (!query.trim()) {
-      return fetchConversations(loadMore);
-    }
-
-    const messageService = useMessageService();
-    loading.value.conversations = true;
-
-    try {
-      const cursor = loadMore
-        ? pagination.value.conversations.nextCursor
-        : undefined;
-      // 简单的本地搜索，因为后端没有searchConversations方法
-      const allConversations = await messageService.getConversations();
-      const filtered = allConversations.items.filter((item: any) =>
-        item.peer_name.toLowerCase().includes(query.toLowerCase()),
-      );
-      const convertedItems = filtered.map((item: ConversationsResponse) => convertConversationSummary(item));
-
-      if (loadMore) {
-        conversations.value.push(...convertedItems);
-      } else {
-        conversations.value = convertedItems;
-      }
-
-      pagination.value.conversations = {
-        hasMore: false,
-        nextCursor: undefined,
-      };
-    } finally {
-      loading.value.conversations = false;
-    }
-  }
-
-  async function createConversation(participantId?: string, groupId?: string) {
-    // 后端没有createConversation方法，通过发送消息自动创建会话
-    throw new Error("请通过发送消息自动创建会话");
-  }
-
-  async function createOrGetConversation(participantId: string) {
-    // 首先检查是否已存在对话
-    const existingConversation = conversations.value.find(
-      (c) => c.type === "user" && c.participant_id === participantId,
-    );
-
-    if (existingConversation) {
-      return existingConversation;
-    }
-
-    // 创建新对话
-    return await createConversation(participantId);
-  }
-
-  async function searchUsers(query: string) {
-    // 使用用户服务搜索用户
-    const userService = useUserService();
-    return await userService.searchUsers(query);
-  }
-
-  async function fetchMessages(
-    conversationId: string,
-    loadMore = false,
-    type: "user" | "group" = "user",
-  ) {
-    const messageService = useMessageService();
-    loading.value.messages = true;
-
-    try {
-      const cursor = loadMore
-        ? pagination.value.messages.nextCursor
-        : undefined;
-      const response =
-        type === "group"
-          ? await messageService.getGroupMessageHistory(
-              String(conversationId),
-              cursor,
-            )
-          : await messageService.getDirectMessageHistory(
-              { conversationId: String(conversationId) },
-              cursor,
-            );
-
-      const convertedItems = response.items; // 直接使用后端数据
-      if (loadMore) {
-        messages.value.push(...convertedItems);
-      } else {
-        messages.value = convertedItems;
-      }
-      // 始终按时间升序（旧->新），确保最新消息在底部
-      messages.value.sort(
-        (a: any, b: any) =>
-          new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-      );
-
-      pagination.value.messages = {
-        hasMore: response.has_more,
-        nextCursor: response.next_cursor,
-      };
-    } finally {
-      loading.value.messages = false;
-    }
-  }
-
-  async function sendMessage(
-    conversationId: string,
-    content: string,
-    messageType: MessageType = "text",
-  ) {
-    const messageService = useMessageService();
-    const authStore = useAuthStore();
-    loading.value.sending = true;
-    // 乐观消息
-    const tempId = String(Date.now());
-    const optimistic: SendMessageResponse = {
-      message_id: tempId,
-      group_id: String(conversationId),
-      sent_at: new Date().toISOString(),
-      message: content,
-      // 兼容属性
-      id: tempId,
-      conversation_id: String(conversationId),
-      sender_id: String(authStore.user?.user_id || "0"),
-      sender_name: authStore.user?.nickname || "",
-      content,
-      message_type: messageType,
-      created_at: new Date().toISOString(),
-      status: "sending" as const,
-    };
-    messages.value.push(optimistic);
-
-    try {
-      const resp = await messageService.sendDirectMessage(
-        String(conversationId),
-        content,
-        messageType,
-      );
-      // 覆盖乐观消息
-      const index = messages.value.findIndex((m: SendMessageResponse) => m.id === tempId);
-      if (index !== -1) {
-        const newMessage: SendMessageResponse = {
-          message_id: String(resp.message_id) || tempId,
-          group_id: resp.group_id,
-          sent_at: resp.sent_at,
-          message: resp.message,
-          // 兼容属性
-          id: String(resp.message_id) || tempId,
-          conversation_id: resp.conversation_id,
-          sender_id: String(authStore.user?.user_id || "0"),
-          sender_name: authStore.user?.nickname || "",
-          content,
-          message_type: resp.message_type,
-          created_at: resp.sent_at,
-        };
-        messages.value.splice(index, 1, newMessage);
-      }
-
-      // 更新对话的最后消息
-      let conversation = conversations.value.find(
-        (c) => c.id === String(resp.conversation_id),
-      );
-      if (conversation) {
-        conversation.last_message = content;
-        conversation.last_message_time = resp.sent_at;
-      } else {
-        // 首次发送创建会话时，插入会话占位并尽力补齐信息
-        conversation = {
-          id: String(resp.conversation_id),
-          name: "",
-          avatar: undefined,
-          last_message: content,
-          last_message_time: resp.sent_at,
-          unread_count: 0,
-          type: "user",
-          participant_id: String((resp as any).recipient_id),
-          is_pinned: false,
-          is_muted: false,
-        };
-        conversations.value.unshift(conversation);
-        // 异步补齐对方资料
-        try {
-          const userService = useUserService();
-          const profile = await userService.getUserProfile(
-            String((resp as any).recipient_id),
-          ) as UserResponse;
-          const target = conversations.value.find(
-            (c) => c.id === String(resp.conversation_id),
-          );
-          if (target) {
-            target.name = profile.nickname || target.name;
-            // 后端无头像字段，保持已有 avatar 占位
-          }
-        } catch (_) {
-          // 忽略补齐失败
-        }
-      }
-
-      return messages.value.find(
-        (m) =>
-          m.conversation_id === String(resp.conversation_id) &&
-          m.sent_at === resp.sent_at,
-      ) as SendMessageResponse;
-    } catch (e) {
-      // 失败：标记乐观消息为失败
-      const idx = messages.value.findIndex((m: SendMessageResponse) => m.id === tempId);
-      if (idx !== -1) {
-        // 安全地更新消息状态
-        const message = messages.value[idx];
-        if (message) {
-          Object.assign(message, {
-            status: "failed" as const,
-            retry_count: (message as any).retry_count ? (message as any).retry_count + 1 : 1
-          });
-        }
-      }
-      throw e;
-    } finally {
-      loading.value.sending = false;
-    }
-  }
-
-  async function sendGroupMessage(
-    groupId: string,
-    content: string,
-    messageType: MessageType = "text",
-  ) {
-    const messageService = useMessageService();
-    const authStore = useAuthStore();
-    loading.value.sending = true;
-    const tempId = String(Date.now());
-    const optimistic: SendMessageResponse = {
-      message_id: tempId,
-      group_id: String(groupId),
-      sent_at: new Date().toISOString(),
-      message: content,
-      // 兼容属性
-      id: tempId,
-      sender_id: String(authStore.user?.user_id || "0"),
-      sender_name: authStore.user?.nickname || "",
-      content,
-      message_type: messageType,
-      created_at: new Date().toISOString(),
-      status: "sending" as const,
-    };
-    messages.value.push(optimistic);
-    try {
-      const resp = await messageService.sendGroupMessage(
-        String(groupId),
-        content,
-        messageType,
-      );
-      const index = messages.value.findIndex((m: SendMessageResponse) => m.id === tempId);
-      if (index !== -1) {
-        const newMessage: SendMessageResponse = {
-          message_id: String((resp as any).message_id) || tempId,
-          group_id: resp.group_id,
-          sent_at: resp.sent_at,
-          message: resp.message,
-          // 兼容属性
-          id: String((resp as any).message_id) || tempId,
-          sender_id: String(authStore.user?.user_id || "0"),
-          sender_name: authStore.user?.nickname || "",
-          content,
-          message_type: messageType,
-          created_at: resp.sent_at,
-        };
-        messages.value.splice(index, 1, newMessage);
-      }
-      // 若会话列表中没有该群会话，插入占位
-      const hasGroupConv = conversations.value.some(
-        (c) =>
-          c.type === "group" &&
-          (c.group_id === String(groupId) || c.id === String(groupId)),
-      );
-      if (!hasGroupConv) {
-        conversations.value.unshift({
-          id: String(groupId),
-          name: "",
-          avatar: undefined,
-          last_message: content,
-          last_message_time: resp.sent_at,
-          unread_count: 0,
-          type: "group",
-          group_id: String(groupId),
-          is_pinned: false,
-          is_muted: false,
-        });
-        // 异步补齐群资料
-        try {
-          const groupService = useGroupService();
-          const details = await groupService.getGroupDetails(String(groupId));
-          const target = conversations.value.find(
-            (c) =>
-              c.type === "group" &&
-              (c.group_id === String(groupId) || c.id === String(groupId)),
-          );
-          if (target) {
-            target.name = (details as any).name || target.name;
-            // 后端无头像字段，保留现有 avatar
-            (target as any).member_count =
-              (details as any).member_count ?? (target as any).member_count;
-          }
-        } catch (_) {
-          // 忽略补齐失败
-        }
-      }
-      return messages.value.find(
-        (m: SendMessageResponse) => m.group_id === String(groupId) && m.sent_at === resp.sent_at,
-      ) as SendMessageResponse;
-    } catch (e) {
-      const idx = messages.value.findIndex((m: SendMessageResponse) => m.id === tempId);
-      if (idx !== -1) {
-        const message = messages.value[idx];
-        if (message) {
-          message.status = "failed";
-          message.retry_count = (message.retry_count || 0) + 1;
-        }
-      }
-      throw e;
-    } finally {
-      loading.value.sending = false;
-    }
-  }
-
-  // 重试失败消息（仅限当前列表中的失败乐观消息）
-  async function retryMessage(
-    messageId: string,
-    type: "user" | "group" = "user",
-  ) {
-    const m = messages.value.find((mm: SendMessageResponse) => mm.id === messageId) as any;
-    if (!m || m.status !== "failed") return;
-    m.status = "sending";
-    try {
-      if (type === "group") {
-        await sendGroupMessage(String(m.group_id), m.content, m.message_type);
-      } else {
-        await sendMessage(
-          String(m.conversation_id || m.recipient_id || ""),
-          m.content,
-          m.message_type,
-        );
-      }
-    } catch (e) {
-      m.status = "failed";
-      m.retry_count = (m.retry_count || 0) + 1;
-      throw e;
-    }
-  }
-
-  async function markConversationAsRead(
-    conversationId: string,
-    type: "user" | "group" = "user",
-    lastReadMessageId?: string,
-  ) {
-    const messageService = useMessageService();
-    await messageService.markAsRead(
-      String(conversationId),
-      type,
-      lastReadMessageId,
-    );
-
-    // 更新本地状态
-    const conversation =
-      type === "group"
-        ? conversations.value.find(
-            (c) =>
-              c.type === "group" &&
-              (c.group_id === String(conversationId) ||
-                c.id === String(conversationId)),
-          )
-        : conversations.value.find((c) => c.id === String(conversationId));
+  
+  /**
+   * 更新会话未读计数
+   */
+  const updateUnreadCount = (conversationId: string, count: number) => {
+    const conversation = conversations.value.get(conversationId)
     if (conversation) {
-      conversation.unread_count = 0;
+      conversation.unreadCount = count
     }
   }
-
-  async function deleteConversation(conversationId: string) {
-    // 后端没有deleteConversation方法，暂时只从本地移除
-    const index = conversations.value.findIndex((c) => c.id === conversationId);
-    if (index > -1) {
-      conversations.value.splice(index, 1);
-    }
-
-    // 如果是当前对话，清空当前对话
-    if (currentConversation.value?.id === String(conversationId)) {
-      currentConversation.value = null;
-      messages.value = [];
-    }
-  }
-
-  function setCurrentConversation(conversation: Conversation) {
-    currentConversation.value = conversation;
-    messages.value = []; // 清空之前的消息
-    pagination.value.messages = { hasMore: false, nextCursor: undefined };
-  }
-
-  function clearMessages() {
-    messages.value = [];
-    pagination.value.messages = { hasMore: false, nextCursor: undefined };
-  }
-
-  // 用户切换时清理本地缓存，避免跨账号数据串扰
-  function resetAll() {
-    conversations.value = [];
-    currentConversation.value = null;
-    messages.value = [];
-    pagination.value = {
-      conversations: { hasMore: false, nextCursor: undefined },
-      messages: { hasMore: false, nextCursor: undefined },
-    };
-    loading.value = { conversations: false, messages: false, sending: false };
-    optimisticMessages.value.clear();
-    userOnlineStatus.value.clear();
-  }
-
-  const auth = useAuthStore();
-  watch(
-    () => auth.user?.user_id,
-    (newId, oldId) => {
-      if (newId !== oldId) resetAll();
-    },
-  );
-
-  // 实时消息功能
-  function addRealtimeMessage(message: any) {
-    // 检查消息是否已存在
-    const existingIndex = messages.value.findIndex((m: SendMessageResponse) => m.id === message.id);
-    if (existingIndex === -1) {
-      // 按时间顺序插入消息
-      const insertIndex = messages.value.findIndex(
-        (m: SendMessageResponse) =>
-          new Date(m.sent_at || m.created_at || new Date()) > new Date(message.created_at || message.sent_at || new Date()),
-      );
-      if (insertIndex === -1) {
-        messages.value.push(message);
-      } else {
-        messages.value.splice(insertIndex, 0, message);
-      }
-    }
-  }
-
-  function updateConversationLastMessage(
-    conversationId: string,
-    messageInfo: any,
-  ) {
-    const conversation = conversations.value.find(
-      (c) => c.id === String(conversationId),
-    );
+  
+  /**
+   * 设置会话草稿
+   */
+  const setDraft = (conversationId: string, draft: string) => {
+    const conversation = conversations.value.get(conversationId)
     if (conversation) {
-      conversation.last_message = messageInfo.content;
-      conversation.last_message_time = messageInfo.time;
-
-      // 将对话移到列表顶部
-      const index = conversations.value.indexOf(conversation);
-      conversations.value.splice(index, 1);
-      conversations.value.unshift(conversation);
+      conversation.draft = draft
     }
   }
-
-  function updateGroupConversationLastMessage(
-    groupId: string,
-    messageInfo: any,
-  ) {
-    const conversation = conversations.value.find(
-      (c) =>
-        c.type === "group" &&
-        (c.group_id === String(groupId) || c.id === String(groupId)),
-    );
+  
+  /**
+   * 设置会话输入状态
+   */
+  const setTyping = (conversationId: string, typing: boolean) => {
+    const conversation = conversations.value.get(conversationId)
     if (conversation) {
-      conversation.last_message = messageInfo.content;
-      conversation.last_message_time = messageInfo.time;
-      const index = conversations.value.indexOf(conversation);
-      conversations.value.splice(index, 1);
-      conversations.value.unshift(conversation);
+      conversation.typing = typing
     }
   }
-
-  function setConversationPinned(conversationId: string, pinned: boolean) {
-    const conversation = conversations.value.find(
-      (c) => c.id === String(conversationId),
-    );
+  
+  // ============ 消息状态操作 ============
+  
+  /**
+   * 设置会话的消息列表
+   */
+  const setMessages = (conversationId: string, messagesList: Message[]) => {
+    messages.value.set(conversationId, [...messagesList])
+  }
+  
+  /**
+   * 添加消息到会话开头（用于加载历史消息）
+   */
+  const prependMessages = (conversationId: string, messagesList: Message[]) => {
+    const existing = messages.value.get(conversationId) || []
+    messages.value.set(conversationId, [...messagesList, ...existing])
+  }
+  
+  /**
+   * 添加消息到会话末尾（用于新消息）
+   */
+  const appendMessage = (conversationId: string, message: Message) => {
+    const existing = messages.value.get(conversationId) || []
+    existing.push(message)
+    messages.value.set(conversationId, existing)
+    
+    // 更新会话的最后消息信息
+    updateConversationLastMessage(conversationId, message)
+  }
+  
+  /**
+   * 更新消息
+   */
+  const updateMessage = (conversationId: string, messageId: string, updates: Partial<Message>) => {
+    const conversationMessages = messages.value.get(conversationId) || []
+    const index = conversationMessages.findIndex(m => m.message_id === messageId)
+    if (index !== -1) {
+      conversationMessages[index] = { ...conversationMessages[index], ...updates }
+    }
+  }
+  
+  /**
+   * 替换消息（用于乐观更新）
+   */
+  const replaceMessage = (conversationId: string, oldMessageId: string, newMessage: Message) => {
+    const conversationMessages = messages.value.get(conversationId) || []
+    const index = conversationMessages.findIndex(m => m.message_id === oldMessageId)
+    if (index !== -1) {
+      conversationMessages[index] = newMessage
+    }
+  }
+  
+  /**
+   * 删除消息
+   */
+  const removeMessage = (conversationId: string, messageId: string) => {
+    const conversationMessages = messages.value.get(conversationId) || []
+    const filteredMessages = conversationMessages.filter(m => m.message_id !== messageId)
+    messages.value.set(conversationId, filteredMessages)
+  }
+  
+  /**
+   * 标记消息发送中
+   */
+  const markMessageSending = (conversationId: string, messageId: string) => {
+    updateMessage(conversationId, messageId, { sending: true, failed: false })
+  }
+  
+  /**
+   * 标记消息发送成功
+   */
+  const markMessageSent = (conversationId: string, messageId: string) => {
+    updateMessage(conversationId, messageId, { sending: false, failed: false, optimistic: false })
+  }
+  
+  /**
+   * 标记消息发送失败
+   */
+  const markMessageFailed = (conversationId: string, messageId: string) => {
+    updateMessage(conversationId, messageId, { sending: false, failed: true })
+  }
+  
+  // ============ 辅助方法 ============
+  
+  /**
+   * 更新会话的最后消息信息
+   */
+  const updateConversationLastMessage = (conversationId: string, message: Message) => {
+    const conversation = conversations.value.get(conversationId)
     if (conversation) {
-      conversation.is_pinned = pinned;
+      conversation.last_message = message.content
+      conversation.updated_at = message.sent_at
     }
   }
-
-  function setConversationMuted(conversationId: string, muted: boolean) {
-    const conversation = conversations.value.find(
-      (c) => c.id === String(conversationId),
-    );
-    if (conversation) {
-      conversation.is_muted = muted;
-    }
+  
+  /**
+   * 获取会话
+   */
+  const getConversation = (conversationId: string): Conversation | undefined => {
+    return conversations.value.get(conversationId)
   }
-
-  function incrementUnreadCount(conversationId: string) {
-    const conversation = conversations.value.find(
-      (c) => c.id === String(conversationId),
-    );
-    if (conversation) {
-      conversation.unread_count = (conversation.unread_count || 0) + 1;
-    }
+  
+  /**
+   * 获取会话消息
+   */
+  const getMessages = (conversationId: string): Message[] => {
+    return messages.value.get(conversationId) || []
   }
-
-  function resetConversationUnreadCount(conversationId: string) {
-    const conversation = conversations.value.find(
-      (c) => c.id === String(conversationId),
-    );
-    if (conversation) {
-      conversation.unread_count = 0;
-    }
-  }
-
-  function getConversationUnreadCount(conversationId: string): number {
-    const conversation = conversations.value.find(
-      (c) => c.id === String(conversationId),
-    );
-    return conversation?.unread_count || 0;
-  }
-
-  function updateMessageStatus(messageId: string, status: string) {
-    const message = messages.value.find((m: SendMessageResponse) => m.id === messageId);
-    if (message) {
-      // 更新消息状态
-    }
-  }
-
-  function updateUserOnlineStatus(userId: string, isOnline: boolean) {
-    userOnlineStatus.value.set(userId, isOnline);
-  }
-
-  function updateMessageId(oldId: string, newId: string) {
-    const message = messages.value.find((m: SendMessageResponse) => m.id === oldId);
-    if (message) {
-      message.id = newId;
-    }
-    optimisticMessages.value.delete(oldId);
-  }
-
-  // 类型转换函数
-  // 移除数据转换函数 - 直接信任后端数据
-  // 原则：接收后直接使用，不做额外处理和验证
-  // 
-  // ❌ 错误做法：重新生成ID、强制类型转换、提供默认值
-  // ✅ 正确做法：直接使用后端返回的数据结构
-
-  function removeOptimisticMessage(messageId: string) {
-    const index = messages.value.findIndex((m) => m.id === messageId);
-    if (index > -1) {
-      messages.value.splice(index, 1);
-    }
-    optimisticMessages.value.delete(messageId);
+  
+  /**
+   * 清空所有数据
+   */
+  const clearAll = () => {
+    conversations.value.clear()
+    messages.value.clear()
+    currentConversationId.value = null
   }
 
   return {
-    // 只读选择器（返回拷贝，避免外部修改内部状态）
-    conversations: computed(() => conversations.value.slice()),
-    currentConversation: computed(() =>
-      currentConversation.value ? { ...currentConversation.value } : null,
-    ),
-    messages: computed(() => messages.value.slice()),
-    pagination: computed(() => ({
-      conversations: { ...pagination.value.conversations },
-      messages: { ...pagination.value.messages },
-    })),
-    loading: computed(() => ({ ...loading.value })),
-
+    // 状态（直接返回，供 Pinia 和插件使用）
+    conversations,
+    messages,
+    currentConversationId,
+    
     // 计算属性
+    conversationsList,
+    currentConversation,
+    currentMessages,
     totalUnreadCount,
 
-    // 方法
-    fetchConversations,
-    searchConversations,
-    createConversation,
-    createOrGetConversation,
-    searchUsers,
-    fetchMessages,
-    sendMessage,
-    sendGroupMessage,
-    markConversationAsRead,
-    deleteConversation,
+    // 会话操作
+    setConversations,
+    upsertConversation,
+    removeConversation,
     setCurrentConversation,
-    clearMessages,
-
-    // 实时消息功能
-    addRealtimeMessage,
-    updateConversationLastMessage,
-    updateGroupConversationLastMessage,
-    setConversationPinned,
-    setConversationMuted,
-    incrementUnreadCount,
-    resetConversationUnreadCount,
-    getConversationUnreadCount,
-    updateMessageStatus,
-    updateUserOnlineStatus,
-    updateMessageId,
-    removeOptimisticMessage,
-    retryMessage,
-  };
-});
+    updateUnreadCount,
+    setDraft,
+    setTyping,
+    
+    // 消息操作
+    setMessages,
+    prependMessages,
+    appendMessage,
+    updateMessage,
+    replaceMessage,
+    removeMessage,
+    markMessageSending,
+    markMessageSent,
+    markMessageFailed,
+    
+    // 辅助方法
+    getConversation,
+    getMessages,
+    clearAll
+  }
+})

@@ -7,7 +7,13 @@
       :min-size="15"
       :default-size="20"
       :max-size="30"
-      :collapsed-size="0"
+      :collapsed-size="4"
+      side="left"
+      :toggle="{
+        color: 'neutral',
+        variant: 'ghost',
+        class: 'rounded-full'
+      }"
     >
       <!-- Logo 区域 -->
       <template #header="{ collapsed }">
@@ -38,9 +44,17 @@
         <UNavigationMenu
           :items="navigationItems"
           :collapsed="collapsed"
-          color="primary"
           variant="pill"
           orientation="vertical"
+          highlight
+          :tooltip="{
+            delayDuration: 300,
+            content: { side: 'right', sideOffset: 12 }
+          }"
+          :popover="{
+            mode: 'hover',
+            content: { side: 'right', align: 'start', sideOffset: 12 }
+          }"
           class="p-3"
         />
       </template>
@@ -59,7 +73,7 @@
             <div class="flex-1 min-w-0">
               <p class="text-sm font-medium truncate">{{ currentUser.nickname || "用户" }}</p>
               <p class="text-xs text-neutral-500 truncate">
-                {{ (currentUser as any)?.is_temp ? "临时用户" : "正式用户" }}
+                {{ isTempUser(currentUser.user_id) ? "临时用户" : "正式用户" }}
               </p>
             </div>
           </div>
@@ -106,7 +120,7 @@
               </UPopover>
             </UTooltip>
 
-            <ThemeToggle size="sm" />
+            <UColorModeSwitch/>
             
             <UTooltip text="设置">
               <UButton
@@ -126,13 +140,15 @@
     <UDashboardPanel>
       <!-- 顶部导航栏 -->
       <template #header>
-        <UDashboardNavbar>
-          <!-- 页面标题 -->
-          <template #center>
-            <h1 class="text-lg font-semibold text-neutral-900 dark:text-white">
-              {{ pageTitle }}
-            </h1>
-          </template>
+        <UDashboardNavbar
+          title="HotSpot"
+          :toggle="{
+            color: 'neutral',
+            variant: 'ghost',
+            class: 'rounded-full'
+          }"
+          toggle-side="left"
+        >
 
           <!-- 右侧工具栏 -->
           <template #right>
@@ -162,12 +178,11 @@
               </UTooltip>
 
               <!-- 语言切换 - 移动端隐藏 -->
-              <USelectMenu
-                v-model="selectedLocaleObject"
-                :items="localeOptions"
+              <ULocaleSelect
+                v-model="currentLocale"
+                :locales="nuxtLocales"
                 size="sm"
                 class="min-w-24 hidden sm:block"
-                :loading="switchingLocale"
                 :disabled="switchingLocale"
                 @update:model-value="handleLocaleChange"
               >
@@ -178,7 +193,7 @@
                     :class="{ 'animate-spin': switchingLocale }"
                   />
                 </template>
-              </USelectMenu>
+              </ULocaleSelect>
 
               <!-- 用户菜单 -->
               <UserMenu />
@@ -198,9 +213,11 @@
 </template>
 
 <script setup lang="ts">
-// 使用现有的 composables
-const { openSearchModal } = useModals();
-const { currentLocale, switchLocale } = useLocaleSwitcher();
+import { isTempUser } from '~/utils/userTypes'
+
+// 使用 composables
+const { showCommandPalette } = useModal();
+const { locale: currentLocale, availableLocales } = useI18n();
 const route = useRoute();
 const { t } = useI18n();
 const toast = useToast();
@@ -224,8 +241,9 @@ const hasSystemAlerts = computed(() => {
 });
 
 // 页面标题 - 从 route.meta 获取
-const pageTitle = computed(() => {
-  return route.meta.title || "HotSpot";
+const pageTitle = computed<string>(() => {
+  const title = route.meta.title;
+  return typeof title === 'string' ? title : "HotSpot";
 });
 
 // 导航菜单项
@@ -250,17 +268,15 @@ const navigationItems = computed(() => [
       icon: "i-heroicons-user-group",
       to: "/groups",
       active: route.path.startsWith("/groups"),
-      badge: authStore.user ? undefined : { label: "新", color: "primary" },
+      badge: authStore.user ? undefined : "新",
     },
     {
       label: t("nav.messages"),
       icon: "i-heroicons-chat-bubble-left-right",
       to: "/chat",
       active: route.path.startsWith("/chat"),
-      badge: unreadCount.value > 0 ? { 
-        label: unreadCount.value > 99 ? "99+" : unreadCount.value.toString(),
-        color: "error" 
-      } : undefined,
+      badge: unreadCount.value > 0 ? 
+        (unreadCount.value > 99 ? "99+" : unreadCount.value.toString()) : undefined,
     },
   ],
   [
@@ -276,7 +292,7 @@ const navigationItems = computed(() => [
         {
           label: t("nav.searchUsers"),
           icon: "i-heroicons-magnifying-glass",
-          to: "/users/search",
+          to: "/search",
         },
       ],
     },
@@ -291,42 +307,36 @@ const navigationItems = computed(() => [
 
 // 语言切换相关
 const switchingLocale = ref(false);
-const { availableLocales } = useI18n();
-const localeNames: Record<string, string> = {
-  "zh-CN": "中文",
-  "en-US": "English",
-};
 
-const localeOptions = computed(() => 
+// 创建 Nuxt UI LocaleSelect 需要的 locales 格式
+const nuxtLocales = computed(() => 
   availableLocales.map((code: string) => ({
-    label: localeNames[code] || code,
-    value: code,
+    code,
+    name: code === 'zh-CN' ? '中文' : 'English',
+    dir: 'ltr' as const,
+    messages: {} // 这里可以传入对应的翻译消息
   }))
 );
 
-const selectedLocaleObject = computed(() => {
-  const currentCode = currentLocale.value;
-  return {
-    label: localeNames[currentCode] || currentCode,
-    value: currentCode,
-  };
-});
-
-const handleLocaleChange = async (selectedItem: { label: string; value: string }) => {
-  if (switchingLocale.value) return;
+const handleLocaleChange = async (newLocale: string | undefined) => {
+  if (switchingLocale.value || !newLocale) return;
 
   switchingLocale.value = true;
   try {
-    const success = await switchLocale(selectedItem.value);
-    if (success) {
-      toast.add({
-        title: "语言切换成功",
-        description: `已切换到${selectedItem.label}`,
-        color: "success",
-      });
-    } else {
-      throw new Error("切换失败");
-    }
+    // 使用 Nuxt i18n 的 setLocale
+    const nuxtApp = useNuxtApp();
+    await (nuxtApp.$i18n as any).setLocale(newLocale);
+    
+    // 保存到 settings store
+    const settingsStore = useSettingsStore();
+    settingsStore.setLanguage(newLocale);
+    
+    const localeName = newLocale === 'zh-CN' ? '中文' : 'English';
+    toast.add({
+      title: "语言切换成功",
+      description: `已切换到${localeName}`,
+      color: "success",
+    });
   } catch (error) {
     console.error("语言切换错误:", error);
     toast.add({
@@ -340,8 +350,8 @@ const handleLocaleChange = async (selectedItem: { label: string; value: string }
 };
 
 // 搜索功能
-const openSearch = () => {
-  openSearchModal({
+const openSearch = async () => {
+  await showCommandPalette({
     onCreateMoment: () => {
       navigateTo('/moments');
     }
@@ -353,11 +363,19 @@ const toggleNotifications = () => {
   showNotifications.value = !showNotifications.value
 };
 
-// 快捷键
-onMounted(() => {
-  const shortcuts = useShortcuts();
-  shortcuts.register('meta+k', openSearch, '全局搜索', '导航');
-  shortcuts.register('alt+n', toggleNotifications, '查看通知', '导航');
-  shortcuts.register('meta+m', () => navigateTo('/chat'), '消息中心', '导航');
+// 快捷键管理 - 使用 Nuxt UI v4 原生支持
+defineShortcuts({
+  's': {
+    usingInput: false,
+    handler: openSearch,
+  },
+  'n': {
+    usingInput: false,
+    handler: toggleNotifications,
+  },
+  'q': {
+    usingInput: false,
+    handler: () => navigateTo('/chat'),
+  },
 });
 </script>

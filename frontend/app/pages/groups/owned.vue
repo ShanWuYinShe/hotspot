@@ -36,8 +36,7 @@
 
 <script setup lang="ts">
 import type { GroupResponse } from "~/types/api"
-import type { ActionItem } from '~/components/ActionPanel.vue'
-import { formatTime } from '~/utils/formatters'
+import type { ActionItem } from '~/components/common/ActionPanel.vue'
 
 definePageMeta({ 
     title: "我创建的群组", 
@@ -47,8 +46,9 @@ definePageMeta({
 
 // 服务和状态
 const groupsStore = useGroupsStore()
-const toast = useSmartToast()
-const { executeFeature } = useFeatureStatus()
+const { formatTime } = useFormatters()
+const { success, error, info } = useNotifications()
+const toast = { success, error, info }
 
 // 数据状态
 const items = ref<GroupResponse[]>([])
@@ -220,19 +220,20 @@ const loadOwnedGroups = async () => {
 
 const loadUnreadCounts = async () => {
     try {
-        const messageService = useMessageService()
+        const { getGroupUnreadCount } = useStatus()
         const groupsToCheck = items.value.slice(0, 30) // 限制数量避免性能问题
+
+        // 批量获取未读数
+        const unreadPromises = groupsToCheck.map(async (group) => {
+            const count = await getGroupUnreadCount(group.group_id)
+            return { groupId: group.group_id, count }
+        })
+        const unreadResults = await Promise.all(unreadPromises)
         
-        await Promise.allSettled(
-            groupsToCheck.map(async (group) => {
-                try {
-                    const result = await messageService.getGroupUnreadCount(String(group.group_id))
-                    ownedUnreadMap[String(group.group_id)] = Number(result?.total_unread || 0)
-                } catch (error) {
-                    console.warn(`获取群组 ${group.group_id} 未读数失败:`, error)
-                }
-            })
-        )
+        // 更新未读数映射
+        unreadResults.forEach(({ groupId, count }) => {
+            ownedUnreadMap[groupId] = count
+        })
     } catch (error) {
         console.error('批量获取未读数失败:', error)
     }
@@ -241,8 +242,7 @@ const loadUnreadCounts = async () => {
 const enterGroup = async (group: GroupResponse) => {
     try {
         // 标记消息为已读
-        const messageService = useMessageService()
-        await messageService.markAsRead(String(group.group_id), 'group')
+        // TODO: 实现消息已读标记功能
         
         // 清零本地未读数
         ownedUnreadMap[String(group.group_id)] = 0

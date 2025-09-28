@@ -25,8 +25,7 @@
     "profile": "我的资料",
     "create": "创建",
     "search": "搜索",
-    "languageSwitch": "语言切换",
-    "themeSwitch": "主题切换"
+    "languageSwitch": "语言切换"
   },
   "common": {
     "user": "用户",
@@ -62,9 +61,11 @@
   "time": {
     "justNow": "刚刚",
     "yesterday": "昨天",
-    "daysAgo": "{n}天前",
     "minutesAgo": "{n}分钟前",
-    "hoursAgo": "{n}小时前"
+    "hoursAgo": "{n}小时前",
+    "daysAgo": "{n}天前",
+    "monthsAgo": "{n}个月前",
+    "yearsAgo": "{n}年前"
   },
   "date": {
     "yearMonth": "{y}年{m}月"
@@ -72,6 +73,11 @@
   "distance": {
     "meters": "{n}米",
     "kilometers": "{n}公里"
+  },
+  "number": {
+    "thousands": "{n}k",
+    "tenThousands": "{n}万",
+    "hundredMillions": "{n}亿"
   },
   "profile": {
     "title": "个人资料",
@@ -373,7 +379,6 @@
     "searchPlaceholder": "搜索...",
     "noResults": "无匹配结果",
     "language": "语言",
-    "theme": "主题",
     "distanceUnit": "距离单位",
     "timeFormat": "时间格式",
     "select": {

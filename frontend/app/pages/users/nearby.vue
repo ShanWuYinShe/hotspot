@@ -61,7 +61,7 @@
                             class="text-sm text-neutral-600 dark:text-neutral-400 flex items-center gap-1"
                         >
                             <UIcon name="i-heroicons-signal" class="w-4 h-4" />
-                            {{ formatDistanceWrapper((row as any).distance) }}
+                            {{ formatDistance((row as any).distance) }}
                         </span>
                     </template>
                     <template #location-cell="{ row }">
@@ -129,7 +129,7 @@
 import { defineAsyncComponent } from "vue";
 import { DEFAULTS as defaults } from "~/config/defaults";
 import type { UserResponse } from "~/types/api";
-import { useUserService } from "~/services/user.service";
+import { useUserService } from "~/services/users.service";
 
 const EmptyNearby = defineAsyncComponent(
     () => import("~/components/illustrations/EmptyNearby.vue"),
@@ -141,9 +141,11 @@ definePageMeta({
     layout: 'dashboard'
 });
 
-const toast = useSmartToast();
+const { success, error, info } = useNotifications()
+const toast = { success, error, info };
 const userService = useUserService();
-const { coordinates, getCurrentPosition } = useGeolocation();
+const { coordinates, getCurrentPosition } = useDeviceAccess();
+const { formatDistance } = useFormatters();
 
 // 本地状态管理
 const users = ref<UserResponse[]>([]);
@@ -288,9 +290,5 @@ function openChat(targetUserId: string) {
     navigateTo(`/chat/users/${targetUserId}`);
 }
 
-// 距离格式化已从统一工具函数导入
-function formatDistanceWrapper(distance?: number): string {
-    if (typeof distance !== "number") return "";
-    return formatDistance(distance);
-}
+// formatDistance 函数已从统一工具函数导入
 </script>

@@ -103,19 +103,28 @@
                 @item-click="(moment) => navigateTo(`/moments/${moment.moment_id}`)"
                 @search="handleSearch"
             />
+            
+            <!-- 加载更多按钮 -->
+            <div v-if="hasMoreData && currentData.length > 0" class="flex justify-center mt-8">
+                <UButton
+                    @click="loadMore"
+                    :loading="loadingMore"
+                    variant="outline"
+                    size="lg"
+                    class="px-8"
+                >
+                    <UIcon name="i-heroicons-arrow-down" class="w-4 h-4 mr-2" />
+                    加载更多
+                </UButton>
+            </div>
         </div>
         
-        <!-- 创建动态弹窗 -->
-        <CreateMomentModal
-            v-model:open="showCreateModal"
-            @success="handleMomentCreated"
-        />
     </div>
 </template>
 
 <script setup lang="ts">
+import { useMomentsService } from '~/services/moments.service';
 import type { MomentResponse } from '~/types/api'
-import { formatTime, formatDistance } from '~/utils/formatters'
 
 definePageMeta({
     title: '动态广场',
@@ -126,6 +135,7 @@ definePageMeta({
 // 基础状态
 const currentView = ref('nearby')
 const selectedTags = ref<string[]>([])
+const { formatTime, formatDistance } = useFormatters()
 
 // 配置
 const tabItems = [
@@ -137,23 +147,23 @@ const tabItems = [
 const popularTags = ref(['美食', '旅行', '生活', '摄影', '音乐', '运动'])
 
 // 服务
-const momentService = useMomentService()
+const momentService = useMomentsService()
 const authStore = useAuthStore()
-const toast = useSmartToast()
+const { success, error, info } = useNotifications()
+const toast = { success, error, info }
 const overlay = useOverlay()
-const { executeFeature } = useFeatureStatus()
 
 // 创建动态功能
-const showCreateModal = ref(false)
+const { showCreateMomentModal } = useModal()
 
-const openCreateModal = () => {
-  showCreateModal.value = true
-}
-
-const handleMomentCreated = (moment: any) => {
-  // 刷新当前视图数据
-  refreshCurrentView()
-  toast.success('动态发布成功')
+const openCreateModal = async () => {
+  await showCreateMomentModal({
+    onSuccess: (momentId: string) => {
+      // 刷新当前视图数据
+      refreshCurrentView()
+      toast.success('动态发布成功')
+    }
+  })
 }
 
 // 刷新当前视图数据
@@ -165,7 +175,8 @@ const refreshCurrentView = () => {
     }
 };
 
-// 创建成功处理暂时移除
+// 位置服务
+const { getCurrentLocationOrDefault } = useLocation()
 
 // 数据状态
 const nearbyMoments = ref<MomentResponse[]>([]);
@@ -187,18 +198,28 @@ const hasMore = ref({
 const loadNearbyMoments = async (cursor?: string) => {
     loading.value.nearby = true;
     try {
+        // 获取当前位置（失败时使用默认位置）
+        const location = await getCurrentLocationOrDefault();
+
         const result = await momentService.searchMoments({
             type: 'location',
-            latitude: 39.9042, // 默认位置，实际应从位置服务获取
-            longitude: 116.4074,
-            radius: 5000
+            latitude: location.latitude,
+            longitude: location.longitude,
+            radius: 5000 // 5公里范围
         }, cursor, 20);
+        
         if (cursor) {
             nearbyMoments.value.push(...result.items);
         } else {
             nearbyMoments.value = result.items;
         }
+        
+        hasMore.value.nearby = result.has_more;
         return result;
+    } catch (error) {
+        console.error('加载附近动态失败:', error);
+        toast.error('加载附近动态失败');
+        return { items: [], hasMore: false, nextCursor: undefined };
     } finally {
         loading.value.nearby = false;
     }
@@ -207,11 +228,22 @@ const loadNearbyMoments = async (cursor?: string) => {
 const loadFollowingMoments = async (cursor?: string) => {
     loading.value.following = true;
     try {
-        // 关注的用户动态 - 暂时返回空数据，因为好友功能未实现
-        followingMoments.value = [];
-        return { items: [], hasMore: false, nextCursor: undefined };
+        // 获取关注用户的动态
+        const result = await momentService.searchMoments({
+            type: 'following'
+        }, cursor, 20);
+        
+        if (cursor) {
+            followingMoments.value.push(...result.items);
+        } else {
+            followingMoments.value = result.items;
+        }
+        
+        hasMore.value.following = result.has_more;
+        return result;
     } catch (error) {
         console.error('加载关注动态失败:', error);
+        toast.error('加载关注动态失败');
         return { items: [], hasMore: false, nextCursor: undefined };
     } finally {
         loading.value.following = false;
@@ -224,21 +256,34 @@ const searchMoments = async (query: string, filters?: any) => {
         return [];
     }
     
-    await executeFeature('momentSearch', async () => {
-        loading.value.search = true;
-        try {
-            // 按标签搜索动态
-            const result = await momentService.searchMoments({
-                type: 'tags',
-                tags: [query.trim()]
-            });
-            searchResults.value = result.items;
-        } finally {
-            loading.value.search = false;
+    loading.value.search = true;
+    try {
+        // 构建搜索参数
+        const searchParams: any = {
+            type: 'search',
+            query: query.trim()
+        };
+        
+        // 添加标签筛选
+        if (selectedTags.value.length > 0) {
+            searchParams.tags = selectedTags.value;
         }
-    });
-    
-    return searchResults.value;
+        
+        const result = await momentService.searchMoments(searchParams);
+        searchResults.value = result.items;
+        
+        if (result.items.length === 0) {
+            toast.info('未找到相关动态');
+        }
+        
+        return result.items;
+    } catch (error) {
+        console.error('搜索动态失败:', error);
+        toast.error('搜索失败，请重试');
+        return [];
+    } finally {
+        loading.value.search = false;
+    }
 };
 
 
@@ -265,9 +310,7 @@ const hasMoreData = computed(() => {
     return hasMore.value[currentView.value as keyof typeof hasMore.value] || false;
 });
 
-const loadingMore = computed(() => {
-    return false; // 暂时不支持加载更多
-});
+const loadingMore = ref(false);
 
 // DataView 配置
 const dataViewActions = computed(() => [
@@ -364,8 +407,30 @@ const toggleLike = async (moment: MomentResponse) => {
     }
 }
 
-const loadMore = () => {
-    // 暂时不支持加载更多
+const loadMore = async () => {
+    if (loadingMore.value || !hasMoreData.value) return;
+    
+    loadingMore.value = true;
+    try {
+        let result;
+        const lastItem = currentData.value[currentData.value.length - 1];
+        const cursor = lastItem?.moment_id;
+        
+        if (currentView.value === 'nearby') {
+            result = await loadNearbyMoments(cursor);
+        } else if (currentView.value === 'following') {
+            result = await loadFollowingMoments(cursor);
+        }
+        
+        if (result && result.items.length === 0) {
+            toast.info('没有更多动态了');
+        }
+    } catch (error) {
+        console.error('加载更多失败:', error);
+        toast.error('加载更多失败');
+    } finally {
+        loadingMore.value = false;
+    }
 };
 
 // 监听视图切换

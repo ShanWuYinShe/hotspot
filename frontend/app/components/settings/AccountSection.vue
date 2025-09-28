@@ -122,7 +122,6 @@
               readonly 
               class="flex-1" 
               placeholder="未设置昵称" 
-              :ui="{ base: 'bg-neutral-50 dark:bg-neutral-900' }" 
             />
             <UButton 
               variant="soft" 
@@ -237,6 +236,7 @@
 
 <script setup lang="ts">
 import type { UserSettings } from '~/types/api';
+import { isTempUser } from '~/utils/userTypes';
 
 interface Props {
   user: any;
@@ -256,7 +256,7 @@ const emit = defineEmits<{
 }>();
 
 // 计算属性
-const isTemporaryUser = computed(() => Boolean(props.user?.is_temp));
+const isTemporaryUser = computed(() => props.user?.user_id ? isTempUser(props.user.user_id) : false);
 
 const displayNickname = computed(() => props.user?.nickname || '未设置昵称');
 

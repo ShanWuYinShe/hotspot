@@ -22,7 +22,7 @@ export function ensureAuthenticatedOrThrow(): void {
   const auth = useAuthStore();
   if (auth.isAuthenticated) return;
 
-  const list = auth.accounts || [];
+  const list = auth.accountsList || [];
   throw createAuthRequiredError({
     accounts: (list as any[]).map((a: any) => ({
       user_id: a.user_id,

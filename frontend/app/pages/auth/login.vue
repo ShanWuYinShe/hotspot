@@ -12,11 +12,11 @@
         @submit="handleLogin"
       >
         <template #description>
-          还没有账号？<ULink to="/auth/register" class="text-primary font-medium">立即注册</ULink>
+          还没有账号？<ULink to="/auth/register" class="text-accent font-medium">立即注册</ULink>
         </template>
         
         <template #password-hint>
-          <ULink @click="showForgotPassword" class="text-primary font-medium cursor-pointer" tabindex="-1">
+          <ULink @click="showForgotPassword" class="text-accent font-medium cursor-pointer" tabindex="-1">
             忘记密码？
           </ULink>
         </template>
@@ -40,7 +40,7 @@
               variant="ghost"
               size="sm"
               icon="i-heroicons-eye"
-              class="text-primary"
+              class="text-accent"
             >
               先体验一下
             </UButton>
@@ -52,6 +52,7 @@
 </template>
 
 <script setup lang="ts">
+import { getPageSeoConfig, buildSeoMeta } from '~/config/seo';
 import * as z from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
 
@@ -146,6 +147,8 @@ const handleLogin = async (event: FormSubmitEvent<LoginSchema>) => {
 
     const { loginId, password } = event.data;
     
+    // 使用 authStore 登录
+    const authStore = useAuthStore();
     await authStore.login(loginId, password);
     
     toast.add({
@@ -173,8 +176,8 @@ const handleLogin = async (event: FormSubmitEvent<LoginSchema>) => {
 
 // 忘记密码处理
 const showForgotPassword = () => {
-  const { openConfirmModal } = useModals();
-  openConfirmModal({
+  const modal = useModal();
+  modal.showConfirmModal({
     title: "重置密码",
     message: "当前版本暂未开放密码找回服务，请联系管理员或使用临时用户体验。",
     confirmText: "我知道了",
@@ -195,9 +198,11 @@ watch(
   { immediate: true }
 );
 
-// 快捷键
-onMounted(() => {
-  const shortcuts = useShortcuts();
-  shortcuts.register('alt+r', () => navigateTo('/auth/register'), '切换到注册', '认证');
+// 快捷键管理 - 使用 Nuxt UI v4 原生支持
+defineShortcuts({
+  'r': {
+    usingInput: false,
+    handler: () => navigateTo('/auth/register'),
+  },
 });
 </script>

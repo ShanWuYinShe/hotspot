@@ -22,23 +22,6 @@
       </template>
 
       <div class="space-y-3 md:space-y-4 p-1 pb-4 md:pb-6">
-        <!-- 主题设置 -->
-        <div class="space-y-3 md:space-y-4">
-          <h4 class="text-sm md:text-base lg:text-lg font-medium text-neutral-900 dark:text-white">
-            主题
-          </h4>
-          <UFormField label="主题模式" class="space-y-2">
-            <URadioGroup 
-              v-model="localSettings.appearance.theme" 
-              :items="themeRadioOptions"
-              variant="card"
-              color="primary"
-              size="md"
-            />
-          </UFormField>
-        </div>
-
-        <USeparator />
 
         <!-- 语言设置 -->
         <div class="space-y-3 md:space-y-4">
@@ -101,29 +84,6 @@ interface Props {
 defineProps<Props>();
 
 // 配置选项
-const themeOptions = [
-  { label: '跟随系统', value: 'system' },
-  { label: '浅色模式', value: 'light' },
-  { label: '深色模式', value: 'dark' }
-];
-
-const themeRadioOptions = [
-  { 
-    label: '跟随系统', 
-    value: 'system',
-    description: '根据系统设置自动切换主题'
-  },
-  { 
-    label: '浅色模式', 
-    value: 'light',
-    description: '使用浅色主题界面'
-  },
-  { 
-    label: '深色模式', 
-    value: 'dark',
-    description: '使用深色主题界面'
-  }
-];
 
 const languageOptions = [
   { label: '简体中文', value: 'zh-CN' },

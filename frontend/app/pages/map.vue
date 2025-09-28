@@ -120,6 +120,10 @@
 </template>
 
 <script setup lang="ts">
+import { useUsersService } from '~/services/users.service';
+import { useGroupsService } from '~/services/groups.service';
+import { useMomentsService } from '~/services/moments.service';
+import { getPageSeoConfig, buildSeoMeta } from '~/config/seo';
 import type { UserResponse, GroupResponse, MomentResponse } from '~/types/api'
 
 // 从数据源获取 SEO 配置
@@ -145,7 +149,7 @@ const currentSearchQuery = ref('')
 const currentData = ref<(UserResponse | GroupResponse | MomentResponse)[]>([])
 
 // 地图相关状态
-const currentLocation = ref({ latitude: 39.9042, longitude: 116.4074 }) // 默认北京
+const currentLocation = ref({ latitude: 0, longitude: 0 }) // 将通过位置服务获取
 const mapMarkers = ref<any[]>([])
 
 // 计算地图标记
@@ -160,7 +164,7 @@ const updateMapMarkers = () => {
             const user = item as UserResponse
             type = 'user'
             title = user.nickname || '用户'
-            description = `距离 ${Math.floor(Math.random() * 5000)}m`
+            description = user.distance ? `距离 ${Math.round(user.distance)}m` : '位置未知'
             avatar = user.avatar_url || ''
         } else if (currentTab.value === 'groups') {
             const group = item as GroupResponse
@@ -181,10 +185,10 @@ const updateMapMarkers = () => {
             type,
             title,
             description,
-            latitude: currentLocation.value.latitude + (Math.random() - 0.5) * 0.01,
-            longitude: currentLocation.value.longitude + (Math.random() - 0.5) * 0.01,
+            latitude: item.latitude || currentLocation.value.latitude,
+            longitude: item.longitude || currentLocation.value.longitude,
             avatar,
-            distance: Math.floor(Math.random() * 5000),
+            distance: item.distance || 0,
             data: item
         }
     })
@@ -198,21 +202,24 @@ const tabs = [
 ]
 
 // 服务和工具
-const userService = useUserService()
-const groupService = useGroupService()
+const userService = useUsersService()
+const groupService = useGroupsService()
 const toast = useToast()
 const authStore = useAuthStore()
+const { getCurrentLocationOrDefault } = useLocation()
 
 // 数据加载函数
 const loadNearbyUsers = async () => {
     try {
         currentLoading.value = true
-        // 模拟位置数据
-        const mockLocation = { latitude: 39.9042, longitude: 116.4074 }
+        
+        // 获取当前位置（失败时使用默认位置）
+        const location = await getCurrentLocationOrDefault()
+        currentLocation.value = location
         
         const result = await userService.findNearbyUsers({
-            latitude: mockLocation.latitude,
-            longitude: mockLocation.longitude,
+            latitude: location.latitude,
+            longitude: location.longitude,
             radius: 5000,
             limit: 20
         })
@@ -234,12 +241,14 @@ const loadNearbyUsers = async () => {
 const loadNearbyGroups = async () => {
     try {
         currentLoading.value = true
-        // 模拟位置数据
-        const mockLocation = { latitude: 39.9042, longitude: 116.4074 }
+        
+        // 获取当前位置（失败时使用默认位置）
+        const location = await getCurrentLocationOrDefault()
+        currentLocation.value = location
         
         const result = await groupService.searchNearbyGroups(
-            mockLocation.latitude,
-            mockLocation.longitude,
+            location.latitude,
+            location.longitude,
             5000,
             20
         )
@@ -268,9 +277,11 @@ const loadNearbyGroups = async () => {
 const loadNearbyMoments = async () => {
     try {
         currentLoading.value = true
-        // 暂时显示空数据，等待后端API实现
-        currentData.value = []
-        hasMore.value = false
+        // 加载附近动态
+        const momentsService = useMomentsService();
+        const response = await momentsService.getNearbyMoments(currentLocation.value);
+        currentData.value = response.items || [];
+        hasMore.value = response.has_more || false;
         
         toast.add({
             title: '功能开发中',

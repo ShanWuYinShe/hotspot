@@ -235,10 +235,11 @@ const showWhyPermission = async () => {
         await authorizeAndSearch();
     }
 };
-const toast = useSmartToast();
+const { success, error, info } = useNotifications()
+const toast = { success, error, info };
 const locationManager = useLocationManager();
 const { checkGeolocation, requestGeolocation, onGeolocationChange } =
-    usePermissions();
+    useDeviceAccess();
 
 const items = ref<GroupResponse[]>([]);
 const loading = ref(false);

@@ -12,7 +12,7 @@ import type {
 
 export const useUploadService = () => {
   const api = useApi();
-  const { handleError } = useErrorHandler();
+  const { handleError } = useNotifications();
 
   // 默认上传配置 - 与后端保持一致
   const DEFAULT_CONFIG: UploadConfig = {

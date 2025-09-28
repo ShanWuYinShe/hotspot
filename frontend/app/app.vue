@@ -4,16 +4,12 @@
             position: 'bottom-right',
             expand: true,
             progress: true,
-            duration: 5000,
-            class: 'toast-smart-position'
+            duration: 5000
         }"
     >
         <NuxtLayout>
             <NuxtPage />
         </NuxtLayout>
-        
-        <!-- 全局 PIN 输入模态框 -->
-        <GlobalPinModal />
     </UApp>
 </template>
 

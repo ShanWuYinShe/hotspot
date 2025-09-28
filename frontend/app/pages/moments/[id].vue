@@ -192,8 +192,10 @@ definePageMeta({
 
 const route = useRoute();
 const authStore = useAuthStore();
+const { formatTime } = useFormatters();
 const momentsStore = useMomentsStore();
-const toast = useSmartToast();
+const { success, error, info } = useNotifications()
+const toast = { success, error, info };
 
 const momentId = route.params.id as string;
 

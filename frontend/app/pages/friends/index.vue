@@ -23,7 +23,7 @@
                 empty-icon="i-heroicons-users"
                 empty-title="还没有好友"
                 empty-description="添加您的第一个好友，开始社交之旅"
-                :empty-action="{ label: '添加好友', action: () => navigateTo('/users/search') }"
+                :empty-action="{ label: '添加好友', action: () => navigateTo('/search') }"
                 @item-click="(user) => handleUserClick(user)"
                 @search="handleSearch"
                 @filter-change="handleFilterChange"
@@ -34,7 +34,6 @@
 
 <script setup lang="ts">
 import type { UserResponse } from "~/types/api"
-import { formatTime } from '~/utils/formatters'
 
 definePageMeta({ 
     title: "我的好友", 
@@ -43,9 +42,11 @@ definePageMeta({
 })
 
 // 服务和状态
-const toast = useSmartToast()
-const { executeFeature } = useFeatureStatus()
+const { success, error, info } = useNotifications()
+const toast = { success, error, info }
 const friendActions = useFriendActions()
+const { formatTime } = useFormatters()
+const { showFriendRequestsModal } = useModal()
 
 // 数据状态
 const loading = ref(true)
@@ -121,14 +122,14 @@ const headerActions = computed(() => [
         label: '添加好友',
         icon: 'i-heroicons-user-plus',
         color: 'primary' as const,
-        action: () => navigateTo('/users/search')
+        action: () => navigateTo('/search')
     },
     {
         key: 'requests',
         label: `好友请求${pendingRequestsCount.value > 0 ? ` (${pendingRequestsCount.value})` : ''}`,
         icon: 'i-heroicons-bell',
         variant: 'outline' as const,
-        action: () => navigateTo('/friends/requests')
+        action: () => showFriendRequestsModal()
     }
 ])
 
@@ -177,7 +178,7 @@ const toolbarActions = computed(() => [
         label: '添加好友',
         icon: 'i-heroicons-user-plus',
         color: 'primary' as const,
-        action: () => navigateTo('/users/search')
+        action: () => navigateTo('/search')
     },
     {
         key: 'requests',

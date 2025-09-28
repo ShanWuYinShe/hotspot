@@ -21,7 +21,7 @@
           
           <div class="flex items-center gap-3">
             <UBadge 
-              v-if="displayedUserResponse.is_temp" 
+              v-if="isTempUser(displayedUserResponse.user_id)" 
               color="warning" 
               variant="soft" 
               size="sm"
@@ -68,129 +68,76 @@
     <!-- 快速操作区域 -->
     <div>
       <div class="flex items-center gap-3 mb-4">
-        <UIcon name="i-heroicons-bolt" class="w-5 h-5 text-primary-500" />
+        <UIcon name="i-heroicons-bolt" class="w-5 h-5 text-blue-500" />
         <h2 class="text-xl font-semibold text-neutral-900 dark:text-white">快速操作</h2>
       </div>
       <p class="text-neutral-600 dark:text-neutral-400 mb-6">选择您想要进行的操作，快速开始使用 HotSpot</p>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <UCard
-          class="hover:shadow-lg transition-shadow cursor-pointer"
-          @click="navigateTo('/users/nearby')"
-        >
-          <template #header>
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center">
-                <UIcon name="i-heroicons-users" class="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <h3 class="font-semibold text-neutral-900 dark:text-white">附近用户</h3>
-                <p class="text-sm text-neutral-600 dark:text-neutral-400">发现周围的朋友</p>
-              </div>
-            </div>
-          </template>
-        </UCard>
+      <UPageGrid>
+        <UPageCard
+          title="附近用户"
+          description="发现周围的朋友"
+          icon="i-heroicons-users"
+          to="/users/nearby"
+          class="cursor-pointer hover:shadow-lg transition-shadow"
+        />
 
-        <UCard
-          class="hover:shadow-lg transition-shadow cursor-pointer"
-          @click="navigateTo('/groups')"
-        >
-          <template #header>
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900/50 rounded-lg flex items-center justify-center">
-                <UIcon name="i-heroicons-user-group" class="w-5 h-5 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div>
-                <h3 class="font-semibold text-neutral-900 dark:text-white">我的群组</h3>
-                <p class="text-sm text-neutral-600 dark:text-neutral-400">管理群组聊天</p>
-              </div>
-            </div>
-          </template>
-        </UCard>
+        <UPageCard
+          title="我的群组"
+          description="管理群组聊天"
+          icon="i-heroicons-user-group"
+          to="/groups"
+          class="cursor-pointer hover:shadow-lg transition-shadow"
+        />
 
-        <UCard
-          class="hover:shadow-lg transition-shadow cursor-pointer"
-          @click="navigateTo('/moments')"
-        >
-          <template #header>
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-orange-100 dark:bg-orange-900/50 rounded-lg flex items-center justify-center">
-                <UIcon name="i-heroicons-photo" class="w-5 h-5 text-orange-600 dark:text-orange-400" />
-              </div>
-              <div>
-                <h3 class="font-semibold text-neutral-900 dark:text-white">动态分享</h3>
-                <p class="text-sm text-neutral-600 dark:text-neutral-400">分享精彩瞬间</p>
-              </div>
-            </div>
-          </template>
-        </UCard>
+        <UPageCard
+          title="动态分享"
+          description="分享精彩瞬间"
+          icon="i-heroicons-photo"
+          to="/moments"
+          class="cursor-pointer hover:shadow-lg transition-shadow"
+        />
 
-        <UCard
-          class="hover:shadow-lg transition-shadow cursor-pointer"
-          @click="navigateTo('/map')"
+        <UPageCard
+          title="地图探索"
+          description="查看周边热点"
+          icon="i-heroicons-map"
           to="/map"
-        >
-          <template #header>
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center">
-                <UIcon name="i-heroicons-map" class="w-5 h-5 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <h3 class="font-semibold text-neutral-900 dark:text-white">地图探索</h3>
-                <p class="text-sm text-neutral-600 dark:text-neutral-400">查看周边热点</p>
-              </div>
-            </div>
-          </template>
-        </UCard>
+          class="cursor-pointer hover:shadow-lg transition-shadow"
+        />
 
-        <UCard
-          class="hover:shadow-lg transition-shadow cursor-pointer relative"
-          @click="navigateTo('/chat')"
+        <UPageCard
+          title="消息中心"
+          description="查看聊天消息"
+          icon="i-heroicons-chat-bubble-left-right"
+          to="/chat"
+          class="cursor-pointer hover:shadow-lg transition-shadow relative"
         >
-          <template #header>
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg flex items-center justify-center relative">
-                <UIcon name="i-heroicons-chat-bubble-left-right" class="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                <UBadge
-                  v-if="unreadCount > 0"
-                  :label="unreadCount > 99 ? '99+' : unreadCount.toString()"
-                  color="error"
-                  size="xs"
-                  class="absolute -top-1 -right-1"
-                />
-              </div>
-              <div>
-                <h3 class="font-semibold text-neutral-900 dark:text-white">消息中心</h3>
-                <p class="text-sm text-neutral-600 dark:text-neutral-400">查看聊天消息</p>
-              </div>
-            </div>
+          <template #trailing>
+            <UBadge
+              v-if="unreadCount > 0"
+              :label="unreadCount > 99 ? '99+' : unreadCount.toString()"
+              color="error"
+              size="xs"
+            />
           </template>
-        </UCard>
+        </UPageCard>
 
-        <UCard
-          class="hover:shadow-lg transition-shadow cursor-pointer"
-          @click="navigateTo('/settings')"
-        >
-          <template #header>
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-neutral-100 dark:bg-neutral-800 rounded-lg flex items-center justify-center">
-                <UIcon name="i-heroicons-cog-6-tooth" class="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
-              </div>
-              <div>
-                <h3 class="font-semibold text-neutral-900 dark:text-white">个人设置</h3>
-                <p class="text-sm text-neutral-600 dark:text-neutral-400">管理账户信息</p>
-              </div>
-            </div>
-          </template>
-        </UCard>
-      </div>
+        <UPageCard
+          title="个人设置"
+          description="管理账户信息"
+          icon="i-heroicons-cog-6-tooth"
+          to="/settings"
+          class="cursor-pointer hover:shadow-lg transition-shadow"
+        />
+      </UPageGrid>
     </div>
 
     <!-- 最近活动 -->
     <div>
       <div class="flex items-center justify-between w-full mb-4">
         <div class="flex items-center gap-3">
-          <UIcon name="i-heroicons-clock" class="w-5 h-5 text-primary-500" />
+          <UIcon name="i-heroicons-clock" class="w-5 h-5 text-blue-500" />
           <h2 class="text-xl font-semibold text-neutral-900 dark:text-white">最近活动</h2>
         </div>
         <UButton 
@@ -258,83 +205,53 @@
     <!-- 功能特色 -->
     <div v-if="!displayedUserResponse">
       <div class="flex items-center gap-3 mb-4">
-        <UIcon name="i-heroicons-star" class="w-5 h-5 text-primary-500" />
+        <UIcon name="i-heroicons-star" class="w-5 h-5 text-blue-500" />
         <h2 class="text-xl font-semibold text-neutral-900 dark:text-white">为什么选择 HotSpot</h2>
       </div>
       
       <p class="text-neutral-600 dark:text-neutral-400 mb-6">基于位置的社交平台，让您轻松发现身边的精彩</p>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <UCard class="lg:col-span-2">
-          <template #header>
-            <div class="flex items-center gap-4">
-              <div class="w-12 h-12 bg-primary-100 dark:bg-primary-900/40 rounded-xl flex items-center justify-center">
-                <UIcon name="i-heroicons-map-pin" class="w-6 h-6 text-primary-600 dark:text-primary-300" />
-              </div>
-              <div>
-                <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">基于位置的发现</h3>
-                <p class="text-neutral-600 dark:text-neutral-400">发现附近用户与群组，快速开始交流</p>
-              </div>
-            </div>
-          </template>
-        </UCard>
+      <UPageColumns>
+        <UPageCard
+          title="基于位置的发现"
+          description="发现附近用户与群组，快速开始交流"
+          icon="i-heroicons-map-pin"
+          class="lg:col-span-2"
+        />
 
-        <UCard>
-          <template #header>
-            <div class="flex items-center gap-4">
-              <div class="w-12 h-12 bg-success-100 dark:bg-success-900/40 rounded-xl flex items-center justify-center">
-                <UIcon name="i-heroicons-chat-bubble-left-right" class="w-6 h-6 text-success-600 dark:text-success-300" />
-              </div>
-              <div>
-                <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">实时消息</h3>
-                <p class="text-neutral-600 dark:text-neutral-400">与朋友和群组实时沟通，支持多种消息类型</p>
-              </div>
-            </div>
-          </template>
-        </UCard>
+        <UPageCard
+          title="实时消息"
+          description="与朋友和群组实时沟通，支持多种消息类型"
+          icon="i-heroicons-chat-bubble-left-right"
+        />
 
-        <UCard>
-          <template #header>
-            <div class="flex items-center gap-4">
-              <div class="w-12 h-12 bg-info-100 dark:bg-info-900/40 rounded-xl flex items-center justify-center">
-                <UIcon name="i-heroicons-photo" class="w-6 h-6 text-info-600 dark:text-info-300" />
-              </div>
-              <div>
-                <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">动态与互动</h3>
-                <p class="text-neutral-600 dark:text-neutral-400">发布动态，点赞互动，记录精彩</p>
-              </div>
-            </div>
-          </template>
-        </UCard>
+        <UPageCard
+          title="动态与互动"
+          description="发布动态，点赞互动，记录精彩"
+          icon="i-heroicons-photo"
+        />
 
-        <UCard class="lg:col-span-2">
-          <template #header>
-            <div class="flex items-center gap-4">
-              <div class="w-12 h-12 bg-warning-100 dark:bg-warning-900/40 rounded-xl flex items-center justify-center">
-                <UIcon name="i-heroicons-shield-check" class="w-6 h-6 text-warning-600 dark:text-warning-300" />
-              </div>
-              <div>
-                <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">隐私安全</h3>
-                <p class="text-neutral-600 dark:text-neutral-400">端到端加密，保护您的隐私和数据安全</p>
-              </div>
-            </div>
-          </template>
-        </UCard>
-      </div>
+        <UPageCard
+          title="隐私安全"
+          description="端到端加密，保护您的隐私和数据安全"
+          icon="i-heroicons-shield-check"
+          class="lg:col-span-2"
+        />
+      </UPageColumns>
     </div>
 
     <!-- CTA 区域 -->
     <div v-if="!displayedUserResponse" class="bg-gradient-to-r from-primary-500 to-blue-600 rounded-xl p-8 text-center text-white">
       <div class="max-w-2xl mx-auto">
         <h2 class="text-3xl font-bold mb-4">准备开始了吗？</h2>
-        <p class="text-xl text-primary-100 mb-8">立即加入 HotSpot，开始您的社交之旅</p>
+        <p class="text-xl text-blue-100 mb-8">立即加入 HotSpot，开始您的社交之旅</p>
         
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <UButton
             to="/auth/register"
             color="primary"
             size="lg"
-            class="bg-white text-primary-600 hover:bg-primary-50"
+            class="bg-white text-blue-600 hover:bg-blue-50"
           >
             <UIcon name="i-heroicons-user-plus" class="w-5 h-5 mr-2" />
             立即注册
@@ -343,7 +260,7 @@
             to="/auth/login"
             variant="outline"
             size="lg"
-            class="border-white text-white hover:bg-white hover:text-primary-600"
+            class="border-white text-white hover:bg-white hover:text-blue-600"
           >
             <UIcon name="i-heroicons-arrow-right-on-rectangle" class="w-5 h-5 mr-2" />
             登录账户
@@ -356,6 +273,7 @@
 
 <script setup lang="ts">
 import { getPageSeoConfig, buildSeoMeta } from '~/config/seo'
+import { isTempUser } from '~/utils/userTypes'
 
 // 从数据源获取 SEO 配置
 const seoConfig = getPageSeoConfig('home')
@@ -377,7 +295,7 @@ definePageMeta({
 useSeoMeta(buildSeoMeta('home'));
 
 const authStore = useAuthStore();
-const { openWelcomeModal, openLoginPromptModal } = useModals();
+const modal = useModal();
 
 // 认证状态
 import type { UserResponse } from '~/types/api';
@@ -468,7 +386,7 @@ onMounted(async () => {
   if (!hasVisited && !displayedUserResponse.value) {
     // 首次访问：延迟显示欢迎弹窗
     setTimeout(() => {
-      openWelcomeModal();
+      modal.showWelcomeModal();
     }, 1000);
     localStorage.setItem('has-visited-hotspot', 'true');
     localStorage.setItem('last-visit-time', currentTime.toString());
@@ -483,7 +401,7 @@ onMounted(async () => {
     
     if (shouldShowPrompt) {
       setTimeout(() => {
-        openLoginPromptModal();
+        modal.showLoginPromptModal();
         localStorage.setItem('last-login-prompt-time', currentTime.toString());
       }, 3000);
     }
@@ -498,15 +416,35 @@ onMounted(async () => {
   await fetchActivities();
 });
 
-// 快捷键管理
-onMounted(() => {
-  const shortcuts = useShortcuts();
-  shortcuts.register('meta+h', () => navigateTo('/'), '返回首页', '导航');
-  shortcuts.register('meta+m', () => navigateTo('/map'), '地图探索', '功能');
-  shortcuts.register('meta+g', () => navigateTo('/groups'), '我的群组', '功能');
-  shortcuts.register('meta+c', () => navigateTo('/chat'), '消息聊天', '功能');
-  shortcuts.register('alt+u', () => navigateTo('/users/nearby'), '附近用户', '功能');
-  shortcuts.register('alt+m', () => navigateTo('/moments'), '动态分享', '功能');
-  shortcuts.register('meta+r', refreshActivities, '刷新活动', '操作');
+// 快捷键管理 - 使用 Nuxt UI v4 原生支持
+defineShortcuts({
+  'h': {
+    usingInput: false,
+    handler: () => navigateTo('/'),
+  },
+  'm': {
+    usingInput: false,
+    handler: () => navigateTo('/map'),
+  },
+  'g': {
+    usingInput: false,
+    handler: () => navigateTo('/groups'),
+  },
+  'c': {
+    usingInput: false,
+    handler: () => navigateTo('/chat'),
+  },
+  'u': {
+    usingInput: false,
+    handler: () => navigateTo('/users/nearby'),
+  },
+  'p': {
+    usingInput: false,
+    handler: () => navigateTo('/moments'),
+  },
+  'r': {
+    usingInput: false,
+    handler: refreshActivities,
+  },
 });
 </script>

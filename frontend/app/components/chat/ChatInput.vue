@@ -55,27 +55,26 @@
     />
 
     <!-- 表情选择器 -->
-    <div
-      v-if="showEmoji"
-      ref="emojiPanelRef"
-      class="absolute bottom-full right-4 mb-2 p-4 bg-white dark:bg-neutral-800 rounded-lg shadow-lg border"
-    >
-      <div class="grid grid-cols-8 gap-2">
-        <button
-          v-for="emoji in commonEmojis"
-          :key="emoji"
-          class="text-xl hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded p-1 transition-colors"
-          @click="insertEmoji(emoji)"
-        >
-          {{ emoji }}
-        </button>
-      </div>
-    </div>
+    <UPopover v-model:open="showEmoji" :popper="{ placement: 'top-end' }">
+      <template #panel>
+        <div class="p-4 bg-white dark:bg-neutral-800 rounded-lg shadow-lg border">
+          <div class="grid grid-cols-8 gap-2">
+            <button
+              v-for="emoji in commonEmojis"
+              :key="emoji"
+              class="text-xl hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded p-1 transition-colors"
+              @click="insertEmoji(emoji)"
+            >
+              {{ emoji }}
+            </button>
+          </div>
+        </div>
+      </template>
+    </UPopover>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onClickOutside } from '@vueuse/core'
 
 interface Emits {
   'send-message': [content: string]
@@ -143,9 +142,5 @@ const handleFileSelect = (event: Event) => {
   }
 }
 
-// 点击外部关闭表情面板
-const emojiPanelRef = ref<HTMLElement>()
-onClickOutside(emojiPanelRef, () => {
-  showEmoji.value = false
-})
+// 表情面板由 UPopover 自动管理，无需手动处理点击外部
 </script>

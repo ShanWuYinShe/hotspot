@@ -58,7 +58,7 @@
             description="搜索并添加新的聊天伙伴"
             icon="i-heroicons-user-plus"
             class="cursor-pointer hover:shadow-md transition-shadow"
-            @click="navigateTo('/users/search')"
+            @click="navigateTo('/search')"
           >
             <template #icon>
               <div class="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
@@ -143,7 +143,7 @@
               </div>
               <h3 class="text-lg font-semibold text-neutral-900 dark:text-white mb-2">暂无会话</h3>
               <p class="text-neutral-600 dark:text-neutral-400 mb-4">开始与朋友聊天吧！</p>
-              <UButton @click="navigateTo('/users/search')" icon="i-heroicons-user-plus">
+              <UButton @click="navigateTo('/search')" icon="i-heroicons-user-plus">
                 发现新朋友
               </UButton>
             </div>
@@ -233,6 +233,7 @@
 </template>
 
 <script setup lang="ts">
+import { getPageSeoConfig, buildSeoMeta } from '~/config/seo';
 // 从数据源获取 SEO 配置
 const seoConfig = getPageSeoConfig('chat')
 
@@ -245,10 +246,15 @@ definePageMeta({
 // 设置 SEO meta
 useSeoMeta(buildSeoMeta('chat'));
 
+// 导入服务
+import { useMessagesService } from '~/services/messages.service';
+
 // 使用现有的 stores 和 composables
 const messagesStore = useMessagesStore();
 const authStore = useAuthStore();
-const { openConfirmModal } = useModals();
+const messageService = useMessagesService();
+const modal = useModal();
+const { formatTime } = useFormatters();
 
 // 响应式状态
 const loading = ref(false);
@@ -299,7 +305,8 @@ const loadConversations = async () => {
   try {
     loading.value = true;
     error.value = null;
-    // await messagesStore.loadConversations(); // 需要实现此方法
+    // 加载会话列表
+    await messageService.getConversations();
   } catch (err: any) {
     console.error('加载会话失败:', err);
     error.value = err.message || '加载会话失败';
@@ -325,21 +332,10 @@ const openConversation = (conversation: any) => {
 
 const openNewChatModal = () => {
   // 这里可以打开新建聊天的模态框
-  navigateTo('/users/search');
+  navigateTo('/search');
 };
 
-const formatTime = (timestamp: string) => {
-  const date = new Date(timestamp);
-  const now = new Date();
-  const diff = now.getTime() - date.getTime();
-  
-  if (diff < 60000) return '刚刚';
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
-  if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`;
-  
-  return date.toLocaleDateString();
-};
+// formatTime 函数已从统一工具函数导入
 
 const getConversationMenuItems = (conversation: any) => {
   const items = [
@@ -388,7 +384,7 @@ const toggleMute = async (conversationId: string) => {
 };
 
 const deleteConversation = (conversationId: string) => {
-  openConfirmModal({
+  modal.showConfirmModal({
     title: "删除聊天",
     message: "确定要删除这个聊天吗？此操作无法撤销。",
     confirmText: "删除",
@@ -409,9 +405,16 @@ onMounted(() => {
   loadConversations();
   
   // 注册快捷键
-  const shortcuts = useShortcuts();
-  shortcuts.register('meta+n', openNewChatModal, '新建聊天', '消息');
-  shortcuts.register('meta+r', loadConversations, '刷新会话', '消息');
+  defineShortcuts({
+    'n': {
+      usingInput: false,
+      handler: openNewChatModal,
+    },
+    'r': {
+      usingInput: false,
+      handler: loadConversations,
+    },
+  });
 });
 
 // 监听认证状态变化

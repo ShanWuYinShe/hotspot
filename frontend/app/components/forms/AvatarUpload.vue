@@ -1,0 +1,177 @@
+<template>
+    <div class="flex flex-col items-center space-y-4">
+        <!-- 当前头像预览 -->
+        <div class="relative">
+            <UTooltip text="点击更换头像">
+                <UAvatar
+                    :alt="user?.nickname"
+                    :src="avatarPreview || user?.avatar_url"
+                    size="3xl"
+                    class="cursor-pointer border-4 border-neutral-200 dark:border-neutral-700"
+                >
+                    {{ user?.nickname?.charAt(0) || "U" }}
+                </UAvatar>
+
+                <!-- 上传按钮覆盖层 -->
+                <div
+                    class="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
+                >
+                    <UIcon name="i-heroicons-camera" class="w-8 h-8 text-white" />
+                </div>
+            </UTooltip>
+        </div>
+
+        <!-- 文件上传 - 使用 UFileUpload -->
+        <UFileUpload
+            v-model="files"
+            accept="image/*"
+            :max-files="1"
+            icon="i-heroicons-photo"
+            label="点击选择或拖拽图片到这里"
+            description="仅支持图片，最大 2MB"
+        />
+
+        <!-- 上传按钮 -->
+        <div class="flex gap-2">
+            <UTooltip text="从本地选择图片文件">
+                <UButton variant="outline" size="sm" :disabled="uploading">
+                    <UIcon name="i-heroicons-photo" class="w-4 h-4 mr-2" />
+                    选择图片
+                </UButton>
+            </UTooltip>
+
+            <UTooltip v-if="selectedFile" text="上传并设置为头像">
+                <UButton
+                    color="primary"
+                    size="sm"
+                    @click="uploadAvatar"
+                    :loading="uploading"
+                >
+                    <UIcon name="i-heroicons-cloud-arrow-up" class="w-4 h-4 mr-2" />
+                    上传头像
+                </UButton>
+            </UTooltip>
+        </div>
+
+        <!-- 上传提示 -->
+        <p class="text-sm text-neutral-600 dark:text-neutral-400 text-center">
+            支持 JPG、PNG 格式，文件大小不超过 2MB
+        </p>
+    </div>
+</template>
+
+<script setup lang="ts">
+interface Props {
+    user?: {
+        nickname?: string;
+        avatar_url?: string;
+    };
+}
+
+const props = defineProps<Props>();
+const emit = defineEmits<{
+    uploaded: [url: string];
+}>();
+
+const { success, error, info } = useNotifications()
+const toast = { success, error, info };
+const files = ref<File | null>(null);
+const selectedFile = ref<File | null>(null);
+const avatarPreview = ref<string>("");
+const uploading = ref(false);
+
+// 监听文件变化（UFileUpload v-model）
+watch(files, (file) => {
+    if (!file) {
+        selectedFile.value = null;
+        avatarPreview.value = "";
+        return;
+    }
+    // 验证文件类型
+    if (!file.type.startsWith("image/")) {
+        toast.add({
+            title: "文件格式错误",
+            description: "请选择图片文件",
+            color: "error",
+        });
+        files.value = null; // 清空无效文件
+        return;
+    }
+    // 验证文件大小 (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+        toast.add({
+            title: "文件太大",
+            description: "图片大小不能超过 2MB",
+            color: "error",
+        });
+        files.value = null; // 清空无效文件
+        return;
+    }
+    selectedFile.value = file;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        avatarPreview.value = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+});
+
+// 上传头像
+const uploadAvatar = async () => {
+    if (!selectedFile.value) return;
+
+    uploading.value = true;
+
+    try {
+        // 注意：头像上传功能需要后端 API 支持
+        // 调用后端API上传文件
+        const formData = new FormData();
+        formData.append('avatar', selectedFile.value);
+
+        try {
+            const api = useApi();
+            const response = await api.postForm('/upload/avatar', formData);
+            
+            if (response.code === 0) {
+                toast.add({
+                    title: "头像上传成功",
+                    description: "您的头像已更新",
+                    color: "success",
+                });
+
+                // 发送上传成功事件，使用后端返回的URL
+                emit("uploaded", response.data?.avatar_url);
+            } else {
+                throw new Error(response.msg || '上传失败');
+            }
+        } catch (error: any) {
+            toast.add({
+                title: "头像上传失败",
+                description: error.message || "请稍后重试",
+                color: "error",
+            });
+            throw error;
+        }
+
+        // 清理状态
+        selectedFile.value = null;
+    } catch (error: any) {
+        toast.add({
+            title: "上传失败",
+            description: error.message || "请稍后重试",
+            color: "error",
+        });
+    } finally {
+        uploading.value = false;
+    }
+};
+
+// 清理预览
+watch(
+    () => props.user?.avatar_url,
+    () => {
+        if (!selectedFile.value) {
+            avatarPreview.value = "";
+        }
+    },
+);
+</script>

@@ -1,185 +1,242 @@
-import { defineStore } from "pinia";
-import type { UserSettings } from "~/types/api";
+/**
+ * 设置状态存储 - 纯状态版本
+ * 职责：纯粹的设置状态管理和持久化，不包含 API 调用
+ */
 
-// 默认设置
-const getDefaultSettings = (): UserSettings => ({
+
+export interface AppSettings {
+  // 外观设置
+  theme: 'light' | 'dark' | 'system'
+  language: string
+  fontSize: 'small' | 'medium' | 'large'
+  compactMode: boolean
+  enableAnimations: boolean
+  
+  // 通知设置
   notifications: {
-    push_enabled: true,
-    email_enabled: true,
-    sms_enabled: false,
-    group_notifications: true,
-    message_notifications: true,
-    friend_requests: true,
-    direct_message_toast: true,
-    group_message_toast: true,
-    system_notification_toast: true,
+    push: boolean
+    email: boolean
+    sound: boolean
+    vibration: boolean
+  }
+  
+  // 隐私设置
+  privacy: {
+    profileVisibility: 'public' | 'friends' | 'private'
+    locationSharing: boolean
+    onlineStatus: boolean
+    readReceipts: boolean
+  }
+}
+
+const DEFAULT_SETTINGS: AppSettings = {
+  theme: 'system',
+  language: 'zh-CN',
+  fontSize: 'medium',
+  compactMode: false,
+  enableAnimations: true,
+  notifications: {
+    push: true,
+    email: true,
+    sound: true,
+    vibration: true
   },
   privacy: {
-    profile_visibility: "public",
-    location_sharing: true,
-    online_status: true,
-    show_in_search: true,
-  },
-  appearance: {
-    theme: "auto" as const,
-    language: "zh-CN",
-    animations: true,
-    compact_mode: false,
-    high_contrast: false,
-  },
-  preferences: {
-    language: "zh-CN",
-    theme: "auto" as const,
-    distance_unit: "km",
-    time_format: "24h",
-  },
-  account: {
-    auto_save: true,
-    backup_enabled: false,
-  },
-});
+    profileVisibility: 'public',
+    locationSharing: true,
+    onlineStatus: true,
+    readReceipts: true
+  }
+}
 
-/**
- * 设置 Store - 简化版
- * 主要负责主题管理和基础设置缓存
- */
-export const useSettingsStore = defineStore(
-  "settings",
-  () => {
-    // 核心状态
-    const settings = ref<UserSettings | null>(null);
-    const theme = ref<"light" | "dark" | "auto">("auto");
-    const preferredLocale = ref<string>("zh-CN");
-    const isLoading = ref(false);
-
-    // 计算属性
-    const effectiveTheme = computed(() => {
-      if (theme.value === "auto") {
-        return "light"; // 服务端渲染时默认为light主题
+export const useSettingsStore = defineStore('settings', () => {
+  // ============ 状态 ============
+  const settings = ref<AppSettings>({ ...DEFAULT_SETTINGS })
+  
+  // ============ 计算属性 ============
+  const isDarkMode = computed(() => {
+    if (settings.value.theme === 'system') {
+      if (typeof window !== 'undefined') {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches
       }
-      return theme.value;
-    });
-
-    // 设置相关方法
-    async function fetchSettings() {
-      if (isLoading.value) return settings.value;
-
-      try {
-        isLoading.value = true;
-        const settingsService = useSettingsService();
-        const userSettings = await settingsService.getUserSettings();
-        settings.value = userSettings as any;
-
-        // 主题和语言设置通过前端本地管理
-        // userSettings 仅包含后端通知设置等
-        return userSettings;
-      } catch (error) {
-        // 获取设置失败，使用默认设置
-        return null;
-      } finally {
-        isLoading.value = false;
-      }
+      return false
     }
-
-    async function updateSettings(newSettings: Partial<UserSettings>) {
-      try {
-        isLoading.value = true;
-        const settingsService = useSettingsService();
-        await settingsService.updateUserSettings(newSettings as any);
-
-        // 重新获取设置
-        await fetchSettings();
-        return settings.value;
-      } catch (error) {
-        // 更新设置失败，保持原状态
-        throw error;
-      } finally {
-        isLoading.value = false;
-      }
+    return settings.value.theme === 'dark'
+  })
+  
+  const displaySettings = computed(() => ({
+    theme: settings.value.theme,
+    fontSize: settings.value.fontSize,
+    compactMode: settings.value.compactMode,
+    enableAnimations: settings.value.enableAnimations
+  }))
+  
+  const notificationSettings = computed(() => settings.value.notifications)
+  const privacySettings = computed(() => settings.value.privacy)
+  
+  // ============ 状态操作方法 ============
+  
+  /**
+   * 更新设置
+   */
+  const updateSettings = (updates: Partial<AppSettings>) => {
+    settings.value = { ...settings.value, ...updates }
+    
+    // 应用主题变化
+    if (updates.theme !== undefined) {
+      applyTheme()
     }
-
-    // 主题管理
-    function setTheme(newTheme: "light" | "dark" | "auto") {
-      theme.value = newTheme;
-      applyTheme();
-
-      // 如果有设置，更新到服务器
-      if (settings.value) {
-        // 主题设置通过前端本地管理，不需要调用后端API
-        // updateSettings 仅用于后端设置同步
-      }
+    
+    // 应用语言变化
+    if (updates.language) {
+      applyLanguage(updates.language)
     }
-
-    function applyTheme() {
-      if (typeof document === "undefined") return;
-
-      const root = document.documentElement;
-      const prefersDark =
-        window.matchMedia &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const wantDark =
-        theme.value === "dark" || (theme.value === "auto" && prefersDark);
-      root.classList.toggle("dark", wantDark);
+  }
+  
+  /**
+   * 设置完整设置对象
+   */
+  const setSettings = (newSettings: AppSettings) => {
+    settings.value = { ...newSettings }
+    applyTheme()
+    applyLanguage(newSettings.language)
+  }
+  
+  /**
+   * 重置为默认设置
+   */
+  const resetSettings = () => {
+    settings.value = { ...DEFAULT_SETTINGS }
+    applyTheme()
+    applyLanguage(DEFAULT_SETTINGS.language)
+  }
+  
+  /**
+   * 更新主题设置
+   */
+  const setTheme = (theme: AppSettings['theme']) => {
+    updateSettings({ theme })
+  }
+  
+  /**
+   * 切换主题
+   */
+  const toggleTheme = () => {
+    const themes: AppSettings['theme'][] = ['light', 'dark', 'system']
+    const currentIndex = themes.indexOf(settings.value.theme)
+    const nextTheme = themes[(currentIndex + 1) % themes.length]
+    setTheme(nextTheme)
+  }
+  
+  /**
+   * 设置语言
+   */
+  const setLanguage = (language: string) => {
+    updateSettings({ language })
+  }
+  
+  /**
+   * 更新通知设置
+   */
+  const updateNotifications = (updates: Partial<AppSettings['notifications']>) => {
+    updateSettings({
+      notifications: { ...settings.value.notifications, ...updates }
+    })
+  }
+  
+  /**
+   * 切换通知设置
+   */
+  const toggleNotification = (type: keyof AppSettings['notifications']) => {
+    updateNotifications({
+      [type]: !settings.value.notifications[type]
+    })
+  }
+  
+  /**
+   * 更新隐私设置
+   */
+  const updatePrivacy = (updates: Partial<AppSettings['privacy']>) => {
+    updateSettings({
+      privacy: { ...settings.value.privacy, ...updates }
+    })
+  }
+  
+  // ============ 内部方法 ============
+  
+  /**
+   * 应用主题到 DOM
+   */
+  const applyTheme = () => {
+    if (typeof window === 'undefined') return
+    
+    const html = document.documentElement
+    const theme = isDarkMode.value ? 'dark' : 'light'
+    
+    html.classList.remove('light', 'dark')
+    html.classList.add(theme)
+    html.setAttribute('data-theme', theme)
+  }
+  
+  /**
+   * 应用语言设置
+   */
+  const applyLanguage = (language: string) => {
+    if (typeof window === 'undefined') return
+    
+    document.documentElement.lang = language
+    
+    // 如果使用了 i18n，在这里切换语言
+    // const { $i18n } = useNuxtApp()
+    // if ($i18n) {
+    //   $i18n.locale.value = language
+    // }
+  }
+  
+  /**
+   * 初始化设置
+   */
+  const initialize = () => {
+    // Pinia 插件会自动恢复持久化设置
+    applyTheme()
+    applyLanguage(settings.value.language)
+    
+    // 监听系统主题变化
+    if (typeof window !== 'undefined' && settings.value.theme === 'system') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+      mediaQuery.addEventListener('change', applyTheme)
     }
-
-    function initThemeWatcher() {
-      // 监听 store 中 theme 的变化
-      const stopTheme = watch(theme, () => applyTheme());
-
-      // 监听系统主题变化（当 theme=auto 时生效）
-      let media: MediaQueryList | null = null;
-      const onMediaChange = () => {
-        if (theme.value === "auto") applyTheme();
-      };
-
-      if (typeof window !== "undefined" && window.matchMedia) {
-        media = window.matchMedia("(prefers-color-scheme: dark)");
-        media.addEventListener?.("change", onMediaChange);
-      }
-
-      // 初次应用一次
-      applyTheme();
-
-      // 返回清理函数
-      return () => {
-        stopTheme();
-        media?.removeEventListener?.("change", onMediaChange);
-      };
-    }
-
-    // 语言偏好管理
-    function setPreferredLocale(locale: string) {
-      preferredLocale.value = locale;
-    }
-
-    function clearSettings() {
-      settings.value = null;
-      theme.value = "auto";
-      preferredLocale.value = "zh-CN";
-      applyTheme();
-    }
-
-    return {
-      // 状态
-      settings: computed(() => settings.value || getDefaultSettings()),
-      theme: computed(() => theme.value),
-      preferredLocale: computed(() => preferredLocale.value),
-      isLoading: computed(() => isLoading.value),
-      effectiveTheme,
-
-      // 方法
-      fetchSettings,
-      updateSettings,
-      setTheme,
-      setPreferredLocale,
-      applyTheme,
-      initThemeWatcher,
-      clearSettings,
-    };
-  },
-  {
-    persist: {
-      pick: ["theme", "preferredLocale"],
-    },
-  },
-);
+  }
+  
+  // ============ 初始化 ============
+  // 客户端自动初始化
+  if (typeof window !== 'undefined') {
+    initialize()
+  }
+  
+  return {
+    // 状态（直接返回，供 Pinia 和插件使用）
+    settings,
+    isDarkMode,
+    displaySettings,
+    notificationSettings,
+    privacySettings,
+    
+    // 状态操作方法
+    updateSettings,
+    setSettings,
+    resetSettings,
+    setTheme,
+    toggleTheme,
+    setLanguage,
+    updateNotifications,
+    toggleNotification,
+    updatePrivacy,
+    initialize
+  }
+}, {
+  persist: {
+    key: 'app-settings',
+    pick: ['settings']
+  }
+})

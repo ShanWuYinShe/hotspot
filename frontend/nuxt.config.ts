@@ -28,6 +28,7 @@ export default defineNuxtConfig({
   piniaPluginPersistedstate: {
     storage: "localStorage",
     debug: process.env.NODE_ENV !== "production",
+    auto: false,  // 禁用自动持久化，需要显式配置
   },
 
   // SSR 配置

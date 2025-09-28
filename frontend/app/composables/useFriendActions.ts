@@ -4,6 +4,7 @@
  */
 
 import type { UserResponse } from '~/types/api'
+import { useUserService } from '~/services/users.service'
 
 export interface FriendRequest {
   relationship_id: string
@@ -18,7 +19,6 @@ export interface FriendRequest {
 export const useFriendActions = () => {
   const userService = useUserService()
   const toast = useToast()
-  const { executeFeature } = useFeatureStatus()
 
   /**
    * 发送好友申请

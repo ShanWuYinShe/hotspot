@@ -9,7 +9,6 @@ export { default as DangerSection } from './DangerSection.vue';
 // Settings 子组件
 export { default as SettingToggleItem } from './SettingToggleItem.vue';
 export { default as SettingSelectField } from './SettingSelectField.vue';
-export { default as SettingSelectSimple } from './SettingSelectSimple.vue';
 
 // 类型定义
 export interface SettingOption {

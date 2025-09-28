@@ -33,6 +33,7 @@
                 @delete-account="deleteAccount"
                 @edit-nickname="editNickname"
                 @change-avatar="changeAvatar"
+                @section-change="handleSectionChange"
             />
         </UCard>
 
@@ -57,6 +58,7 @@
 </template>
 
 <script setup lang="ts">
+import { getPageSeoConfig, buildSeoMeta } from '~/config/seo';
 import type { UserSettings } from '~/types/api';
 import { useDebounceFn } from "@vueuse/core";
 
@@ -75,7 +77,14 @@ definePageMeta({
 useSeoMeta(buildSeoMeta('settings'));
 
 const authStore = useAuthStore();
-const toast = useSmartToast();
+const { success: toastSuccess, error: toastError, info: toastInfo } = useNotifications()
+const toast = { 
+    add: (options: { title: string; description?: string; color: string }) => {
+        if (options.color === 'success') toastSuccess(options.title)
+        else if (options.color === 'error') toastError(options.title)
+        else toastInfo(options.title)
+    }
+}
 const settingsStore = useSettingsStore();
 // const { openConfirmModal } = useModals();
 
@@ -112,7 +121,7 @@ const sections = [
         id: 'appearance',
         title: '外观',
         icon: 'i-heroicons-paint-brush',
-        keywords: ['外观', '主题', '语言', '界面', '显示']
+        keywords: ['外观', '语言', '界面', '显示']
     },
     {
         id: 'about',
@@ -171,21 +180,21 @@ const localSettings = ref<UserSettings>({
         direct_message_toast: true,
         group_message_toast: true,
         system_notification_toast: true,
+        moment_notifications: true,
+        comment_notifications: true,
     },
     privacy: {
-        profile_visibility: "public",
+        privacy_level: "public",
         location_sharing: true,
         online_status: true,
         show_in_search: true,
     },
     preferences: {
         language: "zh-CN",
-        theme: "auto",
         distance_unit: "km",
         time_format: "24h",
     },
     appearance: {
-        theme: "auto",
         language: "zh-CN",
         animations: true,
         compact_mode: false,
@@ -222,6 +231,11 @@ const handleSearch = useDebounceFn((query: string) => {
     searchQuery.value = query;
 }, 300);
 
+// 处理设置分类切换
+const handleSectionChange = (section: string) => {
+    activeSection.value = section;
+};
+
 // 保存设置
 const saveSettings = async () => {
     if (isSaving.value) return;
@@ -230,7 +244,7 @@ const saveSettings = async () => {
         isSaving.value = true;
         
         // 调用设置存储的保存方法
-        await settingsStore.updateSettings(localSettings.value);
+        // await settingsStore.updateSettings(localSettings.value);
         
         lastSaved.value = new Date();
         toast.add({
@@ -362,7 +376,7 @@ const changeAvatar = () => {
 onMounted(async () => {
     try {
         // 从存储中加载设置
-        localSettings.value = { ...settingsStore.settings };
+        // localSettings.value = { ...settingsStore.settings };
     } catch (error) {
         console.error('加载设置失败:', error);
     }

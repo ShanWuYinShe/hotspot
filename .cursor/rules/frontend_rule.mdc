@@ -92,8 +92,19 @@ const title = computed(() => props.title || t('common.title'))
 - **验证机制**：提供了更好的表单验证和错误处理机制
 
 ### 2.4 覆盖层组件使用要求
-- **强制要求**：UModal、USlideover 等覆盖层组件必须通过 `useOverlay` 管理
-- **禁止直接使用**：不得直接在模板中使用这些组件
+- **强制要求**：UModal、USlideover、UCommandPalette 等覆盖层组件必须通过 `useOverlay` 管理
+- **禁止直接使用**：不得直接在页面模板中使用这些组件，必须封装为独立的 Modal 组件文件
+- **Modal 组件结构要求**：
+  - 每个 Modal 必须是独立的 `.vue` 文件
+  - Modal 组件内部必须使用适当的包装组件：
+    - `UCommandPalette` → 必须用 `<UModal>` 包装
+    - `USlideover` → 可以直接使用（已是覆盖层组件）
+    - 其他覆盖层组件 → 必须用 `<UModal>` 包装
+  - Modal 组件必须支持 `open` prop 和 `v-model:open`（用于 useOverlay 管理）
+  - Modal 组件必须 emit `close` 事件（用于 useOverlay 捕获返回值）
+- **架构违规检查**：
+  - ❌ 错误：直接使用 `<UCommandPalette>` 而不用 `<UModal>` 包装
+  - ✅ 正确：`<UModal><UCommandPalette /></UModal>`
 - **正确用法**：参考官方文档 `https://ui.nuxt.com/composables/use-overlay`
 
 ## 3. MCP 服务器集成与使用规范
@@ -316,7 +327,104 @@ function isSystemUser(userId: string): boolean {
   - 每个 API 端点对应一个 `use*` 函数
   - 服务函数返回响应式数据和状态管理
 
-## 10. 优雅错误处理系统规范
+## 10. 格式化函数规范（严禁违规）
+
+### 10.1 核心原则
+
+**严禁在 Vue 文件中实现格式化函数**：
+- **绝对禁止**：任何 Vue 文件（`.vue`）中不得定义以 `format` 开头的函数
+- **统一使用 useFormatters**：所有格式化需求必须通过 `useFormatters()` composable 实现
+- **零容忍政策**：发现违规立即修复，无例外情况
+
+### 10.2 违规模式识别
+
+**严禁的代码模式**：
+```typescript
+// ❌ 绝对禁止：在 Vue 文件中定义格式化函数
+const formatTime = (time: string) => { ... }
+const formatDistance = (distance: number) => { ... }
+const formatDate = (date: string) => { ... }
+const formatCount = (count: number) => { ... }
+const formatFileSize = (bytes: number) => { ... }
+function formatXxx(...) { ... }
+```
+
+**正确的实现方式**：
+```typescript
+// ✅ 正确：使用 useFormatters composable
+const { formatTime, formatDistance, formatDate, formatCount, formatFileSize } = useFormatters()
+```
+
+### 10.3 特殊业务逻辑处理
+
+**业务逻辑函数命名规范**：
+- 如需要特殊的显示逻辑，使用 `display` 前缀而非 `format`
+- 如需要特殊的转换逻辑，使用 `transform` 前缀
+- 如需要特殊的处理逻辑，使用 `process` 前缀
+
+**正确示例**：
+```typescript
+// ✅ 正确：业务逻辑函数，非格式化函数
+const displayTime = (timeString?: string) => {
+    if (!timeString) return "";
+    return formatTime(timeString); // 内部调用 useFormatters
+};
+
+const displayMemberCount = (count: number) => {
+    if (count > 99) return "99+";
+    return count.toString();
+};
+
+const transformMessageTime = (date: string | number | Date): string => {
+    // 特殊的消息时间显示逻辑
+    const d = new Date(date);
+    // ... 业务逻辑
+    return timeStr;
+};
+```
+
+### 10.4 检查与修复指南
+
+**自动检查命令**：
+```bash
+# 检查项目中是否存在违规的格式化函数
+grep -r "const.*format.*= (" app/ --include="*.vue" | grep -v composables
+grep -r "function format" app/ --include="*.vue"
+```
+
+**修复步骤**：
+1. **导入 useFormatters**：在组件顶部添加 `const { formatXxx } = useFormatters()`
+2. **删除违规函数**：删除所有以 `format` 开头的函数定义
+3. **重命名业务逻辑**：将业务逻辑函数重命名为 `display`、`transform` 等前缀
+4. **验证功能**：确保修复后功能正常工作
+
+### 10.5 代码审查要求
+
+**强制检查项目**：
+- 所有 Vue 文件不得包含 `const format` 或 `function format` 定义
+- 所有格式化需求必须通过 `useFormatters()` 实现
+- 业务逻辑函数必须使用合适的命名前缀
+
+**违规处理**：
+- 发现违规代码立即要求修复
+- 不允许提交包含违规代码的 Pull Request
+- 定期扫描项目确保规范执行
+
+### 10.6 useFormatters 功能覆盖
+
+**已提供的格式化函数**：
+- `formatTime(dateString)` - 时间格式化（支持国际化）
+- `formatDistance(distance)` - 距离格式化
+- `formatDate(dateString, format)` - 日期格式化
+- `formatCount(count)` - 数量格式化（K/M 缩写）
+- `formatFileSize(bytes)` - 文件大小格式化
+
+**扩展需求处理**：
+- 如需新的格式化功能，在 `composables/useFormatters.ts` 中添加
+- 不得在业务组件中实现格式化逻辑
+- 确保所有格式化函数支持国际化
+
+## 11. 优雅错误处理系统规范
 
 ### 核心设计原则
 - **零侵入设计**：不破坏现有代码结构，完全向后兼容
@@ -507,9 +615,52 @@ errorHandler.setupGlobalErrorHandler(); // 在app.vue中调用
 - 不影响正常业务流程的性能
 - 轻量级设计，最小化内存占用
 
-## 11. 组件设计规范
+## 11. Store 状态管理纯化规范（强制）
 
-### 11.1 组件拆分原则
+### 11.1 Store 职责边界
+
+**Store 应该做的**：
+- 纯粹的状态存储和数据管理
+- 持久化配置（通过 `pinia-plugin-persistedstate`）
+- 计算属性（getters）
+- 状态操作方法（setter/getter）
+
+**Store 不应该做的**：
+- API 调用（HTTP 请求、WebSocket 连接）
+- 业务逻辑处理
+- 错误处理和用户通知
+- 异步数据获取
+
+### 11.2 强制要求
+
+- **零 API 调用**：Store 中严禁包含任何 HTTP 请求、WebSocket 连接、第三方服务调用
+- **纯状态操作**：Store 只能操作调用者提供的数据，不能主动获取外部数据
+- **职责分离**：业务逻辑和 API 调用必须放在 Composables 中处理
+
+### 11.3 检查规范
+
+**强制检查项目**：
+- Store 中不得包含 `useHttp`、`$fetch`、`axios` 等 HTTP 客户端调用
+- Store 中不得包含 `use*Service` 等业务服务调用
+- Store 中不得包含 `async/await` 异步操作（除持久化相关）
+- Store 中不得包含 `console.log`、`alert`、`toast` 等副作用操作
+
+**违规处理**：
+- 发现违规代码立即要求修复
+- 不允许提交包含违规代码的 Pull Request
+- 必要时进行架构重构，将业务逻辑迁移到 Composables
+
+### 11.4 协作规范
+
+**数据流向**：`用户操作 → Composable → API调用 → Store状态更新 → UI响应`
+
+**职责分工**：
+- **Store**：数据存储、状态管理、持久化、计算属性
+- **Composable**：业务逻辑、API调用、错误处理、用户通知、状态同步
+
+## 12. 组件设计规范
+
+### 12.1 组件拆分原则
 
 **核心原则**：
 - **功能单一**：每个组件只负责一个明确的功能
@@ -526,7 +677,7 @@ errorHandler.setupGlobalErrorHandler(); // 在app.vue中调用
 - **简单逻辑**：几行代码就能搞定 → 内联
 - **强耦合**：与特定页面/功能强耦合 → 内联
 
-### 11.2 Modal 组件架构规范
+### 12.2 Modal 组件架构规范
 
 **强制要求**：
 - **严禁在页面中直接使用 Modal**：必须通过 `useOverlay` 管理
@@ -576,7 +727,7 @@ const onCancel = () => {
 </template>
 ```
 
-### 11.3 组件复用原则
+### 12.3 组件复用原则
 
 **应该拆分的情况**：
 - **明显可以复用的组件**：会被多个地方使用
@@ -588,7 +739,7 @@ const onCancel = () => {
 - **简单包装组件**：内容很少，只是简单包装
 - **强耦合组件**：与特定上下文强耦合
 
-### 11.4 PIN码安全组件规范
+### 12.4 PIN码安全组件规范
 
 **PIN码用途**：
 - **用于解密本地token数据**：在需要访问加密数据时主动触发
@@ -624,7 +775,7 @@ watch(() => authStore.pinModalState.isOpen, (isOpen) => {
 })
 ```
 
-## 12. 性能优化规范
+## 13. 性能优化规范
 - 组件合理拆分，避免过大组件
 - 列表使用虚拟滚动优化
 - 大数据操作用 Web Worker
