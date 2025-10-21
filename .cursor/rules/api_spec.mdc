@@ -1,0 +1,3016 @@
+---
+description: 这个文档定义了后端支持的api端点、request/response类型，websocket支持的订阅消息、推送消息类型
+alwaysApply: false
+---
+# HotSpot API 规范文档
+
+## 文档说明
+
+本文档定义了 HotSpot 后端 API 的接口规范，包括：
+- API 端点定义
+- Request/Response 类型定义
+- WebSocket 消息类型定义
+- 事件推送与订阅机制
+
+## 1. API 设计原则
+
+### 1.1 统一响应格式
+
+**标准响应结构**：
+```typescript
+{
+  code: number;      // 业务状态码：0-成功，非0-错误
+  msg: string;       // 响应消息
+  data: T | null;    // 成功为数据；失败通常为 null
+}
+```
+
+**分页响应结构**：
+```typescript
+{
+  items: T[];            // 数据项
+  has_more: boolean;     // 是否还有更多
+  next_cursor?: string;  // 下一页游标（64位整数转字符串）
+}
+```
+
+### 1.2 HTTP状态码策略
+
+- 所有API请求统一返回HTTP 200状态码
+- 通过响应体中的`code`字段区分业务处理结果
+
+### 1.3 错误码分组
+
+- 1000-1999: 客户端请求错误
+- 5000-5999: 服务器内部错误
+
+### 1.4 API类型命名规范
+
+- **Request类型**: 必须以 `Request` 结尾，格式为 `XxxRequest`
+- **Response类型**: 必须以 `Response` 结尾，格式为 `XxxResponse`
+- **通用数据模型**: 可以使用 `XxxResponse` 作为通用响应类型
+- **示例**:
+  - ✅ 正确: `LoginRequest`, `LoginResponse`, `UserResponse`
+  - ❌ 错误: `User`, `LoginData`, `UserInfo`, `UserActivity`
+
+### 1.5 类型转换规范
+
+- **64位整数 (`i64`)**: 转换为 `string` 类型（用户ID、主键、游标）
+- **32位整数 (`i32`)**: 转换为 `number` 类型（计数、错误码）
+- **64位浮点数 (`f64`)**: 转换为 `number` 类型（地理坐标）
+
+### 1.6 用户ID编码规范
+
+- **用户ID结构**: 64位整数，高8位表示用户类型，低56位表示用户序号
+- **用户类型编码**:
+  - `0x01` (1) - 临时用户
+  - `0x02` (2) - 普通用户
+  - `0x03` (3) - 系统用户（官方账号等）
+  - `0x04-0xFF` - 预留给未来用户类型
+
+## 2. API 端点与类型定义
+
+### 2.1 认证 API
+
+#### 通用认证响应类型
+
+**AuthResponse** - 认证成功的通用响应类型
+```typescript
+{
+  user_id: string;          // 64位整数转字符串（高8位编码用户类型）
+  nickname: string;         // 用户昵称
+  access_token: string;     // 访问令牌
+  refresh_token: string;    // 刷新令牌
+  expires_at: string;       // 过期时间（ISO 8601）
+}
+```
+
+#### API 端点
+
+**1. POST /api/v1/public/auth/get_nonce - 获取认证随机数**
+
+Request: `GetNonceRequest`
+```typescript
+{}  // 空请求体
+```
+
+Response: `GetNonceResponse`
+```typescript
+{
+  nonce_id: string;         // nonce标识符
+  nonce: string;            // 随机数
+  timestamp: number;        // 时间戳
+  expires_in: number;       // 有效期（秒）
+}
+```
+
+**2. POST /api/v1/public/auth/register - 用户注册**
+
+Request: `RegisterRequest`
+```typescript
+{
+  login_id: string;         // 登录ID（邮箱/手机号）
+  nickname: string;         // 用户昵称
+  password_hash: string;    // SHA256(password + nonce + timestamp)
+  nonce_id: string;         // nonce标识符
+  timestamp: number;        // 时间戳
+  latitude?: number;        // 纬度（可选）
+  longitude?: number;       // 经度（可选）
+}
+```
+
+Response: `RegisterResponse`
+```typescript
+AuthResponse  // 使用通用认证响应类型
+```
+
+**3. POST /api/v1/public/auth/login - 用户登录**
+
+Request: `LoginRequest`
+```typescript
+{
+  login_id: string;         // 登录ID（邮箱/手机号）
+  password_hash: string;    // SHA256(password + nonce + timestamp)
+  nonce_id: string;         // nonce标识符
+  timestamp: number;        // 时间戳
+}
+```
+
+Response: `LoginResponse`
+```typescript
+AuthResponse  // 使用通用认证响应类型
+```
+
+**4. POST /api/v1/public/auth/logout - 用户登出**
+
+Request: `LogoutRequest`
+```typescript
+{}  // 空请求体
+```
+
+Response: `LogoutResponse`
+```typescript
+{
+  success: boolean;         // 是否登出成功
+  message: string;          // 响应消息
+  logged_out_at: string;    // 登出时间（ISO 8601）
+}
+```
+
+**5. POST /api/v1/public/auth/create_temp - 创建临时用户**
+
+Request: `CreateTempRequest`
+```typescript
+{
+  nickname: string;         // 用户昵称
+  latitude?: number;        // 纬度（可选）
+  longitude?: number;       // 经度（可选）
+}
+```
+
+Response: `CreateTempResponse`
+```typescript
+AuthResponse  // 使用通用认证响应类型
+```
+
+**6. POST /api/v1/public/auth/refresh_token - 刷新Token**
+
+Request: `RefreshTokenRequest`
+```typescript
+{
+  refresh_token: string;    // 刷新令牌
+  latitude?: number;        // 纬度（可选）
+  longitude?: number;       // 经度（可选）
+}
+```
+
+Response: `RefreshTokenResponse`
+```typescript
+AuthResponse  // 使用通用认证响应类型
+```
+
+**7. POST /api/v1/public/auth/check_status - 检查认证状态**
+
+Request: `CheckStatusRequest`
+```typescript
+{}  // 空请求体
+```
+
+Response: `CheckStatusResponse`
+```typescript
+{
+  user_id: string;          // 64位整数转字符串
+  nickname: string;         // 用户昵称
+  is_valid: boolean;        // token是否有效
+  expires_at: string;       // 过期时间（ISO 8601）
+}
+```
+
+**8. POST /api/v1/protected/auth/set_password - 设置密码**
+
+Request: `SetPasswordRequest`
+```typescript
+{
+  password_hash: string;    // SHA256(password + nonce + timestamp)
+  nonce_id: string;         // nonce标识符
+  timestamp: number;        // 时间戳
+}
+```
+
+Response: `SetPasswordResponse`
+```typescript
+{
+  success: boolean;         // 是否设置成功
+  message: string;          // 响应消息
+  can_login: boolean;       // 是否可以登录
+}
+```
+
+### 2.2 用户 API
+
+#### 通用用户信息响应类型
+
+**UserResponse** - 用户信息的通用响应类型
+```typescript
+{
+  user_id: string;          // 64位整数转字符串
+  nickname: string;         // 用户昵称
+  avatar_url?: string;      // 头像URL
+  bio?: string;             // 个人简介
+  created_at?: string;      // 创建时间（ISO 8601）
+  last_active_at?: string;  // 最后活跃时间（ISO 8601）
+  latitude?: number;        // 纬度
+  longitude?: number;       // 经度
+  location_name?: string;   // 位置名称
+  distance?: number;        // 距离（米）
+}
+```
+
+#### API 端点
+
+**1. POST /api/v1/public/user/search_by_name - 按昵称搜索用户**
+
+Request: `SearchUserByNameRequest`
+```typescript
+{
+  name: string;             // 搜索关键词
+  limit?: number;           // 返回数量限制，默认20
+  cursor?: string;          // 分页游标
+}
+```
+
+Response: 分页响应，项类型为 `UserResponse`
+
+**2. POST /api/v1/public/user/search_by_id - 获取用户资料**
+
+Request: `SearchUserByIdRequest`
+```typescript
+{
+  user_id: string;          // 用户ID
+}
+```
+
+Response: `SearchUserByIdResponse`
+```typescript
+UserResponse  // 使用通用用户信息响应类型
+```
+
+**3. POST /api/v1/public/user/search_by_location - 搜索附近用户**
+
+Request: `SearchUserByLocationRequest`
+```typescript
+{
+  latitude: number;         // 纬度
+  longitude: number;        // 经度
+  radius: number;           // 搜索半径（米）
+  limit?: number;           // 返回数量限制，默认20
+  cursor?: string;          // 分页游标
+}
+```
+
+Response: 分页响应，项类型为 `SearchUserByLocationResponse`
+```typescript
+UserResponse & {
+  distance: number;         // 距离（米，必填）
+}
+```
+
+**4. POST /api/v1/protected/user/update_location - 更新用户位置**
+
+Request: `UpdateLocationRequest`
+```typescript
+{
+  latitude: number;         // 纬度
+  longitude: number;        // 经度
+  location_name?: string;   // 位置名称
+}
+```
+
+Response: `UpdateLocationResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+**5. POST /api/v1/protected/user/update_profile - 更新用户资料**
+
+Request: `UpdateProfileRequest`
+```typescript
+{
+  nickname?: string;        // 用户昵称
+  avatar_url?: string;      // 头像URL
+  bio?: string;             // 个人简介
+}
+```
+
+Response: `UpdateProfileResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+**6. POST /api/v1/protected/user/upgrade_account - 账户升级**
+
+Request: `UpgradeAccountRequest`
+```typescript
+{
+  login_id: string;         // 新的登录ID
+  password_hash: string;    // SHA256(password + nonce + timestamp)
+  nonce_id: string;         // nonce标识符
+  timestamp: number;        // 时间戳
+}
+```
+
+Response: `UpgradeAccountResponse`
+```typescript
+AuthResponse  // 使用通用认证响应类型
+```
+
+**7. POST /api/v1/protected/user/get_settings - 获取用户设置**
+
+Request: `GetSettingsRequest`
+```typescript
+{}  // 空请求体
+```
+
+Response: `GetSettingsResponse`
+```typescript
+{
+  privacy_level: string;    // 隐私级别：'public'|'friends'|'private'
+  location_sharing: boolean; // 位置分享开关
+}
+```
+
+**8. POST /api/v1/protected/user/update_settings - 更新用户设置**
+
+Request: `UpdateSettingsRequest`
+```typescript
+{
+  privacy_level?: string;   // 隐私级别
+  location_sharing?: boolean; // 位置分享开关
+}
+```
+
+Response: `UpdateSettingsResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+**9. POST /api/v1/protected/user/delete_account - 删除账户**
+
+Request: `DeleteAccountRequest`
+```typescript
+{
+  confirmation: string;     // 确认字符串，必须为 "DELETE_MY_ACCOUNT"
+}
+```
+
+Response: `DeleteAccountResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+**10. POST /api/v1/protected/user/add_friend - 发送好友申请**
+
+Request: `AddFriendRequest`
+```typescript
+{
+  to_user_id: string;       // 目标用户ID
+  message?: string;         // 申请消息（可选）
+}
+```
+
+Response: `AddFriendResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  relationship_id: string;  // 关系记录ID
+}
+```
+
+**11. POST /api/v1/protected/user/accept_friend - 接受好友申请**
+
+Request: `AcceptFriendRequest`
+```typescript
+{
+  relationship_id: string;  // 关系记录ID
+}
+```
+
+Response: `AcceptFriendResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+**12. POST /api/v1/protected/user/reject_friend - 拒绝好友申请**
+
+Request: `RejectFriendRequest`
+```typescript
+{
+  relationship_id: string;  // 关系记录ID
+}
+```
+
+Response: `RejectFriendResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+**13. POST /api/v1/protected/user/remove_friend - 删除好友**
+
+Request: `RemoveFriendRequest`
+```typescript
+{
+  friend_user_id: string;   // 好友用户ID
+}
+```
+
+Response: `RemoveFriendResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+**14. POST /api/v1/protected/user/follow_user - 关注用户**
+
+Request: `FollowRequest`
+```typescript
+{
+  to_user_id: string;       // 目标用户ID
+}
+```
+
+Response: `FollowResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  relationship_id: string;  // 关系记录ID
+}
+```
+
+**15. POST /api/v1/protected/user/unfollow_user - 取消关注**
+
+Request: `UnfollowRequest`
+```typescript
+{
+  to_user_id: string;       // 目标用户ID
+}
+```
+
+Response: `UnfollowResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+**16. POST /api/v1/protected/user/block_user - 拉黑用户**
+
+Request: `BlockRequest`
+```typescript
+{
+  to_user_id: string;       // 目标用户ID
+  reason?: string;          // 拉黑原因（可选）
+}
+```
+
+Response: `BlockResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  relationship_id: string;  // 关系记录ID
+}
+```
+
+**17. POST /api/v1/protected/user/friends_list - 获取好友列表**
+
+Request: `GetFriendsListRequest`
+```typescript
+{
+  limit?: number;           // 返回数量限制，默认20
+  cursor?: string;          // 分页游标
+  status?: string;          // 状态过滤：'pending'|'accepted'|'all'，默认'accepted'
+}
+```
+
+Response: 分页响应，项类型为 `GetFriendsListResponse`
+```typescript
+{
+  user_id: string;
+  nickname: string;
+  avatar_url?: string;
+  bio?: string;
+  relationship_type: string;
+  relationship_id: string;
+  created_at: string;
+  last_active_at?: string;
+  is_online?: boolean;
+}
+```
+
+**18. POST /api/v1/protected/user/following_list - 获取关注列表**
+
+Request: `GetFollowingListRequest`
+```typescript
+{
+  user_id?: string;         // 目标用户ID（可选）
+  limit?: number;
+  cursor?: string;
+}
+```
+
+Response: 分页响应，项类型为 `GetFollowingListResponse`
+```typescript
+{
+  user_id: string;
+  nickname: string;
+  avatar_url?: string;
+  bio?: string;
+  relationship_id: string;
+  followed_at: string;
+  is_mutual: boolean;
+  is_friend: boolean;
+}
+```
+
+**19. POST /api/v1/protected/user/followers_list - 获取粉丝列表**
+
+Request: `GetFollowersListRequest`
+```typescript
+{
+  user_id?: string;
+  limit?: number;
+  cursor?: string;
+}
+```
+
+Response: 分页响应，项类型为 `GetFollowersListResponse`
+```typescript
+{
+  user_id: string;
+  nickname: string;
+  avatar_url?: string;
+  bio?: string;
+  relationship_id: string;
+  followed_at: string;
+  is_mutual: boolean;
+  is_friend: boolean;
+}
+```
+
+**20. POST /api/v1/protected/user/blocked_list - 获取拉黑列表**
+
+Request: `GetBlockedListRequest`
+```typescript
+{
+  limit?: number;
+  cursor?: string;
+}
+```
+
+Response: 分页响应，项类型为 `GetBlockedListResponse`
+```typescript
+{
+  user_id: string;
+  nickname: string;
+  avatar_url?: string;
+  relationship_id: string;
+  blocked_at: string;
+  reason?: string;
+}
+```
+
+**21. POST /api/v1/protected/user/unblock_user - 解除拉黑**
+
+Request: `UnblockUserRequest`
+```typescript
+{
+  to_user_id: string;
+}
+```
+
+Response: `UnblockUserResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+### 2.3 群组管理 API
+
+#### 通用群组信息响应类型
+
+**GroupResponse** - 群组信息的通用响应类型
+```typescript
+{
+  group_id: string;         // UUID转字符串
+  group_type: 'public_group' | 'private_group';
+  name: string;             // 群组名称
+  description?: string;     // 群组描述
+  avatar_url?: string;      // 群组头像URL
+  owner_id: string;         // 群主ID
+  creator_name: string;     // 创建者昵称
+  latitude: number;         // 纬度
+  longitude: number;        // 经度
+  location_name: string;    // 位置名称
+  member_count: number;     // 成员数量
+  distance?: number;        // 距离（米）
+  is_password_required: boolean;
+  is_member: boolean;       // 当前用户是否为成员
+  user_role?: string;       // 当前用户角色
+  created_at: string;       // 创建时间
+  last_active_at: string;   // 最后活跃时间
+}
+```
+
+#### API 端点
+
+**1. POST /api/v1/public/group/search_by_location - 按位置搜索群组**
+
+Request: `SearchGroupByLocationRequest`
+```typescript
+{
+  latitude: number;
+  longitude: number;
+  radius: number;           // 搜索半径（米）
+  limit?: number;
+  cursor?: string;
+}
+```
+
+Response: 分页响应，项类型为 `SearchGroupByLocationResponse`
+```typescript
+GroupResponse & {
+  distance: number;         // 距离（米，必填）
+}
+```
+
+**2. POST /api/v1/public/group/search_by_name - 按名称搜索群组**
+
+Request: `SearchGroupByNameRequest`
+```typescript
+{
+  name: string;
+  limit?: number;
+  cursor?: string;
+}
+```
+
+Response: 分页响应，项类型为 `GroupResponse`
+
+**3. POST /api/v1/public/group/search_by_id - 按ID获取群组详情**
+
+Request: `SearchGroupByIdRequest`
+```typescript
+{
+  group_id: string;
+}
+```
+
+Response: `SearchGroupByIdResponse`
+```typescript
+GroupResponse
+```
+
+**4. POST /api/v1/protected/group/members - 获取群组成员**
+
+Request: `GetMembersRequest`
+```typescript
+{
+  group_id: string;
+  limit?: number;
+  cursor?: string;
+}
+```
+
+Response: 分页响应，项类型为 `GetMembersResponse`
+```typescript
+{
+  user_id: string;
+  nickname: string;
+  avatar_url?: string;
+  role: string;             // 'owner'|'admin'|'member'
+  is_online: boolean;       // 是否在线
+  last_seen?: string;       // 最后在线时间（ISO 8601）
+  joined_at: string;
+}
+```
+
+**5. POST /api/v1/protected/group/create - 创建群组**
+
+Request: `CreateGroupRequest`
+```typescript
+{
+  group_type: 'public_group' | 'private_group';
+  name: string;
+  description?: string;
+  latitude: number;
+  longitude: number;
+  location_name: string;
+  password?: string;
+  avatar_url?: string;
+  max_members?: number;
+  initial_members?: string[];
+}
+```
+
+Response: `CreateGroupResponse`
+```typescript
+{
+  group_id: string;
+  group_type: 'public_group' | 'private_group';
+  name: string;
+  description?: string;
+  latitude: number;
+  longitude: number;
+  location_name: string;
+  created_at: string;
+  message: string;
+}
+```
+
+**6. POST /api/v1/protected/group/update_profile - 更新群组资料**
+
+Request: `UpdateGroupProfileRequest`
+```typescript
+{
+  group_id: string;
+  name?: string;
+  description?: string;
+  avatar_url?: string;
+}
+```
+
+Response: `UpdateGroupProfileResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  group_id: string;
+}
+```
+
+**7. POST /api/v1/protected/group/update_location - 更新群组位置**
+
+Request: `UpdateGroupLocationRequest`
+```typescript
+{
+  group_id: string;
+  latitude: number;
+  longitude: number;
+  location_name: string;
+}
+```
+
+Response: `UpdateGroupLocationResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  group_id: string;
+  latitude: number;
+  longitude: number;
+  location_name: string;
+}
+```
+
+**8. POST /api/v1/protected/group/update_privacy_settings - 更新群组隐私设置**
+
+Request: `UpdateGroupPrivacySettingsRequest`
+```typescript
+{
+  group_id: string;
+  group_type?: 'public_group' | 'private_group';
+  password?: string;
+  max_members?: number;
+}
+```
+
+Response: `UpdateGroupPrivacySettingsResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  group_id: string;
+  new_group_type?: 'public_group' | 'private_group';
+}
+```
+
+**9. POST /api/v1/protected/group/promote_to_admin - 提升成员为管理员**
+
+Request: `PromoteToAdminRequest`
+```typescript
+{
+  group_id: string;
+  user_id: string;
+}
+```
+
+Response: `PromoteToAdminResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  user_id: string;
+  new_role: 'admin';
+}
+```
+
+**10. POST /api/v1/protected/group/demote_to_member - 降级管理员**
+
+Request: `DemoteToMemberRequest`
+```typescript
+{
+  group_id: string;
+  user_id: string;
+}
+```
+
+Response: `DemoteToMemberResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  user_id: string;
+  new_role: 'member';
+}
+```
+
+**11. POST /api/v1/protected/group/mute_member - 禁言成员**
+
+Request: `MuteMemberRequest`
+```typescript
+{
+  group_id: string;
+  user_id: string;
+  duration?: number;        // 禁言时长（秒）
+  reason?: string;
+}
+```
+
+Response: `MuteMemberResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  user_id: string;
+  muted_until?: string;
+}
+```
+
+**12. POST /api/v1/protected/group/unmute_member - 解除禁言**
+
+Request: `UnmuteMemberRequest`
+```typescript
+{
+  group_id: string;
+  user_id: string;
+}
+```
+
+Response: `UnmuteMemberResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  user_id: string;
+}
+```
+
+**13. POST /api/v1/protected/group/ban_member - 封禁成员**
+
+Request: `BanMemberRequest`
+```typescript
+{
+  group_id: string;
+  user_id: string;
+  reason?: string;
+}
+```
+
+Response: `BanMemberResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  user_id: string;
+}
+```
+
+**14. POST /api/v1/protected/group/unban_member - 解除封禁**
+
+Request: `UnbanMemberRequest`
+```typescript
+{
+  group_id: string;
+  user_id: string;
+}
+```
+
+Response: `UnbanMemberResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  user_id: string;
+}
+```
+
+**15. POST /api/v1/protected/group/invite_members - 邀请成员加入群组**
+
+Request: `InviteMembersRequest`
+```typescript
+{
+  group_id: string;
+  user_ids: string[];
+  message?: string;
+}
+```
+
+Response: `InviteMembersResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  invites: {
+    invite_id: string;
+    invitee_id: string;
+    status: 'sent' | 'failed';
+    reason?: string;
+  }[];
+  sent_count: number;
+  failed_count: number;
+}
+```
+
+**16. POST /api/v1/protected/group/accept_invite - 接受群组邀请**
+
+Request: `AcceptInviteRequest`
+```typescript
+{
+  invite_id: string;
+}
+```
+
+Response: `AcceptInviteResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  group_id: string;
+  group_type: 'public_group' | 'private_group';
+  group_name: string;
+}
+```
+
+**17. POST /api/v1/protected/group/reject_invite - 拒绝群组邀请**
+
+Request: `RejectInviteRequest`
+```typescript
+{
+  invite_id: string;
+}
+```
+
+Response: `RejectInviteResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+**18. POST /api/v1/protected/group/join - 加入公开群组**
+
+Request: `JoinGroupRequest`
+```typescript
+{
+  group_id: string;
+  password?: string;
+}
+```
+
+Response: `JoinGroupResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  group_id: string;
+  user_role: string;
+}
+```
+
+**19. POST /api/v1/protected/group/leave - 离开群组**
+
+Request: `LeaveGroupRequest`
+```typescript
+{
+  group_id: string;
+}
+```
+
+Response: `LeaveGroupResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+**20. POST /api/v1/protected/group/remove_member - 移除群组成员**
+
+Request: `RemoveMemberRequest`
+```typescript
+{
+  group_id: string;
+  user_id: string;
+  reason?: string;
+}
+```
+
+Response: `RemoveMemberResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+**21. POST /api/v1/protected/group/transfer_ownership - 转移群组所有权**
+
+Request: `TransferOwnershipRequest`
+```typescript
+{
+  group_id: string;
+  new_owner_id: string;
+}
+```
+
+Response: `TransferOwnershipResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  new_owner_id: string;
+}
+```
+
+**22. POST /api/v1/protected/group/list - 获取我的群组列表**
+
+Request: `ListMyGroupsRequest`
+```typescript
+{
+  group_type?: 'public_group' | 'private_group' | 'all';  // 默认'all'
+  limit?: number;
+  cursor?: string;
+}
+```
+
+Response: 分页响应，项类型为 `MyGroupResponse`
+```typescript
+{
+  group_id: string;
+  group_type: 'public_group' | 'private_group';
+  name: string;
+  description?: string;
+  avatar_url?: string;
+  owner_id: string;
+  latitude: number;
+  longitude: number;
+  location_name: string;
+  member_count: number;
+  
+  // 我在群组中的状态
+  my_role: 'owner' | 'admin' | 'member';
+  unread_count: number;
+  notifications_enabled: boolean;
+  joined_at: string;
+  last_active_at: string;
+}
+```
+
+**23. POST /api/v1/protected/group/user_invites - 获取我的邀请列表**
+
+Request: `ListUserInvitesRequest`
+```typescript
+{
+  status?: 'pending' | 'accepted' | 'rejected' | 'all';
+  limit?: number;
+  cursor?: string;
+}
+```
+
+Response: 分页响应，项类型为 `ListUserInvitesResponse`
+```typescript
+{
+  invite_id: string;
+  group_id: string;
+  group_name: string;
+  group_avatar?: string;
+  inviter_id: string;
+  inviter_name: string;
+  inviter_avatar?: string;
+  message?: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  created_at: string;
+  responded_at?: string;
+}
+```
+
+**24. POST /api/v1/protected/group/update_notifications - 更新群组通知设置**
+
+Request: `UpdateGroupNotificationsRequest`
+```typescript
+{
+  group_id: string;
+  notifications_enabled?: boolean;      // 是否接收通知
+  mention_notifications?: boolean;      // 是否接收@提醒通知
+}
+```
+
+Response: `UpdateGroupNotificationsResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  group_id: string;
+  notifications_enabled: boolean;
+  mention_notifications: boolean;
+}
+```
+
+### 2.4 私聊会话 API
+
+**1. POST /api/v1/protected/conversation/start - 发起私聊**
+
+Request: `StartConversationRequest`
+```typescript
+{
+  target_user_id: string;
+  initial_message?: string;
+}
+```
+
+Response: `StartConversationResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  conversation_id: string;
+  other_user: {
+    user_id: string;
+    nickname: string;
+    avatar_url?: string;
+    is_online: boolean;
+    last_seen?: string;
+  };
+  is_new: boolean;
+  unread_count: number;
+  last_message?: {
+    content: string;
+    message_type: string;
+    sent_at: string;
+  };
+}
+```
+
+**2. POST /api/v1/protected/conversation/list - 获取私聊列表**
+
+Request: `ListConversationsRequest`
+```typescript
+{
+  limit?: number;
+  cursor?: string;
+}
+```
+
+Response: 分页响应，项类型为 `ConversationResponse`
+```typescript
+{
+  conversation_id: string;
+  other_user: {
+    user_id: string;
+    nickname: string;
+    avatar_url?: string;
+    is_online: boolean;
+    last_seen?: string;
+  };
+  unread_count: number;
+  last_message?: {
+    content: string;
+    message_type: string;
+    sent_at: string;
+  };
+  last_activity_at: string;
+}
+```
+
+**3. POST /api/v1/protected/conversation/hide - 隐藏会话**
+
+Request: `HideConversationRequest`
+```typescript
+{
+  conversation_id: string;
+}
+```
+
+Response: `HideConversationResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+**4. POST /api/v1/protected/conversation/upgrade_to_group - 升级为群组**
+
+Request: `UpgradeConversationToGroupRequest`
+```typescript
+{
+  conversation_id: string;
+  group_type: 'public_group' | 'private_group';
+  name: string;
+  latitude: number;
+  longitude: number;
+  location_name: string;
+  description?: string;
+  avatar_url?: string;
+  password?: string;
+  invited_users?: string[];
+}
+```
+
+Response: `UpgradeConversationToGroupResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  group_id: string;
+  group_type: 'public_group' | 'private_group';
+  group_name: string;
+}
+```
+
+### 2.5 消息通讯 API
+
+**1. POST /api/v1/protected/message/send - 发送消息**
+
+Request: `SendMessageRequest`
+```typescript
+{
+  target_id: string;        // conversation_id 或 group_id
+  content: string;
+  message_type?: string;    // 'text'|'image'|'video'|'audio'|'file'|'location'
+  reply_to_message_id?: string;
+  mentioned_users?: string[];
+  
+  // 位置消息字段
+  latitude?: number;
+  longitude?: number;
+  location_name?: string;
+  
+  // 文件/媒体消息字段
+  file_url?: string;
+  file_name?: string;
+  file_size?: number;
+  thumbnail_url?: string;
+}
+```
+
+Response: `SendMessageResponse`
+```typescript
+{
+  message_id: string;
+  target_id: string;
+  sent_at: string;
+  message: string;
+}
+```
+
+**2. POST /api/v1/protected/message/history - 获取消息历史**
+
+Request: `GetHistoryRequest`
+```typescript
+{
+  target_id: string;        // conversation_id 或 group_id
+  limit?: number;
+  cursor?: string;
+  include_system_messages?: boolean;
+}
+```
+
+Response: 分页响应，项类型为 `MessageResponse`
+```typescript
+{
+  message_id: string;
+  target_id: string;
+  sender_id?: string;
+  sender_name?: string;
+  sender_avatar?: string;
+  content: string;
+  message_type: string;
+  system_event_type?: string;
+  reply_to_message_id?: string;
+  is_edited: boolean;
+  reaction_count: number;
+  mentioned_users: string[];
+  affected_users: string[];
+  sent_at: string;
+  edited_at?: string;
+  
+  // 位置消息字段
+  latitude?: number;
+  longitude?: number;
+  location_name?: string;
+  
+  // 文件/媒体消息字段
+  file_url?: string;
+  file_name?: string;
+  file_size?: number;
+  thumbnail_url?: string;
+}
+```
+
+**3. POST /api/v1/protected/message/delete - 删除消息**
+
+Request: `DeleteMessageRequest`
+```typescript
+{
+  message_id: string;
+  delete_for_everyone?: boolean;
+}
+```
+
+Response: `DeleteMessageResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+**4. POST /api/v1/protected/message/mark_read - 标记消息已读**
+
+Request: `MarkReadRequest`
+```typescript
+{
+  target_id: string;        // conversation_id 或 group_id
+  message_id?: string;
+}
+```
+
+Response: `MarkReadResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+**5. POST /api/v1/protected/message/mark_all_read - 标记所有消息已读**
+
+Request: `MarkAllReadRequest`
+```typescript
+{}  // 空请求体
+}
+```
+
+Response: `MarkAllReadResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  targets_updated: number;  // 更新了多少个会话/群组
+}
+```
+
+**6. POST /api/v1/protected/message/unread_count - 获取未读消息数**
+
+Request: `UnreadCountRequest`
+```typescript
+{
+  target_id?: string;       // 可选，指定某个会话/群组
+}
+```
+
+Response: `UnreadCountResponse`
+```typescript
+{
+  total_unread: number;
+  targets?: Array<{
+    target_id: string;
+    target_type: 'conversation' | 'group';
+    unread_count: number;
+  }>;
+}
+```
+
+**7. POST /api/v1/protected/message/add_reaction - 添加消息反应**
+
+Request: `AddReactionRequest`
+```typescript
+{
+  message_id: string;
+  reaction_type: 'like' | 'love' | 'laugh' | 'angry' | 'sad' | 'wow';
+}
+```
+
+Response: `AddReactionResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  reaction_id: string;
+  reaction_count: number;
+}
+```
+
+**8. POST /api/v1/protected/message/remove_reaction - 移除消息反应**
+
+Request: `RemoveReactionRequest`
+```typescript
+{
+  message_id: string;
+  reaction_type: string;
+}
+```
+
+Response: `RemoveReactionResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  reaction_count: number;
+}
+```
+
+**9. POST /api/v1/protected/message/get_reactions - 获取消息反应列表**
+
+Request: `GetReactionsRequest`
+```typescript
+{
+  message_id: string;
+  reaction_type?: string;   // 可选，筛选特定类型
+  limit?: number;
+  cursor?: string;
+}
+```
+
+Response: 分页响应，项类型为 `ReactionResponse`
+```typescript
+{
+  reaction_id: string;
+  message_id: string;
+  user_id: string;
+  nickname: string;
+  avatar_url?: string;
+  reaction_type: string;
+  created_at: string;
+}
+```
+
+### 2.6 生活瞬间 API
+
+#### 通用生活瞬间响应类型
+
+**MomentResponse** - 生活瞬间通用响应类型
+```typescript
+{
+  moment_id: string;
+  user_id: string;
+  nickname: string;
+  user_avatar?: string;
+  description: string;
+  latitude: number;
+  longitude: number;
+  location_name: string;
+  created_at: string;
+  likes_count: number;
+  comments_count: number;
+  liked_by_me: boolean;
+  distance?: number;
+  tags: string[];
+  images?: string[];
+}
+```
+
+#### API 端点
+
+**1. POST /api/v1/protected/moments/create - 创建生活瞬间**
+
+Request: `CreateMomentRequest`
+```typescript
+{
+  description: string;
+  latitude: number;
+  longitude: number;
+  location_name: string;
+  tags?: string[];
+  images?: string[];
+}
+```
+
+Response: `CreateMomentResponse`
+```typescript
+{
+  moment_id: string;
+  description: string;
+  created_at: string;
+  message: string;
+}
+```
+
+**2. POST /api/v1/public/moments/search_by_location - 按位置搜索生活瞬间**
+
+Request: `SearchMomentsByLocationRequest`
+```typescript
+{
+  latitude: number;
+  longitude: number;
+  radius: number;
+  limit?: number;
+  cursor?: string;
+}
+```
+
+Response: 分页响应，项类型为 `MomentResponse & { distance: number }`
+
+**3. POST /api/v1/public/moments/search_by_tags - 按标签搜索生活瞬间**
+
+Request: `SearchMomentsByTagsRequest`
+```typescript
+{
+  tags: string[];
+  limit?: number;
+  cursor?: string;
+}
+```
+
+Response: 分页响应，项类型为 `MomentResponse`
+
+**4. POST /api/v1/public/moments/search_by_id - 按ID搜索生活瞬间**
+
+Request: `SearchMomentByIdRequest`
+```typescript
+{
+  moment_id: string;
+}
+```
+
+Response: `SearchMomentByIdResponse`
+```typescript
+MomentResponse
+```
+
+**5. POST /api/v1/public/moments/history - 获取生活瞬间历史**
+
+Request: `GetMomentsHistoryRequest`
+```typescript
+{
+  user_id?: string;
+  limit?: number;
+  cursor?: string;
+}
+```
+
+Response: 分页响应，项类型为 `MomentResponse`
+
+**6. POST /api/v1/protected/moments/delete - 删除生活瞬间**
+
+Request: `DeleteMomentRequest`
+```typescript
+{
+  moment_id: string;
+}
+```
+
+Response: `DeleteMomentResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+**7. POST /api/v1/protected/moments/like - 点赞生活瞬间**
+
+Request: `LikeMomentRequest`
+```typescript
+{
+  moment_id: string;
+}
+```
+
+Response: `LikeMomentResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  likes_count: number;
+}
+```
+
+**8. POST /api/v1/protected/moments/unlike - 取消点赞**
+
+Request: `UnlikeMomentRequest`
+```typescript
+{
+  moment_id: string;
+}
+```
+
+Response: `UnlikeMomentResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  likes_count: number;
+}
+```
+
+### 2.6 评论互动 API
+
+#### 通用评论响应类型
+
+**CommentResponse** - 评论通用响应类型
+```typescript
+{
+  comment_id: string;
+  moment_id: string;
+  user_id: string;
+  nickname: string;
+  user_avatar?: string;
+  content: string;
+  parent_comment_id?: string;
+  created_at: string;
+  replies_count: number;
+}
+```
+
+#### API 端点
+
+**1. POST /api/v1/protected/comments/add - 添加评论**
+
+Request: `AddCommentRequest`
+```typescript
+{
+  moment_id: string;
+  content: string;
+}
+```
+
+Response: `AddCommentResponse`
+```typescript
+{
+  comment_id: string;
+  content: string;
+  created_at: string;
+  message: string;
+}
+```
+
+**2. POST /api/v1/protected/comments/reply - 回复评论**
+
+Request: `ReplyCommentRequest`
+```typescript
+{
+  comment_id: string;
+  content: string;
+}
+```
+
+Response: `ReplyCommentResponse`
+```typescript
+{
+  comment_id: string;
+  parent_comment_id: string;
+  content: string;
+  created_at: string;
+  message: string;
+}
+```
+
+**3. POST /api/v1/protected/comments/delete - 删除评论**
+
+Request: `DeleteCommentRequest`
+```typescript
+{
+  comment_id: string;
+}
+```
+
+Response: `DeleteCommentResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+**4. POST /api/v1/public/comments/list - 获取评论列表**
+
+Request: `GetCommentsRequest`
+```typescript
+{
+  moment_id: string;
+  limit?: number;
+  cursor?: string;
+}
+```
+
+Response: 分页响应，项类型为 `CommentResponse`
+
+**5. POST /api/v1/protected/comments/like - 点赞评论**
+
+Request: `LikeCommentRequest`
+```typescript
+{
+  comment_id: string;
+}
+```
+
+Response: `LikeCommentResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  likes_count: number;
+  liked_at: string;
+}
+```
+
+**6. POST /api/v1/protected/comments/unlike - 取消点赞评论**
+
+Request: `UnlikeCommentRequest`
+```typescript
+{
+  comment_id: string;
+}
+```
+
+Response: `UnlikeCommentResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  likes_count: number;
+}
+```
+
+### 2.7 内容安全 API
+
+#### 通用举报响应类型
+
+**ReportResponse** - 举报通用响应类型
+```typescript
+{
+  report_id: string;
+  reporter_id: string;
+  reporter_nickname?: string;
+  target_type: string;      // 'user'|'moment'|'comment'|'message'|'group'
+  target_id: string;
+  target_summary?: {
+    user_nickname?: string;
+    group_name?: string;
+    content_preview?: string;
+    created_at?: string;
+  };
+  reason: string;
+  description?: string;
+  status: string;           // 'pending'|'reviewing'|'resolved'|'dismissed'
+  created_at: string;
+  handled_at?: string;
+  handler_id?: string;
+  handler_note?: string;
+}
+```
+
+#### API 端点
+
+**1. POST /api/v1/protected/reports/create - 提交举报**
+
+Request: `CreateReportRequest`
+```typescript
+{
+  target_type: string;
+  target_id: string;
+  reason: string;
+  description?: string;
+}
+```
+
+Response: `CreateReportResponse`
+```typescript
+{
+  report_id: string;
+  message: string;
+  created_at: string;
+}
+```
+
+**2. POST /api/v1/protected/reports/user_reports - 我的举报记录**
+
+Request: `GetUserReportsRequest`
+```typescript
+{
+  limit?: number;
+  cursor?: string;
+}
+```
+
+Response: 分页响应，项类型为 `ReportResponse`
+
+**3. POST /api/v1/protected/reports/list - 举报列表（管理员）**
+
+Request: `GetReportsRequest`
+```typescript
+{
+  status?: string;
+  target_type?: string;
+  limit?: number;
+  cursor?: string;
+}
+```
+
+Response: 分页响应，项类型为 `ReportResponse`
+
+**4. POST /api/v1/protected/reports/handle - 处理举报（管理员）**
+
+Request: `HandleReportRequest`
+```typescript
+{
+  report_id: string;
+  action: string;           // 'resolve'|'dismiss'|'escalate'
+  note?: string;
+}
+```
+
+Response: `HandleReportResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  handled_at: string;
+}
+```
+
+### 2.8 事件订阅与推送 API
+
+#### 通用事件响应类型
+
+**EventResponse** - 事件通用响应类型
+```typescript
+{
+  event_id: string;
+  event_type: string;
+  event_data: object;
+  created_at: string;
+}
+```
+
+#### API 端点
+
+**1. POST /api/v1/protected/subscriptions/get - 获取订阅配置**
+
+Request: `GetSubscriptionsRequest`
+```typescript
+{}  // 空请求体
+```
+
+Response: `GetSubscriptionsResponse`
+```typescript
+{
+  // 社交互动
+  friend_request_enabled: boolean;
+  friend_accepted_enabled: boolean;
+  
+  // 群组相关
+  group_invite_enabled: boolean;
+  group_invite_response_enabled: boolean;
+  
+  // 消息相关
+  message_mention_enabled: boolean;
+  
+  // 瞬间互动
+  moment_like_enabled: boolean;
+  moment_comment_enabled: boolean;
+  comment_reply_enabled: boolean;
+  
+  // 系统通知
+  system_announcement_enabled: boolean;
+}
+```
+
+**2. POST /api/v1/protected/subscriptions/update - 更新订阅配置**
+
+Request: `UpdateSubscriptionsRequest`
+```typescript
+{
+  friend_request_enabled?: boolean;
+  friend_accepted_enabled?: boolean;
+  group_invite_enabled?: boolean;
+  group_invite_response_enabled?: boolean;
+  message_mention_enabled?: boolean;
+  moment_like_enabled?: boolean;
+  moment_comment_enabled?: boolean;
+  comment_reply_enabled?: boolean;
+  system_announcement_enabled?: boolean;
+}
+```
+
+Response: `UpdateSubscriptionsResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+**3. POST /api/v1/protected/events/fetch_unpushed - 获取未推送事件**
+
+Request: `FetchUnpushedEventsRequest`
+```typescript
+{}  // 空请求体
+```
+
+Response: `FetchUnpushedEventsResponse`
+```typescript
+{
+  events: EventResponse[];
+  total_count: number;
+}
+```
+
+**4. POST /api/v1/protected/events/acknowledge - 确认收到事件（ACK）**
+
+Request: `AcknowledgeEventsRequest`
+```typescript
+{
+  event_ids: string[];
+  acknowledged_at?: string;
+}
+```
+
+Response: `AcknowledgeEventsResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  acknowledged_count: number;
+  failed_ids?: string[];
+}
+```
+
+### 2.9 系统状态 API
+
+**1. POST /api/v1/public/status/health - 系统健康检查**
+
+Request: `HealthCheckRequest`
+```typescript
+{}  // 空请求体
+```
+
+Response: `HealthCheckResponse`
+```typescript
+{
+  status: 'healthy'|'degraded'|'unhealthy';
+  timestamp: string;
+  version: string;
+  uptime: number;
+  database: {
+    status: 'connected'|'disconnected';
+    response_time: number;
+  };
+  redis: {
+    status: 'connected'|'disconnected';
+    response_time: number;
+  };
+  metrics: {
+    cpu_usage: number;
+    memory_usage: number;
+    active_connections: number;
+    total_requests: number;
+    error_rate: number;
+  };
+}
+```
+
+### 2.10 排行榜 API
+
+**1. POST /api/v1/public/leaderboard/top_creators - 内容创作者排行榜**
+
+Request: `TopCreatorsRequest`
+```typescript
+{
+  scope: 'global' | 'country' | 'province' | 'city' | 'custom';
+  scope_value?: string;
+  timeframe: 'realtime' | 'daily' | 'weekly' | 'monthly' | 'all_time';
+  latitude?: number;
+  longitude?: number;
+  radius?: number;
+  limit?: number;
+}
+```
+
+Response: `TopCreatorsResponse`
+```typescript
+{
+  leaderboard_type: 'top_creators';
+  scope: string;
+  scope_value?: string;
+  timeframe: string;
+  total_participants: number;
+  rankings: {
+    rank: number;
+    user_id: string;
+    nickname: string;
+    avatar_url?: string;
+    score: number;
+    stats: {
+      total_moments: number;
+      total_likes_received: number;
+      total_comments_received: number;
+    };
+  }[];
+  updated_at: string;
+}
+```
+
+**2. POST /api/v1/public/leaderboard/top_moments - 热门瞬间排行榜**
+
+Request: `TopMomentsRequest`
+```typescript
+{
+  scope: 'global' | 'country' | 'province' | 'city' | 'custom';
+  scope_value?: string;
+  timeframe: 'realtime' | 'daily' | 'weekly' | 'monthly' | 'all_time';
+  latitude?: number;
+  longitude?: number;
+  radius?: number;
+  limit?: number;
+}
+```
+
+Response: `TopMomentsResponse`
+```typescript
+{
+  leaderboard_type: 'top_moments';
+  scope: string;
+  scope_value?: string;
+  timeframe: string;
+  rankings: {
+    rank: number;
+    moment_id: string;
+    user_id: string;
+    nickname: string;
+    user_avatar?: string;
+    description: string;
+    latitude: number;
+    longitude: number;
+    location_name: string;
+    created_at: string;
+    popularity_score: number;
+    stats: {
+      likes_count: number;
+      comments_count: number;
+      shares_count: number;
+      views_count: number;
+    };
+    images?: string[];
+    tags: string[];
+  }[];
+  updated_at: string;
+}
+```
+
+**3. POST /api/v1/public/leaderboard/top_groups - 热门群组排行榜**
+
+Request: `TopGroupsRequest`
+```typescript
+{
+  scope: 'global' | 'country' | 'province' | 'city' | 'custom';
+  scope_value?: string;
+  latitude?: number;
+  longitude?: number;
+  radius?: number;
+  limit?: number;
+}
+```
+
+Response: `TopGroupsResponse`
+```typescript
+{
+  leaderboard_type: 'top_groups';
+  scope: string;
+  scope_value?: string;
+  rankings: {
+    rank: number;
+    group_id: string;
+    group_type: 'public_group' | 'private_group';
+    name: string;
+    description?: string;
+    avatar_url?: string;
+    latitude: number;
+    longitude: number;
+    location_name: string;
+    created_at: string;
+    popularity_score: number;
+    stats: {
+      total_members: number;
+      active_members_7d: number;
+      total_messages: number;
+      messages_24h: number;
+    };
+  }[];
+  updated_at: string;
+}
+```
+
+**4. POST /api/v1/public/leaderboard/top_locations - 热门地点排行榜**
+
+Request: `TopLocationsRequest`
+```typescript
+{
+  scope: 'global' | 'country' | 'province' | 'city' | 'custom';
+  scope_value?: string;
+  latitude?: number;
+  longitude?: number;
+  radius?: number;
+  limit?: number;
+}
+```
+
+Response: `TopLocationsResponse`
+```typescript
+{
+  leaderboard_type: 'top_locations';
+  scope: string;
+  scope_value?: string;
+  rankings: {
+    rank: number;
+    location_key: string;
+    location_name: string;
+    latitude: number;
+    longitude: number;
+    country?: string;
+    province?: string;
+    city?: string;
+    popularity_score: number;
+    stats: {
+      total_moments: number;
+      total_groups: number;
+      total_visits: number;
+      unique_visitors: number;
+      moments_7d: number;
+    };
+  }[];
+  updated_at: string;
+}
+```
+
+**5. POST /api/v1/protected/leaderboard/rank - 获取用户排名**
+
+Request: `GetUserRankRequest`
+```typescript
+{
+  user_id?: string;
+  leaderboard_type: 'top_creators' | 'top_influencers' | 'top_explorers' | 'top_social';
+  scope: 'global' | 'country' | 'province' | 'city' | 'custom';
+  scope_value?: string;
+  timeframe: 'realtime' | 'daily' | 'weekly' | 'monthly' | 'all_time';
+  latitude?: number;
+  longitude?: number;
+  radius?: number;
+}
+```
+
+Response: `GetUserRankResponse`
+```typescript
+{
+  leaderboard_type: string;
+  scope: string;
+  scope_value?: string;
+  timeframe: string;
+  my_rank: number | null;
+  my_score: number;
+  total_participants: number;
+  percentile?: number;
+  top_rankers: {
+    rank: number;
+    user_id: string;
+    nickname: string;
+    avatar_url?: string;
+    score: number;
+  }[];
+}
+```
+
+**6. POST /api/v1/protected/leaderboard/nearby_ranking - 附近用户排行榜**
+
+Request: `NearbyRankingRequest`
+```typescript
+{
+  leaderboard_type: 'top_creators' | 'top_influencers' | 'top_explorers' | 'top_social';
+  latitude: number;
+  longitude: number;
+  radius: number;
+  timeframe: 'realtime' | 'daily' | 'weekly' | 'monthly' | 'all_time';
+  limit?: number;
+}
+```
+
+Response: `NearbyRankingResponse`
+```typescript
+{
+  leaderboard_type: string;
+  center_lat: number;
+  center_lng: number;
+  radius: number;
+  timeframe: string;
+  rankings: {
+    rank: number;
+    user_id: string;
+    nickname: string;
+    avatar_url?: string;
+    score: number;
+    distance: number;
+    is_friend: boolean;
+  }[];
+  updated_at: string;
+}
+```
+
+**7. POST /api/v1/protected/leaderboard/friends_ranking - 好友排行榜**
+
+Request: `FriendsRankingRequest`
+```typescript
+{
+  leaderboard_type: 'top_creators' | 'top_influencers' | 'top_explorers' | 'top_social';
+  timeframe: 'realtime' | 'daily' | 'weekly' | 'monthly' | 'all_time';
+  limit?: number;
+}
+```
+
+Response: `FriendsRankingResponse`
+```typescript
+{
+  leaderboard_type: string;
+  timeframe: string;
+  my_rank: number;
+  my_score: number;
+  rankings: {
+    rank: number;
+    user_id: string;
+    nickname: string;
+    avatar_url?: string;
+    score: number;
+    stats: {
+      total_moments?: number;
+      total_likes_received?: number;
+      total_followers?: number;
+      places_visited?: number;
+    };
+  }[];
+  updated_at: string;
+}
+```
+
+### 2.11 成就系统 API
+
+**1. POST /api/v1/public/achievements/list - 获取所有成就列表**
+
+Request: `ListAchievementsRequest`
+```typescript
+{
+  category?: 'social' | 'content' | 'exploration' | 'influence' | 'participation' | 'special';
+  rarity?: 'common' | 'rare' | 'epic' | 'legendary';
+  include_hidden?: boolean;
+}
+```
+
+Response: `ListAchievementsResponse`
+```typescript
+{
+  achievements: {
+    achievement_id: string;
+    name: string;
+    description: string;
+    icon_url?: string;
+    category: string;
+    rarity: string;
+    points: number;
+    criteria: {
+      type: string;
+      threshold: number;
+      description: string;
+    };
+    is_hidden: boolean;
+  }[];
+  total_count: number;
+}
+```
+
+**2. POST /api/v1/protected/achievements/user - 获取用户的成就**
+
+Request: `GetUserAchievementsRequest`
+```typescript
+{
+  user_id?: string;
+  category?: string;
+  rarity?: string;
+  status?: 'unlocked' | 'in_progress' | 'locked';
+}
+```
+
+Response: `GetUserAchievementsResponse`
+```typescript
+{
+  user_id: string;
+  total_achievements: number;
+  total_points: number;
+  level: number;
+  achievements: {
+    achievement_id: string;
+    name: string;
+    description: string;
+    icon_url?: string;
+    category: string;
+    rarity: string;
+    points: number;
+    status: 'unlocked' | 'in_progress' | 'locked';
+    unlocked_at?: string;
+    progress?: {
+      current: number;
+      target: number;
+      percentage: number;
+    };
+    is_claimed: boolean;
+  }[];
+}
+```
+
+**3. POST /api/v1/protected/achievements/user_achievements - 获取指定用户的成就**
+
+Request: `UserAchievementsRequest`
+```typescript
+{
+  user_id: string;
+  category?: string;
+  rarity?: string;
+}
+```
+
+Response: `UserAchievementsResponse`
+```typescript
+{
+  user_id: string;
+  nickname: string;
+  avatar_url?: string;
+  total_achievements: number;
+  total_points: number;
+  level: number;
+  achievements: {
+    achievement_id: string;
+    name: string;
+    description: string;
+    icon_url?: string;
+    category: string;
+    rarity: string;
+    points: number;
+    unlocked_at: string;
+  }[];
+}
+```
+
+**4. POST /api/v1/protected/achievements/claim - 手动领取可解锁的成就**
+
+Request: `ClaimAchievementRequest`
+```typescript
+{
+  achievement_id: string;
+}
+```
+
+Response: `ClaimAchievementResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  achievement: {
+    achievement_id: string;
+    name: string;
+    description: string;
+    icon_url?: string;
+    category: string;
+    rarity: string;
+    points: number;
+    unlocked_at: string;
+    claimed_at: string;
+  };
+  rewards?: {
+    points: number;
+    items?: string[];
+  };
+}
+```
+
+### 2.12 热点发现系统 API
+
+#### 热点数据响应类型
+
+**HotspotResponse** - 热点数据的通用响应类型
+```typescript
+{
+  hotspot_key: string;
+  location: {
+    latitude: number;
+    longitude: number;
+    location_name: string;
+  };
+  popularity_score: number;
+  statistics: {
+    total_moments: number;
+    active_users_count: number;
+    total_likes: number;
+    total_comments: number;
+    recent_moments_24h: number;
+  };
+  distance?: number;
+  last_updated: string;
+}
+```
+
+#### API 端点
+
+**1. POST /api/v1/public/hotspots/nearby - 获取附近热点**
+
+Request: `NearbyHotspotsRequest`
+```typescript
+{
+  latitude: number;
+  longitude: number;
+  radius?: number;          // 默认5000，最大20000
+  limit?: number;           // 默认20，最大100
+}
+```
+
+Response: `NearbyHotspotsResponse`
+```typescript
+{
+  hotspots: HotspotResponse[];
+}
+```
+
+**2. POST /api/v1/public/hotspots/trending - 获取热门热点**
+
+Request: `TrendingHotspotsRequest`
+```typescript
+{
+  scope?: 'global' | 'country' | 'city';
+  scope_value?: string;
+  timeframe?: 'today' | 'week' | 'month';
+  limit?: number;
+}
+```
+
+Response: `TrendingHotspotsResponse`
+```typescript
+{
+  hotspots: HotspotResponse[];
+}
+```
+
+**3. POST /api/v1/public/hotspots/search - 搜索热点**
+
+Request: `SearchHotspotsRequest`
+```typescript
+{
+  location_name?: string;
+  latitude?: number;
+  longitude?: number;
+  radius?: number;
+  limit?: number;
+}
+```
+
+Response: `SearchHotspotsResponse`
+```typescript
+{
+  hotspots: HotspotResponse[];
+}
+```
+
+**4. POST /api/v1/public/hotspots/detail - 获取热点详情**
+
+Request: `HotspotDetailRequest`
+```typescript
+{
+  latitude: number;
+  longitude: number;
+  radius?: number;          // 默认500
+}
+```
+
+Response: `HotspotDetailResponse`
+```typescript
+HotspotResponse
+```
+
+### 2.13 媒体上传 API
+
+#### 媒体上传响应类型
+
+**MediaUploadResponse** - 媒体上传成功的通用响应类型
+```typescript
+{
+  file_url: string;
+  file_name: string;
+  file_size: number;
+  file_type: string;
+  width?: number;
+  height?: number;
+  duration?: number;
+  uploaded_at: string;
+}
+```
+
+#### API 端点
+
+**1. POST /api/v1/protected/media/upload - 通用文件上传**
+
+Request: `UploadMediaRequest` (multipart/form-data)
+```typescript
+{
+  file: File;
+  category?: string;
+}
+```
+
+Response: `UploadMediaResponse`
+```typescript
+MediaUploadResponse
+```
+
+**2. POST /api/v1/protected/media/upload/avatar - 上传用户头像**
+
+Request: `UploadAvatarRequest` (multipart/form-data)
+```typescript
+{
+  file: File;               // 限制：jpg/png/webp，最大5MB
+}
+```
+
+Response: `UploadAvatarResponse`
+```typescript
+MediaUploadResponse
+```
+
+**3. POST /api/v1/protected/media/upload/group_image - 上传群组图片**
+
+Request: `UploadGroupImageRequest` (multipart/form-data)
+```typescript
+{
+  file: File;               // 限制：jpg/png/webp，最大10MB
+}
+```
+
+Response: `UploadGroupImageResponse`
+```typescript
+MediaUploadResponse
+```
+
+**4. POST /api/v1/protected/media/upload/moment_images - 上传瞬间图片**
+
+Request: `UploadMomentImagesRequest` (multipart/form-data)
+```typescript
+{
+  files: File[];            // 限制：最多9张，每张最大10MB
+}
+```
+
+Response: `UploadMomentImagesResponse`
+```typescript
+{
+  uploads: MediaUploadResponse[];
+  success_count: number;
+  failed_count: number;
+}
+```
+
+## 3. WebSocket 消息类型定义
+
+### 3.1 连接管理消息
+
+**ConnectionEstablished** - 连接建立确认
+```typescript
+{
+  type: "ConnectionEstablished";
+  payload: {
+    connection_id: string;
+    user_id: string;
+    server_time: string;    // ISO 8601
+  };
+}
+```
+
+**Heartbeat** - 心跳保活
+```typescript
+{
+  type: "Heartbeat";
+  payload: {
+    timestamp: string;      // ISO 8601
+  };
+}
+```
+
+### 3.2 用户状态消息
+
+**UserOnline** - 用户上线
+```typescript
+{
+  type: "UserOnline";
+  payload: {
+    user_id: string;
+    nickname: string;
+    avatar_url: string;
+    online_at: string;      // ISO 8601
+  };
+}
+```
+
+**UserOffline** - 用户离线
+```typescript
+{
+  type: "UserOffline";
+  payload: {
+    user_id: string;
+    offline_at: string;     // ISO 8601
+  };
+}
+```
+
+**UserLocationUpdate** - 位置更新
+```typescript
+{
+  type: "UserLocationUpdate";
+  payload: {
+    user_id: string;
+    latitude: number;
+    longitude: number;
+    location_name: string;
+    updated_at: string;     // ISO 8601
+  };
+}
+```
+
+### 3.3 群组消息
+
+**NewMessage** - 新消息
+```typescript
+{
+  type: "NewMessage";
+  payload: {
+    message_id: string;
+    target_id: string;      // conversation_id 或 group_id
+    target_type: 'conversation' | 'group';
+    sender_id: string;
+    sender_nickname: string;
+    sender_avatar: string;
+    message_type: string;
+    content: string;
+    media_urls?: string[];
+    reply_to_message_id?: string;
+    mentioned_users?: string[];
+    created_at: string;     // ISO 8601
+  };
+}
+```
+
+**GroupMemberJoined** - 成员加入
+```typescript
+{
+  type: "GroupMemberJoined";
+  payload: {
+    group_id: string;
+    user_id: string;
+    nickname: string;
+    avatar_url: string;
+    joined_at: string;      // ISO 8601
+  };
+}
+```
+
+**GroupMemberLeft** - 成员离开
+```typescript
+{
+  type: "GroupMemberLeft";
+  payload: {
+    group_id: string;
+    user_id: string;
+    left_at: string;        // ISO 8601
+  };
+}
+```
+
+**GroupInfoUpdated** - 群组信息更新
+```typescript
+{
+  type: "GroupInfoUpdated";
+  payload: {
+    group_id: string;
+    updated_fields: {
+      name?: string;
+      description?: string;
+      avatar_url?: string;
+    };
+    updated_at: string;     // ISO 8601
+  };
+}
+```
+
+**GroupUpgraded** - 私聊升级为群组
+```typescript
+{
+  type: "GroupUpgraded";
+  payload: {
+    old_group_id: string;
+    new_group_id: string;
+    group_type: string;
+    upgraded_at: string;    // ISO 8601
+  };
+}
+```
+
+**MessageReaction** - 消息反应通知
+```typescript
+{
+  type: "MessageReaction";
+  payload: {
+    message_id: string;
+    target_id: string;      // conversation_id 或 group_id
+    user_id: string;
+    nickname: string;
+    reaction_type: string;
+    action: "add" | "remove";
+    reaction_count: number;
+    created_at: string;     // ISO 8601
+  };
+}
+```
+
+**UserTyping** - 用户正在输入
+```typescript
+{
+  type: "UserTyping";
+  payload: {
+    target_id: string;      // conversation_id 或 group_id
+    user_id: string;
+    nickname: string;
+    is_typing: boolean;
+  };
+}
+```
+
+**MessageRead** - 消息已读回执
+```typescript
+{
+  type: "MessageRead";
+  payload: {
+    target_id: string;      // conversation_id 或 group_id
+    message_id: string;
+    reader_id: string;
+    read_at: string;        // ISO 8601
+  };
+}
+```
+
+**MessageDeleted** - 消息删除通知
+```typescript
+{
+  type: "MessageDeleted";
+  payload: {
+    message_id: string;
+    target_id: string;      // conversation_id 或 group_id
+    deleted_by: string;
+    delete_for_everyone: boolean;
+    deleted_at: string;     // ISO 8601
+  };
+}
+```
+
+### 3.4 事件推送消息
+
+**EventPush** - 统一事件推送
+```typescript
+{
+  type: "EventPush";
+  payload: {
+    event_id: string;
+    event_type: string;
+    event_data: object;
+    created_at: string;     // ISO 8601
+  };
+}
+```
+
+**EventAck** - 事件确认
+```typescript
+{
+  type: "EventAck";
+  payload: {
+    event_ids: string[];
+    acknowledged_at: string; // ISO 8601
+  };
+}
+```
+
+### 3.5 系统消息
+
+**SystemNotification** - 系统通知
+```typescript
+{
+  type: "SystemNotification";
+  payload: {
+    notification_id: string;
+    title: string;
+    content: string;
+    severity: "info" | "warning" | "error";
+    action_url?: string;
+    created_at: string;     // ISO 8601
+  };
+}
+```
+
+**Error** - 错误消息
+```typescript
+{
+  type: "Error";
+  payload: {
+    error_code: string;
+    error_message: string;
+    details?: object;
+  };
+}
+```
+
+### 3.6 客户端发送消息
+
+客户端可以通过 WebSocket 向服务器发送以下轻量级操作消息：
+
+**Ping** - 心跳保活
+```typescript
+{
+  type: "Ping";
+  payload: {
+    timestamp: string;      // ISO 8601
+  };
+}
+```
+
+**Pong** - 心跳响应
+```typescript
+{
+  type: "Pong";
+  payload: {
+    timestamp: string;      // ISO 8601
+  };
+}
+```
+
+**MarkAsRead** - 标记已读（快速通道）
+```typescript
+{
+  type: "MarkAsRead";
+  payload: {
+    target_id: string;      // conversation_id 或 group_id
+    message_id: string;
+  };
+}
+```
+
+**Typing** - 正在输入通知
+```typescript
+{
+  type: "Typing";
+  payload: {
+    target_id: string;      // conversation_id 或 group_id
+    is_typing: boolean;     // true=开始输入，false=停止输入
+  };
+}
+```
+
+## 4. 事件类型与订阅
+
+### 4.1 支持的事件类型
+
+以下是系统支持的所有事件类型（event_type）：
+
+#### 社交互动事件
+- `friend_request` - 好友申请
+- `friend_accepted` - 好友申请被接受
+
+#### 群组相关事件
+- `group_invite` - 群组邀请
+- `group_invite_response` - 群组邀请响应（接受/拒绝）
+
+#### 消息相关事件
+- `message_mention` - 消息中被@提及
+
+#### 瞬间互动事件
+- `moment_like` - 生活瞬间被点赞
+- `moment_comment` - 生活瞬间被评论
+- `comment_reply` - 评论被回复
+
+#### 系统通知事件
+- `system_announcement` - 系统公告
+
+### 4.2 事件订阅配置
+
+用户可以通过订阅配置API控制接收哪些类型的事件推送：
+
+- `friend_request_enabled` - 是否接收好友申请事件
+- `friend_accepted_enabled` - 是否接收好友接受事件
+- `group_invite_enabled` - 是否接收群组邀请事件
+- `group_invite_response_enabled` - 是否接收群组邀请响应事件
+- `message_mention_enabled` - 是否接收消息提及事件
+- `moment_like_enabled` - 是否接收瞬间点赞事件
+- `moment_comment_enabled` - 是否接收瞬间评论事件
+- `comment_reply_enabled` - 是否接收评论回复事件
+- `system_announcement_enabled` - 是否接收系统公告事件
+
+默认情况下，所有订阅配置均为 `true`（启用）。
+
+### 4.3 事件推送机制
+
+1. **事件生成**：当特定操作发生时，系统会生成相应的事件记录
+2. **订阅过滤**：系统根据用户的订阅配置决定是否生成该用户的事件推送记录
+3. **推送方式**：
+   - 优先通过 WebSocket 实时推送
+   - 如果用户不在线，事件会保存在 `event_push_records` 表中
+   - 用户下次连接时通过 `fetch_unpushed` API 获取未推送的事件
+4. **事件确认**：客户端收到事件后应发送 ACK 确认，系统标记为已推送
+
+### 4.4 事件数据结构
+
+每个事件类型的 `event_data` 字段结构各不相同，具体结构由业务逻辑定义。通常包含：
+- 触发事件的用户信息
+- 相关资源的ID和基本信息
+- 事件发生的时间
+- 其他上下文信息
+
+## 5. API 版本与兼容性
+
+### 5.1 版本控制
+
+- 当前 API 版本：v1
+- API 路径格式：`/api/v1/...`
+- 版本变更会通过新的版本路径提供（如 v2）
+
+### 5.2 向后兼容性原则
+
+- 添加新字段不视为破坏性变更
+- 删除字段或修改字段类型视为破坏性变更
+- 破坏性变更将通过新版本API提供
