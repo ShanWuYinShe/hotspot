@@ -12,6 +12,11 @@ alwaysApply: false
 - WebSocket 消息类型定义
 - 事件推送与订阅机制
 
+**重要约定**：
+- 📅 **所有时间字段均使用 UTC 时间**，格式为 ISO 8601（如 `2025-10-27T12:30:00Z`），末尾的 `Z` 表示 UTC 时区
+- 🌍 **前端负责时区转换**：接收到 UTC 时间后，根据用户本地时区显示
+- 🔄 **客户端发送时间**：向服务端发送时间参数时，也应转换为 UTC 时间
+
 ## 1. API 设计原则
 
 ### 1.1 统一响应格式
@@ -20,8 +25,28 @@ alwaysApply: false
 ```typescript
 {
   code: number;      // 业务状态码：0-成功，非0-错误
-  msg: string;       // 响应消息
+  message: string;   // 响应消息
   data: T | null;    // 成功为数据；失败通常为 null
+}
+```
+
+说明：除非特别声明，下文各接口"Response 示例"均表达 data 字段的结构；完整响应需外层包裹 `{ code, message, data }`。
+
+示例（成功）：
+```json
+{
+  "code": 0,
+  "message": "Success",
+  "data": { "example": true }
+}
+```
+
+示例（失败，业务错误）：
+```json
+{
+  "code": 1001,
+  "message": "参数不合法",
+  "data": null
 }
 ```
 
@@ -39,10 +64,32 @@ alwaysApply: false
 - 所有API请求统一返回HTTP 200状态码
 - 通过响应体中的`code`字段区分业务处理结果
 
+说明：查询类接口统一使用 POST，便于携带复杂过滤条件、避免过长URL、利于反爬与缓存控制；幂等性由请求语义保证。
+
 ### 1.3 错误码分组
 
 - 1000-1999: 客户端请求错误
 - 5000-5999: 服务器内部错误
+
+常见错误码示例：
+- 1000: 参数缺失或格式错误
+- 1001: 参数不合法
+- 1002: 认证失败（token 无效/过期）
+- 1003: 权限不足
+- 1004: 资源不存在
+- 1005: 操作冲突（如重复操作）
+- 5000: 服务器内部错误
+- 5001: 数据库错误
+- 5002: 外部服务调用失败
+
+统一错误响应示例：
+```json
+{
+  "code": 1002,
+  "message": "认证失败：token已过期",
+  "data": null
+}
+```
 
 ### 1.4 API类型命名规范
 
@@ -53,13 +100,50 @@ alwaysApply: false
   - ✅ 正确: `LoginRequest`, `LoginResponse`, `UserResponse`
   - ❌ 错误: `User`, `LoginData`, `UserInfo`, `UserActivity`
 
-### 1.5 类型转换规范
+### 1.5 分页与游标语义
+- 完整分页响应示例（以消息历史为例）：
+```json
+{
+  "code": 0,
+  "message": "Success",
+  "data": {
+    "items": [
+      {
+        "message_id": "m1",
+        "target_id": "c1",
+        "content": "hi",
+        "message_type": "text",
+        "is_edited": false,
+        "reaction_count": 0,
+        "mentioned_users": [],
+        "affected_users": [],
+        "sent_at": "2025-10-27T10:00:00Z"
+      }
+    ],
+    "has_more": true,
+    "next_cursor": "9876543210"
+  }
+}
+```
+
+- 分页统一采用 `{ items, has_more, next_cursor? }`；当 `has_more=false` 时可省略 `next_cursor`。
+- `next_cursor` 为不透明游标，具备时间/结果集稳定性；游标可短期过期，过期后需从头发起查询。
+
+### 1.6 类型转换规范
 
 - **64位整数 (`i64`)**: 转换为 `string` 类型（用户ID、主键、游标）
 - **32位整数 (`i32`)**: 转换为 `number` 类型（计数、错误码）
 - **64位浮点数 (`f64`)**: 转换为 `number` 类型（地理坐标）
+- **布尔值 (`bool`)**: 转换为 `boolean` 类型
+- **时间戳**: 统一使用 ISO 8601 格式的 UTC 时间字符串（如 `2025-10-27T12:30:00Z`）
 
-### 1.6 用户ID编码规范
+**时间处理规范**：
+- ✅ **服务端**: 所有时间字段必须使用 UTC 时间，以 ISO 8601 格式返回，末尾带 `Z` 标识
+- ✅ **客户端**: 接收到 UTC 时间后，根据用户本地时区转换显示
+- ✅ **优势**: 确保全球用户看到一致的时间，避免时区混乱
+- ⚠️ **注意**: 客户端向服务端发送时间时（如筛选条件），也应转换为 UTC 时间
+
+### 1.7 用户ID编码规范
 
 - **用户ID结构**: 64位整数，高8位表示用户类型，低56位表示用户序号
 - **用户类型编码**:
@@ -68,9 +152,344 @@ alwaysApply: false
   - `0x03` (3) - 系统用户（官方账号等）
   - `0x04-0xFF` - 预留给未来用户类型
 
-## 2. API 端点与类型定义
+### 1.8 密码安全策略
 
-### 2.1 认证 API
+#### 双层哈希机制
+- **客户端哈希**: `SHA256(password)` - 避免传输明文密码
+- **服务端哈希**: `bcrypt(client_hash, salt)` 或 `argon2(client_hash, salt)` - 防止数据库泄露后的暴力破解
+
+#### 注册流程
+1. 客户端计算传输哈希：`client_hash = SHA256(password)`
+2. 客户端发送注册请求，包含 `client_hash`
+3. 服务端生成随机盐值，计算存储哈希：`storage_hash = bcrypt(client_hash, random_salt)`
+4. 服务端存储 `storage_hash`（bcrypt 结果中已包含 salt 信息）
+
+#### 登录流程
+1. 客户端计算传输哈希：`client_hash = SHA256(password)`（与注册时相同算法）
+2. 客户端发送登录请求，包含 `client_hash`
+3. 服务端验证：`bcrypt.compare(client_hash, stored_storage_hash)`
+4. bcrypt 自动提取 salt 并重新计算，比对结果
+
+#### 密码修改流程
+1. 客户端计算新密码的传输哈希：`new_client_hash = SHA256(new_password)`
+2. 服务端生成新的随机盐值，计算新的存储哈希
+3. 服务端更新存储的 `storage_hash`
+
+#### 安全保障
+- ✅ **避免明文传输**：客户端不传输明文密码，即使在 HTTPS 之上也增加额外保护层
+- ✅ **防暴力破解**：bcrypt/argon2 计算成本高（推荐 work factor: 12），即使数据库泄露也难以破解
+- ✅ **前向安全**：修改密码后旧的哈希立即失效
+- ✅ **简单可靠**：实现简单，不依赖复杂的 nonce 机制
+- ✅ **防御纵深**：即使 HTTPS 配置正确，也能防止服务端日志泄露、内部人员威胁、客户端 bug 等风险
+- ⚠️ **依赖 HTTPS**：必须使用 TLS 1.2+ 加密传输层，防止中间人攻击
+- ⚠️ **无防重放**：客户端哈希不能防止重放攻击（如果 HTTPS 被破解），敏感操作需额外添加一次性 token
+
+#### 为什么使用双层哈希而非单层 bcrypt？
+虽然 HTTPS 已提供传输层加密，客户端 SHA256 仍有价值：
+1. **日志安全**：防止服务端日志意外记录明文密码
+2. **内部威胁**：降低内部人员窃取密码的风险
+3. **多站点保护**：即使哈希泄露，攻击者也无法直接用于其他网站（需要破解）
+4. **用户信任**：明文密码永远不离开客户端，符合安全最佳实践
+5. **成本极低**：SHA256 计算极快（<1ms），对性能影响可忽略
+
+如果追求极简，可以考虑去掉客户端哈希，直接传输明文密码（over HTTPS），但需要：
+- 严格的日志脱敏策略（不记录请求体）
+- 严格的代码审查（防止内部人员窃取）
+- 完善的 HTTPS 配置（TLS 1.3，强加密套件）
+
+#### 推荐参数
+- **bcrypt**: work factor = 12
+- **argon2**: memory=64MB, iterations=3, parallelism=4
+- **SHA256**: 客户端哈希使用标准 SHA-256 算法
+
+### 1.9 搜索接口设计模式
+
+所有 `search_by_xxx` 接口遵循统一的设计模式，确保跨模块一致性：
+
+#### 命名规范
+- `search_by_name` - 按名称/昵称搜索
+- `search_by_id` - 按ID获取单个资源详情
+- `search_by_location` - 按地理位置搜索
+- `search_by_tags` - 按标签搜索
+
+#### 通用参数规范
+```typescript
+// 分页参数（所有搜索接口必须支持）
+{
+  limit?: number;           // 默认20，最大100
+  cursor?: string;          // 分页游标
+}
+
+// 位置搜索参数（search_by_location 统一格式）
+{
+  latitude: number;         // 纬度（必填）
+  longitude: number;        // 经度（必填）
+  radius?: number;          // 搜索半径（米），默认5000，最大50000
+  limit?: number;
+  cursor?: string;
+}
+
+// 名称搜索参数（search_by_name 统一格式）
+{
+  name: string;             // 搜索关键词（必填）
+  limit?: number;
+  cursor?: string;
+}
+
+// ID查询参数（search_by_id 统一格式）
+{
+  id: string;               // 资源ID（必填）
+}
+```
+
+#### 响应格式规范
+- 所有搜索接口返回分页响应：`{ items: T[], has_more: boolean, next_cursor?: string }`
+- `search_by_id` 返回单个对象（不分页）
+- `search_by_location` 的响应项必须包含 `distance: number` 字段
+
+#### 安全与性能
+- 所有公开搜索接口必须实施频率限制
+- `radius` 参数必须验证范围（最大50000米）
+- `limit` 参数必须验证范围（最大100）
+- 位置坐标必须验证合理性（经度 -180~180，纬度 -90~90）
+
+### 1.10 零信任前端数据原则
+
+**核心原则**：服务端不信任任何客户端提供的数据，所有关键信息必须由服务端生成或验证
+
+#### 身份与权限
+- ✅ **正确**：从 JWT token 或 session 中获取当前用户 ID
+- ❌ **错误**：让客户端在请求中传递 `current_user_id`
+- ✅ **正确**：服务端根据 token 验证用户权限
+- ❌ **错误**：让客户端传递 `is_admin`、`role` 等权限字段
+
+#### 时间戳
+- ✅ **正确**：服务端使用自己的系统时间生成 `created_at`、`updated_at`
+- ❌ **错误**：接受客户端传递的 `timestamp`、`created_at`
+
+#### 地理位置
+- ✅ **正确**：服务端验证位置坐标的合理性（经度 -180~180，纬度 -90~90）
+- ✅ **正确**：对位置搜索接口实施合理的频率限制
+- ❌ **错误**：直接信任客户端位置用于计费、排名等关键业务逻辑
+
+#### 统计与计数
+- ✅ **正确**：服务端计算 `unread_count`、`follower_count`、`like_count`
+- ❌ **错误**：让客户端传递统计数据
+- ✅ **正确**：服务端计算 `distance`（基于保存的位置）
+- ❌ **错误**：让客户端传递距离信息
+
+#### 业务规则
+- ✅ **正确**：服务端验证操作权限（如是否群主、是否好友）
+- ❌ **错误**：信任客户端传递的 `can_delete`、`is_owner` 等标志
+- ✅ **正确**：服务端验证业务规则（如群成员上限、好友数量限制）
+- ❌ **错误**：依赖客户端检查业务规则
+
+#### 频率限制
+- ✅ **必须**：对所有公开接口实施频率限制
+- ✅ **必须**：对敏感操作（搜索、发送消息）实施更严格的限制
+- ✅ **必须**：记录异常行为日志，监控恶意请求
+
+## 2. 核心概念澄清
+
+### 2.1 API vs WebSocket 协作模式
+
+本系统采用 **API + WebSocket 双通道架构**，各司其职：
+
+#### API（主动拉取）
+- **用途**: 冷启动、历史数据查询、主动操作
+- **特点**:
+  - 客户端主动发起请求
+  - 适合获取历史数据和执行操作
+  - 支持分页、筛选、排序
+- **典型场景**:
+  - 应用启动时加载初始数据
+  - 用户主动刷新列表
+  - 查询历史消息/提醒
+  - 执行增删改操作
+
+#### WebSocket（被动推送）
+- **用途**: 实时推送、状态同步
+- **特点**:
+  - 服务端主动推送数据
+  - 低延迟、高实时性
+  - 保持长连接
+- **典型场景**:
+  - 实时接收新消息
+  - 在线状态变更通知
+  - 收到新的提醒
+  - 群组成员变动
+
+#### 协作流程示例
+
+```
+用户打开应用:
+1. [API] 调用 /chat_messages/list 加载历史消息
+2. [API] 调用 /inbox/list 加载历史提醒
+3. [WebSocket] 建立连接，开始接收实时推送
+
+使用过程中:
+4. [WebSocket] 收到 NewMessage 事件 → 实时显示新消息
+5. [WebSocket] 收到 InboxItem 事件 → 实时显示新提醒
+6. [API] 用户主动发送消息 → 调用 /chat_messages/send
+7. [WebSocket] 服务端推送 NewMessage 给接收方
+
+断线重连:
+8. [WebSocket] 重新建立连接
+9. [API] 调用 /inbox/list?is_read=false 补拉离线期间的提醒
+10. [WebSocket] 恢复实时接收
+```
+
+#### 设计原则
+
+| 操作类型 | 使用通道 | 原因 |
+|---------|---------|------|
+| 发送消息 | API | 需要可靠的响应确认 |
+| 接收消息 | WebSocket | 实时性要求高 |
+| 查询历史 | API | 支持分页和筛选 |
+| 状态同步 | WebSocket | 减少轮询开销 |
+| 批量操作 | API | 需要事务性保证 |
+| 实时通知 | WebSocket | 低延迟推送 |
+
+---
+
+### 2.2 聊天消息 vs 收件箱提醒
+
+为避免混淆，本系统明确区分两个核心概念：
+
+#### 聊天消息 (Chat Messages)
+- **定义**: 用户之间的实时通讯内容（文本、图片、视频等）
+- **场景**: 私聊、群聊
+- **特点**: 
+  - 双向交互，支持回复、编辑、撤回
+  - 实时性要求高
+  - 存储在会话上下文中
+- **API 路径**: `/api/v1/protected/chat_messages/*`
+- **WebSocket 事件**: `ChatMessage*` 系列事件
+- **数据流向**: 
+  - 发送：API 主动调用
+  - 接收：WebSocket 被动推送
+
+**实际例子**：
+```
+用户 A → 用户 B: "你好，在吗？"
+用户 B → 用户 A: "在的，什么事？"
+群聊中: "@张三 明天一起跑步吗？"
+```
+
+#### 收件箱提醒 (Inbox Items)
+- **定义**: 系统生成的单向提醒通知
+- **场景**: 
+  - 社交提醒：好友申请、群组邀请、关注通知
+  - 内容提醒：点赞、评论、收藏
+  - 系统提醒：公告、维护通知、安全警告
+- **特点**:
+  - 单向推送，不支持回复
+  - 可批量标记已读/删除
+  - 按分类管理（social/content/system）
+- **API 路径**: `/api/v1/protected/inbox/*`
+- **WebSocket 事件**: `InboxItem` 事件
+- **数据流向**:
+  - 生成：系统自动触发
+  - 接收：WebSocket 被动推送
+  - 管理：API 主动操作（标记已读/删除）
+
+**实际例子**：
+```
+社交提醒:
+  - "张三想要添加你为好友"
+  - "李四邀请你加入'北京跑步群'"
+  - "王五接受了你的好友申请"
+
+内容提醒:
+  - "张三点赞了你的瞬间"
+  - "李四评论了你的瞬间：拍得真好！"
+  - "王五回复了你的评论"
+  - "在群聊'跑步群'中，@了你"
+
+系统提醒:
+  - "系统将于今晚22:00-23:00进行维护"
+  - "你的账号在异地登录，请注意安全"
+  - "你发布的内容违反了社区规范"
+```
+
+#### 对比表
+
+| 维度 | 聊天消息 | 收件箱提醒 |
+|------|---------|-----------|
+| 交互性 | 双向对话 | 单向通知 |
+| 实时性 | 极高 | 中等 |
+| 持久化 | 会话历史 | 提醒列表 |
+| 发送方式 | 用户主动发送 | 系统自动生成 |
+| 接收方式 | WebSocket 推送 | WebSocket 推送 |
+| 操作 | 发送、编辑、撤回、回复 | 标记已读、删除 |
+| 未读管理 | 按会话统计 | 按分类统计 |
+| 能否回复 | ✅ 可以回复 | ❌ 不能回复 |
+| 典型示例 | "你好，在吗？" | "张三点赞了你的瞬间" |
+
+#### 为什么要分开？
+
+**如果混在一起会有什么问题？**
+
+1. **混乱的未读数**：
+   - 聊天消息未读：需要按会话分别统计
+   - 提醒未读：需要按类型（社交/内容/系统）统计
+   - 混在一起会导致"未读数"概念混乱
+
+2. **不同的处理逻辑**：
+   - 聊天消息：点击进入会话，可以回复
+   - 提醒：点击跳转到相关内容，只能标记已读/删除
+
+3. **不同的展示方式**：
+   - 聊天消息：按时间线展示，支持滚动加载历史
+   - 提醒：按类型分组展示，支持筛选和批量操作
+
+4. **不同的生命周期**：
+   - 聊天消息：长期保存，可以随时查看历史
+   - 提醒：阅读后可删除，通常只保留近期的
+
+#### UI 展示对比
+
+```
+┌─────────────────────────────────────┐
+│  聊天消息 (Chat Messages)            │
+├─────────────────────────────────────┤
+│  📱 私聊列表                          │
+│  ┌─────────────────────────────┐   │
+│  │ 👤 张三                      │   │
+│  │    你好，在吗？              │   │
+│  │    2分钟前                   │   │
+│  └─────────────────────────────┘   │
+│  ┌─────────────────────────────┐   │
+│  │ 👥 跑步群                    │   │
+│  │    @你 明天一起跑步吗？      │   │
+│  │    10分钟前                  │   │
+│  └─────────────────────────────┘   │
+└─────────────────────────────────────┘
+
+┌─────────────────────────────────────┐
+│  收件箱提醒 (Inbox)                  │
+├─────────────────────────────────────┤
+│  🔔 社交 (3)  💬 内容 (5)  📢 系统 (1)│
+│  ┌─────────────────────────────┐   │
+│  │ 👤 张三想要添加你为好友       │   │
+│  │    [接受] [拒绝]             │   │
+│  │    刚刚                       │   │
+│  └─────────────────────────────┘   │
+│  ┌─────────────────────────────┐   │
+│  │ ❤️ 李四点赞了你的瞬间         │   │
+│  │    5分钟前                   │   │
+│  └─────────────────────────────┘   │
+│  ┌─────────────────────────────┐   │
+│  │ 💬 王五评论了你的瞬间：       │   │
+│  │    "拍得真好！"              │   │
+│  │    10分钟前                  │   │
+│  └─────────────────────────────┘   │
+└─────────────────────────────────────┘
+```
+
+## 3. API 端点与类型定义
+
+### 3.1 认证 API
 
 #### 通用认证响应类型
 
@@ -81,67 +500,68 @@ alwaysApply: false
   nickname: string;         // 用户昵称
   access_token: string;     // 访问令牌
   refresh_token: string;    // 刷新令牌
-  expires_at: string;       // 过期时间（ISO 8601）
+  expires_at: string;       // 过期时间（UTC，ISO 8601格式）
 }
 ```
+
+说明：所有时间字段均为 UTC 时间，格式如 `2025-10-27T12:30:00Z`，末尾的 `Z` 表示 UTC 时区
 
 #### API 端点
 
-**1. POST /api/v1/public/auth/get_nonce - 获取认证随机数**
-
-Request: `GetNonceRequest`
-```typescript
-{}  // 空请求体
-```
-
-Response: `GetNonceResponse`
-```typescript
-{
-  nonce_id: string;         // nonce标识符
-  nonce: string;            // 随机数
-  timestamp: number;        // 时间戳
-  expires_in: number;       // 有效期（秒）
-}
-```
-
-**2. POST /api/v1/public/auth/register - 用户注册**
+**1. POST /api/v1/public/auth/register - 用户注册**
 
 Request: `RegisterRequest`
 ```typescript
 {
   login_id: string;         // 登录ID（邮箱/手机号）
   nickname: string;         // 用户昵称
-  password_hash: string;    // SHA256(password + nonce + timestamp)
-  nonce_id: string;         // nonce标识符
-  timestamp: number;        // 时间戳
-  latitude?: number;        // 纬度（可选）
-  longitude?: number;       // 经度（可选）
+  password_hash: string;    // SHA256(password)
 }
 ```
+
+说明：
+- 密码哈希使用 `SHA256(password)` 计算（客户端固定算法）
+- 服务端使用 bcrypt/argon2 对收到的哈希进行二次哈希存储
+- 位置信息应在注册后通过 `POST /api/v1/protected/user/update_location` 更新
 
 Response: `RegisterResponse`
 ```typescript
 AuthResponse  // 使用通用认证响应类型
 ```
 
-**3. POST /api/v1/public/auth/login - 用户登录**
+**2. POST /api/v1/public/auth/login - 用户登录**
 
 Request: `LoginRequest`
 ```typescript
 {
   login_id: string;         // 登录ID（邮箱/手机号）
-  password_hash: string;    // SHA256(password + nonce + timestamp)
-  nonce_id: string;         // nonce标识符
-  timestamp: number;        // 时间戳
+  password_hash: string;    // SHA256(password)
 }
 ```
+
+说明：密码哈希使用 `SHA256(password)` 计算（与注册时相同算法），服务端使用 bcrypt.compare 验证
 
 Response: `LoginResponse`
 ```typescript
 AuthResponse  // 使用通用认证响应类型
 ```
 
-**4. POST /api/v1/public/auth/logout - 用户登出**
+完整成功响应示例：
+```json
+{
+  "code": 0,
+  "message": "Success",
+  "data": {
+    "user_id": "user_123",
+    "nickname": "张三",
+    "access_token": "eyJhbGc...",
+    "refresh_token": "refresh_abc...",
+    "expires_at": "2025-10-27T13:30:00Z"
+  }
+}
+```
+
+**3. POST /api/v1/protected/auth/logout - 用户登出**
 
 Request: `LogoutRequest`
 ```typescript
@@ -153,43 +573,42 @@ Response: `LogoutResponse`
 {
   success: boolean;         // 是否登出成功
   message: string;          // 响应消息
-  logged_out_at: string;    // 登出时间（ISO 8601）
 }
 ```
 
-**5. POST /api/v1/public/auth/create_temp - 创建临时用户**
+**4. POST /api/v1/public/auth/create_temp - 创建临时用户**
 
 Request: `CreateTempRequest`
 ```typescript
 {
   nickname: string;         // 用户昵称
-  latitude?: number;        // 纬度（可选）
-  longitude?: number;       // 经度（可选）
 }
 ```
+
+说明：位置信息应在创建后通过 `POST /api/v1/protected/user/update_location` 更新
 
 Response: `CreateTempResponse`
 ```typescript
 AuthResponse  // 使用通用认证响应类型
 ```
 
-**6. POST /api/v1/public/auth/refresh_token - 刷新Token**
+**5. POST /api/v1/protected/auth/refresh_token - 刷新Token**
 
 Request: `RefreshTokenRequest`
 ```typescript
 {
   refresh_token: string;    // 刷新令牌
-  latitude?: number;        // 纬度（可选）
-  longitude?: number;       // 经度（可选）
 }
 ```
+
+说明：刷新 token 只需要提供 refresh_token，位置信息与 token 刷新无关
 
 Response: `RefreshTokenResponse`
 ```typescript
 AuthResponse  // 使用通用认证响应类型
 ```
 
-**7. POST /api/v1/public/auth/check_status - 检查认证状态**
+**6. POST /api/v1/protected/auth/check_status - 检查认证状态**
 
 Request: `CheckStatusRequest`
 ```typescript
@@ -206,16 +625,16 @@ Response: `CheckStatusResponse`
 }
 ```
 
-**8. POST /api/v1/protected/auth/set_password - 设置密码**
+**7. POST /api/v1/protected/auth/set_password - 设置密码**
 
 Request: `SetPasswordRequest`
 ```typescript
 {
-  password_hash: string;    // SHA256(password + nonce + timestamp)
-  nonce_id: string;         // nonce标识符
-  timestamp: number;        // 时间戳
+  password_hash: string;    // SHA256(password)
 }
 ```
+
+说明：密码哈希使用 `SHA256(password)` 计算，服务端使用 bcrypt/argon2 进行二次哈希存储
 
 Response: `SetPasswordResponse`
 ```typescript
@@ -226,25 +645,147 @@ Response: `SetPasswordResponse`
 }
 ```
 
+**8. POST /api/v1/public/auth/request_password_reset - 请求密码重置**
+
+Request: `RequestPasswordResetRequest`
+```typescript
+{
+  login_id: string;         // 登录ID（邮箱/手机号）
+}
+```
+
+Response: `RequestPasswordResetResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  reset_id: string;         // 重置请求ID
+  expires_in: number;       // 验证码有效期（秒）
+}
+```
+
+**9. POST /api/v1/public/auth/verify_reset_code - 验证重置码**
+
+Request: `VerifyResetCodeRequest`
+```typescript
+{
+  reset_id: string;         // 重置请求ID
+  code: string;             // 验证码
+}
+```
+
+Response: `VerifyResetCodeResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  reset_token: string;      // 用于重置密码的临时token
+}
+```
+
+**10. POST /api/v1/public/auth/reset_password - 重置密码**
+
+Request: `ResetPasswordRequest`
+```typescript
+{
+  reset_token: string;      // 验证后获得的临时token
+  password_hash: string;    // SHA256(new_password)
+}
+```
+
+说明：密码哈希使用 `SHA256(new_password)` 计算，服务端使用 bcrypt/argon2 进行二次哈希存储
+
+Response: `ResetPasswordResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+**11. POST /api/v1/protected/auth/list_sessions - 列出活跃会话**
+
+Request: `ListSessionsRequest`
+```typescript
+{
+  limit?: number;           // 返回数量限制，默认20，最大100
+  cursor?: string;          // 分页游标
+}
+```
+
+Response: 分页响应，项类型为 `SessionResponse`
+```typescript
+{
+  id: string;               // 会话ID
+  device_type?: string;     // 设备类型
+  device_name?: string;     // 设备名称
+  ip_address?: string;      // IP地址
+  location?: string;        // 地理位置
+  created_at: string;       // 会话创建时间
+  last_active_at: string;   // 最后活跃时间
+  is_current: boolean;      // 是否当前会话
+}
+```
+
+**12. POST /api/v1/protected/auth/revoke_session - 撤销会话**
+
+Request: `RevokeSessionRequest`
+```typescript
+{
+  id: string;               // 要撤销的会话ID
+}
+```
+
+Response: `RevokeSessionResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
 ### 2.2 用户 API
 
 #### 通用用户信息响应类型
 
-**UserResponse** - 用户信息的通用响应类型
+**UserResponse** - 用户基本信息（最小集合）
 ```typescript
 {
-  user_id: string;          // 64位整数转字符串
+  user_id: string;          // 64位整数转字符串（高8位编码用户类型）
   nickname: string;         // 用户昵称
   avatar_url?: string;      // 头像URL
-  bio?: string;             // 个人简介
-  created_at?: string;      // 创建时间（ISO 8601）
-  last_active_at?: string;  // 最后活跃时间（ISO 8601）
-  latitude?: number;        // 纬度
-  longitude?: number;       // 经度
-  location_name?: string;   // 位置名称
-  distance?: number;        // 距离（米）
 }
 ```
+
+**UserProfileResponse** - 用户详细资料（用于查看用户资料页）
+```typescript
+{
+  user_id: string;
+  nickname: string;
+  avatar_url?: string;
+  bio?: string;             // 个人简介
+  location_name?: string;   // 位置名称
+  is_online?: boolean;      // 是否在线（根据隐私设置）
+  last_seen?: string;       // 最后在线时间（根据隐私设置）
+  
+  // 与当前用户的关系（仅已登录时返回）
+  relationship?: {
+    status: 'none' | 'friend' | 'pending_sent' | 'pending_received' | 'following' | 'follower' | 'blocked' | 'blocked_by';
+    can_message: boolean;   // 是否可以发消息
+    can_view_moments: boolean;  // 是否可以查看瞬间
+  };
+}
+```
+
+说明：
+- `UserResponse` 用于列表、消息发送者等场景，只包含最基本的信息（user_id, nickname, avatar_url）
+- `UserProfileResponse` 用于查看用户详细资料时，包含完整信息和关系状态
+- `NearbyUserResponse` 用于位置搜索，额外包含距离信息
+- `FriendResponse` 用于好友列表，额外包含好友备注、关系状态等
+- `BlockedUserResponse` 用于拉黑列表，额外包含拉黑原因和时间
+- `user_id` 的高8位编码了用户类型，前端可以通过位运算判断用户类型
+
+**设计原则**：不同场景使用不同的响应类型，避免在通用类型中混入场景特定字段
 
 #### API 端点
 
@@ -254,48 +795,114 @@ Request: `SearchUserByNameRequest`
 ```typescript
 {
   name: string;             // 搜索关键词
-  limit?: number;           // 返回数量限制，默认20
+  limit?: number;           // 返回数量限制，默认20，最大100
   cursor?: string;          // 分页游标
 }
 ```
 
+说明：遵循统一的 `search_by_name` 接口设计模式（见 1.9 章节）
+
 Response: 分页响应，项类型为 `UserResponse`
+
+完整成功响应示例（分页）：
+```json
+{
+  "code": 0,
+  "message": "Success",
+  "data": {
+    "items": [
+      {
+        "user_id": "user_123",
+        "nickname": "张三",
+        "avatar_url": "https://example.com/avatar.jpg"
+      }
+    ],
+    "has_more": true,
+    "next_cursor": "cursor_xyz"
+  }
+}
+```
 
 **2. POST /api/v1/public/user/search_by_id - 获取用户资料**
 
 Request: `SearchUserByIdRequest`
 ```typescript
 {
-  user_id: string;          // 用户ID
+  id: string;               // 用户ID
 }
 ```
 
+说明：遵循统一的 `search_by_id` 接口设计模式（见 1.9 章节）
+
 Response: `SearchUserByIdResponse`
 ```typescript
-UserResponse  // 使用通用用户信息响应类型
+UserProfileResponse  // 返回详细资料
 ```
 
-**3. POST /api/v1/public/user/search_by_location - 搜索附近用户**
+**3. POST /api/v1/protected/user/me - 获取我的资料与聚合**
+
+Request: `GetMeRequest`
+```typescript
+{}  // 空请求体
+```
+
+Response: `GetMeResponse`
+```typescript
+{
+  profile: UserResponse & {
+    email?: string;
+    phone?: string;
+    created_at: string;
+  };
+  stats: {
+    moments_count: number;
+    friends_count: number;
+    followers_count: number;
+    following_count: number;
+    groups_count: number;
+  };
+  unread: {
+    messages: number;
+    friend_requests: number;
+    group_invites: number;
+    notifications: number;
+  };
+  settings: {
+    privacy_level: 'public'|'friends'|'private';
+    location_sharing: boolean;
+    allow_follow: boolean;
+  };
+}
+```
+
+**4. POST /api/v1/public/user/search_by_location - 按位置搜索用户**
 
 Request: `SearchUserByLocationRequest`
 ```typescript
 {
   latitude: number;         // 纬度
   longitude: number;        // 经度
-  radius: number;           // 搜索半径（米）
-  limit?: number;           // 返回数量限制，默认20
+  radius?: number;          // 搜索半径（米），默认5000，最大50000
+  limit?: number;           // 返回数量限制，默认20，最大100
   cursor?: string;          // 分页游标
 }
 ```
 
-Response: 分页响应，项类型为 `SearchUserByLocationResponse`
+说明：遵循统一的 `search_by_location` 接口设计模式（见 1.9 章节）
+
+Response: 分页响应，项类型为 `NearbyUserResponse`
 ```typescript
-UserResponse & {
-  distance: number;         // 距离（米，必填）
+{
+  user_id: string;
+  nickname: string;
+  avatar_url?: string;
+  location_name?: string;   // 位置名称
+  distance: number;         // 距离（米）
+  is_online?: boolean;      // 是否在线（根据隐私设置）
 }
 ```
 
-**4. POST /api/v1/protected/user/update_location - 更新用户位置**
+**5. POST /api/v1/protected/user/update_location - 更新用户位置**
 
 Request: `UpdateLocationRequest`
 ```typescript
@@ -314,7 +921,7 @@ Response: `UpdateLocationResponse`
 }
 ```
 
-**5. POST /api/v1/protected/user/update_profile - 更新用户资料**
+**6. POST /api/v1/protected/user/update_profile - 更新用户资料**
 
 Request: `UpdateProfileRequest`
 ```typescript
@@ -333,24 +940,24 @@ Response: `UpdateProfileResponse`
 }
 ```
 
-**6. POST /api/v1/protected/user/upgrade_account - 账户升级**
+**7. POST /api/v1/protected/user/upgrade_account - 账户升级**
 
 Request: `UpgradeAccountRequest`
 ```typescript
 {
   login_id: string;         // 新的登录ID
-  password_hash: string;    // SHA256(password + nonce + timestamp)
-  nonce_id: string;         // nonce标识符
-  timestamp: number;        // 时间戳
+  password_hash: string;    // SHA256(password)
 }
 ```
+
+说明：密码哈希使用 `SHA256(password)` 计算，服务端使用 bcrypt/argon2 进行二次哈希存储
 
 Response: `UpgradeAccountResponse`
 ```typescript
 AuthResponse  // 使用通用认证响应类型
 ```
 
-**7. POST /api/v1/protected/user/get_settings - 获取用户设置**
+**8. POST /api/v1/protected/user/settings - 获取用户设置**
 
 Request: `GetSettingsRequest`
 ```typescript
@@ -360,18 +967,19 @@ Request: `GetSettingsRequest`
 Response: `GetSettingsResponse`
 ```typescript
 {
-  privacy_level: string;    // 隐私级别：'public'|'friends'|'private'
-  location_sharing: boolean; // 位置分享开关
+  privacy_level: 'public' | 'friends' | 'private';  // 隐私级别
+  location_sharing: boolean;                         // 位置分享开关
+  allow_follow: boolean;                             // 是否允许被关注
 }
 ```
 
-**8. POST /api/v1/protected/user/update_settings - 更新用户设置**
+**9. POST /api/v1/protected/user/update_settings - 更新用户设置**
 
 Request: `UpdateSettingsRequest`
 ```typescript
 {
-  privacy_level?: string;   // 隐私级别
-  location_sharing?: boolean; // 位置分享开关
+  privacy_level?: 'public' | 'friends' | 'private';  // 隐私级别
+  location_sharing?: boolean;                         // 位置分享开关
 }
 ```
 
@@ -383,7 +991,7 @@ Response: `UpdateSettingsResponse`
 }
 ```
 
-**9. POST /api/v1/protected/user/delete_account - 删除账户**
+**10. POST /api/v1/protected/user/delete_account - 删除账户**
 
 Request: `DeleteAccountRequest`
 ```typescript
@@ -400,7 +1008,7 @@ Response: `DeleteAccountResponse`
 }
 ```
 
-**10. POST /api/v1/protected/user/add_friend - 发送好友申请**
+**11. POST /api/v1/protected/user/add_friend - 发送好友申请**
 
 Request: `AddFriendRequest`
 ```typescript
@@ -415,16 +1023,21 @@ Response: `AddFriendResponse`
 {
   success: boolean;
   message: string;
-  relationship_id: string;  // 关系记录ID
+  id: string;               // 关系记录ID
+  status: 'pending' | 'accepted';  // pending=等待对方同意, accepted=直接成为好友（如对方也申请过）
 }
 ```
 
-**11. POST /api/v1/protected/user/accept_friend - 接受好友申请**
+说明：
+- 如果对方也向你发送过好友申请，则自动接受，状态为 `accepted`
+- 否则状态为 `pending`，需要对方同意
+
+**12. POST /api/v1/protected/user/accept_friend - 接受好友申请**
 
 Request: `AcceptFriendRequest`
 ```typescript
 {
-  relationship_id: string;  // 关系记录ID
+  id: string;               // 关系记录ID
 }
 ```
 
@@ -436,12 +1049,12 @@ Response: `AcceptFriendResponse`
 }
 ```
 
-**12. POST /api/v1/protected/user/reject_friend - 拒绝好友申请**
+**13. POST /api/v1/protected/user/reject_friend - 拒绝好友申请**
 
 Request: `RejectFriendRequest`
 ```typescript
 {
-  relationship_id: string;  // 关系记录ID
+  id: string;               // 关系记录ID
 }
 ```
 
@@ -453,12 +1066,12 @@ Response: `RejectFriendResponse`
 }
 ```
 
-**13. POST /api/v1/protected/user/remove_friend - 删除好友**
+**14. POST /api/v1/protected/user/remove_friend - 删除好友**
 
 Request: `RemoveFriendRequest`
 ```typescript
 {
-  friend_user_id: string;   // 好友用户ID
+  user_id: string;          // 好友用户ID
 }
 ```
 
@@ -470,12 +1083,12 @@ Response: `RemoveFriendResponse`
 }
 ```
 
-**14. POST /api/v1/protected/user/follow_user - 关注用户**
+**15. POST /api/v1/protected/user/follow - 关注用户**
 
 Request: `FollowRequest`
 ```typescript
 {
-  to_user_id: string;       // 目标用户ID
+  user_id: string;          // 目标用户ID
 }
 ```
 
@@ -484,16 +1097,20 @@ Response: `FollowResponse`
 {
   success: boolean;
   message: string;
-  relationship_id: string;  // 关系记录ID
+  id: string;               // 关系记录ID
 }
 ```
 
-**15. POST /api/v1/protected/user/unfollow_user - 取消关注**
+说明：
+- 如果目标用户设置不允许被关注（`allow_follow=false`），则返回 `success=false`
+- 关注是单向操作，不需要对方同意
+
+**16. POST /api/v1/protected/user/unfollow - 取消关注**
 
 Request: `UnfollowRequest`
 ```typescript
 {
-  to_user_id: string;       // 目标用户ID
+  user_id: string;          // 目标用户ID
 }
 ```
 
@@ -505,12 +1122,12 @@ Response: `UnfollowResponse`
 }
 ```
 
-**16. POST /api/v1/protected/user/block_user - 拉黑用户**
+**17. POST /api/v1/protected/user/block - 拉黑用户**
 
 Request: `BlockRequest`
 ```typescript
 {
-  to_user_id: string;       // 目标用户ID
+  user_id: string;          // 目标用户ID
   reason?: string;          // 拉黑原因（可选）
 }
 ```
@@ -520,118 +1137,111 @@ Response: `BlockResponse`
 {
   success: boolean;
   message: string;
-  relationship_id: string;  // 关系记录ID
+  id: string;               // 关系记录ID
 }
 ```
 
-**17. POST /api/v1/protected/user/friends_list - 获取好友列表**
+**18. POST /api/v1/protected/user/list_friends - 获取好友列表**
 
-Request: `GetFriendsListRequest`
+Request: `ListFriendsRequest`
 ```typescript
 {
-  limit?: number;           // 返回数量限制，默认20
+  status?: 'pending' | 'accepted' | 'all';  // 默认'accepted'
+  limit?: number;           // 返回数量限制，默认20，最大100
   cursor?: string;          // 分页游标
-  status?: string;          // 状态过滤：'pending'|'accepted'|'all'，默认'accepted'
 }
 ```
 
-Response: 分页响应，项类型为 `GetFriendsListResponse`
+Response: 分页响应，项类型为 `FriendResponse`
 ```typescript
 {
   user_id: string;
   nickname: string;
   avatar_url?: string;
   bio?: string;
-  relationship_type: string;
-  relationship_id: string;
-  created_at: string;
-  last_active_at?: string;
   is_online?: boolean;
+  last_seen?: string;
+  relation_id: string;      // 关系记录ID
+  status: 'pending' | 'accepted';
+  created_at: string;       // 成为好友的时间
+  remark?: string;          // 好友备注
 }
 ```
 
-**18. POST /api/v1/protected/user/following_list - 获取关注列表**
+**19. POST /api/v1/protected/user/list_following - 获取关注列表**
 
-Request: `GetFollowingListRequest`
+Request: `ListFollowingRequest`
 ```typescript
 {
-  user_id?: string;         // 目标用户ID（可选）
-  limit?: number;
-  cursor?: string;
+  limit?: number;           // 返回数量限制，默认20，最大100
+  cursor?: string;          // 分页游标
 }
 ```
 
-Response: 分页响应，项类型为 `GetFollowingListResponse`
+Response: 分页响应，项类型为 `UserResponse`
+
+**20. POST /api/v1/protected/user/list_followers - 获取粉丝列表**
+
+Request: `ListFollowersRequest`
 ```typescript
 {
-  user_id: string;
-  nickname: string;
-  avatar_url?: string;
-  bio?: string;
-  relationship_id: string;
-  followed_at: string;
-  is_mutual: boolean;
-  is_friend: boolean;
+  limit?: number;           // 返回数量限制，默认20，最大100
+  cursor?: string;          // 分页游标
 }
 ```
 
-**19. POST /api/v1/protected/user/followers_list - 获取粉丝列表**
+Response: 分页响应，项类型为 `UserResponse`
 
-Request: `GetFollowersListRequest`
+**21. POST /api/v1/protected/user/list_blocked - 获取拉黑列表**
+
+Request: `ListBlockedRequest`
 ```typescript
 {
-  user_id?: string;
-  limit?: number;
-  cursor?: string;
+  limit?: number;           // 返回数量限制，默认20，最大100
+  cursor?: string;          // 分页游标
 }
 ```
 
-Response: 分页响应，项类型为 `GetFollowersListResponse`
-```typescript
-{
-  user_id: string;
-  nickname: string;
-  avatar_url?: string;
-  bio?: string;
-  relationship_id: string;
-  followed_at: string;
-  is_mutual: boolean;
-  is_friend: boolean;
-}
-```
-
-**20. POST /api/v1/protected/user/blocked_list - 获取拉黑列表**
-
-Request: `GetBlockedListRequest`
-```typescript
-{
-  limit?: number;
-  cursor?: string;
-}
-```
-
-Response: 分页响应，项类型为 `GetBlockedListResponse`
+Response: 分页响应，项类型为 `BlockedUserResponse`
 ```typescript
 {
   user_id: string;
   nickname: string;
   avatar_url?: string;
-  relationship_id: string;
-  blocked_at: string;
-  reason?: string;
+  relation_id: string;      // 关系记录ID
+  blocked_at: string;       // 拉黑时间
+  reason?: string;          // 拉黑原因
 }
 ```
 
-**21. POST /api/v1/protected/user/unblock_user - 解除拉黑**
+**22. POST /api/v1/protected/user/unblock - 解除拉黑**
 
-Request: `UnblockUserRequest`
+Request: `UnblockRequest`
 ```typescript
 {
-  to_user_id: string;
+  user_id: string;
 }
 ```
 
-Response: `UnblockUserResponse`
+Response: `UnblockResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+**23. POST /api/v1/protected/user/set_friend_remark - 设置好友备注**
+
+Request: `SetFriendRemarkRequest`
+```typescript
+{
+  user_id: string;
+  remark: string;           // 备注名称，空字符串表示清除备注
+}
+```
+
+Response: `SetFriendRemarkResponse`
 ```typescript
 {
   success: boolean;
@@ -643,28 +1253,80 @@ Response: `UnblockUserResponse`
 
 #### 通用群组信息响应类型
 
-**GroupResponse** - 群组信息的通用响应类型
+**GroupResponse** - 群组基本信息（用于搜索、列表等）
 ```typescript
 {
-  group_id: string;         // UUID转字符串
-  group_type: 'public_group' | 'private_group';
+  id: string;               // UUID转字符串
+  type: 'public_group' | 'private_group';
   name: string;             // 群组名称
   description?: string;     // 群组描述
   avatar_url?: string;      // 群组头像URL
   owner_id: string;         // 群主ID
-  creator_name: string;     // 创建者昵称
-  latitude: number;         // 纬度
-  longitude: number;        // 经度
+  owner_name: string;       // 群主昵称
   location_name: string;    // 位置名称
   member_count: number;     // 成员数量
-  distance?: number;        // 距离（米）
   is_password_required: boolean;
-  is_member: boolean;       // 当前用户是否为成员
-  user_role?: string;       // 当前用户角色
   created_at: string;       // 创建时间
-  last_active_at: string;   // 最后活跃时间
+  is_member: boolean;       // 当前用户是否为成员
 }
 ```
+
+**GroupDetailResponse** - 群组详细信息（用于查看群组详情）
+```typescript
+{
+  id: string;
+  type: 'public_group' | 'private_group';
+  name: string;
+  description?: string;
+  avatar_url?: string;
+  owner_id: string;
+  owner_name: string;
+  latitude: number;         // 纬度
+  longitude: number;        // 经度
+  location_name: string;
+  member_count: number;
+  max_members?: number;     // 最大成员数
+  is_password_required: boolean;
+  created_at: string;
+  last_active_at: string;
+  
+  // 当前用户与群组的关系（仅在已登录时返回）
+  my_role?: 'owner' | 'admin' | 'member';  // 我的角色（非成员时不返回）
+  is_member: boolean;
+}
+```
+
+**MyGroupResponse** - 我的群组信息（用于"我的群组列表"）
+```typescript
+{
+  id: string;
+  type: 'public_group' | 'private_group';
+  name: string;
+  description?: string;
+  avatar_url?: string;
+  owner_id: string;
+  latitude: number;         // 纬度（用于地图显示）
+  longitude: number;        // 经度（用于地图显示）
+  location_name: string;
+  member_count: number;
+  my_role: 'owner' | 'admin' | 'member';
+  unread_count: number;
+  notifications_enabled: boolean;
+  mention_only: boolean;
+  joined_at: string;
+  last_active_at: string;
+  last_message?: {
+    content: string;
+    sender_name: string;
+    sent_at: string;
+  };
+}
+```
+
+说明：
+- `GroupResponse` 用于搜索、浏览群组列表等场景
+- `GroupDetailResponse` 用于查看群组详情页
+- `MyGroupResponse` 用于"我的群组列表"，包含未读数、通知设置等个人相关信息
 
 #### API 端点
 
@@ -673,18 +1335,30 @@ Response: `UnblockUserResponse`
 Request: `SearchGroupByLocationRequest`
 ```typescript
 {
-  latitude: number;
-  longitude: number;
-  radius: number;           // 搜索半径（米）
-  limit?: number;
-  cursor?: string;
+  latitude: number;         // 纬度
+  longitude: number;        // 经度
+  radius?: number;          // 搜索半径（米），默认5000，最大50000
+  limit?: number;           // 返回数量限制，默认20，最大100
+  cursor?: string;          // 分页游标
 }
 ```
 
-Response: 分页响应，项类型为 `SearchGroupByLocationResponse`
+说明：遵循统一的 `search_by_location` 接口设计模式（见 1.9 章节）
+
+Response: 分页响应，项类型为 `NearbyGroupResponse`
 ```typescript
-GroupResponse & {
-  distance: number;         // 距离（米，必填）
+{
+  id: string;
+  type: 'public_group' | 'private_group';
+  name: string;
+  description?: string;
+  avatar_url?: string;
+  owner_name: string;
+  location_name: string;
+  member_count: number;
+  is_password_required: boolean;
+  distance: number;         // 距离（米）
+  is_member: boolean;
 }
 ```
 
@@ -693,11 +1367,13 @@ GroupResponse & {
 Request: `SearchGroupByNameRequest`
 ```typescript
 {
-  name: string;
-  limit?: number;
-  cursor?: string;
+  name: string;             // 搜索关键词
+  limit?: number;           // 返回数量限制，默认20，最大100
+  cursor?: string;          // 分页游标
 }
 ```
+
+说明：遵循统一的 `search_by_name` 接口设计模式（见 1.9 章节）
 
 Response: 分页响应，项类型为 `GroupResponse`
 
@@ -706,36 +1382,71 @@ Response: 分页响应，项类型为 `GroupResponse`
 Request: `SearchGroupByIdRequest`
 ```typescript
 {
-  group_id: string;
+  id: string;               // 群组ID
 }
 ```
 
+说明：遵循统一的 `search_by_id` 接口设计模式（见 1.9 章节）
+
 Response: `SearchGroupByIdResponse`
 ```typescript
-GroupResponse
+GroupDetailResponse  // 返回详细信息
 ```
 
-**4. POST /api/v1/protected/group/members - 获取群组成员**
+**4. POST /api/v1/protected/group/list_members - 获取群组成员**
 
-Request: `GetMembersRequest`
+Request: `ListMembersRequest`
 ```typescript
 {
-  group_id: string;
+  id: string;               // 群组ID
   limit?: number;
   cursor?: string;
 }
 ```
 
-Response: 分页响应，项类型为 `GetMembersResponse`
+Response: 分页响应，项类型为 `MemberResponse`
 ```typescript
 {
   user_id: string;
   nickname: string;
   avatar_url?: string;
-  role: string;             // 'owner'|'admin'|'member'
+  role: 'owner' | 'admin' | 'member';
   is_online: boolean;       // 是否在线
   last_seen?: string;       // 最后在线时间（ISO 8601）
   joined_at: string;
+  is_muted: boolean;        // 是否被禁言
+  muted_until?: string;     // 禁言到期时间
+}
+```
+
+完整成功响应示例（分页）：
+```json
+{
+  "code": 0,
+  "message": "Success",
+  "data": {
+    "items": [
+      {
+        "user_id": "user_123",
+        "nickname": "张三",
+        "avatar_url": "https://example.com/avatar.jpg",
+        "role": "owner",
+        "is_online": true,
+        "joined_at": "2025-01-01T00:00:00Z"
+      },
+      {
+        "user_id": "user_456",
+        "nickname": "李四",
+        "avatar_url": "https://example.com/avatar2.jpg",
+        "role": "member",
+        "is_online": false,
+        "last_seen": "2025-10-26T18:00:00Z",
+        "joined_at": "2025-01-15T10:00:00Z"
+      }
+    ],
+    "has_more": true,
+    "next_cursor": "cursor_members_xyz"
+  }
 }
 ```
 
@@ -744,24 +1455,29 @@ Response: 分页响应，项类型为 `GetMembersResponse`
 Request: `CreateGroupRequest`
 ```typescript
 {
-  group_type: 'public_group' | 'private_group';
+  type: 'public_group' | 'private_group';
   name: string;
   description?: string;
   latitude: number;
   longitude: number;
   location_name: string;
-  password?: string;
+  password_hash?: string;   // SHA256(password)，仅公开群可设置密码
   avatar_url?: string;
-  max_members?: number;
-  initial_members?: string[];
+  max_members?: number;     // 最大成员数，默认500，最大10000
+  initial_members?: string[];  // 初始成员列表，最多50人
 }
 ```
+
+说明：
+- 密码哈希使用 `SHA256(password)` 计算，服务端使用 bcrypt/argon2 进行二次哈希存储
+- `initial_members` 最多50人，超过则返回错误
+- 创建者自动成为群主
 
 Response: `CreateGroupResponse`
 ```typescript
 {
-  group_id: string;
-  group_type: 'public_group' | 'private_group';
+  id: string;
+  type: 'public_group' | 'private_group';
   name: string;
   description?: string;
   latitude: number;
@@ -772,12 +1488,31 @@ Response: `CreateGroupResponse`
 }
 ```
 
+完整成功响应示例：
+```json
+{
+  "code": 0,
+  "message": "Success",
+  "data": {
+    "id": "group_abc123",
+    "type": "public_group",
+    "name": "北京朝阳跑步群",
+    "description": "欢迎热爱跑步的朋友加入",
+    "latitude": 39.9042,
+    "longitude": 116.4074,
+    "location_name": "北京市朝阳区",
+    "created_at": "2025-10-27T12:30:00Z",
+    "message": "群组创建成功"
+  }
+}
+```
+
 **6. POST /api/v1/protected/group/update_profile - 更新群组资料**
 
 Request: `UpdateGroupProfileRequest`
 ```typescript
 {
-  group_id: string;
+  id: string;               // 群组ID
   name?: string;
   description?: string;
   avatar_url?: string;
@@ -789,7 +1524,6 @@ Response: `UpdateGroupProfileResponse`
 {
   success: boolean;
   message: string;
-  group_id: string;
 }
 ```
 
@@ -798,7 +1532,7 @@ Response: `UpdateGroupProfileResponse`
 Request: `UpdateGroupLocationRequest`
 ```typescript
 {
-  group_id: string;
+  id: string;               // 群组ID
   latitude: number;
   longitude: number;
   location_name: string;
@@ -810,83 +1544,58 @@ Response: `UpdateGroupLocationResponse`
 {
   success: boolean;
   message: string;
-  group_id: string;
-  latitude: number;
-  longitude: number;
-  location_name: string;
 }
 ```
 
-**8. POST /api/v1/protected/group/update_privacy_settings - 更新群组隐私设置**
+**8. POST /api/v1/protected/group/update_privacy - 更新群组隐私设置**
 
-Request: `UpdateGroupPrivacySettingsRequest`
+Request: `UpdatePrivacyRequest`
 ```typescript
 {
-  group_id: string;
-  group_type?: 'public_group' | 'private_group';
-  password?: string;
+  id: string;               // 群组ID
+  type?: 'public_group' | 'private_group';
+  password_hash?: string;   // SHA256(password)，空字符串表示移除密码
   max_members?: number;
 }
 ```
 
-Response: `UpdateGroupPrivacySettingsResponse`
+说明：密码哈希使用 `SHA256(password)` 计算，服务端使用 bcrypt/argon2 进行二次哈希存储
+
+Response: `UpdatePrivacyResponse`
 ```typescript
 {
   success: boolean;
   message: string;
-  group_id: string;
-  new_group_type?: 'public_group' | 'private_group';
 }
 ```
 
-**9. POST /api/v1/protected/group/promote_to_admin - 提升成员为管理员**
+**9. POST /api/v1/protected/group/set_member_role - 设置成员角色**
 
-Request: `PromoteToAdminRequest`
+Request: `SetMemberRoleRequest`
 ```typescript
 {
-  group_id: string;
+  id: string;               // 群组ID
   user_id: string;
+  role: 'admin' | 'member';  // 不能设置为owner，转移所有权使用transfer_ownership
 }
 ```
 
-Response: `PromoteToAdminResponse`
-```typescript
-{
-  success: boolean;
-  message: string;
-  user_id: string;
-  new_role: 'admin';
-}
-```
-
-**10. POST /api/v1/protected/group/demote_to_member - 降级管理员**
-
-Request: `DemoteToMemberRequest`
-```typescript
-{
-  group_id: string;
-  user_id: string;
-}
-```
-
-Response: `DemoteToMemberResponse`
+Response: `SetMemberRoleResponse`
 ```typescript
 {
   success: boolean;
   message: string;
-  user_id: string;
-  new_role: 'member';
 }
 ```
 
-**11. POST /api/v1/protected/group/mute_member - 禁言成员**
+**10. POST /api/v1/protected/group/mute_member - 禁言成员**
 
 Request: `MuteMemberRequest`
 ```typescript
 {
-  group_id: string;
+  id: string;               // 群组ID
   user_id: string;
-  duration?: number;        // 禁言时长（秒）
+  duration: number;         // 秒；0 表示解除禁言
   reason?: string;
 }
 ```
@@ -896,37 +1605,18 @@ Response: `MuteMemberResponse`
 {
   success: boolean;
   message: string;
-  user_id: string;
-  muted_until?: string;
+  muted_until?: string;     // 禁言到期时间
 }
 ```
 
-**12. POST /api/v1/protected/group/unmute_member - 解除禁言**
-
-Request: `UnmuteMemberRequest`
-```typescript
-{
-  group_id: string;
-  user_id: string;
-}
-```
-
-Response: `UnmuteMemberResponse`
-```typescript
-{
-  success: boolean;
-  message: string;
-  user_id: string;
-}
-```
-
-**13. POST /api/v1/protected/group/ban_member - 封禁成员**
+**11. POST /api/v1/protected/group/ban_member - 封禁成员**
 
 Request: `BanMemberRequest`
 ```typescript
 {
-  group_id: string;
+  id: string;               // 群组ID
   user_id: string;
+  action: 'ban' | 'unban';
   reason?: string;
 }
 ```
@@ -936,36 +1626,16 @@ Response: `BanMemberResponse`
 {
   success: boolean;
   message: string;
-  user_id: string;
 }
 ```
 
-**14. POST /api/v1/protected/group/unban_member - 解除封禁**
+**12. POST /api/v1/protected/group/invite - 邀请成员加入群组**
 
-Request: `UnbanMemberRequest`
+Request: `InviteRequest`
 ```typescript
 {
-  group_id: string;
-  user_id: string;
-}
-```
-
-Response: `UnbanMemberResponse`
-```typescript
-{
-  success: boolean;
-  message: string;
-  user_id: string;
-}
-```
-
-**15. POST /api/v1/protected/group/invite_members - 邀请成员加入群组**
-
-Request: `InviteMembersRequest`
-```typescript
-{
-  group_id: string;
-  user_ids: string[];
+  id: string;               // 群组ID
+  user_ids: string[];       // 最多50人
   message?: string;
 }
 ```
@@ -975,23 +1645,22 @@ Response: `InviteMembersResponse`
 {
   success: boolean;
   message: string;
-  invites: {
-    invite_id: string;
-    invitee_id: string;
+  results: {
+    user_id: string;
     status: 'sent' | 'failed';
     reason?: string;
   }[];
-  sent_count: number;
-  failed_count: number;
 }
 ```
 
-**16. POST /api/v1/protected/group/accept_invite - 接受群组邀请**
+说明：邀请是异步操作，`sent` 表示邀请已发送，需要对方接受
+
+**13. POST /api/v1/protected/group/accept_invite - 接受群组邀请**
 
 Request: `AcceptInviteRequest`
 ```typescript
 {
-  invite_id: string;
+  id: string;               // 邀请ID
 }
 ```
 
@@ -1000,18 +1669,20 @@ Response: `AcceptInviteResponse`
 {
   success: boolean;
   message: string;
-  group_id: string;
-  group_type: 'public_group' | 'private_group';
-  group_name: string;
+  group: {
+    id: string;
+    type: 'public_group' | 'private_group';
+    name: string;
+  };
 }
 ```
 
-**17. POST /api/v1/protected/group/reject_invite - 拒绝群组邀请**
+**14. POST /api/v1/protected/group/reject_invite - 拒绝群组邀请**
 
 Request: `RejectInviteRequest`
 ```typescript
 {
-  invite_id: string;
+  id: string;               // 邀请ID
 }
 ```
 
@@ -1023,36 +1694,19 @@ Response: `RejectInviteResponse`
 }
 ```
 
-**18. POST /api/v1/protected/group/join - 加入公开群组**
+**15. POST /api/v1/protected/group/join - 加入公开群组**
 
-Request: `JoinGroupRequest`
+Request: `JoinRequest`
 ```typescript
 {
-  group_id: string;
-  password?: string;
+  id: string;               // 群组ID
+  password_hash?: string;   // SHA256(password)，如果群组有密码则必填
 }
 ```
 
-Response: `JoinGroupResponse`
-```typescript
-{
-  success: boolean;
-  message: string;
-  group_id: string;
-  user_role: string;
-}
-```
+说明：密码哈希使用 `SHA256(password)` 计算，服务端使用 bcrypt.compare 验证
 
-**19. POST /api/v1/protected/group/leave - 离开群组**
-
-Request: `LeaveGroupRequest`
-```typescript
-{
-  group_id: string;
-}
-```
-
-Response: `LeaveGroupResponse`
+Response: `JoinResponse`
 ```typescript
 {
   success: boolean;
@@ -1060,12 +1714,29 @@ Response: `LeaveGroupResponse`
 }
 ```
 
-**20. POST /api/v1/protected/group/remove_member - 移除群组成员**
+**16. POST /api/v1/protected/group/leave - 离开群组**
+
+Request: `LeaveRequest`
+```typescript
+{
+  id: string;               // 群组ID
+}
+```
+
+Response: `LeaveResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+**17. POST /api/v1/protected/group/remove_member - 移除群组成员**
 
 Request: `RemoveMemberRequest`
 ```typescript
 {
-  group_id: string;
+  id: string;               // 群组ID
   user_id: string;
   reason?: string;
 }
@@ -1079,13 +1750,13 @@ Response: `RemoveMemberResponse`
 }
 ```
 
-**21. POST /api/v1/protected/group/transfer_ownership - 转移群组所有权**
+**18. POST /api/v1/protected/group/transfer_ownership - 转移群组所有权**
 
 Request: `TransferOwnershipRequest`
 ```typescript
 {
-  group_id: string;
-  new_owner_id: string;
+  id: string;               // 群组ID
+  user_id: string;          // 新群主ID
 }
 ```
 
@@ -1094,16 +1765,15 @@ Response: `TransferOwnershipResponse`
 {
   success: boolean;
   message: string;
-  new_owner_id: string;
 }
 ```
 
-**22. POST /api/v1/protected/group/list - 获取我的群组列表**
+**19. POST /api/v1/protected/group/list - 获取我的群组列表**
 
-Request: `ListMyGroupsRequest`
+Request: `ListGroupsRequest`
 ```typescript
 {
-  group_type?: 'public_group' | 'private_group' | 'all';  // 默认'all'
+  type?: 'public_group' | 'private_group' | 'all';  // 默认'all'
   limit?: number;
   cursor?: string;
 }
@@ -1112,8 +1782,8 @@ Request: `ListMyGroupsRequest`
 Response: 分页响应，项类型为 `MyGroupResponse`
 ```typescript
 {
-  group_id: string;
-  group_type: 'public_group' | 'private_group';
+  id: string;
+  type: 'public_group' | 'private_group';
   name: string;
   description?: string;
   avatar_url?: string;
@@ -1122,37 +1792,46 @@ Response: 分页响应，项类型为 `MyGroupResponse`
   longitude: number;
   location_name: string;
   member_count: number;
-  
-  // 我在群组中的状态
   my_role: 'owner' | 'admin' | 'member';
   unread_count: number;
   notifications_enabled: boolean;
+  mention_only: boolean;    // 是否仅@提醒
   joined_at: string;
   last_active_at: string;
+  last_message?: {
+    content: string;
+    sender_name: string;
+    sent_at: string;
+  };
 }
 ```
 
-**23. POST /api/v1/protected/group/user_invites - 获取我的邀请列表**
+**20. POST /api/v1/protected/group/list_invites - 获取我的群组邀请列表**
 
-Request: `ListUserInvitesRequest`
+Request: `ListInvitesRequest`
 ```typescript
 {
-  status?: 'pending' | 'accepted' | 'rejected' | 'all';
+  status?: 'pending' | 'accepted' | 'rejected' | 'all';  // 默认'pending'
   limit?: number;
   cursor?: string;
 }
 ```
 
-Response: 分页响应，项类型为 `ListUserInvitesResponse`
+Response: 分页响应，项类型为 `GroupInviteResponse`
 ```typescript
 {
-  invite_id: string;
-  group_id: string;
-  group_name: string;
-  group_avatar?: string;
-  inviter_id: string;
-  inviter_name: string;
-  inviter_avatar?: string;
+  id: string;               // 邀请ID
+  group: {
+    id: string;
+    name: string;
+    avatar_url?: string;
+    type: 'public_group' | 'private_group';
+  };
+  inviter: {
+    user_id: string;
+    nickname: string;
+    avatar_url?: string;
+  };
   message?: string;
   status: 'pending' | 'accepted' | 'rejected';
   created_at: string;
@@ -1160,66 +1839,91 @@ Response: 分页响应，项类型为 `ListUserInvitesResponse`
 }
 ```
 
-**24. POST /api/v1/protected/group/update_notifications - 更新群组通知设置**
+**21. POST /api/v1/protected/group/update_notifications - 更新群组通知设置**
 
-Request: `UpdateGroupNotificationsRequest`
+Request: `UpdateNotificationsRequest`
 ```typescript
 {
-  group_id: string;
-  notifications_enabled?: boolean;      // 是否接收通知
-  mention_notifications?: boolean;      // 是否接收@提醒通知
+  id: string;               // 群组ID
+  enabled?: boolean;        // 是否接收通知
+  mention_only?: boolean;   // 是否仅@提醒
 }
 ```
 
-Response: `UpdateGroupNotificationsResponse`
-```typescript
-{
-  success: boolean;
-  message: string;
-  group_id: string;
-  notifications_enabled: boolean;
-  mention_notifications: boolean;
-}
-```
-
-### 2.4 私聊会话 API
-
-**1. POST /api/v1/protected/conversation/start - 发起私聊**
-
-Request: `StartConversationRequest`
-```typescript
-{
-  target_user_id: string;
-  initial_message?: string;
-}
-```
-
-Response: `StartConversationResponse`
+Response: `UpdateNotificationsResponse`
 ```typescript
 {
   success: boolean;
   message: string;
-  conversation_id: string;
-  other_user: {
-    user_id: string;
-    nickname: string;
-    avatar_url?: string;
-    is_online: boolean;
-    last_seen?: string;
-  };
-  is_new: boolean;
-  unread_count: number;
-  last_message?: {
-    content: string;
-    message_type: string;
-    sent_at: string;
-  };
 }
 ```
 
-**2. POST /api/v1/protected/conversation/list - 获取私聊列表**
+**22. POST /api/v1/protected/group/apply - 申请加入群组（私密群）**
 
-Request: `ListConversationsRequest`
+Request: `ApplyToGroupRequest`
+```typescript
+{
+  id: string;               // 群组ID
+  message?: string;
+}
+```
+
+Response: `ApplyToGroupResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  application_id: string;
+}
+```
+
+**23. POST /api/v1/protected/group/review_application - 审核入群申请**
+
+Request: `ReviewApplicationRequest`
+```typescript
+{
+  id: string;               // 申请ID
+  action: 'approve' | 'reject';
+  reason?: string;
+}
+```
+
+Response: `ReviewApplicationResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+### 2.4 私聊 API
+
+**1. POST /api/v1/protected/chat/start - 发起私聊**
+
+Request: `StartChatRequest`
+```typescript
+{
+  user_id: string;          // 对方用户ID
+  initial_message?: string; // 初始消息（可选）
+}
+```
+
+Response: `StartChatResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  chat_id: string;          // 私聊ID
+}
+```
+
+说明：
+- 如果已存在与该用户的私聊，返回已有的 `chat_id`
+- `initial_message` 如果提供，会自动发送该消息
+
+**2. POST /api/v1/protected/chat/list - 获取私聊列表**
+
+Request: `ListChatsRequest`
 ```typescript
 {
   limit?: number;
@@ -1227,10 +1931,10 @@ Request: `ListConversationsRequest`
 }
 ```
 
-Response: 分页响应，项类型为 `ConversationResponse`
+Response: 分页响应，项类型为 `ChatResponse`
 ```typescript
 {
-  conversation_id: string;
+  id: string;               // 私聊ID
   other_user: {
     user_id: string;
     nickname: string;
@@ -1239,25 +1943,45 @@ Response: 分页响应，项类型为 `ConversationResponse`
     last_seen?: string;
   };
   unread_count: number;
+  muted: boolean;           // 是否静音
   last_message?: {
     content: string;
-    message_type: string;
+    type: 'text' | 'image' | 'video' | 'audio' | 'file' | 'location';
     sent_at: string;
   };
   last_activity_at: string;
 }
 ```
 
-**3. POST /api/v1/protected/conversation/hide - 隐藏会话**
+**3. POST /api/v1/protected/chat/settings - 获取私聊设置**
 
-Request: `HideConversationRequest`
+Request: `GetChatSettingsRequest`
 ```typescript
 {
-  conversation_id: string;
+  id: string;               // 私聊ID
 }
 ```
 
-Response: `HideConversationResponse`
+Response: `GetChatSettingsResponse`
+```typescript
+{
+  muted: boolean;
+  pinned: boolean;          // 是否置顶
+}
+```
+
+**4. POST /api/v1/protected/chat/update_settings - 更新私聊设置**
+
+Request: `UpdateChatSettingsRequest`
+```typescript
+{
+  id: string;               // 私聊ID
+  muted?: boolean;
+  pinned?: boolean;
+}
+```
+
+Response: `UpdateChatSettingsResponse`
 ```typescript
 {
   success: boolean;
@@ -1265,101 +1989,199 @@ Response: `HideConversationResponse`
 }
 ```
 
-**4. POST /api/v1/protected/conversation/upgrade_to_group - 升级为群组**
+**5. POST /api/v1/protected/chat/delete - 删除私聊**
 
-Request: `UpgradeConversationToGroupRequest`
+Request: `DeleteChatRequest`
 ```typescript
 {
-  conversation_id: string;
-  group_type: 'public_group' | 'private_group';
+  id: string;               // 私聊ID
+}
+```
+
+Response: `DeleteChatResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+说明：删除私聊只是从列表中移除，不会删除消息历史，对方仍可见
+
+**6. POST /api/v1/protected/chat/upgrade_to_group - 升级为群组**
+
+Request: `UpgradeToGroupRequest`
+```typescript
+{
+  id: string;               // 私聊ID
+  type: 'public_group' | 'private_group';
   name: string;
-  latitude: number;
-  longitude: number;
-  location_name: string;
   description?: string;
   avatar_url?: string;
-  password?: string;
-  invited_users?: string[];
+  password_hash?: string;   // SHA256(password)，仅公开群可设置
+  invited_users?: string[]; // 额外邀请的用户（不包括私聊双方）
 }
 ```
 
-Response: `UpgradeConversationToGroupResponse`
+说明：
+- 位置信息使用当前用户的位置
+- 私聊双方自动成为群成员
+- 密码哈希使用 `SHA256(password)` 计算
+
+Response: `UpgradeToGroupResponse`
 ```typescript
 {
   success: boolean;
   message: string;
-  group_id: string;
-  group_type: 'public_group' | 'private_group';
-  group_name: string;
+  group: {
+    id: string;
+    type: 'public_group' | 'private_group';
+    name: string;
+  };
 }
 ```
 
-### 2.5 消息通讯 API
+### 3.5 聊天消息 API
 
-**1. POST /api/v1/protected/message/send - 发送消息**
+**1. POST /api/v1/protected/chat_messages/send - 发送消息**
 
 Request: `SendMessageRequest`
 ```typescript
 {
-  target_id: string;        // conversation_id 或 group_id
-  content: string;
-  message_type?: string;    // 'text'|'image'|'video'|'audio'|'file'|'location'
-  reply_to_message_id?: string;
-  mentioned_users?: string[];
+  target_id: string;        // chat_id 或 group_id
+  target_type: 'chat' | 'group';
+  type: 'text' | 'image' | 'video' | 'audio' | 'file' | 'location';
+  content: string;          // 文本内容或文件URL
+  reply_to?: string;        // 回复的消息ID
+  mentions?: string[];      // @的用户ID列表
   
-  // 位置消息字段
+  // 位置消息字段（type=location时必填）
   latitude?: number;
   longitude?: number;
   location_name?: string;
   
-  // 文件/媒体消息字段
-  file_url?: string;
+  // 文件/媒体消息字段（type=file/image/video/audio时必填）
   file_name?: string;
   file_size?: number;
-  thumbnail_url?: string;
+  thumbnail_url?: string;   // 缩略图URL（图片/视频）
+  duration?: number;        // 时长（秒，音频/视频）
 }
 ```
+
+说明：
+- `type=text`: `content` 为文本内容
+- `type=image/video/audio/file`: `content` 为文件URL（通过媒体上传API获取）
+- `type=location`: `content` 为位置描述，`latitude/longitude/location_name` 必填
 
 Response: `SendMessageResponse`
 ```typescript
 {
-  message_id: string;
-  target_id: string;
+  id: string;               // 消息ID
   sent_at: string;
   message: string;
 }
 ```
 
-**2. POST /api/v1/protected/message/history - 获取消息历史**
+完整成功响应示例：
+```json
+{
+  "code": 0,
+  "message": "Success",
+  "data": {
+    "id": "msg_abc123",
+    "sent_at": "2025-10-27T12:30:00Z",
+    "message": "消息发送成功"
+  }
+}
+```
 
-Request: `GetHistoryRequest`
+**2. POST /api/v1/protected/chat_messages/edit - 编辑消息**
+
+Request: `EditMessageRequest`
 ```typescript
 {
-  target_id: string;        // conversation_id 或 group_id
-  limit?: number;
-  cursor?: string;
-  include_system_messages?: boolean;
+  id: string;               // 消息ID
+  content: string;          // 新内容
+}
+```
+
+说明：只能编辑文本消息，且只能编辑自己发送的消息
+
+Response: `EditMessageResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+**3. POST /api/v1/protected/chat_messages/recall - 撤回消息**
+
+Request: `RecallMessageRequest`
+```typescript
+{
+  id: string;               // 消息ID
+}
+```
+
+说明：只能撤回自己发送的消息，撤回后消息变为系统消息"xxx撤回了一条消息"
+
+Response: `RecallMessageResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+**4. POST /api/v1/protected/chat_messages/list - 获取消息历史**
+
+Request: `ListMessagesRequest`
+```typescript
+{
+  target_id: string;        // chat_id 或 group_id
+  target_type: 'chat' | 'group';
+  limit?: number;           // 默认50，最大100
+  cursor?: string;          // 分页游标
+  include_system?: boolean; // 是否包含系统消息，默认true
 }
 ```
 
 Response: 分页响应，项类型为 `MessageResponse`
 ```typescript
 {
-  message_id: string;
+  id: string;
   target_id: string;
-  sender_id?: string;
-  sender_name?: string;
-  sender_avatar?: string;
+  target_type: 'chat' | 'group';
+  type: 'text' | 'image' | 'video' | 'audio' | 'file' | 'location' | 'system';
   content: string;
-  message_type: string;
-  system_event_type?: string;
-  reply_to_message_id?: string;
+  
+  // 发送者信息（系统消息时为空）
+  sender?: {
+    user_id: string;
+    nickname: string;
+    avatar_url?: string;
+  };
+  
+  // 回复信息
+  reply_to?: {
+    id: string;
+    content: string;
+    sender_name: string;
+  };
+  
+  // 其他字段
+  mentions?: string[];      // 被@的用户ID列表
   is_edited: boolean;
-  reaction_count: number;
-  mentioned_users: string[];
-  affected_users: string[];
-  sent_at: string;
   edited_at?: string;
+  sent_at: string;
+  
+  // 反应统计
+  reactions?: {
+    type: 'like' | 'love' | 'laugh' | 'angry' | 'sad' | 'wow';
+    count: number;
+    reacted_by_me: boolean;
+  }[];
   
   // 位置消息字段
   latitude?: number;
@@ -1367,20 +2189,29 @@ Response: 分页响应，项类型为 `MessageResponse`
   location_name?: string;
   
   // 文件/媒体消息字段
-  file_url?: string;
   file_name?: string;
   file_size?: number;
   thumbnail_url?: string;
+  duration?: number;
+  
+  // 系统消息字段
+  system_event?: string;    // 系统事件类型
+  affected_users?: string[]; // 受影响的用户ID列表
 }
 ```
 
-**3. POST /api/v1/protected/message/delete - 删除消息**
+说明：
+- 撤回的消息不会返回，会转换为系统消息
+- 系统消息的 `type` 为 `system`，`sender` 为空
+- `reactions` 数组只包含有人反应的类型
+
+**5. POST /api/v1/protected/chat_messages/delete - 删除消息**
 
 Request: `DeleteMessageRequest`
 ```typescript
 {
-  message_id: string;
-  delete_for_everyone?: boolean;
+  id: string;               // 消息ID
+  for_everyone?: boolean;   // 是否为所有人删除（仅发送者可用）
 }
 ```
 
@@ -1392,13 +2223,14 @@ Response: `DeleteMessageResponse`
 }
 ```
 
-**4. POST /api/v1/protected/message/mark_read - 标记消息已读**
+**6. POST /api/v1/protected/chat_messages/mark_read - 标记消息已读**
 
 Request: `MarkReadRequest`
 ```typescript
 {
-  target_id: string;        // conversation_id 或 group_id
-  message_id?: string;
+  target_id: string;        // chat_id 或 group_id
+  target_type: 'chat' | 'group';
+  up_to?: string;           // 标记到该消息ID（含）之前的所有消息为已读，省略则标记全部
 }
 ```
 
@@ -1410,12 +2242,11 @@ Response: `MarkReadResponse`
 }
 ```
 
-**5. POST /api/v1/protected/message/mark_all_read - 标记所有消息已读**
+**7. POST /api/v1/protected/chat_messages/mark_all_read - 标记所有消息已读**
 
 Request: `MarkAllReadRequest`
 ```typescript
 {}  // 空请求体
-}
 ```
 
 Response: `MarkAllReadResponse`
@@ -1423,119 +2254,135 @@ Response: `MarkAllReadResponse`
 {
   success: boolean;
   message: string;
-  targets_updated: number;  // 更新了多少个会话/群组
 }
 ```
 
-**6. POST /api/v1/protected/message/unread_count - 获取未读消息数**
+**8. POST /api/v1/protected/chat_messages/unread_summary - 获取未读消息汇总**
 
-Request: `UnreadCountRequest`
+Request: `GetUnreadSummaryRequest`
 ```typescript
 {
-  target_id?: string;       // 可选，指定某个会话/群组
+  include_details?: boolean;  // 是否包含各会话详情，默认false
 }
 ```
 
-Response: `UnreadCountResponse`
+Response: `GetUnreadSummaryResponse`
 ```typescript
 {
-  total_unread: number;
-  targets?: Array<{
+  total: number;            // 总未读数
+  chats: number;            // 私聊未读数
+  groups: number;           // 群组未读数
+  details?: {               // 各会话详情（include_details=true时返回）
     target_id: string;
-    target_type: 'conversation' | 'group';
+    target_type: 'chat' | 'group';
     unread_count: number;
-  }>;
+    last_message_at: string;
+  }[];
 }
 ```
 
-**7. POST /api/v1/protected/message/add_reaction - 添加消息反应**
+**9. POST /api/v1/protected/chat_messages/unread_count - 获取特定会话未读数**
 
-Request: `AddReactionRequest`
+Request: `GetUnreadCountRequest`
 ```typescript
 {
-  message_id: string;
-  reaction_type: 'like' | 'love' | 'laugh' | 'angry' | 'sad' | 'wow';
+  target_id: string;        // chat_id 或 group_id
+  target_type: 'chat' | 'group';
 }
 ```
 
-Response: `AddReactionResponse`
+Response: `GetUnreadCountResponse`
+```typescript
+{
+  target_id: string;
+  target_type: 'chat' | 'group';
+  unread_count: number;
+}
+```
+
+**10. POST /api/v1/protected/chat_messages/react - 设置消息反应**
+
+Request: `ReactToMessageRequest`
+```typescript
+{
+  id: string;               // 消息ID
+  type: 'like' | 'love' | 'laugh' | 'angry' | 'sad' | 'wow';
+  action: 'add' | 'remove';
+}
+```
+
+Response: `ReactToMessageResponse`
 ```typescript
 {
   success: boolean;
   message: string;
-  reaction_id: string;
-  reaction_count: number;
 }
 ```
 
-**8. POST /api/v1/protected/message/remove_reaction - 移除消息反应**
+**11. POST /api/v1/protected/chat_messages/reactions - 获取消息反应列表**
 
-Request: `RemoveReactionRequest`
+Request: `ListReactionsRequest`
 ```typescript
 {
-  message_id: string;
-  reaction_type: string;
-}
-```
-
-Response: `RemoveReactionResponse`
-```typescript
-{
-  success: boolean;
-  message: string;
-  reaction_count: number;
-}
-```
-
-**9. POST /api/v1/protected/message/get_reactions - 获取消息反应列表**
-
-Request: `GetReactionsRequest`
-```typescript
-{
-  message_id: string;
-  reaction_type?: string;   // 可选，筛选特定类型
+  id: string;               // 消息ID
+  type?: 'like' | 'love' | 'laugh' | 'angry' | 'sad' | 'wow';  // 可选，筛选特定类型
   limit?: number;
   cursor?: string;
 }
 ```
 
-Response: 分页响应，项类型为 `ReactionResponse`
+Response: 分页响应，项类型为 `ReactionItemResponse`
 ```typescript
 {
-  reaction_id: string;
-  message_id: string;
   user_id: string;
   nickname: string;
   avatar_url?: string;
-  reaction_type: string;
+  type: 'like' | 'love' | 'laugh' | 'angry' | 'sad' | 'wow';
   created_at: string;
 }
 ```
 
-### 2.6 生活瞬间 API
+### 3.6 生活瞬间 API
 
 #### 通用生活瞬间响应类型
 
 **MomentResponse** - 生活瞬间通用响应类型
 ```typescript
 {
-  moment_id: string;
-  user_id: string;
-  nickname: string;
-  user_avatar?: string;
+  id: string;
+  user: {
+    user_id: string;
+    nickname: string;
+    avatar_url?: string;
+  };
   description: string;
-  latitude: number;
-  longitude: number;
-  location_name: string;
+  images?: string[];
+  tags: string[];
+  location: {
+    latitude: number;
+    longitude: number;
+    name: string;
+  };
   created_at: string;
+  updated_at?: string;      // 编辑时间
+  
+  // 统计信息
   likes_count: number;
   comments_count: number;
-  liked_by_me: boolean;
+  
+  // 当前用户的交互状态（已登录时返回）
+  liked_by_me?: boolean;
+  favorited_by_me?: boolean;
+  
+  // 距离信息（位置搜索时返回）
   distance?: number;
-  tags: string[];
-  images?: string[];
 }
 ```
+
+说明：
+- 前端可以根据 `user.user_id` 判断是否为自己的瞬间,从而决定是否显示编辑/删除按钮
+- 所有可见的瞬间都可以评论和点赞
+- `liked_by_me` 和 `favorited_by_me` 只在用户已登录时返回
 
 #### API 端点
 
@@ -1556,29 +2403,100 @@ Request: `CreateMomentRequest`
 Response: `CreateMomentResponse`
 ```typescript
 {
-  moment_id: string;
+  id: string;               // 瞬间ID
   description: string;
   created_at: string;
   message: string;
 }
 ```
 
-**2. POST /api/v1/public/moments/search_by_location - 按位置搜索生活瞬间**
+完整成功响应示例：
+```json
+{
+  "code": 0,
+  "message": "Success",
+  "data": {
+    "id": "moment_xyz789",
+    "description": "今天天气真好，在公园跑步",
+    "created_at": "2025-10-27T12:30:00Z",
+    "message": "瞬间创建成功"
+  }
+}
+```
 
-Request: `SearchMomentsByLocationRequest`
+**2. POST /api/v1/protected/moments/edit - 编辑生活瞬间**
+
+Request: `EditMomentRequest`
 ```typescript
 {
-  latitude: number;
-  longitude: number;
-  radius: number;
+  id: string;               // 瞬间ID
+  description?: string;
+  images?: string[];
+  tags?: string[];
+  latitude?: number;        // 位置信息（可选，全部提供或全部不提供）
+  longitude?: number;
+  location_name?: string;
+}
+```
+
+说明：只能编辑自己的瞬间
+
+Response: `EditMomentResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+**3. POST /api/v1/protected/moments/update_favorite - 收藏/取消收藏瞬间**
+
+Request: `UpdateFavoriteMomentRequest`
+```typescript
+{
+  id: string;               // 瞬间ID
+  action: 'add' | 'remove';
+}
+```
+
+Response: `UpdateFavoriteMomentResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+**4. POST /api/v1/protected/moments/list_favorites - 我的收藏列表**
+
+Request: `ListFavoritesRequest`
+```typescript
+{
   limit?: number;
   cursor?: string;
 }
 ```
 
+Response: 分页响应，项类型为 `MomentResponse`
+
+**5. POST /api/v1/public/moments/search_by_location - 按位置搜索生活瞬间**
+
+Request: `SearchMomentsByLocationRequest`
+```typescript
+{
+  latitude: number;         // 纬度
+  longitude: number;        // 经度
+  radius?: number;          // 搜索半径（米），默认5000，最大50000
+  limit?: number;           // 返回数量限制，默认20，最大100
+  cursor?: string;          // 分页游标
+}
+```
+
+说明：遵循统一的 `search_by_location` 接口设计模式（见 1.9 章节）
+
 Response: 分页响应，项类型为 `MomentResponse & { distance: number }`
 
-**3. POST /api/v1/public/moments/search_by_tags - 按标签搜索生活瞬间**
+**6. POST /api/v1/public/moments/search_by_tags - 按标签搜索生活瞬间**
 
 Request: `SearchMomentsByTagsRequest`
 ```typescript
@@ -1591,23 +2509,25 @@ Request: `SearchMomentsByTagsRequest`
 
 Response: 分页响应，项类型为 `MomentResponse`
 
-**4. POST /api/v1/public/moments/search_by_id - 按ID搜索生活瞬间**
+**7. POST /api/v1/public/moments/search_by_id - 按ID搜索生活瞬间**
 
 Request: `SearchMomentByIdRequest`
 ```typescript
 {
-  moment_id: string;
+  id: string;               // 瞬间ID
 }
 ```
+
+说明：遵循统一的 `search_by_id` 接口设计模式（见 1.9 章节）
 
 Response: `SearchMomentByIdResponse`
 ```typescript
 MomentResponse
 ```
 
-**5. POST /api/v1/public/moments/history - 获取生活瞬间历史**
+**8. POST /api/v1/public/moments/list - 获取生活瞬间历史**
 
-Request: `GetMomentsHistoryRequest`
+Request: `ListMomentsRequest`
 ```typescript
 {
   user_id?: string;
@@ -1618,14 +2538,16 @@ Request: `GetMomentsHistoryRequest`
 
 Response: 分页响应，项类型为 `MomentResponse`
 
-**6. POST /api/v1/protected/moments/delete - 删除生活瞬间**
+**9. POST /api/v1/protected/moments/delete - 删除生活瞬间**
 
 Request: `DeleteMomentRequest`
 ```typescript
 {
-  moment_id: string;
+  id: string;               // 瞬间ID
 }
 ```
+
+说明：只能删除自己的瞬间
 
 Response: `DeleteMomentResponse`
 ```typescript
@@ -1635,12 +2557,13 @@ Response: `DeleteMomentResponse`
 }
 ```
 
-**7. POST /api/v1/protected/moments/like - 点赞生活瞬间**
+**10. POST /api/v1/protected/moments/like - 点赞/取消点赞生活瞬间**
 
 Request: `LikeMomentRequest`
 ```typescript
 {
-  moment_id: string;
+  id: string;               // 瞬间ID
+  action: 'like' | 'unlike';
 }
 ```
 
@@ -1649,98 +2572,72 @@ Response: `LikeMomentResponse`
 {
   success: boolean;
   message: string;
-  likes_count: number;
 }
 ```
 
-**8. POST /api/v1/protected/moments/unlike - 取消点赞**
-
-Request: `UnlikeMomentRequest`
-```typescript
-{
-  moment_id: string;
-}
-```
-
-Response: `UnlikeMomentResponse`
-```typescript
-{
-  success: boolean;
-  message: string;
-  likes_count: number;
-}
-```
-
-### 2.6 评论互动 API
+### 3.7 评论互动 API
 
 #### 通用评论响应类型
 
 **CommentResponse** - 评论通用响应类型
 ```typescript
 {
-  comment_id: string;
-  moment_id: string;
-  user_id: string;
-  nickname: string;
-  user_avatar?: string;
+  id: string;
+  moment_id: string;        // 所属瞬间ID
+  user: {
+    user_id: string;
+    nickname: string;
+    avatar_url?: string;
+  };
   content: string;
-  parent_comment_id?: string;
+  parent_id?: string;       // 父评论ID（回复时）
+  reply_to_user?: {         // 回复的用户信息
+    user_id: string;
+    nickname: string;
+  };
   created_at: string;
+  likes_count: number;
   replies_count: number;
+  liked_by_me?: boolean;    // 当前用户是否点赞（已登录时返回）
 }
 ```
+
+说明：
+- 前端可以根据 `user.user_id` 判断是否为自己的评论,从而决定是否显示删除按钮
+- 所有可见的评论都可以回复和点赞
 
 #### API 端点
 
-**1. POST /api/v1/protected/comments/add - 添加评论**
+**1. POST /api/v1/protected/comments/create - 添加评论/回复**
 
-Request: `AddCommentRequest`
+Request: `CreateCommentRequest`
 ```typescript
 {
   moment_id: string;
   content: string;
+  parent_id?: string;       // 可选，存在则表示回复该评论
 }
 ```
 
-Response: `AddCommentResponse`
+Response: `CreateCommentResponse`
 ```typescript
 {
-  comment_id: string;
-  content: string;
+  id: string;               // 评论ID
   created_at: string;
   message: string;
 }
 ```
 
-**2. POST /api/v1/protected/comments/reply - 回复评论**
-
-Request: `ReplyCommentRequest`
-```typescript
-{
-  comment_id: string;
-  content: string;
-}
-```
-
-Response: `ReplyCommentResponse`
-```typescript
-{
-  comment_id: string;
-  parent_comment_id: string;
-  content: string;
-  created_at: string;
-  message: string;
-}
-```
-
-**3. POST /api/v1/protected/comments/delete - 删除评论**
+**2. POST /api/v1/protected/comments/delete - 删除评论**
 
 Request: `DeleteCommentRequest`
 ```typescript
 {
-  comment_id: string;
+  id: string;               // 评论ID
 }
 ```
+
+说明：只能删除自己的评论
 
 Response: `DeleteCommentResponse`
 ```typescript
@@ -1750,9 +2647,9 @@ Response: `DeleteCommentResponse`
 }
 ```
 
-**4. POST /api/v1/public/comments/list - 获取评论列表**
+**3. POST /api/v1/public/comments/list - 获取评论列表**
 
-Request: `GetCommentsRequest`
+Request: `ListCommentsRequest`
 ```typescript
 {
   moment_id: string;
@@ -1763,12 +2660,53 @@ Request: `GetCommentsRequest`
 
 Response: 分页响应，项类型为 `CommentResponse`
 
-**5. POST /api/v1/protected/comments/like - 点赞评论**
+完整成功响应示例（分页）：
+```json
+{
+  "code": 0,
+  "message": "Success",
+  "data": {
+    "items": [
+      {
+        "id": "comment_123",
+        "moment_id": "moment_456",
+        "user": {
+          "user_id": "user_789",
+          "nickname": "张三",
+          "avatar_url": "https://example.com/avatar.jpg"
+        },
+        "content": "拍得真好！",
+        "created_at": "2025-10-27T12:30:00Z",
+        "likes_count": 5,
+        "replies_count": 2
+      }
+    ],
+    "has_more": false,
+    "next_cursor": null
+  }
+}
+```
+
+**4. POST /api/v1/public/comments/list_replies - 获取子评论列表**
+
+Request: `ListRepliesRequest`
+```typescript
+{
+  id: string;               // 父评论ID
+  limit?: number;
+  cursor?: string;
+}
+```
+
+Response: 分页响应，项类型为 `CommentResponse`
+
+**5. POST /api/v1/protected/comments/like - 点赞/取消点赞评论**
 
 Request: `LikeCommentRequest`
 ```typescript
 {
-  comment_id: string;
+  id: string;               // 评论ID
+  action: 'like' | 'unlike';
 }
 ```
 
@@ -1777,40 +2715,20 @@ Response: `LikeCommentResponse`
 {
   success: boolean;
   message: string;
-  likes_count: number;
-  liked_at: string;
 }
 ```
 
-**6. POST /api/v1/protected/comments/unlike - 取消点赞评论**
-
-Request: `UnlikeCommentRequest`
-```typescript
-{
-  comment_id: string;
-}
-```
-
-Response: `UnlikeCommentResponse`
-```typescript
-{
-  success: boolean;
-  message: string;
-  likes_count: number;
-}
-```
-
-### 2.7 内容安全 API
+### 3.8 内容安全 API
 
 #### 通用举报响应类型
 
 **ReportResponse** - 举报通用响应类型
 ```typescript
 {
-  report_id: string;
+  id: string;               // 举报ID
   reporter_id: string;
   reporter_nickname?: string;
-  target_type: string;      // 'user'|'moment'|'comment'|'message'|'group'
+  target_type: 'user' | 'moment' | 'comment' | 'message' | 'group';
   target_id: string;
   target_summary?: {
     user_nickname?: string;
@@ -1820,7 +2738,7 @@ Response: `UnlikeCommentResponse`
   };
   reason: string;
   description?: string;
-  status: string;           // 'pending'|'reviewing'|'resolved'|'dismissed'
+  status: 'pending' | 'reviewing' | 'resolved' | 'dismissed';
   created_at: string;
   handled_at?: string;
   handler_id?: string;
@@ -1845,15 +2763,15 @@ Request: `CreateReportRequest`
 Response: `CreateReportResponse`
 ```typescript
 {
-  report_id: string;
+  id: string;               // 举报ID
   message: string;
   created_at: string;
 }
 ```
 
-**2. POST /api/v1/protected/reports/user_reports - 我的举报记录**
+**2. POST /api/v1/protected/reports/list_user_reports - 我的举报记录**
 
-Request: `GetUserReportsRequest`
+Request: `ListUserReportsRequest`
 ```typescript
 {
   limit?: number;
@@ -1865,11 +2783,11 @@ Response: 分页响应，项类型为 `ReportResponse`
 
 **3. POST /api/v1/protected/reports/list - 举报列表（管理员）**
 
-Request: `GetReportsRequest`
+Request: `ListReportsRequest`
 ```typescript
 {
-  status?: string;
-  target_type?: string;
+  status?: 'pending' | 'reviewing' | 'resolved' | 'dismissed';
+  target_type?: 'user' | 'moment' | 'comment' | 'message' | 'group';
   limit?: number;
   cursor?: string;
 }
@@ -1882,8 +2800,8 @@ Response: 分页响应，项类型为 `ReportResponse`
 Request: `HandleReportRequest`
 ```typescript
 {
-  report_id: string;
-  action: string;           // 'resolve'|'dismiss'|'escalate'
+  id: string;               // 举报ID
+  action: 'resolve' | 'dismiss' | 'escalate';
   note?: string;
 }
 ```
@@ -1893,25 +2811,12 @@ Response: `HandleReportResponse`
 {
   success: boolean;
   message: string;
-  handled_at: string;
 }
 ```
 
-### 2.8 事件订阅与推送 API
+### 3.9 收件箱订阅配置 API
 
-#### 通用事件响应类型
-
-**EventResponse** - 事件通用响应类型
-```typescript
-{
-  event_id: string;
-  event_type: string;
-  event_data: object;
-  created_at: string;
-}
-```
-
-#### API 端点
+说明：订阅配置的**持久化存储**通过 API 管理，但**实时订阅控制**通过 WebSocket 管理（见 4.8 章节）。
 
 **1. POST /api/v1/protected/subscriptions/get - 获取订阅配置**
 
@@ -1944,6 +2849,8 @@ Response: `GetSubscriptionsResponse`
 }
 ```
 
+说明：此接口用于获取用户的**持久化订阅偏好**，通常在设置页面使用。
+
 **2. POST /api/v1/protected/subscriptions/update - 更新订阅配置**
 
 Request: `UpdateSubscriptionsRequest`
@@ -1969,44 +2876,193 @@ Response: `UpdateSubscriptionsResponse`
 }
 ```
 
-**3. POST /api/v1/protected/events/fetch_unpushed - 获取未推送事件**
+说明：此接口用于**持久化保存**用户的订阅偏好。保存后，下次 WebSocket 连接时会自动应用这些配置。
 
-Request: `FetchUnpushedEventsRequest`
+### 3.10 收件箱 API
+
+#### 通用收件箱项响应类型
+
+**InboxItemResponse** - 收件箱项通用响应类型
+```typescript
+{
+  id: string;               // 通知ID
+  category: 'social' | 'system' | 'content';  // 通知分类
+  type: string;             // 具体类型（见下方事件类型列表）
+  title?: string;           // 通知标题（可选）
+  content: string;          // 通知内容
+  data?: {                  // 类型相关的额外数据
+    user_id?: string;
+    user_name?: string;
+    group_id?: string;
+    group_name?: string;
+    moment_id?: string;
+    comment_id?: string;
+    relation_id?: string;
+    [key: string]: any;
+  };
+  action_url?: string;      // 点击跳转URL（可选）
+  severity?: 'info' | 'warning' | 'error';  // 严重程度（仅系统通知）
+  created_at: string;       // 创建时间（UTC，ISO 8601）
+  is_read: boolean;         // 是否已读
+}
+```
+
+说明：
+- `category` 用于大类分组：
+  - `social` - 社交互动（好友、群组、关注等）
+  - `content` - 内容互动（瞬间点赞、评论等）
+  - `system` - 系统通知（公告、警告等）
+- `type` 是具体的事件类型（如 `friend_request`, `moment_like` 等）
+- `data` 包含该通知类型相关的结构化数据，便于前端处理
+- `action_url` 可用于深度链接跳转
+
+**1. POST /api/v1/protected/inbox/list - 获取收件箱列表**
+
+Request: `ListInboxItemsRequest`
+```typescript
+{
+  category?: 'social' | 'system' | 'content';  // 按分类过滤
+  types?: string[];         // 按具体类型过滤（如 ['friend_request', 'group_invite']）
+  is_read?: boolean;        // 按已读/未读过滤
+  limit?: number;
+  cursor?: string;
+}
+```
+
+Response: 分页响应，项类型为 `InboxItemResponse`
+
+完整成功响应示例（分页）：
+```json
+{
+  "code": 0,
+  "message": "Success",
+  "data": {
+    "items": [
+      {
+        "id": "notif_123",
+        "category": "social",
+        "type": "friend_request",
+        "title": "好友请求",
+        "content": "张三想要添加你为好友",
+        "data": {
+          "user_id": "user_456",
+          "user_name": "张三",
+          "relation_id": "rel_789"
+        },
+        "action_url": "/friends/requests",
+        "created_at": "2025-10-27T12:30:00Z",
+        "is_read": false
+      },
+      {
+        "id": "notif_124",
+        "category": "social",
+        "type": "group_invite",
+        "title": "群组邀请",
+        "content": "李四邀请你加入"北京跑步群"",
+        "data": {
+          "user_id": "user_789",
+          "user_name": "李四",
+          "group_id": "group_456",
+          "group_name": "北京跑步群"
+        },
+        "action_url": "/groups/group_456",
+        "created_at": "2025-10-27T11:00:00Z",
+        "is_read": true
+      },
+      {
+        "id": "notif_125",
+        "category": "system",
+        "type": "system_announcement",
+        "title": "系统维护通知",
+        "content": "系统将于今晚22:00-23:00进行维护",
+        "severity": "warning",
+        "created_at": "2025-10-27T10:00:00Z",
+        "is_read": false
+      }
+    ],
+    "has_more": true,
+    "next_cursor": "cursor_abc"
+  }
+}
+```
+
+**2. POST /api/v1/protected/inbox/unread_summary - 获取未读提醒统计**
+
+Request: `GetUnreadInboxSummaryRequest`
 ```typescript
 {}  // 空请求体
 ```
 
-Response: `FetchUnpushedEventsResponse`
+Response: `GetUnreadInboxSummaryResponse`
 ```typescript
 {
-  events: EventResponse[];
-  total_count: number;
+  total: number;            // 总未读数
+  by_category: {
+    social: number;         // 社交类未读数
+    content: number;        // 内容类未读数
+    system: number;         // 系统类未读数
+  };
 }
 ```
 
-**4. POST /api/v1/protected/events/acknowledge - 确认收到事件（ACK）**
+**3. POST /api/v1/protected/inbox/mark_read - 标记提醒已读**
 
-Request: `AcknowledgeEventsRequest`
+Request: `MarkInboxItemsReadRequest`
 ```typescript
 {
-  event_ids: string[];
-  acknowledged_at?: string;
+  ids?: string[];           // 通知ID列表，缺省=全部标记为已读
 }
 ```
 
-Response: `AcknowledgeEventsResponse`
+Response: `MarkInboxItemsReadResponse`
 ```typescript
 {
   success: boolean;
   message: string;
-  acknowledged_count: number;
-  failed_ids?: string[];
+  marked_count: number;     // 实际标记的数量
 }
 ```
 
-### 2.9 系统状态 API
+**4. POST /api/v1/protected/inbox/delete - 删除提醒**
 
-**1. POST /api/v1/public/status/health - 系统健康检查**
+Request: `DeleteInboxItemsRequest`
+```typescript
+{
+  ids: string[];            // 通知ID列表
+}
+```
+
+Response: `DeleteInboxItemsResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+  deleted_count: number;    // 实际删除的数量
+}
+```
+
+**5. POST /api/v1/protected/inbox/update_device_token - 注册/注销设备推送Token**
+
+Request: `UpdateDeviceTokenRequest`
+```typescript
+{
+  action: 'register' | 'unregister';
+  platform: 'ios' | 'android' | 'web';
+  token: string;            // unregister 时可为空
+}
+```
+
+Response: `UpdateDeviceTokenResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+### 3.11 系统 API
+
+**1. POST /api/v1/public/system/health - 系统健康检查**
 
 Request: `HealthCheckRequest`
 ```typescript
@@ -2016,633 +3072,341 @@ Request: `HealthCheckRequest`
 Response: `HealthCheckResponse`
 ```typescript
 {
-  status: 'healthy'|'degraded'|'unhealthy';
-  timestamp: string;
+  status: 'healthy' | 'degraded' | 'unhealthy';
   version: string;
-  uptime: number;
-  database: {
-    status: 'connected'|'disconnected';
-    response_time: number;
-  };
-  redis: {
-    status: 'connected'|'disconnected';
-    response_time: number;
-  };
-  metrics: {
-    cpu_usage: number;
-    memory_usage: number;
-    active_connections: number;
-    total_requests: number;
-    error_rate: number;
-  };
+  timestamp: string;
 }
 ```
 
-### 2.10 排行榜 API
+说明：此接口用于监控系统状态,详细的metrics信息不对外暴露
 
-**1. POST /api/v1/public/leaderboard/top_creators - 内容创作者排行榜**
+### 3.12 排行榜 API
 
-Request: `TopCreatorsRequest`
+说明：排行榜系统基于用户活跃度和内容质量进行排名,支持多个维度和时间范围
+
+**1. POST /api/v1/public/leaderboard/list - 获取排行榜**
+
+Request: `ListLeaderboardRequest`
 ```typescript
 {
-  scope: 'global' | 'country' | 'province' | 'city' | 'custom';
-  scope_value?: string;
-  timeframe: 'realtime' | 'daily' | 'weekly' | 'monthly' | 'all_time';
-  latitude?: number;
-  longitude?: number;
-  radius?: number;
-  limit?: number;
+  category: 'creators' | 'moments';  // 排行榜类别
+  timeframe: 'daily' | 'weekly' | 'monthly' | 'all_time';  // 时间范围
+  scope?: 'nearby' | 'friends';  // 可选，附近的人或好友
+  latitude?: number;        // scope=nearby时必填
+  longitude?: number;       // scope=nearby时必填
+  radius?: number;          // scope=nearby时可选，默认5000米，最大50000米
+  limit?: number;           // 默认50，最大100
 }
 ```
 
-Response: `TopCreatorsResponse`
+说明：
+- `category=creators`: 创作者排行榜,按瞬间数、点赞数、评论数等综合评分
+- `category=moments`: 热门瞬间排行榜,按点赞数、评论数、浏览数等综合评分
+- 不指定 `scope` 时返回全局排行榜
+- `scope=nearby`: 返回指定位置附近的排行榜
+- `scope=friends`: 返回好友排行榜（需登录）
+
+Response: 分页响应，项类型根据category不同：
+
+当 `category=creators` 时，项类型为 `CreatorRankResponse`:
 ```typescript
 {
-  leaderboard_type: 'top_creators';
-  scope: string;
-  scope_value?: string;
-  timeframe: string;
-  total_participants: number;
-  rankings: {
-    rank: number;
+  rank: number;
+  user: {
     user_id: string;
     nickname: string;
     avatar_url?: string;
-    score: number;
-    stats: {
-      total_moments: number;
-      total_likes_received: number;
-      total_comments_received: number;
-    };
-  }[];
-  updated_at: string;
-}
-```
-
-**2. POST /api/v1/public/leaderboard/top_moments - 热门瞬间排行榜**
-
-Request: `TopMomentsRequest`
-```typescript
-{
-  scope: 'global' | 'country' | 'province' | 'city' | 'custom';
-  scope_value?: string;
-  timeframe: 'realtime' | 'daily' | 'weekly' | 'monthly' | 'all_time';
-  latitude?: number;
-  longitude?: number;
-  radius?: number;
-  limit?: number;
-}
-```
-
-Response: `TopMomentsResponse`
-```typescript
-{
-  leaderboard_type: 'top_moments';
-  scope: string;
-  scope_value?: string;
-  timeframe: string;
-  rankings: {
-    rank: number;
-    moment_id: string;
-    user_id: string;
-    nickname: string;
-    user_avatar?: string;
-    description: string;
-    latitude: number;
-    longitude: number;
-    location_name: string;
-    created_at: string;
-    popularity_score: number;
-    stats: {
-      likes_count: number;
-      comments_count: number;
-      shares_count: number;
-      views_count: number;
-    };
-    images?: string[];
-    tags: string[];
-  }[];
-  updated_at: string;
-}
-```
-
-**3. POST /api/v1/public/leaderboard/top_groups - 热门群组排行榜**
-
-Request: `TopGroupsRequest`
-```typescript
-{
-  scope: 'global' | 'country' | 'province' | 'city' | 'custom';
-  scope_value?: string;
-  latitude?: number;
-  longitude?: number;
-  radius?: number;
-  limit?: number;
-}
-```
-
-Response: `TopGroupsResponse`
-```typescript
-{
-  leaderboard_type: 'top_groups';
-  scope: string;
-  scope_value?: string;
-  rankings: {
-    rank: number;
-    group_id: string;
-    group_type: 'public_group' | 'private_group';
-    name: string;
-    description?: string;
-    avatar_url?: string;
-    latitude: number;
-    longitude: number;
-    location_name: string;
-    created_at: string;
-    popularity_score: number;
-    stats: {
-      total_members: number;
-      active_members_7d: number;
-      total_messages: number;
-      messages_24h: number;
-    };
-  }[];
-  updated_at: string;
-}
-```
-
-**4. POST /api/v1/public/leaderboard/top_locations - 热门地点排行榜**
-
-Request: `TopLocationsRequest`
-```typescript
-{
-  scope: 'global' | 'country' | 'province' | 'city' | 'custom';
-  scope_value?: string;
-  latitude?: number;
-  longitude?: number;
-  radius?: number;
-  limit?: number;
-}
-```
-
-Response: `TopLocationsResponse`
-```typescript
-{
-  leaderboard_type: 'top_locations';
-  scope: string;
-  scope_value?: string;
-  rankings: {
-    rank: number;
-    location_key: string;
-    location_name: string;
-    latitude: number;
-    longitude: number;
-    country?: string;
-    province?: string;
-    city?: string;
-    popularity_score: number;
-    stats: {
-      total_moments: number;
-      total_groups: number;
-      total_visits: number;
-      unique_visitors: number;
-      moments_7d: number;
-    };
-  }[];
-  updated_at: string;
-}
-```
-
-**5. POST /api/v1/protected/leaderboard/rank - 获取用户排名**
-
-Request: `GetUserRankRequest`
-```typescript
-{
-  user_id?: string;
-  leaderboard_type: 'top_creators' | 'top_influencers' | 'top_explorers' | 'top_social';
-  scope: 'global' | 'country' | 'province' | 'city' | 'custom';
-  scope_value?: string;
-  timeframe: 'realtime' | 'daily' | 'weekly' | 'monthly' | 'all_time';
-  latitude?: number;
-  longitude?: number;
-  radius?: number;
-}
-```
-
-Response: `GetUserRankResponse`
-```typescript
-{
-  leaderboard_type: string;
-  scope: string;
-  scope_value?: string;
-  timeframe: string;
-  my_rank: number | null;
-  my_score: number;
-  total_participants: number;
-  percentile?: number;
-  top_rankers: {
-    rank: number;
-    user_id: string;
-    nickname: string;
-    avatar_url?: string;
-    score: number;
-  }[];
-}
-```
-
-**6. POST /api/v1/protected/leaderboard/nearby_ranking - 附近用户排行榜**
-
-Request: `NearbyRankingRequest`
-```typescript
-{
-  leaderboard_type: 'top_creators' | 'top_influencers' | 'top_explorers' | 'top_social';
-  latitude: number;
-  longitude: number;
-  radius: number;
-  timeframe: 'realtime' | 'daily' | 'weekly' | 'monthly' | 'all_time';
-  limit?: number;
-}
-```
-
-Response: `NearbyRankingResponse`
-```typescript
-{
-  leaderboard_type: string;
-  center_lat: number;
-  center_lng: number;
-  radius: number;
-  timeframe: string;
-  rankings: {
-    rank: number;
-    user_id: string;
-    nickname: string;
-    avatar_url?: string;
-    score: number;
-    distance: number;
-    is_friend: boolean;
-  }[];
-  updated_at: string;
-}
-```
-
-**7. POST /api/v1/protected/leaderboard/friends_ranking - 好友排行榜**
-
-Request: `FriendsRankingRequest`
-```typescript
-{
-  leaderboard_type: 'top_creators' | 'top_influencers' | 'top_explorers' | 'top_social';
-  timeframe: 'realtime' | 'daily' | 'weekly' | 'monthly' | 'all_time';
-  limit?: number;
-}
-```
-
-Response: `FriendsRankingResponse`
-```typescript
-{
-  leaderboard_type: string;
-  timeframe: string;
-  my_rank: number;
-  my_score: number;
-  rankings: {
-    rank: number;
-    user_id: string;
-    nickname: string;
-    avatar_url?: string;
-    score: number;
-    stats: {
-      total_moments?: number;
-      total_likes_received?: number;
-      total_followers?: number;
-      places_visited?: number;
-    };
-  }[];
-  updated_at: string;
-}
-```
-
-### 2.11 成就系统 API
-
-**1. POST /api/v1/public/achievements/list - 获取所有成就列表**
-
-Request: `ListAchievementsRequest`
-```typescript
-{
-  category?: 'social' | 'content' | 'exploration' | 'influence' | 'participation' | 'special';
-  rarity?: 'common' | 'rare' | 'epic' | 'legendary';
-  include_hidden?: boolean;
-}
-```
-
-Response: `ListAchievementsResponse`
-```typescript
-{
-  achievements: {
-    achievement_id: string;
-    name: string;
-    description: string;
-    icon_url?: string;
-    category: string;
-    rarity: string;
-    points: number;
-    criteria: {
-      type: string;
-      threshold: number;
-      description: string;
-    };
-    is_hidden: boolean;
-  }[];
-  total_count: number;
-}
-```
-
-**2. POST /api/v1/protected/achievements/user - 获取用户的成就**
-
-Request: `GetUserAchievementsRequest`
-```typescript
-{
-  user_id?: string;
-  category?: string;
-  rarity?: string;
-  status?: 'unlocked' | 'in_progress' | 'locked';
-}
-```
-
-Response: `GetUserAchievementsResponse`
-```typescript
-{
-  user_id: string;
-  total_achievements: number;
-  total_points: number;
-  level: number;
-  achievements: {
-    achievement_id: string;
-    name: string;
-    description: string;
-    icon_url?: string;
-    category: string;
-    rarity: string;
-    points: number;
-    status: 'unlocked' | 'in_progress' | 'locked';
-    unlocked_at?: string;
-    progress?: {
-      current: number;
-      target: number;
-      percentage: number;
-    };
-    is_claimed: boolean;
-  }[];
-}
-```
-
-**3. POST /api/v1/protected/achievements/user_achievements - 获取指定用户的成就**
-
-Request: `UserAchievementsRequest`
-```typescript
-{
-  user_id: string;
-  category?: string;
-  rarity?: string;
-}
-```
-
-Response: `UserAchievementsResponse`
-```typescript
-{
-  user_id: string;
-  nickname: string;
-  avatar_url?: string;
-  total_achievements: number;
-  total_points: number;
-  level: number;
-  achievements: {
-    achievement_id: string;
-    name: string;
-    description: string;
-    icon_url?: string;
-    category: string;
-    rarity: string;
-    points: number;
-    unlocked_at: string;
-  }[];
-}
-```
-
-**4. POST /api/v1/protected/achievements/claim - 手动领取可解锁的成就**
-
-Request: `ClaimAchievementRequest`
-```typescript
-{
-  achievement_id: string;
-}
-```
-
-Response: `ClaimAchievementResponse`
-```typescript
-{
-  success: boolean;
-  message: string;
-  achievement: {
-    achievement_id: string;
-    name: string;
-    description: string;
-    icon_url?: string;
-    category: string;
-    rarity: string;
-    points: number;
-    unlocked_at: string;
-    claimed_at: string;
   };
-  rewards?: {
-    points: number;
-    items?: string[];
-  };
-}
-```
-
-### 2.12 热点发现系统 API
-
-#### 热点数据响应类型
-
-**HotspotResponse** - 热点数据的通用响应类型
-```typescript
-{
-  hotspot_key: string;
-  location: {
-    latitude: number;
-    longitude: number;
-    location_name: string;
-  };
-  popularity_score: number;
-  statistics: {
-    total_moments: number;
-    active_users_count: number;
+  score: number;           // 综合评分
+  stats: {
+    moments_count: number;
     total_likes: number;
     total_comments: number;
-    recent_moments_24h: number;
+    followers_count: number;
   };
-  distance?: number;
-  last_updated: string;
+  distance?: number;       // 距离（米，scope=nearby时返回）
 }
 ```
 
-#### API 端点
-
-**1. POST /api/v1/public/hotspots/nearby - 获取附近热点**
-
-Request: `NearbyHotspotsRequest`
+当 `category=moments` 时，项类型为 `MomentRankResponse`:
 ```typescript
 {
-  latitude: number;
-  longitude: number;
-  radius?: number;          // 默认5000，最大20000
-  limit?: number;           // 默认20，最大100
+  rank: number;
+  moment: MomentResponse;  // 使用标准的MomentResponse
+  score: number;           // 综合评分
 }
 ```
 
-Response: `NearbyHotspotsResponse`
+**2. POST /api/v1/protected/leaderboard/my_rank - 获取我的排名**
+
+Request: `GetMyRankRequest`
 ```typescript
 {
-  hotspots: HotspotResponse[];
-}
-```
-
-**2. POST /api/v1/public/hotspots/trending - 获取热门热点**
-
-Request: `TrendingHotspotsRequest`
-```typescript
-{
-  scope?: 'global' | 'country' | 'city';
-  scope_value?: string;
-  timeframe?: 'today' | 'week' | 'month';
-  limit?: number;
-}
-```
-
-Response: `TrendingHotspotsResponse`
-```typescript
-{
-  hotspots: HotspotResponse[];
-}
-```
-
-**3. POST /api/v1/public/hotspots/search - 搜索热点**
-
-Request: `SearchHotspotsRequest`
-```typescript
-{
-  location_name?: string;
+  category: 'creators' | 'moments';
+  timeframe: 'daily' | 'weekly' | 'monthly' | 'all_time';
+  scope?: 'nearby' | 'friends';
   latitude?: number;
   longitude?: number;
   radius?: number;
-  limit?: number;
 }
 ```
 
-Response: `SearchHotspotsResponse`
+Response: `GetMyRankResponse`
 ```typescript
 {
-  hotspots: HotspotResponse[];
+  category: string;
+  timeframe: string;
+  scope?: string;
+  my_rank: number | null;  // null表示未上榜
+  my_score: number;
+  total_participants: number;
+  top_3: CreatorRankResponse[] | MomentRankResponse[];  // 前3名
 }
 ```
 
-**4. POST /api/v1/public/hotspots/detail - 获取热点详情**
+### 3.13 媒体上传 API
 
-Request: `HotspotDetailRequest`
+**1. POST /api/v1/protected/media/upload - 通用媒体上传**
+
+Request: `UploadMediaRequest`
 ```typescript
 {
-  latitude: number;
-  longitude: number;
-  radius?: number;          // 默认500
-}
-```
-
-Response: `HotspotDetailResponse`
-```typescript
-HotspotResponse
-```
-
-### 2.13 媒体上传 API
-
-#### 媒体上传响应类型
-
-**MediaUploadResponse** - 媒体上传成功的通用响应类型
-```typescript
-{
-  file_url: string;
-  file_name: string;
-  file_size: number;
-  file_type: string;
-  width?: number;
-  height?: number;
-  duration?: number;
-  uploaded_at: string;
-}
-```
-
-#### API 端点
-
-**1. POST /api/v1/protected/media/upload - 通用文件上传**
-
-Request: `UploadMediaRequest` (multipart/form-data)
-```typescript
-{
-  file: File;
-  category?: string;
+  file: File;               // 文件对象
+  category: 'avatar' | 'group_image' | 'moment_image' | 'file';
 }
 ```
 
 Response: `UploadMediaResponse`
 ```typescript
-MediaUploadResponse
-```
-
-**2. POST /api/v1/protected/media/upload/avatar - 上传用户头像**
-
-Request: `UploadAvatarRequest` (multipart/form-data)
-```typescript
 {
-  file: File;               // 限制：jpg/png/webp，最大5MB
+  url: string;              // 上传后的文件URL
+  file_size: number;        // 文件大小（字节）
+  mime_type: string;        // MIME类型
 }
 ```
 
-Response: `UploadAvatarResponse`
-```typescript
-MediaUploadResponse
-```
+// 说明：不同 category 对应不同校验与配额策略（如 avatar 5MB、group_image/moment_image 10MB 等）。
 
-**3. POST /api/v1/protected/media/upload/group_image - 上传群组图片**
+### 3.14 信息流（Feed）API
 
-Request: `UploadGroupImageRequest` (multipart/form-data)
+**1. POST /api/v1/protected/feed/list - 拉取信息流**
+
+Request: `ListFeedRequest`
 ```typescript
 {
-  file: File;               // 限制：jpg/png/webp，最大10MB
+  channel: 'following' | 'nearby' | 'recommended';
+  limit?: number;
+  cursor?: string;
 }
 ```
 
-Response: `UploadGroupImageResponse`
-```typescript
-MediaUploadResponse
-```
-
-**4. POST /api/v1/protected/media/upload/moment_images - 上传瞬间图片**
-
-Request: `UploadMomentImagesRequest` (multipart/form-data)
+Response: 分页响应，项类型为 `FeedItemResponse`
 ```typescript
 {
-  files: File[];            // 限制：最多9张，每张最大10MB
+  item_id: string;
+  type: 'moment' | 'group_card' | 'system';
+  payload: MomentResponse | GroupResponse | SystemAnnouncementPayload; // 根据 type 字段确定具体类型
+  reason?: string;          // 推荐理由（如 "你关注的人发布了新瞬间"）
+  score?: number;           // 推荐分数（0-1），仅 channel=recommended 时存在
+  is_pinned?: boolean;      // 是否置顶
 }
 ```
 
-Response: `UploadMomentImagesResponse`
-```typescript
+说明：
+- `type=moment`: `payload` 为 `MomentResponse`
+- `type=group_card`: `payload` 为 `GroupResponse`（简化版，仅包含基本信息）
+- `type=system`: `payload` 为系统公告内容
+
+完整成功响应示例（分页）：
+```json
 {
-  uploads: MediaUploadResponse[];
-  success_count: number;
-  failed_count: number;
+  "code": 0,
+  "message": "Success",
+  "data": {
+    "items": [
+      {
+        "item_id": "feed_item_1",
+        "type": "moment",
+        "payload": {
+          "moment_id": "moment_123",
+          "user_id": "user_456",
+          "nickname": "张三",
+          "description": "今天跑步10公里",
+          "images": ["https://example.com/img1.jpg"],
+          "created_at": "2025-10-27T12:00:00Z"
+        },
+        "reason": "你关注的人发布了新瞬间",
+        "is_pinned": false
+      },
+      {
+        "item_id": "feed_item_2",
+        "type": "group_card",
+        "payload": {
+          "group_id": "group_789",
+          "name": "北京跑步群",
+          "member_count": 128
+        },
+        "reason": "附近热门群组",
+        "score": 0.95
+      }
+    ],
+    "has_more": true,
+    "next_cursor": "cursor_feed_xyz"
+  }
 }
 ```
 
-## 3. WebSocket 消息类型定义
+**2. POST /api/v1/protected/feed/feedback - 反馈信息流条目**
 
-### 3.1 连接管理消息
+Request: `FeedFeedbackRequest`
+```typescript
+{
+  item_id: string;
+  action: 'hide' | 'not_interested' | 'clicked' | 'viewed';
+}
+```
+
+Response: `FeedFeedbackResponse`
+```typescript
+{
+  success: boolean;
+  message: string;
+}
+```
+
+## 4. WebSocket 实时事件定义
+
+### 4.0 WebSocket 事件类型索引
+
+以下是系统支持的所有 WebSocket 事件类型：
+
+#### 服务端推送事件（Server → Client）
+
+| 事件类型 | 所属频道 | 说明 | 章节 |
+|---------|---------|------|------|
+| `ConnectionEstablished` | - | 连接建立确认 | 4.2 |
+| `ConnectionClosed` | - | 连接关闭通知 | 4.2 |
+| `Heartbeat` | - | 心跳保活 | 4.2 |
+| `UserOnline` | `presence` | 用户上线 | 4.3 |
+| `UserOffline` | `presence` | 用户下线 | 4.3 |
+| `UserLocationUpdate` | `presence` | 位置更新 | 4.3 |
+| `ChatMessageNew` | `chat_messages` | 新聊天消息 | 4.4 |
+| `ChatMessageEdited` | `chat_messages` | 消息被编辑 | 4.4 |
+| `ChatMessageRecalled` | `chat_messages` | 消息被撤回 | 4.4 |
+| `ChatMessageDeleted` | `chat_messages` | 消息被删除 | 4.4 |
+| `ChatMessageRead` | `chat_messages` | 消息已读回执 | 4.4 |
+| `ChatMessageReaction` | `chat_messages` | 消息反应 | 4.4 |
+| `UserTyping` | `chat_messages` | 正在输入状态 | 4.4 |
+| `GroupMemberJoined` | `group.{group_id}` | 成员加入群组 | 4.5 |
+| `GroupMemberLeft` | `group.{group_id}` | 成员离开群组 | 4.5 |
+| `GroupMemberRemoved` | `group.{group_id}` | 成员被移除 | 4.5 |
+| `GroupRoleChanged` | `group.{group_id}` | 成员角色变更 | 4.5 |
+| `GroupProfileUpdated` | `group.{group_id}` | 群组资料更新 | 4.5 |
+| `ChatUpgradedToGroup` | `group.{group_id}` | 私聊升级为群组 | 4.5 |
+| `InboxItem` | `inbox.social`/`inbox.content`/`inbox.system` | 收件箱新提醒 | 4.6 |
+| `SystemBroadcast` | - | 系统广播（强制推送） | 4.7 |
+| `SubscribeAck` | - | 订阅确认 | 4.8 |
+| `Pong` | - | 心跳响应 | 4.8 |
+
+#### 客户端发送事件（Client → Server）
+
+| 事件类型 | 说明 | 章节 |
+|---------|------|------|
+| `Ping` | 心跳保活 | 4.8 |
+| `Subscribe` | 订阅频道 | 4.8 |
+| `Unsubscribe` | 取消订阅 | 4.8 |
+| `MarkAsRead` | 标记已读（快速通道） | 4.8 |
+| `Typing` | 正在输入通知 | 4.8 |
+
+#### 订阅频道说明
+
+| 频道名称 | 说明 | 包含的事件类型 |
+|---------|------|--------------|
+| `chat_messages` | 聊天消息 | 所有 `ChatMessage*` 事件 |
+| `inbox.social` | 社交类提醒 | 好友申请、群组邀请等 |
+| `inbox.content` | 内容类提醒 | 点赞、评论、@提及等 |
+| `inbox.system` | 系统类提醒 | 系统公告、安全警告等 |
+| `presence` | 在线状态 | `UserOnline`、`UserOffline` |
+| `group.{group_id}` | 特定群组事件 | 该群组的所有 `Group*` 事件 |
+
+说明：
+- 客户端需要主动订阅感兴趣的频道才能接收相应的推送事件
+- `Typing` 事件不需要订阅，自动包含在 `chat_messages` 频道中
+- `SystemBroadcast` 和连接管理事件无需订阅，自动推送
+
+---
+
+### 4.1 WebSocket 设计理念
+
+#### 核心定位
+WebSocket 是 **实时数据推送通道**，用于服务端主动向客户端推送所有需要实时处理的数据：
+- ✅ 新消息到达
+- ✅ 在线状态变更
+- ✅ 群组成员变动
+- ✅ 收件箱新提醒
+- ✅ 消息已读回执
+- ✅ 用户正在输入状态
+
+#### 与 API 的职责分工
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    客户端应用                             │
+├─────────────────────────────────────────────────────────┤
+│                                                           │
+│  冷启动阶段:                                              │
+│  ┌─────────┐                                             │
+│  │ API 调用 │ → 加载历史数据（消息、提醒、会话列表等）    │
+│  └─────────┘                                             │
+│       ↓                                                   │
+│  ┌─────────────┐                                         │
+│  │ WebSocket 连接│ → 开始接收实时推送                     │
+│  └─────────────┘                                         │
+│                                                           │
+│  使用过程中:                                              │
+│  ┌─────────┐                                             │
+│  │ API 调用 │ → 主动操作（发送消息、标记已读等）          │
+│  └─────────┘                                             │
+│  ┌─────────────┐                                         │
+│  │ WebSocket 推送│ → 被动接收（新消息、状态变更等）        │
+│  └─────────────┘                                         │
+│                                                           │
+│  断线重连:                                                │
+│  ┌─────────────┐                                         │
+│  │ WebSocket 重连│                                        │
+│  └─────────────┘                                         │
+│       ↓                                                   │
+│  ┌─────────┐                                             │
+│  │ API 补拉 │ → 获取离线期间的数据                        │
+│  └─────────┘                                             │
+│       ↓                                                   │
+│  ┌─────────────┐                                         │
+│  │ WebSocket 推送│ → 恢复实时接收                         │
+│  └─────────────┘                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+#### 推送原则
+1. **实时性优先**: 所有需要立即通知用户的事件都通过 WebSocket 推送
+2. **完整数据**: 推送的数据应包含前端渲染所需的完整信息，避免二次查询
+3. **幂等性**: 客户端应能处理重复推送（网络抖动可能导致重发）
+4. **降级处理**: WebSocket 断开时，客户端应能通过 API 轮询保证基本功能
+
+---
+
+### 4.1 连接与鉴权规范
+
+- **鉴权**: 采用受保护的 HTTP 登录后，下发 `access_token`；WebSocket 连接时通过 `Sec-WebSocket-Protocol` 子协议或 `Authorization: Bearer <token>` 头传递；重连沿用最新有效 token。
+- **心跳**: 客户端每 25s 发送 `Ping`，服务端在 5s 内回 `Pong`；超过 60s 未收到心跳或业务帧则服务端可断开连接。
+- **重连退避**: 指数退避起始 1s，最大 30s，随机抖动 20%。
+- **断线补偿**: 重连成功后客户端应优先调用以下 API 补拉离线数据：
+  - `POST /api/v1/protected/inbox/list?is_read=false` - 未读提醒
+  - `POST /api/v1/protected/chat_messages/unread_summary?include_details=true` - 未读消息汇总
+  - 然后恢复 WebSocket 实时接收
+
+---
+
+### 4.2 连接管理事件
 
 **ConnectionEstablished** - 连接建立确认
 ```typescript
@@ -2666,7 +3430,7 @@ Response: `UploadMomentImagesResponse`
 }
 ```
 
-### 3.2 用户状态消息
+### 4.3 在线状态事件
 
 **UserOnline** - 用户上线
 ```typescript
@@ -2706,28 +3470,121 @@ Response: `UploadMomentImagesResponse`
 }
 ```
 
-### 3.3 群组消息
+### 4.4 聊天消息事件
 
 **NewMessage** - 新消息
 ```typescript
 {
   type: "NewMessage";
   payload: {
-    message_id: string;
-    target_id: string;      // conversation_id 或 group_id
-    target_type: 'conversation' | 'group';
-    sender_id: string;
-    sender_nickname: string;
-    sender_avatar: string;
-    message_type: string;
+    id: string;             // 消息ID
+    target_id: string;      // chat_id 或 group_id
+    target_type: 'chat' | 'group';
+    sender: {
+      user_id: string;
+      nickname: string;
+      avatar_url?: string;
+    };
+    type: 'text' | 'image' | 'video' | 'audio' | 'file' | 'location' | 'system';
     content: string;
-    media_urls?: string[];
-    reply_to_message_id?: string;
-    mentioned_users?: string[];
+    reply_to?: string;      // 回复的消息ID
+    mentions?: string[];    // @的用户ID列表
+    sent_at: string;        // ISO 8601
+  };
+}
+```
+
+**MessageEdited** - 消息编辑
+```typescript
+{
+  type: "MessageEdited";
+  payload: {
+    id: string;             // 消息ID
+    target_id: string;      // chat_id 或 group_id
+    target_type: 'chat' | 'group';
+    content: string;        // 新内容
+    edited_at: string;      // ISO 8601
+  };
+}
+```
+
+**MessageRecalled** - 消息撤回
+```typescript
+{
+  type: "MessageRecalled";
+  payload: {
+    id: string;             // 消息ID
+    target_id: string;      // chat_id 或 group_id
+    target_type: 'chat' | 'group';
+    recalled_by: string;    // 撤回者ID
+    recalled_at: string;    // ISO 8601
+  };
+}
+```
+
+**MessageDeleted** - 消息删除
+```typescript
+{
+  type: "MessageDeleted";
+  payload: {
+    id: string;             // 消息ID
+    target_id: string;      // chat_id 或 group_id
+    target_type: 'chat' | 'group';
+    deleted_by: string;     // 删除者ID
+    for_everyone: boolean;  // 是否为所有人删除
+    deleted_at: string;     // ISO 8601
+  };
+}
+```
+
+**MessageReaction** - 消息反应
+```typescript
+{
+  type: "MessageReaction";
+  payload: {
+    id: string;             // 消息ID
+    target_id: string;      // chat_id 或 group_id
+    target_type: 'chat' | 'group';
+    user: {
+      user_id: string;
+      nickname: string;
+    };
+    reaction_type: 'like' | 'love' | 'laugh' | 'angry' | 'sad' | 'wow';
+    action: 'add' | 'remove';
     created_at: string;     // ISO 8601
   };
 }
 ```
+
+**MessageRead** - 消息已读回执
+```typescript
+{
+  type: "MessageRead";
+  payload: {
+    target_id: string;      // chat_id 或 group_id
+    target_type: 'chat' | 'group';
+    up_to: string;          // 读到哪条消息ID
+    reader_id: string;
+    read_at: string;        // ISO 8601
+  };
+}
+```
+
+**UserTyping** - 用户正在输入
+```typescript
+{
+  type: "UserTyping";
+  payload: {
+    target_id: string;      // chat_id 或 group_id
+    target_type: 'chat' | 'group';
+    user_id: string;
+    nickname: string;
+    is_typing: boolean;
+  };
+}
+```
+
+### 4.5 群组事件
 
 **GroupMemberJoined** - 成员加入
 ```typescript
@@ -2735,9 +3592,11 @@ Response: `UploadMomentImagesResponse`
   type: "GroupMemberJoined";
   payload: {
     group_id: string;
-    user_id: string;
-    nickname: string;
-    avatar_url: string;
+    user: {
+      user_id: string;
+      nickname: string;
+      avatar_url?: string;
+    };
     joined_at: string;      // ISO 8601
   };
 }
@@ -2771,118 +3630,54 @@ Response: `UploadMomentImagesResponse`
 }
 ```
 
-**GroupUpgraded** - 私聊升级为群组
+**ChatUpgradedToGroup** - 私聊升级为群组
 ```typescript
 {
-  type: "GroupUpgraded";
+  type: "ChatUpgradedToGroup";
   payload: {
-    old_group_id: string;
+    old_chat_id: string;
     new_group_id: string;
-    group_type: string;
+    group_type: 'public_group' | 'private_group';
     upgraded_at: string;    // ISO 8601
   };
 }
 ```
 
-**MessageReaction** - 消息反应通知
+### 4.6 收件箱事件
+
+**InboxItem** - 收件箱提醒推送
 ```typescript
 {
-  type: "MessageReaction";
+  type: "InboxItem";
   payload: {
-    message_id: string;
-    target_id: string;      // conversation_id 或 group_id
-    user_id: string;
-    nickname: string;
-    reaction_type: string;
-    action: "add" | "remove";
-    reaction_count: number;
+    id: string;             // 通知ID
+    category: 'social' | 'system' | 'content';  // 通知分类
+    type: string;           // 具体类型（如 friend_request, moment_like 等）
+    title?: string;         // 通知标题
+    content: string;        // 通知内容
+    data?: {                // 类型相关的额外数据
+      user_id?: string;
+      user_name?: string;
+      group_id?: string;
+      group_name?: string;
+      moment_id?: string;
+      comment_id?: string;
+      relation_id?: string;
+      [key: string]: any;
+    };
+    action_url?: string;    // 点击跳转URL
+    severity?: 'info' | 'warning' | 'error';  // 严重程度（仅系统通知）
     created_at: string;     // ISO 8601
   };
 }
 ```
 
-**UserTyping** - 用户正在输入
-```typescript
-{
-  type: "UserTyping";
-  payload: {
-    target_id: string;      // conversation_id 或 group_id
-    user_id: string;
-    nickname: string;
-    is_typing: boolean;
-  };
-}
-```
+说明：
+- 实时推送提醒给在线用户
+- 与 `InboxItemResponse` 结构保持一致
+- 离线用户可通过 `POST /api/v1/protected/inbox/list` 拉取历史提醒
 
-**MessageRead** - 消息已读回执
-```typescript
-{
-  type: "MessageRead";
-  payload: {
-    target_id: string;      // conversation_id 或 group_id
-    message_id: string;
-    reader_id: string;
-    read_at: string;        // ISO 8601
-  };
-}
-```
-
-**MessageDeleted** - 消息删除通知
-```typescript
-{
-  type: "MessageDeleted";
-  payload: {
-    message_id: string;
-    target_id: string;      // conversation_id 或 group_id
-    deleted_by: string;
-    delete_for_everyone: boolean;
-    deleted_at: string;     // ISO 8601
-  };
-}
-```
-
-### 3.4 事件推送消息
-
-**EventPush** - 统一事件推送
-```typescript
-{
-  type: "EventPush";
-  payload: {
-    event_id: string;
-    event_type: string;
-    event_data: object;
-    created_at: string;     // ISO 8601
-  };
-}
-```
-
-**EventAck** - 事件确认
-```typescript
-{
-  type: "EventAck";
-  payload: {
-    event_ids: string[];
-    acknowledged_at: string; // ISO 8601
-  };
-}
-```
-
-### 3.5 系统消息
-
-**SystemNotification** - 系统通知
-```typescript
-{
-  type: "SystemNotification";
-  payload: {
-    notification_id: string;
-    title: string;
-    content: string;
-    severity: "info" | "warning" | "error";
-    action_url?: string;
-    created_at: string;     // ISO 8601
-  };
-}
-```
+### 4.7 系统事件
 
 **Error** - 错误消息
 ```typescript
@@ -2896,9 +3691,11 @@ Response: `UploadMomentImagesResponse`
 }
 ```
 
-### 3.6 客户端发送消息
+### 4.8 客户端发送事件
 
-客户端可以通过 WebSocket 向服务器发送以下轻量级操作消息：
+客户端可以通过 WebSocket 向服务器发送以下操作消息：
+
+#### 连接管理
 
 **Ping** - 心跳保活
 ```typescript
@@ -2920,97 +3717,347 @@ Response: `UploadMomentImagesResponse`
 }
 ```
 
+#### 订阅管理
+
+**Subscribe** - 订阅事件类型
+```typescript
+{
+  type: "Subscribe";
+  payload: {
+    channels: string[];     // 要订阅的频道列表
+  };
+}
+```
+
+说明：
+- 连接建立后，客户端需要主动订阅感兴趣的事件类型
+- 支持的频道类型：
+  - `chat_messages` - 聊天消息事件
+  - `inbox.social` - 社交类提醒
+  - `inbox.content` - 内容类提醒
+  - `inbox.system` - 系统类提醒
+  - `presence` - 在线状态事件
+  - `group.{group_id}` - 特定群组事件
+  - `typing` - 正在输入状态
+
+示例：
+```typescript
+// 订阅所有聊天消息和社交提醒
+{
+  type: "Subscribe",
+  payload: {
+    channels: ["chat_messages", "inbox.social", "presence"]
+  }
+}
+```
+
+**Unsubscribe** - 取消订阅
+```typescript
+{
+  type: "Unsubscribe";
+  payload: {
+    channels: string[];     // 要取消订阅的频道列表
+  };
+}
+```
+
+说明：
+- 客户端可以动态调整订阅，无需断开连接
+- 取消订阅后，服务端不再推送该频道的事件
+
+**SubscribeAck** - 订阅确认（服务端响应）
+```typescript
+{
+  type: "SubscribeAck";
+  payload: {
+    subscribed: string[];   // 成功订阅的频道
+    failed: {
+      channel: string;
+      reason: string;
+    }[];                    // 订阅失败的频道
+  };
+}
+```
+
+#### 实时状态同步
+
 **MarkAsRead** - 标记已读（快速通道）
 ```typescript
 {
   type: "MarkAsRead";
   payload: {
-    target_id: string;      // conversation_id 或 group_id
-    message_id: string;
+    target_id: string;      // chat_id 或 group_id
+    target_type: 'chat' | 'group';
+    up_to: string;          // 读到哪条消息ID
   };
 }
 ```
+
+说明：通过 WebSocket 标记已读可以实现实时已读回执，比 API 调用更快。
 
 **Typing** - 正在输入通知
 ```typescript
 {
   type: "Typing";
   payload: {
-    target_id: string;      // conversation_id 或 group_id
+    target_id: string;      // chat_id 或 group_id
+    target_type: 'chat' | 'group';
     is_typing: boolean;     // true=开始输入，false=停止输入
   };
 }
 ```
 
-## 4. 事件类型与订阅
+说明：正在输入状态是临时的，通常只在对方正在输入时显示，不需要持久化。
 
-### 4.1 支持的事件类型
+#### 订阅管理最佳实践
 
-以下是系统支持的所有事件类型（event_type）：
+**连接建立流程**：
+```
+1. WebSocket 连接成功
+2. 收到 ConnectionEstablished 事件
+3. 客户端发送 Subscribe 消息，订阅需要的频道
+4. 收到 SubscribeAck 确认
+5. 开始接收订阅频道的实时推送
+```
 
-#### 社交互动事件
+**订阅策略建议**：
+```typescript
+// 应用启动时的基础订阅
+{
+  type: "Subscribe",
+  payload: {
+    channels: [
+      "chat_messages",      // 聊天消息
+      "inbox.social",       // 社交提醒
+      "inbox.system",       // 系统提醒
+      "presence"            // 在线状态
+    ]
+  }
+}
+
+// 进入某个群组页面时，额外订阅
+{
+  type: "Subscribe",
+  payload: {
+    channels: ["group.group_abc123"]
+  }
+}
+
+// 离开群组页面时，取消订阅
+{
+  type: "Unsubscribe",
+  payload: {
+    channels: ["group.group_abc123"]
+  }
+}
+
+// 用户在设置中关闭"内容提醒"
+{
+  type: "Unsubscribe",
+  payload: {
+    channels: ["inbox.content"]
+  }
+}
+```
+
+**频道命名规范**：
+- 全局频道：直接使用名称（如 `chat_messages`）
+- 分类频道：使用点分隔（如 `inbox.social`）
+- 资源频道：使用点+ID（如 `group.{group_id}`）
+
+## 5. 收件箱提醒类型与订阅
+
+### 5.1 支持的提醒类型
+
+以下是系统支持的所有通知类型（按 category 分组）：
+
+#### 社交互动通知 (category: 'social')
 - `friend_request` - 好友申请
 - `friend_accepted` - 好友申请被接受
-
-#### 群组相关事件
 - `group_invite` - 群组邀请
 - `group_invite_response` - 群组邀请响应（接受/拒绝）
 
-#### 消息相关事件
+#### 内容互动通知 (category: 'content')
 - `message_mention` - 消息中被@提及
-
-#### 瞬间互动事件
 - `moment_like` - 生活瞬间被点赞
 - `moment_comment` - 生活瞬间被评论
 - `comment_reply` - 评论被回复
 
-#### 系统通知事件
+#### 系统通知 (category: 'system')
 - `system_announcement` - 系统公告
+- `system_maintenance` - 系统维护通知
+- `account_warning` - 账号警告
+- `security_alert` - 安全提醒
 
-### 4.2 事件订阅配置
+### 5.2 提醒订阅配置
 
-用户可以通过订阅配置API控制接收哪些类型的事件推送：
+系统提供两层订阅控制机制：
 
-- `friend_request_enabled` - 是否接收好友申请事件
-- `friend_accepted_enabled` - 是否接收好友接受事件
-- `group_invite_enabled` - 是否接收群组邀请事件
-- `group_invite_response_enabled` - 是否接收群组邀请响应事件
-- `message_mention_enabled` - 是否接收消息提及事件
-- `moment_like_enabled` - 是否接收瞬间点赞事件
-- `moment_comment_enabled` - 是否接收瞬间评论事件
-- `comment_reply_enabled` - 是否接收评论回复事件
-- `system_announcement_enabled` - 是否接收系统公告事件
+#### 层级 1：持久化偏好设置（通过 API）
 
-默认情况下，所有订阅配置均为 `true`（启用）。
+用户可以通过订阅配置 API (`POST /api/v1/protected/subscriptions/update`) 设置**持久化的订阅偏好**：
 
-### 4.3 事件推送机制
+- `friend_request_enabled` - 是否接收好友申请通知
+- `friend_accepted_enabled` - 是否接收好友接受通知
+- `group_invite_enabled` - 是否接收群组邀请通知
+- `group_invite_response_enabled` - 是否接收群组邀请响应通知
+- `message_mention_enabled` - 是否接收消息提及通知
+- `moment_like_enabled` - 是否接收瞬间点赞通知
+- `moment_comment_enabled` - 是否接收瞬间评论通知
+- `comment_reply_enabled` - 是否接收评论回复通知
+- `system_announcement_enabled` - 是否接收系统公告通知
 
-1. **事件生成**：当特定操作发生时，系统会生成相应的事件记录
-2. **订阅过滤**：系统根据用户的订阅配置决定是否生成该用户的事件推送记录
-3. **推送方式**：
-   - 优先通过 WebSocket 实时推送
-   - 如果用户不在线，事件会保存在 `event_push_records` 表中
-   - 用户下次连接时通过 `fetch_unpushed` API 获取未推送的事件
-4. **事件确认**：客户端收到事件后应发送 ACK 确认，系统标记为已推送
+**特点**：
+- 持久化存储在数据库中
+- 跨设备、跨会话生效
+- 通常在"设置"页面修改
+- 默认全部启用（`true`）
 
-### 4.4 事件数据结构
+#### 层级 2：实时订阅控制（通过 WebSocket）
 
-每个事件类型的 `event_data` 字段结构各不相同，具体结构由业务逻辑定义。通常包含：
-- 触发事件的用户信息
-- 相关资源的ID和基本信息
-- 事件发生的时间
-- 其他上下文信息
+用户可以通过 WebSocket 的 `Subscribe`/`Unsubscribe` 消息**动态控制当前连接的订阅**：
 
-## 5. API 版本与兼容性
+```typescript
+// 订阅社交类提醒
+{ type: "Subscribe", payload: { channels: ["inbox.social"] } }
 
-### 5.1 版本控制
+// 取消订阅内容类提醒
+{ type: "Unsubscribe", payload: { channels: ["inbox.content"] } }
+```
+
+**特点**：
+- 仅影响当前 WebSocket 连接
+- 可以动态调整，无需断开连接
+- 适合临时性的订阅控制（如进入/离开某个页面）
+- 连接断开后失效
+
+#### 两层订阅的关系
+
+```
+最终是否推送 = 持久化偏好 AND 实时订阅
+
+示例 1：
+- 持久化偏好：moment_like_enabled = true
+- 实时订阅：已订阅 "inbox.content"
+- 结果：✅ 会收到点赞提醒
+
+示例 2：
+- 持久化偏好：moment_like_enabled = true
+- 实时订阅：未订阅 "inbox.content"
+- 结果：❌ 不会收到点赞提醒
+
+示例 3：
+- 持久化偏好：moment_like_enabled = false
+- 实时订阅：已订阅 "inbox.content"
+- 结果：❌ 不会收到点赞提醒（持久化偏好优先）
+```
+
+#### 频道与提醒类型的映射
+
+| WebSocket 频道 | 包含的提醒类型 |
+|---------------|--------------|
+| `inbox.social` | friend_request, friend_accepted, group_invite, group_invite_response |
+| `inbox.content` | message_mention, moment_like, moment_comment, comment_reply |
+| `inbox.system` | system_announcement, system_maintenance, account_warning, security_alert |
+
+### 5.3 提醒推送机制
+
+1. **通知生成**：当特定操作发生时，系统会生成相应的通知记录
+2. **持久化过滤**：检查用户的持久化订阅偏好（如 `moment_like_enabled`）
+3. **实时订阅过滤**：检查用户当前 WebSocket 连接是否订阅了相应频道（如 `inbox.content`）
+4. **实时推送**：对于在线且通过两层过滤的用户，通过 WebSocket 实时推送 `InboxItem` 事件
+5. **离线存储**：对于离线用户或未订阅的用户，提醒会存储在数据库中，用户上线后可通过 API 拉取
+6. **已读管理**：用户可以标记提醒为已读或删除提醒
+
+#### 推送流程图
+
+```
+事件发生（如：张三点赞了李四的瞬间）
+    ↓
+生成 InboxItem 记录
+    ↓
+检查李四的持久化偏好：moment_like_enabled = ?
+    ↓
+    ├─ false → 不推送，不存储
+    └─ true → 继续
+        ↓
+        存储到数据库
+        ↓
+        检查李四是否在线
+        ↓
+        ├─ 离线 → 等待下次上线拉取
+        └─ 在线 → 检查 WebSocket 订阅
+            ↓
+            检查是否订阅了 "inbox.content"
+            ↓
+            ├─ 未订阅 → 不推送（但已存储）
+            └─ 已订阅 → 实时推送 InboxItem 事件
+```
+
+### 5.4 提醒数据结构示例
+
+每个通知类型的 `data` 字段结构各不相同，以下是常见通知类型的数据结构示例：
+
+#### friend_request（好友申请）
+```typescript
+{
+  user_id: string;
+  user_name: string;
+  relation_id: string;
+}
+```
+
+#### group_invite（群组邀请）
+```typescript
+{
+  user_id: string;        // 邀请者ID
+  user_name: string;      // 邀请者名称
+  group_id: string;
+  group_name: string;
+}
+```
+
+#### moment_like（瞬间点赞）
+```typescript
+{
+  user_id: string;        // 点赞者ID
+  user_name: string;      // 点赞者名称
+  moment_id: string;
+}
+```
+
+#### moment_comment（瞬间评论）
+```typescript
+{
+  user_id: string;        // 评论者ID
+  user_name: string;      // 评论者名称
+  moment_id: string;
+  comment_id: string;
+  comment_content: string;
+}
+```
+
+#### message_mention（消息提及）
+```typescript
+{
+  user_id: string;        // 提及者ID
+  user_name: string;      // 提及者名称
+  target_id: string;      // chat_id 或 group_id
+  target_type: 'chat' | 'group';
+  message_id: string;
+}
+```
+
+## 6. API 版本与兼容性
+
+### 6.1 版本控制
 
 - 当前 API 版本：v1
 - API 路径格式：`/api/v1/...`
 - 版本变更会通过新的版本路径提供（如 v2）
 
-### 5.2 向后兼容性原则
+### 6.2 API 演进原则
 
 - 添加新字段不视为破坏性变更
 - 删除字段或修改字段类型视为破坏性变更
-- 破坏性变更将通过新版本API提供
+- 破坏性变更将通过新版本 API 提供（如 v2）

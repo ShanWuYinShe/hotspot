@@ -1,0 +1,1548 @@
+---
+description: HotSpot 后端开发需求文档 - 面向后端开发团队的技术实现指南
+alwaysApply: false
+---
+
+# HotSpot 后端开发需求文档
+
+## 1. 项目概述
+
+### 1.1 项目简介
+
+HotSpot 是一个基于地理位置的社交平台，支持用户发现附近的人和热点、创建和加入群组、分享生活瞬间、实时消息通讯等功能。
+
+### 1.2 技术栈
+
+- **编程语言**: Rust (Edition 2021)
+- **Web 框架**: Axum 0.7+
+- **数据库**: PostgreSQL 15+ (主数据库) + Redis 7+ (缓存/会话)
+- **认证**: JWT (jsonwebtoken) + bcrypt (密码哈希)
+- **WebSocket**: tokio-tungstenite
+- **ORM**: SQLx (异步 SQL 工具包)
+- **序列化**: serde + serde_json
+- **异步运行时**: Tokio
+- **日志**: tracing + tracing-subscriber
+
+### 1.3 核心特性
+
+- 100+ API 端点（**统一使用 POST 方法**）
+- 实时 WebSocket 通讯（双层订阅机制）
+- 基于地理位置的搜索和推荐
+- 多层级权限控制
+- 事件驱动的收件箱系统
+- 完整的用户关系管理（好友、关注、拉黑）
+- 聊天消息与收件箱提醒分离设计
+
+### 1.4 API 设计约定
+
+**⚠️ 重要：所有 API 统一使用 POST 方法**
+
+本项目不采用传统的 RESTful 风格（GET/POST/PUT/DELETE），所有 API 端点统一使用 POST 方法。
+
+**设计原因**：
+- **复杂参数支持**：便于携带复杂过滤条件和请求体，避免 URL 过长
+- **统一处理逻辑**：简化路由设计和中间件处理
+- **安全性增强**：POST 请求体不会出现在日志和浏览器历史中
+- **缓存控制**：更好的缓存策略和反爬虫能力
+- **幂等性灵活**：由业务逻辑保证幂等性，不受 HTTP 方法限制
+
+**实现示例**：
+```rust
+// ✅ 正确：所有操作都使用 POST
+Router::new()
+    .route("/api/v1/public/auth/login", post(auth::login))           // 登录
+    .route("/api/v1/protected/user/search_by_id", post(user::search_by_id))      // 查询
+    .route("/api/v1/protected/user/update_profile", post(user::update_profile))  // 更新
+    .route("/api/v1/protected/user/delete_account", post(user::delete_account))  // 删除
+    .route("/api/v1/protected/group/create", post(group::create))                // 创建
+```
+
+## 2. 系统架构设计
+
+### 2.1 整体架构
+
+HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture），基于 Rust + Axum 构建高性能、类型安全的 Web 服务。
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Client Layer                         │
+│          (Web/Mobile App, WebSocket Clients)                │
+└────────────────────────┬────────────────────────────────────┘
+                         │ HTTPS / WSS
+┌────────────────────────▼────────────────────────────────────┐
+│                     Load Balancer                           │
+│                  (Nginx / Traefik)                          │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+        ┌────────────────┴────────────────┐
+        │                                 │
+┌───────▼──────────┐            ┌────────▼─────────┐
+│   HTTP Server    │            │  WebSocket Server │
+│   (Axum/Tokio)   │            │   (Tungstenite)   │
+└───────┬──────────┘            └────────┬──────────┘
+        │                                │
+        └────────────────┬───────────────┘
+                         │
+┌────────────────────────▼────────────────────────────────────┐
+│                  Application Layer                          │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │              Middleware Chain                        │   │
+│  │  Auth → RateLimit → Logging → ErrorHandler          │   │
+│  └──────────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │              Route Layer (POST-only)                 │   │
+│  │  /api/v1/public/*  |  /api/v1/protected/*           │   │
+│  └──────────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │              Handler Layer                           │   │
+│  │  参数验证、调用 Service、构造响应                      │   │
+│  └──────────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │              Service Layer                           │   │
+│  │  业务逻辑、权限检查、事务管理、缓存策略                 │   │
+│  └──────────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │              Repository Layer                        │   │
+│  │  SQL 查询、数据映射、缓存读写                          │   │
+│  └──────────────────────────────────────────────────────┘   │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+        ┌────────────────┴────────────────┐
+        │                                 │
+┌───────▼──────────┐            ┌────────▼─────────┐
+│   PostgreSQL     │            │      Redis       │
+│  (主数据库)       │            │  (缓存/会话)      │
+│  - 用户数据       │            │  - Token 黑名单   │
+│  - 群组数据       │            │  - 未读计数       │
+│  - 消息记录       │            │  - 频率限制       │
+│  - 生活瞬间       │            │  - 活跃会话       │
+└──────────────────┘            └──────────────────┘
+```
+
+### 2.2 分层架构详解
+
+#### 2.2.1 API Layer（路由层）
+
+**职责**：
+- 定义所有 API 端点（统一使用 POST 方法）
+- 组织路由层级（public/protected）
+- 配置中间件链
+- 请求分发到对应 Handler
+
+**技术实现**：
+- 使用 Axum Router 组织路由
+- 使用 `Router::nest()` 实现路由分组
+- 使用 `layer()` 添加中间件
+
+**示例**：
+```rust
+pub fn create_router(state: AppState) -> Router {
+    Router::new()
+        .nest("/api/v1/public", public_routes())
+        .nest("/api/v1/protected", protected_routes())
+        .layer(TraceLayer::new())
+        .layer(CorsLayer::permissive())
+        .with_state(state)
+}
+```
+
+#### 2.2.2 Handler Layer（控制器层）
+
+**职责**：
+- 提取和验证请求参数
+- 调用 Service 层处理业务逻辑
+- 构造统一格式的响应
+- 处理和转换错误
+
+**技术实现**：
+- 使用 Axum Extractors（State, Json, Path, Query）
+- 返回 `Result<Json<ApiResponse<T>>, AppError>`
+- 不包含业务逻辑，只做参数验证和响应构造
+
+**示例**：
+```rust
+pub async fn login(
+    State(state): State<AppState>,
+    Json(req): Json<LoginRequest>,
+) -> Result<Json<ApiResponse<AuthResponse>>, AppError> {
+    // 1. 参数验证
+    validate_login_request(&req)?;
+    
+    // 2. 调用 Service
+    let auth_service = AuthService::new(&state.db, &state.redis);
+    let response = auth_service.login(&req).await?;
+    
+    // 3. 构造响应
+    Ok(Json(ApiResponse::success(response)))
+}
+```
+
+#### 2.2.3 Service Layer（业务逻辑层）
+
+**职责**：
+- 实现核心业务逻辑
+- 权限验证和业务规则检查
+- 事务管理（跨多个 Repository 操作）
+- 缓存策略（读缓存、写缓存、缓存失效）
+- 调用 Repository 层进行数据操作
+
+**技术实现**：
+- 每个模块一个 Service 结构体
+- 持有 Database Pool 和 Redis Connection
+- 使用 SQLx Transaction 管理事务
+- 实现业务逻辑的组合和编排
+
+**示例**：
+```rust
+pub struct AuthService {
+    user_repo: UserRepository,
+    redis: ConnectionManager,
+}
+
+impl AuthService {
+    pub async fn login(&self, req: &LoginRequest) -> Result<AuthResponse, AppError> {
+        // 1. 查询用户
+        let user = self.user_repo.find_by_login_id(&req.login_id).await?
+            .ok_or(AppError::Unauthorized("用户不存在".into()))?;
+        
+        // 2. 验证密码
+        PasswordUtil::verify(&req.password_hash, &user.password_hash)?;
+        
+        // 3. 生成 Token
+        let tokens = JwtUtil::generate_tokens(user.user_id)?;
+        
+        // 4. 缓存 Refresh Token
+        self.cache_refresh_token(user.user_id, &tokens.refresh_token).await?;
+        
+        // 5. 更新最后活跃时间
+        self.user_repo.update_last_active(user.user_id).await?;
+        
+        Ok(AuthResponse::from(user, tokens))
+    }
+}
+```
+
+#### 2.2.4 Repository Layer（数据访问层）
+
+**职责**：
+- 封装所有数据库操作
+- 执行 SQL 查询（使用 SQLx）
+- 数据映射（DB Row ↔ Domain Model）
+- Redis 缓存读写
+- 不包含业务逻辑
+
+**技术实现**：
+- 每个领域模型一个 Repository 结构体
+- 使用 SQLx 的类型安全查询
+- 使用 `query_as!` 宏自动映射
+- 统一错误处理
+
+**示例**：
+```rust
+pub struct UserRepository {
+    pool: PgPool,
+}
+
+impl UserRepository {
+    pub async fn find_by_login_id(&self, login_id: &str) -> Result<Option<User>, AppError> {
+        sqlx::query_as!(
+            User,
+            "SELECT * FROM users WHERE login_id = $1",
+            login_id
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(AppError::Database)
+    }
+    
+    pub async fn create(&self, user: &User) -> Result<(), AppError> {
+        sqlx::query!(
+            "INSERT INTO users (user_id, login_id, nickname, password_hash) 
+             VALUES ($1, $2, $3, $4)",
+            user.user_id, user.login_id, user.nickname, user.password_hash
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(AppError::Database)?;
+        Ok(())
+    }
+}
+```
+
+### 2.3 架构设计原则
+
+#### 2.3.1 单一职责原则（SRP）
+
+- 每一层只负责自己的职责
+- Handler 不写业务逻辑
+- Service 不直接操作数据库
+- Repository 不包含业务规则
+
+#### 2.3.2 依赖倒置原则（DIP）
+
+- 上层依赖下层的抽象（trait），而非具体实现
+- Service 依赖 Repository trait
+- Handler 依赖 Service trait
+- 便于测试和替换实现
+
+#### 2.3.3 开闭原则（OCP）
+
+- 通过中间件扩展功能，而不修改核心代码
+- 使用 trait 定义接口，实现可替换
+- 配置驱动的功能开关
+
+#### 2.3.4 接口隔离原则（ISP）
+
+- Repository 接口细粒度划分
+- 每个 Service 只依赖需要的 Repository 方法
+- 避免臃肿的接口
+
+### 2.4 并发模型
+
+#### 2.4.1 异步运行时
+
+- 使用 Tokio 作为异步运行时
+- 所有 I/O 操作使用 async/await
+- 数据库连接池（SQLx Pool）
+- Redis 连接池（ConnectionManager）
+
+#### 2.4.2 并发策略
+
+- 请求级并发：每个请求独立的异步任务
+- 数据库连接池：最大连接数 = CPU 核心数 × 2
+- Redis 连接复用：使用 ConnectionManager
+- WebSocket 连接：每个连接独立的异步任务
+
+#### 2.4.3 线程模型
+
+```
+┌─────────────────────────────────────┐
+│         Tokio Runtime               │
+│  (Work-stealing Scheduler)          │
+│                                     │
+│  ┌──────┐ ┌──────┐ ┌──────┐        │
+│  │Thread│ │Thread│ │Thread│  ...   │
+│  │  1   │ │  2   │ │  3   │        │
+│  └──────┘ └──────┘ └──────┘        │
+│     │        │        │             │
+│     └────────┴────────┘             │
+│            │                        │
+│      ┌─────▼─────┐                  │
+│      │ Task Queue│                  │
+│      └───────────┘                  │
+└─────────────────────────────────────┘
+```
+
+- 默认线程数 = CPU 核心数
+- 任务窃取调度器（Work-stealing）
+- 非阻塞 I/O（epoll/kqueue）
+
+### 2.5 数据流向
+
+#### 2.5.1 典型请求流程
+
+```
+1. Client 发送 POST 请求
+   ↓
+2. Nginx/Load Balancer 转发
+   ↓
+3. Axum Server 接收请求
+   ↓
+4. Middleware Chain 处理
+   - Logging: 记录请求日志
+   - RateLimit: 检查频率限制
+   - Auth: 验证 JWT Token（受保护路由）
+   - CORS: 处理跨域
+   ↓
+5. Router 匹配路由，分发到 Handler
+   ↓
+6. Handler 提取参数，验证格式
+   ↓
+7. Service 执行业务逻辑
+   - 权限检查
+   - 业务规则验证
+   - 调用 Repository
+   ↓
+8. Repository 操作数据库
+   - 查询 PostgreSQL
+   - 读写 Redis 缓存
+   ↓
+9. Service 处理结果，返回给 Handler
+   ↓
+10. Handler 构造统一响应格式
+   ↓
+11. Middleware Chain 后处理
+   - ErrorHandler: 捕获错误，转换为统一格式
+   - Logging: 记录响应日志
+   ↓
+12. Axum Server 返回 JSON 响应
+   ↓
+13. Client 接收响应
+```
+
+#### 2.5.2 WebSocket 消息流程
+
+```
+1. Client 发起 WebSocket 连接
+   ↓
+2. Server 验证 JWT Token
+   ↓
+3. 连接建立，存入连接池
+   ↓
+4. 心跳保活（25秒一次 Ping/Pong）
+   ↓
+5. 事件触发（新消息、状态变更等）
+   ↓
+6. 查找目标用户的所有连接
+   ↓
+7. 序列化消息为 JSON
+   ↓
+8. 并发推送到所有连接
+   ↓
+9. 如果用户离线，存储到 event_push_records
+   ↓
+10. 用户重连后，拉取未推送事件
+```
+
+### 2.6 扩展性设计
+
+#### 2.6.1 水平扩展
+
+- **无状态设计**：所有状态存储在 PostgreSQL/Redis
+- **负载均衡**：支持多实例部署
+- **WebSocket 扩展**：通过 Redis Pub/Sub 同步消息
+- **数据库扩展**：主从复制、读写分离
+
+#### 2.6.2 垂直扩展
+
+- **连接池调优**：根据负载调整连接数
+- **缓存优化**：热点数据缓存到 Redis
+- **查询优化**：索引优化、查询优化
+- **资源隔离**：CPU/内存限制
+
+#### 2.6.3 模块化设计
+
+- **功能模块独立**：15 个功能模块，低耦合
+- **中间件可插拔**：按需启用/禁用中间件
+- **配置驱动**：通过环境变量控制功能开关
+
+### 2.7 模块划分与依赖关系
+
+系统分为 **3 大类共 15 个功能模块**：
+
+#### 2.7.1 核心业务模块（Core Modules）
+
+这些模块是系统的核心功能，直接处理用户数据和业务逻辑：
+
+**1. 认证模块 (auth)**
+- **职责**：用户注册、登录、Token 管理、会话管理、密码重置
+- **数据存储**：users 表、sessions 表、Redis (token 黑名单、refresh token)
+- **依赖**：无（基础模块）
+- **被依赖**：所有需要认证的模块
+
+**2. 用户模块 (user)**
+- **职责**：用户资料管理、用户搜索、关系管理（好友/关注/拉黑）、位置更新
+- **数据存储**：users 表、user_relationships 表
+- **依赖**：auth（认证）
+- **被依赖**：几乎所有模块
+
+**3. 群组模块 (group)**
+- **职责**：群组 CRUD、成员管理、权限控制、群组搜索、邀请/申请流程
+- **数据存储**：groups 表、group_members 表、group_invites 表、group_applications 表
+- **依赖**：auth、user
+- **被依赖**：message、notification
+
+**4. 聊天消息模块 (chat_messages)**
+- **职责**：消息发送、历史查询、已读管理、消息编辑/撤回、消息反应
+- **数据存储**：messages 表、message_read_records 表、message_reactions 表、Redis (未读计数)
+- **依赖**：auth、user、group、conversation
+- **被依赖**：inbox、feed
+- **注意**：统一处理私聊和群聊消息，通过 target_type 区分
+- **API 路径**：`/api/v1/protected/chat_messages/*`
+- **说明**：聊天消息是用户之间的双向实时通讯，支持回复、编辑、撤回
+
+**5. 私聊会话模块 (conversation)**
+- **职责**：创建私聊会话、会话列表、隐藏会话、升级为群组
+- **数据存储**：conversations 表
+- **依赖**：auth、user
+- **被依赖**：message、conversation_settings
+- **说明**：管理私聊会话元数据，实际消息存储在 message 模块
+
+**6. 生活瞬间模块 (moment)**
+- **职责**：发布瞬间、搜索瞬间、点赞/取消点赞、编辑/删除、收藏管理
+- **数据存储**：moments 表、moment_likes 表、moment_collections 表
+- **依赖**：auth、user、media
+- **被依赖**：comment、feed、leaderboard
+
+**7. 评论模块 (comment)**
+- **职责**：发布评论、回复评论、删除评论、点赞评论、查询评论列表
+- **数据存储**：comments 表、comment_likes 表
+- **依赖**：auth、user、moment
+- **被依赖**：notification
+- **说明**：评论对象目前只有 moment，未来可扩展到其他内容类型
+
+#### 2.7.2 辅助功能模块（Supporting Modules）
+
+这些模块提供辅助功能，增强用户体验和系统安全性：
+
+**8. 内容安全模块 (report)**
+- **职责**：用户举报、管理员审核、处理举报
+- **数据存储**：reports 表
+- **依赖**：auth、user
+- **被依赖**：无
+- **说明**：处理用户、群组、消息、瞬间等内容的举报
+
+**9. 会话通知设置模块 (conversation_settings)**
+- **职责**：设置会话静音、仅@提醒等通知偏好
+- **数据存储**：conversation_settings 表
+- **依赖**：auth、user、conversation、group
+- **被依赖**：notification（推送时检查设置）
+- **说明**：统一管理私聊和群聊的通知设置
+
+**10. 媒体上传模块 (media)**
+- **职责**：文件上传（头像、群组图片、瞬间图片、通用文件）
+- **数据存储**：文件系统或对象存储（OSS）、media_files 表（元数据）
+- **依赖**：auth
+- **被依赖**：user、group、moment、message
+- **说明**：统一的文件上传服务，通过 category 字段区分用途
+
+**11. 系统模块 (system)**
+- **职责**：健康检查、客户端配置、法律文档（隐私政策、服务条款）
+- **数据存储**：system_configs 表、legal_contents 表
+- **依赖**：无
+- **被依赖**：无
+- **说明**：提供系统级别的配置和状态查询
+
+#### 2.7.3 数据聚合模块（Aggregation Modules）
+
+这些模块不直接存储核心业务数据，而是基于其他模块的数据进行聚合、分析和推荐：
+
+**12. 收件箱模块 (inbox)**
+- **职责**：收件箱提醒历史查询、标记已读、删除提醒、设备 Token 管理（APNs/FCM）
+- **数据存储**：inbox_items 表（或 notifications 表）、device_tokens 表
+- **依赖**：auth、user、chat_messages、comment、group
+- **被依赖**：无
+- **API 路径**：`/api/v1/protected/inbox/*`
+- **实现方式**：
+  - 监听其他模块的事件（新消息、新评论、群组邀请等）
+  - 生成收件箱提醒记录并推送到设备
+  - 提供历史查询接口
+- **说明**：收件箱是系统生成的单向提醒，不同于双向的聊天消息
+- **提醒分类**：
+  - social（社交）：好友申请、群组邀请
+  - content（内容）：点赞、评论、@提及
+  - system（系统）：公告、维护通知、安全警告
+
+**13. 事件订阅与推送模块 (subscription)**
+- **职责**：配置事件订阅偏好（持久化）、WebSocket 实时订阅管理
+- **数据存储**：event_subscriptions 表（持久化偏好）
+- **依赖**：auth、user
+- **被依赖**：WebSocket 推送系统
+- **API 路径**：`/api/v1/protected/subscriptions/*`
+- **实现方式**：
+  - **两层订阅机制**：
+    - 层级 1：API 管理持久化订阅偏好（跨设备生效）
+    - 层级 2：WebSocket 管理实时订阅（当前连接生效）
+  - **推送逻辑**：最终推送 = 持久化偏好 AND 实时订阅
+  - **支持的频道**：
+    - `chat_messages` - 聊天消息事件
+    - `inbox.social` - 社交类提醒
+    - `inbox.content` - 内容类提醒
+    - `inbox.system` - 系统类提醒
+    - `presence` - 在线状态
+    - `group.{group_id}` - 特定群组事件
+    - `typing` - 正在输入状态（自动包含在 chat_messages 中）
+
+**14. 排行榜模块 (leaderboard)**
+- **职责**：创作者排行、热门瞬间排行、用户排名查询
+- **数据存储**：leaderboard_cache 表（Redis 或 PostgreSQL）
+- **依赖**：auth、user、moment
+- **被依赖**：无
+- **API 路径**：`/api/v1/public/leaderboard/*`
+- **实现方式**：
+  - **定时任务**：每小时/每天统计各模块数据
+  - **数据来源**：
+    - 创作者排行：统计 moments 表的 user_id 和点赞数
+    - 热门瞬间：统计 moment_likes 表
+  - **缓存策略**：结果缓存到 Redis，定期刷新
+  - **支持范围**：
+    - 全局排行
+    - 附近排行（nearby，需提供位置和半径）
+    - 好友排行（friends）
+  - **时间范围**：daily、weekly、monthly、all_time
+
+**15. 信息流模块 (feed)**
+- **职责**：获取个性化推荐内容、反馈（隐藏/不感兴趣）
+- **数据存储**：feed_items 表（推荐结果缓存）、feed_feedback 表（用户反馈）
+- **依赖**：auth、user、moment、group
+- **被依赖**：无
+- **API 路径**：`/api/v1/protected/feed/*`
+- **实现方式**：
+  - **推荐算法**：
+    - 基于位置：推荐附近的瞬间和群组
+    - 基于关注：推荐关注用户的瞬间
+    - 基于兴趣：根据用户点赞/收藏历史推荐相似内容
+  - **数据来源**：
+    - moments 表（瞬间内容）
+    - moment_likes、moment_collections（用户偏好）
+    - user_relationships（社交关系）
+    - users 表（位置信息）
+  - **实时性**：
+    - 热数据实时计算
+    - 冷数据预计算并缓存
+  - **频道类型**：
+    - following（关注）：推荐关注用户的内容
+    - nearby（附近）：推荐附近的热门内容
+    - recommended（推荐）：基于兴趣的个性化推荐
+
+#### 2.7.4 模块依赖关系图
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      核心业务模块                            │
+│                                                             │
+│  ┌──────┐    ┌──────┐    ┌──────┐    ┌──────────┐         │
+│  │ auth │───▶│ user │───▶│ group│───▶│conversation│        │
+│  └──────┘    └──┬───┘    └──┬───┘    └─────┬─────┘        │
+│                 │            │               │              │
+│                 │            │               │              │
+│                 ▼            ▼               ▼              │
+│            ┌─────────┐  ┌──────────┐   ┌─────────┐        │
+│            │ moment  │  │chat_msgs │   │conv_set │        │
+│            └────┬────┘  └────┬─────┘   └─────────┘        │
+│                 │            │                              │
+│                 ▼            │                              │
+│            ┌─────────┐       │                              │
+│            │ comment │       │                              │
+│            └─────────┘       │                              │
+│                              │                              │
+└──────────────────────────────┼──────────────────────────────┘
+                               │
+┌──────────────────────────────┼──────────────────────────────┐
+│                      辅助功能模块                            │
+│                              │                              │
+│  ┌────────┐  ┌───────┐  ┌───▼───┐  ┌────────┐            │
+│  │ report │  │ media │  │ system│  │conv_set│            │
+│  └────────┘  └───────┘  └───────┘  └────────┘            │
+│                                                             │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                               │ 监听事件 / 定时统计
+                               │
+┌──────────────────────────────▼──────────────────────────────┐
+│                      数据聚合模块                            │
+│                                                             │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐                 │
+│  │  inbox   │  │subscription│ │leaderboard│                 │
+│  └──────────┘  └──────────┘  └──────────┘                 │
+│                                                             │
+│  ┌──────────┐                                               │
+│  │   feed   │                                               │
+│  └──────────┘                                               │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**说明**：
+- 移除了 `achievement` 和 `hotspot` 模块（未在当前 API 规范中定义）
+- `notification` 重命名为 `inbox`（收件箱）
+- `message` 重命名为 `chat_msgs`（聊天消息）
+- 保留核心的 15 个模块
+
+#### 2.7.5 关键实现说明
+
+**数据聚合模块的实现策略**：
+
+1. **收件箱 (inbox)**
+   - 采用**事件驱动**架构
+   - 其他模块通过发布事件触发收件箱提醒
+   - 示例：comment 模块添加评论后，发布 `CommentAdded` 事件
+   - inbox 模块订阅事件，生成提醒并推送
+   - 区别于聊天消息：收件箱是系统生成的单向提醒，聊天消息是用户之间的双向通讯
+
+2. **事件订阅 (subscription)**
+   - 采用**两层订阅机制**：
+     - **API 层**：持久化存储用户的订阅偏好（跨设备生效）
+     - **WebSocket 层**：实时控制当前连接的订阅状态（仅当前连接生效）
+   - 用户通过 API 配置订阅偏好（哪些类型的提醒要推送）
+   - WebSocket 连接后，客户端发送 `Subscribe` 消息订阅感兴趣的频道
+   - 推送逻辑：先检查 API 持久化偏好，再检查 WebSocket 实时订阅
+   - 离线提醒通过 API 拉取（`POST /api/v1/protected/inbox/list?is_read=false`）
+
+3. **排行榜 (leaderboard)**
+   - 采用**定时任务 + 缓存**策略
+   - 每小时运行统计任务：
+     ```sql
+     -- 创作者排行
+     SELECT user_id, COUNT(*) as moment_count, SUM(like_count) as total_likes
+     FROM moments
+     WHERE created_at > NOW() - INTERVAL '7 days'
+     GROUP BY user_id
+     ORDER BY total_likes DESC
+     LIMIT 100;
+     ```
+   - 结果缓存到 Redis，有效期 1 小时
+   - 用户查询时直接读取缓存
+
+4. **成就系统 (achievement)**
+   - 采用**事件监听 + 定时检查**策略
+   - 实时检查：监听关键事件（如发布瞬间），立即检查相关成就
+   - 定时检查：每天凌晨检查需要统计的成就（如"本月获得100个赞"）
+   - 成就条件配置化，便于扩展
+
+5. **热点发现 (hotspot)**
+   - 采用**定时聚合 + 地理聚类**策略
+   - 每小时运行分析任务：
+     1. 查询最近 24 小时的瞬间和群组
+     2. 按地理位置聚类（使用 PostGIS 的 ST_ClusterDBSCAN）
+     3. 计算每个聚类的热度（瞬间数 + 群组数 + 用户数）
+     4. 生成热点名称（基于位置或标签）
+   - 结果存储到 hotspots 表，前端查询时直接读取
+
+6. **信息流 (feed)**
+   - 采用**混合推荐**策略
+   - 推荐来源：
+     - 40% 关注用户的瞬间（社交推荐）
+     - 30% 附近的热门瞬间（位置推荐）
+     - 20% 基于兴趣的瞬间（协同过滤）
+     - 10% 热门群组（探索推荐）
+   - 实现方式：
+     - 实时计算（用户刷新时）
+     - 结果缓存 5 分钟
+     - 用户反馈（隐藏/不感兴趣）影响后续推荐
+
+### 2.8 中间件设计
+
+**中间件链顺序**:
+```rust
+Router::new()
+    .layer(TraceLayer::new())           // 1. 请求追踪
+    .layer(CorsLayer::permissive())     // 2. CORS 处理
+    .layer(RateLimitLayer::new())       // 3. 频率限制
+    .layer(AuthMiddleware::new())       // 4. JWT 认证（受保护路由）
+    .layer(ErrorHandlerLayer::new())    // 5. 统一错误处理
+```
+
+**关键中间件**:
+- **认证中间件**: 验证 JWT Token，提取 user_id，注入到请求上下文
+- **频率限制中间件**: 基于 IP/用户的请求限流（Redis 实现）
+- **日志中间件**: 记录请求/响应、耗时、错误
+- **错误处理中间件**: 捕获 panic，转换为统一错误响应
+
+**路由组织示例**（所有路由使用 POST）:
+```rust
+use axum::routing::post;
+
+// 公开路由
+let public_routes = Router::new()
+    .route("/auth/register", post(auth::register))
+    .route("/auth/login", post(auth::login));
+
+// 受保护路由
+let protected_routes = Router::new()
+    .route("/user/update_profile", post(user::update_profile))
+    .route("/group/create", post(group::create))
+    .layer(AuthMiddleware::new());
+
+Router::new()
+    .nest("/api/v1/public", public_routes)
+    .nest("/api/v1/protected", protected_routes)
+```
+
+## 3. 核心功能模块
+
+### 3.1 认证与授权系统
+
+#### 3.1.1 密码安全策略
+
+**双层哈希机制**:
+1. **客户端层**: `SHA256(password)` - 避免明文传输
+2. **服务端层**: `bcrypt(client_hash, salt)` - 防止数据库泄露
+
+**实现要点**:
+- 使用 bcrypt crate，work factor = 12
+- 每个用户独立的随机 salt（bcrypt 自动管理）
+- 密码验证使用 `bcrypt::verify()`
+
+#### 3.1.2 JWT Token 管理
+
+**Token 类型**:
+- **Access Token**: 短期有效（1小时），用于 API 认证
+- **Refresh Token**: 长期有效（30天），用于刷新 Access Token
+
+**Token Payload**:
+```rust
+{
+    sub: user_id,        // Subject (用户ID)
+    exp: timestamp,      // Expiration (过期时间)
+    iat: timestamp,      // Issued At (签发时间)
+    user_type: u8,       // 用户类型（临时/普通/系统）
+}
+```
+
+**实现要点**:
+- 使用 HS256 算法签名
+- Secret Key 从环境变量读取
+- Token 黑名单使用 Redis 存储（登出时）
+
+#### 3.1.3 会话管理
+
+**多设备会话**:
+- 每个登录生成唯一 session_id
+- 存储设备信息（类型、名称、IP、地理位置）
+- 支持列出所有活跃会话
+- 支持撤销指定会话
+
+**存储方案**:
+- PostgreSQL: 持久化会话记录
+- Redis: 活跃会话缓存（TTL = token 有效期）
+
+### 3.2 用户管理系统
+
+#### 3.2.1 用户类型编码
+
+**用户ID结构** (64位整数):
+```
+┌────────┬──────────────────────────────────────────────────┐
+│ 高8位  │                    低56位                        │
+│ 类型   │                    序号                          │
+└────────┴──────────────────────────────────────────────────┘
+```
+
+**类型编码**:
+- `0x01`: 临时用户（无密码，可升级）
+- `0x02`: 普通用户（已注册）
+- `0x03`: 系统用户（官方账号）
+
+**生成算法**:
+```rust
+user_id = (user_type << 56) | sequence_number
+```
+
+#### 3.2.2 用户关系管理
+
+**关系类型**:
+- **好友关系**: 双向确认，需要申请和接受
+- **关注关系**: 单向，无需确认
+- **拉黑关系**: 单向，屏蔽所有互动
+
+**数据库设计**:
+- 使用 `user_relationships` 表统一管理
+- 字段: `from_user_id`, `to_user_id`, `relationship_type`, `status`
+- 索引: `(from_user_id, relationship_type)`, `(to_user_id, relationship_type)`
+
+#### 3.2.3 位置服务
+
+**位置存储**:
+- 用户表存储最后更新的位置（latitude, longitude, location_name）
+- 使用 PostGIS 扩展进行地理位置查询
+
+**位置搜索**:
+```sql
+-- 查找半径内的用户
+SELECT *, ST_Distance(
+    ST_MakePoint(longitude, latitude)::geography,
+    ST_MakePoint($1, $2)::geography
+) AS distance
+FROM users
+WHERE ST_DWithin(
+    ST_MakePoint(longitude, latitude)::geography,
+    ST_MakePoint($1, $2)::geography,
+    $3  -- radius in meters
+)
+ORDER BY distance
+LIMIT $4;
+```
+
+### 3.3 群组管理系统
+
+#### 3.3.1 群组类型
+
+- **公开群组** (public_group): 任何人可搜索和加入
+- **私密群组** (private_group): 需要邀请或申请批准
+
+#### 3.3.2 成员角色
+
+- **群主** (owner): 全部权限，可转让
+- **管理员** (admin): 管理成员、审核申请、修改群信息
+- **普通成员** (member): 发送消息、查看成员
+
+#### 3.3.3 权限矩阵
+
+| 操作 | 群主 | 管理员 | 普通成员 |
+|------|------|--------|----------|
+| 修改群信息 | ✓ | ✓ | ✗ |
+| 邀请成员 | ✓ | ✓ | ✗ |
+| 移除成员 | ✓ | ✓ | ✗ |
+| 设置管理员 | ✓ | ✗ | ✗ |
+| 转让群主 | ✓ | ✗ | ✗ |
+| 解散群组 | ✓ | ✗ | ✗ |
+| 发送消息 | ✓ | ✓ | ✓ |
+
+### 3.4 聊天消息系统
+
+#### 3.4.1 消息类型
+
+- **文本消息** (text)
+- **图片消息** (image)
+- **视频消息** (video)
+- **音频消息** (audio)
+- **文件消息** (file)
+- **位置消息** (location)
+- **系统消息** (system)
+
+#### 3.4.2 消息存储
+
+**统一存储策略**:
+- 使用统一的 `messages` 表存储所有消息
+- 通过 `target_type` 字段区分私聊（conversation）和群聊（group）
+- 按月分表（可选，高并发场景）
+
+**消息索引**:
+- `(target_id, created_at DESC)` - 查询会话历史
+- `(sender_id, created_at DESC)` - 查询用户发送记录
+- `(target_id, target_type)` - 复合索引优化查询
+
+#### 3.4.3 已读管理
+
+**已读记录**:
+- `message_read_records` 表
+- 字段: `user_id`, `target_id`, `last_read_message_id`, `read_at`
+
+**未读计数**:
+- Redis 缓存: `unread:{user_id}:{target_id}` = count
+- 发送消息时增加计数
+- 标记已读时清零计数
+
+### 3.5 生活瞬间系统
+
+#### 3.5.1 瞬间数据结构
+
+```rust
+struct Moment {
+    moment_id: String,
+    user_id: String,
+    description: String,
+    latitude: f64,
+    longitude: f64,
+    location_name: String,
+    tags: Vec<String>,
+    images: Vec<String>,
+    created_at: DateTime<Utc>,
+}
+```
+
+#### 3.5.2 搜索策略
+
+**按位置搜索**:
+- 使用 PostGIS 的 `ST_DWithin` 进行半径搜索
+- 返回结果包含 `distance` 字段
+
+**按标签搜索**:
+- 使用 PostgreSQL 的 Array 类型存储标签
+- 使用 `@>` 操作符进行包含查询
+
+**全文搜索** (可选):
+- 使用 PostgreSQL 的 `tsvector` 和 `tsquery`
+- 对 description 字段建立全文索引
+
+### 3.6 WebSocket 实时通讯
+
+#### 3.6.1 连接管理
+
+**连接认证**:
+- 通过 `Sec-WebSocket-Protocol` 或 `Authorization` 头传递 JWT
+- 连接建立后验证 Token，提取 user_id
+
+**连接存储**:
+```rust
+// 内存中的连接池
+HashMap<UserId, Vec<WebSocketConnection>>
+```
+
+**心跳机制**:
+- 客户端每 25 秒发送 Ping
+- 服务端 5 秒内回复 Pong
+- 超过 60 秒无活动则断开连接
+
+#### 3.6.2 消息推送与订阅机制
+
+**两层订阅机制**:
+1. **层级 1（持久化偏好）**：通过 API 配置，跨设备生效
+   - 用户在设置页面配置订阅偏好
+   - 存储在 `event_subscriptions` 表
+   - 示例：关闭"瞬间点赞提醒"
+
+2. **层级 2（实时订阅）**：通过 WebSocket 管理，仅当前连接生效
+   - 客户端连接后发送 `Subscribe` 消息
+   - 订阅感兴趣的频道
+   - 示例：订阅 `inbox.social` 频道
+
+**推送逻辑**:
+- 最终推送 = 持久化偏好 AND 实时订阅
+- 只有两层都允许时才推送
+
+**支持的频道**:
+- `chat_messages` - 聊天消息事件
+- `inbox.social` - 社交类提醒（好友申请、群组邀请）
+- `inbox.content` - 内容类提醒（点赞、评论、@提及）
+- `inbox.system` - 系统类提醒（公告、维护通知）
+- `presence` - 在线状态
+- `group.{group_id}` - 特定群组事件
+- `typing` - 正在输入状态
+
+**推送策略**:
+1. 检查用户的持久化订阅偏好
+2. 查找目标用户的所有活跃连接
+3. 检查每个连接的实时订阅状态
+4. 序列化消息为 JSON
+5. 并发发送到符合条件的连接
+6. 如果用户离线或未订阅，存储到收件箱
+
+#### 3.6.3 离线消息补偿
+
+**实现流程**:
+1. 用户重连后，WebSocket 连接建立
+2. 客户端发送 `Subscribe` 消息订阅频道
+3. 客户端调用 API 拉取离线数据：
+   - `POST /api/v1/protected/inbox/list?is_read=false` - 未读提醒
+   - `POST /api/v1/protected/chat_messages/unread_summary?include_details=true` - 未读消息汇总
+4. 恢复实时接收 WebSocket 推送
+
+**说明**:
+- 收件箱提醒通过 API 拉取（系统生成的单向提醒）
+- 聊天消息通过 API 拉取（用户之间的双向通讯）
+- 不再使用 `event_push_records` 表，改用各模块自己的存储
+
+#### 3.6.4 WebSocket 事件类型定义
+
+系统支持完整的 WebSocket 事件类型，用于实时推送和客户端交互。
+
+**服务端推送事件（Server → Client）**：
+
+| 事件类型 | 所属频道 | 说明 |
+|---|---|---|
+| `ConnectionEstablished` | - | 连接建立确认 |
+| `ConnectionClosed` | - | 连接关闭通知 |
+| `Heartbeat` | - | 心跳保活 |
+| `UserOnline` | `presence` | 用户上线 |
+| `UserOffline` | `presence` | 用户下线 |
+| `UserLocationUpdate` | `presence` | 位置更新 |
+| `ChatMessageNew` | `chat_messages` | 新聊天消息 |
+| `ChatMessageEdited` | `chat_messages` | 消息被编辑 |
+| `ChatMessageRecalled` | `chat_messages` | 消息被撤回 |
+| `ChatMessageDeleted` | `chat_messages` | 消息被删除 |
+| `ChatMessageRead` | `chat_messages` | 消息已读回执 |
+| `ChatMessageReaction` | `chat_messages` | 消息反应 |
+| `UserTyping` | `chat_messages` | 正在输入状态 |
+| `GroupMemberJoined` | `group.{group_id}` | 成员加入群组 |
+| `GroupMemberLeft` | `group.{group_id}` | 成员离开群组 |
+| `GroupMemberRemoved` | `group.{group_id}` | 成员被移除 |
+| `GroupRoleChanged` | `group.{group_id}` | 成员角色变更 |
+| `GroupProfileUpdated` | `group.{group_id}` | 群组资料更新 |
+| `ChatUpgradedToGroup` | `group.{group_id}` | 私聊升级为群组 |
+| `InboxItem` | `inbox.*` | 收件箱新提醒 |
+| `SystemBroadcast` | - | 系统广播（强制推送） |
+| `SubscribeAck` | - | 订阅确认 |
+| `Error` | - | 错误消息 |
+
+**客户端发送事件（Client → Server）**：
+
+| 事件类型 | 说明 |
+|---|---|
+| `Ping` | 心跳保活 |
+| `Pong` | 心跳响应 |
+| `Subscribe` | 订阅频道 |
+| `Unsubscribe` | 取消订阅 |
+| `MarkAsRead` | 标记已读（快速通道） |
+| `Typing` | 正在输入通知 |
+
+**支持的订阅频道**：
+
+| 频道名称 | 说明 | 包含的事件类型 |
+|---|---|---|
+| `chat_messages` | 聊天消息 | 所有 `ChatMessage*` 事件 |
+| `inbox.social` | 社交类提醒 | 好友申请、群组邀请等 |
+| `inbox.content` | 内容类提醒 | 点赞、评论、@提及等 |
+| `inbox.system` | 系统类提醒 | 系统公告、安全警告等 |
+| `presence` | 在线状态 | `UserOnline`、`UserOffline`、`UserLocationUpdate` |
+| `group.{group_id}` | 特定群组事件 | 该群组的所有 `Group*` 事件 |
+| `typing` | 正在输入状态 | 自动包含在 `chat_messages` 中 |
+
+**关键事件说明**：
+
+1. **ChatMessageNew**（新消息）：
+   - 替代旧的 `NewMessage` 事件
+   - 包含完整的消息信息（发送者、内容、类型、回复、@提及等）
+   - 是聊天功能的核心事件
+
+2. **InboxItem**（收件箱提醒）：
+   - 系统生成的单向提醒
+   - 包含分类（social/content/system）和具体类型
+   - 与 `InboxItemResponse` API 响应结构保持一致
+
+3. **Subscribe/Unsubscribe**（订阅管理）：
+   - 实现两层订阅机制的核心
+   - 客户端连接后必须主动订阅感兴趣的频道
+   - 支持动态调整订阅，无需断开连接
+
+4. **SubscribeAck**（订阅确认）：
+   - 服务端返回订阅结果
+   - 包含成功订阅的频道列表和失败原因
+
+**实现要求**：
+- 所有时间字段使用 ISO 8601 格式的 UTC 时间
+- 事件 payload 结构与 API 规范保持一致
+- 完整的事件定义参考 `api_spec.mdc` 第 4 章
+
+## 4. 数据库设计要点
+
+### 4.1 核心表结构
+
+#### 4.1.1 用户相关表
+
+**users** (用户表)
+```sql
+CREATE TABLE users (
+    user_id BIGINT PRIMARY KEY,
+    login_id VARCHAR(255) UNIQUE,
+    nickname VARCHAR(100) NOT NULL,
+    password_hash VARCHAR(255),
+    avatar_url TEXT,
+    bio TEXT,
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
+    location_name VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    last_active_at TIMESTAMP WITH TIME ZONE,
+    INDEX idx_login_id (login_id),
+    INDEX idx_location (latitude, longitude)
+);
+```
+
+**user_relationships** (用户关系表)
+```sql
+CREATE TABLE user_relationships (
+    relationship_id BIGSERIAL PRIMARY KEY,
+    from_user_id BIGINT NOT NULL,
+    to_user_id BIGINT NOT NULL,
+    relationship_type VARCHAR(20) NOT NULL, -- 'friend', 'following', 'blocked'
+    status VARCHAR(20) DEFAULT 'pending',   -- 'pending', 'accepted', 'rejected'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    FOREIGN KEY (from_user_id) REFERENCES users(user_id),
+    FOREIGN KEY (to_user_id) REFERENCES users(user_id),
+    INDEX idx_from_user (from_user_id, relationship_type),
+    INDEX idx_to_user (to_user_id, relationship_type),
+    UNIQUE (from_user_id, to_user_id, relationship_type)
+);
+```
+
+#### 4.1.2 群组相关表
+
+**groups** (群组表)
+```sql
+CREATE TABLE groups (
+    group_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    group_type VARCHAR(20) NOT NULL,  -- 'public_group', 'private_group'
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    avatar_url TEXT,
+    owner_id BIGINT NOT NULL,
+    latitude DOUBLE PRECISION NOT NULL,
+    longitude DOUBLE PRECISION NOT NULL,
+    location_name VARCHAR(255) NOT NULL,
+    password_hash VARCHAR(255),
+    max_members INTEGER DEFAULT 500,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    last_active_at TIMESTAMP WITH TIME ZONE,
+    FOREIGN KEY (owner_id) REFERENCES users(user_id),
+    INDEX idx_location (latitude, longitude),
+    INDEX idx_name (name)
+);
+```
+
+**group_members** (群组成员表)
+```sql
+CREATE TABLE group_members (
+    id BIGSERIAL PRIMARY KEY,
+    group_id UUID NOT NULL,
+    user_id BIGINT NOT NULL,
+    role VARCHAR(20) NOT NULL DEFAULT 'member',  -- 'owner', 'admin', 'member'
+    joined_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    FOREIGN KEY (group_id) REFERENCES groups(group_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    INDEX idx_group (group_id),
+    INDEX idx_user (user_id),
+    UNIQUE (group_id, user_id)
+);
+```
+
+#### 4.1.3 消息相关表
+
+**messages** (消息表)
+```sql
+CREATE TABLE messages (
+    message_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    target_id VARCHAR(255) NOT NULL,  -- conversation_id or group_id
+    target_type VARCHAR(20) NOT NULL, -- 'conversation', 'group'
+    sender_id BIGINT,
+    content TEXT NOT NULL,
+    message_type VARCHAR(20) DEFAULT 'text',
+    is_edited BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    edited_at TIMESTAMP WITH TIME ZONE,
+    FOREIGN KEY (sender_id) REFERENCES users(user_id),
+    INDEX idx_target (target_id, created_at DESC),
+    INDEX idx_sender (sender_id, created_at DESC)
+);
+```
+
+#### 4.1.4 生活瞬间相关表
+
+**moments** (生活瞬间表)
+```sql
+CREATE TABLE moments (
+    moment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id BIGINT NOT NULL,
+    description TEXT NOT NULL,
+    latitude DOUBLE PRECISION NOT NULL,
+    longitude DOUBLE PRECISION NOT NULL,
+    location_name VARCHAR(255) NOT NULL,
+    tags TEXT[],
+    images TEXT[],
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    INDEX idx_location (latitude, longitude),
+    INDEX idx_user (user_id, created_at DESC),
+    INDEX idx_tags USING GIN (tags)
+);
+```
+
+### 4.2 索引策略
+
+**索引原则**:
+1. 为所有外键创建索引
+2. 为频繁查询的字段创建索引
+3. 为地理位置查询创建 GiST 索引
+4. 为数组字段创建 GIN 索引
+5. 定期分析查询性能，优化索引
+
+**关键索引**:
+- 用户位置: `CREATE INDEX idx_users_location ON users USING GIST (ST_MakePoint(longitude, latitude));`
+- 群组位置: `CREATE INDEX idx_groups_location ON groups USING GIST (ST_MakePoint(longitude, latitude));`
+- 瞬间标签: `CREATE INDEX idx_moments_tags ON moments USING GIN (tags);`
+
+### 4.3 关系设计
+
+**一对多关系**:
+- 用户 → 瞬间
+- 用户 → 评论
+- 群组 → 成员
+- 群组 → 消息
+
+**多对多关系**:
+- 用户 ↔ 用户 (关系表)
+- 用户 ↔ 群组 (成员表)
+- 用户 ↔ 成就 (用户成就表)
+
+## 5. 开发规范
+
+### 5.1 统一响应格式
+
+**成功响应**:
+```rust
+#[derive(Serialize)]
+struct ApiResponse<T> {
+    code: i32,
+    message: String,
+    data: Option<T>,
+}
+
+// 使用示例
+ApiResponse {
+    code: 0,
+    message: "Success".to_string(),
+    data: Some(user_data),
+}
+```
+
+**错误响应**:
+```rust
+ApiResponse {
+    code: 1001,
+    message: "参数不合法".to_string(),
+    data: None,
+}
+```
+
+### 5.2 错误处理
+
+**错误类型定义**:
+```rust
+#[derive(Debug, thiserror::Error)]
+pub enum AppError {
+    #[error("参数错误: {0}")]
+    BadRequest(String),
+    
+    #[error("认证失败: {0}")]
+    Unauthorized(String),
+    
+    #[error("权限不足")]
+    Forbidden,
+    
+    #[error("资源不存在")]
+    NotFound,
+    
+    #[error("数据库错误: {0}")]
+    Database(#[from] sqlx::Error),
+    
+    #[error("内部服务器错误")]
+    Internal,
+}
+```
+
+**错误码映射**:
+- 1000-1999: 客户端错误
+- 5000-5999: 服务器错误
+
+### 5.3 日志规范
+
+**日志级别**:
+- **ERROR**: 系统错误、数据库错误、外部服务失败
+- **WARN**: 业务异常、参数错误、权限不足
+- **INFO**: 关键业务操作（登录、注册、支付）
+- **DEBUG**: 详细调试信息
+- **TRACE**: 函数调用追踪
+
+**日志格式**:
+```rust
+tracing::info!(
+    user_id = %user_id,
+    action = "login",
+    ip = %client_ip,
+    "User logged in successfully"
+);
+```
+
+### 5.4 代码组织结构
+
+```
+src/
+├── main.rs                 # 应用入口
+├── config.rs               # 配置管理
+├── error.rs                # 错误定义
+├── routes/                 # 路由定义（所有路由使用 POST）
+│   ├── mod.rs
+│   ├── auth.rs
+│   ├── user.rs
+│   └── group.rs
+├── middleware/             # 中间件
+│   ├── auth.rs
+│   ├── rate_limit.rs
+│   └── logging.rs
+├── models/                 # 数据模型
+│   ├── user.rs
+│   ├── group.rs
+│   └── message.rs
+├── handlers/               # 请求处理器
+│   ├── auth.rs
+│   ├── user.rs
+│   └── group.rs
+├── services/               # 业务逻辑
+│   ├── auth_service.rs
+│   ├── user_service.rs
+│   └── group_service.rs
+├── repositories/           # 数据访问
+│   ├── user_repo.rs
+│   ├── group_repo.rs
+│   └── message_repo.rs
+├── dto/                    # 数据传输对象
+│   ├── request.rs
+│   └── response.rs
+├── utils/                  # 工具函数
+│   ├── jwt.rs
+│   ├── password.rs
+│   └── geo.rs
+└── websocket/              # WebSocket 处理
+    ├── handler.rs
+    └── manager.rs
+```
+
+**路由层规范**:
+- 所有 API 路由统一使用 `axum::routing::post`
+- 按模块组织路由文件（auth.rs, user.rs, group.rs 等）
+- 公开路由和受保护路由分离
+- 使用 `Router::nest()` 组织路由层级
+
+## 6. 性能与安全要求
+
+### 6.1 频率限制策略
+
+**全局限制**:
+- 每个 IP: 1000 请求/小时
+- 每个用户: 5000 请求/小时
+
+**接口级限制**:
+- 登录: 5 次/分钟
+- 注册: 3 次/小时
+- 搜索: 60 次/分钟
+- 发送消息: 100 次/分钟
+- 上传文件: 10 次/分钟
+
+**实现方案**:
+- 使用 Redis 的 INCR + EXPIRE 实现滑动窗口
+- Key 格式: `rate_limit:{type}:{identifier}:{window}`
+
+### 6.2 零信任前端数据原则
+
+**核心原则**:
+1. 所有用户身份从 JWT Token 中提取，不信任请求参数
+2. 所有时间戳由服务端生成
+3. 所有统计数据由服务端计算
+4. 所有权限由服务端验证
+5. 所有地理位置坐标需验证合理性
+
+**实施要点**:
+- 从 Token 提取 `user_id`，不接受客户端传递
+- 使用 `Utc::now()` 生成时间戳
+- 服务端计算 `unread_count`、`follower_count` 等
+- 每个操作前验证用户权限
+- 验证经度 [-180, 180]、纬度 [-90, 90]
+
+### 6.3 HTTPS 要求
+
+**TLS 配置**:
+- 最低版本: TLS 1.2
+- 推荐版本: TLS 1.3
+- 强加密套件: ECDHE-RSA-AES256-GCM-SHA384
+
+**证书管理**:
+- 使用 Let's Encrypt 自动续期
+- 配置 HSTS 头: `Strict-Transport-Security: max-age=31536000; includeSubDomains`
+
+### 6.4 密码安全策略
+
+**密码强度要求** (建议):
+- 最小长度: 8 字符
+- 包含大小写字母、数字
+
+**存储策略**:
+- 客户端: `SHA256(password)`
+- 服务端: `bcrypt(client_hash, salt)` with work factor 12
+- 永不存储明文密码或客户端哈希
+
+**防暴力破解**:
+- 登录失败 5 次后锁定账号 15 分钟
+- 使用验证码（可选）
+
+## 7. 部署与运维
+
+### 7.1 环境变量
+
+```bash
+# 数据库
+DATABASE_URL=postgresql://user:pass@localhost/hotspot
+REDIS_URL=redis://localhost:6379
+
+# JWT
+JWT_SECRET=your-secret-key-here
+JWT_EXPIRATION=3600
+
+# 服务器
+SERVER_HOST=0.0.0.0
+SERVER_PORT=8080
+
+# 日志
+RUST_LOG=info
+
+# 文件上传
+MAX_UPLOAD_SIZE=10485760  # 10MB
+UPLOAD_DIR=/var/hotspot/uploads
+```
+
+### 7.2 性能指标
+
+**目标 SLA**:
+- API 响应时间 P95 < 200ms
+- API 响应时间 P99 < 500ms
+- WebSocket 消息延迟 < 100ms
+- 系统可用性 > 99.9%
+
+**监控指标**:
+- 请求 QPS
+- 错误率
+- 数据库连接池使用率
+- Redis 命中率
+- WebSocket 连接数
+
+### 7.3 扩展性考虑
+
+**水平扩展**:
+- 无状态 API 服务器，可任意扩展
+- WebSocket 服务器通过 Redis Pub/Sub 同步消息
+- 数据库读写分离（主从复制）
+
+**缓存策略**:
+- 用户信息: 缓存 5 分钟
+- 群组信息: 缓存 10 分钟
+- 热点数据: 缓存 1 小时
+- 使用 Redis 作为缓存层
+
+## 8. 测试要求
+
+### 8.1 单元测试
+
+- 覆盖率目标: > 80%
+- 测试所有 Service 层业务逻辑
+- 测试所有工具函数
+
+### 8.2 集成测试
+
+- 测试所有 API 端点
+- 测试数据库操作
+- 测试 WebSocket 连接和消息推送
+
+### 8.3 性能测试
+
+- 使用 wrk 或 k6 进行压力测试
+- 模拟 1000 并发用户
+- 验证系统在高负载下的表现
+
+## 9. 开发里程碑
+
+### Phase 1: 基础设施 (Week 1-2)
+- 项目初始化
+- 数据库设计与迁移
+- 中间件实现
+- 错误处理框架
+
+### Phase 2: 核心功能 (Week 3-6)
+- 认证系统
+- 用户管理
+- 群组管理
+- 消息通讯
+
+### Phase 3: 扩展功能 (Week 7-10)
+- 生活瞬间
+- 评论系统
+- 排行榜
+- 成就系统
+
+### Phase 4: 实时通讯 (Week 11-12)
+- WebSocket 实现
+- 事件推送
+- 离线消息补偿
+
+### Phase 5: 优化与测试 (Week 13-14)
+- 性能优化
+- 安全加固
+- 完整测试
+- 文档完善
+
+## 10. 参考资料
+
+- API 规范文档: `api_spec.mdc`
+- Axum 官方文档: https://docs.rs/axum
+- SQLx 文档: https://docs.rs/sqlx
+- PostgreSQL 文档: https://www.postgresql.org/docs/
+- Redis 文档: https://redis.io/documentation
