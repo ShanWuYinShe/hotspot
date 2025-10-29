@@ -1,85 +1,50 @@
+[workspace]
+members = []
+resolver = "2"
+
 [package]
-name = "backend"
+name = "hotspot-backend"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
-argon2 = "0.5.3"
-axum = { version = "0.8.3", features = ["macros", "multipart", "ws"] }
-chrono = { version = "0.4.40", features = ["serde"] }
-dotenv = "0.15.0"
-futures = "0.3.31"
-futures-util = "0.3.31"
-jsonwebtoken = "9.3.1"
-lapin = "2.3.1"  # RabbitMQ 客户端
-prometheus = "0.13.3"
-rand = { version = "0.9.0", features = ["std"] }
-redis = { version = "0.29.5", features = ["aio", "tokio-comp", "connection-manager"] }
-serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0.140"
-sqlx = { version = "0.8.4", features = ["runtime-tokio-native-tls", "postgres", "uuid", "chrono", "migrate", "bigdecimal"] }
-sysinfo = "0.30"
-thiserror = "2.0.12"
-tokio = { version = "1.44.2", features = ["full"] }
-tokio-tungstenite = "0.26.2"
-tower-http = { version = "0.6.2", features = ["cors", "fs", "timeout", "trace"] }
-tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter", "json"] }
-utoipa = { version = "4.2.0", features = ["axum_extras"] }
-uuid = { version = "1.16.0", features = ["v4", "serde"] }
-toml = "0.8"
-async-trait = "0.1.83"
-log = "0.4"
-tower = "0.5"
-once_cell = "1.21.3"
-num_cpus = "1.17.0"
-lettre = { version = "0.11.18", features = ["smtp-transport", "tokio1-native-tls", "builder"] }
-serde_yaml = "0.9.34"
-reqwest = "0.12.23"
-sha2 = "0.10.9"
-regex = "1.10.6"
+# Web 框架
+axum = { version = "0.7", features = ["macros", "ws"] }
+tokio = { version = "1", features = ["full"] }
+tower = { version = "0.4", features = ["util"] }
+tower-http = { version = "0.5", features = ["fs", "trace", "cors"] }
 
-[features]
-# 默认配置：使用内存缓存和轻量级任务队列
-default = ["cache_memory", "jobs_memory", "metrics_basic"]
+# 数据库
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json"] }
 
-# === 替代实现 Feature Flags ===
+# Redis
+redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
 
-# 缓存系统（二选一）
-cache_memory = []     # 默认：内存缓存
-cache_redis = []      # 替代：Redis缓存
+# 序列化
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 
-# 任务队列系统（二选一）
-jobs_memory = []      # 默认：内存队列（轻量级）
-jobs_redis = []       # 替代：Redis队列（持久化）
+# 认证
+jsonwebtoken = "9.2"
+bcrypt = "0.15"
 
-# 监控指标系统（二选一）
-metrics_basic = []    # 默认：基础指标
-metrics_prometheus = [] # 替代：Prometheus指标
+# WebSocket
+tokio-tungstenite = "0.21"
+futures-util = "0.3"
 
-# === 可选增强功能 ===
+# 工具
+uuid = { version = "1.6", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "1.0"
+anyhow = "1.0"
 
-# 邮件通知（可选增强）
-email_notifications = []
+# 日志
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
-# WebSocket 钩子扩展（可选增强）
-ws_hooks = []
+# 环境变量
+dotenvy = "0.15"
 
-# 审计日志（可选增强）
-audit_logging = []
+# 其他
+once_cell = "1.19"
 
-# 高级搜索分析（可选增强）
-search_analytics = []
-
-# 事件存储系统（可选增强）  
-event_store = []
-
-# === 临时兼容性 Feature（待清理） ===
-# 这些 feature 用于兼容现有代码，将在后续版本中清理
-ws_offline_notifications = []
-
-# 注意：PostgreSQL、WebSocket、通知等是核心功能，始终启用
-# 不再使用 feature gate 控制核心业务功能
-
-[dev-dependencies]
-tower = "0.5"

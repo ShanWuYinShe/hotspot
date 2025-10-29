@@ -1,22 +1,14 @@
-/// HotSpot 服务层模块
-/// 
-/// 提供高级业务服务和跨领域功能：
-/// - 缓存服务：统一的缓存管理和策略
-/// - 监控服务：性能指标收集和监控
-/// - 通知服务：多渠道通知管理
-/// - 任务服务：异步任务处理和调度
-pub mod batch_notification_service;
-pub mod cache_service;
-pub mod metrics_service;
-pub mod nonce_service;
-pub mod password_security_service;
-pub mod simple_cache_adapter;
-pub mod user_id_service;
+pub mod auth_service;
+pub mod user_service;
+pub mod group_service;
+pub mod message_service;
+pub mod moment_service;
+pub mod comment_service;
+pub mod media_service;
+pub mod inbox_service;
+pub mod report_service;
+pub mod conversation_settings_service;
+pub mod subscription_service;
+pub mod leaderboard_service;
+pub mod feed_service;
 
-pub use batch_notification_service::*;
-pub use cache_service::{CacheService as GeneralCacheService, InMemoryCacheService, NullCacheService, CachedRepository};
-pub use metrics_service::*;
-pub use nonce_service::*;
-pub use password_security_service::*;
-pub use simple_cache_adapter::*;
-pub use user_id_service::*;
