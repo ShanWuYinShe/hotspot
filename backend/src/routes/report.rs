@@ -9,7 +9,7 @@ pub fn report_routes() -> Router {
             .route("/create", post(ReportHandler::create_report))
             .route("/history", post(ReportHandler::get_report_history))
             .route("/all", post(ReportHandler::get_all_reports))
-            .route("/review", post(ReportHandler::review_report)),
+            .route("/handle", post(ReportHandler::handle_report)),
     )
 }
 

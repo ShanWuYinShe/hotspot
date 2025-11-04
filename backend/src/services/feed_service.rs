@@ -14,8 +14,9 @@ use crate::{
     },
 };
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct FeedService {
+    db: PgPool,
     redis: ConnectionManager,
     moment_repo: MomentRepository,
     user_repo: UserRepository,
@@ -24,6 +25,7 @@ pub struct FeedService {
 impl FeedService {
     pub fn new(pool: PgPool, redis: ConnectionManager) -> Self {
         Self {
+            db: pool.clone(),
             redis,
             moment_repo: MomentRepository::new(pool.clone()),
             user_repo: UserRepository::new(pool),
@@ -36,8 +38,13 @@ impl FeedService {
         user_id: i64,
         req: GetFeedRequest,
     ) -> Result<PaginatedResponse<FeedItemResponse>, AppError> {
-        let offset = req.cursor.unwrap_or(0);
-        let limit = req.limit.min(100);
+        let offset = if let Some(cursor_str) = req.cursor {
+            cursor_str.parse::<i64>()
+                .map_err(|_| AppError::BadRequest("无效的游标".to_string()))?
+        } else {
+            0
+        };
+        let limit = req.limit.unwrap_or(20).min(100) as i64;
 
         // 尝试从Redis缓存获取推荐内容
         let cached_feed = self.get_cached_feed(user_id, offset, limit).await?;
@@ -52,7 +59,7 @@ impl FeedService {
             };
 
             let next_cursor = if has_more {
-                Some(offset + limit)
+                Some((offset + limit).to_string())
             } else {
                 None
             };
@@ -78,7 +85,7 @@ impl FeedService {
         };
 
         let next_cursor = if has_more {
-            Some(offset + limit)
+            Some((offset + limit).to_string())
         } else {
             None
         };
@@ -108,7 +115,7 @@ impl FeedService {
         // 记录反馈到数据库（使用feed_feedback表）
         sqlx::query!(
             r#"
-            INSERT INTO feed_feedback (user_id, content_type, content_id, feedback_type, created_at)
+            INSERT INTO feed_feedback (user_id, item_type, item_id, action, created_at)
             VALUES ($1, $2, $3, $4, NOW())
             "#,
             user_id,
@@ -116,7 +123,7 @@ impl FeedService {
             req.content_id,
             req.feedback_type
         )
-        .execute(&self.moment_repo.pool)
+        .execute(&self.db)
         .await
         .map_err(AppError::from)?;
 
@@ -144,9 +151,9 @@ impl FeedService {
 
         // 获取缓存的内容ID列表
         let content_ids: Vec<String> = conn
-            .lrange(&redis_key, offset, offset + limit)
+            .lrange(&redis_key, offset as isize, (offset + limit) as isize)
             .await
-            .map_err(|e| AppError::Internal(format!("Redis错误: {}", e)))?;
+            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
 
         if content_ids.is_empty() {
             return Ok(Vec::new());
@@ -167,12 +174,13 @@ impl FeedService {
             match content_type {
                 "moment" => {
                     if let Ok(moment_id) = uuid::Uuid::parse_str(id) {
-                        if let Ok(Some(moment)) = self.moment_repo.find_moment_by_id(moment_id).await {
+                        if let Ok(Some(moment)) = self.moment_repo.find_by_id(moment_id).await {
                             items.push(FeedItemResponse {
+                                item_id: format!("feed_item_{}", uuid::Uuid::new_v4()),
                                 content_type: "moment".to_string(),
-                                content_id: moment.id.to_string(),
+                                content_id: moment.moment_id.to_string(),
                                 title: None,
-                                description: moment.content.clone(),
+                                description: moment.description.clone(),
                                 author_id: moment.user_id,
                                 author_name: "".to_string(), // 需要查询用户信息
                                 created_at: moment.created_at,
@@ -202,22 +210,37 @@ impl FeedService {
         // 4. 混合排序
 
         // 获取最新的瞬间（简化实现）
-        let moments = self
-            .moment_repo
-            .list_moments(offset, limit + 1)
-            .await?;
+        use crate::models::moment::Moment;
+        let moments = sqlx::query_as!(
+            Moment,
+            r#"
+            SELECT moment_id, user_id, description, latitude, longitude,
+                   location_name, tags, images, created_at, updated_at,
+                   is_deleted, deleted_at
+            FROM moments
+            WHERE is_deleted = FALSE
+            ORDER BY created_at DESC
+            LIMIT $1 OFFSET $2
+            "#,
+            (limit + 1) as i64,
+            offset as i64
+        )
+        .fetch_all(&self.db)
+        .await
+        .map_err(AppError::from)?;
 
         let mut items = Vec::new();
         for moment in moments {
             // 获取作者信息
-            let author = self.user_repo.find_user_by_id(moment.user_id).await?;
-            let author_name = author.map(|u| u.nickname.unwrap_or(u.username)).unwrap_or_default();
+            let author = self.user_repo.find_by_id(moment.user_id).await?;
+            let author_name = author.map(|u| u.nickname).unwrap_or_default();
 
             items.push(FeedItemResponse {
+                item_id: format!("feed_item_{}", uuid::Uuid::new_v4()),
                 content_type: "moment".to_string(),
-                content_id: moment.id.to_string(),
+                content_id: moment.moment_id.to_string(),
                 title: None,
-                description: moment.content.clone(),
+                description: moment.description.clone(),
                 author_id: moment.user_id,
                 author_name,
                 created_at: moment.created_at,
@@ -241,7 +264,7 @@ impl FeedService {
         let _: () = conn
             .del(&redis_key)
             .await
-            .map_err(|e| AppError::Internal(format!("Redis错误: {}", e)))?;
+            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
 
         // 缓存新内容
         for item in items {
@@ -249,14 +272,14 @@ impl FeedService {
             let _: () = conn
                 .rpush(&redis_key, content_id)
                 .await
-                .map_err(|e| AppError::Internal(format!("Redis错误: {}", e)))?;
+                .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
         }
 
         // 设置过期时间（1小时）
         let _: () = conn
             .expire(&redis_key, 3600)
             .await
-            .map_err(|e| AppError::Internal(format!("Redis错误: {}", e)))?;
+            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
 
         Ok(())
     }
@@ -281,10 +304,13 @@ impl FeedService {
         };
 
         let content_key = format!("{}:{}", req.content_type, req.content_id);
-        let _: () = conn
-            .hincrbyfloat(&redis_key, content_key, weight_change)
+        redis::cmd("HINCRBYFLOAT")
+            .arg(&redis_key)
+            .arg(&content_key)
+            .arg(weight_change)
+            .query_async(&mut conn)
             .await
-            .map_err(|e| AppError::Internal(format!("Redis错误: {}", e)))?;
+            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
 
         Ok(())
     }
@@ -301,7 +327,7 @@ impl FeedService {
         let _: () = conn
             .lrem(&redis_key, 0, content_id)
             .await
-            .map_err(|e| AppError::Internal(format!("Redis错误: {}", e)))?;
+            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
 
         Ok(())
     }
@@ -314,7 +340,7 @@ impl FeedService {
         let _: () = conn
             .del(&redis_key)
             .await
-            .map_err(|e| AppError::Internal(format!("Redis错误: {}", e)))?;
+            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
 
         Ok(())
     }

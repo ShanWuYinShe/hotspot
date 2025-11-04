@@ -1,23 +1,35 @@
-use axum::{extract::State, Json};
+use axum::{extract::{Request, State}, Json};
 
 use crate::{
-    dto::{request::GetLeaderboardRequest, response::{ApiResponse, LeaderboardResponse}},
-    error::AppError,
+    dto::{
+        request::{ListLeaderboardRequest, GetMyRankRequest},
+        response::{ApiResponse, PaginatedResponse, CreatorRankResponse, MomentRankResponse, GetMyRankResponse},
+    },
+    error::Result,
+    middleware::auth::extract_user_id,
     services::leaderboard_service::LeaderboardService,
     state::AppState,
 };
 
-pub struct LeaderboardHandler;
+/// POST /api/v1/public/leaderboard/list
+pub async fn list(
+    State(state): State<AppState>,
+    Json(req): Json<ListLeaderboardRequest>,
+) -> Result<Json<ApiResponse<PaginatedResponse<serde_json::Value>>>> {
+    let service = LeaderboardService::new(&state.db, &state.redis);
+    let response = service.list_leaderboard(&req).await?;
+    Ok(Json(ApiResponse::success(response)))
+}
 
-impl LeaderboardHandler {
-    /// 获取排行榜
-    pub async fn get_leaderboard(
-        State(state): State<AppState>,
-        Json(req): Json<GetLeaderboardRequest>,
-    ) -> Result<Json<ApiResponse<LeaderboardResponse>>, AppError> {
-        let service = LeaderboardService::new(state.db.clone(), state.redis.clone());
-        let result = service.get_leaderboard(req).await?;
-        Ok(Json(ApiResponse::success_data(result)))
-    }
+/// POST /api/v1/protected/leaderboard/my_rank
+pub async fn my_rank(
+    State(state): State<AppState>,
+    req: Request,
+    Json(req_body): Json<GetMyRankRequest>,
+) -> Result<Json<ApiResponse<GetMyRankResponse>>> {
+    let user_id = extract_user_id(&req)?;
+    let service = LeaderboardService::new(&state.db, &state.redis);
+    let response = service.get_my_rank(user_id, &req_body).await?;
+    Ok(Json(ApiResponse::success(response)))
 }
 

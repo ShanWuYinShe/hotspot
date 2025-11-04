@@ -11,7 +11,7 @@ use crate::{
     repositories::user_repo::UserRepository,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct LeaderboardService {
     redis: ConnectionManager,
     user_repo: UserRepository,
@@ -30,64 +30,75 @@ impl LeaderboardService {
         &self,
         req: GetLeaderboardRequest,
     ) -> Result<LeaderboardResponse, AppError> {
-        let leaderboard_type = req.leaderboard_type.as_str();
-        let limit = req.limit.min(100) as isize;
-        let offset = req.offset.unwrap_or(0) as isize;
+        let category = req.category.as_str();
+        let limit = req.limit.unwrap_or(20).min(100) as isize;
+        let offset = 0 as isize; // 暂时使用0，后续可根据timeframe调整
 
         // 验证排行榜类型
-        let valid_types = vec!["active", "popular", "contributor"];
-        if !valid_types.contains(&leaderboard_type) {
+        let valid_categories = vec!["creators", "moments"];
+        if !valid_categories.contains(&category) {
             return Err(AppError::InvalidInput(format!(
-                "无效的排行榜类型: {}",
-                leaderboard_type
+                "无效的排行榜类别: {}",
+                category
             )));
         }
 
         // Redis key
-        let redis_key = format!("leaderboard:{}", leaderboard_type);
+        let redis_key = format!("leaderboard:{}", category);
 
         // 从Redis获取排行榜数据
         let mut conn = self.redis.clone();
         let results: Vec<(String, f64)> = conn
             .zrevrange_withscores(&redis_key, offset, offset + limit - 1)
             .await
-            .map_err(|e| AppError::Internal(format!("Redis错误: {}", e)))?;
+            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
 
         // 获取总数
         let total: isize = conn
             .zcard(&redis_key)
             .await
-            .map_err(|e| AppError::Internal(format!("Redis错误: {}", e)))?;
+            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
 
         // 转换为LeaderboardEntry
         let mut entries = Vec::new();
         for (rank_idx, (user_id_str, score)) in results.iter().enumerate() {
             let user_id: i64 = user_id_str
                 .parse()
-                .map_err(|_| AppError::Internal("无效的用户ID".to_string()))?;
+                .map_err(|_| AppError::InternalError("无效的用户ID".to_string()))?;
 
             // 获取用户信息
-            let user = self.user_repo.find_user_by_id(user_id).await?;
+            let user = self.user_repo.find_by_id(user_id).await?;
 
             if let Some(user) = user {
                 entries.push(LeaderboardEntry {
                     rank: (offset + rank_idx as isize + 1) as i32,
-                    user_id: user.id,
-                    username: user.username,
+                    user_id: user.user_id.to_string(),
                     nickname: user.nickname,
                     avatar_url: user.avatar_url,
-                    score: *score as i64,
+                    score: *score,
+                    stats: None,
+                    distance: None,
                 });
             }
         }
 
         let has_more = (offset + limit) < total;
+        
+        // 计算next_cursor（如果有更多数据）
+        let next_cursor = if has_more {
+            // 使用最后一个条目的排名作为cursor
+            entries.last().map(|e| e.rank.to_string())
+        } else {
+            None
+        };
 
         Ok(LeaderboardResponse {
-            leaderboard_type: leaderboard_type.to_string(),
-            entries,
+            category: category.to_string(),
+            timeframe: req.timeframe.clone(),
+            scope: req.scope.clone(),
+            items: entries,
             has_more,
-            total: total as i64,
+            next_cursor,
         })
     }
 
@@ -98,32 +109,12 @@ impl LeaderboardService {
     ) -> Result<(), AppError> {
         let mut conn = self.redis.clone();
 
-        // 更新活跃度排行榜
-        if let Some(active_score) = req.active_score {
-            let redis_key = "leaderboard:active";
-            let _: () = conn
-                .zadd(redis_key, req.user_id.to_string(), active_score)
-                .await
-                .map_err(|e| AppError::Internal(format!("Redis错误: {}", e)))?;
-        }
-
-        // 更新人气排行榜
-        if let Some(popular_score) = req.popular_score {
-            let redis_key = "leaderboard:popular";
-            let _: () = conn
-                .zadd(redis_key, req.user_id.to_string(), popular_score)
-                .await
-                .map_err(|e| AppError::Internal(format!("Redis错误: {}", e)))?;
-        }
-
-        // 更新贡献度排行榜
-        if let Some(contributor_score) = req.contributor_score {
-            let redis_key = "leaderboard:contributor";
-            let _: () = conn
-                .zadd(redis_key, req.user_id.to_string(), contributor_score)
-                .await
-                .map_err(|e| AppError::Internal(format!("Redis错误: {}", e)))?;
-        }
+        // 根据stats_type更新对应的排行榜
+        let redis_key = format!("leaderboard:{}", req.stats_type);
+        let _: () = conn
+            .zadd(&redis_key, &req.user_id, req.value as f64)
+            .await
+            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
 
         Ok(())
     }
@@ -139,7 +130,7 @@ impl LeaderboardService {
         let _: () = conn
             .zadd(redis_key, user_id.to_string(), increment)
             .await
-            .map_err(|e| AppError::Internal(format!("Redis错误: {}", e)))?;
+            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
         Ok(())
     }
 
@@ -151,10 +142,14 @@ impl LeaderboardService {
     ) -> Result<(), AppError> {
         let mut conn = self.redis.clone();
         let redis_key = "leaderboard:popular";
-        let _: () = conn
-            .zincrby(redis_key, increment, user_id.to_string())
+        // 使用 zadd with INCR 选项
+        let _: f64 = redis::cmd("ZINCRBY")
+            .arg(redis_key)
+            .arg(increment)
+            .arg(user_id.to_string())
+            .query_async(&mut conn)
             .await
-            .map_err(|e| AppError::Internal(format!("Redis错误: {}", e)))?;
+            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
         Ok(())
     }
 
@@ -166,10 +161,14 @@ impl LeaderboardService {
     ) -> Result<(), AppError> {
         let mut conn = self.redis.clone();
         let redis_key = "leaderboard:contributor";
-        let _: () = conn
-            .zincrby(redis_key, increment, user_id.to_string())
+        // 使用 zadd with INCR 选项
+        let _: f64 = redis::cmd("ZINCRBY")
+            .arg(redis_key)
+            .arg(increment)
+            .arg(user_id.to_string())
+            .query_async(&mut conn)
             .await
-            .map_err(|e| AppError::Internal(format!("Redis错误: {}", e)))?;
+            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
         Ok(())
     }
 
@@ -184,7 +183,7 @@ impl LeaderboardService {
         let rank: Option<isize> = conn
             .zrevrank(&redis_key, user_id.to_string())
             .await
-            .map_err(|e| AppError::Internal(format!("Redis错误: {}", e)))?;
+            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
 
         Ok(rank.map(|r| (r + 1) as i64))
     }
@@ -200,7 +199,7 @@ impl LeaderboardService {
         let score: Option<f64> = conn
             .zscore(&redis_key, user_id.to_string())
             .await
-            .map_err(|e| AppError::Internal(format!("Redis错误: {}", e)))?;
+            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
 
         Ok(score)
     }
@@ -212,8 +211,26 @@ impl LeaderboardService {
         let _: () = conn
             .del(&redis_key)
             .await
-            .map_err(|e| AppError::Internal(format!("Redis错误: {}", e)))?;
+            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
         Ok(())
+    }
+
+    /// 获取排行榜（别名方法）
+    pub async fn list_leaderboard(
+        &self,
+        req: crate::dto::request::GetLeaderboardRequest,
+    ) -> Result<crate::dto::response::LeaderboardResponse, AppError> {
+        self.get_leaderboard(req).await
+    }
+
+    /// 获取我的排名（别名方法）
+    pub async fn get_my_rank(
+        &self,
+        _user_id: i64,
+        _req: crate::dto::request::GetMyRankRequest,
+    ) -> Result<crate::dto::response::GetMyRankResponse, AppError> {
+        // TODO: 实现获取我的排名逻辑
+        Err(AppError::NotImplemented("功能开发中".to_string()))
     }
 }
 

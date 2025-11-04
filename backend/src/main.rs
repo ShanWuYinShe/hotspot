@@ -1,6 +1,8 @@
 mod config;
+mod constants;
 mod error;
 mod state;
+mod types;
 mod utils;
 mod middleware;
 mod dto;
@@ -60,6 +62,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         event_handler.start(event_receiver).await;
     });
     tracing::info!("Event handler started");
+
+    // 启动 WebSocket 超时检查任务
+    let ws_manager_clone = state.ws_manager.clone();
+    tokio::spawn(async move {
+        use tokio::time::{interval, Duration};
+        let mut check_interval = interval(Duration::from_secs(30));
+        loop {
+            check_interval.tick().await;
+            let timeout_connections = ws_manager_clone.check_timeout().await;
+            for connection_id in timeout_connections {
+                tracing::warn!("WebSocket连接超时，移除连接: {}", connection_id);
+                ws_manager_clone.remove_connection(&connection_id).await;
+            }
+        }
+    });
+    tracing::info!("WebSocket timeout checker started");
 
     // 创建路由
     let app = Router::new()

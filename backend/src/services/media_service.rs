@@ -1,4 +1,4 @@
-use redis::Client as RedisClient;
+use redis::aio::ConnectionManager as RedisConnectionManager;
 use sqlx::PgPool;
 use std::path::PathBuf;
 use uuid::Uuid;
@@ -12,13 +12,13 @@ pub struct MediaService<'a> {
     #[allow(dead_code)]
     db: &'a PgPool,
     #[allow(dead_code)]
-    redis: &'a RedisClient,
+    redis: &'a RedisConnectionManager,
     upload_dir: PathBuf,
     max_file_size: usize,
 }
 
 impl<'a> MediaService<'a> {
-    pub fn new(db: &'a PgPool, redis: &'a RedisClient) -> Self {
+    pub fn new(db: &'a PgPool, redis: &'a RedisConnectionManager) -> Self {
         // 从环境变量读取配置，或使用默认值
         let upload_dir = std::env::var("UPLOAD_DIR")
             .unwrap_or_else(|_| "./uploads".to_string());
@@ -111,8 +111,7 @@ impl<'a> MediaService<'a> {
 
         Ok(UploadResponse {
             url,
-            filename: new_filename,
-            size: data.len() as i64,
+            file_size: data.len() as i64,
             mime_type: format!("image/{}", extension),
         })
     }
@@ -157,8 +156,7 @@ impl<'a> MediaService<'a> {
 
         Ok(UploadResponse {
             url,
-            filename: new_filename,
-            size: data.len() as i64,
+            file_size: data.len() as i64,
             mime_type: self.get_mime_type(&extension),
         })
     }

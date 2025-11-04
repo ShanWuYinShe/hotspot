@@ -6,7 +6,10 @@ use tracing::{error, info};
 use crate::{
     events::events::AppEvent,
     models::inbox::InboxItem,
-    repositories::inbox_repo::InboxRepository,
+    repositories::{
+        inbox_repo::InboxRepository,
+        event_subscription_repo::EventSubscriptionRepository,
+    },
     websocket::{
         manager::ConnectionManager as WsConnectionManager,
         types::WsMessage,
@@ -19,6 +22,7 @@ pub struct EventHandler {
     redis: ConnectionManager,
     ws_manager: WsConnectionManager,
     inbox_repo: InboxRepository,
+    subscription_repo: EventSubscriptionRepository,
 }
 
 impl EventHandler {
@@ -29,6 +33,7 @@ impl EventHandler {
     ) -> Self {
         Self {
             inbox_repo: InboxRepository::new(db.clone()),
+            subscription_repo: EventSubscriptionRepository::new(db.clone()),
             db,
             redis,
             ws_manager,
@@ -77,7 +82,7 @@ impl EventHandler {
                         "message": "您收到了一个好友请求"
                     }),
                 );
-                self.inbox_repo.create_inbox_item(&item).await?;
+                self.inbox_repo.create(&item).await?;
             }
             AppEvent::FriendRequestAccepted { from_user_id, to_user_id } => {
                 let item = InboxItem::new(
@@ -89,7 +94,7 @@ impl EventHandler {
                         "message": "您的好友请求已被接受"
                     }),
                 );
-                self.inbox_repo.create_inbox_item(&item).await?;
+                self.inbox_repo.create(&item).await?;
             }
             AppEvent::GroupInviteSent { group_id, to_user_id, from_user_id } => {
                 let item = InboxItem::new(
@@ -102,7 +107,7 @@ impl EventHandler {
                         "message": "您收到了一个群组邀请"
                     }),
                 );
-                self.inbox_repo.create_inbox_item(&item).await?;
+                self.inbox_repo.create(&item).await?;
             }
             AppEvent::MomentLiked { moment_id, user_id, liker_id } => {
                 let item = InboxItem::new(
@@ -115,7 +120,7 @@ impl EventHandler {
                         "message": "有人点赞了您的瞬间"
                     }),
                 );
-                self.inbox_repo.create_inbox_item(&item).await?;
+                self.inbox_repo.create(&item).await?;
             }
             AppEvent::MomentCommented { moment_id, user_id, commenter_id, .. } => {
                 let item = InboxItem::new(
@@ -128,7 +133,7 @@ impl EventHandler {
                         "message": "有人评论了您的瞬间"
                     }),
                 );
-                self.inbox_repo.create_inbox_item(&item).await?;
+                self.inbox_repo.create(&item).await?;
             }
             AppEvent::CommentLiked { comment_id, user_id, liker_id } => {
                 let item = InboxItem::new(
@@ -141,7 +146,7 @@ impl EventHandler {
                         "message": "有人点赞了您的评论"
                     }),
                 );
-                self.inbox_repo.create_inbox_item(&item).await?;
+                self.inbox_repo.create(&item).await?;
             }
             AppEvent::SystemNotification { user_id, title, content } => {
                 let item = InboxItem::new(
@@ -153,7 +158,7 @@ impl EventHandler {
                         "content": content
                     }),
                 );
-                self.inbox_repo.create_inbox_item(&item).await?;
+                self.inbox_repo.create(&item).await?;
             }
             _ => {
                 // 其他事件不需要创建收件箱项
@@ -166,23 +171,103 @@ impl EventHandler {
     /// 发送WebSocket推送
     async fn send_websocket_notifications(&self, event: &AppEvent) -> Result<(), Box<dyn std::error::Error>> {
         match event {
-            AppEvent::MessageSent { sender_id, conversation_id, conversation_type, .. } => {
+            AppEvent::MessageSent { message_id, room_id, sender_id, content, message_type } => {
+                // TODO: 查询消息详细信息（发送者昵称、头像等）
                 let message = WsMessage::NewMessage {
-                    sender_id: *sender_id,
-                    conversation_id: *conversation_id,
-                    conversation_type: conversation_type.clone(),
+                    id: message_id.to_string(),
+                    target_id: room_id.to_string(),
+                    target_type: "group".to_string(),  // TODO: 根据room_type判断
+                    sender: crate::websocket::types::UserInfo {
+                        user_id: sender_id.to_string(),
+                        nickname: "Unknown".to_string(),  // TODO: 从数据库查询
+                        avatar_url: None,
+                    },
+                    message_type: message_type.clone(),
+                    content: content.clone(),
+                    reply_to: None,  // TODO: 从消息中获取
+                    mentions: None,
+                    sent_at: chrono::Utc::now().to_rfc3339(),
+                    latitude: None,
+                    longitude: None,
+                    location_name: None,
+                    file_name: None,
+                    file_size: None,
+                    thumbnail_url: None,
+                    duration: None,
+                    system_event: None,
+                    affected_users: None,
                 };
                 
-                // 根据会话类型推送给相关用户
-                if conversation_type == "private" {
-                    // 私聊：推送给对方
-                    // 这里需要查询会话的另一方用户ID
-                    // 简化实现：推送给所有订阅了private_message的用户
-                    self.ws_manager.broadcast_to_channel("private_message", message).await;
-                } else {
-                    // 群聊：推送给群组成员
-                    self.ws_manager.broadcast_to_channel("group_message", message).await;
-                }
+                // 推送给订阅了 chat_messages 频道的用户
+                // TODO: 查询聊天室成员并推送
+                let _ = self.ws_manager.broadcast(&message).await;
+            }
+            AppEvent::MessageEdited { message_id, room_id, content, edited_at } => {
+                let message = WsMessage::MessageEdited {
+                    id: message_id.to_string(),
+                    target_id: room_id.to_string(),
+                    target_type: "group".to_string(),
+                    content: content.clone(),
+                    edited_at: edited_at.clone(),
+                };
+                let _ = self.ws_manager.broadcast(&message).await;
+            }
+            AppEvent::MessageRecalled { message_id, room_id, recalled_by, recalled_at } => {
+                let message = WsMessage::MessageRecalled {
+                    id: message_id.to_string(),
+                    target_id: room_id.to_string(),
+                    target_type: "group".to_string(),
+                    recalled_by: recalled_by.to_string(),
+                    recalled_at: recalled_at.clone(),
+                };
+                let _ = self.ws_manager.broadcast(&message).await;
+            }
+            AppEvent::MessageDeleted { message_id, room_id, deleted_by, for_everyone } => {
+                let message = WsMessage::MessageDeleted {
+                    id: message_id.to_string(),
+                    target_id: room_id.to_string(),
+                    target_type: "group".to_string(),
+                    deleted_by: deleted_by.to_string(),
+                    for_everyone: *for_everyone,
+                    deleted_at: chrono::Utc::now().to_rfc3339(),
+                };
+                let _ = self.ws_manager.broadcast(&message).await;
+            }
+            AppEvent::MessageRead { room_id, reader_id, up_to, read_at } => {
+                let message = WsMessage::MessageRead {
+                    target_id: room_id.to_string(),
+                    target_type: "group".to_string(),
+                    up_to: up_to.to_string(),
+                    reader_id: reader_id.to_string(),
+                    read_at: read_at.clone(),
+                };
+                let _ = self.ws_manager.broadcast(&message).await;
+            }
+            AppEvent::MessageReaction { message_id, room_id, user_id, reaction_type, action } => {
+                let message = WsMessage::MessageReaction {
+                    id: message_id.to_string(),
+                    target_id: room_id.to_string(),
+                    target_type: "group".to_string(),
+                    user: crate::websocket::types::UserInfo {
+                        user_id: user_id.to_string(),
+                        nickname: "Unknown".to_string(),  // TODO: 从数据库查询
+                        avatar_url: None,
+                    },
+                    reaction_type: reaction_type.clone(),
+                    action: action.clone(),
+                    created_at: chrono::Utc::now().to_rfc3339(),
+                };
+                let _ = self.ws_manager.broadcast(&message).await;
+            }
+            AppEvent::UserTyping { room_id, user_id, is_typing } => {
+                let message = WsMessage::UserTyping {
+                    target_id: room_id.to_string(),
+                    target_type: "group".to_string(),
+                    user_id: user_id.to_string(),
+                    nickname: "Unknown".to_string(),  // TODO: 从数据库查询
+                    is_typing: *is_typing,
+                };
+                let _ = self.ws_manager.broadcast(&message).await;
             }
             AppEvent::FriendRequestSent { to_user_id, from_user_id } => {
                 let message = WsMessage::FriendRequest {

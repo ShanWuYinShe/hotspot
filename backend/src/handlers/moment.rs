@@ -1,4 +1,4 @@
-use axum::{extract::{Request, State}, Json};
+use axum::{extract::State, Extension, Json};
 
 use crate::{
     dto::{
@@ -8,10 +8,10 @@ use crate::{
             ListMyMomentsRequest, LikeMomentRequest, UnlikeMomentRequest,
             CollectMomentRequest, UncollectMomentRequest, ListCollectionsRequest,
         },
-        response::{ApiResponse, PaginatedResponse, MomentResponse},
+        response::{ApiResponse, PaginatedResponse, MomentResponse, MomentSummaryResponse},
     },
     error::Result,
-    middleware::auth::extract_user_id,
+    middleware::auth::OptionalUserId,
     services::moment_service::MomentService,
     state::AppState,
 };
@@ -19,10 +19,9 @@ use crate::{
 /// POST /api/v1/protected/moment/create
 pub async fn create(
     State(state): State<AppState>,
-    req: Request,
+    Extension(user_id): Extension<i64>,
     Json(req_body): Json<CreateMomentRequest>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>> {
-    let user_id = extract_user_id(&req)?;
     
     let service = MomentService::new(&state.db, &state.redis);
     let moment_id = service.create_moment(user_id, &req_body).await?;
@@ -37,10 +36,9 @@ pub async fn create(
 /// POST /api/v1/protected/moment/update
 pub async fn update(
     State(state): State<AppState>,
-    req: Request,
+    Extension(user_id): Extension<i64>,
     Json(req_body): Json<UpdateMomentRequest>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>> {
-    let user_id = extract_user_id(&req)?;
     
     let service = MomentService::new(&state.db, &state.redis);
     service.update_moment(user_id, &req_body).await?;
@@ -54,10 +52,9 @@ pub async fn update(
 /// POST /api/v1/protected/moment/delete
 pub async fn delete(
     State(state): State<AppState>,
-    req: Request,
+    Extension(user_id): Extension<i64>,
     Json(req_body): Json<DeleteMomentRequest>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>> {
-    let user_id = extract_user_id(&req)?;
     
     let service = MomentService::new(&state.db, &state.redis);
     service.delete_moment(user_id, &req_body).await?;
@@ -71,10 +68,9 @@ pub async fn delete(
 /// POST /api/v1/protected/moment/my_moments
 pub async fn my_moments(
     State(state): State<AppState>,
-    req: Request,
+    Extension(user_id): Extension<i64>,
     Json(req_body): Json<ListMyMomentsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedResponse<MomentResponse>>>> {
-    let user_id = extract_user_id(&req)?;
     
     let service = MomentService::new(&state.db, &state.redis);
     let response = service.list_my_moments(user_id, &req_body).await?;
@@ -85,11 +81,9 @@ pub async fn my_moments(
 /// POST /api/v1/public/moment/search_by_location
 pub async fn search_by_location(
     State(state): State<AppState>,
-    request: Request,
+    OptionalUserId(current_user_id): OptionalUserId,
     Json(req): Json<SearchMomentByLocationRequest>,
 ) -> Result<Json<ApiResponse<PaginatedResponse<MomentResponse>>>> {
-    let current_user_id = extract_user_id(&request).ok();
-    
     let service = MomentService::new(&state.db, &state.redis);
     let response = service.search_by_location(&req, current_user_id).await?;
     
@@ -99,11 +93,9 @@ pub async fn search_by_location(
 /// POST /api/v1/public/moment/search_by_tags
 pub async fn search_by_tags(
     State(state): State<AppState>,
-    request: Request,
+    OptionalUserId(current_user_id): OptionalUserId,
     Json(req): Json<SearchMomentByTagsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedResponse<MomentResponse>>>> {
-    let current_user_id = extract_user_id(&request).ok();
-    
     let service = MomentService::new(&state.db, &state.redis);
     let response = service.search_by_tags(&req, current_user_id).await?;
     
@@ -113,10 +105,9 @@ pub async fn search_by_tags(
 /// POST /api/v1/protected/moment/like
 pub async fn like(
     State(state): State<AppState>,
-    req: Request,
+    Extension(user_id): Extension<i64>,
     Json(req_body): Json<LikeMomentRequest>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>> {
-    let user_id = extract_user_id(&req)?;
     
     let service = MomentService::new(&state.db, &state.redis);
     service.like_moment(user_id, &req_body).await?;
@@ -130,10 +121,9 @@ pub async fn like(
 /// POST /api/v1/protected/moment/unlike
 pub async fn unlike(
     State(state): State<AppState>,
-    req: Request,
+    Extension(user_id): Extension<i64>,
     Json(req_body): Json<UnlikeMomentRequest>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>> {
-    let user_id = extract_user_id(&req)?;
     
     let service = MomentService::new(&state.db, &state.redis);
     service.unlike_moment(user_id, &req_body).await?;
@@ -147,10 +137,9 @@ pub async fn unlike(
 /// POST /api/v1/protected/moment/collect
 pub async fn collect(
     State(state): State<AppState>,
-    req: Request,
+    Extension(user_id): Extension<i64>,
     Json(req_body): Json<CollectMomentRequest>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>> {
-    let user_id = extract_user_id(&req)?;
     
     let service = MomentService::new(&state.db, &state.redis);
     service.collect_moment(user_id, &req_body).await?;
@@ -164,10 +153,9 @@ pub async fn collect(
 /// POST /api/v1/protected/moment/uncollect
 pub async fn uncollect(
     State(state): State<AppState>,
-    req: Request,
+    Extension(user_id): Extension<i64>,
     Json(req_body): Json<UncollectMomentRequest>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>> {
-    let user_id = extract_user_id(&req)?;
     
     let service = MomentService::new(&state.db, &state.redis);
     service.uncollect_moment(user_id, &req_body).await?;
@@ -179,12 +167,12 @@ pub async fn uncollect(
 }
 
 /// POST /api/v1/protected/moment/collections
+/// 获取收藏列表（使用摘要响应，性能优化）
 pub async fn collections(
     State(state): State<AppState>,
-    req: Request,
+    Extension(user_id): Extension<i64>,
     Json(req_body): Json<ListCollectionsRequest>,
-) -> Result<Json<ApiResponse<PaginatedResponse<MomentResponse>>>> {
-    let user_id = extract_user_id(&req)?;
+) -> Result<Json<ApiResponse<PaginatedResponse<MomentSummaryResponse>>>> {
     
     let service = MomentService::new(&state.db, &state.redis);
     let response = service.list_collections(user_id, &req_body).await?;

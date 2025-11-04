@@ -14,14 +14,23 @@ pub enum AppError {
     #[error("认证失败: {0}")]
     Unauthorized(String),
 
-    #[error("权限不足")]
-    Forbidden,
+    #[error("权限不足: {0}")]
+    Forbidden(String),
 
-    #[error("资源不存在")]
-    NotFound,
+    #[error("资源不存在: {0}")]
+    NotFound(String),
 
     #[error("操作冲突: {0}")]
     Conflict(String),
+
+    #[error("参数验证失败: {0}")]
+    InvalidInput(String),
+
+    #[error("内部错误: {0}")]
+    InternalError(String),
+
+    #[error("功能未实现: {0}")]
+    NotImplemented(String),
 
     #[error("数据库错误: {0}")]
     Database(#[from] sqlx::Error),
@@ -47,9 +56,12 @@ impl AppError {
         match self {
             Self::BadRequest(_) => 1000,
             Self::Unauthorized(_) => 1002,
-            Self::Forbidden => 1003,
-            Self::NotFound => 1004,
+            Self::Forbidden(_) => 1003,
+            Self::NotFound(_) => 1004,
             Self::Conflict(_) => 1005,
+            Self::InvalidInput(_) => 1001,
+            Self::InternalError(_) => 5000,
+            Self::NotImplemented(_) => 1006,
             Self::Database(_) => 5001,
             Self::Redis(_) => 5001,
             Self::Jwt(_) => 1002,

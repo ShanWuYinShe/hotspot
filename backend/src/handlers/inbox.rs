@@ -4,9 +4,9 @@ use crate::{
     dto::{
         request::{
             DeleteInboxItemsRequest, GetInboxRequest, MarkInboxReadRequest,
-            RegisterDeviceTokenRequest, UnregisterDeviceTokenRequest,
+            UpdateDeviceTokenRequest,
         },
-        response::{ApiResponse, InboxItemResponse, PaginatedResponse},
+        response::{ApiResponse, InboxItemResponse, PaginatedResponse, UpdateDeviceTokenResponse},
     },
     error::AppError,
     services::inbox_service::InboxService,
@@ -59,28 +59,27 @@ impl InboxHandler {
         Ok(Json(ApiResponse::success_data(count)))
     }
 
-    /// 注册设备Token
-    pub async fn register_device_token(
+    /// 更新设备Token（注册或注销）
+    pub async fn update_device_token(
         State(state): State<AppState>,
         Extension(user_id): Extension<i64>,
-        Json(req): Json<RegisterDeviceTokenRequest>,
-    ) -> Result<Json<ApiResponse<()>>, AppError> {
+        Json(req): Json<UpdateDeviceTokenRequest>,
+    ) -> Result<Json<ApiResponse<UpdateDeviceTokenResponse>>, AppError> {
         let inbox_service = InboxService::new(state.db.clone());
-        inbox_service.register_device_token(user_id, req).await?;
-        Ok(Json(ApiResponse::success("设备Token注册成功")))
-    }
-
-    /// 注销设备Token
-    pub async fn unregister_device_token(
-        State(state): State<AppState>,
-        Extension(user_id): Extension<i64>,
-        Json(req): Json<UnregisterDeviceTokenRequest>,
-    ) -> Result<Json<ApiResponse<()>>, AppError> {
-        let inbox_service = InboxService::new(state.db.clone());
-        inbox_service
-            .unregister_device_token(user_id, req)
-            .await?;
-        Ok(Json(ApiResponse::success("设备Token注销成功")))
+        inbox_service.update_device_token(user_id, req.clone()).await?;
+        
+        let message = match req.action.as_str() {
+            "register" => "设备Token注册成功",
+            "unregister" => "设备Token注销成功",
+            _ => "操作成功",
+        };
+        
+        let response = UpdateDeviceTokenResponse {
+            success: true,
+            message: message.to_string(),
+        };
+        
+        Ok(Json(ApiResponse::success_data(response)))
     }
 }
 

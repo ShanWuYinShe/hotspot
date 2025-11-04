@@ -57,21 +57,32 @@ async fn handle_socket(socket: WebSocket, user_id: i64, state: AppState) {
     // 将连接添加到管理器
     state.ws_manager.add_connection(connection_id.clone(), user_id, tx.clone()).await;
 
+    // 标记用户上线（Redis）
+    use crate::services::presence_service::PresenceService;
+    let mut presence_service = PresenceService::new(state.redis.clone());
+    if let Err(e) = presence_service.mark_user_online(user_id).await {
+        tracing::error!("标记用户上线失败: user_id={}, error={}", user_id, e);
+    }
+
     // 发送欢迎消息
-    let welcome_msg = WsMessage::Connected {
+    let welcome_msg = WsMessage::ConnectionEstablished {
         connection_id: connection_id.clone(),
         user_id: user_id.to_string(),
+        server_time: chrono::Utc::now().to_rfc3339(),
     };
     if let Ok(json) = serde_json::to_string(&welcome_msg) {
         let _ = tx.send(Message::Text(json));
     }
 
     // 通知其他用户该用户上线
+    // TODO: 查询用户昵称和头像
     let online_msg = WsMessage::UserOnline {
         user_id: user_id.to_string(),
-        timestamp: chrono::Utc::now().timestamp(),
+        nickname: "Unknown".to_string(),
+        avatar_url: String::new(),
+        online_at: chrono::Utc::now().to_rfc3339(),
     };
-    // TODO: 只推送给订阅了该用户在线状态的用户
+    // TODO: 只推送给订阅了 presence 频道的用户
     let _ = state.ws_manager.broadcast(&online_msg).await;
 
     // 启动心跳任务
@@ -98,11 +109,12 @@ async fn handle_socket(socket: WebSocket, user_id: i64, state: AppState) {
     // 处理接收消息
     let state_clone = state.clone();
     let connection_id_clone = connection_id.clone();
+    let connection_id_for_handle = connection_id.clone();
     let receive_task = tokio::spawn(async move {
         while let Some(result) = receiver.next().await {
             match result {
                 Ok(msg) => {
-                    if let Err(e) = handle_message(msg, user_id, &state_clone).await {
+                    if let Err(e) = handle_message(msg, user_id, &connection_id_for_handle, &state_clone).await {
                         tracing::error!("处理WebSocket消息失败: user_id={}, error={}", user_id, e);
                     }
                 }
@@ -125,21 +137,30 @@ async fn handle_socket(socket: WebSocket, user_id: i64, state: AppState) {
     // 移除连接
     state.ws_manager.remove_connection(&connection_id).await;
 
+    // 标记用户离线（Redis，仅当用户没有其他连接时）
+    if state.ws_manager.get_user_connection_count(user_id).await == 0 {
+        use crate::services::presence_service::PresenceService;
+        let mut presence_service = PresenceService::new(state.redis.clone());
+        if let Err(e) = presence_service.mark_user_offline(user_id).await {
+            tracing::error!("标记用户离线失败: user_id={}, error={}", user_id, e);
+        }
+
+        // 通知其他用户该用户下线
+        let offline_msg = WsMessage::UserOffline {
+            user_id: user_id.to_string(),
+            offline_at: chrono::Utc::now().to_rfc3339(),
+        };
+        let _ = state.ws_manager.broadcast(&offline_msg).await;
+    }
+
     // 取消所有订阅
     state.ws_subscription.unsubscribe_all(user_id).await;
-
-    // 通知其他用户该用户下线
-    let offline_msg = WsMessage::UserOffline {
-        user_id: user_id.to_string(),
-        timestamp: chrono::Utc::now().timestamp(),
-    };
-    let _ = state.ws_manager.broadcast(&offline_msg).await;
 
     tracing::info!("WebSocket连接关闭: user_id={}, connection_id={}", user_id, connection_id);
 }
 
 /// 处理WebSocket消息
-async fn handle_message(msg: Message, user_id: i64, state: &AppState) -> Result<(), String> {
+async fn handle_message(msg: Message, user_id: i64, connection_id: &str, state: &AppState) -> Result<(), String> {
     match msg {
         Message::Text(text) => {
             // 解析客户端消息
@@ -148,6 +169,9 @@ async fn handle_message(msg: Message, user_id: i64, state: &AppState) -> Result<
 
             match client_msg {
                 WsMessage::Ping => {
+                    // 更新心跳时间
+                    state.ws_manager.update_ping(connection_id).await?;
+                    
                     // 回复Pong
                     let pong_msg = WsMessage::Pong;
                     state.ws_manager.send_to_user(user_id, &pong_msg).await?;
@@ -155,25 +179,23 @@ async fn handle_message(msg: Message, user_id: i64, state: &AppState) -> Result<
                 
                 WsMessage::Subscribe { channels } => {
                     // 处理订阅请求
-                    for channel in channels {
-                        let subscription = parse_channel(&channel)?;
-                        state.ws_subscription.subscribe(user_id, subscription).await;
-                    }
+                    let subscribed = state.ws_manager.subscribe(connection_id, channels).await?;
                     
                     // 发送订阅确认
-                    let ack_msg = WsMessage::SubscribeAck { channels };
+                    let ack_msg = WsMessage::SubscribeAck { 
+                        channels: subscribed,
+                    };
                     state.ws_manager.send_to_user(user_id, &ack_msg).await?;
                 }
                 
                 WsMessage::Unsubscribe { channels } => {
                     // 处理取消订阅请求
-                    for channel in channels {
-                        let subscription = parse_channel(&channel)?;
-                        state.ws_subscription.unsubscribe(user_id, &subscription).await;
-                    }
+                    let unsubscribed = state.ws_manager.unsubscribe(connection_id, channels).await?;
                     
                     // 发送取消订阅确认
-                    let ack_msg = WsMessage::UnsubscribeAck { channels };
+                    let ack_msg = WsMessage::UnsubscribeAck { 
+                        channels: unsubscribed,
+                    };
                     state.ws_manager.send_to_user(user_id, &ack_msg).await?;
                 }
                 

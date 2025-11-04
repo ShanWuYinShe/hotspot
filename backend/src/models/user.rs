@@ -9,11 +9,10 @@ pub struct User {
     pub password_hash: Option<String>,
     pub avatar_url: Option<String>,
     pub bio: Option<String>,
-    pub latitude: Option<f64>,
-    pub longitude: Option<f64>,
-    pub location_name: Option<String>,
     pub created_at: DateTime<Utc>,
     pub last_active_at: Option<DateTime<Utc>>,
+    pub is_deleted: bool,
+    pub deleted_at: Option<DateTime<Utc>>,
 }
 
 impl Default for User {
@@ -25,11 +24,10 @@ impl Default for User {
             password_hash: None,
             avatar_url: None,
             bio: None,
-            latitude: None,
-            longitude: None,
-            location_name: None,
             created_at: Utc::now(),
             last_active_at: None,
+            is_deleted: false,
+            deleted_at: None,
         }
     }
 }

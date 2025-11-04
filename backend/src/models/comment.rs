@@ -11,5 +11,8 @@ pub struct Comment {
     pub parent_id: Option<Uuid>,
     pub reply_to_user_id: Option<i64>,
     pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub is_deleted: bool,
+    pub deleted_at: Option<DateTime<Utc>>,
 }
 

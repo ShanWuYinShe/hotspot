@@ -1,4 +1,4 @@
-use redis::Client as RedisClient;
+use redis::aio::ConnectionManager as RedisConnectionManager;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -10,7 +10,7 @@ use crate::{
             ListMyMomentsRequest, LikeMomentRequest, UnlikeMomentRequest,
             CollectMomentRequest, UncollectMomentRequest, ListCollectionsRequest,
         },
-        response::{MomentResponse, PaginatedResponse},
+        response::{MomentResponse, MomentSummaryResponse, PaginatedResponse},
     },
     error::{AppError, Result},
     models::moment::Moment,
@@ -20,49 +20,55 @@ use crate::{
 pub struct MomentService<'a> {
     db: &'a PgPool,
     #[allow(dead_code)]
-    redis: &'a RedisClient,
+    redis: &'a RedisConnectionManager,
 }
 
 impl<'a> MomentService<'a> {
-    pub fn new(db: &'a PgPool, redis: &'a RedisClient) -> Self {
+    pub fn new(db: &'a PgPool, redis: &'a RedisConnectionManager) -> Self {
         Self { db, redis }
     }
 
     /// 创建瞬间
     pub async fn create_moment(&self, user_id: i64, req: &CreateMomentRequest) -> Result<String> {
-        let moment_repo = MomentRepository::new(self.db);
+        let moment_repo = MomentRepository::new(self.db.clone());
 
         // 验证坐标
-        if let (Some(lat), Some(lon)) = (req.latitude, req.longitude) {
-            crate::utils::validation::Validator::validate_coordinates(lat, lon)?;
+        if req.latitude < -90.0 || req.latitude > 90.0 {
+            return Err(AppError::InvalidInput("纬度必须在-90到90之间".to_string()));
+        }
+        if req.longitude < -180.0 || req.longitude > 180.0 {
+            return Err(AppError::InvalidInput("经度必须在-180到180之间".to_string()));
         }
 
         // 验证内容长度
-        if req.content.is_empty() {
+        if req.description.is_empty() {
             return Err(AppError::BadRequest("内容不能为空".to_string()));
         }
 
-        if req.content.len() > 5000 {
+        if req.description.len() > 5000 {
             return Err(AppError::BadRequest("内容过长".to_string()));
         }
 
         // 验证图片数量
-        if req.images.len() > 9 {
-            return Err(AppError::BadRequest("最多只能上传9张图片".to_string()));
+        if let Some(images) = &req.images {
+            if images.len() > 9 {
+                return Err(AppError::BadRequest("最多只能上传9张图片".to_string()));
+            }
         }
 
         let moment_id = Uuid::new_v4();
         let moment = Moment {
             moment_id,
             user_id,
-            content: req.content.clone(),
+            description: req.description.clone(),
             images: req.images.clone(),
-            tags: req.tags.clone().unwrap_or_default(),
+            tags: req.tags.clone(),
             latitude: req.latitude,
             longitude: req.longitude,
-            visibility: req.visibility.clone().unwrap_or_else(|| "public".to_string()),
-            created_at: chrono::Utc::now().naive_utc(),
-            edited_at: None,
+            location_name: req.location_name.clone(),
+            created_at: chrono::Utc::now(),
+            updated_at: None,
+            is_deleted: false,
             deleted_at: None,
         };
 
@@ -80,9 +86,9 @@ impl<'a> MomentService<'a> {
         user_id: i64,
         req: &UpdateMomentRequest,
     ) -> Result<()> {
-        let moment_repo = MomentRepository::new(self.db);
+        let moment_repo = MomentRepository::new(self.db.clone());
 
-        let moment_id = Uuid::parse_str(&req.moment_id)
+        let moment_id = Uuid::parse_str(&req.id)
             .map_err(|_| AppError::BadRequest("无效的瞬间ID".to_string()))?;
 
         let mut moment = moment_repo
@@ -96,30 +102,28 @@ impl<'a> MomentService<'a> {
         }
 
         // 更新字段
-        if let Some(content) = &req.content {
+        if let Some(content) = &req.description {
             if content.is_empty() {
                 return Err(AppError::BadRequest("内容不能为空".to_string()));
             }
             if content.len() > 5000 {
                 return Err(AppError::BadRequest("内容过长".to_string()));
             }
-            moment.content = content.clone();
+            moment.description = content.clone();
         }
 
         if let Some(images) = &req.images {
             if images.len() > 9 {
                 return Err(AppError::BadRequest("最多只能上传9张图片".to_string()));
             }
-            moment.images = images.clone();
+            moment.images = Some(images.clone());
         }
 
         if let Some(tags) = &req.tags {
-            moment.tags = tags.clone();
+            moment.tags = Some(tags.clone());
         }
 
-        if let Some(visibility) = &req.visibility {
-            moment.visibility = visibility.clone();
-        }
+        moment.updated_at = Some(chrono::Utc::now());
 
         moment_repo.update(&moment).await?;
 
@@ -130,9 +134,9 @@ impl<'a> MomentService<'a> {
 
     /// 删除瞬间
     pub async fn delete_moment(&self, user_id: i64, req: &DeleteMomentRequest) -> Result<()> {
-        let moment_repo = MomentRepository::new(self.db);
+        let moment_repo = MomentRepository::new(self.db.clone());
 
-        let moment_id = Uuid::parse_str(&req.moment_id)
+        let moment_id = Uuid::parse_str(&req.id)
             .map_err(|_| AppError::BadRequest("无效的瞬间ID".to_string()))?;
 
         let moment = moment_repo
@@ -156,21 +160,24 @@ impl<'a> MomentService<'a> {
         user_id: i64,
         req: &ListMyMomentsRequest,
     ) -> Result<PaginatedResponse<MomentResponse>> {
-        let moment_repo = MomentRepository::new(self.db);
+        let moment_repo = MomentRepository::new(self.db.clone());
 
-        let limit = req.limit.unwrap_or(20).min(100);
-        let offset = req.cursor.unwrap_or(0);
+        let limit = req.limit.unwrap_or(20).min(100) as i64;
 
-        let moments = moment_repo.list_by_user(user_id, limit + 1, offset).await?;
+        // 使用游标分页：多取一条判断has_more
+        let moments = moment_repo.list_by_user(user_id, req.cursor.clone(), limit + 1).await?;
 
         let has_more = moments.len() > limit as usize;
-        let items = self.build_moment_responses(moments.into_iter().take(limit as usize).collect(), Some(user_id)).await?;
-
+        let moments_to_return: Vec<Moment> = moments.into_iter().take(limit as usize).collect();
+        
+        // next_cursor是最后一条记录的moment_id（业务ID）
         let next_cursor = if has_more {
-            Some(offset + limit)
+            moments_to_return.last().map(|m| m.moment_id.to_string())
         } else {
             None
         };
+
+        let items = self.build_moment_responses(moments_to_return, Some(user_id)).await?;
 
         Ok(PaginatedResponse {
             items,
@@ -185,38 +192,54 @@ impl<'a> MomentService<'a> {
         req: &SearchMomentByLocationRequest,
         current_user_id: Option<i64>,
     ) -> Result<PaginatedResponse<MomentResponse>> {
-        let moment_repo = MomentRepository::new(self.db);
+        let moment_repo = MomentRepository::new(self.db.clone());
 
-        crate::utils::validation::Validator::validate_coordinates(req.latitude, req.longitude)?;
-        crate::utils::validation::Validator::validate_radius(req.radius_meters)?;
+        // 验证坐标
+        if req.latitude < -90.0 || req.latitude > 90.0 {
+            return Err(AppError::InvalidInput("纬度必须在-90到90之间".to_string()));
+        }
+        if req.longitude < -180.0 || req.longitude > 180.0 {
+            return Err(AppError::InvalidInput("经度必须在-180到180之间".to_string()));
+        }
+        
+        // 验证半径
+        let radius = req.radius.unwrap_or(5000.0);
+        if radius <= 0.0 || radius > 50000.0 {
+            return Err(AppError::InvalidInput("搜索半径必须在0到50000米之间".to_string()));
+        }
 
-        let limit = req.limit.unwrap_or(20).min(100);
-        let offset = req.cursor.unwrap_or(0);
+        let limit = req.limit.unwrap_or(20).min(100) as i64;
 
+        // 使用游标分页：多取一条判断has_more
         let moments_with_distance = moment_repo
             .search_by_location(
                 req.latitude,
                 req.longitude,
-                req.radius_meters,
+                radius,
+                req.cursor.clone(),
                 limit + 1,
-                offset,
             )
             .await?;
 
         let has_more = moments_with_distance.len() > limit as usize;
-        let moments: Vec<Moment> = moments_with_distance
+        let moments_to_return: Vec<(Moment, f64)> = moments_with_distance
             .into_iter()
             .take(limit as usize)
+            .collect();
+
+        // next_cursor是最后一条记录的moment_id（业务ID）
+        let next_cursor = if has_more {
+            moments_to_return.last().map(|(m, _)| m.moment_id.to_string())
+        } else {
+            None
+        };
+
+        let moments: Vec<Moment> = moments_to_return
+            .into_iter()
             .map(|(moment, _distance)| moment)
             .collect();
 
         let items = self.build_moment_responses(moments, current_user_id).await?;
-
-        let next_cursor = if has_more {
-            Some(offset + limit)
-        } else {
-            None
-        };
 
         Ok(PaginatedResponse {
             items,
@@ -231,21 +254,24 @@ impl<'a> MomentService<'a> {
         req: &SearchMomentByTagsRequest,
         current_user_id: Option<i64>,
     ) -> Result<PaginatedResponse<MomentResponse>> {
-        let moment_repo = MomentRepository::new(self.db);
+        let moment_repo = MomentRepository::new(self.db.clone());
 
-        let limit = req.limit.unwrap_or(20).min(100);
-        let offset = req.cursor.unwrap_or(0);
+        let limit = req.limit.unwrap_or(20).min(100) as i64;
 
-        let moments = moment_repo.search_by_tags(&req.tags, limit + 1, offset).await?;
+        // 使用游标分页：多取一条判断has_more
+        let moments = moment_repo.search_by_tags(&req.tags, req.cursor.clone(), limit + 1).await?;
 
         let has_more = moments.len() > limit as usize;
-        let items = self.build_moment_responses(moments.into_iter().take(limit as usize).collect(), current_user_id).await?;
-
+        let moments_to_return: Vec<Moment> = moments.into_iter().take(limit as usize).collect();
+        
+        // next_cursor是最后一条记录的moment_id（业务ID）
         let next_cursor = if has_more {
-            Some(offset + limit)
+            moments_to_return.last().map(|m| m.moment_id.to_string())
         } else {
             None
         };
+
+        let items = self.build_moment_responses(moments_to_return, current_user_id).await?;
 
         Ok(PaginatedResponse {
             items,
@@ -256,9 +282,9 @@ impl<'a> MomentService<'a> {
 
     /// 点赞瞬间
     pub async fn like_moment(&self, user_id: i64, req: &LikeMomentRequest) -> Result<()> {
-        let moment_repo = MomentRepository::new(self.db);
+        let moment_repo = MomentRepository::new(self.db.clone());
 
-        let moment_id = Uuid::parse_str(&req.moment_id)
+        let moment_id = Uuid::parse_str(&req.id)
             .map_err(|_| AppError::BadRequest("无效的瞬间ID".to_string()))?;
 
         // 验证瞬间存在
@@ -275,9 +301,9 @@ impl<'a> MomentService<'a> {
 
     /// 取消点赞
     pub async fn unlike_moment(&self, user_id: i64, req: &UnlikeMomentRequest) -> Result<()> {
-        let moment_repo = MomentRepository::new(self.db);
+        let moment_repo = MomentRepository::new(self.db.clone());
 
-        let moment_id = Uuid::parse_str(&req.moment_id)
+        let moment_id = Uuid::parse_str(&req.id)
             .map_err(|_| AppError::BadRequest("无效的瞬间ID".to_string()))?;
 
         moment_repo.unlike_moment(moment_id, user_id).await?;
@@ -287,9 +313,9 @@ impl<'a> MomentService<'a> {
 
     /// 收藏瞬间
     pub async fn collect_moment(&self, user_id: i64, req: &CollectMomentRequest) -> Result<()> {
-        let moment_repo = MomentRepository::new(self.db);
+        let moment_repo = MomentRepository::new(self.db.clone());
 
-        let moment_id = Uuid::parse_str(&req.moment_id)
+        let moment_id = Uuid::parse_str(&req.id)
             .map_err(|_| AppError::BadRequest("无效的瞬间ID".to_string()))?;
 
         // 验证瞬间存在
@@ -304,9 +330,9 @@ impl<'a> MomentService<'a> {
 
     /// 取消收藏
     pub async fn uncollect_moment(&self, user_id: i64, req: &UncollectMomentRequest) -> Result<()> {
-        let moment_repo = MomentRepository::new(self.db);
+        let moment_repo = MomentRepository::new(self.db.clone());
 
-        let moment_id = Uuid::parse_str(&req.moment_id)
+        let moment_id = Uuid::parse_str(&req.id)
             .map_err(|_| AppError::BadRequest("无效的瞬间ID".to_string()))?;
 
         moment_repo.uncollect_moment(moment_id, user_id).await?;
@@ -314,27 +340,30 @@ impl<'a> MomentService<'a> {
         Ok(())
     }
 
-    /// 获取收藏列表
+    /// 获取收藏列表（使用摘要响应，提升性能）
     pub async fn list_collections(
         &self,
         user_id: i64,
         req: &ListCollectionsRequest,
-    ) -> Result<PaginatedResponse<MomentResponse>> {
-        let moment_repo = MomentRepository::new(self.db);
+    ) -> Result<PaginatedResponse<MomentSummaryResponse>> {
+        let moment_repo = MomentRepository::new(self.db.clone());
 
-        let limit = req.limit.unwrap_or(20).min(100);
-        let offset = req.cursor.unwrap_or(0);
+        let limit = req.limit.unwrap_or(20).min(100) as i64;
 
-        let moments = moment_repo.list_collections(user_id, limit + 1, offset).await?;
+        // 使用游标分页：多取一条判断has_more
+        let moments = moment_repo.list_collections(user_id, req.cursor.clone(), limit + 1).await?;
 
         let has_more = moments.len() > limit as usize;
-        let items = self.build_moment_responses(moments.into_iter().take(limit as usize).collect(), Some(user_id)).await?;
-
+        let moments_to_return: Vec<Moment> = moments.into_iter().take(limit as usize).collect();
+        
+        // next_cursor是最后一条记录的moment_id（业务ID）
         let next_cursor = if has_more {
-            Some(offset + limit)
+            moments_to_return.last().map(|m| m.moment_id.to_string())
         } else {
             None
         };
+
+        let items = self.build_moment_summary_responses(moments_to_return).await?;
 
         Ok(PaginatedResponse {
             items,
@@ -349,7 +378,7 @@ impl<'a> MomentService<'a> {
         moments: Vec<Moment>,
         current_user_id: Option<i64>,
     ) -> Result<Vec<MomentResponse>> {
-        let moment_repo = MomentRepository::new(self.db);
+        let moment_repo = MomentRepository::new(self.db.clone());
         let mut responses = Vec::new();
 
         for moment in moments {
@@ -368,21 +397,67 @@ impl<'a> MomentService<'a> {
                 false
             };
 
+            // TODO: 获取用户信息
+            let user = crate::dto::response::UserResponse {
+                user_id: moment.user_id.to_string(),
+                nickname: "Unknown".to_string(), // TODO: 从数据库查询
+                avatar_url: None,
+            };
+            
             responses.push(MomentResponse {
                 id: moment.moment_id.to_string(),
-                user_id: moment.user_id.to_string(),
-                content: moment.content,
+                user,
+                description: moment.description,
                 images: moment.images,
-                tags: moment.tags,
-                latitude: moment.latitude,
-                longitude: moment.longitude,
-                visibility: moment.visibility,
-                like_count,
-                comment_count,
-                is_liked,
-                is_collected,
-                created_at: moment.created_at.and_utc().timestamp(),
-                edited_at: moment.edited_at.map(|dt| dt.and_utc().timestamp()),
+                tags: moment.tags.unwrap_or_default(),
+                location: crate::dto::response::LocationInfo {
+                    latitude: moment.latitude,
+                    longitude: moment.longitude,
+                    name: moment.location_name,
+                },
+                created_at: moment.created_at,
+                updated_at: moment.updated_at,
+                likes_count: like_count as i32,
+                comments_count: comment_count as i32,
+                liked_by_me: Some(is_liked),
+                favorited_by_me: Some(is_collected),
+                distance: None, // 我的收藏列表不需要距离信息
+            });
+        }
+
+        Ok(responses)
+    }
+
+    /// 构建瞬间摘要响应（用于列表场景，性能优化）
+    /// 相比完整响应，不查询 liked_by_me 和 favorited_by_me，减少 JOIN 查询
+    async fn build_moment_summary_responses(
+        &self,
+        moments: Vec<Moment>,
+    ) -> Result<Vec<MomentSummaryResponse>> {
+        let moment_repo = MomentRepository::new(self.db.clone());
+        let mut responses = Vec::new();
+
+        for moment in moments {
+            // 只查询点赞数和评论数，不查询当前用户是否已点赞/收藏
+            let like_count = moment_repo.get_like_count(moment.moment_id).await?;
+            let comment_count = moment_repo.get_comment_count(moment.moment_id).await?;
+
+            // TODO: 获取用户信息（后续可以批量查询优化）
+            let user = crate::dto::response::UserResponse {
+                user_id: moment.user_id.to_string(),
+                nickname: "Unknown".to_string(), // TODO: 从数据库查询
+                avatar_url: None,
+            };
+            
+            responses.push(MomentSummaryResponse {
+                id: moment.moment_id.to_string(),
+                user,
+                description: moment.description,
+                images: moment.images,
+                location_name: moment.location_name,
+                created_at: moment.created_at,
+                likes_count: like_count as i32,
+                comments_count: comment_count as i32,
             });
         }
 

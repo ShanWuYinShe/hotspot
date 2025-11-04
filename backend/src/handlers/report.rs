@@ -3,7 +3,7 @@ use axum::{extract::State, Extension, Json};
 use crate::{
     dto::{
         request::{
-            CreateReportRequest, GetReportHistoryRequest, GetReportsRequest, ReviewReportRequest,
+            CreateReportRequest, GetReportHistoryRequest, GetReportsRequest, HandleReportRequest,
         },
         response::{ApiResponse, PaginatedResponse, ReportResponse},
     },
@@ -49,13 +49,13 @@ impl ReportHandler {
     }
 
     /// 审核举报（管理员）
-    pub async fn review_report(
+    pub async fn handle_report(
         State(state): State<AppState>,
         Extension(user_id): Extension<i64>,
-        Json(req): Json<ReviewReportRequest>,
+        Json(req): Json<HandleReportRequest>,
     ) -> Result<Json<ApiResponse<ReportResponse>>, AppError> {
         let report_service = ReportService::new(state.db.clone());
-        let result = report_service.review_report(user_id, req).await?;
+        let result = report_service.handle_report(user_id, req).await?;
         Ok(Json(ApiResponse::success_data(result)))
     }
 }

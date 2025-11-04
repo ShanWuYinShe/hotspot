@@ -1,5 +1,7 @@
 use axum::{
-    extract::{Request, State},
+    async_trait,
+    extract::{FromRequestParts, Request, State},
+    http::request::Parts,
     middleware::Next,
     response::Response,
 };
@@ -56,5 +58,51 @@ pub fn extract_user_id(req: &Request) -> Result<i64, AppError> {
         .get::<i64>()
         .copied()
         .ok_or_else(|| AppError::Unauthorized("未认证".to_string()))
+}
+
+/// 可选的用户ID提取器（用于公开API）
+/// 
+/// 如果请求已认证（有token），则返回Some(user_id)
+/// 否则返回None
+pub struct OptionalUserId(pub Option<i64>);
+
+#[async_trait]
+impl<S> FromRequestParts<S> for OptionalUserId
+where
+    S: Send + Sync,
+{
+    type Rejection = std::convert::Infallible;
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        let user_id = parts.extensions.get::<i64>().copied();
+        Ok(OptionalUserId(user_id))
+    }
+}
+
+/// Bearer Token 提取器
+/// 
+/// 从Authorization header中提取Bearer token
+pub struct BearerToken(pub String);
+
+#[async_trait]
+impl<S> FromRequestParts<S> for BearerToken
+where
+    S: Send + Sync,
+{
+    type Rejection = AppError;
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        let auth_header = parts
+            .headers
+            .get("Authorization")
+            .and_then(|h| h.to_str().ok())
+            .ok_or_else(|| AppError::Unauthorized("缺少认证令牌".to_string()))?;
+
+        let token = auth_header
+            .strip_prefix("Bearer ")
+            .ok_or_else(|| AppError::Unauthorized("令牌格式错误".to_string()))?;
+
+        Ok(BearerToken(token.to_string()))
+    }
 }
 

@@ -1,17 +1,18 @@
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use crate::{
     error::{AppError, Result},
     models::group::Group,
+    types::enums::RoomType,
 };
 
-pub struct GroupRepository<'a> {
-    db: &'a PgPool,
+pub struct GroupRepository {
+    db: PgPool,
 }
 
-impl<'a> GroupRepository<'a> {
-    pub fn new(db: &'a PgPool) -> Self {
+impl GroupRepository {
+    pub fn new(db: PgPool) -> Self {
         Self { db }
     }
 
@@ -19,29 +20,31 @@ impl<'a> GroupRepository<'a> {
     pub async fn create(&self, group: &Group) -> Result<Uuid> {
         let rec = sqlx::query!(
             r#"
-            INSERT INTO groups (
-                group_id, name, description, group_type, owner_id, 
-                avatar_url, latitude, longitude, max_members, password_hash
+            INSERT INTO chat_rooms (
+                room_id, name, description, room_type, owner_id, 
+                avatar_url, max_members, password_hash,
+                latitude, longitude, location_name
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            RETURNING group_id
+            VALUES ($1, $2, $3, $4::room_type, $5, $6, $7, $8, $9, $10, $11)
+            RETURNING room_id
             "#,
             group.group_id,
             group.name,
             group.description,
-            group.group_type,
+            group.group_type as RoomType,
             group.owner_id,
             group.avatar_url,
-            group.latitude,
-            group.longitude,
             group.max_members,
             group.password_hash,
+            group.latitude,
+            group.longitude,
+            group.location_name,
         )
-        .fetch_one(self.db)
+        .fetch_one(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
-        Ok(rec.group_id)
+        Ok(rec.room_id)
     }
 
     /// 根据ID查找群组
@@ -49,13 +52,23 @@ impl<'a> GroupRepository<'a> {
         let group = sqlx::query_as!(
             Group,
             r#"
-            SELECT * FROM groups WHERE group_id = $1 AND deleted_at IS NULL
+            SELECT id, room_id as group_id, room_type as "group_type: RoomType", name, description, avatar_url, 
+                   owner_id, password_hash, max_members, 
+                   COALESCE(latitude, 35.154922) as "latitude!", 
+                   COALESCE(longitude, 112.682524) as "longitude!", 
+                   COALESCE(location_name, '南天门') as "location_name!",
+                   created_at, last_message_at as last_active_at, 
+                   is_deleted, deleted_at
+            FROM chat_rooms 
+            WHERE room_id = $1 
+              AND room_type IN ('public_group'::room_type, 'private_group'::room_type)
+              AND is_deleted = FALSE
             "#,
             group_id
         )
-        .fetch_optional(self.db)
+        .fetch_optional(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(group)
     }
@@ -64,24 +77,25 @@ impl<'a> GroupRepository<'a> {
     pub async fn update(&self, group: &Group) -> Result<()> {
         sqlx::query!(
             r#"
-            UPDATE groups
+            UPDATE chat_rooms
             SET name = $2, description = $3, avatar_url = $4, 
-                latitude = $5, longitude = $6, max_members = $7,
-                password_hash = $8
-            WHERE group_id = $1
+                max_members = $5, password_hash = $6,
+                latitude = $7, longitude = $8, location_name = $9
+            WHERE room_id = $1 AND room_type IN ('public_group'::room_type, 'private_group'::room_type)
             "#,
             group.group_id,
             group.name,
             group.description,
             group.avatar_url,
-            group.latitude,
-            group.longitude,
             group.max_members,
             group.password_hash,
+            group.latitude,
+            group.longitude,
+            group.location_name,
         )
-        .execute(self.db)
+        .execute(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(())
     }
@@ -90,41 +104,72 @@ impl<'a> GroupRepository<'a> {
     pub async fn soft_delete(&self, group_id: Uuid) -> Result<()> {
         sqlx::query!(
             r#"
-            UPDATE groups
-            SET deleted_at = NOW()
-            WHERE group_id = $1
+            UPDATE chat_rooms
+            SET is_deleted = TRUE, deleted_at = NOW()
+            WHERE room_id = $1 AND room_type IN ('public_group'::room_type, 'private_group'::room_type)
             "#,
             group_id
         )
-        .execute(self.db)
+        .execute(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(())
     }
 
     /// 根据名称搜索群组
+    /// 按名称搜索群组（游标分页）
+    /// cursor: room_id (UUID字符串)
     pub async fn search_by_name(
         &self,
         name: &str,
+        cursor: Option<String>,
         limit: i64,
-        offset: i64,
     ) -> Result<Vec<Group>> {
+        // 1. 解析cursor获取自增主键id
+        let cursor_id = if let Some(cursor_str) = cursor {
+            let room_uuid = uuid::Uuid::parse_str(&cursor_str)
+                .map_err(|_| AppError::BadRequest("无效的游标".to_string()))?;
+            
+            let result = sqlx::query!(
+                "SELECT id FROM chat_rooms WHERE room_id = $1 AND is_deleted = FALSE",
+                room_uuid
+            )
+            .fetch_optional(&self.db)
+            .await
+            .map_err(|e| AppError::from(e))?;
+            
+            result.map(|r| r.id)
+        } else {
+            None
+        };
+
+        // 2. 使用自增id进行游标分页
         let groups = sqlx::query_as!(
             Group,
             r#"
-            SELECT * FROM groups
-            WHERE name ILIKE $1 AND deleted_at IS NULL
-            ORDER BY created_at DESC
-            LIMIT $2 OFFSET $3
+            SELECT id, room_id as group_id, room_type as "group_type: RoomType", name, description, avatar_url, 
+                   owner_id, password_hash, max_members,
+                   COALESCE(latitude, 35.154922) as "latitude!", 
+                   COALESCE(longitude, 112.682524) as "longitude!", 
+                   COALESCE(location_name, '南天门') as "location_name!",
+                   created_at, last_message_at as last_active_at, 
+                   is_deleted, deleted_at
+            FROM chat_rooms
+            WHERE name ILIKE $1 
+              AND room_type IN ('public_group'::room_type, 'private_group'::room_type)
+              AND is_deleted = FALSE
+              AND ($2::BIGINT IS NULL OR id > $2::BIGINT)
+            ORDER BY id DESC
+            LIMIT $3
             "#,
             format!("%{}%", name),
-            limit,
-            offset
+            cursor_id,
+            limit
         )
-        .fetch_all(self.db)
+        .fetch_all(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(groups)
     }
@@ -138,53 +183,76 @@ impl<'a> GroupRepository<'a> {
         limit: i64,
         offset: i64,
     ) -> Result<Vec<(Group, f64)>> {
-        let records = sqlx::query!(
+        let records = sqlx::query(
             r#"
+            WITH latest_locations AS (
+                SELECT DISTINCT ON (room_id) 
+                    room_id,
+                    location,
+                    latitude,
+                    longitude,
+                    location_name
+                FROM room_location_history
+                ORDER BY room_id, created_at DESC
+            )
             SELECT 
-                g.*,
+                cr.id, cr.room_id, cr.room_type, cr.name, cr.description, cr.avatar_url,
+                cr.owner_id, cr.password_hash, cr.max_members, 
+                COALESCE(cr.latitude, ll.latitude, 35.154922) as latitude,
+                COALESCE(cr.longitude, ll.longitude, 112.682524) as longitude,
+                COALESCE(cr.location_name, ll.location_name, '南天门') as location_name,
+                cr.created_at, cr.last_message_at, 
+                cr.is_deleted, cr.deleted_at,
                 ST_Distance(
-                    ST_MakePoint(g.longitude, g.latitude)::geography,
-                    ST_MakePoint($2, $1)::geography
-                ) as "distance!"
-            FROM groups g
+                    ll.location,
+                    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography
+                ) as distance
+            FROM chat_rooms cr
+            INNER JOIN latest_locations ll ON cr.room_id = ll.room_id
             WHERE 
-                g.deleted_at IS NULL
+                cr.room_type IN ('public_group'::room_type, 'private_group'::room_type)
+                AND cr.is_deleted = FALSE
                 AND ST_DWithin(
-                    ST_MakePoint(g.longitude, g.latitude)::geography,
-                    ST_MakePoint($2, $1)::geography,
+                    ll.location,
+                    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography,
                     $3
                 )
             ORDER BY distance ASC
             LIMIT $4 OFFSET $5
-            "#,
-            lat,
-            lon,
-            radius_meters,
-            limit,
-            offset
+            "#
         )
-        .fetch_all(self.db)
+        .bind(lat)
+        .bind(lon)
+        .bind(radius_meters)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         let results = records
-            .into_iter()
+            .iter()
             .map(|rec| {
                 let group = Group {
-                    group_id: rec.group_id,
-                    name: rec.name,
-                    description: rec.description,
-                    group_type: rec.group_type,
-                    owner_id: rec.owner_id,
-                    avatar_url: rec.avatar_url,
-                    latitude: rec.latitude,
-                    longitude: rec.longitude,
-                    max_members: rec.max_members,
-                    password_hash: rec.password_hash,
-                    created_at: rec.created_at,
-                    deleted_at: rec.deleted_at,
+                    id: rec.get("id"),
+                    group_id: rec.get("room_id"),
+                    group_type: rec.get("room_type"),
+                    name: rec.get("name"),
+                    description: rec.get("description"),
+                    avatar_url: rec.get("avatar_url"),
+                    owner_id: rec.get("owner_id"),
+                    max_members: rec.get("max_members"),
+                    password_hash: rec.get("password_hash"),
+                    latitude: rec.get("latitude"),
+                    longitude: rec.get("longitude"),
+                    location_name: rec.get("location_name"),
+                    created_at: rec.get("created_at"),
+                    last_active_at: rec.get("last_message_at"),
+                    is_deleted: rec.get("is_deleted"),
+                    deleted_at: rec.get("deleted_at"),
                 };
-                (group, rec.distance)
+                let distance: f64 = rec.get("distance");
+                (group, distance)
             })
             .collect();
 
@@ -196,14 +264,14 @@ impl<'a> GroupRepository<'a> {
         let rec = sqlx::query!(
             r#"
             SELECT COUNT(*) as "count!"
-            FROM group_members
-            WHERE group_id = $1 AND status = 'active'
+            FROM room_members
+            WHERE room_id = $1 AND is_deleted = FALSE
             "#,
             group_id
         )
-        .fetch_one(self.db)
+        .fetch_one(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(rec.count)
     }
@@ -212,16 +280,16 @@ impl<'a> GroupRepository<'a> {
     pub async fn transfer_ownership(&self, group_id: Uuid, new_owner_id: i64) -> Result<()> {
         sqlx::query!(
             r#"
-            UPDATE groups
+            UPDATE chat_rooms
             SET owner_id = $2
-            WHERE group_id = $1
+            WHERE room_id = $1 AND room_type IN ('public_group'::room_type, 'private_group'::room_type)
             "#,
             group_id,
             new_owner_id
         )
-        .execute(self.db)
+        .execute(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(())
     }

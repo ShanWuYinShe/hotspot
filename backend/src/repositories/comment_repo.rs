@@ -6,12 +6,12 @@ use crate::{
     models::comment::Comment,
 };
 
-pub struct CommentRepository<'a> {
-    db: &'a PgPool,
+pub struct CommentRepository {
+    db: PgPool,
 }
 
-impl<'a> CommentRepository<'a> {
-    pub fn new(db: &'a PgPool) -> Self {
+impl CommentRepository {
+    pub fn new(db: PgPool) -> Self {
         Self { db }
     }
 
@@ -20,22 +20,22 @@ impl<'a> CommentRepository<'a> {
         let rec = sqlx::query!(
             r#"
             INSERT INTO comments (
-                comment_id, user_id, target_id, target_type,
-                content, parent_id
+                comment_id, user_id, moment_id,
+                content, parent_id, reply_to_user_id
             )
             VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING comment_id
             "#,
             comment.comment_id,
             comment.user_id,
-            comment.target_id,
-            comment.target_type,
+            comment.moment_id,
             comment.content,
             comment.parent_id,
+            comment.reply_to_user_id,
         )
-        .fetch_one(self.db)
+        .fetch_one(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(rec.comment_id)
     }
@@ -45,88 +45,138 @@ impl<'a> CommentRepository<'a> {
         let comment = sqlx::query_as!(
             Comment,
             r#"
-            SELECT * FROM comments WHERE comment_id = $1 AND deleted_at IS NULL
+            SELECT comment_id, moment_id, user_id, content, parent_id, 
+                   reply_to_user_id, created_at, updated_at,
+                   is_deleted, deleted_at
+            FROM comments
+            WHERE comment_id = $1 AND is_deleted = FALSE
             "#,
             comment_id
         )
-        .fetch_optional(self.db)
+        .fetch_optional(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(comment)
     }
 
-    /// 软删除评论
+    /// 删除评论（软删除）
     pub async fn soft_delete(&self, comment_id: Uuid) -> Result<()> {
         sqlx::query!(
             r#"
             UPDATE comments
-            SET deleted_at = NOW()
+            SET is_deleted = TRUE, deleted_at = NOW()
             WHERE comment_id = $1
             "#,
             comment_id
         )
-        .execute(self.db)
+        .execute(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(())
     }
 
-    /// 获取目标的评论列表（顶级评论）
-    pub async fn list_by_target(
+    /// 获取瞬间的评论列表（顶级评论）（游标分页）
+    /// cursor: comment_id (UUID字符串)
+    pub async fn list_by_moment(
         &self,
-        target_id: &str,
-        target_type: &str,
+        moment_id: Uuid,
+        cursor: Option<String>,
         limit: i64,
-        offset: i64,
     ) -> Result<Vec<Comment>> {
+        // 1. 解析cursor获取自增主键id
+        let cursor_id = if let Some(cursor_str) = cursor {
+            let comment_uuid = Uuid::parse_str(&cursor_str)
+                .map_err(|_| AppError::BadRequest("无效的游标".to_string()))?;
+            
+            let result = sqlx::query!(
+                "SELECT id FROM comments WHERE comment_id = $1 AND is_deleted = FALSE",
+                comment_uuid
+            )
+            .fetch_optional(&self.db)
+            .await
+            .map_err(|e| AppError::from(e))?;
+            
+            result.map(|r| r.id)
+        } else {
+            None
+        };
+
+        // 2. 使用自增id进行游标分页
         let comments = sqlx::query_as!(
             Comment,
             r#"
-            SELECT * FROM comments
+            SELECT comment_id, moment_id, user_id, content, parent_id, 
+                   reply_to_user_id, created_at, updated_at,
+                   is_deleted, deleted_at
+            FROM comments
             WHERE 
-                target_id = $1 
-                AND target_type = $2 
+                moment_id = $1 
                 AND parent_id IS NULL
-                AND deleted_at IS NULL
-            ORDER BY created_at DESC
-            LIMIT $3 OFFSET $4
+                AND is_deleted = FALSE
+                AND ($2::BIGINT IS NULL OR id > $2::BIGINT)
+            ORDER BY id DESC
+            LIMIT $3
             "#,
-            target_id,
-            target_type,
-            limit,
-            offset
+            moment_id,
+            cursor_id,
+            limit
         )
-        .fetch_all(self.db)
+        .fetch_all(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(comments)
     }
 
-    /// 获取评论的回复列表
+    /// 获取评论的回复列表（游标分页）
+    /// cursor: comment_id (UUID字符串)
     pub async fn list_replies(
         &self,
         parent_id: Uuid,
+        cursor: Option<String>,
         limit: i64,
-        offset: i64,
     ) -> Result<Vec<Comment>> {
+        // 1. 解析cursor获取自增主键id
+        let cursor_id = if let Some(cursor_str) = cursor {
+            let comment_uuid = Uuid::parse_str(&cursor_str)
+                .map_err(|_| AppError::BadRequest("无效的游标".to_string()))?;
+            
+            let result = sqlx::query!(
+                "SELECT id FROM comments WHERE comment_id = $1 AND is_deleted = FALSE",
+                comment_uuid
+            )
+            .fetch_optional(&self.db)
+            .await
+            .map_err(|e| AppError::from(e))?;
+            
+            result.map(|r| r.id)
+        } else {
+            None
+        };
+
+        // 2. 使用自增id进行游标分页（回复按创建时间升序，id也是升序）
         let comments = sqlx::query_as!(
             Comment,
             r#"
-            SELECT * FROM comments
-            WHERE parent_id = $1 AND deleted_at IS NULL
-            ORDER BY created_at ASC
-            LIMIT $2 OFFSET $3
+            SELECT comment_id, moment_id, user_id, content, parent_id, 
+                   reply_to_user_id, created_at, updated_at,
+                   is_deleted, deleted_at
+            FROM comments
+            WHERE parent_id = $1 
+            AND is_deleted = FALSE
+            AND ($2::BIGINT IS NULL OR id > $2::BIGINT)
+            ORDER BY id ASC
+            LIMIT $3
             "#,
             parent_id,
-            limit,
-            offset
+            cursor_id,
+            limit
         )
-        .fetch_all(self.db)
+        .fetch_all(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(comments)
     }
@@ -142,9 +192,9 @@ impl<'a> CommentRepository<'a> {
             comment_id,
             user_id
         )
-        .execute(self.db)
+        .execute(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(())
     }
@@ -159,9 +209,9 @@ impl<'a> CommentRepository<'a> {
             comment_id,
             user_id
         )
-        .execute(self.db)
+        .execute(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(())
     }
@@ -176,9 +226,9 @@ impl<'a> CommentRepository<'a> {
             "#,
             comment_id
         )
-        .fetch_one(self.db)
+        .fetch_one(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(rec.count)
     }
@@ -189,13 +239,13 @@ impl<'a> CommentRepository<'a> {
             r#"
             SELECT COUNT(*) as "count!"
             FROM comments
-            WHERE parent_id = $1 AND deleted_at IS NULL
+            WHERE parent_id = $1
             "#,
             comment_id
         )
-        .fetch_one(self.db)
+        .fetch_one(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(rec.count)
     }
@@ -212,55 +262,78 @@ impl<'a> CommentRepository<'a> {
             comment_id,
             user_id
         )
-        .fetch_one(self.db)
+        .fetch_one(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(rec.exists)
     }
 
-    /// 获取用户的评论列表
+    /// 获取用户的评论列表（游标分页）
+    /// cursor: comment_id (UUID字符串)
     pub async fn list_by_user(
         &self,
         user_id: i64,
+        cursor: Option<String>,
         limit: i64,
-        offset: i64,
     ) -> Result<Vec<Comment>> {
+        // 1. 解析cursor获取自增主键id
+        let cursor_id = if let Some(cursor_str) = cursor {
+            let comment_uuid = Uuid::parse_str(&cursor_str)
+                .map_err(|_| AppError::BadRequest("无效的游标".to_string()))?;
+            
+            let result = sqlx::query!(
+                "SELECT id FROM comments WHERE comment_id = $1 AND is_deleted = FALSE",
+                comment_uuid
+            )
+            .fetch_optional(&self.db)
+            .await
+            .map_err(|e| AppError::from(e))?;
+            
+            result.map(|r| r.id)
+        } else {
+            None
+        };
+
+        // 2. 使用自增id进行游标分页
         let comments = sqlx::query_as!(
             Comment,
             r#"
-            SELECT * FROM comments
-            WHERE user_id = $1 AND deleted_at IS NULL
-            ORDER BY created_at DESC
-            LIMIT $2 OFFSET $3
+            SELECT comment_id, moment_id, user_id, content, parent_id, 
+                   reply_to_user_id, created_at, updated_at,
+                   is_deleted, deleted_at
+            FROM comments
+            WHERE user_id = $1 
+            AND is_deleted = FALSE
+            AND ($2::BIGINT IS NULL OR id > $2::BIGINT)
+            ORDER BY id DESC
+            LIMIT $3
             "#,
             user_id,
-            limit,
-            offset
+            cursor_id,
+            limit
         )
-        .fetch_all(self.db)
+        .fetch_all(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(comments)
     }
 
-    /// 获取目标的评论总数
-    pub async fn count_by_target(&self, target_id: &str, target_type: &str) -> Result<i64> {
+    /// 获取瞬间的评论总数
+    pub async fn count_by_moment(&self, moment_id: Uuid) -> Result<i64> {
         let rec = sqlx::query!(
             r#"
             SELECT COUNT(*) as "count!"
             FROM comments
-            WHERE target_id = $1 AND target_type = $2 AND deleted_at IS NULL
+            WHERE moment_id = $1
             "#,
-            target_id,
-            target_type
+            moment_id
         )
-        .fetch_one(self.db)
+        .fetch_one(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(rec.count)
     }
 }
-

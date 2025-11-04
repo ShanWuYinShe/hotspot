@@ -1,4 +1,4 @@
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use crate::{
@@ -6,12 +6,13 @@ use crate::{
     models::moment::Moment,
 };
 
-pub struct MomentRepository<'a> {
-    db: &'a PgPool,
+#[derive(Debug, Clone)]
+pub struct MomentRepository {
+    db: PgPool,
 }
 
-impl<'a> MomentRepository<'a> {
-    pub fn new(db: &'a PgPool) -> Self {
+impl MomentRepository {
+    pub fn new(db: PgPool) -> Self {
         Self { db }
     }
 
@@ -20,24 +21,24 @@ impl<'a> MomentRepository<'a> {
         let rec = sqlx::query!(
             r#"
             INSERT INTO moments (
-                moment_id, user_id, content, images, tags,
-                latitude, longitude, visibility
+                moment_id, user_id, description, images, tags,
+                latitude, longitude, location_name
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING moment_id
             "#,
             moment.moment_id,
             moment.user_id,
-            moment.content,
-            &moment.images,
-            &moment.tags,
+            moment.description,
+            moment.images.as_deref(),
+            moment.tags.as_deref(),
             moment.latitude,
             moment.longitude,
-            moment.visibility,
+            moment.location_name,
         )
-        .fetch_one(self.db)
+        .fetch_one(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(rec.moment_id)
     }
@@ -47,13 +48,17 @@ impl<'a> MomentRepository<'a> {
         let moment = sqlx::query_as!(
             Moment,
             r#"
-            SELECT * FROM moments WHERE moment_id = $1 AND deleted_at IS NULL
+            SELECT moment_id, user_id, description, latitude, longitude, 
+                   location_name, tags, images, created_at, updated_at,
+                   is_deleted, deleted_at
+            FROM moments 
+            WHERE moment_id = $1 AND is_deleted = FALSE
             "#,
             moment_id
         )
-        .fetch_optional(self.db)
+        .fetch_optional(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(moment)
     }
@@ -63,125 +68,176 @@ impl<'a> MomentRepository<'a> {
         sqlx::query!(
             r#"
             UPDATE moments
-            SET content = $2, images = $3, tags = $4,
-                latitude = $5, longitude = $6, visibility = $7,
-                edited_at = NOW()
+            SET description = $2, images = $3, tags = $4,
+                latitude = $5, longitude = $6, location_name = $7,
+                updated_at = NOW()
             WHERE moment_id = $1
             "#,
             moment.moment_id,
-            moment.content,
-            &moment.images,
-            &moment.tags,
+            moment.description,
+            moment.images.as_deref(),
+            moment.tags.as_deref(),
             moment.latitude,
             moment.longitude,
-            moment.visibility,
+            moment.location_name,
         )
-        .execute(self.db)
+        .execute(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(())
     }
 
-    /// 软删除瞬间
+    /// 删除瞬间（软删除）
     pub async fn soft_delete(&self, moment_id: Uuid) -> Result<()> {
         sqlx::query!(
             r#"
             UPDATE moments
-            SET deleted_at = NOW()
+            SET is_deleted = TRUE, deleted_at = NOW()
             WHERE moment_id = $1
             "#,
             moment_id
         )
-        .execute(self.db)
+        .execute(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(())
     }
 
     /// 获取用户的瞬间列表
+    /// 列出用户的瞬间（游标分页）
+    /// cursor: moment_id (UUID字符串)
     pub async fn list_by_user(
         &self,
         user_id: i64,
+        cursor: Option<String>,
         limit: i64,
-        offset: i64,
     ) -> Result<Vec<Moment>> {
+        // 1. 解析cursor获取自增主键id
+        let cursor_id = if let Some(cursor_str) = cursor {
+            let moment_uuid = Uuid::parse_str(&cursor_str)
+                .map_err(|_| AppError::BadRequest("无效的游标".to_string()))?;
+            
+            let result = sqlx::query!(
+                "SELECT id FROM moments WHERE moment_id = $1 AND is_deleted = FALSE",
+                moment_uuid
+            )
+            .fetch_optional(&self.db)
+            .await
+            .map_err(|e| AppError::from(e))?;
+            
+            result.map(|r| r.id)
+        } else {
+            None
+        };
+
+        // 2. 使用自增id进行游标分页
         let moments = sqlx::query_as!(
             Moment,
             r#"
-            SELECT * FROM moments
-            WHERE user_id = $1 AND deleted_at IS NULL
-            ORDER BY created_at DESC
-            LIMIT $2 OFFSET $3
+            SELECT moment_id, user_id, description, latitude, longitude, 
+                   location_name, tags, images, created_at, updated_at,
+                   is_deleted, deleted_at
+            FROM moments
+            WHERE user_id = $1 
+            AND is_deleted = FALSE
+            AND ($2::BIGINT IS NULL OR id > $2::BIGINT)
+            ORDER BY id DESC
+            LIMIT $3
             "#,
             user_id,
-            limit,
-            offset
+            cursor_id,
+            limit
         )
-        .fetch_all(self.db)
+        .fetch_all(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(moments)
     }
 
     /// 根据位置搜索瞬间（使用PostGIS）
+    /// 按位置搜索瞬间（游标分页）
+    /// cursor: moment_id (UUID字符串)
     pub async fn search_by_location(
         &self,
         lat: f64,
         lon: f64,
         radius_meters: f64,
+        cursor: Option<String>,
         limit: i64,
-        offset: i64,
     ) -> Result<Vec<(Moment, f64)>> {
-        let records = sqlx::query!(
+        // 1. 解析cursor获取自增主键id
+        let cursor_id = if let Some(cursor_str) = cursor {
+            let moment_uuid = Uuid::parse_str(&cursor_str)
+                .map_err(|_| AppError::BadRequest("无效的游标".to_string()))?;
+            
+            let result = sqlx::query!(
+                "SELECT id FROM moments WHERE moment_id = $1 AND is_deleted = FALSE",
+                moment_uuid
+            )
+            .fetch_optional(&self.db)
+            .await
+            .map_err(|e| AppError::from(e))?;
+            
+            result.map(|r| r.id)
+        } else {
+            None
+        };
+
+        // 2. 使用自增id进行游标分页，按distance排序，id作为第二排序键确保稳定性
+        let records = sqlx::query(
             r#"
             SELECT 
-                m.*,
+                m.id, m.moment_id, m.user_id, m.description, m.latitude, m.longitude,
+                m.location_name, m.tags, m.images, m.created_at, m.updated_at,
+                m.is_deleted, m.deleted_at,
                 ST_Distance(
                     ST_MakePoint(m.longitude, m.latitude)::geography,
                     ST_MakePoint($2, $1)::geography
-                ) as "distance!"
+                ) as distance
             FROM moments m
             WHERE 
-                m.deleted_at IS NULL
-                AND m.visibility = 'public'
+                m.is_deleted = FALSE
                 AND ST_DWithin(
                     ST_MakePoint(m.longitude, m.latitude)::geography,
                     ST_MakePoint($2, $1)::geography,
                     $3
                 )
-            ORDER BY distance ASC
-            LIMIT $4 OFFSET $5
-            "#,
-            lat,
-            lon,
-            radius_meters,
-            limit,
-            offset
+                AND ($4::BIGINT IS NULL OR m.id > $4::BIGINT)
+            ORDER BY distance ASC, m.id ASC
+            LIMIT $5
+            "#
         )
-        .fetch_all(self.db)
+        .bind(lat)
+        .bind(lon)
+        .bind(radius_meters)
+        .bind(cursor_id)
+        .bind(limit)
+        .fetch_all(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         let results = records
-            .into_iter()
+            .iter()
             .map(|rec| {
                 let moment = Moment {
-                    moment_id: rec.moment_id,
-                    user_id: rec.user_id,
-                    content: rec.content,
-                    images: rec.images,
-                    tags: rec.tags,
-                    latitude: rec.latitude,
-                    longitude: rec.longitude,
-                    visibility: rec.visibility,
-                    created_at: rec.created_at,
-                    edited_at: rec.edited_at,
-                    deleted_at: rec.deleted_at,
+                    moment_id: rec.get("moment_id"),
+                    user_id: rec.get("user_id"),
+                    description: rec.get("description"),
+                    latitude: rec.get("latitude"),
+                    longitude: rec.get("longitude"),
+                    location_name: rec.get("location_name"),
+                    tags: rec.get("tags"),
+                    images: rec.get("images"),
+                    created_at: rec.get("created_at"),
+                    updated_at: rec.get("updated_at"),
+                    is_deleted: rec.get("is_deleted"),
+                    deleted_at: rec.get("deleted_at"),
                 };
-                (moment, rec.distance)
+                let distance: f64 = rec.get("distance");
+                (moment, distance)
             })
             .collect();
 
@@ -189,30 +245,53 @@ impl<'a> MomentRepository<'a> {
     }
 
     /// 根据标签搜索瞬间
+    /// 按标签搜索瞬间（游标分页）
+    /// cursor: moment_id (UUID字符串)
     pub async fn search_by_tags(
         &self,
         tags: &[String],
+        cursor: Option<String>,
         limit: i64,
-        offset: i64,
     ) -> Result<Vec<Moment>> {
+        // 1. 解析cursor获取自增主键id
+        let cursor_id = if let Some(cursor_str) = cursor {
+            let moment_uuid = Uuid::parse_str(&cursor_str)
+                .map_err(|_| AppError::BadRequest("无效的游标".to_string()))?;
+            
+            let result = sqlx::query!(
+                "SELECT id FROM moments WHERE moment_id = $1 AND is_deleted = FALSE",
+                moment_uuid
+            )
+            .fetch_optional(&self.db)
+            .await
+            .map_err(|e| AppError::from(e))?;
+            
+            result.map(|r| r.id)
+        } else {
+            None
+        };
+
+        // 2. 使用自增id进行游标分页
         let moments = sqlx::query_as!(
             Moment,
             r#"
-            SELECT * FROM moments
-            WHERE 
-                deleted_at IS NULL
-                AND visibility = 'public'
-                AND tags && $1
-            ORDER BY created_at DESC
-            LIMIT $2 OFFSET $3
+            SELECT moment_id, user_id, description, latitude, longitude, 
+                   location_name, tags, images, created_at, updated_at,
+                   is_deleted, deleted_at
+            FROM moments
+            WHERE tags && $1 
+            AND is_deleted = FALSE
+            AND ($2::BIGINT IS NULL OR id > $2::BIGINT)
+            ORDER BY id DESC
+            LIMIT $3
             "#,
             tags,
-            limit,
-            offset
+            cursor_id,
+            limit
         )
-        .fetch_all(self.db)
+        .fetch_all(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(moments)
     }
@@ -228,9 +307,9 @@ impl<'a> MomentRepository<'a> {
             moment_id,
             user_id
         )
-        .execute(self.db)
+        .execute(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(())
     }
@@ -245,9 +324,9 @@ impl<'a> MomentRepository<'a> {
             moment_id,
             user_id
         )
-        .execute(self.db)
+        .execute(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(())
     }
@@ -263,9 +342,9 @@ impl<'a> MomentRepository<'a> {
             moment_id,
             user_id
         )
-        .execute(self.db)
+        .execute(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(())
     }
@@ -280,9 +359,9 @@ impl<'a> MomentRepository<'a> {
             moment_id,
             user_id
         )
-        .execute(self.db)
+        .execute(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(())
     }
@@ -297,9 +376,9 @@ impl<'a> MomentRepository<'a> {
             "#,
             moment_id
         )
-        .fetch_one(self.db)
+        .fetch_one(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(rec.count)
     }
@@ -310,13 +389,13 @@ impl<'a> MomentRepository<'a> {
             r#"
             SELECT COUNT(*) as "count!"
             FROM comments
-            WHERE target_id = $1 AND target_type = 'moment' AND deleted_at IS NULL
+            WHERE moment_id = $1
             "#,
-            moment_id.to_string()
+            moment_id
         )
-        .fetch_one(self.db)
+        .fetch_one(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(rec.count)
     }
@@ -333,9 +412,9 @@ impl<'a> MomentRepository<'a> {
             moment_id,
             user_id
         )
-        .fetch_one(self.db)
+        .fetch_one(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(rec.exists)
     }
@@ -352,36 +431,67 @@ impl<'a> MomentRepository<'a> {
             moment_id,
             user_id
         )
-        .fetch_one(self.db)
+        .fetch_one(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(rec.exists)
     }
 
     /// 获取用户的收藏列表
+    /// 获取用户收藏的瞬间列表（游标分页）
+    /// cursor: moment_id (UUID字符串)
     pub async fn list_collections(
         &self,
         user_id: i64,
+        cursor: Option<String>,
         limit: i64,
-        offset: i64,
     ) -> Result<Vec<Moment>> {
+        // 1. 解析cursor获取对应的moment_collections.id
+        let cursor_id = if let Some(cursor_str) = cursor {
+            let moment_uuid = Uuid::parse_str(&cursor_str)
+                .map_err(|_| AppError::BadRequest("无效的游标".to_string()))?;
+            
+            let result = sqlx::query!(
+                r#"
+                SELECT mc.id
+                FROM moment_collections mc
+                WHERE mc.user_id = $1 AND mc.moment_id = $2
+                "#,
+                user_id,
+                moment_uuid
+            )
+            .fetch_optional(&self.db)
+            .await
+            .map_err(|e| AppError::from(e))?;
+            
+            result.map(|r| r.id)
+        } else {
+            None
+        };
+
+        // 2. 使用moment_collections.id进行游标分页
         let moments = sqlx::query_as!(
             Moment,
             r#"
-            SELECT m.* FROM moments m
+            SELECT m.moment_id, m.user_id, m.description, m.latitude, m.longitude,
+                   m.location_name, m.tags, m.images, m.created_at, m.updated_at,
+                   m.is_deleted, m.deleted_at
+            FROM moments m
             INNER JOIN moment_collections mc ON m.moment_id = mc.moment_id
-            WHERE mc.user_id = $1 AND m.deleted_at IS NULL
-            ORDER BY mc.created_at DESC
-            LIMIT $2 OFFSET $3
+            WHERE mc.user_id = $1 
+            AND m.is_deleted = FALSE
+            AND ($2::BIGINT IS NULL OR mc.id > $2::BIGINT)
+            ORDER BY mc.id DESC
+            LIMIT $3
             "#,
             user_id,
-            limit,
-            offset
+            cursor_id,
+            limit
         )
-        .fetch_all(self.db)
+        .fetch_all(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(moments)
     }

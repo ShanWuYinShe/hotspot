@@ -1,10 +1,9 @@
 use sqlx::PgPool;
-use uuid::Uuid;
 
 use crate::{
     dto::{
         request::{
-            CreateReportRequest, GetReportHistoryRequest, GetReportsRequest, ReviewReportRequest,
+            CreateReportRequest, GetReportHistoryRequest, GetReportsRequest, HandleReportRequest,
         },
         response::{PaginatedResponse, ReportResponse},
     },
@@ -55,19 +54,7 @@ impl ReportService {
 
         let created_report = self.report_repo.create_report(&report).await?;
 
-        Ok(ReportResponse {
-            id: created_report.id,
-            reporter_id: created_report.reporter_id,
-            target_type: created_report.target_type,
-            target_id: created_report.target_id,
-            reason: created_report.reason,
-            description: created_report.description,
-            status: created_report.status,
-            reviewed_by: created_report.reviewed_by,
-            review_note: created_report.review_note,
-            created_at: created_report.created_at,
-            updated_at: created_report.updated_at,
-        })
+        Ok(Self::to_response(created_report))
     }
 
     /// 获取用户的举报历史
@@ -76,42 +63,27 @@ impl ReportService {
         reporter_id: i64,
         req: GetReportHistoryRequest,
     ) -> Result<PaginatedResponse<ReportResponse>, AppError> {
-        let offset = req.cursor.unwrap_or(0);
-        let limit = req.limit.min(100);
+        let limit = req.limit.unwrap_or(20).min(100) as i64;
 
+        // 使用游标分页：多取一条判断has_more
         let reports = self
             .report_repo
-            .find_reports_by_reporter(reporter_id, offset, limit + 1)
+            .find_reports_by_reporter(reporter_id, req.cursor.clone(), limit + 1)
             .await?;
 
         let has_more = reports.len() > limit as usize;
-        let reports: Vec<Report> = if has_more {
-            reports.into_iter().take(limit as usize).collect()
-        } else {
-            reports
-        };
-
+        let reports_to_return: Vec<Report> = reports.into_iter().take(limit as usize).collect();
+        
+        // next_cursor是最后一条记录的report_id（业务ID）
         let next_cursor = if has_more {
-            Some(offset + limit)
+            reports_to_return.last().map(|r| r.report_id.to_string())
         } else {
             None
         };
 
-        let response_items: Vec<ReportResponse> = reports
+        let response_items: Vec<ReportResponse> = reports_to_return
             .into_iter()
-            .map(|r| ReportResponse {
-                id: r.id,
-                reporter_id: r.reporter_id,
-                target_type: r.target_type,
-                target_id: r.target_id,
-                reason: r.reason,
-                description: r.description,
-                status: r.status,
-                reviewed_by: r.reviewed_by,
-                review_note: r.review_note,
-                created_at: r.created_at,
-                updated_at: r.updated_at,
-            })
+            .map(Self::to_response)
             .collect();
 
         Ok(PaginatedResponse {
@@ -129,42 +101,27 @@ impl ReportService {
     ) -> Result<PaginatedResponse<ReportResponse>, AppError> {
         // TODO: 验证管理员权限
 
-        let offset = req.cursor.unwrap_or(0);
-        let limit = req.limit.min(100);
+        let limit = req.limit.unwrap_or(20).min(100) as i64;
 
+        // 使用游标分页：多取一条判断has_more
         let reports = self
             .report_repo
-            .find_all_reports(req.status, offset, limit + 1)
+            .find_all_reports(req.status, req.cursor.clone(), limit + 1)
             .await?;
 
         let has_more = reports.len() > limit as usize;
-        let reports: Vec<Report> = if has_more {
-            reports.into_iter().take(limit as usize).collect()
-        } else {
-            reports
-        };
-
+        let reports_to_return: Vec<Report> = reports.into_iter().take(limit as usize).collect();
+        
+        // next_cursor是最后一条记录的report_id（业务ID）
         let next_cursor = if has_more {
-            Some(offset + limit)
+            reports_to_return.last().map(|r| r.report_id.to_string())
         } else {
             None
         };
 
-        let response_items: Vec<ReportResponse> = reports
+        let response_items: Vec<ReportResponse> = reports_to_return
             .into_iter()
-            .map(|r| ReportResponse {
-                id: r.id,
-                reporter_id: r.reporter_id,
-                target_type: r.target_type,
-                target_id: r.target_id,
-                reason: r.reason,
-                description: r.description,
-                status: r.status,
-                reviewed_by: r.reviewed_by,
-                review_note: r.review_note,
-                created_at: r.created_at,
-                updated_at: r.updated_at,
-            })
+            .map(Self::to_response)
             .collect();
 
         Ok(PaginatedResponse {
@@ -175,47 +132,65 @@ impl ReportService {
     }
 
     /// 审核举报（管理员）
-    pub async fn review_report(
+    pub async fn handle_report(
         &self,
         admin_id: i64,
-        req: ReviewReportRequest,
+        req: HandleReportRequest,
     ) -> Result<ReportResponse, AppError> {
         // TODO: 验证管理员权限
 
-        // 验证status
-        if !["reviewing", "resolved", "rejected"].contains(&req.status.as_str()) {
-            return Err(AppError::InvalidInput("无效的审核状态".to_string()));
+        // 验证action
+        if !["resolve", "dismiss", "escalate"].contains(&req.action.as_str()) {
+            return Err(AppError::InvalidInput("无效的操作类型".to_string()));
         }
+
+        // 解析report_id
+        let report_id = uuid::Uuid::parse_str(&req.id)
+            .map_err(|_| AppError::BadRequest("无效的举报ID".to_string()))?;
 
         // 查找举报
         let report = self
             .report_repo
-            .find_report_by_id(req.report_id)
+            .find_report_by_id(report_id)
             .await?
             .ok_or_else(|| AppError::NotFound("举报不存在".to_string()))?;
+
+        // 根据action映射status
+        let status = match req.action.as_str() {
+            "resolve" => "resolved",
+            "dismiss" => "dismissed",
+            "escalate" => "reviewing",
+            _ => return Err(AppError::InvalidInput("无效的操作类型".to_string())),
+        };
 
         // 更新状态
         let updated_report = self
             .report_repo
-            .update_report_status(report.id, req.status, admin_id, req.review_note)
+            .update_report_status(report.report_id, status.to_string(), admin_id, req.note)
             .await?;
 
         // TODO: 根据审核结果采取相应措施
         // 例如：如果resolved，可能需要封禁用户、删除内容等
 
-        Ok(ReportResponse {
-            id: updated_report.id,
-            reporter_id: updated_report.reporter_id,
-            target_type: updated_report.target_type,
-            target_id: updated_report.target_id,
-            reason: updated_report.reason,
-            description: updated_report.description,
-            status: updated_report.status,
-            reviewed_by: updated_report.reviewed_by,
-            review_note: updated_report.review_note,
-            created_at: updated_report.created_at,
-            updated_at: updated_report.updated_at,
-        })
+        Ok(Self::to_response(updated_report))
+    }
+
+    /// 辅助方法：将Report转换为ReportResponse
+    fn to_response(report: Report) -> ReportResponse {
+        ReportResponse {
+            id: report.report_id.to_string(),
+            reporter_id: report.reporter_id.to_string(),
+            reporter_nickname: None,
+            target_type: report.target_type,
+            target_id: report.target_id,
+            reason: report.reason,
+            description: report.description,
+            status: report.status,
+            created_at: report.created_at.to_rfc3339(),
+            handled_at: report.handled_at.map(|t| t.to_rfc3339()),
+            handler_id: report.handler_id.map(|id| id.to_string()),
+            handler_note: report.handler_note,
+        }
     }
 }
 

@@ -4,17 +4,26 @@ use sqlx::PgPool;
 
 use crate::{
     dto::{
-        request::{CreateTempRequest, LoginRequest, RegisterRequest, RefreshTokenRequest},
-        response::AuthResponse,
+        request::{
+            CreateTempRequest, LoginRequest, RegisterRequest, RefreshTokenRequest,
+            RequestPasswordResetRequest, ResetPasswordRequest, SetPasswordRequest,
+            VerifyResetCodeRequest, ListSessionsRequest, RevokeSessionRequest,
+        },
+        response::{
+            AuthResponse, CheckStatusResponse, SessionResponse, PaginatedResponse,
+            RevokeSessionResponse, SetPasswordResponse, RequestPasswordResetResponse,
+            VerifyResetCodeResponse, ResetPasswordResponse,
+        },
     },
     error::{AppError, Result},
     models::user::User,
-    repositories::user_repo::UserRepository,
-    utils::{id_gen::IdGenerator, jwt::JwtUtil, password::PasswordUtil},
+    repositories::{user_repo::UserRepository, session_repo::SessionRepository},
+    utils::{id_gen::IdGenerator, jwt::JwtUtil, password::PasswordUtil, validation::Validator},
 };
 
 pub struct AuthService {
     user_repo: UserRepository,
+    session_repo: SessionRepository,
     redis: ConnectionManager,
     jwt_secret: String,
     access_token_expiration: i64,
@@ -31,6 +40,7 @@ impl AuthService {
     ) -> Self {
         Self {
             user_repo: UserRepository::new(db.clone()),
+            session_repo: SessionRepository::new(db.clone()),
             redis: redis.clone(),
             jwt_secret,
             access_token_expiration,
@@ -204,7 +214,7 @@ impl AuthService {
             .user_repo
             .find_by_id(user_id)
             .await?
-            .ok_or_else(|| AppError::NotFound)?;
+            .ok_or_else(|| AppError::NotFound("用户不存在".to_string()))?;
 
         // 4. 生成新的 Token
         let access_token =
@@ -251,6 +261,272 @@ impl AuthService {
             .map_err(|_| AppError::Internal)?;
 
         Ok(())
+    }
+
+    /// 检查认证状态
+    pub async fn check_status(&self, user_id: i64, token: &str) -> Result<CheckStatusResponse> {
+        // 1. 验证 Token
+        let claims = JwtUtil::verify_token(token, &self.jwt_secret)?;
+        
+        // 2. 检查 Token 是否在黑名单
+        let blacklist_key = format!("token_blacklist:{}", token);
+        let is_blacklisted: Option<i32> = redis::cmd("GET")
+            .arg(&blacklist_key)
+            .query_async(&mut self.redis.clone())
+            .await
+            .map_err(|_| AppError::Internal)?;
+
+        if is_blacklisted.is_some() {
+            return Err(AppError::Unauthorized("Token 已失效".to_string()));
+        }
+
+        // 3. 查找用户
+        let user = self
+            .user_repo
+            .find_by_id(user_id)
+            .await?
+            .ok_or_else(|| AppError::NotFound("用户不存在".to_string()))?;
+
+        Ok(CheckStatusResponse {
+            user_id: user_id.to_string(),
+            nickname: user.nickname,
+            is_valid: true,
+            expires_at: (Utc::now() + Duration::seconds(claims.exp - Utc::now().timestamp())).to_rfc3339(),
+        })
+    }
+
+    /// 设置密码（临时用户升级或修改密码）
+    pub async fn set_password(&self, user_id: i64, req: &SetPasswordRequest) -> Result<SetPasswordResponse> {
+        // 1. 查找用户
+        let _user = self
+            .user_repo
+            .find_by_id(user_id)
+            .await?
+            .ok_or_else(|| AppError::NotFound("用户不存在".to_string()))?;
+
+        // 2. 对客户端哈希进行 bcrypt 二次哈希
+        let password_hash = PasswordUtil::hash_password(&req.password_hash)?;
+
+        // 3. 更新用户密码
+        self.user_repo
+            .update_password(user_id, &password_hash)
+            .await?;
+
+        Ok(SetPasswordResponse {
+            success: true,
+            message: "密码设置成功".to_string(),
+            can_login: true,
+        })
+    }
+
+    /// 请求密码重置
+    pub async fn request_password_reset(&self, req: &RequestPasswordResetRequest) -> Result<RequestPasswordResetResponse> {
+        use uuid::Uuid;
+        
+        // 1. 查找用户
+        let user = self
+            .user_repo
+            .find_by_login_id(&req.login_id)
+            .await?
+            .ok_or_else(|| AppError::NotFound("用户不存在".to_string()))?;
+
+        // 2. 生成重置码（6位数字）
+        use std::time::{SystemTime, UNIX_EPOCH};
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .subsec_nanos();
+        let reset_code = format!("{:06}", nanos % 1000000);
+        
+        // 3. 生成重置ID
+        let reset_id = Uuid::new_v4().to_string();
+
+        // 4. 存储到 Redis（15分钟有效）
+        let key = format!("password_reset:{}:{}", reset_id, user.user_id);
+        let _: () = redis::cmd("SETEX")
+            .arg(&key)
+            .arg(900) // 15分钟
+            .arg(&reset_code)
+            .query_async(&mut self.redis.clone())
+            .await
+            .map_err(|_| AppError::Internal)?;
+
+        // TODO: 发送验证码到用户邮箱/手机（根据 login_id 类型判断）
+        tracing::info!("密码重置验证码: {} (reset_id: {})", reset_code, reset_id);
+
+        Ok(RequestPasswordResetResponse {
+            success: true,
+            message: "验证码已发送".to_string(),
+            reset_id,
+            expires_in: 900,
+        })
+    }
+
+    /// 验证重置码
+    pub async fn verify_reset_code(&self, req: &VerifyResetCodeRequest) -> Result<VerifyResetCodeResponse> {
+        // 1. 从 Redis 获取验证码（需要遍历所有匹配的key）
+        let pattern = format!("password_reset:{}:*", req.reset_id);
+        let keys: Vec<String> = redis::cmd("KEYS")
+            .arg(&pattern)
+            .query_async(&mut self.redis.clone())
+            .await
+            .map_err(|_| AppError::Internal)?;
+
+        if keys.is_empty() {
+            return Err(AppError::BadRequest("重置请求不存在或已过期".to_string()));
+        }
+
+        let key = &keys[0];
+        let stored_code: Option<String> = redis::cmd("GET")
+            .arg(key)
+            .query_async(&mut self.redis.clone())
+            .await
+            .map_err(|_| AppError::Internal)?;
+
+        // 2. 验证验证码
+        if stored_code.as_deref() != Some(&req.code) {
+            return Err(AppError::BadRequest("验证码错误".to_string()));
+        }
+
+        // 3. 生成临时重置 Token（5分钟有效）
+        let user_id = key.split(':').last()
+            .and_then(|s| s.parse::<i64>().ok())
+            .ok_or_else(|| AppError::Internal)?;
+
+        let reset_token = JwtUtil::generate_token(user_id, 300, &self.jwt_secret)?;
+
+        // 4. 存储重置 Token 到 Redis
+        let token_key = format!("reset_token:{}", reset_token);
+        let _: () = redis::cmd("SETEX")
+            .arg(&token_key)
+            .arg(300) // 5分钟
+            .arg(user_id)
+            .query_async(&mut self.redis.clone())
+            .await
+            .map_err(|_| AppError::Internal)?;
+
+        // 5. 删除验证码
+        let _: () = redis::cmd("DEL")
+            .arg(key)
+            .query_async(&mut self.redis.clone())
+            .await
+            .map_err(|_| AppError::Internal)?;
+
+        Ok(VerifyResetCodeResponse {
+            success: true,
+            message: "验证成功".to_string(),
+            reset_token,
+        })
+    }
+
+    /// 重置密码
+    pub async fn reset_password(&self, req: &ResetPasswordRequest) -> Result<ResetPasswordResponse> {
+        // 1. 验证重置 Token
+        let token_key = format!("reset_token:{}", req.reset_token);
+        let user_id: Option<i64> = redis::cmd("GET")
+            .arg(&token_key)
+            .query_async(&mut self.redis.clone())
+            .await
+            .map_err(|_| AppError::Internal)?;
+
+        let user_id = user_id.ok_or_else(|| {
+            AppError::Unauthorized("重置Token无效或已过期".to_string())
+        })?;
+
+        // 2. 对客户端哈希进行 bcrypt 二次哈希
+        let password_hash = PasswordUtil::hash_password(&req.password_hash)?;
+
+        // 3. 更新密码
+        self.user_repo
+            .update_password(user_id, &password_hash)
+            .await?;
+
+        // 4. 删除重置 Token
+        let _: () = redis::cmd("DEL")
+            .arg(&token_key)
+            .query_async(&mut self.redis.clone())
+            .await
+            .map_err(|_| AppError::Internal)?;
+
+        // 5. 删除所有 Refresh Token（强制重新登录）
+        let refresh_key = format!("refresh_token:{}", user_id);
+        let _: () = redis::cmd("DEL")
+            .arg(&refresh_key)
+            .query_async(&mut self.redis.clone())
+            .await
+            .map_err(|_| AppError::Internal)?;
+
+        Ok(ResetPasswordResponse {
+            success: true,
+            message: "密码重置成功".to_string(),
+        })
+    }
+
+    /// 列出活跃会话
+    pub async fn list_sessions(
+        &self,
+        user_id: i64,
+        req: &ListSessionsRequest,
+    ) -> Result<PaginatedResponse<SessionResponse>> {
+        let limit = Validator::validate_pagination(req.limit, 100)?;
+        let (sessions, next_cursor) = self
+            .session_repo
+            .list_by_user(user_id, limit, req.cursor.clone())
+            .await?;
+
+        let items = sessions
+            .into_iter()
+            .map(|s| SessionResponse {
+                id: s.session_id.to_string(),
+                device_type: s.device_type,
+                device_name: s.device_name,
+                ip_address: s.ip_address.map(|ip| ip.to_string()),
+                location: s.location,
+                created_at: s.created_at,
+                last_active_at: s.last_active_at,
+                is_current: false, // TODO: 根据当前token判断
+            })
+            .collect();
+
+        Ok(PaginatedResponse {
+            items,
+            has_more: next_cursor.is_some(),
+            next_cursor,
+        })
+    }
+
+    /// 撤销会话
+    pub async fn revoke_session(
+        &self,
+        user_id: i64,
+        req: &RevokeSessionRequest,
+    ) -> Result<RevokeSessionResponse> {
+        // 1. 解析会话ID
+        let session_id = uuid::Uuid::parse_str(&req.id)
+            .map_err(|_| AppError::BadRequest("会话ID格式错误".to_string()))?;
+
+        // 2. 查找会话
+        let session = self
+            .session_repo
+            .find_by_id(session_id)
+            .await?
+            .ok_or_else(|| AppError::NotFound("会话不存在".to_string()))?;
+
+        // 3. 验证会话所有权
+        if session.user_id != user_id {
+            return Err(AppError::Forbidden("无权操作该会话".to_string()));
+        }
+
+        // 4. 删除会话
+        self.session_repo.delete(session_id).await?;
+
+        // 5. 将该会话的 token 加入黑名单（如果存在）
+        // TODO: 需要在会话表中存储 token，或者使用其他方式标记
+
+        Ok(RevokeSessionResponse {
+            success: true,
+            message: "会话已撤销".to_string(),
+        })
     }
 }
 

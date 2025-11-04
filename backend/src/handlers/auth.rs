@@ -1,12 +1,20 @@
-use axum::{extract::{Request, State}, Json};
+use axum::{extract::State, Extension, Json};
 
 use crate::{
     dto::{
-        request::{CreateTempRequest, LoginRequest, RegisterRequest, RefreshTokenRequest},
-        response::{ApiResponse, AuthResponse},
+        request::{
+            CreateTempRequest, LoginRequest, RegisterRequest, RefreshTokenRequest,
+            RequestPasswordResetRequest, VerifyResetCodeRequest, ResetPasswordRequest,
+            CheckStatusRequest, SetPasswordRequest, ListSessionsRequest, RevokeSessionRequest,
+        },
+        response::{
+            ApiResponse, AuthResponse, RequestPasswordResetResponse, VerifyResetCodeResponse,
+            ResetPasswordResponse, CheckStatusResponse, SetPasswordResponse,
+            SessionResponse, PaginatedResponse, RevokeSessionResponse,
+        },
     },
     error::{AppError, Result},
-    middleware::auth::extract_user_id,
+    middleware::auth::BearerToken,
     services::auth_service::AuthService,
     state::AppState,
     utils::validation::Validator,
@@ -107,18 +115,9 @@ pub async fn refresh_token(
 /// POST /api/v1/protected/auth/logout
 pub async fn logout(
     State(state): State<AppState>,
-    req: Request,
+    Extension(user_id): Extension<i64>,
+    BearerToken(token): BearerToken,
 ) -> Result<Json<ApiResponse<serde_json::Value>>> {
-    let user_id = extract_user_id(&req)?;
-    
-    // 提取 token
-    let token = req
-        .headers()
-        .get("Authorization")
-        .and_then(|h| h.to_str().ok())
-        .and_then(|s| s.strip_prefix("Bearer "))
-        .ok_or_else(|| AppError::Unauthorized("缺少Token".to_string()))?;
-
     // 调用 Service
     let auth_service = AuthService::new(
         &state.db,
@@ -127,7 +126,7 @@ pub async fn logout(
         state.config.jwt_access_token_expiration,
         state.config.jwt_refresh_token_expiration,
     );
-    auth_service.logout(user_id, token).await?;
+    auth_service.logout(user_id, &token).await?;
 
     Ok(Json(ApiResponse::success(serde_json::json!({
         "success": true,
@@ -135,12 +134,121 @@ pub async fn logout(
     }))))
 }
 
-// TODO: 实现其他认证端点
-// - check_status
-// - set_password
-// - request_password_reset
-// - verify_reset_code
-// - reset_password
-// - list_sessions
-// - revoke_session
+/// POST /api/v1/public/auth/request_password_reset
+pub async fn request_password_reset(
+    State(state): State<AppState>,
+    Json(req): Json<RequestPasswordResetRequest>,
+) -> Result<Json<ApiResponse<RequestPasswordResetResponse>>> {
+    let auth_service = AuthService::new(
+        &state.db,
+        &state.redis,
+        state.config.jwt_secret.clone(),
+        state.config.jwt_access_token_expiration,
+        state.config.jwt_refresh_token_expiration,
+    );
+    let response = auth_service.request_password_reset(&req).await?;
+    Ok(Json(ApiResponse::success(response)))
+}
+
+/// POST /api/v1/public/auth/verify_reset_code
+pub async fn verify_reset_code(
+    State(state): State<AppState>,
+    Json(req): Json<VerifyResetCodeRequest>,
+) -> Result<Json<ApiResponse<VerifyResetCodeResponse>>> {
+    let auth_service = AuthService::new(
+        &state.db,
+        &state.redis,
+        state.config.jwt_secret.clone(),
+        state.config.jwt_access_token_expiration,
+        state.config.jwt_refresh_token_expiration,
+    );
+    let response = auth_service.verify_reset_code(&req).await?;
+    Ok(Json(ApiResponse::success(response)))
+}
+
+/// POST /api/v1/public/auth/reset_password
+pub async fn reset_password(
+    State(state): State<AppState>,
+    Json(req): Json<ResetPasswordRequest>,
+) -> Result<Json<ApiResponse<ResetPasswordResponse>>> {
+    let auth_service = AuthService::new(
+        &state.db,
+        &state.redis,
+        state.config.jwt_secret.clone(),
+        state.config.jwt_access_token_expiration,
+        state.config.jwt_refresh_token_expiration,
+    );
+    let response = auth_service.reset_password(&req).await?;
+    Ok(Json(ApiResponse::success(response)))
+}
+
+/// POST /api/v1/protected/auth/check_status
+pub async fn check_status(
+    State(state): State<AppState>,
+    Extension(user_id): Extension<i64>,
+    BearerToken(token): BearerToken,
+    Json(_req): Json<CheckStatusRequest>,
+) -> Result<Json<ApiResponse<CheckStatusResponse>>> {
+    let auth_service = AuthService::new(
+        &state.db,
+        &state.redis,
+        state.config.jwt_secret.clone(),
+        state.config.jwt_access_token_expiration,
+        state.config.jwt_refresh_token_expiration,
+    );
+    
+    let response = auth_service.check_status(user_id, &token).await?;
+    Ok(Json(ApiResponse::success(response)))
+}
+
+/// POST /api/v1/protected/auth/set_password
+pub async fn set_password(
+    State(state): State<AppState>,
+    Extension(user_id): Extension<i64>,
+    Json(password_req): Json<SetPasswordRequest>,
+) -> Result<Json<ApiResponse<SetPasswordResponse>>> {
+    let auth_service = AuthService::new(
+        &state.db,
+        &state.redis,
+        state.config.jwt_secret.clone(),
+        state.config.jwt_access_token_expiration,
+        state.config.jwt_refresh_token_expiration,
+    );
+    let response = auth_service.set_password(user_id, &password_req).await?;
+    Ok(Json(ApiResponse::success(response)))
+}
+
+/// POST /api/v1/protected/auth/list_sessions
+pub async fn list_sessions(
+    State(state): State<AppState>,
+    Extension(user_id): Extension<i64>,
+    Json(list_req): Json<ListSessionsRequest>,
+) -> Result<Json<ApiResponse<PaginatedResponse<SessionResponse>>>> {
+    let auth_service = AuthService::new(
+        &state.db,
+        &state.redis,
+        state.config.jwt_secret.clone(),
+        state.config.jwt_access_token_expiration,
+        state.config.jwt_refresh_token_expiration,
+    );
+    let response = auth_service.list_sessions(user_id, &list_req).await?;
+    Ok(Json(ApiResponse::success(response)))
+}
+
+/// POST /api/v1/protected/auth/revoke_session
+pub async fn revoke_session(
+    State(state): State<AppState>,
+    Extension(user_id): Extension<i64>,
+    Json(revoke_req): Json<RevokeSessionRequest>,
+) -> Result<Json<ApiResponse<RevokeSessionResponse>>> {
+    let auth_service = AuthService::new(
+        &state.db,
+        &state.redis,
+        state.config.jwt_secret.clone(),
+        state.config.jwt_access_token_expiration,
+        state.config.jwt_refresh_token_expiration,
+    );
+    let response = auth_service.revoke_session(user_id, &revoke_req).await?;
+    Ok(Json(ApiResponse::success(response)))
+}
 

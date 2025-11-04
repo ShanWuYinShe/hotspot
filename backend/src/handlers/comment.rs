@@ -1,4 +1,4 @@
-use axum::{extract::{Request, State}, Json};
+use axum::{extract::State, Extension, Json};
 
 use crate::{
     dto::{
@@ -9,7 +9,7 @@ use crate::{
         response::{ApiResponse, PaginatedResponse, CommentResponse},
     },
     error::Result,
-    middleware::auth::extract_user_id,
+    middleware::auth::OptionalUserId,
     services::comment_service::CommentService,
     state::AppState,
 };
@@ -17,10 +17,9 @@ use crate::{
 /// POST /api/v1/protected/comment/add
 pub async fn add(
     State(state): State<AppState>,
-    req: Request,
+    Extension(user_id): Extension<i64>,
     Json(req_body): Json<AddCommentRequest>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>> {
-    let user_id = extract_user_id(&req)?;
     
     let service = CommentService::new(&state.db, &state.redis);
     let comment_id = service.add_comment(user_id, &req_body).await?;
@@ -35,10 +34,9 @@ pub async fn add(
 /// POST /api/v1/protected/comment/delete
 pub async fn delete(
     State(state): State<AppState>,
-    req: Request,
+    Extension(user_id): Extension<i64>,
     Json(req_body): Json<DeleteCommentRequest>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>> {
-    let user_id = extract_user_id(&req)?;
     
     let service = CommentService::new(&state.db, &state.redis);
     service.delete_comment(user_id, &req_body).await?;
@@ -52,10 +50,9 @@ pub async fn delete(
 /// POST /api/v1/protected/comment/like
 pub async fn like(
     State(state): State<AppState>,
-    req: Request,
+    Extension(user_id): Extension<i64>,
     Json(req_body): Json<LikeCommentRequest>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>> {
-    let user_id = extract_user_id(&req)?;
     
     let service = CommentService::new(&state.db, &state.redis);
     service.like_comment(user_id, &req_body).await?;
@@ -69,10 +66,9 @@ pub async fn like(
 /// POST /api/v1/protected/comment/unlike
 pub async fn unlike(
     State(state): State<AppState>,
-    req: Request,
+    Extension(user_id): Extension<i64>,
     Json(req_body): Json<UnlikeCommentRequest>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>> {
-    let user_id = extract_user_id(&req)?;
     
     let service = CommentService::new(&state.db, &state.redis);
     service.unlike_comment(user_id, &req_body).await?;
@@ -86,11 +82,9 @@ pub async fn unlike(
 /// POST /api/v1/public/comment/list
 pub async fn list(
     State(state): State<AppState>,
-    request: Request,
+    OptionalUserId(current_user_id): OptionalUserId,
     Json(req): Json<ListCommentsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedResponse<CommentResponse>>>> {
-    let current_user_id = extract_user_id(&request).ok();
-    
     let service = CommentService::new(&state.db, &state.redis);
     let response = service.list_comments(&req, current_user_id).await?;
     
@@ -100,11 +94,9 @@ pub async fn list(
 /// POST /api/v1/public/comment/replies
 pub async fn replies(
     State(state): State<AppState>,
-    request: Request,
+    OptionalUserId(current_user_id): OptionalUserId,
     Json(req): Json<ListRepliesRequest>,
 ) -> Result<Json<ApiResponse<PaginatedResponse<CommentResponse>>>> {
-    let current_user_id = extract_user_id(&request).ok();
-    
     let service = CommentService::new(&state.db, &state.redis);
     let response = service.list_replies(&req, current_user_id).await?;
     

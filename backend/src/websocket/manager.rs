@@ -1,5 +1,6 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use std::time::Instant;
 use tokio::sync::{mpsc, RwLock};
 use futures_util::stream::SplitSink;
 use tokio_tungstenite::{WebSocketStream, tungstenite::Message};
@@ -14,6 +15,9 @@ pub struct Connection {
     pub connection_id: String,
     pub user_id: i64,
     pub sender: mpsc::UnboundedSender<Message>,
+    pub last_ping: Arc<RwLock<Instant>>,
+    pub subscriptions: Arc<RwLock<HashSet<String>>>,
+    pub connected_at: Instant,
 }
 
 /// WebSocket连接管理器
@@ -40,10 +44,14 @@ impl ConnectionManager {
         user_id: i64,
         sender: mpsc::UnboundedSender<Message>,
     ) {
+        let now = Instant::now();
         let connection = Arc::new(Connection {
             connection_id: connection_id.clone(),
             user_id,
             sender,
+            last_ping: Arc::new(RwLock::new(now)),
+            subscriptions: Arc::new(RwLock::new(HashSet::new())),
+            connected_at: now,
         });
 
         // 添加到用户连接列表
@@ -153,6 +161,155 @@ impl ConnectionManager {
     pub async fn get_user_connection_count(&self, user_id: i64) -> usize {
         let connections = self.connections.read().await;
         connections.get(&user_id).map(|v| v.len()).unwrap_or(0)
+    }
+
+    /// 更新连接的最后心跳时间
+    pub async fn update_ping(&self, connection_id: &str) -> Result<(), String> {
+        let connection_map = self.connection_map.read().await;
+        if let Some(&user_id) = connection_map.get(connection_id) {
+            let connections = self.connections.read().await;
+            if let Some(user_connections) = connections.get(&user_id) {
+                for conn in user_connections {
+                    if conn.connection_id == connection_id {
+                        let mut last_ping = conn.last_ping.write().await;
+                        *last_ping = Instant::now();
+                        return Ok(());
+                    }
+                }
+            }
+        }
+        Err(format!("连接不存在: connection_id={}", connection_id))
+    }
+
+    /// 检查连接是否超时（超过60秒未收到心跳）
+    pub async fn check_timeout(&self) -> Vec<String> {
+        let mut timeout_connections = Vec::new();
+        let connections = self.connections.read().await;
+        let timeout_duration = std::time::Duration::from_secs(60);
+        
+        for user_connections in connections.values() {
+            for conn in user_connections {
+                let last_ping = conn.last_ping.read().await;
+                if last_ping.elapsed() > timeout_duration {
+                    timeout_connections.push(conn.connection_id.clone());
+                }
+            }
+        }
+        
+        timeout_connections
+    }
+
+    /// 订阅频道
+    pub async fn subscribe(&self, connection_id: &str, channels: Vec<String>) -> Result<Vec<String>, String> {
+        let connection_map = self.connection_map.read().await;
+        if let Some(&user_id) = connection_map.get(connection_id) {
+            let connections = self.connections.read().await;
+            if let Some(user_connections) = connections.get(&user_id) {
+                for conn in user_connections {
+                    if conn.connection_id == connection_id {
+                        let mut subscriptions = conn.subscriptions.write().await;
+                        let mut subscribed = Vec::new();
+                        for channel in channels {
+                            if subscriptions.insert(channel.clone()) {
+                                subscribed.push(channel);
+                            }
+                        }
+                        return Ok(subscribed);
+                    }
+                }
+            }
+        }
+        Err(format!("连接不存在: connection_id={}", connection_id))
+    }
+
+    /// 取消订阅频道
+    pub async fn unsubscribe(&self, connection_id: &str, channels: Vec<String>) -> Result<Vec<String>, String> {
+        let connection_map = self.connection_map.read().await;
+        if let Some(&user_id) = connection_map.get(connection_id) {
+            let connections = self.connections.read().await;
+            if let Some(user_connections) = connections.get(&user_id) {
+                for conn in user_connections {
+                    if conn.connection_id == connection_id {
+                        let mut subscriptions = conn.subscriptions.write().await;
+                        let mut unsubscribed = Vec::new();
+                        for channel in channels {
+                            if subscriptions.remove(&channel) {
+                                unsubscribed.push(channel);
+                            }
+                        }
+                        return Ok(unsubscribed);
+                    }
+                }
+            }
+        }
+        Err(format!("连接不存在: connection_id={}", connection_id))
+    }
+
+    /// 检查用户是否订阅了某个频道
+    pub async fn check_subscription(&self, user_id: i64, channel: &str) -> bool {
+        let connections = self.connections.read().await;
+        if let Some(user_connections) = connections.get(&user_id) {
+            for conn in user_connections {
+                let subscriptions = conn.subscriptions.read().await;
+                if subscriptions.contains(channel) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    /// 发送消息给订阅了指定频道的用户
+    pub async fn send_to_channel(&self, channel: &str, user_ids: &[i64], message: &WsMessage) {
+        for user_id in user_ids {
+            if self.check_subscription(*user_id, channel).await {
+                if let Err(e) = self.send_to_user(*user_id, message).await {
+                    tracing::debug!("{}", e);
+                }
+            }
+        }
+    }
+
+    /// 获取连接信息（用于调试）
+    pub async fn get_connection_info(&self, connection_id: &str) -> Option<(i64, Instant, Vec<String>)> {
+        let connection_map = self.connection_map.read().await;
+        if let Some(&user_id) = connection_map.get(connection_id) {
+            let connections = self.connections.read().await;
+            if let Some(user_connections) = connections.get(&user_id) {
+                for conn in user_connections {
+                    if conn.connection_id == connection_id {
+                        let subscriptions = conn.subscriptions.read().await;
+                        let subs: Vec<String> = subscriptions.iter().cloned().collect();
+                        return Some((user_id, conn.connected_at, subs));
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    /// 向指定频道的所有订阅者广播消息
+    pub async fn broadcast_to_channel(&self, channel: &str, message: &crate::websocket::types::WsMessage) -> Result<usize, Box<dyn std::error::Error + Send + Sync>> {
+        let json = serde_json::to_string(message)?;
+        let msg = axum::extract::ws::Message::Text(json);
+        
+        let connections = self.connections.read().await;
+        let mut sent_count = 0;
+        
+        for user_connections in connections.values() {
+            for conn in user_connections {
+                let subscriptions = conn.subscriptions.read().await;
+                if subscriptions.contains(channel) {
+                    if let Err(e) = conn.sender.send(msg.clone()) {
+                        tracing::warn!("Failed to send to connection {}: {}", conn.connection_id, e);
+                    } else {
+                        sent_count += 1;
+                    }
+                }
+            }
+        }
+        
+        Ok(sent_count)
     }
 }
 

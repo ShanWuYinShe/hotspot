@@ -76,7 +76,7 @@ pub struct SearchUserByIdRequest {
 pub struct SearchUserByLocationRequest {
     pub latitude: f64,
     pub longitude: f64,
-    pub radius: Option<i32>,
+    pub radius: Option<f64>,
     pub limit: Option<i32>,
     pub cursor: Option<String>,
 }
@@ -105,6 +105,7 @@ pub struct UpgradeAccountRequest {
 pub struct UpdateSettingsRequest {
     pub privacy_level: Option<String>,
     pub location_sharing: Option<bool>,
+    pub allow_follow: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -191,7 +192,7 @@ pub struct SetFriendRemarkRequest {
 pub struct SearchGroupByLocationRequest {
     pub latitude: f64,
     pub longitude: f64,
-    pub radius: Option<i32>,
+    pub radius: Option<f64>,
     pub limit: Option<i32>,
     pub cursor: Option<String>,
 }
@@ -262,9 +263,9 @@ pub struct SetMemberRoleRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct MuteMemberRequest {
-    pub id: String,
+    pub id: String,        // 群组ID
     pub user_id: String,
-    pub duration: i64,
+    pub duration: i64,     // 秒
     pub reason: Option<String>,
 }
 
@@ -460,3 +461,349 @@ pub struct UpgradeToGroupRequest {
     pub invited_users: Option<Vec<String>>,
 }
 
+// ==================== 群组模块请求（补全） ====================
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateGroupRequest {
+    pub id: String,  // 群组ID
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub avatar_url: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct JoinGroupRequest {
+    pub id: String,
+    pub password_hash: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LeaveGroupRequest {
+    pub id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct InviteMemberRequest {
+    pub user_ids: Vec<String>,
+    pub message: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UnmuteMemberRequest {
+    pub id: String,        // 群组ID
+    pub user_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ListGroupMembersRequest {
+    pub id: String,  // 群组ID
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+// ==================== 消息模块请求（补全） ====================
+
+#[derive(Debug, Deserialize)]
+pub struct MarkAsReadRequest {
+    pub target_id: String,
+    pub target_type: String,
+    pub up_to: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AddReactionRequest {
+    pub id: String,
+    pub reaction_type: String,
+    pub action: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RemoveReactionRequest {
+    pub id: String,
+    pub reaction_type: String,
+}
+
+// ==================== 瞬间模块请求（补全） ====================
+
+#[derive(Debug, Deserialize)]
+pub struct CreateMomentRequest {
+    pub description: String,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub location_name: String,
+    pub tags: Option<Vec<String>>,
+    pub images: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateMomentRequest {
+    pub id: String,
+    pub description: Option<String>,
+    pub images: Option<Vec<String>>,
+    pub tags: Option<Vec<String>>,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+    pub location_name: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteMomentRequest {
+    pub id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SearchMomentByLocationRequest {
+    pub latitude: f64,
+    pub longitude: f64,
+    pub radius: Option<f64>,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SearchMomentByTagsRequest {
+    pub tags: Vec<String>,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ListMyMomentsRequest {
+    pub user_id: Option<String>,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LikeMomentRequest {
+    pub id: String,
+    pub action: String, // "like" or "unlike"
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UnlikeMomentRequest {
+    pub id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CollectMomentRequest {
+    pub id: String,
+    pub action: String, // "add" or "remove"
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UncollectMomentRequest {
+    pub id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ListCollectionsRequest {
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+// ==================== 评论模块请求（补全） ====================
+
+#[derive(Debug, Deserialize)]
+pub struct AddCommentRequest {
+    pub moment_id: String,
+    pub content: String,
+    pub parent_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteCommentRequest {
+    pub id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LikeCommentRequest {
+    pub id: String,
+    pub action: String, // "like" or "unlike"
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UnlikeCommentRequest {
+    pub id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ListCommentsRequest {
+    pub moment_id: String,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ListRepliesRequest {
+    pub id: String,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+// ==================== 收件箱模块请求（补全） ====================
+
+#[derive(Debug, Deserialize)]
+pub struct GetInboxRequest {
+    pub category: Option<String>,
+    pub types: Option<Vec<String>>,
+    pub is_read: Option<bool>,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MarkInboxReadRequest {
+    pub ids: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteInboxItemsRequest {
+    pub ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct UpdateDeviceTokenRequest {
+    pub action: String, // 'register' | 'unregister'
+    pub platform: String, // 'ios' | 'android' | 'web'
+    pub token: String, // unregister 时可为空
+}
+
+// ==================== 举报模块请求（补全） ====================
+
+#[derive(Debug, Deserialize)]
+pub struct CreateReportRequest {
+    pub target_type: String,
+    pub target_id: String,
+    pub reason: String,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetReportHistoryRequest {
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetReportsRequest {
+    pub status: Option<String>,
+    pub target_type: Option<String>,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct HandleReportRequest {
+    pub id: String,     // 举报ID
+    pub action: String, // "resolve", "dismiss", "escalate"
+    pub note: Option<String>,
+}
+
+// ==================== 订阅模块请求（补全） ====================
+
+#[derive(Debug, Deserialize)]
+pub struct GetSubscriptionsRequest {}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateSubscriptionRequest {
+    pub friend_request_enabled: Option<bool>,
+    pub friend_accepted_enabled: Option<bool>,
+    pub group_invite_enabled: Option<bool>,
+    pub group_invite_response_enabled: Option<bool>,
+    pub message_mention_enabled: Option<bool>,
+    pub moment_like_enabled: Option<bool>,
+    pub moment_comment_enabled: Option<bool>,
+    pub comment_reply_enabled: Option<bool>,
+    pub system_announcement_enabled: Option<bool>,
+}
+
+// UpdateSubscriptionsRequest 别名（API文档使用复数形式）
+pub type UpdateSubscriptionsRequest = UpdateSubscriptionRequest;
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateSubscriptionsBatchRequest {
+    pub subscriptions: Vec<UpdateSubscriptionRequest>,
+}
+
+// ==================== 排行榜模块请求（补全） ====================
+
+#[derive(Debug, Deserialize)]
+pub struct GetLeaderboardRequest {
+    pub category: String, // "creators" or "moments"
+    pub timeframe: String, // "daily", "weekly", "monthly", "all_time"
+    pub scope: Option<String>, // "nearby" or "friends"
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+    pub radius: Option<i32>,
+    pub limit: Option<i32>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateUserStatsRequest {
+    pub user_id: String,
+    pub stats_type: String,
+    pub value: i64,
+}
+
+// ==================== 信息流模块请求（补全） ====================
+
+#[derive(Debug, Deserialize)]
+pub struct GetFeedRequest {
+    pub channel: String, // "following", "nearby", "recommended"
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SubmitFeedbackRequest {
+    pub item_id: String,
+    pub content_type: String,
+    pub content_id: String,
+    pub feedback_type: String, // "like", "dislike", "skip", "view", "share"
+}
+
+// ============= Auth 补充 Request =============
+#[derive(Debug, Deserialize)]
+pub struct CheckStatusRequest {}
+
+// ============= Chat Messages 补充 Request =============
+#[derive(Debug, Deserialize)]
+pub struct MarkAllReadRequest {}
+
+#[derive(Debug, Deserialize)]
+pub struct GetUnreadSummaryRequest {
+    pub include_details: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetUnreadCountRequest {
+    pub target_id: String,
+    pub target_type: String, // "chat" or "group"
+}
+
+// ============= User 补充 Request =============
+#[derive(Debug, Deserialize)]
+pub struct GetSettingsRequest {}
+
+// ============= Leaderboard Request =============
+#[derive(Debug, Deserialize)]
+pub struct ListLeaderboardRequest {
+    pub category: String, // "creators" or "moments"
+    pub timeframe: String, // "daily", "weekly", "monthly", "all_time"
+    pub scope: Option<String>, // "nearby" or "friends"
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+    pub radius: Option<f64>,
+    pub limit: Option<i32>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetMyRankRequest {
+    pub category: String,
+    pub timeframe: String,
+    pub scope: Option<String>,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+    pub radius: Option<f64>,
+}

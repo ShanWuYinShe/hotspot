@@ -4,14 +4,15 @@ use uuid::Uuid;
 use crate::{
     error::{AppError, Result},
     models::message::Message,
+    types::enums::MessageType,
 };
 
-pub struct MessageRepository<'a> {
-    db: &'a PgPool,
+pub struct MessageRepository {
+    db: PgPool,
 }
 
-impl<'a> MessageRepository<'a> {
-    pub fn new(db: &'a PgPool) -> Self {
+impl MessageRepository {
+    pub fn new(db: PgPool) -> Self {
         Self { db }
     }
 
@@ -20,25 +21,23 @@ impl<'a> MessageRepository<'a> {
         let rec = sqlx::query!(
             r#"
             INSERT INTO messages (
-                message_id, sender_id, target_id, target_type, content, 
-                message_type, reply_to, metadata, status
+                message_id, sender_id, room_id, content, 
+                message_type, reply_to, status
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            VALUES ($1, $2, $3, $4, $5::message_type, $6, $7)
             RETURNING message_id
             "#,
             message.message_id,
             message.sender_id,
-            message.target_id,
-            message.target_type,
+            message.room_id,
             message.content,
-            message.message_type,
+            message.message_type as MessageType,
             message.reply_to,
-            message.metadata,
             message.status,
         )
-        .fetch_one(self.db)
+        .fetch_one(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(rec.message_id)
     }
@@ -48,13 +47,18 @@ impl<'a> MessageRepository<'a> {
         let message = sqlx::query_as!(
             Message,
             r#"
-            SELECT * FROM messages WHERE message_id = $1
+            SELECT id, message_id, room_id, sender_id, content, message_type as "message_type: MessageType", is_edited,
+                   created_at, edited_at, reply_to, status, is_deleted, deleted_at,
+                   mentions, file_name, file_size, thumbnail_url, duration,
+                   system_event, affected_users, latitude, longitude, location_name
+            FROM messages 
+            WHERE message_id = $1
             "#,
             message_id
         )
-        .fetch_optional(self.db)
+        .fetch_optional(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(message)
     }
@@ -70,9 +74,9 @@ impl<'a> MessageRepository<'a> {
             message_id,
             content
         )
-        .execute(self.db)
+        .execute(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(())
     }
@@ -88,9 +92,9 @@ impl<'a> MessageRepository<'a> {
             message_id,
             status
         )
-        .execute(self.db)
+        .execute(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(())
     }
@@ -105,171 +109,135 @@ impl<'a> MessageRepository<'a> {
         sqlx::query!(
             r#"
             UPDATE messages
-            SET deleted_at = NOW()
+            SET is_deleted = TRUE, deleted_at = NOW()
             WHERE message_id = $1
             "#,
             message_id
         )
-        .execute(self.db)
+        .execute(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(())
     }
 
-    /// 获取单聊消息历史
-    pub async fn list_user_messages(
+    /// 获取聊天室消息历史（统一私聊和群聊，使用游标分页）
+    /// cursor: message_id (UUID字符串)
+    pub async fn list_room_messages(
         &self,
-        user_id: i64,
-        other_user_id: i64,
-        limit: i64,
-        before_timestamp: Option<i64>,
-    ) -> Result<Vec<Message>> {
-        let before_dt = before_timestamp.map(|ts| {
-            chrono::DateTime::from_timestamp(ts, 0)
-                .unwrap_or_default()
-                .naive_utc()
-        });
-
-        let messages = if let Some(before) = before_dt {
-            sqlx::query_as!(
-                Message,
-                r#"
-                SELECT * FROM messages
-                WHERE 
-                    target_type = 'user'
-                    AND (
-                        (sender_id = $1 AND target_id = $2::text)
-                        OR (sender_id = $2 AND target_id = $1::text)
-                    )
-                    AND created_at < $3
-                    AND deleted_at IS NULL
-                ORDER BY created_at DESC
-                LIMIT $4
-                "#,
-                user_id,
-                other_user_id,
-                before,
-                limit
-            )
-            .fetch_all(self.db)
-            .await
-            .map_err(|e| AppError::DatabaseError(e.to_string()))?
+        room_id: Uuid,
+        limit: i32,
+        cursor: Option<String>,
+    ) -> Result<(Vec<Message>, Option<String>)> {
+        // 1. 根据业务ID查询自增主键id
+        let cursor_id = if let Some(msg_id_str) = cursor {
+            let msg_id = Uuid::parse_str(&msg_id_str).ok();
+            if let Some(mid) = msg_id {
+                sqlx::query!("SELECT id FROM messages WHERE message_id = $1", mid)
+                    .fetch_optional(&self.db)
+                    .await?
+                    .map(|r| r.id)
+            } else {
+                None
+            }
         } else {
-            sqlx::query_as!(
-                Message,
-                r#"
-                SELECT * FROM messages
-                WHERE 
-                    target_type = 'user'
-                    AND (
-                        (sender_id = $1 AND target_id = $2::text)
-                        OR (sender_id = $2 AND target_id = $1::text)
-                    )
-                    AND deleted_at IS NULL
-                ORDER BY created_at DESC
-                LIMIT $3
-                "#,
-                user_id,
-                other_user_id,
-                limit
-            )
-            .fetch_all(self.db)
-            .await
-            .map_err(|e| AppError::DatabaseError(e.to_string()))?
+            None
         };
 
-        Ok(messages)
-    }
+        // 2. 查询limit+1条记录
+        let messages = sqlx::query_as!(
+            Message,
+            r#"
+            SELECT id, message_id, room_id, sender_id, content, message_type as "message_type: MessageType", is_edited,
+                   created_at, edited_at, reply_to, status, is_deleted, deleted_at,
+                   mentions, file_name, file_size, thumbnail_url, duration,
+                   system_event, affected_users, latitude, longitude, location_name
+            FROM messages
+            WHERE room_id = $1
+              AND is_deleted = FALSE
+              AND ($2::BIGINT IS NULL OR id > $2::BIGINT)
+            ORDER BY id
+            LIMIT $3
+            "#,
+            room_id,
+            cursor_id,
+            (limit + 1) as i64
+        )
+        .fetch_all(&self.db)
+        .await?;
 
-    /// 获取群聊消息历史
-    pub async fn list_group_messages(
-        &self,
-        group_id: Uuid,
-        limit: i64,
-        before_timestamp: Option<i64>,
-    ) -> Result<Vec<Message>> {
-        let before_dt = before_timestamp.map(|ts| {
-            chrono::DateTime::from_timestamp(ts, 0)
-                .unwrap_or_default()
-                .naive_utc()
-        });
-
-        let messages = if let Some(before) = before_dt {
-            sqlx::query_as!(
-                Message,
-                r#"
-                SELECT * FROM messages
-                WHERE 
-                    target_type = 'group'
-                    AND target_id = $1
-                    AND created_at < $2
-                    AND deleted_at IS NULL
-                ORDER BY created_at DESC
-                LIMIT $3
-                "#,
-                group_id.to_string(),
-                before,
-                limit
-            )
-            .fetch_all(self.db)
-            .await
-            .map_err(|e| AppError::DatabaseError(e.to_string()))?
+        // 3. 判断has_more并返回next_cursor
+        let has_more = messages.len() > limit as usize;
+        let items: Vec<Message> = messages.into_iter().take(limit as usize).collect();
+        let next_cursor = if has_more {
+            items.last().map(|m| m.message_id.to_string())
         } else {
-            sqlx::query_as!(
-                Message,
-                r#"
-                SELECT * FROM messages
-                WHERE 
-                    target_type = 'group'
-                    AND target_id = $1
-                    AND deleted_at IS NULL
-                ORDER BY created_at DESC
-                LIMIT $2
-                "#,
-                group_id.to_string(),
-                limit
-            )
-            .fetch_all(self.db)
-            .await
-            .map_err(|e| AppError::DatabaseError(e.to_string()))?
+            None
         };
 
-        Ok(messages)
+        Ok((items, next_cursor))
     }
 
-    /// 标记消息已读
-    pub async fn mark_as_read(
+    // list_group_messages 已合并到 list_room_messages
+
+    /// 标记聊天室消息已读（使用 message_read_records 表）
+    pub async fn mark_room_as_read(
         &self,
         user_id: i64,
-        message_id: Uuid,
+        room_id: Uuid,
+        up_to_message_id: Option<Uuid>,
     ) -> Result<()> {
+        // 如果没有指定 up_to_message_id，查询该房间最新的消息ID
+        let last_read_message_id = if let Some(msg_id) = up_to_message_id {
+            msg_id
+        } else {
+            // 查询房间最新的消息ID
+            let latest = sqlx::query!(
+                r#"
+                SELECT message_id
+                FROM messages
+                WHERE room_id = $1 AND is_deleted = FALSE
+                ORDER BY created_at DESC
+                LIMIT 1
+                "#,
+                room_id
+            )
+            .fetch_optional(&self.db)
+            .await
+            .map_err(|e| AppError::from(e))?;
+            
+            match latest {
+                Some(rec) => rec.message_id,
+                None => return Ok(()), // 没有消息，直接返回
+            }
+        };
+        
         sqlx::query!(
             r#"
-            INSERT INTO message_read_records (message_id, user_id, read_at)
-            VALUES ($1, $2, NOW())
-            ON CONFLICT (message_id, user_id) DO NOTHING
+            INSERT INTO message_read_records (user_id, room_id, last_read_message_id, read_at)
+            VALUES ($1, $2, $3, NOW())
+            ON CONFLICT (user_id, room_id) 
+            DO UPDATE SET last_read_message_id = $3, read_at = NOW()
             "#,
-            message_id,
-            user_id
+            user_id,
+            room_id,
+            last_read_message_id
         )
-        .execute(self.db)
+        .execute(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(())
     }
 
-    /// 批量标记已读
+    /// 批量标记已读（废弃 - 使用 mark_room_as_read 代替）
     pub async fn mark_multiple_as_read(
         &self,
-        user_id: i64,
-        message_ids: &[Uuid],
+        _user_id: i64,
+        _message_ids: &[Uuid],
     ) -> Result<()> {
-        for message_id in message_ids {
-            self.mark_as_read(user_id, *message_id).await?;
-        }
-        Ok(())
+        // 这个方法已废弃，应该使用 mark_room_as_read
+        Err(AppError::BadRequest("Use mark_room_as_read instead".to_string()))
     }
 
     /// 添加消息反应
@@ -281,17 +249,17 @@ impl<'a> MessageRepository<'a> {
     ) -> Result<()> {
         sqlx::query!(
             r#"
-            INSERT INTO message_reactions (message_id, user_id, reaction)
+            INSERT INTO message_reactions (message_id, user_id, reaction_type)
             VALUES ($1, $2, $3)
-            ON CONFLICT (message_id, user_id, reaction) DO NOTHING
+            ON CONFLICT (message_id, user_id, reaction_type) DO NOTHING
             "#,
             message_id,
             user_id,
             reaction
         )
-        .execute(self.db)
+        .execute(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(())
     }
@@ -306,76 +274,60 @@ impl<'a> MessageRepository<'a> {
         sqlx::query!(
             r#"
             DELETE FROM message_reactions
-            WHERE message_id = $1 AND user_id = $2 AND reaction = $3
+            WHERE message_id = $1 AND user_id = $2 AND reaction_type = $3
             "#,
             message_id,
             user_id,
             reaction
         )
-        .execute(self.db)
+        .execute(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
         Ok(())
     }
 
-    /// 获取未读消息数量（单聊）
-    pub async fn count_unread_user_messages(
+    /// 获取聊天室未读消息数量（统一私聊和群聊，使用 room_members 表的 unread_count）
+    pub async fn count_unread_room_messages(
         &self,
         user_id: i64,
-        other_user_id: i64,
-    ) -> Result<i64> {
+        room_id: Uuid,
+    ) -> Result<i32> {
         let rec = sqlx::query!(
             r#"
-            SELECT COUNT(*) as "count!"
-            FROM messages m
-            WHERE 
-                m.sender_id = $2
-                AND m.target_type = 'user'
-                AND m.target_id = $1::text
-                AND m.deleted_at IS NULL
-                AND NOT EXISTS (
-                    SELECT 1 FROM message_read_records r
-                    WHERE r.message_id = m.message_id AND r.user_id = $1
-                )
+            SELECT unread_count
+            FROM room_members
+            WHERE user_id = $1 AND room_id = $2 AND is_deleted = FALSE
             "#,
             user_id,
-            other_user_id
+            room_id
         )
-        .fetch_one(self.db)
+        .fetch_optional(&self.db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::from(e))?;
 
-        Ok(rec.count)
+        Ok(rec.map(|r| r.unread_count).unwrap_or(0))
     }
 
-    /// 获取未读消息数量（群聊）
-    pub async fn count_unread_group_messages(
+    /// 获取两个用户之间的私聊消息（包装方法）
+    pub async fn list_user_messages(
         &self,
-        user_id: i64,
-        group_id: Uuid,
-    ) -> Result<i64> {
-        let rec = sqlx::query!(
-            r#"
-            SELECT COUNT(*) as "count!"
-            FROM messages m
-            WHERE 
-                m.target_type = 'group'
-                AND m.target_id = $2
-                AND m.sender_id != $1
-                AND m.deleted_at IS NULL
-                AND NOT EXISTS (
-                    SELECT 1 FROM message_read_records r
-                    WHERE r.message_id = m.message_id AND r.user_id = $1
-                )
-            "#,
-            user_id,
-            group_id.to_string()
-        )
-        .fetch_one(self.db)
-        .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
-
-        Ok(rec.count)
+        user1_id: i64,
+        user2_id: i64,
+        limit: i32,
+        cursor: Option<String>,
+    ) -> Result<(Vec<Message>, Option<String>)> {
+        // 首先查找两个用户之间的私聊室
+        use crate::repositories::chat_room_repo::ChatRoomRepository;
+        let chat_room_repo = ChatRoomRepository::new(self.db.clone());
+        
+        if let Some(room) = chat_room_repo.find_direct_chat(user1_id, user2_id).await? {
+            // 如果私聊室存在，返回消息列表
+            self.list_room_messages(room.room_id, limit, cursor).await
+        } else {
+            // 如果私聊室不存在，返回空列表
+            Ok((Vec::new(), None))
+        }
     }
+
 }

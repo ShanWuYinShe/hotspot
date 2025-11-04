@@ -15,6 +15,7 @@ use crate::{
 pub struct AppState {
     pub db: PgPool,
     pub redis: ConnectionManager,
+    pub redis_client: Arc<redis::Client>,
     pub config: Config,
     pub ws_manager: WsConnectionManager,
     pub ws_subscription: SubscriptionManager,
@@ -30,7 +31,8 @@ impl AppState {
 
         // 初始化 Redis 连接
         let redis_client = redis::Client::open(config.redis_url.as_str())?;
-        let redis = ConnectionManager::new(redis_client).await?;
+        let redis = ConnectionManager::new(redis_client.clone()).await?;
+        let redis_client = Arc::new(redis_client);
         
         tracing::info!("Redis connected successfully");
 
@@ -43,6 +45,7 @@ impl AppState {
         Ok(Self {
             db,
             redis,
+            redis_client,
             config,
             ws_manager,
             ws_subscription,

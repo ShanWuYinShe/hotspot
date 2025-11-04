@@ -24,17 +24,46 @@ pub enum AppEvent {
     // 消息相关事件
     MessageSent { 
         message_id: Uuid, 
+        room_id: Uuid,
         sender_id: i64, 
-        conversation_id: Uuid,
-        conversation_type: String, // "private" or "group"
+        content: String,
+        message_type: String,
     },
-    MessageRead { 
-        message_id: Uuid, 
-        reader_id: i64 
+    MessageEdited { 
+        message_id: Uuid,
+        room_id: Uuid,
+        content: String,
+        edited_at: String,
     },
     MessageRecalled { 
-        message_id: Uuid, 
-        sender_id: i64 
+        message_id: Uuid,
+        room_id: Uuid,
+        recalled_by: i64,
+        recalled_at: String,
+    },
+    MessageDeleted {
+        message_id: Uuid,
+        room_id: Uuid,
+        deleted_by: i64,
+        for_everyone: bool,
+    },
+    MessageRead { 
+        room_id: Uuid,
+        reader_id: i64,
+        up_to: Uuid,
+        read_at: String,
+    },
+    MessageReaction {
+        message_id: Uuid,
+        room_id: Uuid,
+        user_id: i64,
+        reaction_type: String,
+        action: String,
+    },
+    UserTyping {
+        room_id: Uuid,
+        user_id: i64,
+        is_typing: bool,
     },
     
     // 瞬间相关事件
@@ -64,8 +93,12 @@ impl AppEvent {
             AppEvent::GroupMemberRemoved { user_id, .. } => vec![*user_id],
             AppEvent::GroupInviteSent { to_user_id, .. } => vec![*to_user_id],
             AppEvent::MessageSent { sender_id, .. } => vec![*sender_id],
+            AppEvent::MessageEdited { .. } => vec![],
+            AppEvent::MessageRecalled { recalled_by, .. } => vec![*recalled_by],
+            AppEvent::MessageDeleted { deleted_by, .. } => vec![*deleted_by],
             AppEvent::MessageRead { reader_id, .. } => vec![*reader_id],
-            AppEvent::MessageRecalled { sender_id, .. } => vec![*sender_id],
+            AppEvent::MessageReaction { user_id, .. } => vec![*user_id],
+            AppEvent::UserTyping { user_id, .. } => vec![*user_id],
             AppEvent::MomentCreated { user_id, .. } => vec![*user_id],
             AppEvent::MomentLiked { user_id, .. } => vec![*user_id],
             AppEvent::MomentCommented { user_id, .. } => vec![*user_id],
@@ -90,8 +123,12 @@ impl AppEvent {
             AppEvent::GroupMemberRemoved { .. } => "group_member_removed",
             AppEvent::GroupInviteSent { .. } => "group_invite_sent",
             AppEvent::MessageSent { .. } => "message_sent",
-            AppEvent::MessageRead { .. } => "message_read",
+            AppEvent::MessageEdited { .. } => "message_edited",
             AppEvent::MessageRecalled { .. } => "message_recalled",
+            AppEvent::MessageDeleted { .. } => "message_deleted",
+            AppEvent::MessageRead { .. } => "message_read",
+            AppEvent::MessageReaction { .. } => "message_reaction",
+            AppEvent::UserTyping { .. } => "user_typing",
             AppEvent::MomentCreated { .. } => "moment_created",
             AppEvent::MomentLiked { .. } => "moment_liked",
             AppEvent::MomentCommented { .. } => "moment_commented",
