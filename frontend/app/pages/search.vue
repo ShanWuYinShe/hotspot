@@ -318,18 +318,17 @@ import { useUserService } from '~/services/users.service';
 import type { UserResponse } from "~/types/api";
 // import { buildFriendUrl, FRIEND_ENDPOINTS } from "~/config/api"; // 好友功能暂未实现
 
+// 公开页面 - 对应 POST /api/v1/public/user/discover 等 API
 definePageMeta({
     title: "users.search.title",
-    requiresAuth: true,
     layout: 'dashboard'
 });
 
 const api = useApi();
 const userService = useUserService();
-const { searchUsers, findNearbyUsers } = userService;
-const { success, error, info } = useNotifications()
-const toast = { success, error, info };
-const authStore = useAuthStore();
+  const { searchUsers, findNearbyUsers } = userService;
+  const toast = useToast()
+  const authStore = useAuthStore();
 const { t: tt } = useI18n();
 const { formatDistance } = useFormatters();
 
@@ -405,12 +404,15 @@ function clearSearch() {
 async function loadRecommendations() {
     loadingRecommended.value = true;
     try {
-        const { coordinates, getCurrentPosition } = useDeviceAccess();
-        const pos = coordinates.value || (await getCurrentPosition());
-        const coords = 'coords' in pos ? pos.coords : pos;
+        const locationStore = useLocationStore();
+        let coords = locationStore.coordinates;
+        if (!coords) {
+            await locationStore.getCurrentPosition();
+            coords = locationStore.coordinates;
+        }
         const response = await findNearbyUsers({
-            latitude: coords.latitude,
-            longitude: coords.longitude,
+            latitude: coords!.latitude,
+            longitude: coords!.longitude,
             radius: 1000,
             limit: 5,
         });
@@ -532,10 +534,10 @@ const getUserSearchDescription = (user: any) => {
     return parts.join(' · ')
 }
 
-// 检查用户在线状态
-const { isUserOnline } = useStatus()
+// 检查用户在线状态（暂时禁用，需要WebSocket支持）
+const isUserOnline = (userId: string) => false
 const checkUserOnline = async (userId: string) => {
-    return await isUserOnline(userId)
+    return false
 }
 
 // 获取好友状态的芯片颜色

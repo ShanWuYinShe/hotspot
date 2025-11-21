@@ -10,11 +10,11 @@
             <h2 
               id="danger-heading" 
               tabindex="-1" 
-              class="text-lg md:text-xl font-semibold text-error-700 dark:text-error-400 focus:outline-none focus:ring-2 focus:ring-error-500 rounded-sm"
+              class="text-lg md:text-xl font-semibold text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-error-500 rounded-sm"
             >
               危险操作
             </h2>
-            <p class="text-xs md:text-sm text-error-600 dark:text-error-500">
+            <p class="text-xs md:text-sm text-neutral-600 dark:text-neutral-400">
               这些操作不可逆转，请谨慎操作
             </p>
           </div>
@@ -36,10 +36,10 @@
                 <UIcon name="i-heroicons-trash" class="w-6 h-6 md:w-7 md:h-7 text-error-600 dark:text-error-400" />
               </div>
               <div class="flex-1 min-w-0">
-                <h4 class="text-base md:text-lg font-medium text-error-900 dark:text-error-100">
+                <h4 class="text-base md:text-lg font-medium text-black dark:text-white">
                   删除账户
                 </h4>
-                <p class="text-xs md:text-sm text-error-700 dark:text-error-300 mt-1">
+                <p class="text-xs md:text-sm text-neutral-700 dark:text-neutral-300 mt-1">
                   永久删除您的账户和所有相关数据，包括消息、群组、好友关系等。此操作不可撤销。
                 </p>
                 <UButton 

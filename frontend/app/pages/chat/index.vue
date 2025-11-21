@@ -237,9 +237,11 @@ import { getPageSeoConfig, buildSeoMeta } from '~/config/seo';
 // 从数据源获取 SEO 配置
 const seoConfig = getPageSeoConfig('chat')
 
+// 需要登录 - 聊天功能需要认证
 definePageMeta({
   title: seoConfig.title,
   description: seoConfig.description,
+  requiresAuth: true,
   layout: "dashboard"
 });
 

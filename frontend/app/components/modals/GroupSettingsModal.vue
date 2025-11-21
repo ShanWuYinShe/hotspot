@@ -307,7 +307,7 @@ const canDeleteGroup = computed(() => currentUserRole.value === 'owner')
 
 // 工具函数
 const { formatTime } = useFormatters()
-const { success, error } = useNotifications()
+const toast = useToast()
 const { showConfirm } = useModal()
 
 // 定义 Badge 颜色类型
@@ -407,7 +407,7 @@ const loadGroupData = async () => {
     return { groupSettings: groupSettings.value, members: members.value }
   } catch (err: any) {
     loadError.value = err.message || '加载失败'
-    const { error } = useNotifications()
+    const toast = useToast()
     error('加载失败')
     throw err
   } finally {

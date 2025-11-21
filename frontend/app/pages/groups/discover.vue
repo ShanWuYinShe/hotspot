@@ -220,7 +220,8 @@
 import { defineAsyncComponent } from "vue";
 // TableColumn 类型已在组件内部定义
 import type { GroupResponse } from "~/types/api";
-definePageMeta({ title: "发现群组", requiresAuth: true, layout: 'dashboard' });
+// 公开页面 - 对应 POST /api/v1/public/group_chats/discover
+definePageMeta({ title: "发现群组", layout: 'dashboard' });
 
 const EmptyGroups = defineAsyncComponent(
     () => import("~/components/illustrations/EmptyGroups.vue"),
@@ -235,11 +236,8 @@ const showWhyPermission = async () => {
         await authorizeAndSearch();
     }
 };
-const { success, error, info } = useNotifications()
-const toast = { success, error, info };
-const locationManager = useLocationManager();
-const { checkGeolocation, requestGeolocation, onGeolocationChange } =
-    useDeviceAccess();
+const toast = useToast()
+const locationStore = useLocationStore()
 
 const items = ref<GroupResponse[]>([]);
 const loading = ref(false);
@@ -292,16 +290,17 @@ const loadNearbyGroups = async () => {
     loading.value = true;
     loadError.value = false;
     try {
-        // 获取当前位置（优先使用位置管理器的缓存位置）
-        let location = locationManager.getLocation();
+        // 获取当前位置（优先使用缓存位置）
+        let location = locationStore.state.currentLocation;
 
         // 如果没有缓存位置，尝试获取当前位置
         if (!location) {
             try {
-                location = await locationManager.getLocationWithFallback();
+                await locationStore.getCurrentPosition();
+                location = locationStore.state.currentLocation;
             } catch (error) {
-                // 如果获取失败，使用默认位置
-                location = locationManager.getLocationOrDefault();
+                // 如果获取失败，使用默认位置（由后端自动处理）
+                location = null;
                 toast.add({
                     title: "位置获取失败",
                     description: "使用默认位置进行搜索",
@@ -384,8 +383,8 @@ const filterAndSortGroups = () => {
 };
 
 onMounted(async () => {
-    const state = await checkGeolocation().catch(() => "prompt");
-    if (state === "granted") {
+    const permission = await locationStore.checkPermission();
+    if (permission?.state === "granted") {
         await loadNearbyGroups();
     }
 });
@@ -410,13 +409,13 @@ const joinGroup = async (g: GroupResponse) => {
 };
 
 const authorizeAndSearch = async () => {
-    const state = await checkGeolocation();
-    if (state === "granted") {
+    const permission = await locationStore.checkPermission();
+    if (permission?.state === "granted") {
         whyOpen.value = false;
         await loadNearbyGroups();
         return;
     }
-    const granted = await requestGeolocation();
+    const granted = await locationStore.requestPermission();
     if (!granted) {
         permissionDenied.value = true;
         return;
@@ -428,9 +427,9 @@ const authorizeAndSearch = async () => {
 onMounted(() => {
     const handler = async () => {
         if (document.visibilityState === "visible") {
-            const state = await checkGeolocation().catch(() => "prompt");
-            if (state !== "granted") {
-                permissionDenied.value = state === "denied";
+            const permission = await locationStore.checkPermission();
+            if (permission?.state !== "granted") {
+                permissionDenied.value = permission?.state === "denied";
             }
         }
     };
@@ -438,20 +437,5 @@ onMounted(() => {
     onUnmounted(() =>
         document.removeEventListener("visibilitychange", handler),
     );
-    let stopPerm: (() => void) | null = null;
-    onGeolocationChange((state) => {
-        if (state !== "granted") {
-            permissionDenied.value = state === "denied";
-        }
-    })
-        .then((stop) => {
-            stopPerm = stop;
-        })
-        .catch(() => {});
-    onUnmounted(() => {
-        try {
-            stopPerm?.();
-        } catch {}
-    });
 });
 </script>

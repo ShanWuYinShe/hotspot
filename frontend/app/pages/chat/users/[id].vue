@@ -266,8 +266,10 @@
 </template>
 
 <script setup lang="ts">
+// 需要登录 - 私聊功能需要认证
 definePageMeta({
   title: "私聊",
+  requiresAuth: true,
   layout: "dashboard"
 });
 

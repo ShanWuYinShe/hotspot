@@ -53,9 +53,8 @@ class AuthLifecycleHandler implements LifecycleHandler {
     // 尝试刷新认证状态
     if (authStore.refreshToken) {
       try {
-        // 使用 useAuth composable 处理令牌刷新
-        const { refreshToken } = useAuth()
-        await refreshToken()
+        // 使用 authStore 处理令牌刷新
+        await authStore.refreshAccessToken()
       } catch (error) {
         if (import.meta.dev) {
           console.warn('Token 刷新失败:', error)
@@ -75,9 +74,9 @@ class LocationLifecycleHandler implements LifecycleHandler {
     if (typeof window === 'undefined') return
     
     try {
-      const location = useLocation()
+      const locationStore = useLocationStore()
       // 获取当前位置（不需要持续监听）
-      await location.getCurrentPosition()
+      await locationStore.getCurrentPosition()
     } catch (error) {
       if (import.meta.dev) {
         console.warn('位置服务启动失败:', error)

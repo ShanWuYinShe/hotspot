@@ -225,7 +225,9 @@ const handleLeaveGroup = async () => {
     
     try {
         const groupService = useGroupsService()
-        await groupService.leaveGroup(props.group.group_id)
+        await groupService.leaveGroup({
+            group_id: props.group.group_id
+        })
         
         const toast = useToast()
         toast.add({
@@ -237,7 +239,6 @@ const handleLeaveGroup = async () => {
         // 刷新群组列表
         await refreshNuxtData('groups')
     } catch (error: any) {
-        const toast = useToast()
         toast.add({
             title: '退出失败',
             description: error.message || '退出群组时发生错误',

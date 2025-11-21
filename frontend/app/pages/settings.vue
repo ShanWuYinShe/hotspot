@@ -77,14 +77,7 @@ definePageMeta({
 useSeoMeta(buildSeoMeta('settings'));
 
 const authStore = useAuthStore();
-const { success: toastSuccess, error: toastError, info: toastInfo } = useNotifications()
-const toast = { 
-    add: (options: { title: string; description?: string; color: string }) => {
-        if (options.color === 'success') toastSuccess(options.title)
-        else if (options.color === 'error') toastError(options.title)
-        else toastInfo(options.title)
-    }
-}
+const toast = useToast()
 const settingsStore = useSettingsStore();
 // const { openConfirmModal } = useModals();
 

@@ -520,14 +520,13 @@ const resetForm = () => {
 // 打开修改密码 Modal
 const openChangePassword = async () => {
   // TODO: 实现密码修改功能
-  const { info } = useNotifications()
+  const toast = useToast()
   info('密码修改功能', '此功能正在开发中')
 }
 
 // 打开注销账户 Modal
 const openDeleteAccount = async () => {
   // TODO: 实现账户删除功能
-  const { info } = useNotifications()
   info('账户删除功能', '此功能正在开发中')
 }
 

@@ -196,11 +196,12 @@
 import type { TableColumn } from '@nuxt/ui';
 import type { GroupResponse } from "~/types/api";
 
-definePageMeta({ title: "群组详情", requiresAuth: true, layout: 'dashboard' });
+// 公开页面 - 对应 POST /api/v1/public/group_chats/open_the_door
+// 注意：某些操作（如加入群组、发消息）仍需登录
+definePageMeta({ title: "群组详情", layout: 'dashboard' });
 
 const route = useRoute();
-const { success, error, info } = useNotifications()
-const toast = { success, error, info };
+const toast = useToast()
 const groupsStore = useGroupsStore();
 const modal = useModal();
 const { formatTime } = useFormatters();
@@ -356,10 +357,9 @@ const getUserDescription = (member: any) => {
     return parts.join(' • ')
 }
 
-// 检查用户在线状态
-const { isUserOnline } = useStatus()
+// 检查用户在线状态（暂时禁用，需要WebSocket支持）
 const isOnlineUser = async (userId: string) => {
-    return await isUserOnline(userId)
+    return false
 }
 
 // 发送私信

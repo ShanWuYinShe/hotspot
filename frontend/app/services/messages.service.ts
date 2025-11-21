@@ -1,166 +1,409 @@
 /**
- * 消息服务 - 现代化实现
- * 提供完整的聊天功能
+ * 消息服务 - 符合API规范的实现
+ * 所有API操作统一使用POST方法
+ * 基于 api_spec.mdc 第3.8节和第3.9节 消息API规范
  */
 
 import { BaseService } from './base.service'
-import type { 
-  SendMessageResponse, 
-  ConversationsResponse,
-  SendMessageRequest,
-  PaginatedResponse 
-} from '~/types/api'
+import type { PaginatedResponse } from '~/types/api'
 
-export interface CreateConversationRequest {
-  type: 'user' | 'group'
-  target_id: string
+// ============ 私聊管理 ============
+
+export interface CreatePrivateChatRequest {
+  target_user_id: string
   initial_message?: string
 }
 
-export interface MarkReadRequest {
-  conversation_id: string
-  message_id?: string
+export interface GetPrivateChatsRequest {
+  limit?: number
+  cursor?: string
+  include_archived?: boolean
 }
 
+export interface OpenPrivateChatDoorRequest {
+  id: string  // private_chat_id
+}
+
+export interface UpdatePrivateChatSettingsRequest {
+  private_chat_id: string
+  is_muted?: boolean
+  is_pinned?: boolean
+  is_archived?: boolean
+}
+
+export interface DeletePrivateChatRequest {
+  private_chat_id: string
+}
+
+// ============ 私聊消息 ============
+
+export interface SendPrivateMessageRequest {
+  private_chat_id: string
+  type: 'text' | 'image' | 'video' | 'audio' | 'file'
+  content: string
+  reply_to?: string
+  file_name?: string
+  file_size?: number
+  thumbnail_url?: string
+  duration?: number
+}
+
+export interface GetPrivateMessagesRequest {
+  private_chat_id: string
+  limit?: number
+  cursor?: string
+}
+
+export interface UpdatePrivateMessageRequest {
+  id: string
+  content: string
+}
+
+export interface RecallPrivateMessageRequest {
+  id: string
+}
+
+export interface DeletePrivateMessageRequest {
+  id: string
+}
+
+export interface MarkPrivateMessagesReadRequest {
+  private_chat_id: string
+  up_to?: string
+}
+
+// ============ 群聊消息 ============
+
+export interface SendGroupMessageRequest {
+  group_chat_id: string
+  type: 'text' | 'image' | 'video' | 'audio' | 'file'
+  content: string
+  reply_to?: string
+  mentions?: string[]
+  file_name?: string
+  file_size?: number
+  thumbnail_url?: string
+  duration?: number
+}
+
+export interface GetGroupMessagesRequest {
+  group_chat_id: string
+  limit?: number
+  cursor?: string
+  include_system?: boolean
+}
+
+export interface UpdateGroupMessageRequest {
+  id: string
+  content: string
+}
+
+export interface RecallGroupMessageRequest {
+  id: string
+}
+
+export interface DeleteGroupMessageRequest {
+  id: string
+  for_everyone?: boolean
+}
+
+export interface MarkGroupMessagesReadRequest {
+  group_chat_id: string
+  up_to?: string
+}
+
+export interface GetMessageReadStatusRequest {
+  id: string
+  limit?: number
+  cursor?: string
+}
+
+export interface AddGroupMessageReactionRequest {
+  id: string
+  type: 'like' | 'love' | 'laugh' | 'angry' | 'sad' | 'wow'
+  action: 'add' | 'remove'
+}
+
+export interface GetGroupMessageReactionsRequest {
+  id: string
+  type?: 'like' | 'love' | 'laugh' | 'angry' | 'sad' | 'wow'
+  limit?: number
+  cursor?: string
+}
+
+// ============ 消息通用 ============
+
+export interface MarkAllMessagesReadRequest {}
+
 export class MessagesService extends BaseService {
-  protected readonly baseUrl = '/protected/chat'
+  protected readonly baseUrl = '/api/v1'
+
+  // ============ 私聊管理 API ============
 
   /**
-   * 获取会话列表
+   * 发起私聊
+   * POST /api/v1/protected/private_chats/create
    */
-  async getConversations(params?: {
-    cursor?: string
-    limit?: number
-  }): Promise<PaginatedResponse<ConversationsResponse>> {
-    return this.paginate<ConversationsResponse>('/conversations', params)
+  async createPrivateChat(request: CreatePrivateChatRequest): Promise<{ private_chat_id: string }> {
+    return this.post<{ private_chat_id: string }>('/protected/private_chats/create', request)
   }
 
   /**
-   * 获取消息历史
+   * 获取私聊列表
+   * POST /api/v1/protected/private_chats/get_list
    */
-  async getMessages(params: {
-    conversation_id: string
-    cursor?: string
-    limit?: number
-  }): Promise<PaginatedResponse<SendMessageResponse>> {
-    return this.paginate<SendMessageResponse>('/messages', params)
+  async getPrivateChats(request: GetPrivateChatsRequest = {}): Promise<PaginatedResponse<{
+    private_chat_id: string
+    other_user: {
+      user_id: string
+      nickname: string
+      avatar_url?: string
+    }
+    unread_count: number
+    last_message?: {
+      id: string
+      content: string
+      type: 'text' | 'image' | 'video' | 'audio' | 'file'
+      sender_id: string
+      sent_at: string
+    }
+    last_activity_at: string
+  }>> {
+    return this.post('/protected/private_chats/get_list', request)
   }
 
   /**
-   * 发送消息
+   * 获取私聊详情
+   * POST /api/v1/protected/private_chats/open_the_door
    */
-  async sendMessage(data: SendMessageRequest): Promise<SendMessageResponse> {
-    return this.post<SendMessageResponse>('/send', data)
-  }
-
-  /**
-   * 发送文件消息
-   */
-  async sendFileMessage(
-    conversationId: string,
-    file: File,
-    messageType: 'image' | 'file' = 'file'
-  ): Promise<SendMessageResponse> {
-    return this.upload<SendMessageResponse>('/send-file', file, {
-      conversation_id: conversationId,
-      message_type: messageType
-    })
-  }
-
-  /**
-   * 删除消息
-   */
-  async deleteMessage(messageId: string): Promise<void> {
-    return this.delete<void>(`/messages/${messageId}`)
-  }
-
-  /**
-   * 标记消息已读
-   */
-  async markAsRead(data: MarkReadRequest): Promise<void> {
-    return this.post<void>('/mark-read', data)
-  }
-
-  /**
-   * 创建会话
-   */
-  async createConversation(data: CreateConversationRequest): Promise<{ conversation_id: string }> {
-    return this.post<{ conversation_id: string }>('/conversations', data)
-  }
-
-  /**
-   * 获取会话详情
-   */
-  async getConversationDetails(conversationId: string): Promise<ConversationsResponse> {
-    return this.get<ConversationsResponse>(`/conversations/${conversationId}`)
-  }
-
-  /**
-   * 删除会话
-   */
-  async deleteConversation(conversationId: string): Promise<void> {
-    return this.delete<void>(`/conversations/${conversationId}`)
-  }
-
-  /**
-   * 静音/取消静音会话
-   */
-  async toggleMute(conversationId: string, muted: boolean): Promise<void> {
-    return this.post<void>('/toggle-mute', {
-      conversation_id: conversationId,
-      muted
-    })
-  }
-
-  /**
-   * 置顶/取消置顶会话
-   */
-  async togglePin(conversationId: string, pinned: boolean): Promise<void> {
-    return this.post<void>('/toggle-pin', {
-      conversation_id: conversationId,
-      pinned
-    })
-  }
-
-  /**
-   * 搜索消息
-   */
-  async searchMessages(params: {
-    query: string
-    conversation_id?: string
-    message_type?: string
-    start_date?: string
-    end_date?: string
-  }): Promise<PaginatedResponse<MessageResponse>> {
-    return this.paginate<MessageResponse>('/search', params)
-  }
-
-  /**
-   * 获取未读消息统计
-   */
-  async getUnreadStats(): Promise<{
-    total_unread: number
-    conversations: Array<{
-      conversation_id: string
-      unread_count: number
-    }>
+  async openPrivateChatDoor(request: OpenPrivateChatDoorRequest): Promise<{
+    private_chat_id: string
+    other_user: {
+      user_id: string
+      nickname: string
+      avatar_url?: string
+    }
+    other_user_status: {
+      is_online: boolean
+      last_seen?: string
+    }
+    unread_count: number
+    is_muted: boolean
+    is_pinned: boolean
+    is_archived: boolean
+    last_message?: {
+      id: string
+      content: string
+      type: 'text' | 'image' | 'video' | 'audio' | 'file'
+      sender_id: string
+      sent_at: string
+    }
+    last_activity_at: string
+    created_at: string
   }> {
-    return this.get<{
-      total_unread: number
-      conversations: Array<{
-        conversation_id: string
-        unread_count: number
-      }>
-    }>('/unread-stats')
+    return this.post('/protected/private_chats/open_the_door', request)
   }
 
   /**
-   * 批量标记已读
+   * 更新私聊设置
+   * POST /api/v1/protected/private_chats/update_settings
    */
-  async batchMarkRead(conversationIds: string[]): Promise<void> {
-    return this.post<void>('/batch-mark-read', {
-      conversation_ids: conversationIds
-    })
+  async updatePrivateChatSettings(request: UpdatePrivateChatSettingsRequest): Promise<void> {
+    return this.post<void>('/protected/private_chats/update_settings', request)
+  }
+
+  /**
+   * 删除私聊
+   * POST /api/v1/protected/private_chats/delete
+   */
+  async deletePrivateChat(request: DeletePrivateChatRequest): Promise<void> {
+    return this.post<void>('/protected/private_chats/delete', request)
+  }
+
+  // ============ 私聊消息 API ============
+
+  /**
+   * 发送私聊消息
+   * POST /api/v1/protected/private_messages/send
+   */
+  async sendPrivateMessage(request: SendPrivateMessageRequest): Promise<{
+    id: string
+    sent_at: string
+  }> {
+    return this.post('/protected/private_messages/send', request)
+  }
+
+  /**
+   * 获取私聊消息历史
+   * POST /api/v1/protected/private_messages/get_history
+   */
+  async getPrivateMessages(request: GetPrivateMessagesRequest): Promise<PaginatedResponse<{
+    id: string
+    type: 'text' | 'image' | 'video' | 'audio' | 'file'
+    content: string
+    sender: {
+      user_id: string
+      nickname: string
+      avatar_url?: string
+    }
+    reply_to?: string
+    sent_at: string
+    edited_at?: string
+    is_recalled: boolean
+    recalled_at?: string
+  }>> {
+    return this.post('/protected/private_messages/get_history', request)
+  }
+
+  /**
+   * 编辑私聊消息
+   * POST /api/v1/protected/private_messages/update
+   */
+  async updatePrivateMessage(request: UpdatePrivateMessageRequest): Promise<void> {
+    return this.post<void>('/protected/private_messages/update', request)
+  }
+
+  /**
+   * 撤回私聊消息
+   * POST /api/v1/protected/private_messages/recall
+   */
+  async recallPrivateMessage(request: RecallPrivateMessageRequest): Promise<void> {
+    return this.post<void>('/protected/private_messages/recall', request)
+  }
+
+  /**
+   * 删除私聊消息
+   * POST /api/v1/protected/private_messages/delete
+   */
+  async deletePrivateMessage(request: DeletePrivateMessageRequest): Promise<void> {
+    return this.post<void>('/protected/private_messages/delete', request)
+  }
+
+  /**
+   * 标记私聊消息已读
+   * POST /api/v1/protected/private_messages/mark_as_read
+   */
+  async markPrivateMessagesRead(request: MarkPrivateMessagesReadRequest): Promise<void> {
+    return this.post<void>('/protected/private_messages/mark_as_read', request)
+  }
+
+  // ============ 群聊消息 API ============
+
+  /**
+   * 发送群聊消息
+   * POST /api/v1/protected/group_messages/send
+   */
+  async sendGroupMessage(request: SendGroupMessageRequest): Promise<{
+    id: string
+    sent_at: string
+  }> {
+    return this.post('/protected/group_messages/send', request)
+  }
+
+  /**
+   * 获取群聊消息历史
+   * POST /api/v1/protected/group_messages/get_history
+   */
+  async getGroupMessages(request: GetGroupMessagesRequest): Promise<PaginatedResponse<{
+    id: string
+    type: 'text' | 'image' | 'video' | 'audio' | 'file' | 'system'
+    content: string
+    sender: {
+      user_id: string
+      nickname: string
+      avatar_url?: string
+    }
+    reply_to?: string
+    mentions?: string[]
+    sent_at: string
+    edited_at?: string
+    is_recalled: boolean
+    recalled_by?: string
+    recalled_at?: string
+    read_count?: number
+  }>> {
+    return this.post('/protected/group_messages/get_history', request)
+  }
+
+  /**
+   * 编辑群聊消息
+   * POST /api/v1/protected/group_messages/update
+   */
+  async updateGroupMessage(request: UpdateGroupMessageRequest): Promise<void> {
+    return this.post<void>('/protected/group_messages/update', request)
+  }
+
+  /**
+   * 撤回群聊消息
+   * POST /api/v1/protected/group_messages/recall
+   */
+  async recallGroupMessage(request: RecallGroupMessageRequest): Promise<void> {
+    return this.post<void>('/protected/group_messages/recall', request)
+  }
+
+  /**
+   * 删除群聊消息
+   * POST /api/v1/protected/group_messages/delete
+   */
+  async deleteGroupMessage(request: DeleteGroupMessageRequest): Promise<void> {
+    return this.post<void>('/protected/group_messages/delete', request)
+  }
+
+  /**
+   * 标记群聊消息已读
+   * POST /api/v1/protected/group_messages/mark_as_read
+   */
+  async markGroupMessagesRead(request: MarkGroupMessagesReadRequest): Promise<void> {
+    return this.post<void>('/protected/group_messages/mark_as_read', request)
+  }
+
+  /**
+   * 获取消息已读状态
+   * POST /api/v1/protected/group_messages/get_read_status
+   */
+  async getMessageReadStatus(request: GetMessageReadStatusRequest): Promise<PaginatedResponse<{
+    user: {
+      user_id: string
+      nickname: string
+      avatar_url?: string
+    }
+    read_at: string
+  }>> {
+    return this.post('/protected/group_messages/get_read_status', request)
+  }
+
+  /**
+   * 添加消息反应
+   * POST /api/v1/protected/group_messages/add_reaction
+   */
+  async addGroupMessageReaction(request: AddGroupMessageReactionRequest): Promise<void> {
+    return this.post<void>('/protected/group_messages/add_reaction', request)
+  }
+
+  /**
+   * 获取消息反应列表
+   * POST /api/v1/protected/group_messages/get_reactions
+   */
+  async getGroupMessageReactions(request: GetGroupMessageReactionsRequest): Promise<PaginatedResponse<{
+    user: {
+      user_id: string
+      nickname: string
+      avatar_url?: string
+    }
+    type: 'like' | 'love' | 'laugh' | 'angry' | 'sad' | 'wow'
+    created_at: string
+  }>> {
+    return this.post('/protected/group_messages/get_reactions', request)
+  }
+
+  // ============ 消息通用 API ============
+
+  /**
+   * 标记所有消息已读
+   * POST /api/v1/protected/messages/mark_all_as_read
+   */
+  async markAllMessagesRead(request: MarkAllMessagesReadRequest = {}): Promise<void> {
+    return this.post<void>('/protected/messages/mark_all_as_read', request)
   }
 }
 

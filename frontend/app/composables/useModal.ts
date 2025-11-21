@@ -260,7 +260,6 @@ export function useModal() {
 
   const showTransferOwnership = (groupId: string, members: any[], onSuccess?: (newOwnerId: string) => void) => {
     // TODO: 实现转让群主模态框
-    const toast = useToast()
     toast.add({
       title: '功能开发中',
       description: '转让群主功能正在开发中',
@@ -316,21 +315,12 @@ export function useModal() {
   }
 
   // ===== 命令面板 =====
+  const commandPaletteOpen = ref(false)
+  
   const showCommandPalette = async (options?: {
     onCreateMoment?: () => void
   }): Promise<void> => {
-    return new Promise(async (resolve) => {
-      const CommandPalette = await import('~/components/navigation/CommandPalette.vue')
-      
-      const modal = overlay.create(CommandPalette)
-
-      modal.open()
-      
-      // 监听关闭事件
-      // 这里需要根据 CommandPalette 组件的实际实现来调整
-      // 暂时直接 resolve
-      resolve()
-    })
+    commandPaletteOpen.value = true
   }
 
   // ===== Slideover =====
@@ -381,6 +371,7 @@ export function useModal() {
     
     // 命令面板
     showCommandPalette,
+    commandPaletteOpen,
     
     // Slideover
     showEntityPreview,

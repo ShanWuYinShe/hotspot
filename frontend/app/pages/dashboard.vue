@@ -95,15 +95,16 @@
 <script setup lang="ts">
 import type { StatItem } from '~/components/data/StatsGrid.vue'
 
+// 需要登录 - 数据仪表板需要认证
 definePageMeta({
     title: '数据仪表板',
     description: '查看您的活动统计和趋势分析',
+    requiresAuth: true,
     layout: 'dashboard'
 })
 
 // 服务和状态
-const { success, error, info } = useNotifications()
-const toast = { success, error, info }
+const toast = useToast()
 
 // 加载状态
 const loading = reactive({
@@ -236,9 +237,13 @@ const headerActions = computed(() => [
         label: '导出报告',
         icon: 'i-heroicons-document-arrow-down',
         variant: 'outline' as const,
-        action: () => executeFeature('reports', () => {
-            toast.success('报告导出功能即将上线')
-        })
+        action: () => {
+            toast.add({
+                title: '功能开发中',
+                description: '报告导出功能即将上线',
+                color: 'info'
+            })
+        }
     },
     {
         key: 'settings',
@@ -295,9 +300,9 @@ const loadActivityData = async () => {
     try {
         // 模拟API调用
         await new Promise(resolve => setTimeout(resolve, 1000))
-        toast.success('活动数据已更新')
-    } catch (error) {
-        toast.error('加载活动数据失败')
+        success('活动数据已更新')
+    } catch (err) {
+        error('加载活动数据失败')
     } finally {
         loading.activity = false
     }
@@ -307,7 +312,7 @@ const loadGroupData = async () => {
     loading.groups = true
     try {
         await new Promise(resolve => setTimeout(resolve, 800))
-        toast.success('群组数据已更新')
+        success('群组数据已更新')
     } finally {
         loading.groups = false
     }
@@ -317,7 +322,7 @@ const loadFriendsData = async () => {
     loading.friends = true
     try {
         await new Promise(resolve => setTimeout(resolve, 600))
-        toast.success('好友数据已更新')
+        success('好友数据已更新')
     } finally {
         loading.friends = false
     }
@@ -327,14 +332,14 @@ const loadMessagesData = async () => {
     loading.messages = true
     try {
         await new Promise(resolve => setTimeout(resolve, 700))
-        toast.success('消息数据已更新')
+        success('消息数据已更新')
     } finally {
         loading.messages = false
     }
 }
 
 const handleTimeRangeChange = (range: string) => {
-    toast.info(`时间范围已切换到: ${timeRanges.find(r => r.value === range)?.label}`)
+    info(`时间范围已切换到: ${timeRanges.find(r => r.value === range)?.label}`)
     // 根据时间范围重新加载数据
 }
 

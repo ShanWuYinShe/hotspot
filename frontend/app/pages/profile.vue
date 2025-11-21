@@ -16,9 +16,11 @@
 <script setup lang="ts">
 import type { StatItem } from '~/components/data/StatsGrid.vue'
 
+// 需要登录 - 个人资料需要认证
 definePageMeta({
     title: '个人资料',
     description: '管理您的个人信息和账户设置',
+    requiresAuth: true,
     layout: 'dashboard'
 })
 
@@ -28,8 +30,7 @@ import { useUsersService } from '~/services/users.service';
 // 服务和状态
 const authStore = useAuthStore()
 const userService = useUsersService();
-const { success: toastSuccess, error: toastError, info: toastInfo } = useNotifications()
-const toast = { success: toastSuccess, error: toastError, info: toastInfo }
+const toast = useToast()
 
 // 用户资料数据
 const userProfile = computed(() => {
@@ -86,7 +87,7 @@ const profileStats = computed<StatItem[]>(() => [
         icon: 'i-heroicons-user',
         color: 'blue',
         description: '完善资料可获得更多关注',
-        onClick: () => toast.info('完善更多资料信息')
+        onClick: () => toast.add({ color: 'info', title: '完善更多资料信息' })
     },
     {
         key: 'privacy-score',
@@ -95,7 +96,7 @@ const profileStats = computed<StatItem[]>(() => [
         icon: 'i-heroicons-shield-check',
         color: 'green',
         description: '您的隐私设置安全等级',
-        onClick: () => toast.info('查看隐私设置详情')
+        onClick: () => toast.add({ color: 'info', title: '查看隐私设置详情' })
     },
     {
         key: 'last-updated',
@@ -104,7 +105,7 @@ const profileStats = computed<StatItem[]>(() => [
         icon: 'i-heroicons-clock',
         color: 'orange',
         description: '资料最后更新时间',
-        onClick: () => toast.info('查看更新历史')
+        onClick: () => toast.add({ color: 'info', title: '查看更新历史' })
     },
     {
         key: 'profile-views',
@@ -113,7 +114,7 @@ const profileStats = computed<StatItem[]>(() => [
         icon: 'i-heroicons-eye',
         color: 'purple',
         description: '最近30天的资料浏览次数',
-        onClick: () => toast.info('查看浏览详情')
+        onClick: () => toast.add({ color: 'info', title: '查看浏览详情' })
     }
 ])
 
@@ -170,7 +171,7 @@ const handleSave = async (profile: any) => {
         await new Promise(resolve => setTimeout(resolve, 1000))
         
         userProfile.value = { ...profile }
-        toast.success('个人资料保存成功')
+        toast.add({ color: 'success', title: '个人资料保存成功' })
         
         // 更新认证状态中的用户信息
         if (authStore.user) {
@@ -178,7 +179,7 @@ const handleSave = async (profile: any) => {
             authStore.user.avatar_url = profile.avatar_url
         }
     } catch (error) {
-        toast.error('保存失败，请重试')
+        toast.add({ color: 'error', title: '保存失败，请重试' })
     }
 }
 
@@ -226,7 +227,7 @@ const exportProfileData = () => {
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
     
-    toast.success('个人资料已导出')
+    toast.add({ color: 'success', title: '个人资料已导出' })
 }
 
 // 页面加载时获取用户资料
@@ -244,7 +245,7 @@ onMounted(async () => {
         const fullProfile = await userService.getProfile();
         userProfile.value = { ...userProfile.value, ...fullProfile };
     } catch (error) {
-        toast.error('加载用户资料失败')
+        toast.add({ color: 'error', title: '加载用户资料失败' })
     }
 })
 </script>

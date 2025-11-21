@@ -137,7 +137,9 @@ const userMenuItems = computed(() => [
 const handleAddFriend = async () => {
     try {
         const userService = useUserService()
-        await userService.followUser(props.user.user_id)
+        await userService.followUser({
+            user_id: props.user.user_id
+        })
         
         const toast = useToast()
         toast.add({
@@ -149,7 +151,6 @@ const handleAddFriend = async () => {
         // 刷新用户数据
         await refreshNuxtData('users')
     } catch (error: any) {
-        const toast = useToast()
         toast.add({
             title: '关注失败',
             description: error.message || '关注用户时发生错误',

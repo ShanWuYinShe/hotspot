@@ -1,0 +1,1016 @@
+---
+description: HotSpot 后端代码生成规则 - 用于 AI Agent 生成 Rust/Axum 代码的详细规范
+alwaysApply: false
+---
+# HotSpot 后端代码生成规则
+
+## ⚠️ 重要说明
+
+**本文档是 Rust/Axum 代码生成规则。所有 API 端点、类型定义、WebSocket 事件定义均以 @api_spec.mdc 为准。**
+
+**文档职责分工**：
+- **@api_spec.mdc**: API 规范的唯一权威来源（端点、类型、事件、错误码）
+- **@backend_rule.mdc**（本文档）: Rust/Axum 代码生成规则和实现模式
+- **@backend_doc.mdc**: 系统架构设计和技术实现指南
+
+**开发时必读**：
+1. 首先阅读 @api_spec.mdc 了解完整的 API 规范
+2. 然后阅读本文档了解 Rust 实现规范
+3. 遇到冲突时，以 @api_spec.mdc 为准
+
+**API规范快速引用**：
+- 完整的API端点定义 → @api_spec.mdc 第3章
+- 完整的WebSocket事件定义 → @api_spec.mdc 第4章
+- 完整的错误码定义 → @api_spec.mdc 第2.5节
+- 通用类型定义 → @api_spec.mdc 第2.2节
+
+## 1. 项目上下文
+
+### 1.1 技术栈
+
+- **语言**: Rust 2021 Edition
+- **Web 框架**: Axum 0.7+
+- **数据库**: PostgreSQL 15+ (SQLx) + Redis 7+
+- **认证**: JWT (jsonwebtoken) + bcrypt
+- **序列化**: serde + serde_json
+- **异步运行时**: Tokio
+- **WebSocket**: tokio-tungstenite
+- **日志**: tracing
+
+### 1.2 架构设计约定
+
+#### 1.2.1 地理位置计算约定
+
+**⚠️ 严重错误：不要在 Rust 代码中计算地理距离！**
+
+所有地理位置计算必须在数据库层（PostgreSQL + PostGIS）完成，不要在应用层实现。
+
+**错误原因**：
+- 应用层计算无法使用 GiST 索引，性能差 100-1000 倍
+- 需要加载所有数据到内存，无法扩展
+- 精度不如 PostGIS 的专业地理计算库
+- 无法利用数据库的并行查询优化
+
+**性能对比**：
+| 方法 | 100万用户查询 | 可扩展性 | 索引支持 |
+|------|--------------|----------|----------|
+| Rust 计算 | ~10秒 | ❌ 差 | ❌ 无 |
+| PostGIS | ~50ms | ✅ 优秀 | ✅ GiST |
+
+**实现原则**：
+
+**❌ 禁止**: 在 Rust 代码中实现地理距离计算（Haversine公式等）
+
+**✅ 必须**: 所有地理计算使用 PostgreSQL + PostGIS
+
+**Rust层职责**（仅限以下场景）:
+- **坐标验证**: 验证经纬度范围合法性（-90~90, -180~180）
+- **边界框计算**: 用于查询优化的粗略估算（可选）
+- **距离格式化**: 格式化数据库返回的距离值（如 "1.2 km"）
+
+**数据库层职责**（核心计算）:
+- **距离计算**: 使用 `ST_Distance(geography, geography)`
+- **范围查询**: 使用 `ST_DWithin(geography, geography, radius)`
+- **地理聚类**: 使用 `ST_ClusterDBSCAN(geometry, eps, minpoints)`
+- **点创建**: 使用 `ST_MakePoint(lon, lat)` + `ST_SetSRID(..., 4326)`
+
+**查询实现要点**:
+- SELECT中包含 `ST_Distance(...)` 计算距离
+- WHERE中使用 `ST_DWithin(...)` 过滤范围
+- ORDER BY distance 排序
+- 绑定参数：经度、纬度、半径、限制数量
+
+**索引要求**（强制）:
+- 地理位置字段必须创建 **GIST 索引**
+- 格式：`CREATE INDEX idx_xxx_location ON xxx USING GIST(location);`
+- 适用范围：所有包含 `GEOGRAPHY(POINT, 4326)` 类型的表
+
+### 1.3 架构分层原则
+
+系统采用经典的三层架构，按职责划分模块：
+
+**Handler 层**（路由处理）:
+- 接收 HTTP 请求、提取参数
+- 调用 Service 层
+- 返回统一响应
+
+**Service 层**（业务逻辑）:
+- 业务规则验证、权限检查
+- 事务管理
+- 调用 Repository 层
+- 缓存更新
+
+**Repository 层**（数据访问）:
+- SQL 查询封装
+- 数据库交互
+- 错误转换
+
+### 1.4 模块划分与依赖关系
+
+⚠️ **完整的模块划分和依赖关系请参见**: @backend_doc.mdc **第 2.7 节**
+
+**核心模块概览**（共 15 个）：
+- **核心业务模块**（8个）：auth、user、group、private_chat、group_messages、chat_unread_counts、moment、comment
+- **辅助功能模块**（4个）：report、event_subscriptions、media、system
+- **数据聚合模块**（4个）：inbox、subscription、leaderboard、feed
+
+**关键实现说明**：
+- **收件箱 (inbox)**: 事件驱动架构，监听其他模块事件并生成提醒
+- **事件订阅 (subscription)**: 两层订阅机制（API持久化 + WebSocket实时）
+- **排行榜 (leaderboard)**: 定时任务 + Redis缓存策略
+- **信息流 (feed)**: 混合推荐算法（社交40% + 位置30% + 兴趣20% + 探索10%）
+
+## 2. 代码生成规范
+
+### 2.1 路由定义原则
+
+**核心原则**:
+- 按模块划分路由
+- 公开路由（`/api/v1/public/*`）和受保护路由（`/api/v1/protected/*`）分离
+- 所有 API 统一使用 POST 方法
+- 受保护路由添加认证中间件
+
+### 2.2 Handler 层实现原则
+
+**核心职责**（仅限以下4项）:
+1. **参数提取**: 从HTTP请求中提取参数（Path/Query/Json/Header）
+2. **Service调用**: 调用对应的Service层方法
+3. **响应构造**: 返回统一的`ApiResponse<T>`格式
+4. **错误传播**: 使用`?`传播错误到统一错误处理中间件
+
+**禁止事项**:
+- ❌ 不要在Handler中编写任何业务逻辑
+- ❌ 不要在Handler中直接操作数据库
+- ❌ 不要在Handler中处理错误（应传播给中间件）
+- ❌ 不要从请求参数中直接提取user_id（应从token中提取）
+
+**实现要点**:
+- 使用Axum Extractors（State, Json, Path等）提取参数
+- 返回类型：`Result<Json<ApiResponse<T>>, AppError>`
+- 调用Service层方法处理业务逻辑
+- 从 `req.extensions()` 获取认证用户ID
+
+### 2.3 Service 层实现原则
+
+**核心职责**（包含所有业务逻辑）:
+1. **业务规则验证**: 检查业务规则是否满足（如权限、状态、配额等）
+2. **数据操作编排**: 调用Repository层进行数据查询/修改
+3. **事务管理**: 需要多个操作原子执行时使用数据库事务
+4. **缓存策略**: 决定何时读缓存、写缓存、删缓存
+5. **事件触发**: 业务操作完成后触发相关事件（如发送通知）
+
+**设计原则**:
+- ✅ 所有业务逻辑集中在Service层
+- ✅ Service可以调用多个Repository
+- ✅ Service可以调用其他Service（避免循环依赖）
+- ✅ 权限验证在Service层完成（检查user_id）
+- ❌ Service不直接编写SQL（应调用Repository）
+
+**关键模式**:
+- **事务**: 使用`sqlx::Transaction`管理跨表操作
+- **缓存**: 先查缓存，未命中再查数据库，写入时更新缓存
+- **错误处理**: 业务错误转换为`AppError`枚举
+
+### 2.4 Repository 层实现原则
+
+**核心职责**（仅限数据访问）:
+1. **SQL封装**: 将所有SQL查询封装为方法
+2. **数据映射**: 数据库Row ↔ Rust Model 的转换
+3. **错误转换**: 将数据库错误转换为`AppError`
+4. **无业务逻辑**: Repository不包含任何业务规则判断
+
+**设计原则**:
+- ✅ 每个Repository对应一个主要的数据库表
+- ✅ 使用SQLx的类型安全查询（`query_as!`宏）
+- ✅ 所有方法都是纯数据操作（CRUD）
+- ❌ Repository不调用其他Repository
+- ❌ Repository不包含业务逻辑判断
+- ❌ Repository不直接返回HTTP响应
+
+**关键SQL模式**（AI Agent应根据需求构造）:
+
+| 场景 | 核心SQL模式 | 关键要点 |
+|---|---|---|
+| 地理位置查询 | `ST_Distance` + `ST_DWithin` | 必须使用PostGIS函数，详见1.2.1节 |
+| 游标分页查询 | `WHERE id > $cursor ORDER BY id LIMIT $limit` | cursor字符串→内部ID转换由Repository负责 |
+| 存在性检查 | `SELECT EXISTS(...)` | 避免COUNT，EXISTS性能更好 |
+| 软删除查询 | `WHERE is_deleted = FALSE` | 几乎所有查询都需要此条件 |
+| 数组包含 | `WHERE tags @> ARRAY[...]` | PostgreSQL数组操作符 |
+
+**游标分页实现规范**：
+
+**设计原则**：
+- 统一使用UUID作为cursor，便于分布式数据库迁移
+- UUID是随机的无法排序，必须转为自增id才能保证时间顺序
+- API层使用`cursor: Option<String>`，对前端不透明
+- Service层直接透传，不做解析
+- Repository层负责UUID→自增id的转换和分页逻辑
+
+**实现模板**（Repository层）：
+**Repository层职责**（负责cursor解析和转换）：
+- 解析cursor：UUID字符串 → Uuid类型
+- UUID转换为自增id（查询数据库）
+- 使用自增id进行分页查询（`WHERE id > cursor_id ORDER BY id ASC`）
+- 返回UUID字符串cursor（从结果集最后一条记录提取）
+
+**Service层职责**（直接透传）：
+- 验证和规范化limit参数（默认20，最小1，最大100）
+- 直接透传cursor字符串，不做解析
+- 构造分页响应（items + pagination元数据）
+
+**推荐实践**:
+- 使用参数化查询防止SQL注入（SQLx自动处理）
+- 为复杂查询创建专门的结构体（而非复用Model）
+- 事务操作接受`&mut Transaction`参数而非`&Pool`
+
+### 2.5 数据模型设计原则
+
+**设计原则**:
+- ✅ Model结构与数据库表字段一一对应
+- ✅ 使用`sqlx::FromRow`自动映射数据库行
+- ✅ 为API响应创建专门的DTO（Data Transfer Object）
+- ❌ 不要在Model中包含业务逻辑方法
+- ❌ 不要在Model中包含验证逻辑（应在Service层）
+
+**类型映射规范**:
+| 数据库类型 | Rust类型 | 说明 |
+|---|---|---|
+| `BIGINT` | `i64` | 64位整数（user_id, 计数等） |
+| `VARCHAR(36)` | `String` | UUID字符串（业务ID：moment_id, message_id, private_chat_id等） |
+| `DOUBLE PRECISION` | `f64` | 浮点数（经纬度等） |
+| `VARCHAR/TEXT` | `String` | 字符串 |
+| `BOOLEAN` | `bool` | 布尔值 |
+| `TIMESTAMPTZ` | `DateTime<Utc>` | 时间戳（使用chrono） |
+| `JSONB` | `serde_json::Value` | JSON数据 |
+| `ARRAY` | `Vec<T>` | 数组 |
+| `NULL` | `Option<T>` | 可空字段 |
+| `ENUM` | `enum` | 枚举类型（使用#[derive(sqlx::Type)]） |
+
+**ID字段特殊说明**:
+- `user_id`: `BIGINT` → `i64`（纯数字用户ID，方便用户传播和分区）
+- 其他业务ID: `VARCHAR(36)` → `String`（存储UUID字符串，如 `moment_id`, `message_id`, `private_chat_id`, `group_chat_id` 等）
+- 所有表的内部主键: `id BIGSERIAL` → `i64`（仅用于数据库内部排序和分页）
+
+**推荐实践**:
+- 为不同场景创建不同的结构体（如CreateRequest, UpdateRequest, Response）
+- 使用`#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]`
+- 复杂查询结果使用专门的结构体（而非复用Model）
+
+## 3. API 实现规范
+
+### 3.1 统一响应格式
+
+⚠️ **完整的 API 响应规范请参见**: @api_spec.mdc **第 2.2 节 统一响应格式**
+
+**实现要点**:
+- 定义 `ApiResponse<T>` 泛型结构体
+- 字段：`code: i64`, `message: String`, `data: Option<T>`
+- 提供 `success()` 和 `error()` 辅助方法
+- 分页响应的data字段包含：`items: Vec<T>`, `pagination: { has_more: bool, next_cursor: Option<String> }`
+
+### 3.2 错误处理原则
+
+⚠️ **完整错误码定义请参见**: @api_spec.mdc **第 2.4 节 错误码定义**
+
+**实现要点**:
+- 使用 `thiserror::Error` 定义 `AppError` 枚举
+- 包含所有错误类型：`BadRequest`, `Unauthorized`, `Forbidden`, `NotFound`, `Conflict`, `Database`, `Redis`, `Jwt`, `Internal`
+- 实现 `IntoResponse` trait，统一返回 HTTP 200 + 业务错误码
+- 错误码映射参考 api_spec.mdc 第 2.4 节
+- 记录错误日志（5000+ 用 ERROR，其他用 WARN）
+
+### 3.3 认证中间件原则
+
+**实现要点**:
+- 从 `Authorization: Bearer <token>` 头提取 JWT Token
+- 验证 Token 有效性（使用 `jsonwebtoken` crate）
+- 检查 Token 黑名单（Redis）
+- 提取 `user_id` 并注入到 `req.extensions()`
+- 失败时返回 `AppError::Unauthorized`
+
+**在 Handler 中获取用户ID**:
+- 从 `req.extensions()` 获取注入的 `user_id`
+- 类型：`i64`（内部使用）
+- 失败时返回 `AppError::Unauthorized`
+
+## 4. 数据库设计参考
+
+### 4.1 数据库初始化流程
+
+**⚠️ 核心原则**: SQLx 迁移文件必须能够独立运行，不依赖外部模板数据库。
+
+**开发环境初始化**（推荐流程）:
+1. **快速启动**（使用 SQLx）:
+   - 命令：`cd backend && sqlx database reset`
+   - 效果：创建空数据库 + 运行所有迁移
+   - 第一个迁移文件会自动安装 PostGIS 等扩展
+   - 适用于开发、测试、CI/CD 环境
+
+2. **或使用脚本**（创建模板数据库，可选优化）:
+   - 命令：`./scripts/setup_database.sh && cd backend && sqlx migrate run`
+   - 效果：创建模板数据库，加快后续数据库创建速度
+   - 推荐用于生产环境和需要频繁创建数据库的场景
+
+**迁移文件规范**（强制要求）:
+- ✅ 第一个迁移文件（`001_database_prerequisites.sql`）必须创建所有扩展
+- ✅ 使用 `CREATE EXTENSION IF NOT EXISTS` 确保幂等性
+- ✅ 后续迁移文件可以安全使用 PostGIS 等扩展的功能
+- ⚠️ 迁移文件必须能从零构建完整数据库（不依赖模板）
+
+**为什么迁移文件必须包含扩展创建**:
+- `sqlx database reset` 创建的是空数据库，不会从模板继承扩展
+- `sqlx migrate run` 必须能够独立完成数据库初始化
+- 确保开发、测试、CI/CD 环境的一致性和可重复性
+
+### 4.2 表结构参考
+
+⚠️ **完整的数据库表结构、字段定义、历史跟踪策略请参见**: @backend_doc.mdc **第 4 章 数据库设计**
+
+**AI Agent实现指导**:
+
+**1. 表结构获取**:
+- 所有表的字段、类型、约束定义在`backend_requirements.mdc`中
+- AI Agent应根据表格描述自行生成CREATE TABLE语句
+- 字段类型可根据实际需求微调（如VARCHAR长度）
+
+**2. Model生成**:
+- 每个表对应一个Rust struct
+- 使用`#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]`
+- 字段类型严格按照第2.5节的类型映射规范
+
+**3. 索引策略**:
+- **强制要求**: 地理位置字段必须使用GIST索引
+- **建议创建**: 外键字段、高频查询字段、软删除字段（部分索引）
+- **自行决定**: 其他索引根据查询模式和性能测试结果创建
+
+**4. 历史跟踪**:
+- 系统需要的历史表：user_location_history, room_location_history, config_change_logs
+- 可选的历史表：参见 @backend_doc.mdc 第4.10节
+- 可根据业务需求扩展新的历史表
+
+## 5. 关键业务规则
+
+⚠️ **详细的业务逻辑规范请参见**: @backend_doc.mdc
+
+### 5.1 密码安全
+
+**双层哈希策略**（强制）:
+1. **客户端**: `SHA256(password)` → 64字符十六进制
+2. **服务端**: `bcrypt(client_hash, cost=10)` → 存储到数据库
+3. **验证**: 使用`bcrypt::verify()`比对
+
+**关键要求**:
+- ❌ 永不存储明文密码或客户端哈希
+- ✅ 服务端使用bcrypt二次哈希
+- ✅ 使用bcrypt crate，work factor=10~12
+
+### 5.2 用户身份编码
+
+**user_id结构**（64位整数）:
+- **高8位**: 用户类型（0x01=临时，0x02=普通，0x03=系统）
+- **低56位**: 序列号（原子递增）
+- **生成公式**: `(type << 56) | (sequence & 0x00FFFFFFFFFFFFFF)`
+
+**Token管理**:
+- **Access Token**: 3600秒（1小时），用于API认证
+- **Refresh Token**: 2592000秒（30天），用于刷新
+- **Claims**: sub(user_id), exp, iat, user_type
+- **存储**: Redis缓存刷新token，key=`refresh_token:{user_id}`
+
+### 5.3 API查询规范
+
+**搜索接口命名**（统一约定）:
+- `discover` - 统一的发现接口，支持关键词搜索和位置搜索的组合
+  - 参数：`keyword`（关键词）、`latitude/longitude`（位置，可选，不传则使用用户当前位置）、`radius`（半径）
+  - 返回：包含 `location_name` 和 `distance` 字段（当使用位置搜索时）
+- `open_the_door` - 按ID查询其他用户/资源的详情（必须传ID）
+- `/me` - 查询当前用户自己的信息（用户API专用，无需传ID）
+
+**discover API 设计原则**:
+- ✅ **统一接口**：一个接口支持多种搜索条件组合
+- ✅ **智能默认**：位置参数不传时自动使用用户当前位置
+- ✅ **完整信息**：response 包含位置名称和距离信息
+- ✅ **黑盒行为**：相同输入保证相同输出，不依赖隐式上下文
+
+**分页参数约定**:
+| 参数 | 默认值 | 最小值 | 最大值 | 说明 |
+|---|---|---|---|---|
+| `limit` | 20 | 1 | 100 | 每页数量 |
+| `radius` | 5000 | 1 | 50000 | 搜索半径（米） |
+| `cursor` | - | - | - | 不透明UUID（从上次响应获取） |
+
+**返回格式**: 统一使用`PaginatedData<T>`，包含items和pagination元数据
+
+### 5.4 数据完整性验证规范（无外键约束）
+
+⚠️ **关键要求**：由于项目不使用数据库外键约束（性能优化，详见 @backend_doc.mdc 4.1.4节），**Service 层必须严格验证所有引用关系**。
+
+**Repository 层辅助方法**（推荐实现）:
+- 提供 `exists()` 方法验证资源存在性
+- 使用 `SELECT EXISTS(...)` 而非 `COUNT(*)`（性能更好）
+- 必须检查 `is_deleted = FALSE`
+- 接受 `executor` 参数支持事务
+
+**Service 层验证模式**（强制要求）:
+
+**模式1：创建关联资源时验证父资源**
+- 在创建前验证所有引用的资源是否存在
+- 使用 `exists()` 方法检查
+- 不存在时返回 `AppError::NotFound`
+- 示例：创建评论前验证瞬间和父评论存在
+
+**模式2：批量操作时验证所有引用**
+- 逐个验证每个资源
+- 验证失败的项记录到结果中
+- 继续处理其他项（不中断整个批量操作）
+- 示例：批量点赞前验证所有瞬间存在
+
+**模式3：关联查询时处理引用缺失**
+- 查询关联数据时使用 `Option<T>`
+- 允许关联数据不存在（如已删除的用户）
+- 返回占位符数据（如"已删除用户"）而非报错
+- 示例：查询消息时发送者可能已删除
+
+**性能优化**（可选）:
+- 使用 `SELECT EXISTS(...)` 而非 `SELECT COUNT(*)`（性能更好）
+- 批量验证：`SELECT user_id FROM users WHERE user_id = ANY($1)` 一次验证多个ID
+- 缓存热点引用关系（如用户存在性）到 Redis
+
+**集成测试要求**（强制）:
+- 测试引用资源不存在的情况
+- 测试引用资源被软删除的情况
+- 验证返回正确的错误码（`AppError::NotFound`）
+
+### 5.5 未读计数操作规范
+
+⚠️ **强制要求**：所有未读计数的读写必须通过 `chat_unread_counts` 表，不得直接操作成员表中的 unread_count 字段（该字段已被删除）。
+
+**表分离设计原因**（详见 @backend_doc.mdc 4.13节）:
+- 避免高并发更新成员表导致的行锁竞争
+- 消息发送和成员管理操作解耦，互不阻塞
+- 提升消息吞吐量和系统整体性能
+
+**Repository层实现要点**:
+- **递增未读计数**（`increment_unread_count`）：
+  - 使用 `INSERT ... ON CONFLICT DO UPDATE` 实现 upsert
+  - 首次插入时设置为 1，已存在时递增
+  - 参数：chat_type, chat_id, user_id
+- **清零未读计数**（`mark_as_read`）：
+  - 更新 `unread_count = 0`
+  - 同时更新 `last_read_at` 和 `last_read_message_id`
+- **查询未读数**（`get_unread_count`）：
+  - 查询单个聊天的未读数
+  - 不存在时返回 0
+- **查询所有未读聊天**（`get_unread_chats`）：
+  - 查询用户所有有未读消息的聊天
+  - 按 `updated_at DESC` 排序
+
+**Service层实现要点**:
+- **发送消息时**: 调用 `increment_unread_count()` 递增聊天内其他成员的未读计数
+- **标记已读时**: 调用 `mark_as_read()` 清零当前用户的未读计数
+- **查询未读时**: 调用 `get_unread_count()` 或 `get_unread_chats()`
+
+**缓存策略**:
+- **Redis Key**: `unread:{user_id}:{chat_type}:{chat_id}` (chat_type: private_chat 或 group_chat, chat_id: private_chat_id 或 group_chat_id)
+- **TTL**: 1小时
+- **模式**: 写穿透（Write-through）
+  - 写入时：同时更新数据库和缓存
+  - 读取时：先查缓存，未命中再查数据库并回写缓存
+- **失效策略**: 
+  - 发送消息：递增缓存
+  - 标记已读：删除缓存（下次查询时重新加载）
+  - 定期同步：每小时从数据库刷新一次
+
+**事务管理**:
+- 发送消息时，未读计数更新应在同一事务中完成
+- 避免未读计数与消息记录不一致
+
+### 5.6 在线状态操作规范
+
+⚠️ **强制要求**：所有在线状态的读写必须通过 `user_online_status` 表，不得直接操作 `users` 表中的 last_active_at 和 last_seen_at 字段（这些字段已被删除）。
+
+**表分离设计原因**（详见 @backend_doc.mdc 4.13节）:
+- 避免高频更新 `users` 表导致的行锁竞争
+- 在线状态更新与用户基础信息查询解耦
+- 提升WebSocket连接处理性能
+
+**Repository层实现要点**:
+- **设置在线**（`set_online`）：
+  - WebSocket连接时调用
+  - 使用 upsert 递增 `connection_count`
+  - 设置 `is_online = TRUE`
+  - 更新 `last_active_at`
+- **设置离线**（`set_offline`）：
+  - WebSocket断开时调用
+  - 递减 `connection_count`
+  - 当计数归零时设置 `is_online = FALSE` 并记录 `last_seen_at`
+  - 支持多设备同时在线
+- **更新活跃时间**（`update_last_active`）：
+  - 任何用户操作时调用
+  - 更新 `last_active_at`
+
+- **查询在线状态**（`get_online_status`）：
+  - 查询单个用户的在线状态
+  - 无记录时返回默认离线状态
+- **批量查询**（`get_online_status_batch`）：
+  - 使用 `WHERE user_id = ANY($1)` 批量查询
+  - 提升性能
+
+**Service层实现要点**:
+- **WebSocket连接**: 调用 `set_online()` 增加连接计数
+- **WebSocket断开**: 调用 `set_offline()` 减少连接计数，为0时设为离线
+- **用户活跃**: 定期调用 `update_last_active()` 更新活跃时间
+- **查询状态**: 调用 `get_online_status()` 或 `get_online_status_batch()`
+
+**缓存策略**:
+- **Redis Key**: `online_status:{user_id}`
+- **TTL**: 连接断开时删除（无固定过期时间）
+- **模式**: 旁路缓存（Cache-aside）
+  - 写入时：仅更新数据库，删除缓存
+  - 读取时：先查缓存，未命中再查数据库并回写缓存
+- **失效策略**: 
+  - WebSocket连接/断开：删除缓存
+  - 用户活跃：删除缓存
+  - 查询时：如缓存未命中，从数据库加载并缓存
+
+**WebSocket集成**:
+- **连接建立时**：
+  1. 更新数据库在线状态（`set_online`）
+  2. 删除Redis缓存（下次查询时重新加载）
+  3. 广播在线事件给关注者
+- **连接断开时**：
+  1. 更新数据库在线状态（`set_offline`）
+  2. 删除Redis缓存
+  3. 检查是否完全离线，如果是则广播离线事件
+
+**错误处理**:
+- 连接/断开失败不应阻塞WebSocket通信
+- 记录错误日志但继续处理
+- 使用重试机制处理瞬时故障
+
+### 5.7 速率限制实现规范
+
+⚠️ **完整的速率限制规范请参见**: @api_spec.mdc **第 2.14 节速率限制与配额管理**
+
+**核心原则**:
+- 速率限制在中间件层实现，配额检查在 Service 层实现
+- 使用 Redis 实现分布式速率限制计数器
+- 必须在响应头中包含限制信息
+
+**中间件实现要点**:
+- 使用 Redis INCR 命令实现计数器
+- 首次请求时设置过期时间
+- 超限时返回 429 错误和 `Retry-After` 头
+- 添加响应头：`X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`
+
+**速率限制配置**:
+- 全局限制：默认 100/分钟，认证用户 300/分钟，临时用户 50/分钟
+- 特定API限制：
+  - 发送消息：10/秒，300/分钟
+  - 创建瞬间：5/分钟，20/小时
+  - 文件上传：10/分钟，100/小时
+  - 搜索接口：5/秒，100/分钟
+
+**配额检查实现**:
+- Service层在操作前检查配额
+- 超限时返回错误码 1300（业务规则冲突）
+- 错误消息包含当前数量和限制数量
+
+**错误响应**:
+- HTTP 状态码: 429 Too Many Requests
+- 错误码: 1400-1404（参见 api_spec.mdc 第 2.5 节）
+- 响应头: `Retry-After`（秒数）
+
+**实现要求**:
+- 使用 Redis 滑动窗口算法
+- 支持多时间窗口（秒/分钟/小时/天）
+- 记录速率限制命中次数到监控系统
+- 超限时返回清晰的错误消息和重试建议
+
+### 5.8 批量操作实现规范
+
+⚠️ **完整的批量操作规范请参见**: @api_spec.mdc **第 2.15 节批量操作设计规范**
+
+**核心原则**:
+- Service 层提供批量处理方法
+- 原子性由 `atomic` 参数控制
+- 非原子操作遇到单项错误时继续处理其他项
+
+**Service 层实现模式**:
+- **原子操作**（`atomic: true`）：
+  - 使用数据库事务
+  - 任何一项失败立即回滚
+  - 全部成功或全部失败
+- **非原子操作**（`atomic: false`）：
+  - 逐项处理
+  - 单项失败不影响其他项
+  - 返回每项的详细结果（index, code, message）
+- **通用流程**：
+  1. 验证批量大小（最大100）
+  2. 遍历处理每一项
+  3. 记录成功/失败数量
+  4. 返回统计结果和详细结果列表
+
+**批量操作限制**:
+- 最大批量大小：100条
+- 速率限制：10次/分钟（比单次操作更严格）
+
+**响应类型定义**:
+- `BatchResult<T>`：包含 total, succeeded, failed, results
+- `BatchItemResult<T>`：包含 index, code, data（可选）, message（可选）
+
+**实现要求**:
+- 验证批量大小限制（MAX_BATCH_SIZE = 100）
+- 记录批量操作审计日志
+- 原子操作失败时全部回滚
+- 非原子操作返回每项的详细结果
+
+### 5.9 幂等性实现规范
+
+⚠️ **完整的幂等性规范请参见**: @api_spec.mdc **第 2.17 节幂等性设计**
+
+**核心原则**:
+- 服务端完全控制幂等性，客户端无需提供幂等键
+- 使用 SHA256 生成幂等键，包含用户ID、端点、请求体、时间窗口
+- 使用 Redis 缓存幂等结果，TTL = 2倍时间窗口
+
+**幂等键生成实现**:
+- 使用 SHA256 哈希算法
+- 输入：user_id + api_endpoint + request_body + time_window
+- 时间窗口：向下取整到5分钟
+- 请求体标准化：
+  1. 移除特殊字段（client_request_id, timestamp, nonce）
+  2. Key按字母顺序排序
+  3. 紧凑JSON格式（无空白）
+
+**幂等中间件实现**:
+```rust
+// 幂等中间件伪代码
+async fn idempotency_middleware(
+    req: Request,
+    user_id: i64,
+) -> Result<Response> {
+    // 只对需要幂等的端点启用
+    if !requires_idempotency(&req.uri().path()) {
+        return Ok(next.run(req).await);
+    }
+    
+    // 生成幂等键
+    let body = extract_body(&req).await?;
+    let normalized_body = normalize_request_body(&body);
+    let time_window = get_time_window(Utc::now());
+    let idempotency_key = generate_idempotency_key(
+        user_id,
+        req.uri().path(),
+        &normalized_body,
+        time_window,
+    );
+    
+    // 检查Redis缓存
+    if let Some(cached_response) = redis.get(&idempotency_key).await? {
+        let mut response = cached_response;
+        response.headers_mut().insert(
+            "X-Idempotent-Replayed",
+            "true".parse().unwrap(),
+        );
+        return Ok(response);
+    }
+    
+    // 执行业务逻辑
+    let response = next.run(req).await?;
+    
+    // 缓存结果
+    redis.setex(
+        &idempotency_key,
+        TTL_SECONDS,  // 10分钟
+        &response,
+    ).await?;
+    
+    // 添加响应头（仅调试用）
+    response.headers_mut().insert(
+        "X-Idempotent-Key",
+        idempotency_key.parse().unwrap(),
+    );
+    
+    Ok(response)
+}
+```
+
+**需要幂等的端点**:
+```rust
+const IDEMPOTENT_ENDPOINTS: &[&str] = &[
+    "/api/v1/protected/chat_messages/send_message",
+    "/api/v1/protected/moments/create",
+    "/api/v1/protected/user/send_friend_request",
+    "/api/v1/protected/group_chats/create",
+    "/api/v1/protected/media/upload_file",
+];
+
+fn requires_idempotency(path: &str) -> bool {
+    IDEMPOTENT_ENDPOINTS.contains(&path)
+}
+```
+
+**文件上传幂等性**（特殊处理）:
+```rust
+// 小文件（≤100MB）幂等性
+pub async fn upload_file(
+    user_id: i64,
+    file_data: Vec<u8>,
+    category: &str,
+) -> Result<UploadResult> {
+    // 计算文件哈希
+    let mut hasher = Sha256::new();
+    hasher.update(&file_data);
+    let file_hash = format!("{:x}", hasher.finalize());
+    
+    // 生成幂等键（包含文件哈希）
+    let time_window = get_time_window(Utc::now());
+    let idempotency_key = format!(
+        "{:x}",
+        Sha256::digest(format!(
+            "{}{}{}{}{}",
+            user_id,
+            "/api/v1/protected/media/upload_file",
+            file_hash,
+            category,
+            time_window.to_rfc3339()
+        ))
+    );
+    
+    // 检查缓存
+    if let Some(cached) = redis.get(&idempotency_key).await? {
+        return Ok(cached);
+    }
+    
+    // 执行上传
+    let result = storage.upload(user_id, file_data, category).await?;
+    
+    // 缓存结果
+    redis.setex(&idempotency_key, TTL_SECONDS, &result).await?;
+    
+    Ok(result)
+}
+```
+
+**并发控制**（使用Redis原子操作）:
+```rust
+// 使用SETNX防止并发重复执行
+pub async fn execute_idempotent(
+    redis: &Redis,
+    key: &str,
+    ttl: u64,
+    operation: impl FnOnce() -> Result<T>,
+) -> Result<T> {
+    let lock_key = format!("lock:{}", key);
+    
+    // 尝试获取锁
+    let acquired = redis.set_nx(&lock_key, "1", ttl).await?;
+    if !acquired {
+        // 已有其他请求在执行，等待结果
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        if let Some(result) = redis.get(key).await? {
+            return Ok(result);
+        }
+        return Err(Error::IdempotentConflict);
+    }
+    
+    // 执行操作
+    let result = operation()?;
+    
+    // 缓存结果
+    redis.setex(key, ttl, &result).await?;
+    redis.del(&lock_key).await?;
+    
+    Ok(result)
+}
+```
+
+**配置项**:
+```rust
+const TIME_WINDOW_MINUTES: i64 = 5;  // 时间窗口5分钟
+const IDEMPOTENCY_TTL_SECONDS: u64 = 600;  // 缓存TTL 10分钟（2倍时间窗口）
+```
+
+**实现要求**:
+- 所有幂等操作必须使用相同的幂等键生成算法
+- 响应必须可序列化为JSON
+- 记录幂等命中率到监控系统
+- 异常高频重试需要告警
+
+### 5.10 私聊权限验证规范
+
+⚠️ **完整业务规则请参见**: @api_spec.mdc **第 3.5.1 节发起私聊权限验证说明**
+
+**Service层验证流程**（强制要求）:
+1. 检查是否对自己发起私聊 → 返回 `AppError::CannotOperateOnSelf`（错误码 1301）
+2. 查询对方 `user_settings.allow_private_chat` → 为 false 时返回 `AppError::PrivateChatNotAllowed`（错误码 1309）
+3. 查询 `user_blocks` 表检查是否被拉黑 → 被拉黑时返回 `AppError::BlockedByUser`（错误码 1310）
+4. 全部通过后创建或返回已存在的私聊房间
+
+**错误码定义**（必须在 `src/error.rs` 中实现）:
+- `1301` - CannotOperateOnSelf: "不能对自己执行此操作"
+- `1309` - PrivateChatNotAllowed: "对方不允许接收私聊"
+- `1310` - BlockedByUser: "已被对方拉黑"
+
+**关键要点**:
+- 三种错误必须使用对应的专用错误类型，不要使用通用的 `Forbidden`
+- 邀请入群无需这些检查
+
+### 5.11 群组密码验证规范
+
+⚠️ **完整业务规则请参见**: @api_spec.mdc **第 3.7.3 节加入群组密码验证说明**
+
+**Service层验证流程**（强制要求）:
+1. 查询 `group_settings.password_hash`
+2. 如果为 NULL → 直接加入（无密码群组）
+3. 如果不为 NULL:
+   - 请求未提供密码 → 返回 `AppError::MissingParameter`（1001）
+   - 使用 `bcrypt::verify()` 验证
+   - 密码错误 → 返回 `AppError::WrongGroupPassword`（1311）
+4. 检查其他条件（群组存在、未满员、未在群组中）
+
+**错误码定义**（必须在 `src/error.rs` 中实现）:
+- `1311` - WrongGroupPassword: "群组密码错误"
+- `1001` - MissingParameter: "缺少必填参数"（未提供密码但群组需要密码）
+- `1200` - NotFound: "资源不存在"（群组不存在）
+- `1305` - AlreadyInGroup: "已在群组中"
+- `1304` - GroupFull: "群组已满员"
+
+**关键要点**:
+- 密码错误必须使用专用错误类型 `WrongGroupPassword`（1311），不要使用通用的 `WrongPassword`（1105）
+- 邀请入群流程（`accept_group_invite`）完全跳过密码验证
+
+## 6. WebSocket 实现规范
+
+⚠️ **完整的 WebSocket 事件类型定义请参见**: @api_spec.mdc **第 4 章 WebSocket 实时事件定义**
+
+### 6.1 连接管理规则
+
+**核心职责**:
+- 维护 `user_id -> Vec<WebSocket连接>` 映射（一个用户多个设备）
+- 提供 `send_to_user()`, `broadcast()` 方法
+- 使用 `tokio::sync::RwLock` 保证并发安全
+- 使用 `tokio-tungstenite` crate
+
+**鉴权流程**:
+1. 从 `Sec-WebSocket-Protocol` 或 `Authorization` 头提取 token
+2. 验证 JWT token
+3. 提取 user_id 并注册连接
+4. Token 过期时主动断开连接
+
+**心跳机制**:
+- 客户端每 25 秒发送 `Ping`
+- 服务端 5 秒内回复 `Pong`
+- 60 秒无消息则断开连接
+
+### 6.2 消息类型实现
+
+**Rust Enum 结构**:
+```rust
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "type", content = "payload")]
+pub enum WsMessage {
+    // 服务端推送事件 - 完整定义见 api_spec.mdc 第 4.3 节
+    ConnectionEstablished { /* ... */ },
+    ChatMessageNew { /* ... */ },
+    InboxItem { /* ... */ },
+    // ... 共 20+ 个事件类型
+    
+    // 客户端发送事件 - 完整定义见 api_spec.mdc 第 4.4 节
+    Ping { timestamp: String },
+    Subscribe { 
+        items: Vec<SubscriptionItem>  // 订阅项列表
+    },
+    Unsubscribe { 
+        items: Vec<SubscriptionItem>  // 取消订阅项列表
+    },
+    SetSubscriptions { 
+        items: Vec<SubscriptionItem>  // 完整订阅列表
+    },
+    // ... 其他客户端事件
+}
+
+// 订阅项定义
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SubscriptionItem {
+    pub source_type: SubscriptionSourceType,
+    pub source_ids: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SubscriptionSourceType {
+    GroupChat,
+    User,
+    Notification,
+}
+```
+
+**关键要点**:
+- 使用 `#[serde(tag = "type", content = "payload")]` 实现 JSON 序列化
+- 所有字段类型必须与 api_spec.mdc 严格一致
+- 时间字段使用 ISO 8601 字符串（`chrono::DateTime<Utc>.to_rfc3339()`）
+
+## 7. 测试策略
+
+⚠️ **详细的测试策略和数据管理请参见**: @backend_doc.mdc **第 9 章测试策略**
+
+### 7.1 测试分层（建议）
+
+**单元测试**（Repository/Service）:
+- 使用`#[test]`和`#[cfg(test)]`
+- Mock外部依赖
+- AI Agent自行决定测试覆盖率
+
+**集成测试**（API端点）:
+- 使用`sqlx::test`宏（自动回滚）
+- 使用`tower::ServiceExt::oneshot()`测试路由
+- AI Agent自行设计测试数据
+
+### 7.2 关键测试场景（建议优先测试）
+
+| 模块 | 关键场景 |
+|---|---|
+| 认证 | 注册/登录/Token刷新/权限验证 |
+| 地理位置 | 附近用户/生活瞬间搜索（PostGIS） |
+| WebSocket | 连接/订阅/推送/断线重连 |
+| 分页 | 游标边界/空结果/大数据集 |
+
+---
+
+## 8. 代码质量要求
+
+### 8.1 必须遵守的规范
+
+**架构约束**（强制）:
+- ✅ Handler → Service → Repository 单向依赖
+- ✅ 地理位置计算使用PostGIS（不在Rust中计算）
+- ✅ 双层密码哈希（客户端SHA256 + 服务端bcrypt）
+- ✅ WebSocket订阅模型（用户明确订阅后才推送）
+- ✅ API响应格式统一使用`ApiResponse<T>`
+
+**代码规范**（强制）:
+- ✅ 所有异步函数使用`async/await`
+- ✅ 使用`?`传播错误
+- ✅ 参数化查询（SQLx自动处理）
+- ✅ 遵循Rust命名规范（snake_case）
+
+### 8.2 AI Agent自行决策的部分
+
+**✅ 完全自主决策**:
+- 文件组织结构和命名
+- 具体的SQL查询语句
+- 缓存key命名和TTL
+- 日志内容和级别
+- 测试用例设计
+- 性能优化策略
+
+**📖 建议参考（可调整）**:
+- 三层架构模式
+- 错误处理模式
+- 日志分级策略
+
+---
+
+## 9. 快速参考
+
+### 9.1 关键约束速查
+
+| 约束类型 | 描述 | 参考 |
+|---|---|---|
+| API规范 | 所有端点/类型/错误码 | @api_spec.mdc |
+| 数据库表 | 所有表结构/字段定义 | @backend_doc.mdc 第4章 |
+| 密码安全 | 双层哈希策略 | @api_spec.mdc 2.9节 |
+| 地理位置 | 必须用PostGIS | 本文档1.2.1节 |
+| WebSocket | 事件类型/订阅模型 | @api_spec.mdc 第4章 |
+| 历史跟踪 | 系统需要/可选历史表 | @backend_doc.mdc 4.10节 |
+
+### 9.2 常用类型映射
+
+| 数据库 | Rust | 说明 |
+|---|---|---|
+| BIGINT | i64 | 所有整数统一使用 |
+| DOUBLE PRECISION | f64 | 经纬度 |
+| TIMESTAMPTZ | DateTime<Utc> | 时间戳 |
+| UUID | Uuid | 唯一标识 |
+| VARCHAR/TEXT | String | 字符串 |
+| BOOLEAN | bool | 布尔 |
+| NULL | Option<T> | 可空 |
+
+### 9.3 核心技术栈
+
+- **语言**: Rust 2021 Edition
+- **Web框架**: Axum 0.7+
+- **数据库**: PostgreSQL 15+ + PostGIS
+- **ORM**: SQLx（编译期检查）
+- **缓存**: Redis 7+
+- **WebSocket**: tokio-tungstenite
+- **认证**: JWT (jsonwebtoken) + bcrypt
+- **异步运行时**: Tokio
+- **序列化**: serde + serde_json
+- **日志**: tracing
+
+---
+
+END

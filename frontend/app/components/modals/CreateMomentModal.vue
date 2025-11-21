@@ -212,6 +212,7 @@
 
 <script setup lang="ts">
 import { MOMENT_CONSTANTS } from '~/config/defaults'
+import { useMomentsService } from '~/services/moments.service'
 
 interface Props {
   onSuccess?: (momentId: string) => void
@@ -254,8 +255,8 @@ const isFormValid = computed(() => {
 })
 
 // 工具函数
-const { success, error } = useNotifications()
-const { getCurrentLocationOrDefault } = useLocation()
+const toast = useToast()
+const locationStore = useLocationStore()
 
 // 方法
 const getCurrentLocation = async () => {
@@ -333,14 +334,17 @@ const createMoment = async () => {
   
   creating.value = true
   try {
-    const momentService = useMomentService()
-    const response = await momentService.createMoment(
-      form.value.latitude!,
-      form.value.longitude!,
-      form.value.description,
-      form.value.tags,
-      form.value.images
-    )
+    const momentService = useMomentsService()
+    const response = await momentService.createMoment({
+      description: form.value.description,
+      location: {
+        latitude: form.value.latitude!,
+        longitude: form.value.longitude!,
+        name: form.value.location_name
+      },
+      tags: form.value.tags,
+      images: form.value.images
+    })
     
     success('瞬间发布成功')
     

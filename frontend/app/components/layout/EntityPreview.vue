@@ -40,11 +40,11 @@
             </template>
             <div class="grid grid-cols-2 gap-4 text-center">
               <div>
-                <p class="text-2xl font-bold text-primary-600">{{ data.moments_count || 0 }}</p>
+                <p class="text-2xl font-bold text-black dark:text-white">{{ data.moments_count || 0 }}</p>
                 <p class="text-sm text-neutral-500">动态</p>
               </div>
               <div>
-                <p class="text-2xl font-bold text-primary-600">{{ data.friends_count || 0 }}</p>
+                <p class="text-2xl font-bold text-black dark:text-white">{{ data.friends_count || 0 }}</p>
                 <p class="text-sm text-neutral-500">好友</p>
               </div>
             </div>
@@ -171,11 +171,11 @@
             </template>
             <div class="grid grid-cols-2 gap-4 text-center">
               <div>
-                <p class="text-2xl font-bold text-error-600">{{ data.likes_count || 0 }}</p>
+                <p class="text-2xl font-bold text-black dark:text-white">{{ data.likes_count || 0 }}</p>
                 <p class="text-sm text-neutral-500">点赞</p>
               </div>
               <div>
-                <p class="text-2xl font-bold text-primary-600">{{ data.comments_count || 0 }}</p>
+                <p class="text-2xl font-bold text-black dark:text-white">{{ data.comments_count || 0 }}</p>
                 <p class="text-sm text-neutral-500">评论</p>
               </div>
             </div>

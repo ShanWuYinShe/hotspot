@@ -126,6 +126,7 @@
 import { useMomentsService } from '~/services/moments.service';
 import type { MomentResponse } from '~/types/api'
 
+// 公开页面 - 对应 POST /api/v1/public/moments/* API
 definePageMeta({
     title: '动态广场',
     description: '发现和分享生活中的精彩瞬间',
@@ -149,8 +150,7 @@ const popularTags = ref(['美食', '旅行', '生活', '摄影', '音乐', '运�
 // 服务
 const momentService = useMomentsService()
 const authStore = useAuthStore()
-const { success, error, info } = useNotifications()
-const toast = { success, error, info }
+const toast = useToast()
 const overlay = useOverlay()
 
 // 创建动态功能
@@ -161,7 +161,7 @@ const openCreateModal = async () => {
     onSuccess: (momentId: string) => {
       // 刷新当前视图数据
       refreshCurrentView()
-      toast.success('动态发布成功')
+      toast.add({ color: 'success', title: '动态发布成功' })
     }
   })
 }
@@ -176,7 +176,7 @@ const refreshCurrentView = () => {
 };
 
 // 位置服务
-const { getCurrentLocationOrDefault } = useLocation()
+const locationStore = useLocationStore()
 
 // 数据状态
 const nearbyMoments = ref<MomentResponse[]>([]);
@@ -214,11 +214,11 @@ const loadNearbyMoments = async (cursor?: string) => {
             nearbyMoments.value = result.items;
         }
         
-        hasMore.value.nearby = result.has_more;
+        hasMore.value.nearby = result.pagination.has_more;
         return result;
     } catch (error) {
         console.error('加载附近动态失败:', error);
-        toast.error('加载附近动态失败');
+        toast.add({ color: 'error', title: '加载附近动态失败' });
         return { items: [], hasMore: false, nextCursor: undefined };
     } finally {
         loading.value.nearby = false;
@@ -239,11 +239,11 @@ const loadFollowingMoments = async (cursor?: string) => {
             followingMoments.value = result.items;
         }
         
-        hasMore.value.following = result.has_more;
+        hasMore.value.following = result.pagination.has_more;
         return result;
     } catch (error) {
         console.error('加载关注动态失败:', error);
-        toast.error('加载关注动态失败');
+        toast.add({ color: 'error', title: '加载关注动态失败' });
         return { items: [], hasMore: false, nextCursor: undefined };
     } finally {
         loading.value.following = false;
@@ -273,13 +273,13 @@ const searchMoments = async (query: string, filters?: any) => {
         searchResults.value = result.items;
         
         if (result.items.length === 0) {
-            toast.info('未找到相关动态');
+            toast.add({ color: 'info', title: '未找到相关动态' });
         }
         
         return result.items;
     } catch (error) {
         console.error('搜索动态失败:', error);
-        toast.error('搜索失败，请重试');
+        toast.add({ color: 'error', title: '搜索失败，请重试' });
         return [];
     } finally {
         loading.value.search = false;
@@ -364,7 +364,7 @@ const handleShare = async (moment: MomentResponse) => {
         } else {
             // 复制链接到剪贴板
             await navigator.clipboard.writeText(`${window.location.origin}/moments/${moment.moment_id}`)
-            toast.success('链接已复制到剪贴板')
+            toast.add({ color: 'success', title: '链接已复制到剪贴板' })
         }
     } catch (error) {
         console.error('分享失败:', error)
@@ -403,7 +403,7 @@ const toggleLike = async (moment: MomentResponse) => {
         // 回滚状态
         moment.liked_by_me = !moment.liked_by_me
         moment.likes_count += moment.liked_by_me ? 1 : -1
-        toast.error('操作失败')
+        toast.add({ color: 'error', title: '操作失败' })
     }
 }
 
@@ -423,11 +423,11 @@ const loadMore = async () => {
         }
         
         if (result && result.items.length === 0) {
-            toast.info('没有更多动态了');
+            toast.add({ color: 'info', title: '没有更多动态了' });
         }
     } catch (error) {
         console.error('加载更多失败:', error);
-        toast.error('加载更多失败');
+        toast.add({ color: 'error', title: '加载更多失败' });
     } finally {
         loadingMore.value = false;
     }

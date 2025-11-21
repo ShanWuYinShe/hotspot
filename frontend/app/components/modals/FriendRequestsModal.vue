@@ -202,7 +202,7 @@ const tabItems = [
 
 // 工具函数
 const { formatTime } = useFormatters()
-const { success, error } = useNotifications()
+const toast = useToast()
 
 const getStatusColor = (status: string) => {
   const colors = {

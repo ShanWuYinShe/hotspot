@@ -218,8 +218,7 @@ definePageMeta({
 });
 
 const route = useRoute();
-const { success, error, info } = useNotifications()
-const toast = { success, error, info };
+const toast = useToast()
 const { formatTime: baseFormatTime } = useFormatters();
 
 // 格式化消息时间（群聊特殊显示需求）
@@ -486,11 +485,11 @@ const onSendLocation = async () => {
     try {
         sending.value = true;
         
-        const deviceAccess = useDeviceAccess();
-        const hasPermission = await deviceAccess.checkGeolocation();
+        const locationStore = useLocationStore();
+        const permission = await locationStore.checkPermission();
         
-        if (hasPermission !== 'granted') {
-            const granted = await deviceAccess.requestGeolocation();
+        if (permission?.state !== 'granted') {
+            const granted = await locationStore.requestPermission();
             if (!granted) {
                 toast.add({
                     title: "需要位置权限",

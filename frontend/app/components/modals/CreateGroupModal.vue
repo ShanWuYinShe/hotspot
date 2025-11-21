@@ -200,6 +200,7 @@
 
 <script setup lang="ts">
 import { GROUP_CONSTANTS } from '~/config/defaults'
+import { useGroupsService } from '~/services/groups.service'
 
 interface Props {
   onSuccess?: (groupId: string) => void
@@ -235,8 +236,8 @@ const isFormValid = computed(() => {
 })
 
 // 工具函数
-const { success, error } = useNotifications()
-const { getCurrentLocationOrDefault } = useLocation()
+const toast = useToast()
+const locationStore = useLocationStore()
 
 // 方法
 const quickCreate = async () => {
@@ -286,15 +287,25 @@ const createGroup = async () => {
   
   creating.value = true
   try {
-    const groupService = useGroupService()
+    const groupService = useGroupsService()
+    
+    // 如果有密码，先哈希
+    let passwordHash: string | undefined
+    if (form.value.password) {
+      const { hashPassword } = await import('~/utils/password')
+      passwordHash = await hashPassword(form.value.password)
+    }
+    
     const response = await groupService.createGroup({
       name: form.value.name,
       description: form.value.description || undefined,
-      latitude: form.value.latitude!,
-      longitude: form.value.longitude!,
-      location_name: form.value.location_name,
-      max_members: form.value.max_members,
-      password: form.value.password || undefined
+      avatar_url: undefined,
+      settings: {
+        join_method: 'open',
+        is_searchable: true,
+        max_members: form.value.max_members,
+        password_hash: passwordHash
+      }
     })
     
     success('群组创建成功', '您已成为群主，可以开始邀请朋友加入了！')

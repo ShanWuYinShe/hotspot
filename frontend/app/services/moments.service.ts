@@ -1,133 +1,254 @@
 /**
- * 动态服务 - 现代化实现
- * 提供完整的动态管理功能
+ * 生活瞬间服务 - 符合API规范的实现
+ * 所有API操作统一使用POST方法
+ * 基于 api_spec.mdc 第3.3节 生活瞬间API规范
  */
 
 import { BaseService } from './base.service'
-import type { 
-  MomentResponse, 
-  PaginatedResponse 
-} from '~/types/api'
+import type { MomentResponse, PaginatedResponse } from '~/types/api'
 
 export interface CreateMomentRequest {
-  content: string
-  images?: string[]
-  location_name?: string
-  latitude?: number
-  longitude?: number
+  description: string
+  location: {
+    latitude: number
+    longitude: number
+    name: string
+  }
   tags?: string[]
-  visibility: 'public' | 'friends' | 'private'
+  images?: string[]
 }
 
 export interface UpdateMomentRequest {
-  content?: string
-  location_name?: string
-  latitude?: number
-  longitude?: number
+  id: string
+  description?: string
+  images?: string[]
   tags?: string[]
-  visibility?: 'public' | 'friends' | 'private'
+  location?: {
+    latitude: number
+    longitude: number
+    name: string
+  }
 }
 
-export interface MomentComment {
-  comment_id: string
+export interface ToggleLikeRequest {
+  id: string
+  action: 'like' | 'unlike'
+}
+
+export interface ToggleFavoriteRequest {
+  id: string
+  action: 'add' | 'remove'
+}
+
+export interface SearchByLocationRequest {
+  latitude: number
+  longitude: number
+  radius?: number
+  limit?: number
+  cursor?: string
+}
+
+export interface SearchByTagsRequest {
+  tags: string[]
+  limit?: number
+  cursor?: string
+}
+
+export interface OpenTheDoorRequest {
+  id: string
+}
+
+export interface GetListRequest {
+  user_id?: string
+  limit?: number
+  cursor?: string
+}
+
+export interface DeleteMomentRequest {
+  id: string
+}
+
+export interface GetLikesRequest {
+  id: string
+  limit?: number
+  cursor?: string
+}
+
+export interface GetFavoritesRequest {
+  limit?: number
+  cursor?: string
+}
+
+export interface AddCommentRequest {
   moment_id: string
-  user_id: string
-  user_name: string
-  user_avatar?: string
   content: string
-  created_at: string
-  updated_at: string
+  parent_id?: string
+}
+
+export interface GetCommentsRequest {
+  moment_id: string
+  limit?: number
+  cursor?: string
+}
+
+export interface DeleteCommentRequest {
+  id: string
+}
+
+export interface ToggleLikeCommentRequest {
+  id: string
+  action: 'like' | 'unlike'
 }
 
 export class MomentsService extends BaseService {
-  protected readonly baseUrl = '/protected/moments'
+  protected readonly baseUrl = '/api/v1'
 
   /**
-   * 获取附近动态
+   * 创建生活瞬间
+   * POST /api/v1/protected/moments/create
    */
-  async getNearbyMoments(params: {
-    latitude: number
-    longitude: number
-    radius?: number
-    cursor?: string
-    limit?: number
-  }): Promise<PaginatedResponse<MomentResponse>> {
-    // 使用公开接口
-    const http = useHttp()
-    return http.get<PaginatedResponse<MomentResponse>>('/public/moments/nearby', {
-      query: params
-    })
+  async createMoment(request: CreateMomentRequest): Promise<{ id: string }> {
+    return this.post<{ id: string }>('/protected/moments/create', request)
   }
 
   /**
-   * 获取关注的动态
+   * 编辑生活瞬间
+   * POST /api/v1/protected/moments/update
    */
-  async getFollowingMoments(params?: {
-    cursor?: string
-    limit?: number
-  }): Promise<PaginatedResponse<MomentResponse>> {
-    return this.paginate<MomentResponse>('/following', params)
+  async updateMoment(request: UpdateMomentRequest): Promise<void> {
+    return this.post<void>('/protected/moments/update', request)
   }
 
   /**
-   * 获取我的动态
+   * 删除生活瞬间
+   * POST /api/v1/protected/moments/delete
    */
-  async getMyMoments(params?: {
-    cursor?: string
-    limit?: number
-  }): Promise<PaginatedResponse<MomentResponse>> {
-    return this.paginate<MomentResponse>('/mine', params)
+  async deleteMoment(request: DeleteMomentRequest): Promise<void> {
+    return this.post<void>('/protected/moments/delete', request)
   }
 
   /**
-   * 获取用户动态
+   * 点赞/取消点赞生活瞬间
+   * POST /api/v1/protected/moments/toggle_like
    */
-  async getUserMoments(
-    userId: string,
-    params?: {
-      cursor?: string
-      limit?: number
+  async toggleLike(request: ToggleLikeRequest): Promise<void> {
+    return this.post<void>('/protected/moments/toggle_like', request)
+  }
+
+  /**
+   * 收藏/取消收藏瞬间
+   * POST /api/v1/protected/moments/toggle_favorite
+   */
+  async toggleFavorite(request: ToggleFavoriteRequest): Promise<void> {
+    return this.post<void>('/protected/moments/toggle_favorite', request)
+  }
+
+  /**
+   * 获取收藏列表
+   * POST /api/v1/protected/moments/get_favorites
+   */
+  async getFavorites(request: GetFavoritesRequest = {}): Promise<PaginatedResponse<MomentResponse>> {
+    return this.post<PaginatedResponse<MomentResponse>>('/protected/moments/get_favorites', request)
+  }
+
+  /**
+   * 按位置搜索生活瞬间（公开接口）
+   * POST /api/v1/public/moments/search_by_location
+   */
+  async searchByLocation(request: SearchByLocationRequest): Promise<PaginatedResponse<MomentResponse>> {
+    return this.publicPost<PaginatedResponse<MomentResponse>>('/public/moments/search_by_location', request)
+  }
+
+  /**
+   * 按标签搜索生活瞬间（公开接口）
+   * POST /api/v1/public/moments/search_by_tags
+   */
+  async searchByTags(request: SearchByTagsRequest): Promise<PaginatedResponse<MomentResponse>> {
+    return this.publicPost<PaginatedResponse<MomentResponse>>('/public/moments/search_by_tags', request)
+  }
+
+  /**
+   * 按ID获取生活瞬间详情（公开接口）
+   * POST /api/v1/public/moments/open_the_door
+   */
+  async openTheDoor(request: OpenTheDoorRequest): Promise<MomentResponse> {
+    return this.publicPost<MomentResponse>('/public/moments/open_the_door', request)
+  }
+
+  /**
+   * 获取生活瞬间历史（公开接口）
+   * POST /api/v1/public/moments/get_list
+   */
+  async getList(request: GetListRequest = {}): Promise<PaginatedResponse<MomentResponse>> {
+    return this.publicPost<PaginatedResponse<MomentResponse>>('/public/moments/get_list', request)
+  }
+
+  /**
+   * 获取生活瞬间点赞列表（公开接口）
+   * POST /api/v1/public/moments/get_likes
+   */
+  async getLikes(request: GetLikesRequest): Promise<PaginatedResponse<{
+    user: {
+      user_id: string
+      nickname: string
+      avatar_url?: string
     }
-  ): Promise<PaginatedResponse<MomentResponse>> {
-    // 使用公开接口
-    const http = useHttp()
-    return http.get<PaginatedResponse<MomentResponse>>(`/public/moments/user/${userId}`, {
-      query: params
-    })
+    liked_at: string
+  }>> {
+    return this.publicPost('/public/moments/get_likes', request)
   }
 
   /**
-   * 获取动态详情
+   * 添加评论/回复
+   * POST /api/v1/protected/comments/add
    */
-  async getMomentDetails(momentId: string): Promise<MomentResponse> {
-    // 使用公开接口
-    const http = useHttp()
-    return http.get<MomentResponse>(`/public/moments/${momentId}`)
+  async addComment(request: AddCommentRequest): Promise<{ id: string }> {
+    return this.post<{ id: string }>('/protected/comments/add', request)
   }
 
   /**
-   * 创建动态
+   * 获取评论列表（公开接口）
+   * POST /api/v1/public/comments/get_list
    */
-  async createMoment(data: CreateMomentRequest): Promise<{ moment_id: string }> {
-    return this.post<{ moment_id: string }>('/create', data)
+  async getComments(request: GetCommentsRequest): Promise<PaginatedResponse<{
+    id: string
+    user: {
+      user_id: string
+      nickname: string
+      avatar_url?: string
+    }
+    content: string
+    parent_id?: string
+    reply_to_user?: {
+      user_id: string
+      nickname: string
+      avatar_url?: string
+    }
+    created_at: string
+    likes_count: number
+    replies_count: number
+  }>> {
+    return this.publicPost('/public/comments/get_list', request)
   }
 
   /**
-   * 更新动态
+   * 删除评论
+   * POST /api/v1/protected/comments/remove
    */
-  async updateMoment(momentId: string, data: UpdateMomentRequest): Promise<MomentResponse> {
-    return this.put<MomentResponse>(`/${momentId}`, data)
+  async deleteComment(request: DeleteCommentRequest): Promise<void> {
+    return this.post<void>('/protected/comments/remove', request)
   }
 
   /**
-   * 删除动态
+   * 点赞/取消点赞评论
+   * POST /api/v1/protected/comments/toggle_like
    */
-  async deleteMoment(momentId: string): Promise<void> {
-    return this.delete<void>(`/${momentId}`)
+  async toggleLikeComment(request: ToggleLikeCommentRequest): Promise<void> {
+    return this.post<void>('/protected/comments/toggle_like', request)
   }
 
   /**
-   * 上传动态图片
+   * 上传动态图片（使用FormData）
    */
   async uploadImages(files: File[]): Promise<{ image_urls: string[] }> {
     const formData = new FormData()
@@ -135,210 +256,21 @@ export class MomentsService extends BaseService {
       formData.append(`images[${index}]`, file)
     })
 
-    return this.http.post<{ image_urls: string[] }>(this.buildUrl('/upload-images'), formData, {
-      auth: true,
-      headers: {
-        // 让浏览器自动设置 Content-Type
-      }
-    })
+    const builder = this.http.post(
+      this.buildUrl('/protected/media/upload_file'),
+      formData
+    ).auth()
+    // 让浏览器自动设置 Content-Type
+    
+    const response = await builder.send<{ image_urls: string[] }>()
+    return response.data
   }
 
   /**
-   * 点赞动态
+   * 获取附近动态（别名方法，调用 searchByLocation）
    */
-  async likeMoment(momentId: string): Promise<void> {
-    return this.post<void>(`/like/${momentId}`)
-  }
-
-  /**
-   * 取消点赞
-   */
-  async unlikeMoment(momentId: string): Promise<void> {
-    return this.delete<void>(`/like/${momentId}`)
-  }
-
-  /**
-   * 获取动态点赞列表
-   */
-  async getMomentLikes(
-    momentId: string,
-    params?: {
-      cursor?: string
-      limit?: number
-    }
-  ): Promise<PaginatedResponse<{
-    user_id: string
-    user_name: string
-    user_avatar?: string
-    liked_at: string
-  }>> {
-    return this.paginate<{
-      user_id: string
-      user_name: string
-      user_avatar?: string
-      liked_at: string
-    }>(`/likes/${momentId}`, params)
-  }
-
-  /**
-   * 添加评论
-   */
-  async addComment(momentId: string, content: string): Promise<MomentComment> {
-    return this.post<MomentComment>('/comments', {
-      moment_id: momentId,
-      content
-    })
-  }
-
-  /**
-   * 获取动态评论
-   */
-  async getMomentComments(
-    momentId: string,
-    params?: {
-      cursor?: string
-      limit?: number
-    }
-  ): Promise<PaginatedResponse<MomentComment>> {
-    return this.paginate<MomentComment>(`/comments/${momentId}`, params)
-  }
-
-  /**
-   * 删除评论
-   */
-  async deleteComment(commentId: string): Promise<void> {
-    return this.delete<void>(`/comments/${commentId}`)
-  }
-
-  /**
-   * 搜索动态
-   */
-  async searchMoments(params: {
-    query?: string
-    tags?: string[]
-    latitude?: number
-    longitude?: number
-    radius?: number
-    user_id?: string
-    start_date?: string
-    end_date?: string
-    cursor?: string
-    limit?: number
-  }): Promise<PaginatedResponse<MomentResponse>> {
-    // 使用公开接口
-    const http = useHttp()
-    return http.get<PaginatedResponse<MomentResponse>>('/public/moments/search', {
-      query: params
-    })
-  }
-
-  /**
-   * 获取热门动态
-   */
-  async getTrendingMoments(params?: {
-    time_range?: 'day' | 'week' | 'month'
-    cursor?: string
-    limit?: number
-  }): Promise<PaginatedResponse<MomentResponse>> {
-    // 使用公开接口
-    const http = useHttp()
-    return http.get<PaginatedResponse<MomentResponse>>('/public/moments/trending', {
-      query: params
-    })
-  }
-
-  /**
-   * 获取动态统计
-   */
-  async getMomentStats(momentId: string): Promise<{
-    likes_count: number
-    comments_count: number
-    shares_count: number
-    views_count: number
-  }> {
-    // 使用公开接口
-    const http = useHttp()
-    return http.get<{
-      likes_count: number
-      comments_count: number
-      shares_count: number
-      views_count: number
-    }>(`/public/moments/stats/${momentId}`)
-  }
-
-  /**
-   * 举报动态
-   */
-  async reportMoment(
-    momentId: string, 
-    reason: string, 
-    description?: string
-  ): Promise<void> {
-    return this.post<void>('/report', {
-      moment_id: momentId,
-      reason,
-      description
-    })
-  }
-
-  /**
-   * 分享动态
-   */
-  async shareMoment(momentId: string, platform?: string): Promise<{
-    share_url: string
-    share_count: number
-  }> {
-    return this.post<{
-      share_url: string
-      share_count: number
-    }>(`/share/${momentId}`, { platform })
-  }
-
-  /**
-   * 收藏动态
-   */
-  async favoriteMoment(momentId: string): Promise<void> {
-    return this.post<void>(`/favorite/${momentId}`)
-  }
-
-  /**
-   * 取消收藏
-   */
-  async unfavoriteMoment(momentId: string): Promise<void> {
-    return this.delete<void>(`/favorite/${momentId}`)
-  }
-
-  /**
-   * 获取收藏的动态
-   */
-  async getFavoriteMoments(params?: {
-    cursor?: string
-    limit?: number
-  }): Promise<PaginatedResponse<MomentResponse>> {
-    return this.paginate<MomentResponse>('/favorites', params)
-  }
-
-  /**
-   * 获取动态标签建议
-   */
-  async getTagSuggestions(query: string): Promise<string[]> {
-    const response = await this.get<{ tags: string[] }>('/tag-suggestions', {
-      query: { q: query }
-    })
-    return response.tags
-  }
-
-  /**
-   * 获取热门标签
-   */
-  async getTrendingTags(): Promise<Array<{
-    tag: string
-    count: number
-  }>> {
-    // 使用公开接口
-    const http = useHttp()
-    const response = await http.get<{ tags: Array<{ tag: string; count: number }> }>('/public/moments/trending-tags')
-    return response.tags
+  async getNearbyMoments(request: SearchByLocationRequest): Promise<PaginatedResponse<MomentResponse>> {
+    return this.searchByLocation(request)
   }
 }
 

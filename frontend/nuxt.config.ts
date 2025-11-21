@@ -110,11 +110,6 @@ export default defineNuxtConfig({
     // 启用实验性功能
     experimental: {
       wasm: true
-    },
-    // 预渲染配置
-    prerender: {
-      crawlLinks: true,
-      routes: ['/']
     }
   },
 

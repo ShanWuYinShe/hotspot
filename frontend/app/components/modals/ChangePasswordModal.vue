@@ -69,14 +69,13 @@ const passwordSchema = z.object({
 const changePassword = async (data: any) => {
   changingPassword.value = true
   
-  const { success, error, info } = useNotifications()
-  const toast = { success, error, info }
+  const toast = useToast()
   
   try {
     const { setPassword } = useUserService()
     await setPassword(data.newPassword)
     
-    toast.success({
+    toast.add({ color: 'success',
       title: '密码修改成功',
       description: '您的密码已成功修改'
     })
@@ -84,7 +83,7 @@ const changePassword = async (data: any) => {
     emit('success')
     emit('close')
     } catch (err: any) {
-      toast.error({
+      toast.add({ color: 'error',
       title: '密码修改失败',
       description: err?.message || '请稍后重试'
     })

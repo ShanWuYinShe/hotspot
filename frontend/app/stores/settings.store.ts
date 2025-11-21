@@ -1,8 +1,12 @@
 /**
- * 设置状态存储 - 纯状态版本
- * 职责：纯粹的设置状态管理和持久化，不包含 API 调用
+ * 设置状态存储
+ * 职责：设置状态管理、持久化 + API 调用
  */
 
+import type {
+  UpdateProfileRequest,
+  UpdateSettingsRequest
+} from '~/services/users.service'
 
 export interface AppSettings {
   // 外观设置
@@ -207,6 +211,74 @@ export const useSettingsStore = defineStore('settings', () => {
       mediaQuery.addEventListener('change', applyTheme)
     }
   }
+
+  // ============ API 调用方法 ============
+
+  /**
+   * 更新用户资料（API）
+   */
+  const updateProfile = async (data: UpdateProfileRequest) => {
+    const userService = useUserService()
+    const authStore = useAuthStore()
+    const toast = useToast()
+    
+    try {
+      await userService.updateProfile(data)
+      
+      // 更新 authStore 中的用户信息
+      authStore.updateCurrentUser(data)
+      
+      toast.add({ color: 'success', title: '资料更新成功' })
+    } catch (error: any) {
+      toast.add({ color: 'error', title: '更新失败', description: error.message })
+      throw error
+    }
+  }
+
+  /**
+   * 更新隐私设置（API）
+   */
+  const updatePrivacySettings = async (data: UpdateSettingsRequest) => {
+    const userService = useUserService()
+    
+    try {
+      await userService.updateSettings(data)
+      
+      // 更新本地设置
+      updatePrivacy({
+        profileVisibility: data.privacy_level as any || settings.value.privacy.profileVisibility,
+        locationSharing: data.is_location_sharing ?? settings.value.privacy.locationSharing,
+        onlineStatus: settings.value.privacy.onlineStatus,
+        readReceipts: settings.value.privacy.readReceipts
+      })
+      
+      toast.add({ color: 'success', title: '设置更新成功' })
+    } catch (error: any) {
+      toast.add({ color: 'error', title: '更新失败', description: error.message })
+      throw error
+    }
+  }
+
+  /**
+   * 获取用户设置（API）
+   */
+  const fetchSettings = async () => {
+    const userService = useUserService()
+    
+    try {
+      const response = await userService.getSettings()
+      
+      // 更新本地设置
+      updatePrivacy({
+        profileVisibility: response.privacy_level as any,
+        locationSharing: response.is_location_sharing,
+        onlineStatus: settings.value.privacy.onlineStatus,
+        readReceipts: settings.value.privacy.readReceipts
+      })
+    } catch (error: any) {
+      console.error('获取设置失败:', error)
+    }
+  }
   
   // ============ 初始化 ============
   // 客户端自动初始化
@@ -232,7 +304,12 @@ export const useSettingsStore = defineStore('settings', () => {
     updateNotifications,
     toggleNotification,
     updatePrivacy,
-    initialize
+    initialize,
+
+    // API 调用方法
+    updateProfile,
+    updatePrivacySettings,
+    fetchSettings
   }
 }, {
   persist: {

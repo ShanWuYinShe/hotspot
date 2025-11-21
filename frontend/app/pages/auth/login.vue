@@ -147,9 +147,16 @@ const handleLogin = async (event: FormSubmitEvent<LoginSchema>) => {
 
     const { loginId, password } = event.data;
     
+    // 计算密码哈希（根据 api_spec.mdc 2.10：SHA256(password)）
+    const { hashPassword } = await import('~/utils/password')
+    const password_hash = await hashPassword(password)
+    
     // 使用 authStore 登录
     const authStore = useAuthStore();
-    await authStore.login(loginId, password);
+    await authStore.login({
+      login_id: loginId,
+      password_hash
+    });
     
     toast.add({
       title: "登录成功",

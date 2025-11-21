@@ -14,14 +14,16 @@
 
 export interface ApiResponse<T = any> {
   code: number;        // 业务状态码：0-成功，非0-错误
-  msg: string;         // 响应消息
-  data: T | null;      // 成功时为具体业务数据；失败时为 null
+  message?: string;    // 响应消息（失败时必须返回，成功时可选）
+  data?: T;            // 成功时为具体业务数据
 }
 
 export interface PaginatedResponse<T> {
   items: T[];          // 数据项数组
-  has_more: boolean;   // 是否有更多数据
-  next_cursor?: string; // 下一页游标（64位整数转字符串）
+  pagination: {
+    has_more: boolean;   // 是否有更多数据
+    next_cursor?: string; // 下一页游标（UUID字符串）
+  };
 }
 
 // ============================================================================
@@ -55,24 +57,13 @@ export interface Coordinates {
 // ============================================================================
 
 /**
- * 计算传输哈希
- * @param password 原始密码
- * @param nonce 随机数
- * @param timestamp 时间戳
- * @returns SHA256哈希值
+ * 密码哈希工具已移至 ~/utils/password.ts
+ * 使用方法：
+ * import { hashPassword } from '~/utils/password'
+ * const hash = await hashPassword('myPassword')
+ * 
+ * 根据 api_spec.mdc 2.10：只需要 SHA256(password)
  */
-export async function calculatePasswordHash(
-  password: string,
-  nonce: string,
-  timestamp: number
-): Promise<string> {
-  const input = `${password}${nonce}${timestamp}`;
-  const encoder = new TextEncoder();
-  const data = encoder.encode(input);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
 
 // ============================================================================
 // 认证API类型
@@ -87,82 +78,102 @@ export interface AuthResponse {
   expires_at: string;       // 过期时间（ISO 8601）
 }
 
-// 1. POST /api/v1/public/auth/get_nonce - 获取认证随机数
-export interface GetNonceRequest {
-  // 无请求参数
-}
-
-export interface GetNonceResponse {
-  nonce_id: string;         // nonce标识符
-  nonce: string;            // 随机数
-  timestamp: number;        // 时间戳
-  expires_in: number;       // 有效期（秒）
-}
-
-// 2. POST /api/v1/public/auth/register - 用户注册
+// 1. POST /api/v1/public/auth/register - 用户注册
 export interface RegisterRequest {
   login_id: string;         // 登录ID（邮箱/手机号）
   nickname: string;         // 用户昵称
-  password_hash: string;    // SHA256(password + nonce + timestamp)
-  nonce_id: string;         // nonce标识符
-  timestamp: number;        // 时间戳
-  latitude?: number;        // 纬度（可选）
-  longitude?: number;       // 经度（可选）
+  password_hash: string;    // SHA256(password) - 根据 api_spec.mdc 2.10
 }
 
 export interface RegisterResponse extends AuthResponse {}
 
-// 3. POST /api/v1/public/auth/login - 用户登录
+// 2. POST /api/v1/public/auth/login - 用户登录
 export interface LoginRequest {
   login_id: string;         // 登录ID（邮箱/手机号）
-  password_hash: string;    // SHA256(password + nonce + timestamp)
-  nonce_id: string;         // nonce标识符
-  timestamp: number;        // 时间戳
+  password_hash: string;    // SHA256(password) - 根据 api_spec.mdc 2.10
 }
 
 export interface LoginResponse extends AuthResponse {}
 
-// 4. POST /api/v1/public/auth/create_temp - 创建临时用户
+// 3. POST /api/v1/public/auth/create_temp_user - 创建临时用户
 export interface CreateTempRequest {
   nickname: string;         // 用户昵称
-  latitude?: number;        // 纬度（可选）
-  longitude?: number;       // 经度（可选）
 }
 
 export interface CreateTempResponse extends AuthResponse {}
 
-// 5. POST /api/v1/public/auth/refresh_token - 刷新Token
+// 4. POST /api/v1/protected/auth/refresh_token - 刷新Token
 export interface RefreshTokenRequest {
   refresh_token: string;    // 刷新令牌
-  latitude?: number;        // 纬度（可选）
-  longitude?: number;       // 经度（可选）
 }
 
 export interface RefreshTokenResponse extends AuthResponse {}
 
-// 6. POST /api/v1/public/auth/check_status - 检查认证状态
-export interface CheckStatusRequest {
-  // 无请求参数，通过JWT token验证
-}
+// 5. POST /api/v1/protected/auth/check_status - 检查认证状态
+export interface CheckStatusRequest {}
 
 export interface CheckStatusResponse {
-  user_id: string;          // 64位整数转字符串（高8位编码用户类型）
-  nickname: string;         // 用户昵称
-  is_valid: boolean;        // token是否有效
-  expires_at: string;       // 过期时间（ISO 8601）
+  user_id: string;
+  nickname: string;
+  is_valid: boolean;
+  expires_at: string;
 }
 
-// 7. POST /api/v1/protected/auth/set_password - 设置密码
+// 6. POST /api/v1/protected/auth/set_password - 设置密码
 export interface SetPasswordRequest {
-  password_hash: string;    // SHA256(password + nonce + timestamp)
-  nonce_id: string;         // nonce标识符
-  timestamp: number;        // 时间戳
+  password_hash: string;    // SHA256(password) - 根据 api_spec.mdc 2.10
 }
 
 export interface SetPasswordResponse {
-  success: boolean;         // 是否设置成功
-  message: string;          // 响应消息
-  can_login: boolean;       // 是否可以登录
+  can_login: boolean;
+}
+
+// 7. POST /api/v1/public/auth/request_password_reset - 请求密码重置
+export interface RequestPasswordResetRequest {
+  login_id: string;         // 登录ID（邮箱/手机号）
+}
+
+export interface RequestPasswordResetResponse {
+  reset_id: string;
+}
+
+// 8. POST /api/v1/public/auth/verify_reset_code - 验证重置码
+export interface VerifyResetCodeRequest {
+  reset_id: string;         // 重置请求ID
+  code: string;             // 验证码
+}
+
+export interface VerifyResetCodeResponse {
+  reset_token: string;
+}
+
+// 9. POST /api/v1/public/auth/reset_password - 重置密码
+export interface ResetPasswordRequest {
+  reset_token: string;      // 验证后获得的临时token
+  password_hash: string;    // SHA256(password) - 根据 api_spec.mdc 2.10
+}
+
+// 10. POST /api/v1/protected/auth/get_sessions - 获取活跃会话列表
+export interface ListSessionsRequest {
+  limit?: number;
+  cursor?: string;
+}
+
+export interface SessionItem {
+  id: string;
+  device_type?: string;
+  device_name?: string;
+  ip_address?: string;
+  created_at: string;
+  last_active_at: string;
+  is_current: boolean;
+}
+
+export interface ListSessionsResponse extends PaginatedData<SessionItem> {}
+
+// 11. POST /api/v1/protected/auth/revoke_session - 撤销会话
+export interface RevokeSessionRequest {
+  id: string;               // 要撤销的会话ID
 }
 
 // ============================================================================
@@ -241,41 +252,33 @@ export interface UpdateProfileResponse {
 // 6. POST /api/v1/protected/user/upgrade_account - 账户升级
 export interface UpgradeAccountRequest {
   login_id: string;         // 新的登录ID（邮箱/手机号）
-  password_hash: string;    // SHA256(password + nonce + timestamp)
-  nonce_id: string;         // nonce标识符
-  timestamp: number;        // 时间戳
+  password_hash: string;    // SHA256(password) - 根据 api_spec.mdc 2.10
 }
 
-export interface UpgradeAccountResponse extends AuthResponse {}
+export interface UpgradeAccountResponse {}
 
 // 7. POST /api/v1/protected/user/get_settings - 获取用户设置
-export interface GetSettingsRequest {
-  // 无请求参数，通过JWT token验证
+export interface GetSettingsRequest {}
+
+// ✅ 与 api_spec.mdc 第3.2.9节保持一致
+export interface UserSettingsData {
+  privacy_level: 'public' | 'friends' | 'private';
+  is_location_sharing: boolean;
+  can_be_followed: boolean;
+  allow_private_chat: boolean;  // 是否允许别人发起私聊
 }
 
-export interface GetSettingsResponse {
-  privacy_level: string;    // 隐私级别：'public'|'friends'|'private'
-  location_sharing: boolean; // 位置分享开关
-  notification_enabled: boolean; // 通知开关
-  mention_notifications: boolean; // 提及通知开关
-  group_invite_notifications: boolean; // 群组邀请通知开关
-  moment_notifications: boolean; // 生活瞬间通知开关
-}
+export type GetSettingsResponse = ApiResponse<UserSettingsData>
 
 // 8. POST /api/v1/protected/user/update_settings - 更新用户设置
 export interface UpdateSettingsRequest {
-  privacy_level?: string;   // 隐私级别：'public'|'friends'|'private'
-  location_sharing?: boolean; // 位置分享开关
-  notification_enabled?: boolean; // 通知开关
-  mention_notifications?: boolean; // 提及通知开关
-  group_invite_notifications?: boolean; // 群组邀请通知开关
-  moment_notifications?: boolean; // 生活瞬间通知开关
+  privacy_level?: 'public' | 'friends' | 'private';
+  is_location_sharing?: boolean;
+  can_be_followed?: boolean;
+  allow_private_chat?: boolean;
 }
 
-export interface UpdateSettingsResponse {
-  success: boolean;         // 是否更新成功
-  message: string;          // 响应消息
-}
+export type UpdateSettingsResponse = ApiResponse
 
 // 9. POST /api/v1/protected/user/delete_account - 删除账户
 export interface DeleteAccountRequest {
@@ -364,7 +367,7 @@ export interface GetFriendsListResponseItem {
   nickname: string;         // 好友昵称
   avatar_url?: string;      // 好友头像URL
   bio?: string;             // 好友个人简介
-  relationship_type: string; // 关系类型：'friend'|'pending_sent'|'pending_received'
+  relationship_type: 'friend' | 'pending_sent' | 'pending_received'; // 关系类型
   relationship_id: string;  // 关系记录ID
   created_at: string;       // 建立关系时间（ISO 8601）
   last_active_at?: string;  // 好友最后活跃时间（ISO 8601）
@@ -399,7 +402,7 @@ export interface GetBlockedListResponse extends PaginatedResponse<GetBlockedList
 // member_count为实际成员数量（初始为2，可随添加成员而增长）
 export interface GroupResponse {
   group_id: string;         // UUID转字符串
-  group_type: string;       // 群组类型：'public_chat'|'private_chat'
+  group_type: 'public_chat' | 'private_chat'; // 群组类型
   name?: string;            // 群组名称（私聊为null，由前端动态生成）
   description?: string;     // 群组描述（私聊为null）
   owner_id: string;         // 群主ID（64位整数转字符串）
@@ -413,7 +416,7 @@ export interface GroupResponse {
   location_name?: string;   // 位置名称（私聊为null）
   is_password_required: boolean; // 是否需要密码（私聊固定为false）
   is_member: boolean;       // 当前用户是否为成员
-  user_role?: string;       // 当前用户在群组中的角色（owner/admin/member）
+  user_role?: 'owner' | 'admin' | 'member'; // 当前用户在群组中的角色
   avatar_url?: string;      // 群组头像URL（私聊为null，由前端动态生成）
 }
 
@@ -459,7 +462,7 @@ export interface GroupMemberResponseData {
   user_id: string;          // 用户ID
   nickname: string;         // 用户昵称
   avatar_url?: string;      // 用户头像URL
-  role: string;             // 用户角色：'owner'|'admin'|'member'
+  role: 'owner' | 'admin' | 'member'; // 用户角色
   joined_at: string;        // 加入时间（ISO 8601）
 }
 
@@ -576,11 +579,11 @@ export interface MyGroupsResponse {
   location_name?: string;   // 位置名称（私聊群组可为null）
   is_password_required: boolean; // 是否需要密码
   avatar_url?: string;      // 群组头像URL
-  group_type: string;       // 群组类型：'public_chat'|'private_chat'
+  group_type: 'public_chat' | 'private_chat'; // 群组类型
   
   // 当前用户在此群组中的状态（来自group_members）
-  user_role: string;        // 用户角色：'owner'|'admin'|'member'
-  user_status: string;      // 用户状态：'active'|'muted'|'banned'|'left'
+  user_role: 'owner' | 'admin' | 'member'; // 用户角色
+  user_status: 'active' | 'muted' | 'banned' | 'left'; // 用户状态
   unread_count: number;     // 未读消息数
   notifications_enabled: boolean; // 通知开关
   last_read_at?: string;    // 最后已读时间（ISO 8601）
@@ -623,7 +626,7 @@ export interface GetHistoryResponse {
   sender_id?: string;       // 发送者ID（系统消息可为null）
   sender_name?: string;     // 发送者昵称（系统消息可为null）
   content: string;          // 消息内容
-  message_type: string;     // 消息类型：'text'|'image'|'video'|'audio'|'file'|'location'|'system'
+  message_type: 'text' | 'image' | 'video' | 'audio' | 'file' | 'location' | 'system'; // 消息类型
   system_event_type?: string; // 系统事件类型（仅系统消息）
   reply_to_message_id?: string; // 回复的消息ID
   is_edited: boolean;       // 是否已编辑
@@ -681,14 +684,14 @@ export interface ConversationsRequest {
 export interface ConversationsResponse {
   group_id: string;         // 群组ID
   group_name: string;       // 群组名称
-  group_type: string;       // 群组类型：'private_chat'|'public_chat'
+  group_type: 'private_chat' | 'public_chat'; // 群组类型
   group_avatar?: string;    // 群组头像URL
   last_message?: {          // 最后一条消息
     message_id: string;     // 消息ID
     sender_id: string;      // 发送者ID
     sender_name: string;    // 发送者昵称
     content: string;        // 消息内容
-    message_type: string;   // 消息类型
+    message_type: 'text' | 'image' | 'video' | 'audio' | 'file' | 'location' | 'system'; // 消息类型
     sent_at: string;        // 发送时间（ISO 8601）
   };
   unread_count: number;     // 未读消息数
@@ -882,11 +885,11 @@ export interface GetCommentsResponse extends PaginatedResponse<CommentResponse> 
 export interface ReportResponse {
   report_id: string;        // 举报记录ID
   reporter_id: string;      // 举报者ID
-  target_type: string;      // 举报目标类型
+  target_type: 'user' | 'moment' | 'comment' | 'message' | 'group'; // 举报目标类型
   target_id: string;        // 举报目标ID
-  reason: string;           // 举报原因
+  reason: 'spam' | 'harassment' | 'inappropriate_content' | 'fake_account' | 'violence' | 'other'; // 举报原因
   description?: string;     // 详细描述
-  status: string;           // 处理状态：'pending'|'reviewing'|'resolved'|'dismissed'
+  status: 'pending' | 'reviewing' | 'resolved' | 'dismissed'; // 处理状态
   created_at: string;       // 创建时间（ISO 8601）
   handled_at?: string;      // 处理时间（ISO 8601）
   handler_note?: string;    // 处理备注
@@ -894,9 +897,9 @@ export interface ReportResponse {
 
 // 1. POST /api/v1/protected/reports/create - 提交举报
 export interface CreateReportRequest {
-  target_type: string;      // 举报目标类型：'user'|'moment'|'comment'|'message'|'group'
+  target_type: 'user' | 'moment' | 'comment' | 'message' | 'group'; // 举报目标类型
   target_id: string;        // 举报目标ID
-  reason: string;           // 举报原因：'spam'|'harassment'|'inappropriate_content'|'fake_account'|'violence'|'other'
+  reason: 'spam' | 'harassment' | 'inappropriate_content' | 'fake_account' | 'violence' | 'other'; // 举报原因
   description?: string;     // 详细描述
 }
 
@@ -927,7 +930,7 @@ export interface GetReportsResponse extends PaginatedResponse<ReportResponse> {}
 // 4. POST /api/v1/protected/reports/handle - 处理举报（管理员）
 export interface HandleReportRequest {
   report_id: string;        // 举报记录ID
-  action: string;           // 处理动作：'resolve'|'dismiss'|'escalate'
+  action: 'resolve' | 'dismiss' | 'escalate'; // 处理动作
   note?: string;            // 处理备注
 }
 
@@ -955,7 +958,7 @@ export interface BlockUserResponse {
 export interface NotificationResponse {
   notification_id: string;  // 通知ID
   user_id: string;          // 接收者ID
-  type: string;             // 通知类型
+  type: 'friend_request' | 'friend_accepted' | 'group_invite' | 'group_invite_response' | 'group_application' | 'group_application_response' | 'message_mention' | 'moment_like' | 'moment_comment' | 'comment_reply' | 'system_announcement' | 'system_maintenance' | 'account_warning' | 'security_alert'; // 通知类型
   title: string;            // 通知标题
   content: string;          // 通知内容
   data?: object;            // 扩展数据（JSON）
@@ -967,7 +970,7 @@ export interface NotificationResponse {
 // 1. POST /api/v1/protected/notifications/send - 发送通知
 export interface SendNotificationRequest {
   user_ids: string[];       // 接收者ID数组
-  type: string;             // 通知类型
+  type: 'friend_request' | 'friend_accepted' | 'group_invite' | 'group_invite_response' | 'group_application' | 'group_application_response' | 'message_mention' | 'moment_like' | 'moment_comment' | 'comment_reply' | 'system_announcement' | 'system_maintenance' | 'account_warning' | 'security_alert'; // 通知类型
   title: string;            // 通知标题
   content: string;          // 通知内容
   data?: object;            // 扩展数据（JSON）
@@ -1008,7 +1011,7 @@ export interface GetUnreadNotificationCountRequest {
 export interface GetUnreadNotificationCountResponse {
   total_unread: number;     // 总未读数量
   by_type?: Array<{         // 按类型分组的未读数（仅当未指定type时返回）
-    type: string;           // 通知类型
+    type: 'friend_request' | 'friend_accepted' | 'group_invite' | 'group_invite_response' | 'group_application' | 'group_application_response' | 'message_mention' | 'moment_like' | 'moment_comment' | 'comment_reply' | 'system_announcement' | 'system_maintenance' | 'account_warning' | 'security_alert'; // 通知类型
     unread_count: number;   // 未读数量
   }>;
 }
@@ -1056,16 +1059,16 @@ export interface HealthCheckRequest {
 }
 
 export interface HealthCheckResponse {
-  status: string;           // 系统状态：'healthy'|'degraded'|'unhealthy'
+  status: 'healthy' | 'degraded' | 'unhealthy'; // 系统状态
   timestamp: string;        // 检查时间（ISO 8601）
   version: string;          // 系统版本
   uptime: number;           // 运行时间（秒）
   database: {               // 数据库状态
-    status: string;         // 连接状态：'connected'|'disconnected'
+    status: 'connected' | 'disconnected'; // 连接状态
     response_time: number;  // 响应时间（毫秒）
   };
   redis: {                  // Redis状态
-    status: string;         // 连接状态：'connected'|'disconnected'
+    status: 'connected' | 'disconnected'; // 连接状态
     response_time: number;  // 响应时间（毫秒）
   };
   metrics: {                // 系统指标
@@ -1233,4 +1236,258 @@ export interface UserMomentsHistoryResponse {
   has_more: boolean;
   next_cursor?: string;
 }
+
+// ============================================================================
+// 私聊管理 API 类型（api_spec.mdc 3.5节）
+// ============================================================================
+
+export interface PrivateChatLastMessage {
+  id: string;
+  content: string;
+  type: 'text' | 'image' | 'video' | 'audio' | 'file';
+  sender_id: string;
+  sent_at: string;
+}
+
+export interface PrivateChatListItem {
+  private_chat_id: string;
+  other_user: UserInfo;
+  unread_count: number;
+  last_message?: PrivateChatLastMessage;
+  last_activity_at: string;
+}
+
+export interface PrivateChatDetailData {
+  private_chat_id: string;
+  other_user: UserInfo;
+  other_user_status: {
+    is_online: boolean;
+    last_seen?: string;
+  };
+  unread_count: number;
+  is_muted: boolean;
+  is_pinned: boolean;
+  is_archived: boolean;
+  last_message?: PrivateChatLastMessage;
+  last_activity_at: string;
+  created_at: string;
+}
+
+// ============================================================================
+// 私聊消息 API 类型（api_spec.mdc 3.8节）
+// ============================================================================
+
+export interface PrivateMessageItem {
+  id: string;
+  type: 'text' | 'image' | 'video' | 'audio' | 'file';
+  content: string;
+  sender: UserInfo;
+  reply_to?: string;
+  sent_at: string;
+  edited_at?: string;
+  is_recalled: boolean;
+  recalled_at?: string;
+}
+
+// ============================================================================
+// 群聊消息 API 类型（api_spec.mdc 3.9节）
+// ============================================================================
+
+export interface GroupMessageItem {
+  id: string;
+  type: 'text' | 'image' | 'video' | 'audio' | 'file' | 'system';
+  content: string;
+  sender: UserInfo;
+  reply_to?: string;
+  mentions?: string[];
+  sent_at: string;
+  edited_at?: string;
+  is_recalled: boolean;
+  recalled_by?: string;
+  recalled_at?: string;
+  read_count?: number;
+}
+
+export interface MessageReadItem {
+  user: UserInfo;
+  read_at: string;
+}
+
+export interface MessageReactionItem {
+  user: UserInfo;
+  type: 'like' | 'love' | 'laugh' | 'angry' | 'sad' | 'wow';
+  created_at: string;
+}
+
+// ============================================================================
+// 通知中心 API 类型（api_spec.mdc 3.13节）
+// ============================================================================
+
+export interface NotificationData {
+  [key: string]: any;  // 动态通知数据
+}
+
+export interface UnreadCategoryStats {
+  social: number;
+  system: number;
+  content: number;
+}
+
+export interface InboxItemData {
+  id: string;
+  category: 'social' | 'system' | 'content';
+  type: 'friend_request' | 'friend_accepted' | 'group_invite' | 'group_invite_response' | 'group_application' | 'group_application_response' | 'message_mention' | 'moment_like' | 'moment_comment' | 'comment_reply' | 'system_announcement' | 'system_maintenance' | 'account_warning' | 'security_alert';
+  title?: string;
+  content: string;
+  data?: NotificationData;
+  action_url?: string;
+  severity?: 'info' | 'warning' | 'error';
+  created_at: string;
+  is_read: boolean;
+}
+
+// ============================================================================
+// 信息流 API 类型（api_spec.mdc 3.17节）
+// ============================================================================
+
+export interface FeedSystemInfo {
+  title: string;
+  content: string;
+  severity?: 'info' | 'warning' | 'error';
+  action_url?: string;
+  created_at: string;
+}
+
+export interface FeedItem {
+  item_id: string;
+  type: 'moment' | 'group_card' | 'system';
+  moment?: MomentInfo;
+  group?: GroupInfo;
+  system?: FeedSystemInfo;
+  reason: string;
+  score?: number;
+}
+
+// ============================================================================
+// 评论与点赞 API 类型（api_spec.mdc 3.4节）
+// ============================================================================
+
+export interface CommentListItem {
+  id: string;
+  user: UserInfo;
+  content: string;
+  parent_id?: string;
+  reply_to_user?: UserInfo;
+  created_at: string;
+  likes_count: number;
+  replies_count: number;
+}
+
+export interface CommentLikeItem {
+  user: UserInfo;
+  liked_at: string;
+}
+
+// ============================================================================
+// 标签管理 API 类型（api_spec.mdc 3.19节）
+// ============================================================================
+
+export interface TagData {
+  name: string;
+  usage_count: number;
+  trend?: 'rising' | 'stable' | 'falling';
+}
+
+// ============================================================================
+// 批量操作 API 类型（api_spec.mdc 3.18节）
+// ============================================================================
+
+export interface BatchItemResult {
+  index: number;
+  code: number;
+  data?: any;
+  message?: string;
+}
+
+export interface BatchResultData {
+  total: number;
+  succeeded: number;
+  failed: number;
+  results: BatchItemResult[];
+}
+
+// ============================================================================
+// 排行榜 API 类型（api_spec.mdc 3.15节）
+// ============================================================================
+
+export interface GetCreatorLeaderboardRequest {
+  timeframe: 'daily' | 'weekly' | 'monthly' | 'all_time';
+  scope?: 'nearby' | 'friends';
+  latitude?: number;
+  longitude?: number;
+  radius?: number;
+  limit?: number;
+}
+
+export interface CreatorRankItem {
+  rank: number;
+  user: UserInfo;
+  score: number;
+}
+
+export interface GetCreatorLeaderboardData {
+  items: CreatorRankItem[];
+}
+
+export interface GetMomentLeaderboardRequest {
+  timeframe: 'daily' | 'weekly' | 'monthly' | 'all_time';
+  scope?: 'nearby' | 'friends';
+  latitude?: number;
+  longitude?: number;
+  radius?: number;
+  limit?: number;
+}
+
+export interface MomentRankItem {
+  rank: number;
+  moment_id: string;
+  score: number;
+}
+
+export interface GetMomentLeaderboardData {
+  items: MomentRankItem[];
+}
+
+export interface GetMyCreatorRankRequest {
+  timeframe: 'daily' | 'weekly' | 'monthly' | 'all_time';
+  scope?: 'nearby' | 'friends';
+  latitude?: number;
+  longitude?: number;
+  radius?: number;
+}
+
+export interface MyCreatorRankData {
+  timeframe: 'daily' | 'weekly' | 'monthly' | 'all_time';
+  scope?: 'nearby' | 'friends';
+  my_rank: number | null;
+  my_score: number;
+  total_participants: number;
+  top_3: CreatorRankItem[];
+}
+
+export interface GetMyMomentRankRequest {
+  timeframe: 'daily' | 'weekly' | 'monthly' | 'all_time';
+  scope?: 'nearby' | 'friends';
+  latitude?: number;
+  longitude?: number;
+  radius?: number;
+}
+
+export interface MyMomentRankData {
+  timeframe: 'daily' | 'weekly' | 'monthly' | 'all_time';
+  scope?: 'nearby' | 'friends';
+  my_rank: number | null;
+  my_score: number;
+  total_participants: number;
+  top_3: MomentRankItem[];
 }

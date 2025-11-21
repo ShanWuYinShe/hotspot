@@ -224,7 +224,7 @@ const zoomIn = () => {
   if (mapLoaded.value) {
     // 这里应该调用实际地图SDK的放大方法
     // 目前显示操作反馈
-    const { info } = useNotifications()
+    const toast = useToast()
     info('地图放大', '放大地图视图')
   }
 }
@@ -234,7 +234,6 @@ const zoomOut = () => {
   if (mapLoaded.value) {
     // 这里应该调用实际地图SDK的缩小方法
     // 目前显示操作反馈
-    const { info } = useNotifications()
     info('地图缩小', '缩小地图视图')
   }
 }
@@ -246,7 +245,6 @@ const resetView = () => {
   if (mapLoaded.value) {
     // 这里应该调用实际地图SDK的重置视图方法
     // 目前显示操作反馈
-    const { info } = useNotifications()
     info('重置视图', '已重置到当前位置')
   }
 }

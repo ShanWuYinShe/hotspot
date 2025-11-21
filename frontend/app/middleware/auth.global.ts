@@ -44,8 +44,8 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   // 尝试静默校验一次，避免误跳转
   try {
-    if (typeof authStore.refreshToken === 'function' && authStore.session.refreshToken) {
-      await authStore.refreshToken()
+    if (authStore.refreshToken) {
+      await authStore.refreshAccessToken()
       if (authStore.isAuthenticated) return
     }
   } catch (e: any) {
@@ -59,7 +59,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   // 最终检查：如果仍未认证，跳转到登录页
   if (!authStore.isAuthenticated) {
     // 将目标地址作为 redirect 带入登录页，并标注原因
-    const hadCreds = !!authStore.session.token || !!authStore.session.refreshToken
+    const hadCreds = !!authStore.token || !!authStore.refreshToken
     const params = new URLSearchParams({
       redirect: to.fullPath || '/',
       reason: hadCreds ? 'expired' : 'login_required'

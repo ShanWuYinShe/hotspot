@@ -4,22 +4,7 @@
  */
 
 import type { FetchOptions } from 'ofetch'
-
-export interface PaginatedResponse<T> {
-  items: T[]
-  total: number
-  page: number
-  limit: number
-  has_more: boolean
-  next_cursor?: string
-}
-
-export interface ApiResponse<T = any> {
-  success: boolean
-  data: T
-  message?: string
-  code?: string
-}
+import type { PaginatedResponse, ApiResponse } from '~/types/api'
 
 export abstract class BaseService {
   protected http = useHttp()
@@ -33,101 +18,66 @@ export abstract class BaseService {
   }
 
   /**
-   * GET 请求
-   */
-  protected async get<T>(endpoint: string, options?: FetchOptions): Promise<T> {
-    return this.http.get<T>(this.buildUrl(endpoint), {
-      auth: true,
-      ...options
-    })
-  }
-
-  /**
-   * POST 请求
+   * POST 请求（需要认证）
+   * 根据API规范，所有API操作统一使用POST方法
    */
   protected async post<T>(endpoint: string, body?: any, options?: FetchOptions): Promise<T> {
-    return this.http.post<T>(this.buildUrl(endpoint), body, {
-      auth: true,
-      ...options
-    })
-  }
-
-  /**
-   * PUT 请求
-   */
-  protected async put<T>(endpoint: string, body?: any, options?: FetchOptions): Promise<T> {
-    return this.http.put<T>(this.buildUrl(endpoint), body, {
-      auth: true,
-      ...options
-    })
-  }
-
-  /**
-   * DELETE 请求
-   */
-  protected async delete<T>(endpoint: string, options?: FetchOptions): Promise<T> {
-    return this.http.delete<T>(this.buildUrl(endpoint), {
-      auth: true,
-      ...options
-    })
-  }
-
-  /**
-   * PATCH 请求
-   */
-  protected async patch<T>(endpoint: string, body?: any, options?: FetchOptions): Promise<T> {
-    return this.http.patch<T>(this.buildUrl(endpoint), body, {
-      auth: true,
-      ...options
-    })
-  }
-
-  /**
-   * 公开 GET 请求（无需认证）
-   */
-  protected async publicGet<T>(endpoint: string, options?: FetchOptions): Promise<T> {
-    return this.http.get<T>(this.buildUrl(endpoint), {
-      auth: false,
-      ...options
-    })
+    const builder = this.http.post(this.buildUrl(endpoint), body).auth()
+    
+    // 应用额外选项
+    if (options?.timeout) {
+      builder.timeout(options.timeout)
+    }
+    if (options?.retry) {
+      builder.retry(options.retry)
+    }
+    if (options?.headers) {
+      builder.headers(options.headers)
+    }
+    
+    const response = await builder.send<T>()
+    return response.data
   }
 
   /**
    * 公开 POST 请求（无需认证）
+   * 根据API规范，所有API操作统一使用POST方法
    */
   protected async publicPost<T>(endpoint: string, body?: any, options?: FetchOptions): Promise<T> {
-    return this.http.post<T>(this.buildUrl(endpoint), body, {
-      auth: false,
-      ...options
-    })
+    const builder = this.http.post(this.buildUrl(endpoint), body)
+    
+    // 应用额外选项（公开接口不需要auth）
+    if (options?.timeout) {
+      builder.timeout(options.timeout)
+    }
+    if (options?.retry) {
+      builder.retry(options.retry)
+    }
+    if (options?.headers) {
+      builder.headers(options.headers)
+    }
+    
+    const response = await builder.send<T>()
+    return response.data
   }
 
   /**
    * 分页查询
+   * 根据API规范，分页参数通过POST请求体传递
    */
   protected async paginate<T>(
     endpoint: string,
     params: {
-      page?: number
       limit?: number
       cursor?: string
       [key: string]: any
     } = {}
   ): Promise<PaginatedResponse<T>> {
-    const query = new URLSearchParams()
-    
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        query.append(key, String(value))
-      }
-    })
-
-    const url = query.toString() ? `${endpoint}?${query}` : endpoint
-    return this.get<PaginatedResponse<T>>(url)
+    return this.post<PaginatedResponse<T>>(endpoint, params)
   }
 
   /**
-   * 上传文件
+   * 上传单个文件
    */
   protected async upload<T>(
     endpoint: string,
@@ -143,12 +93,41 @@ export abstract class BaseService {
       })
     }
 
-    return this.http.post<T>(this.buildUrl(endpoint), formData, {
-      auth: true,
-      headers: {
-        // 让浏览器自动设置 Content-Type
-      }
+    const builder = this.http.post(this.buildUrl(endpoint), formData).auth()
+    // 让浏览器自动设置 Content-Type（不手动设置headers）
+    
+    const response = await builder.send<T>()
+    return response.data
+  }
+
+  /**
+   * 批量上传文件
+   */
+  protected async uploadMultiple<T>(
+    endpoint: string,
+    files: File[],
+    fieldName: string = 'files',
+    additionalData?: Record<string, any>
+  ): Promise<T> {
+    const formData = new FormData()
+    
+    // 添加多个文件
+    files.forEach(file => {
+      formData.append(fieldName, file)
     })
+    
+    // 添加额外数据
+    if (additionalData) {
+      Object.entries(additionalData).forEach(([key, value]) => {
+        formData.append(key, String(value))
+      })
+    }
+
+    const builder = this.http.post(this.buildUrl(endpoint), formData).auth()
+    // 让浏览器自动设置 Content-Type（不手动设置headers）
+    
+    const response = await builder.send<T>()
+    return response.data
   }
 
   /**

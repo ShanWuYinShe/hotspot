@@ -61,6 +61,8 @@
 </template>
 
 <script setup lang="ts">
+import { useUploadService } from '~/services/upload.service'
+
 interface Props {
     user?: {
         nickname?: string;
@@ -73,8 +75,7 @@ const emit = defineEmits<{
     uploaded: [url: string];
 }>();
 
-const { success, error, info } = useNotifications()
-const toast = { success, error, info };
+const toast = useToast()
 const files = ref<File | null>(null);
 const selectedFile = ref<File | null>(null);
 const avatarPreview = ref<string>("");
@@ -122,27 +123,20 @@ const uploadAvatar = async () => {
     uploading.value = true;
 
     try {
-        // 注意：头像上传功能需要后端 API 支持
-        // 调用后端API上传文件
-        const formData = new FormData();
-        formData.append('avatar', selectedFile.value);
-
+        // ✅ 使用 upload.service.ts 上传头像（符合 API 规范 3.16.1）
+        const uploadService = useUploadService();
+        
         try {
-            const api = useApi();
-            const response = await api.postForm('/upload/avatar', formData);
+            const response = await uploadService.uploadFile(selectedFile.value, 'avatar');
             
-            if (response.code === 0) {
-                toast.add({
-                    title: "头像上传成功",
-                    description: "您的头像已更新",
-                    color: "success",
-                });
+            toast.add({
+                title: "头像上传成功",
+                description: "您的头像已更新",
+                color: "success",
+            });
 
-                // 发送上传成功事件，使用后端返回的URL
-                emit("uploaded", response.data?.avatar_url);
-            } else {
-                throw new Error(response.msg || '上传失败');
-            }
+            // 发送上传成功事件，使用后端返回的URL
+            emit("uploaded", response.url);
         } catch (error: any) {
             toast.add({
                 title: "头像上传失败",

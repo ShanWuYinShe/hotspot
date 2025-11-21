@@ -4,7 +4,6 @@
  */
 
 import type { ApiResponse } from '~/types/api'
-import { useErrorHandler } from './useErrorHandler'
 
 // 使用 Nuxt 内置的 FetchOptions 类型
 export interface HttpOptions {
@@ -41,7 +40,6 @@ export interface HttpResponse<T = any> {
 class HttpRequestBuilder {
   private request: HttpRequest
   private middlewares: HttpMiddleware[] = []
-  private errorHandler = useErrorHandler({ source: 'HTTP Client' })
 
   constructor(url: string, method: string = 'GET') {
     this.request = {
@@ -140,14 +138,17 @@ class HttpRequestBuilder {
 
       // 处理业务响应
       return this.processResponse(response)
-    } catch (error) {
-      await this.errorHandler.handle(error as Error, {
-        metadata: {
-          url: this.request.url,
-          method: this.request.method,
-          headers: this.request.headers
-        }
-      })
+    } catch (error: any) {
+      // 直接抛出错误，由调用方处理
+      // 或使用 toast 显示错误（如果需要全局错误提示）
+      const toast = useToast()
+      if (error.message) {
+        toast.add({
+          color: 'error',
+          title: 'HTTP 请求失败',
+          description: error.message
+        })
+      }
       throw error
     }
   }
@@ -166,7 +167,7 @@ class HttpRequestBuilder {
           ok: true
         }
       } else {
-        const error = new Error(response.msg || '操作失败')
+        const error = new Error(response.message || '操作失败')
         ;(error as any).isBusinessError = true
         ;(error as any).businessCode = response.code
         ;(error as any).data = response

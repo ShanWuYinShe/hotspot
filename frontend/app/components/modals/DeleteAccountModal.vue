@@ -99,9 +99,8 @@ const handleDelete = async () => {
     const { deleteAccount: deleteUserAccount } = useUserService()
     await deleteUserAccount()
     
-    const { success, error, info } = useNotifications()
-const toast = { success, error, info }
-    toast.success({
+    const toast = useToast()
+    toast.add({ color: 'success',
       title: '账户已注销',
       description: '您的账户已成功注销'
     })
@@ -116,9 +115,8 @@ const toast = { success, error, info }
     // 跳转到首页
     await navigateTo('/')
     } catch (err: any) {
-      const { success, error, info } = useNotifications()
-const toast = { success, error, info }
-      toast.error({
+      const toast = useToast()
+      toast.add({ color: 'error',
       title: '注销失败',
       description: err?.message || '请稍后重试'
     })

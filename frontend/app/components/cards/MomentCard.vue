@@ -86,7 +86,7 @@
                     <UButton
                         variant="ghost"
                         size="sm"
-                        @click.stop="$emit('like', moment)"
+                        @click.stop="handleLike"
                         :color="moment.liked_by_me ? 'error' : 'neutral'"
                         class="transition-colors"
                     >
@@ -101,7 +101,7 @@
                         variant="ghost" 
                         size="sm" 
                         color="neutral"
-                        @click.stop="$emit('comment', moment)"
+                        @click.stop="handleComment"
                     >
                         <UIcon name="i-heroicons-chat-bubble-left" class="w-4 h-4 mr-1" />
                         {{ moment.comments_count }}
@@ -111,7 +111,7 @@
                         variant="ghost" 
                         size="sm" 
                         color="neutral"
-                        @click.stop="$emit('share', moment)"
+                        @click.stop="handleShare"
                     >
                         <UIcon name="i-heroicons-share" class="w-4 h-4 mr-1" />
                         分享
@@ -147,9 +147,32 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 const { formatTime, formatDistance } = useFormatters()
+const { requireAuth } = useRequireAuth()
 
 const authStore = useAuthStore()
 const toast = useToast()
+
+// ============================================================================
+// 功能级认证处理函数
+// ============================================================================
+
+// 点赞（需要认证）
+const handleLike = () => {
+    if (!requireAuth('点赞')) return
+    emit('like', props.moment)
+}
+
+// 评论（需要认证）
+const handleComment = () => {
+    if (!requireAuth('发表评论')) return
+    emit('comment', props.moment)
+}
+
+// 分享（需要认证）
+const handleShare = () => {
+    if (!requireAuth('分享动态')) return
+    emit('share', props.moment)
+}
 
 // 检查是否是当前用户的动态
 const isMyMoment = computed(() => {
@@ -232,7 +255,7 @@ const momentMenuItems = computed(() => {
 
 // 服务和功能管理
 const momentService = useMomentsService()
-const friendActions = useFriendActions()
+const userService = useUserService()
 
 // 编辑动态
 const handleEditMoment = async () => {
@@ -251,7 +274,9 @@ const handleDeleteMoment = async () => {
     if (!confirmed) return
 
     try {
-        await momentService.deleteMoment(props.moment.moment_id)
+        await momentService.deleteMoment({
+            id: props.moment.moment_id
+        })
         const toast = useToast()
         toast.add({
             title: '删除成功',
@@ -261,7 +286,6 @@ const handleDeleteMoment = async () => {
         // 触发父组件刷新
         emit('deleted', props.moment)
     } catch (error: any) {
-        const toast = useToast()
         toast.add({
             title: '删除失败',
             description: error?.message || '删除动态时发生错误',
@@ -272,13 +296,12 @@ const handleDeleteMoment = async () => {
 
 // 关注用户
 const handleFollowUser = async () => {
-    const user = {
-        user_id: props.moment.user_id,
-        nickname: props.moment.nickname,
-        avatar_url: props.moment.user_avatar
-    } as UserResponse
-    
-    await friendActions.followUser(user)
+    try {
+        await userService.followUser({ user_id: props.moment.user_id })
+        toast.add({ color: 'success', title: '关注成功' })
+    } catch (error: any) {
+        toast.add({ color: 'error', title: '关注失败', description: error.message })
+    }
 }
 
 // 发送消息

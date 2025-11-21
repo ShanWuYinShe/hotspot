@@ -164,8 +164,7 @@ const emit = defineEmits<{
 
 // 移除不存在的 openConfirmModal
 
-const { success, error, info } = useNotifications()
-const toast = { success, error, info };
+const toast = useToast()
 
 // 计算最后一条消息的类型
 const lastMessageType = computed(() => {

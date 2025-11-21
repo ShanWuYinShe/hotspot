@@ -42,46 +42,37 @@
                 :key="notification.id"
                 class="flex items-start gap-3 p-3 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800/50 cursor-pointer transition-colors"
                 :class="{
-                    'bg-primary-50 dark:bg-primary-950/20': !notification.read,
-                    'opacity-75': notification.read
+                    'bg-primary-50 dark:bg-primary-950/20': !notification.is_read,
+                    'opacity-75': notification.is_read
                 }"
                 @click="handleNotificationClick(notification)"
             >
                 <!-- 通知图标 -->
                 <div class="flex-shrink-0 mt-0.5">
-                    <UAvatar
-                        v-if="notification.type === 'message' || notification.type === 'friend_request'"
-                        :src="notification.avatar"
-                        :alt="notification.title"
-                        size="sm"
-                    >
-                        {{ notification.title?.charAt(0) }}
-                    </UAvatar>
                     <div
-                        v-else
                         class="w-8 h-8 rounded-full flex items-center justify-center"
-                        :class="getNotificationIconClass(notification.type)"
+                        :class="getNotificationIconClass(notification.category)"
                     >
-                        <UIcon :name="getNotificationIcon(notification.type)" class="w-4 h-4" />
+                        <UIcon :name="getNotificationIcon(notification.category)" class="w-4 h-4" />
                     </div>
                 </div>
 
                 <!-- 通知内容 -->
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 mb-1">
-                        <h4 class="font-medium text-sm truncate">{{ notification.title }}</h4>
-                        <div v-if="!notification.read" class="w-2 h-2 bg-primary-500 rounded-full flex-shrink-0"></div>
+                        <h4 class="font-medium text-sm truncate">{{ notification.title || '通知' }}</h4>
+                        <div v-if="!notification.is_read" class="w-2 h-2 bg-primary-500 rounded-full flex-shrink-0"></div>
                     </div>
                     <p class="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-2 mb-1">
-                        {{ notification.message }}
+                        {{ notification.content }}
                     </p>
                     <div class="flex items-center justify-between">
                         <span class="text-xs text-neutral-500">
                             {{ formatTime(notification.created_at) }}
                         </span>
                         <UChip
-                            :text="getNotificationTypeText(notification.type)"
-                            :color="getNotificationTypeColor(notification.type)"
+                            :text="getNotificationCategoryText(notification.category)"
+                            :color="getNotificationCategoryColor(notification.category)"
                             size="xs"
                         />
                     </div>
@@ -105,90 +96,50 @@
 </template>
 
 <script setup lang="ts">
-
-interface Notification {
-    id: string
-    type: 'message' | 'group' | 'friend_request' | 'system' | 'moment'
-    title: string
-    message: string
-    avatar?: string
-    read: boolean
-    created_at: string
-    data?: any
-}
+import type { InboxItem } from '~/services/inbox.service'
+import { useInboxService } from '~/services/inbox.service'
 
 const { formatTime } = useFormatters()
-
-// 模拟通知数据
-const notifications = ref<Notification[]>([
-    {
-        id: '1',
-        type: 'message',
-        title: '张三',
-        message: '你好，最近怎么样？',
-        avatar: '',
-        read: false,
-        created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-        data: { userId: '123' }
-    },
-    {
-        id: '2',
-        type: 'group',
-        title: '技术交流群',
-        message: '李四: 大家有什么好的学习资源推荐吗？',
-        read: false,
-        created_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-        data: { groupId: '456' }
-    },
-    {
-        id: '3',
-        type: 'friend_request',
-        title: '王五',
-        message: '想要添加您为好友',
-        avatar: '',
-        read: false,
-        created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-        data: { userId: '789' }
-    },
-    {
-        id: '4',
-        type: 'system',
-        title: '系统通知',
-        message: '您的账户安全设置已更新',
-        read: true,
-        created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
-    },
-    {
-        id: '5',
-        type: 'moment',
-        title: '赵六',
-        message: '点赞了您的动态',
-        avatar: '',
-        read: true,
-        created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-        data: { momentId: '101' }
-    }
-])
-
+const inboxService = useInboxService()
 const toast = useToast()
+
+// 通知数据
+const notifications = ref<InboxItem[]>([])
+const loading = ref(false)
 
 // 未读通知数量
 const unreadCount = computed(() => 
-    notifications.value.filter(n => !n.read).length
+    notifications.value.filter(n => !n.is_read).length
 )
 
+// 加载通知列表
+const loadNotifications = async () => {
+    loading.value = true
+    try {
+        const response = await inboxService.getList({
+            limit: 20
+        })
+        notifications.value = response.items
+    } catch (error) {
+        console.error('加载通知失败:', error)
+    } finally {
+        loading.value = false
+    }
+}
+
+// 组件挂载时加载通知
+onMounted(() => {
+    loadNotifications()
+})
+
 // 获取通知图标
-const getNotificationIcon = (type: string) => {
-    switch (type) {
-        case 'message':
-            return 'i-heroicons-chat-bubble-left'
-        case 'group':
+const getNotificationIcon = (category: string) => {
+    switch (category) {
+        case 'social':
             return 'i-heroicons-user-group'
-        case 'friend_request':
-            return 'i-heroicons-user-plus'
         case 'system':
             return 'i-heroicons-exclamation-triangle'
-        case 'moment':
+        case 'content':
             return 'i-heroicons-heart'
         default:
             return 'i-heroicons-bell'
@@ -196,53 +147,41 @@ const getNotificationIcon = (type: string) => {
 }
 
 // 获取通知图标样式类
-const getNotificationIconClass = (type: string) => {
-    switch (type) {
-        case 'message':
+const getNotificationIconClass = (category: string) => {
+    switch (category) {
+        case 'social':
             return 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-        case 'group':
-            return 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
-        case 'friend_request':
-            return 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'
         case 'system':
             return 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
-        case 'moment':
+        case 'content':
             return 'bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400'
         default:
             return 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
     }
 }
 
-// 获取通知类型文本
-const getNotificationTypeText = (type: string) => {
-    switch (type) {
-        case 'message':
-            return '私信'
-        case 'group':
-            return '群组'
-        case 'friend_request':
-            return '好友'
+// 获取通知分类文本
+const getNotificationCategoryText = (category: string) => {
+    switch (category) {
+        case 'social':
+            return '社交'
         case 'system':
             return '系统'
-        case 'moment':
-            return '动态'
+        case 'content':
+            return '内容'
         default:
             return '通知'
     }
 }
 
-// 获取通知类型颜色
-const getNotificationTypeColor = (type: string) => {
-    switch (type) {
-        case 'message':
+// 获取通知分类颜色
+const getNotificationCategoryColor = (category: string) => {
+    switch (category) {
+        case 'social':
             return 'primary'
-        case 'group':
-            return 'success'
-        case 'friend_request':
-            return 'info'
         case 'system':
             return 'warning'
-        case 'moment':
+        case 'content':
             return 'error'
         default:
             return 'neutral'
@@ -252,46 +191,40 @@ const getNotificationTypeColor = (type: string) => {
 // formatTime 函数已从统一工具函数导入
 
 // 处理通知点击
-const handleNotificationClick = (notification: Notification) => {
+const handleNotificationClick = async (notification: InboxItem) => {
     // 标记为已读
-    if (!notification.read) {
-        notification.read = true
+    if (!notification.is_read) {
+        try {
+            await inboxService.markAsRead({ ids: [notification.id] })
+            notification.is_read = true
+        } catch (error) {
+            console.error('标记已读失败:', error)
+        }
     }
 
-    // 根据通知类型进行导航
-    switch (notification.type) {
-        case 'message':
-            if (notification.data?.userId) {
-                navigateTo(`/chat/users/${notification.data.userId}`)
-            }
-            break
-        case 'group':
-            if (notification.data?.groupId) {
-                navigateTo(`/chat/groups/${notification.data.groupId}`)
-            }
-            break
-        case 'friend_request':
-            navigateTo('/friends/requests')
-            break
-        case 'moment':
-            if (notification.data?.momentId) {
-                navigateTo(`/moments/${notification.data.momentId}`)
-            }
-            break
-        case 'system':
-            // 系统通知可能不需要导航
-            break
+    // 根据 action_url 进行导航
+    if (notification.action_url) {
+        navigateTo(notification.action_url)
     }
 }
 
 // 全部标记为已读
-const markAllAsRead = () => {
-    notifications.value.forEach(n => n.read = true)
-    toast.add({
-        title: '已标记为已读',
-        description: '所有通知已标记为已读',
-        color: 'success'
-    })
+const markAllAsRead = async () => {
+    try {
+        await inboxService.markAsRead({})
+        notifications.value.forEach(n => n.is_read = true)
+        toast.add({
+            title: '已标记为已读',
+            description: '所有通知已标记为已读',
+            color: 'success'
+        })
+    } catch (error: any) {
+        toast.add({
+            title: '操作失败',
+            description: error?.message || '标记已读失败',
+            color: 'error'
+        })
+    }
 }
 
 // 打开设置

@@ -1,0 +1,2853 @@
+---
+description: HotSpot 后端开发需求文档 - 面向后端开发团队的技术实现指南
+alwaysApply: false
+---
+
+# HotSpot 后端开发需求文档
+
+## ⚠️ 重要说明
+
+**本文档是系统架构设计和技术实现指南。所有 API 端点、类型定义、WebSocket 事件定义均以 @api_spec.mdc 为准。**
+
+**文档职责分工**：
+- **@api_spec.mdc**: API 规范的唯一权威来源（端点、类型、事件、错误码）
+- **@backend_rule.mdc**: Rust/Axum 代码生成规则和实现模式
+- **@backend_doc.mdc**（本文档）: 系统架构设计和技术实现指南
+
+**开发时必读**：
+1. 首先阅读 @api_spec.mdc 了解完整的 API 规范
+2. 然后阅读本文档了解系统架构和实现指南
+3. 遇到冲突时，以 @api_spec.mdc 为准
+
+**API规范快速引用**：
+- 完整的API端点定义 → @api_spec.mdc 第3章
+- 完整的WebSocket事件定义 → @api_spec.mdc 第4章
+- 完整的错误码定义 → @api_spec.mdc 第2.5节
+- 通用类型定义 → @api_spec.mdc 第2.2节
+
+## 1. 项目概述
+
+### 1.1 项目简介
+
+HotSpot 是一个基于地理位置的社交平台，支持用户发现附近的人和热点、创建和加入群组、分享生活瞬间、实时消息通讯等功能。
+
+### 1.2 技术栈
+
+- **编程语言**: Rust (Edition 2021)
+- **Web 框架**: Axum 0.7+
+- **数据库**: PostgreSQL 15+ (主数据库) + Redis 7+ (缓存/会话)
+- **认证**: JWT (jsonwebtoken) + bcrypt (密码哈希)
+- **WebSocket**: tokio-tungstenite
+- **ORM**: SQLx (异步 SQL 工具包)
+- **序列化**: serde + serde_json
+- **异步运行时**: Tokio
+- **日志**: tracing + tracing-subscriber
+
+### 1.3 核心特性
+
+- 100+ API 端点
+- 实时 WebSocket 通讯（双层订阅机制）
+- 基于地理位置的搜索和推荐
+- 多层级权限控制
+- 事件驱动的收件箱系统
+- 完整的用户关系管理（好友、关注、拉黑）
+- 聊天消息与收件箱提醒分离设计
+
+## 2. 系统架构设计
+
+### 2.1 整体架构
+
+HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture），基于 Rust + Axum 构建高性能、类型安全的 Web 服务。
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Client Layer                         │
+│          (Web/Mobile App, WebSocket Clients)                │
+└────────────────────────┬────────────────────────────────────┘
+                         │ HTTPS / WSS
+┌────────────────────────▼────────────────────────────────────┐
+│                     Load Balancer                           │
+│                  (Nginx / Traefik)                          │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+        ┌────────────────┴────────────────┐
+        │                                 │
+┌───────▼──────────┐            ┌────────▼─────────┐
+│   HTTP Server    │            │  WebSocket Server │
+│   (Axum/Tokio)   │            │   (Tungstenite)   │
+└───────┬──────────┘            └────────┬──────────┘
+        │                                │
+        └────────────────┬───────────────┘
+                         │
+┌────────────────────────▼────────────────────────────────────┐
+│                  Application Layer                          │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │              Middleware Chain                        │   │
+│  │  Auth → RateLimit → Logging → ErrorHandler          │   │
+│  └──────────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │              Route Layer                             │   │
+│  │  /api/v1/public/*  |  /api/v1/protected/*           │   │
+│  └──────────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │              Handler Layer                           │   │
+│  │  参数验证、调用 Service、构造响应                      │   │
+│  └──────────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │              Service Layer                           │   │
+│  │  业务逻辑、权限检查、事务管理、缓存策略                 │   │
+│  └──────────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │              Repository Layer                        │   │
+│  │  SQL 查询、数据映射、缓存读写                          │   │
+│  └──────────────────────────────────────────────────────┘   │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+        ┌────────────────┴────────────────┐
+        │                                 │
+┌───────▼──────────┐            ┌────────▼─────────┐
+│   PostgreSQL     │            │      Redis       │
+│  (主数据库)       │            │  (缓存/会话)      │
+│  - 用户数据       │            │  - Token 黑名单   │
+│  - 群组数据       │            │  - 未读计数       │
+│  - 消息记录       │            │  - 频率限制       │
+│  - 生活瞬间       │            │  - 活跃会话       │
+└──────────────────┘            └──────────────────┘
+```
+
+### 2.2 分层架构详解
+
+#### 2.2.1 API Layer（路由层）
+
+**职责**：
+- 定义所有 API 端点
+- 组织路由层级（public/protected）
+- 配置中间件链
+- 请求分发到对应 Handler
+
+**技术实现**：
+- 使用 Axum Router 组织路由
+- 使用 `Router::nest()` 实现路由分组
+- 使用 `layer()` 添加中间件
+- 通过 `with_state()` 注入共享状态
+
+#### 2.2.2 Handler Layer（控制器层）
+
+**职责**：
+- 提取和验证请求参数
+- 调用 Service 层处理业务逻辑
+- 构造统一格式的响应
+- 处理和转换错误
+
+**技术实现**：
+- 使用 Axum Extractors（State, Json, Path, Query）提取请求参数
+- 返回 `Result<Json<ApiResponse<T>>, AppError>` 统一响应格式
+- 不包含业务逻辑,只做参数验证和响应构造
+- 处理流程：参数验证 → 调用 Service → 构造响应
+
+#### 2.2.3 Service Layer（业务逻辑层）
+
+**职责**：
+- 实现核心业务逻辑
+- 权限验证和业务规则检查
+- 事务管理（跨多个 Repository 操作）
+- 缓存策略（读缓存、写缓存、缓存失效）
+- 调用 Repository 层进行数据操作
+
+**技术实现**：
+- 每个模块一个 Service 结构体
+- 持有 Database Pool 和 Redis Connection
+- 使用 SQLx Transaction 管理事务
+- 实现业务逻辑的组合和编排
+- 处理流程：查询数据 → 业务规则验证 → 数据处理 → 缓存更新 → 返回结果
+
+#### 2.2.4 Repository Layer（数据访问层）
+
+**职责**：
+- 封装所有数据库操作
+- 执行 SQL 查询（使用 SQLx）
+- 数据映射（DB Row ↔ Domain Model）
+- Redis 缓存读写
+- 不包含业务逻辑
+
+**技术实现**：
+- 每个领域模型一个 Repository 结构体
+- 使用 SQLx 的类型安全查询
+- 使用 `query_as!` 宏自动映射
+- 统一错误处理
+- 提供标准CRUD方法：查询、创建、更新、删除
+- 支持条件查询、分页查询、批量操作
+
+### 2.3 架构设计原则
+
+#### 2.3.1 单一职责原则（SRP）
+
+- 每一层只负责自己的职责
+- Handler 不写业务逻辑
+- Service 不直接操作数据库
+- Repository 不包含业务规则
+
+#### 2.3.2 依赖倒置原则（DIP）
+
+- 上层依赖下层的抽象（trait），而非具体实现
+- Service 依赖 Repository trait
+- Handler 依赖 Service trait
+- 便于测试和替换实现
+
+#### 2.3.3 开闭原则（OCP）
+
+- 通过中间件扩展功能，而不修改核心代码
+- 使用 trait 定义接口，实现可替换
+- 配置驱动的功能开关
+
+#### 2.3.4 接口隔离原则（ISP）
+
+- Repository 接口细粒度划分
+- 每个 Service 只依赖需要的 Repository 方法
+- 避免臃肿的接口
+
+### 2.4 并发模型
+
+#### 2.4.1 异步运行时
+
+- 使用 Tokio 作为异步运行时
+- 所有 I/O 操作使用 async/await
+- 数据库连接池（SQLx Pool）
+- Redis 连接池（ConnectionManager）
+
+#### 2.4.2 并发策略
+
+- 请求级并发：每个请求独立的异步任务
+- 数据库连接池：最大连接数 = CPU 核心数 × 2
+- Redis 连接复用：使用 ConnectionManager
+- WebSocket 连接：每个连接独立的异步任务
+
+#### 2.4.3 线程模型
+
+```
+┌─────────────────────────────────────┐
+│         Tokio Runtime               │
+│  (Work-stealing Scheduler)          │
+│                                     │
+│  ┌──────┐ ┌──────┐ ┌──────┐        │
+│  │Thread│ │Thread│ │Thread│  ...   │
+│  │  1   │ │  2   │ │  3   │        │
+│  └──────┘ └──────┘ └──────┘        │
+│     │        │        │             │
+│     └────────┴────────┘             │
+│            │                        │
+│      ┌─────▼─────┐                  │
+│      │ Task Queue│                  │
+│      └───────────┘                  │
+└─────────────────────────────────────┘
+```
+
+- 默认线程数 = CPU 核心数
+- 任务窃取调度器（Work-stealing）
+- 非阻塞 I/O（epoll/kqueue）
+
+### 2.5 数据流向
+
+#### 2.5.1 典型请求流程
+
+```
+1. Client 发送 POST 请求
+   ↓
+2. Nginx/Load Balancer 转发
+   ↓
+3. Axum Server 接收请求
+   ↓
+4. Middleware Chain 处理
+   - Logging: 记录请求日志
+   - RateLimit: 检查频率限制
+   - Auth: 验证 JWT Token（受保护路由）
+   - CORS: 处理跨域
+   ↓
+5. Router 匹配路由，分发到 Handler
+   ↓
+6. Handler 提取参数，验证格式
+   ↓
+7. Service 执行业务逻辑
+   - 权限检查
+   - 业务规则验证
+   - 调用 Repository
+   ↓
+8. Repository 操作数据库
+   - 查询 PostgreSQL
+   - 读写 Redis 缓存
+   ↓
+9. Service 处理结果，返回给 Handler
+   ↓
+10. Handler 构造统一响应格式
+   ↓
+11. Middleware Chain 后处理
+   - ErrorHandler: 捕获错误，转换为统一格式
+   - Logging: 记录响应日志
+   ↓
+12. Axum Server 返回 JSON 响应
+   ↓
+13. Client 接收响应
+```
+
+#### 2.5.2 WebSocket 消息流程
+
+```
+1. Client 发起 WebSocket 连接
+   ↓
+2. Server 验证 JWT Token
+   ↓
+3. 连接建立，存入连接池
+   ↓
+4. 心跳保活（25秒一次 Ping/Pong）
+   ↓
+5. 事件触发（新消息、状态变更等）
+   ↓
+6. 查找目标用户的所有连接
+   ↓
+7. 序列化消息为 JSON
+   ↓
+8. 并发推送到所有连接
+   ↓
+9. 如果用户离线，存储到 event_push_records
+   ↓
+10. 用户重连后，拉取未推送事件
+```
+
+### 2.6 扩展性设计
+
+#### 2.6.1 水平扩展
+
+- **无状态设计**：所有状态存储在 PostgreSQL/Redis
+- **负载均衡**：支持多实例部署
+- **WebSocket 扩展**：通过 Redis Pub/Sub 同步消息
+- **数据库扩展**：主从复制、读写分离
+
+#### 2.6.2 垂直扩展
+
+- **连接池调优**：根据负载调整连接数
+- **缓存优化**：热点数据缓存到 Redis
+- **查询优化**：索引优化、查询优化
+- **资源隔离**：CPU/内存限制
+
+#### 2.6.3 模块化设计
+
+- **功能模块独立**：15 个功能模块，低耦合
+- **中间件可插拔**：按需启用/禁用中间件
+- **配置驱动**：通过环境变量控制功能开关
+
+### 2.7 模块划分与依赖关系
+
+系统分为 **3 大类共 15 个功能模块**：
+
+#### 2.7.1 核心业务模块（Core Modules）
+
+这些模块是系统的核心功能，直接处理用户数据和业务逻辑：
+
+**1. 认证模块 (auth)**
+- **职责**：用户注册、登录、Token 管理、会话管理、密码重置
+- **数据存储**：users 表、sessions 表、Redis (token 黑名单、refresh token)
+- **依赖**：无（基础模块）
+- **被依赖**：所有需要认证的模块
+
+**2. 用户模块 (user)**
+- **职责**：用户资料管理、用户搜索、关系管理（好友/关注/拉黑）、位置更新
+- **数据存储**：users、user_settings、user_follows、user_blocks、user_friend_requests、sessions、user_location_history、user_online_status 表
+- **依赖**：auth（认证）
+- **被依赖**：几乎所有模块
+- **架构决策**：
+  - ❌ **不提供批量查询在线状态API**（由前端通过WebSocket订阅实现）
+  - ❌ **不提供未读汇总API**（由前端本地统计）
+  - ✅ **提供用户搜索API**（后端数据库查询）
+  - ✅ **提供用户详情API**（包含关系信息）
+
+**3. 群组模块 (group)**
+- **职责**：群组 CRUD、成员管理、权限控制、群组搜索、邀请/申请流程
+- **数据存储**：group_chats、group_settings、group_members、group_member_settings、group_invites、group_applications 表
+- **依赖**：auth、user
+- **被依赖**：message、notification
+
+**4. 私聊模块 (private_chat)**
+- **职责**：创建私聊、私聊列表、私聊设置、私聊消息管理
+- **数据存储**：private_chats、private_chat_settings、private_messages 表
+- **依赖**：auth、user
+- **被依赖**：notification
+- **API 路径**：`/api/v1/protected/private_chats/*`, `/api/v1/protected/private_messages/*`
+- **说明**：管理私聊会话和消息
+
+**5. 群聊消息模块 (group_messages)**
+- **职责**：群聊消息发送、历史查询、已读管理、消息编辑/撤回、消息反应
+- **数据存储**：group_messages、group_message_read_status、message_reactions 表
+- **依赖**：auth、user、group
+- **被依赖**：inbox、feed
+- **API 路径**：`/api/v1/protected/group_messages/*`
+- **说明**：群聊消息是多人实时通讯，支持回复、编辑、撤回、@提及
+- **架构决策**：
+  - ❌ **不提供消息搜索API**（由前端本地实现）
+  - ❌ **不提供未读汇总API**（由前端本地统计）
+  - ✅ **提供消息历史API**（支持分页查询）
+  - ✅ **提供批量标记已读API**（跨聊天批量操作）
+
+**6. 未读计数模块 (chat_unread_counts)**
+- **职责**：管理所有聊天（私聊和群聊）的未读计数
+- **数据存储**：chat_unread_counts 表、Redis（缓存）
+- **依赖**：auth、user
+- **被依赖**：private_chat、group
+- **说明**：独立表设计，避免高并发更新锁竞争
+
+**7. 生活瞬间模块 (moment)**
+- **职责**：发布瞬间、搜索瞬间、点赞/取消点赞、编辑/删除、收藏管理
+- **数据存储**：moments、moment_likes、moment_favorites 表
+- **依赖**：auth、user、media
+- **被依赖**：comment、feed、leaderboard
+
+**8. 评论模块 (comment)**
+- **职责**：发布评论、回复评论、删除评论、点赞评论、查询评论列表
+- **数据存储**：comments、comment_likes 表
+- **依赖**：auth、user、moment
+- **被依赖**：notification
+- **说明**：评论对象为 moment，系统设计支持扩展到其他内容类型
+
+#### 2.7.2 辅助功能模块（Supporting Modules）
+
+这些模块提供辅助功能，增强用户体验和系统安全性：
+
+**9. 内容安全模块 (report)**
+- **职责**：用户举报、管理员审核、处理举报
+- **数据存储**：reports 表
+- **依赖**：auth、user
+- **被依赖**：无
+- **说明**：处理用户、群组、消息、瞬间等内容的举报
+
+**10. 通知订阅设置模块 (event_subscriptions)**
+- **职责**：设置通知订阅偏好（好友申请、群组邀请、@提及等）
+- **数据存储**：event_subscriptions 表
+- **依赖**：auth、user
+- **被依赖**：notification（推送时检查设置）
+- **说明**：持久化的通知订阅配置，跨设备生效
+
+**11. 媒体上传模块 (media)**
+- **职责**：文件上传（头像、群组图片、瞬间图片、通用文件）
+- **数据存储**：文件系统或对象存储（OSS）、media_files 表（元数据）
+- **依赖**：auth
+- **被依赖**：user、group、moment、message
+- **说明**：统一的文件上传服务，通过 category 字段区分用途
+
+**12. 系统模块 (system)**
+- **职责**：健康检查、客户端配置、系统配置管理
+- **数据存储**：system_configs、config_change_logs 表
+- **依赖**：无
+- **被依赖**：无
+- **说明**：提供系统级别的配置和状态查询
+
+#### 2.7.3 数据聚合模块（Aggregation Modules）
+
+这些模块不直接存储核心业务数据，而是基于其他模块的数据进行聚合、分析和推荐：
+
+**12. 收件箱模块 (inbox)**
+- **职责**：收件箱提醒历史查询、标记已读、删除提醒、设备 Token 管理（APNs/FCM）
+- **数据存储**：inbox_items 表（或 notifications 表）、device_tokens 表
+- **依赖**：auth、user、chat_messages、comment、group
+- **被依赖**：无
+- **API 路径**：`/api/v1/protected/inbox/*`
+- **实现方式**：
+  - 监听其他模块的事件（新消息、新评论、群组邀请等）
+  - 生成收件箱提醒记录并推送到设备
+  - 提供历史查询接口
+- **说明**：收件箱是系统生成的单向提醒，不同于双向的聊天消息
+- **提醒分类**：
+  - social（社交）：好友申请、群组邀请
+  - content（内容）：点赞、评论、@提及
+  - system（系统）：公告、维护通知、安全警告
+
+**13. 事件订阅与推送模块 (subscription)**
+- **职责**：配置事件订阅偏好（持久化）、WebSocket 实时订阅管理
+- **数据存储**：event_subscriptions 表（持久化偏好）
+- **依赖**：auth、user
+- **被依赖**：WebSocket 推送系统
+- **API 路径**：`/api/v1/protected/subscriptions/*`
+- **实现方式**：
+  - **两层订阅机制**：
+    - 层级 1：API 管理持久化订阅偏好（跨设备生效）
+    - 层级 2：WebSocket 管理实时订阅（仅对应连接生效）
+  - **推送逻辑**：最终推送 = 持久化偏好 AND 实时订阅
+  - **三种订阅事件**（详见 api_spec.mdc 第 4.4 节）：
+    - `Subscribe` - 增量订阅（追加到现有订阅）
+    - `Unsubscribe` - 取消订阅（从现有订阅中移除）
+    - `SetSubscriptions` - 替换式订阅（覆盖现有订阅）
+  - **订阅项类型**（`source_type`）：
+    - `group_chat` - 群聊消息事件（需要订阅，`source_ids` 为 `group_chat_id` 数组）
+    - `user` - 用户在线状态、位置更新等（`source_ids` 为 `user_id` 数组）
+    - `notification` - 收件箱提醒（`source_ids` 为通知类型数组，如 `["friend_request", "moment_like"]`）
+    - **注意**：私聊消息自动推送，无需订阅
+
+**14. 排行榜模块 (leaderboard)**
+- **职责**：创作者排行、热门瞬间排行、用户排名查询
+- **数据存储**：leaderboard_cache 表（Redis 或 PostgreSQL）
+- **依赖**：auth、user、moment
+- **被依赖**：无
+- **API 路径**：`/api/v1/public/leaderboard/*`
+- **实现方式**：
+  - **定时任务**：每小时/每天统计各模块数据
+  - **数据来源**：
+    - 创作者排行：统计 moments 表的 user_id 和点赞数
+    - 热门瞬间：统计 moment_likes 表
+  - **缓存策略**：结果缓存到 Redis，定期刷新
+  - **支持范围**：
+    - 全局排行
+    - 附近排行（nearby，需提供位置和半径）
+    - 好友排行（friends）
+  - **时间范围**：daily、weekly、monthly、all_time
+
+**15. 信息流模块 (feed)**
+- **职责**：获取个性化推荐内容、反馈（隐藏/不感兴趣）
+- **数据存储**：feed_items 表（推荐结果缓存）、feed_feedback 表（用户反馈）
+- **依赖**：auth、user、moment、group
+- **被依赖**：无
+- **API 路径**：`/api/v1/protected/feed/*`
+- **实现方式**：
+  - **推荐算法**：
+    - 基于位置：推荐附近的瞬间和群组
+    - 基于关注：推荐关注用户的瞬间
+    - 基于兴趣：根据用户点赞/收藏历史推荐相似内容
+  - **数据来源**：
+    - moments 表（瞬间内容）
+    - moment_likes、moment_collections（用户偏好）
+    - user_relationships（社交关系）
+    - users 表（位置信息）
+  - **实时性**：
+    - 热数据实时计算
+    - 冷数据预计算并缓存
+  - **频道类型**：
+    - following（关注）：推荐关注用户的内容
+    - nearby（附近）：推荐附近的热门内容
+    - recommended（推荐）：基于兴趣的个性化推荐
+
+#### 2.7.4 模块依赖关系图
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      核心业务模块                            │
+│                                                             │
+│  ┌──────┐    ┌──────┐    ┌──────┐    ┌──────────┐         │
+│  │ auth │───▶│ user │───▶│ group│───▶│private_chat│        │
+│  └──────┘    └──┬───┘    └──┬───┘    └─────┬─────┘        │
+│                 │            │               │              │
+│                 │            │               │              │
+│                 ▼            ▼               ▼              │
+│            ┌─────────┐  ┌──────────┐   ┌─────────┐        │
+│            │ moment  │  │chat_msgs │   │conv_set │        │
+│            └────┬────┘  └────┬─────┘   └─────────┘        │
+│                 │            │                              │
+│                 ▼            │                              │
+│            ┌─────────┐       │                              │
+│            │ comment │       │                              │
+│            └─────────┘       │                              │
+│                              │                              │
+└──────────────────────────────┼──────────────────────────────┘
+                               │
+┌──────────────────────────────┼──────────────────────────────┐
+│                      辅助功能模块                            │
+│                              │                              │
+│  ┌────────┐  ┌───────┐  ┌───▼───┐  ┌────────┐            │
+│  │ report │  │ media │  │ system│  │conv_set│            │
+│  └────────┘  └───────┘  └───────┘  └────────┘            │
+│                                                             │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                               │ 监听事件 / 定时统计
+                               │
+┌──────────────────────────────▼──────────────────────────────┐
+│                      数据聚合模块                            │
+│                                                             │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐                 │
+│  │  inbox   │  │subscription│ │leaderboard│                 │
+│  └──────────┘  └──────────┘  └──────────┘                 │
+│                                                             │
+│  ┌──────────┐                                               │
+│  │   feed   │                                               │
+│  └──────────┘                                               │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**说明**：
+- 所有模块的 API 端点定义参见 @api_spec.mdc **第 3 章 API 端点与类型定义**
+- 系统包含 15 个核心模块
+- `inbox` 模块负责收件箱功能（api_spec.mdc 第 3.13 节）
+- `chat_msgs` 模块负责聊天消息功能（api_spec.mdc 第 3.8-3.9 节）
+
+#### 2.7.5 关键实现说明
+
+**数据聚合模块的实现策略**：
+
+1. **收件箱 (inbox)**
+   - 采用**事件驱动**架构
+   - 其他模块通过发布事件触发收件箱提醒
+   - 示例：comment 模块添加评论后，发布 `CommentAdded` 事件
+   - inbox 模块订阅事件，生成提醒并推送
+   - 区别于聊天消息：收件箱是系统生成的单向提醒，聊天消息是用户之间的双向通讯
+
+2. **事件订阅 (subscription)**
+   - 采用**两层订阅机制**：
+     - **API 层**：持久化存储用户的订阅偏好（跨设备生效）
+     - **WebSocket 层**：实时控制连接的订阅状态（仅对应连接生效）
+   - 用户通过 API 配置订阅偏好（哪些类型的提醒要推送）
+   - WebSocket 连接后，客户端使用三种订阅事件管理订阅状态：
+     - `Subscribe` - 增量订阅（追加到现有订阅）
+     - `Unsubscribe` - 取消订阅（从现有订阅中移除）
+     - `SetSubscriptions` - 替换式订阅（覆盖现有订阅）
+   - 推送逻辑：先检查 API 持久化偏好，再检查 WebSocket 实时订阅
+   - 离线提醒通过 API 拉取（`POST /api/v1/protected/inbox/get_list`，参数通过request body传递：`{is_read: false}`）
+
+3. **排行榜 (leaderboard)**
+   - 采用**定时任务 + 缓存**策略
+   - 每小时运行统计任务：统计用户的瞬间数量和总点赞数
+   - 结果缓存到 Redis，有效期 1 小时
+   - 用户查询时直接读取缓存
+
+4. **信息流 (feed)**
+   - 采用**混合推荐**策略
+   - 推荐来源：
+     - 40% 关注用户的瞬间（社交推荐）
+     - 30% 附近的热门瞬间（位置推荐）
+     - 20% 基于兴趣的瞬间（协同过滤）
+     - 10% 热门群组（探索推荐）
+   - 实现方式：
+     - 实时计算（用户刷新时）
+     - 结果缓存 5 分钟
+     - 用户反馈（隐藏/不感兴趣）影响推荐算法
+
+### 2.8 中间件设计
+
+**中间件链顺序**:
+1. 请求追踪 (TraceLayer)
+2. CORS 处理 (CorsLayer)
+3. 频率限制 (RateLimitLayer)
+4. JWT 认证 (AuthMiddleware - 仅受保护路由)
+5. 统一错误处理 (ErrorHandlerLayer)
+
+**关键中间件**:
+- **认证中间件**: 验证 JWT Token，提取 user_id，注入到请求上下文
+- **频率限制中间件**: 基于 IP/用户的请求限流（Redis 实现）
+- **日志中间件**: 记录请求/响应、耗时、错误
+- **错误处理中间件**: 捕获 panic，转换为统一错误响应
+
+**路由组织**:
+
+路由定义和中间件集成的完整示例参见 @backend_dev_rule.mdc **第 2.1 节 路由定义模式**
+
+## 3. 核心功能模块
+
+### 3.1 认证与授权系统
+
+#### 3.1.1 密码安全策略
+
+**双层哈希机制**:
+1. **客户端层**: `SHA256(password)` - 避免明文传输
+2. **服务端层**: `bcrypt(client_hash, salt)` - 防止数据库泄露
+
+**实现要点**:
+- 使用 bcrypt crate，work factor = 12
+- 每个用户独立的随机 salt（bcrypt 自动管理）
+- 密码验证使用 `bcrypt::verify()`
+
+#### 3.1.2 JWT Token 管理
+
+**Token 类型**:
+- **Access Token**: 短期有效（1小时），用于 API 认证
+- **Refresh Token**: 长期有效（30天），用于刷新 Access Token
+
+**Token Payload**:
+- `sub`: Subject (用户ID)
+- `exp`: Expiration (过期时间)
+- `iat`: Issued At (签发时间)
+- `user_type`: 用户类型（临时/普通/系统）
+
+**实现要点**:
+- 使用 HS256 算法签名
+- Secret Key 从环境变量读取
+- Token 黑名单使用 Redis 存储（登出时）
+
+#### 3.1.3 会话管理
+
+**多设备会话**:
+- 每个登录生成唯一 session_id
+- 存储设备信息（类型、名称、IP、地理位置）
+- 支持列出所有活跃会话
+- 支持撤销指定会话
+
+**存储方案**:
+- PostgreSQL: 持久化会话记录
+- Redis: 活跃会话缓存（TTL = token 有效期）
+
+### 3.2 用户管理系统
+
+#### 3.2.1 用户类型编码
+
+**用户ID结构** (64位整数):
+```
+┌────────┬──────────────────────────────────────────────────┐
+│ 高8位  │                    低56位                        │
+│ 类型   │                    序号                          │
+└────────┴──────────────────────────────────────────────────┘
+```
+
+**类型编码**:
+- `0x01`: 临时用户（无密码，可升级）
+- `0x02`: 普通用户（已注册）
+- `0x03`: 系统用户（官方账号）
+
+**生成算法**:
+- 高8位存储用户类型（左移56位）
+- 低56位存储序列号
+- 组合方式：`user_id = (user_type << 56) | sequence_number`
+
+#### 3.2.2 用户关系管理
+
+**关系类型**:
+- **好友关系**: 双向确认，需要申请和接受
+- **关注关系**: 单向，无需确认
+- **拉黑关系**: 单向，屏蔽所有互动
+
+**数据库设计**:
+- 使用 `user_relationships` 表统一管理
+- 字段: `from_user_id`, `to_user_id`, `relationship_type`, `status`
+- 索引: `(from_user_id, relationship_type)`, `(to_user_id, relationship_type)`
+
+#### 3.2.3 位置服务
+
+**位置存储**:
+- 用户表存储最后更新的位置（latitude, longitude, location_name）
+- 使用 PostGIS 扩展进行地理位置查询
+
+**位置搜索**:
+- 使用 PostGIS 的 `ST_Distance` 计算地理距离
+- 使用 `ST_DWithin` 进行半径内查询
+- 按距离排序返回结果
+- 支持分页查询
+
+### 3.3 群组管理系统
+
+#### 3.3.1 群组类型
+
+- **公开群组** (public_group): 任何人可搜索和加入
+- **私密群组** (private_group): 需要邀请或申请批准
+
+#### 3.3.2 成员角色
+
+- **群主** (owner): 全部权限，可转让
+- **管理员** (admin): 管理成员、审核申请、修改群信息
+- **普通成员** (member): 发送消息、查看成员
+
+#### 3.3.3 权限矩阵
+
+| 操作 | 群主 | 管理员 | 普通成员 |
+|------|------|--------|----------|
+| 修改群信息 | ✓ | ✓ | ✗ |
+| 邀请成员 | ✓ | ✓ | ✗ |
+| 移除成员 | ✓ | ✓ | ✗ |
+| 设置管理员 | ✓ | ✗ | ✗ |
+| 转让群主 | ✓ | ✗ | ✗ |
+| 解散群组 | ✓ | ✗ | ✗ |
+| 发送消息 | ✓ | ✓ | ✓ |
+
+### 3.4 聊天消息系统
+
+#### 3.4.1 消息类型
+
+- **文本消息** (text)
+- **图片消息** (image)
+- **视频消息** (video)
+- **音频消息** (audio)
+- **文件消息** (file)
+- **系统消息** (system)
+
+#### 3.4.2 消息存储
+
+**统一存储策略**:
+- 使用统一的 `messages` 表存储所有消息
+- 私聊和群聊使用独立的表（private_messages 和 group_messages）
+- 按月分表（可选，高并发场景）
+
+**消息索引**:
+- `(target_id, created_at DESC)` - 查询会话历史
+- `(sender_id, created_at DESC)` - 查询用户发送记录
+- `(target_id, target_type)` - 复合索引优化查询
+
+#### 3.4.3 已读管理
+
+**已读记录**:
+- `message_read_records` 表
+- 字段: `user_id`, `target_id`, `last_read_message_id`, `read_at`
+
+**未读计数**:
+- Redis 缓存: `unread:{user_id}:{target_id}` = count
+- 发送消息时增加计数
+- 标记已读时清零计数
+
+### 3.5 生活瞬间系统
+
+#### 3.5.1 瞬间数据结构
+
+**核心字段**:
+- `moment_id`: 瞬间唯一标识
+- `user_id`: 发布用户ID
+- `description`: 描述文本
+- `latitude`, `longitude`: 地理坐标
+- `location_name`: 位置名称
+- `tags`: 标签数组
+- `images`: 图片URL数组
+- `created_at`: 创建时间
+
+#### 3.5.2 搜索策略
+
+**按位置搜索**:
+- 使用 PostGIS 的 `ST_DWithin` 进行半径搜索
+- 返回结果包含 `distance` 字段
+
+**按标签搜索**:
+- 使用 PostgreSQL 的 Array 类型存储标签
+- 使用 `@>` 操作符进行包含查询
+
+**全文搜索** (可选):
+- 使用 PostgreSQL 的 `tsvector` 和 `tsquery`
+- 对 description 字段建立全文索引
+
+### 3.6 WebSocket 实时通讯
+
+#### 3.6.1 连接管理
+
+**连接认证**:
+- 通过 `Sec-WebSocket-Protocol` 或 `Authorization` 头传递 JWT
+- 连接建立后验证 Token，提取 user_id
+
+**连接存储**:
+- 使用内存中的连接池管理活跃连接
+- 数据结构：`HashMap<UserId, Vec<WebSocketConnection>>`
+- 支持单用户多设备连接
+
+**心跳机制**:
+- 客户端每 25 秒发送 Ping
+- 服务端 5 秒内回复 Pong
+- 超过 60 秒无活动则断开连接
+
+#### 3.6.2 消息推送与订阅机制
+
+**两层订阅机制**:
+1. **层级 1（持久化偏好）**：通过 API 配置，跨设备生效
+   - 用户在设置页面配置订阅偏好（api_spec.mdc 第 3.10 节）
+   - 存储在 `event_subscriptions` 表
+   - 示例：关闭"瞬间点赞提醒"
+
+2. **层级 2（实时订阅）**：通过 WebSocket 管理，仅对应连接生效
+   - 客户端连接后发送 `Subscribe` 消息（api_spec.mdc 第 4.4 节）
+   - 使用统一的订阅项数组格式：`{ source_type, source_ids }`
+   - 支持批量订阅同类型数据源
+   - 示例：`[{ source_type: "group_chat", source_ids: ["gc_123", "gc_456"] }, { source_type: "user", source_ids: ["user_789"] }]`
+
+**推送逻辑**:
+- 最终推送 = 持久化偏好 AND 实时订阅
+- 只有两层都允许时才推送
+
+⚠️ **支持的订阅类型和频道请参见**: @api_spec.mdc **第 4.4 节 客户端发送事件 - 订阅机制使用示例**
+
+**推送策略**:
+1. 检查用户的持久化订阅偏好
+2. 查找目标用户的所有活跃连接
+3. 检查每个连接的实时订阅状态
+4. 序列化消息为 JSON
+5. 并发发送到符合条件的连接
+6. 如果用户离线或未订阅，存储到收件箱
+
+#### 3.6.3 离线消息补偿
+
+**实现流程**:
+1. 用户重连后，WebSocket 连接建立
+2. 客户端发送 `Subscribe` 消息订阅频道
+3. 客户端调用 API 拉取离线数据：
+   - `POST /api/v1/protected/inbox/get_list` (参数：`{is_read: false}`) - 未读提醒
+   - `POST /api/v1/protected/chat_messages/get_unread_summary` (参数：`{include_details: true}`) - 未读消息汇总
+4. 恢复实时接收 WebSocket 推送
+
+**说明**:
+- 收件箱提醒通过 API 拉取（系统生成的单向提醒）
+- 聊天消息通过 API 拉取（用户之间的双向通讯）
+- 不再使用 `event_push_records` 表，改用各模块自己的存储
+
+#### 3.6.4 WebSocket 事件类型定义
+
+⚠️ **完整的 WebSocket 事件类型定义请参见**: @api_spec.mdc **第 4 章 WebSocket 实时事件定义**
+
+**核心概念**：
+
+系统支持完整的 WebSocket 事件类型，用于服务端主动推送实时数据。
+
+**事件分类**（详见 api_spec.mdc 第 4.3-4.4 节）：
+- **服务端推送事件**（20+ 个事件类型）：连接管理、在线状态、聊天消息、群组事件、收件箱提醒、系统通知
+- **客户端发送事件**（6 个事件类型）：心跳、订阅管理、实时状态同步
+
+**关键事件**（完整定义见 api_spec.mdc）：
+- **ChatMessageNew**: 聊天消息核心事件，包含完整消息信息
+- **InboxItem**: 收件箱提醒推送（系统生成的单向提醒）
+- **Subscribe/Unsubscribe**: 实现两层订阅机制的核心事件
+- **订阅机制使用示例**: 参见 api_spec.mdc 第 4.4 节
+
+**实现要求**：
+- 所有事件类型必须严格遵循 api_spec.mdc 定义
+- 所有时间字段使用 ISO 8601 格式的 UTC 时间
+- 事件 payload 结构与 API 规范保持一致
+- 订阅频道列表参见 api_spec.mdc 第 4.4 节
+
+### 3.7 速率限制与配额管理
+
+⚠️ **完整的速率限制规范请参见**: @api_spec.mdc **第 2.14 节速率限制与配额管理**
+
+**系统概述**：
+
+速率限制和配额管理是保护系统资源、防止滥用、确保服务质量的关键机制。
+
+**全局速率限制**：
+- 默认限制：每分钟100次请求
+- 认证用户：每分钟300次请求
+- 临时用户：每分钟50次请求
+
+**特定API速率限制**（关键接口）：
+- 发送消息：每秒10次，每分钟300次
+- 创建生活瞬间：每分钟5次，每小时20次
+- 上传文件：每分钟10次，每小时100次
+- 搜索接口：每秒5次，每分钟100次
+- 发送好友申请：每分钟10次，每小时50次
+
+**配额限制**（业务规则）：
+- 单个用户最多500个好友
+- 单个群组最多500成员（可配置）
+- 单个用户最多创建10个群组
+- 单次批量操作最多100条记录
+- 消息内容最大10KB
+- 文件上传大小限制（通过系统配置管理）
+
+**实现机制**：
+- 使用 Redis 计数器实现滑动窗口速率限制
+- 响应头包含限制信息：`X-RateLimit-Limit`、`X-RateLimit-Remaining`、`X-RateLimit-Reset`
+- 超限返回 HTTP 429 状态码
+- 配额检查在 Service 层执行
+
+**监控与告警**：
+- 记录速率限制命中率
+- 异常高频重试需要告警
+- 定期审查限制策略的合理性
+
+### 3.8 批量操作设计
+
+⚠️ **完整的批量操作规范请参见**: @api_spec.mdc **第 2.15 节批量操作设计规范**
+
+**系统概述**：
+
+批量操作提供高效的多项处理能力，减少客户端请求次数，提升用户体验。
+
+**批量请求格式**：
+- `items`: 批量操作的数据项数组
+- `atomic`: 是否原子操作（默认false）
+
+**批量响应格式**：
+- `total`: 总数量
+- `succeeded`: 成功数量
+- `failed`: 失败数量
+- `results`: 每项的处理结果数组
+  - `index`: 对应请求items的索引
+  - `code`: 0表示成功，非0表示失败
+  - `data`: 成功时的数据
+  - `message`: 失败时的错误消息
+
+**支持的批量操作**：
+- 批量标记消息已读：`POST /api/v1/protected/messages/mark_as_read_batch`
+- 批量删除通知：`POST /api/v1/protected/inbox/remove_batch`
+- 系统设计支持扩展更多批量操作（如批量更新设置、批量邀请成员）
+
+**批量操作限制**：
+- 单次批量操作最多100条记录
+- 原子操作（`atomic: true`）：全部成功或全部失败
+- 非原子操作（默认）：部分成功即返回，需检查每项的结果
+- 批量操作的速率限制通常比单次操作更严格
+
+**实现要求**：
+- Service 层提供批量处理方法
+- 使用数据库事务保证原子性（当 `atomic: true` 时）
+- 非原子操作遇到单项错误时继续处理其他项
+- 记录批量操作的审计日志
+
+### 3.9 幂等性设计
+
+⚠️ **完整的幂等性规范请参见**: @api_spec.mdc **第 2.17 节幂等性设计**
+
+**系统概述**：
+
+幂等性确保同一个请求执行多次与执行一次的效果相同，这对于网络不稳定场景下的重试机制至关重要。
+
+**核心原则：零信任**：
+- 不依赖客户端生成或提供幂等键
+- 完全由服务端基于请求内容自动生成和控制
+- 客户端无需关心幂等性机制
+
+**服务端幂等键生成规则**：
+```
+idempotency_key = SHA256(
+  user_id +                    // 用户ID（从token中提取）
+  api_endpoint +               // API端点路径
+  request_body_json +          // 请求体JSON（标准化排序后）
+  time_window                  // 时间窗口（5分钟为单位）
+)
+```
+
+**时间窗口设计**：
+- 时间窗口大小：5分钟（可配置）
+- 作用：防止长期缓存占用，允许相同请求在不同时间窗口执行
+- 实现：请求时间向下取整到5分钟
+
+**自动幂等的操作**：
+- 发送私聊消息：`POST /api/v1/protected/private_messages/send`
+- 发送群聊消息：`POST /api/v1/protected/group_messages/send`
+- 创建生活瞬间：`POST /api/v1/protected/moments/create`
+- 发送好友申请：`POST /api/v1/protected/user/send_friend_request`
+- 创建群组：`POST /api/v1/protected/group_chats/create`
+- 文件上传：`POST /api/v1/protected/media/upload_file`（基于文件哈希）
+- 系统设计支持扩展到支付相关操作
+
+**文件上传幂等性**（特殊处理）：
+- **小文件（≤100MB）**：基于文件内容SHA256哈希确保相同文件不重复上传
+- **大文件（>100MB）**：使用分块上传，通过 `upload_id` 追踪上传会话，支持断点续传
+- 文件去重：后端可以复用存储，但返回不同的URL路径，确保权限隔离和统计准确
+
+**实现机制**：
+- 使用 Redis 存储幂等键和响应结果
+- 幂等缓存 TTL = 2倍时间窗口（默认10分钟）
+- 并发控制：使用 Redis 原子操作（SETNX）防止竞态
+- 响应头包含幂等信息：
+  - `X-Idempotent-Key`: 幂等键（仅调试用）
+  - `X-Idempotent-Replayed`: "true"（标记为幂等返回）
+
+**天然幂等的操作**（无需特殊处理）：
+- 查询操作（POST search_*）- 天然幂等
+- 幂等的更新/删除操作 - 天然幂等
+- 读取类操作（open_the_door）- 天然幂等
+
+**请求体标准化规则**：
+- 移除所有空白字符
+- Key按字母顺序排序
+- 忽略特殊字段：`client_request_id`（客户端追踪ID）、`timestamp`、`nonce`
+
+**监控与审计**：
+- 记录幂等命中率
+- 异常高频重试需要告警
+- 审计日志记录幂等操作
+
+## 4. 数据库设计
+
+### 4.1 PostgreSQL 扩展与数据库初始化
+
+#### 4.1.1 主键与业务ID设计策略 ✨
+
+**⚠️ 核心设计原则**：**三ID策略（自增主键 + 业务ID + 分页游标ID）**
+
+所有需要分页的表都采用统一的三ID设计：
+
+**1. 自增主键（内部使用）**：
+- 所有表使用 `id BIGSERIAL PRIMARY KEY` 作为自增主键
+- **用途**：数据库内部高效查询、JOIN关联、性能优化
+- **特点**：不暴露给API层，前端永远不会接触到这个字段
+
+**2. 业务ID（对外暴露）**：
+- **用途**：对外展示的唯一标识，用于业务逻辑识别资源
+- **类型**：
+  - **users表**：`user_id BIGINT`（纯数字，方便用户传播和使用）
+  - **其他表**：`xxx_id VARCHAR(36)`（UUID字符串，如 moment_id, message_id, group_chat_id 等）
+- **特点**：与业务逻辑紧密相关，前端使用此ID进行API调用
+
+**3. 分页游标ID（仅用于分页）**：
+- **字段名**：统一命名为 `cursor_id VARCHAR(36)`
+- **用途**：专用于分页游标，与业务逻辑完全隔离
+- **类型**：UUID字符串（所有表统一，包括 users 表）
+- **特点**：
+  - 不暴露给前端（仅在分页响应中作为 cursor 返回）
+  - 不参与业务逻辑
+  - 前端只需原样传递，无需理解其内容
+
+**4. ID字段命名规范**：
+- 自增主键统一命名为 `id`
+- 业务ID使用描述性名称（如 `user_id`, `moment_id`, `private_chat_id`）
+- 分页游标统一命名为 `cursor_id`（所有需要分页的表）
+
+**5. 设计优势**：
+- ✅ **自增主键**：数据库内部查询性能极佳，支持高效范围扫描
+- ✅ **业务ID分离**：API层和数据库层解耦，可以独立优化
+- ✅ **cursor_id 专用于分页**：业务逻辑与分页逻辑完全解耦，互不干扰
+- ✅ **user_id纯数字**：用户友好、便于传播（如分享用户ID）
+- ✅ **其他业务ID使用UUID**：安全性高、不暴露业务信息
+- ✅ **cursor_id统一UUID**：所有表分页逻辑一致，便于维护
+
+**6. 游标分页实现原理**：
+
+**核心思想**：使用专用的 cursor_id 作为分页游标，内部转换为自增id进行高效查询
+
+```sql
+-- 步骤1：前端传入cursor（cursor_id）
+-- 例如：cursor = "550e8400-e29b-41d4-a716-446655440000"
+
+-- 步骤2：将 cursor_id 转换为自增id
+SELECT id FROM moments WHERE cursor_id = $cursor;  -- 假设得到 id = 12345
+
+-- 步骤3：使用自增id进行高效范围查询
+SELECT * FROM moments 
+WHERE id > 12345  -- 使用自增id的索引，性能极佳
+AND is_deleted = FALSE
+ORDER BY id ASC 
+LIMIT 20;
+
+-- 步骤4：返回最后一条记录的 cursor_id 作为 next_cursor
+-- 返回：next_cursor = "660e8400-e29b-41d4-a716-446655440001"
+```
+
+**实现要点**：
+- ✅ **前端**：只知道业务ID（user_id/moment_id等）和分页cursor，不知道自增id
+- ✅ **API层**：接收和返回 cursor_id（cursor）
+- ✅ **Repository层**：负责 cursor_id ↔ 自增id的转换
+- ✅ **数据库层**：使用自增id进行高效查询
+- ✅ **业务逻辑**：完全不依赖 cursor_id，只使用业务ID
+
+#### 4.1.2 核心原则：迁移文件必须自包含
+
+**⚠️ 关键设计决策**：SQLx 迁移文件必须能够独立运行，不依赖外部模板数据库。
+
+**原因**：
+- `sqlx database reset` 创建空数据库（不使用模板）
+- `sqlx migrate run` 必须能从零构建完整数据库
+- 确保开发、测试、CI/CD 环境的一致性
+
+**实现方式**：
+- **第一个迁移文件** (`001_database_prerequisites.sql`) 必须包含扩展创建语句
+- 使用 `CREATE EXTENSION IF NOT EXISTS` 确保幂等性
+- 其他迁移文件可以安全使用 PostGIS 等扩展的功能
+
+#### 4.1.3 系统需要的 PostgreSQL 扩展
+
+必须在 `001_prerequisites.sql` 中安装的扩展：
+
+| 扩展名 | 版本 | 用途 | 必需性 |
+|---|---|---|---|
+| `postgis` | 3.3+ | 地理位置计算（核心功能） | ✅ 必需 |
+| `postgis_raster` | 3.3+ | 栅格数据支持 | ✅ 必需 |
+| `postgis_topology` | 3.3+ | 拓扑数据支持 | ✅ 必需 |
+| `postgis_sfcgal` | 3.3+ | 3D几何计算 | ✅ 必需 |
+| `fuzzystrmatch` | - | 模糊字符串匹配 | ⚠️ 可选 |
+| `uuid-ossp` | - | UUID 生成 | ✅ 必需 |
+| `pg_trgm` | - | 三元组相似度匹配（用于模糊搜索） | ✅ 必需 |
+
+**迁移文件要求**：
+- 第一个迁移文件（`001_prerequisites.sql`）必须包含所有扩展的创建语句
+- 使用 `CREATE EXTENSION IF NOT EXISTS` 确保幂等性
+- 必需的扩展：postgis, postgis_raster, postgis_topology, postgis_sfcgal, uuid-ossp, fuzzystrmatch, pg_trgm
+
+#### 4.1.4 模板数据库（可选优化）
+
+生产环境推荐使用模板数据库优化部署：
+
+**优势**：
+- ✅ 加快新数据库创建速度
+- ✅ 确保所有数据库扩展版本一致
+- ✅ 避免重复安装扩展的开销
+
+**使用方式**：
+- 开发环境：直接使用 `sqlx database reset` 即可
+- 生产环境：可选择性使用 `setup_database.sh` 脚本创建模板数据库
+
+**注意**：模板数据库是可选的性能优化，SQLx 迁移系统不依赖它
+
+#### 4.1.5 外键策略：不使用数据库外键约束
+
+**⚠️ 关键设计决策**：HotSpot 项目**不使用**数据库层的外键约束（FOREIGN KEY），改由应用层保证数据完整性。
+
+**设计理由**：
+
+| 维度 | 有外键 | 无外键（系统设计） |
+|---|---|---|
+| **写入性能** | 每次写入检查约束，影响 5-15% | 无额外开销 ✅ |
+| **并发性能** | 可能产生锁竞争（特别是删除） | 无锁竞争 ✅ |
+| **删除操作** | CASCADE 级联删除，风险高 | 软删除更可控 ✅ |
+| **分片扩展** | 跨库外键无法保证 | 分片友好 ✅ |
+| **批量操作** | 性能较差（每条都检查） | 性能好 ✅ |
+| **数据完整性** | 数据库层保证 | 应用层保证，需要严格测试 ⚠️ |
+
+**社交应用特点**：
+- ✅ 高并发写入（消息、点赞、评论）
+- ✅ 用户删除不频繁（软删除为主）
+- ✅ 需要分片扩展能力
+- ✅ 外键的完整性保证不如性能重要
+
+**应用层保证方式**（详见 @backend_rule.mdc 第 5.4 节）：
+- Service层在创建关联资源前验证父资源存在性
+- Repository层提供 `exists()` 辅助方法
+- 使用 `SELECT EXISTS(...)` 而非 `SELECT COUNT(*)`（性能更好）
+- 批量操作时验证所有引用关系
+
+**软删除策略**（代替 CASCADE 删除）：
+- 所有关键表包含 `is_deleted` 和 `deleted_at` 字段
+- 删除操作标记 `is_deleted = TRUE`，而非物理删除
+- 关联数据保留，或通过定时任务异步清理
+
+**注意事项**：
+- ⚠️ Service 层必须严格验证所有引用关系
+- ⚠️ 集成测试必须覆盖数据完整性场景
+- ⚠️ 数据库不会自动阻止孤儿记录，需要应用层保证
+
+### 4.2 ENUM 类型定义
+
+系统使用 PostgreSQL ENUM 类型确保数据一致性。
+
+**枚举类型及其值的详细定义**：参见 `api_spec.mdc` 第 2.6 节（枚举类型使用规范）
+
+**核心ENUM类型**：
+- `member_role`: owner, admin, member
+- `room_type`: direct, public_group, private_group
+- `relationship_type`: any, friend, following, blocked
+- `relationship_status`: any, pending, accepted, rejected
+- `message_type`: any, text, image, video, audio, file, system
+- `report_status`: any, pending, reviewing, resolved, dismissed
+- `invite_status`: any, pending, accepted, rejected, approved, expired
+- `inbox_category`: any, social, content, system
+
+⚠️ **重要约定**：
+- 所有枚举类型中的 'any' 值仅用于查询过滤，禁止存储到数据库
+- 枚举值定义以 `api_spec.mdc` 为权威参考
+
+### 4.3 用户相关表
+
+#### 4.3.1 users - 用户表 ✨
+
+**表说明**: 存储用户核心信息。⚠️ **采用设置表分离设计**：
+- **当前位置** → `users` 表（用于"附近的人"快速查询）
+- **位置历史** → `user_location_history` 表（完整轨迹追踪）
+- **用户设置** → `user_settings` 表（隐私、位置共享等配置）
+- ✅ **三ID设计**：
+  - `id`：内部主键，用于高效排序
+  - `user_id`：纯数字用户ID，对外公开，方便传播和分区
+  - `user_uuid`：UUID，用于统一分页游标
+- ✅ **支持分页**：使用user_uuid作为cursor进行分页（与其他表完全统一）
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键（用于分页排序） |
+| user_id | BIGINT | NOT NULL, UNIQUE | - | 纯数字用户ID（对外公开） |
+| user_uuid | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | UUID（用于分页游标） |
+| user_type | user_type | NOT NULL | 'normal' | 用户类型（temp/normal/system） |
+| login_id | VARCHAR(255) | UNIQUE | NULL | 登录标识（邮箱/手机），临时用户为NULL |
+| nickname | VARCHAR(100) | NOT NULL | - | 昵称 |
+| password_hash | VARCHAR(255) | - | NULL | bcrypt哈希，临时用户为NULL |
+| avatar_url | TEXT | - | NULL | 头像URL |
+| bio | TEXT | - | NULL | 个人简介 |
+| email | VARCHAR(255) | - | NULL | 邮箱地址 |
+| phone | VARCHAR(20) | - | NULL | 手机号码 |
+| **current_latitude** | DOUBLE PRECISION | - | NULL | **当前纬度**（用于附近的人搜索） |
+| **current_longitude** | DOUBLE PRECISION | - | NULL | **当前经度**（用于附近的人搜索） |
+| **current_location_name** | VARCHAR(255) | - | NULL | **当前位置名称**（如"北京市朝阳区"） |
+| **location** | geography(POINT, 4326) | - | NULL | **PostGIS地理对象**（自动生成，用于空间查询） |
+| **location_updated_at** | TIMESTAMPTZ | - | NULL | **位置最后更新时间** |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 创建时间 |
+| updated_at | TIMESTAMPTZ | - | NULL | 更新时间 |
+| is_banned | BOOLEAN | NOT NULL | FALSE | 是否被封禁 |
+| is_deleted | BOOLEAN | NOT NULL | FALSE | 软删除标记 |
+| deleted_at | TIMESTAMPTZ | - | NULL | 删除时间 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `user_id WHERE is_deleted = FALSE`
+- 唯一索引 `user_uuid WHERE is_deleted = FALSE`（用于分页游标查询）
+- 唯一索引 `login_id WHERE login_id IS NOT NULL AND is_deleted = FALSE`
+- GIN索引 `nickname USING gin (nickname gin_trgm_ops) WHERE is_deleted = FALSE`
+- **GIST索引 `location USING gist (location) WHERE location IS NOT NULL AND is_deleted = FALSE`**
+
+**关键约束**: 
+- 软删除约束（is_deleted与deleted_at必须同时为NULL或同时有值）
+- 纬度范围约束（-90 ~ 90）
+- 经度范围约束（-180 ~ 180）
+- 触发器自动生成 `location` 字段（从经纬度）
+
+**设计优势**：
+- ✅ **统一分页逻辑**：所有表都使用相同的UUID游标分页模式
+- ✅ **更好的安全性**：UUID不暴露用户数量和增长趋势
+- ✅ **便于分布式**：UUID天然支持分布式系统和数据迁移
+- ✅ **类型标识**：通过 `user_type` 枚举字段明确标识用户类型
+
+#### 4.3.2 user_settings - 用户设置表 ✨
+
+**表说明**: 存储用户配置项（从 `users` 表分离），采用 **1:1 关联**，通过触发器自动创建默认设置。
+
+**设计理念**：
+- ✅ **职责分明**：核心数据（users）与配置（user_settings）分离
+- ✅ **查询优化**：列表查询无需加载设置字段，减少数据传输
+- ✅ **扩展灵活**：新增设置不影响主表结构
+- ✅ **缓存友好**：设置和核心数据可独立缓存
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| user_id | BIGINT | PK | - | 用户ID（引用 users.user_id，应用层保证） |
+| privacy_level | privacy_level | NOT NULL | 'public' | 隐私级别（public/friends/private） |
+| is_location_sharing | BOOLEAN | NOT NULL | TRUE | 是否共享位置 |
+| can_be_followed | BOOLEAN | NOT NULL | TRUE | 是否允许被关注 |
+| **allow_private_chat** | **BOOLEAN** | **NOT NULL** | **TRUE** | **是否允许别人发起私聊** |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 创建时间 |
+| updated_at | TIMESTAMPTZ | - | NULL | 更新时间 |
+
+**索引**: 主键 `user_id`
+
+**关键约束**: 
+- user_id 引用 users.user_id，由应用层保证数据完整性
+- 触发器 `trigger_auto_create_user_settings` 在用户创建时自动插入默认设置
+
+**触发器实现**（在 `002_user_module.sql` 中创建）：
+- 触发器函数：`auto_create_user_settings()` 在用户创建时自动插入默认设置
+- 触发器：`trigger_auto_create_user_settings` 绑定到 users 表的 INSERT 操作
+- 使用 `ON CONFLICT DO NOTHING` 确保幂等性
+
+**私聊权限控制**：
+- ✅ **allow_private_chat = TRUE**：允许任何人（除了黑名单用户）发起私聊
+- ✅ **allow_private_chat = FALSE**：不允许别人发起私聊（仅自己可以发起）
+- ✅ **权限验证逻辑**：用户A能否对用户B发起私聊，需要同时满足：
+  1. 用户B的 `allow_private_chat = TRUE`（否则返回错误码 `1309` - 对方不允许接收私聊）
+  2. 用户B**没有**将用户A拉黑（否则返回错误码 `1310` - 已被对方拉黑）
+  3. 用户A不能对自己发起私聊（否则返回错误码 `1301` - 不能对自己执行此操作）
+
+**查询模式**：
+- 查询用户详情时使用 LEFT JOIN 关联 user_settings 表
+- 更新设置时直接操作 user_settings 表
+- 私聊权限验证需要同时检查 `allow_private_chat` 和 `user_blocks` 表
+
+#### 4.3.3 user_follows - 用户关注表 ✨
+
+**表说明**: 单向关注关系表。**职责分离设计**：
+- ✅ **好友关系**：互相关注（A关注B 且 B关注A）
+- ✅ **单向关注**：仅一方关注
+- ✅ **好友申请** → 独立的 `user_friend_requests` 表管理
+
+**设计理念**：
+- ✅ **职责单一**：只管理关注关系，不混入拉黑、好友申请等逻辑
+- ✅ **无冗余字段**：不需要 `status`、`message`、`block_reason` 等字段
+- ✅ **查询高效**：不需要 `WHERE relation_type = 'following'` 过滤
+- ✅ **支持分页**：使用UUID业务ID实现游标分页
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键 |
+| follow_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | 业务ID（用于游标分页） |
+| follower_id | BIGINT | NOT NULL | - | 关注者ID（引用 users.user_id，应用层保证） |
+| following_id | BIGINT | NOT NULL | - | 被关注者ID（引用 users.user_id，应用层保证） |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 创建时间 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `follow_id`
+- 唯一索引 `(follower_id, following_id)`
+- 复合索引 `(follower_id, created_at DESC)`（查询关注列表）
+- 复合索引 `(following_id, created_at DESC)`（查询粉丝列表）
+- 复合索引 `(follower_id, following_id)`（查询互相关注/好友关系）
+
+**关键约束**: 
+- `CHECK (follower_id != following_id)` - 不能关注自己
+- `UNIQUE (follower_id, following_id)` - 同一对用户的关注关系唯一
+
+**好友关系查询原理**：
+- 使用自连接（self-join）查询互相关注的用户
+- 条件：A关注B 且 B关注A
+- 好友备注存储在独立的 `user_friend_remarks` 表中
+
+---
+
+#### 4.3.4 user_blocks - 用户拉黑表 ✨
+
+**表说明**: 单向拉黑关系表。**职责分离设计**：
+- ✅ **职责单一**：只管理拉黑关系
+- ✅ **无冗余字段**：不需要 `status`、`message`、`remark` 等字段
+- ✅ **查询高效**：权限验证时直接查询，无需 `WHERE relation_type = 'blocked'` 过滤
+- ✅ **支持分页**：使用UUID业务ID实现游标分页
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键 |
+| block_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | 业务ID（用于游标分页） |
+| blocker_id | BIGINT | NOT NULL | - | 拉黑者ID（引用 users.user_id，应用层保证） |
+| blocked_id | BIGINT | NOT NULL | - | 被拉黑者ID（引用 users.user_id，应用层保证） |
+| reason | TEXT | - | NULL | 拉黑原因（可选） |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 创建时间 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `block_id`
+- 唯一索引 `(blocker_id, blocked_id)`
+- 复合索引 `(blocker_id, created_at DESC)`（查询拉黑列表）
+- 复合索引 `(blocked_id, blocker_id)`（权限验证：检查是否被拉黑）
+
+**关键约束**: 
+- `CHECK (blocker_id != blocked_id)` - 不能拉黑自己
+- `UNIQUE (blocker_id, blocked_id)` - 同一对用户的拉黑关系唯一
+
+**权限验证要点**：
+- 发起私聊前必须检查是否被对方拉黑
+- 使用 `EXISTS` 查询而非 `COUNT`（性能更好）
+- 查询条件：`blocker_id = 对方ID AND blocked_id = 自己ID`
+
+---
+
+#### 4.3.5 user_friend_remarks - 好友备注表 ✨
+
+**表说明**: 存储用户对好友的备注信息。**职责分离设计**：
+- ✅ **职责单一**：只管理好友备注，与关注关系解耦
+- ✅ **支持分页**：使用UUID业务ID实现游标分页
+- ✅ **可选字段**：备注为空时不创建记录，节省存储空间
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键 |
+| remark_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | 业务ID（用于游标分页） |
+| user_id | BIGINT | NOT NULL | - | 用户ID（引用 users.user_id，应用层保证） |
+| friend_id | BIGINT | NOT NULL | - | 好友ID（引用 users.user_id，应用层保证） |
+| remark | VARCHAR(100) | - | NULL | 备注内容 |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 创建时间 |
+| updated_at | TIMESTAMPTZ | - | NULL | 更新时间 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `remark_id`
+- 唯一索引 `(user_id, friend_id)`
+- 复合索引 `(user_id, created_at DESC)`（查询备注列表）
+
+**关键约束**: 
+- user_id, friend_id 引用 users.user_id，由应用层保证数据完整性
+
+**使用说明**：
+- 备注为空时可以删除记录，而不是保留空字符串
+- 查询时通过LEFT JOIN关联，未设置备注时返回NULL
+
+---
+
+#### 4.3.6 user_friend_requests - 好友申请表 ✨
+
+**表说明**: 独立管理好友申请流程。**职责分离设计**：
+- ✅ **职责单一**：只管理好友申请的生命周期（pending → accepted/rejected）
+- ✅ **无冗余字段**：不需要 `remark`、`block_reason` 等字段
+- ✅ **清晰的状态流转**：`pending` → `accepted`/`rejected`
+- ✅ **支持分页**：使用UUID业务ID实现游标分页
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键（用于分页排序） |
+| request_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | UUID业务ID（API暴露，游标） |
+| from_user_id | VARCHAR(36) | NOT NULL | - | 申请者ID（引用 users.user_id，应用层保证） |
+| to_user_id | VARCHAR(36) | NOT NULL | - | 被申请者ID（引用 users.user_id，应用层保证） |
+| message | TEXT | - | NULL | 申请附带消息 |
+| status | invitation_status | NOT NULL | 'pending' | 申请状态（pending/accepted/rejected） |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 创建时间 |
+| responded_at | TIMESTAMPTZ | - | NULL | 响应时间（接受/拒绝时间） |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `request_id`
+- 复合索引 `(from_user_id, created_at DESC)`（查询已发送申请）
+- 复合索引 `(to_user_id, status, created_at DESC)`（查询收到的申请）
+
+**关键约束**: 
+- `CHECK (from_user_id != to_user_id)` - 不能向自己发送申请
+
+**好友申请流程**：
+1. **发送申请**：在 `user_friend_requests` 表插入记录，状态为 `pending`
+2. **接受申请**：需要在事务中完成两个操作：
+   - 更新申请状态为 `accepted`
+   - 在 `user_follows` 表插入双向关注记录
+3. **拒绝申请**：更新申请状态为 `rejected`
+
+---
+
+#### 4.3.6 sessions - 会话表
+
+**表说明**: 记录登录会话，支持多设备
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键 |
+| session_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | 会话唯一标识 |
+| user_id | BIGINT | NOT NULL | - | 用户ID（引用 users.user_id，应用层保证） |
+| device_type | VARCHAR(50) | - | NULL | 设备类型（ios/android/web） |
+| device_name | VARCHAR(100) | - | NULL | 设备名称 |
+| ip_address | INET | - | NULL | 登录IP地址 |
+| user_agent | TEXT | - | NULL | 浏览器UA |
+| access_token_hash | VARCHAR(255) | NOT NULL | - | 访问令牌哈希 |
+| refresh_token_hash | VARCHAR(255) | NOT NULL | - | 刷新令牌哈希 |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 创建时间 |
+| last_active_at | TIMESTAMPTZ | NOT NULL | NOW() | 最后活跃时间 |
+| expires_at | TIMESTAMPTZ | NOT NULL | - | 过期时间 |
+| is_revoked | BOOLEAN | NOT NULL | FALSE | 是否已撤销 |
+| revoked_at | TIMESTAMPTZ | - | NULL | 撤销时间 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `session_id WHERE is_revoked = FALSE`
+- 复合索引 `(user_id, last_active_at DESC) WHERE is_revoked = FALSE`
+
+**关键约束**: user_id 引用 users.user_id，由应用层保证数据完整性
+
+---
+
+#### 4.3.7 user_location_history - 用户位置历史表 ✨
+
+**表说明**: 存储用户位置变化的完整历史轨迹。⚠️ **与 `users` 表职责分工**：
+- **`users.current_*` 字段**：存储当前位置，用于"附近的人"快速查询
+- **`user_location_history` 表**：存储完整历史轨迹，用于分析、统计、历史查询
+- ✅ **支持分页**：使用UUID业务ID实现游标分页
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键 |
+| history_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | 业务ID（用于游标分页） |
+| user_id | BIGINT | NOT NULL | - | 用户ID（引用 users.user_id，应用层保证） |
+| latitude | DOUBLE PRECISION | NOT NULL | - | 纬度 |
+| longitude | DOUBLE PRECISION | NOT NULL | - | 经度 |
+| location_name | VARCHAR(255) | - | NULL | 位置名称 |
+| location | geography(POINT, 4326) | NOT NULL | - | PostGIS地理对象（触发器自动生成） |
+| recorded_at | TIMESTAMPTZ | NOT NULL | NOW() | 记录时间 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `history_id`
+- 复合索引 `(user_id, recorded_at DESC)`
+- 地理索引 `location USING GIST`
+
+**关键约束**: 
+- user_id 引用 users.user_id，由应用层保证数据完整性
+- 纬度范围约束（-90 ~ 90）
+- 经度范围约束（-180 ~ 180）
+
+**特殊处理**: `location`字段由触发器自动生成（`ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography`），只有位置变化超过阈值（系统配置`location_change_threshold`，默认500米）时才记录
+
+---
+
+### 4.4 聊天相关表
+
+⚠️ **重要设计变更**：`chat_rooms` 表已拆分为 `private_chats` 和 `group_chats` 两个独立表。
+
+**拆分理念**：
+- ✅ **职责单一**：私聊和群聊的数据结构和业务逻辑完全不同
+- ✅ **无冗余字段**：不再需要大量只在特定类型下才用的字段
+- ✅ **无复杂约束**：不再需要 `CHECK (room_type = 'xxx' OR ...)`
+- ✅ **查询高效**：不需要 `WHERE room_type = 'xxx'` 过滤
+
+---
+
+#### 4.4.1 private_chats - 私聊表 ✨
+
+**表说明**: 1对1私聊房间表。**职责分离设计**：
+- ✅ **职责单一**：只管理私聊（1对1），不混入群聊逻辑
+- ✅ **极简设计**：无需 name/avatar/description/location/owner_id 等群聊字段
+- ✅ **双向唯一**：`user_a_id < user_b_id` 保证 (A,B) 和 (B,A) 被视为同一私聊
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键 |
+| private_chat_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | 私聊UUID |
+| user_a_id | BIGINT | NOT NULL | - | 用户A（user_a_id < user_b_id，引用 users.user_id） |
+| user_b_id | BIGINT | NOT NULL | - | 用户B（user_a_id < user_b_id，引用 users.user_id） |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 创建时间 |
+| updated_at | TIMESTAMPTZ | - | NULL | 更新时间 |
+| is_deleted | BOOLEAN | NOT NULL | FALSE | 软删除标记 |
+| deleted_at | TIMESTAMPTZ | - | NULL | 删除时间 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `private_chat_id`
+- 唯一索引 `(user_a_id, user_b_id)`
+- 复合索引 `(user_a_id, updated_at DESC) WHERE is_deleted = FALSE`
+- 复合索引 `(user_b_id, updated_at DESC) WHERE is_deleted = FALSE`
+
+**关键约束**: 
+- `CHECK (user_a_id < user_b_id)` - 保证用户顺序一致性
+- `UNIQUE (user_a_id, user_b_id)` - 同一对用户只能有一个私聊
+- user_a_id, user_b_id 引用 users.user_id，由应用层保证数据完整性
+
+**查询模式**：
+- 查询用户所有私聊：使用 `WHERE user_a_id = $1 OR user_b_id = $1`
+- 查询两个用户的私聊：需要双向匹配 `(A,B)` 或 `(B,A)`
+- 必须添加 `is_deleted = FALSE` 过滤条件
+
+---
+
+#### 4.4.2 group_chats - 群聊表 ✨
+
+**表说明**: 多人群聊房间表。**职责分离设计**：
+- ✅ **职责单一**：只管理群聊（多人），不混入私聊逻辑
+- ✅ **完整字段**：包含 name/avatar/description/location/owner_id 等群聊特有字段
+- ✅ **设置分离**：群组设置（join_method/is_searchable等）→ `group_settings` 表
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键 |
+| group_chat_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | 群聊UUID |
+| name | VARCHAR(100) | NOT NULL | - | 群组名称（必填） |
+| description | TEXT | - | NULL | 群组描述 |
+| avatar_url | TEXT | - | NULL | 群组头像 |
+| owner_id | BIGINT | NOT NULL | - | 群主ID（引用 users.user_id，应用层保证） |
+| latitude | DOUBLE PRECISION | - | NULL | 当前纬度（群组位置快照） |
+| longitude | DOUBLE PRECISION | - | NULL | 当前经度（群组位置快照） |
+| location_name | VARCHAR(255) | - | NULL | 当前位置名称 |
+| location | geography(POINT, 4326) | - | NULL | PostGIS地理对象（触发器自动生成） |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 创建时间 |
+| updated_at | TIMESTAMPTZ | - | NULL | 更新时间 |
+| is_deleted | BOOLEAN | NOT NULL | FALSE | 软删除标记 |
+| is_dismissed | BOOLEAN | NOT NULL | FALSE | 是否解散 |
+| deleted_at | TIMESTAMPTZ | - | NULL | 删除时间 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `group_chat_id WHERE is_deleted = FALSE AND is_dismissed = FALSE`
+- 地理索引 `location USING GIST WHERE location IS NOT NULL AND is_deleted = FALSE`
+- 查询索引 `name USING gin (name gin_trgm_ops) WHERE is_deleted = FALSE`
+- 复合索引 `(owner_id) WHERE is_deleted = FALSE`
+
+**关键约束**: 
+- 纬度范围约束（-90 ~ 90）
+- 经度范围约束（-180 ~ 180）
+- 触发器自动生成 `location` 字段（从经纬度）
+- owner_id 引用 users.user_id，由应用层保证数据完整性
+
+---
+
+#### 4.4.3 group_settings - 群组设置表 ✨
+
+**表说明**: 存储群组配置项（从 `group_chats` 表分离），采用 **1:1 关联**，通过触发器自动创建默认设置。
+
+**设计理念**：与 `user_settings` 相同，实现职责分明、查询优化、扩展灵活、缓存友好。
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键 |
+| group_chat_id | VARCHAR(36) | NOT NULL, UNIQUE | - | 群组ID（引用 group_chats.group_chat_id，应用层保证） |
+| join_method | join_method | NOT NULL | 'open' | 加入方式（open/approval/invite_only） |
+| is_searchable | BOOLEAN | NOT NULL | TRUE | 是否可被搜索 |
+| max_members | INTEGER | - | NULL | 最大成员数（NULL表示无限制） |
+| **password_hash** | **VARCHAR(255)** | - | **NULL** | **群组密码（bcrypt哈希，NULL表示无密码）** |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 创建时间 |
+| updated_at | TIMESTAMPTZ | - | NULL | 更新时间 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `group_chat_id`
+
+**关键约束**: 
+- group_chat_id 引用 group_chats.group_chat_id，由应用层保证数据完整性
+- 触发器 `trigger_auto_create_group_settings` 在群组创建时自动插入默认设置
+
+**触发器实现**（在 `003_chat_module.sql` 中创建）：
+- 触发器函数：`auto_create_group_settings()` 在群组创建时自动插入默认设置
+- 触发器：`trigger_auto_create_group_settings` 绑定到 group_chats 表的 INSERT 操作
+- 使用 `ON CONFLICT DO NOTHING` 确保幂等性
+
+**群组密码机制**：
+- ✅ **邀请入群**：通过邀请链接或好友邀请加入群组，**不需要密码**
+- ✅ **搜索加入**：用户搜索到群组后，如果群组设置了密码，**必须输入正确密码才能加入**
+- ✅ **密码存储**：使用 bcrypt 哈希存储，**NULL 表示无密码**
+- ✅ **密码验证**：Service 层负责验证密码，使用 `password::verify()` 工具函数
+- ✅ **错误返回**（使用具体错误码）：
+  - 群组密码错误，返回错误码 `1311`（群组密码错误）
+  - 未提供密码但群组需要密码，返回错误码 `1001`（缺少必填参数）
+  - 群组不存在，返回错误码 `1200`（资源不存在）
+  - 已在群组中，返回错误码 `1305`（已在群组中）
+  - 群组已满员，返回错误码 `1304`（群组已满员）
+
+**查询模式**：
+- 查询群组详情时使用 LEFT JOIN 关联 group_settings 表
+- 更新设置时直接操作 group_settings 表
+- 密码验证逻辑：
+  1. 查询 `password_hash` 字段
+  2. 如果为 NULL，直接通过
+  3. 如果不为 NULL，使用 bcrypt 验证
+
+#### 4.4.4 group_members - 群组成员表 ✨
+
+**表说明**: 管理群组成员关系。⚠️ **采用设置表分离设计**：
+- **未读计数** → `chat_unread_counts` 表（高频更新，独立表优化性能）
+- **用户个性化设置** → `group_member_settings` 表（置顶、归档等，独立管理）
+- ✅ **支持分页**：使用UUID业务ID实现游标分页
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键（用于分页排序） |
+| member_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | UUID业务ID（API暴露，游标） |
+| group_chat_id | VARCHAR(36) | NOT NULL | - | 群聊ID（引用 group_chats.group_chat_id，应用层保证） |
+| user_id | VARCHAR(36) | NOT NULL | - | 成员ID（引用 users.user_id，应用层保证） |
+| role | member_role | NOT NULL | 'member' | 角色（owner/admin/member） |
+| joined_at | TIMESTAMPTZ | NOT NULL | NOW() | 加入时间 |
+| muted_until | TIMESTAMPTZ | - | NULL | 禁言到期时间 |
+| is_left | BOOLEAN | NOT NULL | FALSE | 是否已退出 |
+| left_at | TIMESTAMPTZ | - | NULL | 退出时间 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `member_id`
+- 唯一索引 `(group_chat_id, user_id)`
+- 复合索引 `(group_chat_id, joined_at DESC) WHERE is_left = FALSE`
+- 复合索引 `(user_id, joined_at DESC) WHERE is_left = FALSE`
+- 复合索引 `(group_chat_id) WHERE is_left = FALSE`（成员计数）
+- 复合索引 `(group_chat_id, role) WHERE is_left = FALSE`（按角色查询）
+
+**关键约束**: 
+- group_chat_id 引用 group_chats.group_chat_id，由应用层保证数据完整性
+- user_id 引用 users.user_id，由应用层保证数据完整性
+
+#### 4.4.5 private_chat_settings - 私聊设置表
+
+**表说明**: 存储用户对私聊的个性化设置。
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键 |
+| private_chat_id | VARCHAR(36) | NOT NULL | - | 私聊ID（引用 private_chats.private_chat_id，应用层保证） |
+| user_id | BIGINT | NOT NULL | - | 用户ID（引用 users.user_id，应用层保证） |
+| is_muted | BOOLEAN | NOT NULL | FALSE | 是否静音 |
+| is_pinned | BOOLEAN | NOT NULL | FALSE | 是否置顶 |
+| is_archived | BOOLEAN | NOT NULL | FALSE | 是否归档 |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 创建时间 |
+| updated_at | TIMESTAMPTZ | - | NULL | 更新时间 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `(private_chat_id, user_id)`
+- 复合索引 `(user_id)`
+- 复合索引 `(private_chat_id)`
+
+**关键约束**: 
+- private_chat_id 引用 private_chats.private_chat_id，由应用层保证数据完整性
+- user_id 引用 users.user_id，由应用层保证数据完整性
+
+---
+
+#### 4.4.6 group_member_settings - 群组成员设置表
+
+**表说明**: 存储用户对群聊的个性化设置。
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键 |
+| group_chat_id | VARCHAR(36) | NOT NULL | - | 群聊ID（引用 group_chats.group_chat_id，应用层保证） |
+| user_id | BIGINT | NOT NULL | - | 用户ID（引用 users.user_id，应用层保证） |
+| is_muted | BOOLEAN | NOT NULL | FALSE | 是否静音 |
+| is_pinned | BOOLEAN | NOT NULL | FALSE | 是否置顶 |
+| is_archived | BOOLEAN | NOT NULL | FALSE | 是否归档 |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 创建时间 |
+| updated_at | TIMESTAMPTZ | - | NULL | 更新时间 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `(group_chat_id, user_id)`
+- 复合索引 `(user_id)`
+- 复合索引 `(group_chat_id)`
+
+**关键约束**: 
+- group_chat_id 引用 group_chats.group_chat_id，由应用层保证数据完整性
+- user_id 引用 users.user_id，由应用层保证数据完整性
+
+#### 4.4.7 group_invites - 群组邀请表 ✨
+
+**表说明**: 群组邀请记录
+- ✅ **支持分页**：使用UUID业务ID实现游标分页
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键 |
+| invite_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | 业务ID（用于游标分页） |
+| group_chat_id | VARCHAR(36) | NOT NULL | - | 群聊ID（引用 group_chats.group_chat_id，应用层保证） |
+| inviter_id | BIGINT | NOT NULL | - | 邀请人ID（引用 users.user_id，应用层保证） |
+| invitee_id | BIGINT | NOT NULL | - | 被邀请人ID（引用 users.user_id，应用层保证） |
+| message | TEXT | - | NULL | 邀请消息 |
+| status | invitation_status | NOT NULL | 'pending' | 状态（pending/accepted/rejected） |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 创建时间 |
+| expires_at | TIMESTAMPTZ | NOT NULL | - | 过期时间 |
+| responded_at | TIMESTAMPTZ | - | NULL | 响应时间 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `invite_id`
+- 复合索引 `(invitee_id, status, created_at DESC)`
+- 复合索引 `(group_chat_id, status, created_at DESC)`
+
+**关键约束**: 
+- group_chat_id 引用 group_chats.group_chat_id，由应用层保证数据完整性
+- inviter_id, invitee_id 引用 users.user_id，由应用层保证数据完整性
+
+#### 4.4.8 group_applications - 群组申请表 ✨
+
+**表说明**: 私密群组加入申请记录
+- ✅ **支持分页**：使用UUID业务ID实现游标分页
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键 |
+| application_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | 业务ID（用于游标分页） |
+| group_chat_id | VARCHAR(36) | NOT NULL | - | 群聊ID（引用 group_chats.group_chat_id，应用层保证） |
+| applicant_id | BIGINT | NOT NULL | - | 申请人ID（引用 users.user_id，应用层保证） |
+| message | TEXT | - | NULL | 申请消息 |
+| status | invitation_status | NOT NULL | 'pending' | 状态（pending/accepted/rejected） |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 申请时间 |
+| handled_at | TIMESTAMPTZ | - | NULL | 审核时间 |
+| handled_by | BIGINT | - | NULL | 审核人ID（引用 users.user_id，应用层保证） |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `application_id`
+- 复合索引 `(group_chat_id, status, created_at DESC)`
+- 复合索引 `(applicant_id, created_at DESC)`
+
+**关键约束**: 
+- group_chat_id 引用 group_chats.group_chat_id，由应用层保证数据完整性
+- applicant_id, handled_by 引用 users.user_id，由应用层保证数据完整性
+
+---
+
+### 4.5 消息相关表
+
+#### 4.5.1 private_messages - 私聊消息表
+
+**表说明**: 存储私聊消息
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键 |
+| message_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | 业务消息ID |
+| private_chat_id | VARCHAR(36) | NOT NULL | - | 私聊ID（引用 private_chats.private_chat_id，应用层保证） |
+| sender_id | BIGINT | NOT NULL | - | 发送者ID（引用 users.user_id，应用层保证） |
+| type | message_type | NOT NULL | 'text' | 类型（text/image/video/audio/file） |
+| content | TEXT | NOT NULL | - | 消息内容 |
+| reply_to_message_id | VARCHAR(36) | - | NULL | 回复的消息ID |
+| file_name | VARCHAR(255) | - | NULL | 文件名 |
+| file_size | BIGINT | - | NULL | 文件大小（字节） |
+| thumbnail_url | TEXT | - | NULL | 缩略图URL |
+| duration | INTEGER | - | NULL | 时长（秒） |
+| sent_at | TIMESTAMPTZ | NOT NULL | NOW() | 发送时间 |
+| edited_at | TIMESTAMPTZ | - | NULL | 编辑时间 |
+| is_recalled | BOOLEAN | NOT NULL | FALSE | 是否已撤回 |
+| recalled_at | TIMESTAMPTZ | - | NULL | 撤回时间 |
+| is_deleted | BOOLEAN | NOT NULL | FALSE | 软删除标记 |
+| deleted_at | TIMESTAMPTZ | - | NULL | 删除时间 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `message_id`
+- 复合索引 `(private_chat_id, sent_at DESC) WHERE is_deleted = FALSE`
+- 复合索引 `(sender_id, sent_at DESC) WHERE is_deleted = FALSE`
+- 全文搜索索引 `content USING gin (content gin_trgm_ops) WHERE type = 'text' AND is_deleted = FALSE`
+
+**关键约束**: 
+- private_chat_id 引用 private_chats.private_chat_id，由应用层保证数据完整性
+- sender_id 引用 users.user_id，由应用层保证数据完整性
+
+---
+
+#### 4.5.2 group_messages - 群聊消息表
+
+**表说明**: 存储群聊消息
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键 |
+| message_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | 业务消息ID |
+| group_chat_id | VARCHAR(36) | NOT NULL | - | 群聊ID（引用 group_chats.group_chat_id，应用层保证） |
+| sender_id | BIGINT | NOT NULL | - | 发送者ID（引用 users.user_id，应用层保证） |
+| type | message_type | NOT NULL | 'text' | 类型（text/image/video/audio/file/system） |
+| content | TEXT | NOT NULL | - | 消息内容 |
+| reply_to_message_id | VARCHAR(36) | - | NULL | 回复的消息ID |
+| mentions | BIGINT[] | - | NULL | @提及的用户ID列表 |
+| file_name | VARCHAR(255) | - | NULL | 文件名 |
+| file_size | BIGINT | - | NULL | 文件大小（字节） |
+| thumbnail_url | TEXT | - | NULL | 缩略图URL |
+| duration | INTEGER | - | NULL | 时长（秒） |
+| sent_at | TIMESTAMPTZ | NOT NULL | NOW() | 发送时间 |
+| edited_at | TIMESTAMPTZ | - | NULL | 编辑时间 |
+| is_recalled | BOOLEAN | NOT NULL | FALSE | 是否已撤回 |
+| recalled_by | BIGINT | - | NULL | 撤回操作者ID（可能是发送者或管理员） |
+| recalled_at | TIMESTAMPTZ | - | NULL | 撤回时间 |
+| is_deleted | BOOLEAN | NOT NULL | FALSE | 软删除标记 |
+| deleted_at | TIMESTAMPTZ | - | NULL | 删除时间 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `message_id`
+- 复合索引 `(group_chat_id, sent_at DESC) WHERE is_deleted = FALSE`
+- 复合索引 `(sender_id, sent_at DESC) WHERE is_deleted = FALSE`
+- GIN索引 `mentions USING gin (mentions) WHERE mentions IS NOT NULL AND is_deleted = FALSE`
+- 全文搜索索引 `content USING gin (content gin_trgm_ops) WHERE type = 'text' AND is_deleted = FALSE`
+
+**关键约束**: 
+- group_chat_id 引用 group_chats.group_chat_id，由应用层保证数据完整性
+- sender_id, recalled_by 引用 users.user_id，由应用层保证数据完整性
+
+#### 4.5.3 group_message_read_status - 群聊消息已读状态表 ✨
+
+**表说明**: 记录群聊消息的已读状态（用于群聊已读回执）
+- ✅ **支持分页**：使用UUID业务ID实现游标分页
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键（用于分页排序） |
+| read_status_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | UUID业务ID（API暴露，游标） |
+| message_id | VARCHAR(36) | NOT NULL | - | 消息ID（引用 group_messages.message_id，应用层保证） |
+| group_chat_id | VARCHAR(36) | NOT NULL | - | 群聊ID（引用 group_chats.group_chat_id，应用层保证） |
+| user_id | VARCHAR(36) | NOT NULL | - | 用户ID（引用 users.user_id，应用层保证） |
+| read_at | TIMESTAMPTZ | NOT NULL | NOW() | 阅读时间 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `read_status_id`
+- 唯一索引 `(message_id, user_id)`
+- 复合索引 `(group_chat_id, user_id, read_at DESC)`
+- 复合索引 `(message_id, read_at DESC)`
+
+**关键约束**: 
+- message_id 引用 group_messages.message_id，由应用层保证数据完整性
+- group_chat_id 引用 group_chats.group_chat_id，由应用层保证数据完整性
+- user_id 引用 users.user_id，由应用层保证数据完整性
+
+---
+
+#### 4.5.4 message_reactions - 消息反应表 ✨
+
+**表说明**: 消息表情反应（点赞、爱心等）
+- ✅ **支持分页**：使用UUID业务ID实现游标分页
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键（用于分页排序） |
+| reaction_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | UUID业务ID（API暴露，游标） |
+| message_id | VARCHAR(36) | NOT NULL | - | 消息ID（可以是私聊或群聊消息） |
+| user_id | VARCHAR(36) | NOT NULL | - | 用户ID（引用 users.user_id，应用层保证） |
+| type | reaction_type | NOT NULL | - | 类型（like/love/laugh/angry/sad/wow） |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 反应时间 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `reaction_id`
+- 唯一索引 `(message_id, user_id, type)`
+- 复合索引 `(message_id, created_at DESC)`
+- 复合索引 `(user_id, created_at DESC)`
+
+**关键约束**: 
+- user_id 引用 users.user_id，由应用层保证数据完整性
+
+---
+
+### 4.6 生活瞬间相关表
+
+#### 4.6.1 moments - 生活瞬间表
+
+**表说明**: 存储用户发布的生活瞬间。⚠️ **位置信息直接存储在此表**（瞬间发布时的位置快照）
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键 |
+| moment_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | 业务瞬间ID |
+| user_id | BIGINT | NOT NULL | - | 用户ID（引用 users.user_id，应用层保证） |
+| description | TEXT | NOT NULL | - | 描述文本 |
+| latitude | DOUBLE PRECISION | NOT NULL | - | 发布位置纬度（快照） |
+| longitude | DOUBLE PRECISION | NOT NULL | - | 发布位置经度（快照） |
+| location_name | VARCHAR(255) | NOT NULL | - | 位置名称 |
+| location | geography(POINT, 4326) | NOT NULL | - | PostGIS地理对象（触发器自动生成） |
+| tags | TEXT[] | - | NULL | 标签数组 |
+| images | TEXT[] | - | NULL | 图片URL数组 |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 发布时间 |
+| updated_at | TIMESTAMPTZ | - | NULL | 更新时间 |
+| is_deleted | BOOLEAN | NOT NULL | FALSE | 软删除 |
+| deleted_at | TIMESTAMPTZ | - | NULL | 删除时间 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `moment_id WHERE is_deleted = FALSE`
+- 复合索引 `(user_id, created_at DESC) WHERE is_deleted = FALSE`
+- 地理索引 `location USING GIST WHERE is_deleted = FALSE`
+- GIN索引 `tags USING gin (tags) WHERE tags IS NOT NULL AND is_deleted = FALSE`
+- 全文搜索索引 `description USING gin (description gin_trgm_ops) WHERE is_deleted = FALSE`
+
+**关键约束**: 
+- user_id 引用 users.user_id，由应用层保证数据完整性
+- 纬度范围约束（-90 ~ 90）
+- 经度范围约束（-180 ~ 180）
+- `location`字段由触发器自动生成
+
+#### 4.6.2 moment_likes - 瞬间点赞表 ✨
+
+**表说明**: 记录点赞关系
+- ✅ **支持分页**：使用UUID业务ID实现游标分页
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键（用于分页排序） |
+| like_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | UUID业务ID（API暴露，游标） |
+| moment_id | VARCHAR(36) | NOT NULL | - | 瞬间ID（引用 moments.moment_id，应用层保证） |
+| user_id | VARCHAR(36) | NOT NULL | - | 用户ID（引用 users.user_id，应用层保证） |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 点赞时间 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `like_id`
+- 唯一索引 `(moment_id, user_id)`
+- 复合索引 `(moment_id, created_at DESC)`
+- 复合索引 `(user_id, created_at DESC)`
+
+**关键约束**: 
+- moment_id 引用 moments.moment_id，由应用层保证数据完整性
+- user_id 引用 users.user_id，由应用层保证数据完整性
+
+---
+
+#### 4.6.3 moment_favorites - 瞬间收藏表 ✨
+
+**表说明**: 记录收藏关系
+- ✅ **支持分页**：使用UUID业务ID实现游标分页
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键（用于分页排序） |
+| favorite_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | UUID业务ID（API暴露，游标） |
+| moment_id | VARCHAR(36) | NOT NULL | - | 瞬间ID（引用 moments.moment_id，应用层保证） |
+| user_id | VARCHAR(36) | NOT NULL | - | 用户ID（引用 users.user_id，应用层保证） |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 收藏时间 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `favorite_id`
+- 唯一索引 `(moment_id, user_id)`
+- 复合索引 `(user_id, created_at DESC)`
+- 复合索引 `(moment_id, created_at DESC)`
+
+**关键约束**: 
+- moment_id 引用 moments.moment_id，由应用层保证数据完整性
+- user_id 引用 users.user_id，由应用层保证数据完整性
+
+---
+
+### 4.7 评论相关表
+
+#### 4.7.1 comments - 评论表
+
+**表说明**: 瞬间评论和回复
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键 |
+| comment_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | 业务评论ID |
+| moment_id | VARCHAR(36) | NOT NULL | - | 瞬间ID（引用 moments.moment_id，应用层保证） |
+| user_id | BIGINT | NOT NULL | - | 评论者ID（引用 users.user_id，应用层保证） |
+| content | TEXT | NOT NULL | - | 评论内容 |
+| parent_comment_id | VARCHAR(36) | - | NULL | 父评论ID（支持嵌套回复） |
+| reply_to_user_id | BIGINT | - | NULL | 回复目标用户ID（引用 users.user_id，应用层保证） |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 评论时间 |
+| is_deleted | BOOLEAN | NOT NULL | FALSE | 软删除 |
+| deleted_at | TIMESTAMPTZ | - | NULL | 删除时间 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `comment_id WHERE is_deleted = FALSE`
+- 复合索引 `(moment_id, created_at DESC) WHERE is_deleted = FALSE`
+- 复合索引 `(user_id, created_at DESC) WHERE is_deleted = FALSE`
+- 复合索引 `(parent_comment_id, created_at DESC) WHERE parent_comment_id IS NOT NULL AND is_deleted = FALSE`
+- 全文搜索索引 `content USING gin (content gin_trgm_ops) WHERE is_deleted = FALSE`
+
+**关键约束**: 
+- moment_id 引用 moments.moment_id，由应用层保证数据完整性
+- user_id, reply_to_user_id 引用 users.user_id，由应用层保证数据完整性
+
+---
+
+#### 4.7.2 comment_likes - 评论点赞表 ✨
+
+**表说明**: 评论点赞记录
+- ✅ **支持分页**：使用UUID业务ID实现游标分页
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键（用于分页排序） |
+| like_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | UUID业务ID（API暴露，游标） |
+| comment_id | VARCHAR(36) | NOT NULL | - | 评论ID（引用 comments.comment_id，应用层保证） |
+| user_id | VARCHAR(36) | NOT NULL | - | 用户ID（引用 users.user_id，应用层保证） |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 点赞时间 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `like_id`
+- 唯一索引 `(comment_id, user_id)`
+- 复合索引 `(comment_id, created_at DESC)`
+- 复合索引 `(user_id, created_at DESC)`
+
+**关键约束**: 
+- comment_id 引用 comments.comment_id，由应用层保证数据完整性
+- user_id 引用 users.user_id，由应用层保证数据完整性
+
+---
+
+### 4.8 系统相关表
+
+#### 4.8.1 reports - 举报表
+
+**表说明**: 内容举报记录
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键 |
+| report_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | 举报ID |
+| reporter_id | BIGINT | NOT NULL | - | 举报人ID（引用 users.user_id，应用层保证） |
+| target_type | report_target_type | NOT NULL | - | 举报对象类型（user/moment/comment/message/group） |
+| target_id | VARCHAR(255) | NOT NULL | - | 举报对象ID |
+| reason | VARCHAR(100) | NOT NULL | - | 举报理由 |
+| description | TEXT | - | NULL | 详细说明 |
+| status | report_status | NOT NULL | 'pending' | 状态（pending/reviewing/resolved/dismissed） |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 举报时间 |
+| handled_at | TIMESTAMPTZ | - | NULL | 处理时间 |
+| handled_by | BIGINT | - | NULL | 处理人ID（引用 users.user_id，应用层保证） |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `report_id`
+- 复合索引 `(reporter_id, created_at DESC)`
+- 复合索引 `(target_type, target_id, created_at DESC)`
+- 复合索引 `(status, created_at DESC)`
+
+**关键约束**: 
+- reporter_id, handled_by 引用 users.user_id，由应用层保证数据完整性
+
+#### 4.8.2 inbox_items - 收件箱提醒表
+
+**表说明**: 系统生成的通知提醒
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键 |
+| inbox_item_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | 提醒ID |
+| user_id | BIGINT | NOT NULL | - | 接收者ID（引用 users.user_id，应用层保证） |
+| category | inbox_category | NOT NULL | - | 分类（social/content/system） |
+| type | VARCHAR(50) | NOT NULL | - | 具体类型（friend_request/moment_like等） |
+| title | VARCHAR(255) | - | NULL | 标题 |
+| content | TEXT | NOT NULL | - | 内容 |
+| data | JSONB | - | NULL | 扩展数据（JSON） |
+| action_url | TEXT | - | NULL | 跳转链接 |
+| severity | notification_severity | - | NULL | 严重级别（info/warning/error） |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 创建时间 |
+| is_read | BOOLEAN | NOT NULL | FALSE | 是否已读 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `inbox_item_id`
+- 复合索引 `(user_id, is_read, created_at DESC)`
+- 复合索引 `(user_id, category, created_at DESC)`
+- 复合索引 `(user_id, type, created_at DESC)`
+
+**关键约束**: 
+- user_id 引用 users.user_id，由应用层保证数据完整性
+
+#### 4.8.3 event_subscriptions - 事件订阅配置表
+
+**表说明**: 用户的通知订阅偏好（持久化，跨设备生效）
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键 |
+| user_id | BIGINT | NOT NULL, FK | - | 用户ID |
+| friend_request_enabled | BOOLEAN | NOT NULL | TRUE | 好友申请提醒 |
+| friend_accepted_enabled | BOOLEAN | NOT NULL | TRUE | 好友接受提醒 |
+| group_invite_enabled | BOOLEAN | NOT NULL | TRUE | 群组邀请提醒 |
+| group_invite_response_enabled | BOOLEAN | NOT NULL | TRUE | 群组邀请响应提醒 |
+| message_mention_enabled | BOOLEAN | NOT NULL | TRUE | @提及提醒 |
+| moment_like_enabled | BOOLEAN | NOT NULL | TRUE | 瞬间点赞提醒 |
+| moment_comment_enabled | BOOLEAN | NOT NULL | TRUE | 瞬间评论提醒 |
+| comment_reply_enabled | BOOLEAN | NOT NULL | TRUE | 评论回复提醒 |
+| system_announcement_enabled | BOOLEAN | NOT NULL | TRUE | 系统公告提醒 |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 创建时间 |
+| updated_at | TIMESTAMPTZ | NOT NULL | NOW() | 更新时间 |
+
+**索引**: 主键 `id`，唯一索引 `user_id`
+
+#### 4.8.4 device_tokens - 设备推送Token表 ✨
+
+**表说明**: 设备推送通知Token（APNs/FCM）
+- ✅ **支持分页**：使用UUID业务ID实现游标分页
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键 |
+| token_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | 业务TokenID（用于游标分页） |
+| user_id | BIGINT | NOT NULL | - | 用户ID（引用 users.user_id，应用层保证） |
+| platform | VARCHAR(20) | NOT NULL | - | 平台（ios/android/web） |
+| device_token | VARCHAR(255) | NOT NULL | - | 推送Token |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 创建时间 |
+| last_used_at | TIMESTAMPTZ | NOT NULL | NOW() | 最后使用时间 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `token_id`
+- 唯一索引 `(user_id, platform, device_token)`
+- 复合索引 `(user_id, created_at DESC)`
+- 复合索引 `platform`
+
+**关键约束**: 
+- user_id 引用 users.user_id，由应用层保证数据完整性
+- `CHECK (platform IN ('ios', 'android', 'web'))`
+
+#### 4.8.5 feed_feedback - 信息流反馈表 ✨
+
+**表说明**: 用户对信息流条目的反馈（用于优化推荐）
+- ✅ **支持分页**：使用UUID业务ID实现游标分页
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键 |
+| feedback_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | 业务反馈记录ID（用于游标分页） |
+| feed_item_id | VARCHAR(36) | NOT NULL | - | 信息流条目ID（引用 feed_items.feed_item_id，应用层保证） |
+| user_id | BIGINT | NOT NULL | - | 用户ID（引用 users.user_id，应用层保证） |
+| action | VARCHAR(20) | NOT NULL | - | 操作（hide/not_interested/clicked/viewed） |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 操作时间 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `feedback_id`
+- 复合索引 `(feed_item_id, action)`
+- 复合索引 `(user_id, created_at DESC)`
+
+**关键约束**: 
+- feed_item_id 引用 feed_items.feed_item_id，由应用层保证数据完整性
+- user_id 引用 users.user_id，由应用层保证数据完整性
+- `CHECK (action IN ('hide', 'not_interested', 'clicked', 'viewed'))`
+
+#### 4.8.6 media_files - 媒体文件元数据表
+
+**表说明**: 上传文件的元数据记录
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键 |
+| file_id | UUID | NOT NULL, UNIQUE | gen_random_uuid() | 文件ID |
+| user_id | BIGINT | NOT NULL, FK | - | 上传者ID |
+| category | VARCHAR(20) | CHECK | - | 类别（avatar/group_image/moment_image/file） |
+| file_url | TEXT | NOT NULL | - | 文件URL |
+| file_size | BIGINT | NOT NULL | - | 文件大小（字节） |
+| mime_type | VARCHAR(100) | NOT NULL | - | MIME类型 |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 上传时间 |
+
+**索引**: 主键 `id`，唯一索引 `file_id`，复合索引 `(user_id, id DESC)` / `category`
+
+#### 4.8.7 system_configs - 系统配置表 ✨
+
+**表说明**: 运行时可修改的系统配置
+- ✅ **支持分页**：使用UUID业务ID实现游标分页
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键 |
+| config_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | 业务配置ID（用于游标分页） |
+| key | VARCHAR(100) | NOT NULL, UNIQUE | - | 配置键 |
+| value | TEXT | NOT NULL | - | 配置值 |
+| type | VARCHAR(20) | NOT NULL | - | 值类型（string/number/boolean） |
+| category | VARCHAR(50) | NOT NULL | - | 配置分类 |
+| description | TEXT | - | NULL | 配置说明 |
+| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 创建时间 |
+| updated_at | TIMESTAMPTZ | - | NULL | 更新时间（触发器自动更新） |
+| is_deleted | BOOLEAN | NOT NULL | FALSE | 软删除标记 |
+| deleted_at | TIMESTAMPTZ | - | NULL | 删除时间 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `config_id WHERE is_deleted = FALSE`
+- 唯一索引 `key`
+- 复合索引 `(category, created_at DESC) WHERE is_deleted = FALSE`
+
+**关键约束**: 
+- `CHECK (type IN ('string', 'number', 'boolean'))`
+
+**预置配置**: default_latitude, default_longitude, location_change_threshold, access_token_ttl, refresh_token_ttl, max_upload_size_*, search_rate_limit, message_rate_limit
+
+#### 4.8.8 system_config_history - 配置变更日志表 ✨
+
+**表说明**: 系统配置变更审计日志
+- ✅ **支持分页**：使用UUID业务ID实现游标分页
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键 |
+| history_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | 业务日志ID（用于游标分页） |
+| config_key | VARCHAR(100) | NOT NULL | - | 配置键 |
+| old_value | TEXT | - | NULL | 旧值 |
+| new_value | TEXT | NOT NULL | - | 新值 |
+| changed_by | BIGINT | NOT NULL | - | 修改人ID（引用 users.user_id，应用层保证） |
+| changed_at | TIMESTAMPTZ | NOT NULL | NOW() | 修改时间 |
+
+**索引**: 
+- 主键 `id`
+- 唯一索引 `history_id`
+- 复合索引 `(config_key, changed_at DESC)`
+- 复合索引 `(changed_by, changed_at DESC)`
+
+**关键约束**: 
+- changed_by 引用 users.user_id，由应用层保证数据完整性
+| ip_address | VARCHAR(45) | - | NULL | 修改IP |
+| user_agent | TEXT | - | NULL | User Agent |
+
+**索引**: 主键 `id`，唯一索引 `log_id`，复合索引 `(config_key, id DESC)` / `(changed_by, id DESC)` / `changed_at DESC`
+
+**用途**: 审计和回溯配置变更
+
+---
+
+### 4.9 系统用户初始化
+
+**预置系统用户**（user_id高8位为0x03）:
+- `216172782113783809` (0x0300000000000001): 系统通知
+- `216172782113783810` (0x0300000000000002): 安全中心
+- `216172782113783811` (0x0300000000000003): 运营团队
+
+所有系统用户默认位置：南天门（35.154922, 112.682524）
+
+---
+
+### 4.10 历史跟踪设计原则
+
+**核心原则**: 对于需要审计、追溯、分析的数据变更，应创建独立的历史表，而不是在主表中保留历史快照。
+
+**系统需要的历史跟踪表**:
+- `user_location_history` - 用户位置变化历史
+- `room_location_history` - 群组位置变化历史
+- `config_change_logs` - 系统配置变更历史
+
+**可选的历史跟踪需求**（可根据业务需求扩展）:
+
+| 场景 | 基础设计 | 可选历史表 | 业务价值 | 优先级 |
+|---|---|---|---|---|
+| 消息编辑 | `edited_at`字段 | `message_edit_history` | 审计追溯、防止恶意编辑 | 中 |
+| 用户资料变更 | `updated_at`字段 | `user_profile_history` | 用户行为分析 | 低 |
+| 群组信息变更 | 无历史记录 | `group_info_history` | 管理审计 | 低 |
+| 用户关系变更 | 覆盖更新 | `relationship_history` | 用户关系分析 | 低 |
+| 登录会话历史 | 仅活跃会话 | `session_history` | 安全审计 | 中 |
+
+**历史表设计模式**:
+```
+主表：存储当前状态（快照）
+历史表：完整记录变更历史
+- {entity}_id: 关联主表
+- snapshot_data: JSONB存储完整快照或变更内容
+- changed_by: 操作人ID
+- changed_at: 变更时间
+- change_type: 变更类型（created/updated/deleted）
+- ip_address: 操作IP（可选）
+```
+
+**实现建议**:
+- 高频变更数据（位置、配置）：必须使用历史表
+- 需要审计的数据（资料、权限）：建议使用历史表
+- 不常变更的数据（评论、点赞）：使用`updated_at`即可
+- AI Agent可根据实际业务需求和存储成本权衡是否创建历史表
+
+---
+
+### 4.11 索引策略
+
+**核心原则**: AI Agent应根据查询模式和性能要求自行优化索引，以下仅为指导原则。
+
+**必须遵守的索引规则**:
+1. **地理位置字段**: 必须使用 **GIST 索引**（`USING GIST`），否则无法发挥PostGIS性能
+2. **外键字段**: 建议自动创建索引（PostgreSQL外键不自动创建）
+3. **软删除字段**: 建议创建部分索引（`WHERE is_deleted = FALSE`）
+
+**建议的索引模式**（AI Agent可根据实际情况调整）:
+- **数组字段**（tags）: 考虑使用 GIN 索引支持包含查询
+- **时间排序字段**: 考虑使用降序索引（`DESC`）
+- **复合查询**: 考虑使用复合索引（注意字段顺序）
+- **高基数字段**: 优先创建索引
+- **低基数字段**: 评估是否需要索引
+
+**性能优化原则**:
+- 避免过度索引（每个索引都有写入成本）
+- 通过`EXPLAIN ANALYZE`分析查询性能后再创建索引
+- 定期分析表统计信息（`ANALYZE`）
+- 考虑使用部分索引减少索引大小
+
+### 4.12 关系设计模式
+
+**设计原则**: AI Agent应根据业务需求选择合适的关系模型，以下仅为参考模式。
+
+**常见关系类型**:
+- **一对多**: 使用外键直接关联（如 user_id → users）
+- **多对多**: 使用中间表管理关系（如 group_members）
+- **自关联**: 使用单表存储对称/非对称关系（如 user_relationships）
+
+**本系统的关键关系**:
+- 用户 ↔ 内容（moments/comments）: 一对多，外键关联
+- 用户 ↔ 群聊: 多对多，通过 group_members 管理
+- 用户 ↔ 用户: 自关联，通过 user_relationships 管理多种关系类型
+- 用户 ↔ 互动（likes/collections）: 多对多，使用轻量级关联表
+
+**关系表设计建议**:
+- 包含时间戳（created_at/updated_at）用于排序和分析
+- 考虑是否需要软删除（is_deleted）
+- 评估是否需要额外的状态字段（status/role）
+- 为高频查询的组合创建索引
+
+### 4.13 高并发场景下的表分离原则
+
+#### 4.13.1 核心设计理念
+
+**表分离的根本目的**: 在高并发场景下，通过将高频更新的字段从主表中分离出来，减少锁竞争，提升系统整体性能。
+
+**三大设计原则**:
+1. **读写分离**: 将高频写操作的字段独立成表，避免阻塞主表的读操作
+2. **热点隔离**: 将热点数据（如未读计数、在线状态）单独存储，减少锁粒度
+3. **锁粒度最小化**: 减少同一张表上的并发更新冲突，提高事务吞吐量
+
+#### 4.13.2 需要分离的场景分析
+
+| 原表 | 高频操作 | 分离后的表 | 说明 | 性能提升 |
+|---|---|---|---|---|
+| group_members | 更新unread_count | chat_unread_counts | 每次发送/标记已读都更新 | 避免锁整个成员记录 |
+| users | 更新last_active_at, last_seen_at | user_online_status | WebSocket连接频繁更新 | 避免锁用户基础信息 |
+| private_chats/group_chats | 更新last_message_at | 保持现状 | 更新频率可接受 | 无需分离 |
+
+**为什么group_members需要分离unread_count**:
+- **问题**: 每次发送消息，需要更新所有成员的unread_count（群聊中可能是数百人）
+- **后果**: 大量并发更新导致行锁竞争，阻塞其他操作（如查询成员列表、修改成员权限）
+- **解决**: 将unread_count独立到chat_unread_counts表，与成员基础信息解耦
+- **收益**: 消息发送和成员管理可并行进行，互不阻塞
+
+**为什么users需要分离在线状态**:
+- **问题**: WebSocket连接/断开、用户活跃都会更新last_active_at/last_seen_at
+- **后果**: 高频更新锁住users表行，影响用户资料查询、好友列表等操作
+- **解决**: 将在线状态字段独立到user_online_status表
+- **收益**: 用户基础信息查询和在线状态更新解耦，各自独立扩展
+
+#### 4.13.3 新增表设计
+
+**chat_unread_counts - 聊天未读计数表**
+
+**设计目标**: 独立管理每个用户在每个聊天（私聊或群聊）的未读计数，与成员基础信息解耦。
+
+| 字段名 | 类型 | 约束 | 默认值 | 说明 |
+|---|---|---|---|---|
+| id | BIGSERIAL | PK | 自增 | 内部主键 |
+| chat_type | chat_type | NOT NULL | - | 聊天类型（private_chat/group_chat） |
+| chat_id | VARCHAR(36) | NOT NULL | - | 聊天ID（private_chat_id 或 group_chat_id） |
+| user_id | BIGINT | NOT NULL | - | 用户ID（引用 users.user_id，应用层保证） |
+| unread_count | INTEGER | NOT NULL | 0 | 未读消息数 |
+| last_read_at | TIMESTAMPTZ | - | NULL | 最后阅读时间 |
+| last_read_message_id | VARCHAR(36) | - | NULL | 最后阅读消息ID |
+| updated_at | TIMESTAMPTZ | NOT NULL | NOW() | 更新时间 |
+
+**索引**:
+- 主键 `id`
+- 唯一索引 `(chat_type, chat_id, user_id)`
+- 复合索引 `(user_id, updated_at DESC)`
+- 复合索引 `(chat_type, chat_id, updated_at DESC)`
+
+**关键约束**: 
+- user_id 引用 users.user_id，由应用层保证数据完整性
+
+**表结构要点**（详见迁移文件 `004_message_module.sql`）：
+- 主键：`id BIGSERIAL`
+- 唯一约束：`(chat_type, chat_id, user_id)`
+- 关键字段：`chat_type`（private_chat/group_chat）、`chat_id`、`user_id`、`unread_count`、`last_read_message_id`
+- 索引：chat_type+chat_id、user_id、user_id+unread_count（部分索引）
+
+**使用场景**：
+- 发送消息：递增聊天内所有其他成员的unread_count
+- 标记已读：清零当前用户在当前聊天的unread_count
+- 查询未读：查询当前用户所有unread_count > 0的聊天
+
+---
+
+**user_online_status - 用户在线状态表**
+
+**设计目标**: 独立管理用户在线状态和活跃时间，与用户基础信息解耦。
+
+**表结构要点**（详见迁移文件 `002_user_module.sql`）：
+- 主键：`id BIGSERIAL`
+- 唯一约束：`user_id`
+- 关键字段：`is_online`、`last_active_at`、`last_seen_at`、`connection_count`
+- 索引：user_id、is_online（部分索引，仅在线用户）
+
+**使用场景**：
+- WebSocket连接：设置is_online=true，connection_count+1
+- WebSocket断开：connection_count-1，如果为0则设置is_online=false
+- 用户活跃：更新last_active_at
+- 查询在线状态：直接查询本表，不影响users表
+
+#### 4.13.4 实现策略
+
+**⚠️ 重要原则**：直接在原始迁移文件中实现正确的表结构，**不使用 ALTER TABLE 或 patch 文件**。
+
+**实现步骤**：
+
+**步骤1：修改原始迁移文件**
+
+在相应的迁移文件中直接创建正确的表结构：
+
+- **`004_message_module.sql`**：创建 `chat_unread_counts` 表，`group_members` 表中**不包含** `unread_count` 和 `last_read_at` 字段
+- **`003_users.sql`**：创建 `user_online_status` 表，`users` 表中**不包含** `last_active_at` 和 `last_seen_at` 字段
+
+**步骤2：应用层实现**
+
+- **Repository层**：创建 `ChatUnreadRepository` 和 `UserOnlineStatusRepository`
+- **Service层**：未读计数和在线状态操作使用新的Repository
+- **WebSocket管理**：连接/断开时更新 `user_online_status` 表
+
+**步骤3：缓存层实现**
+
+- 未读计数：Redis Key `unread:{user_id}:{chat_type}:{chat_id}`
+- 在线状态：Redis Key `online_status:{user_id}`
+
+**注意事项**：
+- ✅ **从一开始就使用正确的表结构**，避免后续修改
+- ✅ **迁移文件保持简洁**，只创建需要的字段
+- ✅ **应用层代码直接使用新表**，无需兼容旧结构
+- ❌ **不使用 ALTER TABLE** 修改已有迁移文件
+- ❌ **不创建 patch 文件**来修补表结构
+
+#### 4.13.5 缓存策略
+
+**未读计数缓存**:
+- **Redis Key**: `unread:{user_id}:{chat_type}:{chat_id}`
+- **TTL**: 1小时
+- **模式**: 写穿透（Write-through）
+  - 写入时：同时更新数据库和缓存
+  - 读取时：先查缓存，未命中再查数据库并回写缓存
+- **失效策略**: 
+  - 发送消息：递增缓存
+  - 标记已读：清除缓存
+  - 定期同步：每小时从数据库刷新一次
+
+**在线状态缓存**:
+- **Redis Key**: `online_status:{user_id}`
+- **TTL**: 连接断开时删除
+- **模式**: 旁路缓存（Cache-aside）
+  - 写入时：仅更新数据库，删除缓存
+  - 读取时：先查缓存，未命中再查数据库并回写缓存
+- **失效策略**: WebSocket断开时主动删除
+
+#### 4.13.6 性能对比与监控
+
+**预期性能提升**:
+
+| 指标 | 分离前 | 分离后 | 提升 |
+|---|---|---|---|
+| 消息发送TPS | ~500 | ~2000 | 4倍 |
+| 成员列表查询延迟 | ~100ms | ~20ms | 5倍 |
+| WebSocket连接更新TPS | ~1000 | ~5000 | 5倍 |
+| 用户资料查询延迟 | ~50ms | ~10ms | 5倍 |
+
+**监控指标**:
+- 数据库行锁等待时间（`pg_stat_activity`中的wait_event）
+- 表更新QPS（`pg_stat_user_tables`中的n_tup_upd）
+- 缓存命中率（Redis INFO命令中的keyspace_hits/keyspace_misses）
+- API响应时间P99（应用层监控）
+
+**告警阈值**:
+- chat_unread_counts表更新QPS > 10000：可能需要分片
+- user_online_status表更新QPS > 5000：可能需要分片
+- 未读计数缓存命中率 < 90%：需要调整TTL或预热策略
+
+#### 4.13.7 潜在的进一步优化
+
+**如果以上分离仍无法满足性能需求，可考虑**:
+
+1. **分片策略**: 将chat_unread_counts按chat_id分片，将user_online_status按user_id分片
+2. **读写分离**: 在线状态读取从只读副本，写入到主库
+3. **消息队列**: 未读计数更新通过消息队列异步处理
+4. **事件溯源**: 将未读计数改为基于事件流计算，而非直接存储
+
+但在大多数场景下，表分离已经足够解决锁竞争问题。
+
+---
+
+
+## 5. 开发规范框架
+
+⚠️ **详细实现规范、代码模式、错误处理请参见**: @backend_dev_rule.mdc
+
+### 5.1 架构设计原则
+
+**三层架构**（建议）:
+- **Handler层**: HTTP请求处理 → Service调用 → 统一响应
+- **Service层**: 业务逻辑 + 事务管理 + 跨模块调用
+- **Repository层**: 数据访问 + SQL封装 + 错误转换
+
+**职责分离原则**:
+- Handler不包含业务逻辑
+- Service不直接写SQL
+- Repository不包含业务判断
+
+### 5.2 可观测性
+
+**日志策略**（建议分级）:
+- **ERROR/WARN**: 系统错误、业务异常
+- **INFO**: 关键业务事件
+- **DEBUG/TRACE**: 开发调试
+
+**日志内容要求**:
+- 包含请求ID（链路追踪）
+- 脱敏敏感信息
+- AI Agent可根据需要调整日志级别和内容
+
+---
+
+## 6. 缓存策略
+
+⚠️ **详细实现规范请参见**: @backend_dev_rule.mdc
+
+### 6.1 Redis使用场景
+
+**核心用途**:
+| 场景 | Key模式 | TTL策略 |
+|---|---|---|
+| 会话管理 | \`session:{session_id}\` | Token过期时间 |
+| Token黑名单 | \`token_blacklist:{jti}\` | Token过期时间 |
+| 未读计数 | \`unread:{user_id}:{chat_id}\` | 手动清除 |
+| 在线状态 | \`online_users\` (SET) | 连接断开时删除 |
+| 排行榜 | \`leaderboard:{type}:{timeframe}\` | 短期（如1小时） |
+| 限流计数 | \`ratelimit:{user_id}:{api}:{window}\` | 窗口时间 |
+
+**设计原则**:
+- AI Agent可根据性能需求调整缓存策略
+- 考虑缓存穿透、击穿、雪崩问题
+- 评估缓存一致性要求
+
+---
+
+## 7. 安全策略
+
+⚠️ **完整的安全规范请参见**: @api_spec.mdc **第 2.16 节安全性最佳实践** 和 @backend_dev_rule.mdc
+
+### 7.1 认证与授权（强制要求）
+
+**密码安全**:
+- 双层哈希：客户端SHA256 + 服务端bcrypt
+- 永不存储明文或单层哈希
+
+**Token管理**:
+- Access Token: 1小时（可配置）
+- Refresh Token: 30天（可配置）
+- 使用JWT + Redis验证
+
+**权限控制**:
+- 路由级：认证中间件
+- 资源级：Service层验证所有权
+
+### 7.2 防御措施（强制要求）
+
+**核心防护**:
+| 威胁 | 防御手段 | 实现方式 |
+|---|---|---|
+| SQL注入 | 参数化查询 | SQLx自动防护 |
+| XSS | 输出转义 | 前端框架处理 |
+| CSRF | Token验证 | Double Submit Cookie |
+| 暴力破解 | 速率限制 | Redis计数器 |
+
+**输入验证**（关键参数）:
+- 经纬度: -90~90, -180~180
+- 分页limit: 最大100
+- 地理半径: 最大50000米
+- AI Agent应对所有用户输入进行验证
+
+---
+
+## 8. 性能优化指导
+
+### 8.1 数据库优化
+
+**查询优化原则**:
+- 使用EXPLAIN ANALYZE分析慢查询
+- 避免N+1查询（使用JOIN或批量查询）
+- 地理位置查询必须使用PostGIS + GIST索引
+- 使用游标分页而非OFFSET（大offset性能差）
+
+**索引优化**:
+- 根据查询模式创建复合索引
+- 避免过度索引（每个索引有写入成本）
+- 定期ANALYZE表统计信息
+
+### 8.2 缓存优化
+
+**缓存策略**（优先级顺序）:
+1. **热点数据**: 用户在线状态、未读计数
+2. **计算密集**: 排行榜、统计数据
+3. **低变更**: 系统配置、用户资料
+
+**缓存模式**:
+- Cache Aside: 读时更新
+- Write Through: 写时同步
+- Write Behind: 异步写入
+
+### 8.3 并发优化
+
+**异步处理**:
+- 使用Tokio异步运行时
+- 邮件发送、推送通知等使用消息队列
+- WebSocket推送使用tokio::spawn
+
+**连接池管理**:
+- PostgreSQL连接池大小: max_connections / (实例数 * 2)
+- Redis连接池大小: 根据并发请求量调整
+- 避免连接泄漏（确保正确释放）
+
+---
+
+## 9. 测试策略
+
+⚠️ **详细的测试规范请参见**: @backend_dev_rule.mdc
+
+### 9.1 测试分层
+
+**单元测试**（推荐）:
+- Repository层：测试SQL查询逻辑
+- Service层：测试业务逻辑
+- 使用mock避免数据库依赖
+
+**集成测试**（推荐）:
+- API端点测试
+- WebSocket连接测试
+- 使用测试数据库
+
+**性能测试**（可选）:
+- 压力测试：并发请求
+- 负载测试：持续负载
+- 使用wrk或k6工具
+
+### 9.2 测试数据管理
+
+**测试隔离原则**:
+- 每个测试独立的数据
+- 测试结束清理数据
+- 使用事务回滚（单元测试）
+
+**Fixture管理**:
+- 预置测试数据（系统用户、默认配置）
+- 使用Builder模式构造测试数据
+- AI Agent可根据需求设计测试数据策略
+
+---
+
+## 10. 部署与运维
+
+### 10.1 环境配置
+
+**配置管理**:
+- 使用环境变量管理敏感配置
+- 不同环境使用不同的配置文件
+- 配置项应有合理的默认值
+
+**必需的环境变量**:
+- \`DATABASE_URL\`: PostgreSQL连接字符串
+- \`REDIS_URL\`: Redis连接字符串
+- \`JWT_SECRET\`: JWT签名密钥
+- \`SERVER_PORT\`: 服务端口（默认8080）
+
+### 10.2 监控与告警
+
+**关键指标**（建议监控）:
+- **性能指标**: API响应时间、QPS、错误率
+- **资源指标**: CPU、内存、磁盘、网络
+- **业务指标**: 活跃用户数、消息量、注册量
+
+**日志收集**:
+- 结构化日志（JSON格式）
+- 集中式日志管理（ELK/Loki）
+- 日志分级存储（ERROR永久，INFO/DEBUG短期）
+
+**告警策略**（建议设置）:
+- 错误率 > 1%：警告
+- API P99延迟 > 1s：警告
+- 数据库连接池耗尽：严重
+- 磁盘使用率 > 80%：警告
+
+---
+
+## 11. AI Agent实施指南
+
+### 11.1 开发流程建议
+
+**第一阶段**：核心功能
+1. 实现数据库表结构（根据第4章）
+2. 实现用户认证模块（注册/登录/Token）
+3. 实现基础CRUD接口（用户/生活瞬间）
+
+**第二阶段**：社交功能
+1. 实现用户关系（好友/关注/拉黑）
+2. 实现聊天功能（私聊/群聊）
+3. 实现WebSocket实时推送
+
+**第三阶段**：高级功能
+1. 实现地理位置搜索（PostGIS）
+2. 实现排行榜系统
+3. 实现系统配置管理
+
+### 11.2 优化决策空间
+
+AI Agent在以下方面有完全的决策权：
+
+**✅ 可以自行优化**:
+- 具体的SQL查询语句编写
+- 索引创建策略（除地理位置GIST索引外）
+- 缓存key命名和TTL时间
+- 日志内容和级别
+- 错误消息文案
+- 测试用例设计
+- 代码组织结构
+
+**⚠️ 必须遵守**:
+- API端点路径和类型（api_spec.mdc）
+- 双层密码哈希策略
+- 地理位置计算使用PostGIS（不在应用层计算）
+- 已定义的历史跟踪表（user_location_history等）
+- WebSocket订阅模型
+
+**📖 建议参考**:
+- 三层架构设计（可调整）
+- 表字段类型（可微调VARCHAR长度等）
+- 缓存策略（可根据性能调整）
+- 日志分级（可调整）
+
+---
+
+## 12. 常见问题与最佳实践
+
+### 12.1 常见陷阱
+
+❌ **不要在Rust中计算地理距离**（性能问题）
+❌ **不要在Handler中编写业务逻辑**（职责混乱）
+❌ **不要在Repository中包含业务判断**（违反单一职责）
+❌ **不要存储明文密码或单层哈希**（安全问题）
+❌ **不要在用户表中直接存储位置信息**（使用位置历史表）
+❌ **不要在所有WebSocket连接上推送所有事件**（使用订阅模型）
+
+### 12.2 最佳实践建议
+
+✅ **使用类型安全的SQL查询**（SQLx compile-time checked）
+✅ **使用参数化查询防止SQL注入**（SQLx自动处理）
+✅ **为地理位置字段创建GIST索引**（性能关键）
+✅ **使用游标分页而非OFFSET**（大数据集性能更好）
+✅ **使用事务管理跨表操作**（保证数据一致性）
+✅ **使用Redis缓存热点数据**（减轻数据库压力）
+✅ **使用结构化日志**（便于分析和监控）
+✅ **编写集成测试覆盖关键API**（保证质量）
+
+### 12.3 技术选型依据
+
+| 组件 | 技术选型 | 原因 |
+|---|---|---|
+| 语言 | Rust | 高性能、内存安全、并发安全 |
+| Web框架 | Axum | 类型安全、异步、零成本抽象 |
+| 数据库 | PostgreSQL | 关系型、事务、PostGIS地理扩展 |
+| 缓存 | Redis | 高性能、丰富数据结构 |
+| ORM | SQLx | 编译期检查、异步、无运行时开销 |
+| WebSocket | tokio-tungstenite | 异步、生态集成好 |
+| 序列化 | serde | 性能好、生态完善 |
+| 日志 | tracing | 结构化、可观测性好 |
+
+---
+
+END

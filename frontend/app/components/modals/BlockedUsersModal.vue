@@ -152,7 +152,7 @@ const filteredUsers = computed(() => {
 
 // 工具函数
 const { formatTime } = useFormatters()
-const { success, error } = useNotifications()
+const toast = useToast()
 const { showConfirmModal } = useModal()
 
 // 方法

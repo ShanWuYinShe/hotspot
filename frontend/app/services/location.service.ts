@@ -3,7 +3,7 @@
  * 负责自动更新用户位置到服务器
  */
 
-import { useLocation, type Location } from '~/composables/useLocationManager.client'
+
 import { useUserService } from './users.service'
 
 class LocationTracker {
@@ -66,7 +66,7 @@ class LocationTracker {
         return
       }
 
-      const { getCurrentLocation } = useLocation()
+      const locationStore = useLocationStore()
       const location = await getCurrentLocation()
       
       if (!location) {
@@ -93,7 +93,7 @@ class LocationTracker {
    * 手动更新位置
    */
   async updateNow(): Promise<Location | null> {
-    const { getCurrentLocation } = useLocation()
+    const locationStore = useLocationStore()
     const location = await getCurrentLocation()
     
     if (location) {

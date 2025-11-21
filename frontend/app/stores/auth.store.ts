@@ -1,9 +1,18 @@
 /**
  * 认证状态存储 - 支持多账户切换
- * 职责：纯粹的状态管理和持久化，不包含 API 调用
+ * 职责：状态管理、持久化 + API 调用
+ * 
+ * ⚠️ 已删除所有兼容性代码，只保留最新设计实现
  */
 
-import type { UserResponse } from '~/types/api'
+import type { 
+  UserResponse,
+  RegisterRequest, 
+  LoginRequest, 
+  CreateTempRequest, 
+  RefreshTokenRequest,
+  SetPasswordRequest 
+} from '~/types/api'
 
 export interface AuthSession {
   user: UserResponse
@@ -260,20 +269,179 @@ export const useAuthStore = defineStore('auth', () => {
     return authState.value.accounts[userId] || null
   }
 
-  // ============ 兼容性方法（保持向后兼容） ============
+  // ============ API 调用方法 ============
 
   /**
-   * 设置会话（兼容旧接口）
+   * 用户注册
    */
-  const setSession = (sessionData: { user: UserResponse, token: string, refreshToken: string, expiresAt: number }) => {
-    setAccountSession(sessionData.user, sessionData.token, sessionData.refreshToken, sessionData.expiresAt)
+  const register = async (data: RegisterRequest) => {
+    const authService = useAuthService()
+    const toast = useToast()
+    
+    try {
+      const response = await authService.register(data)
+      
+      // 解析过期时间
+      const expiresAt = new Date(response.expires_at).getTime()
+      
+      // 保存会话
+      setAccountSession(
+        { user_id: response.user_id, nickname: response.nickname },
+        response.access_token,
+        response.refresh_token,
+        expiresAt
+      )
+      
+      toast.add({ color: 'success', title: '注册成功' })
+      return response
+    } catch (error: any) {
+      toast.add({ color: 'error', title: '注册失败', description: error.message })
+      throw error
+    }
   }
 
   /**
-   * 清除会话（兼容旧接口）
+   * 用户登录
    */
-  const clearSession = () => {
-    logoutCurrent()
+  const login = async (data: LoginRequest) => {
+    const authService = useAuthService()
+    
+    try {
+      const response = await authService.login(data)
+      
+      // 解析过期时间
+      const expiresAt = new Date(response.expires_at).getTime()
+      
+      // 保存会话
+      setAccountSession(
+        { user_id: response.user_id, nickname: response.nickname },
+        response.access_token,
+        response.refresh_token,
+        expiresAt
+      )
+      
+      toast.add({ color: 'success', title: '登录成功' })
+      return response
+    } catch (error: any) {
+      toast.add({ color: 'error', title: '登录失败', description: error.message })
+      throw error
+    }
+  }
+
+  /**
+   * 创建临时用户
+   */
+  const createTempUser = async (data: CreateTempRequest) => {
+    const authService = useAuthService()
+    
+    try {
+      const response = await authService.createTempUser(data)
+      
+      // 解析过期时间
+      const expiresAt = new Date(response.expires_at).getTime()
+      
+      // 保存会话
+      setAccountSession(
+        { user_id: response.user_id, nickname: response.nickname },
+        response.access_token,
+        response.refresh_token,
+        expiresAt
+      )
+      
+      toast.add({ color: 'success', title: '临时用户创建成功' })
+      return response
+    } catch (error: any) {
+      toast.add({ color: 'error', title: '创建失败', description: error.message })
+      throw error
+    }
+  }
+
+  /**
+   * 刷新令牌
+   */
+  const refreshAccessToken = async () => {
+    if (!refreshToken.value) {
+      throw new Error('没有刷新令牌')
+    }
+
+    const authService = useAuthService()
+    
+    try {
+      const response = await authService.refreshToken({ 
+        refresh_token: refreshToken.value 
+      })
+      
+      // 解析过期时间
+      const expiresAt = new Date(response.expires_at).getTime()
+      
+      // 更新令牌
+      updateCurrentTokens(
+        response.access_token,
+        response.refresh_token,
+        expiresAt
+      )
+      
+      return response
+    } catch (error) {
+      // Token 刷新失败，登出当前用户
+      logoutCurrent()
+      throw error
+    }
+  }
+
+  /**
+   * 登出
+   */
+  const logout = async () => {
+    const authService = useAuthService()
+    
+    try {
+      await authService.logout()
+      logoutCurrent()
+      toast.add({ color: 'success', title: '已登出' })
+    } catch (error: any) {
+      // 即使API失败也要清除本地会话
+      logoutCurrent()
+      toast.add({ color: 'warning', title: '登出失败，但已清除本地会话' })
+    }
+  }
+
+  /**
+   * 设置密码（临时用户升级）
+   */
+  const setPassword = async (data: SetPasswordRequest) => {
+    const authService = useAuthService()
+    
+    try {
+      const response = await authService.setPassword(data)
+      toast.add({ color: 'success', title: '密码设置成功' })
+      return response
+    } catch (error: any) {
+      toast.add({ color: 'error', title: '设置失败', description: error.message })
+      throw error
+    }
+  }
+
+  /**
+   * 检查认证状态
+   */
+  const checkStatus = async () => {
+    const authService = useAuthService()
+    
+    try {
+      const response = await authService.checkStatus()
+      
+      // 如果服务端验证失败，清除本地会话
+      if (!response.is_valid) {
+        logoutCurrent()
+        return false
+      }
+      
+      return true
+    } catch (error) {
+      logoutCurrent()
+      return false
+    }
   }
 
   // ============ 初始化 ============
@@ -310,9 +478,14 @@ export const useAuthStore = defineStore('auth', () => {
     cleanExpiredAccounts,
     getAccount,
 
-    // 兼容性方法
-    setSession,
-    clearSession
+    // API 调用方法
+    register,
+    login,
+    createTempUser,
+    refreshAccessToken,
+    logout,
+    setPassword,
+    checkStatus
   }
 }, {
   persist: {

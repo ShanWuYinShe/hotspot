@@ -262,26 +262,23 @@
 
 <script setup lang="ts">
 import { useUserService } from '~/services/users.service';
-import { useFriendService } from '~/services/friend.service';
 import { useMomentService } from '~/services/moments.service';
 import { buildUserUrl, USER_ENDPOINTS } from '~/config/api';
 import type { UserResponse, MomentResponse } from '~/types/api';
 
+// 公开页面 - 用户资料应该公开可见（虽然 API 是 protected，但应该允许未登录用户查看）
+// 注意：某些操作（如关注、发消息）仍需登录
 definePageMeta({ 
-    title: '用户详情', 
-    requiresAuth: true,
+    title: '用户详情',
     layout: 'dashboard'
 });
 
 const route = useRoute();
 const userService = useUserService();
-const friendService = useFriendService();
 const momentService = useMomentService();
-const { getUserProfile } = userService;
-const { sendFriendRequest: sendFriendRequestAPI, acceptFriendRequest, rejectFriendRequest } = friendService;
+const { getUserProfile, sendFriendRequest: sendFriendRequestAPI, acceptFriendRequest, rejectFriendRequest } = userService;
 const momentsStore = useMomentsStore();
-const { success, error, info } = useNotifications()
-const toast = { success, error, info };
+const toast = useToast()
 const { formatTime } = useFormatters();
 const authStore = useAuthStore();
 const api = useApi();
@@ -407,17 +404,18 @@ onMounted(async () => {
 async function loadUserProfile() {
     loading.value = true;
     try {
-        // 暂无 getById，沿用搜索以最小改动取数
-        try {
-            const response = await getUserProfile(userId);
-            const foundUser = (response as any)?.users?.find((u: any) => u.user_id.toString() === userId);
-            if (foundUser) {
-                user.value = foundUser;
-                friendshipStatus.value = foundUser.friendship_status || 'none';
-            }
-        } catch (error) {
-            if (import.meta.dev) {
-                console.warn('Failed to find user in store:', error);
+        // 使用新的 getUserProfile API (POST /api/v1/protected/user/open_the_door)
+        const response = await userService.getUserProfile(userId);
+        user.value = response;
+        
+        // 从 relationship 字段获取好友状态
+        if (response.relationship) {
+            if (response.relationship.is_friend) {
+                friendshipStatus.value = 'friends';
+            } else if (response.relationship.friend_request_status === 'sent') {
+                friendshipStatus.value = 'pending';
+            } else {
+                friendshipStatus.value = 'none';
             }
         }
         
@@ -454,16 +452,19 @@ async function loadUserStats() {
     }
 }
 
-// 加载用户动态（使用生活瞬间历史API - 符合 hotspot.md 7.5.1）
+// 加载用户动态（使用生活瞬间历史API）
 async function loadUserMoments() {
     loadingMoments.value = true;
     try {
-        // 使用生活瞬间服务获取用户历史
-        const { getUserMomentsHistory } = momentService;
-        const resp = await getUserMomentsHistory(userId, '0');
+        // 使用新的 getUserMoments API (POST /api/v1/public/moments/get_list)
+        const resp = await momentService.getUserMoments({
+            user_id: userId,
+            limit: 20
+        });
         
         userMoments.value = resp?.items || [];
-        hasMoreMoments.value = resp?.has_more || false;
+        hasMoreMoments.value = resp?.pagination.has_more || false;
+        userStats.value.momentsCount = resp?.items?.length || 0;
     } catch (e: any) {
         console.error('加载用户动态失败:', e);
         toast.add({ title: '加载失败', description: e?.message || '无法加载用户动态', color: 'error' });
@@ -479,15 +480,18 @@ async function loadMoreMoments() {
     loadingMoreMoments.value = true;
     try {
         const lastMoment = userMoments.value[userMoments.value.length - 1];
-        const cursor = lastMoment?.moment_id || 0;
+        const cursor = lastMoment?.id;
         
-        // 使用生活瞬间服务获取更多历史
-        const { getUserMomentsHistory } = momentService;
-        const resp = await getUserMomentsHistory(userId, cursor.toString());
+        // 使用新的 getUserMoments API 加载更多
+        const resp = await momentService.getUserMoments({
+            user_id: userId,
+            cursor: cursor,
+            limit: 20
+        });
         
         const newMoments = resp?.items || [];
         userMoments.value.push(...newMoments);
-        hasMoreMoments.value = resp?.has_more || false;
+        hasMoreMoments.value = resp?.pagination.has_more || false;
     } catch (e: any) {
         toast.add({ title: '加载失败', description: e?.message || '无法加载更多动态', color: 'error' });
     } finally {
@@ -501,7 +505,10 @@ async function sendFriendRequest() {
     
     operating.value = true;
     try {
-        await sendFriendRequestAPI(userId);
+        await userService.sendFriendRequest({
+            to_user_id: userId,
+            message: '想和你成为好友'
+        });
         friendshipStatus.value = 'pending';
         toast.add({
             title: '好友请求已发送',
@@ -530,8 +537,9 @@ async function removeFriend() {
         onConfirm: async () => {
             operating.value = true;
             try {
-                // TODO: 实现移除好友功能
-                // await removeFriend(userId);
+                await userService.removeFriend({
+                    user_id: userId
+                });
                 friendshipStatus.value = 'none';
                 toast.add({
                     title: '已删除好友',
@@ -555,8 +563,9 @@ async function followUser() {
     if (!user.value) return;
     
     try {
-        const friendService = useFriendService()
-        await friendService.sendFriendRequest(user.value.user_id, '想和你成为朋友');
+        await userService.followUser({
+            user_id: user.value.user_id
+        });
         
         toast.add({
             title: '关注成功',
@@ -634,8 +643,10 @@ async function blockUser() {
     if (!confirmed) return;
     
     try {
-        // TODO: 调用拉黑用户API
-        // await userService.blockUser(user.value.user_id);
+        await userService.blockUser({
+            user_id: user.value.user_id,
+            reason: '用户主动拉黑'
+        });
         
         toast.add({
             title: '拉黑成功',

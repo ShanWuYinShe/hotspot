@@ -111,7 +111,7 @@ export function useUpload(options: UploadOptions = {}) {
 
     // 检查文件数量限制
     if (files.value.length + fileArray.length > maxFiles) {
-      const { error: showError } = useNotifications()
+      const toast = useToast()
       showError('文件数量超限', `最多只能上传 ${maxFiles} 个文件`)
       return
     }
@@ -120,7 +120,7 @@ export function useUpload(options: UploadOptions = {}) {
       // 验证文件
       const error = validateFile(file)
       if (error) {
-        const { error: showError } = useNotifications()
+        const toast = useToast()
         showError('文件验证失败', error)
         continue
       }
@@ -217,7 +217,6 @@ export function useUpload(options: UploadOptions = {}) {
       uploadFile.status = 'error'
       uploadFile.error = error.message || '上传失败'
       
-      const { error: showError } = useNotifications()
       showError('上传失败', `${uploadFile.name}: ${uploadFile.error}`)
       
       return false
@@ -244,10 +243,8 @@ export function useUpload(options: UploadOptions = {}) {
       const successCount = results.filter(Boolean).length
       
       if (successCount === targetFiles.length) {
-        const { success } = useNotifications()
         success('上传完成', `成功上传 ${successCount} 个文件`)
       } else {
-        const { warning } = useNotifications()
         warning('部分上传失败', `${successCount}/${targetFiles.length} 个文件上传成功`)
       }
 

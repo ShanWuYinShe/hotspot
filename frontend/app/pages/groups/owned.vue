@@ -47,8 +47,7 @@ definePageMeta({
 // 服务和状态
 const groupsStore = useGroupsStore()
 const { formatTime } = useFormatters()
-const { success, error, info } = useNotifications()
-const toast = { success, error, info }
+const toast = useToast()
 
 // 数据状态
 const items = ref<GroupResponse[]>([])
@@ -78,7 +77,7 @@ const groupStats = computed(() => [
         icon: 'i-heroicons-user-group',
         color: 'blue' as const,
         description: '您创建的群组总数',
-        onClick: () => toast.info('显示全部群组')
+        onClick: () => toast.add({ color: 'info', title: '显示全部群组' })
     },
     {
         key: 'active',
@@ -88,7 +87,7 @@ const groupStats = computed(() => [
         color: 'green' as const,
         description: '24小时内有活动的群组',
         trend: (activeGroups.value > totalGroups.value * 0.5 ? 'up' : 'down') as 'up' | 'down',
-        onClick: () => toast.info('显示活跃群组')
+        onClick: () => toast.add({ color: 'info', title: '显示活跃群组' })
     },
     {
         key: 'members',
@@ -97,7 +96,7 @@ const groupStats = computed(() => [
         icon: 'i-heroicons-users',
         color: 'purple' as const,
         description: '所有群组的成员总数',
-        onClick: () => toast.info('查看成员统计')
+        onClick: () => toast.add({ color: 'info', title: '查看成员统计' })
     },
     {
         key: 'unread',
@@ -106,7 +105,7 @@ const groupStats = computed(() => [
         icon: 'i-heroicons-bell',
         color: 'orange' as const,
         description: '所有群组的未读消息',
-        onClick: () => toast.info('查看未读消息')
+        onClick: () => toast.add({ color: 'info', title: '查看未读消息' })
     }
 ])
 
@@ -124,7 +123,7 @@ const headerActions = computed(() => [
         label: '批量管理',
         icon: 'i-heroicons-cog-6-tooth',
         variant: 'outline' as const,
-        action: () => toast.info('批量管理功能')
+        action: () => toast.add({ color: 'info', title: '批量管理功能' })
     }
 ])
 
@@ -150,7 +149,7 @@ const toolbarActions = computed(() => [
         icon: 'i-heroicons-chart-bar',
         variant: 'outline' as const,
         action: () => executeFeature('reports', () => {
-            toast.info('群组数据统计功能即将上线')
+            toast.add({ color: 'info', title: '群组数据统计功能即将上线' })
         })
     }
 ])
@@ -210,9 +209,9 @@ const loadOwnedGroups = async () => {
         // 加载未读消息数量
         await loadUnreadCounts()
         
-        toast.success('群组列表已更新')
+        toast.add({ color: 'success', title: '群组列表已更新' })
     } catch (error: any) {
-        toast.error(`加载失败: ${error?.message || '未知错误'}`)
+        toast.add({ color: 'error', title: `加载失败: ${error?.message || '未知错误'}` })
     } finally {
         loading.value = false
     }
@@ -220,12 +219,12 @@ const loadOwnedGroups = async () => {
 
 const loadUnreadCounts = async () => {
     try {
-        const { getGroupUnreadCount } = useStatus()
+        // 暂时禁用未读数获取，需要WebSocket支持
         const groupsToCheck = items.value.slice(0, 30) // 限制数量避免性能问题
 
         // 批量获取未读数
         const unreadPromises = groupsToCheck.map(async (group) => {
-            const count = await getGroupUnreadCount(group.group_id)
+            const count = 0 // 暂时返回0
             return { groupId: group.group_id, count }
         })
         const unreadResults = await Promise.all(unreadPromises)
@@ -274,7 +273,7 @@ const toggleGroupSelection = (group: GroupResponse) => {
 const handleSearch = (query: string) => {
     // DataView 组件会自动处理搜索
     if (query.trim()) {
-        toast.info(`搜索: ${query}`)
+        toast.add({ color: 'info', title: `搜索: ${query}` })
     }
 }
 
@@ -290,7 +289,7 @@ const handleBatchExport = async () => {
             
             selectedGroups.value = []
         } catch (error) {
-            toast.error('导出失败')
+            toast.add({ color: 'error', title: '导出失败' })
         }
     })
 }
@@ -304,13 +303,13 @@ const handleBatchArchive = async () => {
             // 这里应该调用实际的归档 API
             await new Promise(resolve => setTimeout(resolve, 1000)) // 模拟 API 调用
             
-            toast.success(`已归档 ${selectedGroups.value.length} 个群组`)
+            toast.add({ color: 'success', title: `已归档 ${selectedGroups.value.length} 个群组` })
             selectedGroups.value = []
             
             // 刷新列表
             await loadOwnedGroups()
         } catch (error) {
-            toast.error('归档失败')
+            toast.add({ color: 'error', title: '归档失败' })
         }
     })
 }

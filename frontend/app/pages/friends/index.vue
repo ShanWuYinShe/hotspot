@@ -42,9 +42,8 @@ definePageMeta({
 })
 
 // 服务和状态
-const { success, error, info } = useNotifications()
-const toast = { success, error, info }
-const friendActions = useFriendActions()
+const toast = useToast()
+const userService = useUserService()
 const { formatTime } = useFormatters()
 const { showFriendRequestsModal } = useModal()
 
@@ -76,7 +75,7 @@ const friendsStats = computed(() => [
         description: '您的好友总数',
         onClick: () => {
             activeFilter.value = 'all'
-            toast.info('显示全部好友')
+            toast.add({ color: 'info', title: '显示全部好友' })
         }
     },
     {
@@ -89,7 +88,7 @@ const friendsStats = computed(() => [
         trend: (onlineFriends.value > totalFriends.value * 0.3 ? 'up' : 'down') as 'up' | 'down',
         onClick: () => {
             activeFilter.value = 'online'
-            toast.info('显示在线好友')
+            toast.add({ color: 'info', title: '显示在线好友' })
         }
     },
     {
@@ -110,7 +109,7 @@ const friendsStats = computed(() => [
         description: '5公里内的好友',
         onClick: () => {
             activeFilter.value = 'nearby'
-            toast.info('显示附近好友')
+            toast.add({ color: 'info', title: '显示附近好友' })
         }
     }
 ])
@@ -220,11 +219,11 @@ const getUserCardEvents = (user: UserResponse) => ({
 const loadFriends = async () => {
     loading.value = true
     try {
-        const result = await friendActions.getFriendsList()
-        friends.value = Array.isArray(result) ? result : []
-        toast.success('好友列表已更新')
+        const result = await userService.getFriends({ status: 'accepted' })
+        friends.value = result.items.map(item => item.user)
+        toast.add({ color: 'success', title: '好友列表已更新' })
     } catch (error: any) {
-        toast.error(`加载失败: ${error?.message || '未知错误'}`)
+        toast.add({ color: 'error', title: '加载失败', description: error?.message || '未知错误' })
     } finally {
         loading.value = false
     }
@@ -232,8 +231,8 @@ const loadFriends = async () => {
 
 const loadPendingRequests = async () => {
     try {
-        const result = await friendActions.getFriendRequests()
-        pendingRequests.value = Array.isArray(result) ? result : []
+        const result = await userService.getFriendRequests({ status: 'received' })
+        pendingRequests.value = result.items.map(item => item.from_user)
     } catch (error) {
         console.error('加载好友请求失败:', error)
     }
@@ -251,19 +250,19 @@ const handleSendMessage = (user: UserResponse) => {
 
 const handleUserActions = (user: UserResponse) => {
     // 显示用户操作菜单
-    toast.info(`用户操作: ${user.nickname}`)
+    toast.add({ color: 'info', title: `用户操作: ${user.nickname}` })
 }
 
 const handleSearch = (query: string) => {
     searchQuery.value = query
     if (query.trim()) {
-        toast.info(`搜索: ${query}`)
+        toast.add({ color: 'info', title: `搜索: ${query}` })
     }
 }
 
 const handleFilterChange = (filter: string) => {
     activeFilter.value = filter
-    toast.info(`筛选: ${filterOptions.find(f => f.value === filter)?.label}`)
+    toast.add({ color: 'info', title: `筛选: ${filterOptions.find(f => f.value === filter)?.label}` })
 }
 
 // 生命周期

@@ -310,8 +310,16 @@ const handleRegister = async (event: FormSubmitEvent<RegisterSchema>) => {
     const { loginId, nickname, password } = event.data;
     const finalNickname = nickname?.trim() || generateNickname();
     
+    // 计算密码哈希（根据 api_spec.mdc 2.10：SHA256(password)）
+    const { hashPassword } = await import('~/utils/password')
+    const password_hash = await hashPassword(password)
+    
     // 使用 authStore 注册用户
-    await authStore.register(loginId, finalNickname, password);
+    await authStore.register({
+      login_id: loginId,
+      nickname: finalNickname,
+      password_hash
+    });
 
     // 设置个人信息到状态
     profileState.nickname = finalNickname;

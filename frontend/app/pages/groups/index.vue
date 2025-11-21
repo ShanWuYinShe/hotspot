@@ -88,9 +88,14 @@ const seoConfig = getPageSeoConfig('groups')
 definePageMeta({ 
     title: seoConfig.title, 
     description: seoConfig.description,
-    requiresAuth: true, 
     layout: 'dashboard' 
 })
+
+// 智能路由：未登录用户重定向到发现群组页面
+const authStore = useAuthStore()
+if (!authStore.isAuthenticated) {
+    navigateTo('/groups/discover')
+}
 
 // 设置 SEO meta
 useSeoMeta(buildSeoMeta('groups'))
@@ -98,8 +103,7 @@ useSeoMeta(buildSeoMeta('groups'))
 // 服务和状态
 const groupsStore = useGroupsStore()
 const { formatTime } = useFormatters()
-const { success, error, info } = useNotifications()
-const toast = { success, error, info }
+const toast = useToast()
 
 // 数据状态
 const loading = ref(true)
@@ -197,9 +201,9 @@ const loadMyGroups = async () => {
     try {
         await groupsStore.fetchMyGroups()
         await loadUnreadCounts()
-        toast.success('群组列表已更新')
+        toast.add({ color: 'success', title: '群组列表已更新' })
     } catch (error: any) {
-        toast.error(`加载失败: ${error?.message || '未知错误'}`)
+        toast.add({ color: 'error', title: `加载失败: ${error?.message || '未知错误'}` })
     } finally {
         loading.value = false
     }
@@ -207,12 +211,12 @@ const loadMyGroups = async () => {
 
 const loadUnreadCounts = async () => {
     try {
-        const { getGroupUnreadCount } = useStatus()
+        // 暂时禁用未读数获取，需要WebSocket支持
         const groups = groupsStore.myGroups.slice(0, 30) // 限制数量
 
         // 批量获取未读数
         const unreadPromises = groups.map(async (group) => {
-            const count = await getGroupUnreadCount(group.group_id)
+            const count = 0 // 暂时返回0
             return { groupId: group.group_id, count }
         })
         const unreadResults = await Promise.all(unreadPromises)
@@ -250,26 +254,26 @@ const openCreateGroup = async () => {
         onSuccess: (groupId: string) => {
             // 刷新群组列表
             loadGroups()
-            toast.success('群组创建成功')
+            toast.add({ color: 'success', title: '群组创建成功' })
         }
     })
 }
 
 const showGroupActions = (group: GroupResponse) => {
     // 这里可以显示群组操作菜单
-    toast.info(`群组操作: ${group.name}`)
+    toast.add({ color: 'info', title: `群组操作: ${group.name}` })
 }
 
 const handleSearch = (query: string) => {
     searchQuery.value = query
     if (query.trim()) {
-        toast.info(`搜索: ${query}`)
+        toast.add({ color: 'info', title: `搜索: ${query}` })
     }
 }
 
 const handleFilterChange = (filter: string) => {
     activeFilter.value = filter
-    toast.info(`筛选: ${filterOptions.find(f => f.value === filter)?.label}`)
+    toast.add({ color: 'info', title: `筛选: ${filterOptions.find(f => f.value === filter)?.label}` })
 }
 
 // 生命周期

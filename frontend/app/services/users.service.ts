@@ -1,122 +1,217 @@
 /**
- * 用户服务 - 现代化实现
- * 提供完整的用户管理功能
+ * 用户服务 - 符合API规范的实现
+ * 所有API操作统一使用POST方法
+ * 基于 api_spec.mdc 第3.2节 用户API规范
  */
 
 import { BaseService } from './base.service'
-import type { UserResponse, UserSettings, PaginatedResponse } from '~/types/api'
+import type {
+  UserResponse,
+  UserSettings,
+  PaginatedResponse,
+  DiscoverUsersRequest,
+  UpdateProfileRequest,
+  UpdateLocationRequest,
+  UpdateSettingsRequest,
+  DeleteAccountRequest,
+  SendFriendRequestRequest,
+  AcceptFriendRequestRequest,
+  RejectFriendRequestRequest,
+  RemoveFriendRequest,
+  FollowUserRequest,
+  UnfollowUserRequest,
+  BlockUserRequest,
+  UnblockUserRequest,
+  ListFriendsRequest,
+  GetBlockedUsersRequest,
+  OpenTheDoorRequest,
+  GetStatsRequest
+} from '~/types/api'
 
-export interface UserSearchParams {
-  query?: string
-  latitude?: number
-  longitude?: number
-  radius?: number
-  user_type?: number
-  page?: number
-  limit?: number
-}
-
-export interface UserUpdateData {
-  nickname?: string
-  bio?: string
-  avatar_url?: string
-  location_name?: string
-  latitude?: number
-  longitude?: number
-}
+// ✅ 所有类型已从 ~/types/api 导入，移除本地定义
 
 export class UserService extends BaseService {
-  protected readonly baseUrl = '/protected/user'
+  protected readonly baseUrl = '/api/v1'
 
   /**
-   * 获取用户资料
+   * 发现用户（公开接口）
+   * POST /api/v1/public/user/discover
    */
-  async getProfile(userId?: string): Promise<UserResponse> {
-    const endpoint = userId ? `/profile/${userId}` : '/profile'
-    return this.get<UserResponse>(endpoint)
+  async discoverUsers(request: DiscoverUsersRequest): Promise<PaginatedResponse<UserResponse>> {
+    return this.publicPost<PaginatedResponse<UserResponse>>('/public/user/discover', request)
+  }
+
+  /**
+   * 获取当前用户资料
+   * POST /api/v1/protected/user/me
+   */
+  async getMe(): Promise<UserResponse> {
+    return this.post<UserResponse>('/protected/user/me', {})
+  }
+
+  /**
+   * 获取其他用户资料
+   * POST /api/v1/protected/user/open_the_door
+   */
+  async openTheDoor(request: OpenTheDoorRequest): Promise<UserResponse> {
+    return this.post<UserResponse>('/protected/user/open_the_door', request)
+  }
+
+  /**
+   * 获取统计数据
+   * POST /api/v1/protected/user/get_stats
+   */
+  async getStats(request: GetStatsRequest = {}): Promise<{
+    moments_count: number
+    friends_count: number
+    followers_count: number
+    following_count: number
+    groups_count: number
+  }> {
+    return this.post('/protected/user/get_stats', request)
+  }
+
+  /**
+   * 更新用户位置
+   * POST /api/v1/protected/user/update_location
+   */
+  async updateLocation(request: UpdateLocationRequest): Promise<void> {
+    return this.post<void>('/protected/user/update_location', request)
   }
 
   /**
    * 更新用户资料
+   * POST /api/v1/protected/user/update_profile
    */
-  async updateProfile(data: UserUpdateData): Promise<UserResponse> {
-    return this.put<UserResponse>('/profile', data)
+  async updateProfile(request: UpdateProfileRequest): Promise<void> {
+    return this.post<void>('/protected/user/update_profile', request)
+  }
+
+  /**
+   * 获取用户设置
+   * POST /api/v1/protected/user/get_settings
+   */
+  async getSettings(): Promise<UserSettings> {
+    return this.post<UserSettings>('/protected/user/get_settings', {})
   }
 
   /**
    * 更新用户设置
+   * POST /api/v1/protected/user/update_settings
    */
-  async updateSettings(settings: Partial<UserSettings>): Promise<UserSettings> {
-    return this.put<UserSettings>('/settings', settings)
-  }
-
-  /**
-   * 上传头像
-   */
-  async uploadAvatar(file: File): Promise<{ avatar_url: string }> {
-    return this.upload<{ avatar_url: string }>('/avatar', file)
-  }
-
-  /**
-   * 搜索用户
-   */
-  async searchUsers(params: UserSearchParams): Promise<PaginatedResponse<UserResponse>> {
-    return this.paginate<UserResponse>('/search', params)
-  }
-
-  /**
-   * 获取附近用户
-   */
-  async getNearbyUsers(
-    latitude: number,
-    longitude: number,
-    radius: number = 5000
-  ): Promise<PaginatedResponse<UserResponse>> {
-    return this.get<PaginatedResponse<UserResponse>>('/nearby', {
-      query: { latitude, longitude, radius }
-    })
-  }
-
-  /**
-   * 关注用户
-   */
-  async followUser(userId: string): Promise<void> {
-    return this.post<void>(`/follow/${userId}`)
-  }
-
-  /**
-   * 取消关注
-   */
-  async unfollowUser(userId: string): Promise<void> {
-    return this.delete<void>(`/follow/${userId}`)
-  }
-
-  /**
-   * 拉黑用户
-   */
-  async blockUser(userId: string): Promise<void> {
-    return this.post<void>(`/block/${userId}`)
-  }
-
-  /**
-   * 解除拉黑
-   */
-  async unblockUser(userId: string): Promise<void> {
-    return this.delete<void>(`/block/${userId}`)
-  }
-
-  /**
-   * 获取拉黑列表
-   */
-  async getBlockedUsers(): Promise<PaginatedResponse<UserResponse>> {
-    return this.get<PaginatedResponse<UserResponse>>('/blocked')
+  async updateSettings(request: UpdateSettingsRequest): Promise<void> {
+    return this.post<void>('/protected/user/update_settings', request)
   }
 
   /**
    * 删除账户
+   * POST /api/v1/protected/user/delete_account
    */
-  async deleteAccount(): Promise<void> {
-    return this.delete<void>('/account')
+  async deleteAccount(request: DeleteAccountRequest): Promise<void> {
+    return this.post<void>('/protected/user/delete_account', request)
+  }
+
+  /**
+   * 发送好友申请
+   * POST /api/v1/protected/user/send_friend_request
+   */
+  async sendFriendRequest(request: SendFriendRequestRequest): Promise<{ id: string }> {
+    return this.post<{ id: string }>('/protected/user/send_friend_request', request)
+  }
+
+  /**
+   * 接受好友申请
+   * POST /api/v1/protected/user/accept_friend_request
+   */
+  async acceptFriendRequest(request: AcceptFriendRequestRequest): Promise<void> {
+    return this.post<void>('/protected/user/accept_friend_request', request)
+  }
+
+  /**
+   * 拒绝好友申请
+   * POST /api/v1/protected/user/reject_friend_request
+   */
+  async rejectFriendRequest(request: RejectFriendRequestRequest): Promise<void> {
+    return this.post<void>('/protected/user/reject_friend_request', request)
+  }
+
+  /**
+   * 删除好友
+   * POST /api/v1/protected/user/remove_friend
+   */
+  async removeFriend(request: RemoveFriendRequest): Promise<void> {
+    return this.post<void>('/protected/user/remove_friend', request)
+  }
+
+  /**
+   * 关注用户
+   * POST /api/v1/protected/user/follow
+   */
+  async followUser(request: FollowUserRequest): Promise<void> {
+    return this.post<void>('/protected/user/follow', request)
+  }
+
+  /**
+   * 取消关注
+   * POST /api/v1/protected/user/unfollow
+   */
+  async unfollowUser(request: UnfollowUserRequest): Promise<void> {
+    return this.post<void>('/protected/user/unfollow', request)
+  }
+
+  /**
+   * 拉黑用户
+   * POST /api/v1/protected/user/block_user
+   */
+  async blockUser(request: BlockUserRequest): Promise<void> {
+    return this.post<void>('/protected/user/block_user', request)
+  }
+
+  /**
+   * 解除拉黑
+   * POST /api/v1/protected/user/unblock_user
+   */
+  async unblockUser(request: UnblockUserRequest): Promise<void> {
+    return this.post<void>('/protected/user/unblock_user', request)
+  }
+
+  /**
+   * 获取好友列表
+   * POST /api/v1/protected/user/get_friends
+   */
+  async getFriends(request: ListFriendsRequest = {}): Promise<PaginatedResponse<UserResponse>> {
+    return this.post<PaginatedResponse<UserResponse>>('/protected/user/get_friends', request)
+  }
+
+  /**
+   * 获取拉黑列表
+   * POST /api/v1/protected/user/get_blocked_users
+   */
+  async getBlockedUsers(request: GetBlockedUsersRequest = {}): Promise<PaginatedResponse<UserResponse>> {
+    return this.post<PaginatedResponse<UserResponse>>('/protected/user/get_blocked_users', request)
+  }
+
+  /**
+   * 上传头像（保留，使用FormData）
+   */
+  async uploadAvatar(file: File): Promise<{ avatar_url: string }> {
+    return this.upload<{ avatar_url: string }>('/protected/media/upload_file', file, {
+      category: 'avatar'
+    })
+  }
+
+  /**
+   * 获取附近用户（别名方法，调用 discoverUsers）
+   */
+  async getNearbyUsers(request: DiscoverUsersRequest): Promise<PaginatedResponse<UserResponse>> {
+    return this.discoverUsers(request)
+  }
+
+  /**
+   * 搜索用户（别名方法，调用 discoverUsers）
+   */
+  async searchUsers(request: DiscoverUsersRequest): Promise<PaginatedResponse<UserResponse>> {
+    return this.discoverUsers(request)
   }
 }
 

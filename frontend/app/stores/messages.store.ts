@@ -1,9 +1,15 @@
 /**
- * 消息状态存储 - 纯状态版本
- * 职责：纯粹的消息状态管理，不包含 API 调用和 WebSocket 管理
+ * 消息状态存储
+ * 职责：消息状态管理 + API 调用
  */
 
 import type { MessageResponse, ConversationsResponse } from '~/types/api'
+import type {
+  SendPrivateMessageRequest,
+  SendGroupMessageRequest,
+  MarkPrivateMessagesReadRequest,
+  MarkGroupMessagesReadRequest
+} from '~/services/messages.service'
 
 export interface Message extends MessageResponse {
   // 本地状态
@@ -235,6 +241,188 @@ export const useMessagesStore = defineStore('messages', () => {
     currentConversationId.value = null
   }
 
+  // ============ API 调用方法 ============
+
+  /**
+   * 发送私聊消息
+   */
+  const sendPrivateMessage = async (chatId: string, data: Omit<SendPrivateMessageRequest, 'private_chat_id'>) => {
+    const messagesService = useMessagesService()
+    const toast = useToast()
+    
+    // 生成临时ID
+    const tempId = `temp_${Date.now()}`
+    
+    // 乐观更新
+    const optimisticMessage: Message = {
+      id: tempId,
+      type: data.type,
+      content: data.content,
+      sender_id: useAuthStore().user?.user_id || '',
+      sent_at: new Date().toISOString(),
+      sending: true,
+      optimistic: true
+    }
+    
+    appendMessage(chatId, optimisticMessage)
+    
+    try {
+      const response = await messagesService.sendPrivateMessage({
+        private_chat_id: chatId,
+        ...data
+      })
+      
+      // 用真实消息替换乐观更新的消息
+      replaceMessage(chatId, tempId, {
+        ...optimisticMessage,
+        id: response.id,
+        sent_at: response.sent_at,
+        sending: false,
+        optimistic: false
+      })
+      
+      return response
+    } catch (error: any) {
+      // 标记为发送失败
+      markMessageFailed(chatId, tempId)
+      toast.add({ color: 'error', title: '发送失败', description: error.message })
+      throw error
+    }
+  }
+
+  /**
+   * 发送群聊消息
+   */
+  const sendGroupMessage = async (chatId: string, data: Omit<SendGroupMessageRequest, 'group_chat_id'>) => {
+    const messagesService = useMessagesService()
+    
+    // 生成临时ID
+    const tempId = `temp_${Date.now()}`
+    
+    // 乐观更新
+    const optimisticMessage: Message = {
+      id: tempId,
+      type: data.type,
+      content: data.content,
+      sender_id: useAuthStore().user?.user_id || '',
+      sent_at: new Date().toISOString(),
+      sending: true,
+      optimistic: true
+    }
+    
+    appendMessage(chatId, optimisticMessage)
+    
+    try {
+      const response = await messagesService.sendGroupMessage({
+        group_chat_id: chatId,
+        ...data
+      })
+      
+      // 用真实消息替换乐观更新的消息
+      replaceMessage(chatId, tempId, {
+        ...optimisticMessage,
+        id: response.id,
+        sent_at: response.sent_at,
+        sending: false,
+        optimistic: false
+      })
+      
+      return response
+    } catch (error: any) {
+      // 标记为发送失败
+      markMessageFailed(chatId, tempId)
+      toast.add({ color: 'error', title: '发送失败', description: error.message })
+      throw error
+    }
+  }
+
+  /**
+   * 标记私聊消息已读
+   */
+  const markPrivateMessagesAsRead = async (chatId: string, upTo?: string) => {
+    const messagesService = useMessagesService()
+    
+    try {
+      await messagesService.markPrivateMessagesRead({
+        private_chat_id: chatId,
+        up_to: upTo
+      })
+      
+      // 更新本地未读计数
+      updateUnreadCount(chatId, 0)
+    } catch (error: any) {
+      console.error('标记已读失败:', error)
+    }
+  }
+
+  /**
+   * 标记群聊消息已读
+   */
+  const markGroupMessagesAsRead = async (chatId: string, upTo?: string) => {
+    const messagesService = useMessagesService()
+    
+    try {
+      await messagesService.markGroupMessagesRead({
+        group_chat_id: chatId,
+        up_to: upTo
+      })
+      
+      // 更新本地未读计数
+      updateUnreadCount(chatId, 0)
+    } catch (error: any) {
+      console.error('标记已读失败:', error)
+    }
+  }
+
+  /**
+   * 撤回消息
+   */
+  const recallMessage = async (chatId: string, messageId: string, isGroup: boolean) => {
+    const messagesService = useMessagesService()
+    
+    try {
+      if (isGroup) {
+        await messagesService.recallGroupMessage({ id: messageId })
+      } else {
+        await messagesService.recallPrivateMessage({ id: messageId })
+      }
+      
+      // 更新本地消息状态
+      updateMessage(chatId, messageId, {
+        is_recalled: true,
+        recalled_at: new Date().toISOString()
+      })
+      
+      toast.add({ color: 'success', title: '消息已撤回' })
+    } catch (error: any) {
+      toast.add({ color: 'error', title: '撤回失败', description: error.message })
+      throw error
+    }
+  }
+
+  /**
+   * 删除消息
+   */
+  const deleteMessage = async (chatId: string, messageId: string, isGroup: boolean, forEveryone = false) => {
+    const messagesService = useMessagesService()
+    
+    try {
+      if (isGroup) {
+        await messagesService.deleteGroupMessage({ id: messageId, for_everyone: forEveryone })
+      } else {
+        await messagesService.deletePrivateMessage({ id: messageId })
+      }
+      
+      // 从本地删除
+      removeMessage(chatId, messageId)
+      
+      toast.add({ color: 'success', title: '消息已删除' })
+    } catch (error: any) {
+      toast.add({ color: 'error', title: '删除失败', description: error.message })
+      throw error
+    }
+  }
+
   return {
     // 状态（直接返回，供 Pinia 和插件使用）
     conversations,
@@ -270,6 +458,14 @@ export const useMessagesStore = defineStore('messages', () => {
     // 辅助方法
     getConversation,
     getMessages,
-    clearAll
+    clearAll,
+
+    // API 调用方法
+    sendPrivateMessage,
+    sendGroupMessage,
+    markPrivateMessagesAsRead,
+    markGroupMessagesAsRead,
+    recallMessage,
+    deleteMessage
   }
 })

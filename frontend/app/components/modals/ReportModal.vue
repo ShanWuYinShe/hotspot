@@ -149,7 +149,7 @@ const reportReasons = computed(() => {
 })
 
 // 工具函数
-const { success, error } = useNotifications()
+const toast = useToast()
 
 const getTargetTypeLabel = (type: string) => {
   const labels = {

@@ -135,16 +135,15 @@ const EmptyNearby = defineAsyncComponent(
     () => import("~/components/illustrations/EmptyNearby.vue"),
 );
 
+// 公开页面 - 对应 POST /api/v1/public/user/discover
 definePageMeta({
     title: "附近的人",
-    requiresAuth: true,
     layout: 'dashboard'
 });
 
-const { success, error, info } = useNotifications()
-const toast = { success, error, info };
+const toast = useToast()
 const userService = useUserService();
-const { coordinates, getCurrentPosition } = useDeviceAccess();
+const locationStore = useLocationStore();
 const { formatDistance } = useFormatters();
 
 // 本地状态管理
@@ -199,19 +198,11 @@ onMounted(async () => {
 
 // 获取当前位置的通用函数
 async function getPositionForSearch() {
-    let pos = coordinates.value;
+    let pos = locationStore.coordinates;
     if (!pos) {
         try {
-            const position = await getCurrentPosition();
-            pos = {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                accuracy: position.coords.accuracy,
-                altitude: position.coords.altitude,
-                altitudeAccuracy: position.coords.altitudeAccuracy,
-                heading: position.coords.heading,
-                speed: position.coords.speed
-            };
+            await locationStore.getCurrentPosition();
+            pos = locationStore.coordinates;
         } catch {
             pos = {
                 latitude: defaults.latitude,
@@ -232,7 +223,7 @@ async function refresh() {
     try {
         const pos = await getPositionForSearch();
 
-        const response = await userService.findNearbyUsers({
+        const response = await userService.getNearbyUsers({
             latitude: (pos as any).latitude,
             longitude: (pos as any).longitude,
             radius: radiusMeters.value,
@@ -241,8 +232,8 @@ async function refresh() {
         });
 
         users.value = response.items;
-        hasMore.value = response.has_more;
-        nextCursor.value = response.next_cursor;
+        hasMore.value = response.pagination.has_more;
+        nextCursor.value = response.pagination.next_cursor;
     } catch (e: any) {
         const msg = e?.message || "无法获取附近的人";
         const detail = e?.details?.message || "";
@@ -263,7 +254,7 @@ async function loadMore() {
     try {
         const pos = await getPositionForSearch();
 
-        const response = await userService.findNearbyUsers({
+        const response = await userService.getNearbyUsers({
             latitude: (pos as any).latitude,
             longitude: (pos as any).longitude,
             radius: radiusMeters.value,
@@ -272,8 +263,8 @@ async function loadMore() {
         });
 
         users.value.push(...response.items);
-        hasMore.value = response.has_more;
-        nextCursor.value = response.next_cursor;
+        hasMore.value = response.pagination.has_more;
+        nextCursor.value = response.pagination.next_cursor;
     } catch (e: any) {
         const msg = e?.message || "无法加载更多用户";
         toast.add({

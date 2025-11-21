@@ -32,7 +32,7 @@
           </div>
           <span
             v-if="!collapsed"
-            class="text-lg font-bold bg-gradient-to-r from-primary-600 to-error-600 bg-clip-text text-transparent"
+            class="text-lg font-bold text-black dark:text-white"
           >
             HotSpot
           </span>
@@ -62,75 +62,77 @@
       <!-- 底部工具栏 -->
       <template #footer="{ collapsed }">
         <div class="p-3 space-y-2">
-          <!-- 用户信息 -->
-          <div v-if="currentUser && !collapsed" class="flex items-center gap-3 p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800">
-            <UAvatar
-              :alt="currentUser.nickname"
-              size="sm"
-            >
-              {{ currentUser.nickname?.charAt(0) || "U" }}
-            </UAvatar>
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium truncate">{{ currentUser.nickname || "用户" }}</p>
-              <p class="text-xs text-neutral-500 truncate">
-                {{ isTempUser(currentUser.user_id) ? "临时用户" : "正式用户" }}
-              </p>
+            <!-- 用户信息 -->
+            <div v-if="currentUser && !collapsed" class="flex items-center gap-3 p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800">
+              <UAvatar
+                :alt="currentUser.nickname"
+                size="sm"
+              >
+                {{ currentUser.nickname?.charAt(0) || "U" }}
+              </UAvatar>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium truncate">{{ currentUser.nickname || "用户" }}</p>
+                <p class="text-xs text-neutral-500 truncate">
+                  {{ isTempUser(currentUser.user_id) ? "临时用户" : "正式用户" }}
+                </p>
+              </div>
             </div>
-          </div>
 
-          <!-- 工具按钮 -->
-          <div class="flex gap-1">
-            <UTooltip text="搜索 (⌘K)">
-              <UButton
-                variant="ghost"
-                icon="i-heroicons-magnifying-glass"
-                size="sm"
-                square
-                @click="openSearch"
-              />
-            </UTooltip>
-            
-            <UTooltip text="通知">
-              <UPopover v-model:open="showNotifications" :popper="{ placement: 'bottom-end' }">
-                <UButton
-                  variant="ghost"
-                  icon="i-heroicons-bell"
-                  size="sm"
-                  square
-                  class="relative"
-                >
-                  <UBadge
-                    v-if="notificationPanelRef?.unreadCount > 0"
-                    size="xs"
-                    color="error"
-                    class="absolute -top-1 -right-1 w-2 h-2"
+            <!-- 工具按钮 -->
+            <div class="flex justify-center">
+              <div class="flex gap-1 items-center">
+                <UTooltip text="搜索 (⌘K)">
+                  <UButton
+                    variant="ghost"
+                    icon="i-heroicons-magnifying-glass"
+                    size="sm"
+                    square
+                    @click="openSearch"
                   />
-                </UButton>
+                </UTooltip>
                 
-                <template #panel>
-                  <Suspense>
-                    <NotificationPanel ref="notificationPanelRef" />
-                    <template #fallback>
-                      <div class="w-96 h-64 flex items-center justify-center">
-                        <USkeleton class="w-full h-full" />
-                      </div>
+                <UTooltip text="通知">
+                  <UPopover v-model:open="showNotifications" :popper="{ placement: 'bottom-end' }">
+                    <UButton
+                      variant="ghost"
+                      icon="i-heroicons-bell"
+                      size="sm"
+                      square
+                      class="relative"
+                    >
+                      <UBadge
+                        v-if="notificationPanelRef?.unreadCount > 0"
+                        size="xs"
+                        color="error"
+                        class="absolute -top-1 -right-1 w-2 h-2"
+                      />
+                    </UButton>
+                    
+                    <template #panel>
+                      <Suspense>
+                        <NotificationPanel ref="notificationPanelRef" />
+                        <template #fallback>
+                          <div class="w-96 h-64 flex items-center justify-center">
+                            <USkeleton class="w-full h-full" />
+                          </div>
+                        </template>
+                      </Suspense>
                     </template>
-                  </Suspense>
-                </template>
-              </UPopover>
-            </UTooltip>
+                  </UPopover>
+                </UTooltip>
 
-            <UColorModeSwitch/>
-            
-            <UTooltip text="设置">
-              <UButton
-                to="/settings"
-                variant="ghost"
-                icon="i-heroicons-cog-6-tooth"
-                size="sm"
-                square
-              />
-            </UTooltip>
+                <UColorModeSwitch/>
+                
+                <UTooltip text="设置">
+                  <UButton
+                    to="/settings"
+                    variant="ghost"
+                    icon="i-heroicons-cog-6-tooth"
+                    size="sm"
+                    square
+                  />
+                </UTooltip>
+            </div>
           </div>
         </div>
       </template>
@@ -142,41 +144,11 @@
       <template #header>
         <UDashboardNavbar
           title="HotSpot"
-          :toggle="{
-            color: 'neutral',
-            variant: 'ghost',
-            class: 'rounded-full'
-          }"
-          toggle-side="left"
         >
 
           <!-- 右侧工具栏 -->
           <template #right>
             <div class="flex items-center gap-1 sm:gap-2">
-              <!-- 消息按钮 -->
-              <UTooltip text="消息中心">
-                <UButton
-                  to="/chat"
-                  variant="ghost"
-                  size="sm"
-                  square
-                  class="relative"
-                >
-                  <UIcon
-                    name="i-heroicons-chat-bubble-left-right"
-                    class="w-4 h-4"
-                  />
-                  <UBadge
-                    v-if="unreadCount > 0"
-                    size="xs"
-                    color="error"
-                    class="absolute -top-1 -right-1 min-w-4 h-4 flex items-center justify-center"
-                  >
-                    {{ unreadCount > 9 ? "9+" : unreadCount }}
-                  </UBadge>
-                </UButton>
-              </UTooltip>
-
               <!-- 语言切换 - 移动端隐藏 -->
               <ULocaleSelect
                 v-model="currentLocale"
@@ -216,7 +188,6 @@
 import { isTempUser } from '~/utils/userTypes'
 
 // 使用 composables
-const { showCommandPalette } = useModal();
 const { locale: currentLocale, availableLocales } = useI18n();
 const route = useRoute();
 const { t } = useI18n();
@@ -246,8 +217,25 @@ const pageTitle = computed<string>(() => {
   return typeof title === 'string' ? title : "HotSpot";
 });
 
-// 导航菜单项
+// "新"标签状态管理（SSR 安全：setup 中使用默认值，onMounted 中设置客户端值）
+const hasSeenGroups = ref(false);
+
+// 从 localStorage 读取状态
+onMounted(() => {
+  hasSeenGroups.value = localStorage.getItem('has_seen_groups') === 'true';
+});
+
+// 监听路由变化，当用户访问群组页面时标记为已查看
+watch(() => route.path, (newPath) => {
+  if (newPath.startsWith('/groups') && !hasSeenGroups.value) {
+    hasSeenGroups.value = true;
+    localStorage.setItem('has_seen_groups', 'true');
+  }
+});
+
+// 导航菜单项 - 扁平化结构，所有功能都是一级导航
 const navigationItems = computed(() => [
+  // 第一组：发现功能
   [
     {
       label: t("nav.home"),
@@ -261,14 +249,27 @@ const navigationItems = computed(() => [
       to: "/map",
       active: route.path === "/map",
     },
+    {
+      label: t("nav.moments"),
+      icon: "i-heroicons-photo",
+      to: "/moments",
+      active: route.path.startsWith("/moments"),
+    },
   ],
+  // 第二组：社交功能
   [
+    {
+      label: t("nav.nearbyUsers"),
+      icon: "i-heroicons-map-pin",
+      to: "/users/nearby",
+      active: route.path === "/users/nearby",
+    },
     {
       label: t("nav.groups"),
       icon: "i-heroicons-user-group",
       to: "/groups",
       active: route.path.startsWith("/groups"),
-      badge: authStore.user ? undefined : "新",
+      badge: hasSeenGroups.value ? undefined : "新",
     },
     {
       label: t("nav.messages"),
@@ -277,30 +278,6 @@ const navigationItems = computed(() => [
       active: route.path.startsWith("/chat"),
       badge: unreadCount.value > 0 ? 
         (unreadCount.value > 99 ? "99+" : unreadCount.value.toString()) : undefined,
-    },
-  ],
-  [
-    {
-      label: t("nav.users"),
-      icon: "i-heroicons-users",
-      children: [
-        {
-          label: t("nav.nearbyUsers"),
-          icon: "i-heroicons-users",
-          to: "/users/nearby",
-        },
-        {
-          label: t("nav.searchUsers"),
-          icon: "i-heroicons-magnifying-glass",
-          to: "/search",
-        },
-      ],
-    },
-    {
-      label: t("nav.moments"),
-      icon: "i-heroicons-photo",
-      to: "/moments",
-      active: route.path.startsWith("/moments"),
     },
   ],
 ]);
@@ -349,13 +326,13 @@ const handleLocaleChange = async (newLocale: string | undefined) => {
   }
 };
 
-// 搜索功能
+// 全局搜索功能（暂时禁用，待修复）
 const openSearch = async () => {
-  await showCommandPalette({
-    onCreateMoment: () => {
-      navigateTo('/moments');
-    }
-  });
+  toast.add({
+    title: "搜索功能",
+    description: "全局搜索功能正在开发中",
+    color: "info",
+  })
 };
 
 // 通知功能
@@ -365,8 +342,12 @@ const toggleNotifications = () => {
 
 // 快捷键管理 - 使用 Nuxt UI v4 原生支持
 defineShortcuts({
-  's': {
-    usingInput: false,
+  'meta_k': {
+    usingInput: true,
+    handler: openSearch,
+  },
+  'ctrl_k': {
+    usingInput: true,
     handler: openSearch,
   },
   'n': {

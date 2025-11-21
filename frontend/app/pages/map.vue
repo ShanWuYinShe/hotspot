@@ -7,7 +7,7 @@
                     <UIcon name="i-heroicons-map" class="w-6 h-6 text-white" />
                 </div>
                 <div>
-                    <h1 class="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">地图探索</h1>
+                    <h1 class="text-3xl font-bold text-black dark:text-white">地图探索</h1>
                     <div class="w-16 h-0.5 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full mt-1"></div>
                 </div>
             </div>
@@ -206,7 +206,7 @@ const userService = useUsersService()
 const groupService = useGroupsService()
 const toast = useToast()
 const authStore = useAuthStore()
-const { getCurrentLocationOrDefault } = useLocation()
+const locationComposable = useLocationStore()
 
 // 数据加载函数
 const loadNearbyUsers = async () => {
@@ -214,10 +214,10 @@ const loadNearbyUsers = async () => {
         currentLoading.value = true
         
         // 获取当前位置（失败时使用默认位置）
-        const location = await getCurrentLocationOrDefault()
+        const location = await locationComposable.getCurrentLocationOrDefault()
         currentLocation.value = location
         
-        const result = await userService.findNearbyUsers({
+        const result = await userService.getNearbyUsers({
             latitude: location.latitude,
             longitude: location.longitude,
             radius: 5000,
@@ -225,7 +225,7 @@ const loadNearbyUsers = async () => {
         })
         
         currentData.value = result.items
-        hasMore.value = result.has_more
+        hasMore.value = result.pagination.has_more
     } catch (error) {
         console.error('加载附近用户失败:', error)
         toast.add({
@@ -243,25 +243,18 @@ const loadNearbyGroups = async () => {
         currentLoading.value = true
         
         // 获取当前位置（失败时使用默认位置）
-        const location = await getCurrentLocationOrDefault()
+        const location = await locationComposable.getCurrentLocationOrDefault()
         currentLocation.value = location
         
-        const result = await groupService.searchNearbyGroups(
-            location.latitude,
-            location.longitude,
-            5000,
-            20
-        )
+        const result = await groupService.getNearbyGroups({
+            latitude: location.latitude,
+            longitude: location.longitude,
+            radius: 5000,
+            limit: 20
+        })
         
-        // 如果返回的是分页响应
-        if ('items' in result) {
-            currentData.value = (result as any).items
-            hasMore.value = (result as any).has_more
-        } else {
-            // 如果返回的是单个项目，包装成数组
-            currentData.value = [result as GroupResponse]
-            hasMore.value = false
-        }
+        currentData.value = result.items
+        hasMore.value = result.pagination.has_more
     } catch (error) {
         console.error('加载附近群组失败:', error)
         toast.add({
@@ -277,11 +270,21 @@ const loadNearbyGroups = async () => {
 const loadNearbyMoments = async () => {
     try {
         currentLoading.value = true
+        
+        // 获取当前位置（失败时使用默认位置）
+        const location = await locationComposable.getCurrentLocationOrDefault()
+        currentLocation.value = location
+        
         // 加载附近动态
         const momentsService = useMomentsService();
-        const response = await momentsService.getNearbyMoments(currentLocation.value);
+        const response = await momentsService.getNearbyMoments({
+            latitude: location.latitude,
+            longitude: location.longitude,
+            radius: 5000,
+            limit: 20
+        });
         currentData.value = response.items || [];
-        hasMore.value = response.has_more || false;
+        hasMore.value = response.pagination.has_more || false;
         
         toast.add({
             title: '功能开发中',
@@ -344,18 +347,20 @@ const handleSearch = async () => {
         
         switch (currentTab.value) {
             case 'users':
-                const userResult = await userService.searchUsers(currentSearchQuery.value.trim())
+                const userResult = await userService.searchUsers({
+                    keyword: currentSearchQuery.value.trim(),
+                    limit: 20
+                })
                 currentData.value = userResult.items
+                hasMore.value = userResult.pagination.has_more
                 break
             case 'groups':
-                const groupResult = await groupService.searchGroupsByName(currentSearchQuery.value.trim())
-                // 如果返回的是分页响应
-                if ('items' in groupResult) {
-                    currentData.value = (groupResult as any).items
-                } else {
-                    // 如果返回的是单个项目，包装成数组
-                    currentData.value = [groupResult as GroupResponse]
-                }
+                const groupResult = await groupService.searchGroups({
+                    keyword: currentSearchQuery.value.trim(),
+                    limit: 20
+                })
+                currentData.value = groupResult.items
+                hasMore.value = groupResult.pagination.has_more
                 break
             case 'moments':
                 // 动态搜索功能暂未实现
@@ -419,7 +424,9 @@ const toggleLocationSharing = () => {
 
 const handleJoinGroup = async (group: GroupResponse) => {
     try {
-        await groupService.joinGroup(group.group_id)
+        await groupService.joinGroup({
+            group_chat_id: group.group_id
+        })
         toast.add({
             title: '加入群组成功',
             description: `已成功加入群组 "${group.name}"`,
@@ -437,8 +444,13 @@ const handleJoinGroup = async (group: GroupResponse) => {
 }
 
 const handleLikeMoment = async (moment: MomentResponse) => {
+    // ✅ 功能级认证检查：游客可以浏览，但不能点赞
+    const { requireAuth } = useRequireAuth()
+    if (!requireAuth('点赞')) return
+
     try {
-        // 动态点赞功能暂未实现
+        // TODO: 实现点赞功能
+        // await momentsService.likeMoment({ id: moment.moment_id })
         toast.add({
             title: '功能开发中',
             description: '点赞功能即将上线',

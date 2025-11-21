@@ -3,6 +3,10 @@ export default defineAppConfig({
     // 主题配置
     primary: "blue",
     gray: "neutral",
+    // 禁用 Dashboard 搜索功能
+    dashboard: {
+      search: false
+    }
   },
 
   // 主题切换配置

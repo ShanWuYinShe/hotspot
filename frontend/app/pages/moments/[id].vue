@@ -184,18 +184,18 @@
 <script setup lang="ts">
 import type { MomentResponse } from '~/types/api';
 
+// 公开页面 - 对应 POST /api/v1/public/moments/open_the_door
 definePageMeta({ 
-    title: '动态详情', 
-    requiresAuth: true,
+    title: '动态详情',
     layout: 'dashboard'
 });
 
 const route = useRoute();
 const authStore = useAuthStore();
 const { formatTime } = useFormatters();
+const { requireAuth } = useRequireAuth();
 const momentsStore = useMomentsStore();
-const { success, error, info } = useNotifications()
-const toast = { success, error, info };
+const toast = useToast()
 
 const momentId = route.params.id as string;
 
@@ -278,17 +278,15 @@ async function fetchMomentDetail() {
 
 async function fetchComments() {
     try {
-        const api = useApi();
-        const response = await api.post('/comments/moment/' + momentId, {
-            cursor: null,
+        const commentsService = useCommentsService();
+        const response = await commentsService.getList({
+            moment_id: momentId,
             limit: 20
         });
         
-        if (response.code === 0 && response.data) {
-            comments.value = response.data.items || [];
-            hasMoreComments.value = response.data.has_more || false;
-            commentCursor.value = response.data.next_cursor;
-        }
+        comments.value = response.items || [];
+        hasMoreComments.value = response.pagination.has_more || false;
+        commentCursor.value = response.pagination.next_cursor;
     } catch (error: any) {
         console.error('获取评论失败:', error);
         // 评论加载失败不显示错误提示，保持静默
@@ -296,6 +294,9 @@ async function fetchComments() {
 }
 
 async function toggleLike() {
+    // ✅ 功能级认证检查
+    if (!requireAuth('点赞')) return;
+    
     if (likingState.value.loading || !moment.value) return;
     
     likingState.value.loading = true;
@@ -325,28 +326,27 @@ async function toggleLike() {
 }
 
 async function submitComment() {
+    // ✅ 功能级认证检查
+    if (!requireAuth('发表评论')) return;
+    
     if (!commentText.value.trim() || commenting.value) return;
     
     commenting.value = true;
     try {
-        const api = useApi();
-        const response = await api.post('/comments/create', {
+        const commentsService = useCommentsService();
+        const newCommentData = await commentsService.create({
             moment_id: momentId,
             content: commentText.value.trim()
         });
         
-        if (response.code === 0) {
-            // 添加新评论到列表顶部
-            comments.value.unshift(response.data);
-            commentText.value = '';
-            
-            toast.add({
-                title: '评论成功',
-                color: 'success'
-            });
-        } else {
-            throw new Error(response.msg || '评论失败');
-        }
+        // 重新获取评论列表（包含完整的评论信息）
+        await fetchComments();
+        commentText.value = '';
+        
+        toast.add({
+            title: '评论成功',
+            color: 'success'
+        });
         
     } catch (error: any) {
         toast.add({
@@ -364,17 +364,16 @@ async function loadMoreComments() {
     
     loadingMoreComments.value = true;
     try {
-        const api = useApi();
-        const response = await api.post('/comments/moment/' + momentId, {
+        const commentsService = useCommentsService();
+        const response = await commentsService.getList({
+            moment_id: momentId,
             cursor: commentCursor.value,
             limit: 20
         });
         
-        if (response.code === 0 && response.data) {
-            comments.value.push(...(response.data.items || []));
-            hasMoreComments.value = response.data.has_more || false;
-            commentCursor.value = response.data.next_cursor;
-        }
+        comments.value.push(...(response.items || []));
+        hasMoreComments.value = response.pagination.has_more || false;
+        commentCursor.value = response.pagination.next_cursor;
     } catch (error: any) {
         toast.add({
             title: '加载评论失败',

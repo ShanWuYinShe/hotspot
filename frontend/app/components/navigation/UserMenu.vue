@@ -52,7 +52,7 @@ const createTempUser = async () => {
 // 切换账户
 const switchAccount = async (userId: string) => {
   try {
-    const { switchAccount } = useAuth()
+    const authStore = useAuthStore()
     await switchAccount(userId)
   } catch (error) {
     console.error('切换账户失败:', error)
@@ -62,7 +62,7 @@ const switchAccount = async (userId: string) => {
 // 登出
 const logout = async () => {
   try {
-    const { logout } = useAuth()
+    const authStore = useAuthStore()
     await logout()
     navigateTo('/auth/login')
   } catch (error) {

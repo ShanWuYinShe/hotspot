@@ -3,13 +3,9 @@
  * 利用 Nuxt v4 的响应式系统，自动处理 SSR/客户端差异
  */
 
-export type WebSocketStatus = 'connecting' | 'connected' | 'disconnected' | 'error'
+import type { WebSocketEvent } from '~/types/websocket'
 
-export interface WebSocketMessage<T = any> {
-  type: string
-  data: T
-  timestamp: number
-}
+export type WebSocketStatus = 'connecting' | 'connected' | 'disconnected' | 'error'
 
 export interface WebSocketOptions {
   autoConnect?: boolean
@@ -32,13 +28,13 @@ export function useWebSocket(url?: string, options: WebSocketOptions = {}) {
     autoConnect = false, // 默认不自动连接，由应用控制
     reconnectAttempts = 5,
     reconnectInterval = 3000,
-    heartbeatInterval = 30000
+    heartbeatInterval = 25000 // ✅ 修正为25秒，符合API规范
   } = options
 
   // 利用 Nuxt v4 的响应式系统
   const socket = ref<WebSocket | null>(null)
   const status = ref<WebSocketStatus>('disconnected')
-  const lastMessage = ref<WebSocketMessage | null>(null)
+  const lastMessage = ref<WebSocketEvent | null>(null)
   const reconnectCount = ref(0)
 
   // 计算属性 - 利用 Vue 3 的响应式
@@ -52,6 +48,11 @@ export function useWebSocket(url?: string, options: WebSocketOptions = {}) {
   // 定时器引用
   let heartbeatTimer: NodeJS.Timeout | null = null
   let reconnectTimer: NodeJS.Timeout | null = null
+  let heartbeatTimeoutTimer: NodeJS.Timeout | null = null
+  
+  // ✅ 心跳超时检测（3次失败断开）
+  let missedHeartbeats = 0
+  const MAX_MISSED_HEARTBEATS = 3
 
   /**
    * 检查是否在客户端环境
@@ -100,11 +101,13 @@ export function useWebSocket(url?: string, options: WebSocketOptions = {}) {
 
       socket.value.onmessage = (event) => {
         try {
-          const message: WebSocketMessage = JSON.parse(event.data)
+          const message: WebSocketEvent = JSON.parse(event.data)
           lastMessage.value = message
           
           // 处理心跳响应
-          if (message.type === 'pong') {
+          if (message.type === 'Pong') { // ✅ 修正为标准事件名
+            missedHeartbeats = 0 // ✅ 重置心跳失败计数
+            clearHeartbeatTimeout()
             return
           }
           
@@ -113,7 +116,7 @@ export function useWebSocket(url?: string, options: WebSocketOptions = {}) {
           if (handlers) {
             handlers.forEach(handler => {
               try {
-                handler(message.data)
+                handler(message.payload) // ✅ 使用 payload 而不是 data
               } catch (error) {
                 console.error(`WebSocket 消息处理器错误 (${message.type}):`, error)
               }
@@ -163,8 +166,9 @@ export function useWebSocket(url?: string, options: WebSocketOptions = {}) {
 
   /**
    * 发送消息 - 增强类型安全
+   * ✅ 使用标准 WebSocketEvent 格式
    */
-  const send = <T = any>(type: string, data: T): boolean => {
+  const send = <T = any>(type: string, payload: T): boolean => {
     if (!isClient || !isConnected.value) {
       if (import.meta.dev) {
         console.warn('WebSocket 未连接，无法发送消息')
@@ -173,10 +177,9 @@ export function useWebSocket(url?: string, options: WebSocketOptions = {}) {
     }
 
     try {
-      const message: WebSocketMessage<T> = {
+      const message: WebSocketEvent<T> = {
         type,
-        data,
-        timestamp: Date.now()
+        payload // ✅ 使用 payload 而不是 data
       }
       
       socket.value!.send(JSON.stringify(message))
@@ -219,15 +222,102 @@ export function useWebSocket(url?: string, options: WebSocketOptions = {}) {
     }
   }
 
+  // ============================================================================
+  // 订阅管理方法（符合 API 规范 4.4 节）
+  // ============================================================================
+
+  /**
+   * 增量订阅（追加到现有订阅）
+   * ✅ 符合API规范：Subscribe 事件
+   */
+  const subscribe = (items: import('~/types/websocket').SubscriptionItem[]): boolean => {
+    return send('Subscribe', { items })
+  }
+
+  /**
+   * 取消订阅（从现有订阅中移除）
+   * ✅ 符合API规范：Unsubscribe 事件
+   */
+  const unsubscribe = (items: import('~/types/websocket').SubscriptionItem[]): boolean => {
+    return send('Unsubscribe', { items })
+  }
+
+  /**
+   * 替换式订阅（覆盖现有订阅）
+   * ✅ 符合API规范：SetSubscriptions 事件
+   */
+  const setSubscriptions = (items: import('~/types/websocket').SubscriptionItem[]): boolean => {
+    return send('SetSubscriptions', { items })
+  }
+
+  /**
+   * 便捷方法：订阅群聊消息
+   */
+  const subscribeToGroupChats = (groupChatIds: string[]): boolean => {
+    return subscribe([{ source_type: 'group_chat', source_ids: groupChatIds }])
+  }
+
+  /**
+   * 便捷方法：取消订阅群聊消息
+   */
+  const unsubscribeFromGroupChats = (groupChatIds: string[]): boolean => {
+    return unsubscribe([{ source_type: 'group_chat', source_ids: groupChatIds }])
+  }
+
+  /**
+   * 便捷方法：订阅用户状态
+   */
+  const subscribeToUsers = (userIds: string[]): boolean => {
+    return subscribe([{ source_type: 'user', source_ids: userIds }])
+  }
+
+  /**
+   * 便捷方法：取消订阅用户状态
+   */
+  const unsubscribeFromUsers = (userIds: string[]): boolean => {
+    return unsubscribe([{ source_type: 'user', source_ids: userIds }])
+  }
+
+  /**
+   * 便捷方法：订阅通知类型
+   */
+  const subscribeToNotifications = (notificationTypes: string[]): boolean => {
+    return subscribe([{ source_type: 'notification', source_ids: notificationTypes }])
+  }
+
+  /**
+   * 便捷方法：取消订阅通知类型
+   */
+  const unsubscribeFromNotifications = (notificationTypes: string[]): boolean => {
+    return unsubscribe([{ source_type: 'notification', source_ids: notificationTypes }])
+  }
+
   /**
    * 心跳机制
+   * ✅ 符合API规范: 25秒间隔，发送标准 Ping 事件
+   * ✅ 心跳超时检测: 5秒内必须收到 Pong，3次失败断开
    */
   const startHeartbeat = () => {
     if (!isClient || heartbeatInterval <= 0) return
     
+    missedHeartbeats = 0 // 重置计数器
+    
     heartbeatTimer = setInterval(() => {
       if (isConnected.value) {
-        send('ping', { timestamp: Date.now() })
+        send('Ping', { timestamp: new Date().toISOString() }) // ✅ 使用标准事件名和ISO时间格式
+        
+        // ✅ 启动心跳超时检测（5秒内必须收到 Pong）
+        heartbeatTimeoutTimer = setTimeout(() => {
+          missedHeartbeats++
+          if (import.meta.dev) {
+            console.warn(`心跳超时 (${missedHeartbeats}/${MAX_MISSED_HEARTBEATS})`)
+          }
+          
+          if (missedHeartbeats >= MAX_MISSED_HEARTBEATS) {
+            console.error('心跳超时次数过多，主动断开连接')
+            disconnect()
+          }
+        }, 5000) // 5秒超时
       }
     }, heartbeatInterval)
   }
@@ -237,23 +327,45 @@ export function useWebSocket(url?: string, options: WebSocketOptions = {}) {
       clearInterval(heartbeatTimer)
       heartbeatTimer = null
     }
+    clearHeartbeatTimeout()
+  }
+  
+  const clearHeartbeatTimeout = () => {
+    if (heartbeatTimeoutTimer) {
+      clearTimeout(heartbeatTimeoutTimer)
+      heartbeatTimeoutTimer = null
+    }
   }
 
   /**
-   * 重连机制
+   * 重连机制 - 指数退避算法
+   * ✅ 符合API规范：1秒 → 2秒 → 4秒 → ... → 最大30秒
    */
   const scheduleReconnect = () => {
     if (!isClient) return
     
     clearReconnectTimer()
     
+    // 计算重连延迟（指数退避 + 随机抖动）
+    const baseDelay = 1000 // 基础延迟1秒
+    const maxDelay = 30000 // 最大延迟30秒
+    const jitterFactor = 0.2 // 随机抖动±20%
+    
+    const exponentialDelay = Math.min(
+      baseDelay * Math.pow(2, reconnectCount.value),
+      maxDelay
+    )
+    
+    const jitter = exponentialDelay * jitterFactor * (Math.random() * 2 - 1)
+    const delay = Math.max(0, Math.floor(exponentialDelay + jitter))
+    
     reconnectTimer = setTimeout(() => {
       reconnectCount.value++
       if (import.meta.dev) {
-        console.log(`WebSocket 重连尝试 ${reconnectCount.value}/${reconnectAttempts}`)
+        console.log(`WebSocket 重连尝试 ${reconnectCount.value}/${reconnectAttempts}，延迟 ${delay}ms`)
       }
       connect()
-    }, reconnectInterval)
+    }, delay)
   }
 
   const clearReconnectTimer = () => {
@@ -309,7 +421,18 @@ export function useWebSocket(url?: string, options: WebSocketOptions = {}) {
     disconnect,
     send,
     on,
-    onStatusChange
+    onStatusChange,
+    
+    // ✅ 订阅管理方法（符合 API 规范）
+    subscribe,
+    unsubscribe,
+    setSubscriptions,
+    subscribeToGroupChats,
+    unsubscribeFromGroupChats,
+    subscribeToUsers,
+    unsubscribeFromUsers,
+    subscribeToNotifications,
+    unsubscribeFromNotifications
   }
 }
 

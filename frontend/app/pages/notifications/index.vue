@@ -47,9 +47,11 @@
 import type { StatItem } from '~/components/data/StatsGrid.vue'
 import type { ActionItem } from '~/components/common/ActionPanel.vue'
 
+// 需要登录 - 通知中心需要认证
 definePageMeta({
     title: '通知中心',
     description: '查看和管理您的所有通知消息',
+    requiresAuth: true,
     layout: 'dashboard'
 })
 
@@ -73,8 +75,7 @@ const selectedNotifications = ref<NotificationItem[]>([])
 const notifications = ref<NotificationItem[]>([])
 
 // 服务和工具
-const { success, error, info } = useNotifications()
-const toast = { success, error, info }
+const toast = useToast()
 
 // 筛选标签
 const filterTabs = [
@@ -140,7 +141,7 @@ const notificationStats = computed<StatItem[]>(() => [
         icon: 'i-heroicons-calendar-days',
         color: 'green',
         description: '今天收到的通知',
-        onClick: () => toast.info('显示今日通知')
+        onClick: () => toast.add({ color: 'info', title: '显示今日通知' })
     },
     {
         key: 'system',
@@ -269,9 +270,9 @@ const loadNotifications = async () => {
             }
         ]
         
-        toast.success('通知加载完成')
+        toast.add({ color: 'success', title: '通知加载完成' })
     } catch (error) {
-        toast.error('加载通知失败')
+        toast.add({ color: 'error', title: '加载通知失败' })
     } finally {
         loading.value = false
     }
@@ -298,25 +299,25 @@ const handleNotificationClick = (notification: NotificationItem) => {
             navigateTo('/chat')
             break
         default:
-            toast.info('查看通知详情')
+            toast.add({ color: 'info', title: '查看通知详情' })
     }
 }
 
 const markAsRead = async (notification: NotificationItem) => {
     try {
         notification.is_read = true
-        toast.success('已标记为已读')
+        toast.add({ color: 'success', title: '已标记为已读' })
     } catch (error) {
-        toast.error('操作失败')
+        toast.add({ color: 'error', title: '操作失败' })
     }
 }
 
 const markAllAsRead = async () => {
     try {
         notifications.value.forEach(n => n.is_read = true)
-        toast.success('所有通知已标记为已读')
+        toast.add({ color: 'success', title: '所有通知已标记为已读' })
     } catch (error) {
-        toast.error('操作失败')
+        toast.add({ color: 'error', title: '操作失败' })
     }
 }
 
@@ -324,9 +325,9 @@ const markSelectedAsRead = async () => {
     try {
         selectedNotifications.value.forEach(n => n.is_read = true)
         selectedNotifications.value = []
-        toast.success('选中通知已标记为已读')
+        toast.add({ color: 'success', title: '选中通知已标记为已读' })
     } catch (error) {
-        toast.error('操作失败')
+        toast.add({ color: 'error', title: '操作失败' })
     }
 }
 
@@ -339,9 +340,9 @@ const deleteNotification = async (notification: NotificationItem) => {
         if (index > -1) {
             notifications.value.splice(index, 1)
         }
-        toast.success('通知已删除')
+        toast.add({ color: 'success', title: '通知已删除' })
     } catch (error) {
-        toast.error('删除失败')
+        toast.add({ color: 'error', title: '删除失败' })
     }
 }
 
@@ -357,16 +358,16 @@ const deleteSelectedNotifications = async () => {
             }
         })
         selectedNotifications.value = []
-        toast.success('选中通知已删除')
+        toast.add({ color: 'success', title: '选中通知已删除' })
     } catch (error) {
-        toast.error('删除失败')
+        toast.add({ color: 'error', title: '删除失败' })
     }
 }
 
 const clearReadNotifications = async () => {
     const readCount = notifications.value.filter(n => n.is_read).length
     if (readCount === 0) {
-        toast.info('没有已读通知需要清除')
+        toast.add({ color: 'info', title: '没有已读通知需要清除' })
         return
     }
     
@@ -375,9 +376,9 @@ const clearReadNotifications = async () => {
     
     try {
         notifications.value = notifications.value.filter(n => !n.is_read)
-        toast.success('已读通知已清除')
+        toast.add({ color: 'success', title: '已读通知已清除' })
     } catch (error) {
-        toast.error('清除失败')
+        toast.add({ color: 'error', title: '清除失败' })
     }
 }
 
@@ -392,7 +393,7 @@ const toggleNotificationSelection = (notification: NotificationItem) => {
 
 const handleSearch = (query: string) => {
     if (query.trim()) {
-        toast.info(`搜索: ${query}`)
+        toast.add({ color: 'info', title: `搜索: ${query}` })
     }
 }
 

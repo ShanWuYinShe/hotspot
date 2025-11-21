@@ -12,7 +12,7 @@ export const DEFAULTS = {
   nearbyRadiusMeters: 5000,
   // 通用分页默认值
   pageSize: 20,
-  maxPageSize: 50,
+  maxPageSize: 100, // 与 api_spec.mdc 保持一致
   // 本地保存账号最大数量
   maxSavedAccounts: 200,
 }
