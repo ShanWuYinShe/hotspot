@@ -3,10 +3,12 @@ use axum::{extract::State, Extension, Json};
 use crate::{
     dto::{
         request::{
-            AddCommentRequest, DeleteCommentRequest, LikeCommentRequest,
-            UnlikeCommentRequest, ListCommentsRequest, ListRepliesRequest,
+            CreateCommentRequest, DeleteCommentRequest, LikeCommentRequest,
+            ListCommentsRequest, ListRepliesRequest, GetCommentLikesRequest,
         },
-        response::{ApiResponse, PaginatedResponse, CommentResponse},
+        response::{
+            ApiResponse, PaginatedData, CommentListItem, CreateCommentData, CommentLikeItem,
+        },
     },
     error::Result,
     middleware::auth::OptionalUserId,
@@ -14,92 +16,67 @@ use crate::{
     state::AppState,
 };
 
-/// POST /api/v1/protected/comment/add
+/// POST /api/v1/protected/comments/add
 pub async fn add(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
-    Json(req_body): Json<AddCommentRequest>,
-) -> Result<Json<ApiResponse<serde_json::Value>>> {
-    
+    Json(req): Json<CreateCommentRequest>,
+) -> Result<Json<ApiResponse<CreateCommentData>>> {
     let service = CommentService::new(&state.db, &state.redis);
-    let comment_id = service.add_comment(user_id, &req_body).await?;
-    
-    Ok(Json(ApiResponse::success(serde_json::json!({
-        "success": true,
-        "message": "评论添加成功",
-        "id": comment_id
-    }))))
+    let response = service.add_comment(user_id, &req).await?;
+    Ok(Json(ApiResponse::success(response)))
 }
 
-/// POST /api/v1/protected/comment/delete
-pub async fn delete(
+/// POST /api/v1/protected/comments/remove
+pub async fn remove(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
-    Json(req_body): Json<DeleteCommentRequest>,
-) -> Result<Json<ApiResponse<serde_json::Value>>> {
-    
+    Json(req): Json<DeleteCommentRequest>,
+) -> Result<Json<ApiResponse<()>>> {
     let service = CommentService::new(&state.db, &state.redis);
-    service.delete_comment(user_id, &req_body).await?;
-    
-    Ok(Json(ApiResponse::success(serde_json::json!({
-        "success": true,
-        "message": "评论删除成功"
-    }))))
+    service.delete_comment(user_id, &req).await?;
+    Ok(Json(ApiResponse::success_empty()))
 }
 
-/// POST /api/v1/protected/comment/like
-pub async fn like(
+/// POST /api/v1/protected/comments/toggle_like
+pub async fn toggle_like(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
-    Json(req_body): Json<LikeCommentRequest>,
-) -> Result<Json<ApiResponse<serde_json::Value>>> {
-    
+    Json(req): Json<LikeCommentRequest>,
+) -> Result<Json<ApiResponse<()>>> {
     let service = CommentService::new(&state.db, &state.redis);
-    service.like_comment(user_id, &req_body).await?;
-    
-    Ok(Json(ApiResponse::success(serde_json::json!({
-        "success": true,
-        "message": "点赞成功"
-    }))))
+    service.toggle_like(user_id, &req).await?;
+    Ok(Json(ApiResponse::success_empty()))
 }
 
-/// POST /api/v1/protected/comment/unlike
-pub async fn unlike(
-    State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
-    Json(req_body): Json<UnlikeCommentRequest>,
-) -> Result<Json<ApiResponse<serde_json::Value>>> {
-    
-    let service = CommentService::new(&state.db, &state.redis);
-    service.unlike_comment(user_id, &req_body).await?;
-    
-    Ok(Json(ApiResponse::success(serde_json::json!({
-        "success": true,
-        "message": "已取消点赞"
-    }))))
-}
-
-/// POST /api/v1/public/comment/list
-pub async fn list(
+/// POST /api/v1/public/comments/get_list
+pub async fn get_list(
     State(state): State<AppState>,
     OptionalUserId(current_user_id): OptionalUserId,
     Json(req): Json<ListCommentsRequest>,
-) -> Result<Json<ApiResponse<PaginatedResponse<CommentResponse>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<CommentListItem>>>> {
     let service = CommentService::new(&state.db, &state.redis);
     let response = service.list_comments(&req, current_user_id).await?;
-    
     Ok(Json(ApiResponse::success(response)))
 }
 
-/// POST /api/v1/public/comment/replies
-pub async fn replies(
+/// POST /api/v1/public/comments/get_replies
+pub async fn get_replies(
     State(state): State<AppState>,
     OptionalUserId(current_user_id): OptionalUserId,
     Json(req): Json<ListRepliesRequest>,
-) -> Result<Json<ApiResponse<PaginatedResponse<CommentResponse>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<CommentListItem>>>> {
     let service = CommentService::new(&state.db, &state.redis);
     let response = service.list_replies(&req, current_user_id).await?;
-    
     Ok(Json(ApiResponse::success(response)))
 }
 
+/// POST /api/v1/public/comments/get_likes
+pub async fn get_likes(
+    State(state): State<AppState>,
+    Json(req): Json<GetCommentLikesRequest>,
+) -> Result<Json<ApiResponse<PaginatedData<CommentLikeItem>>>> {
+    let service = CommentService::new(&state.db, &state.redis);
+    let response = service.get_likes(&req).await?;
+    Ok(Json(ApiResponse::success(response)))
+}

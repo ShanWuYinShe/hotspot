@@ -29,9 +29,6 @@ pub enum AppError {
     #[error("内部错误: {0}")]
     InternalError(String),
 
-    #[error("功能未实现: {0}")]
-    NotImplemented(String),
-
     #[error("数据库错误: {0}")]
     Database(#[from] sqlx::Error),
 
@@ -61,7 +58,6 @@ impl AppError {
             Self::Conflict(_) => 1005,
             Self::InvalidInput(_) => 1001,
             Self::InternalError(_) => 5000,
-            Self::NotImplemented(_) => 1006,
             Self::Database(_) => 5001,
             Self::Redis(_) => 5001,
             Self::Jwt(_) => 1002,

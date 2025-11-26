@@ -52,14 +52,6 @@ pub async fn auth_middleware(
     Ok(next.run(req).await)
 }
 
-/// 从请求中提取当前用户ID
-pub fn extract_user_id(req: &Request) -> Result<i64, AppError> {
-    req.extensions()
-        .get::<i64>()
-        .copied()
-        .ok_or_else(|| AppError::Unauthorized("未认证".to_string()))
-}
-
 /// 可选的用户ID提取器（用于公开API）
 /// 
 /// 如果请求已认证（有token），则返回Some(user_id)

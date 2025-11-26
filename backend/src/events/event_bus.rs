@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use tokio::sync::mpsc;
 use tracing::{error, info};
 
@@ -37,23 +36,6 @@ impl EventBus {
 impl Default for EventBus {
     fn default() -> Self {
         Self::new().0
-    }
-}
-
-/// 事件总线管理器
-pub struct EventBusManager {
-    event_bus: Arc<EventBus>,
-}
-
-impl EventBusManager {
-    pub fn new(event_bus: EventBus) -> Self {
-        Self {
-            event_bus: Arc::new(event_bus),
-        }
-    }
-
-    pub fn get_bus(&self) -> Arc<EventBus> {
-        self.event_bus.clone()
     }
 }
 

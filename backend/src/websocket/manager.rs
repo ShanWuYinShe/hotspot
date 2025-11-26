@@ -2,13 +2,9 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::{mpsc, RwLock};
-use futures_util::stream::SplitSink;
-use tokio_tungstenite::{WebSocketStream, tungstenite::Message};
-use tokio::net::TcpStream;
+use axum::extract::ws::Message;
 
 use crate::websocket::types::WsMessage;
-
-type WsSender = SplitSink<WebSocketStream<TcpStream>, Message>;
 
 /// WebSocket连接信息
 pub struct Connection {
@@ -63,7 +59,7 @@ impl ConnectionManager {
 
         // 添加到连接映射
         let mut connection_map = self.connection_map.write().await;
-        connection_map.insert(connection_id, user_id);
+        connection_map.insert(connection_id.clone(), user_id);
 
         tracing::info!("WebSocket连接已添加: user_id={}, connection_id={}", user_id, connection_id);
     }
@@ -291,7 +287,7 @@ impl ConnectionManager {
     /// 向指定频道的所有订阅者广播消息
     pub async fn broadcast_to_channel(&self, channel: &str, message: &crate::websocket::types::WsMessage) -> Result<usize, Box<dyn std::error::Error + Send + Sync>> {
         let json = serde_json::to_string(message)?;
-        let msg = axum::extract::ws::Message::Text(json);
+        let msg = Message::Text(json);
         
         let connections = self.connections.read().await;
         let mut sent_count = 0;

@@ -6,7 +6,6 @@ mod types;
 mod utils;
 mod middleware;
 mod dto;
-mod models;
 mod repositories;
 mod services;
 mod handlers;
@@ -14,15 +13,15 @@ mod routes;
 mod websocket;
 mod events;
 
-use axum::Router;
 use std::sync::Arc;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+use axum::middleware as axum_middleware;
 use crate::{
     config::Config,
     events::{event_bus::EventBus, event_handler::EventHandler},
-    middleware::cors::create_cors_layer,
+    middleware::{cors::create_cors_layer, logging::logging_middleware, rate_limit::rate_limit_middleware},
     state::AppState,
 };
 
@@ -80,8 +79,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("WebSocket timeout checker started");
 
     // 创建路由
-    let app = Router::new()
-        .nest("/api/v1", routes::create_routes(state.clone()))
+    let app = routes::create_routes(state.clone())
+        .layer(axum_middleware::from_fn_with_state(state.clone(), rate_limit_middleware))
+        .layer(axum_middleware::from_fn(logging_middleware))
         .layer(create_cors_layer())
         .layer(TraceLayer::new_for_http());
 
@@ -94,4 +94,3 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-

@@ -1,21 +1,18 @@
 pub mod auth;
-pub mod user;
-pub mod group;
-pub mod chat;
-pub mod chat_messages;
-// message handler 已废弃：使用 chat_messages 替代
-// pub mod message;
-// conversation handlers 已废弃：使用统一的 chat_rooms 表设计
-// pub mod conversation;
-// pub mod conversation_settings;
-pub mod system;
-pub mod system_config;
-pub mod moment;
 pub mod comment;
-pub mod media;
+pub mod feed;
+pub mod group;
+pub mod group_messages;
 pub mod inbox;
+pub mod leaderboard;
+pub mod media;
+pub mod message_common;
+pub mod moment;
+pub mod private_chats;
+pub mod private_messages;
 pub mod report;
 pub mod subscription;
-pub mod leaderboard;
-pub mod feed;
-
+pub mod system;
+pub mod system_config;
+pub mod tag;
+pub mod user;

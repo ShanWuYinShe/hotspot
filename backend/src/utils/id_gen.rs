@@ -10,7 +10,7 @@ impl IdGenerator {
     pub fn generate_user_id(user_type: u8) -> i64 {
         let sequence = SEQUENCE.fetch_add(1, Ordering::SeqCst);
         let type_bits = (user_type as i64) << 56;
-        let sequence_bits = sequence & 0x00FFFFFFFFFFFFFF;
+        let sequence_bits = (sequence & 0x00FFFFFFFFFFFFFF) as i64;
         type_bits | sequence_bits
     }
     

@@ -3,60 +3,78 @@ use axum::{extract::State, Extension, Json};
 use crate::{
     dto::{
         request::{
-            CreateReportRequest, GetReportHistoryRequest, GetReportsRequest, HandleReportRequest,
+            CreateReportRequest, ListUserReportsRequest, ListReportsRequest, HandleReportRequest,
         },
-        response::{ApiResponse, PaginatedResponse, ReportResponse},
+        response::{ApiResponse, PaginatedData, ReportItem, CreateReportData},
     },
-    error::AppError,
+    error::{AppError, Result},
     services::report_service::ReportService,
     state::AppState,
 };
 
-pub struct ReportHandler;
+/// 检查管理员权限
+async fn check_admin(state: &AppState, user_id: i64) -> Result<()> {
+    let is_admin = sqlx::query_scalar::<_, bool>(
+        r#"
+        SELECT is_admin
+        FROM users
+        WHERE user_id = $1
+        "#,
+    )
+    .bind(user_id)
+    .fetch_optional(&state.db)
+    .await?
+    .unwrap_or(false);
 
-impl ReportHandler {
-    /// 提交举报
-    pub async fn create_report(
-        State(state): State<AppState>,
-        Extension(user_id): Extension<i64>,
-        Json(req): Json<CreateReportRequest>,
-    ) -> Result<Json<ApiResponse<ReportResponse>>, AppError> {
-        let report_service = ReportService::new(state.db.clone());
-        let result = report_service.create_report(user_id, req).await?;
-        Ok(Json(ApiResponse::success_data(result)))
+    if !is_admin {
+        return Err(AppError::Forbidden("需要管理员权限".to_string()));
     }
 
-    /// 获取举报历史
-    pub async fn get_report_history(
-        State(state): State<AppState>,
-        Extension(user_id): Extension<i64>,
-        Json(req): Json<GetReportHistoryRequest>,
-    ) -> Result<Json<ApiResponse<PaginatedResponse<ReportResponse>>>, AppError> {
-        let report_service = ReportService::new(state.db.clone());
-        let result = report_service.get_report_history(user_id, req).await?;
-        Ok(Json(ApiResponse::success_data(result)))
-    }
-
-    /// 获取所有举报（管理员）
-    pub async fn get_all_reports(
-        State(state): State<AppState>,
-        Extension(user_id): Extension<i64>,
-        Json(req): Json<GetReportsRequest>,
-    ) -> Result<Json<ApiResponse<PaginatedResponse<ReportResponse>>>, AppError> {
-        let report_service = ReportService::new(state.db.clone());
-        let result = report_service.get_all_reports(user_id, req).await?;
-        Ok(Json(ApiResponse::success_data(result)))
-    }
-
-    /// 审核举报（管理员）
-    pub async fn handle_report(
-        State(state): State<AppState>,
-        Extension(user_id): Extension<i64>,
-        Json(req): Json<HandleReportRequest>,
-    ) -> Result<Json<ApiResponse<ReportResponse>>, AppError> {
-        let report_service = ReportService::new(state.db.clone());
-        let result = report_service.handle_report(user_id, req).await?;
-        Ok(Json(ApiResponse::success_data(result)))
-    }
+    Ok(())
 }
 
+/// POST /api/v1/protected/reports/create
+pub async fn create(
+    State(state): State<AppState>,
+    Extension(user_id): Extension<i64>,
+    Json(req): Json<CreateReportRequest>,
+) -> Result<Json<ApiResponse<CreateReportData>>> {
+    let service = ReportService::new(state.db.clone());
+    let result = service.create_report(user_id, req).await?;
+    Ok(Json(ApiResponse::success(result)))
+}
+
+/// POST /api/v1/protected/reports/get_my_reports
+pub async fn get_my_reports(
+    State(state): State<AppState>,
+    Extension(user_id): Extension<i64>,
+    Json(req): Json<ListUserReportsRequest>,
+) -> Result<Json<ApiResponse<PaginatedData<ReportItem>>>> {
+    let service = ReportService::new(state.db.clone());
+    let result = service.get_my_reports(user_id, req).await?;
+    Ok(Json(ApiResponse::success(result)))
+}
+
+/// POST /api/v1/protected/reports/get_admin_list
+pub async fn get_admin_list(
+    State(state): State<AppState>,
+    Extension(user_id): Extension<i64>,
+    Json(req): Json<ListReportsRequest>,
+) -> Result<Json<ApiResponse<PaginatedData<ReportItem>>>> {
+    check_admin(&state, user_id).await?;
+    let service = ReportService::new(state.db.clone());
+    let result = service.get_admin_list(user_id, req).await?;
+    Ok(Json(ApiResponse::success(result)))
+}
+
+/// POST /api/v1/protected/reports/handle
+pub async fn handle(
+    State(state): State<AppState>,
+    Extension(user_id): Extension<i64>,
+    Json(req): Json<HandleReportRequest>,
+) -> Result<Json<ApiResponse<()>>> {
+    check_admin(&state, user_id).await?;
+    let service = ReportService::new(state.db.clone());
+    service.handle(user_id, req).await?;
+    Ok(Json(ApiResponse::success_empty()))
+}

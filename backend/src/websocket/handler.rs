@@ -33,10 +33,10 @@ pub async fn ws_handler(
     State(state): State<AppState>,
 ) -> Result<Response, AppError> {
     // 验证JWT Token
-    let claims = JwtUtil::verify_access_token(&query.token, &state.config.jwt_secret)
+    let claims = JwtUtil::verify_token(&query.token, &state.config.jwt_secret)
         .map_err(|_| AppError::Unauthorized("无效的Token".to_string()))?;
 
-    let user_id = claims.user_id;
+    let user_id = claims.sub.parse::<i64>().map_err(|_| AppError::Unauthorized("无效的Token: user_id不是数字".to_string()))?;
 
     // 升级到WebSocket连接
     Ok(ws.on_upgrade(move |socket| handle_socket(socket, user_id, state)))
@@ -108,8 +108,8 @@ async fn handle_socket(socket: WebSocket, user_id: i64, state: AppState) {
 
     // 处理接收消息
     let state_clone = state.clone();
-    let connection_id_clone = connection_id.clone();
     let connection_id_for_handle = connection_id.clone();
+    let connection_id_for_return = connection_id.clone();
     let receive_task = tokio::spawn(async move {
         while let Some(result) = receiver.next().await {
             match result {
@@ -124,7 +124,7 @@ async fn handle_socket(socket: WebSocket, user_id: i64, state: AppState) {
                 }
             }
         }
-        connection_id_clone
+        connection_id_for_return
     });
 
     // 等待任务完成
@@ -168,12 +168,12 @@ async fn handle_message(msg: Message, user_id: i64, connection_id: &str, state: 
                 .map_err(|e| format!("解析消息失败: {}", e))?;
 
             match client_msg {
-                WsMessage::Ping => {
+                WsMessage::Ping { .. } => {
                     // 更新心跳时间
                     state.ws_manager.update_ping(connection_id).await?;
                     
                     // 回复Pong
-                    let pong_msg = WsMessage::Pong;
+                    let pong_msg = WsMessage::Pong { timestamp: chrono::Utc::now().to_rfc3339() };
                     state.ws_manager.send_to_user(user_id, &pong_msg).await?;
                 }
                 
@@ -183,7 +183,8 @@ async fn handle_message(msg: Message, user_id: i64, connection_id: &str, state: 
                     
                     // 发送订阅确认
                     let ack_msg = WsMessage::SubscribeAck { 
-                        channels: subscribed,
+                        subscribed: subscribed,
+                        failed: vec![]
                     };
                     state.ws_manager.send_to_user(user_id, &ack_msg).await?;
                 }
@@ -194,22 +195,23 @@ async fn handle_message(msg: Message, user_id: i64, connection_id: &str, state: 
                     
                     // 发送取消订阅确认
                     let ack_msg = WsMessage::UnsubscribeAck { 
-                        channels: unsubscribed,
+                        unsubscribed: unsubscribed,
                     };
                     state.ws_manager.send_to_user(user_id, &ack_msg).await?;
                 }
                 
-                WsMessage::MarkAsRead { message_ids } => {
+                WsMessage::MarkAsRead { target_id, target_type, up_to } => {
                     // 处理标记已读请求
                     // TODO: 调用消息服务标记已读
-                    tracing::debug!("收到标记已读请求: user_id={}, message_ids={:?}", user_id, message_ids);
+                    tracing::debug!("收到标记已读请求: user_id={}, target_id={}, target_type={}, up_to={}", user_id, target_id, target_type, up_to);
                 }
                 
-                WsMessage::Typing { target_id, target_type } => {
+                WsMessage::Typing { target_id, target_type, is_typing } => {
                     // 处理正在输入事件
                     let typing_msg = WsMessage::Typing {
                         target_id: target_id.clone(),
                         target_type: target_type.clone(),
+                        is_typing,
                     };
                     
                     // 推送给目标用户

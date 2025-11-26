@@ -1,307 +1,250 @@
-use sqlx::PgPool;
+use sqlx::{PgPool, FromRow};
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
-use crate::{
-    error::{AppError, Result},
-    models::inbox::{InboxItem, DeviceToken},
-    types::enums::InboxCategory,
-};
+use crate::error::Result;
+use crate::types::enums::{NotificationCategory, NotificationSeverity};
+
+/// 收件箱项Row - 数据库查询返回类型
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+pub struct InboxItemRow {
+    pub id: i64,
+    pub inbox_item_id: Uuid,
+    pub user_id: i64,
+    pub category: NotificationCategory,
+    pub r#type: String,
+    pub title: Option<String>,
+    pub content: String,
+    pub data: Option<serde_json::Value>,
+    pub action_url: Option<String>,
+    pub severity: Option<NotificationSeverity>,
+    pub is_read: bool,
+    pub created_at: DateTime<Utc>,
+}
 
 #[derive(Debug, Clone)]
 pub struct InboxRepository {
-    db: PgPool,
+    pool: PgPool,
 }
 
 impl InboxRepository {
-    pub fn new(db: PgPool) -> Self {
-        Self { db }
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
+    }
+
+    /// 将 UUID cursor 转换为自增主键
+    async fn resolve_cursor(&self, cursor: Option<Uuid>) -> Result<i64> {
+        match cursor {
+            Some(c) => {
+                sqlx::query_scalar!(
+                    r#"SELECT id FROM inbox_items WHERE inbox_item_id = $1"#,
+                    c
+                )
+                .fetch_optional(&self.pool)
+                .await?
+                .ok_or_else(|| crate::error::AppError::BadRequest("无效的 cursor".to_string()))
+            }
+            None => Ok(i64::MAX),
+        }
     }
 
     /// 创建收件箱项
-    pub async fn create(&self, item: &InboxItem) -> Result<i64> {
-        let rec = sqlx::query!(
-            r#"
-            INSERT INTO inbox_items (
-                item_id, user_id, category, item_type, 
-                title, content, data, action_url, severity, is_read
-            )
-            VALUES ($1, $2, $3::inbox_category, $4, $5, $6, $7, $8, $9, $10)
-            RETURNING id
-            "#,
-            item.item_id,
-            item.user_id,
-            item.category as InboxCategory,
-            item.item_type,
-            item.title,
-            item.content,
-            item.data,
-            item.action_url,
-            item.severity,
-            item.is_read,
-        )
-        .fetch_one(&self.db)
-        .await
-        .map_err(|e| AppError::from(e))?;
-
-        Ok(rec.id)
-    }
-
-    /// 获取用户的收件箱列表（游标分页）
-    /// cursor: item_id (UUID字符串)
-    pub async fn list_by_user(
+    pub async fn create(
         &self,
         user_id: i64,
-        category: Option<InboxCategory>,
-        cursor: Option<String>,
-        limit: i64,
-    ) -> Result<Vec<InboxItem>> {
-        // 1. 解析cursor获取自增主键id
-        let cursor_id = if let Some(cursor_str) = cursor {
-            let item_uuid = uuid::Uuid::parse_str(&cursor_str)
-                .map_err(|_| AppError::BadRequest("无效的游标".to_string()))?;
-            
-            let result = sqlx::query!(
-                "SELECT id FROM inbox_items WHERE item_id = $1",
-                item_uuid
-            )
-            .fetch_optional(&self.db)
-            .await
-            .map_err(|e| AppError::from(e))?;
-            
-            result.map(|r| r.id)
-        } else {
-            None
-        };
+        category: NotificationCategory,
+        r#type: String,
+        title: Option<String>,
+        content: String,
+        data: Option<serde_json::Value>,
+        action_url: Option<String>,
+        severity: Option<NotificationSeverity>,
+    ) -> Result<InboxItemRow> {
+        let row = sqlx::query_as!(
+            InboxItemRow,
+            r#"
+            INSERT INTO inbox_items (user_id, category, type, title, content, data, action_url, severity)
+            VALUES ($1, $2::notification_category, $3, $4, $5, $6, $7, $8::notification_severity)
+            RETURNING id, inbox_item_id, user_id,
+                      category as "category: NotificationCategory",
+                      type as "type!", title, content, data, action_url,
+                      severity as "severity: NotificationSeverity",
+                      is_read, created_at
+            "#,
+            user_id,
+            category as NotificationCategory,
+            r#type,
+            title,
+            content,
+            data,
+            action_url,
+            severity as Option<NotificationSeverity>
+        )
+        .fetch_one(&self.pool)
+        .await?;
 
-        // 2. 使用自增id进行游标分页
-        let items = if let Some(cat) = category {
-            sqlx::query_as!(
-                InboxItem,
-                r#"
-                SELECT id, item_id, user_id, category as "category: InboxCategory", item_type, 
-                       title, content, data, action_url, severity, 
-                       created_at, is_read
-                FROM inbox_items
-                WHERE user_id = $1 
-                AND (category = $2::inbox_category OR $2::inbox_category = 'any'::inbox_category)
-                AND ($3::BIGINT IS NULL OR id > $3::BIGINT)
-                ORDER BY id DESC
-                LIMIT $4
-                "#,
-                user_id,
-                cat as InboxCategory,
-                cursor_id,
-                limit
-            )
-            .fetch_all(&self.db)
-            .await
-            .map_err(|e| AppError::from(e))?
-        } else {
-            sqlx::query_as!(
-                InboxItem,
-                r#"
-                SELECT id, item_id, user_id, category as "category: InboxCategory", item_type, 
-                       title, content, data, action_url, severity, 
-                       created_at, is_read
-                FROM inbox_items
-                WHERE user_id = $1
-                AND ($2::BIGINT IS NULL OR id > $2::BIGINT)
-                ORDER BY id DESC
-                LIMIT $3
-                "#,
-                user_id,
-                cursor_id,
-                limit
-            )
-            .fetch_all(&self.db)
-            .await
-            .map_err(|e| AppError::from(e))?
-        };
-
-        Ok(items)
+        Ok(row)
     }
 
-    /// 标记为已读
-    /// 标记已读（通过item_id）
-    pub async fn mark_as_read(&self, user_id: i64, item_ids: &[uuid::Uuid]) -> Result<u64> {
+    /// 按ID查找收件箱项
+    pub async fn find_by_id(&self, inbox_item_id: Uuid) -> Result<Option<InboxItemRow>> {
+        let row = sqlx::query_as!(
+            InboxItemRow,
+            r#"
+            SELECT id, inbox_item_id, user_id,
+                   category as "category: NotificationCategory",
+                   type as "type!", title, content, data, action_url,
+                   severity as "severity: NotificationSeverity",
+                   is_read, created_at
+            FROM inbox_items
+            WHERE inbox_item_id = $1
+            "#,
+            inbox_item_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(row)
+    }
+
+    /// 标记为已读 (单个)
+    pub async fn mark_as_read(&self, inbox_item_id: Uuid) -> Result<()> {
+        sqlx::query!(
+            r#"
+            UPDATE inbox_items
+            SET is_read = TRUE
+            WHERE inbox_item_id = $1
+            "#,
+            inbox_item_id
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// 批量标记为已读
+    pub async fn mark_batch_as_read(&self, user_id: i64, inbox_item_ids: &[Uuid]) -> Result<u64> {
         let result = sqlx::query!(
             r#"
             UPDATE inbox_items
-            SET is_read = true
-            WHERE user_id = $1 AND item_id = ANY($2)
+            SET is_read = TRUE
+            WHERE user_id = $1 AND inbox_item_id = ANY($2)
             "#,
             user_id,
-            item_ids
+            inbox_item_ids
         )
-        .execute(&self.db)
-        .await
-        .map_err(|e| AppError::from(e))?;
+        .execute(&self.pool)
+        .await?;
 
         Ok(result.rows_affected())
     }
 
     /// 标记所有为已读
-    pub async fn mark_all_as_read(&self, user_id: i64, category: Option<InboxCategory>) -> Result<u64> {
-        let result = if let Some(cat) = category {
-            sqlx::query!(
-                r#"
-                UPDATE inbox_items
-                SET is_read = true
-                WHERE user_id = $1 
-                AND (category = $2::inbox_category OR $2::inbox_category = 'any'::inbox_category)
-                AND is_read = false
-                "#,
-                user_id,
-                cat as InboxCategory
-            )
-            .execute(&self.db)
-            .await
-            .map_err(|e| AppError::from(e))?
-        } else {
-            sqlx::query!(
-                r#"
-                UPDATE inbox_items
-                SET is_read = true
-                WHERE user_id = $1 AND is_read = false
-                "#,
-                user_id
-            )
-            .execute(&self.db)
-            .await
-            .map_err(|e| AppError::from(e))?
-        };
+    pub async fn mark_all_as_read(&self, user_id: i64, category: Option<NotificationCategory>) -> Result<u64> {
+        let result = sqlx::query!(
+            r#"
+            UPDATE inbox_items
+            SET is_read = TRUE
+            WHERE user_id = $1 
+              AND ($2::notification_category IS NULL OR category = $2::notification_category)
+              AND is_read = FALSE
+            "#,
+            user_id,
+            category as Option<NotificationCategory>
+        )
+        .execute(&self.pool)
+        .await?;
 
         Ok(result.rows_affected())
     }
 
-    /// 删除收件箱项（通过item_id）
-    pub async fn delete(&self, user_id: i64, item_ids: &[uuid::Uuid]) -> Result<u64> {
+    /// 删除收件箱项 (单个)
+    pub async fn delete(&self, inbox_item_id: Uuid) -> Result<()> {
+        sqlx::query!(
+            r#"
+            DELETE FROM inbox_items
+            WHERE inbox_item_id = $1
+            "#,
+            inbox_item_id
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// 批量删除
+    pub async fn delete_batch(&self, user_id: i64, inbox_item_ids: &[Uuid]) -> Result<u64> {
         let result = sqlx::query!(
             r#"
             DELETE FROM inbox_items
-            WHERE user_id = $1 AND item_id = ANY($2)
+            WHERE user_id = $1 AND inbox_item_id = ANY($2)
             "#,
             user_id,
-            item_ids
+            inbox_item_ids
         )
-        .execute(&self.db)
-        .await
-        .map_err(|e| AppError::from(e))?;
+        .execute(&self.pool)
+        .await?;
 
         Ok(result.rows_affected())
     }
 
-    /// 获取未读数量
+    /// 获取未读通知数
     pub async fn get_unread_count(&self, user_id: i64) -> Result<i64> {
-        let rec = sqlx::query!(
+        let count = sqlx::query!(
             r#"
-            SELECT COUNT(*) as count
+            SELECT COUNT(*) as "count!"
             FROM inbox_items
             WHERE user_id = $1 AND is_read = FALSE
             "#,
             user_id
         )
-        .fetch_one(&self.db)
-        .await
-        .map_err(|e| AppError::from(e))?;
-
-        Ok(rec.count.unwrap_or(0))
-    }
-
-    /// 获取未读数量
-    pub async fn count_unread(&self, user_id: i64, category: Option<InboxCategory>) -> Result<i64> {
-        let count = if let Some(cat) = category {
-            sqlx::query!(
-                r#"
-                SELECT COUNT(*) as "count!"
-                FROM inbox_items
-                WHERE user_id = $1 
-                AND (category = $2::inbox_category OR $2::inbox_category = 'any'::inbox_category)
-                AND is_read = false
-                "#,
-                user_id,
-                cat as InboxCategory
-            )
-            .fetch_one(&self.db)
-            .await
-            .map_err(|e| AppError::from(e))?
-            .count
-        } else {
-            sqlx::query!(
-                r#"
-                SELECT COUNT(*) as "count!"
-                FROM inbox_items
-                WHERE user_id = $1 AND is_read = false
-                "#,
-                user_id
-            )
-            .fetch_one(&self.db)
-            .await
-            .map_err(|e| AppError::from(e))?
-            .count
-        };
+        .fetch_one(&self.pool)
+        .await?
+        .count;
 
         Ok(count)
     }
 
-    /// 注册设备Token
-    pub async fn register_device_token(
+    /// 获取收件箱列表
+    pub async fn list_by_user(
         &self,
         user_id: i64,
-        token: &str,
-        platform: &str,
-    ) -> Result<i64> {
-        let rec = sqlx::query!(
+        category: Option<NotificationCategory>,
+        is_read: Option<bool>,
+        limit: i32,
+        cursor: Option<Uuid>
+    ) -> Result<Vec<InboxItemRow>> {
+        // 使用 resolve_cursor 将 UUID 转换为自增主键
+        let cursor_pk = self.resolve_cursor(cursor).await?;
+        
+        // 使用单一 SQL 查询，通过 IS NULL OR 处理可选过滤条件
+        let items = sqlx::query_as!(
+            InboxItemRow,
             r#"
-            INSERT INTO device_tokens (user_id, token, platform)
-            VALUES ($1, $2, $3)
-            ON CONFLICT (user_id, platform, token) 
-            DO UPDATE SET updated_at = NOW()
-            RETURNING id
+            SELECT id, inbox_item_id, user_id,
+                   category as "category: NotificationCategory",
+                   type as "type!", title, content, data, action_url,
+                   severity as "severity: NotificationSeverity",
+                   is_read, created_at
+            FROM inbox_items
+            WHERE user_id = $1 AND id < $2
+              AND ($3::notification_category IS NULL OR category = $3::notification_category)
+              AND ($4::boolean IS NULL OR is_read = $4)
+            ORDER BY id DESC
+            LIMIT $5
             "#,
             user_id,
-            token,
-            platform
+            cursor_pk,
+            category as Option<NotificationCategory>,
+            is_read,
+            limit as i64
         )
-        .fetch_one(&self.db)
-        .await
-        .map_err(|e| AppError::from(e))?;
-
-        Ok(rec.id)
-    }
-
-    /// 注销设备Token
-    pub async fn unregister_device_token(&self, user_id: i64, token: &str) -> Result<()> {
-        sqlx::query!(
-            r#"
-            DELETE FROM device_tokens
-            WHERE user_id = $1 AND token = $2
-            "#,
-            user_id,
-            token
-        )
-        .execute(&self.db)
-        .await
-        .map_err(|e| AppError::from(e))?;
-
-        Ok(())
-    }
-
-    /// 获取用户的所有设备Token
-    pub async fn get_user_device_tokens(&self, user_id: i64) -> Result<Vec<DeviceToken>> {
-        let tokens = sqlx::query_as!(
-            DeviceToken,
-            r#"
-            SELECT id, user_id, token, platform, created_at
-            FROM device_tokens
-            WHERE user_id = $1
-            ORDER BY created_at DESC
-            "#,
-            user_id
-        )
-        .fetch_all(&self.db)
-        .await
-        .map_err(|e| AppError::from(e))?;
-
-        Ok(tokens)
+        .fetch_all(&self.pool)
+        .await?;
+        
+        Ok(items)
     }
 }

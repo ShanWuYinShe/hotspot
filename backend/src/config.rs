@@ -1,6 +1,11 @@
+//! 应用配置
+//! 
+//! 部分配置项暂未使用，但已按规范定义
+
 use std::env;
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct Config {
     pub database_url: String,
     pub redis_url: String,

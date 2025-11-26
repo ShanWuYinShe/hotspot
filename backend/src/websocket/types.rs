@@ -235,6 +235,39 @@ pub enum WsMessage {
         #[serde(skip_serializing_if = "Option::is_none")]
         details: Option<serde_json::Value>,
     },
+
+    // ===== 额外补充事件 =====
+    FriendRequest {
+        from_user_id: i64,
+        to_user_id: i64,
+    },
+
+    FriendRequestAccepted {
+        from_user_id: i64,
+        to_user_id: i64,
+    },
+
+    GroupInvite {
+        group_id: uuid::Uuid,
+        from_user_id: i64,
+        to_user_id: i64,
+    },
+
+    NewMoment {
+        moment_id: uuid::Uuid,
+        user_id: i64,
+    },
+
+    MomentComment {
+        moment_id: uuid::Uuid,
+        comment_id: uuid::Uuid,
+        user_id: i64,
+    },
+
+    SystemNotification {
+        title: String,
+        content: String,
+    },
     
     // ========== 客户端发送事件 (Client → Server) ==========
     
@@ -262,6 +295,11 @@ pub enum WsMessage {
     SubscribeAck {
         subscribed: Vec<String>,
         failed: Vec<SubscribeError>,
+    },
+
+    /// 取消订阅确认
+    UnsubscribeAck {
+        unsubscribed: Vec<String>,
     },
     
     /// 标记已读（快速通道）
@@ -294,4 +332,3 @@ pub struct SubscribeError {
     pub channel: String,
     pub reason: String,
 }
-

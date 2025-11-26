@@ -18,15 +18,6 @@ impl GeoUtil {
         Ok(())
     }
     
-    /// 格式化距离（米 -> 人类可读）
-    pub fn format_distance(meters: f64) -> String {
-        if meters < 1000.0 {
-            format!("{:.0}m", meters)
-        } else {
-            format!("{:.1}km", meters / 1000.0)
-        }
-    }
-    
     /// 使用 Haversine 公式计算两点间的距离（米）
     pub fn haversine_distance(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
         const EARTH_RADIUS_M: f64 = 6371000.0; // 地球半径（米）
@@ -66,9 +57,10 @@ mod tests {
     }
 
     #[test]
-    fn test_format_distance() {
-        assert_eq!(GeoUtil::format_distance(500.0), "500m");
-        assert_eq!(GeoUtil::format_distance(1500.0), "1.5km");
+    fn test_haversine_distance() {
+        // 北京到上海的距离约 1068 km
+        let distance = GeoUtil::haversine_distance(39.9042, 116.4074, 31.2304, 121.4737);
+        assert!(distance > 1000000.0 && distance < 1200000.0);
     }
 }
 

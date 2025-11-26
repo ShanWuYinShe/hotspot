@@ -4,7 +4,10 @@ use std::path::PathBuf;
 use uuid::Uuid;
 
 use crate::{
-    dto::response::UploadResponse,
+    dto::{
+        request::{InitiateUploadRequest, CompleteUploadRequest, GetUploadStatusRequest, AbortUploadRequest},
+        response::{UploadMediaData, InitiateUploadData, UploadStatusData},
+    },
     error::{AppError, Result},
 };
 
@@ -78,7 +81,7 @@ impl<'a> MediaService<'a> {
         _user_id: i64,
         filename: &str,
         data: Vec<u8>,
-    ) -> Result<UploadResponse> {
+    ) -> Result<UploadMediaData> {
         // 验证文件大小
         if data.len() > self.max_file_size {
             return Err(AppError::BadRequest(format!(
@@ -99,6 +102,7 @@ impl<'a> MediaService<'a> {
         self.ensure_directory(&file_path)?;
 
         // 保存文件
+        let file_size = data.len() as i64;
         tokio::fs::write(&file_path, data)
             .await
             .map_err(|e| AppError::InternalError(format!("保存文件失败: {}", e)))?;
@@ -109,9 +113,9 @@ impl<'a> MediaService<'a> {
         // TODO: 保存文件元数据到数据库
         // TODO: 生成缩略图
 
-        Ok(UploadResponse {
+        Ok(UploadMediaData {
             url,
-            file_size: data.len() as i64,
+            file_size,
             mime_type: format!("image/{}", extension),
         })
     }
@@ -122,7 +126,7 @@ impl<'a> MediaService<'a> {
         _user_id: i64,
         filename: &str,
         data: Vec<u8>,
-    ) -> Result<UploadResponse> {
+    ) -> Result<UploadMediaData> {
         // 验证文件大小
         if data.len() > self.max_file_size {
             return Err(AppError::BadRequest(format!(
@@ -145,6 +149,7 @@ impl<'a> MediaService<'a> {
         self.ensure_directory(&file_path)?;
 
         // 保存文件
+        let file_size = data.len() as i64;
         tokio::fs::write(&file_path, data)
             .await
             .map_err(|e| AppError::InternalError(format!("保存文件失败: {}", e)))?;
@@ -154,9 +159,9 @@ impl<'a> MediaService<'a> {
 
         // TODO: 保存文件元数据到数据库
 
-        Ok(UploadResponse {
+        Ok(UploadMediaData {
             url,
-            file_size: data.len() as i64,
+            file_size,
             mime_type: self.get_mime_type(&extension),
         })
     }
@@ -172,6 +177,87 @@ impl<'a> MediaService<'a> {
         tracing::info!("生成上传Token: user_id={}, token={}", user_id, token);
 
         Ok(token)
+    }
+
+    /// 初始化大文件上传（>100MB）
+    pub async fn initiate_upload(
+        &self,
+        _user_id: i64,
+        req: &InitiateUploadRequest,
+    ) -> Result<InitiateUploadData> {
+        // 生成上传会话ID
+        let upload_id = Uuid::new_v4().to_string();
+        
+        // 计算分块数量
+        let chunk_size = req.chunk_size.unwrap_or(5 * 1024 * 1024); // 默认5MB
+        let chunk_count = ((req.file_size as f64) / (chunk_size as f64)).ceil() as i32;
+        
+        // 生成预签名URL列表（简化实现）
+        let upload_urls: Vec<String> = (0..chunk_count)
+            .map(|i| format!("/api/v1/protected/media/upload_chunk?upload_id={}&part={}", upload_id, i + 1))
+            .collect();
+
+        // TODO: 将上传会话信息存储到Redis
+        // TODO: 设置24小时过期时间
+
+        Ok(InitiateUploadData {
+            upload_id,
+            chunk_count,
+            upload_urls,
+        })
+    }
+
+    /// 完成大文件上传
+    pub async fn complete_upload(
+        &self,
+        _user_id: i64,
+        req: &CompleteUploadRequest,
+    ) -> Result<UploadMediaData> {
+        // TODO: 验证所有分块已上传
+        // TODO: 合并分块文件
+        // TODO: 清理临时分块
+
+        // 简化实现：返回模拟数据
+        let url = format!("/uploads/files/{}", req.upload_id);
+
+        Ok(UploadMediaData {
+            url,
+            file_size: 0, // TODO: 计算实际文件大小
+            mime_type: "application/octet-stream".to_string(),
+        })
+    }
+
+    /// 查询上传状态
+    pub async fn get_upload_status(
+        &self,
+        _user_id: i64,
+        req: &GetUploadStatusRequest,
+    ) -> Result<UploadStatusData> {
+        // TODO: 从Redis获取上传会话信息
+
+        // 简化实现：返回模拟数据
+        Ok(UploadStatusData {
+            upload_id: req.upload_id.clone(),
+            status: "in_progress".to_string(),
+            uploaded_parts: vec![],
+            total_parts: 0,
+            created_at: chrono::Utc::now().to_rfc3339(),
+            expires_at: (chrono::Utc::now() + chrono::Duration::hours(24)).to_rfc3339(),
+        })
+    }
+
+    /// 取消大文件上传
+    pub async fn abort_upload(
+        &self,
+        _user_id: i64,
+        req: &AbortUploadRequest,
+    ) -> Result<()> {
+        // TODO: 从Redis删除上传会话信息
+        // TODO: 清理已上传的分块文件
+
+        tracing::info!("取消上传: upload_id={}", req.upload_id);
+
+        Ok(())
     }
 
     /// 获取MIME类型
@@ -192,4 +278,3 @@ impl<'a> MediaService<'a> {
         .to_string()
     }
 }
-

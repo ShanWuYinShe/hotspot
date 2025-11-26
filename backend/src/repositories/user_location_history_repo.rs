@@ -1,154 +1,95 @@
-use crate::error::{AppError, Result};
-use crate::models::user_location_history::UserLocationHistory;
-use sqlx::PgPool;
+use sqlx::{PgPool, FromRow};
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
+use crate::error::Result;
+
+/// 用户位置历史Row - 数据库查询返回类型
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+pub struct UserLocationHistoryRow {
+    pub id: i64,
+    pub user_id: i64,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub location_name: Option<String>,
+    pub recorded_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone)]
 pub struct UserLocationHistoryRepository {
-    db: PgPool,
+    pool: PgPool,
 }
 
 impl UserLocationHistoryRepository {
-    pub fn new(db: PgPool) -> Self {
-        Self { db }
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
     }
 
-    /// 插入新的位置记录
-    pub async fn create(
+    /// 记录用户位置
+    pub async fn record(
         &self,
         user_id: i64,
         latitude: f64,
         longitude: f64,
-        location_name: &str,
-    ) -> Result<UserLocationHistory> {
-        let record = sqlx::query_as!(
-            UserLocationHistory,
+        location_name: Option<String>,
+    ) -> Result<UserLocationHistoryRow> {
+        let row = sqlx::query_as!(
+            UserLocationHistoryRow,
             r#"
             INSERT INTO user_location_history (user_id, latitude, longitude, location_name)
             VALUES ($1, $2, $3, $4)
-            RETURNING id, user_id, latitude, longitude, location_name, created_at
+            RETURNING id, user_id, latitude, longitude, location_name, recorded_at
             "#,
             user_id,
             latitude,
             longitude,
             location_name
         )
-        .fetch_one(&self.db)
-        .await
-        .map_err(AppError::from)?;
+        .fetch_one(&self.pool)
+        .await?;
 
-        Ok(record)
+        Ok(row)
     }
 
-    /// 获取用户最新的位置记录
-    pub async fn get_latest_by_user_id(
-        &self,
-        user_id: i64,
-    ) -> Result<Option<UserLocationHistory>> {
-        let record = sqlx::query_as!(
-            UserLocationHistory,
+    /// 获取用户最新位置
+    pub async fn get_latest(&self, user_id: i64) -> Result<Option<UserLocationHistoryRow>> {
+        let row = sqlx::query_as!(
+            UserLocationHistoryRow,
             r#"
-            SELECT id, user_id, latitude, longitude, location_name, created_at
+            SELECT id, user_id, latitude, longitude, location_name, recorded_at
             FROM user_location_history
             WHERE user_id = $1
-            ORDER BY created_at DESC
+            ORDER BY recorded_at DESC
             LIMIT 1
             "#,
             user_id
         )
-        .fetch_optional(&self.db)
-        .await
-        .map_err(AppError::from)?;
+        .fetch_optional(&self.pool)
+        .await?;
 
-        Ok(record)
+        Ok(row)
     }
 
-    /// 获取用户的位置历史列表（分页）
-    pub async fn list_by_user_id(
-        &self,
-        user_id: i64,
-        limit: i64,
-        before_id: Option<i64>,
-    ) -> Result<Vec<UserLocationHistory>> {
-        let records = if let Some(before_id) = before_id {
-            sqlx::query_as!(
-                UserLocationHistory,
-                r#"
-                SELECT id, user_id, latitude, longitude, location_name, created_at
-                FROM user_location_history
-                WHERE user_id = $1 AND id < $2
-                ORDER BY id DESC
-                LIMIT $3
-                "#,
-                user_id,
-                before_id,
-                limit
-            )
-            .fetch_all(&self.db)
-            .await
-            .map_err(AppError::from)?
-        } else {
-            sqlx::query_as!(
-                UserLocationHistory,
-                r#"
-                SELECT id, user_id, latitude, longitude, location_name, created_at
-                FROM user_location_history
-                WHERE user_id = $1
-                ORDER BY id DESC
-                LIMIT $2
-                "#,
-                user_id,
-                limit
-            )
-            .fetch_all(&self.db)
-            .await
-            .map_err(AppError::from)?
-        };
+    /// 批量获取用户最新位置
+    pub async fn get_latest_batch(&self, user_ids: &[i64]) -> Result<std::collections::HashMap<i64, UserLocationHistoryRow>> {
+        if user_ids.is_empty() {
+            return Ok(std::collections::HashMap::new());
+        }
 
-        Ok(records)
-    }
-
-    /// 按位置搜索附近的用户（返回用户ID和距离）
-    pub async fn search_nearby_users(
-        &self,
-        latitude: f64,
-        longitude: f64,
-        radius_meters: f64,
-        limit: i64,
-    ) -> Result<Vec<(i64, f64)>> {
-        let records = sqlx::query_as::<_, (i64, f64)>(
+        // 使用 DISTINCT ON 获取每个用户的最新位置
+        let rows = sqlx::query_as!(
+            UserLocationHistoryRow,
             r#"
-            WITH latest_locations AS (
-                SELECT DISTINCT ON (user_id) 
-                    user_id,
-                    location
-                FROM user_location_history
-                ORDER BY user_id, created_at DESC
-            )
-            SELECT 
-                user_id,
-                ST_Distance(
-                    location,
-                    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography
-                ) as distance
-            FROM latest_locations
-            WHERE ST_DWithin(
-                location,
-                ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography,
-                $3
-            )
-            ORDER BY distance
-            LIMIT $4
-            "#
+            SELECT DISTINCT ON (user_id) id, user_id, latitude, longitude, location_name, recorded_at
+            FROM user_location_history
+            WHERE user_id = ANY($1)
+            ORDER BY user_id, recorded_at DESC
+            "#,
+            user_ids
         )
-        .bind(latitude)
-        .bind(longitude)
-        .bind(radius_meters)
-        .bind(limit)
-        .fetch_all(&self.db)
-        .await
-        .map_err(AppError::from)?;
+        .fetch_all(&self.pool)
+        .await?;
 
-        Ok(records)
+        Ok(rows.into_iter().map(|r| (r.user_id, r)).collect())
     }
 }
-
-

@@ -8,9 +8,9 @@ use crate::{
             CheckStatusRequest, SetPasswordRequest, ListSessionsRequest, RevokeSessionRequest,
         },
         response::{
-            ApiResponse, AuthResponse, RequestPasswordResetResponse, VerifyResetCodeResponse,
-            ResetPasswordResponse, CheckStatusResponse, SetPasswordResponse,
-            SessionResponse, PaginatedResponse, RevokeSessionResponse,
+            ApiResponse, AuthData, RequestPasswordResetData, VerifyResetCodeData,
+            CheckStatusData, SetPasswordData,
+            SessionItem, PaginatedData,
         },
     },
     error::{AppError, Result},
@@ -24,7 +24,7 @@ use crate::{
 pub async fn register(
     State(state): State<AppState>,
     Json(req): Json<RegisterRequest>,
-) -> Result<Json<ApiResponse<AuthResponse>>> {
+) -> Result<Json<ApiResponse<AuthData>>> {
     // 参数验证
     Validator::validate_not_empty(&req.login_id, "登录ID")?;
     Validator::validate_not_empty(&req.nickname, "昵称")?;
@@ -51,7 +51,7 @@ pub async fn register(
 pub async fn login(
     State(state): State<AppState>,
     Json(req): Json<LoginRequest>,
-) -> Result<Json<ApiResponse<AuthResponse>>> {
+) -> Result<Json<ApiResponse<AuthData>>> {
     // 参数验证
     Validator::validate_not_empty(&req.login_id, "登录ID")?;
     
@@ -72,11 +72,11 @@ pub async fn login(
     Ok(Json(ApiResponse::success(auth_response)))
 }
 
-/// POST /api/v1/public/auth/create_temp
+/// POST /api/v1/public/auth/create_temp_user
 pub async fn create_temp(
     State(state): State<AppState>,
     Json(req): Json<CreateTempRequest>,
-) -> Result<Json<ApiResponse<AuthResponse>>> {
+) -> Result<Json<ApiResponse<AuthData>>> {
     // 参数验证
     Validator::validate_not_empty(&req.nickname, "昵称")?;
     Validator::validate_length(&req.nickname, "昵称", 1, 100)?;
@@ -94,11 +94,11 @@ pub async fn create_temp(
     Ok(Json(ApiResponse::success(auth_response)))
 }
 
-/// POST /api/v1/public/auth/refresh_token
+/// POST /api/v1/protected/auth/refresh_token
 pub async fn refresh_token(
     State(state): State<AppState>,
     Json(req): Json<RefreshTokenRequest>,
-) -> Result<Json<ApiResponse<AuthResponse>>> {
+) -> Result<Json<ApiResponse<AuthData>>> {
     // 调用 Service
     let auth_service = AuthService::new(
         &state.db,
@@ -117,7 +117,7 @@ pub async fn logout(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     BearerToken(token): BearerToken,
-) -> Result<Json<ApiResponse<serde_json::Value>>> {
+) -> Result<Json<ApiResponse<()>>> {
     // 调用 Service
     let auth_service = AuthService::new(
         &state.db,
@@ -128,17 +128,14 @@ pub async fn logout(
     );
     auth_service.logout(user_id, &token).await?;
 
-    Ok(Json(ApiResponse::success(serde_json::json!({
-        "success": true,
-        "message": "登出成功"
-    }))))
+    Ok(Json(ApiResponse::success_empty()))
 }
 
 /// POST /api/v1/public/auth/request_password_reset
 pub async fn request_password_reset(
     State(state): State<AppState>,
     Json(req): Json<RequestPasswordResetRequest>,
-) -> Result<Json<ApiResponse<RequestPasswordResetResponse>>> {
+) -> Result<Json<ApiResponse<RequestPasswordResetData>>> {
     let auth_service = AuthService::new(
         &state.db,
         &state.redis,
@@ -154,7 +151,7 @@ pub async fn request_password_reset(
 pub async fn verify_reset_code(
     State(state): State<AppState>,
     Json(req): Json<VerifyResetCodeRequest>,
-) -> Result<Json<ApiResponse<VerifyResetCodeResponse>>> {
+) -> Result<Json<ApiResponse<VerifyResetCodeData>>> {
     let auth_service = AuthService::new(
         &state.db,
         &state.redis,
@@ -170,7 +167,7 @@ pub async fn verify_reset_code(
 pub async fn reset_password(
     State(state): State<AppState>,
     Json(req): Json<ResetPasswordRequest>,
-) -> Result<Json<ApiResponse<ResetPasswordResponse>>> {
+) -> Result<Json<ApiResponse<()>>> {
     let auth_service = AuthService::new(
         &state.db,
         &state.redis,
@@ -178,8 +175,8 @@ pub async fn reset_password(
         state.config.jwt_access_token_expiration,
         state.config.jwt_refresh_token_expiration,
     );
-    let response = auth_service.reset_password(&req).await?;
-    Ok(Json(ApiResponse::success(response)))
+    auth_service.reset_password(&req).await?;
+    Ok(Json(ApiResponse::success_empty()))
 }
 
 /// POST /api/v1/protected/auth/check_status
@@ -188,7 +185,7 @@ pub async fn check_status(
     Extension(user_id): Extension<i64>,
     BearerToken(token): BearerToken,
     Json(_req): Json<CheckStatusRequest>,
-) -> Result<Json<ApiResponse<CheckStatusResponse>>> {
+) -> Result<Json<ApiResponse<CheckStatusData>>> {
     let auth_service = AuthService::new(
         &state.db,
         &state.redis,
@@ -206,7 +203,7 @@ pub async fn set_password(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(password_req): Json<SetPasswordRequest>,
-) -> Result<Json<ApiResponse<SetPasswordResponse>>> {
+) -> Result<Json<ApiResponse<SetPasswordData>>> {
     let auth_service = AuthService::new(
         &state.db,
         &state.redis,
@@ -218,12 +215,13 @@ pub async fn set_password(
     Ok(Json(ApiResponse::success(response)))
 }
 
-/// POST /api/v1/protected/auth/list_sessions
+/// POST /api/v1/protected/auth/get_sessions
 pub async fn list_sessions(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
+    Extension(session_id): Extension<Option<uuid::Uuid>>,
     Json(list_req): Json<ListSessionsRequest>,
-) -> Result<Json<ApiResponse<PaginatedResponse<SessionResponse>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<SessionItem>>>> {
     let auth_service = AuthService::new(
         &state.db,
         &state.redis,
@@ -231,7 +229,7 @@ pub async fn list_sessions(
         state.config.jwt_access_token_expiration,
         state.config.jwt_refresh_token_expiration,
     );
-    let response = auth_service.list_sessions(user_id, &list_req).await?;
+    let response = auth_service.list_sessions(user_id, &list_req, session_id).await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
@@ -240,7 +238,7 @@ pub async fn revoke_session(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(revoke_req): Json<RevokeSessionRequest>,
-) -> Result<Json<ApiResponse<RevokeSessionResponse>>> {
+) -> Result<Json<ApiResponse<()>>> {
     let auth_service = AuthService::new(
         &state.db,
         &state.redis,
@@ -248,7 +246,6 @@ pub async fn revoke_session(
         state.config.jwt_access_token_expiration,
         state.config.jwt_refresh_token_expiration,
     );
-    let response = auth_service.revoke_session(user_id, &revoke_req).await?;
-    Ok(Json(ApiResponse::success(response)))
+    auth_service.revoke_session(user_id, &revoke_req).await?;
+    Ok(Json(ApiResponse::success_empty()))
 }
-

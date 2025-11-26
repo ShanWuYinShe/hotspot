@@ -1,12 +1,26 @@
-use sqlx::PgPool;
+use sqlx::{PgPool, FromRow};
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{
-    error::{AppError, Result},
-    models::group_application::GroupApplication,
-    types::enums::InviteStatus,
-};
+use crate::error::Result;
+use crate::types::enums::InviteStatus;
 
+/// 群组申请Row - 数据库查询返回类型
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+pub struct GroupApplicationRow {
+    pub id: i64,
+    pub cursor_id: Uuid,
+    pub group_chat_id: Uuid,
+    pub applicant_id: i64,
+    pub message: Option<String>,
+    pub status: InviteStatus,
+    pub created_at: DateTime<Utc>,
+    pub handled_by: Option<i64>,
+    pub handled_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone)]
 pub struct GroupApplicationRepository {
     pool: PgPool,
 }
@@ -19,152 +33,115 @@ impl GroupApplicationRepository {
     /// 创建申请
     pub async fn create(
         &self,
-        group_id: Uuid,
+        group_chat_id: Uuid,
         applicant_id: i64,
         message: Option<String>,
-    ) -> Result<Uuid> {
-        let application = sqlx::query!(
+    ) -> Result<GroupApplicationRow> {
+        let row = sqlx::query_as!(
+            GroupApplicationRow,
             r#"
-            INSERT INTO room_applications (room_id, applicant_id, message, status)
-            VALUES ($1, $2, $3, 'pending')
-            RETURNING application_id
+            INSERT INTO group_applications (group_chat_id, applicant_id, message)
+            VALUES ($1, $2, $3)
+            RETURNING id, cursor_id, group_chat_id, applicant_id, message,
+                      status as "status: InviteStatus", created_at, handled_by, handled_at
             "#,
-            group_id,
+            group_chat_id,
             applicant_id,
             message
         )
         .fetch_one(&self.pool)
-        .await
-        .map_err(|e| AppError::from(e))?;
+        .await?;
 
-        Ok(application.application_id)
+        Ok(row)
     }
 
-    /// 根据ID查找申请
-    pub async fn find_by_id(&self, application_id: Uuid) -> Result<Option<GroupApplication>> {
-        let application = sqlx::query_as!(
-            GroupApplication,
+    /// 按ID查找申请
+    pub async fn find_by_id(&self, id: i64) -> Result<Option<GroupApplicationRow>> {
+        let row = sqlx::query_as!(
+            GroupApplicationRow,
             r#"
-            SELECT id, application_id, room_id as group_id, applicant_id, message, status as "status: InviteStatus", 
-                   created_at, reviewed_at, reviewer_id, review_reason
-            FROM room_applications
-            WHERE application_id = $1
+            SELECT id, cursor_id, group_chat_id, applicant_id, message,
+                   status as "status: InviteStatus", created_at, handled_by, handled_at
+            FROM group_applications
+            WHERE id = $1
             "#,
-            application_id
+            id
         )
         .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| AppError::from(e))?;
+        .await?;
 
-        Ok(application)
+        Ok(row)
     }
 
-    /// 查询群组的申请列表（管理员查看）
-    pub async fn list_by_group(
+    /// 更新申请状态
+    pub async fn update_status(
         &self,
-        group_id: Uuid,
-        status: Option<InviteStatus>,
-        limit: i32,
-        cursor: Option<String>,
-    ) -> Result<(Vec<GroupApplication>, Option<String>)> {
-        let cursor_time = cursor.and_then(|c| chrono::DateTime::parse_from_rfc3339(&c).ok());
-
-        let applications = if let Some(status) = status {
-            sqlx::query_as!(
-                GroupApplication,
-                r#"
-                SELECT id, application_id, room_id as group_id, applicant_id, message, status as "status: InviteStatus",
-                       created_at, reviewed_at, reviewer_id, review_reason
-                FROM room_applications
-                WHERE room_id = $1 
-                  AND (status = $2::invite_status OR $2::invite_status = 'any'::invite_status)
-                  AND ($3::TIMESTAMPTZ IS NULL OR created_at < $3::TIMESTAMPTZ)
-                ORDER BY created_at DESC
-                LIMIT $4
-                "#,
-                group_id,
-                status as InviteStatus,
-                cursor_time.map(|t| t.with_timezone(&chrono::Utc)),
-                limit as i64
-            )
-            .fetch_all(&self.pool)
-            .await?
-        } else {
-            sqlx::query_as!(
-                GroupApplication,
-                r#"
-                SELECT id, application_id, room_id as group_id, applicant_id, message, status as "status: InviteStatus",
-                       created_at, reviewed_at, reviewer_id, review_reason
-                FROM room_applications
-                WHERE room_id = $1
-                  AND ($2::TIMESTAMPTZ IS NULL OR created_at < $2::TIMESTAMPTZ)
-                ORDER BY created_at DESC
-                LIMIT $3
-                "#,
-                group_id,
-                cursor_time.map(|t| t.with_timezone(&chrono::Utc)),
-                limit as i64
-            )
-            .fetch_all(&self.pool)
-            .await?
-        };
-
-        let next_cursor = if applications.len() == limit as usize {
-            applications.last().map(|a| a.created_at.to_rfc3339())
-        } else {
-            None
-        };
-
-        Ok((applications, next_cursor))
-    }
-
-    /// 审核申请
-    pub async fn review(
-        &self,
-        application_id: Uuid,
-        reviewer_id: i64,
+        id: i64,
         status: InviteStatus,
-        reason: Option<String>,
+        handled_by: i64,
     ) -> Result<()> {
-        let result = sqlx::query!(
+        sqlx::query(
             r#"
-            UPDATE room_applications
-            SET status = $2::invite_status, reviewed_at = NOW(), reviewer_id = $3, review_reason = $4
-            WHERE application_id = $1
-            "#,
-            application_id,
-            status as InviteStatus,
-            reviewer_id,
-            reason
+            UPDATE group_applications
+            SET status = $2::invitation_status, handled_by = $3, handled_at = NOW()
+            WHERE id = $1
+            "#
         )
+        .bind(id)
+        .bind(status as InviteStatus)
+        .bind(handled_by)
         .execute(&self.pool)
-        .await
-        .map_err(|e| AppError::from(e))?;
-
-        if result.rows_affected() == 0 {
-            return Err(AppError::NotFound("资源不存在".to_string()));
-        }
+        .await?;
 
         Ok(())
     }
 
-    /// 检查是否已有待处理的申请
-    pub async fn has_pending_application(&self, group_id: Uuid, applicant_id: i64) -> Result<bool> {
-        let result = sqlx::query!(
-            r#"
-            SELECT EXISTS(
-                SELECT 1 FROM room_applications
-                WHERE room_id = $1 AND applicant_id = $2 AND status = 'pending'
-            ) as "exists!"
-            "#,
-            group_id,
-            applicant_id
-        )
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|e| AppError::from(e))?;
+    /// 将 UUID cursor 转换为自增主键
+    async fn resolve_cursor(&self, cursor: Option<Uuid>) -> Result<i64> {
+        match cursor {
+            Some(c) => {
+                sqlx::query_scalar!(
+                    r#"SELECT id FROM group_applications WHERE cursor_id = $1"#,
+                    c
+                )
+                .fetch_optional(&self.pool)
+                .await?
+                .ok_or_else(|| crate::error::AppError::BadRequest("无效的 cursor".to_string()))
+            }
+            None => Ok(i64::MAX),
+        }
+    }
 
-        Ok(result.exists)
+    /// 按群组ID查询申请列表
+    pub async fn list_by_group(
+        &self,
+        group_chat_id: Uuid,
+        status: Option<InviteStatus>,
+        limit: i32,
+        cursor: Option<Uuid>,
+    ) -> Result<Vec<GroupApplicationRow>> {
+        let cursor_pk = self.resolve_cursor(cursor).await?;
+        
+        let rows = sqlx::query_as!(
+            GroupApplicationRow,
+            r#"
+            SELECT id, cursor_id, group_chat_id, applicant_id, message,
+                   status as "status: InviteStatus", created_at, handled_by, handled_at
+            FROM group_applications
+            WHERE group_chat_id = $1 
+              AND ($2::invitation_status IS NULL OR status = $2)
+              AND id < $3
+            ORDER BY id DESC
+            LIMIT $4
+            "#,
+            group_chat_id,
+            status as Option<InviteStatus>,
+            cursor_pk,
+            limit as i64
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        
+        Ok(rows)
     }
 }
-

@@ -4,8 +4,12 @@ use sqlx::PgPool;
 
 use crate::{
     dto::{
-        request::{GetLeaderboardRequest, UpdateUserStatsRequest},
-        response::{LeaderboardEntry, LeaderboardResponse},
+        request::{GetCreatorLeaderboardRequest, GetMomentLeaderboardRequest, GetMyCreatorRankRequest, GetMyMomentRankRequest},
+        response::{
+            GetCreatorLeaderboardData, GetMomentLeaderboardData,
+            CreatorRankItem, MomentRankItem,
+            MyCreatorRankData, MyMomentRankData, UserInfo,
+        },
     },
     error::AppError,
     repositories::user_repo::UserRepository,
@@ -25,26 +29,17 @@ impl LeaderboardService {
         }
     }
 
-    /// 获取排行榜
-    pub async fn get_leaderboard(
+    /// 获取创作者排行榜
+    pub async fn get_creator_leaderboard(
         &self,
-        req: GetLeaderboardRequest,
-    ) -> Result<LeaderboardResponse, AppError> {
-        let category = req.category.as_str();
+        req: GetCreatorLeaderboardRequest,
+    ) -> Result<GetCreatorLeaderboardData, AppError> {
+        let timeframe = req.timeframe.as_str();
         let limit = req.limit.unwrap_or(20).min(100) as isize;
-        let offset = 0 as isize; // 暂时使用0，后续可根据timeframe调整
+        let offset = 0 as isize;
 
-        // 验证排行榜类型
-        let valid_categories = vec!["creators", "moments"];
-        if !valid_categories.contains(&category) {
-            return Err(AppError::InvalidInput(format!(
-                "无效的排行榜类别: {}",
-                category
-            )));
-        }
-
-        // Redis key
-        let redis_key = format!("leaderboard:{}", category);
+        // Redis key: leaderboard:creators:{timeframe}
+        let redis_key = format!("leaderboard:creators:{}", timeframe);
 
         // 从Redis获取排行榜数据
         let mut conn = self.redis.clone();
@@ -53,184 +48,177 @@ impl LeaderboardService {
             .await
             .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
 
-        // 获取总数
-        let total: isize = conn
-            .zcard(&redis_key)
-            .await
-            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
-
-        // 转换为LeaderboardEntry
-        let mut entries = Vec::new();
-        for (rank_idx, (user_id_str, score)) in results.iter().enumerate() {
-            let user_id: i64 = user_id_str
-                .parse()
-                .map_err(|_| AppError::InternalError("无效的用户ID".to_string()))?;
-
-            // 获取用户信息
-            let user = self.user_repo.find_by_id(user_id).await?;
-
-            if let Some(user) = user {
-                entries.push(LeaderboardEntry {
-                    rank: (offset + rank_idx as isize + 1) as i32,
-                    user_id: user.user_id.to_string(),
-                    nickname: user.nickname,
-                    avatar_url: user.avatar_url,
-                    score: *score,
-                    stats: None,
-                    distance: None,
-                });
-            }
+        if results.is_empty() {
+            return Ok(GetCreatorLeaderboardData { items: vec![] });
         }
 
-        let has_more = (offset + limit) < total;
-        
-        // 计算next_cursor（如果有更多数据）
-        let next_cursor = if has_more {
-            // 使用最后一个条目的排名作为cursor
-            entries.last().map(|e| e.rank.to_string())
-        } else {
-            None
-        };
+        // 收集所有用户ID
+        let user_ids: Vec<i64> = results.iter()
+            .filter_map(|(user_id_str, _)| user_id_str.parse().ok())
+            .collect();
 
-        Ok(LeaderboardResponse {
-            category: category.to_string(),
-            timeframe: req.timeframe.clone(),
-            scope: req.scope.clone(),
-            items: entries,
-            has_more,
-            next_cursor,
+        // 批量获取用户信息
+        let users = self.user_repo.find_by_ids(&user_ids).await?;
+        let user_map: std::collections::HashMap<i64, _> = users.into_iter()
+            .map(|u| (u.user_id, u))
+            .collect();
+
+        // 转换为CreatorRankItem
+        let items: Vec<CreatorRankItem> = results.iter().enumerate().filter_map(|(rank_idx, (user_id_str, score))| {
+            let user_id: i64 = user_id_str.parse().ok()?;
+            let user = user_map.get(&user_id)?;
+            Some(CreatorRankItem {
+                rank: (offset + rank_idx as isize + 1) as i32,
+                user: UserInfo {
+                    user_id: user.user_id.to_string(),
+                    nickname: user.nickname.clone(),
+                    avatar_url: user.avatar_url.clone(),
+                },
+                score: *score as i32,
+            })
+        }).collect();
+
+        Ok(GetCreatorLeaderboardData {
+            items,
         })
     }
 
-    /// 更新用户统计数据（内部使用）
-    pub async fn update_user_stats(
+    /// 获取生活瞬间排行榜
+    pub async fn get_moment_leaderboard(
         &self,
-        req: UpdateUserStatsRequest,
-    ) -> Result<(), AppError> {
-        let mut conn = self.redis.clone();
+        req: GetMomentLeaderboardRequest,
+    ) -> Result<GetMomentLeaderboardData, AppError> {
+        let timeframe = req.timeframe.as_str();
+        let limit = req.limit.unwrap_or(20).min(100) as isize;
+        let offset = 0 as isize;
 
-        // 根据stats_type更新对应的排行榜
-        let redis_key = format!("leaderboard:{}", req.stats_type);
-        let _: () = conn
-            .zadd(&redis_key, &req.user_id, req.value as f64)
+        // Redis key: leaderboard:moments:{timeframe}
+        let redis_key = format!("leaderboard:moments:{}", timeframe);
+
+        // 从Redis获取排行榜数据 (member is moment_id)
+        let mut conn = self.redis.clone();
+        let results: Vec<(String, f64)> = conn
+            .zrevrange_withscores(&redis_key, offset, offset + limit - 1)
             .await
             .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
 
-        Ok(())
+        // 转换为MomentRankItem
+        let mut items = Vec::new();
+        for (rank_idx, (moment_id_str, score)) in results.iter().enumerate() {
+            items.push(MomentRankItem {
+                rank: (offset + rank_idx as isize + 1) as i32,
+                moment_id: moment_id_str.clone(),
+                score: *score as i32,
+            });
+        }
+
+        Ok(GetMomentLeaderboardData {
+            items,
+        })
     }
 
-    /// 增加用户活跃度分数（内部使用）
-    pub async fn increment_active_score(
+    /// 获取我的创作者排名
+    pub async fn get_my_creator_rank(
         &self,
         user_id: i64,
-        increment: f64,
-    ) -> Result<(), AppError> {
+        req: GetMyCreatorRankRequest,
+    ) -> Result<MyCreatorRankData, AppError> {
+        let timeframe = req.timeframe.as_str();
+        let redis_key = format!("leaderboard:creators:{}", timeframe);
         let mut conn = self.redis.clone();
-        let redis_key = "leaderboard:active";
-        let _: () = conn
-            .zadd(redis_key, user_id.to_string(), increment)
-            .await
-            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
-        Ok(())
-    }
 
-    /// 增加用户人气分数（内部使用）
-    pub async fn increment_popular_score(
-        &self,
-        user_id: i64,
-        increment: f64,
-    ) -> Result<(), AppError> {
-        let mut conn = self.redis.clone();
-        let redis_key = "leaderboard:popular";
-        // 使用 zadd with INCR 选项
-        let _: f64 = redis::cmd("ZINCRBY")
-            .arg(redis_key)
-            .arg(increment)
-            .arg(user_id.to_string())
-            .query_async(&mut conn)
-            .await
-            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
-        Ok(())
-    }
-
-    /// 增加用户贡献度分数（内部使用）
-    pub async fn increment_contributor_score(
-        &self,
-        user_id: i64,
-        increment: f64,
-    ) -> Result<(), AppError> {
-        let mut conn = self.redis.clone();
-        let redis_key = "leaderboard:contributor";
-        // 使用 zadd with INCR 选项
-        let _: f64 = redis::cmd("ZINCRBY")
-            .arg(redis_key)
-            .arg(increment)
-            .arg(user_id.to_string())
-            .query_async(&mut conn)
-            .await
-            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
-        Ok(())
-    }
-
-    /// 获取用户排名（内部使用）
-    pub async fn get_user_rank(
-        &self,
-        user_id: i64,
-        leaderboard_type: &str,
-    ) -> Result<Option<i64>, AppError> {
-        let mut conn = self.redis.clone();
-        let redis_key = format!("leaderboard:{}", leaderboard_type);
+        // 获取我的排名
         let rank: Option<isize> = conn
             .zrevrank(&redis_key, user_id.to_string())
             .await
             .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
-
-        Ok(rank.map(|r| (r + 1) as i64))
-    }
-
-    /// 获取用户分数（内部使用）
-    pub async fn get_user_score(
-        &self,
-        user_id: i64,
-        leaderboard_type: &str,
-    ) -> Result<Option<f64>, AppError> {
-        let mut conn = self.redis.clone();
-        let redis_key = format!("leaderboard:{}", leaderboard_type);
+        
         let score: Option<f64> = conn
             .zscore(&redis_key, user_id.to_string())
             .await
             .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
 
-        Ok(score)
+        let total_participants: isize = conn
+            .zcard(&redis_key)
+            .await
+            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
+
+        // 获取前3名
+        let top_results: Vec<(String, f64)> = conn
+            .zrevrange_withscores(&redis_key, 0, 2)
+            .await
+            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
+
+        // 批量获取用户信息
+        let user_ids: Vec<i64> = top_results.iter()
+            .filter_map(|(uid_str, _)| uid_str.parse().ok())
+            .collect();
+        let users = self.user_repo.find_by_ids(&user_ids).await?;
+        let user_map: std::collections::HashMap<i64, _> = users.into_iter()
+            .map(|u| (u.user_id, u))
+            .collect();
+
+        let top_3: Vec<CreatorRankItem> = top_results.iter().enumerate().filter_map(|(rank_idx, (uid_str, sc))| {
+            let uid: i64 = uid_str.parse().ok()?;
+            let user = user_map.get(&uid)?;
+            Some(CreatorRankItem {
+                rank: (rank_idx + 1) as i32,
+                user: UserInfo {
+                    user_id: user.user_id.to_string(),
+                    nickname: user.nickname.clone(),
+                    avatar_url: user.avatar_url.clone(),
+                },
+                score: *sc as i32,
+            })
+        }).collect();
+
+        Ok(MyCreatorRankData {
+            timeframe: req.timeframe,
+            scope: req.scope,
+            my_rank: rank.map(|r| (r + 1) as i32),
+            my_score: score.unwrap_or(0.0) as i32,
+            total_participants: total_participants as i32,
+            top_3,
+        })
     }
 
-    /// 重置排行榜（管理员使用）
-    pub async fn reset_leaderboard(&self, leaderboard_type: &str) -> Result<(), AppError> {
+    /// 获取我的瞬间排名
+    /// 注意：瞬间排行榜是按瞬间排名，不是按用户排名
+    /// 这里返回用户最佳瞬间的排名（暂未实现完整逻辑）
+    pub async fn get_my_moment_rank(
+        &self,
+        _user_id: i64, // 暂未实现：需要根据用户ID查找其瞬间在排行榜中的位置
+        req: GetMyMomentRankRequest,
+    ) -> Result<MyMomentRankData, AppError> {
+        // 暂未实现：需要在 Redis 中建立用户到瞬间的索引才能高效查询
+        
+        Ok(MyMomentRankData {
+            timeframe: req.timeframe,
+            scope: req.scope,
+            my_rank: None,
+            my_score: 0,
+            total_participants: 0,
+            top_3: vec![],
+        })
+    }
+
+    /// 增加用户分数 (Internal)
+    pub async fn increment_score(
+        &self,
+        category: &str, // "creators" or "moments"
+        id: &str, // user_id or moment_id
+        timeframe: &str, // "daily", "weekly", etc.
+        increment: f64,
+    ) -> Result<(), AppError> {
         let mut conn = self.redis.clone();
-        let redis_key = format!("leaderboard:{}", leaderboard_type);
-        let _: () = conn
-            .del(&redis_key)
+        let redis_key = format!("leaderboard:{}:{}", category, timeframe);
+        let _: f64 = redis::cmd("ZINCRBY")
+            .arg(&redis_key)
+            .arg(increment)
+            .arg(id)
+            .query_async(&mut conn)
             .await
             .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
         Ok(())
     }
-
-    /// 获取排行榜（别名方法）
-    pub async fn list_leaderboard(
-        &self,
-        req: crate::dto::request::GetLeaderboardRequest,
-    ) -> Result<crate::dto::response::LeaderboardResponse, AppError> {
-        self.get_leaderboard(req).await
-    }
-
-    /// 获取我的排名（别名方法）
-    pub async fn get_my_rank(
-        &self,
-        _user_id: i64,
-        _req: crate::dto::request::GetMyRankRequest,
-    ) -> Result<crate::dto::response::GetMyRankResponse, AppError> {
-        // TODO: 实现获取我的排名逻辑
-        Err(AppError::NotImplemented("功能开发中".to_string()))
-    }
 }
-

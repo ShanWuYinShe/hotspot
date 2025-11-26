@@ -1,10 +1,10 @@
 use axum::{routing::post, Router};
 
-use crate::{handlers::feed::FeedHandler, state::AppState};
+use crate::{handlers::feed, state::AppState};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .route("/list", post(FeedHandler::get_feed))
-        .route("/feedback", post(FeedHandler::submit_feedback))
+        .route("/get_list", post(feed::get_list))
+        .route("/feedback", post(feed::feedback))
 }
 

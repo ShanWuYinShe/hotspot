@@ -1,66 +1,85 @@
-use sqlx::PgPool;
+use sqlx::{PgPool, FromRow};
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{
-    error::{AppError, Result},
-    models::comment::Comment,
-};
+use crate::error::Result;
 
+/// 评论Row - 数据库查询返回类型
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+pub struct CommentRow {
+    pub id: i64,
+    pub comment_id: Uuid,
+    pub cursor_id: Uuid,
+    pub moment_id: Uuid,
+    pub user_id: i64,
+    pub parent_id: Option<Uuid>,
+    pub reply_to_user_id: Option<i64>,
+    pub content: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: Option<DateTime<Utc>>,
+    pub is_deleted: bool,
+    pub deleted_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone)]
 pub struct CommentRepository {
-    db: PgPool,
+    pool: PgPool,
 }
 
 impl CommentRepository {
-    pub fn new(db: PgPool) -> Self {
-        Self { db }
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
     }
 
     /// 创建评论
-    pub async fn create(&self, comment: &Comment) -> Result<Uuid> {
-        let rec = sqlx::query!(
+    pub async fn create(
+        &self,
+        moment_id: Uuid,
+        user_id: i64,
+        content: String,
+        parent_id: Option<Uuid>,
+        reply_to_user_id: Option<i64>,
+    ) -> Result<CommentRow> {
+        let row = sqlx::query_as!(
+            CommentRow,
             r#"
-            INSERT INTO comments (
-                comment_id, user_id, moment_id,
-                content, parent_id, reply_to_user_id
-            )
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING comment_id
+            INSERT INTO comments (moment_id, user_id, content, parent_id, reply_to_user_id)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id, comment_id, cursor_id, moment_id, user_id, parent_id, reply_to_user_id, content,
+                      created_at, updated_at, is_deleted, deleted_at
             "#,
-            comment.comment_id,
-            comment.user_id,
-            comment.moment_id,
-            comment.content,
-            comment.parent_id,
-            comment.reply_to_user_id,
+            moment_id,
+            user_id,
+            content,
+            parent_id,
+            reply_to_user_id
         )
-        .fetch_one(&self.db)
-        .await
-        .map_err(|e| AppError::from(e))?;
+        .fetch_one(&self.pool)
+        .await?;
 
-        Ok(rec.comment_id)
+        Ok(row)
     }
 
-    /// 根据ID查找评论
-    pub async fn find_by_id(&self, comment_id: Uuid) -> Result<Option<Comment>> {
-        let comment = sqlx::query_as!(
-            Comment,
+    /// 按ID查找评论
+    pub async fn find_by_id(&self, comment_id: Uuid) -> Result<Option<CommentRow>> {
+        let row = sqlx::query_as!(
+            CommentRow,
             r#"
-            SELECT comment_id, moment_id, user_id, content, parent_id, 
-                   reply_to_user_id, created_at, updated_at,
-                   is_deleted, deleted_at
+            SELECT id, comment_id, cursor_id, moment_id, user_id, parent_id, reply_to_user_id, content,
+                   created_at, updated_at, is_deleted, deleted_at
             FROM comments
             WHERE comment_id = $1 AND is_deleted = FALSE
             "#,
             comment_id
         )
-        .fetch_optional(&self.db)
-        .await
-        .map_err(|e| AppError::from(e))?;
+        .fetch_optional(&self.pool)
+        .await?;
 
-        Ok(comment)
+        Ok(row)
     }
 
-    /// 删除评论（软删除）
+    /// 软删除评论
     pub async fn soft_delete(&self, comment_id: Uuid) -> Result<()> {
         sqlx::query!(
             r#"
@@ -70,115 +89,10 @@ impl CommentRepository {
             "#,
             comment_id
         )
-        .execute(&self.db)
-        .await
-        .map_err(|e| AppError::from(e))?;
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
-    }
-
-    /// 获取瞬间的评论列表（顶级评论）（游标分页）
-    /// cursor: comment_id (UUID字符串)
-    pub async fn list_by_moment(
-        &self,
-        moment_id: Uuid,
-        cursor: Option<String>,
-        limit: i64,
-    ) -> Result<Vec<Comment>> {
-        // 1. 解析cursor获取自增主键id
-        let cursor_id = if let Some(cursor_str) = cursor {
-            let comment_uuid = Uuid::parse_str(&cursor_str)
-                .map_err(|_| AppError::BadRequest("无效的游标".to_string()))?;
-            
-            let result = sqlx::query!(
-                "SELECT id FROM comments WHERE comment_id = $1 AND is_deleted = FALSE",
-                comment_uuid
-            )
-            .fetch_optional(&self.db)
-            .await
-            .map_err(|e| AppError::from(e))?;
-            
-            result.map(|r| r.id)
-        } else {
-            None
-        };
-
-        // 2. 使用自增id进行游标分页
-        let comments = sqlx::query_as!(
-            Comment,
-            r#"
-            SELECT comment_id, moment_id, user_id, content, parent_id, 
-                   reply_to_user_id, created_at, updated_at,
-                   is_deleted, deleted_at
-            FROM comments
-            WHERE 
-                moment_id = $1 
-                AND parent_id IS NULL
-                AND is_deleted = FALSE
-                AND ($2::BIGINT IS NULL OR id > $2::BIGINT)
-            ORDER BY id DESC
-            LIMIT $3
-            "#,
-            moment_id,
-            cursor_id,
-            limit
-        )
-        .fetch_all(&self.db)
-        .await
-        .map_err(|e| AppError::from(e))?;
-
-        Ok(comments)
-    }
-
-    /// 获取评论的回复列表（游标分页）
-    /// cursor: comment_id (UUID字符串)
-    pub async fn list_replies(
-        &self,
-        parent_id: Uuid,
-        cursor: Option<String>,
-        limit: i64,
-    ) -> Result<Vec<Comment>> {
-        // 1. 解析cursor获取自增主键id
-        let cursor_id = if let Some(cursor_str) = cursor {
-            let comment_uuid = Uuid::parse_str(&cursor_str)
-                .map_err(|_| AppError::BadRequest("无效的游标".to_string()))?;
-            
-            let result = sqlx::query!(
-                "SELECT id FROM comments WHERE comment_id = $1 AND is_deleted = FALSE",
-                comment_uuid
-            )
-            .fetch_optional(&self.db)
-            .await
-            .map_err(|e| AppError::from(e))?;
-            
-            result.map(|r| r.id)
-        } else {
-            None
-        };
-
-        // 2. 使用自增id进行游标分页（回复按创建时间升序，id也是升序）
-        let comments = sqlx::query_as!(
-            Comment,
-            r#"
-            SELECT comment_id, moment_id, user_id, content, parent_id, 
-                   reply_to_user_id, created_at, updated_at,
-                   is_deleted, deleted_at
-            FROM comments
-            WHERE parent_id = $1 
-            AND is_deleted = FALSE
-            AND ($2::BIGINT IS NULL OR id > $2::BIGINT)
-            ORDER BY id ASC
-            LIMIT $3
-            "#,
-            parent_id,
-            cursor_id,
-            limit
-        )
-        .fetch_all(&self.db)
-        .await
-        .map_err(|e| AppError::from(e))?;
-
-        Ok(comments)
     }
 
     /// 点赞评论
@@ -192,14 +106,12 @@ impl CommentRepository {
             comment_id,
             user_id
         )
-        .execute(&self.db)
-        .await
-        .map_err(|e| AppError::from(e))?;
-
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
-    /// 取消点赞
+    /// 取消点赞评论
     pub async fn unlike_comment(&self, comment_id: Uuid, user_id: i64) -> Result<()> {
         sqlx::query!(
             r#"
@@ -209,131 +121,195 @@ impl CommentRepository {
             comment_id,
             user_id
         )
-        .execute(&self.db)
-        .await
-        .map_err(|e| AppError::from(e))?;
-
+        .execute(&self.pool)
+        .await?;
         Ok(())
-    }
-
-    /// 获取点赞数
-    pub async fn get_like_count(&self, comment_id: Uuid) -> Result<i64> {
-        let rec = sqlx::query!(
-            r#"
-            SELECT COUNT(*) as "count!"
-            FROM comment_likes
-            WHERE comment_id = $1
-            "#,
-            comment_id
-        )
-        .fetch_one(&self.db)
-        .await
-        .map_err(|e| AppError::from(e))?;
-
-        Ok(rec.count)
-    }
-
-    /// 获取回复数
-    pub async fn get_reply_count(&self, comment_id: Uuid) -> Result<i64> {
-        let rec = sqlx::query!(
-            r#"
-            SELECT COUNT(*) as "count!"
-            FROM comments
-            WHERE parent_id = $1
-            "#,
-            comment_id
-        )
-        .fetch_one(&self.db)
-        .await
-        .map_err(|e| AppError::from(e))?;
-
-        Ok(rec.count)
     }
 
     /// 检查是否已点赞
     pub async fn is_liked(&self, comment_id: Uuid, user_id: i64) -> Result<bool> {
-        let rec = sqlx::query!(
+        let result = sqlx::query!(
             r#"
             SELECT EXISTS(
-                SELECT 1 FROM comment_likes
+                SELECT 1 FROM comment_likes 
                 WHERE comment_id = $1 AND user_id = $2
             ) as "exists!"
             "#,
             comment_id,
             user_id
         )
-        .fetch_one(&self.db)
-        .await
-        .map_err(|e| AppError::from(e))?;
-
-        Ok(rec.exists)
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(result.exists)
     }
 
-    /// 获取用户的评论列表（游标分页）
-    /// cursor: comment_id (UUID字符串)
-    pub async fn list_by_user(
-        &self,
-        user_id: i64,
-        cursor: Option<String>,
-        limit: i64,
-    ) -> Result<Vec<Comment>> {
-        // 1. 解析cursor获取自增主键id
-        let cursor_id = if let Some(cursor_str) = cursor {
-            let comment_uuid = Uuid::parse_str(&cursor_str)
-                .map_err(|_| AppError::BadRequest("无效的游标".to_string()))?;
-            
-            let result = sqlx::query!(
-                "SELECT id FROM comments WHERE comment_id = $1 AND is_deleted = FALSE",
-                comment_uuid
-            )
-            .fetch_optional(&self.db)
-            .await
-            .map_err(|e| AppError::from(e))?;
-            
-            result.map(|r| r.id)
-        } else {
-            None
-        };
+    /// 获取点赞数
+    pub async fn get_like_count(&self, comment_id: Uuid) -> Result<i32> {
+        let count = sqlx::query!(
+            r#"SELECT COUNT(*) as "count!" FROM comment_likes WHERE comment_id = $1"#,
+            comment_id
+        )
+        .fetch_one(&self.pool)
+        .await?
+        .count as i32;
+        Ok(count)
+    }
 
-        // 2. 使用自增id进行游标分页
-        let comments = sqlx::query_as!(
-            Comment,
+    /// 获取回复数
+    pub async fn get_reply_count(&self, comment_id: Uuid) -> Result<i32> {
+        let count = sqlx::query!(
+            r#"SELECT COUNT(*) as "count!" FROM comments WHERE parent_id = $1 AND is_deleted = FALSE"#,
+            comment_id
+        )
+        .fetch_one(&self.pool)
+        .await?
+        .count as i32;
+        Ok(count)
+    }
+
+    /// 批量获取评论统计数据（点赞数和回复数）
+    pub async fn get_stats_batch(&self, comment_ids: &[Uuid]) -> Result<std::collections::HashMap<Uuid, (i32, i32)>> {
+        if comment_ids.is_empty() {
+            return Ok(std::collections::HashMap::new());
+        }
+
+        let rows = sqlx::query!(
             r#"
-            SELECT comment_id, moment_id, user_id, content, parent_id, 
-                   reply_to_user_id, created_at, updated_at,
-                   is_deleted, deleted_at
+            SELECT 
+                c.comment_id as "comment_id!",
+                COALESCE(l.likes_count, 0) as "likes_count!",
+                COALESCE(r.replies_count, 0) as "replies_count!"
+            FROM unnest($1::uuid[]) as c(comment_id)
+            LEFT JOIN (
+                SELECT comment_id, COUNT(*) as likes_count
+                FROM comment_likes
+                GROUP BY comment_id
+            ) l ON c.comment_id = l.comment_id
+            LEFT JOIN (
+                SELECT parent_id, COUNT(*) as replies_count
+                FROM comments
+                WHERE is_deleted = FALSE AND parent_id IS NOT NULL
+                GROUP BY parent_id
+            ) r ON c.comment_id = r.parent_id
+            "#,
+            comment_ids
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.into_iter().map(|r| (r.comment_id, (r.likes_count as i32, r.replies_count as i32))).collect())
+    }
+
+    /// 将 UUID cursor 转换为自增主键
+    async fn resolve_cursor(&self, cursor: Option<Uuid>) -> Result<i64> {
+        match cursor {
+            Some(c) => {
+                sqlx::query_scalar!(
+                    r#"SELECT id FROM comments WHERE cursor_id = $1"#,
+                    c
+                )
+                .fetch_optional(&self.pool)
+                .await?
+                .ok_or_else(|| crate::error::AppError::BadRequest("无效的 cursor".to_string()))
+            }
+            None => Ok(i64::MAX),
+        }
+    }
+
+    /// 按瞬间ID查询评论列表
+    pub async fn list_by_moment(&self, moment_id: Uuid, limit: i32, cursor: Option<Uuid>) -> Result<Vec<CommentRow>> {
+        let cursor_pk = self.resolve_cursor(cursor).await?;
+        
+        let comments = sqlx::query_as!(
+            CommentRow,
+            r#"
+            SELECT id, comment_id, cursor_id, moment_id, user_id, parent_id, reply_to_user_id, content, 
+                   created_at, updated_at, is_deleted, deleted_at
             FROM comments
-            WHERE user_id = $1 
-            AND is_deleted = FALSE
-            AND ($2::BIGINT IS NULL OR id > $2::BIGINT)
+            WHERE moment_id = $1 AND parent_id IS NULL AND id < $2 AND is_deleted = FALSE
             ORDER BY id DESC
             LIMIT $3
             "#,
-            user_id,
-            cursor_id,
-            limit
+            moment_id,
+            cursor_pk,
+            limit as i64
         )
-        .fetch_all(&self.db)
-        .await
-        .map_err(|e| AppError::from(e))?;
-
+        .fetch_all(&self.pool)
+        .await?;
+        
         Ok(comments)
     }
 
-    /// 获取瞬间的评论总数
-    pub async fn count_by_moment(&self, moment_id: Uuid) -> Result<i64> {
-        let rec = sqlx::query!(
+    /// 获取评论的回复列表
+    pub async fn list_replies(&self, parent_id: Uuid, limit: i32, cursor: Option<Uuid>) -> Result<Vec<CommentRow>> {
+        let cursor_pk = self.resolve_cursor(cursor).await?;
+        
+        let replies = sqlx::query_as!(
+            CommentRow,
             r#"
-            SELECT COUNT(*) as "count!"
+            SELECT id, comment_id, cursor_id, moment_id, user_id, parent_id, reply_to_user_id, content, 
+                   created_at, updated_at, is_deleted, deleted_at
             FROM comments
-            WHERE moment_id = $1
+            WHERE parent_id = $1 AND id < $2 AND is_deleted = FALSE
+            ORDER BY id DESC
+            LIMIT $3
             "#,
-            moment_id
+            parent_id,
+            cursor_pk,
+            limit as i64
         )
-        .fetch_one(&self.db)
-        .await
-        .map_err(|e| AppError::from(e))?;
-
-        Ok(rec.count)
+        .fetch_all(&self.pool)
+        .await?;
+        
+        Ok(replies)
     }
+
+    /// 将点赞 cursor UUID 转换为自增主键
+    async fn resolve_like_cursor(&self, cursor: Option<Uuid>) -> Result<i64> {
+        match cursor {
+            Some(c) => {
+                sqlx::query_scalar!(
+                    r#"SELECT id FROM comment_likes WHERE cursor_id = $1"#,
+                    c
+                )
+                .fetch_optional(&self.pool)
+                .await?
+                .ok_or_else(|| crate::error::AppError::BadRequest("无效的 cursor".to_string()))
+            }
+            None => Ok(i64::MAX),
+        }
+    }
+
+    /// 获取评论点赞列表
+    pub async fn list_likes(&self, comment_id: Uuid, limit: i64, cursor: Option<Uuid>) -> Result<Vec<CommentLikeRow>> {
+        let cursor_pk = self.resolve_like_cursor(cursor).await?;
+
+        let likes = sqlx::query_as!(
+            CommentLikeRow,
+            r#"
+            SELECT id, cursor_id, comment_id, user_id, created_at
+            FROM comment_likes
+            WHERE comment_id = $1 AND id < $2
+            ORDER BY id DESC
+            LIMIT $3
+            "#,
+            comment_id,
+            cursor_pk,
+            limit
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(likes)
+    }
+}
+
+/// 评论点赞行
+#[derive(Debug)]
+pub struct CommentLikeRow {
+    pub id: i64,
+    pub cursor_id: Uuid,
+    pub comment_id: Uuid,
+    pub user_id: i64,
+    pub created_at: DateTime<Utc>,
 }

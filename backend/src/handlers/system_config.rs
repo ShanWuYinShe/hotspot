@@ -1,59 +1,19 @@
 use axum::{extract::State, Extension, Json};
-use serde::{Deserialize, Serialize};
 
 use crate::{
-    dto::response::ApiResponse,
-    error::{AppError, Result},
-    middleware::auth::extract_user_id,
-    models::{
-        config_change_log::ConfigChangeLogResponse,
-        system_config::{
-            CreateSystemConfigRequest, SystemConfigResponse, UpdateSystemConfigRequest,
+    dto::{
+        request::{
+            CreateConfigRequest, UpdateConfigRequest, GetConfigRequest, GetConfigListRequest,
+            DeleteConfigRequest, GetConfigHistoryRequest, ListAllConfigChangesRequest,
+        },
+        response::{
+            ApiResponse, ConfigItem, CreateConfigData, ConfigHistoryItem, PaginatedData,
         },
     },
+    error::{AppError, Result},
     services::system_config_service::SystemConfigService,
     state::AppState,
 };
-
-#[derive(Debug, Deserialize)]
-pub struct GetConfigRequest {
-    pub config_key: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct GetConfigResponse {
-    pub config: Option<SystemConfigResponse>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct ListConfigsRequest {}
-
-#[derive(Debug, Serialize)]
-pub struct ListConfigsResponse {
-    pub configs: Vec<SystemConfigResponse>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct GetConfigHistoryRequest {
-    pub config_key: String,
-    pub limit: Option<i64>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct GetConfigHistoryResponse {
-    pub logs: Vec<ConfigChangeLogResponse>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct ListAllChangesRequest {
-    pub limit: Option<i64>,
-    pub offset: Option<i64>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct ListAllChangesResponse {
-    pub logs: Vec<ConfigChangeLogResponse>,
-}
 
 /// 检查管理员权限
 async fn check_admin(state: &AppState, user_id: i64) -> Result<()> {
@@ -76,143 +36,104 @@ async fn check_admin(state: &AppState, user_id: i64) -> Result<()> {
     Ok(())
 }
 
-/// 获取配置项
+/// POST /api/v1/admin/config/create
+pub async fn create(
+    State(state): State<AppState>,
+    Extension(user_id): Extension<i64>,
+    Json(req): Json<CreateConfigRequest>,
+) -> Result<Json<ApiResponse<CreateConfigData>>> {
+    check_admin(&state, user_id).await?;
+    
+    let service = SystemConfigService::new(state.db.clone(), state.redis_client.clone());
+    let config = service.create_config(req, user_id).await?;
+
+    Ok(Json(ApiResponse::success(config)))
+}
+
+/// POST /api/v1/admin/config/get_config
 pub async fn get_config(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(req): Json<GetConfigRequest>,
-) -> Result<Json<ApiResponse<GetConfigResponse>>> {
+) -> Result<Json<ApiResponse<ConfigItem>>> {
     check_admin(&state, user_id).await?;
     
     let service = SystemConfigService::new(state.db.clone(), state.redis_client.clone());
-    let config = service.get_config(&req.config_key).await?;
-
-    Ok(Json(ApiResponse::success(GetConfigResponse { config })))
-}
-
-/// 列出所有配置项
-pub async fn list_configs(
-    State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
-    Json(_req): Json<ListConfigsRequest>,
-) -> Result<Json<ApiResponse<ListConfigsResponse>>> {
-    check_admin(&state, user_id).await?;
-    
-    let service = SystemConfigService::new(state.db.clone(), state.redis_client.clone());
-    let configs = service.list_configs().await?;
-
-    Ok(Json(ApiResponse::success(ListConfigsResponse { configs })))
-}
-
-/// 创建配置项
-pub async fn create_config(
-    State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
-    Json(req): Json<CreateSystemConfigRequest>,
-) -> Result<Json<ApiResponse<SystemConfigResponse>>> {
-    check_admin(&state, user_id).await?;
-    
-    let service = SystemConfigService::new(state.db.clone(), state.redis_client.clone());
-    
-    let ip_address = None;
-    let user_agent = None;
-
-    let config = service
-        .create_config(req, user_id, ip_address, user_agent)
-        .await?;
+    let config = service.get_single_config(&req.key).await?;
 
     Ok(Json(ApiResponse::success(config)))
 }
 
-/// 更新配置项
-pub async fn update_config(
+/// POST /api/v1/admin/config/get_list
+pub async fn get_list(
+    State(state): State<AppState>,
+    Extension(user_id): Extension<i64>,
+    Json(req): Json<GetConfigListRequest>,
+) -> Result<Json<ApiResponse<PaginatedData<ConfigItem>>>> {
+    check_admin(&state, user_id).await?;
+    
+    let service = SystemConfigService::new(state.db.clone(), state.redis_client.clone());
+    let configs = service.get_list(req).await?;
+
+    Ok(Json(ApiResponse::success(configs)))
+}
+
+/// POST /api/v1/admin/config/update
+pub async fn update(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(req): Json<UpdateConfigRequest>,
-) -> Result<Json<ApiResponse<SystemConfigResponse>>> {
+) -> Result<Json<ApiResponse<()>>> {
     check_admin(&state, user_id).await?;
     
     let service = SystemConfigService::new(state.db.clone(), state.redis_client.clone());
-    
-    let ip_address = None;
-    let user_agent = None;
+    // Note: req contains key and value. service.update_config takes key as separate arg.
+    let key = req.key.clone();
+    service.update_config(&key, req, user_id).await?;
 
-    let config = service
-        .update_config(&req.config_key, req.update, user_id, ip_address, user_agent)
-        .await?;
-
-    Ok(Json(ApiResponse::success(config)))
+    Ok(Json(ApiResponse::success_empty()))
 }
 
-/// 删除配置项
-pub async fn delete_config(
+/// POST /api/v1/admin/config/delete
+pub async fn delete(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(req): Json<DeleteConfigRequest>,
-) -> Result<Json<ApiResponse<DeleteConfigResponse>>> {
+) -> Result<Json<ApiResponse<()>>> {
     check_admin(&state, user_id).await?;
     
     let service = SystemConfigService::new(state.db.clone(), state.redis_client.clone());
-    
-    let ip_address = None;
-    let user_agent = None;
+    service.delete_config(&req.key, user_id).await?;
 
-    service
-        .delete_config(&req.config_key, user_id, ip_address, user_agent)
-        .await?;
-
-    Ok(Json(ApiResponse::success(DeleteConfigResponse {
-        success: true,
-        message: "配置项已删除".to_string(),
-    })))
+    Ok(Json(ApiResponse::success_empty()))
 }
 
-/// 获取配置变更历史
+/// POST /api/v1/admin/config/get_config_history
 pub async fn get_config_history(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(req): Json<GetConfigHistoryRequest>,
-) -> Result<Json<ApiResponse<GetConfigHistoryResponse>>> {
+) -> Result<Json<ApiResponse<PaginatedData<ConfigHistoryItem>>>> {
     check_admin(&state, user_id).await?;
     
     let service = SystemConfigService::new(state.db.clone(), state.redis_client.clone());
-    let limit = req.limit.unwrap_or(50);
-    let logs = service.get_config_history(&req.config_key, limit).await?;
+    // Note: req contains key. service.get_config_history takes key separate.
+    let key = req.key.clone();
+    let logs = service.get_config_history(&key, req).await?;
 
-    Ok(Json(ApiResponse::success(GetConfigHistoryResponse { logs })))
+    Ok(Json(ApiResponse::success(logs)))
 }
 
-/// 获取所有变更历史
+/// POST /api/v1/admin/config/list_all_changes
 pub async fn list_all_changes(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
-    Json(req): Json<ListAllChangesRequest>,
-) -> Result<Json<ApiResponse<ListAllChangesResponse>>> {
+    Json(req): Json<ListAllConfigChangesRequest>,
+) -> Result<Json<ApiResponse<PaginatedData<ConfigHistoryItem>>>> {
     check_admin(&state, user_id).await?;
     
     let service = SystemConfigService::new(state.db.clone(), state.redis_client.clone());
-    let limit = req.limit.unwrap_or(50);
-    let offset = req.offset.unwrap_or(0);
-    let logs = service.list_all_changes(limit, offset).await?;
+    let logs = service.list_all_changes(req).await?;
 
-    Ok(Json(ApiResponse::success(ListAllChangesResponse { logs })))
+    Ok(Json(ApiResponse::success(logs)))
 }
-
-#[derive(Debug, Deserialize)]
-pub struct UpdateConfigRequest {
-    pub config_key: String,
-    #[serde(flatten)]
-    pub update: UpdateSystemConfigRequest,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct DeleteConfigRequest {
-    pub config_key: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct DeleteConfigResponse {
-    pub success: bool,
-    pub message: String,
-}
-

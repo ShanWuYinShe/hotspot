@@ -1,124 +1,141 @@
-use sqlx::PgPool;
+use sqlx::{PgPool, FromRow};
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
-use crate::{
-    error::Result,
-    models::device_token::DeviceToken,
-};
+use crate::error::Result;
+use crate::types::enums::Platform;
+
+/// 设备Token Row - 数据库查询返回类型
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+pub struct DeviceTokenRow {
+    pub id: i64,
+    pub user_id: i64,
+    pub platform: Platform,
+    pub device_token: String,
+    pub created_at: DateTime<Utc>,
+}
 
 #[derive(Debug, Clone)]
 pub struct DeviceTokenRepository {
-    db: PgPool,
+    pool: PgPool,
 }
 
 impl DeviceTokenRepository {
-    pub fn new(db: PgPool) -> Self {
-        Self { db }
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
     }
 
-    /// 注册或更新设备Token
-    pub async fn upsert(&self, user_id: i64, platform: &str, token: &str) -> Result<DeviceToken> {
-        let device_token = sqlx::query_as!(
-            DeviceToken,
-            r#"
-            INSERT INTO device_tokens (user_id, platform, token, is_active)
-            VALUES ($1, $2, $3, TRUE)
-            ON CONFLICT (user_id, platform, token)
-            DO UPDATE SET 
-                updated_at = CURRENT_TIMESTAMP,
-                is_active = TRUE
-            RETURNING id, user_id, platform, token, created_at, updated_at, last_used_at, is_active
-            "#,
-            user_id,
-            platform,
-            token
-        )
-        .fetch_one(&self.db)
-        .await?;
-
-        Ok(device_token)
-    }
-
-    /// 注销设备Token（软删除，设置为不活跃）
-    pub async fn deactivate(&self, user_id: i64, token: &str) -> Result<u64> {
-        let result = sqlx::query!(
-            r#"
-            UPDATE device_tokens
-            SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
-            WHERE user_id = $1 AND token = $2
-            "#,
-            user_id,
-            token
-        )
-        .execute(&self.db)
-        .await?;
-
-        Ok(result.rows_affected())
-    }
-
-    /// 注销用户所有设备Token
-    pub async fn deactivate_all(&self, user_id: i64) -> Result<u64> {
-        let result = sqlx::query!(
-            r#"
-            UPDATE device_tokens
-            SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
-            WHERE user_id = $1
-            "#,
-            user_id
-        )
-        .execute(&self.db)
-        .await?;
-
-        Ok(result.rows_affected())
-    }
-
-    /// 获取用户所有活跃的设备Token
-    pub async fn find_active_by_user(&self, user_id: i64) -> Result<Vec<DeviceToken>> {
-        let tokens = sqlx::query_as!(
-            DeviceToken,
-            r#"
-            SELECT id, user_id, platform, token, created_at, updated_at, last_used_at, is_active
-            FROM device_tokens
-            WHERE user_id = $1 AND is_active = TRUE
-            ORDER BY updated_at DESC
-            "#,
-            user_id
-        )
-        .fetch_all(&self.db)
-        .await?;
-
-        Ok(tokens)
-    }
-
-    /// 更新Token最后使用时间
-    pub async fn update_last_used(&self, id: i64) -> Result<()> {
+    /// 注册设备Token
+    pub async fn register(
+        &self,
+        user_id: i64,
+        platform: Platform,
+        device_token: String,
+    ) -> Result<()> {
         sqlx::query!(
             r#"
-            UPDATE device_tokens
-            SET last_used_at = CURRENT_TIMESTAMP
-            WHERE id = $1
+            INSERT INTO device_tokens (user_id, platform, device_token)
+            VALUES ($1, $2::platform, $3)
+            ON CONFLICT (user_id, platform, device_token) DO NOTHING
             "#,
-            id
+            user_id,
+            platform as Platform,
+            device_token
         )
-        .execute(&self.db)
+        .execute(&self.pool)
         .await?;
 
         Ok(())
     }
 
-    /// 删除不活跃的旧Token（清理任务）
-    pub async fn delete_inactive_tokens(&self, days: i32) -> Result<u64> {
+    /// 注销设备Token
+    pub async fn unregister(
+        &self,
+        user_id: i64,
+        platform: Platform,
+        device_token: String,
+    ) -> Result<()> {
+        sqlx::query!(
+            r#"
+            DELETE FROM device_tokens
+            WHERE user_id = $1 AND platform = $2::platform AND device_token = $3
+            "#,
+            user_id,
+            platform as Platform,
+            device_token
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// 获取用户的所有设备Token
+    pub async fn find_by_user(&self, user_id: i64) -> Result<Vec<DeviceTokenRow>> {
+        let rows = sqlx::query_as!(
+            DeviceTokenRow,
+            r#"
+            SELECT id, user_id, platform as "platform: Platform", device_token, created_at
+            FROM device_tokens
+            WHERE user_id = $1
+            "#,
+            user_id
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows)
+    }
+
+    /// 注册或更新设备Token (upsert)
+    pub async fn upsert(
+        &self,
+        user_id: i64,
+        platform: &str,
+        device_token: &str,
+    ) -> Result<()> {
+        let platform_enum = Platform::from_str(platform)
+            .map_err(|e| crate::error::AppError::BadRequest(e))?;
+            
+        self.register(user_id, platform_enum, device_token.to_string()).await
+    }
+
+    /// 注销指定Token (deactivate)
+    pub async fn deactivate(
+        &self,
+        user_id: i64,
+        device_token: &str,
+    ) -> Result<u64> {
         let result = sqlx::query!(
             r#"
             DELETE FROM device_tokens
-            WHERE is_active = FALSE 
-              AND updated_at < CURRENT_TIMESTAMP - INTERVAL '1 day' * $1
+            WHERE user_id = $1 AND device_token = $2
             "#,
-            days as f64
+            user_id,
+            device_token
         )
-        .execute(&self.db)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(result.rows_affected())
+    }
+
+    /// 注销所有设备Token (deactivate_all)
+    pub async fn deactivate_all(
+        &self,
+        user_id: i64,
+    ) -> Result<u64> {
+        let result = sqlx::query!(
+            r#"
+            DELETE FROM device_tokens
+            WHERE user_id = $1
+            "#,
+            user_id
+        )
+        .execute(&self.pool)
         .await?;
 
         Ok(result.rows_affected())
     }
 }
-

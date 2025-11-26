@@ -1,8 +1,31 @@
-use sqlx::PgPool;
+use sqlx::{PgPool, FromRow};
+use sqlx::types::ipnetwork::IpNetwork;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{error::Result, models::session::Session};
+use crate::error::Result;
 
+/// 会话Row - 数据库查询返回类型
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+pub struct SessionRow {
+    pub id: i64,
+    pub session_id: Uuid,
+    pub user_id: i64,
+    pub device_type: Option<String>,
+    pub device_name: Option<String>,
+    pub ip_address: Option<IpNetwork>,
+    pub user_agent: Option<String>,
+    pub access_token_hash: String,
+    pub refresh_token_hash: String,
+    pub created_at: DateTime<Utc>,
+    pub last_active_at: DateTime<Utc>,
+    pub expires_at: DateTime<Utc>,
+    pub is_revoked: bool,
+    pub revoked_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone)]
 pub struct SessionRepository {
     pool: PgPool,
 }
@@ -13,130 +36,63 @@ impl SessionRepository {
     }
 
     /// 创建会话
-    pub async fn create(&self, session: &Session) -> Result<()> {
-        sqlx::query!(
+    pub async fn create(
+        &self,
+        user_id: i64,
+        device_type: Option<String>,
+        device_name: Option<String>,
+        ip_address: Option<IpNetwork>,
+        user_agent: Option<String>,
+        access_token_hash: String,
+        refresh_token_hash: String,
+        expires_at: DateTime<Utc>,
+    ) -> Result<SessionRow> {
+        let row = sqlx::query_as!(
+            SessionRow,
             r#"
-            INSERT INTO sessions (
-                session_id, user_id, device_type, device_name,
-                ip_address, location, created_at, last_active_at, expires_at
-            )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            INSERT INTO sessions (user_id, device_type, device_name, ip_address, user_agent, access_token_hash, refresh_token_hash, expires_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING id, session_id, user_id, device_type, device_name, 
+                      ip_address as "ip_address!", user_agent,
+                      access_token_hash, refresh_token_hash,
+                      created_at, last_active_at, expires_at, is_revoked, revoked_at
             "#,
-            session.session_id,
-            session.user_id,
-            session.device_type,
-            session.device_name,
-            session.ip_address,
-            session.location,
-            session.created_at,
-            session.last_active_at,
-            session.expires_at
+            user_id,
+            device_type,
+            device_name,
+            ip_address as Option<IpNetwork>,
+            user_agent,
+            access_token_hash,
+            refresh_token_hash,
+            expires_at
         )
-        .execute(&self.pool)
+        .fetch_one(&self.pool)
         .await?;
 
-        Ok(())
+        Ok(row)
     }
 
-    /// 根据session_id查询会话
-    pub async fn find_by_id(&self, session_id: Uuid) -> Result<Option<Session>> {
-        let session = sqlx::query_as!(
-            Session,
+    /// 按ID查找会话
+    pub async fn find_by_id(&self, session_id: Uuid) -> Result<Option<SessionRow>> {
+        let row = sqlx::query_as!(
+            SessionRow,
             r#"
             SELECT id, session_id, user_id, device_type, device_name,
-                   ip_address, location, created_at, last_active_at, expires_at
+                   ip_address as "ip_address!", user_agent,
+                   access_token_hash, refresh_token_hash,
+                   created_at, last_active_at, expires_at, is_revoked, revoked_at
             FROM sessions
-            WHERE session_id = $1 AND expires_at > NOW()
+            WHERE session_id = $1 AND is_revoked = FALSE
             "#,
             session_id
         )
         .fetch_optional(&self.pool)
         .await?;
 
-        Ok(session)
+        Ok(row)
     }
 
-    /// 获取用户的会话列表（游标分页）
-    pub async fn list_by_user(
-        &self,
-        user_id: i64,
-        limit: i32,
-        cursor: Option<String>,
-    ) -> Result<(Vec<Session>, Option<String>)> {
-        // 1. 根据业务ID查询自增主键id (如果提供了cursor)
-        let cursor_id = if let Some(session_id_str) = &cursor {
-            let session_id = Uuid::parse_str(session_id_str).ok();
-            if let Some(sid) = session_id {
-                sqlx::query!("SELECT id FROM sessions WHERE session_id = $1", sid)
-                    .fetch_optional(&self.pool)
-                    .await?
-                    .map(|r| r.id)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-
-        // 2. 使用自增主键id进行分页
-        let sessions = sqlx::query_as!(
-            Session,
-            r#"
-            SELECT id, session_id, user_id, device_type, device_name,
-                   ip_address, location, created_at, last_active_at, expires_at
-            FROM sessions
-            WHERE user_id = $1
-            AND ($2::BIGINT IS NULL OR id > $2)
-            AND expires_at > NOW()
-            ORDER BY id DESC
-            LIMIT $3
-            "#,
-            user_id,
-            cursor_id,
-            limit as i64
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        // 3. 返回业务ID作为游标
-        let next_cursor = if sessions.len() == limit as usize {
-            sessions.last().map(|s| s.session_id.to_string())
-        } else {
-            None
-        };
-
-        Ok((sessions, next_cursor))
-    }
-
-    /// 删除会话
-    pub async fn delete(&self, session_id: Uuid) -> Result<()> {
-        sqlx::query!(
-            r#"
-            DELETE FROM sessions WHERE session_id = $1
-            "#,
-            session_id
-        )
-        .execute(&self.pool)
-        .await?;
-
-        Ok(())
-    }
-
-    /// 删除用户的所有会话
-    pub async fn delete_by_user(&self, user_id: i64) -> Result<()> {
-        sqlx::query!(
-            r#"
-            DELETE FROM sessions WHERE user_id = $1
-            "#,
-            user_id
-        )
-        .execute(&self.pool)
-        .await?;
-
-        Ok(())
-    }
-
-    /// 更新最后活跃时间
+    /// 更新会话活跃时间
     pub async fn update_last_active(&self, session_id: Uuid) -> Result<()> {
         sqlx::query!(
             r#"
@@ -152,17 +108,66 @@ impl SessionRepository {
         Ok(())
     }
 
-    /// 删除过期会话（定期清理）
-    pub async fn delete_expired(&self) -> Result<u64> {
-        let result = sqlx::query!(
+    /// 撤销会话
+    pub async fn revoke(&self, session_id: Uuid) -> Result<()> {
+        sqlx::query!(
             r#"
-            DELETE FROM sessions WHERE expires_at < NOW()
-            "#
+            UPDATE sessions
+            SET is_revoked = TRUE, revoked_at = NOW()
+            WHERE session_id = $1
+            "#,
+            session_id
         )
         .execute(&self.pool)
         .await?;
 
-        Ok(result.rows_affected())
+        Ok(())
+    }
+
+    /// 将 UUID cursor 转换为自增主键
+    async fn resolve_cursor(&self, cursor: Option<Uuid>) -> Result<i64> {
+        match cursor {
+            Some(c) => {
+                sqlx::query_scalar!(
+                    r#"SELECT id FROM sessions WHERE session_id = $1"#,
+                    c
+                )
+                .fetch_optional(&self.pool)
+                .await?
+                .ok_or_else(|| crate::error::AppError::BadRequest("无效的 cursor".to_string()))
+            }
+            None => Ok(i64::MAX),
+        }
+    }
+
+    /// 按用户ID查询会话列表
+    pub async fn list_by_user(&self, user_id: i64, limit: i32, cursor: Option<Uuid>) -> Result<Vec<SessionRow>> {
+        let cursor_pk = self.resolve_cursor(cursor).await?;
+        
+        let sessions = sqlx::query_as!(
+            SessionRow,
+            r#"
+            SELECT id, session_id, user_id, device_type, device_name,
+                   ip_address as "ip_address!", user_agent,
+                   access_token_hash, refresh_token_hash,
+                   created_at, last_active_at, expires_at, is_revoked, revoked_at
+            FROM sessions
+            WHERE user_id = $1 AND id < $2 AND is_revoked = FALSE
+            ORDER BY id DESC
+            LIMIT $3
+            "#,
+            user_id,
+            cursor_pk,
+            limit as i64
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        
+        Ok(sessions)
+    }
+
+    /// 删除会话（撤销）
+    pub async fn delete(&self, session_id: Uuid) -> Result<()> {
+        self.revoke(session_id).await
     }
 }
-

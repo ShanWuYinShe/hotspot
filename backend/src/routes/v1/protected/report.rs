@@ -1,12 +1,11 @@
 use axum::{routing::post, Router};
 
-use crate::{handlers::report::ReportHandler, state::AppState};
+use crate::{handlers::report, state::AppState};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .route("/create", post(ReportHandler::create_report))
-        .route("/list", post(ReportHandler::get_report_history))
-        .route("/list_all", post(ReportHandler::get_all_reports))
-        .route("/handle", post(ReportHandler::handle_report))
+        .route("/create", post(report::create))
+        .route("/get_my_reports", post(report::get_my_reports))
+        .route("/get_admin_list", post(report::get_admin_list))
+        .route("/handle", post(report::handle))
 }
-

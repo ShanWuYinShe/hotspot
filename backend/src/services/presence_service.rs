@@ -1,12 +1,11 @@
 use redis::aio::ConnectionManager as RedisConnectionManager;
 use redis::AsyncCommands;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 
+use crate::constants::{
+    REDIS_KEY_PRESENCE_ONLINE, REDIS_KEY_PRESENCE_LOCATION, REDIS_TTL_ONLINE_STATUS,
+};
 use crate::error::{AppError, Result};
-
-const ONLINE_USERS_KEY: &str = "presence:online_users";
-const USER_LOCATION_PREFIX: &str = "presence:location:";
-const ONLINE_TTL: usize = 300; // 5分钟
 
 pub struct PresenceService {
     redis: RedisConnectionManager,
@@ -22,7 +21,7 @@ impl PresenceService {
         let mut conn = self.redis.clone();
         let timestamp = Utc::now().timestamp();
         
-        conn.zadd(ONLINE_USERS_KEY, user_id, timestamp)
+        let _: () = conn.zadd(REDIS_KEY_PRESENCE_ONLINE, user_id, timestamp)
             .await
             .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
         
@@ -34,12 +33,12 @@ impl PresenceService {
     pub async fn mark_user_offline(&mut self, user_id: i64) -> Result<()> {
         let mut conn = self.redis.clone();
         
-        conn.zrem(ONLINE_USERS_KEY, user_id)
+        let _: () = conn.zrem(REDIS_KEY_PRESENCE_ONLINE, user_id)
             .await
             .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
         
         // 删除位置信息
-        let location_key = format!("{}{}", USER_LOCATION_PREFIX, user_id);
+        let location_key = format!("{}{}", REDIS_KEY_PRESENCE_LOCATION, user_id);
         let _: () = conn.del(&location_key)
             .await
             .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
@@ -52,7 +51,7 @@ impl PresenceService {
     pub async fn is_user_online(&mut self, user_id: i64) -> Result<bool> {
         let mut conn = self.redis.clone();
         
-        let score: Option<i64> = conn.zscore(ONLINE_USERS_KEY, user_id)
+        let score: Option<i64> = conn.zscore(REDIS_KEY_PRESENCE_ONLINE, user_id)
             .await
             .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
         
@@ -63,7 +62,7 @@ impl PresenceService {
     pub async fn get_online_users(&mut self) -> Result<Vec<i64>> {
         let mut conn = self.redis.clone();
         
-        let users: Vec<i64> = conn.zrange(ONLINE_USERS_KEY, 0, -1)
+        let users: Vec<i64> = conn.zrange(REDIS_KEY_PRESENCE_ONLINE, 0, -1)
             .await
             .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
         
@@ -74,7 +73,7 @@ impl PresenceService {
     pub async fn get_online_count(&mut self) -> Result<usize> {
         let mut conn = self.redis.clone();
         
-        let count: usize = conn.zcard(ONLINE_USERS_KEY)
+        let count: usize = conn.zcard(REDIS_KEY_PRESENCE_ONLINE)
             .await
             .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
         
@@ -90,7 +89,7 @@ impl PresenceService {
         location_name: String,
     ) -> Result<()> {
         let mut conn = self.redis.clone();
-        let location_key = format!("{}{}", USER_LOCATION_PREFIX, user_id);
+        let location_key = format!("{}{}", REDIS_KEY_PRESENCE_LOCATION, user_id);
         
         let location_data = serde_json::json!({
             "latitude": latitude,
@@ -102,7 +101,7 @@ impl PresenceService {
         let location_str = serde_json::to_string(&location_data)
             .map_err(|e| AppError::InternalError(format!("序列化错误: {}", e)))?;
         
-        conn.set_ex(&location_key, location_str, ONLINE_TTL)
+        let _: () = conn.set_ex(&location_key, location_str, REDIS_TTL_ONLINE_STATUS)
             .await
             .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
         
@@ -113,7 +112,7 @@ impl PresenceService {
     /// 获取用户位置
     pub async fn get_user_location(&mut self, user_id: i64) -> Result<Option<UserLocation>> {
         let mut conn = self.redis.clone();
-        let location_key = format!("{}{}", USER_LOCATION_PREFIX, user_id);
+        let location_key = format!("{}{}", REDIS_KEY_PRESENCE_LOCATION, user_id);
         
         let location_str: Option<String> = conn.get(&location_key)
             .await
@@ -132,9 +131,9 @@ impl PresenceService {
     /// 清理离线用户（超过TTL的用户）
     pub async fn cleanup_offline_users(&mut self) -> Result<usize> {
         let mut conn = self.redis.clone();
-        let cutoff_time = Utc::now().timestamp() - ONLINE_TTL as i64;
+        let cutoff_time = Utc::now().timestamp() - (REDIS_TTL_ONLINE_STATUS as i64);
         
-        let removed: usize = conn.zrembyscore(ONLINE_USERS_KEY, "-inf", cutoff_time)
+        let removed: usize = conn.zrembyscore(REDIS_KEY_PRESENCE_ONLINE, "-inf", cutoff_time)
             .await
             .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
         

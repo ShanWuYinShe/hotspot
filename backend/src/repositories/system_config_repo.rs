@@ -1,13 +1,37 @@
-use sqlx::PgPool;
+use sqlx::{PgPool, FromRow};
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
-use crate::{
-    error::{AppError, Result},
-    models::{
-        config_change_log::{ConfigChangeLog, CreateConfigChangeLogRequest},
-        system_config::{CreateSystemConfigRequest, SystemConfig, UpdateSystemConfigRequest},
-    },
-};
+use crate::error::Result;
 
+/// 系统配置Row - 数据库查询返回类型
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+pub struct SystemConfigRow {
+    pub id: i64,
+    pub cursor_id: Uuid,
+    pub key: String,
+    pub value: String,
+    pub config_type: Option<String>,  // 使用 Option 以兼容 sqlx 宏
+    pub category: Option<String>,     // 使用 Option 以兼容 sqlx 宏
+    pub description: Option<String>,  // description 在数据库中是 TEXT，可能为 NULL
+    pub created_at: DateTime<Utc>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+/// 配置变更历史Row
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+pub struct ConfigChangeLogRow {
+    pub id: i64,
+    pub cursor_id: Uuid,
+    pub key: String,
+    pub old_value: Option<String>,
+    pub new_value: String,
+    pub changed_by: i64,
+    pub changed_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone)]
 pub struct SystemConfigRepository {
     pool: PgPool,
 }
@@ -18,89 +42,60 @@ impl SystemConfigRepository {
     }
 
     /// 获取配置项
-    pub async fn get(&self, config_key: &str) -> Result<Option<SystemConfig>> {
-        let config = sqlx::query_as!(
-            SystemConfig,
+    pub async fn find_by_key(&self, key: &str) -> Result<Option<SystemConfigRow>> {
+        let row = sqlx::query_as!(
+            SystemConfigRow,
             r#"
-            SELECT id, config_key, config_value, value_type, description, created_at, updated_at
+            SELECT id, cursor_id, key, value, type as config_type, category, description, created_at, updated_at
             FROM system_configs
-            WHERE config_key = $1
+            WHERE key = $1 AND is_deleted = FALSE
             "#,
-            config_key
+            key
         )
         .fetch_optional(&self.pool)
         .await?;
 
-        Ok(config)
-    }
-
-    /// 列出所有配置项
-    pub async fn list(&self) -> Result<Vec<SystemConfig>> {
-        let configs = sqlx::query_as!(
-            SystemConfig,
-            r#"
-            SELECT id, config_key, config_value, value_type, description, created_at, updated_at
-            FROM system_configs
-            ORDER BY config_key
-            "#
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(configs)
+        Ok(row)
     }
 
     /// 创建配置项
-    pub async fn create(&self, req: &CreateSystemConfigRequest) -> Result<SystemConfig> {
-        let config = sqlx::query_as!(
-            SystemConfig,
+    pub async fn create(
+        &self,
+        key: String,
+        value: String,
+        description: Option<String>,
+        config_type: String,
+        category: String,
+    ) -> Result<SystemConfigRow> {
+        let row = sqlx::query_as!(
+            SystemConfigRow,
             r#"
-            INSERT INTO system_configs (config_key, config_value, value_type, description)
-            VALUES ($1, $2, $3, $4)
-            RETURNING id, config_key, config_value, value_type, description, created_at, updated_at
+            INSERT INTO system_configs (key, value, description, type, category)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id, cursor_id, key, value, type as config_type, category, description, created_at, updated_at
             "#,
-            req.config_key,
-            req.config_value,
-            req.value_type,
-            req.description
+            key,
+            value,
+            description,
+            config_type,
+            category
         )
         .fetch_one(&self.pool)
         .await?;
 
-        Ok(config)
+        Ok(row)
     }
 
     /// 更新配置项
-    pub async fn update(
-        &self,
-        config_key: &str,
-        req: &UpdateSystemConfigRequest,
-    ) -> Result<SystemConfig> {
-        let config = sqlx::query_as!(
-            SystemConfig,
-            r#"
-            UPDATE system_configs
-            SET config_value = $2, updated_at = NOW()
-            WHERE config_key = $1
-            RETURNING id, config_key, config_value, value_type, description, created_at, updated_at
-            "#,
-            config_key,
-            req.config_value
-        )
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(config)
-    }
-
-    /// 删除配置项
-    pub async fn delete(&self, config_key: &str) -> Result<()> {
+    pub async fn update(&self, key: &str, value: String) -> Result<()> {
         sqlx::query!(
             r#"
-            DELETE FROM system_configs
-            WHERE config_key = $1
+            UPDATE system_configs
+            SET value = $2, updated_at = NOW()
+            WHERE key = $1
             "#,
-            config_key
+            key,
+            value
         )
         .execute(&self.pool)
         .await?;
@@ -108,79 +103,164 @@ impl SystemConfigRepository {
         Ok(())
     }
 
-    /// 记录配置变更日志
-    pub async fn log_change(&self, req: &CreateConfigChangeLogRequest) -> Result<ConfigChangeLog> {
-        let log = sqlx::query_as!(
-            ConfigChangeLog,
+    /// 删除配置项
+    pub async fn delete(&self, key: &str) -> Result<()> {
+        sqlx::query!(
             r#"
-            INSERT INTO config_change_logs (config_key, old_value, new_value, changed_by, ip_address, user_agent)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING id, config_key, old_value, new_value, changed_by, changed_at, ip_address, user_agent
+            UPDATE system_configs
+            SET is_deleted = TRUE, deleted_at = NOW()
+            WHERE key = $1
             "#,
-            req.config_key,
-            req.old_value,
-            req.new_value,
-            req.changed_by,
-            req.ip_address,
-            req.user_agent
+            key
         )
-        .fetch_one(&self.pool)
+        .execute(&self.pool)
         .await?;
 
-        Ok(log)
+        Ok(())
+    }
+
+    /// 记录配置变更历史
+    pub async fn log_change(
+        &self,
+        key: &str,
+        old_value: Option<String>,
+        new_value: String,
+        changed_by: i64,
+    ) -> Result<()> {
+        sqlx::query!(
+            r#"
+            INSERT INTO system_config_history (config_key, old_value, new_value, changed_by)
+            VALUES ($1, $2, $3, $4)
+            "#,
+            key,
+            old_value,
+            new_value,
+            changed_by
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// 将 UUID cursor 转换为自增主键（配置表）
+    async fn resolve_config_cursor(&self, cursor: Option<Uuid>) -> Result<i64> {
+        match cursor {
+            Some(c) => {
+                sqlx::query_scalar!(
+                    r#"SELECT id FROM system_configs WHERE cursor_id = $1"#,
+                    c
+                )
+                .fetch_optional(&self.pool)
+                .await?
+                .ok_or_else(|| crate::error::AppError::BadRequest("无效的 cursor".to_string()))
+            }
+            None => Ok(i64::MAX),
+        }
+    }
+
+    /// 将 UUID cursor 转换为自增主键（历史表）
+    async fn resolve_history_cursor(&self, cursor: Option<Uuid>) -> Result<i64> {
+        match cursor {
+            Some(c) => {
+                sqlx::query_scalar!(
+                    r#"SELECT id FROM system_config_history WHERE cursor_id = $1"#,
+                    c
+                )
+                .fetch_optional(&self.pool)
+                .await?
+                .ok_or_else(|| crate::error::AppError::BadRequest("无效的 cursor".to_string()))
+            }
+            None => Ok(i64::MAX),
+        }
     }
 
     /// 获取配置变更历史
-    pub async fn get_change_history(
-        &self,
-        config_key: &str,
-        limit: i64,
-    ) -> Result<Vec<ConfigChangeLog>> {
-        let logs = sqlx::query_as!(
-            ConfigChangeLog,
+    pub async fn get_change_history(&self, key: &str, limit: i32, cursor: Option<Uuid>) -> Result<Vec<ConfigChangeLogRow>> {
+        let cursor_pk = self.resolve_history_cursor(cursor).await?;
+        
+        let rows = sqlx::query_as!(
+            ConfigChangeLogRow,
             r#"
-            SELECT id, config_key, old_value, new_value, changed_by, changed_at, ip_address, user_agent
-            FROM config_change_logs
-            WHERE config_key = $1
-            ORDER BY changed_at DESC
-            LIMIT $2
+            SELECT id, cursor_id, config_key as key, old_value, new_value, changed_by, changed_at
+            FROM system_config_history
+            WHERE config_key = $1 AND id < $2
+            ORDER BY id DESC
+            LIMIT $3
             "#,
-            config_key,
-            limit
+            key,
+            cursor_pk,
+            limit as i64
         )
         .fetch_all(&self.pool)
         .await?;
-
-        Ok(logs)
+        
+        Ok(rows)
     }
 
-    /// 获取所有变更历史（带分页）
-    pub async fn list_all_changes(&self, limit: i64, offset: i64) -> Result<Vec<ConfigChangeLog>> {
-        let logs = sqlx::query_as!(
-            ConfigChangeLog,
+    /// 获取所有配置变更
+    pub async fn list_all_changes(
+        &self, 
+        start_time: Option<&str>,
+        end_time: Option<&str>,
+        changed_by: Option<i64>,
+        limit: i32, 
+        cursor: Option<Uuid>
+    ) -> Result<Vec<ConfigChangeLogRow>> {
+        let cursor_pk = self.resolve_history_cursor(cursor).await?;
+        
+        // 解析时间字符串为 DateTime
+        let start_dt = start_time.and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+            .map(|dt| dt.with_timezone(&chrono::Utc));
+        let end_dt = end_time.and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+            .map(|dt| dt.with_timezone(&chrono::Utc));
+        
+        let rows = sqlx::query_as!(
+            ConfigChangeLogRow,
             r#"
-            SELECT id, config_key, old_value, new_value, changed_by, changed_at, ip_address, user_agent
-            FROM config_change_logs
-            ORDER BY changed_at DESC
-            LIMIT $1 OFFSET $2
+            SELECT id, cursor_id, config_key as key, old_value, new_value, changed_by, changed_at
+            FROM system_config_history
+            WHERE id < $1
+              AND ($2::timestamptz IS NULL OR changed_at >= $2)
+              AND ($3::timestamptz IS NULL OR changed_at <= $3)
+              AND ($4::bigint IS NULL OR changed_by = $4)
+            ORDER BY id DESC
+            LIMIT $5
             "#,
-            limit,
-            offset
+            cursor_pk,
+            start_dt,
+            end_dt,
+            changed_by,
+            limit as i64
         )
         .fetch_all(&self.pool)
         .await?;
+        
+        Ok(rows)
+    }
 
-        Ok(logs)
+    /// 按分类列出配置
+    pub async fn list(&self, category: Option<String>, limit: i32, cursor: Option<Uuid>) -> Result<Vec<SystemConfigRow>> {
+        let cursor_pk = self.resolve_config_cursor(cursor).await?;
+        
+        let rows = sqlx::query_as!(
+            SystemConfigRow,
+            r#"
+            SELECT id, cursor_id, key, value, type as config_type, category, description, created_at, updated_at
+            FROM system_configs
+            WHERE ($1::text IS NULL OR category = $1)
+              AND id < $2 
+              AND is_deleted = FALSE
+            ORDER BY id DESC
+            LIMIT $3
+            "#,
+            category,
+            cursor_pk,
+            limit as i64
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        
+        Ok(rows)
     }
 }
-
-
-
-
-
-
-
-
-
-
-

@@ -24,7 +24,7 @@ pub enum SubscriptionType {
 /// 订阅管理器
 /// 
 /// 实现双层订阅机制：
-/// 1. 持久化订阅偏好（存储在数据库的event_subscriptions表）
+/// 1. 持久化订阅偏好（存储在数据库的notification_subscriptions表）
 /// 2. 实时订阅控制（通过WebSocket Subscribe/Unsubscribe消息）
 #[derive(Clone)]
 pub struct SubscriptionManager {
