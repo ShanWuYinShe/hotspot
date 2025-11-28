@@ -108,7 +108,7 @@
                       />
                     </UButton>
                     
-                    <template #panel>
+                    <template #content>
                       <Suspense>
                         <NotificationPanel ref="notificationPanelRef" />
                         <template #fallback>

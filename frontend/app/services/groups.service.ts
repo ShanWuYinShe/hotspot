@@ -1,11 +1,10 @@
 /**
- * 群组服务 - 符合API规范的实现
+ * 群组服务
  * 所有API操作统一使用POST方法
- * 基于 api_spec.mdc 第3.6节和第3.7节 群组管理API规范
  */
 
 import { BaseService } from './base.service'
-import type { GroupResponse, GroupMemberResponseData, PaginatedResponse } from '~/types/api'
+import type { GroupResponse, GroupMemberResponseData, PaginatedData } from '~/types/api'
 
 export interface DiscoverGroupsRequest {
   keyword?: string
@@ -134,14 +133,14 @@ export interface RejectInviteRequest {
 }
 
 export class GroupsService extends BaseService {
-  protected readonly baseUrl = '/api/v1'
+  protected readonly baseUrl = ''
 
   /**
    * 发现群组（公开接口）
    * POST /api/v1/public/group_chats/discover
    */
-  async discoverGroups(request: DiscoverGroupsRequest): Promise<PaginatedResponse<GroupResponse>> {
-    return this.publicPost<PaginatedResponse<GroupResponse>>('/public/group_chats/discover', request)
+  async discoverGroups(request: DiscoverGroupsRequest): Promise<PaginatedData<GroupResponse>> {
+    return this.publicPost<PaginatedData<GroupResponse>>('/public/group_chats/discover', request)
   }
 
   /**
@@ -156,8 +155,8 @@ export class GroupsService extends BaseService {
    * 获取我的群组
    * POST /api/v1/protected/group_chats/get_joined
    */
-  async getJoined(request: GetJoinedRequest = {}): Promise<PaginatedResponse<GroupResponse>> {
-    return this.post<PaginatedResponse<GroupResponse>>('/protected/group_chats/get_joined', request)
+  async getJoined(request: GetJoinedRequest = {}): Promise<PaginatedData<GroupResponse>> {
+    return this.post<PaginatedData<GroupResponse>>('/protected/group_chats/get_joined', request)
   }
 
   /**
@@ -188,8 +187,8 @@ export class GroupsService extends BaseService {
    * 获取成员列表（公开接口）
    * POST /api/v1/public/group_chats/members/get_list
    */
-  async getMembers(request: GetMembersRequest): Promise<PaginatedResponse<GroupMemberResponseData>> {
-    return this.publicPost<PaginatedResponse<GroupMemberResponseData>>('/public/group_chats/members/get_list', request)
+  async getMembers(request: GetMembersRequest): Promise<PaginatedData<GroupMemberResponseData>> {
+    return this.publicPost<PaginatedData<GroupMemberResponseData>>('/public/group_chats/members/get_list', request)
   }
 
   /**
@@ -252,7 +251,7 @@ export class GroupsService extends BaseService {
    * 获取群组申请列表
    * POST /api/v1/protected/group_chats/applications/get_list
    */
-  async getApplications(request: GetApplicationsRequest): Promise<PaginatedResponse<{
+  async getApplications(request: GetApplicationsRequest): Promise<PaginatedData<{
     id: string
     applicant: {
       user_id: string
@@ -295,7 +294,7 @@ export class GroupsService extends BaseService {
    * 获取我的群组邀请列表
    * POST /api/v1/protected/group_chats/invites/get_list
    */
-  async getInvites(request: GetInvitesRequest = {}): Promise<PaginatedResponse<{
+  async getInvites(request: GetInvitesRequest = {}): Promise<PaginatedData<{
     id: string
     group: {
       group_chat_id: string
@@ -345,14 +344,14 @@ export class GroupsService extends BaseService {
   /**
    * 获取附近群组（别名方法，调用 discoverGroups）
    */
-  async getNearbyGroups(request: DiscoverGroupsRequest): Promise<PaginatedResponse<GroupResponse>> {
+  async getNearbyGroups(request: DiscoverGroupsRequest): Promise<PaginatedData<GroupResponse>> {
     return this.discoverGroups(request)
   }
 
   /**
    * 搜索群组（别名方法，调用 discoverGroups）
    */
-  async searchGroups(request: DiscoverGroupsRequest): Promise<PaginatedResponse<GroupResponse>> {
+  async searchGroups(request: DiscoverGroupsRequest): Promise<PaginatedData<GroupResponse>> {
     return this.discoverGroups(request)
   }
 }

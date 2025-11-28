@@ -998,7 +998,7 @@ HTTP Status: 401 Unauthorized
 - 验证文件上传的MIME类型和内容
 
 **Content-Type验证**：
-- **仅接受**：application/json
+- **仅接受**：application/json（文件上传接口除外，应支持 multipart/form-data）
 - **拒绝其他格式**：返回错误码 1000（参数错误）
 
 **敏感数据处理**：
@@ -1271,7 +1271,7 @@ Response: {
 }
 
 // 上传单个分块（每个分块独立幂等）
-PUT <upload_url>
+POST <upload_url>
 Headers: {
   Content-Type: application/octet-stream
   Content-Length: <chunk_size>
@@ -2492,7 +2492,44 @@ type MuteMemberResponse = ApiResponse
 
 ---
 
-**3.7.7. POST /api/v1/protected/group_chats/members/remove - 移除成员**
+**3.7.7. POST /api/v1/protected/group_chats/members/unmute - 取消禁言成员**
+```typescript
+interface UnmuteMemberRequest {
+  group_chat_id: string;  // ✨ 群聊ID
+  user_id: string;
+}
+
+type UnmuteMemberResponse = ApiResponse
+```
+
+**权限要求**：
+- 群主和管理员可以取消禁言任何成员
+
+---
+
+**3.7.8. POST /api/v1/protected/group_chats/members/ban - 封禁成员**
+```typescript
+interface BanMemberRequest {
+  group_chat_id: string;  // ✨ 群聊ID
+  user_id: string;
+  reason?: string;        // 封禁原因（可选）
+}
+
+type BanMemberResponse = ApiResponse
+```
+
+**功能说明**：
+- 封禁后，成员将被移出群组且无法再次加入
+- 封禁记录会被保存，用于防止被封禁用户重新加入
+
+**权限要求**：
+- 仅群主和管理员可以封禁成员
+- 管理员不能封禁群主
+- 管理员不能封禁其他管理员
+
+---
+
+**3.7.9. POST /api/v1/protected/group_chats/members/remove - 移除成员**
 ```typescript
 interface RemoveMemberRequest {
   group_chat_id: string;  // ✨ 群聊ID
@@ -2504,7 +2541,7 @@ type RemoveMemberResponse = ApiResponse
 
 ---
 
-**3.7.8. POST /api/v1/protected/group_chats/members/leave - 退出群组**
+**3.7.10. POST /api/v1/protected/group_chats/members/leave - 退出群组**
 ```typescript
 interface LeaveGroupRequest {
   group_chat_id: string;  // ✨ 群聊ID
@@ -2515,7 +2552,7 @@ type LeaveGroupResponse = ApiResponse
 
 ---
 
-**3.7.9. POST /api/v1/protected/group_chats/applications/get_list - 获取群组申请列表**
+**3.7.11. POST /api/v1/protected/group_chats/applications/get_list - 获取群组申请列表**
 ```typescript
 interface GetGroupApplicationsRequest {
   group_chat_id: string;  // ✨ 群聊ID
@@ -2538,7 +2575,7 @@ interface GroupApplicationItem {
 
 ---
 
-**3.7.10. POST /api/v1/protected/group_chats/applications/approve - 审批群组申请**
+**3.7.12. POST /api/v1/protected/group_chats/applications/approve - 审批群组申请**
 ```typescript
 interface ApproveGroupApplicationRequest {
   application_id: string;
@@ -2549,7 +2586,7 @@ type ApproveGroupApplicationResponse = ApiResponse
 
 ---
 
-**3.7.11. POST /api/v1/protected/group_chats/applications/reject - 拒绝群组申请**
+**3.7.13. POST /api/v1/protected/group_chats/applications/reject - 拒绝群组申请**
 ```typescript
 interface RejectGroupApplicationRequest {
   application_id: string;
@@ -2561,7 +2598,7 @@ type RejectGroupApplicationResponse = ApiResponse
 
 ---
 
-**3.7.12. POST /api/v1/protected/group_chats/transfer_ownership - 转让群主**
+**3.7.14. POST /api/v1/protected/group_chats/transfer_ownership - 转让群主**
 ```typescript
 interface TransferOwnershipRequest {
   group_chat_id: string;  // ✨ 群聊ID
@@ -2573,7 +2610,7 @@ type TransferOwnershipResponse = ApiResponse
 
 ---
 
-**3.7.13. POST /api/v1/protected/group_chats/invites/get_list - 获取我的群组邀请列表**
+**3.7.15. POST /api/v1/protected/group_chats/invites/get_list - 获取我的群组邀请列表**
 ```typescript
 interface GetGroupInvitesRequest {
   status?: 'pending' | 'accepted' | 'rejected' | 'all';
@@ -2596,7 +2633,7 @@ interface GroupInviteItem {
 
 ---
 
-**3.7.14. POST /api/v1/protected/group_chats/invites/accept - 接受群组邀请**
+**3.7.16. POST /api/v1/protected/group_chats/invites/accept - 接受群组邀请**
 ```typescript
 interface AcceptGroupInviteRequest {
   invite_id: string;
@@ -2607,7 +2644,7 @@ type AcceptGroupInviteResponse = ApiResponse
 
 ---
 
-**3.7.15. POST /api/v1/protected/group_chats/invites/reject - 拒绝群组邀请**
+**3.7.17. POST /api/v1/protected/group_chats/invites/reject - 拒绝群组邀请**
 ```typescript
 interface RejectGroupInviteRequest {
   invite_id: string;
@@ -3108,7 +3145,7 @@ type UnregisterDeviceTokenResponse = ApiResponse
 
 ### 3.14 系统健康检查 API
 
-**3.20.1. POST /api/v1/public/system/health_check - 系统健康检查**
+**3.14.1. POST /api/v1/public/system/health_check - 系统健康检查**
 ```typescript
 interface HealthCheckRequest {}
 
@@ -3123,7 +3160,7 @@ interface HealthCheckData {
 
 ### 3.15 排行榜 API
 
-**3.19.1. POST /api/v1/public/leaderboard/get_creators - 获取创作者排行榜**
+**3.15.1. POST /api/v1/public/leaderboard/get_creators - 获取创作者排行榜**
 ```typescript
 interface GetCreatorLeaderboardRequest {
   timeframe: 'daily' | 'weekly' | 'monthly' | 'all_time';
@@ -3147,7 +3184,7 @@ interface CreatorRankItem {
 }
 ```
 
-**3.19.2. POST /api/v1/public/leaderboard/get_moments - 获取生活瞬间排行榜**
+**3.15.2. POST /api/v1/public/leaderboard/get_moments - 获取生活瞬间排行榜**
 ```typescript
 interface GetMomentLeaderboardRequest {
   timeframe: 'daily' | 'weekly' | 'monthly' | 'all_time';
@@ -3217,7 +3254,7 @@ interface MyMomentRankData {
 
 ### 3.16 文件与媒体上传 API
 
-**3.20.1. POST /api/v1/protected/media/upload_file - 上传文件（≤100MB）**
+**3.16.1. POST /api/v1/protected/media/upload_file - 上传文件（≤100MB）**
 ```typescript
 interface UploadMediaRequest {
   file: File;              // 文件内容（最大100MB）
@@ -3233,7 +3270,7 @@ interface UploadMediaData {
 }
 ```
 
-**3.20.2. POST /api/v1/protected/media/initiate_upload - 初始化大文件上传（>100MB）**
+**3.16.2. POST /api/v1/protected/media/initiate_upload - 初始化大文件上传（>100MB）**
 ```typescript
 interface InitiateUploadRequest {
   file_name: string;
@@ -3293,7 +3330,7 @@ type AbortUploadResponse = ApiResponse
 
 ### 3.17 信息流（Feed）API
 
-**3.19.1. POST /api/v1/protected/feed/get_list - 获取信息流**
+**3.17.1. POST /api/v1/protected/feed/get_list - 获取信息流**
 ```typescript
 interface ListFeedRequest {
   channel: 'following' | 'nearby' | 'recommended';
@@ -3322,7 +3359,7 @@ interface FeedSystemInfo {
 }
 ```
 
-**3.19.2. POST /api/v1/protected/feed/feedback - 反馈信息流条目**
+**3.17.2. POST /api/v1/protected/feed/feedback - 反馈信息流条目**
 ```typescript
 interface FeedFeedbackRequest {
   item_id: string;
@@ -3334,7 +3371,7 @@ type FeedFeedbackResponse = ApiResponse
 
 ### 3.18 批量操作 API
 
-**3.20.1. POST /api/v1/protected/messages/mark_as_read_batch - 批量标记消息已读**
+**3.18.1. POST /api/v1/protected/messages/mark_as_read_batch - 批量标记消息已读**
 ```typescript
 interface MarkAsReadBatchRequest {
   items: {               // 最多100个聊天
@@ -3360,7 +3397,7 @@ interface BatchItemResult {
 }
 ```
 
-**3.20.2. POST /api/v1/protected/inbox/remove_batch - 批量删除通知**
+**3.18.2. POST /api/v1/protected/inbox/remove_batch - 批量删除通知**
 ```typescript
 interface RemoveInboxBatchRequest {
   ids: string[];         // 最多100个通知ID
@@ -3410,15 +3447,37 @@ interface TagSuggestData {
 
 ### 3.20 系统配置管理 API
 
-**3.20.1. POST /api/v1/admin/config/get_list - 获取配置列表（管理员）**
+**3.20.1. POST /api/v1/admin/config/create - 创建配置（管理员）**
 ```typescript
-interface GetConfigListRequest {
-  category?: string;
-  limit?: number;
-  cursor?: string;
+interface CreateConfigRequest {
+  key: string;
+  value: string;
+  type: 'string' | 'number' | 'boolean';
+  category: string;
+  description: string;
 }
 
-type GetConfigListResponse = ApiResponse<PaginatedData<ConfigItem>>
+type CreateConfigResponse = ApiResponse<CreateConfigData>
+
+interface CreateConfigData {
+  key: string;
+}
+```
+
+**功能说明**：
+- 创建新的系统配置项
+- key 必须唯一，重复时返回错误
+- type 用于前端展示时的类型转换
+
+---
+
+**3.20.2. POST /api/v1/admin/config/get_config - 获取单个配置（管理员）**
+```typescript
+interface GetConfigRequest {
+  key: string;
+}
+
+type GetConfigResponse = ApiResponse<ConfigItem>
 
 interface ConfigItem {
   key: string;
@@ -3430,7 +3489,26 @@ interface ConfigItem {
 }
 ```
 
-**3.20.2. POST /api/v1/admin/config/update - 更新配置（管理员）**
+---
+
+**3.20.3. POST /api/v1/admin/config/get_list - 获取配置列表（管理员）**
+```typescript
+interface GetConfigListRequest {
+  category?: string;
+  limit?: number;
+  cursor?: string;
+}
+
+type GetConfigListResponse = ApiResponse<PaginatedData<ConfigItem>>
+```
+
+**功能说明**：
+- 支持按category筛选配置项
+- 返回分页结果
+
+---
+
+**3.20.4. POST /api/v1/admin/config/update - 更新配置（管理员）**
 ```typescript
 interface UpdateConfigRequest {
   key: string;
@@ -3439,6 +3517,73 @@ interface UpdateConfigRequest {
 
 type UpdateConfigResponse = ApiResponse
 ```
+
+**功能说明**：
+- 更新指定配置项的值
+- 会自动记录变更历史
+
+---
+
+**3.20.5. POST /api/v1/admin/config/delete - 删除配置（管理员）**
+```typescript
+interface DeleteConfigRequest {
+  key: string;
+}
+
+type DeleteConfigResponse = ApiResponse
+```
+
+**功能说明**：
+- 删除指定的配置项
+- 同时会删除该配置的变更历史
+
+---
+
+**3.20.6. POST /api/v1/admin/config/get_config_history - 获取配置变更历史（管理员）**
+```typescript
+interface GetConfigHistoryRequest {
+  key: string;
+  limit?: number;
+  cursor?: string;
+}
+
+type GetConfigHistoryResponse = ApiResponse<PaginatedData<ConfigHistoryItem>>
+
+interface ConfigHistoryItem {
+  id: string;
+  key: string;
+  old_value: string;
+  new_value: string;
+  changed_by: string;      // 操作者用户ID
+  changed_at: string;
+}
+```
+
+**功能说明**：
+- 查看指定配置项的所有变更记录
+- 支持分页查询
+
+---
+
+**3.20.7. POST /api/v1/admin/config/list_all_changes - 获取所有配置变更（管理员）**
+```typescript
+interface ListAllConfigChangesRequest {
+  start_time?: string;     // 开始时间（UTC，ISO 8601）
+  end_time?: string;       // 结束时间（UTC，ISO 8601）
+  changed_by?: string;     // 操作者用户ID
+  limit?: number;
+  cursor?: string;
+}
+
+type ListAllConfigChangesResponse = ApiResponse<PaginatedData<ConfigHistoryItem>>
+```
+
+**功能说明**：
+- 查看系统所有配置的变更记录
+- 支持按时间范围和操作者筛选
+- 用于审计和追溯配置变更
+
+---
 
 ## 4. WebSocket 实时事件定义
 

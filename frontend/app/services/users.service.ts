@@ -1,14 +1,14 @@
 /**
- * 用户服务 - 符合API规范的实现
+ * 用户服务
  * 所有API操作统一使用POST方法
- * 基于 api_spec.mdc 第3.2节 用户API规范
  */
 
 import { BaseService } from './base.service'
 import type {
   UserResponse,
-  UserSettings,
-  PaginatedResponse,
+  UserInfo,
+  UserSettingsData,
+  PaginatedData,
   DiscoverUsersRequest,
   UpdateProfileRequest,
   UpdateLocationRequest,
@@ -17,36 +17,43 @@ import type {
   SendFriendRequestRequest,
   AcceptFriendRequestRequest,
   RejectFriendRequestRequest,
+  CancelFriendRequestRequest,
   RemoveFriendRequest,
-  FollowUserRequest,
-  UnfollowUserRequest,
+  FollowRequest,
+  UnfollowRequest,
   BlockUserRequest,
   UnblockUserRequest,
-  ListFriendsRequest,
-  GetBlockedUsersRequest,
+  GetFriendsListRequest,
+  GetFollowingRequest,
+  GetFollowersRequest,
+  GetBlockedListRequest,
+  GetFriendRequestsRequest,
+  SetFriendRemarkRequest,
   OpenTheDoorRequest,
-  GetStatsRequest
+  GetUserStatsRequest,
+  FriendListItem,
+  FriendRequestItem
 } from '~/types/api'
 
 // ✅ 所有类型已从 ~/types/api 导入，移除本地定义
 
 export class UserService extends BaseService {
-  protected readonly baseUrl = '/api/v1'
+  protected readonly baseUrl = ''
 
   /**
    * 发现用户（公开接口）
    * POST /api/v1/public/user/discover
    */
-  async discoverUsers(request: DiscoverUsersRequest): Promise<PaginatedResponse<UserResponse>> {
-    return this.publicPost<PaginatedResponse<UserResponse>>('/public/user/discover', request)
+  async discoverUsers(request: DiscoverUsersRequest): Promise<PaginatedData<UserResponse>> {
+    return this.publicPost<PaginatedData<UserResponse>>('/public/user/discover', request)
   }
 
   /**
    * 获取当前用户资料
    * POST /api/v1/protected/user/me
    */
-  async getMe(): Promise<UserResponse> {
-    return this.post<UserResponse>('/protected/user/me', {})
+  async getMe(): Promise<import('~/types/api').MyProfileData> {
+    return this.post<import('~/types/api').MyProfileData>('/protected/user/me', {})
   }
 
   /**
@@ -61,7 +68,7 @@ export class UserService extends BaseService {
    * 获取统计数据
    * POST /api/v1/protected/user/get_stats
    */
-  async getStats(request: GetStatsRequest = {}): Promise<{
+  async getStats(request: GetUserStatsRequest = {}): Promise<{
     moments_count: number
     friends_count: number
     followers_count: number
@@ -91,8 +98,8 @@ export class UserService extends BaseService {
    * 获取用户设置
    * POST /api/v1/protected/user/get_settings
    */
-  async getSettings(): Promise<UserSettings> {
-    return this.post<UserSettings>('/protected/user/get_settings', {})
+  async getSettings(): Promise<UserSettingsData> {
+    return this.post<UserSettingsData>('/protected/user/get_settings', {})
   }
 
   /**
@@ -136,6 +143,14 @@ export class UserService extends BaseService {
   }
 
   /**
+   * 取消好友申请
+   * POST /api/v1/protected/user/cancel_friend_request
+   */
+  async cancelFriendRequest(request: CancelFriendRequestRequest): Promise<void> {
+    return this.post<void>('/protected/user/cancel_friend_request', request)
+  }
+
+  /**
    * 删除好友
    * POST /api/v1/protected/user/remove_friend
    */
@@ -147,7 +162,7 @@ export class UserService extends BaseService {
    * 关注用户
    * POST /api/v1/protected/user/follow
    */
-  async followUser(request: FollowUserRequest): Promise<void> {
+  async followUser(request: FollowRequest): Promise<void> {
     return this.post<void>('/protected/user/follow', request)
   }
 
@@ -155,7 +170,7 @@ export class UserService extends BaseService {
    * 取消关注
    * POST /api/v1/protected/user/unfollow
    */
-  async unfollowUser(request: UnfollowUserRequest): Promise<void> {
+  async unfollowUser(request: UnfollowRequest): Promise<void> {
     return this.post<void>('/protected/user/unfollow', request)
   }
 
@@ -179,16 +194,48 @@ export class UserService extends BaseService {
    * 获取好友列表
    * POST /api/v1/protected/user/get_friends
    */
-  async getFriends(request: ListFriendsRequest = {}): Promise<PaginatedResponse<UserResponse>> {
-    return this.post<PaginatedResponse<UserResponse>>('/protected/user/get_friends', request)
+  async getFriends(request: GetFriendsListRequest = {}): Promise<PaginatedData<FriendListItem>> {
+    return this.post<PaginatedData<FriendListItem>>('/protected/user/get_friends', request)
   }
 
   /**
    * 获取拉黑列表
    * POST /api/v1/protected/user/get_blocked_users
    */
-  async getBlockedUsers(request: GetBlockedUsersRequest = {}): Promise<PaginatedResponse<UserResponse>> {
-    return this.post<PaginatedResponse<UserResponse>>('/protected/user/get_blocked_users', request)
+  async getBlockedUsers(request: GetBlockedListRequest = {}): Promise<PaginatedData<UserInfo>> {
+    return this.post<PaginatedData<UserInfo>>('/protected/user/get_blocked_users', request)
+  }
+
+  /**
+   * 获取好友申请列表
+   * POST /api/v1/protected/user/get_friend_requests
+   */
+  async getFriendRequests(request: GetFriendRequestsRequest = {}): Promise<PaginatedData<FriendRequestItem>> {
+    return this.post<PaginatedData<FriendRequestItem>>('/protected/user/get_friend_requests', request)
+  }
+
+  /**
+   * 获取关注列表
+   * POST /api/v1/protected/user/get_following
+   */
+  async getFollowing(request: GetFollowingRequest = {}): Promise<PaginatedData<UserInfo>> {
+    return this.post<PaginatedData<UserInfo>>('/protected/user/get_following', request)
+  }
+
+  /**
+   * 获取粉丝列表
+   * POST /api/v1/protected/user/get_followers
+   */
+  async getFollowers(request: GetFollowersRequest = {}): Promise<PaginatedData<UserInfo>> {
+    return this.post<PaginatedData<UserInfo>>('/protected/user/get_followers', request)
+  }
+
+  /**
+   * 设置好友备注
+   * POST /api/v1/protected/user/set_friend_remark
+   */
+  async setFriendRemark(request: SetFriendRemarkRequest): Promise<void> {
+    return this.post<void>('/protected/user/set_friend_remark', request)
   }
 
   /**
@@ -203,14 +250,14 @@ export class UserService extends BaseService {
   /**
    * 获取附近用户（别名方法，调用 discoverUsers）
    */
-  async getNearbyUsers(request: DiscoverUsersRequest): Promise<PaginatedResponse<UserResponse>> {
+  async getNearbyUsers(request: DiscoverUsersRequest): Promise<PaginatedData<UserResponse>> {
     return this.discoverUsers(request)
   }
 
   /**
    * 搜索用户（别名方法，调用 discoverUsers）
    */
-  async searchUsers(request: DiscoverUsersRequest): Promise<PaginatedResponse<UserResponse>> {
+  async searchUsers(request: DiscoverUsersRequest): Promise<PaginatedData<UserResponse>> {
     return this.discoverUsers(request)
   }
 }

@@ -1,27 +1,22 @@
 /**
  * 系统服务
  * 提供系统健康检查等功能
- * 
- * 符合 API 规范 3.14 节
  */
 
 import { BaseService } from './base.service'
-import type { HealthCheckData } from '~/types/api'
+import type { HealthCheckResponse } from '~/types/api'
 
 /**
  * 系统服务类
  */
 export class SystemService extends BaseService {
-  constructor() {
-    super('/api/v1/public/system')
-  }
+  protected readonly baseUrl = '/public/system'
 
   /**
    * 系统健康检查
-   * 3.14.1. POST /api/v1/public/system/health_check - 系统健康检查
    */
-  async healthCheck(): Promise<HealthCheckData> {
-    return this.publicPost<HealthCheckData>('/health_check', {})
+  async healthCheck(): Promise<HealthCheckResponse> {
+    return this.publicPost<HealthCheckResponse>('/health_check', {})
   }
 }
 

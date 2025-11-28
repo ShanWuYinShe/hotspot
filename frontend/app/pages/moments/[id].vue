@@ -19,7 +19,7 @@
                 title="动态不存在"
                 description="该动态可能已被删除或不存在"
                 action-text="返回动态广场"
-                :action-handler="() => $router.push('/moments')"
+                @action="() => $router.push('/moments')"
             />
         </UCard>
 
@@ -149,14 +149,15 @@
                             class="flex gap-3 p-4 rounded-lg bg-neutral-50 dark:bg-neutral-900"
                         >
                             <UAvatar 
-                                :alt="comment.nickname"
+                                :alt="comment.user.nickname"
+                                :src="comment.user.avatar_url"
                                 size="sm"
                             >
-                                {{ comment.nickname?.charAt(0) }}
+                                {{ comment.user.nickname?.charAt(0) }}
                             </UAvatar>
                             <div class="flex-1">
                                 <div class="flex items-center gap-2 mb-1">
-                                    <span class="font-medium">{{ comment.nickname }}</span>
+                                    <span class="font-medium">{{ comment.user.nickname }}</span>
                                     <span class="text-xs text-neutral-500">{{ formatTime(comment.created_at) }}</span>
                                 </div>
                                 <p class="text-sm">{{ comment.content }}</p>
@@ -197,6 +198,12 @@ const { requireAuth } = useRequireAuth();
 const momentsStore = useMomentsStore();
 const toast = useToast()
 
+// 导入服务
+import { useMomentsService } from '~/services/moments.service';
+import { useCommentsService } from '~/services/comments.service';
+const momentsService = useMomentsService();
+const commentsService = useCommentsService();
+
 const momentId = route.params.id as string;
 
 // 状态变量
@@ -230,24 +237,18 @@ const likingState = ref({
     liked: false
 });
 
-// 评论类型定义
-interface Comment {
-  id: string;
-  user_id: string;
-  nickname: string;
-  avatar_url?: string;
-  content: string;
-  created_at: string;
-}
+// 使用 API 定义的评论类型
+import type { CommentListItem } from '~/types/api';
 
 // 评论数据
-const comments = ref<Comment[]>([]);
+const comments = ref<CommentListItem[]>([]);
 const hasMoreComments = ref(false);
 const commentCount = computed(() => comments.value.length);
-const commentCursor = ref<string | null>(null);
+const commentCursor = ref<string | undefined>(undefined);
 
 // 动态详情
-const moment = computed(() => momentsStore.currentMoment);
+const momentData = ref<any>(null);
+const moment = computed(() => momentData.value);
 
 onMounted(async () => {
     await fetchMomentDetail();
@@ -257,13 +258,15 @@ onMounted(async () => {
 async function fetchMomentDetail() {
     loading.value = true;
     try {
-        const momentDetail = await momentsStore.fetchMomentDetails(momentId);
+        const momentDetail = await momentsService.openTheDoor({ id: momentId });
+        momentData.value = momentDetail;
+        momentsStore.setMomentDetails(momentId, momentDetail as any);
         
         // 初始化点赞状态
         likingState.value = {
             loading: false,
-            count: momentDetail.likes_count,
-            liked: momentDetail.liked_by_me
+            count: momentDetail.likes_count || 0,
+            liked: momentDetail.liked_by_me || false
         };
     } catch (e: any) {
         toast.add({
@@ -278,7 +281,6 @@ async function fetchMomentDetail() {
 
 async function fetchComments() {
     try {
-        const commentsService = useCommentsService();
         const response = await commentsService.getList({
             moment_id: momentId,
             limit: 20
@@ -333,7 +335,6 @@ async function submitComment() {
     
     commenting.value = true;
     try {
-        const commentsService = useCommentsService();
         const newCommentData = await commentsService.create({
             moment_id: momentId,
             content: commentText.value.trim()
@@ -364,7 +365,6 @@ async function loadMoreComments() {
     
     loadingMoreComments.value = true;
     try {
-        const commentsService = useCommentsService();
         const response = await commentsService.getList({
             moment_id: momentId,
             cursor: commentCursor.value,
@@ -430,7 +430,7 @@ function getMomentActions(m: MomentResponse) {
 
 async function onDelete(m: MomentResponse) {
     try {
-        await momentsStore.deleteMoment(m.moment_id);
+        await momentsService.deleteMoment({ id: m.moment_id });
         toast.add({ title: "已删除", color: "success" });
         // 删除后返回动态广场
         navigateTo('/moments');

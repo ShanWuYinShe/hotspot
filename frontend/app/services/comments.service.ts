@@ -1,11 +1,13 @@
 import { BaseService } from './base.service'
-import type { PaginatedResponse } from './base.service'
-import type { CommentListItem, CommentLikeItem } from '~/types/api'
+import type { CommentListItem, CommentLikeItem, PaginatedData } from '~/types/api'
 
 /**
  * 评论服务
  * ✅ 类型定义已统一从 types/api.ts 导入
  */
+
+// 导出类型别名以保持向后兼容
+export type CommentItem = CommentListItem
 
 // ==================== Request 类型定义 ====================
 
@@ -49,7 +51,7 @@ export interface GetCommentLikesRequest {
 // ==================== 服务类 ====================
 
 export class CommentsService extends BaseService {
-  protected readonly baseUrl = '/api/v1'
+  protected readonly baseUrl = ''
 
   /**
    * 添加评论/回复
@@ -68,15 +70,15 @@ export class CommentsService extends BaseService {
   /**
    * 获取评论列表
    */
-  async getList(params: ListCommentsRequest): Promise<PaginatedResponse<CommentListItem>> {
-    return this.publicPost<PaginatedResponse<CommentListItem>>('/public/comments/get_list', params)
+  async getList(params: ListCommentsRequest): Promise<PaginatedData<CommentListItem>> {
+    return this.publicPost<PaginatedData<CommentListItem>>('/public/comments/get_list', params)
   }
 
   /**
    * 获取子评论列表
    */
-  async getReplies(params: ListRepliesRequest): Promise<PaginatedResponse<CommentListItem>> {
-    return this.publicPost<PaginatedResponse<CommentListItem>>('/public/comments/get_replies', params)
+  async getReplies(params: ListRepliesRequest): Promise<PaginatedData<CommentListItem>> {
+    return this.publicPost<PaginatedData<CommentListItem>>('/public/comments/get_replies', params)
   }
 
   /**
@@ -89,8 +91,8 @@ export class CommentsService extends BaseService {
   /**
    * 获取评论点赞列表
    */
-  async getLikes(params: GetCommentLikesRequest): Promise<PaginatedResponse<CommentLikeItem>> {
-    return this.publicPost<PaginatedResponse<CommentLikeItem>>('/public/comments/get_likes', params)
+  async getLikes(params: GetCommentLikesRequest): Promise<PaginatedData<CommentLikeItem>> {
+    return this.publicPost<PaginatedData<CommentLikeItem>>('/public/comments/get_likes', params)
   }
 }
 

@@ -1,53 +1,90 @@
 <template>
-  <UModal title="注销账户" :close="{ onClick: () => $emit('close') }">
+  <UModal size="md">
     <template #body>
-      <div class="space-y-4">
+      <div class="p-6">
+        <!-- 标题 -->
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <UIcon name="i-heroicons-exclamation-triangle" class="w-6 h-6 text-error-500" />
+            <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+              删除账户
+            </h3>
+          </div>
+          <UButton
+            variant="ghost"
+            icon="i-heroicons-x-mark"
+            size="sm"
+            @click="handleClose"
+          />
+        </div>
+
+        <!-- 警告信息 -->
         <UAlert
           color="error"
           variant="soft"
-          title="警告"
-          description="此操作不可撤销，您的所有数据将被永久删除"
+          title="此操作无法撤销"
+          description="删除账户后，您的所有数据将被永久删除，包括个人资料、发布的内容、好友关系等。"
+          class="mb-6"
         />
-        
-        <div class="space-y-2">
-          <p class="text-sm text-neutral-600 dark:text-neutral-400">
-            注销账户将会：
-          </p>
-          <ul class="text-sm text-neutral-600 dark:text-neutral-400 list-disc list-inside space-y-1">
-            <li>删除您的个人资料和设置</li>
-            <li>删除您发布的所有动态</li>
-            <li>删除您的好友关系</li>
-            <li>删除您的群组成员身份</li>
-            <li>删除您的聊天记录</li>
-          </ul>
-        </div>
-        
-        <UFormField label="确认删除" required>
-          <UInput
-            v-model="confirmText"
-            placeholder="请输入 DELETE 确认删除"
-            :error="hasError"
-          />
-          <p v-if="hasError" class="text-sm text-red-600 mt-1">
-            请输入 DELETE 确认删除
-          </p>
-        </UFormField>
-      </div>
-    </template>
 
-    <template #footer>
-      <div class="flex justify-end gap-2">
-        <UButton variant="outline" @click="handleCancel">
-          取消
-        </UButton>
-        <UButton 
-          color="error" 
-          :disabled="!isConfirmed"
-          :loading="deleting"
-          @click="handleDelete"
-        >
-          确认注销
-        </UButton>
+        <form @submit.prevent="handleSubmit" class="space-y-5">
+          <!-- 确认文本 -->
+          <div>
+            <label class="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+              请输入 <code class="px-2 py-1 bg-neutral-100 dark:bg-neutral-800 rounded">DELETE_MY_ACCOUNT</code> 来确认删除 *
+            </label>
+            <UInput
+              v-model="confirmText"
+              placeholder="DELETE_MY_ACCOUNT"
+              :disabled="isSubmitting"
+              required
+            />
+          </div>
+
+          <!-- 删除原因（可选） -->
+          <div>
+            <label class="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+              删除原因（可选）
+            </label>
+            <UTextarea
+              v-model="reason"
+              placeholder="告诉我们您删除账户的原因，帮助我们改进产品"
+              :rows="3"
+              :disabled="isSubmitting"
+            />
+          </div>
+
+          <!-- 错误提示 -->
+          <UAlert
+            v-if="errorMessage"
+            color="error"
+            variant="soft"
+            :title="errorMessage"
+            icon="i-heroicons-exclamation-triangle"
+          />
+
+          <!-- 操作按钮 -->
+          <div class="flex gap-3 pt-4">
+            <UButton
+              type="button"
+              variant="ghost"
+              class="flex-1"
+              @click="handleClose"
+              :disabled="isSubmitting"
+            >
+              取消
+            </UButton>
+            <UButton
+              type="submit"
+              color="error"
+              class="flex-1"
+              :loading="isSubmitting"
+              :disabled="!isFormValid"
+            >
+              确认删除
+            </UButton>
+          </div>
+        </form>
       </div>
     </template>
   </UModal>
@@ -55,73 +92,67 @@
 
 <script setup lang="ts">
 import { useUserService } from '~/services/users.service'
+import { useAuthStore } from '~/stores/auth.store'
 
 interface Props {
   onSuccess?: () => void
-  onCancel?: () => void
+  onClose?: () => void
 }
 
-const props = withDefaults(defineProps<Props>(), {})
-
-const emit = defineEmits<{
-  success: []
-  cancel: []
-  close: []
-}>()
+const props = defineProps<Props>()
+const toast = useToast()
+const router = useRouter()
+const authStore = useAuthStore()
 
 const confirmText = ref('')
-const hasError = ref(false)
-const deleting = ref(false)
+const reason = ref('')
+const isSubmitting = ref(false)
+const errorMessage = ref('')
 
-const isConfirmed = computed(() => confirmText.value === 'DELETE')
-
-// 监听输入变化，清除错误状态
-watch(confirmText, () => {
-  if (hasError.value) {
-    hasError.value = false
-  }
+const isFormValid = computed(() => {
+  return confirmText.value === 'DELETE_MY_ACCOUNT'
 })
 
-const handleCancel = () => {
-  emit('cancel')
-  emit('close')
+const handleClose = () => {
+  if (!isSubmitting.value) {
+    props.onClose?.()
+  }
 }
 
-const handleDelete = async () => {
-  if (!isConfirmed.value) {
-    hasError.value = true
+const handleSubmit = async () => {
+  errorMessage.value = ''
+  
+  if (!isFormValid.value) {
+    errorMessage.value = '请正确输入确认文本'
     return
   }
   
-  deleting.value = true
+  isSubmitting.value = true
   
   try {
-    const { deleteAccount: deleteUserAccount } = useUserService()
-    await deleteUserAccount()
+    const userService = useUserService()
     
-    const toast = useToast()
-    toast.add({ color: 'success',
-      title: '账户已注销',
-      description: '您的账户已成功注销'
+    await userService.deleteAccount({
+      confirmation: 'DELETE_MY_ACCOUNT'
     })
     
-    // 清除认证状态并跳转到首页
-    const authStore = useAuthStore()
-    authStore.clearSession()
-    
-    emit('success')
-    emit('close')
-    
-    // 跳转到首页
-    await navigateTo('/')
-    } catch (err: any) {
-      const toast = useToast()
-      toast.add({ color: 'error',
-      title: '注销失败',
-      description: err?.message || '请稍后重试'
+    toast.add({
+      title: '账户已删除',
+      description: '感谢您使用我们的产品，再见',
+      color: 'success'
     })
+    
+    // 登出并跳转到首页
+    await authStore.logout()
+    await router.push('/')
+    
+    props.onSuccess?.()
+    handleClose()
+  } catch (error) {
+    console.error('删除账户失败:', error)
+    errorMessage.value = (error as Error).message || '删除账户失败，请稍后重试'
   } finally {
-    deleting.value = false
+    isSubmitting.value = false
   }
 }
 </script>

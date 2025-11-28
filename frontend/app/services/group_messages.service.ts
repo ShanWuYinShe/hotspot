@@ -1,6 +1,5 @@
 import { BaseService } from './base.service'
-import type { PaginatedResponse } from './base.service'
-import type { GroupMessageItem, MessageReadItem, MessageReactionItem } from '~/types/api'
+import type { GroupMessageItem, MessageReadItem, MessageReactionItem, PaginatedData, UserInfo } from '~/types/api'
 
 /**
  * 群聊消息服务
@@ -8,12 +7,6 @@ import type { GroupMessageItem, MessageReadItem, MessageReactionItem } from '~/t
  */
 
 // ==================== Request 类型定义 ====================
-
-export interface MessageReactionItem {
-  user: UserInfo
-  type: 'like' | 'love' | 'laugh' | 'angry' | 'sad' | 'wow'
-  created_at: string
-}
 
 export interface SendGroupMessageRequest {
   group_chat_id: string
@@ -80,7 +73,7 @@ export interface GetGroupMessageReactionsRequest {
 // ==================== 服务类 ====================
 
 export class GroupMessagesService extends BaseService {
-  protected readonly baseUrl = '/api/v1'
+  protected readonly baseUrl = ''
 
   /**
    * 发送群聊消息
@@ -92,8 +85,8 @@ export class GroupMessagesService extends BaseService {
   /**
    * 获取群聊消息历史
    */
-  async getHistory(params: GetGroupMessagesRequest): Promise<PaginatedResponse<GroupMessageItem>> {
-    return this.post<PaginatedResponse<GroupMessageItem>>('/protected/group_messages/get_history', params)
+  async getHistory(params: GetGroupMessagesRequest): Promise<PaginatedData<GroupMessageItem>> {
+    return this.post<PaginatedData<GroupMessageItem>>('/protected/group_messages/get_history', params)
   }
 
   /**
@@ -127,8 +120,8 @@ export class GroupMessagesService extends BaseService {
   /**
    * 获取消息已读状态
    */
-  async getReadStatus(params: GetMessageReadStatusRequest): Promise<PaginatedResponse<MessageReadItem>> {
-    return this.post<PaginatedResponse<MessageReadItem>>('/protected/group_messages/get_read_status', params)
+  async getReadStatus(params: GetMessageReadStatusRequest): Promise<PaginatedData<MessageReadItem>> {
+    return this.post<PaginatedData<MessageReadItem>>('/protected/group_messages/get_read_status', params)
   }
 
   /**
@@ -141,8 +134,8 @@ export class GroupMessagesService extends BaseService {
   /**
    * 获取消息反应列表
    */
-  async getReactions(params: GetGroupMessageReactionsRequest): Promise<PaginatedResponse<MessageReactionItem>> {
-    return this.post<PaginatedResponse<MessageReactionItem>>('/protected/group_messages/get_reactions', params)
+  async getReactions(params: GetGroupMessageReactionsRequest): Promise<PaginatedData<MessageReactionItem>> {
+    return this.post<PaginatedData<MessageReactionItem>>('/protected/group_messages/get_reactions', params)
   }
 }
 

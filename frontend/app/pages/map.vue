@@ -214,12 +214,23 @@ const loadNearbyUsers = async () => {
         currentLoading.value = true
         
         // 获取当前位置（失败时使用默认位置）
-        const location = await locationComposable.getCurrentLocationOrDefault()
-        currentLocation.value = location
+        let latitude: number;
+        let longitude: number;
+        
+        if (locationComposable.coordinates) {
+            latitude = locationComposable.coordinates.latitude;
+            longitude = locationComposable.coordinates.longitude;
+        } else {
+            // 使用系统默认位置（南天门）
+            latitude = 35.154922;
+            longitude = 112.682524;
+        }
+        
+        currentLocation.value = { latitude, longitude };
         
         const result = await userService.getNearbyUsers({
-            latitude: location.latitude,
-            longitude: location.longitude,
+            latitude,
+            longitude,
             radius: 5000,
             limit: 20
         })
@@ -243,12 +254,23 @@ const loadNearbyGroups = async () => {
         currentLoading.value = true
         
         // 获取当前位置（失败时使用默认位置）
-        const location = await locationComposable.getCurrentLocationOrDefault()
-        currentLocation.value = location
+        let latitude: number;
+        let longitude: number;
+        
+        if (locationComposable.coordinates) {
+            latitude = locationComposable.coordinates.latitude;
+            longitude = locationComposable.coordinates.longitude;
+        } else {
+            // 使用系统默认位置（南天门）
+            latitude = 35.154922;
+            longitude = 112.682524;
+        }
+        
+        currentLocation.value = { latitude, longitude };
         
         const result = await groupService.getNearbyGroups({
-            latitude: location.latitude,
-            longitude: location.longitude,
+            latitude,
+            longitude,
             radius: 5000,
             limit: 20
         })
@@ -272,14 +294,25 @@ const loadNearbyMoments = async () => {
         currentLoading.value = true
         
         // 获取当前位置（失败时使用默认位置）
-        const location = await locationComposable.getCurrentLocationOrDefault()
-        currentLocation.value = location
+        let latitude: number;
+        let longitude: number;
+        
+        if (locationComposable.coordinates) {
+            latitude = locationComposable.coordinates.latitude;
+            longitude = locationComposable.coordinates.longitude;
+        } else {
+            // 使用系统默认位置（南天门）
+            latitude = 35.154922;
+            longitude = 112.682524;
+        }
+        
+        currentLocation.value = { latitude, longitude };
         
         // 加载附近动态
         const momentsService = useMomentsService();
         const response = await momentsService.getNearbyMoments({
-            latitude: location.latitude,
-            longitude: location.longitude,
+            latitude,
+            longitude,
             radius: 5000,
             limit: 20
         });
@@ -449,17 +482,25 @@ const handleLikeMoment = async (moment: MomentResponse) => {
     if (!requireAuth('点赞')) return
 
     try {
-        // TODO: 实现点赞功能
-        // await momentsService.likeMoment({ id: moment.moment_id })
+        const momentsService = useMomentsService()
+        await momentsService.toggleLike({
+            id: moment.moment_id,
+            action: moment.liked_by_me ? 'unlike' : 'like'
+        })
+        
+        // 更新本地状态
+        moment.liked_by_me = !moment.liked_by_me
+        moment.likes_count += moment.liked_by_me ? 1 : -1
+        
         toast.add({
-            title: '功能开发中',
-            description: '点赞功能即将上线',
-            color: 'info'
+            title: moment.liked_by_me ? '点赞成功' : '取消点赞',
+            color: 'success'
         })
     } catch (error) {
+        console.error('点赞失败:', error)
         toast.add({
-            title: '点赞失败',
-            description: '请重试',
+            title: '操作失败',
+            description: (error as Error).message,
             color: 'error'
         })
     }

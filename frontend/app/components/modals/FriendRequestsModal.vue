@@ -28,21 +28,21 @@
           <div v-if="receivedRequests.length > 0">
             <div
               v-for="request in receivedRequests"
-              :key="request.relationship_id"
+              :key="request.id"
               class="flex items-center justify-between p-4 border border-neutral-200 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
             >
               <div class="flex items-center gap-3">
                 <UAvatar
-                  :alt="request.nickname"
-                  :src="request.avatar_url"
+                  :alt="request.from_user.nickname"
+                  :src="request.from_user.avatar_url"
                   size="md"
                 >
-                  {{ request.nickname?.charAt(0) || 'U' }}
+                  {{ request.from_user.nickname?.charAt(0) || 'U' }}
                 </UAvatar>
                 
                 <div>
                   <h4 class="font-medium text-neutral-900 dark:text-neutral-100">
-                    {{ request.nickname }}
+                    {{ request.from_user.nickname }}
                   </h4>
                   <p class="text-sm text-neutral-600 dark:text-neutral-400">
                     {{ formatTime(request.created_at) }}
@@ -58,7 +58,7 @@
                   color="green"
                   size="sm"
                   @click="acceptRequest(request)"
-                  :loading="processingRequests.has(request.relationship_id)"
+                  :loading="processingRequests.has(request.id)"
                 >
                   接受
                 </UButton>
@@ -67,7 +67,7 @@
                   variant="outline"
                   size="sm"
                   @click="rejectRequest(request)"
-                  :loading="processingRequests.has(request.relationship_id)"
+                  :loading="processingRequests.has(request.id)"
                 >
                   拒绝
                 </UButton>
@@ -92,21 +92,21 @@
           <div v-if="sentRequests.length > 0">
             <div
               v-for="request in sentRequests"
-              :key="request.relationship_id"
+              :key="request.id"
               class="flex items-center justify-between p-4 border border-neutral-200 dark:border-neutral-700 rounded-lg"
             >
               <div class="flex items-center gap-3">
                 <UAvatar
-                  :alt="request.nickname"
-                  :src="request.avatar_url"
+                  :alt="request.to_user.nickname"
+                  :src="request.to_user.avatar_url"
                   size="md"
                 >
-                  {{ request.nickname?.charAt(0) || 'U' }}
+                  {{ request.to_user.nickname?.charAt(0) || 'U' }}
                 </UAvatar>
                 
                 <div>
                   <h4 class="font-medium text-neutral-900 dark:text-neutral-100">
-                    {{ request.nickname }}
+                    {{ request.to_user.nickname }}
                   </h4>
                   <p class="text-sm text-neutral-600 dark:text-neutral-400">
                     {{ formatTime(request.created_at) }}
@@ -126,7 +126,7 @@
                   variant="outline"
                   size="sm"
                   @click="cancelRequest(request)"
-                  :loading="processingRequests.has(request.relationship_id)"
+                  :loading="processingRequests.has(request.id)"
                 >
                   撤销
                 </UButton>
@@ -181,6 +181,9 @@
 </template>
 
 <script setup lang="ts">
+import { useUsersService } from '~/services/users.service'
+import type { FriendRequestItem } from '~/types/api'
+
 interface Props {
   onClose?: () => void
 }
@@ -190,9 +193,9 @@ const props = defineProps<Props>()
 // 状态管理
 const loading = ref(false)
 const activeTab = ref('received')
-const receivedRequests = ref([])
-const sentRequests = ref([])
-const processingRequests = ref(new Set())
+const receivedRequests = ref<FriendRequestItem[]>([])
+const sentRequests = ref<FriendRequestItem[]>([])
+const processingRequests = ref(new Set<string>())
 
 // 标签页配置
 const tabItems = [
@@ -204,8 +207,16 @@ const tabItems = [
 const { formatTime } = useFormatters()
 const toast = useToast()
 
-const getStatusColor = (status: string) => {
-  const colors = {
+// Toast 辅助函数
+const success = (title: string, description?: string) => {
+  toast.add({ title, description, color: 'success' })
+}
+const error = (title: string, description?: string) => {
+  toast.add({ title, description, color: 'error' })
+}
+
+const getStatusColor = (status: string): 'orange' | 'green' | 'red' | 'neutral' => {
+  const colors: Record<string, 'orange' | 'green' | 'red' | 'neutral'> = {
     pending: 'orange',
     accepted: 'green',
     rejected: 'red'
@@ -213,8 +224,8 @@ const getStatusColor = (status: string) => {
   return colors[status] || 'neutral'
 }
 
-const getStatusLabel = (status: string) => {
-  const labels = {
+const getStatusLabel = (status: string): string => {
+  const labels: Record<string, string> = {
     pending: '等待回复',
     accepted: '已接受',
     rejected: '已拒绝'
@@ -226,10 +237,10 @@ const getStatusLabel = (status: string) => {
 const loadRequests = async () => {
   loading.value = true
   try {
-    const friendService = useFriendService()
+    const userService = useUsersService()
     const [receivedResponse, sentResponse] = await Promise.all([
-      friendService.getReceivedRequests(),
-      friendService.getSentRequests()
+      userService.getFriendRequests({ status: 'received' }),
+      userService.getFriendRequests({ status: 'sent' })
     ])
     receivedRequests.value = receivedResponse.items || []
     sentRequests.value = sentResponse.items || []
@@ -241,37 +252,37 @@ const loadRequests = async () => {
   }
 }
 
-const acceptRequest = async (request: any) => {
-  processingRequests.value.add(request.relationship_id)
+const acceptRequest = async (request: FriendRequestItem) => {
+  processingRequests.value.add(request.id)
   
   try {
-    // TODO: 调用API接受好友请求
-    // await friendService.acceptRequest(request.relationship_id)
+    const userService = useUsersService()
+    await userService.acceptFriendRequest({ id: request.id })
     
     // 从列表中移除
-    const index = receivedRequests.value.findIndex(r => r.relationship_id === request.relationship_id)
+    const index = receivedRequests.value.findIndex(r => r.id === request.id)
     if (index > -1) {
       receivedRequests.value.splice(index, 1)
     }
     
-    success('已接受好友请求', `您和 ${request.nickname} 现在是好友了`)
+    success('已接受好友请求', `您和 ${request.from_user.nickname} 现在是好友了`)
   } catch (err: any) {
     console.error('接受好友请求失败:', err)
     error('操作失败', err?.message || '无法接受好友请求')
   } finally {
-    processingRequests.value.delete(request.relationship_id)
+    processingRequests.value.delete(request.id)
   }
 }
 
-const rejectRequest = async (request: any) => {
-  processingRequests.value.add(request.relationship_id)
+const rejectRequest = async (request: FriendRequestItem) => {
+  processingRequests.value.add(request.id)
   
   try {
-    // TODO: 调用API拒绝好友请求
-    // await friendService.rejectRequest(request.relationship_id)
+    const userService = useUsersService()
+    await userService.rejectFriendRequest({ id: request.id })
     
     // 从列表中移除
-    const index = receivedRequests.value.findIndex(r => r.relationship_id === request.relationship_id)
+    const index = receivedRequests.value.findIndex(r => r.id === request.id)
     if (index > -1) {
       receivedRequests.value.splice(index, 1)
     }
@@ -281,19 +292,19 @@ const rejectRequest = async (request: any) => {
     console.error('拒绝好友请求失败:', err)
     error('操作失败', err?.message || '无法拒绝好友请求')
   } finally {
-    processingRequests.value.delete(request.relationship_id)
+    processingRequests.value.delete(request.id)
   }
 }
 
-const cancelRequest = async (request: any) => {
-  processingRequests.value.add(request.relationship_id)
+const cancelRequest = async (request: FriendRequestItem) => {
+  processingRequests.value.add(request.id)
   
   try {
-    // TODO: 调用API撤销好友请求
-    // await friendService.cancelRequest(request.relationship_id)
+    const userService = useUsersService()
+    await userService.cancelFriendRequest({ id: request.id })
     
     // 从列表中移除
-    const index = sentRequests.value.findIndex(r => r.relationship_id === request.relationship_id)
+    const index = sentRequests.value.findIndex(r => r.id === request.id)
     if (index > -1) {
       sentRequests.value.splice(index, 1)
     }
@@ -303,7 +314,7 @@ const cancelRequest = async (request: any) => {
     console.error('撤销好友请求失败:', err)
     error('操作失败', err?.message || '无法撤销好友请求')
   } finally {
-    processingRequests.value.delete(request.relationship_id)
+    processingRequests.value.delete(request.id)
   }
 }
 

@@ -52,6 +52,18 @@ export function useUpload(options: UploadOptions = {}) {
     return Math.round(total / files.value.length)
   })
 
+  // Toast 辅助函数
+  const toast = useToast()
+  const showError = (title: string, description?: string) => {
+    toast.add({ title, description, color: 'error' })
+  }
+  const success = (title: string, description?: string) => {
+    toast.add({ title, description, color: 'success' })
+  }
+  const warning = (title: string, description?: string) => {
+    toast.add({ title, description, color: 'warning' })
+  }
+
   /**
    * 创建文件ID
    */
@@ -111,7 +123,6 @@ export function useUpload(options: UploadOptions = {}) {
 
     // 检查文件数量限制
     if (files.value.length + fileArray.length > maxFiles) {
-      const toast = useToast()
       showError('文件数量超限', `最多只能上传 ${maxFiles} 个文件`)
       return
     }
@@ -120,7 +131,6 @@ export function useUpload(options: UploadOptions = {}) {
       // 验证文件
       const error = validateFile(file)
       if (error) {
-        const toast = useToast()
         showError('文件验证失败', error)
         continue
       }
@@ -153,20 +163,19 @@ export function useUpload(options: UploadOptions = {}) {
   /**
    * 上传单个文件
    */
-  const uploadFile = async (fileId: string): Promise<boolean> => {
-    const uploadFile = files.value.find(f => f.id === fileId)
-    if (!uploadFile || uploadFile.status === 'uploading') {
+  const uploadSingleFile = async (fileId: string): Promise<boolean> => {
+    const fileToUpload = files.value.find(f => f.id === fileId)
+    if (!fileToUpload || fileToUpload.status === 'uploading') {
       return false
     }
 
-    uploadFile.status = 'uploading'
-    uploadFile.progress = 0
-    uploadFile.error = undefined
+    fileToUpload.status = 'uploading'
+    fileToUpload.progress = 0
+    fileToUpload.error = undefined
 
     try {
-      const http = useHttp()
       const formData = new FormData()
-      formData.append('file', uploadFile.file)
+      formData.append('file', fileToUpload.file)
 
       // 使用 XMLHttpRequest 以支持进度回调
       const response = await new Promise<any>((resolve, reject) => {
@@ -174,7 +183,7 @@ export function useUpload(options: UploadOptions = {}) {
 
         xhr.upload.onprogress = (event) => {
           if (event.lengthComputable) {
-            uploadFile.progress = Math.round((event.loaded / event.total) * 100)
+            fileToUpload.progress = Math.round((event.loaded / event.total) * 100)
           }
         }
 
@@ -208,16 +217,16 @@ export function useUpload(options: UploadOptions = {}) {
       })
 
       // 上传成功
-      uploadFile.status = 'success'
-      uploadFile.progress = 100
-      uploadFile.url = response.url || response.file_url
+      fileToUpload.status = 'success'
+      fileToUpload.progress = 100
+      fileToUpload.url = response.url || response.file_url
 
       return true
     } catch (error: any) {
-      uploadFile.status = 'error'
-      uploadFile.error = error.message || '上传失败'
+      fileToUpload.status = 'error'
+      fileToUpload.error = error.message || '上传失败'
       
-      showError('上传失败', `${uploadFile.name}: ${uploadFile.error}`)
+      showError('上传失败', `${fileToUpload.name}: ${fileToUpload.error}`)
       
       return false
     }
@@ -237,7 +246,7 @@ export function useUpload(options: UploadOptions = {}) {
 
     try {
       const results = await Promise.all(
-        targetFiles.map(f => uploadFile(f.id))
+        targetFiles.map(f => uploadSingleFile(f.id))
       )
 
       const successCount = results.filter(Boolean).length
@@ -258,10 +267,10 @@ export function useUpload(options: UploadOptions = {}) {
    * 重试上传
    */
   const retryUpload = async (fileId: string) => {
-    const uploadFile = files.value.find(f => f.id === fileId)
-    if (uploadFile && uploadFile.status === 'error') {
-      uploadFile.status = 'pending'
-      await uploadFile(fileId)
+    const fileToRetry = files.value.find(f => f.id === fileId)
+    if (fileToRetry && fileToRetry.status === 'error') {
+      fileToRetry.status = 'pending'
+      await uploadSingleFile(fileId)
     }
   }
 
@@ -363,7 +372,7 @@ export function useUpload(options: UploadOptions = {}) {
 
     // 方法
     addFiles,
-    uploadFile,
+    uploadFile: uploadSingleFile,
     uploadFiles,
     retryUpload,
     removeFile,

@@ -313,7 +313,7 @@
 </template>
 
 <script setup lang="ts">
-import { useUserService } from '~/services/users.service';
+import { useUsersService } from '~/services/users.service';
 // TableColumn 类型已在组件内部定义
 import type { UserResponse } from "~/types/api";
 // import { buildFriendUrl, FRIEND_ENDPOINTS } from "~/config/api"; // 好友功能暂未实现
@@ -324,10 +324,8 @@ definePageMeta({
     layout: 'dashboard'
 });
 
-const api = useApi();
-const userService = useUserService();
-  const { searchUsers, findNearbyUsers } = userService;
-  const toast = useToast()
+const userService = useUsersService();
+const toast = useToast()
   const authStore = useAuthStore();
 const { t: tt } = useI18n();
 const { formatDistance } = useFormatters();
@@ -375,7 +373,7 @@ async function performSearch() {
     hasSearched.value = true;
     page.value = 1;
     try {
-        const response = await searchUsers(searchQuery.value);
+        const response = await userService.searchUsers({ keyword: searchQuery.value });
         searchResults.value = (response.items || []).map((u: any) => ({
             ...u,
             requesting: false,
@@ -410,7 +408,7 @@ async function loadRecommendations() {
             await locationStore.getCurrentPosition();
             coords = locationStore.coordinates;
         }
-        const response = await findNearbyUsers({
+        const response = await userService.discoverUsers({
             latitude: coords!.latitude,
             longitude: coords!.longitude,
             radius: 1000,

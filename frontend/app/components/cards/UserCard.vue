@@ -1,6 +1,10 @@
 <template>
-    <UCard 
-        class="group cursor-pointer card-hover fade-in-up"
+    <InteractiveCard 
+        class="group user-card fade-in-up"
+        :hover="true"
+        :active="true"
+        :glow="true"
+        shadow="md"
         @click="$emit('click', user)"
     >
         <div class="flex items-center justify-between">
@@ -43,31 +47,52 @@
             </UUser>
 
             <!-- 操作按钮 -->
-            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <UTooltip text="发送消息">
-                    <UButton
-                        variant="ghost"
-                        size="sm"
-                        icon="i-heroicons-chat-bubble-left"
-                        @click.stop="$emit('message', user)"
-                    />
-                </UTooltip>
-                
-                <UDropdownMenu :items="userMenuItems" @click.stop>
-                    <UButton
-                        variant="ghost"
-                        size="sm"
-                        icon="i-heroicons-ellipsis-horizontal"
-                    />
-                </UDropdownMenu>
+            <div class="flex items-center gap-2">
+                <!-- 好友状态标记（始终可见） -->
+                <UBadge
+                    v-if="isFriend"
+                    variant="soft"
+                    color="success"
+                    size="sm"
+                >
+                    好友
+                </UBadge>
+                <UBadge
+                    v-else-if="isFollowing"
+                    variant="soft"
+                    color="primary"
+                    size="sm"
+                >
+                    已关注
+                </UBadge>
+
+                <!-- 操作按钮（hover时显示） -->
+                <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <UTooltip text="发送消息">
+                        <UButton
+                            variant="ghost"
+                            size="sm"
+                            icon="i-heroicons-chat-bubble-left"
+                            @click.stop="$emit('message', user)"
+                        />
+                    </UTooltip>
+                    
+                    <UDropdownMenu :items="userMenuItems" @click.stop>
+                        <UButton
+                            variant="ghost"
+                            size="sm"
+                            icon="i-heroicons-ellipsis-horizontal"
+                        />
+                    </UDropdownMenu>
+                </div>
             </div>
         </div>
-    </UCard>
+    </InteractiveCard>
 </template>
 
 <script setup lang="ts">
 import type { UserResponse } from '~/types/api'
-import { useUserService } from '~/services/users.service'
+import { useUsersService } from '~/services/users.service'
 import { isTempUser } from '~/utils/userTypes'
 
 interface Props {
@@ -96,52 +121,99 @@ const userDescription = computed(() => {
     return parts.join(' • ')
 })
 
-// 获取用户在线状态
-const { checkUserOnline } = useOnlineStatus()
-const isOnline = ref(false)
+// 用户在线状态（从 props 获取或默认为 false）
+// TODO: 通过 WebSocket 订阅用户在线状态更新
+const isOnline = computed(() => props.user.is_online ?? false)
 
-// 异步获取在线状态
-watchEffect(async () => {
-    if (props.user.user_id) {
-        isOnline.value = await checkUserOnline(props.user.user_id)
-    }
-})
+// 用户关系状态（从 props 获取，如果有 relationship 字段）
+const isFriend = computed(() => (props.user as any).is_friend ?? false)
+const isFollowing = computed(() => (props.user as any).is_following ?? false)
 
-// 用户操作菜单
-const userMenuItems = computed(() => [
-    [{
+// 用户操作菜单（根据关系状态动态调整）
+const userMenuItems = computed(() => {
+    const items = []
+
+    // 基础操作
+    items.push([{
         label: '查看资料',
         icon: 'i-heroicons-user',
         click: () => emit('click', props.user)
-    }],
-    [{
-        label: '添加好友',
-        icon: 'i-heroicons-user-plus',
-        click: () => handleAddFriend()
-    }, {
-        label: '关注用户',
-        icon: 'i-heroicons-heart',
-        click: () => handleFollowUser()
-    }],
-    [{
+    }])
+
+    // 关系操作
+    const relationItems = []
+    if (!isFriend.value) {
+        relationItems.push({
+            label: '添加好友',
+            icon: 'i-heroicons-user-plus',
+            click: () => handleAddFriend()
+        })
+    }
+    if (!isFollowing.value) {
+        relationItems.push({
+            label: '关注用户',
+            icon: 'i-heroicons-heart',
+            click: () => handleFollowUser()
+        })
+    } else {
+        relationItems.push({
+            label: '取消关注',
+            icon: 'i-heroicons-heart-slash',
+            click: () => handleUnfollowUser()
+        })
+    }
+    if (relationItems.length > 0) {
+        items.push(relationItems)
+    }
+
+    // 举报操作
+    items.push([{
         label: '举报用户',
         icon: 'i-heroicons-flag',
         click: () => handleReportUser(),
         class: 'text-error-500'
-    }]
-])
+    }])
+
+    return items
+})
 
 // formatDistance 函数已从统一工具函数导入
 
 // 添加好友
 const handleAddFriend = async () => {
+    const toast = useToast()
+    const userService = useUsersService()
     try {
-        const userService = useUserService()
-        await userService.followUser({
-            user_id: props.user.user_id
+        await userService.sendFriendRequest({
+            to_user_id: props.user.user_id
         })
         
-        const toast = useToast()
+        toast.add({
+            title: '好友申请已发送',
+            description: `已向 ${props.user.nickname} 发送好友申请`,
+            color: 'success'
+        })
+        
+        // 刷新用户数据
+        await refreshNuxtData('users')
+    } catch (error: any) {
+        toast.add({
+            title: '发送失败',
+            description: error.message || '发送好友申请时发生错误',
+            color: 'error'
+        })
+    }
+}
+
+// 关注用户
+const handleFollowUser = async () => {
+    const toast = useToast()
+    const userService = useUsersService()
+    try {
+        await userService.followUser({
+            to_user_id: props.user.user_id
+        })
+        
         toast.add({
             title: '关注成功',
             description: `已关注 ${props.user.nickname}`,
@@ -159,9 +231,30 @@ const handleAddFriend = async () => {
     }
 }
 
-// 关注用户
-const handleFollowUser = async () => {
-    await handleAddFriend() // 关注和添加好友使用相同逻辑
+// 取消关注用户
+const handleUnfollowUser = async () => {
+    const toast = useToast()
+    const userService = useUsersService()
+    try {
+        await userService.unfollowUser({
+            to_user_id: props.user.user_id
+        })
+        
+        toast.add({
+            title: '已取消关注',
+            description: `已取消关注 ${props.user.nickname}`,
+            color: 'success'
+        })
+        
+        // 刷新用户数据
+        await refreshNuxtData('users')
+    } catch (error: any) {
+        toast.add({
+            title: '取消关注失败',
+            description: error.message || '取消关注时发生错误',
+            color: 'error'
+        })
+    }
 }
 
 // 举报用户

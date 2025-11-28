@@ -199,8 +199,9 @@
 </template>
 
 <script setup lang="ts">
-import { GROUP_CONSTANTS } from '~/config/defaults'
+import { GROUP_CONSTANTS, DEFAULTS } from '~/config/defaults'
 import { useGroupsService } from '~/services/groups.service'
+import { useGeocodingService } from '~/services/geocoding.service'
 
 interface Props {
   onSuccess?: (groupId: string) => void
@@ -239,6 +240,38 @@ const isFormValid = computed(() => {
 const toast = useToast()
 const locationStore = useLocationStore()
 
+// Toast 辅助函数
+const success = (title: string, description?: string) => {
+  toast.add({ title, description, color: 'success' })
+}
+const error = (title: string, description?: string) => {
+  toast.add({ title, description, color: 'error' })
+}
+
+// 获取当前位置或默认位置
+const getCurrentLocationOrDefault = async (): Promise<{ latitude: number; longitude: number }> => {
+  // 先尝试从 store 获取
+  if (locationStore.coordinates) {
+    return locationStore.coordinates
+  }
+  
+  // 尝试获取浏览器位置
+  try {
+    await locationStore.getCurrentPosition()
+    if (locationStore.coordinates) {
+      return locationStore.coordinates
+    }
+  } catch (e) {
+    console.warn('获取位置失败，使用默认位置')
+  }
+  
+  // 返回系统默认位置（南天门）
+  return {
+    latitude: DEFAULTS.latitude,
+    longitude: DEFAULTS.longitude
+  }
+}
+
 // 方法
 const quickCreate = async () => {
   isQuickCreate.value = true
@@ -270,8 +303,12 @@ const getCurrentLocation = async () => {
     form.value.latitude = location.latitude
     form.value.longitude = location.longitude
     
-    // TODO: 调用地理编码API获取位置名称
-    form.value.location_name = '当前位置'
+    // 使用地理编码服务获取位置名称
+    const geocodingService = useGeocodingService()
+    form.value.location_name = await geocodingService.getLocationName(
+      location.latitude,
+      location.longitude
+    )
     
     success('位置获取成功')
   } catch (err) {
@@ -311,7 +348,7 @@ const createGroup = async () => {
     success('群组创建成功', '您已成为群主，可以开始邀请朋友加入了！')
     
     // 调用成功回调
-    props.onSuccess?.(response.group_id)
+    props.onSuccess?.(response.group_chat_id)
     
     // 关闭Modal
     handleClose()

@@ -1,6 +1,5 @@
 import { BaseService } from './base.service'
-import type { PaginatedResponse } from './base.service'
-import type { FeedItem, FeedSystemInfo } from '~/types/api'
+import type { FeedItem, FeedSystemInfo, PaginatedData } from '~/types/api'
 
 /**
  * 信息流服务
@@ -23,13 +22,13 @@ export interface FeedFeedbackRequest {
 // ==================== 服务类 ====================
 
 export class FeedService extends BaseService {
-  protected readonly baseUrl = '/api/v1'
+  protected readonly baseUrl = ''
 
   /**
    * 获取信息流
    */
-  async getList(params: ListFeedRequest): Promise<PaginatedResponse<FeedItem>> {
-    return this.post<PaginatedResponse<FeedItem>>('/protected/feed/get_list', params)
+  async getList(params: ListFeedRequest): Promise<PaginatedData<FeedItem>> {
+    return this.post<PaginatedData<FeedItem>>('/protected/feed/get_list', params)
   }
 
   /**

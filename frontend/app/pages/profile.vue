@@ -32,50 +32,18 @@ const authStore = useAuthStore()
 const userService = useUsersService();
 const toast = useToast()
 
-// 用户资料数据
-const userProfile = computed(() => {
-  const user = authStore.user
-  if (!user) {
-    return {
-      user_id: '',
-      nickname: '',
-      display_name: '',
-      bio: '',
-      email: '',
-      phone: '',
-      avatar_url: '',
-      birthday: '',
-      gender: 'male',
-      location: '',
-      website: '',
-      allow_stranger_view: true,
-      show_online_status: true,
-      searchable_by_phone: false,
-      location_sharing_enabled: true,
-      precise_location: false,
-      two_factor_enabled: false
-    }
-  }
-  
-  return {
-    user_id: user.user_id,
-    nickname: user.nickname,
-    display_name: user.display_name || user.nickname,
-    bio: user.bio || '',
-    email: user.email || '',
-    phone: user.phone || '',
-    avatar_url: user.avatar_url || '',
-    birthday: user.birthday || '',
-    gender: user.gender || 'male',
-    location: user.location || '',
-    website: user.website || '',
-    allow_stranger_view: user.allow_stranger_view ?? true,
-    show_online_status: user.show_online_status ?? true,
-    searchable_by_phone: user.searchable_by_phone ?? false,
-    location_sharing_enabled: user.location_sharing_enabled ?? true,
-    precise_location: user.precise_location ?? false,
-    two_factor_enabled: user.two_factor_enabled ?? false
-  }
+// 用户资料数据（根据 API 文档 3.2.2 MyProfileData）
+const userProfile = ref({
+  user_id: '',
+  nickname: '',
+  bio: '',
+  avatar_url: '',
+  email: '',
+  phone: '',
+  location_name: '',
+  is_online: false,
+  last_seen: '',
+  created_at: ''
 })
 
 // 统计数据
@@ -139,8 +107,7 @@ const headerActions = computed(() => [
 // 方法
 const calculateProfileCompletion = () => {
     const fields = [
-        'nickname', 'display_name', 'bio', 'email', 'phone', 
-        'avatar_url', 'birthday', 'gender', 'location', 'website'
+        'nickname', 'bio', 'avatar_url', 'email', 'phone', 'location_name'
     ]
     
     const completedFields = fields.filter(field => {
@@ -152,25 +119,21 @@ const calculateProfileCompletion = () => {
 }
 
 const calculatePrivacyScore = () => {
-    let score = 0
-    
-    // 基础隐私设置
-    if (!userProfile.value.allow_stranger_view) score += 20
-    if (!userProfile.value.show_online_status) score += 15
-    if (!userProfile.value.searchable_by_phone) score += 20
-    if (!userProfile.value.location_sharing_enabled) score += 25
-    if (!userProfile.value.precise_location) score += 10
-    if (userProfile.value.two_factor_enabled) score += 10
-    
-    return Math.min(score, 100)
+    // 隐私设置应该从 /user/get_settings API 获取
+    // 这里返回一个固定值或从 settingsStore 获取
+    return 85 // 默认值
 }
 
 const handleSave = async (profile: any) => {
     try {
-        // 调用API保存用户资料
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        // 调用 API 保存用户资料（API 3.2.7 update_profile）
+        await userService.updateProfile({
+            nickname: profile.nickname,
+            avatar_url: profile.avatar_url,
+            bio: profile.bio
+        })
         
-        userProfile.value = { ...profile }
+        userProfile.value = { ...userProfile.value, ...profile }
         toast.add({ color: 'success', title: '个人资料保存成功' })
         
         // 更新认证状态中的用户信息
@@ -201,15 +164,14 @@ const previewProfile = () => {
 const exportProfileData = () => {
     // 创建导出数据
     const exportData = {
+        user_id: userProfile.value.user_id,
         nickname: userProfile.value.nickname,
-        display_name: userProfile.value.display_name,
         bio: userProfile.value.bio,
         email: userProfile.value.email,
         phone: userProfile.value.phone,
-        birthday: userProfile.value.birthday,
-        gender: userProfile.value.gender === 'male' ? '男' : userProfile.value.gender === 'female' ? '女' : '保密',
-        location: userProfile.value.location,
-        website: userProfile.value.website,
+        avatar_url: userProfile.value.avatar_url,
+        location_name: userProfile.value.location_name,
+        created_at: userProfile.value.created_at,
         export_time: new Date().toISOString()
     }
     
@@ -233,17 +195,20 @@ const exportProfileData = () => {
 // 页面加载时获取用户资料
 onMounted(async () => {
     try {
-        // 从认证状态中获取基础信息
-        if (authStore.user) {
-            userProfile.value.user_id = authStore.user.user_id
-            userProfile.value.nickname = authStore.user.nickname || userProfile.value.nickname
-            userProfile.value.email = authStore.user.email || userProfile.value.email
-            userProfile.value.avatar_url = authStore.user.avatar_url || userProfile.value.avatar_url
-        }
-        
-        // 获取完整的用户资料
-        const fullProfile = await userService.getProfile();
-        userProfile.value = { ...userProfile.value, ...fullProfile };
+        // 调用 API 获取完整的用户资料（API 3.2.2 me）
+        const profile = await userService.getMe();
+        userProfile.value = {
+            user_id: profile.user_id,
+            nickname: profile.nickname,
+            bio: profile.bio || '',
+            avatar_url: profile.avatar_url || '',
+            email: profile.email || '',
+            phone: profile.phone || '',
+            location_name: profile.location_name || '',
+            is_online: profile.is_online,
+            last_seen: profile.last_seen || '',
+            created_at: profile.created_at
+        };
     } catch (error) {
         toast.add({ color: 'error', title: '加载用户资料失败' })
     }

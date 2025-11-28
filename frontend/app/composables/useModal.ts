@@ -247,25 +247,30 @@ export function useModal() {
     })
   }
 
-  const showInviteMembers = (groupId: string, onSuccess?: () => void) => {
-    // TODO: 实现邀请成员模态框
-    const toast = useToast()
-    toast.add({
-      title: '功能开发中',
-      description: '邀请成员功能正在开发中',
-      color: 'info'
+  const showInviteMembers = async (groupId: string, onSuccess?: () => void): Promise<void> => {
+    return new Promise(async (resolve) => {
+      const InviteMembersModal = await import('~/components/modals/InviteMembersModal.vue')
+      
+      const modal = overlay.create(InviteMembersModal)
+
+      modal.open()
+      
+      // 暂时直接 resolve
+      resolve()
     })
-    return Promise.resolve()
   }
 
-  const showTransferOwnership = (groupId: string, members: any[], onSuccess?: (newOwnerId: string) => void) => {
-    // TODO: 实现转让群主模态框
-    toast.add({
-      title: '功能开发中',
-      description: '转让群主功能正在开发中',
-      color: 'info'
+  const showTransferOwnership = async (groupId: string, members: any[], onSuccess?: (newOwnerId: string) => void): Promise<void> => {
+    return new Promise(async (resolve) => {
+      const TransferOwnershipModal = await import('~/components/modals/TransferOwnershipModal.vue')
+      
+      const modal = overlay.create(TransferOwnershipModal)
+
+      modal.open()
+      
+      // 暂时直接 resolve
+      resolve()
     })
-    return Promise.resolve(null)
   }
 
   // ===== 好友相关模态框 =====

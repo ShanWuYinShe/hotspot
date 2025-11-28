@@ -139,16 +139,11 @@ class HttpRequestBuilder {
       // 处理业务响应
       return this.processResponse(response)
     } catch (error: any) {
-      // 直接抛出错误，由调用方处理
-      // 或使用 toast 显示错误（如果需要全局错误提示）
-      const toast = useToast()
-      if (error.message) {
-        toast.add({
-          color: 'error',
-          title: 'HTTP 请求失败',
-          description: error.message
-        })
-      }
+      // ✅ 直接抛出错误，由调用方（Service 层或组件层）处理
+      // 这样做的好处：
+      // 1. 避免在非 setup 上下文中调用 useToast() 导致的 SSR 错误
+      // 2. 让业务层决定如何处理和显示错误
+      // 3. 符合单一职责原则：HTTP 客户端只负责通信，不负责 UI 交互
       throw error
     }
   }

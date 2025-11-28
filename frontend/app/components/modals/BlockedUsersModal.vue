@@ -50,12 +50,9 @@
                   <h4 class="font-medium text-neutral-900 dark:text-neutral-100">
                     {{ user.nickname }}
                   </h4>
-                  <div class="flex items-center gap-4 text-sm text-neutral-500">
-                    <span>拉黑时间：{{ formatTime(user.blocked_at) }}</span>
-                    <span v-if="user.reason" class="text-red-600">
-                      原因：{{ user.reason }}
-                    </span>
-                  </div>
+                  <p class="text-sm text-neutral-500">
+                    已加入黑名单
+                  </p>
                 </div>
               </div>
               
@@ -127,6 +124,9 @@
 </template>
 
 <script setup lang="ts">
+import { useUsersService } from '~/services/users.service'
+import type { UserResponse } from '~/types/api'
+
 interface Props {
   onClose?: () => void
 }
@@ -135,9 +135,9 @@ const props = defineProps<Props>()
 
 // 状态管理
 const loading = ref(false)
-const blockedUsers = ref([])
+const blockedUsers = ref<UserResponse[]>([])
 const searchQuery = ref('')
-const unblockingUsers = ref(new Set())
+const unblockingUsers = ref(new Set<string>())
 
 // 计算属性
 const filteredUsers = computed(() => {
@@ -145,8 +145,7 @@ const filteredUsers = computed(() => {
   
   const query = searchQuery.value.toLowerCase()
   return blockedUsers.value.filter(user => 
-    user.nickname.toLowerCase().includes(query) ||
-    user.reason?.toLowerCase().includes(query)
+    user.nickname.toLowerCase().includes(query)
   )
 })
 
@@ -155,11 +154,19 @@ const { formatTime } = useFormatters()
 const toast = useToast()
 const { showConfirmModal } = useModal()
 
+// Toast 辅助函数
+const success = (title: string, description?: string) => {
+  toast.add({ title, description, color: 'success' })
+}
+const error = (title: string, description?: string) => {
+  toast.add({ title, description, color: 'error' })
+}
+
 // 方法
 const loadBlockedUsers = async () => {
   loading.value = true
   try {
-    const userService = useUserService()
+    const userService = useUsersService()
     const response = await userService.getBlockedUsers()
     blockedUsers.value = response.items || []
   } catch (err) {
@@ -191,8 +198,8 @@ const unblockUser = async (user: any) => {
   unblockingUsers.value.add(user.user_id)
   
   try {
-    const userService = useUserService()
-    await userService.unblockUser(user.user_id)
+    const userService = useUsersService()
+    await userService.unblockUser({ user_id: user.user_id })
     
     // 从列表中移除
     const index = blockedUsers.value.findIndex(u => u.user_id === user.user_id)

@@ -1,6 +1,5 @@
 import { BaseService } from './base.service'
-import type { PaginatedResponse } from './base.service'
-import type { PrivateMessageItem } from '~/types/api'
+import type { PrivateMessageItem, PaginatedData } from '~/types/api'
 
 /**
  * 私聊消息服务
@@ -52,7 +51,7 @@ export interface MarkPrivateMessagesReadRequest {
 // ==================== 服务类 ====================
 
 export class PrivateMessagesService extends BaseService {
-  protected readonly baseUrl = '/api/v1'
+  protected readonly baseUrl = ''
 
   /**
    * 发送私聊消息
@@ -64,8 +63,8 @@ export class PrivateMessagesService extends BaseService {
   /**
    * 获取私聊消息历史
    */
-  async getHistory(params: GetPrivateMessagesRequest): Promise<PaginatedResponse<PrivateMessageItem>> {
-    return this.post<PaginatedResponse<PrivateMessageItem>>('/protected/private_messages/get_history', params)
+  async getHistory(params: GetPrivateMessagesRequest): Promise<PaginatedData<PrivateMessageItem>> {
+    return this.post<PaginatedData<PrivateMessageItem>>('/protected/private_messages/get_history', params)
   }
 
   /**

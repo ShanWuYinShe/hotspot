@@ -3,7 +3,8 @@
  * 使用 readonly，但不持久化（动态数据应从服务器获取）
  */
 
-import type { MomentResponse, PaginatedResponse } from '~/types/api'
+import { defineStore } from 'pinia'
+import type { MomentResponse, PaginatedData } from '~/types/api'
 
 export interface Moment extends MomentResponse {
   // 扩展字段
@@ -11,6 +12,7 @@ export interface Moment extends MomentResponse {
   isDeleting?: boolean
   optimisticLike?: boolean
   localImages?: string[] // 本地上传的图片预览
+  is_favorited?: boolean // 是否已收藏
 }
 
 export interface MomentComment {
@@ -55,12 +57,14 @@ export const useMomentsStore = defineStore('moments', () => {
     trending: { hasMore: false, cursor: undefined as string | undefined }
   })
 
-  // ============ 只读状态 (公开) ============
-  const moments = readonly(_moments)
-  const comments = readonly(_comments)
-  const feeds = readonly(_feeds)
-  const loading = readonly(_loading)
-  const pagination = readonly(_pagination)
+  // ============ 公开状态 ============
+  // 注意：不使用 readonly() 包装，因为 Pinia 需要在 hydration 时能够修改这些状态
+  // 外部应该通过 actions 修改状态，而不是直接修改
+  const moments = _moments
+  const comments = _comments
+  const feeds = _feeds
+  const loading = _loading
+  const pagination = _pagination
 
   // ============ 计算属性 ============
   const momentsList = computed(() => Array.from(_moments.value.values()))
@@ -195,7 +199,7 @@ export const useMomentsStore = defineStore('moments', () => {
     const moment = _moments.value.get(momentId)
     if (moment) {
       moment.isLiking = isLiking
-      moment.is_liked = isLiked
+      moment.liked_by_me = isLiked
       moment.likes_count += isLiked ? 1 : -1
     }
   }
@@ -206,7 +210,7 @@ export const useMomentsStore = defineStore('moments', () => {
   const rollbackLikeStatus = (momentId: string, wasLiked: boolean) => {
     const moment = _moments.value.get(momentId)
     if (moment) {
-      moment.is_liked = wasLiked
+      moment.liked_by_me = wasLiked
       moment.likes_count += wasLiked ? 1 : -1
       moment.isLiking = false
       moment.optimisticLike = undefined
@@ -330,6 +334,26 @@ export const useMomentsStore = defineStore('moments', () => {
   }
 
   /**
+   * 点赞生活瞬间（调用服务并更新本地状态）
+   */
+  const likeMoment = async (momentId: string): Promise<void> => {
+    const { useMomentsService } = await import('~/services/moments.service')
+    const momentsService = useMomentsService()
+    await momentsService.likeMoment(momentId)
+    setLikeStatus(momentId, true)
+  }
+
+  /**
+   * 取消点赞生活瞬间（调用服务并更新本地状态）
+   */
+  const unlikeMoment = async (momentId: string): Promise<void> => {
+    const { useMomentsService } = await import('~/services/moments.service')
+    const momentsService = useMomentsService()
+    await momentsService.unlikeMoment(momentId)
+    setLikeStatus(momentId, false)
+  }
+
+  /**
    * 清空指定类型的动态数据
    */
   const clearFeed = (type: 'nearby' | 'following' | 'mine' | 'trending') => {
@@ -387,7 +411,9 @@ export const useMomentsStore = defineStore('moments', () => {
     setFavoriteStatus,
     getMoment,
     getMomentComments,
-    clearFeed
+    clearFeed,
+    likeMoment,
+    unlikeMoment
   }
 })
 // 注意：这个 store 不使用 persist，因为动态数据应该从服务器获取

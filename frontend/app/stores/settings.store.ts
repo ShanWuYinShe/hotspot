@@ -3,10 +3,12 @@
  * 职责：设置状态管理、持久化 + API 调用
  */
 
+import { defineStore } from 'pinia'
 import type {
   UpdateProfileRequest,
   UpdateSettingsRequest
-} from '~/services/users.service'
+} from '~/types/api'
+import { useUsersService } from '~/services/users.service'
 
 export interface AppSettings {
   // 外观设置
@@ -216,54 +218,41 @@ export const useSettingsStore = defineStore('settings', () => {
 
   /**
    * 更新用户资料（API）
+   * ✅ Store 只负责状态管理，不处理 UI 反馈
    */
   const updateProfile = async (data: UpdateProfileRequest) => {
-    const userService = useUserService()
+    const userService = useUsersService()
     const authStore = useAuthStore()
-    const toast = useToast()
     
-    try {
-      await userService.updateProfile(data)
-      
-      // 更新 authStore 中的用户信息
-      authStore.updateCurrentUser(data)
-      
-      toast.add({ color: 'success', title: '资料更新成功' })
-    } catch (error: any) {
-      toast.add({ color: 'error', title: '更新失败', description: error.message })
-      throw error
-    }
+    await userService.updateProfile(data)
+    
+    // 更新 authStore 中的用户信息
+    authStore.updateCurrentUser(data)
   }
 
   /**
    * 更新隐私设置（API）
+   * ✅ Store 只负责状态管理，不处理 UI 反馈
    */
   const updatePrivacySettings = async (data: UpdateSettingsRequest) => {
-    const userService = useUserService()
+    const userService = useUsersService()
     
-    try {
-      await userService.updateSettings(data)
-      
-      // 更新本地设置
-      updatePrivacy({
-        profileVisibility: data.privacy_level as any || settings.value.privacy.profileVisibility,
-        locationSharing: data.is_location_sharing ?? settings.value.privacy.locationSharing,
-        onlineStatus: settings.value.privacy.onlineStatus,
-        readReceipts: settings.value.privacy.readReceipts
-      })
-      
-      toast.add({ color: 'success', title: '设置更新成功' })
-    } catch (error: any) {
-      toast.add({ color: 'error', title: '更新失败', description: error.message })
-      throw error
-    }
+    await userService.updateSettings(data)
+    
+    // 更新本地设置
+    updatePrivacy({
+      profileVisibility: data.privacy_level as any || settings.value.privacy.profileVisibility,
+      locationSharing: data.is_location_sharing ?? settings.value.privacy.locationSharing,
+      onlineStatus: settings.value.privacy.onlineStatus,
+      readReceipts: settings.value.privacy.readReceipts
+    })
   }
 
   /**
    * 获取用户设置（API）
    */
   const fetchSettings = async () => {
-    const userService = useUserService()
+    const userService = useUsersService()
     
     try {
       const response = await userService.getSettings()

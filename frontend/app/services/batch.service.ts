@@ -25,7 +25,7 @@ export interface RemoveInboxBatchRequest {
 // ==================== 服务类 ====================
 
 export class BatchService extends BaseService {
-  protected readonly baseUrl = '/api/v1'
+  protected readonly baseUrl = ''
 
   /**
    * 批量标记消息已读

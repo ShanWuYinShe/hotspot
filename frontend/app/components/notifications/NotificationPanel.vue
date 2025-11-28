@@ -96,20 +96,20 @@
 </template>
 
 <script setup lang="ts">
-import type { InboxItem } from '~/services/inbox.service'
 import { useInboxService } from '~/services/inbox.service'
+import type { InboxItemData } from '~/types/api'
 
 const { formatTime } = useFormatters()
 const inboxService = useInboxService()
 const toast = useToast()
 
 // 通知数据
-const notifications = ref<InboxItem[]>([])
+const notifications = ref<InboxItemData[]>([])
 const loading = ref(false)
 
 // 未读通知数量
 const unreadCount = computed(() => 
-    notifications.value.filter(n => !n.is_read).length
+    notifications.value.filter((n: InboxItemData) => !n.is_read).length
 )
 
 // 加载通知列表
@@ -191,7 +191,7 @@ const getNotificationCategoryColor = (category: string) => {
 // formatTime 函数已从统一工具函数导入
 
 // 处理通知点击
-const handleNotificationClick = async (notification: InboxItem) => {
+const handleNotificationClick = async (notification: InboxItemData) => {
     // 标记为已读
     if (!notification.is_read) {
         try {
@@ -212,7 +212,7 @@ const handleNotificationClick = async (notification: InboxItem) => {
 const markAllAsRead = async () => {
     try {
         await inboxService.markAsRead({})
-        notifications.value.forEach(n => n.is_read = true)
+        notifications.value.forEach((n: InboxItemData) => n.is_read = true)
         toast.add({
             title: '已标记为已读',
             description: '所有通知已标记为已读',
@@ -233,13 +233,8 @@ const openSettings = () => {
 }
 
 // 查看全部通知
-const viewAllNotifications = () => {
-    // TODO: 创建专门的通知页面
-    toast.add({
-        title: '功能开发中',
-        description: '通知页面即将上线',
-        color: 'info'
-    })
+const viewAllNotifications = async () => {
+    await navigateTo('/notifications')
 }
 
 // 暴露未读数量给父组件

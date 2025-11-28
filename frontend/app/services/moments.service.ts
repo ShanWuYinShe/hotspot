@@ -1,11 +1,10 @@
 /**
- * 生活瞬间服务 - 符合API规范的实现
+ * 生活瞬间服务
  * 所有API操作统一使用POST方法
- * 基于 api_spec.mdc 第3.3节 生活瞬间API规范
  */
 
 import { BaseService } from './base.service'
-import type { MomentResponse, PaginatedResponse } from '~/types/api'
+import type { MomentResponse, PaginatedData } from '~/types/api'
 
 export interface CreateMomentRequest {
   description: string
@@ -101,7 +100,7 @@ export interface ToggleLikeCommentRequest {
 }
 
 export class MomentsService extends BaseService {
-  protected readonly baseUrl = '/api/v1'
+  protected readonly baseUrl = ''
 
   /**
    * 创建生活瞬间
@@ -136,6 +135,22 @@ export class MomentsService extends BaseService {
   }
 
   /**
+   * 点赞生活瞬间（便捷方法）
+   * 调用 toggleLike 并指定 action: 'like'
+   */
+  async likeMoment(momentId: string): Promise<void> {
+    return this.toggleLike({ id: momentId, action: 'like' })
+  }
+
+  /**
+   * 取消点赞生活瞬间（便捷方法）
+   * 调用 toggleLike 并指定 action: 'unlike'
+   */
+  async unlikeMoment(momentId: string): Promise<void> {
+    return this.toggleLike({ id: momentId, action: 'unlike' })
+  }
+
+  /**
    * 收藏/取消收藏瞬间
    * POST /api/v1/protected/moments/toggle_favorite
    */
@@ -147,24 +162,24 @@ export class MomentsService extends BaseService {
    * 获取收藏列表
    * POST /api/v1/protected/moments/get_favorites
    */
-  async getFavorites(request: GetFavoritesRequest = {}): Promise<PaginatedResponse<MomentResponse>> {
-    return this.post<PaginatedResponse<MomentResponse>>('/protected/moments/get_favorites', request)
+  async getFavorites(request: GetFavoritesRequest = {}): Promise<PaginatedData<MomentResponse>> {
+    return this.post<PaginatedData<MomentResponse>>('/protected/moments/get_favorites', request)
   }
 
   /**
    * 按位置搜索生活瞬间（公开接口）
    * POST /api/v1/public/moments/search_by_location
    */
-  async searchByLocation(request: SearchByLocationRequest): Promise<PaginatedResponse<MomentResponse>> {
-    return this.publicPost<PaginatedResponse<MomentResponse>>('/public/moments/search_by_location', request)
+  async searchByLocation(request: SearchByLocationRequest): Promise<PaginatedData<MomentResponse>> {
+    return this.publicPost<PaginatedData<MomentResponse>>('/public/moments/search_by_location', request)
   }
 
   /**
    * 按标签搜索生活瞬间（公开接口）
    * POST /api/v1/public/moments/search_by_tags
    */
-  async searchByTags(request: SearchByTagsRequest): Promise<PaginatedResponse<MomentResponse>> {
-    return this.publicPost<PaginatedResponse<MomentResponse>>('/public/moments/search_by_tags', request)
+  async searchByTags(request: SearchByTagsRequest): Promise<PaginatedData<MomentResponse>> {
+    return this.publicPost<PaginatedData<MomentResponse>>('/public/moments/search_by_tags', request)
   }
 
   /**
@@ -179,15 +194,15 @@ export class MomentsService extends BaseService {
    * 获取生活瞬间历史（公开接口）
    * POST /api/v1/public/moments/get_list
    */
-  async getList(request: GetListRequest = {}): Promise<PaginatedResponse<MomentResponse>> {
-    return this.publicPost<PaginatedResponse<MomentResponse>>('/public/moments/get_list', request)
+  async getList(request: GetListRequest = {}): Promise<PaginatedData<MomentResponse>> {
+    return this.publicPost<PaginatedData<MomentResponse>>('/public/moments/get_list', request)
   }
 
   /**
    * 获取生活瞬间点赞列表（公开接口）
    * POST /api/v1/public/moments/get_likes
    */
-  async getLikes(request: GetLikesRequest): Promise<PaginatedResponse<{
+  async getLikes(request: GetLikesRequest): Promise<PaginatedData<{
     user: {
       user_id: string
       nickname: string
@@ -210,7 +225,7 @@ export class MomentsService extends BaseService {
    * 获取评论列表（公开接口）
    * POST /api/v1/public/comments/get_list
    */
-  async getComments(request: GetCommentsRequest): Promise<PaginatedResponse<{
+  async getComments(request: GetCommentsRequest): Promise<PaginatedData<{
     id: string
     user: {
       user_id: string
@@ -269,7 +284,7 @@ export class MomentsService extends BaseService {
   /**
    * 获取附近动态（别名方法，调用 searchByLocation）
    */
-  async getNearbyMoments(request: SearchByLocationRequest): Promise<PaginatedResponse<MomentResponse>> {
+  async getNearbyMoments(request: SearchByLocationRequest): Promise<PaginatedData<MomentResponse>> {
     return this.searchByLocation(request)
   }
 }

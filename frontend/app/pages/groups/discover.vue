@@ -147,7 +147,7 @@
                                     title="暂无附近群组"
                                     description="授权位置后可展示附近可加入的群组"
                                     action-text="允许位置访问并搜索"
-                                    :action-handler="authorizeAndSearch"
+                                    @action="authorizeAndSearch"
                                 >
                                     <template #illustration>
                                         <EmptyGroups size="lg" />
@@ -185,7 +185,7 @@
                         title="暂无附近群组"
                         description="授权位置后可展示附近可加入的群组"
                         action-text="允许位置访问并搜索"
-                        :action-handler="authorizeAndSearch"
+                        @action="authorizeAndSearch"
                     >
                         <template #illustration>
                             <EmptyGroups size="lg" />
@@ -220,6 +220,7 @@
 import { defineAsyncComponent } from "vue";
 // TableColumn 类型已在组件内部定义
 import type { GroupResponse } from "~/types/api";
+import { useGroupsService } from '~/services/groups.service';
 // 公开页面 - 对应 POST /api/v1/public/group_chats/discover
 definePageMeta({ title: "发现群组", layout: 'dashboard' });
 
@@ -227,6 +228,7 @@ const EmptyGroups = defineAsyncComponent(
     () => import("~/components/illustrations/EmptyGroups.vue"),
 );
 const groupsStore = useGroupsStore();
+const groupsService = useGroupsService();
 // 本地UI配置，不需要从设置中获取
 const preferCardOnDenied = ref(true);
 
@@ -309,12 +311,19 @@ const loadNearbyGroups = async () => {
             }
         }
 
-        const resp = await groupsStore.searchNearbyGroups({
-            latitude: location.latitude,
-            longitude: location.longitude,
+        // 调用 service 获取数据
+        // 如果有位置信息，则传递；否则后端会使用默认位置
+        const resp = await groupsService.discoverGroups({
+            ...(location && {
+                latitude: location.latitude,
+                longitude: location.longitude,
+            }),
             radius: 5000,
         });
-        items.value = resp;
+        
+        // 更新 store 和本地状态
+        groupsStore.setNearbyGroups(resp.items, resp.pagination.has_more, resp.pagination.next_cursor);
+        items.value = resp.items;
     } catch (e: any) {
         loadError.value = true;
         toast.add({
@@ -347,7 +356,7 @@ const filterAndSortGroups = () => {
         const query = searchQuery.value.toLowerCase();
         filtered = filtered.filter(
             (group) =>
-                group.name.toLowerCase().includes(query) ||
+                group.name?.toLowerCase().includes(query) ||
                 (group.description &&
                     group.description.toLowerCase().includes(query)),
         );
@@ -391,8 +400,13 @@ onMounted(async () => {
 
 const joinGroup = async (g: GroupResponse) => {
     try {
-        const full = await groupsStore.joinGroup(g.group_id);
-        await groupsStore.fetchMyGroups();
+        // 调用 service 加入群组
+        await groupsService.joinGroup({ group_chat_id: g.group_id });
+        
+        // 重新获取我的群组列表并更新 store
+        const response = await groupsService.getJoined();
+        groupsStore.setMyGroups(response.items);
+        
         toast.add({
             title: "加入成功",
             description: `已加入群组 ${g.name}`,

@@ -61,6 +61,7 @@
 import { getPageSeoConfig, buildSeoMeta } from '~/config/seo';
 import type { UserSettings } from '~/types/api';
 import { useDebounceFn } from "@vueuse/core";
+import { useUsersService } from '~/services/users.service';
 
 // 从数据源获取 SEO 配置
 const seoConfig = getPageSeoConfig('settings')
@@ -236,8 +237,13 @@ const saveSettings = async () => {
     try {
         isSaving.value = true;
         
-        // 调用设置存储的保存方法
-        // await settingsStore.updateSettings(localSettings.value);
+        // 调用 API 保存用户设置 (API 3.2.10 update_settings)
+        const userService = useUsersService()
+        await userService.updateSettings({
+            privacy_level: localSettings.value.privacy.privacy_level,
+            is_location_sharing: localSettings.value.privacy.location_sharing,
+            // can_be_followed 和 allow_private_chat 需要额外的 UI 支持
+        })
         
         lastSaved.value = new Date();
         toast.add({
@@ -287,11 +293,8 @@ const upgradeAccount = () => {
 };
 
 const changePassword = () => {
-    toast.add({
-        title: '功能开发中',
-        description: '密码修改功能即将上线',
-        color: 'info'
-    });
+    const modal = useModal()
+    modal.showChangePasswordModal()
 };
 
 const setup2FA = () => {
@@ -340,13 +343,8 @@ const showTerms = () => {
 };
 
 const deleteAccount = () => {
-    if (confirm('确定要删除您的账户吗？此操作不可撤销，所有数据将被永久删除。')) {
-        toast.add({
-            title: '功能开发中',
-            description: '账户删除功能即将上线',
-            color: 'info'
-        });
-    }
+    const modal = useModal()
+    modal.showDeleteAccountModal()
 };
 
 const editNickname = () => {
@@ -368,10 +366,27 @@ const changeAvatar = () => {
 // 页面加载时初始化设置
 onMounted(async () => {
     try {
-        // 从存储中加载设置
-        // localSettings.value = { ...settingsStore.settings };
+        // 从 API 加载用户设置 (API 3.2.9 get_settings)
+        const userService = useUsersService()
+        const settings = await userService.getSettings()
+        
+        // 映射 API 数据到本地设置
+        localSettings.value.privacy = {
+            privacy_level: settings.privacy_level,
+            location_sharing: settings.is_location_sharing,
+            online_status: true, // API 中没有这个字段
+            show_in_search: true // API 中没有这个字段
+        }
+        
+        // 加载通知订阅设置（如果需要）
+        // const subscriptions = await ...getSubscriptions()
     } catch (error) {
-        console.error('加载设置失败:', error);
+        console.error('加载设置失败:', error)
+        toast.add({
+            title: '加载设置失败',
+            description: '无法加载您的设置',
+            color: 'error'
+        })
     }
 });
 </script>

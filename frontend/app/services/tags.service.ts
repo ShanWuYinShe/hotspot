@@ -29,7 +29,7 @@ export interface TagSuggestData {
 // ==================== 服务类 ====================
 
 export class TagsService extends BaseService {
-  protected readonly baseUrl = '/api/v1'
+  protected readonly baseUrl = ''
 
   /**
    * 获取热门标签

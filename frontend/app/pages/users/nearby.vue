@@ -30,13 +30,15 @@
                 <UButton size="md" @click="refresh">应用</UButton>
             </div>
 
-            <!-- 加载状态 -->
-            <div v-if="loading" class="space-y-4">
-                <UserCardSkeleton v-for="i in 5" :key="i" />
-            </div>
-
-            <!-- 表格视图 -->
-            <div v-else class="w-full">
+            <!-- 加载状态和表格视图 -->
+            <ClientOnly>
+                <template v-if="loading">
+                    <div class="space-y-4">
+                        <UserCardSkeleton v-for="i in 5" :key="i" />
+                    </div>
+                </template>
+                <template v-else>
+                    <div class="w-full">
                 <UTable :rows="pagedUsers" :columns="columns">
                     <template #avatar_name-cell="{ row }">
                         <div class="flex items-center gap-3 min-w-0">
@@ -92,7 +94,7 @@
                                 title="附近暂无用户"
                                 description="可以尝试扩大搜索半径或稍后再试"
                                 action-text="刷新"
-                                :action-handler="refresh"
+                                @action="refresh"
                             >
                                 <template #illustration>
                                     <EmptyNearby size="lg" />
@@ -101,7 +103,9 @@
                         </div>
                     </template>
                 </UTable>
-            </div>
+                    </div>
+                </template>
+            </ClientOnly>
 
             <!-- 加载更多 -->
             <div v-if="hasMore" class="mt-6 flex justify-center">
@@ -206,12 +210,7 @@ async function getPositionForSearch() {
         } catch {
             pos = {
                 latitude: defaults.latitude,
-                longitude: defaults.longitude,
-                accuracy: 0,
-                altitude: null,
-                altitudeAccuracy: null,
-                heading: null,
-                speed: null
+                longitude: defaults.longitude
             };
         }
     }

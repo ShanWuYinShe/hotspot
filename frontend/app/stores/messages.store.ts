@@ -3,26 +3,48 @@
  * 职责：消息状态管理 + API 调用
  */
 
-import type { MessageResponse, ConversationsResponse } from '~/types/api'
-import type {
-  SendPrivateMessageRequest,
-  SendGroupMessageRequest,
-  MarkPrivateMessagesReadRequest,
-  MarkGroupMessagesReadRequest
-} from '~/services/messages.service'
+import { defineStore } from 'pinia'
+import type { PrivateChatListItem, PrivateMessageItem, GroupMessageItem, UserInfo } from '~/types/api'
+import { useMessagesService, type SendPrivateMessageRequest, type SendGroupMessageRequest } from '~/services/messages.service'
 
-export interface Message extends MessageResponse {
+// 消息类型（带本地状态）
+export interface Message {
+  id: string
+  type: 'text' | 'image' | 'video' | 'audio' | 'file' | 'system'
+  content: string
+  sender: UserInfo
+  reply_to?: string
+  mentions?: string[]
+  sent_at: string
+  edited_at?: string
+  is_recalled: boolean
+  recalled_by?: string
+  recalled_at?: string
+  read_count?: number
   // 本地状态
   sending?: boolean
   failed?: boolean
   optimistic?: boolean
 }
 
-export interface Conversation extends ConversationsResponse {
+// 会话类型（带本地状态）
+export interface Conversation {
+  chat_id: string
+  chat_type: 'private' | 'group'
+  name: string
+  avatar_url?: string
+  unread_count: number
+  last_message?: {
+    id: string
+    content: string
+    type: string
+    sender_id: string
+    sent_at: string
+  }
+  last_activity_at: string
   // 本地状态
   draft?: string
   typing?: boolean
-  unreadCount?: number
 }
 
 export const useMessagesStore = defineStore('messages', () => {
@@ -30,11 +52,12 @@ export const useMessagesStore = defineStore('messages', () => {
   const conversations = ref<Map<string, Conversation>>(new Map())
   const messages = ref<Map<string, Message[]>>(new Map())
   const currentConversationId = ref<string | null>(null)
+  const loading = ref(false)
 
   // ============ 计算属性 ============
   const conversationsList = computed(() => {
     return Array.from(conversations.value.values())
-      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+      .sort((a, b) => new Date(b.last_activity_at).getTime() - new Date(a.last_activity_at).getTime())
   })
   
   const currentConversation = computed(() => {
@@ -49,7 +72,7 @@ export const useMessagesStore = defineStore('messages', () => {
   
   const totalUnreadCount = computed(() => {
     return Array.from(conversations.value.values())
-      .reduce((total, conv) => total + (conv.unreadCount || 0), 0)
+      .reduce((total, conv) => total + (conv.unread_count || 0), 0)
   })
   
   // ============ 会话状态操作 ============
@@ -60,7 +83,7 @@ export const useMessagesStore = defineStore('messages', () => {
   const setConversations = (conversationsList: Conversation[]) => {
     conversations.value.clear()
     conversationsList.forEach(conv => {
-      conversations.value.set(conv.conversation_id, conv)
+      conversations.value.set(conv.chat_id, conv)
     })
   }
   
@@ -68,28 +91,28 @@ export const useMessagesStore = defineStore('messages', () => {
    * 添加或更新会话
    */
   const upsertConversation = (conversation: Conversation) => {
-    conversations.value.set(conversation.conversation_id, conversation)
+    conversations.value.set(conversation.chat_id, conversation)
   }
   
   /**
    * 删除会话
    */
-  const removeConversation = (conversationId: string) => {
-    conversations.value.delete(conversationId)
-    messages.value.delete(conversationId)
+  const removeConversation = (chatId: string) => {
+    conversations.value.delete(chatId)
+    messages.value.delete(chatId)
   }
   
   /**
    * 设置当前会话
    */
-  const setCurrentConversation = (conversationId: string | null) => {
-    currentConversationId.value = conversationId
+  const setCurrentConversation = (chatId: string | null) => {
+    currentConversationId.value = chatId
     
     // 自动标记为已读
-    if (conversationId) {
-      const conversation = conversations.value.get(conversationId)
-      if (conversation && conversation.unreadCount) {
-        conversation.unreadCount = 0
+    if (chatId) {
+      const conversation = conversations.value.get(chatId)
+      if (conversation && conversation.unread_count) {
+        conversation.unread_count = 0
       }
     }
   }
@@ -97,18 +120,18 @@ export const useMessagesStore = defineStore('messages', () => {
   /**
    * 更新会话未读计数
    */
-  const updateUnreadCount = (conversationId: string, count: number) => {
-    const conversation = conversations.value.get(conversationId)
+  const updateUnreadCount = (chatId: string, count: number) => {
+    const conversation = conversations.value.get(chatId)
     if (conversation) {
-      conversation.unreadCount = count
+      conversation.unread_count = count
     }
   }
   
   /**
    * 设置会话草稿
    */
-  const setDraft = (conversationId: string, draft: string) => {
-    const conversation = conversations.value.get(conversationId)
+  const setDraft = (chatId: string, draft: string) => {
+    const conversation = conversations.value.get(chatId)
     if (conversation) {
       conversation.draft = draft
     }
@@ -117,8 +140,8 @@ export const useMessagesStore = defineStore('messages', () => {
   /**
    * 设置会话输入状态
    */
-  const setTyping = (conversationId: string, typing: boolean) => {
-    const conversation = conversations.value.get(conversationId)
+  const setTyping = (chatId: string, typing: boolean) => {
+    const conversation = conversations.value.get(chatId)
     if (conversation) {
       conversation.typing = typing
     }
@@ -129,36 +152,36 @@ export const useMessagesStore = defineStore('messages', () => {
   /**
    * 设置会话的消息列表
    */
-  const setMessages = (conversationId: string, messagesList: Message[]) => {
-    messages.value.set(conversationId, [...messagesList])
+  const setMessages = (chatId: string, messagesList: Message[]) => {
+    messages.value.set(chatId, [...messagesList])
   }
   
   /**
    * 添加消息到会话开头（用于加载历史消息）
    */
-  const prependMessages = (conversationId: string, messagesList: Message[]) => {
-    const existing = messages.value.get(conversationId) || []
-    messages.value.set(conversationId, [...messagesList, ...existing])
+  const prependMessages = (chatId: string, messagesList: Message[]) => {
+    const existing = messages.value.get(chatId) || []
+    messages.value.set(chatId, [...messagesList, ...existing])
   }
   
   /**
    * 添加消息到会话末尾（用于新消息）
    */
-  const appendMessage = (conversationId: string, message: Message) => {
-    const existing = messages.value.get(conversationId) || []
+  const appendMessage = (chatId: string, message: Message) => {
+    const existing = messages.value.get(chatId) || []
     existing.push(message)
-    messages.value.set(conversationId, existing)
+    messages.value.set(chatId, existing)
     
     // 更新会话的最后消息信息
-    updateConversationLastMessage(conversationId, message)
+    updateConversationLastMessage(chatId, message)
   }
   
   /**
    * 更新消息
    */
-  const updateMessage = (conversationId: string, messageId: string, updates: Partial<Message>) => {
-    const conversationMessages = messages.value.get(conversationId) || []
-    const index = conversationMessages.findIndex(m => m.message_id === messageId)
+  const updateMessage = (chatId: string, messageId: string, updates: Partial<Message>) => {
+    const conversationMessages = messages.value.get(chatId) || []
+    const index = conversationMessages.findIndex(m => m.id === messageId)
     if (index !== -1) {
       conversationMessages[index] = { ...conversationMessages[index], ...updates }
     }
@@ -167,9 +190,9 @@ export const useMessagesStore = defineStore('messages', () => {
   /**
    * 替换消息（用于乐观更新）
    */
-  const replaceMessage = (conversationId: string, oldMessageId: string, newMessage: Message) => {
-    const conversationMessages = messages.value.get(conversationId) || []
-    const index = conversationMessages.findIndex(m => m.message_id === oldMessageId)
+  const replaceMessage = (chatId: string, oldMessageId: string, newMessage: Message) => {
+    const conversationMessages = messages.value.get(chatId) || []
+    const index = conversationMessages.findIndex(m => m.id === oldMessageId)
     if (index !== -1) {
       conversationMessages[index] = newMessage
     }
@@ -178,31 +201,31 @@ export const useMessagesStore = defineStore('messages', () => {
   /**
    * 删除消息
    */
-  const removeMessage = (conversationId: string, messageId: string) => {
-    const conversationMessages = messages.value.get(conversationId) || []
-    const filteredMessages = conversationMessages.filter(m => m.message_id !== messageId)
-    messages.value.set(conversationId, filteredMessages)
+  const removeMessage = (chatId: string, messageId: string) => {
+    const conversationMessages = messages.value.get(chatId) || []
+    const filteredMessages = conversationMessages.filter(m => m.id !== messageId)
+    messages.value.set(chatId, filteredMessages)
   }
   
   /**
    * 标记消息发送中
    */
-  const markMessageSending = (conversationId: string, messageId: string) => {
-    updateMessage(conversationId, messageId, { sending: true, failed: false })
+  const markMessageSending = (chatId: string, messageId: string) => {
+    updateMessage(chatId, messageId, { sending: true, failed: false })
   }
   
   /**
    * 标记消息发送成功
    */
-  const markMessageSent = (conversationId: string, messageId: string) => {
-    updateMessage(conversationId, messageId, { sending: false, failed: false, optimistic: false })
+  const markMessageSent = (chatId: string, messageId: string) => {
+    updateMessage(chatId, messageId, { sending: false, failed: false, optimistic: false })
   }
   
   /**
    * 标记消息发送失败
    */
-  const markMessageFailed = (conversationId: string, messageId: string) => {
-    updateMessage(conversationId, messageId, { sending: false, failed: true })
+  const markMessageFailed = (chatId: string, messageId: string) => {
+    updateMessage(chatId, messageId, { sending: false, failed: true })
   }
   
   // ============ 辅助方法 ============
@@ -210,26 +233,32 @@ export const useMessagesStore = defineStore('messages', () => {
   /**
    * 更新会话的最后消息信息
    */
-  const updateConversationLastMessage = (conversationId: string, message: Message) => {
-    const conversation = conversations.value.get(conversationId)
+  const updateConversationLastMessage = (chatId: string, message: Message) => {
+    const conversation = conversations.value.get(chatId)
     if (conversation) {
-      conversation.last_message = message.content
-      conversation.updated_at = message.sent_at
+      conversation.last_message = {
+        id: message.id,
+        content: message.content,
+        type: message.type,
+        sender_id: message.sender.user_id,
+        sent_at: message.sent_at
+      }
+      conversation.last_activity_at = message.sent_at
     }
   }
   
   /**
    * 获取会话
    */
-  const getConversation = (conversationId: string): Conversation | undefined => {
-    return conversations.value.get(conversationId)
+  const getConversation = (chatId: string): Conversation | undefined => {
+    return conversations.value.get(chatId)
   }
   
   /**
    * 获取会话消息
    */
-  const getMessages = (conversationId: string): Message[] => {
-    return messages.value.get(conversationId) || []
+  const getMessages = (chatId: string): Message[] => {
+    return messages.value.get(chatId) || []
   }
   
   /**
@@ -248,7 +277,7 @@ export const useMessagesStore = defineStore('messages', () => {
    */
   const sendPrivateMessage = async (chatId: string, data: Omit<SendPrivateMessageRequest, 'private_chat_id'>) => {
     const messagesService = useMessagesService()
-    const toast = useToast()
+    const authStore = useAuthStore()
     
     // 生成临时ID
     const tempId = `temp_${Date.now()}`
@@ -258,8 +287,13 @@ export const useMessagesStore = defineStore('messages', () => {
       id: tempId,
       type: data.type,
       content: data.content,
-      sender_id: useAuthStore().user?.user_id || '',
+      sender: {
+        user_id: authStore.user?.user_id || '',
+        nickname: authStore.user?.nickname || '',
+        avatar_url: authStore.user?.avatar_url
+      },
       sent_at: new Date().toISOString(),
+      is_recalled: false,
       sending: true,
       optimistic: true
     }
@@ -285,7 +319,6 @@ export const useMessagesStore = defineStore('messages', () => {
     } catch (error: any) {
       // 标记为发送失败
       markMessageFailed(chatId, tempId)
-      toast.add({ color: 'error', title: '发送失败', description: error.message })
       throw error
     }
   }
@@ -295,6 +328,7 @@ export const useMessagesStore = defineStore('messages', () => {
    */
   const sendGroupMessage = async (chatId: string, data: Omit<SendGroupMessageRequest, 'group_chat_id'>) => {
     const messagesService = useMessagesService()
+    const authStore = useAuthStore()
     
     // 生成临时ID
     const tempId = `temp_${Date.now()}`
@@ -304,8 +338,14 @@ export const useMessagesStore = defineStore('messages', () => {
       id: tempId,
       type: data.type,
       content: data.content,
-      sender_id: useAuthStore().user?.user_id || '',
+      sender: {
+        user_id: authStore.user?.user_id || '',
+        nickname: authStore.user?.nickname || '',
+        avatar_url: authStore.user?.avatar_url
+      },
+      mentions: data.mentions,
       sent_at: new Date().toISOString(),
+      is_recalled: false,
       sending: true,
       optimistic: true
     }
@@ -331,7 +371,6 @@ export const useMessagesStore = defineStore('messages', () => {
     } catch (error: any) {
       // 标记为发送失败
       markMessageFailed(chatId, tempId)
-      toast.add({ color: 'error', title: '发送失败', description: error.message })
       throw error
     }
   }
@@ -380,24 +419,17 @@ export const useMessagesStore = defineStore('messages', () => {
   const recallMessage = async (chatId: string, messageId: string, isGroup: boolean) => {
     const messagesService = useMessagesService()
     
-    try {
-      if (isGroup) {
-        await messagesService.recallGroupMessage({ id: messageId })
-      } else {
-        await messagesService.recallPrivateMessage({ id: messageId })
-      }
-      
-      // 更新本地消息状态
-      updateMessage(chatId, messageId, {
-        is_recalled: true,
-        recalled_at: new Date().toISOString()
-      })
-      
-      toast.add({ color: 'success', title: '消息已撤回' })
-    } catch (error: any) {
-      toast.add({ color: 'error', title: '撤回失败', description: error.message })
-      throw error
+    if (isGroup) {
+      await messagesService.recallGroupMessage({ id: messageId })
+    } else {
+      await messagesService.recallPrivateMessage({ id: messageId })
     }
+    
+    // 更新本地消息状态
+    updateMessage(chatId, messageId, {
+      is_recalled: true,
+      recalled_at: new Date().toISOString()
+    })
   }
 
   /**
@@ -406,28 +438,82 @@ export const useMessagesStore = defineStore('messages', () => {
   const deleteMessage = async (chatId: string, messageId: string, isGroup: boolean, forEveryone = false) => {
     const messagesService = useMessagesService()
     
+    if (isGroup) {
+      await messagesService.deleteGroupMessage({ id: messageId, for_everyone: forEveryone })
+    } else {
+      await messagesService.deletePrivateMessage({ id: messageId })
+    }
+    
+    // 从本地删除
+    removeMessage(chatId, messageId)
+  }
+
+  /**
+   * 加载私聊消息历史
+   */
+  const fetchPrivateMessages = async (chatId: string, cursor?: string) => {
+    const messagesService = useMessagesService()
+    loading.value = true
+    
     try {
-      if (isGroup) {
-        await messagesService.deleteGroupMessage({ id: messageId, for_everyone: forEveryone })
+      const response = await messagesService.getPrivateMessages({
+        private_chat_id: chatId,
+        cursor
+      })
+      
+      const messagesList: Message[] = response.items.map(item => ({
+        ...item,
+        is_recalled: item.is_recalled || false
+      }))
+      
+      if (cursor) {
+        prependMessages(chatId, messagesList)
       } else {
-        await messagesService.deletePrivateMessage({ id: messageId })
+        setMessages(chatId, messagesList)
       }
       
-      // 从本地删除
-      removeMessage(chatId, messageId)
+      return response.pagination
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * 加载群聊消息历史
+   */
+  const fetchGroupMessages = async (chatId: string, cursor?: string) => {
+    const messagesService = useMessagesService()
+    loading.value = true
+    
+    try {
+      const response = await messagesService.getGroupMessages({
+        group_chat_id: chatId,
+        cursor
+      })
       
-      toast.add({ color: 'success', title: '消息已删除' })
-    } catch (error: any) {
-      toast.add({ color: 'error', title: '删除失败', description: error.message })
-      throw error
+      const messagesList: Message[] = response.items.map(item => ({
+        ...item,
+        is_recalled: item.is_recalled || false
+      }))
+      
+      if (cursor) {
+        prependMessages(chatId, messagesList)
+      } else {
+        setMessages(chatId, messagesList)
+      }
+      
+      return response.pagination
+    } finally {
+      loading.value = false
     }
   }
 
   return {
-    // 状态（直接返回，供 Pinia 和插件使用）
+    // 状态
     conversations,
     messages,
     currentConversationId,
+    loading,
     
     // 计算属性
     conversationsList,
@@ -466,6 +552,8 @@ export const useMessagesStore = defineStore('messages', () => {
     markPrivateMessagesAsRead,
     markGroupMessagesAsRead,
     recallMessage,
-    deleteMessage
+    deleteMessage,
+    fetchPrivateMessages,
+    fetchGroupMessages
   }
 })

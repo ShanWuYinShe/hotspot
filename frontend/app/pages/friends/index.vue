@@ -42,8 +42,9 @@ definePageMeta({
 })
 
 // 服务和状态
+import { useUsersService } from '~/services/users.service'
 const toast = useToast()
-const userService = useUserService()
+const userService = useUsersService()
 const { formatTime } = useFormatters()
 const { showFriendRequestsModal } = useModal()
 
@@ -243,9 +244,7 @@ const handleUserClick = (user: UserResponse) => {
 }
 
 const handleSendMessage = (user: UserResponse) => {
-    executeFeature('privateChat', () => {
-        navigateTo(`/chat/users/${user.user_id}`)
-    })
+    navigateTo(`/chat/users/${user.user_id}`)
 }
 
 const handleUserActions = (user: UserResponse) => {

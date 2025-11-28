@@ -106,6 +106,11 @@ definePageMeta({
 // 服务和状态
 const toast = useToast()
 
+// 提示辅助函数
+const success = (message: string) => toast.add({ title: message, color: 'success' })
+const error = (message: string) => toast.add({ title: message, color: 'error' })
+const info = (message: string) => toast.add({ title: message, color: 'info' })
+
 // 加载状态
 const loading = reactive({
     activity: false,

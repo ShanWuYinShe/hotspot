@@ -19,7 +19,7 @@
                 title="用户不存在"
                 description="该用户可能已被删除或不存在"
                 action-text="返回搜索"
-                :action-handler="() => $router.push('/search')"
+                @action="() => $router.push('/search')"
             />
         </UCard>
 
@@ -276,12 +276,11 @@ definePageMeta({
 const route = useRoute();
 const userService = useUserService();
 const momentService = useMomentService();
-const { getUserProfile, sendFriendRequest: sendFriendRequestAPI, acceptFriendRequest, rejectFriendRequest } = userService;
+const { sendFriendRequest: sendFriendRequestAPI, acceptFriendRequest, rejectFriendRequest } = userService;
 const momentsStore = useMomentsStore();
 const toast = useToast()
 const { formatTime } = useFormatters();
 const authStore = useAuthStore();
-const api = useApi();
 const modal = useModal();
 
 // 格式化加入时间（特殊显示需求）
@@ -404,8 +403,8 @@ onMounted(async () => {
 async function loadUserProfile() {
     loading.value = true;
     try {
-        // 使用新的 getUserProfile API (POST /api/v1/protected/user/open_the_door)
-        const response = await userService.getUserProfile(userId);
+        // 使用 openTheDoor API (POST /api/v1/protected/user/open_the_door)
+        const response = await userService.openTheDoor({ id: userId });
         user.value = response;
         
         // 从 relationship 字段获取好友状态
@@ -433,22 +432,22 @@ async function loadUserProfile() {
     }
 }
 
-// 加载用户统计信息（TODO: 需要后端实现统计API或通过现有API计算）
+// 加载用户统计信息
 async function loadUserStats() {
     try {
-        userStats.value = { momentsCount: 0, friendsCount: 0, groupsCount: 0 };
+        // 调用 get_stats API 获取用户统计数据
+        const stats = await userService.getStats({ id: userId });
         
-        // 可能的实现方式：
-        // 1. 通过 moments/history API 获取用户动态数量
-        // 2. 通过 friends API 获取好友数量（当好友功能实现时）
-        // 3. 通过 groups API 获取用户参与的群组数量
-        
-        if (import.meta.dev) {
-            console.log('用户统计功能暂未实现，使用默认值');
-        }
+        userStats.value = {
+            momentsCount: stats.moments_count,
+            friendsCount: stats.friends_count,
+            groupsCount: stats.groups_count
+        };
     } catch (e: any) {
         console.error('加载用户统计失败:', e);
         toast.add({ title: '加载失败', description: e?.message || '无法加载用户统计信息', color: 'error' });
+        // 失败时使用默认值
+        userStats.value = { momentsCount: 0, friendsCount: 0, groupsCount: 0 };
     }
 }
 
@@ -456,8 +455,8 @@ async function loadUserStats() {
 async function loadUserMoments() {
     loadingMoments.value = true;
     try {
-        // 使用新的 getUserMoments API (POST /api/v1/public/moments/get_list)
-        const resp = await momentService.getUserMoments({
+        // 使用 getList API (POST /api/v1/public/moments/get_list)
+        const resp = await momentService.getList({
             user_id: userId,
             limit: 20
         });
@@ -480,10 +479,10 @@ async function loadMoreMoments() {
     loadingMoreMoments.value = true;
     try {
         const lastMoment = userMoments.value[userMoments.value.length - 1];
-        const cursor = lastMoment?.id;
+        const cursor = lastMoment?.moment_id;
         
-        // 使用新的 getUserMoments API 加载更多
-        const resp = await momentService.getUserMoments({
+        // 使用 getList API 加载更多
+        const resp = await momentService.getList({
             user_id: userId,
             cursor: cursor,
             limit: 20
@@ -564,7 +563,7 @@ async function followUser() {
     
     try {
         await userService.followUser({
-            user_id: user.value.user_id
+            to_user_id: user.value.user_id
         });
         
         toast.add({
@@ -615,10 +614,9 @@ async function shareUser() {
 async function reportUser() {
     if (!user.value) return;
     
-    const reported = await showReportModal({
+    await showReportModal({
         targetType: 'user',
         targetId: user.value.user_id,
-        targetTitle: user.value.nickname,
         onSuccess: () => {
             toast.add({
                 title: '举报已提交',
@@ -637,15 +635,14 @@ async function blockUser() {
         message: `确定要拉黑 ${user.value.nickname} 吗？拉黑后您将无法看到对方的任何内容，对方也无法与您互动。`,
         confirmText: '确认拉黑',
         cancelText: '取消',
-        confirmColor: 'red'
+        confirmColor: 'error'
     });
     
     if (!confirmed) return;
     
     try {
         await userService.blockUser({
-            user_id: user.value.user_id,
-            reason: '用户主动拉黑'
+            user_id: user.value.user_id
         });
         
         toast.add({

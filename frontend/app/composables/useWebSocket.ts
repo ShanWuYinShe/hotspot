@@ -223,7 +223,7 @@ export function useWebSocket(url?: string, options: WebSocketOptions = {}) {
   }
 
   // ============================================================================
-  // 订阅管理方法（符合 API 规范 4.4 节）
+  // 订阅管理方法
   // ============================================================================
 
   /**
@@ -423,7 +423,7 @@ export function useWebSocket(url?: string, options: WebSocketOptions = {}) {
     on,
     onStatusChange,
     
-    // ✅ 订阅管理方法（符合 API 规范）
+    // 订阅管理方法
     subscribe,
     unsubscribe,
     setSubscriptions,

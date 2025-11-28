@@ -1,6 +1,10 @@
 <template>
-    <UCard 
-        class="group cursor-pointer hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg animate-in slide-in-from-bottom-4 fade-in duration-600"
+    <InteractiveCard 
+        class="group group-card fade-in-up-delayed"
+        :hover="true"
+        :active="true"
+        :glow="true"
+        shadow="md"
         @click="$emit('click', group)"
     >
         <!-- 群组头部 -->
@@ -125,7 +129,7 @@
                 </div>
             </div>
         </template>
-    </UCard>
+    </InteractiveCard>
 </template>
 
 <script setup lang="ts">
@@ -223,13 +227,13 @@ const handleLeaveGroup = async () => {
     
     if (!confirmed) return
     
+    const toast = useToast()
+    const groupService = useGroupsService()
     try {
-        const groupService = useGroupsService()
         await groupService.leaveGroup({
-            group_id: props.group.group_id
+            group_chat_id: props.group.group_id
         })
         
-        const toast = useToast()
         toast.add({
             title: '退出成功',
             description: `已退出群组"${props.group.name}"`,

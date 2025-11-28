@@ -3,10 +3,11 @@
  * 使用 readonly + 选择性持久化（只持久化用户偏好）
  */
 
+import { defineStore } from 'pinia'
 import type { 
   GroupResponse, 
-  GroupMemberResponse,
-  PaginatedResponse 
+  GroupMemberResponseData,
+  PaginatedData 
 } from '~/types/api'
 
 export interface Group extends GroupResponse {
@@ -17,7 +18,7 @@ export interface Group extends GroupResponse {
   optimisticJoin?: boolean
 }
 
-export interface GroupMember extends GroupMemberResponse {
+export interface GroupMember extends GroupMemberResponseData {
   // 扩展字段
   isRemoving?: boolean
   isPromoting?: boolean
@@ -74,15 +75,17 @@ export const useGroupsStore = defineStore('groups', () => {
     search: { hasMore: false, cursor: undefined as string | undefined }
   })
 
-  // ============ 只读状态 (公开) ============
-  const groups = readonly(_groups)
-  const members = readonly(_members)
-  const myGroups = readonly(_myGroups)
-  const nearbyGroups = readonly(_nearbyGroups)
-  const searchResults = readonly(_searchResults)
-  const preferences = readonly(_preferences)
-  const loading = readonly(_loading)
-  const pagination = readonly(_pagination)
+  // ============ 公开状态 ============
+  // 注意：不使用 readonly() 包装，因为 Pinia 需要在 hydration 时能够修改这些状态
+  // 外部应该通过 actions 修改状态，而不是直接修改
+  const groups = _groups
+  const members = _members
+  const myGroups = _myGroups
+  const nearbyGroups = _nearbyGroups
+  const searchResults = _searchResults
+  const preferences = _preferences
+  const loading = _loading
+  const pagination = _pagination
 
   // ============ 计算属性 ============
   const groupsList = computed(() => Array.from(_groups.value.values()))

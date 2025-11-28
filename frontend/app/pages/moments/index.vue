@@ -124,7 +124,8 @@
 
 <script setup lang="ts">
 import { useMomentsService } from '~/services/moments.service';
-import type { MomentResponse } from '~/types/api'
+import { useFeedService } from '~/services/feed.service';
+import type { MomentResponse, MomentInfo } from '~/types/api'
 
 // 公开页面 - 对应 POST /api/v1/public/moments/* API
 definePageMeta({
@@ -149,6 +150,7 @@ const popularTags = ref(['美食', '旅行', '生活', '摄影', '音乐', '运�
 
 // 服务
 const momentService = useMomentsService()
+const feedService = useFeedService()
 const authStore = useAuthStore()
 const toast = useToast()
 const overlay = useOverlay()
@@ -180,7 +182,7 @@ const locationStore = useLocationStore()
 
 // 数据状态
 const nearbyMoments = ref<MomentResponse[]>([]);
-const followingMoments = ref<MomentResponse[]>([]);
+const followingMoments = ref<MomentInfo[]>([]);
 const searchResults = ref<MomentResponse[]>([]);
 const loading = ref({
     nearby: false,
@@ -199,14 +201,25 @@ const loadNearbyMoments = async (cursor?: string) => {
     loading.value.nearby = true;
     try {
         // 获取当前位置（失败时使用默认位置）
-        const location = await getCurrentLocationOrDefault();
+        let latitude: number;
+        let longitude: number;
+        
+        if (locationStore.coordinates) {
+            latitude = locationStore.coordinates.latitude;
+            longitude = locationStore.coordinates.longitude;
+        } else {
+            // 使用系统默认位置（南天门）
+            latitude = 35.154922;
+            longitude = 112.682524;
+        }
 
-        const result = await momentService.searchMoments({
-            type: 'location',
-            latitude: location.latitude,
-            longitude: location.longitude,
-            radius: 5000 // 5公里范围
-        }, cursor, 20);
+        const result = await momentService.searchByLocation({
+            latitude,
+            longitude,
+            radius: 5000, // 5公里范围
+            limit: 20,
+            cursor
+        });
         
         if (cursor) {
             nearbyMoments.value.push(...result.items);
@@ -228,15 +241,23 @@ const loadNearbyMoments = async (cursor?: string) => {
 const loadFollowingMoments = async (cursor?: string) => {
     loading.value.following = true;
     try {
-        // 获取关注用户的动态
-        const result = await momentService.searchMoments({
-            type: 'following'
-        }, cursor, 20);
+        // 使用Feed API获取关注用户的动态
+        const feedService = useFeedService()
+        const result = await feedService.getList({
+            channel: 'following',
+            limit: 20,
+            cursor
+        });
+        
+        // 提取Feed中的moment数据
+        const moments = result.items
+            .filter(item => item.type === 'moment' && item.moment)
+            .map(item => item.moment!)
         
         if (cursor) {
-            followingMoments.value.push(...result.items);
+            followingMoments.value.push(...moments);
         } else {
-            followingMoments.value = result.items;
+            followingMoments.value = moments;
         }
         
         hasMore.value.following = result.pagination.has_more;
@@ -244,7 +265,7 @@ const loadFollowingMoments = async (cursor?: string) => {
     } catch (error) {
         console.error('加载关注动态失败:', error);
         toast.add({ color: 'error', title: '加载关注动态失败' });
-        return { items: [], hasMore: false, nextCursor: undefined };
+        return { items: [], pagination: { has_more: false } };
     } finally {
         loading.value.following = false;
     }
@@ -258,18 +279,18 @@ const searchMoments = async (query: string, filters?: any) => {
     
     loading.value.search = true;
     try {
-        // 构建搜索参数
-        const searchParams: any = {
-            type: 'search',
-            query: query.trim()
-        };
+        // 使用标签搜索（API不支持全文搜索，所以将查询词作为标签）
+        const tags = query.trim().split(/\s+/);
         
-        // 添加标签筛选
+        // 添加额外的标签筛选
         if (selectedTags.value.length > 0) {
-            searchParams.tags = selectedTags.value;
+            tags.push(...selectedTags.value);
         }
         
-        const result = await momentService.searchMoments(searchParams);
+        const result = await momentService.searchByTags({
+            tags,
+            limit: 20
+        });
         searchResults.value = result.items;
         
         if (result.items.length === 0) {
@@ -413,8 +434,8 @@ const loadMore = async () => {
     loadingMore.value = true;
     try {
         let result;
-        const lastItem = currentData.value[currentData.value.length - 1];
-        const cursor = lastItem?.moment_id;
+        const lastItem = currentData.value[currentData.value.length - 1] as any;
+        const cursor = lastItem?.moment_id || lastItem?.id;
         
         if (currentView.value === 'nearby') {
             result = await loadNearbyMoments(cursor);

@@ -75,12 +75,14 @@ const { t } = useI18n()
 const isCreating = ref(false)
 const tempState = ref({ nickname: '' })
 
-// 使用通用表单验证
-const { validateLength, createFormValidator } = useFormValidation()
-
-const validateTempState = createFormValidator({
-  nickname: [(value) => value && value.length > 20 ? t('userMenu.tempModal.nicknameTooLong') : undefined]
-})
+// 表单验证
+const validateTempState = (state: typeof tempState.value) => {
+  const errors: { path: string; message: string }[] = []
+  if (state.nickname && state.nickname.length > 20) {
+    errors.push({ path: 'nickname', message: t('userMenu.tempModal.nicknameTooLong') })
+  }
+  return errors
+}
 
 // 处理关闭
 const handleClose = () => {

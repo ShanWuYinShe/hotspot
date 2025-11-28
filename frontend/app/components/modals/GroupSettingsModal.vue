@@ -310,6 +310,14 @@ const { formatTime } = useFormatters()
 const toast = useToast()
 const { showConfirm } = useModal()
 
+// Toast 辅助函数
+const success = (title: string, description?: string) => {
+  toast.add({ title, description, color: 'success' })
+}
+const error = (title: string, description?: string) => {
+  toast.add({ title, description, color: 'error' })
+}
+
 // 定义 Badge 颜色类型
 type BadgeColor = 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral'
 
@@ -382,13 +390,13 @@ const loadGroupData = async () => {
     
     // 获取群组详情和成员列表
     const [groupResponse, membersResponse] = await Promise.all([
-      groupService.getGroupDetails(props.groupId),
-      groupService.getGroupMembers(props.groupId)
+      groupService.openTheDoor({ id: props.groupId }),
+      groupService.getMembers({ group_chat_id: props.groupId })
     ])
     
     // 设置群组基本信息
     groupSettings.value = {
-      name: groupResponse.name,
+      name: groupResponse.name || '',
       description: groupResponse.description || '',
       max_members: GROUP_CONSTANTS.MAX_MEMBERS_DEFAULT,
       password_required: false,
@@ -477,7 +485,11 @@ const promoteMember = async (member: any) => {
   
   try {
     const groupService = useGroupsService()
-    await groupService.setMemberRole(props.groupId, member.user_id, 'admin')
+    await groupService.setMemberRole({
+      group_chat_id: props.groupId,
+      user_id: member.user_id,
+      role: 'admin'
+    })
     member.role = 'admin'
     success('设置成功')
   } catch (err: any) {
@@ -498,7 +510,11 @@ const demoteMember = async (member: any) => {
   
   try {
     const groupService = useGroupsService()
-    await groupService.setMemberRole(props.groupId, member.user_id, 'member')
+    await groupService.setMemberRole({
+      group_chat_id: props.groupId,
+      user_id: member.user_id,
+      role: 'member'
+    })
     member.role = 'member'
     success('取消成功')
   } catch (err: any) {
@@ -520,7 +536,10 @@ const kickMember = async (member: any) => {
   
   try {
     const groupService = useGroupsService()
-    await groupService.removeMember(props.groupId, member.user_id)
+    await groupService.removeMember({
+      group_chat_id: props.groupId,
+      user_id: member.user_id
+    })
     const index = members.value.findIndex(m => m.user_id === member.user_id)
     if (index > -1) {
       members.value.splice(index, 1)
@@ -557,7 +576,7 @@ const deleteGroup = async () => {
   
   try {
     const groupService = useGroupsService()
-    await groupService.deleteGroup(props.groupId)
+    await groupService.deleteGroup({ group_chat_id: props.groupId })
     success('群组已解散')
     handleClose()
   } catch (err: any) {
@@ -569,7 +588,14 @@ const saveSettings = async () => {
   saving.value = true
   try {
     const groupService = useGroupsService()
-    await groupService.updateGroup(props.groupId, groupSettings.value)
+    await groupService.updateGroup({
+      group_chat_id: props.groupId,
+      name: groupSettings.value.name,
+      description: groupSettings.value.description || undefined,
+      settings: {
+        max_members: groupSettings.value.max_members
+      }
+    })
     success('设置已保存')
     props.onSuccess?.()
   } catch (err: any) {

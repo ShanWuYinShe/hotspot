@@ -28,7 +28,7 @@
           <div v-if="filteredReports.length > 0" class="space-y-3">
             <div
               v-for="report in filteredReports"
-              :key="report.report_id"
+              :key="report.report_id || report.target_id"
               class="p-4 border border-neutral-200 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
             >
               <div class="flex items-start justify-between mb-2">
@@ -112,6 +112,9 @@
 </template>
 
 <script setup lang="ts">
+import { useReportsService } from '~/services/reports.service'
+import type { ReportItem } from '~/types/api'
+
 interface Props {
   onClose?: () => void
 }
@@ -120,7 +123,7 @@ const props = defineProps<Props>()
 
 // 状态管理
 const loading = ref(false)
-const reports = ref([])
+const reports = ref<ReportItem[]>([])
 const activeTab = ref('all')
 
 // 标签页配置
@@ -141,48 +144,41 @@ const filteredReports = computed(() => {
 // 工具函数
 const { formatTime } = useFormatters()
 
-const getStatusColor = (status: string) => {
-  const colors = {
-    pending: 'orange',
-    reviewing: 'blue',
-    resolved: 'green',
-    dismissed: 'red'
-  }
-  return colors[status] || 'neutral'
+const statusColors: Record<string, string> = {
+  pending: 'orange',
+  reviewing: 'blue',
+  resolved: 'green',
+  dismissed: 'red'
 }
 
-const getStatusLabel = (status: string) => {
-  const labels = {
-    pending: '待处理',
-    reviewing: '处理中',
-    resolved: '已解决',
-    dismissed: '已驳回'
-  }
-  return labels[status] || status
+const statusLabels: Record<string, string> = {
+  pending: '待处理',
+  reviewing: '处理中',
+  resolved: '已解决',
+  dismissed: '已驳回'
 }
 
-const getTargetTypeLabel = (type: string) => {
-  const labels = {
-    user: '用户',
-    moment: '生活瞬间',
-    comment: '评论',
-    message: '消息',
-    group: '群组'
-  }
-  return labels[type] || type
+const targetTypeLabels: Record<string, string> = {
+  user: '用户',
+  moment: '生活瞬间',
+  comment: '评论',
+  message: '消息',
+  group: '群组'
 }
 
-const getReasonLabel = (reason: string) => {
-  const labels = {
-    spam: '垃圾信息',
-    harassment: '骚扰行为',
-    inappropriate_content: '不当内容',
-    fake_account: '虚假账户',
-    violence: '暴力内容',
-    other: '其他'
-  }
-  return labels[reason] || reason
+const reasonLabels: Record<string, string> = {
+  spam: '垃圾信息',
+  harassment: '骚扰行为',
+  inappropriate_content: '不当内容',
+  fake_account: '虚假账户',
+  violence: '暴力内容',
+  other: '其他'
 }
+
+const getStatusColor = (status: string) => statusColors[status] || 'neutral'
+const getStatusLabel = (status: string) => statusLabels[status] || status
+const getTargetTypeLabel = (type: string) => targetTypeLabels[type] || type
+const getReasonLabel = (reason: string) => reasonLabels[reason] || reason
 
 const getTabLabel = (tab: string) => {
   const item = tabItems.find(t => t.value === tab)

@@ -307,7 +307,11 @@
       },
       "recommended": {
         "title": "Recommended Users",
-        "empty": "No recommended users"
+        "empty": {
+          "title": "No Recommended Users",
+          "description": "We couldn't find recommended users nearby",
+          "actionText": "Refresh"
+        }
       },
       "status": {
         "sent": "Sent",

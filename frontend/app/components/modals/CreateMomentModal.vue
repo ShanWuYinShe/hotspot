@@ -211,8 +211,10 @@
 </template>
 
 <script setup lang="ts">
-import { MOMENT_CONSTANTS } from '~/config/defaults'
+import { MOMENT_CONSTANTS, DEFAULTS } from '~/config/defaults'
 import { useMomentsService } from '~/services/moments.service'
+import { useUploadService } from '~/services/upload.service'
+import { useGeocodingService } from '~/services/geocoding.service'
 
 interface Props {
   onSuccess?: (momentId: string) => void
@@ -225,6 +227,7 @@ const props = defineProps<Props>()
 // 状态管理
 const creating = ref(false)
 const gettingLocation = ref(false)
+const isSubmitting = ref(false)
 const newTag = ref('')
 const imageInput = ref<HTMLInputElement>()
 
@@ -258,6 +261,38 @@ const isFormValid = computed(() => {
 const toast = useToast()
 const locationStore = useLocationStore()
 
+// Toast 辅助函数
+const success = (title: string, description?: string) => {
+  toast.add({ title, description, color: 'success' })
+}
+const error = (title: string, description?: string) => {
+  toast.add({ title, description, color: 'error' })
+}
+
+// 获取当前位置或默认位置
+const getCurrentLocationOrDefault = async (): Promise<{ latitude: number; longitude: number }> => {
+  // 先尝试从 store 获取
+  if (locationStore.coordinates) {
+    return locationStore.coordinates
+  }
+  
+  // 尝试获取浏览器位置
+  try {
+    await locationStore.getCurrentPosition()
+    if (locationStore.coordinates) {
+      return locationStore.coordinates
+    }
+  } catch (e) {
+    console.warn('获取位置失败，使用默认位置')
+  }
+  
+  // 返回系统默认位置（南天门）
+  return {
+    latitude: DEFAULTS.latitude,
+    longitude: DEFAULTS.longitude
+  }
+}
+
 // 方法
 const getCurrentLocation = async () => {
   gettingLocation.value = true
@@ -266,8 +301,12 @@ const getCurrentLocation = async () => {
     form.value.latitude = location.latitude
     form.value.longitude = location.longitude
     
-    // TODO: 调用地理编码API获取位置名称
-    form.value.location_name = '当前位置'
+    // 使用地理编码服务获取位置名称
+    const geocodingService = useGeocodingService()
+    form.value.location_name = await geocodingService.getLocationName(
+      location.latitude,
+      location.longitude
+    )
     
     success('位置获取成功')
   } catch (err) {
@@ -289,15 +328,22 @@ const handleImageUpload = async (event: Event) => {
   const maxFiles = 9 - form.value.images.length
   const filesToUpload = Array.from(files).slice(0, maxFiles)
   
-  for (const file of filesToUpload) {
-    try {
-      // TODO: 实现图片上传
-      const imageUrl = URL.createObjectURL(file) // 临时预览
-      form.value.images.push(imageUrl)
-    } catch (err) {
-      console.error('图片上传失败:', err)
-      error('图片上传失败')
+  isSubmitting.value = true
+  try {
+    const uploadService = useUploadService()
+    
+    // 批量上传图片
+    for (const file of filesToUpload) {
+      try {
+        const result = await uploadService.uploadFile(file, 'moment_image')
+        form.value.images.push(result.url)
+      } catch (err) {
+        console.error('图片上传失败:', err)
+        error(`图片 ${file.name} 上传失败`)
+      }
     }
+  } finally {
+    isSubmitting.value = false
   }
   
   // 清空input
@@ -352,7 +398,7 @@ const createMoment = async () => {
     localStorage.removeItem(MOMENT_CONSTANTS.DRAFT_STORAGE_KEY)
     
     // 调用成功回调
-    props.onSuccess?.(response.moment_id)
+    props.onSuccess?.(response.id)
     
     // 关闭Modal
     handleClose()

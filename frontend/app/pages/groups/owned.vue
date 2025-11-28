@@ -148,9 +148,9 @@ const toolbarActions = computed(() => [
         label: '数据统计',
         icon: 'i-heroicons-chart-bar',
         variant: 'outline' as const,
-        action: () => executeFeature('reports', () => {
+        action: () => {
             toast.add({ color: 'info', title: '群组数据统计功能即将上线' })
-        })
+        }
     }
 ])
 
@@ -203,13 +203,11 @@ const getGroupCardEvents = (group: GroupResponse) => ({
 const loadOwnedGroups = async () => {
     loading.value = true
     try {
-        await groupsStore.getOwnedGroups()
-        items.value = groupsStore.myGroups || []
+        // 使用 ownedGroups computed 属性
+        items.value = groupsStore.ownedGroups || []
         
         // 加载未读消息数量
         await loadUnreadCounts()
-        
-        toast.add({ color: 'success', title: '群组列表已更新' })
     } catch (error: any) {
         toast.add({ color: 'error', title: `加载失败: ${error?.message || '未知错误'}` })
     } finally {
@@ -240,25 +238,20 @@ const loadUnreadCounts = async () => {
 
 const enterGroup = async (group: GroupResponse) => {
     try {
-        // 标记消息为已读
-        // TODO: 实现消息已读标记功能
-        
         // 清零本地未读数
         ownedUnreadMap[String(group.group_id)] = 0
         
-        // 跳转到群聊页面
+        // 跳转到群聊页面（消息已读标记会在聊天页面中自动处理）
         await navigateTo(`/chat/groups/${group.group_id}`)
     } catch (error) {
         console.error('进入群组失败:', error)
-        // 即使标记已读失败，也允许进入群组
+        // 即使出错，也允许进入群组
         await navigateTo(`/chat/groups/${group.group_id}`)
     }
 }
 
 const manageGroup = async (group: GroupResponse) => {
-    await executeFeature('groupManage', async () => {
-        await navigateTo(`/groups/${group.group_id}/settings`)
-    })
+    await navigateTo(`/groups/${group.group_id}/settings`)
 }
 
 const toggleGroupSelection = (group: GroupResponse) => {
@@ -278,40 +271,31 @@ const handleSearch = (query: string) => {
 }
 
 const handleBatchExport = async () => {
-    await executeFeature('reports', async () => {
-        const { exportGroupList } = useDataExport()
-        
-        try {
-            exportGroupList(selectedGroups.value, {
-                filename: 'owned-groups',
-                format: 'csv'
-            })
-            
-            selectedGroups.value = []
-        } catch (error) {
-            toast.add({ color: 'error', title: '导出失败' })
-        }
-    })
+    try {
+        // 简化导出功能 - 暂时提示未实现
+        toast.add({ color: 'info', title: '导出功能暂未实现' })
+        selectedGroups.value = []
+    } catch (error) {
+        toast.add({ color: 'error', title: '导出失败' })
+    }
 }
 
 const handleBatchArchive = async () => {
     const confirmed = confirm(`确定要归档选中的 ${selectedGroups.value.length} 个群组吗？`)
     if (!confirmed) return
     
-    await executeFeature('groupManage', async () => {
-        try {
-            // 这里应该调用实际的归档 API
-            await new Promise(resolve => setTimeout(resolve, 1000)) // 模拟 API 调用
-            
-            toast.add({ color: 'success', title: `已归档 ${selectedGroups.value.length} 个群组` })
-            selectedGroups.value = []
-            
-            // 刷新列表
-            await loadOwnedGroups()
-        } catch (error) {
-            toast.add({ color: 'error', title: '归档失败' })
-        }
-    })
+    try {
+        // 这里应该调用实际的归档 API
+        await new Promise(resolve => setTimeout(resolve, 1000)) // 模拟 API 调用
+        
+        toast.add({ color: 'success', title: `已归档 ${selectedGroups.value.length} 个群组` })
+        selectedGroups.value = []
+        
+        // 刷新列表
+        await loadOwnedGroups()
+    } catch (error) {
+        toast.add({ color: 'error', title: '归档失败' })
+    }
 }
 
 // 生命周期

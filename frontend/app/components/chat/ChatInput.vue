@@ -56,7 +56,7 @@
 
     <!-- 表情选择器 -->
     <UPopover v-model:open="showEmoji" :popper="{ placement: 'top-end' }">
-      <template #panel>
+      <template #content>
         <div class="p-4 bg-white dark:bg-neutral-800 rounded-lg shadow-lg border">
           <div class="grid grid-cols-8 gap-2">
             <button

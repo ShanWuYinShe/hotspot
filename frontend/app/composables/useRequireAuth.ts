@@ -57,13 +57,7 @@ export function useRequireAuth() {
     // 未登录，引导登录
     if (showModal) {
       // 使用模态框引导（更友好）
-      modal.open({
-        component: 'LoginPromptModal',
-        props: {
-          actionName,
-          redirectPath: redirectAfterLogin ? route.fullPath : undefined
-        }
-      })
+      modal.showLoginPrompt()
     } else {
       // 直接跳转到登录页
       const redirectPath = redirectAfterLogin ? route.fullPath : '/'
@@ -111,4 +105,6 @@ export function useRequireAuth() {
     checkPermission
   }
 }
+
+
 

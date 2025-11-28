@@ -81,6 +81,7 @@
 <script setup lang="ts">
 import { getPageSeoConfig, buildSeoMeta } from '~/config/seo';
 import type { GroupResponse } from "~/types/api"
+import { useGroupsService } from '~/services/groups.service'
 
 // 从数据源获取 SEO 配置
 const seoConfig = getPageSeoConfig('groups')
@@ -102,6 +103,7 @@ useSeoMeta(buildSeoMeta('groups'))
 
 // 服务和状态
 const groupsStore = useGroupsStore()
+const groupsService = useGroupsService()
 const { formatTime } = useFormatters()
 const toast = useToast()
 
@@ -199,9 +201,9 @@ const getGroupCardEvents = (group: GroupResponse) => ({
 const loadMyGroups = async () => {
     loading.value = true
     try {
-        await groupsStore.fetchMyGroups()
+        const response = await groupsService.getJoined()
+        groupsStore.setMyGroups(response.items as any[])
         await loadUnreadCounts()
-        toast.add({ color: 'success', title: '群组列表已更新' })
     } catch (error: any) {
         toast.add({ color: 'error', title: `加载失败: ${error?.message || '未知错误'}` })
     } finally {
@@ -232,17 +234,14 @@ const loadUnreadCounts = async () => {
 
 const enterGroup = async (group: GroupResponse) => {
     try {
-        // 标记消息为已读
-        // TODO: 实现消息已读标记功能
-        
         // 清零本地未读数
         unreadCounts[group.group_id] = 0
         
-        // 跳转到群聊页面
+        // 跳转到群聊页面（消息已读标记会在聊天页面中自动处理）
         await navigateTo(`/chat/groups/${group.group_id}`)
     } catch (error) {
         console.error('进入群组失败:', error)
-        // 即使标记已读失败，也允许进入群组
+        // 即使出错，也允许进入群组
         await navigateTo(`/chat/groups/${group.group_id}`)
     }
 }
@@ -253,7 +252,7 @@ const openCreateGroup = async () => {
     await showCreateGroupModal({
         onSuccess: (groupId: string) => {
             // 刷新群组列表
-            loadGroups()
+            loadMyGroups()
             toast.add({ color: 'success', title: '群组创建成功' })
         }
     })

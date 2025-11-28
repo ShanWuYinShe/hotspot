@@ -2,6 +2,9 @@
  * 位置存储 - 地理位置管理
  */
 
+import { defineStore } from 'pinia'
+import { useUserService } from '~/services/users.service'
+
 export interface LocationState {
   currentPosition: GeolocationPosition | null
   currentLocation: {
@@ -79,9 +82,10 @@ export const useLocationStore = defineStore('location', () => {
 
   /**
    * 获取当前位置
+   * ✅ Store 只负责状态管理，不处理 UI 反馈
+   * 由调用方（组件）捕获错误并显示 toast
    */
   const getCurrentPosition = async (): Promise<GeolocationPosition> => {
-    const toast = useToast()
     state.value.isLoading = true
     state.value.error = null
 
@@ -122,7 +126,6 @@ export const useLocationStore = defineStore('location', () => {
       }
 
       state.value.error = errorMessage
-      toast.add({ color: 'error', title: errorMessage })
       throw error
     } finally {
       state.value.isLoading = false
@@ -181,27 +184,21 @@ export const useLocationStore = defineStore('location', () => {
 
   /**
    * 更新位置名称
+   * ✅ Store 只负责状态管理，不处理 UI 反馈
    */
   const updateLocationName = async (latitude: number, longitude: number, name: string) => {
     const userService = useUserService()
 
-    try {
-      await userService.updateLocation({
-        latitude,
-        longitude,
-        location_name: name
-      })
+    await userService.updateLocation({
+      latitude,
+      longitude,
+      location_name: name
+    })
 
-      state.value.currentLocation = {
-        latitude,
-        longitude,
-        location_name: name
-      }
-
-      toast.add({ color: 'success', title: '位置更新成功' })
-    } catch (error: any) {
-      toast.add({ color: 'error', title: '更新失败', description: error.message })
-      throw error
+    state.value.currentLocation = {
+      latitude,
+      longitude,
+      location_name: name
     }
   }
 
@@ -250,10 +247,10 @@ export const useLocationStore = defineStore('location', () => {
     state.value.error = null
   }
 
-  // ============ 生命周期 ============
-  onUnmounted(() => {
-    clearWatch()
-  })
+  // ============ 注意事项 ============
+  // Store 不能使用生命周期钩子（onMounted/onUnmounted 等）
+  // 如果需要在组件卸载时清理资源，应在组件中调用 clearWatch()
+  // 例如：onUnmounted(() => locationStore.clearWatch())
 
   return {
     // 状态

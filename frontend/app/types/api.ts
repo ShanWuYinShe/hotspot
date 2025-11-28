@@ -5,7 +5,7 @@
  * - 所有API响应都使用统一的 ApiResponse<T> 格式
  * - 严格遵循 XxxRequest/XxxResponse 命名规范
  * - ApiResponse<T> 中的 T 就是 XxxResponse 类型
- * - 对于分页查询，T 为 PaginatedResponse<XxxResponse>
+ * - 对于分页查询，T 为 PaginatedData<XxxResponse>
  */
 
 // ============================================================================
@@ -18,12 +18,58 @@ export interface ApiResponse<T = any> {
   data?: T;            // 成功时为具体业务数据
 }
 
-export interface PaginatedResponse<T> {
+export interface PaginatedData<T> {
   items: T[];          // 数据项数组
   pagination: {
     has_more: boolean;   // 是否有更多数据
     next_cursor?: string; // 下一页游标（UUID字符串）
   };
+}
+
+// ============================================================================
+// 核心通用类型
+// ============================================================================
+
+/**
+ * 用户基本信息（用于列表展示、嵌套对象）
+ */
+export interface UserInfo {
+  user_id: string;
+  nickname: string;
+  avatar_url?: string;
+}
+
+/**
+ * 位置信息
+ */
+export interface LocationInfo {
+  latitude: number;
+  longitude: number;
+  name: string;
+}
+
+/**
+ * 群组基本信息
+ */
+export interface GroupInfo {
+  group_chat_id: string;
+  name: string;
+  avatar_url?: string;
+  member_count: number;
+}
+
+/**
+ * 生活瞬间基本信息
+ */
+export interface MomentInfo {
+  id: string;
+  user: UserInfo;
+  description: string;
+  images?: string[];
+  location_name: string;
+  created_at: string;
+  likes_count: number;
+  comments_count: number;
 }
 
 // ============================================================================
@@ -62,7 +108,7 @@ export interface Coordinates {
  * import { hashPassword } from '~/utils/password'
  * const hash = await hashPassword('myPassword')
  * 
- * 根据 api_spec.mdc 2.10：只需要 SHA256(password)
+ * 只需要 SHA256(password)
  */
 
 // ============================================================================
@@ -82,7 +128,7 @@ export interface AuthResponse {
 export interface RegisterRequest {
   login_id: string;         // 登录ID（邮箱/手机号）
   nickname: string;         // 用户昵称
-  password_hash: string;    // SHA256(password) - 根据 api_spec.mdc 2.10
+  password_hash: string;    // SHA256(password)
 }
 
 export interface RegisterResponse extends AuthResponse {}
@@ -90,7 +136,7 @@ export interface RegisterResponse extends AuthResponse {}
 // 2. POST /api/v1/public/auth/login - 用户登录
 export interface LoginRequest {
   login_id: string;         // 登录ID（邮箱/手机号）
-  password_hash: string;    // SHA256(password) - 根据 api_spec.mdc 2.10
+  password_hash: string;    // SHA256(password)
 }
 
 export interface LoginResponse extends AuthResponse {}
@@ -121,7 +167,7 @@ export interface CheckStatusResponse {
 
 // 6. POST /api/v1/protected/auth/set_password - 设置密码
 export interface SetPasswordRequest {
-  password_hash: string;    // SHA256(password) - 根据 api_spec.mdc 2.10
+  password_hash: string;    // SHA256(password)
 }
 
 export interface SetPasswordResponse {
@@ -150,7 +196,7 @@ export interface VerifyResetCodeResponse {
 // 9. POST /api/v1/public/auth/reset_password - 重置密码
 export interface ResetPasswordRequest {
   reset_token: string;      // 验证后获得的临时token
-  password_hash: string;    // SHA256(password) - 根据 api_spec.mdc 2.10
+  password_hash: string;    // SHA256(password)
 }
 
 // 10. POST /api/v1/protected/auth/get_sessions - 获取活跃会话列表
@@ -192,6 +238,15 @@ export interface UserResponse {
   longitude?: number;       // 经度
   location_name?: string;   // 位置名称
   distance?: number;        // 距离（米）
+  is_online?: boolean;      // 是否在线
+  relationship?: {          // 与当前用户的关系
+    is_friend: boolean;
+    is_following: boolean;
+    is_followed_by: boolean;
+    is_blocked: boolean;
+    is_blocking: boolean;
+    friend_request_status?: 'sent' | 'received';
+  };
 }
 
 // 1. POST /api/v1/public/user/search_by_name - 按昵称搜索用户
@@ -201,7 +256,17 @@ export interface SearchUserByNameRequest {
   cursor?: string;          // 分页游标
 }
 
-export interface SearchUserByNameResponse extends PaginatedResponse<UserResponse> {}
+export interface SearchUserByNameResponse extends PaginatedData<UserResponse> {}
+
+// POST /api/v1/public/user/discover - 发现用户
+export interface DiscoverUsersRequest {
+  keyword?: string;
+  latitude?: number;
+  longitude?: number;
+  radius?: number;
+  limit?: number;
+  cursor?: string;
+}
 
 // 2. POST /api/v1/public/user/search_by_id - 获取用户资料
 export interface SearchUserByIdRequest {
@@ -223,7 +288,7 @@ export interface SearchUserByLocationResponseItem extends UserResponse {
   distance: number;         // 距离（米，必填）
 }
 
-export interface SearchUserByLocationResponse extends PaginatedResponse<SearchUserByLocationResponseItem> {}
+export interface SearchUserByLocationResponse extends PaginatedData<SearchUserByLocationResponseItem> {}
 
 // 4. POST /api/v1/protected/user/update_location - 更新用户位置
 export interface UpdateLocationRequest {
@@ -235,6 +300,20 @@ export interface UpdateLocationRequest {
 export interface UpdateLocationResponse {
   success: boolean;         // 是否更新成功
   message: string;          // 响应消息
+}
+
+// POST /api/v1/protected/user/me - 获取当前用户资料
+export interface MyProfileData {
+  user_id: string;
+  nickname: string;
+  avatar_url?: string;
+  bio?: string;
+  email?: string;           // 仅查询自己时返回
+  phone?: string;           // 仅查询自己时返回
+  location_name?: string;
+  is_online: boolean;
+  last_seen?: string;
+  created_at: string;
 }
 
 // 5. POST /api/v1/protected/user/update_profile - 更新用户资料
@@ -252,7 +331,7 @@ export interface UpdateProfileResponse {
 // 6. POST /api/v1/protected/user/upgrade_account - 账户升级
 export interface UpgradeAccountRequest {
   login_id: string;         // 新的登录ID（邮箱/手机号）
-  password_hash: string;    // SHA256(password) - 根据 api_spec.mdc 2.10
+  password_hash: string;    // SHA256(password)
 }
 
 export interface UpgradeAccountResponse {}
@@ -260,7 +339,7 @@ export interface UpgradeAccountResponse {}
 // 7. POST /api/v1/protected/user/get_settings - 获取用户设置
 export interface GetSettingsRequest {}
 
-// ✅ 与 api_spec.mdc 第3.2.9节保持一致
+// 用户设置类型
 export interface UserSettingsData {
   privacy_level: 'public' | 'friends' | 'private';
   is_location_sharing: boolean;
@@ -290,31 +369,42 @@ export interface DeleteAccountResponse {
   message: string;          // 响应消息
 }
 
-// 10. POST /api/v1/protected/user/add_friend - 发送好友申请
-export interface AddFriendRequest {
+// 10. POST /api/v1/protected/user/send_friend_request - 发送好友申请
+export interface SendFriendRequestRequest {
   to_user_id: string;       // 目标用户ID
   message?: string;         // 申请消息（可选）
 }
 
-export interface AddFriendResponse {
-  success: boolean;         // 是否发送成功
-  message: string;          // 响应消息
-  relationship_id: string;  // 关系记录ID
+export interface SendFriendRequestData {
+  id: string;               // 关系记录ID，用于追踪申请状态
 }
 
-// 11. POST /api/v1/protected/user/accept_friend - 接受好友申请
-export interface AcceptFriendRequest {
-  relationship_id: string;  // 关系记录ID
+export type SendFriendRequestResponse = ApiResponse<SendFriendRequestData>
+
+// 11. POST /api/v1/protected/user/accept_friend_request - 接受好友申请
+export interface AcceptFriendRequestRequest {
+  id: string;               // 关系记录ID
 }
 
-export interface AcceptFriendResponse {
-  success: boolean;         // 是否接受成功
-  message: string;          // 响应消息
+export type AcceptFriendRequestResponse = ApiResponse
+
+// 12. POST /api/v1/protected/user/reject_friend_request - 拒绝好友申请
+export interface RejectFriendRequestRequest {
+  id: string;               // 关系记录ID
 }
 
-// 12. POST /api/v1/protected/user/reject_friend - 拒绝好友申请
-export interface RejectFriendRequest {
-  relationship_id: string;  // 关系记录ID
+export type RejectFriendRequestResponse = ApiResponse
+
+// 13. POST /api/v1/protected/user/cancel_friend_request - 取消好友申请
+export interface CancelFriendRequestRequest {
+  id: string;               // 关系记录ID
+}
+
+export type CancelFriendRequestResponse = ApiResponse
+
+// 14. POST /api/v1/protected/user/remove_friend - 删除好友
+export interface RemoveFriendRequest {
+  user_id: string;          // 好友用户ID
 }
 
 export interface RejectFriendResponse {
@@ -374,7 +464,66 @@ export interface GetFriendsListResponseItem {
   is_online?: boolean;      // 是否在线（可选）
 }
 
-export interface GetFriendsListResponse extends PaginatedResponse<GetFriendsListResponseItem> {}
+export interface GetFriendsListResponse extends PaginatedData<GetFriendsListResponseItem> {}
+
+// 好友列表项类型
+export interface FriendListItem {
+  user: UserInfo;
+  relation_id: string;
+  status: 'pending' | 'accepted';
+  is_online?: boolean;
+  remark?: string;
+}
+
+// 好友申请列表项类型
+export interface FriendRequestItem {
+  id: string;
+  from_user: UserInfo;
+  to_user: UserInfo;
+  message?: string;
+  status: 'pending';
+  created_at: string;
+}
+
+// 获取关注列表请求
+export interface GetFollowingRequest {
+  limit?: number;
+  cursor?: string;
+}
+
+// 获取粉丝列表请求
+export interface GetFollowersRequest {
+  limit?: number;
+  cursor?: string;
+}
+
+// 获取好友申请列表请求
+export interface GetFriendRequestsRequest {
+  status?: 'sent' | 'received' | 'all';
+  limit?: number;
+  cursor?: string;
+}
+
+// 设置好友备注请求
+export interface SetFriendRemarkRequest {
+  user_id: string;
+  remark?: string;
+}
+
+// 获取资源详情请求（通用）
+export interface OpenTheDoorRequest {
+  id: string;
+}
+
+// 获取用户统计请求
+export interface GetUserStatsRequest {
+  id?: string;
+}
+
+// 解除拉黑请求
+export interface UnblockUserRequest {
+  user_id: string;
+}
 
 // 17. POST /api/v1/protected/user/blocked_list - 获取拉黑列表
 export interface GetBlockedListRequest {
@@ -391,7 +540,7 @@ export interface GetBlockedListResponseItem {
   reason?: string;          // 拉黑原因
 }
 
-export interface GetBlockedListResponse extends PaginatedResponse<GetBlockedListResponseItem> {}
+export interface GetBlockedListResponse extends PaginatedData<GetBlockedListResponseItem> {}
 
 // ============================================================================
 // 群组管理API类型
@@ -433,7 +582,7 @@ export interface SearchGroupByLocationResponseItem extends GroupResponse {
   distance: number;         // 距离（米，必填）
 }
 
-export interface SearchGroupByLocationResponse extends PaginatedResponse<SearchGroupByLocationResponseItem> {}
+export interface SearchGroupByLocationResponse extends PaginatedData<SearchGroupByLocationResponseItem> {}
 
 // 2. POST /api/v1/public/group/search_by_name - 按名称搜索群组
 export interface SearchGroupByNameRequest {
@@ -442,7 +591,7 @@ export interface SearchGroupByNameRequest {
   cursor?: string;          // 分页游标
 }
 
-export interface SearchGroupByNameResponse extends PaginatedResponse<GroupResponse> {}
+export interface SearchGroupByNameResponse extends PaginatedData<GroupResponse> {}
 
 // 3. POST /api/v1/public/group/search_by_id - 按ID获取群组详情
 export interface SearchGroupByIdRequest {
@@ -466,7 +615,7 @@ export interface GroupMemberResponseData {
   joined_at: string;        // 加入时间（ISO 8601）
 }
 
-export interface GetMembersResponse extends PaginatedResponse<GroupMemberResponseData> {}
+export interface GetMembersResponse extends PaginatedData<GroupMemberResponseData> {}
 
 
 // 5. POST /api/v1/protected/group/create_public - 创建公开群组
@@ -712,6 +861,7 @@ export interface MomentResponse {
   nickname: string;         // 用户昵称
   user_avatar?: string;     // 用户头像URL
   description: string;      // 瞬间描述
+  images?: string[];        // 图片URL数组（可选）
   latitude: number;         // 纬度
   longitude: number;        // 经度
   location_name: string;    // 位置名称
@@ -753,7 +903,7 @@ export interface SearchMomentsByLocationResponseItem extends MomentResponse {
   distance: number;         // 距离（米，必填）
 }
 
-export interface SearchMomentsByLocationResponse extends PaginatedResponse<SearchMomentsByLocationResponseItem> {}
+export interface SearchMomentsByLocationResponse extends PaginatedData<SearchMomentsByLocationResponseItem> {}
 
 // 3. POST /api/v1/public/moments/search_by_tags - 按标签搜索生活瞬间
 export interface SearchMomentsByTagsRequest {
@@ -764,7 +914,7 @@ export interface SearchMomentsByTagsRequest {
   longitude?: number;       // 经度（可选）
 }
 
-export interface SearchMomentsByTagsResponse extends PaginatedResponse<MomentResponse> {}
+export interface SearchMomentsByTagsResponse extends PaginatedData<MomentResponse> {}
 
 // 4. POST /api/v1/public/moments/search_by_id - 按ID搜索生活瞬间
 export interface SearchMomentByIdRequest {
@@ -780,7 +930,7 @@ export interface GetMomentsHistoryRequest {
   cursor?: string;          // 分页游标
 }
 
-export interface GetMomentsHistoryResponse extends PaginatedResponse<MomentResponse> {}
+export interface GetMomentsHistoryResponse extends PaginatedData<MomentResponse> {}
 
 // 6. POST /api/v1/protected/moments/delete - 删除生活瞬间
 export interface DeleteMomentRequest {
@@ -875,24 +1025,24 @@ export interface GetCommentsRequest {
   cursor?: string;          // 分页游标
 }
 
-export interface GetCommentsResponse extends PaginatedResponse<CommentResponse> {}
+export interface GetCommentsResponse extends PaginatedData<CommentResponse> {}
 
 // ============================================================================
 // 内容安全API类型
 // ============================================================================
 
-// 通用举报响应类型
-export interface ReportResponse {
-  report_id: string;        // 举报记录ID
-  reporter_id: string;      // 举报者ID
-  target_type: 'user' | 'moment' | 'comment' | 'message' | 'group'; // 举报目标类型
-  target_id: string;        // 举报目标ID
-  reason: 'spam' | 'harassment' | 'inappropriate_content' | 'fake_account' | 'violence' | 'other'; // 举报原因
-  description?: string;     // 详细描述
-  status: 'pending' | 'reviewing' | 'resolved' | 'dismissed'; // 处理状态
-  created_at: string;       // 创建时间（ISO 8601）
-  handled_at?: string;      // 处理时间（ISO 8601）
-  handler_note?: string;    // 处理备注
+// 举报记录类型
+export interface ReportItem {
+  report_id: string;
+  reporter_id: string;
+  target_type: 'user' | 'moment' | 'comment' | 'message' | 'group';
+  target_id: string;
+  reason: 'spam' | 'harassment' | 'inappropriate_content' | 'fake_account' | 'violence' | 'other';
+  description?: string;
+  status: 'pending' | 'reviewing' | 'resolved' | 'dismissed';
+  created_at: string;
+  handled_at?: string;
+  handler_note?: string;
 }
 
 // 1. POST /api/v1/protected/reports/create - 提交举报
@@ -903,7 +1053,7 @@ export interface CreateReportRequest {
   description?: string;     // 详细描述
 }
 
-export interface CreateReportResponse {
+export interface CreateReportItem {
   report_id: string;        // 举报记录ID
   message: string;          // 响应消息
   created_at: string;       // 创建时间（ISO 8601）
@@ -915,7 +1065,7 @@ export interface GetMyReportsRequest {
   cursor?: string;          // 分页游标
 }
 
-export interface GetMyReportsResponse extends PaginatedResponse<ReportResponse> {}
+export interface GetMyReportsResponse extends PaginatedData<ReportItem> {}
 
 // 3. POST /api/v1/protected/reports/list - 举报列表（管理员）
 export interface GetReportsRequest {
@@ -925,7 +1075,7 @@ export interface GetReportsRequest {
   cursor?: string;          // 分页游标
 }
 
-export interface GetReportsResponse extends PaginatedResponse<ReportResponse> {}
+export interface GetReportsResponse extends PaginatedData<ReportItem> {}
 
 // 4. POST /api/v1/protected/reports/handle - 处理举报（管理员）
 export interface HandleReportRequest {
@@ -934,7 +1084,7 @@ export interface HandleReportRequest {
   note?: string;            // 处理备注
 }
 
-export interface HandleReportResponse {
+export interface HandleReportItem {
   success: boolean;         // 是否处理成功
   message: string;          // 响应消息
   handled_at: string;       // 处理时间（ISO 8601）
@@ -990,7 +1140,7 @@ export interface GetNotificationsRequest {
   cursor?: string;          // 分页游标
 }
 
-export interface GetNotificationsResponse extends PaginatedResponse<NotificationResponse> {}
+export interface GetNotificationsResponse extends PaginatedData<NotificationResponse> {}
 
 // 3. POST /api/v1/protected/notifications/mark_read - 标记通知已读
 export interface MarkNotificationReadRequest {
@@ -1144,6 +1294,35 @@ export interface UploadResponse {
   upload_time: string;
 }
 
+export interface UploadMediaData {
+  url: string;
+  file_size: number;
+  mime_type: string;
+}
+
+export interface InitiateUploadData {
+  upload_id: string;
+  chunk_count: number;
+  upload_urls: string[];
+}
+
+export interface CompleteUploadRequest {
+  upload_id: string;
+  parts: {
+    part_number: number;
+    etag: string;
+  }[];
+}
+
+export interface UploadStatusData {
+  upload_id: string;
+  status: 'in_progress' | 'completed' | 'failed';
+  uploaded_parts: number[];
+  total_parts: number;
+  created_at: string;
+  expires_at: string;
+}
+
 export interface BatchUploadResponse {
   files: UploadResponse[];
   total_count: number;
@@ -1238,7 +1417,7 @@ export interface UserMomentsHistoryResponse {
 }
 
 // ============================================================================
-// 私聊管理 API 类型（api_spec.mdc 3.5节）
+// 私聊管理 API 类型
 // ============================================================================
 
 export interface PrivateChatLastMessage {
@@ -1274,7 +1453,7 @@ export interface PrivateChatDetailData {
 }
 
 // ============================================================================
-// 私聊消息 API 类型（api_spec.mdc 3.8节）
+// 私聊消息 API 类型
 // ============================================================================
 
 export interface PrivateMessageItem {
@@ -1290,7 +1469,7 @@ export interface PrivateMessageItem {
 }
 
 // ============================================================================
-// 群聊消息 API 类型（api_spec.mdc 3.9节）
+// 群聊消息 API 类型
 // ============================================================================
 
 export interface GroupMessageItem {
@@ -1320,7 +1499,7 @@ export interface MessageReactionItem {
 }
 
 // ============================================================================
-// 通知中心 API 类型（api_spec.mdc 3.13节）
+// 通知中心 API 类型
 // ============================================================================
 
 export interface NotificationData {
@@ -1347,7 +1526,7 @@ export interface InboxItemData {
 }
 
 // ============================================================================
-// 信息流 API 类型（api_spec.mdc 3.17节）
+// 信息流 API 类型
 // ============================================================================
 
 export interface FeedSystemInfo {
@@ -1369,7 +1548,7 @@ export interface FeedItem {
 }
 
 // ============================================================================
-// 评论与点赞 API 类型（api_spec.mdc 3.4节）
+// 评论与点赞 API 类型
 // ============================================================================
 
 export interface CommentListItem {
@@ -1381,6 +1560,7 @@ export interface CommentListItem {
   created_at: string;
   likes_count: number;
   replies_count: number;
+  liked_by_me?: boolean;  // 当前用户是否点赞
 }
 
 export interface CommentLikeItem {
@@ -1389,7 +1569,7 @@ export interface CommentLikeItem {
 }
 
 // ============================================================================
-// 标签管理 API 类型（api_spec.mdc 3.19节）
+// 标签管理 API 类型
 // ============================================================================
 
 export interface TagData {
@@ -1399,7 +1579,7 @@ export interface TagData {
 }
 
 // ============================================================================
-// 批量操作 API 类型（api_spec.mdc 3.18节）
+// 批量操作 API 类型
 // ============================================================================
 
 export interface BatchItemResult {
@@ -1417,7 +1597,7 @@ export interface BatchResultData {
 }
 
 // ============================================================================
-// 排行榜 API 类型（api_spec.mdc 3.15节）
+// 排行榜 API 类型
 // ============================================================================
 
 export interface GetCreatorLeaderboardRequest {

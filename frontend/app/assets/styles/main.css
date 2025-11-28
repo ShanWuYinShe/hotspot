@@ -1,9 +1,9 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
-/* ========================================
+/* ============================================================================
    响应式基础字体大小设置 - 提升阅读体验
-   ======================================== */
+   ============================================================================ */
 html {
   font-size: 18px;
 }
@@ -26,40 +26,321 @@ html {
   }
 }
 
-/* ========================================
+/* ============================================================================
    Nuxt UI 容器扩展
-   ======================================== */
+   ============================================================================ */
 :root {
   --ui-container: var(--container-8xl);
   --container-8xl: 90rem;
 }
 
-/* ========================================
-   主题背景色优化
-   ======================================== */
-/* 浅色模式：使用柔和的浅灰色背景（类似 macOS 风格） */
+/* ============================================================================
+   主题背景色优化（增强对比度和视觉层次）
+   ============================================================================ */
+/* 浅色模式：使用柔和的渐变背景（类似 macOS 风格） */
 :root {
   --color-background: 248 248 250; /* 非常浅的灰色 #f8f8fa */
+  --color-surface: 255 255 255; /* 纯白 */
+  --color-surface-elevated: 251 252 253; /* 轻微灰白 */
 }
 
-/* 暗黑模式：保持原有的深色背景 */
+/* 暗黑模式：深色但有层次感的背景 */
 .dark {
   --color-background: 15 23 42; /* slate-900 */
+  --color-surface: 30 41 59; /* slate-800 */
+  --color-surface-elevated: 51 65 85; /* slate-700 */
 }
 
 /* 应用背景色到 body */
 body {
   background-color: rgb(var(--color-background));
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ========================================
+/* ============================================================================
+   卡片和容器增强（增加深度感和微交互）
+   ============================================================================ */
+/* 增强 UCard 的交互效果 */
+.u-card {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.u-card:hover {
+  transform: translateY(-2px);
+}
+
+/* 鼠标按下时的反馈 */
+.u-card:active {
+  transform: translateY(0);
+}
+
+/* ============================================================================
+   按钮增强（更好的视觉反馈）
+   ============================================================================ */
+button,
+.cursor-pointer {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+button:active:not(:disabled),
+.cursor-pointer:active {
+  transform: scale(0.98);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ============================================================================
+   输入框增强（更清晰的焦点状态）
+   ============================================================================ */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 2px solid rgba(59, 130, 246, 0.5);
+  outline-offset: 2px;
+  transition: outline 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================================================
+   滚动条美化
+   ============================================================================ */
+/* 浅色模式滚动条 */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  transition: background 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* 暗黑模式滚动条 */
+.dark ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* ============================================================================
+   文本选择样式
+   ============================================================================ */
+::selection {
+  background-color: rgba(59, 130, 246, 0.3);
+  color: inherit;
+}
+
+.dark ::selection {
+  background-color: rgba(96, 165, 250, 0.3);
+}
+
+/* ============================================================================
+   图片加载优化（防止布局抖动）
+   ============================================================================ */
+img {
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+img:not([src]), img[src=""] {
+  opacity: 0;
+}
+
+/* 骨架屏加载动画 */
+@keyframes skeleton-loading {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.skeleton {
+  background-image: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.05) 0px,
+    rgba(0, 0, 0, 0.08) 40px,
+    rgba(0, 0, 0, 0.05) 80px
+  );
+  background-size: 200px 100%;
+  animation: skeleton-loading 1.5s infinite linear;
+}
+
+.dark .skeleton {
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 0px,
+    rgba(255, 255, 255, 0.08) 40px,
+    rgba(255, 255, 255, 0.05) 80px
+  );
+}
+
+/* ============================================================================
+   Tooltip 增强（更现代的提示框）
+   ============================================================================ */
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px);
+  padding: 0.5rem 0.75rem;
+  background-color: rgba(0, 0, 0, 0.9);
+  color: white;
+  font-size: 0.875rem;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 100;
+  opacity: 0;
+  animation: tooltip-fade-in 0.2s forwards;
+}
+
+@keyframes tooltip-fade-in {
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-4px);
+  }
+}
+
+/* ============================================================================
+   Glassmorphism（毛玻璃效果）- 用于模态框和弹出层
+   ============================================================================ */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.dark .glass {
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ============================================================================
+   脉冲动画（用于加载状态和提示）
+   ============================================================================ */
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.pulse-soft {
+  animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ============================================================================
+   渐入动画（用于页面元素加载）
+   ============================================================================ */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fade-in-up 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 延迟渐入（用于列表项） */
+.fade-in-up-delayed {
+  animation: fade-in-up 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fade-in-up-delayed:nth-child(1) { animation-delay: 0.05s; }
+.fade-in-up-delayed:nth-child(2) { animation-delay: 0.1s; }
+.fade-in-up-delayed:nth-child(3) { animation-delay: 0.15s; }
+.fade-in-up-delayed:nth-child(4) { animation-delay: 0.2s; }
+.fade-in-up-delayed:nth-child(5) { animation-delay: 0.25s; }
+
+/* ============================================================================
+   平滑滚动
+   ============================================================================ */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* ============================================================================
    无障碍和性能优化
-   ======================================== */
+   ============================================================================ */
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* 键盘导航增强 */
+*:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.6);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ============================================================================
+   打印样式优化
+   ============================================================================ */
+@media print {
+  * {
+    background: transparent !important;
+    color: black !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  
+  a, a:visited {
+    text-decoration: underline;
+  }
+  
+  a[href]::after {
+    content: " (" attr(href) ")";
+  }
+  
+  img {
+    page-break-inside: avoid;
+  }
+  
+  h2, h3 {
+    page-break-after: avoid;
   }
 }

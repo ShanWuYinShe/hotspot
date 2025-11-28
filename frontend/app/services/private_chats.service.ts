@@ -1,9 +1,9 @@
 import { BaseService } from './base.service'
-import type { PaginatedResponse } from './base.service'
 import type { 
   PrivateChatLastMessage, 
   PrivateChatListItem, 
-  PrivateChatDetailData 
+  PrivateChatDetailData,
+  PaginatedData
 } from '~/types/api'
 
 /**
@@ -42,7 +42,7 @@ export interface DeletePrivateChatRequest {
 // ==================== 服务类 ====================
 
 export class PrivateChatsService extends BaseService {
-  protected readonly baseUrl = '/api/v1'
+  protected readonly baseUrl = ''
 
   /**
    * 发起私聊
@@ -54,8 +54,8 @@ export class PrivateChatsService extends BaseService {
   /**
    * 获取私聊列表
    */
-  async getList(params: GetPrivateChatsRequest = {}): Promise<PaginatedResponse<PrivateChatListItem>> {
-    return this.post<PaginatedResponse<PrivateChatListItem>>('/protected/private_chats/get_list', params)
+  async getList(params: GetPrivateChatsRequest = {}): Promise<PaginatedData<PrivateChatListItem>> {
+    return this.post<PaginatedData<PrivateChatListItem>>('/protected/private_chats/get_list', params)
   }
 
   /**

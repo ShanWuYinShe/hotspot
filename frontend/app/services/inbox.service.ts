@@ -1,6 +1,5 @@
 import { BaseService } from './base.service'
-import type { PaginatedResponse } from './base.service'
-import type { InboxItemData, UnreadCategoryStats } from '~/types/api'
+import type { InboxItemData, UnreadCategoryStats, PaginatedData } from '~/types/api'
 
 /**
  * 通知中心服务
@@ -47,13 +46,13 @@ export interface UnregisterDeviceTokenRequest {
 // ==================== 服务类 ====================
 
 export class InboxService extends BaseService {
-  protected readonly baseUrl = '/api/v1/protected/inbox'
+  protected readonly baseUrl = '/protected/inbox'
 
   /**
    * 获取通知列表
    */
-  async getList(params: ListInboxItemsRequest = {}): Promise<PaginatedResponse<InboxItemData>> {
-    return this.post<PaginatedResponse<InboxItemData>>(`${this.baseUrl}/get_list`, params)
+  async getList(params: ListInboxItemsRequest = {}): Promise<PaginatedData<InboxItemData>> {
+    return this.post<PaginatedData<InboxItemData>>(`${this.baseUrl}/get_list`, params)
   }
 
   /**

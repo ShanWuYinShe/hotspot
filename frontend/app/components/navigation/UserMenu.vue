@@ -39,21 +39,19 @@ const otherAccounts = computed(() =>
 )
 
 // 创建临时用户
-const createTempUser = async () => {
+const handleCreateTempUser = async () => {
   try {
-    // 创建临时用户
-    const authStore = useAuthStore();
-    await authStore.createTempUser();
+    // 创建临时用户，使用默认昵称
+    await authStore.createTempUser({ nickname: '访客用户' });
   } catch (error) {
     console.error('创建临时用户失败:', error)
   }
 }
 
 // 切换账户
-const switchAccount = async (userId: string) => {
+const handleSwitchAccount = async (userId: string) => {
   try {
-    const authStore = useAuthStore()
-    await switchAccount(userId)
+    await authStore.switchToAccount(userId)
   } catch (error) {
     console.error('切换账户失败:', error)
   }
@@ -79,7 +77,7 @@ const menuItems = computed((): DropdownMenuItem[][] => {
         {
           label: t('userMenu.tempExperience'),
           icon: 'i-heroicons-rocket-launch',
-          onSelect: createTempUser
+          onSelect: handleCreateTempUser
         },
         {
           label: t('userMenu.loginRegister'),
@@ -141,7 +139,7 @@ const menuItems = computed((): DropdownMenuItem[][] => {
       accountItems.push({
         label: account.user?.nickname || '未知用户',
         icon: isTempUser(account.user?.user_id) ? 'i-heroicons-clock' : 'i-heroicons-user-circle',
-        onSelect: () => switchAccount(account.user?.user_id || '')
+        onSelect: () => handleSwitchAccount(account.user?.user_id || '')
       })
     })
 

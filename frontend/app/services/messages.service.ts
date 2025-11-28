@@ -1,11 +1,10 @@
 /**
- * 消息服务 - 符合API规范的实现
+ * 消息服务
  * 所有API操作统一使用POST方法
- * 基于 api_spec.mdc 第3.8节和第3.9节 消息API规范
  */
 
 import { BaseService } from './base.service'
-import type { PaginatedResponse } from '~/types/api'
+import type { PaginatedData } from '~/types/api'
 
 // ============ 私聊管理 ============
 
@@ -136,7 +135,7 @@ export interface GetGroupMessageReactionsRequest {
 export interface MarkAllMessagesReadRequest {}
 
 export class MessagesService extends BaseService {
-  protected readonly baseUrl = '/api/v1'
+  protected readonly baseUrl = ''
 
   // ============ 私聊管理 API ============
 
@@ -152,7 +151,7 @@ export class MessagesService extends BaseService {
    * 获取私聊列表
    * POST /api/v1/protected/private_chats/get_list
    */
-  async getPrivateChats(request: GetPrivateChatsRequest = {}): Promise<PaginatedResponse<{
+  async getPrivateChats(request: GetPrivateChatsRequest = {}): Promise<PaginatedData<{
     private_chat_id: string
     other_user: {
       user_id: string
@@ -237,7 +236,7 @@ export class MessagesService extends BaseService {
    * 获取私聊消息历史
    * POST /api/v1/protected/private_messages/get_history
    */
-  async getPrivateMessages(request: GetPrivateMessagesRequest): Promise<PaginatedResponse<{
+  async getPrivateMessages(request: GetPrivateMessagesRequest): Promise<PaginatedData<{
     id: string
     type: 'text' | 'image' | 'video' | 'audio' | 'file'
     content: string
@@ -304,7 +303,7 @@ export class MessagesService extends BaseService {
    * 获取群聊消息历史
    * POST /api/v1/protected/group_messages/get_history
    */
-  async getGroupMessages(request: GetGroupMessagesRequest): Promise<PaginatedResponse<{
+  async getGroupMessages(request: GetGroupMessagesRequest): Promise<PaginatedData<{
     id: string
     type: 'text' | 'image' | 'video' | 'audio' | 'file' | 'system'
     content: string
@@ -361,7 +360,7 @@ export class MessagesService extends BaseService {
    * 获取消息已读状态
    * POST /api/v1/protected/group_messages/get_read_status
    */
-  async getMessageReadStatus(request: GetMessageReadStatusRequest): Promise<PaginatedResponse<{
+  async getMessageReadStatus(request: GetMessageReadStatusRequest): Promise<PaginatedData<{
     user: {
       user_id: string
       nickname: string
@@ -384,7 +383,7 @@ export class MessagesService extends BaseService {
    * 获取消息反应列表
    * POST /api/v1/protected/group_messages/get_reactions
    */
-  async getGroupMessageReactions(request: GetGroupMessageReactionsRequest): Promise<PaginatedResponse<{
+  async getGroupMessageReactions(request: GetGroupMessageReactionsRequest): Promise<PaginatedData<{
     user: {
       user_id: string
       nickname: string

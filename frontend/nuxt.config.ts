@@ -102,6 +102,11 @@ export default defineNuxtConfig({
     // 优化依赖
     optimizeDeps: {
       include: ['@headlessui/vue', '@heroicons/vue/24/outline', '@heroicons/vue/24/solid']
+    },
+    // 构建配置（消除 Tailwind CSS sourcemap 警告）
+    build: {
+      // 生产环境禁用 sourcemap，减小构建体积并消除警告
+      sourcemap: process.env.NODE_ENV !== 'production',
     }
   },
 

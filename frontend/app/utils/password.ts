@@ -1,7 +1,7 @@
 /**
  * 密码安全工具函数
  * 
- * 根据 api_spec.mdc 2.10 密码安全策略：
+ * 密码安全策略：
  * - 客户端哈希：SHA256(password)
  * - 字段命名：password_hash
  * - 算法固定：SHA-256
@@ -84,4 +84,6 @@ export function checkPasswordStrength(password: string): PasswordStrength {
 
   return { score, level, feedback }
 }
+
+
 

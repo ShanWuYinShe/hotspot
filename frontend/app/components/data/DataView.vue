@@ -244,8 +244,8 @@ const handleItemClick = (item: any) => {
   emit('itemClick', item)
 }
 
-const handleTableSelect = (rows: any[]) => {
-  emit('tableSelect', rows)
+const handleTableSelect = (e: Event, row: any) => {
+  emit('tableSelect', [row])
 }
 
 // 监听数据变化，重置分页

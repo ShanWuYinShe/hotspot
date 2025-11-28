@@ -1,33 +1,74 @@
 /**
  * 位置跟踪服务
- * 负责自动更新用户位置到服务器
+ * ✅ 重构为纯 Composable 模式，避免在类方法中调用 Vue composables
  */
-
 
 import { useUserService } from './users.service'
 
-class LocationTracker {
-  private updateTimer: NodeJS.Timeout | null = null
-  private isTracking = false
-  private readonly UPDATE_INTERVAL = 5 * 60 * 1000 // 5分钟更新一次
+/**
+ * ✅ 使用 Composable 模式而非类模式
+ * 所有的 store/service 调用都在 composable 函数内部，确保在正确的 Vue 上下文中执行
+ */
+export const useLocationTracker = () => {
+  // ✅ 在 composable 顶层声明所有需要的 stores 和 services
+  const authStore = useAuthStore()
+  const locationStore = useLocationStore()
+  const userService = useUserService()
+  
+  // 使用 ref 管理状态
+  const updateTimer = ref<NodeJS.Timeout | null>(null)
+  const isTracking = ref(false)
+  const UPDATE_INTERVAL = 5 * 60 * 1000 // 5分钟更新一次
+
+  /**
+   * 更新位置到服务器
+   */
+  const updateLocationToServer = async () => {
+    try {
+      // 检查用户是否已认证
+      if (!authStore.isAuthenticated) {
+        return
+      }
+
+      // 获取当前位置
+      const position = await locationStore.getCurrentPosition()
+      
+      if (!position) {
+        return
+      }
+
+      await userService.updateLocation({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        location_name: '当前位置'
+      })
+
+      if (import.meta.dev) {
+        console.log('位置更新成功:', position.coords)
+      }
+    } catch (error) {
+      // 位置更新失败不影响其他功能，只记录日志
+      console.warn('位置更新失败:', error)
+    }
+  }
 
   /**
    * 开始位置跟踪
    */
-  async start() {
-    if (this.isTracking) {
+  const start = async () => {
+    if (isTracking.value) {
       return
     }
 
-    this.isTracking = true
+    isTracking.value = true
     
     // 立即更新一次位置
-    await this.updateLocationToServer()
+    await updateLocationToServer()
     
     // 设置定时更新
-    this.updateTimer = setInterval(async () => {
-      await this.updateLocationToServer()
-    }, this.UPDATE_INTERVAL)
+    updateTimer.value = setInterval(async () => {
+      await updateLocationToServer()
+    }, UPDATE_INTERVAL)
 
     if (import.meta.dev) {
       console.log('位置跟踪已启动')
@@ -37,16 +78,16 @@ class LocationTracker {
   /**
    * 停止位置跟踪
    */
-  stop() {
-    if (!this.isTracking) {
+  const stop = () => {
+    if (!isTracking.value) {
       return
     }
 
-    this.isTracking = false
+    isTracking.value = false
     
-    if (this.updateTimer) {
-      clearInterval(this.updateTimer)
-      this.updateTimer = null
+    if (updateTimer.value) {
+      clearInterval(updateTimer.value)
+      updateTimer.value = null
     }
 
     if (import.meta.dev) {
@@ -55,86 +96,32 @@ class LocationTracker {
   }
 
   /**
-   * 更新位置到服务器
-   */
-  private async updateLocationToServer() {
-    try {
-      const authStore = useAuthStore()
-      
-      // 检查用户是否已认证
-      if (!authStore.isAuthenticated) {
-        return
-      }
-
-      const locationStore = useLocationStore()
-      const location = await getCurrentLocation()
-      
-      if (!location) {
-        return
-      }
-
-      const userService = useUserService()
-      await userService.updateLocation(
-        location.latitude,
-        location.longitude,
-        '当前位置'
-      )
-
-      if (import.meta.dev) {
-        console.log('位置更新成功:', location)
-      }
-    } catch (error) {
-      // 位置更新失败不影响其他功能，只记录日志
-      console.warn('位置更新失败:', error)
-    }
-  }
-
-  /**
    * 手动更新位置
    */
-  async updateNow(): Promise<Location | null> {
-    const locationStore = useLocationStore()
-    const location = await getCurrentLocation()
-    
-    if (location) {
-      const authStore = useAuthStore()
+  const updateNow = async (): Promise<GeolocationPosition | null> => {
+    try {
+      const position = await locationStore.getCurrentPosition()
       
-      if (authStore.isAuthenticated) {
-        try {
-          const userService = useUserService()
-          await userService.updateLocation(
-            location.latitude,
-            location.longitude,
-            '当前位置'
-          )
-        } catch (error) {
-          console.warn('手动位置更新失败:', error)
-        }
+      if (position && authStore.isAuthenticated) {
+        await userService.updateLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          location_name: '当前位置'
+        })
       }
+      
+      return position
+    } catch (error) {
+      console.warn('手动位置更新失败:', error)
+      return null
     }
-    
-    return location
   }
 
-  /**
-   * 是否正在跟踪
-   */
-  get tracking() {
-    return this.isTracking
-  }
-}
-
-// 单例实例
-const locationTracker = new LocationTracker()
-
-export const useLocationTracker = () => {
   return {
-    start: () => locationTracker.start(),
-    stop: () => locationTracker.stop(),
-    updateNow: () => locationTracker.updateNow(),
-    get tracking() {
-      return locationTracker.tracking
-    }
+    start,
+    stop,
+    updateNow,
+    tracking: computed(() => isTracking.value)
   }
 }
 

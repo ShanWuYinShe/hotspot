@@ -306,11 +306,21 @@ const imageInput = ref<HTMLInputElement>();
 
 // 计算属性
 const currentUser = computed(() => authStore.user);
+// 用户信息状态
+const userInfoData = ref<any>(null);
+
+// 异步加载用户信息
+const loadUserInfo = async () => {
+  try {
+    const response = await userService.openTheDoor({ id: route.params.id as string });
+    userInfoData.value = response;
+  } catch (error) {
+    console.error('加载用户信息失败:', error);
+  }
+};
+
 const userInfo = computed(() => {
-  // 从用户 store 获取用户信息
-  const user = userService.getProfile(route.params.id as string);
-  
-  return user || { 
+  return userInfoData.value || { 
     user_id: route.params.id as string,
     nickname: '未知用户', 
     isOnline: false, 
@@ -461,10 +471,9 @@ const handleSendMessage = async (event: Event) => {
     
     // 发送消息到后端
     try {
-      await messageService.sendMessage({
-        group_id: userId,
-        content: newMessage.content,
-        message_type: 'text'
+      await messagesStore.sendPrivateMessage(userId, {
+        type: 'text',
+        content: newMessage.content
       });
     } catch (error) {
       console.error('发送消息失败:', error);
@@ -571,12 +580,9 @@ const shareLocation = async () => {
     
     // 发送位置消息到后端
     try {
-      await messageService.sendMessage({
-        group_id: userId,
-        content: `位置: ${latitude}, ${longitude}`,
-        message_type: 'location',
-        latitude,
-        longitude
+      await messagesStore.sendPrivateMessage(userId, {
+        type: 'text',
+        content: `📍 位置: ${latitude}, ${longitude}`
       });
     } catch (error) {
       console.error('发送位置消息失败:', error);
@@ -609,12 +615,16 @@ const editMessage = (message: any) => {
 const deleteMessage = async (message: any) => {
   if (confirm('确定要删除这条消息吗？')) {
     try {
-      await messageService.deleteMessage(message.id);
+      await messagesStore.deleteMessage(userId, message.id, false);
     } catch (error) {
       console.error('删除消息失败:', error);
     }
   }
 };
+
+// 图片预览状态
+const currentImagePreview = ref<string | null>(null);
+const showImagePreview = ref(false);
 
 const previewImage = (imageUrl: string) => {
   // 打开图片预览模态框
@@ -638,7 +648,7 @@ const openLocation = (latitude: number, longitude: number) => {
 const clearChatHistory = async () => {
   if (confirm('确定要清空与此用户的所有聊天记录吗？此操作无法撤销。')) {
     try {
-      await messageService.deleteConversation(userId);
+      messagesStore.removeConversation(userId);
       toast.add({
         title: '聊天记录已清空',
         color: 'success'
@@ -661,7 +671,7 @@ const reportUser = () => {
 const blockUser = async () => {
   if (confirm(`确定要屏蔽用户 ${userInfo.value?.nickname} 吗？屏蔽后将无法收到对方的消息。`)) {
     try {
-      await userService.blockUser(userId);
+      await userService.blockUser({ user_id: userId });
       toast.add({
         title: '用户已屏蔽',
         color: 'success'
@@ -676,11 +686,8 @@ const blockUser = async () => {
 const loadMessages = async () => {
   try {
     // 加载聊天数据
-    await messageService.getMessages({
-      conversation_id: userId,
-      limit: 50
-    });
-    await userService.getProfile(userId);
+    await messagesStore.fetchPrivateMessages(userId);
+    await loadUserInfo();
   } catch (error) {
     console.error('加载聊天数据失败:', error);
   }

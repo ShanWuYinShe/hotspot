@@ -3,6 +3,15 @@
  * 在开发环境显示详细日志，生产环境只记录错误
  */
 
+// Sentry 类型声明
+declare global {
+  interface Window {
+    Sentry?: {
+      captureException: (error: Error, options?: any) => void
+    }
+  }
+}
+
 export enum LogLevel {
   DEBUG = 0,
   INFO = 1,

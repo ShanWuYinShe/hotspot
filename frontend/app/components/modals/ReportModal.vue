@@ -88,6 +88,8 @@
 </template>
 
 <script setup lang="ts">
+import { useReportsService } from '~/services/reports.service'
+
 interface Props {
   targetType: 'user' | 'moment' | 'comment' | 'message' | 'group'
   targetId: string
@@ -105,6 +107,15 @@ const props = withDefaults(defineProps<Props>(), {
 const submitting = ref(false)
 const selectedReason = ref('')
 const description = ref('')
+
+// Toast 辅助函数
+const toast = useToast()
+const success = (title: string, description?: string) => {
+  toast.add({ title, description, color: 'success' })
+}
+const error = (title: string, description?: string) => {
+  toast.add({ title, description, color: 'error' })
+}
 
 // 举报原因配置
 const reportReasons = computed(() => {
@@ -149,18 +160,15 @@ const reportReasons = computed(() => {
 })
 
 // 工具函数
-const toast = useToast()
-
-const getTargetTypeLabel = (type: string) => {
-  const labels = {
-    user: '用户',
-    moment: '生活瞬间',
-    comment: '评论',
-    message: '消息',
-    group: '群组'
-  }
-  return labels[type] || type
+const targetTypeLabels: Record<string, string> = {
+  user: '用户',
+  moment: '生活瞬间',
+  comment: '评论',
+  message: '消息',
+  group: '群组'
 }
+
+const getTargetTypeLabel = (type: string) => targetTypeLabels[type] || type
 
 // 方法
 const handleSubmit = async () => {
@@ -173,10 +181,10 @@ const handleSubmit = async () => {
 
   try {
     const reportsService = useReportsService()
-    await reportsService.createReport({
+    await reportsService.create({
       target_type: props.targetType,
       target_id: props.targetId,
-      reason: selectedReason.value,
+      reason: selectedReason.value as 'spam' | 'harassment' | 'inappropriate_content' | 'fake_account' | 'violence' | 'other',
       description: description.value.trim() || undefined
     })
 

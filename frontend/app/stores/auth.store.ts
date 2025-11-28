@@ -5,6 +5,7 @@
  * ⚠️ 已删除所有兼容性代码，只保留最新设计实现
  */
 
+import { defineStore } from 'pinia'
 import type { 
   UserResponse,
   RegisterRequest, 
@@ -13,6 +14,7 @@ import type {
   RefreshTokenRequest,
   SetPasswordRequest 
 } from '~/types/api'
+import { useAuthService } from '~/services/auth.service'
 
 export interface AuthSession {
   user: UserResponse
@@ -273,87 +275,72 @@ export const useAuthStore = defineStore('auth', () => {
 
   /**
    * 用户注册
+   * ✅ Store 只负责状态管理，不处理 UI 反馈
+   * 由调用方（组件）捕获错误并显示 toast
    */
   const register = async (data: RegisterRequest) => {
     const authService = useAuthService()
-    const toast = useToast()
     
-    try {
-      const response = await authService.register(data)
-      
-      // 解析过期时间
-      const expiresAt = new Date(response.expires_at).getTime()
-      
-      // 保存会话
-      setAccountSession(
-        { user_id: response.user_id, nickname: response.nickname },
-        response.access_token,
-        response.refresh_token,
-        expiresAt
-      )
-      
-      toast.add({ color: 'success', title: '注册成功' })
-      return response
-    } catch (error: any) {
-      toast.add({ color: 'error', title: '注册失败', description: error.message })
-      throw error
-    }
+    const response = await authService.register(data)
+    
+    // 解析过期时间
+    const expiresAt = new Date(response.expires_at).getTime()
+    
+    // 保存会话
+    setAccountSession(
+      { user_id: response.user_id, nickname: response.nickname },
+      response.access_token,
+      response.refresh_token,
+      expiresAt
+    )
+    
+    return response
   }
 
   /**
    * 用户登录
+   * ✅ Store 只负责状态管理，不处理 UI 反馈
    */
   const login = async (data: LoginRequest) => {
     const authService = useAuthService()
     
-    try {
-      const response = await authService.login(data)
-      
-      // 解析过期时间
-      const expiresAt = new Date(response.expires_at).getTime()
-      
-      // 保存会话
-      setAccountSession(
-        { user_id: response.user_id, nickname: response.nickname },
-        response.access_token,
-        response.refresh_token,
-        expiresAt
-      )
-      
-      toast.add({ color: 'success', title: '登录成功' })
-      return response
-    } catch (error: any) {
-      toast.add({ color: 'error', title: '登录失败', description: error.message })
-      throw error
-    }
+    const response = await authService.login(data)
+    
+    // 解析过期时间
+    const expiresAt = new Date(response.expires_at).getTime()
+    
+    // 保存会话
+    setAccountSession(
+      { user_id: response.user_id, nickname: response.nickname },
+      response.access_token,
+      response.refresh_token,
+      expiresAt
+    )
+    
+    return response
   }
 
   /**
    * 创建临时用户
+   * ✅ Store 只负责状态管理，不处理 UI 反馈
    */
   const createTempUser = async (data: CreateTempRequest) => {
     const authService = useAuthService()
     
-    try {
-      const response = await authService.createTempUser(data)
-      
-      // 解析过期时间
-      const expiresAt = new Date(response.expires_at).getTime()
-      
-      // 保存会话
-      setAccountSession(
-        { user_id: response.user_id, nickname: response.nickname },
-        response.access_token,
-        response.refresh_token,
-        expiresAt
-      )
-      
-      toast.add({ color: 'success', title: '临时用户创建成功' })
-      return response
-    } catch (error: any) {
-      toast.add({ color: 'error', title: '创建失败', description: error.message })
-      throw error
-    }
+    const response = await authService.createTempUser(data)
+    
+    // 解析过期时间
+    const expiresAt = new Date(response.expires_at).getTime()
+    
+    // 保存会话
+    setAccountSession(
+      { user_id: response.user_id, nickname: response.nickname },
+      response.access_token,
+      response.refresh_token,
+      expiresAt
+    )
+    
+    return response
   }
 
   /**
@@ -391,35 +378,26 @@ export const useAuthStore = defineStore('auth', () => {
 
   /**
    * 登出
+   * ✅ Store 只负责状态管理，不处理 UI 反馈
    */
   const logout = async () => {
     const authService = useAuthService()
     
     try {
       await authService.logout()
-      logoutCurrent()
-      toast.add({ color: 'success', title: '已登出' })
-    } catch (error: any) {
+    } finally {
       // 即使API失败也要清除本地会话
       logoutCurrent()
-      toast.add({ color: 'warning', title: '登出失败，但已清除本地会话' })
     }
   }
 
   /**
    * 设置密码（临时用户升级）
+   * ✅ Store 只负责状态管理，不处理 UI 反馈
    */
   const setPassword = async (data: SetPasswordRequest) => {
     const authService = useAuthService()
-    
-    try {
-      const response = await authService.setPassword(data)
-      toast.add({ color: 'success', title: '密码设置成功' })
-      return response
-    } catch (error: any) {
-      toast.add({ color: 'error', title: '设置失败', description: error.message })
-      throw error
-    }
+    return await authService.setPassword(data)
   }
 
   /**

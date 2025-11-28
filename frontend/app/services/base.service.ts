@@ -3,11 +3,27 @@
  * 遵循现代化服务设计模式
  */
 
-import type { FetchOptions } from 'ofetch'
-import type { PaginatedResponse, ApiResponse } from '~/types/api'
+import type { PaginatedData, ApiResponse } from '~/types/api'
+
+/**
+ * HTTP 请求选项
+ */
+interface RequestOptions {
+  timeout?: number
+  retry?: number
+  headers?: Record<string, string>
+}
 
 export abstract class BaseService {
-  protected http = useHttp()
+  /**
+   * ✅ 使用 getter 延迟初始化 HTTP 客户端
+   * 这样 useHttp() 只会在方法调用时执行，而不是在类实例化时
+   * 避免在非 Vue setup 上下文中调用 composables
+   */
+  protected get http() {
+    return useHttp()
+  }
+  
   protected abstract readonly baseUrl: string
 
   /**
@@ -21,7 +37,7 @@ export abstract class BaseService {
    * POST 请求（需要认证）
    * 根据API规范，所有API操作统一使用POST方法
    */
-  protected async post<T>(endpoint: string, body?: any, options?: FetchOptions): Promise<T> {
+  protected async post<T>(endpoint: string, body?: any, options?: RequestOptions): Promise<T> {
     const builder = this.http.post(this.buildUrl(endpoint), body).auth()
     
     // 应用额外选项
@@ -43,7 +59,7 @@ export abstract class BaseService {
    * 公开 POST 请求（无需认证）
    * 根据API规范，所有API操作统一使用POST方法
    */
-  protected async publicPost<T>(endpoint: string, body?: any, options?: FetchOptions): Promise<T> {
+  protected async publicPost<T>(endpoint: string, body?: any, options?: RequestOptions): Promise<T> {
     const builder = this.http.post(this.buildUrl(endpoint), body)
     
     // 应用额外选项（公开接口不需要auth）
@@ -72,8 +88,8 @@ export abstract class BaseService {
       cursor?: string
       [key: string]: any
     } = {}
-  ): Promise<PaginatedResponse<T>> {
-    return this.post<PaginatedResponse<T>>(endpoint, params)
+  ): Promise<PaginatedData<T>> {
+    return this.post<PaginatedData<T>>(endpoint, params)
   }
 
   /**

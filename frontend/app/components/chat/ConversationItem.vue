@@ -129,7 +129,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import type { SendMessageResponse } from "~/types/api";
+import type { PrivateChatLastMessage } from "~/types/api";
 
 // 本地 Conversation 类型定义 - 基于后端 ConversationsResponse 规范
 interface Conversation {
@@ -139,7 +139,7 @@ interface Conversation {
   type: 'group' | 'user';   // 对话类型
   group_type?: string;      // 群组类型：'private_chat'|'public_chat'
   member_count?: number;    // 成员数量
-  last_message?: SendMessageResponse;
+  last_message?: PrivateChatLastMessage;
   last_message_time?: string; // 最后消息时间
   unread_count: number;
   is_pinned: boolean;
@@ -169,7 +169,7 @@ const toast = useToast()
 // 计算最后一条消息的类型
 const lastMessageType = computed(() => {
     // 从 last_message 对象中获取消息类型
-    return props.conversation.last_message?.message_type || "text";
+    return props.conversation.last_message?.type || "text";
 });
 
 // 对话操作菜单

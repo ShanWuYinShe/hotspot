@@ -219,13 +219,14 @@ const initializeMockMap = () => {
   }, 1500)
 }
 
+const toast = useToast()
+
 const zoomIn = () => {
   // 实现地图放大功能
   if (mapLoaded.value) {
     // 这里应该调用实际地图SDK的放大方法
     // 目前显示操作反馈
-    const toast = useToast()
-    info('地图放大', '放大地图视图')
+    toast.add({ title: '地图放大', description: '放大地图视图', color: 'info' })
   }
 }
 
@@ -234,7 +235,7 @@ const zoomOut = () => {
   if (mapLoaded.value) {
     // 这里应该调用实际地图SDK的缩小方法
     // 目前显示操作反馈
-    info('地图缩小', '缩小地图视图')
+    toast.add({ title: '地图缩小', description: '缩小地图视图', color: 'info' })
   }
 }
 
@@ -245,13 +246,13 @@ const resetView = () => {
   if (mapLoaded.value) {
     // 这里应该调用实际地图SDK的重置视图方法
     // 目前显示操作反馈
-    info('重置视图', '已重置到当前位置')
+    toast.add({ title: '重置视图', description: '已重置到当前位置', color: 'info' })
   }
 }
 
 const locateMe = async () => {
   if (!navigator.geolocation) {
-    useNotifications().error('您的浏览器不支持定位功能')
+    toast.add({ title: '定位失败', description: '您的浏览器不支持定位功能', color: 'error' })
     return
   }
   
@@ -274,10 +275,10 @@ const locateMe = async () => {
     currentLocation.value = location
     emit('locationUpdate', location)
     
-    useNotifications().success('定位成功')
+    toast.add({ title: '定位成功', color: 'success' })
   } catch (error) {
     console.error('定位失败:', error)
-    useNotifications().error('定位失败，请检查位置权限')
+    toast.add({ title: '定位失败', description: '请检查位置权限', color: 'error' })
   } finally {
     locating.value = false
   }

@@ -123,7 +123,7 @@ const uploadAvatar = async () => {
     uploading.value = true;
 
     try {
-        // ✅ 使用 upload.service.ts 上传头像（符合 API 规范 3.16.1）
+        // 使用 upload.service.ts 上传头像
         const uploadService = useUploadService();
         
         try {

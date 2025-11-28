@@ -98,7 +98,7 @@
                                     src: (row as any).avatar_url,
                                     alt: (row as any).nickname,
                                     size: 'md',
-                                    chip: isOnlineUser((row as any).user_id) ? { color: 'success', position: 'bottom-right' } : false
+                                    chip: isOnlineUser((row as any).user_id) ? { color: 'success', position: 'bottom-right' } : undefined
                                 }"
                                 :chip="(row as any).role ? { text: (row as any).role, color: 'primary' } : false"
                                 size="md"
@@ -135,7 +135,7 @@
                                 title="暂无成员"
                                 description="邀请朋友一起加入群组吧"
                                 action-text="去管理"
-                                :action-handler="goSettings"
+                                @action="goSettings"
                             />
                         </template>
                     </UTable>
@@ -205,6 +205,10 @@ const toast = useToast()
 const groupsStore = useGroupsStore();
 const modal = useModal();
 const { formatTime } = useFormatters();
+
+// 导入服务
+import { useGroupsService } from '~/services/groups.service';
+const groupsService = useGroupsService();
 const groupId = computed(() =>
     String(
         Array.isArray(route.params.id) ? route.params.id[0] : route.params.id,
@@ -270,9 +274,21 @@ const groupInfoAccordionItems = computed(() => [
 
 const loadData = async () => {
     try {
-        const g = await groupsStore.fetchGroupDetails(groupId.value);
+        // 获取群组详情
+        const g = await groupsService.openTheDoor({ id: groupId.value });
         group.value = g;
-        members.value = await groupsStore.fetchGroupMembers(groupId.value);
+        groupsStore.setGroupDetails(groupId.value, g as any);
+        
+        // 获取群组成员
+        const membersResponse = await groupsService.getMembers({ group_chat_id: groupId.value });
+        members.value = membersResponse.items.map(m => ({
+            user_id: m.user_id,
+            nickname: m.nickname,
+            avatar_url: m.avatar_url,
+            role: m.role,
+            joined_at: m.joined_at
+        }));
+        
         // 获取群聊未读数（临时简化处理）
         groupUnread.value = 0;
         page.value = 1;
@@ -297,7 +313,7 @@ const goSettings = () => {
 
 const onJoin = async () => {
     try {
-        await groupsStore.joinGroup(groupId.value);
+        await groupsService.joinGroup({ group_chat_id: groupId.value });
         toast.add({ title: "加入成功", color: "success" });
         await loadData();
     } catch (e: any) {
@@ -333,7 +349,7 @@ onMounted(async () => {
 // 离开群组确认
 const confirmLeave = async () => {
     try {
-        await groupsStore.leaveGroup(groupId.value);
+        await groupsService.leaveGroup({ group_chat_id: groupId.value });
         toast.add({ title: "已退出群组", color: "success" });
         await loadData();
     } catch (e: any) {
@@ -358,7 +374,8 @@ const getUserDescription = (member: any) => {
 }
 
 // 检查用户在线状态（暂时禁用，需要WebSocket支持）
-const isOnlineUser = async (userId: string) => {
+const isOnlineUser = (userId: string): boolean => {
+    // TODO: 实现 WebSocket 在线状态检查
     return false
 }
 
@@ -426,7 +443,12 @@ const getMemberMenuItems = (member: any) => {
 // 角色变更
 const handleRoleChange = async (member: any, newRole: 'admin' | 'member') => {
     try {
-        // TODO: 实现角色变更API调用
+        await groupsService.setMemberRole({
+            group_chat_id: groupId.value,
+            user_id: member.user_id,
+            role: newRole
+        })
+        
         toast.add({
             title: "角色变更成功",
             description: `已将 ${member.nickname} 设为${newRole === 'admin' ? '管理员' : '普通成员'}`,
@@ -434,6 +456,7 @@ const handleRoleChange = async (member: any, newRole: 'admin' | 'member') => {
         })
         await loadData() // 重新加载数据
     } catch (error: any) {
+        console.error('角色变更失败:', error)
         toast.add({
             title: "角色变更失败",
             description: error.message || "请稍后重试",
@@ -452,7 +475,11 @@ const handleKickMember = async (member: any) => {
         confirmColor: "error",
         onConfirm: async () => {
             try {
-                // TODO: 实现移出成员API调用
+                await groupsService.removeMember({
+                    group_chat_id: groupId.value,
+                    user_id: member.user_id
+                })
+                
                 toast.add({
                     title: "移出成功",
                     description: `已将 ${member.nickname} 移出群组`,
@@ -460,6 +487,7 @@ const handleKickMember = async (member: any) => {
                 })
                 await loadData()
             } catch (error: any) {
+                console.error('移出成员失败:', error)
                 toast.add({
                     title: "移出失败",
                     description: error.message || "请稍后重试",

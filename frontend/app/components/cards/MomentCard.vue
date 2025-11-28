@@ -1,6 +1,10 @@
 <template>
-    <UCard 
-        class="group cursor-pointer hover:shadow-md transition-all duration-200"
+    <InteractiveCard 
+        class="group moment-card"
+        :hover="true"
+        :active="true"
+        :glow="true"
+        shadow="md"
         @click="$emit('click', moment)"
     >
         <!-- 用户信息头部 -->
@@ -60,8 +64,64 @@
                 </p>
             </div>
 
+            <!-- 图片展示（支持最多9张） -->
+            <div v-if="moment.images?.length" class="mt-3">
+                <!-- 单张图片 -->
+                <div v-if="moment.images.length === 1" class="rounded-lg overflow-hidden">
+                    <img
+                        :src="moment.images[0]"
+                        :alt="moment.description"
+                        class="w-full max-h-96 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                        @click.stop="handleImageClick(moment.images[0], 0)"
+                    />
+                </div>
+
+                <!-- 2-4张图片（网格布局） -->
+                <div 
+                    v-else-if="moment.images.length <= 4"
+                    :class="[
+                        'grid gap-2 rounded-lg overflow-hidden',
+                        moment.images.length === 2 ? 'grid-cols-2' : 'grid-cols-2'
+                    ]"
+                >
+                    <img
+                        v-for="(image, index) in moment.images"
+                        :key="index"
+                        :src="image"
+                        :alt="`${moment.description} - ${index + 1}`"
+                        class="w-full h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                        @click.stop="handleImageClick(image, index)"
+                    />
+                </div>
+
+                <!-- 5-9张图片（3x3网格） -->
+                <div 
+                    v-else
+                    class="grid grid-cols-3 gap-2 rounded-lg overflow-hidden"
+                >
+                    <template v-for="(image, index) in moment.images.slice(0, 9)" :key="index">
+                        <div class="relative">
+                            <img
+                                :src="image"
+                                :alt="`${moment.description} - ${index + 1}`"
+                                class="w-full h-32 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                @click.stop="handleImageClick(image, index)"
+                            />
+                            <!-- 第9张图片显示"更多"遮罩 -->
+                            <div
+                                v-if="index === 8 && moment.images.length > 9"
+                                class="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-semibold"
+                                @click.stop="$emit('more-images', moment)"
+                            >
+                                +{{ moment.images.length - 9 }}
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
             <!-- 标签 -->
-            <div v-if="moment.tags?.length" class="flex flex-wrap gap-2">
+            <div v-if="moment.tags?.length" class="flex flex-wrap gap-2 mt-3">
                 <UBadge
                     v-for="tag in moment.tags"
                     :key="tag"
@@ -74,8 +134,6 @@
                     #{{ tag }}
                 </UBadge>
             </div>
-
-            <!-- 图片功能暂未实现，等待后端API支持 -->
         </div>
 
         <!-- 互动区域 -->
@@ -121,11 +179,12 @@
                 <!-- 可见性功能暂未实现，等待后端API支持 -->
             </div>
         </template>
-    </UCard>
+    </InteractiveCard>
 </template>
 
 <script setup lang="ts">
 import { useMomentsService } from '~/services/moments.service';
+import { useUserService } from '~/services/users.service';
 import type { MomentResponse, UserResponse } from '~/types/api'
 
 interface Props {
@@ -179,16 +238,9 @@ const isMyMoment = computed(() => {
     return props.moment.user_id === authStore.user?.user_id
 })
 
-// 获取用户在线状态
-const { checkUserOnline } = useOnlineStatus()
-const isOnline = ref(false)
-
-// 异步获取在线状态
-watchEffect(async () => {
-    if (props.moment.user_id) {
-        isOnline.value = await checkUserOnline(props.moment.user_id)
-    }
-})
+// 用户在线状态（如果需要显示，应该通过 WebSocket 订阅获取）
+// TODO: 通过 WebSocket 订阅用户在线状态更新
+const isOnline = computed(() => false)
 
 // 用户描述信息
 const userDescription = computed(() => {
@@ -297,7 +349,8 @@ const handleDeleteMoment = async () => {
 // 关注用户
 const handleFollowUser = async () => {
     try {
-        await userService.followUser({ user_id: props.moment.user_id })
+        const userService = useUserService()
+        await userService.followUser({ to_user_id: props.moment.user_id })
         toast.add({ color: 'success', title: '关注成功' })
     } catch (error: any) {
         toast.add({ color: 'error', title: '关注失败', description: error.message })
@@ -326,5 +379,10 @@ const handleReportMoment = async () => {
             })
         }
     })
+}
+
+// 图片点击处理
+const handleImageClick = (image: string, index: number) => {
+    emit('image-click', { image, index })
 }
 </script>
