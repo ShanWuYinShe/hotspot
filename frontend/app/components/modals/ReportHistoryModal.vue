@@ -5,8 +5,8 @@
         <!-- 标题 -->
         <div class="flex items-center justify-between mb-6">
           <div class="flex items-center gap-3">
-            <UIcon name="i-heroicons-document-text" class="w-6 h-6 text-blue-500" />
-            <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+            <UIcon name="i-heroicons-document-text" class="w-6 h-6 text-neutral-600 dark:text-neutral-300" />
+            <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">
               我的举报记录
             </h3>
           </div>
@@ -38,16 +38,16 @@
                     :label="getStatusLabel(report.status)"
                     size="xs"
                   />
-                  <span class="text-sm text-neutral-500">
+                  <span class="text-sm text-neutral-500 dark:text-neutral-400">
                     {{ getTargetTypeLabel(report.target_type) }}
                   </span>
                 </div>
-                <span class="text-xs text-neutral-500">
+                <span class="text-xs text-neutral-500 dark:text-neutral-400">
                   {{ formatTime(report.created_at) }}
                 </span>
               </div>
               
-              <h4 class="font-medium text-neutral-900 dark:text-neutral-100 mb-1">
+              <h4 class="font-medium text-neutral-900 dark:text-white mb-1">
                 {{ getReasonLabel(report.reason) }}
               </h4>
               
@@ -55,11 +55,11 @@
                 {{ report.description }}
               </p>
               
-              <div v-if="report.handler_note" class="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
+              <div v-if="report.handler_note" class="text-xs text-neutral-700 dark:text-neutral-300 bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
                 <strong>处理说明：</strong>{{ report.handler_note }}
               </div>
               
-              <div v-if="report.handled_at" class="text-xs text-neutral-500 mt-2">
+              <div v-if="report.handled_at" class="text-xs text-neutral-500 dark:text-neutral-400 mt-2">
                 处理时间：{{ formatTime(report.handled_at) }}
               </div>
             </div>
@@ -67,8 +67,8 @@
 
           <!-- 空状态 -->
           <div v-else-if="!loading" class="text-center py-8">
-            <UIcon name="i-heroicons-document-text" class="w-12 h-12 text-neutral-400 mx-auto mb-3" />
-            <h4 class="text-sm font-medium text-neutral-900 dark:text-neutral-100 mb-1">
+            <UIcon name="i-heroicons-document-text" class="w-12 h-12 text-neutral-400 dark:text-neutral-500 mx-auto mb-3" />
+            <h4 class="text-sm font-medium text-neutral-900 dark:text-white mb-1">
               {{ activeTab === 'all' ? '暂无举报记录' : `暂无${getTabLabel(activeTab)}举报` }}
             </h4>
             <p class="text-xs text-neutral-600 dark:text-neutral-400">

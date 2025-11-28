@@ -19,7 +19,7 @@
                 </UAvatar>
 
                 <div>
-                    <h1 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+                    <h1 class="text-lg font-semibold text-neutral-900 dark:text-white">
                         {{ groupInfo?.name || "群聊" }}
                     </h1>
                     <p class="text-sm opacity-80">
@@ -72,7 +72,7 @@
             />
             <div
                 v-if="searchResults.length > 0"
-                class="mt-2 text-sm text-neutral-500"
+                class="mt-2 text-sm text-neutral-500 dark:text-neutral-400"
             >
                 找到 {{ searchResults.length }} 条相关消息
             </div>

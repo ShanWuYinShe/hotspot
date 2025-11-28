@@ -14,7 +14,7 @@
     >
       <div class="text-center">
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-2"></div>
-        <p class="text-sm text-slate-600 dark:text-slate-400">加载地图中...</p>
+        <p class="text-sm text-neutral-600 dark:text-neutral-400">加载地图中...</p>
       </div>
     </div>
     
@@ -56,7 +56,7 @@
       v-if="showLegend && markers.length > 0"
       class="absolute bottom-4 left-4 bg-white dark:bg-slate-800 rounded-lg p-3 shadow-lg border border-slate-200 dark:border-slate-700"
     >
-      <h4 class="text-sm font-medium text-slate-900 dark:text-white mb-2">图例</h4>
+      <h4 class="text-sm font-medium text-neutral-900 dark:text-white mb-2">图例</h4>
       <div class="space-y-1">
         <div
           v-for="type in markerTypes"
@@ -67,7 +67,7 @@
             class="w-3 h-3 rounded-full"
             :style="{ backgroundColor: type.color }"
           />
-          <span class="text-slate-600 dark:text-slate-400">{{ type.label }}</span>
+          <span class="text-neutral-600 dark:text-neutral-400">{{ type.label }}</span>
         </div>
       </div>
     </div>
@@ -84,13 +84,13 @@
           size="sm"
         />
         <div class="flex-1 min-w-0">
-          <h4 class="font-medium text-slate-900 dark:text-white truncate">
+          <h4 class="font-medium text-neutral-900 dark:text-white truncate">
             {{ selectedMarker.title }}
           </h4>
-          <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
+          <p class="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
             {{ selectedMarker.description }}
           </p>
-          <div class="flex items-center gap-2 mt-2 text-xs text-slate-500">
+          <div class="flex items-center gap-2 mt-2 text-xs text-neutral-500 dark:text-neutral-400">
             <UIcon name="i-heroicons-map-pin" class="w-3 h-3" />
             <span>距离 {{ formatDistance(selectedMarker.distance || 0) }}</span>
           </div>
@@ -126,10 +126,10 @@
       class="absolute inset-0 flex items-center justify-center bg-slate-50 dark:bg-slate-800"
     >
       <div class="text-center">
-        <UIcon name="i-heroicons-map" class="w-16 h-16 text-slate-400 mx-auto mb-4" />
-        <h3 class="text-lg font-medium text-slate-900 dark:text-white mb-2">地图功能</h3>
-        <p class="text-slate-600 dark:text-slate-400 mb-4">即将支持高德地图集成</p>
-        <div class="space-y-2 text-sm text-slate-500">
+        <UIcon name="i-heroicons-map" class="w-16 h-16 text-neutral-400 dark:text-neutral-500 mx-auto mb-4" />
+        <h3 class="text-lg font-medium text-neutral-900 dark:text-white mb-2">地图功能</h3>
+        <p class="text-neutral-600 dark:text-neutral-400 mb-4">即将支持高德地图集成</p>
+        <div class="space-y-2 text-sm text-neutral-500 dark:text-neutral-400">
           <p>• 实时位置定位</p>
           <p>• 附近用户和群组</p>
           <p>• 路线导航</p>

@@ -16,18 +16,18 @@
         <!-- 用户信息 -->
         <div class="flex items-center gap-2 mb-1">
           <span class="font-medium text-sm">{{ comment.user.nickname }}</span>
-          <span class="text-xs text-neutral-500">
+          <span class="text-xs text-neutral-500 dark:text-neutral-400">
             {{ formatTime(comment.created_at) }}
           </span>
         </div>
 
         <!-- 回复对象 -->
         <div v-if="comment.reply_to_user" class="text-sm text-neutral-600 dark:text-neutral-400 mb-1">
-          回复 <span class="text-primary-500">@{{ comment.reply_to_user.nickname }}</span>
+          回复 <span class="text-neutral-600 dark:text-neutral-300">@{{ comment.reply_to_user.nickname }}</span>
         </div>
 
         <!-- 评论内容 -->
-        <p class="text-sm text-neutral-800 dark:text-neutral-200 whitespace-pre-wrap break-words">
+        <p class="text-sm text-neutral-900 dark:text-white whitespace-pre-wrap break-words">
           {{ comment.content }}
         </p>
 
@@ -39,7 +39,7 @@
             class="flex items-center gap-1 text-xs transition-colors"
             :class="comment.liked_by_me 
               ? 'text-error-500' 
-              : 'text-neutral-500 hover:text-error-500'"
+              : 'text-neutral-500 dark:text-neutral-400 hover:text-error-500'"
           >
             <UIcon 
               :name="comment.liked_by_me ? 'i-heroicons-heart-solid' : 'i-heroicons-heart'" 
@@ -51,7 +51,7 @@
           <!-- 回复 -->
           <button
             @click="handleReply"
-            class="flex items-center gap-1 text-xs text-neutral-500 hover:text-primary-500 transition-colors"
+            class="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-600 dark:text-neutral-300 transition-colors"
           >
             <UIcon name="i-heroicons-chat-bubble-left" class="w-4 h-4" />
             <span>回复</span>
@@ -61,7 +61,7 @@
           <button
             v-if="comment.replies_count > 0 && !isReply"
             @click="toggleReplies"
-            class="flex items-center gap-1 text-xs text-neutral-500 hover:text-primary-500 transition-colors"
+            class="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-600 dark:text-neutral-300 transition-colors"
           >
             <UIcon 
               :name="showReplies ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'" 
@@ -74,7 +74,7 @@
           <button
             v-if="canDelete"
             @click="handleDelete"
-            class="flex items-center gap-1 text-xs text-neutral-500 hover:text-error-500 transition-colors ml-auto"
+            class="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400 hover:text-error-500 transition-colors ml-auto"
           >
             <UIcon name="i-heroicons-trash" class="w-4 h-4" />
             <span>删除</span>
@@ -99,7 +99,7 @@
         v-if="hasMoreReplies"
         @click="loadMoreReplies"
         :disabled="loadingReplies"
-        class="text-sm text-primary-500 hover:text-primary-600 transition-colors"
+        class="text-sm text-neutral-600 dark:text-neutral-300 hover:underline transition-colors"
       >
         {{ loadingReplies ? '加载中...' : '查看更多回复' }}
       </button>

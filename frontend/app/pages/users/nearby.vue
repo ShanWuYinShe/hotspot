@@ -49,7 +49,7 @@
                                 <div class="font-semibold truncate">
                                     {{ (row as any).nickname }}
                                 </div>
-                                <div class="text-xs text-neutral-500 truncate">
+                                <div class="text-xs text-neutral-500 dark:text-neutral-400 truncate">
                                     {{
                                         (row as any).location_name ||
                                         defaults.locationName
@@ -121,7 +121,7 @@
             </div>
             
             <!-- 已加载完毕提示 -->
-            <div v-else-if="users.length > 0" class="mt-6 text-center text-sm text-neutral-500">
+            <div v-else-if="users.length > 0" class="mt-6 text-center text-sm text-neutral-500 dark:text-neutral-400">
                 已显示全部 {{ users.length }} 位附近用户
             </div>
         </UCard>

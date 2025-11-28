@@ -209,6 +209,8 @@
     "temporary": "Temporary",
     "verified": "Verified",
     "upgradeAccount": "Upgrade Account",
+    "createGroup": "Create Group",
+    "findFriends": "Find Friends",
     "tempModal": {
       "title": "Quick Temporary Experience",
       "infoTitle": "Temporary Experience Info",

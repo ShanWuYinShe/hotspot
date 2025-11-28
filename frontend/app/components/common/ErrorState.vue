@@ -25,7 +25,7 @@
       
       <!-- 错误详情（开发模式） -->
       <details v-if="error && isDev" class="mt-4 text-left">
-        <summary class="text-xs text-neutral-500 dark:text-neutral-400 cursor-pointer hover:text-neutral-700 dark:hover:text-neutral-300">
+        <summary class="text-xs text-neutral-500 dark:text-neutral-400 cursor-pointer hover:text-neutral-700 dark:text-neutral-300 dark:hover:text-neutral-400 dark:text-neutral-500">
           查看错误详情
         </summary>
         <pre class="mt-2 p-3 bg-neutral-100 dark:bg-neutral-800 rounded-lg text-xs text-neutral-700 dark:text-neutral-300 overflow-auto max-h-32">{{ error }}</pre>

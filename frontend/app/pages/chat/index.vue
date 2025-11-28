@@ -10,7 +10,7 @@
             </div>
             <div>
               <h1 class="text-lg font-semibold text-neutral-900 dark:text-white">消息中心</h1>
-              <p class="text-sm text-neutral-500">与朋友和群组保持联系</p>
+              <p class="text-sm text-neutral-500 dark:text-neutral-400">与朋友和群组保持联系</p>
             </div>
           </div>
         </template>
@@ -61,7 +61,7 @@
             @click="navigateTo('/search')"
           >
             <template #icon>
-              <div class="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
+              <div class="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center">
                 <UIcon name="i-heroicons-user-plus" class="w-5 h-5 text-white" />
               </div>
             </template>
@@ -139,7 +139,7 @@
             <!-- 空状态 -->
             <div v-else-if="filteredConversations.length === 0" class="text-center py-12">
               <div class="w-16 h-16 bg-neutral-100 dark:bg-neutral-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <UIcon name="i-heroicons-chat-bubble-left-ellipsis" class="w-8 h-8 text-neutral-500" />
+                <UIcon name="i-heroicons-chat-bubble-left-ellipsis" class="w-8 h-8 text-neutral-500 dark:text-neutral-400" />
               </div>
               <h3 class="text-lg font-semibold text-neutral-900 dark:text-white mb-2">暂无会话</h3>
               <p class="text-neutral-600 dark:text-neutral-400 mb-4">开始与朋友聊天吧！</p>
@@ -175,7 +175,7 @@
                   <!-- 群组标识 -->
                   <div
                     v-if="conversation.chat_type === 'group'"
-                    class="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 rounded-full border-2 border-white dark:border-neutral-900 flex items-center justify-center"
+                    class="absolute -bottom-1 -right-1 w-4 h-4 bg-primary-500 rounded-full border-2 border-white dark:border-neutral-900 flex items-center justify-center"
                   >
                     <UIcon name="i-heroicons-user-group" class="w-2 h-2 text-white" />
                   </div>
@@ -187,14 +187,14 @@
                     <h3 class="font-medium text-neutral-900 dark:text-white truncate">
                       {{ conversation.name }}
                     </h3>
-                    <span class="text-xs text-neutral-500 flex-shrink-0">
+                    <span class="text-xs text-neutral-500 dark:text-neutral-400 flex-shrink-0">
                       {{ formatTime(conversation.last_activity_at) }}
                     </span>
                   </div>
                   
                   <div class="flex items-center justify-between">
                     <p class="text-sm text-neutral-600 dark:text-neutral-400 truncate">
-                      <span v-if="(conversation as any).last_message_sender && conversation.chat_type === 'group'" class="text-neutral-500">
+                      <span v-if="(conversation as any).last_message_sender && conversation.chat_type === 'group'" class="text-neutral-500 dark:text-neutral-400">
                         {{ (conversation as any).last_message_sender }}:
                       </span>
                       {{ conversation.last_message?.content || '暂无消息' }}

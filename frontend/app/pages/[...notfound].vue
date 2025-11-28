@@ -10,7 +10,7 @@
                 >
                     <UIcon
                         name="i-heroicons-question-mark-circle"
-                        class="w-16 h-16 text-primary-600 dark:text-primary-400"
+                        class="w-16 h-16 text-neutral-700 dark:text-neutral-300"
                     />
                 </div>
             </div>

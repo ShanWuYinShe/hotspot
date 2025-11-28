@@ -2,7 +2,7 @@
   <div class="comment-input">
     <!-- 回复提示 -->
     <div v-if="replyTo" class="flex items-center justify-between p-2 mb-2 bg-primary-50 dark:bg-primary-950/20 rounded-lg">
-      <span class="text-sm text-primary-600 dark:text-primary-400">
+      <span class="text-sm text-neutral-700 dark:text-neutral-300">
         回复 <span class="font-medium">@{{ replyTo.user.nickname }}</span>
       </span>
       <UButton
@@ -38,7 +38,7 @@
         
         <!-- 字数统计和操作按钮 -->
         <div class="flex items-center justify-between mt-2">
-          <span class="text-xs text-neutral-500">
+          <span class="text-xs text-neutral-500 dark:text-neutral-400">
             {{ content.length }} / 500
           </span>
           

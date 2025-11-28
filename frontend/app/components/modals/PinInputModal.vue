@@ -2,7 +2,7 @@
   <UModal :title="isSetup ? '设置设备PIN' : '输入设备PIN'" :prevent-close="true" :close="{ onClick: () => $emit('close') }">
     <template #body>
       <div class="space-y-4">
-        <p class="text-sm text-gray-600 dark:text-gray-400">
+        <p class="text-sm text-neutral-600 dark:text-neutral-400">
           {{ isSetup 
             ? '请设置4位数字PIN以保护账户切换功能' 
             : '请输入4位数字PIN以解锁账户切换功能' 
@@ -27,7 +27,7 @@
         </div>
 
         <div v-if="isSetup" class="text-center">
-          <p class="text-xs text-gray-500 dark:text-gray-400">
+          <p class="text-xs text-neutral-500 dark:text-neutral-400">
             建议使用好记的数字组合，如生日或纪念日
           </p>
         </div>

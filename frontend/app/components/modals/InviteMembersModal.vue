@@ -5,8 +5,8 @@
         <!-- 标题 -->
         <div class="flex items-center justify-between mb-6">
           <div class="flex items-center gap-3">
-            <UIcon name="i-heroicons-user-plus" class="w-6 h-6 text-primary-500" />
-            <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+            <UIcon name="i-heroicons-user-plus" class="w-6 h-6 text-neutral-600 dark:text-neutral-300" />
+            <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">
               邀请成员
             </h3>
           </div>
@@ -49,7 +49,7 @@
                 <div class="font-medium text-neutral-900 dark:text-white">
                   {{ friend.nickname }}
                 </div>
-                <div v-if="friend.remark" class="text-xs text-neutral-500">
+                <div v-if="friend.remark" class="text-xs text-neutral-500 dark:text-neutral-400">
                   备注: {{ friend.remark }}
                 </div>
               </div>

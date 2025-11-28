@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col items-center justify-center py-8 md:py-12 space-y-4">
     <!-- 加载动画 -->
-    <UIcon name="i-lucide-loader-2" class="w-12 h-12 md:w-16 md:h-16 animate-spin text-primary-500" />
+    <UIcon name="i-lucide-loader-2" class="w-12 h-12 md:w-16 md:h-16 animate-spin text-neutral-600 dark:text-neutral-300" />
     
     <!-- 加载文本 -->
     <div class="text-center space-y-2">

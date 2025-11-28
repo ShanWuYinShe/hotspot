@@ -4,7 +4,7 @@
       <template #header>
         <div class="flex items-center gap-4 md:gap-5">
           <div class="p-4 md:p-5 rounded-xl bg-primary-100 dark:bg-primary-900/40 flex-shrink-0">
-            <UIcon name="i-heroicons-information-circle" class="w-7 h-7 md:w-9 md:h-9 text-primary-600 dark:text-primary-400" />
+            <UIcon name="i-heroicons-information-circle" class="w-7 h-7 md:w-9 md:h-9 text-neutral-700 dark:text-neutral-300" />
           </div>
           <div class="min-w-0 flex-1">
             <h2 
@@ -25,7 +25,7 @@
         <!-- 应用信息 -->
         <div class="text-center py-4 md:py-6">
           <div class="w-16 h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 bg-primary-100 dark:bg-primary-900/40 rounded-2xl flex items-center justify-center mx-auto mb-3 md:mb-4">
-            <UIcon name="i-heroicons-map-pin" class="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 text-primary-600 dark:text-primary-400" />
+            <UIcon name="i-heroicons-map-pin" class="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 text-neutral-700 dark:text-neutral-300" />
           </div>
           <h3 class="text-lg md:text-xl lg:text-2xl font-bold text-neutral-900 dark:text-white mb-1 md:mb-2">
             HotSpot
@@ -52,7 +52,7 @@
             </div>
             <div class="text-left min-w-0 flex-1">
               <div class="font-medium text-sm md:text-base">清除缓存</div>
-              <div class="text-xs md:text-sm text-neutral-600">清除应用缓存数据</div>
+              <div class="text-xs md:text-sm text-neutral-600 dark:text-neutral-400">清除应用缓存数据</div>
             </div>
           </UButton>
           
@@ -68,7 +68,7 @@
             </div>
             <div class="text-left min-w-0 flex-1">
               <div class="font-medium text-sm md:text-base">帮助与支持</div>
-              <div class="text-xs md:text-sm text-neutral-600">获取使用帮助</div>
+              <div class="text-xs md:text-sm text-neutral-600 dark:text-neutral-400">获取使用帮助</div>
             </div>
           </UButton>
           
@@ -84,7 +84,7 @@
             </div>
             <div class="text-left min-w-0 flex-1">
               <div class="font-medium text-sm md:text-base">隐私政策</div>
-              <div class="text-xs md:text-sm text-neutral-600">查看隐私政策</div>
+              <div class="text-xs md:text-sm text-neutral-600 dark:text-neutral-400">查看隐私政策</div>
             </div>
           </UButton>
           
@@ -100,7 +100,7 @@
             </div>
             <div class="text-left min-w-0 flex-1">
               <div class="font-medium text-sm md:text-base">服务条款</div>
-              <div class="text-xs md:text-sm text-neutral-600">查看服务条款</div>
+              <div class="text-xs md:text-sm text-neutral-600 dark:text-neutral-400">查看服务条款</div>
             </div>
           </UButton>
         </div>

@@ -39,7 +39,7 @@
 
           <template #footer>
             <div class="text-center space-y-2">
-              <p class="text-xs text-neutral-500">
+              <p class="text-xs text-neutral-500 dark:text-neutral-400">
                 注册即表示您同意我们的 
                 <ULink to="#" class="text-primary font-medium">服务条款</ULink> 
                 和 
@@ -63,7 +63,7 @@
         <!-- 个人信息完善步骤 -->
         <div v-else-if="currentStep === 1" class="p-6">
           <div class="text-center mb-6">
-            <UIcon name="i-heroicons-user-circle" class="w-16 h-16 text-primary-500 mx-auto mb-4" />
+            <UIcon name="i-heroicons-user-circle" class="w-16 h-16 text-neutral-600 dark:text-neutral-300 mx-auto mb-4" />
             <h2 class="text-2xl font-bold text-neutral-900 dark:text-white mb-2">完善个人信息</h2>
             <p class="text-neutral-600 dark:text-neutral-400">让我们更好地了解您</p>
           </div>

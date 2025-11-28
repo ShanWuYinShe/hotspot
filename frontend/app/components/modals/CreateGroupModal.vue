@@ -5,8 +5,8 @@
         <!-- 标题 -->
         <div class="flex items-center justify-between mb-6">
           <div class="flex items-center gap-3">
-            <UIcon name="i-heroicons-user-group" class="w-6 h-6 text-primary-500" />
-            <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+            <UIcon name="i-heroicons-user-group" class="w-6 h-6 text-neutral-600 dark:text-neutral-300" />
+            <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">
               创建群组
             </h3>
           </div>
@@ -31,7 +31,7 @@
           >
             <div class="flex items-center gap-4 p-4">
               <div class="flex items-center justify-center w-12 h-12 bg-primary-100 dark:bg-primary-900/50 rounded-xl">
-                <UIcon name="i-heroicons-bolt" class="w-6 h-6 text-primary-600 dark:text-primary-300" />
+                <UIcon name="i-heroicons-bolt" class="w-6 h-6 text-neutral-700 dark:text-neutral-300" />
               </div>
               <div class="flex-1">
                 <h4 class="font-semibold text-neutral-900 dark:text-white mb-1">快速创建</h4>
@@ -91,7 +91,7 @@
                 :maxlength="200"
               />
               <div class="flex justify-end mt-1">
-                <span class="text-xs text-neutral-500">
+                <span class="text-xs text-neutral-500 dark:text-neutral-400">
                   {{ (form.description || '').length }}/200
                 </span>
               </div>
@@ -169,7 +169,7 @@
                 type="password"
                 placeholder="设置群组密码以限制加入"
               />
-              <p class="text-xs text-neutral-500 mt-1">
+              <p class="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
                 设置密码后，用户需要输入密码才能加入群组
               </p>
             </div>

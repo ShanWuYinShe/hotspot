@@ -109,7 +109,7 @@
                             <h1 class="text-2xl font-bold text-neutral-900 dark:text-white mb-2">
                                 {{ user.nickname || '未设置昵称' }}
                             </h1>
-                            <div class="flex flex-wrap gap-4 text-sm text-neutral-600 dark:text-neutral-300">
+                            <div class="flex flex-wrap gap-4 text-sm text-neutral-600 dark:text-neutral-400">
                                 <div class="flex items-center gap-1">
                                     <UIcon name="i-heroicons-identification" />
                                     <span>ID: {{ user.user_id }}</span>
@@ -131,7 +131,7 @@
                                 <div class="text-xl font-semibold text-neutral-900 dark:text-white">
                                     {{ userStats.momentsCount }}
                                 </div>
-                                <div class="text-sm text-neutral-600 dark:text-neutral-300">
+                                <div class="text-sm text-neutral-600 dark:text-neutral-400">
                                     动态
                                 </div>
                             </div>
@@ -139,7 +139,7 @@
                                 <div class="text-xl font-semibold text-neutral-900 dark:text-white">
                                     {{ userStats.friendsCount }}
                                 </div>
-                                <div class="text-sm text-neutral-600 dark:text-neutral-300">
+                                <div class="text-sm text-neutral-600 dark:text-neutral-400">
                                     好友
                                 </div>
                             </div>
@@ -147,7 +147,7 @@
                                 <div class="text-xl font-semibold text-neutral-900 dark:text-white">
                                     {{ userStats.groupsCount }}
                                 </div>
-                                <div class="text-sm text-neutral-600 dark:text-neutral-300">
+                                <div class="text-sm text-neutral-600 dark:text-neutral-400">
                                     群组
                                 </div>
                             </div>
@@ -187,12 +187,12 @@
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center gap-2 mb-1">
                                         <span class="font-medium text-sm">{{ moment.nickname }}</span>
-                                        <span class="text-xs text-neutral-500">{{ formatTime(moment.created_at) }}</span>
+                                        <span class="text-xs text-neutral-500 dark:text-neutral-400">{{ formatTime(moment.created_at) }}</span>
                                     </div>
                                     <p class="text-sm text-neutral-700 dark:text-neutral-300 line-clamp-2">
                                         {{ moment.description }}
                                     </p>
-                                    <div class="flex items-center gap-4 mt-2 text-xs text-neutral-500">
+                                    <div class="flex items-center gap-4 mt-2 text-xs text-neutral-500 dark:text-neutral-400">
                                         <span class="flex items-center gap-1">
                                             <UIcon name="i-heroicons-heart" />
                                             {{ moment.likes_count }}
@@ -218,7 +218,7 @@
                         </div>
                     </div>
                     
-                    <div v-else class="py-8 text-center text-neutral-500">
+                    <div v-else class="py-8 text-center text-neutral-500 dark:text-neutral-400">
                         TA还没有发布任何动态
                     </div>
                 </template>
@@ -234,7 +234,7 @@
                 </template>
                 
                 <template #friends-content>
-                    <div class="py-8 text-center text-neutral-500">
+                    <div class="py-8 text-center text-neutral-500 dark:text-neutral-400">
                         好友列表功能开发中...
                     </div>
                 </template>
@@ -250,7 +250,7 @@
                 </template>
                 
                 <template #groups-content>
-                    <div class="py-8 text-center text-neutral-500">
+                    <div class="py-8 text-center text-neutral-500 dark:text-neutral-400">
                         群组列表功能开发中...
                     </div>
                 </template>
@@ -263,7 +263,6 @@
 <script setup lang="ts">
 import { useUserService } from '~/services/users.service';
 import { useMomentService } from '~/services/moments.service';
-import { buildUserUrl, USER_ENDPOINTS } from '~/config/api';
 import type { UserResponse, MomentResponse } from '~/types/api';
 
 // 公开页面 - 用户资料应该公开可见（虽然 API 是 protected，但应该允许未登录用户查看）

@@ -39,7 +39,7 @@
                             </UBadge>
                         </div>
                         
-                        <div class="flex items-center gap-2 text-xs text-muted mt-1">
+                        <div class="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400 mt-1">
                             <UChip 
                                 v-if="group.user_role === 'owner'"
                                 text="群主"
@@ -97,12 +97,12 @@
         <!-- 群组内容 -->
         <div class="space-y-3">
             <!-- 群组描述 -->
-            <p v-if="group.description" class="text-sm text-muted line-clamp-2">
+            <p v-if="group.description" class="text-sm text-neutral-600 dark:text-neutral-400 line-clamp-2">
                 {{ group.description }}
             </p>
 
             <!-- 位置和距离信息 -->
-            <div class="flex items-center gap-4 text-sm text-muted">
+            <div class="flex items-center gap-4 text-sm text-neutral-600 dark:text-neutral-400">
                 <div v-if="group.location_name" class="flex items-center gap-1">
                     <UIcon name="i-heroicons-map-pin" class="w-3 h-3" />
                     <span class="truncate">{{ group.location_name }}</span>
@@ -117,7 +117,7 @@
 
         <!-- 群组底部信息 -->
         <template #footer>
-            <div class="flex items-center justify-between text-xs text-muted">
+            <div class="flex items-center justify-between text-xs text-neutral-600 dark:text-neutral-400">
                 <div class="flex items-center gap-1">
                     <UIcon name="i-heroicons-clock" class="w-3 h-3" />
                     <span>活跃: {{ formatTime(group.last_active_at) }}</span>

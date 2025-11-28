@@ -4,7 +4,8 @@
       <UButton 
         variant="ghost" 
         size="sm"
-        :class="{ 'bg-primary/10 text-primary': activeFilters.includes('users') }"
+        color="neutral"
+        :class="{ 'bg-primary-100 dark:bg-primary-900/30 border border-primary-500': activeFilters.includes('users') }"
         @click="$emit('toggle-filter', 'users')"
       >
         <UIcon name="i-heroicons-users" class="w-4 h-4 mr-1" />
@@ -13,7 +14,8 @@
       <UButton 
         variant="ghost" 
         size="sm"
-        :class="{ 'bg-primary/10 text-primary': activeFilters.includes('groups') }"
+        color="neutral"
+        :class="{ 'bg-primary-100 dark:bg-primary-900/30 border border-primary-500': activeFilters.includes('groups') }"
         @click="$emit('toggle-filter', 'groups')"
       >
         <UIcon name="i-heroicons-user-group" class="w-4 h-4 mr-1" />
@@ -22,7 +24,8 @@
       <UButton 
         variant="ghost" 
         size="sm"
-        :class="{ 'bg-primary/10 text-primary': activeFilters.includes('moments') }"
+        color="neutral"
+        :class="{ 'bg-primary-100 dark:bg-primary-900/30 border border-primary-500': activeFilters.includes('moments') }"
         @click="$emit('toggle-filter', 'moments')"
       >
         <UIcon name="i-heroicons-photo" class="w-4 h-4 mr-1" />

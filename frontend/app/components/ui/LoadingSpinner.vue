@@ -38,7 +38,7 @@ const spinnerClasses = computed(() => [
 
 // 文本样式
 const textClasses = computed(() => [
-  'text-muted text-center',
+  'text-neutral-600 dark:text-neutral-400 text-center',
   {
     'text-sm': props.size === 'sm',
     'text-base': props.size === 'md',

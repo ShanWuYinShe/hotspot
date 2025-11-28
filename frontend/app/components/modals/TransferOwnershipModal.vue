@@ -6,7 +6,7 @@
         <div class="flex items-center justify-between mb-6">
           <div class="flex items-center gap-3">
             <UIcon name="i-heroicons-arrow-right-circle" class="w-6 h-6 text-warning-500" />
-            <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+            <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">
               转让群主
             </h3>
           </div>
@@ -58,7 +58,7 @@
                 <div class="font-medium text-neutral-900 dark:text-white">
                   {{ member.nickname }}
                 </div>
-                <div class="text-xs text-neutral-500">
+                <div class="text-xs text-neutral-500 dark:text-neutral-400">
                   {{ getRoleLabel(member.role) }}
                 </div>
               </div>

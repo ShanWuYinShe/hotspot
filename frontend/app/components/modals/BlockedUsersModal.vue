@@ -6,7 +6,7 @@
         <div class="flex items-center justify-between mb-6">
           <div class="flex items-center gap-3">
             <UIcon name="i-heroicons-user-minus" class="w-6 h-6 text-red-500" />
-            <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+            <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">
               黑名单管理
             </h3>
           </div>
@@ -47,10 +47,10 @@
                 </UAvatar>
                 
                 <div>
-                  <h4 class="font-medium text-neutral-900 dark:text-neutral-100">
+                  <h4 class="font-medium text-neutral-900 dark:text-white">
                     {{ user.nickname }}
                   </h4>
-                  <p class="text-sm text-neutral-500">
+                  <p class="text-sm text-neutral-500 dark:text-neutral-400">
                     已加入黑名单
                   </p>
                 </div>
@@ -79,8 +79,8 @@
 
           <!-- 空状态 -->
           <div v-else-if="!loading" class="text-center py-8">
-            <UIcon name="i-heroicons-user-minus" class="w-12 h-12 text-neutral-400 mx-auto mb-3" />
-            <h4 class="text-sm font-medium text-neutral-900 dark:text-neutral-100 mb-1">
+            <UIcon name="i-heroicons-user-minus" class="w-12 h-12 text-neutral-400 dark:text-neutral-500 mx-auto mb-3" />
+            <h4 class="text-sm font-medium text-neutral-900 dark:text-white mb-1">
               黑名单为空
             </h4>
             <p class="text-xs text-neutral-600 dark:text-neutral-400">

@@ -1,5 +1,5 @@
 <template>
-  <!-- 用户菜单 - 使用 UDropdownMenu 实现更规范的菜单 -->
+  <!-- 用户菜单 -->
   <UDropdownMenu :items="menuItems" :ui="{ content: 'w-56' }">
     <UButton 
       size="lg" 
@@ -30,7 +30,7 @@ import type { DropdownMenuItem } from '@nuxt/ui'
 const { t } = useI18n()
 const authStore = useAuthStore()
 
-// 当前用户
+// 当前用户（初始为 null，客户端水合后为真实用户）
 const user = computed(() => authStore.user)
 
 // 其他账户列表
@@ -41,7 +41,6 @@ const otherAccounts = computed(() =>
 // 创建临时用户
 const handleCreateTempUser = async () => {
   try {
-    // 创建临时用户，使用默认昵称
     await authStore.createTempUser({ nickname: '访客用户' });
   } catch (error) {
     console.error('创建临时用户失败:', error)
@@ -58,10 +57,9 @@ const handleSwitchAccount = async (userId: string) => {
 }
 
 // 登出
-const logout = async () => {
+const handleLogout = async () => {
   try {
-    const authStore = useAuthStore()
-    await logout()
+    await authStore.logout()
     navigateTo('/auth/login')
   } catch (error) {
     console.error('登出失败:', error)
@@ -154,7 +152,7 @@ const menuItems = computed((): DropdownMenuItem[][] => {
       label: t('userMenu.logout'),
       icon: 'i-heroicons-arrow-left-start-on-rectangle',
       color: 'error',
-      onSelect: logout
+      onSelect: handleLogout
     }
   ])
 

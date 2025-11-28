@@ -26,7 +26,7 @@
                 <template #description>
                     <div class="space-y-1">
                         <!-- 位置和距离信息 -->
-                        <div class="flex items-center gap-4 text-sm text-muted">
+                        <div class="flex items-center gap-4 text-sm text-neutral-600 dark:text-neutral-400">
                             <div v-if="user.location_name" class="flex items-center gap-1">
                                 <UIcon name="i-heroicons-map-pin" class="w-3 h-3" />
                                 <span class="truncate">{{ user.location_name }}</span>
@@ -39,7 +39,7 @@
                         </div>
 
                         <!-- 个人简介 -->
-                        <p v-if="user.bio" class="text-sm text-muted line-clamp-2">
+                        <p v-if="user.bio" class="text-sm text-neutral-600 dark:text-neutral-400 line-clamp-2">
                             {{ user.bio }}
                         </p>
                     </div>

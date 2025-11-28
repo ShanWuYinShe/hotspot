@@ -130,7 +130,7 @@
             :disabled="field.disabled || loading"
             :tooltip="field.tooltip !== false"
           />
-          <div class="flex justify-between text-xs text-gray-500">
+          <div class="flex justify-between text-xs text-neutral-500 dark:text-neutral-400">
             <span>{{ field.min || 0 }}{{ field.unit || '' }}</span>
             <span class="font-medium">{{ formState[field.name] }}{{ field.unit || '' }}</span>
             <span>{{ field.max || 100 }}{{ field.unit || '' }}</span>

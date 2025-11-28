@@ -32,8 +32,8 @@
         <div class="space-y-1 max-h-80 overflow-y-auto">
             <!-- 空状态 -->
             <div v-if="notifications.length === 0" class="text-center py-8">
-                <UIcon name="i-heroicons-bell-slash" class="w-12 h-12 text-neutral-400 mx-auto mb-3" />
-                <p class="text-neutral-500 text-sm">暂无通知</p>
+                <UIcon name="i-heroicons-bell-slash" class="w-12 h-12 text-neutral-400 dark:text-neutral-500 mx-auto mb-3" />
+                <p class="text-neutral-500 dark:text-neutral-400 text-sm">暂无通知</p>
             </div>
 
             <!-- 通知列表 -->
@@ -67,7 +67,7 @@
                         {{ notification.content }}
                     </p>
                     <div class="flex items-center justify-between">
-                        <span class="text-xs text-neutral-500">
+                        <span class="text-xs text-neutral-500 dark:text-neutral-400">
                             {{ formatTime(notification.created_at) }}
                         </span>
                         <UChip
@@ -150,7 +150,7 @@ const getNotificationIcon = (category: string) => {
 const getNotificationIconClass = (category: string) => {
     switch (category) {
         case 'social':
-            return 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+            return 'bg-primary-100 dark:bg-primary-900/30 text-neutral-700 dark:text-neutral-300'
         case 'system':
             return 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
         case 'content':

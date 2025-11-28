@@ -67,8 +67,8 @@ const switchColor = computed(() => {
 // 颜色配置
 const colorConfig = {
   blue: {
-    wrapper: 'bg-blue-100 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700',
-    icon: 'text-blue-600 dark:text-blue-300'
+    wrapper: 'bg-primary-100 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700',
+    icon: 'text-neutral-700 dark:text-neutral-300'
   },
   green: {
     wrapper: 'bg-green-100 dark:bg-green-900/50 border border-green-200 dark:border-green-700',
@@ -84,7 +84,7 @@ const colorConfig = {
   },
   neutral: {
     wrapper: 'bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600',
-    icon: 'text-neutral-600 dark:text-neutral-300'
+    icon: 'text-neutral-600 dark:text-neutral-400'
   },
   red: {
     wrapper: 'bg-red-100 dark:bg-red-900/50 border border-red-200 dark:border-red-700',

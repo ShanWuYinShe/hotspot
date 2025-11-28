@@ -71,7 +71,7 @@
               <p class="text-sm text-neutral-600 dark:text-neutral-400 mb-2">
                 {{ notification.content }}
               </p>
-              <div class="flex items-center gap-4 text-xs text-neutral-500">
+              <div class="flex items-center gap-4 text-xs text-neutral-500 dark:text-neutral-400">
                 <span>{{ formatTime(notification.created_at) }}</span>
                 <UBadge
                   v-if="notification.category"
@@ -280,11 +280,11 @@ const getIcon = (type: string) => {
 const getSeverityColor = (severity?: string) => {
   switch (severity) {
     case 'error':
-      return 'bg-error-100 dark:bg-error-900/30 text-error-600'
+      return 'bg-error-100 dark:bg-error-900/30 text-neutral-900 dark:text-white'
     case 'warning':
-      return 'bg-warning-100 dark:bg-warning-900/30 text-warning-600'
+      return 'bg-warning-100 dark:bg-warning-900/30 text-neutral-900 dark:text-white'
     default:
-      return 'bg-primary-100 dark:bg-primary-900/30 text-primary-600'
+      return 'bg-primary-100 dark:bg-primary-900/30 text-neutral-900 dark:text-white'
   }
 }
 

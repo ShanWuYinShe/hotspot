@@ -5,8 +5,8 @@
         <!-- 标题 -->
         <div class="flex items-center justify-between mb-6">
           <div class="flex items-center gap-3">
-            <UIcon name="i-heroicons-user-plus" class="w-6 h-6 text-blue-500" />
-            <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+            <UIcon name="i-heroicons-user-plus" class="w-6 h-6 text-neutral-600 dark:text-neutral-300" />
+            <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">
               好友请求
             </h3>
           </div>
@@ -41,13 +41,13 @@
                 </UAvatar>
                 
                 <div>
-                  <h4 class="font-medium text-neutral-900 dark:text-neutral-100">
+                  <h4 class="font-medium text-neutral-900 dark:text-white">
                     {{ request.from_user.nickname }}
                   </h4>
                   <p class="text-sm text-neutral-600 dark:text-neutral-400">
                     {{ formatTime(request.created_at) }}
                   </p>
-                  <p v-if="request.message" class="text-sm text-neutral-500 mt-1">
+                  <p v-if="request.message" class="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
                     "{{ request.message }}"
                   </p>
                 </div>
@@ -77,8 +77,8 @@
           
           <!-- 空状态 -->
           <div v-else class="text-center py-8">
-            <UIcon name="i-heroicons-inbox" class="w-12 h-12 text-neutral-400 mx-auto mb-3" />
-            <h4 class="text-sm font-medium text-neutral-900 dark:text-neutral-100 mb-1">
+            <UIcon name="i-heroicons-inbox" class="w-12 h-12 text-neutral-400 dark:text-neutral-500 mx-auto mb-3" />
+            <h4 class="text-sm font-medium text-neutral-900 dark:text-white mb-1">
               暂无好友请求
             </h4>
             <p class="text-xs text-neutral-600 dark:text-neutral-400">
@@ -105,7 +105,7 @@
                 </UAvatar>
                 
                 <div>
-                  <h4 class="font-medium text-neutral-900 dark:text-neutral-100">
+                  <h4 class="font-medium text-neutral-900 dark:text-white">
                     {{ request.to_user.nickname }}
                   </h4>
                   <p class="text-sm text-neutral-600 dark:text-neutral-400">
@@ -136,8 +136,8 @@
           
           <!-- 空状态 -->
           <div v-else class="text-center py-8">
-            <UIcon name="i-heroicons-paper-airplane" class="w-12 h-12 text-neutral-400 mx-auto mb-3" />
-            <h4 class="text-sm font-medium text-neutral-900 dark:text-neutral-100 mb-1">
+            <UIcon name="i-heroicons-paper-airplane" class="w-12 h-12 text-neutral-400 dark:text-neutral-500 mx-auto mb-3" />
+            <h4 class="text-sm font-medium text-neutral-900 dark:text-white mb-1">
               暂无发送记录
             </h4>
             <p class="text-xs text-neutral-600 dark:text-neutral-400">

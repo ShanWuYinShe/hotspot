@@ -82,10 +82,10 @@
               
               <!-- 文件消息 -->
               <div v-else-if="(message as any).type === 'file'" class="flex items-center gap-3 p-3 bg-neutral-100 dark:bg-neutral-800 rounded-lg">
-                <UIcon name="i-heroicons-document" class="w-8 h-8 text-neutral-500" />
+                <UIcon name="i-heroicons-document" class="w-8 h-8 text-neutral-500 dark:text-neutral-400" />
                 <div class="flex-1 min-w-0">
                   <p class="font-medium truncate">{{ (message as any).fileName }}</p>
-                  <p class="text-sm text-neutral-500">{{ formatFileSize((message as any).fileSize) }}</p>
+                  <p class="text-sm text-neutral-500 dark:text-neutral-400">{{ formatFileSize((message as any).fileSize) }}</p>
                 </div>
                 <UButton
                   variant="ghost"
@@ -98,7 +98,7 @@
               <!-- 位置消息 -->
               <div v-else-if="(message as any).type === 'location'" class="p-3 bg-neutral-100 dark:bg-neutral-800 rounded-lg">
                 <div class="flex items-center gap-2 mb-2">
-                  <UIcon name="i-heroicons-map-pin" class="w-4 h-4 text-primary-500" />
+                  <UIcon name="i-heroicons-map-pin" class="w-4 h-4 text-neutral-600 dark:text-neutral-300" />
                   <span class="font-medium">位置信息</span>
                 </div>
                 <p class="text-sm text-neutral-600 dark:text-neutral-400">{{ (message as any).address }}</p>
@@ -114,7 +114,7 @@
               
               <!-- 系统消息 -->
               <div v-else-if="(message as any).type === 'system'" class="text-center">
-                <span class="text-xs text-neutral-500 bg-neutral-100 dark:bg-neutral-800 px-2 py-1 rounded-full">
+                <span class="text-xs text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-1 rounded-full">
                   {{ (message as any).content }}
                 </span>
               </div>
@@ -147,7 +147,7 @@
 
           <!-- 加载指示器 -->
           <template #indicator v-if="isTyping">
-            <div class="flex items-center gap-2 text-sm text-neutral-500">
+            <div class="flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400">
               <div class="flex gap-1">
                 <div class="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
                 <div class="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
@@ -166,7 +166,7 @@
         <!-- 回复消息预览 -->
         <div v-if="replyingTo" class="mb-3 p-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg flex items-center justify-between">
           <div class="flex-1 min-w-0">
-            <p class="text-xs text-neutral-500">回复 {{ replyingTo.sender }}</p>
+            <p class="text-xs text-neutral-500 dark:text-neutral-400">回复 {{ replyingTo.sender }}</p>
             <p class="text-sm truncate">{{ replyingTo.content }}</p>
           </div>
           <UButton

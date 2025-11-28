@@ -8,11 +8,11 @@
                     icon="i-heroicons-arrow-left"
                     @click="$router.back()"
                 />
-                <h1 class="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+                <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">
                     {{ $t("users.search.title") }}
                 </h1>
             </div>
-            <p class="text-neutral-600 dark:text-neutral-300">
+            <p class="text-neutral-600 dark:text-neutral-400">
                 {{ $t("users.search.subtitle") }}
             </p>
         </div>
@@ -54,8 +54,9 @@
                     <UButton
                         variant="ghost"
                         size="xs"
+                        color="neutral"
                         :class="{
-                            'bg-primary/10 text-primary': searchType === 'name',
+                            'bg-primary-100 dark:bg-primary-900/30 border border-primary-500': searchType === 'name',
                         }"
                         @click="searchType = 'name'"
                     >
@@ -64,8 +65,9 @@
                     <UButton
                         variant="ghost"
                         size="xs"
+                        color="neutral"
                         :class="{
-                            'bg-primary/10 text-primary':
+                            'bg-primary-100 dark:bg-primary-900/30 border border-primary-500':
                                 searchType === 'phone',
                         }"
                         @click="searchType = 'phone'"
@@ -75,8 +77,9 @@
                     <UButton
                         variant="ghost"
                         size="xs"
+                        color="neutral"
                         :class="{
-                            'bg-primary/10 text-primary': searchType === 'all',
+                            'bg-primary-100 dark:bg-primary-900/30 border border-primary-500': searchType === 'all',
                         }"
                         @click="searchType = 'all'"
                     >
@@ -277,7 +280,7 @@
                                 {{ user.nickname }}
                             </div>
                             <div
-                                class="text-sm text-neutral-500 flex items-center gap-2"
+                                class="text-sm text-neutral-500 dark:text-neutral-400 flex items-center gap-2"
                             >
                                 <span v-if="user.location_name">{{
                                     user.location_name

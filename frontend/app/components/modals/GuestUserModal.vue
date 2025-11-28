@@ -2,7 +2,7 @@
   <UModal title="创建临时用户">
     <template #header>
       <div class="flex items-center gap-2">
-        <UIcon name="i-heroicons-rocket-launch" class="w-5 h-5 text-primary-500" />
+        <UIcon name="i-heroicons-rocket-launch" class="w-5 h-5 text-neutral-600 dark:text-neutral-300" />
         <h3 class="text-lg font-semibold">{{ t('userMenu.tempModal.title') }}</h3>
       </div>
     </template>

@@ -10,7 +10,7 @@
             <h2 
               id="danger-heading" 
               tabindex="-1" 
-              class="text-lg md:text-xl font-semibold text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-error-500 rounded-sm"
+              class="text-lg md:text-xl font-semibold text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-error-500 rounded-sm"
             >
               危险操作
             </h2>
@@ -36,7 +36,7 @@
                 <UIcon name="i-heroicons-trash" class="w-6 h-6 md:w-7 md:h-7 text-error-600 dark:text-error-400" />
               </div>
               <div class="flex-1 min-w-0">
-                <h4 class="text-base md:text-lg font-medium text-black dark:text-white">
+                <h4 class="text-base md:text-lg font-medium text-neutral-900 dark:text-white">
                   删除账户
                 </h4>
                 <p class="text-xs md:text-sm text-neutral-700 dark:text-neutral-300 mt-1">

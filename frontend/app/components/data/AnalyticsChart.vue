@@ -3,8 +3,8 @@
     <template #header>
       <div class="flex items-center justify-between">
         <div>
-          <h3 class="text-lg font-semibold text-slate-900 dark:text-white">{{ title }}</h3>
-          <p v-if="description" class="text-sm text-slate-600 dark:text-slate-400 mt-1">{{ description }}</p>
+          <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">{{ title }}</h3>
+          <p v-if="description" class="text-sm text-neutral-600 dark:text-neutral-400 mt-1">{{ description }}</p>
         </div>
         <div class="flex items-center gap-2">
           <USelectMenu
@@ -31,10 +31,10 @@
           :key="metric.key"
           class="text-center p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg"
         >
-          <div class="text-2xl font-bold text-slate-900 dark:text-white">
+          <div class="text-2xl font-bold text-neutral-900 dark:text-white">
             {{ formatValue(metric.value) }}
           </div>
-          <div class="text-sm text-slate-600 dark:text-slate-400 mt-1">
+          <div class="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
             {{ metric.label }}
           </div>
           <div v-if="metric.change !== undefined" class="flex items-center justify-center gap-1 mt-2">
@@ -116,7 +116,7 @@
             <span
               v-for="(item, index) in chartData"
               :key="index"
-              class="text-xs text-slate-600 dark:text-slate-400 flex-1 text-center"
+              class="text-xs text-neutral-600 dark:text-neutral-400 flex-1 text-center"
             >
               {{ item.label }}
             </span>
@@ -154,7 +154,7 @@
                   class="w-3 h-3 rounded-full"
                   :style="{ backgroundColor: pieColors[index % pieColors.length] }"
                 ></div>
-                <span class="text-slate-700 dark:text-slate-300">{{ item.label }}</span>
+                <span class="text-neutral-700 dark:text-neutral-300">{{ item.label }}</span>
               </div>
             </div>
           </div>

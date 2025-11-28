@@ -6,7 +6,7 @@
         <div class="flex items-center justify-between mb-6">
           <div class="flex items-center gap-3">
             <UIcon name="i-heroicons-exclamation-triangle" class="w-6 h-6 text-error-500" />
-            <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+            <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">
               删除账户
             </h3>
           </div>

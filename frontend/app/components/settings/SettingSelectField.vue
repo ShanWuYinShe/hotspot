@@ -3,7 +3,7 @@
     :label="label" 
     :description="description" 
     class="space-y-2" 
-    :ui="{ label: 'font-medium text-neutral-800 dark:text-neutral-200' }"
+    :ui="{ label: 'font-medium text-neutral-900 dark:text-white' }"
   >
     <div class="space-y-2">
       <!-- 搜索框 -->

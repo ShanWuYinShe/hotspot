@@ -5,8 +5,8 @@
         <!-- 标题 -->
         <div class="flex items-center justify-between mb-6">
           <div class="flex items-center gap-3">
-            <UIcon name="i-heroicons-camera" class="w-6 h-6 text-primary-500" />
-            <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+            <UIcon name="i-heroicons-camera" class="w-6 h-6 text-neutral-600 dark:text-neutral-300" />
+            <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">
               发布生活瞬间
             </h3>
           </div>
@@ -32,7 +32,7 @@
               required
             />
             <div class="flex justify-between items-center mt-1">
-              <span class="text-xs text-neutral-500">
+              <span class="text-xs text-neutral-500 dark:text-neutral-400">
                 {{ form.description.length }}/{{ MOMENT_CONSTANTS.MAX_DESCRIPTION_LENGTH }}
               </span>
             </div>
@@ -72,8 +72,8 @@
                 @click="triggerImageUpload"
               >
                 <div class="text-center">
-                  <UIcon name="i-heroicons-camera" class="w-6 h-6 text-neutral-400 mx-auto mb-1" />
-                  <span class="text-xs text-neutral-500">添加图片</span>
+                  <UIcon name="i-heroicons-camera" class="w-6 h-6 text-neutral-400 dark:text-neutral-500 mx-auto mb-1" />
+                  <span class="text-xs text-neutral-500 dark:text-neutral-400">添加图片</span>
                 </div>
               </div>
             </div>

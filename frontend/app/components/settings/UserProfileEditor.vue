@@ -3,7 +3,7 @@
     <!-- 头像编辑 -->
     <UCard class="bg-white/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50">
       <template #header>
-        <h3 class="text-lg font-semibold text-slate-900 dark:text-white">头像设置</h3>
+        <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">头像设置</h3>
       </template>
       
       <div class="flex flex-col md:flex-row items-center gap-6">
@@ -20,10 +20,10 @@
         </div>
         
         <div class="flex-1 text-center md:text-left">
-          <h4 class="text-lg font-medium text-slate-900 dark:text-white mb-2">
+          <h4 class="text-lg font-medium text-neutral-900 dark:text-white mb-2">
             更换头像
           </h4>
-          <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+          <p class="text-sm text-neutral-600 dark:text-neutral-400 mb-4">
             支持 JPG、PNG 格式，文件大小不超过 5MB
           </p>
         </div>
@@ -33,12 +33,12 @@
     <!-- 基本信息 - 仅包含 API 支持的字段 (nickname, bio, avatar_url) -->
     <UCard class="bg-white/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50">
       <template #header>
-        <h3 class="text-lg font-semibold text-slate-900 dark:text-white">基本信息</h3>
+        <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">基本信息</h3>
       </template>
       
       <form @submit.prevent="saveBasicInfo" class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+          <label class="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
             昵称 *
           </label>
           <UInput
@@ -50,7 +50,7 @@
         </div>
         
         <div>
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+          <label class="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
             个人简介
           </label>
           <UTextarea
@@ -66,12 +66,12 @@
     <!-- 联系方式（只读 - 显示API返回的email和phone） -->
     <UCard class="bg-white/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50">
       <template #header>
-        <h3 class="text-lg font-semibold text-slate-900 dark:text-white">联系方式</h3>
+        <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">联系方式</h3>
       </template>
       
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+          <label class="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
             邮箱
           </label>
           <UInput
@@ -79,13 +79,13 @@
             disabled
             placeholder="未设置"
           />
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <p class="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
             邮箱用于账户注册和找回密码
           </p>
         </div>
         
         <div>
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+          <label class="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
             手机号
           </label>
           <UInput
@@ -93,7 +93,7 @@
             disabled
             placeholder="未设置"
           />
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <p class="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
             手机号用于账户注册和找回密码
           </p>
         </div>
@@ -103,14 +103,14 @@
     <!-- 账户安全 -->
     <UCard class="bg-white/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50">
       <template #header>
-        <h3 class="text-lg font-semibold text-slate-900 dark:text-white">账户安全</h3>
+        <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">账户安全</h3>
       </template>
       
       <div class="space-y-4">
         <div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
           <div>
-            <h4 class="text-sm font-medium text-slate-900 dark:text-white">修改密码</h4>
-            <p class="text-xs text-slate-500 dark:text-slate-400">定期更换密码以保护账户安全</p>
+            <h4 class="text-sm font-medium text-neutral-900 dark:text-white">修改密码</h4>
+            <p class="text-xs text-neutral-500 dark:text-neutral-400">定期更换密码以保护账户安全</p>
           </div>
           <UButton
             variant="outline"

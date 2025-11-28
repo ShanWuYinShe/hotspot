@@ -10,10 +10,10 @@
             <!-- 页面标题和操作栏 -->
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                 <div class="space-y-2">
-                    <h1 class="text-3xl sm:text-4xl font-bold text-slate-800 dark:text-slate-100">
+                    <h1 class="text-3xl sm:text-4xl font-bold text-neutral-900 dark:text-white">
                         动态广场
                     </h1>
-                    <p class="text-slate-600 dark:text-slate-400 text-lg">发现和分享生活中的精彩瞬间</p>
+                    <p class="text-neutral-600 dark:text-neutral-400 text-lg">发现和分享生活中的精彩瞬间</p>
                 </div>
                 <div class="flex gap-3 w-full sm:w-auto">
                     <UButton
@@ -62,7 +62,7 @@
 
                         <!-- 热门标签 -->
                         <div class="space-y-3">
-                            <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center">
+                            <h3 class="text-sm font-semibold text-neutral-700 dark:text-neutral-300 flex items-center">
                                 <UIcon name="i-heroicons-hashtag" class="w-4 h-4 mr-2" />
                                 热门标签
                             </h3>

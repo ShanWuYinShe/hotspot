@@ -14,7 +14,7 @@
             placeholder="输入备注名称（留空则显示昵称）"
             :maxlength="20"
           />
-          <div class="text-right text-xs text-neutral-500 mt-1">
+          <div class="text-right text-xs text-neutral-500 dark:text-neutral-400 mt-1">
             {{ remarkText.length }}/20
           </div>
         </UFormField>

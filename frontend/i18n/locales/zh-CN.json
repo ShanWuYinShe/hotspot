@@ -216,6 +216,8 @@
     "temporary": "临时",
     "verified": "正式",
     "upgradeAccount": "升级账户",
+    "createGroup": "创建群组",
+    "findFriends": "查找好友",
     "tempModal": {
       "title": "一键临时体验",
       "infoTitle": "临时体验说明",

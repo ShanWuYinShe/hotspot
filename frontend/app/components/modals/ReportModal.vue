@@ -5,7 +5,7 @@
         <!-- 标题 -->
         <div class="flex items-center gap-3 mb-6">
           <UIcon name="i-heroicons-shield-exclamation" class="w-6 h-6 text-red-500" />
-          <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+          <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">
             举报{{ getTargetTypeLabel(targetType) }}
           </h3>
         </div>
@@ -43,7 +43,7 @@
             :maxlength="500"
           />
           <div class="flex justify-end mt-1">
-            <span class="text-xs text-neutral-500">
+            <span class="text-xs text-neutral-500 dark:text-neutral-400">
               {{ description.length }}/500
             </span>
           </div>

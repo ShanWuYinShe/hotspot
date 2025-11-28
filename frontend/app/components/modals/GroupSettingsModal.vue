@@ -6,7 +6,7 @@
         <div class="flex items-center justify-between mb-6">
           <div class="flex items-center gap-3">
             <UIcon name="i-heroicons-cog-6-tooth" class="w-6 h-6 text-purple-500" />
-            <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+            <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">
               群组管理
             </h3>
           </div>
@@ -40,7 +40,7 @@
               <div class="flex items-center justify-between mb-3">
                 <div>
                   <h5 class="font-medium text-sm">群组邀请码</h5>
-                  <p class="text-xs text-neutral-500 mt-1">
+                  <p class="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
                     分享此邀请码让朋友快速加入群组
                   </p>
                 </div>
@@ -109,7 +109,7 @@
                         size="xs"
                       />
                     </div>
-                    <p class="text-xs text-neutral-500">
+                    <p class="text-xs text-neutral-500 dark:text-neutral-400">
                       加入时间：{{ formatTime(member.joined_at) }}
                     </p>
                   </div>
@@ -176,7 +176,7 @@
                   <label class="text-sm font-medium text-neutral-700 dark:text-neutral-300">
                     需要密码加入
                   </label>
-                  <p class="text-xs text-neutral-500">
+                  <p class="text-xs text-neutral-500 dark:text-neutral-400">
                     开启后新成员需要输入密码才能加入
                   </p>
                 </div>
@@ -212,7 +212,7 @@
                   <h5 class="text-sm font-medium text-neutral-900 dark:text-white">
                     转移群主
                   </h5>
-                  <p class="text-xs text-neutral-500">
+                  <p class="text-xs text-neutral-500 dark:text-neutral-400">
                     将群主权限转移给其他管理员
                   </p>
                 </div>
@@ -231,7 +231,7 @@
                   <h5 class="text-sm font-medium text-red-600 dark:text-red-400">
                     解散群组
                   </h5>
-                  <p class="text-xs text-neutral-500">
+                  <p class="text-xs text-neutral-500 dark:text-neutral-400">
                     永久删除群组，此操作不可撤销
                   </p>
                 </div>

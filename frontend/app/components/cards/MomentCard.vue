@@ -24,7 +24,7 @@
                     class="flex-1 min-w-0"
                 >
                     <template #description>
-                        <div class="flex items-center gap-3 text-sm text-muted">
+                        <div class="flex items-center gap-3 text-sm text-neutral-600 dark:text-neutral-400">
                             <div class="flex items-center gap-1">
                                 <UIcon name="i-heroicons-clock" class="w-3 h-3" />
                                 <span>{{ formatTime(moment.created_at) }}</span>
@@ -128,7 +128,7 @@
                     variant="soft"
                     size="sm"
                     color="neutral"
-                    class="cursor-pointer hover:bg-primary-50 hover:text-primary-600 dark:hover:bg-primary-950 dark:hover:text-primary-400 transition-colors"
+                    class="cursor-pointer hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:border-primary-300 transition-colors"
                     @click.stop="$emit('tag-click', tag)"
                 >
                     #{{ tag }}

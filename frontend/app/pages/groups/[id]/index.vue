@@ -8,10 +8,10 @@
                             {{ group?.name?.charAt(0) }}
                         </UAvatar>
                         <div>
-                            <h1 class="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+                            <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">
                                 {{ group?.name }}
                             </h1>
-                            <p class="text-sm text-neutral-600 dark:text-neutral-300">
+                            <p class="text-sm text-neutral-600 dark:text-neutral-400">
                                 {{ group?.location_name }} ·
                                 {{ group?.member_count || 0 }} 人
                             </p>
@@ -62,8 +62,8 @@
             </template>
 
             <div class="space-y-2">
-                <p class="text-neutral-700">{{ group?.description }}</p>
-                <div class="text-sm text-neutral-500">
+                <p class="text-neutral-700 dark:text-neutral-300">{{ group?.description }}</p>
+                <div class="text-sm text-neutral-500 dark:text-neutral-400">
                     创建于：{{ formatTime(group?.created_at) }} · 最近活跃：{{
                         formatTime(group?.last_active_at)
                     }}
@@ -82,7 +82,7 @@
                             {{ members.length }}
                         </UBadge>
                     </div>
-                    <div class="text-sm text-neutral-500">仅展示当前页</div>
+                    <div class="text-sm text-neutral-500 dark:text-neutral-400">仅展示当前页</div>
                 </div>
             </template>
             
@@ -108,7 +108,7 @@
                             <span class="text-sm text-neutral-600 dark:text-neutral-400">{{ formatTime((row as any).joined_at) }}</span>
                         </template>
                         <template #uid-cell="{ row }">
-                            <span class="text-xs text-neutral-500">{{ (row as any).user_id }}</span>
+                            <span class="text-xs text-neutral-500 dark:text-neutral-400">{{ (row as any).user_id }}</span>
                         </template>
                         <template #actions-cell="{ row }">
                             <div class="flex items-center gap-1">
@@ -153,7 +153,7 @@
             </template>
             
             <template #activities-content>
-                <div class="py-8 text-center text-neutral-500">
+                <div class="py-8 text-center text-neutral-500 dark:text-neutral-400">
                     群组动态功能开发中...
                 </div>
             </template>

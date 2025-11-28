@@ -4,7 +4,7 @@
       <template #header>
         <div class="flex items-center gap-4 md:gap-5">
           <div class="p-4 md:p-5 rounded-xl bg-primary-100 dark:bg-primary-900/40 flex-shrink-0">
-            <UIcon name="i-heroicons-paint-brush" class="w-7 h-7 md:w-9 md:h-9 text-primary-600 dark:text-primary-400" />
+            <UIcon name="i-heroicons-paint-brush" class="w-7 h-7 md:w-9 md:h-9 text-neutral-700 dark:text-neutral-300" />
           </div>
           <div class="min-w-0 flex-1">
             <h2 

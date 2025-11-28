@@ -3,10 +3,10 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <!-- 页面标题 -->
             <div class="mb-8">
-                <h1 class="text-3xl font-bold text-slate-800 dark:text-slate-100 mb-2">
+                <h1 class="text-3xl font-bold text-neutral-900 dark:text-white mb-2">
                     我的群组
                 </h1>
-                <p class="text-slate-600 dark:text-slate-400">
+                <p class="text-neutral-600 dark:text-neutral-400">
                     管理您加入和创建的所有群组
                 </p>
             </div>
@@ -15,12 +15,12 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <UCard class="bg-white/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50">
                     <div class="flex items-center gap-4">
-                        <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                            <UIcon name="i-heroicons-user-group" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                        <div class="p-3 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
+                            <UIcon name="i-heroicons-user-group" class="w-6 h-6 text-neutral-700 dark:text-neutral-300" />
                         </div>
                         <div>
-                            <p class="text-2xl font-bold text-slate-900 dark:text-white">{{ totalGroups }}</p>
-                            <p class="text-sm text-slate-600 dark:text-slate-400">总群组数</p>
+                            <p class="text-2xl font-bold text-neutral-900 dark:text-white">{{ totalGroups }}</p>
+                            <p class="text-sm text-neutral-600 dark:text-neutral-400">总群组数</p>
                         </div>
                     </div>
                 </UCard>
@@ -31,8 +31,8 @@
                             <UIcon name="i-heroicons-crown" class="w-6 h-6 text-green-600 dark:text-green-400" />
                         </div>
                         <div>
-                            <p class="text-2xl font-bold text-slate-900 dark:text-white">{{ ownedGroups }}</p>
-                            <p class="text-sm text-slate-600 dark:text-slate-400">我创建的</p>
+                            <p class="text-2xl font-bold text-neutral-900 dark:text-white">{{ ownedGroups }}</p>
+                            <p class="text-sm text-neutral-600 dark:text-neutral-400">我创建的</p>
                         </div>
                     </div>
                 </UCard>
@@ -43,8 +43,8 @@
                             <UIcon name="i-heroicons-bell" class="w-6 h-6 text-orange-600 dark:text-orange-400" />
                         </div>
                         <div>
-                            <p class="text-2xl font-bold text-slate-900 dark:text-white">{{ totalUnreadCount }}</p>
-                            <p class="text-sm text-slate-600 dark:text-slate-400">未读消息</p>
+                            <p class="text-2xl font-bold text-neutral-900 dark:text-white">{{ totalUnreadCount }}</p>
+                            <p class="text-sm text-neutral-600 dark:text-neutral-400">未读消息</p>
                         </div>
                     </div>
                 </UCard>

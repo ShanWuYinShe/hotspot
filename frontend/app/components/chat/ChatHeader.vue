@@ -19,7 +19,7 @@
           <h1 class="text-lg font-semibold text-neutral-900 dark:text-white">
             {{ userInfo?.nickname || "私聊" }}
           </h1>
-          <p class="text-sm text-neutral-500">
+          <p class="text-sm text-neutral-500 dark:text-neutral-400">
             {{ onlineStatus }}
           </p>
         </div>

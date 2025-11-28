@@ -4,7 +4,7 @@
       <!-- 头部 -->
       <template #header>
         <div class="flex items-center justify-between">
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+          <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">
             需要登录
           </h3>
           <UButton
@@ -21,23 +21,23 @@
         <!-- 图标 -->
         <div class="flex justify-center">
           <div class="w-16 h-16 bg-primary-50 dark:bg-primary-900/20 rounded-full flex items-center justify-center">
-            <UIcon name="i-heroicons-lock-closed" class="w-8 h-8 text-primary-500" />
+            <UIcon name="i-heroicons-lock-closed" class="w-8 h-8 text-neutral-600 dark:text-neutral-300" />
           </div>
         </div>
 
         <!-- 提示信息 -->
         <div class="text-center space-y-2">
-          <p class="text-base text-gray-700 dark:text-gray-300">
+          <p class="text-base text-neutral-700 dark:text-neutral-300">
             {{ message }}
           </p>
-          <p class="text-sm text-gray-500 dark:text-gray-400">
+          <p class="text-sm text-neutral-500 dark:text-neutral-400">
             登录后即可解锁所有功能
           </p>
         </div>
 
         <!-- 功能列表 -->
         <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-          <ul class="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+          <ul class="space-y-2 text-sm text-neutral-600 dark:text-neutral-400">
             <li class="flex items-center gap-2">
               <UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-green-500" />
               发布和分享生活瞬间
@@ -71,7 +71,7 @@
           </UButton>
 
           <!-- 注册引导 -->
-          <div class="text-center text-sm text-gray-500 dark:text-gray-400">
+          <div class="text-center text-sm text-neutral-500 dark:text-neutral-400">
             还没有账号？
             <UButton
               variant="link"

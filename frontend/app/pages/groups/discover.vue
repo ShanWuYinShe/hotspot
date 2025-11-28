@@ -4,10 +4,10 @@
             <template #header>
                 <div class="flex items-center justify-between">
                     <div>
-                        <h1 class="text-3xl font-bold text-neutral-900">
+                        <h1 class="text-3xl font-bold text-neutral-900 dark:text-white">
                             发现群组
                         </h1>
-                        <p class="text-neutral-600 dark:text-neutral-300">
+                        <p class="text-neutral-600 dark:text-neutral-400">
                             基于你的位置展示附近可加入的群组
                         </p>
                     </div>
@@ -57,7 +57,7 @@
                 >
                     <template #description>
                         <div class="space-y-2">
-                            <p class="text-sm text-neutral-600">
+                            <p class="text-sm text-neutral-600 dark:text-neutral-400">
                                 你可以在浏览器地址栏的位置图标中重新允许权限，或点击下方按钮再次尝试。
                             </p>
                             <UButton
@@ -66,7 +66,7 @@
                                 @click="authorizeAndSearch"
                                 >再次尝试</UButton
                             >
-                            <div class="text-xs text-neutral-500 mt-2">
+                            <div class="text-xs text-neutral-500 dark:text-neutral-400 mt-2">
                                 提示：为避免每次弹窗，请在浏览器权限提示中勾选“记住此决定”。
                             </div>
                         </div>
@@ -96,7 +96,7 @@
                                         </UTooltip>
                                     </div>
                                     <p
-                                        class="text-xs text-neutral-500 truncate"
+                                        class="text-xs text-neutral-500 dark:text-neutral-400 truncate"
                                     >
                                         {{ (row as any).description || "—" }}
                                     </p>
@@ -161,7 +161,7 @@
                                 >
                                     <template #description>
                                         <div class="space-y-2">
-                                            <p class="text-sm text-neutral-600">
+                                            <p class="text-sm text-neutral-600 dark:text-neutral-400">
                                                 请检查网络或位置权限后重试。
                                             </p>
                                             <UButton
@@ -203,7 +203,7 @@
                                     @click="showWhyPermission"
                                     >为什么需要？</UButton
                                 >
-                                <div class="text-xs text-neutral-500">
+                                <div class="text-xs text-neutral-500 dark:text-neutral-400">
                                     提示：为避免每次弹窗，请在浏览器权限提示中勾选“记住此决定”。
                                 </div>
                             </div>

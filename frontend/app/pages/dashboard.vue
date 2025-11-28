@@ -79,10 +79,10 @@
                         />
                     </div>
                     <div class="flex-1 min-w-0">
-                        <h3 class="font-medium text-slate-900 dark:text-white truncate">
+                        <h3 class="font-medium text-neutral-900 dark:text-white truncate">
                             {{ action.title }}
                         </h3>
-                        <p class="text-sm text-slate-600 dark:text-slate-400 truncate">
+                        <p class="text-sm text-neutral-600 dark:text-neutral-400 truncate">
                             {{ action.description }}
                         </p>
                     </div>
@@ -266,8 +266,8 @@ const quickActions = [
         title: '创建群组',
         description: '建立新的群组',
         icon: 'i-heroicons-plus-circle',
-        bgClass: 'bg-blue-100 dark:bg-blue-900/30',
-        iconClass: 'text-blue-600 dark:text-blue-400',
+        bgClass: 'bg-primary-100 dark:bg-primary-900/30',
+        iconClass: 'text-neutral-700 dark:text-neutral-300',
         action: () => navigateTo('/groups/create')
     },
     {
