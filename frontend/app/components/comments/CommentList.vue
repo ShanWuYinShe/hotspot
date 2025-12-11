@@ -3,7 +3,7 @@
     <!-- 评论统计 -->
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-lg font-semibold">
-        评论 <span class="text-neutral-500 dark:text-neutral-400">({{ totalCount }})</span>
+        评论 <span class="text-neutral-500">({{ totalCount }})</span>
       </h3>
       <UButton
         variant="ghost"
@@ -28,14 +28,14 @@
     <div class="mt-6 space-y-4">
       <!-- 加载状态 -->
       <div v-if="loading && comments.length === 0" class="text-center py-8">
-        <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-neutral-600 dark:text-neutral-300 mx-auto" />
-        <p class="text-sm text-neutral-500 dark:text-neutral-400 mt-2">加载中...</p>
+        <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-primary-500 mx-auto" />
+        <p class="text-sm text-neutral-500 mt-2">加载中...</p>
       </div>
 
       <!-- 空状态 -->
       <div v-else-if="comments.length === 0" class="text-center py-8">
-        <UIcon name="i-heroicons-chat-bubble-left-ellipsis" class="w-12 h-12 text-neutral-400 dark:text-neutral-500 mx-auto mb-3" />
-        <p class="text-neutral-500 dark:text-neutral-400 text-sm">还没有评论，来抢沙发吧！</p>
+        <UIcon name="i-heroicons-chat-bubble-left-ellipsis" class="w-12 h-12 text-neutral-400 mx-auto mb-3" />
+        <p class="text-neutral-500 text-sm">还没有评论，来抢沙发吧！</p>
       </div>
 
       <!-- 评论项 -->

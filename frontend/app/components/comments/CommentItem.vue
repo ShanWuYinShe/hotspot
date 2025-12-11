@@ -99,7 +99,7 @@
         v-if="hasMoreReplies"
         @click="loadMoreReplies"
         :disabled="loadingReplies"
-        class="text-sm text-neutral-600 dark:text-neutral-300 hover:underline transition-colors"
+        class="text-sm text-neutral-600 dark:text-neutral-300 hover:text-primary-600 transition-colors"
       >
         {{ loadingReplies ? '加载中...' : '查看更多回复' }}
       </button>

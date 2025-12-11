@@ -9,13 +9,13 @@
             :class="iconClass"
             class="w-6 h-6" 
           />
-          <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">
+          <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
             {{ title }}
           </h3>
         </div>
 
         <!-- 消息内容 -->
-        <p class="text-neutral-500 dark:text-neutral-400 mb-6">
+        <p class="text-neutral-600 dark:text-neutral-400 mb-6">
           {{ message }}
         </p>
 
@@ -82,7 +82,7 @@ const iconClass = computed(() => {
     case 'success':
       return 'text-green-500'
     default:
-      return 'text-neutral-600 dark:text-neutral-300'
+      return 'text-blue-500'
   }
 })
 

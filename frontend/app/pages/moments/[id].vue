@@ -138,7 +138,7 @@
                     </div>
 
                     <!-- 评论列表 -->
-                    <div v-if="comments.length === 0" class="py-8 text-center text-neutral-500 dark:text-neutral-400">
+                    <div v-if="comments.length === 0" class="py-8 text-center text-neutral-500">
                         还没有评论，快来抢沙发吧~
                     </div>
                     
@@ -149,16 +149,15 @@
                             class="flex gap-3 p-4 rounded-lg bg-neutral-50 dark:bg-neutral-900"
                         >
                             <UAvatar 
-                                :alt="comment.user.nickname"
-                                :src="comment.user.avatar_url"
+                                :alt="comment.nickname"
                                 size="sm"
                             >
-                                {{ comment.user.nickname?.charAt(0) }}
+                                {{ comment.nickname?.charAt(0) }}
                             </UAvatar>
                             <div class="flex-1">
                                 <div class="flex items-center gap-2 mb-1">
-                                    <span class="font-medium">{{ comment.user.nickname }}</span>
-                                    <span class="text-xs text-neutral-500 dark:text-neutral-400">{{ formatTime(comment.created_at) }}</span>
+                                    <span class="font-medium">{{ comment.nickname }}</span>
+                                    <span class="text-xs text-neutral-500">{{ formatTime(comment.created_at) }}</span>
                                 </div>
                                 <p class="text-sm">{{ comment.content }}</p>
                             </div>
@@ -430,7 +429,7 @@ function getMomentActions(m: MomentResponse) {
 
 async function onDelete(m: MomentResponse) {
     try {
-        await momentsService.deleteMoment({ id: m.moment_id });
+        await momentsService.delete({ id: m.moment_id });
         toast.add({ title: "已删除", color: "success" });
         // 删除后返回动态广场
         navigateTo('/moments');

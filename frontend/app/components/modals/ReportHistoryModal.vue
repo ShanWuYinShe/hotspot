@@ -5,8 +5,8 @@
         <!-- 标题 -->
         <div class="flex items-center justify-between mb-6">
           <div class="flex items-center gap-3">
-            <UIcon name="i-heroicons-document-text" class="w-6 h-6 text-neutral-600 dark:text-neutral-300" />
-            <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">
+            <UIcon name="i-heroicons-document-text" class="w-6 h-6 text-blue-500" />
+            <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
               我的举报记录
             </h3>
           </div>
@@ -28,7 +28,7 @@
           <div v-if="filteredReports.length > 0" class="space-y-3">
             <div
               v-for="report in filteredReports"
-              :key="report.report_id || report.target_id"
+              :key="report.report_id"
               class="p-4 border border-neutral-200 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
             >
               <div class="flex items-start justify-between mb-2">
@@ -38,16 +38,16 @@
                     :label="getStatusLabel(report.status)"
                     size="xs"
                   />
-                  <span class="text-sm text-neutral-500 dark:text-neutral-400">
+                  <span class="text-sm text-neutral-500">
                     {{ getTargetTypeLabel(report.target_type) }}
                   </span>
                 </div>
-                <span class="text-xs text-neutral-500 dark:text-neutral-400">
+                <span class="text-xs text-neutral-500">
                   {{ formatTime(report.created_at) }}
                 </span>
               </div>
               
-              <h4 class="font-medium text-neutral-900 dark:text-white mb-1">
+              <h4 class="font-medium text-neutral-900 dark:text-neutral-100 mb-1">
                 {{ getReasonLabel(report.reason) }}
               </h4>
               
@@ -55,11 +55,11 @@
                 {{ report.description }}
               </p>
               
-              <div v-if="report.handler_note" class="text-xs text-neutral-700 dark:text-neutral-300 bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
+              <div v-if="report.handler_note" class="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
                 <strong>处理说明：</strong>{{ report.handler_note }}
               </div>
               
-              <div v-if="report.handled_at" class="text-xs text-neutral-500 dark:text-neutral-400 mt-2">
+              <div v-if="report.handled_at" class="text-xs text-neutral-500 mt-2">
                 处理时间：{{ formatTime(report.handled_at) }}
               </div>
             </div>
@@ -67,8 +67,8 @@
 
           <!-- 空状态 -->
           <div v-else-if="!loading" class="text-center py-8">
-            <UIcon name="i-heroicons-document-text" class="w-12 h-12 text-neutral-400 dark:text-neutral-500 mx-auto mb-3" />
-            <h4 class="text-sm font-medium text-neutral-900 dark:text-white mb-1">
+            <UIcon name="i-heroicons-document-text" class="w-12 h-12 text-neutral-400 mx-auto mb-3" />
+            <h4 class="text-sm font-medium text-neutral-900 dark:text-neutral-100 mb-1">
               {{ activeTab === 'all' ? '暂无举报记录' : `暂无${getTabLabel(activeTab)}举报` }}
             </h4>
             <p class="text-xs text-neutral-600 dark:text-neutral-400">
@@ -112,9 +112,6 @@
 </template>
 
 <script setup lang="ts">
-import { useReportsService } from '~/services/reports.service'
-import type { ReportItem } from '~/types/api'
-
 interface Props {
   onClose?: () => void
 }
@@ -123,7 +120,7 @@ const props = defineProps<Props>()
 
 // 状态管理
 const loading = ref(false)
-const reports = ref<ReportItem[]>([])
+const reports = ref([])
 const activeTab = ref('all')
 
 // 标签页配置
@@ -144,41 +141,48 @@ const filteredReports = computed(() => {
 // 工具函数
 const { formatTime } = useFormatters()
 
-const statusColors: Record<string, string> = {
-  pending: 'orange',
-  reviewing: 'blue',
-  resolved: 'green',
-  dismissed: 'red'
+const getStatusColor = (status: string) => {
+  const colors = {
+    pending: 'orange',
+    reviewing: 'blue',
+    resolved: 'green',
+    dismissed: 'red'
+  }
+  return colors[status] || 'neutral'
 }
 
-const statusLabels: Record<string, string> = {
-  pending: '待处理',
-  reviewing: '处理中',
-  resolved: '已解决',
-  dismissed: '已驳回'
+const getStatusLabel = (status: string) => {
+  const labels = {
+    pending: '待处理',
+    reviewing: '处理中',
+    resolved: '已解决',
+    dismissed: '已驳回'
+  }
+  return labels[status] || status
 }
 
-const targetTypeLabels: Record<string, string> = {
-  user: '用户',
-  moment: '生活瞬间',
-  comment: '评论',
-  message: '消息',
-  group: '群组'
+const getTargetTypeLabel = (type: string) => {
+  const labels = {
+    user: '用户',
+    moment: '生活瞬间',
+    comment: '评论',
+    message: '消息',
+    group: '群组'
+  }
+  return labels[type] || type
 }
 
-const reasonLabels: Record<string, string> = {
-  spam: '垃圾信息',
-  harassment: '骚扰行为',
-  inappropriate_content: '不当内容',
-  fake_account: '虚假账户',
-  violence: '暴力内容',
-  other: '其他'
+const getReasonLabel = (reason: string) => {
+  const labels = {
+    spam: '垃圾信息',
+    harassment: '骚扰行为',
+    inappropriate_content: '不当内容',
+    fake_account: '虚假账户',
+    violence: '暴力内容',
+    other: '其他'
+  }
+  return labels[reason] || reason
 }
-
-const getStatusColor = (status: string) => statusColors[status] || 'neutral'
-const getStatusLabel = (status: string) => statusLabels[status] || status
-const getTargetTypeLabel = (type: string) => targetTypeLabels[type] || type
-const getReasonLabel = (reason: string) => reasonLabels[reason] || reason
 
 const getTabLabel = (tab: string) => {
   const item = tabItems.find(t => t.value === tab)

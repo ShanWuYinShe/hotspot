@@ -1,5 +1,5 @@
 <template>
-  <!-- 用户菜单 -->
+  <!-- 用户菜单 - 使用 UDropdownMenu 实现更规范的菜单 -->
   <UDropdownMenu :items="menuItems" :ui="{ content: 'w-56' }">
     <UButton 
       size="lg" 
@@ -30,7 +30,7 @@ import type { DropdownMenuItem } from '@nuxt/ui'
 const { t } = useI18n()
 const authStore = useAuthStore()
 
-// 当前用户（初始为 null，客户端水合后为真实用户）
+// 当前用户
 const user = computed(() => authStore.user)
 
 // 其他账户列表
@@ -39,27 +39,31 @@ const otherAccounts = computed(() =>
 )
 
 // 创建临时用户
-const handleCreateTempUser = async () => {
+const createTempUser = async () => {
   try {
-    await authStore.createTempUser({ nickname: '访客用户' });
+    // 创建临时用户
+    const authStore = useAuthStore();
+    await authStore.createTempUser();
   } catch (error) {
     console.error('创建临时用户失败:', error)
   }
 }
 
 // 切换账户
-const handleSwitchAccount = async (userId: string) => {
+const switchAccount = async (userId: string) => {
   try {
-    await authStore.switchToAccount(userId)
+    const authStore = useAuthStore()
+    await switchAccount(userId)
   } catch (error) {
     console.error('切换账户失败:', error)
   }
 }
 
 // 登出
-const handleLogout = async () => {
+const logout = async () => {
   try {
-    await authStore.logout()
+    const authStore = useAuthStore()
+    await logout()
     navigateTo('/auth/login')
   } catch (error) {
     console.error('登出失败:', error)
@@ -75,7 +79,7 @@ const menuItems = computed((): DropdownMenuItem[][] => {
         {
           label: t('userMenu.tempExperience'),
           icon: 'i-heroicons-rocket-launch',
-          onSelect: handleCreateTempUser
+          onSelect: createTempUser
         },
         {
           label: t('userMenu.loginRegister'),
@@ -137,7 +141,7 @@ const menuItems = computed((): DropdownMenuItem[][] => {
       accountItems.push({
         label: account.user?.nickname || '未知用户',
         icon: isTempUser(account.user?.user_id) ? 'i-heroicons-clock' : 'i-heroicons-user-circle',
-        onSelect: () => handleSwitchAccount(account.user?.user_id || '')
+        onSelect: () => switchAccount(account.user?.user_id || '')
       })
     })
 
@@ -152,7 +156,7 @@ const menuItems = computed((): DropdownMenuItem[][] => {
       label: t('userMenu.logout'),
       icon: 'i-heroicons-arrow-left-start-on-rectangle',
       color: 'error',
-      onSelect: handleLogout
+      onSelect: logout
     }
   ])
 

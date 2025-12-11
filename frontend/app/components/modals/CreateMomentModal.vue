@@ -5,8 +5,8 @@
         <!-- 标题 -->
         <div class="flex items-center justify-between mb-6">
           <div class="flex items-center gap-3">
-            <UIcon name="i-heroicons-camera" class="w-6 h-6 text-neutral-600 dark:text-neutral-300" />
-            <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">
+            <UIcon name="i-heroicons-camera" class="w-6 h-6 text-primary-500" />
+            <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
               发布生活瞬间
             </h3>
           </div>
@@ -32,7 +32,7 @@
               required
             />
             <div class="flex justify-between items-center mt-1">
-              <span class="text-xs text-neutral-500 dark:text-neutral-400">
+              <span class="text-xs text-neutral-500">
                 {{ form.description.length }}/{{ MOMENT_CONSTANTS.MAX_DESCRIPTION_LENGTH }}
               </span>
             </div>
@@ -72,8 +72,8 @@
                 @click="triggerImageUpload"
               >
                 <div class="text-center">
-                  <UIcon name="i-heroicons-camera" class="w-6 h-6 text-neutral-400 dark:text-neutral-500 mx-auto mb-1" />
-                  <span class="text-xs text-neutral-500 dark:text-neutral-400">添加图片</span>
+                  <UIcon name="i-heroicons-camera" class="w-6 h-6 text-neutral-400 mx-auto mb-1" />
+                  <span class="text-xs text-neutral-500">添加图片</span>
                 </div>
               </div>
             </div>
@@ -211,7 +211,7 @@
 </template>
 
 <script setup lang="ts">
-import { MOMENT_CONSTANTS, DEFAULTS } from '~/config/defaults'
+import { MOMENT_CONSTANTS } from '~/config/defaults'
 import { useMomentsService } from '~/services/moments.service'
 import { useUploadService } from '~/services/upload.service'
 import { useGeocodingService } from '~/services/geocoding.service'
@@ -227,7 +227,6 @@ const props = defineProps<Props>()
 // 状态管理
 const creating = ref(false)
 const gettingLocation = ref(false)
-const isSubmitting = ref(false)
 const newTag = ref('')
 const imageInput = ref<HTMLInputElement>()
 
@@ -260,38 +259,6 @@ const isFormValid = computed(() => {
 // 工具函数
 const toast = useToast()
 const locationStore = useLocationStore()
-
-// Toast 辅助函数
-const success = (title: string, description?: string) => {
-  toast.add({ title, description, color: 'success' })
-}
-const error = (title: string, description?: string) => {
-  toast.add({ title, description, color: 'error' })
-}
-
-// 获取当前位置或默认位置
-const getCurrentLocationOrDefault = async (): Promise<{ latitude: number; longitude: number }> => {
-  // 先尝试从 store 获取
-  if (locationStore.coordinates) {
-    return locationStore.coordinates
-  }
-  
-  // 尝试获取浏览器位置
-  try {
-    await locationStore.getCurrentPosition()
-    if (locationStore.coordinates) {
-      return locationStore.coordinates
-    }
-  } catch (e) {
-    console.warn('获取位置失败，使用默认位置')
-  }
-  
-  // 返回系统默认位置（南天门）
-  return {
-    latitude: DEFAULTS.latitude,
-    longitude: DEFAULTS.longitude
-  }
-}
 
 // 方法
 const getCurrentLocation = async () => {
@@ -398,7 +365,7 @@ const createMoment = async () => {
     localStorage.removeItem(MOMENT_CONSTANTS.DRAFT_STORAGE_KEY)
     
     // 调用成功回调
-    props.onSuccess?.(response.id)
+    props.onSuccess?.(response.moment_id)
     
     // 关闭Modal
     handleClose()

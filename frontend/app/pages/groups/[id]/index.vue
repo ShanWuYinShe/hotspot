@@ -8,10 +8,10 @@
                             {{ group?.name?.charAt(0) }}
                         </UAvatar>
                         <div>
-                            <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">
+                            <h1 class="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
                                 {{ group?.name }}
                             </h1>
-                            <p class="text-sm text-neutral-600 dark:text-neutral-400">
+                            <p class="text-sm text-neutral-600 dark:text-neutral-300">
                                 {{ group?.location_name }} ·
                                 {{ group?.member_count || 0 }} 人
                             </p>
@@ -62,8 +62,8 @@
             </template>
 
             <div class="space-y-2">
-                <p class="text-neutral-700 dark:text-neutral-300">{{ group?.description }}</p>
-                <div class="text-sm text-neutral-500 dark:text-neutral-400">
+                <p class="text-neutral-700">{{ group?.description }}</p>
+                <div class="text-sm text-neutral-500">
                     创建于：{{ formatTime(group?.created_at) }} · 最近活跃：{{
                         formatTime(group?.last_active_at)
                     }}
@@ -82,7 +82,7 @@
                             {{ members.length }}
                         </UBadge>
                     </div>
-                    <div class="text-sm text-neutral-500 dark:text-neutral-400">仅展示当前页</div>
+                    <div class="text-sm text-neutral-500">仅展示当前页</div>
                 </div>
             </template>
             
@@ -98,7 +98,7 @@
                                     src: (row as any).avatar_url,
                                     alt: (row as any).nickname,
                                     size: 'md',
-                                    chip: isOnlineUser((row as any).user_id) ? { color: 'success', position: 'bottom-right' } : undefined
+                                    chip: isOnlineUser((row as any).user_id) ? { color: 'success', position: 'bottom-right' } : false
                                 }"
                                 :chip="(row as any).role ? { text: (row as any).role, color: 'primary' } : false"
                                 size="md"
@@ -108,7 +108,7 @@
                             <span class="text-sm text-neutral-600 dark:text-neutral-400">{{ formatTime((row as any).joined_at) }}</span>
                         </template>
                         <template #uid-cell="{ row }">
-                            <span class="text-xs text-neutral-500 dark:text-neutral-400">{{ (row as any).user_id }}</span>
+                            <span class="text-xs text-neutral-500">{{ (row as any).user_id }}</span>
                         </template>
                         <template #actions-cell="{ row }">
                             <div class="flex items-center gap-1">
@@ -153,7 +153,7 @@
             </template>
             
             <template #activities-content>
-                <div class="py-8 text-center text-neutral-500 dark:text-neutral-400">
+                <div class="py-8 text-center text-neutral-500">
                     群组动态功能开发中...
                 </div>
             </template>
@@ -205,10 +205,6 @@ const toast = useToast()
 const groupsStore = useGroupsStore();
 const modal = useModal();
 const { formatTime } = useFormatters();
-
-// 导入服务
-import { useGroupsService } from '~/services/groups.service';
-const groupsService = useGroupsService();
 const groupId = computed(() =>
     String(
         Array.isArray(route.params.id) ? route.params.id[0] : route.params.id,
@@ -274,21 +270,9 @@ const groupInfoAccordionItems = computed(() => [
 
 const loadData = async () => {
     try {
-        // 获取群组详情
-        const g = await groupsService.openTheDoor({ id: groupId.value });
+        const g = await groupsStore.fetchGroupDetails(groupId.value);
         group.value = g;
-        groupsStore.setGroupDetails(groupId.value, g as any);
-        
-        // 获取群组成员
-        const membersResponse = await groupsService.getMembers({ group_chat_id: groupId.value });
-        members.value = membersResponse.items.map(m => ({
-            user_id: m.user_id,
-            nickname: m.nickname,
-            avatar_url: m.avatar_url,
-            role: m.role,
-            joined_at: m.joined_at
-        }));
-        
+        members.value = await groupsStore.fetchGroupMembers(groupId.value);
         // 获取群聊未读数（临时简化处理）
         groupUnread.value = 0;
         page.value = 1;
@@ -313,7 +297,7 @@ const goSettings = () => {
 
 const onJoin = async () => {
     try {
-        await groupsService.joinGroup({ group_chat_id: groupId.value });
+        await groupsStore.joinGroup(groupId.value);
         toast.add({ title: "加入成功", color: "success" });
         await loadData();
     } catch (e: any) {
@@ -349,7 +333,7 @@ onMounted(async () => {
 // 离开群组确认
 const confirmLeave = async () => {
     try {
-        await groupsService.leaveGroup({ group_chat_id: groupId.value });
+        await groupsStore.leaveGroup(groupId.value);
         toast.add({ title: "已退出群组", color: "success" });
         await loadData();
     } catch (e: any) {
@@ -374,8 +358,7 @@ const getUserDescription = (member: any) => {
 }
 
 // 检查用户在线状态（暂时禁用，需要WebSocket支持）
-const isOnlineUser = (userId: string): boolean => {
-    // TODO: 实现 WebSocket 在线状态检查
+const isOnlineUser = async (userId: string) => {
     return false
 }
 
@@ -443,8 +426,9 @@ const getMemberMenuItems = (member: any) => {
 // 角色变更
 const handleRoleChange = async (member: any, newRole: 'admin' | 'member') => {
     try {
+        const groupsService = useGroupsService()
         await groupsService.setMemberRole({
-            group_chat_id: groupId.value,
+            group_chat_id: id.value as string,
             user_id: member.user_id,
             role: newRole
         })
@@ -475,8 +459,9 @@ const handleKickMember = async (member: any) => {
         confirmColor: "error",
         onConfirm: async () => {
             try {
+                const groupsService = useGroupsService()
                 await groupsService.removeMember({
-                    group_chat_id: groupId.value,
+                    group_chat_id: id.value as string,
                     user_id: member.user_id
                 })
                 

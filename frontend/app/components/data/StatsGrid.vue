@@ -22,7 +22,7 @@
         <!-- 数据区域 -->
         <div class="flex-1 min-w-0">
           <div class="flex items-baseline gap-2">
-            <p class="text-2xl font-bold text-neutral-900 dark:text-white truncate">
+            <p class="text-2xl font-bold text-black dark:text-white truncate">
               {{ formatValue(stat.value) }}
             </p>
             <UBadge
@@ -34,10 +34,10 @@
               {{ formatChange(stat.change) }}
             </UBadge>
           </div>
-          <p class="text-sm text-neutral-600 dark:text-neutral-400 truncate">
+          <p class="text-sm text-black/60 dark:text-white/60 truncate">
             {{ stat.label }}
           </p>
-          <p v-if="stat.description" class="text-xs text-neutral-500 dark:text-neutral-400 dark:text-neutral-500 dark:text-neutral-400 truncate mt-1">
+          <p v-if="stat.description" class="text-xs text-black/50 dark:text-white/50 dark:text-black/50 dark:text-white/50 truncate mt-1">
             {{ stat.description }}
           </p>
         </div>
@@ -59,7 +59,7 @@
       <div v-if="stat.trend || stat.extraContent" class="mt-4 pt-4 border-t border-slate-200/50 dark:border-slate-700/50">
         <!-- 简单趋势指示器 -->
         <div v-if="stat.trend" class="flex items-center justify-between text-xs">
-          <span class="text-neutral-500 dark:text-neutral-400">趋势</span>
+          <span class="text-black/50 dark:text-white/50">趋势</span>
           <div class="flex items-center gap-1">
             <UIcon 
               :name="getTrendIcon(stat.trend)" 
@@ -151,8 +151,8 @@ const gridClass = computed(() => {
 // 颜色映射
 const colorMaps = {
   blue: {
-    bg: 'bg-primary-100 dark:bg-primary-900/30',
-    icon: 'text-neutral-700 dark:text-neutral-300'
+    bg: 'bg-blue-100 dark:bg-blue-900/30',
+    icon: 'text-blue-600 dark:text-blue-400'
   },
   green: {
     bg: 'bg-green-100 dark:bg-green-900/30',
@@ -210,7 +210,7 @@ const getTrendColor = (trend: string) => {
   switch (trend) {
     case 'up': return 'text-green-600 dark:text-green-400'
     case 'down': return 'text-red-600 dark:text-red-400'
-    default: return 'text-neutral-500 dark:text-neutral-400'
+    default: return 'text-slate-500'
   }
 }
 

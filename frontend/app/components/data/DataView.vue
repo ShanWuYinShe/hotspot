@@ -52,9 +52,9 @@
       
       <!-- 空状态 -->
       <div v-else-if="!loading && filteredData.length === 0" class="text-center py-12">
-        <UIcon :name="emptyIcon" class="w-12 h-12 text-neutral-400 dark:text-neutral-500 mx-auto mb-4" />
-        <h3 class="text-lg font-medium text-neutral-900 dark:text-white mb-2">{{ emptyTitle }}</h3>
-        <p class="text-neutral-500 dark:text-neutral-400 mb-4">{{ emptyDescription }}</p>
+        <UIcon :name="emptyIcon" class="w-12 h-12 text-gray-400 mx-auto mb-4" />
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ emptyTitle }}</h3>
+        <p class="text-gray-500 dark:text-gray-400 mb-4">{{ emptyDescription }}</p>
         <UButton
           v-if="emptyAction"
           :color="emptyAction.color || 'primary'"
@@ -244,8 +244,8 @@ const handleItemClick = (item: any) => {
   emit('itemClick', item)
 }
 
-const handleTableSelect = (e: Event, row: any) => {
-  emit('tableSelect', [row])
+const handleTableSelect = (rows: any[]) => {
+  emit('tableSelect', rows)
 }
 
 // 监听数据变化，重置分页

@@ -10,7 +10,7 @@
             </div>
             <div>
               <h1 class="text-lg font-semibold text-neutral-900 dark:text-white">消息中心</h1>
-              <p class="text-sm text-neutral-500 dark:text-neutral-400">与朋友和群组保持联系</p>
+              <p class="text-sm text-neutral-500">与朋友和群组保持联系</p>
             </div>
           </div>
         </template>
@@ -61,7 +61,7 @@
             @click="navigateTo('/search')"
           >
             <template #icon>
-              <div class="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center">
+              <div class="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
                 <UIcon name="i-heroicons-user-plus" class="w-5 h-5 text-white" />
               </div>
             </template>
@@ -139,7 +139,7 @@
             <!-- 空状态 -->
             <div v-else-if="filteredConversations.length === 0" class="text-center py-12">
               <div class="w-16 h-16 bg-neutral-100 dark:bg-neutral-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <UIcon name="i-heroicons-chat-bubble-left-ellipsis" class="w-8 h-8 text-neutral-500 dark:text-neutral-400" />
+                <UIcon name="i-heroicons-chat-bubble-left-ellipsis" class="w-8 h-8 text-neutral-500" />
               </div>
               <h3 class="text-lg font-semibold text-neutral-900 dark:text-white mb-2">暂无会话</h3>
               <p class="text-neutral-600 dark:text-neutral-400 mb-4">开始与朋友聊天吧！</p>
@@ -152,7 +152,7 @@
             <div v-else class="space-y-1">
               <div
                 v-for="conversation in filteredConversations"
-                :key="conversation.chat_id"
+                :key="conversation.id"
                 class="flex items-center gap-3 p-3 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 cursor-pointer transition-colors"
                 @click="openConversation(conversation)"
               >
@@ -161,7 +161,7 @@
                   <UAvatar
                     :alt="conversation.name"
                     size="lg"
-                    :src="conversation.avatar_url"
+                    :src="conversation.avatar"
                   >
                     {{ conversation.name?.charAt(0) || "?" }}
                   </UAvatar>
@@ -174,8 +174,8 @@
                   
                   <!-- 群组标识 -->
                   <div
-                    v-if="conversation.chat_type === 'group'"
-                    class="absolute -bottom-1 -right-1 w-4 h-4 bg-primary-500 rounded-full border-2 border-white dark:border-neutral-900 flex items-center justify-center"
+                    v-if="conversation.type === 'group'"
+                    class="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 rounded-full border-2 border-white dark:border-neutral-900 flex items-center justify-center"
                   >
                     <UIcon name="i-heroicons-user-group" class="w-2 h-2 text-white" />
                   </div>
@@ -187,17 +187,17 @@
                     <h3 class="font-medium text-neutral-900 dark:text-white truncate">
                       {{ conversation.name }}
                     </h3>
-                    <span class="text-xs text-neutral-500 dark:text-neutral-400 flex-shrink-0">
-                      {{ formatTime(conversation.last_activity_at) }}
+                    <span class="text-xs text-neutral-500 flex-shrink-0">
+                      {{ formatTime(conversation.last_message_time) }}
                     </span>
                   </div>
                   
                   <div class="flex items-center justify-between">
                     <p class="text-sm text-neutral-600 dark:text-neutral-400 truncate">
-                      <span v-if="(conversation as any).last_message_sender && conversation.chat_type === 'group'" class="text-neutral-500 dark:text-neutral-400">
+                      <span v-if="(conversation as any).last_message_sender && conversation.type === 'group'" class="text-neutral-500">
                         {{ (conversation as any).last_message_sender }}:
                       </span>
-                      {{ conversation.last_message?.content || '暂无消息' }}
+                      {{ conversation.last_message || '暂无消息' }}
                     </p>
                     
                     <!-- 未读消息数 -->
@@ -266,7 +266,7 @@ const activeFilter = ref<string>('all');
 
 // 计算属性
 const totalUnread = computed(() => messagesStore.totalUnreadCount);
-const conversations = computed(() => messagesStore.conversationsList);
+const conversations = computed(() => messagesStore.conversations || []);
 
 // 筛选器配置
 const conversationFilters = [
@@ -286,19 +286,19 @@ const filteredConversations = computed(() => {
       filtered = filtered.filter(c => c.unread_count > 0);
       break;
     case 'private':
-      filtered = filtered.filter(c => c.chat_type === 'private');
+      filtered = filtered.filter(c => c.type === 'user');
       break;
     case 'group':
-      filtered = filtered.filter(c => c.chat_type === 'group');
+      filtered = filtered.filter(c => c.type === 'group');
       break;
     case 'online':
       filtered = filtered.filter(c => (c as any).is_online);
       break;
   }
   
-  // 按最后活动时间排序
+  // 按最后消息时间排序
   return filtered.sort((a, b) => 
-    new Date(b.last_activity_at).getTime() - new Date(a.last_activity_at).getTime()
+    new Date(b.last_message_time).getTime() - new Date(a.last_message_time).getTime()
   );
 });
 
@@ -307,19 +307,8 @@ const loadConversations = async () => {
   try {
     loading.value = true;
     error.value = null;
-    // 加载私聊列表
-    const response = await messageService.getPrivateChats({});
-    // 转换为通用会话格式
-    const conversationsList = response.items.map(item => ({
-      chat_id: item.private_chat_id,
-      chat_type: 'private' as const,
-      name: item.other_user.nickname,
-      avatar_url: item.other_user.avatar_url,
-      unread_count: item.unread_count,
-      last_message: item.last_message,
-      last_activity_at: item.last_activity_at
-    }));
-    messagesStore.setConversations(conversationsList);
+    // 加载会话列表
+    await messageService.getConversations();
   } catch (err: any) {
     console.error('加载会话失败:', err);
     error.value = err.message || '加载会话失败';
@@ -337,9 +326,9 @@ const setFilter = (filterKey: string) => {
 };
 
 const openConversation = (conversation: any) => {
-  const route = conversation.chat_type === 'group' 
-    ? `/chat/groups/${conversation.chat_id}`
-    : `/chat/users/${conversation.chat_id}`;
+  const route = conversation.type === 'group' 
+    ? `/chat/groups/${conversation.id}`
+    : `/chat/users/${conversation.id}`;
   navigateTo(route);
 };
 
@@ -355,22 +344,22 @@ const getConversationMenuItems = (conversation: any) => {
     [{
       label: '标记为已读',
       icon: 'i-heroicons-check',
-      click: () => markAsRead(conversation.chat_id),
+      click: () => markAsRead(conversation.id),
       disabled: conversation.unread_count === 0
     }],
     [{
       label: '置顶聊天',
       icon: 'i-heroicons-bookmark',
-      click: () => togglePin(conversation.chat_id)
+      click: () => togglePin(conversation.id)
     }, {
       label: '免打扰',
       icon: 'i-heroicons-bell-slash',
-      click: () => toggleMute(conversation.chat_id)
+      click: () => toggleMute(conversation.id)
     }],
     [{
       label: '删除聊天',
       icon: 'i-heroicons-trash',
-      click: () => deleteConversation(conversation.chat_id),
+      click: () => deleteConversation(conversation.id),
       class: 'text-error-500'
     }]
   ];
@@ -378,14 +367,9 @@ const getConversationMenuItems = (conversation: any) => {
   return items;
 };
 
-const markAsRead = async (chatId: string) => {
+const markAsRead = async (conversationId: string) => {
   try {
-    const conversation = messagesStore.getConversation(chatId);
-    if (conversation?.chat_type === 'group') {
-      await messagesStore.markGroupMessagesAsRead(chatId);
-    } else {
-      await messagesStore.markPrivateMessagesAsRead(chatId);
-    }
+    await messagesStore.markConversationAsRead(conversationId);
   } catch (err) {
     console.error('标记已读失败:', err);
   }
@@ -401,17 +385,16 @@ const toggleMute = async (conversationId: string) => {
   console.log('切换免打扰:', conversationId);
 };
 
-const deleteConversation = (chatId: string) => {
-  modal.showConfirm({
+const deleteConversation = (conversationId: string) => {
+  modal.showConfirmModal({
     title: "删除聊天",
     message: "确定要删除这个聊天吗？此操作无法撤销。",
     confirmText: "删除",
     cancelText: "取消",
-    confirmColor: "error"
-  }).then(async (confirmed) => {
-    if (confirmed) {
+    confirmColor: "error",
+    onConfirm: async () => {
       try {
-        messagesStore.removeConversation(chatId);
+        await messagesStore.deleteConversation(conversationId);
       } catch (err) {
         console.error('删除聊天失败:', err);
       }

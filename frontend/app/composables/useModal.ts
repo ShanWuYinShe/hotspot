@@ -247,29 +247,18 @@ export function useModal() {
     })
   }
 
-  const showInviteMembers = async (groupId: string, onSuccess?: () => void): Promise<void> => {
-    return new Promise(async (resolve) => {
-      const InviteMembersModal = await import('~/components/modals/InviteMembersModal.vue')
-      
-      const modal = overlay.create(InviteMembersModal)
-
-      modal.open()
-      
-      // 暂时直接 resolve
-      resolve()
+  const showInviteMembers = (groupId: string, onSuccess?: () => void) => {
+    open('InviteMembersModal', {
+      groupId,
+      onSuccess
     })
   }
 
-  const showTransferOwnership = async (groupId: string, members: any[], onSuccess?: (newOwnerId: string) => void): Promise<void> => {
-    return new Promise(async (resolve) => {
-      const TransferOwnershipModal = await import('~/components/modals/TransferOwnershipModal.vue')
-      
-      const modal = overlay.create(TransferOwnershipModal)
-
-      modal.open()
-      
-      // 暂时直接 resolve
-      resolve()
+  const showTransferOwnership = (groupId: string, members: any[], onSuccess?: (newOwnerId: string) => void) => {
+    open('TransferOwnershipModal', {
+      groupId,
+      members,
+      onSuccess
     })
   }
 

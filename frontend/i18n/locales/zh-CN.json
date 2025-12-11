@@ -216,8 +216,6 @@
     "temporary": "临时",
     "verified": "正式",
     "upgradeAccount": "升级账户",
-    "createGroup": "创建群组",
-    "findFriends": "查找好友",
     "tempModal": {
       "title": "一键临时体验",
       "infoTitle": "临时体验说明",
@@ -316,11 +314,7 @@
       },
       "recommended": {
         "title": "推荐用户",
-        "empty": {
-          "title": "暂无推荐用户",
-          "description": "暂时没有找到附近的推荐用户",
-          "actionText": "刷新"
-        }
+        "empty": "暂无推荐用户"
       },
       "status": {
         "sent": "已发送",

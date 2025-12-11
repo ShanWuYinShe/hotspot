@@ -71,7 +71,7 @@
               <p class="text-sm text-neutral-600 dark:text-neutral-400 mb-2">
                 {{ notification.content }}
               </p>
-              <div class="flex items-center gap-4 text-xs text-neutral-500 dark:text-neutral-400">
+              <div class="flex items-center gap-4 text-xs text-neutral-500">
                 <span>{{ formatTime(notification.created_at) }}</span>
                 <UBadge
                   v-if="notification.category"
@@ -185,7 +185,7 @@ const loadNotifications = async (loadMore = false) => {
     nextCursor.value = response.pagination.next_cursor
 
     // 获取未读数
-    const unreadResponse = await inboxService.getUnreadCount()
+    const unreadResponse = await inboxService.getUnreadCount({})
     unreadCount.value = unreadResponse.total
   } catch (error) {
     console.error('加载通知失败:', error)
@@ -240,7 +240,7 @@ const markAsRead = async (id: string) => {
 // 删除通知
 const deleteNotification = async (id: string) => {
   try {
-    await inboxService.remove({ ids: [id] })
+    await inboxService.deleteItems({ ids: [id] })
     notifications.value = notifications.value.filter(n => n.id !== id)
     toast.add({
       title: '已删除',
@@ -280,11 +280,11 @@ const getIcon = (type: string) => {
 const getSeverityColor = (severity?: string) => {
   switch (severity) {
     case 'error':
-      return 'bg-error-100 dark:bg-error-900/30 text-neutral-900 dark:text-white'
+      return 'bg-error-100 dark:bg-error-900/30 text-error-600'
     case 'warning':
-      return 'bg-warning-100 dark:bg-warning-900/30 text-neutral-900 dark:text-white'
+      return 'bg-warning-100 dark:bg-warning-900/30 text-warning-600'
     default:
-      return 'bg-primary-100 dark:bg-primary-900/30 text-neutral-900 dark:text-white'
+      return 'bg-primary-100 dark:bg-primary-900/30 text-primary-600'
   }
 }
 

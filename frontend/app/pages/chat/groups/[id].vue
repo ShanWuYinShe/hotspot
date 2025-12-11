@@ -19,7 +19,7 @@
                 </UAvatar>
 
                 <div>
-                    <h1 class="text-lg font-semibold text-neutral-900 dark:text-white">
+                    <h1 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
                         {{ groupInfo?.name || "群聊" }}
                     </h1>
                     <p class="text-sm opacity-80">
@@ -72,7 +72,7 @@
             />
             <div
                 v-if="searchResults.length > 0"
-                class="mt-2 text-sm text-neutral-500 dark:text-neutral-400"
+                class="mt-2 text-sm text-neutral-500"
             >
                 找到 {{ searchResults.length }} 条相关消息
             </div>
@@ -81,7 +81,7 @@
         <!-- 消息列表 -->
         <div class="flex-1 overflow-hidden">
             <!-- 加载中占位 -->
-            <div v-if="messagesStore.loading" class="h-full flex items-center justify-center">
+            <div v-if="messagesStore.loading.messages" class="h-full flex items-center justify-center">
                 <div class="space-y-3 w-full max-w-md px-4">
                     <USkeleton class="h-6 w-2/3" />
                     <USkeleton class="h-20 w-5/6" />
@@ -204,7 +204,7 @@ import {
 } from "vue";
 import { useRoute, navigateTo } from "nuxt/app";
 import type { SendMessageResponse } from "~/types/api";
-import { useGroupsService } from "~/services/groups.service";
+import { useGroupService } from "~/services/groups.service";
 
 const EmptyMessages = defineAsyncComponent(
     () => import("~/components/illustrations/EmptyMessages.vue"),
@@ -237,7 +237,7 @@ const formatMessageTime = (date: string | number | Date): string => {
 };
 
 // 使用服务实例
-const groupService = useGroupsService();
+const { getGroupDetails, leaveGroup } = useGroupService();
 
 // 群聊参数
 const groupId = route.params.id as string;
@@ -251,8 +251,7 @@ type GroupInfo = {
 };
 
 const groupInfo = ref<GroupInfo | null>(null);
-const hasMoreMessages = ref(false);
-const messagesList = computed(() => messagesStore.getMessages(groupId));
+const messagesList = computed<SendMessageResponse[]>(() => messagesStore.messages);
 
 // 消息输入和状态
 const messageInput = ref('');
@@ -270,13 +269,13 @@ const chatStatus = computed(() => {
 // 格式化消息为ChatMessages组件需要的格式
 const formattedMessages = computed(() => {
     return messagesList.value.map(message => ({
-        id: message.id || String(Math.random()),
+        id: message.message_id || String(Math.random()),
         role: (isOwn(message) ? 'user' : 'assistant') as 'user' | 'assistant' | 'system',
         parts: [{ type: 'text' as const, text: message.content || '' }],
         metadata: {
-            senderName: message.sender.nickname,
+            senderName: message.sender_name,
             timestamp: message.sent_at || new Date().toISOString(),
-            senderId: message.sender.user_id
+            senderId: message.sender_id
         }
     }));
 });
@@ -304,6 +303,10 @@ const displayMessages = computed(() => {
     }
     return messagesList.value;
 });
+
+const hasMoreMessages = computed<boolean>(
+    () => messagesStore.pagination.messages.hasMore,
+);
 const focusComposer = () => {
     const el = document.querySelector(
         'textarea[placeholder*="群里"]',
@@ -315,8 +318,8 @@ const messagesStore = useMessagesStore();
 const authStore = useAuthStore();
 
 // 是否本人消息
-const isOwn = (m: any) =>
-    String(m.sender?.user_id) === String(authStore.user?.user_id ?? "");
+const isOwn = (m: SendMessageResponse) =>
+    String(m.sender_id) === String(authStore.user?.user_id ?? "");
 
 // 群聊操作菜单
 const groupActions = computed(() => [
@@ -348,20 +351,13 @@ const initGroupChat = async (): Promise<void> => {
     try {
         // 获取群组信息
         try {
-            const response = await groupService.openTheDoor({ id: groupId });
-            groupInfo.value = {
-                name: response.name || `群组 ${groupId}`,
-                avatar_url: response.avatar_url,
-                member_count: response.member_count,
-                description: response.description
-            };
+            groupInfo.value = (await getGroupDetails(groupId)) as any;
         } catch (_) {
             groupInfo.value = { name: `群组 ${groupId}`, member_count: 0 };
         }
 
         // 获取群聊消息
-        const pagination = await messagesStore.fetchGroupMessages(groupId);
-        hasMoreMessages.value = pagination?.has_more ?? false;
+        await messagesStore.fetchMessages(groupId, false, "group");
     } catch (error) {
         console.error("初始化群聊失败:", error);
         toast.add({
@@ -380,7 +376,7 @@ const handleSendMessage = async (event: Event) => {
     
     sending.value = true;
     try {
-        await messagesStore.sendGroupMessage(groupId, { type: 'text', content });
+        await messagesStore.sendGroupMessage(groupId, content, "text");
         messageInput.value = ''; // 清空输入框
     } catch (error) {
         toast.add({ 
@@ -399,7 +395,7 @@ const onSend = async (content: string) => {
     
     sending.value = true;
     try {
-        await messagesStore.sendGroupMessage(groupId, { type: 'text', content });
+        await messagesStore.sendGroupMessage(groupId, content, "text");
     } catch (error) {
         toast.add({ 
             title: "发送失败", 
@@ -460,10 +456,11 @@ const onUploadFile = async (file: File) => {
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         // 发送文件消息
-        await messagesStore.sendGroupMessage(groupId, {
-            type: 'file',
-            content: `[文件] ${file.name}`
-        });
+        await messagesStore.sendGroupMessage(
+            groupId,
+            `[文件] ${file.name}`,
+            "file"
+        );
         
         toast.add({
             title: "上传成功",
@@ -503,13 +500,12 @@ const onSendLocation = async () => {
             }
         }
         
-        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject);
-        });
+        const position = await deviceAccess.getCurrentPosition();
+        const address = await deviceAccess.reverseGeocode(position.coords.latitude, position.coords.longitude);
         
-        const locationContent = `📍 我的位置\n纬度: ${position.coords.latitude.toFixed(6)}\n经度: ${position.coords.longitude.toFixed(6)}`;
+        const locationContent = `📍 我的位置\n${address}\n纬度: ${position.coords.latitude.toFixed(6)}\n经度: ${position.coords.longitude.toFixed(6)}`;
         
-        await messagesStore.sendGroupMessage(groupId, { type: 'text', content: locationContent });
+        await messagesStore.sendGroupMessage(groupId, locationContent, "location");
         
         toast.add({
             title: "位置已发送",
@@ -539,13 +535,10 @@ const onSendLocation = async () => {
 
 // 加载更多消息
 const loadMoreMessages = async (): Promise<void> => {
-    if (loadingMore.value || !hasMoreMessages.value) return;
+    if (loadingMore.value) return;
     loadingMore.value = true;
     try {
-        // 获取当前最早的消息作为游标
-        const firstMessage = messagesList.value[0];
-        const pagination = await messagesStore.fetchGroupMessages(groupId, firstMessage?.id);
-        hasMoreMessages.value = pagination?.has_more ?? false;
+        await messagesStore.fetchMessages(groupId, true, "group");
     } catch (error) {
         toast.add({ 
             title: "加载失败", 
@@ -587,7 +580,7 @@ const showGroupSettings = (): void => {
 
 const leaveGroupChat = async (): Promise<void> => {
     try {
-        await groupService.leaveGroup({ group_chat_id: groupId });
+        await leaveGroup(groupId);
         toast.add({
             title: "已退出群聊",
             description: "您已成功退出该群聊",

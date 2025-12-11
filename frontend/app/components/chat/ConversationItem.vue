@@ -61,7 +61,7 @@
                         {{ conversation.name }}
                     </h3>
                     <div class="flex flex-col items-end space-y-1">
-                        <span class="text-sm text-neutral-500 dark:text-neutral-400 flex-shrink-0">
+                        <span class="text-sm text-neutral-500 shrink-0">
                             {{ displayTime(conversation.last_message_time || conversation.updated_at) }}
                         </span>
                         <!-- 未读消息数 -->
@@ -84,12 +84,12 @@
                         >
                             <UIcon
                                 :name="getMessageTypeIcon(lastMessageType)"
-                                class="w-4 h-4 text-neutral-400 dark:text-neutral-500 flex-shrink-0"
+                                class="w-4 h-4 text-neutral-400 shrink-0"
                             />
                         </UTooltip>
 
                         <!-- 最后一条消息 -->
-                        <p class="text-sm text-neutral-600 dark:text-neutral-400 truncate">
+                        <p class="text-sm text-neutral-600 truncate">
                             {{
                                 displayLastMessage(
                                     conversation.last_message?.content || '',
@@ -103,7 +103,7 @@
                     <UTooltip v-if="conversation.is_pinned" text="已置顶会话">
                         <UIcon
                             name="i-heroicons-bookmark-solid"
-                            class="w-4 h-4 text-yellow-500 flex-shrink-0 ml-2"
+                            class="w-4 h-4 text-yellow-500 shrink-0 ml-2"
                         />
                     </UTooltip>
                 </div>

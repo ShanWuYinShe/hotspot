@@ -42,7 +42,7 @@
                 :color="healthData.database?.status === 'connected' ? 'green' : 'red'"
                 :label="healthData.database?.status === 'connected' ? '已连接' : '断开'"
               />
-              <span class="text-xs text-neutral-500 dark:text-neutral-400">
+              <span class="text-xs text-neutral-500">
                 {{ healthData.database?.response_time }}ms
               </span>
             </div>
@@ -55,7 +55,7 @@
                 :color="healthData.redis?.status === 'connected' ? 'green' : 'red'"
                 :label="healthData.redis?.status === 'connected' ? '已连接' : '断开'"
               />
-              <span class="text-xs text-neutral-500 dark:text-neutral-400">
+              <span class="text-xs text-neutral-500">
                 {{ healthData.redis?.response_time }}ms
               </span>
             </div>
@@ -78,7 +78,7 @@
             <div class="flex items-center gap-2">
               <div class="w-20 bg-neutral-200 dark:bg-neutral-700 rounded-full h-2">
                 <div
-                  class="bg-primary-500 h-2 rounded-full transition-all"
+                  class="bg-blue-500 h-2 rounded-full transition-all"
                   :style="{ width: `${healthData.metrics?.cpu_usage || 0}%` }"
                 />
               </div>
@@ -124,8 +124,8 @@
         @click="navigateTo('/admin/users')"
       >
         <div class="text-center">
-          <UIcon name="i-heroicons-users" class="w-8 h-8 text-neutral-600 dark:text-neutral-300 mx-auto mb-2" />
-          <h4 class="font-medium text-neutral-900 dark:text-white">用户管理</h4>
+          <UIcon name="i-heroicons-users" class="w-8 h-8 text-blue-500 mx-auto mb-2" />
+          <h4 class="font-medium text-neutral-900 dark:text-neutral-100">用户管理</h4>
           <p class="text-sm text-neutral-600 dark:text-neutral-400">管理用户账户</p>
         </div>
       </UCard>
@@ -136,7 +136,7 @@
       >
         <div class="text-center">
           <UIcon name="i-heroicons-shield-exclamation" class="w-8 h-8 text-red-500 mx-auto mb-2" />
-          <h4 class="font-medium text-neutral-900 dark:text-white">举报处理</h4>
+          <h4 class="font-medium text-neutral-900 dark:text-neutral-100">举报处理</h4>
           <p class="text-sm text-neutral-600 dark:text-neutral-400">处理用户举报</p>
         </div>
       </UCard>
@@ -147,7 +147,7 @@
       >
         <div class="text-center">
           <UIcon name="i-heroicons-document-text" class="w-8 h-8 text-green-500 mx-auto mb-2" />
-          <h4 class="font-medium text-neutral-900 dark:text-white">内容管理</h4>
+          <h4 class="font-medium text-neutral-900 dark:text-neutral-100">内容管理</h4>
           <p class="text-sm text-neutral-600 dark:text-neutral-400">管理平台内容</p>
         </div>
       </UCard>
@@ -158,7 +158,7 @@
       >
         <div class="text-center">
           <UIcon name="i-heroicons-cog-6-tooth" class="w-8 h-8 text-purple-500 mx-auto mb-2" />
-          <h4 class="font-medium text-neutral-900 dark:text-white">系统设置</h4>
+          <h4 class="font-medium text-neutral-900 dark:text-neutral-100">系统设置</h4>
           <p class="text-sm text-neutral-600 dark:text-neutral-400">配置系统参数</p>
         </div>
       </UCard>
@@ -186,14 +186,14 @@
         >
           <UIcon :name="activity.icon" :class="activity.iconColor" class="w-5 h-5" />
           <div class="flex-1">
-            <p class="text-sm font-medium text-neutral-900 dark:text-white">
+            <p class="text-sm font-medium text-neutral-900 dark:text-neutral-100">
               {{ activity.title }}
             </p>
             <p class="text-xs text-neutral-600 dark:text-neutral-400">
               {{ activity.description }}
             </p>
           </div>
-          <span class="text-xs text-neutral-500 dark:text-neutral-400">
+          <span class="text-xs text-neutral-500">
             {{ formatTime(activity.timestamp) }}
           </span>
         </div>
@@ -203,9 +203,6 @@
 </template>
 
 <script setup lang="ts">
-import { useSystemService } from '~/services/system.service'
-import type { StatItem } from '~/components/data/StatsGrid.vue'
-
 definePageMeta({
   title: '系统管理面板',
   description: '监控系统运行状态和管理平台数据',
@@ -213,8 +210,6 @@ definePageMeta({
   layout: 'dashboard',
   middleware: 'admin' // 需要管理员权限
 })
-
-const toast = useToast()
 
 // 状态管理
 const loading = ref(false)
@@ -248,13 +243,13 @@ const recentActivities = ref([
     title: '举报处理',
     description: '处理了一条垃圾信息举报',
     icon: 'i-heroicons-shield-check',
-    iconColor: 'text-neutral-600 dark:text-neutral-300',
+    iconColor: 'text-blue-500',
     timestamp: new Date(Date.now() - 300000).toISOString()
   }
 ])
 
 // 计算属性
-const systemStats = computed<StatItem[]>(() => [
+const systemStats = computed(() => [
   {
     key: 'users',
     label: '总用户数',
@@ -311,7 +306,7 @@ const headerActions = computed(() => [
 const { formatTime, formatCount } = useFormatters()
 
 const getHealthColor = (status: string) => {
-  const colors: Record<string, string> = {
+  const colors = {
     healthy: 'green',
     degraded: 'orange',
     unhealthy: 'red'
@@ -320,7 +315,7 @@ const getHealthColor = (status: string) => {
 }
 
 const getHealthLabel = (status: string) => {
-  const labels: Record<string, string> = {
+  const labels = {
     healthy: '健康',
     degraded: '降级',
     unhealthy: '异常'
@@ -351,18 +346,10 @@ const loadHealthData = async () => {
   loading.value = true
   try {
     const systemService = useSystemService()
-    const response = await systemService.healthCheck()
-    healthData.value = {
-      status: response.status,
-      timestamp: response.timestamp,
-      version: response.version,
-      uptime: 0,
-      database: { status: 'connected', response_time: 0 },
-      redis: { status: 'connected', response_time: 0 },
-      metrics: healthData.value.metrics
-    }
-  } catch (err) {
-    console.error('加载系统状态失败:', err)
+    const response = await systemService.getHealthStatus()
+    healthData.value = response
+  } catch (error) {
+    console.error('加载系统状态失败:', error)
   } finally {
     loading.value = false
   }
@@ -370,11 +357,23 @@ const loadHealthData = async () => {
 
 const exportReport = async () => {
   try {
-    // 导出功能暂未实现
-    toast.add({ title: '导出成功', description: '系统报告已下载', color: 'success' })
-  } catch (err) {
-    console.error('导出报告失败:', err)
-    toast.add({ title: '导出失败', description: '无法导出系统报告', color: 'error' })
+    const systemService = useSystemService()
+    const blob = await systemService.exportSystemReport('pdf')
+    
+    // 创建下载链接
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `system-report-${new Date().toISOString().split('T')[0]}.pdf`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    
+    success('导出成功', '系统报告已下载')
+  } catch (error) {
+    console.error('导出报告失败:', error)
+    error('导出失败', '无法导出系统报告')
   }
 }
 

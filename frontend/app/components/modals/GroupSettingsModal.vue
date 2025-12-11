@@ -6,7 +6,7 @@
         <div class="flex items-center justify-between mb-6">
           <div class="flex items-center gap-3">
             <UIcon name="i-heroicons-cog-6-tooth" class="w-6 h-6 text-purple-500" />
-            <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">
+            <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
               群组管理
             </h3>
           </div>
@@ -40,7 +40,7 @@
               <div class="flex items-center justify-between mb-3">
                 <div>
                   <h5 class="font-medium text-sm">群组邀请码</h5>
-                  <p class="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                  <p class="text-xs text-neutral-500 mt-1">
                     分享此邀请码让朋友快速加入群组
                   </p>
                 </div>
@@ -109,7 +109,7 @@
                         size="xs"
                       />
                     </div>
-                    <p class="text-xs text-neutral-500 dark:text-neutral-400">
+                    <p class="text-xs text-neutral-500">
                       加入时间：{{ formatTime(member.joined_at) }}
                     </p>
                   </div>
@@ -176,7 +176,7 @@
                   <label class="text-sm font-medium text-neutral-700 dark:text-neutral-300">
                     需要密码加入
                   </label>
-                  <p class="text-xs text-neutral-500 dark:text-neutral-400">
+                  <p class="text-xs text-neutral-500">
                     开启后新成员需要输入密码才能加入
                   </p>
                 </div>
@@ -212,7 +212,7 @@
                   <h5 class="text-sm font-medium text-neutral-900 dark:text-white">
                     转移群主
                   </h5>
-                  <p class="text-xs text-neutral-500 dark:text-neutral-400">
+                  <p class="text-xs text-neutral-500">
                     将群主权限转移给其他管理员
                   </p>
                 </div>
@@ -231,7 +231,7 @@
                   <h5 class="text-sm font-medium text-red-600 dark:text-red-400">
                     解散群组
                   </h5>
-                  <p class="text-xs text-neutral-500 dark:text-neutral-400">
+                  <p class="text-xs text-neutral-500">
                     永久删除群组，此操作不可撤销
                   </p>
                 </div>
@@ -310,14 +310,6 @@ const { formatTime } = useFormatters()
 const toast = useToast()
 const { showConfirm } = useModal()
 
-// Toast 辅助函数
-const success = (title: string, description?: string) => {
-  toast.add({ title, description, color: 'success' })
-}
-const error = (title: string, description?: string) => {
-  toast.add({ title, description, color: 'error' })
-}
-
 // 定义 Badge 颜色类型
 type BadgeColor = 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral'
 
@@ -390,13 +382,13 @@ const loadGroupData = async () => {
     
     // 获取群组详情和成员列表
     const [groupResponse, membersResponse] = await Promise.all([
-      groupService.openTheDoor({ id: props.groupId }),
-      groupService.getMembers({ group_chat_id: props.groupId })
+      groupService.getGroupDetails(props.groupId),
+      groupService.getGroupMembers(props.groupId)
     ])
     
     // 设置群组基本信息
     groupSettings.value = {
-      name: groupResponse.name || '',
+      name: groupResponse.name,
       description: groupResponse.description || '',
       max_members: GROUP_CONSTANTS.MAX_MEMBERS_DEFAULT,
       password_required: false,
@@ -485,11 +477,7 @@ const promoteMember = async (member: any) => {
   
   try {
     const groupService = useGroupsService()
-    await groupService.setMemberRole({
-      group_chat_id: props.groupId,
-      user_id: member.user_id,
-      role: 'admin'
-    })
+    await groupService.setMemberRole(props.groupId, member.user_id, 'admin')
     member.role = 'admin'
     success('设置成功')
   } catch (err: any) {
@@ -510,11 +498,7 @@ const demoteMember = async (member: any) => {
   
   try {
     const groupService = useGroupsService()
-    await groupService.setMemberRole({
-      group_chat_id: props.groupId,
-      user_id: member.user_id,
-      role: 'member'
-    })
+    await groupService.setMemberRole(props.groupId, member.user_id, 'member')
     member.role = 'member'
     success('取消成功')
   } catch (err: any) {
@@ -536,10 +520,7 @@ const kickMember = async (member: any) => {
   
   try {
     const groupService = useGroupsService()
-    await groupService.removeMember({
-      group_chat_id: props.groupId,
-      user_id: member.user_id
-    })
+    await groupService.removeMember(props.groupId, member.user_id)
     const index = members.value.findIndex(m => m.user_id === member.user_id)
     if (index > -1) {
       members.value.splice(index, 1)
@@ -576,7 +557,7 @@ const deleteGroup = async () => {
   
   try {
     const groupService = useGroupsService()
-    await groupService.deleteGroup({ group_chat_id: props.groupId })
+    await groupService.deleteGroup(props.groupId)
     success('群组已解散')
     handleClose()
   } catch (err: any) {
@@ -588,14 +569,7 @@ const saveSettings = async () => {
   saving.value = true
   try {
     const groupService = useGroupsService()
-    await groupService.updateGroup({
-      group_chat_id: props.groupId,
-      name: groupSettings.value.name,
-      description: groupSettings.value.description || undefined,
-      settings: {
-        max_members: groupSettings.value.max_members
-      }
-    })
+    await groupService.updateGroup(props.groupId, groupSettings.value)
     success('设置已保存')
     props.onSuccess?.()
   } catch (err: any) {

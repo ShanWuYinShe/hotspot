@@ -4,7 +4,7 @@
     <template #header>
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <UIcon :name="headerIcon" class="w-5 h-5 text-neutral-600 dark:text-neutral-300" />
+          <UIcon :name="headerIcon" class="w-5 h-5 text-primary-500" />
           <h2 class="text-lg font-semibold">{{ title }}</h2>
         </div>
         <UButton variant="ghost" icon="i-heroicons-x-mark" size="sm" square @click="handleClose" />
@@ -40,12 +40,12 @@
             </template>
             <div class="grid grid-cols-2 gap-4 text-center">
               <div>
-                <p class="text-2xl font-bold text-neutral-900 dark:text-white">{{ data.moments_count || 0 }}</p>
-                <p class="text-sm text-neutral-500 dark:text-neutral-400">动态</p>
+                <p class="text-2xl font-bold text-black dark:text-white">{{ data.moments_count || 0 }}</p>
+                <p class="text-sm text-neutral-500">动态</p>
               </div>
               <div>
-                <p class="text-2xl font-bold text-neutral-900 dark:text-white">{{ data.friends_count || 0 }}</p>
-                <p class="text-sm text-neutral-500 dark:text-neutral-400">好友</p>
+                <p class="text-2xl font-bold text-black dark:text-white">{{ data.friends_count || 0 }}</p>
+                <p class="text-sm text-neutral-500">好友</p>
               </div>
             </div>
           </UCard>
@@ -90,15 +90,15 @@
             </template>
             <div class="space-y-3">
               <div class="flex justify-between">
-                <span class="text-neutral-600 dark:text-neutral-400">成员数量</span>
+                <span class="text-neutral-600">成员数量</span>
                 <span class="font-semibold">{{ data.member_count || 0 }}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-neutral-600 dark:text-neutral-400">创建时间</span>
+                <span class="text-neutral-600">创建时间</span>
                 <span class="font-semibold">{{ formatDate(data.created_at) }}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-neutral-600 dark:text-neutral-400">最后活跃</span>
+                <span class="text-neutral-600">最后活跃</span>
                 <span class="font-semibold">{{ formatDate(data.last_active_at) }}</span>
               </div>
             </div>
@@ -126,7 +126,7 @@
             </UAvatar>
             <div class="flex-1">
               <p class="font-semibold text-neutral-900 dark:text-white">{{ data.author?.nickname }}</p>
-              <p class="text-sm text-neutral-500 dark:text-neutral-400">{{ formatDate(data.created_at) }}</p>
+              <p class="text-sm text-neutral-500">{{ formatDate(data.created_at) }}</p>
             </div>
           </div>
 
@@ -171,12 +171,12 @@
             </template>
             <div class="grid grid-cols-2 gap-4 text-center">
               <div>
-                <p class="text-2xl font-bold text-neutral-900 dark:text-white">{{ data.likes_count || 0 }}</p>
-                <p class="text-sm text-neutral-500 dark:text-neutral-400">点赞</p>
+                <p class="text-2xl font-bold text-black dark:text-white">{{ data.likes_count || 0 }}</p>
+                <p class="text-sm text-neutral-500">点赞</p>
               </div>
               <div>
-                <p class="text-2xl font-bold text-neutral-900 dark:text-white">{{ data.comments_count || 0 }}</p>
-                <p class="text-sm text-neutral-500 dark:text-neutral-400">评论</p>
+                <p class="text-2xl font-bold text-black dark:text-white">{{ data.comments_count || 0 }}</p>
+                <p class="text-sm text-neutral-500">评论</p>
               </div>
             </div>
           </UCard>
@@ -196,8 +196,8 @@
 
         <!-- 空状态 -->
         <div v-else class="text-center py-8">
-          <UIcon name="i-heroicons-document-text" class="w-12 h-12 mx-auto text-neutral-400 dark:text-neutral-500 mb-4" />
-          <p class="text-neutral-500 dark:text-neutral-400">暂无详细信息</p>
+          <UIcon name="i-heroicons-document-text" class="w-12 h-12 mx-auto text-neutral-400 mb-4" />
+          <p class="text-neutral-500">暂无详细信息</p>
         </div>
       </div>
     </template>

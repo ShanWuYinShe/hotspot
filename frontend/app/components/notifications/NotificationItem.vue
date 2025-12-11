@@ -44,13 +44,13 @@
           <div class="flex-1 min-w-0">
             <h4 
               class="font-medium truncate"
-              :class="notification.is_read ? 'text-neutral-700 dark:text-neutral-300' : 'text-neutral-900 dark:text-white'"
+              :class="notification.is_read ? 'text-black/70 dark:text-white/70' : 'text-black dark:text-white'"
             >
               {{ notification.title }}
             </h4>
             <p 
               class="text-sm mt-1 line-clamp-2"
-              :class="notification.is_read ? 'text-neutral-500 dark:text-neutral-400' : 'text-neutral-600 dark:text-neutral-400'"
+              :class="notification.is_read ? 'text-black/50 dark:text-white/50' : 'text-black/60 dark:text-white/60 dark:text-slate-300'"
             >
               {{ notification.content }}
             </p>
@@ -60,7 +60,7 @@
           <div class="flex flex-col items-end gap-1 flex-shrink-0">
             <time 
               class="text-xs"
-              :class="notification.is_read ? 'text-neutral-400 dark:text-neutral-500' : 'text-neutral-500 dark:text-neutral-400'"
+              :class="notification.is_read ? 'text-slate-400' : 'text-slate-500'"
             >
               {{ formatTime(notification.created_at) }}
             </time>
@@ -70,8 +70,8 @@
         
         <!-- 发送者信息 -->
         <div v-if="notification.sender_name" class="flex items-center gap-1 mt-2">
-          <UIcon name="i-heroicons-user" class="w-3 h-3 text-neutral-400 dark:text-neutral-500" />
-          <span class="text-xs text-neutral-500 dark:text-neutral-400">{{ notification.sender_name }}</span>
+          <UIcon name="i-heroicons-user" class="w-3 h-3 text-black/40 dark:text-white/40" />
+          <span class="text-xs text-black/50 dark:text-white/50">{{ notification.sender_name }}</span>
         </div>
       </div>
     </div>
@@ -169,7 +169,7 @@ const typeIconClass = computed(() => {
 const typeIconBgClass = computed(() => {
   switch (props.notification.type) {
     case 'friend':
-      return 'bg-primary-500'
+      return 'bg-blue-500'
     case 'group':
       return 'bg-green-500'
     case 'moment':

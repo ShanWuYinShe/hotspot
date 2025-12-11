@@ -8,11 +8,11 @@
                     icon="i-heroicons-arrow-left"
                     @click="$router.back()"
                 />
-                <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">
+                <h1 class="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
                     {{ $t("users.search.title") }}
                 </h1>
             </div>
-            <p class="text-neutral-600 dark:text-neutral-400">
+            <p class="text-neutral-600 dark:text-neutral-300">
                 {{ $t("users.search.subtitle") }}
             </p>
         </div>
@@ -54,9 +54,8 @@
                     <UButton
                         variant="ghost"
                         size="xs"
-                        color="neutral"
                         :class="{
-                            'bg-primary-100 dark:bg-primary-900/30 border border-primary-500': searchType === 'name',
+                            'bg-primary/10 text-primary': searchType === 'name',
                         }"
                         @click="searchType = 'name'"
                     >
@@ -65,9 +64,8 @@
                     <UButton
                         variant="ghost"
                         size="xs"
-                        color="neutral"
                         :class="{
-                            'bg-primary-100 dark:bg-primary-900/30 border border-primary-500':
+                            'bg-primary/10 text-primary':
                                 searchType === 'phone',
                         }"
                         @click="searchType = 'phone'"
@@ -77,9 +75,8 @@
                     <UButton
                         variant="ghost"
                         size="xs"
-                        color="neutral"
                         :class="{
-                            'bg-primary-100 dark:bg-primary-900/30 border border-primary-500': searchType === 'all',
+                            'bg-primary/10 text-primary': searchType === 'all',
                         }"
                         @click="searchType = 'all'"
                     >
@@ -280,7 +277,7 @@
                                 {{ user.nickname }}
                             </div>
                             <div
-                                class="text-sm text-neutral-500 dark:text-neutral-400 flex items-center gap-2"
+                                class="text-sm text-neutral-500 flex items-center gap-2"
                             >
                                 <span v-if="user.location_name">{{
                                     user.location_name
@@ -316,7 +313,7 @@
 </template>
 
 <script setup lang="ts">
-import { useUsersService } from '~/services/users.service';
+import { useUserService } from '~/services/users.service';
 // TableColumn 类型已在组件内部定义
 import type { UserResponse } from "~/types/api";
 // import { buildFriendUrl, FRIEND_ENDPOINTS } from "~/config/api"; // 好友功能暂未实现
@@ -327,7 +324,8 @@ definePageMeta({
     layout: 'dashboard'
 });
 
-const userService = useUsersService();
+const userService = useUserService();
+const { searchUsers, findNearbyUsers } = userService;
 const toast = useToast()
   const authStore = useAuthStore();
 const { t: tt } = useI18n();
@@ -376,7 +374,7 @@ async function performSearch() {
     hasSearched.value = true;
     page.value = 1;
     try {
-        const response = await userService.searchUsers({ keyword: searchQuery.value });
+        const response = await searchUsers(searchQuery.value);
         searchResults.value = (response.items || []).map((u: any) => ({
             ...u,
             requesting: false,
@@ -411,7 +409,7 @@ async function loadRecommendations() {
             await locationStore.getCurrentPosition();
             coords = locationStore.coordinates;
         }
-        const response = await userService.discoverUsers({
+        const response = await findNearbyUsers({
             latitude: coords!.latitude,
             longitude: coords!.longitude,
             radius: 1000,

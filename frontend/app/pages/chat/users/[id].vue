@@ -82,10 +82,10 @@
               
               <!-- 文件消息 -->
               <div v-else-if="(message as any).type === 'file'" class="flex items-center gap-3 p-3 bg-neutral-100 dark:bg-neutral-800 rounded-lg">
-                <UIcon name="i-heroicons-document" class="w-8 h-8 text-neutral-500 dark:text-neutral-400" />
+                <UIcon name="i-heroicons-document" class="w-8 h-8 text-neutral-500" />
                 <div class="flex-1 min-w-0">
                   <p class="font-medium truncate">{{ (message as any).fileName }}</p>
-                  <p class="text-sm text-neutral-500 dark:text-neutral-400">{{ formatFileSize((message as any).fileSize) }}</p>
+                  <p class="text-sm text-neutral-500">{{ formatFileSize((message as any).fileSize) }}</p>
                 </div>
                 <UButton
                   variant="ghost"
@@ -98,7 +98,7 @@
               <!-- 位置消息 -->
               <div v-else-if="(message as any).type === 'location'" class="p-3 bg-neutral-100 dark:bg-neutral-800 rounded-lg">
                 <div class="flex items-center gap-2 mb-2">
-                  <UIcon name="i-heroicons-map-pin" class="w-4 h-4 text-neutral-600 dark:text-neutral-300" />
+                  <UIcon name="i-heroicons-map-pin" class="w-4 h-4 text-primary-500" />
                   <span class="font-medium">位置信息</span>
                 </div>
                 <p class="text-sm text-neutral-600 dark:text-neutral-400">{{ (message as any).address }}</p>
@@ -114,7 +114,7 @@
               
               <!-- 系统消息 -->
               <div v-else-if="(message as any).type === 'system'" class="text-center">
-                <span class="text-xs text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-1 rounded-full">
+                <span class="text-xs text-neutral-500 bg-neutral-100 dark:bg-neutral-800 px-2 py-1 rounded-full">
                   {{ (message as any).content }}
                 </span>
               </div>
@@ -147,7 +147,7 @@
 
           <!-- 加载指示器 -->
           <template #indicator v-if="isTyping">
-            <div class="flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400">
+            <div class="flex items-center gap-2 text-sm text-neutral-500">
               <div class="flex gap-1">
                 <div class="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
                 <div class="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
@@ -166,7 +166,7 @@
         <!-- 回复消息预览 -->
         <div v-if="replyingTo" class="mb-3 p-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg flex items-center justify-between">
           <div class="flex-1 min-w-0">
-            <p class="text-xs text-neutral-500 dark:text-neutral-400">回复 {{ replyingTo.sender }}</p>
+            <p class="text-xs text-neutral-500">回复 {{ replyingTo.sender }}</p>
             <p class="text-sm truncate">{{ replyingTo.content }}</p>
           </div>
           <UButton
@@ -306,21 +306,11 @@ const imageInput = ref<HTMLInputElement>();
 
 // 计算属性
 const currentUser = computed(() => authStore.user);
-// 用户信息状态
-const userInfoData = ref<any>(null);
-
-// 异步加载用户信息
-const loadUserInfo = async () => {
-  try {
-    const response = await userService.openTheDoor({ id: route.params.id as string });
-    userInfoData.value = response;
-  } catch (error) {
-    console.error('加载用户信息失败:', error);
-  }
-};
-
 const userInfo = computed(() => {
-  return userInfoData.value || { 
+  // 从用户 store 获取用户信息
+  const user = userService.getProfile(route.params.id as string);
+  
+  return user || { 
     user_id: route.params.id as string,
     nickname: '未知用户', 
     isOnline: false, 
@@ -471,9 +461,10 @@ const handleSendMessage = async (event: Event) => {
     
     // 发送消息到后端
     try {
-      await messagesStore.sendPrivateMessage(userId, {
-        type: 'text',
-        content: newMessage.content
+      await messageService.sendMessage({
+        group_id: userId,
+        content: newMessage.content,
+        message_type: 'text'
       });
     } catch (error) {
       console.error('发送消息失败:', error);
@@ -580,9 +571,12 @@ const shareLocation = async () => {
     
     // 发送位置消息到后端
     try {
-      await messagesStore.sendPrivateMessage(userId, {
-        type: 'text',
-        content: `📍 位置: ${latitude}, ${longitude}`
+      await messageService.sendMessage({
+        group_id: userId,
+        content: `位置: ${latitude}, ${longitude}`,
+        message_type: 'location',
+        latitude,
+        longitude
       });
     } catch (error) {
       console.error('发送位置消息失败:', error);
@@ -615,16 +609,12 @@ const editMessage = (message: any) => {
 const deleteMessage = async (message: any) => {
   if (confirm('确定要删除这条消息吗？')) {
     try {
-      await messagesStore.deleteMessage(userId, message.id, false);
+      await messageService.deleteMessage(message.id);
     } catch (error) {
       console.error('删除消息失败:', error);
     }
   }
 };
-
-// 图片预览状态
-const currentImagePreview = ref<string | null>(null);
-const showImagePreview = ref(false);
 
 const previewImage = (imageUrl: string) => {
   // 打开图片预览模态框
@@ -648,7 +638,7 @@ const openLocation = (latitude: number, longitude: number) => {
 const clearChatHistory = async () => {
   if (confirm('确定要清空与此用户的所有聊天记录吗？此操作无法撤销。')) {
     try {
-      messagesStore.removeConversation(userId);
+      await messageService.deleteConversation(userId);
       toast.add({
         title: '聊天记录已清空',
         color: 'success'
@@ -671,7 +661,7 @@ const reportUser = () => {
 const blockUser = async () => {
   if (confirm(`确定要屏蔽用户 ${userInfo.value?.nickname} 吗？屏蔽后将无法收到对方的消息。`)) {
     try {
-      await userService.blockUser({ user_id: userId });
+      await userService.blockUser(userId);
       toast.add({
         title: '用户已屏蔽',
         color: 'success'
@@ -686,8 +676,11 @@ const blockUser = async () => {
 const loadMessages = async () => {
   try {
     // 加载聊天数据
-    await messagesStore.fetchPrivateMessages(userId);
-    await loadUserInfo();
+    await messageService.getMessages({
+      conversation_id: userId,
+      limit: 50
+    });
+    await userService.getProfile(userId);
   } catch (error) {
     console.error('加载聊天数据失败:', error);
   }

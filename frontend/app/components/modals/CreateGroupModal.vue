@@ -5,8 +5,8 @@
         <!-- 标题 -->
         <div class="flex items-center justify-between mb-6">
           <div class="flex items-center gap-3">
-            <UIcon name="i-heroicons-user-group" class="w-6 h-6 text-neutral-600 dark:text-neutral-300" />
-            <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">
+            <UIcon name="i-heroicons-user-group" class="w-6 h-6 text-primary-500" />
+            <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
               创建群组
             </h3>
           </div>
@@ -31,7 +31,7 @@
           >
             <div class="flex items-center gap-4 p-4">
               <div class="flex items-center justify-center w-12 h-12 bg-primary-100 dark:bg-primary-900/50 rounded-xl">
-                <UIcon name="i-heroicons-bolt" class="w-6 h-6 text-neutral-700 dark:text-neutral-300" />
+                <UIcon name="i-heroicons-bolt" class="w-6 h-6 text-primary-600 dark:text-primary-300" />
               </div>
               <div class="flex-1">
                 <h4 class="font-semibold text-neutral-900 dark:text-white mb-1">快速创建</h4>
@@ -91,7 +91,7 @@
                 :maxlength="200"
               />
               <div class="flex justify-end mt-1">
-                <span class="text-xs text-neutral-500 dark:text-neutral-400">
+                <span class="text-xs text-neutral-500">
                   {{ (form.description || '').length }}/200
                 </span>
               </div>
@@ -169,7 +169,7 @@
                 type="password"
                 placeholder="设置群组密码以限制加入"
               />
-              <p class="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+              <p class="text-xs text-neutral-500 mt-1">
                 设置密码后，用户需要输入密码才能加入群组
               </p>
             </div>
@@ -199,7 +199,7 @@
 </template>
 
 <script setup lang="ts">
-import { GROUP_CONSTANTS, DEFAULTS } from '~/config/defaults'
+import { GROUP_CONSTANTS } from '~/config/defaults'
 import { useGroupsService } from '~/services/groups.service'
 import { useGeocodingService } from '~/services/geocoding.service'
 
@@ -239,38 +239,6 @@ const isFormValid = computed(() => {
 // 工具函数
 const toast = useToast()
 const locationStore = useLocationStore()
-
-// Toast 辅助函数
-const success = (title: string, description?: string) => {
-  toast.add({ title, description, color: 'success' })
-}
-const error = (title: string, description?: string) => {
-  toast.add({ title, description, color: 'error' })
-}
-
-// 获取当前位置或默认位置
-const getCurrentLocationOrDefault = async (): Promise<{ latitude: number; longitude: number }> => {
-  // 先尝试从 store 获取
-  if (locationStore.coordinates) {
-    return locationStore.coordinates
-  }
-  
-  // 尝试获取浏览器位置
-  try {
-    await locationStore.getCurrentPosition()
-    if (locationStore.coordinates) {
-      return locationStore.coordinates
-    }
-  } catch (e) {
-    console.warn('获取位置失败，使用默认位置')
-  }
-  
-  // 返回系统默认位置（南天门）
-  return {
-    latitude: DEFAULTS.latitude,
-    longitude: DEFAULTS.longitude
-  }
-}
 
 // 方法
 const quickCreate = async () => {
@@ -348,7 +316,7 @@ const createGroup = async () => {
     success('群组创建成功', '您已成为群主，可以开始邀请朋友加入了！')
     
     // 调用成功回调
-    props.onSuccess?.(response.group_chat_id)
+    props.onSuccess?.(response.group_id)
     
     // 关闭Modal
     handleClose()

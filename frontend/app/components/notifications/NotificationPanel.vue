@@ -32,8 +32,8 @@
         <div class="space-y-1 max-h-80 overflow-y-auto">
             <!-- 空状态 -->
             <div v-if="notifications.length === 0" class="text-center py-8">
-                <UIcon name="i-heroicons-bell-slash" class="w-12 h-12 text-neutral-400 dark:text-neutral-500 mx-auto mb-3" />
-                <p class="text-neutral-500 dark:text-neutral-400 text-sm">暂无通知</p>
+                <UIcon name="i-heroicons-bell-slash" class="w-12 h-12 text-neutral-400 mx-auto mb-3" />
+                <p class="text-neutral-500 text-sm">暂无通知</p>
             </div>
 
             <!-- 通知列表 -->
@@ -67,7 +67,7 @@
                         {{ notification.content }}
                     </p>
                     <div class="flex items-center justify-between">
-                        <span class="text-xs text-neutral-500 dark:text-neutral-400">
+                        <span class="text-xs text-neutral-500">
                             {{ formatTime(notification.created_at) }}
                         </span>
                         <UChip
@@ -96,20 +96,20 @@
 </template>
 
 <script setup lang="ts">
+import type { InboxItem } from '~/services/inbox.service'
 import { useInboxService } from '~/services/inbox.service'
-import type { InboxItemData } from '~/types/api'
 
 const { formatTime } = useFormatters()
 const inboxService = useInboxService()
 const toast = useToast()
 
 // 通知数据
-const notifications = ref<InboxItemData[]>([])
+const notifications = ref<InboxItem[]>([])
 const loading = ref(false)
 
 // 未读通知数量
 const unreadCount = computed(() => 
-    notifications.value.filter((n: InboxItemData) => !n.is_read).length
+    notifications.value.filter(n => !n.is_read).length
 )
 
 // 加载通知列表
@@ -150,7 +150,7 @@ const getNotificationIcon = (category: string) => {
 const getNotificationIconClass = (category: string) => {
     switch (category) {
         case 'social':
-            return 'bg-primary-100 dark:bg-primary-900/30 text-neutral-700 dark:text-neutral-300'
+            return 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
         case 'system':
             return 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
         case 'content':
@@ -191,7 +191,7 @@ const getNotificationCategoryColor = (category: string) => {
 // formatTime 函数已从统一工具函数导入
 
 // 处理通知点击
-const handleNotificationClick = async (notification: InboxItemData) => {
+const handleNotificationClick = async (notification: InboxItem) => {
     // 标记为已读
     if (!notification.is_read) {
         try {
@@ -212,7 +212,7 @@ const handleNotificationClick = async (notification: InboxItemData) => {
 const markAllAsRead = async () => {
     try {
         await inboxService.markAsRead({})
-        notifications.value.forEach((n: InboxItemData) => n.is_read = true)
+        notifications.value.forEach(n => n.is_read = true)
         toast.add({
             title: '已标记为已读',
             description: '所有通知已标记为已读',

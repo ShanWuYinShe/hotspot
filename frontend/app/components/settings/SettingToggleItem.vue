@@ -68,7 +68,7 @@ const switchColor = computed(() => {
 const colorConfig = {
   blue: {
     wrapper: 'bg-primary-100 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700',
-    icon: 'text-neutral-700 dark:text-neutral-300'
+    icon: 'text-primary-600 dark:text-blue-300'
   },
   green: {
     wrapper: 'bg-green-100 dark:bg-green-900/50 border border-green-200 dark:border-green-700',

@@ -24,10 +24,11 @@ export default defineNuxtConfig({
   // Nuxt 默认自动导入：composables/, utils/, stores/ (via @pinia/nuxt)
   // services/ 和 config/ 需要手动导入以保持代码依赖关系清晰
 
-  // Pinia 持久化配置 - 使用 localStorage
+  // Pinia 持久化配置
   piniaPluginPersistedstate: {
     storage: "localStorage",
     debug: process.env.NODE_ENV !== "production",
+    auto: false,  // 禁用自动持久化，需要显式配置
   },
 
   // SSR 配置

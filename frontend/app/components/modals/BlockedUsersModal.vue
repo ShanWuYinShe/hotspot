@@ -6,7 +6,7 @@
         <div class="flex items-center justify-between mb-6">
           <div class="flex items-center gap-3">
             <UIcon name="i-heroicons-user-minus" class="w-6 h-6 text-red-500" />
-            <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">
+            <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
               黑名单管理
             </h3>
           </div>
@@ -47,12 +47,15 @@
                 </UAvatar>
                 
                 <div>
-                  <h4 class="font-medium text-neutral-900 dark:text-white">
+                  <h4 class="font-medium text-neutral-900 dark:text-neutral-100">
                     {{ user.nickname }}
                   </h4>
-                  <p class="text-sm text-neutral-500 dark:text-neutral-400">
-                    已加入黑名单
-                  </p>
+                  <div class="flex items-center gap-4 text-sm text-neutral-500">
+                    <span>拉黑时间：{{ formatTime(user.blocked_at) }}</span>
+                    <span v-if="user.reason" class="text-red-600">
+                      原因：{{ user.reason }}
+                    </span>
+                  </div>
                 </div>
               </div>
               
@@ -79,8 +82,8 @@
 
           <!-- 空状态 -->
           <div v-else-if="!loading" class="text-center py-8">
-            <UIcon name="i-heroicons-user-minus" class="w-12 h-12 text-neutral-400 dark:text-neutral-500 mx-auto mb-3" />
-            <h4 class="text-sm font-medium text-neutral-900 dark:text-white mb-1">
+            <UIcon name="i-heroicons-user-minus" class="w-12 h-12 text-neutral-400 mx-auto mb-3" />
+            <h4 class="text-sm font-medium text-neutral-900 dark:text-neutral-100 mb-1">
               黑名单为空
             </h4>
             <p class="text-xs text-neutral-600 dark:text-neutral-400">
@@ -124,9 +127,6 @@
 </template>
 
 <script setup lang="ts">
-import { useUsersService } from '~/services/users.service'
-import type { UserResponse } from '~/types/api'
-
 interface Props {
   onClose?: () => void
 }
@@ -135,9 +135,9 @@ const props = defineProps<Props>()
 
 // 状态管理
 const loading = ref(false)
-const blockedUsers = ref<UserResponse[]>([])
+const blockedUsers = ref([])
 const searchQuery = ref('')
-const unblockingUsers = ref(new Set<string>())
+const unblockingUsers = ref(new Set())
 
 // 计算属性
 const filteredUsers = computed(() => {
@@ -145,7 +145,8 @@ const filteredUsers = computed(() => {
   
   const query = searchQuery.value.toLowerCase()
   return blockedUsers.value.filter(user => 
-    user.nickname.toLowerCase().includes(query)
+    user.nickname.toLowerCase().includes(query) ||
+    user.reason?.toLowerCase().includes(query)
   )
 })
 
@@ -154,19 +155,11 @@ const { formatTime } = useFormatters()
 const toast = useToast()
 const { showConfirmModal } = useModal()
 
-// Toast 辅助函数
-const success = (title: string, description?: string) => {
-  toast.add({ title, description, color: 'success' })
-}
-const error = (title: string, description?: string) => {
-  toast.add({ title, description, color: 'error' })
-}
-
 // 方法
 const loadBlockedUsers = async () => {
   loading.value = true
   try {
-    const userService = useUsersService()
+    const userService = useUserService()
     const response = await userService.getBlockedUsers()
     blockedUsers.value = response.items || []
   } catch (err) {
@@ -198,8 +191,8 @@ const unblockUser = async (user: any) => {
   unblockingUsers.value.add(user.user_id)
   
   try {
-    const userService = useUsersService()
-    await userService.unblockUser({ user_id: user.user_id })
+    const userService = useUserService()
+    await userService.unblockUser(user.user_id)
     
     // 从列表中移除
     const index = blockedUsers.value.findIndex(u => u.user_id === user.user_id)

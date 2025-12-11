@@ -209,8 +209,6 @@
     "temporary": "Temporary",
     "verified": "Verified",
     "upgradeAccount": "Upgrade Account",
-    "createGroup": "Create Group",
-    "findFriends": "Find Friends",
     "tempModal": {
       "title": "Quick Temporary Experience",
       "infoTitle": "Temporary Experience Info",
@@ -309,11 +307,7 @@
       },
       "recommended": {
         "title": "Recommended Users",
-        "empty": {
-          "title": "No Recommended Users",
-          "description": "We couldn't find recommended users nearby",
-          "actionText": "Refresh"
-        }
+        "empty": "No recommended users"
       },
       "status": {
         "sent": "Sent",

@@ -23,7 +23,7 @@
           aria-label="返回首页"
         >
           <div
-            class="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-500 to-error-600 flex items-center justify-center shadow-lg"
+            class="w-8 h-8 rounded-xl bg-linear-to-br from-primary-500 to-error-600 flex items-center justify-center shadow-lg"
           >
             <UIcon
               name="i-heroicons-fire"
@@ -32,7 +32,7 @@
           </div>
           <span
             v-if="!collapsed"
-            class="text-lg font-bold text-neutral-900 dark:text-white"
+            class="text-lg font-bold text-black dark:text-white"
           >
             HotSpot
           </span>
@@ -72,7 +72,7 @@
               </UAvatar>
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium truncate">{{ currentUser.nickname || "用户" }}</p>
-                <p class="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                <p class="text-xs text-neutral-500 truncate">
                   {{ isTempUser(currentUser.user_id) ? "临时用户" : "正式用户" }}
                 </p>
               </div>
@@ -198,11 +198,9 @@ const toast = useToast();
 const authStore = useAuthStore();
 const currentUser = computed(() => authStore.user);
 
-// 消息相关（使用 isReady 控制显示）
+// 消息相关
 const messagesStore = useMessagesStore();
-const unreadCount = computed(() => 
-  authStore.isReady ? messagesStore.totalUnreadCount : 0
-);
+const unreadCount = computed(() => messagesStore.totalUnreadCount);
 
 // 通知系统
 const showNotifications = ref(false)
@@ -219,18 +217,18 @@ const pageTitle = computed<string>(() => {
   return typeof title === 'string' ? title : "HotSpot";
 });
 
-// "新"标签状态管理（使用内部状态，显示由 isReady 控制）
-const _hasSeenGroups = ref(true);
+// "新"标签状态管理（SSR 安全：setup 中使用默认值，onMounted 中设置客户端值）
+const hasSeenGroups = ref(false);
 
-// 从 localStorage 读取状态（仅客户端）
+// 从 localStorage 读取状态
 onMounted(() => {
-  _hasSeenGroups.value = localStorage.getItem('has_seen_groups') === 'true';
+  hasSeenGroups.value = localStorage.getItem('has_seen_groups') === 'true';
 });
 
 // 监听路由变化，当用户访问群组页面时标记为已查看
 watch(() => route.path, (newPath) => {
-  if (newPath.startsWith('/groups') && !_hasSeenGroups.value) {
-    _hasSeenGroups.value = true;
+  if (newPath.startsWith('/groups') && !hasSeenGroups.value) {
+    hasSeenGroups.value = true;
     localStorage.setItem('has_seen_groups', 'true');
   }
 });
@@ -271,8 +269,7 @@ const navigationItems = computed(() => [
       icon: "i-heroicons-user-group",
       to: "/groups",
       active: route.path.startsWith("/groups"),
-      // 使用 isReady 控制 badge 显示，确保 SSR 和客户端初始渲染一致
-      badge: (authStore.isReady && !_hasSeenGroups.value) ? "新" : undefined,
+      badge: hasSeenGroups.value ? undefined : "新",
     },
     {
       label: t("nav.messages"),

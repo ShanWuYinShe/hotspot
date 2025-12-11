@@ -7,11 +7,11 @@
                     <UIcon name="i-heroicons-map" class="w-6 h-6 text-white" />
                 </div>
                 <div>
-                    <h1 class="text-3xl font-bold text-neutral-900 dark:text-white">地图探索</h1>
+                    <h1 class="text-3xl font-bold text-black dark:text-white">地图探索</h1>
                     <div class="w-16 h-0.5 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full mt-1"></div>
                 </div>
             </div>
-            <p class="text-neutral-600 dark:text-neutral-400 text-lg leading-relaxed">发现附近有趣的用户、群组和精彩动态，探索你周围的世界</p>
+            <p class="text-secondary text-lg leading-relaxed">发现附近有趣的用户、群组和精彩动态，探索你周围的世界</p>
         </div>
 
         <!-- 标签页切换 -->
@@ -69,12 +69,12 @@
             >
                 <UIcon 
                     :name="tabs.find(t => t.value === currentTab)?.icon || 'i-heroicons-map'" 
-                    class="w-16 h-16 text-neutral-400 dark:text-neutral-500 mx-auto mb-4" 
+                    class="w-16 h-16 text-neutral-400 mx-auto mb-4" 
                 />
-                <h3 class="text-lg font-semibold text-neutral-900 dark:text-white mb-2">
+                <h3 class="text-lg font-semibold text-neutral-600 dark:text-neutral-400 mb-2">
                     暂无{{ tabs.find(t => t.value === currentTab)?.label }}
                 </h3>
-                <p class="text-neutral-600 dark:text-neutral-400">
+                <p class="text-neutral-500">
                     附近没有找到相关的{{ tabs.find(t => t.value === currentTab)?.label }}
                 </p>
             </div>

@@ -120,11 +120,11 @@ const handleActionClick = (onClick?: () => void) => {
 // 图标颜色类
 const iconColorClass = computed(() => {
   const colorMap = {
-    primary: 'text-neutral-600 dark:text-neutral-300',
+    primary: 'text-primary-500',
     success: 'text-success-500',
     warning: 'text-warning-500',
     error: 'text-error-500',
-    neutral: 'text-neutral-400 dark:text-neutral-500',
+    neutral: 'text-neutral-400',
   };
   return colorMap[props.iconColor];
 });
