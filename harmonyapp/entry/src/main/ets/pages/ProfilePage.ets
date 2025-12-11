@@ -11,7 +11,8 @@ import { PageNames } from '../constants/AppConstants';
 import { SystemAvatar } from '../components/SystemAvatar';
 import { SystemToast } from '../components/SystemToast';
 import { SystemLoadingView } from '../components/SystemLoadingView';
-import { UserResponse, isTempUser } from '../common/types/BackendApiTypes';
+import { MyProfileData, UserType } from '../common/types/api';
+import { isTempUser } from '../common/types/CommonTypes';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
 const DOMAIN_NUMBER: number = 0xFF03;
@@ -53,52 +54,31 @@ struct ProfilePage {
 
   /**
    * 检查是否为临时用户
-   * 使用 UserTypeUtil 工具类进行用户类型判断
+   * 根据 api_spec.mdc，通过 user_type 字段判断用户类型
+   * 注意：MyProfileData 不包含 user_type 字段，此处假设临时用户场景由其他方式处理
+   * 或者在 API 返回用户资料时会包含 user_type
    */
-  private isTemporaryUser(user: UserResponse | null): boolean {
-    if (!user || !user.user_id) return false;
-    
-    try {
-      return isTempUser(user.user_id);
-    } catch (error) {
-      return false;
-    }
+  private isTemporaryUser(userType?: UserType): boolean {
+    if (!userType) return false;
+    return isTempUser(userType);
   }
 
   /**
    * 加载用户统计信息
+   * 使用 getMyStats API 获取用户统计数据
    */
   private async loadUserStats(): Promise<void> {
-    if (!this.globalState.isLoggedIn || !this.globalState.currentLocation) {
+    if (!this.globalState.isLoggedIn) {
       return;
     }
 
     try {
-      // 加载我的瞬间数量
-      const momentsResponse = await ApiClient.searchMomentByLocation({
-        latitude: this.globalState.currentLocation.latitude,
-        longitude: this.globalState.currentLocation.longitude,
-        radius: 50000 // 大范围搜索
-      });
-      // 过滤出当前用户的瞬间
-      if (momentsResponse.code === 0 && momentsResponse.data) {
-        this.myMomentsCount = momentsResponse.data.items.filter(
-          moment => moment.user_id === this.globalState.currentUser?.user_id
-        ).length;
-      }
-
-      // 加载我的群组数量
-      const groupsResponse = await ApiClient.searchGroupByLocation({
-        latitude: this.globalState.currentLocation.latitude,
-        longitude: this.globalState.currentLocation.longitude,
-        radius: 50000, // 大范围搜索
-        limit: 100
-      });
-      // 过滤出我加入的群组
-      if (groupsResponse.code === 0 && groupsResponse.data) {
-        this.myGroupsCount = groupsResponse.data.items.filter(
-          group => group.is_member
-        ).length;
+      // 使用 getMyStats API 获取统计数据
+      const response = await ApiClient.getMyStats();
+      
+      if (response.code === 0 && response.data) {
+        this.myMomentsCount = response.data.moments_count;
+        this.myGroupsCount = response.data.groups_count;
       }
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `加载用户统计失败: ${JSON.stringify(error)}`);
@@ -140,16 +120,15 @@ struct ProfilePage {
 
       // 临时更新本地状态
       if (this.globalState.currentUser) {
-        const updatedUser: UserResponse = {
+        const updatedUser: MyProfileData = {
           user_id: this.globalState.currentUser.user_id,
           nickname: this.editNickname,
           bio: this.editBio,
           avatar_url: this.globalState.currentUser.avatar_url,
-          longitude: this.globalState.currentUser.longitude,
-          latitude: this.globalState.currentUser.latitude,
           location_name: this.globalState.currentUser.location_name,
-          created_at: this.globalState.currentUser.created_at,
-          last_active_at: this.globalState.currentUser.last_active_at
+          is_online: this.globalState.currentUser.is_online,
+          last_online: this.globalState.currentUser.last_online,
+          created_at: this.globalState.currentUser.created_at
         };
         this.stateManager.updateUser(updatedUser);
         await PreferencesUtil.setObject('user_info', updatedUser);

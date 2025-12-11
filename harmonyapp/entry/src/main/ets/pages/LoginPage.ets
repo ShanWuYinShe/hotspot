@@ -11,7 +11,7 @@ import { PageNames } from '../constants/AppConstants';
 import { SystemLoadingView } from '../components/SystemLoadingView';
 import { SystemToast } from '../components/SystemToast';
 import { PasswordSecurityUtil } from '../common/security/PasswordSecurityUtil';
-import { AuthResponse, CreateTempRequest, UserResponse, LoginRequest } from '../common/types/BackendApiTypes';
+import { AuthData, CreateTempRequest, MyProfileData, LoginRequest } from '../common/types/api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { I18nManager } from '../common/i18n/I18nManager';
 
@@ -150,7 +150,7 @@ struct LoginPage {
       const request: CreateTempRequest = {
         nickname: this.nickname.trim()
       };
-      const response = await ApiClient.createTemp(request);
+      const response = await ApiClient.createTempUser(request);
       
       if (response.code === 0 && response.data) {
         // 阶段3：处理登录成功
@@ -159,7 +159,7 @@ struct LoginPage {
         await this.handleAuthSuccess(response.data);
         this.loadingProgress = 100;
       } else {
-        SystemToast.showError(response.msg || this.i18nManager.t('auth.registerFailed'), this.getUIContext());
+        SystemToast.showError(response.message || this.i18nManager.t('auth.registerFailed'), this.getUIContext());
       }
     } catch (error) {
       SystemToast.showError(error instanceof Error ? error.message : this.i18nManager.t('auth.registerFailed'), this.getUIContext());
@@ -172,6 +172,7 @@ struct LoginPage {
 
   /**
    * 用户登录
+   * 使用 SHA256(password) 进行密码哈希
    */
   private async userLogin() {
     if (!this.loginId.trim() || !this.password.trim()) {
@@ -183,51 +184,22 @@ struct LoginPage {
     this.loadingProgress = 0;
 
     try {
-      // 阶段1：获取安全令牌
-      this.loadingStage = '正在获取安全令牌...';
-      this.loadingProgress = 15;
-      const nonceResponse = await ApiClient.getNonce();
-      if (nonceResponse.code !== 0 || !nonceResponse.data) {
-        throw new Error(nonceResponse.msg || '获取nonce失败');
-      }
-
-      const nonceData = nonceResponse.data;
-      const nonce_id = nonceData.nonce_id;
-      const nonce = nonceData.nonce;
-      const timestamp = nonceData.timestamp;
-      const expires_in = nonceData.expires_in;
-
-      // 阶段2：验证安全令牌
-      this.loadingStage = '正在验证安全令牌...';
-      this.loadingProgress = 30;
-      await this.delay(200);
-      if (!PasswordSecurityUtil.validateNonce(nonce, timestamp, expires_in)) {
-        throw new Error('nonce无效或已过期');
-      }
-
-      // 阶段3：加密密码
+      // 阶段1：加密密码
       this.loadingStage = '正在加密密码...';
-      this.loadingProgress = 50;
-      const passwordHash = await PasswordSecurityUtil.calculateTransportHash(
-        this.password,
-        nonce,
-        timestamp
-      );
+      this.loadingProgress = 30;
+      const passwordHash = await PasswordSecurityUtil.calculatePasswordHash(this.password);
 
-      // 阶段4：发送登录请求
+      // 阶段2：发送登录请求
       this.loadingStage = '正在验证登录信息...';
-      this.loadingProgress = 70;
+      this.loadingProgress = 60;
       const loginRequest: LoginRequest = {
         login_id: this.loginId,
-        password_hash: passwordHash,
-        nonce_id: nonce_id,
-        timestamp: timestamp
+        password_hash: passwordHash
       };
 
-      // 5. 发送登录请求
       const response = await ApiClient.login(loginRequest);
       if (response.code === 0 && response.data) {
-        // 阶段5：登录成功，正在初始化
+        // 阶段3：登录成功，正在初始化
         this.loadingStage = '登录成功，正在初始化...';
         this.loadingProgress = 90;
         
@@ -238,7 +210,7 @@ struct LoginPage {
         await this.handleAuthSuccess(response.data);
         this.loadingProgress = 100;
       } else {
-        SystemToast.showError(response.msg || '登录失败', this.getUIContext());
+        SystemToast.showError(response.message || '登录失败', this.getUIContext());
       }
     } catch (error) {
       SystemToast.showError(error instanceof Error ? error.message : '登录失败', this.getUIContext());
@@ -252,21 +224,24 @@ struct LoginPage {
   /**
    * 处理认证成功
    */
-  private async handleAuthSuccess(response: AuthResponse) {
-    await PreferencesUtil.setObject('user_info', response);
-    await PreferencesUtil.set('access_token', response.access_token);
+  private async handleAuthSuccess(authData: AuthData) {
+    await PreferencesUtil.setObject('user_info', authData);
+    await PreferencesUtil.set('access_token', authData.access_token);
 
     // 更新全局状态
-    const userInfo: UserResponse = {
-      user_id: response.user_id,
-      nickname: response.nickname
+    const userInfo: MyProfileData = {
+      user_id: authData.user_id,
+      nickname: authData.nickname,
+      location_name: '',
+      is_online: true,
+      created_at: new Date().toISOString()
     };
     this.stateManager.updateUser(userInfo);
-    await HttpUtil.setToken(response.access_token);
+    await HttpUtil.setToken(authData.access_token);
 
     // 连接WebSocket
     try {
-      await this.webSocketService.connect(response.access_token);
+      await this.webSocketService.connect(authData.access_token);
     } catch (error) {
       hilog.warn(DOMAIN_NUMBER, TAG, `WebSocket连接失败: ${JSON.stringify(error)}`);
     }

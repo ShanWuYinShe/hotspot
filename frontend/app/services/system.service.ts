@@ -1,28 +1,12 @@
-/**
- * 系统服务
- * 提供系统健康检查等功能
- */
-
 import { BaseService } from './base.service'
-import type { HealthCheckResponse } from '~/types/api'
+import { SYSTEM } from '~/config/api'
+import type { HealthCheckData } from '~/types/api'
 
-/**
- * 系统服务类
- */
-export class SystemService extends BaseService {
-  protected readonly baseUrl = '/public/system'
-
-  /**
-   * 系统健康检查
-   */
-  async healthCheck(): Promise<HealthCheckResponse> {
-    return this.publicPost<HealthCheckResponse>('/health_check', {})
+class SystemService extends BaseService {
+  async healthCheck() {
+    return this.publicPost<HealthCheckData>(SYSTEM.HEALTH_CHECK, {})
   }
 }
 
-/**
- * 使用系统服务的 Composable
- */
-export function useSystemService() {
-  return new SystemService()
-}
+export const systemService = new SystemService()
+export function useSystemService() { return systemService }

@@ -1,6 +1,6 @@
 <template>
-  <div class="p-4 bg-white/80 dark:bg-neutral-900/70 backdrop-blur border-t">
-    <UChatPrompt
+  <div class="p-4 bg-glass-neutral backdrop-blur border-t">
+    <ChatPrompt
       v-model="messageInput"
       placeholder="发送消息..."
       :loading="sending"
@@ -9,16 +9,32 @@
     >
       <template #trailing>
         <div class="flex items-center gap-1">
-          <!-- 表情按钮 -->
-          <UTooltip text="表情">
-            <UButton
-              variant="ghost"
-              size="xs"
-              icon="i-heroicons-face-smile"
-              @click="toggleEmoji"
-              :disabled="sending"
-            />
-          </UTooltip>
+          <!-- 表情选择器 -->
+          <UPopover v-model:open="showEmoji">
+            <UTooltip text="表情">
+              <UButton
+                variant="ghost"
+                size="xs"
+                icon="i-heroicons-face-smile"
+                :disabled="sending"
+              />
+            </UTooltip>
+            <template #content>
+              <div class="p-3 w-72">
+                <div class="grid grid-cols-8 gap-1">
+                  <UButton
+                    v-for="emoji in commonEmojis"
+                    :key="emoji"
+                    variant="ghost"
+                    size="xs"
+                    :label="emoji"
+                    class="text-lg"
+                    @click="insertEmoji(emoji)"
+                  />
+                </div>
+              </div>
+            </template>
+          </UPopover>
 
           <!-- 文件上传 -->
           <UTooltip text="发送文件">
@@ -43,34 +59,19 @@
           </UTooltip>
         </div>
       </template>
-    </UChatPrompt>
+    </ChatPrompt>
 
-    <!-- 隐藏的文件输入 -->
-    <input
-      ref="fileInputRef"
-      type="file"
-      class="hidden"
+    <!-- 文件上传 (使用 UFileUpload) -->
+    <UFileUpload
+      v-slot="{ open }"
+      v-model="selectedFile"
       accept="image/*,.pdf,.doc,.docx,.txt"
-      @change="handleFileSelect"
-    />
+      class="hidden"
+      @update:model-value="handleFileSelected"
+    >
+      <button ref="fileUploadBtn" class="hidden" @click="open()" />
+    </UFileUpload>
 
-    <!-- 表情选择器 -->
-    <UPopover v-model:open="showEmoji" :popper="{ placement: 'top-end' }">
-      <template #content>
-        <div class="p-4 bg-white dark:bg-neutral-800 rounded-lg shadow-lg border">
-          <div class="grid grid-cols-8 gap-2">
-            <button
-              v-for="emoji in commonEmojis"
-              :key="emoji"
-              class="text-xl hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded p-1 transition-colors"
-              @click="insertEmoji(emoji)"
-            >
-              {{ emoji }}
-            </button>
-          </div>
-        </div>
-      </template>
-    </UPopover>
   </div>
 </template>
 
@@ -87,7 +88,9 @@ const emit = defineEmits<Emits>()
 const messageInput = ref('')
 const sending = ref(false)
 const showEmoji = ref(false)
-const fileInputRef = ref<HTMLInputElement>()
+// 文件上传 (UFileUpload)
+const selectedFile = ref<File | null>(null)
+const fileUploadBtn = ref<HTMLButtonElement | null>(null)
 
 // 常用表情
 const commonEmojis = [
@@ -102,8 +105,7 @@ const commonEmojis = [
 ]
 
 // 处理消息发送
-const handleSendMessage = async (event: Event) => {
-  event.preventDefault()
+const handleSendMessage = async () => {
   const content = messageInput.value.trim()
   if (!content || sending.value) return
 
@@ -116,11 +118,6 @@ const handleSendMessage = async (event: Event) => {
   }
 }
 
-// 切换表情面板
-const toggleEmoji = () => {
-  showEmoji.value = !showEmoji.value
-}
-
 // 插入表情
 const insertEmoji = (emoji: string) => {
   messageInput.value += emoji
@@ -129,18 +126,16 @@ const insertEmoji = (emoji: string) => {
 
 // 触发文件上传
 const triggerFileUpload = () => {
-  fileInputRef.value?.click()
+  fileUploadBtn.value?.click()
 }
 
-// 处理文件选择
-const handleFileSelect = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const file = target.files?.[0]
+// UFileUpload 回调 - 处理文件选择
+const handleFileSelected = (file: File | null | undefined) => {
   if (file) {
     emit('send-file', file)
-    target.value = '' // 清空文件输入
+    // 重置选择
+    selectedFile.value = null
   }
 }
 
-// 表情面板由 UPopover 自动管理，无需手动处理点击外部
 </script>

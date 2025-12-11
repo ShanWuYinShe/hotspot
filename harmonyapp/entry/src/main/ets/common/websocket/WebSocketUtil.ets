@@ -1,6 +1,6 @@
 /**
- * 极简WebSocket工具类
- * 直接使用HarmonyOS WebSocket API
+ * WebSocket工具类
+ * 底层WebSocket连接管理，遵循 api_spec.mdc WebSocket 设计规范
  */
 
 import webSocket from '@ohos.net.webSocket';
@@ -9,17 +9,14 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 const DOMAIN_NUMBER: number = 0xFF07;
 const TAG: string = 'WebSocketUtil';
 
-export interface WebSocketMessage {
-  type: string;
-  data: Record<string, Object>;
-}
-
 export class WebSocketUtil {
   private static instance: WebSocketUtil | null = null;
   private ws: webSocket.WebSocket | null = null;
   private url: string = '';
   private token: string = '';
-  private messageHandlers: Map<string, (data: Record<string, Object>) => void> = new Map();
+  private rawMessageHandler: ((data: string) => void) | null = null;
+  private closeHandler: (() => void) | null = null;
+  private errorHandler: ((error: Error) => void) | null = null;
 
   private constructor() {}
 
@@ -32,10 +29,12 @@ export class WebSocketUtil {
 
   /**
    * 连接WebSocket
+   * WebSocket 鉴权通过 URL Query 参数传递 token
    */
-  async connect(url: string, token: string): Promise<void> {
-    this.url = url;
+  async connect(baseUrl: string, token: string): Promise<void> {
     this.token = token;
+    // 通过 URL Query 传递 token 进行鉴权
+    this.url = `${baseUrl}?token=${encodeURIComponent(token)}`;
     
     this.ws = webSocket.createWebSocket();
     
@@ -47,8 +46,6 @@ export class WebSocketUtil {
 
       this.ws.on('open', () => {
         hilog.info(DOMAIN_NUMBER, TAG, 'WebSocket连接成功');
-        // 发送认证消息
-        this.send('auth', { "token": this.token });
         resolve();
       });
 
@@ -58,48 +55,61 @@ export class WebSocketUtil {
           return;
         }
         
-        try {
-          const message = JSON.parse(value as string) as WebSocketMessage;
-          const handler = this.messageHandlers.get(message.type);
-          if (handler) {
-            handler(message.data);
-          }
-        } catch (error) {
-          hilog.error(DOMAIN_NUMBER, TAG, `WebSocket消息解析失败: ${JSON.stringify(error)}`);
+        // 直接将原始消息传递给处理器
+        if (this.rawMessageHandler && typeof value === 'string') {
+          this.rawMessageHandler(value);
         }
       });
 
       this.ws.on('close', (err, value) => {
         hilog.info(DOMAIN_NUMBER, TAG, `WebSocket连接关闭: ${value.code}`);
+        if (this.closeHandler) {
+          this.closeHandler();
+        }
       });
 
       this.ws.on('error', (err) => {
         hilog.error(DOMAIN_NUMBER, TAG, `WebSocket错误: ${JSON.stringify(err)}`);
+        if (this.errorHandler) {
+          this.errorHandler(new Error(JSON.stringify(err)));
+        }
         reject(err);
       });
 
-      this.ws.connect(url);
+      this.ws.connect(this.url);
     });
   }
 
   /**
-   * 发送消息
+   * 发送原始消息（已序列化的字符串）
    */
-  send(type: string, data: Record<string, Object>): void {
+  sendRaw(data: string): void {
     if (!this.ws) {
       hilog.error(DOMAIN_NUMBER, TAG, 'WebSocket未连接');
       return;
     }
-
-    const message: WebSocketMessage = { type, data };
-    this.ws.send(JSON.stringify(message));
+    this.ws.send(data);
   }
 
   /**
-   * 注册消息处理器
+   * 注册原始消息处理器
    */
-  onMessage(type: string, handler: (data: Record<string, Object>) => void): void {
-    this.messageHandlers.set(type, handler);
+  onRawMessage(handler: (data: string) => void): void {
+    this.rawMessageHandler = handler;
+  }
+
+  /**
+   * 注册连接关闭处理器
+   */
+  onClose(handler: () => void): void {
+    this.closeHandler = handler;
+  }
+
+  /**
+   * 注册错误处理器
+   */
+  onError(handler: (error: Error) => void): void {
+    this.errorHandler = handler;
   }
 
   /**
@@ -110,6 +120,15 @@ export class WebSocketUtil {
       this.ws.close();
       this.ws = null;
     }
-    this.messageHandlers.clear();
+    this.rawMessageHandler = null;
+    this.closeHandler = null;
+    this.errorHandler = null;
+  }
+
+  /**
+   * 获取连接状态
+   */
+  isConnected(): boolean {
+    return this.ws !== null;
   }
 }

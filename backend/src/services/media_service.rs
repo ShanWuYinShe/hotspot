@@ -1,21 +1,23 @@
 use redis::aio::ConnectionManager as RedisConnectionManager;
+use redis::AsyncCommands;
 use sqlx::PgPool;
 use std::path::PathBuf;
 use uuid::Uuid;
+use sha2::{Sha256, Digest};
 
 use crate::{
+    constants::UPLOAD_SESSION_HOURS,
     dto::{
         request::{InitiateUploadRequest, CompleteUploadRequest, GetUploadStatusRequest, AbortUploadRequest},
-        response::{UploadMediaData, InitiateUploadData, UploadStatusData},
+        response::{UploadMediaData, InitiateUploadData, UploadStatusData, UploadChunkData},
     },
     error::{AppError, Result},
+    repositories::file_repo::FileRepository,
 };
 
 pub struct MediaService<'a> {
-    #[allow(dead_code)]
-    db: &'a PgPool,
-    #[allow(dead_code)]
     redis: &'a RedisConnectionManager,
+    file_repo: FileRepository,
     upload_dir: PathBuf,
     max_file_size: usize,
 }
@@ -31,7 +33,7 @@ impl<'a> MediaService<'a> {
             .unwrap_or(10485760);
 
         Self {
-            db,
+            file_repo: FileRepository::new(db.clone()),
             redis,
             upload_dir: PathBuf::from(upload_dir),
             max_file_size,
@@ -75,56 +77,12 @@ impl<'a> MediaService<'a> {
         Ok(())
     }
 
-    /// 上传图片
-    pub async fn upload_image(
-        &self,
-        _user_id: i64,
-        filename: &str,
-        data: Vec<u8>,
-    ) -> Result<UploadMediaData> {
-        // 验证文件大小
-        if data.len() > self.max_file_size {
-            return Err(AppError::BadRequest(format!(
-                "文件大小超过限制: {} bytes",
-                self.max_file_size
-            )));
-        }
-
-        // 验证文件类型
-        let allowed_types = ["jpg", "jpeg", "png", "gif", "webp"];
-        let extension = self.validate_file_type(filename, &allowed_types)?;
-
-        // 生成新文件名
-        let new_filename = self.generate_filename(&extension);
-        let file_path = self.get_file_path(&new_filename, "images");
-
-        // 确保目录存在
-        self.ensure_directory(&file_path)?;
-
-        // 保存文件
-        let file_size = data.len() as i64;
-        tokio::fs::write(&file_path, data)
-            .await
-            .map_err(|e| AppError::InternalError(format!("保存文件失败: {}", e)))?;
-
-        // 生成URL（这里简化处理，实际应该使用CDN或对象存储）
-        let url = format!("/uploads/images/{}", new_filename);
-
-        // TODO: 保存文件元数据到数据库
-        // TODO: 生成缩略图
-
-        Ok(UploadMediaData {
-            url,
-            file_size,
-            mime_type: format!("image/{}", extension),
-        })
-    }
-
-    /// 上传文件
+    /// 上传文件（≤100MB）
     pub async fn upload_file(
         &self,
-        _user_id: i64,
+        user_id: i64,
         filename: &str,
+        category: &str,
         data: Vec<u8>,
     ) -> Result<UploadMediaData> {
         // 验证文件大小
@@ -135,54 +93,80 @@ impl<'a> MediaService<'a> {
             )));
         }
 
-        // 验证文件类型
+        // 验证文件类型（支持图片和文档）
         let allowed_types = [
+            "jpg", "jpeg", "png", "gif", "webp",
             "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "zip", "rar",
+            "mp4", "mov", "mp3", "aac", "ogg",
         ];
         let extension = self.validate_file_type(filename, &allowed_types)?;
 
-        // 生成新文件名
-        let new_filename = self.generate_filename(&extension);
-        let file_path = self.get_file_path(&new_filename, "files");
+        // 计算文件 checksum 用于去重
+        let mut hasher = Sha256::new();
+        hasher.update(&data);
+        let checksum = format!("{:x}", hasher.finalize());
 
-        // 确保目录存在
-        self.ensure_directory(&file_path)?;
-
-        // 保存文件
         let file_size = data.len() as i64;
-        tokio::fs::write(&file_path, data)
-            .await
-            .map_err(|e| AppError::InternalError(format!("保存文件失败: {}", e)))?;
+        let mime_type = self.get_mime_type(&extension);
 
-        // 生成URL
-        let url = format!("/uploads/files/{}", new_filename);
+        // 检查是否有相同内容的文件（物理文件去重）
+        // 注意：无论是否复用物理文件，每次上传都会生成新的 file_id 和 url
+        let (storage_path, need_save) = if let Some(existing_file) = self.file_repo.find_any_by_checksum(&checksum).await? {
+            // 物理文件已存在，复用 storage_path，跳过磁盘写入
+            (existing_file.storage_path, false)
+        } else {
+            // 全新文件，生成新路径，需要保存到磁盘
+            let new_filename = self.generate_filename(&extension);
+            let storage_path = format!("files/{}", new_filename);
+            (storage_path, true)
+        };
 
-        // TODO: 保存文件元数据到数据库
+        // 只有全新文件才需要保存到磁盘
+        if need_save {
+            let file_path = self.get_file_path(&storage_path.replace("files/", ""), "files");
+            self.ensure_directory(&file_path)?;
+            tokio::fs::write(&file_path, &data)
+                .await
+                .map_err(|e| AppError::InternalError(format!("保存文件失败: {}", e)))?;
+        }
+
+        // 每次上传都创建新的 file_id 记录
+        // file_id 是给客户端的标识符，url 是实际物理文件路径，两者无关联
+        // 客户端发送消息时只传 file_id，服务端查表转换为 url
+        let file_id = Uuid::new_v4();
+        let url = format!("/uploads/{}", storage_path);
+        
+        let file_record = self.file_repo.create_file_with_id(
+            file_id,
+            user_id,
+            category,
+            Some(filename),
+            &storage_path,
+            &url,
+            None,  // thumbnail_url
+            &mime_type,
+            file_size,
+            None,  // width
+            None,  // height  
+            None,  // duration
+            Some(&checksum),
+        ).await?;
 
         Ok(UploadMediaData {
-            url,
+            file_id: file_record.file_id.to_string(),
+            thumbnail_url: None,
             file_size,
-            mime_type: self.get_mime_type(&extension),
+            mime_type,
+            duration: None,
+            width: None,
+            height: None,
         })
-    }
-
-    /// 获取上传Token（用于客户端直传）
-    pub async fn get_upload_token(&self, user_id: i64) -> Result<String> {
-        // 生成临时上传Token（有效期10分钟）
-        let token = Uuid::new_v4().to_string();
-        
-        // TODO: 将Token存储到Redis，设置过期时间
-        // redis.setex(format!("upload_token:{}", token), 600, user_id)
-
-        tracing::info!("生成上传Token: user_id={}, token={}", user_id, token);
-
-        Ok(token)
     }
 
     /// 初始化大文件上传（>100MB）
     pub async fn initiate_upload(
         &self,
-        _user_id: i64,
+        user_id: i64,
         req: &InitiateUploadRequest,
     ) -> Result<InitiateUploadData> {
         // 生成上传会话ID
@@ -192,13 +176,28 @@ impl<'a> MediaService<'a> {
         let chunk_size = req.chunk_size.unwrap_or(5 * 1024 * 1024); // 默认5MB
         let chunk_count = ((req.file_size as f64) / (chunk_size as f64)).ceil() as i32;
         
-        // 生成预签名URL列表（简化实现）
+        // 生成预签名URL列表
         let upload_urls: Vec<String> = (0..chunk_count)
-            .map(|i| format!("/api/v1/protected/media/upload_chunk?upload_id={}&part={}", upload_id, i + 1))
+            .map(|i| format!("/api/v1/protected/media/upload_chunk?upload_id={}&part_number={}", upload_id, i + 1))
             .collect();
 
-        // TODO: 将上传会话信息存储到Redis
-        // TODO: 设置24小时过期时间
+        // 将上传会话信息存储到Redis
+        let session_key = format!("upload_session:{}", upload_id);
+        let session_data = serde_json::json!({
+            "user_id": user_id,
+            "file_name": req.file_name,
+            "file_size": req.file_size,
+            "mime_type": req.mime_type,
+            "category": req.category,
+            "chunk_size": chunk_size,
+            "chunk_count": chunk_count,
+            "uploaded_parts": Vec::<i32>::new(),
+            "created_at": chrono::Utc::now().to_rfc3339(),
+        });
+        
+        let mut redis = self.redis.clone();
+        let _: () = redis.set_ex(&session_key, session_data.to_string(), 86400).await
+            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
 
         Ok(InitiateUploadData {
             upload_id,
@@ -207,53 +206,260 @@ impl<'a> MediaService<'a> {
         })
     }
 
+    /// 上传分块
+    pub async fn upload_chunk(
+        &self,
+        user_id: i64,
+        upload_id: &str,
+        part_number: i32,
+        data: Vec<u8>,
+    ) -> Result<UploadChunkData> {
+        // 从Redis获取上传会话信息
+        let session_key = format!("upload_session:{}", upload_id);
+        let mut redis = self.redis.clone();
+        
+        let session_str: Option<String> = redis.get(&session_key).await
+            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
+        
+        let session_str = session_str.ok_or_else(|| AppError::NotFound("上传会话不存在或已过期".to_string()))?;
+        let mut session: serde_json::Value = serde_json::from_str(&session_str)
+            .map_err(|e| AppError::InternalError(format!("解析会话数据失败: {}", e)))?;
+        
+        // 验证用户ID
+        if session["user_id"].as_i64() != Some(user_id) {
+            return Err(AppError::Forbidden("无权访问此上传会话".to_string()));
+        }
+        
+        // 保存分块文件
+        let chunk_dir = self.upload_dir.join("chunks").join(upload_id);
+        std::fs::create_dir_all(&chunk_dir)
+            .map_err(|e| AppError::InternalError(format!("创建分块目录失败: {}", e)))?;
+        
+        let chunk_path = chunk_dir.join(format!("part_{}", part_number));
+        tokio::fs::write(&chunk_path, &data).await
+            .map_err(|e| AppError::InternalError(format!("保存分块失败: {}", e)))?;
+        
+        // 计算ETag（使用SHA256）
+        let mut hasher = Sha256::new();
+        hasher.update(&data);
+        let etag = format!("{:x}", hasher.finalize());
+        
+        // 更新已上传分块列表
+        if let Some(parts) = session["uploaded_parts"].as_array_mut() {
+            if !parts.iter().any(|p| p.as_i64() == Some(part_number as i64)) {
+                parts.push(serde_json::json!(part_number));
+            }
+        }
+        
+        // 保存更新后的会话
+        let _: () = redis.set_ex(&session_key, session.to_string(), 86400).await
+            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
+        
+        Ok(UploadChunkData {
+            part_number,
+            etag,
+        })
+    }
+
     /// 完成大文件上传
     pub async fn complete_upload(
         &self,
-        _user_id: i64,
+        user_id: i64,
         req: &CompleteUploadRequest,
     ) -> Result<UploadMediaData> {
-        // TODO: 验证所有分块已上传
-        // TODO: 合并分块文件
-        // TODO: 清理临时分块
-
-        // 简化实现：返回模拟数据
-        let url = format!("/uploads/files/{}", req.upload_id);
-
+        // 从Redis获取上传会话信息
+        let session_key = format!("upload_session:{}", req.upload_id);
+        let mut redis = self.redis.clone();
+        
+        let session_str: Option<String> = redis.get(&session_key).await
+            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
+        
+        let session_str = session_str.ok_or_else(|| AppError::NotFound("上传会话不存在或已过期".to_string()))?;
+        let session: serde_json::Value = serde_json::from_str(&session_str)
+            .map_err(|e| AppError::InternalError(format!("解析会话数据失败: {}", e)))?;
+        
+        // 验证用户ID
+        if session["user_id"].as_i64() != Some(user_id) {
+            return Err(AppError::Forbidden("无权访问此上传会话".to_string()));
+        }
+        
+        let chunk_count = session["chunk_count"].as_i64().unwrap_or(0) as i32;
+        let file_name = session["file_name"].as_str().unwrap_or("file");
+        let mime_type = session["mime_type"].as_str().unwrap_or("application/octet-stream").to_string();
+        let category = session["category"].as_str().unwrap_or("chat_file").to_string();
+        
+        // 验证所有分块已上传
+        if req.parts.len() != chunk_count as usize {
+            return Err(AppError::BadRequest(format!(
+                "分块数量不匹配: 期望 {}, 实际 {}",
+                chunk_count,
+                req.parts.len()
+            )));
+        }
+        
+        // 合并分块文件
+        let chunk_dir = self.upload_dir.join("chunks").join(&req.upload_id);
+        let extension = file_name.rsplit('.').next().unwrap_or("bin");
+        let new_filename = self.generate_filename(extension);
+        let storage_path = format!("files/{}", new_filename);
+        let final_path = self.get_file_path(&new_filename, "files");
+        
+        self.ensure_directory(&final_path)?;
+        
+        let mut final_file = tokio::fs::File::create(&final_path).await
+            .map_err(|e| AppError::InternalError(format!("创建文件失败: {}", e)))?;
+        
+        let mut total_size: i64 = 0;
+        let mut hasher = Sha256::new();
+        
+        for part in &req.parts {
+            let chunk_path = chunk_dir.join(format!("part_{}", part.part_number));
+            let chunk_data = tokio::fs::read(&chunk_path).await
+                .map_err(|e| AppError::InternalError(format!("读取分块失败: {}", e)))?;
+            total_size += chunk_data.len() as i64;
+            hasher.update(&chunk_data);
+            
+            use tokio::io::AsyncWriteExt;
+            final_file.write_all(&chunk_data).await
+                .map_err(|e| AppError::InternalError(format!("写入文件失败: {}", e)))?;
+        }
+        
+        let checksum = format!("{:x}", hasher.finalize());
+        
+        // 检查是否有相同内容的文件（物理文件去重）
+        // 如果有，删除刚合并的文件，复用已存在的 storage_path
+        let final_storage_path = if let Some(existing_file) = self.file_repo.find_any_by_checksum(&checksum).await? {
+            // 删除刚合并的文件（因为已有相同内容的文件）
+            let _ = tokio::fs::remove_file(&final_path).await;
+            existing_file.storage_path
+        } else {
+            storage_path
+        };
+        
+        // 清理临时分块
+        let _ = tokio::fs::remove_dir_all(&chunk_dir).await;
+        
+        // 删除Redis会话
+        let _: () = redis.del(&session_key).await
+            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
+        
+        // 每次上传都生成新的 file_id
+        // file_id 是标识符，url 是实际物理文件路径，两者无关联
+        let file_id = Uuid::new_v4();
+        let url = format!("/uploads/{}", final_storage_path);
+        
+        // 持久化到数据库
+        let file_record = self.file_repo.create_file_with_id(
+            file_id,
+            user_id,
+            &category,
+            Some(file_name),
+            &final_storage_path,
+            &url,
+            None,  // thumbnail_url
+            &mime_type,
+            total_size,
+            None,  // width
+            None,  // height  
+            None,  // duration
+            Some(&checksum),
+        ).await?;
+        
         Ok(UploadMediaData {
-            url,
-            file_size: 0, // TODO: 计算实际文件大小
-            mime_type: "application/octet-stream".to_string(),
+            file_id: file_record.file_id.to_string(),
+            thumbnail_url: None,
+            file_size: total_size,
+            mime_type,
+            duration: None,
+            width: None,
+            height: None,
         })
     }
 
     /// 查询上传状态
     pub async fn get_upload_status(
         &self,
-        _user_id: i64,
+        user_id: i64,
         req: &GetUploadStatusRequest,
     ) -> Result<UploadStatusData> {
-        // TODO: 从Redis获取上传会话信息
-
-        // 简化实现：返回模拟数据
+        // 从Redis获取上传会话信息
+        let session_key = format!("upload_session:{}", req.upload_id);
+        let mut redis = self.redis.clone();
+        
+        let session_str: Option<String> = redis.get(&session_key).await
+            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
+        
+        let session_str = session_str.ok_or_else(|| AppError::NotFound("上传会话不存在或已过期".to_string()))?;
+        let session: serde_json::Value = serde_json::from_str(&session_str)
+            .map_err(|e| AppError::InternalError(format!("解析会话数据失败: {}", e)))?;
+        
+        // 验证用户ID
+        if session["user_id"].as_i64() != Some(user_id) {
+            return Err(AppError::Forbidden("无权访问此上传会话".to_string()));
+        }
+        
+        let uploaded_parts: Vec<i32> = session["uploaded_parts"]
+            .as_array()
+            .map(|arr| arr.iter().filter_map(|v| v.as_i64().map(|n| n as i32)).collect())
+            .unwrap_or_default();
+        
+        let chunk_count = session["chunk_count"].as_i64().unwrap_or(0) as i32;
+        let created_at = session["created_at"].as_str().unwrap_or("").to_string();
+        
+        // 计算过期时间
+        let expires_at = if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(&created_at) {
+            (dt + chrono::Duration::hours(UPLOAD_SESSION_HOURS)).to_rfc3339()
+        } else {
+            (chrono::Utc::now() + chrono::Duration::hours(UPLOAD_SESSION_HOURS)).to_rfc3339()
+        };
+        
+        // 判断状态
+        let status = if uploaded_parts.len() == chunk_count as usize {
+            "completed".to_string()
+        } else {
+            "in_progress".to_string()
+        };
+        
         Ok(UploadStatusData {
             upload_id: req.upload_id.clone(),
-            status: "in_progress".to_string(),
-            uploaded_parts: vec![],
-            total_parts: 0,
-            created_at: chrono::Utc::now().to_rfc3339(),
-            expires_at: (chrono::Utc::now() + chrono::Duration::hours(24)).to_rfc3339(),
+            status,
+            uploaded_parts,
+            total_parts: chunk_count,
+            created_at,
+            expires_at,
         })
     }
 
     /// 取消大文件上传
     pub async fn abort_upload(
         &self,
-        _user_id: i64,
+        user_id: i64,
         req: &AbortUploadRequest,
     ) -> Result<()> {
-        // TODO: 从Redis删除上传会话信息
-        // TODO: 清理已上传的分块文件
+        // 从Redis获取上传会话信息
+        let session_key = format!("upload_session:{}", req.upload_id);
+        let mut redis = self.redis.clone();
+        
+        let session_str: Option<String> = redis.get(&session_key).await
+            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
+        
+        if let Some(session_str) = session_str {
+            let session: serde_json::Value = serde_json::from_str(&session_str)
+                .map_err(|e| AppError::InternalError(format!("解析会话数据失败: {}", e)))?;
+            
+            // 验证用户ID
+            if session["user_id"].as_i64() != Some(user_id) {
+                return Err(AppError::Forbidden("无权访问此上传会话".to_string()));
+            }
+        }
+        
+        // 清理已上传的分块文件
+        let chunk_dir = self.upload_dir.join("chunks").join(&req.upload_id);
+        let _ = tokio::fs::remove_dir_all(&chunk_dir).await;
+        
+        // 从Redis删除上传会话信息
+        let _: () = redis.del(&session_key).await
+            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
 
         tracing::info!("取消上传: upload_id={}", req.upload_id);
 
@@ -263,6 +469,10 @@ impl<'a> MediaService<'a> {
     /// 获取MIME类型
     fn get_mime_type(&self, extension: &str) -> String {
         match extension {
+            "jpg" | "jpeg" => "image/jpeg",
+            "png" => "image/png",
+            "gif" => "image/gif",
+            "webp" => "image/webp",
             "pdf" => "application/pdf",
             "doc" => "application/msword",
             "docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",

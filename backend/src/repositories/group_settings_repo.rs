@@ -1,3 +1,9 @@
+//! 群组设置仓库
+//!
+//! 管理群组的加入方式、密码、成员上限等设置
+
+#![allow(dead_code)]
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};

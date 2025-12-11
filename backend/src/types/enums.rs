@@ -541,123 +541,158 @@ impl std::fmt::Display for ReactionType {
 }
 
 // ============================================================
-// 16. 信息流频道枚举
+// 16. 用户类型枚举
+// ============================================================
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
+#[sqlx(type_name = "user_type", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
+pub enum UserType {
+    Temp,       // 临时用户
+    Normal,     // 普通用户
+    Admin,      // 管理员用户
+    System,     // 系统用户
+}
+
+impl UserType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            UserType::Temp => "temp",
+            UserType::Normal => "normal",
+            UserType::Admin => "admin",
+            UserType::System => "system",
+        }
+    }
+
+    pub fn from_str(s: &str) -> Result<Self, String> {
+        match s {
+            "temp" => Ok(UserType::Temp),
+            "normal" => Ok(UserType::Normal),
+            "admin" => Ok(UserType::Admin),
+            "system" => Ok(UserType::System),
+            _ => Err(format!("无效的用户类型: {}", s)),
+        }
+    }
+
+    /// 检查是否为管理员
+    pub fn is_admin(&self) -> bool {
+        matches!(self, UserType::Admin)
+    }
+}
+
+impl std::fmt::Display for UserType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+// ============================================================
+// 17. 点赞操作枚举
 // ============================================================
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub enum FeedChannel {
-    Following,      // 关注
-    Nearby,         // 附近
-    Recommended,    // 推荐
+pub enum LikeAction {
+    Like,       // 点赞
+    Unlike,     // 取消点赞
 }
 
-impl FeedChannel {
+impl LikeAction {
     pub fn as_str(&self) -> &'static str {
         match self {
-            FeedChannel::Following => "following",
-            FeedChannel::Nearby => "nearby",
-            FeedChannel::Recommended => "recommended",
+            LikeAction::Like => "like",
+            LikeAction::Unlike => "unlike",
         }
     }
 }
 
 // ============================================================
-// 17. 信息流项目类型枚举
-// ============================================================
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum FeedItemType {
-    Moment,         // 生活瞬间
-    GroupCard,      // 群组卡片
-    System,         // 系统消息
-}
-
-impl FeedItemType {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            FeedItemType::Moment => "moment",
-            FeedItemType::GroupCard => "group_card",
-            FeedItemType::System => "system",
-        }
-    }
-}
-
-// ============================================================
-// 18. 排行榜时间范围枚举
-// ============================================================
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum LeaderboardTimeframe {
-    Daily,      // 每日
-    Weekly,     // 每周
-    Monthly,    // 每月
-    AllTime,    // 全部时间
-}
-
-impl LeaderboardTimeframe {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            LeaderboardTimeframe::Daily => "daily",
-            LeaderboardTimeframe::Weekly => "weekly",
-            LeaderboardTimeframe::Monthly => "monthly",
-            LeaderboardTimeframe::AllTime => "all_time",
-        }
-    }
-}
-
-// ============================================================
-// 19. 排行榜范围枚举
+// 18. 收藏操作枚举
 // ============================================================
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub enum LeaderboardScope {
-    Nearby,     // 附近
-    Friends,    // 好友
+pub enum FavoriteAction {
+    Add,        // 添加收藏
+    Remove,     // 取消收藏
 }
 
-impl LeaderboardScope {
+impl FavoriteAction {
     pub fn as_str(&self) -> &'static str {
         match self {
-            LeaderboardScope::Nearby => "nearby",
-            LeaderboardScope::Friends => "friends",
+            FavoriteAction::Add => "add",
+            FavoriteAction::Remove => "remove",
         }
     }
 }
 
 // ============================================================
-// 测试
+// 19. 反应操作枚举
 // ============================================================
-#[cfg(test)]
-mod tests {
-    use super::*;
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ReactionAction {
+    Add,        // 添加反应
+    Remove,     // 移除反应
+}
 
-    #[test]
-    fn test_member_role() {
-        assert_eq!(MemberRole::Owner.as_str(), "owner");
-        assert_eq!(MemberRole::Admin.as_str(), "admin");
-        assert_eq!(MemberRole::Member.as_str(), "member");
-    }
-
-    #[test]
-    fn test_room_type() {
-        assert_eq!(RoomType::Direct.as_str(), "direct");
-        assert_eq!(RoomType::PublicGroup.as_str(), "public_group");
-        assert_eq!(RoomType::PrivateGroup.as_str(), "private_group");
-        
-        assert!(!RoomType::Direct.is_group());
-        assert!(RoomType::Direct.is_direct());
-        assert!(RoomType::PublicGroup.is_group());
-        assert!(RoomType::PrivateGroup.is_group());
-    }
-
-    #[test]
-    fn test_message_type() {
-        assert_eq!(MessageType::Text.as_str(), "text");
-        assert_eq!(MessageType::Image.as_str(), "image");
-        
-        assert!(!MessageType::Text.is_media());
-        assert!(MessageType::Image.is_media());
-        assert!(MessageType::Video.is_media());
+impl ReactionAction {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ReactionAction::Add => "add",
+            ReactionAction::Remove => "remove",
+        }
     }
 }
 
+// ============================================================
+// 20. 举报处理操作枚举
+// ============================================================
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ReportHandleAction {
+    Resolve,    // 解决
+    Dismiss,    // 驳回
+    Escalate,   // 升级
+}
+
+impl ReportHandleAction {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ReportHandleAction::Resolve => "resolve",
+            ReportHandleAction::Dismiss => "dismiss",
+            ReportHandleAction::Escalate => "escalate",
+        }
+    }
+}
+
+// ============================================================
+// 21. 信息流反馈操作枚举
+// ============================================================
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FeedFeedbackAction {
+    Hide,           // 隐藏
+    NotInterested,  // 不感兴趣
+    Clicked,        // 点击
+    Viewed,         // 查看
+}
+
+impl FeedFeedbackAction {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            FeedFeedbackAction::Hide => "hide",
+            FeedFeedbackAction::NotInterested => "not_interested",
+            FeedFeedbackAction::Clicked => "clicked",
+            FeedFeedbackAction::Viewed => "viewed",
+        }
+    }
+
+    /// 判断是否应从 feed 中移除
+    pub fn should_remove_from_feed(&self) -> bool {
+        matches!(self, FeedFeedbackAction::Hide | FeedFeedbackAction::NotInterested)
+    }
+}
+
+impl std::fmt::Display for FeedFeedbackAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}

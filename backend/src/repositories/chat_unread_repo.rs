@@ -2,26 +2,8 @@
 // 聊天未读计数Repository（统一管理私聊和群聊的未读计数）
 
 use crate::error::AppError;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, PgPool};
+use sqlx::PgPool;
 use uuid::Uuid;
-
-/// 聊天未读计数Row
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
-pub struct ChatUnreadCountRow {
-    pub id: i64,
-    pub chat_type: String, // 'private_chat' 或 'group_chat'
-    pub chat_id: Uuid,     // private_chat_id 或 group_chat_id（UUID）
-    pub user_id: i64,      // BIGINT（引用 users.user_id）
-
-    // 最后已读信息
-    pub last_read_at: Option<DateTime<Utc>>,
-    pub last_read_message_id: Option<Uuid>,
-
-    // 时间戳
-    pub updated_at: DateTime<Utc>,
-}
 
 #[derive(Clone)]
 pub struct ChatUnreadRepository {
@@ -135,22 +117,5 @@ impl ChatUnreadRepository {
         };
 
         Ok(count)
-    }
-
-    /// 获取用户所有未读聊天列表
-    pub async fn list_unread_chats_by_user(&self, user_id: i64) -> Result<Vec<ChatUnreadCountRow>, AppError> {
-        let rows = sqlx::query_as!(
-            ChatUnreadCountRow,
-            r#"
-            SELECT id, chat_type, chat_id, user_id, last_read_at, last_read_message_id, updated_at
-            FROM chat_unread_counts
-            WHERE user_id = $1
-            "#,
-            user_id
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(rows)
     }
 }

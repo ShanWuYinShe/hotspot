@@ -191,5 +191,158 @@ impl UserFollowsRepository {
         let next_cursor = rows.last().map(|r| r.cursor_id);
         Ok((user_ids, next_cursor))
     }
+
+    /// 检查是否互相关注（好友）
+    pub async fn are_mutual_follows(&self, user_a_id: i64, user_b_id: i64) -> Result<bool> {
+        let a_follows_b = self.exists(user_a_id, user_b_id).await?;
+        let b_follows_a = self.exists(user_b_id, user_a_id).await?;
+        Ok(a_follows_b && b_follows_a)
+    }
+
+    /// 统计互相关注（好友）数量
+    pub async fn count_mutual_follows(&self, user_id: i64) -> Result<i64> {
+        let result = sqlx::query!(
+            r#"
+            SELECT COUNT(*) as "count!"
+            FROM user_follows f1
+            INNER JOIN user_follows f2 ON f1.following_id = f2.follower_id AND f1.follower_id = f2.following_id
+            WHERE f1.follower_id = $1
+            "#,
+            user_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(result.count)
+    }
+
+    /// 获取互相关注（好友）列表（分页）
+    pub async fn list_mutual_follows(
+        &self,
+        user_id: i64,
+        limit: i32,
+        cursor: Option<Uuid>,
+    ) -> Result<(Vec<MutualFollowRow>, Option<Uuid>)> {
+        let cursor_pk = self.resolve_cursor(cursor).await?;
+        
+        let rows: Vec<MutualFollowRow> = sqlx::query_as!(
+            MutualFollowRow,
+            r#"
+            SELECT f1.following_id as user_id, f1.cursor_id, f1.created_at as followed_at, f2.created_at as followed_back_at
+            FROM user_follows f1
+            INNER JOIN user_follows f2 ON f1.following_id = f2.follower_id AND f1.follower_id = f2.following_id
+            WHERE f1.follower_id = $1 AND f1.id < $2
+            ORDER BY f1.id DESC
+            LIMIT $3
+            "#,
+            user_id,
+            cursor_pk,
+            limit as i64
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let next_cursor = rows.last().map(|r| r.cursor_id);
+        Ok((rows, next_cursor))
+    }
+
+    /// 获取用户关注列表（包含详细信息）
+    pub async fn list_following_detail(
+        &self,
+        user_id: i64,
+        limit: i32,
+        cursor: Option<Uuid>,
+    ) -> Result<(Vec<FollowingDetailRow>, Option<Uuid>)> {
+        let cursor_pk = self.resolve_cursor(cursor).await?;
+        
+        let rows: Vec<FollowingDetailRow> = sqlx::query_as!(
+            FollowingDetailRow,
+            r#"
+            SELECT 
+                f.following_id,
+                f.cursor_id,
+                f.created_at,
+                EXISTS(
+                    SELECT 1 FROM user_follows f2 
+                    WHERE f2.follower_id = f.following_id AND f2.following_id = f.follower_id
+                ) as "is_mutual!"
+            FROM user_follows f
+            WHERE f.follower_id = $1 AND f.id < $2
+            ORDER BY f.id DESC
+            LIMIT $3
+            "#,
+            user_id,
+            cursor_pk,
+            limit as i64
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let next_cursor = rows.last().map(|r| r.cursor_id);
+        Ok((rows, next_cursor))
+    }
+
+    /// 获取用户粉丝列表（包含详细信息）
+    pub async fn list_followers_detail(
+        &self,
+        user_id: i64,
+        limit: i32,
+        cursor: Option<Uuid>,
+    ) -> Result<(Vec<FollowerDetailRow>, Option<Uuid>)> {
+        let cursor_pk = self.resolve_cursor(cursor).await?;
+        
+        let rows: Vec<FollowerDetailRow> = sqlx::query_as!(
+            FollowerDetailRow,
+            r#"
+            SELECT 
+                f.follower_id,
+                f.cursor_id,
+                f.created_at,
+                EXISTS(
+                    SELECT 1 FROM user_follows f2 
+                    WHERE f2.follower_id = f.following_id AND f2.following_id = f.follower_id
+                ) as "is_following_back!"
+            FROM user_follows f
+            WHERE f.following_id = $1 AND f.id < $2
+            ORDER BY f.id DESC
+            LIMIT $3
+            "#,
+            user_id,
+            cursor_pk,
+            limit as i64
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let next_cursor = rows.last().map(|r| r.cursor_id);
+        Ok((rows, next_cursor))
+    }
+}
+
+/// 互相关注（好友）查询结果
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct MutualFollowRow {
+    pub user_id: i64,
+    pub cursor_id: Uuid,
+    pub followed_at: DateTime<Utc>,      // 我关注对方的时间
+    pub followed_back_at: DateTime<Utc>, // 对方关注我的时间
+}
+
+/// 关注列表查询结果（包含额外信息）
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct FollowingDetailRow {
+    pub following_id: i64,
+    pub cursor_id: Uuid,
+    pub created_at: DateTime<Utc>,       // 关注时间
+    pub is_mutual: bool,                 // 是否互相关注
+}
+
+/// 粉丝列表查询结果（包含额外信息）
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct FollowerDetailRow {
+    pub follower_id: i64,
+    pub cursor_id: Uuid,
+    pub created_at: DateTime<Utc>,       // 对方关注我的时间
+    pub is_following_back: bool,         // 我是否回关
 }
 

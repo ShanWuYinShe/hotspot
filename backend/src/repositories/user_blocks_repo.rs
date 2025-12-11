@@ -81,8 +81,9 @@ impl UserBlocksRepository {
         Ok(result.exists)
     }
 
-    pub async fn is_blocked_by(&self, user_id: i64, blocker_id: i64) -> Result<bool> {
-        self.exists(blocker_id, user_id).await
+    /// 检查 blocker_id 是否拉黑了 blocked_id
+    pub async fn is_blocked(&self, blocker_id: i64, blocked_id: i64) -> Result<bool> {
+        self.exists(blocker_id, blocked_id).await
     }
 
     /// 解析 UUID cursor 为自增主键
@@ -101,25 +102,19 @@ impl UserBlocksRepository {
         }
     }
 
-    /// 获取拉黑列表（分页）
-    pub async fn list_blocked(
+    /// 获取拉黑列表（包含详细信息）
+    pub async fn list_blocked_detail(
         &self,
         user_id: i64,
         limit: i32,
         cursor: Option<Uuid>,
-    ) -> Result<(Vec<i64>, Option<Uuid>)> {
-        #[derive(sqlx::FromRow)]
-        struct BlockedRow {
-            blocked_id: i64,
-            cursor_id: Uuid,
-        }
-
+    ) -> Result<(Vec<BlockedDetailRow>, Option<Uuid>)> {
         let cursor_pk = self.resolve_cursor(cursor).await?;
         
-        let rows: Vec<BlockedRow> = sqlx::query_as!(
-            BlockedRow,
+        let rows: Vec<BlockedDetailRow> = sqlx::query_as!(
+            BlockedDetailRow,
             r#"
-            SELECT blocked_id, cursor_id
+            SELECT blocked_id, cursor_id, reason, created_at
             FROM user_blocks
             WHERE blocker_id = $1 AND id < $2
             ORDER BY id DESC
@@ -132,9 +127,17 @@ impl UserBlocksRepository {
         .fetch_all(&self.pool)
         .await?;
 
-        let user_ids = rows.iter().map(|r| r.blocked_id).collect();
         let next_cursor = rows.last().map(|r| r.cursor_id);
-        Ok((user_ids, next_cursor))
+        Ok((rows, next_cursor))
     }
+}
+
+/// 拉黑列表查询结果（包含详细信息）
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct BlockedDetailRow {
+    pub blocked_id: i64,
+    pub cursor_id: Uuid,
+    pub reason: Option<String>,
+    pub created_at: DateTime<Utc>,
 }
 

@@ -1,100 +1,38 @@
 import { BaseService } from './base.service'
-import type { InboxItemData, UnreadCategoryStats, PaginatedData } from '~/types/api'
-
-/**
- * 通知中心服务
- * ✅ 类型定义已统一从 types/api.ts 导入
- */
-
-// ==================== Request 类型定义 ====================
-
-export interface UnreadInboxSummary {
-  total: number
-  by_category: UnreadCategoryStats
-}
-
-export interface ListInboxItemsRequest {
-  category?: 'social' | 'system' | 'content'
-  types?: string[]
-  is_read?: boolean
-  limit?: number
-  cursor?: string
-}
-
-export interface MarkInboxItemsReadRequest {
-  ids?: string[]
-}
-
-export interface MarkInboxReadData {
-  marked_count: number
-}
-
-export interface DeleteInboxItemsRequest {
-  ids: string[]
-}
+import { DEVICE_TOKENS } from '~/config/api'
+import type { PaginatedData } from '~/types/api'
 
 export interface RegisterDeviceTokenRequest {
-  platform: 'ios' | 'android' | 'web'
+  platform: 'ios' | 'android' | 'harmony'
   device_token: string
 }
 
 export interface UnregisterDeviceTokenRequest {
-  platform: 'ios' | 'android' | 'web'
+  platform: 'ios' | 'android' | 'harmony'
   device_token: string
 }
 
-// ==================== 服务类 ====================
+export interface DeviceTokenItem {
+  id: string
+  platform: 'ios' | 'android' | 'harmony'
+  device_token: string
+  created_at: string
+}
 
-export class InboxService extends BaseService {
-  protected readonly baseUrl = '/protected/inbox'
-
-  /**
-   * 获取通知列表
-   */
-  async getList(params: ListInboxItemsRequest = {}): Promise<PaginatedData<InboxItemData>> {
-    return this.post<PaginatedData<InboxItemData>>(`${this.baseUrl}/get_list`, params)
+class InboxService extends BaseService {
+  async registerDeviceToken(data: RegisterDeviceTokenRequest) {
+    return this.post<void>(DEVICE_TOKENS.REGISTER, data)
   }
 
-  /**
-   * 获取未读通知数
-   */
-  async getUnreadCount(): Promise<UnreadInboxSummary> {
-    return this.post<UnreadInboxSummary>(`${this.baseUrl}/get_unread_count`)
+  async unregisterDeviceToken(data: UnregisterDeviceTokenRequest) {
+    return this.post<void>(DEVICE_TOKENS.UNREGISTER, data)
   }
 
-  /**
-   * 标记通知已读
-   */
-  async markAsRead(data: MarkInboxItemsReadRequest): Promise<MarkInboxReadData> {
-    return this.post<MarkInboxReadData>(`${this.baseUrl}/mark_all_as_read`, data)
-  }
-
-  /**
-   * 删除通知
-   */
-  async remove(data: DeleteInboxItemsRequest): Promise<void> {
-    return this.post<void>(`${this.baseUrl}/remove`, data)
-  }
-
-  /**
-   * 注册设备推送Token
-   */
-  async registerDeviceToken(data: RegisterDeviceTokenRequest): Promise<void> {
-    return this.post<void>(`${this.baseUrl}/register_device_token`, data)
-  }
-
-  /**
-   * 注销设备推送Token
-   */
-  async unregisterDeviceToken(data: UnregisterDeviceTokenRequest): Promise<void> {
-    return this.post<void>(`${this.baseUrl}/unregister_device_token`, data)
+  async getDeviceTokens() {
+    const result = await this.post<PaginatedData<DeviceTokenItem>>(DEVICE_TOKENS.GET_LIST, {})
+    return result.items
   }
 }
 
 export const inboxService = new InboxService()
-
-export function useInboxService() {
-  return inboxService
-}
-
-
+export function useInboxService() { return inboxService }

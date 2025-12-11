@@ -3,39 +3,81 @@ use uuid::Uuid;
 
 use crate::{
     error::{AppError, Result},
-    repositories::private_chat_repo::{PrivateChatRepository, PrivateChatRow, PrivateChatSettingsRow},
+    repositories::{
+        private_chat_repo::{PrivateChatRepository, PrivateChatRow, PrivateChatSettingsRow},
+        user_settings_repo::UserSettingsRepository,
+        user_blocks_repo::UserBlocksRepository,
+    },
 };
 
 /// 私聊服务
 #[derive(Clone)]
 pub struct PrivateChatService {
     repo: PrivateChatRepository,
+    settings_repo: UserSettingsRepository,
+    blocks_repo: UserBlocksRepository,
 }
 
 impl PrivateChatService {
     pub fn new(pool: PgPool) -> Self {
         Self {
-            repo: PrivateChatRepository::new(pool),
+            repo: PrivateChatRepository::new(pool.clone()),
+            settings_repo: UserSettingsRepository::new(pool.clone()),
+            blocks_repo: UserBlocksRepository::new(pool),
         }
     }
 
     /// 创建或获取私聊
+    /// 
+    /// 权限验证逻辑（根据 API 规范 3.5.1）：
+    /// 1. 目标用户的 allow_private_chat = true（否则返回错误码 1309）
+    /// 2. 目标用户没有将当前用户拉黑（否则返回错误码 1310）
     pub async fn create_or_get(
         &self,
-        user_id_1: i64,
-        user_id_2: i64,
+        current_user_id: i64,
+        target_user_id: i64,
     ) -> Result<PrivateChatRow> {
-        if user_id_1 == user_id_2 {
+        if current_user_id == target_user_id {
             return Err(AppError::BadRequest("不能与自己创建私聊".to_string()));
         }
 
-        // 尝试查找现有私聊
-        if let Some(chat) = self.repo.find_by_users(user_id_1, user_id_2).await? {
+        // 尝试查找现有私聊（如果已存在则直接返回，无需权限验证）
+        if let Some(chat) = self.repo.find_by_users(current_user_id, target_user_id).await? {
             return Ok(chat);
         }
 
+        // 创建新私聊前进行权限验证
+        
+        // 1. 检查目标用户是否允许接收私聊
+        let target_settings = self.settings_repo.find_by_user_id(target_user_id).await?;
+        if let Some(settings) = target_settings {
+            match settings.allow_private_chat.as_str() {
+                "nobody" => {
+                    return Err(AppError::PrivateChatNotAllowed(
+                        "对方不允许接收私聊".to_string()
+                    ));
+                }
+                "friends" => {
+                    // 检查是否是好友（互相关注）
+                    // TODO: 添加好友关系检查逻辑
+                    // 暂时允许，后续可以添加更严格的检查
+                }
+                _ => {
+                    // "everyone" 或其他值，允许私聊
+                }
+            }
+        }
+        // 如果目标用户没有设置记录，使用默认值（allow_private_chat = 'everyone'）
+        
+        // 2. 检查当前用户是否被目标用户拉黑
+        if self.blocks_repo.is_blocked(target_user_id, current_user_id).await? {
+            return Err(AppError::BlockedByUser(
+                "已被对方拉黑".to_string()
+            ));
+        }
+
         // 创建新私聊
-        let chat = self.repo.create(user_id_1, user_id_2).await?;
+        let chat = self.repo.create(current_user_id, target_user_id).await?;
         Ok(chat)
     }
 

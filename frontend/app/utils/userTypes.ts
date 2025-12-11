@@ -1,66 +1,101 @@
 /**
- * 用户ID编码规范工具函数
- * 根据需求文档：用户ID为64位整数，高8位表示用户类型，低56位表示用户序号
+ * 用户类型工具函数
+ *
+ * 用户类型通过 user_type 枚举字段区分：
+ * - temp: 临时用户
+ * - normal: 注册用户
+ * - admin: 管理员用户
+ * - system: 系统用户（官方账号等）
+ *
+ * 用户ID分配规则：
+ * - 系统用户区间：1 - 1,000,000
+ * - 临时用户和注册用户区间：1,000,001+
  */
 
 /**
  * 用户类型枚举
+ * 与后端 UserType 枚举保持一致
  */
 export enum UserType {
-  TEMP = 1,     // 临时用户
-  REGULAR = 2,  // 普通用户
-  SYSTEM = 3,   // 系统用户（官方账号等）
+  TEMP = 'temp', // 临时用户
+  NORMAL = 'normal', // 注册用户
+  ADMIN = 'admin', // 管理员用户
+  SYSTEM = 'system', // 系统用户
 }
 
 /**
- * 获取用户类型
- * @param userId 用户ID字符串（64位整数）
- * @returns 用户类型编码
+ * 用户类型字符串联合类型（用于类型约束）
  */
-export function getUserType(userId: string): number {
-  const userIdBigInt = BigInt(userId);
-  return Number(userIdBigInt >> 56n);
+export type UserTypeValue = `${UserType}`;
+
+/**
+ * 将字符串解析为 UserType 枚举
+ * @param value 用户类型字符串
+ * @returns UserType 枚举值，无效值返回 NORMAL
+ */
+export function parseUserType(value: string): UserType {
+  switch (value) {
+    case UserType.TEMP:
+      return UserType.TEMP;
+    case UserType.ADMIN:
+      return UserType.ADMIN;
+    case UserType.SYSTEM:
+      return UserType.SYSTEM;
+    case UserType.NORMAL:
+    default:
+      return UserType.NORMAL;
+  }
+}
+
+/**
+ * 判断是否为管理员用户
+ * @param userType 用户类型（字符串或枚举）
+ * @returns 是否为管理员用户
+ */
+export function isAdminUser(userType: UserTypeValue | string): boolean {
+  return userType === UserType.ADMIN;
 }
 
 /**
  * 判断是否为临时用户
- * @param userId 用户ID字符串
+ * @param userType 用户类型（字符串或枚举）
  * @returns 是否为临时用户
  */
-export function isTempUser(userId: string): boolean {
-  return getUserType(userId) === UserType.TEMP;
+export function isTempUser(userType: UserTypeValue | string): boolean {
+  return userType === UserType.TEMP;
 }
 
 /**
- * 判断是否为普通用户
- * @param userId 用户ID字符串
+ * 判断是否为普通用户（注册用户）
+ * @param userType 用户类型（字符串或枚举）
  * @returns 是否为普通用户
  */
-export function isRegularUser(userId: string): boolean {
-  return getUserType(userId) === UserType.REGULAR;
+export function isNormalUser(userType: UserTypeValue | string): boolean {
+  return userType === UserType.NORMAL;
 }
 
 /**
  * 判断是否为系统用户
- * @param userId 用户ID字符串
+ * @param userType 用户类型（字符串或枚举）
  * @returns 是否为系统用户
  */
-export function isSystemUser(userId: string): boolean {
-  return getUserType(userId) === UserType.SYSTEM;
+export function isSystemUser(userType: UserTypeValue | string): boolean {
+  return userType === UserType.SYSTEM;
 }
 
 /**
  * 获取用户类型显示名称
- * @param userId 用户ID字符串
+ * @param userType 用户类型（字符串或枚举）
  * @returns 用户类型显示名称
  */
-export function getUserTypeDisplayName(userId: string): string {
-  const userType = getUserType(userId);
+export function getUserTypeDisplayName(userType: UserTypeValue | string): string {
   switch (userType) {
     case UserType.TEMP:
       return '临时用户';
-    case UserType.REGULAR:
+    case UserType.NORMAL:
       return '普通用户';
+    case UserType.ADMIN:
+      return '管理员';
     case UserType.SYSTEM:
       return '官方账号';
     default:
@@ -70,21 +105,26 @@ export function getUserTypeDisplayName(userId: string): string {
 
 /**
  * 获取用户类型标签样式
- * @param userId 用户ID字符串
+ * @param userType 用户类型（字符串或枚举）
  * @returns 标签样式配置
  */
-export function getUserTypeTagStyle(userId: string): {
+export function getUserTypeTagStyle(userType: UserTypeValue | string): {
   text: string;
   color: string;
   bgColor: string;
 } {
-  const userType = getUserType(userId);
   switch (userType) {
     case UserType.TEMP:
       return {
         text: '临时',
         color: 'text-orange-600',
         bgColor: 'bg-orange-100',
+      };
+    case UserType.ADMIN:
+      return {
+        text: '管理',
+        color: 'text-purple-600',
+        bgColor: 'bg-purple-100',
       };
     case UserType.SYSTEM:
       return {
@@ -103,10 +143,15 @@ export function getUserTypeTagStyle(userId: string): {
 }
 
 /**
- * 示例用户ID（用于测试和文档）
+ * 系统用户ID常量
  */
-export const EXAMPLE_USER_IDS = {
-  TEMP: '72057594037927936',      // 0x0100000000000000
-  REGULAR: '144115188075855872',  // 0x0200000000000000
-  SYSTEM: '216172782113783808',   // 0x0300000000000000
+export const SYSTEM_USER_IDS = {
+  NOTIFICATION: '1', // 系统通知
+  SECURITY_CENTER: '2', // 安全中心
+  OPERATIONS_TEAM: '3', // 运营团队
 } as const;
+
+/**
+ * 系统用户ID区间边界
+ */
+export const SYSTEM_USER_ID_MAX = 1000000;

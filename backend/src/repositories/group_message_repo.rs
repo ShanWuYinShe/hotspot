@@ -50,12 +50,16 @@ impl GroupMessageRepository {
         content: String,
         reply_to_message_id: Option<Uuid>,
         mentions: Option<Vec<i64>>,
+        file_name: Option<&str>,
+        file_size: Option<i64>,
+        thumbnail_url: Option<&str>,
+        duration: Option<i32>,
     ) -> Result<GroupMessageRow> {
         let row = sqlx::query_as!(
             GroupMessageRow,
             r#"
-            INSERT INTO group_messages (group_chat_id, sender_id, type, content, reply_to_message_id, mentions)
-            VALUES ($1, $2, $3::message_type, $4, $5, $6)
+            INSERT INTO group_messages (group_chat_id, sender_id, type, content, reply_to_message_id, mentions, file_name, file_size, thumbnail_url, duration)
+            VALUES ($1, $2, $3::message_type, $4, $5, $6, $7, $8, $9, $10)
             RETURNING id, message_id, cursor_id, group_chat_id, sender_id,
                       type as "type: MessageType", content, reply_to_message_id, mentions,
                       file_name, file_size, thumbnail_url, duration,
@@ -66,7 +70,11 @@ impl GroupMessageRepository {
             r#type as MessageType,
             content,
             reply_to_message_id,
-            mentions.as_deref()
+            mentions.as_deref(),
+            file_name,
+            file_size,
+            thumbnail_url,
+            duration
         )
         .fetch_one(&self.pool)
         .await?;
@@ -192,11 +200,6 @@ impl GroupMessageRepository {
         Ok(())
     }
 
-    /// 获取群聊历史消息（旧方法，保留兼容性）
-    pub async fn get_history(&self, group_chat_id: Uuid, limit: i64) -> Result<Vec<GroupMessageRow>> {
-        self.list_by_group(group_chat_id, limit, None).await
-    }
-
     /// 获取消息已读用户列表
     pub async fn get_read_status(&self, message_id: Uuid) -> Result<Vec<i64>> {
         let rows = sqlx::query_scalar!(
@@ -212,27 +215,5 @@ impl GroupMessageRepository {
         .await?;
 
         Ok(rows)
-    }
-
-    /// 获取群聊的最后一条消息
-    pub async fn get_last_message(&self, group_chat_id: Uuid) -> Result<Option<GroupMessageRow>> {
-        let row = sqlx::query_as!(
-            GroupMessageRow,
-            r#"
-            SELECT id, message_id, cursor_id, group_chat_id, sender_id,
-                   type as "type: MessageType", content, reply_to_message_id, mentions,
-                   file_name, file_size, thumbnail_url, duration,
-                   sent_at, edited_at, is_recalled, recalled_by, recalled_at, is_deleted, deleted_at
-            FROM group_messages
-            WHERE group_chat_id = $1 AND is_deleted = FALSE
-            ORDER BY sent_at DESC
-            LIMIT 1
-            "#,
-            group_chat_id
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(row)
     }
 }

@@ -1,10 +1,10 @@
 <template>
-  <UCard class="bg-white/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50">
+  <UCard class=" border ">
     <template #header>
       <div class="flex items-center justify-between">
         <div>
-          <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">{{ title }}</h3>
-          <p v-if="description" class="text-sm text-neutral-600 dark:text-neutral-400 mt-1">{{ description }}</p>
+          <h3 class="text-lg font-semibold text-primary-content">{{ title }}</h3>
+          <p v-if="description" class="text-sm text-secondary-content mt-1">{{ description }}</p>
         </div>
         <div class="flex items-center gap-2">
           <USelectMenu
@@ -29,22 +29,22 @@
         <div
           v-for="metric in metrics"
           :key="metric.key"
-          class="text-center p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg"
+          class="text-center p-4 bg-surface rounded-lg"
         >
-          <div class="text-2xl font-bold text-neutral-900 dark:text-white">
-            {{ formatValue(metric.value) }}
+          <div class="text-2xl font-bold text-primary-content">
+            {{ transformValue(metric.value) }}
           </div>
-          <div class="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
+          <div class="text-sm text-secondary-content mt-1">
             {{ metric.label }}
           </div>
           <div v-if="metric.change !== undefined" class="flex items-center justify-center gap-1 mt-2">
             <UIcon
               :name="metric.change >= 0 ? 'i-heroicons-arrow-trending-up' : 'i-heroicons-arrow-trending-down'"
-              :class="metric.change >= 0 ? 'text-green-600' : 'text-red-600'"
-              class="w-3 h-3"
+              :class="metric.change >= 0 ? 'text-green' : 'text-red'"
+              class="icon-xs"
             />
             <span
-              :class="metric.change >= 0 ? 'text-green-600' : 'text-red-600'"
+              :class="metric.change >= 0 ? 'text-green' : 'text-red'"
               class="text-xs font-medium"
             >
               {{ Math.abs(metric.change).toFixed(1) }}%
@@ -61,7 +61,7 @@
         
         <div v-else-if="chartType === 'line'" class="h-64">
           <!-- 简单的折线图模拟 -->
-          <div class="relative h-full bg-slate-50 dark:bg-slate-700/30 rounded-lg p-4">
+          <div class="relative h-full bg-slate-subtle rounded-lg p-4">
             <svg class="w-full h-full" viewBox="0 0 400 200">
               <!-- 网格线 -->
               <defs>
@@ -97,16 +97,16 @@
         
         <div v-else-if="chartType === 'bar'" class="h-64">
           <!-- 简单的柱状图模拟 -->
-          <div class="flex items-end justify-between h-full bg-slate-50 dark:bg-slate-700/30 rounded-lg p-4 gap-2">
+          <div class="flex items-end justify-between h-full bg-slate-subtle rounded-lg p-4 gap-2">
             <div
               v-for="(item, index) in chartData"
               :key="index"
-              class="flex-1 bg-gradient-to-t from-primary-600 to-primary-400 rounded-t-sm relative group cursor-pointer"
+              class="flex-1 bg-linear-to-t from-primary-600 to-primary-400 rounded-t-sm relative group cursor-pointer"
               :style="{ height: `${(item.value / maxValue) * 100}%` }"
             >
               <!-- 悬浮提示 -->
-              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-slate-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                {{ item.label }}: {{ formatValue(item.value) }}
+              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-slate-dark text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                {{ item.label }}: {{ transformValue(item.value) }}
               </div>
             </div>
           </div>
@@ -116,7 +116,7 @@
             <span
               v-for="(item, index) in chartData"
               :key="index"
-              class="text-xs text-neutral-600 dark:text-neutral-400 flex-1 text-center"
+              class="text-xs text-secondary-content flex-1 text-center"
             >
               {{ item.label }}
             </span>
@@ -154,7 +154,7 @@
                   class="w-3 h-3 rounded-full"
                   :style="{ backgroundColor: pieColors[index % pieColors.length] }"
                 ></div>
-                <span class="text-neutral-700 dark:text-neutral-300">{{ item.label }}</span>
+                <span class="text-secondary-strong">{{ item.label }}</span>
               </div>
             </div>
           </div>
@@ -162,7 +162,7 @@
         
         <!-- 空状态 -->
         <div v-else-if="!chartData?.length" class="flex items-center justify-center h-64">
-          <EmptyState
+          <UEmpty
             icon="i-heroicons-chart-bar"
             title="暂无数据"
             description="当前时间段内没有数据可显示"
@@ -206,8 +206,8 @@ const props = withDefaults(defineProps<Props>(), {
 })
 const { formatCount } = useFormatters()
 
-// 格式化数值显示
-const formatValue = (value: number) => formatCount(value)
+// 转换数值显示
+const transformValue = (value: number) => formatCount(value)
 
 const emit = defineEmits<{
   refresh: []

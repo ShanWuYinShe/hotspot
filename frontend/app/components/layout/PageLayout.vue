@@ -1,30 +1,40 @@
 <template>
   <UPage>
     <!-- 页面头部 -->
-    <UPageHeader
-      v-if="showHeader"
-      :title="title"
-      :description="description"
-      :icon="headerIcon"
-      :ui="{
-        wrapper: 'relative',
-        container: 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8',
-        title: 'text-3xl sm:text-4xl font-bold',
-        description: 'text-lg mt-1'
-      }"
-    >
-      <template #leading>
+    <div v-if="showHeader" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
+      <!-- 返回按钮 -->
+      <div v-if="showBackButton" class="mb-4">
         <UButton
-          v-if="showBackButton"
           variant="ghost"
-          size="sm"
+          color="neutral"
+          size="md"
           icon="i-heroicons-arrow-left"
           @click="handleBack"
-        />
-      </template>
-
-      <template #trailing>
-        <div v-if="headerActions?.length" class="flex gap-3">
+        >
+          返回
+        </UButton>
+      </div>
+      
+      <!-- 标题区域 -->
+      <div class="flex items-start justify-between gap-4">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-3">
+            <div v-if="headerIcon" class="p-2.5 bg-primary-subtle rounded-xl">
+              <UIcon :name="headerIcon" class="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <h1 class="text-2xl sm:text-3xl font-bold text-primary-content">
+                {{ title }}
+              </h1>
+              <p v-if="description" class="mt-1 text-base text-secondary-content">
+                {{ description }}
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 头部操作按钮 -->
+        <div v-if="headerActions?.length" class="flex gap-3 shrink-0">
           <UButton
             v-for="action in headerActions"
             :key="action.key"
@@ -40,19 +50,11 @@
             {{ action.label }}
           </UButton>
         </div>
-      </template>
-    </UPageHeader>
-
-    <!-- 面包屑导航 -->
-    <div v-if="breadcrumbs?.length" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
-      <UBreadcrumb
-        :items="breadcrumbs"
-        separator-icon="i-heroicons-chevron-right"
-      />
+      </div>
     </div>
 
     <!-- 统计信息 -->
-    <div v-if="stats?.length" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+    <div v-if="stats?.length" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
       <StatsGrid :stats="stats" :columns="statsColumns" />
     </div>
 
@@ -62,7 +64,7 @@
     </UPageBody>
 
     <!-- 页脚操作面板 -->
-    <div v-if="footerActions?.length" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+    <div v-if="footerActions?.length" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
       <ActionPanel
         :title="footerTitle || '操作'"
         :description="footerDescription"
@@ -76,11 +78,6 @@
 <script setup lang="ts">
 import type { StatItem } from '../data/StatsGrid.vue'
 import type { ActionItem } from '../common/ActionPanel.vue'
-
-export interface BreadcrumbItem {
-  label: string
-  to?: string
-}
 
 export interface HeaderAction {
   key: string
@@ -103,7 +100,6 @@ interface Props {
   
   // 导航相关
   showBackButton?: boolean
-  breadcrumbs?: BreadcrumbItem[]
   
   // 布局控制
   showHeader?: boolean
@@ -132,13 +128,10 @@ const emit = defineEmits<{
   back: []
 }>()
 
+const router = useRouter()
+
 const handleBack = () => {
   emit('back')
-  // 默认行为：返回上一页
-  if (history.length > 1) {
-    history.back()
-  } else {
-    navigateTo('/')
-  }
+  router.back()
 }
 </script>

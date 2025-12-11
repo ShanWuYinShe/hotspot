@@ -216,28 +216,25 @@ impl PrivateMessageRepository {
         Ok(row)
     }
 
-    /// 获取私聊未读消息数
-    pub async fn get_unread_count(&self, private_chat_id: Uuid, user_id: i64, last_read_at: Option<DateTime<Utc>>) -> Result<i64> {
-        // 如果没有读取记录，使用 Unix 纪元作为默认值（统计所有消息）
-        let read_at = last_read_at.unwrap_or(DateTime::UNIX_EPOCH);
-        
-        let count = sqlx::query_scalar!(
+    /// 检查某用户是否在该私聊中发送过消息
+    /// 用于判断是否应该解锁对方的消息限制
+    pub async fn has_messages_from_user(&self, private_chat_id: Uuid, user_id: i64) -> Result<bool> {
+        let exists = sqlx::query_scalar!(
             r#"
-            SELECT COUNT(*) as "count!"
-            FROM private_messages
-            WHERE private_chat_id = $1 
-              AND sender_id != $2 
-              AND sent_at > $3
-              AND is_deleted = FALSE
+            SELECT EXISTS(
+                SELECT 1 FROM private_messages
+                WHERE private_chat_id = $1 
+                  AND sender_id = $2 
+                  AND is_deleted = FALSE
+            ) as "exists!"
             "#,
             private_chat_id,
-            user_id,
-            read_at
+            user_id
         )
         .fetch_one(&self.pool)
         .await?;
 
-        Ok(count)
+        Ok(exists)
     }
 }
 

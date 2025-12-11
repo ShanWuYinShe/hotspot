@@ -1,41 +1,15 @@
 -- 006_notification_module.sql
--- 通知模块：收件箱、订阅设置、设备令牌
+-- 通知模块：推送订阅设置、设备令牌
+-- 注：通知是实时推送机制，不存储。冷启动通过各业务 API 获取待处理数据。
 
 -- ============================================================
--- 收件箱
--- ============================================================
-CREATE TABLE inbox_items (
-    id BIGSERIAL PRIMARY KEY,
-    inbox_item_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
-    cursor_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
-    user_id BIGINT NOT NULL,
-    category notification_category NOT NULL,
-    type VARCHAR(50) NOT NULL,
-    title VARCHAR(255),
-    content TEXT NOT NULL,
-    data JSONB,
-    action_url TEXT,
-    severity notification_severity,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    is_read BOOLEAN NOT NULL DEFAULT FALSE,
-    read_at TIMESTAMPTZ,
-    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-    deleted_at TIMESTAMPTZ
-);
-
-CREATE INDEX idx_inbox_items_cursor_id ON inbox_items (cursor_id) WHERE is_deleted = FALSE;
-CREATE INDEX idx_inbox_items_user_id ON inbox_items (user_id, created_at DESC) WHERE is_deleted = FALSE;
-CREATE INDEX idx_inbox_items_unread ON inbox_items (user_id, is_read, created_at DESC) WHERE is_deleted = FALSE AND is_read = FALSE;
-CREATE INDEX idx_inbox_unread_by_category ON inbox_items (user_id, category, is_read) WHERE is_deleted = FALSE AND is_read = FALSE;
-CREATE INDEX idx_inbox_by_type ON inbox_items (user_id, type, created_at DESC) WHERE is_deleted = FALSE;
-
--- ============================================================
--- 订阅设置
+-- 推送订阅设置（用户推送偏好）
+-- 说明：好友 = 互相关注，无独立好友申请流程
 -- ============================================================
 CREATE TABLE notification_subscriptions (
     user_id BIGINT PRIMARY KEY,
-    friend_request_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-    friend_accepted_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    new_follower_enabled BOOLEAN NOT NULL DEFAULT TRUE,        -- 有人关注我
+    mutual_follow_enabled BOOLEAN NOT NULL DEFAULT TRUE,       -- 互相关注（成为好友）
     group_invite_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     group_invite_response_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     group_application_enabled BOOLEAN NOT NULL DEFAULT TRUE,

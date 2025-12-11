@@ -1,6 +1,11 @@
 /**
  * 密码安全工具类
- * 提供密码哈希计算、nonce验证等安全功能
+ * 提供密码哈希计算等安全功能
+ * 
+ * 根据 api_spec.mdc 密码安全策略：
+ * - 客户端哈希：所有密码相关请求必须使用 SHA256(password) 计算哈希后发送
+ * - 字段命名：API 使用 password_hash 字段接收客户端哈希值
+ * - 算法固定：始终使用 SHA-256，不使用其他哈希算法
  */
 
 import cryptoFramework from '@ohos.security.cryptoFramework';
@@ -13,19 +18,17 @@ const TAG: string = 'PasswordSecurityUtil';
 export class PasswordSecurityUtil {
 
   /**
-   * 计算传输哈希: SHA256(password + nonce + timestamp)
+   * 计算密码哈希: SHA256(password)
+   * 用于注册、登录、设置密码、重置密码、账户升级等场景
+   * 
    * @param password 用户的明文密码
-   * @param nonce 服务器返回的随机数
-   * @param timestamp 服务器返回的时间戳
-   * @returns 计算出的SHA-256哈希值
+   * @returns 计算出的SHA-256哈希值（十六进制字符串）
    */
-  static async calculateTransportHash(password: string, nonce: string, timestamp: number): Promise<string> {
+  static async calculatePasswordHash(password: string): Promise<string> {
     try {
-      const dataToHash = password + nonce + timestamp.toString();
-      
       // 将字符串转换为Uint8Array
       const encoder = new util.TextEncoder();
-      const dataBuffer = encoder.encodeInto(dataToHash);
+      const dataBuffer = encoder.encodeInto(password);
 
       // 创建MD算法实例
       const md = cryptoFramework.createMd('SHA256');
@@ -48,27 +51,20 @@ export class PasswordSecurityUtil {
   }
 
   /**
-   * 验证nonce的有效性
-   * @param nonce 服务器返回的随机数
-   * @param timestamp 服务器返回的时间戳
-   * @param expiresIn nonce的有效期（秒）
-   * @returns 如果nonce有效则返回true，否则返回false
+   * @deprecated 已废弃，使用 calculatePasswordHash 代替
+   * 保留此方法仅为向后兼容，新代码请勿使用
    */
-  static validateNonce(nonce: string, timestamp: number, expiresIn: number): boolean {
-    if (!nonce || !timestamp || !expiresIn) {
-      hilog.warn(DOMAIN_NUMBER, TAG, 'nonce、timestamp或expiresIn缺失');
-      return false;
-    }
+  static async calculateTransportHash(password: string, _nonce?: string, _timestamp?: number): Promise<string> {
+    hilog.warn(DOMAIN_NUMBER, TAG, 'calculateTransportHash 已废弃，请使用 calculatePasswordHash');
+    return PasswordSecurityUtil.calculatePasswordHash(password);
+  }
 
-    const currentTime = Math.floor(Date.now() / 1000); // 当前Unix时间戳
-    const nonceExpiryTime = timestamp + expiresIn;
-
-    if (currentTime > nonceExpiryTime) {
-      hilog.warn(DOMAIN_NUMBER, TAG, `nonce已过期。当前时间: ${currentTime}, 过期时间: ${nonceExpiryTime}`);
-      return false;
-    }
-
-    // 可以在这里添加更多nonce的验证逻辑，例如检查nonce格式等
+  /**
+   * @deprecated 已废弃，nonce 机制已移除
+   * 保留此方法仅为向后兼容，新代码请勿使用
+   */
+  static validateNonce(_nonce: string, _timestamp: number, _expiresIn: number): boolean {
+    hilog.warn(DOMAIN_NUMBER, TAG, 'validateNonce 已废弃，nonce 机制已移除');
     return true;
   }
 

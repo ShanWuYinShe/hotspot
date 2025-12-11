@@ -622,7 +622,7 @@ export class SmartNotificationServiceV2 extends BaseSingleton {
    */
   async createSocialNotification(social: {
     fromUser: string;
-    type: 'message' | 'friend_request' | 'group_invite';
+    type: 'message' | 'new_follower' | 'group_invite';
     content: string;
   }): Promise<string | null> {
     if (!this.config.enableSocialNotifications) {
@@ -631,7 +631,7 @@ export class SmartNotificationServiceV2 extends BaseSingleton {
     
     const typeMap = {
       'message': '新消息',
-      'friend_request': '好友请求',
+      'new_follower': '新关注',
       'group_invite': '群组邀请'
     };
     

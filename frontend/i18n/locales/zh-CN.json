@@ -11,9 +11,9 @@
   "nav": {
     "home": "首页",
     "map": "地图",
-    "moments": "动态",
+    "moments": "附近动态",
     "messages": "消息",
-    "groups": "群组",
+    "groups": "附近群组",
     "users": "用户",
     "my": "我的",
     "myGroups": "我的群组",
@@ -314,7 +314,11 @@
       },
       "recommended": {
         "title": "推荐用户",
-        "empty": "暂无推荐用户"
+        "empty": {
+          "title": "暂无推荐用户",
+          "description": "附近暂时没有推荐的用户，试试搜索吧",
+          "actionText": "搜索用户"
+        }
       },
       "status": {
         "sent": "已发送",

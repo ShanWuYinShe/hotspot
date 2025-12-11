@@ -4,15 +4,18 @@ use sqlx::PgPool;
 
 use crate::{
     dto::{
-        request::{ListFeedRequest, FeedFeedbackRequest},
-        response::{FeedItem, PaginatedData, PaginationMeta},
+        request::{GetFeedMomentsRequest, GetFeedGroupsRequest, GetFeedUsersRequest, GetFeedTrendingRequest, FeedFeedbackRequest},
+        response::{FeedMomentItem, FeedGroupItem, FeedUserItem, FeedTrendingData, TrendingTagItem, PaginatedData, PaginationMeta, MomentSearchItem, GroupSearchItem, UserSearchItem, GeoData},
     },
     error::AppError,
     repositories::{
         feed_repo::FeedRepository,
         moment_repo::MomentRepository,
         user_repo::UserRepository,
+        group_repo::GroupRepository,
+        tag_repo::TagRepository,
     },
+    utils::validation::Validator,
 };
 
 #[derive(Clone)]
@@ -21,6 +24,8 @@ pub struct FeedService {
     feed_repo: FeedRepository,
     moment_repo: MomentRepository,
     user_repo: UserRepository,
+    group_repo: GroupRepository,
+    tag_repo: TagRepository,
 }
 
 impl FeedService {
@@ -29,63 +34,76 @@ impl FeedService {
             redis,
             feed_repo: FeedRepository::new(pool.clone()),
             moment_repo: MomentRepository::new(pool.clone()),
-            user_repo: UserRepository::new(pool),
+            user_repo: UserRepository::new(pool.clone()),
+            group_repo: GroupRepository::new(pool.clone()),
+            tag_repo: TagRepository::new(pool),
         }
     }
 
-    /// 获取个性化信息流
-    pub async fn get_feed(
+    /// 获取瞬间信息流（距离由 PostGIS 计算）
+    pub async fn get_moments_feed(
         &self,
         user_id: i64,
-        req: ListFeedRequest,
-    ) -> Result<PaginatedData<FeedItem>, AppError> {
-        let offset = if let Some(cursor_str) = req.cursor {
-            cursor_str.parse::<i64>()
-                .map_err(|_| AppError::BadRequest("无效的游标".to_string()))?
-        } else {
-            0
+        req: GetFeedMomentsRequest,
+    ) -> Result<PaginatedData<FeedMomentItem>, AppError> {
+        let limit = Validator::validate_limit(req.limit, 100)? as i64;
+        let offset = Validator::parse_offset(req.cursor.as_deref())?;
+
+        // 获取用户位置（用于计算距离）
+        let user_location = self.user_repo.get_location(user_id).await?;
+        let (user_lat, user_lng) = user_location.unwrap_or((35.154922, 112.682524));
+
+        // 根据 source 筛选（使用新的 Feed 方法，返回带距离的结果）
+        let source = req.source.as_deref().unwrap_or("all");
+        
+        let moments = match source {
+            "following" => {
+                self.moment_repo.get_following_feed(user_id, user_lat, user_lng, limit + 1, offset).await?
+            }
+            "nearby" => {
+                let radius = Validator::validate_radius(req.radius, 50000)? as f64;
+                self.moment_repo.get_nearby_feed(user_lat, user_lng, radius, limit + 1, offset).await?
+            }
+            _ => {
+                self.moment_repo.list_latest_feed(user_lat, user_lng, limit + 1, offset).await?
+            }
         };
-        let limit = req.limit.unwrap_or(20).min(100) as i64;
 
-        // 尝试从Redis缓存获取推荐内容
-        let cached_feed = self.get_cached_feed(user_id, offset, limit).await?;
-
-        if !cached_feed.is_empty() {
-            // 从缓存获取成功
-            let has_more = cached_feed.len() > limit as usize;
-            let items: Vec<FeedItem> = if has_more {
-                cached_feed.into_iter().take(limit as usize).collect()
-            } else {
-                cached_feed
-            };
-
-            let next_cursor = if has_more {
-                Some((offset + limit).to_string())
-            } else {
-                None
-            };
-
-            return Ok(PaginatedData {
-                items,
-                pagination: PaginationMeta {
-                    has_more,
-                    next_cursor,
-                },
-            });
-        }
-
-        // 缓存未命中，生成推荐内容
-        let recommended_items = self.generate_recommendations(user_id, offset, limit).await?;
-
-        // 缓存推荐结果
-        self.cache_feed(user_id, &recommended_items).await?;
-
-        let has_more = recommended_items.len() > limit as usize;
-        let items: Vec<FeedItem> = if has_more {
-            recommended_items.into_iter().take(limit as usize).collect()
-        } else {
-            recommended_items
-        };
+        let has_more = moments.len() > limit as usize;
+        let items: Vec<FeedMomentItem> = moments.into_iter()
+            .take(limit as usize)
+            .map(|m| {
+                FeedMomentItem {
+                    moment: MomentSearchItem {
+                        id: m.moment_id.to_string(),
+                        user: crate::dto::response::UserInfo {
+                            user_id: m.user_id,
+                            nickname: m.nickname,
+                            avatar_url: m.avatar_url,
+                            user_type: m.user_type,
+                        },
+                        description: m.description,
+                        images: Some(m.images),
+                        tags: vec![], // TODO: 从 moment_tags 获取
+                        created_at: m.created_at.to_rfc3339(),
+                        likes_count: m.likes_count as i32,
+                        comments_count: m.comments_count as i32,
+                        geo: GeoData {
+                            latitude: m.latitude,
+                            longitude: m.longitude,
+                            location_name: m.location_name,
+                            distance: m.distance as i32,
+                            degrees: m.degrees,
+                        },
+                    },
+                    reason: Some(match source {
+                        "following" => "好友动态".to_string(),
+                        "nearby" => "附近热门".to_string(),
+                        _ => "为你推荐".to_string(),
+                    }),
+                }
+            })
+            .collect();
 
         let next_cursor = if has_more {
             Some((offset + limit).to_string())
@@ -102,192 +120,197 @@ impl FeedService {
         })
     }
 
+    /// 获取群组推荐（距离由 PostGIS 计算）
+    pub async fn get_groups_feed(
+        &self,
+        user_id: i64,
+        req: GetFeedGroupsRequest,
+    ) -> Result<PaginatedData<FeedGroupItem>, AppError> {
+        let limit = Validator::validate_limit(req.limit, 100)? as i64;
+        let offset = Validator::parse_offset(req.cursor.as_deref())?;
+
+        // 获取用户位置
+        let user_location = self.user_repo.get_location(user_id).await?;
+        let (user_lat, user_lng) = user_location.unwrap_or((35.154922, 112.682524));
+        let radius = Validator::validate_radius(req.radius, 50000)? as f64;
+
+        // 获取附近群组（使用 PostGIS 计算距离）
+        let groups = self.group_repo.search_by_location(user_lat, user_lng, radius, limit + 1, offset).await?;
+
+        let has_more = groups.len() > limit as usize;
+        let items: Vec<FeedGroupItem> = groups.into_iter()
+            .take(limit as usize)
+            .map(|g| {
+                FeedGroupItem {
+                    group: GroupSearchItem {
+                        id: g.group_id.to_string(),
+                        name: g.name,
+                        description: g.description,
+                        avatar_url: g.avatar_url,
+                        tags: Some(g.tags),
+                        members_count: g.member_count,
+                        has_password: g.has_password,
+                        geo: GeoData {
+                            latitude: g.latitude,
+                            longitude: g.longitude,
+                            location_name: g.location_name,
+                            distance: g.distance as i32,
+                            degrees: g.degrees,
+                        },
+                    },
+                    reason: Some("附近热门".to_string()),
+                    friends_in_group: None, // TODO: 计算群内好友数
+                }
+            })
+            .collect();
+
+        let next_cursor = if has_more {
+            Some((offset + limit).to_string())
+        } else {
+            None
+        };
+
+        Ok(PaginatedData {
+            items,
+            pagination: PaginationMeta {
+                has_more,
+                next_cursor,
+            },
+        })
+    }
+
+    /// 获取用户推荐（距离由 PostGIS 计算）
+    pub async fn get_users_feed(
+        &self,
+        user_id: i64,
+        req: GetFeedUsersRequest,
+    ) -> Result<PaginatedData<FeedUserItem>, AppError> {
+        let limit = Validator::validate_limit(req.limit, 100)? as i64;
+        let offset = Validator::parse_offset(req.cursor.as_deref())?;
+
+        // 获取用户位置
+        let user_location = self.user_repo.get_location(user_id).await?;
+        let (user_lat, user_lng) = user_location.unwrap_or((35.154922, 112.682524));
+        let radius = Validator::validate_radius(req.radius, 50000)? as f64;
+
+        // 获取附近用户（使用 PostGIS 计算距离）
+        let users = self.user_repo.search_for_feed(user_lat, user_lng, radius, limit + 1, offset, Some(user_id)).await?;
+
+        let has_more = users.len() > limit as usize;
+        let items: Vec<FeedUserItem> = users.into_iter()
+            .take(limit as usize)
+            .map(|u| {
+                FeedUserItem {
+                    user: UserSearchItem {
+                        user_id: u.user_id,
+                        nickname: u.nickname,
+                        avatar_url: u.avatar_url,
+                        bio: u.bio,
+                        tags: Some(u.tags),
+                        geo: GeoData {
+                            latitude: u.latitude,
+                            longitude: u.longitude,
+                            location_name: u.location_name,
+                            distance: u.distance as i32,
+                            degrees: u.degrees,
+                        },
+                    },
+                    reason: Some("附近的人".to_string()),
+                    mutual_friends_count: None, // TODO: 计算共同好友数
+                    common_tags: None, // TODO: 计算共同标签
+                }
+            })
+            .collect();
+
+        let next_cursor = if has_more {
+            Some((offset + limit).to_string())
+        } else {
+            None
+        };
+
+        Ok(PaginatedData {
+            items,
+            pagination: PaginationMeta {
+                has_more,
+                next_cursor,
+            },
+        })
+    }
+
+    /// 获取热门内容
+    pub async fn get_trending(
+        &self,
+        _user_id: i64,
+        req: GetFeedTrendingRequest,
+    ) -> Result<FeedTrendingData, AppError> {
+        let limit = Validator::validate_limit(req.limit, 50)? as i64;
+        let since = chrono::Utc::now() - chrono::Duration::days(crate::constants::TRENDING_WEEKLY_DAYS);
+
+        // 获取热门标签
+        let tags = self.tag_repo.get_trending(limit, since).await?;
+
+        let trending_tags: Vec<TrendingTagItem> = tags.into_iter().map(|t| {
+            TrendingTagItem {
+                name: t.name,
+                usage_count: t.usage_count,
+                trend: "stable".to_string(), // TODO: 计算趋势
+                hot_moment_preview: None, // TODO: 获取该标签下的热门瞬间
+            }
+        }).collect();
+
+        // 获取热门瞬间（最多5个）
+        let hot_moments_raw = self.moment_repo.get_hot_moments(5, since).await?;
+        let hot_moments: Vec<MomentSearchItem> = hot_moments_raw.into_iter().map(|m| {
+            MomentSearchItem {
+                id: m.moment_id.to_string(),
+                user: crate::dto::response::UserInfo {
+                    user_id: m.user_id,
+                    nickname: m.nickname,
+                    avatar_url: m.avatar_url,
+                    user_type: m.user_type,
+                },
+                description: m.description,
+                images: Some(m.images),
+                tags: vec![], // TODO: 从 moment_tags 获取
+                created_at: m.created_at.to_rfc3339(),
+                likes_count: m.likes_count as i32,
+                comments_count: m.comments_count as i32,
+                geo: GeoData {
+                    latitude: m.latitude,
+                    longitude: m.longitude,
+                    location_name: m.location_name,
+                    distance: m.distance as i32,
+                    degrees: m.degrees,
+                },
+            }
+        }).collect();
+
+        Ok(FeedTrendingData {
+            trending_tags,
+            hot_moments,
+        })
+    }
+
     /// 提交反馈
     pub async fn submit_feedback(
         &self,
         user_id: i64,
         req: FeedFeedbackRequest,
     ) -> Result<(), AppError> {
-        // 验证反馈类型
-        let valid_actions = vec!["hide", "not_interested", "clicked", "viewed"];
-        if !valid_actions.contains(&req.action.as_str()) {
-            return Err(AppError::InvalidInput(format!(
-                "无效的反馈动作: {}",
-                req.action
-            )));
-        }
-
-        // 记录反馈到数据库（使用 FeedRepository）
-        let item_uuid = uuid::Uuid::parse_str(&req.item_id)
-            .map_err(|_| AppError::InvalidInput("无效的 item_id 格式".to_string()))?;
+        // 验证 content_id 格式
+        let content_uuid = uuid::Uuid::parse_str(&req.content_id)
+            .map_err(|_| AppError::InvalidInput("无效的 content_id 格式".to_string()))?;
         
-        self.feed_repo.record_feedback(user_id, item_uuid, &req.action).await?;
+        // 记录反馈到数据库
+        self.feed_repo.record_feedback(user_id, content_uuid, &req.action).await?;
 
         // 更新Redis中的推荐权重
         self.update_recommendation_weights(user_id, &req).await?;
 
         // 如果是负面反馈，从缓存中移除该内容
         if req.action == "hide" || req.action == "not_interested" {
-            self.remove_from_cached_feed(user_id, &req.item_id)
-                .await?;
+            self.remove_from_cached_feed(user_id, &req.content_id).await?;
         }
-
-        Ok(())
-    }
-
-    /// 从Redis缓存获取信息流
-    async fn get_cached_feed(
-        &self,
-        user_id: i64,
-        offset: i64,
-        limit: i64,
-    ) -> Result<Vec<FeedItem>, AppError> {
-        let mut conn = self.redis.clone();
-        let redis_key = format!("feed:user:{}", user_id);
-
-        // 获取缓存的内容ID列表
-        let content_ids: Vec<String> = conn
-            .lrange(&redis_key, offset as isize, (offset + limit) as isize)
-            .await
-            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
-
-        if content_ids.is_empty() {
-            return Ok(Vec::new());
-        }
-
-        // 解析并收集所有 moment IDs
-        let mut moment_ids = Vec::new();
-        for content_id in &content_ids {
-            let parts: Vec<&str> = content_id.split(':').collect();
-            if parts.len() == 2 && parts[0] == "moment" {
-                if let Ok(moment_id) = uuid::Uuid::parse_str(parts[1]) {
-                    moment_ids.push(moment_id);
-                }
-            }
-        }
-
-        if moment_ids.is_empty() {
-            return Ok(Vec::new());
-        }
-
-        // 批量获取瞬间信息
-        let moments = self.moment_repo.find_by_ids(&moment_ids).await?;
-        if moments.is_empty() {
-            return Ok(Vec::new());
-        }
-
-        // 批量获取用户信息
-        let user_ids: Vec<i64> = moments.iter().map(|m| m.user_id).collect();
-        let users = self.user_repo.find_by_ids(&user_ids).await?;
-        let user_map: std::collections::HashMap<i64, _> = users.into_iter()
-            .map(|u| (u.user_id, u))
-            .collect();
-
-        // 批量获取统计数据
-        let stats = self.moment_repo.get_stats_batch(&moment_ids).await?;
-
-        // 构建结果
-        let items = moments.into_iter().filter_map(|moment| {
-            let user = user_map.get(&moment.user_id)?;
-            let (likes_count, comments_count) = stats.get(&moment.moment_id).copied().unwrap_or((0, 0));
-            
-            Some(FeedItem {
-                item_id: format!("feed_item_{}", uuid::Uuid::new_v4()),
-                r#type: "moment".to_string(),
-                moment: Some(crate::dto::response::MomentInfo {
-                    id: moment.moment_id.to_string(),
-                    user: crate::dto::response::UserInfo {
-                        user_id: user.user_id.to_string(),
-                        nickname: user.nickname.clone(),
-                        avatar_url: user.avatar_url.clone(),
-                    },
-                    description: moment.description,
-                    images: moment.images,
-                    location_name: moment.location_name,
-                    created_at: moment.created_at.to_rfc3339(),
-                    likes_count: likes_count as i32,
-                    comments_count: comments_count as i32,
-                }),
-                group: None,
-                system: None,
-                reason: "推荐".to_string(),
-                score: Some(0.0),
-            })
-        }).collect();
-
-        Ok(items)
-    }
-
-    /// 生成推荐内容
-    async fn generate_recommendations(
-        &self,
-        _user_id: i64,
-        offset: i64,
-        limit: i64,
-    ) -> Result<Vec<FeedItem>, AppError> {
-        // 使用优化后的批量查询，一次性获取瞬间、用户信息和统计数据
-        let moments_with_stats = self.moment_repo
-            .list_latest_with_user_and_stats(limit + 1, offset)
-            .await
-            .map_err(AppError::from)?;
-
-        let items = moments_with_stats.into_iter().map(|m| {
-            FeedItem {
-                item_id: format!("feed_item_{}", uuid::Uuid::new_v4()),
-                r#type: "moment".to_string(),
-                moment: Some(crate::dto::response::MomentInfo {
-                    id: m.moment.moment_id.to_string(),
-                    user: crate::dto::response::UserInfo {
-                        user_id: m.moment.user_id.to_string(),
-                        nickname: m.nickname,
-                        avatar_url: m.avatar_url,
-                    },
-                    description: m.moment.description,
-                    images: m.moment.images,
-                    location_name: m.moment.location_name,
-                    created_at: m.moment.created_at.to_rfc3339(),
-                    likes_count: m.likes_count as i32,
-                    comments_count: m.comments_count as i32,
-                }),
-                group: None,
-                system: None,
-                reason: "推荐".to_string(),
-                score: Some(1.0),
-            }
-        }).collect();
-
-        Ok(items)
-    }
-
-    /// 缓存信息流
-    async fn cache_feed(
-        &self,
-        user_id: i64,
-        items: &[FeedItem],
-    ) -> Result<(), AppError> {
-        let mut conn = self.redis.clone();
-        let redis_key = format!("feed:user:{}", user_id);
-
-        // 清空旧缓存
-        let _: () = conn
-            .del(&redis_key)
-            .await
-            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
-
-        // 缓存新内容
-        for item in items {
-            let content_id = format!("{}:{}", item.r#type, item.item_id);
-            let _: () = conn
-                .rpush(&redis_key, content_id)
-                .await
-                .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
-        }
-
-        // 设置过期时间（1小时）
-        let _: () = conn
-            .expire(&redis_key, 3600)
-            .await
-            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
 
         Ok(())
     }
@@ -303,14 +326,13 @@ impl FeedService {
 
         // 根据反馈类型调整权重
         let weight_change = match req.action.as_str() {
-            "clicked" => 2.0,
-            "viewed" => 0.5,
             "hide" => -1.0,
             "not_interested" => -2.0,
+            "report" => -3.0,
             _ => 0.0,
         };
 
-        let content_key = &req.item_id;
+        let content_key = format!("{}:{}", req.content_type, req.content_id);
         let _: () = redis::cmd("HINCRBYFLOAT")
             .arg(&redis_key)
             .arg(content_key)
@@ -338,18 +360,4 @@ impl FeedService {
 
         Ok(())
     }
-
-    /// 清空用户的信息流缓存（内部使用）
-    pub async fn clear_feed_cache(&self, user_id: i64) -> Result<(), AppError> {
-        let mut conn = self.redis.clone();
-        let redis_key = format!("feed:user:{}", user_id);
-
-        let _: () = conn
-            .del(&redis_key)
-            .await
-            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
-
-        Ok(())
-    }
 }
-

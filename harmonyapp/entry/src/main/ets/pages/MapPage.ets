@@ -8,10 +8,10 @@ import { ApiClient } from '../common/api/ApiClient';
 import { LocationUtil } from '../common/location/LocationUtil';
 import { PageNames } from '../constants/AppConstants';
 import { 
-  SearchUserByLocationResponse, 
-  SearchGroupByLocationResponse, 
-  SearchMomentsByLocationResponse 
-} from '../common/types/BackendApiTypes';
+  UserSearchItem, 
+  GroupSearchItem, 
+  MomentSearchItem 
+} from '../common/types/api';
 import { SystemLoadingView } from '../components/SystemLoadingView';
 import { SystemToast } from '../components/SystemToast';
 import { SystemAvatar } from '../components/SystemAvatar';
@@ -27,7 +27,7 @@ interface MapMarker {
   longitude: number;
   title: string;
   subtitle?: string;
-  data: SearchUserByLocationResponse | SearchGroupByLocationResponse | SearchMomentsByLocationResponse;
+  data: UserSearchItem | GroupSearchItem | MomentSearchItem;
 }
 
 interface MapCenter {
@@ -136,7 +136,7 @@ struct MapPage {
     }
 
     try {
-      const response = await ApiClient.searchUserByLocation({
+      const response = await ApiClient.searchUsersByLocation({
         latitude: this.mapCenter.latitude,
         longitude: this.mapCenter.longitude,
         radius: 2000,
@@ -144,11 +144,11 @@ struct MapPage {
       });
 
       if (response.code === 0 && response.data) {
-        const userMarkers: MapMarker[] = response.data.items.map((user): MapMarker => ({
+        const userMarkers: MapMarker[] = response.data.items.map((user: UserSearchItem): MapMarker => ({
           id: `user_${user.user_id}`,
           type: 'user',
-          latitude: user.latitude || this.mapCenter!.latitude,
-          longitude: user.longitude || this.mapCenter!.longitude,
+          latitude: user.geo.latitude,
+          longitude: user.geo.longitude,
           title: user.nickname,
           subtitle: user.bio || '用户',
           data: user
@@ -169,7 +169,7 @@ struct MapPage {
     }
 
     try {
-      const response = await ApiClient.searchGroupByLocation({
+      const response = await ApiClient.searchGroupsByLocation({
         latitude: this.mapCenter.latitude,
         longitude: this.mapCenter.longitude,
         radius: 5000,
@@ -177,11 +177,11 @@ struct MapPage {
       });
 
       if (response.code === 0 && response.data) {
-        const groupMarkers: MapMarker[] = response.data.items.map((group): MapMarker => ({
-          id: `group_${group.group_id}`,
+        const groupMarkers: MapMarker[] = response.data.items.map((group: GroupSearchItem): MapMarker => ({
+          id: `group_${group.id}`,
           type: 'group',
-          latitude: group.latitude,
-          longitude: group.longitude,
+          latitude: group.geo.latitude,
+          longitude: group.geo.longitude,
           title: group.name,
           subtitle: `${group.member_count} 成员`,
           data: group
@@ -202,7 +202,7 @@ struct MapPage {
     }
 
     try {
-      const response = await ApiClient.searchMomentByLocation({
+      const response = await ApiClient.searchMomentsByLocation({
         latitude: this.mapCenter.latitude,
         longitude: this.mapCenter.longitude,
         radius: 3000,
@@ -210,12 +210,12 @@ struct MapPage {
       });
 
       if (response.code === 0 && response.data) {
-        const momentMarkers: MapMarker[] = response.data.items.map((moment): MapMarker => ({
-          id: `moment_${moment.moment_id}`,
+        const momentMarkers: MapMarker[] = response.data.items.map((moment: MomentSearchItem): MapMarker => ({
+          id: `moment_${moment.id}`,
           type: 'moment',
-          latitude: moment.latitude,
-          longitude: moment.longitude,
-          title: moment.nickname,
+          latitude: moment.geo.latitude,
+          longitude: moment.geo.longitude,
+          title: moment.user.nickname,
           subtitle: moment.description.length > 20 ? 
             moment.description.substring(0, 20) + '...' : moment.description,
           data: moment
@@ -263,7 +263,7 @@ struct MapPage {
         // 导航到群组详情页面
         this.getUIContext().getRouter().pushUrl({
           url: `pages/${PageNames.GROUP_DETAIL}`,
-          params: { groupId: (marker.data as SearchGroupByLocationResponse).group_id }
+          params: { groupId: (marker.data as GroupSearchItem).id }
         });
         break;
       case 'moment':

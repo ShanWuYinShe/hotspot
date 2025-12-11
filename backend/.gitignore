@@ -6,7 +6,7 @@ Cargo.lock
 /.sqlx
 
 # 环境变量
-.env
+# .env
 
 # IDE
 .idea/

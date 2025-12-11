@@ -1,585 +1,714 @@
 /**
- * WebSocket消息类型定义
- * 根据后端文档规范定义的WebSocket消息格式
+ * WebSocket 实时通信类型定义
+ * 严格遵循 api_spec.mdc WebSocket 实时事件定义
  */
 
+// ============================================================================
+// 通用类型
+// ============================================================================
+
 /**
- * WebSocket消息基础格式
+ * 用户基本信息
  */
-export interface WebSocketMessage {
-  type: string;             // 消息类型标识
-  timestamp: number;        // 消息时间戳（Unix时间戳）
-  data: Record<string, Object>; // 消息数据载荷
+export interface UserInfo {
+  user_id: number
+  nickname: string
+  avatar_url?: string
+  user_type: 'temp' | 'normal' | 'admin' | 'system'
 }
 
 /**
- * 新消息实时推送数据格式
+ * 反应类型
  */
-export interface NewMessageData {
-  message_id: string;       // 消息ID
-  group_id: string;         // 群组ID（统一架构）
-  group_type: string;       // 群组类型：'public_chat'|'private_chat'
-  sender_id?: string;       // 发送者ID（系统消息可为null）
-  sender_name?: string;     // 发送者昵称（系统消息可为null）
-  sender_avatar?: string;   // 发送者头像URL
-  content: string;          // 消息内容
-  message_type: string;     // 消息类型：'text'|'image'|'location'|'file'|'system'
-  system_event_type?: string; // 系统事件类型（仅系统消息）
-  reply_to_message_id?: string; // 回复的消息ID
-  mentioned_users: string[]; // 提及的用户ID数组
-  affected_users: string[]; // 受影响的用户ID数组（系统消息用）
-  sent_at: string;          // 发送时间（ISO 8601）
-  latitude?: number;        // 纬度（位置消息）
-  longitude?: number;       // 经度（位置消息）
-  location_name?: string;   // 位置名称（位置消息）
-  file_url?: string;        // 文件URL（文件消息）
-  file_name?: string;       // 文件名（文件消息）
-  file_size?: number;       // 文件大小（文件消息）
+export type ReactionType = 'like' | 'love' | 'laugh' | 'angry' | 'sad' | 'wow'
+
+/**
+ * 消息类型（接收时使用，包含系统消息）
+ */
+export type ReceiveMessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'system'
+
+/**
+ * 群组设置（部分）
+ */
+export interface GroupSettings {
+  join_method?: 'open' | 'approval' | 'invite_only'
+  is_searchable?: boolean
+  max_members?: number
+  password_hash?: string
+  longitude?: number
+  latitude?: number
+  location_name?: string
 }
 
 /**
- * 消息已读状态通知数据格式
+ * 群组更新字段
  */
-export interface MessageReadData {
-  message_id: string;       // 消息ID
-  group_id: string;         // 群组ID（统一架构）
-  read_by: string;          // 已读用户ID
-  read_by_name: string;     // 已读用户昵称
-  read_at: string;          // 已读时间（ISO 8601）
+export interface GroupUpdatedFields {
+  name?: string
+  description?: string
+  avatar_url?: string
+  settings?: Partial<GroupSettings>
+}
+
+// ============================================================================
+// 订阅管理类型
+// ============================================================================
+
+/**
+ * 订阅项定义
+ * 注意: source_ids 类型根据 source_type 不同而不同
+ *   - group_chat: string[] (群聊ID)
+ *   - user: number[] (用户ID)
+ *   - notification: string[] (通知类型)
+ */
+export interface SubscriptionItem {
+  source_type: 'group_chat' | 'user' | 'notification'
+  source_ids: string[] | number[]
 }
 
 /**
- * 输入状态指示器数据格式
+ * 失败的订阅项
  */
-export interface TypingIndicatorData {
-  group_id: string;         // 群组ID（统一架构）
-  user_id: string;          // 正在输入的用户ID
-  user_name: string;        // 正在输入的用户昵称
-  is_typing: boolean;       // 是否正在输入
+export interface FailedSubscriptionItem {
+  source_type: 'group_chat' | 'user' | 'notification'
+  source_ids: string[] | number[]
+  reason: string
 }
 
-/**
- * 用户上线通知数据格式
- */
-export interface UserOnlineData {
-  user_id: string;          // 用户ID
-  nickname: string;         // 用户昵称
-  avatar_url?: string;      // 头像URL
-  last_seen?: string;       // 最后在线时间（ISO 8601）
-}
+// ============================================================================
+// WebSocket 事件类型枚举
+// ============================================================================
 
 /**
- * 用户下线通知数据格式
+ * 客户端发送事件类型
  */
-export interface UserOfflineData {
-  user_id: string;          // 用户ID
-  nickname: string;         // 用户昵称
-  last_seen: string;        // 最后在线时间（ISO 8601）
-}
+export type ClientEventType =
+  | 'Ping'
+  | 'Pong'
+  | 'Subscribe'
+  | 'Unsubscribe'
+  | 'SetSubscriptions'
+  | 'MarkAsRead'
+  | 'Typing'
 
 /**
- * 用户位置更新通知数据格式
+ * 服务端推送事件类型
  */
-export interface UserLocationUpdateData {
-  user_id: string;          // 用户ID
-  nickname: string;         // 用户昵称
-  latitude: number;         // 纬度
-  longitude: number;        // 经度
-  location_name?: string;   // 位置名称
-  updated_at: string;       // 更新时间（ISO 8601）
-}
+export type ServerEventType =
+  | 'ConnectionEstablished'
+  | 'Heartbeat'
+  | 'UserOnline'
+  | 'UserOffline'
+  | 'UserLocationUpdate'
+  | 'NewFollower'
+  | 'MutualFollow'
+  | 'Unfollowed'
+  | 'MomentLiked'
+  | 'MomentCommented'
+  | 'CommentReply'
+  | 'SystemAnnouncement'
+  | 'ChatMessageNew'
+  | 'ChatMessageEdited'
+  | 'ChatMessageRecalled'
+  | 'ChatMessageDeleted'
+  | 'ChatMessageReaction'
+  | 'ChatMessageRead'
+  | 'UserTyping'
+  | 'GroupMemberJoined'
+  | 'GroupMemberLeft'
+  | 'GroupProfileUpdated'
+  | 'GroupMemberRoleChanged'
+  | 'GroupMemberMuted'
+  | 'GroupMemberUnmuted'
+  | 'GroupDismissed'
+  | 'GroupInviteReceived'
+  | 'GroupInviteResponse'
+  | 'GroupApplicationReceived'
+  | 'GroupApplicationResponse'
+  | 'SubscribeAck'
+  | 'Error'
+
+// ============================================================================
+// 客户端发送事件定义
+// ============================================================================
 
 /**
- * 群组新成员加入通知数据格式
+ * 心跳事件
  */
-export interface GroupMemberJoinedData {
-  group_id: string;         // 群组ID
-  group_name: string;       // 群组名称
-  user_id: string;          // 新成员ID
-  nickname: string;         // 新成员昵称
-  avatar_url?: string;      // 新成员头像URL
-  user_role: string;        // 成员角色：'member'|'admin'|'owner'
-  joined_at: string;        // 加入时间（ISO 8601）
-  invited_by?: string;      // 邀请者ID（如果是被邀请）
-}
-
-/**
- * 群组成员离开通知数据格式
- */
-export interface GroupMemberLeftData {
-  group_id: string;         // 群组ID
-  group_name: string;       // 群组名称
-  user_id: string;          // 离开成员ID
-  nickname: string;         // 离开成员昵称
-  left_at: string;          // 离开时间（ISO 8601）
-  reason: string;           // 离开原因：'leave'|'kick'|'ban'
-  operated_by?: string;     // 操作者ID（踢出/封禁时）
-}
-
-/**
- * 群组角色变更通知数据格式
- */
-export interface GroupRoleChangedData {
-  group_id: string;         // 群组ID
-  group_name: string;       // 群组名称
-  user_id: string;          // 用户ID
-  nickname: string;         // 用户昵称
-  old_role: string;         // 原角色：'member'|'admin'|'owner'
-  new_role: string;         // 新角色：'member'|'admin'|'owner'
-  changed_by: string;       // 操作者ID
-  changed_by_name: string;  // 操作者昵称
-  changed_at: string;       // 变更时间（ISO 8601）
-}
-
-/**
- * 系统级通知消息数据格式
- */
-export interface SystemNotificationData {
-  notification_id: string;  // 通知ID
-  title: string;            // 通知标题
-  content: string;          // 通知内容
-  level: string;            // 通知级别：'info'|'warning'|'error'|'success'
-  category?: string;        // 通知分类：'system'|'security'|'feature'|'maintenance'
-  action_url?: string;      // 操作链接
-  action_text?: string;     // 操作按钮文本
-  expires_at?: string;      // 过期时间（ISO 8601）
-  created_at: string;       // 创建时间（ISO 8601）
-}
-
-/**
- * 附近新生活瞬间通知数据格式
- */
-export interface NewMomentNearbyData {
-  moment_id: string;        // 瞬间ID
-  user_id: string;          // 发布者ID
-  nickname: string;         // 发布者昵称
-  user_avatar?: string;     // 发布者头像URL
-  description: string;      // 瞬间描述
-  latitude: number;         // 纬度
-  longitude: number;        // 经度
-  location_name: string;    // 位置名称
-  distance: number;         // 距离（米）
-  created_at: string;       // 创建时间（ISO 8601）
-  tags: string[];           // 标签数组
-  images?: string[];        // 图片URL数组
-  likes_count: number;      // 点赞数
-}
-
-/**
- * WebSocket消息类型枚举
- */
-export enum WebSocketMessageType {
-  // 实时消息类型
-  NEW_MESSAGE = 'NewMessage',
-  MESSAGE_READ = 'MessageRead',
-  TYPING_INDICATOR = 'TypingIndicator',
-  
-  // 用户状态类型
-  USER_ONLINE = 'UserOnline',
-  USER_OFFLINE = 'UserOffline',
-  USER_LOCATION_UPDATE = 'UserLocationUpdate',
-  
-  // 群组事件类型
-  GROUP_MEMBER_JOINED = 'GroupMemberJoined',
-  GROUP_MEMBER_LEFT = 'GroupMemberLeft',
-  GROUP_ROLE_CHANGED = 'GroupRoleChanged',
-  
-  // 系统通知类型
-  SYSTEM_NOTIFICATION = 'SystemNotification',
-  NEW_MOMENT_NEARBY = 'NewMomentNearby'
-}
-
-/**
- * 类型检查函数：检查数据是否为有效的 WebSocketMessage
- */
-export function isWebSocketMessage(data: Record<string, Object>): boolean {
-  return typeof data.type === 'string' && 
-         typeof data.timestamp === 'number' && 
-         typeof data.data === 'object' && 
-         data.data !== null;
-}
-
-/**
- * 类型检查函数：检查数据是否为新消息类型
- */
-export function isNewMessageData(data: Record<string, Object>): boolean {
-  return typeof data.message_id === 'string' && 
-         typeof data.group_id === 'string' && 
-         typeof data.content === 'string';
-}
-
-/**
- * 类型检查函数：检查数据是否为消息已读类型
- */
-export function isMessageReadData(data: Record<string, Object>): boolean {
-  return typeof data.message_id === 'string' && 
-         typeof data.group_id === 'string' && 
-         typeof data.read_by === 'string';
-}
-
-/**
- * 类型检查函数：检查数据是否为输入状态指示器类型
- */
-export function isTypingIndicatorData(data: Record<string, Object>): boolean {
-  return typeof data.group_id === 'string' && 
-         typeof data.user_id === 'string' && 
-         typeof data.is_typing === 'boolean';
-}
-
-/**
- * 类型检查函数：检查数据是否为用户上线类型
- */
-export function isUserOnlineData(data: Record<string, Object>): boolean {
-  return typeof data.user_id === 'string' && 
-         typeof data.nickname === 'string';
-}
-
-/**
- * 类型检查函数：检查数据是否为用户下线类型
- */
-export function isUserOfflineData(data: Record<string, Object>): boolean {
-  return typeof data.user_id === 'string' && 
-         typeof data.nickname === 'string' && 
-         typeof data.last_seen === 'string';
-}
-
-/**
- * 类型检查函数：检查数据是否为用户位置更新类型
- */
-export function isUserLocationUpdateData(data: Record<string, Object>): boolean {
-  return typeof data.user_id === 'string' && 
-         typeof data.nickname === 'string' && 
-         typeof data.latitude === 'number' && 
-         typeof data.longitude === 'number';
-}
-
-/**
- * 类型检查函数：检查数据是否为群组成员加入类型
- */
-export function isGroupMemberJoinedData(data: Record<string, Object>): boolean {
-  return typeof data.group_id === 'string' && 
-         typeof data.user_id === 'string' && 
-         typeof data.nickname === 'string';
-}
-
-/**
- * 类型检查函数：检查数据是否为群组成员离开类型
- */
-export function isGroupMemberLeftData(data: Record<string, Object>): boolean {
-  return typeof data.group_id === 'string' && 
-         typeof data.user_id === 'string' && 
-         typeof data.nickname === 'string';
-}
-
-/**
- * 类型检查函数：检查数据是否为系统通知类型
- */
-export function isSystemNotificationData(data: Record<string, Object>): boolean {
-  return typeof data.notification_id === 'string' && 
-         typeof data.title === 'string' && 
-         typeof data.content === 'string';
-}
-
-/**
- * 类型检查函数：检查数据是否为附近新瞬间类型
- */
-export function isNewMomentNearbyData(data: Record<string, Object>): boolean {
-  return typeof data.moment_id === 'string' && 
-         typeof data.user_id === 'string' && 
-         typeof data.nickname === 'string';
-}
-
-/**
- * WebSocket消息解析结果接口
- */
-export interface WebSocketParseResult {
-  message: WebSocketMessage | null;
-  newMessageData: NewMessageData | null;
-  typingIndicatorData: TypingIndicatorData | null;
-  messageReadData: MessageReadData | null;
-  userOnlineData: UserOnlineData | null;
-  userOfflineData: UserOfflineData | null;
-  userLocationUpdateData: UserLocationUpdateData | null;
-  groupMemberJoinedData: GroupMemberJoinedData | null;
-  groupMemberLeftData: GroupMemberLeftData | null;
-  systemNotificationData: SystemNotificationData | null;
-  newMomentNearbyData: NewMomentNearbyData | null;
-}
-
-/**
- * WebSocket消息类型转换工具函数
- */
-export class WebSocketMessageConverter {
-  
-  /**
-   * 将Record转换为WebSocketMessage
-   */
-  static toWebSocketMessage(rawData: Record<string, Object>): WebSocketMessage | null {
-    if (isWebSocketMessage(rawData)) {
-      const message: WebSocketMessage = {
-        type: rawData.type as string,
-        timestamp: rawData.timestamp as number,
-        data: rawData.data as Record<string, Object>
-      };
-      return message;
-    }
-    return null;
+export interface PingEvent {
+  type: 'Ping'
+  payload: {
+    timestamp: string
   }
+}
 
-  /**
-   * 将Record转换为NewMessageData
-   */
-  static toNewMessageData(data: Record<string, Object>): NewMessageData | null {
-    if (isNewMessageData(data)) {
-      const messageData: NewMessageData = {
-        message_id: data.message_id as string,
-        group_id: data.group_id as string,
-        group_type: data.group_type as string,
-        sender_id: data.sender_id as string,
-        sender_name: data.sender_name as string,
-        sender_avatar: data.sender_avatar as string,
-        content: data.content as string,
-        message_type: data.message_type as string,
-        system_event_type: data.system_event_type as string,
-        reply_to_message_id: data.reply_to_message_id as string,
-        mentioned_users: data.mentioned_users as string[],
-        affected_users: data.affected_users as string[],
-        sent_at: data.sent_at as string,
-        latitude: data.latitude as number,
-        longitude: data.longitude as number,
-        location_name: data.location_name as string,
-        file_url: data.file_url as string,
-        file_name: data.file_name as string,
-        file_size: data.file_size as number
-      };
-      return messageData;
-    }
-    return null;
+export interface PongEvent {
+  type: 'Pong'
+  payload: {
+    timestamp: string
   }
+}
 
-  /**
-   * 将Record转换为TypingIndicatorData
-   */
-  static toTypingIndicatorData(data: Record<string, Object>): TypingIndicatorData | null {
-    if (isTypingIndicatorData(data)) {
-      const typingData: TypingIndicatorData = {
-        group_id: data.group_id as string,
-        user_id: data.user_id as string,
-        user_name: data.user_name as string,
-        is_typing: data.is_typing as boolean
-      };
-      return typingData;
-    }
-    return null;
+/**
+ * 订阅事件
+ */
+export interface SubscribeEvent {
+  type: 'Subscribe'
+  payload: {
+    items: SubscriptionItem[]
   }
+}
 
-  /**
-   * 将Record转换为MessageReadData
-   */
-  static toMessageReadData(data: Record<string, Object>): MessageReadData | null {
-    if (isMessageReadData(data)) {
-      const readData: MessageReadData = {
-        message_id: data.message_id as string,
-        group_id: data.group_id as string,
-        read_by: data.read_by as string,
-        read_by_name: data.read_by_name as string,
-        read_at: data.read_at as string
-      };
-      return readData;
-    }
-    return null;
+export interface UnsubscribeEvent {
+  type: 'Unsubscribe'
+  payload: {
+    items: SubscriptionItem[]
   }
+}
 
-  /**
-   * 将Record转换为UserOnlineData
-   */
-  static toUserOnlineData(data: Record<string, Object>): UserOnlineData | null {
-    if (isUserOnlineData(data)) {
-      const onlineData: UserOnlineData = {
-        user_id: data.user_id as string,
-        nickname: data.nickname as string,
-        avatar_url: data.avatar_url as string,
-        last_seen: data.last_seen as string
-      };
-      return onlineData;
-    }
-    return null;
+export interface SetSubscriptionsEvent {
+  type: 'SetSubscriptions'
+  payload: {
+    items: SubscriptionItem[]
   }
+}
 
-  /**
-   * 将Record转换为UserOfflineData
-   */
-  static toUserOfflineData(data: Record<string, Object>): UserOfflineData | null {
-    if (isUserOfflineData(data)) {
-      const offlineData: UserOfflineData = {
-        user_id: data.user_id as string,
-        nickname: data.nickname as string,
-        last_seen: data.last_seen as string
-      };
-      return offlineData;
-    }
-    return null;
+/**
+ * 标记已读事件
+ */
+export interface MarkAsReadEvent {
+  type: 'MarkAsRead'
+  payload: {
+    chat_type: 'private_chat' | 'group_chat'
+    chat_id: string
+    up_to: string
   }
+}
 
-  /**
-   * 将Record转换为SystemNotificationData
-   */
-  static toSystemNotificationData(data: Record<string, Object>): SystemNotificationData | null {
-    if (isSystemNotificationData(data)) {
-      const notificationData: SystemNotificationData = {
-        notification_id: data.notification_id as string,
-        title: data.title as string,
-        content: data.content as string,
-        level: data.level as string,
-        category: data.category as string,
-        action_url: data.action_url as string,
-        action_text: data.action_text as string,
-        expires_at: data.expires_at as string,
-        created_at: data.created_at as string
-      };
-      return notificationData;
-    }
-    return null;
+/**
+ * 正在输入事件
+ */
+export interface TypingEvent {
+  type: 'Typing'
+  payload: {
+    chat_type: 'private_chat' | 'group_chat'
+    chat_id: string
+    is_typing: boolean
   }
+}
 
-  static toUserLocationUpdateData(data: Record<string, Object>): UserLocationUpdateData | null {
-    if (isUserLocationUpdateData(data)) {
-      const locationData: UserLocationUpdateData = {
-        user_id: data.user_id as string,
-        nickname: data.nickname as string,
-        latitude: data.latitude as number,
-        longitude: data.longitude as number,
-        location_name: data.location_name as string,
-        updated_at: data.updated_at as string
-      };
-      return locationData;
-    }
-    return null;
+// ============================================================================
+// 服务端推送事件定义
+// ============================================================================
+
+// ----- 连接管理事件 -----
+
+export interface ConnectionEstablishedEvent {
+  type: 'ConnectionEstablished'
+  payload: {
+    connection_id: string
+    user_id: number
+    server_time: string
   }
+}
 
-  static toGroupMemberJoinedData(data: Record<string, Object>): GroupMemberJoinedData | null {
-    if (isGroupMemberJoinedData(data)) {
-      const joinedData: GroupMemberJoinedData = {
-        group_id: data.group_id as string,
-        group_name: data.group_name as string,
-        user_id: data.user_id as string,
-        nickname: data.nickname as string,
-        avatar_url: data.avatar_url as string,
-        joined_at: data.joined_at as string,
-        invited_by: data.invited_by as string,
-        user_role: data.user_role as string
-      };
-      return joinedData;
-    }
-    return null;
+export interface HeartbeatEvent {
+  type: 'Heartbeat'
+  payload: {
+    timestamp: string
   }
+}
 
-  static toGroupMemberLeftData(data: Record<string, Object>): GroupMemberLeftData | null {
-    if (isGroupMemberLeftData(data)) {
-      const leftData: GroupMemberLeftData = {
-        group_id: data.group_id as string,
-        group_name: data.group_name as string,
-        user_id: data.user_id as string,
-        nickname: data.nickname as string,
-        left_at: data.left_at as string,
-        reason: data.reason as string
-      };
-      return leftData;
-    }
-    return null;
+// ----- 在线状态事件 -----
+
+export interface UserOnlineEvent {
+  type: 'UserOnline'
+  payload: {
+    user_id: number
+    nickname: string
+    avatar_url?: string
+    online_at: string
   }
+}
 
-  static toNewMomentNearbyData(data: Record<string, Object>): NewMomentNearbyData | null {
-    if (isNewMomentNearbyData(data)) {
-      const momentData: NewMomentNearbyData = {
-        moment_id: data.moment_id as string,
-        user_id: data.user_id as string,
-        nickname: data.nickname as string,
-        user_avatar: data.user_avatar as string,
-        description: data.description as string,
-        latitude: data.latitude as number,
-        longitude: data.longitude as number,
-        location_name: data.location_name as string,
-        distance: data.distance as number,
-        created_at: data.created_at as string,
-        tags: data.tags as string[],
-        images: data.images as string[],
-        likes_count: data.likes_count as number
-      };
-      return momentData;
-    }
-    return null;
+export interface UserOfflineEvent {
+  type: 'UserOffline'
+  payload: {
+    user_id: number
+    offline_at: string
   }
+}
 
-  /**
-   * 完整的消息解析
-   */
-  static parseWebSocketMessage(rawData: Record<string, Object>): WebSocketParseResult {
-    const message = WebSocketMessageConverter.toWebSocketMessage(rawData);
-    if (!message) {
-      return {
-        message: null,
-        newMessageData: null,
-        typingIndicatorData: null,
-        messageReadData: null,
-        userOnlineData: null,
-        userOfflineData: null,
-        userLocationUpdateData: null,
-        groupMemberJoinedData: null,
-        groupMemberLeftData: null,
-        systemNotificationData: null,
-        newMomentNearbyData: null
-      };
-    }
-
-    const result: WebSocketParseResult = {
-      message: message,
-      newMessageData: null,
-      typingIndicatorData: null,
-      messageReadData: null,
-      userOnlineData: null,
-      userOfflineData: null,
-      userLocationUpdateData: null,
-      groupMemberJoinedData: null,
-      groupMemberLeftData: null,
-      systemNotificationData: null,
-      newMomentNearbyData: null
-    };
-
-    // 根据消息类型转换对应的数据
-    switch (message.type) {
-      case WebSocketMessageType.NEW_MESSAGE:
-        result.newMessageData = WebSocketMessageConverter.toNewMessageData(message.data);
-        break;
-      case WebSocketMessageType.TYPING_INDICATOR:
-        result.typingIndicatorData = WebSocketMessageConverter.toTypingIndicatorData(message.data);
-        break;
-      case WebSocketMessageType.MESSAGE_READ:
-        result.messageReadData = WebSocketMessageConverter.toMessageReadData(message.data);
-        break;
-      case WebSocketMessageType.USER_ONLINE:
-        result.userOnlineData = WebSocketMessageConverter.toUserOnlineData(message.data);
-        break;
-      case WebSocketMessageType.USER_OFFLINE:
-        result.userOfflineData = WebSocketMessageConverter.toUserOfflineData(message.data);
-        break;
-      case WebSocketMessageType.USER_LOCATION_UPDATE:
-        result.userLocationUpdateData = WebSocketMessageConverter.toUserLocationUpdateData(message.data);
-        break;
-      case WebSocketMessageType.GROUP_MEMBER_JOINED:
-        result.groupMemberJoinedData = WebSocketMessageConverter.toGroupMemberJoinedData(message.data);
-        break;
-      case WebSocketMessageType.GROUP_MEMBER_LEFT:
-        result.groupMemberLeftData = WebSocketMessageConverter.toGroupMemberLeftData(message.data);
-        break;
-      case WebSocketMessageType.SYSTEM_NOTIFICATION:
-        result.systemNotificationData = WebSocketMessageConverter.toSystemNotificationData(message.data);
-        break;
-      case WebSocketMessageType.NEW_MOMENT_NEARBY:
-        result.newMomentNearbyData = WebSocketMessageConverter.toNewMomentNearbyData(message.data);
-        break;
-    }
-
-    return result;
+export interface UserLocationUpdateEvent {
+  type: 'UserLocationUpdate'
+  payload: {
+    user_id: number
+    latitude: number
+    longitude: number
+    location_name: string
+    updated_at: string
   }
+}
+
+// ----- 关注关系事件 -----
+
+export interface NewFollowerEvent {
+  type: 'NewFollower'
+  payload: {
+    user: UserInfo
+    followed_at: string
+    is_mutual: boolean
+  }
+}
+
+export interface MutualFollowEvent {
+  type: 'MutualFollow'
+  payload: {
+    user: UserInfo
+    mutual_at: string
+  }
+}
+
+export interface UnfollowedEvent {
+  type: 'Unfollowed'
+  payload: {
+    user_id: number
+    unfollowed_at: string
+    was_mutual: boolean
+  }
+}
+
+// ----- 生活瞬间互动事件 -----
+
+export interface MomentLikedEvent {
+  type: 'MomentLiked'
+  payload: {
+    moment_id: string
+    user: UserInfo
+    liked_at: string
+  }
+}
+
+export interface MomentCommentedEvent {
+  type: 'MomentCommented'
+  payload: {
+    moment_id: string
+    comment_id: string
+    user: UserInfo
+    content: string
+    commented_at: string
+  }
+}
+
+export interface CommentReplyEvent {
+  type: 'CommentReply'
+  payload: {
+    moment_id: string
+    comment_id: string
+    reply_id: string
+    user: UserInfo
+    content: string
+    replied_at: string
+  }
+}
+
+export interface SystemAnnouncementEvent {
+  type: 'SystemAnnouncement'
+  payload: {
+    id: string
+    title: string
+    content: string
+    severity: 'info' | 'warning' | 'error'
+    action_url?: string
+    created_at: string
+  }
+}
+
+// ----- 聊天消息事件 -----
+
+export interface ChatMessageNewEvent {
+  type: 'ChatMessageNew'
+  payload: {
+    id: string
+    chat_type: 'private_chat' | 'group_chat'
+    chat_id: string
+    sender: UserInfo
+    message_type: ReceiveMessageType
+    content?: string
+    reply_to?: string
+    mentions?: number[]
+    // 媒体消息字段
+    media_url?: string
+    thumbnail_url?: string
+    file_name?: string
+    file_size?: number
+    duration?: number
+    width?: number
+    height?: number
+    sent_at: string
+  }
+}
+
+export interface ChatMessageEditedEvent {
+  type: 'ChatMessageEdited'
+  payload: {
+    id: string
+    chat_type: 'private_chat' | 'group_chat'
+    chat_id: string
+    content: string
+    edited_at: string
+  }
+}
+
+export interface ChatMessageRecalledEvent {
+  type: 'ChatMessageRecalled'
+  payload: {
+    id: string
+    chat_type: 'private_chat' | 'group_chat'
+    chat_id: string
+    recalled_by: number
+    recalled_at: string
+  }
+}
+
+export interface ChatMessageDeletedEvent {
+  type: 'ChatMessageDeleted'
+  payload: {
+    id: string
+    chat_type: 'private_chat' | 'group_chat'
+    chat_id: string
+    deleted_by: number
+    for_everyone: boolean
+    deleted_at: string
+  }
+}
+
+export interface ChatMessageReactionEvent {
+  type: 'ChatMessageReaction'
+  payload: {
+    id: string
+    chat_type: 'private_chat' | 'group_chat'
+    chat_id: string
+    user: UserInfo
+    reaction_type: ReactionType
+    has_reaction: boolean
+    created_at: string
+  }
+}
+
+export interface ChatMessageReadEvent {
+  type: 'ChatMessageRead'
+  payload: {
+    chat_type: 'private_chat' | 'group_chat'
+    chat_id: string
+    up_to: string
+    reader_id: number
+    read_at: string
+  }
+}
+
+export interface UserTypingEvent {
+  type: 'UserTyping'
+  payload: {
+    chat_type: 'private_chat' | 'group_chat'
+    chat_id: string
+    user_id: number
+    nickname: string
+    is_typing: boolean
+  }
+}
+
+// ----- 群组事件 -----
+
+export interface GroupMemberJoinedEvent {
+  type: 'GroupMemberJoined'
+  payload: {
+    group_chat_id: string
+    user: UserInfo
+    joined_at: string
+  }
+}
+
+export interface GroupMemberLeftEvent {
+  type: 'GroupMemberLeft'
+  payload: {
+    group_chat_id: string
+    user_id: number
+    left_at: string
+  }
+}
+
+export interface GroupProfileUpdatedEvent {
+  type: 'GroupProfileUpdated'
+  payload: {
+    group_chat_id: string
+    updated_fields: GroupUpdatedFields
+    updated_at: string
+  }
+}
+
+export interface GroupMemberRoleChangedEvent {
+  type: 'GroupMemberRoleChanged'
+  payload: {
+    group_chat_id: string
+    user_id: number
+    old_role: 'owner' | 'admin' | 'member'
+    new_role: 'owner' | 'admin' | 'member'
+    changed_at: string
+  }
+}
+
+export interface GroupMemberMutedEvent {
+  type: 'GroupMemberMuted'
+  payload: {
+    group_chat_id: string
+    user_id: number
+    muted_until: string
+    muted_at: string
+  }
+}
+
+export interface GroupMemberUnmutedEvent {
+  type: 'GroupMemberUnmuted'
+  payload: {
+    group_chat_id: string
+    user_id: number
+    unmuted_at: string
+  }
+}
+
+export interface GroupDismissedEvent {
+  type: 'GroupDismissed'
+  payload: {
+    group_chat_id: string
+    dismissed_by: number
+    dismissed_at: string
+  }
+}
+
+export interface GroupInviteReceivedEvent {
+  type: 'GroupInviteReceived'
+  payload: {
+    id: string
+    group_chat_id: string
+    group_name: string
+    inviter: UserInfo
+    message?: string
+    created_at: string
+  }
+}
+
+export interface GroupInviteResponseEvent {
+  type: 'GroupInviteResponse'
+  payload: {
+    id: string
+    group_chat_id: string
+    user: UserInfo
+    status: 'accepted' | 'rejected'
+    responded_at: string
+  }
+}
+
+export interface GroupApplicationReceivedEvent {
+  type: 'GroupApplicationReceived'
+  payload: {
+    id: string
+    group_chat_id: string
+    applicant: UserInfo
+    message?: string
+    created_at: string
+  }
+}
+
+export interface GroupApplicationResponseEvent {
+  type: 'GroupApplicationResponse'
+  payload: {
+    id: string
+    group_chat_id: string
+    group_name: string
+    status: 'accepted' | 'rejected'
+    responded_at: string
+  }
+}
+
+// ----- 系统事件 -----
+
+export interface SubscribeAckEvent {
+  type: 'SubscribeAck'
+  payload: {
+    operation: 'subscribe' | 'unsubscribe' | 'set'
+    items: SubscriptionItem[]
+    code: number
+    message?: string
+    failed_items?: FailedSubscriptionItem[]
+  }
+}
+
+export interface ErrorEvent {
+  type: 'Error'
+  payload: {
+    code: number
+    message: string
+    details?: Record<string, Object>
+  }
+}
+
+// ============================================================================
+// 联合类型
+// ============================================================================
+
+export type ClientEvent =
+  | PingEvent
+  | PongEvent
+  | SubscribeEvent
+  | UnsubscribeEvent
+  | SetSubscriptionsEvent
+  | MarkAsReadEvent
+  | TypingEvent
+
+export type ServerEvent =
+  | ConnectionEstablishedEvent
+  | HeartbeatEvent
+  | UserOnlineEvent
+  | UserOfflineEvent
+  | UserLocationUpdateEvent
+  | NewFollowerEvent
+  | MutualFollowEvent
+  | UnfollowedEvent
+  | MomentLikedEvent
+  | MomentCommentedEvent
+  | CommentReplyEvent
+  | SystemAnnouncementEvent
+  | ChatMessageNewEvent
+  | ChatMessageEditedEvent
+  | ChatMessageRecalledEvent
+  | ChatMessageDeletedEvent
+  | ChatMessageReactionEvent
+  | ChatMessageReadEvent
+  | UserTypingEvent
+  | GroupMemberJoinedEvent
+  | GroupMemberLeftEvent
+  | GroupProfileUpdatedEvent
+  | GroupMemberRoleChangedEvent
+  | GroupMemberMutedEvent
+  | GroupMemberUnmutedEvent
+  | GroupDismissedEvent
+  | GroupInviteReceivedEvent
+  | GroupInviteResponseEvent
+  | GroupApplicationReceivedEvent
+  | GroupApplicationResponseEvent
+  | SubscribeAckEvent
+  | ErrorEvent
+
+// ============================================================================
+// 辅助类型
+// ============================================================================
+
+/**
+ * WebSocket 连接状态
+ */
+export type WebSocketState = 'connecting' | 'connected' | 'disconnected' | 'error'
+
+/**
+ * 重连策略配置
+ */
+export interface ReconnectConfig {
+  baseDelay: number      // 基础延迟（毫秒），默认 1000
+  maxDelay: number       // 最大延迟（毫秒），默认 30000
+  maxAttempts: number    // 最大重连次数，默认 10
+  jitterFactor: number   // 随机抖动因子，默认 0.2
+}
+
+// ============================================================================
+// 辅助函数
+// ============================================================================
+
+/**
+ * 创建 Ping 事件
+ */
+export function createPingEvent(): PingEvent {
+  return {
+    type: 'Ping',
+    payload: {
+      timestamp: new Date().toISOString()
+    }
+  }
+}
+
+/**
+ * 创建订阅事件
+ */
+export function createSubscribeEvent(items: SubscriptionItem[]): SubscribeEvent {
+  return {
+    type: 'Subscribe',
+    payload: { items }
+  }
+}
+
+/**
+ * 创建取消订阅事件
+ */
+export function createUnsubscribeEvent(items: SubscriptionItem[]): UnsubscribeEvent {
+  return {
+    type: 'Unsubscribe',
+    payload: { items }
+  }
+}
+
+/**
+ * 创建替换式订阅事件
+ */
+export function createSetSubscriptionsEvent(items: SubscriptionItem[]): SetSubscriptionsEvent {
+  return {
+    type: 'SetSubscriptions',
+    payload: { items }
+  }
+}
+
+/**
+ * 创建标记已读事件
+ */
+export function createMarkAsReadEvent(
+  chat_type: 'private_chat' | 'group_chat',
+  chat_id: string,
+  up_to: string
+): MarkAsReadEvent {
+  return {
+    type: 'MarkAsRead',
+    payload: { chat_type, chat_id, up_to }
+  }
+}
+
+/**
+ * 创建正在输入事件
+ */
+export function createTypingEvent(
+  chat_type: 'private_chat' | 'group_chat',
+  chat_id: string,
+  is_typing: boolean
+): TypingEvent {
+  return {
+    type: 'Typing',
+    payload: { chat_type, chat_id, is_typing }
+  }
+}
+
+/**
+ * 解析服务端事件
+ */
+export function parseServerEvent(data: string): ServerEvent | null {
+  try {
+    const event = JSON.parse(data) as ServerEvent
+    return event
+  } catch (e) {
+    console.error('Failed to parse WebSocket message:', e)
+    return null
+  }
+}
+
+/**
+ * 序列化客户端事件
+ */
+export function serializeClientEvent(event: ClientEvent): string {
+  return JSON.stringify(event)
 }

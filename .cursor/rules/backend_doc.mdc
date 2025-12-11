@@ -20,10 +20,10 @@ alwaysApply: false
 3. 遇到冲突时，以 @api_spec.mdc 为准
 
 **API规范快速引用**：
-- 完整的API端点定义 → @api_spec.mdc 第3章
-- 完整的WebSocket事件定义 → @api_spec.mdc 第4章
-- 完整的错误码定义 → @api_spec.mdc 第2.5节
-- 通用类型定义 → @api_spec.mdc 第2.2节
+- 完整的API端点定义 → @api_spec.mdc API端点与类型定义
+- 完整的WebSocket事件定义 → @api_spec.mdc WebSocket实时事件定义
+- 完整的错误码定义 → @api_spec.mdc 错误码定义
+- 通用类型定义 → @api_spec.mdc 通用类型定义
 
 ## 1. 项目概述
 
@@ -298,7 +298,7 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
    ↓
 3. 连接建立，存入连接池
    ↓
-4. 心跳保活（25秒一次 Ping/Pong）
+4. 心跳保活（服务端60秒一次 Ping，客户端45秒一次 Ping）
    ↓
 5. 事件触发（新消息、状态变更等）
    ↓
@@ -351,7 +351,7 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
 
 **2. 用户模块 (user)**
 - **职责**：用户资料管理、用户搜索、关系管理（好友/关注/拉黑）、位置更新
-- **数据存储**：users、user_settings、user_follows、user_blocks、user_friend_requests、sessions、user_location_history、user_online_status 表
+- **数据存储**：users、user_settings、user_follows、user_blocks、user_friend_remarks、sessions、user_location_history、user_online_status 表
 - **依赖**：auth（认证）
 - **被依赖**：几乎所有模块
 - **架构决策**：
@@ -385,7 +385,7 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
   - ❌ **不提供消息搜索API**（由前端本地实现）
   - ❌ **不提供未读汇总API**（由前端本地统计）
   - ✅ **提供消息历史API**（支持分页查询）
-  - ✅ **提供批量标记已读API**（跨聊天批量操作）
+  - ✅ **提供标记全部已读API**（mark_all_as_read）
 
 **6. 未读计数模块 (chat_unread_counts)**
 - **职责**：管理所有聊天（私聊和群聊）的未读计数
@@ -398,7 +398,7 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
 - **职责**：发布瞬间、搜索瞬间、点赞/取消点赞、编辑/删除、收藏管理
 - **数据存储**：moments、moment_likes、moment_favorites 表
 - **依赖**：auth、user、media
-- **被依赖**：comment、feed、leaderboard
+- **被依赖**：comment、feed
 
 **8. 评论模块 (comment)**
 - **职责**：发布评论、回复评论、删除评论、点赞评论、查询评论列表
@@ -419,7 +419,7 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
 - **说明**：处理用户、群组、消息、瞬间等内容的举报
 
 **10. 通知订阅设置模块 (event_subscriptions)**
-- **职责**：设置通知订阅偏好（好友申请、群组邀请、@提及等）
+- **职责**：设置通知订阅偏好（新关注者、互相关注、群组邀请、@提及等）
 - **数据存储**：event_subscriptions 表
 - **依赖**：auth、user
 - **被依赖**：notification（推送时检查设置）
@@ -443,21 +443,23 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
 
 这些模块不直接存储核心业务数据，而是基于其他模块的数据进行聚合、分析和推荐：
 
-**12. 收件箱模块 (inbox)**
-- **职责**：收件箱提醒历史查询、标记已读、删除提醒、设备 Token 管理（APNs/FCM）
-- **数据存储**：inbox_items 表（或 notifications 表）、device_tokens 表
-- **依赖**：auth、user、chat_messages、comment、group
-- **被依赖**：无
-- **API 路径**：`/api/v1/protected/inbox/*`
-- **实现方式**：
-  - 监听其他模块的事件（新消息、新评论、群组邀请等）
-  - 生成收件箱提醒记录并推送到设备
-  - 提供历史查询接口
-- **说明**：收件箱是系统生成的单向提醒，不同于双向的聊天消息
-- **提醒分类**：
-  - social（社交）：好友申请、群组邀请
-  - content（内容）：点赞、评论、@提及
-  - system（系统）：公告、维护通知、安全警告
+**12. 推送设备管理模块 (device_tokens)**
+- **职责**：管理推送设备令牌（APNs/FCM/HarmonyOS Push）
+- **数据存储**：device_tokens 表、Redis（在线状态、待处理计数）
+- **依赖**：auth、user
+- **被依赖**：WebSocket 推送系统
+- **API 路径**：`/api/v1/protected/device_tokens/*`
+- **架构说明**：
+  - ⚠️ **通知不存储**：通知是实时推送机制，不是独立存储的数据
+  - **在线推送**：WebSocket 实时推送事件（新消息、新关注、点赞等）
+  - **离线推送**：通过设备令牌推送到移动端
+  - **冷启动获取**：调用各业务 API 获取待处理数据
+    - 未读消息：`get_private_chats` / `get_joined`（包含 unread_count）
+    - 群组邀请：`get_group_invites`
+    - 群组申请：`get_group_applications`
+- **Redis 缓存**：
+  - 待处理群组邀请数：`pending:invite:{user_id}`
+  - 待审批群组申请数：`pending:apply:{group_id}`
 
 **13. 事件订阅与推送模块 (subscription)**
 - **职责**：配置事件订阅偏好（持久化）、WebSocket 实时订阅管理
@@ -470,40 +472,29 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
     - 层级 1：API 管理持久化订阅偏好（跨设备生效）
     - 层级 2：WebSocket 管理实时订阅（仅对应连接生效）
   - **推送逻辑**：最终推送 = 持久化偏好 AND 实时订阅
-  - **三种订阅事件**（详见 api_spec.mdc 第 4.4 节）：
+  - **三种订阅事件**（详见 api_spec.mdc 客户端发送事件）：
     - `Subscribe` - 增量订阅（追加到现有订阅）
     - `Unsubscribe` - 取消订阅（从现有订阅中移除）
     - `SetSubscriptions` - 替换式订阅（覆盖现有订阅）
   - **订阅项类型**（`source_type`）：
     - `group_chat` - 群聊消息事件（需要订阅，`source_ids` 为 `group_chat_id` 数组）
     - `user` - 用户在线状态、位置更新等（`source_ids` 为 `user_id` 数组）
-    - `notification` - 收件箱提醒（`source_ids` 为通知类型数组，如 `["friend_request", "moment_like"]`）
+    - `notification` - 收件箱提醒（`source_ids` 为通知类型数组，如 `["new_follower", "moment_like"]`）
     - **注意**：私聊消息自动推送，无需订阅
 
-**14. 排行榜模块 (leaderboard)**
-- **职责**：创作者排行、热门瞬间排行、用户排名查询
-- **数据存储**：leaderboard_cache 表（Redis 或 PostgreSQL）
-- **依赖**：auth、user、moment
-- **被依赖**：无
-- **API 路径**：`/api/v1/public/leaderboard/*`
-- **实现方式**：
-  - **定时任务**：每小时/每天统计各模块数据
-  - **数据来源**：
-    - 创作者排行：统计 moments 表的 user_id 和点赞数
-    - 热门瞬间：统计 moment_likes 表
-  - **缓存策略**：结果缓存到 Redis，定期刷新
-  - **支持范围**：
-    - 全局排行
-    - 附近排行（nearby，需提供位置和半径）
-    - 好友排行（friends）
-  - **时间范围**：daily、weekly、monthly、all_time
-
-**15. 信息流模块 (feed)**
+**14. 信息流模块 (feed)**
 - **职责**：获取个性化推荐内容、反馈（隐藏/不感兴趣）
-- **数据存储**：feed_items 表（推荐结果缓存）、feed_feedback 表（用户反馈）
+- **数据存储**：feed_feedback 表（用户反馈）
 - **依赖**：auth、user、moment、group
 - **被依赖**：无
 - **API 路径**：`/api/v1/protected/feed/*`
+- **特点**：Protected API 不需要位置参数，后端自动使用用户存储的位置
+- **API 端点**：
+  - `feed/moments` - 获取瞬间信息流（支持 source 筛选）
+  - `feed/groups` - 获取群组推荐
+  - `feed/users` - 获取用户推荐
+  - `feed/trending` - 获取热门内容
+  - `feed/feedback` - 反馈信息流内容
 - **实现方式**：
   - **推荐算法**：
     - 基于位置：推荐附近的瞬间和群组
@@ -517,10 +508,10 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
   - **实时性**：
     - 热数据实时计算
     - 冷数据预计算并缓存
-  - **频道类型**：
-    - following（关注）：推荐关注用户的内容
-    - nearby（附近）：推荐附近的热门内容
-    - recommended（推荐）：基于兴趣的个性化推荐
+  - **source 筛选**（瞬间信息流）：
+    - following：仅关注的人发布的瞬间
+    - nearby：附近范围内的瞬间
+    - all（默认）：综合推荐
 
 #### 2.7.4 模块依赖关系图
 
@@ -560,20 +551,16 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
 │                      数据聚合模块                            │
 │                                                             │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐                 │
-│  │  inbox   │  │subscription│ │leaderboard│                 │
+│  │  inbox   │  │subscription│ │   feed   │                 │
 │  └──────────┘  └──────────┘  └──────────┘                 │
-│                                                             │
-│  ┌──────────┐                                               │
-│  │   feed   │                                               │
-│  └──────────┘                                               │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 **说明**：
 - 所有模块的 API 端点定义参见 @api_spec.mdc **第 3 章 API 端点与类型定义**
-- 系统包含 15 个核心模块
-- `inbox` 模块负责收件箱功能（api_spec.mdc 第 3.13 节）
+- 系统包含 14 个核心模块
+- `inbox` 模块负责收件箱功能（api_spec.mdc 推送设备管理API）
 - `chat_msgs` 模块负责聊天消息功能（api_spec.mdc 第 3.8-3.9 节）
 
 #### 2.7.5 关键实现说明
@@ -599,13 +586,7 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
    - 推送逻辑：先检查 API 持久化偏好，再检查 WebSocket 实时订阅
    - 离线提醒通过 API 拉取（`POST /api/v1/protected/inbox/get_list`，参数通过request body传递：`{is_read: false}`）
 
-3. **排行榜 (leaderboard)**
-   - 采用**定时任务 + 缓存**策略
-   - 每小时运行统计任务：统计用户的瞬间数量和总点赞数
-   - 结果缓存到 Redis，有效期 1 小时
-   - 用户查询时直接读取缓存
-
-4. **信息流 (feed)**
+3. **信息流 (feed)**
    - 采用**混合推荐**策略
    - 推荐来源：
      - 40% 关注用户的瞬间（社交推荐）
@@ -634,7 +615,7 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
 
 **路由组织**:
 
-路由定义和中间件集成的完整示例参见 @backend_dev_rule.mdc **第 2.1 节 路由定义模式**
+路由定义和中间件集成的完整示例参见 @backend_dev_rule.mdc **路由定义模式**
 
 ## 3. 核心功能模块
 
@@ -661,7 +642,6 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
 - `sub`: Subject (用户ID)
 - `exp`: Expiration (过期时间)
 - `iat`: Issued At (签发时间)
-- `user_type`: 用户类型（临时/普通/系统）
 
 **实现要点**:
 - 使用 HS256 算法签名
@@ -684,23 +664,21 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
 
 #### 3.2.1 用户类型编码
 
-**用户ID结构** (64位整数):
-```
-┌────────┬──────────────────────────────────────────────────┐
-│ 高8位  │                    低56位                        │
-│ 类型   │                    序号                          │
-└────────┴──────────────────────────────────────────────────┘
-```
+**用户ID分配规则**:
+- **系统用户区间**：1 - 1,000,000（通过管理员接口创建）
+- **临时用户和注册用户区间**：1,000,001+（共用序列，方便临时用户转正）
 
-**类型编码**:
-- `0x01`: 临时用户（无密码，可升级）
-- `0x02`: 普通用户（已注册）
-- `0x03`: 系统用户（官方账号）
+**用户类型标识**:
+通过 `users` 表的 `user_type` 字段标识，使用枚举类型：
+- `temp`: 临时用户（无密码，可升级）
+- `normal`: 普通用户（已注册）
+- `system`: 系统用户（官方账号）
 
-**生成算法**:
-- 高8位存储用户类型（左移56位）
-- 低56位存储序列号
-- 组合方式：`user_id = (user_type << 56) | sequence_number`
+**预置系统用户**:
+- `1` - 系统通知
+- `2` - 安全中心
+- `3` - 运营团队
+- `1000000` - 系统用户区间边界标记
 
 #### 3.2.2 用户关系管理
 
@@ -827,20 +805,20 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
 - 支持单用户多设备连接
 
 **心跳机制**:
-- 客户端每 25 秒发送 Ping
-- 服务端 5 秒内回复 Pong
-- 超过 60 秒无活动则断开连接
+- 客户端每 45 秒发送 Ping
+- 服务端 10 秒内回复 Pong
+- 超过 100 秒无活动则断开连接（计算公式：45×2+10=100）
 
 #### 3.6.2 消息推送与订阅机制
 
 **两层订阅机制**:
 1. **层级 1（持久化偏好）**：通过 API 配置，跨设备生效
-   - 用户在设置页面配置订阅偏好（api_spec.mdc 第 3.10 节）
+   - 用户在设置页面配置订阅偏好（api_spec.mdc 通知订阅设置API）
    - 存储在 `event_subscriptions` 表
    - 示例：关闭"瞬间点赞提醒"
 
 2. **层级 2（实时订阅）**：通过 WebSocket 管理，仅对应连接生效
-   - 客户端连接后发送 `Subscribe` 消息（api_spec.mdc 第 4.4 节）
+   - 客户端连接后发送 `Subscribe` 消息（api_spec.mdc 客户端发送事件）
    - 使用统一的订阅项数组格式：`{ source_type, source_ids }`
    - 支持批量订阅同类型数据源
    - 示例：`[{ source_type: "group_chat", source_ids: ["gc_123", "gc_456"] }, { source_type: "user", source_ids: ["user_789"] }]`
@@ -849,7 +827,7 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
 - 最终推送 = 持久化偏好 AND 实时订阅
 - 只有两层都允许时才推送
 
-⚠️ **支持的订阅类型和频道请参见**: @api_spec.mdc **第 4.4 节 客户端发送事件 - 订阅机制使用示例**
+⚠️ **支持的订阅类型和频道请参见**: @api_spec.mdc **客户端发送事件**
 
 **推送策略**:
 1. 检查用户的持久化订阅偏好
@@ -859,20 +837,22 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
 5. 并发发送到符合条件的连接
 6. 如果用户离线或未订阅，存储到收件箱
 
-#### 3.6.3 离线消息补偿
+#### 3.6.3 离线消息补偿（冷启动）
 
 **实现流程**:
 1. 用户重连后，WebSocket 连接建立
 2. 客户端发送 `Subscribe` 消息订阅频道
-3. 客户端调用 API 拉取离线数据：
-   - `POST /api/v1/protected/inbox/get_list` (参数：`{is_read: false}`) - 未读提醒
-   - `POST /api/v1/protected/chat_messages/get_unread_summary` (参数：`{include_details: true}`) - 未读消息汇总
+3. 客户端调用各业务 API 拉取离线数据：
+   - `POST /api/v1/protected/private_chats/me/get_list` - 私聊列表（包含 unread_count）
+   - `POST /api/v1/protected/group_chats/me/get_joined` - 群聊列表（包含 unread_count）
+   - `POST /api/v1/protected/group_chats/invites/get_invites_list` - 待处理群组邀请
+   - `POST /api/v1/protected/group_chats/applications/get_list` - 待审批群组申请（管理员）
 4. 恢复实时接收 WebSocket 推送
 
 **说明**:
-- 收件箱提醒通过 API 拉取（系统生成的单向提醒）
-- 聊天消息通过 API 拉取（用户之间的双向通讯）
-- 不再使用 `event_push_records` 表，改用各模块自己的存储
+- ⚠️ **通知不存储**：通知是实时推送机制，不再有 inbox_items 表
+- 各业务数据通过对应的业务 API 获取
+- 客户端本地汇总计算未读总数
 
 #### 3.6.4 WebSocket 事件类型定义
 
@@ -882,25 +862,27 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
 
 系统支持完整的 WebSocket 事件类型，用于服务端主动推送实时数据。
 
-**事件分类**（详见 api_spec.mdc 第 4.3-4.4 节）：
+**事件分类**（详见 api_spec.mdc 服务端推送事件和客户端发送事件）：
 - **服务端推送事件**（20+ 个事件类型）：连接管理、在线状态、聊天消息、群组事件、收件箱提醒、系统通知
 - **客户端发送事件**（6 个事件类型）：心跳、订阅管理、实时状态同步
 
 **关键事件**（完整定义见 api_spec.mdc）：
 - **ChatMessageNew**: 聊天消息核心事件，包含完整消息信息
-- **InboxItem**: 收件箱提醒推送（系统生成的单向提醒）
-- **Subscribe/Unsubscribe**: 实现两层订阅机制的核心事件
-- **订阅机制使用示例**: 参见 api_spec.mdc 第 4.4 节
+- **NewFollower/MutualFollow/Unfollowed**: 关注关系事件
+- **GroupInviteReceived/GroupApplicationReceived**: 群组社交事件
+- **MomentLiked/MomentCommented**: 内容互动事件
+- **Subscribe/Unsubscribe/SetSubscriptions**: 实现订阅机制的核心事件
+- **订阅机制使用示例**: 参见 api_spec.mdc 客户端发送事件
 
 **实现要求**：
 - 所有事件类型必须严格遵循 api_spec.mdc 定义
 - 所有时间字段使用 ISO 8601 格式的 UTC 时间
 - 事件 payload 结构与 API 规范保持一致
-- 订阅频道列表参见 api_spec.mdc 第 4.4 节
+- 订阅频道列表参见 api_spec.mdc 客户端发送事件
 
 ### 3.7 速率限制与配额管理
 
-⚠️ **完整的速率限制规范请参见**: @api_spec.mdc **第 2.14 节速率限制与配额管理**
+⚠️ **完整的速率限制规范请参见**: @api_spec.mdc **速率限制与配额管理**
 
 **系统概述**：
 
@@ -916,20 +898,19 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
 - 创建生活瞬间：每分钟5次，每小时20次
 - 上传文件：每分钟10次，每小时100次
 - 搜索接口：每秒5次，每分钟100次
-- 发送好友申请：每分钟10次，每小时50次
+- 关注用户：每分钟30次，每小时100次
 
 **配额限制**（业务规则）：
 - 单个用户最多500个好友
 - 单个群组最多500成员（可配置）
 - 单个用户最多创建10个群组
-- 单次批量操作最多100条记录
 - 消息内容最大10KB
 - 文件上传大小限制（通过系统配置管理）
 
 **实现机制**：
 - 使用 Redis 计数器实现滑动窗口速率限制
 - 响应头包含限制信息：`X-RateLimit-Limit`、`X-RateLimit-Remaining`、`X-RateLimit-Reset`
-- 超限返回 HTTP 429 状态码
+- 超限返回 HTTP 200，code: 1400（所有错误统一返回 HTTP 200）
 - 配额检查在 Service 层执行
 
 **监控与告警**：
@@ -937,48 +918,9 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
 - 异常高频重试需要告警
 - 定期审查限制策略的合理性
 
-### 3.8 批量操作设计
+### 3.8 幂等性设计
 
-⚠️ **完整的批量操作规范请参见**: @api_spec.mdc **第 2.15 节批量操作设计规范**
-
-**系统概述**：
-
-批量操作提供高效的多项处理能力，减少客户端请求次数，提升用户体验。
-
-**批量请求格式**：
-- `items`: 批量操作的数据项数组
-- `atomic`: 是否原子操作（默认false）
-
-**批量响应格式**：
-- `total`: 总数量
-- `succeeded`: 成功数量
-- `failed`: 失败数量
-- `results`: 每项的处理结果数组
-  - `index`: 对应请求items的索引
-  - `code`: 0表示成功，非0表示失败
-  - `data`: 成功时的数据
-  - `message`: 失败时的错误消息
-
-**支持的批量操作**：
-- 批量标记消息已读：`POST /api/v1/protected/messages/mark_as_read_batch`
-- 批量删除通知：`POST /api/v1/protected/inbox/remove_batch`
-- 系统设计支持扩展更多批量操作（如批量更新设置、批量邀请成员）
-
-**批量操作限制**：
-- 单次批量操作最多100条记录
-- 原子操作（`atomic: true`）：全部成功或全部失败
-- 非原子操作（默认）：部分成功即返回，需检查每项的结果
-- 批量操作的速率限制通常比单次操作更严格
-
-**实现要求**：
-- Service 层提供批量处理方法
-- 使用数据库事务保证原子性（当 `atomic: true` 时）
-- 非原子操作遇到单项错误时继续处理其他项
-- 记录批量操作的审计日志
-
-### 3.9 幂等性设计
-
-⚠️ **完整的幂等性规范请参见**: @api_spec.mdc **第 2.17 节幂等性设计**
+⚠️ **完整的幂等性规范请参见**: @api_spec.mdc **幂等性设计**
 
 **系统概述**：
 
@@ -1008,7 +950,7 @@ idempotency_key = SHA256(
 - 发送私聊消息：`POST /api/v1/protected/private_messages/send`
 - 发送群聊消息：`POST /api/v1/protected/group_messages/send`
 - 创建生活瞬间：`POST /api/v1/protected/moments/create`
-- 发送好友申请：`POST /api/v1/protected/user/send_friend_request`
+- 关注用户：`POST /api/v1/protected/user/follow`
 - 创建群组：`POST /api/v1/protected/group_chats/create`
 - 文件上传：`POST /api/v1/protected/media/upload_file`（基于文件哈希）
 - 系统设计支持扩展到支付相关操作
@@ -1183,7 +1125,7 @@ LIMIT 20;
 - ✅ 需要分片扩展能力
 - ✅ 外键的完整性保证不如性能重要
 
-**应用层保证方式**（详见 @backend_rule.mdc 第 5.4 节）：
+**应用层保证方式**（详见 @backend_rule.mdc 业务逻辑实现规范）：
 - Service层在创建关联资源前验证父资源存在性
 - Repository层提供 `exists()` 辅助方法
 - 使用 `SELECT EXISTS(...)` 而非 `SELECT COUNT(*)`（性能更好）
@@ -1203,7 +1145,7 @@ LIMIT 20;
 
 系统使用 PostgreSQL ENUM 类型确保数据一致性。
 
-**枚举类型及其值的详细定义**：参见 `api_spec.mdc` 第 2.6 节（枚举类型使用规范）
+**枚举类型及其值的详细定义**：参见 `api_spec.mdc` API类型命名规范
 
 **核心ENUM类型**：
 - `member_role`: owner, admin, member
@@ -1236,9 +1178,8 @@ LIMIT 20;
 | 字段名 | 类型 | 约束 | 默认值 | 说明 |
 |---|---|---|---|---|
 | id | BIGSERIAL | PK | 自增 | 内部主键（用于分页排序） |
-| user_id | BIGINT | NOT NULL, UNIQUE | - | 纯数字用户ID（对外公开） |
+| user_id | BIGINT | NOT NULL, UNIQUE | - | 纯数字用户ID（对外公开，系统用户1-1000000，普通用户1000001+） |
 | user_uuid | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | UUID（用于分页游标） |
-| user_type | user_type | NOT NULL | 'normal' | 用户类型（temp/normal/system） |
 | login_id | VARCHAR(255) | UNIQUE | NULL | 登录标识（邮箱/手机），临时用户为NULL |
 | nickname | VARCHAR(100) | NOT NULL | - | 昵称 |
 | password_hash | VARCHAR(255) | - | NULL | bcrypt哈希，临时用户为NULL |
@@ -1275,32 +1216,53 @@ LIMIT 20;
 - ✅ **统一分页逻辑**：所有表都使用相同的UUID游标分页模式
 - ✅ **更好的安全性**：UUID不暴露用户数量和增长趋势
 - ✅ **便于分布式**：UUID天然支持分布式系统和数据迁移
-- ✅ **类型标识**：通过 `user_type` 枚举字段明确标识用户类型
+- ✅ **类型标识**：通过 `user_type` 字段标识（枚举：temp/normal/system）
 
 #### 4.3.2 user_settings - 用户设置表 ✨
 
-**表说明**: 存储用户配置项（从 `users` 表分离），采用 **1:1 关联**，通过触发器自动创建默认设置。
+**表说明**: 存储用户配置项（从 `users` 表分离），采用 **1:1 关联**，与 API 文档 `UserSettingsData` 完全对应。所有字段都有默认值，不允许 NULL。
 
 **设计理念**：
 - ✅ **职责分明**：核心数据（users）与配置（user_settings）分离
 - ✅ **查询优化**：列表查询无需加载设置字段，减少数据传输
 - ✅ **扩展灵活**：新增设置不影响主表结构
 - ✅ **缓存友好**：设置和核心数据可独立缓存
+- ✅ **无 NULL**：所有字段 NOT NULL + DEFAULT，确保不会出现空值
 
 | 字段名 | 类型 | 约束 | 默认值 | 说明 |
 |---|---|---|---|---|
 | user_id | BIGINT | PK | - | 用户ID（引用 users.user_id，应用层保证） |
-| privacy_level | privacy_level | NOT NULL | 'public' | 隐私级别（public/friends/private） |
-| is_location_sharing | BOOLEAN | NOT NULL | TRUE | 是否共享位置 |
-| can_be_followed | BOOLEAN | NOT NULL | TRUE | 是否允许被关注 |
-| **allow_private_chat** | **BOOLEAN** | **NOT NULL** | **TRUE** | **是否允许别人发起私聊** |
+| **隐私设置** |||||
+| privacy_level | privacy_level | NOT NULL | 'public' | 基础隐私级别（public/friends/private） |
+| location_visible | BOOLEAN | NOT NULL | TRUE | 是否显示位置信息 |
+| online_visible | BOOLEAN | NOT NULL | TRUE | 是否显示在线状态 |
+| last_online_visible | BOOLEAN | NOT NULL | TRUE | 是否显示最后上线时间 |
+| friends_visible | privacy_level | NOT NULL | 'public' | 好友列表可见性 |
+| following_visible | privacy_level | NOT NULL | 'public' | 关注列表可见性 |
+| followers_visible | privacy_level | NOT NULL | 'public' | 粉丝列表可见性 |
+| moments_visible | privacy_level | NOT NULL | 'public' | 瞬间列表可见性 |
+| stats_visible | privacy_level | NOT NULL | 'public' | 统计数据可见性 |
+| **社交设置** |||||
+| allow_follow | BOOLEAN | NOT NULL | TRUE | 是否允许被关注 |
+| allow_private_chat | chat_permission | NOT NULL | 'everyone' | 私聊权限（everyone/friends/nobody） |
+| **搜索设置** |||||
+| searchable | BOOLEAN | NOT NULL | TRUE | 总开关：是否可被搜索 |
+| phone_searchable | BOOLEAN | NOT NULL | TRUE | 是否可通过手机号搜索 |
+| nickname_searchable | BOOLEAN | NOT NULL | TRUE | 是否可通过昵称搜索 |
+| location_searchable | BOOLEAN | NOT NULL | TRUE | 是否出现在附近的人 |
+| **时间戳** |||||
 | created_at | TIMESTAMPTZ | NOT NULL | NOW() | 创建时间 |
 | updated_at | TIMESTAMPTZ | - | NULL | 更新时间 |
 
 **索引**: 主键 `user_id`
 
+**枚举类型**:
+- `privacy_level`: public | friends | private
+- `chat_permission`: everyone | friends | nobody（需在 `001_prerequisites.sql` 中创建）
+
 **关键约束**: 
 - user_id 引用 users.user_id，由应用层保证数据完整性
+- 所有设置字段 NOT NULL + DEFAULT，避免任何 NULL 值
 - 触发器 `trigger_auto_create_user_settings` 在用户创建时自动插入默认设置
 
 **触发器实现**（在 `002_user_module.sql` 中创建）：
@@ -1309,28 +1271,47 @@ LIMIT 20;
 - 使用 `ON CONFLICT DO NOTHING` 确保幂等性
 
 **私聊权限控制**：
-- ✅ **allow_private_chat = TRUE**：允许任何人（除了黑名单用户）发起私聊
-- ✅ **allow_private_chat = FALSE**：不允许别人发起私聊（仅自己可以发起）
+- ✅ **allow_private_chat = 'everyone'**：允许任何人（除了黑名单用户）发起私聊
+- ✅ **allow_private_chat = 'friends'**：仅好友（互相关注）可以发起私聊
+- ✅ **allow_private_chat = 'nobody'**：不允许任何人发起私聊（仅自己可以发起）
 - ✅ **权限验证逻辑**：用户A能否对用户B发起私聊，需要同时满足：
-  1. 用户B的 `allow_private_chat = TRUE`（否则返回错误码 `1309` - 对方不允许接收私聊）
+  1. 用户B的 `allow_private_chat` 允许（否则返回错误码 `1309` - 对方不允许接收私聊）
   2. 用户B**没有**将用户A拉黑（否则返回错误码 `1310` - 已被对方拉黑）
   3. 用户A不能对自己发起私聊（否则返回错误码 `1301` - 不能对自己执行此操作）
+
+**陌生人消息限制机制**：
+
+非好友（非互相关注）发送消息时有数量限制，防止骚扰：
+
+| 关系状态 | 可发送消息数 | 限制解除条件 |
+|---|---|---|
+| 互相关注（好友） | 无限制 | - |
+| 对方回复过我 | 无限制 | 对方回复即解除 |
+| 单向关注 + 对方未回复 | 3条 | 对方回复即解除 |
+| 未关注 + 对方未回复 | 1条 | 对方回复即解除 |
+
+**实现要点**：
+- ✅ **状态存储**：在 `private_chats` 表添加 `a_can_message_freely`、`b_can_message_freely` 字段
+- ✅ **计数存储**：在 `private_chats` 表添加 `a_sent_count`、`b_sent_count` 字段
+- ✅ **解锁逻辑**：对方发送消息后，将己方的 `can_message_freely` 设为 TRUE
+- ✅ **错误返回**：达到限制返回错误码 `1312`（消息数量已达上限）
 
 **查询模式**：
 - 查询用户详情时使用 LEFT JOIN 关联 user_settings 表
 - 更新设置时直接操作 user_settings 表
-- 私聊权限验证需要同时检查 `allow_private_chat` 和 `user_blocks` 表
+- 私聊权限验证需要检查 `allow_private_chat` 字段和 `user_blocks` 表
+- 消息限制验证需要检查 `user_follows` 表和 `private_chats` 表
 
 #### 4.3.3 user_follows - 用户关注表 ✨
 
-**表说明**: 单向关注关系表。**职责分离设计**：
-- ✅ **好友关系**：互相关注（A关注B 且 B关注A）
-- ✅ **单向关注**：仅一方关注
-- ✅ **好友申请** → 独立的 `user_friend_requests` 表管理
+**表说明**: 单向关注关系表。**好友 = 互相关注**：
+- ✅ **好友关系**：互相关注（A关注B 且 B关注A）= 好友
+- ✅ **单向关注**：仅一方关注 = 粉丝/关注者
+- ✅ **无独立好友申请**：关注操作即为建立联系的入口
 
 **设计理念**：
-- ✅ **职责单一**：只管理关注关系，不混入拉黑、好友申请等逻辑
-- ✅ **无冗余字段**：不需要 `status`、`message`、`block_reason` 等字段
+- ✅ **职责单一**：只管理关注关系，不混入拉黑等逻辑
+- ✅ **简化好友流程**：无需独立的好友申请表，互相关注即成为好友
 - ✅ **查询高效**：不需要 `WHERE relation_type = 'following'` 过滤
 - ✅ **支持分页**：使用UUID业务ID实现游标分页
 
@@ -1425,43 +1406,6 @@ LIMIT 20;
 **使用说明**：
 - 备注为空时可以删除记录，而不是保留空字符串
 - 查询时通过LEFT JOIN关联，未设置备注时返回NULL
-
----
-
-#### 4.3.6 user_friend_requests - 好友申请表 ✨
-
-**表说明**: 独立管理好友申请流程。**职责分离设计**：
-- ✅ **职责单一**：只管理好友申请的生命周期（pending → accepted/rejected）
-- ✅ **无冗余字段**：不需要 `remark`、`block_reason` 等字段
-- ✅ **清晰的状态流转**：`pending` → `accepted`/`rejected`
-- ✅ **支持分页**：使用UUID业务ID实现游标分页
-
-| 字段名 | 类型 | 约束 | 默认值 | 说明 |
-|---|---|---|---|---|
-| id | BIGSERIAL | PK | 自增 | 内部主键（用于分页排序） |
-| request_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | UUID业务ID（API暴露，游标） |
-| from_user_id | VARCHAR(36) | NOT NULL | - | 申请者ID（引用 users.user_id，应用层保证） |
-| to_user_id | VARCHAR(36) | NOT NULL | - | 被申请者ID（引用 users.user_id，应用层保证） |
-| message | TEXT | - | NULL | 申请附带消息 |
-| status | invitation_status | NOT NULL | 'pending' | 申请状态（pending/accepted/rejected） |
-| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 创建时间 |
-| responded_at | TIMESTAMPTZ | - | NULL | 响应时间（接受/拒绝时间） |
-
-**索引**: 
-- 主键 `id`
-- 唯一索引 `request_id`
-- 复合索引 `(from_user_id, created_at DESC)`（查询已发送申请）
-- 复合索引 `(to_user_id, status, created_at DESC)`（查询收到的申请）
-
-**关键约束**: 
-- `CHECK (from_user_id != to_user_id)` - 不能向自己发送申请
-
-**好友申请流程**：
-1. **发送申请**：在 `user_friend_requests` 表插入记录，状态为 `pending`
-2. **接受申请**：需要在事务中完成两个操作：
-   - 更新申请状态为 `accepted`
-   - 在 `user_follows` 表插入双向关注记录
-3. **拒绝申请**：更新申请状态为 `rejected`
 
 ---
 
@@ -2117,56 +2061,40 @@ LIMIT 20;
 **关键约束**: 
 - reporter_id, handled_by 引用 users.user_id，由应用层保证数据完整性
 
-#### 4.8.2 inbox_items - 收件箱提醒表
+#### 4.8.2 ~~inbox_items~~ - 已废弃
 
-**表说明**: 系统生成的通知提醒
+**⚠️ 架构变更**：通知是实时推送机制，不再存储。
 
-| 字段名 | 类型 | 约束 | 默认值 | 说明 |
-|---|---|---|---|---|
-| id | BIGSERIAL | PK | 自增 | 内部主键 |
-| inbox_item_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | 提醒ID |
-| user_id | BIGINT | NOT NULL | - | 接收者ID（引用 users.user_id，应用层保证） |
-| category | inbox_category | NOT NULL | - | 分类（social/content/system） |
-| type | VARCHAR(50) | NOT NULL | - | 具体类型（friend_request/moment_like等） |
-| title | VARCHAR(255) | - | NULL | 标题 |
-| content | TEXT | NOT NULL | - | 内容 |
-| data | JSONB | - | NULL | 扩展数据（JSON） |
-| action_url | TEXT | - | NULL | 跳转链接 |
-| severity | notification_severity | - | NULL | 严重级别（info/warning/error） |
-| created_at | TIMESTAMPTZ | NOT NULL | NOW() | 创建时间 |
-| is_read | BOOLEAN | NOT NULL | FALSE | 是否已读 |
+**新架构**：
+- **在线推送**：WebSocket 实时推送事件
+- **离线推送**：通过 `device_tokens` 表的令牌推送到移动端
+- **冷启动获取**：调用各业务 API 获取待处理数据
+- **计数缓存**：使用 Redis 缓存待处理计数（`pending:invite:{user_id}` 等）
 
-**索引**: 
-- 主键 `id`
-- 唯一索引 `inbox_item_id`
-- 复合索引 `(user_id, is_read, created_at DESC)`
-- 复合索引 `(user_id, category, created_at DESC)`
-- 复合索引 `(user_id, type, created_at DESC)`
+#### 4.8.3 notification_subscriptions - 推送订阅配置表
 
-**关键约束**: 
-- user_id 引用 users.user_id，由应用层保证数据完整性
-
-#### 4.8.3 event_subscriptions - 事件订阅配置表
-
-**表说明**: 用户的通知订阅偏好（持久化，跨设备生效）
+**表说明**: 用户的推送订阅偏好（持久化，跨设备生效）
 
 | 字段名 | 类型 | 约束 | 默认值 | 说明 |
 |---|---|---|---|---|
-| id | BIGSERIAL | PK | 自增 | 内部主键 |
-| user_id | BIGINT | NOT NULL, FK | - | 用户ID |
-| friend_request_enabled | BOOLEAN | NOT NULL | TRUE | 好友申请提醒 |
-| friend_accepted_enabled | BOOLEAN | NOT NULL | TRUE | 好友接受提醒 |
-| group_invite_enabled | BOOLEAN | NOT NULL | TRUE | 群组邀请提醒 |
-| group_invite_response_enabled | BOOLEAN | NOT NULL | TRUE | 群组邀请响应提醒 |
-| message_mention_enabled | BOOLEAN | NOT NULL | TRUE | @提及提醒 |
-| moment_like_enabled | BOOLEAN | NOT NULL | TRUE | 瞬间点赞提醒 |
-| moment_comment_enabled | BOOLEAN | NOT NULL | TRUE | 瞬间评论提醒 |
-| comment_reply_enabled | BOOLEAN | NOT NULL | TRUE | 评论回复提醒 |
-| system_announcement_enabled | BOOLEAN | NOT NULL | TRUE | 系统公告提醒 |
+| user_id | BIGINT | PK | - | 用户ID（主键） |
+| new_follower_enabled | BOOLEAN | NOT NULL | TRUE | 新关注者推送 |
+| mutual_follow_enabled | BOOLEAN | NOT NULL | TRUE | 互相关注推送 |
+| group_invite_enabled | BOOLEAN | NOT NULL | TRUE | 群组邀请推送 |
+| group_invite_response_enabled | BOOLEAN | NOT NULL | TRUE | 群组邀请响应推送 |
+| group_application_enabled | BOOLEAN | NOT NULL | TRUE | 群组申请推送 |
+| group_application_response_enabled | BOOLEAN | NOT NULL | TRUE | 群组申请响应推送 |
+| message_mention_enabled | BOOLEAN | NOT NULL | TRUE | @提及推送 |
+| moment_like_enabled | BOOLEAN | NOT NULL | TRUE | 瞬间点赞推送 |
+| moment_comment_enabled | BOOLEAN | NOT NULL | TRUE | 瞬间评论推送 |
+| comment_reply_enabled | BOOLEAN | NOT NULL | TRUE | 评论回复推送 |
+| system_announcement_enabled | BOOLEAN | NOT NULL | TRUE | 系统公告推送 |
 | created_at | TIMESTAMPTZ | NOT NULL | NOW() | 创建时间 |
-| updated_at | TIMESTAMPTZ | NOT NULL | NOW() | 更新时间 |
+| updated_at | TIMESTAMPTZ | - | NULL | 更新时间 |
 
-**索引**: 主键 `id`，唯一索引 `user_id`
+**索引**: 主键 `user_id`
+
+**用途**：控制用户是否接收各类推送通知（WebSocket 在线推送和离线设备推送）
 
 #### 4.8.4 device_tokens - 设备推送Token表 ✨
 
@@ -2196,28 +2124,30 @@ LIMIT 20;
 
 #### 4.8.5 feed_feedback - 信息流反馈表 ✨
 
-**表说明**: 用户对信息流条目的反馈（用于优化推荐）
+**表说明**: 用户对信息流内容的反馈（用于优化推荐）
 - ✅ **支持分页**：使用UUID业务ID实现游标分页
 
 | 字段名 | 类型 | 约束 | 默认值 | 说明 |
 |---|---|---|---|---|
 | id | BIGSERIAL | PK | 自增 | 内部主键 |
 | feedback_id | VARCHAR(36) | NOT NULL, UNIQUE | uuid_generate_v4()::TEXT | 业务反馈记录ID（用于游标分页） |
-| feed_item_id | VARCHAR(36) | NOT NULL | - | 信息流条目ID（引用 feed_items.feed_item_id，应用层保证） |
+| content_type | VARCHAR(20) | NOT NULL | - | 内容类型（moment/group/user） |
+| content_id | VARCHAR(36) | NOT NULL | - | 内容ID（瞬间ID/群组ID/用户ID） |
 | user_id | BIGINT | NOT NULL | - | 用户ID（引用 users.user_id，应用层保证） |
-| action | VARCHAR(20) | NOT NULL | - | 操作（hide/not_interested/clicked/viewed） |
+| action | VARCHAR(20) | NOT NULL | - | 操作（hide/not_interested/report） |
+| reason | TEXT | | NULL | 反馈原因（可选） |
 | created_at | TIMESTAMPTZ | NOT NULL | NOW() | 操作时间 |
 
 **索引**: 
 - 主键 `id`
 - 唯一索引 `feedback_id`
-- 复合索引 `(feed_item_id, action)`
+- 复合索引 `(content_type, content_id, user_id)` UNIQUE
 - 复合索引 `(user_id, created_at DESC)`
 
 **关键约束**: 
-- feed_item_id 引用 feed_items.feed_item_id，由应用层保证数据完整性
 - user_id 引用 users.user_id，由应用层保证数据完整性
-- `CHECK (action IN ('hide', 'not_interested', 'clicked', 'viewed'))`
+- `CHECK (content_type IN ('moment', 'group', 'user'))`
+- `CHECK (action IN ('hide', 'not_interested', 'report'))`
 
 #### 4.8.6 media_files - 媒体文件元数据表
 
@@ -2300,12 +2230,13 @@ LIMIT 20;
 
 ### 4.9 系统用户初始化
 
-**预置系统用户**（user_id高8位为0x03）:
-- `216172782113783809` (0x0300000000000001): 系统通知
-- `216172782113783810` (0x0300000000000002): 安全中心
-- `216172782113783811` (0x0300000000000003): 运营团队
+**预置系统用户**（user_id 范围 1 - 1,000,000）:
+- `1`: 系统通知
+- `2`: 安全中心
+- `3`: 运营团队
+- `1000000`: 系统用户区间边界标记
 
-所有系统用户默认位置：南天门（35.154922, 112.682524）
+所有系统用户默认位置：南天门（纬度 35.154921, 经度 112.68253）
 
 ---
 
@@ -2602,14 +2533,23 @@ LIMIT 20;
 ### 6.1 Redis使用场景
 
 **核心用途**:
-| 场景 | Key模式 | TTL策略 |
-|---|---|---|
-| 会话管理 | \`session:{session_id}\` | Token过期时间 |
-| Token黑名单 | \`token_blacklist:{jti}\` | Token过期时间 |
-| 未读计数 | \`unread:{user_id}:{chat_id}\` | 手动清除 |
-| 在线状态 | \`online_users\` (SET) | 连接断开时删除 |
-| 排行榜 | \`leaderboard:{type}:{timeframe}\` | 短期（如1小时） |
-| 限流计数 | \`ratelimit:{user_id}:{api}:{window}\` | 窗口时间 |
+| 场景 | Key模式 | TTL策略 | 说明 |
+|---|---|---|---|
+| 会话管理 | \`session:{session_id}\` | Token过期时间 | JWT 验证结果缓存 |
+| Token黑名单 | \`token_blacklist:{jti}\` | Token过期时间 | 登出时加入黑名单 |
+| 私聊未读计数 | \`unread:private:{user_id}:{chat_id}\` | 无过期 | 收到消息+1，标记已读清零 |
+| 群聊未读计数 | \`unread:group:{user_id}:{chat_id}\` | 无过期 | 收到消息+1，标记已读清零 |
+| 总未读消息数 | \`unread:total:{user_id}\` | 无过期 | 随私聊/群聊未读变化同步更新 |
+| 用户在线状态 | \`online:{user_id}\` | 5分钟 | WebSocket心跳续期，断开时删除 |
+| 待处理群组邀请 | \`pending:invite:{user_id}\` | 无过期 | 收到邀请+1，处理后-1 |
+| 待审批群组申请 | \`pending:apply:{group_id}\` | 无过期 | 收到申请+1，处理后-1 |
+| 热门标签 | \`tags:trending:{timeframe}\` | 10分钟 | 高频读取数据 |
+| 限流计数 | \`ratelimit:{user_id}:{api}:{window}\` | 窗口时间 | 滑动窗口速率限制 |
+
+**缓存更新原则**:
+- **写时更新**：业务操作时同步更新 Redis 计数器（使用 INCR/DECR 原子操作）
+- **读时优先缓存**：API 查询优先读取 Redis，缓存未命中时查询数据库并回填
+- **一致性保证**：使用 Redis 事务或 Lua 脚本保证原子性
 
 **设计原则**:
 - AI Agent可根据性能需求调整缓存策略
@@ -2620,7 +2560,7 @@ LIMIT 20;
 
 ## 7. 安全策略
 
-⚠️ **完整的安全规范请参见**: @api_spec.mdc **第 2.16 节安全性最佳实践** 和 @backend_dev_rule.mdc
+⚠️ **完整的安全规范请参见**: @api_spec.mdc **安全性最佳实践** 和 @backend_dev_rule.mdc
 
 ### 7.1 认证与授权（强制要求）
 
@@ -2674,7 +2614,7 @@ LIMIT 20;
 
 **缓存策略**（优先级顺序）:
 1. **热点数据**: 用户在线状态、未读计数
-2. **计算密集**: 排行榜、统计数据
+2. **计算密集**: 统计数据、热门标签
 3. **低变更**: 系统配置、用户资料
 
 **缓存模式**:
@@ -2771,7 +2711,7 @@ LIMIT 20;
 ### 11.1 开发流程建议
 
 **第一阶段**：核心功能
-1. 实现数据库表结构（根据第4章）
+1. 实现数据库表结构（根据数据库设计章节）
 2. 实现用户认证模块（注册/登录/Token）
 3. 实现基础CRUD接口（用户/生活瞬间）
 
@@ -2782,7 +2722,7 @@ LIMIT 20;
 
 **第三阶段**：高级功能
 1. 实现地理位置搜索（PostGIS）
-2. 实现排行榜系统
+2. 实现信息流推荐系统
 3. 实现系统配置管理
 
 ### 11.2 优化决策空间
@@ -2847,6 +2787,28 @@ AI Agent在以下方面有完全的决策权：
 | WebSocket | tokio-tungstenite | 异步、生态集成好 |
 | 序列化 | serde | 性能好、生态完善 |
 | 日志 | tracing | 结构化、可观测性好 |
+
+### 12.4 幂等性实现要点
+
+- 使用 Redis 存储幂等键和响应结果
+- 幂等缓存 TTL = 2 倍时间窗口（默认 10 分钟）
+- 响应结果必须可序列化（JSON 格式）
+- 并发控制：使用 Redis 原子操作（SETNX）防止竞态
+- 监控告警：记录幂等命中率，异常高频重试需要告警
+
+### 12.5 性能监控指标
+
+**关键指标**：
+- API 响应时间（P50、P95、P99）
+- WebSocket 消息延迟
+- 文件上传成功率和速度
+- 重连频率和成功率
+
+**优化目标**：
+- API 响应时间 < 200ms（P95）
+- WebSocket 消息延迟 < 100ms
+- 文件上传成功率 > 99%
+- 重连成功率 > 95%
 
 ---
 

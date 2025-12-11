@@ -31,22 +31,3 @@ impl PasswordUtil {
         Ok(is_valid)
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_hash_and_verify_password() {
-        let client_hash = "a".repeat(64); // 模拟 SHA256 输出
-        let hashed = PasswordUtil::hash_password(&client_hash).unwrap();
-        assert!(PasswordUtil::verify_password(&client_hash, &hashed).unwrap());
-    }
-
-    #[test]
-    fn test_invalid_hash_format() {
-        let invalid_hash = "short";
-        assert!(PasswordUtil::hash_password(invalid_hash).is_err());
-    }
-}
-

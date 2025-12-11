@@ -3,7 +3,7 @@
         @click="openConversation"
         class="cursor-pointer group"
         :class="{
-            'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-900/10':
+            'ring-2 ring-accent bg-primary-light':
                 conversation.unread_count > 0,
         }"
     >
@@ -32,7 +32,7 @@
                     color="info" 
                     size="md" 
                     position="bottom-right"
-                    :text="displayMemberCount(conversation.member_count || 0)"
+                    :text="displayMemberCount(conversation.members_count || 0)"
                 >
                     <UAvatar
                         :src="conversation.avatar"
@@ -61,7 +61,7 @@
                         {{ conversation.name }}
                     </h3>
                     <div class="flex flex-col items-end space-y-1">
-                        <span class="text-sm text-neutral-500 shrink-0">
+                        <span class="text-sm text-secondary-content shrink-0">
                             {{ displayTime(conversation.last_message_time || conversation.updated_at) }}
                         </span>
                         <!-- 未读消息数 -->
@@ -84,12 +84,12 @@
                         >
                             <UIcon
                                 :name="getMessageTypeIcon(lastMessageType)"
-                                class="w-4 h-4 text-neutral-400 shrink-0"
+                                class="icon-sm text-muted shrink-0"
                             />
                         </UTooltip>
 
                         <!-- 最后一条消息 -->
-                        <p class="text-sm text-neutral-600 truncate">
+                        <p class="text-sm text-secondary-strong truncate">
                             {{
                                 displayLastMessage(
                                     conversation.last_message?.content || '',
@@ -103,7 +103,7 @@
                     <UTooltip v-if="conversation.is_pinned" text="已置顶会话">
                         <UIcon
                             name="i-heroicons-bookmark-solid"
-                            class="w-4 h-4 text-yellow-500 shrink-0 ml-2"
+                            class="icon-sm text-amber shrink-0 ml-2"
                         />
                     </UTooltip>
                 </div>
@@ -130,6 +130,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import type { PrivateChatLastMessage } from "~/types/api";
+import { getErrorMessage } from '~/utils/error';
 
 // 本地 Conversation 类型定义 - 基于后端 ConversationsResponse 规范
 interface Conversation {
@@ -138,14 +139,13 @@ interface Conversation {
   avatar?: string;          // 头像URL
   type: 'group' | 'user';   // 对话类型
   group_type?: string;      // 群组类型：'private_chat'|'public_chat'
-  member_count?: number;    // 成员数量
+  members_count?: number;    // 成员数量
   last_message?: PrivateChatLastMessage;
   last_message_time?: string; // 最后消息时间
   unread_count: number;
   is_pinned: boolean;
   is_muted: boolean;
   updated_at: string;
-  id?: string;              // 兼容属性
 }
 
 interface Props {
@@ -161,8 +161,6 @@ const emit = defineEmits<{
     (e: "mute", conversation: Conversation): void;
     (e: "delete", conversation: Conversation): void;
 }>();
-
-// 移除不存在的 openConfirmModal
 
 const toast = useToast()
 
@@ -207,7 +205,7 @@ const conversationActions = computed(() => [
             label: "删除对话",
             icon: "i-heroicons-x-circle",
             click: () => deleteConversation(),
-            class: "text-red-600",
+            class: "text-red",
         },
     ],
 ]);
@@ -314,16 +312,16 @@ const markAsRead = async () => {
     try {
         const messagesStore = useMessagesStore();
         const isGroup = props.conversation.type === "group";
-        const targetId = props.conversation.group_id || props.conversation.id;
+        const targetId = props.conversation.group_id;
         
         // 使用 updateUnreadCount 方法标记为已读
         messagesStore.updateUnreadCount(String(targetId), 0);
         
         toast.add({ title: "已标记为已读", color: "success" });
-    } catch (e: any) {
+    } catch (e: unknown) {
         toast.add({
             title: "操作失败",
-            description: e?.message,
+            description: getErrorMessage(e),
             color: "error",
         });
     }
@@ -337,14 +335,17 @@ const clearHistory = () => {
     });
 };
 
-const deleteConversation = () => {
-    if (confirm("确定要删除该对话吗？此操作不可撤销。")) {
-        confirmDelete();
+const deleteConversation = async () => {
+    const modal = useModal()
+    const confirmed = await modal.showConfirm({
+        title: '删除对话',
+        message: '确定要删除该对话吗？此操作不可撤销。',
+        confirmText: '删除',
+        confirmColor: 'error'
+    })
+    if (confirmed) {
+        emit("delete", props.conversation);
+        toast.add({ title: "对话已删除", color: "success" });
     }
-};
-
-const confirmDelete = () => {
-    emit("delete", props.conversation);
-    toast.add({ title: "对话已删除", color: "success" });
 };
 </script>

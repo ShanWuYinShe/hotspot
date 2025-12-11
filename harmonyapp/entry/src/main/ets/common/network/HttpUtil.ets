@@ -6,10 +6,9 @@
 
 import http from '@ohos.net.http';
 import { BusinessCode, API_BASE_URL } from '../../constants/AppConstants';
-import { ApiResponse } from '../types/BackendApiTypes';
+import { ApiResponse, HealthCheckRequest, HealthCheckResponse } from '../types/api';
 import { PreferencesUtil } from '../storage/PreferencesUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { HealthCheckRequest, HealthCheckResponse } from '../types/BackendApiTypes';
 
 const DOMAIN_NUMBER: number = 0xFF08;
 const TAG: string = 'HttpUtil';

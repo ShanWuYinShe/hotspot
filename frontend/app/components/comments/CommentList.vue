@@ -1,9 +1,9 @@
 <template>
-  <div class="comment-list">
+  <div class="w-full">
     <!-- 评论统计 -->
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-lg font-semibold">
-        评论 <span class="text-neutral-500">({{ totalCount }})</span>
+        评论 <span class="text-secondary-content">({{ totalCount }})</span>
       </h3>
       <UButton
         variant="ghost"
@@ -18,6 +18,7 @@
 
     <!-- 评论输入框 -->
     <CommentInput
+      ref="commentInputRef"
       :moment-id="momentId"
       :reply-to="replyTo"
       @submit="handleCommentSubmit"
@@ -28,14 +29,14 @@
     <div class="mt-6 space-y-4">
       <!-- 加载状态 -->
       <div v-if="loading && comments.length === 0" class="text-center py-8">
-        <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-primary-500 mx-auto" />
-        <p class="text-sm text-neutral-500 mt-2">加载中...</p>
+        <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-accent mx-auto" />
+        <p class="text-sm text-secondary-content mt-2">加载中...</p>
       </div>
 
       <!-- 空状态 -->
       <div v-else-if="comments.length === 0" class="text-center py-8">
-        <UIcon name="i-heroicons-chat-bubble-left-ellipsis" class="w-12 h-12 text-neutral-400 mx-auto mb-3" />
-        <p class="text-neutral-500 text-sm">还没有评论，来抢沙发吧！</p>
+        <UIcon name="i-heroicons-chat-bubble-left-ellipsis" class="w-12 h-12 text-muted mx-auto mb-3" />
+        <p class="text-secondary-content text-sm">还没有评论，来抢沙发吧！</p>
       </div>
 
       <!-- 评论项 -->
@@ -63,10 +64,16 @@
 </template>
 
 <script setup lang="ts">
-import type { CommentItem as CommentItemType } from '~/services/comments.service'
+import type { CommentListItem } from '~/types/api'
 import { useCommentsService } from '~/services/comments.service'
+import { getErrorMessage } from '~/utils/error'
 import CommentItem from './CommentItem.vue'
 import CommentInput from './CommentInput.vue'
+
+// 扩展类型：包含前端本地管理的点赞状态
+interface CommentWithLikeStatus extends CommentListItem {
+  liked_by_me?: boolean
+}
 
 const props = defineProps<{
   momentId: string
@@ -76,13 +83,14 @@ const commentsService = useCommentsService()
 const toast = useToast()
 
 // 状态
-const comments = ref<CommentItemType[]>([])
+const comments = ref<CommentWithLikeStatus[]>([])
 const loading = ref(false)
 const loadingMore = ref(false)
 const hasMore = ref(false)
 const nextCursor = ref<string | undefined>()
 const totalCount = ref(0)
-const replyTo = ref<CommentItemType | undefined>()
+const replyTo = ref<CommentWithLikeStatus | undefined>()
+const commentInputRef = ref<InstanceType<typeof CommentInput> | null>(null)
 
 // 加载评论列表
 const loadComments = async () => {
@@ -97,10 +105,10 @@ const loadComments = async () => {
     hasMore.value = response.pagination.has_more
     nextCursor.value = response.pagination.next_cursor
     totalCount.value = response.items.length
-  } catch (error: any) {
+  } catch (error: unknown) {
     toast.add({
       title: '加载失败',
-      description: error?.message || '加载评论失败',
+      description: getErrorMessage(error, '加载评论失败'),
       color: 'error'
     })
   } finally {
@@ -123,10 +131,10 @@ const loadMore = async () => {
     comments.value.push(...response.items)
     hasMore.value = response.pagination.has_more
     nextCursor.value = response.pagination.next_cursor
-  } catch (error: any) {
+  } catch (error: unknown) {
     toast.add({
       title: '加载失败',
-      description: error?.message || '加载更多评论失败',
+      description: getErrorMessage(error, '加载更多评论失败'),
       color: 'error'
     })
   } finally {
@@ -141,7 +149,7 @@ const refresh = () => {
 }
 
 // 处理评论提交
-const handleCommentSubmit = (newComment: CommentItemType) => {
+const handleCommentSubmit = (newComment: CommentWithLikeStatus) => {
   // 如果是回复，不添加到顶层列表
   if (!replyTo.value) {
     comments.value.unshift(newComment)
@@ -158,11 +166,10 @@ const handleCommentSubmit = (newComment: CommentItemType) => {
 }
 
 // 处理回复
-const handleReply = (comment: CommentItemType) => {
+const handleReply = (comment: CommentWithLikeStatus) => {
   replyTo.value = comment
-  // 滚动到评论输入框
-  const inputElement = document.querySelector('.comment-input')
-  inputElement?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  // 使用模板引用滚动到评论输入框
+  commentInputRef.value?.$el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 }
 
 // 处理删除
@@ -186,10 +193,4 @@ defineExpose({
   refresh
 })
 </script>
-
-<style scoped>
-.comment-list {
-  @apply w-full;
-}
-</style>
 

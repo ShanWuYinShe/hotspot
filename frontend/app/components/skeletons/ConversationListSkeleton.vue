@@ -4,32 +4,32 @@
     <div 
       v-for="i in count" 
       :key="i" 
-      class="flex items-center gap-4 p-4 animate-pulse"
+      class="flex items-center gap-4 p-4"
     >
       <!-- 头像骨架 -->
       <div class="relative">
-        <div class="w-12 h-12 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
+        <USkeleton class="w-12 h-12 rounded-full" />
         <!-- 在线状态指示器骨架 -->
-        <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
+        <USkeleton class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full" />
       </div>
       
       <!-- 会话信息骨架 -->
       <div class="flex-1 min-w-0 space-y-2">
         <div class="flex items-center justify-between">
           <!-- 用户名骨架 -->
-          <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-24"></div>
+          <USkeleton class="h-4 w-24" />
           <!-- 时间骨架 -->
-          <div class="h-3 bg-slate-200 dark:bg-slate-700 rounded w-12"></div>
+          <USkeleton class="h-3 w-12" />
         </div>
         
         <div class="flex items-center justify-between">
           <!-- 最后消息预览骨架 -->
-          <div class="h-3 bg-slate-200 dark:bg-slate-700 rounded w-40"></div>
+          <USkeleton class="h-3 w-40" />
           <!-- 未读消息数骨架 -->
-          <div 
+          <USkeleton 
             v-if="i % 3 === 0" 
-            class="w-5 h-5 bg-slate-200 dark:bg-slate-700 rounded-full"
-          ></div>
+            class="w-5 h-5 rounded-full"
+          />
         </div>
       </div>
     </div>

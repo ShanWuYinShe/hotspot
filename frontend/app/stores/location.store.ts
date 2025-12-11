@@ -1,276 +1,210 @@
 /**
- * 位置存储 - 地理位置管理
+ * 位置状态存储 - 纯状态管理
+ * 
+ * ✅ 职责：存储和管理位置相关的状态
+ * ❌ 不包含：位置获取逻辑（使用 useGeolocation composable）
+ * 
+ * 使用方式：
+ * - 组件中使用 useGeolocation() 获取位置
+ * - 获取后使用 locationStore.setLocation() 更新全局状态
  */
 
 import { defineStore } from 'pinia'
-import { useUserService } from '~/services/users.service'
+import { DEFAULTS } from '~/config/defaults'
+import type { BrowserPermissionStatus } from '~/utils/browser-permissions'
 
-export interface LocationState {
-  currentPosition: GeolocationPosition | null
-  currentLocation: {
-    latitude: number
-    longitude: number
-    location_name: string
-  } | null
-  error: string | null
-  isLoading: boolean
-  isWatching: boolean
-  watchId: number | null
+export interface StoredLocation {
+  latitude: number
+  longitude: number
+  locationName: string
+  accuracy?: number
+  source?: 'gps' | 'network' | 'cache' | 'default'
+  updatedAt: number
 }
 
 export const useLocationStore = defineStore('location', () => {
-  // ============ 状态 ============
-  const state = ref<LocationState>({
-    currentPosition: null,
-    currentLocation: null,
-    error: null,
-    isLoading: false,
-    isWatching: false,
-    watchId: null
-  })
+  // ============ 内部状态 ============
+  const _location = ref<StoredLocation | null>(null)
+  const _permissionStatus = ref<BrowserPermissionStatus>('unknown')
+  const _initialized = ref(false)
 
-  // ============ 计算属性 ============
-  const hasPermission = computed(() => {
-    return state.value.currentPosition !== null || state.value.error === null
-  })
+  // ============ Getter ============
 
+  /**
+   * 当前位置
+   */
+  const location = computed(() => _location.value)
+
+  /**
+   * 坐标（快捷访问）
+   */
   const coordinates = computed(() => {
-    if (!state.value.currentPosition) return null
+    if (!_location.value) return null
     return {
-      latitude: state.value.currentPosition.coords.latitude,
-      longitude: state.value.currentPosition.coords.longitude
+      latitude: _location.value.latitude,
+      longitude: _location.value.longitude
     }
   })
 
-  // ============ 方法 ============
+  /**
+   * 位置名称
+   */
+  const locationName = computed(() => _location.value?.locationName ?? '')
 
   /**
-   * 检查地理位置权限
+   * 定位精度（米）
    */
-  const checkPermission = async (): Promise<PermissionStatus | null> => {
-    if (!('permissions' in navigator)) {
-      return null
-    }
+  const accuracy = computed(() => _location.value?.accuracy ?? null)
 
-    try {
-      const result = await navigator.permissions.query({ name: 'geolocation' as PermissionName })
-      return result
-    } catch (error) {
-      console.warn('权限查询失败:', error)
-      return null
-    }
+  /**
+   * 权限状态
+   */
+  const permissionStatus = computed(() => _permissionStatus.value)
+
+  /**
+   * 是否有权限
+   */
+  const hasPermission = computed(() => _permissionStatus.value === 'granted')
+
+  /**
+   * 是否已初始化
+   */
+  const isInitialized = computed(() => _initialized.value)
+
+  /**
+   * 是否使用的是默认位置
+   */
+  const isDefaultLocation = computed(() => {
+    if (!_location.value) return true
+    return _location.value.source === 'default'
+  })
+
+  /**
+   * 同步获取坐标（有则返回，无则返回默认值）
+   */
+  const getCoordinatesSync = (): { latitude: number; longitude: number } => {
+    return coordinates.value ?? { latitude: DEFAULTS.latitude, longitude: DEFAULTS.longitude }
   }
 
   /**
-   * 请求地理位置权限
+   * 同步获取完整位置信息
    */
-  const requestPermission = async (): Promise<boolean> => {
-    // 检查是否已经授权
-    const permission = await checkPermission()
-    if (permission?.state === 'granted') {
-      return true
-    }
-
-    // 尝试获取位置（会触发权限请求）
-    try {
-      await getCurrentPosition()
-      return true
-    } catch (error) {
-      return false
+  const getLocationSync = (): StoredLocation => {
+    return _location.value ?? {
+      latitude: DEFAULTS.latitude,
+      longitude: DEFAULTS.longitude,
+      locationName: DEFAULTS.locationName,
+      source: 'default',
+      updatedAt: Date.now()
     }
   }
 
+  // ============ Setter ============
+
   /**
-   * 获取当前位置
-   * ✅ Store 只负责状态管理，不处理 UI 反馈
-   * 由调用方（组件）捕获错误并显示 toast
+   * 设置位置
    */
-  const getCurrentPosition = async (): Promise<GeolocationPosition> => {
-    state.value.isLoading = true
-    state.value.error = null
-
-    try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(
-          resolve,
-          reject,
-          {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0
-          }
-        )
-      })
-
-      state.value.currentPosition = position
-      state.value.currentLocation = {
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        location_name: '' // 需要通过反向地理编码获取
-      }
-
-      return position
-    } catch (error: any) {
-      let errorMessage = '获取位置失败'
-
-      switch (error.code) {
-        case error.PERMISSION_DENIED:
-          errorMessage = '位置权限被拒绝'
-          break
-        case error.POSITION_UNAVAILABLE:
-          errorMessage = '位置信息不可用'
-          break
-        case error.TIMEOUT:
-          errorMessage = '获取位置超时'
-          break
-      }
-
-      state.value.error = errorMessage
-      throw error
-    } finally {
-      state.value.isLoading = false
+  const setLocation = (
+    latitude: number,
+    longitude: number,
+    locationName: string = '',
+    options?: {
+      accuracy?: number
+      source?: StoredLocation['source']
     }
-  }
-
-  /**
-   * 开始监听位置变化
-   */
-  const watchPosition = (
-    onSuccess?: (position: GeolocationPosition) => void,
-    onError?: (error: GeolocationPositionError) => void
   ) => {
-    if (state.value.isWatching) {
-      console.warn('已经在监听位置变化')
-      return
+    _location.value = {
+      latitude,
+      longitude,
+      locationName,
+      accuracy: options?.accuracy,
+      source: options?.source ?? 'network',
+      updatedAt: Date.now()
     }
+    _initialized.value = true
+  }
 
-    const watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        state.value.currentPosition = position
-        state.value.currentLocation = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          location_name: state.value.currentLocation?.location_name || ''
-        }
-        onSuccess?.(position)
-      },
-      (error) => {
-        state.value.error = error.message
-        onError?.(error)
-      },
+  /**
+   * 从 PositionResult 设置位置
+   */
+  const setFromPosition = (
+    position: { coords: { latitude: number; longitude: number; accuracy: number }; source?: string },
+    locationName?: string
+  ) => {
+    setLocation(
+      position.coords.latitude,
+      position.coords.longitude,
+      locationName ?? '',
       {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
+        accuracy: position.coords.accuracy,
+        source: (position.source as StoredLocation['source']) ?? 'network'
       }
     )
-
-    state.value.watchId = watchId
-    state.value.isWatching = true
-
-    return watchId
   }
 
   /**
-   * 停止监听位置变化
+   * 设置位置名称
    */
-  const clearWatch = () => {
-    if (state.value.watchId !== null) {
-      navigator.geolocation.clearWatch(state.value.watchId)
-      state.value.watchId = null
-      state.value.isWatching = false
+  const setLocationName = (name: string) => {
+    if (_location.value) {
+      _location.value.locationName = name
+      _location.value.updatedAt = Date.now()
     }
   }
 
   /**
-   * 更新位置名称
-   * ✅ Store 只负责状态管理，不处理 UI 反馈
+   * 设置权限状态
    */
-  const updateLocationName = async (latitude: number, longitude: number, name: string) => {
-    const userService = useUserService()
+  const setPermissionStatus = (status: BrowserPermissionStatus) => {
+    _permissionStatus.value = status
+  }
 
-    await userService.updateLocation({
-      latitude,
-      longitude,
-      location_name: name
-    })
-
-    state.value.currentLocation = {
-      latitude,
-      longitude,
-      location_name: name
+  /**
+   * 使用默认位置初始化
+   */
+  const initWithDefault = () => {
+    if (!_initialized.value) {
+      _location.value = {
+        latitude: DEFAULTS.latitude,
+        longitude: DEFAULTS.longitude,
+        locationName: DEFAULTS.locationName,
+        source: 'default',
+        updatedAt: Date.now()
+      }
+      _initialized.value = true
     }
   }
 
   /**
-   * 计算两点之间的距离（单位：米）
-   */
-  const calculateDistance = (
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number
-  ): number => {
-    const R = 6371000 // 地球半径（米）
-    const dLat = ((lat2 - lat1) * Math.PI) / 180
-    const dLon = ((lon2 - lon1) * Math.PI) / 180
-
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2)
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-    return R * c
-  }
-
-  /**
-   * 格式化距离显示
-   */
-  const formatDistance = (meters: number): string => {
-    if (meters < 1000) {
-      return `${Math.round(meters)}m`
-    } else {
-      return `${(meters / 1000).toFixed(1)}km`
-    }
-  }
-
-  /**
-   * 清除位置数据
+   * 清除位置
    */
   const clearLocation = () => {
-    clearWatch()
-    state.value.currentPosition = null
-    state.value.currentLocation = null
-    state.value.error = null
+    _location.value = null
+    _initialized.value = false
   }
-
-  // ============ 注意事项 ============
-  // Store 不能使用生命周期钩子（onMounted/onUnmounted 等）
-  // 如果需要在组件卸载时清理资源，应在组件中调用 clearWatch()
-  // 例如：onUnmounted(() => locationStore.clearWatch())
 
   return {
-    // 状态
-    state,
-
-    // 计算属性
-    hasPermission,
+    // Getter
+    location,
     coordinates,
+    locationName,
+    accuracy,
+    permissionStatus,
+    hasPermission,
+    isInitialized,
+    isDefaultLocation,
+    getCoordinatesSync,
+    getLocationSync,
 
-    // 方法
-    checkPermission,
-    requestPermission,
-    getCurrentPosition,
-    watchPosition,
-    clearWatch,
-    updateLocationName,
-    calculateDistance,
-    formatDistance,
+    // Setter
+    setLocation,
+    setFromPosition,
+    setLocationName,
+    setPermissionStatus,
+    initWithDefault,
     clearLocation
   }
+}, {
+  // 不需要持久化
+  persist: false
 })
-
-

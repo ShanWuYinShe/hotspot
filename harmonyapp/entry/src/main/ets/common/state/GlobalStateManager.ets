@@ -3,8 +3,7 @@
  * 解决@Entry组件不能使用@ObjectLink的问题
  */
 
-import { UserResponse } from '../types/BackendApiTypes';
-import { UnreadCount } from '../types/BackendApiTypes';
+import { MyProfileData } from '../types/api';
 import { LocationInfo } from '../location/LocationUtil';
 import { WebSocketService } from '../websocket/WebSocketService';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -12,8 +11,17 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 const DOMAIN_NUMBER: number = 0xFF08;
 const TAG: string = 'GlobalStateManager';
 
+/**
+ * 未读计数
+ */
+export interface UnreadCount {
+  total_unread_count: number;
+  private_chat_count?: number;
+  group_chat_count?: number;
+}
+
 export interface GlobalState {
-  currentUser: UserResponse | null;
+  currentUser: MyProfileData | null;
   isLoggedIn: boolean;
   networkConnected: boolean;
   locationEnabled: boolean;
@@ -86,7 +94,7 @@ export class GlobalStateManager {
   /**
    * 更新用户信息
    */
-  updateUser(user: UserResponse | null): void {
+  updateUser(user: MyProfileData | null): void {
     this.currentState = {
       currentUser: user,
       isLoggedIn: user !== null,

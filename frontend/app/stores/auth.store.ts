@@ -1,443 +1,247 @@
 /**
- * 认证状态存储 - 支持多账户切换
- * 职责：状态管理、持久化 + API 调用
+ * 认证状态存储 - 纯持久化状态管理
  * 
- * ⚠️ 已删除所有兼容性代码，只保留最新设计实现
+ * ✅ 职责：仅管理持久化状态
+ * ❌ 不包含：API 调用、业务逻辑、副作用
+ * 
+ * 使用 localStorage 存储：
+ * - 数据由 store-hydration 插件在客户端启动时同步恢复
+ * - 插件执行早于 Vue onMounted，所以非 Vue 代码可直接使用
+ * 
+ * 使用约定：
+ * - 非 Vue 代码（中间件、服务等）：直接使用 store getter
+ * - Vue 组件：使用 useHydratedValue() composable 获取值，避免 SSR mismatch
  */
 
 import { defineStore } from 'pinia'
-import type { 
-  UserResponse,
-  RegisterRequest, 
-  LoginRequest, 
-  CreateTempRequest, 
-  RefreshTokenRequest,
-  SetPasswordRequest 
-} from '~/types/api'
-import { useAuthService } from '~/services/auth.service'
+import type { UserResponse } from '~/types/client'
 
 export interface AuthSession {
   user: UserResponse
-  token: string
-  refreshToken: string
-  expiresAt: number
-  loginTime: number // 登录时间戳
-  lastActiveTime: number // 最后活跃时间
+  accessToken: string              // access_token（用于 API 请求）
+  refreshToken: string             // refresh_token（用于刷新 access_token）
+  accessTokenExpiresAt: number     // access_token 过期时间（毫秒时间戳）
+  refreshTokenExpiresAt: number    // refresh_token 过期时间（毫秒时间戳）
+  loginTime: number
+  lastActiveTime: number
 }
 
 export interface AuthState {
-  currentUserId: string | null // 当前活跃用户ID
-  accounts: Record<string, AuthSession> // 用户ID -> 会话信息
-  accountOrder: string[] // 账户切换顺序（最近使用的在前）
+  currentUserId: string | null
+  accounts: Record<string, AuthSession>
+  accountOrder: string[]
+}
+
+const DEFAULT_AUTH_STATE: AuthState = {
+  currentUserId: null,
+  accounts: {},
+  accountOrder: []
 }
 
 export const useAuthStore = defineStore('auth', () => {
-  // ============ 状态 ============
-  const authState = ref<AuthState>({
-    currentUserId: null,
-    accounts: {},
-    accountOrder: []
-  })
+  // ============ 内部状态 ============
+  const _authState = ref<AuthState>({ ...DEFAULT_AUTH_STATE })
 
-  // ============ 计算属性 ============
+  // ============ Getter ============
 
-  /**
-   * 当前活跃会话
-   */
+  const authState = computed((): AuthState => _authState.value)
+
   const currentSession = computed(() => {
-    if (!authState.value.currentUserId) return null
-    return authState.value.accounts[authState.value.currentUserId] || null
+    if (!_authState.value.currentUserId) return null
+    return _authState.value.accounts[_authState.value.currentUserId] || null
   })
 
-  /**
-   * 是否已认证
-   */
+  // access_token 是否有效（未过期）
+  const isAccessTokenValid = computed(() => {
+    const session = currentSession.value
+    if (!session) return false
+    return Date.now() < session.accessTokenExpiresAt
+  })
+
+  // refresh_token 是否有效（未过期）
+  const isRefreshTokenValid = computed(() => {
+    const session = currentSession.value
+    if (!session) return false
+    return Date.now() < session.refreshTokenExpiresAt
+  })
+
+  // 是否已认证：有 access_token 且用户信息存在
   const isAuthenticated = computed(() => {
     const session = currentSession.value
     if (!session) return false
-
-    // 检查令牌是否过期
-    if (Date.now() > session.expiresAt) return false
-
-    return !!(session.token && session.user)
+    return !!(session.accessToken && session.user)
   })
 
-  /**
-   * 当前令牌是否过期
-   */
+  // access_token 是否过期（用于判断是否需要刷新）
   const isTokenExpired = computed(() => {
     const session = currentSession.value
     if (!session) return true
-    return Date.now() > session.expiresAt
+    return Date.now() > session.accessTokenExpiresAt
   })
 
-  /**
-   * 当前用户信息
-   */
   const user = computed(() => currentSession.value?.user || null)
 
-  /**
-   * 当前访问令牌
-   */
-  const token = computed(() => currentSession.value?.token || null)
+  const token = computed(() => currentSession.value?.accessToken || null)
 
-  /**
-   * 当前刷新令牌
-   */
   const refreshToken = computed(() => currentSession.value?.refreshToken || null)
 
-  /**
-   * 所有已登录账户列表（按最近使用排序）
-   */
   const accountsList = computed(() => {
-    return authState.value.accountOrder
-      .map(userId => authState.value.accounts[userId])
+    return _authState.value.accountOrder
+      .map(userId => _authState.value.accounts[userId])
       .filter(Boolean)
   })
 
-  /**
-   * 账户数量
-   */
-  const accountsCount = computed(() => authState.value.accountOrder.length)
+  const accountsCount = computed(() => _authState.value.accountOrder.length)
 
-  // ============ 状态操作方法 ============
+  // ============ Setter ============
 
-  /**
-   * 添加或更新账户会话
-   */
-  const setAccountSession = (user: UserResponse, token: string, refreshToken: string, expiresAt: number) => {
-    const userId = user.user_id
+  const setAccountSession = (
+    userOrId: UserResponse | { user_id: number; nickname: string },
+    accessToken: string,
+    refreshToken: string,
+    accessTokenExpiresAt: number,
+    refreshTokenExpiresAt: number
+  ) => {
+    // 支持从 AuthData（只有 user_id 和 nickname）或完整的 UserResponse 创建 session
+    const user: UserResponse = 'geo' in userOrId
+      ? userOrId as UserResponse
+      : {
+          user_id: userOrId.user_id,
+          nickname: userOrId.nickname,
+          geo: { latitude: 0, longitude: 0, location_name: '', distance: 0, degrees: 0 }
+        }
+    // 内部存储使用 string key，因为 JavaScript 对象 key 必须是 string
+    const userId = String(user.user_id)
     const now = Date.now()
 
-    // 创建会话信息
     const session: AuthSession = {
       user,
-      token,
+      accessToken,
       refreshToken,
-      expiresAt,
-      loginTime: authState.value.accounts[userId]?.loginTime || now,
+      accessTokenExpiresAt,
+      refreshTokenExpiresAt,
+      loginTime: _authState.value.accounts[userId]?.loginTime || now,
       lastActiveTime: now
     }
 
-    // 保存会话
-    authState.value.accounts[userId] = session
+    _authState.value.accounts[userId] = session
 
-    // 更新账户顺序（最近使用的在前）
-    const orderIndex = authState.value.accountOrder.indexOf(userId)
+    const orderIndex = _authState.value.accountOrder.indexOf(userId)
     if (orderIndex > -1) {
-      authState.value.accountOrder.splice(orderIndex, 1)
+      _authState.value.accountOrder.splice(orderIndex, 1)
     }
-    authState.value.accountOrder.unshift(userId)
+    _authState.value.accountOrder.unshift(userId)
 
-    // 设置为当前活跃用户
-    authState.value.currentUserId = userId
+    _authState.value.currentUserId = userId
   }
 
-  /**
-   * 切换到指定账户
-   */
   const switchToAccount = (userId: string) => {
-    const account = authState.value.accounts[userId]
+    const account = _authState.value.accounts[userId]
     if (!account) {
       throw new Error(`账户 ${userId} 不存在`)
     }
 
-    // 更新当前用户
-    authState.value.currentUserId = userId
+    _authState.value.currentUserId = userId
+    _authState.value.accounts[userId].lastActiveTime = Date.now()
 
-    // 更新最后活跃时间
-    authState.value.accounts[userId].lastActiveTime = Date.now()
-
-    // 更新账户顺序
-    const orderIndex = authState.value.accountOrder.indexOf(userId)
+    const orderIndex = _authState.value.accountOrder.indexOf(userId)
     if (orderIndex > 0) {
-      authState.value.accountOrder.splice(orderIndex, 1)
-      authState.value.accountOrder.unshift(userId)
+      _authState.value.accountOrder.splice(orderIndex, 1)
+      _authState.value.accountOrder.unshift(userId)
     }
 
     return account.user
   }
 
+  const updateCurrentTokens = (
+    accessToken: string,
+    refreshToken: string,
+    accessTokenExpiresAt: number,
+    refreshTokenExpiresAt: number
+  ) => {
+    if (!_authState.value.currentUserId) return
 
-  /**
-   * 更新当前会话的令牌信息
-   */
-  const updateCurrentTokens = (token: string, refreshToken: string, expiresAt: number) => {
-    if (!authState.value.currentUserId) return
-
-    const session = authState.value.accounts[authState.value.currentUserId]
+    const session = _authState.value.accounts[_authState.value.currentUserId]
     if (session) {
-      session.token = token
+      session.accessToken = accessToken
       session.refreshToken = refreshToken
-      session.expiresAt = expiresAt
+      session.accessTokenExpiresAt = accessTokenExpiresAt
+      session.refreshTokenExpiresAt = refreshTokenExpiresAt
       session.lastActiveTime = Date.now()
     }
   }
 
-  /**
-   * 更新当前用户信息
-   */
   const updateCurrentUser = (userData: Partial<UserResponse>) => {
-    if (!authState.value.currentUserId) return
+    if (!_authState.value.currentUserId) return
 
-    const session = authState.value.accounts[authState.value.currentUserId]
+    const session = _authState.value.accounts[_authState.value.currentUserId]
     if (session) {
       session.user = { ...session.user, ...userData }
       session.lastActiveTime = Date.now()
     }
   }
 
-  /**
-   * 移除指定账户
-   */
   const removeAccount = (userId: string) => {
-    const account = authState.value.accounts[userId]
-    if (!account) return
+    const account = _authState.value.accounts[userId]
+    if (!account) return null
 
-    // 删除账户数据
-    delete authState.value.accounts[userId]
+    delete _authState.value.accounts[userId]
 
-    // 从顺序中移除
-    const orderIndex = authState.value.accountOrder.indexOf(userId)
+    const orderIndex = _authState.value.accountOrder.indexOf(userId)
     if (orderIndex > -1) {
-      authState.value.accountOrder.splice(orderIndex, 1)
+      _authState.value.accountOrder.splice(orderIndex, 1)
     }
 
-    // 如果删除的是当前用户，切换到下一个用户或清空
-    if (authState.value.currentUserId === userId) {
-      if (authState.value.accountOrder.length > 0) {
-        authState.value.currentUserId = authState.value.accountOrder[0]
-      } else {
-        authState.value.currentUserId = null
-      }
+    if (_authState.value.currentUserId === userId) {
+      _authState.value.currentUserId = _authState.value.accountOrder[0] || null
     }
 
-    return account // 返回被删除的账户信息，供调用者处理服务器登出
+    return account
   }
 
-  /**
-   * 登出当前账户
-   */
   const logoutCurrent = () => {
-    if (authState.value.currentUserId) {
-      return removeAccount(authState.value.currentUserId)
+    if (_authState.value.currentUserId) {
+      return removeAccount(_authState.value.currentUserId)
     }
     return null
   }
 
-  /**
-   * 登出所有账户
-   */
   const logoutAll = () => {
-    const accounts = Object.values(authState.value.accounts)
-
-    // 清空本地所有账户
-    authState.value = {
-      currentUserId: null,
-      accounts: {},
-      accountOrder: []
-    }
-
-    // 返回所有账户信息，供调用者处理服务器登出
+    const accounts = Object.values(_authState.value.accounts)
+    _authState.value = { ...DEFAULT_AUTH_STATE }
     return accounts
   }
 
-  /**
-   * 清理过期的账户
-   */
+  // 清理 refresh_token 过期的账户（不是 access_token 过期）
   const cleanExpiredAccounts = () => {
     const now = Date.now()
     const expiredUserIds: string[] = []
 
-    // 找出过期的账户
-    for (const [userId, session] of Object.entries(authState.value.accounts)) {
-      if (now > session.expiresAt) {
+    for (const [userId, session] of Object.entries(_authState.value.accounts)) {
+      // 只有 refresh_token 过期才清理账户
+      if (now > session.refreshTokenExpiresAt) {
         expiredUserIds.push(userId)
       }
     }
 
-    // 移除过期账户
-    expiredUserIds.forEach(userId => {
-      removeAccount(userId)
-    })
-
+    expiredUserIds.forEach(userId => removeAccount(userId))
     return expiredUserIds.length
   }
 
-  /**
-   * 获取指定账户信息
-   */
   const getAccount = (userId: string) => {
-    return authState.value.accounts[userId] || null
-  }
-
-  // ============ API 调用方法 ============
-
-  /**
-   * 用户注册
-   * ✅ Store 只负责状态管理，不处理 UI 反馈
-   * 由调用方（组件）捕获错误并显示 toast
-   */
-  const register = async (data: RegisterRequest) => {
-    const authService = useAuthService()
-    
-    const response = await authService.register(data)
-    
-    // 解析过期时间
-    const expiresAt = new Date(response.expires_at).getTime()
-    
-    // 保存会话
-    setAccountSession(
-      { user_id: response.user_id, nickname: response.nickname },
-      response.access_token,
-      response.refresh_token,
-      expiresAt
-    )
-    
-    return response
-  }
-
-  /**
-   * 用户登录
-   * ✅ Store 只负责状态管理，不处理 UI 反馈
-   */
-  const login = async (data: LoginRequest) => {
-    const authService = useAuthService()
-    
-    const response = await authService.login(data)
-    
-    // 解析过期时间
-    const expiresAt = new Date(response.expires_at).getTime()
-    
-    // 保存会话
-    setAccountSession(
-      { user_id: response.user_id, nickname: response.nickname },
-      response.access_token,
-      response.refresh_token,
-      expiresAt
-    )
-    
-    return response
-  }
-
-  /**
-   * 创建临时用户
-   * ✅ Store 只负责状态管理，不处理 UI 反馈
-   */
-  const createTempUser = async (data: CreateTempRequest) => {
-    const authService = useAuthService()
-    
-    const response = await authService.createTempUser(data)
-    
-    // 解析过期时间
-    const expiresAt = new Date(response.expires_at).getTime()
-    
-    // 保存会话
-    setAccountSession(
-      { user_id: response.user_id, nickname: response.nickname },
-      response.access_token,
-      response.refresh_token,
-      expiresAt
-    )
-    
-    return response
-  }
-
-  /**
-   * 刷新令牌
-   */
-  const refreshAccessToken = async () => {
-    if (!refreshToken.value) {
-      throw new Error('没有刷新令牌')
-    }
-
-    const authService = useAuthService()
-    
-    try {
-      const response = await authService.refreshToken({ 
-        refresh_token: refreshToken.value 
-      })
-      
-      // 解析过期时间
-      const expiresAt = new Date(response.expires_at).getTime()
-      
-      // 更新令牌
-      updateCurrentTokens(
-        response.access_token,
-        response.refresh_token,
-        expiresAt
-      )
-      
-      return response
-    } catch (error) {
-      // Token 刷新失败，登出当前用户
-      logoutCurrent()
-      throw error
-    }
-  }
-
-  /**
-   * 登出
-   * ✅ Store 只负责状态管理，不处理 UI 反馈
-   */
-  const logout = async () => {
-    const authService = useAuthService()
-    
-    try {
-      await authService.logout()
-    } finally {
-      // 即使API失败也要清除本地会话
-      logoutCurrent()
-    }
-  }
-
-  /**
-   * 设置密码（临时用户升级）
-   * ✅ Store 只负责状态管理，不处理 UI 反馈
-   */
-  const setPassword = async (data: SetPasswordRequest) => {
-    const authService = useAuthService()
-    return await authService.setPassword(data)
-  }
-
-  /**
-   * 检查认证状态
-   */
-  const checkStatus = async () => {
-    const authService = useAuthService()
-    
-    try {
-      const response = await authService.checkStatus()
-      
-      // 如果服务端验证失败，清除本地会话
-      if (!response.is_valid) {
-        logoutCurrent()
-        return false
-      }
-      
-      return true
-    } catch (error) {
-      logoutCurrent()
-      return false
-    }
-  }
-
-  // ============ 初始化 ============
-  // Pinia 插件会自动恢复持久化的状态
-  // 应用启动时自动清理过期账户
-  if (typeof window !== 'undefined') {
-    nextTick(() => {
-      cleanExpiredAccounts()
-    })
+    return _authState.value.accounts[userId] || null
   }
 
   return {
-    // 状态
-    authState,
+    // 内部状态（用于持久化）
+    _authState,
 
-    // 计算属性
+    // Getter
+    authState,
     currentSession,
     isAuthenticated,
+    isAccessTokenValid,
+    isRefreshTokenValid,
     isTokenExpired,
     user,
     token,
@@ -445,7 +249,7 @@ export const useAuthStore = defineStore('auth', () => {
     accountsList,
     accountsCount,
 
-    // 多账户管理方法
+    // Setter
     setAccountSession,
     switchToAccount,
     updateCurrentTokens,
@@ -454,21 +258,11 @@ export const useAuthStore = defineStore('auth', () => {
     logoutCurrent,
     logoutAll,
     cleanExpiredAccounts,
-    getAccount,
-
-    // API 调用方法
-    register,
-    login,
-    createTempUser,
-    refreshAccessToken,
-    logout,
-    setPassword,
-    checkStatus
+    getAccount
   }
 }, {
   persist: {
     key: 'auth-multi-accounts',
-    pick: ['authState']
-    // 现在持久化完整的多账户状态，包括用户信息
+    pick: ['_authState']
   }
 })

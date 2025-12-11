@@ -1,11 +1,28 @@
 <template>
-  <UBanner
+  <UAlert
     :title="title"
     :description="description"
     :icon="icon"
-    :actions="bannerActions"
     class="border-t"
-  />
+  >
+    <template #actions>
+      <div class="flex gap-2">
+        <UButton
+          v-for="action in actions"
+          :key="action.key"
+          :icon="action.icon"
+          :color="action.color || 'primary'"
+          :variant="action.variant || 'solid'"
+          :size="action.size || 'sm'"
+          :loading="action.loading"
+          :disabled="action.disabled"
+          @click="action.action"
+        >
+          {{ action.label }}
+        </UButton>
+      </div>
+    </template>
+  </UAlert>
 </template>
 
 <script setup lang="ts">
@@ -28,19 +45,5 @@ interface Props {
   actions: ActionItem[]
 }
 
-const props = defineProps<Props>()
-
-// 转换为 UBanner 需要的格式
-const bannerActions = computed(() => 
-  props.actions.map(action => ({
-    label: action.label,
-    icon: action.icon,
-    color: action.color || 'primary',
-    variant: action.variant || 'solid',
-    size: action.size || 'sm',
-    loading: action.loading,
-    disabled: action.disabled,
-    click: action.action
-  }))
-)
+defineProps<Props>()
 </script>

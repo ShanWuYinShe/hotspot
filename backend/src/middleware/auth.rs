@@ -1,5 +1,4 @@
 use axum::{
-    async_trait,
     extract::{FromRequestParts, Request, State},
     http::request::Parts,
     middleware::Next,
@@ -7,6 +6,16 @@ use axum::{
 };
 
 use crate::{error::AppError, state::AppState, utils::jwt::JwtUtil};
+
+/// 从请求扩展中提取用户ID
+/// 
+/// 在 auth_middleware 之后使用，用于获取已认证用户的ID
+pub fn extract_user_id(req: &Request) -> Result<i64, AppError> {
+    req.extensions()
+        .get::<i64>()
+        .copied()
+        .ok_or_else(|| AppError::Unauthorized("未认证".to_string()))
+}
 
 /// JWT 认证中间件
 pub async fn auth_middleware(
@@ -19,12 +28,12 @@ pub async fn auth_middleware(
         .headers()
         .get("Authorization")
         .and_then(|h| h.to_str().ok())
-        .ok_or_else(|| AppError::Unauthorized("缺少认证令牌".to_string()))?;
+        .ok_or_else(|| AppError::TokenMissing("缺少认证令牌".to_string()))?;
 
     // 2. 验证 Bearer 格式
     let token = auth_header
         .strip_prefix("Bearer ")
-        .ok_or_else(|| AppError::Unauthorized("令牌格式错误".to_string()))?;
+        .ok_or_else(|| AppError::TokenMissing("令牌格式错误".to_string()))?;
 
     // 3. 验证 JWT Token
     let claims = JwtUtil::verify_token(token, &state.config.jwt_secret)?;
@@ -52,31 +61,11 @@ pub async fn auth_middleware(
     Ok(next.run(req).await)
 }
 
-/// 可选的用户ID提取器（用于公开API）
-/// 
-/// 如果请求已认证（有token），则返回Some(user_id)
-/// 否则返回None
-pub struct OptionalUserId(pub Option<i64>);
-
-#[async_trait]
-impl<S> FromRequestParts<S> for OptionalUserId
-where
-    S: Send + Sync,
-{
-    type Rejection = std::convert::Infallible;
-
-    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        let user_id = parts.extensions.get::<i64>().copied();
-        Ok(OptionalUserId(user_id))
-    }
-}
-
 /// Bearer Token 提取器
 /// 
 /// 从Authorization header中提取Bearer token
 pub struct BearerToken(pub String);
 
-#[async_trait]
 impl<S> FromRequestParts<S> for BearerToken
 where
     S: Send + Sync,
@@ -88,11 +77,11 @@ where
             .headers
             .get("Authorization")
             .and_then(|h| h.to_str().ok())
-            .ok_or_else(|| AppError::Unauthorized("缺少认证令牌".to_string()))?;
+            .ok_or_else(|| AppError::TokenMissing("缺少认证令牌".to_string()))?;
 
         let token = auth_header
             .strip_prefix("Bearer ")
-            .ok_or_else(|| AppError::Unauthorized("令牌格式错误".to_string()))?;
+            .ok_or_else(|| AppError::TokenMissing("令牌格式错误".to_string()))?;
 
         Ok(BearerToken(token.to_string()))
     }

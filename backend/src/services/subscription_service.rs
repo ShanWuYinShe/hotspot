@@ -25,8 +25,8 @@ impl SubscriptionService {
         let row = sqlx::query!(
             r#"
             SELECT
-                friend_request_enabled,
-                friend_accepted_enabled,
+                new_follower_enabled,
+                mutual_follow_enabled,
                 group_invite_enabled,
                 group_invite_response_enabled,
                 group_application_enabled,
@@ -46,8 +46,8 @@ impl SubscriptionService {
 
         match row {
             Some(r) => Ok(SubscriptionsData {
-                friend_request_enabled: r.friend_request_enabled,
-                friend_accepted_enabled: r.friend_accepted_enabled,
+                new_follower_enabled: r.new_follower_enabled,
+                mutual_follow_enabled: r.mutual_follow_enabled,
                 group_invite_enabled: r.group_invite_enabled,
                 group_invite_response_enabled: r.group_invite_response_enabled,
                 group_application_enabled: r.group_application_enabled,
@@ -61,8 +61,8 @@ impl SubscriptionService {
             None => {
                 // 如果没有记录，返回默认值（全部启用）
                 Ok(SubscriptionsData {
-                    friend_request_enabled: true,
-                    friend_accepted_enabled: true,
+                    new_follower_enabled: true,
+                    mutual_follow_enabled: true,
                     group_invite_enabled: true,
                     group_invite_response_enabled: true,
                     group_application_enabled: true,
@@ -84,8 +84,8 @@ impl SubscriptionService {
             r#"
             INSERT INTO notification_subscriptions (
                 user_id,
-                friend_request_enabled,
-                friend_accepted_enabled,
+                new_follower_enabled,
+                mutual_follow_enabled,
                 group_invite_enabled,
                 group_invite_response_enabled,
                 group_application_enabled,
@@ -97,8 +97,8 @@ impl SubscriptionService {
                 system_announcement_enabled
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             ON CONFLICT (user_id) DO UPDATE SET
-                friend_request_enabled = COALESCE($2, notification_subscriptions.friend_request_enabled),
-                friend_accepted_enabled = COALESCE($3, notification_subscriptions.friend_accepted_enabled),
+                new_follower_enabled = COALESCE($2, notification_subscriptions.new_follower_enabled),
+                mutual_follow_enabled = COALESCE($3, notification_subscriptions.mutual_follow_enabled),
                 group_invite_enabled = COALESCE($4, notification_subscriptions.group_invite_enabled),
                 group_invite_response_enabled = COALESCE($5, notification_subscriptions.group_invite_response_enabled),
                 group_application_enabled = COALESCE($6, notification_subscriptions.group_application_enabled),
@@ -111,8 +111,8 @@ impl SubscriptionService {
                 updated_at = NOW()
             "#,
             user_id,
-            req.friend_request_enabled.unwrap_or(true),
-            req.friend_accepted_enabled.unwrap_or(true),
+            req.new_follower_enabled.unwrap_or(true),
+            req.mutual_follow_enabled.unwrap_or(true),
             req.group_invite_enabled.unwrap_or(true),
             req.group_invite_response_enabled.unwrap_or(true),
             req.group_application_enabled.unwrap_or(true),

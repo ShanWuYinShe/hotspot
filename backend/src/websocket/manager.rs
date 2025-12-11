@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::{mpsc, RwLock};
@@ -9,11 +9,8 @@ use crate::websocket::types::WsMessage;
 /// WebSocket连接信息
 pub struct Connection {
     pub connection_id: String,
-    pub user_id: i64,
     pub sender: mpsc::UnboundedSender<Message>,
     pub last_ping: Arc<RwLock<Instant>>,
-    pub subscriptions: Arc<RwLock<HashSet<String>>>,
-    pub connected_at: Instant,
 }
 
 /// WebSocket连接管理器
@@ -40,14 +37,10 @@ impl ConnectionManager {
         user_id: i64,
         sender: mpsc::UnboundedSender<Message>,
     ) {
-        let now = Instant::now();
         let connection = Arc::new(Connection {
             connection_id: connection_id.clone(),
-            user_id,
             sender,
-            last_ping: Arc::new(RwLock::new(now)),
-            subscriptions: Arc::new(RwLock::new(HashSet::new())),
-            connected_at: now,
+            last_ping: Arc::new(RwLock::new(Instant::now())),
         });
 
         // 添加到用户连接列表
@@ -92,7 +85,7 @@ impl ConnectionManager {
             let json_str = serde_json::to_string(message)
                 .map_err(|e| format!("序列化消息失败: {}", e))?;
             
-            let ws_message = Message::Text(json_str);
+            let ws_message = Message::Text(json_str.into());
             
             for connection in user_connections {
                 if let Err(e) = connection.sender.send(ws_message.clone()) {
@@ -113,44 +106,6 @@ impl ConnectionManager {
                 tracing::debug!("{}", e);
             }
         }
-    }
-
-    /// 广播消息给所有在线用户
-    pub async fn broadcast(&self, message: &WsMessage) -> Result<(), String> {
-        let connections = self.connections.read().await;
-        
-        let json_str = serde_json::to_string(message)
-            .map_err(|e| format!("序列化消息失败: {}", e))?;
-        
-        let ws_message = Message::Text(json_str);
-        
-        for user_connections in connections.values() {
-            for connection in user_connections {
-                if let Err(e) = connection.sender.send(ws_message.clone()) {
-                    tracing::error!("广播消息失败: user_id={}, error={}", connection.user_id, e);
-                }
-            }
-        }
-        
-        Ok(())
-    }
-
-    /// 检查用户是否在线
-    pub async fn is_user_online(&self, user_id: i64) -> bool {
-        let connections = self.connections.read().await;
-        connections.contains_key(&user_id)
-    }
-
-    /// 获取在线用户数量
-    pub async fn online_user_count(&self) -> usize {
-        let connections = self.connections.read().await;
-        connections.len()
-    }
-
-    /// 获取在线用户列表
-    pub async fn get_online_users(&self) -> Vec<i64> {
-        let connections = self.connections.read().await;
-        connections.keys().copied().collect()
     }
 
     /// 获取用户的连接数
@@ -177,11 +132,11 @@ impl ConnectionManager {
         Err(format!("连接不存在: connection_id={}", connection_id))
     }
 
-    /// 检查连接是否超时（超过60秒未收到心跳）
+    /// 检查连接是否超时（超过 WS_CONNECTION_TIMEOUT_SECS 秒未收到心跳）
     pub async fn check_timeout(&self) -> Vec<String> {
         let mut timeout_connections = Vec::new();
         let connections = self.connections.read().await;
-        let timeout_duration = std::time::Duration::from_secs(60);
+        let timeout_duration = std::time::Duration::from_secs(crate::constants::WS_CONNECTION_TIMEOUT_SECS);
         
         for user_connections in connections.values() {
             for conn in user_connections {
@@ -193,119 +148,6 @@ impl ConnectionManager {
         }
         
         timeout_connections
-    }
-
-    /// 订阅频道
-    pub async fn subscribe(&self, connection_id: &str, channels: Vec<String>) -> Result<Vec<String>, String> {
-        let connection_map = self.connection_map.read().await;
-        if let Some(&user_id) = connection_map.get(connection_id) {
-            let connections = self.connections.read().await;
-            if let Some(user_connections) = connections.get(&user_id) {
-                for conn in user_connections {
-                    if conn.connection_id == connection_id {
-                        let mut subscriptions = conn.subscriptions.write().await;
-                        let mut subscribed = Vec::new();
-                        for channel in channels {
-                            if subscriptions.insert(channel.clone()) {
-                                subscribed.push(channel);
-                            }
-                        }
-                        return Ok(subscribed);
-                    }
-                }
-            }
-        }
-        Err(format!("连接不存在: connection_id={}", connection_id))
-    }
-
-    /// 取消订阅频道
-    pub async fn unsubscribe(&self, connection_id: &str, channels: Vec<String>) -> Result<Vec<String>, String> {
-        let connection_map = self.connection_map.read().await;
-        if let Some(&user_id) = connection_map.get(connection_id) {
-            let connections = self.connections.read().await;
-            if let Some(user_connections) = connections.get(&user_id) {
-                for conn in user_connections {
-                    if conn.connection_id == connection_id {
-                        let mut subscriptions = conn.subscriptions.write().await;
-                        let mut unsubscribed = Vec::new();
-                        for channel in channels {
-                            if subscriptions.remove(&channel) {
-                                unsubscribed.push(channel);
-                            }
-                        }
-                        return Ok(unsubscribed);
-                    }
-                }
-            }
-        }
-        Err(format!("连接不存在: connection_id={}", connection_id))
-    }
-
-    /// 检查用户是否订阅了某个频道
-    pub async fn check_subscription(&self, user_id: i64, channel: &str) -> bool {
-        let connections = self.connections.read().await;
-        if let Some(user_connections) = connections.get(&user_id) {
-            for conn in user_connections {
-                let subscriptions = conn.subscriptions.read().await;
-                if subscriptions.contains(channel) {
-                    return true;
-                }
-            }
-        }
-        false
-    }
-
-    /// 发送消息给订阅了指定频道的用户
-    pub async fn send_to_channel(&self, channel: &str, user_ids: &[i64], message: &WsMessage) {
-        for user_id in user_ids {
-            if self.check_subscription(*user_id, channel).await {
-                if let Err(e) = self.send_to_user(*user_id, message).await {
-                    tracing::debug!("{}", e);
-                }
-            }
-        }
-    }
-
-    /// 获取连接信息（用于调试）
-    pub async fn get_connection_info(&self, connection_id: &str) -> Option<(i64, Instant, Vec<String>)> {
-        let connection_map = self.connection_map.read().await;
-        if let Some(&user_id) = connection_map.get(connection_id) {
-            let connections = self.connections.read().await;
-            if let Some(user_connections) = connections.get(&user_id) {
-                for conn in user_connections {
-                    if conn.connection_id == connection_id {
-                        let subscriptions = conn.subscriptions.read().await;
-                        let subs: Vec<String> = subscriptions.iter().cloned().collect();
-                        return Some((user_id, conn.connected_at, subs));
-                    }
-                }
-            }
-        }
-        None
-    }
-
-    /// 向指定频道的所有订阅者广播消息
-    pub async fn broadcast_to_channel(&self, channel: &str, message: &crate::websocket::types::WsMessage) -> Result<usize, Box<dyn std::error::Error + Send + Sync>> {
-        let json = serde_json::to_string(message)?;
-        let msg = Message::Text(json);
-        
-        let connections = self.connections.read().await;
-        let mut sent_count = 0;
-        
-        for user_connections in connections.values() {
-            for conn in user_connections {
-                let subscriptions = conn.subscriptions.read().await;
-                if subscriptions.contains(channel) {
-                    if let Err(e) = conn.sender.send(msg.clone()) {
-                        tracing::warn!("Failed to send to connection {}: {}", conn.connection_id, e);
-                    } else {
-                        sent_count += 1;
-                    }
-                }
-            }
-        }
-        
-        Ok(sent_count)
     }
 }
 

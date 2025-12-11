@@ -1,10 +1,6 @@
 <template>
-    <InteractiveCard 
-        class="group user-card fade-in-up"
-        :hover="true"
-        :active="true"
-        :glow="true"
-        shadow="md"
+    <UCard
+        class="interactive-card group cursor-pointer"
         @click="$emit('click', user)"
     >
         <div class="flex items-center justify-between">
@@ -18,28 +14,28 @@
                     size: 'lg',
                     chip: isOnline ? { color: 'success', position: 'bottom-right' } : false
                 }"
-                :chip="isTempUser(user.user_id) ? { text: '临时', color: 'neutral' } : false"
+                :chip="user.user_type && isTempUser(user.user_type) ? { text: '临时', color: 'neutral' } : false"
                 size="lg"
                 class="flex-1 min-w-0"
             >
                 <!-- 自定义描述内容 -->
                 <template #description>
                     <div class="space-y-1">
-                        <!-- 位置和距离信息 -->
-                        <div class="flex items-center gap-4 text-sm text-neutral-600 dark:text-neutral-400">
-                            <div v-if="user.location_name" class="flex items-center gap-1">
-                                <UIcon name="i-heroicons-map-pin" class="w-3 h-3" />
-                                <span class="truncate">{{ user.location_name }}</span>
+                        <!-- 位置和距离信息（仅当有 geo 数据时显示） -->
+                        <div v-if="user.geo" class="flex items-center gap-4 text-sm text-secondary-content">
+                            <div v-if="user.geo.location_name" class="flex items-center gap-1">
+                                <UIcon name="i-heroicons-map-pin" class="icon-sm" />
+                                <span class="truncate">{{ user.geo.location_name }}</span>
                             </div>
                             
-                            <div v-if="user.distance !== undefined" class="flex items-center gap-1">
-                                <UIcon name="i-heroicons-signal" class="w-3 h-3" />
-                                <span>{{ formatDistance(user.distance) }}</span>
+                            <div v-if="user.geo.distance !== undefined" class="flex items-center gap-1">
+                                <UIcon name="i-heroicons-signal" class="icon-sm" />
+                                <span>{{ formatDistance(user.geo.distance) }}</span>
                             </div>
                         </div>
 
                         <!-- 个人简介 -->
-                        <p v-if="user.bio" class="text-sm text-neutral-600 dark:text-neutral-400 line-clamp-2">
+                        <p v-if="user.bio" class="text-sm text-secondary-content line-clamp-2">
                             {{ user.bio }}
                         </p>
                     </div>
@@ -87,22 +83,39 @@
                 </div>
             </div>
         </div>
-    </InteractiveCard>
+    </UCard>
 </template>
 
 <script setup lang="ts">
-import type { UserResponse } from '~/types/api'
+import type { GeoData } from '~/types/api'
 import { useUsersService } from '~/services/users.service'
 import { isTempUser } from '~/utils/userTypes'
+import { getErrorMessage } from '~/utils/error'
+
+// UserCard 支持的用户数据类型（兼容搜索结果和好友列表）
+interface UserCardData {
+    user_id: number;
+    nickname: string;
+    avatar_url?: string;
+    user_type?: string;  // 可选，搜索结果可能没有
+    bio?: string;
+    tags?: string[];
+    is_online?: boolean;
+    geo?: GeoData;  // 搜索结果有 geo，好友列表没有
+    relationship?: {
+        is_mutual_follow?: boolean;
+        is_following?: boolean;
+    };
+}
 
 interface Props {
-    user: UserResponse
+    user: UserCardData
 }
 
 interface Emits {
-    click: [user: UserResponse]
-    message: [user: UserResponse]
-    more: [user: UserResponse]
+    click: [user: UserCardData]
+    message: [user: UserCardData]
+    more: [user: UserCardData]
 }
 
 const props = defineProps<Props>()
@@ -112,22 +125,22 @@ const emit = defineEmits<Emits>()
 // 用户描述（基础信息）
 const userDescription = computed(() => {
     const parts = []
-    if (props.user.location_name) {
-        parts.push(props.user.location_name)
+    if (props.user.geo?.location_name) {
+        parts.push(props.user.geo.location_name)
     }
-    if (props.user.distance !== undefined) {
-        parts.push(formatDistance(props.user.distance))
+    if (props.user.geo?.distance !== undefined) {
+        parts.push(formatDistance(props.user.geo.distance))
     }
     return parts.join(' • ')
 })
 
-// 用户在线状态（从 props 获取或默认为 false）
-// TODO: 通过 WebSocket 订阅用户在线状态更新
+// 用户在线状态：直接使用 props 传入的值（展示组件不需要实时订阅）
 const isOnline = computed(() => props.user.is_online ?? false)
 
-// 用户关系状态（从 props 获取，如果有 relationship 字段）
-const isFriend = computed(() => (props.user as any).is_friend ?? false)
-const isFollowing = computed(() => (props.user as any).is_following ?? false)
+// 用户关系状态（从 relationship 字段获取）
+// 好友 = 互相关注
+const isFriend = computed(() => props.user.relationship?.is_mutual_follow ?? false)
+const isFollowing = computed(() => props.user.relationship?.is_following ?? false)
 
 // 用户操作菜单（根据关系状态动态调整）
 const userMenuItems = computed(() => {
@@ -140,15 +153,8 @@ const userMenuItems = computed(() => {
         click: () => emit('click', props.user)
     }])
 
-    // 关系操作
+    // 关系操作（好友 = 互相关注，只需要关注操作）
     const relationItems = []
-    if (!isFriend.value) {
-        relationItems.push({
-            label: '添加好友',
-            icon: 'i-heroicons-user-plus',
-            click: () => handleAddFriend()
-        })
-    }
     if (!isFollowing.value) {
         relationItems.push({
             label: '关注用户',
@@ -171,7 +177,7 @@ const userMenuItems = computed(() => {
         label: '举报用户',
         icon: 'i-heroicons-flag',
         click: () => handleReportUser(),
-        class: 'text-error-500'
+        class: 'text-error'
     }])
 
     return items
@@ -179,39 +185,13 @@ const userMenuItems = computed(() => {
 
 // formatDistance 函数已从统一工具函数导入
 
-// 添加好友
-const handleAddFriend = async () => {
-    const toast = useToast()
-    const userService = useUsersService()
-    try {
-        await userService.sendFriendRequest({
-            to_user_id: props.user.user_id
-        })
-        
-        toast.add({
-            title: '好友申请已发送',
-            description: `已向 ${props.user.nickname} 发送好友申请`,
-            color: 'success'
-        })
-        
-        // 刷新用户数据
-        await refreshNuxtData('users')
-    } catch (error: any) {
-        toast.add({
-            title: '发送失败',
-            description: error.message || '发送好友申请时发生错误',
-            color: 'error'
-        })
-    }
-}
-
-// 关注用户
+// 关注用户（好友 = 互相关注）
 const handleFollowUser = async () => {
     const toast = useToast()
     const userService = useUsersService()
     try {
         await userService.followUser({
-            to_user_id: props.user.user_id
+            id: props.user.user_id
         })
         
         toast.add({
@@ -222,10 +202,10 @@ const handleFollowUser = async () => {
         
         // 刷新用户数据
         await refreshNuxtData('users')
-    } catch (error: any) {
+    } catch (error: unknown) {
         toast.add({
             title: '关注失败',
-            description: error.message || '关注用户时发生错误',
+            description: getErrorMessage(error, '关注用户时发生错误'),
             color: 'error'
         })
     }
@@ -237,7 +217,7 @@ const handleUnfollowUser = async () => {
     const userService = useUsersService()
     try {
         await userService.unfollowUser({
-            to_user_id: props.user.user_id
+            id: props.user.user_id
         })
         
         toast.add({
@@ -248,10 +228,10 @@ const handleUnfollowUser = async () => {
         
         // 刷新用户数据
         await refreshNuxtData('users')
-    } catch (error: any) {
+    } catch (error: unknown) {
         toast.add({
             title: '取消关注失败',
-            description: error.message || '取消关注时发生错误',
+            description: getErrorMessage(error, '取消关注时发生错误'),
             color: 'error'
         })
     }
@@ -259,19 +239,14 @@ const handleUnfollowUser = async () => {
 
 // 举报用户
 const handleReportUser = async () => {
-    const { showReport } = useModal()
+    const modal = useModal()
+    const toast = useToast()
     
-    await showReport({
-        targetType: 'user',
-        targetId: props.user.user_id,
-        onSuccess: () => {
-            const toast = useToast()
-            toast.add({
-                title: '举报已提交',
-                description: '感谢您的举报，我们会尽快处理',
-                color: 'success'
-            })
-        }
+    await modal.showReport('user', String(props.user.user_id))
+    toast.add({
+        title: '举报已提交',
+        description: '感谢您的举报，我们会尽快处理',
+        color: 'success'
     })
 }
 </script>

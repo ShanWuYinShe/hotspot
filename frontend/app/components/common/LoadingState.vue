@@ -1,14 +1,14 @@
 <template>
   <div class="flex flex-col items-center justify-center py-8 md:py-12 space-y-4">
     <!-- 加载动画 -->
-    <UIcon name="i-lucide-loader-2" class="w-12 h-12 md:w-16 md:h-16 animate-spin text-neutral-600 dark:text-neutral-300" />
+    <UIcon name="i-lucide-loader-2" class="w-12 h-12 md:w-16 md:h-16 animate-spin text-secondary-content" />
     
     <!-- 加载文本 -->
     <div class="text-center space-y-2">
-      <p class="text-sm md:text-base font-medium text-neutral-700 dark:text-neutral-300">
+      <p class="text-sm md:text-base font-medium text-secondary-strong">
         {{ title || '加载中...' }}
       </p>
-      <p v-if="description" class="text-xs md:text-sm text-neutral-500 dark:text-neutral-400">
+      <p v-if="description" class="text-xs md:text-sm text-secondary-content">
         {{ description }}
       </p>
     </div>
@@ -18,9 +18,9 @@
       <UProgress 
         :value="progress" 
         :max="100"
-        class="h-2 [&>div]:bg-primary-500 [&>div]:dark:bg-primary-400 [&>div]:transition-all [&>div]:duration-300 [&>div]:ease-out"
+        class="h-2 progress-primary"
       />
-      <p class="text-xs text-center mt-2 text-neutral-500 dark:text-neutral-400">
+      <p class="text-xs text-center mt-2 text-secondary-content">
         {{ Math.round(progress) }}%
       </p>
     </div>

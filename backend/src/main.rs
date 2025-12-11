@@ -1,27 +1,27 @@
 mod config;
 mod constants;
+mod dto;
 mod error;
+mod events;
+mod handlers;
+mod middleware;
+mod repositories;
+mod routes;
+mod services;
 mod state;
 mod types;
 mod utils;
-mod middleware;
-mod dto;
-mod repositories;
-mod services;
-mod handlers;
-mod routes;
 mod websocket;
-mod events;
 
+use axum::Router;
 use std::sync::Arc;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use axum::middleware as axum_middleware;
 use crate::{
     config::Config,
     events::{event_bus::EventBus, event_handler::EventHandler},
-    middleware::{cors::create_cors_layer, logging::logging_middleware, rate_limit::rate_limit_middleware},
+    middleware::cors::create_cors_layer,
     state::AppState,
 };
 
@@ -56,6 +56,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         state.db.clone(),
         state.redis.clone(),
         state.ws_manager.clone(),
+        state.ws_subscription.clone(),
     );
     tokio::spawn(async move {
         event_handler.start(event_receiver).await;
@@ -79,9 +80,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("WebSocket timeout checker started");
 
     // 创建路由
-    let app = routes::create_routes(state.clone())
-        .layer(axum_middleware::from_fn_with_state(state.clone(), rate_limit_middleware))
-        .layer(axum_middleware::from_fn(logging_middleware))
+    // 明确挂载各版本 API，方便后续支持 v2、v3 等版本
+    let app: Router = Router::new()
+        .nest("/api/v1", routes::v1_routes(state.clone()))
+        // 后续版本可在此添加：
+        // .nest("/api/v2", routes::v2_routes(state.clone()))
+        .merge(routes::ws_routes())
+        .with_state(state)
         .layer(create_cors_layer())
         .layer(TraceLayer::new_for_http());
 

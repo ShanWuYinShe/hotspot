@@ -80,16 +80,16 @@ impl GroupApplicationRepository {
         status: InviteStatus,
         handled_by: i64,
     ) -> Result<()> {
-        sqlx::query(
+        sqlx::query!(
             r#"
             UPDATE group_applications
-            SET status = $2::invitation_status, handled_by = $3, handled_at = NOW()
+            SET status = $2, handled_by = $3, handled_at = NOW()
             WHERE id = $1
-            "#
+            "#,
+            id,
+            status as InviteStatus,
+            handled_by
         )
-        .bind(id)
-        .bind(status as InviteStatus)
-        .bind(handled_by)
         .execute(&self.pool)
         .await?;
 
@@ -143,5 +143,17 @@ impl GroupApplicationRepository {
         .await?;
         
         Ok(rows)
+    }
+
+    /// 删除申请（取消申请时使用）
+    pub async fn delete(&self, id: i64) -> Result<()> {
+        sqlx::query!(
+            "DELETE FROM group_applications WHERE id = $1",
+            id
+        )
+        .execute(&self.pool)
+        .await?;
+        
+        Ok(())
     }
 }

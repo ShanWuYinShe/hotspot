@@ -4,7 +4,7 @@ use axum::{
 };
 
 use crate::{
-    handlers::system_config,
+    handlers::{system_config, reports},
     state::AppState,
 };
 
@@ -17,5 +17,8 @@ pub fn admin_routes() -> Router<AppState> {
         .route("/config/update", post(system_config::update))
         .route("/config/delete", post(system_config::delete))
         .route("/config/get_config_history", post(system_config::get_config_history))
-        .route("/config/list_all_changes", post(system_config::list_all_changes))
+        .route("/config/get_changes", post(system_config::get_changes))
+        // 举报审核（管理员）
+        .route("/reports/get_list", post(reports::get_list))
+        .route("/reports/handle", post(reports::handle))
 }

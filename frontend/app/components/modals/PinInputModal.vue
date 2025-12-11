@@ -1,56 +1,59 @@
 <template>
-  <UModal :title="isSetup ? '设置设备PIN' : '输入设备PIN'" :prevent-close="true" :close="{ onClick: () => $emit('close') }">
+  <UModal
+    :title="isSetup ? '设置设备PIN' : '输入设备PIN'"
+    :dismissible="false"
+    :close="{ onClick: () => $emit('close') }"
+  >
     <template #body>
-      <div class="space-y-4">
-        <p class="text-sm text-neutral-600 dark:text-neutral-400">
-          {{ isSetup 
-            ? '请设置4位数字PIN以保护账户切换功能' 
-            : '请输入4位数字PIN以解锁账户切换功能' 
-          }}
-        </p>
+      <p class="text-sm text-secondary-content mb-4">
+        {{ isSetup
+          ? '请设置4位数字PIN以保护账户切换功能'
+          : '请输入4位数字PIN以解锁账户切换功能'
+        }}
+      </p>
 
-        <div class="flex justify-center">
-          <UPinInput
-            v-model="pinValue"
-            :length="4"
-            mask
-            :error="hasError"
-            placeholder="●"
-            @complete="handlePinComplete"
-          />
-        </div>
+      <section class="flex justify-center mb-4">
+        <UPinInput
+          v-model="pinValue"
+          :length="4"
+          mask
+          :error="hasError"
+          placeholder="●"
+          @complete="handlePinComplete"
+        />
+      </section>
 
-        <div v-if="hasError" class="text-center">
-          <p class="text-sm text-red-600 dark:text-red-400">
-            {{ errorMessage }}
-          </p>
-        </div>
+      <UAlert
+        v-if="hasError"
+        color="error"
+        variant="subtle"
+        :title="errorMessage"
+        class="mb-4"
+      />
 
-        <div v-if="isSetup" class="text-center">
-          <p class="text-xs text-neutral-500 dark:text-neutral-400">
-            建议使用好记的数字组合，如生日或纪念日
-          </p>
-        </div>
-      </div>
+      <p
+        v-if="isSetup"
+        class="text-xs text-secondary-content text-center"
+      >
+        建议使用好记的数字组合，如生日或纪念日
+      </p>
     </template>
 
     <template #footer>
-      <div class="flex justify-end space-x-3">
-        <UButton 
-          variant="ghost" 
-          @click="handleCancel"
-          :disabled="isProcessing"
-        >
-          取消
-        </UButton>
-        <UButton 
-          :disabled="!isComplete || isProcessing"
-          :loading="isProcessing"
-          @click="handleConfirm"
-        >
-          {{ isSetup ? '设置' : '确认' }}
-        </UButton>
-      </div>
+      <UButton
+        variant="ghost"
+        :disabled="isProcessing"
+        @click="handleCancel"
+      >
+        取消
+      </UButton>
+      <UButton
+        :disabled="!isComplete || isProcessing"
+        :loading="isProcessing"
+        @click="handleConfirm"
+      >
+        {{ isSetup ? '设置' : '确认' }}
+      </UButton>
     </template>
   </UModal>
 </template>
@@ -72,27 +75,19 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>()
 
-// useOverlay 会自动管理 Modal 状态，无需手动绑定 isOpen
-
 const pinValue = ref<string[]>(['', '', '', ''])
 const hasError = ref(false)
 const errorMessage = ref('')
 const isProcessing = ref(false)
 
-// 计算属性
-const isComplete = computed(() => 
+const isComplete = computed(() =>
   pinValue.value.length === 4 && pinValue.value.every(digit => /^\d$/.test(digit))
 )
 
-// 计算完整的PIN字符串
 const pinString = computed(() => pinValue.value.join(''))
 
-// 组件挂载时重置表单
-onMounted(() => {
-  resetForm()
-})
+onMounted(() => resetForm())
 
-// 监听PIN值变化，清除错误状态
 watch(pinValue, () => {
   if (hasError.value) {
     hasError.value = false
@@ -100,12 +95,10 @@ watch(pinValue, () => {
   }
 })
 
-// 处理PIN输入完成
 const handlePinComplete = (pins: string[]) => {
   pinValue.value = pins
 }
 
-// 方法
 function resetForm() {
   pinValue.value = ['', '', '', '']
   hasError.value = false
@@ -113,15 +106,14 @@ function resetForm() {
   isProcessing.value = false
 }
 
-
 async function handleConfirm() {
   if (!isComplete.value || isProcessing.value) return
-  
+
   isProcessing.value = true
-  
+
   try {
     emit('confirm', pinString.value)
-    emit('close') // 通知 useOverlay 关闭
+    emit('close')
   } catch (error) {
     hasError.value = true
     errorMessage.value = '处理失败，请重试'
@@ -132,34 +124,15 @@ async function handleConfirm() {
 function handleCancel() {
   if (isProcessing.value) return
   emit('cancel')
-  emit('close') // 通知 useOverlay 关闭
+  emit('close')
 }
 
 function showError(message: string) {
   hasError.value = true
   errorMessage.value = message
   isProcessing.value = false
-  
-  // 清空输入
   resetForm()
 }
 
-// 暴露方法给父组件
-defineExpose({
-  showError,
-  resetForm
-})
+defineExpose({ showError, resetForm })
 </script>
-
-<style scoped>
-/* 确保输入框在所有浏览器中都有一致的样式 */
-input[type="password"]::-ms-reveal {
-  display: none;
-}
-
-input[type="password"]::-webkit-textfield-decoration-container {
-  display: none;
-}
-</style>
-
-

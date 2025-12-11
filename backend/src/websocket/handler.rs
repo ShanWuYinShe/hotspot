@@ -15,10 +15,8 @@ use crate::{
     error::AppError,
     state::AppState,
     utils::jwt::JwtUtil,
-    websocket::{
-        subscription::SubscriptionType,
-        types::WsMessage,
-    },
+    websocket::subscription::SubscriptionType,
+    websocket::types::{WsMessage, SubscriptionItem, FailedSubscriptionItem},
 };
 
 #[derive(Debug, Deserialize)]
@@ -57,41 +55,50 @@ async fn handle_socket(socket: WebSocket, user_id: i64, state: AppState) {
     // 将连接添加到管理器
     state.ws_manager.add_connection(connection_id.clone(), user_id, tx.clone()).await;
 
-    // 标记用户上线（Redis）
+    // 标记用户上线（Redis + 数据库）
     use crate::services::presence_service::PresenceService;
+    use crate::repositories::user_online_status_repo::UserOnlineStatusRepository;
+    
+    // 1. 更新 Redis（实时状态）
     let mut presence_service = PresenceService::new(state.redis.clone());
     if let Err(e) = presence_service.mark_user_online(user_id).await {
-        tracing::error!("标记用户上线失败: user_id={}, error={}", user_id, e);
+        tracing::error!("标记用户上线失败(Redis): user_id={}, error={}", user_id, e);
+    }
+    
+    // 2. 更新数据库（持久化状态）
+    let online_status_repo = UserOnlineStatusRepository::new(state.db.clone());
+    if let Err(e) = online_status_repo.set_online(user_id).await {
+        tracing::error!("标记用户上线失败(DB): user_id={}, error={}", user_id, e);
     }
 
     // 发送欢迎消息
     let welcome_msg = WsMessage::ConnectionEstablished {
         connection_id: connection_id.clone(),
-        user_id: user_id.to_string(),
+        user_id,
         server_time: chrono::Utc::now().to_rfc3339(),
     };
     if let Ok(json) = serde_json::to_string(&welcome_msg) {
-        let _ = tx.send(Message::Text(json));
+        let _ = tx.send(Message::Text(json.into()));
     }
 
-    // 通知其他用户该用户上线
-    // TODO: 查询用户昵称和头像
+    // 通知订阅了该用户状态的其他用户
     let online_msg = WsMessage::UserOnline {
-        user_id: user_id.to_string(),
-        nickname: "Unknown".to_string(),
-        avatar_url: String::new(),
+        user_id,
+        nickname: "Unknown".to_string(), // TODO: 查询用户昵称
+        avatar_url: None,
         online_at: chrono::Utc::now().to_rfc3339(),
     };
-    // TODO: 只推送给订阅了 presence 频道的用户
-    let _ = state.ws_manager.broadcast(&online_msg).await;
+    // 只推送给订阅了该用户状态的用户
+    let subscribers = state.ws_subscription.get_user_status_subscribers(&user_id.to_string()).await;
+    state.ws_manager.send_to_users(&subscribers, &online_msg).await;
 
-    // 启动心跳任务
+    // 启动心跳任务（使用常量配置的间隔）
     let heartbeat_tx = tx.clone();
     let heartbeat_task = tokio::spawn(async move {
-        let mut heartbeat_interval = interval(Duration::from_secs(30));
+        let mut heartbeat_interval = interval(Duration::from_secs(crate::constants::WS_SERVER_PING_INTERVAL_SECS));
         loop {
             heartbeat_interval.tick().await;
-            if heartbeat_tx.send(Message::Ping(vec![])).is_err() {
+            if heartbeat_tx.send(Message::Ping(vec![].into())).is_err() {
                 break;
             }
         }
@@ -137,24 +144,34 @@ async fn handle_socket(socket: WebSocket, user_id: i64, state: AppState) {
     // 移除连接
     state.ws_manager.remove_connection(&connection_id).await;
 
-    // 标记用户离线（Redis，仅当用户没有其他连接时）
+    // 取消用户所有订阅
+    state.ws_subscription.unsubscribe_all(user_id).await;
+
+    // 标记用户离线（Redis + 数据库，仅当用户没有其他连接时）
     if state.ws_manager.get_user_connection_count(user_id).await == 0 {
         use crate::services::presence_service::PresenceService;
+        use crate::repositories::user_online_status_repo::UserOnlineStatusRepository;
+        
+        // 1. 更新 Redis（实时状态）
         let mut presence_service = PresenceService::new(state.redis.clone());
         if let Err(e) = presence_service.mark_user_offline(user_id).await {
-            tracing::error!("标记用户离线失败: user_id={}, error={}", user_id, e);
+            tracing::error!("标记用户离线失败(Redis): user_id={}, error={}", user_id, e);
+        }
+        
+        // 2. 更新数据库（持久化状态）
+        let online_status_repo = UserOnlineStatusRepository::new(state.db.clone());
+        if let Err(e) = online_status_repo.set_offline(user_id).await {
+            tracing::error!("标记用户离线失败(DB): user_id={}, error={}", user_id, e);
         }
 
-        // 通知其他用户该用户下线
+        // 通知订阅了该用户状态的其他用户
         let offline_msg = WsMessage::UserOffline {
-            user_id: user_id.to_string(),
+            user_id,
             offline_at: chrono::Utc::now().to_rfc3339(),
         };
-        let _ = state.ws_manager.broadcast(&offline_msg).await;
+        let subscribers = state.ws_subscription.get_user_status_subscribers(&user_id.to_string()).await;
+        state.ws_manager.send_to_users(&subscribers, &offline_msg).await;
     }
-
-    // 取消所有订阅
-    state.ws_subscription.unsubscribe_all(user_id).await;
 
     tracing::info!("WebSocket连接关闭: user_id={}, connection_id={}", user_id, connection_id);
 }
@@ -164,7 +181,7 @@ async fn handle_message(msg: Message, user_id: i64, connection_id: &str, state: 
     match msg {
         Message::Text(text) => {
             // 解析客户端消息
-            let client_msg: WsMessage = serde_json::from_str(&text)
+            let client_msg: WsMessage = serde_json::from_str(text.as_str())
                 .map_err(|e| format!("解析消息失败: {}", e))?;
 
             match client_msg {
@@ -177,54 +194,105 @@ async fn handle_message(msg: Message, user_id: i64, connection_id: &str, state: 
                     state.ws_manager.send_to_user(user_id, &pong_msg).await?;
                 }
                 
-                WsMessage::Subscribe { channels } => {
-                    // 处理订阅请求
-                    let subscribed = state.ws_manager.subscribe(connection_id, channels).await?;
+                WsMessage::Subscribe { items } => {
+                    // 处理增量订阅
+                    let (subscribed_items, failed_items) = process_subscribe(user_id, &items, state).await;
                     
                     // 发送订阅确认
                     let ack_msg = WsMessage::SubscribeAck { 
-                        subscribed: subscribed,
-                        failed: vec![]
+                        operation: "subscribe".to_string(),
+                        items: subscribed_items,
+                        code: 0,
+                        message: None,
+                        failed_items: if failed_items.is_empty() { None } else { Some(failed_items) },
                     };
                     state.ws_manager.send_to_user(user_id, &ack_msg).await?;
                 }
                 
-                WsMessage::Unsubscribe { channels } => {
-                    // 处理取消订阅请求
-                    let unsubscribed = state.ws_manager.unsubscribe(connection_id, channels).await?;
+                WsMessage::Unsubscribe { items } => {
+                    // 处理取消订阅
+                    let unsubscribed_items = process_unsubscribe(user_id, &items, state).await;
                     
                     // 发送取消订阅确认
-                    let ack_msg = WsMessage::UnsubscribeAck { 
-                        unsubscribed: unsubscribed,
+                    let ack_msg = WsMessage::SubscribeAck { 
+                        operation: "unsubscribe".to_string(),
+                        items: unsubscribed_items,
+                        code: 0,
+                        message: None,
+                        failed_items: None,
                     };
                     state.ws_manager.send_to_user(user_id, &ack_msg).await?;
                 }
                 
-                WsMessage::MarkAsRead { target_id, target_type, up_to } => {
-                    // 处理标记已读请求
-                    // TODO: 调用消息服务标记已读
-                    tracing::debug!("收到标记已读请求: user_id={}, target_id={}, target_type={}, up_to={}", user_id, target_id, target_type, up_to);
+                WsMessage::SetSubscriptions { items } => {
+                    // 先清空所有订阅
+                    state.ws_subscription.unsubscribe_all(user_id).await;
+                    
+                    // 然后添加新订阅
+                    let (subscribed_items, failed_items) = process_subscribe(user_id, &items, state).await;
+                    
+                    // 发送确认
+                    let ack_msg = WsMessage::SubscribeAck { 
+                        operation: "set".to_string(),
+                        items: subscribed_items,
+                        code: 0,
+                        message: None,
+                        failed_items: if failed_items.is_empty() { None } else { Some(failed_items) },
+                    };
+                    state.ws_manager.send_to_user(user_id, &ack_msg).await?;
                 }
                 
-                WsMessage::Typing { target_id, target_type, is_typing } => {
+                WsMessage::MarkAsRead { chat_type, chat_id, up_to } => {
+                    // 处理标记已读请求
+                    tracing::debug!("收到标记已读请求: user_id={}, chat_type={}, chat_id={}, up_to={}", 
+                        user_id, chat_type, chat_id, up_to);
+                    
+                    // 广播已读回执给相关用户
+                    let read_msg = WsMessage::ChatMessageRead {
+                        chat_type: chat_type.clone(),
+                        chat_id: chat_id.clone(),
+                        up_to,
+                        reader_id: user_id,
+                        read_at: chrono::Utc::now().to_rfc3339(),
+                    };
+                    
+                    // 根据类型推送
+                    if chat_type == "private_chat" {
+                        // 私聊：推送给对方
+                        if let Ok(other_user_id) = chat_id.parse::<i64>() {
+                            let _ = state.ws_manager.send_to_user(other_user_id, &read_msg).await;
+                        }
+                    } else if chat_type == "group_chat" {
+                        // 群聊：推送给订阅了该群聊的所有用户
+                        let subscribers = state.ws_subscription.get_group_chat_subscribers(&chat_id).await;
+                        state.ws_manager.send_to_users(&subscribers, &read_msg).await;
+                    }
+                }
+                
+                WsMessage::Typing { chat_type, chat_id, is_typing } => {
                     // 处理正在输入事件
-                    let typing_msg = WsMessage::Typing {
-                        target_id: target_id.clone(),
-                        target_type: target_type.clone(),
+                    let typing_msg = WsMessage::UserTyping {
+                        chat_type: chat_type.clone(),
+                        chat_id: chat_id.clone(),
+                        user_id,
+                        nickname: "Unknown".to_string(), // TODO: 查询用户昵称
                         is_typing,
                     };
                     
-                    // 推送给目标用户
-                    if target_type == "user" {
-                        if let Ok(target_user_id) = target_id.parse::<i64>() {
+                    // 推送给目标
+                    if chat_type == "private_chat" {
+                        // 私聊：推送给对方
+                        if let Ok(target_user_id) = chat_id.parse::<i64>() {
                             let _ = state.ws_manager.send_to_user(target_user_id, &typing_msg).await;
                         }
-                    } else if target_type == "group" {
-                        // 推送给群组所有成员
-                        let subscribers = state.ws_subscription
-                            .get_group_message_subscribers(&target_id)
-                            .await;
-                        state.ws_manager.send_to_users(&subscribers, &typing_msg).await;
+                    } else if chat_type == "group_chat" {
+                        // 群聊：推送给订阅了该群聊的所有用户（排除自己）
+                        let subscribers = state.ws_subscription.get_group_chat_subscribers(&chat_id).await;
+                        for subscriber_id in subscribers {
+                            if subscriber_id != user_id {
+                                let _ = state.ws_manager.send_to_user(subscriber_id, &typing_msg).await;
+                            }
+                        }
                     }
                 }
                 
@@ -243,7 +311,8 @@ async fn handle_message(msg: Message, user_id: i64, connection_id: &str, state: 
         }
         
         Message::Pong(_) => {
-            // 心跳响应
+            // 心跳响应，更新最后活跃时间
+            let _ = state.ws_manager.update_ping(connection_id).await;
         }
         
         Message::Close(_) => {
@@ -254,36 +323,102 @@ async fn handle_message(msg: Message, user_id: i64, connection_id: &str, state: 
     Ok(())
 }
 
-/// 解析频道字符串为订阅类型
-fn parse_channel(channel: &str) -> Result<SubscriptionType, String> {
-    let parts: Vec<&str> = channel.split(':').collect();
+/// 处理订阅请求
+async fn process_subscribe(
+    user_id: i64, 
+    items: &[SubscriptionItem], 
+    state: &AppState
+) -> (Vec<SubscriptionItem>, Vec<FailedSubscriptionItem>) {
+    let mut subscribed = Vec::new();
+    let mut failed = Vec::new();
     
-    match parts.as_slice() {
-        ["user_message", user_id] => {
-            let id = user_id.parse::<i64>()
-                .map_err(|_| format!("无效的用户ID: {}", user_id))?;
-            Ok(SubscriptionType::UserMessage(id))
+    for item in items {
+        let mut success_ids = Vec::new();
+        let mut fail_ids = Vec::new();
+        
+        for source_id in &item.source_ids {
+            match item.source_type.as_str() {
+                "group_chat" => {
+                    let subscription = SubscriptionType::GroupChat(source_id.clone());
+                    state.ws_subscription.subscribe(user_id, subscription).await;
+                    success_ids.push(source_id.clone());
+                }
+                "user" => {
+                    let subscription = SubscriptionType::User(source_id.clone());
+                    state.ws_subscription.subscribe(user_id, subscription).await;
+                    success_ids.push(source_id.clone());
+                }
+                "notification" => {
+                    let subscription = SubscriptionType::Notification(source_id.clone());
+                    state.ws_subscription.subscribe(user_id, subscription).await;
+                    success_ids.push(source_id.clone());
+                }
+                _ => {
+                    fail_ids.push(source_id.clone());
+                }
+            }
         }
-        ["group_message", group_id] => {
-            Ok(SubscriptionType::GroupMessage(group_id.to_string()))
+        
+        if !success_ids.is_empty() {
+            subscribed.push(SubscriptionItem {
+                source_type: item.source_type.clone(),
+                source_ids: success_ids,
+            });
         }
-        ["inbox"] => {
-            Ok(SubscriptionType::Inbox)
+        
+        if !fail_ids.is_empty() {
+            failed.push(FailedSubscriptionItem {
+                source_type: item.source_type.clone(),
+                source_ids: fail_ids,
+                reason: "不支持的订阅类型".to_string(),
+            });
         }
-        ["user_online", user_id] => {
-            let id = user_id.parse::<i64>()
-                .map_err(|_| format!("无效的用户ID: {}", user_id))?;
-            Ok(SubscriptionType::UserOnlineStatus(id))
-        }
-        ["nearby_users"] => {
-            Ok(SubscriptionType::NearbyUsers)
-        }
-        ["group_events", group_id] => {
-            Ok(SubscriptionType::GroupEvents(group_id.to_string()))
-        }
-        ["moment_updates"] => {
-            Ok(SubscriptionType::MomentUpdates)
-        }
-        _ => Err(format!("未知的频道类型: {}", channel)),
     }
+    
+    (subscribed, failed)
+}
+
+/// 处理取消订阅请求
+async fn process_unsubscribe(
+    user_id: i64, 
+    items: &[SubscriptionItem], 
+    state: &AppState
+) -> Vec<SubscriptionItem> {
+    let mut unsubscribed = Vec::new();
+    
+    for item in items {
+        let mut success_ids = Vec::new();
+        
+        for source_id in &item.source_ids {
+            match item.source_type.as_str() {
+                "group_chat" => {
+                    let subscription = SubscriptionType::GroupChat(source_id.clone());
+                    state.ws_subscription.unsubscribe(user_id, &subscription).await;
+                    success_ids.push(source_id.clone());
+                }
+                "user" => {
+                    let subscription = SubscriptionType::User(source_id.clone());
+                    state.ws_subscription.unsubscribe(user_id, &subscription).await;
+                    success_ids.push(source_id.clone());
+                }
+                "notification" => {
+                    let subscription = SubscriptionType::Notification(source_id.clone());
+                    state.ws_subscription.unsubscribe(user_id, &subscription).await;
+                    success_ids.push(source_id.clone());
+                }
+                _ => {
+                    // 忽略不支持的类型
+                }
+            }
+        }
+        
+        if !success_ids.is_empty() {
+            unsubscribed.push(SubscriptionItem {
+                source_type: item.source_type.clone(),
+                source_ids: success_ids,
+            });
+        }
+    }
+    
+    unsubscribed
 }

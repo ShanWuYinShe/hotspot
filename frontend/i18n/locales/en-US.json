@@ -11,9 +11,9 @@
   "nav": {
     "home": "Home",
     "map": "Map",
-    "moments": "Moments",
+    "moments": "Nearby Moments",
     "messages": "Messages",
-    "groups": "Groups",
+    "groups": "Nearby Groups",
     "users": "Users",
     "my": "My",
     "myGroups": "My Groups",
@@ -307,7 +307,11 @@
       },
       "recommended": {
         "title": "Recommended Users",
-        "empty": "No recommended users"
+        "empty": {
+          "title": "No Recommended Users",
+          "description": "No recommended users nearby, try searching",
+          "actionText": "Search Users"
+        }
       },
       "status": {
         "sent": "Sent",

@@ -1,22 +1,26 @@
 /**
- * 用户ID类型判断工具类
- * 根据后端文档定义的用户ID编码规范实现类型判断功能
+ * 用户类型工具类
+ *
+ * 用户类型通过 user_type 字段区分：
+ * - temp: 临时用户
+ * - normal: 注册用户
+ * - admin: 管理员用户
+ * - system: 系统用户（官方账号等）
+ *
+ * 用户ID分配规则：
+ * - 系统用户区间：1 - 1,000,000
+ * - 临时用户和注册用户区间：1,000,001+
  */
-
-import { hilog } from '@kit.PerformanceAnalysisKit';
-
-const DOMAIN_NUMBER: number = 0xFF02;
-const TAG: string = 'UserTypeUtil';
 
 /**
  * 用户类型枚举
- * 对应后端文档中用户ID高8位的编码
+ * 与后端 UserType 枚举保持一致
  */
 export enum UserType {
-  UNKNOWN = 0x00,       // 未知用户类型
-  TEMPORARY = 0x01,     // 临时用户
-  REGULAR = 0x02,       // 普通用户
-  SYSTEM = 0x0F,        // 系统用户
+  TEMP = 'temp',     // 临时用户
+  NORMAL = 'normal', // 注册用户
+  ADMIN = 'admin',   // 管理员用户
+  SYSTEM = 'system', // 系统用户
 }
 
 /**
@@ -29,111 +33,95 @@ interface PermissionConfig {
 }
 
 export class UserTypeUtil {
-
   /**
-   * 获取用户ID的高8位作为用户类型编码
-   * @param userId 64位用户ID字符串
-   * @returns 用户类型编码（0-255）
+   * 将字符串解析为 UserType 枚举
+   * @param value 用户类型字符串
+   * @returns UserType 枚举值，无效值返回 NORMAL
    */
-  static getUserTypeCode(userId: string): number {
-    if (!userId || userId.length < 16) { // 64位ID至少16个十六进制字符
-      hilog.warn(DOMAIN_NUMBER, TAG, `无效的用户ID格式: ${userId}`);
-      return UserType.UNKNOWN;
-    }
-    try {
-      // 假设userId是64位整数的字符串表示，高8位是用户类型
-      // 取前两位十六进制字符转换为数字
-      const typeCodeStr = userId.substring(0, 2);
-      return parseInt(typeCodeStr, 16);
-    } catch (e) {
-      hilog.error(DOMAIN_NUMBER, TAG, `解析用户ID类型失败: ${JSON.stringify(e)}`);
-      return UserType.UNKNOWN;
-    }
-  }
-
-  /**
-   * 获取用户类型
-   * @param userId 64位用户ID字符串
-   * @returns UserType枚举值
-   */
-  static getUserType(userId: string): UserType {
-    const typeCode = UserTypeUtil.getUserTypeCode(userId);
-    switch (typeCode) {
-      case UserType.TEMPORARY:
-        return UserType.TEMPORARY;
-      case UserType.REGULAR:
-        return UserType.REGULAR;
+  static parseUserType(value: string): UserType {
+    switch (value) {
+      case UserType.TEMP:
+        return UserType.TEMP;
+      case UserType.ADMIN:
+        return UserType.ADMIN;
       case UserType.SYSTEM:
         return UserType.SYSTEM;
+      case UserType.NORMAL:
       default:
-        return UserType.UNKNOWN;
+        return UserType.NORMAL;
     }
   }
 
   /**
    * 判断是否为临时用户
-   * @param userId 用户ID
+   * @param userType 用户类型
    */
-  static isTempUser(userId: string): boolean {
-    return UserTypeUtil.getUserType(userId) === UserType.TEMPORARY;
+  static isTempUser(userType: string): boolean {
+    return userType === UserType.TEMP;
   }
 
   /**
    * 判断是否为普通用户
-   * @param userId 用户ID
+   * @param userType 用户类型
    */
-  static isRegularUser(userId: string): boolean {
-    return UserTypeUtil.getUserType(userId) === UserType.REGULAR;
+  static isNormalUser(userType: string): boolean {
+    return userType === UserType.NORMAL;
+  }
+
+  /**
+   * 判断是否为管理员用户
+   * @param userType 用户类型
+   */
+  static isAdminUser(userType: string): boolean {
+    return userType === UserType.ADMIN;
   }
 
   /**
    * 判断是否为系统用户
-   * @param userId 用户ID
+   * @param userType 用户类型
    */
-  static isSystemUser(userId: string): boolean {
-    return UserTypeUtil.getUserType(userId) === UserType.SYSTEM;
+  static isSystemUser(userType: string): boolean {
+    return userType === UserType.SYSTEM;
   }
 
   /**
    * 获取用户类型名称
-   * @param userId 用户ID
+   * @param userType 用户类型
    */
-  static getUserTypeName(userId: string): string {
-    switch (UserTypeUtil.getUserType(userId)) {
-      case UserType.TEMPORARY:
+  static getUserTypeName(userType: string): string {
+    switch (userType) {
+      case UserType.TEMP:
         return '临时用户';
-      case UserType.REGULAR:
+      case UserType.NORMAL:
         return '普通用户';
+      case UserType.ADMIN:
+        return '管理员';
       case UserType.SYSTEM:
         return '系统用户';
-      case UserType.UNKNOWN:
       default:
         return '未知用户';
     }
   }
 
   /**
-   * 验证用户ID格式是否有效
-   * 简单的正则匹配，确保是16位十六进制字符串
-   * @param userId 用户ID
+   * 验证用户类型是否有效
+   * @param userType 用户类型
    */
-  static validateUserId(userId: string): boolean {
-    return /^[0-9a-fA-F]{16}$/.test(userId);
+  static isValidUserType(userType: string): boolean {
+    return userType === UserType.TEMP ||
+      userType === UserType.NORMAL ||
+      userType === UserType.ADMIN ||
+      userType === UserType.SYSTEM;
   }
 
   /**
    * 检查用户是否拥有特定权限
-   * 这是一个示例函数，实际权限逻辑可能更复杂，需要后端或本地权限配置
-   * @param userId 用户ID
-   * @param permission 权限字符串，例如 'can_create_group', 'can_send_message'
+   * @param userType 用户类型
+   * @param permission 权限字符串
    */
-  static hasPermission(userId: string, permission: string): boolean {
-    const userType = UserTypeUtil.getUserType(userId);
-    
-    // 获取权限配置
+  static hasPermission(userType: string, permission: string): boolean {
     const permissions = UserTypeUtil.getPermissionConfig(userType);
-    
-    // 检查权限
+
     switch (permission) {
       case 'can_create_group':
         return permissions.can_create_group;
@@ -151,15 +139,21 @@ export class UserTypeUtil {
    * @param userType 用户类型
    * @returns 权限配置对象
    */
-  private static getPermissionConfig(userType: UserType): PermissionConfig {
+  private static getPermissionConfig(userType: string): PermissionConfig {
     switch (userType) {
-      case UserType.TEMPORARY:
+      case UserType.TEMP:
         return {
           can_create_group: false,
           can_send_message: true,
           can_kick_member: false
         };
-      case UserType.REGULAR:
+      case UserType.NORMAL:
+        return {
+          can_create_group: true,
+          can_send_message: true,
+          can_kick_member: true
+        };
+      case UserType.ADMIN:
         return {
           can_create_group: true,
           can_send_message: true,
@@ -168,7 +162,7 @@ export class UserTypeUtil {
       case UserType.SYSTEM:
         return {
           can_create_group: false,
-          can_send_message: false,
+          can_send_message: true,
           can_kick_member: false
         };
       default:
@@ -180,3 +174,17 @@ export class UserTypeUtil {
     }
   }
 }
+
+/**
+ * 系统用户ID常量
+ */
+export const SYSTEM_USER_IDS = {
+  NOTIFICATION: '1',       // 系统通知
+  SECURITY_CENTER: '2',    // 安全中心
+  OPERATIONS_TEAM: '3',    // 运营团队
+};
+
+/**
+ * 系统用户ID区间边界
+ */
+export const SYSTEM_USER_ID_MAX = 1000000;

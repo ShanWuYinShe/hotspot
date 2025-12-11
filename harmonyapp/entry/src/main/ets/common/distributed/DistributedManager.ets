@@ -7,7 +7,7 @@ import distributedKVStore from '@ohos.data.distributedKVStore';
 import deviceManager from '@ohos.distributedDeviceManager';
 import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { GetHistoryResponse } from '../types/BackendApiTypes';
+import { GetHistoryResponse } from '../types/api';
 
 const DOMAIN_NUMBER: number = 0xFF10;
 const TAG: string = 'DistributedManager';

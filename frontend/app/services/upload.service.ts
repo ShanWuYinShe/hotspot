@@ -1,95 +1,93 @@
-/**
- * 文件上传服务
- * 提供文件上传、多部分上传等功能
- */
-
 import { BaseService } from './base.service'
-import type {
-  UploadMediaData,
-  InitiateUploadData,
-  CompleteUploadRequest,
-  UploadStatusData
-} from '~/types/api'
+import { MEDIA } from '~/config/api'
+import type { UploadMediaData, CompleteUploadRequest } from '~/types/api'
 
-/**
- * 文件上传服务类
- */
-export class UploadService extends BaseService {
-  protected readonly baseUrl = '/protected/media'
+// ============ 上传类型定义 ============
 
-  /**
-   * 上传文件（≤100MB）
-   */
-  async uploadFile(file: File, category: 'avatar' | 'group_image' | 'moment_image' | 'file'): Promise<UploadMediaData> {
-    return this.upload<UploadMediaData>('/upload_file', file, { category })
+export interface InitiateUploadRequest {
+  file_name: string
+  file_size: number
+  mime_type: string
+  chunk_size?: number
+}
+
+export interface InitiateUploadData {
+  upload_id: string
+  chunk_count: number
+  upload_urls: string[]
+}
+
+export interface UploadChunkData {
+  part_number: number
+  etag: string
+}
+
+export interface GetUploadStatusRequest {
+  upload_id: string
+}
+
+export interface UploadStatusData {
+  upload_id: string
+  status: 'in_progress' | 'completed' | 'failed'
+  uploaded_parts: number[]
+  total_parts: number
+  created_at: string
+  expires_at: string
+}
+
+export interface AbortUploadRequest {
+  upload_id: string
+}
+
+// ============ 服务类 ============
+
+class UploadService extends BaseService {
+  async uploadFile(file: File, category: 'avatar' | 'group_image' | 'moment_image' | 'file') {
+    return this.upload<UploadMediaData>(MEDIA.UPLOAD_FILE, file, { category })
   }
 
-  /**
-   * 初始化大文件上传（>100MB）
-   */
-  async initiateUpload(request: {
-    file_name: string
-    file_size: number
-    mime_type: string
-    chunk_size?: number
-  }): Promise<InitiateUploadData> {
-    return this.post<InitiateUploadData>('/initiate_upload', request)
+  async initiateUpload(request: InitiateUploadRequest) {
+    return this.post<InitiateUploadData>(MEDIA.INITIATE_UPLOAD, request)
   }
 
-  /**
-   * 完成大文件上传
-   */
-  async completeUpload(request: CompleteUploadRequest): Promise<UploadMediaData> {
-    return this.post<UploadMediaData>('/complete_upload', request)
+  async uploadChunk(uploadId: string, partNumber: number, chunk: Blob) {
+    const formData = new FormData()
+    formData.append('upload_id', uploadId)
+    formData.append('part_number', String(partNumber))
+    formData.append('chunk', chunk)
+
+    const config = useRuntimeConfig()
+    const authStore = useAuthStore()
+    const headers: Record<string, string> = {}
+    if (authStore.token) {
+      headers.Authorization = `Bearer ${authStore.token}`
+    }
+
+    const response = await $fetch<{ code: number; data: UploadChunkData }>(MEDIA.UPLOAD_CHUNK, {
+      method: 'POST',
+      baseURL: config.public.apiBaseUrl as string,
+      headers,
+      body: formData
+    })
+
+    if (response.code !== 0) {
+      throw new Error('分块上传失败')
+    }
+    return response.data
   }
 
-  /**
-   * 查询上传状态
-   */
-  async getUploadStatus(uploadId: string): Promise<UploadStatusData> {
-    return this.post<UploadStatusData>('/get_upload_status', { upload_id: uploadId })
+  async completeUpload(request: CompleteUploadRequest) {
+    return this.post<UploadMediaData>(MEDIA.COMPLETE_UPLOAD, request)
   }
 
-  /**
-   * 取消大文件上传
-   */
-  async abortUpload(uploadId: string): Promise<void> {
-    await this.post<void>('/abort_upload', { upload_id: uploadId })
+  async getUploadStatus(request: GetUploadStatusRequest) {
+    return this.post<UploadStatusData>(MEDIA.GET_UPLOAD_STATUS, request)
   }
 
-  /**
-   * 获取文件预览URL（客户端工具方法）
-   */
-  getPreviewUrl(file: File): string {
-    return URL.createObjectURL(file)
-  }
-
-  /**
-   * 释放预览URL（客户端工具方法）
-   */
-  revokePreviewUrl(url: string): void {
-    URL.revokeObjectURL(url)
-  }
-
-  /**
-   * 格式化文件大小（客户端工具方法）
-   */
-  formatFileSize(bytes: number): string {
-    if (bytes === 0) return '0 B'
-    
-    const k = 1024
-    const sizes = ['B', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  async abortUpload(request: AbortUploadRequest) {
+    return this.post<void>(MEDIA.ABORT_UPLOAD, request)
   }
 }
 
-/**
- * 使用上传服务的 Composable
- */
-export function useUploadService() {
-  return new UploadService()
-}
-
-
+export const uploadService = new UploadService()
+export function useUploadService() { return uploadService }

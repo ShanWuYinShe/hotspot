@@ -6,7 +6,7 @@
 import { GlobalStateManager, GlobalState } from '../common/state/GlobalStateManager';
 import { ApiClient } from '../common/api/ApiClient';
 import { PageNames } from '../constants/AppConstants';
-import { LikeMomentRequest, SearchMomentsByLocationResponse } from '../common/types/BackendApiTypes';
+import { LikeMomentRequest, MomentSearchItem } from '../common/types/api';
 import { SystemAvatar } from '../components/SystemAvatar';
 import { IntelligentLocationCard } from '../components/IntelligentLocationCard';
 import { SystemLoadingView } from '../components/SystemLoadingView';
@@ -20,7 +20,7 @@ const TAG: string = 'MomentPage';
 struct MomentPage {
   @State globalState: GlobalState = GlobalStateManager.getInstance().getState();
   private stateManager = GlobalStateManager.getInstance();
-  @State moments: SearchMomentsByLocationResponse[] = [];
+  @State moments: MomentSearchItem[] = [];
   @State isLoading: boolean = false;
   @State errorMessage: string = '';
 
@@ -50,7 +50,7 @@ struct MomentPage {
     this.errorMessage = '';
 
     try {
-      const response = await ApiClient.searchMomentByLocation({
+      const response = await ApiClient.searchMomentsByLocation({
         latitude: this.globalState.currentLocation.latitude,
         longitude: this.globalState.currentLocation.longitude,
         radius: 2000,
@@ -60,7 +60,7 @@ struct MomentPage {
       if (response.code === 0 && response.data) {
         this.moments = response.data.items;
       } else {
-        this.errorMessage = response.msg || '加载瞬间失败';
+        this.errorMessage = response.message || '加载瞬间失败';
         this.moments = [];
       }
     } catch (error) {
@@ -73,34 +73,18 @@ struct MomentPage {
   /**
    * 点赞瞬间
    */
-  private async likeMoment(moment: SearchMomentsByLocationResponse, index: number) {
+  private async likeMoment(moment: MomentSearchItem, index: number) {
     try {
       const request: LikeMomentRequest = {
-        moment_id: moment.moment_id
+        moment_id: moment.id
       };
       const response = await ApiClient.likeMoment(request);
       
-      if (response.code === 0 && response.data) {
-        // 更新本地状态
-        this.moments[index] = {
-          moment_id: moment.moment_id,
-          user_id: moment.user_id,
-          nickname: moment.nickname,
-          user_avatar: moment.user_avatar,
-          description: moment.description,
-          latitude: moment.latitude,
-          longitude: moment.longitude,
-          location_name: moment.location_name,
-          created_at: moment.created_at,
-          comments_count: moment.comments_count,
-          distance: moment.distance,
-          tags: moment.tags,
-          images: moment.images,
-          liked_by_me: !moment.liked_by_me,
-          likes_count: response.data.likes_count
-        };
+      if (response.code === 0) {
+        // 更新本地状态 - 点赞成功后重新加载列表
+        await this.loadNearbyMoments();
       } else {
-        hilog.error(DOMAIN_NUMBER, TAG, `点赞失败: ${response.msg}`);
+        hilog.error(DOMAIN_NUMBER, TAG, `点赞失败: ${response.message}`);
       }
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `点赞失败: ${JSON.stringify(error)}`);
@@ -186,11 +170,11 @@ struct MomentPage {
   @Builder
   private buildMomentList() {
     List({ space: 12 }) {
-      ForEach(this.moments, (moment: SearchMomentsByLocationResponse, index: number) => {
+      ForEach(this.moments, (moment: MomentSearchItem, index: number) => {
         ListItem() {
           this.buildMomentCard(moment, index)
         }
-      }, (moment: SearchMomentsByLocationResponse) => moment.moment_id)
+      }, (moment: MomentSearchItem) => moment.id)
     }
     .width('100%')
     .layoutWeight(1)
@@ -199,18 +183,18 @@ struct MomentPage {
   }
 
   @Builder
-  private buildMomentCard(moment: SearchMomentsByLocationResponse, index: number) {
+  private buildMomentCard(moment: MomentSearchItem, index: number) {
     Column({ space: 12 }) {
       // 用户信息
       Row({ space: 12 }) {
         SystemAvatar({ 
-          avatarUrl: moment.user_avatar || '',
-          nickname: moment.nickname,
+          avatarUrl: moment.user.avatar_url || '',
+          nickname: moment.user.nickname,
           avatarSize: 40
         })
 
         Column({ space: 2 }) {
-          Text(moment.nickname)
+          Text(moment.user.nickname)
             .fontSize(14)
             .fontWeight(FontWeight.Medium)
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
@@ -253,16 +237,16 @@ struct MomentPage {
 
       // 位置信息
       IntelligentLocationCard({
-        latitude: moment.latitude,
-        longitude: moment.longitude,
-        locationName: moment.location_name,
-        distance: moment.distance
+        latitude: moment.geo.latitude,
+        longitude: moment.geo.longitude,
+        locationName: moment.geo.location_name,
+        distance: moment.geo.distance
       })
 
       // 互动区域
       Row({ space: 16 }) {
         Row({ space: 4 }) {
-          Text(moment.liked_by_me ? '❤️' : '🤍')
+          Text('🤍')  // TODO: 需要从后端获取是否已点赞状态
             .fontSize(16)
             .onClick(() => this.likeMoment(moment, index))
 

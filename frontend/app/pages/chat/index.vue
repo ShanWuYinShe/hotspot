@@ -5,12 +5,12 @@
       <UDashboardToolbar>
         <template #left>
           <div class="flex items-center gap-3">
-            <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
-              <UIcon name="i-heroicons-chat-bubble-left-right" class="w-5 h-5 text-white" />
+            <div class="icon-lg icon-container-rounded-lg bg-linear-to-br from-blue-500 to-purple-600 shadow-lg">
+              <UIcon name="i-heroicons-chat-bubble-left-right" class="icon-md text-white" />
             </div>
             <div>
-              <h1 class="text-lg font-semibold text-neutral-900 dark:text-white">消息中心</h1>
-              <p class="text-sm text-neutral-500">与朋友和群组保持联系</p>
+              <h1 class="text-lg font-semibold text-primary-content">消息中心</h1>
+              <p class="text-sm text-secondary-content">与朋友和群组保持联系</p>
             </div>
           </div>
         </template>
@@ -57,12 +57,12 @@
             title="发现新朋友"
             description="搜索并添加新的聊天伙伴"
             icon="i-heroicons-user-plus"
-            class="cursor-pointer hover:shadow-md transition-shadow"
+            class="interactive-card cursor-pointer"
             @click="navigateTo('/search')"
           >
             <template #icon>
-              <div class="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
-                <UIcon name="i-heroicons-user-plus" class="w-5 h-5 text-white" />
+              <div class="icon-avatar-sm icon-container-rounded-lg bg-icon-primary">
+                <UIcon name="i-heroicons-user-plus" class="icon-md text-white" />
               </div>
             </template>
           </UPageCard>
@@ -71,12 +71,12 @@
             title="加入群组"
             description="发现并加入感兴趣的群组"
             icon="i-heroicons-user-group"
-            class="cursor-pointer hover:shadow-md transition-shadow"
+            class="interactive-card cursor-pointer"
             @click="navigateTo('/groups/discover')"
           >
             <template #icon>
-              <div class="w-10 h-10 bg-purple-500 rounded-xl flex items-center justify-center">
-                <UIcon name="i-heroicons-user-group" class="w-5 h-5 text-white" />
+              <div class="icon-avatar-sm icon-container-rounded-lg bg-icon-purple">
+                <UIcon name="i-heroicons-user-group" class="icon-md text-white" />
               </div>
             </template>
           </UPageCard>
@@ -102,7 +102,7 @@
             </template>
 
             <!-- 筛选器 -->
-            <div v-if="showFilters" class="mb-4 p-4 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
+            <div v-if="showFilters" class="mb-4 p-4 bg-interactive rounded-lg">
               <div class="flex flex-wrap gap-2">
                 <UButton
                   v-for="filter in conversationFilters"
@@ -129,75 +129,81 @@
             </div>
 
             <!-- 错误状态 -->
-            <div v-else-if="error" class="text-center py-12">
-              <UIcon name="i-heroicons-exclamation-triangle" class="w-12 h-12 text-error-500 mx-auto mb-4" />
-              <h3 class="text-lg font-semibold text-neutral-900 dark:text-white mb-2">加载失败</h3>
-              <p class="text-neutral-600 dark:text-neutral-400 mb-4">{{ error }}</p>
-              <UButton @click="loadConversations" variant="outline">重试</UButton>
-            </div>
+            <UEmpty
+              v-else-if="error"
+              icon="i-heroicons-exclamation-triangle"
+              title="加载失败"
+              :description="error"
+            >
+              <template #actions>
+                <UButton @click="loadConversations" variant="outline">重试</UButton>
+              </template>
+            </UEmpty>
 
             <!-- 空状态 -->
-            <div v-else-if="filteredConversations.length === 0" class="text-center py-12">
-              <div class="w-16 h-16 bg-neutral-100 dark:bg-neutral-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <UIcon name="i-heroicons-chat-bubble-left-ellipsis" class="w-8 h-8 text-neutral-500" />
-              </div>
-              <h3 class="text-lg font-semibold text-neutral-900 dark:text-white mb-2">暂无会话</h3>
-              <p class="text-neutral-600 dark:text-neutral-400 mb-4">开始与朋友聊天吧！</p>
-              <UButton @click="navigateTo('/search')" icon="i-heroicons-user-plus">
-                发现新朋友
-              </UButton>
-            </div>
+            <UEmpty
+              v-else-if="filteredConversations.length === 0"
+              icon="i-heroicons-chat-bubble-left-ellipsis"
+              title="暂无会话"
+              description="开始与朋友聊天吧！"
+            >
+              <template #actions>
+                <UButton @click="navigateTo('/search')" icon="i-heroicons-user-plus">
+                  发现新朋友
+                </UButton>
+              </template>
+            </UEmpty>
 
             <!-- 会话列表 -->
-            <div v-else class="space-y-1">
+            <div v-else class="space-y-2">
               <div
                 v-for="conversation in filteredConversations"
-                :key="conversation.id"
-                class="flex items-center gap-3 p-3 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 cursor-pointer transition-colors"
+                :key="conversation.chat_id"
+                class="interactive-list-item flex items-center gap-3 p-3 rounded-lg cursor-pointer"
                 @click="openConversation(conversation)"
               >
                 <!-- 头像 -->
-                <div class="relative flex-shrink-0">
+                <div class="relative shrink-0">
                   <UAvatar
                     :alt="conversation.name"
                     size="lg"
-                    :src="conversation.avatar"
+                    :src="conversation.avatar_url"
                   >
                     {{ conversation.name?.charAt(0) || "?" }}
                   </UAvatar>
                   
                   <!-- 在线状态 -->
                   <div
-                    v-if="(conversation as any).is_online"
-                    class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-neutral-900"
+                    v-if="conversation.is_online"
+                    class="badge-position-br status-dot-online"
                   />
                   
                   <!-- 群组标识 -->
                   <div
-                    v-if="conversation.type === 'group'"
-                    class="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 rounded-full border-2 border-white dark:border-neutral-900 flex items-center justify-center"
+                    v-if="conversation.chat_type === 'group'"
+                    class="badge-position-br status-dot-online bg-icon-primary icon-container"
                   >
-                    <UIcon name="i-heroicons-user-group" class="w-2 h-2 text-white" />
+                    <UIcon name="i-heroicons-user-group" class="icon-xs text-white" />
                   </div>
                 </div>
 
                 <!-- 会话信息 -->
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center justify-between mb-1">
-                    <h3 class="font-medium text-neutral-900 dark:text-white truncate">
+                    <h3 class="font-medium text-primary-content truncate">
                       {{ conversation.name }}
                     </h3>
-                    <span class="text-xs text-neutral-500 flex-shrink-0">
-                      {{ formatTime(conversation.last_message_time) }}
+                    <span class="text-xs text-secondary-content shrink-0">
+                      {{ formatTime(conversation.last_activity_at) }}
                     </span>
                   </div>
                   
                   <div class="flex items-center justify-between">
-                    <p class="text-sm text-neutral-600 dark:text-neutral-400 truncate">
-                      <span v-if="(conversation as any).last_message_sender && conversation.type === 'group'" class="text-neutral-500">
-                        {{ (conversation as any).last_message_sender }}:
+                    <p class="text-sm text-secondary-content truncate">
+                      <span v-if="conversation.last_message?.sender_id && conversation.chat_type === 'group'" class="text-secondary-strong">
+                        {{ conversation.last_message?.sender_id }}:
                       </span>
-                      {{ conversation.last_message || '暂无消息' }}
+                      {{ conversation.last_message?.content || '暂无消息' }}
                     </p>
                     
                     <!-- 未读消息数 -->
@@ -206,7 +212,7 @@
                       :label="conversation.unread_count > 99 ? '99+' : conversation.unread_count.toString()"
                       color="primary"
                       size="xs"
-                      class="flex-shrink-0"
+                      class="shrink-0"
                     />
                   </div>
                 </div>
@@ -248,13 +254,16 @@ definePageMeta({
 // 设置 SEO meta
 useSeoMeta(buildSeoMeta('chat'));
 
-// 导入服务
-import { useMessagesService } from '~/services/messages.service';
+import { type Conversation } from '~/stores/messages.store'
+import { getErrorMessage } from '~/utils/error'
+import { usePrivateChatsService } from '~/services/private_chats.service'
+import { usePrivateMessagesService } from '~/services/private_messages.service'
 
-// 使用现有的 stores 和 composables
-const messagesStore = useMessagesStore();
+// 使用水合安全的 store 访问
 const authStore = useAuthStore();
-const messageService = useMessagesService();
+const messagesStore = useMessagesStore();
+const privateChatsService = usePrivateChatsService();
+const privateMessagesService = usePrivateMessagesService();
 const modal = useModal();
 const { formatTime } = useFormatters();
 
@@ -266,7 +275,7 @@ const activeFilter = ref<string>('all');
 
 // 计算属性
 const totalUnread = computed(() => messagesStore.totalUnreadCount);
-const conversations = computed(() => messagesStore.conversations || []);
+const conversations = computed(() => messagesStore.conversationsList || []);
 
 // 筛选器配置
 const conversationFilters = [
@@ -286,19 +295,19 @@ const filteredConversations = computed(() => {
       filtered = filtered.filter(c => c.unread_count > 0);
       break;
     case 'private':
-      filtered = filtered.filter(c => c.type === 'user');
+      filtered = filtered.filter(c => c.chat_type === 'private');
       break;
     case 'group':
-      filtered = filtered.filter(c => c.type === 'group');
+      filtered = filtered.filter(c => c.chat_type === 'group');
       break;
     case 'online':
-      filtered = filtered.filter(c => (c as any).is_online);
-      break;
+      filtered = filtered.filter(c => c.is_online === true)
+      break
   }
   
-  // 按最后消息时间排序
+  // 按最后活动时间排序
   return filtered.sort((a, b) => 
-    new Date(b.last_message_time).getTime() - new Date(a.last_message_time).getTime()
+    new Date(b.last_activity_at).getTime() - new Date(a.last_activity_at).getTime()
   );
 });
 
@@ -307,11 +316,24 @@ const loadConversations = async () => {
   try {
     loading.value = true;
     error.value = null;
-    // 加载会话列表
-    await messageService.getConversations();
-  } catch (err: any) {
+    // 加载私聊列表
+    const response = await privateChatsService.getPrivateChats();
+    // 转换为 Conversation 格式并更新 store
+    const conversationList: Conversation[] = response.items.map(item => ({
+      chat_id: item.id,
+      chat_type: 'private' as const,
+      target_user_id: item.other_user.user_id,  // 保存对方用户ID
+      name: item.other_user.nickname,
+      avatar_url: item.other_user.avatar_url,
+      unread_count: item.unread_count,
+      last_message: item.last_message,
+      last_activity_at: item.last_activity_at,
+      is_online: false
+    }));
+    messagesStore.setConversations(conversationList);
+  } catch (err: unknown) {
     console.error('加载会话失败:', err);
-    error.value = err.message || '加载会话失败';
+    error.value = getErrorMessage(err, '加载会话失败');
   } finally {
     loading.value = false;
   }
@@ -325,11 +347,17 @@ const setFilter = (filterKey: string) => {
   activeFilter.value = filterKey;
 };
 
-const openConversation = (conversation: any) => {
-  const route = conversation.type === 'group' 
-    ? `/chat/groups/${conversation.id}`
-    : `/chat/users/${conversation.id}`;
-  navigateTo(route);
+const openConversation = (conversation: Conversation) => {
+  if (conversation.chat_type === 'group') {
+    navigateTo(`/chat/groups/${conversation.chat_id}`);
+  } else {
+    // 私聊使用目标用户ID导航
+    if (conversation.target_user_id) {
+      navigateTo(`/chat/users/${conversation.target_user_id}`);
+    } else {
+      console.error('私聊会话缺少目标用户ID');
+    }
+  }
 };
 
 const openNewChatModal = () => {
@@ -339,28 +367,28 @@ const openNewChatModal = () => {
 
 // formatTime 函数已从统一工具函数导入
 
-const getConversationMenuItems = (conversation: any) => {
+const getConversationMenuItems = (conversation: Conversation) => {
   const items = [
     [{
       label: '标记为已读',
       icon: 'i-heroicons-check',
-      click: () => markAsRead(conversation.id),
+      click: () => markAsRead(conversation.chat_id),
       disabled: conversation.unread_count === 0
     }],
     [{
       label: '置顶聊天',
       icon: 'i-heroicons-bookmark',
-      click: () => togglePin(conversation.id)
+      click: () => togglePin(conversation.chat_id)
     }, {
       label: '免打扰',
       icon: 'i-heroicons-bell-slash',
-      click: () => toggleMute(conversation.id)
+      click: () => toggleMute(conversation.chat_id)
     }],
     [{
       label: '删除聊天',
       icon: 'i-heroicons-trash',
-      click: () => deleteConversation(conversation.id),
-      class: 'text-error-500'
+      click: () => deleteConversation(conversation.chat_id),
+      class: 'text-error'
     }]
   ];
   
@@ -369,7 +397,8 @@ const getConversationMenuItems = (conversation: any) => {
 
 const markAsRead = async (conversationId: string) => {
   try {
-    await messagesStore.markConversationAsRead(conversationId);
+    await privateMessagesService.markPrivateMessagesAsRead({ id: conversationId });
+    messagesStore.updateUnreadCount(conversationId, 0);
   } catch (err) {
     console.error('标记已读失败:', err);
   }
@@ -385,26 +414,89 @@ const toggleMute = async (conversationId: string) => {
   console.log('切换免打扰:', conversationId);
 };
 
-const deleteConversation = (conversationId: string) => {
-  modal.showConfirmModal({
+const deleteConversation = async (conversationId: string) => {
+  const confirmed = await modal.showConfirm({
     title: "删除聊天",
     message: "确定要删除这个聊天吗？此操作无法撤销。",
     confirmText: "删除",
     cancelText: "取消",
-    confirmColor: "error",
-    onConfirm: async () => {
-      try {
-        await messagesStore.deleteConversation(conversationId);
-      } catch (err) {
-        console.error('删除聊天失败:', err);
-      }
-    }
+    confirmColor: "error"
   });
+  
+  if (confirmed) {
+    try {
+      await privateChatsService.deletePrivateChat({ id: conversationId });
+      messagesStore.removeConversation(conversationId);
+    } catch (err) {
+      console.error('删除聊天失败:', err);
+    }
+  }
 };
+
+// WebSocket 实时更新
+const { on: wsOn } = useGlobalWebSocket();
+
+// ChatMessageNew 事件的 payload 类型
+interface ChatMessageNewPayload {
+  id: string;
+  chat_type: 'private_chat' | 'group_chat';
+  chat_id: string;
+  sender: {
+    user_id: number;
+    nickname: string;
+    avatar_url?: string;
+    user_type: string;
+  };
+  message_type: 'text' | 'image' | 'video' | 'audio' | 'file' | 'system';
+  content?: string;
+  reply_to?: string;
+  mentions?: number[];
+  sent_at: string;
+}
+
+let messageCleanup: (() => void) | null = null;
 
 // 生命周期
 onMounted(() => {
   loadConversations();
+  
+  // 监听 ChatMessageNew 事件 - 实时更新会话列表
+  messageCleanup = wsOn<ChatMessageNewPayload>('ChatMessageNew', (data) => {
+    // 只处理私聊消息（群聊需要订阅）
+    if (data.chat_type === 'private_chat') {
+      // 忽略自己发送的消息
+      if (data.sender.user_id === authStore.user?.user_id) {
+        return;
+      }
+      
+      // 更新会话列表中的对应会话
+      const existingConversation = conversations.value.find(
+        c => c.chat_id === data.chat_id
+      );
+      
+      if (existingConversation) {
+        // 更新最后消息和未读数
+        messagesStore.updateConversation(data.chat_id, {
+          last_message: {
+            id: data.id,
+            content: data.content,
+            type: data.message_type,
+            sender_id: data.sender.user_id,
+            sent_at: data.sent_at
+          },
+          last_activity_at: data.sent_at,
+          unread_count: existingConversation.unread_count + 1
+        });
+      } else {
+        // 新会话 - 重新加载会话列表
+        loadConversations();
+      }
+      
+      if (import.meta.dev) {
+        console.log('[WebSocket] 会话列表收到新消息:', data.content);
+      }
+    }
+  });
   
   // 注册快捷键
   defineShortcuts({
@@ -417,6 +509,13 @@ onMounted(() => {
       handler: loadConversations,
     },
   });
+});
+
+// 页面离开时清理
+onUnmounted(() => {
+  if (messageCleanup) {
+    messageCleanup();
+  }
 });
 
 // 监听认证状态变化

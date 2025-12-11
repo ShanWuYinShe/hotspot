@@ -15,32 +15,23 @@ import { PageNames } from '../constants/AppConstants';
 import { SystemLoadingView } from '../components/SystemLoadingView';
 import { SystemAvatar } from '../components/SystemAvatar';
 import { SystemToast } from '../components/SystemToast';
-import { UserResponse, GetConversationsResponse, SearchUserByLocationResponse } from '../common/types/BackendApiTypes';
+import { PrivateChatListItem, UserSearchItem, PrivateChatLastMessage } from '../common/types/api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
 const DOMAIN_NUMBER: number = 0xFF05;
 const TAG: string = 'MessagePage';
 
-interface LastMessage {
-  message_id: string;
-  sender_id: string;
-  sender_name: string;
-  content: string;
-  message_type: string;
-  sent_at: string;
-}
-
+/**
+ * 会话类型：统一私聊和群聊的展示结构
+ */
 interface Conversation {
-  group_id: string;
-  group_name: string;
-  group_type: string;  // 'public_chat' | 'private_chat'
-  group_avatar?: string;
-  last_message?: LastMessage;
+  id: string;               // 聊天ID
+  type: 'private' | 'group';
+  name: string;
+  avatar_url?: string;
+  last_message?: PrivateChatLastMessage;
   unread_count: number;
   last_activity_at: string;
-  is_muted: boolean;
-  is_archived: boolean;
-  member_count: number;
 }
 
 
@@ -72,6 +63,7 @@ struct MessagePage {
 
   /**
    * 加载会话列表
+   * 按照 api_spec.mdc，私聊列表通过 getPrivateChats 获取
    */
   private async loadConversations() {
     if (!this.globalState.isLoggedIn) {
@@ -82,35 +74,24 @@ struct MessagePage {
     this.errorMessage = '';
 
     try {
-      const response = await ApiClient.conversations({ limit: 50 });
+      // 获取私聊列表
+      const response = await ApiClient.getPrivateChats({ limit: 50 });
       
       if (response.code === 0 && response.data) {
-        // 转换 GetConversationsResponse 到 Conversation 格式
-        this.conversations = response.data.items.map((item): Conversation => {
-          const lastMessage: LastMessage | undefined = item.last_message_content ? {
-            message_id: '',
-            sender_id: '',
-            sender_name: '',
-            content: item.last_message_content,
-            message_type: 'text',
-            sent_at: item.last_message_at || new Date().toISOString()
-          } : undefined;
-
+        // 转换 PrivateChatListItem 到 Conversation 格式
+        this.conversations = response.data.items.map((item: PrivateChatListItem): Conversation => {
           return {
-            group_id: item.group_id,
-            group_name: item.group_name,
-            group_type: item.group_type,
-            group_avatar: item.avatar_url,
-            last_message: lastMessage,
+            id: item.id,
+            type: 'private',
+            name: item.other_user.nickname,
+            avatar_url: item.other_user.avatar_url,
+            last_message: item.last_message,
             unread_count: item.unread_count,
-            last_activity_at: item.last_message_at || new Date().toISOString(),
-            is_muted: item.is_muted,
-            is_archived: false,
-            member_count: 0
+            last_activity_at: item.last_activity_at
           };
         });
       } else {
-        this.errorMessage = response.msg || '加载会话失败';
+        this.errorMessage = response.message || '加载会话失败';
         this.conversations = [];
       }
     } catch (error) {
@@ -131,9 +112,9 @@ struct MessagePage {
       await routerInstance.pushUrl({
         url: 'pages/ChatPage',
         params: {
-          groupId: conversation.group_id,
-          groupName: this.getDisplayName(conversation),
-          groupType: conversation.group_type
+          chatId: conversation.id,
+          chatName: conversation.name,
+          chatType: conversation.type
         }
       });
     } catch (error) {
@@ -143,15 +124,9 @@ struct MessagePage {
 
   /**
    * 获取会话显示名称
-   * 根据群组类型和名称生成合适的显示名称
    */
   private getDisplayName(conversation: Conversation): string {
-    if (conversation.group_name) {
-      return conversation.group_name;
-    }
-    
-    // 如果没有群组名称，根据类型返回默认名称
-    return conversation.group_type === 'private_chat' ? '私聊' : '群聊';
+    return conversation.name || (conversation.type === 'private' ? '私聊' : '群聊');
   }
 
   /**
@@ -164,7 +139,7 @@ struct MessagePage {
     }
 
     try {
-      const response = await ApiClient.searchUserByLocation({
+      const response = await ApiClient.searchUsersByLocation({
         latitude: this.globalState.currentLocation.latitude,
         longitude: this.globalState.currentLocation.longitude,
         radius: 1000, // 1km 范围
@@ -187,7 +162,7 @@ struct MessagePage {
   /**
    * 显示附近用户选择对话框
    */
-  private showNearbyUsersDialog(users: SearchUserByLocationResponse[]): void {
+  private showNearbyUsersDialog(users: UserSearchItem[]): void {
     // 这里可以实现用户选择对话框
     // 暂时使用简单的提示，实际项目中可以实现自定义对话框
     const userNames = users.map(user => user.nickname).join(', ');
@@ -304,7 +279,7 @@ struct MessagePage {
         ListItem() {
           this.buildConversationItem(conversation)
         }
-      }, (conversation: Conversation) => conversation.group_id)
+      }, (conversation: Conversation) => conversation.id)
     }
     .width('100%')
     .layoutWeight(1)
@@ -316,7 +291,7 @@ struct MessagePage {
     Row({ space: 12 }) {
       // 头像
       SystemAvatar({
-        avatarUrl: conversation.group_avatar || '',
+        avatarUrl: conversation.avatar_url || '',
         nickname: this.getDisplayName(conversation),
         avatarSize: 48
       })
@@ -325,8 +300,8 @@ struct MessagePage {
       Column({ space: 4 }) {
         Row() {
           Row() {
-            // 根据群组类型显示不同图标
-            Text(conversation.group_type === 'private_chat' ? '👤' : '👥')
+            // 根据聊天类型显示不同图标
+            Text(conversation.type === 'private' ? '👤' : '👥')
               .fontSize(14)
               .margin({ right: 4 })
             

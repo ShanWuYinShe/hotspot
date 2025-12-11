@@ -1,370 +1,186 @@
-/**
- * 群组服务
- * 所有API操作统一使用POST方法
- */
-
 import { BaseService } from './base.service'
-import type { GroupResponse, GroupMemberResponseData, PaginatedData } from '~/types/api'
+import { GROUPS } from '~/config/api'
+import type {
+  PaginatedData,
+  GroupSearchItem,
+  GroupSettings,
+  JoinedGroupItem,
+  GetGroupMembersRequest,
+  GroupMemberItem,
+  BannedMemberItem,
+  GroupApplicationItem,
+  GroupInviteItem,
+  // 搜索类型
+  SearchGroupsByKeywordRequest,
+  SearchGroupsByTagRequest,
+  SearchGroupsByLocationRequest,
+  // 群组管理类型
+  CreateGroupChatRequest,
+  CreateGroupChatData,
+  GetJoinedGroupChatsRequest,
+  UpdateGroupChatRequest,
+  DeleteGroupChatRequest,
+  // 成员管理类型
+  InviteMemberRequest,
+  InviteMemberData,
+  JoinGroupRequest,
+  ApplyToGroupRequest,
+  ApplyToGroupData,
+  SetMemberRoleRequest,
+  MuteMemberRequest,
+  UnmuteMemberRequest,
+  BanMemberRequest,
+  UnbanMemberRequest,
+  GetBannedMembersRequest,
+  RemoveMemberRequest,
+  LeaveGroupRequest,
+  // 申请管理类型
+  GetGroupApplicationsRequest,
+  ApproveGroupApplicationRequest,
+  RejectGroupApplicationRequest,
+  CancelGroupApplicationRequest,
+  TransferOwnershipRequest,
+  // 邀请管理类型
+  GetGroupInvitesRequest,
+  AcceptGroupInviteRequest,
+  RejectGroupInviteRequest
+} from '~/types/api'
 
-export interface DiscoverGroupsRequest {
-  keyword?: string
-  latitude?: number
-  longitude?: number
-  radius?: number
-  limit?: number
-  cursor?: string
+// 群组设置响应类型
+interface GroupSettingsData {
+  id: string;
+  settings: GroupSettings;
+  has_password: boolean;
+  created_at: string;
 }
 
-export interface CreateGroupRequest {
-  name: string
-  description?: string
-  avatar_url?: string
-  settings: {
-    join_method: 'open' | 'approval' | 'invite_only'
-    is_searchable: boolean
-    max_members?: number
-    password_hash?: string
-  }
-}
+class GroupsService extends BaseService {
+  // ============ 搜索 API (public) ============
 
-export interface GetJoinedRequest {
-  limit?: number
-  cursor?: string
-}
-
-export interface OpenTheDoorRequest {
-  id: string
-}
-
-export interface UpdateGroupRequest {
-  group_chat_id: string
-  name?: string
-  description?: string
-  avatar_url?: string
-  settings?: {
-    join_method?: 'open' | 'approval' | 'invite_only'
-    is_searchable?: boolean
-    max_members?: number
-    password_hash?: string
-  }
-}
-
-export interface DeleteGroupRequest {
-  group_chat_id: string
-}
-
-export interface GetMembersRequest {
-  group_chat_id: string
-  role?: 'owner' | 'admin' | 'member'
-  limit?: number
-  cursor?: string
-}
-
-export interface InviteMemberRequest {
-  group_chat_id: string
-  user_id: string
-  message?: string
-}
-
-export interface JoinGroupRequest {
-  group_chat_id: string
-  password_hash?: string
-}
-
-export interface ApplyToGroupRequest {
-  group_chat_id: string
-  message?: string
-}
-
-export interface SetMemberRoleRequest {
-  group_chat_id: string
-  user_id: string
-  role: 'admin' | 'member'
-}
-
-export interface MuteMemberRequest {
-  group_chat_id: string
-  user_id: string
-  duration_minutes: number
-}
-
-export interface RemoveMemberRequest {
-  group_chat_id: string
-  user_id: string
-}
-
-export interface LeaveGroupRequest {
-  group_chat_id: string
-}
-
-export interface GetApplicationsRequest {
-  group_chat_id: string
-  status?: 'pending' | 'accepted' | 'rejected' | 'all'
-  limit?: number
-  cursor?: string
-}
-
-export interface ApproveApplicationRequest {
-  application_id: string
-}
-
-export interface RejectApplicationRequest {
-  application_id: string
-  reason?: string
-}
-
-export interface TransferOwnershipRequest {
-  group_chat_id: string
-  new_owner_id: string
-}
-
-export interface GetInvitesRequest {
-  status?: 'pending' | 'accepted' | 'rejected' | 'all'
-  limit?: number
-  cursor?: string
-}
-
-export interface AcceptInviteRequest {
-  invite_id: string
-}
-
-export interface RejectInviteRequest {
-  invite_id: string
-}
-
-export class GroupsService extends BaseService {
-  protected readonly baseUrl = ''
-
-  /**
-   * 发现群组（公开接口）
-   * POST /api/v1/public/group_chats/discover
-   */
-  async discoverGroups(request: DiscoverGroupsRequest): Promise<PaginatedData<GroupResponse>> {
-    return this.publicPost<PaginatedData<GroupResponse>>('/public/group_chats/discover', request)
+  async searchByKeyword(request: SearchGroupsByKeywordRequest) {
+    return this.publicPost<PaginatedData<GroupSearchItem>>(GROUPS.SEARCH_BY_KEYWORD, request)
   }
 
-  /**
-   * 创建群组
-   * POST /api/v1/protected/group_chats/create
-   */
-  async createGroup(request: CreateGroupRequest): Promise<{ group_chat_id: string }> {
-    return this.post<{ group_chat_id: string }>('/protected/group_chats/create', request)
+  async searchByTag(request: SearchGroupsByTagRequest) {
+    return this.publicPost<PaginatedData<GroupSearchItem>>(GROUPS.SEARCH_BY_TAG, request)
   }
 
-  /**
-   * 获取我的群组
-   * POST /api/v1/protected/group_chats/get_joined
-   */
-  async getJoined(request: GetJoinedRequest = {}): Promise<PaginatedData<GroupResponse>> {
-    return this.post<PaginatedData<GroupResponse>>('/protected/group_chats/get_joined', request)
+  async searchByLocation(request: SearchGroupsByLocationRequest) {
+    return this.publicPost<PaginatedData<GroupSearchItem>>(GROUPS.SEARCH_BY_LOCATION, request)
   }
 
-  /**
-   * 获取群组详情（公开接口）
-   * POST /api/v1/public/group_chats/open_the_door
-   */
-  async openTheDoor(request: OpenTheDoorRequest): Promise<GroupResponse> {
-    return this.publicPost<GroupResponse>('/public/group_chats/open_the_door', request)
+  async getSettings(request: { id: string }) {
+    return this.publicPost<GroupSettingsData>(GROUPS.GET_SETTINGS, request)
   }
 
-  /**
-   * 更新群组资料
-   * POST /api/v1/protected/group_chats/update
-   */
-  async updateGroup(request: UpdateGroupRequest): Promise<void> {
-    return this.post<void>('/protected/group_chats/update', request)
+  async openTheDoor(request: { id: string; latitude: number; longitude: number }) {
+    return this.publicPost<GroupSearchItem>(GROUPS.OPEN_THE_DOOR, request)
   }
 
-  /**
-   * 解散群组
-   * POST /api/v1/protected/group_chats/delete
-   */
-  async deleteGroup(request: DeleteGroupRequest): Promise<void> {
-    return this.post<void>('/protected/group_chats/delete', request)
+  // ============ 群组管理 API (protected) ============
+
+  async create(request: CreateGroupChatRequest) {
+    return this.post<CreateGroupChatData>(GROUPS.CREATE, request)
   }
 
-  /**
-   * 获取成员列表（公开接口）
-   * POST /api/v1/public/group_chats/members/get_list
-   */
-  async getMembers(request: GetMembersRequest): Promise<PaginatedData<GroupMemberResponseData>> {
-    return this.publicPost<PaginatedData<GroupMemberResponseData>>('/public/group_chats/members/get_list', request)
+  async getJoined(request: GetJoinedGroupChatsRequest = {}) {
+    return this.post<PaginatedData<JoinedGroupItem>>(GROUPS.ME.GET_JOINED, request)
   }
 
-  /**
-   * 邀请成员
-   * POST /api/v1/protected/group_chats/members/invite
-   */
-  async inviteMember(request: InviteMemberRequest): Promise<{ id: string; expires_at: string }> {
-    return this.post<{ id: string; expires_at: string }>('/protected/group_chats/members/invite', request)
+  async update(request: UpdateGroupChatRequest) {
+    return this.post<void>(GROUPS.UPDATE, request)
   }
 
-  /**
-   * 加入群组
-   * POST /api/v1/protected/group_chats/members/join
-   */
-  async joinGroup(request: JoinGroupRequest): Promise<void> {
-    return this.post<void>('/protected/group_chats/members/join', request)
+  async deleteGroup(request: DeleteGroupChatRequest) {
+    return this.post<void>(GROUPS.DELETE, request)
   }
 
-  /**
-   * 申请加入
-   * POST /api/v1/protected/group_chats/members/apply
-   */
-  async applyToGroup(request: ApplyToGroupRequest): Promise<{ id: string }> {
-    return this.post<{ id: string }>('/protected/group_chats/members/apply', request)
+  async transferOwnership(request: TransferOwnershipRequest) {
+    return this.post<void>(GROUPS.TRANSFER_OWNERSHIP, request)
   }
 
-  /**
-   * 设置成员角色
-   * POST /api/v1/protected/group_chats/members/set_role
-   */
-  async setMemberRole(request: SetMemberRoleRequest): Promise<void> {
-    return this.post<void>('/protected/group_chats/members/set_role', request)
+  // ============ 成员管理 API ============
+
+  async getMembers(request: GetGroupMembersRequest) {
+    return this.publicPost<PaginatedData<GroupMemberItem>>(GROUPS.MEMBERS.GET_LIST, request)
   }
 
-  /**
-   * 禁言成员
-   * POST /api/v1/protected/group_chats/members/mute
-   */
-  async muteMember(request: MuteMemberRequest): Promise<void> {
-    return this.post<void>('/protected/group_chats/members/mute', request)
+  async inviteMember(request: InviteMemberRequest) {
+    return this.post<InviteMemberData>(GROUPS.MEMBERS.INVITE, request)
   }
 
-  /**
-   * 移除成员
-   * POST /api/v1/protected/group_chats/members/remove
-   */
-  async removeMember(request: RemoveMemberRequest): Promise<void> {
-    return this.post<void>('/protected/group_chats/members/remove', request)
+  async joinGroup(request: JoinGroupRequest) {
+    return this.post<void>(GROUPS.MEMBERS.JOIN, request)
   }
 
-  /**
-   * 退出群组
-   * POST /api/v1/protected/group_chats/members/leave
-   */
-  async leaveGroup(request: LeaveGroupRequest): Promise<void> {
-    return this.post<void>('/protected/group_chats/members/leave', request)
+  async applyToGroup(request: ApplyToGroupRequest) {
+    return this.post<ApplyToGroupData>(GROUPS.MEMBERS.APPLY, request)
   }
 
-  /**
-   * 获取群组申请列表
-   * POST /api/v1/protected/group_chats/applications/get_list
-   */
-  async getApplications(request: GetApplicationsRequest): Promise<PaginatedData<{
-    id: string
-    applicant: {
-      user_id: string
-      nickname: string
-      avatar_url?: string
-    }
-    message?: string
-    status: 'pending' | 'accepted' | 'rejected'
-    created_at: string
-    handled_at?: string
-  }>> {
-    return this.post('/protected/group_chats/applications/get_list', request)
+  async setMemberRole(request: SetMemberRoleRequest) {
+    return this.post<void>(GROUPS.MEMBERS.SET_ROLE, request)
   }
 
-  /**
-   * 审批群组申请
-   * POST /api/v1/protected/group_chats/applications/approve
-   */
-  async approveApplication(request: ApproveApplicationRequest): Promise<void> {
-    return this.post<void>('/protected/group_chats/applications/approve', request)
+  async muteMember(request: MuteMemberRequest) {
+    return this.post<void>(GROUPS.MEMBERS.MUTE, request)
   }
 
-  /**
-   * 拒绝群组申请
-   * POST /api/v1/protected/group_chats/applications/reject
-   */
-  async rejectApplication(request: RejectApplicationRequest): Promise<void> {
-    return this.post<void>('/protected/group_chats/applications/reject', request)
+  async unmuteMember(request: UnmuteMemberRequest) {
+    return this.post<void>(GROUPS.MEMBERS.UNMUTE, request)
   }
 
-  /**
-   * 转让群主
-   * POST /api/v1/protected/group_chats/transfer_ownership
-   */
-  async transferOwnership(request: TransferOwnershipRequest): Promise<void> {
-    return this.post<void>('/protected/group_chats/transfer_ownership', request)
+  async banMember(request: BanMemberRequest) {
+    return this.post<void>(GROUPS.MEMBERS.BAN_MEMBER, request)
   }
 
-  /**
-   * 获取我的群组邀请列表
-   * POST /api/v1/protected/group_chats/invites/get_list
-   */
-  async getInvites(request: GetInvitesRequest = {}): Promise<PaginatedData<{
-    id: string
-    group: {
-      group_chat_id: string
-      name: string
-      avatar_url?: string
-      member_count: number
-    }
-    inviter: {
-      user_id: string
-      nickname: string
-      avatar_url?: string
-    }
-    message?: string
-    status: 'pending' | 'accepted' | 'rejected'
-    created_at: string
-    expires_at?: string
-  }>> {
-    return this.post('/protected/group_chats/invites/get_list', request)
+  async unbanMember(request: UnbanMemberRequest) {
+    return this.post<void>(GROUPS.MEMBERS.UNBAN_MEMBER, request)
   }
 
-  /**
-   * 接受群组邀请
-   * POST /api/v1/protected/group_chats/invites/accept
-   */
-  async acceptInvite(request: AcceptInviteRequest): Promise<void> {
-    return this.post<void>('/protected/group_chats/invites/accept', request)
+  async getBannedMembers(request: GetBannedMembersRequest) {
+    return this.post<PaginatedData<BannedMemberItem>>(GROUPS.MEMBERS.GET_BANNED_LIST, request)
   }
 
-  /**
-   * 拒绝群组邀请
-   * POST /api/v1/protected/group_chats/invites/reject
-   */
-  async rejectInvite(request: RejectInviteRequest): Promise<void> {
-    return this.post<void>('/protected/group_chats/invites/reject', request)
+  async removeMember(request: RemoveMemberRequest) {
+    return this.post<void>(GROUPS.MEMBERS.REMOVE_MEMBER, request)
   }
 
-  /**
-   * 上传群组头像（使用FormData）
-   */
-  async uploadAvatar(groupId: string, file: File): Promise<{ avatar_url: string }> {
-    return this.upload<{ avatar_url: string }>('/protected/media/upload_file', file, {
-      category: 'group_image',
-      group_id: groupId
-    })
+  // ============ 申请管理 API ============
+
+  async getApplications(request: GetGroupApplicationsRequest) {
+    return this.post<PaginatedData<GroupApplicationItem>>(GROUPS.APPLICATIONS.GET_LIST, request)
   }
 
-  /**
-   * 获取附近群组（别名方法，调用 discoverGroups）
-   */
-  async getNearbyGroups(request: DiscoverGroupsRequest): Promise<PaginatedData<GroupResponse>> {
-    return this.discoverGroups(request)
+  async approveApplication(request: ApproveGroupApplicationRequest) {
+    return this.post<void>(GROUPS.APPLICATIONS.APPROVE, request)
   }
 
-  /**
-   * 搜索群组（别名方法，调用 discoverGroups）
-   */
-  async searchGroups(request: DiscoverGroupsRequest): Promise<PaginatedData<GroupResponse>> {
-    return this.discoverGroups(request)
+  async rejectApplication(request: RejectGroupApplicationRequest) {
+    return this.post<void>(GROUPS.APPLICATIONS.REJECT, request)
+  }
+
+  // ============ 当前用户群组相关 API（/me/ 路径）============
+
+  async cancelApplication(request: CancelGroupApplicationRequest) {
+    return this.post<void>(GROUPS.ME.CANCEL_APPLICATION, request)
+  }
+
+  async getInvites(request: GetGroupInvitesRequest = {}) {
+    return this.post<PaginatedData<GroupInviteItem>>(GROUPS.ME.GET_INVITES_LIST, request)
+  }
+
+  async acceptInvite(request: AcceptGroupInviteRequest) {
+    return this.post<void>(GROUPS.ME.ACCEPT_INVITE, request)
+  }
+
+  async rejectInvite(request: RejectGroupInviteRequest) {
+    return this.post<void>(GROUPS.ME.REJECT_INVITE, request)
+  }
+
+  async leaveGroup(request: LeaveGroupRequest) {
+    return this.post<void>(GROUPS.ME.LEAVE_GROUP, request)
   }
 }
 
-// 创建服务实例
 export const groupsService = new GroupsService()
-
-// 提供 composable 接口
-export function useGroupsService() {
-  return groupsService
-}
-
-// 兼容旧的导出名称
-export function useGroupService() {
-  return groupsService
-}
+export function useGroupsService() { return groupsService }

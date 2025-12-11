@@ -1,12 +1,12 @@
 <template>
-  <div class="comment-item" :class="{ 'is-reply': isReply }">
+  <div :class="isReply ? 'py-2' : 'py-3'">
     <!-- 评论内容 -->
     <div class="flex gap-3">
       <!-- 用户头像 -->
       <UAvatar
         :alt="comment.user.nickname"
         size="sm"
-        class="flex-shrink-0"
+        class="shrink-0"
       >
         {{ comment.user.nickname?.charAt(0) }}
       </UAvatar>
@@ -16,69 +16,65 @@
         <!-- 用户信息 -->
         <div class="flex items-center gap-2 mb-1">
           <span class="font-medium text-sm">{{ comment.user.nickname }}</span>
-          <span class="text-xs text-neutral-500 dark:text-neutral-400">
+          <span class="text-xs text-secondary-content">
             {{ formatTime(comment.created_at) }}
           </span>
         </div>
 
         <!-- 回复对象 -->
-        <div v-if="comment.reply_to_user" class="text-sm text-neutral-600 dark:text-neutral-400 mb-1">
-          回复 <span class="text-neutral-600 dark:text-neutral-300">@{{ comment.reply_to_user.nickname }}</span>
+        <div v-if="comment.reply_to_user" class="text-sm text-secondary-content mb-1">
+          回复 <span class="text-secondary-content">@{{ comment.reply_to_user.nickname }}</span>
         </div>
 
         <!-- 评论内容 -->
-        <p class="text-sm text-neutral-900 dark:text-white whitespace-pre-wrap break-words">
+        <p class="text-sm text-primary-content whitespace-pre-wrap wrap-break-word">
           {{ comment.content }}
         </p>
 
         <!-- 操作按钮 -->
-        <div class="flex items-center gap-4 mt-2">
+        <div class="flex items-center gap-2 mt-2">
           <!-- 点赞 -->
-          <button
+          <UButton
+            variant="link"
+            size="sm"
+            :color="comment.liked_by_me ? 'error' : 'neutral'"
+            :icon="comment.liked_by_me ? 'i-heroicons-heart-solid' : 'i-heroicons-heart'"
+            :label="String(comment.likes_count || 0)"
             @click="handleLike"
-            class="flex items-center gap-1 text-xs transition-colors"
-            :class="comment.liked_by_me 
-              ? 'text-error-500' 
-              : 'text-neutral-500 dark:text-neutral-400 hover:text-error-500'"
-          >
-            <UIcon 
-              :name="comment.liked_by_me ? 'i-heroicons-heart-solid' : 'i-heroicons-heart'" 
-              class="w-4 h-4" 
-            />
-            <span>{{ comment.likes_count || 0 }}</span>
-          </button>
+          />
 
           <!-- 回复 -->
-          <button
+          <UButton
+            variant="link"
+            size="sm"
+            color="neutral"
+            icon="i-heroicons-chat-bubble-left"
+            label="回复"
             @click="handleReply"
-            class="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-600 dark:text-neutral-300 transition-colors"
-          >
-            <UIcon name="i-heroicons-chat-bubble-left" class="w-4 h-4" />
-            <span>回复</span>
-          </button>
+          />
 
           <!-- 查看回复 -->
-          <button
+          <UButton
             v-if="comment.replies_count > 0 && !isReply"
+            variant="link"
+            size="sm"
+            color="neutral"
+            :icon="showReplies ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
+            :label="`${comment.replies_count} 条回复`"
             @click="toggleReplies"
-            class="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-600 dark:text-neutral-300 transition-colors"
-          >
-            <UIcon 
-              :name="showReplies ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'" 
-              class="w-4 h-4" 
-            />
-            <span>{{ comment.replies_count }} 条回复</span>
-          </button>
+          />
 
           <!-- 删除（仅作者可见） -->
-          <button
+          <UButton
             v-if="canDelete"
+            variant="link"
+            size="sm"
+            color="neutral"
+            icon="i-heroicons-trash"
+            label="删除"
+            class="ml-auto hover:text-error"
             @click="handleDelete"
-            class="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400 hover:text-error-500 transition-colors ml-auto"
-          >
-            <UIcon name="i-heroicons-trash" class="w-4 h-4" />
-            <span>删除</span>
-          </button>
+          />
         </div>
       </div>
     </div>
@@ -95,29 +91,37 @@
       />
       
       <!-- 加载更多回复 -->
-      <button
+      <UButton
         v-if="hasMoreReplies"
-        @click="loadMoreReplies"
+        variant="link"
+        size="sm"
+        color="neutral"
+        :label="loadingReplies ? '加载中...' : '查看更多回复'"
+        :loading="loadingReplies"
         :disabled="loadingReplies"
-        class="text-sm text-neutral-600 dark:text-neutral-300 hover:text-primary-600 transition-colors"
-      >
-        {{ loadingReplies ? '加载中...' : '查看更多回复' }}
-      </button>
+        @click="loadMoreReplies"
+      />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { CommentItem as CommentItemType } from '~/services/comments.service'
+import type { CommentListItem } from '~/types/api'
 import { useCommentsService } from '~/services/comments.service'
+import { getErrorMessage } from '~/utils/error'
+
+// 扩展类型：包含前端本地管理的点赞状态
+interface CommentWithLikeStatus extends CommentListItem {
+  liked_by_me?: boolean
+}
 
 const props = defineProps<{
-  comment: CommentItemType
+  comment: CommentWithLikeStatus
   isReply?: boolean
 }>()
 
 const emit = defineEmits<{
-  reply: [comment: CommentItemType]
+  reply: [comment: CommentWithLikeStatus]
   delete: [commentId: string]
   like: [commentId: string]
 }>()
@@ -125,12 +129,13 @@ const emit = defineEmits<{
 const { formatTime } = useFormatters()
 const { requireAuth } = useRequireAuth()
 const commentsService = useCommentsService()
+// 使用水合安全的 store 访问
 const authStore = useAuthStore()
 const toast = useToast()
 
 // 状态
 const showReplies = ref(false)
-const replies = ref<CommentItemType[]>([])
+const replies = ref<CommentWithLikeStatus[]>([])
 const hasMoreReplies = ref(false)
 const nextCursor = ref<string | undefined>()
 const loadingReplies = ref(false)
@@ -146,20 +151,23 @@ const handleLike = async () => {
   if (!requireAuth('点赞评论')) return;
   
   try {
-    await commentsService.toggleLike({
-      id: props.comment.id,
-      action: props.comment.liked_by_me ? 'unlike' : 'like'
-    })
+    const wasLiked = props.comment.liked_by_me
+    
+    if (wasLiked) {
+      await commentsService.unlikeComment({ id: props.comment.id })
+    } else {
+      await commentsService.likeComment({ id: props.comment.id })
+    }
     
     // 更新本地状态
     props.comment.liked_by_me = !props.comment.liked_by_me
     props.comment.likes_count += props.comment.liked_by_me ? 1 : -1
     
     emit('like', props.comment.id)
-  } catch (error: any) {
+  } catch (error: unknown) {
     toast.add({
       title: '操作失败',
-      description: error?.message || '点赞失败',
+      description: getErrorMessage(error, '点赞失败'),
       color: 'error'
     })
   }
@@ -175,20 +183,26 @@ const handleReply = () => {
 
 // 删除
 const handleDelete = async () => {
-  const confirmed = confirm('确定要删除这条评论吗？')
+  const modal = useModal()
+  const confirmed = await modal.showConfirm({
+    title: '删除评论',
+    message: '确定要删除这条评论吗？',
+    confirmText: '删除',
+    confirmColor: 'error'
+  })
   if (!confirmed) return
 
   try {
-    await commentsService.delete({ id: props.comment.id })
+    await commentsService.remove({ id: props.comment.id })
     toast.add({
       title: '删除成功',
       color: 'success'
     })
     emit('delete', props.comment.id)
-  } catch (error: any) {
+  } catch (error: unknown) {
     toast.add({
       title: '删除失败',
-      description: error?.message || '删除评论失败',
+      description: getErrorMessage(error, '删除评论失败'),
       color: 'error'
     })
   }
@@ -248,7 +262,7 @@ const loadMoreReplies = async () => {
 }
 
 // 回复的回复
-const handleReplyToReply = (reply: CommentItemType) => {
+const handleReplyToReply = (reply: CommentWithLikeStatus) => {
   emit('reply', reply)
 }
 
@@ -258,14 +272,4 @@ const handleDeleteReply = (replyId: string) => {
   props.comment.replies_count--
 }
 </script>
-
-<style scoped>
-.comment-item {
-  @apply py-3;
-}
-
-.comment-item.is-reply {
-  @apply py-2;
-}
-</style>
 

@@ -1,154 +1,55 @@
 <template>
-  <div class="relative w-full h-full bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden">
+  <div class="relative w-full h-full bg-slate-base rounded-lg overflow-hidden">
     <!-- 地图容器 -->
-    <div
-      ref="mapContainer"
-      class="w-full h-full"
-      :class="{ 'opacity-50': loading }"
-    />
-    
-    <!-- 加载状态 -->
+    <div ref="mapContainer" class="w-full h-full" />
+
+    <!-- 加载中 -->
     <div
       v-if="loading"
-      class="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-slate-900/80"
+      class="absolute inset-0 flex items-center justify-center bg-glass-white-deep"
     >
       <div class="text-center">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-2"></div>
-        <p class="text-sm text-neutral-600 dark:text-neutral-400">加载地图中...</p>
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-strong mx-auto mb-2" />
+        <p class="text-sm text-secondary-content">加载地图中...</p>
       </div>
     </div>
-    
-    <!-- 地图控制按钮 -->
-    <div class="absolute top-4 right-4 flex flex-col gap-2">
-      <UButton
-        icon="i-heroicons-magnifying-glass-plus"
-        variant="solid"
-        color="neutral"
-        size="sm"
-        @click="zoomIn"
-      />
-      <UButton
-        icon="i-heroicons-magnifying-glass-minus"
-        variant="solid"
-        color="neutral"
-        size="sm"
-        @click="zoomOut"
-      />
-      <UButton
-        icon="i-heroicons-arrow-path"
-        variant="solid"
-        color="neutral"
-        size="sm"
-        @click="resetView"
-      />
-      <UButton
-        icon="i-heroicons-map-pin"
-        variant="solid"
-        color="primary"
-        size="sm"
-        @click="locateMe"
-        :loading="locating"
-      />
+
+    <!-- 控制按钮 -->
+    <div v-if="mapReady" class="absolute top-4 right-4 flex flex-col gap-2">
+      <UButton icon="i-heroicons-plus" variant="solid" color="neutral" size="sm" @click="zoomIn" />
+      <UButton icon="i-heroicons-minus" variant="solid" color="neutral" size="sm" @click="zoomOut" />
+      <UButton icon="i-heroicons-map-pin" variant="solid" color="primary" size="sm" :loading="locating" @click="locateMe" />
     </div>
-    
-    <!-- 地图图例 -->
-    <div
-      v-if="showLegend && markers.length > 0"
-      class="absolute bottom-4 left-4 bg-white dark:bg-slate-800 rounded-lg p-3 shadow-lg border border-slate-200 dark:border-slate-700"
-    >
-      <h4 class="text-sm font-medium text-neutral-900 dark:text-white mb-2">图例</h4>
-      <div class="space-y-1">
-        <div
-          v-for="type in markerTypes"
-          :key="type.key"
-          class="flex items-center gap-2 text-xs"
-        >
-          <div
-            class="w-3 h-3 rounded-full"
-            :style="{ backgroundColor: type.color }"
-          />
-          <span class="text-neutral-600 dark:text-neutral-400">{{ type.label }}</span>
-        </div>
-      </div>
-    </div>
-    
-    <!-- 地图信息面板 -->
+
+    <!-- 选中的标记信息 -->
     <div
       v-if="selectedMarker"
-      class="absolute bottom-4 right-4 bg-white dark:bg-slate-800 rounded-lg p-4 shadow-lg border border-slate-200 dark:border-slate-700 max-w-xs"
+      class="absolute bottom-4 left-4 right-4 bg-card-elevated rounded-lg p-4 shadow-lg"
     >
-      <div class="flex items-start gap-3">
-        <UAvatar
-          :src="selectedMarker.avatar"
-          :alt="selectedMarker.title"
-          size="sm"
-        />
+      <div class="flex items-center gap-3">
+        <UAvatar :src="selectedMarker.avatar" size="sm" />
         <div class="flex-1 min-w-0">
-          <h4 class="font-medium text-neutral-900 dark:text-white truncate">
-            {{ selectedMarker.title }}
-          </h4>
-          <p class="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
-            {{ selectedMarker.description }}
-          </p>
-          <div class="flex items-center gap-2 mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-            <UIcon name="i-heroicons-map-pin" class="w-3 h-3" />
-            <span>距离 {{ formatDistance(selectedMarker.distance || 0) }}</span>
-          </div>
+          <p class="font-medium truncate">{{ selectedMarker.title }}</p>
+          <p class="text-sm text-secondary-content">{{ selectedMarker.description }}</p>
         </div>
-        <UButton
-          icon="i-heroicons-x-mark"
-          variant="ghost"
-          size="xs"
-          @click="selectedMarker = null"
-        />
-      </div>
-      
-      <div class="flex gap-2 mt-3">
-        <UButton
-          size="xs"
-          variant="outline"
-          @click="navigateToMarker(selectedMarker)"
-        >
-          导航
-        </UButton>
-        <UButton
-          size="xs"
-          @click="viewMarkerDetails(selectedMarker)"
-        >
-          查看详情
-        </UButton>
+        <UButton icon="i-heroicons-x-mark" variant="ghost" size="sm" @click="selectedMarker = null" />
       </div>
     </div>
-    
-    <!-- 开发中提示 -->
+
+    <!-- 未配置提示 -->
     <div
-      v-if="!mapLoaded"
-      class="absolute inset-0 flex items-center justify-center bg-slate-50 dark:bg-slate-800"
+      v-if="!isConfigured"
+      class="absolute inset-0 flex items-center justify-center bg-surface"
     >
-      <div class="text-center">
-        <UIcon name="i-heroicons-map" class="w-16 h-16 text-neutral-400 dark:text-neutral-500 mx-auto mb-4" />
-        <h3 class="text-lg font-medium text-neutral-900 dark:text-white mb-2">地图功能</h3>
-        <p class="text-neutral-600 dark:text-neutral-400 mb-4">即将支持高德地图集成</p>
-        <div class="space-y-2 text-sm text-neutral-500 dark:text-neutral-400">
-          <p>• 实时位置定位</p>
-          <p>• 附近用户和群组</p>
-          <p>• 路线导航</p>
-          <p>• 地点标记</p>
-        </div>
-        <UButton
-          class="mt-4"
-          variant="outline"
-          @click="initializeMockMap"
-        >
-          查看演示
-        </UButton>
+      <div class="text-center p-4">
+        <UIcon name="i-heroicons-map" class="w-12 h-12 text-muted mx-auto mb-3" />
+        <p class="text-secondary-content">请配置 NUXT_PUBLIC_AMAP_KEY</p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-
 export interface MapMarker {
   id: string
   type: 'user' | 'group' | 'moment' | 'location'
@@ -158,175 +59,159 @@ export interface MapMarker {
   longitude: number
   avatar?: string
   distance?: number
-  data?: any
+  data?: Record<string, unknown>
 }
 
-interface Props {
+const props = withDefaults(defineProps<{
   markers?: MapMarker[]
   center?: { latitude: number; longitude: number }
   zoom?: number
-  showLegend?: boolean
-  interactive?: boolean
-}
-
-const props = withDefaults(defineProps<Props>(), {
+}>(), {
   markers: () => [],
-  center: () => ({ latitude: 39.9042, longitude: 116.4074 }), // 北京天安门
-  zoom: 13,
-  showLegend: true,
-  interactive: true
+  center: () => ({ latitude: 39.9042, longitude: 116.4074 }),
+  zoom: 13
 })
 
 const emit = defineEmits<{
   markerClick: [marker: MapMarker]
-  mapClick: [coordinates: { latitude: number; longitude: number }]
-  locationUpdate: [location: { latitude: number; longitude: number }]
+  mapClick: [coords: { latitude: number; longitude: number }]
 }>()
-const { formatDistance } = useFormatters()
 
-// 状态
-const mapContainer = ref<HTMLElement>()
-const loading = ref(false)
-const locating = ref(false)
-const mapLoaded = ref(false)
-const selectedMarker = ref<MapMarker | null>(null)
-const currentLocation = ref(props.center)
-
-// 地图实例（预留给真实地图SDK）
-const mapInstance = ref<any>(null)
-
-// 标记类型配置
-const markerTypes = computed(() => [
-  { key: 'user', label: '用户', color: '#3b82f6' },
-  { key: 'group', label: '群组', color: '#10b981' },
-  { key: 'moment', label: '动态', color: '#f59e0b' },
-  { key: 'location', label: '地点', color: '#ef4444' }
-])
-
-// 方法
-const initializeMockMap = () => {
-  loading.value = true
-  
-  // 模拟地图加载
-  setTimeout(() => {
-    mapLoaded.value = true
-    loading.value = false
-    
-    // 如果有标记，显示第一个
-    if (props.markers.length > 0) {
-      selectedMarker.value = props.markers[0]
-    }
-  }, 1500)
-}
-
+const config = useRuntimeConfig()
 const toast = useToast()
 
+const mapContainer = ref<HTMLElement>()
+const mapInstance = ref<AMap.Map | null>(null)
+const markerInstances = ref<Map<string, AMap.Marker>>(new Map())
+const loading = ref(true)
+const locating = ref(false)
+const mapReady = ref(false)
+const selectedMarker = ref<MapMarker | null>(null)
+
+const isConfigured = computed(() => !!config.public.amapKey)
+
+// 等待 AMap 加载
+const waitForAMap = (): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    if (window.AMap) {
+      resolve()
+      return
+    }
+    let attempts = 0
+    const check = setInterval(() => {
+      attempts++
+      if (window.AMap) {
+        clearInterval(check)
+        resolve()
+      } else if (attempts > 50) {
+        clearInterval(check)
+        reject(new Error('AMap 加载超时'))
+      }
+    }, 100)
+  })
+}
+
+// 初始化地图
+const initMap = async () => {
+  if (!mapContainer.value || !isConfigured.value) {
+    loading.value = false
+    return
+  }
+
+  try {
+    await waitForAMap()
+
+    mapInstance.value = new AMap.Map(mapContainer.value, {
+      center: [props.center.longitude, props.center.latitude],
+      zoom: props.zoom,
+      viewMode: '2D'
+    })
+
+    mapInstance.value.on('click', (e: unknown) => {
+      const event = e as { lnglat: AMap.LngLat }
+      emit('mapClick', {
+        latitude: event.lnglat.getLat(),
+        longitude: event.lnglat.getLng()
+      })
+    })
+
+    mapReady.value = true
+    updateMarkers()
+  } catch (error) {
+    console.error('[Map] 初始化失败:', error)
+    toast.add({ title: '地图加载失败', color: 'error' })
+  } finally {
+    loading.value = false
+  }
+}
+
+// 更新标记
+const updateMarkers = () => {
+  if (!mapInstance.value) return
+
+  // 清除旧标记
+  markerInstances.value.forEach(m => mapInstance.value?.remove(m))
+  markerInstances.value.clear()
+
+  // 添加新标记
+  props.markers.forEach(data => {
+    const marker = new AMap.Marker({
+      position: [data.longitude, data.latitude],
+      title: data.title,
+      extData: data
+    })
+    marker.on('click', () => {
+      selectedMarker.value = data
+      emit('markerClick', data)
+    })
+    mapInstance.value?.add(marker)
+    markerInstances.value.set(data.id, marker)
+  })
+}
+
+// 控制方法
 const zoomIn = () => {
-  // 实现地图放大功能
-  if (mapLoaded.value) {
-    // 这里应该调用实际地图SDK的放大方法
-    // 目前显示操作反馈
-    toast.add({ title: '地图放大', description: '放大地图视图', color: 'info' })
+  if (mapInstance.value) {
+    mapInstance.value.setZoom(mapInstance.value.getZoom() + 1)
   }
 }
 
 const zoomOut = () => {
-  // 实现地图缩小功能
-  if (mapLoaded.value) {
-    // 这里应该调用实际地图SDK的缩小方法
-    // 目前显示操作反馈
-    toast.add({ title: '地图缩小', description: '缩小地图视图', color: 'info' })
-  }
-}
-
-const resetView = () => {
-  currentLocation.value = props.center
-  selectedMarker.value = null
-  // 实现重置地图视图功能
-  if (mapLoaded.value) {
-    // 这里应该调用实际地图SDK的重置视图方法
-    // 目前显示操作反馈
-    toast.add({ title: '重置视图', description: '已重置到当前位置', color: 'info' })
+  if (mapInstance.value) {
+    mapInstance.value.setZoom(mapInstance.value.getZoom() - 1)
   }
 }
 
 const locateMe = async () => {
-  if (!navigator.geolocation) {
-    toast.add({ title: '定位失败', description: '您的浏览器不支持定位功能', color: 'error' })
-    return
-  }
-  
+  if (!mapInstance.value) return
   locating.value = true
-  
+
   try {
-    const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+    const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
       navigator.geolocation.getCurrentPosition(resolve, reject, {
-        enableHighAccuracy: true,
-        timeout: 10000,
+        enableHighAccuracy: false,
+        timeout: 5000,
         maximumAge: 60000
       })
     })
-    
-    const location = {
-      latitude: position.coords.latitude,
-      longitude: position.coords.longitude
-    }
-    
-    currentLocation.value = location
-    emit('locationUpdate', location)
-    
+    mapInstance.value.setCenter([pos.coords.longitude, pos.coords.latitude])
     toast.add({ title: '定位成功', color: 'success' })
-  } catch (error) {
-    console.error('定位失败:', error)
-    toast.add({ title: '定位失败', description: '请检查位置权限', color: 'error' })
+  } catch {
+    toast.add({ title: '定位失败', color: 'error' })
   } finally {
     locating.value = false
   }
 }
 
-const navigateToMarker = (marker: MapMarker) => {
-  // 预留给导航功能
-  const url = `https://uri.amap.com/navigation?to=${marker.longitude},${marker.latitude}&name=${encodeURIComponent(marker.title)}`
-  window.open(url, '_blank')
-}
-
-const viewMarkerDetails = (marker: MapMarker) => {
-  emit('markerClick', marker)
-}
-
-// 监听标记变化
-watch(() => props.markers, (newMarkers) => {
-  if (mapLoaded.value && newMarkers.length > 0) {
-    // 预留给真实地图SDK更新标记
-    console.log('Update markers:', newMarkers)
-  }
-}, { deep: true })
-
-// 组件挂载时初始化
-onMounted(() => {
-  // 这里可以初始化真实的地图SDK
-  // 目前显示开发中状态
+// 监听
+watch(() => props.markers, updateMarkers, { deep: true })
+watch(() => props.center, (c) => {
+  mapInstance.value?.setCenter([c.longitude, c.latitude])
 })
 
-// 组件卸载时清理
+onMounted(initMap)
 onUnmounted(() => {
-  if (mapInstance.value) {
-    // 清理地图实例
-    mapInstance.value = null
-  }
+  mapInstance.value?.destroy()
+  mapInstance.value = null
 })
 </script>
-
-<style scoped>
-/* 地图容器样式 */
-.map-container {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-/* 预留给地图SDK的样式 */
-:deep(.amap-container) {
-  border-radius: 0.5rem;
-}
-</style>

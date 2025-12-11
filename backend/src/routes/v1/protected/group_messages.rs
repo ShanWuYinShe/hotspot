@@ -7,7 +7,6 @@ use axum::{routing::post, Router};
 /// Protected 群聊消息路由
 ///
 /// 这些接口需要认证，必须提供有效的 access_token
-/// 严格按照 api_spec.mdc 第 3.9 节定义
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/send", post(group_messages::send)) // ✅ 发送群聊消息
@@ -18,5 +17,6 @@ pub fn routes() -> Router<AppState> {
         .route("/mark_as_read", post(group_messages::mark_as_read)) // ✅ 标记群聊消息已读
         .route("/get_read_status", post(group_messages::get_read_status)) // ✅ 获取消息已读状态
         .route("/add_reaction", post(group_messages::add_reaction)) // ✅ 添加消息反应
-        .route("/get_reactions", post(group_messages::get_reactions)) // ✅ 获取消息反应列表
+        .route("/remove_reaction", post(group_messages::remove_reaction)) // ✅ 移除消息反应
+        .route("/get_reactions_list", post(group_messages::get_reactions_list)) // ✅ 获取消息反应列表
 }

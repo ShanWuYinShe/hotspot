@@ -19,10 +19,10 @@ alwaysApply: false
 3. 遇到冲突时，以 @api_spec.mdc 为准
 
 **API规范快速引用**：
-- 完整的API端点定义 → @api_spec.mdc 第3章
-- 完整的WebSocket事件定义 → @api_spec.mdc 第4章
-- 完整的错误码定义 → @api_spec.mdc 第2.5节
-- 通用类型定义 → @api_spec.mdc 第2.2节
+- 完整的API端点定义 → @api_spec.mdc API端点与类型定义
+- 完整的WebSocket事件定义 → @api_spec.mdc WebSocket实时事件定义
+- 完整的错误码定义 → @api_spec.mdc 错误码定义
+- 通用类型定义 → @api_spec.mdc 通用类型定义
 
 ## 1. 项目上下文
 
@@ -107,17 +107,16 @@ alwaysApply: false
 
 ### 1.4 模块划分与依赖关系
 
-⚠️ **完整的模块划分和依赖关系请参见**: @backend_doc.mdc **第 2.7 节**
+⚠️ **完整的模块划分和依赖关系请参见**: @backend_doc.mdc **业务功能模块**
 
-**核心模块概览**（共 15 个）：
+**核心模块概览**（共 14 个）：
 - **核心业务模块**（8个）：auth、user、group、private_chat、group_messages、chat_unread_counts、moment、comment
 - **辅助功能模块**（4个）：report、event_subscriptions、media、system
-- **数据聚合模块**（4个）：inbox、subscription、leaderboard、feed
+- **数据聚合模块**（3个）：inbox、subscription、feed
 
 **关键实现说明**：
 - **收件箱 (inbox)**: 事件驱动架构，监听其他模块事件并生成提醒
 - **事件订阅 (subscription)**: 两层订阅机制（API持久化 + WebSocket实时）
-- **排行榜 (leaderboard)**: 定时任务 + Redis缓存策略
 - **信息流 (feed)**: 混合推荐算法（社交40% + 位置30% + 兴趣20% + 探索10%）
 
 ## 2. 代码生成规范
@@ -191,7 +190,7 @@ alwaysApply: false
 
 | 场景 | 核心SQL模式 | 关键要点 |
 |---|---|---|
-| 地理位置查询 | `ST_Distance` + `ST_DWithin` | 必须使用PostGIS函数，详见1.2.1节 |
+| 地理位置查询 | `ST_Distance` + `ST_DWithin` | 必须使用PostGIS函数 |
 | 游标分页查询 | `WHERE id > $cursor ORDER BY id LIMIT $limit` | cursor字符串→内部ID转换由Repository负责 |
 | 存在性检查 | `SELECT EXISTS(...)` | 避免COUNT，EXISTS性能更好 |
 | 软删除查询 | `WHERE is_deleted = FALSE` | 几乎所有查询都需要此条件 |
@@ -260,7 +259,7 @@ alwaysApply: false
 
 ### 3.1 统一响应格式
 
-⚠️ **完整的 API 响应规范请参见**: @api_spec.mdc **第 2.2 节 统一响应格式**
+⚠️ **完整的 API 响应规范请参见**: @api_spec.mdc **统一响应格式**
 
 **实现要点**:
 - 定义 `ApiResponse<T>` 泛型结构体
@@ -270,13 +269,13 @@ alwaysApply: false
 
 ### 3.2 错误处理原则
 
-⚠️ **完整错误码定义请参见**: @api_spec.mdc **第 2.4 节 错误码定义**
+⚠️ **完整错误码定义请参见**: @api_spec.mdc **错误码定义**
 
 **实现要点**:
 - 使用 `thiserror::Error` 定义 `AppError` 枚举
 - 包含所有错误类型：`BadRequest`, `Unauthorized`, `Forbidden`, `NotFound`, `Conflict`, `Database`, `Redis`, `Jwt`, `Internal`
 - 实现 `IntoResponse` trait，统一返回 HTTP 200 + 业务错误码
-- 错误码映射参考 api_spec.mdc 第 2.4 节
+- 错误码映射参考 api_spec.mdc 错误码定义
 - 记录错误日志（5000+ 用 ERROR，其他用 WARN）
 
 ### 3.3 认证中间件原则
@@ -336,7 +335,7 @@ alwaysApply: false
 **2. Model生成**:
 - 每个表对应一个Rust struct
 - 使用`#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]`
-- 字段类型严格按照第2.5节的类型映射规范
+- 字段类型严格按照错误码定义的类型映射规范
 
 **3. 索引策略**:
 - **强制要求**: 地理位置字段必须使用GIST索引
@@ -345,7 +344,7 @@ alwaysApply: false
 
 **4. 历史跟踪**:
 - 系统需要的历史表：user_location_history, room_location_history, config_change_logs
-- 可选的历史表：参见 @backend_doc.mdc 第4.10节
+- 可选的历史表：参见 @backend_doc.mdc 数据库设计
 - 可根据业务需求扩展新的历史表
 
 ## 5. 关键业务规则
@@ -364,17 +363,23 @@ alwaysApply: false
 - ✅ 服务端使用bcrypt二次哈希
 - ✅ 使用bcrypt crate，work factor=10~12
 
-### 5.2 用户身份编码
+### 5.2 用户类型标识
 
-**user_id结构**（64位整数）:
-- **高8位**: 用户类型（0x01=临时，0x02=普通，0x03=系统）
-- **低56位**: 序列号（原子递增）
-- **生成公式**: `(type << 56) | (sequence & 0x00FFFFFFFFFFFFFF)`
+**用户类型**：通过 `user_type` 枚举字段标识（存储在数据库的 `users` 表中）
+
+**UserType 枚举值**:
+- `temp` - 临时用户（无密码，可升级）
+- `normal` - 普通用户（已注册）
+- `system` - 系统用户（官方账号）
+
+**用户ID分配规则**:
+- **系统用户区间**：1 - 1,000,000（通过管理员接口创建）
+- **临时用户和注册用户区间**：1,000,001+（共用序列，方便临时用户转正）
 
 **Token管理**:
 - **Access Token**: 3600秒（1小时），用于API认证
 - **Refresh Token**: 2592000秒（30天），用于刷新
-- **Claims**: sub(user_id), exp, iat, user_type
+- **Claims**: sub(user_id), exp, iat
 - **存储**: Redis缓存刷新token，key=`refresh_token:{user_id}`
 
 ### 5.3 API查询规范
@@ -403,7 +408,7 @@ alwaysApply: false
 
 ### 5.4 数据完整性验证规范（无外键约束）
 
-⚠️ **关键要求**：由于项目不使用数据库外键约束（性能优化，详见 @backend_doc.mdc 4.1.4节），**Service 层必须严格验证所有引用关系**。
+⚠️ **关键要求**：由于项目不使用数据库外键约束（性能优化），**Service 层必须严格验证所有引用关系**。
 
 **Repository 层辅助方法**（推荐实现）:
 - 提供 `exists()` 方法验证资源存在性
@@ -445,7 +450,7 @@ alwaysApply: false
 
 ⚠️ **强制要求**：所有未读计数的读写必须通过 `chat_unread_counts` 表，不得直接操作成员表中的 unread_count 字段（该字段已被删除）。
 
-**表分离设计原因**（详见 @backend_doc.mdc 4.13节）:
+**表分离设计原因**:
 - 避免高并发更新成员表导致的行锁竞争
 - 消息发送和成员管理操作解耦，互不阻塞
 - 提升消息吞吐量和系统整体性能
@@ -489,7 +494,7 @@ alwaysApply: false
 
 ⚠️ **强制要求**：所有在线状态的读写必须通过 `user_online_status` 表，不得直接操作 `users` 表中的 last_active_at 和 last_seen_at 字段（这些字段已被删除）。
 
-**表分离设计原因**（详见 @backend_doc.mdc 4.13节）:
+**表分离设计原因**:
 - 避免高频更新 `users` 表导致的行锁竞争
 - 在线状态更新与用户基础信息查询解耦
 - 提升WebSocket连接处理性能
@@ -512,15 +517,13 @@ alwaysApply: false
 - **查询在线状态**（`get_online_status`）：
   - 查询单个用户的在线状态
   - 无记录时返回默认离线状态
-- **批量查询**（`get_online_status_batch`）：
-  - 使用 `WHERE user_id = ANY($1)` 批量查询
-  - 提升性能
 
 **Service层实现要点**:
 - **WebSocket连接**: 调用 `set_online()` 增加连接计数
 - **WebSocket断开**: 调用 `set_offline()` 减少连接计数，为0时设为离线
 - **用户活跃**: 定期调用 `update_last_active()` 更新活跃时间
-- **查询状态**: 调用 `get_online_status()` 或 `get_online_status_batch()`
+- **查询状态**: 调用 `get_online_status()` 查询单个用户状态
+- **注意**: 用户在线状态的批量订阅通过 WebSocket 实现，不再提供批量 HTTP API
 
 **缓存策略**:
 - **Redis Key**: `online_status:{user_id}`
@@ -550,7 +553,7 @@ alwaysApply: false
 
 ### 5.7 速率限制实现规范
 
-⚠️ **完整的速率限制规范请参见**: @api_spec.mdc **第 2.14 节速率限制与配额管理**
+⚠️ **完整的速率限制规范请参见**: @api_spec.mdc **速率限制与配额管理**
 
 **核心原则**:
 - 速率限制在中间件层实现，配额检查在 Service 层实现
@@ -560,7 +563,7 @@ alwaysApply: false
 **中间件实现要点**:
 - 使用 Redis INCR 命令实现计数器
 - 首次请求时设置过期时间
-- 超限时返回 429 错误和 `Retry-After` 头
+- 超限时返回 HTTP 200，code: 1400
 - 添加响应头：`X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`
 
 **速率限制配置**:
@@ -577,9 +580,9 @@ alwaysApply: false
 - 错误消息包含当前数量和限制数量
 
 **错误响应**:
-- HTTP 状态码: 429 Too Many Requests
-- 错误码: 1400-1404（参见 api_spec.mdc 第 2.5 节）
-- 响应头: `Retry-After`（秒数）
+- HTTP 状态码: 200（所有错误统一返回 HTTP 200）
+- 错误码: 1400-1404（参见 api_spec.mdc 错误码定义）
+- 响应头: `X-RateLimit-Reset`（重置时间戳）
 
 **实现要求**:
 - 使用 Redis 滑动窗口算法
@@ -587,47 +590,9 @@ alwaysApply: false
 - 记录速率限制命中次数到监控系统
 - 超限时返回清晰的错误消息和重试建议
 
-### 5.8 批量操作实现规范
+### 5.8 幂等性实现规范
 
-⚠️ **完整的批量操作规范请参见**: @api_spec.mdc **第 2.15 节批量操作设计规范**
-
-**核心原则**:
-- Service 层提供批量处理方法
-- 原子性由 `atomic` 参数控制
-- 非原子操作遇到单项错误时继续处理其他项
-
-**Service 层实现模式**:
-- **原子操作**（`atomic: true`）：
-  - 使用数据库事务
-  - 任何一项失败立即回滚
-  - 全部成功或全部失败
-- **非原子操作**（`atomic: false`）：
-  - 逐项处理
-  - 单项失败不影响其他项
-  - 返回每项的详细结果（index, code, message）
-- **通用流程**：
-  1. 验证批量大小（最大100）
-  2. 遍历处理每一项
-  3. 记录成功/失败数量
-  4. 返回统计结果和详细结果列表
-
-**批量操作限制**:
-- 最大批量大小：100条
-- 速率限制：10次/分钟（比单次操作更严格）
-
-**响应类型定义**:
-- `BatchResult<T>`：包含 total, succeeded, failed, results
-- `BatchItemResult<T>`：包含 index, code, data（可选）, message（可选）
-
-**实现要求**:
-- 验证批量大小限制（MAX_BATCH_SIZE = 100）
-- 记录批量操作审计日志
-- 原子操作失败时全部回滚
-- 非原子操作返回每项的详细结果
-
-### 5.9 幂等性实现规范
-
-⚠️ **完整的幂等性规范请参见**: @api_spec.mdc **第 2.17 节幂等性设计**
+⚠️ **完整的幂等性规范请参见**: @api_spec.mdc **幂等性设计**
 
 **核心原则**:
 - 服务端完全控制幂等性，客户端无需提供幂等键
@@ -699,9 +664,9 @@ async fn idempotency_middleware(
 **需要幂等的端点**:
 ```rust
 const IDEMPOTENT_ENDPOINTS: &[&str] = &[
-    "/api/v1/protected/chat_messages/send_message",
+    "/api/v1/protected/private_messages/send",
+    "/api/v1/protected/group_messages/send",
     "/api/v1/protected/moments/create",
-    "/api/v1/protected/user/send_friend_request",
     "/api/v1/protected/group_chats/create",
     "/api/v1/protected/media/upload_file",
 ];
@@ -800,11 +765,11 @@ const IDEMPOTENCY_TTL_SECONDS: u64 = 600;  // 缓存TTL 10分钟（2倍时间窗
 
 ### 5.10 私聊权限验证规范
 
-⚠️ **完整业务规则请参见**: @api_spec.mdc **第 3.5.1 节发起私聊权限验证说明**
+⚠️ **完整业务规则请参见**: @api_spec.mdc **私聊管理 API - 发起私聊**
 
 **Service层验证流程**（强制要求）:
 1. 检查是否对自己发起私聊 → 返回 `AppError::CannotOperateOnSelf`（错误码 1301）
-2. 查询对方 `user_settings.allow_private_chat` → 为 false 时返回 `AppError::PrivateChatNotAllowed`（错误码 1309）
+2. 查询对方 `user_settings.allow_private_chat` → 为 'nobody' 或（为 'friends' 且非好友）时返回 `AppError::PrivateChatNotAllowed`（错误码 1309）
 3. 查询 `user_blocks` 表检查是否被拉黑 → 被拉黑时返回 `AppError::BlockedByUser`（错误码 1310）
 4. 全部通过后创建或返回已存在的私聊房间
 
@@ -819,7 +784,7 @@ const IDEMPOTENCY_TTL_SECONDS: u64 = 600;  // 缓存TTL 10分钟（2倍时间窗
 
 ### 5.11 群组密码验证规范
 
-⚠️ **完整业务规则请参见**: @api_spec.mdc **第 3.7.3 节加入群组密码验证说明**
+⚠️ **完整业务规则请参见**: @api_spec.mdc **群组成员管理 API - 加入群组**
 
 **Service层验证流程**（强制要求）:
 1. 查询 `group_settings.password_hash`
@@ -860,9 +825,9 @@ const IDEMPOTENCY_TTL_SECONDS: u64 = 600;  // 缓存TTL 10分钟（2倍时间窗
 4. Token 过期时主动断开连接
 
 **心跳机制**:
-- 客户端每 25 秒发送 `Ping`
-- 服务端 5 秒内回复 `Pong`
-- 60 秒无消息则断开连接
+- 客户端每 45 秒发送 `Ping`
+- 服务端 10 秒内回复 `Pong`
+- 100 秒无消息则断开连接（计算公式：45×2+10=100）
 
 ### 6.2 消息类型实现
 
@@ -871,13 +836,13 @@ const IDEMPOTENCY_TTL_SECONDS: u64 = 600;  // 缓存TTL 10分钟（2倍时间窗
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "payload")]
 pub enum WsMessage {
-    // 服务端推送事件 - 完整定义见 api_spec.mdc 第 4.3 节
+    // 服务端推送事件 - 完整定义见 api_spec.mdc 服务端推送事件
     ConnectionEstablished { /* ... */ },
     ChatMessageNew { /* ... */ },
     InboxItem { /* ... */ },
     // ... 共 20+ 个事件类型
     
-    // 客户端发送事件 - 完整定义见 api_spec.mdc 第 4.4 节
+    // 客户端发送事件 - 完整定义见 api_spec.mdc 客户端发送事件
     Ping { timestamp: String },
     Subscribe { 
         items: Vec<SubscriptionItem>  // 订阅项列表
@@ -980,10 +945,10 @@ pub enum SubscriptionSourceType {
 | 约束类型 | 描述 | 参考 |
 |---|---|---|
 | API规范 | 所有端点/类型/错误码 | @api_spec.mdc |
-| 数据库表 | 所有表结构/字段定义 | @backend_doc.mdc 第4章 |
+| 数据库表 | 所有表结构/字段定义 | @backend_doc.mdc 数据库设计 |
 | 密码安全 | 双层哈希策略 | @api_spec.mdc 2.9节 |
 | 地理位置 | 必须用PostGIS | 本文档1.2.1节 |
-| WebSocket | 事件类型/订阅模型 | @api_spec.mdc 第4章 |
+| WebSocket | 事件类型/订阅模型 | @api_spec.mdc WebSocket实时事件定义 |
 | 历史跟踪 | 系统需要/可选历史表 | @backend_doc.mdc 4.10节 |
 
 ### 9.2 常用类型映射

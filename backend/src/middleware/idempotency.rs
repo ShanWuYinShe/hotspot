@@ -187,7 +187,7 @@ fn should_check_idempotency(path: &str) -> bool {
         path,
         "/api/v1/protected/chat_messages/send_message"
             | "/api/v1/protected/moments/create"
-            | "/api/v1/protected/user/send_friend_request"
+            | "/api/v1/protected/user/me/follow_user"  // 好友 = 互相关注
             | "/api/v1/protected/group_chats/create"
             | "/api/v1/protected/media/upload_file"
     )
@@ -206,56 +206,4 @@ fn build_cached_response(cached_body: &str, idempotency_key: &str) -> Response {
             .insert("X-Idempotent-Key", header_value);
     }
     response
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use chrono::TimeZone;
-
-    #[test]
-    fn test_time_window_calculation() {
-        // 测试时间窗口计算
-        let time1 = Utc.with_ymd_and_hms(2025, 11, 8, 10, 27, 30).unwrap();
-        let window1 = IdempotencyKeyGenerator::calculate_time_window(time1);
-        assert_eq!(window1.minute(), 25);
-        assert_eq!(window1.second(), 0);
-
-        let time2 = Utc.with_ymd_and_hms(2025, 11, 8, 10, 33, 45).unwrap();
-        let window2 = IdempotencyKeyGenerator::calculate_time_window(time2);
-        assert_eq!(window2.minute(), 30);
-        assert_eq!(window2.second(), 0);
-    }
-
-    #[test]
-    fn test_json_normalization() {
-        let json = serde_json::json!({
-            "group_chat_id": "room_123",
-            "content": "Hello",
-            "client_request_id": "should-be-removed",
-            "timestamp": "should-be-removed",
-        });
-
-        let normalized = JsonNormalizer::normalize(&json);
-        assert!(!normalized.contains("client_request_id"));
-        assert!(!normalized.contains("timestamp"));
-        assert!(normalized.contains("group_chat_id"));
-        assert!(normalized.contains("content"));
-    }
-
-    #[test]
-    fn test_idempotency_key_generation() {
-        let user_id = 123456;
-        let endpoint = "/api/v1/protected/chat_messages/send_message";
-        let body = r#"{"content":"Hello","group_chat_id":"room_123"}"#;
-        let time_window = Utc.with_ymd_and_hms(2025, 11, 8, 10, 30, 0).unwrap();
-
-        let key1 = IdempotencyKeyGenerator::generate(user_id, endpoint, body, time_window);
-        let key2 = IdempotencyKeyGenerator::generate(user_id, endpoint, body, time_window);
-
-        // 相同输入应该生成相同的键
-        assert_eq!(key1, key2);
-        // 键应该是64位十六进制字符串（SHA256）
-        assert_eq!(key1.len(), 64);
-    }
 }

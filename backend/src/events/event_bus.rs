@@ -24,13 +24,6 @@ impl EventBus {
             info!("Event published: {}", event.event_type());
         }
     }
-
-    /// 批量发布事件
-    pub fn publish_batch(&self, events: Vec<AppEvent>) {
-        for event in events {
-            self.publish(event);
-        }
-    }
 }
 
 impl Default for EventBus {

@@ -1,5 +1,5 @@
 -- 007_system_module.sql
--- 系统模块：举报、信息流、排行榜、系统配置
+-- 系统模块：举报、信息流、系统配置
 
 -- ============================================================
 -- 举报
@@ -68,45 +68,6 @@ CREATE INDEX idx_feed_feedback_feed_item ON feed_feedback (feed_item_id, action)
 CREATE INDEX idx_feed_feedback_user ON feed_feedback (user_id, created_at DESC);
 
 -- ============================================================
--- 排行榜
--- ============================================================
-CREATE TABLE leaderboard_creator_scores (
-    id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL,
-    timeframe leaderboard_timeframe NOT NULL,
-    scope leaderboard_scope NOT NULL,
-    score DOUBLE PRECISION NOT NULL DEFAULT 0,
-    rank INTEGER,
-    latitude DOUBLE PRECISION,
-    longitude DOUBLE PRECISION,
-    location geography(POINT, 4326),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT unique_creator_score UNIQUE (user_id, timeframe, scope)
-);
-
-CREATE INDEX idx_creator_scores_timeframe_scope ON leaderboard_creator_scores (timeframe, scope, score DESC);
-CREATE INDEX idx_creator_leaderboard ON leaderboard_creator_scores (timeframe, scope, rank) WHERE rank IS NOT NULL;
-CREATE INDEX idx_creator_scores_location ON leaderboard_creator_scores USING gist (location) WHERE location IS NOT NULL;
-
-CREATE TABLE leaderboard_moment_scores (
-    id BIGSERIAL PRIMARY KEY,
-    moment_id UUID NOT NULL,
-    timeframe leaderboard_timeframe NOT NULL,
-    scope leaderboard_scope NOT NULL,
-    score DOUBLE PRECISION NOT NULL DEFAULT 0,
-    rank INTEGER,
-    latitude DOUBLE PRECISION,
-    longitude DOUBLE PRECISION,
-    location geography(POINT, 4326),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT unique_moment_score UNIQUE (moment_id, timeframe, scope)
-);
-
-CREATE INDEX idx_moment_scores_timeframe_scope ON leaderboard_moment_scores (timeframe, scope, score DESC);
-CREATE INDEX idx_moment_leaderboard ON leaderboard_moment_scores (timeframe, scope, rank) WHERE rank IS NOT NULL;
-CREATE INDEX idx_moment_scores_location ON leaderboard_moment_scores USING gist (location) WHERE location IS NOT NULL;
-
--- ============================================================
 -- 系统配置
 -- ============================================================
 CREATE TABLE system_configs (
@@ -148,6 +109,76 @@ CREATE INDEX idx_config_history_history_id ON system_config_history (history_id)
 CREATE INDEX idx_config_history_cursor_id ON system_config_history (cursor_id);
 CREATE INDEX idx_config_history_key ON system_config_history (config_key, changed_at DESC);
 CREATE INDEX idx_config_history_changed_by ON system_config_history (changed_by, changed_at DESC);
+
+-- ============================================================
+-- 上传文件（用于管理用户上传的文件，支持 file_id -> url 转换）
+-- ============================================================
+CREATE TABLE uploaded_files (
+    id BIGSERIAL PRIMARY KEY,
+    file_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    cursor_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    uploader_id BIGINT NOT NULL,
+    category VARCHAR(50) NOT NULL,  -- 'avatar', 'group_avatar', 'moment_image', 'chat_image', 'chat_video', 'chat_audio', 'chat_file'
+    original_name VARCHAR(255),
+    storage_path VARCHAR(500) NOT NULL,  -- 存储路径
+    url VARCHAR(500) NOT NULL,  -- 可访问的URL
+    thumbnail_url VARCHAR(500),  -- 缩略图URL（仅图片/视频）
+    mime_type VARCHAR(100) NOT NULL,
+    file_size BIGINT NOT NULL,  -- 文件大小（字节）
+    width INTEGER,  -- 宽度（仅图片/视频）
+    height INTEGER,  -- 高度（仅图片/视频）
+    duration INTEGER,  -- 时长秒数（仅音频/视频）
+    checksum VARCHAR(64),  -- SHA256哈希（用于去重）
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMPTZ,  -- 临时文件过期时间
+    is_used BOOLEAN NOT NULL DEFAULT FALSE,  -- 是否已被业务引用
+    used_at TIMESTAMPTZ,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at TIMESTAMPTZ,
+    CONSTRAINT check_file_category CHECK (category IN ('avatar', 'group_avatar', 'moment_image', 'chat_image', 'chat_video', 'chat_audio', 'chat_file'))
+);
+
+CREATE INDEX idx_uploaded_files_file_id ON uploaded_files (file_id) WHERE is_deleted = FALSE;
+CREATE INDEX idx_uploaded_files_cursor_id ON uploaded_files (cursor_id) WHERE is_deleted = FALSE;
+CREATE INDEX idx_uploaded_files_uploader ON uploaded_files (uploader_id, created_at DESC) WHERE is_deleted = FALSE;
+CREATE INDEX idx_uploaded_files_checksum ON uploaded_files (checksum) WHERE checksum IS NOT NULL AND is_deleted = FALSE;
+CREATE INDEX idx_uploaded_files_expires ON uploaded_files (expires_at) WHERE expires_at IS NOT NULL AND is_used = FALSE;
+
+-- 大文件分片上传跟踪
+CREATE TABLE upload_chunks (
+    id BIGSERIAL PRIMARY KEY,
+    upload_id UUID NOT NULL,  -- 上传会话ID
+    part_number INTEGER NOT NULL,
+    etag VARCHAR(64),
+    size BIGINT NOT NULL,
+    uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (upload_id, part_number)
+);
+
+CREATE INDEX idx_upload_chunks_upload_id ON upload_chunks (upload_id);
+
+CREATE TABLE upload_sessions (
+    id BIGSERIAL PRIMARY KEY,
+    upload_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    uploader_id BIGINT NOT NULL,
+    file_name VARCHAR(255) NOT NULL,
+    file_size BIGINT NOT NULL,
+    mime_type VARCHAR(100) NOT NULL,
+    chunk_size INTEGER NOT NULL DEFAULT 5242880,  -- 默认5MB
+    total_chunks INTEGER NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'in_progress',  -- 'in_progress', 'completed', 'failed', 'aborted'
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ,
+    expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '24 hours'),
+    CONSTRAINT check_upload_status CHECK (status IN ('in_progress', 'completed', 'failed', 'aborted'))
+);
+
+CREATE INDEX idx_upload_sessions_upload_id ON upload_sessions (upload_id);
+CREATE INDEX idx_upload_sessions_uploader ON upload_sessions (uploader_id, created_at DESC);
+CREATE INDEX idx_upload_sessions_expires ON upload_sessions (expires_at) WHERE status = 'in_progress';
+
+CREATE TRIGGER trigger_upload_sessions_updated_at
+    BEFORE UPDATE ON upload_sessions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- 插入默认配置（修正为南天门坐标）
 INSERT INTO system_configs (key, value, type, category, description) VALUES

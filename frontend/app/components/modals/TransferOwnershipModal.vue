@@ -1,206 +1,169 @@
 <template>
-  <UModal size="md">
-    <template #body>
-      <div class="p-6">
-        <!-- 标题 -->
-        <div class="flex items-center justify-between mb-6">
-          <div class="flex items-center gap-3">
-            <UIcon name="i-heroicons-arrow-right-circle" class="w-6 h-6 text-warning-500" />
-            <h3 class="text-lg font-semibold text-neutral-900 dark:text-white">
-              转让群主
-            </h3>
-          </div>
-          <UButton
-            variant="ghost"
-            icon="i-heroicons-x-mark"
-            size="sm"
-            @click="handleClose"
-          />
-        </div>
+  <UModal
+    size="md"
+    title="转让群主"
+    description="选择新的群主"
+  >
+    <template #body="{ close }">
+      <UAlert
+        color="warning"
+        variant="soft"
+        title="重要提示"
+        description="转让群主后，您将失去群主权限，新群主将拥有最高管理权限。此操作不可撤销。"
+        class="mb-6"
+      />
 
-        <!-- 警告提示 -->
-        <UAlert
-          color="warning"
-          variant="soft"
-          title="重要提示"
-          description="转让群主后，您将失去群主权限，新群主将拥有最高管理权限。此操作不可撤销。"
-          class="mb-6"
+      <UInput
+        v-model="searchQuery"
+        placeholder="搜索成员..."
+        icon="i-heroicons-magnifying-glass"
+        :disabled="isLoading"
+        class="mb-4"
+      />
+
+      <!-- 加载状态 -->
+      <template v-if="isLoading">
+        <USkeleton
+          v-for="i in 3"
+          :key="i"
+          class="h-16 rounded-lg mb-2"
         />
+      </template>
 
-        <!-- 搜索成员 -->
-        <div class="mb-4">
-          <UInput
-            v-model="searchQuery"
-            placeholder="搜索成员..."
-            icon="i-heroicons-magnifying-glass"
-            :disabled="isLoading"
-          />
-        </div>
-
-        <!-- 成员列表 -->
-        <div v-if="isLoading" class="space-y-2">
-          <USkeleton class="h-16" v-for="i in 3" :key="i" />
-        </div>
-
-        <div v-else-if="filteredMembers.length > 0" class="max-h-96 overflow-y-auto space-y-2">
-          <div
-            v-for="member in filteredMembers"
-            :key="member.user_id"
-            class="flex items-center justify-between p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-          >
-            <div class="flex items-center gap-3">
+      <!-- 成员列表 -->
+      <section
+        v-else-if="filteredMembers.length > 0"
+        class="max-h-96 overflow-y-auto space-y-2"
+      >
+        <UCard
+          v-for="member in filteredMembers"
+          :key="member.user.user_id"
+          :ui="{ body: 'p-3' }"
+        >
+          <section class="flex items-center justify-between gap-3">
+            <header class="flex items-center gap-3 min-w-0">
               <UAvatar
-                :src="member.avatar_url"
-                :alt="member.nickname"
+                :src="member.user.avatar_url"
+                :alt="member.user.nickname"
                 size="md"
               />
-              <div>
-                <div class="font-medium text-neutral-900 dark:text-white">
-                  {{ member.nickname }}
-                </div>
-                <div class="text-xs text-neutral-500 dark:text-neutral-400">
+              <article class="min-w-0">
+                <p class="font-medium truncate">{{ member.user.nickname }}</p>
+                <UBadge
+                  variant="subtle"
+                  color="neutral"
+                  size="xs"
+                >
                   {{ getRoleLabel(member.role) }}
-                </div>
-              </div>
-            </div>
+                </UBadge>
+              </article>
+            </header>
 
             <UButton
               size="sm"
               color="warning"
-              @click="selectMember(member)"
               :disabled="isTransferring"
+              @click="() => selectMember(member, close)"
             >
               选择
             </UButton>
-          </div>
-        </div>
+          </section>
+        </UCard>
+      </section>
 
-        <EmptyState
-          v-else
-          icon="i-heroicons-users"
-          title="暂无成员"
-          description="没有可以转让的成员"
-        />
+      <UAlert
+        v-else
+        icon="i-heroicons-users"
+        color="neutral"
+        variant="subtle"
+        title="暂无成员"
+        description="没有可以转让的成员"
+      />
+    </template>
 
-        <!-- 操作按钮 -->
-        <div class="flex gap-3 pt-4 mt-6 border-t border-neutral-200 dark:border-neutral-700">
-          <UButton
-            variant="ghost"
-            class="flex-1"
-            @click="handleClose"
-            :disabled="isTransferring"
-          >
-            取消
-          </UButton>
-        </div>
-      </div>
+    <template #footer="{ close }">
+      <UButton
+        variant="ghost"
+        class="flex-1"
+        :disabled="isTransferring"
+        @click="close"
+      >
+        取消
+      </UButton>
     </template>
   </UModal>
 </template>
 
 <script setup lang="ts">
+import type { GroupMemberItem } from '~/types/api'
 import { useGroupsService } from '~/services/groups.service'
-
-interface Member {
-  user_id: string
-  nickname: string
-  avatar_url?: string
-  role: 'owner' | 'admin' | 'member'
-}
 
 interface Props {
   groupId: string
-  members: Member[]
-  onSuccess?: (newOwnerId: string) => void
-  onClose?: () => void
+  members: GroupMemberItem[]
+  onSuccess?: (newOwnerId: number) => void
 }
 
 const props = defineProps<Props>()
 const toast = useToast()
 const modal = useModal()
-
 const groupsService = useGroupsService()
 
 const searchQuery = ref('')
 const isLoading = ref(false)
 const isTransferring = ref(false)
 
-// 可以转让的成员（排除群主自己）
-const availableMembers = computed(() => {
-  return props.members.filter(m => m.role !== 'owner')
-})
+const availableMembers = computed(() => props.members.filter(m => m.role !== 'owner'))
 
-// 过滤成员列表
 const filteredMembers = computed(() => {
-  if (!searchQuery.value.trim()) {
-    return availableMembers.value
-  }
-  
+  if (!searchQuery.value.trim()) return availableMembers.value
   const query = searchQuery.value.toLowerCase()
-  return availableMembers.value.filter(member => 
-    member.nickname.toLowerCase().includes(query)
+  return availableMembers.value.filter(member =>
+    member.user.nickname.toLowerCase().includes(query)
   )
 })
 
-// 获取角色标签
 const getRoleLabel = (role: string) => {
-  const labels: Record<string, string> = {
-    admin: '管理员',
-    member: '普通成员'
-  }
+  const labels: Record<string, string> = { admin: '管理员', member: '普通成员' }
   return labels[role] || role
 }
 
-// 选择成员
-const selectMember = (member: Member) => {
-  modal.showConfirmModal({
+const selectMember = async (member: GroupMemberItem, close: () => void) => {
+  const confirmed = await modal.showConfirm({
     title: '确认转让',
-    message: `确定将群主转让给 "${member.nickname}" 吗？此操作不可撤销。`,
+    message: `确定将群主转让给 "${member.user.nickname}" 吗？此操作不可撤销。`,
     confirmText: '确认转让',
     cancelText: '取消',
-    confirmColor: 'warning',
-    onConfirm: async () => {
-      await transferOwnership(member)
-    }
+    confirmColor: 'warning'
   })
+
+  if (confirmed) {
+    await transferOwnership(member, close)
+  }
 }
 
-// 转让群主
-const transferOwnership = async (member: Member) => {
+const transferOwnership = async (member: GroupMemberItem, close: () => void) => {
   isTransferring.value = true
-  
+
   try {
     await groupsService.transferOwnership({
-      group_chat_id: props.groupId,
-      new_owner_id: member.user_id
+      id: props.groupId,
+      new_owner_id: member.user.user_id
     })
-    
+
     toast.add({
       title: '转让成功',
-      description: `已将群主转让给 ${member.nickname}`,
+      description: `已将群主转让给 ${member.user.nickname}`,
       color: 'success'
     })
-    
-    props.onSuccess?.(member.user_id)
-    handleClose()
+
+    props.onSuccess?.(member.user.user_id)
+    close()
   } catch (error) {
     console.error('转让失败:', error)
-    toast.add({
-      title: '转让失败',
-      description: (error as Error).message,
-      color: 'error'
-    })
+    toast.add({ title: '转让失败', description: (error as Error).message, color: 'error' })
   } finally {
     isTransferring.value = false
   }
 }
-
-const handleClose = () => {
-  if (!isTransferring.value) {
-    props.onClose?.()
-  }
-}
 </script>
-
-
-

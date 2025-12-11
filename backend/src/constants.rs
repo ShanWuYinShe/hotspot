@@ -7,8 +7,8 @@
 // ============================================================
 // 默认位置（南天门）
 // ============================================================
-pub const DEFAULT_LATITUDE: f64 = 35.154922;
-pub const DEFAULT_LONGITUDE: f64 = 112.682524;
+pub const DEFAULT_LATITUDE: f64 = 35.154921;
+pub const DEFAULT_LONGITUDE: f64 = 112.68253;
 pub const DEFAULT_LOCATION_NAME: &str = "南天门";
 
 // 位置变化阈值（米）
@@ -16,15 +16,15 @@ pub const LOCATION_CHANGE_THRESHOLD: f64 = 500.0;
 
 // ============================================================
 // 系统用户ID（预定义的官方账号）
+// 系统用户ID区间：1 - 1,000,000
 // ============================================================
-pub const SYSTEM_USER_ID: i64 = 216172782113783809; // 0x0300000000000001 - 系统通知
-pub const SECURITY_CENTER_USER_ID: i64 = 216172782113783810; // 0x0300000000000002 - 安全中心
-pub const OPERATIONS_TEAM_USER_ID: i64 = 216172782113783811; // 0x0300000000000003 - 运营团队
+pub const SYSTEM_USER_ID: i64 = 1;           // 系统通知
+pub const SECURITY_CENTER_USER_ID: i64 = 2;  // 安全中心
+pub const OPERATIONS_TEAM_USER_ID: i64 = 3;  // 运营团队
 
-// 用户类型
-pub const USER_TYPE_TEMP: u8 = 0x01;
-pub const USER_TYPE_NORMAL: u8 = 0x02;
-pub const USER_TYPE_SYSTEM: u8 = 0x03;
+// 系统用户ID区间边界
+pub const SYSTEM_USER_ID_MAX: i64 = 1_000_000;     // 系统用户区间上限
+pub const REGULAR_USER_ID_START: i64 = 1_000_001;  // 普通用户区间起始
 
 // ============================================================
 // Redis 键前缀
@@ -32,7 +32,6 @@ pub const USER_TYPE_SYSTEM: u8 = 0x03;
 pub const REDIS_KEY_ONLINE: &str = "online";
 pub const REDIS_KEY_UNREAD: &str = "unread";
 pub const REDIS_KEY_CONFIG: &str = "config";
-pub const REDIS_KEY_LEADERBOARD: &str = "leaderboard";
 pub const REDIS_KEY_FEED: &str = "feed";
 pub const REDIS_KEY_TYPING: &str = "typing";
 pub const REDIS_KEY_SESSION: &str = "session";
@@ -68,7 +67,6 @@ pub const MESSAGE_RATE_LIMIT: u32 = 1000;
 // ============================================================
 pub const REDIS_TTL_ONLINE_STATUS: u64 = 300; // 5分钟
 pub const REDIS_TTL_CONFIG: i64 = 60; // 1分钟
-pub const REDIS_TTL_LEADERBOARD: i64 = 3600; // 1小时
 pub const REDIS_TTL_FEED: i64 = 300; // 5分钟
 pub const REDIS_TTL_TYPING: i64 = 10; // 10秒
 
@@ -83,3 +81,28 @@ pub const MAX_PAGE_LIMIT: i64 = 100;
 // ============================================================
 pub const DEFAULT_SEARCH_RADIUS: f64 = 5000.0; // 5公里
 pub const MAX_SEARCH_RADIUS: f64 = 50000.0; // 50公里
+
+// ============================================================
+// 时间窗口（天/小时/分钟）
+// ============================================================
+pub const TRENDING_DAILY_DAYS: i64 = 1;
+pub const TRENDING_WEEKLY_DAYS: i64 = 7;
+pub const TRENDING_MONTHLY_DAYS: i64 = 30;
+
+pub const MESSAGE_RECALL_MINUTES: i64 = 2; // 消息撤回时间窗口
+pub const INVITE_EXPIRE_DAYS: i64 = 7; // 邀请过期时间
+pub const UPLOAD_SESSION_HOURS: i64 = 24; // 上传会话过期时间
+
+// ============================================================
+// WebSocket 心跳配置
+// ============================================================
+/// 客户端心跳间隔（秒）
+pub const WS_HEARTBEAT_INTERVAL_SECS: u64 = 45;
+/// 心跳响应超时时间（秒）
+pub const WS_HEARTBEAT_TIMEOUT_SECS: u64 = 10;
+/// 最大允许丢失心跳次数
+pub const WS_MAX_MISSED_HEARTBEATS: u32 = 3;
+/// 服务端心跳发送间隔（秒）- 略长于客户端间隔
+pub const WS_SERVER_PING_INTERVAL_SECS: u64 = 60;
+/// 服务端连接超时时间（秒）= HEARTBEAT_INTERVAL * 2 + HEARTBEAT_TIMEOUT
+pub const WS_CONNECTION_TIMEOUT_SECS: u64 = WS_HEARTBEAT_INTERVAL_SECS * 2 + WS_HEARTBEAT_TIMEOUT_SECS;

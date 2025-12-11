@@ -7,7 +7,7 @@ import { GlobalStateManager, GlobalState } from '../common/state/GlobalStateMana
 import { ApiClient } from '../common/api/ApiClient';
 import { LocationUtil } from '../common/location/LocationUtil';
 import { PageNames } from '../constants/AppConstants';
-import { SearchGroupByLocationResponse } from '../common/types/BackendApiTypes';
+import { GroupSearchItem } from '../common/types/api';
 import { SystemAvatar } from '../components/SystemAvatar';
 import { IntelligentLocationCard } from '../components/IntelligentLocationCard';
 import { SystemLoadingView } from '../components/SystemLoadingView';
@@ -19,7 +19,7 @@ import { SystemToast } from '../components/SystemToast';
 struct GroupPage {
   @State globalState: GlobalState = GlobalStateManager.getInstance().getState();
   private stateManager = GlobalStateManager.getInstance();
-  @State groups: SearchGroupByLocationResponse[] = [];
+  @State groups: GroupSearchItem[] = [];
   @State isLoading: boolean = false;
   @State errorMessage: string = '';
 
@@ -49,7 +49,7 @@ struct GroupPage {
     this.errorMessage = '';
 
     try {
-      const response = await ApiClient.searchGroupByLocation({
+      const response = await ApiClient.searchGroupsByLocation({
         latitude: this.globalState.currentLocation.latitude,
         longitude: this.globalState.currentLocation.longitude,
         radius: 5000, // 5km 范围
@@ -59,7 +59,7 @@ struct GroupPage {
       if (response.code === 0 && response.data) {
         this.groups = response.data.items;
       } else {
-        this.errorMessage = response.msg || '加载群组失败';
+        this.errorMessage = response.message || '加载群组失败';
         this.groups = [];
       }
     } catch (error) {
@@ -72,9 +72,9 @@ struct GroupPage {
   /**
    * 加入群组
    */
-  private async joinGroup(group: SearchGroupByLocationResponse) {
+  private async joinGroup(group: GroupSearchItem) {
     try {
-      await ApiClient.joinGroup({ group_id: group.group_id });
+      await ApiClient.joinGroup({ id: group.id });
       SystemToast.show('加入群组成功', this.getUIContext());
       await this.loadNearbyGroups(); // 刷新列表
     } catch (error) {

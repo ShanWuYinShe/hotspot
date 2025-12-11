@@ -1,62 +1,44 @@
-use std::sync::atomic::{AtomicU64, Ordering};
+//! 用户ID生成器
+//!
+//! 用户ID分配规则：
+//! - 系统用户区间：1 - 1,000,000（通过管理员接口创建）
+//! - 临时用户和注册用户区间：1,000,001+（共用序列，方便临时用户转正）
 
-static SEQUENCE: AtomicU64 = AtomicU64::new(1);
+use sqlx::PgPool;
+
+#[allow(unused_imports)]
+use crate::constants::{SYSTEM_USER_ID_MAX, REGULAR_USER_ID_START};
 
 pub struct IdGenerator;
 
 impl IdGenerator {
-    /// 生成用户ID
-    /// user_type: 0x01 (临时), 0x02 (普通), 0x03 (系统)
-    pub fn generate_user_id(user_type: u8) -> i64 {
-        let sequence = SEQUENCE.fetch_add(1, Ordering::SeqCst);
-        let type_bits = (user_type as i64) << 56;
-        let sequence_bits = (sequence & 0x00FFFFFFFFFFFFFF) as i64;
-        type_bits | sequence_bits
+    /// 生成用户ID（用于临时用户和注册用户）
+    ///
+    /// 从统一的 user_id_seq 序列获取下一个值
+    ///
+    /// # Arguments
+    /// * `pool` - 数据库连接池
+    pub async fn generate_user_id(pool: &PgPool) -> Result<i64, sqlx::Error> {
+        let result: (i64,) = sqlx::query_as("SELECT nextval('user_id_seq')")
+            .fetch_one(pool)
+            .await?;
+
+        Ok(result.0)
     }
-    
-    /// 提取用户类型
-    pub fn extract_user_type(user_id: i64) -> u8 {
-        ((user_id >> 56) & 0xFF) as u8
+
+    /// 判断是否为系统用户ID
+    ///
+    /// 系统用户ID范围：1 - 1,000,000
+    #[allow(dead_code)]
+    pub fn is_system_user_id(user_id: i64) -> bool {
+        user_id >= 1 && user_id <= SYSTEM_USER_ID_MAX
     }
-    
-    /// 判断是否为临时用户
-    pub fn is_temp_user(user_id: i64) -> bool {
-        Self::extract_user_type(user_id) == 0x01
-    }
-    
-    /// 判断是否为普通用户
-    pub fn is_normal_user(user_id: i64) -> bool {
-        Self::extract_user_type(user_id) == 0x02
-    }
-    
-    /// 判断是否为系统用户
-    pub fn is_system_user(user_id: i64) -> bool {
-        Self::extract_user_type(user_id) == 0x03
+
+    /// 判断是否为普通用户ID（临时用户或注册用户）
+    ///
+    /// 普通用户ID范围：1,000,001+
+    #[allow(dead_code)]
+    pub fn is_regular_user_id(user_id: i64) -> bool {
+        user_id > SYSTEM_USER_ID_MAX
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_generate_user_id() {
-        let user_id = IdGenerator::generate_user_id(0x02);
-        let user_type = IdGenerator::extract_user_type(user_id);
-        assert_eq!(user_type, 0x02);
-        assert!(IdGenerator::is_normal_user(user_id));
-    }
-
-    #[test]
-    fn test_temp_user() {
-        let user_id = IdGenerator::generate_user_id(0x01);
-        assert!(IdGenerator::is_temp_user(user_id));
-    }
-
-    #[test]
-    fn test_system_user() {
-        let user_id = IdGenerator::generate_user_id(0x03);
-        assert!(IdGenerator::is_system_user(user_id));
-    }
-}
-

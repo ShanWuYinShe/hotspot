@@ -22,7 +22,8 @@ export function useWebSocket(url?: string, options: WebSocketOptions = {}) {
   const authStore = useAuthStore()
   
   // 使用配置中的 WebSocket URL 或传入的 URL
-  const wsUrl = url || `${config.public.wsBaseUrl || 'ws://localhost:8080/ws'}/chat`
+  // 后端路由为 /ws，不需要额外的 /chat 后缀
+  const wsUrl = url || (config.public.wsBaseUrl || 'ws://localhost:8080/ws').replace(/\/$/, '')
   
   const {
     autoConnect = false, // 默认不自动连接，由应用控制
@@ -42,7 +43,8 @@ export function useWebSocket(url?: string, options: WebSocketOptions = {}) {
   const isConnecting = computed(() => status.value === 'connecting')
 
   // 事件系统 - 使用 Map 提高性能
-  const messageHandlers = new Map<string, Set<(data: any) => void>>()
+  // 使用 unknown 类型，具体类型在 on() 方法的泛型中指定
+  const messageHandlers = new Map<string, Set<(data: unknown) => void>>()
   const statusHandlers = new Set<(status: WebSocketStatus) => void>()
 
   // 定时器引用
@@ -192,18 +194,21 @@ export function useWebSocket(url?: string, options: WebSocketOptions = {}) {
 
   /**
    * 监听消息 - 返回清理函数
+   * @param type 消息类型（WebSocket 事件类型）
+   * @param handler 消息处理函数（泛型类型，由调用方指定具体类型）
    */
-  const on = <T = any>(type: string, handler: (data: T) => void) => {
+  const on = <T = unknown>(type: string, handler: (data: T) => void) => {
     if (!messageHandlers.has(type)) {
       messageHandlers.set(type, new Set())
     }
-    messageHandlers.get(type)!.add(handler)
+    // handler 类型兼容：具体类型的处理器可以安全地作为 unknown 处理器添加
+    messageHandlers.get(type)!.add(handler as (data: unknown) => void)
 
     // 返回清理函数
     return () => {
       const handlers = messageHandlers.get(type)
       if (handlers) {
-        handlers.delete(handler)
+        handlers.delete(handler as (data: unknown) => void)
         if (handlers.size === 0) {
           messageHandlers.delete(type)
         }
@@ -294,8 +299,8 @@ export function useWebSocket(url?: string, options: WebSocketOptions = {}) {
 
   /**
    * 心跳机制
-   * ✅ 符合API规范: 25秒间隔，发送标准 Ping 事件
-   * ✅ 心跳超时检测: 5秒内必须收到 Pong，3次失败断开
+   * - 25秒间隔，发送标准 Ping 事件
+   * - 心跳超时检测: 5秒内必须收到 Pong，3次失败断开
    */
   const startHeartbeat = () => {
     if (!isClient || heartbeatInterval <= 0) return
@@ -339,7 +344,7 @@ export function useWebSocket(url?: string, options: WebSocketOptions = {}) {
 
   /**
    * 重连机制 - 指数退避算法
-   * ✅ 符合API规范：1秒 → 2秒 → 4秒 → ... → 最大30秒
+   * 延迟策略：1秒 → 2秒 → 4秒 → ... → 最大30秒
    */
   const scheduleReconnect = () => {
     if (!isClient) return

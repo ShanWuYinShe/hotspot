@@ -7,7 +7,7 @@ use std::net::SocketAddr;
 
 use crate::{error::AppError, state::AppState};
 
-/// 频率限制中间件
+/// 频率限制中间件（全局）
 pub async fn rate_limit_middleware(
     State(state): State<AppState>,
     req: Request,
@@ -39,7 +39,7 @@ pub async fn rate_limit_middleware(
     }
 
     if global_count > state.config.rate_limit_global_per_hour {
-        return Err(AppError::BadRequest(
+        return Err(AppError::RateLimitExceeded(
             "请求过于频繁，请稍后再试".to_string(),
         ));
     }
@@ -63,7 +63,7 @@ pub async fn rate_limit_middleware(
         }
 
         if user_count > state.config.rate_limit_user_per_hour {
-            return Err(AppError::BadRequest(
+            return Err(AppError::RateLimitExceeded(
                 "请求过于频繁，请稍后再试".to_string(),
             ));
         }

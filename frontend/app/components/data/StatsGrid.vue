@@ -3,18 +3,18 @@
     <UCard
       v-for="stat in stats"
       :key="stat.key"
-      class="bg-white/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50 hover:shadow-lg transition-shadow cursor-pointer"
+      class="interactive-card border cursor-pointer"
       @click="stat.onClick?.()"
     >
       <div class="flex items-center gap-4">
         <!-- 图标区域 -->
         <div 
-          class="p-3 rounded-lg flex-shrink-0"
+          class="p-3 rounded-lg shrink-0"
           :class="getIconBgClass(stat.color)"
         >
           <UIcon 
             :name="stat.icon" 
-            class="w-6 h-6"
+            class="icon-lg"
             :class="getIconClass(stat.color)"
           />
         </div>
@@ -22,8 +22,8 @@
         <!-- 数据区域 -->
         <div class="flex-1 min-w-0">
           <div class="flex items-baseline gap-2">
-            <p class="text-2xl font-bold text-black dark:text-white truncate">
-              {{ formatValue(stat.value) }}
+            <p class="text-2xl font-bold text-primary-content truncate">
+              {{ transformValue(stat.value) }}
             </p>
             <UBadge
               v-if="stat.change !== undefined"
@@ -31,19 +31,19 @@
               variant="soft"
               size="xs"
             >
-              {{ formatChange(stat.change) }}
+              {{ transformChange(stat.change) }}
             </UBadge>
           </div>
-          <p class="text-sm text-black/60 dark:text-white/60 truncate">
+          <p class="text-sm text-secondary-content truncate">
             {{ stat.label }}
           </p>
-          <p v-if="stat.description" class="text-xs text-black/50 dark:text-white/50 dark:text-black/50 dark:text-white/50 truncate mt-1">
+          <p v-if="stat.description" class="text-xs text-muted truncate mt-1">
             {{ stat.description }}
           </p>
         </div>
         
         <!-- 操作按钮 -->
-        <div v-if="stat.actions?.length" class="flex-shrink-0">
+        <div v-if="stat.actions?.length" class="shrink-0">
           <UDropdownMenu :items="stat.actions">
             <UButton
               variant="ghost"
@@ -56,14 +56,14 @@
       </div>
       
       <!-- 趋势图或额外内容 -->
-      <div v-if="stat.trend || stat.extraContent" class="mt-4 pt-4 border-t border-slate-200/50 dark:border-slate-700/50">
+      <div v-if="stat.trend || stat.extraContent" class="mt-4 pt-4 border-t ">
         <!-- 简单趋势指示器 -->
         <div v-if="stat.trend" class="flex items-center justify-between text-xs">
-          <span class="text-black/50 dark:text-white/50">趋势</span>
+          <span class="text-muted">趋势</span>
           <div class="flex items-center gap-1">
             <UIcon 
               :name="getTrendIcon(stat.trend)" 
-              class="w-3 h-3"
+              class="icon-xs"
               :class="getTrendColor(stat.trend)"
             />
             <span :class="getTrendColor(stat.trend)">
@@ -82,6 +82,8 @@
 </template>
 
 <script setup lang="ts">
+import type { Component } from 'vue'
+
 export interface StatAction {
   label: string
   icon?: string
@@ -99,8 +101,8 @@ export interface StatItem {
   trend?: 'up' | 'down' | 'stable'
   onClick?: () => void
   actions?: StatAction[]
-  extraContent?: any // 组件
-  extraProps?: Record<string, any>
+  extraContent?: Component // 组件
+  extraProps?: Record<string, unknown>
 }
 
 interface Props {
@@ -115,14 +117,14 @@ const props = withDefaults(defineProps<Props>(), {
 })
 const { formatCount } = useFormatters()
 
-// 格式化数值显示
-const formatValue = (value: number | string) => {
+// 转换数值显示
+const transformValue = (value: number | string) => {
   if (typeof value === 'string') return value
   return formatCount(value)
 }
 
-// 格式化变化百分比
-const formatChange = (change: number) => {
+// 转换变化百分比
+const transformChange = (change: number) => {
   const sign = change > 0 ? '+' : ''
   return `${sign}${change.toFixed(1)}%`
 }
@@ -151,36 +153,36 @@ const gridClass = computed(() => {
 // 颜色映射
 const colorMaps = {
   blue: {
-    bg: 'bg-blue-100 dark:bg-blue-900/30',
-    icon: 'text-blue-600 dark:text-blue-400'
+    bg: 'bg-info-base',
+    icon: 'text-info'
   },
   green: {
-    bg: 'bg-green-100 dark:bg-green-900/30',
-    icon: 'text-green-600 dark:text-green-400'
+    bg: 'bg-success-base',
+    icon: 'text-success'
   },
   orange: {
-    bg: 'bg-orange-100 dark:bg-orange-900/30',
-    icon: 'text-orange-600 dark:text-orange-400'
+    bg: 'bg-warning-base',
+    icon: 'text-warning'
   },
   purple: {
-    bg: 'bg-purple-100 dark:bg-purple-900/30',
-    icon: 'text-purple-600 dark:text-purple-400'
+    bg: 'bg-purple-subtle',
+    icon: 'text-purple'
   },
   red: {
-    bg: 'bg-red-100 dark:bg-red-900/30',
-    icon: 'text-red-600 dark:text-red-400'
+    bg: 'bg-red-subtle',
+    icon: 'text-error'
   },
   yellow: {
-    bg: 'bg-yellow-100 dark:bg-yellow-900/30',
-    icon: 'text-yellow-600 dark:text-yellow-400'
+    bg: 'bg-yellow-subtle',
+    icon: 'text-yellow'
   },
   indigo: {
-    bg: 'bg-indigo-100 dark:bg-indigo-900/30',
-    icon: 'text-indigo-600 dark:text-indigo-400'
+    bg: 'bg-indigo-subtle',
+    icon: 'text-indigo'
   },
   pink: {
-    bg: 'bg-pink-100 dark:bg-pink-900/30',
-    icon: 'text-pink-600 dark:text-pink-400'
+    bg: 'bg-pink-subtle',
+    icon: 'text-pink'
   }
 }
 
@@ -208,9 +210,9 @@ const getTrendIcon = (trend: string) => {
 
 const getTrendColor = (trend: string) => {
   switch (trend) {
-    case 'up': return 'text-green-600 dark:text-green-400'
-    case 'down': return 'text-red-600 dark:text-red-400'
-    default: return 'text-slate-500'
+    case 'up': return 'text-success'
+    case 'down': return 'text-error'
+    default: return 'text-slate'
   }
 }
 

@@ -1,8 +1,9 @@
 use sqlx::{PgPool, FromRow};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::constants::INVITE_EXPIRE_DAYS;
 use crate::error::Result;
 use crate::types::enums::InviteStatus;
 
@@ -39,18 +40,20 @@ impl GroupInviteRepository {
         invitee_id: i64,
         message: Option<String>,
     ) -> Result<GroupInviteRow> {
+        let expires_at = Utc::now() + Duration::days(INVITE_EXPIRE_DAYS);
         let row = sqlx::query_as!(
             GroupInviteRow,
             r#"
             INSERT INTO group_invites (group_chat_id, inviter_id, invitee_id, message, expires_at)
-            VALUES ($1, $2, $3, $4, NOW() + INTERVAL '7 days')
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING id, cursor_id, group_chat_id, inviter_id, invitee_id, message,
                       status as "status: InviteStatus", created_at, expires_at, responded_at
             "#,
             group_chat_id,
             inviter_id,
             invitee_id,
-            message
+            message,
+            expires_at
         )
         .fetch_one(&self.pool)
         .await?;
@@ -78,15 +81,15 @@ impl GroupInviteRepository {
 
     /// 更新邀请状态
     pub async fn update_status(&self, id: i64, status: InviteStatus) -> Result<()> {
-        sqlx::query(
+        sqlx::query!(
             r#"
             UPDATE group_invites
-            SET status = $2::invitation_status, responded_at = NOW()
+            SET status = $2, responded_at = NOW()
             WHERE id = $1
-            "#
+            "#,
+            id,
+            status as InviteStatus
         )
-        .bind(id)
-        .bind(status as InviteStatus)
         .execute(&self.pool)
         .await?;
 

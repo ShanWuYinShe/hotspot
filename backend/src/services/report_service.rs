@@ -4,13 +4,14 @@ use uuid::Uuid;
 use crate::{
     dto::{
         request::{
-            CreateReportRequest, ListUserReportsRequest, ListReportsRequest, HandleReportRequest,
+            CreateReportRequest, GetMyReportsRequest, GetReportsRequest, HandleReportRequest,
         },
         response::{PaginatedData, PaginationMeta, ReportItem, CreateReportData},
     },
     error::AppError,
     repositories::report_repo::{ReportRepository, ReportRow},
     types::enums::{ReportStatus, ReportTargetType},
+    utils::validation::Validator,
 };
 
 #[derive(Debug, Clone)]
@@ -64,14 +65,10 @@ impl ReportService {
     pub async fn get_my_reports(
         &self,
         reporter_id: i64,
-        req: ListUserReportsRequest,
+        req: GetMyReportsRequest,
     ) -> Result<PaginatedData<ReportItem>, AppError> {
-        let limit = req.limit.unwrap_or(20).min(100) as i32;
-        let cursor = if let Some(c) = req.cursor {
-            Some(Uuid::parse_str(&c).map_err(|_| AppError::BadRequest("无效的游标".to_string()))?)
-        } else {
-            None
-        };
+        let limit = Validator::validate_limit(req.limit, 100)?;
+        let cursor = Validator::parse_cursor(req.cursor.as_deref())?;
 
         // 使用游标分页：多取一条判断has_more
         let reports = self
@@ -104,17 +101,13 @@ impl ReportService {
     }
 
     /// 获取所有举报（管理员）
-    pub async fn get_admin_list(
+    pub async fn get_list(
         &self,
         _admin_id: i64, // 验证在Handler层
-        req: ListReportsRequest,
+        req: GetReportsRequest,
     ) -> Result<PaginatedData<ReportItem>, AppError> {
-        let limit = req.limit.unwrap_or(20).min(100) as i32;
-        let cursor = if let Some(c) = req.cursor {
-            Some(Uuid::parse_str(&c).map_err(|_| AppError::BadRequest("无效的游标".to_string()))?)
-        } else {
-            None
-        };
+        let limit = Validator::validate_limit(req.limit, 100)?;
+        let cursor = Validator::parse_cursor(req.cursor.as_deref())?;
         
         let status = if let Some(s) = req.status {
              match s.to_lowercase().as_str() {

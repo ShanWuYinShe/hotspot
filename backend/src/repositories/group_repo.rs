@@ -142,85 +142,6 @@ impl GroupRepository {
         Ok(())
     }
 
-    /// 将 UUID cursor 转换为自增主键
-    async fn resolve_cursor(&self, cursor: Option<Uuid>) -> Result<i64> {
-        match cursor {
-            Some(c) => {
-                sqlx::query_scalar!(
-                    r#"SELECT id FROM group_chats WHERE cursor_id = $1"#,
-                    c
-                )
-                .fetch_optional(&self.pool)
-                .await?
-                .ok_or_else(|| crate::error::AppError::BadRequest("无效的 cursor".to_string()))
-            }
-            None => Ok(i64::MAX),
-        }
-    }
-
-    /// 按名称搜索群组
-    pub async fn search_by_name(&self, keyword: &str, limit: i32, cursor: Option<Uuid>) -> Result<Vec<GroupRow>> {
-        let search_pattern = format!("%{}%", keyword);
-        let cursor_pk = self.resolve_cursor(cursor).await?;
-        
-        let groups = sqlx::query_as!(
-            GroupRow,
-            r#"
-            SELECT id, group_chat_id as group_id, cursor_id, name, description, avatar_url, owner_id,
-                   latitude, longitude, ST_AsText(location) as location, location_name,
-                   created_at, updated_at, is_deleted, is_dismissed, deleted_at
-            FROM group_chats
-            WHERE name ILIKE $1 AND id < $2 AND is_deleted = FALSE
-            ORDER BY id DESC
-            LIMIT $3
-            "#,
-            search_pattern,
-            cursor_pk,
-            limit as i64
-        )
-        .fetch_all(&self.pool)
-        .await?;
-        
-        Ok(groups)
-    }
-
-    /// 搜索附近群组
-    pub async fn search_nearby(&self, latitude: f64, longitude: f64, radius_meters: f64, limit: i32) -> Result<Vec<(Uuid, f64)>> {
-        // 使用 PostGIS 查询附近群组
-        // 返回 (group_id, distance)
-        let rows = sqlx::query!(
-            r#"
-            SELECT group_chat_id, 
-                   ST_Distance(
-                       location, 
-                       ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography
-                   ) as "distance!"
-            FROM group_chats
-            WHERE is_deleted = FALSE 
-              AND is_dismissed = FALSE
-              AND location IS NOT NULL
-              AND ST_DWithin(
-                  location,
-                  ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography,
-                  $3
-              )
-            ORDER BY ST_Distance(
-                       location, 
-                       ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography
-                   ) ASC
-            LIMIT $4
-            "#,
-            latitude,
-            longitude,
-            radius_meters,
-            limit as i64
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(rows.into_iter().map(|r| (r.group_chat_id, r.distance)).collect())
-    }
-
     /// 获取成员数量
     pub async fn get_member_count(&self, group_id: Uuid) -> Result<i32> {
         let count = sqlx::query!(
@@ -237,60 +158,16 @@ impl GroupRepository {
         Ok(count)
     }
 
-    /// 批量获取成员数量
-    pub async fn get_member_counts(&self, group_ids: &[Uuid]) -> Result<std::collections::HashMap<Uuid, i32>> {
-        if group_ids.is_empty() {
-            return Ok(std::collections::HashMap::new());
-        }
-
-        let rows = sqlx::query!(
-            r#"
-            SELECT group_chat_id, COUNT(*) as "count!"
-            FROM group_members
-            WHERE group_chat_id = ANY($1) AND is_deleted = FALSE
-            GROUP BY group_chat_id
-            "#,
-            group_ids
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(rows.into_iter().map(|r| (r.group_chat_id, r.count as i32)).collect())
-    }
-
-    /// 批量获取群组
-    pub async fn find_by_ids(&self, group_ids: &[Uuid]) -> Result<Vec<GroupRow>> {
-        if group_ids.is_empty() {
-            return Ok(Vec::new());
-        }
-
-        let groups = sqlx::query_as!(
-            GroupRow,
-            r#"
-            SELECT id, group_chat_id as group_id, cursor_id, name, description, avatar_url, owner_id,
-                   latitude, longitude, ST_AsText(location) as location, location_name,
-                   created_at, updated_at, is_deleted, is_dismissed, deleted_at
-            FROM group_chats
-            WHERE group_chat_id = ANY($1) AND is_deleted = FALSE AND is_dismissed = FALSE
-            "#,
-            group_ids
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(groups)
-    }
-
-    /// 搜索附近群组（返回完整信息，包含成员数量）
-    pub async fn search_nearby_with_details(
+    /// 发现附近群组（按位置范围过滤）
+    /// 位置参数用于：1. 过滤指定范围内的群组  2. 计算距离用于排序
+    pub async fn discover(
         &self,
         latitude: f64,
         longitude: f64,
         radius_meters: f64,
         keyword: Option<&str>,
         limit: i32,
-    ) -> Result<Vec<(GroupRow, f64, i32)>> {
-        // 使用 JOIN 一次性获取群组信息和成员数量
+    ) -> Result<Vec<(GroupRow, f64, i32, bool)>> {
         let search_pattern = keyword.map(|k| format!("%{}%", k));
         
         let rows = sqlx::query!(
@@ -299,10 +176,11 @@ impl GroupRepository {
                    g.latitude, g.longitude, ST_AsText(g.location) as location, g.location_name,
                    g.created_at, g.updated_at, g.is_deleted, g.is_dismissed, g.deleted_at,
                    ST_Distance(
-                       g.location, 
+                       g.location::geography, 
                        ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography
                    ) as "distance!",
-                   COALESCE(m.member_count, 0) as "member_count!"
+                   COALESCE(m.member_count, 0) as "member_count!",
+                   (s.password_hash IS NOT NULL) as "has_password!"
             FROM group_chats g
             LEFT JOIN (
                 SELECT group_chat_id, COUNT(*) as member_count
@@ -310,6 +188,7 @@ impl GroupRepository {
                 WHERE is_deleted = FALSE
                 GROUP BY group_chat_id
             ) m ON g.group_chat_id = m.group_chat_id
+            LEFT JOIN group_settings s ON g.group_chat_id = s.group_chat_id
             WHERE g.is_deleted = FALSE 
               AND g.is_dismissed = FALSE
               AND g.location IS NOT NULL
@@ -353,26 +232,33 @@ impl GroupRepository {
                 },
                 r.distance,
                 r.member_count as i32,
+                r.has_password,
             )
         }).collect())
     }
 
-    /// 按名称搜索群组（带成员数量）
-    pub async fn search_by_name_with_member_count(
+    /// 全局搜索群组（不限范围，按关键词匹配）
+    /// 位置参数仅用于：计算距离用于排序和显示，不做范围过滤
+    pub async fn search_by_name(
         &self,
         keyword: &str,
+        latitude: f64,
+        longitude: f64,
         limit: i32,
-        cursor: Option<Uuid>,
-    ) -> Result<Vec<(GroupRow, i32)>> {
+    ) -> Result<Vec<(GroupRow, f64, i32, bool)>> {
         let search_pattern = format!("%{}%", keyword);
-        let cursor_pk = self.resolve_cursor(cursor).await?;
         
         let rows = sqlx::query!(
             r#"
             SELECT g.id, g.group_chat_id, g.cursor_id, g.name, g.description, g.avatar_url, g.owner_id,
                    g.latitude, g.longitude, ST_AsText(g.location) as location, g.location_name,
                    g.created_at, g.updated_at, g.is_deleted, g.is_dismissed, g.deleted_at,
-                   COALESCE(m.member_count, 0) as "member_count!"
+                   ST_Distance(
+                       g.location::geography, 
+                       ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography
+                   ) as "distance!",
+                   COALESCE(m.member_count, 0) as "member_count!",
+                   (s.password_hash IS NOT NULL) as "has_password!"
             FROM group_chats g
             LEFT JOIN (
                 SELECT group_chat_id, COUNT(*) as member_count
@@ -380,17 +266,22 @@ impl GroupRepository {
                 WHERE is_deleted = FALSE
                 GROUP BY group_chat_id
             ) m ON g.group_chat_id = m.group_chat_id
-            WHERE g.name ILIKE $1 AND g.id < $2 AND g.is_deleted = FALSE
-            ORDER BY g.id DESC
-            LIMIT $3
+            LEFT JOIN group_settings s ON g.group_chat_id = s.group_chat_id
+            WHERE g.is_deleted = FALSE 
+              AND g.is_dismissed = FALSE
+              AND g.location IS NOT NULL
+              AND (g.name ILIKE $3 OR g.description ILIKE $3)
+            ORDER BY "distance!" ASC
+            LIMIT $4
             "#,
+            latitude,
+            longitude,
             search_pattern,
-            cursor_pk,
             limit as i64
         )
         .fetch_all(&self.pool)
         .await?;
-        
+
         Ok(rows.into_iter().map(|r| {
             (
                 GroupRow {
@@ -411,7 +302,9 @@ impl GroupRepository {
                     is_dismissed: r.is_dismissed,
                     deleted_at: r.deleted_at,
                 },
+                r.distance,
                 r.member_count as i32,
+                r.has_password,
             )
         }).collect())
     }
@@ -445,4 +338,96 @@ impl GroupRepository {
 
         Ok(())
     }
+
+    /// 按位置搜索群组（PostGIS 计算距离）
+    pub async fn search_by_location(
+        &self,
+        user_lat: f64,
+        user_lng: f64,
+        radius: f64,
+        limit: i64,
+        offset: i64,
+    ) -> Result<Vec<GroupSearchRow>> {
+        let rows = sqlx::query!(
+            r#"
+            SELECT 
+                g.group_chat_id,
+                g.name,
+                g.description,
+                g.avatar_url,
+                COALESCE(g.latitude, 35.154922) as "latitude!",
+                COALESCE(g.longitude, 112.682524) as "longitude!",
+                COALESCE(g.location_name, '南天门') as "location_name!",
+                COALESCE(m.member_count, 0)::int4 as "member_count!",
+                (gs.password_hash IS NOT NULL) as "has_password!",
+                ST_Distance(
+                    ST_SetSRID(ST_MakePoint(COALESCE(g.longitude, 112.682524), COALESCE(g.latitude, 35.154922)), 4326)::geography,
+                    ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
+                ) as "distance!",
+                COALESCE(degrees(ST_Azimuth(
+                    ST_SetSRID(ST_MakePoint($1, $2), 4326),
+                    ST_SetSRID(ST_MakePoint(COALESCE(g.longitude, 112.682524), COALESCE(g.latitude, 35.154922)), 4326)
+                )), 0) as "degrees!"
+            FROM group_chats g
+            LEFT JOIN group_settings gs ON g.group_chat_id = gs.group_chat_id
+            LEFT JOIN (
+                SELECT group_chat_id, COUNT(*) as member_count
+                FROM group_members
+                WHERE is_deleted = FALSE
+                GROUP BY group_chat_id
+            ) m ON g.group_chat_id = m.group_chat_id
+            WHERE g.is_deleted = FALSE
+              AND g.is_dismissed = FALSE
+              AND (gs.is_searchable IS NULL OR gs.is_searchable = TRUE)
+              AND ST_DWithin(
+                  ST_SetSRID(ST_MakePoint(COALESCE(g.longitude, 112.682524), COALESCE(g.latitude, 35.154922)), 4326)::geography,
+                  ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
+                  $3
+              )
+            ORDER BY "distance!" ASC
+            LIMIT $4 OFFSET $5
+            "#,
+            user_lng,
+            user_lat,
+            radius,
+            limit,
+            offset
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.into_iter().map(|r| GroupSearchRow {
+            group_id: r.group_chat_id,
+            name: r.name,
+            description: r.description,
+            avatar_url: r.avatar_url,
+            latitude: r.latitude,
+            longitude: r.longitude,
+            location_name: r.location_name,
+            member_count: r.member_count,
+            has_password: r.has_password,
+            tags: vec![], // TODO: 从 group_tags 获取
+            distance: r.distance,
+            degrees: r.degrees,
+        }).collect())
+    }
+}
+
+/// 群组搜索结果Row（统一结构，包含距离和方位角）
+#[derive(Debug, Clone)]
+pub struct GroupSearchRow {
+    pub group_id: Uuid,
+    pub name: String,
+    pub description: Option<String>,
+    pub avatar_url: Option<String>,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub location_name: String,
+    pub member_count: i32,
+    pub has_password: bool,
+    pub tags: Vec<String>,
+    /// PostGIS 计算的距离（米）
+    pub distance: f64,
+    /// PostGIS 计算的方位角（0-360度）
+    pub degrees: f64,
 }

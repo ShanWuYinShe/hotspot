@@ -5,13 +5,10 @@
 
 import { ApiClient } from '../common/api/ApiClient';
 import { 
-  SearchUserByLocationResponse, 
-  SearchGroupByLocationResponse, 
-  SearchMomentsByLocationResponse,
-  UserResponse,
-  GroupResponse,
-  MomentResponse
-} from '../common/types/BackendApiTypes';
+  UserSearchItem, 
+  GroupSearchItem, 
+  MomentSearchItem
+} from '../common/types/api';
 import { GlobalStateManager } from '../common/state/GlobalStateManager';
 import { SystemAvatar } from './SystemAvatar';
 import { SystemToast } from './SystemToast';
@@ -26,7 +23,7 @@ interface SearchResult {
   type: 'user' | 'group' | 'moment';
   title: string;
   subtitle: string;
-  data: UserResponse | GroupResponse | MomentResponse | SearchUserByLocationResponse | SearchGroupByLocationResponse | SearchMomentsByLocationResponse;
+  data: UserSearchItem | GroupSearchItem | MomentSearchItem;
 }
 
 @Component
@@ -107,13 +104,23 @@ export struct SmartSearchComponent {
 
   /**
    * 搜索用户
+   * 使用 searchUsersByKeyword API
    */
   private async searchUsers(query: string) {
+    if (!this.globalState.currentLocation) {
+      return;
+    }
+
     try {
-      const response = await ApiClient.searchUserByName({ name: query, limit: 10 });
+      const response = await ApiClient.searchUsersByKeyword({
+        kw: query,
+        latitude: this.globalState.currentLocation.latitude,
+        longitude: this.globalState.currentLocation.longitude,
+        limit: 10
+      });
 
       if (response.code === 0 && response.data) {
-        const userResults: SearchResult[] = response.data.items.map((user): SearchResult => ({
+        const userResults: SearchResult[] = response.data.items.map((user: UserSearchItem): SearchResult => ({
           id: `user_${user.user_id}`,
           type: 'user',
           title: user.nickname,
@@ -130,17 +137,24 @@ export struct SmartSearchComponent {
 
   /**
    * 搜索群组
+   * 使用 searchGroupsByKeyword API
    */
   private async searchGroups(query: string) {
+    if (!this.globalState.currentLocation) {
+      return;
+    }
+
     try {
-      const response = await ApiClient.searchGroupByName({
-        name: query,
+      const response = await ApiClient.searchGroupsByKeyword({
+        kw: query,
+        latitude: this.globalState.currentLocation.latitude,
+        longitude: this.globalState.currentLocation.longitude,
         limit: 10
       });
 
       if (response.code === 0 && response.data) {
-        const groupResults: SearchResult[] = response.data.items.map((group): SearchResult => ({
-          id: `group_${group.group_id}`,
+        const groupResults: SearchResult[] = response.data.items.map((group: GroupSearchItem): SearchResult => ({
+          id: `group_${group.id}`,
           type: 'group',
           title: group.name,
           subtitle: `${group.member_count} 成员`,
@@ -156,6 +170,7 @@ export struct SmartSearchComponent {
 
   /**
    * 搜索瞬间
+   * 使用 searchMomentsByKeyword API
    */
   private async searchMoments(query: string) {
     if (!this.globalState.currentLocation) {
@@ -163,26 +178,19 @@ export struct SmartSearchComponent {
     }
 
     try {
-      // 先按位置搜索，然后在客户端过滤
-      const response = await ApiClient.searchMomentByLocation({
+      // 使用关键字搜索
+      const response = await ApiClient.searchMomentsByKeyword({
+        kw: query,
         latitude: this.globalState.currentLocation.latitude,
         longitude: this.globalState.currentLocation.longitude,
-        radius: 10000, // 10km 范围
-        limit: 50
+        limit: 10
       });
 
       if (response.code === 0 && response.data) {
-        // 在客户端过滤包含关键词的瞬间
-        const filteredMoments = response.data.items.filter(moment =>
-        moment.description.toLowerCase().includes(query.toLowerCase()) ||
-        moment.nickname.toLowerCase().includes(query.toLowerCase()) ||
-        moment.tags.some(tag => tag.toLowerCase().includes(query.toLowerCase()))
-        );
-
-        const momentResults: SearchResult[] = filteredMoments.slice(0, 10).map((moment): SearchResult => ({
-          id: `moment_${moment.moment_id}`,
+        const momentResults: SearchResult[] = response.data.items.map((moment: MomentSearchItem): SearchResult => ({
+          id: `moment_${moment.id}`,
           type: 'moment',
-          title: moment.nickname,
+          title: moment.user.nickname,
           subtitle: moment.description.length > 30 ?
             moment.description.substring(0, 30) + '...' : moment.description,
           data: moment

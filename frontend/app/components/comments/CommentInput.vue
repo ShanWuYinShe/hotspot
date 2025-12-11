@@ -1,13 +1,13 @@
 <template>
-  <div class="comment-input">
+  <div class="w-full">
     <!-- 回复提示 -->
-    <div v-if="replyTo" class="flex items-center justify-between p-2 mb-2 bg-primary-50 dark:bg-primary-950/20 rounded-lg">
-      <span class="text-sm text-neutral-700 dark:text-neutral-300">
+    <div v-if="replyTo" class="flex items-center justify-between p-2 mb-2 bg-primary-light-20 rounded-lg">
+      <span class="text-sm text-secondary-strong">
         回复 <span class="font-medium">@{{ replyTo.user.nickname }}</span>
       </span>
       <UButton
         variant="ghost"
-        size="xs"
+        size="sm"
         icon="i-heroicons-x-mark"
         @click="handleCancelReply"
       />
@@ -17,12 +17,12 @@
     <div class="flex gap-3">
       <!-- 当前用户头像 -->
       <UAvatar
-        v-if="currentUser"
-        :alt="currentUser.nickname"
+        v-if="authStore.user"
+        :alt="authStore.user.nickname"
         size="sm"
-        class="flex-shrink-0"
+        class="shrink-0"
       >
-        {{ currentUser.nickname?.charAt(0) }}
+        {{ authStore.user.nickname?.charAt(0) }}
       </UAvatar>
 
       <!-- 输入区域 -->
@@ -38,7 +38,7 @@
         
         <!-- 字数统计和操作按钮 -->
         <div class="flex items-center justify-between mt-2">
-          <span class="text-xs text-neutral-500 dark:text-neutral-400">
+          <span class="text-xs text-secondary-content">
             {{ content.length }} / 500
           </span>
           
@@ -67,29 +67,33 @@
 </template>
 
 <script setup lang="ts">
-import type { CommentItem } from '~/services/comments.service'
+import type { CommentListItem } from '~/types/api'
 import { useCommentsService } from '~/services/comments.service'
+import { getErrorMessage } from '~/utils/error'
+
+// 扩展类型：包含前端本地管理的点赞状态
+interface CommentWithLikeStatus extends CommentListItem {
+  liked_by_me?: boolean
+}
 
 const props = defineProps<{
   momentId: string
-  replyTo?: CommentItem
+  replyTo?: CommentWithLikeStatus
 }>()
 
 const emit = defineEmits<{
-  submit: [comment: CommentItem]
+  submit: [comment: CommentWithLikeStatus]
   cancelReply: []
 }>()
 
 const commentsService = useCommentsService()
+// 使用水合安全的 store 访问
 const authStore = useAuthStore()
 const toast = useToast()
 
 // 状态
 const content = ref('')
 const submitting = ref(false)
-
-// 当前用户
-const currentUser = computed(() => authStore.user)
 
 // 占位符
 const placeholder = computed(() => {
@@ -110,16 +114,19 @@ const handleSubmit = async () => {
   
   submitting.value = true
   try {
-    const response = await commentsService.create({
+    const response = await commentsService.add({
       moment_id: props.momentId,
       content: content.value.trim(),
       parent_id: props.replyTo?.id
     })
     
     // 构造新评论对象（用于本地显示）
-    const newComment: CommentItem = {
+    const newComment: CommentWithLikeStatus = {
       id: response.id,
-      user: currentUser.value!,
+      user: {
+        ...authStore.user!,
+        user_type: 'normal' as const
+      },
       content: content.value.trim(),
       parent_id: props.replyTo?.id,
       reply_to_user: props.replyTo?.user,
@@ -138,10 +145,10 @@ const handleSubmit = async () => {
       title: props.replyTo ? '回复成功' : '评论成功',
       color: 'success'
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     toast.add({
       title: '发送失败',
-      description: error?.message || '评论发送失败',
+      description: getErrorMessage(error, '评论发送失败'),
       color: 'error'
     })
   } finally {
@@ -154,10 +161,3 @@ const handleCancelReply = () => {
   emit('cancelReply')
 }
 </script>
-
-<style scoped>
-.comment-input {
-  @apply w-full;
-}
-</style>
-

@@ -6,13 +6,13 @@
 // 通用类型（复用 api.ts 中的定义）
 // ============================================================================
 
-import type { UserInfo } from './api'
+import type { UserInfo, GroupSettings, MessageType, ReactionType } from './api'
 
 // ============================================================================
 // 基础 WebSocket 事件格式
 // ============================================================================
 
-export interface WebSocketEvent<T = any> {
+export interface WebSocketEvent<T = unknown> {
   type: string
   payload: T
 }
@@ -40,11 +40,13 @@ export type ServerEventType =
   | 'UserOnline'
   | 'UserOffline'
   | 'UserLocationUpdate'
-  | 'FriendRequestReceived'
-  | 'FriendRequestAccepted'
-  | 'FriendRemoved'
+  | 'NewFollower'           // 有人关注我
+  | 'MutualFollow'          // 互相关注（成为好友）
+  | 'Unfollowed'            // 取消关注
   | 'MomentLiked'
   | 'MomentCommented'
+  | 'CommentReply'          // 评论被回复
+  | 'SystemAnnouncement'    // 系统公告
   | 'ChatMessageNew'
   | 'ChatMessageEdited'
   | 'ChatMessageRecalled'
@@ -57,12 +59,12 @@ export type ServerEventType =
   | 'GroupProfileUpdated'
   | 'GroupMemberRoleChanged'
   | 'GroupMemberMuted'
+  | 'GroupMemberUnmuted'    // 取消禁言
   | 'GroupDismissed'
   | 'GroupInviteReceived'
   | 'GroupInviteResponse'
   | 'GroupApplicationReceived'
   | 'GroupApplicationResponse'
-  | 'InboxItem'
   | 'SubscribeAck'
   | 'Error'
 
@@ -144,7 +146,7 @@ export interface ConnectionEstablishedEvent {
   type: 'ConnectionEstablished'
   payload: {
     connection_id: string
-    user_id: string
+    user_id: number
     server_time: string
   }
 }
@@ -160,7 +162,7 @@ export interface HeartbeatEvent {
 export interface UserOnlineEvent {
   type: 'UserOnline'
   payload: {
-    user_id: string
+    user_id: number
     nickname: string
     avatar_url?: string
     online_at: string
@@ -170,7 +172,7 @@ export interface UserOnlineEvent {
 export interface UserOfflineEvent {
   type: 'UserOffline'
   payload: {
-    user_id: string
+    user_id: number
     offline_at: string
   }
 }
@@ -178,7 +180,7 @@ export interface UserOfflineEvent {
 export interface UserLocationUpdateEvent {
   type: 'UserLocationUpdate'
   payload: {
-    user_id: string
+    user_id: number
     latitude: number
     longitude: number
     location_name: string
@@ -186,31 +188,30 @@ export interface UserLocationUpdateEvent {
   }
 }
 
-// 好友关系事件
-export interface FriendRequestReceivedEvent {
-  type: 'FriendRequestReceived'
+// 关注关系事件（好友 = 互相关注）
+export interface NewFollowerEvent {
+  type: 'NewFollower'
   payload: {
-    id: string
-    from_user: UserInfo
-    message?: string
-    created_at: string
-  }
-}
-
-export interface FriendRequestAcceptedEvent {
-  type: 'FriendRequestAccepted'
-  payload: {
-    id: string
     user: UserInfo
-    accepted_at: string
+    followed_at: string
+    is_mutual: boolean  // 是否互相关注（成为好友）
   }
 }
 
-export interface FriendRemovedEvent {
-  type: 'FriendRemoved'
+export interface MutualFollowEvent {
+  type: 'MutualFollow'
   payload: {
-    user_id: string
-    removed_at: string
+    user: UserInfo
+    mutual_at: string
+  }
+}
+
+export interface UnfollowedEvent {
+  type: 'Unfollowed'
+  payload: {
+    user_id: number
+    unfollowed_at: string
+    was_mutual: boolean  // 之前是否互相关注
   }
 }
 
@@ -235,6 +236,30 @@ export interface MomentCommentedEvent {
   }
 }
 
+export interface CommentReplyEvent {
+  type: 'CommentReply'
+  payload: {
+    moment_id: string
+    comment_id: string        // 原评论ID（被回复的评论）
+    reply_id: string          // 回复评论ID
+    user: UserInfo            // 回复者
+    content: string
+    replied_at: string
+  }
+}
+
+export interface SystemAnnouncementEvent {
+  type: 'SystemAnnouncement'
+  payload: {
+    id: string
+    title: string
+    content: string
+    severity: 'info' | 'warning' | 'error'
+    action_url?: string
+    created_at: string
+  }
+}
+
 // 聊天消息事件
 export interface ChatMessageNewEvent {
   type: 'ChatMessageNew'
@@ -243,10 +268,10 @@ export interface ChatMessageNewEvent {
     chat_type: 'private_chat' | 'group_chat'
     chat_id: string
     sender: UserInfo
-    type: 'text' | 'image' | 'video' | 'audio' | 'file' | 'system'
-    content: string
+    message_type: MessageType
+    content?: string       // 文本内容（仅 text/system 类型有值）
     reply_to?: string
-    mentions?: string[]
+    mentions?: number[]
     sent_at: string
   }
 }
@@ -268,7 +293,7 @@ export interface ChatMessageRecalledEvent {
     id: string
     chat_type: 'private_chat' | 'group_chat'
     chat_id: string
-    recalled_by: string
+    recalled_by: number
     recalled_at: string
   }
 }
@@ -279,7 +304,7 @@ export interface ChatMessageDeletedEvent {
     id: string
     chat_type: 'private_chat' | 'group_chat'
     chat_id: string
-    deleted_by: string
+    deleted_by: number
     for_everyone: boolean
     deleted_at: string
   }
@@ -288,12 +313,12 @@ export interface ChatMessageDeletedEvent {
 export interface ChatMessageReactionEvent {
   type: 'ChatMessageReaction'
   payload: {
-    id: string
+    id: string                // 消息ID
     chat_type: 'private_chat' | 'group_chat'
     chat_id: string
-    user: UserInfo
-    reaction_type: 'like' | 'love' | 'laugh' | 'angry' | 'sad' | 'wow'
-    action: 'add' | 'remove'
+    user: UserInfo            // 操作者
+    reaction_type: ReactionType
+    has_reaction: boolean     // 操作后状态：true=添加了反应，false=移除了反应
     created_at: string
   }
 }
@@ -304,7 +329,7 @@ export interface ChatMessageReadEvent {
     chat_type: 'private_chat' | 'group_chat'
     chat_id: string
     up_to: string
-    reader_id: string
+    reader_id: number
     read_at: string
   }
 }
@@ -314,7 +339,7 @@ export interface UserTypingEvent {
   payload: {
     chat_type: 'private_chat' | 'group_chat'
     chat_id: string
-    user_id: string
+    user_id: number
     nickname: string
     is_typing: boolean
   }
@@ -334,7 +359,7 @@ export interface GroupMemberLeftEvent {
   type: 'GroupMemberLeft'
   payload: {
     group_chat_id: string
-    user_id: string
+    user_id: number
     left_at: string
   }
 }
@@ -347,7 +372,7 @@ export interface GroupProfileUpdatedEvent {
       name?: string
       description?: string
       avatar_url?: string
-      settings?: any
+      settings?: Partial<GroupSettings>
     }
     updated_at: string
   }
@@ -357,7 +382,7 @@ export interface GroupMemberRoleChangedEvent {
   type: 'GroupMemberRoleChanged'
   payload: {
     group_chat_id: string
-    user_id: string
+    user_id: number
     old_role: 'owner' | 'admin' | 'member'
     new_role: 'owner' | 'admin' | 'member'
     changed_at: string
@@ -368,9 +393,18 @@ export interface GroupMemberMutedEvent {
   type: 'GroupMemberMuted'
   payload: {
     group_chat_id: string
-    user_id: string
+    user_id: number
     muted_until: string
     muted_at: string
+  }
+}
+
+export interface GroupMemberUnmutedEvent {
+  type: 'GroupMemberUnmuted'
+  payload: {
+    group_chat_id: string
+    user_id: number
+    unmuted_at: string
   }
 }
 
@@ -378,7 +412,7 @@ export interface GroupDismissedEvent {
   type: 'GroupDismissed'
   payload: {
     group_chat_id: string
-    dismissed_by: string
+    dismissed_by: number
     dismissed_at: string
   }
 }
@@ -428,22 +462,6 @@ export interface GroupApplicationResponseEvent {
   }
 }
 
-// 收件箱事件
-export interface InboxItemEvent {
-  type: 'InboxItem'
-  payload: {
-    id: string
-    category: 'social' | 'system' | 'content'
-    type: string
-    title?: string
-    content: string
-    data?: Record<string, any>
-    action_url?: string
-    severity?: 'info' | 'warning' | 'error'
-    created_at: string
-  }
-}
-
 // 订阅确认事件
 export interface SubscribeAckEvent {
   type: 'SubscribeAck'
@@ -489,11 +507,13 @@ export type ServerEvent =
   | UserOnlineEvent
   | UserOfflineEvent
   | UserLocationUpdateEvent
-  | FriendRequestReceivedEvent
-  | FriendRequestAcceptedEvent
-  | FriendRemovedEvent
+  | NewFollowerEvent
+  | MutualFollowEvent
+  | UnfollowedEvent
   | MomentLikedEvent
   | MomentCommentedEvent
+  | CommentReplyEvent
+  | SystemAnnouncementEvent
   | ChatMessageNewEvent
   | ChatMessageEditedEvent
   | ChatMessageRecalledEvent
@@ -506,12 +526,12 @@ export type ServerEvent =
   | GroupProfileUpdatedEvent
   | GroupMemberRoleChangedEvent
   | GroupMemberMutedEvent
+  | GroupMemberUnmutedEvent
   | GroupDismissedEvent
   | GroupInviteReceivedEvent
   | GroupInviteResponseEvent
   | GroupApplicationReceivedEvent
   | GroupApplicationResponseEvent
-  | InboxItemEvent
   | SubscribeAckEvent
   | ErrorEvent
 

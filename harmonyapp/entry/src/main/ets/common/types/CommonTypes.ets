@@ -1,8 +1,83 @@
 /**
- * 通用数据类型定义
- * 包含项目中使用的通用类型和枚举
- * 注意：基础API类型已迁移到 BackendApiTypes.ets
+ * 客户端本地扩展类型
+ * 
+ * 这些类型仅用于 HarmonyOS 客户端组件和逻辑，不是 API 文档定义的类型
+ * API 文档定义的类型请查看 api.ets
+ * 用户类型工具函数请查看 ../utils/UserTypeUtil.ets
  */
+
+// 重新导出用户类型工具函数，方便使用
+export { 
+  UserTypeUtil, 
+  UserType, 
+  SYSTEM_USER_IDS, 
+  SYSTEM_USER_ID_MAX 
+} from '../utils/UserTypeUtil';
+
+/**
+ * 便捷函数：判断是否为临时用户
+ * @param userType 用户类型
+ */
+export function isTempUser(userType: string): boolean {
+  return userType === 'temp';
+}
+
+/**
+ * 便捷函数：判断是否为普通用户
+ * @param userType 用户类型
+ */
+export function isNormalUser(userType: string): boolean {
+  return userType === 'normal';
+}
+
+/**
+ * 便捷函数：判断是否为系统用户
+ * @param userType 用户类型
+ */
+export function isSystemUser(userType: string): boolean {
+  return userType === 'system';
+}
+
+/**
+ * 便捷函数：判断是否为管理员用户
+ * @param userType 用户类型
+ */
+export function isAdminUser(userType: string): boolean {
+  return userType === 'admin';
+}
+
+/**
+ * 便捷函数：获取用户类型显示名称
+ * @param userType 用户类型
+ */
+export function getUserTypeDisplayName(userType: string): string {
+  switch (userType) {
+    case 'temp':
+      return '临时用户';
+    case 'normal':
+      return '普通用户';
+    case 'admin':
+      return '管理员';
+    case 'system':
+      return '系统用户';
+    default:
+      return '未知类型';
+  }
+}
+
+/**
+ * 便捷函数：检查用户是否具有指定权限
+ * @param userType 用户类型
+ * @param permission 权限名称
+ */
+export function hasUserPermission(userType: string, permission: string): boolean {
+  const { UserTypeUtil } = require('../utils/UserTypeUtil');
+  return UserTypeUtil.hasPermission(userType, permission);
+}
+
+// ============================================================================
+// 地理位置类型（客户端扩展）
+// ============================================================================
 
 // 地理坐标
 export interface Coordinates {
@@ -34,12 +109,17 @@ export enum RoomType {
 
 // 通知类型枚举
 export enum NotificationType {
-  FRIEND_REQUEST = 'friend_request',
+  NEW_FOLLOWER = 'new_follower',
+  MUTUAL_FOLLOW = 'mutual_follow',
   GROUP_INVITATION = 'group_invitation',
-  SYSTEM = 'system',
-  ANNOUNCEMENT = 'announcement',
-  NEW_MOMENT = 'new_moment',
-  GROUP_DIGEST = 'group_digest'
+  GROUP_INVITE_RESPONSE = 'group_invite_response',
+  GROUP_APPLICATION = 'group_application',
+  GROUP_APPLICATION_RESPONSE = 'group_application_response',
+  MESSAGE_MENTION = 'message_mention',
+  MOMENT_LIKE = 'moment_like',
+  MOMENT_COMMENT = 'moment_comment',
+  COMMENT_REPLY = 'comment_reply',
+  SYSTEM_ANNOUNCEMENT = 'system_announcement'
 }
 
 // 群组事件类型

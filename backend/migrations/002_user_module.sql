@@ -45,17 +45,57 @@ CREATE TRIGGER trigger_users_location_sync
     EXECUTE FUNCTION sync_user_location();
 
 -- ============================================================
--- 用户设置
+-- 用户设置（与 API 文档 UserSettingsData 对应）
 -- ============================================================
 CREATE TABLE user_settings (
     user_id BIGINT PRIMARY KEY,
+    
+    -- ============ 隐私设置 ============
+    -- 基础隐私级别（影响大部分信息的默认可见性）
     privacy_level privacy_level NOT NULL DEFAULT 'public',
-    is_location_sharing BOOLEAN NOT NULL DEFAULT TRUE,
-    can_be_followed BOOLEAN NOT NULL DEFAULT TRUE,
-    allow_private_chat BOOLEAN NOT NULL DEFAULT TRUE,
+    -- 位置可见性
+    location_visible BOOLEAN NOT NULL DEFAULT TRUE,
+    -- 在线状态可见性
+    online_visible BOOLEAN NOT NULL DEFAULT TRUE,
+    last_online_visible BOOLEAN NOT NULL DEFAULT TRUE,
+    -- 列表/统计可见性（细粒度控制）
+    friends_visible privacy_level NOT NULL DEFAULT 'public',
+    following_visible privacy_level NOT NULL DEFAULT 'public',
+    followers_visible privacy_level NOT NULL DEFAULT 'public',
+    moments_visible privacy_level NOT NULL DEFAULT 'public',
+    stats_visible privacy_level NOT NULL DEFAULT 'public',
+    
+    -- ============ 社交设置 ============
+    allow_follow BOOLEAN NOT NULL DEFAULT TRUE,
+    allow_private_chat chat_permission NOT NULL DEFAULT 'everyone',
+    
+    -- ============ 搜索设置 ============
+    searchable BOOLEAN NOT NULL DEFAULT TRUE,
+    phone_searchable BOOLEAN NOT NULL DEFAULT TRUE,
+    nickname_searchable BOOLEAN NOT NULL DEFAULT TRUE,
+    location_searchable BOOLEAN NOT NULL DEFAULT TRUE,
+    
+    -- ============ 时间戳 ============
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ
 );
+
+COMMENT ON TABLE user_settings IS '用户设置表，与 API 文档 UserSettingsData 完全对应';
+COMMENT ON COLUMN user_settings.privacy_level IS '基础隐私级别：public-公开, friends-仅好友, private-仅自己';
+COMMENT ON COLUMN user_settings.location_visible IS '是否显示位置信息';
+COMMENT ON COLUMN user_settings.online_visible IS '是否显示在线状态';
+COMMENT ON COLUMN user_settings.last_online_visible IS '是否显示最后上线时间';
+COMMENT ON COLUMN user_settings.friends_visible IS '好友列表可见性';
+COMMENT ON COLUMN user_settings.following_visible IS '关注列表可见性';
+COMMENT ON COLUMN user_settings.followers_visible IS '粉丝列表可见性';
+COMMENT ON COLUMN user_settings.moments_visible IS '瞬间列表可见性';
+COMMENT ON COLUMN user_settings.stats_visible IS '统计数据可见性';
+COMMENT ON COLUMN user_settings.allow_follow IS '是否允许被关注';
+COMMENT ON COLUMN user_settings.allow_private_chat IS '私聊权限：everyone-所有人, friends-仅好友, nobody-禁止';
+COMMENT ON COLUMN user_settings.searchable IS '总开关：是否可被搜索';
+COMMENT ON COLUMN user_settings.phone_searchable IS '是否可通过手机号搜索';
+COMMENT ON COLUMN user_settings.nickname_searchable IS '是否可通过昵称搜索';
+COMMENT ON COLUMN user_settings.location_searchable IS '是否出现在附近的人';
 
 CREATE TRIGGER trigger_user_settings_updated_at
     BEFORE UPDATE ON user_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -77,7 +117,8 @@ CREATE INDEX idx_user_online_status_user ON user_online_status (user_id);
 CREATE INDEX idx_user_online_status_online ON user_online_status (is_online) WHERE is_online = TRUE;
 
 -- ============================================================
--- 用户关系：关注、拉黑、好友申请、好友备注
+-- 用户关系：关注、拉黑、好友备注
+-- 说明：好友 = 互相关注，无需独立的好友申请表
 -- ============================================================
 CREATE TABLE user_follows (
     id BIGSERIAL PRIMARY KEY,
@@ -113,24 +154,6 @@ CREATE INDEX idx_user_blocks_cursor_id ON user_blocks (cursor_id);
 CREATE INDEX idx_user_blocks_blocker ON user_blocks (blocker_id, created_at DESC);
 CREATE INDEX idx_user_blocks_blocked ON user_blocks (blocked_id, created_at DESC);
 
-CREATE TABLE user_friend_requests (
-    id BIGSERIAL PRIMARY KEY,
-    request_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
-    cursor_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
-    from_user_id BIGINT NOT NULL,
-    to_user_id BIGINT NOT NULL,
-    message TEXT,
-    status invitation_status NOT NULL DEFAULT 'pending',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    responded_at TIMESTAMPTZ,
-    CONSTRAINT check_friend_request_not_self CHECK (from_user_id != to_user_id)
-);
-
-CREATE INDEX idx_friend_requests_request_id ON user_friend_requests (request_id);
-CREATE INDEX idx_friend_requests_cursor_id ON user_friend_requests (cursor_id);
-CREATE INDEX idx_friend_requests_from_user ON user_friend_requests (from_user_id, created_at DESC);
-CREATE INDEX idx_friend_requests_to_user ON user_friend_requests (to_user_id, status, created_at DESC);
-
 CREATE TABLE user_friend_remarks (
     id BIGSERIAL PRIMARY KEY,
     remark_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
@@ -160,7 +183,7 @@ CREATE TABLE user_location_history (
     latitude DOUBLE PRECISION NOT NULL,
     longitude DOUBLE PRECISION NOT NULL,
     location_name VARCHAR(255),
-    location geography(POINT, 4326) NOT NULL,
+    location geography(POINT, 4326), -- 由 trigger 自动填充
     recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT check_location_latitude_range CHECK (latitude >= -90 AND latitude <= 90),
     CONSTRAINT check_location_longitude_range CHECK (longitude >= -180 AND longitude <= 180)
@@ -169,6 +192,11 @@ CREATE TABLE user_location_history (
 CREATE INDEX idx_location_history_history_id ON user_location_history (history_id);
 CREATE INDEX idx_location_history_user_id ON user_location_history (user_id, recorded_at DESC);
 CREATE INDEX idx_location_history_location ON user_location_history USING gist (location);
+
+CREATE TRIGGER trigger_location_history_sync
+    BEFORE INSERT ON user_location_history
+    FOR EACH ROW
+    EXECUTE FUNCTION sync_location_history();
 
 -- ============================================================
 -- 会话管理

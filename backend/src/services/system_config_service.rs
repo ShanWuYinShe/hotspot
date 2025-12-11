@@ -1,3 +1,9 @@
+//! 系统配置服务
+//!
+//! 管理系统配置项，支持 Redis 缓存和配置变更订阅
+
+#![allow(dead_code)]
+
 use futures_util::StreamExt;
 use redis::AsyncCommands;
 use sqlx::PgPool;
@@ -9,7 +15,7 @@ use crate::{
     dto::{
         request::{
             CreateConfigRequest, UpdateConfigRequest, GetConfigListRequest, 
-            GetConfigHistoryRequest, ListAllConfigChangesRequest
+            GetConfigHistoryRequest, GetConfigChangesRequest
         },
         response::{
             ConfigItem, ConfigHistoryItem, CreateConfigData, 
@@ -18,6 +24,7 @@ use crate::{
     },
     error::{AppError, Result},
     repositories::system_config_repo::{SystemConfigRepository, SystemConfigRow, ConfigChangeLogRow},
+    utils::validation::Validator,
 };
 
 pub struct SystemConfigService {
@@ -97,7 +104,7 @@ impl SystemConfigService {
 
     /// 列出所有配置项
     pub async fn get_list(&self, req: GetConfigListRequest) -> Result<PaginatedData<ConfigItem>> {
-        let limit = req.limit.unwrap_or(20).min(100) as i32;
+        let limit = Validator::validate_limit(req.limit, 100)?;
         let cursor = Self::parse_cursor(req.cursor)?;
 
         let configs = self.repo.list(req.category, limit + 1, cursor).await?;
@@ -234,7 +241,7 @@ impl SystemConfigService {
         config_key: &str,
         req: GetConfigHistoryRequest,
     ) -> Result<PaginatedData<ConfigHistoryItem>> {
-        let limit = req.limit.unwrap_or(20).min(100) as i32;
+        let limit = Validator::validate_limit(req.limit, 100)?;
         let cursor = Self::parse_cursor(req.cursor)?;
 
         let logs = self.repo.get_change_history(config_key, limit + 1, cursor).await?;
@@ -264,17 +271,14 @@ impl SystemConfigService {
     }
 
     /// 获取所有变更历史
-    pub async fn list_all_changes(
+    pub async fn get_changes(
         &self,
-        req: ListAllConfigChangesRequest,
+        req: GetConfigChangesRequest,
     ) -> Result<PaginatedData<ConfigHistoryItem>> {
-        let limit = req.limit.unwrap_or(20).min(100) as i32;
+        let limit = Validator::validate_limit(req.limit, 100)?;
         let cursor = Self::parse_cursor(req.cursor)?;
 
-        let changed_by = match req.changed_by.as_deref() {
-            Some(s) => Some(s.parse::<i64>().map_err(|_| AppError::BadRequest("无效的操作者ID".to_string()))?),
-            None => None,
-        };
+        let changed_by = req.changed_by;
 
         let logs = self.repo.list_all_changes(
             req.start_time.as_deref(),
@@ -330,19 +334,20 @@ impl SystemConfigService {
     }
 
     /// 订阅配置更新事件（后台任务）
+    /// 
+    /// 使用 Redis PubSub 监听配置变更通知
     pub async fn subscribe_config_updates(&self) -> Result<()> {
         let mut pubsub = self.redis.get_async_pubsub().await?;
         pubsub.subscribe(REDIS_CHANNEL_CONFIG_UPDATES).await?;
 
         let mut stream = pubsub.on_message();
         while let Some(msg) = stream.next().await {
-            if let Ok(payload) = msg.get_payload::<String>() {
-                if let Ok(data) = serde_json::from_str::<serde_json::Value>(&payload) {
-                    if let Some(config_key) = data.get("config_key").and_then(|v| v.as_str()) {
-                        tracing::info!("收到配置更新通知: {}", config_key);
-                        // 清除本地缓存（如果有的话）
-                        let _ = self.clear_config_cache(config_key).await;
-                    }
+            let payload: String = msg.get_payload()?;
+            if let Ok(data) = serde_json::from_str::<serde_json::Value>(&payload) {
+                if let Some(config_key) = data.get("config_key").and_then(|v| v.as_str()) {
+                    tracing::info!("收到配置更新通知: {}", config_key);
+                    // 清除本地缓存（如果有的话）
+                    let _ = self.clear_config_cache(config_key).await;
                 }
             }
         }
@@ -367,7 +372,7 @@ impl SystemConfigService {
             key: log.key,
             old_value: log.old_value.unwrap_or_default(),
             new_value: log.new_value,
-            changed_by: log.changed_by.to_string(),
+            changed_by: log.changed_by,
             changed_at: log.changed_at.to_rfc3339(),
         }
     }

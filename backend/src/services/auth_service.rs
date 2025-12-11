@@ -7,12 +7,12 @@ use crate::{
     dto::{
         request::{
             CreateTempRequest, LoginRequest, RegisterRequest, RefreshTokenRequest,
-            RequestPasswordResetRequest, ResetPasswordRequest, SetPasswordRequest,
-            VerifyResetCodeRequest, ListSessionsRequest, RevokeSessionRequest,
+            RequestPasswordResetRequest, ResetPasswordRequest, ChangePasswordRequest,
+            VerifyResetCodeRequest, GetSessionsRequest, RevokeSessionRequest,
         },
         response::{
             AuthData, CheckStatusData, SessionItem, PaginatedData, PaginationMeta,
-            SetPasswordData, RequestPasswordResetData, VerifyResetCodeData,
+            RequestPasswordResetData, VerifyResetCodeData,
         },
     },
     error::{AppError, Result},
@@ -24,6 +24,7 @@ use crate::{
 };
 
 pub struct AuthService {
+    db: PgPool,
     user_repo: UserRepository,
     session_repo: SessionRepository,
     redis: ConnectionManager,
@@ -41,6 +42,7 @@ impl AuthService {
         refresh_token_expiration: i64,
     ) -> Self {
         Self {
+            db: db.clone(),
             user_repo: UserRepository::new(db.clone()),
             session_repo: SessionRepository::new(db.clone()),
             redis: redis.clone(),
@@ -57,15 +59,17 @@ impl AuthService {
             return Err(AppError::Conflict("该登录ID已被注册".to_string()));
         }
 
-        // 2. 生成用户ID（类型：普通用户 0x02）
-        let user_id = IdGenerator::generate_user_id(0x02);
+        // 2. 从数据库序列生成用户ID
+        let user_id = IdGenerator::generate_user_id(&self.db).await?;
 
         // 3. 对客户端哈希进行 bcrypt 二次哈希
         let password_hash = PasswordUtil::hash_password(&req.password_hash)?;
 
         // 4. 创建用户
+        use crate::types::enums::UserType;
         self.user_repo.create(
             user_id,
+            UserType::Normal,
             Some(req.login_id.clone()),
             req.nickname.clone(),
             Some(password_hash.clone()),
@@ -77,23 +81,27 @@ impl AuthService {
         let refresh_token =
             JwtUtil::generate_token(user_id, self.refresh_token_expiration, &self.jwt_secret)?;
 
-        // 6. 存储 Refresh Token 到 Redis
-        let key = format!("refresh_token:{}", user_id);
-        let _: () = redis::cmd("SETEX")
-            .arg(&key)
-            .arg(self.refresh_token_expiration)
-            .arg(&refresh_token)
-            .query_async(&mut self.redis.clone())
-            .await
-            .map_err(|_| AppError::Internal)?;
+        // 6. 创建会话记录（替代 Redis 存储）
+        let session_expires_at = Utc::now() + Duration::seconds(self.refresh_token_expiration);
+        self.session_repo.create(
+            user_id,
+            None, // device_type
+            None, // device_name
+            None, // ip_address
+            None, // user_agent
+            access_token.clone(),
+            refresh_token.clone(),
+            session_expires_at,
+        ).await?;
 
         // 7. 构造响应
         Ok(AuthData {
-            user_id: user_id.to_string(),
+            user_id,
             nickname: req.nickname.clone(),
             access_token,
             refresh_token,
-            expires_at: (Utc::now() + Duration::seconds(self.access_token_expiration)).to_rfc3339(),
+            access_token_expires_at: (Utc::now() + Duration::seconds(self.access_token_expiration)).to_rfc3339(),
+            refresh_token_expires_at: (Utc::now() + Duration::seconds(self.refresh_token_expiration)).to_rfc3339(),
         })
     }
 
@@ -112,7 +120,7 @@ impl AuthService {
             .ok_or_else(|| AppError::Unauthorized("该账号未设置密码".to_string()))?;
 
         if !PasswordUtil::verify_password(&req.password_hash, &password_hash)? {
-            return Err(AppError::Unauthorized("用户名或密码错误".to_string()));
+            return Err(AppError::PasswordError("用户名或密码错误".to_string()));
         }
 
         // 3. 生成 Token
@@ -124,36 +132,42 @@ impl AuthService {
             &self.jwt_secret,
         )?;
 
-        // 4. 存储 Refresh Token
-        let key = format!("refresh_token:{}", user.user_id);
-        let _: () = redis::cmd("SETEX")
-            .arg(&key)
-            .arg(self.refresh_token_expiration)
-            .arg(&refresh_token)
-            .query_async(&mut self.redis.clone())
-            .await
-            .map_err(|_| AppError::Internal)?;
+        // 4. 创建会话记录
+        let session_expires_at = Utc::now() + Duration::seconds(self.refresh_token_expiration);
+        self.session_repo.create(
+            user.user_id,
+            None, // device_type
+            None, // device_name
+            None, // ip_address
+            None, // user_agent
+            access_token.clone(),
+            refresh_token.clone(),
+            session_expires_at,
+        ).await?;
 
         // 5. 更新最后活跃时间
         self.user_repo.update_last_active(user.user_id).await?;
 
         Ok(AuthData {
-            user_id: user.user_id.to_string(),
+            user_id: user.user_id,
             nickname: user.nickname,
             access_token,
             refresh_token,
-            expires_at: (Utc::now() + Duration::seconds(self.access_token_expiration)).to_rfc3339(),
+            access_token_expires_at: (Utc::now() + Duration::seconds(self.access_token_expiration)).to_rfc3339(),
+            refresh_token_expires_at: (Utc::now() + Duration::seconds(self.refresh_token_expiration)).to_rfc3339(),
         })
     }
 
     /// 创建临时用户
     pub async fn create_temp(&self, req: &CreateTempRequest) -> Result<AuthData> {
-        // 1. 生成临时用户ID（类型：临时用户 0x01）
-        let user_id = IdGenerator::generate_user_id(0x01);
+        // 1. 从数据库序列生成用户ID（临时用户和注册用户共用序列）
+        let user_id = IdGenerator::generate_user_id(&self.db).await?;
 
         // 2. 创建用户（无密码）
+        use crate::types::enums::UserType;
         self.user_repo.create(
             user_id,
+            UserType::Temp,
             None,
             req.nickname.clone(),
             None,
@@ -165,88 +179,92 @@ impl AuthService {
         let refresh_token =
             JwtUtil::generate_token(user_id, self.refresh_token_expiration, &self.jwt_secret)?;
 
-        // 4. 存储 Refresh Token
-        let key = format!("refresh_token:{}", user_id);
-        let _: () = redis::cmd("SETEX")
-            .arg(&key)
-            .arg(self.refresh_token_expiration)
-            .arg(&refresh_token)
-            .query_async(&mut self.redis.clone())
-            .await
-            .map_err(|_| AppError::Internal)?;
+        // 4. 创建会话记录
+        let session_expires_at = Utc::now() + Duration::seconds(self.refresh_token_expiration);
+        self.session_repo.create(
+            user_id,
+            None, // device_type
+            None, // device_name
+            None, // ip_address
+            None, // user_agent
+            access_token.clone(),
+            refresh_token.clone(),
+            session_expires_at,
+        ).await?;
 
         Ok(AuthData {
-            user_id: user_id.to_string(),
+            user_id,
             nickname: req.nickname.clone(),
             access_token,
             refresh_token,
-            expires_at: (Utc::now() + Duration::seconds(self.access_token_expiration)).to_rfc3339(),
+            access_token_expires_at: (Utc::now() + Duration::seconds(self.access_token_expiration)).to_rfc3339(),
+            refresh_token_expires_at: (Utc::now() + Duration::seconds(self.refresh_token_expiration)).to_rfc3339(),
         })
     }
 
     /// 刷新Token
     pub async fn refresh_token(&self, req: &RefreshTokenRequest) -> Result<AuthData> {
-        // 1. 验证 Refresh Token
+        // 1. 验证 Refresh Token 格式
         let claims = JwtUtil::verify_token(&req.refresh_token, &self.jwt_secret)?;
         let user_id = claims
             .sub
             .parse::<i64>()
             .map_err(|_| AppError::Unauthorized("无效的Token".to_string()))?;
 
-        // 2. 检查 Redis 中的 Refresh Token
-        let key = format!("refresh_token:{}", user_id);
-        let stored_token: Option<String> = redis::cmd("GET")
-            .arg(&key)
-            .query_async(&mut self.redis.clone())
-            .await
-            .map_err(|_| AppError::Internal)?;
+        // 2. 通过 refresh_token 查找会话
+        let session = self.session_repo
+            .find_by_refresh_token(&req.refresh_token)
+            .await?
+            .ok_or_else(|| AppError::Unauthorized("Refresh Token 无效或已过期".to_string()))?;
 
-        if stored_token.as_deref() != Some(&req.refresh_token) {
-            return Err(AppError::Unauthorized("Refresh Token 无效".to_string()));
+        // 3. 验证 session 属于该用户
+        if session.user_id != user_id {
+            return Err(AppError::Unauthorized("Token 与用户不匹配".to_string()));
         }
 
-        // 3. 查找用户
+        // 4. 查找用户
         let user = self
             .user_repo
             .find_by_id(user_id)
             .await?
             .ok_or_else(|| AppError::NotFound("用户不存在".to_string()))?;
 
-        // 4. 生成新的 Token
+        // 5. 生成新的 Token
         let access_token =
             JwtUtil::generate_token(user_id, self.access_token_expiration, &self.jwt_secret)?;
-        let refresh_token =
+        let new_refresh_token =
             JwtUtil::generate_token(user_id, self.refresh_token_expiration, &self.jwt_secret)?;
 
-        // 5. 更新 Redis 中的 Refresh Token
-        let _: () = redis::cmd("SETEX")
-            .arg(&key)
-            .arg(self.refresh_token_expiration)
-            .arg(&refresh_token)
-            .query_async(&mut self.redis.clone())
-            .await
-            .map_err(|_| AppError::Internal)?;
+        // 6. 更新会话中的 token（轮换 refresh_token）
+        let session_expires_at = Utc::now() + Duration::seconds(self.refresh_token_expiration);
+        self.session_repo.update_tokens(
+            session.session_id,
+            access_token.clone(),
+            new_refresh_token.clone(),
+            session_expires_at,
+        ).await?;
 
         Ok(AuthData {
-            user_id: user_id.to_string(),
+            user_id,
             nickname: user.nickname,
             access_token,
-            refresh_token,
-            expires_at: (Utc::now() + Duration::seconds(self.access_token_expiration)).to_rfc3339(),
+            refresh_token: new_refresh_token,
+            access_token_expires_at: (Utc::now() + Duration::seconds(self.access_token_expiration)).to_rfc3339(),
+            refresh_token_expires_at: (Utc::now() + Duration::seconds(self.refresh_token_expiration)).to_rfc3339(),
         })
     }
 
     /// 登出
     pub async fn logout(&self, user_id: i64, token: &str) -> Result<()> {
-        // 1. 删除 Refresh Token
-        let key = format!("refresh_token:{}", user_id);
-        let _: () = redis::cmd("DEL")
-            .arg(&key)
-            .query_async(&mut self.redis.clone())
-            .await
-            .map_err(|_| AppError::Internal)?;
+        // 1. 通过 access_token 查找并撤销会话
+        if let Some(session) = self.session_repo.find_by_access_token(token).await? {
+            // 验证会话属于该用户
+            if session.user_id == user_id {
+                self.session_repo.revoke(session.session_id).await?;
+            }
+        }
 
-        // 2. 将 Access Token 加入黑名单
+        // 2. 将 Access Token 加入黑名单（保留此机制以确保即时失效）
         let blacklist_key = format!("token_blacklist:{}", token);
         let _: () = redis::cmd("SETEX")
             .arg(&blacklist_key)
@@ -284,32 +302,10 @@ impl AuthService {
             .ok_or_else(|| AppError::NotFound("用户不存在".to_string()))?;
 
         Ok(CheckStatusData {
-            user_id: user_id.to_string(),
+            user_id,
             nickname: user.nickname,
             is_valid: true,
             expires_at: (Utc::now() + Duration::seconds(claims.exp - Utc::now().timestamp())).to_rfc3339(),
-        })
-    }
-
-    /// 设置密码（临时用户升级或修改密码）
-    pub async fn set_password(&self, user_id: i64, req: &SetPasswordRequest) -> Result<SetPasswordData> {
-        // 1. 查找用户
-        let _user = self
-            .user_repo
-            .find_by_id(user_id)
-            .await?
-            .ok_or_else(|| AppError::NotFound("用户不存在".to_string()))?;
-
-        // 2. 对客户端哈希进行 bcrypt 二次哈希
-        let password_hash = PasswordUtil::hash_password(&req.password_hash)?;
-
-        // 3. 更新用户密码
-        self.user_repo
-            .update_password(user_id, password_hash.clone())
-            .await?;
-
-        Ok(SetPasswordData {
-            can_login: true,
         })
     }
 
@@ -448,16 +444,54 @@ impl AuthService {
         Ok(())
     }
 
+    /// 修改密码（需要验证旧密码）
+    pub async fn change_password(&self, user_id: i64, req: &ChangePasswordRequest) -> Result<()> {
+        // 1. 查找用户
+        let user = self
+            .user_repo
+            .find_by_id(user_id)
+            .await?
+            .ok_or_else(|| AppError::NotFound("用户不存在".to_string()))?;
+
+        // 2. 验证用户是否有密码（临时用户没有密码）
+        let stored_hash = user.password_hash.as_ref().ok_or_else(|| {
+            AppError::BadRequest("临时用户请使用账户升级功能设置密码".to_string())
+        })?;
+
+        // 3. 验证旧密码
+        if !PasswordUtil::verify_password(&req.old_password_hash, stored_hash)? {
+            return Err(AppError::PasswordError("当前密码错误".to_string()));
+        }
+
+        // 4. 对新密码进行 bcrypt 二次哈希
+        let new_password_hash = PasswordUtil::hash_password(&req.new_password_hash)?;
+
+        // 5. 更新密码
+        self.user_repo
+            .update_password(user_id, new_password_hash)
+            .await?;
+
+        // 6. 删除所有 Refresh Token（强制重新登录）
+        let refresh_key = format!("refresh_token:{}", user_id);
+        let _: () = redis::cmd("DEL")
+            .arg(&refresh_key)
+            .query_async(&mut self.redis.clone())
+            .await
+            .map_err(|_| AppError::Internal)?;
+
+        Ok(())
+    }
+
     /// 列出活跃会话
     /// current_session_id: 当前请求的会话ID（可选，用于标记当前会话）
     pub async fn list_sessions(
         &self,
         user_id: i64,
-        req: &ListSessionsRequest,
+        req: &GetSessionsRequest,
         current_session_id: Option<Uuid>,
     ) -> Result<PaginatedData<SessionItem>> {
-        let limit = Validator::validate_pagination(req.limit, 100)?;
-        let cursor = req.cursor.as_ref().and_then(|c| Uuid::parse_str(c).ok());
+        let limit = Validator::validate_limit(req.limit, 100)?;
+        let cursor = Validator::parse_cursor(req.cursor.as_deref())?;
         let sessions = self
             .session_repo
             .list_by_user(user_id, limit + 1, cursor)

@@ -1,45 +1,36 @@
 <template>
   <UModal title="切换账户">
-    <template #header>
-      <div class="flex items-center gap-2">
-        <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-warning-500" />
-        <h3 class="text-lg font-semibold">{{ t('userMenu.switchModal.title') }}</h3>
-      </div>
+    <template #body>
+      <p class="text-secondary-content mb-4">
+        {{ t('userMenu.switchModal.description', { name: account?.nickname }) }}
+      </p>
+
+      <UAlert
+        v-if="account?.user_type && isTempUser(account.user_type)"
+        icon="i-heroicons-exclamation-triangle"
+        color="warning"
+        variant="soft"
+        :title="t('userMenu.switchModal.tempWarningTitle')"
+        :description="t('userMenu.switchModal.tempWarningDescription')"
+      />
     </template>
 
-    <template #body>
-      <div class="space-y-4">
-        <p class="text-neutral-600 dark:text-neutral-400">
-          {{ t('userMenu.switchModal.description', { name: account?.nickname }) }}
-        </p>
-
-        <UAlert 
-          v-if="account?.user_id && isTempUser(account.user_id)"
-          icon="i-heroicons-exclamation-triangle"
-          color="warning"
-          variant="soft"
-          :title="t('userMenu.switchModal.tempWarningTitle')"
-          :description="t('userMenu.switchModal.tempWarningDescription')"
-        />
-
-        <div class="flex justify-end gap-3 pt-4">
-          <UButton 
-            @click="handleClose" 
-            variant="ghost"
-            color="neutral"
-          >
-            {{ t('userMenu.switchModal.cancel') }}
-          </UButton>
-          <UButton 
-            @click="handleConfirm" 
-            :loading="isSwitching"
-            color="warning"
-            icon="i-heroicons-arrow-path"
-          >
-            {{ t('userMenu.switchModal.confirm') }}
-          </UButton>
-        </div>
-      </div>
+    <template #footer>
+      <UButton
+        variant="ghost"
+        color="neutral"
+        @click="handleClose"
+      >
+        {{ t('userMenu.switchModal.cancel') }}
+      </UButton>
+      <UButton
+        color="warning"
+        icon="i-heroicons-arrow-path"
+        :loading="isSwitching"
+        @click="handleConfirm"
+      >
+        {{ t('userMenu.switchModal.confirm') }}
+      </UButton>
     </template>
   </UModal>
 </template>
@@ -48,28 +39,18 @@
 import { isTempUser } from '~/utils/userTypes'
 
 interface Props {
-  account?: any
+  account?: { user_id: number; nickname?: string; avatar_url?: string; user_type?: 'temp' | 'normal' | 'admin' | 'system' }
   onConfirm?: () => Promise<void>
 }
 
 const props = defineProps<Props>()
-const emit = defineEmits<{
-  close: []
-}>()
-
+const emit = defineEmits<{ close: [] }>()
 const { t } = useI18n()
 
-// useOverlay 会自动管理 Modal 状态，无需手动绑定 isOpen
-
-// 响应式状态
 const isSwitching = ref(false)
 
-// 处理关闭
-const handleClose = () => {
-  emit('close')
-}
+const handleClose = () => emit('close')
 
-// 处理确认切换
 const handleConfirm = async () => {
   if (!props.onConfirm) {
     console.error('onConfirm callback not provided')
@@ -81,11 +62,9 @@ const handleConfirm = async () => {
     await props.onConfirm()
     handleClose()
   } catch (error) {
-    // 错误已在父组件处理，这里不需要额外处理
     console.error('切换账户失败:', error)
   } finally {
     isSwitching.value = false
   }
 }
 </script>
-

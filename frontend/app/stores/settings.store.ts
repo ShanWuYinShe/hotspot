@@ -1,308 +1,264 @@
 /**
- * 设置状态存储
- * 职责：设置状态管理、持久化 + API 调用
+ * 设置存储 - 直接按设置页面标签分类
+ * 
+ * 结构对应：
+ * - privacy: 隐私标签（隐私设置、社交设置、资料可见性、搜索设置）
+ * - notifications: 通知标签
+ * - appearance: 外观标签
+ * - guide: 引导状态（不在设置页面，但需要持久化）
+ * 
+ * 账户标签 → 由 authStore 管理
+ * 危险操作/关于 → 无需持久化状态
  */
 
 import { defineStore } from 'pinia'
-import type {
-  UpdateProfileRequest,
-  UpdateSettingsRequest
-} from '~/types/api'
-import { useUsersService } from '~/services/users.service'
+import type { UserSettingsData, SubscriptionsData } from '~/types/api'
 
-export interface AppSettings {
-  // 外观设置
-  theme: 'light' | 'dark' | 'system'
-  language: string
-  fontSize: 'small' | 'medium' | 'large'
-  compactMode: boolean
+// ============ 类型定义 ============
+
+export type ThemeMode = 'light' | 'dark' | 'system'
+export type LanguageCode = 'zh-CN' | 'en-US'
+
+// 外观设置（对应"外观"标签）
+export interface AppearanceSettings {
+  theme: ThemeMode
+  language: LanguageCode
   enableAnimations: boolean
-  
-  // 通知设置
-  notifications: {
-    push: boolean
-    email: boolean
-    sound: boolean
-    vibration: boolean
-  }
-  
-  // 隐私设置
-  privacy: {
-    profileVisibility: 'public' | 'friends' | 'private'
-    locationSharing: boolean
-    onlineStatus: boolean
-    readReceipts: boolean
-  }
+  compactMode: boolean
+  sidebarCollapsed: boolean  // 侧边栏折叠状态
 }
 
-const DEFAULT_SETTINGS: AppSettings = {
+// 引导状态（不在设置页面）
+export interface GuideState {
+  hasVisited: boolean
+  lastVisitTime: number
+  neverShowLoginPrompt: boolean
+  lastLoginPromptTime: number
+}
+
+// 完整设置状态
+export interface SettingsState {
+  privacy: UserSettingsData        // 隐私标签（直接复用 API 类型）
+  notifications: SubscriptionsData // 通知标签（直接复用 API 类型）
+  appearance: AppearanceSettings   // 外观标签
+  guide: GuideState                // 引导状态
+}
+
+// ============ 默认值 ============
+
+const DEFAULT_PRIVACY: UserSettingsData = {
+  privacy_level: 'public',
+  location_visible: true,
+  online_visible: true,
+  last_online_visible: true,
+  friends_visible: 'public',
+  following_visible: 'public',
+  followers_visible: 'public',
+  moments_visible: 'public',
+  stats_visible: 'public',
+  allow_follow: true,
+  allow_private_chat: 'everyone',
+  searchable: true,
+  phone_searchable: true,
+  nickname_searchable: true,
+  location_searchable: true
+}
+
+const DEFAULT_NOTIFICATIONS: SubscriptionsData = {
+  new_follower_enabled: true,
+  mutual_follow_enabled: true,
+  group_invite_enabled: true,
+  group_invite_response_enabled: true,
+  group_application_enabled: true,
+  group_application_response_enabled: true,
+  message_mention_enabled: true,
+  moment_like_enabled: true,
+  moment_comment_enabled: true,
+  comment_reply_enabled: true,
+  system_announcement_enabled: true
+}
+
+const DEFAULT_APPEARANCE: AppearanceSettings = {
   theme: 'system',
   language: 'zh-CN',
-  fontSize: 'medium',
-  compactMode: false,
   enableAnimations: true,
-  notifications: {
-    push: true,
-    email: true,
-    sound: true,
-    vibration: true
-  },
-  privacy: {
-    profileVisibility: 'public',
-    locationSharing: true,
-    onlineStatus: true,
-    readReceipts: true
-  }
+  compactMode: false,
+  sidebarCollapsed: false
 }
+
+const DEFAULT_GUIDE: GuideState = {
+  hasVisited: false,
+  lastVisitTime: 0,
+  neverShowLoginPrompt: false,
+  lastLoginPromptTime: 0
+}
+
+const getDefaultState = (): SettingsState => ({
+  privacy: { ...DEFAULT_PRIVACY },
+  notifications: { ...DEFAULT_NOTIFICATIONS },
+  appearance: { ...DEFAULT_APPEARANCE },
+  guide: { ...DEFAULT_GUIDE }
+})
 
 export const useSettingsStore = defineStore('settings', () => {
   // ============ 状态 ============
-  const settings = ref<AppSettings>({ ...DEFAULT_SETTINGS })
-  
-  // ============ 计算属性 ============
-  const isDarkMode = computed(() => {
-    if (settings.value.theme === 'system') {
-      if (typeof window !== 'undefined') {
-        return window.matchMedia('(prefers-color-scheme: dark)').matches
-      }
-      return false
-    }
-    return settings.value.theme === 'dark'
-  })
-  
-  const displaySettings = computed(() => ({
-    theme: settings.value.theme,
-    fontSize: settings.value.fontSize,
-    compactMode: settings.value.compactMode,
-    enableAnimations: settings.value.enableAnimations
-  }))
-  
-  const notificationSettings = computed(() => settings.value.notifications)
-  const privacySettings = computed(() => settings.value.privacy)
-  
-  // ============ 状态操作方法 ============
-  
-  /**
-   * 更新设置
-   */
-  const updateSettings = (updates: Partial<AppSettings>) => {
-    settings.value = { ...settings.value, ...updates }
-    
-    // 应用主题变化
-    if (updates.theme !== undefined) {
-      applyTheme()
-    }
-    
-    // 应用语言变化
-    if (updates.language) {
-      applyLanguage(updates.language)
-    }
-  }
-  
-  /**
-   * 设置完整设置对象
-   */
-  const setSettings = (newSettings: AppSettings) => {
-    settings.value = { ...newSettings }
-    applyTheme()
-    applyLanguage(newSettings.language)
-  }
-  
-  /**
-   * 重置为默认设置
-   */
-  const resetSettings = () => {
-    settings.value = { ...DEFAULT_SETTINGS }
-    applyTheme()
-    applyLanguage(DEFAULT_SETTINGS.language)
-  }
-  
-  /**
-   * 更新主题设置
-   */
-  const setTheme = (theme: AppSettings['theme']) => {
-    updateSettings({ theme })
-  }
-  
-  /**
-   * 切换主题
-   */
-  const toggleTheme = () => {
-    const themes: AppSettings['theme'][] = ['light', 'dark', 'system']
-    const currentIndex = themes.indexOf(settings.value.theme)
-    const nextTheme = themes[(currentIndex + 1) % themes.length]
-    setTheme(nextTheme)
-  }
-  
-  /**
-   * 设置语言
-   */
-  const setLanguage = (language: string) => {
-    updateSettings({ language })
-  }
-  
-  /**
-   * 更新通知设置
-   */
-  const updateNotifications = (updates: Partial<AppSettings['notifications']>) => {
-    updateSettings({
-      notifications: { ...settings.value.notifications, ...updates }
-    })
-  }
-  
-  /**
-   * 切换通知设置
-   */
-  const toggleNotification = (type: keyof AppSettings['notifications']) => {
-    updateNotifications({
-      [type]: !settings.value.notifications[type]
-    })
-  }
-  
-  /**
-   * 更新隐私设置
-   */
-  const updatePrivacy = (updates: Partial<AppSettings['privacy']>) => {
-    updateSettings({
-      privacy: { ...settings.value.privacy, ...updates }
-    })
-  }
-  
-  // ============ 内部方法 ============
-  
-  /**
-   * 应用主题到 DOM
-   */
-  const applyTheme = () => {
-    if (typeof window === 'undefined') return
-    
-    const html = document.documentElement
-    const theme = isDarkMode.value ? 'dark' : 'light'
-    
-    html.classList.remove('light', 'dark')
-    html.classList.add(theme)
-    html.setAttribute('data-theme', theme)
-  }
-  
-  /**
-   * 应用语言设置
-   */
-  const applyLanguage = (language: string) => {
-    if (typeof window === 'undefined') return
-    
-    document.documentElement.lang = language
-    
-    // 如果使用了 i18n，在这里切换语言
-    // const { $i18n } = useNuxtApp()
-    // if ($i18n) {
-    //   $i18n.locale.value = language
-    // }
-  }
-  
-  /**
-   * 初始化设置
-   */
-  const initialize = () => {
-    // Pinia 插件会自动恢复持久化设置
-    applyTheme()
-    applyLanguage(settings.value.language)
-    
-    // 监听系统主题变化
-    if (typeof window !== 'undefined' && settings.value.theme === 'system') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-      mediaQuery.addEventListener('change', applyTheme)
-    }
+  const _state = ref<SettingsState>(getDefaultState())
+  const _remoteLoaded = ref(false)
+
+  // ============ Getter ============
+
+  // 隐私标签
+  const privacy = computed((): UserSettingsData => _state.value.privacy)
+
+  // 通知标签
+  const notifications = computed((): SubscriptionsData => _state.value.notifications)
+
+  // 外观标签
+  const appearance = computed((): AppearanceSettings => _state.value.appearance)
+
+  // 外观快捷访问
+  const theme = computed(() => appearance.value.theme)
+  const language = computed(() => appearance.value.language)
+  const enableAnimations = computed(() => appearance.value.enableAnimations)
+  const compactMode = computed(() => appearance.value.compactMode)
+  const sidebarCollapsed = computed(() => appearance.value.sidebarCollapsed)
+
+  // 引导状态
+  const guide = computed((): GuideState => _state.value.guide)
+
+  // 引导快捷访问
+  const hasVisited = computed(() => guide.value.hasVisited)
+  const lastVisitTime = computed(() => guide.value.lastVisitTime)
+  const neverShowLoginPrompt = computed(() => guide.value.neverShowLoginPrompt)
+  const lastLoginPromptTime = computed(() => guide.value.lastLoginPromptTime)
+
+  const remoteLoaded = computed(() => _remoteLoaded.value)
+
+  // ============ Setter - 隐私标签 ============
+
+  const setPrivacy = (data: UserSettingsData) => {
+    _state.value.privacy = { ...data }
   }
 
-  // ============ API 调用方法 ============
-
-  /**
-   * 更新用户资料（API）
-   * ✅ Store 只负责状态管理，不处理 UI 反馈
-   */
-  const updateProfile = async (data: UpdateProfileRequest) => {
-    const userService = useUsersService()
-    const authStore = useAuthStore()
-    
-    await userService.updateProfile(data)
-    
-    // 更新 authStore 中的用户信息
-    authStore.updateCurrentUser(data)
+  const updatePrivacy = (updates: Partial<UserSettingsData>) => {
+    _state.value.privacy = { ..._state.value.privacy, ...updates }
   }
 
-  /**
-   * 更新隐私设置（API）
-   * ✅ Store 只负责状态管理，不处理 UI 反馈
-   */
-  const updatePrivacySettings = async (data: UpdateSettingsRequest) => {
-    const userService = useUsersService()
-    
-    await userService.updateSettings(data)
-    
-    // 更新本地设置
-    updatePrivacy({
-      profileVisibility: data.privacy_level as any || settings.value.privacy.profileVisibility,
-      locationSharing: data.is_location_sharing ?? settings.value.privacy.locationSharing,
-      onlineStatus: settings.value.privacy.onlineStatus,
-      readReceipts: settings.value.privacy.readReceipts
-    })
+  // ============ Setter - 通知标签 ============
+
+  const setNotifications = (data: SubscriptionsData) => {
+    _state.value.notifications = { ...data }
   }
 
-  /**
-   * 获取用户设置（API）
-   */
-  const fetchSettings = async () => {
-    const userService = useUsersService()
-    
-    try {
-      const response = await userService.getSettings()
-      
-      // 更新本地设置
-      updatePrivacy({
-        profileVisibility: response.privacy_level as any,
-        locationSharing: response.is_location_sharing,
-        onlineStatus: settings.value.privacy.onlineStatus,
-        readReceipts: settings.value.privacy.readReceipts
-      })
-    } catch (error: any) {
-      console.error('获取设置失败:', error)
-    }
+  const updateNotifications = (updates: Partial<SubscriptionsData>) => {
+    _state.value.notifications = { ..._state.value.notifications, ...updates }
   }
-  
-  // ============ 初始化 ============
-  // 客户端自动初始化
-  if (typeof window !== 'undefined') {
-    initialize()
+
+  // ============ Setter - 外观标签 ============
+
+  const setTheme = (value: ThemeMode) => {
+    _state.value.appearance.theme = value
   }
-  
+
+  const setLanguage = (value: LanguageCode) => {
+    _state.value.appearance.language = value
+  }
+
+  const setEnableAnimations = (value: boolean) => {
+    _state.value.appearance.enableAnimations = value
+  }
+
+  const setCompactMode = (value: boolean) => {
+    _state.value.appearance.compactMode = value
+  }
+
+  const setSidebarCollapsed = (value: boolean) => {
+    _state.value.appearance.sidebarCollapsed = value
+  }
+
+  // ============ Setter - 引导状态 ============
+
+  const markVisited = () => {
+    _state.value.guide.hasVisited = true
+    _state.value.guide.lastVisitTime = Date.now()
+  }
+
+  const updateLastVisitTime = () => {
+    _state.value.guide.lastVisitTime = Date.now()
+  }
+
+  const setNeverShowLoginPrompt = (value: boolean) => {
+    _state.value.guide.neverShowLoginPrompt = value
+  }
+
+  const updateLastLoginPromptTime = () => {
+    _state.value.guide.lastLoginPromptTime = Date.now()
+  }
+
+  // ============ 其他 ============
+
+  const markRemoteLoaded = () => {
+    _remoteLoaded.value = true
+  }
+
+  const reset = () => {
+    _state.value = getDefaultState()
+    _remoteLoaded.value = false
+  }
+
   return {
-    // 状态（直接返回，供 Pinia 和插件使用）
-    settings,
-    isDarkMode,
-    displaySettings,
-    notificationSettings,
-    privacySettings,
-    
-    // 状态操作方法
-    updateSettings,
-    setSettings,
-    resetSettings,
-    setTheme,
-    toggleTheme,
-    setLanguage,
-    updateNotifications,
-    toggleNotification,
-    updatePrivacy,
-    initialize,
+    _state,
 
-    // API 调用方法
-    updateProfile,
-    updatePrivacySettings,
-    fetchSettings
+    // Getter - 按标签分类
+    privacy,
+    notifications,
+    appearance,
+    guide,
+
+    // Getter - 外观快捷访问
+    theme,
+    language,
+    enableAnimations,
+    compactMode,
+    sidebarCollapsed,
+
+    // Getter - 引导快捷访问
+    hasVisited,
+    lastVisitTime,
+    neverShowLoginPrompt,
+    lastLoginPromptTime,
+
+    // 状态标志
+    remoteLoaded,
+
+    // Setter - 隐私标签
+    setPrivacy,
+    updatePrivacy,
+
+    // Setter - 通知标签
+    setNotifications,
+    updateNotifications,
+
+    // Setter - 外观标签
+    setTheme,
+    setLanguage,
+    setEnableAnimations,
+    setCompactMode,
+    setSidebarCollapsed,
+
+    // Setter - 引导状态
+    markVisited,
+    updateLastVisitTime,
+    setNeverShowLoginPrompt,
+    updateLastLoginPromptTime,
+
+    // 其他
+    markRemoteLoaded,
+    reset
   }
 }, {
   persist: {
     key: 'app-settings',
-    pick: ['settings']
+    pick: ['_state']
   }
 })

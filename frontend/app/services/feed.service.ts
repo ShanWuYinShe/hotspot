@@ -1,48 +1,44 @@
 import { BaseService } from './base.service'
-import type { FeedItem, FeedSystemInfo, PaginatedData } from '~/types/api'
+import { FEED } from '~/config/api'
+import type {
+  PaginatedData,
+  GetFeedMomentsRequest,
+  FeedMomentItem,
+  GetFeedGroupsRequest,
+  FeedGroupItem,
+  GetFeedUsersRequest,
+  FeedUserItem,
+  GetFeedTrendingRequest,
+  FeedTrendingData,
+  FeedFeedbackRequest
+} from '~/types/api'
 
-/**
- * 信息流服务
- * ✅ 类型定义已统一从 types/api.ts 导入
- */
-
-// ==================== Request 类型定义 ====================
-
-export interface ListFeedRequest {
-  channel: 'following' | 'nearby' | 'recommended'
-  limit?: number
-  cursor?: string
-}
-
-export interface FeedFeedbackRequest {
-  item_id: string
-  action: 'hide' | 'not_interested' | 'clicked' | 'viewed'
-}
-
-// ==================== 服务类 ====================
-
-export class FeedService extends BaseService {
-  protected readonly baseUrl = ''
-
-  /**
-   * 获取信息流
-   */
-  async getList(params: ListFeedRequest): Promise<PaginatedData<FeedItem>> {
-    return this.post<PaginatedData<FeedItem>>('/protected/feed/get_list', params)
+class FeedService extends BaseService {
+  // 获取瞬间信息流
+  async getMoments(request: GetFeedMomentsRequest = {}) {
+    return this.post<PaginatedData<FeedMomentItem>>(FEED.MOMENTS, request)
   }
 
-  /**
-   * 反馈信息流条目
-   */
-  async feedback(data: FeedFeedbackRequest): Promise<void> {
-    return this.post<void>('/protected/feed/feedback', data)
+  // 获取群组推荐
+  async getGroups(request: GetFeedGroupsRequest = {}) {
+    return this.post<PaginatedData<FeedGroupItem>>(FEED.GROUPS, request)
+  }
+
+  // 获取用户推荐
+  async getUsers(request: GetFeedUsersRequest = {}) {
+    return this.post<PaginatedData<FeedUserItem>>(FEED.USERS, request)
+  }
+
+  // 获取热门内容
+  async getTrending(request: GetFeedTrendingRequest = {}) {
+    return this.post<FeedTrendingData>(FEED.TRENDING, request)
+  }
+
+  // 反馈信息流内容
+  async feedback(request: FeedFeedbackRequest) {
+    return this.post<void>(FEED.FEEDBACK, request)
   }
 }
 
 export const feedService = new FeedService()
-
-export function useFeedService() {
-  return feedService
-}
-
-
+export function useFeedService() { return feedService }

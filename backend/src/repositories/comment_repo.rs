@@ -126,47 +126,6 @@ impl CommentRepository {
         Ok(())
     }
 
-    /// 检查是否已点赞
-    pub async fn is_liked(&self, comment_id: Uuid, user_id: i64) -> Result<bool> {
-        let result = sqlx::query!(
-            r#"
-            SELECT EXISTS(
-                SELECT 1 FROM comment_likes 
-                WHERE comment_id = $1 AND user_id = $2
-            ) as "exists!"
-            "#,
-            comment_id,
-            user_id
-        )
-        .fetch_one(&self.pool)
-        .await?;
-        Ok(result.exists)
-    }
-
-    /// 获取点赞数
-    pub async fn get_like_count(&self, comment_id: Uuid) -> Result<i32> {
-        let count = sqlx::query!(
-            r#"SELECT COUNT(*) as "count!" FROM comment_likes WHERE comment_id = $1"#,
-            comment_id
-        )
-        .fetch_one(&self.pool)
-        .await?
-        .count as i32;
-        Ok(count)
-    }
-
-    /// 获取回复数
-    pub async fn get_reply_count(&self, comment_id: Uuid) -> Result<i32> {
-        let count = sqlx::query!(
-            r#"SELECT COUNT(*) as "count!" FROM comments WHERE parent_id = $1 AND is_deleted = FALSE"#,
-            comment_id
-        )
-        .fetch_one(&self.pool)
-        .await?
-        .count as i32;
-        Ok(count)
-    }
-
     /// 批量获取评论统计数据（点赞数和回复数）
     pub async fn get_stats_batch(&self, comment_ids: &[Uuid]) -> Result<std::collections::HashMap<Uuid, (i32, i32)>> {
         if comment_ids.is_empty() {
@@ -287,7 +246,7 @@ impl CommentRepository {
         let likes = sqlx::query_as!(
             CommentLikeRow,
             r#"
-            SELECT id, cursor_id, comment_id, user_id, created_at
+            SELECT cursor_id, user_id, created_at
             FROM comment_likes
             WHERE comment_id = $1 AND id < $2
             ORDER BY id DESC
@@ -302,14 +261,13 @@ impl CommentRepository {
 
         Ok(likes)
     }
+
 }
 
 /// 评论点赞行
 #[derive(Debug)]
 pub struct CommentLikeRow {
-    pub id: i64,
     pub cursor_id: Uuid,
-    pub comment_id: Uuid,
     pub user_id: i64,
     pub created_at: DateTime<Utc>,
 }

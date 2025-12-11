@@ -19,12 +19,12 @@ alwaysApply: false
 3. 遇到冲突时，以 @api_spec.mdc 为准
 
 **API规范快速引用**：
-- 完整的API端点定义 → @api_spec.mdc 第3章
-- 完整的WebSocket事件定义 → @api_spec.mdc 第4章
-- 完整的错误码定义 → @api_spec.mdc 第2.5节
-- 通用类型定义 → @api_spec.mdc 第2.2节
-- 类型转换规范 → @api_spec.mdc 第2.8节
-- 密码安全策略 → @api_spec.mdc 第2.10节
+- 完整的API端点定义 → @api_spec.mdc API端点与类型定义
+- 完整的WebSocket事件定义 → @api_spec.mdc WebSocket实时事件定义
+- 完整的错误码定义 → @api_spec.mdc 错误码定义
+- 通用类型定义 → @api_spec.mdc 通用类型定义
+- 类型转换规范 → @api_spec.mdc 类型转换规范
+- 密码安全策略 → @api_spec.mdc 密码安全策略
 
 ## 1. 核心开发约束
 
@@ -194,7 +194,7 @@ await routerInstance.pushUrl({ url: 'pages/HomePage' });
 
 ## 3. 密码安全处理规范
 
-⚠️ **完整的密码安全策略请参见**: @api_spec.mdc **第2.10节**
+⚠️ **完整的密码安全策略请参见**: @api_spec.mdc **密码安全策略**
 
 ### 3.1 SHA-256哈希计算实现（ArkTS）
 
@@ -382,85 +382,29 @@ async function handleLogin(loginId: string, password: string) {
 }
 ```
 
-## 4. 用户ID类型判断规范
+## 4. 用户类型判断规范
 
-**用户类型标识规范**（完全遵循 `@api_spec.mdc` 第2.9节）：
-- ✅ 用户类型通过 `user_type` 枚举字段标识，而非通过ID编码
-- ✅ 用户类型枚举：`'temp'` | `'normal'` | `'system'`
-- ✅ user_id 使用UUID字符串，与其他所有业务ID保持一致
+**用户类型标识规范**（遵循 `@api_spec.mdc` 用户类型标识）：
+- 用户类型通过 `user_type` 字段判断（包含在 UserInfo 等响应类型中）
+- 用户类型值：`temp`（临时用户）| `normal`（注册用户）| `system`（系统用户）
 
-### 4.1 用户类型判断函数
+**用户ID分配规则**：
+- 系统用户区间：1 - 1,000,000（通过管理员接口创建）
+- 临时用户和注册用户区间：1,000,001+（共用序列）
 
 **必须实现的工具函数**：
-```typescript
-// 判断用户类型（基于 user_type 字段）
-function isTempUser(userType: 'temp' | 'normal' | 'system'): boolean {
-  return userType === 'temp';
-}
+- `isTempUser(userType)` - 判断是否为临时用户
+- `isNormalUser(userType)` - 判断是否为普通用户
+- `isSystemUser(userType)` - 判断是否为系统用户
 
-// 判断是否为普通用户
-function isRegularUser(userType: 'temp' | 'normal' | 'system'): boolean {
-  return userType === 'normal';
-}
-
-// 判断是否为系统用户
-function isSystemUser(userType: 'temp' | 'normal' | 'system'): boolean {
-  return userType === 'system';
-}
-```
-
-**API响应示例**：
-```typescript
-interface MyProfileData {
-  user_id: string;          // UUID字符串
-  user_type: 'temp' | 'normal' | 'system';  // 用户类型枚举
-  nickname: string;
-  avatar_url?: string;
-  // ... 其他字段
-}
-```
-
-### 4.2 用户类型显示策略
-
-**UI显示规范**：
-```typescript
-@Component
-struct UserTypeIndicator {
-  @Prop userType: 'temp' | 'normal' | 'system';
-  
-  build() {
-    if (isTempUser(this.userType)) {
-      Text('临时')
-        .fontSize(10)
-        .fontColor($r('sys.color.ohos_id_color_warning'))
-        .backgroundColor($r('sys.color.ohos_id_color_warning_bg'))
-        .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-        .borderRadius(4)
-    } else if (isSystemUser(this.userType)) {
-      Text('官方')
-        .fontSize(10)
-        .fontColor($r('sys.color.ohos_id_color_emphasize'))
-        .backgroundColor($r('sys.color.ohos_id_color_emphasize_bg'))
-        .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-        .borderRadius(4)
-    }
-    // 普通用户不显示标识
-  }
-}
-```
-
-**使用示例**：
-```typescript
-// 从API响应中获取用户类型
-const userProfile: MyProfileData = await userService.getMyProfile();
-
-// 显示用户类型标识
-UserTypeIndicator({ userType: userProfile.user_type })
-```
+**用户类型显示策略**：
+- 临时用户：显示"临时"标识（warning 颜色），引导升级
+- 普通用户：正常显示，无特殊标识
+- 系统用户：显示"官方"标识（emphasize 颜色）
 
 ## 5. WebSocket通信规范
 
-**WebSocket设计理念**（完全遵循 `@api_spec.mdc` 第4章"WebSocket 实时事件定义"）：
+**WebSocket设计理念**（完全遵循 `@api_spec.mdc` WebSocket实时事件定义）：
 - **核心定位**：WebSocket 是实时数据推送通道，用于服务端主动向客户端推送所有需要实时处理的数据
 - **API + WebSocket 双通道架构**：API负责历史查询，WebSocket负责实时推送
 - **协作流程**：启动时 API 加载历史 → WebSocket 接收实时推送；重连后 API 补拉离线数据
@@ -479,8 +423,8 @@ UserTypeIndicator({ userType: userProfile.user_type })
 ### 5.2 心跳机制
 
 **心跳参数**：
-- 客户端每 25秒 发送 `Ping` 事件
-- 服务端在 5秒 内必须回复 `Pong` 事件
+- 客户端每 45秒 发送 `Ping` 事件
+- 服务端在 10秒 内必须回复 `Pong` 事件
 - 如果3次心跳失败，客户端主动断开并重连
 - 服务端如果60秒未收到任何消息，主动断开连接
 
@@ -488,7 +432,7 @@ UserTypeIndicator({ userType: userProfile.user_type })
 ```typescript
 class HeartbeatManager {
   private heartbeatTimer: number | null = null;
-  private heartbeatInterval: number = 25000; // 25秒
+  private heartbeatInterval: number = 45000; // 45秒
   private missedHeartbeats: number = 0;
   private maxMissedHeartbeats: number = 3;
   
@@ -595,7 +539,7 @@ class ReconnectManager {
 
 ### 5.4 订阅管理
 
-**订阅机制**（完整规范见 `@api_spec.mdc` 第4.4节）：
+**订阅机制**（完整规范见 `@api_spec.mdc` 客户端发送事件）：
 ```typescript
 class SubscriptionManager {
   private subscribedRooms: Set<string> = new Set();
@@ -839,7 +783,7 @@ wsService.onMessage('UserOffline', (data) => {
 ```
 
 **WebSocket事件类型**：
-完整的WebSocket消息类型定义请参考 `@api_spec.mdc` 第4.3章"服务端推送事件"和第4.4章"客户端发送事件"。
+完整的WebSocket消息类型定义请参考 `@api_spec.mdc` 服务端推送事件和客户端发送事件。
 
 ## 6. 系统服务集成规范
 
@@ -1081,7 +1025,7 @@ class LocationService {
 
 ## 10. 幂等性处理规范
 
-**幂等性设计**（完全遵循 `@api_spec.mdc` 第2.17节"幂等性设计"）：
+**幂等性设计**（完全遵循 `@api_spec.mdc` 幂等性设计）：
 
 ### 10.1 核心原则
 
@@ -1161,9 +1105,9 @@ async function sendMessageWithNotification(privateChatId: string, content: strin
 ### 10.3 自动幂等的操作
 
 **无需客户端处理的操作**：
-- 发送消息：`POST /api/v1/protected/chat_messages/send_message`
+- 发送私聊消息：`POST /api/v1/protected/private_messages/send`
+- 发送群聊消息：`POST /api/v1/protected/group_messages/send`
 - 创建生活瞬间：`POST /api/v1/protected/moments/create`
-- 发送好友申请：`POST /api/v1/protected/user/send_friend_request`
 - 创建群组：`POST /api/v1/protected/group_chats/create`
 - 文件上传：`POST /api/v1/protected/media/upload_file`
 
@@ -1258,7 +1202,7 @@ httpService.request({
 
 ### 11.2 统一响应处理
 
-**响应格式**（完全遵循 `@api_spec.mdc` 第2.3节）：
+**响应格式**（完全遵循 `@api_spec.mdc` 统一响应格式）：
 ```typescript
 interface ApiResponse<T = void> {
   code: number;       // 状态码：0表示成功，非0表示错误
@@ -1468,13 +1412,13 @@ class HttpInterceptor {
 }
 ```
 
-## 12. 速率限制处理规范（完整规范见 `@api_spec.mdc` 第2.14节）
+## 12. 速率限制处理规范（完整规范见 `@api_spec.mdc` 速率限制与配额管理）
 
 ### 12.1 速率限制响应处理
 
 **核心原则**：
-- 检测HTTP 429响应和速率限制错误码（1400-1404）
-- 读取响应头获取限制信息和重试时间
+- 检测速率限制错误码（1400-1404），所有响应均为 HTTP 200
+- 读取响应头获取限制信息（`X-RateLimit-Reset`）
 - 提供用户友好的错误提示
 - 实现客户端速率限制预防
 
@@ -1636,12 +1580,12 @@ class RequestQueue {
 export const requestQueue = new RequestQueue();
 
 // 使用示例
-async function sendMessageQueued(roomId: string, content: string) {
+async function sendMessageQueued(chatId: string, content: string) {
   return requestQueue.enqueue(() => 
     httpService.request({
       method: 'POST',
-      url: '/api/v1/protected/chat_messages/send_message',
-      data: { room_id: roomId, content }
+      url: '/api/v1/protected/private_messages/send',
+      data: { id: chatId, type: 'text', content }
     })
   );
 }
@@ -1649,304 +1593,5 @@ async function sendMessageQueued(roomId: string, content: string) {
 
 **最佳实践**：
 - 实现请求队列，避免短时间内大量请求
-- 批量操作使用批量API（如 `mark_as_read_batch`）
 - 缓存结果，减少重复请求
 - 对用户高频操作添加防抖/节流
-
-## 13. 批量操作实现规范（完整规范见 `@api_spec.mdc` 第2.15节）
-
-### 13.1 批量操作调用模式
-
-**核心原则**：
-- 使用专门的批量API端点，不要循环调用单次API
-- 处理部分成功的情况，给用户清晰的反馈
-- 遵守批量操作的大小限制（最多100条）
-
-**批量请求格式**：
-```typescript
-interface BatchRequest<T> {
-  items: T[];           // 批量操作的数据项
-  atomic?: boolean;     // 是否原子操作（默认false）
-}
-
-interface BatchResponse<T> {
-  total: number;        // 总数量
-  succeeded: number;    // 成功数量
-  failed: number;       // 失败数量
-  results: Array<{
-    index: number;      // 对应请求items的索引
-    code: number;       // 0表示成功，非0表示失败
-    data?: T;           // 成功时的数据
-    message?: string;   // 失败时的错误消息
-  }>;
-}
-```
-
-**批量标记已读实现示例**：
-```typescript
-// ✅ 正确：使用批量API
-async function markMultipleRoomsAsRead(rooms: Array<{ room_id: string; up_to: string }>) {
-  // 验证批量大小
-  if (rooms.length > 100) {
-    promptAction.showToast({ message: '批量操作最多支持100条记录' });
-    return;
-  }
-  
-  const response = await httpService.request<BatchResponse<void>>({
-    method: 'POST',
-    url: '/api/v1/protected/chat_messages/mark_as_read_batch',
-    data: {
-      items: rooms,
-      atomic: false  // 非原子操作，部分失败继续处理
-    }
-  });
-  
-  const { succeeded, failed, results } = response.result.data;
-  
-  // 处理结果
-  if (failed > 0) {
-    const failedRooms = results
-      .filter(r => r.code !== 0)
-      .map(r => rooms[r.index].room_id);
-    
-    promptAction.showToast({
-      message: `${succeeded} 个房间标记成功，${failed} 个失败`
-    });
-    console.error('Failed rooms:', failedRooms);
-  } else {
-    promptAction.showToast({
-      message: `成功标记 ${succeeded} 个房间为已读`
-    });
-  }
-  
-  return response.result.data;
-}
-
-// ❌ 错误：循环调用单次API
-async function markMultipleRoomsAsReadBad(rooms: Array<{ room_id: string; up_to: string }>) {
-  for (const room of rooms) {
-    await httpService.request({
-      method: 'POST',
-      url: '/api/v1/protected/chat_messages/mark_as_read',
-      data: room
-    });
-  }
-}
-```
-
-**批量删除通知实现示例**：
-```typescript
-async function deleteMultipleNotifications(notificationIds: string[]) {
-  if (notificationIds.length > 100) {
-    promptAction.showToast({ message: '批量操作最多支持100条记录' });
-    return;
-  }
-  
-  const response = await httpService.request<BatchResponse<void>>({
-    method: 'POST',
-    url: '/api/v1/protected/inbox/remove_batch',
-    data: {
-      items: notificationIds
-    }
-  });
-  
-  const { succeeded, failed, results } = response.result.data;
-  
-  // 处理结果
-  if (failed > 0) {
-    promptAction.showToast({
-      message: `${succeeded} 条通知删除成功，${failed} 条失败`
-    });
-    
-    // 记录失败的通知ID
-    const failedIds = results
-      .filter(r => r.code !== 0)
-      .map(r => notificationIds[r.index]);
-    console.error('Failed notification IDs:', failedIds);
-  } else {
-    promptAction.showToast({
-      message: `成功删除 ${succeeded} 条通知`
-    });
-  }
-  
-  return response.result.data;
-}
-```
-
-### 13.2 批量操作UI反馈
-
-**加载状态显示**：
-```typescript
-@Component
-struct BatchOperationComponent {
-  @State isLoading: boolean = false;
-  @State selectedRooms: Array<{ room_id: string; up_to: string }> = [];
-  
-  async executeBatchMarkAsRead() {
-    this.isLoading = true;
-    
-    try {
-      const result = await markMultipleRoomsAsRead(this.selectedRooms);
-      
-      promptAction.showToast({
-        message: `批量操作完成：${result.succeeded}/${result.total} 成功`
-      });
-    } catch (error) {
-      promptAction.showToast({
-        message: '批量操作失败：' + error.message
-      });
-    } finally {
-      this.isLoading = false;
-    }
-  }
-  
-  build() {
-    Column() {
-      Button(this.isLoading ? '处理中...' : '批量标记已读')
-        .enabled(!this.isLoading)
-        .onClick(() => this.executeBatchMarkAsRead())
-    }
-  }
-}
-```
-
-**部分失败处理**：
-```typescript
-function handleBatchResult<T>(
-  result: BatchResponse<T>, 
-  itemNames: string[]
-): { type: 'success' | 'warning' | 'error'; message: string; details?: string } {
-  if (result.failed === 0) {
-    // 全部成功
-    return {
-      type: 'success',
-      message: `成功处理 ${result.succeeded} 项`
-    };
-  } else if (result.succeeded === 0) {
-    // 全部失败
-    return {
-      type: 'error',
-      message: `批量操作失败，所有 ${result.total} 项均未成功`
-    };
-  } else {
-    // 部分成功
-    const failedItems = result.results
-      .filter(r => r.code !== 0)
-      .map(r => itemNames[r.index]);
-    
-    return {
-      type: 'warning',
-      message: `${result.succeeded} 项成功，${result.failed} 项失败`,
-      details: failedItems.join(', ')
-    };
-  }
-}
-```
-
-### 13.3 批量操作最佳实践
-
-**分批处理大量数据**：
-```typescript
-// 处理超过100条的大量数据
-async function processManyItems<T>(
-  items: T[],
-  batchApi: (batch: T[]) => Promise<BatchResponse<any>>
-): Promise<{ total: number; succeeded: number; failed: number }> {
-  const BATCH_SIZE = 100;
-  const batches: T[][] = [];
-  
-  for (let i = 0; i < items.length; i += BATCH_SIZE) {
-    const batch = items.slice(i, i + BATCH_SIZE);
-    batches.push(batch);
-  }
-  
-  const results = {
-    total: items.length,
-    succeeded: 0,
-    failed: 0
-  };
-  
-  for (const batch of batches) {
-    const result = await batchApi(batch);
-    results.succeeded += result.succeeded;
-    results.failed += result.failed;
-  }
-  
-  return results;
-}
-```
-
-**用户确认机制**：
-```typescript
-// 批量操作前确认
-async function deleteMultipleWithConfirmation(ids: string[]) {
-  return new Promise((resolve, reject) => {
-    AlertDialog.show({
-      title: '批量删除确认',
-      message: `确定要删除 ${ids.length} 项吗？此操作不可撤销。`,
-      primaryButton: {
-        value: '确认删除',
-        action: async () => {
-          try {
-            const result = await deleteMultipleNotifications(ids);
-            resolve(result);
-          } catch (error) {
-            reject(error);
-          }
-        }
-      },
-      secondaryButton: {
-        value: '取消',
-        action: () => reject(new Error('用户取消操作'))
-      }
-    });
-  });
-}
-```
-
-**错误恢复机制**：
-```typescript
-// 批量操作失败后重试失败项
-async function batchOperationWithRetry<T>(
-  items: T[],
-  batchApi: (items: T[]) => Promise<BatchResponse<any>>,
-  maxRetries: number = 2
-): Promise<{ total: number; succeeded: number; failed: number }> {
-  let remainingItems = [...items];
-  let attempt = 0;
-  
-  while (attempt < maxRetries && remainingItems.length > 0) {
-    const result = await batchApi(remainingItems);
-    
-    if (result.failed === 0) {
-      return {
-        total: items.length,
-        succeeded: items.length,
-        failed: 0
-      };
-    }
-    
-    // 提取失败的项
-    const failedIndices = result.results
-      .filter(r => r.code !== 0)
-      .map(r => r.index);
-    
-    remainingItems = failedIndices.map(i => remainingItems[i]);
-    attempt++;
-    
-    if (attempt < maxRetries) {
-      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));  // 指数退避
-    }
-  }
-  
-  return {
-    total: items.length,
-    succeeded: items.length - remainingItems.length,
-    failed: remainingItems.length
-  };
-}
-```
-
-**支持的批量操作API**：
-- `POST /api/v1/protected/chat_messages/mark_as_read_batch` - 批量标记消息已读
-- `POST /api/v1/protected/inbox/remove_batch` - 批量删除通知

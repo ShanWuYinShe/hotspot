@@ -1,3 +1,9 @@
+//! 用户位置历史仓库
+//!
+//! 记录用户历史位置变化
+
+#![allow(dead_code)]
+
 use sqlx::{PgPool, FromRow};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -26,6 +32,7 @@ impl UserLocationHistoryRepository {
     }
 
     /// 记录用户位置
+    /// location 字段由数据库 trigger 自动从 latitude/longitude 生成
     pub async fn record(
         &self,
         user_id: i64,
@@ -91,5 +98,34 @@ impl UserLocationHistoryRepository {
         .await?;
 
         Ok(rows.into_iter().map(|r| (r.user_id, r)).collect())
+    }
+
+    /// 使用 PostGIS 计算用户最新位置与指定坐标的距离（米）
+    /// 返回 None 表示没有位置记录
+    pub async fn get_distance_from_latest(
+        &self,
+        user_id: i64,
+        latitude: f64,
+        longitude: f64,
+    ) -> Result<Option<f64>> {
+        let row = sqlx::query_scalar!(
+            r#"
+            SELECT ST_Distance(
+                ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography,
+                ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography
+            ) as "distance!"
+            FROM user_location_history
+            WHERE user_id = $1
+            ORDER BY recorded_at DESC
+            LIMIT 1
+            "#,
+            user_id,
+            longitude,
+            latitude
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(row)
     }
 }

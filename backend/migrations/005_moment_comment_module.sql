@@ -11,7 +11,6 @@ CREATE TABLE moments (
     user_id BIGINT NOT NULL,
     description TEXT NOT NULL,
     images TEXT[],
-    tags TEXT[],
     latitude DOUBLE PRECISION NOT NULL,
     longitude DOUBLE PRECISION NOT NULL,
     location_name VARCHAR(255) NOT NULL,
@@ -27,7 +26,6 @@ CREATE TABLE moments (
 CREATE INDEX idx_moments_cursor_id ON moments (cursor_id) WHERE is_deleted = FALSE;
 CREATE INDEX idx_moments_user_id ON moments (user_id, created_at DESC) WHERE is_deleted = FALSE;
 CREATE INDEX idx_moments_location ON moments USING gist (location) WHERE is_deleted = FALSE;
-CREATE INDEX idx_moments_tags ON moments USING gin (tags) WHERE tags IS NOT NULL AND is_deleted = FALSE;
 CREATE INDEX idx_moments_created_at ON moments (created_at DESC) WHERE is_deleted = FALSE;
 
 CREATE TRIGGER trigger_moments_updated_at

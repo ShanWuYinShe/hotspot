@@ -1,3 +1,9 @@
+//! 用户在线状态仓库
+//!
+//! 管理用户的在线状态记录（数据库持久化）
+
+#![allow(dead_code)]
+
 use chrono::{DateTime, Utc};
 
 use sqlx::PgPool;
@@ -168,7 +174,6 @@ impl UserOnlineStatusRepository {
 
 /// 用户在线状态行
 #[derive(Debug)]
-#[allow(dead_code)]
 pub struct UserOnlineStatusRow {
     pub user_id: i64,
     pub is_online: bool,

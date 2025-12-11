@@ -4,8 +4,8 @@
 use crate::{
     dto::{
         request::{
-            AddGroupMessageReactionRequest, DeleteGroupMessageRequest,
-            GetGroupMessageReactionsRequest, GetGroupMessagesRequest, GetMessageReadStatusRequest,
+            AddGroupMessageReactionRequest, RemoveGroupMessageReactionRequest, DeleteGroupMessageRequest,
+            GetGroupMessageReactionsListRequest, GetGroupMessagesRequest, GetMessageReadStatusRequest,
             MarkGroupMessagesReadRequest, RecallGroupMessageRequest, SendGroupMessageRequest,
             UpdateGroupMessageRequest,
         },
@@ -20,7 +20,7 @@ use crate::{
 };
 use axum::{extract::State, Extension, Json};
 
-/// POST /api/v1/protected/group_messages/send - 发送群聊消息
+/// 发送群聊消息
 pub async fn send(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
@@ -32,7 +32,7 @@ pub async fn send(
     Ok(Json(ApiResponse::success(response)))
 }
 
-/// POST /api/v1/protected/group_messages/get_history - 获取群聊消息历史
+/// 获取群聊消息历史
 pub async fn get_history(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
@@ -44,7 +44,7 @@ pub async fn get_history(
     Ok(Json(ApiResponse::success(response)))
 }
 
-/// POST /api/v1/protected/group_messages/update - 编辑群聊消息
+/// 编辑群聊消息
 pub async fn update(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
@@ -56,7 +56,7 @@ pub async fn update(
     Ok(Json(ApiResponse::success_empty()))
 }
 
-/// POST /api/v1/protected/group_messages/recall - 撤回群聊消息
+/// 撤回群聊消息
 pub async fn recall(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
@@ -68,7 +68,7 @@ pub async fn recall(
     Ok(Json(ApiResponse::success_empty()))
 }
 
-/// POST /api/v1/protected/group_messages/delete - 删除群聊消息
+/// 删除群聊消息
 pub async fn delete(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
@@ -80,7 +80,7 @@ pub async fn delete(
     Ok(Json(ApiResponse::success_empty()))
 }
 
-/// POST /api/v1/protected/group_messages/mark_as_read - 标记群聊消息已读
+/// 标记群聊消息已读
 pub async fn mark_as_read(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
@@ -92,7 +92,7 @@ pub async fn mark_as_read(
     Ok(Json(ApiResponse::success_empty()))
 }
 
-/// POST /api/v1/protected/group_messages/get_read_status - 获取消息已读状态
+/// 获取消息已读状态
 pub async fn get_read_status(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
@@ -104,7 +104,7 @@ pub async fn get_read_status(
     Ok(Json(ApiResponse::success(response)))
 }
 
-/// POST /api/v1/protected/group_messages/add_reaction - 添加消息反应
+/// 添加消息反应
 pub async fn add_reaction(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
@@ -116,14 +116,26 @@ pub async fn add_reaction(
     Ok(Json(ApiResponse::success_empty()))
 }
 
-/// POST /api/v1/protected/group_messages/get_reactions - 获取消息反应列表
-pub async fn get_reactions(
+/// 移除消息反应
+pub async fn remove_reaction(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
-    Json(req): Json<GetGroupMessageReactionsRequest>,
+    Json(req): Json<RemoveGroupMessageReactionRequest>,
+) -> Result<Json<ApiResponse<()>>> {
+    let service = GroupMessageService::new(&state.db, &state.redis, state.event_bus.clone());
+    service.remove_reaction(&req, user_id).await?;
+
+    Ok(Json(ApiResponse::success_empty()))
+}
+
+/// 获取消息反应列表
+pub async fn get_reactions_list(
+    State(state): State<AppState>,
+    Extension(user_id): Extension<i64>,
+    Json(req): Json<GetGroupMessageReactionsListRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<MessageReactionItem>>>> {
     let service = GroupMessageService::new(&state.db, &state.redis, state.event_bus.clone());
-    let response = service.get_reactions(&req, user_id).await?;
+    let response = service.get_reactions_list(&req, user_id).await?;
 
     Ok(Json(ApiResponse::success(response)))
 }

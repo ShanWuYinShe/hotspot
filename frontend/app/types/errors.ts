@@ -129,7 +129,7 @@ export interface StandardError {
   operation?: string; // 正在执行的操作
   
   // 原始错误信息（调试用）
-  originalError?: any;
+  originalError?: unknown;
   
   // 特定类型的详细信息
   geolocation?: GeolocationErrorInfo;
@@ -156,7 +156,7 @@ export type ErrorFactory = (params: {
   message: string;
   source: string;
   operation?: string;
-  originalError?: any;
+  originalError?: unknown;
   canRetry?: boolean;
   requiresUserAction?: boolean;
   shouldNotify?: boolean;
@@ -168,7 +168,7 @@ export type ErrorFactory = (params: {
 
 export interface ErrorHandler {
   handle(error: StandardError): Promise<void>;
-  canHandle(error: any): boolean;
+  canHandle(error: unknown): boolean;
   priority: number; // 处理器优先级
 }
 

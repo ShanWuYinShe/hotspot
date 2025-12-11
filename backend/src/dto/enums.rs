@@ -9,19 +9,13 @@ use serde::{Deserialize, Serialize};
 // 重新导出数据库层的枚举类型
 // ============================================================
 pub use crate::types::enums::{
-    FeedChannel,
-    FeedItemType,
     InviteStatus,
     JoinMethod,
-    LeaderboardScope,
-    LeaderboardTimeframe,
     MemberRole,
     MessageType,
     NotificationCategory,
     NotificationSeverity,
-    Platform as DevicePlatform, // Re-export Platform as DevicePlatform to match API spec naming if needed, or just use Platform? Spec uses 'ios' | 'android' | 'web' string union in DTO usually.
-                                // Spec 3.13.5 uses platform: 'ios' | 'android' | 'web'.
-                                // Let's keep it as Platform or map it.
+    Platform as DevicePlatform,
     PrivacyLevel,
     ReactionType,
     RelationshipStatus,
@@ -101,13 +95,7 @@ pub enum ActionType {
     Unregister,
 }
 
-// 好友申请状态方向（发送/接收）
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
-pub enum FriendRequestStatus {
-    Sent,     // 我发送的好友申请
-    Received, // 我收到的好友申请
-}
+// 好友 = 互相关注，无独立好友申请流程
 
 // 系统健康检查状态
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]

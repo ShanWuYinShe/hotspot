@@ -12,7 +12,7 @@ import { PersistentStateManager } from '../common/state/PersistentStateManager';
 import { PreferencesUtil } from '../common/storage/PreferencesUtil';
 import { LocationUtil } from '../common/location/LocationUtil';
 import { WebSocketService } from '../common/websocket/WebSocketService';
-import { UserResponse } from '../common/types/BackendApiTypes';
+import { MyProfileData } from '../common/types/api';
 import { PermissionManager } from '../common/permission/PermissionManager';
 import { NotificationComponent } from '../components/NotificationComponent';
 import { NavIcon, AppIcon } from '../components/SystemIcon';

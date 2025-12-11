@@ -1,162 +1,152 @@
 /**
- * 基础服务类 - 提供统一的 API 接口
- * 遵循现代化服务设计模式
+ * 基础服务类 - 提供统一的 HTTP 请求方法
+ * 
+ * 特性：
+ * - 自动刷新过期的 access_token
+ * - 统一响应处理
+ * - 统一错误处理
  */
 
 import type { PaginatedData, ApiResponse } from '~/types/api'
-
-/**
- * HTTP 请求选项
- */
-interface RequestOptions {
-  timeout?: number
-  retry?: number
-  headers?: Record<string, string>
-}
+import { ensureRefreshToken, isTokenExpiredError } from '~/utils/token'
 
 export abstract class BaseService {
   /**
-   * ✅ 使用 getter 延迟初始化 HTTP 客户端
-   * 这样 useHttp() 只会在方法调用时执行，而不是在类实例化时
-   * 避免在非 Vue setup 上下文中调用 composables
+   * 获取 API 基础 URL
    */
-  protected get http() {
-    return useHttp()
-  }
-  
-  protected abstract readonly baseUrl: string
-
-  /**
-   * 构建完整 URL
-   */
-  protected buildUrl(endpoint: string): string {
-    return `${this.baseUrl}${endpoint}`
+  private get baseURL(): string {
+    const config = useRuntimeConfig()
+    return config.public.apiBaseUrl as string
   }
 
   /**
-   * POST 请求（需要认证）
-   * 根据API规范，所有API操作统一使用POST方法
+   * 获取认证 Token
    */
-  protected async post<T>(endpoint: string, body?: any, options?: RequestOptions): Promise<T> {
-    const builder = this.http.post(this.buildUrl(endpoint), body).auth()
-    
-    // 应用额外选项
-    if (options?.timeout) {
-      builder.timeout(options.timeout)
+  private get token(): string | null {
+    const authStore = useAuthStore()
+    return authStore.token
+  }
+
+  /**
+   * 获取刷新 Token
+   */
+  private get refreshToken(): string | null {
+    const authStore = useAuthStore()
+    return authStore.refreshToken
+  }
+
+  /**
+   * 处理 API 响应
+   */
+  private processResponse<T>(response: unknown): T {
+    if (typeof response === 'object' && response !== null && 'code' in response) {
+      const apiResponse = response as ApiResponse<T>
+      if (apiResponse.code === 0) {
+        return apiResponse.data as T
+      }
+      // 创建带有业务错误信息的 Error
+      throw Object.assign(new Error(apiResponse.message || '操作失败'), {
+        isBusinessError: true,
+        businessCode: apiResponse.code,
+        data: apiResponse
+      })
     }
-    if (options?.retry) {
-      builder.retry(options.retry)
+    return response as T
+  }
+
+  /**
+   * POST 请求（需要认证，支持自动刷新 token）
+   */
+  protected async post<T>(url: string, body?: object): Promise<T> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (this.token) {
+      headers.Authorization = `Bearer ${this.token}`
     }
-    if (options?.headers) {
-      builder.headers(options.headers)
+
+    try {
+      const response = await $fetch<ApiResponse<T>>(url, {
+        method: 'POST',
+        baseURL: this.baseURL,
+        headers,
+        body
+      })
+      return this.processResponse<T>(response)
+    } catch (error) {
+      // Token 过期，尝试刷新后重试
+      if (isTokenExpiredError(error) && this.refreshToken) {
+        const refreshed = await ensureRefreshToken()
+        if (refreshed) {
+          // 使用新 token 重试请求
+          const newHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
+          const newToken = this.token
+          if (newToken) {
+            newHeaders.Authorization = `Bearer ${newToken}`
+          }
+          const response = await $fetch<ApiResponse<T>>(url, {
+            method: 'POST',
+            baseURL: this.baseURL,
+            headers: newHeaders,
+            body
+          })
+          return this.processResponse<T>(response)
+        }
+      }
+      throw error
     }
-    
-    const response = await builder.send<T>()
-    return response.data
   }
 
   /**
    * 公开 POST 请求（无需认证）
-   * 根据API规范，所有API操作统一使用POST方法
    */
-  protected async publicPost<T>(endpoint: string, body?: any, options?: RequestOptions): Promise<T> {
-    const builder = this.http.post(this.buildUrl(endpoint), body)
-    
-    // 应用额外选项（公开接口不需要auth）
-    if (options?.timeout) {
-      builder.timeout(options.timeout)
-    }
-    if (options?.retry) {
-      builder.retry(options.retry)
-    }
-    if (options?.headers) {
-      builder.headers(options.headers)
-    }
-    
-    const response = await builder.send<T>()
-    return response.data
+  protected async publicPost<T>(url: string, body?: object): Promise<T> {
+    const response = await $fetch<ApiResponse<T>>(url, {
+      method: 'POST',
+      baseURL: this.baseURL,
+      headers: { 'Content-Type': 'application/json' },
+      body
+    })
+    return this.processResponse<T>(response)
   }
 
   /**
    * 分页查询
-   * 根据API规范，分页参数通过POST请求体传递
    */
-  protected async paginate<T>(
-    endpoint: string,
-    params: {
-      limit?: number
-      cursor?: string
-      [key: string]: any
-    } = {}
+  protected async paginate<T, P extends Record<string, unknown> = Record<string, unknown>>(
+    url: string,
+    params: { limit?: number; cursor?: string } & P = {} as { limit?: number; cursor?: string } & P
   ): Promise<PaginatedData<T>> {
-    return this.post<PaginatedData<T>>(endpoint, params)
+    return this.post<PaginatedData<T>>(url, params)
   }
 
   /**
-   * 上传单个文件
+   * 上传文件
    */
   protected async upload<T>(
-    endpoint: string,
+    url: string,
     file: File,
-    additionalData?: Record<string, any>
+    additionalData?: Record<string, string | number | boolean>
   ): Promise<T> {
     const formData = new FormData()
     formData.append('file', file)
-    
+
     if (additionalData) {
       Object.entries(additionalData).forEach(([key, value]) => {
         formData.append(key, String(value))
       })
     }
 
-    const builder = this.http.post(this.buildUrl(endpoint), formData).auth()
-    // 让浏览器自动设置 Content-Type（不手动设置headers）
-    
-    const response = await builder.send<T>()
-    return response.data
-  }
+    const headers: Record<string, string> = {}
+    if (this.token) {
+      headers.Authorization = `Bearer ${this.token}`
+    }
 
-  /**
-   * 批量上传文件
-   */
-  protected async uploadMultiple<T>(
-    endpoint: string,
-    files: File[],
-    fieldName: string = 'files',
-    additionalData?: Record<string, any>
-  ): Promise<T> {
-    const formData = new FormData()
-    
-    // 添加多个文件
-    files.forEach(file => {
-      formData.append(fieldName, file)
+    const response = await $fetch<ApiResponse<T>>(url, {
+      method: 'POST',
+      baseURL: this.baseURL,
+      headers,
+      body: formData
     })
-    
-    // 添加额外数据
-    if (additionalData) {
-      Object.entries(additionalData).forEach(([key, value]) => {
-        formData.append(key, String(value))
-      })
-    }
 
-    const builder = this.http.post(this.buildUrl(endpoint), formData).auth()
-    // 让浏览器自动设置 Content-Type（不手动设置headers）
-    
-    const response = await builder.send<T>()
-    return response.data
-  }
-
-  /**
-   * 批量操作
-   */
-  protected async batch<T>(
-    endpoint: string,
-    operations: Array<{
-      method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
-      url: string
-      body?: any
-    }>
-  ): Promise<T[]> {
-    return this.post<T[]>(endpoint, { operations })
+    return this.processResponse<T>(response)
   }
 }

@@ -1,105 +1,58 @@
 import { BaseService } from './base.service'
-import type { PrivateMessageItem, PaginatedData } from '~/types/api'
+import { PRIVATE_MESSAGES } from '~/config/api'
+import type {
+  PaginatedData,
+  SendPrivateMessageRequest,
+  SendPrivateMessageData,
+  GetPrivateMessagesRequest,
+  PrivateMessageItem,
+  UpdatePrivateMessageRequest,
+  RecallPrivateMessageRequest,
+  DeletePrivateMessageRequest,
+  MarkPrivateMessagesReadRequest,
+  AddPrivateMessageReactionRequest,
+  RemovePrivateMessageReactionRequest,
+  GetPrivateMessageReactionsRequest,
+  MessageReactionItem
+} from '~/types/api'
 
-/**
- * 私聊消息服务
- * ✅ 类型定义已统一从 types/api.ts 导入
- */
-
-// ==================== Request 类型定义 ====================
-
-export interface SendPrivateMessageRequest {
-  private_chat_id: string
-  type: 'text' | 'image' | 'video' | 'audio' | 'file'
-  content: string
-  reply_to?: string
-  file_name?: string
-  file_size?: number
-  thumbnail_url?: string
-  duration?: number
-}
-
-export interface SendPrivateMessageData {
-  id: string
-  sent_at: string
-}
-
-export interface GetPrivateMessagesRequest {
-  private_chat_id: string
-  limit?: number
-  cursor?: string
-}
-
-export interface UpdatePrivateMessageRequest {
-  id: string
-  content: string
-}
-
-export interface RecallPrivateMessageRequest {
-  id: string
-}
-
-export interface DeletePrivateMessageRequest {
-  id: string
-}
-
-export interface MarkPrivateMessagesReadRequest {
-  private_chat_id: string
-  up_to?: string
-}
-
-// ==================== 服务类 ====================
-
-export class PrivateMessagesService extends BaseService {
-  protected readonly baseUrl = ''
-
-  /**
-   * 发送私聊消息
-   */
-  async send(data: SendPrivateMessageRequest): Promise<SendPrivateMessageData> {
-    return this.post<SendPrivateMessageData>('/protected/private_messages/send', data)
+class PrivateMessagesService extends BaseService {
+  async send(request: SendPrivateMessageRequest) {
+    return this.post<SendPrivateMessageData>(PRIVATE_MESSAGES.SEND, request)
   }
 
-  /**
-   * 获取私聊消息历史
-   */
-  async getHistory(params: GetPrivateMessagesRequest): Promise<PaginatedData<PrivateMessageItem>> {
-    return this.post<PaginatedData<PrivateMessageItem>>('/protected/private_messages/get_history', params)
+  async getPrivateMessages(request: GetPrivateMessagesRequest) {
+    return this.post<PaginatedData<PrivateMessageItem>>(PRIVATE_MESSAGES.GET_HISTORY, request)
   }
 
-  /**
-   * 编辑私聊消息
-   */
-  async update(data: UpdatePrivateMessageRequest): Promise<void> {
-    return this.post<void>('/protected/private_messages/update', data)
+  async update(request: UpdatePrivateMessageRequest) {
+    return this.post<void>(PRIVATE_MESSAGES.UPDATE, request)
   }
 
-  /**
-   * 撤回私聊消息
-   */
-  async recall(data: RecallPrivateMessageRequest): Promise<void> {
-    return this.post<void>('/protected/private_messages/recall', data)
+  async recall(request: RecallPrivateMessageRequest) {
+    return this.post<void>(PRIVATE_MESSAGES.RECALL, request)
   }
 
-  /**
-   * 删除私聊消息
-   */
-  async delete(data: DeletePrivateMessageRequest): Promise<void> {
-    return this.post<void>('/protected/private_messages/delete', data)
+  async deletePrivateMessage(request: DeletePrivateMessageRequest) {
+    return this.post<void>(PRIVATE_MESSAGES.DELETE, request)
   }
 
-  /**
-   * 标记私聊消息已读
-   */
-  async markAsRead(data: MarkPrivateMessagesReadRequest): Promise<void> {
-    return this.post<void>('/protected/private_messages/mark_as_read', data)
+  async markPrivateMessagesAsRead(request: MarkPrivateMessagesReadRequest) {
+    return this.post<void>(PRIVATE_MESSAGES.MARK_AS_READ, request)
+  }
+
+  async addReaction(request: AddPrivateMessageReactionRequest) {
+    return this.post<void>(PRIVATE_MESSAGES.ADD_REACTION, request)
+  }
+
+  async removeReaction(request: RemovePrivateMessageReactionRequest) {
+    return this.post<void>(PRIVATE_MESSAGES.REMOVE_REACTION, request)
+  }
+
+  async getReactions(request: GetPrivateMessageReactionsRequest) {
+    return this.post<PaginatedData<MessageReactionItem>>(PRIVATE_MESSAGES.GET_REACTIONS_LIST, request)
   }
 }
 
 export const privateMessagesService = new PrivateMessagesService()
-
-export function usePrivateMessagesService() {
-  return privateMessagesService
-}
-
-
+export function usePrivateMessagesService() { return privateMessagesService }

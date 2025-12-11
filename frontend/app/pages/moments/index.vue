@@ -1,35 +1,31 @@
 <template>
-    <div class="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100/50 to-slate-50 dark:from-slate-900 dark:via-slate-800/30 dark:to-slate-900">
+    <div class="min-h-screen bg-gradient-slate-page">
         <!-- 背景装饰 -->
         <div class="absolute inset-0 overflow-hidden pointer-events-none">
-            <div class="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-slate-300/10 to-slate-400/10 rounded-full blur-3xl"></div>
-            <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-slate-300/10 to-slate-400/10 rounded-full blur-3xl"></div>
+            <div class="absolute -top-40 -right-40 w-80 h-80 bg-linear-to-br from-slate-300/10 to-slate-400/10 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-linear-to-tr from-slate-300/10 to-slate-400/10 rounded-full blur-3xl"></div>
         </div>
 
-        <div class="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
             <!-- 页面标题和操作栏 -->
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                <div class="space-y-2">
-                    <h1 class="text-3xl sm:text-4xl font-bold text-neutral-900 dark:text-white">
-                        动态广场
-                    </h1>
-                    <p class="text-neutral-600 dark:text-neutral-400 text-lg">发现和分享生活中的精彩瞬间</p>
-                </div>
-                <div class="flex gap-3 w-full sm:w-auto">
+            <UPageHeader
+                title="动态广场"
+                class="mb-6"
+            >
+                <template #actions>
                     <UButton
                         @click="openCreateModal"
                         icon="i-heroicons-plus"
                         color="primary"
-                        class="flex-1 sm:flex-none"
                     >
                         <span class="hidden sm:inline">发布动态</span>
                         <span class="sm:hidden">发布</span>
                     </UButton>
-                </div>
-            </div>
+                </template>
+            </UPageHeader>
 
             <!-- 视图切换 -->
-            <div class="mb-8">
+            <div class="mb-6">
                 <UTabs
                     :items="tabItems"
                     v-model="currentView"
@@ -37,9 +33,28 @@
                 />
             </div>
 
+            <!-- 附近动态筛选栏 -->
+            <UCard v-if="currentView === 'nearby'" class="mb-6 border-0 shadow-lg bg-glass-white backdrop-blur-sm">
+                <div class="flex flex-col sm:flex-row gap-4 items-center">
+                    <div class="flex items-center gap-3 w-full sm:w-auto">
+                        <span class="text-sm text-secondary-content whitespace-nowrap">搜索半径</span>
+                        <USelect
+                            v-model="selectedRadius"
+                            :items="radiusOptions"
+                            class="w-32"
+                            @change="refreshCurrentView"
+                        />
+                    </div>
+                    <div class="flex-1" />
+                    <UButton variant="outline" icon="i-heroicons-arrow-path" :loading="loading.nearby" @click="refreshCurrentView">
+                        刷新
+                    </UButton>
+                </div>
+            </UCard>
+
             <!-- 搜索和筛选栏 -->
-            <div v-if="currentView === 'search'" class="mb-8">
-                <UCard class="bg-white/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50">
+            <div v-if="currentView === 'search'" class="mb-6">
+                <UCard class=" border ">
                     <div class="space-y-6">
                         <div class="flex flex-col sm:flex-row gap-4">
                             <UInput
@@ -62,7 +77,7 @@
 
                         <!-- 热门标签 -->
                         <div class="space-y-3">
-                            <h3 class="text-sm font-semibold text-neutral-700 dark:text-neutral-300 flex items-center">
+                            <h3 class="text-sm font-semibold text-secondary-strong flex items-center">
                                 <UIcon name="i-heroicons-hashtag" class="w-4 h-4 mr-2" />
                                 热门标签
                             </h3>
@@ -84,25 +99,40 @@
             </div>
 
 
+            <!-- 关注视图刷新按钮 -->
+            <div v-if="currentView === 'following'" class="flex justify-end mb-4">
+                <UButton variant="outline" icon="i-heroicons-arrow-path" :loading="loading.following" @click="refreshCurrentView">
+                    刷新
+                </UButton>
+            </div>
+
+            <!-- 加载状态 -->
+            <div v-if="currentLoading && currentData.length === 0" class="grid gap-4">
+                <USkeleton v-for="i in 3" :key="i" class="h-48 rounded-2xl" />
+            </div>
+
             <!-- 动态列表 -->
-            <DataView
-                :data="currentData"
-                :loading="currentLoading"
-                :searchable="currentView === 'search'"
-                :search-fields="['description', 'tags', 'nickname']"
-                :show-pagination="false"
-                :toolbar-actions="dataViewActions"
-                item-component="MomentCard"
-                :get-item-key="(item) => item.moment_id"
-                :get-item-props="getMomentCardProps"
-                :get-item-events="getMomentCardEvents"
-                empty-icon="i-heroicons-photo"
-                empty-title="暂无动态"
-                empty-description="成为第一个分享生活瞬间的人"
-                :empty-action="{ label: '发布动态', action: openCreateModal }"
-                @item-click="(moment) => navigateTo(`/moments/${moment.moment_id}`)"
-                @search="handleSearch"
-            />
+            <div v-else-if="currentData.length > 0" class="grid gap-4">
+                <MomentCard
+                    v-for="moment in currentData"
+                    :key="moment.id"
+                    :moment="moment"
+                    :show-actions="true"
+                    @click="navigateTo(`/moments/${moment.id}`)"
+                    @like="toggleLike(moment as unknown as Moment)"
+                    @comment="navigateTo(`/moments/${moment.id}#comments`)"
+                    @share="handleShare(moment)"
+                    @tag-click="toggleTag"
+                    @deleted="refreshCurrentView"
+                />
+            </div>
+
+            <!-- 空状态 -->
+            <UEmpty v-else icon="i-heroicons-photo" title="暂无动态" description="成为第一个分享生活瞬间的人">
+                <template #actions>
+                    <UButton icon="i-heroicons-plus" @click="openCreateModal">发布动态</UButton>
+                </template>
+            </UEmpty>
             
             <!-- 加载更多按钮 -->
             <div v-if="hasMoreData && currentData.length > 0" class="flex justify-center mt-8">
@@ -117,17 +147,21 @@
                     加载更多
                 </UButton>
             </div>
+            
+            <!-- 已显示全部提示 -->
+            <div v-else-if="currentData.length > 0 && !hasMoreData" class="text-center mt-8 text-sm text-secondary-content">
+                已显示全部 {{ currentData.length }} 条动态
+            </div>
         </div>
-        
     </div>
 </template>
 
 <script setup lang="ts">
 import { useMomentsService } from '~/services/moments.service';
 import { useFeedService } from '~/services/feed.service';
-import type { MomentResponse, MomentInfo } from '~/types/api'
+import type { MomentSearchItem } from '~/types/api'
+import type { Moment } from '~/stores/moments.store'
 
-// 公开页面 - 对应 POST /api/v1/public/moments/* API
 definePageMeta({
     title: '动态广场',
     description: '发现和分享生活中的精彩瞬间',
@@ -138,6 +172,20 @@ definePageMeta({
 const currentView = ref('nearby')
 const selectedTags = ref<string[]>([])
 const { formatTime, formatDistance } = useFormatters()
+
+// 位置服务
+const locationStore = useLocationStore()
+
+// 搜索范围
+const selectedRadius = ref(5000)
+
+const radiusOptions = [
+    { label: '1 公里', value: 1000 },
+    { label: '5 公里', value: 5000 },
+    { label: '10 公里', value: 10000 },
+    { label: '25 公里', value: 25000 },
+    { label: '50 公里', value: 50000 }
+]
 
 // 配置
 const tabItems = [
@@ -151,21 +199,18 @@ const popularTags = ref(['美食', '旅行', '生活', '摄影', '音乐', '运�
 // 服务
 const momentService = useMomentsService()
 const feedService = useFeedService()
-const authStore = useAuthStore()
+const geolocation = useGeolocation()
 const toast = useToast()
-const overlay = useOverlay()
 
 // 创建动态功能
-const { showCreateMomentModal } = useModal()
+const modal = useModal()
 
 const openCreateModal = async () => {
-  await showCreateMomentModal({
-    onSuccess: (momentId: string) => {
-      // 刷新当前视图数据
-      refreshCurrentView()
-      toast.add({ color: 'success', title: '动态发布成功' })
-    }
-  })
+  const momentId = await modal.showCreateMoment()
+  if (momentId) {
+    refreshCurrentView()
+    toast.add({ color: 'success', title: '动态发布成功' })
+  }
 }
 
 // 刷新当前视图数据
@@ -177,13 +222,10 @@ const refreshCurrentView = () => {
     }
 };
 
-// 位置服务
-const locationStore = useLocationStore()
-
 // 数据状态
-const nearbyMoments = ref<MomentResponse[]>([]);
-const followingMoments = ref<MomentInfo[]>([]);
-const searchResults = ref<MomentResponse[]>([]);
+const nearbyMoments = ref<MomentSearchItem[]>([]);
+const followingMoments = ref<MomentSearchItem[]>([]);
+const searchResults = ref<MomentSearchItem[]>([]);
 const loading = ref({
     nearby: false,
     following: false,
@@ -200,23 +242,26 @@ const hasMore = ref({
 const loadNearbyMoments = async (cursor?: string) => {
     loading.value.nearby = true;
     try {
-        // 获取当前位置（失败时使用默认位置）
-        let latitude: number;
-        let longitude: number;
-        
-        if (locationStore.coordinates) {
-            latitude = locationStore.coordinates.latitude;
-            longitude = locationStore.coordinates.longitude;
-        } else {
-            // 使用系统默认位置（南天门）
-            latitude = 35.154922;
-            longitude = 112.682524;
+        // 使用 locationStore 的位置，如果没有则获取并更新 store
+        let pos = locationStore.coordinates;
+        if (!pos) {
+            const coords = await geolocation.getCoordinates();
+            // 尝试获取位置名称并更新 store
+            let locationName = '未知位置';
+            try {
+                const { geocoding } = await import('~/utils/geocoding');
+                locationName = await geocoding.getLocationName(coords.latitude, coords.longitude);
+            } catch {
+                // 使用默认名称
+            }
+            locationStore.setLocation(coords.latitude, coords.longitude, locationName);
+            pos = coords;
         }
 
         const result = await momentService.searchByLocation({
-            latitude,
-            longitude,
-            radius: 5000, // 5公里范围
+            latitude: pos.latitude,
+            longitude: pos.longitude,
+            radius: selectedRadius.value,
             limit: 20,
             cursor
         });
@@ -243,16 +288,14 @@ const loadFollowingMoments = async (cursor?: string) => {
     try {
         // 使用Feed API获取关注用户的动态
         const feedService = useFeedService()
-        const result = await feedService.getList({
-            channel: 'following',
+        const result = await feedService.getMoments({
+            source: 'following',
             limit: 20,
             cursor
         });
         
-        // 提取Feed中的moment数据
-        const moments = result.items
-            .filter(item => item.type === 'moment' && item.moment)
-            .map(item => item.moment!)
+        // FeedMomentItem 继承自 MomentSearchItem，可以直接使用
+        const moments = result.items as MomentSearchItem[];
         
         if (cursor) {
             followingMoments.value.push(...moments);
@@ -271,7 +314,7 @@ const loadFollowingMoments = async (cursor?: string) => {
     }
 };
 
-const searchMoments = async (query: string, filters?: any) => {
+const searchMoments = async (query: string, filters?: Record<string, unknown>) => {
     if (!query.trim()) {
         searchResults.value = [];
         return [];
@@ -279,16 +322,13 @@ const searchMoments = async (query: string, filters?: any) => {
     
     loading.value.search = true;
     try {
-        // 使用标签搜索（API不支持全文搜索，所以将查询词作为标签）
-        const tags = query.trim().split(/\s+/);
+        const coords = await geolocation.getCoordinates();
         
-        // 添加额外的标签筛选
-        if (selectedTags.value.length > 0) {
-            tags.push(...selectedTags.value);
-        }
-        
-        const result = await momentService.searchByTags({
-            tags,
+        // 使用关键字搜索
+        const result = await momentService.searchByKeyword({
+            kw: query.trim(),
+            latitude: coords.latitude,
+            longitude: coords.longitude,
             limit: 20
         });
         searchResults.value = result.items;
@@ -333,58 +373,18 @@ const hasMoreData = computed(() => {
 
 const loadingMore = ref(false);
 
-// DataView 配置
-const dataViewActions = computed(() => [
-    {
-        key: 'refresh',
-        label: '刷新',
-        icon: 'i-heroicons-arrow-path',
-        variant: 'outline' as const,
-        action: () => { refreshCurrentView(); }
-    },
-    {
-        key: 'create',
-        label: '发布动态',
-        icon: 'i-heroicons-plus',
-        color: 'primary' as const,
-        action: openCreateModal
-    }
-])
 
-const getMomentCardProps = (moment: MomentResponse) => ({
-    moment,
-    showActions: true,
-    class: 'group bg-white/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50 cursor-pointer hover:bg-white/80 dark:hover:bg-slate-800/80 transition-colors'
-})
-
-const getMomentCardEvents = (moment: MomentResponse) => ({
-    like: () => toggleLike(moment),
-    comment: () => navigateTo(`/moments/${moment.moment_id}#comments`),
-    share: () => handleShare(moment),
-    'tag-click': (tag: string) => toggleTag(tag),
-    deleted: () => refreshCurrentView()
-})
-
-const handleSearch = (query: string) => {
-    searchQuery.value = query
-    if (query.trim()) {
-        searchMoments(query)
-    } else {
-        searchResults.value = []
-    }
-}
-
-const handleShare = async (moment: MomentResponse) => {
+const handleShare = async (moment: MomentSearchItem) => {
     try {
         if (navigator.share) {
             await navigator.share({
-                title: `${moment.nickname}的动态`,
+                title: `${moment.user.nickname}的动态`,
                 text: moment.description,
-                url: `${window.location.origin}/moments/${moment.moment_id}`
+                url: `${window.location.origin}/moments/${moment.id}`
             })
         } else {
             // 复制链接到剪贴板
-            await navigator.clipboard.writeText(`${window.location.origin}/moments/${moment.moment_id}`)
+            await navigator.clipboard.writeText(`${window.location.origin}/moments/${moment.id}`)
             toast.add({ color: 'success', title: '链接已复制到剪贴板' })
         }
     } catch (error) {
@@ -407,18 +407,18 @@ const toggleTag = (tag: string) => {
     }
 }
 
-const toggleLike = async (moment: MomentResponse) => {
+const toggleLike = async (moment: Moment) => {
     try {
         // 乐观更新
         const wasLiked = moment.liked_by_me
         moment.liked_by_me = !moment.liked_by_me
         moment.likes_count += moment.liked_by_me ? 1 : -1
 
-        // 调用真实API
-        if (moment.liked_by_me) {
-            await momentService.likeMoment(moment.moment_id)
+        // 根据当前状态调用对应 API
+        if (wasLiked) {
+            await momentService.unlikeMoment({ id: moment.id })
         } else {
-            await momentService.unlikeMoment(moment.moment_id)
+            await momentService.likeMoment({ id: moment.id })
         }
     } catch (error) {
         // 回滚状态
@@ -431,11 +431,11 @@ const toggleLike = async (moment: MomentResponse) => {
 const loadMore = async () => {
     if (loadingMore.value || !hasMoreData.value) return;
     
-    loadingMore.value = true;
+    loadingMore.value = true
     try {
-        let result;
-        const lastItem = currentData.value[currentData.value.length - 1] as any;
-        const cursor = lastItem?.moment_id || lastItem?.id;
+        let result
+        const lastItem = currentData.value[currentData.value.length - 1]
+        const cursor = lastItem?.id
         
         if (currentView.value === 'nearby') {
             result = await loadNearbyMoments(cursor);

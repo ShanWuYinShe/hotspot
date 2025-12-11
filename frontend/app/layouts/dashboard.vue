@@ -1,29 +1,23 @@
 <template>
-  <UDashboardGroup>
+  <!-- 使用 v-model 控制侧边栏折叠状态，由 settings store 持久化 -->
+  <UDashboardGroup v-model:collapsed="sidebarCollapsed" :persistent="false">
     <!-- 侧边栏 -->
-    <UDashboardSidebar 
-      collapsible
+    <UDashboardSidebar
       resizable
-      :min-size="15"
-      :default-size="20"
-      :max-size="30"
-      :collapsed-size="4"
+      collapsible
       side="left"
-      :toggle="{
-        color: 'neutral',
-        variant: 'ghost',
-        class: 'rounded-full'
-      }"
+      mode="drawer"
+      :ui="{ footer: 'border-t border-default' }"
     >
       <!-- Logo 区域 -->
       <template #header="{ collapsed }">
         <NuxtLink
           to="/"
-          class="flex items-center gap-3 hover:opacity-90 transition-opacity p-3"
+          class="flex items-center gap-3 hover:opacity-90 transition-opacity"
           aria-label="返回首页"
         >
           <div
-            class="w-8 h-8 rounded-xl bg-linear-to-br from-primary-500 to-error-600 flex items-center justify-center shadow-lg"
+            class="w-8 h-8 rounded-xl bg-linear-to-br from-primary-500 to-red-500 flex items-center justify-center shadow-lg shrink-0"
           >
             <UIcon
               name="i-heroicons-fire"
@@ -31,108 +25,77 @@
             />
           </div>
           <span
-            v-if="!collapsed"
-            class="text-lg font-bold text-black dark:text-white"
+            :class="collapsed ? 'hidden' : 'text-lg font-bold text-emphasis whitespace-nowrap'"
           >
             HotSpot
           </span>
         </NuxtLink>
       </template>
 
-      <!-- 主导航 -->
+      <!-- 搜索和导航 -->
       <template #default="{ collapsed }">
+        <!-- 导航菜单搜索按钮（搜索侧边栏导航项） -->
+
+        <!-- 主导航 -->
         <UNavigationMenu
           :items="navigationItems"
           :collapsed="collapsed"
           variant="pill"
           orientation="vertical"
           highlight
-          :tooltip="{
-            delayDuration: 300,
-            content: { side: 'right', sideOffset: 12 }
-          }"
-          :popover="{
-            mode: 'hover',
-            content: { side: 'right', align: 'start', sideOffset: 12 }
-          }"
-          class="p-3"
         />
       </template>
 
       <!-- 底部工具栏 -->
       <template #footer="{ collapsed }">
-        <div class="p-3 space-y-2">
-            <!-- 用户信息 -->
-            <div v-if="currentUser && !collapsed" class="flex items-center gap-3 p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800">
-              <UAvatar
-                :alt="currentUser.nickname"
+        <div class="space-y-3">
+          <!-- 当前位置显示（可点击修改） -->
+          <UTooltip :text="collapsed ? currentLocationDisplay : '点击修改位置'" :placement="collapsed ? 'right' : 'top'">
+            <UButton
+              variant="ghost"
+              :icon="collapsed ? 'i-heroicons-map-pin' : undefined"
+              size="sm"
+              :square="collapsed"
+              :block="!collapsed"
+              :class="collapsed ? '' : 'justify-start text-left'"
+              @click="openLocationPicker"
+            >
+              <template v-if="!collapsed">
+                <UIcon name="i-heroicons-map-pin" class="w-4 h-4 text-primary shrink-0" />
+                <span class="truncate text-xs">{{ currentLocationDisplay }}</span>
+              </template>
+            </UButton>
+          </UTooltip>
+
+          <!-- 工具按钮行 -->
+          <div :class="collapsed ? 'flex flex-col items-center gap-2' : 'flex items-center justify-between'">
+            <!-- 全局搜索按钮 -->
+            <UTooltip text="全局搜索" :kbds="['meta', 'K']">
+              <UButton
+                variant="ghost"
+                icon="i-heroicons-magnifying-glass"
                 size="sm"
-              >
-                {{ currentUser.nickname?.charAt(0) || "U" }}
-              </UAvatar>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium truncate">{{ currentUser.nickname || "用户" }}</p>
-                <p class="text-xs text-neutral-500 truncate">
-                  {{ isTempUser(currentUser.user_id) ? "临时用户" : "正式用户" }}
-                </p>
-              </div>
-            </div>
+                square
+                @click="openGlobalSearch"
+              />
+            </UTooltip>
 
-            <!-- 工具按钮 -->
-            <div class="flex justify-center">
-              <div class="flex gap-1 items-center">
-                <UTooltip text="搜索 (⌘K)">
-                  <UButton
-                    variant="ghost"
-                    icon="i-heroicons-magnifying-glass"
-                    size="sm"
-                    square
-                    @click="openSearch"
-                  />
-                </UTooltip>
-                
-                <UTooltip text="通知">
-                  <UPopover v-model:open="showNotifications" :popper="{ placement: 'bottom-end' }">
-                    <UButton
-                      variant="ghost"
-                      icon="i-heroicons-bell"
-                      size="sm"
-                      square
-                      class="relative"
-                    >
-                      <UBadge
-                        v-if="notificationPanelRef?.unreadCount > 0"
-                        size="xs"
-                        color="error"
-                        class="absolute -top-1 -right-1 w-2 h-2"
-                      />
-                    </UButton>
-                    
-                    <template #content>
-                      <Suspense>
-                        <NotificationPanel ref="notificationPanelRef" />
-                        <template #fallback>
-                          <div class="w-96 h-64 flex items-center justify-center">
-                            <USkeleton class="w-full h-full" />
-                          </div>
-                        </template>
-                      </Suspense>
-                    </template>
-                  </UPopover>
-                </UTooltip>
+            <!-- 通知按钮 -->
+            <UTooltip text="通知中心">
+              <UButton
+                variant="ghost"
+                icon="i-heroicons-bell"
+                size="sm"
+                square
+                @click="navigateTo('/notifications')"
+              />
+            </UTooltip>
 
-                <UColorModeSwitch/>
-                
-                <UTooltip text="设置">
-                  <UButton
-                    to="/settings"
-                    variant="ghost"
-                    icon="i-heroicons-cog-6-tooth"
-                    size="sm"
-                    square
-                  />
-                </UTooltip>
-            </div>
+            <!-- 颜色模式切换 -->
+            <UColorModeSwitch />
+
+            <!-- 折叠/展开按钮（仅桌面端显示，移动端用顶部 toggle） -->
+            <UDashboardSidebarCollapse class="hidden lg:flex" />
           </div>
         </div>
       </template>
@@ -142,30 +105,54 @@
     <UDashboardPanel>
       <!-- 顶部导航栏 -->
       <template #header>
-        <UDashboardNavbar
-          title="HotSpot"
-        >
-
+        <UDashboardNavbar>
           <!-- 右侧工具栏 -->
           <template #right>
-            <div class="flex items-center gap-1 sm:gap-2">
-              <!-- 语言切换 - 移动端隐藏 -->
-              <ULocaleSelect
-                v-model="currentLocale"
-                :locales="nuxtLocales"
+            <div class="flex items-center gap-2">
+              <!-- 语言切换 - 桌面端显示完整下拉框 -->
+              <USelectMenu
+                :model-value="currentLocale"
+                :items="localeOptions"
+                value-key="value"
                 size="sm"
-                class="min-w-24 hidden sm:block"
+                class="w-24 hidden sm:block"
                 :disabled="switchingLocale"
                 @update:model-value="handleLocaleChange"
               >
                 <template #leading>
                   <UIcon
                     :name="switchingLocale ? 'i-heroicons-arrow-path' : 'i-heroicons-language'"
-                    class="w-3 h-3"
-                    :class="{ 'animate-spin': switchingLocale }"
+                    class="icon-sm"
+                    :class="{ 'loading-spin': switchingLocale }"
                   />
                 </template>
-              </ULocaleSelect>
+              </USelectMenu>
+
+              <!-- 语言切换 - 移动端显示简洁按钮 -->
+              <UPopover class="sm:hidden">
+                <UButton
+                  variant="ghost"
+                  size="sm"
+                  :icon="switchingLocale ? 'i-heroicons-arrow-path' : 'i-heroicons-language'"
+                  :loading="switchingLocale"
+                />
+                <template #content>
+                  <div class="p-2 space-y-1">
+                    <UButton
+                      v-for="locale in localeOptions"
+                      :key="locale.value"
+                      :color="currentLocale === locale.value ? 'primary' : 'neutral'"
+                      :variant="currentLocale === locale.value ? 'soft' : 'ghost'"
+                      size="sm"
+                      block
+                      class="justify-start"
+                      @click="handleLocaleChange(locale.value)"
+                    >
+                      {{ locale.label }}
+                    </UButton>
+                  </div>
+                </template>
+              </UPopover>
 
               <!-- 用户菜单 -->
               <UserMenu />
@@ -176,7 +163,23 @@
 
       <!-- 页面内容 -->
       <template #body>
-        <div class="p-3 sm:p-6">
+        <!-- 全高度模式（聊天页面等） -->
+        <div v-if="isFullHeight" class="h-full flex flex-col overflow-hidden">
+          <slot />
+        </div>
+        <!-- 普通页面模式 -->
+        <div v-else class="w-full px-4 sm:px-6 lg:px-8 py-4 max-w-[1600px] mx-auto">
+          <!-- 全局返回按钮 -->
+          <div v-if="canGoBack" class="mb-4">
+            <UButton
+              variant="ghost"
+              color="neutral"
+              icon="i-heroicons-arrow-left"
+              @click="goBack"
+            >
+              返回
+            </UButton>
+          </div>
           <slot />
         </div>
       </template>
@@ -185,178 +188,177 @@
 </template>
 
 <script setup lang="ts">
-import { isTempUser } from '~/utils/userTypes'
-
-// 使用 composables
-const { locale: currentLocale, availableLocales } = useI18n();
-const route = useRoute();
 const { t } = useI18n();
+const { currentLocale, locales, switchLocale } = useLocaleSwitcher();
+const route = useRoute();
+const router = useRouter();
 const toast = useToast();
 
+// 返回按钮逻辑
 
-// 用户状态
+// 主要导航页面（不显示返回按钮）
+const mainNavPages = ['/', '/map', '/moments', '/users/nearby', '/groups/discover', '/chat'];
+
+// 检查是否是全高度模式（聊天页面等）
+const isFullHeight = computed(() => route.meta.fullHeight === true);
+
+// 是否可以返回（只要不是主导航页面就显示返回按钮）
+const canGoBack = computed(() => {
+  return !mainNavPages.includes(route.path);
+});
+
+// 返回上一页
+const goBack = () => {
+  // 如果有历史记录则返回，否则回到首页
+  if (window.history.length > 1) {
+    router.back();
+  } else {
+    router.push('/');
+  }
+};
+
+// 使用水合安全的 store 访问
 const authStore = useAuthStore();
-const currentUser = computed(() => authStore.user);
-
-// 消息相关
 const messagesStore = useMessagesStore();
+const settingsStore = useSettingsStore();
+const locationStore = useLocationStore();
 const unreadCount = computed(() => messagesStore.totalUnreadCount);
 
-// 通知系统
-const showNotifications = ref(false)
-const notificationPanelRef = ref()
+// WebSocket 连接
+const { connect: wsConnect, isConnected: wsConnected, status: wsStatus } = useGlobalWebSocket();
 
-// 系统通知
-const hasSystemAlerts = computed(() => {
-  return notificationPanelRef.value?.unreadCount > 0
+// 侧边栏折叠状态（双向绑定到 store）
+const sidebarCollapsed = computed({
+  get: () => settingsStore.sidebarCollapsed,
+  set: (value: boolean) => settingsStore.setSidebarCollapsed(value)
 });
 
-// 页面标题 - 从 route.meta 获取
-const pageTitle = computed<string>(() => {
-  const title = route.meta.title;
-  return typeof title === 'string' ? title : "HotSpot";
-});
+// 当前位置显示：SSR 时使用默认值，onMounted 后同步 store 值
+const currentLocationDisplay = ref('未设置位置');
 
-// "新"标签状态管理（SSR 安全：setup 中使用默认值，onMounted 中设置客户端值）
-const hasSeenGroups = ref(false);
-
-// 从 localStorage 读取状态
 onMounted(() => {
-  hasSeenGroups.value = localStorage.getItem('has_seen_groups') === 'true';
-});
-
-// 监听路由变化，当用户访问群组页面时标记为已查看
-watch(() => route.path, (newPath) => {
-  if (newPath.startsWith('/groups') && !hasSeenGroups.value) {
-    hasSeenGroups.value = true;
-    localStorage.setItem('has_seen_groups', 'true');
+  // 立即同步位置
+  currentLocationDisplay.value = locationStore.location?.locationName || '未设置位置';
+  // 监听变化
+  watch(() => locationStore.location?.locationName, (name) => {
+    currentLocationDisplay.value = name || '未设置位置';
+  });
+  
+  // 初始化 WebSocket 连接（用户已登录时）
+  if (authStore.isAuthenticated) {
+    wsConnect();
   }
 });
 
-// 导航菜单项 - 扁平化结构，所有功能都是一级导航
+// 模态框管理
+const modal = useModal();
+
+// 打开位置选择器（使用高德地图）
+const openLocationPicker = () => {
+  modal.showLocationPicker((location) => {
+    locationStore.setLocation(location.latitude, location.longitude, location.locationName);
+    toast.add({ title: '位置已更新', description: location.locationName, color: 'success' });
+  });
+};
+
+// 导航菜单项 - 按功能逻辑分组
 const navigationItems = computed(() => [
-  // 第一组：发现功能
+  // 第一组：核心功能
   [
     {
-      label: t("nav.home"),
-      icon: "i-heroicons-home",
-      to: "/",
-      active: route.path === "/",
+      label: t('nav.home'),
+      icon: 'i-heroicons-home',
+      to: '/',
+      active: route.path === '/',
     },
     {
-      label: t("nav.map"),
-      icon: "i-heroicons-map",
-      to: "/map",
-      active: route.path === "/map",
-    },
-    {
-      label: t("nav.moments"),
-      icon: "i-heroicons-photo",
-      to: "/moments",
-      active: route.path.startsWith("/moments"),
+      label: t('nav.map'),
+      icon: 'i-heroicons-map',
+      to: '/map',
+      active: route.path === '/map',
     },
   ],
-  // 第二组：社交功能
+  // 第二组：发现内容
   [
     {
-      label: t("nav.nearbyUsers"),
-      icon: "i-heroicons-map-pin",
-      to: "/users/nearby",
-      active: route.path === "/users/nearby",
+      label: t('nav.moments'),
+      icon: 'i-heroicons-photo',
+      to: '/moments',
+      active: route.path.startsWith('/moments'),
     },
     {
-      label: t("nav.groups"),
-      icon: "i-heroicons-user-group",
-      to: "/groups",
-      active: route.path.startsWith("/groups"),
-      badge: hasSeenGroups.value ? undefined : "新",
+      label: t('nav.nearbyUsers'),
+      icon: 'i-heroicons-users',
+      to: '/users/nearby',
+      active: route.path === '/users/nearby',
     },
     {
-      label: t("nav.messages"),
-      icon: "i-heroicons-chat-bubble-left-right",
-      to: "/chat",
-      active: route.path.startsWith("/chat"),
-      badge: unreadCount.value > 0 ? 
-        (unreadCount.value > 99 ? "99+" : unreadCount.value.toString()) : undefined,
+      label: t('nav.groups'),
+      icon: 'i-heroicons-user-group',
+      to: '/groups/discover',
+      active: route.path.startsWith('/groups'),
+    },
+  ],
+  // 第三组：社交通讯
+  [
+    {
+      label: t('nav.messages'),
+      icon: 'i-heroicons-chat-bubble-left-right',
+      to: '/chat',
+      active: route.path.startsWith('/chat'),
+      badge: unreadCount.value > 0
+        ? (unreadCount.value > 99 ? '99+' : unreadCount.value.toString())
+        : undefined,
     },
   ],
 ]);
 
-// 语言切换相关
+// 语言切换
 const switchingLocale = ref(false);
 
-// 创建 Nuxt UI LocaleSelect 需要的 locales 格式
-const nuxtLocales = computed(() => 
-  availableLocales.map((code: string) => ({
-    code,
-    name: code === 'zh-CN' ? '中文' : 'English',
-    dir: 'ltr' as const,
-    messages: {} // 这里可以传入对应的翻译消息
+const localeOptions = computed(() =>
+  locales.value.map((locale) => ({
+    value: locale.code,
+    label: locale.name,
   }))
 );
 
 const handleLocaleChange = async (newLocale: string | undefined) => {
   if (switchingLocale.value || !newLocale) return;
+  // 验证 locale 是否有效
+  if (newLocale !== 'zh-CN' && newLocale !== 'en-US') return;
 
   switchingLocale.value = true;
   try {
-    // 使用 Nuxt i18n 的 setLocale
-    const nuxtApp = useNuxtApp();
-    await (nuxtApp.$i18n as any).setLocale(newLocale);
-    
-    // 保存到 settings store
-    const settingsStore = useSettingsStore();
-    settingsStore.setLanguage(newLocale);
-    
-    const localeName = newLocale === 'zh-CN' ? '中文' : 'English';
-    toast.add({
-      title: "语言切换成功",
-      description: `已切换到${localeName}`,
-      color: "success",
-    });
+    const success = await switchLocale(newLocale);
+    if (success) {
+      toast.add({
+        title: '语言切换成功',
+        description: `已切换到${newLocale === 'zh-CN' ? '中文' : 'English'}`,
+        color: 'success',
+      });
+    }
   } catch (error) {
-    console.error("语言切换错误:", error);
+    console.error('语言切换错误:', error);
     toast.add({
-      title: "语言切换失败",
-      description: "请刷新页面后重试",
-      color: "error",
+      title: '语言切换失败',
+      description: '请刷新页面后重试',
+      color: 'error',
     });
   } finally {
     switchingLocale.value = false;
   }
 };
 
-// 全局搜索功能（暂时禁用，待修复）
-const openSearch = async () => {
-  toast.add({
-    title: "搜索功能",
-    description: "全局搜索功能正在开发中",
-    color: "info",
-  })
+// 全局搜索
+const openGlobalSearch = () => {
+  modal.showGlobalSearch();
 };
 
-// 通知功能
-const toggleNotifications = () => {
-  showNotifications.value = !showNotifications.value
-};
-
-// 快捷键管理 - 使用 Nuxt UI v4 原生支持
+// 快捷键
 defineShortcuts({
-  'meta_k': {
-    usingInput: true,
-    handler: openSearch,
-  },
-  'ctrl_k': {
-    usingInput: true,
-    handler: openSearch,
-  },
-  'n': {
-    usingInput: false,
-    handler: toggleNotifications,
-  },
-  'q': {
-    usingInput: false,
-    handler: () => navigateTo('/chat'),
-  },
+  meta_k: { usingInput: true, handler: openGlobalSearch },
+  ctrl_k: { usingInput: true, handler: openGlobalSearch },
+  q: { usingInput: false, handler: () => navigateTo('/chat') },
 });
 </script>

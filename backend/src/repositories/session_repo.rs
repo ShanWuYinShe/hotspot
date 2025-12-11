@@ -53,7 +53,7 @@ impl SessionRepository {
             INSERT INTO sessions (user_id, device_type, device_name, ip_address, user_agent, access_token_hash, refresh_token_hash, expires_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING id, session_id, user_id, device_type, device_name, 
-                      ip_address as "ip_address!", user_agent,
+                      ip_address, user_agent,
                       access_token_hash, refresh_token_hash,
                       created_at, last_active_at, expires_at, is_revoked, revoked_at
             "#,
@@ -78,7 +78,7 @@ impl SessionRepository {
             SessionRow,
             r#"
             SELECT id, session_id, user_id, device_type, device_name,
-                   ip_address as "ip_address!", user_agent,
+                   ip_address, user_agent,
                    access_token_hash, refresh_token_hash,
                    created_at, last_active_at, expires_at, is_revoked, revoked_at
             FROM sessions
@@ -90,22 +90,6 @@ impl SessionRepository {
         .await?;
 
         Ok(row)
-    }
-
-    /// 更新会话活跃时间
-    pub async fn update_last_active(&self, session_id: Uuid) -> Result<()> {
-        sqlx::query!(
-            r#"
-            UPDATE sessions
-            SET last_active_at = NOW()
-            WHERE session_id = $1
-            "#,
-            session_id
-        )
-        .execute(&self.pool)
-        .await?;
-
-        Ok(())
     }
 
     /// 撤销会话
@@ -148,7 +132,7 @@ impl SessionRepository {
             SessionRow,
             r#"
             SELECT id, session_id, user_id, device_type, device_name,
-                   ip_address as "ip_address!", user_agent,
+                   ip_address, user_agent,
                    access_token_hash, refresh_token_hash,
                    created_at, last_active_at, expires_at, is_revoked, revoked_at
             FROM sessions
@@ -169,5 +153,89 @@ impl SessionRepository {
     /// 删除会话（撤销）
     pub async fn delete(&self, session_id: Uuid) -> Result<()> {
         self.revoke(session_id).await
+    }
+
+    /// 按 refresh_token 查找会话
+    pub async fn find_by_refresh_token(&self, refresh_token: &str) -> Result<Option<SessionRow>> {
+        let row = sqlx::query_as!(
+            SessionRow,
+            r#"
+            SELECT id, session_id, user_id, device_type, device_name,
+                   ip_address, user_agent,
+                   access_token_hash, refresh_token_hash,
+                   created_at, last_active_at, expires_at, is_revoked, revoked_at
+            FROM sessions
+            WHERE refresh_token_hash = $1 AND is_revoked = FALSE AND expires_at > NOW()
+            "#,
+            refresh_token
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(row)
+    }
+
+    /// 更新会话的 token（刷新时使用）
+    pub async fn update_tokens(
+        &self,
+        session_id: Uuid,
+        access_token: String,
+        refresh_token: String,
+        expires_at: DateTime<Utc>,
+    ) -> Result<()> {
+        sqlx::query!(
+            r#"
+            UPDATE sessions
+            SET access_token_hash = $2,
+                refresh_token_hash = $3,
+                expires_at = $4,
+                last_active_at = NOW()
+            WHERE session_id = $1 AND is_revoked = FALSE
+            "#,
+            session_id,
+            access_token,
+            refresh_token,
+            expires_at
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// 撤销用户的所有会话
+    pub async fn revoke_all_by_user(&self, user_id: i64) -> Result<u64> {
+        let result = sqlx::query!(
+            r#"
+            UPDATE sessions
+            SET is_revoked = TRUE, revoked_at = NOW()
+            WHERE user_id = $1 AND is_revoked = FALSE
+            "#,
+            user_id
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(result.rows_affected())
+    }
+
+    /// 按 access_token 查找会话
+    pub async fn find_by_access_token(&self, access_token: &str) -> Result<Option<SessionRow>> {
+        let row = sqlx::query_as!(
+            SessionRow,
+            r#"
+            SELECT id, session_id, user_id, device_type, device_name,
+                   ip_address, user_agent,
+                   access_token_hash, refresh_token_hash,
+                   created_at, last_active_at, expires_at, is_revoked, revoked_at
+            FROM sessions
+            WHERE access_token_hash = $1 AND is_revoked = FALSE
+            "#,
+            access_token
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(row)
     }
 }

@@ -12,6 +12,11 @@ pub struct PrivateChatRow {
     pub private_chat_id: Uuid,
     pub user_a_id: i64,
     pub user_b_id: i64,
+    // 陌生人消息限制字段
+    pub user_a_can_message_freely: bool,
+    pub user_b_can_message_freely: bool,
+    pub user_a_sent_count: i32,
+    pub user_b_sent_count: i32,
     pub created_at: DateTime<Utc>,
     pub is_deleted: bool,
     pub deleted_at: Option<DateTime<Utc>>,
@@ -56,13 +61,24 @@ impl PrivateChatRepository {
     }
 
     /// 创建私聊
-    pub async fn create(&self, user_a_id: i64, user_b_id: i64) -> Result<PrivateChatRow> {
+    /// 注意：user_a_id 和 user_b_id 会自动排序以满足数据库约束 (user_a_id < user_b_id)
+    pub async fn create(&self, user1_id: i64, user2_id: i64) -> Result<PrivateChatRow> {
+        // 确保 user_a_id < user_b_id 以满足数据库约束
+        let (user_a_id, user_b_id) = if user1_id < user2_id {
+            (user1_id, user2_id)
+        } else {
+            (user2_id, user1_id)
+        };
+
         let row = sqlx::query_as!(
             PrivateChatRow,
             r#"
             INSERT INTO private_chats (user_a_id, user_b_id)
             VALUES ($1, $2)
-            RETURNING id, private_chat_id, user_a_id, user_b_id, created_at, is_deleted, deleted_at
+            RETURNING id, private_chat_id, user_a_id, user_b_id,
+                user_a_can_message_freely, user_b_can_message_freely,
+                user_a_sent_count, user_b_sent_count,
+                created_at, is_deleted, deleted_at
             "#,
             user_a_id,
             user_b_id
@@ -78,7 +94,10 @@ impl PrivateChatRepository {
         let row = sqlx::query_as!(
             PrivateChatRow,
             r#"
-            SELECT id, private_chat_id, user_a_id, user_b_id, created_at, is_deleted, deleted_at
+            SELECT id, private_chat_id, user_a_id, user_b_id,
+                user_a_can_message_freely, user_b_can_message_freely,
+                user_a_sent_count, user_b_sent_count,
+                created_at, is_deleted, deleted_at
             FROM private_chats
             WHERE ((user_a_id = $1 AND user_b_id = $2) OR (user_a_id = $2 AND user_b_id = $1))
               AND is_deleted = FALSE
@@ -97,7 +116,10 @@ impl PrivateChatRepository {
         let row = sqlx::query_as!(
             PrivateChatRow,
             r#"
-            SELECT id, private_chat_id, user_a_id, user_b_id, created_at, is_deleted, deleted_at
+            SELECT id, private_chat_id, user_a_id, user_b_id,
+                user_a_can_message_freely, user_b_can_message_freely,
+                user_a_sent_count, user_b_sent_count,
+                created_at, is_deleted, deleted_at
             FROM private_chats
             WHERE private_chat_id = $1 AND is_deleted = FALSE
             "#,
@@ -152,7 +174,10 @@ impl PrivateChatRepository {
         let rows = sqlx::query_as!(
             PrivateChatRow,
             r#"
-            SELECT id, private_chat_id, user_a_id, user_b_id, created_at, is_deleted, deleted_at
+            SELECT id, private_chat_id, user_a_id, user_b_id,
+                user_a_can_message_freely, user_b_can_message_freely,
+                user_a_sent_count, user_b_sent_count,
+                created_at, is_deleted, deleted_at
             FROM private_chats
             WHERE (user_a_id = $1 OR user_b_id = $1) AND id < $2 AND is_deleted = FALSE
             ORDER BY id DESC
@@ -214,6 +239,80 @@ impl PrivateChatRepository {
         )
         .execute(&self.pool)
         .await?;
+        
+        Ok(())
+    }
+
+    /// 获取用户的消息限制信息
+    /// 返回 (can_message_freely, sent_count)
+    pub async fn get_message_limit(&self, private_chat_id: Uuid, user_id: i64) -> Result<(bool, i32)> {
+        let chat = self.find_by_id(private_chat_id).await?.ok_or_else(|| {
+            crate::error::AppError::NotFound("私聊不存在".to_string())
+        })?;
+        
+        if chat.user_a_id == user_id {
+            Ok((chat.user_a_can_message_freely, chat.user_a_sent_count))
+        } else if chat.user_b_id == user_id {
+            Ok((chat.user_b_can_message_freely, chat.user_b_sent_count))
+        } else {
+            Err(crate::error::AppError::Forbidden("用户不在此私聊中".to_string()))
+        }
+    }
+
+    /// 增加用户发送消息计数
+    pub async fn increment_sent_count(&self, private_chat_id: Uuid, user_id: i64) -> Result<i32> {
+        let chat = self.find_by_id(private_chat_id).await?.ok_or_else(|| {
+            crate::error::AppError::NotFound("私聊不存在".to_string())
+        })?;
+        
+        if chat.user_a_id == user_id {
+            let new_count = chat.user_a_sent_count + 1;
+            sqlx::query!(
+                r#"UPDATE private_chats SET user_a_sent_count = $1 WHERE private_chat_id = $2"#,
+                new_count,
+                private_chat_id
+            )
+            .execute(&self.pool)
+            .await?;
+            Ok(new_count)
+        } else if chat.user_b_id == user_id {
+            let new_count = chat.user_b_sent_count + 1;
+            sqlx::query!(
+                r#"UPDATE private_chats SET user_b_sent_count = $1 WHERE private_chat_id = $2"#,
+                new_count,
+                private_chat_id
+            )
+            .execute(&self.pool)
+            .await?;
+            Ok(new_count)
+        } else {
+            Err(crate::error::AppError::Forbidden("用户不在此私聊中".to_string()))
+        }
+    }
+
+    /// 解锁用户消息限制（对方回复后调用）
+    pub async fn unlock_messaging(&self, private_chat_id: Uuid, user_id: i64) -> Result<()> {
+        let chat = self.find_by_id(private_chat_id).await?.ok_or_else(|| {
+            crate::error::AppError::NotFound("私聊不存在".to_string())
+        })?;
+        
+        if chat.user_a_id == user_id {
+            sqlx::query!(
+                r#"UPDATE private_chats SET user_a_can_message_freely = TRUE WHERE private_chat_id = $1"#,
+                private_chat_id
+            )
+            .execute(&self.pool)
+            .await?;
+        } else if chat.user_b_id == user_id {
+            sqlx::query!(
+                r#"UPDATE private_chats SET user_b_can_message_freely = TRUE WHERE private_chat_id = $1"#,
+                private_chat_id
+            )
+            .execute(&self.pool)
+            .await?;
+        } else {
+            return Err(crate::error::AppError::Forbidden("用户不在此私聊中".to_string()));
+        }
         
         Ok(())
     }

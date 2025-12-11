@@ -1,39 +1,77 @@
 <template>
     <PageLayout
         title="我的好友"
-        description="管理您的好友关系和社交网络"
+        description="互相关注的好友列表"
         :stats="friendsStats"
         :header-actions="headerActions"
     >
         <!-- 好友列表 -->
-        <UCard class="bg-white/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50">
-            <DataView
-                :data="filteredFriends"
-                :loading="loading"
-                :searchable="true"
-                :search-fields="['nickname', 'display_name', 'email']"
-                :filters="filterOptions"
-                :show-pagination="true"
-                :page-size="12"
-                :toolbar-actions="toolbarActions"
-                item-component="UserCard"
-                :get-item-key="(item) => item.user_id"
-                :get-item-props="getUserCardProps"
-                :get-item-events="getUserCardEvents"
-                empty-icon="i-heroicons-users"
-                empty-title="还没有好友"
-                empty-description="添加您的第一个好友，开始社交之旅"
-                :empty-action="{ label: '添加好友', action: () => navigateTo('/search') }"
-                @item-click="(user) => handleUserClick(user)"
-                @search="handleSearch"
-                @filter-change="handleFilterChange"
-            />
+        <UCard class="border">
+            <!-- 工具栏 -->
+            <template #header>
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div class="flex items-center gap-4 w-full sm:w-auto">
+                        <UInput
+                            v-model="searchQuery"
+                            placeholder="搜索好友..."
+                            icon="i-heroicons-magnifying-glass"
+                            class="w-full sm:w-64"
+                        />
+                        <USelectMenu
+                            v-model="activeFilter"
+                            :items="filterOptions"
+                            value-key="value"
+                            class="w-36"
+                        />
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <UButton variant="outline" icon="i-heroicons-arrow-path" @click="loadFriends">
+                            刷新
+                        </UButton>
+                        <UButton color="primary" icon="i-heroicons-user-plus" @click="navigateTo('/search')">
+                            发现用户
+                        </UButton>
+                        <UButton variant="outline" icon="i-heroicons-map-pin" @click="navigateTo('/users/nearby')">
+                            附近的人
+                        </UButton>
+                    </div>
+                </div>
+            </template>
+
+            <!-- 加载状态 -->
+            <div v-if="loading" class="space-y-4">
+                <USkeleton v-for="i in 3" :key="i" class="h-20 w-full" />
+            </div>
+
+            <!-- 空状态 -->
+            <UEmpty
+                v-else-if="displayFriends.length === 0"
+                icon="i-heroicons-users"
+                title="还没有好友"
+                description="添加您的第一个好友，开始社交之旅"
+            >
+                <template #actions>
+                    <UButton color="primary" @click="navigateTo('/search')">添加好友</UButton>
+                </template>
+            </UEmpty>
+
+            <!-- 好友列表 -->
+            <div v-else class="space-y-3">
+                <UserCard
+                    v-for="friend in displayFriends"
+                    :key="friend.user.user_id"
+                    :user="toUserCardData(friend)"
+                    @click="handleUserClick(friend)"
+                    @message="handleSendMessage(friend)"
+                    @more="handleUserActions(friend)"
+                />
+            </div>
         </UCard>
     </PageLayout>
 </template>
 
 <script setup lang="ts">
-import type { UserResponse } from "~/types/api"
+import type { FriendListItem } from "~/types/api"
 
 definePageMeta({ 
     title: "我的好友", 
@@ -45,24 +83,18 @@ definePageMeta({
 import { useUsersService } from '~/services/users.service'
 const toast = useToast()
 const userService = useUsersService()
-const { formatTime } = useFormatters()
-const { showFriendRequestsModal } = useModal()
+const authStore = useAuthStore()
 
 // 数据状态
 const loading = ref(true)
-const friends = ref<UserResponse[]>([])
-const pendingRequests = ref<UserResponse[]>([])
+const friends = ref<FriendListItem[]>([])
 const searchQuery = ref('')
 const activeFilter = ref('all')
 
 // 计算属性
 const totalFriends = computed(() => friends.value.length)
 const onlineFriends = computed(() => 
-    friends.value.filter(f => (f as any).is_online).length
-)
-const pendingRequestsCount = computed(() => pendingRequests.value.length)
-const nearbyFriends = computed(() => 
-    friends.value.filter(f => (f as any).distance && (f as any).distance < 5000).length
+    friends.value.filter(f => f.is_online === true).length
 )
 
 // 统计数据
@@ -73,7 +105,7 @@ const friendsStats = computed(() => [
         value: totalFriends.value,
         icon: 'i-heroicons-users',
         color: 'blue' as const,
-        description: '您的好友总数',
+        description: '互相关注的好友总数',
         onClick: () => {
             activeFilter.value = 'all'
             toast.add({ color: 'info', title: '显示全部好友' })
@@ -91,27 +123,6 @@ const friendsStats = computed(() => [
             activeFilter.value = 'online'
             toast.add({ color: 'info', title: '显示在线好友' })
         }
-    },
-    {
-        key: 'requests',
-        label: '待处理请求',
-        value: pendingRequestsCount.value,
-        icon: 'i-heroicons-bell',
-        color: 'orange' as const,
-        description: '等待您处理的好友请求',
-        onClick: () => navigateTo('/friends/requests')
-    },
-    {
-        key: 'nearby',
-        label: '附近好友',
-        value: nearbyFriends.value,
-        icon: 'i-heroicons-map-pin',
-        color: 'purple' as const,
-        description: '5公里内的好友',
-        onClick: () => {
-            activeFilter.value = 'nearby'
-            toast.add({ color: 'info', title: '显示附近好友' })
-        }
     }
 ])
 
@@ -119,37 +130,37 @@ const friendsStats = computed(() => [
 const headerActions = computed(() => [
     {
         key: 'add',
-        label: '添加好友',
+        label: '发现用户',
         icon: 'i-heroicons-user-plus',
         color: 'primary' as const,
         action: () => navigateTo('/search')
     },
     {
-        key: 'requests',
-        label: `好友请求${pendingRequestsCount.value > 0 ? ` (${pendingRequestsCount.value})` : ''}`,
-        icon: 'i-heroicons-bell',
+        key: 'following',
+        label: '我的关注',
+        icon: 'i-heroicons-user-group',
         variant: 'outline' as const,
-        action: () => showFriendRequestsModal()
+        action: () => navigateTo('/following')
     }
 ])
 
-const filteredFriends = computed(() => {
+// 显示的好友（搜索 + 筛选）
+const displayFriends = computed(() => {
     let result = [...friends.value]
+    
+    // 搜索过滤
+    if (searchQuery.value.trim()) {
+        const query = searchQuery.value.toLowerCase()
+        result = result.filter(f => 
+            f.user.nickname.toLowerCase().includes(query) ||
+            (f.remark?.toLowerCase().includes(query))
+        )
+    }
     
     // 应用筛选
     switch (activeFilter.value) {
         case 'online':
-            result = result.filter(f => (f as any).is_online)
-            break
-        case 'nearby':
-            result = result.filter(f => (f as any).distance && (f as any).distance < 5000)
-            break
-        case 'recent':
-            result = result.filter(f => {
-                const lastActive = new Date((f as any).last_active_at || 0)
-                const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
-                return lastActive > dayAgo
-            })
+            result = result.filter(f => f.is_online === true)
             break
     }
     
@@ -159,116 +170,55 @@ const filteredFriends = computed(() => {
 // 筛选选项
 const filterOptions = [
     { label: '全部好友', value: 'all' },
-    { label: '在线好友', value: 'online' },
-    { label: '附近好友', value: 'nearby' },
-    { label: '最近活跃', value: 'recent' }
+    { label: '在线好友', value: 'online' }
 ]
 
-// 工具栏操作
-const toolbarActions = computed(() => [
-    {
-        key: 'refresh',
-        label: '刷新',
-        icon: 'i-heroicons-arrow-path',
-        variant: 'outline' as const,
-        action: loadFriends
-    },
-    {
-        key: 'add',
-        label: '添加好友',
-        icon: 'i-heroicons-user-plus',
-        color: 'primary' as const,
-        action: () => navigateTo('/search')
-    },
-    {
-        key: 'requests',
-        label: '好友请求',
-        icon: 'i-heroicons-bell',
-        variant: 'outline' as const,
-        action: () => navigateTo('/friends/requests')
-    },
-    {
-        key: 'nearby',
-        label: '附近的人',
-        icon: 'i-heroicons-map-pin',
-        variant: 'outline' as const,
-        action: () => navigateTo('/users/nearby')
-    }
-])
-
-// UserCard 配置
-const getUserCardProps = (user: UserResponse) => ({
-    user: {
-        ...user,
-        display_name: (user as any).display_name || user.nickname,
-        is_online: (user as any).is_online || false,
-        last_active_display: (user as any).last_active_at ? 
-            formatTime((user as any).last_active_at) : '未知'
-    },
-    showOnlineStatus: true,
-    showLastActive: true,
-    class: 'cursor-pointer hover:shadow-md transition-shadow'
+// 转换好友数据为 UserCard 可用的格式
+const toUserCardData = (friend: FriendListItem) => ({
+    ...friend.user,
+    nickname: friend.remark || friend.user.nickname, // 优先显示备注
+    is_online: friend.is_online,
+    // 好友列表没有 geo 数据，UserCard 会自动处理
 })
 
-const getUserCardEvents = (user: UserResponse) => ({
-    click: () => handleUserClick(user),
-    message: () => handleSendMessage(user),
-    more: () => handleUserActions(user)
-})
+
+// 导入错误处理工具
+import { getErrorMessage } from '~/utils/error'
 
 // 方法
 const loadFriends = async () => {
     loading.value = true
     try {
-        const result = await userService.getFriends({ status: 'accepted' })
-        friends.value = result.items.map(item => item.user)
+        const result = await userService.getFriends({})
+        friends.value = result.items
         toast.add({ color: 'success', title: '好友列表已更新' })
-    } catch (error: any) {
-        toast.add({ color: 'error', title: '加载失败', description: error?.message || '未知错误' })
+    } catch (error: unknown) {
+        toast.add({ color: 'error', title: '加载失败', description: getErrorMessage(error) })
     } finally {
         loading.value = false
     }
 }
 
-const loadPendingRequests = async () => {
-    try {
-        const result = await userService.getFriendRequests({ status: 'received' })
-        pendingRequests.value = result.items.map(item => item.from_user)
-    } catch (error) {
-        console.error('加载好友请求失败:', error)
+const handleUserClick = (friend: FriendListItem) => {
+    if (friend.user.user_id === authStore.user?.user_id) {
+        navigateTo('/profile')
+    } else {
+        navigateTo(`/users/${friend.user.user_id}`)
     }
 }
 
-const handleUserClick = (user: UserResponse) => {
-    navigateTo(`/users/${user.user_id}`)
+const handleSendMessage = (friend: FriendListItem) => {
+    navigateTo(`/chat/users/${friend.user.user_id}`)
 }
 
-const handleSendMessage = (user: UserResponse) => {
-    navigateTo(`/chat/users/${user.user_id}`)
-}
-
-const handleUserActions = (user: UserResponse) => {
+const handleUserActions = (friend: FriendListItem) => {
     // 显示用户操作菜单
-    toast.add({ color: 'info', title: `用户操作: ${user.nickname}` })
+    toast.add({ color: 'info', title: `用户操作: ${friend.user.nickname}` })
 }
 
-const handleSearch = (query: string) => {
-    searchQuery.value = query
-    if (query.trim()) {
-        toast.add({ color: 'info', title: `搜索: ${query}` })
-    }
-}
-
-const handleFilterChange = (filter: string) => {
-    activeFilter.value = filter
-    toast.add({ color: 'info', title: `筛选: ${filterOptions.find(f => f.value === filter)?.label}` })
-}
 
 // 生命周期
 onMounted(async () => {
-    await Promise.all([
-        loadFriends(),
-        loadPendingRequests()
-    ])
+    await loadFriends()
 })
 </script>

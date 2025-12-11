@@ -4,12 +4,18 @@
  * 这个 composable 可以在 Vue 组件中使用，正确访问 i18n 实例
  */
 
+// 翻译参数类型
+type TranslateParams = Record<string, string | number>
+
 export const useFormatters = () => {
-  const { $t, $i18n } = useNuxtApp()
-  
+  const { $i18n } = useNuxtApp()
+  const { t: i18nT } = useI18n()
+
   // 类型安全的翻译函数
-  const t = (key: string, params?: Record<string, any>) => {
-    return ($t as any)(key, params) as string
+  const t = (key: string, params?: TranslateParams): string => {
+    // 使用 useI18n 的 t 函数
+    const translated = i18nT(key, params ?? {})
+    return typeof translated === 'string' ? translated : String(translated)
   }
 
   /**
@@ -20,7 +26,7 @@ export const useFormatters = () => {
   const formatTime = (dateString: string | Date | null | undefined): string => {
     // 处理空值和无效值
     if (!dateString) return '-'
-    
+
     let date: Date
     try {
       date = typeof dateString === 'string' ? new Date(dateString) : dateString
@@ -28,10 +34,10 @@ export const useFormatters = () => {
     } catch {
       return '-'
     }
-    
+
     const now = new Date()
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-    
+
     if (diffInSeconds < 60) return t('time.justNow')
     if (diffInSeconds < 3600) return t('time.minutesAgo', { n: Math.floor(diffInSeconds / 60) })
     if (diffInSeconds < 86400) return t('time.hoursAgo', { n: Math.floor(diffInSeconds / 3600) })
@@ -40,7 +46,7 @@ export const useFormatters = () => {
       const months = Math.floor(diffInSeconds / 2592000)
       return t('time.monthsAgo', { n: months })
     }
-    
+
     const years = Math.floor(diffInSeconds / 31536000)
     return t('time.yearsAgo', { n: years })
   }
@@ -53,7 +59,7 @@ export const useFormatters = () => {
   const formatDistance = (distance: number | null | undefined): string => {
     // 处理无效值
     if (typeof distance !== 'number' || isNaN(distance) || distance < 0) return '-'
-    
+
     if (distance < 1000) {
       return t('distance.meters', { n: Math.round(distance) })
     } else {
@@ -70,7 +76,7 @@ export const useFormatters = () => {
   const formatDate = (dateString: string | Date | null | undefined, format: 'short' | 'long' | 'time' = 'short'): string => {
     // 处理空值和无效值
     if (!dateString) return '-'
-    
+
     let date: Date
     try {
       date = typeof dateString === 'string' ? new Date(dateString) : dateString
@@ -78,10 +84,11 @@ export const useFormatters = () => {
     } catch {
       return '-'
     }
-    
+
     // 获取当前语言环境
-    const locale = ($i18n as any)?.locale?.value || 'zh-CN'
-    
+    const i18nInstance = $i18n as { locale?: { value?: string } }
+    const locale = i18nInstance?.locale?.value || 'zh-CN'
+
     switch (format) {
       case 'long':
         return date.toLocaleDateString(locale, {
@@ -115,7 +122,7 @@ export const useFormatters = () => {
   const formatCount = (count: number | null | undefined): string => {
     // 处理无效值
     if (typeof count !== 'number' || isNaN(count) || count < 0) return '0'
-    
+
     if (count < 1000) {
       return count.toString()
     } else if (count < 10000) {
@@ -127,26 +134,10 @@ export const useFormatters = () => {
     }
   }
 
-  /**
-   * 格式化文件大小（不需要国际化）
-   * @param bytes 字节数
-   * @returns 格式化后的文件大小字符串
-   */
-  const formatFileSize = (bytes: number | null | undefined): string => {
-    if (!bytes || bytes === 0) return '0 B'
-    
-    const k = 1024
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    
-    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`
-  }
-
   return {
     formatTime,
     formatDistance,
     formatDate,
-    formatCount,
-    formatFileSize
+    formatCount
   }
 }

@@ -49,28 +49,6 @@ impl DeviceTokenRepository {
         Ok(())
     }
 
-    /// 注销设备Token
-    pub async fn unregister(
-        &self,
-        user_id: i64,
-        platform: Platform,
-        device_token: String,
-    ) -> Result<()> {
-        sqlx::query!(
-            r#"
-            DELETE FROM device_tokens
-            WHERE user_id = $1 AND platform = $2::platform AND device_token = $3
-            "#,
-            user_id,
-            platform as Platform,
-            device_token
-        )
-        .execute(&self.pool)
-        .await?;
-
-        Ok(())
-    }
-
     /// 获取用户的所有设备Token
     pub async fn find_by_user(&self, user_id: i64) -> Result<Vec<DeviceTokenRow>> {
         let rows = sqlx::query_as!(
@@ -101,8 +79,8 @@ impl DeviceTokenRepository {
         self.register(user_id, platform_enum, device_token.to_string()).await
     }
 
-    /// 注销指定Token (deactivate)
-    pub async fn deactivate(
+    /// 注销指定Token
+    pub async fn unregister(
         &self,
         user_id: i64,
         device_token: &str,
@@ -121,8 +99,8 @@ impl DeviceTokenRepository {
         Ok(result.rows_affected())
     }
 
-    /// 注销所有设备Token (deactivate_all)
-    pub async fn deactivate_all(
+    /// 注销用户所有设备Token
+    pub async fn unregister_all(
         &self,
         user_id: i64,
     ) -> Result<u64> {

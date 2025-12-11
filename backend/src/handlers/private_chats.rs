@@ -5,7 +5,7 @@ use crate::{
     dto::{
         request::{
             CreatePrivateChatRequest, DeletePrivateChatRequest, GetPrivateChatsRequest,
-            OpenTheDoorRequest, UpdatePrivateChatSettingsRequest,
+            PrivateChatOpenTheDoorRequest, UpdatePrivateChatSettingsRequest,
         },
         response::{
             ApiResponse, CreatePrivateChatData, PaginatedData, PaginationMeta,
@@ -19,8 +19,9 @@ use crate::{
         user_repo::UserRepository,
         private_message_repo::PrivateMessageRepository,
         chat_unread_repo::ChatUnreadRepository,
-        user_online_status_repo::UserOnlineStatusRepository,
+        user_follows_repo::UserFollowsRepository,
     },
+    utils::validation::Validator,
 };
 
 /// 3.5.1 创建私聊
@@ -31,13 +32,12 @@ pub async fn create(
 ) -> Result<Json<ApiResponse<CreatePrivateChatData>>> {
     let service = PrivateChatService::new(state.db.clone());
     
-    let target_user_id = req.target_user_id.parse::<i64>()
-        .map_err(|_| AppError::BadRequest("无效的用户ID".to_string()))?;
+    let target_user_id = req.target_user_id;
     
     let chat = service.create_or_get(current_user_id, target_user_id).await?;
     
     Ok(Json(ApiResponse::success(CreatePrivateChatData {
-        private_chat_id: chat.private_chat_id.to_string(),
+        id: chat.private_chat_id.to_string(),
     })))
 }
 
@@ -52,7 +52,7 @@ pub async fn get_list(
     let message_repo = PrivateMessageRepository::new(state.db.clone());
     let unread_repo = ChatUnreadRepository::new(state.db.clone());
     
-    let limit = req.limit.unwrap_or(20) as i64;
+    let limit = Validator::validate_limit(req.limit, 100)? as i64;
     let chats = service.list_by_user(current_user_id, limit + 1, req.cursor.clone()).await?;
     
     let has_more = chats.len() > limit as usize;
@@ -74,13 +74,15 @@ pub async fn get_list(
         
         let other_user = user_repo.find_by_id(other_user_id).await?;
         let other_user_info = other_user.map(|u| UserInfo {
-            user_id: u.user_id.to_string(),
+            user_id: u.user_id,
             nickname: u.nickname,
             avatar_url: u.avatar_url,
+            user_type: u.user_type,
         }).unwrap_or_else(|| UserInfo {
-            user_id: other_user_id.to_string(),
+            user_id: other_user_id,
             nickname: "未知用户".to_string(),
             avatar_url: None,
+            user_type: crate::types::enums::UserType::Normal,
         });
         
         // 获取未读计数
@@ -94,9 +96,9 @@ pub async fn get_list(
         let last_message = message_repo.get_last_message(chat.private_chat_id).await?
             .map(|m| PrivateChatLastMessage {
                 id: m.message_id.to_string(),
-                content: m.content,
+                content: Some(m.content),
                 r#type: m.r#type.as_str().to_string(),
-                sender_id: m.sender_id.to_string(),
+                sender_id: m.sender_id,
                 sent_at: m.sent_at.to_rfc3339(),
             });
         
@@ -105,7 +107,7 @@ pub async fn get_list(
             .unwrap_or_else(|| chat.created_at.to_rfc3339());
         
         items.push(PrivateChatListItem {
-            private_chat_id: chat.private_chat_id.to_string(),
+            id: chat.private_chat_id.to_string(),
             other_user: other_user_info,
             unread_count: unread_count as i32,
             last_message,
@@ -122,17 +124,16 @@ pub async fn get_list(
     })))
 }
 
-/// 3.5.3 获取私聊详情
+/// 获取私聊详情 - POST /api/v1/protected/private_chats/open_the_door
 pub async fn open_the_door(
     State(state): State<AppState>,
     Extension(current_user_id): Extension<i64>,
-    Json(req): Json<OpenTheDoorRequest>,
+    Json(req): Json<PrivateChatOpenTheDoorRequest>,
 ) -> Result<Json<ApiResponse<PrivateChatDetailData>>> {
     let service = PrivateChatService::new(state.db.clone());
     let user_repo = UserRepository::new(state.db.clone());
     let message_repo = PrivateMessageRepository::new(state.db.clone());
     let unread_repo = ChatUnreadRepository::new(state.db.clone());
-    let online_repo = UserOnlineStatusRepository::new(state.db.clone());
     
     let private_chat_id = Uuid::parse_str(&req.id)
         .map_err(|_| AppError::BadRequest("无效的私聊ID".to_string()))?;
@@ -149,24 +150,19 @@ pub async fn open_the_door(
     
     let other_user = user_repo.find_by_id(other_user_id).await?;
     let other_user_info = other_user.map(|u| UserInfo {
-        user_id: u.user_id.to_string(),
+        user_id: u.user_id,
         nickname: u.nickname,
         avatar_url: u.avatar_url,
+        user_type: u.user_type,
     }).unwrap_or_else(|| UserInfo {
-        user_id: other_user_id.to_string(),
+        user_id: other_user_id,
         nickname: "未知用户".to_string(),
         avatar_url: None,
+        user_type: crate::types::enums::UserType::Normal,
     });
     
     // 获取设置
     let settings = service.get_settings(private_chat_id, current_user_id).await?;
-    
-    // 获取对方在线状态
-    let online_status = online_repo.get_status(other_user_id).await?;
-    let other_user_status = crate::dto::response::OtherUserStatus {
-        is_online: online_status.as_ref().map(|s| s.is_online).unwrap_or(false),
-        last_seen: online_status.and_then(|s| s.last_seen_at.map(|t| t.to_rfc3339())),
-    };
     
     // 获取未读计数
     let unread_count = unread_repo.get_unread_count(
@@ -179,9 +175,9 @@ pub async fn open_the_door(
     let last_message = message_repo.get_last_message(chat.private_chat_id).await?
         .map(|m| PrivateChatLastMessage {
             id: m.message_id.to_string(),
-            content: m.content,
+            content: Some(m.content),
             r#type: m.r#type.as_str().to_string(),
-            sender_id: m.sender_id.to_string(),
+            sender_id: m.sender_id,
             sent_at: m.sent_at.to_rfc3339(),
         });
     
@@ -189,10 +185,40 @@ pub async fn open_the_door(
         .map(|m| m.sent_at.clone())
         .unwrap_or_else(|| chat.created_at.to_rfc3339());
     
+    // 获取消息限制信息
+    // 通过关系判断消息限制
+    let follows_repo = UserFollowsRepository::new(state.db.clone());
+    let is_following = follows_repo.exists(current_user_id, other_user_id).await.unwrap_or(false);
+    let is_followed_by = follows_repo.exists(other_user_id, current_user_id).await.unwrap_or(false);
+    let is_mutual_follow = is_following && is_followed_by;
+    
+    let message_limit = if is_mutual_follow {
+        None
+    } else {
+        let (can_message_freely, sent_count) = if chat.user_a_id == current_user_id {
+            (chat.user_a_can_message_freely, chat.user_a_sent_count)
+        } else {
+            (chat.user_b_can_message_freely, chat.user_b_sent_count)
+        };
+        
+        if can_message_freely {
+            None
+        } else {
+            let total = if is_following { 3 } else { 1 };
+            let remaining = (total - sent_count).max(0);
+            
+            Some(crate::dto::response::MessageLimit {
+                remaining,
+                total,
+                is_unlocked: false,
+            })
+        }
+    };
+
     Ok(Json(ApiResponse::success(PrivateChatDetailData {
-        private_chat_id: chat.private_chat_id.to_string(),
+        id: chat.private_chat_id.to_string(),
         other_user: other_user_info,
-        other_user_status,
+        message_limit,
         unread_count: unread_count as i32,
         is_muted: settings.as_ref().map(|s| s.is_muted).unwrap_or(false),
         is_pinned: settings.as_ref().map(|s| s.is_pinned).unwrap_or(false),
@@ -211,7 +237,7 @@ pub async fn update_settings(
 ) -> Result<Json<ApiResponse<()>>> {
     let service = PrivateChatService::new(state.db.clone());
     
-    let private_chat_id = Uuid::parse_str(&req.private_chat_id)
+    let private_chat_id = Uuid::parse_str(&req.id)
         .map_err(|_| AppError::BadRequest("无效的私聊ID".to_string()))?;
     
     service.update_settings(
@@ -233,7 +259,7 @@ pub async fn delete(
 ) -> Result<Json<ApiResponse<()>>> {
     let service = PrivateChatService::new(state.db.clone());
     
-    let private_chat_id = Uuid::parse_str(&req.private_chat_id)
+    let private_chat_id = Uuid::parse_str(&req.id)
         .map_err(|_| AppError::BadRequest("无效的私聊ID".to_string()))?;
     
     service.delete(private_chat_id, current_user_id).await?;

@@ -1,21 +1,17 @@
 <template>
-    <InteractiveCard 
-        class="group moment-card"
-        :hover="true"
-        :active="true"
-        :glow="true"
-        shadow="md"
+    <UCard
+        class="interactive-card group cursor-pointer"
         @click="$emit('click', moment)"
     >
         <!-- 用户信息头部 -->
         <template #header>
             <div class="flex items-center justify-between">
                 <UUser
-                    :name="moment.nickname"
+                    :name="moment.user.nickname"
                     :description="userDescription"
                     :avatar="{
-                        src: moment.user_avatar,
-                        alt: moment.nickname,
+                        src: moment.user.avatar_url,
+                        alt: moment.user.nickname,
                         size: 'md',
                         chip: isOnline ? { color: 'success', position: 'bottom-right' } : false
                     }"
@@ -24,20 +20,20 @@
                     class="flex-1 min-w-0"
                 >
                     <template #description>
-                        <div class="flex items-center gap-3 text-sm text-muted">
+                        <div class="flex items-center gap-3 text-sm text-secondary-content">
                             <div class="flex items-center gap-1">
-                                <UIcon name="i-heroicons-clock" class="w-3 h-3" />
+                                <UIcon name="i-heroicons-clock" class="icon-sm" />
                                 <span>{{ formatTime(moment.created_at) }}</span>
                             </div>
                             
-                            <div v-if="moment.location_name" class="flex items-center gap-1">
-                                <UIcon name="i-heroicons-map-pin" class="w-3 h-3" />
-                                <span class="truncate">{{ moment.location_name }}</span>
+                            <div v-if="moment.geo.location_name" class="flex items-center gap-1">
+                                <UIcon name="i-heroicons-map-pin" class="icon-sm" />
+                                <span class="truncate">{{ moment.geo.location_name }}</span>
                             </div>
                             
-                            <div v-if="moment.distance !== undefined" class="flex items-center gap-1">
-                                <UIcon name="i-heroicons-signal" class="w-3 h-3" />
-                                <span>{{ formatDistance(moment.distance) }}</span>
+                            <div v-if="moment.geo.distance !== undefined" class="flex items-center gap-1">
+                                <UIcon name="i-heroicons-signal" class="icon-sm" />
+                                <span>{{ formatDistance(moment.geo.distance) }}</span>
                             </div>
                         </div>
                     </template>
@@ -59,7 +55,7 @@
         <div class="space-y-4">
             <!-- 文字内容 -->
             <div class="prose prose-sm max-w-none">
-                <p class="text-highlighted leading-relaxed">
+                <p class="text-primary-content leading-relaxed">
                     {{ moment.description }}
                 </p>
             </div>
@@ -68,7 +64,7 @@
             <div v-if="moment.images?.length" class="mt-3">
                 <!-- 单张图片 -->
                 <div v-if="moment.images.length === 1" class="rounded-lg overflow-hidden">
-                    <img
+                    <NuxtImg
                         :src="moment.images[0]"
                         :alt="moment.description"
                         class="w-full max-h-96 object-cover cursor-pointer hover:opacity-90 transition-opacity"
@@ -84,7 +80,7 @@
                         moment.images.length === 2 ? 'grid-cols-2' : 'grid-cols-2'
                     ]"
                 >
-                    <img
+                    <NuxtImg
                         v-for="(image, index) in moment.images"
                         :key="index"
                         :src="image"
@@ -101,7 +97,7 @@
                 >
                     <template v-for="(image, index) in moment.images.slice(0, 9)" :key="index">
                         <div class="relative">
-                            <img
+                            <NuxtImg
                                 :src="image"
                                 :alt="`${moment.description} - ${index + 1}`"
                                 class="w-full h-32 object-cover cursor-pointer hover:opacity-90 transition-opacity"
@@ -128,7 +124,7 @@
                     variant="soft"
                     size="sm"
                     color="neutral"
-                    class="cursor-pointer hover:bg-primary-50 hover:text-primary-600 dark:hover:bg-primary-950 dark:hover:text-primary-400 transition-colors"
+                    class="cursor-pointer hover-primary transition-colors"
                     @click.stop="$emit('tag-click', tag)"
                 >
                     #{{ tag }}
@@ -150,7 +146,7 @@
                     >
                         <UIcon
                             :name="moment.liked_by_me ? 'i-heroicons-heart-solid' : 'i-heroicons-heart'"
-                            class="w-4 h-4 mr-1"
+                            class="icon-sm mr-1"
                         />
                         {{ moment.likes_count }}
                     </UButton>
@@ -161,7 +157,7 @@
                         color="neutral"
                         @click.stop="handleComment"
                     >
-                        <UIcon name="i-heroicons-chat-bubble-left" class="w-4 h-4 mr-1" />
+                        <UIcon name="i-heroicons-chat-bubble-left" class="icon-sm mr-1" />
                         {{ moment.comments_count }}
                     </UButton>
 
@@ -171,7 +167,7 @@
                         color="neutral"
                         @click.stop="handleShare"
                     >
-                        <UIcon name="i-heroicons-share" class="w-4 h-4 mr-1" />
+                        <UIcon name="i-heroicons-share" class="icon-sm mr-1" />
                         分享
                     </UButton>
                 </div>
@@ -179,28 +175,35 @@
                 <!-- 可见性功能暂未实现，等待后端API支持 -->
             </div>
         </template>
-    </InteractiveCard>
+    </UCard>
 </template>
 
 <script setup lang="ts">
 import { useMomentsService } from '~/services/moments.service';
-import { useUserService } from '~/services/users.service';
-import type { MomentResponse, UserResponse } from '~/types/api'
+import { useUsersService } from '~/services/users.service';
+import { getErrorMessage } from '~/utils/error';
+import type { MomentSearchItem } from '~/types/api'
+
+// MomentCard 使用 MomentSearchItem 类型（包含 geo 和 tags）
+// 添加可选的 liked_by_me 字段用于 UI 状态显示
+interface MomentCardData extends MomentSearchItem {
+  liked_by_me?: boolean;  // 当前用户是否已点赞（客户端状态）
+}
 
 interface Props {
-    moment: MomentResponse
+    moment: MomentCardData
 }
 
 interface Emits {
-    click: [moment: MomentResponse]
-    like: [moment: MomentResponse]
-    comment: [moment: MomentResponse]
-    share: [moment: MomentResponse]
-    more: [moment: MomentResponse]
-    deleted: [moment: MomentResponse]
+    click: [moment: MomentCardData]
+    like: [moment: MomentCardData]
+    comment: [moment: MomentCardData]
+    share: [moment: MomentCardData]
+    more: [moment: MomentCardData]
+    deleted: [moment: MomentCardData]
     'tag-click': [tag: string]
     'image-click': [data: { image: string; index: number }]
-    'more-images': [moment: MomentResponse]
+    'more-images': [moment: MomentCardData]
 }
 
 const props = defineProps<Props>()
@@ -208,6 +211,7 @@ const emit = defineEmits<Emits>()
 const { formatTime, formatDistance } = useFormatters()
 const { requireAuth } = useRequireAuth()
 
+// 使用水合安全的 store 访问
 const authStore = useAuthStore()
 const toast = useToast()
 
@@ -235,21 +239,20 @@ const handleShare = () => {
 
 // 检查是否是当前用户的动态
 const isMyMoment = computed(() => {
-    return props.moment.user_id === authStore.user?.user_id
+    return props.moment.user.user_id === authStore.user?.user_id
 })
 
-// 用户在线状态（如果需要显示，应该通过 WebSocket 订阅获取）
-// TODO: 通过 WebSocket 订阅用户在线状态更新
+// 在线状态：展示组件不需要实时在线状态，默认不显示
 const isOnline = computed(() => false)
 
 // 用户描述信息
 const userDescription = computed(() => {
     const parts = []
-    if (props.moment.location_name) {
-        parts.push(props.moment.location_name)
+    if (props.moment.geo.location_name) {
+        parts.push(props.moment.geo.location_name)
     }
-    if (props.moment.distance !== undefined) {
-        parts.push(formatDistance(props.moment.distance))
+    if (props.moment.geo.distance !== undefined) {
+        parts.push(formatDistance(props.moment.geo.distance))
     }
     return parts.join(' • ')
 })
@@ -279,7 +282,7 @@ const momentMenuItems = computed(() => {
             label: '删除动态',
             icon: 'i-heroicons-trash',
             click: () => handleDeleteMoment(),
-            class: 'text-error-500'
+            class: 'text-error'
         }])
     } else {
         // 他人动态操作
@@ -297,7 +300,7 @@ const momentMenuItems = computed(() => {
             label: '举报动态',
             icon: 'i-heroicons-flag',
             click: () => handleReportMoment(),
-            class: 'text-error-500'
+            class: 'text-error'
         }])
     }
 
@@ -307,7 +310,7 @@ const momentMenuItems = computed(() => {
 
 // 服务和功能管理
 const momentService = useMomentsService()
-const userService = useUserService()
+const userService = useUsersService()
 
 // 编辑动态
 const handleEditMoment = async () => {
@@ -322,14 +325,19 @@ const handleEditMoment = async () => {
 
 // 删除动态
 const handleDeleteMoment = async () => {
-    const confirmed = confirm('确定要删除这条动态吗？')
+    const modal = useModal()
+    const confirmed = await modal.showConfirm({
+        title: '删除动态',
+        message: '确定要删除这条动态吗？此操作无法撤销。',
+        confirmText: '删除',
+        confirmColor: 'error'
+    })
     if (!confirmed) return
 
     try {
         await momentService.deleteMoment({
-            id: props.moment.moment_id
+            id: props.moment.id
         })
-        const toast = useToast()
         toast.add({
             title: '删除成功',
             description: '动态已删除',
@@ -337,10 +345,10 @@ const handleDeleteMoment = async () => {
         })
         // 触发父组件刷新
         emit('deleted', props.moment)
-    } catch (error: any) {
+    } catch (error: unknown) {
         toast.add({
             title: '删除失败',
-            description: error?.message || '删除动态时发生错误',
+            description: getErrorMessage(error, '删除动态时发生错误'),
             color: 'error'
         })
     }
@@ -349,35 +357,33 @@ const handleDeleteMoment = async () => {
 // 关注用户
 const handleFollowUser = async () => {
     try {
-        const userService = useUserService()
-        await userService.followUser({ to_user_id: props.moment.user_id })
+        const userService = useUsersService()
+        await userService.followUser({ id: props.moment.user.user_id })
         toast.add({ color: 'success', title: '关注成功' })
-    } catch (error: any) {
-        toast.add({ color: 'error', title: '关注失败', description: error.message })
+    } catch (error: unknown) {
+        toast.add({ color: 'error', title: '关注失败', description: getErrorMessage(error) })
     }
 }
 
 // 发送消息
 const handleSendMessage = async () => {
-    // 跳转到私聊页面
-    await navigateTo(`/chat/users/${props.moment.user_id}`)
+    if (props.moment.user.user_id === authStore.user?.user_id) {
+        navigateTo('/profile')
+    } else {
+        navigateTo(`/chat/users/${props.moment.user.user_id}`)
+    }
 }
 
 // 举报动态
 const handleReportMoment = async () => {
-    const { showReport } = useModal()
+    const modal = useModal()
+    const toast = useToast()
     
-    await showReport({
-        targetType: 'moment',
-        targetId: props.moment.moment_id,
-        onSuccess: () => {
-            const toast = useToast()
-            toast.add({
-                title: '举报已提交',
-                description: '我们会尽快处理您的举报',
-                color: 'success'
-            })
-        }
+    await modal.showReport('moment', props.moment.id)
+    toast.add({
+        title: '举报已提交',
+        description: '我们会尽快处理您的举报',
+        color: 'success'
     })
 }
 

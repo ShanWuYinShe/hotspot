@@ -5,12 +5,11 @@ use crate::{
         request::{
             CreateTempRequest, LoginRequest, RegisterRequest, RefreshTokenRequest,
             RequestPasswordResetRequest, VerifyResetCodeRequest, ResetPasswordRequest,
-            CheckStatusRequest, SetPasswordRequest, ListSessionsRequest, RevokeSessionRequest,
+            ChangePasswordRequest, CheckStatusRequest, GetSessionsRequest, RevokeSessionRequest,
         },
         response::{
             ApiResponse, AuthData, RequestPasswordResetData, VerifyResetCodeData,
-            CheckStatusData, SetPasswordData,
-            SessionItem, PaginatedData,
+            CheckStatusData, SessionItem, PaginatedData,
         },
     },
     error::{AppError, Result},
@@ -20,7 +19,7 @@ use crate::{
     utils::validation::Validator,
 };
 
-/// POST /api/v1/public/auth/register
+
 pub async fn register(
     State(state): State<AppState>,
     Json(req): Json<RegisterRequest>,
@@ -47,7 +46,7 @@ pub async fn register(
     Ok(Json(ApiResponse::success(auth_response)))
 }
 
-/// POST /api/v1/public/auth/login
+
 pub async fn login(
     State(state): State<AppState>,
     Json(req): Json<LoginRequest>,
@@ -72,7 +71,7 @@ pub async fn login(
     Ok(Json(ApiResponse::success(auth_response)))
 }
 
-/// POST /api/v1/public/auth/create_temp_user
+
 pub async fn create_temp(
     State(state): State<AppState>,
     Json(req): Json<CreateTempRequest>,
@@ -94,7 +93,7 @@ pub async fn create_temp(
     Ok(Json(ApiResponse::success(auth_response)))
 }
 
-/// POST /api/v1/protected/auth/refresh_token
+
 pub async fn refresh_token(
     State(state): State<AppState>,
     Json(req): Json<RefreshTokenRequest>,
@@ -112,7 +111,7 @@ pub async fn refresh_token(
     Ok(Json(ApiResponse::success(auth_response)))
 }
 
-/// POST /api/v1/protected/auth/logout
+
 pub async fn logout(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
@@ -131,7 +130,7 @@ pub async fn logout(
     Ok(Json(ApiResponse::success_empty()))
 }
 
-/// POST /api/v1/public/auth/request_password_reset
+
 pub async fn request_password_reset(
     State(state): State<AppState>,
     Json(req): Json<RequestPasswordResetRequest>,
@@ -147,7 +146,7 @@ pub async fn request_password_reset(
     Ok(Json(ApiResponse::success(response)))
 }
 
-/// POST /api/v1/public/auth/verify_reset_code
+
 pub async fn verify_reset_code(
     State(state): State<AppState>,
     Json(req): Json<VerifyResetCodeRequest>,
@@ -163,7 +162,7 @@ pub async fn verify_reset_code(
     Ok(Json(ApiResponse::success(response)))
 }
 
-/// POST /api/v1/public/auth/reset_password
+
 pub async fn reset_password(
     State(state): State<AppState>,
     Json(req): Json<ResetPasswordRequest>,
@@ -179,7 +178,7 @@ pub async fn reset_password(
     Ok(Json(ApiResponse::success_empty()))
 }
 
-/// POST /api/v1/protected/auth/check_status
+
 pub async fn check_status(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
@@ -198,12 +197,12 @@ pub async fn check_status(
     Ok(Json(ApiResponse::success(response)))
 }
 
-/// POST /api/v1/protected/auth/set_password
-pub async fn set_password(
+
+pub async fn change_password(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
-    Json(password_req): Json<SetPasswordRequest>,
-) -> Result<Json<ApiResponse<SetPasswordData>>> {
+    Json(req): Json<ChangePasswordRequest>,
+) -> Result<Json<ApiResponse<()>>> {
     let auth_service = AuthService::new(
         &state.db,
         &state.redis,
@@ -211,16 +210,16 @@ pub async fn set_password(
         state.config.jwt_access_token_expiration,
         state.config.jwt_refresh_token_expiration,
     );
-    let response = auth_service.set_password(user_id, &password_req).await?;
-    Ok(Json(ApiResponse::success(response)))
+    auth_service.change_password(user_id, &req).await?;
+    Ok(Json(ApiResponse::success_empty()))
 }
 
-/// POST /api/v1/protected/auth/get_sessions
+
 pub async fn list_sessions(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Extension(session_id): Extension<Option<uuid::Uuid>>,
-    Json(list_req): Json<ListSessionsRequest>,
+    Json(list_req): Json<GetSessionsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<SessionItem>>>> {
     let auth_service = AuthService::new(
         &state.db,
@@ -233,7 +232,7 @@ pub async fn list_sessions(
     Ok(Json(ApiResponse::success(response)))
 }
 
-/// POST /api/v1/protected/auth/revoke_session
+
 pub async fn revoke_session(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,

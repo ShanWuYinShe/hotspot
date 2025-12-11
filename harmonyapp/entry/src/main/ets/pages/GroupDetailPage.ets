@@ -11,11 +11,14 @@ import { SystemLoadingView } from '../components/SystemLoadingView';
 import { SystemToast } from '../components/SystemToast';
 import { IconButton, AppIcon, IconSize } from '../components/SystemIcon';
 import { 
-  SearchGroupByIdResponse, 
-  GetMembersResponse, 
-  isTempUser,
-  hasUserPermission 
-} from '../common/types/BackendApiTypes';
+  GroupSearchItem, 
+  GroupMemberItem
+} from '../common/types/api';
+import { UserTypeUtil } from '../common/utils/UserTypeUtil';
+
+// 类型别名：保持向后兼容
+type SearchGroupByIdResponse = GroupSearchItem;
+type GetMembersResponse = GroupMemberItem;
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DistributedSyncService, SyncData } from '../common/services/DistributedSyncService';
 import { SmartNotificationService } from '../common/services/SmartNotificationService';
@@ -151,12 +154,8 @@ struct GroupDetailPage {
   private async joinGroup(): Promise<void> {
     if (!this.groupInfo || !this.globalState.currentUser) return;
 
-    // 检查临时用户权限
-    if (isTempUser(this.globalState.currentUser.user_id) && 
-        !hasUserPermission(this.globalState.currentUser.user_id, 'join_group')) {
-      SystemToast.showWarning('临时用户功能受限，请升级为正式用户', this.getUIContext());
-      return;
-    }
+    // TODO: 需要从用户会话中获取 user_type 来进行权限检查
+    // 临时用户加入群组的权限检查已暂时禁用
 
     this.isJoining = true;
     try {

@@ -38,11 +38,6 @@ pub struct RefreshTokenRequest {
 pub struct CheckStatusRequest {}
 
 #[derive(Debug, Deserialize)]
-pub struct SetPasswordRequest {
-    pub password_hash: String,
-}
-
-#[derive(Debug, Deserialize)]
 pub struct RequestPasswordResetRequest {
     pub login_id: String,
 }
@@ -60,7 +55,7 @@ pub struct ResetPasswordRequest {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ListSessionsRequest {
+pub struct GetSessionsRequest {
     pub limit: Option<i32>,
     pub cursor: Option<String>,
 }
@@ -73,26 +68,51 @@ pub struct RevokeSessionRequest {
 // ==================== 用户模块请求 ====================
 
 #[derive(Debug, Deserialize)]
-pub struct DiscoverUsersRequest {
-    pub keyword: Option<String>,
-    pub latitude: Option<f64>,
-    pub longitude: Option<f64>,
-    pub radius: Option<f64>,
+pub struct GetMyProfileRequest {}
+
+#[derive(Debug, Deserialize)]
+pub struct GetUserStatsRequest {
+    pub id: i64,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetMyStatsRequest {}
+
+#[derive(Debug, Deserialize)]
+pub struct GetUserFriendsListRequest {
+    pub id: i64,
     pub limit: Option<i32>,
     pub cursor: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct GetMyProfileRequest {}
-
-#[derive(Debug, Deserialize)]
-pub struct OpenTheDoorRequest {
-    pub id: String,
+pub struct GetUserFollowingListRequest {
+    pub id: i64,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct GetStatsRequest {
-    pub id: Option<String>,
+pub struct GetUserFollowersListRequest {
+    pub id: i64,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetUserGroupsListRequest {
+    pub id: String,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetUserLikedMomentsListRequest {
+    pub id: String,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -105,8 +125,9 @@ pub struct UpdateLocationRequest {
 #[derive(Debug, Deserialize)]
 pub struct UpdateProfileRequest {
     pub nickname: Option<String>,
-    pub avatar_url: Option<String>,
+    pub avatar_file_id: Option<String>,
     pub bio: Option<String>,
+    pub tags: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -121,9 +142,20 @@ pub struct GetSettingsRequest {}
 #[derive(Debug, Deserialize)]
 pub struct UpdateSettingsRequest {
     pub privacy_level: Option<String>,
-    pub is_location_sharing: Option<bool>,
-    pub can_be_followed: Option<bool>,
-    pub allow_private_chat: Option<bool>,
+    pub location_visible: Option<bool>,
+    pub online_visible: Option<bool>,
+    pub last_online_visible: Option<bool>,
+    pub friends_visible: Option<String>,
+    pub following_visible: Option<String>,
+    pub followers_visible: Option<String>,
+    pub moments_visible: Option<String>,
+    pub stats_visible: Option<String>,
+    pub allow_follow: Option<bool>,
+    pub allow_private_chat: Option<String>,
+    pub searchable: Option<bool>,
+    pub phone_searchable: Option<bool>,
+    pub nickname_searchable: Option<bool>,
+    pub location_searchable: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -132,87 +164,29 @@ pub struct DeleteAccountRequest {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct SendFriendRequestRequest {
-    pub to_user_id: String,
-    pub message: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct AcceptFriendRequestRequest {
-    pub id: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct RejectFriendRequestRequest {
-    pub id: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct RemoveFriendRequest {
-    pub user_id: String,
-}
-
-#[derive(Debug, Deserialize)]
 pub struct FollowUserRequest {
-    pub user_id: String,
+    pub id: i64,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct UnfollowUserRequest {
-    pub user_id: String,
+    pub id: i64,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct BlockUserRequest {
-    pub user_id: String,
+    pub id: i64,
     pub reason: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct UnblockUserRequest {
-    pub user_id: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct ListFriendsRequest {
-    pub status: Option<String>,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct ListFollowingRequest {
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct ListFollowersRequest {
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct GetBlockedUsersRequest {
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct GetFriendRequestsRequest {
-    pub status: Option<String>,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct CancelFriendRequestRequest {
-    pub id: String,
+    pub id: i64,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct SetFriendRemarkRequest {
-    pub user_id: String,
+    pub id: i64,
     pub remark: Option<String>,
 }
 
@@ -256,9 +230,10 @@ pub struct ListFavoritesRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct SearchMomentsByLocationRequest {
+    pub kw: Option<String>,
     pub latitude: f64,
     pub longitude: f64,
-    pub radius: Option<f64>,
+    pub radius: f64,
     pub limit: Option<i32>,
     pub cursor: Option<String>,
 }
@@ -285,7 +260,6 @@ pub struct DeleteMomentRequest {
 #[derive(Debug, Deserialize)]
 pub struct LikeMomentRequest {
     pub id: String,
-    pub action: String, // 'like' | 'unlike'
 }
 
 #[derive(Debug, Deserialize)]
@@ -325,8 +299,33 @@ pub struct ListRepliesRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct LikeCommentRequest {
+    pub comment_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UnlikeCommentRequest {
+    pub comment_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetCommentsRequest {
+    pub moment_id: String,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetRepliesRequest {
     pub id: String,
-    pub action: String, // 'like' | 'unlike'
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetCommentLikesListRequest {
+    pub id: String,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -340,7 +339,7 @@ pub struct GetCommentLikesRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct CreatePrivateChatRequest {
-    pub target_user_id: String,
+    pub target_user_id: i64,
     pub initial_message: Option<String>,
 }
 
@@ -353,7 +352,7 @@ pub struct GetPrivateChatsRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct UpdatePrivateChatSettingsRequest {
-    pub private_chat_id: String,
+    pub id: String,
     pub is_muted: Option<bool>,
     pub is_pinned: Option<bool>,
     pub is_archived: Option<bool>,
@@ -361,17 +360,27 @@ pub struct UpdatePrivateChatSettingsRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct DeletePrivateChatRequest {
-    pub private_chat_id: String,
+    pub id: String,
 }
 
 // ==================== 群组管理 API ====================
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 pub struct GroupSettings {
-    pub join_method: String, // 'open' | 'approval' | 'invite_only'
+    #[serde(default = "default_join_method")]
+    pub join_method: String,
+    #[serde(default = "default_true")]
     pub is_searchable: bool,
     pub max_members: Option<i32>,
     pub password_hash: Option<String>,
+}
+
+fn default_join_method() -> String {
+    "open".to_string()
+}
+
+fn default_true() -> bool {
+    true
 }
 
 #[derive(Debug, Deserialize)]
@@ -386,8 +395,9 @@ pub struct GroupSettingsUpdate {
 pub struct CreateGroupChatRequest {
     pub name: String,
     pub description: Option<String>,
-    pub avatar_url: Option<String>,
-    pub settings: GroupSettings,
+    pub avatar_file_id: Option<String>,
+    pub tags: Option<Vec<String>>,
+    pub settings: Option<GroupSettings>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -408,23 +418,24 @@ pub struct GetJoinedGroupChatsRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct UpdateGroupChatRequest {
-    pub group_chat_id: String,
+    pub id: String,
     pub name: Option<String>,
     pub description: Option<String>,
-    pub avatar_url: Option<String>,
+    pub avatar_file_id: Option<String>,
+    pub tags: Option<Vec<String>>,
     pub settings: Option<GroupSettingsUpdate>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct DeleteGroupChatRequest {
-    pub group_chat_id: String,
+    pub id: String,
 }
 
 // ==================== 群组成员管理 API ====================
 
 #[derive(Debug, Deserialize)]
 pub struct GetMembersRequest {
-    pub group_chat_id: String,
+    pub id: String,
     pub role: Option<String>,
     pub limit: Option<i32>,
     pub cursor: Option<String>,
@@ -432,64 +443,64 @@ pub struct GetMembersRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct InviteMemberRequest {
-    pub group_chat_id: String,
-    pub user_id: String,
+    pub id: String,
+    pub user_id: i64,
     pub message: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct JoinGroupRequest {
-    pub group_chat_id: String,
+    pub id: String,
     pub password_hash: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct ApplyToGroupRequest {
-    pub group_chat_id: String,
+    pub id: String,
     pub message: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct SetMemberRoleRequest {
-    pub group_chat_id: String,
-    pub user_id: String,
-    pub role: String, // 'admin' | 'member'
+    pub id: String,
+    pub user_id: i64,
+    pub role: String,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct MuteMemberRequest {
-    pub group_chat_id: String,
-    pub user_id: String,
+    pub id: String,
+    pub user_id: i64,
     pub duration_minutes: i32,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct UnmuteMemberRequest {
-    pub group_chat_id: String,
-    pub user_id: String,
+    pub id: String,
+    pub user_id: i64,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct BanMemberRequest {
-    pub group_chat_id: String,
-    pub user_id: String,
+    pub id: String,
+    pub user_id: i64,
     pub reason: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct RemoveMemberRequest {
-    pub group_chat_id: String,
-    pub user_id: String,
+    pub id: String,
+    pub user_id: i64,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct LeaveGroupRequest {
-    pub group_chat_id: String,
+    pub id: String,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct GetGroupApplicationsRequest {
-    pub group_chat_id: String,
+    pub id: String,
     pub status: Option<String>,
     pub limit: Option<i32>,
     pub cursor: Option<String>,
@@ -508,8 +519,8 @@ pub struct RejectGroupApplicationRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct TransferOwnershipRequest {
-    pub group_chat_id: String,
-    pub new_owner_id: String,
+    pub id: String,
+    pub new_owner_id: i64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -533,19 +544,16 @@ pub struct RejectGroupInviteRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct SendPrivateMessageRequest {
-    pub private_chat_id: String,
+    pub id: String,
     pub r#type: String,
-    pub content: String,
+    pub content: Option<String>,  // 文本消息必填，媒体消息可选
+    pub file_id: Option<String>,  // 媒体消息必填，服务端转换为实际 url
     pub reply_to: Option<String>,
-    pub file_name: Option<String>,
-    pub file_size: Option<i64>,
-    pub thumbnail_url: Option<String>,
-    pub duration: Option<i32>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct GetPrivateMessagesRequest {
-    pub private_chat_id: String,
+    pub id: String,
     pub limit: Option<i32>,
     pub cursor: Option<String>,
 }
@@ -568,7 +576,7 @@ pub struct DeletePrivateMessageRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct MarkPrivateMessagesReadRequest {
-    pub private_chat_id: String,
+    pub id: String,
     pub up_to: Option<String>,
 }
 
@@ -576,20 +584,17 @@ pub struct MarkPrivateMessagesReadRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct SendGroupMessageRequest {
-    pub group_chat_id: String,
+    pub id: String,
     pub r#type: String,
-    pub content: String,
+    pub content: Option<String>,
+    pub file_id: Option<String>,
     pub reply_to: Option<String>,
-    pub mentions: Option<Vec<String>>,
-    pub file_name: Option<String>,
-    pub file_size: Option<i64>,
-    pub thumbnail_url: Option<String>,
-    pub duration: Option<i32>,
+    pub mentions: Option<Vec<i64>>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct GetGroupMessagesRequest {
-    pub group_chat_id: String,
+    pub id: String,
     pub limit: Option<i32>,
     pub cursor: Option<String>,
     pub include_system: Option<bool>,
@@ -614,7 +619,7 @@ pub struct DeleteGroupMessageRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct MarkGroupMessagesReadRequest {
-    pub group_chat_id: String,
+    pub id: String,
     pub up_to: Option<String>,
 }
 
@@ -629,7 +634,6 @@ pub struct GetMessageReadStatusRequest {
 pub struct AddGroupMessageReactionRequest {
     pub id: String,
     pub r#type: String,
-    pub action: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -683,8 +687,8 @@ pub struct GetSubscriptionsRequest {}
 
 #[derive(Debug, Deserialize)]
 pub struct UpdateSubscriptionsRequest {
-    pub friend_request_enabled: Option<bool>,
-    pub friend_accepted_enabled: Option<bool>,
+    pub new_follower_enabled: Option<bool>,
+    pub mutual_follow_enabled: Option<bool>,
     pub group_invite_enabled: Option<bool>,
     pub group_invite_response_enabled: Option<bool>,
     pub group_application_enabled: Option<bool>,
@@ -737,45 +741,6 @@ pub struct UnregisterDeviceTokenRequest {
 #[derive(Debug, Deserialize)]
 pub struct HealthCheckRequest {}
 
-// ==================== 排行榜 API ====================
-
-#[derive(Debug, Deserialize)]
-pub struct GetCreatorLeaderboardRequest {
-    pub timeframe: String,
-    pub scope: Option<String>,
-    pub latitude: Option<f64>,
-    pub longitude: Option<f64>,
-    pub radius: Option<f64>,
-    pub limit: Option<i32>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct GetMomentLeaderboardRequest {
-    pub timeframe: String,
-    pub scope: Option<String>,
-    pub latitude: Option<f64>,
-    pub longitude: Option<f64>,
-    pub radius: Option<f64>,
-    pub limit: Option<i32>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct GetMyCreatorRankRequest {
-    pub timeframe: String,
-    pub scope: Option<String>,
-    pub latitude: Option<f64>,
-    pub longitude: Option<f64>,
-    pub radius: Option<f64>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct GetMyMomentRankRequest {
-    pub timeframe: String,
-    pub scope: Option<String>,
-    pub latitude: Option<f64>,
-    pub longitude: Option<f64>,
-    pub radius: Option<f64>,
-}
 
 // ==================== 文件与媒体上传 API ====================
 
@@ -793,6 +758,7 @@ pub struct InitiateUploadRequest {
     pub file_name: String,
     pub file_size: i64,
     pub mime_type: String,
+    pub category: String,      // 文件分类
     pub chunk_size: Option<i64>,
 }
 
@@ -821,35 +787,38 @@ pub struct AbortUploadRequest {
 // ==================== 信息流 API ====================
 
 #[derive(Debug, Deserialize)]
-pub struct ListFeedRequest {
-    pub channel: String,
+pub struct GetFeedMomentsRequest {
+    pub source: Option<String>,  // 'following' | 'nearby' | 'all'，默认 'all'
+    pub radius: Option<i32>,     // 仅 source='nearby' 时有效，默认 5000 米
     pub limit: Option<i32>,
     pub cursor: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
+pub struct GetFeedGroupsRequest {
+    pub radius: Option<i32>,     // 搜索半径（米），默认 10000
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetFeedUsersRequest {
+    pub radius: Option<i32>,     // 搜索半径（米），默认 5000
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetFeedTrendingRequest {
+    pub limit: Option<i32>,      // 默认 20，最大 50
+}
+
+#[derive(Debug, Deserialize)]
 pub struct FeedFeedbackRequest {
-    pub item_id: String,
-    pub action: String,
-}
-
-// ==================== 批量操作 API ====================
-
-#[derive(Debug, Deserialize)]
-pub struct MarkAsReadBatchItem {
-    pub chat_type: String,
-    pub chat_id: String,
-    pub up_to: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct MarkAsReadBatchRequest {
-    pub items: Vec<MarkAsReadBatchItem>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct RemoveInboxBatchRequest {
-    pub ids: Vec<String>,
+    pub content_type: String,    // 'moment' | 'group' | 'user'
+    pub content_id: String,
+    pub action: String,          // 'hide' | 'not_interested' | 'report'
+    pub reason: Option<String>,
 }
 
 // ==================== 标签管理 API ====================
@@ -911,7 +880,286 @@ pub struct GetConfigHistoryRequest {
 pub struct ListAllConfigChangesRequest {
     pub start_time: Option<String>,
     pub end_time: Option<String>,
-    pub changed_by: Option<String>,
+    pub changed_by: Option<i64>,  // 操作者用户ID
     pub limit: Option<i32>,
     pub cursor: Option<String>,
 }
+
+// ==================== 别名和补充类型 ====================
+
+// Group 相关
+pub type UnbanMemberRequest = RemoveMemberRequest; // 复用结构
+pub type GetBannedMembersListRequest = GetMembersRequest; // 复用结构
+
+/// 按关键字搜索群组请求
+#[derive(Debug, Deserialize)]
+pub struct SearchGroupsByKeywordRequest {
+    pub kw: String,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+/// 按标签搜索群组请求
+#[derive(Debug, Deserialize)]
+pub struct SearchGroupsByTagRequest {
+    pub tag: String,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+/// 按位置搜索群组请求
+#[derive(Debug, Deserialize)]
+pub struct SearchGroupsByLocationRequest {
+    pub kw: Option<String>,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub radius: f64,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+pub type GetGroupSettingsRequest = DeleteGroupChatRequest; // 只需要 group_chat_id
+pub type GetGroupInvitesListRequest = GetGroupInvitesRequest;
+pub type CancelGroupApplicationRequest = ApproveGroupApplicationRequest; // 只需要 application_id
+pub type GetGroupApplicationsListRequest = GetGroupApplicationsRequest;
+
+#[derive(Debug, Deserialize)]
+pub struct GroupOpenTheDoorRequest {
+    pub id: String,
+    pub latitude: f64,
+    pub longitude: f64,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SearchMomentsByKeywordRequest {
+    pub kw: String,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SearchMomentsByTagRequest {
+    pub tag: String,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetMomentCommentsRequest {
+    pub moment_id: String,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetUserMomentsListRequest {
+    pub id: i64,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetMyMomentsListRequest {
+    pub latitude: f64,
+    pub longitude: f64,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MomentOpenTheDoorRequest {
+    pub id: String,
+    pub latitude: f64,
+    pub longitude: f64,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UnlikeMomentRequest {
+    pub id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CheckMomentLikedRequest {
+    pub id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FavoriteMomentRequest {
+    pub id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UnfavoriteMomentRequest {
+    pub id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CheckMomentFavoritedRequest {
+    pub id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetFavoritesListRequest {
+    pub latitude: f64,
+    pub longitude: f64,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetMomentLikesListRequest {
+    pub id: String,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AddPrivateMessageReactionRequest {
+    pub id: String,
+    pub r#type: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RemovePrivateMessageReactionRequest {
+    pub id: String,
+    pub r#type: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetPrivateMessageReactionsListRequest {
+    pub id: String,
+    pub r#type: Option<String>,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RemoveGroupMessageReactionRequest {
+    pub id: String,
+    pub r#type: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetGroupMessageReactionsListRequest {
+    pub id: String,
+    pub r#type: Option<String>,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+// Device Tokens
+#[derive(Debug, Deserialize)]
+pub struct GetDeviceTokensRequest {
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+// Media Upload
+#[derive(Debug, Deserialize)]
+pub struct UploadChunkRequest {
+    pub upload_id: String,
+    pub part_number: i32,
+}
+
+// Private Chat
+#[derive(Debug, Deserialize)]
+pub struct PrivateChatOpenTheDoorRequest {
+    pub id: String,
+}
+
+// Reports
+#[derive(Debug, Deserialize)]
+pub struct GetMyReportsRequest {
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+pub type GetReportsRequest = ListReportsRequest;
+pub type GetConfigChangesRequest = ListAllConfigChangesRequest;
+/// 修改密码请求
+#[derive(Debug, Deserialize)]
+pub struct ChangePasswordRequest {
+    pub old_password_hash: String,
+    pub new_password_hash: String,
+}
+
+// User 相关
+#[derive(Debug, Deserialize)]
+pub struct SearchUsersByKeywordRequest {
+    pub kw: String,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SearchUsersByTagRequest {
+    pub tag: String,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SearchUsersByLocationRequest {
+    pub kw: Option<String>,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub radius: f64,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetStatusRequest {
+    pub id: i64,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UserOpenTheDoorRequest {
+    pub id: i64,
+    pub latitude: f64,
+    pub longitude: f64,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetRelationshipRequest {
+    pub id: i64,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetFriendsListRequest {
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetFollowingListRequest {
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetFollowersListRequest {
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetBlockedUsersListRequest {
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+

@@ -19,10 +19,10 @@ alwaysApply: false
 3. 遇到冲突时，以 @api_spec.mdc 为准
 
 **API规范快速引用**：
-- 完整的API端点定义 → @api_spec.mdc 第3章
-- 完整的WebSocket事件定义 → @api_spec.mdc 第4章
-- 完整的错误码定义 → @api_spec.mdc 第2.5节
-- 通用类型定义 → @api_spec.mdc 第2.2节
+- 完整的API端点定义 → @api_spec.mdc API端点与类型定义
+- 完整的WebSocket事件定义 → @api_spec.mdc WebSocket实时事件定义
+- 完整的错误码定义 → @api_spec.mdc 错误码定义
+- 通用类型定义 → @api_spec.mdc 通用类型定义
 
 ## 文档结构
 
@@ -83,6 +83,12 @@ alwaysApply: false
     - [4.4 项目管理规范](#44-项目管理规范)
       - [4.4.1 代码管理](#441-代码管理)
       - [4.4.2 调试规范](#442-调试规范)
+  - [5. 性能优化与最佳实践](#5-性能优化与最佳实践)
+    - [5.1 分页查询](#51-分页查询)
+    - [5.2 WebSocket 订阅](#52-websocket-订阅)
+    - [5.3 缓存策略](#53-缓存策略)
+    - [5.4 错误处理与重试](#54-错误处理与重试)
+    - [5.5 数据同步](#55-数据同步)
   - [总结](#总结)
 
 ## 1. 项目概览
@@ -147,25 +153,25 @@ HotSpot是一个基于地理位置的社交应用，专为HarmonyOS Next平台�
 ⚠️ **所有API设计规范以 @api_spec.mdc 为准**
 
 **核心规范引用**：
-- 统一响应格式 → @api_spec.mdc 第2.3节
-- HTTP方法与状态码 → @api_spec.mdc 第2.4节
-- 错误码定义 → @api_spec.mdc 第2.5节
-- API类型命名规范 → @api_spec.mdc 第2.6节
-- 分页与游标语义 → @api_spec.mdc 第2.7节
-- 类型转换规范 → @api_spec.mdc 第2.8节
-- 用户ID编码规范 → @api_spec.mdc 第2.9节
-- 密码安全策略 → @api_spec.mdc 第2.10节
-- 速率限制与配额管理 → @api_spec.mdc 第2.14节
-- 批量操作设计规范 → @api_spec.mdc 第2.15节
-- 安全性最佳实践 → @api_spec.mdc 第2.16节
-- 幂等性设计 → @api_spec.mdc 第2.17节
+- 统一响应格式 → @api_spec.mdc 统一响应格式
+- HTTP方法与状态码 → @api_spec.mdc HTTP方法与状态码策略
+- 错误码定义 → @api_spec.mdc 错误码定义
+- API类型命名规范 → @api_spec.mdc API类型命名规范
+- 分页与游标语义 → @api_spec.mdc 分页与游标语义
+- 类型转换规范 → @api_spec.mdc 类型转换规范
+- 用户类型标识 → @api_spec.mdc 用户类型标识
+- 密码安全策略 → @api_spec.mdc 密码安全策略
+- 速率限制与配额管理 → @api_spec.mdc 速率限制与配额管理
+- 安全性最佳实践 → @api_spec.mdc 安全性最佳实践
+- 幂等性设计 → @api_spec.mdc 幂等性设计
 
 **HarmonyOS前端实现要点**：
 - 所有API统一使用POST方法，返回HTTP 200
 - 响应格式：`ApiResponse<T>`，通过`code`字段区分业务结果（0表示成功，非0表示错误）
-- **所有业务ID**（user_id, moment_id等）统一使用UUID字符串（`string`）
-- **用户类型标识**：通过 `user_type` 枚举字段（`'temp'` | `'normal'` | `'system'`），而非通过ID编码
-- **计数统计**（likes_count, member_count等）映射为 `number`
+- **所有业务ID**（moment_id, group_chat_id等）统一使用UUID字符串（`string`）
+- **用户ID**：64位整数字符串（系统用户区间1-1000000，普通用户区间1000001+）
+- **用户类型**：通过 `user_type` 字段判断（temp/normal/system），包含在 UserInfo 等响应类型中
+- **计数统计**（likes_count, members_count等）映射为 `number`
 - 时间处理：UTC时间（ISO 8601格式），前端负责时区转换
 - 游标分页：不解析游标内容，原样传递`next_cursor`
 - 密码安全：使用SHA-256哈希后发送（字段名：`password_hash`）
@@ -173,43 +179,28 @@ HotSpot是一个基于地理位置的社交应用，专为HarmonyOS Next平台�
 
 #### 2.2.1 公共数据模型
 
-⚠️ **完整的公共数据模型定义请参见**: @api_spec.mdc **第2.2节**
+⚠️ **完整的公共数据模型定义请参见**: @api_spec.mdc **通用类型定义**
 
-⚠️ **完整的API类型定义请参见**: @api_spec.mdc **第3章**
+⚠️ **完整的API类型定义请参见**: @api_spec.mdc **API端点与类型定义**
 
 **HarmonyOS前端实现要点**：
 - 所有类型定义必须与 @api_spec.mdc 严格一致
-- 用户类型判断示例（ArkTS）：
-  ```typescript
-  // 判断用户类型（基于 user_type 字段）
-  function isTempUser(userType: 'temp' | 'normal' | 'system'): boolean {
-    return userType === 'temp';
-  }
-  
-  // API响应示例
-  interface MyProfileData {
-    user_id: string;          // UUID字符串
-    user_type: 'temp' | 'normal' | 'system';  // 用户类型枚举
-    nickname: string;
-    avatar_url?: string;
-    // ... 其他字段
-  }
-  ```
+- 用户类型通过 `user_type` 字段判断，需实现 `isTempUser`、`isNormalUser`、`isSystemUser` 等工具函数
 
 **常用类型引用**：
 
 | 类型分类 | 类型名称 | 定义位置 |
 |---------|---------|---------|
-| **通用类型** | `UserInfo`, `UserRelationship`, `GroupInfo`, `MomentInfo` | @api_spec.mdc 第2.2节 |
-| **分页类型** | `PaginationParams`, `PaginationMeta`, `PaginatedData<T>` | @api_spec.mdc 第2.2节 |
-| **位置类型** | `LocationInfo`, `LocationSearchParams` | @api_spec.mdc 第2.2节 |
-| **群组类型** | `GroupSettings`, `GroupSettingsUpdate` | @api_spec.mdc 第2.2节 |
-| **认证类型** | `AuthData` | @api_spec.mdc 第3.1节 |
-| **用户类型** | `UserDetailData`, `UserStatsData`, `UnreadSummaryData` | @api_spec.mdc 第3.2节 |
-| **瞬间类型** | `MomentDetailData`, `NearbyMomentItem` | @api_spec.mdc 第3.3节 |
-| **消息类型** | `MessageListItem`, `SendMessageData` | @api_spec.mdc 第3.8节 |
-| **群组类型** | `GroupDetailData`, `GroupMemberItem` | @api_spec.mdc 第3.6-3.7节 |
-| **通知类型** | `InboxItemData`, `UnreadInboxSummaryData` | @api_spec.mdc 第3.11节 |
+| **通用类型** | `UserInfo`, `UserRelationship`, `GroupInfo`, `MomentInfo` | @api_spec.mdc 通用类型定义 |
+| **分页类型** | `PaginationParams`, `PaginationMeta`, `PaginatedData<T>` | @api_spec.mdc 通用类型定义 |
+| **位置类型** | `LocationInfo`, `LocationSearchParams` | @api_spec.mdc 通用类型定义 |
+| **群组类型** | `GroupSettings`, `GroupSettingsUpdate` | @api_spec.mdc 通用类型定义 |
+| **认证类型** | `AuthData` | @api_spec.mdc 认证API |
+| **用户类型** | `UserDetailData`, `UserStatsData`, `UnreadSummaryData` | @api_spec.mdc 用户API |
+| **瞬间类型** | `MomentDetailData`, `NearbyMomentItem` | @api_spec.mdc 生活瞬间API |
+| **消息类型** | `MessageListItem`, `SendMessageData` | @api_spec.mdc 私聊消息API |
+| **群组类型** | `GroupDetailData`, `GroupMemberItem` | @api_spec.mdc 群组管理API |
+| **通知类型** | `InboxItemData`, `UnreadInboxSummaryData` | @api_spec.mdc 举报审核API |
 
 **ArkTS 类型转换要点**：
 - 64位整数（`i64`）→ `string`（用户ID、主键等）
@@ -219,18 +210,18 @@ HotSpot是一个基于地理位置的社交应用，专为HarmonyOS Next平台�
 
 ### 2.3 WebSocket实时通信
 
-⚠️ **完整的WebSocket规范请参见**: @api_spec.mdc **第4章**
+⚠️ **完整的WebSocket规范请参见**: @api_spec.mdc **WebSocket实时事件定义**
 
 **核心规范引用**：
-- WebSocket设计理念 → @api_spec.mdc 第4.1节
-- 连接与鉴权规范 → @api_spec.mdc 第4.2节
-- 服务端推送事件 → @api_spec.mdc 第4.3节
-- 客户端发送事件 → @api_spec.mdc 第4.4节
+- WebSocket设计理念 → @api_spec.mdc WebSocket设计理念
+- 连接与鉴权规范 → @api_spec.mdc 连接与鉴权规范
+- 服务端推送事件 → @api_spec.mdc 服务端推送事件
+- 客户端发送事件 → @api_spec.mdc 客户端发送事件
 
 **HarmonyOS前端实现要点**：
 - 连接端点：`WebSocket /ws/`
 - 鉴权方式：通过子协议头或Authorization头传递token
-- 心跳机制：客户端25秒发Ping，服务端5秒内回Pong
+- 心跳机制：客户端45秒发Ping，服务端10秒内回Pong
 - 重连策略：指数退避算法（最多10次，最大延迟30秒）
 - 订阅机制：支持订阅房间、用户、通知类型（Subscribe/Unsubscribe/SetSubscriptions）
 - 事件格式：`{ type: string, payload: object }`，严格遵循 @api_spec.mdc 定义
@@ -242,14 +233,14 @@ HotSpot是一个基于地理位置的社交应用，专为HarmonyOS Next平台�
 - 基于消息类型的分发处理
 - 连接状态、在线状态的统一管理
 - **订阅管理**：动态订阅和取消订阅房间、用户、通知类型
-- **心跳维护**：实现25秒心跳机制，保持连接活跃
+- **心跳维护**：实现45秒心跳机制，保持连接活跃
 
 
 ### 2.4 安全设计
 
 #### 2.4.1 密码安全机制
 
-⚠️ **完整的密码安全策略请参见**: @api_spec.mdc **第2.10节**
+⚠️ **完整的密码安全策略请参见**: @api_spec.mdc **密码安全策略**
 
 **HarmonyOS前端实现要点**：
 - 使用 `@ohos.security.cryptoFramework` 计算SHA-256哈希
@@ -329,12 +320,11 @@ Headers: {
   Authorization: "Bearer <access_token>"
 }
 
-// Token 缺失或无效时的响应
+// Token 缺失或无效时的响应（HTTP 200，通过 code 区分错误）
 {
   code: 1102;           // Token缺失
   message: "Token缺失";
 }
-HTTP Status: 401 Unauthorized
 ```
 
 **输入验证与过滤**：
@@ -434,8 +424,8 @@ HTTP Status: 401 Unauthorized
 
 **密码安全处理**：
 - `@ohos.security.cryptoFramework` - 加密框架，用于SHA-256哈希计算
-- 支持密码传输哈希计算：`SHA256(password + nonce + timestamp)`
-- 统一的nonce获取和哈希计算服务
+- 支持密码传输哈希计算：`SHA256(password)`
+- 统一的密码哈希计算服务
 - 安全的密码处理流程，不存储明文密码
 
 #### 3.3.2 位置服务
@@ -754,6 +744,41 @@ HTTP Status: 401 Unauthorized
 - HarmonyOS Preferences持久化调试
 - 系统服务集成调试
 - 多设备调试和测试
+
+---
+
+## 5. 性能优化与最佳实践
+
+### 5.1 分页查询
+
+- 首次加载：请求第一页（不传 `cursor`），使用默认 `limit`（20）
+- 增量加载：向下滚动时使用 `cursor` 加载更多
+- 实时更新：使用 WebSocket 接收新数据，避免轮询
+
+### 5.2 WebSocket 订阅
+
+- 只订阅当前查看的群聊，离开时取消订阅
+- 私聊消息自动推送，无需订阅
+- 实现指数退避重连（1s → 2s → 4s → ... → 30s max）
+- 重连成功后重新订阅之前的频道
+
+### 5.3 缓存策略
+
+- 用户资料、群组信息缓存 5-10 分钟
+- 消息列表使用内存缓存 + WebSocket 增量更新
+- 预加载最近 3 个会话的消息
+
+### 5.4 错误处理与重试
+
+- 幂等操作可自动重试 3 次（指数退避）
+- Token 过期（1101）：使用 `refresh_token` 刷新后重试
+- 速率限制（1400）：等待 `X-RateLimit-Reset` 时间后重试
+
+### 5.5 数据同步
+
+- 冷启动：API 加载历史 + WebSocket 接收实时推送
+- 离线补拉：重连后使用时间戳查询增量数据
+- 数据一致性：WebSocket 推送优先，按消息 ID 去重
 
 ---
 

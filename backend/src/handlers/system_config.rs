@@ -4,7 +4,7 @@ use crate::{
     dto::{
         request::{
             CreateConfigRequest, UpdateConfigRequest, GetConfigRequest, GetConfigListRequest,
-            DeleteConfigRequest, GetConfigHistoryRequest, ListAllConfigChangesRequest,
+            DeleteConfigRequest, GetConfigHistoryRequest, GetConfigChangesRequest,
         },
         response::{
             ApiResponse, ConfigItem, CreateConfigData, ConfigHistoryItem, PaginatedData,
@@ -36,7 +36,7 @@ async fn check_admin(state: &AppState, user_id: i64) -> Result<()> {
     Ok(())
 }
 
-/// POST /api/v1/admin/config/create
+
 pub async fn create(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
@@ -50,7 +50,7 @@ pub async fn create(
     Ok(Json(ApiResponse::success(config)))
 }
 
-/// POST /api/v1/admin/config/get_config
+
 pub async fn get_config(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
@@ -64,7 +64,7 @@ pub async fn get_config(
     Ok(Json(ApiResponse::success(config)))
 }
 
-/// POST /api/v1/admin/config/get_list
+
 pub async fn get_list(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
@@ -78,7 +78,7 @@ pub async fn get_list(
     Ok(Json(ApiResponse::success(configs)))
 }
 
-/// POST /api/v1/admin/config/update
+
 pub async fn update(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
@@ -94,7 +94,7 @@ pub async fn update(
     Ok(Json(ApiResponse::success_empty()))
 }
 
-/// POST /api/v1/admin/config/delete
+
 pub async fn delete(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
@@ -108,7 +108,7 @@ pub async fn delete(
     Ok(Json(ApiResponse::success_empty()))
 }
 
-/// POST /api/v1/admin/config/get_config_history
+
 pub async fn get_config_history(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
@@ -124,16 +124,16 @@ pub async fn get_config_history(
     Ok(Json(ApiResponse::success(logs)))
 }
 
-/// POST /api/v1/admin/config/list_all_changes
-pub async fn list_all_changes(
+
+pub async fn get_changes(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
-    Json(req): Json<ListAllConfigChangesRequest>,
+    Json(req): Json<GetConfigChangesRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<ConfigHistoryItem>>>> {
     check_admin(&state, user_id).await?;
     
     let service = SystemConfigService::new(state.db.clone(), state.redis_client.clone());
-    let logs = service.list_all_changes(req).await?;
+    let logs = service.get_changes(req).await?;
 
     Ok(Json(ApiResponse::success(logs)))
 }

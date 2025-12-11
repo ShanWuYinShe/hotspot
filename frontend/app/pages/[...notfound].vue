@@ -1,6 +1,6 @@
 <template>
     <div
-        class="min-h-screen antialiased bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-950 flex items-center justify-center"
+        class="min-h-screen antialiased bg-gradient-neutral-page flex items-center justify-center"
     >
         <UCard class="text-center px-6 py-8">
             <!-- 404 图标 -->
@@ -10,7 +10,7 @@
                 >
                     <UIcon
                         name="i-heroicons-question-mark-circle"
-                        class="w-16 h-16 text-neutral-700 dark:text-neutral-300"
+                        class="w-16 h-16 text-secondary-strong"
                     />
                 </div>
             </div>
@@ -37,7 +37,7 @@
                 <UButton
                     variant="outline"
                     size="lg"
-                    @click="goBack"
+                    @click="router.back()"
                     class="w-full sm:w-auto"
                 >
                     <UIcon name="i-heroicons-arrow-left" class="w-5 h-5 mr-2" />
@@ -76,12 +76,5 @@ definePageMeta({
     layout: false, // 使用无布局样式
 });
 
-// 返回上一页
-const goBack = () => {
-    if (history.length > 1) {
-        history.back();
-    } else {
-        navigateTo("/");
-    }
-};
+const router = useRouter()
 </script>

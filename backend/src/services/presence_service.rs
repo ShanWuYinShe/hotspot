@@ -1,3 +1,9 @@
+//! 用户在线状态服务
+//!
+//! 使用 Redis 管理用户实时在线状态和位置
+
+#![allow(dead_code)]
+
 use redis::aio::ConnectionManager as RedisConnectionManager;
 use redis::AsyncCommands;
 use chrono::Utc;

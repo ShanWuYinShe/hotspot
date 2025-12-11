@@ -9,7 +9,6 @@ pub struct Claims {
     pub sub: String,        // Subject (用户ID)
     pub exp: i64,           // Expiration (过期时间)
     pub iat: i64,           // Issued At (签发时间)
-    pub user_type: u8,      // 用户类型
 }
 
 pub struct JwtUtil;
@@ -20,14 +19,10 @@ impl JwtUtil {
         let now = Utc::now();
         let exp = now + Duration::seconds(expires_in_seconds);
         
-        // 提取用户类型（高8位）
-        let user_type = ((user_id >> 56) & 0xFF) as u8;
-        
         let claims = Claims {
             sub: user_id.to_string(),
             exp: exp.timestamp(),
             iat: now.timestamp(),
-            user_type,
         };
         
         let token = encode(
@@ -50,21 +45,3 @@ impl JwtUtil {
         Ok(token_data.claims)
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_generate_and_verify_token() {
-        let secret = "test_secret";
-        let user_id = (0x02_i64 << 56) | 12345; // 普通用户
-        
-        let token = JwtUtil::generate_token(user_id, 3600, secret).unwrap();
-        let claims = JwtUtil::verify_token(&token, secret).unwrap();
-        
-        assert_eq!(claims.sub, user_id.to_string());
-        assert_eq!(claims.user_type, 0x02);
-    }
-}
-

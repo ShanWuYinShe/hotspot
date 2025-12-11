@@ -4,16 +4,24 @@
  */
 
 import { PreferencesUtil } from '../storage/PreferencesUtil';
-import { UserResponse } from '../types/BackendApiTypes';
-import { UnreadCount } from '../types/BackendApiTypes';
+import { MyProfileData } from '../types/api';
 import { LocationInfo } from '../location/LocationUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
 const DOMAIN_NUMBER: number = 0xFF10;
 const TAG: string = 'PersistentStateManager';
 
+/**
+ * 未读计数
+ */
+export interface UnreadCount {
+  total_unread_count?: number;
+  private_chat_count?: number;
+  group_chat_count?: number;
+}
+
 export interface GlobalState {
-  currentUser: UserResponse | null;
+  currentUser: MyProfileData | null;
   isLoggedIn: boolean;
   networkConnected: boolean;
   locationEnabled: boolean;
@@ -56,7 +64,7 @@ export class PersistentStateManager {
       hilog.info(DOMAIN_NUMBER, TAG, '🔄 开始初始化持久化状态管理器');
 
       // 恢复用户信息
-      const userInfo = await PreferencesUtil.getObject<UserResponse>('user_info');
+      const userInfo = await PreferencesUtil.getObject<MyProfileData>('user_info');
       const token = await PreferencesUtil.get<string>('access_token', '');
 
       if (userInfo && token) {
@@ -111,7 +119,7 @@ export class PersistentStateManager {
   /**
    * 更新用户信息并持久化
    */
-  async updateUser(user: UserResponse | null): Promise<void> {
+  async updateUser(user: MyProfileData | null): Promise<void> {
     try {
       this.state.currentUser = user;
       this.state.isLoggedIn = !!user;
