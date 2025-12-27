@@ -4,12 +4,14 @@ import type {
   PaginatedData,
   GroupSearchItem,
   GroupSettings,
+  GroupSettingsData,
   JoinedGroupItem,
-  GetGroupMembersRequest,
+  GroupMembersRequest,
   GroupMemberItem,
   BannedMemberItem,
   GroupApplicationItem,
   GroupInviteItem,
+  GroupOpenTheDoorRequest,
   // 搜索类型
   SearchGroupsByKeywordRequest,
   SearchGroupsByTagRequest,
@@ -17,7 +19,7 @@ import type {
   // 群组管理类型
   CreateGroupChatRequest,
   CreateGroupChatData,
-  GetJoinedGroupChatsRequest,
+  MyGroupChatsRequest,
   UpdateGroupChatRequest,
   DeleteGroupChatRequest,
   // 成员管理类型
@@ -31,28 +33,20 @@ import type {
   UnmuteMemberRequest,
   BanMemberRequest,
   UnbanMemberRequest,
-  GetBannedMembersRequest,
+  BannedMembersRequest,
   RemoveMemberRequest,
   LeaveGroupRequest,
   // 申请管理类型
-  GetGroupApplicationsRequest,
-  ApproveGroupApplicationRequest,
-  RejectGroupApplicationRequest,
-  CancelGroupApplicationRequest,
+  GroupApplicationsRequest,
+  ApproveApplicationRequest,
+  RejectApplicationRequest,
+  CancelApplicationRequest,
   TransferOwnershipRequest,
   // 邀请管理类型
-  GetGroupInvitesRequest,
-  AcceptGroupInviteRequest,
-  RejectGroupInviteRequest
+  MyInvitesRequest,
+  AcceptInviteRequest,
+  RejectInviteRequest
 } from '~/types/api'
-
-// 群组设置响应类型
-interface GroupSettingsData {
-  id: string;
-  settings: GroupSettings;
-  has_password: boolean;
-  created_at: string;
-}
 
 class GroupsService extends BaseService {
   // ============ 搜索 API (public) ============
@@ -70,10 +64,10 @@ class GroupsService extends BaseService {
   }
 
   async getSettings(request: { id: string }) {
-    return this.publicPost<GroupSettingsData>(GROUPS.GET_SETTINGS, request)
+    return this.publicPost<GroupSettingsData>(GROUPS.SETTINGS, request)
   }
 
-  async openTheDoor(request: { id: string; latitude: number; longitude: number }) {
+  async openTheDoor(request: GroupOpenTheDoorRequest) {
     return this.publicPost<GroupSearchItem>(GROUPS.OPEN_THE_DOOR, request)
   }
 
@@ -83,8 +77,8 @@ class GroupsService extends BaseService {
     return this.post<CreateGroupChatData>(GROUPS.CREATE, request)
   }
 
-  async getJoined(request: GetJoinedGroupChatsRequest = {}) {
-    return this.post<PaginatedData<JoinedGroupItem>>(GROUPS.ME.GET_JOINED, request)
+  async getJoined(request: MyGroupChatsRequest = {}) {
+    return this.post<PaginatedData<JoinedGroupItem>>(GROUPS.ME.LIST, request)
   }
 
   async update(request: UpdateGroupChatRequest) {
@@ -101,8 +95,8 @@ class GroupsService extends BaseService {
 
   // ============ 成员管理 API ============
 
-  async getMembers(request: GetGroupMembersRequest) {
-    return this.publicPost<PaginatedData<GroupMemberItem>>(GROUPS.MEMBERS.GET_LIST, request)
+  async getMembers(request: GroupMembersRequest) {
+    return this.publicPost<PaginatedData<GroupMemberItem>>(GROUPS.MEMBERS.LIST, request)
   }
 
   async inviteMember(request: InviteMemberRequest) {
@@ -130,15 +124,15 @@ class GroupsService extends BaseService {
   }
 
   async banMember(request: BanMemberRequest) {
-    return this.post<void>(GROUPS.MEMBERS.BAN_MEMBER, request)
+    return this.post<void>(GROUPS.MEMBERS.BAN, request)
   }
 
   async unbanMember(request: UnbanMemberRequest) {
-    return this.post<void>(GROUPS.MEMBERS.UNBAN_MEMBER, request)
+    return this.post<void>(GROUPS.MEMBERS.UNBAN, request)
   }
 
-  async getBannedMembers(request: GetBannedMembersRequest) {
-    return this.post<PaginatedData<BannedMemberItem>>(GROUPS.MEMBERS.GET_BANNED_LIST, request)
+  async getBannedMembers(request: BannedMembersRequest) {
+    return this.post<PaginatedData<BannedMemberItem>>(GROUPS.MEMBERS.BANNED, request)
   }
 
   async removeMember(request: RemoveMemberRequest) {
@@ -147,38 +141,38 @@ class GroupsService extends BaseService {
 
   // ============ 申请管理 API ============
 
-  async getApplications(request: GetGroupApplicationsRequest) {
-    return this.post<PaginatedData<GroupApplicationItem>>(GROUPS.APPLICATIONS.GET_LIST, request)
+  async getApplications(request: GroupApplicationsRequest) {
+    return this.post<PaginatedData<GroupApplicationItem>>(GROUPS.APPLICATIONS.LIST, request)
   }
 
-  async approveApplication(request: ApproveGroupApplicationRequest) {
+  async approveApplication(request: ApproveApplicationRequest) {
     return this.post<void>(GROUPS.APPLICATIONS.APPROVE, request)
   }
 
-  async rejectApplication(request: RejectGroupApplicationRequest) {
+  async rejectApplication(request: RejectApplicationRequest) {
     return this.post<void>(GROUPS.APPLICATIONS.REJECT, request)
   }
 
   // ============ 当前用户群组相关 API（/me/ 路径）============
 
-  async cancelApplication(request: CancelGroupApplicationRequest) {
+  async cancelApplication(request: CancelApplicationRequest) {
     return this.post<void>(GROUPS.ME.CANCEL_APPLICATION, request)
   }
 
-  async getInvites(request: GetGroupInvitesRequest = {}) {
-    return this.post<PaginatedData<GroupInviteItem>>(GROUPS.ME.GET_INVITES_LIST, request)
+  async getInvites(request: MyInvitesRequest = {}) {
+    return this.post<PaginatedData<GroupInviteItem>>(GROUPS.ME.INVITES, request)
   }
 
-  async acceptInvite(request: AcceptGroupInviteRequest) {
+  async acceptInvite(request: AcceptInviteRequest) {
     return this.post<void>(GROUPS.ME.ACCEPT_INVITE, request)
   }
 
-  async rejectInvite(request: RejectGroupInviteRequest) {
+  async rejectInvite(request: RejectInviteRequest) {
     return this.post<void>(GROUPS.ME.REJECT_INVITE, request)
   }
 
   async leaveGroup(request: LeaveGroupRequest) {
-    return this.post<void>(GROUPS.ME.LEAVE_GROUP, request)
+    return this.post<void>(GROUPS.ME.LEAVE, request)
   }
 }
 

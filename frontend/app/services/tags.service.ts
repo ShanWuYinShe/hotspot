@@ -1,15 +1,15 @@
 import { BaseService } from './base.service'
 import { TAGS } from '~/config/api'
 import type {
-  GetTrendingTagsRequest,
+  TrendingTagsRequest,
   TrendingTagsData,
   SuggestTagsRequest,
   TagSuggestData
 } from '~/types/api'
 
 class TagsService extends BaseService {
-  async getTrending(request: GetTrendingTagsRequest = {}) {
-    return this.publicPost<TrendingTagsData>(TAGS.GET_TRENDING, request)
+  async getTrending(request: TrendingTagsRequest = {}) {
+    return this.publicPost<TrendingTagsData>(TAGS.TRENDING, request)
   }
 
   async suggest(request: SuggestTagsRequest) {

@@ -4,8 +4,10 @@ import type {
   PaginatedData,
   CreateReportRequest,
   CreateReportData,
-  GetMyReportsRequest,
-  ReportItem
+  MyReportsRequest,
+  ReportItem,
+  ReportsRequest,
+  HandleReportRequest
 } from '~/types/api'
 
 class ReportsService extends BaseService {
@@ -13,8 +15,17 @@ class ReportsService extends BaseService {
     return this.post<CreateReportData>(REPORTS.CREATE, request)
   }
 
-  async getMyReports(request: GetMyReportsRequest = {}) {
-    return this.post<PaginatedData<ReportItem>>(REPORTS.ME_GET_LIST, request)
+  async getMyReports(request: MyReportsRequest = {}) {
+    return this.post<PaginatedData<ReportItem>>(REPORTS.ME, request)
+  }
+
+  // ============ Admin ============
+  async adminList(request: ReportsRequest = {}) {
+    return this.post<PaginatedData<ReportItem>>(REPORTS.ADMIN_LIST, request)
+  }
+
+  async adminHandle(request: HandleReportRequest) {
+    return this.post<void>(REPORTS.ADMIN_HANDLE, request)
   }
 }
 

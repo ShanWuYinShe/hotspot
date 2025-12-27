@@ -1,6 +1,5 @@
 <template>
   <UModal
-    size="2xl"
     title="我的举报记录"
     :description="`共 ${reports.length} 条举报记录`"
   >
@@ -12,12 +11,15 @@
         class="mb-4"
       />
 
-      <section class="max-h-96 overflow-y-auto space-y-3">
+      <section
+        ref="listEl"
+        class="max-h-96 overflow-y-auto space-y-3"
+        @scroll="onListScroll"
+      >
         <!-- 举报列表 -->
         <UCard
           v-for="report in filteredReports"
           :key="report.id"
-          :ui="{ body: 'p-4' }"
         >
           <header class="flex items-start justify-between mb-2">
             <section class="flex items-center gap-2">
@@ -26,33 +28,27 @@
                 :label="getStatusLabel(report.status)"
                 size="xs"
               />
-              <span class="text-sm text-secondary-content">{{ getTargetTypeLabel(report.target_type) }}</span>
+              <UBadge color="neutral" variant="soft" size="xs">{{ getTargetTypeLabel(report.target_type) }}</UBadge>
             </section>
-            <time class="text-xs text-secondary-content">{{ formatTime(report.created_at) }}</time>
+            <UBadge color="neutral" variant="soft" size="xs">{{ formatTime(report.created_at) }}</UBadge>
           </header>
 
           <h4 class="font-medium mb-1">{{ getReasonLabel(report.reason) }}</h4>
-          <p
-            v-if="report.description"
-            class="text-sm text-secondary-content mb-2"
-          >
+          <UBadge v-if="report.description" color="neutral" variant="soft" size="xs" class="mb-2 w-fit max-w-full">
             {{ report.description }}
-          </p>
+          </UBadge>
 
-          <p
-            v-if="report.handled_at"
-            class="text-xs text-secondary-content mt-2"
-          >
+          <UBadge v-if="report.handled_at" color="neutral" variant="soft" size="xs" class="mt-2">
             处理时间：{{ formatTime(report.handled_at) }}
-          </p>
+          </UBadge>
         </UCard>
 
         <!-- 空状态 -->
         <UAlert
           v-if="!loading && filteredReports.length === 0"
-          icon="i-heroicons-document-text"
+          icon="i-lucide-file-text"
           color="neutral"
-          variant="subtle"
+          variant="soft"
           :title="activeTab === 'all' ? '暂无举报记录' : `暂无${getTabLabel(activeTab)}举报`"
           :description="activeTab === 'all' ? '您还没有提交过任何举报' : '该状态下没有举报记录'"
         />
@@ -62,16 +58,27 @@
           <USkeleton
             v-for="i in 3"
             :key="i"
-            class="h-20 rounded-lg"
+            class="h-20"
           />
         </template>
+
+        <!-- 回到顶部（列表很长时） -->
+        <div v-if="showScrollTop" class="sticky bottom-3 flex justify-end">
+          <UButton
+            variant="soft"
+            color="neutral"
+            size="sm"
+            icon="i-lucide-arrow-up"
+            @click="scrollToTop"
+          />
+        </div>
       </section>
     </template>
 
     <template #footer="{ close }">
       <UButton
         variant="outline"
-        icon="i-heroicons-arrow-path"
+        icon="i-lucide-refresh-cw"
         :loading="loading"
         @click="loadReports"
       >
@@ -93,6 +100,19 @@ import { useReportsService } from '~/services/reports.service'
 const loading = ref(false)
 const reports = ref<any[]>([])
 const activeTab = ref('all')
+
+const listEl = ref<HTMLElement | null>(null)
+const showScrollTop = ref(false)
+
+const onListScroll = () => {
+  const el = listEl.value
+  if (!el) return
+  showScrollTop.value = el.scrollTop > 160
+}
+
+const scrollToTop = () => {
+  listEl.value?.scrollTo({ top: 0, behavior: 'smooth' })
+}
 
 const tabItems = [
   { value: 'all', label: '全部' },

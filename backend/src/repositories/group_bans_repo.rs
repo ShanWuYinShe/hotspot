@@ -4,13 +4,14 @@ use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
 use crate::error::Result;
+use crate::utils::pagination::{decode_cursor, encode_cursor, IdCursor};
 
 /// 群组封禁记录 Row（用于JOIN查询，包含用户信息）
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct GroupBanRow {
     pub id: i64,
     pub ban_id: Uuid,
-    pub cursor_id: Uuid,
+    // cursor field removed
     pub group_chat_id: Uuid,
     pub user_id: i64,
     pub banned_by: i64,
@@ -65,12 +66,7 @@ impl GroupBansRepository {
     }
 
     /// 解除封禁
-    pub async fn unban(
-        &self,
-        group_chat_id: Uuid,
-        user_id: i64,
-        unbanned_by: i64,
-    ) -> Result<bool> {
+    pub async fn unban(&self, group_chat_id: Uuid, user_id: i64, unbanned_by: i64) -> Result<bool> {
         let result = sqlx::query!(
             r#"
             UPDATE group_bans
@@ -110,14 +106,18 @@ impl GroupBansRepository {
         &self,
         group_chat_id: Uuid,
         limit: i32,
-        cursor: Option<Uuid>,
-    ) -> Result<Vec<GroupBanRow>> {
-        let cursor_pk = self.resolve_cursor(cursor).await?;
+        cursor: Option<String>,
+    ) -> Result<(Vec<GroupBanRow>, Option<String>)> {
+        let last_id = if let Some(c) = cursor {
+            decode_cursor::<IdCursor>(&c)?
+        } else {
+            i64::MAX
+        };
 
         let rows = sqlx::query_as!(
             GroupBanRow,
             r#"
-            SELECT b.id, b.ban_id, b.cursor_id, b.group_chat_id, b.user_id, 
+            SELECT b.id, b.ban_id, b.group_chat_id, b.user_id, 
                    b.banned_by, b.reason, b.banned_at, b.unbanned_at, b.unbanned_by,
                    u.nickname, u.avatar_url, u.user_type as "user_type: crate::types::enums::UserType"
             FROM group_bans b
@@ -127,29 +127,17 @@ impl GroupBansRepository {
             LIMIT $3
             "#,
             group_chat_id,
-            cursor_pk,
+            last_id,
             limit as i64
         )
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows)
-    }
+        let next_cursor = rows
+            .last()
+            .map(|last| encode_cursor(&last.id))
+            .transpose()?;
 
-    /// 将 UUID cursor 转换为自增主键
-    async fn resolve_cursor(&self, cursor: Option<Uuid>) -> Result<i64> {
-        match cursor {
-            Some(c) => {
-                sqlx::query_scalar!(
-                    r#"SELECT id FROM group_bans WHERE cursor_id = $1"#,
-                    c
-                )
-                .fetch_optional(&self.pool)
-                .await?
-                .ok_or_else(|| crate::error::AppError::BadRequest("Invalid cursor".to_string()))
-            }
-            None => Ok(i64::MAX),
-        }
+        Ok((rows, next_cursor))
     }
 }
-

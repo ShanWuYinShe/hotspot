@@ -4,28 +4,34 @@
  * 这些类型仅用于前端组件和逻辑，不是 API 文档定义的类型
  */
 
-import type { UserInfo, GroupInfo, UserRelationship, GeoData, GroupSettings, GroupSearchItem, PrivacyLevel } from './api'
+import type { 
+  UserInfo, 
+  GroupInfo, 
+  UserRelationship, 
+  GeoData, 
+  GroupSettings, 
+  GroupSearchItem, 
+  PrivacyLevel, 
+  UserSearchItem, 
+  MomentSearchItem,
+  UserType,
+  MessageType as ApiMessageType
+} from './api'
 
 // ============================================================================
 // 用户存储类型（客户端本地）
 // ============================================================================
 
 /**
- * 客户端存储的完整用户信息
- * 组合自多个 API 返回的数据
+ * 用户详情扩展类型（前端组件使用）
+ * 组合自 UserSearchItem 并添加前端需要的字段
  */
-export interface UserResponse {
-  user_id: number;
-  nickname: string;
-  avatar_url?: string;
-  bio?: string;
-  user_type?: 'temp' | 'normal' | 'admin' | 'system';  // 用户类型
+export interface UserDetailData extends UserSearchItem {
+  user_type?: UserType;
   created_at?: string;
   last_active_at?: string;
-  last_online?: string;      // 最后在线时间（来自 UserStatusData）
-  geo: GeoData;              // 地理数据（必填）
-  is_online?: boolean;
   relationship?: UserRelationship;
+  geo: GeoData; // 覆盖基类，要求必填
 }
 
 // ============================================================================
@@ -54,6 +60,7 @@ export interface Coordinates {
 export interface GroupDetailData extends GroupSearchItem {
   settings: GroupSettings;
   created_at: string;
+  last_activity_at?: string;
 }
 
 /**
@@ -66,7 +73,16 @@ export interface GroupCardData extends GroupDetailData {
   my_role?: 'owner' | 'admin' | 'member'; // 当前用户角色
   is_member?: boolean;      // 当前用户是否为成员
   unread_count?: number;    // 未读消息数
-  last_activity_at?: string; // 最后活跃时间
+}
+
+/**
+ * 动态卡片渲染类型（前端组件使用）
+ * 扩展 MomentSearchItem，添加用户关系和点赞状态
+ */
+export interface MomentCardData extends MomentSearchItem {
+  // 展平结构，避免重新定义 user 类型
+  relationship?: Partial<UserRelationship>; // 与动态作者的关系
+  liked_by_me?: boolean;
 }
 
 // ============================================================================
@@ -131,8 +147,9 @@ export interface UserSettings {
 
 /**
  * 消息类型枚举（客户端使用）
+ * 扩展 API 消息类型，添加客户端特有的 location 类型
  */
-export type MessageType = 'text' | 'image' | 'file' | 'location' | 'system';
+export type ClientMessageType = ApiMessageType | 'location';
 
 /**
  * 基础成功响应
@@ -178,4 +195,3 @@ export interface NotificationData {
   message_id?: string;
   [key: string]: string | number | boolean | UserInfo | GroupInfo | undefined;
 }
-

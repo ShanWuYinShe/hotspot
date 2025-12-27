@@ -12,83 +12,57 @@ import { ensureRefreshToken, isTokenExpiredError } from '~/utils/token'
 
 export abstract class BaseService {
   /**
-   * 获取 API 基础 URL
-   */
-  private get baseURL(): string {
-    const config = useRuntimeConfig()
-    return config.public.apiBaseUrl as string
-  }
-
-  /**
    * 获取认证 Token
    */
   private get token(): string | null {
-    const authStore = useAuthStore()
-    return authStore.token
+    return useAuthStore().token
   }
 
   /**
-   * 获取刷新 Token
+   * 核心请求方法
+   * 封装了 Token 注入、错误处理和自动重试逻辑
    */
-  private get refreshToken(): string | null {
-    const authStore = useAuthStore()
-    return authStore.refreshToken
-  }
-
-  /**
-   * 处理 API 响应
-   */
-  private processResponse<T>(response: unknown): T {
-    if (typeof response === 'object' && response !== null && 'code' in response) {
-      const apiResponse = response as ApiResponse<T>
-      if (apiResponse.code === 0) {
-        return apiResponse.data as T
+  private async request<T>(url: string, options: any = {}): Promise<T> {
+    const performRequest = async (forceToken?: string) => {
+      const token = forceToken ?? this.token
+      const headers = { ...options.headers }
+      
+      if (token) {
+        headers.Authorization = `Bearer ${token}`
       }
-      // 创建带有业务错误信息的 Error
-      throw Object.assign(new Error(apiResponse.message || '操作失败'), {
-        isBusinessError: true,
-        businessCode: apiResponse.code,
-        data: apiResponse
-      })
-    }
-    return response as T
-  }
 
-  /**
-   * POST 请求（需要认证，支持自动刷新 token）
-   */
-  protected async post<T>(url: string, body?: object): Promise<T> {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-    if (this.token) {
-      headers.Authorization = `Bearer ${this.token}`
+      const response = await $fetch<ApiResponse<T>>(url, {
+        // Web: 需要携带 HttpOnly refresh cookie（用于 refresh_token、logout 等）
+        credentials: 'include',
+        ...options,
+        headers
+      })
+
+      // 统一响应处理
+      if (typeof response === 'object' && response !== null && 'code' in response) {
+        if (response.code === 0) {
+          return response.data as T
+        }
+        // 业务错误
+        throw Object.assign(new Error(response.message || '操作失败'), {
+          isBusinessError: true,
+          businessCode: response.code,
+          data: response
+        })
+      }
+      return response as T
     }
 
     try {
-      const response = await $fetch<ApiResponse<T>>(url, {
-        method: 'POST',
-        baseURL: this.baseURL,
-        headers,
-        body
-      })
-      return this.processResponse<T>(response)
+      return await performRequest()
     } catch (error) {
-      // Token 过期，尝试刷新后重试
-      if (isTokenExpiredError(error) && this.refreshToken) {
+      // Token 过期处理
+      // 前置条件：本次请求确实带了 access_token（未登录/缺 token 的 401 不应触发 refresh）
+      if (this.token && isTokenExpiredError(error)) {
         const refreshed = await ensureRefreshToken()
         if (refreshed) {
-          // 使用新 token 重试请求
-          const newHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
-          const newToken = this.token
-          if (newToken) {
-            newHeaders.Authorization = `Bearer ${newToken}`
-          }
-          const response = await $fetch<ApiResponse<T>>(url, {
-            method: 'POST',
-            baseURL: this.baseURL,
-            headers: newHeaders,
-            body
-          })
-          return this.processResponse<T>(response)
+          // 使用新 Token 重试
+          return await performRequest(useAuthStore().token!)
         }
       }
       throw error
@@ -96,24 +70,34 @@ export abstract class BaseService {
   }
 
   /**
-   * 公开 POST 请求（无需认证）
+   * POST 请求
    */
-  protected async publicPost<T>(url: string, body?: object): Promise<T> {
-    const response = await $fetch<ApiResponse<T>>(url, {
+  protected post<T>(url: string, body?: object): Promise<T> {
+    return this.request<T>(url, {
       method: 'POST',
-      baseURL: this.baseURL,
-      headers: { 'Content-Type': 'application/json' },
       body
     })
-    return this.processResponse<T>(response)
+  }
+
+  /**
+   * 公开 POST 请求（无需认证）
+   * 
+   * 虽然 request 方法会自动处理 token，但显式分开可以提高代码可读性
+   * 且此处不强制 token 存在，request 内部 logic 兼容 token 为空的情况
+   */
+  protected publicPost<T>(url: string, body?: object): Promise<T> {
+    return this.request<T>(url, {
+      method: 'POST',
+      body
+    })
   }
 
   /**
    * 分页查询
    */
-  protected async paginate<T, P extends Record<string, unknown> = Record<string, unknown>>(
+  protected paginate<T>(
     url: string,
-    params: { limit?: number; cursor?: string } & P = {} as { limit?: number; cursor?: string } & P
+    params: { limit?: number; cursor?: string } & Record<string, any> = {}
   ): Promise<PaginatedData<T>> {
     return this.post<PaginatedData<T>>(url, params)
   }
@@ -121,7 +105,7 @@ export abstract class BaseService {
   /**
    * 上传文件
    */
-  protected async upload<T>(
+  protected upload<T>(
     url: string,
     file: File,
     additionalData?: Record<string, string | number | boolean>
@@ -135,18 +119,9 @@ export abstract class BaseService {
       })
     }
 
-    const headers: Record<string, string> = {}
-    if (this.token) {
-      headers.Authorization = `Bearer ${this.token}`
-    }
-
-    const response = await $fetch<ApiResponse<T>>(url, {
+    return this.request<T>(url, {
       method: 'POST',
-      baseURL: this.baseURL,
-      headers,
       body: formData
     })
-
-    return this.processResponse<T>(response)
   }
 }

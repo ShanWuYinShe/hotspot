@@ -2,23 +2,9 @@
 //!
 //! 用于管理用户给好友设置的备注名称
 
-#![allow(dead_code)]
-
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, PgPool};
+use sqlx::PgPool;
 
 use crate::error::Result;
-
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
-pub struct UserFriendRemarkRow {
-    pub id: i64,
-    pub user_id: i64,
-    pub friend_id: i64,
-    pub remark: String,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: Option<DateTime<Utc>>,
-}
 
 #[derive(Debug, Clone)]
 pub struct UserFriendRemarksRepository {
@@ -63,24 +49,12 @@ impl UserFriendRemarksRepository {
         Ok(())
     }
 
-    pub async fn get(&self, user_id: i64, friend_id: i64) -> Result<Option<String>> {
-        let result = sqlx::query!(
-            r#"
-            SELECT remark
-            FROM user_friend_remarks
-            WHERE user_id = $1 AND friend_id = $2
-            "#,
-            user_id,
-            friend_id
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(result.and_then(|r| r.remark))
-    }
-
     /// 批量获取好友备注
-    pub async fn get_batch(&self, user_id: i64, friend_ids: &[i64]) -> Result<std::collections::HashMap<i64, String>> {
+    pub async fn get_batch(
+        &self,
+        user_id: i64,
+        friend_ids: &[i64],
+    ) -> Result<std::collections::HashMap<i64, String>> {
         if friend_ids.is_empty() {
             return Ok(std::collections::HashMap::new());
         }
@@ -97,9 +71,9 @@ impl UserFriendRemarksRepository {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows.into_iter()
+        Ok(rows
+            .into_iter()
             .filter_map(|r| r.remark.map(|remark| (r.friend_id, remark)))
             .collect())
     }
 }
-

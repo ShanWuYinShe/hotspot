@@ -4,7 +4,7 @@ use tokio::sync::RwLock;
 
 /// 订阅类型 - 根据 API 文档 4.4 节定义
 /// 支持三种订阅源类型：group_chat, user, notification
-/// 
+///
 /// 注意：所有 ID 都使用 String 类型（JavaScript 不支持超过 2^53 的整数）
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SubscriptionType {
@@ -12,11 +12,11 @@ pub enum SubscriptionType {
     /// source_id: group_chat_id (UUID 字符串)
     /// 私聊消息自动推送，不需要订阅
     GroupChat(String),
-    
+
     /// 用户状态订阅 - 订阅用户的在线状态变化、位置更新等
     /// source_id: user_id (字符串，客户端传递字符串，后端内部解析)
     User(String),
-    
+
     /// 通知订阅 - 订阅特定类型的通知
     /// source_id: notification_type (如 "new_follower", "moment_like" 等)
     Notification(String),
@@ -28,14 +28,16 @@ impl SubscriptionType {
         match self {
             SubscriptionType::GroupChat(group_id) => format!("group_chat:{}", group_id),
             SubscriptionType::User(user_id) => format!("user:{}", user_id),
-            SubscriptionType::Notification(notification_type) => format!("notification:{}", notification_type),
+            SubscriptionType::Notification(notification_type) => {
+                format!("notification:{}", notification_type)
+            }
         }
     }
 }
 
 /// 订阅管理器
 /// 维护用户订阅和反向索引，支持高效的订阅查询和消息推送
-/// 
+///
 /// 注意：内部使用 i64 作为 user_id 键（性能优化），但对外接口使用 String
 #[derive(Clone)]
 pub struct SubscriptionManager {
@@ -103,7 +105,7 @@ impl SubscriptionManager {
     /// 取消用户的所有订阅（用户断开连接时调用）
     pub async fn unsubscribe_all(&self, user_id: i64) {
         let mut subscriptions = self.subscriptions.write().await;
-        
+
         if let Some(user_subs) = subscriptions.remove(&user_id) {
             let mut reverse_index = self.reverse_index.write().await;
             for subscription in user_subs {
@@ -124,7 +126,7 @@ impl SubscriptionManager {
     pub async fn get_group_chat_subscribers(&self, group_id: &str) -> Vec<i64> {
         let channel_key = format!("group_chat:{}", group_id);
         let reverse_index = self.reverse_index.read().await;
-        
+
         reverse_index
             .get(&channel_key)
             .map(|users| users.iter().copied().collect())
@@ -132,12 +134,12 @@ impl SubscriptionManager {
     }
 
     /// 获取订阅了某个用户状态的所有用户（用于在线状态推送）
-    /// 
+    ///
     /// 注意：target_user_id 作为字符串传入（与客户端一致）
     pub async fn get_user_status_subscribers(&self, target_user_id: &str) -> Vec<i64> {
         let channel_key = format!("user:{}", target_user_id);
         let reverse_index = self.reverse_index.read().await;
-        
+
         reverse_index
             .get(&channel_key)
             .map(|users| users.iter().copied().collect())
@@ -145,14 +147,23 @@ impl SubscriptionManager {
     }
 
     /// 获取订阅了某种通知类型的所有用户
-    pub async fn get_notification_subscribers(&self, notification_type: &str) -> Vec<i64> {
-        let channel_key = format!("notification:{}", notification_type);
-        let reverse_index = self.reverse_index.read().await;
-        
-        reverse_index
-            .get(&channel_key)
-            .map(|users| users.iter().copied().collect())
-            .unwrap_or_default()
+    /// 判断用户是否订阅了指定订阅项
+    ///
+    /// 说明：
+    /// - WebSocket 推送必须严格按订阅执行（不允许“直接推送/广播”绕过订阅）
+    /// - 对 notification 订阅：语义是“我只接收与我相关的该类型事件”
+    pub async fn has_subscription(&self, user_id: i64, subscription: &SubscriptionType) -> bool {
+        let subscriptions = self.subscriptions.read().await;
+        subscriptions
+            .get(&user_id)
+            .map(|set| set.contains(subscription))
+            .unwrap_or(false)
+    }
+
+    /// 判断用户是否订阅了某种通知类型
+    pub async fn has_notification_subscription(&self, user_id: i64, notification_type: &str) -> bool {
+        self.has_subscription(user_id, &SubscriptionType::Notification(notification_type.to_string()))
+            .await
     }
 }
 

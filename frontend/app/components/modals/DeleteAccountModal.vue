@@ -1,6 +1,6 @@
 <template>
   <UModal
-    size="md"
+    width="md"
     title="删除账户"
     description="此操作无法撤销，请谨慎操作"
   >
@@ -20,7 +20,7 @@
       >
         <UFormField
           name="confirmText"
-          required
+          :required="true"
           label="请输入 DELETE_MY_ACCOUNT 来确认删除"
         >
           <UInput
@@ -47,7 +47,7 @@
           color="error"
           variant="soft"
           :title="errorMessage"
-          icon="i-heroicons-exclamation-triangle"
+          icon="i-lucide-triangle-alert"
         />
       </UForm>
     </template>
@@ -83,7 +83,7 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const toast = useToast()
+const feedback = useFeedbackStore()
 const router = useRouter()
 const authStore = useAuthStore()
 
@@ -116,11 +116,7 @@ const handleSubmit = async (close: () => void) => {
       confirmation: 'DELETE_MY_ACCOUNT'
     })
 
-    toast.add({
-      title: '账户已删除',
-      description: '感谢您使用我们的产品，再见',
-      color: 'success'
-    })
+    feedback.success('账户已删除', '感谢您使用我们的产品，再见')
 
     authStore.logoutCurrent()
     await router.push('/')

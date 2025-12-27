@@ -1,6 +1,6 @@
 <template>
   <UModal
-    size="md"
+    width="md"
     title="修改密码"
     description="定期修改密码可以提高账户安全性"
   >
@@ -13,7 +13,7 @@
         <UFormField
           label="当前密码"
           name="oldPassword"
-          required
+          :required="true"
         >
           <UInput
             v-model="form.oldPassword"
@@ -27,7 +27,7 @@
           label="新密码"
           name="newPassword"
           hint="密码长度至少为8个字符，建议包含大小写字母、数字和特殊字符"
-          required
+          :required="true"
         >
           <UInput
             v-model="form.newPassword"
@@ -41,7 +41,7 @@
         <UFormField
           label="确认新密码"
           name="confirmPassword"
-          required
+          :required="true"
         >
           <UInput
             v-model="form.confirmPassword"
@@ -56,7 +56,7 @@
           color="error"
           variant="soft"
           :title="errorMessage"
-          icon="i-heroicons-exclamation-triangle"
+          icon="i-lucide-triangle-alert"
         />
       </UForm>
     </template>
@@ -84,7 +84,7 @@
 </template>
 
 <script setup lang="ts">
-import { hashPassword, checkPasswordStrength } from '~/utils/password'
+import { checkPasswordStrength } from '~/utils/password'
 import { useAuthService } from '~/services/auth.service'
 import { useAuthStore } from '~/stores/auth.store'
 
@@ -93,7 +93,7 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const toast = useToast()
+const feedback = useFeedbackStore()
 
 const form = reactive({
   oldPassword: '',
@@ -128,30 +128,22 @@ const handleSubmit = async (close: () => void) => {
   isSubmitting.value = true
 
   try {
-    const { useAuthService } = await import('~/services/auth.service')
     const authService = useAuthService()
     const authStore = useAuthStore()
 
-    const oldPasswordHash = await hashPassword(form.oldPassword)
-    const newPasswordHash = await hashPassword(form.newPassword)
-
     await authService.changePassword({
-      old_password_hash: oldPasswordHash,
-      new_password_hash: newPasswordHash
+      old_password: form.oldPassword,
+      new_password: form.newPassword
     })
 
-    toast.add({
-      title: '密码修改成功',
-      description: '请使用新密码重新登录',
-      color: 'success'
-    })
+    feedback.success('密码修改成功', '请使用新密码重新登录')
 
     props.onSuccess?.()
     close()
 
     await authService.logout()
     authStore.logoutCurrent()
-    await navigateTo('/auth/login')
+    await navigateTo('/auth?mode=login')
   } catch (error) {
     console.error('修改密码失败:', error)
     errorMessage.value = (error as Error).message || '修改密码失败，请检查当前密码是否正确'

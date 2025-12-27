@@ -1,0 +1,633 @@
+/**
+ * 优化后的主页面
+ * 使用HarmonyOS原生能力，简化架构，AppStorage 状态管理
+ */
+
+import { PageNames } from '../../../constants/AppConstants';
+import { common } from '@kit.AbilityKit';
+import { UIContext } from '@kit.ArkUI';
+import { GlobalStateManager, UnreadCount, KEY_CURRENT_USER, KEY_IS_LOGGED_IN, KEY_CURRENT_LOCATION, KEY_UNREAD_COUNT } from '../../../core/state/GlobalStateManager';
+import { LocationInfo } from '../../../core/location/LocationUtil';
+import { PersistentStateManager } from '../../../core/state/PersistentStateManager';
+import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
+import { LocationUtil } from '../../../core/location/LocationUtil';
+import { WebSocketService } from '../../../core/network/WebSocketService';
+import { MyProfileData } from '../../../core/types/api';
+import type { ServerEvent } from '../../../core/types/WebSocketTypes';
+import { PermissionManager } from '../../../core/permission/PermissionManager';
+import { ApiClient } from '../../../core/api/ApiClient';
+import { AppIcon, AppIconMap } from '../../../components/SystemIcon';
+import { hilog } from '@kit.PerformanceAnalysisKit';
+import { SmartNotificationService, NotificationEvent } from '../../../core/services/SmartNotificationService';
+import { CacheManager } from '../../../core/cache/CacheManager';
+import { NotificationCenter } from '../../../components/NotificationCenter';
+import { PerformanceIndicator } from '../../../components/PerformanceIndicator';
+import { I18nManager } from '../../../core/i18n/I18nManager';
+import { DesignConstants } from '../../../constants/DesignConstants';
+import { GroupPage } from '../../../features/group/pages/GroupPage';
+import { MessagePage } from '../../../features/message/pages/MessagePage';
+import { MomentPage } from '../../../features/moment/pages/MomentPage';
+import { MapPage } from '../../../features/map/pages/MapPage';
+import { ProfilePage } from '../../../features/profile/pages/ProfilePage';
+import { NotificationRenderer, STORAGE_KEY_VISIBLE_NOTIFICATIONS } from '../../../core/services/notification/NotificationRenderer';
+import { SmartNotification, NotificationAction } from '../../../core/services/notification/NotificationDataManager';
+import { NotificationBanner } from '../../../components/NotificationBanner';
+import { TimerManager } from '../../../core/utils/TimerManager';
+
+const DOMAIN_NUMBER: number = 0xFF09;
+const TAG: string = 'IndexPage';
+
+const WS_NOTIFICATION_SOURCE_IDS: string[] = [
+  'new_follower',
+  'mutual_follow',
+  'unfollowed',
+  'moment_like',
+  'moment_comment',
+  'comment_reply',
+  'group_invite',
+  'group_invite_response',
+  'group_application',
+  'group_application_response',
+  'system_announcement',
+];
+
+@Entry
+@Component
+struct Index {
+  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfileData | null = null;
+  @StorageLink(KEY_IS_LOGGED_IN) isLoggedIn: boolean = false;
+  @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
+  @StorageLink(KEY_UNREAD_COUNT) unreadCount: UnreadCount = { total_unread_count: 0 };
+  @StorageLink(STORAGE_KEY_VISIBLE_NOTIFICATIONS) visibleNotifications: SmartNotification[] = [];
+
+  @State currentTabIndex: number = 0;
+  @State isInitialized: boolean = false;
+  @State lastError: string = '';
+  @State showNotificationCenter: boolean = false;
+  @State showPerformanceDetails: boolean = false;
+  
+  private stateManager = GlobalStateManager.getInstance();
+  private persistentStateManager = PersistentStateManager.getInstance();
+  private webSocketService = WebSocketService.getInstance();
+  private smartNotificationService = SmartNotificationService.getInstance();
+  private cacheManager = CacheManager.getInstance();
+  private i18nManager = I18nManager.getInstance();
+  private uiContext: UIContext | null = null;
+  private abilityContext: common.UIAbilityContext | null = null;
+  private tabsController: TabsController = new TabsController();
+  private wsNotificationsBound: boolean = false;
+  private locationSyncTimerId: number = 0;
+
+  async aboutToAppear() {
+    try {
+      this.uiContext = this.getUIContext();
+      this.abilityContext = this.uiContext.getHostContext() as common.UIAbilityContext;
+    } catch (error) {
+      hilog.error(DOMAIN_NUMBER, TAG, `获取UIContext失败: ${JSON.stringify(error)}`);
+    }
+
+    if (this.abilityContext) {
+      this.i18nManager.setContext(this.abilityContext);
+      await this.i18nManager.initialize();
+    }
+
+    await this.initializeApp();
+  }
+
+  aboutToDisappear() {
+    // 清理定时任务（避免页面销毁后继续跑）
+    if (this.locationSyncTimerId) {
+      TimerManager.clearInterval(this.locationSyncTimerId);
+      this.locationSyncTimerId = 0;
+    }
+  }
+
+  private async initializeApp() {
+    try {
+      hilog.info(DOMAIN_NUMBER, TAG, '🚀 开始应用初始化');
+
+      if (!this.abilityContext) {
+        const errorMsg = 'UIAbilityContext未初始化';
+        hilog.error(DOMAIN_NUMBER, TAG, errorMsg);
+        this.lastError = errorMsg;
+        return;
+      }
+
+      await PreferencesUtil.init(this.abilityContext);
+      hilog.info(DOMAIN_NUMBER, TAG, '✅ 存储初始化完成');
+
+      await this.persistentStateManager.initialize();
+      await this.stateManager.initialize();
+      await this.initializeSmartServices();
+
+      const persistentState = this.persistentStateManager.getState();
+      if (persistentState.currentUser) {
+        this.stateManager.updateUser(persistentState.currentUser);
+      }
+      if (persistentState.currentLocation) {
+        this.stateManager.updateLocation(persistentState.currentLocation as LocationInfo);
+      }
+
+      try {
+        const hasPermission: boolean = await PermissionManager.getInstance().checkLocationPermission();
+        if (hasPermission) {
+          const location = await LocationUtil.getCurrentLocation();
+          if (location) {
+            const locationName: string | null = await LocationUtil.getLocationName(location.latitude, location.longitude);
+            const locationInfo: LocationInfo = {
+              latitude: location.latitude,
+              longitude: location.longitude,
+              locationName: locationName || '位置不可用',
+              accuracy: location.accuracy || 0,
+              altitude: location.altitude || 0,
+              speed: location.speed || 0,
+              bearing: location.bearing || 0,
+              timestamp: location.timestamp || Date.now()
+            };
+            this.stateManager.updateLocation(locationInfo);
+
+            // 登录态：同步到服务端（与 Web 端保持一致，不依赖“手动点更新位置”）
+            if (this.isLoggedIn) {
+              try {
+                await ApiClient.updateLocation({
+                  latitude: locationInfo.latitude,
+                  longitude: locationInfo.longitude,
+                  location_name: locationInfo.locationName || '位置不可用'
+                });
+              } catch (e) {
+                hilog.warn(DOMAIN_NUMBER, TAG, `位置上传失败: ${JSON.stringify(e)}`);
+              }
+            }
+          }
+        } else {
+          hilog.warn(DOMAIN_NUMBER, TAG, '位置权限未授予');
+        }
+      } catch (error) {
+        hilog.warn(DOMAIN_NUMBER, TAG, `获取位置失败: ${JSON.stringify(error)}`);
+      }
+
+      // 定时同步位置（5分钟一次）：仅登录态启用，节省电量与网络
+      if (this.isLoggedIn && this.locationSyncTimerId === 0) {
+        this.locationSyncTimerId = TimerManager.setInterval(async () => {
+          try {
+            if (!this.isLoggedIn) return;
+            const hasPermission: boolean = await PermissionManager.getInstance().checkLocationPermission();
+            if (!hasPermission) return;
+
+            const location = await LocationUtil.getCurrentLocation();
+            if (!location) return;
+
+            const locationName: string | null = await LocationUtil.getLocationName(location.latitude, location.longitude);
+            const locationInfo: LocationInfo = {
+              latitude: location.latitude,
+              longitude: location.longitude,
+              locationName: locationName || '位置不可用',
+              accuracy: location.accuracy || 0,
+              altitude: location.altitude || 0,
+              speed: location.speed || 0,
+              bearing: location.bearing || 0,
+              timestamp: location.timestamp || Date.now()
+            };
+            this.stateManager.updateLocation(locationInfo);
+
+            const resp = await ApiClient.updateLocation({
+              latitude: locationInfo.latitude,
+              longitude: locationInfo.longitude,
+              location_name: locationInfo.locationName || '位置不可用'
+            });
+            if (resp.code !== 0) {
+              hilog.warn(DOMAIN_NUMBER, TAG, `定时位置上传失败: ${resp.message || resp.code}`);
+            }
+          } catch (e) {
+            hilog.warn(DOMAIN_NUMBER, TAG, `定时位置同步异常: ${JSON.stringify(e)}`);
+          }
+        }, 5 * 60 * 1000, '定时同步用户位置');
+      }
+
+      await this.initializeWebSocket();
+
+      this.isInitialized = true;
+      hilog.info(DOMAIN_NUMBER, TAG, '✅ 应用初始化完成');
+    } catch (error) {
+      const errorMsg = `应用初始化失败: ${error}`;
+      hilog.error(DOMAIN_NUMBER, TAG, errorMsg);
+      this.lastError = errorMsg;
+      this.isInitialized = true; 
+    }
+  }
+
+  private async getAccessToken(): Promise<string | null> {
+    try {
+      return await PreferencesUtil.get('access_token', '');
+    } catch (error) {
+      hilog.error(DOMAIN_NUMBER, TAG, `获取访问令牌失败: ${error}`);
+      return null;
+    }
+  }
+
+  private async initializeWebSocket() {
+    try {
+      hilog.info(DOMAIN_NUMBER, TAG, '🔌 初始化WebSocket连接');
+      if (this.isLoggedIn && this.currentUser) {
+        const token = await this.getAccessToken();
+        if (token) {
+          await this.webSocketService.connect(token);
+          this.bindWsNotificationsOnce();
+        }
+      }
+    } catch (error) {
+      hilog.error(DOMAIN_NUMBER, TAG, `WebSocket初始化失败: ${error}`);
+    }
+  }
+
+  /**
+   * WS 通知桥：订阅 notification 类型，并将事件转成 SmartNotification
+   *
+   * 说明：
+   * - 后端推送侧会同时检查“持久化偏好 + 实时订阅”
+   * - App 端这里订阅所有通知类型即可，最终是否推送由后端控制
+   * - 避免重复注册：只绑定一次（重连后会通过 SubscribeAck/内部重订阅恢复）
+   */
+  private bindWsNotificationsOnce() {
+    if (this.wsNotificationsBound) return;
+    this.wsNotificationsBound = true;
+
+    // 连接建立后再订阅（未 connected 时 subscribe 会被忽略）
+    this.webSocketService.on('ConnectionEstablished', (_e: ServerEvent) => {
+      this.webSocketService.subscribe([{
+        source_type: 'notification',
+        source_ids: WS_NOTIFICATION_SOURCE_IDS
+      }]);
+    });
+
+    // 通用处理：把“与我相关的通知事件”落到 SmartNotificationService
+    const handle = async (event: ServerEvent) => {
+      try {
+        switch (event.type) {
+          case 'NewFollower': {
+            const p: any = event.payload;
+            await this.smartNotificationService.createNotification({
+              type: 'social',
+              priority: 'medium',
+              title: p.is_mutual ? '新好友' : '新关注者',
+              message: p.is_mutual ? `${p.user.nickname} 与你互相关注了` : `${p.user.nickname} 关注了你`,
+              read: false,
+              actionable: false,
+              metadata: { type: 'new_follower', user: p.user }
+            }, { immediate: true });
+            break;
+          }
+          case 'MutualFollow': {
+            const p: any = event.payload;
+            await this.smartNotificationService.createNotification({
+              type: 'social',
+              priority: 'medium',
+              title: '成为好友',
+              message: `你和 ${p.user.nickname} 互相关注了`,
+              read: false,
+              actionable: false,
+              metadata: { type: 'mutual_follow', user: p.user }
+            }, { immediate: true });
+            break;
+          }
+          case 'Unfollowed': {
+            const p: any = event.payload;
+            await this.smartNotificationService.createNotification({
+              type: 'social',
+              priority: p.was_mutual ? 'high' : 'low',
+              title: p.was_mutual ? '好友关系解除' : '取消关注',
+              message: p.was_mutual ? '对方已取消关注，你们不再是好友' : '有人取消关注了你',
+              read: false,
+              actionable: false,
+              metadata: { type: 'unfollowed', targetId: String(p.user_id) }
+            }, { immediate: true });
+            break;
+          }
+          case 'MomentLiked': {
+            const p: any = event.payload;
+            await this.smartNotificationService.createNotification({
+              type: 'social',
+              priority: 'low',
+              title: '收到点赞',
+              message: `${p.user.nickname} 赞了你的瞬间`,
+              read: false,
+              actionable: false,
+              metadata: { type: 'moment_like', targetId: String(p.moment_id) }
+            }, { immediate: true });
+            break;
+          }
+          case 'MomentCommented': {
+            const p: any = event.payload;
+            await this.smartNotificationService.createNotification({
+              type: 'social',
+              priority: 'medium',
+              title: '新评论',
+              message: `${p.user.nickname}: ${p.content}`,
+              read: false,
+              actionable: false,
+              metadata: { type: 'moment_comment', targetId: String(p.moment_id) }
+            }, { immediate: true });
+            break;
+          }
+          case 'CommentReply': {
+            const p: any = event.payload;
+            await this.smartNotificationService.createNotification({
+              type: 'social',
+              priority: 'medium',
+              title: '评论被回复',
+              message: `${p.user.nickname}: ${p.content}`,
+              read: false,
+              actionable: false,
+              metadata: { type: 'comment_reply', targetId: String(p.moment_id) }
+            }, { immediate: true });
+            break;
+          }
+          case 'GroupInviteReceived': {
+            const p: any = event.payload;
+            await this.smartNotificationService.createNotification({
+              type: 'social',
+              priority: 'high',
+              title: '群组邀请',
+              message: `${p.inviter.nickname} 邀请你加入「${p.group_name}」`,
+              read: false,
+              actionable: false,
+              metadata: { type: 'group_invite', targetId: String(p.group_chat_id) }
+            }, { immediate: true });
+            break;
+          }
+          case 'GroupInviteResponse': {
+            const p: any = event.payload;
+            await this.smartNotificationService.createNotification({
+              type: 'social',
+              priority: p.status === 'accepted' ? 'medium' : 'low',
+              title: p.status === 'accepted' ? '邀请已接受' : '邀请被拒绝',
+              message: p.status === 'accepted' ? '对方已接受你的群组邀请' : '对方拒绝了你的群组邀请',
+              read: false,
+              actionable: false,
+              metadata: { type: 'group_invite_response', targetId: String(p.group_chat_id) }
+            }, { immediate: true });
+            break;
+          }
+          case 'GroupApplicationReceived': {
+            const p: any = event.payload;
+            await this.smartNotificationService.createNotification({
+              type: 'social',
+              priority: 'high',
+              title: '入群申请',
+              message: `${p.applicant.nickname} 申请加入群组`,
+              read: false,
+              actionable: false,
+              metadata: { type: 'group_application', targetId: String(p.group_chat_id) }
+            }, { immediate: true });
+            break;
+          }
+          case 'GroupApplicationResponse': {
+            const p: any = event.payload;
+            await this.smartNotificationService.createNotification({
+              type: 'social',
+              priority: p.status === 'accepted' ? 'medium' : 'low',
+              title: p.status === 'accepted' ? '申请已通过' : '申请被拒绝',
+              message: p.status === 'accepted' ? `你已加入「${p.group_name}」` : `你的入群申请被拒绝`,
+              read: false,
+              actionable: false,
+              metadata: { type: 'group_application_response', targetId: String(p.group_chat_id) }
+            }, { immediate: true });
+            break;
+          }
+          case 'SystemAnnouncement': {
+            const p: any = event.payload;
+            const priority = p.severity === 'error' ? 'critical' : (p.severity === 'warning' ? 'high' : 'medium');
+            await this.smartNotificationService.createNotification({
+              type: 'system',
+              priority,
+              title: p.title,
+              message: p.content,
+              read: false,
+              actionable: false,
+              metadata: { type: 'system_announcement', targetId: String(p.id) }
+            }, { immediate: true });
+            break;
+          }
+        }
+      } catch (err) {
+        hilog.warn(DOMAIN_NUMBER, TAG, `WS通知处理失败: ${JSON.stringify(err)}`);
+      }
+    };
+
+    // 逐事件绑定（避免 '*' 里做大量无关 switch）
+    [
+      'NewFollower',
+      'MutualFollow',
+      'Unfollowed',
+      'MomentLiked',
+      'MomentCommented',
+      'CommentReply',
+      'GroupInviteReceived',
+      'GroupInviteResponse',
+      'GroupApplicationReceived',
+      'GroupApplicationResponse',
+      'SystemAnnouncement',
+    ].forEach((t: string) => {
+      this.webSocketService.on(t, handle);
+    });
+  }
+
+  private async initializeSmartServices(): Promise<void> {
+    try {
+      setInterval(() => {
+        const stats = this.cacheManager.getStats();
+        if (stats.hitRate < 50 && stats.totalRequests > 100) {
+          hilog.warn(DOMAIN_NUMBER, TAG, `缓存命中率较低: ${stats.hitRate}%`);
+        }
+      }, 30000); 
+
+      this.smartNotificationService.addEventListener(NotificationEvent.CREATED, (event, notification) => {
+        hilog.info(DOMAIN_NUMBER, TAG, `收到通知: ${notification.title}`);
+        NotificationRenderer.getInstance().showNotification(notification);
+      });
+
+    } catch (error) {
+      hilog.error(DOMAIN_NUMBER, TAG, `智能服务初始化失败: ${JSON.stringify(error)}`);
+    }
+  }
+
+  private handleTabChange(index: number) {
+    this.currentTabIndex = index;
+    if (!this.isLoggedIn && index !== 0 && index !== 3) { 
+       // Logic for unauthorized access
+    }
+  }
+
+  @Builder
+  TabBuilderIcon(title: string, targetIndex: number, icon: string) {
+    Column() {
+      // 使用 SymbolGlyph 替代 Text 渲染图标
+      SymbolGlyph($r(`sys.symbol.${icon}`))
+        .fontSize(24)
+        .fontColor([this.currentTabIndex === targetIndex ? DesignConstants.COLOR.BRAND_PRIMARY : DesignConstants.COLOR.TEXT_SECONDARY_LIGHT])
+        .renderingStrategy(SymbolRenderingStrategy.SINGLE)
+      
+      Text(title)
+        .fontColor(this.currentTabIndex === targetIndex ? DesignConstants.COLOR.BRAND_PRIMARY : DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+        .fontSize(10)
+        .margin({ top: 4 })
+        .fontWeight(this.currentTabIndex === targetIndex ? 500 : 400)
+    }
+    .width('100%')
+    .height(56)
+    .justifyContent(FlexAlign.Center)
+    .onClick(() => {
+      this.currentTabIndex = targetIndex;
+      this.tabsController.changeIndex(targetIndex);
+    })
+  }
+
+  build() {
+    Stack({ alignContent: Alignment.Top }) {
+      if (!this.isInitialized) {
+        Column() {
+          LoadingProgress()
+            .width(48)
+            .height(48)
+            .color($r('sys.color.ohos_id_color_emphasize'))
+          
+          Text($r('app.string.common_loading'))
+            .fontSize(16)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .margin({ top: 16 })
+        }
+        .width('100%')
+        .height('100%')
+        .justifyContent(FlexAlign.Center)
+        .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+      } else {
+        Tabs({ barPosition: BarPosition.End, controller: this.tabsController }) {
+          // 1. 群组/发现
+          TabContent() {
+            // 游客允许浏览附近群组；加入/创建等操作在页面内做登录引导
+            GroupPage()
+          }
+          .tabBar(this.TabBuilderIcon('群组', 0, AppIconMap[AppIcon.GROUP]))
+
+          // 2. 消息
+          TabContent() {
+            if (this.isLoggedIn) {
+              MessagePage()
+            } else {
+              this.buildWelcomeView()
+            }
+          }
+          .tabBar(this.TabBuilderIcon('消息', 1, AppIconMap[AppIcon.MESSAGE]))
+
+          // 3. 瞬间
+          TabContent() {
+            // 游客允许浏览附近瞬间；发布/点赞等操作在页面内做登录引导
+            MomentPage()
+          }
+          .tabBar(this.TabBuilderIcon('瞬间', 2, AppIconMap[AppIcon.CAMERA]))
+
+          // 4. 地图
+          TabContent() {
+            MapPage()
+          }
+          .tabBar(this.TabBuilderIcon('地图', 3, AppIconMap[AppIcon.MAP]))
+
+          // 5. 我的
+          TabContent() {
+            ProfilePage()
+          }
+          .tabBar(this.TabBuilderIcon('我的', 4, AppIconMap[AppIcon.PERSON]))
+        }
+        .scrollable(false)
+        .onChange((index: number) => this.handleTabChange(index))
+        .backgroundColor(DesignConstants.COLOR.SECONDARY_BG_LIGHT)
+      }
+
+      if (this.visibleNotifications.length > 0) {
+        Column({ space: 8 }) {
+          ForEach(this.visibleNotifications, (notification: SmartNotification) => {
+            NotificationBanner({
+              notification: notification,
+              onClose: () => {
+                NotificationRenderer.getInstance().hideNotification(notification.id, 'manual');
+              },
+              onClick: () => {
+                NotificationRenderer.getInstance().handleClick(notification);
+              },
+              onAction: (action: NotificationAction) => {
+                NotificationRenderer.getInstance().handleAction(action, notification);
+              }
+            })
+            .transition(TransitionEffect.OPACITY.animation({ duration: 300 }).combine(TransitionEffect.move(TransitionEdge.TOP)))
+          }, (item: SmartNotification) => item.id)
+        }
+        .width('100%')
+        .padding({ top: 12 + 36, left: 16, right: 16 })
+        .hitTestBehavior(HitTestMode.Transparent)
+      }
+
+      if (this.showNotificationCenter) {
+        Column() {
+          NotificationCenter()
+        }
+        .width('100%')
+        .height('100%')
+        .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+        .onClick(() => {
+          this.showNotificationCenter = false;
+        })
+      }
+
+      if (this.showPerformanceDetails) {
+        Column() {
+          PerformanceIndicator({
+            showDetails: true,
+            compact: false
+          })
+        }
+        .width('100%')
+        .height('100%')
+        .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+        .onClick(() => {
+          this.showPerformanceDetails = false;
+        })
+      }
+    }
+    .width('100%')
+    .height('100%')
+  }
+
+  @Builder
+  private buildWelcomeView() {
+    Column({ space: 24 }) {
+      Text($r('app.string.module_desc'))
+        .fontSize(28)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+
+      Text($r('app.string.app_description'))
+        .fontSize(16)
+        .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+
+      Button($r('app.string.auth_start_experience'))
+        .type(ButtonType.Capsule)
+        .backgroundColor(DesignConstants.COLOR.BRAND_PRIMARY)
+        .fontColor(Color.White)
+        .width(200)
+        .height(44)
+        .onClick(async () => {
+          try {
+            const routerInstance = this.getUIContext().getRouter();
+            await routerInstance.pushUrl({ url: `features/auth/pages/${PageNames.LOGIN}` });
+          } catch (error) {
+            hilog.error(DOMAIN_NUMBER, TAG, `跳转登录页面失败: ${error}`);
+          }
+        })
+    }
+    .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.Center)
+    .padding(24)
+    .backgroundColor(DesignConstants.COLOR.SECONDARY_BG_LIGHT)
+  }
+}

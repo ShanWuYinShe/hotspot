@@ -8,10 +8,11 @@ use crate::{handlers::media, state::AppState};
 /// 严格按照 api_spec.mdc 定义
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .route("/upload_file", post(media::upload_file))
+        .route("/upload", post(media::upload))
         .route("/initiate_upload", post(media::initiate_upload))
+        .route("/upload_part_url", post(media::upload_part_url))
         .route("/upload_chunk", post(media::upload_chunk))
         .route("/complete_upload", post(media::complete_upload))
-        .route("/get_upload_status", post(media::get_upload_status))
+        .route("/upload_status", post(media::upload_status))
         .route("/abort_upload", post(media::abort_upload))
 }

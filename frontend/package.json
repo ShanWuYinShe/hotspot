@@ -2,38 +2,43 @@
   "name": "nuxt-app",
   "private": true,
   "type": "module",
+  "version": "0.0.1",
+  "pnpm": {
+    "overrides": {
+      "sourcemap-codec": "npm:@jridgewell/sourcemap-codec@^1.5.0"
+    }
+  },
   "scripts": {
     "build": "nuxt build",
-    "dev": "nuxt dev",
+    "dev": "nuxt dev --host 127.0.0.1",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "start": "nuxt start"
   },
   "dependencies": {
-    "@internationalized/date": "^3.10.0",
+    "@internationalized/date": "^3.10.1",
     "@nuxt/image": "^2.0.0",
     "@nuxt/ui": "^4.2.1",
     "@nuxtjs/color-mode": "^3.5.2",
     "@nuxtjs/i18n": "^10.2.1",
     "@pinia/nuxt": "^0.11.3",
-    "@tanstack/vue-virtual": "^3.13.13",
     "@vueuse/core": "^13.9.0",
-    "date-fns": "^4.1.0",
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "^4.7.1",
-    "tailwindcss": "^4.1.17",
+    "tailwindcss": "^4.1.18",
     "vue": "^3.5.25",
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@iconify-json/heroicons": "^1.2.3",
-    "@iconify-json/lucide": "^1.2.79",
-    "@iconify-json/simple-icons": "^1.2.62",
+    "@iconify-json/lucide": "^1.2.81",
     "@nuxt/devtools": "^2.7.0",
-    "@nuxt/icon": "^2.1.0",
+    "@nuxt/icon": "^2.1.1",
+    "@tailwindcss/postcss": "^4.1.18",
     "@vite-pwa/nuxt": "^1.1.0",
+    "@vueuse/nuxt": "^14.1.0",
     "nuxt": "^4.2.2",
+    "postcss": "^8.5.6",
     "typescript": "^5.9.3",
     "vue-tsc": "^3.1.8"
   },

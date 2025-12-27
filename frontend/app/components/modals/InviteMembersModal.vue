@@ -1,6 +1,5 @@
 <template>
   <UModal
-    size="lg"
     title="邀请成员"
     description="从好友列表中选择要邀请的成员"
   >
@@ -8,7 +7,7 @@
       <UInput
         v-model="searchQuery"
         placeholder="搜索好友..."
-        icon="i-heroicons-magnifying-glass"
+        icon="i-lucide-search"
         :disabled="isLoading"
         class="mb-4"
       />
@@ -18,19 +17,20 @@
         <USkeleton
           v-for="i in 3"
           :key="i"
-          class="h-16 rounded-lg mb-2"
+          class="h-16 mb-2"
         />
       </template>
 
       <!-- 好友列表 -->
       <section
         v-else-if="filteredFriends.length > 0"
+        ref="listEl"
         class="max-h-96 overflow-y-auto space-y-2"
+        @scroll="onListScroll"
       >
         <UCard
           v-for="friend in filteredFriends"
           :key="friend.user_id"
-          :ui="{ body: 'p-3' }"
         >
           <section class="flex items-center justify-between gap-3">
             <header class="flex items-center gap-3 min-w-0">
@@ -41,12 +41,9 @@
               />
               <article class="min-w-0">
                 <p class="font-medium truncate">{{ friend.nickname }}</p>
-                <p
-                  v-if="friend.remark"
-                  class="text-xs text-secondary-content"
-                >
+                <UBadge v-if="friend.remark" color="neutral" variant="soft" size="xs">
                   备注: {{ friend.remark }}
-                </p>
+                </UBadge>
               </article>
             </header>
 
@@ -67,13 +64,24 @@
             </UBadge>
           </section>
         </UCard>
+
+        <!-- 回到顶部（列表很长时） -->
+        <div v-if="showScrollTop" class="sticky bottom-3 flex justify-end">
+          <UButton
+            variant="soft"
+            color="neutral"
+            size="sm"
+            icon="i-lucide-arrow-up"
+            @click="scrollToTop"
+          />
+        </div>
       </section>
 
       <UAlert
         v-else
-        icon="i-heroicons-user-group"
+        icon="i-lucide-users-round"
         color="neutral"
-        variant="subtle"
+        variant="soft"
         title="暂无好友"
         description="您还没有添加好友"
       />
@@ -109,7 +117,7 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const toast = useToast()
+const feedback = useFeedbackStore()
 
 const groupsService = useGroupsService()
 const userService = useUsersService()
@@ -119,6 +127,19 @@ const friends = ref<Friend[]>([])
 const isLoading = ref(false)
 const invitedUsers = ref(new Set<number>())
 const invitingUsers = ref(new Set<number>())
+
+const listEl = ref<HTMLElement | null>(null)
+const showScrollTop = ref(false)
+
+const onListScroll = () => {
+  const el = listEl.value
+  if (!el) return
+  showScrollTop.value = el.scrollTop > 160
+}
+
+const scrollToTop = () => {
+  listEl.value?.scrollTo({ top: 0, behavior: 'smooth' })
+}
 
 const filteredFriends = computed(() => {
   if (!searchQuery.value.trim()) return friends.value
@@ -141,7 +162,7 @@ const loadFriends = async () => {
     }))
   } catch (error) {
     console.error('加载好友列表失败:', error)
-    toast.add({ title: '加载失败', description: (error as Error).message, color: 'error' })
+    feedback.error('加载失败', (error as Error).message)
   } finally {
     isLoading.value = false
   }
@@ -158,11 +179,11 @@ const inviteFriend = async (friend: Friend) => {
     })
 
     invitedUsers.value.add(friend.user_id)
-    toast.add({ title: '邀请成功', description: `已向 ${friend.nickname} 发送邀请`, color: 'success' })
+    feedback.success('邀请成功', `已向 ${friend.nickname} 发送邀请`)
     props.onSuccess?.()
   } catch (error) {
     console.error('邀请失败:', error)
-    toast.add({ title: '邀请失败', description: (error as Error).message, color: 'error' })
+    feedback.error('邀请失败', (error as Error).message)
   } finally {
     invitingUsers.value.delete(friend.user_id)
   }

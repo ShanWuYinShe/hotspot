@@ -1,28 +1,42 @@
 <template>
-  <UAlert
-    :title="title"
-    :description="description"
-    :icon="icon"
-    class="border-t"
-  >
-    <template #actions>
-      <div class="flex gap-2">
-        <UButton
-          v-for="action in actions"
-          :key="action.key"
-          :icon="action.icon"
-          :color="action.color || 'primary'"
-          :variant="action.variant || 'solid'"
-          :size="action.size || 'sm'"
-          :loading="action.loading"
-          :disabled="action.disabled"
-          @click="action.action"
-        >
-          {{ action.label }}
-        </UButton>
+  <UCard variant="outline">
+    <div class="flex items-start gap-4">
+      <div class="shrink-0">
+        <UAvatar
+          :icon="icon"
+          size="sm"
+          color="primary"
+        />
       </div>
-    </template>
-  </UAlert>
+
+      <div class="flex-1 min-w-0">
+        <div class="space-y-1">
+          <div class="text-base font-semibold">
+            {{ title }}
+          </div>
+          <div v-if="description" class="text-sm">
+            {{ description }}
+          </div>
+        </div>
+
+        <div class="flex flex-wrap gap-2 mt-4">
+          <UButton
+            v-for="action in actions"
+            :key="action.key"
+            :icon="action.icon"
+            :color="action.color || 'primary'"
+            :variant="action.variant || 'solid'"
+            :size="action.size || 'sm'"
+            :loading="action.loading"
+            :disabled="action.disabled"
+            @click="action.action"
+          >
+            {{ action.label }}
+          </UButton>
+        </div>
+      </div>
+    </div>
+  </UCard>
 </template>
 
 <script setup lang="ts">

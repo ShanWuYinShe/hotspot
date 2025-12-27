@@ -2,7 +2,63 @@
   "string": [
     {
       "name": "app_name",
-      "value": "GeoTalk"
+      "value": "HotSpot"
+    },
+    {
+      "name": "app_description",
+      "value": "发现附近的人、群组与生活瞬间"
+    },
+    {
+      "name": "common_loading",
+      "value": "加载中..."
+    },
+    {
+      "name": "auth_login",
+      "value": "登录"
+    },
+    {
+      "name": "auth_temp_user",
+      "value": "快速体验"
+    },
+    {
+      "name": "auth_login_btn",
+      "value": "登录"
+    },
+    {
+      "name": "auth_start_experience",
+      "value": "开始体验"
+    },
+    {
+      "name": "auth_temp_user_desc",
+      "value": "无需注册，立即创建临时身份开始探索。你之后可以升级为正式账号。"
+    },
+    {
+      "name": "auth_nickname_placeholder",
+      "value": "请输入昵称"
+    },
+    {
+      "name": "auth_login_id_placeholder",
+      "value": "请输入邮箱或手机号"
+    },
+    {
+      "name": "auth_password_placeholder",
+      "value": "请输入密码"
+    },
+    {
+      "name": "auth_register_not_supported",
+      "value": "暂不支持注册，请使用网页端注册后再登录"
+    },
+    {
+      "name": "auth_login_success",
+      "value": "登录成功"
+    },
+    {
+      "name": "auth_login_failed",
+      "value": "登录失败"
+    },
+    {
+      "name": "module_desc",
+      "value": "探索附近、即时聊天、分享瞬间"
     }
   ]
 }

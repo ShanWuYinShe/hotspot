@@ -1,73 +1,125 @@
 <template>
   <UModal
+    :fullscreen="isMobile"
+    width="xl"
+    :padding="false"
     :title="title"
-    description="选择位置信息"
-    :ui="{ width: 'sm:max-w-2xl' }"
+    :ui="{ 
+      content: 'h-[85vh] sm:h-[80vh] flex flex-col', 
+      body: 'flex-1 p-0 overflow-hidden relative flex flex-col',
+      close: 'sm:flex'
+    }"
   >
     <template #body="{ close }">
-      <div class="space-y-4">
-        <!-- 地图容器 -->
-        <div class="relative rounded-xl overflow-hidden border border-default">
-          <div ref="mapContainer" class="w-full h-64 sm:h-80 bg-interactive" />
-          <!-- 中心标记 -->
-          <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-full pointer-events-none z-10">
-            <UIcon name="i-heroicons-map-pin-solid" class="w-8 h-8 text-primary drop-shadow-lg" />
+      <!-- 地图容器 -->
+      <div class="relative flex-1 min-h-0 hs-map-background">
+        <MapContainer
+          :center="center"
+          :zoom="zoom"
+          :markers="markers"
+          :interactive="true"
+          :show-anchor="true"
+          @viewport-change="handleViewportChange"
+          @marker-click="handleMarkerClick"
+        />
+
+        <!-- 顶部控制栏 (悬浮) -->
+        <div class="absolute top-4 left-4 right-4 z-20 flex justify-between items-start pointer-events-none">
+          <!-- 模式切换 -->
+          <div class="pointer-events-auto flex flex-col gap-2">
+            <UCard variant="outline" class="hs-floating-control" :ui="{ body: 'p-1 flex items-center gap-1' }">
+              <UTooltip text="显示附近的人">
+                <UButton
+                  :variant="modes.includes('users') ? 'soft' : 'ghost'"
+                  :color="modes.includes('users') ? 'primary' : 'neutral'"
+                  size="sm"
+                  icon="i-lucide-users"
+                  @click="toggleMode('users')"
+                />
+              </UTooltip>
+              <UTooltip text="显示附近群组">
+                <UButton
+                  :variant="modes.includes('groups') ? 'soft' : 'ghost'"
+                  :color="modes.includes('groups') ? 'primary' : 'neutral'"
+                  size="sm"
+                  icon="i-lucide-users-round"
+                  @click="toggleMode('groups')"
+                />
+              </UTooltip>
+              <UTooltip text="显示附近动态">
+                <UButton
+                  :variant="modes.includes('moments') ? 'soft' : 'ghost'"
+                  :color="modes.includes('moments') ? 'primary' : 'neutral'"
+                  size="sm"
+                  icon="i-lucide-image"
+                  @click="toggleMode('moments')"
+                />
+              </UTooltip>
+            </UCard>
           </div>
-          <!-- 加载状态 -->
-          <div v-if="mapLoading" class="absolute inset-0 flex items-center justify-center bg-overlay">
-            <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 text-primary animate-spin" />
+
+          <!-- 右侧工具 -->
+          <div class="pointer-events-auto flex flex-col gap-2">
+             <UButton
+              color="white"
+              variant="solid"
+              icon="i-lucide-refresh-cw"
+              :loading="loading"
+              size="sm"
+              class="hs-floating-control"
+              @click="refresh"
+            />
+            <UButton
+              color="white"
+              variant="solid"
+              icon="i-lucide-crosshair"
+              :loading="locating"
+              size="sm"
+              class="hs-floating-control"
+              @click="locateMe"
+            />
           </div>
         </div>
 
-        <!-- 选中位置信息 -->
-        <div class="p-3 bg-surface/50 rounded-lg">
-          <div class="flex items-start gap-3">
-            <UIcon name="i-heroicons-map-pin" class="w-5 h-5 text-primary mt-0.5 shrink-0" />
-            <div class="min-w-0 flex-1">
-              <p class="font-medium text-sm truncate">{{ selectedLocationName || '拖动地图选择位置' }}</p>
-              <p v-if="selectedLatitude && selectedLongitude" class="text-xs text-secondary-content mt-1">
-                {{ selectedLatitude.toFixed(6) }}, {{ selectedLongitude.toFixed(6) }}
-              </p>
+        <!-- 底部位置确认栏 (悬浮) -->
+        <div class="absolute bottom-6 left-4 right-4 z-20 pointer-events-none">
+          <div class="pointer-events-auto hs-floating-panel p-3 flex flex-col sm:flex-row items-center gap-3 max-w-2xl mx-auto">
+            <UChip color="primary" size="xl" class="shrink-0">
+              <UIcon name="i-lucide-map-pin" />
+            </UChip>
+            
+            <div class="flex-1 min-w-0 text-center sm:text-left">
+              <UBadge variant="subtle" color="neutral" size="md" class="w-full truncate">
+                {{ selectedLocationName || '拖动地图选择位置' }}
+              </UBadge>
+              <UBadge variant="subtle" color="neutral" size="xs" class="font-mono mt-1">
+                {{ center.latitude.toFixed(6) }}, {{ center.longitude.toFixed(6) }}
+              </UBadge>
             </div>
-          </div>
-        </div>
 
-        <!-- 操作按钮 -->
-        <div class="flex gap-3">
-          <UButton
-            variant="soft"
-            icon="i-heroicons-arrow-path"
-            :loading="gettingLocation"
-            @click="locateMe"
-          >
-            定位到当前位置
-          </UButton>
-          <UButton
-            class="flex-1"
-            :disabled="!selectedLocationName"
-            @click="() => confirmLocation(close)"
-          >
-            确认选择
-          </UButton>
+            <UButton
+              size="md"
+              class="w-full sm:w-auto min-w-[100px]"
+              :disabled="!selectedLocationName"
+              @click="confirmLocation(close)"
+            >
+              设为锚点
+            </UButton>
+          </div>
         </div>
       </div>
-    </template>
-
-    <template #footer="{ close }">
-      <UButton
-        variant="outline"
-        @click="close"
-      >
-        取消
-      </UButton>
     </template>
   </UModal>
 </template>
 
 <script setup lang="ts">
+import MapContainer, { type MapMarker } from '~/components/map/MapContainer.vue'
 import { DEFAULTS as defaults } from '~/config/defaults'
 import { geocoding } from '~/utils/geocoding'
-import { waitForAMap, loadAMapPlugin } from '~/plugins/amap.client'
+import { useMapService } from '~/services/map.service'
+import { useGeolocation } from '~/composables/useGeolocation'
+import { useBreakpoints, breakpointsTailwind } from '@vueuse/core'
+import type { Bounds, GroupSearchItem, MomentSearchItem, UserSearchItem } from '~/types/api'
 
 export interface LocationResult {
   latitude: number
@@ -81,182 +133,237 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  title: '选择位置'
+  title: '地图探索'
 })
 
-const toast = useToast()
-const locationStore = useLocationStore()
+// 响应式断点
+const breakpoints = useBreakpoints(breakpointsTailwind)
+const isMobile = breakpoints.smaller('sm')
+
+// 依赖
+const anchorStore = useMapAnchorStore()
+const mapService = useMapService()
+const geolocation = useGeolocation()
+const { withErrorHandling } = useErrorHandler()
+const feedback = useFeedbackStore()
 
 // 状态
-const mapContainer = ref<HTMLElement | null>(null)
-const mapLoading = ref(true)
-const gettingLocation = ref(false)
-const selectedLatitude = ref<number>(locationStore.location?.latitude || defaults.latitude)
-const selectedLongitude = ref<number>(locationStore.location?.longitude || defaults.longitude)
-const selectedLocationName = ref<string>(locationStore.location?.locationName || '')
-
-// 高德地图实例
-let mapInstance: AMap.Map | null = null
-let geolocationInstance: AMap.Geolocation | null = null
-
-// 初始化地图 - 使用 nextTick 确保 DOM 已渲染
-onMounted(async () => {
-  await nextTick()
-  await initMap()
+const loading = ref(false)
+const locating = ref(false)
+const zoom = ref(15)
+const center = reactive({
+  latitude: defaults.latitude,
+  longitude: defaults.longitude
 })
+const selectedLocationName = ref('')
 
-// 清理地图
-onUnmounted(() => {
-  if (mapInstance) {
-    mapInstance.destroy()
-    mapInstance = null
-  }
-  geolocationInstance = null
-})
+// 搜索模式（支持多选）
+type Mode = 'users' | 'groups' | 'moments'
+const modes = ref<Mode[]>(['users', 'groups', 'moments'])
 
-async function initMap() {
-  if (!mapContainer.value) {
-    mapLoading.value = false
-    return
-  }
+// 搜索结果
+const usersResults = ref<UserSearchItem[]>([])
+const groupsResults = ref<GroupSearchItem[]>([])
+const momentsResults = ref<MomentSearchItem[]>([])
+const lastBounds = ref<Bounds | null>(null)
 
-  mapLoading.value = true
-  try {
-    // 等待高德地图 SDK 加载完成（由 amap.client.ts 插件负责加载）
-    await waitForAMap()
-    
-    // 确保 Geolocation 插件已加载
-    await loadAMapPlugin('AMap.Geolocation')
-    
-    // 创建地图实例
-    mapInstance = new AMap.Map(mapContainer.value, {
-      zoom: 15,
-      center: [selectedLongitude.value, selectedLatitude.value],
-      mapStyle: document.documentElement.classList.contains('dark') ? 'amap://styles/dark' : 'amap://styles/normal'
-    })
+// 计算属性：标记点
+const markers = computed<MapMarker[]>(() => {
+  const list: MapMarker[] = []
 
-    // 创建定位实例
-    geolocationInstance = new AMap.Geolocation({
-      enableHighAccuracy: true,
-      timeout: 10000,
-      convert: true,
-      showButton: false,
-      showMarker: false,
-      showCircle: false,
-      extensions: 'all'
-    })
-
-    // 监听地图移动结束事件
-    mapInstance.on('moveend', handleMapMoveEnd)
-    
-    // 初始获取中心点位置名称
-    await updateLocationName()
-  } catch (error) {
-    console.error('[LocationPicker] 地图初始化失败:', error)
-    toast.add({ title: '地图加载失败', description: '请刷新页面重试', color: 'error' })
-  } finally {
-    mapLoading.value = false
-  }
-}
-
-// 处理地图移动结束
-async function handleMapMoveEnd() {
-  if (!mapInstance) return
-  
-  const center = mapInstance.getCenter()
-  selectedLatitude.value = center.getLat()
-  selectedLongitude.value = center.getLng()
-  
-  await updateLocationName()
-}
-
-// 更新位置名称
-async function updateLocationName() {
-  try {
-    selectedLocationName.value = await geocoding.getLocationName(
-      selectedLatitude.value,
-      selectedLongitude.value
+  if (modes.value.includes('users')) {
+    list.push(...usersResults.value
+      .filter(u => !!u.geo)
+      .map(u => ({
+        id: `u:${u.user_id}`,
+        type: 'user' as const,
+        title: u.nickname,
+        description: u.geo?.location_name || '未知位置',
+        latitude: u.geo!.latitude,
+        longitude: u.geo!.longitude,
+        avatar: u.avatar_url
+      }))
     )
-  } catch {
-    selectedLocationName.value = `${selectedLatitude.value.toFixed(4)}, ${selectedLongitude.value.toFixed(4)}`
   }
+
+  if (modes.value.includes('groups')) {
+    list.push(...groupsResults.value
+      .filter(g => !!g.geo)
+      .map(g => ({
+        id: `g:${g.id}`,
+        type: 'group' as const,
+        title: g.name,
+        description: g.geo?.location_name || '未知位置',
+        latitude: g.geo!.latitude,
+        longitude: g.geo!.longitude,
+        avatar: g.avatar_url
+      }))
+    )
+  }
+
+  if (modes.value.includes('moments')) {
+    list.push(...momentsResults.value
+      .filter(m => !!m.geo)
+      .map(m => ({
+        id: `m:${m.id}`,
+        type: 'moment' as const,
+        title: m.user?.nickname || '动态',
+        description: m.description || '查看详情',
+        latitude: m.geo!.latitude,
+        longitude: m.geo!.longitude,
+        avatar: m.user?.avatar_url
+      }))
+    )
+  }
+
+  return list
+})
+
+// 初始化：从 Store 恢复位置
+const hydratedAnchor = useHydratedStore(anchorStore, 'anchor', {
+  latitude: defaults.latitude,
+  longitude: defaults.longitude,
+  name: ''
+})
+
+watch(
+  hydratedAnchor,
+  (val) => {
+    // 只有当距离变化显著时才更新 center（避免拖拽时的微小抖动循环）
+    if (
+      Math.abs(val.latitude - center.latitude) > 0.0001 ||
+      Math.abs(val.longitude - center.longitude) > 0.0001
+    ) {
+      center.latitude = val.latitude
+      center.longitude = val.longitude
+      selectedLocationName.value = val.name || ''
+    }
+  },
+  { deep: true, immediate: true }
+)
+
+// 模式切换
+const toggleMode = (mode: Mode) => {
+  const index = modes.value.indexOf(mode)
+  if (index > -1) {
+    modes.value.splice(index, 1)
+  } else {
+    modes.value.push(mode)
+  }
+  refresh()
 }
 
-// 定位到当前位置（使用高德地图定位 API）
-async function locateMe() {
-  if (!geolocationInstance || !mapInstance) {
-    toast.add({ title: '定位服务未就绪', color: 'warning' })
-    return
-  }
+// 刷新数据
+const refresh = async () => {
+  if (!lastBounds.value) return
   
-  gettingLocation.value = true
-  try {
-    const result = await new Promise<AMap.GeolocationResult>((resolve, reject) => {
-      geolocationInstance!.getCurrentPosition((status, result) => {
-        if (status === 'complete') {
-          resolve(result)
-        } else {
-          reject(new Error(result.message || '定位失败'))
-        }
-      })
-    })
-    
-    // 使用高德地图定位结果
-    const lng = result.position.getLng()
-    const lat = result.position.getLat()
-    
-    selectedLatitude.value = lat
-    selectedLongitude.value = lng
-    mapInstance.setCenter([lng, lat])
-    
-    // 如果定位结果包含地址信息，直接使用
-    if (result.formattedAddress) {
-      selectedLocationName.value = formatLocationName(result)
-    } else {
-      await updateLocationName()
+  loading.value = true
+  await withErrorHandling(async () => {
+    const req = {
+      bounds: lastBounds.value!,
+      latitude: center.latitude,
+      longitude: center.longitude,
+      limit: 50 // 限制数量防止地图过载
     }
-  } catch {
-    toast.add({ 
-      title: '获取位置失败', 
-      description: '请检查位置权限设置或稍后重试', 
-      color: 'error' 
-    })
-  } finally {
-    gettingLocation.value = false
-  }
+
+    const promises = []
+    
+    if (modes.value.includes('users')) {
+      promises.push(mapService.searchUsersByBounds(req).then(res => {
+        if (res.type === 'users') usersResults.value = res.items
+      }))
+    } else {
+      usersResults.value = []
+    }
+
+    if (modes.value.includes('groups')) {
+      promises.push(mapService.searchGroupsByBounds(req).then(res => {
+        if (res.type === 'groups') groupsResults.value = res.items
+      }))
+    } else {
+      groupsResults.value = []
+    }
+
+    if (modes.value.includes('moments')) {
+      promises.push(mapService.searchMomentsByBounds(req).then(res => {
+        if (res.type === 'moments') momentsResults.value = res.items
+      }))
+    } else {
+      momentsResults.value = []
+    }
+
+    await Promise.all(promises)
+  }, {
+    loading,
+    showToast: false // 静默刷新
+  })
+  loading.value = false
 }
 
-// 格式化位置名称
-function formatLocationName(result: AMap.GeolocationResult): string {
-  const addr = result.addressComponent
-  if (addr) {
-    // 优先返回：区 + 街道
-    if (addr.district && addr.street) {
-      return `${addr.district}${addr.street}`
-    }
-    if (addr.district && addr.township) {
-      return `${addr.district}${addr.township}`
-    }
-    if (addr.district) {
-      return addr.district
-    }
-    if (addr.city) {
-      return addr.city
-    }
+const refreshDebounced = useDebounceFn(refresh, 500)
+
+// 视口变化处理（拖拽/缩放）
+const handleViewportChange = async (payload: { center: { latitude: number; longitude: number }; zoom: number; bounds: Bounds }) => {
+  // 1. 更新本地状态
+  center.latitude = payload.center.latitude
+  center.longitude = payload.center.longitude
+  zoom.value = payload.zoom
+  lastBounds.value = payload.bounds
+
+  // 2. 逆地理编码更新名称
+  selectedLocationName.value = '' // 清空表示正在加载
+  try {
+    const name = await geocoding.getLocationName(center.latitude, center.longitude)
+    selectedLocationName.value = name
+  } catch {
+    selectedLocationName.value = `${center.latitude.toFixed(4)}, ${center.longitude.toFixed(4)}`
   }
-  return result.formattedAddress || '未知位置'
+
+  // 3. 刷新附近数据
+  refreshDebounced()
+}
+
+// 标记点击
+const handleMarkerClick = (marker: MapMarker) => {
+  // 根据类型跳转详情
+  const [type, id] = marker.id.split(':')
+  if (type === 'u') navigateTo(`/users/${id}`)
+  if (type === 'g') navigateTo(`/groups/${id}`)
+  if (type === 'm') navigateTo(`/moments/${id}`)
+}
+
+// 定位到我
+const locateMe = async () => {
+  locating.value = true
+  try {
+    const pos = await geolocation.getPosition({ silent: false })
+    if (pos) {
+      center.latitude = pos.coords.latitude
+      center.longitude = pos.coords.longitude
+      // 触发一次视口更新会联动刷新数据
+    }
+  } catch {
+    feedback.error('定位失败')
+  } finally {
+    locating.value = false
+  }
 }
 
 // 确认选择
-function confirmLocation(close: () => void) {
+const confirmLocation = (close: () => void) => {
   if (!selectedLocationName.value) return
 
+  // 更新全局锚点
+  anchorStore.setAnchor(center.latitude, center.longitude, selectedLocationName.value)
+  
+  // 回调
   props.onSelect?.({
-    latitude: selectedLatitude.value,
-    longitude: selectedLongitude.value,
+    latitude: center.latitude,
+    longitude: center.longitude,
     locationName: selectedLocationName.value
   })
+  
+  feedback.success('浏览锚点已更新', selectedLocationName.value)
   close()
 }
-
 </script>

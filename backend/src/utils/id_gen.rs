@@ -6,9 +6,6 @@
 
 use sqlx::PgPool;
 
-#[allow(unused_imports)]
-use crate::constants::{SYSTEM_USER_ID_MAX, REGULAR_USER_ID_START};
-
 pub struct IdGenerator;
 
 impl IdGenerator {
@@ -24,21 +21,5 @@ impl IdGenerator {
             .await?;
 
         Ok(result.0)
-    }
-
-    /// 判断是否为系统用户ID
-    ///
-    /// 系统用户ID范围：1 - 1,000,000
-    #[allow(dead_code)]
-    pub fn is_system_user_id(user_id: i64) -> bool {
-        user_id >= 1 && user_id <= SYSTEM_USER_ID_MAX
-    }
-
-    /// 判断是否为普通用户ID（临时用户或注册用户）
-    ///
-    /// 普通用户ID范围：1,000,001+
-    #[allow(dead_code)]
-    pub fn is_regular_user_id(user_id: i64) -> bool {
-        user_id > SYSTEM_USER_ID_MAX
     }
 }

@@ -3,40 +3,39 @@
 //! 管理用户的隐私设置、社交设置、搜索设置等
 //! 与 API 文档 UserSettingsData 完全对应
 
-#![allow(dead_code)]
-
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
 
-use crate::error::{AppError, Result};
+use crate::error::Result;
+use crate::types::enums::{ChatPermission, PrivacyLevel};
 
 /// 用户设置Row（与数据库表完全对应）
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct UserSettings {
     pub user_id: i64,
-    
+
     // ============ 隐私设置 ============
-    pub privacy_level: String,           // 'public', 'friends', 'private'
+    pub privacy_level: PrivacyLevel, // 'public', 'friends', 'private'
     pub location_visible: bool,
     pub online_visible: bool,
     pub last_online_visible: bool,
-    pub friends_visible: String,         // 'public', 'friends', 'private'
-    pub following_visible: String,       // 'public', 'friends', 'private'
-    pub followers_visible: String,       // 'public', 'friends', 'private'
-    pub moments_visible: String,         // 'public', 'friends', 'private'
-    pub stats_visible: String,           // 'public', 'friends', 'private'
-    
+    pub friends_visible: PrivacyLevel, // 'public', 'friends', 'private'
+    pub following_visible: PrivacyLevel, // 'public', 'friends', 'private'
+    pub followers_visible: PrivacyLevel, // 'public', 'friends', 'private'
+    pub moments_visible: PrivacyLevel, // 'public', 'friends', 'private'
+    pub stats_visible: PrivacyLevel,   // 'public', 'friends', 'private'
+
     // ============ 社交设置 ============
     pub allow_follow: bool,
-    pub allow_private_chat: String,      // 'everyone', 'friends', 'nobody'
-    
+    pub allow_private_chat: ChatPermission, // 'everyone', 'friends', 'nobody'
+
     // ============ 搜索设置 ============
     pub searchable: bool,
     pub phone_searchable: bool,
     pub nickname_searchable: bool,
     pub location_searchable: bool,
-    
+
     // ============ 时间戳 ============
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
@@ -46,20 +45,20 @@ pub struct UserSettings {
 #[derive(Debug, Clone, Default)]
 pub struct UpdateSettingsParams {
     // 隐私设置
-    pub privacy_level: Option<String>,
+    pub privacy_level: Option<PrivacyLevel>,
     pub location_visible: Option<bool>,
     pub online_visible: Option<bool>,
     pub last_online_visible: Option<bool>,
-    pub friends_visible: Option<String>,
-    pub following_visible: Option<String>,
-    pub followers_visible: Option<String>,
-    pub moments_visible: Option<String>,
-    pub stats_visible: Option<String>,
-    
+    pub friends_visible: Option<PrivacyLevel>,
+    pub following_visible: Option<PrivacyLevel>,
+    pub followers_visible: Option<PrivacyLevel>,
+    pub moments_visible: Option<PrivacyLevel>,
+    pub stats_visible: Option<PrivacyLevel>,
+
     // 社交设置
     pub allow_follow: Option<bool>,
-    pub allow_private_chat: Option<String>,
-    
+    pub allow_private_chat: Option<ChatPermission>,
+
     // 搜索设置
     pub searchable: Option<bool>,
     pub phone_searchable: Option<bool>,
@@ -77,48 +76,6 @@ impl UserSettingsRepository {
         Self { pool }
     }
 
-    /// 获取用户设置
-    pub async fn get(&self, user_id: i64) -> Result<UserSettings> {
-        let settings = sqlx::query_as!(
-            UserSettings,
-            r#"
-            SELECT 
-                user_id,
-                privacy_level::TEXT as "privacy_level!",
-                location_visible,
-                online_visible,
-                last_online_visible,
-                friends_visible::TEXT as "friends_visible!",
-                following_visible::TEXT as "following_visible!",
-                followers_visible::TEXT as "followers_visible!",
-                moments_visible::TEXT as "moments_visible!",
-                stats_visible::TEXT as "stats_visible!",
-                allow_follow,
-                allow_private_chat::TEXT as "allow_private_chat!",
-                searchable,
-                phone_searchable,
-                nickname_searchable,
-                location_searchable,
-                created_at,
-                updated_at
-            FROM user_settings
-            WHERE user_id = $1
-            "#,
-            user_id
-        )
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|e| {
-            if matches!(e, sqlx::Error::RowNotFound) {
-                AppError::NotFound("用户设置不存在".to_string())
-            } else {
-                AppError::from(e)
-            }
-        })?;
-
-        Ok(settings)
-    }
-
     /// 按用户ID查找设置（返回 Option）
     pub async fn find_by_user_id(&self, user_id: i64) -> Result<Option<UserSettings>> {
         let settings = sqlx::query_as!(
@@ -126,17 +83,17 @@ impl UserSettingsRepository {
             r#"
             SELECT 
                 user_id,
-                privacy_level::TEXT as "privacy_level!",
+                privacy_level as "privacy_level: PrivacyLevel",
                 location_visible,
                 online_visible,
                 last_online_visible,
-                friends_visible::TEXT as "friends_visible!",
-                following_visible::TEXT as "following_visible!",
-                followers_visible::TEXT as "followers_visible!",
-                moments_visible::TEXT as "moments_visible!",
-                stats_visible::TEXT as "stats_visible!",
+                friends_visible as "friends_visible: PrivacyLevel",
+                following_visible as "following_visible: PrivacyLevel",
+                followers_visible as "followers_visible: PrivacyLevel",
+                moments_visible as "moments_visible: PrivacyLevel",
+                stats_visible as "stats_visible: PrivacyLevel",
                 allow_follow,
-                allow_private_chat::TEXT as "allow_private_chat!",
+                allow_private_chat as "allow_private_chat: ChatPermission",
                 searchable,
                 phone_searchable,
                 nickname_searchable,
@@ -160,17 +117,17 @@ impl UserSettingsRepository {
             r#"
             UPDATE user_settings
             SET 
-                privacy_level = COALESCE($2::TEXT, privacy_level::TEXT)::privacy_level,
+                privacy_level = COALESCE($2, privacy_level),
                 location_visible = COALESCE($3, location_visible),
                 online_visible = COALESCE($4, online_visible),
                 last_online_visible = COALESCE($5, last_online_visible),
-                friends_visible = COALESCE($6::TEXT, friends_visible::TEXT)::privacy_level,
-                following_visible = COALESCE($7::TEXT, following_visible::TEXT)::privacy_level,
-                followers_visible = COALESCE($8::TEXT, followers_visible::TEXT)::privacy_level,
-                moments_visible = COALESCE($9::TEXT, moments_visible::TEXT)::privacy_level,
-                stats_visible = COALESCE($10::TEXT, stats_visible::TEXT)::privacy_level,
+                friends_visible = COALESCE($6, friends_visible),
+                following_visible = COALESCE($7, following_visible),
+                followers_visible = COALESCE($8, followers_visible),
+                moments_visible = COALESCE($9, moments_visible),
+                stats_visible = COALESCE($10, stats_visible),
                 allow_follow = COALESCE($11, allow_follow),
-                allow_private_chat = COALESCE($12::TEXT, allow_private_chat::TEXT)::chat_permission,
+                allow_private_chat = COALESCE($12, allow_private_chat),
                 searchable = COALESCE($13, searchable),
                 phone_searchable = COALESCE($14, phone_searchable),
                 nickname_searchable = COALESCE($15, nickname_searchable),
@@ -179,17 +136,17 @@ impl UserSettingsRepository {
             WHERE user_id = $1
             "#,
             user_id,
-            params.privacy_level.as_deref(),
+            params.privacy_level as Option<PrivacyLevel>,
             params.location_visible,
             params.online_visible,
             params.last_online_visible,
-            params.friends_visible.as_deref(),
-            params.following_visible.as_deref(),
-            params.followers_visible.as_deref(),
-            params.moments_visible.as_deref(),
-            params.stats_visible.as_deref(),
+            params.friends_visible as Option<PrivacyLevel>,
+            params.following_visible as Option<PrivacyLevel>,
+            params.followers_visible as Option<PrivacyLevel>,
+            params.moments_visible as Option<PrivacyLevel>,
+            params.stats_visible as Option<PrivacyLevel>,
             params.allow_follow,
-            params.allow_private_chat.as_deref(),
+            params.allow_private_chat as Option<ChatPermission>,
             params.searchable,
             params.phone_searchable,
             params.nickname_searchable,
@@ -228,17 +185,17 @@ impl UserSettingsRepository {
             r#"
             SELECT 
                 user_id,
-                privacy_level::TEXT as "privacy_level!",
+                privacy_level as "privacy_level: PrivacyLevel",
                 location_visible,
                 online_visible,
                 last_online_visible,
-                friends_visible::TEXT as "friends_visible!",
-                following_visible::TEXT as "following_visible!",
-                followers_visible::TEXT as "followers_visible!",
-                moments_visible::TEXT as "moments_visible!",
-                stats_visible::TEXT as "stats_visible!",
+                friends_visible as "friends_visible: PrivacyLevel",
+                following_visible as "following_visible: PrivacyLevel",
+                followers_visible as "followers_visible: PrivacyLevel",
+                moments_visible as "moments_visible: PrivacyLevel",
+                stats_visible as "stats_visible: PrivacyLevel",
                 allow_follow,
-                allow_private_chat::TEXT as "allow_private_chat!",
+                allow_private_chat as "allow_private_chat: ChatPermission",
                 searchable,
                 phone_searchable,
                 nickname_searchable,
@@ -254,28 +211,5 @@ impl UserSettingsRepository {
         .await?;
 
         Ok(settings)
-    }
-    
-    /// 检查用户是否允许私聊
-    pub async fn can_receive_private_chat(&self, user_id: i64, _from_user_id: i64, is_friend: bool) -> Result<bool> {
-        let settings = self.find_by_user_id(user_id).await?;
-        
-        match settings {
-            Some(s) => {
-                match s.allow_private_chat.as_str() {
-                    "everyone" => Ok(true),
-                    "friends" => Ok(is_friend),
-                    "nobody" => Ok(false),
-                    _ => Ok(true), // 默认允许
-                }
-            }
-            None => Ok(true), // 没有设置默认允许
-        }
-    }
-    
-    /// 检查用户是否允许被关注
-    pub async fn can_be_followed(&self, user_id: i64) -> Result<bool> {
-        let settings = self.find_by_user_id(user_id).await?;
-        Ok(settings.map(|s| s.allow_follow).unwrap_or(true))
     }
 }

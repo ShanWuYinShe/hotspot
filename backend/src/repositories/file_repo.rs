@@ -12,10 +12,8 @@ pub struct UploadedFileData {
     pub file_id: Uuid,
     pub url: String,
     pub thumbnail_url: Option<String>,
-    pub mime_type: String,
+    // mime_type, width, height removed as they are unused
     pub file_size: i64,
-    pub width: Option<i32>,
-    pub height: Option<i32>,
     pub duration: Option<i32>,
 }
 
@@ -28,7 +26,7 @@ pub struct ExistingFileInfo {
     pub storage_path: String,
 }
 
-// 注：分块上传使用 Redis 存储临时会话状态，数据库表 upload_sessions 和 upload_chunks 
+// 注：分块上传使用 Redis 存储临时会话状态，数据库表 upload_sessions 和 upload_chunks
 // 作为备用方案保留，当前未使用
 
 #[derive(Clone)]
@@ -43,6 +41,7 @@ impl FileRepository {
 
     /// 创建上传文件记录（指定 file_id）
     /// 每次上传都生成新的 file_id 和 url，客户端无法判断文件是否已存在
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_file_with_id(
         &self,
         file_id: Uuid,
@@ -66,7 +65,7 @@ impl FileRepository {
                 thumbnail_url, mime_type, file_size, width, height, duration, checksum
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-            RETURNING file_id, url, thumbnail_url, mime_type, file_size, width, height, duration
+            RETURNING file_id, url, thumbnail_url, file_size, duration
             "#,
             file_id,
             uploader_id,
@@ -89,16 +88,18 @@ impl FileRepository {
             file_id: row.file_id,
             url: row.url,
             thumbnail_url: row.thumbnail_url,
-            mime_type: row.mime_type,
             file_size: row.file_size,
-            width: row.width,
-            height: row.height,
             duration: row.duration,
         })
     }
 
     /// 验证文件所有权和分类，返回文件 URL
-    pub async fn validate_file(&self, file_id: Uuid, uploader_id: i64, expected_category: &str) -> Result<FileValidationResult> {
+    pub async fn validate_file(
+        &self,
+        file_id: Uuid,
+        uploader_id: i64,
+        expected_category: &str,
+    ) -> Result<FileValidationResult> {
         let row = sqlx::query!(
             r#"
             SELECT uploader_id, category, url
@@ -117,7 +118,8 @@ impl FileRepository {
 
         if row.category != expected_category {
             return Err(AppError::BadRequest(format!(
-                "文件分类不匹配，期望 {}，实际 {}", expected_category, row.category
+                "文件分类不匹配，期望 {}，实际 {}",
+                expected_category, row.category
             )));
         }
 
@@ -170,8 +172,8 @@ impl FileRepository {
     ) -> Result<UploadedFileData> {
         let row = sqlx::query!(
             r#"
-            SELECT file_id, uploader_id, category, url, thumbnail_url, mime_type, 
-                   file_size, width, height, duration
+            SELECT file_id, uploader_id, category, url, thumbnail_url,
+                   file_size, duration
             FROM uploaded_files
             WHERE file_id = $1 AND is_deleted = FALSE
             "#,
@@ -187,7 +189,8 @@ impl FileRepository {
 
         if !expected_categories.contains(&row.category.as_str()) {
             return Err(AppError::BadRequest(format!(
-                "文件分类不匹配，期望 {:?}，实际 {}", expected_categories, row.category
+                "文件分类不匹配，期望 {:?}，实际 {}",
+                expected_categories, row.category
             )));
         }
 
@@ -195,10 +198,7 @@ impl FileRepository {
             file_id: row.file_id,
             url: row.url,
             thumbnail_url: row.thumbnail_url,
-            mime_type: row.mime_type,
             file_size: row.file_size,
-            width: row.width,
-            height: row.height,
             duration: row.duration,
         })
     }

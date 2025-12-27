@@ -1,9 +1,11 @@
 <template>
-  <UModal :title="`举报${getTargetTypeLabel(targetType)}`">
+  <UModal
+    :title="`举报${getTargetTypeLabel(targetType)}`"
+  >
     <template #body="{ close }">
       <UFormField
         label="请选择举报原因"
-        required
+        :required="true"
         class="mb-6"
       >
         <URadioGroup
@@ -28,8 +30,8 @@
 
       <UAlert
         color="warning"
-        variant="subtle"
-        icon="i-heroicons-information-circle"
+        variant="soft"
+        icon="i-lucide-info"
         title="举报须知"
         class="mb-6"
       >
@@ -65,7 +67,6 @@
 
 <script setup lang="ts">
 import { useReportsService } from '~/services/reports.service'
-import { getErrorMessage } from '~/utils/error'
 
 interface Props {
   targetType: 'user' | 'moment' | 'comment' | 'message' | 'group'
@@ -81,7 +82,8 @@ const props = withDefaults(defineProps<Props>(), {
 const submitting = ref(false)
 const selectedReason = ref('')
 const description = ref('')
-const toast = useToast()
+const feedback = useFeedbackStore()
+const { requireAuth } = useRequireAuth()
 
 const reportReasons = computed(() => {
   const baseReasons = [
@@ -115,8 +117,9 @@ const getTargetTypeLabel = (type: string) => {
 }
 
 const handleSubmit = async (close: () => void) => {
+  if (!requireAuth('提交举报')) return
   if (!selectedReason.value) {
-    toast.add({ color: 'error', title: '请选择举报原因' })
+    feedback.error('请选择举报原因')
     return
   }
 
@@ -127,16 +130,16 @@ const handleSubmit = async (close: () => void) => {
     await reportsService.create({
       target_type: props.targetType,
       target_id: props.targetId,
-      reason: selectedReason.value as any,
+      reason: selectedReason.value,
       description: description.value.trim() || undefined
     })
 
-    toast.add({ color: 'success', title: '举报提交成功', description: '我们会尽快处理您的举报' })
+    feedback.success('举报提交成功', '我们会尽快处理您的举报')
     props.onSuccess?.()
     close()
   } catch (err: unknown) {
     console.error('提交举报失败:', err)
-    toast.add({ color: 'error', title: '提交失败', description: getErrorMessage(err, '网络错误，请稍后重试') })
+    feedback.error('提交失败', getErrorMessage(err, '网络错误，请稍后重试'))
   } finally {
     submitting.value = false
   }

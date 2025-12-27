@@ -10,8 +10,8 @@
           v-model="password"
           type="password"
           placeholder="请输入群组密码"
-          icon="i-heroicons-lock-closed"
-          autofocus
+          icon="i-lucide-lock"
+          :autofocus="true"
           @keyup.enter="confirm"
         />
       </UFormField>

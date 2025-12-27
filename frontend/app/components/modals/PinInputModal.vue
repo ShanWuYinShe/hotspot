@@ -2,21 +2,24 @@
   <UModal
     :title="isSetup ? '设置设备PIN' : '输入设备PIN'"
     :dismissible="false"
-    :close="{ onClick: () => $emit('close') }"
   >
     <template #body>
-      <p class="text-sm text-secondary-content mb-4">
-        {{ isSetup
+      <UAlert
+        class="mb-4"
+        color="neutral"
+        variant="soft"
+        icon="i-lucide-lock-keyhole"
+        :title="isSetup
           ? '请设置4位数字PIN以保护账户切换功能'
           : '请输入4位数字PIN以解锁账户切换功能'
-        }}
-      </p>
+        "
+      />
 
       <section class="flex justify-center mb-4">
         <UPinInput
           v-model="pinValue"
           :length="4"
-          mask
+          :mask="true"
           :error="hasError"
           placeholder="●"
           @complete="handlePinComplete"
@@ -33,9 +36,11 @@
 
       <p
         v-if="isSetup"
-        class="text-xs text-secondary-content text-center"
+        class="text-xs text-center"
       >
-        建议使用好记的数字组合，如生日或纪念日
+        <UBadge color="neutral" variant="soft" size="xs">
+          建议使用好记的数字组合，如生日或纪念日
+        </UBadge>
       </p>
     </template>
 
@@ -66,7 +71,7 @@ interface Props {
 interface Emits {
   (e: 'confirm', pin: string): void
   (e: 'cancel'): void
-  (e: 'close'): void
+  (e: 'close', value?: string): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -113,7 +118,7 @@ async function handleConfirm() {
 
   try {
     emit('confirm', pinString.value)
-    emit('close')
+    emit('close', pinString.value)
   } catch (error) {
     hasError.value = true
     errorMessage.value = '处理失败，请重试'

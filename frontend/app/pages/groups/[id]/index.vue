@@ -1,9 +1,9 @@
 <template>
-    <div class="mx-auto max-w-7xl space-y-6">
+    <div class="w-full">
         <!-- 群组详情（仅当数据加载完成后显示） -->
         <UCard v-if="group">
             <template #header>
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="flex items-center justify-between gap-4">
                     <div class="flex items-center gap-4">
                         <UAvatar 
                             :alt="group.name" 
@@ -14,34 +14,50 @@
                         </UAvatar>
                         <div class="space-y-1">
                             <div class="flex items-center gap-2">
-                                <h1 class="text-2xl font-bold text-primary-content">
+                                <h1 class="text-2xl font-bold tracking-tight">
                                     {{ group.name }}
                                 </h1>
-                                <UBadge v-if="group.has_password" variant="subtle" color="warning" size="xs">
-                                    <UIcon name="i-heroicons-lock-closed" class="icon-xs mr-1" />
+                                <UBadge v-if="group.has_password" variant="soft" color="warning" size="xs">
+                                    <span class="mr-1">
+                                        <UIcon name="i-lucide-lock" :size="14" />
+                                    </span>
                                     需密码
                                 </UBadge>
                             </div>
-                            <div class="flex flex-wrap items-center gap-2 text-sm text-secondary-content">
-                                <span class="flex items-center gap-1">
-                                    <UIcon name="i-heroicons-map-pin" class="icon-sm" />
-                                    {{ group.geo?.location_name || '未知位置' }}
-                                </span>
-                                <span>·</span>
-                                <span class="flex items-center gap-1">
-                                    <UIcon name="i-heroicons-users" class="icon-sm" />
-                                    {{ group.members_count || 0 }} 人
-                                </span>
-                                <span v-if="group.geo?.distance !== undefined">·</span>
-                                <span v-if="group.geo?.distance !== undefined" class="flex items-center gap-1">
-                                    <UIcon name="i-heroicons-signal" class="icon-sm" />
-                                    {{ formatDistance(group.geo.distance) }}
-                                </span>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <UBadge
+                                  color="neutral"
+                                  variant="soft"
+                                  size="xs"
+                                  icon="i-lucide-map-pin"
+                                  class="max-w-full truncate"
+                                >
+                                  {{ group.geo?.location_name || '未知位置' }}
+                                </UBadge>
+                                <UBadge
+                                  color="neutral"
+                                  variant="soft"
+                                  size="xs"
+                                  icon="i-lucide-users"
+                                >
+                                  {{ group.members_count || 0 }} 人
+                                </UBadge>
+                                <UBadge
+                                  v-if="group.geo?.distance !== undefined"
+                                  color="neutral"
+                                  variant="soft"
+                                  size="xs"
+                                  icon="i-lucide-signal"
+                                >
+                                  {{ formatDistance(group.geo?.distance ?? 0) }}
+                                </UBadge>
                             </div>
                             <!-- 我的角色标签 -->
                             <div v-if="userRole !== 'visitor'" class="flex items-center gap-2 mt-1">
                                 <UBadge :color="roleConfig.color" variant="soft" size="xs">
-                                    <UIcon :name="roleConfig.icon" class="icon-xs mr-1" />
+                                    <span class="mr-1">
+                                        <UIcon :name="roleConfig.icon" :size="14" />
+                                    </span>
                                     {{ roleConfig.label }}
                                 </UBadge>
                                 <UBadge v-if="groupUnread > 0" color="primary" variant="soft" size="xs">
@@ -57,7 +73,7 @@
                         <UTooltip :text="userRole === 'visitor' ? '加入群组后可进入群聊' : '进入群聊'">
                             <UButton
                                 :disabled="userRole === 'visitor'"
-                                icon="i-heroicons-chat-bubble-left-right"
+                                icon="i-lucide-messages-square"
                                 @click="goChat"
                             >
                                 群聊
@@ -68,7 +84,7 @@
                         <UButton
                             v-if="userRole === 'visitor'"
                             color="primary"
-                            icon="i-heroicons-plus"
+                            icon="i-lucide-plus"
                             @click="onJoin"
                         >
                             加入群组
@@ -78,7 +94,7 @@
                         <UDropdownMenu v-else :items="actionMenuItems">
                             <UButton
                                 variant="outline"
-                                icon="i-heroicons-ellipsis-horizontal"
+                                icon="i-lucide-ellipsis"
                             />
                         </UDropdownMenu>
                     </div>
@@ -87,19 +103,17 @@
 
             <!-- 群组描述 -->
             <div class="space-y-4">
-                <p v-if="group.description" class="text-emphasis">
+                <p v-if="group.description" class="font-bold tracking-tight">
                     {{ group.description }}
                 </p>
-                <p v-else class="text-secondary-content italic">
-                    暂无群组介绍
-                </p>
+                <UBadge v-else color="neutral" variant="soft" size="sm">暂无群组介绍</UBadge>
                 
                 <!-- 标签 -->
                 <div v-if="group.tags?.length" class="flex flex-wrap gap-2">
                     <UBadge
                         v-for="tag in group.tags"
                         :key="tag"
-                        variant="subtle"
+                        variant="soft"
                         color="neutral"
                         size="sm"
                     >
@@ -108,15 +122,14 @@
                 </div>
                 
                 <!-- 时间信息 -->
-                <div class="flex flex-wrap gap-4 text-sm text-secondary-content pt-2 border-t border-default">
-                    <span class="flex items-center gap-1">
-                        <UIcon name="i-heroicons-calendar" class="icon-sm" />
-                        创建于 {{ formatTime(group.created_at) }}
-                    </span>
-                    <span v-if="group.last_activity_at" class="flex items-center gap-1">
-                        <UIcon name="i-heroicons-clock" class="icon-sm" />
-                        最近活跃 {{ formatTime(group.last_activity_at) }}
-                    </span>
+                <USeparator class="mt-2" />
+                <div class="flex flex-wrap gap-2 pt-2">
+                    <UBadge v-if="group.created_at" color="neutral" variant="soft" size="xs" icon="i-lucide-calendar">
+                      创建于 {{ formatTime(group.created_at) }}
+                    </UBadge>
+                    <UBadge v-if="group.last_activity_at" color="neutral" variant="soft" size="xs" icon="i-lucide-clock">
+                      最近活跃 {{ formatTime(group.last_activity_at) }}
+                    </UBadge>
                 </div>
             </div>
         </UCard>
@@ -124,13 +137,13 @@
         <!-- 群组不存在（加载完成后仍无数据时显示） -->
         <UCard v-else-if="!loading">
             <UEmpty
-                icon="i-heroicons-user-group"
+                icon="i-lucide-users-round"
                 title="群组不存在"
                 description="该群组可能已被解散或不存在"
             >
                 <template #actions>
                     <UButton to="/groups">返回群组列表</UButton>
-                    <UButton color="primary" to="/groups/discover">发现群组</UButton>
+                    <UButton color="primary" to="/groups/nearby">去附近群组</UButton>
                 </template>
             </UEmpty>
         </UCard>
@@ -152,7 +165,7 @@
                                 v-if="canInvite"
                                 variant="outline"
                                 size="sm"
-                                icon="i-heroicons-user-plus"
+                                icon="i-lucide-user-plus"
                                 @click="showInviteModal"
                             >
                                 邀请成员
@@ -183,9 +196,9 @@
                             </UBadge>
                         </template>
                         <template #joined-cell="{ row }">
-                            <span class="text-sm text-secondary-content">
-                                {{ formatTime(row.original.joined_at) }}
-                            </span>
+                            <UBadge color="neutral" variant="soft" size="xs">
+                              {{ formatTime(row.original.joined_at) }}
+                            </UBadge>
                         </template>
                         <template #actions-cell="{ row }">
                             <div class="flex items-center gap-1">
@@ -193,15 +206,15 @@
                                     <UButton
                                         variant="ghost"
                                         size="xs"
-                                        icon="i-heroicons-user"
-                                        @click="row.original.user.user_id === authStore.user?.user_id ? navigateTo('/profile') : navigateTo(`/users/${row.original.user.user_id}`)"
+                                        icon="i-lucide-user"
+                                        @click="row.original.user.user_id === currentUserId ? navigateTo('/profile') : navigateTo(`/users/${row.original.user.user_id}`)"
                                     />
                                 </UTooltip>
                                 <UTooltip text="发送私信">
                                     <UButton
                                         variant="ghost"
                                         size="xs"
-                                        icon="i-heroicons-chat-bubble-left"
+                                        icon="i-lucide-message-circle"
                                         @click="sendMessage(row.original)"
                                     />
                                 </UTooltip>
@@ -212,14 +225,14 @@
                                     <UButton
                                         variant="ghost"
                                         size="xs"
-                                        icon="i-heroicons-ellipsis-horizontal"
+                                        icon="i-lucide-ellipsis"
                                     />
                                 </UDropdownMenu>
                             </div>
                         </template>
                         <template #empty>
                             <UEmpty
-                                icon="i-heroicons-users"
+                                icon="i-lucide-users"
                                 title="暂无成员"
                                 description="邀请朋友一起加入群组吧"
                             />
@@ -234,17 +247,6 @@
                 </UCard>
             </template>
 
-            <!-- 群组动态 -->
-            <template #activities>
-                <UCard class="mt-4">
-                    <UEmpty
-                        icon="i-heroicons-clock"
-                        title="群组动态"
-                        description="功能开发中，敬请期待..."
-                    />
-                </UCard>
-            </template>
-
             <!-- 群组设置（仅管理员和创建者可见） -->
             <template v-if="canManageGroup" #settings>
                 <UCard class="mt-4">
@@ -252,18 +254,18 @@
                         <div class="grid gap-4 sm:grid-cols-2">
                             <UButton
                                 variant="outline"
-                                block
+                                :block="true"
                                 class="justify-start"
-                                icon="i-heroicons-pencil-square"
+                                icon="i-lucide-square-pen"
                                 @click="navigateTo(`/groups/${groupId}/settings`)"
                             >
                                 编辑群组资料
                             </UButton>
                             <UButton
                                 variant="outline"
-                                block
+                                :block="true"
                                 class="justify-start"
-                                icon="i-heroicons-users"
+                                icon="i-lucide-users"
                                 @click="navigateTo(`/groups/${groupId}/settings?tab=members`)"
                             >
                                 成员管理
@@ -271,9 +273,9 @@
                             <UButton
                                 v-if="userRole === 'owner'"
                                 variant="outline"
-                                block
+                                :block="true"
                                 class="justify-start"
-                                icon="i-heroicons-arrow-right-circle"
+                                icon="i-lucide-circle-arrow-right"
                                 @click="showTransferModal"
                             >
                                 转让群主
@@ -282,9 +284,9 @@
                                 v-if="userRole === 'owner'"
                                 variant="outline"
                                 color="error"
-                                block
+                                :block="true"
                                 class="justify-start"
-                                icon="i-heroicons-trash"
+                                icon="i-lucide-trash-2"
                                 @click="showDismissModal"
                             >
                                 解散群组
@@ -302,14 +304,7 @@ import type { TableColumn } from '@nuxt/ui'
 import type { GroupMemberItem } from "~/types/api"
 import type { GroupDetailData } from "~/types/client"
 import { useGroupsService } from '~/services/groups.service'
-import { getErrorMessage } from '~/utils/error'
-
-// 扩展群组详情类型
-interface GroupPageData extends GroupDetailData {
-    last_activity_at?: string;
-    avatar_url?: string;
-    tags?: string[];
-}
+import { useDashboardHeader } from '~/composables/useDashboardHeader'
 
 // 用户角色类型
 type UserRole = 'owner' | 'admin' | 'member' | 'visitor'
@@ -317,12 +312,33 @@ type UserRole = 'owner' | 'admin' | 'member' | 'visitor'
 // 成员行类型
 type MemberRow = GroupMemberItem
 
-definePageMeta({ title: "群组详情", layout: 'dashboard' })
+definePageMeta({
+  title: "群组详情",
+  description: "查看群组信息与成员",
+  layout: 'dashboard',
+  dashboardHeader: true
+})
+
+const dashboardHeader = useDashboardHeader()
+const router = useRouter()
+
+watchEffect(() => {
+  dashboardHeader.setActions([
+    {
+      key: 'back',
+      label: '返回',
+      icon: 'i-lucide-arrow-left',
+      color: 'neutral',
+      variant: 'outline',
+      action: () => router.back()
+    }
+  ])
+})
 
 const route = useRoute()
-const router = useRouter()
-const toast = useToast()
+const feedback = useFeedbackStore()
 const groupsService = useGroupsService()
+const groupsStore = useGroupsStore()
 const geolocation = useGeolocation()
 const modal = useModal()
 const { formatTime, formatDistance } = useFormatters()
@@ -333,7 +349,7 @@ const groupId = computed(() =>
 
 // 状态
 const loading = ref(true)
-const group = ref<GroupPageData | null>(null)
+const group = ref<GroupDetailData | null>(null)
 const groupUnread = ref(0)
 const members = ref<GroupMemberItem[]>([])
 
@@ -346,9 +362,16 @@ const pagedMembers = computed(() => {
     return members.value.slice(start, start + pageSize.value)
 })
 
-// 当前用户
+// 当前用户（水合安全）
 const authStore = useAuthStore()
-const currentUserId = computed(() => authStore.user?.user_id)
+const currentUserId = ref<number | undefined>(undefined)
+
+onMounted(() => {
+    currentUserId.value = authStore.user?.user_id
+    watch(() => authStore.user?.user_id, (userId) => {
+        currentUserId.value = userId
+    })
+})
 
 // 用户角色判断 - 根据成员列表确定
 const userRole = computed<UserRole>(() => {
@@ -363,10 +386,10 @@ const userRole = computed<UserRole>(() => {
 // 角色配置
 const roleConfig = computed(() => {
     const configs: Record<UserRole, { label: string; color: string; icon: string }> = {
-        owner: { label: '群主', color: 'warning', icon: 'i-heroicons-crown' },
-        admin: { label: '管理员', color: 'primary', icon: 'i-heroicons-shield-check' },
-        member: { label: '成员', color: 'neutral', icon: 'i-heroicons-user' },
-        visitor: { label: '访客', color: 'neutral', icon: 'i-heroicons-eye' }
+        owner: { label: '群主', color: 'warning', icon: 'i-lucide-crown' },
+        admin: { label: '管理员', color: 'primary', icon: 'i-lucide-shield-check' },
+        member: { label: '成员', color: 'neutral', icon: 'i-lucide-user' },
+        visitor: { label: '访客', color: 'neutral', icon: 'i-lucide-eye' }
     }
     return configs[userRole.value]
 })
@@ -378,11 +401,10 @@ const canInvite = computed(() => userRole.value !== 'visitor')
 // Tab 配置
 const tabItems = computed(() => {
     const items = [
-        { label: '成员', slot: 'members', icon: 'i-heroicons-users' },
-        { label: '动态', slot: 'activities', icon: 'i-heroicons-clock' }
+        { label: '成员', slot: 'members', icon: 'i-lucide-users' }
     ]
     if (canManageGroup.value) {
-        items.push({ label: '设置', slot: 'settings', icon: 'i-heroicons-cog-6-tooth' })
+        items.push({ label: '设置', slot: 'settings', icon: 'i-lucide-settings' })
     }
     return items
 })
@@ -396,13 +418,8 @@ const actionMenuItems = computed(() => {
         items.push([
             {
                 label: '邀请成员',
-                icon: 'i-heroicons-user-plus',
+                icon: 'i-lucide-user-plus',
                 click: showInviteModal
-            },
-            {
-                label: '消息免打扰',
-                icon: 'i-heroicons-bell-slash',
-                click: toggleMute
             }
         ])
     }
@@ -412,12 +429,12 @@ const actionMenuItems = computed(() => {
         items.push([
             {
                 label: '群组设置',
-                icon: 'i-heroicons-cog-6-tooth',
+                icon: 'i-lucide-settings',
                 click: () => navigateTo(`/groups/${groupId.value}/settings`)
             },
             {
                 label: '成员管理',
-                icon: 'i-heroicons-users',
+                icon: 'i-lucide-users',
                 click: () => navigateTo(`/groups/${groupId.value}/settings?tab=members`)
             }
         ])
@@ -428,14 +445,14 @@ const actionMenuItems = computed(() => {
         items.push([
             {
                 label: '转让群主',
-                icon: 'i-heroicons-arrow-right-circle',
+                icon: 'i-lucide-circle-arrow-right',
                 click: showTransferModal
             },
             {
                 label: '解散群组',
-                icon: 'i-heroicons-trash',
+                icon: 'i-lucide-trash-2',
                 click: showDismissModal,
-                class: 'text-error'
+                color: 'error'
             }
         ])
     }
@@ -445,9 +462,9 @@ const actionMenuItems = computed(() => {
         items.push([
             {
                 label: '退出群组',
-                icon: 'i-heroicons-arrow-right-on-rectangle',
+                icon: 'i-lucide-log-out',
                 click: onLeave,
-                class: 'text-error'
+                color: 'error'
             }
         ])
     }
@@ -467,6 +484,19 @@ const memberColumns: TableColumn<MemberRow>[] = [
 const loadData = async () => {
     loading.value = true
     try {
+        // 1. 尝试从 store 获取缓存数据
+        const cachedGroup = groupsStore.getGroup(groupId.value)
+        if (cachedGroup) {
+            // 使用部分数据初始化，created_at 和 settings 暂时为空
+            group.value = {
+                ...cachedGroup,
+                created_at: '',
+                settings: {},
+                geo: cachedGroup.geo // 确保 geo 类型匹配
+            } as GroupDetailData
+            loading.value = false // 有缓存先显示
+        }
+
         const coords = await geolocation.getCoordinates()
         
         const [groupData, settingsData, membersResponse] = await Promise.all([
@@ -479,22 +509,21 @@ const loadData = async () => {
             groupsService.getMembers({ id: groupId.value })
         ])
         
+        // 更新 store
+        groupsStore.setGroup(groupData)
+
         group.value = {
             ...groupData,
             settings: settingsData.settings,
             has_password: settingsData.has_password,
             created_at: settingsData.created_at
-        } as GroupPageData
+        } as GroupDetailData
         
         members.value = membersResponse.items || []
         groupUnread.value = 0
         page.value = 1
     } catch (e: unknown) {
-        toast.add({
-            title: "加载失败",
-            description: getErrorMessage(e, "无法加载群组信息"),
-            color: "error"
-        })
+        feedback.error("加载失败", getErrorMessage(e, "无法加载群组信息"))
     } finally {
         loading.value = false
     }
@@ -510,25 +539,18 @@ const goChat = () => {
 // 加入群组
 const onJoin = async () => {
     try {
-        // 如果群组有密码，暂时提示功能开发中
         if (group.value?.has_password) {
-            toast.add({ 
-                title: "该群组需要密码", 
-                description: "密码输入功能开发中",
-                color: "warning" 
-            })
-            return
+            const password = await modal.showGroupPassword(group.value?.name)
+            if (!password) return
+            await groupsService.joinGroup({ id: groupId.value, password })
+        } else {
+            await groupsService.joinGroup({ id: groupId.value })
         }
         
-        await groupsService.joinGroup({ id: groupId.value })
-        toast.add({ title: "加入成功", color: "success" })
+        feedback.success("加入成功")
         await loadData()
     } catch (e: unknown) {
-        toast.add({
-            title: "加入失败",
-            description: getErrorMessage(e),
-            color: "error"
-        })
+        feedback.error("加入失败", getErrorMessage(e))
     }
 }
 
@@ -547,31 +569,28 @@ const onLeave = async () => {
     if (confirmed) {
         try {
             await groupsService.leaveGroup({ id: groupId.value })
-            toast.add({ title: "已退出群组", color: "success" })
+            feedback.success("已退出群组")
             await loadData()
         } catch (e: unknown) {
-            toast.add({
-                title: "操作失败",
-                description: getErrorMessage(e),
-                color: "error"
-            })
+            feedback.error("操作失败", getErrorMessage(e))
         }
     }
 }
 
-// 消息免打扰（待实现）
-const toggleMute = () => {
-    toast.add({ title: "功能开发中", color: "info" })
-}
-
 // 邀请成员（待实现）
-const showInviteModal = () => {
-    toast.add({ title: "功能开发中", color: "info" })
+const showInviteModal = async () => {
+    await modal.showInviteMembers(groupId.value)
 }
 
 // 转让群主（待实现）
-const showTransferModal = () => {
-    toast.add({ title: "功能开发中", color: "info" })
+const showTransferModal = async () => {
+    const newOwnerId = await modal.showTransferOwnership(
+        groupId.value,
+        members.value.filter(m => m.role !== 'owner')
+    )
+    if (newOwnerId) {
+        await loadData()
+    }
 }
 
 // 解散群组
@@ -589,21 +608,17 @@ const showDismissModal = async () => {
     if (confirmed) {
         try {
             await groupsService.deleteGroup({ id: groupId.value })
-            toast.add({ title: "群组已解散", color: "success" })
+            feedback.success("群组已解散")
             router.back()
         } catch (e: unknown) {
-            toast.add({
-                title: "操作失败",
-                description: getErrorMessage(e),
-                color: "error"
-            })
+            feedback.error("操作失败", getErrorMessage(e))
         }
     }
 }
 
 // 发送私信
 const sendMessage = (member: GroupMemberItem) => {
-    if (member.user.user_id === authStore.user?.user_id) {
+    if (member.user.user_id === currentUserId.value) {
         navigateTo('/profile')
     } else {
         navigateTo(`/chat/users/${member.user.user_id}`)
@@ -656,13 +671,13 @@ const getMemberMenuItems = (member: GroupMemberItem) => {
         if (member.role === 'admin') {
             items.push([{
                 label: '取消管理员',
-                icon: 'i-heroicons-arrow-down',
+                icon: 'i-lucide-arrow-down',
                 click: () => handleRoleChange(member, 'member')
             }])
         } else if (member.role === 'member') {
             items.push([{
                 label: '设为管理员',
-                icon: 'i-heroicons-arrow-up',
+                icon: 'i-lucide-arrow-up',
                 click: () => handleRoleChange(member, 'admin')
             }])
         }
@@ -673,14 +688,14 @@ const getMemberMenuItems = (member: GroupMemberItem) => {
         items.push([
             {
                 label: member.muted_until ? '取消禁言' : '禁言成员',
-                icon: member.muted_until ? 'i-heroicons-speaker-wave' : 'i-heroicons-speaker-x-mark',
+                icon: member.muted_until ? 'i-lucide-volume-2' : 'i-lucide-volume-x',
                 click: () => handleMute(member)
             },
             {
                 label: '移出群组',
-                icon: 'i-heroicons-user-minus',
+                icon: 'i-lucide-user-minus',
                 click: () => handleKickMember(member),
-                class: 'text-error'
+                color: 'error'
             }
         ])
     }
@@ -697,18 +712,13 @@ const handleRoleChange = async (member: GroupMemberItem, newRole: 'admin' | 'mem
             role: newRole
         })
         
-        toast.add({
-            title: "角色变更成功",
-            description: `已将 ${member.user.nickname} 设为${newRole === 'admin' ? '管理员' : '普通成员'}`,
-            color: "success"
-        })
+        feedback.success(
+            "角色变更成功",
+            `已将 ${member.user.nickname} 设为${newRole === 'admin' ? '管理员' : '普通成员'}`
+        )
         await loadData()
     } catch (error: unknown) {
-        toast.add({
-            title: "角色变更失败",
-            description: getErrorMessage(error, "请稍后重试"),
-            color: "error"
-        })
+        feedback.error("角色变更失败", getErrorMessage(error, "请稍后重试"))
     }
 }
 
@@ -720,7 +730,7 @@ const handleMute = async (member: GroupMemberItem) => {
                 id: groupId.value,
                 user_id: member.user.user_id
             })
-            toast.add({ title: "已取消禁言", color: "success" })
+            feedback.success("已取消禁言")
         } else {
             // 默认禁言 24 小时
             await groupsService.muteMember({
@@ -728,15 +738,11 @@ const handleMute = async (member: GroupMemberItem) => {
                 user_id: member.user.user_id,
                 duration_minutes: 24 * 60
             })
-            toast.add({ title: "已禁言 24 小时", color: "success" })
+            feedback.success("已禁言 24 小时")
         }
         await loadData()
     } catch (error: unknown) {
-        toast.add({
-            title: "操作失败",
-            description: getErrorMessage(error),
-            color: "error"
-        })
+        feedback.error("操作失败", getErrorMessage(error))
     }
 }
 
@@ -757,18 +763,10 @@ const handleKickMember = async (member: GroupMemberItem) => {
                 user_id: member.user.user_id
             })
             
-            toast.add({
-                title: "移出成功",
-                description: `已将 ${member.user.nickname} 移出群组`,
-                color: "success"
-            })
+            feedback.success("移出成功", `已将 ${member.user.nickname} 移出群组`)
             await loadData()
         } catch (error: unknown) {
-            toast.add({
-                title: "移出失败",
-                description: getErrorMessage(error, "请稍后重试"),
-                color: "error"
-            })
+            feedback.error("移出失败", getErrorMessage(error, "请稍后重试"))
         }
     }
 }

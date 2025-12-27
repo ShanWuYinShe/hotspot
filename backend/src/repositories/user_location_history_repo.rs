@@ -2,11 +2,9 @@
 //!
 //! 记录用户历史位置变化
 
-#![allow(dead_code)]
-
-use sqlx::{PgPool, FromRow};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::{FromRow, PgPool};
 
 use crate::error::Result;
 
@@ -78,28 +76,6 @@ impl UserLocationHistoryRepository {
     }
 
     /// 批量获取用户最新位置
-    pub async fn get_latest_batch(&self, user_ids: &[i64]) -> Result<std::collections::HashMap<i64, UserLocationHistoryRow>> {
-        if user_ids.is_empty() {
-            return Ok(std::collections::HashMap::new());
-        }
-
-        // 使用 DISTINCT ON 获取每个用户的最新位置
-        let rows = sqlx::query_as!(
-            UserLocationHistoryRow,
-            r#"
-            SELECT DISTINCT ON (user_id) id, user_id, latitude, longitude, location_name, recorded_at
-            FROM user_location_history
-            WHERE user_id = ANY($1)
-            ORDER BY user_id, recorded_at DESC
-            "#,
-            user_ids
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(rows.into_iter().map(|r| (r.user_id, r)).collect())
-    }
-
     /// 使用 PostGIS 计算用户最新位置与指定坐标的距离（米）
     /// 返回 None 表示没有位置记录
     pub async fn get_distance_from_latest(

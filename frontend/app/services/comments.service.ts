@@ -5,42 +5,42 @@ import type {
   CreateCommentRequest,
   CreateCommentData,
   DeleteCommentRequest,
-  GetCommentsRequest,
+  CommentsRequest,
   CommentListItem,
-  GetRepliesRequest,
+  CommentRepliesRequest,
   LikeCommentRequest,
   UnlikeCommentRequest,
-  GetCommentLikesRequest,
+  CommentLikesRequest,
   CommentLikeItem
 } from '~/types/api'
 
 class CommentsService extends BaseService {
-  async add(request: CreateCommentRequest) {
-    return this.post<CreateCommentData>(COMMENTS.ADD, request)
+  async create(request: CreateCommentRequest) {
+    return this.post<CreateCommentData>(COMMENTS.CREATE, request)
   }
 
-  async remove(request: DeleteCommentRequest) {
-    return this.post<void>(COMMENTS.REMOVE, request)
+  async delete(request: DeleteCommentRequest) {
+    return this.post<void>(COMMENTS.DELETE, request)
   }
 
-  async getList(request: GetCommentsRequest) {
-    return this.publicPost<PaginatedData<CommentListItem>>(COMMENTS.GET_LIST, request)
+  async getList(request: CommentsRequest) {
+    return this.publicPost<PaginatedData<CommentListItem>>(COMMENTS.LIST, request)
   }
 
-  async getReplies(request: GetRepliesRequest) {
-    return this.publicPost<PaginatedData<CommentListItem>>(COMMENTS.GET_REPLIES, request)
+  async getReplies(request: CommentRepliesRequest) {
+    return this.publicPost<PaginatedData<CommentListItem>>(COMMENTS.REPLIES, request)
   }
 
-  async likeComment(request: LikeCommentRequest) {
-    return this.post<void>(COMMENTS.LIKE_COMMENT, request)
+  async like(request: LikeCommentRequest) {
+    return this.post<void>(COMMENTS.LIKE, request)
   }
 
-  async unlikeComment(request: UnlikeCommentRequest) {
-    return this.post<void>(COMMENTS.UNLIKE_COMMENT, request)
+  async unlike(request: UnlikeCommentRequest) {
+    return this.post<void>(COMMENTS.UNLIKE, request)
   }
 
-  async getLikes(request: GetCommentLikesRequest) {
-    return this.publicPost<PaginatedData<CommentLikeItem>>(COMMENTS.GET_LIKES_LIST, request)
+  async getLikes(request: CommentLikesRequest) {
+    return this.publicPost<PaginatedData<CommentLikeItem>>(COMMENTS.LIKES, request)
   }
 }
 

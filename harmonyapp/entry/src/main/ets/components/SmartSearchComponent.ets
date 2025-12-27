@@ -3,13 +3,15 @@
  * 支持用户、群组、瞬间的统一搜索
  */
 
-import { ApiClient } from '../common/api/ApiClient';
+import { ApiClient } from '../core/api/ApiClient';
 import { 
   UserSearchItem, 
   GroupSearchItem, 
   MomentSearchItem
-} from '../common/types/api';
-import { GlobalStateManager } from '../common/state/GlobalStateManager';
+} from '../core/types/api';
+import { KEY_CURRENT_LOCATION } from '../core/state/GlobalStateManager';
+import { GlobalStateManager } from '../core/state/GlobalStateManager';
+import { LocationInfo } from '../core/location/LocationUtil';
 import { SystemAvatar } from './SystemAvatar';
 import { SystemToast } from './SystemToast';
 import { PageNames } from '../constants/AppConstants';
@@ -28,13 +30,15 @@ interface SearchResult {
 
 @Component
 export struct SmartSearchComponent {
+  @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
+  
   @State searchText: string = '';
   @State searchResults: SearchResult[] = [];
   @State isSearching: boolean = false;
   @State showResults: boolean = false;
   @State searchHistory: string[] = [];
   @State currentFilter: 'all' | 'users' | 'groups' | 'moments' = 'all';
-  private globalState = GlobalStateManager.getInstance().getState();
+  
   private searchTimer: number = -1;
 
   aboutToAppear() {
@@ -107,20 +111,26 @@ export struct SmartSearchComponent {
    * 使用 searchUsersByKeyword API
    */
   private async searchUsers(query: string) {
-    if (!this.globalState.currentLocation) {
+    if (!this.currentLocation) {
       return;
     }
 
     try {
+      const me = GlobalStateManager.getInstance().getCurrentUser();
+      const myId = me?.user_id;
       const response = await ApiClient.searchUsersByKeyword({
         kw: query,
-        latitude: this.globalState.currentLocation.latitude,
-        longitude: this.globalState.currentLocation.longitude,
+        latitude: this.currentLocation.latitude,
+        longitude: this.currentLocation.longitude,
         limit: 10
       });
 
       if (response.code === 0 && response.data) {
-        const userResults: SearchResult[] = response.data.items.map((user: UserSearchItem): SearchResult => ({
+        const users = typeof myId === 'number'
+          ? response.data.items.filter((u: UserSearchItem) => u.user_id !== myId)
+          : response.data.items;
+
+        const userResults: SearchResult[] = users.map((user: UserSearchItem): SearchResult => ({
           id: `user_${user.user_id}`,
           type: 'user',
           title: user.nickname,
@@ -140,15 +150,15 @@ export struct SmartSearchComponent {
    * 使用 searchGroupsByKeyword API
    */
   private async searchGroups(query: string) {
-    if (!this.globalState.currentLocation) {
+    if (!this.currentLocation) {
       return;
     }
 
     try {
       const response = await ApiClient.searchGroupsByKeyword({
         kw: query,
-        latitude: this.globalState.currentLocation.latitude,
-        longitude: this.globalState.currentLocation.longitude,
+        latitude: this.currentLocation.latitude,
+        longitude: this.currentLocation.longitude,
         limit: 10
       });
 
@@ -157,7 +167,7 @@ export struct SmartSearchComponent {
           id: `group_${group.id}`,
           type: 'group',
           title: group.name,
-          subtitle: `${group.member_count} 成员`,
+          subtitle: `${group.members_count} 成员`,
           data: group
         }));
 
@@ -173,7 +183,7 @@ export struct SmartSearchComponent {
    * 使用 searchMomentsByKeyword API
    */
   private async searchMoments(query: string) {
-    if (!this.globalState.currentLocation) {
+    if (!this.currentLocation) {
       return;
     }
 
@@ -181,8 +191,8 @@ export struct SmartSearchComponent {
       // 使用关键字搜索
       const response = await ApiClient.searchMomentsByKeyword({
         kw: query,
-        latitude: this.globalState.currentLocation.latitude,
-        longitude: this.globalState.currentLocation.longitude,
+        latitude: this.currentLocation.latitude,
+        longitude: this.currentLocation.longitude,
         limit: 10
       });
 
@@ -247,11 +257,15 @@ export struct SmartSearchComponent {
         break;
       case 'group':
         // 导航到群组详情
-        const group = result.data as SearchGroupByLocationResponse;
-        this.getUIContext().getRouter().pushUrl({
-          url: `pages/${PageNames.GROUP_DETAIL}`,
-          params: { groupId: group.group_id }
-        });
+        const group = result.data as GroupSearchItem;
+        try {
+          this.getUIContext().getRouter().pushUrl({
+            url: `features/group/pages/${PageNames.GROUP_DETAIL}`,
+            params: { groupId: group.id }
+          });
+        } catch (error) {
+          hilog.error(DOMAIN_NUMBER, TAG, `跳转群组详情失败: ${error}`);
+        }
         break;
       case 'moment':
         // 显示瞬间详情
@@ -482,6 +496,3 @@ export struct SmartSearchComponent {
     }
   }
 }
-
-
-

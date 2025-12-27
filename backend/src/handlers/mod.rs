@@ -1,13 +1,14 @@
 pub mod auth;
 pub mod comments;
+pub mod device_tokens;
 pub mod feed;
-pub mod geocoding;
 pub mod group_chats;
 pub mod group_messages;
-pub mod inbox;
+pub mod map;
 pub mod media;
 pub mod message_common;
 pub mod moments;
+pub mod admin_rbac;
 pub mod private_chats;
 pub mod private_messages;
 pub mod reports;

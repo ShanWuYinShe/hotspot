@@ -4,18 +4,16 @@
  * 自动同步用户位置到服务器：
  * - 登录后自动获取并上传位置
  * - 定时更新位置（默认每5分钟）
- * - 位置变化时自动上传（距离超过阈值）
+ * - 位置变化时自动上传（仅做时间节流 + 坐标去重；严禁在客户端计算距离）
  */
 
 import { useUsersService } from '~/services/users.service'
-import { DEFAULTS } from '~/config/defaults'
-import type { PositionResult } from '~/utils/browser-permissions'
+import type { PositionResult } from '~/composables/useGeolocation'
+import { ensureRefreshToken } from '~/utils/token'
 
 export interface LocationSyncOptions {
   /** 同步间隔（毫秒），默认 5 分钟 */
   syncInterval?: number
-  /** 位置变化阈值（米），超过此距离才上传，默认 100 米 */
-  distanceThreshold?: number
   /** 是否启用位置监听，默认 false（节省电量） */
   enableWatch?: boolean
   /** 是否在初始化时立即获取位置，默认 true */
@@ -24,29 +22,11 @@ export interface LocationSyncOptions {
 
 const DEFAULT_OPTIONS: Required<LocationSyncOptions> = {
   syncInterval: 5 * 60 * 1000, // 5 分钟
-  distanceThreshold: 100, // 100 米
   enableWatch: false, // 默认关闭持续监听，节省电量
   immediateSync: true
 }
 
-/**
- * 计算两点之间的距离（米）
- * 使用 Haversine 公式
- */
-function calculateDistance(
-  lat1: number, lon1: number,
-  lat2: number, lon2: number
-): number {
-  const R = 6371000 // 地球半径（米）
-  const dLat = (lat2 - lat1) * Math.PI / 180
-  const dLon = (lon2 - lon1) * Math.PI / 180
-  const a = 
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2)
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-  return R * c
-}
+const normalizeCoord = (n: number) => Number(n.toFixed(6))
 
 export function useLocationSync(options: LocationSyncOptions = {}) {
   const opts = { ...DEFAULT_OPTIONS, ...options }
@@ -62,9 +42,15 @@ export function useLocationSync(options: LocationSyncOptions = {}) {
   const lastSyncedCoords = ref<{ latitude: number; longitude: number } | null>(null)
   const syncError = ref<string | null>(null)
   const syncCount = ref(0)
+  const pendingUpload = ref<Promise<boolean> | null>(null)
+  const lastAuthFailAt = ref<number>(0)
   
-  // 定时器 ID
-  let syncIntervalId: ReturnType<typeof setInterval> | null = null
+  // 定时器控制
+  const { pause, resume, isActive } = useIntervalFn(() => {
+    if (authStore.hasSession) {
+      syncLocation()
+    }
+  }, opts.syncInterval, { immediate: false })
   
   /**
    * 上传位置到服务器
@@ -74,44 +60,61 @@ export function useLocationSync(options: LocationSyncOptions = {}) {
     longitude: number,
     locationName?: string
   ): Promise<boolean> => {
-    if (!authStore.isAuthenticated) return false
-    if (syncing.value) return false
-    
-    syncing.value = true
-    syncError.value = null
-    
-    try {
-      await userService.updateLocation({
-        latitude,
-        longitude,
-        location_name: locationName
-      })
-      
-      lastSyncTime.value = Date.now()
-      lastSyncedCoords.value = { latitude, longitude }
-      syncCount.value++
-      
-      // 同步更新 locationStore
-      locationStore.setLocation(latitude, longitude, locationName ?? '', {
-        source: 'network'
-      })
-      
-      console.log(`[LocationSync] 位置已同步 (${syncCount.value}次)`)
-      return true
-    } catch (error) {
-      console.error('[LocationSync] 位置同步失败:', error)
-      syncError.value = '位置同步失败'
-      return false
-    } finally {
-      syncing.value = false
+    // 完全未登录：禁止触发任何 protected 调用/刷新
+    if (!authStore.hasSession) return false
+    // access_token 不可用时，不要直接打 protected API；先尝试刷新一次（失败则短暂降噪）
+    if (!authStore.isAccessTokenValid) {
+      const now = Date.now()
+      if (lastAuthFailAt.value > 0 && now - lastAuthFailAt.value < 30_000) return false
+      const ok = await ensureRefreshToken()
+      if (!ok) {
+        lastAuthFailAt.value = now
+        return false
+      }
     }
+    if (syncing.value) return false
+    if (pendingUpload.value) return pendingUpload.value
+    
+    pendingUpload.value = (async () => {
+      syncing.value = true
+      syncError.value = null
+      
+      try {
+        await userService.updateLocation({
+          latitude,
+          longitude,
+          location_name: locationName
+        })
+        
+        lastSyncTime.value = Date.now()
+        lastSyncedCoords.value = { latitude, longitude }
+        syncCount.value++
+        
+        // 同步更新 locationStore
+        locationStore.setLocation(latitude, longitude, locationName ?? '', {
+          source: 'network'
+        })
+        
+        console.log(`[LocationSync] 位置已同步 (${syncCount.value}次)`)
+        return true
+      } catch (error) {
+        console.error('[LocationSync] 位置同步失败:', error)
+        syncError.value = '位置同步失败'
+        return false
+      } finally {
+        syncing.value = false
+        pendingUpload.value = null
+      }
+    })()
+
+    return pendingUpload.value
   }
   
   /**
    * 获取当前位置并上传
    */
   const syncLocation = async (): Promise<boolean> => {
-    if (!authStore.isAuthenticated) return false
+    if (!authStore.hasSession) return false
     
     // 使用快速定位模式
     const position = await geolocation.getPosition({ silent: true })
@@ -122,22 +125,23 @@ export function useLocationSync(options: LocationSyncOptions = {}) {
     }
     
     const { latitude, longitude } = position.coords
-    
-    // 检查是否需要上传（距离超过阈值）
-    if (lastSyncedCoords.value) {
-      const distance = calculateDistance(
-        lastSyncedCoords.value.latitude,
-        lastSyncedCoords.value.longitude,
-        latitude,
-        longitude
-      )
-      
-      // 距离未超过阈值，只更新本地状态
-      if (distance < opts.distanceThreshold) {
-        locationStore.setFromPosition(position, geolocation.locationName.value ?? undefined)
-        return true
-      }
-    }
+
+    // 只更新本地状态（不计算距离）
+    locationStore.setFromPosition(position, geolocation.locationName.value ?? undefined)
+
+    const now = Date.now()
+    const isTooFrequent = lastSyncTime.value > 0 && now - lastSyncTime.value < opts.syncInterval
+
+    const normalized = { latitude: normalizeCoord(latitude), longitude: normalizeCoord(longitude) }
+    const last = lastSyncedCoords.value
+      ? {
+          latitude: normalizeCoord(lastSyncedCoords.value.latitude),
+          longitude: normalizeCoord(lastSyncedCoords.value.longitude)
+        }
+      : null
+    const isSameCoords = !!last && normalized.latitude === last.latitude && normalized.longitude === last.longitude
+
+    if (isTooFrequent || isSameCoords) return true
     
     // 获取位置名称（如果还没有）
     let locationName = geolocation.locationName.value
@@ -152,11 +156,14 @@ export function useLocationSync(options: LocationSyncOptions = {}) {
    * 强制同步位置（忽略阈值检查）
    */
   const forceSyncLocation = async (): Promise<boolean> => {
-    if (!authStore.isAuthenticated) return false
+    if (!authStore.hasSession) return false
     
     // 使用快速定位，但显示错误提示
     const position = await geolocation.getPosition({ silent: false })
     if (!position) return false
+
+    // 更新本地 store（不计算距离）
+    locationStore.setFromPosition(position, geolocation.locationName.value ?? undefined)
     
     // 获取位置名称
     const locationName = await geolocation.fetchLocationName(
@@ -175,13 +182,9 @@ export function useLocationSync(options: LocationSyncOptions = {}) {
    * 开始定时同步
    */
   const startPeriodicSync = () => {
-    if (syncIntervalId) return
+    if (isActive.value) return
     
-    syncIntervalId = setInterval(() => {
-      if (authStore.isAuthenticated) {
-        syncLocation()
-      }
-    }, opts.syncInterval)
+    resume()
     
     console.log(`[LocationSync] 定时同步已启动 (间隔 ${opts.syncInterval / 1000}秒)`)
   }
@@ -190,9 +193,8 @@ export function useLocationSync(options: LocationSyncOptions = {}) {
    * 停止定时同步
    */
   const stopPeriodicSync = () => {
-    if (syncIntervalId) {
-      clearInterval(syncIntervalId)
-      syncIntervalId = null
+    if (isActive.value) {
+      pause()
       console.log('[LocationSync] 定时同步已停止')
     }
   }
@@ -201,29 +203,29 @@ export function useLocationSync(options: LocationSyncOptions = {}) {
    * 位置变化回调（用于 watchPosition）
    */
   const handlePositionChange = (position: PositionResult) => {
-    if (!authStore.isAuthenticated) return
+    if (!authStore.hasSession) return
+    if (!authStore.isAccessTokenValid) return
     
     const { latitude, longitude } = position.coords
     
     // 更新本地 store
     locationStore.setFromPosition(position, geolocation.locationName.value ?? undefined)
-    
-    // 检查是否需要上传
-    if (lastSyncedCoords.value) {
-      const distance = calculateDistance(
-        lastSyncedCoords.value.latitude,
-        lastSyncedCoords.value.longitude,
-        latitude,
-        longitude
-      )
-      
-      if (distance >= opts.distanceThreshold) {
-        uploadLocation(latitude, longitude, geolocation.locationName.value ?? undefined)
-      }
-    } else {
-      // 首次位置，直接上传
-      uploadLocation(latitude, longitude, geolocation.locationName.value ?? undefined)
-    }
+
+    // 仅做时间节流 + 坐标去重（严禁在客户端计算距离）
+    const now = Date.now()
+    const isTooFrequent = lastSyncTime.value > 0 && now - lastSyncTime.value < opts.syncInterval
+
+    const normalized = { latitude: normalizeCoord(latitude), longitude: normalizeCoord(longitude) }
+    const last = lastSyncedCoords.value
+      ? {
+          latitude: normalizeCoord(lastSyncedCoords.value.latitude),
+          longitude: normalizeCoord(lastSyncedCoords.value.longitude)
+        }
+      : null
+    const isSameCoords = !!last && normalized.latitude === last.latitude && normalized.longitude === last.longitude
+
+    if (isTooFrequent || isSameCoords) return
+    uploadLocation(latitude, longitude, geolocation.locationName.value ?? undefined)
   }
   
   /**
@@ -257,7 +259,7 @@ export function useLocationSync(options: LocationSyncOptions = {}) {
    */
   const cleanup = () => {
     stopPeriodicSync()
-    geolocation.stopWatching()
+    geolocation.stopWatching(handlePositionChange)
     lastSyncedCoords.value = null
     lastSyncTime.value = 0
     syncCount.value = 0
@@ -266,9 +268,9 @@ export function useLocationSync(options: LocationSyncOptions = {}) {
   
   // 监听登录状态变化
   watch(
-    () => authStore.isAuthenticated,
-    async (isAuthenticated) => {
-      if (isAuthenticated) {
+    () => [authStore.isAuthenticated, authStore.isAccessTokenValid] as const,
+    async ([isAuthenticated, isAccessTokenValid]) => {
+      if (isAuthenticated && isAccessTokenValid) {
         // 用户登录，初始化位置同步
         await initialize()
       } else {

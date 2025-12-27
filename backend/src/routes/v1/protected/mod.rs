@@ -1,10 +1,10 @@
 pub mod admin;
 pub mod auth;
 pub mod comments;
+pub mod device_tokens;
 pub mod feed;
 pub mod group_chats;
 pub mod group_messages;
-pub mod inbox;
 pub mod media;
 pub mod messages;
 pub mod moments;
@@ -12,4 +12,5 @@ pub mod private_chats;
 pub mod private_messages;
 pub mod reports;
 pub mod subscriptions;
+pub mod system;
 pub mod user;

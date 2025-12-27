@@ -56,14 +56,16 @@ export function useRequireAuth() {
 
     // 未登录，引导登录
     if (showModal) {
+      const redirectPath = redirectAfterLogin ? route.fullPath : '/'
       // 使用模态框引导（更友好）
-      modal.showLoginPrompt()
+      modal.showLoginPrompt({ actionName, redirectPath })
     } else {
       // 直接跳转到登录页
       const redirectPath = redirectAfterLogin ? route.fullPath : '/'
       router.push({
-        path: '/auth/login',
+        path: '/auth',
         query: {
+          mode: 'login',
           redirect: redirectPath,
           reason: 'action_required',
           action: actionName

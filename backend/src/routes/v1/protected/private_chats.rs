@@ -12,8 +12,7 @@ pub fn routes() -> Router<AppState> {
         .route("/delete", post(private_chats::delete));
 
     // /me 子路由 - 当前用户私聊列表
-    let me_routes = Router::new()
-        .route("/get_list", post(private_chats::get_list));
+    let me_routes = Router::new().route("/", post(private_chats::me));
 
     main_routes.nest("/me", me_routes)
 }

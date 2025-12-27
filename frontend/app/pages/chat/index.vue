@@ -1,245 +1,111 @@
 <template>
-  <UDashboardPanel>
-    <!-- 顶部工具栏 -->
-    <template #header>
-      <UDashboardToolbar>
-        <template #left>
-          <div class="flex items-center gap-3">
-            <div class="icon-lg icon-container-rounded-lg bg-linear-to-br from-blue-500 to-purple-600 shadow-lg">
-              <UIcon name="i-heroicons-chat-bubble-left-right" class="icon-md text-white" />
-            </div>
-            <div>
-              <h1 class="text-lg font-semibold text-primary-content">消息中心</h1>
-              <p class="text-sm text-secondary-content">与朋友和群组保持联系</p>
-            </div>
-          </div>
-        </template>
+  <div class="w-full">
 
-        <template #right>
-          <div class="flex items-center gap-2">
-            <UBadge 
-              v-if="totalUnread > 0" 
-              :label="`${totalUnread} 条未读`"
-              color="primary" 
-              variant="solid"
-              size="sm"
-            />
-            
-            <UButton 
-              icon="i-heroicons-arrow-path"
-              variant="ghost"
-              size="sm"
-              :loading="loading"
-              @click="loadConversations"
-            >
-              刷新
-            </UButton>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+      <UPageCard
+        to="/search"
+        title="发现新朋友"
+        description="搜索并添加新的聊天伙伴"
+        icon="i-lucide-user-plus"
+        orientation="horizontal"
+        variant="outline"
+        spotlight
+      />
 
-            <UButton 
-              icon="i-heroicons-user-plus"
-              variant="outline"
-              size="sm"
-              @click="openNewChatModal"
-            >
-              新建聊天
-            </UButton>
-          </div>
-        </template>
-      </UDashboardToolbar>
-    </template>
+      <UPageCard
+        to="/groups/nearby"
+        title="加入群组"
+        description="发现并加入感兴趣的群组"
+        icon="i-lucide-users-round"
+        orientation="horizontal"
+        variant="outline"
+        spotlight
+      />
+    </div>
 
-    <!-- 主内容区域 -->
-    <template #body>
-      <div class="h-full flex flex-col">
-        <!-- 快速操作卡片 -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <UPageCard
-            title="发现新朋友"
-            description="搜索并添加新的聊天伙伴"
-            icon="i-heroicons-user-plus"
-            class="interactive-card cursor-pointer"
-            @click="navigateTo('/search')"
+    <UCard variant="subtle">
+      <template #header>
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-lg font-semibold">最近会话</span>
+          <UButton
+            variant="ghost"
+            color="neutral"
+            size="sm"
+            icon="i-lucide-filter"
+            @click="toggleFilters"
           >
-            <template #icon>
-              <div class="icon-avatar-sm icon-container-rounded-lg bg-icon-primary">
-                <UIcon name="i-heroicons-user-plus" class="icon-md text-white" />
-              </div>
-            </template>
-          </UPageCard>
+            筛选
+          </UButton>
+        </div>
+      </template>
 
-          <UPageCard
-            title="加入群组"
-            description="发现并加入感兴趣的群组"
-            icon="i-heroicons-user-group"
-            class="interactive-card cursor-pointer"
-            @click="navigateTo('/groups/discover')"
-          >
-            <template #icon>
-              <div class="icon-avatar-sm icon-container-rounded-lg bg-icon-purple">
-                <UIcon name="i-heroicons-user-group" class="icon-md text-white" />
-              </div>
-            </template>
-          </UPageCard>
+      <div>
+        <UCard
+          v-if="showFilters"
+          variant="soft"
+          class="mb-3"
+        >
+          <div class="flex flex-wrap gap-2">
+            <UButton
+              v-for="filter in conversationFilters"
+              :key="filter.key"
+              :variant="activeFilter === filter.key ? 'solid' : 'ghost'"
+              :color="activeFilter === filter.key ? 'primary' : 'neutral'"
+              size="sm"
+              @click="setFilter(filter.key)"
+            >
+              {{ filter.label }}
+            </UButton>
+          </div>
+        </UCard>
+
+        <div v-if="loading" class="space-y-3">
+          <div v-for="i in 5" :key="i" class="flex items-center gap-3 p-2">
+            <UAvatar size="md" icon="i-lucide-user" color="neutral" />
+            <div class="flex-1 space-y-2">
+              <USkeleton class="h-4 w-3/4" />
+              <USkeleton class="h-3 w-1/2" />
+            </div>
+            <USkeleton class="h-3 w-12" />
+          </div>
         </div>
 
-        <!-- 会话列表 -->
-        <div class="flex-1">
-          <UCard class="h-full">
-            <template #header>
-              <div class="flex items-center justify-between">
-                <h2 class="text-lg font-semibold">最近会话</h2>
-                <div class="flex items-center gap-2">
-                  <UButton
-                    variant="ghost"
-                    size="xs"
-                    icon="i-heroicons-funnel"
-                    @click="toggleFilters"
-                  >
-                    筛选
-                  </UButton>
-                </div>
-              </div>
-            </template>
+        <UEmpty
+          v-else-if="filteredConversations.length === 0"
+          icon="i-lucide-messages-square"
+          title="暂无会话"
+          description="开始与朋友聊天吧！"
+          class="py-12"
+        >
+          <template #actions>
+            <UButton @click="navigateTo('/search')" icon="i-lucide-user-plus" color="primary">
+              发现新朋友
+            </UButton>
+          </template>
+        </UEmpty>
 
-            <!-- 筛选器 -->
-            <div v-if="showFilters" class="mb-4 p-4 bg-interactive rounded-lg">
-              <div class="flex flex-wrap gap-2">
-                <UButton
-                  v-for="filter in conversationFilters"
-                  :key="filter.key"
-                  :variant="activeFilter === filter.key ? 'solid' : 'ghost'"
-                  size="xs"
-                  @click="setFilter(filter.key)"
-                >
-                  {{ filter.label }}
-                </UButton>
-              </div>
-            </div>
-
-            <!-- 加载状态 -->
-            <div v-if="loading" class="space-y-4">
-              <div v-for="i in 5" :key="i" class="flex items-center gap-3 p-3">
-                <USkeleton class="w-12 h-12 rounded-full" />
-                <div class="flex-1 space-y-2">
-                  <USkeleton class="h-4 w-3/4" />
-                  <USkeleton class="h-3 w-1/2" />
-                </div>
-                <USkeleton class="h-3 w-12" />
-              </div>
-            </div>
-
-            <!-- 错误状态 -->
-            <UEmpty
-              v-else-if="error"
-              icon="i-heroicons-exclamation-triangle"
-              title="加载失败"
-              :description="error"
-            >
-              <template #actions>
-                <UButton @click="loadConversations" variant="outline">重试</UButton>
-              </template>
-            </UEmpty>
-
-            <!-- 空状态 -->
-            <UEmpty
-              v-else-if="filteredConversations.length === 0"
-              icon="i-heroicons-chat-bubble-left-ellipsis"
-              title="暂无会话"
-              description="开始与朋友聊天吧！"
-            >
-              <template #actions>
-                <UButton @click="navigateTo('/search')" icon="i-heroicons-user-plus">
-                  发现新朋友
-                </UButton>
-              </template>
-            </UEmpty>
-
-            <!-- 会话列表 -->
-            <div v-else class="space-y-2">
-              <div
-                v-for="conversation in filteredConversations"
-                :key="conversation.chat_id"
-                class="interactive-list-item flex items-center gap-3 p-3 rounded-lg cursor-pointer"
-                @click="openConversation(conversation)"
-              >
-                <!-- 头像 -->
-                <div class="relative shrink-0">
-                  <UAvatar
-                    :alt="conversation.name"
-                    size="lg"
-                    :src="conversation.avatar_url"
-                  >
-                    {{ conversation.name?.charAt(0) || "?" }}
-                  </UAvatar>
-                  
-                  <!-- 在线状态 -->
-                  <div
-                    v-if="conversation.is_online"
-                    class="badge-position-br status-dot-online"
-                  />
-                  
-                  <!-- 群组标识 -->
-                  <div
-                    v-if="conversation.chat_type === 'group'"
-                    class="badge-position-br status-dot-online bg-icon-primary icon-container"
-                  >
-                    <UIcon name="i-heroicons-user-group" class="icon-xs text-white" />
-                  </div>
-                </div>
-
-                <!-- 会话信息 -->
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center justify-between mb-1">
-                    <h3 class="font-medium text-primary-content truncate">
-                      {{ conversation.name }}
-                    </h3>
-                    <span class="text-xs text-secondary-content shrink-0">
-                      {{ formatTime(conversation.last_activity_at) }}
-                    </span>
-                  </div>
-                  
-                  <div class="flex items-center justify-between">
-                    <p class="text-sm text-secondary-content truncate">
-                      <span v-if="conversation.last_message?.sender_id && conversation.chat_type === 'group'" class="text-secondary-strong">
-                        {{ conversation.last_message?.sender_id }}:
-                      </span>
-                      {{ conversation.last_message?.content || '暂无消息' }}
-                    </p>
-                    
-                    <!-- 未读消息数 -->
-                    <UBadge
-                      v-if="conversation.unread_count > 0"
-                      :label="conversation.unread_count > 99 ? '99+' : conversation.unread_count.toString()"
-                      color="primary"
-                      size="xs"
-                      class="shrink-0"
-                    />
-                  </div>
-                </div>
-
-                <!-- 操作菜单 -->
-                <UDropdownMenu
-                  :items="getConversationMenuItems(conversation)"
-                  @click.stop
-                >
-                  <UButton
-                    variant="ghost"
-                    size="xs"
-                    icon="i-heroicons-ellipsis-vertical"
-                    square
-                  />
-                </UDropdownMenu>
-              </div>
-            </div>
-          </UCard>
+        <div v-else class="space-y-1">
+          <ConversationItem
+            v-for="conversation in filteredConversations"
+            :key="conversation.chat_id"
+            :conversation="toConversationItem(conversation)"
+            :is-online="conversation.is_online"
+            @open="openConversation(conversation)"
+            @pin="togglePin(conversation.chat_id)"
+            @mute="toggleMute(conversation.chat_id)"
+            @delete="deleteConversation(conversation.chat_id)"
+          />
         </div>
       </div>
-    </template>
-  </UDashboardPanel>
+    </UCard>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { getPageSeoConfig, buildSeoMeta } from '~/config/seo';
+import ConversationItem from '~/components/chat/ConversationItem.vue';
+import { useDashboardHeader } from '~/composables/useDashboardHeader'
+
 // 从数据源获取 SEO 配置
 const seoConfig = getPageSeoConfig('chat')
 
@@ -248,14 +114,14 @@ definePageMeta({
   title: seoConfig.title,
   description: seoConfig.description,
   requiresAuth: true,
-  layout: "dashboard"
+  layout: "dashboard",
+  dashboardHeader: true
 });
 
 // 设置 SEO meta
 useSeoMeta(buildSeoMeta('chat'));
 
 import { type Conversation } from '~/stores/messages.store'
-import { getErrorMessage } from '~/utils/error'
 import { usePrivateChatsService } from '~/services/private_chats.service'
 import { usePrivateMessagesService } from '~/services/private_messages.service'
 
@@ -265,11 +131,12 @@ const messagesStore = useMessagesStore();
 const privateChatsService = usePrivateChatsService();
 const privateMessagesService = usePrivateMessagesService();
 const modal = useModal();
+const dashboardHeader = useDashboardHeader()
 const { formatTime } = useFormatters();
+const { withErrorHandling } = useErrorHandler();
 
 // 响应式状态
 const loading = ref(false);
-const error = ref<string | null>(null);
 const showFilters = ref(false);
 const activeFilter = ref<string>('all');
 
@@ -311,11 +178,24 @@ const filteredConversations = computed(() => {
   );
 });
 
+// 转换函数
+const toConversationItem = (c: Conversation) => ({
+  group_id: c.chat_id,
+  name: c.name,
+  avatar: c.avatar_url,
+  type: (c.chat_type === 'private' ? 'user' : 'group') as 'user' | 'group',
+  members_count: 0, // Store doesn't have this yet, maybe need to fetch or ignore
+  last_message: c.last_message || undefined,
+  last_message_time: c.last_activity_at,
+  unread_count: c.unread_count,
+  is_pinned: false,
+  is_muted: false,
+  updated_at: c.last_activity_at
+});
+
 // 方法
 const loadConversations = async () => {
-  try {
-    loading.value = true;
-    error.value = null;
+  await withErrorHandling(async () => {
     // 加载私聊列表
     const response = await privateChatsService.getPrivateChats();
     // 转换为 Conversation 格式并更新 store
@@ -328,15 +208,14 @@ const loadConversations = async () => {
       unread_count: item.unread_count,
       last_message: item.last_message,
       last_activity_at: item.last_activity_at,
-      is_online: false
+      // 在线状态由 WebSocket user 订阅驱动（store 内有缓存，会自动合并）
+      is_online: undefined
     }));
     messagesStore.setConversations(conversationList);
-  } catch (err: unknown) {
-    console.error('加载会话失败:', err);
-    error.value = getErrorMessage(err, '加载会话失败');
-  } finally {
-    loading.value = false;
-  }
+  }, {
+    title: '加载会话失败',
+    loading: loading
+  });
 };
 
 const toggleFilters = () => {
@@ -348,6 +227,8 @@ const setFilter = (filterKey: string) => {
 };
 
 const openConversation = (conversation: Conversation) => {
+  // 切换到会话：本地先置为当前会话（避免会话列表/徽标继续显示未读）
+  messagesStore.setCurrentConversation(conversation.chat_id)
   if (conversation.chat_type === 'group') {
     navigateTo(`/chat/groups/${conversation.chat_id}`);
   } else {
@@ -365,43 +246,32 @@ const openNewChatModal = () => {
   navigateTo('/search');
 };
 
-// formatTime 函数已从统一工具函数导入
-
-const getConversationMenuItems = (conversation: Conversation) => {
-  const items = [
-    [{
-      label: '标记为已读',
-      icon: 'i-heroicons-check',
-      click: () => markAsRead(conversation.chat_id),
-      disabled: conversation.unread_count === 0
-    }],
-    [{
-      label: '置顶聊天',
-      icon: 'i-heroicons-bookmark',
-      click: () => togglePin(conversation.chat_id)
-    }, {
-      label: '免打扰',
-      icon: 'i-heroicons-bell-slash',
-      click: () => toggleMute(conversation.chat_id)
-    }],
-    [{
-      label: '删除聊天',
-      icon: 'i-heroicons-trash',
-      click: () => deleteConversation(conversation.chat_id),
-      class: 'text-error'
-    }]
-  ];
-  
-  return items;
-};
+// 把 PageLayout 的 header-actions 移到 dashboard 内置 header（避免每页重复包 PageLayout）
+watchEffect(() => {
+  dashboardHeader.setActions([
+    {
+      key: 'refresh',
+      label: '刷新',
+      icon: 'i-lucide-refresh-cw',
+      variant: 'outline',
+      loading: loading.value,
+      action: () => loadConversations()
+    },
+    {
+      key: 'new_chat',
+      label: '新建聊天',
+      icon: 'i-lucide-user-plus',
+      variant: 'outline',
+      action: () => openNewChatModal()
+    }
+  ])
+})
 
 const markAsRead = async (conversationId: string) => {
-  try {
+  await withErrorHandling(async () => {
     await privateMessagesService.markPrivateMessagesAsRead({ id: conversationId });
     messagesStore.updateUnreadCount(conversationId, 0);
-  } catch (err) {
-    console.error('标记已读失败:', err);
-  }
+  }, { title: '标记已读失败', showToast: false }); // 标记已读失败通常不需要打扰用户
 };
 
 const togglePin = async (conversationId: string) => {
@@ -424,79 +294,16 @@ const deleteConversation = async (conversationId: string) => {
   });
   
   if (confirmed) {
-    try {
+    await withErrorHandling(async () => {
       await privateChatsService.deletePrivateChat({ id: conversationId });
       messagesStore.removeConversation(conversationId);
-    } catch (err) {
-      console.error('删除聊天失败:', err);
-    }
+    }, { title: '删除聊天失败' });
   }
 };
-
-// WebSocket 实时更新
-const { on: wsOn } = useGlobalWebSocket();
-
-// ChatMessageNew 事件的 payload 类型
-interface ChatMessageNewPayload {
-  id: string;
-  chat_type: 'private_chat' | 'group_chat';
-  chat_id: string;
-  sender: {
-    user_id: number;
-    nickname: string;
-    avatar_url?: string;
-    user_type: string;
-  };
-  message_type: 'text' | 'image' | 'video' | 'audio' | 'file' | 'system';
-  content?: string;
-  reply_to?: string;
-  mentions?: number[];
-  sent_at: string;
-}
-
-let messageCleanup: (() => void) | null = null;
 
 // 生命周期
 onMounted(() => {
   loadConversations();
-  
-  // 监听 ChatMessageNew 事件 - 实时更新会话列表
-  messageCleanup = wsOn<ChatMessageNewPayload>('ChatMessageNew', (data) => {
-    // 只处理私聊消息（群聊需要订阅）
-    if (data.chat_type === 'private_chat') {
-      // 忽略自己发送的消息
-      if (data.sender.user_id === authStore.user?.user_id) {
-        return;
-      }
-      
-      // 更新会话列表中的对应会话
-      const existingConversation = conversations.value.find(
-        c => c.chat_id === data.chat_id
-      );
-      
-      if (existingConversation) {
-        // 更新最后消息和未读数
-        messagesStore.updateConversation(data.chat_id, {
-          last_message: {
-            id: data.id,
-            content: data.content,
-            type: data.message_type,
-            sender_id: data.sender.user_id,
-            sent_at: data.sent_at
-          },
-          last_activity_at: data.sent_at,
-          unread_count: existingConversation.unread_count + 1
-        });
-      } else {
-        // 新会话 - 重新加载会话列表
-        loadConversations();
-      }
-      
-      if (import.meta.dev) {
-        console.log('[WebSocket] 会话列表收到新消息:', data.content);
-      }
-    }
-  });
   
   // 注册快捷键
   defineShortcuts({
@@ -512,11 +319,7 @@ onMounted(() => {
 });
 
 // 页面离开时清理
-onUnmounted(() => {
-  if (messageCleanup) {
-    messageCleanup();
-  }
-});
+// useWebSocket 自动管理清理，无需手动 onUnmounted
 
 // 监听认证状态变化
 watch(

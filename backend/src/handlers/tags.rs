@@ -2,23 +2,19 @@ use axum::{extract::State, Json};
 
 use crate::{
     dto::{
-        request::{GetTrendingTagsRequest, SuggestTagsRequest},
+        request::{SuggestTagsRequest, TrendingTagsRequest},
         response::{ApiResponse, TagSuggestData, TrendingTagsData},
     },
     error::Result,
-    repositories::tag_repo::TagRepository,
-    services::tag_service::TagService,
     state::AppState,
 };
 
 /// 获取热门标签
-pub async fn get_trending(
+pub async fn trending(
     State(state): State<AppState>,
-    Json(req_body): Json<GetTrendingTagsRequest>,
+    Json(req_body): Json<TrendingTagsRequest>,
 ) -> Result<Json<ApiResponse<TrendingTagsData>>> {
-    let tag_repo = TagRepository::new(state.db.clone());
-    let service = TagService::new(tag_repo);
-    let response = service.get_trending(&req_body).await?;
+    let response = state.tag_service.get_trending(&req_body).await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
@@ -27,10 +23,6 @@ pub async fn suggest(
     State(state): State<AppState>,
     Json(req_body): Json<SuggestTagsRequest>,
 ) -> Result<Json<ApiResponse<TagSuggestData>>> {
-    let tag_repo = TagRepository::new(state.db.clone());
-    let service = TagService::new(tag_repo);
-    let response = service.suggest(&req_body).await?;
+    let response = state.tag_service.suggest(&req_body).await?;
     Ok(Json(ApiResponse::success(response)))
 }
-
-

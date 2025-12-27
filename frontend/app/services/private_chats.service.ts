@@ -4,9 +4,10 @@ import type {
   PaginatedData,
   CreatePrivateChatRequest,
   CreatePrivateChatData,
-  GetPrivateChatsRequest,
+  MyPrivateChatsRequest,
   PrivateChatListItem,
   PrivateChatDetailData,
+  PrivateChatOpenTheDoorRequest,
   UpdatePrivateChatSettingsRequest,
   DeletePrivateChatRequest
 } from '~/types/api'
@@ -16,11 +17,11 @@ class PrivateChatsService extends BaseService {
     return this.post<CreatePrivateChatData>(PRIVATE_CHATS.CREATE, request)
   }
 
-  async getPrivateChats(request: GetPrivateChatsRequest = {}) {
-    return this.post<PaginatedData<PrivateChatListItem>>(PRIVATE_CHATS.GET_LIST, request)
+  async getPrivateChats(request: MyPrivateChatsRequest = {}) {
+    return this.post<PaginatedData<PrivateChatListItem>>(PRIVATE_CHATS.ME, request)
   }
 
-  async openTheDoor(request: { id: string }) {
+  async openTheDoor(request: PrivateChatOpenTheDoorRequest) {
     return this.post<PrivateChatDetailData>(PRIVATE_CHATS.OPEN_THE_DOOR, request)
   }
 

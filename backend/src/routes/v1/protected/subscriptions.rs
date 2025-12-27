@@ -6,8 +6,8 @@ use crate::{handlers::subscriptions, state::AppState};
 pub fn routes() -> Router<AppState> {
     // /me 子路由 - 当前用户订阅配置
     let me_routes = Router::new()
-        .route("/get_config", post(subscriptions::get_config))
-        .route("/update", post(subscriptions::update));
+        .route("/", post(subscriptions::get_me))
+        .route("/update", post(subscriptions::update_me));
 
     Router::new().nest("/me", me_routes)
 }

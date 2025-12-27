@@ -3,7 +3,8 @@
  * 使用 useOverlay 控制所有模态框的显示（Nuxt UI v4）
  */
 
-import type { GroupMemberItem } from '~/types/api'
+import type { Component } from 'vue'
+import type { GroupMemberItem, MomentSearchItem } from '~/types/api'
 
 /** 举报目标类型 */
 export type ReportTargetType = 'user' | 'moment' | 'comment' | 'message' | 'group'
@@ -23,151 +24,150 @@ export interface ConfirmOptions {
 export function useModal() {
   const overlay = useOverlay()
 
+  function openModal<TResult = void>(importer: () => Promise<{ default: Component }>): Promise<TResult>
+  function openModal<TOptions, TResult = void>(
+    importer: () => Promise<{ default: Component }>,
+    options: TOptions
+  ): Promise<TResult>
+  async function openModal<TOptions, TResult = void>(
+    importer: () => Promise<{ default: Component }>,
+    options?: TOptions
+  ): Promise<TResult> {
+    const { default: Component } = await importer()
+    const modal = overlay.create(Component)
+    const instance = options === undefined ? modal.open() : modal.open(options)
+    return await instance.result as TResult
+  }
+
   // ===== 确认对话框 =====
   const showConfirm = async (options: ConfirmOptions): Promise<boolean> => {
-    const { default: ConfirmModal } = await import('~/components/modals/ConfirmModal.vue')
-    const modal = overlay.create(ConfirmModal)
-    const instance = modal.open(options)
-    const result = await instance.result
+    const result = await openModal<ConfirmOptions, unknown>(
+      () => import('~/components/modals/ConfirmModal.vue'),
+      options
+    )
     return result === true
   }
 
   // ===== 全局搜索 =====
   const showGlobalSearch = async (): Promise<void> => {
-    const { default: GlobalSearchModal } = await import('~/components/modals/GlobalSearchModal.vue')
-    const modal = overlay.create(GlobalSearchModal)
-    const instance = modal.open()
-    await instance.result
+    await openModal(() => import('~/components/modals/GlobalSearchModal.vue'))
   }
 
   // ===== 认证相关 =====
-  const showLoginPrompt = async (): Promise<void> => {
-    const { default: LoginPromptModal } = await import('~/components/modals/LoginPromptModal.vue')
-    const modal = overlay.create(LoginPromptModal)
-    const instance = modal.open()
-    await instance.result
+  const showLoginPrompt = async (options?: { actionName?: string; redirectPath?: string }): Promise<void> => {
+    if (options) {
+      await openModal<{ actionName?: string; redirectPath?: string }>(
+        () => import('~/components/modals/LoginPromptModal.vue'),
+        options
+      )
+    } else {
+      await openModal(() => import('~/components/modals/LoginPromptModal.vue'))
+    }
   }
 
   const showWelcome = async (): Promise<void> => {
-    const { default: WelcomeModal } = await import('~/components/modals/WelcomeModal.vue')
-    const modal = overlay.create(WelcomeModal)
-    const instance = modal.open()
-    await instance.result
+    await openModal(() => import('~/components/modals/WelcomeModal.vue'))
   }
 
-  const showTempUserUpgrade = async (): Promise<void> => {
-    const { default: GuestUserModal } = await import('~/components/modals/GuestUserModal.vue')
-    const modal = overlay.create(GuestUserModal)
-    const instance = modal.open()
-    await instance.result
+  const showGuestUserUpgrade = async (): Promise<void> => {
+    await openModal(() => import('~/components/modals/GuestUserModal.vue'))
   }
 
   const showChangePassword = async (): Promise<void> => {
-    const { default: ChangePasswordModal } = await import('~/components/modals/ChangePasswordModal.vue')
-    const modal = overlay.create(ChangePasswordModal)
-    const instance = modal.open()
-    await instance.result
+    await openModal(() => import('~/components/modals/ChangePasswordModal.vue'))
+  }
+
+  const showResetPassword = async (): Promise<void> => {
+    await openModal(() => import('~/components/modals/ResetPasswordModal.vue'))
   }
 
   const showDeleteAccount = async (): Promise<void> => {
-    const { default: DeleteAccountModal } = await import('~/components/modals/DeleteAccountModal.vue')
-    const modal = overlay.create(DeleteAccountModal)
-    const instance = modal.open()
-    await instance.result
+    await openModal(() => import('~/components/modals/DeleteAccountModal.vue'))
+  }
+
+  const showEditProfile = async (): Promise<void> => {
+    await openModal(() => import('~/components/modals/EditProfileModal.vue'))
   }
 
   const showSwitchAccount = async (): Promise<void> => {
-    const { default: SwitchAccountModal } = await import('~/components/modals/SwitchAccountModal.vue')
-    const modal = overlay.create(SwitchAccountModal)
-    const instance = modal.open()
-    await instance.result
+    await openModal(() => import('~/components/modals/SwitchAccountModal.vue'))
   }
 
   const showPinInput = async (isSetup?: boolean): Promise<string | null> => {
-    const { default: PinInputModal } = await import('~/components/modals/PinInputModal.vue')
-    const modal = overlay.create(PinInputModal)
-    const instance = modal.open({ isSetup })
-    const result = await instance.result
+    const result = await openModal<{ isSetup?: boolean }, unknown>(
+      () => import('~/components/modals/PinInputModal.vue'),
+      { isSetup }
+    )
     return typeof result === 'string' ? result : null
   }
 
   // ===== 内容创建 =====
   const showCreateMoment = async (): Promise<string | null> => {
-    const { default: CreateMomentModal } = await import('~/components/modals/CreateMomentModal.vue')
-    const modal = overlay.create(CreateMomentModal)
-    const instance = modal.open()
-    const result = await instance.result
+    const result = await openModal<unknown>(() => import('~/components/modals/CreateMomentModal.vue'))
+    return typeof result === 'string' ? result : null
+  }
+
+  const showEditMoment = async (moment: Pick<MomentSearchItem, 'id' | 'description' | 'tags' | 'images' | 'geo'>): Promise<string | null> => {
+    const result = await openModal<{ mode: 'edit'; moment: Pick<MomentSearchItem, 'id' | 'description' | 'tags' | 'images' | 'geo'> }, unknown>(
+      () => import('~/components/modals/CreateMomentModal.vue'),
+      { mode: 'edit', moment }
+    )
     return typeof result === 'string' ? result : null
   }
 
   const showCreateGroup = async (): Promise<string | null> => {
-    const { default: CreateGroupModal } = await import('~/components/modals/CreateGroupModal.vue')
-    const modal = overlay.create(CreateGroupModal)
-    const instance = modal.open()
-    const result = await instance.result
+    const result = await openModal<unknown>(() => import('~/components/modals/CreateGroupModal.vue'))
     return typeof result === 'string' ? result : null
   }
 
   // ===== 举报 =====
   const showReport = async (targetType: ReportTargetType, targetId: string): Promise<void> => {
-    const { default: ReportModal } = await import('~/components/modals/ReportModal.vue')
-    const modal = overlay.create(ReportModal)
-    const instance = modal.open({ targetType, targetId })
-    await instance.result
+    await openModal<{ targetType: ReportTargetType; targetId: string }>(
+      () => import('~/components/modals/ReportModal.vue'),
+      { targetType, targetId }
+    )
   }
 
   const showReportHistory = async (): Promise<void> => {
-    const { default: ReportHistoryModal } = await import('~/components/modals/ReportHistoryModal.vue')
-    const modal = overlay.create(ReportHistoryModal)
-    const instance = modal.open()
-    await instance.result
+    await openModal(() => import('~/components/modals/ReportHistoryModal.vue'))
   }
 
   // ===== 群组管理 =====
   const showGroupSettings = async (groupId: string): Promise<void> => {
-    const { default: GroupSettingsModal } = await import('~/components/modals/GroupSettingsModal.vue')
-    const modal = overlay.create(GroupSettingsModal)
-    const instance = modal.open({ groupId })
-    await instance.result
+    await openModal<{ groupId: string }>(() => import('~/components/modals/GroupSettingsModal.vue'), { groupId })
   }
 
   const showInviteMembers = async (groupId: string): Promise<void> => {
-    const { default: InviteMembersModal } = await import('~/components/modals/InviteMembersModal.vue')
-    const modal = overlay.create(InviteMembersModal)
-    const instance = modal.open({ groupId })
-    await instance.result
+    await openModal<{ groupId: string }>(() => import('~/components/modals/InviteMembersModal.vue'), { groupId })
   }
 
   const showTransferOwnership = async (groupId: string, members: GroupMemberItem[]): Promise<string | null> => {
-    const { default: TransferOwnershipModal } = await import('~/components/modals/TransferOwnershipModal.vue')
-    const modal = overlay.create(TransferOwnershipModal)
-    const instance = modal.open({ groupId, members })
-    const result = await instance.result
+    const result = await openModal<{ groupId: string; members: GroupMemberItem[] }, unknown>(
+      () => import('~/components/modals/TransferOwnershipModal.vue'),
+      { groupId, members }
+    )
     return typeof result === 'string' ? result : null
   }
 
   const showGroupPassword = async (groupName?: string): Promise<string | null> => {
-    const { default: GroupPasswordModal } = await import('~/components/modals/GroupPasswordModal.vue')
-    const modal = overlay.create(GroupPasswordModal)
-    const instance = modal.open({ groupName })
-    const result = await instance.result
+    const result = await openModal<{ groupName?: string }, unknown>(
+      () => import('~/components/modals/GroupPasswordModal.vue'),
+      { groupName }
+    )
     return typeof result === 'string' ? result : null
   }
 
   // ===== 好友管理 =====
   const showBlockedUsers = async (): Promise<void> => {
-    const { default: BlockedUsersModal } = await import('~/components/modals/BlockedUsersModal.vue')
-    const modal = overlay.create(BlockedUsersModal)
-    const instance = modal.open()
-    await instance.result
+    await openModal(() => import('~/components/modals/BlockedUsersModal.vue'))
   }
 
   // ===== 位置选择 =====
   const showLocationPicker = async (onSelect: (location: { latitude: number; longitude: number; locationName: string }) => void): Promise<void> => {
-    const { default: LocationPickerModal } = await import('~/components/modals/LocationPickerModal.vue')
-    const modal = overlay.create(LocationPickerModal)
-    const instance = modal.open({ onSelect })
-    await instance.result
+    await openModal<{ onSelect: (location: { latitude: number; longitude: number; locationName: string }) => void }>(
+      () => import('~/components/modals/LocationPickerModal.vue'),
+      { onSelect }
+    )
   }
 
   return {
@@ -178,14 +178,17 @@ export function useModal() {
     // 认证
     showLoginPrompt,
     showWelcome,
-    showTempUserUpgrade,
+    showGuestUserUpgrade,
     showChangePassword,
+    showResetPassword,
     showDeleteAccount,
+    showEditProfile,
     showSwitchAccount,
     showPinInput,
     
     // 内容
     showCreateMoment,
+    showEditMoment,
     showCreateGroup,
     showReport,
     showReportHistory,

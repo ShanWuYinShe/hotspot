@@ -1,20 +1,17 @@
 <template>
     <UCard
         @click="openConversation"
-        class="cursor-pointer group"
-        :class="{
-            'ring-2 ring-accent bg-primary-light':
-                conversation.unread_count > 0,
-        }"
+        variant="outline"
+        data-hs-card="interactive"
     >
-        <div class="flex items-center space-x-4">
+        <div class="flex items-center gap-4">
             <!-- 头像 -->
             <div class="relative">
                 <!-- 在线状态指示器 (仅私聊显示) -->
                 <UChip 
                     v-if="conversation.type === 'user' && isOnline"
                     color="success" 
-                    size="sm" 
+                    size="2xs" 
                     position="bottom-right"
                 >
                     <UAvatar
@@ -30,7 +27,7 @@
                 <UChip 
                     v-else-if="conversation.type === 'group'"
                     color="info" 
-                    size="md" 
+                    size="2xl" 
                     position="bottom-right"
                     :text="displayMemberCount(conversation.members_count || 0)"
                 >
@@ -61,7 +58,7 @@
                         {{ conversation.name }}
                     </h3>
                     <div class="flex flex-col items-end space-y-1">
-                        <span class="text-sm text-secondary-content shrink-0">
+                        <span class="text-sm shrink-0">
                             {{ displayTime(conversation.last_message_time || conversation.updated_at) }}
                         </span>
                         <!-- 未读消息数 -->
@@ -82,14 +79,16 @@
                             v-if="lastMessageType !== 'text'"
                             :text="getMessageTypeTooltip(lastMessageType)"
                         >
-                            <UIcon
-                                :name="getMessageTypeIcon(lastMessageType)"
-                                class="icon-sm text-muted shrink-0"
-                            />
+                            <span class="shrink-0">
+                              <UIcon
+                                  :name="getMessageTypeIcon(lastMessageType)"
+                                  :size="16"
+                              />
+                            </span>
                         </UTooltip>
 
                         <!-- 最后一条消息 -->
-                        <p class="text-sm text-secondary-strong truncate">
+                        <p class="text-sm truncate">
                             {{
                                 displayLastMessage(
                                     conversation.last_message?.content || '',
@@ -100,23 +99,26 @@
                     </div>
 
                     <!-- 置顶图标 -->
-                    <UTooltip v-if="conversation.is_pinned" text="已置顶会话">
-                        <UIcon
-                            name="i-heroicons-bookmark-solid"
-                            class="icon-sm text-amber shrink-0 ml-2"
-                        />
+                    <UTooltip v-if="conversation.is_pinned" text="置顶会话">
+                        <span class="shrink-0 ml-2">
+                          <UIcon
+                              name="i-lucide-bookmark"
+                              :size="16"
+                          />
+                        </span>
                     </UTooltip>
                 </div>
             </div>
 
             <!-- 操作按钮 -->
-            <div class="opacity-0 group-hover:opacity-100 transition-opacity">
+            <div class="transition-opacity duration-200 hover:opacity-80">
                 <UDropdownMenu :items="conversationActions">
                     <UTooltip text="更多操作">
                         <UButton
                             variant="ghost"
-                            size="md"
-                            icon="i-heroicons-ellipsis-horizontal"
+                            size="sm"
+                            :square="true"
+                            icon="i-lucide-ellipsis"
                             aria-label="更多操作"
                             @click.stop
                         />
@@ -131,6 +133,9 @@
 import { computed, ref } from "vue";
 import type { PrivateChatLastMessage } from "~/types/api";
 import { getErrorMessage } from '~/utils/error';
+import type { DropdownMenuItem } from '@nuxt/ui'
+import { usePrivateMessagesService } from '~/services/private_messages.service'
+import { useGroupMessagesService } from '~/services/group_messages.service'
 
 // 本地 Conversation 类型定义 - 基于后端 ConversationsResponse 规范
 interface Conversation {
@@ -162,7 +167,7 @@ const emit = defineEmits<{
     (e: "delete", conversation: Conversation): void;
 }>();
 
-const toast = useToast()
+const feedback = useFeedbackStore()
 
 // 计算最后一条消息的类型
 const lastMessageType = computed(() => {
@@ -171,41 +176,36 @@ const lastMessageType = computed(() => {
 });
 
 // 对话操作菜单
-const conversationActions = computed(() => [
+const conversationActions = computed((): DropdownMenuItem[][] => [
     [
         {
             label: props.conversation.is_pinned ? "取消置顶" : "置顶对话",
             icon: props.conversation.is_pinned
-                ? "i-heroicons-bookmark"
-                : "i-heroicons-bookmark-solid",
-            click: () => togglePin(),
+                ? "i-lucide-bookmark"
+                : "i-lucide-bookmark",
+            onSelect: () => togglePin(),
         },
         {
             label: props.conversation.is_muted ? "取消免打扰" : "免打扰",
             icon: props.conversation.is_muted
-                ? "i-heroicons-speaker-wave"
-                : "i-heroicons-speaker-x-mark",
-            click: () => toggleMute(),
+                ? "i-lucide-volume-2"
+                : "i-lucide-volume-x",
+            onSelect: () => toggleMute(),
         },
     ],
     [
         {
             label: "标记为已读",
-            icon: "i-heroicons-check-circle",
-            click: () => markAsRead(),
-        },
-        {
-            label: "清空聊天记录",
-            icon: "i-heroicons-trash",
-            click: () => clearHistory(),
+            icon: "i-lucide-circle-check",
+            onSelect: () => markAsRead(),
         },
     ],
     [
         {
             label: "删除对话",
-            icon: "i-heroicons-x-circle",
-            click: () => deleteConversation(),
-            class: "text-red",
+            icon: "i-lucide-circle-x",
+            color: "error",
+            onSelect: () => deleteConversation(),
         },
     ],
 ]);
@@ -234,17 +234,17 @@ const displayUnreadCount = (count: number) => {
 const getMessageTypeIcon = (type: string) => {
     switch (type) {
         case "image":
-            return "i-heroicons-photo";
+            return "i-lucide-image";
         case "file":
-            return "i-heroicons-document";
+            return "i-lucide-file-text";
         case "location":
-            return "i-heroicons-map-pin";
+            return "i-lucide-map-pin";
         case "voice":
-            return "i-heroicons-microphone";
+            return "i-lucide-mic";
         case "video":
-            return "i-heroicons-video-camera";
+            return "i-lucide-video";
         default:
-            return "i-heroicons-chat-bubble-left-right";
+            return "i-lucide-messages-square";
     }
 };
 
@@ -294,45 +294,35 @@ const openConversation = () => {
 
 const togglePin = () => {
     emit("pin", props.conversation);
-    toast.add({
-        title: props.conversation.is_pinned ? "已取消置顶" : "已置顶",
-        color: "success",
-    });
+    feedback.success(props.conversation.is_pinned ? "已取消置顶" : "已置顶")
 };
 
 const toggleMute = () => {
     emit("mute", props.conversation);
-    toast.add({
-        title: props.conversation.is_muted ? "已取消免打扰" : "已开启免打扰",
-        color: "success",
-    });
+    feedback.success(props.conversation.is_muted ? "已取消免打扰" : "已开启免打扰")
 };
 
 const markAsRead = async () => {
     try {
         const messagesStore = useMessagesStore();
-        const isGroup = props.conversation.type === "group";
         const targetId = props.conversation.group_id;
-        
-        // 使用 updateUnreadCount 方法标记为已读
-        messagesStore.updateUnreadCount(String(targetId), 0);
-        
-        toast.add({ title: "已标记为已读", color: "success" });
-    } catch (e: unknown) {
-        toast.add({
-            title: "操作失败",
-            description: getErrorMessage(e),
-            color: "error",
-        });
-    }
-};
 
-const clearHistory = () => {
-    toast.add({
-        title: "功能开发中",
-        description: "清空聊天记录功能即将上线",
-        color: "warning",
-    });
+        // 先调用后端标记已读（兜底：失败也会本地置零，避免 UI 卡住）
+        if (props.conversation.type === "group") {
+          const groupMessagesService = useGroupMessagesService()
+          await groupMessagesService.markAsRead({ id: String(targetId) })
+        } else {
+          const privateMessagesService = usePrivateMessagesService()
+          await privateMessagesService.markPrivateMessagesAsRead({ id: String(targetId) })
+        }
+
+        // 本地同步
+        messagesStore.updateUnreadCount(String(targetId), 0)
+        
+        feedback.success("已标记为已读")
+    } catch (e: unknown) {
+        feedback.error("操作失败", getErrorMessage(e))
+    }
 };
 
 const deleteConversation = async () => {
@@ -345,7 +335,7 @@ const deleteConversation = async () => {
     })
     if (confirmed) {
         emit("delete", props.conversation);
-        toast.add({ title: "对话已删除", color: "success" });
+        feedback.success("对话已删除")
     }
 };
 </script>

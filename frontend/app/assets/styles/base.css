@@ -1,0 +1,196 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+@theme {
+  --animate-blob: blob 7s infinite;
+  --animate-spin-slow: spin 3s linear infinite;
+  --animate-typing-dot: typing-dot 1.4s infinite ease-in-out both;
+  --animate-fade-in-up: fadeInUp 0.5s ease-out forwards;
+
+  @keyframes blob {
+    0% {
+      transform: translate(0px, 0px) scale(1);
+    }
+
+    33% {
+      transform: translate(30px, -50px) scale(1.1);
+    }
+
+    66% {
+      transform: translate(-20px, 20px) scale(0.9);
+    }
+
+    100% {
+      transform: translate(0px, 0px) scale(1);
+    }
+  }
+
+  @keyframes typing-dot {
+    0%,
+    80%,
+    100% {
+      transform: scale(0);
+    }
+
+    40% {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+@utility animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+@utility delay-75 {
+  animation-delay: 75ms;
+}
+
+@utility delay-100 {
+  animation-delay: 100ms;
+}
+
+@utility delay-150 {
+  animation-delay: 150ms;
+}
+
+@utility delay-200 {
+  animation-delay: 200ms;
+}
+
+/* ============================================================================
+   Global Styles
+   ============================================================================ */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ============================================================================
+   Minimal @utility (non-Nuxt UI elements)
+   ============================================================================ */
+@utility hs-search-hit {
+  @apply bg-warning/30 rounded-md px-0.5;
+}
+
+@utility hs-image-more-overlay {
+  @apply absolute inset-0 flex items-center justify-center cursor-pointer transition-colors;
+  @apply bg-gray-900/50 dark:bg-white/50 hover:bg-gray-900/60 dark:hover:bg-white/60;
+}
+
+@utility hs-avatar-upload-overlay {
+  @apply absolute inset-0 flex items-center justify-center rounded-full z-10 transition-opacity;
+  @apply bg-gray-900/40 dark:bg-white/40 text-white dark:text-gray-900 opacity-0 hover:opacity-100;
+}
+
+@utility hs-overlay-scrim {
+  @apply bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm;
+}
+
+@utility hs-typing-dot {
+  @apply size-1.5 bg-gray-500 dark:bg-gray-400 rounded-full;
+}
+
+/* ============================================================================
+   Chat Messages (non-Nuxt UI custom implementation)
+   ============================================================================ */
+
+@utility hs-chat-bubble-user {
+  @apply rounded-3xl px-4 py-2 text-sm wrap-break-word whitespace-pre-wrap shadow-sm ring-1 ring-inset;
+  @apply bg-primary-500 dark:bg-primary-600 text-white ring-primary-600 dark:ring-primary-500 rounded-br-sm;
+}
+
+@utility hs-chat-bubble-other {
+  @apply rounded-3xl px-4 py-2 text-sm wrap-break-word whitespace-pre-wrap shadow-sm ring-1 ring-inset;
+  @apply bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 ring-gray-200 dark:ring-gray-700 rounded-bl-sm;
+}
+
+@utility hs-chat-highlight {
+  @apply bg-primary-50/50 dark:bg-primary-900/10 ring-2 ring-primary-500/20 rounded-2xl;
+}
+
+/* ============================================================================
+   Floating Panels (glassmorphism effect for map overlays)
+   ============================================================================ */
+
+@utility hs-floating-panel {
+  @apply bg-white/90 dark:bg-gray-900/90 backdrop-blur-md rounded-2xl shadow-xl ring-1 ring-gray-200 dark:ring-gray-800;
+}
+
+@utility hs-floating-control {
+  @apply shadow-lg;
+}
+
+/* ============================================================================
+   Map (non-Nuxt UI)
+   ============================================================================ */
+
+@utility hs-map-frame {
+  @apply rounded-2xl overflow-hidden;
+}
+
+@utility hs-map-background {
+  @apply bg-gray-100 dark:bg-gray-900;
+}
+
+@utility hs-map-cluster {
+  @apply inline-flex items-center justify-center select-none;
+  @apply min-w-7 h-7 px-2 rounded-full text-xs font-semibold;
+  @apply bg-gray-900/85 dark:bg-white/85 text-white dark:text-gray-900 ring-1 ring-white/15 dark:ring-black/15 shadow-lg;
+}
+
+/* 未启用交互时：地图层不应吞掉滚轮/触摸滚动（尤其移动端）。 */
+[data-hs-map-interactive='false'] {
+  pointer-events: none;
+}
+
+/* ============================================================================
+   Charts (non-Nuxt UI)
+   ============================================================================ */
+
+@utility hs-chart-line {
+  @apply drop-shadow-sm;
+}
+
+@utility hs-chart-bar {
+  @apply rounded-t-2xl overflow-hidden;
+}
+
+@utility hs-chart-dot {
+  @apply rounded-full;
+}
+
+@utility hs-logo-text {
+  @apply font-bold text-xl tracking-tight text-gray-900 dark:text-white transition-opacity duration-300;
+}
+
+@utility hs-text-strong {
+  @apply truncate font-semibold leading-tight mt-1;
+}
+
+@utility hs-card-title {
+  @apply font-semibold truncate text-gray-900 dark:text-white;
+}
+
+@utility hs-card-description {
+  @apply text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate;
+}
+
+@utility hs-stat-value {
+  @apply text-2xl font-semibold tabular-nums text-gray-900 dark:text-white;
+}
+
+@utility hs-stat-label {
+  @apply mt-1 font-medium truncate text-gray-900 dark:text-white;
+}

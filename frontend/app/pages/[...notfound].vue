@@ -1,26 +1,26 @@
 <template>
     <div
-        class="min-h-screen antialiased bg-gradient-neutral-page flex items-center justify-center"
+        class="min-h-screen antialiased flex items-center justify-center"
     >
-        <UCard class="text-center px-6 py-8">
+        <UCard class="px-6 py-8">
             <!-- 404 图标 -->
             <div class="mb-8">
-                <div
-                    class="w-32 h-32 rounded-full flex items-center justify-center mx-auto mb-6"
-                >
-                    <UIcon
-                        name="i-heroicons-question-mark-circle"
-                        class="w-16 h-16 text-secondary-strong"
-                    />
-                </div>
+                <UAvatar
+                    size="3xl"
+                    icon="i-lucide-circle-question-mark"
+                    color="neutral"
+                    class="mx-auto mb-6"
+                />
             </div>
 
             <!-- 错误信息 -->
-            <h1 class="text-6xl font-bold mb-4">404</h1>
-            <h2 class="text-2xl font-semibold mb-4">{{ $t('notFound.title') }}</h2>
-            <p class="opacity-80 mb-8 max-w-md mx-auto">
-                {{ $t('notFound.description') }}
-            </p>
+            <div class="text-center">
+                <h1 class="text-7xl font-extrabold tracking-tight mb-4">404</h1>
+                <h2 class="text-2xl font-bold tracking-tight mb-4">{{ $t('notFound.title') }}</h2>
+                <p class="opacity-80 mb-8 max-w-md mx-auto">
+                    {{ $t('notFound.description') }}
+                </p>
+            </div>
 
             <!-- 操作按钮 -->
             <div
@@ -28,19 +28,19 @@
             >
                 <UButton
                     size="lg"
+                    leading-icon="i-lucide-house"
                     @click="navigateTo('/')"
                     class="w-full sm:w-auto"
                 >
-                    <UIcon name="i-heroicons-home" class="w-5 h-5 mr-2" />
                     {{ $t('notFound.actions.goHome') }}
                 </UButton>
                 <UButton
                     variant="outline"
                     size="lg"
+                    leading-icon="i-lucide-arrow-left"
                     @click="router.back()"
                     class="w-full sm:w-auto"
                 >
-                    <UIcon name="i-heroicons-arrow-left" class="w-5 h-5 mr-2" />
                     {{ $t('notFound.actions.goBack') }}
                 </UButton>
             </div>

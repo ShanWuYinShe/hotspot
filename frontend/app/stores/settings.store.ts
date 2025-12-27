@@ -102,19 +102,25 @@ const getDefaultState = (): SettingsState => ({
 
 export const useSettingsStore = defineStore('settings', () => {
   // ============ 状态 ============
-  const _state = ref<SettingsState>(getDefaultState())
+  // 多账号隔离：
+  // - appearance/guide 属于“设备级”
+  // - privacy/notifications 属于“用户级”，跨账号持久化会串数据，所以不持久化
+  const _privacy = ref<UserSettingsData>({ ...DEFAULT_PRIVACY })
+  const _notifications = ref<SubscriptionsData>({ ...DEFAULT_NOTIFICATIONS })
+  const _appearance = ref<AppearanceSettings>({ ...DEFAULT_APPEARANCE })
+  const _guide = ref<GuideState>({ ...DEFAULT_GUIDE })
   const _remoteLoaded = ref(false)
 
   // ============ Getter ============
 
   // 隐私标签
-  const privacy = computed((): UserSettingsData => _state.value.privacy)
+  const privacy = computed((): UserSettingsData => _privacy.value)
 
   // 通知标签
-  const notifications = computed((): SubscriptionsData => _state.value.notifications)
+  const notifications = computed((): SubscriptionsData => _notifications.value)
 
   // 外观标签
-  const appearance = computed((): AppearanceSettings => _state.value.appearance)
+  const appearance = computed((): AppearanceSettings => _appearance.value)
 
   // 外观快捷访问
   const theme = computed(() => appearance.value.theme)
@@ -124,7 +130,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const sidebarCollapsed = computed(() => appearance.value.sidebarCollapsed)
 
   // 引导状态
-  const guide = computed((): GuideState => _state.value.guide)
+  const guide = computed((): GuideState => _guide.value)
 
   // 引导快捷访问
   const hasVisited = computed(() => guide.value.hasVisited)
@@ -137,62 +143,62 @@ export const useSettingsStore = defineStore('settings', () => {
   // ============ Setter - 隐私标签 ============
 
   const setPrivacy = (data: UserSettingsData) => {
-    _state.value.privacy = { ...data }
+    _privacy.value = { ...data }
   }
 
   const updatePrivacy = (updates: Partial<UserSettingsData>) => {
-    _state.value.privacy = { ..._state.value.privacy, ...updates }
+    _privacy.value = { ..._privacy.value, ...updates }
   }
 
   // ============ Setter - 通知标签 ============
 
   const setNotifications = (data: SubscriptionsData) => {
-    _state.value.notifications = { ...data }
+    _notifications.value = { ...data }
   }
 
   const updateNotifications = (updates: Partial<SubscriptionsData>) => {
-    _state.value.notifications = { ..._state.value.notifications, ...updates }
+    _notifications.value = { ..._notifications.value, ...updates }
   }
 
   // ============ Setter - 外观标签 ============
 
   const setTheme = (value: ThemeMode) => {
-    _state.value.appearance.theme = value
+    _appearance.value.theme = value
   }
 
   const setLanguage = (value: LanguageCode) => {
-    _state.value.appearance.language = value
+    _appearance.value.language = value
   }
 
   const setEnableAnimations = (value: boolean) => {
-    _state.value.appearance.enableAnimations = value
+    _appearance.value.enableAnimations = value
   }
 
   const setCompactMode = (value: boolean) => {
-    _state.value.appearance.compactMode = value
+    _appearance.value.compactMode = value
   }
 
   const setSidebarCollapsed = (value: boolean) => {
-    _state.value.appearance.sidebarCollapsed = value
+    _appearance.value.sidebarCollapsed = value
   }
 
   // ============ Setter - 引导状态 ============
 
   const markVisited = () => {
-    _state.value.guide.hasVisited = true
-    _state.value.guide.lastVisitTime = Date.now()
+    _guide.value.hasVisited = true
+    _guide.value.lastVisitTime = Date.now()
   }
 
   const updateLastVisitTime = () => {
-    _state.value.guide.lastVisitTime = Date.now()
+    _guide.value.lastVisitTime = Date.now()
   }
 
   const setNeverShowLoginPrompt = (value: boolean) => {
-    _state.value.guide.neverShowLoginPrompt = value
+    _guide.value.neverShowLoginPrompt = value
   }
 
   const updateLastLoginPromptTime = () => {
-    _state.value.guide.lastLoginPromptTime = Date.now()
+    _guide.value.lastLoginPromptTime = Date.now()
   }
 
   // ============ 其他 ============
@@ -202,12 +208,29 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   const reset = () => {
-    _state.value = getDefaultState()
+    _privacy.value = { ...DEFAULT_PRIVACY }
+    _notifications.value = { ...DEFAULT_NOTIFICATIONS }
+    _appearance.value = { ...DEFAULT_APPEARANCE }
+    _guide.value = { ...DEFAULT_GUIDE }
+    _remoteLoaded.value = false
+  }
+
+  /**
+   * 仅重置“用户级”设置（多账号切换/锁定时使用）
+   * - 保留设备级外观/引导状态
+   */
+  const resetUserScoped = () => {
+    _privacy.value = { ...DEFAULT_PRIVACY }
+    _notifications.value = { ...DEFAULT_NOTIFICATIONS }
     _remoteLoaded.value = false
   }
 
   return {
-    _state,
+    // 内部状态（用于持久化/调试）
+    _privacy,
+    _notifications,
+    _appearance,
+    _guide,
 
     // Getter - 按标签分类
     privacy,
@@ -254,11 +277,13 @@ export const useSettingsStore = defineStore('settings', () => {
 
     // 其他
     markRemoteLoaded,
-    reset
+    reset,
+    resetUserScoped
   }
 }, {
   persist: {
     key: 'app-settings',
-    pick: ['_state']
+    // 只持久化“设备级”设置，避免多账号串数据
+    pick: ['_appearance', '_guide']
   }
 })

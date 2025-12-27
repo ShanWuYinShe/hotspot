@@ -9,12 +9,8 @@
 use axum::{Extension, Json};
 
 use crate::{
-    dto::{
-        request::MarkAllMessagesReadRequest,
-        response::ApiResponse,
-    },
+    dto::{request::MarkAllMessagesReadRequest, response::ApiResponse},
     error::AppError,
-    services::message_common_service::MessageCommonService,
     state::AppState,
 };
 
@@ -25,8 +21,10 @@ pub async fn mark_all_as_read(
     Extension(user_id): Extension<i64>,
     Json(_req): Json<MarkAllMessagesReadRequest>,
 ) -> Result<Json<ApiResponse<()>>, AppError> {
-    let service = MessageCommonService::new(state.db.clone());
-    service.mark_all_as_read(user_id).await?;
+    state
+        .message_common_service
+        .mark_all_as_read(user_id)
+        .await?;
 
     Ok(Json(ApiResponse::success_empty()))
 }

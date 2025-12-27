@@ -2,13 +2,14 @@
   <div class="w-full">
     <!-- 评论统计 -->
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-lg font-semibold">
-        评论 <span class="text-secondary-content">({{ totalCount }})</span>
-      </h3>
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="text-lg font-semibold truncate">评论</span>
+        <UBadge color="neutral" variant="soft" size="xs">{{ totalCount }}</UBadge>
+      </div>
       <UButton
         variant="ghost"
         size="sm"
-        icon="i-heroicons-arrow-path"
+        icon="i-lucide-refresh-cw"
         @click="refresh"
         :loading="loading"
       >
@@ -28,16 +29,22 @@
     <!-- 评论列表 -->
     <div class="mt-6 space-y-4">
       <!-- 加载状态 -->
-      <div v-if="loading && comments.length === 0" class="text-center py-8">
-        <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-accent mx-auto" />
-        <p class="text-sm text-secondary-content mt-2">加载中...</p>
-      </div>
+      <UEmpty
+        v-if="loading && comments.length === 0"
+        icon="i-lucide-refresh-cw"
+        title="加载中..."
+        description="请稍候"
+        class="py-8"
+      />
 
       <!-- 空状态 -->
-      <div v-else-if="comments.length === 0" class="text-center py-8">
-        <UIcon name="i-heroicons-chat-bubble-left-ellipsis" class="w-12 h-12 text-muted mx-auto mb-3" />
-        <p class="text-secondary-content text-sm">还没有评论，来抢沙发吧！</p>
-      </div>
+      <UEmpty
+        v-else-if="comments.length === 0"
+        icon="i-lucide-messages-square"
+        title="还没有评论"
+        description="来抢沙发吧！"
+        class="py-8"
+      />
 
       <!-- 评论项 -->
       <CommentItem
@@ -66,7 +73,6 @@
 <script setup lang="ts">
 import type { CommentListItem } from '~/types/api'
 import { useCommentsService } from '~/services/comments.service'
-import { getErrorMessage } from '~/utils/error'
 import CommentItem from './CommentItem.vue'
 import CommentInput from './CommentInput.vue'
 
@@ -77,10 +83,11 @@ interface CommentWithLikeStatus extends CommentListItem {
 
 const props = defineProps<{
   momentId: string
+  initialTotal?: number  // 来自父组件的初始评论总数
 }>()
 
 const commentsService = useCommentsService()
-const toast = useToast()
+const feedback = useFeedbackStore()
 
 // 状态
 const comments = ref<CommentWithLikeStatus[]>([])
@@ -88,9 +95,16 @@ const loading = ref(false)
 const loadingMore = ref(false)
 const hasMore = ref(false)
 const nextCursor = ref<string | undefined>()
-const totalCount = ref(0)
+const totalCount = ref(props.initialTotal || 0)  // 使用 prop 传入的初始值
 const replyTo = ref<CommentWithLikeStatus | undefined>()
 const commentInputRef = ref<InstanceType<typeof CommentInput> | null>(null)
+
+// 监听 initialTotal 的变化
+watch(() => props.initialTotal, (newTotal) => {
+  if (newTotal !== undefined) {
+    totalCount.value = newTotal
+  }
+})
 
 // 加载评论列表
 const loadComments = async () => {
@@ -104,13 +118,10 @@ const loadComments = async () => {
     comments.value = response.items
     hasMore.value = response.pagination.has_more
     nextCursor.value = response.pagination.next_cursor
-    totalCount.value = response.items.length
+    // ❌ 不要使用 items.length 作为总数！这只是当前分页的数量
+    // totalCount 应该由父组件通过 initialTotal prop 传入，或者通过新增/删除评论来增减
   } catch (error: unknown) {
-    toast.add({
-      title: '加载失败',
-      description: getErrorMessage(error, '加载评论失败'),
-      color: 'error'
-    })
+    feedback.error('加载失败', getErrorMessage(error, '加载评论失败'))
   } finally {
     loading.value = false
   }
@@ -132,11 +143,7 @@ const loadMore = async () => {
     hasMore.value = response.pagination.has_more
     nextCursor.value = response.pagination.next_cursor
   } catch (error: unknown) {
-    toast.add({
-      title: '加载失败',
-      description: getErrorMessage(error, '加载更多评论失败'),
-      color: 'error'
-    })
+    feedback.error('加载失败', getErrorMessage(error, '加载更多评论失败'))
   } finally {
     loadingMore.value = false
   }
@@ -154,6 +161,8 @@ const handleCommentSubmit = (newComment: CommentWithLikeStatus) => {
   if (!replyTo.value) {
     comments.value.unshift(newComment)
     totalCount.value++
+    // 发送总数更新事件
+    emit('update:total', totalCount.value)
   } else {
     // 找到被回复的评论，增加回复数
     const parentComment = comments.value.find(c => c.id === replyTo.value!.id)
@@ -176,6 +185,8 @@ const handleReply = (comment: CommentWithLikeStatus) => {
 const handleDelete = (commentId: string) => {
   comments.value = comments.value.filter(c => c.id !== commentId)
   totalCount.value--
+  // 发送总数更新事件
+  emit('update:total', totalCount.value)
 }
 
 // 处理点赞
@@ -192,5 +203,9 @@ onMounted(() => {
 defineExpose({
   refresh
 })
+
+const emit = defineEmits<{
+  (e: 'update:total', count: number): void
+}>()
 </script>
 

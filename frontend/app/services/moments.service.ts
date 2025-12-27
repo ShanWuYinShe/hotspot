@@ -1,31 +1,31 @@
 import { BaseService } from './base.service'
-import { MOMENTS } from '~/config/api'
+import { MOMENTS, USER } from '~/config/api'
 import type {
   PaginatedData,
   MomentSearchItem,
   CreateMomentRequest,
   CreateMomentData,
-  EditMomentRequest,
+  UpdateMomentRequest,
   FavoriteMomentRequest,
   UnfavoriteMomentRequest,
-  GetFavoritesRequest,
+  MyFavoritesRequest,
   SearchMomentsByKeywordRequest,
   SearchMomentsByTagRequest,
   SearchMomentsByLocationRequest,
-  GetUserMomentsRequest,
-  GetMyMomentsRequest,
+  UserMomentsRequest,
+  MyMomentsRequest,
   MomentOpenTheDoorRequest,
   DeleteMomentRequest,
   LikeMomentRequest,
   UnlikeMomentRequest,
-  CheckMomentLikedRequest,
+  CheckLikedRequest,
   CheckLikedData,
-  CheckMomentFavoritedRequest,
+  CheckFavoritedRequest,
   CheckFavoritedData,
-  GetMomentLikesRequest,
+  MomentLikesRequest,
   MomentLikeItem,
   CommentListItem,
-  GetCommentsRequest
+  MomentCommentsRequest
 } from '~/types/api'
 
 class MomentsService extends BaseService {
@@ -43,17 +43,17 @@ class MomentsService extends BaseService {
     return this.publicPost<PaginatedData<MomentSearchItem>>(MOMENTS.SEARCH_BY_LOCATION, request)
   }
 
-  async getComments(request: GetCommentsRequest) {
-    return this.publicPost<PaginatedData<CommentListItem>>(MOMENTS.GET_COMMENTS_LIST, request)
+  async getComments(request: MomentCommentsRequest) {
+    return this.publicPost<PaginatedData<CommentListItem>>(MOMENTS.COMMENTS, request)
   }
 
   // 获取指定用户瞬间列表（公开 API）
-  async getUserMoments(request: GetUserMomentsRequest) {
-    return this.publicPost<PaginatedData<MomentSearchItem>>(MOMENTS.GET_USER_MOMENTS_LIST, request)
+  async getUserMoments(request: UserMomentsRequest) {
+    return this.publicPost<PaginatedData<MomentSearchItem>>(USER.MOMENTS, request)
   }
 
-  async getLikes(request: GetMomentLikesRequest) {
-    return this.publicPost<PaginatedData<MomentLikeItem>>(MOMENTS.GET_LIKES_LIST, request)
+  async getLikes(request: MomentLikesRequest) {
+    return this.publicPost<PaginatedData<MomentLikeItem>>(MOMENTS.LIKES, request)
   }
 
   // 获取瞬间详情（通过 ID 获取指定瞬间的详情）
@@ -67,7 +67,7 @@ class MomentsService extends BaseService {
     return this.post<CreateMomentData>(MOMENTS.CREATE, request)
   }
 
-  async update(request: EditMomentRequest) {
+  async update(request: UpdateMomentRequest) {
     return this.post<void>(MOMENTS.UPDATE, request)
   }
 
@@ -76,36 +76,36 @@ class MomentsService extends BaseService {
   }
 
   async likeMoment(request: LikeMomentRequest) {
-    return this.post<void>(MOMENTS.LIKE_MOMENT, request)
+    return this.post<void>(MOMENTS.LIKE, request)
   }
 
   async unlikeMoment(request: UnlikeMomentRequest) {
-    return this.post<void>(MOMENTS.UNLIKE_MOMENT, request)
+    return this.post<void>(MOMENTS.UNLIKE, request)
   }
 
   async favoriteMoment(request: FavoriteMomentRequest) {
-    return this.post<void>(MOMENTS.FAVORITE_MOMENT, request)
+    return this.post<void>(MOMENTS.FAVORITE, request)
   }
 
   async unfavoriteMoment(request: UnfavoriteMomentRequest) {
-    return this.post<void>(MOMENTS.UNFAVORITE_MOMENT, request)
+    return this.post<void>(MOMENTS.UNFAVORITE, request)
   }
 
-  async checkLiked(request: CheckMomentLikedRequest) {
-    return this.post<CheckLikedData>(MOMENTS.CHECK_LIKED, request)
+  async checkLiked(request: CheckLikedRequest) {
+    return this.post<CheckLikedData>(MOMENTS.LIKED, request)
   }
 
-  async checkFavorited(request: CheckMomentFavoritedRequest) {
-    return this.post<CheckFavoritedData>(MOMENTS.CHECK_FAVORITED, request)
+  async checkFavorited(request: CheckFavoritedRequest) {
+    return this.post<CheckFavoritedData>(MOMENTS.FAVORITED, request)
   }
 
   // 获取当前用户瞬间列表（/me/ API）
-  async getMyMoments(request: GetMyMomentsRequest) {
-    return this.post<PaginatedData<MomentSearchItem>>(MOMENTS.GET_MY_LIST, request)
+  async getMyMoments(request: MyMomentsRequest) {
+    return this.post<PaginatedData<MomentSearchItem>>(MOMENTS.MY, request)
   }
 
-  async getFavorites(request: GetFavoritesRequest) {
-    return this.post<PaginatedData<MomentSearchItem>>(MOMENTS.GET_FAVORITES_LIST, request)
+  async getFavorites(request: MyFavoritesRequest) {
+    return this.post<PaginatedData<MomentSearchItem>>(MOMENTS.MY_FAVORITES, request)
   }
 }
 

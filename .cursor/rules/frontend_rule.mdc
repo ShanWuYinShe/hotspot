@@ -1,260 +1,143 @@
 ---
-description: 前端项目的rule文件，包含了AI Agent给前端项目生成代码时必须遵循的规范。
-alwaysApply: false
----
-# HotSpot 项目前端开发规范
-
-> **规范定位**：前端代码实现的技术规范，AI Agent 生成代码时必须遵循。
-
-## ⚠️ 重要说明
-
-- **@api_spec.mdc**: API 规范的唯一权威来源（端点、类型、事件、错误码）
-- **@frontend_rule.mdc**（本文档）: 前端代码生成规则
-- **@frontend_doc.mdc**: 前端需求和功能定义
-- **遇到冲突时，以 @api_spec.mdc 为准**
-
+description: Frontend (Nuxt) AI code generation rules
+globs: frontend/**
 ---
 
-## 1. 类型定义规范
+# Frontend Development Rules
 
-- 所有类型定义必须从 `@api_spec.mdc` 文档同步
-- 类型名称、字段名称和类型必须与后端定义完全匹配
-- 请求类型：`XxxRequest`，响应类型：`XxxResponse`
-- 严禁使用不符合命名规范的类型（如 `User`、`Group`）
+## 0. 范围与权威来源（强制）
 
-### 数据类型映射
-| 类型 | TypeScript |
-|------|------------|
-| 业务ID | `string` |
-| 计数统计 | `number` |
-| 地理坐标 | `number` |
-| 时间戳 | `string`（ISO 8601，UTC） |
-| 用户类型 | `'temp' \| 'normal' \| 'admin' \| 'system'` |
+- **API 规范唯一权威**：所有端点/字段/错误码/WebSocket 事件以 `@api_spec.mdc` 为准。
+- **本文件只约束 AI 生成代码的规则**：不写“产品功能清单”（那属于 `frontend_doc.mdc`）。
+- **禁止硬编码端点**：只能从 `frontend/app/config/api.ts` 引用路径常量。
 
-### 类型文件组织
-- `types/api.ts` - API请求响应类型
-- `types/client.ts` - 业务实体类型
-- `types/websocket.ts` - WebSocket消息类型
+## 1. 核心开发原则与流程（强制）
+
+### 技术栈 (Tech Stack)
+- **Framework**: Nuxt v4
+- **UI Component Library**: Nuxt UI v4
+- **Core Library**: Vue 3
+- **State Management**: Pinia
+
+### 技术选型优先权
+- **Nuxt UI v4 优先**: 构建 UI 时，**必须**优先使用 Nuxt UI v4 提供的组件。
+- **避免原生 HTML**: 严禁在已有现成组件（如 `UButton`, `UCard`, `UInput`）的情况下使用原生 HTML 元素（如 `button`, `div.card`, `input`）。
+- **Nuxt v4 特性优先**: 使用最新特性（Server Functions, Data Fetching）。
+
+### 开发前置流程
+- **MCP 查询机制**: 编写 UI 代码前，先查询文档确认组件属性。
+- **避免臆造**: 严禁臆造组件名或属性。
 
 ---
 
-## 2. 依赖管理规范
+## 2. 样式管理规范：严格的分层体系（强制）
 
-- **禁止直接修改 package.json**，必须使用 `pnpm add/remove` 命令
-- 使用 Nuxt v4 和 Nuxt UI v4 的功能前，先联网搜索确认
-- 引入新依赖前，确认是否仍在维护、是否有安全问题
+### 总体哲学
+**"Vue 文件只负责排版，Config 负责颜值，CSS 负责补位"**
 
----
+### Level 1: 组件视觉核心 (`@frontend/app/app.config.ts`)
+- **唯一真理**: 所有 Nuxt UI 组件的**颜色 (Colors)**、**圆角 (Rounding)**、**阴影 (Shadows)**、**边框 (Borders)**、**交互状态 (Hover/Focus)** 必须在此文件中统一定义。
+- **配置原则**: 修改此文件前，**必须查阅 [Nuxt UI 官方文档](https://ui.nuxt.com)**，确保修改的 `slots`, `variants` 等配置项是该组件确实支持的。**严禁臆造配置项**。
+- **零 class 原则**: 在 Vue 文件中使用 Nuxt UI 组件时，**严禁**添加任何涉及视觉风格的 utility class（如 `bg-blue-500`, `rounded-lg`, `shadow-md`, `text-white`）。组件应该仅仅通过其 Props（`variant`, `size`, `color`）就能呈现完美效果。
+- **禁止“CSS 覆盖组件皮肤”**：严禁在 `base.css` 里用选择器去覆盖 Nuxt UI 组件内部结构/slot（例如 `.ui-*`、`[data-slot=...]`、`[data-state=...]` 等）。如果需要统一组件观感，只能通过 `app.config.ts` 的 `ui.*` 配置完成。
 
-## 3. Nuxt UI v4 规范
+### Level 2: 非组件样式与原子功能 (`@frontend/app/assets/styles/base.css`)
+- **非 Nuxt UI 元素**: 对于必须使用的原生 HTML 元素（如地图 SDK DOM、图表 SVG），如果涉及视觉样式（颜色、背景），必须使用在此文件中定义的 `@utility` 类。
+- **@utility 规范**: 所有自定义类**必须**使用 `@utility` 指令定义，并以 `hs-` (HotSpot) 开头，例如 `@utility hs-map-frame { ... }`。
+- **特殊效果**: 定义无法通过 Config 实现的复杂动画 (`keyframes` via `@theme`) 或特殊视觉效果。
+- **保持精简**：只包含真正被引用的样式，一旦组件化或被 Config 覆盖即删除。
 
-### MCP 服务器（优先使用）
-- 已配置 `https://ui.nuxt.com/mcp`
-- 使用 Nuxt UI 组件前，优先通过 MCP 获取最新 API
-- MCP 不可用时，查阅 `https://ui.nuxt.com/`
+### Level 3: 布局与尺寸 (Vue Components)
+- **职责限制**: Vue 文件中的 `class` 属性**只能**包含以下类别的 Tailwind 工具类：
+    1.  **Layout (布局)**: `flex`, `grid`, `absolute`, `relative`, `hidden`, `block`, `items-center`, `justify-between` 等。
+    2.  **Sizing (尺寸)**: `w-full`, `h-64`, `min-w-0`, `max-w-md`, `shrink-0` 等。
+    3.  **Spacing (间距)**: `m-4`, `p-6`, `gap-4`, `space-y-2` 等。
+    4.  **Z-Index (层级)**: `z-10`, `z-50`。
+    5.  **Cursor (光标)**: `cursor-pointer` (仅当组件自身不支持通过 prop 设置时)。
+- **严禁行为**:
+    - ❌ `<UButton class="bg-blue-500 text-white">` (颜色/背景禁止)
+    - ❌ `<UCard class="rounded-xl shadow-sm">` (形状/阴影禁止)
+    - ❌ `<div class="text-gray-500 text-sm">` (原生元素的颜色禁止，应使用 `UBadge` 或 `base.css` 中的 `hs-` 类)
+    - ❌ `<style>` 标签禁止出现在 Vue 文件中。
 
-### 颜色使用（强制）
-使用 Nuxt UI 内置语义化类，自动适配暗色模式：
-
-| 类型 | 推荐 | 禁止 |
-|------|------|------|
-| 文字 | `text-default/muted/dimmed/highlighted` | `text-gray-600 dark:text-gray-400` |
-| 背景 | `bg-default/muted/elevated/accented` | `bg-white dark:bg-slate-800` |
-| 边框 | `border-default/muted/accented` | `border-neutral-200 dark:border-neutral-700` |
-| 状态 | `text-error/success/warning/info` | 手动指定颜色 |
-
-### 组件导入
-- Nuxt UI v4 组件自动导入，无需手动 import
-- 使用 @nuxt/icon@2.0.0，支持 Heroicons 和 Lucide
-
----
-
-## 4. Modal 管理规范（强制）
-
-### 核心规则
-- **所有 Modal 必须通过 `useOverlay` 管理**
-- **禁止在页面模板中直接使用 `<UModal>`、`<USlideover>`**
-- **每个 Modal 必须是独立的 `.vue` 文件，放在 `components/modals/` 目录**
-- **所有 Modal 调用必须通过 `composables/useModal.ts` 统一管理**
-
-### Modal 组件要求
-- 参考 https://ui.nuxt.com/docs/components/modal 实现
-- 确保充分利用nuxt ui 给Modal提供的template
-- 确保充分利用nuxt ui 提供的组件
-
-### 禁止的用法
-- 在页面模板中直接使用 `<UModal v-model="isOpen">`
-- 使用 `ref(false)` 控制 Modal 显示
+### Dark Mode & Accessibility
+- **自动化**: 依赖 `app.config.ts` 中的 `dark:` 变体配置，而不是在 Vue 文件中手动写 `dark:bg-xxx`。
 
 ---
 
-## 5. Service 层规范
+## 3. Nuxt UI v4 组件使用规范
 
-### 架构设计
-- 所有 Service 继承 `BaseService`
-- Service 负责 API 调用，不负责状态管理
-- 文件命名：`xxx.service.ts`
+### 组件替代映射
+- `UButtonGroup` -> `UFieldGroup` (或 Flex 布局)
+- `USelect` -> `USlider` (范围) 或 `USelectMenu`
+- 面包屑 -> `UBreadcrumb`
+- 空状态 -> `UEmpty` (必须闭合标签)
 
-### BaseService 方法
-| 方法 | 用途 | 认证 |
-|------|------|------|
-| `post()` | 需要认证的请求 | ✅ |
-| `publicPost()` | 公开请求 | ❌ |
-| `paginate()` | 分页查询 | ✅ |
-| `upload()` | 单文件上传 | ✅ |
-| `uploadMultiple()` | 多文件上传 | ✅ |
+### Modal/Slideover 管理
+- **必须**通过 `composables/useModal.ts` 管理，使用 `useOverlay` 实现。
+- **禁止**在 template 中直接编写 `<UModal>`。
 
 ---
 
-## 6. HTTP 客户端规范
+## 4. 目录与架构
 
-### useHttp 链式调用
-- 需要认证的请求必须调用 `.auth()`
-- 支持 `.timeout(ms)`、`.retry(n)` 配置
-- `response.data` 直接返回业务数据（已解包 ApiResponse）
+### Service 层
+- 继承 `BaseService`，单例导出。
+- 只负责数据交互，不负责 UI 逻辑。
 
----
+### Store 层
+- 使用 `defineStore` 和 Composition API。
+- 持久化 Store 必须在组件中使用 `useHydratedStore` 访问以避免水合不匹配。
 
-## 7. 格式化函数规范（强制）
+### 消息发送流程（强制）
+- **API 仅负责发送**: 调用发送消息 API (`send`) 时，**严禁**直接将消息添加到本地 Store 或 UI 列表。
+- **WebSocket 负责接收**: 必须监听 WebSocket 的 `ChatMessageNew` 事件，收到推送后才构造消息对象并添加到 Store。
+- **一致性保证**: 这种模式确保了前端显示的消息（包括媒体 URL、时间戳、ID）与服务端数据库完全一致，避免了乐观更新导致的数据不一致问题。
 
-### 核心规则
-- **严禁在 Vue 文件中定义 `format*` 函数**
-- **所有格式化需求必须通过 `useFormatters()` composable**
-- 业务逻辑函数使用 `display`/`transform`/`process` 前缀
-
-### useFormatters 方法
-| 方法 | 用途 |
-|------|------|
-| `formatTime()` | 相对时间（刚刚、5分钟前） |
-| `formatDistance()` | 距离（500米、1.5公里） |
-| `formatDate()` | 日期格式化 |
-| `formatCount()` | 数量（1.2万、1亿） |
-| `formatFileSize()` | 文件大小（1.5 MB） |
+### 目录结构
+- `app/components`: UI 组件
+- `app/pages`: 页面
+- `app/layouts`: 布局
+- `app/config`: 配置文件
+- `app/assets/styles`: 全局样式
 
 ---
 
-## 8. Store 状态管理规范（强制）
+## 5. 代码质量
 
-### Store 职责划分
-| 应该做 | 不应该做 |
-|--------|----------|
-| 纯粹的状态存储 | API 调用 |
-| 持久化配置 | 业务逻辑 |
-| 计算属性 | 错误处理 |
-| setter/getter | 异步数据获取 |
-
-### 水合安全实现（持久化 Store 强制）
-- 定义 `DEFAULT_STATE` 常量
-- 使用 `_state` 和 `_hydrated` 内部 ref
-- 客户端通过 `onNuxtReady` 标记水合完成
-- Getter 在水合前返回默认值，水合后返回实际值
-- `persist.pick` 只包含内部状态（如 `['_state']`）
-
-### Store 分类
-| Store | 持久化 | 需要水合安全 |
-|-------|--------|--------------|
-| auth.store.ts | ✅ | ✅ |
-| settings.store.ts | ✅ | ✅ |
-| groups.store.ts（preferences） | ✅ | ✅ |
-| location.store.ts | ❌ | ❌ |
-| messages.store.ts | ❌ | ❌ |
-| moments.store.ts | ❌ | ❌ |
+- **类型安全**: 严禁 `any`。
+- **零 Linter 错误**: 保持代码整洁。
+- **Geo 数据访问**: 使用可选链 `user.geo?.distance`，严禁直接访问。
 
 ---
 
-## 9. 认证检查规范
+## 6. API / WebSocket / 数据语义（强制）
 
-- 执行需要登录的操作前，使用 `useRequireAuth().requireAuth('操作名')` 检查
-- 未登录会弹出登录引导，返回 `false`
-- 适用场景：点赞、评论、发送消息、关注、发布动态、加入群组
+### 6.1 HTTP 与业务成功判定
 
----
+- **HTTP status 表达错误大类**（401/403/404/409/429/5xx 等），但**业务成功与否仍以 `ApiResponse.code` 为准**（`code === 0` 才是成功）。
+- 失败时优先展示/记录 `message`（如果存在），并按错误码做分流（1101/1102/1106 等）。
 
-## 10. 组件设计规范
+### 6.2 时间与时区
 
-### 拆分原则
-| 拆分 | 不拆分 |
-|------|--------|
-| 被3+处使用 | 单次使用 |
-| 逻辑复杂 | 简单逻辑 |
-| 功能独立 | 强耦合 |
+- 服务端所有时间字段是 **UTC ISO 8601 string**；前端展示时转成本地时区。
+- 前端向后端传时间字段也必须是 UTC ISO 8601 string。
 
-### 组件分类目录
-- `components/modals/` - Modal 组件
-- `components/cards/` - 卡片组件
-- `components/forms/` - 表单组件
-- `components/data/` - 数据展示组件
-- `components/layout/` - 布局组件
-- `components/common/` - 通用组件
+### 6.3 ID 类型
 
----
+- `user_id`：**number**
+- 其他业务 ID（moment_id、group_chat_id、message_id、comment_id、private_chat_id 等）：**string（UUID）**
 
-## 11. 密码安全规范
+### 6.4 分页（cursor）
 
-- 客户端使用 SHA-256 哈希密码后再发送
-- 使用 `utils/password.ts` 中的 `hashPassword()` 函数
-- 传输必须使用 HTTPS
-- 前端不存储明文密码
+- cursor 是不透明字符串：只透传 `next_cursor`；禁止解析、拼装、或在前端生成 cursor。
 
----
+### 6.5 消息一致性（再次强调）
 
-## 12. 命名规范
+- UI 展示的消息以 WebSocket 推送为准；发送消息接口的返回只用于“发送成功/失败”和必要的本地状态更新（如清空输入框）。
 
-### 文件命名
-| 类型 | 命名规则 | 示例 |
-|------|----------|------|
-| 组件 | PascalCase | `UserProfile.vue` |
-| Store | kebab-case + `.store` | `auth.store.ts` |
-| Service | kebab-case + `.service` | `users.service.ts` |
-| Composable | camelCase + `use` | `useModal.ts` |
-| 类型文件 | kebab-case | `api.ts` |
+### 6.6 地理数据与距离口径（强制）
 
-- 路由命名：kebab-case（如 `user-profile`）
-- 组件名应为多个单词（避免与 HTML 元素冲突）
-
----
-
-## 13. Nuxt 文件规范
-
-### 环境后缀适用目录
-仅允许在以下目录使用 `.client.ts`/`.server.ts` 后缀：
-- `pages/`、`layouts/`、`middleware/`、`plugins/`、`composables/`、`components/`
-
-**禁止**在 `utils/`、`services/`、`stores/` 使用环境后缀。
-
-### 环境检查规范
-- 禁止使用 `process.client` 检查
-- 使用文件后缀（`.client.ts`）或 `onMounted` 处理客户端逻辑
-
----
-
-## 14. 错误处理规范
-
-- 使用 `utils/error.ts` 中的工具函数：`getErrorMessage()`、`isBusinessError()`、`getBusinessErrorCode()`
-- Toast 颜色：成功 `success`、错误 `error`、警告 `warning`、信息 `info`
-
----
-
-## 15. 响应式设计规范
-
-- 使用 Tailwind CSS 响应式类，禁止 JavaScript 检测
-- 断点：`sm:`(640px)、`md:`(768px)、`lg:`(1024px)、`xl:`(1280px)、`2xl:`(1536px)
-- 禁止使用 `v-if="isMobile"` 这类运行时检测
-
----
-
-## 16. WebSocket/速率限制规范
-
-> 详细规范见 `@api_spec.mdc` WebSocket实时事件定义、速率限制与配额管理、幂等性设计
-
-- **WebSocket**：心跳45秒/次，重连使用指数退避（1s→30s）
-- **幂等性**：服务端自动控制，客户端直接发送请求即可
-- **速率限制**：检测 code 1400，实现请求节流
-
----
-
-## 17. 代码质量要求
-
-- 确保 `pnpm run build` 无错误
-- TypeScript 类型检查通过
-- 避免使用 `any` 类型
+- **禁止客户端计算距离/角度**：严禁在前端实现 Haversine、地球半径常量、弧度换算等“从经纬度推导距离/角度”的逻辑。
+- **距离/角度只能来自后端**：列表/详情展示的 `distance/degrees` 必须使用后端返回的 `GeoData.distance` / `GeoData.degrees`。
+- **筛选与范围查询交给后端**：需要“半径/范围”筛选时，只传 `radius` 给后端（`search_by_location` / feed 等），前端不做本地距离过滤。

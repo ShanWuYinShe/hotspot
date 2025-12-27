@@ -15,16 +15,15 @@
                             :alt="user?.nickname"
                             :src="avatarPreview || user?.avatar_url"
                             size="3xl"
-                            class="border-4 border-default"
                         >
                             {{ user?.nickname?.charAt(0) || "U" }}
                         </UAvatar>
 
                         <!-- 上传按钮覆盖层 -->
                         <div
-                            class="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+                            class="hs-avatar-upload-overlay"
                         >
-                            <UIcon name="i-heroicons-camera" class="icon-lg text-white" />
+                            <UIcon name="i-lucide-camera" :size="24" />
                         </div>
                     </div>
                 </UFileUpload>
@@ -35,7 +34,7 @@
         <UFileUpload
             v-model="selectedFile"
             accept="image/*"
-            icon="i-heroicons-photo"
+            icon="i-lucide-image"
             label="点击选择或拖拽图片到这里"
             description="仅支持图片，最大 2MB"
             class="w-full max-w-xs min-h-32"
@@ -52,8 +51,12 @@
                 @update:model-value="handleFileSelected"
             >
                 <UTooltip text="从本地选择图片文件">
-                    <UButton variant="outline" size="sm" :disabled="uploading" @click="open()">
-                        <UIcon name="i-heroicons-photo" class="icon-sm mr-2" />
+                    <UButton
+                        variant="outline"
+                        :disabled="uploading"
+                        leading-icon="i-lucide-image"
+                        @click="open()"
+                    >
                         选择图片
                     </UButton>
                 </UTooltip>
@@ -62,26 +65,28 @@
             <UTooltip v-if="selectedFile" text="上传并设置为头像">
                 <UButton
                     color="primary"
-                    size="sm"
                     :loading="uploading"
+                    leading-icon="i-lucide-cloud-upload"
                     @click="uploadAvatar"
                 >
-                    <UIcon name="i-heroicons-cloud-arrow-up" class="icon-sm mr-2" />
                     上传头像
                 </UButton>
             </UTooltip>
         </div>
 
         <!-- 上传提示 -->
-        <p class="text-sm text-secondary-content text-center">
-            支持 JPG、PNG 格式，文件大小不超过 2MB
-        </p>
+        <UAlert
+            color="neutral"
+            variant="soft"
+            icon="i-lucide-info"
+            title="支持 JPG、PNG 格式"
+            description="文件大小不超过 2MB"
+        />
     </div>
 </template>
 
 <script setup lang="ts">
 import { useUploadService } from '~/services/upload.service'
-import { getErrorMessage } from '~/utils/error'
 
 interface Props {
     user?: {
@@ -95,7 +100,7 @@ const emit = defineEmits<{
     uploaded: [fileId: string];
 }>();
 
-const toast = useToast()
+const feedback = useFeedbackStore()
 const selectedFile = ref<File | null>(null);
 const avatarPreview = ref<string>("");
 const uploading = ref(false);
@@ -110,21 +115,13 @@ const handleFileSelected = (file: File | null | undefined) => {
 const processFile = (file: File) => {
     // 验证文件类型
     if (!file.type.startsWith("image/")) {
-        toast.add({
-            title: "文件格式错误",
-            description: "请选择图片文件",
-            color: "error",
-        });
+        feedback.error("文件格式错误", "请选择图片文件")
         selectedFile.value = null;
         return;
     }
     // 验证文件大小 (2MB)
     if (file.size > 2 * 1024 * 1024) {
-        toast.add({
-            title: "文件太大",
-            description: "图片大小不能超过 2MB",
-            color: "error",
-        });
+        feedback.error("文件太大", "图片大小不能超过 2MB")
         selectedFile.value = null;
         return;
     }
@@ -150,31 +147,19 @@ const uploadAvatar = async () => {
         try {
             const response = await uploadService.uploadFile(selectedFile.value, 'avatar');
             
-            toast.add({
-                title: "头像上传成功",
-                description: "您的头像已更新",
-                color: "success",
-            });
+            feedback.success("头像上传成功", "您的头像已更新")
 
             // 发送上传成功事件（本地预览已在选择文件时生成）
             emit("uploaded", response.file_id);
         } catch (error: unknown) {
-            toast.add({
-                title: "头像上传失败",
-                description: getErrorMessage(error, "请稍后重试"),
-                color: "error",
-            });
+            feedback.error("头像上传失败", getErrorMessage(error, "请稍后重试"))
             throw error;
         }
 
         // 清理状态
         selectedFile.value = null;
     } catch (error: unknown) {
-        toast.add({
-            title: "上传失败",
-            description: getErrorMessage(error, "请稍后重试"),
-            color: "error",
-        });
+        feedback.error("上传失败", getErrorMessage(error, "请稍后重试"))
     } finally {
         uploading.value = false;
     }

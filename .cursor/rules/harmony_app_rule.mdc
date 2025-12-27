@@ -1,5 +1,5 @@
 ---
-description: HotSpot HarmonyOS 应用开发规范，专注于ArkTS/HarmonyOS代码实现、系统服务集成、组件使用等具体技术约束，用于指导HarmonyOS应用代码生成和开发工作。
+globs: harmonyapp/**
 alwaysApply: false
 ---
 # HotSpot HarmonyOS 应用开发规范
@@ -28,6 +28,11 @@ alwaysApply: false
 
 ## 1. 核心开发约束
 
+### 1.0 doc/rule 职责分离（强制）
+
+- `harmony_app_doc.mdc`：描述产品功能与页面，不写实现细节。
+- `harmony_app_rule.mdc`（本文）：限制 AI 生成代码必须遵守的实现规则与禁忌清单。
+
 ### 1.1 官方文档优先原则（强制）
 
 **核心原则**：
@@ -55,11 +60,10 @@ alwaysApply: false
 - **对象字面量优先**：直接使用对象字面量，而不是先声明类型再赋值
 - **类型推断优先**：让 TypeScript 自动推断类型，减少冗余的类型注解
 
-**类型使用要点**：
-- 函数参数和返回值需要明确类型注解
-- 复杂对象结构可以定义接口，但使用时无需显式声明
-- API 调用时直接传入符合结构的对象
-- 避免不必要的类型断言和显式类型声明
+**API 类型一致性（Strict Consistency）**：
+- **类型定义映射**：ArkTS 中的接口定义必须与 `@api_spec.mdc` 中的定义**严格一致**（字段名、类型、可选性）。
+- **禁止 `any`**：严禁在 API 数据处理中使用 `any` 类型。必须定义完整的 Interface。
+- **空值处理**：必须正确处理 API 返回的 `null` 或 `undefined` 值，使用 Optional Chaining (`?.`) 和 Nullish Coalescing (`??`)。
 
 ### 1.3 编译质量要求（强制）
 
@@ -82,20 +86,85 @@ alwaysApply: false
 - 不更改已有的API调用方式
 - 不替换已有的正确实现
 
+## 2. UI 设计与体验规范（Premium Design）
+
+### 2.1 设计常量与组件系统（强制）
+
+**DesignConstants 使用规范**：
+- **严禁硬编码**：禁止在页面和组件中直接写死颜色值（Hex/RGB）、字号（Number）、圆角、间距等。
+- **统一引用**：必须使用 `DesignConstants` 常量（`COLOR`, `FONT`, `SPACING`, `RADIUS`, `SHADOW`）。
+
+**System 组件使用规范**：
+必须优先使用以下封装好的系统组件，以保证全应用的一致性：
+- `SystemCard`: 替代普通的 `Column`/`Row` 用于内容容器，提供统一的圆角、背景和交互效果。
+- `SystemAvatar`: 替代 `Image` 用于显示头像，提供统一的在线状态、徽章和占位符逻辑。
+- `SystemIcon` / `IconButton`: 替代 `Image` 用于图标，提供统一的着色和点击区域。
+- `SystemLoadingView`: 替代自定义的 Loading 布局。
+- `SystemToast`: 替代 `promptAction.showToast`，提供统一的样式。
+
 **示例**：
 ```typescript
-// ❌ 错误的修复方式 - 重写了整个功能
-// 原代码：使用正确的 picker API
-// 修复时：重写成可能错误的实现
+// ✅ 正确
+import { DesignConstants } from '../constants/DesignConstants';
+import { SystemCard } from '../components/SystemCard';
 
-// ✅ 正确的修复方式 - 只修复类型错误
-// 原代码：Color.Transparent
-// 修复：'#00000000'  // 只修改类型问题，不改变功能
+@Component
+struct MyPage {
+  build() {
+    Column() {
+      SystemCard({
+        content: () => { this.buildContent() },
+        backgroundColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT
+      })
+    }
+    .backgroundColor(DesignConstants.COLOR.SECONDARY_BG_LIGHT)
+  }
+}
+
+// ❌ 错误
+@Component
+struct MyPage {
+  build() {
+    Column() {
+      Column() { // 未使用 SystemCard
+        // ...
+      }
+      .backgroundColor('#FFFFFF') // 硬编码颜色
+      .borderRadius(16) // 硬编码圆角
+    }
+    .backgroundColor('#F5F5F5') // 硬编码颜色
+  }
+}
 ```
 
-## 2. 路由导航规范
+### 2.2 视觉风格 (Apple-Style / HarmonyOS Next Pure)
 
-### 2.1 Router API 废弃处理（强制）
+**核心视觉风格**：
+- **大标题（Large Titles）**：页面顶部使用大字号标题，随着滚动过渡到导航栏小标题。
+- **圆角卡片（Rounded Cards）**：内容区域使用统一的圆角（推荐 16vp 或 24vp），卡片间距统一。
+- **毛玻璃效果（Blur / Glassmorphism）**：在导航栏、底部 Tab 栏、弹窗背景使用 `BlurEffect` 或 `BackgroundBlurStyle`。
+- **高品质图标**：使用系统提供的 `sys.media` 矢量图标或高品质 SVG 图标，避免低分辨率位图。
+
+**交互体验**：
+- **触觉反馈（Haptic Feedback）**：在关键操作（点赞、下拉刷新成功、长按菜单）时触发系统触觉反馈。
+- **流畅动画（Fluid Animations）**：
+  - 页面跳转使用共享元素转场（Shared Element Transition）。
+  - 列表项加载使用交错动画（Staggered Animation）。
+  - 状态切换（如点赞）必须有微动效。
+
+### 2.2 组件实现规范
+
+**统一组件库**：
+- 必须优先使用项目封装的通用组件（如 `SystemAvatar`, `SystemIcon`, `SystemToast`），确保全应用风格统一。
+- 禁止直接在页面中写死复杂的样式属性，应抽取为公共样式或组件。
+
+**布局原则**：
+- **安全区域**：必须处理刘海屏、挖孔屏的安全区域（`expandSafeArea`）。
+- **沉浸式体验**：状态栏和导航栏背景透明或毛玻璃化，内容延伸至边缘。
+
+## 3. 路由导航规范
+
+### 3.1 Router API 废弃处理（强制）
 
 **禁用废弃API**：
 - 完全禁止使用 `@ohos.router` 模块的静态方法
@@ -192,65 +261,29 @@ routerInstance.clear();
 await routerInstance.pushUrl({ url: 'pages/HomePage' });
 ```
 
-## 3. 密码安全处理规范
+## 4. 密码安全处理规范
 
 ⚠️ **完整的密码安全策略请参见**: @api_spec.mdc **密码安全策略**
 
-### 3.1 SHA-256哈希计算实现（ArkTS）
+### 4.1 密码传输实现（ArkTS）
 
-**使用HarmonyOS加密框架**：
-```typescript
-import cryptoFramework from '@ohos.security.cryptoFramework';
+**核心原则**：客户端 **不做密码哈希**；密码在 **HTTPS/TLS** 中明文传输；服务端进行慢哈希存储。
 
-class CryptoService {
-  /**
-   * 计算SHA-256哈希
-   * @param input 输入字符串
-   * @returns 十六进制格式的哈希值
-   */
-  async calculateSHA256(input: string): Promise<string> {
-    try {
-      const md = cryptoFramework.createMd('SHA256');
-      await md.update({ data: new Uint8Array(Buffer.from(input, 'utf-8')) });
-      const result = await md.digest();
-      
-      // 转换为十六进制字符串
-      return Array.from(result.data)
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
-    } catch (error) {
-      console.error('SHA-256计算失败:', error);
-      throw error;
-    }
-  }
-  
-  /**
-   * 计算密码哈希（用于API请求）
-   * @param password 用户输入的明文密码
-   * @returns password_hash 值
-   */
-  async calculatePasswordHash(password: string): Promise<string> {
-    return await this.calculateSHA256(password);
-  }
-}
-```
+### 4.2 认证流程实现示例
 
-### 3.2 认证流程实现示例
-
-**核心要点**：所有涉及密码的API（注册、登录、设置密码、重置密码、账户升级）都必须先计算SHA-256哈希。
+**核心要点**：所有涉及密码的API（注册、登录、设置密码、重置密码、账户升级）都直接提交 `password` 字段（依赖 TLS 传输安全）。
 
 **认证服务示例**：
 ```typescript
 class AuthService {
-  private crypto = new CryptoService();
   private http = new HttpService();
   
-  async login(loginId: string, password: string): Promise<AuthData> {
-    const passwordHash = await this.crypto.calculatePasswordHash(password);
-    const loginResponse = await this.http.request<ApiResponse<AuthData>>({
+  // App 场景：响应体包含 refresh_token（opaque string），建议安全存储
+  async login(loginId: string, password: string): Promise<AppAuthData> {
+    const loginResponse = await this.http.request<ApiResponse<AppAuthData>>({
       method: 'POST',
       url: '/api/v1/public/auth/login',
-      data: { login_id: loginId, password_hash: passwordHash }
+      data: { login_id: loginId, password, client_type: 'app' }
     });
     if (loginResponse.code !== 0 || !loginResponse.data) {
       throw new Error(loginResponse.message || '登录失败');
@@ -258,12 +291,11 @@ class AuthService {
     return loginResponse.data;
   }
   
-  async register(loginId: string, nickname: string, password: string): Promise<AuthData> {
-    const passwordHash = await this.crypto.calculatePasswordHash(password);
-    const registerResponse = await this.http.request<ApiResponse<AuthData>>({
+  async register(loginId: string, nickname: string, password: string): Promise<AppAuthData> {
+    const registerResponse = await this.http.request<ApiResponse<AppAuthData>>({
       method: 'POST',
       url: '/api/v1/public/auth/register',
-      data: { login_id: loginId, nickname: nickname, password_hash: passwordHash }
+      data: { login_id: loginId, nickname: nickname, password, client_type: 'app' }
     });
     
     if (registerResponse.code !== 0 || !registerResponse.data) {
@@ -274,23 +306,20 @@ class AuthService {
   }
   
   /**
-   * 设置密码（临时用户升级或修改密码）
+   * 修改密码
    */
-  async setPassword(password: string): Promise<void> {
-    // 1. 计算密码哈希
-    const passwordHash = await this.crypto.calculatePasswordHash(password);
-    
-    // 2. 发送设置密码请求
+  async changePassword(oldPassword: string, newPassword: string): Promise<void> {
     const response = await this.http.request<ApiResponse<void>>({
       method: 'POST',
-      url: '/api/v1/protected/auth/set_password',
+      url: '/api/v1/protected/auth/me/change_password',
       data: {
-        password_hash: passwordHash
+        old_password: oldPassword,
+        new_password: newPassword
       }
     });
     
     if (response.code !== 0) {
-      throw new Error(response.message || '设置密码失败');
+      throw new Error(response.message || '修改密码失败');
     }
   }
   
@@ -298,16 +327,13 @@ class AuthService {
    * 重置密码
    */
   async resetPassword(resetToken: string, newPassword: string): Promise<void> {
-    // 1. 计算密码哈希
-    const passwordHash = await this.crypto.calculatePasswordHash(newPassword);
-    
-    // 2. 发送重置密码请求
+    // 发送重置密码请求
     const response = await this.http.request<ApiResponse<void>>({
       method: 'POST',
       url: '/api/v1/public/auth/reset_password',
       data: {
         reset_token: resetToken,
-        password_hash: passwordHash
+        password: newPassword
       }
     });
     
@@ -320,16 +346,13 @@ class AuthService {
    * 账户升级（临时用户转正式用户）
    */
   async upgradeAccount(loginId: string, password: string): Promise<void> {
-    // 1. 计算密码哈希
-    const passwordHash = await this.crypto.calculatePasswordHash(password);
-    
-    // 2. 发送账户升级请求
+    // 发送账户升级请求
     const response = await this.http.request<ApiResponse<void>>({
       method: 'POST',
-      url: '/api/v1/protected/user/upgrade_account',
+      url: '/api/v1/protected/user/me/upgrade',
       data: {
         login_id: loginId,
-        password_hash: passwordHash
+        password
       }
     });
     
@@ -340,18 +363,16 @@ class AuthService {
 }
 ```
 
-### 3.4 密码处理最佳实践
+### 4.3 密码处理最佳实践
 
 **禁止的操作**：
 - ❌ 存储明文密码（内存、缓存、数据库、日志）
 - ❌ 在日志中打印密码相关信息
 - ❌ 将密码写入临时文件
-- ❌ 使用除SHA-256外的其他哈希算法
-- ❌ 在密码哈希后添加额外处理（如再次哈希、加密等）
+- ❌ 在客户端做“password_hash / SHA256(password)”并把哈希当密码替身发送（可重放风险）
 
 **推荐的操作**：
-- ✅ 用户输入密码后立即计算哈希
-- ✅ 仅将哈希值传递给API
+- ✅ 仅在 HTTPS/TLS 下提交 `password`
 - ✅ 密码输入框使用安全输入类型
 - ✅ 密码输入完成后清空输入框
 - ✅ 使用HTTPS传输所有密码相关请求
@@ -361,16 +382,13 @@ class AuthService {
 // ✅ 正确的密码处理流程
 async function handleLogin(loginId: string, password: string) {
   try {
-    // 1. 立即计算哈希
-    const passwordHash = await cryptoService.calculatePasswordHash(password);
-    
-    // 2. 清空原始密码（可选，通常由作用域自动处理）
+    // 1. 清空原始密码（可选，通常由作用域自动处理）
     // password = '';
     
-    // 3. 使用哈希值进行API调用
-    const authData = await authService.login(loginId, passwordHash);
+    // 2. 使用明文密码（TLS）进行API调用
+    const authData = await authService.login(loginId, password);
     
-    // 4. 存储Token，不存储密码
+    // 3. 存储Token，不存储密码
     await storageService.setToken(authData.access_token);
     
     return authData;
@@ -382,7 +400,7 @@ async function handleLogin(loginId: string, password: string) {
 }
 ```
 
-## 4. 用户类型判断规范
+## 5. 用户类型判断规范
 
 **用户类型标识规范**（遵循 `@api_spec.mdc` 用户类型标识）：
 - 用户类型通过 `user_type` 字段判断（包含在 UserInfo 等响应类型中）
@@ -402,392 +420,43 @@ async function handleLogin(loginId: string, password: string) {
 - 普通用户：正常显示，无特殊标识
 - 系统用户：显示"官方"标识（emphasize 颜色）
 
-## 5. WebSocket通信规范
+## 6. WebSocket通信规范
 
 **WebSocket设计理念**（完全遵循 `@api_spec.mdc` WebSocket实时事件定义）：
 - **核心定位**：WebSocket 是实时数据推送通道，用于服务端主动向客户端推送所有需要实时处理的数据
 - **API + WebSocket 双通道架构**：API负责历史查询，WebSocket负责实时推送
 - **协作流程**：启动时 API 加载历史 → WebSocket 接收实时推送；重连后 API 补拉离线数据
 
-### 5.1 连接与鉴权
+### 6.1 连接与鉴权（强制，确定性）
 
-**连接端点**：`wss://[server]/ws/`
+- **连接端点**：`wss://[server]/ws`
+- **鉴权方式**：握手成功后客户端立即发送 `Auth` 事件（payload 携带 `access_token`，可选 `device_fingerprint`）
+- **状态切换**：收到服务端 `ConnectionEstablished` 后，才认为“已连接可用”（此时才允许发送订阅/已读/typing 等业务事件）
+- **失败处理**：服务端发送 `Error` 后会断开；客户端收到 `Error.code=1101`（token 过期/无效）应先刷新 token 再重连
 
-**鉴权机制**：
-- 采用受保护的 HTTP 登录后，下发 `access_token`
-- WebSocket 连接时通过以下方式之一传递token：
-  - `Sec-WebSocket-Protocol` 子协议头
-  - `Authorization: Bearer <token>` 头
-- Token过期时服务端会主动断开连接，客户端需要刷新token后重连
+### 6.2 心跳与重连（强制）
 
-### 5.2 心跳机制
+- **心跳**：客户端按 `@api_spec.mdc` 的常量发送 `Ping`；收到 `Pong/Heartbeat` 视为连接健康
+- **重连**：按 `@api_spec.mdc` 的指数退避参数实现；重连成功后需要重新鉴权并恢复订阅
 
-**心跳参数**：
-- 客户端每 45秒 发送 `Ping` 事件
-- 服务端在 10秒 内必须回复 `Pong` 事件
-- 如果3次心跳失败，客户端主动断开并重连
-- 服务端如果60秒未收到任何消息，主动断开连接
+### 6.3 订阅管理（强制）
 
-**心跳实现**：
-```typescript
-class HeartbeatManager {
-  private heartbeatTimer: number | null = null;
-  private heartbeatInterval: number = 45000; // 45秒
-  private missedHeartbeats: number = 0;
-  private maxMissedHeartbeats: number = 3;
-  
-  start(wsService: WebSocketService) {
-    this.stop(); // 清除旧的定时器
-    
-    this.heartbeatTimer = setInterval(() => {
-      // 发送 Ping
-      wsService.send({
-        type: 'Ping',
-        payload: {
-          timestamp: new Date().toISOString()
-        }
-      });
-      
-      // 增加未收到回复计数
-      this.missedHeartbeats++;
-      
-      // 检查是否超过最大失败次数
-      if (this.missedHeartbeats >= this.maxMissedHeartbeats) {
-        console.error('心跳失败次数过多，断开连接');
-        wsService.disconnect();
-        this.stop();
-      }
-    }, this.heartbeatInterval);
-  }
-  
-  // 收到 Pong 时重置计数
-  onPong() {
-    this.missedHeartbeats = 0;
-  }
-  
-  stop() {
-    if (this.heartbeatTimer) {
-      clearInterval(this.heartbeatTimer);
-      this.heartbeatTimer = null;
-    }
-    this.missedHeartbeats = 0;
-  }
-}
-```
+- 订阅事件：`Subscribe/Unsubscribe/SetSubscriptions`
+- payload 统一 `{ items: SubscriptionItem[] }`，禁止使用其他结构
 
-### 5.3 重连策略（指数退避算法）
+### 6.4 消息一致性（强制）
 
-**重连参数**：
-```typescript
-const reconnectConfig = {
-  baseDelay: 1000,      // 基础延迟 1秒
-  maxDelay: 30000,      // 最大延迟 30秒
-  maxAttempts: 10,      // 最大重连次数
-  jitterFactor: 0.2     // 随机抖动因子 20%
-};
-```
+- 发送消息后 **不做本地“假消息插入”**；以 WebSocket 的 `ChatMessageNew` 推送为准
 
-**重连实现**：
-```typescript
-class ReconnectManager {
-  private reconnectAttempts: number = 0;
-  private reconnectTimer: number | null = null;
-  
-  calculateDelay(attempt: number): number {
-    // 指数退避：delay = min(baseDelay * 2^attempt, maxDelay)
-    const exponentialDelay = Math.min(
-      reconnectConfig.baseDelay * Math.pow(2, attempt),
-      reconnectConfig.maxDelay
-    );
-    
-    // 添加随机抖动：±20%
-    const jitter = exponentialDelay * reconnectConfig.jitterFactor * (Math.random() * 2 - 1);
-    return Math.max(0, Math.floor(exponentialDelay + jitter));
-  }
-  
-  scheduleReconnect(connectFn: () => void) {
-    if (this.reconnectAttempts >= reconnectConfig.maxAttempts) {
-      console.error('超过最大重连次数，停止重连');
-      return;
-    }
-    
-    const delay = this.calculateDelay(this.reconnectAttempts);
-    console.info(`第 ${this.reconnectAttempts + 1} 次重连，延迟 ${delay}ms`);
-    
-    this.reconnectTimer = setTimeout(() => {
-      this.reconnectAttempts++;
-      connectFn();
-    }, delay);
-  }
-  
-  reset() {
-    this.reconnectAttempts = 0;
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
-  }
-  
-  cancel() {
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
-  }
-}
-```
+## 7. 系统服务集成规范
 
-### 5.4 订阅管理
+### 7.1 位置服务集成
 
-**订阅机制**（完整规范见 `@api_spec.mdc` 客户端发送事件）：
-```typescript
-class SubscriptionManager {
-  private subscribedRooms: Set<string> = new Set();
-  private subscribedUsers: Set<string> = new Set();
-  private subscribedNotifications: Set<string> = new Set();
-  
-  // 1. Subscribe - 增量订阅（追加到现有订阅）
-  subscribeRooms(wsService: WebSocketService, roomIds: string[]) {
-    roomIds.forEach(id => this.subscribedRooms.add(id));
-    wsService.send({
-      type: 'Subscribe',
-      payload: {
-        rooms: roomIds
-      }
-    });
-  }
-  
-  // 订阅用户
-  subscribeUsers(wsService: WebSocketService, userIds: string[]) {
-    userIds.forEach(id => this.subscribedUsers.add(id));
-    wsService.send({
-      type: 'Subscribe',
-      payload: {
-        users: userIds
-      }
-    });
-  }
-  
-  // 订阅通知类型
-  subscribeNotifications(wsService: WebSocketService, types: string[]) {
-    types.forEach(type => this.subscribedNotifications.add(type));
-    wsService.send({
-      type: 'Subscribe',
-      payload: {
-        notifications: types
-      }
-    });
-  }
-  
-  // 2. Unsubscribe - 取消订阅（从现有订阅中移除）
-  unsubscribeRooms(wsService: WebSocketService, roomIds: string[]) {
-    roomIds.forEach(id => this.subscribedRooms.delete(id));
-    wsService.send({
-      type: 'Unsubscribe',
-      payload: {
-        rooms: roomIds
-      }
-    });
-  }
-  
-  // 3. SetSubscriptions - 替换式订阅（覆盖现有订阅）
-  setAllSubscriptions(wsService: WebSocketService) {
-    wsService.send({
-      type: 'SetSubscriptions',
-      payload: {
-        rooms: this.subscribedRooms.size > 0 ? Array.from(this.subscribedRooms) : [],
-        users: this.subscribedUsers.size > 0 ? Array.from(this.subscribedUsers) : [],
-        notifications: this.subscribedNotifications.size > 0 ? Array.from(this.subscribedNotifications) : []
-      }
-    });
-  }
-  
-  // 重新订阅所有（重连后使用 SetSubscriptions）
-  resubscribeAll(wsService: WebSocketService) {
-    this.setAllSubscriptions(wsService);
-  }
-}
-```
+### 7.1.1 地理数据口径（强制）
 
-### 5.5 完整的WebSocket服务实现
-
-**WebSocket服务类**：
-```typescript
-import webSocket from '@ohos.net.webSocket';
-
-class WebSocketService {
-  private ws: webSocket.WebSocket | null = null;
-  private url: string = '';
-  private token: string = '';
-  
-  private heartbeatManager: HeartbeatManager = new HeartbeatManager();
-  private reconnectManager: ReconnectManager = new ReconnectManager();
-  private subscriptionManager: SubscriptionManager = new SubscriptionManager();
-  
-  private messageHandlers: Map<string, (data: any) => void> = new Map();
-  private isConnecting: boolean = false;
-  
-  async connect(url: string, token: string): Promise<void> {
-    if (this.isConnecting) {
-      console.warn('WebSocket正在连接中...');
-      return;
-    }
-    
-    this.url = url;
-    this.token = token;
-    this.isConnecting = true;
-    
-    return new Promise((resolve, reject) => {
-      this.ws = webSocket.createWebSocket();
-      
-      this.ws.on('open', () => {
-        console.info('WebSocket连接已建立');
-        this.isConnecting = false;
-        
-        // 认证
-        this.send({
-          type: 'Auth',
-          payload: { token: this.token }
-        });
-        
-        // 启动心跳
-        this.heartbeatManager.start(this);
-        
-        // 重置重连计数
-        this.reconnectManager.reset();
-        
-        // 重新订阅
-        this.subscriptionManager.resubscribeAll(this);
-        
-        resolve();
-      });
-      
-      this.ws.on('message', (err, value) => {
-        if (!err && typeof value === 'string') {
-          this.handleMessage(value);
-        }
-      });
-      
-      this.ws.on('close', () => {
-        console.info('WebSocket连接已关闭');
-        this.isConnecting = false;
-        this.heartbeatManager.stop();
-        
-        // 尝试重连
-        this.reconnectManager.scheduleReconnect(() => {
-          this.connect(this.url, this.token);
-        });
-      });
-      
-      this.ws.on('error', (err) => {
-        console.error('WebSocket错误:', err);
-        this.isConnecting = false;
-        reject(err);
-      });
-      
-      // 连接到服务器
-      this.ws.connect(url);
-    });
-  }
-  
-  private handleMessage(message: string) {
-    try {
-      const wsEvent = JSON.parse(message);
-      const { type, payload } = wsEvent;
-      
-      // 处理 Pong 消息
-      if (type === 'Pong') {
-        this.heartbeatManager.onPong();
-        return;
-      }
-      
-      // 调用注册的处理器
-      const handler = this.messageHandlers.get(type);
-      if (handler) {
-        handler(payload);
-      } else {
-        console.warn(`未处理的WebSocket消息类型: ${type}`);
-      }
-    } catch (error) {
-      console.error('WebSocket消息解析失败:', error);
-    }
-  }
-  
-  // 注册消息处理器
-  onMessage(type: string, handler: (data: any) => void) {
-    this.messageHandlers.set(type, handler);
-  }
-  
-  // 发送消息
-  send(message: any) {
-    if (this.ws) {
-      this.ws.send(JSON.stringify(message));
-    } else {
-      console.error('WebSocket未连接');
-    }
-  }
-  
-  // 断开连接
-  disconnect() {
-    this.reconnectManager.cancel();
-    this.heartbeatManager.stop();
-    
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
-    }
-  }
-  
-  // 订阅方法
-  subscribeRooms(roomIds: string[]) {
-    this.subscriptionManager.subscribeRooms(this, roomIds);
-  }
-  
-  subscribeUsers(userIds: string[]) {
-    this.subscriptionManager.subscribeUsers(this, userIds);
-  }
-  
-  subscribeNotifications(types: string[]) {
-    this.subscriptionManager.subscribeNotifications(this, types);
-  }
-}
-```
-
-### 5.6 WebSocket消息类型处理
-
-**消息处理器注册示例**：
-```typescript
-const wsService = new WebSocketService();
-
-// 注册各类消息处理器
-wsService.onMessage('ConnectionEstablished', (data) => {
-  console.info('连接已建立:', data);
-});
-
-wsService.onMessage('ChatMessageNew', (data) => {
-  console.info('收到新消息:', data);
-  // 更新UI显示新消息
-});
-
-wsService.onMessage('UserOnline', (data) => {
-  console.info('用户上线:', data);
-  // 更新用户在线状态
-});
-
-wsService.onMessage('UserOffline', (data) => {
-  console.info('用户下线:', data);
-  // 更新用户离线状态
-});
-
-// 更多消息类型处理...
-```
-
-**WebSocket事件类型**：
-完整的WebSocket消息类型定义请参考 `@api_spec.mdc` 服务端推送事件和客户端发送事件。
-
-## 6. 系统服务集成规范
-
-### 6.1 位置服务集成
+- **禁止客户端计算距离/角度**：严禁在 ArkTS 中实现 Haversine、地球半径常量、弧度换算等“从经纬度推导距离/角度”的逻辑。
+- **距离/角度只能来自后端**：UI 展示的距离/角度必须使用后端 `GeoData.distance / GeoData.degrees`，客户端只做格式化展示。
+- **范围筛选交给后端**：需要“附近/半径”筛选时，只将 `radius` 作为请求参数交给后端处理，客户端不做本地距离过滤。
 
 **位置服务实现**：
 ```typescript
@@ -830,7 +499,7 @@ class LocationService {
 }
 ```
 
-### 6.2 存储服务集成
+### 7.2 存储服务集成
 
 **Preferences存储服务**：
 ```typescript
@@ -870,9 +539,9 @@ class StorageService {
 }
 ```
 
-## 7. 错误处理规范
+## 8. 错误处理规范
 
-### 7.1 统一错误处理
+### 8.1 统一错误处理
 
 **错误处理服务**：
 ```typescript
@@ -919,9 +588,9 @@ class ErrorHandler {
 }
 ```
 
-## 8. Context 管理规范（强制）
+## 9. Context 管理规范（强制）
 
-### 8.1 Context 获取原则
+### 9.1 Context 获取原则
 
 **严格的 Context 获取规范**：
 - **@Component 组件专用**：只有使用 `@Component` 装饰器的组件类才能直接调用 `getUIContext().getHostContext()`
@@ -973,7 +642,7 @@ class LocationService {
 }
 ```
 
-### 8.2 Context 传递模式
+### 9.2 Context 传递模式
 
 **推荐的传递模式**：
 1. **方法参数传递**（最推荐）：需要时通过方法参数传递，用完即释放
@@ -983,7 +652,7 @@ class LocationService {
 - 使用静态变量保存 Context（会导致内存泄漏）
 - 在服务类中直接调用 getContext() 等函数
 
-### 8.3 Context 生命周期管理
+### 9.3 Context 生命周期管理
 
 **Context 的正确管理原则**：
 - **按需传递**：需要时通过方法参数传递，用完即释放
@@ -997,9 +666,9 @@ class LocationService {
 - 服务类通过方法参数接收 Context
 - 如需在类中保存 Context，必须提供 cleanup 方法及时清理引用
 
-## 9. 代码质量管控
+## 10. 代码质量管控
 
-### 9.1 代码审查检查点
+### 10.1 代码审查检查点
 
 **必检项目**：
 - [ ] 是否使用了废弃的API（如 @ohos.router）
@@ -1015,7 +684,7 @@ class LocationService {
 - [ ] **是否避免了不必要的显式类型声明**
 - [ ] **是否充分利用了 TypeScript 结构类型检查**
 
-### 9.2 性能优化要求
+### 10.2 性能优化要求
 
 **关键性能指标**：
 - 页面加载时间 < 3秒
@@ -1023,110 +692,40 @@ class LocationService {
 - 列表滚动流畅度 > 60fps
 - 内存使用合理，无明显泄漏
 
-## 10. 幂等性处理规范
+## 11. 幂等性处理规范
 
 **幂等性设计**（完全遵循 `@api_spec.mdc` 幂等性设计）：
 
-### 10.1 核心原则
+### 11.1 核心原则
 
-**零信任原则**：
-- 服务端完全控制幂等性，客户端无需关心
-- 基于请求内容自动去重，防止恶意攻击
-- 零额外网络开销，透明化处理
+**核心原则（与 `api_spec.mdc` 一致）**：
+- 幂等键由**客户端提供**：对“非幂等意图”（创建资源、发送消息、提交上传完成等）客户端在重试同一次意图时应复用同一个 `Idempotency-Key`（或 `X-Idempotency-Key`）。
+- **未提供幂等键时**：服务端不做幂等去重（避免误去重）。
+- `X-Request-Id` 仅用于链路追踪，**不得**当作幂等键使用。
 
-**服务端自动处理**：
-- 服务端基于请求内容自动生成幂等键
-- 幂等键计算：SHA256(user_id + api_endpoint + request_body_json + time_window)
-- 时间窗口：5分钟（可配置）
-- 相同请求在时间窗口内自动去重
+### 11.2 客户端实现要点
 
-### 10.2 前端实现要点
+- 对需要幂等的接口：在重试同一次操作时复用相同 `Idempotency-Key`；两次独立操作必须使用不同 key。
+- 对查询/天然幂等接口：无需携带 `Idempotency-Key`。
 
-**无需额外处理**：
-```typescript
-// ✅ 正确：直接发送请求，无需任何幂等相关处理
-async function sendMessage(roomId: string, content: string) {
-  const response = await httpService.request({
-    method: 'POST',
-    url: '/api/v1/protected/private_messages/send',
-    data: {
-      private_chat_id: privateChatId,
-      type: 'text',
-      content: content
-    }
-  });
-  
-  return response.data;
-}
-
-// ✅ 网络失败时直接重试
-async function sendMessageWithRetry(privateChatId: string, content: string) {
-  let attempts = 0;
-  const maxAttempts = 3;
-  
-  while (attempts < maxAttempts) {
-    try {
-      return await sendMessage(privateChatId, content);
-    } catch (error) {
-      attempts++;
-      if (attempts >= maxAttempts) throw error;
-      
-      // 等待后重试（服务端会自动识别重复）
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-  }
-}
-```
-
-**识别幂等返回**：
-```typescript
-// 检查响应头判断是否为幂等返回
-function isIdempotentReplay(response: HttpResponse): boolean {
-  return response.headers['X-Idempotent-Replayed'] === 'true';
-}
-
-// 示例使用
-async function sendMessageWithNotification(privateChatId: string, content: string) {
-  const response = await httpService.request({
-    method: 'POST',
-    url: '/api/v1/protected/private_messages/send',
-    data: { private_chat_id: privateChatId, type: 'text', content: content }
-  });
-  
-  // 如果是幂等返回（重复请求），不显示成功提示
-  if (!isIdempotentReplay(response)) {
-    promptAction.showToast({ message: '消息发送成功' });
-  }
-  
-  return response.data;
-}
-```
-
-### 10.3 自动幂等的操作
+### 11.3 自动幂等的操作
 
 **无需客户端处理的操作**：
-- 发送私聊消息：`POST /api/v1/protected/private_messages/send`
-- 发送群聊消息：`POST /api/v1/protected/group_messages/send`
-- 创建生活瞬间：`POST /api/v1/protected/moments/create`
-- 创建群组：`POST /api/v1/protected/group_chats/create`
-- 文件上传：`POST /api/v1/protected/media/upload_file`
+- 查询操作（`search_by_*` / `open_the_door` 等）- 天然幂等
+- 幂等的更新/删除操作 - 天然幂等
 
 **不需要幂等处理的操作**：
-- 查询操作（POST search_*）- 天然幂等
-- 幂等的更新/删除操作 - 天然幂等
-- 读取类操作（GET/open_the_door）- 天然幂等
+- 无（是否需要幂等由“是否可能因重试造成重复执行”决定）
 
-### 10.4 客户端最佳实践
+### 11.4 客户端最佳实践
 
 **推荐的操作**：
-- ✅ **正常发送请求**：无需生成UUID或其他幂等标识
-- ✅ **网络失败重试**：直接重试相同请求，服务端自动去重
-- ✅ **用户重复点击**：服务端自动识别并去重
+- ✅ **对创建/发送/提交类接口**：生成 `Idempotency-Key`（推荐 UUID），并在重试时复用
+- ✅ **对确实是两次独立操作**：即使请求体相同，也必须使用不同 `Idempotency-Key`
 
 **禁止的操作**：
-- ❌ 不要生成客户端幂等键
-- ❌ 不要在请求中添加 nonce 或随机数
-- ❌ 不要为了避免重复而阻止用户操作
+- ❌ 用请求体 hash 充当幂等键（容易误去重）
+- ❌ 把 `X-Request-Id` 当幂等键使用
 
 **重试策略示例**：
 ```typescript
@@ -1163,9 +762,9 @@ class HttpService {
 }
 ```
 
-## 11. API调用规范
+## 12. API调用规范
 
-### 11.1 API路径规范
+### 12.1 API路径规范
 
 **严格区分公开和受保护的API端点**：
 - `/api/v1/public/*` - 无需 Token（公开访问）
@@ -1176,7 +775,7 @@ class HttpService {
 // ❌ 错误：在 public API 中发送 Token
 httpService.request({
   method: 'POST',
-  url: '/api/v1/public/user/discover',
+  url: '/api/v1/public/user/search_by_keyword',
   headers: {
     Authorization: `Bearer ${token}` // 不必要
   }
@@ -1185,8 +784,8 @@ httpService.request({
 // ✅ 正确：public API 不发送 Token
 httpService.request({
   method: 'POST',
-  url: '/api/v1/public/user/discover',
-  data: { keyword: 'John' }
+  url: '/api/v1/public/user/search_by_keyword',
+  data: { kw: 'John', latitude: 0, longitude: 0 }
 });
 
 // ✅ 正确：protected API 必须发送 Token
@@ -1200,14 +799,15 @@ httpService.request({
 });
 ```
 
-### 11.2 统一响应处理
+### 12.2 统一响应处理
 
 **响应格式**（完全遵循 `@api_spec.mdc` 统一响应格式）：
 ```typescript
 interface ApiResponse<T = void> {
-  code: number;       // 状态码：0表示成功，非0表示错误
-  message?: string;   // 响应消息（可选，失败时必须返回错误描述，成功时由客户端决定提示内容）
-  data?: T;           // 成功时的数据（可选，类型根据具体API而定）
+  code: number;          // 状态码：0表示成功，非0表示错误
+  message?: string;      // 面向用户的响应消息（可选，失败时必须返回）
+  data?: T;              // 成功时的数据（可选，类型根据具体API而定）
+  request_id: string;    // 每次请求必返，用于链路追踪
 }
 ```
 
@@ -1258,7 +858,7 @@ class NetworkError extends Error {
 }
 ```
 
-### 11.3 分页查询规范
+### 12.3 分页查询规范
 
 **分页参数**：
 ```typescript
@@ -1314,7 +914,7 @@ class ListService {
 }
 ```
 
-### 11.4 错误处理规范
+### 12.4 错误处理规范
 
 **错误码处理**：
 ```typescript
@@ -1379,7 +979,7 @@ class ApiErrorHandler {
 }
 ```
 
-### 11.5 请求拦截器
+### 12.5 请求拦截器
 
 **Token自动注入**：
 ```typescript
@@ -1412,40 +1012,15 @@ class HttpInterceptor {
 }
 ```
 
-## 12. 速率限制处理规范（完整规范见 `@api_spec.mdc` 速率限制与配额管理）
+## 13. 速率限制处理规范（完整规范见 `@api_spec.mdc` 速率限制与配额管理）
 
-### 12.1 速率限制响应处理
+### 13.1 速率限制响应处理
 
-**核心原则**：
-- 检测速率限制错误码（1400-1404），所有响应均为 HTTP 200
-- 读取响应头获取限制信息（`X-RateLimit-Reset`）
-- 提供用户友好的错误提示
-- 实现客户端速率限制预防
+**核心原则（与 `api_spec.mdc` 一致）**：
+- 服务端依然返回 HTTP 200；速率限制通过 `ApiResponse.code`（1400-1404）表达。
+- 可读取响应头（如 `X-RateLimit-Reset`）做用户提示或延迟重试。
 
-**速率限制检测**：
-```typescript
-// HTTP状态码检测
-if (response.responseCode === 429) {
-  const retryAfter = response.result?.retry_after || 60;
-  const message = response.result?.message || '请求过于频繁，请稍后再试';
-  
-  // 显示用户友好提示
-  promptAction.showToast({
-    message: `${message}\n请等待 ${retryAfter} 秒后重试`,
-    duration: 3000
-  });
-  
-  // 延迟后重试
-  await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-  return retry();
-}
-
-// 错误码检测（1400-1404）
-if (response.result?.code >= 1400 && response.result?.code <= 1404) {
-  const message = response.result?.message || '操作过于频繁，请稍后再试';
-  promptAction.showToast({ message, duration: 3000 });
-}
-```
+**禁止**以 HTTP 429 作为判断条件（该项目约定所有业务错误都 HTTP 200）。
 
 **响应头处理**：
 ```typescript
@@ -1472,7 +1047,7 @@ class RateLimitMonitor {
 }
 ```
 
-### 12.2 客户端速率限制预防
+### 13.2 客户端速率限制预防
 
 **请求节流**：
 ```typescript

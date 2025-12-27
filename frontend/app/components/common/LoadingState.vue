@@ -1,30 +1,32 @@
 <template>
-  <div class="flex flex-col items-center justify-center py-8 md:py-12 space-y-4">
-    <!-- 加载动画 -->
-    <UIcon name="i-lucide-loader-2" class="w-12 h-12 md:w-16 md:h-16 animate-spin text-secondary-content" />
-    
-    <!-- 加载文本 -->
-    <div class="text-center space-y-2">
-      <p class="text-sm md:text-base font-medium text-secondary-strong">
-        {{ title || '加载中...' }}
-      </p>
-      <p v-if="description" class="text-xs md:text-sm text-secondary-content">
-        {{ description }}
-      </p>
-    </div>
-    
-    <!-- 进度条（可选） -->
-    <div v-if="showProgress && progress !== undefined" class="w-full max-w-xs">
-      <UProgress 
-        :value="progress" 
-        :max="100"
-        class="h-2 progress-primary"
-      />
-      <p class="text-xs text-center mt-2 text-secondary-content">
-        {{ Math.round(progress) }}%
-      </p>
-    </div>
-  </div>
+  <UEmpty
+    icon="i-lucide-loader-2"
+    :title="title || '加载中...'"
+    :description="description"
+    variant="naked"
+    class="py-12"
+  >
+    <template #body>
+      <UButton loading variant="ghost" color="neutral" />
+
+      <div
+        v-if="showProgress && progress !== undefined"
+        class="w-full max-w-xs"
+      >
+        <UProgress
+          :model-value="progress"
+          :max="100"
+          color="primary"
+          class="h-2"
+        />
+        <div class="mt-2 flex justify-center">
+          <UBadge color="neutral" variant="soft" size="xs">
+            {{ Math.round(progress) }}%
+          </UBadge>
+        </div>
+      </div>
+    </template>
+  </UEmpty>
 </template>
 
 <script setup lang="ts">

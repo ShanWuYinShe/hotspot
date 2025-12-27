@@ -6,8 +6,7 @@
 -- ============================================================
 CREATE TABLE reports (
     id BIGSERIAL PRIMARY KEY,
-    report_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
-    cursor_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    report_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
     reporter_id BIGINT NOT NULL,
     target_type report_target_type NOT NULL,
     target_id VARCHAR(255) NOT NULL,
@@ -22,7 +21,6 @@ CREATE TABLE reports (
     deleted_at TIMESTAMPTZ
 );
 
-CREATE INDEX idx_reports_cursor_id ON reports (cursor_id) WHERE is_deleted = FALSE;
 CREATE INDEX idx_reports_reporter ON reports (reporter_id, created_at DESC) WHERE is_deleted = FALSE;
 CREATE INDEX idx_reports_status ON reports (status, created_at DESC) WHERE is_deleted = FALSE;
 CREATE INDEX idx_reports_target ON reports (target_type, target_id) WHERE is_deleted = FALSE;
@@ -32,8 +30,6 @@ CREATE INDEX idx_reports_target ON reports (target_type, target_id) WHERE is_del
 -- ============================================================
 CREATE TABLE feed_items (
     id BIGSERIAL PRIMARY KEY,
-    feed_item_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
-    cursor_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
     user_id BIGINT NOT NULL,
     channel feed_channel NOT NULL,
     item_type feed_item_type NOT NULL,
@@ -47,14 +43,12 @@ CREATE TABLE feed_items (
     hidden_at TIMESTAMPTZ
 );
 
-CREATE INDEX idx_feed_items_cursor_id ON feed_items (cursor_id) WHERE is_hidden = FALSE;
 CREATE INDEX idx_feed_items_user_channel ON feed_items (user_id, channel, created_at DESC) WHERE is_hidden = FALSE;
 CREATE INDEX idx_feed_items_expires ON feed_items (expires_at) WHERE expires_at IS NOT NULL;
 
 CREATE TABLE feed_feedback (
     id BIGSERIAL PRIMARY KEY,
-    feedback_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
-    cursor_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    feedback_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
     feed_item_id UUID NOT NULL,
     user_id BIGINT NOT NULL,
     action VARCHAR(20) NOT NULL,
@@ -63,7 +57,6 @@ CREATE TABLE feed_feedback (
 );
 
 CREATE INDEX idx_feed_feedback_feedback_id ON feed_feedback (feedback_id);
-CREATE INDEX idx_feed_feedback_cursor_id ON feed_feedback (cursor_id);
 CREATE INDEX idx_feed_feedback_feed_item ON feed_feedback (feed_item_id, action);
 CREATE INDEX idx_feed_feedback_user ON feed_feedback (user_id, created_at DESC);
 
@@ -72,8 +65,7 @@ CREATE INDEX idx_feed_feedback_user ON feed_feedback (user_id, created_at DESC);
 -- ============================================================
 CREATE TABLE system_configs (
     id BIGSERIAL PRIMARY KEY,
-    config_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
-    cursor_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    config_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
     key VARCHAR(100) UNIQUE NOT NULL,
     value TEXT NOT NULL,
     type VARCHAR(20) NOT NULL,
@@ -87,7 +79,6 @@ CREATE TABLE system_configs (
 );
 
 CREATE INDEX idx_system_configs_config_id ON system_configs (config_id) WHERE is_deleted = FALSE;
-CREATE INDEX idx_system_configs_cursor_id ON system_configs (cursor_id) WHERE is_deleted = FALSE;
 CREATE INDEX idx_system_configs_category ON system_configs (category, created_at DESC) WHERE is_deleted = FALSE;
 CREATE INDEX idx_system_configs_key ON system_configs (key) WHERE is_deleted = FALSE;
 
@@ -96,8 +87,7 @@ CREATE TRIGGER trigger_system_configs_updated_at
 
 CREATE TABLE system_config_history (
     id BIGSERIAL PRIMARY KEY,
-    history_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
-    cursor_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    history_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
     config_key VARCHAR(100) NOT NULL,
     old_value TEXT,
     new_value TEXT NOT NULL,
@@ -106,7 +96,6 @@ CREATE TABLE system_config_history (
 );
 
 CREATE INDEX idx_config_history_history_id ON system_config_history (history_id);
-CREATE INDEX idx_config_history_cursor_id ON system_config_history (cursor_id);
 CREATE INDEX idx_config_history_key ON system_config_history (config_key, changed_at DESC);
 CREATE INDEX idx_config_history_changed_by ON system_config_history (changed_by, changed_at DESC);
 
@@ -115,8 +104,7 @@ CREATE INDEX idx_config_history_changed_by ON system_config_history (changed_by,
 -- ============================================================
 CREATE TABLE uploaded_files (
     id BIGSERIAL PRIMARY KEY,
-    file_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
-    cursor_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    file_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
     uploader_id BIGINT NOT NULL,
     category VARCHAR(50) NOT NULL,  -- 'avatar', 'group_avatar', 'moment_image', 'chat_image', 'chat_video', 'chat_audio', 'chat_file'
     original_name VARCHAR(255),
@@ -139,7 +127,6 @@ CREATE TABLE uploaded_files (
 );
 
 CREATE INDEX idx_uploaded_files_file_id ON uploaded_files (file_id) WHERE is_deleted = FALSE;
-CREATE INDEX idx_uploaded_files_cursor_id ON uploaded_files (cursor_id) WHERE is_deleted = FALSE;
 CREATE INDEX idx_uploaded_files_uploader ON uploaded_files (uploader_id, created_at DESC) WHERE is_deleted = FALSE;
 CREATE INDEX idx_uploaded_files_checksum ON uploaded_files (checksum) WHERE checksum IS NOT NULL AND is_deleted = FALSE;
 CREATE INDEX idx_uploaded_files_expires ON uploaded_files (expires_at) WHERE expires_at IS NOT NULL AND is_used = FALSE;
@@ -159,7 +146,7 @@ CREATE INDEX idx_upload_chunks_upload_id ON upload_chunks (upload_id);
 
 CREATE TABLE upload_sessions (
     id BIGSERIAL PRIMARY KEY,
-    upload_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    upload_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
     uploader_id BIGINT NOT NULL,
     file_name VARCHAR(255) NOT NULL,
     file_size BIGINT NOT NULL,

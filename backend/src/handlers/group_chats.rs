@@ -3,27 +3,25 @@ use axum::{extract::State, Extension, Json};
 use crate::{
     dto::{
         request::{
-            CreateGroupChatRequest, UpdateGroupChatRequest, JoinGroupRequest, LeaveGroupRequest,
-            InviteMemberRequest, RemoveMemberRequest, MuteMemberRequest, UnmuteMemberRequest,
-            BanMemberRequest, UnbanMemberRequest, GetBannedMembersListRequest,
-            SetMemberRoleRequest, TransferOwnershipRequest,
-            SearchGroupsByKeywordRequest, SearchGroupsByTagRequest, SearchGroupsByLocationRequest,
-            GroupOpenTheDoorRequest, GetGroupSettingsRequest, GetMembersRequest,
-            GetJoinedGroupChatsRequest, AcceptGroupInviteRequest, RejectGroupInviteRequest,
-            GetGroupInvitesListRequest, ApplyToGroupRequest, ApproveGroupApplicationRequest,
-            RejectGroupApplicationRequest, CancelGroupApplicationRequest, GetGroupApplicationsListRequest,
+            AcceptInviteRequest, ApplyToGroupRequest, ApproveApplicationRequest, BanMemberRequest,
+            BannedMembersRequest, CancelApplicationRequest, CreateGroupChatRequest,
+            GroupApplicationsRequest, GroupMembersRequest, GroupOpenTheDoorRequest,
+            GroupSettingsRequest, InviteMemberRequest, JoinGroupRequest, LeaveGroupRequest,
+            MuteMemberRequest, MyGroupChatsRequest, MyInvitesRequest, RejectApplicationRequest,
+            RejectInviteRequest, RemoveMemberRequest, SearchGroupsByKeywordRequest,
+            SearchGroupsByLocationRequest, SearchGroupsByTagRequest, SetMemberRoleRequest,
+            TransferOwnershipRequest, UnbanMemberRequest, UnmuteMemberRequest,
+            UpdateGroupChatRequest,
         },
         response::{
-            ApiResponse, PaginatedData, GroupSearchItem, JoinedGroupItem,
-            GroupSettingsData, CreateGroupChatData, GroupMemberItem, BannedMemberItem,
-            InviteMemberData, ApplyToGroupData, GroupInviteItem, GroupApplicationItem,
+            ApiResponse, ApplyToGroupData, BannedMemberItem, CreateGroupChatData,
+            GroupApplicationItem, GroupInviteItem, GroupMemberItem, GroupSearchItem,
+            GroupSettingsData, InviteMemberData, JoinedGroupItem, PaginatedData,
         },
     },
     error::Result,
-    services::group_service::GroupService,
     state::AppState,
 };
-
 
 // ==================== Public APIs ====================
 
@@ -32,8 +30,7 @@ pub async fn search_by_keyword(
     State(state): State<AppState>,
     Json(req): Json<SearchGroupsByKeywordRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<GroupSearchItem>>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    let response = service.search_by_keyword(req).await?;
+    let response = state.group_service.search_by_keyword(req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
@@ -42,8 +39,7 @@ pub async fn search_by_tag(
     State(state): State<AppState>,
     Json(req): Json<SearchGroupsByTagRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<GroupSearchItem>>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    let response = service.search_by_tag(req).await?;
+    let response = state.group_service.search_by_tag(req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
@@ -52,8 +48,7 @@ pub async fn search_by_location(
     State(state): State<AppState>,
     Json(req): Json<SearchGroupsByLocationRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<GroupSearchItem>>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    let response = service.search_by_location(req).await?;
+    let response = state.group_service.search_by_location(req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
@@ -62,31 +57,27 @@ pub async fn open_the_door(
     State(state): State<AppState>,
     Json(req): Json<GroupOpenTheDoorRequest>,
 ) -> Result<Json<ApiResponse<GroupSearchItem>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    let response = service.open_the_door(&req).await?;
+    let response = state.group_service.open_the_door(&req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
 /// 获取群组设置
-pub async fn get_settings(
+pub async fn settings(
     State(state): State<AppState>,
-    Json(req): Json<GetGroupSettingsRequest>,
+    Json(req): Json<GroupSettingsRequest>,
 ) -> Result<Json<ApiResponse<GroupSettingsData>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    let response = service.get_settings(req).await?;
+    let response = state.group_service.get_settings(req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
 /// 获取成员列表
-pub async fn get_members(
+pub async fn members(
     State(state): State<AppState>,
-    Json(req): Json<GetMembersRequest>,
+    Json(req): Json<GroupMembersRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<GroupMemberItem>>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    let response = service.get_members(req).await?;
+    let response = state.group_service.get_members(req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
-
 
 // ==================== Protected APIs ====================
 
@@ -95,55 +86,45 @@ pub async fn create(
     Extension(user_id): Extension<i64>,
     Json(req): Json<CreateGroupChatRequest>,
 ) -> Result<Json<ApiResponse<CreateGroupChatData>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    let response = service.create_group(user_id, req).await?;
+    let response = state.group_service.create_group(user_id, req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
-
-pub async fn get_joined(
+pub async fn me(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
-    Json(req): Json<GetJoinedGroupChatsRequest>,
+    Json(req): Json<MyGroupChatsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<JoinedGroupItem>>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    let response = service.get_joined(user_id, req).await?;
+    let response = state.group_service.get_joined(user_id, req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
-
 
 pub async fn update(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(req): Json<UpdateGroupChatRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    service.update_group(user_id, req).await?;
+    state.group_service.update_group(user_id, req).await?;
     Ok(Json(ApiResponse::success_empty()))
 }
-
 
 pub async fn delete(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(req): Json<crate::dto::request::DeleteGroupChatRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    service.delete_group(user_id, req).await?;
+    state.group_service.delete_group(user_id, req).await?;
     Ok(Json(ApiResponse::success_empty()))
 }
-
 
 pub async fn transfer_ownership(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(req): Json<TransferOwnershipRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    service.transfer_ownership(user_id, req).await?;
+    state.group_service.transfer_ownership(user_id, req).await?;
     Ok(Json(ApiResponse::success_empty()))
 }
-
 
 // ==================== 成员操作 ====================
 
@@ -152,198 +133,166 @@ pub async fn invite(
     Extension(user_id): Extension<i64>,
     Json(req): Json<InviteMemberRequest>,
 ) -> Result<Json<ApiResponse<InviteMemberData>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    let response = service.invite_member(user_id, req).await?;
+    let response = state.group_service.invite_member(user_id, req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
-
 
 pub async fn join(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(req): Json<JoinGroupRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    service.join_group(user_id, req).await?;
+    state.group_service.join_group(user_id, req).await?;
     Ok(Json(ApiResponse::success_empty()))
 }
-
 
 pub async fn apply(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(req): Json<ApplyToGroupRequest>,
 ) -> Result<Json<ApiResponse<ApplyToGroupData>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    let response = service.apply_to_group(user_id, req).await?;
+    let response = state.group_service.apply_to_group(user_id, req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
-
 
 pub async fn set_role(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(req): Json<SetMemberRoleRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    service.set_role(user_id, req).await?;
+    state.group_service.set_role(user_id, req).await?;
     Ok(Json(ApiResponse::success_empty()))
 }
-
 
 pub async fn mute(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(req): Json<MuteMemberRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    service.mute_member(user_id, req).await?;
+    state.group_service.mute_member(user_id, req).await?;
     Ok(Json(ApiResponse::success_empty()))
 }
-
 
 pub async fn unmute(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(req): Json<UnmuteMemberRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    service.unmute_member(user_id, req).await?;
+    state.group_service.unmute_member(user_id, req).await?;
     Ok(Json(ApiResponse::success_empty()))
 }
 
-
-pub async fn ban_member(
+pub async fn ban(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(req): Json<BanMemberRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    service.ban_member(user_id, req).await?;
+    state.group_service.ban_member(user_id, req).await?;
     Ok(Json(ApiResponse::success_empty()))
 }
 
-
-pub async fn unban_member(
+pub async fn unban(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(req): Json<UnbanMemberRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    service.unban_member(user_id, req).await?;
+    state.group_service.unban_member(user_id, req).await?;
     Ok(Json(ApiResponse::success_empty()))
 }
 
-
-pub async fn get_banned_list(
+pub async fn banned(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
-    Json(req): Json<GetBannedMembersListRequest>,
+    Json(req): Json<BannedMembersRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<BannedMemberItem>>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    let result = service.get_banned_list(user_id, req).await?;
+    let result = state.group_service.get_banned_list(user_id, req).await?;
     Ok(Json(ApiResponse::success(result)))
 }
-
 
 pub async fn remove_member(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(req): Json<RemoveMemberRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    service.remove_member(user_id, req).await?;
+    state.group_service.remove_member(user_id, req).await?;
     Ok(Json(ApiResponse::success_empty()))
 }
-
 
 pub async fn leave_group(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(req): Json<LeaveGroupRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    service.leave_group(user_id, req).await?;
+    state.group_service.leave_group(user_id, req).await?;
     Ok(Json(ApiResponse::success_empty()))
 }
 
-
 // ==================== 申请管理 ====================
 
-pub async fn get_applications(
+pub async fn applications(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
-    Json(req): Json<GetGroupApplicationsListRequest>,
+    Json(req): Json<GroupApplicationsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<GroupApplicationItem>>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    let response = service.get_applications(user_id, req).await?;
+    let response = state.group_service.get_applications(user_id, req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
-
 
 pub async fn approve_application(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
-    Json(req): Json<ApproveGroupApplicationRequest>,
+    Json(req): Json<ApproveApplicationRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    service.approve_application(user_id, req).await?;
+    state
+        .group_service
+        .approve_application(user_id, req)
+        .await?;
     Ok(Json(ApiResponse::success_empty()))
 }
-
 
 pub async fn reject_application(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
-    Json(req): Json<RejectGroupApplicationRequest>,
+    Json(req): Json<RejectApplicationRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    service.reject_application(user_id, req).await?;
+    state.group_service.reject_application(user_id, req).await?;
     Ok(Json(ApiResponse::success_empty()))
 }
-
 
 pub async fn cancel_application(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
-    Json(req): Json<CancelGroupApplicationRequest>,
+    Json(req): Json<CancelApplicationRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    service.cancel_application(user_id, req).await?;
+    state.group_service.cancel_application(user_id, req).await?;
     Ok(Json(ApiResponse::success_empty()))
 }
 
-
 // ==================== 邀请管理 ====================
 
-pub async fn get_invites(
+pub async fn my_invites(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
-    Json(req): Json<GetGroupInvitesListRequest>,
+    Json(req): Json<MyInvitesRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<GroupInviteItem>>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    let response = service.get_invites(user_id, req).await?;
+    let response = state.group_service.get_invites(user_id, req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
-
 
 pub async fn accept_invite(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
-    Json(req): Json<AcceptGroupInviteRequest>,
+    Json(req): Json<AcceptInviteRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    service.accept_invite(user_id, req).await?;
+    state.group_service.accept_invite(user_id, req).await?;
     Ok(Json(ApiResponse::success_empty()))
 }
-
 
 pub async fn reject_invite(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
-    Json(req): Json<RejectGroupInviteRequest>,
+    Json(req): Json<RejectInviteRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let service = GroupService::new(&state.db, &state.redis, state.event_bus.clone());
-    service.reject_invite(user_id, req).await?;
+    state.group_service.reject_invite(user_id, req).await?;
     Ok(Json(ApiResponse::success_empty()))
 }

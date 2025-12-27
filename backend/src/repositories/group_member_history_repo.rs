@@ -6,6 +6,8 @@ use uuid::Uuid;
 use crate::error::Result;
 use crate::types::enums::MemberRole;
 
+use std::fmt;
+
 /// 成员操作类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type)]
 #[sqlx(type_name = "member_action", rename_all = "snake_case")]
@@ -17,6 +19,21 @@ pub enum MemberAction {
     RoleChanged,
     Muted,
     Unmuted,
+}
+
+impl fmt::Display for MemberAction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            MemberAction::Join => "join",
+            MemberAction::Leave => "leave",
+            MemberAction::Removed => "removed",
+            MemberAction::Banned => "banned",
+            MemberAction::RoleChanged => "role_changed",
+            MemberAction::Muted => "muted",
+            MemberAction::Unmuted => "unmuted",
+        };
+        write!(f, "{}", s)
+    }
 }
 
 /// 创建历史记录的参数
@@ -183,19 +200,23 @@ impl GroupMemberHistoryRepository {
 
     /// 创建历史记录
     async fn create(&self, params: CreateHistoryParams) -> Result<Uuid> {
+        let action_str = params.action.to_string();
+        let old_role_str = params.old_role.map(|r| r.to_string());
+        let new_role_str = params.new_role.map(|r| r.to_string());
+
         let history_id = sqlx::query_scalar!(
             r#"
             INSERT INTO group_member_history 
                 (group_chat_id, user_id, action, operator_id, old_role, new_role, reason, muted_until)
-            VALUES ($1, $2, $3::member_action, $4, $5::member_role, $6::member_role, $7, $8)
+            VALUES ($1, $2, $3::text::member_action, $4, $5::text::member_role, $6::text::member_role, $7, $8)
             RETURNING history_id
             "#,
             params.group_chat_id,
             params.user_id,
-            params.action as MemberAction,
+            action_str,
             params.operator_id,
-            params.old_role as Option<MemberRole>,
-            params.new_role as Option<MemberRole>,
+            old_role_str,
+            new_role_str,
             params.reason,
             params.muted_until
         )

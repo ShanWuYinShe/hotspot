@@ -1,133 +1,139 @@
 <template>
-  <div 
-    ref="containerRef" 
-    class="flex-1 overflow-y-auto p-4 space-y-4"
-    @scroll="handleScroll"
-  >
-    <!-- 加载更多指示器 -->
-    <div v-if="status === 'streaming'" class="flex justify-center py-2">
-      <UIcon name="i-heroicons-arrow-path" class="icon-md animate-spin text-secondary-content" />
-    </div>
-
-    <!-- 消息列表 -->
-    <div 
-      v-for="(message, index) in messages" 
-      :key="message.id || index"
-      class="flex gap-3"
-      :class="[
-        message.role === 'user' ? 'flex-row-reverse' : 'flex-row'
-      ]"
+  <div class="h-full min-h-0 flex flex-col">
+    <!-- 空状态 -->
+    <UEmpty
+      v-if="messages.length === 0"
+      icon="i-lucide-messages-square"
+      title="暂无消息"
+      description="发送一条消息开始对话"
+      class="h-full"
     >
-      <!-- 头像 -->
-      <div class="shrink-0">
-        <!-- 群聊模式：使用每条消息的发送者头像 -->
-        <UAvatar
-          v-if="isGroupChat && message.role === 'assistant' && message.metadata?.senderAvatar"
-          :alt="message.metadata.senderName || '用户'"
-          :src="message.metadata.senderAvatar"
-          size="sm"
-          class="cursor-pointer hover:ring-2 hover:ring-accent transition-all"
-          @click="handleAvatarClick(message)"
-        >
-          {{ (message.metadata.senderName || '用户').charAt(0) }}
-        </UAvatar>
-        <!-- 群聊模式：发送者没有头像时显示首字母 -->
-        <UAvatar
-          v-else-if="isGroupChat && message.role === 'assistant' && message.metadata?.senderName"
-          size="sm"
-          class="cursor-pointer hover:ring-2 hover:ring-accent transition-all"
-          @click="handleAvatarClick(message)"
-        >
-          {{ message.metadata.senderName.charAt(0) }}
-        </UAvatar>
-        <!-- 自己发送的消息 -->
-        <UAvatar
-          v-else-if="message.role === 'user' && user?.avatar"
-          :alt="user.avatar.alt"
-          :src="user.avatar.src"
-          size="sm"
-        >
-          {{ user.avatar.fallback }}
-        </UAvatar>
-        <!-- 私聊模式：对方消息使用统一头像 -->
-        <UAvatar
-          v-else-if="message.role === 'assistant' && assistant?.avatar"
-          :alt="assistant.avatar.alt"
-          :src="assistant.avatar.src"
-          size="sm"
-          :class="isGroupChat ? 'cursor-pointer hover:ring-2 hover:ring-accent transition-all' : ''"
-          @click="isGroupChat ? handleAvatarClick(message) : undefined"
-        >
-          {{ assistant.avatar.fallback }}
-        </UAvatar>
-        <UAvatar v-else size="sm">
-          {{ message.role === 'user' ? 'U' : 'A' }}
-        </UAvatar>
-      </div>
+      <template v-if="$slots.empty" #default>
+        <slot name="empty" />
+      </template>
+    </UEmpty>
 
-      <!-- 消息内容 -->
-      <div 
-        class="max-w-[70%] rounded-2xl px-4 py-2.5 shadow-sm"
+    <!-- 消息列表容器 -->
+    <div
+      v-else
+      ref="containerRef"
+      class="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth"
+    >
+      <!-- 消息项 -->
+      <div
+        v-for="(message, index) in messages"
+        :key="message.id"
+        :data-message-id="message.id"
+        class="group/message flex gap-3 w-full"
         :class="[
-          message.role === 'user' 
-            ? 'message-bubble-user' 
-            : 'message-bubble-other'
+          message.role === 'user' ? 'flex-row-reverse' : 'flex-row',
+          highlightMessageId === message.id ? 'hs-chat-highlight -mx-4 px-4 py-2' : ''
         ]"
       >
-        <!-- 使用插槽自定义内容 -->
-        <slot name="content" :message="message">
-          <p class="text-sm whitespace-pre-wrap wrap-break-word">{{ getMessageContent(message) }}</p>
-        </slot>
+        <!-- 头像 (对方) -->
+        <div v-if="message.role !== 'user'" class="shrink-0 flex flex-col justify-end pb-1">
+          <slot name="leading" :message="message">
+            <UAvatar
+              :src="message.metadata?.senderAvatar || assistant?.avatar?.src"
+              :alt="message.metadata?.senderName || assistant?.avatar?.alt || assistant?.avatar?.fallback"
+              :fallback="message.metadata?.senderName?.charAt(0) || assistant?.avatar?.fallback"
+              size="md"
+              :class="isGroupChat ? 'cursor-pointer' : ''"
+              @click="isGroupChat ? emit('avatarClick', message) : undefined"
+            />
+          </slot>
+        </div>
 
-        <!-- 时间戳 -->
-        <div 
-          v-if="getMessageTimestamp(message)"
-          class="text-xs mt-1 opacity-70"
-          :class="message.role === 'user' ? 'text-right' : 'text-left'"
+        <!-- 内容区域 -->
+        <div
+          class="flex flex-col gap-1 max-w-[85%] sm:max-w-[75%]"
+          :class="message.role === 'user' ? 'items-end' : 'items-start'"
         >
-          {{ displayTime(getMessageTimestamp(message)!) }}
+          <!-- 群聊发送者昵称 (仅在左侧且是群聊时显示) -->
+          <UBadge
+            v-if="isGroupChat && message.role !== 'user' && message.metadata?.senderName"
+            variant="subtle"
+            color="neutral"
+            size="xs"
+            class="ml-1"
+          >
+            {{ message.metadata.senderName }}
+          </UBadge>
+
+          <!-- 气泡 & 操作栏容器 -->
+          <div class="relative group/bubble">
+            <!-- 气泡 -->
+            <div :class="message.role === 'user' ? 'hs-chat-bubble-user' : 'hs-chat-bubble-other'">
+              <slot name="content" :message="message">
+                {{ message.content }}
+              </slot>
+            </div>
+
+            <!-- 操作栏 (悬浮) -->
+            <div
+              v-if="$slots.actions"
+              class="absolute top-0 -translate-y-1/2 opacity-0 group-hover/bubble:opacity-100 transition-opacity z-10 hidden sm:block"
+              :class="message.role === 'user' ? 'right-full mr-2' : 'left-full ml-2'"
+            >
+              <UCard variant="outline" :ui="{ body: 'p-1 flex gap-0.5' }">
+                <slot name="actions" :message="message" />
+              </UCard>
+            </div>
+          </div>
+
+          <!-- 时间戳 -->
+          <UBadge
+            v-if="getMessageTimestamp(message)"
+            variant="subtle"
+            color="neutral"
+            size="xs"
+            class="px-1 select-none"
+          >
+            {{ displayTime(getMessageTimestamp(message)!) }}
+          </UBadge>
+        </div>
+
+        <!-- 头像 (我) -->
+        <div v-if="message.role === 'user'" class="shrink-0 flex flex-col justify-end pb-1">
+          <UAvatar
+            :src="user?.avatar?.src"
+            :alt="user?.avatar?.alt || user?.avatar?.fallback"
+            :fallback="user?.avatar?.fallback"
+            size="md"
+          />
         </div>
       </div>
-    </div>
 
-    <!-- 空状态 -->
-    <div v-if="messages.length === 0" class="flex flex-col items-center justify-center h-full text-secondary-content">
-      <UIcon name="i-heroicons-chat-bubble-left-right" class="icon-2xl mb-4 opacity-50" />
-      <p>暂无消息</p>
+      <!-- 输入状态指示器 (typing) -->
+      <div v-if="$slots.indicator" class="pb-2">
+        <slot name="indicator" />
+      </div>
+
+      <!-- 底部锚点 -->
+      <div ref="bottomRef" class="h-px w-full" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-// 消息部分类型（兼容 AI SDK 格式）
-export interface MessagePart {
-  type: string;
-  text?: string;
-  content?: string;
+import type { ClientMessageType } from '~/types/client';
+
+// 聊天消息类型
+export interface ChatMessageMetadata {
+  senderId?: number | string
+  senderName?: string
+  senderAvatar?: string
+  timestamp?: string | Date
 }
 
-// 消息元数据
-export interface MessageMetadata {
-  timestamp?: string;
-  type?: string;
-  senderName?: string;
-  senderAvatar?: string;
-  senderId?: number;
-  [key: string]: unknown;
-}
-
-// 聊天消息类型（兼容 AI SDK 格式和简单格式）
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
-  // AI SDK 格式
-  parts?: MessagePart[];
-  metadata?: MessageMetadata;
-  // 简单格式
   content?: string;
-  type?: string;
+  type?: ClientMessageType | 'typing'; // 支持 typing 类型
   createdAt?: string | Date;
   timestamp?: string;
+  metadata?: ChatMessageMetadata;
   [key: string]: unknown;
 }
 
@@ -149,6 +155,7 @@ interface Props {
   shouldAutoScroll?: boolean;
   shouldScrollToBottom?: boolean;
   isGroupChat?: boolean;
+  highlightMessageId?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -158,34 +165,12 @@ const props = withDefaults(defineProps<Props>(), {
   isGroupChat: false,
 });
 
-// 定义事件
 const emit = defineEmits<{
   (e: 'avatarClick', message: ChatMessage): void;
 }>();
 
-// 处理头像点击
-const handleAvatarClick = (message: ChatMessage) => {
-  if (props.isGroupChat && message.metadata?.senderId) {
-    emit('avatarClick', message);
-  }
-};
-
 const containerRef = ref<HTMLElement | null>(null);
-const isNearBottom = ref(true);
-
-// 获取消息内容（兼容两种格式）
-const getMessageContent = (message: ChatMessage): string => {
-  // 优先使用 content 字段
-  if ('content' in message && message.content) {
-    return String(message.content);
-  }
-  // 否则从 parts 中提取
-  if (message.parts && message.parts.length > 0) {
-    const textPart = message.parts.find(p => p.type === 'text');
-    return textPart?.text || (textPart as { content?: string })?.content || '';
-  }
-  return '';
-};
+const bottomRef = ref<HTMLElement | null>(null);
 
 // 获取消息时间戳
 const getMessageTimestamp = (message: ChatMessage): string | Date | undefined => {
@@ -199,38 +184,48 @@ const getMessageTimestamp = (message: ChatMessage): string | Date | undefined =>
 const { formatDate } = useFormatters()
 const displayTime = (date: string | Date) => formatDate(date, 'time');
 
-// 处理滚动
-const handleScroll = () => {
-  if (!containerRef.value) return;
-  const { scrollTop, scrollHeight, clientHeight } = containerRef.value;
-  isNearBottom.value = scrollHeight - scrollTop - clientHeight < 100;
+const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+  if (!bottomRef.value) return;
+  bottomRef.value.scrollIntoView({ block: 'end', behavior });
 };
 
-// 滚动到底部
-const scrollToBottom = () => {
+const scrollToMessage = (id: string, behavior: ScrollBehavior = 'smooth') => {
   if (!containerRef.value) return;
-  containerRef.value.scrollTop = containerRef.value.scrollHeight;
+  if (!id) return;
+  
+  const target = containerRef.value.querySelector(`[data-message-id="${id}"]`) as HTMLElement | null;
+  if (!target) {
+    // 可能是消息还没渲染，尝试下一帧
+    nextTick(() => {
+        const retryTarget = containerRef.value?.querySelector(`[data-message-id="${id}"]`) as HTMLElement | null;
+        retryTarget?.scrollIntoView({ block: 'center', behavior });
+    })
+    return;
+  }
+  
+  target.scrollIntoView({ block: 'center', behavior });
 };
 
-// 监听消息变化，自动滚动
+// 自动滚动逻辑
 watch(
   () => props.messages.length,
-  () => {
-    if (props.shouldAutoScroll && isNearBottom.value) {
-      nextTick(() => scrollToBottom());
+  (newLen, oldLen) => {
+    if (props.shouldAutoScroll && newLen > oldLen) {
+      nextTick(() => scrollToBottom('smooth'));
     }
   }
 );
 
-// 初始滚动到底部
+// 初始滚动
 onMounted(() => {
   if (props.shouldScrollToBottom) {
-    nextTick(() => scrollToBottom());
+    nextTick(() => scrollToBottom('auto')); // 初始加载不需要动画
   }
 });
 
-// 暴露方法
+// 暴露方法给父组件
 defineExpose({
   scrollToBottom,
+  scrollToMessage
 });
 </script>

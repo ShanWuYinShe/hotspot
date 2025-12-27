@@ -17,7 +17,8 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { notificationManager } from '@kit.NotificationKit';
 import { deviceInfo, BusinessError } from '@kit.BasicServicesKit';
 import { geoLocationManager } from '@kit.LocationKit';
-import { ServiceRegistry } from '../common/services/ServiceRegistry';
+import { ServiceRegistry } from '../core/services/ServiceRegistry';
+import { RdbManager } from '../core/database/RdbManager';
 
 const DOMAIN_NUMBER: number = 0xFF00;
 const TAG: string = 'GeoTalk';
@@ -25,6 +26,7 @@ const TAG: string = 'GeoTalk';
 export default class EntryAbility extends UIAbility {
   private windowStage: window.WindowStage | null = null;
   private serviceRegistry = ServiceRegistry.getInstance();
+  private rdbManager = RdbManager.getInstance();
 
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     hilog.info(DOMAIN_NUMBER, TAG, 'GeoTalk应用启动 - 启动原因: %{public}s',
@@ -41,6 +43,9 @@ export default class EntryAbility extends UIAbility {
 
     // 获取设备信息
     this.logDeviceInfo();
+    
+    // 初始化数据库
+    this.rdbManager.init(this.context);
 
     // 初始化智能服务
     this.initializeSmartServices();
@@ -59,7 +64,7 @@ export default class EntryAbility extends UIAbility {
     this.configureWindow(windowStage);
 
     // 加载主页面
-    windowStage.loadContent('pages/Index')
+    windowStage.loadContent('features/main/pages/Index')
       .then(() => {
         hilog.info(DOMAIN_NUMBER, TAG, '主页面加载成功');
         // 页面加载完成后的初始化

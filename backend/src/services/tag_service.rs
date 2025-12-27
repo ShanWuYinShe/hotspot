@@ -1,9 +1,9 @@
 //! 标签服务 - 热门标签和搜索建议
 
 use crate::{
-    constants::{TRENDING_DAILY_DAYS, TRENDING_WEEKLY_DAYS, TRENDING_MONTHLY_DAYS},
+    constants::{TRENDING_DAILY_DAYS, TRENDING_MONTHLY_DAYS, TRENDING_WEEKLY_DAYS},
     dto::{
-        request::{GetTrendingTagsRequest, SuggestTagsRequest},
+        request::{SuggestTagsRequest, TrendingTagsRequest},
         response::{TagData, TagSuggestData, TagSuggestItem, TrendingTagsData},
     },
     error::{AppError, Result},
@@ -11,6 +11,7 @@ use crate::{
     utils::validation::Validator,
 };
 
+#[derive(Clone)]
 pub struct TagService {
     tag_repo: TagRepository,
 }
@@ -21,7 +22,7 @@ impl TagService {
     }
 
     /// 获取热门标签
-    pub async fn get_trending(&self, req: &GetTrendingTagsRequest) -> Result<TrendingTagsData> {
+    pub async fn get_trending(&self, req: &TrendingTagsRequest) -> Result<TrendingTagsData> {
         let limit = Validator::validate_limit(req.limit, 100)? as i64;
         let timeframe = req.timeframe.as_deref().unwrap_or("weekly");
 
@@ -40,7 +41,7 @@ impl TagService {
             .map(|r| TagData {
                 name: r.name,
                 usage_count: r.usage_count,
-                trend: None, // TODO: 实现趋势计算
+                trend: None,
             })
             .collect();
 
@@ -58,11 +59,14 @@ impl TagService {
 
         // 从 tags 表获取匹配前缀的标签
         let rows = self.tag_repo.suggest(&req.prefix, limit).await?;
-        
-        let items = rows.into_iter().map(|r| TagSuggestItem {
-            name: r.name,
-            usage_count: r.usage_count,
-        }).collect();
+
+        let items = rows
+            .into_iter()
+            .map(|r| TagSuggestItem {
+                name: r.name,
+                usage_count: r.usage_count,
+            })
+            .collect();
 
         Ok(TagSuggestData { items })
     }

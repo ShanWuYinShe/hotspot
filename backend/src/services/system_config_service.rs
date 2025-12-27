@@ -2,31 +2,29 @@
 //!
 //! 管理系统配置项，支持 Redis 缓存和配置变更订阅
 
-#![allow(dead_code)]
-
-use futures_util::StreamExt;
 use redis::AsyncCommands;
 use sqlx::PgPool;
 use std::sync::Arc;
-use uuid::Uuid;
 
 use crate::{
-    constants::{REDIS_CHANNEL_CONFIG_UPDATES, REDIS_KEY_CONFIG, REDIS_TTL_CONFIG},
+    constants::{REDIS_CHANNEL_CONFIG_UPDATES, REDIS_KEY_CONFIG},
     dto::{
         request::{
-            CreateConfigRequest, UpdateConfigRequest, GetConfigListRequest, 
-            GetConfigHistoryRequest, GetConfigChangesRequest
+            ConfigChangesRequest, ConfigHistoryRequest, ConfigListRequest, CreateConfigRequest,
+            UpdateConfigRequest,
         },
         response::{
-            ConfigItem, ConfigHistoryItem, CreateConfigData, 
-            PaginatedData, PaginationMeta
+            ConfigHistoryItem, ConfigItem, CreateConfigData, PaginatedData, PaginationMeta,
         },
     },
     error::{AppError, Result},
-    repositories::system_config_repo::{SystemConfigRepository, SystemConfigRow, ConfigChangeLogRow},
+    repositories::system_config_repo::{
+        ConfigChangeLogRow, SystemConfigRepository, SystemConfigRow,
+    },
     utils::validation::Validator,
 };
 
+#[derive(Clone)]
 pub struct SystemConfigService {
     repo: SystemConfigRepository,
     redis: Arc<redis::Client>,
@@ -40,94 +38,29 @@ impl SystemConfigService {
         }
     }
 
-    /// 获取配置项（按优先级：Redis 缓存 > 数据库 > 环境变量 > 默认值）
-    pub async fn get_config(&self, config_key: &str) -> Result<Option<String>> {
-        // 1. 尝试从 Redis 缓存读取
-        let cache_key = format!("{}:{}", REDIS_KEY_CONFIG, config_key);
-        let mut conn = self.redis.get_multiplexed_async_connection().await?;
-
-        if let Ok(Some(cached_value)) = conn.get::<_, Option<String>>(&cache_key).await {
-            return Ok(Some(cached_value));
-        }
-
-        // 2. 从数据库读取
-        if let Some(config) = self.repo.find_by_key(config_key).await? {
-            // 写入 Redis 缓存
-            let _: std::result::Result<(), _> = conn
-                .set_ex(&cache_key, &config.value, REDIS_TTL_CONFIG as u64)
-                .await;
-
-            return Ok(Some(config.value));
-        }
-
-        // 3. 尝试从环境变量读取
-        if let Ok(env_value) = std::env::var(config_key.to_uppercase()) {
-            return Ok(Some(env_value));
-        }
-
-        // 4. 返回 None，调用方应使用默认值
-        Ok(None)
-    }
-
-    /// 获取配置项（带类型转换）
-    pub async fn get_config_as<T>(&self, config_key: &str, default: T) -> Result<T>
-    where
-        T: std::str::FromStr,
-    {
-        if let Some(value) = self.get_config(config_key).await? {
-            value
-                .parse::<T>()
-                .map_err(|_| AppError::BadRequest("配置值类型转换失败".to_string()))
-        } else {
-            Ok(default)
-        }
-    }
-
     /// 获取单个配置（管理员）
     pub async fn get_single_config(&self, key: &str) -> Result<ConfigItem> {
-        let config = self.repo.find_by_key(key).await?
+        let config = self
+            .repo
+            .find_by_key(key)
+            .await?
             .ok_or_else(|| AppError::NotFound("配置项不存在".to_string()))?;
         Ok(Self::to_config_item(config))
     }
 
-    /// 解析 cursor 字符串为 UUID
-    fn parse_cursor(cursor: Option<String>) -> Result<Option<Uuid>> {
-        match cursor {
-            Some(c) => {
-                let uuid = Uuid::parse_str(&c)
-                    .map_err(|_| AppError::BadRequest("无效的 cursor 格式".to_string()))?;
-                Ok(Some(uuid))
-            }
-            None => Ok(None),
-        }
-    }
-
     /// 列出所有配置项
-    pub async fn get_list(&self, req: GetConfigListRequest) -> Result<PaginatedData<ConfigItem>> {
+    pub async fn get_list(&self, req: ConfigListRequest) -> Result<PaginatedData<ConfigItem>> {
         let limit = Validator::validate_limit(req.limit, 100)?;
-        let cursor = Self::parse_cursor(req.cursor)?;
+        let cursor = Validator::parse_cursor(req.cursor.as_deref())?;
 
-        let configs = self.repo.list(req.category, limit + 1, cursor).await?;
+        let (configs, next_cursor) = self.repo.list(req.category, limit as i32, cursor).await?;
 
-        let has_more = configs.len() > limit as usize;
-        let configs_to_return: Vec<SystemConfigRow> = configs.into_iter().take(limit as usize).collect();
-        
-        // next_cursor是最后一条记录的cursor_id
-        let next_cursor = if has_more {
-            configs_to_return.last().map(|c| c.cursor_id.to_string())
-        } else {
-            None
-        };
-
-        let items: Vec<ConfigItem> = configs_to_return
-            .into_iter()
-            .map(Self::to_config_item)
-            .collect();
+        let items: Vec<ConfigItem> = configs.into_iter().map(Self::to_config_item).collect();
 
         Ok(PaginatedData {
             items,
             pagination: PaginationMeta {
-                has_more,
+                has_more: next_cursor.is_some(),
                 next_cursor,
             },
         })
@@ -144,28 +77,31 @@ impl SystemConfigService {
             return Err(AppError::Conflict("配置项已存在".to_string()));
         }
 
-        let config = self.repo.create(
-            req.key.clone(),
-            req.value.clone(),
-            Some(req.description.clone()),
-            req.r#type.clone(),
-            req.category.clone(),
-        ).await?;
+        // DB 强一致：create + log_change 必须在同一事务内
+        let mut tx = self.repo.pool().begin().await?;
 
-        // 记录变更日志
-        self.repo.log_change(
-            &req.key,
-            None,
-            req.value.clone(),
-            admin_id
-        ).await?;
+        let config = self
+            .repo
+            .create_tx(
+                &mut tx,
+                req.key.clone(),
+                req.value.clone(),
+                Some(req.description.clone()),
+                req.r#type.clone(),
+                req.category.clone(),
+            )
+            .await?;
+
+        self.repo
+            .log_change_tx(&mut tx, &req.key, None, req.value.clone(), admin_id)
+            .await?;
+
+        tx.commit().await?;
 
         // 发布配置更新事件
         self.publish_config_update(&req.key).await?;
 
-        Ok(CreateConfigData {
-            key: config.key,
-        })
+        Ok(CreateConfigData { key: config.key })
     }
 
     /// 更新配置项
@@ -182,16 +118,21 @@ impl SystemConfigService {
             .await?
             .ok_or_else(|| AppError::NotFound("配置项不存在".to_string()))?;
 
-        // 更新配置
-        self.repo.update(key, req.value.clone()).await?;
+        // DB 强一致：update + log_change 必须在同一事务内
+        let mut tx = self.repo.pool().begin().await?;
 
-        // 记录变更日志
-        self.repo.log_change(
-            key,
-            Some(old_config.value.clone()),
-            req.value.clone(),
-            admin_id
-        ).await?;
+        self.repo.update_tx(&mut tx, key, req.value.clone()).await?;
+        self.repo
+            .log_change_tx(
+                &mut tx,
+                key,
+                Some(old_config.value.clone()),
+                req.value.clone(),
+                admin_id,
+            )
+            .await?;
+
+        tx.commit().await?;
 
         // 清除 Redis 缓存
         self.clear_config_cache(key).await?;
@@ -203,11 +144,7 @@ impl SystemConfigService {
     }
 
     /// 删除配置项
-    pub async fn delete_config(
-        &self,
-        key: &str,
-        admin_id: i64,
-    ) -> Result<()> {
+    pub async fn delete_config(&self, key: &str, admin_id: i64) -> Result<()> {
         // 获取旧值
         let old_config = self
             .repo
@@ -215,16 +152,21 @@ impl SystemConfigService {
             .await?
             .ok_or_else(|| AppError::NotFound("配置项不存在".to_string()))?;
 
-        // 删除配置
-        self.repo.delete(key).await?;
+        // DB 强一致：delete + log_change 必须在同一事务内
+        let mut tx = self.repo.pool().begin().await?;
 
-        // 记录变更日志
-        self.repo.log_change(
-            key,
-            Some(old_config.value),
-            "DELETED".to_string(),
-            admin_id
-        ).await?;
+        self.repo.delete_tx(&mut tx, key).await?;
+        self.repo
+            .log_change_tx(
+                &mut tx,
+                key,
+                Some(old_config.value),
+                "DELETED".to_string(),
+                admin_id,
+            )
+            .await?;
+
+        tx.commit().await?;
 
         // 清除 Redis 缓存
         self.clear_config_cache(key).await?;
@@ -239,32 +181,22 @@ impl SystemConfigService {
     pub async fn get_config_history(
         &self,
         config_key: &str,
-        req: GetConfigHistoryRequest,
+        req: ConfigHistoryRequest,
     ) -> Result<PaginatedData<ConfigHistoryItem>> {
         let limit = Validator::validate_limit(req.limit, 100)?;
-        let cursor = Self::parse_cursor(req.cursor)?;
+        let cursor = Validator::parse_cursor(req.cursor.as_deref())?;
 
-        let logs = self.repo.get_change_history(config_key, limit + 1, cursor).await?;
+        let (logs, next_cursor) = self
+            .repo
+            .get_change_history(config_key.to_string(), limit as i32, cursor)
+            .await?;
 
-        let has_more = logs.len() > limit as usize;
-        let logs_to_return: Vec<ConfigChangeLogRow> = logs.into_iter().take(limit as usize).collect();
-        
-        // next_cursor是最后一条记录的cursor_id
-        let next_cursor = if has_more {
-            logs_to_return.last().map(|l| l.cursor_id.to_string())
-        } else {
-            None
-        };
-
-        let items: Vec<ConfigHistoryItem> = logs_to_return
-            .into_iter()
-            .map(Self::to_history_item)
-            .collect();
+        let items: Vec<ConfigHistoryItem> = logs.into_iter().map(Self::to_history_item).collect();
 
         Ok(PaginatedData {
             items,
             pagination: PaginationMeta {
-                has_more,
+                has_more: next_cursor.is_some(),
                 next_cursor,
             },
         })
@@ -273,40 +205,26 @@ impl SystemConfigService {
     /// 获取所有变更历史
     pub async fn get_changes(
         &self,
-        req: GetConfigChangesRequest,
+        req: ConfigChangesRequest,
     ) -> Result<PaginatedData<ConfigHistoryItem>> {
         let limit = Validator::validate_limit(req.limit, 100)?;
-        let cursor = Self::parse_cursor(req.cursor)?;
+        let cursor = Validator::parse_cursor(req.cursor.as_deref())?;
 
         let changed_by = req.changed_by;
+        let start_time = Validator::parse_datetime(req.start_time.as_deref())?;
+        let end_time = Validator::parse_datetime(req.end_time.as_deref())?;
 
-        let logs = self.repo.list_all_changes(
-            req.start_time.as_deref(),
-            req.end_time.as_deref(),
-            changed_by,
-            limit + 1,
-            cursor
-        ).await?;
+        let (logs, next_cursor) = self
+            .repo
+            .list_all_changes(start_time, end_time, changed_by, limit as i32, cursor)
+            .await?;
 
-        let has_more = logs.len() > limit as usize;
-        let logs_to_return: Vec<ConfigChangeLogRow> = logs.into_iter().take(limit as usize).collect();
-        
-        // next_cursor是最后一条记录的cursor_id
-        let next_cursor = if has_more {
-            logs_to_return.last().map(|l| l.cursor_id.to_string())
-        } else {
-            None
-        };
-
-        let items: Vec<ConfigHistoryItem> = logs_to_return
-            .into_iter()
-            .map(Self::to_history_item)
-            .collect();
+        let items: Vec<ConfigHistoryItem> = logs.into_iter().map(Self::to_history_item).collect();
 
         Ok(PaginatedData {
             items,
             pagination: PaginationMeta {
-                has_more,
+                has_more: next_cursor.is_some(),
                 next_cursor,
             },
         })
@@ -330,28 +248,6 @@ impl SystemConfigService {
         let _: std::result::Result<(), _> = conn
             .publish(REDIS_CHANNEL_CONFIG_UPDATES, message.to_string())
             .await;
-        Ok(())
-    }
-
-    /// 订阅配置更新事件（后台任务）
-    /// 
-    /// 使用 Redis PubSub 监听配置变更通知
-    pub async fn subscribe_config_updates(&self) -> Result<()> {
-        let mut pubsub = self.redis.get_async_pubsub().await?;
-        pubsub.subscribe(REDIS_CHANNEL_CONFIG_UPDATES).await?;
-
-        let mut stream = pubsub.on_message();
-        while let Some(msg) = stream.next().await {
-            let payload: String = msg.get_payload()?;
-            if let Ok(data) = serde_json::from_str::<serde_json::Value>(&payload) {
-                if let Some(config_key) = data.get("config_key").and_then(|v| v.as_str()) {
-                    tracing::info!("收到配置更新通知: {}", config_key);
-                    // 清除本地缓存（如果有的话）
-                    let _ = self.clear_config_cache(config_key).await;
-                }
-            }
-        }
-
         Ok(())
     }
 

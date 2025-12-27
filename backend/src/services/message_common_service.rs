@@ -9,6 +9,7 @@
 use crate::error::AppError;
 use sqlx::PgPool;
 
+#[derive(Clone)]
 pub struct MessageCommonService {
     pool: PgPool,
 }

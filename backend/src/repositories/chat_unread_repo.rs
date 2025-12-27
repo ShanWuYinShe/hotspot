@@ -5,6 +5,12 @@ use crate::error::AppError;
 use sqlx::PgPool;
 use uuid::Uuid;
 
+#[derive(Debug, sqlx::FromRow)]
+struct UnreadCountRow {
+    chat_id: Uuid,
+    count: i64,
+}
+
 #[derive(Clone)]
 pub struct ChatUnreadRepository {
     pool: PgPool,
@@ -44,7 +50,7 @@ impl ChatUnreadRepository {
         )
         .execute(&self.pool)
         .await?;
-        
+
         Ok(())
     }
 
@@ -75,7 +81,7 @@ impl ChatUnreadRepository {
         // 如果没有读取记录，使用 Unix 纪元作为默认值（统计所有消息）
         let read_at = record
             .and_then(|r| r.last_read_at)
-            .unwrap_or_else(|| chrono::DateTime::UNIX_EPOCH);
+            .unwrap_or(chrono::DateTime::UNIX_EPOCH);
 
         // 根据聊天类型查询未读消息数
         let count = match chat_type {
@@ -117,5 +123,67 @@ impl ChatUnreadRepository {
         };
 
         Ok(count)
+    }
+
+    /// 批量获取未读计数 (返回 Map<chat_id, count>)
+    pub async fn get_unread_count_batch(
+        &self,
+        chat_type: &str,
+        chat_ids: &[Uuid],
+        user_id: i64,
+    ) -> Result<std::collections::HashMap<Uuid, i64>, AppError> {
+        if chat_ids.is_empty() {
+            return Ok(std::collections::HashMap::new());
+        }
+
+        let rows = match chat_type {
+            "private_chat" => {
+                sqlx::query_as!(
+                    UnreadCountRow,
+                    r#"
+                    SELECT m.private_chat_id as "chat_id!", COUNT(*) as "count!"
+                    FROM private_messages m
+                    LEFT JOIN chat_unread_counts c 
+                        ON c.chat_id = m.private_chat_id 
+                        AND c.user_id = $2 
+                        AND c.chat_type = 'private_chat'
+                    WHERE m.private_chat_id = ANY($1)
+                      AND m.sender_id != $2
+                      AND m.is_deleted = FALSE
+                      AND m.sent_at > COALESCE(c.last_read_at, '1970-01-01')
+                    GROUP BY m.private_chat_id
+                    "#,
+                    chat_ids,
+                    user_id
+                )
+                .fetch_all(&self.pool)
+                .await?
+            }
+            "group_chat" => {
+                sqlx::query_as!(
+                    UnreadCountRow,
+                    r#"
+                    SELECT m.group_chat_id as "chat_id!", COUNT(*) as "count!"
+                    FROM group_messages m
+                    LEFT JOIN chat_unread_counts c 
+                        ON c.chat_id = m.group_chat_id 
+                        AND c.user_id = $2 
+                        AND c.chat_type = 'group_chat'
+                    WHERE m.group_chat_id = ANY($1)
+                      AND m.sender_id != $2
+                      AND m.is_deleted = FALSE
+                      AND m.sent_at > COALESCE(c.last_read_at, '1970-01-01')
+                    GROUP BY m.group_chat_id
+                    "#,
+                    chat_ids,
+                    user_id
+                )
+                .fetch_all(&self.pool)
+                .await?
+            }
+            _ => return Ok(std::collections::HashMap::new()),
+        };
+
+        Ok(rows.into_iter().map(|r| (r.chat_id, r.count)).collect())
     }
 }

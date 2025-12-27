@@ -2,7 +2,7 @@
   <UModal title="创建临时用户">
     <template #body>
       <UAlert
-        icon="i-heroicons-information-circle"
+        icon="i-lucide-info"
         color="info"
         variant="soft"
         :title="t('userMenu.tempModal.infoTitle')"
@@ -23,7 +23,7 @@
           <UInput
             v-model="tempState.nickname"
             :placeholder="t('userMenu.tempModal.nicknamePlaceholder')"
-            icon="i-heroicons-user"
+            icon="i-lucide-user"
           />
         </UFormField>
       </UForm>
@@ -39,7 +39,7 @@
       </UButton>
       <UButton
         :loading="isCreating"
-        icon="i-heroicons-rocket-launch"
+        icon="i-lucide-rocket"
         @click="handleSubmit"
       >
         {{ t('userMenu.tempModal.startExperience') }}

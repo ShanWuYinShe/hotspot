@@ -1,319 +1,630 @@
 <template>
-  <!-- 使用 v-model 控制侧边栏折叠状态，由 settings store 持久化 -->
-  <UDashboardGroup v-model:collapsed="sidebarCollapsed" :persistent="false">
-    <!-- 侧边栏 -->
+  <UDashboardGroup :persistent="false">
     <UDashboardSidebar
-      resizable
-      collapsible
       side="left"
       mode="drawer"
-      :ui="{ footer: 'border-t border-default' }"
+      :menu="{ portal: false }"
+      :collapsed="sidebarCollapsed"
+      :collapsible="true"
+      class="hidden sm:flex"
+      @update:collapsed="(value: boolean) => sidebarCollapsed = value"
     >
-      <!-- Logo 区域 -->
       <template #header="{ collapsed }">
-        <NuxtLink
-          to="/"
-          class="flex items-center gap-3 hover:opacity-90 transition-opacity"
-          aria-label="返回首页"
+        <div
+          class="p-2 flex flex-col gap-2 overflow-x-hidden"
+          :class="{ 'items-center': collapsed }"
         >
-          <div
-            class="w-8 h-8 rounded-xl bg-linear-to-br from-primary-500 to-red-500 flex items-center justify-center shadow-lg shrink-0"
-          >
-            <UIcon
-              name="i-heroicons-fire"
-              class="w-5 h-5 text-white"
-            />
-          </div>
-          <span
-            :class="collapsed ? 'hidden' : 'text-lg font-bold text-emphasis whitespace-nowrap'"
-          >
-            HotSpot
-          </span>
-        </NuxtLink>
+          <NuxtLink to="/" class="flex items-center gap-2 group focus:outline-none">
+            <div class="relative flex items-center justify-center shrink-0">
+              <UAvatar
+                icon="i-lucide-flame"
+                size="md"
+                variant="logo"
+              />
+            </div>
+            
+            <span
+              v-if="!collapsed"
+              class="hs-logo-text"
+            >
+              HotSpot
+            </span>
+          </NuxtLink>
+        </div>
       </template>
 
-      <!-- 搜索和导航 -->
       <template #default="{ collapsed }">
-        <!-- 导航菜单搜索按钮（搜索侧边栏导航项） -->
-
-        <!-- 主导航 -->
-        <UNavigationMenu
-          :items="navigationItems"
-          :collapsed="collapsed"
-          variant="pill"
-          orientation="vertical"
-          highlight
-        />
+        <div
+          class="py-4"
+          :class="collapsed ? 'px-2 flex justify-center' : 'px-3'"
+        >
+          <UNavigationMenu
+            :items="navigationItems"
+            :collapsed="collapsed"
+            :variant="collapsed ? 'link' : 'pill'"
+            orientation="vertical"
+            :highlight="!collapsed"
+            :class="collapsed ? 'w-auto' : 'w-full'"
+          />
+        </div>
       </template>
 
-      <!-- 底部工具栏 -->
       <template #footer="{ collapsed }">
-        <div class="space-y-3">
-          <!-- 当前位置显示（可点击修改） -->
-          <UTooltip :text="collapsed ? currentLocationDisplay : '点击修改位置'" :placement="collapsed ? 'right' : 'top'">
+        <div
+          class="p-2 w-full flex flex-col gap-2 overflow-x-hidden"
+          :class="{ 'items-center': collapsed }"
+        >
+          <UTooltip
+            text="设置浏览锚点"
+            :content="{ side: collapsed ? 'right' : 'top' }"
+            :portal="false"
+          >
             <UButton
-              variant="ghost"
-              :icon="collapsed ? 'i-heroicons-map-pin' : undefined"
-              size="sm"
+              variant="soft"
+              size="md"
               :square="collapsed"
-              :block="!collapsed"
-              :class="collapsed ? '' : 'justify-start text-left'"
+              icon="i-lucide-map-pin"
               @click="openLocationPicker"
             >
-              <template v-if="!collapsed">
-                <UIcon name="i-heroicons-map-pin" class="w-4 h-4 text-primary shrink-0" />
-                <span class="truncate text-xs">{{ currentLocationDisplay }}</span>
-              </template>
+              <div
+                v-if="!collapsed"
+                class="truncate flex-1 text-left"
+              >
+                <UBadge>浏览锚点</UBadge>
+                <div class="hs-text-strong">
+                  {{ currentLocationDisplay }}
+                </div>
+              </div>
             </UButton>
           </UTooltip>
+          <USeparator class="my-1 w-full" />
 
-          <!-- 工具按钮行 -->
-          <div :class="collapsed ? 'flex flex-col items-center gap-2' : 'flex items-center justify-between'">
-            <!-- 全局搜索按钮 -->
-            <UTooltip text="全局搜索" :kbds="['meta', 'K']">
-              <UButton
-                variant="ghost"
-                icon="i-heroicons-magnifying-glass"
-                size="sm"
-                square
-                @click="openGlobalSearch"
-              />
-            </UTooltip>
+          <div
+            class="w-full"
+            :class="collapsed ? 'flex flex-col gap-2 items-center justify-center' : 'flex items-center justify-between'"
+          >
+            <div :class="collapsed ? 'flex flex-col gap-2 items-center' : 'flex items-center gap-1.5 flex-nowrap'">
+              <UTooltip
+                text="搜索 (⌘K)"
+                :content="{ side: collapsed ? 'right' : 'top' }"
+                :portal="false"
+              >
+                <UButton
+                  variant="ghost"
+                  color="neutral"
+                  :size="collapsed ? 'md' : 'sm'"
+                  icon="i-lucide-search"
+                  :square="collapsed"
+                  @click="openGlobalSearch"
+                />
+              </UTooltip>
 
-            <!-- 通知按钮 -->
-            <UTooltip text="通知中心">
-              <UButton
-                variant="ghost"
-                icon="i-heroicons-bell"
-                size="sm"
-                square
-                @click="navigateTo('/notifications')"
-              />
-            </UTooltip>
+              <UTooltip
+                text="通知"
+                :content="{ side: collapsed ? 'right' : 'top' }"
+                :portal="false"
+              >
+                <UChip
+                  :show="unreadCount > 0"
+                  :text="unreadCount > 99 ? '99+' : unreadCount"
+                  color="error"
+                  position="top-right"
+                  size="sm"
+                  :inset="true"
+                >
+                  <UButton
+                    variant="ghost"
+                    color="neutral"
+                    :size="collapsed ? 'md' : 'sm'"
+                    icon="i-lucide-bell"
+                    :square="collapsed"
+                    @click="onNotificationsClick"
+                  />
+                </UChip>
+              </UTooltip>
 
-            <!-- 颜色模式切换 -->
-            <UColorModeSwitch />
+              <UTooltip
+                text="主题切换"
+                :content="{ side: collapsed ? 'right' : 'top' }"
+                :portal="false"
+              >
+                <UColorModeButton
+                  variant="ghost"
+                  color="neutral"
+                  :size="collapsed ? 'md' : 'sm'"
+                  :square="collapsed"
+                />
+              </UTooltip>
+            </div>
 
-            <!-- 折叠/展开按钮（仅桌面端显示，移动端用顶部 toggle） -->
-            <UDashboardSidebarCollapse class="hidden lg:flex" />
+            <div class="flex justify-center">
+              <UTooltip
+                :text="collapsed ? '展开侧边栏' : '收起侧边栏'"
+                :content="{ side: collapsed ? 'right' : 'top' }"
+                :portal="false"
+              >
+                <UButton
+                  variant="ghost"
+                  color="neutral"
+                  :size="collapsed ? 'md' : 'sm'"
+                  :square="collapsed"
+                  :icon="collapsed ? 'i-lucide-chevrons-right' : 'i-lucide-chevrons-left'"
+                  @click="sidebarCollapsed = !sidebarCollapsed"
+                />
+              </UTooltip>
+            </div>
           </div>
+
         </div>
       </template>
     </UDashboardSidebar>
 
-    <!-- 主内容区域 -->
     <UDashboardPanel>
-      <!-- 顶部导航栏 -->
       <template #header>
-        <UDashboardNavbar>
-          <!-- 右侧工具栏 -->
-          <template #right>
-            <div class="flex items-center gap-2">
-              <!-- 语言切换 - 桌面端显示完整下拉框 -->
-              <USelectMenu
-                :model-value="currentLocale"
-                :items="localeOptions"
-                value-key="value"
-                size="sm"
-                class="w-24 hidden sm:block"
-                :disabled="switchingLocale"
-                @update:model-value="handleLocaleChange"
+        <div class="sticky top-0 z-30">
+          <UDashboardNavbar :toggle="false">
+            <template #left>
+              <UTooltip
+                v-if="showNavbarBack"
+                text="返回"
+                :portal="false"
               >
-                <template #leading>
-                  <UIcon
-                    :name="switchingLocale ? 'i-heroicons-arrow-path' : 'i-heroicons-language'"
-                    class="icon-sm"
-                    :class="{ 'loading-spin': switchingLocale }"
-                  />
-                </template>
-              </USelectMenu>
-
-              <!-- 语言切换 - 移动端显示简洁按钮 -->
-              <UPopover class="sm:hidden">
                 <UButton
                   variant="ghost"
-                  size="sm"
-                  :icon="switchingLocale ? 'i-heroicons-arrow-path' : 'i-heroicons-language'"
-                  :loading="switchingLocale"
+                  color="neutral"
+                  icon="i-lucide-arrow-left"
+                  class="hidden sm:inline-flex"
+                  @click="goBack"
                 />
-                <template #content>
-                  <div class="p-2 space-y-1">
-                    <UButton
-                      v-for="locale in localeOptions"
-                      :key="locale.value"
-                      :color="currentLocale === locale.value ? 'primary' : 'neutral'"
-                      :variant="currentLocale === locale.value ? 'soft' : 'ghost'"
-                      size="sm"
-                      block
-                      class="justify-start"
-                      @click="handleLocaleChange(locale.value)"
-                    >
-                      {{ locale.label }}
-                    </UButton>
-                  </div>
-                </template>
-              </UPopover>
+              </UTooltip>
+              <UButton
+                class="sm:hidden"
+                variant="ghost"
+                color="neutral"
+                icon="i-lucide-menu"
+                @click="mobileNavOpen = true"
+              />
+            </template>
+            <template #right>
+              <div class="flex items-center gap-3">
+                <USelectMenu
+                  :model-value="currentLocale"
+                  :items="localeOptions"
+                  value-key="value"
+                  size="sm"
+                  class="w-24 hidden sm:block"
+                  :disabled="switchingLocale"
+                  @update:model-value="handleLocaleChange"
+                >
+                  <template #leading>
+                    <UIcon
+                      :name="switchingLocale ? 'i-lucide-refresh-cw' : 'i-lucide-languages'"
+                      :size="16"
+                      :class="switchingLocale && 'animate-spin'"
+                    />
+                  </template>
+                </USelectMenu>
 
-              <!-- 用户菜单 -->
-              <UserMenu />
-            </div>
-          </template>
-        </UDashboardNavbar>
+                <UPopover
+                  class="sm:hidden"
+                  :portal="false"
+                >
+                  <UButton
+                    variant="ghost"
+                    size="md"
+                    :icon="switchingLocale ? 'i-lucide-refresh-cw' : 'i-lucide-languages'"
+                    :loading="switchingLocale"
+                  />
+                  <template #content>
+                    <div class="p-2 space-y-1">
+                      <UButton
+                        v-for="locale in localeOptions"
+                        :key="locale.value"
+                        :color="currentLocale === locale.value ? 'primary' : 'neutral'"
+                        :variant="currentLocale === locale.value ? 'soft' : 'ghost'"
+                        size="sm"
+                        :block="true"
+                        class="justify-start"
+                        @click="handleLocaleChange(locale.value)"
+                      >
+                        {{ locale.label }}
+                      </UButton>
+                    </div>
+                  </template>
+                </UPopover>
+
+                <!-- 用户菜单 -->
+                <UserMenu />
+              </div>
+            </template>
+          </UDashboardNavbar>
+
+          <div v-if="dashboardHeaderEnabled">
+            <UPageHeader
+              :title="dashboardTitle"
+              :description="dashboardDescription"
+            >
+              <template #links>
+                <div class="flex items-center gap-2">
+                  <UButton
+                    v-for="action in mergedDashboardHeaderActions"
+                    :key="action.key"
+                    :color="action.color"
+                    :variant="action.variant || 'outline'"
+                    :size="action.size || 'sm'"
+                    :leading-icon="action.icon"
+                    :loading="action.loading"
+                    :disabled="action.disabled"
+                    :class="action.class"
+                    @click="action.action"
+                  >
+                    {{ action.label }}
+                  </UButton>
+                </div>
+              </template>
+            </UPageHeader>
+          </div>
+
+          <div
+            v-if="dashboardStats && dashboardStats.length"
+            class="w-full px-3 sm:px-4 lg:px-6 pb-4"
+          >
+            <StatsGrid
+              :stats="dashboardStats"
+              :columns="dashboardStatsColumns"
+            />
+          </div>
+        </div>
       </template>
 
-      <!-- 页面内容 -->
       <template #body>
-        <!-- 全高度模式（聊天页面等） -->
-        <div v-if="isFullHeight" class="h-full flex flex-col overflow-hidden">
+        <div
+          v-if="isFullHeight"
+          class="h-full min-h-0"
+        >
           <slot />
         </div>
-        <!-- 普通页面模式 -->
-        <div v-else class="w-full px-4 sm:px-6 lg:px-8 py-4 max-w-[1600px] mx-auto">
-          <!-- 全局返回按钮 -->
-          <div v-if="canGoBack" class="mb-4">
-            <UButton
-              variant="ghost"
-              color="neutral"
-              icon="i-heroicons-arrow-left"
-              @click="goBack"
-            >
-              返回
-            </UButton>
-          </div>
+
+        <!-- 普通页面模式：内容只负责 padding，不再承担 header/sticky，避免滚动穿透 -->
+        <div
+          v-else
+          :class="bodyContainerClass"
+        >
           <slot />
         </div>
       </template>
     </UDashboardPanel>
   </UDashboardGroup>
+
+  <UDrawer
+    v-model:open="mobileNavOpen"
+    direction="bottom"
+    title="导航"
+    description="快速跳转到主要功能"
+  >
+    <template #body>
+      <div class="space-y-3 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+        <UNavigationMenu
+          :items="navigationItems"
+          orientation="vertical"
+          :highlight="true"
+          variant="pill"
+        />
+
+        <USeparator class="my-2" />
+
+        <!-- 移动端功能区 -->
+        <div class="grid grid-cols-4 gap-2 px-2">
+          <div class="flex flex-col items-center gap-1">
+            <UButton
+              variant="soft"
+              color="neutral"
+              icon="i-lucide-search"
+              size="lg"
+              :square="true"
+              @click="openGlobalSearch"
+            />
+            <UBadge variant="subtle" color="neutral" size="xs">搜索</UBadge>
+          </div>
+
+          <div class="flex flex-col items-center gap-1">
+            <div class="relative">
+              <UButton
+                variant="soft"
+                color="neutral"
+                icon="i-lucide-bell"
+                size="lg"
+                :square="true"
+                @click="onNotificationsClick"
+              />
+              <UChip
+                v-if="unreadCount > 0"
+                :text="unreadCount > 99 ? '99+' : unreadCount"
+                color="error"
+                position="top-right"
+                size="sm"
+                :inset="false"
+                class="absolute top-0 right-0 translate-x-1/3 -translate-y-1/3"
+              />
+            </div>
+            <UBadge variant="subtle" color="neutral" size="xs">通知</UBadge>
+          </div>
+
+          <div class="flex flex-col items-center gap-1">
+            <UColorModeButton
+              variant="soft"
+              color="neutral"
+              size="lg"
+              :square="true"
+            />
+            <UBadge variant="subtle" color="neutral" size="xs">主题</UBadge>
+          </div>
+
+          <div class="flex flex-col items-center gap-1">
+             <UButton
+              variant="soft"
+              color="neutral"
+              icon="i-lucide-map-pin"
+              size="lg"
+              :square="true"
+              @click="openLocationPicker"
+            />
+            <UBadge variant="subtle" color="neutral" size="xs">定位</UBadge>
+          </div>
+        </div>
+      </div>
+    </template>
+  </UDrawer>
 </template>
 
 <script setup lang="ts">
-const { t } = useI18n();
-const { currentLocale, locales, switchLocale } = useLocaleSwitcher();
+import type { LanguageCode } from '~/stores/settings.store'
+import { DASHBOARD_HEADER_CTX_KEY, type DashboardHeaderAction } from '~/composables/useDashboardHeader'
+import StatsGrid from '~/components/data/StatsGrid.vue'
+import type { StatItem } from '~/components/data/StatsGrid.vue'
+
+const { t, locale, availableLocales } = useI18n();
+const nuxtApp = useNuxtApp()
+
+// 语言切换（只在本 layout 用，避免额外 composable）
+const localeNames: Record<LanguageCode, string> = {
+  'zh-CN': '中文',
+  'en-US': 'English'
+}
+
+const currentLocale = computed(() => (locale.value || 'zh-CN') as LanguageCode)
+
+const locales = computed(() =>
+  (availableLocales || []).map((code: string) => ({
+    code: code as LanguageCode,
+    name: localeNames[code as LanguageCode] || code
+  }))
+)
+
+const switchLocale = async (code: LanguageCode): Promise<boolean> => {
+  try {
+    await (nuxtApp.$i18n as { setLocale: (c: LanguageCode) => Promise<void> }).setLocale(code)
+    settingsStore.setLanguage(code)
+    return true
+  } catch (error) {
+    console.error('语言切换失败:', error)
+    return false
+  }
+}
 const route = useRoute();
 const router = useRouter();
-const toast = useToast();
+const mainNavPages = ['/', '/map', '/moments/nearby', '/users/nearby', '/groups/nearby', '/chat'];
 
-// 返回按钮逻辑
-
-// 主要导航页面（不显示返回按钮）
-const mainNavPages = ['/', '/map', '/moments', '/users/nearby', '/groups/discover', '/chat'];
-
-// 检查是否是全高度模式（聊天页面等）
 const isFullHeight = computed(() => route.meta.fullHeight === true);
 
-// 是否可以返回（只要不是主导航页面就显示返回按钮）
+const dashboardHeaderEnabled = computed(() => {
+  if (isFullHeight.value) return false
+  return route.meta.dashboardHeader === true
+})
+
+type ContentWidth = 'container' | 'full'
+const contentWidth = computed<ContentWidth>(() => {
+  // 默认：桌面端阅读更舒服（container），需要“铺满”的页面再显式 opt-in full
+  const raw = route.meta.contentWidth
+  return raw === 'full' ? 'full' : 'container'
+})
+
+const bodyContainerClass = computed(() => {
+  const base = 'w-full px-3 sm:px-4 lg:px-6 py-5'
+  if (contentWidth.value === 'full') return base
+  return `${base} max-w-(--ui-container) mx-auto`
+})
+
+const dashboardTitle = ref<string>(String(route.meta.title || ''))
+const dashboardDescription = ref<string>(String(route.meta.description || ''))
+
+const dashboardStats = ref<StatItem[] | null>(null)
+const dashboardStatsColumns = ref<1 | 2 | 3 | 4 | 5 | 6>(4)
+
+const dashboardHeaderActions = ref<DashboardHeaderAction[]>([])
+
+type DashboardHeaderMetaAction = {
+  key: string
+  label: string
+  icon?: string
+  color?: DashboardHeaderAction['color']
+  variant?: DashboardHeaderAction['variant']
+  size?: DashboardHeaderAction['size']
+  disabled?: boolean
+  to: string
+}
+
+const dashboardMetaActions = computed<DashboardHeaderAction[]>(() => {
+  const raw = route.meta.dashboardActions as unknown
+  if (!Array.isArray(raw)) return []
+
+  const actions: DashboardHeaderAction[] = []
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue
+    const a = item as Partial<DashboardHeaderMetaAction>
+    if (!a.key || typeof a.key !== 'string') continue
+    if (!a.label || typeof a.label !== 'string') continue
+    if (!a.to || typeof a.to !== 'string') continue
+
+    actions.push({
+      key: a.key,
+      label: a.label,
+      icon: a.icon,
+      color: a.color,
+      variant: a.variant,
+      size: a.size,
+      disabled: a.disabled,
+      action: () => navigateTo(a.to!)
+    })
+  }
+  return actions
+})
+
+const mergedDashboardHeaderActions = computed<DashboardHeaderAction[]>(() => {
+  const map = new Map<string, DashboardHeaderAction>()
+  for (const a of dashboardMetaActions.value) map.set(a.key, a)
+  for (const a of dashboardHeaderActions.value) map.set(a.key, a)
+  return [...map.values()]
+})
+
+provide(DASHBOARD_HEADER_CTX_KEY, {
+  setHeader: (h: { title?: string; description?: string }) => {
+    if (h.title !== undefined) dashboardTitle.value = h.title
+    if (h.description !== undefined) dashboardDescription.value = h.description
+  },
+  clearHeader: () => {
+    dashboardTitle.value = String(route.meta.title || '')
+    dashboardDescription.value = String(route.meta.description || '')
+  },
+  setStats: (stats: StatItem[] | null) => {
+    dashboardStats.value = stats || null
+  },
+  clearStats: () => {
+    dashboardStats.value = null
+  },
+  setActions: (actions: DashboardHeaderAction[]) => {
+    dashboardHeaderActions.value = actions
+  },
+  clearActions: () => {
+    dashboardHeaderActions.value = []
+  }
+})
+
+watch(() => route.fullPath, () => {
+  dashboardHeaderActions.value = []
+  dashboardStats.value = null
+  dashboardTitle.value = String(route.meta.title || '')
+  dashboardDescription.value = String(route.meta.description || '')
+})
+
 const canGoBack = computed(() => {
   return !mainNavPages.includes(route.path);
 });
 
-// 返回上一页
+const showNavbarBack = computed(() => {
+  return canGoBack.value && route.meta.showNavbarBack !== false
+})
+
 const goBack = () => {
-  // 如果有历史记录则返回，否则回到首页
-  if (window.history.length > 1) {
+  if (router.options.history.state.back) {
     router.back();
   } else {
     router.push('/');
   }
 };
 
-// 使用水合安全的 store 访问
 const authStore = useAuthStore();
 const messagesStore = useMessagesStore();
 const settingsStore = useSettingsStore();
 const locationStore = useLocationStore();
-const unreadCount = computed(() => messagesStore.totalUnreadCount);
+const anchorStore = useMapAnchorStore()
 
-// WebSocket 连接
-const { connect: wsConnect, isConnected: wsConnected, status: wsStatus } = useGlobalWebSocket();
+const unreadCount = messagesStore.totalUnreadCount;
 
-// 侧边栏折叠状态（双向绑定到 store）
+const sidebarCollapsedValue = useHydratedStore(settingsStore, 'sidebarCollapsed', false);
 const sidebarCollapsed = computed({
-  get: () => settingsStore.sidebarCollapsed,
+  get: () => sidebarCollapsedValue.value,
   set: (value: boolean) => settingsStore.setSidebarCollapsed(value)
 });
 
-// 当前位置显示：SSR 时使用默认值，onMounted 后同步 store 值
-const currentLocationDisplay = ref('未设置位置');
+const anchorName = useHydratedStore(anchorStore, 'anchorName', '')
+const currentLocationDisplay = computed(() => anchorName.value || '未设置锚点')
 
-onMounted(() => {
-  // 立即同步位置
-  currentLocationDisplay.value = locationStore.location?.locationName || '未设置位置';
-  // 监听变化
-  watch(() => locationStore.location?.locationName, (name) => {
-    currentLocationDisplay.value = name || '未设置位置';
-  });
-  
-  // 初始化 WebSocket 连接（用户已登录时）
-  if (authStore.isAuthenticated) {
-    wsConnect();
-  }
-});
-
-// 模态框管理
 const modal = useModal();
+const feedback = useFeedbackStore()
+const { requireAuth } = useRequireAuth()
+const adminStore = useAdminStore()
 
-// 打开位置选择器（使用高德地图）
+const hydratedMe = useHydratedStore(authStore, 'user', null) as Ref<{ user_type?: string } | null>
+const hydratedIsAdmin = computed(() => {
+  return hydratedMe.value?.user_type === 'admin' || adminStore.hasAccess
+})
+
+const mobileNavOpen = ref(false)
+
+const onNotificationsClick = () => {
+  if (!requireAuth('查看通知')) return
+  navigateTo('/notifications')
+}
+
 const openLocationPicker = () => {
   modal.showLocationPicker((location) => {
-    locationStore.setLocation(location.latitude, location.longitude, location.locationName);
-    toast.add({ title: '位置已更新', description: location.locationName, color: 'success' });
+    anchorStore.setAnchor(location.latitude, location.longitude, location.locationName)
+    feedback.success('浏览锚点已更新', location.locationName)
   });
 };
 
-// 导航菜单项 - 按功能逻辑分组
 const navigationItems = computed(() => [
-  // 第一组：核心功能
   [
     {
       label: t('nav.home'),
-      icon: 'i-heroicons-home',
+      icon: 'i-lucide-house',
       to: '/',
       active: route.path === '/',
-    },
-    {
-      label: t('nav.map'),
-      icon: 'i-heroicons-map',
-      to: '/map',
-      active: route.path === '/map',
-    },
+    }
   ],
-  // 第二组：发现内容
   [
     {
       label: t('nav.moments'),
-      icon: 'i-heroicons-photo',
-      to: '/moments',
+      icon: 'i-lucide-image',
+      to: '/moments/nearby',
       active: route.path.startsWith('/moments'),
     },
     {
       label: t('nav.nearbyUsers'),
-      icon: 'i-heroicons-users',
+      icon: 'i-lucide-users',
       to: '/users/nearby',
-      active: route.path === '/users/nearby',
+      active: route.path.startsWith('/users/nearby'),
     },
     {
       label: t('nav.groups'),
-      icon: 'i-heroicons-user-group',
-      to: '/groups/discover',
+      icon: 'i-lucide-users-round',
+      to: '/groups/nearby',
       active: route.path.startsWith('/groups'),
     },
   ],
-  // 第三组：社交通讯
   [
     {
       label: t('nav.messages'),
-      icon: 'i-heroicons-chat-bubble-left-right',
+      icon: 'i-lucide-messages-square',
       to: '/chat',
       active: route.path.startsWith('/chat'),
-      badge: unreadCount.value > 0
-        ? (unreadCount.value > 99 ? '99+' : unreadCount.value.toString())
+      badge: unreadCount > 0
+        ? (unreadCount > 99 ? '99+' : unreadCount.toString())
         : undefined,
     },
   ],
+
+  ...(hydratedIsAdmin.value ? [[
+    {
+      label: '管理',
+      icon: 'i-lucide-shield-check',
+      to: '/admin',
+      active: route.path.startsWith('/admin')
+    }
+  ]] : [])
 ]);
 
-// 语言切换
 const switchingLocale = ref(false);
 
 const localeOptions = computed(() =>
@@ -325,37 +636,30 @@ const localeOptions = computed(() =>
 
 const handleLocaleChange = async (newLocale: string | undefined) => {
   if (switchingLocale.value || !newLocale) return;
-  // 验证 locale 是否有效
   if (newLocale !== 'zh-CN' && newLocale !== 'en-US') return;
 
   switchingLocale.value = true;
   try {
     const success = await switchLocale(newLocale);
     if (success) {
-      toast.add({
-        title: '语言切换成功',
-        description: `已切换到${newLocale === 'zh-CN' ? '中文' : 'English'}`,
-        color: 'success',
-      });
+      feedback.success('语言切换成功', `已切换到${newLocale === 'zh-CN' ? '中文' : 'English'}`)
     }
   } catch (error) {
     console.error('语言切换错误:', error);
-    toast.add({
-      title: '语言切换失败',
-      description: '请刷新页面后重试',
-      color: 'error',
-    });
+    feedback.error('语言切换失败', '请刷新页面后重试')
   } finally {
     switchingLocale.value = false;
   }
 };
 
-// 全局搜索
 const openGlobalSearch = () => {
   modal.showGlobalSearch();
 };
 
-// 快捷键
+watch(() => route.fullPath, () => {
+  mobileNavOpen.value = false
+})
+
 defineShortcuts({
   meta_k: { usingInput: true, handler: openGlobalSearch },
   ctrl_k: { usingInput: true, handler: openGlobalSearch },

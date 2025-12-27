@@ -1,21 +1,19 @@
-/// API v1 路由模块
-/// 
-/// API 路径与 Token 要求规范：
-/// - /public/* 路径不需要认证（无 auth_middleware）
-/// - /protected/* 路径需要认证（应用 auth_middleware）
+//! API v1 路由模块
+//!
+//! API 路径与 Token 要求规范：
+//! - /public/* 路径不需要认证（无 auth_middleware）
+//! - /protected/* 路径需要认证（应用 auth_middleware）
 
-pub mod public;
 pub mod protected;
+pub mod public;
 
 use axum::{middleware, Router};
 use tower::ServiceBuilder;
 
 use crate::{
     middleware::{
-        admin_auth::admin_auth_middleware,
-        auth::auth_middleware,
-        idempotency::idempotency_middleware,
-        rate_limit::rate_limit_middleware,
+        admin_auth::admin_auth_middleware, auth::auth_middleware,
+        idempotency::idempotency_middleware, rate_limit::rate_limit_middleware,
     },
     state::AppState,
 };
@@ -31,6 +29,7 @@ pub fn v1_routes(state: AppState) -> Router<AppState> {
         .nest("/public/group_chats", public::group_chats::routes())
         .nest("/public/moments", public::moments::routes())
         .nest("/public/comments", public::comments::routes())
+        .nest("/public/map", public::map::routes())
         .nest("/public/system", public::system::routes())
         .nest("/public/tags", public::tags::routes())
         .with_state(state.clone())
@@ -45,14 +44,30 @@ pub fn v1_routes(state: AppState) -> Router<AppState> {
         .nest("/protected/auth", protected::auth::routes())
         .nest("/protected/user", protected::user::routes())
         .nest("/protected/group_chats", protected::group_chats::routes())
-        .nest("/protected/private_chats", protected::private_chats::routes())
-        .nest("/protected/private_messages", protected::private_messages::routes())
-        .nest("/protected/group_messages", protected::group_messages::routes())
+        .nest(
+            "/protected/private_chats",
+            protected::private_chats::routes(),
+        )
+        .nest(
+            "/protected/private_messages",
+            protected::private_messages::routes(),
+        )
+        .nest(
+            "/protected/group_messages",
+            protected::group_messages::routes(),
+        )
         .nest("/protected/moments", protected::moments::routes())
         .nest("/protected/comments", protected::comments::routes())
         .nest("/protected/reports", protected::reports::routes())
-        .nest("/protected/device_tokens", protected::inbox::routes())
-        .nest("/protected/subscriptions", protected::subscriptions::routes())
+        .nest(
+            "/protected/device_tokens",
+            protected::device_tokens::routes(),
+        )
+        .nest(
+            "/protected/subscriptions",
+            protected::subscriptions::routes(),
+        )
+        .nest("/protected/system", protected::system::routes())
         .nest("/protected/feed", protected::feed::routes())
         .nest("/protected/media", protected::media::routes())
         .nest("/protected/messages", protected::messages::routes())
@@ -108,5 +123,6 @@ pub fn v1_routes(state: AppState) -> Router<AppState> {
         );
 
     // ==================== 合并 v1 路由 ====================
+    // request_id 中间件已提升到 app 全局层，避免 TraceLayer 日志缺失 request_id
     public_routes.merge(protected_routes).merge(admin_routes)
 }

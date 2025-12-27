@@ -1,17 +1,18 @@
-use sqlx::{PgPool, FromRow};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
 use crate::constants::INVITE_EXPIRE_DAYS;
 use crate::error::Result;
 use crate::types::enums::InviteStatus;
+use crate::utils::pagination::{decode_cursor, encode_cursor, IdCursor};
 
 /// 群组邀请Row - 数据库查询返回类型
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct GroupInviteRow {
     pub id: i64,
-    pub cursor_id: Uuid,
+    pub invite_id: Uuid,
     pub group_chat_id: Uuid,
     pub inviter_id: i64,
     pub invitee_id: i64,
@@ -46,7 +47,7 @@ impl GroupInviteRepository {
             r#"
             INSERT INTO group_invites (group_chat_id, inviter_id, invitee_id, message, expires_at)
             VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, cursor_id, group_chat_id, inviter_id, invitee_id, message,
+            RETURNING id, invite_id, group_chat_id, inviter_id, invitee_id, message,
                       status as "status: InviteStatus", created_at, expires_at, responded_at
             "#,
             group_chat_id,
@@ -61,17 +62,17 @@ impl GroupInviteRepository {
         Ok(row)
     }
 
-    /// 按ID查找邀请
-    pub async fn find_by_id(&self, id: i64) -> Result<Option<GroupInviteRow>> {
+    /// 按 invite_id 查找邀请（对外契约使用 UUID 字符串）
+    pub async fn find_by_invite_id(&self, invite_id: Uuid) -> Result<Option<GroupInviteRow>> {
         let row = sqlx::query_as!(
             GroupInviteRow,
             r#"
-            SELECT id, cursor_id, group_chat_id, inviter_id, invitee_id, message,
+            SELECT id, invite_id, group_chat_id, inviter_id, invitee_id, message,
                    status as "status: InviteStatus", created_at, expires_at, responded_at
             FROM group_invites
-            WHERE id = $1
+            WHERE invite_id = $1
             "#,
-            id
+            invite_id
         )
         .fetch_optional(&self.pool)
         .await?;
@@ -79,15 +80,15 @@ impl GroupInviteRepository {
         Ok(row)
     }
 
-    /// 更新邀请状态
-    pub async fn update_status(&self, id: i64, status: InviteStatus) -> Result<()> {
+    /// 按 invite_id 更新邀请状态（对外契约使用 UUID 字符串）
+    pub async fn update_status_by_invite_id(&self, invite_id: Uuid, status: InviteStatus) -> Result<()> {
         sqlx::query!(
             r#"
             UPDATE group_invites
             SET status = $2, responded_at = NOW()
-            WHERE id = $1
+            WHERE invite_id = $1
             "#,
-            id,
+            invite_id,
             status as InviteStatus
         )
         .execute(&self.pool)
@@ -96,52 +97,46 @@ impl GroupInviteRepository {
         Ok(())
     }
 
-    /// 将 UUID cursor 转换为自增主键
-    async fn resolve_cursor(&self, cursor: Option<Uuid>) -> Result<i64> {
-        match cursor {
-            Some(c) => {
-                sqlx::query_scalar!(
-                    r#"SELECT id FROM group_invites WHERE cursor_id = $1"#,
-                    c
-                )
-                .fetch_optional(&self.pool)
-                .await?
-                .ok_or_else(|| crate::error::AppError::BadRequest("无效的 cursor".to_string()))
-            }
-            None => Ok(i64::MAX),
-        }
-    }
-
     /// 按用户ID查询邀请列表
     pub async fn list_by_user(
         &self,
         user_id: i64,
         status: Option<InviteStatus>,
         limit: i32,
-        cursor: Option<Uuid>,
-    ) -> Result<Vec<GroupInviteRow>> {
-        let cursor_pk = self.resolve_cursor(cursor).await?;
-        
+        cursor: Option<String>,
+    ) -> Result<(Vec<GroupInviteRow>, Option<String>)> {
+        let status_str = status.map(|s| s.to_string());
+        let last_id = if let Some(c) = cursor {
+            decode_cursor::<IdCursor>(&c)?
+        } else {
+            i64::MAX
+        };
+
         let rows = sqlx::query_as!(
             GroupInviteRow,
             r#"
-            SELECT id, cursor_id, group_chat_id, inviter_id, invitee_id, message,
+            SELECT id, invite_id, group_chat_id, inviter_id, invitee_id, message,
                    status as "status: InviteStatus", created_at, expires_at, responded_at
             FROM group_invites
             WHERE invitee_id = $1 
-              AND ($2::invitation_status IS NULL OR status = $2)
+              AND ($2::text IS NULL OR status::text = $2)
               AND id < $3
             ORDER BY id DESC
             LIMIT $4
             "#,
             user_id,
-            status as Option<InviteStatus>,
-            cursor_pk,
+            status_str,
+            last_id,
             limit as i64
         )
         .fetch_all(&self.pool)
         .await?;
-        
-        Ok(rows)
+
+        let next_cursor = rows
+            .last()
+            .map(|last| encode_cursor(&last.id))
+            .transpose()?;
+
+        Ok((rows, next_cursor))
     }
 }

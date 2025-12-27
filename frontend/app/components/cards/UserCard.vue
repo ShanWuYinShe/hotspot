@@ -1,252 +1,364 @@
 <template>
-    <UCard
-        class="interactive-card group cursor-pointer"
-        @click="$emit('click', user)"
-    >
-        <div class="flex items-center justify-between">
-            <!-- 使用 Nuxt UI User 组件 -->
-            <UUser
-                :name="user.nickname"
-                :description="userDescription"
-                :avatar="{
-                    src: user.avatar_url,
-                    alt: user.nickname,
-                    size: 'lg',
-                    chip: isOnline ? { color: 'success', position: 'bottom-right' } : false
-                }"
-                :chip="user.user_type && isTempUser(user.user_type) ? { text: '临时', color: 'neutral' } : false"
-                size="lg"
-                class="flex-1 min-w-0"
+  <UCard
+    variant="outline"
+    class="group relative flex flex-col h-full overflow-hidden"
+    data-hs-card="interactive"
+    @click="$emit('click', user)"
+  >
+    <template #header>
+      <div class="flex flex-col gap-3">
+        <div class="flex items-start justify-between gap-3">
+          <UUser
+            class="min-w-0"
+            :name="user.nickname"
+            :description="user.bio || '暂无简介'"
+            :avatar="{
+              src: user.avatar_url,
+              alt: user.nickname,
+              size: 'xl',
+              chip: isOnline ? { color: 'success', position: 'bottom-right', size: '2xs', inset: false } : false
+            }"
+          />
+
+          <div class="flex gap-1 shrink-0">
+            <UBadge
+              v-if="isFriend"
+              color="primary"
+              variant="soft"
+              size="xs"
+            >好友</UBadge>
+            <UBadge
+              v-else-if="isFollowing"
+              color="neutral"
+              variant="soft"
+              size="xs"
+            >已关注</UBadge>
+            <UBadge
+              v-if="userTypeBadge"
+              :color="userTypeBadge.color"
+              variant="soft"
+              size="xs"
             >
-                <!-- 自定义描述内容 -->
-                <template #description>
-                    <div class="space-y-1">
-                        <!-- 位置和距离信息（仅当有 geo 数据时显示） -->
-                        <div v-if="user.geo" class="flex items-center gap-4 text-sm text-secondary-content">
-                            <div v-if="user.geo.location_name" class="flex items-center gap-1">
-                                <UIcon name="i-heroicons-map-pin" class="icon-sm" />
-                                <span class="truncate">{{ user.geo.location_name }}</span>
-                            </div>
-                            
-                            <div v-if="user.geo.distance !== undefined" class="flex items-center gap-1">
-                                <UIcon name="i-heroicons-signal" class="icon-sm" />
-                                <span>{{ formatDistance(user.geo.distance) }}</span>
-                            </div>
-                        </div>
-
-                        <!-- 个人简介 -->
-                        <p v-if="user.bio" class="text-sm text-secondary-content line-clamp-2">
-                            {{ user.bio }}
-                        </p>
-                    </div>
-                </template>
-            </UUser>
-
-            <!-- 操作按钮 -->
-            <div class="flex items-center gap-2">
-                <!-- 好友状态标记（始终可见） -->
-                <UBadge
-                    v-if="isFriend"
-                    variant="soft"
-                    color="success"
-                    size="sm"
-                >
-                    好友
-                </UBadge>
-                <UBadge
-                    v-else-if="isFollowing"
-                    variant="soft"
-                    color="primary"
-                    size="sm"
-                >
-                    已关注
-                </UBadge>
-
-                <!-- 操作按钮（hover时显示） -->
-                <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <UTooltip text="发送消息">
-                        <UButton
-                            variant="ghost"
-                            size="sm"
-                            icon="i-heroicons-chat-bubble-left"
-                            @click.stop="$emit('message', user)"
-                        />
-                    </UTooltip>
-                    
-                    <UDropdownMenu :items="userMenuItems" @click.stop>
-                        <UButton
-                            variant="ghost"
-                            size="sm"
-                            icon="i-heroicons-ellipsis-horizontal"
-                        />
-                    </UDropdownMenu>
-                </div>
-            </div>
+              {{ userTypeBadge.label }}
+            </UBadge>
+          </div>
         </div>
-    </UCard>
+
+        <div
+          v-if="user.geo"
+          class="flex flex-wrap gap-2"
+        >
+          <UBadge
+            v-if="user.geo.location_name"
+            :label="user.geo.location_name"
+            icon="i-lucide-map-pin"
+            color="neutral"
+            variant="soft"
+            size="xs"
+            class="max-w-full truncate"
+          />
+          <UBadge
+            v-if="user.geo.distance !== undefined"
+            :label="formatDistance(user.geo.distance)"
+            icon="i-lucide-send"
+            color="neutral"
+            variant="soft"
+            size="xs"
+          />
+        </div>
+      </div>
+
+    </template>
+
+    <!-- 底部操作栏 -->
+    <template #footer>
+      <div class="flex items-center justify-between">
+        <div
+          class="flex items-center gap-1"
+          @click.stop
+        >
+          <!-- 关注/取消关注 -->
+          <UTooltip
+            :text="isFollowing ? '取消关注' : '关注用户'"
+            :portal="false"
+          >
+            <UButton
+              :variant="isFollowing ? 'ghost' : 'soft'"
+              :color="isFollowing ? 'neutral' : 'primary'"
+              size="sm"
+              :square="true"
+              :icon="isFollowing ? 'i-lucide-user-minus' : 'i-lucide-user-plus'"
+              :loading="followOperating"
+              :disabled="followOperating"
+              @click.stop="isFollowing ? handleUnfollowUser() : handleFollowUser()"
+            />
+          </UTooltip>
+
+          <!-- 发送消息 -->
+          <UTooltip
+            text="发送消息"
+            :portal="false"
+          >
+            <UButton
+              variant="ghost"
+              color="neutral"
+              size="sm"
+              :square="true"
+              icon="i-lucide-messages-square"
+              @click.stop="handleSendMessage"
+            />
+          </UTooltip>
+
+          <!-- 举报用户 -->
+          <UTooltip
+            text="举报用户"
+            :portal="false"
+          >
+            <UButton
+              variant="ghost"
+              color="error"
+              size="sm"
+              :square="true"
+              icon="i-lucide-flag"
+              @click.stop="handleReportUser"
+            />
+          </UTooltip>
+        </div>
+      </div>
+    </template>
+  </UCard>
 </template>
 
 <script setup lang="ts">
 import type { GeoData } from '~/types/api'
 import { useUsersService } from '~/services/users.service'
 import { isTempUser } from '~/utils/userTypes'
-import { getErrorMessage } from '~/utils/error'
+import { useAuthStore } from '~/stores/auth.store'
+import { useHydratedStore } from '~/composables/useHydratedStore'
 
-// UserCard 支持的用户数据类型（兼容搜索结果和好友列表）
+// 关系状态缓存（避免页面内多个卡片重复请求；页面刷新后会重新拉取一次）
+const relationshipCache = new Map<number, { is_mutual_follow: boolean; is_following: boolean; ts: number }>()
+const relationshipInflight = new Map<number, Promise<void>>()
+let relationshipActive = 0
+const relationshipQueue: Array<() => void> = []
+const REL_CACHE_TTL_MS = 30_000
+const REL_MAX_CONCURRENCY = 4
+
+async function withRelationshipLimit<T>(fn: () => Promise<T>): Promise<T> {
+  if (relationshipActive >= REL_MAX_CONCURRENCY) {
+    await new Promise<void>((resolve) => relationshipQueue.push(resolve))
+  }
+  relationshipActive += 1
+  try {
+    return await fn()
+  } finally {
+    relationshipActive -= 1
+    const next = relationshipQueue.shift()
+    if (next) next()
+  }
+}
+
 interface UserCardData {
-    user_id: number;
-    nickname: string;
-    avatar_url?: string;
-    user_type?: string;  // 可选，搜索结果可能没有
-    bio?: string;
-    tags?: string[];
-    is_online?: boolean;
-    geo?: GeoData;  // 搜索结果有 geo，好友列表没有
-    relationship?: {
-        is_mutual_follow?: boolean;
-        is_following?: boolean;
-    };
+  user_id: number;
+  nickname: string;
+  avatar_url?: string;
+  user_type?: string;
+  bio?: string;
+  tags?: string[];
+  is_online?: boolean;
+  geo?: GeoData;
+  relationship?: {
+    is_mutual_follow?: boolean;
+    is_following?: boolean;
+  };
 }
 
 interface Props {
-    user: UserCardData
+  user: UserCardData
 }
 
 interface Emits {
-    click: [user: UserCardData]
-    message: [user: UserCardData]
-    more: [user: UserCardData]
+  click: [user: UserCardData]
+  message: [user: UserCardData]
+  more: [user: UserCardData]
 }
 
 const props = defineProps<Props>()
 const { formatDistance } = useFormatters()
 const emit = defineEmits<Emits>()
 
-// 用户描述（基础信息）
-const userDescription = computed(() => {
-    const parts = []
-    if (props.user.geo?.location_name) {
-        parts.push(props.user.geo.location_name)
-    }
-    if (props.user.geo?.distance !== undefined) {
-        parts.push(formatDistance(props.user.geo.distance))
-    }
-    return parts.join(' • ')
-})
+const authStore = useAuthStore()
+const isAuthenticated = useHydratedStore(authStore, 'isAuthenticated', false)
+const { requireAuth } = useRequireAuth()
 
-// 用户在线状态：直接使用 props 传入的值（展示组件不需要实时订阅）
 const isOnline = computed(() => props.user.is_online ?? false)
+const relationshipOverride = ref<{ is_mutual_follow?: boolean; is_following?: boolean } | null>(null)
+watch(
+  () => props.user.relationship,
+  (v) => {
+    // 外部数据刷新时，同步覆盖本地 override（避免长时间不一致）
+    relationshipOverride.value = v ? { ...v } : null
+  },
+  { immediate: true }
+)
 
-// 用户关系状态（从 relationship 字段获取）
-// 好友 = 互相关注
-const isFriend = computed(() => props.user.relationship?.is_mutual_follow ?? false)
-const isFollowing = computed(() => props.user.relationship?.is_following ?? false)
+async function ensureRelationshipLoaded(userId: number) {
+  // 只有已登录场景才有 relationship 的意义；未登录直接跳过
+  if (!isAuthenticated.value) return
+  // 如果外部已经给了 relationship，就不需要拉
+  if (props.user.relationship) return
 
-// 用户操作菜单（根据关系状态动态调整）
-const userMenuItems = computed(() => {
-    const items = []
+  const cached = relationshipCache.get(userId)
+  if (cached && Date.now() - cached.ts < REL_CACHE_TTL_MS) {
+    relationshipOverride.value = { ...cached }
+    return
+  }
 
-    // 基础操作
-    items.push([{
-        label: '查看资料',
-        icon: 'i-heroicons-user',
-        click: () => emit('click', props.user)
-    }])
+  const inflight = relationshipInflight.get(userId)
+  if (inflight) {
+    await inflight
+    const again = relationshipCache.get(userId)
+    if (again) relationshipOverride.value = { ...again }
+    return
+  }
 
-    // 关系操作（好友 = 互相关注，只需要关注操作）
-    const relationItems = []
-    if (!isFollowing.value) {
-        relationItems.push({
-            label: '关注用户',
-            icon: 'i-heroicons-heart',
-            click: () => handleFollowUser()
-        })
-    } else {
-        relationItems.push({
-            label: '取消关注',
-            icon: 'i-heroicons-heart-slash',
-            click: () => handleUnfollowUser()
-        })
+  const userService = useUsersService()
+  const p = withRelationshipLimit(async () => {
+    try {
+      const rel = await userService.getRelationship({ id: userId })
+      const value = {
+        is_mutual_follow: !!rel.is_mutual_follow,
+        is_following: !!rel.is_following,
+        ts: Date.now()
+      }
+      relationshipCache.set(userId, value)
+      relationshipOverride.value = { ...value }
+    } catch {
+      // 静默失败：可能未登录、token 过期、网络问题等；不影响页面展示与点击 follow 的主流程
     }
-    if (relationItems.length > 0) {
-        items.push(relationItems)
+  }).finally(() => {
+    relationshipInflight.delete(userId)
+  })
+
+  relationshipInflight.set(userId, p)
+  await p
+}
+
+watch(
+  () => [props.user.user_id, isAuthenticated.value] as const,
+  ([userId]) => {
+    // relationship 缺失时补拉（页面刷新后恢复“已关注/好友”状态）
+    if (!props.user.relationship) {
+      ensureRelationshipLoaded(userId)
     }
+  },
+  { immediate: true }
+)
 
-    // 举报操作
-    items.push([{
-        label: '举报用户',
-        icon: 'i-heroicons-flag',
-        click: () => handleReportUser(),
-        class: 'text-error'
-    }])
+const isFriend = computed(() => relationshipOverride.value?.is_mutual_follow ?? false)
+const isFollowing = computed(() => relationshipOverride.value?.is_following ?? false)
 
-    return items
+const userTypeBadge = computed<{ label: string; color: 'warning' | 'neutral' } | null>(() => {
+  const t = props.user.user_type
+  if (!t) return null
+  if (isTempUser(t)) return { label: '临时', color: 'warning' }
+  // 非 normal 一律视为“访客/特殊用户”，避免重复展示 TEMP + Guest
+  if (t !== 'normal') return { label: '访客', color: 'neutral' }
+  return null
 })
 
-// formatDistance 函数已从统一工具函数导入
+const followOperating = ref(false)
 
-// 关注用户（好友 = 互相关注）
 const handleFollowUser = async () => {
-    const toast = useToast()
-    const userService = useUsersService()
-    try {
-        await userService.followUser({
-            id: props.user.user_id
-        })
-        
-        toast.add({
-            title: '关注成功',
-            description: `已关注 ${props.user.nickname}`,
-            color: 'success'
-        })
-        
-        // 刷新用户数据
-        await refreshNuxtData('users')
-    } catch (error: unknown) {
-        toast.add({
-            title: '关注失败',
-            description: getErrorMessage(error, '关注用户时发生错误'),
-            color: 'error'
-        })
+  if (followOperating.value) return
+  if (!requireAuth('关注用户')) return
+  const feedback = useFeedbackStore()
+  const userService = useUsersService()
+  try {
+    followOperating.value = true
+    await userService.follow({ id: props.user.user_id })
+    // 立即更新 UI（避免用户重复点击）
+    relationshipOverride.value = {
+      ...(relationshipOverride.value ?? {}),
+      is_following: true
     }
-}
 
-// 取消关注用户
-const handleUnfollowUser = async () => {
-    const toast = useToast()
-    const userService = useUsersService()
-    try {
-        await userService.unfollowUser({
-            id: props.user.user_id
-        })
-        
-        toast.add({
-            title: '已取消关注',
-            description: `已取消关注 ${props.user.nickname}`,
-            color: 'success'
-        })
-        
-        // 刷新用户数据
-        await refreshNuxtData('users')
-    } catch (error: unknown) {
-        toast.add({
-            title: '取消关注失败',
-            description: getErrorMessage(error, '取消关注时发生错误'),
-            color: 'error'
-        })
-    }
-}
-
-// 举报用户
-const handleReportUser = async () => {
-    const modal = useModal()
-    const toast = useToast()
-    
-    await modal.showReport('user', String(props.user.user_id))
-    toast.add({
-        title: '举报已提交',
-        description: '感谢您的举报，我们会尽快处理',
-        color: 'success'
+    // 同步缓存（避免同页其它卡片/后续重新渲染出现“又可关注”）
+    relationshipCache.set(props.user.user_id, {
+      is_mutual_follow: !!relationshipOverride.value?.is_mutual_follow,
+      is_following: true,
+      ts: Date.now()
     })
+
+    // 尝试拉一次 relationship，补齐互相关注状态（失败不影响主流程）
+    userService
+      .getRelationship({ id: props.user.user_id })
+      .then((rel) => {
+        relationshipOverride.value = { ...rel }
+        relationshipCache.set(props.user.user_id, {
+          is_mutual_follow: !!rel.is_mutual_follow,
+          is_following: !!rel.is_following,
+          ts: Date.now()
+        })
+      })
+      .catch(() => { })
+    feedback.success('关注成功', `已关注 ${props.user.nickname}`)
+  } catch (error: unknown) {
+    feedback.error('关注失败', getErrorMessage(error, '关注用户时发生错误'))
+  } finally {
+    followOperating.value = false
+  }
+}
+
+const handleUnfollowUser = async () => {
+  if (followOperating.value) return
+  if (!requireAuth('取消关注')) return
+  const feedback = useFeedbackStore()
+  const userService = useUsersService()
+  try {
+    followOperating.value = true
+    await userService.unfollow({ id: props.user.user_id })
+    relationshipOverride.value = {
+      ...(relationshipOverride.value ?? {}),
+      is_following: false,
+      is_mutual_follow: false
+    }
+
+    relationshipCache.set(props.user.user_id, {
+      is_mutual_follow: false,
+      is_following: false,
+      ts: Date.now()
+    })
+
+    userService
+      .getRelationship({ id: props.user.user_id })
+      .then((rel) => {
+        relationshipOverride.value = { ...rel }
+        relationshipCache.set(props.user.user_id, {
+          is_mutual_follow: !!rel.is_mutual_follow,
+          is_following: !!rel.is_following,
+          ts: Date.now()
+        })
+      })
+      .catch(() => { })
+    feedback.success('已取消关注', `已取消关注 ${props.user.nickname}`)
+  } catch (error: unknown) {
+    feedback.error('取消关注失败', getErrorMessage(error, '取消关注时发生错误'))
+  } finally {
+    followOperating.value = false
+  }
+}
+
+const handleSendMessage = () => {
+  if (!requireAuth('发送消息')) return
+  emit('message', props.user)
+}
+
+const handleReportUser = async () => {
+  if (!requireAuth('提交举报')) return
+  const modal = useModal()
+  const feedback = useFeedbackStore()
+  await modal.showReport('user', String(props.user.user_id))
+  feedback.success('举报已提交', '感谢您的举报，我们会尽快处理')
 }
 </script>

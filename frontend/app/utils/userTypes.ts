@@ -108,37 +108,22 @@ export function getUserTypeDisplayName(userType: UserTypeValue | string): string
  * @param userType 用户类型（字符串或枚举）
  * @returns 标签样式配置
  */
-export function getUserTypeTagStyle(userType: UserTypeValue | string): {
-  text: string;
-  color: string;
-  bgColor: string;
-} {
+/**
+ * 获取用户类型对应的 Nuxt UI Badge 配置（避免在 Vue 里拼 Tailwind 颜色 class）
+ */
+export function getUserTypeBadge(userType: UserTypeValue | string): {
+  label: string
+  color: 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral'
+} | null {
   switch (userType) {
     case UserType.TEMP:
-      return {
-        text: '临时',
-        color: 'text-orange-600',
-        bgColor: 'bg-orange-100',
-      };
+      return { label: '临时', color: 'warning' }
     case UserType.ADMIN:
-      return {
-        text: '管理',
-        color: 'text-purple-600',
-        bgColor: 'bg-purple-100',
-      };
+      return { label: '管理', color: 'secondary' }
     case UserType.SYSTEM:
-      return {
-        text: '官方',
-        color: 'text-blue-600',
-        bgColor: 'bg-blue-100',
-      };
+      return { label: '官方', color: 'info' }
     default:
-      // 普通用户不显示标签
-      return {
-        text: '',
-        color: '',
-        bgColor: '',
-      };
+      return null
   }
 }
 

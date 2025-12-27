@@ -1,17 +1,19 @@
-use sqlx::{PgPool, FromRow};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::enums::MessageType;
+
+use crate::utils::pagination::{decode_cursor, encode_cursor, IdCursor};
 
 /// 群聊消息Row - 数据库查询返回类型
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct GroupMessageRow {
     pub id: i64,
     pub message_id: Uuid,
-    pub cursor_id: Uuid,
+    // cursor field removed
     pub group_chat_id: Uuid,
     pub sender_id: i64,
     pub r#type: MessageType,
@@ -32,6 +34,14 @@ pub struct GroupMessageRow {
 }
 
 #[derive(Debug, Clone)]
+pub struct GroupMessageMeta {
+    pub group_chat_id: Uuid,
+    pub sender_id: i64,
+    pub is_recalled: bool,
+    pub sent_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone)]
 pub struct GroupMessageRepository {
     pool: PgPool,
 }
@@ -41,7 +51,25 @@ impl GroupMessageRepository {
         Self { pool }
     }
 
+    /// 获取消息元数据（用于权限检查）
+    pub async fn get_meta(&self, message_id: Uuid) -> Result<Option<GroupMessageMeta>> {
+        let row = sqlx::query_as!(
+            GroupMessageMeta,
+            r#"
+            SELECT group_chat_id, sender_id, is_recalled, sent_at
+            FROM group_messages
+            WHERE message_id = $1 AND is_deleted = FALSE
+            "#,
+            message_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(row)
+    }
+
     /// 发送群聊消息
+    #[allow(clippy::too_many_arguments)]
     pub async fn create(
         &self,
         group_chat_id: Uuid,
@@ -60,7 +88,7 @@ impl GroupMessageRepository {
             r#"
             INSERT INTO group_messages (group_chat_id, sender_id, type, content, reply_to_message_id, mentions, file_name, file_size, thumbnail_url, duration)
             VALUES ($1, $2, $3::message_type, $4, $5, $6, $7, $8, $9, $10)
-            RETURNING id, message_id, cursor_id, group_chat_id, sender_id,
+            RETURNING id, message_id, group_chat_id, sender_id,
                       type as "type: MessageType", content, reply_to_message_id, mentions,
                       file_name, file_size, thumbnail_url, duration,
                       sent_at, edited_at, is_recalled, recalled_by, recalled_at, is_deleted, deleted_at
@@ -82,72 +110,43 @@ impl GroupMessageRepository {
         Ok(row)
     }
 
-    /// 按ID查找消息
-    pub async fn find_by_id(&self, message_id: Uuid) -> Result<Option<GroupMessageRow>> {
-        let row = sqlx::query_as!(
-            GroupMessageRow,
-            r#"
-            SELECT id, message_id, cursor_id, group_chat_id, sender_id,
-                   type as "type: MessageType", content, reply_to_message_id, mentions,
-                   file_name, file_size, thumbnail_url, duration,
-                   sent_at, edited_at, is_recalled, recalled_by, recalled_at, is_deleted, deleted_at
-            FROM group_messages
-            WHERE message_id = $1 AND is_deleted = FALSE
-            "#,
-            message_id
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(row)
-    }
-
-    /// 获取群聊消息历史（分页）
-    /// 将 UUID cursor 转换为自增主键
-    async fn resolve_cursor(&self, cursor: Option<Uuid>) -> Result<i64> {
-        match cursor {
-            Some(c) => {
-                sqlx::query_scalar!(
-                    r#"SELECT id FROM group_messages WHERE cursor_id = $1"#,
-                    c
-                )
-                .fetch_optional(&self.pool)
-                .await?
-                .ok_or_else(|| crate::error::AppError::BadRequest("无效的 cursor".to_string()))
-            }
-            None => Ok(i64::MAX),
-        }
-    }
-
-    /// cursor: 游标（cursor_id 的 UUID），用于分页
+    /// cursor: 游标（cursor 的 UUID），用于分页
     pub async fn list_by_group(
         &self,
         group_chat_id: Uuid,
         limit: i64,
-        cursor: Option<Uuid>,
-    ) -> Result<Vec<GroupMessageRow>> {
-        let cursor_pk = self.resolve_cursor(cursor).await?;
+        cursor: Option<String>,
+        include_system: bool,
+    ) -> Result<(Vec<GroupMessageRow>, Option<String>)> {
+        let last_id = if let Some(c) = cursor {
+            decode_cursor::<IdCursor>(&c)?
+        } else {
+            i64::MAX
+        };
 
         let rows = sqlx::query_as!(
             GroupMessageRow,
             r#"
-            SELECT id, message_id, cursor_id, group_chat_id, sender_id,
+            SELECT id, message_id, group_chat_id, sender_id,
                    type as "type: MessageType", content, reply_to_message_id, mentions,
                    file_name, file_size, thumbnail_url, duration,
                    sent_at, edited_at, is_recalled, recalled_by, recalled_at, is_deleted, deleted_at
             FROM group_messages
             WHERE group_chat_id = $1 AND id < $2 AND is_deleted = FALSE
+              AND ($4::bool = TRUE OR type != 'system'::message_type)
             ORDER BY id DESC
             LIMIT $3
             "#,
             group_chat_id,
-            cursor_pk,
-            limit
+            last_id,
+            limit,
+            include_system
         )
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows)
+        let next_cursor = rows.last().map(|r| encode_cursor(&r.id)).transpose()?;
+        Ok((rows, next_cursor))
     }
 
     /// 更新消息内容
@@ -200,20 +199,43 @@ impl GroupMessageRepository {
         Ok(())
     }
 
-    /// 获取消息已读用户列表
-    pub async fn get_read_status(&self, message_id: Uuid) -> Result<Vec<i64>> {
-        let rows = sqlx::query_scalar!(
+    /// 获取消息已读用户列表（分页）
+    pub async fn get_read_status(
+        &self,
+        message_id: Uuid,
+        limit: i64,
+        cursor: Option<String>,
+    ) -> Result<(Vec<(i64, DateTime<Utc>)>, Option<String>)> {
+        // cursor: (read_at, user_id)
+        use crate::utils::pagination::TimeCursor;
+        let (last_read_at, last_user_id) = if let Some(c) = cursor {
+            decode_cursor::<TimeCursor>(&c)?
+        } else {
+            (DateTime::<Utc>::MAX_UTC, i64::MAX)
+        };
+
+        let rows = sqlx::query!(
             r#"
-            SELECT user_id
+            SELECT user_id, read_at
             FROM group_message_read_status
-            WHERE message_id = $1
-            ORDER BY read_at DESC
+            WHERE message_id = $1 AND (read_at, user_id) < ($2, $3)
+            ORDER BY read_at DESC, user_id DESC
+            LIMIT $4
             "#,
-            message_id
+            message_id,
+            last_read_at,
+            last_user_id,
+            limit
         )
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows)
+        let next_cursor = rows
+            .last()
+            .map(|r| encode_cursor(&(r.read_at, r.user_id)))
+            .transpose()?;
+
+        let result = rows.into_iter().map(|r| (r.user_id, r.read_at)).collect();
+        Ok((result, next_cursor))
     }
 }

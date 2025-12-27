@@ -54,8 +54,8 @@ const DEFAULT_DRAFT: MomentDraft = {
 
 export const useMomentsStore = defineStore('moments', () => {
   // ============ 内部状态 ============
-  const _moments = ref<Map<string, Moment>>(new Map())
-  const _comments = ref<Map<string, MomentComment[]>>(new Map())
+  const _moments = ref<Record<string, Moment>>({})
+  const _comments = ref<Record<string, MomentComment[]>>({})
   const _draft = ref<MomentDraft>({ ...DEFAULT_DRAFT })
   
   const _feeds = ref({
@@ -93,7 +93,7 @@ export const useMomentsStore = defineStore('moments', () => {
   const feeds = computed(() => _feeds.value)
   const loading = computed(() => _loading.value)
   const pagination = computed(() => _pagination.value)
-  const momentsList = computed(() => Array.from(_moments.value.values()))
+  const momentsList = computed(() => Object.values(_moments.value))
   const nearbyMoments = computed(() => _feeds.value.nearby)
   const followingMoments = computed(() => _feeds.value.following)
   const myMoments = computed(() => _feeds.value.mine)
@@ -117,7 +117,9 @@ export const useMomentsStore = defineStore('moments', () => {
       _feeds.value[type] = newMoments
     }
 
-    newMoments.forEach(moment => _moments.value.set(moment.id, moment))
+    newMoments.forEach(moment => {
+      _moments.value[moment.id] = moment
+    })
     _pagination.value[type] = { hasMore, cursor }
 
     return newMoments
@@ -130,13 +132,13 @@ export const useMomentsStore = defineStore('moments', () => {
 
   const addCreatedMoment = (moment: Moment) => {
     const data = { ...moment }
-    _moments.value.set(moment.id, data)
+    _moments.value[moment.id] = data
     _feeds.value.mine.unshift(data)
     return data
   }
 
   const setLikeStatus = (momentId: string, isLiked: boolean, isLiking = false) => {
-    const moment = _moments.value.get(momentId)
+    const moment = _moments.value[momentId]
     if (moment) {
       moment.isLiking = isLiking
       moment.liked_by_me = isLiked
@@ -145,7 +147,7 @@ export const useMomentsStore = defineStore('moments', () => {
   }
 
   const rollbackLikeStatus = (momentId: string, wasLiked: boolean) => {
-    const moment = _moments.value.get(momentId)
+    const moment = _moments.value[momentId]
     if (moment) {
       moment.liked_by_me = wasLiked
       moment.likes_count += wasLiked ? 1 : -1
@@ -155,13 +157,13 @@ export const useMomentsStore = defineStore('moments', () => {
   }
 
   const setDeleteStatus = (momentId: string, isDeleting: boolean) => {
-    const moment = _moments.value.get(momentId)
+    const moment = _moments.value[momentId]
     if (moment) moment.isDeleting = isDeleting
   }
 
   const removeMoment = (momentId: string) => {
-    _moments.value.delete(momentId)
-    _comments.value.delete(momentId)
+    delete _moments.value[momentId]
+    delete _comments.value[momentId]
     Object.keys(_feeds.value).forEach(feedType => {
       const key = feedType as keyof typeof _feeds.value
       _feeds.value[key] = _feeds.value[key].filter(m => m.id !== momentId)
@@ -170,47 +172,49 @@ export const useMomentsStore = defineStore('moments', () => {
 
   const setMomentDetails = (momentId: string, moment: Moment) => {
     const data = { ...moment }
-    _moments.value.set(momentId, data)
+    _moments.value[momentId] = data
     return data
   }
 
   const setSearchResults = (momentsList: Moment[]) => {
     const results = momentsList.map(item => ({ ...item }))
-    results.forEach(moment => _moments.value.set(moment.id, moment))
+    results.forEach(moment => {
+      _moments.value[moment.id] = moment
+    })
     return results
   }
 
   const setMomentComments = (momentId: string, commentsList: MomentComment[], loadMore = false) => {
     if (loadMore) {
-      const existing = _comments.value.get(momentId) || []
-      _comments.value.set(momentId, [...existing, ...commentsList])
+      const existing = _comments.value[momentId] || []
+      _comments.value[momentId] = [...existing, ...commentsList]
     } else {
-      _comments.value.set(momentId, commentsList)
+      _comments.value[momentId] = commentsList
     }
     return commentsList
   }
 
   const addNewComment = (momentId: string, newComment: MomentComment) => {
-    const existing = _comments.value.get(momentId) || []
-    _comments.value.set(momentId, [...existing, newComment])
-    const moment = _moments.value.get(momentId)
+    const existing = _comments.value[momentId] || []
+    _comments.value[momentId] = [...existing, newComment]
+    const moment = _moments.value[momentId]
     if (moment) moment.comments_count = (moment.comments_count || 0) + 1
   }
 
   const removeComment = (momentId: string, commentId: string) => {
-    const existing = _comments.value.get(momentId) || []
-    _comments.value.set(momentId, existing.filter(c => c.comment_id !== commentId))
-    const moment = _moments.value.get(momentId)
+    const existing = _comments.value[momentId] || []
+    _comments.value[momentId] = existing.filter(c => c.comment_id !== commentId)
+    const moment = _moments.value[momentId]
     if (moment) moment.comments_count = Math.max((moment.comments_count || 0) - 1, 0)
   }
 
   const setFavoriteStatus = (momentId: string, isFavorited: boolean) => {
-    const moment = _moments.value.get(momentId)
+    const moment = _moments.value[momentId]
     if (moment) moment.is_favorited = isFavorited
   }
 
-  const getMoment = (momentId: string) => _moments.value.get(momentId)
-  const getMomentComments = (momentId: string) => _comments.value.get(momentId) || []
+  const getMoment = (momentId: string) => _moments.value[momentId]
+  const getMomentComments = (momentId: string) => _comments.value[momentId] || []
 
   const setLoading = (type: keyof typeof _loading.value, isLoading: boolean) => {
     _loading.value[type] = isLoading
@@ -229,9 +233,33 @@ export const useMomentsStore = defineStore('moments', () => {
     _draft.value = { ...DEFAULT_DRAFT }
   }
 
+  /**
+   * 清空用户相关缓存（feeds/moments/评论/草稿）
+   * - 多账号切换/锁定时使用，避免跨账号看到旧内容或状态（liked_by_me 等）
+   */
+  const clearUserCache = () => {
+    _moments.value = {}
+    _comments.value = {}
+    _feeds.value = {
+      nearby: [],
+      following: [],
+      mine: [],
+      trending: []
+    }
+    _pagination.value = {
+      nearby: { hasMore: false, cursor: undefined },
+      following: { hasMore: false, cursor: undefined },
+      mine: { hasMore: false, cursor: undefined },
+      trending: { hasMore: false, cursor: undefined }
+    }
+    _draft.value = { ...DEFAULT_DRAFT }
+  }
+
   return {
     // 内部状态（用于持久化）
     _draft,
+    _feeds,
+    _moments, // Expose for persistence
 
     // Getter
     moments,
@@ -269,12 +297,11 @@ export const useMomentsStore = defineStore('moments', () => {
     setLoading,
     clearFeed,
     saveDraft,
-    clearDraft
+    clearDraft,
+    clearUserCache
   }
 }, {
-  // 仅持久化草稿
-  persist: {
-    key: 'moments-draft',
-    pick: ['_draft']
-  }
+  // 多账号隔离：瞬间缓存/草稿与用户强相关，跨账号持久化会导致“串数据”
+  // 需要缓存可由服务端/HTTP 拉取或按账号维度实现单独持久化（未来再做）
+  persist: false
 })

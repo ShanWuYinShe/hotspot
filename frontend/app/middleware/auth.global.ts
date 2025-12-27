@@ -1,4 +1,4 @@
-import { refreshAccessToken } from '~/utils/token'
+import { ensureRefreshToken } from '~/utils/token'
 
 /**
  * 认证中间件
@@ -20,8 +20,9 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   // 尝试静默刷新 token 一次，避免误跳转
   try {
-    if (authStore.refreshToken) {
-      const success = await refreshAccessToken()
+    // web：refresh_token 在 HttpOnly cookie；app：refresh_token 在 store
+    if (authStore.canAttemptRefresh) {
+      const success = await ensureRefreshToken()
       if (success && authStore.isAuthenticated) return
     }
   } catch (e: unknown) {
@@ -36,11 +37,11 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   // 最终检查：如果仍未认证，跳转到登录页
   if (!authStore.isAuthenticated) {
-    const hadCreds = !!authStore.token || !!authStore.refreshToken
+    const hadCreds = !!authStore.token || authStore.refreshToken != null || authStore.canAttemptRefresh
     const params = new URLSearchParams({
       redirect: to.fullPath || '/',
       reason: hadCreds ? 'expired' : 'login_required'
     }).toString()
-    return navigateTo(`/auth/login?${params}`)
+    return navigateTo(`/auth?mode=login&${params}`)
   }
 })

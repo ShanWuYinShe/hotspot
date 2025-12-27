@@ -1,10 +1,12 @@
 pub mod auth_service;
+pub mod admin_rbac_service;
 pub mod comment_service;
+pub mod device_tokens_service;
 pub mod feed_service;
 pub mod group_message_service;
 pub mod group_service;
-pub mod inbox_service;
 pub mod media_service;
+pub mod map_service;
 pub mod message_common_service;
 pub mod moment_service;
 pub mod presence_service;

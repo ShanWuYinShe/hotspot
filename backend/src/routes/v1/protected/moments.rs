@@ -9,18 +9,18 @@ pub fn routes() -> Router<AppState> {
         .route("/update", post(moments::update))
         .route("/delete", post(moments::delete))
         // 点赞
-        .route("/like_moment", post(moments::like_moment))
-        .route("/unlike_moment", post(moments::unlike_moment))
+        .route("/like", post(moments::like))
+        .route("/unlike", post(moments::unlike))
         // 收藏
-        .route("/favorite_moment", post(moments::favorite_moment))
-        .route("/unfavorite_moment", post(moments::unfavorite_moment));
+        .route("/favorite", post(moments::favorite))
+        .route("/unfavorite", post(moments::unfavorite));
 
     // /me 子路由 - 当前用户的瞬间相关操作
     let me_routes = Router::new()
-        .route("/get_list", post(moments::get_my_list))
-        .route("/get_favorites_list", post(moments::get_favorites_list))
-        .route("/check_liked", post(moments::check_liked))
-        .route("/check_favorited", post(moments::check_favorited));
+        .route("/", post(moments::get_my_moments))
+        .route("/favorites", post(moments::get_my_favorites))
+        .route("/liked", post(moments::check_liked))
+        .route("/favorited", post(moments::check_favorited));
 
     main_routes.nest("/me", me_routes)
 }

@@ -15,18 +15,14 @@ export struct IntelligentLocationCard {
   @Prop longitude: number = 0;
   @Prop locationName: string = '南天门';
   @Prop distance: number = -1;
-  @Prop showWeather: boolean = true;
+  @Prop altitude: number = 0; // 新增海拔属性
   @Prop showElevation: boolean = true;
   @Prop onLocationTap: () => void = () => {};
   @Prop onNavigationTap: () => void = () => {};
   @State private cardElevation: number = 1;
-  @State private weatherInfo: string = '';
   @State private elevationInfo: string = '';
 
   aboutToAppear() {
-    if (this.showWeather) {
-      this.loadWeatherInfo();
-    }
     if (this.showElevation) {
       this.loadElevationInfo();
     }
@@ -63,18 +59,6 @@ export struct IntelligentLocationCard {
                   .fontSize(12)
                   .fontColor($r('sys.color.ohos_id_color_text_secondary'))
               }
-          }
-
-          // 天气信息
-          if (this.showWeather && this.weatherInfo) {
-            Row({ space: 4 }) {
-              Text('🌤️')
-                .fontSize(12)
-              
-              Text(this.weatherInfo)
-                .fontSize(12)
-                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-            }
           }
 
           // 海拔信息
@@ -175,41 +159,13 @@ export struct IntelligentLocationCard {
     }
   }
 
-  private async loadWeatherInfo(): Promise<void> {
-    try {
-      if (this.latitude !== 0 && this.longitude !== 0) {
-        // 调用天气API获取天气信息
-        const weatherData = await this.getWeatherByLocation(this.latitude, this.longitude);
-        this.weatherInfo = weatherData || '天气信息不可用';
-      } else {
-        this.weatherInfo = '位置信息不可用';
-      }
-    } catch (error) {
-      hilog.warn(DOMAIN_NUMBER, TAG, '加载天气信息失败');
-      this.weatherInfo = '天气信息获取失败';
-    }
-  }
-
-  /**
-   * 根据位置获取天气信息
-   */
-  private async getWeatherByLocation(latitude: number, longitude: number): Promise<string | null> {
-    try {
-      // 这里应该调用实际的天气API
-      // 由于HarmonyOS可能没有内置天气API，这里返回基础信息
-      hilog.info(DOMAIN_NUMBER, TAG, `获取位置天气信息: ${latitude}, ${longitude}`);
-      return null; // 暂时返回null，表示功能未实现
-    } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, `获取天气信息失败: ${JSON.stringify(error)}`);
-      return null;
-    }
-  }
-
   private async loadElevationInfo(): Promise<void> {
     try {
-      // 这里可以使用地理位置服务获取海拔信息
-      await new Promise<void>(resolve => setTimeout(resolve, 800));
-      this.elevationInfo = '海拔 45m';
+      if (this.altitude && this.altitude !== 0) {
+         this.elevationInfo = `海拔 ${Math.round(this.altitude)}m`;
+      } else {
+         this.elevationInfo = '';
+      }
     } catch (error) {
       hilog.warn(DOMAIN_NUMBER, TAG, '加载海拔信息失败');
     }

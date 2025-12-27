@@ -1,7 +1,7 @@
 use tokio::sync::mpsc;
 use tracing::{error, info};
 
-use crate::events::events::AppEvent;
+use crate::events::event_types::AppEvent;
 
 /// 事件总线
 #[derive(Clone)]
@@ -31,4 +31,3 @@ impl Default for EventBus {
         Self::new().0
     }
 }
-

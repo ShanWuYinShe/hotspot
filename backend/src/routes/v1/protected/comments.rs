@@ -4,8 +4,8 @@ use crate::{handlers::comments, state::AppState};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .route("/add", post(comments::add))
-        .route("/remove", post(comments::remove))
-        .route("/like_comment", post(comments::like_comment))
-        .route("/unlike_comment", post(comments::unlike_comment))
+        .route("/create", post(comments::create))
+        .route("/delete", post(comments::delete))
+        .route("/like", post(comments::like))
+        .route("/unlike", post(comments::unlike))
 }

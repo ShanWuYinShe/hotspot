@@ -1,6 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  devtools: { enabled: false }, // 临时禁用以排查连接问题
+  devtools: { enabled: true },
   compatibilityDate: "2025-05-28",
   future: {
     compatibilityVersion: 4, // 启用 Nuxt 4 特性
@@ -12,7 +12,8 @@ export default defineNuxtConfig({
     "@nuxt/ui",
     "@nuxt/image",
     "@nuxtjs/color-mode",
-    "@nuxtjs/i18n"
+    "@nuxtjs/i18n",
+    "@vueuse/nuxt"
   ],
 
   // 组件自动导入（含 app/components 与插画目录、虚拟滚动组件）
@@ -28,7 +29,7 @@ export default defineNuxtConfig({
   // 使用 localStorage 存储（仅客户端）
   piniaPluginPersistedstate: {
     storage: 'localStorage',
-    debug: process.env.NODE_ENV !== 'production',
+    debug: import.meta.env.NODE_ENV !== 'production',
   },
 
   // SSR 配置
@@ -58,9 +59,15 @@ export default defineNuxtConfig({
 
   // 样式配置
   css: [
-    "~/assets/styles/main.css",
-    "~/assets/styles/transitions.css"
+    "~/assets/styles/base.css",
   ],
+
+  postcss: {
+    plugins: {
+      "@tailwindcss/postcss": {},
+      autoprefixer: {},
+    },
+  },
 
   // TypeScript 配置
   typescript: {
@@ -74,8 +81,9 @@ export default defineNuxtConfig({
     typedPages: true,
     // 启用应用清单
     appManifest: true,
-    // 启用视图过渡 API
-    viewTransition: true,
+    // 视图过渡在本项目中会导致部分页面跳转超时并抛出 DOMException（影响实际跳转）。
+    // 先禁用，确保导航可靠；如未来需要再按页面/组件精细开启。
+    viewTransition: false,
     // 启用 payload 提取
     payloadExtraction: false,
     // 启用 watcher 忽略
@@ -87,7 +95,7 @@ export default defineNuxtConfig({
   // Nuxt v4 构建优化
   build: {
     // 启用 analyze 模式
-    analyze: process.env.ANALYZE === 'true'
+    analyze: import.meta.env.ANALYZE === 'true'
   },
 
   // Nuxt v4 Vite 配置
@@ -95,29 +103,30 @@ export default defineNuxtConfig({
     // 构建配置（消除 Tailwind CSS sourcemap 警告）
     build: {
       // 生产环境禁用 sourcemap，减小构建体积并消除警告
-      sourcemap: process.env.NODE_ENV !== 'production',
-    }
+      sourcemap: import.meta.env.NODE_ENV !== 'production',
+    },
+    // 同源环境：统一由 Nginx 做反代（见 docs/hotspot.test.nginx.conf，可直接用于真实环境）
+    server: {
+      allowedHosts: true,
+    },
   },
 
   // Nuxt v4 Nitro 配置
   nitro: {
-    // 启用实验性功能
     experimental: {
-      wasm: true
+      wasm: true,
     }
   },
 
   runtimeConfig: {
     public: {
-      apiBaseUrl:
-        process.env.NUXT_PUBLIC_API_BASE_URL || "http://localhost:8080",
-      wsBaseUrl: process.env.NUXT_PUBLIC_WS_BASE_URL || "",  // 空则使用同源路径
-      // 高德地图配置
-      amapKey: process.env.NUXT_PUBLIC_AMAP_KEY || "d6e827b4530d8a87f745f3f1f237cb1d",
-      amapSecurityCode: process.env.NUXT_PUBLIC_AMAP_SECURITY_CODE || "b18c8efd4340355a7546e65bba339cab",
-      wechatAppId: process.env.NUXT_PUBLIC_WECHAT_APPID || "",
-      shareDefaultImage: process.env.NUXT_PUBLIC_SHARE_DEFAULT_IMAGE || "",
-      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || "https://hotspot.example.com"
+      // 高德 JS API：key 必须显式配置；安全密钥通过 Nginx /_AMapService 代理注入（前端不再持有 securityJsCode）
+      amapKey: import.meta.env.NUXT_PUBLIC_AMAP_KEY || "d6e827b4530d8a87f745f3f1f237cb1d",
+      // 可选：手动指定代理域名；不填时默认使用当前站点 origin + /_AMapService
+      amapServiceHost: import.meta.env.NUXT_PUBLIC_AMAP_SERVICE_HOST || "/_AMapService",
+      wechatAppId: import.meta.env.NUXT_PUBLIC_WECHAT_APPID || "",
+      shareDefaultImage: import.meta.env.NUXT_PUBLIC_SHARE_DEFAULT_IMAGE || "",
+      siteUrl: import.meta.env.NUXT_PUBLIC_SITE_URL || ""
     },
   },
 });

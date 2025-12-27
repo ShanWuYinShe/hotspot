@@ -11,21 +11,19 @@
 
 import { defineStore } from 'pinia'
 import { DEFAULTS } from '~/config/defaults'
-import type { BrowserPermissionStatus } from '~/utils/browser-permissions'
 
 export interface StoredLocation {
   latitude: number
   longitude: number
   locationName: string
   accuracy?: number
-  source?: 'gps' | 'network' | 'cache' | 'default'
+  source?: 'gps' | 'network' | 'cache' | 'default' | 'amap'
   updatedAt: number
 }
 
 export const useLocationStore = defineStore('location', () => {
   // ============ 内部状态 ============
   const _location = ref<StoredLocation | null>(null)
-  const _permissionStatus = ref<BrowserPermissionStatus>('unknown')
   const _initialized = ref(false)
 
   // ============ Getter ============
@@ -55,16 +53,6 @@ export const useLocationStore = defineStore('location', () => {
    * 定位精度（米）
    */
   const accuracy = computed(() => _location.value?.accuracy ?? null)
-
-  /**
-   * 权限状态
-   */
-  const permissionStatus = computed(() => _permissionStatus.value)
-
-  /**
-   * 是否有权限
-   */
-  const hasPermission = computed(() => _permissionStatus.value === 'granted')
 
   /**
    * 是否已初始化
@@ -153,13 +141,6 @@ export const useLocationStore = defineStore('location', () => {
   }
 
   /**
-   * 设置权限状态
-   */
-  const setPermissionStatus = (status: BrowserPermissionStatus) => {
-    _permissionStatus.value = status
-  }
-
-  /**
    * 使用默认位置初始化
    */
   const initWithDefault = () => {
@@ -189,8 +170,6 @@ export const useLocationStore = defineStore('location', () => {
     coordinates,
     locationName,
     accuracy,
-    permissionStatus,
-    hasPermission,
     isInitialized,
     isDefaultLocation,
     getCoordinatesSync,
@@ -200,7 +179,6 @@ export const useLocationStore = defineStore('location', () => {
     setLocation,
     setFromPosition,
     setLocationName,
-    setPermissionStatus,
     initWithDefault,
     clearLocation
   }

@@ -9,10 +9,10 @@ use uuid::Uuid;
 use crate::{
     dto::{
         request::{
-            AddGroupMessageReactionRequest, RemoveGroupMessageReactionRequest, DeleteGroupMessageRequest,
-            GetGroupMessageReactionsListRequest, GetGroupMessagesRequest, GetMessageReadStatusRequest,
-            MarkGroupMessagesReadRequest, RecallGroupMessageRequest, SendGroupMessageRequest,
-            UpdateGroupMessageRequest,
+            AddGroupMessageReactionRequest, DeleteGroupMessageRequest,
+            GroupMessageReactionsRequest, GroupMessagesHistoryRequest,
+            MarkGroupMessagesReadRequest, MessageReadStatusRequest, RecallGroupMessageRequest,
+            RemoveGroupMessageReactionRequest, SendGroupMessageRequest, UpdateGroupMessageRequest,
         },
         response::{
             GroupMessageItem, MessageReactionItem, MessageReadItem, PaginatedData, PaginationMeta,
@@ -20,16 +20,13 @@ use crate::{
         },
     },
     error::{AppError, Result},
-    events::events::AppEvent,
+    events::event_types::AppEvent,
     repositories::{
-        group_message_repo::GroupMessageRepository,
-        group_member_repo::GroupMemberRepository,
-        user_repo::UserRepository,
-        chat_unread_repo::ChatUnreadRepository,
-        message_reactions_repo::MessageReactionsRepository,
-        file_repo::FileRepository,
+        chat_unread_repo::ChatUnreadRepository, file_repo::FileRepository,
+        group_member_repo::GroupMemberRepository, group_message_repo::GroupMessageRepository,
+        message_reactions_repo::MessageReactionsRepository, user_repo::UserRepository,
     },
-    types::enums::{MessageType, MemberRole},
+    types::enums::{MemberRole, MessageType},
     utils::validation::Validator,
     EventBus,
 };
@@ -75,12 +72,15 @@ impl GroupMessageService {
 
         let group_chat_id = Uuid::parse_str(&req.id)
             .map_err(|_| AppError::BadRequest("无效的群组ID".to_string()))?;
-        
+
         let message_type = MessageType::from_str(&req.r#type)
             .ok_or_else(|| AppError::BadRequest("无效的消息类型".to_string()))?;
 
         let reply_to_message_id = if let Some(ref id) = req.reply_to {
-            Some(Uuid::parse_str(id).map_err(|_| AppError::BadRequest("无效的回复消息ID".to_string()))?)
+            Some(
+                Uuid::parse_str(id)
+                    .map_err(|_| AppError::BadRequest("无效的回复消息ID".to_string()))?,
+            )
         } else {
             None
         };
@@ -89,7 +89,10 @@ impl GroupMessageService {
         let mentions = req.mentions.clone();
 
         // 2. 验证用户是否是群成员
-        let member = self.member_repo.find_by_user_and_group(group_chat_id, user_id).await?
+        let member = self
+            .member_repo
+            .find_member(group_chat_id, user_id)
+            .await?
             .ok_or_else(|| AppError::Forbidden("您不是此群组的成员".to_string()))?;
 
         // 检查是否被禁言
@@ -102,61 +105,70 @@ impl GroupMessageService {
         // 3. 根据消息类型处理内容和文件
         // - 文本消息：content 必填，file_id 不需要
         // - 媒体消息：file_id 必填，服务端转换为实际 url 存入 content
-        let (content, file_name, file_size, thumbnail_url, duration, media_url) = match message_type {
-            MessageType::Text => {
-                let content = req.content.clone()
-                    .ok_or_else(|| AppError::BadRequest("文本消息必须提供 content".to_string()))?;
-                (content, None, None, None, None, None)
-            }
-            MessageType::System => {
-                let content = req.content.clone().unwrap_or_default();
-                (content, None, None, None, None, None)
-            }
-            _ => {
-                // 媒体消息：需要 file_id
-                let file_id_str = req.file_id.as_ref()
-                    .ok_or_else(|| AppError::BadRequest("媒体消息必须提供 file_id".to_string()))?;
-                let file_id = Uuid::parse_str(file_id_str)
-                    .map_err(|_| AppError::BadRequest("无效的 file_id".to_string()))?;
-                
-                // 验证文件所有权并获取文件信息
-                let expected_categories = match message_type {
-                    MessageType::Image => vec!["chat_image"],
-                    MessageType::Video => vec!["chat_video"],
-                    MessageType::Audio => vec!["chat_audio"],
-                    MessageType::File => vec!["chat_file"],
-                    _ => vec![],
-                };
-                let file_data = self.file_repo.get_file_for_message(file_id, user_id, &expected_categories).await?;
-                
-                // 标记文件已使用
-                self.file_repo.mark_as_used(file_id).await?;
-                
-                // 媒体消息的 content 存储实际 url
-                (
-                    file_data.url.clone(),  // content = media_url
-                    None,  // file_name 暂不存储
-                    Some(file_data.file_size),
-                    file_data.thumbnail_url.clone(),
-                    file_data.duration,
-                    Some(file_data.url),
-                )
-            }
-        };
+        let (content, file_name, file_size, thumbnail_url, duration, media_url) =
+            match message_type {
+                MessageType::Text => {
+                    let content = req.content.clone().ok_or_else(|| {
+                        AppError::BadRequest("文本消息必须提供 content".to_string())
+                    })?;
+                    (content, None, None, None, None, None)
+                }
+                MessageType::System => {
+                    let content = req.content.clone().unwrap_or_default();
+                    (content, None, None, None, None, None)
+                }
+                _ => {
+                    // 媒体消息：需要 file_id
+                    let file_id_str = req.file_id.as_ref().ok_or_else(|| {
+                        AppError::BadRequest("媒体消息必须提供 file_id".to_string())
+                    })?;
+                    let file_id = Uuid::parse_str(file_id_str)
+                        .map_err(|_| AppError::BadRequest("无效的 file_id".to_string()))?;
+
+                    // 验证文件所有权并获取文件信息
+                    let expected_categories = match message_type {
+                        MessageType::Image => vec!["chat_image"],
+                        MessageType::Video => vec!["chat_video"],
+                        MessageType::Audio => vec!["chat_audio"],
+                        MessageType::File => vec!["chat_file"],
+                        _ => vec![],
+                    };
+                    let file_data = self
+                        .file_repo
+                        .get_file_for_message(file_id, user_id, &expected_categories)
+                        .await?;
+
+                    // 标记文件已使用
+                    self.file_repo.mark_as_used(file_id).await?;
+
+                    // 媒体消息的 content 存储实际 url
+                    (
+                        file_data.url.clone(), // content = media_url
+                        None,                  // file_name 暂不存储
+                        Some(file_data.file_size),
+                        file_data.thumbnail_url.clone(),
+                        file_data.duration,
+                        Some(file_data.url),
+                    )
+                }
+            };
 
         // 4. 保存到数据库
-        let created = self.message_repo.create(
-            group_chat_id,
-            user_id,
-            message_type,
-            content.clone(),
-            reply_to_message_id,
-            mentions.clone(),
-            file_name.as_deref(),
-            file_size,
-            thumbnail_url.as_deref(),
-            duration,
-        ).await?;
+        let created = self
+            .message_repo
+            .create(
+                group_chat_id,
+                user_id,
+                message_type,
+                content.clone(),
+                reply_to_message_id,
+                mentions.clone(),
+                file_name.as_deref(),
+                file_size,
+                thumbnail_url.as_deref(),
+                duration,
+            )
+            .await?;
 
         // 5. 更新群聊最后活跃时间（通过更新updated_at字段）
         sqlx::query!(
@@ -173,7 +185,7 @@ impl GroupMessageService {
         } else {
             None
         };
-        
+
         self.event_bus.publish(AppEvent::GroupMessageSent {
             message_id: created.message_id,
             group_chat_id,
@@ -200,7 +212,7 @@ impl GroupMessageService {
     /// 获取群聊消息历史
     pub async fn get_history(
         &self,
-        req: &GetGroupMessagesRequest,
+        req: &GroupMessagesHistoryRequest,
         user_id: i64,
     ) -> Result<PaginatedData<GroupMessageItem>> {
         // 1. 参数验证
@@ -209,33 +221,25 @@ impl GroupMessageService {
             .map_err(|_| AppError::BadRequest("无效的群组ID".to_string()))?;
 
         // 2. 验证用户是否是群成员
-        if self.member_repo.find_by_user_and_group(group_chat_id, user_id).await?.is_none() {
+        if !self.member_repo.is_member(group_chat_id, user_id).await? {
             return Err(AppError::Forbidden("您不是此群组的成员".to_string()));
         }
 
         // 3. 解析游标
-        let cursor = req.cursor.as_ref()
-            .map(|c| Uuid::parse_str(c))
-            .transpose()
-            .map_err(|_| AppError::BadRequest("无效的游标".to_string()))?;
+        let cursor = Validator::parse_cursor(req.cursor.as_deref())?;
+        let include_system = req.include_system.unwrap_or(false);
 
         // 4. 查询消息历史
-        let messages = self.message_repo.list_by_group(group_chat_id, limit + 1, cursor).await?;
-
-        let has_more = messages.len() > limit as usize;
-        let messages: Vec<_> = messages.into_iter().take(limit as usize).collect();
-        let next_cursor = if has_more {
-            messages.last().map(|m| m.cursor_id.to_string())
-        } else {
-            None
-        };
+        let (messages, next_cursor) = self
+            .message_repo
+            .list_by_group(group_chat_id, limit, cursor, include_system)
+            .await?;
 
         // 5. 批量获取发送者信息
         let sender_ids: Vec<i64> = messages.iter().map(|m| m.sender_id).collect();
-        let users = self.user_repo.find_by_ids(&sender_ids).await?;
-        let user_map: std::collections::HashMap<i64, _> = users.into_iter()
-            .map(|u| (u.user_id, u))
-            .collect();
+        let users = self.user_repo.find_profiles(&sender_ids).await?;
+        let user_map: std::collections::HashMap<i64, _> =
+            users.into_iter().map(|u| (u.user_id, u)).collect();
 
         // 6. 转换为DTO
         let items: Vec<GroupMessageItem> = messages
@@ -248,9 +252,13 @@ impl GroupMessageService {
                     content: Some(m.content.clone()),
                     sender: UserInfo {
                         user_id: m.sender_id,
-                        nickname: user.map(|u| u.nickname.clone()).unwrap_or_else(|| "未知用户".to_string()),
+                        nickname: user
+                            .map(|u| u.nickname.clone())
+                            .unwrap_or_else(|| "未知用户".to_string()),
                         avatar_url: user.and_then(|u| u.avatar_url.clone()),
-                        user_type: user.map(|u| u.user_type).unwrap_or(crate::types::enums::UserType::Normal),
+                        user_type: user
+                            .map(|u| u.user_type)
+                            .unwrap_or(crate::types::enums::UserType::Normal),
                     },
                     reply_to: m.reply_to_message_id.map(|id| id.to_string()),
                     mentions: m.mentions.clone(),
@@ -274,7 +282,7 @@ impl GroupMessageService {
         Ok(PaginatedData {
             items,
             pagination: PaginationMeta {
-                has_more,
+                has_more: next_cursor.is_some(),
                 next_cursor,
             },
         })
@@ -287,9 +295,10 @@ impl GroupMessageService {
         let message_id = Uuid::parse_str(&req.id)
             .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
 
-        // 2. 查询消息
-        let message = self.message_repo
-            .find_by_id(message_id)
+        // 2. 查询消息元数据
+        let message = self
+            .message_repo
+            .get_meta(message_id)
             .await?
             .ok_or_else(|| AppError::NotFound("消息不存在".to_string()))?;
 
@@ -304,7 +313,9 @@ impl GroupMessageService {
         }
 
         // 5. 更新消息
-        self.message_repo.update_content(message_id, req.content.clone()).await?;
+        self.message_repo
+            .update_content(message_id, req.content.clone())
+            .await?;
 
         // 6. 发布编辑事件
         self.event_bus.publish(AppEvent::GroupMessageEdited {
@@ -322,9 +333,10 @@ impl GroupMessageService {
         let message_id = Uuid::parse_str(&req.id)
             .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
 
-        // 1. 查询消息
-        let message = self.message_repo
-            .find_by_id(message_id)
+        // 1. 查询消息元数据
+        let message = self
+            .message_repo
+            .get_meta(message_id)
             .await?
             .ok_or_else(|| AppError::NotFound("消息不存在".to_string()))?;
 
@@ -336,8 +348,11 @@ impl GroupMessageService {
             elapsed.num_minutes() < 2
         } else {
             // 检查是否是管理员/群主
-            let member = self.member_repo.find_by_user_and_group(message.group_chat_id, user_id).await?;
-            member.map(|m| m.role == MemberRole::Owner || m.role == MemberRole::Admin).unwrap_or(false)
+            let role = self
+                .member_repo
+                .get_member_role(message.group_chat_id, user_id)
+                .await?;
+            role == Some(MemberRole::Owner) || role == Some(MemberRole::Admin)
         };
 
         if !can_recall {
@@ -368,9 +383,10 @@ impl GroupMessageService {
         let message_id = Uuid::parse_str(&req.id)
             .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
 
-        // 1. 查询消息
-        let message = self.message_repo
-            .find_by_id(message_id)
+        // 1. 查询消息元数据
+        let message = self
+            .message_repo
+            .get_meta(message_id)
             .await?
             .ok_or_else(|| AppError::NotFound("消息不存在".to_string()))?;
 
@@ -379,14 +395,21 @@ impl GroupMessageService {
 
         if for_everyone {
             // 为所有人删除（仅管理员/群主）
-            let member = self.member_repo.find_by_user_and_group(message.group_chat_id, user_id).await?;
-            let is_admin = member.map(|m| m.role == MemberRole::Owner || m.role == MemberRole::Admin).unwrap_or(false);
+            let role = self
+                .member_repo
+                .get_member_role(message.group_chat_id, user_id)
+                .await?;
+            let is_admin = role == Some(MemberRole::Owner) || role == Some(MemberRole::Admin);
             if !is_admin {
                 return Err(AppError::Forbidden("无权为所有人删除消息".to_string()));
             }
         } else {
             // 仅为自己删除（需要是群成员）
-            if self.member_repo.find_by_user_and_group(message.group_chat_id, user_id).await?.is_none() {
+            if !self
+                .member_repo
+                .is_member(message.group_chat_id, user_id)
+                .await?
+            {
                 return Err(AppError::Forbidden("您不是此群组的成员".to_string()));
             }
         }
@@ -415,18 +438,22 @@ impl GroupMessageService {
             .map_err(|_| AppError::BadRequest("无效的群组ID".to_string()))?;
 
         // 验证用户是否是群成员
-        if self.member_repo.find_by_user_and_group(group_chat_id, user_id).await?.is_none() {
+        if !self.member_repo.is_member(group_chat_id, user_id).await? {
             return Err(AppError::Forbidden("您不是此群组的成员".to_string()));
         }
 
         // 解析截止消息ID
-        let up_to = req.up_to.as_ref()
+        let up_to = req
+            .up_to
+            .as_ref()
             .map(|id| Uuid::parse_str(id))
             .transpose()
             .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
 
         // 更新已读状态
-        self.unread_repo.mark_as_read("group_chat", &group_chat_id.to_string(), user_id, up_to).await?;
+        self.unread_repo
+            .mark_as_read("group_chat", &group_chat_id.to_string(), user_id, up_to)
+            .await?;
 
         Ok(())
     }
@@ -434,50 +461,68 @@ impl GroupMessageService {
     /// 获取消息已读状态
     pub async fn get_read_status(
         &self,
-        req: &GetMessageReadStatusRequest,
+        req: &MessageReadStatusRequest,
         user_id: i64,
     ) -> Result<PaginatedData<MessageReadItem>> {
         let limit = Validator::validate_limit(req.limit, 100)?;
+        let cursor = Validator::parse_cursor(req.cursor.as_deref())?;
         let message_id = Uuid::parse_str(&req.id)
             .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
 
-        // 获取消息
-        let message = self.message_repo.find_by_id(message_id).await?
+        // 获取消息元数据
+        let message = self
+            .message_repo
+            .get_meta(message_id)
+            .await?
             .ok_or_else(|| AppError::NotFound("消息不存在".to_string()))?;
 
         // 验证用户是否是群成员
-        if self.member_repo.find_by_user_and_group(message.group_chat_id, user_id).await?.is_none() {
+        if !self
+            .member_repo
+            .is_member(message.group_chat_id, user_id)
+            .await?
+        {
             return Err(AppError::Forbidden("您不是此群组的成员".to_string()));
         }
 
         // 查询已读状态
-        let read_users = self.message_repo.get_read_status(message_id).await?;
+        let (read_status_list, next_cursor) = self
+            .message_repo
+            .get_read_status(message_id, limit as i64, cursor)
+            .await?;
 
         // 批量获取用户信息
-        let users = self.user_repo.find_by_ids(&read_users).await?;
-        let user_map: std::collections::HashMap<i64, _> = users.into_iter()
-            .map(|u| (u.user_id, u))
-            .collect();
+        let user_ids: Vec<i64> = read_status_list.iter().map(|(uid, _)| *uid).collect();
+        let users = self.user_repo.find_profiles(&user_ids).await?;
+        let user_map: std::collections::HashMap<i64, _> =
+            users.into_iter().map(|u| (u.user_id, u)).collect();
 
         // 转换为DTO
-        let items: Vec<MessageReadItem> = read_users.iter().map(|&uid| {
-            let user = user_map.get(&uid);
-            MessageReadItem {
-                user: UserInfo {
-                    user_id: uid,
-                    nickname: user.map(|u| u.nickname.clone()).unwrap_or_else(|| "未知用户".to_string()),
-                    avatar_url: user.and_then(|u| u.avatar_url.clone()),
-                    user_type: user.map(|u| u.user_type).unwrap_or(crate::types::enums::UserType::Normal),
-                },
-                read_at: chrono::Utc::now().to_rfc3339(), // 实际应从数据库获取
-            }
-        }).take(limit as usize).collect();
+        let items: Vec<MessageReadItem> = read_status_list
+            .iter()
+            .map(|(uid, read_at)| {
+                let user = user_map.get(uid);
+                MessageReadItem {
+                    user: UserInfo {
+                        user_id: *uid,
+                        nickname: user
+                            .map(|u| u.nickname.clone())
+                            .unwrap_or_else(|| "未知用户".to_string()),
+                        avatar_url: user.and_then(|u| u.avatar_url.clone()),
+                        user_type: user
+                            .map(|u| u.user_type)
+                            .unwrap_or(crate::types::enums::UserType::Normal),
+                    },
+                    read_at: read_at.to_rfc3339(),
+                }
+            })
+            .collect();
 
         Ok(PaginatedData {
             items,
             pagination: PaginationMeta {
-                has_more: false,
-                next_cursor: None,
+                has_more: next_cursor.is_some(),
+                next_cursor,
             },
         })
     }
@@ -491,17 +536,26 @@ impl GroupMessageService {
         let message_id = Uuid::parse_str(&req.id)
             .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
 
-        // 获取消息
-        let message = self.message_repo.find_by_id(message_id).await?
+        // 获取消息元数据
+        let message = self
+            .message_repo
+            .get_meta(message_id)
+            .await?
             .ok_or_else(|| AppError::NotFound("消息不存在".to_string()))?;
 
         // 验证用户是否是群成员
-        if self.member_repo.find_by_user_and_group(message.group_chat_id, user_id).await?.is_none() {
+        if !self
+            .member_repo
+            .is_member(message.group_chat_id, user_id)
+            .await?
+        {
             return Err(AppError::Forbidden("您不是此群组的成员".to_string()));
         }
 
         // 添加反应
-        self.reactions_repo.add(message_id, user_id, &req.r#type).await?;
+        self.reactions_repo
+            .add(message_id, user_id, &req.r#type)
+            .await?;
         Ok(())
     }
 
@@ -514,35 +568,51 @@ impl GroupMessageService {
         let message_id = Uuid::parse_str(&req.id)
             .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
 
-        // 获取消息
-        let message = self.message_repo.find_by_id(message_id).await?
+        // 获取消息元数据
+        let message = self
+            .message_repo
+            .get_meta(message_id)
+            .await?
             .ok_or_else(|| AppError::NotFound("消息不存在".to_string()))?;
 
         // 验证用户是否是群成员
-        if self.member_repo.find_by_user_and_group(message.group_chat_id, user_id).await?.is_none() {
+        if !self
+            .member_repo
+            .is_member(message.group_chat_id, user_id)
+            .await?
+        {
             return Err(AppError::Forbidden("您不是此群组的成员".to_string()));
         }
 
         // 移除反应
-        self.reactions_repo.remove(message_id, user_id, &req.r#type).await?;
+        self.reactions_repo
+            .remove(message_id, user_id, &req.r#type)
+            .await?;
         Ok(())
     }
 
     /// 获取消息反应列表
     pub async fn get_reactions_list(
         &self,
-        req: &GetGroupMessageReactionsListRequest,
+        req: &GroupMessageReactionsRequest,
         user_id: i64,
     ) -> Result<PaginatedData<MessageReactionItem>> {
         let message_id = Uuid::parse_str(&req.id)
             .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
 
-        // 获取消息
-        let message = self.message_repo.find_by_id(message_id).await?
+        // 获取消息元数据
+        let message = self
+            .message_repo
+            .get_meta(message_id)
+            .await?
             .ok_or_else(|| AppError::NotFound("消息不存在".to_string()))?;
 
         // 验证用户是否是群成员
-        if self.member_repo.find_by_user_and_group(message.group_chat_id, user_id).await?.is_none() {
+        if !self
+            .member_repo
+            .is_member(message.group_chat_id, user_id)
+            .await?
+        {
             return Err(AppError::Forbidden("您不是此群组的成员".to_string()));
         }
 
@@ -550,43 +620,38 @@ impl GroupMessageService {
         let cursor = Validator::parse_cursor(req.cursor.as_deref())?;
         let reaction_type = req.r#type.as_deref();
 
-        let reactions = self.reactions_repo
-            .list_by_message(message_id, reaction_type, limit + 1, cursor)
+        let (reactions, next_cursor) = self
+            .reactions_repo
+            .list_by_message(message_id, reaction_type, limit, cursor)
             .await?;
 
-        let has_more = reactions.len() > limit as usize;
-        let reactions_to_return: Vec<_> = reactions.into_iter().take(limit as usize).collect();
-        let next_cursor = if has_more {
-            reactions_to_return.last().map(|r| r.cursor_id.to_string())
-        } else {
-            None
-        };
-
         // 批量获取用户信息
-        let user_ids: Vec<i64> = reactions_to_return.iter().map(|r| r.user_id).collect();
-        let users = self.user_repo.find_by_ids(&user_ids).await?;
-        let user_map: std::collections::HashMap<i64, _> = users.into_iter()
-            .map(|u| (u.user_id, u))
-            .collect();
+        let user_ids: Vec<i64> = reactions.iter().map(|r| r.user_id).collect();
+        let users = self.user_repo.find_profiles(&user_ids).await?;
+        let user_map: std::collections::HashMap<i64, _> =
+            users.into_iter().map(|u| (u.user_id, u)).collect();
 
-        let items: Vec<MessageReactionItem> = reactions_to_return.into_iter().filter_map(|r| {
-            let user = user_map.get(&r.user_id)?;
-            Some(MessageReactionItem {
-                user: UserInfo {
-                    user_id: user.user_id,
-                    nickname: user.nickname.clone(),
-                    avatar_url: user.avatar_url.clone(),
-                    user_type: user.user_type,
-                },
-                r#type: r.r#type,
-                created_at: r.created_at.to_rfc3339(),
+        let items: Vec<MessageReactionItem> = reactions
+            .into_iter()
+            .filter_map(|r| {
+                let user = user_map.get(&r.user_id)?;
+                Some(MessageReactionItem {
+                    user: UserInfo {
+                        user_id: user.user_id,
+                        nickname: user.nickname.clone(),
+                        avatar_url: user.avatar_url.clone(),
+                        user_type: user.user_type,
+                    },
+                    r#type: r.r#type,
+                    created_at: r.created_at.to_rfc3339(),
+                })
             })
-        }).collect();
+            .collect();
 
         Ok(PaginatedData {
             items,
             pagination: PaginationMeta {
-                has_more,
+                has_more: next_cursor.is_some(),
                 next_cursor,
             },
         })

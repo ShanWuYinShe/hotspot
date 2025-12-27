@@ -2,6 +2,7 @@
 
 pub mod chat_unread_repo;
 pub mod comment_repo;
+pub mod admin_rbac_repo;
 pub mod device_token_repo;
 pub mod feed_repo;
 pub mod file_repo;
@@ -12,9 +13,11 @@ pub mod group_member_history_repo;
 pub mod group_member_repo;
 pub mod group_message_repo;
 pub mod group_repo;
-pub mod message_reactions_repo;
 pub mod group_settings_repo;
+pub mod message_reactions_repo;
+pub mod map_repo;
 pub mod moment_repo;
+pub mod password_reset_repo;
 pub mod private_chat_repo;
 pub mod private_message_repo;
 pub mod report_repo;

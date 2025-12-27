@@ -1,6 +1,6 @@
 <template>
   <UModal
-    size="md"
+    width="md"
     title="转让群主"
     description="选择新的群主"
   >
@@ -16,7 +16,7 @@
       <UInput
         v-model="searchQuery"
         placeholder="搜索成员..."
-        icon="i-heroicons-magnifying-glass"
+        icon="i-lucide-search"
         :disabled="isLoading"
         class="mb-4"
       />
@@ -26,7 +26,7 @@
         <USkeleton
           v-for="i in 3"
           :key="i"
-          class="h-16 rounded-lg mb-2"
+          class="h-16 rounded-2xl mb-2"
         />
       </template>
 
@@ -38,7 +38,6 @@
         <UCard
           v-for="member in filteredMembers"
           :key="member.user.user_id"
-          :ui="{ body: 'p-3' }"
         >
           <section class="flex items-center justify-between gap-3">
             <header class="flex items-center gap-3 min-w-0">
@@ -73,9 +72,9 @@
 
       <UAlert
         v-else
-        icon="i-heroicons-users"
+        icon="i-lucide-users"
         color="neutral"
-        variant="subtle"
+        variant="soft"
         title="暂无成员"
         description="没有可以转让的成员"
       />
@@ -105,7 +104,7 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const toast = useToast()
+const feedback = useFeedbackStore()
 const modal = useModal()
 const groupsService = useGroupsService()
 
@@ -151,17 +150,13 @@ const transferOwnership = async (member: GroupMemberItem, close: () => void) => 
       new_owner_id: member.user.user_id
     })
 
-    toast.add({
-      title: '转让成功',
-      description: `已将群主转让给 ${member.user.nickname}`,
-      color: 'success'
-    })
+    feedback.success('转让成功', `已将群主转让给 ${member.user.nickname}`)
 
     props.onSuccess?.(member.user.user_id)
     close()
   } catch (error) {
     console.error('转让失败:', error)
-    toast.add({ title: '转让失败', description: (error as Error).message, color: 'error' })
+    feedback.error('转让失败', (error as Error).message)
   } finally {
     isTransferring.value = false
   }

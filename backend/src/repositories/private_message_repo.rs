@@ -1,17 +1,19 @@
-use sqlx::{PgPool, FromRow};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::enums::MessageType;
+
+use crate::utils::pagination::{decode_cursor, encode_cursor, IdCursor};
 
 /// 私聊消息Row - 数据库查询返回类型
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct PrivateMessageRow {
     pub id: i64,
     pub message_id: Uuid,
-    pub cursor_id: Uuid,
+    // cursor field removed
     pub private_chat_id: Uuid,
     pub sender_id: i64,
     pub r#type: MessageType,
@@ -30,6 +32,14 @@ pub struct PrivateMessageRow {
 }
 
 #[derive(Debug, Clone)]
+pub struct PrivateMessageMeta {
+    pub private_chat_id: Uuid,
+    pub sender_id: i64,
+    pub is_recalled: bool,
+    pub sent_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone)]
 pub struct PrivateMessageRepository {
     pool: PgPool,
 }
@@ -39,7 +49,25 @@ impl PrivateMessageRepository {
         Self { pool }
     }
 
+    /// 获取消息元数据（用于权限检查）
+    pub async fn get_meta(&self, message_id: Uuid) -> Result<Option<PrivateMessageMeta>> {
+        let row = sqlx::query_as!(
+            PrivateMessageMeta,
+            r#"
+            SELECT private_chat_id, sender_id, is_recalled, sent_at
+            FROM private_messages
+            WHERE message_id = $1 AND is_deleted = FALSE
+            "#,
+            message_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(row)
+    }
+
     /// 创建私聊消息
+    #[allow(clippy::too_many_arguments)]
     pub async fn create(
         &self,
         private_chat_id: Uuid,
@@ -57,7 +85,7 @@ impl PrivateMessageRepository {
             r#"
             INSERT INTO private_messages (private_chat_id, sender_id, type, content, reply_to_message_id, file_name, file_size, thumbnail_url, duration)
             VALUES ($1, $2, $3::message_type, $4, $5, $6, $7, $8, $9)
-            RETURNING id, message_id, cursor_id, private_chat_id, sender_id,
+            RETURNING id, message_id, private_chat_id, sender_id,
                       type as "type: MessageType", content, reply_to_message_id,
                       file_name, file_size, thumbnail_url, duration, sent_at, edited_at,
                       is_recalled, recalled_at, is_deleted, deleted_at
@@ -83,7 +111,7 @@ impl PrivateMessageRepository {
         let row = sqlx::query_as!(
             PrivateMessageRow,
             r#"
-            SELECT id, message_id, cursor_id, private_chat_id, sender_id,
+            SELECT id, message_id, private_chat_id, sender_id,
                    type as "type: MessageType", content, reply_to_message_id,
                    file_name, file_size, thumbnail_url, duration, sent_at, edited_at,
                    is_recalled, recalled_at, is_deleted, deleted_at
@@ -98,35 +126,23 @@ impl PrivateMessageRepository {
         Ok(row)
     }
 
-    /// 将 UUID cursor 转换为自增主键
-    async fn resolve_cursor(&self, cursor: Option<Uuid>) -> Result<i64> {
-        match cursor {
-            Some(c) => {
-                sqlx::query_scalar!(
-                    r#"SELECT id FROM private_messages WHERE cursor_id = $1"#,
-                    c
-                )
-                .fetch_optional(&self.pool)
-                .await?
-                .ok_or_else(|| crate::error::AppError::BadRequest("无效的 cursor".to_string()))
-            }
-            None => Ok(i64::MAX),
-        }
-    }
-
     /// 获取私聊消息历史（分页）
     pub async fn list_by_chat(
         &self,
         private_chat_id: Uuid,
         limit: i64,
-        cursor: Option<Uuid>,
-    ) -> Result<Vec<PrivateMessageRow>> {
-        let cursor_pk = self.resolve_cursor(cursor).await?;
+        cursor: Option<String>,
+    ) -> Result<(Vec<PrivateMessageRow>, Option<String>)> {
+        let last_id = if let Some(c) = cursor {
+            decode_cursor::<IdCursor>(&c)?
+        } else {
+            i64::MAX
+        };
 
         let rows = sqlx::query_as!(
             PrivateMessageRow,
             r#"
-            SELECT id, message_id, cursor_id, private_chat_id, sender_id,
+            SELECT id, message_id, private_chat_id, sender_id,
                    type as "type: MessageType", content, reply_to_message_id,
                    file_name, file_size, thumbnail_url, duration, sent_at, edited_at,
                    is_recalled, recalled_at, is_deleted, deleted_at
@@ -136,13 +152,14 @@ impl PrivateMessageRepository {
             LIMIT $3
             "#,
             private_chat_id,
-            cursor_pk,
+            last_id,
             limit
         )
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows)
+        let next_cursor = rows.last().map(|r| encode_cursor(&r.id)).transpose()?;
+        Ok((rows, next_cursor))
     }
 
     /// 更新消息内容
@@ -195,11 +212,14 @@ impl PrivateMessageRepository {
     }
 
     /// 获取私聊的最后一条消息
-    pub async fn get_last_message(&self, private_chat_id: Uuid) -> Result<Option<PrivateMessageRow>> {
+    pub async fn get_last_message(
+        &self,
+        private_chat_id: Uuid,
+    ) -> Result<Option<PrivateMessageRow>> {
         let row = sqlx::query_as!(
             PrivateMessageRow,
             r#"
-            SELECT id, message_id, cursor_id, private_chat_id, sender_id,
+            SELECT id, message_id, private_chat_id, sender_id,
                    type as "type: MessageType", content, reply_to_message_id,
                    file_name, file_size, thumbnail_url, duration, sent_at, edited_at,
                    is_recalled, recalled_at, is_deleted, deleted_at
@@ -218,7 +238,11 @@ impl PrivateMessageRepository {
 
     /// 检查某用户是否在该私聊中发送过消息
     /// 用于判断是否应该解锁对方的消息限制
-    pub async fn has_messages_from_user(&self, private_chat_id: Uuid, user_id: i64) -> Result<bool> {
+    pub async fn has_messages_from_user(
+        &self,
+        private_chat_id: Uuid,
+        user_id: i64,
+    ) -> Result<bool> {
         let exists = sqlx::query_scalar!(
             r#"
             SELECT EXISTS(
@@ -236,5 +260,33 @@ impl PrivateMessageRepository {
 
         Ok(exists)
     }
-}
 
+    /// 批量获取私聊的最后一条消息 (Map<private_chat_id, Message>)
+    pub async fn get_last_message_batch(
+        &self,
+        private_chat_ids: &[Uuid],
+    ) -> Result<std::collections::HashMap<Uuid, PrivateMessageRow>> {
+        if private_chat_ids.is_empty() {
+            return Ok(std::collections::HashMap::new());
+        }
+
+        let rows = sqlx::query_as!(
+            PrivateMessageRow,
+            r#"
+            SELECT DISTINCT ON (private_chat_id)
+                   id, message_id, private_chat_id, sender_id,
+                   type as "type: MessageType", content, reply_to_message_id,
+                   file_name, file_size, thumbnail_url, duration, sent_at, edited_at,
+                   is_recalled, recalled_at, is_deleted, deleted_at
+            FROM private_messages
+            WHERE private_chat_id = ANY($1) AND is_deleted = FALSE
+            ORDER BY private_chat_id, sent_at DESC
+            "#,
+            private_chat_ids
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.into_iter().map(|r| (r.private_chat_id, r)).collect())
+    }
+}

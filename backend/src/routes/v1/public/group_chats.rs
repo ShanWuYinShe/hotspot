@@ -10,7 +10,7 @@ pub fn routes() -> Router<AppState> {
         .route("/search_by_location", post(group_chats::search_by_location))
         // 获取指定群组信息
         .route("/open_the_door", post(group_chats::open_the_door))
-        .route("/get_settings", post(group_chats::get_settings))
+        .route("/settings", post(group_chats::settings))
         // 成员列表
-        .route("/members/get_list", post(group_chats::get_members))
+        .route("/members", post(group_chats::members))
 }

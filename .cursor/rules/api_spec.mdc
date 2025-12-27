@@ -35,6 +35,7 @@ alwaysApply: true
   - [私聊消息 API](#私聊消息-api)
   - [群聊消息 API](#群聊消息-api)
   - [消息通用 API](#消息通用-api)
+  - [地图聚合与视口查询 API](#地图聚合与视口查询-api)
   - [举报审核 API](#举报审核-api)
   - [通知订阅设置 API](#通知订阅设置-api)
   - [推送设备管理 API](#推送设备管理-api)
@@ -69,35 +70,22 @@ alwaysApply: true
 - 🌍 **客户端负责时区转换**：接收到 UTC 时间后，根据用户本地时区显示
 - 🔄 **客户端发送时间**：向服务端发送时间参数时，也应转换为 UTC 时间
 
-### 快速开始
-
 ### 基础流程
 
 **1. 用户注册**  
-调用注册接口 `POST /api/v1/public/auth/register`,提供登录ID(邮箱或手机号)、昵称和密码哈希(SHA256)。成功后返回用户ID、访问令牌、刷新令牌和令牌过期时间。
+调用 `POST /api/v1/public/auth/register`，提供登录ID（邮箱或手机号）、昵称和密码（在 HTTPS/TLS 中传输）。成功后返回用户ID、访问令牌、刷新令牌和令牌过期时间。
 
 **2. 用户登录**  
-调用登录接口 `POST /api/v1/public/auth/login`,提供登录ID和密码哈希。成功后返回与注册相同的认证信息。
+调用 `POST /api/v1/public/auth/login`，提供登录ID和密码（在 HTTPS/TLS 中传输）。成功后返回与注册相同的认证信息。
 
 **3. 调用受保护的 API**  
-在请求头中添加 `Authorization: Bearer <access_token>`,即可访问受保护的API端点。例如调用 `POST /api/v1/protected/user/me` 获取当前用户资料。
+在请求头中添加 `Authorization: Bearer <access_token>`，即可访问 `/protected/*` 路径下的API端点。
 
 **4. 建立 WebSocket 连接**  
-使用访问令牌建立 WebSocket 连接,连接成功后可以订阅感兴趣的数据源(群聊消息、用户状态、通知等)。服务端会实时推送相关事件。
+使用访问令牌建立 WebSocket 连接，连接成功后可以订阅感兴趣的数据源（群聊消息、用户状态、通知等）。
 
-**5. 发送消息**  
-调用消息发送接口(私聊或群聊),提供聊天ID、消息类型和内容。消息会通过 WebSocket 实时推送给订阅了该聊天的其他用户。
-
-### 常见错误处理
-
-**Token 过期** (错误码 1101)  
-使用 refresh_token 调用刷新令牌接口获取新的 access_token。
-
-**权限不足** (错误码 1103)  
-检查当前用户角色和操作权限,确认是否有执行该操作的权限。
-
-**请求过于频繁** (错误码 1400)  
-实现客户端请求节流,遵守API的速率限制。可以从响应头的 `X-RateLimit-*` 字段获取限流信息。
+**5. Token 刷新**  
+当 access_token 过期（错误码 1101）时，使用 refresh_token 调用刷新令牌接口获取新的 access_token。
 
 ## API 设计原则
 
@@ -117,10 +105,10 @@ alwaysApply: true
 - 只返回资源ID
 - 不返回 created_at（客户端知道就是现在）
 - 不返回 status: 'pending'（创建时必然是这个状态）
-- 例外：expires_at 等客户端无法推断的时间字段可以保留
+- 例外：`expires_at`、`sent_at` 等客户端无法推断的时间字段可以保留
 - 示例：`CreateMomentData { id: string }`
 
-**列表操作（get_list/search_by_xxx）**
+**列表操作（list/search_by_xxx）**
 - 只返回列表渲染必需的字段（通常3-6个）
 - 字段选择原则：用户在列表中能直接看到的信息
 - 不返回详细信息、关系数据、复杂统计信息
@@ -128,13 +116,12 @@ alwaysApply: true
 - 示例：用户列表只返回 `{user_id, nickname, avatar_url}`
 
 **详情获取（按需组合）**
-- 搜索结果已包含列表展示必需的信息
+- 搜索结果已包含列表展示必需的信息（包括在线状态）
 - 详细信息通过专门的 API 按需获取：
-  - 用户状态：`get_status`（is_online, last_online）
-  - 用户统计：`get_stats`（moments_count, followers_count 等）
-  - 用户关系：`get_relationship`（is_following, is_blocked 等）
-  - 群组设置：`get_settings`（GroupSettings）
-- 示例：用户资料 = 搜索结果 + get_status + get_stats + get_relationship
+  - 用户统计：`POST /api/v1/public/user/stats`（`UserStatsData`）
+  - 用户关系：`POST /api/v1/protected/user/relationship`（`UserRelationship`）
+  - 群组设置：`POST /api/v1/public/group_chats/settings`（`GroupSettingsData`）
+- 示例：用户资料 = 搜索结果 + stats + relationship
 
 **嵌套对象处理**
 - 列表中的嵌套用户对象：直接使用 `UserInfo` 通用类型
@@ -191,6 +178,17 @@ type PrivacyLevel = 'public' | 'friends' | 'private';
 ```typescript
 // 消息反应类型枚举
 type ReactionType = 'like' | 'love' | 'laugh' | 'angry' | 'sad' | 'wow';
+```
+
+**字段可见性（隐私控制）**：
+```typescript
+type FieldVisibility = 'visible' | 'hidden';
+type HiddenReason = 'privacy' | 'blocked' | 'not_available';
+
+interface FieldVisibilityMeta {
+  visibility: FieldVisibility;
+  reason?: HiddenReason; // visibility='hidden' 时必须提供
+}
 ```
 
 **用户关系类型**：
@@ -275,15 +273,6 @@ interface TimeRangeParams {
 }
 ```
 
-**用户状态类型**：
-```typescript
-// 用户在线状态（用于 get_status API）
-interface UserStatusData {
-  is_online: boolean;
-  last_online?: string;   // 最后上线时间（仅离线时返回）
-}
-```
-
 **群组设置类型**：
 ```typescript
 // 群组设置（创建和更新时通用，所有字段可选，未设置则使用默认值）
@@ -294,14 +283,21 @@ interface GroupSettings {
   is_searchable?: boolean;
   // 最大成员数，默认：500
   max_members?: number;
-  // 群组密码（SHA256哈希，NULL表示无密码），默认：NULL
-  password_hash?: string;
+  // 群组密码：仅用于创建/更新/加入时提交；不回显；服务端会进行慢哈希存储
+  // 注意：该字段不属于 GroupSettings 的稳定输出契约，输出只通过 has_password 表示是否设置密码
+  // 如需在请求中携带密码，请使用 GroupSettingsInput / JoinGroupRequest.password
+  // password?: string;
   // 群组位置（经度），默认：112.68253
   longitude?: number;
   // 群组位置（纬度），默认：35.154921
   latitude?: number;
   // 群组位置名称，默认："南天门"
   location_name?: string;
+}
+
+// 群组设置（请求输入用，允许携带 password）
+interface GroupSettingsInput extends GroupSettings {
+  password?: string;
 }
 ```
 
@@ -311,21 +307,20 @@ interface GroupSettings {
 | `join_method` | `'open'` | 开放加入，无需审批 |
 | `is_searchable` | `true` | 允许被搜索发现 |
 | `max_members` | `500` | 最大成员数 |
-| `password_hash` | `NULL` | 无密码 |
+| `password` | `NULL` | 无密码（仅输入字段，不回显） |
 | `longitude` | `112.68253` | 默认经度（南天门） |
 | `latitude` | `35.154921` | 默认纬度（南天门） |
 | `location_name` | `"南天门"` | 默认位置名称 |
 
 **位置信息说明**：
-- 群组位置是群主/管理员设置的固定位置，用于"发现群组"功能
-- 未主动设置位置时，使用系统默认位置（南天门）
-- 所有群组都有位置信息，确保可以按距离排序
+- 群组位置是固定位置，用于"发现群组"功能
+- 未设置时使用系统默认位置（南天门）
 
-**群组密码机制说明**：
-- ✅ **邀请入群**：通过邀请链接或好友邀请加入群组，**不需要密码**
-- ✅ **搜索加入**：用户搜索到群组后，如果群组设置了密码，**必须输入正确密码才能加入**
-- ✅ **密码存储**：使用 SHA256 哈希（客户端计算）+ bcrypt（服务端存储）
-- ✅ **密码验证**：Service 层负责验证密码
+**群组密码机制**：
+- 邀请入群：不需要密码
+- 搜索加入：需要密码（如果群组设置了密码）
+- 密码传输：HTTPS/TLS 中明文传输（不做客户端哈希）
+- 密码存储：服务端使用慢哈希（建议 Argon2id 或 bcrypt）+ 随机盐
 
 ### 统一响应格式
 
@@ -333,8 +328,9 @@ interface GroupSettings {
 ```typescript
 interface ApiResponse<T = void> {
   code: number;       // 状态码：0表示成功，非0表示错误
-  message?: string;   // 响应消息（可选，失败时必须返回错误描述，成功时由客户端决定提示内容）
+  message?: string;   // 面向用户的响应消息（可选，失败时必须返回）
   data?: T;           // 成功时的数据（可选，类型根据具体API而定）
+  request_id: string; // 每次请求必返，用于链路追踪
 }
 ```
 
@@ -345,6 +341,7 @@ interface ApiResponse<T = void> {
 - `message` 字段使用原则：
   - ✅ **失败响应**：必须返回 `message`，描述具体错误原因
   - ⚠️ **成功响应**：可选返回 `message`，建议由客户端根据业务上下文自行决定提示内容
+- `request_id`：服务端必须回显客户端 `X-Request-Id`（若未提供则由服务端生成）
 - 每个API会明确定义其Response类型和data结构
 - 可复用的公共类型统一定义在通用类型定义中
 
@@ -357,9 +354,18 @@ interface ApiResponse<T = void> {
   - 特点：可携带复杂请求体、不可缓存、字段使用Optional实现部分更新
 
 **HTTP 状态码策略**：
-- **所有API请求统一返回HTTP 200状态码**
-- 通过响应体中的`code`字段区分业务处理结果（0表示成功，非0表示错误）
-- **无例外情况**：包括认证失败、速率限制等所有错误都返回HTTP 200，错误信息封装在`ApiResponse`的`code`和`message`字段中
+- API 保持 **RPC 风格 + 全部 POST**，但 **使用真实 HTTP 状态码** 表达“错误大类”
+- 响应体始终使用 `ApiResponse<T>`（即使是 4xx/5xx，也返回同一 envelope）
+- HTTP 状态码与 `code` 的推荐映射：
+  - 200：`code=0`
+  - 400：`1000~1099`
+  - 401：`1100~1102`
+  - 403：`1103~1104`
+  - 404：`1200`
+  - 409：`1201~1203`、`1300~1399`、`2200~2202`
+  - 410：`1204`（cursor 无效或已过期）
+  - 429：`1400~1499`（同时返回 `Retry-After`）
+  - 5xx：`5000~5199`
 
 ### 错误码定义
 
@@ -368,7 +374,7 @@ interface ApiResponse<T = void> {
 {
   code: number;        // 错误码（非0）
   message: string;     // 用户友好的错误消息
-  details?: object;    // 可选的详细信息（如字段验证错误）
+  request_id: string;  // 用于追踪与定位
 }
 ```
 
@@ -396,6 +402,7 @@ interface ApiResponse<T = void> {
 - `1201` - 资源已存在
 - `1202` - 资源已被删除
 - `1203` - 资源状态冲突
+- `1204` - 游标无效或已过期（分页 cursor）
 
 **1300-1399：业务逻辑错误**
 - `1300` - 业务规则冲突（通用）
@@ -473,21 +480,15 @@ interface ApiResponse<T = void> {
 **核心原则**：在无歧义的情况下，ID字段直接使用 `id`，有歧义时使用 `xxx_id`。
 
 **Request 中的 ID 命名**：
-- ✅ **操作目标资源**：使用 `id`（API端点已明确资源类型）
-  - `/moments/like` → `{ id: "..." }` （点赞的是瞬间）
-  - `/user/get_status` → `{ id: "..." }` （获取的是用户状态）
-  - `/comments/delete` → `{ id: "..." }` （删除的是评论）
-- ✅ **引用关联资源**：使用 `xxx_id`（需要明确引用的是什么）
-  - `/comments/add` → `{ moment_id: "...", content: "..." }` （在哪个瞬间下评论）
-  - `/group_chats/members/invite` → `{ id: "...", user_id: "..." }` （群组ID + 被邀请用户ID）
+- **操作目标资源**：使用 `id`（API端点已明确资源类型）
+- **引用关联资源**：使用 `xxx_id`（需要明确引用的是什么）
 
 **Response 中的 ID 命名**：
-- ✅ **主资源**：使用 `id`（如 `MomentSearchItem.id`、`CommentListItem.id`）
-- ✅ **嵌套引用**：使用 `xxx_id`（如 `CommentListItem.parent_id`、`PrivateChatLastMessage.sender_id`）
+- **主资源**：使用 `id`
+- **嵌套引用**：使用 `xxx_id`
 
 **WebSocket 事件中的 ID 命名**：
-- ✅ **保持描述性命名**：事件接收时缺少上下文，需要明确指示
-- 示例：`MomentLikedEvent.payload.moment_id`、`ChatMessageNewEvent.payload.chat_id`
+- **保持描述性命名**：事件接收时缺少上下文，需要明确指示
 
 #### 枚举类型使用规范
 
@@ -521,98 +522,37 @@ interface ApiResponse<T = void> {
 
 #### API动词命名规范
 
-**核心原则**：使用清晰、语义明确的动词，确保API命名一致性和可预测性。
-
 **标准动词及其使用场景**：
 
 - **create**: 创建新资源
-  - 用于：创建全新的实体（用户、瞬间、群组等）
-  - 示例：`create_moment`, `create_group_chat`
-  - 幂等性：非幂等（重复执行会创建多个资源）
-
 - **update**: 更新资源属性
-  - 用于：修改已有资源的部分或全部属性
-  - 示例：`update_profile`, `update_settings`
-  - 幂等性：天然幂等（相同内容多次更新结果相同）
-
-- **delete**: 物理删除资源
-  - 用于：永久删除资源（不可恢复）
-  - 示例：`delete_account`, `delete_moment`
-  - 幂等性：天然幂等（删除已删除的资源返回相同结果）
-
-- **remove**: 移除关系或取消关联
-  - 用于：解除两个实体之间的关系，但不删除实体本身
-  - 示例：`remove_friend`, `remove_member`
-  - 幂等性：天然幂等
-
+- **delete**: 物理删除资源（不可恢复）
+- **remove**: 移除关系或取消关联（不删除实体本身）
 - **like / unlike**: 点赞/取消点赞
-  - 用于：对资源（瞬间、评论）的点赞操作
-  - 示例：`like_moment`, `unlike_moment`, `like_comment`, `unlike_comment`
-  - 幂等性：天然幂等
-
 - **favorite / unfavorite**: 收藏/取消收藏
-  - 用于：对资源的收藏操作
-  - 示例：`favorite_moment`, `unfavorite_moment`
-  - 幂等性：天然幂等
-
 - **follow / unfollow**: 关注/取消关注
-  - 用于：用户之间的关注关系
-  - 示例：`follow_user`, `unfollow_user`
-  - 幂等性：天然幂等
-
 - **block / unblock**: 拉黑/解除拉黑
-  - 用于：用户之间的拉黑关系
-  - 示例：`block_user`, `unblock_user`
-  - 幂等性：天然幂等
-
-- **ban / unban**: 封禁/解除封禁
-  - 用于：群组成员管理
-  - 示例：`ban_member`, `unban_member`
-  - 幂等性：天然幂等
-
-- **add / remove**: 添加/移除
-  - 用于：添加或移除关系（如消息反应）
-  - 示例：`add_reaction`, `remove_reaction`
-  - 幂等性：天然幂等
-
+- **ban / unban**: 封禁/解除封禁（群组成员管理）
+- **add / remove**: 添加/移除（如消息反应）
 - **set**: 直接设置为指定值
-  - 用于：明确设置某个属性为指定值，不关心当前状态
-  - 示例：`set_role`, `set_friend_remark`
-  - 幂等性：天然幂等
-
-- **send**: 发送动作
-  - 用于：发送消息等需要传递的内容
-  - 示例：`send_message`
-  - 幂等性：非幂等（需要通过幂等键机制保证）
-
+- **send**: 发送消息等内容
 - **get**: 获取资源（可用于列表）
-  - 用于：查询资源列表或集合
-  - 示例：`get_list`, `get_friends`, `get_stats`
-  - 幂等性：天然幂等
-
 - **search_by_xxx**: 按条件搜索
-  - 用于：按特定条件搜索资源列表
-  - 示例：`search_by_name`, `search_by_location`, `search_by_tags`
-  - 幂等性：天然幂等
-
-- **mark**: 标记状态
-  - 用于：标记某个状态（如已读）
-  - 示例：`mark_as_read`, `mark_all_as_read`
-  - 幂等性：天然幂等
+- **mark**: 标记状态（如已读）
 
 ### 分页与游标语义
 
 **游标特性**：
-- **游标是不透明的字符串**，客户端不应解析其内容
-- **客户端职责**：将后端返回的 `next_cursor` 原样传回，无需理解其含义
-- **后端职责**：负责cursor的编码/解码，将其映射到数据库分页机制
+- **游标是不透明的字符串**（Opaque String），通常是 Base64 编码的键集（Keyset）
+- **客户端职责**：将后端返回的 `next_cursor` 原样传回，**严禁解析或构造其内容**
+- **后端职责**：负责cursor的编码/解码（Keyset Pagination逻辑）
 - 首次请求不传 `cursor`，后续请求原样传递 `next_cursor`
 - `has_more=false` 表示没有更多数据
 
 **游标格式说明**：
-- cursor是不透明的UUID格式字符串（如 `550e8400-e29b-41d4-a716-446655440000`）
-- 客户端无需解析cursor内容，只需原样存储和传递
-- 后端负责cursor的编码/解码和分页逻辑
+- cursor是不透明的字符串（例如 `MTY5NjE2MTYwMDAwMCwxMjM0NTY=`）
+- 客户端无需且不能解析cursor内容
+- 后端负责将游标解码为 `(sort_value, unique_id)` 进行高效分页查询
 
 **分页参数规范**：
 - **limit 默认值**：20
@@ -620,14 +560,14 @@ interface ApiResponse<T = void> {
 - **limit 最小值**：1
 - **超出范围处理**：
   - 如果 `limit > 100`，自动调整为 100
-  - 如果 `limit < 1`，返回参数错误（error_code: 1003）
+  - 如果 `limit < 1`，返回参数错误（错误码 `1003`）
 
 **边界情况处理**：
 - **空列表**：返回空 `items` 数组，`has_more: false`
 - **最后一页**：返回少于 `limit` 个数据，`has_more: false`
 - **有下一页**：返回等于 `limit` 个数据，`has_more: true`，包含 `next_cursor`
-- **cursor 失效**：返回错误码 `1200`（资源不存在）
-- **cursor 格式错误**：返回错误码 `1002`（参数格式错误）
+- **cursor 格式错误**：HTTP 400 + 错误码 `1002`（参数格式错误）
+- **cursor 无效或已过期**：HTTP 410 + 错误码 `1204`；客户端应清空 cursor 重新从第一页拉取
 
 ### 类型转换规范
 
@@ -658,10 +598,7 @@ interface ApiResponse<T = void> {
 
 **用户类型**: 通过 `user_type` 枚举字段标识（包含在 `UserInfo` 等响应类型中）
 
-**UserType 枚举值**:
-```typescript
-type UserType = 'temp' | 'normal' | 'admin' | 'system';
-```
+**UserType 枚举值**：见“通用类型定义”中的 `UserType`
 - `temp` - 临时用户
 - `normal` - 注册用户（普通用户）
 - `admin` - 管理员用户
@@ -679,10 +616,10 @@ type UserType = 'temp' | 'normal' | 'admin' | 'system';
 
 ### 密码安全策略
 
-- **客户端哈希**：所有密码相关请求必须使用 `SHA256(password)` 计算哈希后发送
-- **字段命名**：API 使用 `password_hash` 字段接收客户端哈希值
-- **算法固定**：始终使用 SHA-256，不使用其他哈希算法
-- **传输安全**：必须使用 HTTPS，客户端不存储明文密码
+- **传输安全**：所有密码相关请求必须使用 HTTPS/TLS（TLS 1.2+）
+- **客户端提交**：客户端提交 `password` 明文（仅在 TLS 中传输），不做 `SHA256(password)` 客户端哈希
+- **服务端存储**：服务端使用慢哈希存储（建议 Argon2id 或 bcrypt），每个密码使用随机盐
+- **字段命名**：密码字段统一命名为 `password`（修改密码使用 `old_password/new_password`）
 
 ### 查询接口设计模式
 
@@ -735,9 +672,9 @@ interface GeoData {
 ```
 
 **补充信息 API 规范**：
-- 搜索结果已包含列表展示必需的基本信息
+- 搜索结果已包含列表展示必需的基本信息（包括在线状态）
 - 详细信息通过专门的补充 API 按需获取
-- 补充 API 包括：`get_status`（用户在线状态）、`get_stats`（统计数据）、`get_relationship`（用户关系）、`get_settings`（群组设置）
+- 补充 API 包括：`user/stats`（统计数据）、`user/relationship`（用户关系）、`group_chats/settings`（群组设置）
 
 ### 客户端数据提交规范
 
@@ -805,39 +742,18 @@ interface GeoData {
 - 临时用户：每分钟50次请求
 
 **特定API速率限制**：
-```typescript
-// 发送私聊消息
-POST /api/v1/protected/private_messages/send
-- 限制：每秒10次，每分钟300次
-
-// 发送群聊消息
-POST /api/v1/protected/group_messages/send
-- 限制：每秒10次，每分钟300次
-
-// 创建生活瞬间
-POST /api/v1/protected/moments/create
-- 限制：每分钟5次，每小时20次
-
-// 上传文件
-POST /api/v1/protected/media/upload_file
-- 限制：每分钟10次，每小时100次
-
-// 搜索接口（用户/瞬间/群组）
-POST /api/v1/public/user/search_by_*
-POST /api/v1/public/moments/search_by_*
-POST /api/v1/public/group_chats/search_by_*
-- 限制：每秒5次，每分钟100次
-
-// 关注用户
-POST /api/v1/protected/user/me/follow_user
-- 限制：每分钟30次，每小时200次
-```
+- 发送私聊消息：每秒10次，每分钟300次
+- 发送群聊消息：每秒10次，每分钟300次
+- 创建生活瞬间：每分钟5次，每小时20次
+- 上传文件：每分钟10次，每小时100次
+- 搜索接口：每秒5次，每分钟100次
+- 关注用户：每分钟30次，每小时200次
 
 **速率限制响应**：
-- **HTTP 状态码**：200（与其他响应一致）
+- **HTTP 状态码**：429
 - **响应体**：`ApiResponse` 格式，`code: 1400`（请求过于频繁）
-- **响应头**：包含 `X-RateLimit-Limit`（最大请求数）、`X-RateLimit-Remaining`（剩余请求数）、`X-RateLimit-Reset`（重置时间）
-- **details 字段**：包含 `retry_after`（建议等待秒数）
+- **响应头**：必须包含 `Retry-After`（建议等待秒数）；可选包含 `X-RateLimit-Limit`、`X-RateLimit-Remaining`、`X-RateLimit-Reset`
+- **details 字段**：可包含 `retry_after`（秒）
 
 **配额限制**：
 - 单个用户最多500个好友
@@ -856,33 +772,51 @@ POST /api/v1/protected/user/me/follow_user
 **传输安全**：
 - 所有API必须使用HTTPS（TLS 1.2+）
 - WebSocket必须使用WSS（WebSocket Secure）
-- 禁止在URL中传递敏感信息（如token、密码等）
+- **HTTP API** 禁止在 URL 中传递敏感信息（如 token、密码等）
+- **WebSocket 鉴权**：采用“握手后首帧鉴权”模式。连接建立后客户端立即发送 `Auth` 事件携带 `access_token`，服务端校验通过后才允许订阅与业务事件
 
 **认证与授权**：
 - 使用JWT（JSON Web Token）进行用户认证
 - Token应包含过期时间和刷新机制
+- **Token 结构要求**：
+  - 必须包含 `sid` (Session ID) 字段，用于会话管理和主动失效
+  - 必须包含 `sub` (User ID)、`exp` (过期时间)、`iat` (签发时间)
+  - 缺少 `sid` 的旧版 Token 将被视为无效
 - 敏感操作需要二次验证（如删除账户、修改密码）
 - 实现基于角色的访问控制（RBAC）
 
+#### Refresh Token 设计（业内最佳实践）
+
+**核心规则**：
+- **access_token**：JWT（短期），用于访问受保护 API
+- **refresh_token**：不透明随机字符串（长效），仅用于刷新 access_token
+- **Refresh Token Rotation**：每次刷新都会签发新的 refresh_token，并立即使旧 refresh_token 失效
+- **Refresh Token Reuse Detection**：检测到“已失效 refresh_token 被再次使用”时，视为疑似泄露，应撤销该会话（sid）
+
+**存储建议**：
+- Web：refresh_token 放在 `HttpOnly; Secure; SameSite=Lax` Cookie（前端 JS 不可读）
+- App：refresh_token 放在系统安全存储（Keychain/Keystore/等价能力）
+
+**主动失效（撤销）**：
+- 通过撤销 `sid`（会话）实现：撤销后该会话下的 access_token 与 refresh_token 立即不可用
+
 **API 路径与 Token 要求**：
 
-⚠️ **严格区分公开和受保护的 API 端点**
-
-- `/public/*` 路径：无需 Token（公开访问）
+- `/public/*` 路径：无需 Token（可匿名访问）
 - `/protected/*` 路径：必需 Token（认证访问）
 
 **Token 验证规则**：
 
-- `/public/*` 路径的请求**不应**包含 Authorization 头
-- `/protected/*` 路径的请求**必须**包含 `Authorization: Bearer <access_token>` 头
-- 未提供 Token 时返回错误码 `1102`（Token缺失）
-- Token 无效或过期时返回错误码 `1101`（Token无效或过期）
-- 所有响应均返回 HTTP 200，错误信息通过 `code` 字段区分
+- `/protected/*` 路径：必须包含 `Authorization: Bearer <access_token>` 头
+- **X-Device-Fingerprint**（推荐）：客户端计算的设备唯一指纹，用于增强安全性
+- Token 缺失：返回错误码 `1102`
+- Token 无效或过期：返回错误码 `1101`
+- 使用真实 HTTP 状态码（401/403 等）表达错误大类，错误信息通过 `code/message/details` 表达细节
 
 **CORS策略**：
 - **允许的源**：指定的客户端域名
 - **允许的方法**：POST, OPTIONS
-- **允许的头**：Authorization, Content-Type, X-Request-ID
+- **允许的头**：Authorization, Content-Type, X-Request-Id
 - **允许携带凭证**：true
 - **预检请求缓存**：86400秒（24小时）
 
@@ -921,69 +855,32 @@ POST /api/v1/protected/user/me/follow_user
 - **POST（扣款/转账等）**：重复执行会导致重复扣款
 - **POST（发送消息）**：重复执行会发送重复消息
 
-**幂等键机制（服务端自动控制）**：
+**幂等键机制（推荐实践：客户端提供 Idempotency-Key）**：
 
-⚠️ **零信任原则**：不依赖客户端生成或提供幂等键，完全由服务端基于请求内容自动生成和控制。
+在真实业务里，“请求体相同”并不等于“用户意图相同”（例如用户连续发送两条相同文本）。因此不建议用“请求内容哈希”来推断幂等。
 
-**设计理念**：
-- ✅ 服务端完全控制幂等性，客户端无需关心
-- ✅ 基于请求内容自动去重，防止恶意攻击
-- ✅ 零额外网络开销，透明化处理
+**推荐方案**：客户端为每一次“不可重复执行的意图”生成一个唯一的 `Idempotency-Key`（或 `X-Idempotency-Key`）请求头，服务端基于该 key 做去重回放。
 
-**服务端幂等键生成规则**：
+**客户端规范**：
+- 对“非幂等操作”（创建资源、发送消息、上传完成提交等），客户端在**重试同一次操作**时必须复用同一个 `Idempotency-Key`
+- 对“确实是两次独立操作”（哪怕请求体完全一致），必须使用不同的 `Idempotency-Key`
+- `Idempotency-Key` 建议使用 UUID（字符串），由客户端生成
 
-服务端基于以下字段自动生成幂等键：`SHA256(user_id + api_endpoint + request_body_json + time_window)`
+**服务端处理规则**：
+- 若请求未携带 `Idempotency-Key`（或 `X-Idempotency-Key`）：不做幂等去重（避免误去重）
+- 若携带：服务端以 `(user_id + api_endpoint + Idempotency-Key)` 作为幂等唯一标识
+- 仅缓存业务成功响应（`ApiResponse.code == 0`）
+- 建议缓存 TTL：24小时（覆盖移动端弱网重试、后台恢复等场景）
 
-- `user_id`：从 Token 中提取
-- `api_endpoint`：API 端点路径
-- `request_body_json`：标准化排序后的请求体 JSON
-- `time_window`：时间窗口（5分钟为单位，向下取整）
+**服务端返回头（调试与可观测性）**：
+- `Idempotency-Key`：回显客户端 key
+- `X-Idempotent-Replayed`：`true/false` 表示是否命中回放
+- `X-Idempotency-Hash`：服务端内部 hash key（可选）
 
-**时间窗口设计**：
-- 时间窗口大小：5分钟（可配置）
-- 作用：防止长期缓存占用，允许相同请求在不同时间窗口执行
-- 示例：
-  - `1949-10-01T10:03:30Z` → 窗口 `1949-10-01T10:00:00Z`
-  - `1949-10-01T10:07:45Z` → 窗口 `1949-10-01T10:05:00Z`
+**补充说明**：
+- 幂等机制解决的是“重试导致的重复执行”，不是业务去重（例如“关注”本身天然幂等，仍应靠数据库约束保证一致性）
+- 对于需要严格“防并发重复”的操作，可在服务端引入“处理中锁”（对应错误码 `2202`），并在文档中明确重试策略
 
-**服务端处理流程**：
-
-1. 接收请求：客户端正常发送请求，无需任何幂等相关字段
-2. 提取上下文：从 Token 提取 user_id，获取 api_endpoint，标准化请求体 JSON
-3. 生成幂等键：基于上述字段计算 SHA256 哈希
-4. 检查缓存：如果存在则返回缓存结果，响应头包含 `X-Idempotent-Replayed: true`
-5. 执行业务逻辑：首次请求时执行
-6. 缓存结果：使用 Redis 存储，TTL = 10分钟（2倍时间窗口）
-7. 返回响应：响应头包含 `X-Idempotent-Key`（仅用于调试）
-
-**自动幂等的操作**（无需客户端处理）：
-- 发送私聊消息：`POST /api/v1/protected/private_messages/send`
-- 发送群聊消息：`POST /api/v1/protected/group_messages/send`
-- 创建生活瞬间：`POST /api/v1/protected/moments/create`
-- 创建群组：`POST /api/v1/protected/group_chats/create`
-- 文件上传：`POST /api/v1/protected/media/upload_file`（详见文件上传幂等性设计）
-- 支付相关操作
-
-**文件上传设计**：
-
-| 文件大小 | 策略 |
-|---------|------|
-| ≤ 100MB | 直接上传 |
-| > 100MB | 分块上传（通过 `upload_id` 追踪） |
-
-**说明**：每次上传都返回新的 `file_id`，物理文件基于 checksum 去重存储。
-
-**不需要幂等处理的操作**：
-- 查询操作（POST search_*）- 天然幂等
-- 幂等的更新/删除操作 - 天然幂等
-- 读取类操作（GET/open_the_door）- 天然幂等
-
-**请求体标准化规则**：
-
-标准化 JSON 以确保相同内容生成相同幂等键：
-1. 移除所有空白字符
-2. Key 按字母顺序排序
-3. 忽略特殊字段：`client_request_id`、`timestamp`、`nonce`
 
 ### 隐私控制机制
 
@@ -1008,9 +905,8 @@ POST /api/v1/protected/user/me/follow_user
 
 | API | 受控设置 | 隐私限制时的行为 |
 |-----|---------|-----------------|
-| `search_by_xxx` (users) | `searchable`, `location_searchable`, `location_visible` | 过滤搜索结果，隐藏位置（`geo: null`） |
-| `get_status` | `online_visible`, `last_online_visible` | 返回错误码 `1103` |
-| `get_stats` | `stats_visible` | 返回错误码 `1103` |
+| `search_by_xxx` (users) | `searchable`, `location_searchable`, `location_visible`, `online_visible`, `last_online_visible` | 过滤搜索结果，隐藏位置（`geo: null`），隐藏在线状态 |
+| `user/stats` | `stats_visible` | 返回错误码 `1103` |
 | `get_user_friends_list` | `friends_visible` | 返回错误码 `1103` |
 | `get_user_following_list` | `following_visible` | 返回错误码 `1103` |
 | `get_user_followers_list` | `followers_visible` | 返回错误码 `1103` |
@@ -1047,10 +943,21 @@ interface AuthData {
   user_id: number;
   nickname: string;
   access_token: string;
-  refresh_token: string;
+  // Web 场景通常不在 body 返回（使用 HttpOnly Cookie 下发）
+  refresh_token?: string;
   access_token_expires_at: string;
   refresh_token_expires_at: string;
 }
+```
+
+**Web 端补充约定**：
+- **Web / App 分离**：为避免客户端误用、也更贴合安全语义，建议将 Web 与 App 的认证返回类型分开定义
+- **WebAuthData**：响应体不包含 `refresh_token`；refresh token 仅通过 `Set-Cookie: hs_refresh_token`（HttpOnly）下发
+- **AppAuthData**：响应体包含 `refresh_token`（opaque string）；客户端自行安全存储；通常不使用 Cookie
+
+```typescript
+type WebAuthData = Omit<AuthData, 'refresh_token'>;
+type AppAuthData = AuthData & { refresh_token: string };
 ```
 
 **POST /api/v1/public/auth/register - 用户注册**
@@ -1058,18 +965,22 @@ interface AuthData {
 interface RegisterRequest {
   login_id: string;
   nickname: string;
-  password_hash: string;
+  password: string;
+  // web/app（用于 refresh_token 投递方式：web=Cookie，app=body）
+  client_type?: 'web' | 'app';
 }
-type RegisterResponse = ApiResponse<AuthData>
+// data 类型：client_type='web' -> WebAuthData；client_type='app' -> AppAuthData
+type RegisterResponse = ApiResponse<WebAuthData | AppAuthData>
 ```
 
 **POST /api/v1/public/auth/login - 用户登录**
 ```typescript
 interface LoginRequest {
   login_id: string;
-  password_hash: string;
+  password: string;
+  client_type?: 'web' | 'app';
 }
-type LoginResponse = ApiResponse<AuthData>
+type LoginResponse = ApiResponse<WebAuthData | AppAuthData>
 ```
 
 **POST /api/v1/protected/auth/logout - 用户登出**
@@ -1078,23 +989,35 @@ interface LogoutRequest {}
 type LogoutResponse = ApiResponse
 ```
 
-**POST /api/v1/public/auth/create_temp_user - 创建临时用户**
+**POST /api/v1/public/auth/guest - 创建访客用户**
 ```typescript
-interface CreateTempRequest {
+interface GuestRequest {
   nickname: string;
+  client_type?: 'web' | 'app';
 }
-type CreateTempResponse = ApiResponse<AuthData>
+type GuestResponse = ApiResponse<WebAuthData | AppAuthData>
 ```
 
 **POST /api/v1/public/auth/refresh_token - 刷新Token**
 ```typescript
 interface RefreshTokenRequest {
-  refresh_token: string;
+  // app：在 body 传递；web：不传（从 HttpOnly cookie 读取）
+  refresh_token?: string;
+  client_type?: 'web' | 'app';
 }
-type RefreshTokenResponse = ApiResponse<AuthData>
+type RefreshTokenResponse = ApiResponse<WebAuthData | AppAuthData>
 ```
 
 Token 刷新时 access_token 和 refresh_token 都会更新，旧 refresh_token 立即失效。此 API 在 `/public/` 路径下，因为调用时 access_token 可能已过期。
+
+**Web 刷新 CSRF 约束（建议）**：
+- refresh_token 若使用 Cookie，则必须校验 `Origin/Referer`（同源）
+- Cookie 使用 `SameSite=Lax`（或更严格策略）
+- 建议服务端通过配置项（例如 `CORS_ALLOW_ORIGINS`）维护允许的 Web Origin 白名单
+
+**安全注意**：
+- Token 结构必须包含 `sid` 字段。
+- 刷新时会验证 User-Agent 和 Device Fingerprint，环境变化可能导致刷新失败。
 
 **POST /api/v1/protected/auth/check_status - 检查认证状态**
 ```typescript
@@ -1138,7 +1061,7 @@ interface VerifyResetCodeData {
 ```typescript
 interface ResetPasswordRequest {
   reset_token: string;
-  password_hash: string;
+  password: string;
 }
 type ResetPasswordResponse = ApiResponse
 ```
@@ -1148,21 +1071,21 @@ type ResetPasswordResponse = ApiResponse
 **POST /api/v1/protected/auth/me/change_password - 修改密码**
 ```typescript
 interface ChangePasswordRequest {
-  old_password_hash: string;
-  new_password_hash: string;
+  old_password: string;
+  new_password: string;
 }
 type ChangePasswordResponse = ApiResponse
 ```
 
 与 `reset_password` 不同，此接口需要验证旧密码。
 
-**POST /api/v1/protected/auth/me/get_sessions - 获取活跃会话列表**
+**POST /api/v1/protected/auth/me/sessions - 获取活跃会话列表**
 ```typescript
-interface GetSessionsRequest {
+interface SessionsRequest {
   limit?: number;
   cursor?: string;
 }
-type GetSessionsResponse = ApiResponse<PaginatedData<SessionItem>>
+type SessionsResponse = ApiResponse<PaginatedData<SessionItem>>
 
 interface SessionItem {
   id: string;
@@ -1175,7 +1098,7 @@ interface SessionItem {
 }
 ```
 
-**POST /api/v1/protected/auth/me/revoke_session - 撤销会话**
+**POST /api/v1/protected/auth/me/sessions/revoke - 撤销会话**
 ```typescript
 interface RevokeSessionRequest {
   id: string;
@@ -1192,9 +1115,22 @@ interface UserSearchItem {
   avatar_url?: string;
   bio?: string;
   tags?: string[];
-  geo: GeoData;
+  user_type: UserType;      // 用户类型
+  // 隐私字段：必须显式返回 value 或 null，并提供 meta（不再通过“省略字段”表达隐藏）
+  is_online: boolean | null;
+  is_online_meta: FieldVisibilityMeta;
+  last_online: string | null;
+  last_online_meta: FieldVisibilityMeta;
+  geo: GeoData | null;
+  geo_meta: FieldVisibilityMeta;
 }
 ```
+
+**隐私设置说明**：
+- `is_online/last_online/geo` 受隐私设置控制
+- 当字段不可见时：
+  - 字段值返回 `null`
+  - 对应 `*_meta.visibility='hidden'` 且 `*_meta.reason` 必须提供（例如 `privacy` / `blocked`）
 
 **POST /api/v1/public/user/search_by_keyword - 按关键字搜索用户（全局）**
 ```typescript
@@ -1243,30 +1179,20 @@ interface UserOpenTheDoorRequest {
 type UserOpenTheDoorResponse = ApiResponse<UserSearchItem>
 ```
 
-**POST /api/v1/public/user/get_status - 获取用户状态**
+**POST /api/v1/protected/user/relationship - 获取与指定用户的关系**
 ```typescript
-interface GetUserStatusRequest {
+interface UserRelationshipRequest {
   id: number;
 }
-type GetUserStatusResponse = ApiResponse<UserStatusData>
+type UserRelationshipResponse = ApiResponse<UserRelationship>
 ```
 
-隐私控制：受 `online_visible` 和 `last_online_visible` 设置控制。
-
-**POST /api/v1/protected/user/get_relationship - 获取与指定用户的关系**
+**POST /api/v1/public/user/stats - 获取指定用户统计数据**
 ```typescript
-interface GetRelationshipRequest {
+interface UserStatsRequest {
   id: number;
 }
-type GetRelationshipResponse = ApiResponse<UserRelationship>
-```
-
-**POST /api/v1/public/user/get_stats - 获取指定用户统计数据**
-```typescript
-interface GetUserStatsRequest {
-  id: number;
-}
-type GetUserStatsResponse = ApiResponse<UserStatsData>
+type UserStatsResponse = ApiResponse<UserStatsData>
 
 interface UserStatsData {
   moments_count: number;
@@ -1279,72 +1205,72 @@ interface UserStatsData {
 
 隐私控制：受 `stats_visible` 设置控制。
 
-**POST /api/v1/public/user/get_user_friends_list - 获取指定用户好友列表**
+**POST /api/v1/public/user/friends - 获取指定用户好友列表**
 ```typescript
-interface GetUserFriendsListRequest {
+interface UserFriendsRequest {
   id: number;
   limit?: number;
   cursor?: string;
 }
-type GetUserFriendsListResponse = ApiResponse<PaginatedData<UserInfo>>
+type UserFriendsResponse = ApiResponse<PaginatedData<UserInfo>>
 ```
 
 隐私控制：受 `friends_visible` 设置控制。
 
-**POST /api/v1/public/user/get_user_following_list - 获取指定用户关注列表**
+**POST /api/v1/public/user/following - 获取指定用户关注列表**
 ```typescript
-interface GetUserFollowingListRequest {
+interface UserFollowingRequest {
   id: number;
   limit?: number;
   cursor?: string;
 }
-type GetUserFollowingListResponse = ApiResponse<PaginatedData<UserInfo>>
+type UserFollowingResponse = ApiResponse<PaginatedData<UserInfo>>
 ```
 
 隐私控制：受 `following_visible` 设置控制。
 
-**POST /api/v1/public/user/get_user_followers_list - 获取指定用户粉丝列表**
+**POST /api/v1/public/user/followers - 获取指定用户粉丝列表**
 ```typescript
-interface GetUserFollowersListRequest {
+interface UserFollowersRequest {
   id: number;
   limit?: number;
   cursor?: string;
 }
-type GetUserFollowersListResponse = ApiResponse<PaginatedData<UserInfo>>
+type UserFollowersResponse = ApiResponse<PaginatedData<UserInfo>>
 ```
 
 隐私控制：受 `followers_visible` 设置控制。
 
-**POST /api/v1/public/user/get_user_groups_list - 获取指定用户加入的公开群组**
+**POST /api/v1/public/user/groups - 获取指定用户加入的公开群组**
 ```typescript
-interface GetUserGroupsListRequest {
+interface UserGroupsRequest {
   id: number;
   limit?: number;
   cursor?: string;
 }
-type GetUserGroupsListResponse = ApiResponse<PaginatedData<GroupInfo>>
+type UserGroupsResponse = ApiResponse<PaginatedData<GroupInfo>>
 ```
 
 仅返回 `is_searchable=true` 的公开群组。
 
-**POST /api/v1/public/user/get_user_liked_moments_list - 获取指定用户点赞的瞬间**
+**POST /api/v1/public/user/liked_moments - 获取指定用户点赞的瞬间**
 ```typescript
-interface GetUserLikedMomentsListRequest {
+interface UserLikedMomentsRequest {
   id: number;
   latitude: number;
   longitude: number;
   limit?: number;
   cursor?: string;
 }
-type GetUserLikedMomentsListResponse = ApiResponse<PaginatedData<MomentSearchItem>>
+type UserLikedMomentsResponse = ApiResponse<PaginatedData<MomentSearchItem>>
 ```
 
 #### 当前用户 API（/me/ 路径）
 
-**POST /api/v1/protected/user/me - 获取当前用户资料**
+**POST /api/v1/protected/user/me/profile - 获取当前用户资料**
 ```typescript
-interface GetMyProfileRequest {}
-type GetMyProfileResponse = ApiResponse<MyProfileData>
+interface MyProfileRequest {}
+type MyProfileResponse = ApiResponse<MyProfileData>
 
 interface MyProfileData {
   user_id: number;
@@ -1361,7 +1287,7 @@ interface MyProfileData {
 }
 ```
 
-**POST /api/v1/protected/user/me/update_profile - 更新用户资料**
+**POST /api/v1/protected/user/me/profile/update - 更新用户资料**
 ```typescript
 interface UpdateProfileRequest {
   nickname?: string;
@@ -1372,7 +1298,7 @@ interface UpdateProfileRequest {
 type UpdateProfileResponse = ApiResponse
 ```
 
-**POST /api/v1/protected/user/me/update_location - 更新用户位置**
+**POST /api/v1/protected/user/me/location - 更新用户位置**
 ```typescript
 interface UpdateLocationRequest {
   latitude: number;
@@ -1382,25 +1308,25 @@ interface UpdateLocationRequest {
 type UpdateLocationResponse = ApiResponse
 ```
 
-**POST /api/v1/protected/user/me/upgrade_account - 账户升级**
+**POST /api/v1/protected/user/me/upgrade - 账户升级**
 ```typescript
 interface UpgradeAccountRequest {
   login_id: string;
-  password_hash: string;
+  password: string;
 }
 type UpgradeAccountResponse = ApiResponse
 ```
 
-**POST /api/v1/protected/user/me/get_stats - 获取我的统计数据**
+**POST /api/v1/protected/user/me/stats - 获取我的统计数据**
 ```typescript
-interface GetMyStatsRequest {}
-type GetMyStatsResponse = ApiResponse<UserStatsData>
+interface MyStatsRequest {}
+type MyStatsResponse = ApiResponse<UserStatsData>
 ```
 
-**POST /api/v1/protected/user/me/get_settings - 获取用户设置**
+**POST /api/v1/protected/user/me/settings - 获取用户设置**
 ```typescript
-interface GetSettingsRequest {}
-type GetSettingsResponse = ApiResponse<UserSettingsData>
+interface MySettingsRequest {}
+type MySettingsResponse = ApiResponse<UserSettingsData>
 
 interface UserSettingsData {
   privacy_level: PrivacyLevel;
@@ -1423,7 +1349,7 @@ interface UserSettingsData {
 
 设置项的含义和隐私控制规则详见"隐私控制机制"章节。
 
-**POST /api/v1/protected/user/me/update_settings - 更新用户设置**
+**POST /api/v1/protected/user/me/settings/update - 更新用户设置**
 ```typescript
 interface UpdateSettingsRequest {
   privacy_level?: PrivacyLevel;
@@ -1445,7 +1371,7 @@ interface UpdateSettingsRequest {
 type UpdateSettingsResponse = ApiResponse
 ```
 
-**POST /api/v1/protected/user/me/delete_account - 删除账户**
+**POST /api/v1/protected/user/me/delete - 删除账户**
 ```typescript
 interface DeleteAccountRequest {
   confirmation: string;  // 必须为 "DELETE_MY_ACCOUNT"
@@ -1453,50 +1379,50 @@ interface DeleteAccountRequest {
 type DeleteAccountResponse = ApiResponse
 ```
 
-**POST /api/v1/protected/user/me/follow_user - 关注用户**
+**POST /api/v1/protected/user/me/follow - 关注用户**
 ```typescript
-interface FollowUserRequest {
+interface FollowRequest {
   id: number;
 }
-type FollowUserResponse = ApiResponse
+type FollowResponse = ApiResponse
 ```
 
 关注成功后，若对方已关注自己，自动成为好友（互相关注）。
 
-**POST /api/v1/protected/user/me/unfollow_user - 取消关注用户**
+**POST /api/v1/protected/user/me/unfollow - 取消关注用户**
 ```typescript
-interface UnfollowUserRequest {
+interface UnfollowRequest {
   id: number;
 }
-type UnfollowUserResponse = ApiResponse
+type UnfollowResponse = ApiResponse
 ```
 
 取消关注后，如果原本是互相关注（好友），则好友关系自动解除。
 
-**POST /api/v1/protected/user/me/block_user - 拉黑用户**
+**POST /api/v1/protected/user/me/block - 拉黑用户**
 ```typescript
-interface BlockUserRequest {
+interface BlockRequest {
   id: number;
   reason?: string;
 }
-type BlockUserResponse = ApiResponse
+type BlockResponse = ApiResponse
 ```
 
-**POST /api/v1/protected/user/me/unblock_user - 解除拉黑用户**
+**POST /api/v1/protected/user/me/unblock - 解除拉黑用户**
 ```typescript
-interface UnblockUserRequest {
+interface UnblockRequest {
   id: number;
 }
-type UnblockUserResponse = ApiResponse
+type UnblockResponse = ApiResponse
 ```
 
-**POST /api/v1/protected/user/me/get_friends_list - 获取好友列表（互相关注）**
+**POST /api/v1/protected/user/me/friends - 获取好友列表（互相关注）**
 ```typescript
-interface GetFriendsRequest {
+interface MyFriendsRequest {
   limit?: number;
   cursor?: string;
 }
-type GetFriendsResponse = ApiResponse<PaginatedData<FriendListItem>>
+type MyFriendsResponse = ApiResponse<PaginatedData<FriendListItem>>
 
 interface FriendListItem {
   user: UserInfo;
@@ -1507,13 +1433,13 @@ interface FriendListItem {
 }
 ```
 
-**POST /api/v1/protected/user/me/get_following_list - 获取关注列表**
+**POST /api/v1/protected/user/me/following - 获取关注列表**
 ```typescript
-interface GetFollowingRequest {
+interface MyFollowingRequest {
   limit?: number;
   cursor?: string;
 }
-type GetFollowingResponse = ApiResponse<PaginatedData<FollowingItem>>
+type MyFollowingResponse = ApiResponse<PaginatedData<FollowingItem>>
 
 interface FollowingItem {
   user: UserInfo;
@@ -1522,13 +1448,13 @@ interface FollowingItem {
 }
 ```
 
-**POST /api/v1/protected/user/me/get_followers_list - 获取粉丝列表**
+**POST /api/v1/protected/user/me/followers - 获取粉丝列表**
 ```typescript
-interface GetFollowersRequest {
+interface MyFollowersRequest {
   limit?: number;
   cursor?: string;
 }
-type GetFollowersResponse = ApiResponse<PaginatedData<FollowerItem>>
+type MyFollowersResponse = ApiResponse<PaginatedData<FollowerItem>>
 
 interface FollowerItem {
   user: UserInfo;
@@ -1537,13 +1463,13 @@ interface FollowerItem {
 }
 ```
 
-**POST /api/v1/protected/user/me/get_blocked_list - 获取拉黑列表**
+**POST /api/v1/protected/user/me/blocked - 获取拉黑列表**
 ```typescript
-interface GetBlockedUsersRequest {
+interface MyBlockedRequest {
   limit?: number;
   cursor?: string;
 }
-type GetBlockedUsersResponse = ApiResponse<PaginatedData<BlockedUserItem>>
+type MyBlockedResponse = ApiResponse<PaginatedData<BlockedUserItem>>
 
 interface BlockedUserItem {
   user: UserInfo;
@@ -1552,13 +1478,13 @@ interface BlockedUserItem {
 }
 ```
 
-**POST /api/v1/protected/user/me/set_friend_remark - 设置好友备注**
+**POST /api/v1/protected/user/me/remark - 设置好友备注**
 ```typescript
-interface SetFriendRemarkRequest {
+interface SetRemarkRequest {
   id: number;
   remark?: string;
 }
-type SetFriendRemarkResponse = ApiResponse
+type SetRemarkResponse = ApiResponse
 ```
 
 用户在线状态通过 WebSocket 订阅获取，不再提供批量查询 API。
@@ -1626,26 +1552,26 @@ interface MomentOpenTheDoorRequest {
 type MomentOpenTheDoorResponse = ApiResponse<MomentSearchItem>
 ```
 
-**POST /api/v1/public/moments/get_comments_list - 获取瞬间评论列表**
+**POST /api/v1/public/moments/comments - 获取瞬间评论列表**
 ```typescript
-interface GetMomentCommentsRequest {
+interface MomentCommentsRequest {
   moment_id: string;
   limit?: number;
   cursor?: string;
 }
-type GetMomentCommentsResponse = ApiResponse<PaginatedData<CommentListItem>>
+type MomentCommentsResponse = ApiResponse<PaginatedData<CommentListItem>>
 ```
 
-**POST /api/v1/public/moments/get_user_moments_list - 获取指定用户生活瞬间历史**
+**POST /api/v1/public/user/moments - 获取指定用户生活瞬间历史**
 ```typescript
-interface GetUserMomentsRequest {
+interface UserMomentsRequest {
   id: number;
   latitude: number;
   longitude: number;
   limit?: number;
   cursor?: string;
 }
-type GetUserMomentsResponse = ApiResponse<PaginatedData<MomentSearchItem>>
+type UserMomentsResponse = ApiResponse<PaginatedData<MomentSearchItem>>
 ```
 
 隐私控制：受 `moments_visible` 设置控制。
@@ -1685,7 +1611,7 @@ interface DeleteMomentRequest {
 type DeleteMomentResponse = ApiResponse
 ```
 
-**POST /api/v1/protected/moments/like_moment - 点赞生活瞬间**
+**POST /api/v1/protected/moments/like - 点赞生活瞬间**
 ```typescript
 interface LikeMomentRequest {
   id: string;
@@ -1693,7 +1619,7 @@ interface LikeMomentRequest {
 type LikeMomentResponse = ApiResponse
 ```
 
-**POST /api/v1/protected/moments/unlike_moment - 取消点赞生活瞬间**
+**POST /api/v1/protected/moments/unlike - 取消点赞生活瞬间**
 ```typescript
 interface UnlikeMomentRequest {
   id: string;
@@ -1701,7 +1627,7 @@ interface UnlikeMomentRequest {
 type UnlikeMomentResponse = ApiResponse
 ```
 
-**POST /api/v1/protected/moments/favorite_moment - 收藏瞬间**
+**POST /api/v1/protected/moments/favorite - 收藏瞬间**
 ```typescript
 interface FavoriteMomentRequest {
   id: string;
@@ -1709,7 +1635,7 @@ interface FavoriteMomentRequest {
 type FavoriteMomentResponse = ApiResponse
 ```
 
-**POST /api/v1/protected/moments/unfavorite_moment - 取消收藏瞬间**
+**POST /api/v1/protected/moments/unfavorite - 取消收藏瞬间**
 ```typescript
 interface UnfavoriteMomentRequest {
   id: string;
@@ -1719,60 +1645,60 @@ type UnfavoriteMomentResponse = ApiResponse
 
 #### 当前用户瞬间 API（/me/ 路径）
 
-**POST /api/v1/protected/moments/me/get_list - 我发布的瞬间列表**
+**POST /api/v1/protected/moments/me - 我发布的瞬间列表**
 ```typescript
-interface GetMyMomentsRequest {
+interface MyMomentsRequest {
   latitude: number;
   longitude: number;
   limit?: number;
   cursor?: string;
 }
-type GetMyMomentsResponse = ApiResponse<PaginatedData<MomentSearchItem>>
+type MyMomentsResponse = ApiResponse<PaginatedData<MomentSearchItem>>
 ```
 
-**POST /api/v1/protected/moments/me/get_favorites_list - 我的收藏列表**
+**POST /api/v1/protected/moments/me/favorites - 我的收藏列表**
 ```typescript
-interface GetFavoritesRequest {
+interface MyFavoritesRequest {
   latitude: number;
   longitude: number;
   limit?: number;
   cursor?: string;
 }
-type GetFavoritesResponse = ApiResponse<PaginatedData<MomentSearchItem>>
+type MyFavoritesResponse = ApiResponse<PaginatedData<MomentSearchItem>>
 ```
 
-**POST /api/v1/protected/moments/me/check_liked - 检查瞬间是否已点赞**
+**POST /api/v1/protected/moments/me/liked - 检查瞬间是否已点赞**
 ```typescript
-interface CheckMomentLikedRequest {
+interface CheckLikedRequest {
   id: string;
 }
-type CheckMomentLikedResponse = ApiResponse<CheckLikedData>
+type CheckLikedResponse = ApiResponse<CheckLikedData>
 
 interface CheckLikedData {
   is_liked: boolean;
 }
 ```
 
-**POST /api/v1/protected/moments/me/check_favorited - 检查瞬间是否已收藏**
+**POST /api/v1/protected/moments/me/favorited - 检查瞬间是否已收藏**
 ```typescript
-interface CheckMomentFavoritedRequest {
+interface CheckFavoritedRequest {
   id: string;
 }
-type CheckMomentFavoritedResponse = ApiResponse<CheckFavoritedData>
+type CheckFavoritedResponse = ApiResponse<CheckFavoritedData>
 
 interface CheckFavoritedData {
   is_favorited: boolean;
 }
 ```
 
-**POST /api/v1/public/moments/get_likes_list - 获取生活瞬间点赞列表**
+**POST /api/v1/public/moments/likes - 获取生活瞬间点赞列表**
 ```typescript
-interface GetMomentLikesRequest {
+interface MomentLikesRequest {
   id: string;
   limit?: number;
   cursor?: string;
 }
-type GetMomentLikesResponse = ApiResponse<PaginatedData<MomentLikeItem>>
+type MomentLikesResponse = ApiResponse<PaginatedData<MomentLikeItem>>
 
 interface MomentLikeItem {
   user: UserInfo;
@@ -1782,7 +1708,7 @@ interface MomentLikeItem {
 
 ### 评论与点赞 API
 
-**POST /api/v1/protected/comments/add - 添加评论/回复**
+**POST /api/v1/protected/comments/create - 添加评论/回复**
 ```typescript
 interface CreateCommentRequest {
   moment_id: string;
@@ -1796,7 +1722,7 @@ interface CreateCommentData {
 }
 ```
 
-**POST /api/v1/protected/comments/remove - 删除评论**
+**POST /api/v1/protected/comments/delete - 删除评论**
 ```typescript
 interface DeleteCommentRequest {
   id: string;
@@ -1804,14 +1730,14 @@ interface DeleteCommentRequest {
 type DeleteCommentResponse = ApiResponse
 ```
 
-**POST /api/v1/public/comments/get_list - 获取评论列表**
+**POST /api/v1/public/comments - 获取评论列表**
 ```typescript
-interface GetCommentsRequest {
+interface CommentsRequest {
   moment_id: string;
   limit?: number;
   cursor?: string;
 }
-type GetCommentsResponse = ApiResponse<PaginatedData<CommentListItem>>
+type CommentsResponse = ApiResponse<PaginatedData<CommentListItem>>
 
 interface CommentListItem {
   id: string;
@@ -1825,17 +1751,17 @@ interface CommentListItem {
 }
 ```
 
-**POST /api/v1/public/comments/get_replies - 获取子评论列表**
+**POST /api/v1/public/comments/replies - 获取子评论列表**
 ```typescript
-interface GetRepliesRequest {
+interface CommentRepliesRequest {
   id: string;
   limit?: number;
   cursor?: string;
 }
-type GetRepliesResponse = ApiResponse<PaginatedData<CommentListItem>>
+type CommentRepliesResponse = ApiResponse<PaginatedData<CommentListItem>>
 ```
 
-**POST /api/v1/protected/comments/like_comment - 点赞评论**
+**POST /api/v1/protected/comments/like - 点赞评论**
 ```typescript
 interface LikeCommentRequest {
   id: string;
@@ -1843,7 +1769,7 @@ interface LikeCommentRequest {
 type LikeCommentResponse = ApiResponse
 ```
 
-**POST /api/v1/protected/comments/unlike_comment - 取消点赞评论**
+**POST /api/v1/protected/comments/unlike - 取消点赞评论**
 ```typescript
 interface UnlikeCommentRequest {
   id: string;
@@ -1851,14 +1777,14 @@ interface UnlikeCommentRequest {
 type UnlikeCommentResponse = ApiResponse
 ```
 
-**POST /api/v1/public/comments/get_likes_list - 获取评论点赞列表**
+**POST /api/v1/public/comments/likes - 获取评论点赞列表**
 ```typescript
-interface GetCommentLikesRequest {
+interface CommentLikesRequest {
   id: string;
   limit?: number;
   cursor?: string;
 }
-type GetCommentLikesResponse = ApiResponse<PaginatedData<CommentLikeItem>>
+type CommentLikesResponse = ApiResponse<PaginatedData<CommentLikeItem>>
 
 interface CommentLikeItem {
   user: UserInfo;
@@ -1885,14 +1811,14 @@ interface CreatePrivateChatData {
 
 如果私聊已存在，直接返回现有的 `id`。
 
-**POST /api/v1/protected/private_chats/me/get_list - 获取私聊列表**
+**POST /api/v1/protected/private_chats/me - 获取私聊列表**
 ```typescript
-interface GetPrivateChatsRequest {
+interface MyPrivateChatsRequest {
   limit?: number;
   cursor?: string;
   include_archived?: boolean;
 }
-type GetPrivateChatsResponse = ApiResponse<PaginatedData<PrivateChatListItem>>
+type MyPrivateChatsResponse = ApiResponse<PaginatedData<PrivateChatListItem>>
 
 interface PrivateChatListItem {
   id: string;
@@ -1938,9 +1864,9 @@ interface MessageLimit {
 }
 ```
 
-**补充信息获取**：客户端可按需调用以下 API 获取对方用户的状态和关系：
-- 用户状态：`POST /api/v1/public/user/get_status`（`{ id: other_user.user_id }`）
-- 用户关系：`POST /api/v1/protected/user/get_relationship`（`{ id: other_user.user_id }`）
+**补充信息获取**：客户端可按需调用以下 API 获取对方用户的关系信息：
+- 用户关系：`POST /api/v1/protected/user/relationship`（`{ id: other_user.user_id }`）
+- 注：用户在线状态已包含在 `other_user` 的 `is_online` 和 `last_online` 字段中（受隐私设置控制）
 
 **POST /api/v1/protected/private_chats/update_settings - 更新私聊设置**
 ```typescript
@@ -2023,12 +1949,12 @@ interface GroupOpenTheDoorRequest {
 type GroupOpenTheDoorResponse = ApiResponse<GroupSearchItem>
 ```
 
-**POST /api/v1/public/group_chats/get_settings - 获取群组设置**
+**POST /api/v1/public/group_chats/settings - 获取群组设置**
 ```typescript
-interface GetGroupSettingsRequest {
+interface GroupSettingsRequest {
   id: string;
 }
-type GetGroupSettingsResponse = ApiResponse<GroupSettingsData>
+type GroupSettingsResponse = ApiResponse<GroupSettingsData>
 
 interface GroupSettingsData {
   id: string;
@@ -2077,15 +2003,15 @@ type DeleteGroupChatResponse = ApiResponse
 
 ### 群组成员管理 API
 
-**POST /api/v1/public/group_chats/members/get_list - 获取成员列表**
+**POST /api/v1/public/group_chats/members - 获取成员列表**
 ```typescript
-interface GetMembersRequest {
+interface GroupMembersRequest {
   id: string;
   role?: 'owner' | 'admin' | 'member';
   limit?: number;
   cursor?: string;
 }
-type GetMembersResponse = ApiResponse<PaginatedData<GroupMemberItem>>
+type GroupMembersResponse = ApiResponse<PaginatedData<GroupMemberItem>>
 
 interface GroupMemberItem {
   user: UserInfo;
@@ -2114,7 +2040,7 @@ interface InviteMemberData {
 ```typescript
 interface JoinGroupRequest {
   id: string;
-  password_hash?: string;
+  password?: string;
 }
 
 type JoinGroupResponse = ApiResponse
@@ -2164,7 +2090,7 @@ interface UnmuteMemberRequest {
 type UnmuteMemberResponse = ApiResponse
 ```
 
-**POST /api/v1/protected/group_chats/members/ban_member - 封禁成员**
+**POST /api/v1/protected/group_chats/members/ban - 封禁成员**
 ```typescript
 interface BanMemberRequest {
   id: string;
@@ -2176,7 +2102,7 @@ type BanMemberResponse = ApiResponse
 
 封禁后成员将被移出群组且无法再次加入。
 
-**POST /api/v1/protected/group_chats/members/unban_member - 解除封禁成员**
+**POST /api/v1/protected/group_chats/members/unban - 解除封禁成员**
 ```typescript
 interface UnbanMemberRequest {
   id: string;
@@ -2185,14 +2111,14 @@ interface UnbanMemberRequest {
 type UnbanMemberResponse = ApiResponse
 ```
 
-**POST /api/v1/protected/group_chats/members/get_banned_list - 获取封禁列表**
+**POST /api/v1/protected/group_chats/members/banned - 获取封禁列表**
 ```typescript
-interface GetBannedMembersRequest {
+interface BannedMembersRequest {
   id: string;
   limit?: number;
   cursor?: string;
 }
-type GetBannedMembersResponse = ApiResponse<PaginatedData<BannedMemberItem>>
+type BannedMembersResponse = ApiResponse<PaginatedData<BannedMemberItem>>
 
 interface BannedMemberItem {
   user: UserInfo;
@@ -2210,15 +2136,15 @@ interface RemoveMemberRequest {
 type RemoveMemberResponse = ApiResponse
 ```
 
-**POST /api/v1/protected/group_chats/applications/get_list - 获取群组申请列表**
+**POST /api/v1/protected/group_chats/applications - 获取群组申请列表**
 ```typescript
-interface GetGroupApplicationsRequest {
+interface GroupApplicationsRequest {
   id: string;
   status?: 'pending' | 'accepted' | 'rejected' | 'all';
   limit?: number;
   cursor?: string;
 }
-type GetGroupApplicationsResponse = ApiResponse<PaginatedData<GroupApplicationItem>>
+type GroupApplicationsResponse = ApiResponse<PaginatedData<GroupApplicationItem>>
 
 interface GroupApplicationItem {
   id: string;
@@ -2258,13 +2184,13 @@ type TransferOwnershipResponse = ApiResponse
 
 #### 当前用户群组 API（/me/ 路径）
 
-**POST /api/v1/protected/group_chats/me/get_joined - 获取我的群组**
+**POST /api/v1/protected/group_chats/me - 获取我的群组**
 ```typescript
-interface GetJoinedGroupChatsRequest {
+interface MyGroupChatsRequest {
   limit?: number;
   cursor?: string;
 }
-type GetJoinedGroupChatsResponse = ApiResponse<PaginatedData<JoinedGroupItem>>
+type MyGroupChatsResponse = ApiResponse<PaginatedData<JoinedGroupItem>>
 
 interface JoinedGroupItem extends GroupInfo {
   my_role: 'owner' | 'admin' | 'member';
@@ -2273,22 +2199,22 @@ interface JoinedGroupItem extends GroupInfo {
 }
 ```
 
-**POST /api/v1/protected/group_chats/me/cancel_application - 取消群组申请**
+**POST /api/v1/protected/group_chats/me/applications/cancel - 取消群组申请**
 ```typescript
-interface CancelGroupApplicationRequest {
+interface CancelApplicationRequest {
   application_id: string;
 }
-type CancelGroupApplicationResponse = ApiResponse
+type CancelApplicationResponse = ApiResponse
 ```
 
-**POST /api/v1/protected/group_chats/me/get_invites_list - 获取我的群组邀请列表**
+**POST /api/v1/protected/group_chats/me/invites - 获取我的群组邀请列表**
 ```typescript
-interface GetGroupInvitesRequest {
+interface MyInvitesRequest {
   status?: 'pending' | 'accepted' | 'rejected' | 'all';
   limit?: number;
   cursor?: string;
 }
-type GetGroupInvitesResponse = ApiResponse<PaginatedData<GroupInviteItem>>
+type MyInvitesResponse = ApiResponse<PaginatedData<GroupInviteItem>>
 
 interface GroupInviteItem {
   id: string;
@@ -2301,23 +2227,23 @@ interface GroupInviteItem {
 }
 ```
 
-**POST /api/v1/protected/group_chats/me/accept_invite - 接受群组邀请**
+**POST /api/v1/protected/group_chats/me/invites/accept - 接受群组邀请**
 ```typescript
-interface AcceptGroupInviteRequest {
+interface AcceptInviteRequest {
   invite_id: string;
 }
-type AcceptGroupInviteResponse = ApiResponse
+type AcceptInviteResponse = ApiResponse
 ```
 
-**POST /api/v1/protected/group_chats/me/reject_invite - 拒绝群组邀请**
+**POST /api/v1/protected/group_chats/me/invites/reject - 拒绝群组邀请**
 ```typescript
-interface RejectGroupInviteRequest {
+interface RejectInviteRequest {
   invite_id: string;
 }
-type RejectGroupInviteResponse = ApiResponse
+type RejectInviteResponse = ApiResponse
 ```
 
-**POST /api/v1/protected/group_chats/me/leave_group - 退出群组**
+**POST /api/v1/protected/group_chats/me/leave - 退出群组**
 ```typescript
 interface LeaveGroupRequest {
   id: string;
@@ -2346,14 +2272,14 @@ interface SendPrivateMessageData {
 }
 ```
 
-**POST /api/v1/protected/private_messages/get_history - 获取私聊消息历史**
+**POST /api/v1/protected/private_messages/history - 获取私聊消息历史**
 ```typescript
-interface GetPrivateMessagesRequest {
+interface PrivateMessagesHistoryRequest {
   id: string;
   limit?: number;
   cursor?: string;
 }
-type GetPrivateMessagesResponse = ApiResponse<PaginatedData<PrivateMessageItem>>
+type PrivateMessagesHistoryResponse = ApiResponse<PaginatedData<PrivateMessageItem>>
 
 interface PrivateMessageItem {
   id: string;
@@ -2429,15 +2355,15 @@ interface RemovePrivateMessageReactionRequest {
 type RemovePrivateMessageReactionResponse = ApiResponse
 ```
 
-**POST /api/v1/protected/private_messages/get_reactions_list - 获取私聊消息反应列表**
+**POST /api/v1/protected/private_messages/reactions - 获取私聊消息反应列表**
 ```typescript
-interface GetPrivateMessageReactionsRequest {
+interface PrivateMessageReactionsRequest {
   id: string;
   type?: ReactionType;
   limit?: number;
   cursor?: string;
 }
-type GetPrivateMessageReactionsResponse = ApiResponse<PaginatedData<MessageReactionItem>>
+type PrivateMessageReactionsResponse = ApiResponse<PaginatedData<MessageReactionItem>>
 ```
 
 ### 群聊消息 API
@@ -2460,15 +2386,15 @@ interface SendGroupMessageData {
 }
 ```
 
-**POST /api/v1/protected/group_messages/get_history - 获取群聊消息历史**
+**POST /api/v1/protected/group_messages/history - 获取群聊消息历史**
 ```typescript
-interface GetGroupMessagesRequest {
+interface GroupMessagesHistoryRequest {
   id: string;
   limit?: number;
   cursor?: string;
   include_system?: boolean;
 }
-type GetGroupMessagesResponse = ApiResponse<PaginatedData<GroupMessageItem>>
+type GroupMessagesHistoryResponse = ApiResponse<PaginatedData<GroupMessageItem>>
 
 interface GroupMessageItem {
   id: string;
@@ -2530,14 +2456,14 @@ interface MarkGroupMessagesReadRequest {
 type MarkGroupMessagesReadResponse = ApiResponse
 ```
 
-**POST /api/v1/protected/group_messages/get_read_status - 获取消息已读状态**
+**POST /api/v1/protected/group_messages/read_status - 获取消息已读状态**
 ```typescript
-interface GetMessageReadStatusRequest {
+interface MessageReadStatusRequest {
   id: string;
   limit?: number;
   cursor?: string;
 }
-type GetMessageReadStatusResponse = ApiResponse<PaginatedData<MessageReadItem>>
+type MessageReadStatusResponse = ApiResponse<PaginatedData<MessageReadItem>>
 
 interface MessageReadItem {
   user: UserInfo;
@@ -2563,15 +2489,15 @@ interface RemoveGroupMessageReactionRequest {
 type RemoveGroupMessageReactionResponse = ApiResponse
 ```
 
-**POST /api/v1/protected/group_messages/get_reactions_list - 获取消息反应列表**
+**POST /api/v1/protected/group_messages/reactions - 获取消息反应列表**
 ```typescript
-interface GetGroupMessageReactionsRequest {
+interface GroupMessageReactionsRequest {
   id: string;
   type?: ReactionType;
   limit?: number;
   cursor?: string;
 }
-type GetGroupMessageReactionsResponse = ApiResponse<PaginatedData<MessageReactionItem>>
+type GroupMessageReactionsResponse = ApiResponse<PaginatedData<MessageReactionItem>>
 
 interface MessageReactionItem {
   user: UserInfo;
@@ -2590,6 +2516,123 @@ type MarkAllMessagesReadResponse = ApiResponse
 
 消息搜索和未读汇总由客户端本地实现。
 
+### 地图聚合与视口查询 API
+
+**设计目标**：
+- 为地图页提供**多尺度**展示能力：zoom 较小时返回聚合点（避免海量 marker），zoom 较大时返回视口内明细（列表/卡片）。
+- **不使用** `search_by_location` 的 radius 模式做地图渲染（radius 在地图大范围下会造成“看得见的范围之外也在拉取”，且无法做正确聚合）。
+- 服务端聚合必须在 DB/PostGIS 完成；客户端不做“从经纬度推导数量”的计算。
+
+**通用类型：Bounds**
+```typescript
+interface Bounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
+```
+
+**聚合点类型：MapClusterItem**
+```typescript
+interface MapClusterItem {
+  // 不透明 key：用于渲染/去重/缓存
+  key: string;
+  latitude: number;
+  longitude: number;
+  count: number;
+}
+```
+
+#### 1) 用户聚合与视口明细
+
+**POST /api/v1/public/map/users/cluster - 用户地图聚合**
+```typescript
+interface MapClusterUsersRequest {
+  bounds: Bounds;
+  zoom: number;
+  // 可选：同 zoom 下控制聚合网格大小（单位由服务端解释）
+  grid_size?: number;
+}
+type MapClusterUsersResponse = ApiResponse<{
+  type: 'users';
+  items: MapClusterItem[];
+}>
+```
+
+**POST /api/v1/public/map/users/search_by_bounds - 用户视口内明细**
+```typescript
+interface MapSearchUsersByBoundsRequest {
+  bounds: Bounds;
+  // 参考点（通常为“浏览锚点”），用于计算 GeoData.distance/degrees
+  latitude: number;
+  longitude: number;
+  limit?: number; // 默认 80，最大 200
+}
+type MapSearchUsersByBoundsResponse = ApiResponse<{
+  type: 'users';
+  items: UserSearchItem[];
+}>
+```
+
+#### 2) 群组聚合与视口明细
+
+**POST /api/v1/public/map/groups/cluster - 群组地图聚合**
+```typescript
+interface MapClusterGroupsRequest {
+  bounds: Bounds;
+  zoom: number;
+  grid_size?: number;
+}
+type MapClusterGroupsResponse = ApiResponse<{
+  type: 'groups';
+  items: MapClusterItem[];
+}>
+```
+
+**POST /api/v1/public/map/groups/search_by_bounds - 群组视口内明细**
+```typescript
+interface MapSearchGroupsByBoundsRequest {
+  bounds: Bounds;
+  latitude: number;
+  longitude: number;
+  limit?: number; // 默认 80，最大 200
+}
+type MapSearchGroupsByBoundsResponse = ApiResponse<{
+  type: 'groups';
+  items: GroupSearchItem[];
+}>
+```
+
+#### 3) 瞬间聚合与视口明细
+
+**POST /api/v1/public/map/moments/cluster - 瞬间地图聚合**
+```typescript
+interface MapClusterMomentsRequest {
+  bounds: Bounds;
+  zoom: number;
+  grid_size?: number;
+}
+type MapClusterMomentsResponse = ApiResponse<{
+  type: 'moments';
+  items: MapClusterItem[];
+}>
+```
+
+**POST /api/v1/public/map/moments/search_by_bounds - 瞬间视口内明细**
+```typescript
+interface MapSearchMomentsByBoundsRequest {
+  bounds: Bounds;
+  latitude: number;
+  longitude: number;
+  limit?: number; // 默认 80，最大 200
+}
+type MapSearchMomentsByBoundsResponse = ApiResponse<{
+  type: 'moments';
+  items: MomentSearchItem[];
+}>
+```
+
 ### 举报审核 API
 
 **POST /api/v1/protected/reports/create - 创建举报**
@@ -2607,13 +2650,13 @@ interface CreateReportData {
 }
 ```
 
-**POST /api/v1/protected/reports/me/get_list - 我的举报记录**
+**POST /api/v1/protected/reports/me - 我的举报记录**
 ```typescript
-interface GetMyReportsRequest {
+interface MyReportsRequest {
   limit?: number;
   cursor?: string;
 }
-type GetMyReportsResponse = ApiResponse<PaginatedData<ReportItem>>
+type MyReportsResponse = ApiResponse<PaginatedData<ReportItem>>
 
 interface ReportItem {
   id: string;
@@ -2627,15 +2670,15 @@ interface ReportItem {
 }
 ```
 
-**POST /api/v1/admin/reports/get_list - 举报列表（管理员）**
+**POST /api/v1/admin/reports - 举报列表（管理员）**
 ```typescript
-interface GetReportsRequest {
+interface ReportsRequest {
   status?: 'pending' | 'reviewing' | 'resolved' | 'dismissed';
   target_type?: 'user' | 'moment' | 'comment' | 'message' | 'group';
   limit?: number;
   cursor?: string;
 }
-type GetReportsResponse = ApiResponse<PaginatedData<ReportItem>>
+type ReportsResponse = ApiResponse<PaginatedData<ReportItem>>
 ```
 
 **POST /api/v1/admin/reports/handle - 处理举报（管理员）**
@@ -2666,10 +2709,10 @@ interface SubscriptionsData {
 }
 ```
 
-**POST /api/v1/protected/subscriptions/me/get_config - 获取订阅配置**
+**POST /api/v1/protected/subscriptions/me - 获取订阅配置**
 ```typescript
-interface GetSubscriptionsRequest {}
-type GetSubscriptionsResponse = ApiResponse<SubscriptionsData>
+interface MySubscriptionsRequest {}
+type MySubscriptionsResponse = ApiResponse<SubscriptionsData>
 ```
 
 **POST /api/v1/protected/subscriptions/me/update - 更新订阅配置**
@@ -2712,13 +2755,13 @@ interface UnregisterDeviceTokenRequest {
 type UnregisterDeviceTokenResponse = ApiResponse
 ```
 
-**POST /api/v1/protected/device_tokens/me/get_list - 获取设备推送Token列表**
+**POST /api/v1/protected/device_tokens/me - 获取设备推送Token列表**
 ```typescript
-interface GetDeviceTokensRequest {
+interface MyDeviceTokensRequest {
   limit?: number;
   cursor?: string;
 }
-type GetDeviceTokensResponse = ApiResponse<PaginatedData<DeviceTokenItem>>
+type MyDeviceTokensResponse = ApiResponse<PaginatedData<DeviceTokenItem>>
 
 interface DeviceTokenItem {
   id: string;
@@ -2730,10 +2773,10 @@ interface DeviceTokenItem {
 
 ### 系统健康检查 API
 
-**POST /api/v1/public/system/health_check - 系统健康检查**
+**POST /api/v1/public/system/health - 系统健康检查**
 ```typescript
-interface HealthCheckRequest {}
-type HealthCheckResponse = ApiResponse<HealthCheckData>
+interface SystemHealthRequest {}
+type SystemHealthResponse = ApiResponse<HealthCheckData>
 
 interface HealthCheckData {
   status: 'healthy' | 'degraded' | 'unhealthy';
@@ -2770,6 +2813,11 @@ interface HealthCheckData {
 - **请求**：客户端只能发送 `file_id`，后端验证后内部解析为 URL
 - **响应**：后端返回解析后的 URL，客户端可直接用于显示
 
+**媒体 URL 的访问语义（必须明确）**：
+- 对公开内容（头像、公开瞬间图）：建议使用可缓存的公开 CDN URL
+- 对私密内容（聊天文件/视频）：建议使用短期可撤销的签名下载 URL 或受保护下载接口
+- 若使用对象存储直传（预签名 URL），数据面上传/下载的错误返回由对象存储决定，不遵循 `ApiResponse`
+
 **聊天消息发送流程**：
 1. 上传文件 → 获得 `file_id`
 2. 发送消息时只传 `file_id`
@@ -2788,35 +2836,12 @@ interface HealthCheckData {
 | `chat_audio` | 聊天语音 | `send_message.file_id`（type: 'audio'） |
 | `chat_file` | 聊天文件 | `send_message.file_id`（type: 'file'） |
 
-**使用流程示例**：
+**使用流程**：
+1. 上传文件获得 `file_id`
+2. 业务 API 传递 `file_id`（如 `avatar_file_id`、`image_file_ids`、消息中的 `file_id`）
+3. 后端验证后转换为 URL 返回
 
-```
-// 场景1：设置用户头像
-1. POST /media/upload_file { file, category: 'avatar' } → { file_id: "f_123", ... }
-2. POST /user/me/update_profile { avatar_file_id: "f_123" }
-   → 后端验证 file_id 属于当前用户且 category='avatar'，通过后更新头像
-
-// 场景2：发布带图片的生活瞬间
-1. POST /media/upload_file { file1, category: 'moment_image' } → { file_id: "f_001" }
-2. POST /media/upload_file { file2, category: 'moment_image' } → { file_id: "f_002" }
-3. POST /moments/create { description, image_file_ids: ["f_001", "f_002"], ... }
-   → 后端验证所有 file_id 属于当前用户且 category='moment_image'
-
-// 场景3：聊天发送图片
-1. POST /media/upload_file { file, category: 'chat_image' } → { file_id: "f_456", ... }
-2. POST /private_messages/send { type: 'image', file_id: "f_456" }
-   → 后端验证 file_id，转换为实际 url，存入消息表
-3. WebSocket 推送 ChatMessageNew 事件（包含 media_url）
-```
-
-**后端处理流程**：
-1. 业务 API 收到 `file_id`
-2. 查询 `uploaded_files` 表验证：`file_id` 存在、`uploader_id = current_user_id`、`category` 匹配
-3. 验证通过后，从表中获取 `url` 存入业务数据（如消息表的 content 字段）
-4. 通过 WebSocket 推送完整消息（包含解析后的 URL）
-5. 客户端收到 WebSocket 推送后显示消息
-
-**POST /api/v1/protected/media/upload_file - 上传文件（≤100MB）**
+**POST /api/v1/protected/media/upload - 上传文件（≤100MB）**
 ```typescript
 interface UploadMediaRequest {
   file: File;              // 文件内容（最大100MB）
@@ -2860,32 +2885,57 @@ interface InitiateUploadRequest {
 
 type InitiateUploadResponse = ApiResponse<InitiateUploadData>
 
+type UploadTarget = 'backend' | 'object_storage';
+
 interface InitiateUploadData {
   upload_id: string;       // 上传会话ID
+  upload_target: UploadTarget; // backend=走后端分块上传；object_storage=对象存储直传（预留）
+  chunk_size: number;      // 分块大小（字节）
   chunk_count: number;     // 总分块数
-  upload_urls: string[];   // 预签名URL列表（用于上传各分块）
+  upload_urls: string[];   // 分块上传URL列表（分块很多时可能为空，客户端用 upload_part_url 按需获取）
+  expires_at: string;      // 上传会话过期时间
 }
 ```
 
-**POST /api/v1/protected/media/upload_chunk - 上传分块**
+**POST /api/v1/protected/media/upload_part_url - 按需获取分块上传URL**
+
+当 `chunk_count` 很大时，`initiate_upload.upload_urls` 可能为空。客户端可用此接口按需获取某个分块的上传地址。
+
 ```typescript
-interface UploadChunkRequest {
-  upload_id: string;       // 上传会话ID
+interface UploadPartUrlRequest {
+  upload_id: string;
   part_number: number;     // 分块编号（从1开始）
-  // Body: multipart/form-data 包含分块数据（chunk 字段）
+}
+
+type UploadPartUrlResponse = ApiResponse<UploadPartUrlData>
+
+interface UploadPartUrlData {
+  upload_id: string;
+  part_number: number;
+  upload_url: string;
+  expires_at: string;
+}
+```
+
+**POST /api/v1/protected/media/upload_chunk - 上传分块（backend 模式）**
+
+```typescript
+// 本接口为 multipart/form-data：
+// - Query: upload_id, part_number
+// - Form field: chunk
+
+interface UploadChunkRequest {
+  upload_id: string;
+  part_number: number;
 }
 
 type UploadChunkResponse = ApiResponse<UploadChunkData>
 
 interface UploadChunkData {
-  part_number: number;     // 分块编号
-  etag: string;            // 分块ETag（用于complete_upload）
+  part_number: number;
+  etag: string;            // 分块校验标识（用于 complete_upload）
 }
 ```
-
-**请求说明**：
-- Content-Type: `multipart/form-data`
-- 表单字段：`upload_id`、`part_number`、`chunk`（文件分块数据）
 
 **POST /api/v1/protected/media/complete_upload - 完成大文件上传**
 ```typescript
@@ -2900,13 +2950,13 @@ interface CompleteUploadRequest {
 type CompleteUploadResponse = ApiResponse<UploadMediaData>
 ```
 
-**POST /api/v1/protected/media/get_upload_status - 查询上传状态**
+**POST /api/v1/protected/media/upload_status - 查询上传状态**
 ```typescript
-interface GetUploadStatusRequest {
+interface UploadStatusRequest {
   upload_id: string;
 }
 
-type GetUploadStatusResponse = ApiResponse<UploadStatusData>
+type UploadStatusResponse = ApiResponse<UploadStatusData>
 
 interface UploadStatusData {
   upload_id: string;
@@ -2914,7 +2964,7 @@ interface UploadStatusData {
   uploaded_parts: number[];  // 已上传的分块编号列表
   total_parts: number;       // 总分块数
   created_at: string;
-  expires_at: string;        // 上传会话过期时间（24小时）
+  expires_at: string;        // 上传会话过期时间
 }
 ```
 
@@ -2926,6 +2976,7 @@ interface AbortUploadRequest {
 
 type AbortUploadResponse = ApiResponse
 ```
+
 
 ### 信息流 API
 
@@ -3047,14 +3098,14 @@ interface TagData {
 }
 ```
 
-**POST /api/v1/public/tags/get_trending - 获取热门标签**
+**POST /api/v1/public/tags/trending - 获取热门标签**
 ```typescript
-interface GetTrendingTagsRequest {
+interface TrendingTagsRequest {
   limit?: number;           // 默认20，最大100
   timeframe?: 'daily' | 'weekly' | 'monthly';  // 默认weekly
 }
 
-type GetTrendingTagsResponse = ApiResponse<TrendingTagsData>
+type TrendingTagsResponse = ApiResponse<TrendingTagsData>
 
 interface TrendingTagsData {
   items: TagData[];  // 热门标签固定返回limit条，不分页
@@ -3080,6 +3131,166 @@ interface TagSuggestItem {
 }
 ```
 
+### 管理员权限（RBAC）API
+
+**设计目标**：
+- **超级管理员（super admin）**：拥有全部管理员权限（可授予/回收其他管理员、管理角色/权限等）
+- **普通管理员（admin）**：通过 **角色/权限表** 获得细粒度权限（例如仅“举报处理”、仅“系统配置”）
+
+**权限 key 约定**：
+- `admin.rbac.manage`：管理员权限管理（授权/角色/权限）
+- `admin.reports.read`：查看举报列表
+- `admin.reports.write`：处理举报
+- `admin.config.read`：查看系统配置（list/detail/history/changes）
+- `admin.config.write`：修改系统配置（create/update/delete）
+
+**POST /api/v1/admin/rbac/me - 获取我的管理员权限信息（管理员）**
+```typescript
+interface AdminRbacMeRequest {}
+
+type AdminRbacMeResponse = ApiResponse<AdminMeData>
+
+interface AdminMeData {
+  is_super: boolean;
+  // '*' 表示拥有全部权限（超级管理员）
+  permissions: string[];
+  roles: AdminRoleBasic[];
+}
+
+interface AdminRoleBasic {
+  id: string;
+  name: string;
+}
+```
+
+**权限说明**：
+- 仅要求“是管理员”，不要求 `admin.rbac.manage`（用于前端侧判断 Admin 入口可见性与功能开关）
+
+**POST /api/v1/admin/rbac/permissions - 获取权限字典（管理员）**
+```typescript
+interface AdminRbacPermissionsRequest {}
+type AdminRbacPermissionsResponse = ApiResponse<AdminPermissionsData>
+
+interface AdminPermissionsData {
+  items: AdminPermissionItem[];
+}
+
+interface AdminPermissionItem {
+  key: string;
+  description: string;
+}
+```
+
+**权限要求**：`admin.rbac.manage`
+
+**POST /api/v1/admin/rbac/roles/list - 获取角色列表（管理员）**
+```typescript
+interface AdminRbacRolesListRequest {}
+type AdminRbacRolesListResponse = ApiResponse<AdminRolesData>
+
+interface AdminRolesData {
+  items: AdminRoleItem[];
+}
+
+interface AdminRoleItem {
+  id: string;
+  name: string;
+  description?: string;
+  permissions: string[];
+}
+```
+
+**权限要求**：`admin.rbac.manage`
+
+**POST /api/v1/admin/rbac/roles/create - 创建角色（管理员）**
+```typescript
+interface AdminRbacRoleCreateRequest {
+  name: string;
+  description?: string;
+}
+type AdminRbacRoleCreateResponse = ApiResponse<AdminRoleItem>
+```
+
+**权限要求**：`admin.rbac.manage`
+
+**POST /api/v1/admin/rbac/roles/update - 更新角色（管理员）**
+```typescript
+interface AdminRbacRoleUpdateRequest {
+  id: string;
+  name?: string;
+  description?: string;
+  clear_description?: boolean;
+}
+type AdminRbacRoleUpdateResponse = ApiResponse
+```
+
+**权限要求**：`admin.rbac.manage`
+
+**POST /api/v1/admin/rbac/roles/delete - 删除角色（管理员）**
+```typescript
+interface AdminRbacRoleDeleteRequest { id: string }
+type AdminRbacRoleDeleteResponse = ApiResponse
+```
+
+**权限要求**：`admin.rbac.manage`
+
+**POST /api/v1/admin/rbac/roles/set_permissions - 设置角色权限（管理员）**
+```typescript
+interface AdminRbacRoleSetPermissionsRequest {
+  id: string;
+  permission_keys: string[];
+}
+type AdminRbacRoleSetPermissionsResponse = ApiResponse
+```
+
+**权限要求**：`admin.rbac.manage`
+
+**POST /api/v1/admin/rbac/admins/list - 获取管理员列表（管理员）**
+```typescript
+interface AdminRbacAdminsListRequest {}
+type AdminRbacAdminsListResponse = ApiResponse<AdminAdminsData>
+
+interface AdminAdminsData {
+  items: AdminAdminItem[];
+}
+
+interface AdminAdminItem {
+  user: UserInfo;
+  is_super: boolean;
+  roles: AdminRoleBasic[];
+}
+```
+
+**权限要求**：`admin.rbac.manage`
+
+**POST /api/v1/admin/rbac/admins/grant - 授予/更新管理员（管理员）**
+```typescript
+interface AdminRbacGrantAdminRequest {
+  user_id: number;
+  is_super?: boolean;
+  role_ids: string[];
+}
+type AdminRbacGrantAdminResponse = ApiResponse
+```
+
+**权限要求**：`admin.rbac.manage`
+
+**额外约束**：
+- 仅超级管理员可将 `is_super=true`
+
+**POST /api/v1/admin/rbac/admins/revoke - 撤销管理员（管理员）**
+```typescript
+interface AdminRbacRevokeAdminRequest {
+  user_id: number;
+}
+type AdminRbacRevokeAdminResponse = ApiResponse
+```
+
+**权限要求**：`admin.rbac.manage`
+
+**额外约束**：
+- 撤销超级管理员：仅超级管理员可执行
+
 ### 系统配置管理 API
 
 **POST /api/v1/admin/config/create - 创建配置（管理员）**
@@ -3104,13 +3315,13 @@ interface CreateConfigData {
 - key 必须唯一，重复时返回错误
 - type 用于客户端展示时的类型转换
 
-**POST /api/v1/admin/config/get_config - 获取单个配置（管理员）**
+**POST /api/v1/admin/config/detail - 获取单个配置（管理员）**
 ```typescript
-interface GetConfigRequest {
+interface ConfigDetailRequest {
   key: string;
 }
 
-type GetConfigResponse = ApiResponse<ConfigItem>
+type ConfigDetailResponse = ApiResponse<ConfigItem>
 
 interface ConfigItem {
   key: string;
@@ -3122,15 +3333,15 @@ interface ConfigItem {
 }
 ```
 
-**POST /api/v1/admin/config/get_list - 获取配置列表（管理员）**
+**POST /api/v1/admin/config - 获取配置列表（管理员）**
 ```typescript
-interface GetConfigListRequest {
+interface ConfigListRequest {
   category?: string;
   limit?: number;
   cursor?: string;
 }
 
-type GetConfigListResponse = ApiResponse<PaginatedData<ConfigItem>>
+type ConfigListResponse = ApiResponse<PaginatedData<ConfigItem>>
 ```
 
 **功能说明**：
@@ -3164,15 +3375,15 @@ type DeleteConfigResponse = ApiResponse
 - 删除指定的配置项
 - 同时会删除该配置的变更历史
 
-**POST /api/v1/admin/config/get_config_history - 获取配置变更历史（管理员）**
+**POST /api/v1/admin/config/history - 获取配置变更历史（管理员）**
 ```typescript
-interface GetConfigHistoryRequest {
+interface ConfigHistoryRequest {
   key: string;
   limit?: number;
   cursor?: string;
 }
 
-type GetConfigHistoryResponse = ApiResponse<PaginatedData<ConfigHistoryItem>>
+type ConfigHistoryResponse = ApiResponse<PaginatedData<ConfigHistoryItem>>
 
 interface ConfigHistoryItem {
   id: string;
@@ -3188,9 +3399,9 @@ interface ConfigHistoryItem {
 - 查看指定配置项的所有变更记录
 - 支持分页查询
 
-**POST /api/v1/admin/config/get_changes - 获取所有配置变更（管理员）**
+**POST /api/v1/admin/config/changes - 获取所有配置变更（管理员）**
 ```typescript
-interface GetConfigChangesRequest {
+interface ConfigChangesRequest {
   start_time?: string;     // 开始时间（UTC，ISO 8601）
   end_time?: string;       // 结束时间（UTC，ISO 8601）
   changed_by?: number;     // 操作者用户ID
@@ -3198,7 +3409,7 @@ interface GetConfigChangesRequest {
   cursor?: string;
 }
 
-type GetConfigChangesResponse = ApiResponse<PaginatedData<ConfigHistoryItem>>
+type ConfigChangesResponse = ApiResponse<PaginatedData<ConfigHistoryItem>>
 ```
 
 **功能说明**：
@@ -3222,10 +3433,9 @@ type GetConfigChangesResponse = ApiResponse<PaginatedData<ConfigHistoryItem>>
 
 **鉴权机制**：
 - 采用受保护的 HTTP 登录后，下发 `access_token`
-- WebSocket 连接时通过以下方式之一传递token：
-  - `Sec-WebSocket-Protocol` 子协议头
-  - `Authorization: Bearer <token>` 头
-- Token过期时服务端会主动断开连接，客户端需要刷新token后重连
+- WebSocket 连接建立后，客户端必须在短时间内发送 `Auth` 事件完成鉴权；鉴权通过后服务端推送 `ConnectionEstablished`，并允许后续 `Subscribe/SetSubscriptions/Unsubscribe` 与业务事件
+- 未在规定时间内完成鉴权或鉴权失败：服务端发送 `Error` 事件并主动断开连接
+- Token 过期时服务端会主动断开连接，客户端需要刷新 token 后重连并重新鉴权
 
 **心跳机制**：
 
@@ -3310,6 +3520,7 @@ type ServerEventType =
 
 // 客户端发送事件类型枚举
 type ClientEventType = 
+  | "Auth"
   | "Ping" | "Pong"
   | "Subscribe" | "Unsubscribe" | "SetSubscriptions"
   | "MarkAsRead" | "Typing";
@@ -3325,6 +3536,14 @@ interface GroupUpdatedFields {
 
 **连接管理事件**：
 ```typescript
+interface AuthEvent {
+  type: "Auth";
+  payload: {
+    access_token: string;
+    device_fingerprint?: string;
+  };
+}
+
 interface ConnectionEstablishedEvent {
   type: "ConnectionEstablished";
   payload: {
@@ -3373,6 +3592,25 @@ interface UserLocationUpdateEvent {
   };
 }
 ```
+
+**在线/输入状态事件触发约定（强制）**：
+
+- **UserOnline**
+  - **触发**：用户任意设备建立 WebSocket 连接并完成 `Auth` 鉴权后，服务端将该用户标记为在线；当且仅当存在对该用户的 `user` 订阅时推送给订阅者。
+  - **多设备**：同一用户多设备在线只会维持“在线”状态；重复连接不应反复产生“离线/上线抖动”。
+
+- **UserOffline**
+  - **触发**：用户所有 WebSocket 连接都断开后（连接计数归零），服务端将其标记为离线，并向订阅者推送。
+  - **离线时间**：`offline_at` 为服务端判定离线的时间（UTC ISO 8601）。
+
+- **UserTyping**
+  - **触发（客户端侧）**：客户端在输入框内容从“空 → 非空”时发送一次 `Typing { is_typing: true }`；在停止输入一段时间或内容清空时发送 `Typing { is_typing: false }`。
+  - **触发（服务端侧）**：服务端仅将 `UserTyping` 推送给同一聊天的其他参与者（私聊推给对端；群聊推给订阅该群聊的成员），并允许客户端用超时机制防止状态卡住。
+  - **注意**：`UserTyping` 属于“瞬时状态”，不落库、不补发历史。
+
+- **UserLocationUpdate**
+  - **触发**：用户调用 `POST /api/v1/protected/user/me/location` 更新位置成功后触发；服务端仅推送给订阅该用户 `user` 状态的订阅者。
+  - **注意**：该事件用于“实时更新”，客户端冷启动/重连应以 HTTP API 的数据为准。
 
 **关注关系事件**：
 ```typescript
@@ -3677,32 +3915,7 @@ interface ErrorEvent {
   payload: {
     code: number;          // 错误码（与HTTP API错误码一致）
     message: string;       // 错误消息
-    details?: object;      // 错误详情
   };
-}
-
-// WebSocket错误示例
-{
-  type: "Error",
-  payload: {
-    code: 2001,
-    message: "订阅失败：聊天不存在",
-    details: {
-      chat_type: "group_chat",
-      chat_id: "gc_123"
-    }
-  }
-}
-
-{
-  type: "Error",
-  payload: {
-    code: 2002,
-    message: "心跳超时，连接即将断开",
-    details: {
-      missed_heartbeats: 3
-    }
-  }
 }
 ```
 
@@ -3779,119 +3992,137 @@ interface SubscribeAckEvent {
 
 **订阅机制说明**：
 
-⚠️ **私聊消息自动推送**：
-- 私聊消息**不需要订阅**，用户登录后自动接收所有私聊消息
-- WebSocket 连接建立后，服务端会自动推送该用户的所有私聊消息
-- 这是因为私聊是一对一的，用户必然需要接收对方的消息
+WebSocket 推送分为**自动推送**和**需要订阅**两种模式。
 
-✅ **群聊消息需要订阅**：
-- 群聊消息**必须订阅**才能接收，避免推送用户不关心的群聊消息
-- 用户可以选择性订阅正在查看的群聊
-- 这样可以节省带宽，提升性能
+### 1. 自动推送（无需订阅）
 
-✅ **用户状态订阅**：
-- 订阅用户ID后，可以接收该用户的在线状态变化、位置更新等事件
-- 通常用于好友列表、聊天界面显示对方在线状态
+以下事件在 WebSocket 连接建立后**自动推送**，客户端无需订阅：
 
-✅ **通知订阅**：
-- 订阅通知类型后，可以接收相应的系统通知、关注请求等
-- 配合通知订阅设置（API）使用
+**连接管理事件**：
+- `ConnectionEstablished` - 连接建立成功
+- `Heartbeat` - 心跳响应
+- `Error` - 错误通知
+- `SubscribeAck` - 订阅操作响应
 
-**实时状态同步**：
-```typescript
-interface MarkAsReadEvent {
-  type: "MarkAsRead";
-  payload: {
-    chat_type: 'private_chat' | 'group_chat';
-    chat_id: string;
-    up_to: string;
-  };
-}
+**私聊消息事件**：
 
-interface TypingEvent {
-  type: "Typing";
-  payload: {
-    chat_type: 'private_chat' | 'group_chat';
-    chat_id: string;
-    is_typing: boolean;
-  };
-}
-```
+所有私聊消息事件自动推送（chat_type='private_chat'）：
 
-**订阅机制使用场景**：
+| 事件 | 说明 |
+|-----|------|
+| `ChatMessageNew` | 新消息 |
+| `ChatMessageEdited` | 消息被编辑 |
+| `ChatMessageRecalled` | 消息被撤回 |
+| `ChatMessageDeleted` | 消息被删除 |
+| `ChatMessageReaction` | 消息反应（表情） |
+| `ChatMessageRead` | 消息已读状态 |
+| `UserTyping` | 对方正在输入 |
 
-| 场景 | 使用事件 | 说明 |
-|------|---------|------|
-| 增量订阅 | `Subscribe` | 用户进入群聊、打开好友列表时，追加订阅新的数据源 |
-| 取消订阅 | `Unsubscribe` | 用户离开群聊、关闭好友列表时，移除不需要的订阅 |
-| 替换式订阅 | `SetSubscriptions` | 页面切换时完全替换订阅列表，或发送空数组清空所有订阅 |
-| 混合订阅 | `Subscribe` | 一次订阅多种类型（群聊、用户状态、通知） |
-| 部分失败 | `SubscribeAck` | 服务端返回 `code: 2001` 和 `failed_items` 列表 |
+### 2. 订阅群聊消息
 
-**最佳实践**：
+**订阅参数**：`{source_type: 'group_chat', source_ids: [群ID列表]}`
 
-1. **连接建立后的初始化**：使用 `SetSubscriptions` 一次性设置所有订阅
-2. **动态增删**：使用 `Subscribe` 和 `Unsubscribe` 进行增量修改
-3. **页面切换**：使用 `SetSubscriptions` 替换订阅列表，避免遗留订阅
-4. **断线重连**：使用 `SetSubscriptions` 重新设置订阅状态
-5. **登出清理**：使用 `SetSubscriptions` 发送空数组清空所有订阅
+**推送事件**：
+
+**聊天消息事件** (chat_type='group_chat')：
+
+| 事件 | 说明 |
+|-----|------|
+| `ChatMessageNew` | 新消息 |
+| `ChatMessageEdited` | 消息被编辑 |
+| `ChatMessageRecalled` | 消息被撤回 |
+| `ChatMessageDeleted` | 消息被删除 |
+| `ChatMessageReaction` | 消息反应（表情） |
+| `ChatMessageRead` | 消息已读状态 |
+| `UserTyping` | 成员正在输入 |
+
+**群组管理事件**：
+
+| 事件 | 说明 |
+|-----|------|
+| `GroupMemberJoined` | 新成员加入 |
+| `GroupMemberLeft` | 成员离开 |
+| `GroupProfileUpdated` | 群组资料更新 |
+| `GroupMemberRoleChanged` | 成员角色变更 |
+| `GroupMemberMuted` | 成员被禁言 |
+| `GroupMemberUnmuted` | 成员解除禁言 |
+| `GroupDismissed` | 群组被解散 |
+
+### 3. 订阅用户状态
+
+**订阅参数**：`{source_type: 'user', source_ids: [用户ID列表]}`
+
+**推送事件**：
+
+| 事件 | 说明 |
+|-----|------|
+| `UserOnline` | 用户上线 |
+| `UserOffline` | 用户离线 |
+| `UserLocationUpdate` | 用户位置更新 |
+
+### 4. 订阅通知
+
+**订阅参数**：`{source_type: 'notification', source_ids: [通知类型列表]}`
+
+**推送事件**：
+
+| 通知类型 | 事件 | 说明 |
+|---------|-----|------|
+| `new_follower` | `NewFollower` | 新关注者 |
+| `mutual_follow` | `MutualFollow` | 互相关注（成为好友） |
+| `unfollowed` | `Unfollowed` | 取消关注 |
+| `moment_like` | `MomentLiked` | 瞬间被点赞 |
+| `moment_comment` | `MomentCommented` | 瞬间被评论 |
+| `comment_reply` | `CommentReply` | 评论被回复 |
+| `group_invite` | `GroupInviteReceived` | 收到群组邀请 |
+| `group_invite_response` | `GroupInviteResponse` | 群组邀请响应 |
+| `group_application` | `GroupApplicationReceived` | 收到入群申请 |
+| `group_application_response` | `GroupApplicationResponse` | 入群申请响应 |
+| `system_announcement` | `SystemAnnouncement` | 系统公告 |
+
+
+### 订阅操作说明
+
+**订阅方式**：
+
+| 操作 | 事件 | 用途 |
+|-----|------|------|
+| 增量订阅 | `Subscribe` | 追加订阅新的数据源 |
+| 取消订阅 | `Unsubscribe` | 移除不需要的订阅 |
+| 替换式订阅 | `SetSubscriptions` | 完全替换订阅列表 |
 
 **订阅数量限制**：
 
-- 单个连接最多订阅 100 个群聊（`source_type: 'group_chat'`）
-- 单个连接最多订阅 500 个用户（`source_type: 'user'`）
-- 通知类型订阅无数量限制（`source_type: 'notification'`，基于预定义类型）
-- 私聊消息自动推送，不计入订阅数量限制
-- 超过限制时，服务端返回错误码 `2102`（批量项数超出限制）
+- 群聊：最多 100 个
+- 用户：最多 500 个
+- 通知：无限制
+- 私聊消息自动推送，不计入限制
 
 ## 推送事件类型与订阅
 
-### 支持的推送事件类型
+### 通知订阅设置与事件映射
 
-**社交互动事件**：
-- `NewFollower` - 有人关注了我
-- `MutualFollow` - 互相关注（成为好友）
-- `Unfollowed` - 取消关注（好友关系解除）
-- `GroupInviteReceived` - 收到群组邀请
-- `GroupInviteResponse` - 群组邀请响应
-- `GroupApplicationReceived` - 收到群组申请
-- `GroupApplicationResponse` - 群组申请响应
+通知事件受**两层控制**：持久化偏好设置（API）+ 实时订阅（WebSocket）。最终推送逻辑：`推送 = 持久化偏好 AND 实时订阅`
 
-**内容互动事件**：
-- `ChatMessageNew` - 新消息（包含 @提及）
-- `MomentLiked` - 生活瞬间被点赞
-- `MomentCommented` - 生活瞬间被评论
-- `CommentReply` - 评论被回复
-
-**系统事件**：
-- `SystemAnnouncement` - 系统公告
-- `Error` - 错误通知
-- `ConnectionEstablished` - 连接建立
-- `Heartbeat` - 心跳
-
-### 推送订阅配置
-
-**两层订阅控制机制**：
-
-1. **持久化偏好设置**（通过 API）：
-   - 长期保存，跨设备、跨会话生效
-   - 通常在"设置"页面修改
-   - 默认全部启用
-
-2. **实时订阅控制**（通过 WebSocket）：
-   - 仅影响当前 WebSocket 连接
-   - 可以动态调整，无需断开连接
-   - 连接断开后失效
-
-**最终推送逻辑**：`持久化偏好 AND 实时订阅`
+| 设置项 | API 字段 | WebSocket 事件 | 订阅参数 |
+|-------|---------|---------------|---------|
+| 新关注者通知 | `new_follower_enabled` | `NewFollower` | `new_follower` |
+| 互相关注通知 | `mutual_follow_enabled` | `MutualFollow` | `mutual_follow` |
+| 群组邀请通知 | `group_invite_enabled` | `GroupInviteReceived` | `group_invite` |
+| 群组邀请响应通知 | `group_invite_response_enabled` | `GroupInviteResponse` | `group_invite_response` |
+| 群组申请通知 | `group_application_enabled` | `GroupApplicationReceived` | `group_application` |
+| 群组申请响应通知 | `group_application_response_enabled` | `GroupApplicationResponse` | `group_application_response` |
+| 消息提及通知 | `message_mention_enabled` | `ChatMessageNew` (含 @提及) | 跟随消息订阅 |
+| 瞬间点赞通知 | `moment_like_enabled` | `MomentLiked` | `moment_like` |
+| 瞬间评论通知 | `moment_comment_enabled` | `MomentCommented` | `moment_comment` |
+| 评论回复通知 | `comment_reply_enabled` | `CommentReply` | `comment_reply` |
+| 系统公告通知 | `system_announcement_enabled` | `SystemAnnouncement` | `system_announcement` |
 
 ### 推送机制
 
-1. **事件触发**：当特定操作发生时（发送消息、点赞、好友请求等）
-2. **偏好过滤**：检查目标用户的推送订阅偏好设置
-3. **在线推送**：对于在线用户，通过 WebSocket 实时推送
-4. **离线推送**：对于离线用户，通过设备令牌推送到移动端
-5. **冷启动获取**：用户上线后通过各业务 API 获取待处理数据
+- **在线用户**：检查持久化偏好 + 实时订阅，通过 WebSocket 推送
+- **离线用户**：检查持久化偏好，通过设备令牌推送
+- **冷启动**：通过各业务 API 获取待处理数据
 
 ## API 版本与兼容性
 

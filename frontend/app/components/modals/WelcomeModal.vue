@@ -11,14 +11,10 @@
           :kbds="['1']"
         >
           <UButton
-            size="lg"
             class="w-full justify-start"
+            leading-icon="i-lucide-rocket"
             @click="handleTempExperience"
           >
-            <UIcon
-              name="i-heroicons-rocket-launch"
-              class="w-5 h-5 mr-3"
-            />
             <article class="text-left">
               <p class="font-semibold">临时体验</p>
               <p class="text-sm opacity-75">无需注册，立即开始</p>
@@ -32,14 +28,10 @@
         >
           <UButton
             variant="outline"
-            size="lg"
             class="w-full justify-start"
+            leading-icon="i-lucide-user-plus"
             @click="handleRegister"
           >
-            <UIcon
-              name="i-heroicons-user-plus"
-              class="w-5 h-5 mr-3"
-            />
             <article class="text-left">
               <p class="font-semibold">注册账户</p>
               <p class="text-sm opacity-75">完整功能，数据永久保存</p>
@@ -53,14 +45,10 @@
         >
           <UButton
             variant="ghost"
-            size="lg"
             class="w-full justify-start"
+            leading-icon="i-lucide-log-in"
             @click="handleLogin"
           >
-            <UIcon
-              name="i-heroicons-arrow-right-end-on-rectangle"
-              class="w-5 h-5 mr-3"
-            />
             <article class="text-left">
               <p class="font-semibold">登录</p>
               <p class="text-sm opacity-75">使用现有账户</p>
@@ -69,47 +57,21 @@
         </UTooltip>
       </nav>
 
-      <footer class="mt-6 pt-4 border-t border-default">
-        <p class="text-sm text-secondary-content text-center mb-3">
-          ✨ HotSpot 主要功能
-        </p>
-        <ul class="flex justify-center gap-6 text-xs text-secondary-content">
-          <li class="flex items-center">
-            <UIcon
-              name="i-heroicons-map-pin"
-              class="w-4 h-4 mr-1"
-            />
-            位置发现
-          </li>
-          <li class="flex items-center">
-            <UIcon
-              name="i-heroicons-chat-bubble-left-right"
-              class="w-4 h-4 mr-1"
-            />
-            实时聊天
-          </li>
-          <li class="flex items-center">
-            <UIcon
-              name="i-heroicons-user-group"
-              class="w-4 h-4 mr-1"
-            />
-            群组交流
-          </li>
-          <li class="flex items-center">
-            <UIcon
-              name="i-heroicons-photo"
-              class="w-4 h-4 mr-1"
-            />
-            动态分享
-          </li>
-        </ul>
+      <footer class="mt-6 pt-4">
+        <USeparator class="mb-4" />
+        <div class="flex items-center justify-center gap-2 flex-wrap">
+          <UBadge color="neutral" variant="soft" size="xs" icon="i-lucide-map-pin">位置发现</UBadge>
+          <UBadge color="neutral" variant="soft" size="xs" icon="i-lucide-messages-square">实时聊天</UBadge>
+          <UBadge color="neutral" variant="soft" size="xs" icon="i-lucide-users-round">群组交流</UBadge>
+          <UBadge color="neutral" variant="soft" size="xs" icon="i-lucide-image">动态分享</UBadge>
+        </div>
       </footer>
     </template>
 
     <template #footer>
-      <p class="text-xs text-secondary-content">
+      <UBadge color="neutral" variant="soft" size="xs">
         使用数字键 1-3 快速选择
-      </p>
+      </UBadge>
       <UTooltip
         text="稍后再说，先浏览页面"
         :kbds="['escape']"
@@ -143,13 +105,13 @@ const handleTempExperience = () => {
 const handleRegister = () => {
   emit('register')
   emit('close')
-  navigateTo('/auth/register')
+  navigateTo('/auth?mode=register')
 }
 
 const handleLogin = () => {
   emit('login')
   emit('close')
-  navigateTo('/auth/login')
+  navigateTo('/auth?mode=login')
 }
 
 const handleSkip = () => {

@@ -1,15 +1,12 @@
 /**
  * WebSocket 实时通信类型定义
+ * 严格对应后端 API 规范 (api_spec.mdc)
  */
-
-// ============================================================================
-// 通用类型（复用 api.ts 中的定义）
-// ============================================================================
 
 import type { UserInfo, GroupSettings, MessageType, ReactionType } from './api'
 
 // ============================================================================
-// 基础 WebSocket 事件格式
+// 基础类型
 // ============================================================================
 
 export interface WebSocketEvent<T = unknown> {
@@ -17,11 +14,25 @@ export interface WebSocketEvent<T = unknown> {
   payload: T
 }
 
+export type WebSocketState = 'connecting' | 'connected' | 'disconnected' | 'error'
+
 // ============================================================================
-// 客户端发送事件类型
+// 订阅相关
+// ============================================================================
+
+export type SubscriptionSourceType = 'group_chat' | 'user' | 'notification'
+
+export interface SubscriptionItem {
+  source_type: SubscriptionSourceType
+  source_ids: string[]
+}
+
+// ============================================================================
+// 客户端发送事件 (Client -> Server)
 // ============================================================================
 
 export type ClientEventType =
+  | 'Auth'
   | 'Ping'
   | 'Pong'
   | 'Subscribe'
@@ -30,58 +41,14 @@ export type ClientEventType =
   | 'MarkAsRead'
   | 'Typing'
 
-// ============================================================================
-// 服务端推送事件类型
-// ============================================================================
-
-export type ServerEventType =
-  | 'ConnectionEstablished'
-  | 'Heartbeat'
-  | 'UserOnline'
-  | 'UserOffline'
-  | 'UserLocationUpdate'
-  | 'NewFollower'           // 有人关注我
-  | 'MutualFollow'          // 互相关注（成为好友）
-  | 'Unfollowed'            // 取消关注
-  | 'MomentLiked'
-  | 'MomentCommented'
-  | 'CommentReply'          // 评论被回复
-  | 'SystemAnnouncement'    // 系统公告
-  | 'ChatMessageNew'
-  | 'ChatMessageEdited'
-  | 'ChatMessageRecalled'
-  | 'ChatMessageDeleted'
-  | 'ChatMessageReaction'
-  | 'ChatMessageRead'
-  | 'UserTyping'
-  | 'GroupMemberJoined'
-  | 'GroupMemberLeft'
-  | 'GroupProfileUpdated'
-  | 'GroupMemberRoleChanged'
-  | 'GroupMemberMuted'
-  | 'GroupMemberUnmuted'    // 取消禁言
-  | 'GroupDismissed'
-  | 'GroupInviteReceived'
-  | 'GroupInviteResponse'
-  | 'GroupApplicationReceived'
-  | 'GroupApplicationResponse'
-  | 'SubscribeAck'
-  | 'Error'
-
-// ============================================================================
-// 订阅管理类型
-// ============================================================================
-
-export interface SubscriptionItem {
-  source_type: 'group_chat' | 'user' | 'notification'
-  source_ids: string[]
+export interface AuthEvent {
+  type: 'Auth'
+  payload: {
+    access_token: string
+    device_fingerprint?: string
+  }
 }
 
-// ============================================================================
-// 客户端发送事件定义
-// ============================================================================
-
-// 心跳事件
 export interface PingEvent {
   type: 'Ping'
   payload: {
@@ -96,7 +63,6 @@ export interface PongEvent {
   }
 }
 
-// 订阅事件
 export interface SubscribeEvent {
   type: 'Subscribe'
   payload: {
@@ -118,7 +84,6 @@ export interface SetSubscriptionsEvent {
   }
 }
 
-// 实时状态同步事件
 export interface MarkAsReadEvent {
   type: 'MarkAsRead'
   payload: {
@@ -137,9 +102,60 @@ export interface TypingEvent {
   }
 }
 
+export type ClientEvent =
+  | AuthEvent
+  | PingEvent
+  | PongEvent
+  | SubscribeEvent
+  | UnsubscribeEvent
+  | SetSubscriptionsEvent
+  | MarkAsReadEvent
+  | TypingEvent
+
 // ============================================================================
-// 服务端推送事件定义
+// 服务端推送事件 (Server -> Client)
 // ============================================================================
+
+export type ServerEventType =
+  // 连接管理
+  | 'ConnectionEstablished'
+  | 'Heartbeat'
+  // 用户状态
+  | 'UserOnline'
+  | 'UserOffline'
+  | 'UserLocationUpdate'
+  // 关注关系
+  | 'NewFollower'
+  | 'MutualFollow'
+  | 'Unfollowed'
+  // 生活瞬间
+  | 'MomentLiked'
+  | 'MomentCommented'
+  | 'CommentReply'
+  | 'SystemAnnouncement'
+  // 聊天消息
+  | 'ChatMessageNew'
+  | 'ChatMessageEdited'
+  | 'ChatMessageRecalled'
+  | 'ChatMessageDeleted'
+  | 'ChatMessageReaction'
+  | 'ChatMessageRead'
+  | 'UserTyping'
+  // 群组
+  | 'GroupMemberJoined'
+  | 'GroupMemberLeft'
+  | 'GroupProfileUpdated'
+  | 'GroupMemberRoleChanged'
+  | 'GroupMemberMuted'
+  | 'GroupMemberUnmuted'
+  | 'GroupDismissed'
+  | 'GroupInviteReceived'
+  | 'GroupInviteResponse'
+  | 'GroupApplicationReceived'
+  | 'GroupApplicationResponse'
+  // 系统
+  | 'Error'
+  | 'SubscribeAck'
 
 // 连接管理事件
 export interface ConnectionEstablishedEvent {
@@ -158,7 +174,7 @@ export interface HeartbeatEvent {
   }
 }
 
-// 在线状态事件
+// 用户状态事件
 export interface UserOnlineEvent {
   type: 'UserOnline'
   payload: {
@@ -188,13 +204,13 @@ export interface UserLocationUpdateEvent {
   }
 }
 
-// 关注关系事件（好友 = 互相关注）
+// 关注关系事件
 export interface NewFollowerEvent {
   type: 'NewFollower'
   payload: {
     user: UserInfo
     followed_at: string
-    is_mutual: boolean  // 是否互相关注（成为好友）
+    is_mutual: boolean
   }
 }
 
@@ -211,7 +227,7 @@ export interface UnfollowedEvent {
   payload: {
     user_id: number
     unfollowed_at: string
-    was_mutual: boolean  // 之前是否互相关注
+    was_mutual: boolean
   }
 }
 
@@ -240,9 +256,9 @@ export interface CommentReplyEvent {
   type: 'CommentReply'
   payload: {
     moment_id: string
-    comment_id: string        // 原评论ID（被回复的评论）
-    reply_id: string          // 回复评论ID
-    user: UserInfo            // 回复者
+    comment_id: string
+    reply_id: string
+    user: UserInfo
     content: string
     replied_at: string
   }
@@ -269,9 +285,17 @@ export interface ChatMessageNewEvent {
     chat_id: string
     sender: UserInfo
     message_type: MessageType
-    content?: string       // 文本内容（仅 text/system 类型有值）
+    content?: string
     reply_to?: string
     mentions?: number[]
+    // 媒体字段
+    media_url?: string
+    thumbnail_url?: string
+    file_name?: string
+    file_size?: number
+    duration?: number
+    width?: number
+    height?: number
     sent_at: string
   }
 }
@@ -313,12 +337,12 @@ export interface ChatMessageDeletedEvent {
 export interface ChatMessageReactionEvent {
   type: 'ChatMessageReaction'
   payload: {
-    id: string                // 消息ID
+    id: string
     chat_type: 'private_chat' | 'group_chat'
     chat_id: string
-    user: UserInfo            // 操作者
+    user: UserInfo
     reaction_type: ReactionType
-    has_reaction: boolean     // 操作后状态：true=添加了反应，false=移除了反应
+    has_reaction: boolean
     created_at: string
   }
 }
@@ -364,16 +388,18 @@ export interface GroupMemberLeftEvent {
   }
 }
 
+export interface GroupUpdatedFields {
+  name?: string
+  description?: string
+  avatar_url?: string
+  settings?: Partial<GroupSettings>
+}
+
 export interface GroupProfileUpdatedEvent {
   type: 'GroupProfileUpdated'
   payload: {
     group_chat_id: string
-    updated_fields: {
-      name?: string
-      description?: string
-      avatar_url?: string
-      settings?: Partial<GroupSettings>
-    }
+    updated_fields: GroupUpdatedFields
     updated_at: string
   }
 }
@@ -471,7 +497,7 @@ export interface SubscribeAckEvent {
     code: number
     message?: string
     failed_items?: {
-      source_type: 'group_chat' | 'user' | 'notification'
+      source_type: SubscriptionSourceType
       source_ids: string[]
       reason: string
     }[]
@@ -484,23 +510,10 @@ export interface ErrorEvent {
   payload: {
     code: number
     message: string
-    details?: Record<string, any>
   }
 }
 
-// ============================================================================
 // 联合类型
-// ============================================================================
-
-export type ClientEvent =
-  | PingEvent
-  | PongEvent
-  | SubscribeEvent
-  | UnsubscribeEvent
-  | SetSubscriptionsEvent
-  | MarkAsReadEvent
-  | TypingEvent
-
 export type ServerEvent =
   | ConnectionEstablishedEvent
   | HeartbeatEvent
@@ -535,17 +548,5 @@ export type ServerEvent =
   | SubscribeAckEvent
   | ErrorEvent
 
-// ============================================================================
-// 辅助类型
-// ============================================================================
-
-// WebSocket 连接状态
-export type WebSocketState = 'connecting' | 'connected' | 'disconnected' | 'error'
-
-// 重连策略配置
-export interface ReconnectConfig {
-  baseDelay: number      // 基础延迟（毫秒），默认 1000
-  maxDelay: number       // 最大延迟（毫秒），默认 30000
-  maxAttempts: number    // 最大重连次数，默认 10
-  jitterFactor: number   // 随机抖动因子，默认 0.2
-}
+// 按事件 type 提取 payload 的辅助类型（给 websocket.service / useWebSocket 等使用）
+export type ServerPayload<K extends ServerEventType> = Extract<ServerEvent, { type: K }>['payload']

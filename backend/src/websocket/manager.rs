@@ -1,8 +1,8 @@
+use axum::extract::ws::Message;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::{mpsc, RwLock};
-use axum::extract::ws::Message;
 
 use crate::websocket::types::WsMessage;
 
@@ -54,7 +54,11 @@ impl ConnectionManager {
         let mut connection_map = self.connection_map.write().await;
         connection_map.insert(connection_id.clone(), user_id);
 
-        tracing::info!("WebSocket连接已添加: user_id={}, connection_id={}", user_id, connection_id);
+        tracing::debug!(
+            "WebSocket连接已添加: user_id={}, connection_id={}",
+            user_id,
+            connection_id
+        );
     }
 
     /// 移除连接
@@ -66,33 +70,37 @@ impl ConnectionManager {
             let mut connections = self.connections.write().await;
             if let Some(user_connections) = connections.get_mut(&user_id) {
                 user_connections.retain(|conn| conn.connection_id != connection_id);
-                
+
                 // 如果用户没有其他连接，移除该用户
                 if user_connections.is_empty() {
                     connections.remove(&user_id);
                 }
             }
 
-            tracing::info!("WebSocket连接已移除: user_id={}, connection_id={}", user_id, connection_id);
+            tracing::debug!(
+                "WebSocket连接已移除: user_id={}, connection_id={}",
+                user_id,
+                connection_id
+            );
         }
     }
 
     /// 发送消息给指定用户的所有连接
     pub async fn send_to_user(&self, user_id: i64, message: &WsMessage) -> Result<(), String> {
         let connections = self.connections.read().await;
-        
+
         if let Some(user_connections) = connections.get(&user_id) {
-            let json_str = serde_json::to_string(message)
-                .map_err(|e| format!("序列化消息失败: {}", e))?;
-            
+            let json_str =
+                serde_json::to_string(message).map_err(|e| format!("序列化消息失败: {}", e))?;
+
             let ws_message = Message::Text(json_str.into());
-            
+
             for connection in user_connections {
                 if let Err(e) = connection.sender.send(ws_message.clone()) {
                     tracing::error!("发送消息失败: user_id={}, error={}", user_id, e);
                 }
             }
-            
+
             Ok(())
         } else {
             Err(format!("用户不在线: user_id={}", user_id))
@@ -102,9 +110,8 @@ impl ConnectionManager {
     /// 发送消息给多个用户
     pub async fn send_to_users(&self, user_ids: &[i64], message: &WsMessage) {
         for user_id in user_ids {
-            if let Err(e) = self.send_to_user(*user_id, message).await {
-                tracing::debug!("{}", e);
-            }
+            // 发送失败（常见原因：对方离线）不记录日志，避免噪音；真正的发送异常会在 send_to_user 内部记录 error
+            let _ = self.send_to_user(*user_id, message).await;
         }
     }
 
@@ -136,8 +143,9 @@ impl ConnectionManager {
     pub async fn check_timeout(&self) -> Vec<String> {
         let mut timeout_connections = Vec::new();
         let connections = self.connections.read().await;
-        let timeout_duration = std::time::Duration::from_secs(crate::constants::WS_CONNECTION_TIMEOUT_SECS);
-        
+        let timeout_duration =
+            std::time::Duration::from_secs(crate::constants::WS_CONNECTION_TIMEOUT_SECS);
+
         for user_connections in connections.values() {
             for conn in user_connections {
                 let last_ping = conn.last_ping.read().await;
@@ -146,7 +154,7 @@ impl ConnectionManager {
                 }
             }
         }
-        
+
         timeout_connections
     }
 }

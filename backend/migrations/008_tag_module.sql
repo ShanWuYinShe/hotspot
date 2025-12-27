@@ -6,7 +6,7 @@
 -- ============================================================
 CREATE TABLE tags (
     id BIGSERIAL PRIMARY KEY,
-    tag_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    tag_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
     name VARCHAR(50) NOT NULL,
     usage_count INTEGER NOT NULL DEFAULT 0,  -- 使用次数（冗余字段，用于热门标签查询）
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

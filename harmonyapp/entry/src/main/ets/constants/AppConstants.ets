@@ -3,9 +3,12 @@
  * 只保留核心必要的常量定义
  */
 
-// API配置
-export const API_BASE_URL = 'http://192.168.1.6:3000';
-export const WS_BASE_URL = 'ws://192.168.1.6:3000/ws';
+// API 配置（统一同源入口：Nginx 反代 Web + API + WebSocket）
+export const SERVER_BASE_URL = 'http://127.0.0.1:8888';
+
+// 由同一个 BaseUrl 推导出 API / WebSocket 地址（避免多处硬编码）
+export const API_BASE_URL = SERVER_BASE_URL;
+export const WS_BASE_URL = SERVER_BASE_URL.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:') + '/ws';
 
 // 业务状态码
 export interface BusinessCodeType {
@@ -27,12 +30,19 @@ export interface StorageKeysType {
   USER_INFO: string;
   ACCESS_TOKEN: string;
   LOCATION_CACHE: string;
+  SERVER_BASE_URL: string;
+  AUTH_ACCOUNTS: string;
+  AUTH_CURRENT_USER_ID: string;
 }
 
 export const StorageKeys: StorageKeysType = {
   USER_INFO: 'user_info',
   ACCESS_TOKEN: 'access_token',
-  LOCATION_CACHE: 'location_cache'
+  LOCATION_CACHE: 'location_cache',
+  SERVER_BASE_URL: 'server_base_url',
+  // 多账号：保存所有账户的 AppAuthData（含 refresh_token），并记录当前活跃账号
+  AUTH_ACCOUNTS: 'auth_accounts',
+  AUTH_CURRENT_USER_ID: 'auth_current_user_id'
 };
 
 // 页面名称
@@ -48,8 +58,14 @@ export interface PageNamesType {
   CREATE_MOMENT: string;
   CHAT: string;
   MAP: string;
+  LOCATION_PICKER: string;
   SEARCH: string;
   SETTINGS: string;
+  ADVANCED_SETTINGS: string;
+  PHOTO_PREVIEW: string;
+  DEBUG_PANEL: string;
+  SUBSCRIPTIONS: string;
+  ACCOUNTS: string;
 }
 
 export const PageNames: PageNamesType = {
@@ -64,8 +80,14 @@ export const PageNames: PageNamesType = {
   CREATE_MOMENT: 'CreateMomentPage',
   CHAT: 'ChatPage',
   MAP: 'MapPage',
+  LOCATION_PICKER: 'LocationPickerPage',
   SEARCH: 'SearchPage',
-  SETTINGS: 'SettingsPage'
+  SETTINGS: 'SettingsPage',
+  ADVANCED_SETTINGS: 'AdvancedSettingsPage',
+  PHOTO_PREVIEW: 'PhotoPreviewPage',
+  DEBUG_PANEL: 'DebugPanel',
+  SUBSCRIPTIONS: 'SubscriptionsPage',
+  ACCOUNTS: 'AccountsPage'
 };
 
 // 默认配置

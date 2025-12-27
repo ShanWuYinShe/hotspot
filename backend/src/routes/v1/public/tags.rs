@@ -8,8 +8,6 @@ use crate::{handlers::tags, state::AppState};
 /// 严格按照 api_spec.mdc 定义
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .route("/get_trending", post(tags::get_trending)) // ✅ 获取热门标签
+        .route("/trending", post(tags::trending)) // ✅ 获取热门标签
         .route("/suggest", post(tags::suggest)) // ✅ 标签搜索建议
 }
-
-

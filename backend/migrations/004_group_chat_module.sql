@@ -6,8 +6,7 @@
 -- ============================================================
 CREATE TABLE group_chats (
     id BIGSERIAL PRIMARY KEY,
-    group_chat_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
-    cursor_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    group_chat_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
     name VARCHAR(100) NOT NULL,
     description TEXT,
     avatar_url TEXT,
@@ -26,7 +25,6 @@ CREATE TABLE group_chats (
 );
 
 CREATE INDEX idx_group_chats_id ON group_chats (group_chat_id) WHERE is_deleted = FALSE AND is_dismissed = FALSE;
-CREATE INDEX idx_group_chats_cursor_id ON group_chats (cursor_id) WHERE is_deleted = FALSE AND is_dismissed = FALSE;
 CREATE INDEX idx_group_chats_owner ON group_chats (owner_id) WHERE is_deleted = FALSE;
 CREATE INDEX idx_group_chats_location ON group_chats USING gist (location) WHERE location IS NOT NULL AND is_deleted = FALSE;
 CREATE INDEX idx_group_chats_name ON group_chats USING gin (name gin_trgm_ops) WHERE is_deleted = FALSE;
@@ -63,8 +61,7 @@ CREATE TRIGGER trigger_group_settings_updated_at
 -- ============================================================
 CREATE TABLE group_members (
     id BIGSERIAL PRIMARY KEY,
-    member_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
-    cursor_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    member_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
     group_chat_id UUID NOT NULL,
     user_id BIGINT NOT NULL,
     role member_role NOT NULL DEFAULT 'member',
@@ -76,7 +73,6 @@ CREATE TABLE group_members (
 );
 
 CREATE INDEX idx_group_members_member_id ON group_members (member_id);
-CREATE INDEX idx_group_members_cursor_id ON group_members (cursor_id) WHERE is_deleted = FALSE;
 CREATE INDEX idx_group_members_group_chat_id ON group_members (group_chat_id, joined_at DESC) WHERE is_deleted = FALSE;
 CREATE INDEX idx_group_members_user_id ON group_members (user_id, joined_at DESC) WHERE is_deleted = FALSE;
 CREATE INDEX idx_group_members_count ON group_members (group_chat_id) WHERE is_deleted = FALSE;
@@ -87,7 +83,7 @@ CREATE INDEX idx_group_members_role ON group_members (group_chat_id, role) WHERE
 -- ============================================================
 CREATE TABLE group_member_history (
     id BIGSERIAL PRIMARY KEY,
-    history_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    history_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
     group_chat_id UUID NOT NULL,
     user_id BIGINT NOT NULL,
     action member_action NOT NULL,
@@ -129,8 +125,7 @@ CREATE TRIGGER trigger_group_member_settings_updated_at
 -- ============================================================
 CREATE TABLE group_bans (
     id BIGSERIAL PRIMARY KEY,
-    ban_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
-    cursor_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    ban_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
     group_chat_id UUID NOT NULL,
     user_id BIGINT NOT NULL,
     banned_by BIGINT NOT NULL,
@@ -143,15 +138,13 @@ CREATE TABLE group_bans (
 
 CREATE INDEX idx_group_bans_group ON group_bans (group_chat_id, banned_at DESC) WHERE unbanned_at IS NULL;
 CREATE INDEX idx_group_bans_user ON group_bans (user_id, banned_at DESC) WHERE unbanned_at IS NULL;
-CREATE INDEX idx_group_bans_cursor ON group_bans (cursor_id);
 
 -- ============================================================
 -- 群组邀请
 -- ============================================================
 CREATE TABLE group_invites (
     id BIGSERIAL PRIMARY KEY,
-    invite_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
-    cursor_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    invite_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
     group_chat_id UUID NOT NULL,
     inviter_id BIGINT NOT NULL,
     invitee_id BIGINT NOT NULL,
@@ -163,7 +156,6 @@ CREATE TABLE group_invites (
 );
 
 CREATE INDEX idx_group_invites_invite_id ON group_invites (invite_id);
-CREATE INDEX idx_group_invites_cursor_id ON group_invites (cursor_id);
 CREATE INDEX idx_group_invites_invitee ON group_invites (invitee_id, status, created_at DESC);
 CREATE INDEX idx_group_invites_group ON group_invites (group_chat_id, status, created_at DESC);
 
@@ -172,8 +164,7 @@ CREATE INDEX idx_group_invites_group ON group_invites (group_chat_id, status, cr
 -- ============================================================
 CREATE TABLE group_applications (
     id BIGSERIAL PRIMARY KEY,
-    application_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
-    cursor_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    application_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
     group_chat_id UUID NOT NULL,
     applicant_id BIGINT NOT NULL,
     message TEXT,
@@ -184,7 +175,6 @@ CREATE TABLE group_applications (
 );
 
 CREATE INDEX idx_group_applications_application_id ON group_applications (application_id);
-CREATE INDEX idx_group_applications_cursor_id ON group_applications (cursor_id);
 CREATE INDEX idx_group_applications_group_chat_id ON group_applications (group_chat_id, status, created_at DESC);
 CREATE INDEX idx_group_applications_applicant ON group_applications (applicant_id, created_at DESC);
 
@@ -193,8 +183,7 @@ CREATE INDEX idx_group_applications_applicant ON group_applications (applicant_i
 -- ============================================================
 CREATE TABLE group_messages (
     id BIGSERIAL PRIMARY KEY,
-    message_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
-    cursor_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    message_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
     group_chat_id UUID NOT NULL,
     sender_id BIGINT NOT NULL,
     type message_type NOT NULL DEFAULT 'text',
@@ -214,7 +203,6 @@ CREATE TABLE group_messages (
     deleted_at TIMESTAMPTZ
 );
 
-CREATE INDEX idx_group_messages_cursor_id ON group_messages (cursor_id) WHERE is_deleted = FALSE;
 CREATE INDEX idx_group_messages_chat_id ON group_messages (group_chat_id, sent_at DESC) WHERE is_deleted = FALSE;
 CREATE INDEX idx_group_messages_sender ON group_messages (sender_id, sent_at DESC) WHERE is_deleted = FALSE;
 CREATE INDEX idx_group_messages_mentions ON group_messages USING gin (mentions) WHERE mentions IS NOT NULL AND is_deleted = FALSE;
@@ -225,8 +213,7 @@ CREATE INDEX idx_group_messages_content_search ON group_messages USING gin (cont
 -- ============================================================
 CREATE TABLE group_message_read_status (
     id BIGSERIAL PRIMARY KEY,
-    read_status_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
-    cursor_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    read_status_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
     message_id UUID NOT NULL,
     group_chat_id UUID NOT NULL,
     user_id BIGINT NOT NULL,
@@ -235,7 +222,6 @@ CREATE TABLE group_message_read_status (
 );
 
 CREATE INDEX idx_message_read_status_id ON group_message_read_status (read_status_id);
-CREATE INDEX idx_message_read_status_cursor_id ON group_message_read_status (cursor_id);
 CREATE INDEX idx_message_read_status_message_id ON group_message_read_status (message_id, read_at DESC);
 CREATE INDEX idx_message_read_status_user ON group_message_read_status (user_id, read_at DESC);
 CREATE INDEX idx_message_read_status_group ON group_message_read_status (group_chat_id, user_id);
@@ -245,8 +231,7 @@ CREATE INDEX idx_message_read_status_group ON group_message_read_status (group_c
 -- ============================================================
 CREATE TABLE group_message_reactions (
     id BIGSERIAL PRIMARY KEY,
-    reaction_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
-    cursor_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    reaction_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
     message_id UUID NOT NULL REFERENCES group_messages(message_id) ON DELETE CASCADE,
     user_id BIGINT NOT NULL,
     type reaction_type NOT NULL,
@@ -255,7 +240,6 @@ CREATE TABLE group_message_reactions (
 );
 
 CREATE INDEX idx_group_message_reactions_id ON group_message_reactions (reaction_id);
-CREATE INDEX idx_group_message_reactions_cursor_id ON group_message_reactions (cursor_id);
 CREATE INDEX idx_group_message_reactions_message_id ON group_message_reactions (message_id, created_at DESC);
 CREATE INDEX idx_group_message_reactions_user ON group_message_reactions (user_id, created_at DESC);
 

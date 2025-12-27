@@ -1,6 +1,5 @@
 <template>
   <UModal
-    size="2xl"
     title="群组管理"
     description="管理群组设置、成员和权限"
   >
@@ -12,12 +11,11 @@
             <header class="flex items-center justify-between">
               <h4 class="font-medium">邀请新成员</h4>
               <UButton
-                size="sm"
                 :disabled="!canInvite"
                 @click="showInviteModal"
               >
                 <UIcon
-                  name="i-heroicons-user-plus"
+                  name="i-lucide-user-plus"
                   class="mr-1"
                 />
                 邀请成员
@@ -25,23 +23,21 @@
             </header>
           </template>
 
-          <UCard
-            :ui="{ body: 'p-4' }"
-            variant="subtle"
-          >
+          <UCard>
             <header class="flex items-center justify-between mb-3">
               <article>
                 <h5 class="font-medium text-sm">群组分享链接</h5>
-                <p class="text-xs text-secondary-content mt-1">分享此链接让朋友快速找到并加入群组</p>
+                <UBadge color="neutral" variant="soft" size="xs" class="mt-1">
+                  分享此链接让朋友快速找到并加入群组
+                </UBadge>
               </article>
               <UButton
-                size="sm"
                 variant="outline"
                 :loading="generatingCode"
                 @click="generateInviteCode"
               >
                 <UIcon
-                  name="i-heroicons-link"
+                  name="i-lucide-link"
                   class="mr-1"
                 />
                 生成链接
@@ -54,19 +50,17 @@
             >
               <UInput
                 :model-value="inviteCode"
-                readonly
+                :readonly="true"
                 class="flex-1"
               />
               <UButton
-                size="sm"
                 variant="outline"
-                icon="i-heroicons-clipboard"
+                icon="i-lucide-clipboard"
                 @click="copyInviteCode"
               />
               <UButton
-                size="sm"
                 variant="outline"
-                icon="i-heroicons-share"
+                icon="i-lucide-share-2"
                 @click="shareInviteCode"
               />
             </section>
@@ -79,44 +73,62 @@
             <h4 class="font-medium">成员管理</h4>
           </template>
 
-          <ul class="space-y-3 max-h-64 overflow-y-auto">
+          <ul
+            ref="membersListEl"
+            class="space-y-3 max-h-64 overflow-y-auto"
+            @scroll="onMembersListScroll"
+          >
             <li
               v-for="member in members"
               :key="member.user.user_id"
-              class="flex items-center justify-between p-3 bg-surface rounded-lg"
+              class="min-w-0"
             >
-              <header class="flex items-center gap-3">
-                <UAvatar
-                  :alt="member.user.nickname"
-                  :src="member.user.avatar_url"
-                  size="sm"
-                >
-                  {{ member.user.nickname?.charAt(0) || 'U' }}
-                </UAvatar>
+              <UCard variant="soft">
+                <div class="flex items-center justify-between gap-3">
+                  <header class="flex items-center gap-3 min-w-0">
+                    <UAvatar
+                      :alt="member.user.nickname"
+                      :src="member.user.avatar_url"
+                    >
+                      {{ member.user.nickname?.charAt(0) || 'U' }}
+                    </UAvatar>
 
-                <article>
-                  <p class="flex items-center gap-2">
-                    <span class="font-medium text-sm">{{ member.user.nickname }}</span>
-                    <UBadge
-                      :color="getRoleColor(member.role)"
-                      :label="getRoleLabel(member.role)"
-                      size="xs"
+                    <article class="min-w-0">
+                      <p class="flex items-center gap-2 min-w-0">
+                        <span class="font-medium text-sm truncate">{{ member.user.nickname }}</span>
+                        <UBadge
+                          :color="getRoleColor(member.role)"
+                          :label="getRoleLabel(member.role)"
+                        />
+                      </p>
+                      <UBadge color="neutral" variant="soft" size="xs">
+                        加入时间：{{ formatTime(member.joined_at) }}
+                      </UBadge>
+                    </article>
+                  </header>
+
+                  <UDropdownMenu
+                    v-if="canManageMember(member)"
+                    :items="getMemberActions(member)"
+                  >
+                    <UButton
+                      variant="ghost"
+                      icon="i-lucide-ellipsis"
                     />
-                  </p>
-                  <time class="text-xs text-secondary-content">加入时间：{{ formatTime(member.joined_at) }}</time>
-                </article>
-              </header>
+                  </UDropdownMenu>
+                </div>
+              </UCard>
+            </li>
 
-              <UDropdownMenu
-                v-if="canManageMember(member)"
-                :items="getMemberActions(member)"
-              >
-                <UButton
-                  variant="ghost"
-                  icon="i-heroicons-ellipsis-horizontal"
-                  size="sm"
-                />
-              </UDropdownMenu>
+            <!-- 回到顶部（成员较多时） -->
+            <li v-if="showMembersScrollTop" class="sticky bottom-2 flex justify-end">
+              <UButton
+                variant="soft"
+                color="neutral"
+                size="sm"
+                icon="i-lucide-arrow-up"
+                @click="scrollMembersToTop"
+              />
             </li>
           </ul>
         </UCard>
@@ -156,16 +168,20 @@
               />
             </UFormField>
 
-            <section class="flex items-center justify-between p-3 bg-surface rounded-lg">
-              <article>
-                <p class="text-sm font-medium text-secondary-strong">需要密码加入</p>
-                <p class="text-xs text-secondary-content">开启后新成员需要输入密码才能加入</p>
-              </article>
-              <USwitch
-                v-model="groupSettings.password_required"
-                :disabled="!canEditGroup"
-              />
-            </section>
+            <UCard variant="soft">
+              <div class="flex items-center justify-between gap-4">
+                <UUser
+                  class="min-w-0"
+                  name="需要密码加入"
+                  description="开启后新成员需要输入密码才能加入"
+                  size="sm"
+                />
+                <USwitch
+                  v-model="groupSettings.password_required"
+                  :disabled="!canEditGroup"
+                />
+              </div>
+            </UCard>
 
             <UFormField
               v-if="groupSettings.password_required"
@@ -184,19 +200,22 @@
         <!-- 危险操作 -->
         <UCard v-if="canDeleteGroup">
           <template #header>
-            <h4 class="font-medium text-error">危险操作</h4>
+            <UBadge color="error" variant="soft" size="sm" icon="i-lucide-triangle-alert">
+              危险操作
+            </UBadge>
           </template>
 
           <ul class="space-y-3">
             <li class="flex items-center justify-between">
               <article>
                 <h5 class="text-sm font-medium">转移群主</h5>
-                <p class="text-xs text-secondary-content">将群主权限转移给其他管理员</p>
+                <UBadge color="neutral" variant="soft" size="xs" class="mt-1">
+                  将群主权限转移给其他管理员
+                </UBadge>
               </article>
               <UButton
                 color="warning"
                 variant="outline"
-                size="sm"
                 @click="() => transferOwnership(close)"
               >
                 转移群主
@@ -205,13 +224,14 @@
 
             <li class="flex items-center justify-between">
               <article>
-                <h5 class="text-sm font-medium text-error">解散群组</h5>
-                <p class="text-xs text-secondary-content">永久删除群组，此操作不可撤销</p>
+                <h5 class="text-sm font-medium">解散群组</h5>
+                <UBadge color="neutral" variant="soft" size="xs" class="mt-1">
+                  永久删除群组，此操作不可撤销
+                </UBadge>
               </article>
               <UButton
                 color="error"
                 variant="outline"
-                size="sm"
                 @click="() => deleteGroup(close)"
               >
                 解散群组
@@ -264,6 +284,20 @@ const inviteCode = ref('')
 const members = ref<GroupMemberItem[]>([])
 const currentUserRole = ref('member')
 
+// 成员列表滚动增强：回到顶部按钮
+const membersListEl = ref<HTMLElement | null>(null)
+const showMembersScrollTop = ref(false)
+
+const onMembersListScroll = () => {
+  const el = membersListEl.value
+  if (!el) return
+  showMembersScrollTop.value = el.scrollTop > 160
+}
+
+const scrollMembersToTop = () => {
+  membersListEl.value?.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
 // 群组设置
 const groupSettings = ref({
   name: '',
@@ -280,7 +314,7 @@ const canDeleteGroup = computed(() => currentUserRole.value === 'owner')
 
 // 工具函数
 const { formatTime } = useFormatters()
-const toast = useToast()
+const feedback = useFeedbackStore()
 
 // 定义 Badge 颜色类型
 type BadgeColor = 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral'
@@ -316,13 +350,13 @@ const getMemberActions = (member: GroupMemberItem) => {
     if (member.role === 'member') {
       actions.push([{
         label: '设为管理员',
-        icon: 'i-heroicons-shield-check',
+        icon: 'i-lucide-shield-check',
         click: () => promoteMember(member)
       }])
     } else if (member.role === 'admin') {
       actions.push([{
         label: '取消管理员',
-        icon: 'i-heroicons-shield-exclamation',
+        icon: 'i-lucide-shield-alert',
         click: () => demoteMember(member)
       }])
     }
@@ -331,7 +365,7 @@ const getMemberActions = (member: GroupMemberItem) => {
   if (canManageMember(member)) {
     actions.push([{
       label: '踢出群组',
-      icon: 'i-heroicons-user-minus',
+      icon: 'i-lucide-user-minus',
       click: () => kickMember(member)
     }])
   }
@@ -376,13 +410,15 @@ const loadGroupData = async () => {
 
     // 获取当前用户在群组中的角色
     const currentUserId = authStore.user?.user_id
-    const currentMember = members.value.find((m) => m.user?.user_id === currentUserId)
-    currentUserRole.value = currentMember?.role || 'member'
+    if (currentUserId) {
+        const currentMember = members.value.find((m) => m.user?.user_id === currentUserId)
+        currentUserRole.value = currentMember?.role || 'member'
+    }
 
     return { groupSettings: groupSettings.value, members: members.value }
   } catch (err: unknown) {
     loadError.value = getErrorMessage(err, '加载失败')
-    toast.add({ color: 'error', title: '加载失败' })
+    feedback.error('加载失败')
     throw err
   } finally {
     dataLoading.value = false
@@ -393,24 +429,27 @@ const generateInviteCode = async () => {
   generatingCode.value = true
   try {
     // 生成群组分享链接（用户点击后进入群组详情页，可以申请加入）
-    const baseUrl = window.location.origin
+    const baseUrl = useRequestURL().origin
     const groupLink = `${baseUrl}/groups/${props.groupId}`
     inviteCode.value = groupLink
-    toast.add({ color: 'success', title: '分享链接已生成' })
+    feedback.success('分享链接已生成')
   } catch (err: unknown) {
     console.error('生成分享链接失败:', err)
-    toast.add({ color: 'error', title: '生成失败', description: getErrorMessage(err) })
+    feedback.error('生成失败', getErrorMessage(err))
   } finally {
     generatingCode.value = false
   }
 }
 
+const { copy } = useClipboard()
+const { share, isSupported: isShareSupported } = useShare()
+
 const copyInviteCode = async () => {
   try {
-    await navigator.clipboard.writeText(inviteCode.value)
-    toast.add({ color: 'success', title: '邀请码已复制到剪贴板' })
+    await copy(inviteCode.value)
+    feedback.success('邀请码已复制到剪贴板')
   } catch (err) {
-    toast.add({ color: 'error', title: '复制失败' })
+    feedback.error('复制失败')
   }
 }
 
@@ -418,15 +457,15 @@ const shareInviteCode = async () => {
   const shareData = {
     title: `加入群组：${groupSettings.value.name}`,
     text: `邀请您加入我们的群组！邀请码：${inviteCode.value}`,
-    url: `${window.location.origin}/groups/join?code=${inviteCode.value}`
+    url: `${useRequestURL().origin}/groups/join?code=${inviteCode.value}`
   }
 
   try {
-    if (navigator.share) {
-      await navigator.share(shareData)
+    if (isShareSupported.value) {
+      await share(shareData)
     } else {
-      await navigator.clipboard.writeText(shareData.url)
-      toast.add({ color: 'success', title: '邀请链接已复制到剪贴板' })
+      await copy(shareData.url)
+      feedback.success('邀请链接已复制到剪贴板')
     }
   } catch (err) {
     console.error('分享失败:', err)
@@ -457,9 +496,9 @@ const promoteMember = async (member: GroupMemberItem) => {
       role: 'admin'
     })
     member.role = 'admin'
-    toast.add({ color: 'success', title: '设置成功' })
+    feedback.success('设置成功')
   } catch (err: unknown) {
-    toast.add({ color: 'error', title: '设置失败', description: getErrorMessage(err) })
+    feedback.error('设置失败', getErrorMessage(err))
   }
 }
 
@@ -482,9 +521,9 @@ const demoteMember = async (member: GroupMemberItem) => {
       role: 'member'
     })
     member.role = 'member'
-    toast.add({ color: 'success', title: '取消成功' })
+    feedback.success('取消成功')
   } catch (err: unknown) {
-    toast.add({ color: 'error', title: '取消失败', description: getErrorMessage(err) })
+    feedback.error('取消失败', getErrorMessage(err))
   }
 }
 
@@ -511,9 +550,9 @@ const kickMember = async (member: GroupMemberItem) => {
     if (index > -1) {
       members.value.splice(index, 1)
     }
-    toast.add({ color: 'success', title: '踢出成功' })
+    feedback.success('踢出成功')
   } catch (err: unknown) {
-    toast.add({ color: 'error', title: '踢出失败', description: getErrorMessage(err) })
+    feedback.error('踢出失败', getErrorMessage(err))
   }
 }
 
@@ -544,10 +583,10 @@ const deleteGroup = async (close: () => void) => {
   try {
     const groupService = useGroupsService()
     await groupService.deleteGroup({ id: props.groupId })
-    toast.add({ color: 'success', title: '群组已解散' })
+    feedback.success('群组已解散')
     close()
   } catch (err: unknown) {
-    toast.add({ color: 'error', title: '解散失败', description: getErrorMessage(err) })
+    feedback.error('解散失败', getErrorMessage(err))
   }
 }
 
@@ -560,12 +599,12 @@ const saveSettings = async (close: () => void) => {
       name: groupSettings.value.name,
       description: groupSettings.value.description
     })
-    toast.add({ color: 'success', title: '设置已保存' })
+    feedback.success('设置已保存')
     props.onSuccess?.()
     close()
   } catch (err: unknown) {
     console.error('保存设置失败:', err)
-    toast.add({ color: 'error', title: '保存失败', description: getErrorMessage(err) })
+    feedback.error('保存失败', getErrorMessage(err))
   } finally {
     saving.value = false
   }

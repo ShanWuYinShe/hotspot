@@ -10,7 +10,7 @@ class SubscriptionsService extends BaseService {
    * 获取订阅配置
    */
   async getConfig(): Promise<SubscriptionsData> {
-    return this.post<SubscriptionsData>(SUBSCRIPTIONS.GET_CONFIG, {})
+    return this.post<SubscriptionsData>(SUBSCRIPTIONS.ME, {})
   }
 
   /**
@@ -21,10 +21,5 @@ class SubscriptionsService extends BaseService {
   }
 }
 
-export const useSubscriptionsService = () => new SubscriptionsService()
-
-
-
-
-
-
+export const subscriptionsService = new SubscriptionsService()
+export function useSubscriptionsService() { return subscriptionsService }

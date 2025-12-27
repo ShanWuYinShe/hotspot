@@ -4,7 +4,7 @@ import type {
   PaginatedData,
   SendPrivateMessageRequest,
   SendPrivateMessageData,
-  GetPrivateMessagesRequest,
+  PrivateMessagesHistoryRequest,
   PrivateMessageItem,
   UpdatePrivateMessageRequest,
   RecallPrivateMessageRequest,
@@ -12,7 +12,7 @@ import type {
   MarkPrivateMessagesReadRequest,
   AddPrivateMessageReactionRequest,
   RemovePrivateMessageReactionRequest,
-  GetPrivateMessageReactionsRequest,
+  PrivateMessageReactionsRequest,
   MessageReactionItem
 } from '~/types/api'
 
@@ -21,8 +21,8 @@ class PrivateMessagesService extends BaseService {
     return this.post<SendPrivateMessageData>(PRIVATE_MESSAGES.SEND, request)
   }
 
-  async getPrivateMessages(request: GetPrivateMessagesRequest) {
-    return this.post<PaginatedData<PrivateMessageItem>>(PRIVATE_MESSAGES.GET_HISTORY, request)
+  async getPrivateMessages(request: PrivateMessagesHistoryRequest) {
+    return this.post<PaginatedData<PrivateMessageItem>>(PRIVATE_MESSAGES.HISTORY, request)
   }
 
   async update(request: UpdatePrivateMessageRequest) {
@@ -49,8 +49,8 @@ class PrivateMessagesService extends BaseService {
     return this.post<void>(PRIVATE_MESSAGES.REMOVE_REACTION, request)
   }
 
-  async getReactions(request: GetPrivateMessageReactionsRequest) {
-    return this.post<PaginatedData<MessageReactionItem>>(PRIVATE_MESSAGES.GET_REACTIONS_LIST, request)
+  async getReactions(request: PrivateMessageReactionsRequest) {
+    return this.post<PaginatedData<MessageReactionItem>>(PRIVATE_MESSAGES.REACTIONS, request)
   }
 }
 

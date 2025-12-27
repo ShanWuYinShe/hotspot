@@ -2,10 +2,10 @@
  * 智能通知中心组件
  * 展示和管理所有类型的智能通知
  */
-import { SmartNotification, SmartNotificationService, NotificationFilter, NotificationAction } from '../common/services/SmartNotificationService';
+import { SmartNotification, SmartNotificationService, NotificationFilter, NotificationAction, NotificationEvent } from '../core/services/SmartNotificationService';
 import { SystemIcon, AppIcon } from './SystemIcon';
 import { SystemToast } from './SystemToast';
-import { AccessibilityManager } from '../common/accessibility/AccessibilityManager';
+import { AccessibilityManager } from '../core/accessibility/AccessibilityManager';
 
 interface FilterOption {
   key: string;
@@ -55,7 +55,7 @@ export struct NotificationCenter {
    * 设置通知监听器
    */
   private setupNotificationListener(): void {
-    this.notificationService.addListener((notification: SmartNotification) => {
+    this.notificationService.addEventListener(NotificationEvent.CREATED, (event, notification: SmartNotification) => {
       this.loadNotifications();
       
       // 无障碍播报新通知
@@ -275,7 +275,7 @@ export struct NotificationCenter {
       .scrollBar(BarState.Off)
 
       // 通知列表
-      if (this.isLoading) {
+      if (this.isLoading && this.notifications.length === 0) {
         Column() {
           LoadingProgress()
             .width(32)
@@ -291,37 +291,58 @@ export struct NotificationCenter {
         .height(200)
         .justifyContent(FlexAlign.Center)
       } else if (this.notifications.length === 0) {
-        Column() {
-          SystemIcon({
-            icon: AppIcon.EMPTY,
-            iconSize: 48,
-            iconColor: $r('sys.color.ohos_id_color_text_tertiary')
-          })
-          
-          Text('暂无通知')
-            .fontSize(16)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-            .margin({ top: 16 })
+        Refresh({ refreshing: $$this.isLoading, builder: this.RefreshBuilder() }) {
+          Column() {
+            SystemIcon({
+              icon: AppIcon.EMPTY,
+              iconSize: 48,
+              iconColor: $r('sys.color.ohos_id_color_text_tertiary')
+            })
+            
+            Text('暂无通知')
+              .fontSize(16)
+              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .margin({ top: 16 })
+          }
+          .width('100%')
+          .height('100%')
+          .justifyContent(FlexAlign.Center)
         }
-        .width('100%')
-        .height(200)
-        .justifyContent(FlexAlign.Center)
+        .onRefreshing(() => {
+          this.loadNotifications();
+        })
       } else {
-        List({ space: 8 }) {
-          ForEach(this.notifications, (notification: SmartNotification) => {
-            ListItem() {
-              this.buildNotificationItem(notification)
-            }
-          })
+        Refresh({ refreshing: $$this.isLoading, builder: this.RefreshBuilder() }) {
+          List({ space: 8 }) {
+            ForEach(this.notifications, (notification: SmartNotification) => {
+              ListItem() {
+                this.buildNotificationItem(notification)
+              }
+            }, (item: SmartNotification) => item.id)
+          }
+          .width('100%')
+          .layoutWeight(1)
+          .padding({ left: 16, right: 16 })
         }
-        .width('100%')
-        .layoutWeight(1)
-        .padding({ left: 16, right: 16 })
+        .onRefreshing(() => {
+          this.loadNotifications();
+        })
       }
     }
     .width('100%')
     .height('100%')
     .backgroundColor($r('sys.color.ohos_id_color_background'))
+  }
+
+  @Builder
+  RefreshBuilder() {
+    Row() {
+      LoadingProgress().width(24).height(24)
+      Text('正在刷新...').fontSize(14).margin({left: 8}).fontColor($r('sys.color.ohos_id_color_text_secondary'))
+    }
+    .width('100%')
+    .justifyContent(FlexAlign.Center)
+    .padding(10)
   }
 
   /**

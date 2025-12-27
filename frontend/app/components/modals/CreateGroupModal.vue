@@ -1,79 +1,16 @@
 <template>
   <UModal
-    size="xl"
     title="创建群组"
-    description="选择创建方式，快速开始您的群组之旅"
+    description="填写群组信息，并在地图上选一个点作为群组位置"
   >
-    <template #body="{ close }">
-      <!-- 创建方式选择 -->
-      <nav
-        v-if="!showForm"
-        class="space-y-4"
-      >
-        <UCard
-          class="interactive-card cursor-pointer"
-          @click="quickCreate"
-        >
-          <section class="flex items-center gap-4 p-2">
-            <UAvatar
-              icon="i-heroicons-bolt"
-              size="lg"
-              :ui="{ icon: 'text-primary' }"
-            />
-            <article class="flex-1">
-              <header class="flex items-center gap-2">
-                <h4 class="font-semibold">快速创建</h4>
-                <UBadge
-                  color="primary"
-                  variant="soft"
-                  size="xs"
-                >
-                  推荐
-                </UBadge>
-              </header>
-              <p class="text-sm text-secondary-content">使用当前位置和默认设置快速创建群组</p>
-            </article>
-            <UIcon
-              name="i-heroicons-chevron-right"
-              class="text-muted"
-            />
-          </section>
-        </UCard>
-
-        <UCard
-          class="interactive-card cursor-pointer"
-          @click="customCreate"
-        >
-          <section class="flex items-center gap-4 p-2">
-            <UAvatar
-              icon="i-heroicons-cog-6-tooth"
-              size="lg"
-              color="purple"
-            />
-            <article class="flex-1">
-              <h4 class="font-semibold">自定义创建</h4>
-              <p class="text-sm text-secondary-content">详细配置群组信息、位置和权限设置</p>
-            </article>
-            <UIcon
-              name="i-heroicons-chevron-right"
-              class="text-muted"
-            />
-          </section>
-        </UCard>
-      </nav>
-
-      <!-- 创建表单 -->
+    <template #body>
       <UForm
-        v-if="showForm"
+        :schema="schema"
         :state="form"
         class="space-y-6"
-        @submit.prevent
+        @submit="createGroup"
       >
-        <UFormField
-          label="群组名称"
-          name="name"
-          required
-        >
+        <UFormField label="群组名称" name="name" :required="true">
           <UInput
             v-model="form.name"
             placeholder="输入群组名称"
@@ -94,81 +31,111 @@
           />
         </UFormField>
 
-        <UFormField label="群组位置">
-          <div class="flex gap-2">
-            <UInput
-              v-model="form.location_name"
-              placeholder="点击获取当前位置"
-              icon="i-heroicons-map-pin"
-              class="flex-1"
-              readonly
-              required
-            />
-            <UButton
-              variant="outline"
-              icon="i-heroicons-map-pin"
-              :loading="gettingLocation"
-              @click="getCurrentLocation"
-            >
-              {{ form.latitude ? '重新获取' : '获取位置' }}
-            </UButton>
-          </div>
-          <p v-if="form.latitude" class="text-xs text-muted mt-1">
-            位置已获取
-          </p>
+        <UFormField
+          label="群组位置"
+          name="location_name"
+          :required="true"
+          :hint="locationHint"
+        >
+          <!-- 用“选择控件”表达只读位置（而不是输入框），点击进入地图选点 -->
+          <UButton
+            type="button"
+            variant="soft"
+            color="neutral"
+            icon="i-lucide-map-pin"
+            trailing-icon="i-lucide-chevron-right"
+            :block="true"
+            class="justify-between"
+            @click="pickLocation"
+          >
+            <span class="truncate text-left">
+              {{ form.location_name || '请选择位置' }}
+            </span>
+          </UButton>
         </UFormField>
 
-        <template v-if="!isQuickCreate">
-          <UFormField label="最大成员数">
-            <UInput
-              v-model.number="form.max_members"
-              type="number"
-              :min="GROUP_CONSTANTS.MIN_MEMBERS"
-              :max="GROUP_CONSTANTS.MAX_MEMBERS_LIMIT"
-              :placeholder="GROUP_CONSTANTS.MAX_MEMBERS_DEFAULT.toString()"
-            />
-          </UFormField>
+        <UAccordion
+          :items="advancedItems"
+          type="single"
+          collapsible
+        >
+          <template #advanced>
+            <div class="space-y-4 pt-2">
+              <UFormField
+                label="加入方式"
+                name="join_method"
+                hint="开放加入：任何人可直接加入；需要审批：管理员审核；仅邀请：只能通过邀请加入"
+              >
+                <USelectMenu
+                  v-model="form.join_method"
+                  :items="joinMethodItems"
+                  value-key="value"
+                  label-key="label"
+                />
+              </UFormField>
 
-          <UFormField
-            label="群组密码（可选）"
-            hint="设置密码后，用户需要输入密码才能加入群组"
-          >
-            <UInput
-              v-model="form.password"
-              type="password"
-              placeholder="设置群组密码以限制加入"
-            />
-          </UFormField>
-        </template>
+              <UFormField
+                name="is_searchable"
+                orientation="horizontal"
+                class="flex items-start justify-between gap-4"
+              >
+                <template #label>
+                  允许被搜索
+                </template>
+                <template #description>
+                  关闭后，群组不会出现在搜索/附近发现中
+                </template>
+                <USwitch v-model="form.is_searchable" />
+              </UFormField>
+
+              <UFormField label="最大成员数" name="max_members">
+                <UInput
+                  v-model.number="form.max_members"
+                  type="number"
+                  :min="GROUP_CONSTANTS.MIN_MEMBERS"
+                  :max="GROUP_CONSTANTS.MAX_MEMBERS_LIMIT"
+                  :placeholder="GROUP_CONSTANTS.MAX_MEMBERS_DEFAULT.toString()"
+                />
+              </UFormField>
+
+              <UFormField label="群组密码（可选）" name="password" hint="设置后，直接加入需要输入密码">
+                <UInput
+                  v-model="form.password"
+                  type="password"
+                  placeholder="不设置则为公开加入"
+                />
+              </UFormField>
+            </div>
+          </template>
+        </UAccordion>
       </UForm>
     </template>
 
-    <template #footer="{ close }">
+    <template #footer>
       <UButton
-        v-if="showForm"
+        type="button"
         variant="outline"
         :disabled="creating"
-        @click="showForm = false"
+        @click="emit('close')"
       >
-        返回
+        取消
       </UButton>
       <UButton
-        v-if="showForm"
+        type="button"
         :loading="creating"
-        :disabled="!isFormValid"
-        @click="() => createGroup(close)"
+        :disabled="!canSubmit"
+        @click="createGroup"
       >
-        {{ isQuickCreate ? '快速创建' : '创建群组' }}
+        创建群组
       </UButton>
     </template>
   </UModal>
 </template>
 
 <script setup lang="ts">
+import { z } from 'zod'
 import { GROUP_CONSTANTS } from '~/config/defaults'
 import { useGroupsService } from '~/services/groups.service'
-import { geocoding } from '~/utils/geocoding'
-import { getErrorMessage } from '~/utils/error'
 
 interface Props {
   onSuccess?: (groupId: string) => void
@@ -176,110 +143,107 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const creating = ref(false)
-const gettingLocation = ref(false)
-const showForm = ref(false)
-const isQuickCreate = ref(false)
+const emit = defineEmits<{
+  close: [value?: string]
+}>()
 
-const form = ref({
+type JoinMethod = 'open' | 'approval' | 'invite_only'
+
+const joinMethodItems: Array<{ label: string; value: JoinMethod }> = [
+  { label: '开放加入', value: 'open' },
+  { label: '需要审批', value: 'approval' },
+  { label: '仅邀请', value: 'invite_only' }
+]
+
+const advancedItems = [
+  { label: '高级设置', icon: 'i-lucide-sliders-horizontal', slot: 'advanced' }
+]
+
+const schema = z.object({
+  name: z.string().trim().min(1, '请输入群组名称').max(50, '群组名称过长'),
+  description: z.string().max(200, '群组描述过长').optional().or(z.literal('')),
+  // state 中在未选点前为 undefined，因此 schema 也应允许 undefined，最终提交仍由 canSubmit 把关
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+  location_name: z.string().trim().min(1, '请选择位置'),
+  join_method: z.enum(['open', 'approval', 'invite_only']).default('open'),
+  is_searchable: z.boolean().default(true),
+  max_members: z.number().int().min(GROUP_CONSTANTS.MIN_MEMBERS).max(GROUP_CONSTANTS.MAX_MEMBERS_LIMIT),
+  password: z.string().optional()
+})
+
+const form = reactive({
   name: '',
   description: '',
-  latitude: null as number | null,
-  longitude: null as number | null,
+  latitude: undefined as number | undefined,
+  longitude: undefined as number | undefined,
   location_name: '',
+  join_method: 'open' as JoinMethod,
+  is_searchable: true,
   max_members: GROUP_CONSTANTS.MAX_MEMBERS_DEFAULT,
   password: ''
 })
 
-const isFormValid = computed(() => {
-  return form.value.name.trim() &&
-    form.value.latitude !== null &&
-    form.value.longitude !== null &&
-    form.value.location_name.trim()
+const creating = ref(false)
+const feedback = useFeedbackStore()
+const modal = useModal()
+const locationStore = useLocationStore()
+
+onMounted(() => {
+  const current = locationStore.location
+  if (!current) return
+
+  if (form.latitude === undefined) form.latitude = current.latitude
+  if (form.longitude === undefined) form.longitude = current.longitude
+  if (!form.location_name) form.location_name = current.locationName
 })
 
-const toast = useToast()
-const geolocation = useGeolocation()
+const canSubmit = computed(() => {
+  return Boolean(form.name.trim() && form.location_name.trim() && form.latitude !== undefined && form.longitude !== undefined)
+})
 
-const quickCreate = async () => {
-  isQuickCreate.value = true
+const locationHint = computed(() => {
+  if (form.latitude === undefined || form.longitude === undefined) return '请选择一个位置点'
+  return `${form.latitude.toFixed(6)}, ${form.longitude.toFixed(6)}`
+})
 
-  const position = await geolocation.getPosition({ silent: true })
-  if (position) {
-    form.value.latitude = position.coords.latitude
-    form.value.longitude = position.coords.longitude
-    form.value.location_name = '当前位置'
-    form.value.name = `${new Date().toLocaleDateString()} 的群组`
-    form.value.description = '欢迎加入我们的群组！'
-  } else {
-    toast.add({ color: 'warning', title: '未能获取位置', description: '请手动输入位置信息' })
-  }
-
-  showForm.value = true
+async function pickLocation() {
+  await modal.showLocationPicker((loc) => {
+    form.latitude = loc.latitude
+    form.longitude = loc.longitude
+    form.location_name = loc.locationName
+  })
 }
 
-const customCreate = () => {
-  isQuickCreate.value = false
-  showForm.value = true
-}
-
-const getCurrentLocation = async () => {
-  gettingLocation.value = true
-  try {
-    const position = await geolocation.getPosition()
-    if (!position) {
-      gettingLocation.value = false
-      return
-    }
-
-    form.value.latitude = position.coords.latitude
-    form.value.longitude = position.coords.longitude
-
-    form.value.location_name = await geocoding.getLocationName(
-      position.coords.latitude,
-      position.coords.longitude
-    )
-
-    toast.add({ color: 'success', title: '位置获取成功' })
-  } catch (err) {
-    console.error('获取位置失败:', err)
-    toast.add({ color: 'error', title: '位置获取失败', description: '请手动输入位置信息' })
-  } finally {
-    gettingLocation.value = false
-  }
-}
-
-const createGroup = async (close: () => void) => {
-  if (!isFormValid.value) return
+async function createGroup() {
+  if (!canSubmit.value || creating.value) return
+  if (form.latitude === undefined || form.longitude === undefined) return
 
   creating.value = true
   try {
     const groupService = useGroupsService()
-
-    let passwordHash: string | undefined
-    if (form.value.password) {
-      const { hashPassword } = await import('~/utils/password')
-      passwordHash = await hashPassword(form.value.password)
-    }
-
     const response = await groupService.create({
-      name: form.value.name,
-      description: form.value.description || undefined,
-      avatar_url: undefined,
+      name: form.name.trim(),
+      description: form.description.trim() || undefined,
+      avatar_file_id: undefined,
+      tags: undefined,
       settings: {
-        join_method: 'open',
-        is_searchable: true,
-        max_members: form.value.max_members,
-        password_hash: passwordHash
+        join_method: form.join_method,
+        is_searchable: form.is_searchable,
+        max_members: form.max_members,
+        latitude: form.latitude,
+        longitude: form.longitude,
+        location_name: form.location_name,
+        password: form.password.trim() || undefined
       }
     })
 
-    toast.add({ color: 'success', title: '群组创建成功', description: '您已成为群主，可以开始邀请朋友加入了！' })
+    feedback.success('群组创建成功', '您已成为群主，可以开始邀请朋友加入了！')
     props.onSuccess?.(response.id)
-    close()
+    emit('close', response.id)
   } catch (err: unknown) {
     console.error('创建群组失败:', err)
-    toast.add({ color: 'error', title: '创建失败', description: getErrorMessage(err, '请检查网络连接后重试') })
+    feedback.error('创建失败', getErrorMessage(err, '请检查网络连接后重试'))
   } finally {
     creating.value = false
   }

@@ -4,7 +4,7 @@ import type {
   AuthData,
   RegisterRequest,
   LoginRequest,
-  CreateTempRequest,
+  GuestRequest,
   RequestPasswordResetRequest,
   RequestPasswordResetData,
   VerifyResetCodeRequest,
@@ -12,7 +12,7 @@ import type {
   ResetPasswordRequest,
   ChangePasswordRequest,
   CheckStatusData,
-  GetSessionsRequest,
+  SessionsRequest,
   RevokeSessionRequest,
   SessionItem,
   PaginatedData
@@ -31,8 +31,8 @@ class AuthService extends BaseService {
     return this.post<void>(AUTH.LOGOUT, {})
   }
 
-  async createTempUser(data: CreateTempRequest) {
-    return this.publicPost<AuthData>(AUTH.CREATE_TEMP, data)
+  async guest(data: GuestRequest) {
+    return this.publicPost<AuthData>(AUTH.GUEST, data)
   }
 
   async checkStatus() {
@@ -57,8 +57,8 @@ class AuthService extends BaseService {
     return this.post<void>(AUTH.ME.CHANGE_PASSWORD, data)
   }
 
-  async getSessions(params: GetSessionsRequest = {}) {
-    return this.post<PaginatedData<SessionItem>>(AUTH.ME.GET_SESSIONS, params)
+  async getSessions(params: SessionsRequest = {}) {
+    return this.post<PaginatedData<SessionItem>>(AUTH.ME.SESSIONS, params)
   }
 
   async revokeSession(data: RevokeSessionRequest) {

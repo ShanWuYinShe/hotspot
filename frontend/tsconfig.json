@@ -17,10 +17,5 @@
     "strictNullChecks": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    // 允许一些灵活性以避免过度严格
-    "noUncheckedIndexedAccess": false,
-    "noPropertyAccessFromIndexSignature": false,
-    "noImplicitOverride": false,
-    "exactOptionalPropertyTypes": false
   }
 }

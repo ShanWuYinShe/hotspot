@@ -8,7 +8,11 @@
       :class="{ 'flex-row-reverse': i % 3 === 0 }" 
     >
       <!-- 头像骨架 -->
-      <USkeleton class="w-8 h-8 rounded-full shrink-0" />
+      <UAvatar
+        size="xs"
+        icon="i-lucide-user"
+        color="neutral"
+      />
       
       <!-- 消息内容骨架 -->
       <div class="flex-1 max-w-xs space-y-2">
@@ -16,17 +20,18 @@
         <USkeleton class="h-3 w-16" />
         
         <!-- 消息气泡骨架 -->
-        <div 
-          class="p-3 rounded-2xl space-y-1"
-          :class="i % 3 === 0 ? 'bg-primary-subtle' : 'bg-interactive'"
+        <UCard
+          :variant="i % 3 === 0 ? 'subtle' : 'soft'"
         >
+          <div class="space-y-1">
           <USkeleton class="h-4 w-full" />
           <USkeleton 
             v-if="i % 2 === 0" 
             class="h-4"
             :class="i % 4 === 0 ? 'w-3/4' : 'w-1/2'"
           />
-        </div>
+          </div>
+        </UCard>
         
         <!-- 时间戳骨架 -->
         <USkeleton class="h-2 w-12" />

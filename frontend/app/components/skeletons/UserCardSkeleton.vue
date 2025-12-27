@@ -3,9 +3,11 @@
     <div class="flex items-center gap-4">
       <!-- 用户头像骨架 -->
       <div class="relative">
-        <USkeleton class="h-12 w-12 rounded-full" />
-        <!-- 在线状态指示器骨架 -->
-        <USkeleton class="absolute -bottom-1 -right-1 h-4 w-4 rounded-full" />
+        <UAvatar
+          size="md"
+          icon="i-lucide-user"
+          color="neutral"
+        />
       </div>
 
       <!-- 用户信息骨架 -->

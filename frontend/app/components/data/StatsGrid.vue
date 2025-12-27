@@ -3,78 +3,84 @@
     <UCard
       v-for="stat in stats"
       :key="stat.key"
-      class="interactive-card border cursor-pointer"
+      class="h-full"
+      :variant="stat.onClick ? 'interactive' : 'outline'"
       @click="stat.onClick?.()"
     >
-      <div class="flex items-center gap-4">
-        <!-- 图标区域 -->
-        <div 
-          class="p-3 rounded-lg shrink-0"
-          :class="getIconBgClass(stat.color)"
-        >
-          <UIcon 
-            :name="stat.icon" 
-            class="icon-lg"
-            :class="getIconClass(stat.color)"
-          />
-        </div>
-        
-        <!-- 数据区域 -->
+      <div class="flex items-start gap-4">
+        <UAvatar
+          :icon="stat.icon"
+          size="lg"
+          :color="getUiColor(stat.color)"
+        />
+
         <div class="flex-1 min-w-0">
-          <div class="flex items-baseline gap-2">
-            <p class="text-2xl font-bold text-primary-content truncate">
+          <div class="flex items-center gap-2">
+            <p class="hs-stat-value">
               {{ transformValue(stat.value) }}
             </p>
+
             <UBadge
               v-if="stat.change !== undefined"
-              :color="getChangeColor(stat.change)"
+              size="sm"
               variant="soft"
-              size="xs"
+              :color="getChangeBadgeColor(stat.change)"
             >
-              {{ transformChange(stat.change) }}
+              <UIcon
+                :name="stat.change >= 0 ? 'i-lucide-trending-up' : 'i-lucide-trending-down'"
+                :size="14"
+              />
+              <span class="ml-1">
+                {{ transformChange(stat.change) }}
+              </span>
             </UBadge>
           </div>
-          <p class="text-sm text-secondary-content truncate">
+
+          <p class="hs-stat-label">
             {{ stat.label }}
           </p>
-          <p v-if="stat.description" class="text-xs text-muted truncate mt-1">
+          <UBadge
+            v-if="stat.description"
+            color="neutral"
+            variant="soft"
+            size="xs"
+            class="mt-1 w-fit max-w-full truncate"
+          >
             {{ stat.description }}
-          </p>
+          </UBadge>
+
+          <div v-if="stat.trend || stat.extraContent" class="mt-4">
+            <USeparator class="mb-4" />
+            <div v-if="stat.trend" class="flex items-center justify-between gap-3">
+              <UBadge color="neutral" variant="soft" size="xs">趋势</UBadge>
+              <UBadge
+                variant="soft"
+                size="sm"
+                :color="getTrendBadgeColor(stat.trend)"
+              >
+                <UIcon :name="getTrendIcon(stat.trend)" :size="14" />
+                <span class="ml-1">
+                  {{ getTrendText(stat.trend) }}
+                </span>
+              </UBadge>
+            </div>
+
+            <div v-if="stat.extraContent" class="mt-3">
+              <component :is="stat.extraContent" v-bind="stat.extraProps" />
+            </div>
+          </div>
         </div>
-        
-        <!-- 操作按钮 -->
-        <div v-if="stat.actions?.length" class="shrink-0">
+
+        <div v-if="stat.actions?.length" class="shrink-0 -mt-1 -mr-1">
           <UDropdownMenu :items="stat.actions">
             <UButton
               variant="ghost"
+              color="neutral"
               size="sm"
-              icon="i-heroicons-ellipsis-horizontal"
+              icon="i-lucide-ellipsis"
               @click.stop
             />
           </UDropdownMenu>
-        </div>
-      </div>
-      
-      <!-- 趋势图或额外内容 -->
-      <div v-if="stat.trend || stat.extraContent" class="mt-4 pt-4 border-t ">
-        <!-- 简单趋势指示器 -->
-        <div v-if="stat.trend" class="flex items-center justify-between text-xs">
-          <span class="text-muted">趋势</span>
-          <div class="flex items-center gap-1">
-            <UIcon 
-              :name="getTrendIcon(stat.trend)" 
-              class="icon-xs"
-              :class="getTrendColor(stat.trend)"
-            />
-            <span :class="getTrendColor(stat.trend)">
-              {{ getTrendText(stat.trend) }}
-            </span>
-          </div>
-        </div>
-        
-        <!-- 额外内容插槽 -->
-        <div v-if="stat.extraContent">
-          <component :is="stat.extraContent" v-bind="stat.extraProps" />
         </div>
       </div>
     </UCard>
@@ -95,7 +101,7 @@ export interface StatItem {
   label: string
   value: number | string
   icon: string
-  color?: 'blue' | 'green' | 'orange' | 'purple' | 'red' | 'yellow' | 'indigo' | 'pink'
+  color?: 'blue' | 'green' | 'orange' | 'purple' | 'red' | 'yellow' | 'indigo' | 'pink' | 'primary'
   description?: string
   change?: number // 变化百分比
   trend?: 'up' | 'down' | 'stable'
@@ -118,13 +124,15 @@ const props = withDefaults(defineProps<Props>(), {
 const { formatCount } = useFormatters()
 
 // 转换数值显示
-const transformValue = (value: number | string) => {
+const transformValue = (value: number | string | undefined) => {
+  if (value === undefined) return '0'
   if (typeof value === 'string') return value
   return formatCount(value)
 }
 
 // 转换变化百分比
-const transformChange = (change: number) => {
+const transformChange = (change: number | undefined) => {
+  if (change === undefined) return '0%'
   const sign = change > 0 ? '+' : ''
   return `${sign}${change.toFixed(1)}%`
 }
@@ -150,51 +158,30 @@ const gridClass = computed(() => {
   return `${baseClass} ${responsiveClasses[props.columns]}`
 })
 
-// 颜色映射
-const colorMaps = {
-  blue: {
-    bg: 'bg-info-base',
-    icon: 'text-info'
-  },
-  green: {
-    bg: 'bg-success-base',
-    icon: 'text-success'
-  },
-  orange: {
-    bg: 'bg-warning-base',
-    icon: 'text-warning'
-  },
-  purple: {
-    bg: 'bg-purple-subtle',
-    icon: 'text-purple'
-  },
-  red: {
-    bg: 'bg-red-subtle',
-    icon: 'text-error'
-  },
-  yellow: {
-    bg: 'bg-yellow-subtle',
-    icon: 'text-yellow'
-  },
-  indigo: {
-    bg: 'bg-indigo-subtle',
-    icon: 'text-indigo'
-  },
-  pink: {
-    bg: 'bg-pink-subtle',
-    icon: 'text-pink'
+const getUiColor = (
+  color: StatItem['color'] = 'primary'
+): 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral' => {
+  switch (color) {
+    case 'green':
+      return 'success'
+    case 'orange':
+    case 'yellow':
+      return 'warning'
+    case 'red':
+      return 'error'
+    case 'blue':
+      return 'info'
+    case 'purple':
+    case 'indigo':
+    case 'pink':
+      return 'secondary'
+    case 'primary':
+    default:
+      return 'primary'
   }
 }
 
-const getIconBgClass = (color: string = 'blue') => {
-  return colorMaps[color as keyof typeof colorMaps]?.bg || colorMaps.blue.bg
-}
-
-const getIconClass = (color: string = 'blue') => {
-  return colorMaps[color as keyof typeof colorMaps]?.icon || colorMaps.blue.icon
-}
-
-const getChangeColor = (change: number) => {
+const getChangeBadgeColor = (change: number): 'success' | 'error' | 'neutral' => {
   if (change > 0) return 'success'
   if (change < 0) return 'error'
   return 'neutral'
@@ -202,17 +189,17 @@ const getChangeColor = (change: number) => {
 
 const getTrendIcon = (trend: string) => {
   switch (trend) {
-    case 'up': return 'i-heroicons-arrow-trending-up'
-    case 'down': return 'i-heroicons-arrow-trending-down'
-    default: return 'i-heroicons-minus'
+    case 'up': return 'i-lucide-trending-up'
+    case 'down': return 'i-lucide-trending-down'
+    default: return 'i-lucide-minus'
   }
 }
 
-const getTrendColor = (trend: string) => {
+const getTrendBadgeColor = (trend: string) => {
   switch (trend) {
-    case 'up': return 'text-success'
-    case 'down': return 'text-error'
-    default: return 'text-slate'
+    case 'up': return 'success'
+    case 'down': return 'error'
+    default: return 'neutral'
   }
 }
 

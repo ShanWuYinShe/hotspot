@@ -1,104 +1,30 @@
-/// 幂等性中间件实现
-///
-/// 服务端控制幂等性设计规范
+/// 幂等性中间件实现（最佳实践版）
 ///
 /// 核心原则：
-/// - 零信任原则：不依赖客户端生成或提供幂等键
-/// - 服务端完全控制：基于请求内容自动生成幂等键
-/// - 透明化处理：客户端无需任何修改
+/// - **避免误去重**：同内容的“重复意图”必须允许（例如用户连续发送两条相同文本）。
+/// - **客户端意图唯一**：仅当客户端提供 Idempotency-Key（或 X-Idempotency-Key）时才启用幂等。
+/// - **不依赖请求体**：幂等键只基于 (user_id + endpoint + client_key) 计算，兼容 multipart 等非 JSON 请求。
+/// - **仅缓存业务成功**：只缓存 ApiResponse.code == 0 的响应，避免把错误响应“钉死”。
 use axum::{
     body::Body,
     extract::{Request, State},
-    http::{HeaderValue, StatusCode},
+    http::{HeaderMap, HeaderValue, StatusCode},
     middleware::Next,
     response::Response,
 };
-use chrono::{DateTime, Timelike, Utc};
 use redis::AsyncCommands;
-use serde_json::Value;
 use sha2::{Digest, Sha256};
-use std::collections::BTreeMap;
 
 use crate::{error::AppError, state::AppState};
 
-/// 幂等键生成器
-pub struct IdempotencyKeyGenerator;
-
-impl IdempotencyKeyGenerator {
-    /// 生成幂等键
-    ///
-    /// 参数:
-    /// - user_id: 从JWT token中提取的用户ID
-    /// - endpoint: API端点路径（如 "/api/v1/protected/chat_messages/send_message"）
-    /// - body: 请求体JSON（已标准化）
-    /// - time_window: 时间窗口（5分钟为单位）
-    pub fn generate(
-        user_id: i64,
-        endpoint: &str,
-        body: &str,
-        time_window: DateTime<Utc>,
-    ) -> String {
-        let mut hasher = Sha256::new();
-        hasher.update(user_id.to_string());
-        hasher.update(endpoint);
-        hasher.update(body);
-        hasher.update(time_window.to_rfc3339());
-
-        let result = hasher.finalize();
-        format!("{:x}", result)
-    }
-
-    /// 计算时间窗口（向下取整到5分钟）
-    ///
-    /// 例如:
-    /// - 2025-11-08T10:27:30Z → 2025-11-08T10:25:00Z
-    /// - 2025-11-08T10:33:45Z → 2025-11-08T10:30:00Z
-    pub fn calculate_time_window(now: DateTime<Utc>) -> DateTime<Utc> {
-        let minutes = now.minute();
-        let window_minutes = (minutes / 5) * 5;
-        now.with_minute(window_minutes)
-            .unwrap()
-            .with_second(0)
-            .unwrap()
-            .with_nanosecond(0)
-            .unwrap()
-    }
-}
-
-/// JSON 标准化器
-pub struct JsonNormalizer;
-
-impl JsonNormalizer {
-    /// 标准化JSON（确保相同内容生成相同幂等键）
-    ///
-    /// 规则:
-    /// 1. 移除所有空白字符
-    /// 2. Key按字母顺序排序
-    /// 3. 忽略特殊字段: client_request_id, timestamp, nonce
-    pub fn normalize(json: &Value) -> String {
-        match json {
-            Value::Object(map) => {
-                let filtered: BTreeMap<String, Value> = map
-                    .iter()
-                    .filter(|(key, _)| {
-                        !matches!(key.as_str(), "client_request_id" | "timestamp" | "nonce")
-                    })
-                    .map(|(k, v)| (k.clone(), v.clone()))
-                    .collect();
-
-                serde_json::to_string(&filtered).unwrap_or_default()
-            }
-            _ => serde_json::to_string(json).unwrap_or_default(),
-        }
-    }
-}
+const IDEMPOTENCY_TTL_SECONDS: usize = 24 * 60 * 60; // 24小时
 
 /// 幂等性中间件
 ///
 /// 仅对需要幂等处理的端点生效
 pub async fn idempotency_middleware(
     State(state): State<AppState>,
-    mut req: Request,
+    req: Request,
     next: Next,
 ) -> Result<Response, AppError> {
     // 1. 检查是否需要幂等处理
@@ -106,104 +32,140 @@ pub async fn idempotency_middleware(
         return Ok(next.run(req).await);
     }
 
-    // 2. 提取上下文
+    // 2. 读取客户端幂等键：没有则直接透传，避免误去重
+    let client_key = match extract_client_idempotency_key(req.headers()) {
+        Some(v) => v,
+        None => return Ok(next.run(req).await),
+    };
+
+    // 3. 提取上下文
     let endpoint = req.uri().path().to_string();
 
-    // 3. 读取请求体
-    let (parts, body) = req.into_parts();
-
-    let user_id = parts
-        .extensions
+    // 4. 提取 user_id（由 auth_middleware 注入 extensions）
+    let user_id = req
+        .extensions()
         .get::<i64>()
         .copied()
         .ok_or_else(|| AppError::Unauthorized("未认证".to_string()))?;
 
-    let bytes = axum::body::to_bytes(body, usize::MAX)
-        .await
-        .map_err(|_| AppError::BadRequest("无法读取请求体".to_string()))?;
+    // 5. 生成服务端缓存用幂等 hash key
+    let hashed_key = hash_idempotency_key(user_id, &endpoint, &client_key);
 
-    // 4. 解析并标准化JSON
-    let json_value: Value = serde_json::from_slice(&bytes)
-        .map_err(|_| AppError::BadRequest("无效的JSON格式".to_string()))?;
-    let normalized_body = JsonNormalizer::normalize(&json_value);
-
-    // 5. 计算时间窗口
-    let time_window = IdempotencyKeyGenerator::calculate_time_window(Utc::now());
-
-    // 6. 生成幂等键
-    let idempotency_key =
-        IdempotencyKeyGenerator::generate(user_id, &endpoint, &normalized_body, time_window);
-
-    // 7. 检查缓存
-    let cache_key = format!("idempotency:{}", idempotency_key);
+    // 6. 检查缓存
+    let cache_key = format!("idempotency:{}", hashed_key);
     let mut redis_conn = state.redis.clone();
 
     if let Ok(Some(cached_response)) = redis_conn.get::<&str, Option<String>>(&cache_key).await {
-        // 返回缓存的响应
-        tracing::debug!("幂等键命中缓存: {}", idempotency_key);
-        return Ok(build_cached_response(&cached_response, &idempotency_key));
+        tracing::debug!("幂等键命中缓存: {}", hashed_key);
+        return Ok(build_cached_response(
+            &cached_response,
+            &client_key,
+            &hashed_key,
+        ));
     }
 
-    // 8. 重新构建请求
-    req = Request::from_parts(parts, Body::from(bytes));
-
-    // 9. 执行业务逻辑
+    // 7. 执行业务逻辑
     let response = next.run(req).await;
 
-    // 10. 如果成功，缓存响应
-    if response.status().is_success() {
-        // 提取响应体
-        let (parts, body) = response.into_parts();
-        let bytes = axum::body::to_bytes(body, usize::MAX)
-            .await
-            .unwrap_or_default();
-        let response_body = String::from_utf8_lossy(&bytes).to_string();
+    // 8. 只缓存业务成功（ApiResponse.code == 0）
+    //    注意：业务成功与否以 ApiResponse.code 为准，不依赖 HTTP status。
+    let (parts, body) = response.into_parts();
+    let bytes = axum::body::to_bytes(body, usize::MAX)
+        .await
+        .unwrap_or_default();
+    let response_body = String::from_utf8_lossy(&bytes).to_string();
 
-        // 缓存到Redis（10分钟 = 2倍时间窗口）
+    let should_cache = serde_json::from_slice::<serde_json::Value>(&bytes)
+        .ok()
+        .and_then(|v| v.get("code").and_then(|c| c.as_i64()))
+        .map(|code| code == 0)
+        .unwrap_or(false);
+
+    if should_cache {
         let _: () = redis::cmd("SETEX")
             .arg(&cache_key)
-            .arg(600)
+            .arg(IDEMPOTENCY_TTL_SECONDS)
             .arg(&response_body)
             .query_async(&mut redis_conn)
             .await
             .unwrap_or_default();
-
-        // 重新构建响应
-        let mut response = Response::from_parts(parts, Body::from(bytes));
-        if let Ok(header_value) = HeaderValue::from_str(&idempotency_key) {
-            response
-                .headers_mut()
-                .insert("X-Idempotent-Key", header_value);
-        }
-        Ok(response)
-    } else {
-        Ok(response)
     }
+
+    // 9. 重新构建响应并写入幂等相关 header
+    let mut response = Response::from_parts(parts, Body::from(bytes));
+    attach_idempotency_headers(&mut response, &client_key, &hashed_key, false);
+    Ok(response)
 }
 
 /// 判断是否需要幂等处理
 fn should_check_idempotency(path: &str) -> bool {
     matches!(
         path,
-        "/api/v1/protected/chat_messages/send_message"
+        // 发送消息：必须允许“同内容重复意图”，所以只在客户端提供 key 时去重重试
+        "/api/v1/protected/private_messages/send"
+            | "/api/v1/protected/group_messages/send"
+            // 创建类：推荐客户端提供 key，避免弱网重试造成重复创建
             | "/api/v1/protected/moments/create"
-            | "/api/v1/protected/user/me/follow_user"  // 好友 = 互相关注
             | "/api/v1/protected/group_chats/create"
-            | "/api/v1/protected/media/upload_file"
+            // 上传：multipart，不应读取 body；仅在客户端提供 key 时去重
+            | "/api/v1/protected/media/upload"
+            | "/api/v1/protected/media/complete_upload"
+            // 关注：虽然天然幂等，但可通过 key 去重重试，减少写放大
+            | "/api/v1/protected/user/me/follow"
     )
 }
 
-/// 构建缓存的响应
-fn build_cached_response(cached_body: &str, idempotency_key: &str) -> Response {
-    let mut response = Response::new(Body::from(cached_body.to_owned()));
-    *response.status_mut() = StatusCode::OK;
+fn extract_client_idempotency_key(headers: &HeaderMap) -> Option<String> {
+    let raw = headers
+        .get("Idempotency-Key")
+        .or_else(|| headers.get("X-Idempotency-Key"))?;
+    let s = raw.to_str().ok()?.trim().to_string();
+    if s.is_empty() {
+        None
+    } else {
+        Some(s)
+    }
+}
+
+fn hash_idempotency_key(user_id: i64, endpoint: &str, client_key: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(user_id.to_string());
+    hasher.update(":");
+    hasher.update(endpoint);
+    hasher.update(":");
+    hasher.update(client_key);
+    format!("{:x}", hasher.finalize())
+}
+
+fn attach_idempotency_headers(
+    response: &mut Response,
+    client_key: &str,
+    hashed_key: &str,
+    replayed: bool,
+) {
+    // 回放响应需要显式设置 content-type
     response
         .headers_mut()
-        .insert("X-Idempotent-Replayed", HeaderValue::from_static("true"));
-    if let Ok(header_value) = HeaderValue::from_str(idempotency_key) {
-        response
-            .headers_mut()
-            .insert("X-Idempotent-Key", header_value);
+        .insert("Content-Type", HeaderValue::from_static("application/json"));
+
+    response.headers_mut().insert(
+        "X-Idempotent-Replayed",
+        HeaderValue::from_static(if replayed { "true" } else { "false" }),
+    );
+
+    if let Ok(v) = HeaderValue::from_str(client_key) {
+        response.headers_mut().insert("Idempotency-Key", v.clone());
+        response.headers_mut().insert("X-Idempotency-Key", v);
     }
+    if let Ok(v) = HeaderValue::from_str(hashed_key) {
+        response.headers_mut().insert("X-Idempotency-Hash", v);
+    }
+}
+
+/// 构建缓存命中的响应
+fn build_cached_response(cached_body: &str, client_key: &str, hashed_key: &str) -> Response {
+    let mut response = Response::new(Body::from(cached_body.to_owned()));
+    *response.status_mut() = StatusCode::OK;
+    attach_idempotency_headers(&mut response, client_key, hashed_key, true);
     response
 }

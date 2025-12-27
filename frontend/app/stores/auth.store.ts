@@ -14,12 +14,12 @@
  */
 
 import { defineStore } from 'pinia'
-import type { UserResponse } from '~/types/client'
+import type { UserDetailData } from '~/types/client'
 
 export interface AuthSession {
-  user: UserResponse
+  user: UserDetailData
   accessToken: string              // access_token（用于 API 请求）
-  refreshToken: string             // refresh_token（用于刷新 access_token）
+  refreshToken: string | null      // refresh_token（app 场景）；web cookie 场景为 null（HttpOnly cookie 存储）
   accessTokenExpiresAt: number     // access_token 过期时间（毫秒时间戳）
   refreshTokenExpiresAt: number    // refresh_token 过期时间（毫秒时间戳）
   loginTime: number
@@ -51,6 +51,11 @@ export const useAuthStore = defineStore('auth', () => {
     return _authState.value.accounts[_authState.value.currentUserId] || null
   })
 
+  // 是否存在当前会话（代表“曾经/正在登录”，但不代表 access_token 仍有效）
+  const hasSession = computed(() => {
+    return !!currentSession.value
+  })
+
   // access_token 是否有效（未过期）
   const isAccessTokenValid = computed(() => {
     const session = currentSession.value
@@ -65,11 +70,29 @@ export const useAuthStore = defineStore('auth', () => {
     return Date.now() < session.refreshTokenExpiresAt
   })
 
-  // 是否已认证：有 access_token 且用户信息存在
+  /**
+   * 是否已认证：access_token 存在且未过期
+   * - 该状态用于“当前能否访问 protected API”
+   * - access_token 过期后即视为未认证（但仍可能具备 refresh 能力）
+   */
   const isAuthenticated = computed(() => {
     const session = currentSession.value
     if (!session) return false
-    return !!(session.accessToken && session.user)
+    return !!(session.accessToken && session.user && Date.now() < session.accessTokenExpiresAt)
+  })
+
+  /**
+   * 是否允许尝试刷新（统一前置条件）
+   * - 必须有会话（避免“完全未登录”还去打 refresh_token）
+   * - refresh_token 未过期
+   * - app 场景必须有 refreshToken 值；web 场景 refreshToken 可能为空（HttpOnly cookie）
+   */
+  const canAttemptRefresh = computed(() => {
+    const session = currentSession.value
+    if (!session) return false
+    if (Date.now() >= session.refreshTokenExpiresAt) return false
+    // web: refreshToken 可能为空（cookie），允许；app: refreshToken 有值也允许
+    return true
   })
 
   // access_token 是否过期（用于判断是否需要刷新）
@@ -96,15 +119,15 @@ export const useAuthStore = defineStore('auth', () => {
   // ============ Setter ============
 
   const setAccountSession = (
-    userOrId: UserResponse | { user_id: number; nickname: string },
+    userOrId: UserDetailData | { user_id: number; nickname: string },
     accessToken: string,
-    refreshToken: string,
+    refreshToken: string | null | undefined,
     accessTokenExpiresAt: number,
     refreshTokenExpiresAt: number
   ) => {
-    // 支持从 AuthData（只有 user_id 和 nickname）或完整的 UserResponse 创建 session
-    const user: UserResponse = 'geo' in userOrId
-      ? userOrId as UserResponse
+    // 支持从 AuthData（只有 user_id 和 nickname）或完整的 UserDetailData 创建 session
+    const user: UserDetailData = 'geo' in userOrId
+      ? userOrId as UserDetailData
       : {
           user_id: userOrId.user_id,
           nickname: userOrId.nickname,
@@ -117,7 +140,7 @@ export const useAuthStore = defineStore('auth', () => {
     const session: AuthSession = {
       user,
       accessToken,
-      refreshToken,
+      refreshToken: typeof refreshToken === 'string' ? refreshToken : null,
       accessTokenExpiresAt,
       refreshTokenExpiresAt,
       loginTime: _authState.value.accounts[userId]?.loginTime || now,
@@ -142,7 +165,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     _authState.value.currentUserId = userId
-    _authState.value.accounts[userId].lastActiveTime = Date.now()
+    account.lastActiveTime = Date.now()
 
     const orderIndex = _authState.value.accountOrder.indexOf(userId)
     if (orderIndex > 0) {
@@ -155,7 +178,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const updateCurrentTokens = (
     accessToken: string,
-    refreshToken: string,
+    refreshToken: string | null | undefined,
     accessTokenExpiresAt: number,
     refreshTokenExpiresAt: number
   ) => {
@@ -164,14 +187,16 @@ export const useAuthStore = defineStore('auth', () => {
     const session = _authState.value.accounts[_authState.value.currentUserId]
     if (session) {
       session.accessToken = accessToken
-      session.refreshToken = refreshToken
+      // web cookie 模式刷新不会在 body 返回 refresh_token（cookie 已更新）：此时保持 null
+      // app 模式：refresh_token 会更新
+      if (typeof refreshToken === 'string') session.refreshToken = refreshToken
       session.accessTokenExpiresAt = accessTokenExpiresAt
       session.refreshTokenExpiresAt = refreshTokenExpiresAt
       session.lastActiveTime = Date.now()
     }
   }
 
-  const updateCurrentUser = (userData: Partial<UserResponse>) => {
+  const updateCurrentUser = (userData: Partial<UserDetailData>) => {
     if (!_authState.value.currentUserId) return
 
     const session = _authState.value.accounts[_authState.value.currentUserId]
@@ -206,6 +231,14 @@ export const useAuthStore = defineStore('auth', () => {
     return null
   }
 
+  /**
+   * 锁定当前会话（保留本地多账户列表，但进入“未登录态”）
+   * - 用于多账户场景：用户希望暂时退出当前账号，但不删除本地已保存账户
+   */
+  const lock = () => {
+    _authState.value.currentUserId = null
+  }
+
   const logoutAll = () => {
     const accounts = Object.values(_authState.value.accounts)
     _authState.value = { ...DEFAULT_AUTH_STATE }
@@ -228,6 +261,44 @@ export const useAuthStore = defineStore('auth', () => {
     return expiredUserIds.length
   }
 
+  /**
+   * 兼容旧版本持久化结构（以及弱数据一致性修复）
+   * - 旧版本 web cookie 模式会把 refreshToken 存成 ''，现在统一转为 null
+   * - currentUserId 指向不存在账号时，重置为 null
+   * - accountOrder 去重并移除不存在项
+   */
+  const normalizePersistedState = () => {
+    const ids = Object.keys(_authState.value.accounts)
+
+    // refreshToken: '' -> null
+    for (const id of ids) {
+      const s = _authState.value.accounts[id]
+      if (s && s.refreshToken === '') {
+        s.refreshToken = null
+      }
+    }
+
+    // accountOrder: 去重 + 只保留存在的账号
+    const nextOrder: string[] = []
+    const seen = new Set<string>()
+    for (const id of _authState.value.accountOrder) {
+      if (seen.has(id)) continue
+      if (!_authState.value.accounts[id]) continue
+      seen.add(id)
+      nextOrder.push(id)
+    }
+    // 若有账号但 order 为空，补齐
+    if (nextOrder.length === 0 && ids.length > 0) {
+      ids.forEach((id) => nextOrder.push(id))
+    }
+    _authState.value.accountOrder = nextOrder
+
+    // currentUserId 修复
+    if (_authState.value.currentUserId && !_authState.value.accounts[_authState.value.currentUserId]) {
+      _authState.value.currentUserId = nextOrder[0] || null
+    }
+  }
+
   const getAccount = (userId: string) => {
     return _authState.value.accounts[userId] || null
   }
@@ -239,9 +310,11 @@ export const useAuthStore = defineStore('auth', () => {
     // Getter
     authState,
     currentSession,
+    hasSession,
     isAuthenticated,
     isAccessTokenValid,
     isRefreshTokenValid,
+    canAttemptRefresh,
     isTokenExpired,
     user,
     token,
@@ -257,7 +330,9 @@ export const useAuthStore = defineStore('auth', () => {
     removeAccount,
     logoutCurrent,
     logoutAll,
+    lock,
     cleanExpiredAccounts,
+    normalizePersistedState,
     getAccount
   }
 }, {

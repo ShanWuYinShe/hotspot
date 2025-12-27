@@ -2,10 +2,10 @@
  * 性能指示器组件
  * 实时显示应用性能指标和状态
  */
-import { PerformanceOptimizer, PerformanceMetrics, PerformanceAlert } from '../common/performance/PerformanceOptimizer';
+import { PerformanceOptimizer, PerformanceMetrics, PerformanceAlert } from '../core/performance/PerformanceOptimizer';
 import { SystemIcon, AppIcon } from './SystemIcon';
 import { SystemToast } from './SystemToast';
-import { AccessibilityManager } from '../common/accessibility/AccessibilityManager';
+import { AccessibilityManager } from '../core/accessibility/AccessibilityManager';
 
 interface PerformanceLevel {
   level: string;

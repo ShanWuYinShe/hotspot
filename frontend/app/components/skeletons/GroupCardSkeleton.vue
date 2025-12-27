@@ -5,9 +5,11 @@
       <div class="flex items-start gap-4">
         <!-- 群组头像骨架 -->
         <div class="relative">
-          <USkeleton class="h-12 w-12 rounded-full" />
-          <!-- 密码保护指示器骨架 -->
-          <USkeleton class="absolute -bottom-1 -right-1 h-4 w-4 rounded-full" />
+          <UAvatar
+            size="md"
+            icon="i-lucide-users-round"
+            color="neutral"
+          />
         </div>
 
         <!-- 群组信息骨架 -->
@@ -55,15 +57,18 @@
       </div>
 
       <!-- 群组活动信息骨架 -->
-      <div class="flex items-center justify-between pt-3 border-t border-default">
-        <div class="flex items-center gap-1">
-          <USkeleton class="h-4 w-4" />
-          <USkeleton class="h-3 w-24" />
-        </div>
-        
-        <div class="flex items-center gap-1">
-          <USkeleton class="h-4 w-4" />
-          <USkeleton class="h-3 w-20" />
+      <div class="pt-3">
+        <USeparator class="mb-3" />
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-1">
+            <USkeleton class="h-4 w-4" />
+            <USkeleton class="h-3 w-24" />
+          </div>
+
+          <div class="flex items-center gap-1">
+            <USkeleton class="h-4 w-4" />
+            <USkeleton class="h-3 w-20" />
+          </div>
         </div>
       </div>
     </div>

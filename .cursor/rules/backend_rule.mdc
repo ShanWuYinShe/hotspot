@@ -1,47 +1,29 @@
 ---
-description: HotSpot 后端代码生成规则 - 用于 AI Agent 生成 Rust/Axum 代码的详细规范
+globs: backend/**
 alwaysApply: false
 ---
-# HotSpot 后端代码生成规则
+ # HotSpot 后端规则（Rust/Axum）
 
-## ⚠️ 重要说明
+## ⚠️ 范围与原则（必读）
 
-**本文档是 Rust/Axum 代码生成规则。所有 API 端点、类型定义、WebSocket 事件定义均以 @api_spec.mdc 为准。**
+- **唯一 API 权威**：所有 **API 端点 / DTO 字段 / WebSocket 事件 / 错误码** 以 `@api_spec.mdc` 为准。
+- **本文档只写“如何落地”**：只描述 Rust/Axum 的实现约束与代码模式；**不重复** `api_spec.mdc` 的端点/类型全文。
+- **避免脆弱引用**：不写“第X章/第X节”，只引用 `api_spec.mdc` 的章节标题（如“幂等性设计”）。
 
-**文档职责分工**：
-- **@api_spec.mdc**: API 规范的唯一权威来源（端点、类型、事件、错误码）
-- **@backend_rule.mdc**（本文档）: Rust/Axum 代码生成规则和实现模式
-- **@backend_doc.mdc**: 系统架构设计和技术实现指南
+## 技术栈（约定）
 
-**开发时必读**：
-1. 首先阅读 @api_spec.mdc 了解完整的 API 规范
-2. 然后阅读本文档了解 Rust 实现规范
-3. 遇到冲突时，以 @api_spec.mdc 为准
+- **Rust**: 2021
+- **Web**: Axum 0.7+
+- **DB/Cache**: PostgreSQL + SQLx；Redis
+- **Auth**: JWT（必须含 `sid`）+ bcrypt
+- **WS**: tokio-tungstenite
+- **Log**: tracing
 
-**API规范快速引用**：
-- 完整的API端点定义 → @api_spec.mdc API端点与类型定义
-- 完整的WebSocket事件定义 → @api_spec.mdc WebSocket实时事件定义
-- 完整的错误码定义 → @api_spec.mdc 错误码定义
-- 通用类型定义 → @api_spec.mdc 通用类型定义
+## 架构分层（强制）
 
-## 1. 项目上下文
+### 地理位置计算（强制：只在 DB）
 
-### 1.1 技术栈
-
-- **语言**: Rust 2021 Edition
-- **Web 框架**: Axum 0.7+
-- **数据库**: PostgreSQL 15+ (SQLx) + Redis 7+
-- **认证**: JWT (jsonwebtoken) + bcrypt
-- **序列化**: serde + serde_json
-- **异步运行时**: Tokio
-- **WebSocket**: tokio-tungstenite
-- **日志**: tracing
-
-### 1.2 架构设计约定
-
-#### 1.2.1 地理位置计算约定
-
-**⚠️ 严重错误：不要在 Rust 代码中计算地理距离！**
+**禁止在 Rust 中计算距离**（Haversine 等一律禁止）。距离/范围计算必须在 PostgreSQL/PostGIS 侧完成，确保走 GiST 索引。
 
 所有地理位置计算必须在数据库层（PostgreSQL + PostGIS）完成，不要在应用层实现。
 
@@ -85,25 +67,11 @@ alwaysApply: false
 - 格式：`CREATE INDEX idx_xxx_location ON xxx USING GIST(location);`
 - 适用范围：所有包含 `GEOGRAPHY(POINT, 4326)` 类型的表
 
-### 1.3 架构分层原则
+### 分层职责
 
-系统采用经典的三层架构，按职责划分模块：
-
-**Handler 层**（路由处理）:
-- 接收 HTTP 请求、提取参数
-- 调用 Service 层
-- 返回统一响应
-
-**Service 层**（业务逻辑）:
-- 业务规则验证、权限检查
-- 事务管理
-- 调用 Repository 层
-- 缓存更新
-
-**Repository 层**（数据访问）:
-- SQL 查询封装
-- 数据库交互
-- 错误转换
+- **Handler**：只做提参/调用 Service/返回 `ApiResponse`；不写业务逻辑、不直接查库。
+- **Service**：业务规则/权限/事务/缓存/事件；**不写 SQL**。
+- **Repository**：只封装 SQL 与映射；**不含业务判断**；提供 `exists()` 等辅助方法。
 
 ### 1.4 模块划分与依赖关系
 
@@ -119,17 +87,18 @@ alwaysApply: false
 - **事件订阅 (subscription)**: 两层订阅机制（API持久化 + WebSocket实时）
 - **信息流 (feed)**: 混合推荐算法（社交40% + 位置30% + 兴趣20% + 探索10%）
 
-## 2. 代码生成规范
+## 代码实现规范（核心）
 
-### 2.1 路由定义原则
+### 路由与响应
 
 **核心原则**:
 - 按模块划分路由
 - 公开路由（`/api/v1/public/*`）和受保护路由（`/api/v1/protected/*`）分离
-- 所有 API 统一使用 POST 方法
-- 受保护路由添加认证中间件
+- **所有 API**：统一 POST。
+- **HTTP 状态码**：使用真实 HTTP 状态码表达错误大类；业务细分错误通过 `ApiResponse.code` 表达（按 `api_spec.mdc`）。
+- **public/protected/admin**：按路径分层挂载中间件（auth、rate limit 等）。
 
-### 2.2 Handler 层实现原则
+### Handler 约束
 
 **核心职责**（仅限以下4项）:
 1. **参数提取**: 从HTTP请求中提取参数（Path/Query/Json/Header）
@@ -145,11 +114,11 @@ alwaysApply: false
 
 **实现要点**:
 - 使用Axum Extractors（State, Json, Path等）提取参数
-- 返回类型：`Result<Json<ApiResponse<T>>, AppError>`
+- 返回类型固定：`Result<Json<ApiResponse<T>>, AppError>`
 - 调用Service层方法处理业务逻辑
-- 从 `req.extensions()` 获取认证用户ID
+- 认证信息从请求上下文（extensions）读取，**禁止**从请求体/参数传 `current_user_id`。
 
-### 2.3 Service 层实现原则
+### Service 约束
 
 **核心职责**（包含所有业务逻辑）:
 1. **业务规则验证**: 检查业务规则是否满足（如权限、状态、配额等）
@@ -166,11 +135,11 @@ alwaysApply: false
 - ❌ Service不直接编写SQL（应调用Repository）
 
 **关键模式**:
-- **事务**: 使用`sqlx::Transaction`管理跨表操作
+- 跨表强一致：使用 `sqlx::Transaction`。
 - **缓存**: 先查缓存，未命中再查数据库，写入时更新缓存
 - **错误处理**: 业务错误转换为`AppError`枚举
 
-### 2.4 Repository 层实现原则
+### Repository 约束
 
 **核心职责**（仅限数据访问）:
 1. **SQL封装**: 将所有SQL查询封装为方法
@@ -180,7 +149,7 @@ alwaysApply: false
 
 **设计原则**:
 - ✅ 每个Repository对应一个主要的数据库表
-- ✅ 使用SQLx的类型安全查询（`query_as!`宏）
+- ✅ 使用SQLx的类型安全查询（sqlx的宏系列查询函数）
 - ✅ 所有方法都是纯数据操作（CRUD）
 - ❌ Repository不调用其他Repository
 - ❌ Repository不包含业务逻辑判断
@@ -191,26 +160,30 @@ alwaysApply: false
 | 场景 | 核心SQL模式 | 关键要点 |
 |---|---|---|
 | 地理位置查询 | `ST_Distance` + `ST_DWithin` | 必须使用PostGIS函数 |
-| 游标分页查询 | `WHERE id > $cursor ORDER BY id LIMIT $limit` | cursor字符串→内部ID转换由Repository负责 |
-| 存在性检查 | `SELECT EXISTS(...)` | 避免COUNT，EXISTS性能更好 |
+| 游标分页查询 | `WHERE (sort_col, id) < ($last_val, $last_id)` | 键集分页（Keyset Pagination），避免使用 OFFSET |
+| 存在性检查 | `SELECT EXISTS(...)` | 避免 `COUNT(*) > 0` 与 `fetch_optional().is_some()` |
 | 软删除查询 | `WHERE is_deleted = FALSE` | 几乎所有查询都需要此条件 |
 | 数组包含 | `WHERE tags @> ARRAY[...]` | PostgreSQL数组操作符 |
 
-**游标分页实现规范**：
+### 分页（Cursor / Keyset）
 
 **设计原则**：
-- 统一使用UUID作为cursor，便于分布式数据库迁移
-- UUID是随机的无法排序，必须转为自增id才能保证时间顺序
-- API层使用`cursor: Option<String>`，对前端不透明
-- Service层直接透传，不做解析
-- Repository层负责UUID→自增id的转换和分页逻辑
+- 统一使用键集分页（Keyset Pagination），又称 Cursor-based Pagination
+- 游标是对 `(排序字段值, 唯一ID)` 元组的编码字符串（opaque string）
+- 不依赖数据库 OFFSET，利用索引快速定位
+- API层使用 `cursor: Option<String>`，对前端完全不透明
+- **Service**：规范化 `limit`（默认20，1~100）+ 原样透传 `cursor`（不解析）
+- **Repository**：负责 cursor 编码/解码与 keyset 条件构造
 
 **实现模板**（Repository层）：
-**Repository层职责**（负责cursor解析和转换）：
-- 解析cursor：UUID字符串 → Uuid类型
-- UUID转换为自增id（查询数据库）
-- 使用自增id进行分页查询（`WHERE id > cursor_id ORDER BY id ASC`）
-- 返回UUID字符串cursor（从结果集最后一条记录提取）
+**Repository层职责**（负责cursor解析和查询构建）：
+- 解析cursor：Base64解码 -> (SortValue, UniqueID)
+- 构建查询条件：
+  - 单字段排序（如按ID）：`WHERE id < last_id`
+  - 多字段排序（如按时间）：`WHERE (created_at, id) < (last_created_at, last_id)`
+  - PostGIS距离排序：`WHERE ST_Distance(...) > last_dist OR (ST_Distance(...) = last_dist AND id > last_id)`
+- 执行查询：`ORDER BY sort_column DESC, id DESC LIMIT limit + 1`
+- 生成下一页cursor：取出最后一条记录的 (SortValue, UniqueID) 进行编码
 
 **Service层职责**（直接透传）：
 - 验证和规范化limit参数（默认20，最小1，最大100）
@@ -255,9 +228,9 @@ alwaysApply: false
 - 使用`#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]`
 - 复杂查询结果使用专门的结构体（而非复用Model）
 
-## 3. API 实现规范
+## 与 `api_spec.mdc` 对齐的关键点
 
-### 3.1 统一响应格式
+### 统一响应格式
 
 ⚠️ **完整的 API 响应规范请参见**: @api_spec.mdc **统一响应格式**
 
@@ -267,23 +240,22 @@ alwaysApply: false
 - 提供 `success()` 和 `error()` 辅助方法
 - 分页响应的data字段包含：`items: Vec<T>`, `pagination: { has_more: bool, next_cursor: Option<String> }`
 
-### 3.2 错误处理原则
+### 错误处理
 
 ⚠️ **完整错误码定义请参见**: @api_spec.mdc **错误码定义**
 
 **实现要点**:
 - 使用 `thiserror::Error` 定义 `AppError` 枚举
 - 包含所有错误类型：`BadRequest`, `Unauthorized`, `Forbidden`, `NotFound`, `Conflict`, `Database`, `Redis`, `Jwt`, `Internal`
-- 实现 `IntoResponse` trait，统一返回 HTTP 200 + 业务错误码
+- 实现 `IntoResponse` trait，统一返回 `ApiResponse`，并按 `code` 映射 HTTP status
 - 错误码映射参考 api_spec.mdc 错误码定义
 - 记录错误日志（5000+ 用 ERROR，其他用 WARN）
 
-### 3.3 认证中间件原则
+### 认证（JWT）
 
 **实现要点**:
 - 从 `Authorization: Bearer <token>` 头提取 JWT Token
 - 验证 Token 有效性（使用 `jsonwebtoken` crate）
-- 检查 Token 黑名单（Redis）
 - 提取 `user_id` 并注入到 `req.extensions()`
 - 失败时返回 `AppError::Unauthorized`
 
@@ -292,9 +264,9 @@ alwaysApply: false
 - 类型：`i64`（内部使用）
 - 失败时返回 `AppError::Unauthorized`
 
-## 4. 数据库设计参考
+## 数据库与数据完整性
 
-### 4.1 数据库初始化流程
+### 初始化与迁移
 
 **⚠️ 核心原则**: SQLx 迁移文件必须能够独立运行，不依赖外部模板数据库。
 
@@ -321,9 +293,9 @@ alwaysApply: false
 - `sqlx migrate run` 必须能够独立完成数据库初始化
 - 确保开发、测试、CI/CD 环境的一致性和可重复性
 
-### 4.2 表结构参考
+### 表结构来源
 
-⚠️ **完整的数据库表结构、字段定义、历史跟踪策略请参见**: @backend_doc.mdc **第 4 章 数据库设计**
+- 表结构以 `backend/migrations/*.sql` 为准（代码与迁移共同演进）。
 
 **AI Agent实现指导**:
 
@@ -347,16 +319,16 @@ alwaysApply: false
 - 可选的历史表：参见 @backend_doc.mdc 数据库设计
 - 可根据业务需求扩展新的历史表
 
-## 5. 关键业务规则
+## 关键业务规则（只写实现约束）
 
 ⚠️ **详细的业务逻辑规范请参见**: @backend_doc.mdc
 
 ### 5.1 密码安全
 
-**双层哈希策略**（强制）:
-1. **客户端**: `SHA256(password)` → 64字符十六进制
-2. **服务端**: `bcrypt(client_hash, cost=10)` → 存储到数据库
-3. **验证**: 使用`bcrypt::verify()`比对
+**密码安全策略**（强制）:
+1. **客户端**: 仅在 **HTTPS/TLS** 中提交明文 `password`（禁止 `SHA256(password)` 客户端哈希）
+2. **服务端**: `bcrypt(password, salt)`（或 Argon2id）慢哈希存储
+3. **验证**: 使用 `bcrypt::verify(password, stored_hash)`
 
 **关键要求**:
 - ❌ 永不存储明文密码或客户端哈希
@@ -377,42 +349,22 @@ alwaysApply: false
 - **临时用户和注册用户区间**：1,000,001+（共用序列，方便临时用户转正）
 
 **Token管理**:
-- **Access Token**: 3600秒（1小时），用于API认证
-- **Refresh Token**: 2592000秒（30天），用于刷新
+- **Access Token**: 900-1800秒（15-30分钟），用于API认证
+- **Refresh Token**: 2592000秒（30天），用于刷新（支持旋转机制）
 - **Claims**: sub(user_id), exp, iat
-- **存储**: Redis缓存刷新token，key=`refresh_token:{user_id}`
+- **存储**: PostgreSQL `sessions` 表（支持多设备会话管理）
 
-### 5.3 API查询规范
+### 查询/搜索命名
 
-**搜索接口命名**（统一约定）:
-- `discover` - 统一的发现接口，支持关键词搜索和位置搜索的组合
-  - 参数：`keyword`（关键词）、`latitude/longitude`（位置，可选，不传则使用用户当前位置）、`radius`（半径）
-  - 返回：包含 `location_name` 和 `distance` 字段（当使用位置搜索时）
-- `open_the_door` - 按ID查询其他用户/资源的详情（必须传ID）
-- `/me` - 查询当前用户自己的信息（用户API专用，无需传ID）
+- 按 `api_spec.mdc` 的“查询接口设计模式”和现有端点命名实现（如 `search_by_keyword/search_by_tag/search_by_location/open_the_door`）。
+- **不要在后端规则文档里发明新端点名**（例如 `discover`），避免与 `api_spec.mdc` 冲突。
 
-**discover API 设计原则**:
-- ✅ **统一接口**：一个接口支持多种搜索条件组合
-- ✅ **智能默认**：位置参数不传时自动使用用户当前位置
-- ✅ **完整信息**：response 包含位置名称和距离信息
-- ✅ **黑盒行为**：相同输入保证相同输出，不依赖隐式上下文
-
-**分页参数约定**:
-| 参数 | 默认值 | 最小值 | 最大值 | 说明 |
-|---|---|---|---|---|
-| `limit` | 20 | 1 | 100 | 每页数量 |
-| `radius` | 5000 | 1 | 50000 | 搜索半径（米） |
-| `cursor` | - | - | - | 不透明UUID（从上次响应获取） |
-
-**返回格式**: 统一使用`PaginatedData<T>`，包含items和pagination元数据
-
-### 5.4 数据完整性验证规范（无外键约束）
+### 数据完整性（无外键约束）
 
 ⚠️ **关键要求**：由于项目不使用数据库外键约束（性能优化），**Service 层必须严格验证所有引用关系**。
 
 **Repository 层辅助方法**（推荐实现）:
-- 提供 `exists()` 方法验证资源存在性
-- 使用 `SELECT EXISTS(...)` 而非 `COUNT(*)`（性能更好）
+- Repository 提供 `exists()`：用 `SELECT EXISTS(...)`，并包含 `is_deleted = FALSE` 条件。
 - 必须检查 `is_deleted = FALSE`
 - 接受 `executor` 参数支持事务
 
@@ -563,7 +515,7 @@ alwaysApply: false
 **中间件实现要点**:
 - 使用 Redis INCR 命令实现计数器
 - 首次请求时设置过期时间
-- 超限时返回 HTTP 200，code: 1400
+- 超限时返回 HTTP 429，code: 1400，并携带 `Retry-After`
 - 添加响应头：`X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`
 
 **速率限制配置**:
@@ -580,9 +532,9 @@ alwaysApply: false
 - 错误消息包含当前数量和限制数量
 
 **错误响应**:
-- HTTP 状态码: 200（所有错误统一返回 HTTP 200）
+- HTTP 状态码: 429（速率限制）
 - 错误码: 1400-1404（参见 api_spec.mdc 错误码定义）
-- 响应头: `X-RateLimit-Reset`（重置时间戳）
+- 响应头: `Retry-After`（建议等待秒数）+ 可选 `X-RateLimit-*`
 
 **实现要求**:
 - 使用 Redis 滑动窗口算法
@@ -590,178 +542,17 @@ alwaysApply: false
 - 记录速率限制命中次数到监控系统
 - 超限时返回清晰的错误消息和重试建议
 
-### 5.8 幂等性实现规范
+### 幂等性（与 `api_spec.mdc` 一致）
 
-⚠️ **完整的幂等性规范请参见**: @api_spec.mdc **幂等性设计**
+`api_spec.mdc` 约定：对“非幂等意图”的重试，客户端应提供 `Idempotency-Key`（或 `X-Idempotency-Key`），服务端基于该 key 做去重回放。
 
-**核心原则**:
-- 服务端完全控制幂等性，客户端无需提供幂等键
-- 使用 SHA256 生成幂等键，包含用户ID、端点、请求体、时间窗口
-- 使用 Redis 缓存幂等结果，TTL = 2倍时间窗口
+- **启用范围**：对 `api_spec.mdc` 标注“自动幂等”的创建/发送类接口启用（如发送消息、创建瞬间、创建群组、上传）。
+- **幂等键生成**：`SHA256(user_id + api_endpoint + normalized_request_body_json + time_window)`（time_window 以 5 分钟为单位）。
+- **缓存**：Redis 保存“请求 → 响应”，TTL 取 2×time_window（默认 10 分钟）。
+- **实现提示**：
+  - 需要对请求体做 JSON 规范化（key 排序、去空字段、忽略 `client_request_id/timestamp/nonce` 等，按 `api_spec.mdc`）。
+  - 如需要链路追踪，可以接受 `X-Request-ID`，但 **不得作为幂等键必填条件**。
 
-**幂等键生成实现**:
-- 使用 SHA256 哈希算法
-- 输入：user_id + api_endpoint + request_body + time_window
-- 时间窗口：向下取整到5分钟
-- 请求体标准化：
-  1. 移除特殊字段（client_request_id, timestamp, nonce）
-  2. Key按字母顺序排序
-  3. 紧凑JSON格式（无空白）
-
-**幂等中间件实现**:
-```rust
-// 幂等中间件伪代码
-async fn idempotency_middleware(
-    req: Request,
-    user_id: i64,
-) -> Result<Response> {
-    // 只对需要幂等的端点启用
-    if !requires_idempotency(&req.uri().path()) {
-        return Ok(next.run(req).await);
-    }
-    
-    // 生成幂等键
-    let body = extract_body(&req).await?;
-    let normalized_body = normalize_request_body(&body);
-    let time_window = get_time_window(Utc::now());
-    let idempotency_key = generate_idempotency_key(
-        user_id,
-        req.uri().path(),
-        &normalized_body,
-        time_window,
-    );
-    
-    // 检查Redis缓存
-    if let Some(cached_response) = redis.get(&idempotency_key).await? {
-        let mut response = cached_response;
-        response.headers_mut().insert(
-            "X-Idempotent-Replayed",
-            "true".parse().unwrap(),
-        );
-        return Ok(response);
-    }
-    
-    // 执行业务逻辑
-    let response = next.run(req).await?;
-    
-    // 缓存结果
-    redis.setex(
-        &idempotency_key,
-        TTL_SECONDS,  // 10分钟
-        &response,
-    ).await?;
-    
-    // 添加响应头（仅调试用）
-    response.headers_mut().insert(
-        "X-Idempotent-Key",
-        idempotency_key.parse().unwrap(),
-    );
-    
-    Ok(response)
-}
-```
-
-**需要幂等的端点**:
-```rust
-const IDEMPOTENT_ENDPOINTS: &[&str] = &[
-    "/api/v1/protected/private_messages/send",
-    "/api/v1/protected/group_messages/send",
-    "/api/v1/protected/moments/create",
-    "/api/v1/protected/group_chats/create",
-    "/api/v1/protected/media/upload_file",
-];
-
-fn requires_idempotency(path: &str) -> bool {
-    IDEMPOTENT_ENDPOINTS.contains(&path)
-}
-```
-
-**文件上传幂等性**（特殊处理）:
-```rust
-// 小文件（≤100MB）幂等性
-pub async fn upload_file(
-    user_id: i64,
-    file_data: Vec<u8>,
-    category: &str,
-) -> Result<UploadResult> {
-    // 计算文件哈希
-    let mut hasher = Sha256::new();
-    hasher.update(&file_data);
-    let file_hash = format!("{:x}", hasher.finalize());
-    
-    // 生成幂等键（包含文件哈希）
-    let time_window = get_time_window(Utc::now());
-    let idempotency_key = format!(
-        "{:x}",
-        Sha256::digest(format!(
-            "{}{}{}{}{}",
-            user_id,
-            "/api/v1/protected/media/upload_file",
-            file_hash,
-            category,
-            time_window.to_rfc3339()
-        ))
-    );
-    
-    // 检查缓存
-    if let Some(cached) = redis.get(&idempotency_key).await? {
-        return Ok(cached);
-    }
-    
-    // 执行上传
-    let result = storage.upload(user_id, file_data, category).await?;
-    
-    // 缓存结果
-    redis.setex(&idempotency_key, TTL_SECONDS, &result).await?;
-    
-    Ok(result)
-}
-```
-
-**并发控制**（使用Redis原子操作）:
-```rust
-// 使用SETNX防止并发重复执行
-pub async fn execute_idempotent(
-    redis: &Redis,
-    key: &str,
-    ttl: u64,
-    operation: impl FnOnce() -> Result<T>,
-) -> Result<T> {
-    let lock_key = format!("lock:{}", key);
-    
-    // 尝试获取锁
-    let acquired = redis.set_nx(&lock_key, "1", ttl).await?;
-    if !acquired {
-        // 已有其他请求在执行，等待结果
-        tokio::time::sleep(Duration::from_millis(100)).await;
-        if let Some(result) = redis.get(key).await? {
-            return Ok(result);
-        }
-        return Err(Error::IdempotentConflict);
-    }
-    
-    // 执行操作
-    let result = operation()?;
-    
-    // 缓存结果
-    redis.setex(key, ttl, &result).await?;
-    redis.del(&lock_key).await?;
-    
-    Ok(result)
-}
-```
-
-**配置项**:
-```rust
-const TIME_WINDOW_MINUTES: i64 = 5;  // 时间窗口5分钟
-const IDEMPOTENCY_TTL_SECONDS: u64 = 600;  // 缓存TTL 10分钟（2倍时间窗口）
-```
-
-**实现要求**:
-- 所有幂等操作必须使用相同的幂等键生成算法
-- 响应必须可序列化为JSON
-- 记录幂等命中率到监控系统
-- 异常高频重试需要告警
 
 ### 5.10 私聊权限验证规范
 
@@ -790,8 +581,8 @@ const IDEMPOTENCY_TTL_SECONDS: u64 = 600;  // 缓存TTL 10分钟（2倍时间窗
 1. 查询 `group_settings.password_hash`
 2. 如果为 NULL → 直接加入（无密码群组）
 3. 如果不为 NULL:
-   - 请求未提供密码 → 返回 `AppError::MissingParameter`（1001）
-   - 使用 `bcrypt::verify()` 验证
+   - 请求未提供 `password` → 返回 `AppError::MissingParameter`（1001）
+   - 使用 `bcrypt::verify(password, stored_hash)` 验证
    - 密码错误 → 返回 `AppError::WrongGroupPassword`（1311）
 4. 检查其他条件（群组存在、未满员、未在群组中）
 
@@ -806,9 +597,10 @@ const IDEMPOTENCY_TTL_SECONDS: u64 = 600;  // 缓存TTL 10分钟（2倍时间窗
 - 密码错误必须使用专用错误类型 `WrongGroupPassword`（1311），不要使用通用的 `WrongPassword`（1105）
 - 邀请入群流程（`accept_group_invite`）完全跳过密码验证
 
-## 6. WebSocket 实现规范
+## WebSocket 落地要点
 
-⚠️ **完整的 WebSocket 事件类型定义请参见**: @api_spec.mdc **第 4 章 WebSocket 实时事件定义**
+- 事件/订阅格式严格按 `api_spec.mdc` 的“WebSocket 实时事件定义”。
+- 订阅事件：`Subscribe/Unsubscribe/SetSubscriptions` 的 payload 是 `{ items: SubscriptionItem[] }`（不是 rooms/users/notifications 三字段）。
 
 ### 6.1 连接管理规则
 
@@ -819,10 +611,10 @@ const IDEMPOTENCY_TTL_SECONDS: u64 = 600;  // 缓存TTL 10分钟（2倍时间窗
 - 使用 `tokio-tungstenite` crate
 
 **鉴权流程**:
-1. 从 `Sec-WebSocket-Protocol` 或 `Authorization` 头提取 token
-2. 验证 JWT token
+1. WebSocket 连接建立后，客户端立即发送 `Auth` 事件（payload 携带 `access_token`）
+2. 服务端验证 JWT token
 3. 提取 user_id 并注册连接
-4. Token 过期时主动断开连接
+4. 鉴权通过后推送 `ConnectionEstablished`；鉴权失败或超时未鉴权则推送 `Error` 并断开连接
 
 **心跳机制**:
 - 客户端每 45 秒发送 `Ping`
@@ -843,6 +635,7 @@ pub enum WsMessage {
     // ... 共 20+ 个事件类型
     
     // 客户端发送事件 - 完整定义见 api_spec.mdc 客户端发送事件
+    Auth { access_token: String, device_fingerprint: Option<String> },
     Ping { timestamp: String },
     Subscribe { 
         items: Vec<SubscriptionItem>  // 订阅项列表
@@ -879,7 +672,7 @@ pub enum SubscriptionSourceType {
 
 ## 7. 测试策略
 
-⚠️ **详细的测试策略和数据管理请参见**: @backend_doc.mdc **第 9 章测试策略**
+⚠️ **详细的测试策略和数据管理请参见**: `@backend_doc.mdc` 的“测试策略”
 
 ### 7.1 测试分层（建议）
 
@@ -938,7 +731,14 @@ pub enum SubscriptionSourceType {
 
 ---
 
-## 9. 快速参考
+## 快速检查清单（推荐）
+
+- **API**：仅 POST；HTTP status 表达大类；`ApiResponse.code` 表达细分业务结果
+- **ID**：`user_id` 是 number（Rust: i64）；其他业务 ID 多为 UUID 字符串
+- **时间**：UTC ISO 8601
+- **存在性检查**：优先 `repo.exists()` + `SELECT EXISTS(...)`
+- **分页**：keyset/cursor；cursor 不透明，service 透传
+- **幂等**：客户端对“同一次重试”复用 `Idempotency-Key`；服务端做去重回放
 
 ### 9.1 关键约束速查
 

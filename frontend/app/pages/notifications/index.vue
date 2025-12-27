@@ -1,121 +1,105 @@
 <template>
-  <div class="max-w-4xl mx-auto space-y-6">
-    <!-- 页面标题 -->
-    <UPageHeader
-      title="通知中心"
-      description="管理您的推送通知设置"
-    />
-
-      <!-- 说明卡片 -->
-      <UCard class="mb-6">
-        <div class="flex items-start gap-4">
-          <div class="shrink-0">
-            <div class="w-12 h-12 rounded-full bg-primary-subtle flex items-center justify-center">
-              <UIcon name="i-heroicons-bell" class="w-6 h-6 text-accent" />
-            </div>
+  <div class="w-full space-y-4">
+    <UCard variant="subtle">
+      <template #header>
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div class="flex items-center gap-2 min-w-0">
+            <UIcon name="i-lucide-bell" :size="20" />
+            <span class="truncate">全部通知</span>
+            <UBadge v-if="unreadCount > 0" color="error" variant="soft" size="xs">
+              {{ unreadCount > 99 ? '99+' : unreadCount }}
+            </UBadge>
           </div>
-          <div class="flex-1">
-            <h3 class="font-semibold text-primary-content mb-2">
-              实时推送通知
-            </h3>
-            <p class="text-sm text-secondary-content mb-4">
-              通知会在事件发生时实时推送到您的设备。您可以在设置中配置接收哪些类型的通知。
-            </p>
-            <div class="flex gap-2">
-              <UButton
-                to="/settings"
-                variant="outline"
-                size="sm"
-                icon="i-heroicons-cog-6-tooth"
-              >
-                通知设置
-              </UButton>
-            </div>
-          </div>
-        </div>
-      </UCard>
 
-      <!-- 通知类型说明 -->
-      <UCard>
-        <template #header>
-          <h3 class="font-semibold text-primary-content">
-            支持的通知类型
-          </h3>
-        </template>
-
-        <div class="space-y-4">
-          <div
-            v-for="notificationType in notificationTypes"
-            :key="notificationType.type"
-            class="flex items-center gap-4 p-3 rounded-lg hover-bg-surface transition-colors"
-          >
-            <div
-              :class="[
-                'w-10 h-10 rounded-full flex items-center justify-center',
-                notificationType.bgColor
-              ]"
+          <div class="flex items-center gap-2 shrink-0">
+            <UButton
+              v-if="notifications.length > 0"
+              variant="outline"
+              color="neutral"
+              size="sm"
+              icon="i-lucide-check"
+              @click="markAllAsRead"
             >
-              <UIcon :name="notificationType.icon" class="icon-md" />
-            </div>
-            <div class="flex-1">
-              <h4 class="font-medium text-primary-content">
-                {{ notificationType.label }}
-              </h4>
-              <p class="text-sm text-secondary-content">
-                {{ notificationType.description }}
-              </p>
-            </div>
+              全部已读
+            </UButton>
+            <UButton
+              v-if="notifications.length > 0"
+              variant="ghost"
+              color="neutral"
+              size="sm"
+              icon="i-lucide-trash-2"
+              @click="clearNotifications"
+            >
+              清空
+            </UButton>
           </div>
         </div>
-      </UCard>
+      </template>
 
-      <!-- 待处理事项快捷入口 -->
-      <UCard class="mt-6">
-        <template #header>
-          <h3 class="font-semibold text-primary-content">
-            快捷入口
-          </h3>
-        </template>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <div class="flex items-center gap-2 pb-4">
           <UButton
-            to="/friends"
-            variant="soft"
-            block
-            class="justify-start"
-            icon="i-heroicons-users"
+            :variant="filter === 'all' ? 'solid' : 'ghost'"
+            color="neutral"
+            size="sm"
+            @click="filter = 'all'"
           >
-            我的好友
+            全部
           </UButton>
           <UButton
-            to="/groups"
-            variant="soft"
-            block
-            class="justify-start"
-            icon="i-heroicons-user-group"
+            :variant="filter === 'unread' ? 'solid' : 'ghost'"
+            color="neutral"
+            size="sm"
+            @click="filter = 'unread'"
           >
-            我的群组
-          </UButton>
-          <UButton
-            to="/chat"
-            variant="soft"
-            block
-            class="justify-start"
-            icon="i-heroicons-chat-bubble-left-right"
-          >
-            消息列表
-          </UButton>
-          <UButton
-            to="/moments"
-            variant="soft"
-            block
-            class="justify-start"
-            icon="i-heroicons-photo"
-          >
-            生活瞬间
+            未读
           </UButton>
         </div>
-      </UCard>
+
+        <UEmpty
+          v-if="filteredNotifications.length === 0"
+          icon="i-lucide-bell-off"
+          title="暂无通知"
+          description="新的通知会在这里出现"
+        />
+
+        <UPageList v-else divide>
+          <UPageCard
+            v-for="n in filteredNotifications"
+            :key="n.id"
+            :title="n.title"
+            :description="n.description"
+            :icon="getNotificationIcon(n.type)"
+            variant="ghost"
+            :to="getNotificationTo(n)"
+            @click="handleOpen(n)"
+          >
+            <template #footer>
+              <div class="flex items-center justify-between gap-3">
+                <UBadge color="neutral" variant="soft" size="xs">
+                  {{ formatTime(n.timestamp) }}
+                </UBadge>
+                <div class="flex items-center gap-2" @click.stop>
+                  <UBadge v-if="!n.read" color="primary" variant="soft" size="xs">
+                    未读
+                  </UBadge>
+                  <UButton
+                    v-if="!n.read"
+                    variant="ghost"
+                    color="neutral"
+                    size="xs"
+                    icon="i-lucide-check"
+                    @click.stop="markAsRead(n.id)"
+                  >
+                    标记已读
+                  </UButton>
+                </div>
+              </div>
+            </template>
+          </UPageCard>
+        </UPageList>
+      </div>
+    </UCard>
   </div>
 </template>
 
@@ -123,59 +107,85 @@
 definePageMeta({
   requiresAuth: true,
   title: '通知中心',
-  layout: 'dashboard'
+  description: '查看实时通知与系统公告',
+  layout: 'dashboard',
+  dashboardHeader: true,
+  // 静态 header actions：由 dashboard layout 统一渲染（避免每页 watchEffect/setActions）
+  dashboardActions: [
+    { key: 'settings', label: '通知设置', icon: 'i-lucide-settings', variant: 'outline', to: '/settings' }
+  ]
 })
 
-// 通知类型列表
-const notificationTypes = [
-  {
-    type: 'new_follower',
-    label: '新关注者',
-    description: '当有人关注您时收到通知',
-    icon: 'i-heroicons-user-plus',
-    bgColor: 'bg-blue-subtle text-blue'
-  },
-  {
-    type: 'mutual_follow',
-    label: '互相关注',
-    description: '当与某人互相关注成为好友时收到通知',
-    icon: 'i-heroicons-heart',
-    bgColor: 'bg-pink-subtle text-pink'
-  },
-  {
-    type: 'group_invite',
-    label: '群组邀请',
-    description: '当您被邀请加入群组时收到通知',
-    icon: 'i-heroicons-user-group',
-    bgColor: 'bg-green-subtle text-green'
-  },
-  {
-    type: 'message',
-    label: '新消息',
-    description: '当收到新的私聊或群聊消息时收到通知',
-    icon: 'i-heroicons-chat-bubble-left-right',
-    bgColor: 'bg-purple-subtle text-purple'
-  },
-  {
-    type: 'moment_like',
-    label: '瞬间点赞',
-    description: '当您的生活瞬间被点赞时收到通知',
-    icon: 'i-heroicons-hand-thumb-up',
-    bgColor: 'bg-orange-subtle text-orange'
-  },
-  {
-    type: 'comment',
-    label: '评论通知',
-    description: '当您的内容收到评论或回复时收到通知',
-    icon: 'i-heroicons-chat-bubble-bottom-center-text',
-    bgColor: 'bg-teal-subtle text-teal'
-  },
-  {
-    type: 'system',
-    label: '系统通知',
-    description: '重要的系统公告和更新通知',
-    icon: 'i-heroicons-megaphone',
-    bgColor: 'bg-yellow-subtle text-yellow'
+import type { NotificationItem } from '~/composables/useNotifications'
+
+const { notifications, unreadCount, markAsRead, markAllAsRead, clearNotifications } = useNotifications()
+
+const filter = ref<'all' | 'unread'>('all')
+
+const filteredNotifications = computed(() => {
+  if (filter.value === 'unread') return notifications.value.filter(n => !n.read)
+  return notifications.value
+})
+
+const formatTime = (timestamp: string) => {
+  const date = new Date(timestamp)
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+
+  if (diff < 60000) return '刚刚'
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
+  if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`
+
+  return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
+}
+
+const getNotificationIcon = (type: string) => {
+  switch (type) {
+    case 'new_follower':
+    case 'mutual_follow':
+      return 'i-lucide-users'
+    case 'moment_liked':
+    case 'moment_commented':
+    case 'comment_reply':
+      return 'i-lucide-image'
+    case 'group_invite':
+    case 'group_application':
+    case 'group_application_response':
+      return 'i-lucide-users-round'
+    case 'system_announcement':
+      return 'i-lucide-megaphone'
+    default:
+      return 'i-lucide-bell'
   }
-]
+}
+
+const getNotificationTo = (notification: NotificationItem) => {
+  const data = notification.data as Record<string, unknown> | undefined
+
+  switch (notification.type) {
+    case 'new_follower':
+    case 'mutual_follow':
+      if (data?.user && typeof data.user === 'object' && 'user_id' in data.user) {
+        return `/users/${(data.user as { user_id: number }).user_id}`
+      }
+      return undefined
+    case 'moment_liked':
+    case 'moment_commented':
+    case 'comment_reply':
+      if (data?.moment_id) return `/moments/${String(data.moment_id)}`
+      return undefined
+    case 'group_invite':
+    case 'group_application':
+    case 'group_application_response':
+      if (data?.group_chat_id) return `/groups/${String(data.group_chat_id)}`
+      return undefined
+    default:
+      return undefined
+  }
+}
+
+const handleOpen = (notification: NotificationItem) => {
+  if (!notification.read) markAsRead(notification.id)
+}
 </script>

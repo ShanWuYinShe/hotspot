@@ -1,6 +1,5 @@
 <template>
   <UModal
-    size="2xl"
     title="黑名单管理"
     :description="`共 ${blockedUsers.length} 个被拉黑用户`"
   >
@@ -8,31 +7,32 @@
       <UInput
         v-model="searchQuery"
         placeholder="搜索被拉黑的用户..."
-        icon="i-heroicons-magnifying-glass"
-        size="lg"
+        icon="i-lucide-search"
         class="mb-4 w-full"
       />
 
-      <section class="max-h-96 overflow-y-auto space-y-3">
+      <section
+        ref="listEl"
+        class="max-h-96 overflow-y-auto space-y-3"
+        @scroll="onListScroll"
+      >
         <!-- 用户列表 -->
         <UCard
           v-for="user in filteredUsers"
           :key="user.user_id"
-          :ui="{ body: 'p-4' }"
         >
           <section class="flex items-center justify-between gap-4">
             <header class="flex items-center gap-3 min-w-0">
               <UAvatar
                 :alt="user.nickname"
                 :src="user.avatar_url"
-                size="md"
               >
                 {{ user.nickname?.charAt(0) || 'U' }}
               </UAvatar>
               <article class="min-w-0">
                 <p class="font-medium truncate">{{ user.nickname }}</p>
                 <UBadge
-                  variant="subtle"
+                  variant="soft"
                   color="neutral"
                   size="xs"
                 >
@@ -41,7 +41,7 @@
               </article>
             </header>
 
-            <UButtonGroup size="sm">
+            <UFieldGroup>
               <UButton
                 variant="outline"
                 @click="viewUserProfile(user, close)"
@@ -56,16 +56,16 @@
               >
                 解除拉黑
               </UButton>
-            </UButtonGroup>
+            </UFieldGroup>
           </section>
         </UCard>
 
         <!-- 空状态 -->
         <UAlert
           v-if="!loading && filteredUsers.length === 0"
-          icon="i-heroicons-user-minus"
+          icon="i-lucide-user-minus"
           color="neutral"
-          variant="subtle"
+          variant="soft"
           title="黑名单为空"
           description="您还没有拉黑任何用户"
         />
@@ -75,16 +75,27 @@
           <USkeleton
             v-for="i in 3"
             :key="i"
-            class="h-20 rounded-lg"
+            class="h-20"
           />
         </template>
+
+        <!-- 回到顶部（列表很长时） -->
+        <div v-if="showScrollTop" class="sticky bottom-3 flex justify-end">
+          <UButton
+            variant="soft"
+            color="neutral"
+            size="sm"
+            icon="i-lucide-arrow-up"
+            @click="scrollToTop"
+          />
+        </div>
       </section>
     </template>
 
     <template #footer="{ close }">
       <UButton
         variant="outline"
-        icon="i-heroicons-arrow-path"
+        icon="i-lucide-refresh-cw"
         :loading="loading"
         @click="loadBlockedUsers"
       >
@@ -103,14 +114,13 @@
 <script setup lang="ts">
 import { useUsersService } from '~/services/users.service'
 import type { UserInfo } from '~/types/api'
-import { getErrorMessage } from '~/utils/error'
 
 const authStore = useAuthStore()
 const loading = ref(false)
 const blockedUsers = ref<UserInfo[]>([])
 const searchQuery = ref('')
 const unblockingUsers = ref(new Set<number>())
-const toast = useToast()
+const feedback = useFeedbackStore()
 
 const filteredUsers = computed(() => {
   if (!searchQuery.value.trim()) return blockedUsers.value
@@ -118,15 +128,28 @@ const filteredUsers = computed(() => {
   return blockedUsers.value.filter(user => user.nickname.toLowerCase().includes(query))
 })
 
+const listEl = ref<HTMLElement | null>(null)
+const showScrollTop = ref(false)
+
+const onListScroll = () => {
+  const el = listEl.value
+  if (!el) return
+  showScrollTop.value = el.scrollTop > 160
+}
+
+const scrollToTop = () => {
+  listEl.value?.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
 const loadBlockedUsers = async () => {
   loading.value = true
   try {
     const userService = useUsersService()
     const response = await userService.getBlockedUsers()
-    blockedUsers.value = response.items || []
+    blockedUsers.value = (response.items || []).map(i => i.user)
   } catch (err) {
     console.error('加载拉黑用户列表失败:', err)
-    toast.add({ color: 'error', title: '加载失败', description: '无法获取拉黑用户列表' })
+    feedback.error('加载失败', '无法获取拉黑用户列表')
   } finally {
     loading.value = false
   }
@@ -157,15 +180,15 @@ const unblockUser = async (user: UserInfo) => {
 
   try {
     const userService = useUsersService()
-    await userService.unblockUser({ id: user.user_id })
+    await userService.unblock({ id: user.user_id })
 
     const index = blockedUsers.value.findIndex(u => u.user_id === user.user_id)
     if (index > -1) blockedUsers.value.splice(index, 1)
 
-    toast.add({ color: 'success', title: '解除成功', description: `已解除对 ${user.nickname} 的拉黑` })
+    feedback.success('解除成功', `已解除对 ${user.nickname} 的拉黑`)
   } catch (err: unknown) {
     console.error('解除拉黑失败:', err)
-    toast.add({ color: 'error', title: '解除失败', description: getErrorMessage(err, '无法解除拉黑，请重试') })
+    feedback.error('解除失败', getErrorMessage(err, '无法解除拉黑，请重试'))
   } finally {
     unblockingUsers.value.delete(user.user_id)
   }

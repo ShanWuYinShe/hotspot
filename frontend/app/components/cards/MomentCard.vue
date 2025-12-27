@@ -1,178 +1,214 @@
 <template>
     <UCard
-        class="interactive-card group cursor-pointer"
+        variant="outline"
+        class="group flex flex-col h-full overflow-hidden"
+        data-hs-card="interactive"
         @click="$emit('click', moment)"
     >
-        <!-- 用户信息头部 -->
-        <template #header>
-            <div class="flex items-center justify-between">
+        <!-- 主体内容 (Header + Body) -->
+        <div class="flex flex-col h-full">
+            <!-- 头部：用户信息与时间 -->
+            <div class="flex items-start justify-between p-3 gap-3">
                 <UUser
+                    class="min-w-0"
                     :name="moment.user.nickname"
-                    :description="userDescription"
-                    :avatar="{
-                        src: moment.user.avatar_url,
-                        alt: moment.user.nickname,
-                        size: 'md',
-                        chip: isOnline ? { color: 'success', position: 'bottom-right' } : false
-                    }"
-                    :chip="isMyMoment ? { text: '我的', color: 'primary' } : false"
-                    size="md"
-                    class="flex-1 min-w-0"
-                >
-                    <template #description>
-                        <div class="flex items-center gap-3 text-sm text-secondary-content">
-                            <div class="flex items-center gap-1">
-                                <UIcon name="i-heroicons-clock" class="icon-sm" />
-                                <span>{{ formatTime(moment.created_at) }}</span>
-                            </div>
-                            
-                            <div v-if="moment.geo.location_name" class="flex items-center gap-1">
-                                <UIcon name="i-heroicons-map-pin" class="icon-sm" />
-                                <span class="truncate">{{ moment.geo.location_name }}</span>
-                            </div>
-                            
-                            <div v-if="moment.geo.distance !== undefined" class="flex items-center gap-1">
-                                <UIcon name="i-heroicons-signal" class="icon-sm" />
-                                <span>{{ formatDistance(moment.geo.distance) }}</span>
-                            </div>
-                        </div>
+                    :avatar="{ src: moment.user.avatar_url, alt: moment.user.nickname, size: 'md' }"
+                />
+
+                <div class="flex items-center gap-2 shrink-0">
+                    <UBadge icon="i-lucide-clock">
+                        {{ formatTime(moment.created_at) }}
+                    </UBadge>
+                    <UBadge v-if="moment.geo?.distance !== undefined" icon="i-lucide-plane">
+                        {{ formatDistance(moment.geo.distance) }}
+                    </UBadge>
+                    <UBadge v-if="isMyMoment" label="我的" color="primary" />
+                </div>
+
+                <!-- 操作按钮组 -->
+                <div class="flex items-center gap-1">
+                    <!-- 我的动态：编辑和删除 -->
+                    <template v-if="isMyMoment">
+                        <UTooltip text="编辑动态" :portal="false">
+                            <UButton
+                                variant="ghost"
+                                color="neutral"
+                                size="sm"
+                                icon="i-lucide-pencil"
+                                @click.stop="handleEditMoment"
+                            />
+                        </UTooltip>
+                        <UTooltip text="删除动态" :portal="false">
+                            <UButton
+                                variant="ghost"
+                                color="error"
+                                size="sm"
+                                icon="i-lucide-trash-2"
+                                @click.stop="handleDeleteMoment"
+                            />
+                        </UTooltip>
                     </template>
-                </UUser>
 
-                <!-- 操作菜单 -->
-                <UDropdownMenu :items="momentMenuItems" @click.stop>
-                    <UButton
-                        variant="ghost"
-                        size="sm"
-                        icon="i-heroicons-ellipsis-horizontal"
-                        class="opacity-0 group-hover:opacity-100 transition-opacity"
-                    />
-                </UDropdownMenu>
+                    <!-- 他人动态：关注、私信、举报 -->
+                    <template v-else>
+                        <UTooltip v-if="!moment.relationship?.is_following" text="关注用户" :portal="false">
+                            <UButton
+                                variant="ghost"
+                                color="primary"
+                                size="sm"
+                                icon="i-lucide-user-plus"
+                                @click.stop="handleFollowUser"
+                            />
+                        </UTooltip>
+                        
+                        <UTooltip text="发送私信" :portal="false">
+                            <UButton
+                                variant="ghost"
+                                color="neutral"
+                                size="sm"
+                                icon="i-lucide-message-square-text"
+                                @click.stop="handleSendMessage"
+                            />
+                        </UTooltip>
+
+                        <UTooltip text="举报内容" :portal="false">
+                            <UButton
+                                variant="ghost"
+                                color="error"
+                                size="sm"
+                                icon="i-lucide-flag"
+                                @click.stop="handleReportMoment"
+                            />
+                        </UTooltip>
+                    </template>
+                </div>
             </div>
-        </template>
 
-        <!-- 动态内容 -->
-        <div class="space-y-4">
-            <!-- 文字内容 -->
-            <div class="prose prose-sm max-w-none">
-                <p class="text-primary-content leading-relaxed">
+            <!-- 动态内容 -->
+            <div class="px-3 pb-3 space-y-3 flex-1">
+                <!-- 文字内容 -->
+                <div v-if="moment.description" class="text-sm leading-relaxed line-clamp-4">
                     {{ moment.description }}
-                </p>
-            </div>
-
-            <!-- 图片展示（支持最多9张） -->
-            <div v-if="moment.images?.length" class="mt-3">
-                <!-- 单张图片 -->
-                <div v-if="moment.images.length === 1" class="rounded-lg overflow-hidden">
-                    <NuxtImg
-                        :src="moment.images[0]"
-                        :alt="moment.description"
-                        class="w-full max-h-96 object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                        @click.stop="handleImageClick(moment.images[0], 0)"
-                    />
                 </div>
 
-                <!-- 2-4张图片（网格布局） -->
-                <div 
-                    v-else-if="moment.images.length <= 4"
-                    :class="[
-                        'grid gap-2 rounded-lg overflow-hidden',
-                        moment.images.length === 2 ? 'grid-cols-2' : 'grid-cols-2'
-                    ]"
-                >
-                    <NuxtImg
-                        v-for="(image, index) in moment.images"
-                        :key="index"
-                        :src="image"
-                        :alt="`${moment.description} - ${index + 1}`"
-                        class="w-full h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                        @click.stop="handleImageClick(image, index)"
-                    />
-                </div>
+                <!-- 图片展示 -->
+                <div v-if="moment.images?.length" class="mt-2">
+                    <!-- 单张图片 -->
+                    <div v-if="moment.images.length === 1" class="rounded-xl overflow-hidden aspect-video ring-1 ring-gray-200 dark:ring-gray-800">
+                        <NuxtImg
+                            :src="moment.images[0]"
+                            :alt="moment.description"
+                            class="w-full h-full object-cover cursor-pointer hover:opacity-95 transition-opacity"
+                            @click.stop="handleImageClick(moment.images?.[0] || '', 0)"
+                        />
+                    </div>
 
-                <!-- 5-9张图片（3x3网格） -->
-                <div 
-                    v-else
-                    class="grid grid-cols-3 gap-2 rounded-lg overflow-hidden"
-                >
-                    <template v-for="(image, index) in moment.images.slice(0, 9)" :key="index">
-                        <div class="relative">
+                    <div 
+                        v-else-if="moment.images.length <= 4"
+                        class="grid gap-0.5 rounded-xl overflow-hidden ring-1 ring-gray-200 dark:ring-gray-800"
+                        :class="moment.images.length === 2 ? 'grid-cols-2 aspect-2/1' : 'grid-cols-2 aspect-square'"
+                    >
+                        <div v-for="(image, index) in moment.images" :key="index" class="relative w-full h-full overflow-hidden">
                             <NuxtImg
                                 :src="image"
                                 :alt="`${moment.description} - ${index + 1}`"
-                                class="w-full h-32 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                class="w-full h-full object-cover cursor-pointer hover:opacity-95 transition-opacity absolute inset-0"
+                                @click.stop="handleImageClick(image, index)"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- 5-9张图片（3x3网格） -->
+                    <div 
+                        v-else
+                        class="grid grid-cols-3 gap-0.5 rounded-xl overflow-hidden aspect-square ring-1 ring-gray-200 dark:ring-gray-800"
+                    >
+                        <div v-for="(image, index) in moment.images.slice(0, 9)" :key="index" class="relative w-full h-full overflow-hidden">
+                            <NuxtImg
+                                :src="image"
+                                :alt="`${moment.description} - ${index + 1}`"
+                                class="w-full h-full object-cover cursor-pointer hover:opacity-95 transition-opacity absolute inset-0"
                                 @click.stop="handleImageClick(image, index)"
                             />
                             <!-- 第9张图片显示"更多"遮罩 -->
                             <div
                                 v-if="index === 8 && moment.images.length > 9"
-                                class="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-semibold"
+                                class="hs-image-more-overlay"
                                 @click.stop="$emit('more-images', moment)"
                             >
-                                +{{ moment.images.length - 9 }}
+                                <UBadge color="neutral" variant="solid" size="xl">
+                                    +{{ moment.images.length - 9 }}
+                                </UBadge>
                             </div>
                         </div>
-                    </template>
+                    </div>
                 </div>
-            </div>
 
-            <!-- 标签 -->
-            <div v-if="moment.tags?.length" class="flex flex-wrap gap-2 mt-3">
-                <UBadge
-                    v-for="tag in moment.tags"
-                    :key="tag"
-                    variant="soft"
-                    size="sm"
-                    color="neutral"
-                    class="cursor-pointer hover-primary transition-colors"
-                    @click.stop="$emit('tag-click', tag)"
-                >
-                    #{{ tag }}
-                </UBadge>
+                <!-- 位置和标签 -->
+                <div v-if="moment.geo?.location_name || moment.tags?.length" class="flex flex-wrap gap-2 pt-1">
+                    <!-- 位置标签 -->
+                    <UBadge
+                        v-if="moment.geo?.location_name"
+                        :label="moment.geo.location_name || ''"
+                        icon="i-lucide-map-pin"
+                        color="info"
+                        variant="soft"
+                        size="xs"
+                        class="max-w-full truncate"
+                    />
+                    
+                    <!-- 话题标签 -->
+                    <UButton
+                        v-for="tag in moment.tags"
+                        :key="tag"
+                        type="button"
+                        variant="soft"
+                        color="primary"
+                        size="xs"
+                        class="cursor-pointer"
+                        @click.stop="$emit('tag-click', tag)"
+                    >
+                        #{{ tag }}
+                    </UButton>
+                </div>
             </div>
         </div>
 
-        <!-- 互动区域 -->
+        <!-- 底部互动栏 -->
         <template #footer>
-            <div class="flex items-center justify-between">
-                <!-- 互动按钮 -->
-                <div class="flex items-center gap-1">
-                    <UButton
-                        variant="ghost"
-                        size="sm"
-                        @click.stop="handleLike"
-                        :color="moment.liked_by_me ? 'error' : 'neutral'"
-                        class="transition-colors"
-                    >
-                        <UIcon
-                            :name="moment.liked_by_me ? 'i-heroicons-heart-solid' : 'i-heroicons-heart'"
-                            class="icon-sm mr-1"
-                        />
-                        {{ moment.likes_count }}
-                    </UButton>
+            <div class="flex items-center gap-2 w-full">
+                <!-- 点赞 -->
+                <UButton
+                    variant="ghost"
+                    size="md"
+                    :color="moment.liked_by_me ? 'error' : 'neutral'"
+                    :icon="'i-lucide-heart'"
+                    :label="String(moment.likes_count || 0)"
+                    class="flex-1 justify-center"
+                    @click.stop="handleLike"
+                />
 
-                    <UButton 
-                        variant="ghost" 
-                        size="sm" 
-                        color="neutral"
-                        @click.stop="handleComment"
-                    >
-                        <UIcon name="i-heroicons-chat-bubble-left" class="icon-sm mr-1" />
-                        {{ moment.comments_count }}
-                    </UButton>
+                <!-- 评论 -->
+                <UButton 
+                    variant="ghost" 
+                    size="md" 
+                    color="neutral"
+                    icon="i-lucide-message-circle"
+                    :label="String(moment.comments_count || 0)"
+                    class="flex-1 justify-center"
+                    @click.stop="handleComment"
+                />
 
-                    <UButton 
-                        variant="ghost" 
-                        size="sm" 
-                        color="neutral"
-                        @click.stop="handleShare"
-                    >
-                        <UIcon name="i-heroicons-share" class="icon-sm mr-1" />
-                        分享
-                    </UButton>
-                </div>
-
-                <!-- 可见性功能暂未实现，等待后端API支持 -->
+                <!-- 分享 -->
+                <UButton 
+                    variant="ghost" 
+                    size="md" 
+                    color="neutral"
+                    icon="i-lucide-share-2"
+                    label="分享"
+                    class="flex-1 justify-center"
+                    @click.stop="handleShare"
+                />
             </div>
         </template>
     </UCard>
@@ -181,14 +217,7 @@
 <script setup lang="ts">
 import { useMomentsService } from '~/services/moments.service';
 import { useUsersService } from '~/services/users.service';
-import { getErrorMessage } from '~/utils/error';
-import type { MomentSearchItem } from '~/types/api'
-
-// MomentCard 使用 MomentSearchItem 类型（包含 geo 和 tags）
-// 添加可选的 liked_by_me 字段用于 UI 状态显示
-interface MomentCardData extends MomentSearchItem {
-  liked_by_me?: boolean;  // 当前用户是否已点赞（客户端状态）
-}
+import type { MomentCardData } from '~/types/client';
 
 interface Props {
     moment: MomentCardData
@@ -201,6 +230,7 @@ interface Emits {
     share: [moment: MomentCardData]
     more: [moment: MomentCardData]
     deleted: [moment: MomentCardData]
+    updated: [momentId: string]
     'tag-click': [tag: string]
     'image-click': [data: { image: string; index: number }]
     'more-images': [moment: MomentCardData]
@@ -213,7 +243,8 @@ const { requireAuth } = useRequireAuth()
 
 // 使用水合安全的 store 访问
 const authStore = useAuthStore()
-const toast = useToast()
+const hydratedUser = useHydratedStore(authStore, 'user', null as typeof authStore.user)
+const feedback = useFeedbackStore()
 
 // ============================================================================
 // 功能级认证处理函数
@@ -239,74 +270,8 @@ const handleShare = () => {
 
 // 检查是否是当前用户的动态
 const isMyMoment = computed(() => {
-    return props.moment.user.user_id === authStore.user?.user_id
+    return props.moment.user.user_id === hydratedUser.value?.user_id
 })
-
-// 在线状态：展示组件不需要实时在线状态，默认不显示
-const isOnline = computed(() => false)
-
-// 用户描述信息
-const userDescription = computed(() => {
-    const parts = []
-    if (props.moment.geo.location_name) {
-        parts.push(props.moment.geo.location_name)
-    }
-    if (props.moment.geo.distance !== undefined) {
-        parts.push(formatDistance(props.moment.geo.distance))
-    }
-    return parts.join(' • ')
-})
-
-// 可见性功能暂未实现，等待后端API支持
-
-// 动态操作菜单
-const momentMenuItems = computed(() => {
-    const items = []
-
-    // 基础操作
-    items.push([{
-        label: '查看详情',
-        icon: 'i-heroicons-eye',
-        click: () => emit('click', props.moment)
-    }])
-
-    // 我的动态操作
-    if (isMyMoment.value) {
-        items.push([{
-            label: '编辑动态',
-            icon: 'i-heroicons-pencil',
-            click: () => handleEditMoment()
-        }])
-
-        items.push([{
-            label: '删除动态',
-            icon: 'i-heroicons-trash',
-            click: () => handleDeleteMoment(),
-            class: 'text-error'
-        }])
-    } else {
-        // 他人动态操作
-        items.push([{
-            label: '关注用户',
-            icon: 'i-heroicons-user-plus',
-            click: () => handleFollowUser()
-        }, {
-            label: '发送消息',
-            icon: 'i-heroicons-chat-bubble-left',
-            click: () => handleSendMessage()
-        }])
-
-        items.push([{
-            label: '举报动态',
-            icon: 'i-heroicons-flag',
-            click: () => handleReportMoment(),
-            class: 'text-error'
-        }])
-    }
-
-    return items
-})
-
 
 // 服务和功能管理
 const momentService = useMomentsService()
@@ -314,13 +279,17 @@ const userService = useUsersService()
 
 // 编辑动态
 const handleEditMoment = async () => {
-    // 实际实现编辑功能
-    const toast = useToast()
-    toast.add({
-        title: '编辑功能',
-        description: '编辑功能正在开发中',
-        color: 'info'
+    if (!requireAuth('编辑动态')) return
+
+    const modal = useModal()
+    const updatedId = await modal.showEditMoment({
+        id: props.moment.id,
+        description: props.moment.description,
+        tags: props.moment.tags,
+        images: props.moment.images,
+        geo: props.moment.geo
     })
+    if (updatedId) emit('updated', updatedId)
 }
 
 // 删除动态
@@ -338,36 +307,30 @@ const handleDeleteMoment = async () => {
         await momentService.deleteMoment({
             id: props.moment.id
         })
-        toast.add({
-            title: '删除成功',
-            description: '动态已删除',
-            color: 'success'
-        })
+        feedback.success('删除成功', '动态已删除')
         // 触发父组件刷新
         emit('deleted', props.moment)
     } catch (error: unknown) {
-        toast.add({
-            title: '删除失败',
-            description: getErrorMessage(error, '删除动态时发生错误'),
-            color: 'error'
-        })
+        feedback.error('删除失败', getErrorMessage(error, '删除动态时发生错误'))
     }
 }
 
 // 关注用户
 const handleFollowUser = async () => {
+    if (!requireAuth('关注用户')) return
     try {
         const userService = useUsersService()
-        await userService.followUser({ id: props.moment.user.user_id })
-        toast.add({ color: 'success', title: '关注成功' })
+        await userService.follow({ id: props.moment.user.user_id })
+        feedback.success('关注成功')
     } catch (error: unknown) {
-        toast.add({ color: 'error', title: '关注失败', description: getErrorMessage(error) })
+        feedback.error('关注失败', getErrorMessage(error))
     }
 }
 
 // 发送消息
 const handleSendMessage = async () => {
-    if (props.moment.user.user_id === authStore.user?.user_id) {
+    if (!requireAuth('发送消息')) return
+    if (props.moment.user.user_id === hydratedUser.value?.user_id) {
         navigateTo('/profile')
     } else {
         navigateTo(`/chat/users/${props.moment.user.user_id}`)
@@ -376,15 +339,11 @@ const handleSendMessage = async () => {
 
 // 举报动态
 const handleReportMoment = async () => {
+    if (!requireAuth('提交举报')) return
     const modal = useModal()
-    const toast = useToast()
     
     await modal.showReport('moment', props.moment.id)
-    toast.add({
-        title: '举报已提交',
-        description: '我们会尽快处理您的举报',
-        color: 'success'
-    })
+    feedback.success('举报已提交', '我们会尽快处理您的举报')
 }
 
 // 图片点击处理

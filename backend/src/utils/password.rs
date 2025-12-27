@@ -5,29 +5,22 @@ use crate::error::{AppError, Result};
 pub struct PasswordUtil;
 
 impl PasswordUtil {
-    /// 对客户端哈希进行 bcrypt 二次哈希
-    /// client_hash: SHA256(password) from client (64字符十六进制)
-    pub fn hash_password(client_hash: &str) -> Result<String> {
-        // 验证客户端哈希格式（应为64字符的十六进制）
-        if client_hash.len() != 64 {
-            return Err(AppError::BadRequest("密码哈希格式错误".to_string()));
+    /// 对密码进行服务端慢哈希（bcrypt）。
+    ///
+    /// 约定：密码在 HTTPS/TLS 中明文传输；服务端负责慢哈希存储（业内最佳实践）。
+    pub fn hash_password(password: &str) -> Result<String> {
+        if password.is_empty() {
+            return Err(AppError::BadRequest("密码不能为空".to_string()));
         }
-        
-        // 验证是否为有效的十六进制字符串
-        if !client_hash.chars().all(|c| c.is_ascii_hexdigit()) {
-            return Err(AppError::BadRequest("密码哈希格式错误".to_string()));
-        }
-        
-        // 使用 bcrypt 进行二次哈希，work factor = 12
-        let hashed = hash(client_hash, 12)?;
+
+        // 使用 bcrypt，work factor = 12（后续建议配置化）
+        let hashed = hash(password, 12)?;
         Ok(hashed)
     }
-    
-    /// 验证密码
-    /// client_hash: SHA256(password) from client
-    /// stored_hash: bcrypt hash from database
-    pub fn verify_password(client_hash: &str, stored_hash: &str) -> Result<bool> {
-        let is_valid = verify(client_hash, stored_hash)?;
+
+    /// 验证密码（明文 password vs stored bcrypt hash）
+    pub fn verify_password(password: &str, stored_hash: &str) -> Result<bool> {
+        let is_valid = verify(password, stored_hash)?;
         Ok(is_valid)
     }
 }

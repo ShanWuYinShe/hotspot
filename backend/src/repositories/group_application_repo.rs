@@ -1,16 +1,17 @@
-use sqlx::{PgPool, FromRow};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::enums::InviteStatus;
+use crate::utils::pagination::{decode_cursor, encode_cursor, IdCursor};
 
 /// 群组申请Row - 数据库查询返回类型
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct GroupApplicationRow {
     pub id: i64,
-    pub cursor_id: Uuid,
+    pub application_id: Uuid,
     pub group_chat_id: Uuid,
     pub applicant_id: i64,
     pub message: Option<String>,
@@ -42,7 +43,7 @@ impl GroupApplicationRepository {
             r#"
             INSERT INTO group_applications (group_chat_id, applicant_id, message)
             VALUES ($1, $2, $3)
-            RETURNING id, cursor_id, group_chat_id, applicant_id, message,
+            RETURNING id, application_id, group_chat_id, applicant_id, message,
                       status as "status: InviteStatus", created_at, handled_by, handled_at
             "#,
             group_chat_id,
@@ -55,17 +56,20 @@ impl GroupApplicationRepository {
         Ok(row)
     }
 
-    /// 按ID查找申请
-    pub async fn find_by_id(&self, id: i64) -> Result<Option<GroupApplicationRow>> {
+    /// 按 application_id 查找申请（对外契约使用 UUID 字符串）
+    pub async fn find_by_application_id(
+        &self,
+        application_id: Uuid,
+    ) -> Result<Option<GroupApplicationRow>> {
         let row = sqlx::query_as!(
             GroupApplicationRow,
             r#"
-            SELECT id, cursor_id, group_chat_id, applicant_id, message,
+            SELECT id, application_id, group_chat_id, applicant_id, message,
                    status as "status: InviteStatus", created_at, handled_by, handled_at
             FROM group_applications
-            WHERE id = $1
+            WHERE application_id = $1
             "#,
-            id
+            application_id
         )
         .fetch_optional(&self.pool)
         .await?;
@@ -73,10 +77,10 @@ impl GroupApplicationRepository {
         Ok(row)
     }
 
-    /// 更新申请状态
-    pub async fn update_status(
+    /// 按 application_id 更新申请状态（对外契约使用 UUID 字符串）
+    pub async fn update_status_by_application_id(
         &self,
-        id: i64,
+        application_id: Uuid,
         status: InviteStatus,
         handled_by: i64,
     ) -> Result<()> {
@@ -84,9 +88,9 @@ impl GroupApplicationRepository {
             r#"
             UPDATE group_applications
             SET status = $2, handled_by = $3, handled_at = NOW()
-            WHERE id = $1
+            WHERE application_id = $1
             "#,
-            id,
+            application_id,
             status as InviteStatus,
             handled_by
         )
@@ -96,64 +100,55 @@ impl GroupApplicationRepository {
         Ok(())
     }
 
-    /// 将 UUID cursor 转换为自增主键
-    async fn resolve_cursor(&self, cursor: Option<Uuid>) -> Result<i64> {
-        match cursor {
-            Some(c) => {
-                sqlx::query_scalar!(
-                    r#"SELECT id FROM group_applications WHERE cursor_id = $1"#,
-                    c
-                )
-                .fetch_optional(&self.pool)
-                .await?
-                .ok_or_else(|| crate::error::AppError::BadRequest("无效的 cursor".to_string()))
-            }
-            None => Ok(i64::MAX),
-        }
-    }
-
     /// 按群组ID查询申请列表
     pub async fn list_by_group(
         &self,
         group_chat_id: Uuid,
         status: Option<InviteStatus>,
         limit: i32,
-        cursor: Option<Uuid>,
-    ) -> Result<Vec<GroupApplicationRow>> {
-        let cursor_pk = self.resolve_cursor(cursor).await?;
-        
+        cursor: Option<String>,
+    ) -> Result<(Vec<GroupApplicationRow>, Option<String>)> {
+        let status_str = status.map(|s| s.to_string());
+        let last_id = if let Some(c) = cursor {
+            decode_cursor::<IdCursor>(&c)?
+        } else {
+            i64::MAX
+        };
+
         let rows = sqlx::query_as!(
             GroupApplicationRow,
             r#"
-            SELECT id, cursor_id, group_chat_id, applicant_id, message,
+            SELECT id, application_id, group_chat_id, applicant_id, message,
                    status as "status: InviteStatus", created_at, handled_by, handled_at
             FROM group_applications
             WHERE group_chat_id = $1 
-              AND ($2::invitation_status IS NULL OR status = $2)
+              AND ($2::text IS NULL OR status::text = $2)
               AND id < $3
             ORDER BY id DESC
             LIMIT $4
             "#,
             group_chat_id,
-            status as Option<InviteStatus>,
-            cursor_pk,
+            status_str,
+            last_id,
             limit as i64
         )
         .fetch_all(&self.pool)
         .await?;
-        
-        Ok(rows)
+
+        let next_cursor = rows
+            .last()
+            .map(|last| encode_cursor(&last.id))
+            .transpose()?;
+
+        Ok((rows, next_cursor))
     }
 
-    /// 删除申请（取消申请时使用）
-    pub async fn delete(&self, id: i64) -> Result<()> {
-        sqlx::query!(
-            "DELETE FROM group_applications WHERE id = $1",
-            id
-        )
-        .execute(&self.pool)
-        .await?;
-        
+    /// 按 application_id 删除申请（取消申请时使用；对外契约使用 UUID 字符串）
+    pub async fn delete_by_application_id(&self, application_id: Uuid) -> Result<()> {
+        sqlx::query!("DELETE FROM group_applications WHERE application_id = $1", application_id)
+            .execute(&self.pool)
+            .await?;
+
         Ok(())
     }
 }

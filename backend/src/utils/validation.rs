@@ -1,6 +1,5 @@
-use uuid::Uuid;
-use crate::error::{AppError, Result};
 use crate::constants::DEFAULT_PAGE_LIMIT;
+use crate::error::{AppError, Result};
 
 pub struct Validator;
 
@@ -53,12 +52,7 @@ impl Validator {
     }
 
     /// 验证字符串长度
-    pub fn validate_length(
-        value: &str,
-        field_name: &str,
-        min: usize,
-        max: usize,
-    ) -> Result<()> {
+    pub fn validate_length(value: &str, field_name: &str, min: usize, max: usize) -> Result<()> {
         let len = value.len();
         if len < min || len > max {
             return Err(AppError::BadRequest(format!(
@@ -84,24 +78,23 @@ impl Validator {
         Ok(())
     }
 
-    /// 解析 UUID 游标
+    /// 解析游标 (透传字符串)
     /// - None -> Ok(None)
-    /// - 有效 UUID -> Ok(Some(uuid))
-    /// - 无效格式 -> 返回错误
-    pub fn parse_cursor(cursor: Option<&str>) -> Result<Option<Uuid>> {
-        cursor
-            .map(|c| Uuid::parse_str(c).map_err(|_| AppError::BadRequest("无效的游标".to_string())))
-            .transpose()
+    /// - Some(str) -> Ok(Some(String))
+    pub fn parse_cursor(cursor: Option<&str>) -> Result<Option<String>> {
+        Ok(cursor.map(|c| c.to_string()))
     }
 
-    /// 解析 offset 游标
-    /// - None -> 0
-    /// - 有效数字 -> offset 值
-    /// - 无效格式 -> 返回错误
-    pub fn parse_offset(cursor: Option<&str>) -> Result<i64> {
-        match cursor {
-            Some(c) => c.parse().map_err(|_| AppError::BadRequest("无效的游标".to_string())),
-            None => Ok(0),
+    /// 解析 ISO 8601 时间字符串
+    pub fn parse_datetime(datetime: Option<&str>) -> Result<Option<chrono::DateTime<chrono::Utc>>> {
+        match datetime {
+            Some(s) => {
+                let dt = chrono::DateTime::parse_from_rfc3339(s)
+                    .map_err(|_| AppError::BadRequest("无效的时间格式".to_string()))?
+                    .with_timezone(&chrono::Utc);
+                Ok(Some(dt))
+            }
+            None => Ok(None),
         }
     }
 }

@@ -8,6 +8,11 @@
       "invite": "Invite"
     }
   },
+  "globalSearch": {
+    "title": "Global Search",
+    "description": "Search users, groups and moments",
+    "placeholder": "Search users / groups / moments..."
+  },
   "nav": {
     "home": "Home",
     "map": "Map",

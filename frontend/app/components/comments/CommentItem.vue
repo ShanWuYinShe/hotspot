@@ -2,32 +2,29 @@
   <div :class="isReply ? 'py-2' : 'py-3'">
     <!-- 评论内容 -->
     <div class="flex gap-3">
-      <!-- 用户头像 -->
-      <UAvatar
-        :alt="comment.user.nickname"
-        size="sm"
-        class="shrink-0"
-      >
-        {{ comment.user.nickname?.charAt(0) }}
-      </UAvatar>
-
       <!-- 评论主体 -->
       <div class="flex-1 min-w-0">
-        <!-- 用户信息 -->
-        <div class="flex items-center gap-2 mb-1">
-          <span class="font-medium text-sm">{{ comment.user.nickname }}</span>
-          <span class="text-xs text-secondary-content">
+        <div class="flex items-start justify-between gap-2 mb-1">
+          <UUser
+            class="min-w-0"
+            :name="comment.user.nickname"
+            :avatar="{ alt: comment.user.nickname, size: 'sm' }"
+            size="sm"
+          />
+          <UBadge color="neutral" variant="soft" size="xs" class="shrink-0">
             {{ formatTime(comment.created_at) }}
-          </span>
+          </UBadge>
         </div>
 
         <!-- 回复对象 -->
-        <div v-if="comment.reply_to_user" class="text-sm text-secondary-content mb-1">
-          回复 <span class="text-secondary-content">@{{ comment.reply_to_user.nickname }}</span>
+        <div v-if="comment.reply_to_user" class="mb-1">
+          <UBadge color="neutral" variant="soft" size="xs">
+            回复 {{ comment.reply_to_user.nickname }}
+          </UBadge>
         </div>
 
         <!-- 评论内容 -->
-        <p class="text-sm text-primary-content whitespace-pre-wrap wrap-break-word">
+        <p class="text-sm whitespace-pre-wrap wrap-break-word leading-relaxed">
           {{ comment.content }}
         </p>
 
@@ -35,20 +32,20 @@
         <div class="flex items-center gap-2 mt-2">
           <!-- 点赞 -->
           <UButton
-            variant="link"
+            variant="ghost"
             size="sm"
             :color="comment.liked_by_me ? 'error' : 'neutral'"
-            :icon="comment.liked_by_me ? 'i-heroicons-heart-solid' : 'i-heroicons-heart'"
+            :icon="comment.liked_by_me ? 'i-lucide-heart' : 'i-lucide-heart'"
             :label="String(comment.likes_count || 0)"
             @click="handleLike"
           />
 
           <!-- 回复 -->
           <UButton
-            variant="link"
+            variant="ghost"
             size="sm"
             color="neutral"
-            icon="i-heroicons-chat-bubble-left"
+            icon="i-lucide-message-circle"
             label="回复"
             @click="handleReply"
           />
@@ -56,10 +53,10 @@
           <!-- 查看回复 -->
           <UButton
             v-if="comment.replies_count > 0 && !isReply"
-            variant="link"
+            variant="ghost"
             size="sm"
             color="neutral"
-            :icon="showReplies ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
+            :icon="showReplies ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
             :label="`${comment.replies_count} 条回复`"
             @click="toggleReplies"
           />
@@ -67,12 +64,12 @@
           <!-- 删除（仅作者可见） -->
           <UButton
             v-if="canDelete"
-            variant="link"
+            variant="ghost"
             size="sm"
-            color="neutral"
-            icon="i-heroicons-trash"
+            color="error"
+            icon="i-lucide-trash-2"
             label="删除"
-            class="ml-auto hover:text-error"
+            class="ml-auto"
             @click="handleDelete"
           />
         </div>
@@ -108,7 +105,7 @@
 <script setup lang="ts">
 import type { CommentListItem } from '~/types/api'
 import { useCommentsService } from '~/services/comments.service'
-import { getErrorMessage } from '~/utils/error'
+import { useHydratedStore } from '~/composables/useHydratedStore'
 
 // 扩展类型：包含前端本地管理的点赞状态
 interface CommentWithLikeStatus extends CommentListItem {
@@ -131,7 +128,8 @@ const { requireAuth } = useRequireAuth()
 const commentsService = useCommentsService()
 // 使用水合安全的 store 访问
 const authStore = useAuthStore()
-const toast = useToast()
+const hydratedUser = useHydratedStore(authStore, 'user', null as typeof authStore.user)
+const feedback = useFeedbackStore()
 
 // 状态
 const showReplies = ref(false)
@@ -142,7 +140,7 @@ const loadingReplies = ref(false)
 
 // 是否可以删除（作者本人）
 const canDelete = computed(() => {
-  return authStore.user?.user_id === props.comment.user.user_id
+  return hydratedUser.value?.user_id === props.comment.user.user_id
 })
 
 // 点赞
@@ -154,9 +152,9 @@ const handleLike = async () => {
     const wasLiked = props.comment.liked_by_me
     
     if (wasLiked) {
-      await commentsService.unlikeComment({ id: props.comment.id })
+      await commentsService.unlike({ id: props.comment.id })
     } else {
-      await commentsService.likeComment({ id: props.comment.id })
+      await commentsService.like({ id: props.comment.id })
     }
     
     // 更新本地状态
@@ -165,11 +163,7 @@ const handleLike = async () => {
     
     emit('like', props.comment.id)
   } catch (error: unknown) {
-    toast.add({
-      title: '操作失败',
-      description: getErrorMessage(error, '点赞失败'),
-      color: 'error'
-    })
+    feedback.error('操作失败', getErrorMessage(error, '点赞失败'))
   }
 }
 
@@ -193,18 +187,11 @@ const handleDelete = async () => {
   if (!confirmed) return
 
   try {
-    await commentsService.remove({ id: props.comment.id })
-    toast.add({
-      title: '删除成功',
-      color: 'success'
-    })
+    await commentsService.delete({ id: props.comment.id })
+    feedback.success('删除成功')
     emit('delete', props.comment.id)
   } catch (error: unknown) {
-    toast.add({
-      title: '删除失败',
-      description: getErrorMessage(error, '删除评论失败'),
-      color: 'error'
-    })
+    feedback.error('删除失败', getErrorMessage(error, '删除评论失败'))
   }
 }
 
@@ -272,4 +259,3 @@ const handleDeleteReply = (replyId: string) => {
   props.comment.replies_count--
 }
 </script>
-

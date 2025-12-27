@@ -2,14 +2,12 @@
 //!
 //! 管理群组的加入方式、密码、成员上限等设置
 
-#![allow(dead_code)]
-
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
-use crate::error::{AppError, Result};
+use crate::error::Result;
 
 /// 群组设置Row（如果group_repo.rs中已定义，可以从那里导入）
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
@@ -58,32 +56,6 @@ impl GroupSettingsRepository {
     /// 根据群聊ID查找群组设置（实例方法）
     pub async fn find_by_group(&self, group_chat_id: Uuid) -> Result<Option<GroupSettings>> {
         Self::find_by_group_id(&self.pool, group_chat_id).await
-    }
-
-    /// 获取群组设置
-    pub async fn get(&self, group_chat_id: Uuid) -> Result<GroupSettings> {
-        let settings = sqlx::query_as!(
-            GroupSettings,
-            r#"
-            SELECT group_chat_id, join_method::TEXT as "join_method!", 
-                   is_searchable, max_members, password_hash,
-                   created_at, updated_at
-            FROM group_settings
-            WHERE group_chat_id = $1
-            "#,
-            group_chat_id
-        )
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|e| {
-            if matches!(e, sqlx::Error::RowNotFound) {
-                AppError::NotFound("群组设置不存在".to_string())
-            } else {
-                AppError::from(e)
-            }
-        })?;
-
-        Ok(settings)
     }
 
     /// 更新群组设置
@@ -142,60 +114,5 @@ impl GroupSettingsRepository {
         .await?;
 
         Ok(())
-    }
-
-    /// 批量获取群组设置
-    pub async fn get_batch(&self, group_chat_ids: &[Uuid]) -> Result<Vec<GroupSettings>> {
-        if group_chat_ids.is_empty() {
-            return Ok(Vec::new());
-        }
-
-        let settings = sqlx::query_as!(
-            GroupSettings,
-            r#"
-            SELECT group_chat_id, join_method::TEXT as "join_method!", 
-                   is_searchable, max_members, password_hash,
-                   created_at, updated_at
-            FROM group_settings
-            WHERE group_chat_id = ANY($1)
-            "#,
-            group_chat_ids as &[Uuid]
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(settings)
-    }
-
-    /// 检查群组是否可搜索
-    pub async fn is_searchable(&self, group_chat_id: Uuid) -> Result<bool> {
-        let result = sqlx::query!(
-            r#"
-            SELECT is_searchable
-            FROM group_settings
-            WHERE group_chat_id = $1
-            "#,
-            group_chat_id
-        )
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(result.is_searchable)
-    }
-
-    /// 获取群组最大成员数
-    pub async fn get_max_members(&self, group_chat_id: Uuid) -> Result<Option<i32>> {
-        let result = sqlx::query!(
-            r#"
-            SELECT max_members
-            FROM group_settings
-            WHERE group_chat_id = $1
-            "#,
-            group_chat_id
-        )
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(result.max_members)
     }
 }

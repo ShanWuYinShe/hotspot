@@ -1,17 +1,17 @@
-use sqlx::{PgPool, FromRow};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::types::enums::{ReportTargetType, ReportStatus};
+use crate::types::enums::{ReportStatus, ReportTargetType};
+use crate::utils::pagination::{decode_cursor, encode_cursor};
 
 /// 举报Row - 数据库查询返回类型
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct ReportRow {
     pub id: i64,
     pub report_id: Uuid,
-    pub cursor_id: Uuid,
     pub reporter_id: i64,
     pub target_type: ReportTargetType,
     pub target_id: String,
@@ -36,20 +36,22 @@ impl ReportRepository {
         Self { pool }
     }
 
-    /// 将 UUID cursor 转换为自增主键
-    async fn resolve_cursor(&self, cursor: Option<Uuid>) -> Result<i64> {
-        match cursor {
-            Some(c) => {
-                sqlx::query_scalar!(
-                    r#"SELECT id FROM reports WHERE cursor_id = $1"#,
-                    c
-                )
-                .fetch_optional(&self.pool)
-                .await?
-                .ok_or_else(|| crate::error::AppError::BadRequest("无效的 cursor".to_string()))
-            }
-            None => Ok(i64::MAX),
-        }
+    /// 是否存在（用于仅做存在性校验的场景，避免拉取整行）
+    pub async fn exists(&self, report_id: Uuid) -> Result<bool> {
+        let result = sqlx::query!(
+            r#"
+            SELECT EXISTS(
+                SELECT 1
+                FROM reports
+                WHERE report_id = $1
+            ) as "exists!"
+            "#,
+            report_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(result.exists)
     }
 
     /// 创建举报
@@ -71,7 +73,7 @@ impl ReportRepository {
                       target_id, reason, description,
                       status as "status: ReportStatus",
                       handled_by, handled_at, handler_note, created_at,
-                      id, cursor_id, is_deleted, deleted_at
+                      id, is_deleted, deleted_at
             "#,
             reporter_id,
             target_type as ReportTargetType,
@@ -80,28 +82,6 @@ impl ReportRepository {
             description
         )
         .fetch_one(&self.pool)
-        .await?;
-
-        Ok(row)
-    }
-
-    /// 按ID查找举报
-    pub async fn find_by_id(&self, report_id: Uuid) -> Result<Option<ReportRow>> {
-        let row = sqlx::query_as!(
-            ReportRow,
-            r#"
-            SELECT id, report_id, cursor_id, reporter_id,
-                   target_type as "target_type: ReportTargetType",
-                   target_id, reason, description,
-                   status as "status: ReportStatus",
-                   handled_by, handled_at, handler_note, created_at,
-                   is_deleted, deleted_at
-            FROM reports
-            WHERE report_id = $1
-            "#,
-            report_id
-        )
-        .fetch_optional(&self.pool)
         .await?;
 
         Ok(row)
@@ -132,16 +112,23 @@ impl ReportRepository {
         Ok(())
     }
 
-
-
     /// 按举报者ID查询举报列表
-    pub async fn find_reports_by_reporter(&self, reporter_id: i64, limit: i32, cursor: Option<Uuid>) -> Result<Vec<ReportRow>> {
-        let cursor_pk = self.resolve_cursor(cursor).await?;
-        
+    pub async fn find_reports_by_reporter(
+        &self,
+        reporter_id: i64,
+        limit: i32,
+        cursor: Option<String>,
+    ) -> Result<(Vec<ReportRow>, Option<String>)> {
+        let last_id = if let Some(c) = cursor {
+            decode_cursor::<i64>(&c)?
+        } else {
+            i64::MAX
+        };
+
         let reports = sqlx::query_as!(
             ReportRow,
             r#"
-            SELECT id, report_id, cursor_id, reporter_id, target_type as "target_type: crate::types::enums::ReportTargetType",
+            SELECT id, report_id, reporter_id, target_type as "target_type: crate::types::enums::ReportTargetType",
                    target_id, reason, description, status as "status: crate::types::enums::ReportStatus",
                    created_at, handled_by, handled_at, handler_note, is_deleted, deleted_at
             FROM reports
@@ -150,39 +137,53 @@ impl ReportRepository {
             LIMIT $3
             "#,
             reporter_id,
-            cursor_pk,
+            last_id,
             limit as i64
         )
         .fetch_all(&self.pool)
         .await?;
-        
-        Ok(reports)
+
+        let next_cursor = reports.last().map(|r| encode_cursor(&r.id)).transpose()?;
+        Ok((reports, next_cursor))
     }
 
     /// 查询所有举报列表
-    pub async fn find_all_reports(&self, status: Option<ReportStatus>, limit: i32, cursor: Option<Uuid>) -> Result<Vec<ReportRow>> {
-        let cursor_pk = self.resolve_cursor(cursor).await?;
-        
+    pub async fn find_all_reports(
+        &self,
+        status: Option<ReportStatus>,
+        target_type: Option<crate::types::enums::ReportTargetType>,
+        limit: i32,
+        cursor: Option<String>,
+    ) -> Result<(Vec<ReportRow>, Option<String>)> {
+        let last_id = if let Some(c) = cursor {
+            decode_cursor::<i64>(&c)?
+        } else {
+            i64::MAX
+        };
+
         let reports = sqlx::query_as!(
             ReportRow,
             r#"
-            SELECT id, report_id, cursor_id, reporter_id, target_type as "target_type: crate::types::enums::ReportTargetType",
+            SELECT id, report_id, reporter_id, target_type as "target_type: crate::types::enums::ReportTargetType",
                    target_id, reason, description, status as "status: crate::types::enums::ReportStatus",
                    created_at, handled_by, handled_at, handler_note, is_deleted, deleted_at
             FROM reports
             WHERE ($1::report_status IS NULL OR status = $1)
-              AND id < $2 
+              AND ($2::report_target_type IS NULL OR target_type = $2)
+              AND id < $3
               AND is_deleted = FALSE
             ORDER BY id DESC
-            LIMIT $3
+            LIMIT $4
             "#,
             status as Option<ReportStatus>,
-            cursor_pk,
+            target_type as Option<crate::types::enums::ReportTargetType>,
+            last_id,
             limit as i64
         )
         .fetch_all(&self.pool)
         .await?;
-        
-        Ok(reports)
+
+        let next_cursor = reports.last().map(|r| encode_cursor(&r.id)).transpose()?;
+        Ok((reports, next_cursor))
     }
 }

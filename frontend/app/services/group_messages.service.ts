@@ -4,17 +4,17 @@ import type {
   PaginatedData,
   SendGroupMessageRequest,
   SendGroupMessageData,
-  GetGroupMessagesRequest,
+  GroupMessagesHistoryRequest,
   GroupMessageItem,
   UpdateGroupMessageRequest,
   RecallGroupMessageRequest,
   DeleteGroupMessageRequest,
   MarkGroupMessagesReadRequest,
-  GetMessageReadStatusRequest,
+  MessageReadStatusRequest,
   MessageReadItem,
   AddGroupMessageReactionRequest,
   RemoveGroupMessageReactionRequest,
-  GetGroupMessageReactionsRequest,
+  GroupMessageReactionsRequest,
   MessageReactionItem
 } from '~/types/api'
 
@@ -23,8 +23,8 @@ class GroupMessagesService extends BaseService {
     return this.post<SendGroupMessageData>(GROUP_MESSAGES.SEND, request)
   }
 
-  async getGroupMessages(request: GetGroupMessagesRequest) {
-    return this.post<PaginatedData<GroupMessageItem>>(GROUP_MESSAGES.GET_HISTORY, request)
+  async getGroupMessages(request: GroupMessagesHistoryRequest) {
+    return this.post<PaginatedData<GroupMessageItem>>(GROUP_MESSAGES.HISTORY, request)
   }
 
   async update(request: UpdateGroupMessageRequest) {
@@ -43,8 +43,8 @@ class GroupMessagesService extends BaseService {
     return this.post<void>(GROUP_MESSAGES.MARK_AS_READ, request)
   }
 
-  async getReadStatus(request: GetMessageReadStatusRequest) {
-    return this.post<PaginatedData<MessageReadItem>>(GROUP_MESSAGES.GET_READ_STATUS, request)
+  async getReadStatus(request: MessageReadStatusRequest) {
+    return this.post<PaginatedData<MessageReadItem>>(GROUP_MESSAGES.READ_STATUS, request)
   }
 
   async addReaction(request: AddGroupMessageReactionRequest) {
@@ -55,8 +55,8 @@ class GroupMessagesService extends BaseService {
     return this.post<void>(GROUP_MESSAGES.REMOVE_REACTION, request)
   }
 
-  async getReactions(request: GetGroupMessageReactionsRequest) {
-    return this.post<PaginatedData<MessageReactionItem>>(GROUP_MESSAGES.GET_REACTIONS_LIST, request)
+  async getReactions(request: GroupMessageReactionsRequest) {
+    return this.post<PaginatedData<MessageReactionItem>>(GROUP_MESSAGES.REACTIONS, request)
   }
 }
 

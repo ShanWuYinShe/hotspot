@@ -8,9 +8,11 @@
     >
       <!-- 头像骨架 -->
       <div class="relative">
-        <USkeleton class="w-12 h-12 rounded-full" />
-        <!-- 在线状态指示器骨架 -->
-        <USkeleton class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full" />
+        <UAvatar
+          size="md"
+          icon="i-lucide-user"
+          color="neutral"
+        />
       </div>
       
       <!-- 会话信息骨架 -->

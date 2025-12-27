@@ -1,13 +1,20 @@
 <template>
-  <UModal title="切换账户">
+  <UModal
+    width="md"
+    title="切换账户"
+  >
     <template #body>
-      <p class="text-secondary-content mb-4">
-        {{ t('userMenu.switchModal.description', { name: account?.nickname }) }}
-      </p>
+      <UAlert
+        class="mb-4"
+        color="neutral"
+        variant="soft"
+        icon="i-lucide-arrow-left-right"
+        :title="t('userMenu.switchModal.description', { name: account?.nickname })"
+      />
 
       <UAlert
         v-if="account?.user_type && isTempUser(account.user_type)"
-        icon="i-heroicons-exclamation-triangle"
+        icon="i-lucide-triangle-alert"
         color="warning"
         variant="soft"
         :title="t('userMenu.switchModal.tempWarningTitle')"
@@ -25,7 +32,7 @@
       </UButton>
       <UButton
         color="warning"
-        icon="i-heroicons-arrow-path"
+        icon="i-lucide-refresh-cw"
         :loading="isSwitching"
         @click="handleConfirm"
       >

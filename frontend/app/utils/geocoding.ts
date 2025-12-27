@@ -2,7 +2,7 @@
  * 地理编码服务 - 使用高德地图 SDK
  */
 
-import { waitForAMap, loadAMapPlugin } from '~/plugins/amap.client'
+import { waitForAMap, loadAMapPlugin } from '~/plugins/01.amap.client'
 
 export interface GeocodeResult {
   formatted_address: string
@@ -87,11 +87,16 @@ class GeocodingService {
       return new Promise((resolve) => {
         geocoder.getLocation(address, (status: string, result: AMap.GeocodeResult) => {
           if (status === 'complete' && result.geocodes?.length) {
-            const location = result.geocodes[0].location
-            resolve({
-              latitude: location.getLat(),
-              longitude: location.getLng()
-            })
+            const geocode = result.geocodes[0]
+            if (geocode && geocode.location) {
+              const location = geocode.location
+              resolve({
+                latitude: location.getLat(),
+                longitude: location.getLng()
+              })
+            } else {
+              resolve(null)
+            }
           } else {
             resolve(null)
           }

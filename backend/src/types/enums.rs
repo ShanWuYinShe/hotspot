@@ -1,9 +1,7 @@
 //! 数据库枚举类型定义
-//! 
+//!
 //! 这些枚举类型与 PostgreSQL ENUM 类型一一对应
 //! 部分枚举暂未使用，但为未来功能预留
-
-#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 use sqlx::Type;
@@ -15,9 +13,9 @@ use sqlx::Type;
 #[sqlx(type_name = "member_role", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum MemberRole {
-    Owner,      // 群主
-    Admin,      // 管理员
-    Member,     // 普通成员
+    Owner,  // 群主
+    Admin,  // 管理员
+    Member, // 普通成员
 }
 
 impl MemberRole {
@@ -28,13 +26,13 @@ impl MemberRole {
             MemberRole::Member => "member",
         }
     }
-    
+
     pub fn from_str(s: &str) -> Result<Self, String> {
         match s {
             "owner" => Ok(MemberRole::Owner),
             "admin" => Ok(MemberRole::Admin),
             "member" => Ok(MemberRole::Member),
-            _ => Err(format!("无效的成员角色: {}", s))
+            _ => Err(format!("无效的成员角色: {}", s)),
         }
     }
 }
@@ -46,125 +44,20 @@ impl std::fmt::Display for MemberRole {
 }
 
 // ============================================================
-// 2. 房间类型枚举
-// ============================================================
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
-#[sqlx(type_name = "room_type", rename_all = "snake_case")]
-#[serde(rename_all = "snake_case")]
-pub enum RoomType {
-    Direct,         // 私聊（与数据库一致）
-    PublicGroup,    // 公开群组
-    PrivateGroup,   // 私密群组
-}
-
-impl RoomType {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            RoomType::Direct => "direct",
-            RoomType::PublicGroup => "public_group",
-            RoomType::PrivateGroup => "private_group",
-        }
-    }
-
-    pub fn is_group(&self) -> bool {
-        matches!(self, RoomType::PublicGroup | RoomType::PrivateGroup)
-    }
-    
-    pub fn is_direct(&self) -> bool {
-        matches!(self, RoomType::Direct)
-    }
-    
-    pub fn from_str(s: &str) -> Result<Self, String> {
-        match s {
-            "direct" => Ok(RoomType::Direct),
-            "public_group" => Ok(RoomType::PublicGroup),
-            "private_group" => Ok(RoomType::PrivateGroup),
-            _ => Err(format!("无效的群组类型: {}", s))
-        }
-    }
-}
-
-impl std::fmt::Display for RoomType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_str())
-    }
-}
-
-// ============================================================
-// 3. 关系类型枚举
-// ============================================================
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
-#[sqlx(type_name = "relationship_type", rename_all = "lowercase")]
-#[serde(rename_all = "lowercase")]
-pub enum RelationshipType {
-    Any,         // 🔍 匹配所有值（仅用于查询过滤）
-    Friend,      // 好友
-    Following,   // 关注
-    Blocked,     // 拉黑
-}
-
-impl RelationshipType {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            RelationshipType::Any => "any",
-            RelationshipType::Friend => "friend",
-            RelationshipType::Following => "following",
-            RelationshipType::Blocked => "blocked",
-        }
-    }
-}
-
-impl std::fmt::Display for RelationshipType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_str())
-    }
-}
-
-// ============================================================
-// 4. 关系状态枚举
-// ============================================================
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
-#[sqlx(type_name = "relationship_status", rename_all = "lowercase")]
-#[serde(rename_all = "lowercase")]
-pub enum RelationshipStatus {
-    Any,        // 🔍 匹配所有值（仅用于查询过滤）
-    Pending,    // 待处理
-    Accepted,   // 已接受
-    Rejected,   // 已拒绝
-}
-
-impl RelationshipStatus {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            RelationshipStatus::Any => "any",
-            RelationshipStatus::Pending => "pending",
-            RelationshipStatus::Accepted => "accepted",
-            RelationshipStatus::Rejected => "rejected",
-        }
-    }
-}
-
-impl std::fmt::Display for RelationshipStatus {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_str())
-    }
-}
-
-// ============================================================
-// 5. 消息类型枚举
+// 2. 消息类型枚举
 // ============================================================
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
 #[sqlx(type_name = "message_type", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum MessageType {
-    Any,        // 🔍 匹配所有值（仅用于查询过滤）
-    Text,       // 文本
-    Image,      // 图片
-    Video,      // 视频
-    Audio,      // 音频
-    File,       // 文件
-    Location,   // 位置
-    System,     // 系统消息
+    Any,      // 🔍 匹配所有值（仅用于查询过滤）
+    Text,     // 文本
+    Image,    // 图片
+    Video,    // 视频
+    Audio,    // 音频
+    File,     // 文件
+    Location, // 位置
+    System,   // 系统消息
 }
 
 impl MessageType {
@@ -194,13 +87,6 @@ impl MessageType {
             _ => None,
         }
     }
-
-    pub fn is_media(&self) -> bool {
-        matches!(
-            self,
-            MessageType::Image | MessageType::Video | MessageType::Audio | MessageType::File
-        )
-    }
 }
 
 impl std::fmt::Display for MessageType {
@@ -216,11 +102,11 @@ impl std::fmt::Display for MessageType {
 #[sqlx(type_name = "report_status", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum ReportStatus {
-    Any,        // 🔍 匹配所有值（仅用于查询过滤）
-    Pending,    // 待处理
-    Reviewing,  // 审核中
-    Resolved,   // 已解决
-    Dismissed,  // 已驳回
+    Any,       // 🔍 匹配所有值（仅用于查询过滤）
+    Pending,   // 待处理
+    Reviewing, // 审核中
+    Resolved,  // 已解决
+    Dismissed, // 已驳回
 }
 
 impl ReportStatus {
@@ -241,6 +127,21 @@ impl std::fmt::Display for ReportStatus {
     }
 }
 
+impl std::str::FromStr for ReportStatus {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "any" => Ok(ReportStatus::Any),
+            "pending" => Ok(ReportStatus::Pending),
+            "reviewing" => Ok(ReportStatus::Reviewing),
+            "resolved" => Ok(ReportStatus::Resolved),
+            "dismissed" => Ok(ReportStatus::Dismissed),
+            _ => Err(format!("无效的举报状态: {}", s)),
+        }
+    }
+}
+
 // ============================================================
 // 7. 邀请状态枚举
 // ============================================================
@@ -248,12 +149,12 @@ impl std::fmt::Display for ReportStatus {
 #[sqlx(type_name = "invite_status", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum InviteStatus {
-    Any,        // 🔍 匹配所有值（仅用于查询过滤）
-    Pending,    // 待处理
-    Accepted,   // 已接受
-    Rejected,   // 已拒绝
-    Approved,   // 已批准（用于申请）
-    Expired,    // 已过期
+    Any,      // 🔍 匹配所有值（仅用于查询过滤）
+    Pending,  // 待处理
+    Accepted, // 已接受
+    Rejected, // 已拒绝
+    Approved, // 已批准（用于申请）
+    Expired,  // 已过期
 }
 
 impl InviteStatus {
@@ -277,7 +178,7 @@ impl std::fmt::Display for InviteStatus {
 
 impl std::str::FromStr for InviteStatus {
     type Err = String;
-    
+
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "any" => Ok(InviteStatus::Any),
@@ -292,47 +193,17 @@ impl std::str::FromStr for InviteStatus {
 }
 
 // ============================================================
-// 8. 收件箱分类枚举
-// ============================================================
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
-#[sqlx(type_name = "inbox_category", rename_all = "lowercase")]
-#[serde(rename_all = "lowercase")]
-pub enum InboxCategory {
-    Any,        // 🔍 匹配所有值（仅用于查询过滤）
-    Social,     // 社交互动
-    Content,    // 内容互动
-    System,     // 系统通知
-}
-
-impl InboxCategory {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            InboxCategory::Any => "any",
-            InboxCategory::Social => "social",
-            InboxCategory::Content => "content",
-            InboxCategory::System => "system",
-        }
-    }
-}
-
-impl std::fmt::Display for InboxCategory {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_str())
-    }
-}
-
-// ============================================================
-// 9. 举报目标类型枚举
+// 8. 举报目标类型枚举
 // ============================================================
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
 #[sqlx(type_name = "report_target_type", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum ReportTargetType {
-    User,       // 用户
-    Moment,     // 生活瞬间
-    Comment,    // 评论
-    Message,    // 消息
-    Group,      // 群组
+    User,    // 用户
+    Moment,  // 生活瞬间
+    Comment, // 评论
+    Message, // 消息
+    Group,   // 群组
 }
 
 impl ReportTargetType {
@@ -353,72 +224,31 @@ impl std::fmt::Display for ReportTargetType {
     }
 }
 
-// ============================================================
-// 10. 通知类别枚举
-// ============================================================
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
-#[sqlx(type_name = "notification_category", rename_all = "lowercase")]
-#[serde(rename_all = "lowercase")]
-pub enum NotificationCategory {
-    Social,     // 社交互动
-    System,     // 系统通知
-    Content,    // 内容互动
-}
+impl std::str::FromStr for ReportTargetType {
+    type Err = String;
 
-impl NotificationCategory {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            NotificationCategory::Social => "social",
-            NotificationCategory::System => "system",
-            NotificationCategory::Content => "content",
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "user" => Ok(ReportTargetType::User),
+            "moment" => Ok(ReportTargetType::Moment),
+            "comment" => Ok(ReportTargetType::Comment),
+            "message" => Ok(ReportTargetType::Message),
+            "group" => Ok(ReportTargetType::Group),
+            _ => Err(format!("无效的举报目标类型: {}", s)),
         }
     }
 }
 
-impl std::fmt::Display for NotificationCategory {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_str())
-    }
-}
-
 // ============================================================
-// 11. 通知严重程度枚举
-// ============================================================
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
-#[sqlx(type_name = "notification_severity", rename_all = "lowercase")]
-#[serde(rename_all = "lowercase")]
-pub enum NotificationSeverity {
-    Info,       // 信息
-    Warning,    // 警告
-    Error,      // 错误
-}
-
-impl NotificationSeverity {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            NotificationSeverity::Info => "info",
-            NotificationSeverity::Warning => "warning",
-            NotificationSeverity::Error => "error",
-        }
-    }
-}
-
-impl std::fmt::Display for NotificationSeverity {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_str())
-    }
-}
-
-// ============================================================
-// 12. 平台枚举
+// 9. 平台枚举
 // ============================================================
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
 #[sqlx(type_name = "platform", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum Platform {
-    Ios,        // iOS
-    Android,    // Android
-    Web,        // Web
+    Ios,     // iOS
+    Android, // Android
+    Web,     // Web
 }
 
 impl Platform {
@@ -439,7 +269,7 @@ impl std::fmt::Display for Platform {
 
 impl std::str::FromStr for Platform {
     type Err = String;
-    
+
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "ios" => Ok(Platform::Ios),
@@ -451,43 +281,15 @@ impl std::str::FromStr for Platform {
 }
 
 // ============================================================
-// 13. 群组加入方式枚举
-// ============================================================
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
-#[sqlx(type_name = "join_method", rename_all = "snake_case")]
-#[serde(rename_all = "snake_case")]
-pub enum JoinMethod {
-    Open,           // 开放加入
-    Approval,       // 需要审批
-    InviteOnly,     // 仅限邀请
-}
-
-impl JoinMethod {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            JoinMethod::Open => "open",
-            JoinMethod::Approval => "approval",
-            JoinMethod::InviteOnly => "invite_only",
-        }
-    }
-}
-
-impl std::fmt::Display for JoinMethod {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_str())
-    }
-}
-
-// ============================================================
-// 14. 隐私级别枚举
+// 10. 隐私级别枚举
 // ============================================================
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
 #[sqlx(type_name = "privacy_level", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum PrivacyLevel {
-    Public,     // 公开
-    Friends,    // 仅好友
-    Private,    // 私密
+    Public,  // 公开
+    Friends, // 仅好友
+    Private, // 私密
 }
 
 impl PrivacyLevel {
@@ -506,51 +308,30 @@ impl std::fmt::Display for PrivacyLevel {
     }
 }
 
-// ============================================================
-// 15. 反应类型枚举
-// ============================================================
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
-#[sqlx(type_name = "reaction_type", rename_all = "lowercase")]
-#[serde(rename_all = "lowercase")]
-pub enum ReactionType {
-    Like,       // 喜欢
-    Love,       // 爱心
-    Laugh,      // 笑脸
-    Angry,      // 生气
-    Sad,        // 悲伤
-    Wow,        // 惊讶
-}
+impl std::str::FromStr for PrivacyLevel {
+    type Err = String;
 
-impl ReactionType {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            ReactionType::Like => "like",
-            ReactionType::Love => "love",
-            ReactionType::Laugh => "laugh",
-            ReactionType::Angry => "angry",
-            ReactionType::Sad => "sad",
-            ReactionType::Wow => "wow",
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "public" => Ok(PrivacyLevel::Public),
+            "friends" => Ok(PrivacyLevel::Friends),
+            "private" => Ok(PrivacyLevel::Private),
+            _ => Err(format!("无效的隐私级别: {}", s)),
         }
     }
 }
 
-impl std::fmt::Display for ReactionType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_str())
-    }
-}
-
 // ============================================================
-// 16. 用户类型枚举
+// 11. 用户类型枚举
 // ============================================================
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
 #[sqlx(type_name = "user_type", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum UserType {
-    Temp,       // 临时用户
-    Normal,     // 普通用户
-    Admin,      // 管理员用户
-    System,     // 系统用户
+    Temp,   // 临时用户
+    Normal, // 普通用户
+    Admin,  // 管理员用户
+    System, // 系统用户
 }
 
 impl UserType {
@@ -560,16 +341,6 @@ impl UserType {
             UserType::Normal => "normal",
             UserType::Admin => "admin",
             UserType::System => "system",
-        }
-    }
-
-    pub fn from_str(s: &str) -> Result<Self, String> {
-        match s {
-            "temp" => Ok(UserType::Temp),
-            "normal" => Ok(UserType::Normal),
-            "admin" => Ok(UserType::Admin),
-            "system" => Ok(UserType::System),
-            _ => Err(format!("无效的用户类型: {}", s)),
         }
     }
 
@@ -586,71 +357,14 @@ impl std::fmt::Display for UserType {
 }
 
 // ============================================================
-// 17. 点赞操作枚举
-// ============================================================
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum LikeAction {
-    Like,       // 点赞
-    Unlike,     // 取消点赞
-}
-
-impl LikeAction {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            LikeAction::Like => "like",
-            LikeAction::Unlike => "unlike",
-        }
-    }
-}
-
-// ============================================================
-// 18. 收藏操作枚举
-// ============================================================
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum FavoriteAction {
-    Add,        // 添加收藏
-    Remove,     // 取消收藏
-}
-
-impl FavoriteAction {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            FavoriteAction::Add => "add",
-            FavoriteAction::Remove => "remove",
-        }
-    }
-}
-
-// ============================================================
-// 19. 反应操作枚举
-// ============================================================
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum ReactionAction {
-    Add,        // 添加反应
-    Remove,     // 移除反应
-}
-
-impl ReactionAction {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            ReactionAction::Add => "add",
-            ReactionAction::Remove => "remove",
-        }
-    }
-}
-
-// ============================================================
-// 20. 举报处理操作枚举
+// 12. 举报处理操作枚举
 // ============================================================
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ReportHandleAction {
-    Resolve,    // 解决
-    Dismiss,    // 驳回
-    Escalate,   // 升级
+    Resolve,  // 解决
+    Dismiss,  // 驳回
+    Escalate, // 升级
 }
 
 impl ReportHandleAction {
@@ -663,16 +377,36 @@ impl ReportHandleAction {
     }
 }
 
+impl std::fmt::Display for ReportHandleAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl std::str::FromStr for ReportHandleAction {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "resolve" => Ok(ReportHandleAction::Resolve),
+            "dismiss" => Ok(ReportHandleAction::Dismiss),
+            "escalate" => Ok(ReportHandleAction::Escalate),
+            _ => Err(format!("无效的操作类型: {}", s)),
+        }
+    }
+}
+
 // ============================================================
 // 21. 信息流反馈操作枚举
 // ============================================================
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum FeedFeedbackAction {
-    Hide,           // 隐藏
-    NotInterested,  // 不感兴趣
-    Clicked,        // 点击
-    Viewed,         // 查看
+    Hide,          // 隐藏
+    NotInterested, // 不感兴趣
+    Clicked,       // 点击
+    Viewed,        // 查看
+    Report,        // 举报 (用于权重调整)
 }
 
 impl FeedFeedbackAction {
@@ -682,17 +416,79 @@ impl FeedFeedbackAction {
             FeedFeedbackAction::NotInterested => "not_interested",
             FeedFeedbackAction::Clicked => "clicked",
             FeedFeedbackAction::Viewed => "viewed",
+            FeedFeedbackAction::Report => "report",
         }
     }
 
     /// 判断是否应从 feed 中移除
     pub fn should_remove_from_feed(&self) -> bool {
-        matches!(self, FeedFeedbackAction::Hide | FeedFeedbackAction::NotInterested)
+        matches!(
+            self,
+            FeedFeedbackAction::Hide
+                | FeedFeedbackAction::NotInterested
+                | FeedFeedbackAction::Report
+        )
     }
 }
 
 impl std::fmt::Display for FeedFeedbackAction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.as_str())
+    }
+}
+
+impl std::str::FromStr for FeedFeedbackAction {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "hide" => Ok(FeedFeedbackAction::Hide),
+            "not_interested" => Ok(FeedFeedbackAction::NotInterested),
+            "clicked" => Ok(FeedFeedbackAction::Clicked),
+            "viewed" => Ok(FeedFeedbackAction::Viewed),
+            "report" => Ok(FeedFeedbackAction::Report),
+            _ => Err(format!("无效的反馈操作: {}", s)),
+        }
+    }
+}
+
+// ============================================================
+// 22. 私聊权限枚举
+// ============================================================
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
+#[sqlx(type_name = "chat_permission", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
+pub enum ChatPermission {
+    Everyone, // 所有人
+    Friends,  // 仅好友
+    Nobody,   // 禁止
+}
+
+impl ChatPermission {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ChatPermission::Everyone => "everyone",
+            ChatPermission::Friends => "friends",
+            ChatPermission::Nobody => "nobody",
+        }
+    }
+}
+
+impl std::fmt::Display for ChatPermission {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl std::str::FromStr for ChatPermission {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "everyone" => Ok(ChatPermission::Everyone),
+            "friends" => Ok(ChatPermission::Friends),
+            "nobody" => Ok(ChatPermission::Nobody),
+            _ => Err(format!("无效的私聊权限: {}", s)),
+        }
     }
 }

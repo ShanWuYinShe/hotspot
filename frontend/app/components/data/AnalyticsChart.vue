@@ -1,22 +1,27 @@
 <template>
-  <UCard class=" border ">
+  <UCard variant="outline">
     <template #header>
       <div class="flex items-center justify-between">
         <div>
-          <h3 class="text-lg font-semibold text-primary-content">{{ title }}</h3>
-          <p v-if="description" class="text-sm text-secondary-content mt-1">{{ description }}</p>
+          <h3 class="text-lg font-semibold">{{ title }}</h3>
+          <p
+            v-if="description"
+            class="font-medium mt-0.5"
+          >{{ description }}</p>
         </div>
         <div class="flex items-center gap-2">
           <USelectMenu
             v-if="timeRanges?.length"
             v-model="selectedTimeRange"
             :options="timeRanges"
-            size="sm"
+            color="neutral"
+            variant="soft"
+            class="min-w-[100px]"
           />
           <UButton
             variant="ghost"
-            size="sm"
-            icon="i-heroicons-arrow-path"
+            color="neutral"
+            icon="i-lucide-refresh-cw"
             @click="refresh"
           />
         </div>
@@ -25,108 +30,200 @@
 
     <div class="space-y-6">
       <!-- 主要指标 -->
-      <div v-if="metrics?.length" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div
+      <div
+        v-if="metrics?.length"
+        class="grid grid-cols-2 md:grid-cols-4 gap-4"
+      >
+        <UCard
           v-for="metric in metrics"
           :key="metric.key"
-          class="text-center p-4 bg-surface rounded-lg"
+          variant="subtle"
         >
-          <div class="text-2xl font-bold text-primary-content">
-            {{ transformValue(metric.value) }}
-          </div>
-          <div class="text-sm text-secondary-content mt-1">
-            {{ metric.label }}
-          </div>
-          <div v-if="metric.change !== undefined" class="flex items-center justify-center gap-1 mt-2">
-            <UIcon
-              :name="metric.change >= 0 ? 'i-heroicons-arrow-trending-up' : 'i-heroicons-arrow-trending-down'"
-              :class="metric.change >= 0 ? 'text-green' : 'text-red'"
-              class="icon-xs"
-            />
-            <span
-              :class="metric.change >= 0 ? 'text-green' : 'text-red'"
-              class="text-xs font-medium"
+          <div class="text-center">
+            <div class="text-2xl font-bold mt-1">
+              {{ transformValue(metric.value) }}
+            </div>
+            <div class="text-xs font-medium mt-1 uppercase tracking-wide">
+              {{ metric.label }}
+            </div>
+            <div
+              v-if="metric.change !== undefined"
+              class="flex items-center justify-center gap-1 mt-2"
             >
-              {{ Math.abs(metric.change).toFixed(1) }}%
-            </span>
+              <UBadge
+                :color="metric.change >= 0 ? 'success' : 'error'"
+                variant="soft"
+                size="xs"
+              >
+                <UIcon
+                  :name="metric.change >= 0 ? 'i-lucide-trending-up' : 'i-lucide-trending-down'"
+                  :size="14"
+                />
+                <span>
+                  {{ Math.abs(metric.change).toFixed(1) }}%
+                </span>
+              </UBadge>
+            </div>
           </div>
-        </div>
+        </UCard>
       </div>
 
       <!-- 图表区域 -->
       <div class="relative">
-        <div v-if="loading" class="flex items-center justify-center h-64">
+        <div
+          v-if="loading"
+          class="flex items-center justify-center h-64"
+        >
           <USkeleton class="h-64 w-full" />
         </div>
-        
-        <div v-else-if="chartType === 'line'" class="h-64">
+
+        <div
+          v-if="chartType === 'line'"
+          class="h-64"
+        >
           <!-- 简单的折线图模拟 -->
-          <div class="relative h-full bg-slate-subtle rounded-lg p-4">
-            <svg class="w-full h-full" viewBox="0 0 400 200">
-              <!-- 网格线 -->
-              <defs>
-                <pattern id="grid" width="40" height="20" patternUnits="userSpaceOnUse">
-                  <path d="M 40 0 L 0 0 0 20" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#grid)" />
-              
-              <!-- 数据线 -->
-              <polyline
-                v-if="chartData?.length"
-                :points="generateLinePoints(chartData || [])"
-                fill="none"
-                stroke="rgb(59 130 246)"
-                stroke-width="2"
-                class="drop-shadow-sm"
-              />
-              
-              <!-- 数据点 -->
-              <circle
-                v-for="(point, index) in generatePoints(chartData || [])"
-                :key="index"
-                :cx="point.x"
-                :cy="point.y"
-                r="3"
-                fill="rgb(59 130 246)"
-                class="drop-shadow-sm"
-              />
-            </svg>
-          </div>
+          <UCard
+            variant="subtle"
+            class="h-full"
+          >
+            <div class="relative h-full p-4">
+              <svg
+                class="w-full h-full"
+                viewBox="0 0 400 200"
+                style="color: var(--ui-primary);"
+              >
+                <!-- 网格线 -->
+                <defs>
+                  <linearGradient
+                    id="lineGradient"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop
+                      offset="0%"
+                      stop-color="currentColor"
+                      stop-opacity="0.2"
+                    />
+                    <stop
+                      offset="100%"
+                      stop-color="currentColor"
+                      stop-opacity="0"
+                    />
+                  </linearGradient>
+                  <pattern
+                    id="grid"
+                    width="40"
+                    height="40"
+                    patternUnits="userSpaceOnUse"
+                  >
+                    <path
+                      d="M 40 0 L 0 0 0 40"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="0.5"
+                      opacity="0.05"
+                    />
+                  </pattern>
+                </defs>
+                <rect
+                  width="100%"
+                  height="100%"
+                  fill="url(#grid)"
+                />
+
+                <!-- 填充区域 -->
+                <polyline
+                  v-if="chartData?.length"
+                  :points="generateAreaPoints(chartData || [])"
+                  fill="url(#lineGradient)"
+                  stroke="none"
+                />
+
+                <!-- 数据线 -->
+                <polyline
+                  v-if="chartData?.length"
+                  :points="generateLinePoints(chartData || [])"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="3"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="hs-chart-line"
+                />
+
+                <!-- 数据点 -->
+                <circle
+                  v-for="(point, index) in generatePoints(chartData || [])"
+                  :key="index"
+                  :cx="point.x"
+                  :cy="point.y"
+                  r="4"
+                  fill="currentColor"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  class="cursor-pointer transition-transform duration-200 hover:scale-110"
+                />
+              </svg>
+            </div>
+          </UCard>
         </div>
-        
-        <div v-else-if="chartType === 'bar'" class="h-64">
+
+        <div
+          v-else-if="chartType === 'bar'"
+          class="h-64"
+        >
           <!-- 简单的柱状图模拟 -->
-          <div class="flex items-end justify-between h-full bg-slate-subtle rounded-lg p-4 gap-2">
-            <div
-              v-for="(item, index) in chartData"
-              :key="index"
-              class="flex-1 bg-linear-to-t from-primary-600 to-primary-400 rounded-t-sm relative group cursor-pointer"
-              :style="{ height: `${(item.value / maxValue) * 100}%` }"
-            >
-              <!-- 悬浮提示 -->
-              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-slate-dark text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                {{ item.label }}: {{ transformValue(item.value) }}
+          <UCard
+            variant="subtle"
+            class="h-full"
+          >
+            <div class="flex items-end justify-between h-full p-4 gap-3">
+              <div
+                v-for="(item, index) in chartData"
+                :key="index"
+                class="flex-1 relative group cursor-pointer transition-all duration-300 hs-chart-bar"
+                :style="{ height: `${Math.max((item.value / maxValue) * 100, 4)}%` }"
+              >
+                <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+
+                <!-- 悬浮提示 -->
+                <UBadge
+                  class="absolute -top-10 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
+                  color="neutral"
+                  variant="solid"
+                  size="xs"
+                >
+                  {{ item.label }}: {{ transformValue(item.value) }}
+                </UBadge>
               </div>
             </div>
-          </div>
-          
+          </UCard>
+
           <!-- X轴标签 -->
-          <div class="flex justify-between mt-2 px-4">
+          <div class="flex justify-between mt-3 px-4">
             <span
               v-for="(item, index) in chartData"
               :key="index"
-              class="text-xs text-secondary-content flex-1 text-center"
+              class="text-[10px] font-medium uppercase tracking-wider flex-1 text-center"
             >
               {{ item.label }}
             </span>
           </div>
         </div>
-        
-        <div v-else-if="chartType === 'pie'" class="h-64 flex items-center justify-center">
+
+        <div
+          v-else-if="chartType === 'pie'"
+          class="h-64 flex items-center justify-center"
+        >
           <!-- 简单的饼图模拟 -->
           <div class="relative">
-            <svg width="200" height="200" viewBox="0 0 200 200">
+            <svg
+              width="200"
+              height="200"
+              viewBox="0 0 200 200"
+            >
               <circle
                 v-for="(segment, index) in pieSegments"
                 :key="index"
@@ -135,102 +232,143 @@
                 r="80"
                 fill="none"
                 :stroke="segment.color"
-                stroke-width="20"
+                stroke-width="24"
                 :stroke-dasharray="`${segment.length} ${500 - segment.length}`"
                 :stroke-dashoffset="segment.offset"
-                class="cursor-pointer hover:stroke-width-[25] transition-all"
+                class="cursor-pointer transition-opacity duration-200 hover:opacity-100 opacity-90"
                 transform="rotate(-90 100 100)"
               />
             </svg>
-            
+
+            <!-- 中心文字 -->
+            <div class="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
+              <UBadge
+                color="neutral"
+                variant="soft"
+                size="xs"
+              >Total</UBadge>
+              <UBadge
+                color="neutral"
+                variant="solid"
+                size="lg"
+              >100%</UBadge>
+            </div>
+
             <!-- 图例 -->
-            <div class="absolute -right-24 top-0 space-y-2">
+            <div class="absolute -right-32 top-1/2 -translate-y-1/2 space-y-3">
               <div
                 v-for="(item, index) in chartData"
                 :key="index"
-                class="flex items-center gap-2 text-sm"
+                class="flex items-center gap-2 text-sm group cursor-pointer"
               >
                 <div
-                  class="w-3 h-3 rounded-full"
+                  class="size-3 shrink-0 transition-transform group-hover:scale-110 hs-chart-dot"
                   :style="{ backgroundColor: pieColors[index % pieColors.length] }"
                 ></div>
-                <span class="text-secondary-strong">{{ item.label }}</span>
+                <UBadge
+                  color="neutral"
+                  variant="soft"
+                  size="xs"
+                >{{ item.label }}</UBadge>
               </div>
             </div>
           </div>
         </div>
-        
+
         <!-- 空状态 -->
-        <div v-else-if="!chartData?.length" class="flex items-center justify-center h-64">
+        <UCard
+          v-else-if="!chartData?.length"
+          variant="subtle"
+          class="h-64 flex items-center justify-center"
+        >
           <UEmpty
-            icon="i-heroicons-chart-bar"
+            icon="i-lucide-bar-chart-3"
             title="暂无数据"
             description="当前时间段内没有数据可显示"
           />
-        </div>
+        </UCard>
       </div>
     </div>
   </UCard>
 </template>
 
 <script setup lang="ts">
-export interface ChartDataItem {
+import { computed, ref, watch } from 'vue'
+
+interface ChartDataItem {
   label: string
   value: number
 }
 
-export interface MetricItem {
+interface MetricItem {
   key: string
   label: string
   value: number
   change?: number
 }
 
-export interface TimeRange {
+interface TimeRangeItem {
   label: string
   value: string
 }
 
-interface Props {
-  title: string
+const props = defineProps<{
+  title?: string
   description?: string
-  chartType: 'line' | 'bar' | 'pie'
+  chartType?: 'line' | 'bar' | 'pie'
   chartData?: ChartDataItem[]
   metrics?: MetricItem[]
-  timeRanges?: TimeRange[]
   loading?: boolean
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  loading: false
-})
-const { formatCount } = useFormatters()
-
-// 转换数值显示
-const transformValue = (value: number) => formatCount(value)
-
-const emit = defineEmits<{
-  refresh: []
-  timeRangeChange: [value: string]
+  timeRanges?: TimeRangeItem[]
 }>()
 
-const selectedTimeRange = ref(props.timeRanges?.[0]?.value || '7d')
+const emit = defineEmits<{
+  (e: 'refresh'): void
+  (e: 'time-range-change', value: string): void
+}>()
 
-// 计算属性
+const selectedTimeRange = ref(props.timeRanges?.[0] || null)
+
+watch(selectedTimeRange, (newVal) => {
+  if (newVal) {
+    emit('time-range-change', newVal.value)
+  }
+})
+
+const refresh = () => {
+  emit('refresh')
+}
+
+const transformValue = (val: number) => {
+  if (val >= 10000) return (val / 10000).toFixed(1) + 'w'
+  if (val >= 1000) return (val / 1000).toFixed(1) + 'k'
+  return val
+}
+
 const maxValue = computed(() => {
   if (!props.chartData?.length) return 0
   return Math.max(...props.chartData.map(item => item.value))
 })
 
+// Pie Chart Logic
+const pieColors = [
+  '#007aff',   // Apple Blue
+  '#34c759',   // Apple Green
+  '#ff9500',   // Apple Orange
+  '#af52de',   // Apple Purple
+  '#ff3b30',   // Apple Red
+  '#5856d6',   // Apple Indigo
+  '#ff2d55',   // Apple Pink
+  '#5ac8fa'    // Apple Teal
+]
+
 const pieSegments = computed(() => {
   if (!props.chartData?.length) return []
-  
-  const total = props.chartData.reduce((sum, item) => sum + item.value, 0)
+  const total = props.chartData.reduce((acc, item) => acc + item.value, 0)
   let currentOffset = 0
-  
+
   return props.chartData.map((item, index) => {
-    const percentage = item.value / total
-    const length = percentage * 500 // 圆周长度
+    const length = (item.value / total) * 500 // 500 is roughly 2 * PI * 80 (circumference)
     const segment = {
       length,
       offset: -currentOffset,
@@ -241,53 +379,28 @@ const pieSegments = computed(() => {
   })
 })
 
-// 颜色配置
-const pieColors = [
-  'rgb(59 130 246)',   // blue
-  'rgb(16 185 129)',   // green
-  'rgb(245 158 11)',   // orange
-  'rgb(139 92 246)',   // purple
-  'rgb(239 68 68)',    // red
-  'rgb(6 182 212)',    // cyan
-  'rgb(236 72 153)',   // pink
-  'rgb(34 197 94)'     // emerald
-]
-
-// 方法
-
-const generateLinePoints = (data: ChartDataItem[]) => {
-  if (!data?.length) return ''
-  
-  const width = 400
-  const height = 200
-  const padding = 20
-  
-  return data.map((item, index) => {
-    const x = padding + (index / (data.length - 1)) * (width - 2 * padding)
-    const y = height - padding - ((item.value / maxValue.value) * (height - 2 * padding))
-    return `${x},${y}`
-  }).join(' ')
-}
-
+// Line Chart Logic
 const generatePoints = (data: ChartDataItem[]) => {
   if (!data?.length) return []
-  
+  const max = maxValue.value || 1
   const width = 400
   const height = 200
-  const padding = 20
-  
+  const step = width / (data.length - 1)
+
   return data.map((item, index) => ({
-    x: padding + (index / (data.length - 1)) * (width - 2 * padding),
-    y: height - padding - ((item.value / maxValue.value) * (height - 2 * padding))
+    x: index * step,
+    y: height - (item.value / max) * height * 0.8 - 20 // Padding
   }))
 }
 
-const refresh = () => {
-  emit('refresh')
+const generateLinePoints = (data: ChartDataItem[]) => {
+  const points = generatePoints(data)
+  return points.map(p => `${p.x},${p.y}`).join(' ')
 }
 
-// 监听时间范围变化
-watch(selectedTimeRange, (newValue) => {
-  emit('timeRangeChange', newValue)
-})
+const generateAreaPoints = (data: ChartDataItem[]) => {
+  if (!data?.length) return ''
+  const linePoints = generateLinePoints(data)
+  return `0,200 ${linePoints} 400,200`
+}
 </script>

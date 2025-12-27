@@ -1,6 +1,7 @@
 import { BaseService } from './base.service'
 import { USER, MEDIA } from '~/config/api'
 import type {
+  AuthData,
   UserSettingsData,
   MyProfileData,
   UserStatsData,
@@ -12,29 +13,30 @@ import type {
   SearchUsersByTagRequest,
   SearchUsersByLocationRequest,
   UserOpenTheDoorRequest,
-  GetRelationshipRequest,
+  UserRelationshipRequest,
   UpdateProfileRequest,
   UpdateLocationRequest,
   UpdateSettingsRequest,
   DeleteAccountRequest,
-  FollowUserRequest,
-  UnfollowUserRequest,
-  BlockUserRequest,
-  UnblockUserRequest,
-  GetFriendsRequest,
-  GetFollowingRequest,
-  GetFollowersRequest,
-  GetBlockedUsersRequest,
-  SetFriendRemarkRequest,
-  GetUserFriendsListRequest,
-  GetUserFollowingListRequest,
-  GetUserFollowersListRequest,
-  GetUserStatsRequest,
+  FollowRequest,
+  UnfollowRequest,
+  BlockRequest,
+  UnblockRequest,
+  MyFriendsRequest,
+  MyFollowingRequest,
+  MyFollowersRequest,
+  MyBlockedRequest,
+  SetRemarkRequest,
+  UserFriendsRequest,
+  UserFollowingRequest,
+  UserFollowersRequest,
+  UserStatsRequest,
   FriendListItem,
   FollowerItem,
   FollowingItem,
   BlockedUserItem,
-  UpgradeAccountRequest
+  UpgradeAccountRequest,
+  UploadMediaData
 } from '~/types/api'
 
 class UserService extends BaseService {
@@ -60,105 +62,104 @@ class UserService extends BaseService {
   // ============ 当前用户 API (protected) ============
 
   async getMe() {
-    return this.post<MyProfileData>(USER.ME, {})
+    return this.post<MyProfileData>(USER.PROFILE, {})
   }
 
-  async getRelationship(request: GetRelationshipRequest) {
-    return this.post<UserRelationship>(USER.GET_RELATIONSHIP, request)
+  async getRelationship(request: UserRelationshipRequest) {
+    return this.post<UserRelationship>(USER.RELATIONSHIP, request)
   }
 
   // 获取指定用户统计数据（公开 API）
-  async getStats(request: GetUserStatsRequest) {
-    return this.post<UserStatsData>(USER.GET_STATS, request)
+  async getStats(request: UserStatsRequest) {
+    return this.publicPost<UserStatsData>(USER.STATS, request)
   }
 
   // 获取当前用户统计数据（/me/ API）
   async getMyStats() {
-    return this.post<UserStatsData>(USER.GET_MY_STATS, {})
+    return this.post<UserStatsData>(USER.MY_STATS, {})
   }
 
   // 获取指定用户好友列表（公开 API）
-  async getUserFriendsList(request: GetUserFriendsListRequest) {
-    return this.publicPost<PaginatedData<UserInfo>>(USER.GET_USER_FRIENDS_LIST, request)
+  async getUserFriendsList(request: UserFriendsRequest) {
+    return this.publicPost<PaginatedData<UserInfo>>(USER.FRIENDS, request)
   }
 
   // 获取指定用户关注列表（公开 API）
-  async getUserFollowingList(request: GetUserFollowingListRequest) {
-    return this.publicPost<PaginatedData<UserInfo>>(USER.GET_USER_FOLLOWING_LIST, request)
+  async getUserFollowingList(request: UserFollowingRequest) {
+    return this.publicPost<PaginatedData<UserInfo>>(USER.FOLLOWING, request)
   }
 
   // 获取指定用户粉丝列表（公开 API）
-  async getUserFollowersList(request: GetUserFollowersListRequest) {
-    return this.publicPost<PaginatedData<UserInfo>>(USER.GET_USER_FOLLOWERS_LIST, request)
+  async getUserFollowersList(request: UserFollowersRequest) {
+    return this.publicPost<PaginatedData<UserInfo>>(USER.FOLLOWERS, request)
   }
 
   async updateLocation(request: UpdateLocationRequest) {
-    return this.post<void>(USER.UPDATE_LOCATION, request)
+    return this.post<void>(USER.LOCATION, request)
   }
 
   async updateProfile(request: UpdateProfileRequest) {
-    return this.post<void>(USER.UPDATE_PROFILE, request)
+    return this.post<void>(USER.PROFILE_UPDATE, request)
   }
 
   async upgradeAccount(request: UpgradeAccountRequest) {
-    return this.post<void>(USER.UPGRADE_ACCOUNT, request)
+    return this.post<AuthData>(USER.UPGRADE, request)
   }
 
   async getSettings() {
-    return this.post<UserSettingsData>(USER.GET_SETTINGS, {})
+    return this.post<UserSettingsData>(USER.SETTINGS, {})
   }
 
   async updateSettings(request: UpdateSettingsRequest) {
-    return this.post<void>(USER.UPDATE_SETTINGS, request)
+    return this.post<void>(USER.SETTINGS_UPDATE, request)
   }
 
   async deleteAccount(request: DeleteAccountRequest) {
-    return this.post<void>(USER.DELETE_ACCOUNT, request)
+    return this.post<void>(USER.DELETE, request)
   }
 
   // ============ 关注关系 API (protected) ============
 
-  async followUser(request: FollowUserRequest) {
-    return this.post<void>(USER.FOLLOW_USER, request)
+  async follow(request: FollowRequest) {
+    return this.post<void>(USER.FOLLOW, request)
   }
 
-  async unfollowUser(request: UnfollowUserRequest) {
-    return this.post<void>(USER.UNFOLLOW_USER, request)
+  async unfollow(request: UnfollowRequest) {
+    return this.post<void>(USER.UNFOLLOW, request)
   }
 
-  async blockUser(request: BlockUserRequest) {
-    return this.post<void>(USER.BLOCK_USER, request)
+  async block(request: BlockRequest) {
+    return this.post<void>(USER.BLOCK, request)
   }
 
-  async unblockUser(request: UnblockUserRequest) {
-    return this.post<void>(USER.UNBLOCK_USER, request)
+  async unblock(request: UnblockRequest) {
+    return this.post<void>(USER.UNBLOCK, request)
   }
 
-  async getFriends(request: GetFriendsRequest = {}) {
-    return this.post<PaginatedData<FriendListItem>>(USER.GET_FRIENDS_LIST, request)
+  async getFriends(request: MyFriendsRequest = {}) {
+    return this.post<PaginatedData<FriendListItem>>(USER.MY_FRIENDS, request)
   }
 
-  async getFollowing(request: GetFollowingRequest = {}) {
-    return this.post<PaginatedData<FollowingItem>>(USER.GET_FOLLOWING_LIST, request)
+  async getFollowing(request: MyFollowingRequest = {}) {
+    return this.post<PaginatedData<FollowingItem>>(USER.MY_FOLLOWING, request)
   }
 
-  async getFollowers(request: GetFollowersRequest = {}) {
-    return this.post<PaginatedData<FollowerItem>>(USER.GET_FOLLOWERS_LIST, request)
+  async getFollowers(request: MyFollowersRequest = {}) {
+    return this.post<PaginatedData<FollowerItem>>(USER.MY_FOLLOWERS, request)
   }
 
-  async getBlockedUsers(request: GetBlockedUsersRequest = {}) {
-    // TODO: 后端目前返回 UserInfo，未来应返回 BlockedUserItem 包含 blocked_at 等信息
-    return this.post<PaginatedData<UserInfo>>(USER.GET_BLOCKED_LIST, request)
+  async getBlockedUsers(request: MyBlockedRequest = {}) {
+    return this.post<PaginatedData<BlockedUserItem>>(USER.MY_BLOCKED, request)
   }
 
-  async setFriendRemark(request: SetFriendRemarkRequest) {
-    return this.post<void>(USER.SET_FRIEND_REMARK, request)
+  async setRemark(request: SetRemarkRequest) {
+    return this.post<void>(USER.REMARK, request)
   }
 
   // ============ 上传 API ============
 
   async uploadAvatar(file: File) {
-    return this.upload<{ avatar_url: string }>(MEDIA.UPLOAD_FILE, file, { category: 'avatar' })
+    return this.upload<UploadMediaData>(MEDIA.UPLOAD, file, { category: 'avatar' })
   }
 }
 

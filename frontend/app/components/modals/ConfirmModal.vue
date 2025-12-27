@@ -1,11 +1,10 @@
 <template>
   <UModal
     :title="title"
-    :close="{ onClick: () => emit('close', false) }"
-    :ui="{ footer: 'justify-end' }"
+    :dismissible="false"
   >
     <template #body>
-      <p class="text-secondary-content">
+      <p>
         {{ message }}
       </p>
     </template>

@@ -3,7 +3,7 @@
         <template #header>
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
-                    <UIcon name="i-heroicons-bell" class="icon-md" />
+                    <UIcon name="i-lucide-bell" :size="20" />
                     <h3 class="font-semibold text-sm">通知中心</h3>
                     <UChip v-if="unreadCount > 0" size="sm" color="error">
                         {{ unreadCount > 99 ? '99+' : unreadCount }}
@@ -21,7 +21,7 @@
                     <UButton
                         variant="ghost"
                         size="sm"
-                        icon="i-heroicons-cog-6-tooth"
+                        icon="i-lucide-settings"
                         @click="openSettings"
                     />
                 </div>
@@ -29,39 +29,38 @@
         </template>
 
         <div class="py-2">
-            <!-- 通知列表或空状态 -->
-            <div v-if="notifications.length === 0" class="text-center py-6">
-                <UIcon name="i-heroicons-bell-slash" class="icon-xl text-subtle mx-auto mb-3" />
-                <p class="text-sm text-secondary-content">
-                    暂无新通知
-                </p>
-            </div>
-            <div v-else class="space-y-1 max-h-64 overflow-y-auto">
-                <div
-                    v-for="notification in notifications"
-                    :key="notification.id"
-                    class="p-3 rounded-lg cursor-pointer transition-colors"
-                    :class="notification.read 
-                        ? 'bg-transparent hover-bg-surface' 
-                        : 'bg-primary-light-20 hover-bg-primary-base'"
-                    @click="handleNotificationClick(notification)"
+            <UEmpty
+                v-if="notifications.length === 0"
+                icon="i-lucide-bell-off"
+                title="暂无新通知"
+                description="新的通知会在这里出现"
+                class="py-6"
+            />
+
+            <UPageList v-else divide class="max-h-64 overflow-y-auto">
+                <UPageCard
+                    v-for="n in notifications"
+                    :key="n.id"
+                    :title="n.title"
+                    :description="n.description"
+                    :icon="getNotificationIcon(n.type)"
+                    variant="ghost"
+                    :highlight="!n.read"
+                    highlight-color="primary"
+                    @click="handleNotificationClick(n)"
                 >
-                    <div class="flex items-start gap-2">
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-medium truncate" :class="notification.read ? 'text-secondary-content' : 'text-heading'">
-                                {{ notification.title }}
-                            </p>
-                            <p class="text-xs text-secondary-content line-clamp-2 mt-0.5">
-                                {{ notification.description }}
-                            </p>
-                            <p class="text-xs text-muted mt-1">
-                                {{ formatTime(notification.timestamp) }}
-                            </p>
+                    <template #footer>
+                        <div class="flex items-center justify-between gap-3">
+                            <UBadge color="neutral" variant="soft" size="xs">
+                                {{ formatTime(n.timestamp) }}
+                            </UBadge>
+                            <UBadge v-if="!n.read" color="primary" variant="soft" size="xs">
+                                未读
+                            </UBadge>
                         </div>
-                        <div v-if="!notification.read" class="status-dot-unread mt-1.5"></div>
-                    </div>
-                </div>
-            </div>
+                    </template>
+                </UPageCard>
+            </UPageList>
         </div>
 
         <template #footer>
@@ -77,7 +76,7 @@
                 <UButton
                     variant="ghost"
                     size="sm"
-                    icon="i-heroicons-cog-6-tooth"
+                    icon="i-lucide-settings"
                     @click="openSettings"
                 />
             </div>
@@ -90,8 +89,12 @@ import type { NotificationItem } from '~/composables/useNotifications'
 
 // 使用全局通知状态
 const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications()
+const { requireAuth } = useRequireAuth()
 
-// 格式化时间
+// 使用统一的格式化工具
+const { formatTime: formatTimeUtil } = useFormatters()
+
+// 格式化时间（相对时间）
 const formatTime = (timestamp: string) => {
     const date = new Date(timestamp)
     const now = new Date()
@@ -103,6 +106,26 @@ const formatTime = (timestamp: string) => {
     if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`
     
     return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
+}
+
+const getNotificationIcon = (type: string) => {
+    switch (type) {
+        case 'new_follower':
+        case 'mutual_follow':
+            return 'i-lucide-users'
+        case 'moment_liked':
+        case 'moment_commented':
+        case 'comment_reply':
+            return 'i-lucide-image'
+        case 'group_invite':
+        case 'group_application':
+        case 'group_application_response':
+            return 'i-lucide-users-round'
+        case 'system_announcement':
+            return 'i-lucide-megaphone'
+        default:
+            return 'i-lucide-bell'
+    }
 }
 
 // 点击通知
@@ -143,11 +166,13 @@ const handleMarkAllAsRead = () => {
 
 // 打开通知页面
 const openNotifications = () => {
+    if (!requireAuth('查看通知')) return
     navigateTo('/notifications')
 }
 
 // 打开设置
 const openSettings = () => {
+    if (!requireAuth('进入隐私设置')) return
     navigateTo('/settings')
 }
 

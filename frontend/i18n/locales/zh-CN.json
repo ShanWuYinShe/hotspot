@@ -8,6 +8,11 @@
       "invite": "邀请"
     }
   },
+  "globalSearch": {
+    "title": "全局搜索",
+    "description": "搜索用户、群组与瞬间",
+    "placeholder": "搜索用户 / 群组 / 瞬间..."
+  },
   "nav": {
     "home": "首页",
     "map": "地图",

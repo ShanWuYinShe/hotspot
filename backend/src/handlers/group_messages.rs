@@ -4,10 +4,10 @@
 use crate::{
     dto::{
         request::{
-            AddGroupMessageReactionRequest, RemoveGroupMessageReactionRequest, DeleteGroupMessageRequest,
-            GetGroupMessageReactionsListRequest, GetGroupMessagesRequest, GetMessageReadStatusRequest,
-            MarkGroupMessagesReadRequest, RecallGroupMessageRequest, SendGroupMessageRequest,
-            UpdateGroupMessageRequest,
+            AddGroupMessageReactionRequest, DeleteGroupMessageRequest,
+            GroupMessageReactionsRequest, GroupMessagesHistoryRequest,
+            MarkGroupMessagesReadRequest, MessageReadStatusRequest, RecallGroupMessageRequest,
+            RemoveGroupMessageReactionRequest, SendGroupMessageRequest, UpdateGroupMessageRequest,
         },
         response::{
             ApiResponse, GroupMessageItem, MessageReactionItem, MessageReadItem, PaginatedData,
@@ -15,7 +15,6 @@ use crate::{
         },
     },
     error::Result,
-    services::group_message_service::GroupMessageService,
     state::AppState,
 };
 use axum::{extract::State, Extension, Json};
@@ -26,20 +25,21 @@ pub async fn send(
     Extension(user_id): Extension<i64>,
     Json(req): Json<SendGroupMessageRequest>,
 ) -> Result<Json<ApiResponse<SendGroupMessageData>>> {
-    let service = GroupMessageService::new(&state.db, &state.redis, state.event_bus.clone());
-    let response = service.send(&req, user_id).await?;
+    let response = state.group_message_service.send(&req, user_id).await?;
 
     Ok(Json(ApiResponse::success(response)))
 }
 
 /// 获取群聊消息历史
-pub async fn get_history(
+pub async fn history(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
-    Json(req): Json<GetGroupMessagesRequest>,
+    Json(req): Json<GroupMessagesHistoryRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<GroupMessageItem>>>> {
-    let service = GroupMessageService::new(&state.db, &state.redis, state.event_bus.clone());
-    let response = service.get_history(&req, user_id).await?;
+    let response = state
+        .group_message_service
+        .get_history(&req, user_id)
+        .await?;
 
     Ok(Json(ApiResponse::success(response)))
 }
@@ -50,8 +50,7 @@ pub async fn update(
     Extension(user_id): Extension<i64>,
     Json(req): Json<UpdateGroupMessageRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let service = GroupMessageService::new(&state.db, &state.redis, state.event_bus.clone());
-    service.update(&req, user_id).await?;
+    state.group_message_service.update(&req, user_id).await?;
 
     Ok(Json(ApiResponse::success_empty()))
 }
@@ -62,8 +61,7 @@ pub async fn recall(
     Extension(user_id): Extension<i64>,
     Json(req): Json<RecallGroupMessageRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let service = GroupMessageService::new(&state.db, &state.redis, state.event_bus.clone());
-    service.recall(&req, user_id).await?;
+    state.group_message_service.recall(&req, user_id).await?;
 
     Ok(Json(ApiResponse::success_empty()))
 }
@@ -74,8 +72,7 @@ pub async fn delete(
     Extension(user_id): Extension<i64>,
     Json(req): Json<DeleteGroupMessageRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let service = GroupMessageService::new(&state.db, &state.redis, state.event_bus.clone());
-    service.delete(&req, user_id).await?;
+    state.group_message_service.delete(&req, user_id).await?;
 
     Ok(Json(ApiResponse::success_empty()))
 }
@@ -86,20 +83,24 @@ pub async fn mark_as_read(
     Extension(user_id): Extension<i64>,
     Json(req): Json<MarkGroupMessagesReadRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let service = GroupMessageService::new(&state.db, &state.redis, state.event_bus.clone());
-    service.mark_as_read(&req, user_id).await?;
+    state
+        .group_message_service
+        .mark_as_read(&req, user_id)
+        .await?;
 
     Ok(Json(ApiResponse::success_empty()))
 }
 
 /// 获取消息已读状态
-pub async fn get_read_status(
+pub async fn read_status(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
-    Json(req): Json<GetMessageReadStatusRequest>,
+    Json(req): Json<MessageReadStatusRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<MessageReadItem>>>> {
-    let service = GroupMessageService::new(&state.db, &state.redis, state.event_bus.clone());
-    let response = service.get_read_status(&req, user_id).await?;
+    let response = state
+        .group_message_service
+        .get_read_status(&req, user_id)
+        .await?;
 
     Ok(Json(ApiResponse::success(response)))
 }
@@ -110,8 +111,10 @@ pub async fn add_reaction(
     Extension(user_id): Extension<i64>,
     Json(req): Json<AddGroupMessageReactionRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let service = GroupMessageService::new(&state.db, &state.redis, state.event_bus.clone());
-    service.add_reaction(&req, user_id).await?;
+    state
+        .group_message_service
+        .add_reaction(&req, user_id)
+        .await?;
 
     Ok(Json(ApiResponse::success_empty()))
 }
@@ -122,20 +125,24 @@ pub async fn remove_reaction(
     Extension(user_id): Extension<i64>,
     Json(req): Json<RemoveGroupMessageReactionRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let service = GroupMessageService::new(&state.db, &state.redis, state.event_bus.clone());
-    service.remove_reaction(&req, user_id).await?;
+    state
+        .group_message_service
+        .remove_reaction(&req, user_id)
+        .await?;
 
     Ok(Json(ApiResponse::success_empty()))
 }
 
 /// 获取消息反应列表
-pub async fn get_reactions_list(
+pub async fn reactions(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
-    Json(req): Json<GetGroupMessageReactionsListRequest>,
+    Json(req): Json<GroupMessageReactionsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<MessageReactionItem>>>> {
-    let service = GroupMessageService::new(&state.db, &state.redis, state.event_bus.clone());
-    let response = service.get_reactions_list(&req, user_id).await?;
+    let response = state
+        .group_message_service
+        .get_reactions_list(&req, user_id)
+        .await?;
 
     Ok(Json(ApiResponse::success(response)))
 }

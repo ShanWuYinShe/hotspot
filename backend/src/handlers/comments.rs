@@ -3,95 +3,77 @@ use axum::{extract::State, Extension, Json};
 use crate::{
     dto::{
         request::{
-            CreateCommentRequest, DeleteCommentRequest,
-            LikeCommentRequest, UnlikeCommentRequest,
-            GetCommentsRequest, GetRepliesRequest, GetCommentLikesListRequest,
+            CommentLikesRequest, CommentRepliesRequest, CreateCommentRequest, DeleteCommentRequest,
+            LikeCommentRequest, MomentCommentsRequest, UnlikeCommentRequest,
         },
         response::{
-            ApiResponse, PaginatedData, CommentListItem, CreateCommentData, CommentLikeItem,
+            ApiResponse, CommentLikeItem, CommentListItem, CreateCommentData, PaginatedData,
         },
     },
     error::Result,
-    services::comment_service::CommentService,
     state::AppState,
 };
 
-
 // ==================== Public APIs ====================
 
-pub async fn get_list(
+pub async fn get_comments(
     State(state): State<AppState>,
-    Json(req): Json<GetCommentsRequest>,
+    Json(req): Json<MomentCommentsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<CommentListItem>>>> {
-    let service = CommentService::new(&state.db, &state.redis, state.event_bus.clone());
-    let response = service.list_comments(&req).await?;
+    let response = state.comment_service.list_comments(&req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
-
 
 pub async fn get_replies(
     State(state): State<AppState>,
-    Json(req): Json<GetRepliesRequest>,
+    Json(req): Json<CommentRepliesRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<CommentListItem>>>> {
-    let service = CommentService::new(&state.db, &state.redis, state.event_bus.clone());
-    let response = service.list_replies(&req).await?;
+    let response = state.comment_service.list_replies(&req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
-
-pub async fn get_likes_list(
+pub async fn get_likes(
     State(state): State<AppState>,
-    Json(req): Json<GetCommentLikesListRequest>,
+    Json(req): Json<CommentLikesRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<CommentLikeItem>>>> {
-    let service = CommentService::new(&state.db, &state.redis, state.event_bus.clone());
-    let response = service.get_likes_list(&req).await?;
+    let response = state.comment_service.get_likes_list(&req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
-
 
 // ==================== Protected APIs ====================
 
-pub async fn add(
+pub async fn create(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(req): Json<CreateCommentRequest>,
 ) -> Result<Json<ApiResponse<CreateCommentData>>> {
-    let service = CommentService::new(&state.db, &state.redis, state.event_bus.clone());
-    let response = service.add_comment(user_id, &req).await?;
+    let response = state.comment_service.add_comment(user_id, &req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
-
-pub async fn remove(
+pub async fn delete(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(req): Json<DeleteCommentRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let service = CommentService::new(&state.db, &state.redis, state.event_bus.clone());
-    service.delete_comment(user_id, &req).await?;
+    state.comment_service.delete_comment(user_id, &req).await?;
     Ok(Json(ApiResponse::success_empty()))
 }
 
-
-pub async fn like_comment(
+pub async fn like(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(req): Json<LikeCommentRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let service = CommentService::new(&state.db, &state.redis, state.event_bus.clone());
-    service.like_comment(user_id, &req).await?;
+    state.comment_service.like_comment(user_id, &req).await?;
     Ok(Json(ApiResponse::success_empty()))
 }
 
-
-pub async fn unlike_comment(
+pub async fn unlike(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(req): Json<UnlikeCommentRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let service = CommentService::new(&state.db, &state.redis, state.event_bus.clone());
-    service.unlike_comment(user_id, &req).await?;
+    state.comment_service.unlike_comment(user_id, &req).await?;
     Ok(Json(ApiResponse::success_empty()))
 }
-
-

@@ -3,14 +3,12 @@
 use sqlx::PgPool;
 
 use crate::{
-    dto::{
-        request::UpdateSubscriptionsRequest,
-        response::SubscriptionsData,
-    },
+    dto::{request::UpdateSubscriptionsRequest, response::SubscriptionsData},
     error::Result,
 };
 
 /// 通知订阅设置服务
+#[derive(Clone)]
 pub struct SubscriptionService {
     db: PgPool,
 }
@@ -78,8 +76,15 @@ impl SubscriptionService {
     }
 
     /// 更新订阅配置
-    pub async fn update_config(&self, user_id: i64, req: &UpdateSubscriptionsRequest) -> Result<()> {
+    pub async fn update_config(
+        &self,
+        user_id: i64,
+        req: &UpdateSubscriptionsRequest,
+    ) -> Result<()> {
         // 使用 UPSERT 模式
+        // 注意：传入 Option<bool>，在 SQL 中使用 COALESCE 处理
+        // INSERT 时：如果为 NULL 则使用默认值 TRUE
+        // UPDATE 时：如果为 NULL 则保持原值
         sqlx::query!(
             r#"
             INSERT INTO notification_subscriptions (
@@ -95,7 +100,20 @@ impl SubscriptionService {
                 moment_comment_enabled,
                 comment_reply_enabled,
                 system_announcement_enabled
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            ) VALUES (
+                $1, 
+                COALESCE($2, TRUE), 
+                COALESCE($3, TRUE), 
+                COALESCE($4, TRUE), 
+                COALESCE($5, TRUE), 
+                COALESCE($6, TRUE), 
+                COALESCE($7, TRUE), 
+                COALESCE($8, TRUE), 
+                COALESCE($9, TRUE), 
+                COALESCE($10, TRUE), 
+                COALESCE($11, TRUE), 
+                COALESCE($12, TRUE)
+            )
             ON CONFLICT (user_id) DO UPDATE SET
                 new_follower_enabled = COALESCE($2, notification_subscriptions.new_follower_enabled),
                 mutual_follow_enabled = COALESCE($3, notification_subscriptions.mutual_follow_enabled),
@@ -111,17 +129,17 @@ impl SubscriptionService {
                 updated_at = NOW()
             "#,
             user_id,
-            req.new_follower_enabled.unwrap_or(true),
-            req.mutual_follow_enabled.unwrap_or(true),
-            req.group_invite_enabled.unwrap_or(true),
-            req.group_invite_response_enabled.unwrap_or(true),
-            req.group_application_enabled.unwrap_or(true),
-            req.group_application_response_enabled.unwrap_or(true),
-            req.message_mention_enabled.unwrap_or(true),
-            req.moment_like_enabled.unwrap_or(true),
-            req.moment_comment_enabled.unwrap_or(true),
-            req.comment_reply_enabled.unwrap_or(true),
-            req.system_announcement_enabled.unwrap_or(true)
+            req.new_follower_enabled,
+            req.mutual_follow_enabled,
+            req.group_invite_enabled,
+            req.group_invite_response_enabled,
+            req.group_application_enabled,
+            req.group_application_response_enabled,
+            req.message_mention_enabled,
+            req.moment_like_enabled,
+            req.moment_comment_enabled,
+            req.comment_reply_enabled,
+            req.system_announcement_enabled
         )
         .execute(&self.db)
         .await?;

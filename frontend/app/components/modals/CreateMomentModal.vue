@@ -1,45 +1,55 @@
 <template>
   <UModal
-    size="2xl"
-    title="发布生活瞬间"
-    description="分享您的生活瞬间给朋友"
+    :title="modalTitle"
+    :description="modalDescription"
   >
-    <template #body="{ close }">
+    <template #body>
       <UForm
         :state="form"
         class="space-y-6"
-        @submit="() => createMoment(close)"
+        @submit="submitMoment"
       >
         <!-- 瞬间描述 -->
         <UFormField
           label="瞬间描述"
           name="description"
           :hint="`${form.description.length}/${MOMENT_CONSTANTS.MAX_DESCRIPTION_LENGTH}`"
-          required
+          :required="true"
         >
           <UTextarea
             v-model="form.description"
             placeholder="分享您此刻的心情和想法..."
             :rows="4"
             :maxlength="MOMENT_CONSTANTS.MAX_DESCRIPTION_LENGTH"
-            class="w-full"
           />
         </UFormField>
 
         <!-- 图片上传 -->
         <UFormField
           label="图片"
-          hint="最多9张"
+          :hint="props.mode === 'edit' ? '可选：上传后将替换原图片（最多9张）' : '最多9张'"
         >
-          <UCard
-            :ui="{ body: 'p-4' }"
-            variant="subtle"
-          >
+          <UCard v-if="props.mode === 'edit' && props.moment?.images?.length" class="mb-3">
+            <section class="grid grid-cols-3 gap-3">
+              <article
+                v-for="(image, index) in props.moment.images"
+                :key="`${image}-${index}`"
+                class="relative aspect-square rounded-xl overflow-hidden ring-1 ring-gray-200 dark:ring-gray-800"
+              >
+                <NuxtImg
+                  :src="image"
+                  :alt="`原图片 ${index + 1}`"
+                  class="w-full h-full object-cover"
+                />
+              </article>
+            </section>
+          </UCard>
+          <UCard>
             <section class="grid grid-cols-3 gap-3">
               <article
                 v-for="(image, index) in form.images"
                 :key="image.file_id"
-                class="relative aspect-square rounded-lg overflow-hidden"
+                class="relative aspect-square rounded-xl overflow-hidden ring-1 ring-gray-200 dark:ring-gray-800"
               >
                 <NuxtImg
                   :src="image.local_preview"
@@ -47,151 +57,145 @@
                   class="w-full h-full object-cover"
                 />
                 <UButton
+                  type="button"
                   variant="solid"
                   color="error"
-                  size="xs"
-                  icon="i-heroicons-x-mark"
+                  size="sm"
+                  icon="i-lucide-x"
                   class="absolute top-1 right-1"
                   @click="removeImage(index)"
                 />
               </article>
 
-              <UButton
+              <!-- 图片上传 (使用作用域插槽) -->
+              <UFileUpload
                 v-if="form.images.length < MOMENT_CONSTANTS.MAX_IMAGES"
-                variant="outline"
-                class="aspect-square flex flex-col items-center justify-center gap-1"
-                :loading="uploading"
-                @click="triggerImageUpload"
+                v-slot="{ open }"
+                v-model="selectedImageFiles"
+                accept="image/*"
+                :multiple="true"
+                @update:model-value="handleImagesSelected"
               >
-                <UIcon
-                  name="i-heroicons-camera"
-                  class="icon-lg"
-                />
-                <span class="text-xs">添加图片</span>
-              </UButton>
+                <UButton
+                  type="button"
+                  variant="outline"
+                  class="aspect-square flex flex-col items-center justify-center gap-1"
+                  :loading="uploading"
+                  @click="() => open()"
+                >
+                  <UIcon
+                    name="i-lucide-camera"
+                    :size="24"
+                  />
+                  <span class="text-xs">添加图片</span>
+                </UButton>
+              </UFileUpload>
             </section>
           </UCard>
-          <UFileUpload
-            v-slot="{ open }"
-            v-model="selectedImageFiles"
-            accept="image/*"
-            multiple
-            class="hidden"
-            @update:model-value="handleImagesSelected"
-          >
-            <button ref="imageUploadTrigger" class="hidden" @click="open()" />
-          </UFileUpload>
         </UFormField>
 
         <!-- 位置信息 -->
         <UFormField
           label="位置"
-          required
+          :required="true"
         >
           <div class="flex gap-2">
-            <UInput
-              v-model="form.location_name"
-              placeholder="点击获取当前位置"
-              icon="i-heroicons-map-pin"
-              class="flex-1"
-              readonly
-              required
-            />
+            <UCard variant="subtle" class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 min-w-0">
+                <UIcon name="i-lucide-map-pin" :size="16" />
+                <span class="truncate">{{ form.location_name || '请选择位置' }}</span>
+              </div>
+            </UCard>
             <UButton
+              type="button"
               variant="outline"
-              icon="i-heroicons-map-pin"
-              :loading="gettingLocation"
-              @click="getCurrentLocation"
+              icon="i-lucide-map"
+              @click="pickLocation"
             >
-              {{ form.latitude ? '重新获取' : '获取位置' }}
+              地图选点
             </UButton>
           </div>
-          <p v-if="form.latitude" class="text-xs text-muted mt-1">
-            位置已获取
-          </p>
+          <div v-if="form.latitude" class="mt-1">
+            <UBadge color="neutral" variant="soft" size="xs">
+              {{ form.latitude.toFixed(6) }}, {{ form.longitude?.toFixed(6) }}
+            </UBadge>
+          </div>
         </UFormField>
 
         <!-- 标签 -->
         <UFormField
           label="标签"
-          hint="最多10个"
+          :hint="`最多 ${MOMENT_CONSTANTS.MAX_TAGS} 个`"
         >
-          <UCard
-            :ui="{ body: 'p-4 space-y-3' }"
-            variant="subtle"
-          >
-            <section
-              v-if="form.tags.length > 0"
-              class="flex flex-wrap gap-2"
-            >
-              <UBadge
-                v-for="(tag, index) in form.tags"
-                :key="index"
-                color="primary"
-                variant="soft"
-                class="cursor-pointer"
-                @click="removeTag(index)"
+          <UCard>
+            <div class="space-y-3">
+              <section
+                v-if="form.tags.length > 0"
+                class="flex flex-wrap gap-2"
               >
-                {{ tag }}
-                <UIcon
-                  name="i-heroicons-x-mark"
-                  class="icon-xs ml-1"
+                <UBadge
+                  v-for="(tag, index) in form.tags"
+                  :key="index"
+                  color="primary"
+                  variant="soft"
+                  class="cursor-pointer"
+                  @click="removeTag(index)"
+                >
+                  {{ tag }}
+                  <UIcon
+                    name="i-lucide-x"
+                    :size="14"
+                    class="ml-1"
+                  />
+                </UBadge>
+              </section>
+
+              <section class="flex gap-2">
+                <UInput
+                  v-model="newTag"
+                  placeholder="输入标签"
+                  class="flex-1"
+                  @keyup.enter="addTag"
                 />
-              </UBadge>
-            </section>
-
-            <section class="flex gap-2">
-              <UInput
-                v-model="newTag"
-                placeholder="输入标签"
-                size="sm"
-                class="flex-1"
-                @keyup.enter="addTag"
-              />
-              <UButton
-                variant="outline"
-                size="sm"
-                :disabled="!newTag.trim() || form.tags.length >= MOMENT_CONSTANTS.MAX_TAGS"
-                @click="addTag"
-              >
-                添加
-              </UButton>
-            </section>
+                <UButton
+                  type="button"
+                  variant="outline"
+                  :disabled="!newTag.trim() || form.tags.length >= MOMENT_CONSTANTS.MAX_TAGS"
+                  @click="addTag"
+                >
+                  添加
+                </UButton>
+              </section>
+            </div>
           </UCard>
-        </UFormField>
-
-        <!-- 隐私设置 -->
-        <UFormField label="隐私设置">
-          <USelect
-            v-model="form.visibility"
-            :items="visibilityOptions"
-          />
         </UFormField>
       </UForm>
     </template>
 
-    <template #footer="{ close }">
+    <template #footer>
       <UButton
+        type="button"
         variant="outline"
-        size="sm"
         :disabled="creating"
         @click="saveDraft"
       >
         保存草稿
       </UButton>
       <UButton
+        type="button"
         variant="outline"
         :disabled="creating"
-        @click="close"
+        @click="emit('close')"
       >
         取消
       </UButton>
       <UButton
+        type="button"
         :loading="creating"
         :disabled="!isFormValid"
-        @click="() => createMoment(close)"
+        @click="submitMoment"
       >
-        发布瞬间
+        {{ props.mode === 'edit' ? '保存修改' : '发布瞬间' }}
       </UButton>
     </template>
   </UModal>
@@ -201,24 +205,30 @@
 import { MOMENT_CONSTANTS } from '~/config/defaults'
 import { useMomentsService } from '~/services/moments.service'
 import { useUploadService } from '~/services/upload.service'
-import { geocoding } from '~/utils/geocoding'
-import { getErrorMessage } from '~/utils/error'
+import type { MomentSearchItem } from '~/types/api'
 
 interface Props {
   onSuccess?: (momentId: string) => void
+  mode?: 'create' | 'edit'
+  moment?: Pick<MomentSearchItem, 'id' | 'description' | 'tags' | 'images' | 'geo'> | null
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  mode: 'create',
+  moment: null
+})
+const emit = defineEmits<{
+  close: [value?: string]
+}>()
 
 const momentsStore = useMomentsStore()
+const locationStore = useLocationStore()
 
 const creating = ref(false)
-const gettingLocation = ref(false)
 const uploading = ref(false)
 const newTag = ref('')
 // 图片上传 (UFileUpload)
 const selectedImageFiles = ref<File[] | null>(null)
-const imageUploadTrigger = ref<HTMLButtonElement | null>(null)
 
 // 图片数据结构（本地预览 + 服务端 file_id）
 interface ImageItem {
@@ -233,12 +243,20 @@ const form = ref({
   latitude: null as number | null,
   longitude: null as number | null,
   location_name: '',
-  tags: [] as string[],
-  visibility: 'public'
+  tags: [] as string[]
 })
 
 // 客户端水合完成后从 store 恢复草稿
 onMounted(() => {
+  if (props.mode === 'edit' && props.moment) {
+    form.value.description = props.moment.description || ''
+    form.value.tags = [...(props.moment.tags || [])]
+    form.value.latitude = props.moment.geo?.latitude ?? null
+    form.value.longitude = props.moment.geo?.longitude ?? null
+    form.value.location_name = props.moment.geo?.location_name ?? ''
+    return
+  }
+
   if (momentsStore.hasDraft) {
     form.value.description = momentsStore.draft.description
     // 草稿中的 images 是 file_id 数组，本地预览 URL 无法恢复，需重新上传
@@ -246,14 +264,17 @@ onMounted(() => {
     form.value.longitude = momentsStore.draft.longitude
     form.value.location_name = momentsStore.draft.location_name
     form.value.tags = [...momentsStore.draft.tags]
+    return
+  }
+
+  // 无草稿时默认使用当前定位（如果已获取）
+  const loc = locationStore.location
+  if (loc) {
+    form.value.latitude = loc.latitude
+    form.value.longitude = loc.longitude
+    form.value.location_name = loc.locationName
   }
 })
-
-const visibilityOptions = [
-  { value: 'public', label: '公开' },
-  { value: 'friends', label: '仅好友可见' },
-  { value: 'private', label: '仅自己可见' }
-]
 
 const isFormValid = computed(() => {
   return form.value.description.trim() &&
@@ -262,36 +283,19 @@ const isFormValid = computed(() => {
          form.value.location_name.trim()
 })
 
-const toast = useToast()
-const geolocation = useGeolocation()
+const feedback = useFeedbackStore()
+const modal = useModal()
 
-const getCurrentLocation = async () => {
-  gettingLocation.value = true
-  try {
-    const position = await geolocation.getPosition()
-    if (!position) {
-      gettingLocation.value = false
-      return
-    }
+const modalTitle = computed(() => (props.mode === 'edit' ? '编辑生活瞬间' : '发布生活瞬间'))
+const modalDescription = computed(() => (props.mode === 'edit' ? '修改您的动态内容' : '分享您的生活瞬间给朋友'))
 
-    form.value.latitude = position.coords.latitude
-    form.value.longitude = position.coords.longitude
-
-    form.value.location_name = await geocoding.getLocationName(
-      position.coords.latitude,
-      position.coords.longitude
-    )
-
-    toast.add({ color: 'success', title: '位置获取成功' })
-  } catch (err) {
-    console.error('获取位置失败:', err)
-    toast.add({ color: 'error', title: '位置获取失败', description: '请手动输入位置信息' })
-  } finally {
-    gettingLocation.value = false
-  }
+const pickLocation = async () => {
+  await modal.showLocationPicker((loc) => {
+    form.value.latitude = loc.latitude
+    form.value.longitude = loc.longitude
+    form.value.location_name = loc.locationName
+  })
 }
-
-const triggerImageUpload = () => imageUploadTrigger.value?.click()
 
 // UFileUpload 回调
 const handleImagesSelected = async (files: File[] | null | undefined) => {
@@ -315,7 +319,7 @@ const handleImagesSelected = async (files: File[] | null | undefined) => {
         })
       } catch (err) {
         console.error('图片上传失败:', err)
-        toast.add({ color: 'error', title: `图片 ${file.name} 上传失败` })
+        feedback.error('图片上传失败', `图片 ${file.name} 上传失败`)
       }
     }
   } finally {
@@ -353,15 +357,33 @@ const saveDraft = () => {
     longitude: form.value.longitude,
     location_name: form.value.location_name
   })
-  toast.add({ color: 'success', title: '草稿已保存' })
+  feedback.success('草稿已保存')
 }
 
-const createMoment = async (close: () => void) => {
+const submitMoment = async () => {
   if (!isFormValid.value) return
 
   creating.value = true
   try {
     const momentService = useMomentsService()
+    if (props.mode === 'edit' && props.moment?.id) {
+      await momentService.update({
+        id: props.moment.id,
+        description: form.value.description,
+        tags: form.value.tags,
+        location: {
+          latitude: form.value.latitude!,
+          longitude: form.value.longitude!,
+          name: form.value.location_name
+        },
+        image_file_ids: form.value.images.length > 0 ? form.value.images.map(img => img.file_id) : undefined
+      })
+      feedback.success('保存成功', '动态已更新')
+      props.onSuccess?.(props.moment.id)
+      emit('close', props.moment.id)
+      return
+    }
+
     const response = await momentService.create({
       description: form.value.description,
       location: {
@@ -373,13 +395,13 @@ const createMoment = async (close: () => void) => {
       image_file_ids: form.value.images.map(img => img.file_id)
     })
 
-    toast.add({ color: 'success', title: '瞬间发布成功' })
+    feedback.success('瞬间发布成功')
     momentsStore.clearDraft()
     props.onSuccess?.(response.id)
-    close()
+    emit('close', response.id)
   } catch (err: unknown) {
     console.error('发布瞬间失败:', err)
-    toast.add({ color: 'error', title: '发布失败', description: getErrorMessage(err, '请检查网络连接后重试') })
+    feedback.error(props.mode === 'edit' ? '保存失败' : '发布失败', getErrorMessage(err, '请检查网络连接后重试'))
   }   finally {
     creating.value = false
   }

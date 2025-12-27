@@ -1,124 +1,106 @@
+import { DesignConstants } from '../constants/DesignConstants';
+import { UserInfo } from '../core/types/WebSocketTypes';
+import { UserTypeUtil } from '../core/utils/UserTypeUtil';
+
 /**
- * 系统级用户头像组件
- * 集成触觉反馈、系统缓存、在线状态等HarmonyOS原生能力
+ * SystemAvatar - Premium Avatar Component
+ * Supports initials fallback, online status, and Apple-style sizing
  */
-
-import { curves } from '@kit.ArkUI';
-import { hilog } from '@kit.PerformanceAnalysisKit';
-import { vibrator } from '@kit.SensorServiceKit';
-
-const DOMAIN_NUMBER: number = 0xFF10;
-const TAG: string = 'SystemAvatar';
-
 @Component
 export struct SystemAvatar {
-  @Prop avatarUrl: string = '';
-  @Prop avatarSize: number = 40;
-  @Prop nickname: string = '';
+  @Prop src: string | Resource | undefined;
+  @Prop name: string = '';
+  @Prop size: number = 40; // Default size in vp
   @Prop isOnline: boolean = false;
-  @Prop showBorder: boolean = true;
-  @Prop avatarBorderColor: ResourceColor = $r('sys.color.ohos_id_color_emphasize');
-  @Prop enableHapticFeedback: boolean = true;
-  @Prop onTap: () => void = () => {};
-  @State private isPressed: boolean = false;
-  @State private scaleValue: number = 1;
-  @State private shadowRadius: number = 4;
+  @Prop showBorder: boolean = false;
+  @Prop shape: 'circle' | 'squircle' | 'square' = 'circle';
+  @Prop userInfo: UserInfo | undefined; // Optional UserInfo to display temp/system badge
 
   build() {
     Stack({ alignContent: Alignment.BottomEnd }) {
-      // 主头像 - 使用系统图片缓存和优化
-      if (this.avatarUrl) {
-        Image(this.avatarUrl)
-          .width(this.avatarSize)
-          .height(this.avatarSize)
-          .borderRadius(this.avatarSize / 2)
+      // Main Avatar Image
+      if (this.src) {
+        Image(this.src)
+          .width(this.size)
+          .height(this.size)
           .objectFit(ImageFit.Cover)
-          .border(this.showBorder ? {
-            width: 2,
-            color: this.avatarBorderColor
-          } : undefined)
-          .scale({ x: this.scaleValue, y: this.scaleValue })
-          .shadow({
-            radius: this.shadowRadius,
-            color: $r('sys.color.ohos_id_color_tertiary'),
-            offsetX: 0,
-            offsetY: 2
-          })
-          .animation({
-            duration: 200,
-            curve: curves.springMotion(0.6, 0.8)
-          })
-          // 使用系统级图片加载优化
-          .syncLoad(false)
-          .autoResize(true)
+          .borderRadius(this.getBorderRadius())
+          .border(this.showBorder ? { width: 2, color: DesignConstants.COLOR.SECONDARY_BG_LIGHT } : undefined)
+          .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
       } else {
-        Text(this.nickname.charAt(0).toUpperCase())
-          .width(this.avatarSize)
-          .height(this.avatarSize)
-          .fontSize(this.avatarSize * 0.4)
-          .fontColor(Color.White)
-          .textAlign(TextAlign.Center)
-          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-          .borderRadius(this.avatarSize / 2)
-          .border(this.showBorder ? {
-            width: 2,
-            color: this.avatarBorderColor
-          } : undefined)
-          .scale({ x: this.scaleValue, y: this.scaleValue })
-          .shadow({
-            radius: this.shadowRadius,
-            color: $r('sys.color.ohos_id_color_tertiary'),
-            offsetX: 0,
-            offsetY: 2
-          })
-          .animation({
-            duration: 200,
-            curve: curves.springMotion(0.6, 0.8)
-          })
+        // Initials Fallback
+        Flex({ justifyContent: FlexAlign.Center, alignItems: ItemAlign.Center }) {
+          Text(this.getInitials(this.name))
+            .fontSize(this.size * 0.4)
+            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+            .fontColor(Color.White)
+        }
+        .width(this.size)
+        .height(this.size)
+        .backgroundColor(this.generateAvatarColor(this.name))
+        .borderRadius(this.getBorderRadius())
+        .border(this.showBorder ? { width: 2, color: DesignConstants.COLOR.SECONDARY_BG_LIGHT } : undefined)
       }
 
-      // 在线状态指示器 - 使用系统状态颜色
-      if (this.isOnline !== undefined) {
-        Circle({ width: this.avatarSize * 0.25, height: this.avatarSize * 0.25 })
-          .fill(this.isOnline ? $r('sys.color.ohos_id_color_emphasize') : $r('sys.color.ohos_id_color_tertiary'))
-          .stroke($r('sys.color.ohos_id_color_background'))
-          .strokeWidth(2)
-          .offset({ x: -2, y: -2 })
+      // Online Status Indicator
+      if (this.isOnline) {
+        Row()
+          .width(this.size * 0.28)
+          .height(this.size * 0.28)
+          .backgroundColor(DesignConstants.COLOR.ONLINE_STATUS)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .border({ width: 2, color: DesignConstants.COLOR.SECONDARY_BG_LIGHT })
+          .margin({ bottom: -1, right: -1 })
+      } else if (this.userInfo && UserTypeUtil.isTempUser(this.userInfo.user_type)) {
+        Text('临时')
+          .fontSize(this.size * 0.25) // Slightly larger than dot
+          .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+          .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
+          .borderRadius(4)
+          .padding({ left: 2, right: 2 })
+          .margin({ bottom: -2, right: -2 })
+      } else if (this.userInfo && UserTypeUtil.isSystemUser(this.userInfo.user_type)) {
+        Text('官方')
+          .fontSize(this.size * 0.25)
+          .fontColor(Color.White)
+          .backgroundColor(DesignConstants.COLOR.BRAND_PRIMARY)
+          .borderRadius(4)
+          .padding({ left: 2, right: 2 })
+          .margin({ bottom: -2, right: -2 })
       }
     }
-    .onTouch((event: TouchEvent) => {
-      if (event.type === TouchType.Down) {
-        this.isPressed = true;
-        this.scaleValue = 0.95;
-        this.shadowRadius = 8;
-        
-        // 系统触觉反馈
-        if (this.enableHapticFeedback) {
-          this.triggerHapticFeedback();
-        }
-      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        this.isPressed = false;
-        this.scaleValue = 1;
-        this.shadowRadius = 4;
-        
-        if (event.type === TouchType.Up) {
-          this.onTap();
-        }
-      }
-    })
+    .width(this.size)
+    .height(this.size)
   }
 
-  private triggerHapticFeedback(): void {
-    try {
-      vibrator.startVibration({
-        type: 'time',
-        duration: 10
-      }, {
-        id: 0,
-        usage: 'alarm'
-      });
-    } catch (error) {
-      hilog.warn(DOMAIN_NUMBER, TAG, '触觉反馈失败');
+  private getBorderRadius(): Length {
+    if (this.shape === 'circle') return DesignConstants.RADIUS.FULL;
+    if (this.shape === 'squircle') return (this.size * 0.22) + 'vp'; // Apple-like squircle approx
+    return DesignConstants.RADIUS.SM;
+  }
+
+  private getInitials(name: string): string {
+    if (!name) return '?';
+    return name.substring(0, 2).toUpperCase();
+  }
+
+  private generateAvatarColor(name: string): string {
+    if (!name) return DesignConstants.COLOR.TEXT_TERTIARY_LIGHT;
+    
+    const colors = [
+      DesignConstants.COLOR.BRAND_PRIMARY,
+      DesignConstants.COLOR.INFO,
+      DesignConstants.COLOR.SUCCESS,
+      DesignConstants.COLOR.WARNING,
+      DesignConstants.COLOR.ERROR
+    ];
+    
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
     }
+    
+    const index = Math.abs(hash % colors.length);
+    return colors[index];
   }
 }

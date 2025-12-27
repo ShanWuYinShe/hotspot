@@ -31,8 +31,7 @@ CREATE TRIGGER trigger_notification_subscriptions_updated_at
 -- ============================================================
 CREATE TABLE device_tokens (
     id BIGSERIAL PRIMARY KEY,
-    token_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
-    cursor_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    token_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
     user_id BIGINT NOT NULL,
     platform platform NOT NULL,
     device_token VARCHAR(255) NOT NULL,
@@ -42,7 +41,6 @@ CREATE TABLE device_tokens (
 );
 
 CREATE INDEX idx_device_tokens_token_id ON device_tokens (token_id);
-CREATE INDEX idx_device_tokens_cursor_id ON device_tokens (cursor_id);
 CREATE INDEX idx_device_tokens_user_id ON device_tokens (user_id, created_at DESC);
 CREATE INDEX idx_device_tokens_platform ON device_tokens (platform);
 

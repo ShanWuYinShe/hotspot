@@ -7,7 +7,6 @@
 CREATE TABLE users (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT UNIQUE NOT NULL,
-    cursor_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
     user_type user_type NOT NULL DEFAULT 'normal',
     login_id VARCHAR(255) UNIQUE,
     password_hash VARCHAR(255),
@@ -31,7 +30,6 @@ CREATE TABLE users (
 );
 
 CREATE INDEX idx_users_user_id ON users (user_id) WHERE is_deleted = FALSE;
-CREATE INDEX idx_users_cursor_id ON users (cursor_id) WHERE is_deleted = FALSE;
 CREATE INDEX idx_users_login_id ON users (login_id) WHERE login_id IS NOT NULL AND is_deleted = FALSE;
 CREATE INDEX idx_users_nickname ON users USING gin (nickname gin_trgm_ops) WHERE is_deleted = FALSE;
 CREATE INDEX idx_users_location ON users USING gist (location) WHERE location IS NOT NULL AND is_deleted = FALSE;
@@ -63,6 +61,7 @@ CREATE TABLE user_settings (
     following_visible privacy_level NOT NULL DEFAULT 'public',
     followers_visible privacy_level NOT NULL DEFAULT 'public',
     moments_visible privacy_level NOT NULL DEFAULT 'public',
+    groups_visible privacy_level NOT NULL DEFAULT 'public',
     stats_visible privacy_level NOT NULL DEFAULT 'public',
     
     -- ============ 社交设置 ============
@@ -89,6 +88,7 @@ COMMENT ON COLUMN user_settings.friends_visible IS '好友列表可见性';
 COMMENT ON COLUMN user_settings.following_visible IS '关注列表可见性';
 COMMENT ON COLUMN user_settings.followers_visible IS '粉丝列表可见性';
 COMMENT ON COLUMN user_settings.moments_visible IS '瞬间列表可见性';
+COMMENT ON COLUMN user_settings.groups_visible IS '群组列表可见性';
 COMMENT ON COLUMN user_settings.stats_visible IS '统计数据可见性';
 COMMENT ON COLUMN user_settings.allow_follow IS '是否允许被关注';
 COMMENT ON COLUMN user_settings.allow_private_chat IS '私聊权限：everyone-所有人, friends-仅好友, nobody-禁止';
@@ -122,8 +122,7 @@ CREATE INDEX idx_user_online_status_online ON user_online_status (is_online) WHE
 -- ============================================================
 CREATE TABLE user_follows (
     id BIGSERIAL PRIMARY KEY,
-    follow_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
-    cursor_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    follow_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
     follower_id BIGINT NOT NULL,
     following_id BIGINT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -132,15 +131,13 @@ CREATE TABLE user_follows (
 );
 
 CREATE INDEX idx_user_follows_follow_id ON user_follows (follow_id);
-CREATE INDEX idx_user_follows_cursor_id ON user_follows (cursor_id);
 CREATE INDEX idx_user_follows_follower ON user_follows (follower_id, created_at DESC);
 CREATE INDEX idx_user_follows_following ON user_follows (following_id, created_at DESC);
 CREATE INDEX idx_user_follows_mutual ON user_follows (follower_id, following_id);
 
 CREATE TABLE user_blocks (
     id BIGSERIAL PRIMARY KEY,
-    block_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
-    cursor_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    block_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
     blocker_id BIGINT NOT NULL,
     blocked_id BIGINT NOT NULL,
     reason TEXT,
@@ -150,14 +147,12 @@ CREATE TABLE user_blocks (
 );
 
 CREATE INDEX idx_user_blocks_block_id ON user_blocks (block_id);
-CREATE INDEX idx_user_blocks_cursor_id ON user_blocks (cursor_id);
 CREATE INDEX idx_user_blocks_blocker ON user_blocks (blocker_id, created_at DESC);
 CREATE INDEX idx_user_blocks_blocked ON user_blocks (blocked_id, created_at DESC);
 
 CREATE TABLE user_friend_remarks (
     id BIGSERIAL PRIMARY KEY,
-    remark_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
-    cursor_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    remark_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
     user_id BIGINT NOT NULL,
     friend_id BIGINT NOT NULL,
     remark VARCHAR(100),
@@ -167,7 +162,6 @@ CREATE TABLE user_friend_remarks (
 );
 
 CREATE INDEX idx_friend_remarks_remark_id ON user_friend_remarks (remark_id);
-CREATE INDEX idx_friend_remarks_cursor_id ON user_friend_remarks (cursor_id);
 CREATE INDEX idx_friend_remarks_user ON user_friend_remarks (user_id, created_at DESC);
 
 CREATE TRIGGER trigger_friend_remarks_updated_at
@@ -178,7 +172,7 @@ CREATE TRIGGER trigger_friend_remarks_updated_at
 -- ============================================================
 CREATE TABLE user_location_history (
     id BIGSERIAL PRIMARY KEY,
-    history_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    history_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
     user_id BIGINT NOT NULL,
     latitude DOUBLE PRECISION NOT NULL,
     longitude DOUBLE PRECISION NOT NULL,
@@ -203,14 +197,16 @@ CREATE TRIGGER trigger_location_history_sync
 -- ============================================================
 CREATE TABLE sessions (
     id BIGSERIAL PRIMARY KEY,
-    session_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    session_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
     user_id BIGINT NOT NULL,
     device_type VARCHAR(50),
     device_name VARCHAR(100),
+    device_fingerprint VARCHAR(255),
     ip_address INET,
     user_agent TEXT,
     access_token_hash VARCHAR(255) NOT NULL,
     refresh_token_hash VARCHAR(255) NOT NULL,
+    previous_refresh_token_hash VARCHAR(255),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     last_active_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     expires_at TIMESTAMPTZ NOT NULL,
@@ -223,7 +219,7 @@ CREATE INDEX idx_sessions_user_id ON sessions (user_id, last_active_at DESC) WHE
 
 CREATE TABLE password_reset_tokens (
     id BIGSERIAL PRIMARY KEY,
-    reset_id UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    reset_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
     user_id BIGINT NOT NULL,
     code VARCHAR(6) NOT NULL,
     code_hash VARCHAR(255) NOT NULL,

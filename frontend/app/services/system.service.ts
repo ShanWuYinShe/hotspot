@@ -4,7 +4,7 @@ import type { HealthCheckData } from '~/types/api'
 
 class SystemService extends BaseService {
   async healthCheck() {
-    return this.publicPost<HealthCheckData>(SYSTEM.HEALTH_CHECK, {})
+    return this.publicPost<HealthCheckData>(SYSTEM.HEALTH, {})
   }
 }
 

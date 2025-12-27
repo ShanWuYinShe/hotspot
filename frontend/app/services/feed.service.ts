@@ -2,35 +2,35 @@ import { BaseService } from './base.service'
 import { FEED } from '~/config/api'
 import type {
   PaginatedData,
-  GetFeedMomentsRequest,
+  FeedMomentsRequest,
   FeedMomentItem,
-  GetFeedGroupsRequest,
+  FeedGroupsRequest,
   FeedGroupItem,
-  GetFeedUsersRequest,
+  FeedUsersRequest,
   FeedUserItem,
-  GetFeedTrendingRequest,
+  FeedTrendingRequest,
   FeedTrendingData,
   FeedFeedbackRequest
 } from '~/types/api'
 
 class FeedService extends BaseService {
   // 获取瞬间信息流
-  async getMoments(request: GetFeedMomentsRequest = {}) {
+  async getMoments(request: FeedMomentsRequest = {}) {
     return this.post<PaginatedData<FeedMomentItem>>(FEED.MOMENTS, request)
   }
 
   // 获取群组推荐
-  async getGroups(request: GetFeedGroupsRequest = {}) {
+  async getGroups(request: FeedGroupsRequest = {}) {
     return this.post<PaginatedData<FeedGroupItem>>(FEED.GROUPS, request)
   }
 
   // 获取用户推荐
-  async getUsers(request: GetFeedUsersRequest = {}) {
+  async getUsers(request: FeedUsersRequest = {}) {
     return this.post<PaginatedData<FeedUserItem>>(FEED.USERS, request)
   }
 
   // 获取热门内容
-  async getTrending(request: GetFeedTrendingRequest = {}) {
+  async getTrending(request: FeedTrendingRequest = {}) {
     return this.post<FeedTrendingData>(FEED.TRENDING, request)
   }
 
