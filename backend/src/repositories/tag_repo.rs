@@ -123,6 +123,18 @@ impl TagRepository {
             .collect())
     }
 
+    /// 删除标签（管理员）
+    pub async fn delete(&self, tag_name: &str) -> Result<bool> {
+        let result = sqlx::query!(
+            "DELETE FROM tags WHERE name = $1",
+            tag_name
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(result.rows_affected() > 0)
+    }
+
     // ==================== 用户标签操作 ====================
 
     /// 设置用户标签（替换所有现有标签）

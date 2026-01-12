@@ -100,3 +100,43 @@ where
         Ok(BearerToken(token.to_string()))
     }
 }
+
+/// 已认证用户提取器
+///
+/// 从请求扩展中提取已认证的用户信息（由 auth_middleware 注入）
+pub struct AuthenticatedUser {
+    pub user_id: i64,
+    /// 当前请求的会话ID
+    ///
+    /// 用途：
+    /// - 会话管理：用于标记当前会话（如 list_sessions 中的 is_current）
+    /// - 会话撤销：通过删除 Redis 中的 `session:{sid}` key 来撤销会话
+    /// - 审计日志：记录操作来源的会话ID
+    ///
+    /// 注意：虽然大多数 handler 使用 `Extension<i64>` 和 `Extension<Option<uuid::Uuid>>` 分别提取，
+    /// 但使用 `AuthenticatedUser` 提取器可以同时获取 user_id 和 session_id，代码更清晰。
+    pub session_id: Option<uuid::Uuid>,
+}
+
+impl<S> FromRequestParts<S> for AuthenticatedUser
+where
+    S: Send + Sync,
+{
+    type Rejection = AppError;
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        let user_id = parts
+            .extensions
+            .get::<i64>()
+            .copied()
+            .ok_or_else(|| AppError::Unauthorized("未认证".to_string()))?;
+
+        let session_id = parts
+            .extensions
+            .get::<Option<uuid::Uuid>>()
+            .copied()
+            .flatten();
+
+        Ok(AuthenticatedUser { user_id, session_id })
+    }
+}

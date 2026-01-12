@@ -2,195 +2,182 @@
 @import "@nuxt/ui";
 
 @theme {
-  --animate-blob: blob 7s infinite;
-  --animate-spin-slow: spin 3s linear infinite;
-  --animate-typing-dot: typing-dot 1.4s infinite ease-in-out both;
-  --animate-fade-in-up: fadeInUp 0.5s ease-out forwards;
+    --animate-blob: blob 7s infinite;
+    --animate-spin-slow: spin 3s linear infinite;
+    --animate-typing-dot: typing-dot 1.4s infinite ease-in-out both;
+    --animate-fade-in-up: fadeInUp 0.5s ease-out forwards;
+    --animate-fade-in: fadeIn 0.4s ease-out forwards;
 
-  @keyframes blob {
-    0% {
-      transform: translate(0px, 0px) scale(1);
+    @keyframes blob {
+        0% {
+            transform: translate(0px, 0px) scale(1);
+        }
+        33% {
+            transform: translate(30px, -50px) scale(1.1);
+        }
+        66% {
+            transform: translate(-20px, 20px) scale(0.9);
+        }
+        100% {
+            transform: translate(0px, 0px) scale(1);
+        }
     }
 
-    33% {
-      transform: translate(30px, -50px) scale(1.1);
+    @keyframes typing-dot {
+        0%,
+        80%,
+        100% {
+            transform: scale(0);
+        }
+        40% {
+            transform: scale(1);
+        }
     }
 
-    66% {
-      transform: translate(-20px, 20px) scale(0.9);
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
-    100% {
-      transform: translate(0px, 0px) scale(1);
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
     }
-  }
-
-  @keyframes typing-dot {
-    0%,
-    80%,
-    100% {
-      transform: scale(0);
-    }
-
-    40% {
-      transform: scale(1);
-    }
-  }
-
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-}
-
-@utility animate-fade-in-up {
-  animation: fadeInUp 0.5s ease-out forwards;
-}
-
-@utility delay-75 {
-  animation-delay: 75ms;
-}
-
-@utility delay-100 {
-  animation-delay: 100ms;
-}
-
-@utility delay-150 {
-  animation-delay: 150ms;
-}
-
-@utility delay-200 {
-  animation-delay: 200ms;
 }
 
 /* ============================================================================
-   Global Styles
+   Global Design Tokens
    ============================================================================ */
-html {
-  scroll-behavior: smooth;
+:root {
+    --ui-container: 80rem;
 }
 
 /* ============================================================================
-   Minimal @utility (non-Nuxt UI elements)
-   ============================================================================ */
-@utility hs-search-hit {
-  @apply bg-warning/30 rounded-md px-0.5;
-}
-
-@utility hs-image-more-overlay {
-  @apply absolute inset-0 flex items-center justify-center cursor-pointer transition-colors;
-  @apply bg-gray-900/50 dark:bg-white/50 hover:bg-gray-900/60 dark:hover:bg-white/60;
-}
-
-@utility hs-avatar-upload-overlay {
-  @apply absolute inset-0 flex items-center justify-center rounded-full z-10 transition-opacity;
-  @apply bg-gray-900/40 dark:bg-white/40 text-white dark:text-gray-900 opacity-0 hover:opacity-100;
-}
-
-@utility hs-overlay-scrim {
-  @apply bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm;
-}
-
-@utility hs-typing-dot {
-  @apply size-1.5 bg-gray-500 dark:bg-gray-400 rounded-full;
-}
-
-/* ============================================================================
-   Chat Messages (non-Nuxt UI custom implementation)
+   Custom Utilities
+   Only keeping complex/semantic utilities. Removing simple aliases.
    ============================================================================ */
 
-@utility hs-chat-bubble-user {
-  @apply rounded-3xl px-4 py-2 text-sm wrap-break-word whitespace-pre-wrap shadow-sm ring-1 ring-inset;
-  @apply bg-primary-500 dark:bg-primary-600 text-white ring-primary-600 dark:ring-primary-500 rounded-br-sm;
+/* Map Overlays */
+@utility lsyb-map-frame {
+    @apply rounded-3xl overflow-hidden ring-1 ring-neutral-200 dark:ring-neutral-800 shadow-sm;
 }
 
-@utility hs-chat-bubble-other {
-  @apply rounded-3xl px-4 py-2 text-sm wrap-break-word whitespace-pre-wrap shadow-sm ring-1 ring-inset;
-  @apply bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 ring-gray-200 dark:ring-gray-700 rounded-bl-sm;
+@utility lsyb-map-surface {
+    @apply bg-neutral-100 dark:bg-neutral-900 transition-colors;
 }
 
-@utility hs-chat-highlight {
-  @apply bg-primary-50/50 dark:bg-primary-900/10 ring-2 ring-primary-500/20 rounded-2xl;
+@utility lsyb-map-anchor-ping {
+    @apply bg-primary-500/20 rounded-full animate-ping;
 }
 
-/* ============================================================================
-   Floating Panels (glassmorphism effect for map overlays)
-   ============================================================================ */
-
-@utility hs-floating-panel {
-  @apply bg-white/90 dark:bg-gray-900/90 backdrop-blur-md rounded-2xl shadow-xl ring-1 ring-gray-200 dark:ring-gray-800;
+@utility lsyb-map-anchor-badge {
+    @apply relative shadow-lg ring-2 ring-white dark:ring-neutral-900;
 }
 
-@utility hs-floating-control {
-  @apply shadow-lg;
+@utility lsyb-map-anchor-card {
+    @apply backdrop-blur-md bg-white/90 dark:bg-neutral-900/90 shadow-lg ring-1 ring-neutral-200/50;
 }
 
-/* ============================================================================
-   Map (non-Nuxt UI)
-   ============================================================================ */
-
-@utility hs-map-frame {
-  @apply rounded-2xl overflow-hidden;
+@utility lsyb-map-zoom-controls {
+    @apply flex flex-col rounded-xl shadow-lg ring-1 ring-neutral-200 dark:ring-neutral-800;
+    @apply overflow-hidden bg-white dark:bg-neutral-900;
 }
 
-@utility hs-map-background {
-  @apply bg-gray-100 dark:bg-gray-900;
+@utility lsyb-map-zoom-btn {
+    @apply rounded-none;
+    @apply hover:bg-neutral-50 dark:hover:bg-neutral-800;
 }
 
-@utility hs-map-cluster {
-  @apply inline-flex items-center justify-center select-none;
-  @apply min-w-7 h-7 px-2 rounded-full text-xs font-semibold;
-  @apply bg-gray-900/85 dark:bg-white/85 text-white dark:text-gray-900 ring-1 ring-white/15 dark:ring-black/15 shadow-lg;
+@utility lsyb-map-zoom-btn--top {
+    @apply border-b border-neutral-100 dark:border-neutral-800;
 }
 
-/* 未启用交互时：地图层不应吞掉滚轮/触摸滚动（尤其移动端）。 */
-[data-hs-map-interactive='false'] {
-  pointer-events: none;
+@utility lsyb-map-zoom-btn--bottom {
+    @apply border-b-0;
 }
 
-/* ============================================================================
-   Charts (non-Nuxt UI)
-   ============================================================================ */
-
-@utility hs-chart-line {
-  @apply drop-shadow-sm;
+@utility lsyb-map-locate-btn {
+    @apply shadow-lg ring-1 ring-neutral-200 dark:ring-neutral-800;
+    @apply text-neutral-700 dark:text-neutral-200;
+    @apply dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700;
 }
 
-@utility hs-chart-bar {
-  @apply rounded-t-2xl overflow-hidden;
+@utility lsyb-map-cluster {
+    @apply inline-flex items-center justify-center select-none;
+    @apply min-w-8 h-8 px-2 rounded-full text-xs font-bold;
+    @apply bg-neutral-900/90 dark:bg-white/90 text-white dark:text-neutral-900;
+    @apply ring-2 ring-white dark:ring-neutral-900 shadow-lg;
+    @apply transition-transform hover:scale-110 cursor-pointer;
 }
 
-@utility hs-chart-dot {
-  @apply rounded-full;
+/* Chat Bubbles */
+@utility lsyb-chat-bubble-user {
+    @apply rounded-3xl rounded-br-sm px-4 py-2.5 text-sm;
+    @apply bg-primary-500 text-white shadow-sm;
 }
 
-@utility hs-logo-text {
-  @apply font-bold text-xl tracking-tight text-gray-900 dark:text-white transition-opacity duration-300;
+@utility lsyb-chat-bubble-other {
+    @apply rounded-3xl rounded-bl-sm px-4 py-2.5 text-sm;
+    @apply bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100;
+    @apply ring-1 ring-neutral-200 dark:ring-neutral-700 shadow-sm;
 }
 
-@utility hs-text-strong {
-  @apply truncate font-semibold leading-tight mt-1;
+@utility lsyb-chat-date {
+    @apply text-xs text-neutral-500 dark:text-neutral-400 font-medium py-4 text-center select-none;
 }
 
-@utility hs-card-title {
-  @apply font-semibold truncate text-gray-900 dark:text-white;
+/* Auth */
+@utility lsyb-auth-layout {
+    @apply min-h-screen flex flex-col justify-center bg-neutral-50 dark:bg-neutral-950 transition-colors duration-300;
 }
 
-@utility hs-card-description {
-  @apply text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate;
+@utility lsyb-auth-logo-bg {
+    @apply absolute inset-0 bg-primary-500/20 rounded-full blur-xl animate-pulse;
 }
 
-@utility hs-stat-value {
-  @apply text-2xl font-semibold tabular-nums text-gray-900 dark:text-white;
+/* Misc */
+@utility lsyb-code-block {
+    @apply text-xs font-mono break-all whitespace-pre-wrap;
 }
 
-@utility hs-stat-label {
-  @apply mt-1 font-medium truncate text-gray-900 dark:text-white;
+/* Image Containers */
+@utility lsyb-image-container {
+    @apply relative overflow-hidden rounded-2xl ring-1 ring-neutral-200 dark:ring-neutral-800 bg-neutral-100 dark:bg-neutral-800;
+}
+
+@utility lsyb-image-container-aspect {
+    @apply lsyb-image-container aspect-square;
+}
+
+/* Interactive Cards */
+@utility lsyb-card-interactive {
+    @apply rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors duration-200 cursor-pointer;
+}
+
+/* Icon Containers */
+@utility lsyb-icon-container-sm {
+    @apply p-2 rounded-2xl bg-primary-50 dark:bg-primary-950/50 text-primary-600 dark:text-primary-400;
+}
+
+@utility lsyb-icon-container-md {
+    @apply p-3 rounded-full bg-primary-50 dark:bg-primary-950/50 text-primary-600 dark:text-primary-400;
+}
+
+@utility lsyb-icon-container-neutral {
+    @apply p-3 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-500;
+}
+
+/* Map Interactive */
+[data-map-interactive="false"] {
+    pointer-events: none;
 }

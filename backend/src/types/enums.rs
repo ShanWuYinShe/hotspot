@@ -87,6 +87,13 @@ impl MessageType {
             _ => None,
         }
     }
+
+    pub fn is_media(&self) -> bool {
+        matches!(
+            self,
+            MessageType::Image | MessageType::Video | MessageType::Audio | MessageType::File
+        )
+    }
 }
 
 impl std::fmt::Display for MessageType {
@@ -343,11 +350,6 @@ impl UserType {
             UserType::System => "system",
         }
     }
-
-    /// 检查是否为管理员
-    pub fn is_admin(&self) -> bool {
-        matches!(self, UserType::Admin)
-    }
 }
 
 impl std::fmt::Display for UserType {
@@ -392,6 +394,76 @@ impl std::str::FromStr for ReportHandleAction {
             "dismiss" => Ok(ReportHandleAction::Dismiss),
             "escalate" => Ok(ReportHandleAction::Escalate),
             _ => Err(format!("无效的操作类型: {}", s)),
+        }
+    }
+}
+
+// ============================================================
+// 13. 群组成员移除原因枚举
+// ============================================================
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum GroupMemberRemovalReason {
+    Left,   // 主动退出
+    Kicked, // 被移除
+    Banned, // 被封禁
+}
+
+impl GroupMemberRemovalReason {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            GroupMemberRemovalReason::Left => "left",
+            GroupMemberRemovalReason::Kicked => "kicked",
+            GroupMemberRemovalReason::Banned => "banned",
+        }
+    }
+}
+
+impl std::fmt::Display for GroupMemberRemovalReason {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+// ============================================================
+// 14. 地图资源类型枚举
+// ============================================================
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum MapResourceType {
+    All,    // 所有
+    User,   // 用户
+    Group,  // 群组
+    Moment, // 瞬间
+}
+
+impl MapResourceType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            MapResourceType::All => "all",
+            MapResourceType::User => "user",
+            MapResourceType::Group => "group",
+            MapResourceType::Moment => "moment",
+        }
+    }
+}
+
+impl std::fmt::Display for MapResourceType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl std::str::FromStr for MapResourceType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "all" => Ok(MapResourceType::All),
+            "user" => Ok(MapResourceType::User),
+            "group" => Ok(MapResourceType::Group),
+            "moment" => Ok(MapResourceType::Moment),
+            _ => Err(format!("无效的地图资源类型: {}", s)),
         }
     }
 }
@@ -489,6 +561,231 @@ impl std::str::FromStr for ChatPermission {
             "friends" => Ok(ChatPermission::Friends),
             "nobody" => Ok(ChatPermission::Nobody),
             _ => Err(format!("无效的私聊权限: {}", s)),
+        }
+    }
+}
+
+// ============================================================
+// 23. 通知 API 类型枚举 (用于 MarkNotificationsReadRequest)
+// ============================================================
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NotificationApiType {
+    Like,
+    Comment,
+    Follow,
+    System,
+    Mention,
+}
+
+impl NotificationApiType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            NotificationApiType::Like => "like",
+            NotificationApiType::Comment => "comment",
+            NotificationApiType::Follow => "follow",
+            NotificationApiType::System => "system",
+            NotificationApiType::Mention => "mention",
+        }
+    }
+}
+
+impl std::fmt::Display for NotificationApiType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl std::str::FromStr for NotificationApiType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "like" => Ok(NotificationApiType::Like),
+            "comment" => Ok(NotificationApiType::Comment),
+            "follow" => Ok(NotificationApiType::Follow),
+            "system" => Ok(NotificationApiType::System),
+            "mention" => Ok(NotificationApiType::Mention),
+            _ => Err(format!("无效的通知API类型: {}", s)),
+        }
+    }
+}
+
+// ============================================================
+// 24. 反应类型枚举
+// ============================================================
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
+#[sqlx(type_name = "reaction_type", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
+pub enum ReactionType {
+    Like,
+    Love,
+    Laugh,
+    Angry,
+    Sad,
+    Wow,
+}
+
+impl ReactionType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ReactionType::Like => "like",
+            ReactionType::Love => "love",
+            ReactionType::Laugh => "laugh",
+            ReactionType::Angry => "angry",
+            ReactionType::Sad => "sad",
+            ReactionType::Wow => "wow",
+        }
+    }
+}
+
+impl std::fmt::Display for ReactionType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl std::str::FromStr for ReactionType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "like" => Ok(ReactionType::Like),
+            "love" => Ok(ReactionType::Love),
+            "laugh" => Ok(ReactionType::Laugh),
+            "angry" => Ok(ReactionType::Angry),
+            "sad" => Ok(ReactionType::Sad),
+            "wow" => Ok(ReactionType::Wow),
+            _ => Err(format!("无效的反应类型: {}", s)),
+        }
+    }
+}
+
+// ============================================================
+// 25. 订阅失败原因枚举
+// ============================================================
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SubscriptionFailureReason {
+    InvalidItem,        // 订阅项无效
+    NotFound,           // 订阅目标不存在
+    PermissionDenied,   // 权限不足
+    TooManySubscriptions, // 订阅数量超限
+    RateLimited,        // 触发限流
+    InternalError,      // 内部错误
+}
+
+impl SubscriptionFailureReason {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            SubscriptionFailureReason::InvalidItem => "invalid_item",
+            SubscriptionFailureReason::NotFound => "not_found",
+            SubscriptionFailureReason::PermissionDenied => "permission_denied",
+            SubscriptionFailureReason::TooManySubscriptions => "too_many_subscriptions",
+            SubscriptionFailureReason::RateLimited => "rate_limited",
+            SubscriptionFailureReason::InternalError => "internal_error",
+        }
+    }
+}
+
+impl std::fmt::Display for SubscriptionFailureReason {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl std::str::FromStr for SubscriptionFailureReason {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "invalid_item" => Ok(SubscriptionFailureReason::InvalidItem),
+            "not_found" => Ok(SubscriptionFailureReason::NotFound),
+            "permission_denied" => Ok(SubscriptionFailureReason::PermissionDenied),
+            "too_many_subscriptions" => Ok(SubscriptionFailureReason::TooManySubscriptions),
+            "rate_limited" => Ok(SubscriptionFailureReason::RateLimited),
+            "internal_error" => Ok(SubscriptionFailureReason::InternalError),
+            _ => Err(format!("无效的订阅失败原因: {}", s)),
+        }
+    }
+}
+
+// ============================================================
+// 26. 信息流来源枚举
+// ============================================================
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FeedSource {
+    Following, // 关注
+    Nearby,    // 附近
+    All,       // 综合
+}
+
+impl FeedSource {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            FeedSource::Following => "following",
+            FeedSource::Nearby => "nearby",
+            FeedSource::All => "all",
+        }
+    }
+}
+
+impl std::fmt::Display for FeedSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl std::str::FromStr for FeedSource {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "following" => Ok(FeedSource::Following),
+            "nearby" => Ok(FeedSource::Nearby),
+            "all" => Ok(FeedSource::All),
+            _ => Err(format!("无效的信息流来源: {}", s)),
+        }
+    }
+}
+
+// ============================================================
+// 27. 趋势枚举
+// ============================================================
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Trend {
+    Rising,  // 上升
+    Stable,  // 稳定
+    Falling, // 下降
+}
+
+impl Trend {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Trend::Rising => "rising",
+            Trend::Stable => "stable",
+            Trend::Falling => "falling",
+        }
+    }
+}
+
+impl std::fmt::Display for Trend {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl std::str::FromStr for Trend {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "rising" => Ok(Trend::Rising),
+            "stable" => Ok(Trend::Stable),
+            "falling" => Ok(Trend::Falling),
+            _ => Err(format!("无效的趋势: {}", s)),
         }
     }
 }

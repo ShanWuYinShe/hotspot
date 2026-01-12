@@ -3,7 +3,7 @@
     <!-- 评论统计 -->
     <div class="flex items-center justify-between mb-4">
       <div class="flex items-center gap-2 min-w-0">
-        <span class="text-lg font-semibold truncate">评论</span>
+        <span class="text-lg font-semibold text-neutral-900 dark:text-white truncate">评论</span>
         <UBadge color="neutral" variant="soft" size="xs">{{ totalCount }}</UBadge>
       </div>
       <UButton
@@ -49,7 +49,7 @@
       <!-- 评论项 -->
       <CommentItem
         v-for="comment in comments"
-        :key="comment.id"
+        :key="comment.comment_id"
         :comment="comment"
         @reply="handleReply"
         @delete="handleDelete"
@@ -165,7 +165,7 @@ const handleCommentSubmit = (newComment: CommentWithLikeStatus) => {
     emit('update:total', totalCount.value)
   } else {
     // 找到被回复的评论，增加回复数
-    const parentComment = comments.value.find(c => c.id === replyTo.value!.id)
+    const parentComment = comments.value.find(c => c.comment_id === replyTo.value!.comment_id)
     if (parentComment) {
       parentComment.replies_count++
     }
@@ -183,7 +183,7 @@ const handleReply = (comment: CommentWithLikeStatus) => {
 
 // 处理删除
 const handleDelete = (commentId: string) => {
-  comments.value = comments.value.filter(c => c.id !== commentId)
+  comments.value = comments.value.filter(c => c.comment_id !== commentId)
   totalCount.value--
   // 发送总数更新事件
   emit('update:total', totalCount.value)
@@ -208,4 +208,3 @@ const emit = defineEmits<{
   (e: 'update:total', count: number): void
 }>()
 </script>
-

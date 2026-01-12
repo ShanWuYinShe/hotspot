@@ -15,11 +15,11 @@
       <UCard v-if="isDev && error?.message" variant="soft" class="mt-6">
         <div class="space-y-2">
           <UBadge color="neutral" variant="soft" size="xs">message</UBadge>
-          <pre class="text-xs font-mono break-all whitespace-pre-wrap">{{ error.message }}</pre>
+          <pre class="text-xs font-mono break-all whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-4 rounded-md text-neutral-900 dark:text-neutral-100 overflow-x-auto">{{ error.message }}</pre>
 
           <template v-if="error.stack">
             <UBadge color="neutral" variant="soft" size="xs">stack</UBadge>
-            <pre class="text-xs font-mono break-all whitespace-pre-wrap">{{ error.stack }}</pre>
+            <pre class="text-xs font-mono break-all whitespace-pre-wrap bg-neutral-100 dark:bg-neutral-800 p-4 rounded-md text-neutral-900 dark:text-neutral-100 overflow-x-auto">{{ error.stack }}</pre>
           </template>
         </div>
       </UCard>
@@ -89,7 +89,3 @@ const handleHome = () => {
   clearError({ redirect: '/' })
 }
 </script>
-
-
-
-

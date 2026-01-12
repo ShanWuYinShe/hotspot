@@ -7,15 +7,22 @@
  */
 import { webSocketService } from '~/services/websocket.service'
 import type {
-  ChatMessageDeletedEvent,
-  ChatMessageEditedEvent,
-  ChatMessageNewEvent,
-  ChatMessageReadEvent,
-  ChatMessageRecalledEvent,
-  ChatMessageReactionEvent,
+  PrivateMessageNewEvent,
+  PrivateMessageEditedEvent,
+  PrivateMessageRecalledEvent,
+  PrivateMessageDeletedEvent,
+  PrivateMessageReadEvent,
+  PrivateMessageReactionEvent,
+  GroupMessageNewEvent,
+  GroupMessageEditedEvent,
+  GroupMessageRecalledEvent,
+  GroupMessageDeletedEvent,
+  GroupMessageReadEvent,
+  GroupMessageReactionEvent,
+  GroupUserTypingEvent,
+  PrivateUserTypingEvent,
   UserOfflineEvent,
-  UserOnlineEvent,
-  UserTypingEvent
+  UserOnlineEvent
 } from '~/types/websocket'
 
 export default defineNuxtPlugin((nuxtApp) => {
@@ -25,21 +32,21 @@ export default defineNuxtPlugin((nuxtApp) => {
   const messagesStore = useMessagesStore()
 
   // 订阅目标用户在线状态：基于会话列表里出现的私聊对象
-  let lastSubscribedUserIds = new Set<string>()
+  let lastSubscribedUserIds = new Set<number>()
 
   function syncUserPresenceSubscriptions() {
     if (webSocketService.getStatus() !== 'connected') return
     if (!authStore.isAuthenticated) return
 
-    const next = new Set<string>()
+    const next = new Set<number>()
     for (const c of messagesStore.conversationsList) {
       if (c.chat_type === 'private' && c.target_user_id) {
-        next.add(String(c.target_user_id))
+        next.add(c.target_user_id)
       }
     }
 
-    const toSubscribe: string[] = []
-    const toUnsubscribe: string[] = []
+    const toSubscribe: number[] = []
+    const toUnsubscribe: number[] = []
     for (const id of next) if (!lastSubscribedUserIds.has(id)) toSubscribe.push(id)
     for (const id of lastSubscribedUserIds) if (!next.has(id)) toUnsubscribe.push(id)
 
@@ -71,26 +78,51 @@ export default defineNuxtPlugin((nuxtApp) => {
     })
 
     // ====== 消息类事件：统一落 messagesStore（去重由 store 负责）======
-    webSocketService.on('ChatMessageNew', (p: ChatMessageNewEvent['payload']) => {
-      messagesStore.handleChatMessageNew(p, currentUserId())
+    // 私聊
+    webSocketService.on('PrivateMessageNew', (p: PrivateMessageNewEvent['payload']) => {
+      messagesStore.handlePrivateMessageNew(p, currentUserId())
     })
-    webSocketService.on('ChatMessageEdited', (p: ChatMessageEditedEvent['payload']) => {
-      messagesStore.handleChatMessageEdited(p)
+    webSocketService.on('PrivateMessageEdited', (p: PrivateMessageEditedEvent['payload']) => {
+      messagesStore.handlePrivateMessageEdited(p)
     })
-    webSocketService.on('ChatMessageRecalled', (p: ChatMessageRecalledEvent['payload']) => {
-      messagesStore.handleChatMessageRecalled(p)
+    webSocketService.on('PrivateMessageRecalled', (p: PrivateMessageRecalledEvent['payload']) => {
+      messagesStore.handlePrivateMessageRecalled(p)
     })
-    webSocketService.on('ChatMessageDeleted', (p: ChatMessageDeletedEvent['payload']) => {
-      messagesStore.handleChatMessageDeleted(p)
+    webSocketService.on('PrivateMessageDeleted', (p: PrivateMessageDeletedEvent['payload']) => {
+      messagesStore.handlePrivateMessageDeleted(p)
     })
-    webSocketService.on('ChatMessageRead', (p: ChatMessageReadEvent['payload']) => {
-      messagesStore.handleChatMessageRead(p, currentUserId())
+    webSocketService.on('PrivateMessageRead', (p: PrivateMessageReadEvent['payload']) => {
+      messagesStore.handlePrivateMessageRead(p, currentUserId())
     })
-    webSocketService.on('ChatMessageReaction', (p: ChatMessageReactionEvent['payload']) => {
-      messagesStore.handleChatMessageReaction(p)
+    webSocketService.on('PrivateMessageReaction', (p: PrivateMessageReactionEvent['payload']) => {
+      messagesStore.handlePrivateMessageReaction(p)
     })
-    webSocketService.on('UserTyping', (p: UserTypingEvent['payload']) => {
-      messagesStore.handleUserTyping(p, currentUserId())
+
+    // 群聊
+    webSocketService.on('GroupMessageNew', (p: GroupMessageNewEvent['payload']) => {
+      messagesStore.handleGroupMessageNew(p, currentUserId())
+    })
+    webSocketService.on('GroupMessageEdited', (p: GroupMessageEditedEvent['payload']) => {
+      messagesStore.handleGroupMessageEdited(p)
+    })
+    webSocketService.on('GroupMessageRecalled', (p: GroupMessageRecalledEvent['payload']) => {
+      messagesStore.handleGroupMessageRecalled(p)
+    })
+    webSocketService.on('GroupMessageDeleted', (p: GroupMessageDeletedEvent['payload']) => {
+      messagesStore.handleGroupMessageDeleted(p)
+    })
+    webSocketService.on('GroupMessageRead', (p: GroupMessageReadEvent['payload']) => {
+      messagesStore.handleGroupMessageRead(p, currentUserId())
+    })
+    webSocketService.on('GroupMessageReaction', (p: GroupMessageReactionEvent['payload']) => {
+      messagesStore.handleGroupMessageReaction(p)
+    })
+
+    webSocketService.on('PrivateUserTyping', (p: PrivateUserTypingEvent['payload']) => {
+      messagesStore.handlePrivateUserTyping(p)
+    })
+    webSocketService.on('GroupUserTyping', (p: GroupUserTypingEvent['payload']) => {
+      messagesStore.handleGroupUserTyping(p, currentUserId())
     })
 
     // ====== 在线状态事件：落到会话列表（以及私聊详情页会自己处理更细节的 last_online）======

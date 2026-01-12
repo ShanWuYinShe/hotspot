@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// 统一API响应格式
 #[derive(Debug, Serialize)]
@@ -32,14 +32,14 @@ impl ApiResponse<()> {
 
 // ==================== 通用类型（API 文档定义） ====================
 
-/// 地理数据 - API 文档: GeoData
+/// 相对位置 - API 文档: RelativeLocation
 #[derive(Debug, Serialize, Clone)]
-pub struct GeoData {
+pub struct RelativeLocation {
     pub latitude: f64,
     pub longitude: f64,
     pub location_name: String,
     pub distance: i32,
-    pub degrees: f64,
+    pub bearing_degrees: f64,
 }
 
 /// 消息限制 - API 文档: MessageLimit
@@ -50,9 +50,17 @@ pub struct MessageLimit {
     pub is_unlocked: bool,
 }
 
+/// 位置信息 - API 文档: Location
+#[derive(Debug, Serialize, Clone)]
+pub struct Location {
+    pub latitude: f64,
+    pub longitude: f64,
+    pub location_name: String,
+}
+
 // ==================== 通用类型定义 ====================
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserInfo {
     pub user_id: i64,
     pub nickname: String,
@@ -61,22 +69,25 @@ pub struct UserInfo {
     pub user_type: crate::types::enums::UserType,
 }
 
-#[derive(Debug, Serialize)]
-pub struct UserRelationship {
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct UserRelation {
     pub is_mutual_follow: bool,
     pub is_following: bool,
     pub is_followed_by: bool,
     pub is_blocked: bool,
     pub is_blocking: bool,
+    pub has_pending_follow_request: bool,
 }
 
 #[derive(Debug, Serialize)]
 pub struct GroupInfo {
-    pub id: String,
+    pub group_chat_id: String,
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub avatar_url: Option<String>,
     pub members_count: i32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub location: Option<Location>,
 }
 
 #[derive(Debug, Serialize)]
@@ -93,7 +104,7 @@ pub struct PaginatedData<T> {
 }
 
 /// 群组设置 - API 文档: GroupSettings
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct GroupSettings {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub join_method: Option<String>, // 'open' | 'approval' | 'invite_only'
@@ -144,7 +155,7 @@ pub struct VerifyResetCodeData {
 
 #[derive(Debug, Serialize)]
 pub struct SessionItem {
-    pub id: String,
+    pub session_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub device_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -173,7 +184,7 @@ pub struct MyProfileData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub phone: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub location_name: Option<String>,
+    pub location: Option<Location>,
     pub is_online: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_online: Option<String>,
@@ -189,7 +200,7 @@ pub struct UserStatsData {
     pub groups_count: i32,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct UserSettingsData {
     // 隐私设置
     pub privacy_level: String, // 'public' | 'friends' | 'private'
@@ -229,6 +240,8 @@ pub struct FollowingItem {
     pub user: UserInfo,
     pub followed_at: String, // 我关注的时间
     pub is_mutual: bool,     // 是否互相关注（是否是好友）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_online: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
@@ -236,6 +249,8 @@ pub struct FollowerItem {
     pub user: UserInfo,
     pub followed_at: String,     // 对方关注我的时间
     pub is_following_back: bool, // 我是否关注了对方
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_online: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
@@ -249,11 +264,6 @@ pub struct BlockedUserItem {
 // ==================== 3.3 生活瞬间 API ====================
 
 #[derive(Debug, Serialize)]
-pub struct CreateMomentData {
-    pub id: String,
-}
-
-#[derive(Debug, Serialize)]
 pub struct MomentLikeItem {
     pub user: UserInfo,
     pub liked_at: String,
@@ -262,19 +272,12 @@ pub struct MomentLikeItem {
 // ==================== 3.4 评论与点赞 API ====================
 
 #[derive(Debug, Serialize)]
-pub struct CreateCommentData {
-    pub id: String,
-}
-
-#[derive(Debug, Serialize)]
 pub struct CommentListItem {
-    pub id: String,
+    pub comment_id: String,
     pub user: UserInfo,
     pub content: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub parent_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub reply_to_user: Option<UserInfo>,
     pub created_at: String,
     pub likes_count: i32,
     pub replies_count: i32,
@@ -289,58 +292,77 @@ pub struct CommentLikeItem {
 // ==================== 3.5 私聊管理 API ====================
 
 #[derive(Debug, Serialize)]
-pub struct CreatePrivateChatData {
-    pub id: String, // 私聊ID
-}
-
-#[derive(Debug, Serialize)]
 pub struct PrivateChatLastMessage {
-    pub id: String,
+    pub message_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub content: Option<String>,
-    pub r#type: String, // 'text' | 'image' | 'video' | 'audio' | 'file'
+    pub r#type: String, // 'text' | 'image' | 'video' | 'audio' | 'file' | 'system'
     pub sender_id: i64,
     pub sent_at: String,
 }
 
 #[derive(Debug, Serialize)]
 pub struct PrivateChatListItem {
-    pub id: String, // 私聊ID
     pub other_user: UserInfo,
     pub unread_count: i32,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_message: Option<PrivateChatLastMessage>,
     pub last_activity_at: String,
+    pub is_muted: bool,
+    pub is_pinned: bool,
+    pub is_online: bool,
 }
 
 /// 私聊详情数据 - API 文档: PrivateChatDetailData
 /// 用户关系信息通过单独的 API 获取（get_relationship）
 #[derive(Debug, Serialize)]
 pub struct PrivateChatDetailData {
-    pub id: String,
     pub other_user: UserInfo,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message_limit: Option<MessageLimit>,
     pub unread_count: i32,
     pub is_muted: bool,
     pub is_pinned: bool,
-    pub is_archived: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_message: Option<PrivateChatLastMessage>,
     pub last_activity_at: String,
     pub created_at: String,
+    pub can_message: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct UserDetailData {
+    #[serde(flatten)]
+    pub user: UserItem,
+    pub stats: UserStatsData,
+}
+
+#[derive(Debug, Serialize)]
+pub struct GroupDetailData {
+    #[serde(flatten)]
+    pub group: GroupItem,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub my_role: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_joined: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unread_count: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_muted: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_pinned: Option<bool>,
 }
 
 // ==================== 群组管理 API ====================
 
 #[derive(Debug, Serialize)]
 pub struct CreateGroupChatData {
-    pub id: String,
+    pub group_chat_id: String,
 }
 
 #[derive(Debug, Serialize)]
-pub struct GroupSearchItem {
-    pub id: String,
+pub struct GroupItem {
+    pub group_chat_id: String,
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
@@ -350,7 +372,9 @@ pub struct GroupSearchItem {
     pub tags: Option<Vec<String>>,
     pub members_count: i32,
     pub has_password: bool,
-    pub geo: GeoData,
+    // API文档: location 应该是可选的（群组通常有公开位置，但不是必须的）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub location: Option<RelativeLocation>,
 }
 
 #[derive(Debug, Serialize)]
@@ -371,22 +395,24 @@ pub struct GroupMemberItem {
     pub joined_at: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub muted_until: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_online: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct InviteMemberData {
-    pub id: String,
+    pub invite_id: String,
     pub expires_at: String,
 }
 
 #[derive(Debug, Serialize)]
 pub struct ApplyToGroupData {
-    pub id: String,
+    pub application_id: String,
 }
 
 #[derive(Debug, Serialize)]
 pub struct GroupApplicationItem {
-    pub id: String,
+    pub application_id: String,
     pub applicant: UserInfo,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
@@ -398,7 +424,7 @@ pub struct GroupApplicationItem {
 
 #[derive(Debug, Serialize)]
 pub struct GroupInviteItem {
-    pub id: String,
+    pub invite_id: String,
     pub group: GroupInfo,
     pub inviter: UserInfo,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -411,36 +437,32 @@ pub struct GroupInviteItem {
 
 // ==================== 3.8 私聊消息 API ====================
 
+#[derive(Debug, Serialize, Clone)]
+pub struct MessageReplyTo {
+    pub message_id: String,
+    pub user_id: i64,
+    pub nickname: String,
+    pub content: String,
+}
+
 #[derive(Debug, Serialize)]
 pub struct SendPrivateMessageData {
-    pub id: String,
-    pub sent_at: String,
+    pub message_id: String,
 }
 
 #[derive(Debug, Serialize)]
 pub struct PrivateMessageItem {
-    pub id: String,
+    pub message_id: String,
     pub r#type: String, // 'text' | 'image' | 'video' | 'audio' | 'file'
     #[serde(skip_serializing_if = "Option::is_none")]
     pub content: Option<String>, // 文本内容（type='text' 时）
     pub sender: UserInfo,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub reply_to: Option<String>,
-    // 媒体消息字段
+    pub reply_to_message_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub media_url: Option<String>,
+    pub media: Option<MessageMedia>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub thumbnail_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub file_name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub file_size: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub duration: Option<i32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub width: Option<i32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub height: Option<i32>,
+    pub reply_to: Option<MessageReplyTo>,
     // 时间字段
     pub sent_at: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -454,36 +476,24 @@ pub struct PrivateMessageItem {
 
 #[derive(Debug, Serialize)]
 pub struct SendGroupMessageData {
-    pub id: String,
-    pub sent_at: String,
+    pub message_id: String,
 }
 
 #[derive(Debug, Serialize)]
 pub struct GroupMessageItem {
-    pub id: String,
+    pub message_id: String,
     pub r#type: String, // 'text' | 'image' | 'video' | 'audio' | 'file' | 'system'
     #[serde(skip_serializing_if = "Option::is_none")]
     pub content: Option<String>, // 文本内容（type='text'/'system' 时）
     pub sender: UserInfo,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub reply_to: Option<String>,
+    pub reply_to_message_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mentions: Option<Vec<i64>>, // @提及的用户ID列表
-    // 媒体消息字段
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub media_url: Option<String>,
+    pub media: Option<MessageMedia>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub thumbnail_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub file_name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub file_size: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub duration: Option<i32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub width: Option<i32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub height: Option<i32>,
+    pub reply_to: Option<MessageReplyTo>,
     // 时间字段
     pub sent_at: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -514,12 +524,12 @@ pub struct MessageReactionItem {
 
 #[derive(Debug, Serialize)]
 pub struct CreateReportData {
-    pub id: String,
+    pub report_id: String,
 }
 
 #[derive(Debug, Serialize)]
 pub struct ReportItem {
-    pub id: String,
+    pub report_id: String,
     pub target_type: String,
     pub target_id: String,
     pub reason: String,
@@ -533,7 +543,7 @@ pub struct ReportItem {
 
 // ==================== 3.12 通知订阅设置 API ====================
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SubscriptionsData {
     pub new_follower_enabled: bool,
     pub mutual_follow_enabled: bool,
@@ -548,6 +558,44 @@ pub struct SubscriptionsData {
     pub system_announcement_enabled: bool,
 }
 
+// ==================== 通知 API ====================
+
+#[derive(Debug, Serialize)]
+pub struct NotificationItem {
+    pub notification_id: String,
+    pub r#type: String,
+    pub title: String,
+    pub content: String,
+    pub created_at: String,
+    pub read: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sender: Option<UserInfo>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reference_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target_preview: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct UnreadNotificationCountData {
+    pub total: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub breakdown: Option<UnreadNotificationBreakdown>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct UnreadNotificationBreakdown {
+    pub like: i64,
+    pub comment: i64,
+    pub follow: i64,
+    pub system: i64,
+    pub mention: i64,
+}
+
 // ==================== 3.14 系统健康检查 API ====================
 
 #[derive(Debug, Serialize)]
@@ -559,14 +607,64 @@ pub struct HealthCheckData {
 
 // ==================== 3.16 文件与媒体上传 API ====================
 
+#[derive(Debug, Serialize, Clone)]
+pub struct MomentImage {
+    pub url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub width: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub height: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content_type: Option<String>,
+}
+
+#[derive(Debug, Serialize, Clone, serde::Deserialize)]
+pub struct MessageMedia {
+    pub url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thumbnail_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_size: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub width: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub height: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mime_type: Option<String>,
+}
+
 #[derive(Debug, Serialize)]
 pub struct UploadMediaData {
-    pub file_id: String, // 文件ID（用于后续业务API）
+    pub file_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thumbnail_url: Option<String>,
     pub file_size: i64,
+    pub mime_type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub duration: Option<i32>, // 时长（秒，仅音频/视频）
+    pub duration: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub width: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub height: Option<i32>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PresignUploadData {
+    pub upload_id: String,
+    pub upload_url: String,
+    pub headers: std::collections::HashMap<String, String>,
+    pub expires_at: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CheckChunkedUploadData {
+    pub upload_id: String,
+    pub chunk_size: i64,
+    pub uploaded_chunks: Vec<i32>,
 }
 
 #[derive(Debug, Serialize)]
@@ -583,48 +681,27 @@ pub struct InitiateUploadData {
     pub expires_at: String,
 }
 
-#[derive(Debug, Serialize)]
-pub struct UploadPartUrlData {
-    pub upload_id: String,
-    pub part_number: i32,
-    pub upload_url: String,
-    pub expires_at: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct UploadStatusData {
-    pub upload_id: String,
-    pub status: String, // 'in_progress' | 'completed' | 'failed'
-    pub uploaded_parts: Vec<i32>,
-    pub total_parts: i32,
-    pub created_at: String,
-    pub expires_at: String,
-}
-
 // ==================== 信息流 API ====================
-
-#[derive(Debug, Serialize)]
-pub struct FeedMomentItem {
-    #[serde(flatten)]
-    pub moment: MomentSearchItem,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub reason: Option<String>, // 推荐理由（如"好友动态"、"附近热门"）
-}
 
 #[derive(Debug, Serialize)]
 pub struct FeedGroupItem {
     #[serde(flatten)]
-    pub group: GroupSearchItem,
+    pub group: GroupItem,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>, // 推荐理由（如"好友在这里"、"附近热门"）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub friends_in_group: Option<i32>, // 群内好友数量
+    // Zero-Lookup
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub my_role: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_joined: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct FeedUserItem {
     #[serde(flatten)]
-    pub user: UserSearchItem,
+    pub user: UserItem,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>, // 推荐理由（如"共同好友"、"相同标签"）
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -639,13 +716,13 @@ pub struct TrendingTagItem {
     pub usage_count: i32,
     pub trend: String, // 'rising' | 'stable' | 'falling'
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub hot_moment_preview: Option<MomentSearchItem>,
+    pub hot_moment_preview: Option<MomentItem>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct FeedTrendingData {
     pub trending_tags: Vec<TrendingTagItem>,
-    pub hot_moments: Vec<MomentSearchItem>, // 最多5个热门瞬间预览
+    pub hot_moments: Vec<MomentItem>, // 最多5个热门瞬间预览
 }
 
 // ==================== 标签管理 API ====================
@@ -676,29 +753,74 @@ pub struct TagSuggestItem {
 
 // ==================== 3.20 系统配置管理 API ====================
 
-#[derive(Debug, Serialize)]
-pub struct CreateConfigData {
-    pub key: String,
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UploadConfig {
+    pub image_max_size: i64,
+    pub video_max_size: i64,
+    pub audio_max_size: i64,
+    pub file_max_size: i64,
+    pub allowed_image_types: Vec<String>,
+    pub allowed_video_types: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ContentDefaults {
+    pub default_location_name: String,
+    pub default_group_avatar: String,
+    pub default_user_avatar: String,
+    pub default_group_settings: GroupSettings,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FeatureSwitches {
+    pub enable_public_registration: bool,
+    pub enable_guest_login: bool,
+    pub enable_moments: bool,
+    pub enable_nearby_people: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ContactInfo {
+    pub support_email: String,
+    pub privacy_policy_url: String,
+    pub terms_of_service_url: String,
+    pub official_website: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AppLimits {
+    pub max_group_members: i32,
+    pub max_moment_tags: i32,
+    pub max_moment_images: i32,
+    pub moment_description_max_length: i32,
+    pub comment_max_length: i32,
+    pub search_radius_max: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GlobalSettings {
+    pub upload: UploadConfig,
+    pub defaults: ContentDefaults,
+    pub features: FeatureSwitches,
+    pub contact: ContactInfo,
+    pub limits: AppLimits,
+    pub version: String,
 }
 
 #[derive(Debug, Serialize)]
-pub struct ConfigItem {
-    pub key: String,
-    pub value: String,
-    pub r#type: String, // 'string' | 'number' | 'boolean'
-    pub category: String,
-    pub description: String,
+pub struct FetchSettingsData {
+    pub action: String, // 'update' | 'no_change' | 'force_update'
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub config: Option<GlobalSettings>,
+    pub latest_version: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AdminGlobalSettingsData {
+    #[serde(flatten)]
+    pub settings: GlobalSettings,
     pub updated_at: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct ConfigHistoryItem {
-    pub id: String,
-    pub key: String,
-    pub old_value: String,
-    pub new_value: String,
-    pub changed_by: i64,
-    pub changed_at: String,
+    pub updated_by_user_id: i64,
 }
 
 // ==================== 管理员 RBAC（admin/rbac） ====================
@@ -737,7 +859,8 @@ pub struct AdminRoleBasic {
 #[derive(Debug, Serialize)]
 pub struct AdminAdminItem {
     pub user: UserInfo,
-    pub is_super: bool,
+    /// '*' 表示拥有全部权限（超级管理员）
+    pub permissions: Vec<String>,
     pub roles: Vec<AdminRoleBasic>,
 }
 
@@ -748,7 +871,7 @@ pub struct AdminAdminsData {
 
 #[derive(Debug, Serialize)]
 pub struct AdminMeData {
-    pub is_super: bool,
+    /// '*' 表示拥有全部权限（超级管理员）
     pub permissions: Vec<String>,
     pub roles: Vec<AdminRoleBasic>,
 }
@@ -757,7 +880,7 @@ pub struct AdminMeData {
 
 #[derive(Debug, Serialize)]
 pub struct GroupSettingsData {
-    pub id: String,
+    pub group_chat_id: String,
     pub settings: GroupSettings,
     pub has_password: bool,
     pub created_at: String,
@@ -780,23 +903,23 @@ pub struct DeviceTokenItem {
 }
 
 #[derive(Debug, Serialize)]
-pub struct UploadChunkData {
-    pub part_number: i32,
-    pub etag: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct MomentSearchItem {
-    pub id: String,
+pub struct MomentItem {
+    pub moment_id: String, // Changed from id to moment_id per spec
     pub user: UserInfo,
     pub description: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub images: Option<Vec<String>>,
+    pub images: Option<Vec<MomentImage>>,
     pub tags: Vec<String>,
     pub created_at: String,
     pub likes_count: i32,
     pub comments_count: i32,
-    pub geo: GeoData,
+    // API文档: location 应该是可选的（发帖位置包含 geo data，但用户可能不提供位置）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub location: Option<RelativeLocation>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_liked: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_favorited: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
@@ -810,7 +933,7 @@ pub struct CheckFavoritedData {
 }
 
 #[derive(Debug, Serialize, Clone)]
-pub struct UserSearchItem {
+pub struct UserItem {
     pub user_id: i64,
     pub nickname: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -828,31 +951,109 @@ pub struct UserSearchItem {
     pub last_online: Option<String>,
     /// 位置信息（受 location_visible 隐私设置控制，为 false 时返回 null）
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub geo: Option<GeoData>,
+    pub location: Option<RelativeLocation>,
+    /// 关系状态（可选）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub relation: Option<UserRelation>,
 }
 
 // ==================== Map 聚合 / 视口查询（public） ====================
 
-#[derive(Debug, Serialize)]
-pub struct MapClusterItem {
-    pub key: String,
+#[derive(Debug, Serialize, Clone)]
+pub struct MapPoint {
     pub latitude: f64,
     pub longitude: f64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct MapClusterData {
     pub count: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preview_urls: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub boundary: Option<Vec<MapPoint>>,
 }
 
 #[derive(Debug, Serialize)]
-#[serde(rename_all = "snake_case", tag = "type", content = "items")]
-pub enum MapItemsData {
-    Users(Vec<UserSearchItem>),
-    Groups(Vec<GroupSearchItem>),
-    Moments(Vec<MomentSearchItem>),
+pub struct MapEntityData {
+    pub title: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subtitle: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cover_url: Option<String>,
+    pub payload_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_highlighted: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
-#[serde(rename_all = "snake_case", tag = "type", content = "items")]
-pub enum MapClustersData {
-    Users(Vec<MapClusterItem>),
-    Groups(Vec<MapClusterItem>),
-    Moments(Vec<MapClusterItem>),
+pub struct MapRenderItem {
+    pub id: String,
+    pub r#type: String, // 'cluster' | 'user' | 'group' | 'moment'
+    pub location: MapPoint,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cluster: Option<MapClusterData>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub entity: Option<MapEntityData>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct MapRenderData {
+    pub items: Vec<MapRenderItem>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub toast_message: Option<String>,
+}
+
+// ==================== 管理员用户管理 (Admin) ====================
+
+#[derive(Debug, Serialize)]
+pub struct AdminUserItem {
+    pub user_id: i64,
+    pub nickname: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub avatar_url: Option<String>,
+    pub user_type: crate::types::enums::UserType,
+    pub status: String, // 'normal' | 'banned'
+    pub created_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_active_at: Option<String>,
+    // 管理员视图补充字段
+    pub login_id: String,
+    pub is_online: bool,
+}
+
+// ==================== 管理员群组管理 (Admin) ====================
+
+#[derive(Debug, Serialize)]
+pub struct AdminGroupItem {
+    pub group_chat_id: String,
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub avatar_url: Option<String>,
+    pub members_count: i32,
+    pub owner: UserInfo,
+    pub created_at: String,
+}
+
+// ==================== 管理员系统公告管理 (Admin) ====================
+
+#[derive(Debug, Serialize)]
+pub struct CreateAnnouncementData {
+    pub announcement_id: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SystemAnnouncementItem {
+    pub announcement_id: String,
+    pub title: String,
+    pub content: String,
+    pub severity: String, // 'info' | 'warning' | 'error'
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub action_url: Option<String>,
+    pub created_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_by: Option<UserInfo>,
 }

@@ -6,16 +6,15 @@ use uuid::Uuid;
 use crate::{
     dto::{
         request::{
-            Bounds,
             CheckFavoritedRequest, CheckLikedRequest, CreateMomentRequest, DeleteMomentRequest,
-            FavoriteMomentRequest, LikeMomentRequest, MomentCommentsRequest, MomentLikesRequest,
+            FavoriteMomentRequest, LikeMomentRequest, MomentLikesRequest,
             MomentOpenTheDoorRequest, MyFavoritesRequest, MyMomentsRequest,
             SearchMomentsByKeywordRequest, SearchMomentsByLocationRequest,
             SearchMomentsByTagRequest, UnfavoriteMomentRequest, UnlikeMomentRequest,
             UpdateMomentRequest, UserMomentsRequest,
         },
         response::{
-            CommentListItem, GeoData, MomentLikeItem, MomentSearchItem, PaginatedData,
+            RelativeLocation, MomentLikeItem, MomentItem, PaginatedData,
             PaginationMeta, UserInfo,
         },
     },
@@ -26,7 +25,7 @@ use crate::{
     repositories::tag_repo::TagRepository,
     repositories::user_repo::UserRepository,
     repositories::user_settings_repo::UserSettingsRepository,
-    services::comment_service::CommentService,
+    types::enums::PrivacyLevel,
     utils::validation::Validator,
     EventBus,
 };
@@ -35,26 +34,24 @@ use crate::{
 pub struct MomentService {
     db: PgPool,
     _redis: RedisConnectionManager,
-    comment_service: CommentService,
     event_bus: Arc<EventBus>,
 }
 
 impl MomentService {
     pub fn new(db: &PgPool, redis: &RedisConnectionManager, event_bus: Arc<EventBus>) -> Self {
-        let event_bus_for_comment = event_bus.clone();
         Self {
             db: db.clone(),
             _redis: redis.clone(),
-            comment_service: CommentService::new(db, redis, event_bus_for_comment),
             event_bus,
         }
     }
 
     /// 创建瞬间
-    pub async fn create_moment(&self, user_id: i64, req: &CreateMomentRequest) -> Result<String> {
+    pub async fn create_moment(&self, user_id: i64, req: &CreateMomentRequest) -> Result<MomentItem> {
         let moment_repo = MomentRepository::new(self.db.clone());
         let tag_repo = TagRepository::new(self.db.clone());
         let file_repo = FileRepository::new(self.db.clone());
+        let user_repo = UserRepository::new(self.db.clone());
 
         // 验证坐标
         if req.location.latitude < -90.0 || req.location.latitude > 90.0 {
@@ -102,10 +99,10 @@ impl MomentService {
             .create(
                 user_id,
                 req.description.clone(),
-                images,
+                images.clone(),
                 req.location.latitude,
                 req.location.longitude,
-                req.location.name.clone(),
+                req.location.location_name.clone(),
             )
             .await?;
 
@@ -122,13 +119,56 @@ impl MomentService {
         }
 
         // 设置标签（通过关联表）
-        if let Some(tags) = &req.tags {
+        let tags = if let Some(tags) = &req.tags {
             if !tags.is_empty() {
                 tag_repo.set_moment_tags(moment.moment_id, tags).await?;
             }
-        }
+            tags.clone()
+        } else {
+            Vec::new()
+        };
 
-        Ok(moment.moment_id.to_string())
+        // 获取创建者信息
+        let users = user_repo.find_profiles(&[user_id]).await?;
+        let user_info = users.first().ok_or_else(|| AppError::UserNotFound("用户不存在".to_string()))?;
+
+        // 构造响应
+        use crate::dto::response::MomentImage;
+        let moment_images = images.map(|urls| {
+            urls.into_iter()
+                .map(|url| MomentImage {
+                    url,
+                    width: None,
+                    height: None,
+                    content_type: None,
+                })
+                .collect()
+        });
+
+        Ok(MomentItem {
+            moment_id: moment.moment_id.to_string(),
+            user: UserInfo {
+                user_id: user_info.user_id,
+                nickname: user_info.nickname.clone(),
+                avatar_url: user_info.avatar_url.clone(),
+                user_type: user_info.user_type,
+            },
+            description: moment.description,
+            images: moment_images,
+            tags,
+            created_at: moment.created_at.to_rfc3339(),
+            likes_count: 0,
+            comments_count: 0,
+            is_liked: Some(false),
+            is_favorited: Some(false),
+            location: Some(RelativeLocation {
+                latitude: req.location.latitude,
+                longitude: req.location.longitude,
+                location_name: req.location.location_name.clone(),
+                distance: 0,
+                bearing_degrees: 0.0,
+            }),
+        })
     }
 
     /// 编辑瞬间
@@ -137,14 +177,14 @@ impl MomentService {
         let tag_repo = TagRepository::new(self.db.clone());
         let file_repo = FileRepository::new(self.db.clone());
 
-        let moment_id = Uuid::parse_str(&req.id)
+        let moment_id = Uuid::parse_str(&req.moment_id)
             .map_err(|_| AppError::BadRequest("无效的瞬间ID".to_string()))?;
 
         // 验证所有权
         let owner_id = moment_repo
             .get_owner(moment_id)
             .await?
-            .ok_or_else(|| AppError::NotFound("瞬间不存在".to_string()))?;
+            .ok_or_else(|| AppError::MomentNotFound("瞬间不存在".to_string()))?;
 
         if owner_id != user_id {
             return Err(AppError::Forbidden("无权编辑该瞬间".to_string()));
@@ -197,7 +237,7 @@ impl MomentService {
                     moment_id,
                     location.latitude,
                     location.longitude,
-                    location.name.clone(),
+                    location.location_name.clone(),
                 )
                 .await?;
         }
@@ -214,14 +254,14 @@ impl MomentService {
     pub async fn delete_moment(&self, user_id: i64, req: &DeleteMomentRequest) -> Result<()> {
         let moment_repo = MomentRepository::new(self.db.clone());
 
-        let moment_id = Uuid::parse_str(&req.id)
+        let moment_id = Uuid::parse_str(&req.moment_id)
             .map_err(|_| AppError::BadRequest("无效的瞬间ID".to_string()))?;
 
         // 验证所有权
         let owner_id = moment_repo
             .get_owner(moment_id)
             .await?
-            .ok_or_else(|| AppError::NotFound("瞬间不存在".to_string()))?;
+            .ok_or_else(|| AppError::MomentNotFound("瞬间不存在".to_string()))?;
 
         if owner_id != user_id {
             return Err(AppError::Forbidden("无权删除该瞬间".to_string()));
@@ -236,14 +276,14 @@ impl MomentService {
     pub async fn search_by_keyword(
         &self,
         req: &SearchMomentsByKeywordRequest,
-    ) -> Result<PaginatedData<MomentSearchItem>> {
+    ) -> Result<PaginatedData<MomentItem>> {
         let moment_repo = MomentRepository::new(self.db.clone());
         let limit = Validator::validate_limit(req.limit, 100)? as i32;
         let cursor = req.cursor.clone();
 
         // 按关键字搜索
         let (moments, next_cursor) = moment_repo
-            .search_by_keyword(&req.kw, req.latitude, req.longitude, limit, cursor)
+            .search_by_keyword(&req.kw, req.reference_point.latitude, req.reference_point.longitude, limit, cursor)
             .await?;
 
         self.build_search_results_from_rows(moments, next_cursor)
@@ -254,14 +294,14 @@ impl MomentService {
     pub async fn search_by_tag(
         &self,
         req: &SearchMomentsByTagRequest,
-    ) -> Result<PaginatedData<MomentSearchItem>> {
+    ) -> Result<PaginatedData<MomentItem>> {
         let moment_repo = MomentRepository::new(self.db.clone());
         let limit = Validator::validate_limit(req.limit, 100)? as i32;
         let cursor = req.cursor.clone();
 
-        // search_by_tag 返回包含 distance/degrees 的 MomentSearchRow
+        // search_by_tag 返回包含 distance/bearing_degrees 的 MomentSearchRow
         let (moments, next_cursor) = moment_repo
-            .search_by_tag(&req.tag, req.latitude, req.longitude, limit, cursor)
+            .search_by_tag(&req.tag, req.reference_point.latitude, req.reference_point.longitude, limit, cursor)
             .await?;
 
         self.build_search_results_from_rows(moments, next_cursor)
@@ -272,10 +312,10 @@ impl MomentService {
     pub async fn search_by_location(
         &self,
         req: &SearchMomentsByLocationRequest,
-    ) -> Result<PaginatedData<MomentSearchItem>> {
+    ) -> Result<PaginatedData<MomentItem>> {
         let moment_repo = MomentRepository::new(self.db.clone());
 
-        Validator::validate_coordinates(req.latitude, req.longitude)?;
+        Validator::validate_coordinates(req.reference_point.latitude, req.reference_point.longitude)?;
         Validator::validate_radius_required(req.radius, 50000.0)?;
 
         let limit = Validator::validate_limit(req.limit, 100)? as i32;
@@ -284,8 +324,8 @@ impl MomentService {
         let (moments, next_cursor) = moment_repo
             .search_by_location(
                 req.kw.as_deref(),
-                req.latitude,
-                req.longitude,
+                req.reference_point.latitude,
+                req.reference_point.longitude,
                 req.radius,
                 limit,
                 cursor,
@@ -296,62 +336,43 @@ impl MomentService {
             .await
     }
 
-    /// 按视口 bounds 获取生活瞬间（用于地图：替代 search_by_location）
-    pub async fn search_by_bounds(
-        &self,
-        bounds: Bounds,
-        latitude: f64,
-        longitude: f64,
-        limit: Option<i32>,
-    ) -> Result<Vec<MomentSearchItem>> {
-        let moment_repo = MomentRepository::new(self.db.clone());
-
-        Validator::validate_coordinates(latitude, longitude)?;
-        Validator::validate_coordinates(bounds.north, bounds.east)?;
-        Validator::validate_coordinates(bounds.south, bounds.west)?;
-        let limit = Validator::validate_limit(limit, 200)? as i32;
-
-        let rows: Vec<MomentSearchRow> = moment_repo
-            .search_by_bounds(
-                bounds.west,
-                bounds.south,
-                bounds.east,
-                bounds.north,
-                latitude,
-                longitude,
-                limit,
-            )
-            .await?;
-
-        let data = self.build_search_results_from_rows(rows, None).await?;
-        Ok(data.items)
-    }
-
     /// 获取瞬间详情（通过 ID 获取指定瞬间的详情）
-    pub async fn open_the_door(&self, req: &MomentOpenTheDoorRequest) -> Result<MomentSearchItem> {
+    pub async fn open_the_door(&self, req: &MomentOpenTheDoorRequest) -> Result<MomentItem> {
         let moment_repo = MomentRepository::new(self.db.clone());
         let tag_repo = TagRepository::new(self.db.clone());
 
-        let moment_id = Uuid::parse_str(&req.id)
+        let moment_id = Uuid::parse_str(&req.moment_id)
             .map_err(|_| AppError::BadRequest("无效的瞬间ID".to_string()))?;
 
-        Validator::validate_coordinates(req.latitude, req.longitude)?;
+        Validator::validate_coordinates(req.reference_point.latitude, req.reference_point.longitude)?;
 
         // 使用 find_by_ids_with_distance 获取带距离的详情（包含用户信息和统计数据）
         // 这样可以避免多次查询，且复用 PostGIS 距离计算
         let moments = moment_repo
-            .find_by_ids_with_distance(&[moment_id], req.latitude, req.longitude)
+            .find_by_ids_with_distance(&[moment_id], req.reference_point.latitude, req.reference_point.longitude)
             .await?;
 
         let moment_data = moments
             .first()
-            .ok_or_else(|| AppError::NotFound("瞬间不存在".to_string()))?;
+            .ok_or_else(|| AppError::MomentNotFound("瞬间不存在".to_string()))?;
 
         // 获取标签（find_by_ids_with_distance 目前不包含标签，因为是一对多关系）
         let tags = tag_repo.get_moment_tags(moment_id).await?;
 
-        Ok(MomentSearchItem {
-            id: moment_data.moment_id.to_string(),
+        use crate::dto::response::MomentImage;
+        let images = if moment_data.images.is_empty() {
+            None
+        } else {
+            Some(moment_data.images.iter().map(|url| MomentImage {
+                url: url.clone(),
+                width: None,
+                height: None,
+                content_type: None,
+            }).collect())
+        };
+
+        Ok(MomentItem {
+            moment_id: moment_data.moment_id.to_string(),
             user: UserInfo {
                 user_id: moment_data.user_id,
                 nickname: moment_data.nickname.clone(),
@@ -359,36 +380,30 @@ impl MomentService {
                 user_type: moment_data.user_type,
             },
             description: moment_data.description.clone(),
-            images: Some(moment_data.images.clone()),
+            images,
             tags,
             created_at: moment_data.created_at.to_rfc3339(),
             likes_count: moment_data.likes_count as i32,
             comments_count: moment_data.comments_count as i32,
-            geo: GeoData {
+            is_liked: None,
+            is_favorited: None,
+            location: Some(RelativeLocation {
                 latitude: moment_data.latitude,
                 longitude: moment_data.longitude,
                 location_name: moment_data.location_name.clone(),
                 distance: moment_data.distance as i32,
-                degrees: moment_data.degrees,
-            },
+                bearing_degrees: moment_data.bearing_degrees,
+            }),
         })
     }
 
-    /// 获取瞬间评论列表
-    pub async fn get_comments_list(
-        &self,
-        req: &MomentCommentsRequest,
-    ) -> Result<PaginatedData<CommentListItem>> {
-        // 使用 CommentService 来获取评论
-        self.comment_service.list_comments(req).await
-    }
 
     /// 获取指定用户生活瞬间历史（公开 API，受 moments_visible 隐私设置控制）
     pub async fn get_user_moments_list(
         &self,
         req: &UserMomentsRequest,
-    ) -> Result<PaginatedData<MomentSearchItem>> {
-        let target_user_id = req.id;
+    ) -> Result<PaginatedData<MomentItem>> {
+        let target_user_id = req.user_id;
 
         // 检查 moments_visible 隐私设置
         let user_settings_repo = UserSettingsRepository::new(self.db.clone());
@@ -399,18 +414,18 @@ impl MomentService {
             .flatten();
         let moments_visible = settings
             .as_ref()
-            .map(|s| s.moments_visible.as_str())
-            .unwrap_or("public");
+            .map(|s| s.moments_visible)
+            .unwrap_or(PrivacyLevel::Public);
 
         // 公开 API 只能访问 moments_visible = 'public' 的用户
-        if moments_visible != "public" {
+        if moments_visible != PrivacyLevel::Public {
             return Err(AppError::Forbidden("权限不足".to_string()));
         }
 
         self.get_moments_by_user(
             target_user_id,
-            req.latitude,
-            req.longitude,
+            req.reference_point.latitude,
+            req.reference_point.longitude,
             req.limit,
             req.cursor.as_deref(),
         )
@@ -422,11 +437,11 @@ impl MomentService {
         &self,
         user_id: i64,
         req: &MyMomentsRequest,
-    ) -> Result<PaginatedData<MomentSearchItem>> {
+    ) -> Result<PaginatedData<MomentItem>> {
         self.get_moments_by_user(
             user_id,
-            req.latitude,
-            req.longitude,
+            req.reference_point.latitude,
+            req.reference_point.longitude,
             req.limit,
             req.cursor.as_deref(),
         )
@@ -440,7 +455,7 @@ impl MomentService {
         _longitude: f64,
         limit: Option<i32>,
         cursor: Option<&str>,
-    ) -> Result<PaginatedData<MomentSearchItem>> {
+    ) -> Result<PaginatedData<MomentItem>> {
         let moment_repo = MomentRepository::new(self.db.clone());
         let limit = Validator::validate_limit(limit, 100)? as i32;
         let cursor_string = cursor.map(|s| s.to_string());
@@ -458,11 +473,11 @@ impl MomentService {
     pub async fn like_moment(&self, user_id: i64, req: &LikeMomentRequest) -> Result<()> {
         let moment_repo = MomentRepository::new(self.db.clone());
 
-        let moment_id = Uuid::parse_str(&req.id)
+        let moment_id = Uuid::parse_str(&req.moment_id)
             .map_err(|_| AppError::BadRequest("无效的瞬间ID".to_string()))?;
 
         if !moment_repo.exists(moment_id).await? {
-            return Err(AppError::NotFound("瞬间不存在".to_string()));
+            return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
         }
 
         let inserted = moment_repo.like_moment(moment_id, user_id).await?;
@@ -474,11 +489,15 @@ impl MomentService {
         if let Some(owner_id) = moment_repo.get_owner(moment_id).await? {
             // 自己点赞自己的瞬间，不需要通知
             if owner_id != user_id {
-                self.event_bus.publish(AppEvent::MomentLiked {
-                    moment_id,
-                    user_id: owner_id,
-                    liker_id: user_id,
-                });
+                let summary_snapshot = moment_repo.get_summary_snapshot(moment_id).await?;
+                if let Some(summary) = summary_snapshot {
+                    self.event_bus.publish(AppEvent::MomentLiked {
+                        moment_id,
+                        moment_summary: summary,
+                        user_id: owner_id,
+                        liker_id: user_id,
+                    });
+                }
             }
         }
         Ok(())
@@ -488,11 +507,11 @@ impl MomentService {
     pub async fn unlike_moment(&self, user_id: i64, req: &UnlikeMomentRequest) -> Result<()> {
         let moment_repo = MomentRepository::new(self.db.clone());
 
-        let moment_id = Uuid::parse_str(&req.id)
+        let moment_id = Uuid::parse_str(&req.moment_id)
             .map_err(|_| AppError::BadRequest("无效的瞬间ID".to_string()))?;
 
         if !moment_repo.exists(moment_id).await? {
-            return Err(AppError::NotFound("瞬间不存在".to_string()));
+            return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
         }
 
         let deleted = moment_repo.unlike_moment(moment_id, user_id).await?;
@@ -506,7 +525,7 @@ impl MomentService {
     pub async fn check_liked(&self, user_id: i64, req: &CheckLikedRequest) -> Result<bool> {
         let moment_repo = MomentRepository::new(self.db.clone());
 
-        let moment_id = Uuid::parse_str(&req.id)
+        let moment_id = Uuid::parse_str(&req.moment_id)
             .map_err(|_| AppError::BadRequest("无效的瞬间ID".to_string()))?;
 
         moment_repo.is_liked_by(moment_id, user_id).await
@@ -516,11 +535,11 @@ impl MomentService {
     pub async fn favorite_moment(&self, user_id: i64, req: &FavoriteMomentRequest) -> Result<()> {
         let moment_repo = MomentRepository::new(self.db.clone());
 
-        let moment_id = Uuid::parse_str(&req.id)
+        let moment_id = Uuid::parse_str(&req.moment_id)
             .map_err(|_| AppError::BadRequest("无效的瞬间ID".to_string()))?;
 
         if !moment_repo.exists(moment_id).await? {
-            return Err(AppError::NotFound("瞬间不存在".to_string()));
+            return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
         }
 
         let inserted = moment_repo.add_favorite(moment_id, user_id).await?;
@@ -538,11 +557,11 @@ impl MomentService {
     ) -> Result<()> {
         let moment_repo = MomentRepository::new(self.db.clone());
 
-        let moment_id = Uuid::parse_str(&req.id)
+        let moment_id = Uuid::parse_str(&req.moment_id)
             .map_err(|_| AppError::BadRequest("无效的瞬间ID".to_string()))?;
 
         if !moment_repo.exists(moment_id).await? {
-            return Err(AppError::NotFound("瞬间不存在".to_string()));
+            return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
         }
 
         let deleted = moment_repo.remove_favorite(moment_id, user_id).await?;
@@ -556,7 +575,7 @@ impl MomentService {
     pub async fn check_favorited(&self, user_id: i64, req: &CheckFavoritedRequest) -> Result<bool> {
         let moment_repo = MomentRepository::new(self.db.clone());
 
-        let moment_id = Uuid::parse_str(&req.id)
+        let moment_id = Uuid::parse_str(&req.moment_id)
             .map_err(|_| AppError::BadRequest("无效的瞬间ID".to_string()))?;
 
         moment_repo.is_favorited_by(moment_id, user_id).await
@@ -567,7 +586,7 @@ impl MomentService {
         &self,
         user_id: i64,
         req: &MyFavoritesRequest,
-    ) -> Result<PaginatedData<MomentSearchItem>> {
+    ) -> Result<PaginatedData<MomentItem>> {
         let moment_repo = MomentRepository::new(self.db.clone());
 
         let limit = Validator::validate_limit(req.limit, 100)? as i32;
@@ -575,7 +594,7 @@ impl MomentService {
 
         // list_favorites returns (MomentSearchRow, favorited_at)
         let (results, next_cursor) = moment_repo
-            .list_favorites(user_id, req.latitude, req.longitude, limit, cursor)
+            .list_favorites(user_id, req.reference_point.latitude, req.reference_point.longitude, limit, cursor)
             .await?;
 
         let search_rows: Vec<MomentSearchRow> = results.into_iter().map(|(m, _)| m).collect();
@@ -592,7 +611,7 @@ impl MomentService {
         let moment_repo = MomentRepository::new(self.db.clone());
         let user_repo = UserRepository::new(self.db.clone());
 
-        let moment_id = Uuid::parse_str(&req.id)
+        let moment_id = Uuid::parse_str(&req.moment_id)
             .map_err(|_| AppError::BadRequest("无效的瞬间ID".to_string()))?;
 
         let limit = Validator::validate_limit(req.limit, 100)? as i32;
@@ -637,19 +656,31 @@ impl MomentService {
         &self,
         moments: Vec<MomentSearchRow>,
         next_cursor: Option<String>,
-    ) -> Result<PaginatedData<MomentSearchItem>> {
+    ) -> Result<PaginatedData<MomentItem>> {
         let tag_repo = TagRepository::new(self.db.clone());
 
         // 批量获取标签
         let moment_ids: Vec<_> = moments.iter().map(|m| m.moment_id).collect();
         let tags_map = tag_repo.get_moment_tags_batch(&moment_ids).await?;
 
+        use crate::dto::response::MomentImage;
         let items = moments
             .into_iter()
             .map(|m| {
                 let tags = tags_map.get(&m.moment_id).cloned().unwrap_or_default();
-                MomentSearchItem {
-                    id: m.moment_id.to_string(),
+                let images = if m.images.is_empty() {
+                    None
+                } else {
+                    Some(m.images.iter().map(|url| MomentImage {
+                        url: url.clone(),
+                        width: None,
+                        height: None,
+                        content_type: None,
+                    }).collect())
+                };
+
+                MomentItem {
+                    moment_id: m.moment_id.to_string(),
                     user: UserInfo {
                         user_id: m.user_id,
                         nickname: m.nickname,
@@ -657,18 +688,20 @@ impl MomentService {
                         user_type: m.user_type,
                     },
                     description: m.description,
-                    images: Some(m.images),
+                    images,
                     tags,
                     created_at: m.created_at.to_rfc3339(),
                     likes_count: m.likes_count as i32,
                     comments_count: m.comments_count as i32,
-                    geo: GeoData {
+                    is_liked: None,
+                    is_favorited: None,
+                    location: RelativeLocation {
                         latitude: m.latitude,
                         longitude: m.longitude,
                         location_name: m.location_name,
                         distance: m.distance as i32,
-                        degrees: m.degrees,
-                    },
+                        bearing_degrees: m.bearing_degrees,
+                    }),
                 }
             })
             .collect();

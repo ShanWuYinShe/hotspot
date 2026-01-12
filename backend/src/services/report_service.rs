@@ -52,7 +52,7 @@ impl ReportService {
             .await?;
 
         Ok(CreateReportData {
-            id: created_report.report_id.to_string(),
+            report_id: created_report.report_id.to_string(),
         })
     }
 
@@ -139,7 +139,7 @@ impl ReportService {
             .map_err(|_| AppError::InvalidInput("无效的操作类型".to_string()))?;
 
         // 解析report_id
-        let report_id = Uuid::parse_str(&req.id)
+        let report_id = Uuid::parse_str(&req.report_id)
             .map_err(|_| AppError::BadRequest("无效的举报ID".to_string()))?;
 
         // 仅做存在性校验（避免拉整行）
@@ -165,7 +165,7 @@ impl ReportService {
     /// 辅助方法：将ReportRow转换为ReportItem
     fn to_report_item(report: ReportRow) -> ReportItem {
         ReportItem {
-            id: report.report_id.to_string(),
+            report_id: report.report_id.to_string(),
             target_type: report.target_type.to_string(),
             target_id: report.target_id,
             reason: report.reason,

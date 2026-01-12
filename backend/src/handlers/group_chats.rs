@@ -3,20 +3,21 @@ use axum::{extract::State, Extension, Json};
 use crate::{
     dto::{
         request::{
-            AcceptInviteRequest, ApplyToGroupRequest, ApproveApplicationRequest, BanMemberRequest,
+            AcceptInviteRequest, AdminDismissGroupRequest, AdminGroupSearchRequest,
+            ApplyToGroupRequest, ApproveGroupApplicationRequest, BanMemberRequest,
             BannedMembersRequest, CancelApplicationRequest, CreateGroupChatRequest,
             GroupApplicationsRequest, GroupMembersRequest, GroupOpenTheDoorRequest,
             GroupSettingsRequest, InviteMemberRequest, JoinGroupRequest, LeaveGroupRequest,
-            MuteMemberRequest, MyGroupChatsRequest, MyInvitesRequest, RejectApplicationRequest,
+            MuteMemberRequest, MyGroupChatsRequest, MyInvitesRequest, RejectGroupApplicationRequest,
             RejectInviteRequest, RemoveMemberRequest, SearchGroupsByKeywordRequest,
             SearchGroupsByLocationRequest, SearchGroupsByTagRequest, SetMemberRoleRequest,
             TransferOwnershipRequest, UnbanMemberRequest, UnmuteMemberRequest,
             UpdateGroupChatRequest,
         },
         response::{
-            ApiResponse, ApplyToGroupData, BannedMemberItem, CreateGroupChatData,
-            GroupApplicationItem, GroupInviteItem, GroupMemberItem, GroupSearchItem,
-            GroupSettingsData, InviteMemberData, JoinedGroupItem, PaginatedData,
+            AdminGroupItem, ApiResponse, ApplyToGroupData, BannedMemberItem, CreateGroupChatData,
+            GroupApplicationItem, GroupDetailData, GroupInviteItem, GroupMemberItem,
+            GroupItem, GroupSettingsData, InviteMemberData, JoinedGroupItem, PaginatedData,
         },
     },
     error::Result,
@@ -29,7 +30,7 @@ use crate::{
 pub async fn search_by_keyword(
     State(state): State<AppState>,
     Json(req): Json<SearchGroupsByKeywordRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<GroupSearchItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<GroupItem>>>> {
     let response = state.group_service.search_by_keyword(req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
@@ -38,7 +39,7 @@ pub async fn search_by_keyword(
 pub async fn search_by_tag(
     State(state): State<AppState>,
     Json(req): Json<SearchGroupsByTagRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<GroupSearchItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<GroupItem>>>> {
     let response = state.group_service.search_by_tag(req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
@@ -47,17 +48,77 @@ pub async fn search_by_tag(
 pub async fn search_by_location(
     State(state): State<AppState>,
     Json(req): Json<SearchGroupsByLocationRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<GroupSearchItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<GroupItem>>>> {
     let response = state.group_service.search_by_location(req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
 /// 获取群组详情（通过 ID 获取指定群组的详情）
+/// 
+/// 支持可选认证：
+/// - 未登录：返回基础群组信息
+/// - 已登录：额外返回 is_joined, my_role 等字段（Zero-Lookup）
 pub async fn open_the_door(
     State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
     Json(req): Json<GroupOpenTheDoorRequest>,
-) -> Result<Json<ApiResponse<GroupSearchItem>>> {
-    let response = state.group_service.open_the_door(&req).await?;
+) -> Result<Json<ApiResponse<GroupDetailData>>> {
+    // 提取 Authorization header
+    let auth_header = headers.get("Authorization");
+    tracing::info!("Authorization header exists: {}", auth_header.is_some());
+    
+    // 尝试从 Authorization header 提取用户ID（可选认证）
+    let user_id = auth_header
+        .and_then(|h| {
+            let header_str = h.to_str().ok()?;
+            tracing::info!("Authorization header value: {}", header_str);
+            Some(header_str)
+        })
+        .and_then(|h| {
+            let token = h.strip_prefix("Bearer ")?;
+            tracing::info!("Extracted token (first 20 chars): {}...", &token[..token.len().min(20)]);
+            Some(token)
+        })
+        .and_then(|token| {
+            match crate::utils::jwt::JwtUtil::verify_token(token, &state.config.jwt_secret) {
+                Ok(claims) => {
+                    tracing::info!("JWT verified successfully: sub={}, sid={}", claims.sub, claims.sid);
+                    Some(claims)
+                }
+                Err(e) => {
+                    tracing::error!("JWT verification failed: {:?}", e);
+                    None
+                }
+            }
+        })
+        .and_then(|claims| {
+            match claims.sub.parse::<i64>() {
+                Ok(uid) => {
+                    tracing::info!("Parsed user_id: {}", uid);
+                    Some(uid)
+                }
+                Err(e) => {
+                    tracing::error!("Failed to parse user_id from sub '{}': {:?}", claims.sub, e);
+                    None
+                }
+            }
+        });
+    
+    tracing::info!(
+        "open_the_door: group_id={}, user_id={:?}, has_auth_header={}",
+        req.group_chat_id,
+        user_id,
+        auth_header.is_some()
+    );
+    
+    let response = state.group_service.open_the_door(&req, user_id).await?;
+    
+    tracing::info!(
+        "open_the_door response: is_joined={:?}, my_role={:?}",
+        response.is_joined,
+        response.my_role
+    );
+    
     Ok(Json(ApiResponse::success(response)))
 }
 
@@ -241,7 +302,7 @@ pub async fn applications(
 pub async fn approve_application(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
-    Json(req): Json<ApproveApplicationRequest>,
+    Json(req): Json<ApproveGroupApplicationRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
     state
         .group_service
@@ -253,7 +314,7 @@ pub async fn approve_application(
 pub async fn reject_application(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
-    Json(req): Json<RejectApplicationRequest>,
+    Json(req): Json<RejectGroupApplicationRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
     state.group_service.reject_application(user_id, req).await?;
     Ok(Json(ApiResponse::success_empty()))
@@ -294,5 +355,27 @@ pub async fn reject_invite(
     Json(req): Json<RejectInviteRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
     state.group_service.reject_invite(user_id, req).await?;
+    Ok(Json(ApiResponse::success_empty()))
+}
+
+// ==================== 管理员群组管理 (Admin) ====================
+
+pub async fn admin_search(
+    State(state): State<AppState>,
+    Json(req): Json<AdminGroupSearchRequest>,
+) -> Result<Json<ApiResponse<PaginatedData<AdminGroupItem>>>> {
+    let response = state.group_service.admin_search_groups(&req).await?;
+    Ok(Json(ApiResponse::success(response)))
+}
+
+pub async fn admin_dismiss(
+    State(state): State<AppState>,
+    Extension(admin_id): Extension<i64>,
+    Json(req): Json<AdminDismissGroupRequest>,
+) -> Result<Json<ApiResponse<()>>> {
+    state
+        .group_service
+        .admin_dismiss_group(admin_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success_empty()))
 }

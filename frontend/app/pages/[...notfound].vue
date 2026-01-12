@@ -16,8 +16,8 @@
             <!-- 错误信息 -->
             <div class="text-center">
                 <h1 class="text-7xl font-extrabold tracking-tight mb-4">404</h1>
-                <h2 class="text-2xl font-bold tracking-tight mb-4">{{ $t('notFound.title') }}</h2>
-                <p class="opacity-80 mb-8 max-w-md mx-auto">
+                <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-white mb-4">{{ $t('notFound.title') }}</h2>
+                <p class="text-base text-neutral-600 dark:text-neutral-300 mb-8 max-w-md mx-auto">
                     {{ $t('notFound.description') }}
                 </p>
             </div>
@@ -46,7 +46,7 @@
             </div>
 
             <!-- 帮助链接 -->
-            <div class="mt-12 text-sm opacity-80">
+            <div class="mt-12 text-base text-neutral-600 dark:text-neutral-300 text-sm">
                 <p class="mb-2">{{ $t('notFound.help.title') }}</p>
                 <div class="space-x-4">
                     <UButton

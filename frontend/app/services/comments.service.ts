@@ -16,7 +16,7 @@ import type {
 
 class CommentsService extends BaseService {
   async create(request: CreateCommentRequest) {
-    return this.post<CreateCommentData>(COMMENTS.CREATE, request)
+    return this.post<CommentListItem>(COMMENTS.CREATE, request)
   }
 
   async delete(request: DeleteCommentRequest) {

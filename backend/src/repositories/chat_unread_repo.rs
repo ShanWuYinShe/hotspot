@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 #[derive(Debug, sqlx::FromRow)]
 struct UnreadCountRow {
-    chat_id: Uuid,
+    chat_id: String,
     count: i64,
 }
 
@@ -29,9 +29,6 @@ impl ChatUnreadRepository {
         user_id: i64,
         last_message_id: Option<Uuid>,
     ) -> Result<(), AppError> {
-        let chat_uuid = Uuid::parse_str(chat_id)
-            .map_err(|_| AppError::BadRequest("Invalid chat_id".to_string()))?;
-
         // 使用 UPSERT 模式
         sqlx::query!(
             r#"
@@ -44,7 +41,7 @@ impl ChatUnreadRepository {
                 updated_at = NOW()
             "#,
             chat_type,
-            chat_uuid,
+            chat_id,
             user_id,
             last_message_id
         )
@@ -61,9 +58,6 @@ impl ChatUnreadRepository {
         chat_id: &str,
         user_id: i64,
     ) -> Result<i64, AppError> {
-        let chat_uuid = Uuid::parse_str(chat_id)
-            .map_err(|_| AppError::BadRequest("Invalid chat_id".to_string()))?;
-
         // 获取最后已读时间
         let record = sqlx::query!(
             r#"
@@ -72,7 +66,7 @@ impl ChatUnreadRepository {
             WHERE chat_type = $1 AND chat_id = $2 AND user_id = $3
             "#,
             chat_type,
-            chat_uuid,
+            chat_id,
             user_id
         )
         .fetch_optional(&self.pool)
@@ -86,16 +80,18 @@ impl ChatUnreadRepository {
         // 根据聊天类型查询未读消息数
         let count = match chat_type {
             "private_chat" => {
+                // private_messages uses chat_id (BIGINT)
+                let chat_id_i64 = chat_id.parse::<i64>().unwrap_or(0);
                 sqlx::query_scalar!(
                     r#"
                     SELECT COUNT(*) as "count!"
                     FROM private_messages
-                    WHERE private_chat_id = $1 
+                    WHERE chat_id = $1 
                       AND sender_id != $2 
                       AND sent_at > $3
                       AND is_deleted = FALSE
                     "#,
-                    chat_uuid,
+                    chat_id_i64,
                     user_id,
                     read_at
                 )
@@ -103,6 +99,8 @@ impl ChatUnreadRepository {
                 .await?
             }
             "group_chat" => {
+                // group_messages uses group_chat_id (UUID)
+                let chat_uuid = Uuid::parse_str(chat_id).unwrap_or_default();
                 sqlx::query_scalar!(
                     r#"
                     SELECT COUNT(*) as "count!"
@@ -125,48 +123,67 @@ impl ChatUnreadRepository {
         Ok(count)
     }
 
-    /// 批量获取未读计数 (返回 Map<chat_id, count>)
+    /// 批量获取未读计数 (返回 Map<chat_id_str, count>)
+    /// chat_ids: 统一传入 String 类型 ID
     pub async fn get_unread_count_batch(
         &self,
         chat_type: &str,
-        chat_ids: &[Uuid],
+        chat_ids: &[String],
         user_id: i64,
-    ) -> Result<std::collections::HashMap<Uuid, i64>, AppError> {
+    ) -> Result<std::collections::HashMap<String, i64>, AppError> {
         if chat_ids.is_empty() {
             return Ok(std::collections::HashMap::new());
         }
 
         let rows = match chat_type {
             "private_chat" => {
+                // private_messages uses chat_id (BIGINT)
+                let chat_ids_i64: Vec<i64> = chat_ids.iter()
+                    .filter_map(|id| id.parse::<i64>().ok())
+                    .collect();
+
+                if chat_ids_i64.is_empty() {
+                    return Ok(std::collections::HashMap::new());
+                }
+
                 sqlx::query_as!(
                     UnreadCountRow,
                     r#"
-                    SELECT m.private_chat_id as "chat_id!", COUNT(*) as "count!"
+                    SELECT CAST(m.chat_id AS TEXT) as "chat_id!", COUNT(*) as "count!"
                     FROM private_messages m
                     LEFT JOIN chat_unread_counts c 
-                        ON c.chat_id = m.private_chat_id 
+                        ON c.chat_id = CAST(m.chat_id AS TEXT)
                         AND c.user_id = $2 
                         AND c.chat_type = 'private_chat'
-                    WHERE m.private_chat_id = ANY($1)
+                    WHERE m.chat_id = ANY($1)
                       AND m.sender_id != $2
                       AND m.is_deleted = FALSE
                       AND m.sent_at > COALESCE(c.last_read_at, '1970-01-01')
-                    GROUP BY m.private_chat_id
+                    GROUP BY m.chat_id
                     "#,
-                    chat_ids,
+                    &chat_ids_i64,
                     user_id
                 )
                 .fetch_all(&self.pool)
                 .await?
             }
             "group_chat" => {
+                // group_messages uses group_chat_id (UUID)
+                let chat_uuids: Vec<Uuid> = chat_ids.iter()
+                    .filter_map(|id| Uuid::parse_str(id).ok())
+                    .collect();
+
+                if chat_uuids.is_empty() {
+                    return Ok(std::collections::HashMap::new());
+                }
+
                 sqlx::query_as!(
                     UnreadCountRow,
                     r#"
-                    SELECT m.group_chat_id as "chat_id!", COUNT(*) as "count!"
+                    SELECT CAST(m.group_chat_id AS TEXT) as "chat_id!", COUNT(*) as "count!"
                     FROM group_messages m
                     LEFT JOIN chat_unread_counts c 
-                        ON c.chat_id = m.group_chat_id 
+                        ON c.chat_id = CAST(m.group_chat_id AS TEXT)
                         AND c.user_id = $2 
                         AND c.chat_type = 'group_chat'
                     WHERE m.group_chat_id = ANY($1)
@@ -175,7 +192,7 @@ impl ChatUnreadRepository {
                       AND m.sent_at > COALESCE(c.last_read_at, '1970-01-01')
                     GROUP BY m.group_chat_id
                     "#,
-                    chat_ids,
+                    &chat_uuids,
                     user_id
                 )
                 .fetch_all(&self.pool)

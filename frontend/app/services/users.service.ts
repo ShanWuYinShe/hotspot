@@ -1,5 +1,5 @@
 import { BaseService } from './base.service'
-import { USER, MEDIA } from '~/config/api'
+import { USER } from '~/config/api'
 import type {
   AuthData,
   UserSettingsData,
@@ -7,13 +7,14 @@ import type {
   UserStatsData,
   UserInfo,
   PaginatedData,
-  UserSearchItem,
-  UserRelationship,
+  UserItem,
+  UserDetailData,
+  UserRelation,
   SearchUsersByKeywordRequest,
   SearchUsersByTagRequest,
   SearchUsersByLocationRequest,
   UserOpenTheDoorRequest,
-  UserRelationshipRequest,
+  GetRelationshipRequest,
   UpdateProfileRequest,
   UpdateLocationRequest,
   UpdateSettingsRequest,
@@ -43,20 +44,20 @@ class UserService extends BaseService {
   // ============ 搜索 API (public) ============
 
   async searchByKeyword(request: SearchUsersByKeywordRequest) {
-    return this.publicPost<PaginatedData<UserSearchItem>>(USER.SEARCH_BY_KEYWORD, request)
+    return this.publicPost<PaginatedData<UserItem>>(USER.SEARCH_BY_KEYWORD, request)
   }
 
   async searchByTag(request: SearchUsersByTagRequest) {
-    return this.publicPost<PaginatedData<UserSearchItem>>(USER.SEARCH_BY_TAG, request)
+    return this.publicPost<PaginatedData<UserItem>>(USER.SEARCH_BY_TAG, request)
   }
 
   async searchByLocation(request: SearchUsersByLocationRequest) {
-    return this.publicPost<PaginatedData<UserSearchItem>>(USER.SEARCH_BY_LOCATION, request)
+    return this.publicPost<PaginatedData<UserItem>>(USER.SEARCH_BY_LOCATION, request)
   }
 
   // 获取用户资料（通过 ID 获取指定用户的资料，包含在线状态）
   async openTheDoor(request: UserOpenTheDoorRequest) {
-    return this.publicPost<UserSearchItem>(USER.OPEN_THE_DOOR, request)
+    return this.publicPost<UserDetailData>(USER.OPEN_THE_DOOR, request)
   }
 
   // ============ 当前用户 API (protected) ============
@@ -65,8 +66,8 @@ class UserService extends BaseService {
     return this.post<MyProfileData>(USER.PROFILE, {})
   }
 
-  async getRelationship(request: UserRelationshipRequest) {
-    return this.post<UserRelationship>(USER.RELATIONSHIP, request)
+  async getRelationship(request: GetRelationshipRequest) {
+    return this.post<UserRelation>(USER.RELATIONSHIP, request)
   }
 
   // 获取指定用户统计数据（公开 API）
@@ -99,7 +100,7 @@ class UserService extends BaseService {
   }
 
   async updateProfile(request: UpdateProfileRequest) {
-    return this.post<void>(USER.PROFILE_UPDATE, request)
+    return this.post<MyProfileData>(USER.PROFILE_UPDATE, request)
   }
 
   async upgradeAccount(request: UpgradeAccountRequest) {
@@ -121,19 +122,19 @@ class UserService extends BaseService {
   // ============ 关注关系 API (protected) ============
 
   async follow(request: FollowRequest) {
-    return this.post<void>(USER.FOLLOW, request)
+    return this.post<UserRelation>(USER.FOLLOW, request)
   }
 
   async unfollow(request: UnfollowRequest) {
-    return this.post<void>(USER.UNFOLLOW, request)
+    return this.post<UserRelation>(USER.UNFOLLOW, request)
   }
 
   async block(request: BlockRequest) {
-    return this.post<void>(USER.BLOCK, request)
+    return this.post<UserRelation>(USER.BLOCK, request)
   }
 
   async unblock(request: UnblockRequest) {
-    return this.post<void>(USER.UNBLOCK, request)
+    return this.post<UserRelation>(USER.UNBLOCK, request)
   }
 
   async getFriends(request: MyFriendsRequest = {}) {
@@ -157,10 +158,8 @@ class UserService extends BaseService {
   }
 
   // ============ 上传 API ============
-
-  async uploadAvatar(file: File) {
-    return this.upload<UploadMediaData>(MEDIA.UPLOAD, file, { category: 'avatar' })
-  }
+  // 注意：头像上传应使用 uploadService.uploadFile(file, 'avatar')
+  // 此方法已移除，请使用 uploadService
 }
 
 export const userService = new UserService()

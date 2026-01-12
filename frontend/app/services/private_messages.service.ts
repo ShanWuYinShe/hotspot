@@ -3,7 +3,6 @@ import { PRIVATE_MESSAGES } from '~/config/api'
 import type {
   PaginatedData,
   SendPrivateMessageRequest,
-  SendPrivateMessageData,
   PrivateMessagesHistoryRequest,
   PrivateMessageItem,
   UpdatePrivateMessageRequest,
@@ -18,7 +17,7 @@ import type {
 
 class PrivateMessagesService extends BaseService {
   async send(request: SendPrivateMessageRequest) {
-    return this.post<SendPrivateMessageData>(PRIVATE_MESSAGES.SEND, request)
+    return this.post<PrivateMessageItem>(PRIVATE_MESSAGES.SEND, request)
   }
 
   async getPrivateMessages(request: PrivateMessagesHistoryRequest) {

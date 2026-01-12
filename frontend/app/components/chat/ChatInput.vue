@@ -1,190 +1,172 @@
 <template>
-  <UCard variant="subtle" data-hs-surface="chat-input">
-    <!-- 文件上传 (使用作用域插槽) -->
-    <UFileUpload
-      v-slot="{ open }"
-      v-model="selectedFile"
-      accept="image/*,.pdf,.doc,.docx,.txt"
-      @update:model-value="handleFileSelected"
-    >
-      <div class="flex items-center gap-2 w-full">
-        <!-- 附件上传按钮 -->
-        <UDropdownMenu :items="attachmentItems(open)">
-          <UButton
-            variant="ghost"
-            color="neutral"
-            icon="i-lucide-plus"
-            size="sm"
-            :square="true"
-            class="shrink-0"
-            :disabled="isLoading"
-          />
+    <div class="flex w-full items-center gap-2 p-3">
+        <!-- Native file input (hidden) -->
+        <input
+            ref="fileInput"
+            type="file"
+            class="hidden"
+            :accept="CHAT_CONSTANTS.ACCEPTED_ATTACHMENTS"
+            @change="onNativeFileChange"
+        />
+
+        <!-- Attachment -->
+        <UDropdownMenu :items="attachmentMenuItems">
+            <UButton
+                variant="ghost"
+                color="neutral"
+                icon="i-lucide-plus-circle"
+                size="md"
+                square
+                :disabled="isLoading"
+                aria-label="添加附件"
+            />
         </UDropdownMenu>
 
-        <!-- 表情按钮（放在输入框外，保证同一水平线） -->
-        <UPopover v-model:open="showEmoji">
-          <UButton
-            :variant="showEmoji ? 'soft' : 'ghost'"
-            :color="showEmoji ? 'primary' : 'neutral'"
-            size="sm"
-            :square="true"
-            icon="i-lucide-smile"
-            class="shrink-0"
-            :disabled="isLoading"
-          />
-          <template #content>
-            <div class="p-3">
-              <div class="grid grid-cols-8 gap-1">
-                <UButton
-                  v-for="emoji in commonEmojis"
-                  :key="emoji"
-                  variant="ghost"
-                  size="sm"
-                  :square="true"
-                  :label="emoji"
-                  @click="insertEmoji(emoji)"
-                />
-              </div>
-            </div>
-          </template>
-        </UPopover>
+        <!-- Composer -->
+        <div class="relative flex-1 min-w-0">
+            <UTextarea
+                v-model="messageInput"
+                variant="outline"
+                placeholder="发送消息…"
+                :rows="1"
+                :maxrows="5"
+                autoresize
+                :disabled="isLoading"
+                @keydown="onKeydown"
+            />
 
-        <!-- 输入框区域 -->
-        <div
-          ref="textareaRootRef"
-          class="flex-1 min-w-0"
-        >
-          <UTextarea
-            v-model="messageInput"
-            placeholder="发送消息..."
-            :rows="1"
-            :maxrows="3"
-            :autoresize="true"
-            size="sm"
-            @keydown.enter.exact.prevent="handleSendMessage"
-            @keydown.enter.shift.stop
-          />
+            <!-- Emoji trigger (inside textarea, centered on same axis as other controls) -->
+            <div class="absolute inset-y-0 right-2 flex items-center">
+                <UPopover v-model:open="showEmoji">
+                    <UButton
+                        variant="ghost"
+                        color="neutral"
+                        icon="i-lucide-smile"
+                        size="md"
+                        square
+                        :disabled="isLoading"
+                        aria-label="选择表情"
+                    />
+                    <template #content>
+                        <div
+                            class="grid w-72 grid-cols-8 gap-1 p-2 max-h-64 overflow-y-auto"
+                        >
+                            <UButton
+                                v-for="emoji in CHAT_CONSTANTS.COMMON_EMOJIS"
+                                :key="emoji"
+                                variant="ghost"
+                                color="neutral"
+                                size="md"
+                                square
+                                :label="emoji"
+                                :aria-label="`插入表情 ${emoji}`"
+                                class="text-lg"
+                                @click="insertEmoji(emoji)"
+                            />
+                        </div>
+                    </template>
+                </UPopover>
+            </div>
         </div>
 
-        <!-- 发送按钮 -->
+        <!-- Send -->
         <UButton
-          color="primary"
-          icon="i-lucide-send-horizontal"
-          size="sm"
-          :square="true"
-          :disabled="!canSubmit"
-          :loading="isLoading"
-          @click="handleSendMessage"
+            color="primary"
+            variant="solid"
+            icon="i-lucide-send-horizontal"
+            size="md"
+            square
+            :disabled="!canSubmit"
+            :loading="isLoading"
+            aria-label="发送消息"
+            @click="sendMessage"
         />
-      </div>
-    </UFileUpload>
-  </UCard>
+    </div>
 </template>
 
 <script setup lang="ts">
-import type { DropdownMenuItem } from '@nuxt/ui'
+import type { DropdownMenuItem } from "@nuxt/ui";
+import { CHAT_CONSTANTS } from "~/config/defaults";
 
 interface Props {
-  loading?: boolean
+    loading?: boolean;
 }
+const props = withDefaults(defineProps<Props>(), { loading: false });
 
 interface Emits {
-  'send-message': [content: string]
-  'send-file': [file: File]
-  'send-image': [file: File]
-  'send-location': []
-  'typing': [isTyping: boolean]
+    "send": [payload: { content: string; type: "text" | "image" | "file" | "location"; file?: File }];
+    "typing": [isTyping: boolean];
+}
+const emit = defineEmits<Emits>();
+
+const messageInput = ref("");
+const showEmoji = ref(false);
+const fileInput = ref<HTMLInputElement | null>(null);
+
+const isLoading = computed(() => props.loading);
+const trimmedMessage = computed(() => messageInput.value.trim());
+const canSubmit = computed(
+    () => trimmedMessage.value.length > 0 && !isLoading.value,
+);
+
+const triggerFileSelect = () => {
+    fileInput.value?.click();
+};
+
+const attachmentMenuItems: DropdownMenuItem[][] = [
+    [
+        {
+            label: "图片",
+            icon: "i-lucide-image",
+            onSelect: triggerFileSelect,
+        },
+        {
+            label: "文件",
+            icon: "i-lucide-file",
+            onSelect: triggerFileSelect,
+        },
+    ],
+    [
+        {
+            label: "位置",
+            icon: "i-lucide-map-pin",
+            onSelect: () => emit("send", { content: "[位置]", type: "location" }),
+        },
+    ],
+];
+
+watch(
+    () => messageInput.value,
+    (v) => emit("typing", v.length > 0),
+);
+
+function sendMessage() {
+    if (!canSubmit.value) return;
+    emit("send", { content: trimmedMessage.value, type: "text" });
+    messageInput.value = "";
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  loading: false
-})
-
-const emit = defineEmits<Emits>()
-
-const messageInput = ref('')
-const showEmoji = ref(false)
-// 文件上传 (UFileUpload)
-const selectedFile = ref<File | null>(null)
-const textareaRootRef = ref<HTMLElement | null>(null)
-
-// 合并加载状态
-const isLoading = computed(() => props.loading)
-
-// 是否可以提交
-const canSubmit = computed(() => {
-  return messageInput.value?.trim().length > 0 && !isLoading.value
-})
-
-// 常用表情
-const commonEmojis = [
-  '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣',
-  '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰',
-  '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜',
-  '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏',
-  '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣',
-  '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠',
-  '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨',
-  '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥'
-]
-
-// 附件菜单项
-const attachmentItems = (openFile: () => void): DropdownMenuItem[][] => [
-  [{
-    label: '发送图片',
-    icon: 'i-lucide-image',
-    onSelect: () => openFile()
-  }, {
-    label: '发送文件',
-    icon: 'i-lucide-file-text',
-    onSelect: () => openFile()
-  }],
-  [{
-    label: '分享位置',
-    icon: 'i-lucide-map-pin',
-    onSelect: () => emit('send-location')
-  }]
-]
-
-// 监听输入状态
-watch(messageInput, (newVal) => {
-  emit('typing', newVal.length > 0)
-})
-
-const focusTextarea = () => {
-  if (!import.meta.client) return
-  const el = textareaRootRef.value?.querySelector('textarea') as HTMLTextAreaElement | null
-  el?.focus()
+function insertEmoji(emoji: string) {
+    messageInput.value += emoji;
+    showEmoji.value = false;
 }
 
-// 处理消息发送
-const handleSendMessage = () => {
-  if (!canSubmit.value) return
+function onNativeFileChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
 
-  const content = messageInput.value.trim()
-  emit('send-message', content)
-  messageInput.value = '' // 清空输入框
+    const type = file.type?.startsWith("image/") ? "image" : "file";
+    emit("send", { content: "[文件]", type, file });
 
-  // UX：发送后保持输入焦点（高频发消息不需要反复点击输入框）
-  nextTick(() => focusTextarea())
+    // Reset input so same file can be selected again
+    input.value = "";
 }
 
-// 插入表情
-const insertEmoji = (emoji: string) => {
-  messageInput.value += emoji
-  showEmoji.value = false
+function onKeydown(e: KeyboardEvent) {
+    if (e.key !== "Enter") return;
+    if (e.shiftKey) return;
+    e.preventDefault();
+    sendMessage();
 }
-
-// UFileUpload 回调 - 处理文件选择
-const handleFileSelected = (file: File | null | undefined) => {
-  if (file) {
-    if (file.type.startsWith('image/')) {
-      emit('send-image', file)
-    } else {
-      emit('send-file', file)
-    }
-    selectedFile.value = null
-  }
-}
-
 </script>

@@ -1,30 +1,14 @@
 import { BaseService } from './base.service'
 import { MAP } from '~/config/api'
-import type { MapClusterRequest, MapClustersData, MapItemsData, MapSearchByBoundsRequest } from '~/types/api'
+import type { MapRenderRequest, MapRenderData } from '~/types/api'
 
 class MapService extends BaseService {
-  async clusterUsers(request: MapClusterRequest) {
-    return this.publicPost<MapClustersData>(MAP.USERS.CLUSTER, request)
-  }
-
-  async clusterGroups(request: MapClusterRequest) {
-    return this.publicPost<MapClustersData>(MAP.GROUPS.CLUSTER, request)
-  }
-
-  async clusterMoments(request: MapClusterRequest) {
-    return this.publicPost<MapClustersData>(MAP.MOMENTS.CLUSTER, request)
-  }
-
-  async searchUsersByBounds(request: MapSearchByBoundsRequest) {
-    return this.publicPost<MapItemsData>(MAP.USERS.SEARCH_BY_BOUNDS, request)
-  }
-
-  async searchGroupsByBounds(request: MapSearchByBoundsRequest) {
-    return this.publicPost<MapItemsData>(MAP.GROUPS.SEARCH_BY_BOUNDS, request)
-  }
-
-  async searchMomentsByBounds(request: MapSearchByBoundsRequest) {
-    return this.publicPost<MapItemsData>(MAP.MOMENTS.SEARCH_BY_BOUNDS, request)
+  /**
+   * 地图聚合与渲染接口
+   * 根据 zoom 和 viewport 动态返回聚合点(Cluster)或实体点(Entity)
+   */
+  async render(request: MapRenderRequest) {
+    return this.publicPost<MapRenderData>(MAP.RENDER, request)
   }
 }
 
@@ -33,4 +17,3 @@ export const useMapService = () => {
   if (!mapService) mapService = new MapService()
   return mapService
 }
-

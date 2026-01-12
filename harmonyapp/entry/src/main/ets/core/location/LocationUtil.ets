@@ -310,7 +310,7 @@ export class LocationUtil {
   /**
    * 格式化距离显示
    *
-   * 注意：这里仅做“显示格式化”，距离值必须来自后端返回的 GeoData.distance（米），
+   * 注意：这里仅做“显示格式化”，距离值必须来自后端返回的 RelativeLocation.distance（米），
    * 客户端严禁基于经纬度自行计算距离（例如 Haversine/地球半径等）。
    */
   static formatDistance(distance: number): string {

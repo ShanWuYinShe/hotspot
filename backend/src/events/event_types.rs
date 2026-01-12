@@ -1,5 +1,9 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use crate::dto::response::MessageMedia;
+use crate::types::enums::{
+    GroupMemberRemovalReason, InviteStatus, MemberRole, MessageType, ReactionType,
+};
 
 /// 应用事件类型
 /// 严格对应 API 文档中定义的 WebSocket 事件
@@ -12,6 +16,9 @@ pub enum AppEvent {
     },
     UserProfileUpdated {
         user_id: i64,
+        nickname: Option<String>,
+        avatar_url: Option<String>,
+        bio: Option<String>,
     },
     /// 用户位置更新
     UserLocationUpdated {
@@ -46,11 +53,15 @@ pub enum AppEvent {
         group_id: Uuid,
         user_id: i64,
         added_by: i64,
+        role: MemberRole,
+        member_count: i64,
     },
     GroupMemberRemoved {
         group_id: Uuid,
         user_id: i64,
         removed_by: i64,
+        member_count: i64,
+        reason: GroupMemberRemovalReason,
     },
     /// 群组资料更新
     GroupProfileUpdated {
@@ -63,8 +74,8 @@ pub enum AppEvent {
     GroupMemberRoleChanged {
         group_id: Uuid,
         user_id: i64,
-        old_role: String,
-        new_role: String,
+        old_role: MemberRole,
+        new_role: MemberRole,
     },
     /// 成员被禁言
     GroupMemberMuted {
@@ -87,6 +98,7 @@ pub enum AppEvent {
         invite_id: Uuid,
         group_id: Uuid,
         group_name: String,
+        group_avatar_url: Option<String>,
         from_user_id: i64,
         to_user_id: i64,
         message: Option<String>,
@@ -97,7 +109,7 @@ pub enum AppEvent {
         group_id: Uuid,
         inviter_id: i64,
         invitee_id: i64,
-        status: String, // "accepted" | "rejected"
+        status: InviteStatus,
     },
     /// 收到群组申请（通知管理员）
     GroupApplicationReceived {
@@ -112,7 +124,7 @@ pub enum AppEvent {
         group_id: Uuid,
         group_name: String,
         applicant_id: i64,
-        status: String, // "accepted" | "rejected"
+        status: InviteStatus,
     },
 
     // ========== 群聊消息事件 ==========
@@ -120,17 +132,11 @@ pub enum AppEvent {
         message_id: Uuid,
         group_chat_id: Uuid,
         sender_id: i64,
-        message_type: String,
+        message_type: MessageType,
         content: Option<String>,
-        reply_to: Option<Uuid>,
+        reply_to: Option<ReplyToSnapshot>,
         mentions: Option<Vec<i64>>,
-        media_url: Option<String>,
-        thumbnail_url: Option<String>,
-        file_name: Option<String>,
-        file_size: Option<i64>,
-        duration: Option<i32>,
-        width: Option<i32>,
-        height: Option<i32>,
+        media: Option<MessageMedia>,
     },
     GroupMessageEdited {
         message_id: Uuid,
@@ -160,7 +166,7 @@ pub enum AppEvent {
         message_id: Uuid,
         group_chat_id: Uuid,
         user_id: i64,
-        reaction_type: String,
+        reaction_type: ReactionType,
         action: String, // "add" | "remove"
     },
     GroupUserTyping {
@@ -172,59 +178,47 @@ pub enum AppEvent {
     // ========== 私聊消息事件 ==========
     PrivateMessageSent {
         message_id: Uuid,
-        private_chat_id: Uuid,
         sender_id: i64,
-        recipient_id: i64,
-        message_type: String,
+        target_user_id: i64, // 接收者ID (用于多端同步定位会话)
+        message_type: MessageType,
         content: Option<String>,
-        reply_to: Option<Uuid>,
-        media_url: Option<String>,
-        thumbnail_url: Option<String>,
-        file_name: Option<String>,
-        file_size: Option<i64>,
-        duration: Option<i32>,
-        width: Option<i32>,
-        height: Option<i32>,
+        reply_to: Option<ReplyToSnapshot>,
+        media: Option<MessageMedia>,
     },
     PrivateMessageEdited {
         message_id: Uuid,
-        private_chat_id: Uuid,
         sender_id: i64,
-        recipient_id: i64,
+        target_user_id: i64,
         content: String,
         edited_at: String,
     },
     PrivateMessageRecalled {
         message_id: Uuid,
-        private_chat_id: Uuid,
         sender_id: i64,
-        recipient_id: i64,
+        target_user_id: i64,
         recalled_by: i64,
         recalled_at: String,
     },
     PrivateMessageDeleted {
         message_id: Uuid,
-        private_chat_id: Uuid,
+        target_user_id: i64,
         deleted_by: i64,
     },
     PrivateMessageRead {
-        private_chat_id: Uuid,
-        sender_id: i64, // 被读消息的发送者
+        target_user_id: i64, // 被读消息的所属会话对方ID (对于读者是 sender_id)
         reader_id: i64,
         up_to: Uuid,
         read_at: String,
     },
     PrivateMessageReaction {
         message_id: Uuid,
-        private_chat_id: Uuid,
-        other_user_id: i64, // 私聊对方
+        target_user_id: i64, // 会话对方ID
         user_id: i64,
-        reaction_type: String,
+        reaction_type: ReactionType,
         action: String, // "add" | "remove"
     },
     PrivateUserTyping {
-        private_chat_id: Uuid,
-        other_user_id: i64, // 私聊对方
+        target_user_id: i64, // 会话对方ID
         user_id: i64,
         is_typing: bool,
     },
@@ -236,11 +230,13 @@ pub enum AppEvent {
     },
     MomentLiked {
         moment_id: Uuid,
+        moment_summary: MomentSummarySnapshot, // 新增
         user_id: i64,
         liker_id: i64,
     },
     MomentCommented {
         moment_id: Uuid,
+        moment_summary: MomentSummarySnapshot, // 新增
         comment_id: Uuid,
         user_id: i64, // 瞬间作者
         commenter_id: i64,
@@ -263,6 +259,7 @@ pub enum AppEvent {
     CommentReplied {
         moment_id: Uuid,
         comment_id: Uuid, // 原评论ID
+        reply_to_content: String, // 原评论摘要
         reply_id: Uuid,   // 回复评论ID
         user_id: i64,     // 原评论作者
         replier_id: i64,  // 回复者
@@ -275,6 +272,53 @@ pub enum AppEvent {
         title: String,
         content: String,
     },
+    SystemAnnouncement {
+        announcement_id: String,
+        title: String,
+        content: String,
+        severity: String,
+        action_url: Option<String>,
+        created_at: String,
+    },
+
+    // ========== 多端同步 (Self-Sync) ==========
+    SelfJoinedGroup {
+        user_id: i64,
+        group: serde_json::Value, // GroupSearchItem json
+    },
+    SelfLeftGroup {
+        user_id: i64,
+        group_id: Uuid,
+    },
+    PrivateChatDeleted {
+        user_id: i64,
+        target_user_id: i64,
+    },
+    PrivateChatSettingsUpdated {
+        user_id: i64,
+        target_user_id: i64,
+        is_muted: Option<bool>,
+        is_pinned: Option<bool>,
+    },
+    NotificationReadStateUpdated {
+        user_id: i64,
+        total_unread_count: i32,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReplyToSnapshot {
+    pub message_id: Uuid,
+    pub user_id: i64,
+    pub nickname: String,
+    pub content: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MomentSummarySnapshot {
+    pub moment_id: Uuid,
+    pub cover_url: Option<String>,
+    pub text_preview: String,
 }
 
 impl AppEvent {
@@ -318,6 +362,12 @@ impl AppEvent {
             AppEvent::PrivateMessageRead { .. } => "private_message_read",
             AppEvent::PrivateMessageReaction { .. } => "private_message_reaction",
             AppEvent::PrivateUserTyping { .. } => "private_user_typing",
+            // 自同步
+            AppEvent::SelfJoinedGroup { .. } => "self_joined_group",
+            AppEvent::SelfLeftGroup { .. } => "self_left_group",
+            AppEvent::PrivateChatDeleted { .. } => "private_chat_deleted",
+            AppEvent::PrivateChatSettingsUpdated { .. } => "private_chat_settings_updated",
+            AppEvent::NotificationReadStateUpdated { .. } => "notification_read_state_updated",
             // 瞬间相关
             AppEvent::MomentCreated { .. } => "moment_created",
             AppEvent::MomentLiked { .. } => "moment_liked",
@@ -328,6 +378,7 @@ impl AppEvent {
             AppEvent::CommentReplied { .. } => "comment_replied",
             // 系统事件
             AppEvent::SystemNotification { .. } => "system_notification",
+            AppEvent::SystemAnnouncement { .. } => "SystemAnnouncement",
         }
     }
 }

@@ -1,4 +1,6 @@
 use chrono::{DateTime, Utc};
+use redis::aio::ConnectionManager;
+use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
@@ -50,14 +52,22 @@ pub struct GroupMemberDetailRow {
     pub is_muted: Option<bool>, // Computed field
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct GroupMemberRepository {
     pool: PgPool,
+    redis: ConnectionManager,
 }
 
 impl GroupMemberRepository {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+    pub fn new(pool: PgPool, redis: ConnectionManager) -> Self {
+        Self { pool, redis }
+    }
+
+    /// 辅助：清除成员缓存
+    async fn invalidate_member_cache(&self, group_chat_id: Uuid, user_id: i64) {
+        let mut conn = self.redis.clone();
+        let key = format!("group:member:{}:{}", group_chat_id, user_id);
+        let _: () = conn.del(&key).await.unwrap_or(());
     }
 
     /// 添加成员
@@ -79,6 +89,11 @@ impl GroupMemberRepository {
         )
         .execute(&self.pool)
         .await?;
+
+        // 写入缓存 (1 = is_member)
+        let mut conn = self.redis.clone();
+        let key = format!("group:member:{}:{}", group_chat_id, user_id);
+        let _: () = conn.set_ex(&key, 1, 86400).await.unwrap_or(()); // 24小时
 
         Ok(())
     }
@@ -127,6 +142,8 @@ impl GroupMemberRepository {
         .execute(&self.pool)
         .await?;
 
+        self.invalidate_member_cache(group_chat_id, user_id).await;
+
         Ok(())
     }
 
@@ -143,6 +160,8 @@ impl GroupMemberRepository {
         )
         .execute(&self.pool)
         .await?;
+
+        self.invalidate_member_cache(group_chat_id, user_id).await;
 
         Ok(())
     }
@@ -167,8 +186,16 @@ impl GroupMemberRepository {
         Ok(row.map(|r| r.role))
     }
 
-    /// 检查用户是否是群组成员
+    /// 检查用户是否是群组成员 (Redis 优先)
     pub async fn is_member(&self, group_chat_id: Uuid, user_id: i64) -> Result<bool> {
+        let mut conn = self.redis.clone();
+        let key = format!("group:member:{}:{}", group_chat_id, user_id);
+
+        // 1. 查缓存
+        if let Ok(Some(val)) = conn.get::<_, Option<i32>>(&key).await {
+            return Ok(val == 1);
+        }
+
         let result = sqlx::query!(
             r#"
             SELECT EXISTS (
@@ -181,22 +208,49 @@ impl GroupMemberRepository {
         )
         .fetch_one(&self.pool)
         .await?;
+
+        // 3. 写缓存 (如果是成员则缓存，非成员不缓存防穿透？或者也可以缓存 0)
+        // 这里简单起见，如果是成员则缓存 1
+        if result.exists {
+            let _: () = conn.set_ex(&key, 1, 86400).await.unwrap_or(());
+        }
+
         Ok(result.exists)
+    }
+
+    /// 获取群组成员数量
+    pub async fn count_members(&self, group_chat_id: Uuid) -> Result<i64> {
+        let result = sqlx::query!(
+            r#"
+            SELECT COUNT(*) as "count!"
+            FROM group_members
+            WHERE group_chat_id = $1 AND is_deleted = FALSE
+            "#,
+            group_chat_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(result.count)
     }
 
     /// 获取群组管理员列表（Owner + Admin）
     ///
     /// 用途：群组申请等“需要通知管理员”的场景，避免在事件处理器里做“全量广播”。
     pub async fn list_admin_user_ids(&self, group_chat_id: Uuid) -> Result<Vec<i64>> {
+        let owner_role = MemberRole::Owner.to_string();
+        let admin_role = MemberRole::Admin.to_string();
+        
         let rows = sqlx::query!(
             r#"
             SELECT user_id
             FROM group_members
             WHERE group_chat_id = $1
               AND is_deleted = FALSE
-              AND role::text IN ('owner', 'admin')
+              AND role::text IN ($2, $3)
             "#,
-            group_chat_id
+            group_chat_id,
+            owner_role,
+            admin_role
         )
         .fetch_all(&self.pool)
         .await?;

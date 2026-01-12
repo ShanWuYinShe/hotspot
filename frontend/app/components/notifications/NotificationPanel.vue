@@ -28,7 +28,7 @@
             </div>
         </template>
 
-        <div class="py-2">
+        <div class="-m-5 sm:-m-7">
             <UEmpty
                 v-if="notifications.length === 0"
                 icon="i-lucide-bell-off"
@@ -37,30 +37,28 @@
                 class="py-6"
             />
 
-            <UPageList v-else divide class="max-h-64 overflow-y-auto">
-                <UPageCard
+            <div v-else class="max-h-64 overflow-y-auto divide-y divide-neutral-100 dark:divide-neutral-800">
+                <div
                     v-for="n in notifications"
                     :key="n.id"
-                    :title="n.title"
-                    :description="n.description"
-                    :icon="getNotificationIcon(n.type)"
-                    variant="ghost"
-                    :highlight="!n.read"
-                    highlight-color="primary"
+                    class="p-3 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 cursor-pointer transition-colors"
                     @click="handleNotificationClick(n)"
                 >
-                    <template #footer>
-                        <div class="flex items-center justify-between gap-3">
-                            <UBadge color="neutral" variant="soft" size="xs">
-                                {{ formatTime(n.timestamp) }}
-                            </UBadge>
-                            <UBadge v-if="!n.read" color="primary" variant="soft" size="xs">
-                                未读
-                            </UBadge>
+                    <div class="flex items-start gap-3">
+                        <div class="bg-neutral-100 dark:bg-neutral-800 p-1.5 rounded-full shrink-0">
+                           <UIcon :name="getNotificationIcon(n.type)" class="size-4 text-neutral-600 dark:text-neutral-400" />
                         </div>
-                    </template>
-                </UPageCard>
-            </UPageList>
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-sm font-medium text-neutral-900 dark:text-white truncate">{{ n.title }}</h4>
+                            <p class="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2 mt-0.5">{{ n.description }}</p>
+                            <div class="flex items-center justify-between gap-2 mt-2">
+                                <UBadge color="neutral" variant="soft" size="xs">{{ formatTime(n.timestamp) }}</UBadge>
+                                <UBadge v-if="!n.read" color="primary" variant="soft" size="xs">未读</UBadge>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <template #footer>

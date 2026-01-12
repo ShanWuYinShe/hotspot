@@ -19,20 +19,20 @@ import type {
 } from '~/types/api'
 
 class AuthService extends BaseService {
-  async register(data: RegisterRequest) {
-    return this.publicPost<AuthData>(AUTH.REGISTER, data)
+  async register<T extends AuthData = AuthData>(data: RegisterRequest) {
+    return this.publicPost<T>(AUTH.REGISTER, data)
   }
 
-  async login(data: LoginRequest) {
-    return this.publicPost<AuthData>(AUTH.LOGIN, data)
+  async login<T extends AuthData = AuthData>(data: LoginRequest) {
+    return this.publicPost<T>(AUTH.LOGIN, data)
   }
 
   async logout() {
     return this.post<void>(AUTH.LOGOUT, {})
   }
 
-  async guest(data: GuestRequest) {
-    return this.publicPost<AuthData>(AUTH.GUEST, data)
+  async guest<T extends AuthData = AuthData>(data: GuestRequest) {
+    return this.publicPost<T>(AUTH.GUEST, data)
   }
 
   async checkStatus() {

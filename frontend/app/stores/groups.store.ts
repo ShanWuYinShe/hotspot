@@ -8,11 +8,11 @@
  */
 
 import { defineStore } from 'pinia'
-import type { GroupSearchItem } from '~/types/api'
+import type { GroupItem } from '~/types/api'
 
 export type GroupType = 'public_chat' | 'private_chat' | 'announcement'
 
-export interface Group extends GroupSearchItem {
+export interface Group extends GroupItem {
   is_member?: boolean
   my_role?: 'owner' | 'admin' | 'member'
   unread_count?: number
@@ -87,16 +87,16 @@ export const useGroupsStore = defineStore('groups', () => {
     _preferences.value = { ...DEFAULT_PREFERENCES }
   }
   
-  const setGroup = (group: GroupSearchItem) => {
-    const existing = _groups.value[group.id]
-    _groups.value[group.id] = { ...existing, ...group }
+  const setGroup = (group: GroupItem) => {
+    const existing = _groups.value[group.group_chat_id]
+    _groups.value[group.group_chat_id] = { ...existing, ...group }
   }
   
-  const setGroups = (groupsList: GroupSearchItem[]) => {
+  const setGroups = (groupsList: GroupItem[]) => {
     groupsList.forEach(group => setGroup(group))
   }
   
-  const setNearbyGroups = (groupsList: GroupSearchItem[], loadMore = false) => {
+  const setNearbyGroups = (groupsList: GroupItem[], loadMore = false) => {
     const newGroups = groupsList.map(item => ({ ...item }))
     
     if (loadMore) {

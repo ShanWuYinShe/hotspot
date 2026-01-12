@@ -2,54 +2,55 @@
   <UModal
     title="邀请成员"
     description="从好友列表中选择要邀请的成员"
+    @update:open="(val) => !val && emit('update:open', false)"
   >
     <template #body>
-      <UInput
-        v-model="searchQuery"
-        placeholder="搜索好友..."
-        icon="i-lucide-search"
-        :disabled="isLoading"
-        class="mb-4"
-      />
+      <div class="sticky top-0 z-10 mb-4 bg-white dark:bg-neutral-900">
+        <UInput
+          v-model="searchQuery"
+          placeholder="搜索好友..."
+          icon="i-lucide-search"
+          :disabled="isLoading"
+        />
+      </div>
 
       <!-- 加载状态 -->
-      <template v-if="isLoading">
-        <USkeleton
-          v-for="i in 3"
-          :key="i"
-          class="h-16 mb-2"
-        />
-      </template>
+      <div v-if="isLoading" class="space-y-3">
+        <USkeleton shape="rectangle" class="h-16 w-full" v-for="i in 3" :key="i" />
+      </div>
 
       <!-- 好友列表 -->
-      <section
+      <div
         v-else-if="filteredFriends.length > 0"
         ref="listEl"
-        class="max-h-96 overflow-y-auto space-y-2"
+        class="max-h-[50vh] overflow-y-auto space-y-2 pr-1"
         @scroll="onListScroll"
       >
         <UCard
           v-for="friend in filteredFriends"
           :key="friend.user_id"
+          variant="outline"
         >
-          <section class="flex items-center justify-between gap-3">
-            <header class="flex items-center gap-3 min-w-0">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
               <UAvatar
                 :src="friend.avatar_url"
                 :alt="friend.nickname"
                 size="md"
               />
-              <article class="min-w-0">
-                <p class="font-medium truncate">{{ friend.nickname }}</p>
-                <UBadge v-if="friend.remark" color="neutral" variant="soft" size="xs">
+              <div class="min-w-0">
+                <p class="font-semibold text-neutral-900 dark:text-white text-sm truncate">{{ friend.nickname }}</p>
+                <span v-if="friend.remark" class="text-neutral-400 dark:text-neutral-500 text-xs mt-0.5 block">
                   备注: {{ friend.remark }}
-                </UBadge>
-              </article>
-            </header>
+                </span>
+              </div>
+            </div>
 
             <UButton
               v-if="!invitedUsers.has(friend.user_id)"
-              size="sm"
+              size="xs"
+              variant="soft"
+              color="primary"
               :loading="invitingUsers.has(friend.user_id)"
               @click="inviteFriend(friend)"
             >
@@ -59,40 +60,47 @@
               v-else
               color="success"
               variant="soft"
+              size="xs"
+              icon="i-lucide-check"
             >
               已邀请
             </UBadge>
-          </section>
+          </div>
         </UCard>
+      </div>
 
-        <!-- 回到顶部（列表很长时） -->
-        <div v-if="showScrollTop" class="sticky bottom-3 flex justify-end">
-          <UButton
-            variant="soft"
-            color="neutral"
-            size="sm"
-            icon="i-lucide-arrow-up"
-            @click="scrollToTop"
-          />
-        </div>
-      </section>
-
-      <UAlert
+      <UEmpty
         v-else
         icon="i-lucide-users-round"
-        color="neutral"
-        variant="soft"
         title="暂无好友"
-        description="您还没有添加好友"
+        description="您还没有添加好友，或者没有找到匹配的好友"
+        class="py-8"
       />
+      
+      <!-- 回到顶部按钮 -->
+      <div 
+        v-show="showScrollTop" 
+        class="absolute bottom-4 right-4 z-20 transition-opacity duration-300 pointer-events-none"
+        :class="showScrollTop ? 'opacity-100 pointer-events-auto' : 'opacity-0'"
+      >
+        <UButton
+          variant="soft"
+          color="neutral"
+          size="sm"
+          icon="i-lucide-arrow-up"
+          :square="true"
+          @click="scrollToTop"
+        />
+      </div>
     </template>
 
-    <template #footer="{ close }">
+    <template #footer>
       <UButton
         variant="ghost"
-        class="flex-1"
+        color="neutral"
+        class="w-full"
         :disabled="isLoading"
-        @click="close"
+        @click="emit('update:open', false)"
       >
         关闭
       </UButton>
@@ -113,12 +121,15 @@ interface Friend {
 
 interface Props {
   groupId: string
-  onSuccess?: () => void
 }
 
 const props = defineProps<Props>()
-const feedback = useFeedbackStore()
+const emit = defineEmits<{
+    'update:open': [value: boolean]
+    'success': []
+}>()
 
+const feedback = useFeedbackStore()
 const groupsService = useGroupsService()
 const userService = useUsersService()
 
@@ -161,8 +172,7 @@ const loadFriends = async () => {
       remark: item.remark
     }))
   } catch (error) {
-    console.error('加载好友列表失败:', error)
-    feedback.error('加载失败', (error as Error).message)
+    feedback.error('加载失败')
   } finally {
     isLoading.value = false
   }
@@ -173,17 +183,16 @@ const inviteFriend = async (friend: Friend) => {
 
   try {
     await groupsService.inviteMember({
-      id: props.groupId,
+      group_chat_id: props.groupId,
       user_id: friend.user_id,
       message: '邀请您加入群组'
     })
 
     invitedUsers.value.add(friend.user_id)
-    feedback.success('邀请成功', `已向 ${friend.nickname} 发送邀请`)
-    props.onSuccess?.()
+    feedback.success(`已邀请 ${friend.nickname}`)
+    emit('success')
   } catch (error) {
-    console.error('邀请失败:', error)
-    feedback.error('邀请失败', (error as Error).message)
+    feedback.error('邀请失败')
   } finally {
     invitingUsers.value.delete(friend.user_id)
   }

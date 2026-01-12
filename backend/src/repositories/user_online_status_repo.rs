@@ -18,6 +18,10 @@ impl UserOnlineStatusRepository {
         Self { pool }
     }
 
+    pub fn pool(&self) -> &PgPool {
+        &self.pool
+    }
+
     /// 获取用户在线状态
     pub async fn get_status(&self, user_id: i64) -> Result<Option<UserOnlineStatusRow>> {
         let status = sqlx::query_as!(

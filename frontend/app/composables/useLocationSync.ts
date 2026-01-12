@@ -81,9 +81,11 @@ export function useLocationSync(options: LocationSyncOptions = {}) {
       
       try {
         await userService.updateLocation({
-          latitude,
-          longitude,
-          location_name: locationName
+          location: {
+            latitude,
+            longitude,
+            location_name: locationName || '当前位置'
+          }
         })
         
         lastSyncTime.value = Date.now()
@@ -95,7 +97,9 @@ export function useLocationSync(options: LocationSyncOptions = {}) {
           source: 'network'
         })
         
-        console.log(`[LocationSync] 位置已同步 (${syncCount.value}次)`)
+        if (import.meta.dev) {
+          console.log(`[LocationSync] 位置已同步 (${syncCount.value}次)`)
+        }
         return true
       } catch (error) {
         console.error('[LocationSync] 位置同步失败:', error)
@@ -186,7 +190,9 @@ export function useLocationSync(options: LocationSyncOptions = {}) {
     
     resume()
     
-    console.log(`[LocationSync] 定时同步已启动 (间隔 ${opts.syncInterval / 1000}秒)`)
+    if (import.meta.dev) {
+      console.log(`[LocationSync] 定时同步已启动 (间隔 ${opts.syncInterval / 1000}秒)`)
+    }
   }
   
   /**
@@ -195,7 +201,9 @@ export function useLocationSync(options: LocationSyncOptions = {}) {
   const stopPeriodicSync = () => {
     if (isActive.value) {
       pause()
-      console.log('[LocationSync] 定时同步已停止')
+      if (import.meta.dev) {
+        console.log('[LocationSync] 定时同步已停止')
+      }
     }
   }
   
@@ -235,7 +243,9 @@ export function useLocationSync(options: LocationSyncOptions = {}) {
   const initialize = async () => {
     if (!authStore.isAuthenticated) return
     
-    console.log('[LocationSync] 初始化位置同步...')
+    if (import.meta.dev) {
+      console.log('[LocationSync] 初始化位置同步...')
+    }
     
     // 1. 先用默认位置初始化 store（确保立即可用）
     locationStore.initWithDefault()
@@ -263,7 +273,9 @@ export function useLocationSync(options: LocationSyncOptions = {}) {
     lastSyncedCoords.value = null
     lastSyncTime.value = 0
     syncCount.value = 0
-    console.log('[LocationSync] 资源已清理')
+    if (import.meta.dev) {
+      console.log('[LocationSync] 资源已清理')
+    }
   }
   
   // 监听登录状态变化

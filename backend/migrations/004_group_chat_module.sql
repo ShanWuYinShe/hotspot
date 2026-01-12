@@ -232,7 +232,7 @@ CREATE INDEX idx_message_read_status_group ON group_message_read_status (group_c
 CREATE TABLE group_message_reactions (
     id BIGSERIAL PRIMARY KEY,
     reaction_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
-    message_id UUID NOT NULL REFERENCES group_messages(message_id) ON DELETE CASCADE,
+    message_id UUID NOT NULL,
     user_id BIGINT NOT NULL,
     type reaction_type NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -249,7 +249,7 @@ CREATE INDEX idx_group_message_reactions_user ON group_message_reactions (user_i
 CREATE TABLE chat_unread_counts (
     id BIGSERIAL PRIMARY KEY,
     chat_type VARCHAR(20) NOT NULL,
-    chat_id UUID NOT NULL,
+    chat_id VARCHAR(64) NOT NULL,
     user_id BIGINT NOT NULL,
     unread_count INTEGER NOT NULL DEFAULT 0,
     last_read_at TIMESTAMPTZ,

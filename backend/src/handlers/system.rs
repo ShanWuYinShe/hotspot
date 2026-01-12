@@ -1,10 +1,10 @@
 use axum::Json;
 
-use crate::{
-    dto::request::SystemHealthRequest,
-    dto::response::{ApiResponse, HealthCheckData},
-    error::Result,
+use crate::dto::{
+    request::SystemHealthRequest,
+    response::{ApiResponse, HealthCheckData},
 };
+use crate::error::Result;
 
 pub async fn health(
     Json(_req): Json<SystemHealthRequest>,

@@ -3,7 +3,7 @@ import { FEED } from '~/config/api'
 import type {
   PaginatedData,
   FeedMomentsRequest,
-  FeedMomentItem,
+  MomentItem,
   FeedGroupsRequest,
   FeedGroupItem,
   FeedUsersRequest,
@@ -16,7 +16,7 @@ import type {
 class FeedService extends BaseService {
   // 获取瞬间信息流
   async getMoments(request: FeedMomentsRequest = {}) {
-    return this.post<PaginatedData<FeedMomentItem>>(FEED.MOMENTS, request)
+    return this.post<PaginatedData<MomentItem>>(FEED.MOMENTS, request)
   }
 
   // 获取群组推荐

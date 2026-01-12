@@ -2,6 +2,7 @@
   <UModal
     title="创建群组"
     description="填写群组信息，并在地图上选一个点作为群组位置"
+    size="lg"
   >
     <template #body>
       <UForm
@@ -15,6 +16,7 @@
             v-model="form.name"
             placeholder="输入群组名称"
             :maxlength="50"
+            icon="i-lucide-users-round"
           />
         </UFormField>
 
@@ -28,6 +30,7 @@
             placeholder="描述群组的主题和目的..."
             :rows="3"
             :maxlength="200"
+            autoresize
           />
         </UFormField>
 
@@ -48,7 +51,7 @@
             class="justify-between"
             @click="pickLocation"
           >
-            <span class="truncate text-left">
+            <span class="truncate">
               {{ form.location_name || '请选择位置' }}
             </span>
           </UButton>
@@ -58,9 +61,10 @@
           :items="advancedItems"
           type="single"
           collapsible
+          variant="soft"
         >
           <template #advanced>
-            <div class="space-y-4 pt-2">
+            <div class="space-y-5 px-1 py-3">
               <UFormField
                 label="加入方式"
                 name="join_method"
@@ -76,11 +80,10 @@
 
               <UFormField
                 name="is_searchable"
-                orientation="horizontal"
                 class="flex items-start justify-between gap-4"
               >
                 <template #label>
-                  允许被搜索
+                  <div class="font-semibold">允许被搜索</div>
                 </template>
                 <template #description>
                   关闭后，群组不会出现在搜索/附近发现中
@@ -103,6 +106,7 @@
                   v-model="form.password"
                   type="password"
                   placeholder="不设置则为公开加入"
+                  icon="i-lucide-lock"
                 />
               </UFormField>
             </div>
@@ -112,22 +116,25 @@
     </template>
 
     <template #footer>
-      <UButton
-        type="button"
-        variant="outline"
-        :disabled="creating"
-        @click="emit('close')"
-      >
-        取消
-      </UButton>
-      <UButton
-        type="button"
-        :loading="creating"
-        :disabled="!canSubmit"
-        @click="createGroup"
-      >
-        创建群组
-      </UButton>
+      <div class="flex justify-end gap-3 w-full">
+        <UButton
+          type="button"
+          variant="ghost"
+          color="neutral"
+          :disabled="creating"
+          @click="emit('close')"
+        >
+          取消
+        </UButton>
+        <UButton
+          type="button"
+          :loading="creating"
+          :disabled="!canSubmit"
+          @click="createGroup"
+        >
+          创建群组
+        </UButton>
+      </div>
     </template>
   </UModal>
 </template>
@@ -156,7 +163,7 @@ const joinMethodItems: Array<{ label: string; value: JoinMethod }> = [
 ]
 
 const advancedItems = [
-  { label: '高级设置', icon: 'i-lucide-sliders-horizontal', slot: 'advanced' }
+  { label: '高级设置', icon: 'i-lucide-settings-2', slot: 'advanced' }
 ]
 
 const schema = z.object({
@@ -239,8 +246,8 @@ async function createGroup() {
     })
 
     feedback.success('群组创建成功', '您已成为群主，可以开始邀请朋友加入了！')
-    props.onSuccess?.(response.id)
-    emit('close', response.id)
+    props.onSuccess?.(response.group_chat_id)
+    emit('close', response.group_chat_id)
   } catch (err: unknown) {
     console.error('创建群组失败:', err)
     feedback.error('创建失败', getErrorMessage(err, '请检查网络连接后重试'))

@@ -4,6 +4,7 @@ import type {
   AdminMeData,
   AdminPermissionsData,
   AdminRolesData,
+  AdminRoleItem,
   AdminAdminsData,
   AdminRbacGrantAdminRequest,
   AdminRbacRevokeAdminRequest,
@@ -27,7 +28,7 @@ class AdminRbacService extends BaseService {
   }
 
   async createRole(request: AdminRbacRoleCreateRequest) {
-    return this.post<any>(ADMIN_RBAC.ROLES_CREATE, request)
+    return this.post<AdminRoleItem>(ADMIN_RBAC.ROLES_CREATE, request)
   }
 
   async updateRole(request: AdminRbacRoleUpdateRequest) {

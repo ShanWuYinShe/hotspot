@@ -1,0 +1,3782 @@
+---
+alwaysApply: true
+---
+# HotSpot API 规范 - HTTP API 端点定义 v0.0.1（契约唯一权威）
+
+> 本文档定义 HotSpot 的所有 HTTP API 端点、请求/响应类型定义。
+
+## 认证与传输概览（契约级）
+
+- **传输协议**：HTTP（所有端点统一使用 `POST`）。
+- **路径分区**：
+  - `/api/v1/public/**`：无需 `access_token`（允许未登录访问）。
+    - 契约级约束：`/public/**` 响应必须 **身份无关**，不得因为请求中携带 `Authorization` 而返回额外字段（关系、互动状态、未读数、置顶/免打扰等）。
+  - `/api/v1/protected/**`：必须携带 `access_token`。
+- **Access Token 传递**（强制）：
+  - `/protected/**` 请求必须包含 `Authorization: Bearer <access_token>`。
+  - 缺失或无效/过期时：仍返回 HTTP 200，业务错误通过 `ApiResponse.code` 表达（错误码见 `@api_spec_errors.mdc`）。
+- **业务成功判定**：仅以 `ApiResponse.code === 0` 为准；禁止通过 HTTP status 推断业务成功/失败（HTTP 状态码策略见 `@api_spec_base.mdc`）。
+- **refresh_token 投递**：
+  - Web / App 的 refresh_token 投递与回传规则以各认证端点的 `client_type` 分流定义为准（避免在本文档重复另一套约束）。
+
+## 从用户体验出发的调用建议（非实现，契约级推荐）
+
+- 未登录（或冷启动未拿到 token）
+  - 使用 `/public/**` 完成：启动配置、搜索/发现、公开详情页浏览。
+  - `/public/**` 主要覆盖两类能力：
+    - **默认公开资源**：系统公告、全局启动配置、热门标签、健康检查等（不具备用户可配置隐私等级，天然就是给其他用户/客户端看的）。
+    - **用户内容的 public 可见形态**：仅当资源本身为 `public` 可见时才返回（例如用户/群组/瞬间等存在可见性分支的资源）。
+  - 对于第二类（存在隐私等级/访问控制的资源），任何非 `public` 的可见性/访问控制，都必须在 `/protected/**` 下完成。
+  - 信息流/推荐流（`/feed/**`）不提供 public 版本；若要进入信息流，应先完成登录或 `POST /api/v1/public/auth/guest` 获取 `access_token`。
+- 已登录（持有 access_token）
+  - 对同一业务能力，优先调用对应的 `/protected/**` 变体（若存在），以获得个性化字段并正确执行基于身份上下文的隐私判定。
+
+### 无需 token 也能做到的能力清单（/public/**，契约级）
+
+一句话规则：**凡是 `/api/v1/public/**` 都不需要 `access_token`**；并且响应必须保持**身份无关**（不得因携带 `Authorization` 而扩字段）。
+
+为避免把“是否需要 token”和“是否涉及隐私等级”混为一谈，`/public/**` 仅覆盖两类能力：
+
+1) 系统级默认公开资源（不具备用户可配置隐私等级）
+- 启动/全局配置：`/public/global_settings/fetch`
+- 系统健康检查：`/public/system/health`
+- 公告：`/public/announcements`
+- 标签：`/public/tags/trending`、`/public/tags/suggest`
+
+2) 用户内容的 public 可见形态（仅当资源本身为 public 可见时才返回）
+- 用户发现：`/public/user/search_by_*`
+- 用户公开资料：`/public/user/open_the_door`
+- 公开社交/统计信息：`/public/user/stats`、`/public/user/friends|following|followers`
+- 瞬间发现与公开详情：`/public/moments/search_by_*`、`/public/moments/open_the_door`、`/public/moments/likes`
+- 评论（继承可见性）：`/public/comments`、`/public/comments/replies`、`/public/comments/likes`
+- 群组发现与公开详情：`/public/group_chats/search_by_*`、`/public/group_chats/open_the_door`、`/public/group_chats/settings`
+- 地图公开渲染：`/public/map/render`
+
+补充（未登录的“热门页/发现页”如何做）：
+- 使用 `tags/trending` 取热门标签，再用 `moments/search_by_tag` 展示热门内容（天然只会返回 public 可见内容）。
+- 信息流/推荐流（`/feed/**`）属于个性化能力，不提供 `/public/feed/**`；想用推荐能力需先登录或走 `auth/guest`。
+
+## 全局规则引用（减少重复，契约唯一权威）
+
+- 统一 envelope、HTTP 状态码策略、分页/游标、幂等性、Public/Protected 强约束：见 `@api_spec_base.mdc`。
+- 错误码枚举与使用规则（包含 `/public` 的 `103xx` 与 `/protected` 的 `10200` 约定）：见 `@api_spec_errors.mdc`。
+- 本文件仅定义：端点本身 + 端点特有补充（如某端点额外排序语义、某隐私字段 `*_visible` 的约束、某写端点的幂等 MUST/SHOULD）。
+
+## API 端点与类型定义
+
+
+### 认证 API
+
+说明：认证相关的 `/public/auth/**` 属于“默认公开能力”（用于注册/登录/刷新/找回密码），不涉及用户内容的隐私等级分支；但必须按风控/限流/反枚举策略实现。
+
+
+```typescript
+// 认证响应负载：按 client_type 拆分，避免 refresh_token 语义漂移
+// Web：refresh_token 绝不出现在 body（通常由 HttpOnly Cookie 承载）
+// App：refresh_token 必须出现在 body，客户端负责安全存储
+interface AuthTokenPairWeb {
+  user_id: number;
+  nickname: string;
+  access_token: string;
+  access_token_expires_at: string;
+  refresh_token_expires_at: string;
+}
+
+interface AuthTokenPairApp {
+  user_id: number;
+  nickname: string;
+  access_token: string;
+  refresh_token: string;
+  access_token_expires_at: string;
+  refresh_token_expires_at: string;
+}
+```
+
+**客户端类型与 refresh_token 投递**：
+- Web / App 分离：服务端必须能区分客户端类型，并据此决定 refresh_token 的投递方式与校验口径
+- 响应体契约：
+  - `client_type='web'`：返回 `ApiResponse<AuthTokenPairWeb>`，响应体中不得出现 `refresh_token`
+  - `client_type='app'`：返回 `ApiResponse<AuthTokenPairApp>`，响应体中必须出现 `refresh_token`（opaque string）
+
+**POST /api/v1/public/auth/register - 用户注册**
+```typescript
+interface RegisterRequest {
+  login_id: string; // Format validation required
+  nickname: string; // 1-32 characters
+  password: string; // 8-64 characters
+  client_type: 'web' | 'app';  // 客户端必须显式传递，避免服务端推断导致的行为漂移
+}
+
+// 响应体契约：按 client_type 严格分流
+type RegisterResponseWeb = ApiResponse<AuthTokenPairWeb>  // body 中不得出现 refresh_token
+type RegisterResponseApp = ApiResponse<AuthTokenPairApp>  // body 中必须出现 refresh_token
+```
+
+失败错误码：
+- `10001` 缺少必填参数（如 login_id/nickname/password/client_type）
+- `10002` 参数格式错误（如 login_id 格式不合法）
+- `10003` 参数值超出范围（如 nickname 长度超限）
+- `10400` 资源已存在（login_id 已注册）
+
+**POST /api/v1/public/auth/login - 用户登录**
+```typescript
+interface LoginRequest {
+  login_id: string;
+  password: string;
+  client_type: 'web' | 'app';  // 客户端必须显式传递
+}
+
+// 响应体契约：按 client_type 严格分流
+type LoginResponseWeb = ApiResponse<AuthTokenPairWeb>  // body 中不得出现 refresh_token
+type LoginResponseApp = ApiResponse<AuthTokenPairApp>  // body 中必须出现 refresh_token
+```
+
+失败错误码：
+- `10001` 缺少必填参数（如 login_id/password/client_type）
+- `10105` 密码错误
+- `10310` 用户不存在
+- `10201` 账号被封禁
+
+**POST /api/v1/protected/auth/logout - 用户登出**
+```typescript
+interface LogoutRequest {}
+type LogoutResponse = ApiResponse
+```
+
+
+**POST /api/v1/public/auth/guest - 创建访客用户**
+```typescript
+interface GuestRequest {
+  nickname: string;
+  client_type: 'web' | 'app';  // 客户端必须显式传递
+}
+
+// 响应体契约：按 client_type 严格分流
+type GuestResponseWeb = ApiResponse<AuthTokenPairWeb>  // body 中不得出现 refresh_token
+type GuestResponseApp = ApiResponse<AuthTokenPairApp>  // body 中必须出现 refresh_token
+```
+
+失败错误码：
+- `10001` 缺少必填参数（如 nickname/client_type）
+- `10003` 参数值超出范围（如 nickname 长度超限）
+
+**POST /api/v1/public/auth/refresh_token - 刷新Token**
+```typescript
+interface RefreshTokenRequest {
+  client_type: 'web' | 'app';  // 客户端必须显式传递
+  // refresh_token 输入规则：
+  // - app：请求体必须携带 refresh_token
+  // - web：请求体不得携带 refresh_token（refresh_token 的提供渠道由实现决定，但不得出现在可被 JS 读取的位置）
+  refresh_token?: string;
+}
+
+// 响应体契约：按 client_type 严格分流
+type RefreshTokenResponseWeb = ApiResponse<AuthTokenPairWeb>  // body 中不得出现 refresh_token
+type RefreshTokenResponseApp = ApiResponse<AuthTokenPairApp>  // body 中必须出现 refresh_token
+```
+
+刷新规则：
+- 刷新成功后：access_token 和 refresh_token 都会更新，旧 refresh_token 立即失效
+- 此 API 在 `/public/` 路径下（调用时 access_token 可能已过期）
+
+失败错误码：
+- `10001` 缺少必填参数（如 client_type；或 app 场景缺少 refresh_token）
+- `10103` Refresh Token 无效或过期
+- `10104` Refresh Token 缺失（web cookie 缺失 / app body 未提供）
+- `10106` 需要重新登录（会话已撤销/风控要求）
+
+client_type 约束：
+- `client_type='web'`：请求体不得携带 `refresh_token`
+- `client_type='app'`：请求体必须携带 `refresh_token`
+
+**Web 刷新安全约束**：
+- 若 Web 场景使用基于 Cookie 的 refresh_token 投递，服务端必须具备 CSRF/来源校验能力
+
+**安全注意**：
+- Token 结构必须包含 `sid` 字段
+- 刷新时可进行环境一致性校验（如 User-Agent / 设备指纹）
+
+**POST /api/v1/protected/auth/check_status - 检查认证状态**
+```typescript
+interface CheckStatusRequest {}
+type CheckStatusResponse = ApiResponse<CheckStatusData>
+
+interface CheckStatusData {
+  user_id: number;
+  nickname: string;
+  is_valid: boolean;
+  expires_at: string;
+}
+```
+
+
+**POST /api/v1/public/auth/request_password_reset - 请求密码重置**
+```typescript
+interface RequestPasswordResetRequest {
+  login_id: string;
+}
+type RequestPasswordResetResponse = ApiResponse<RequestPasswordResetData>
+
+interface RequestPasswordResetData {
+  reset_id: string;
+}
+```
+
+失败错误码：
+- `10001` 缺少必填参数（login_id）
+- `10106` 需要重新登录（风控要求）
+
+**POST /api/v1/public/auth/verify_reset_code - 验证重置码**
+```typescript
+interface VerifyResetCodeRequest {
+  reset_id: string;
+  code: string;
+}
+type VerifyResetCodeResponse = ApiResponse<VerifyResetCodeData>
+
+interface VerifyResetCodeData {
+  reset_token: string;
+}
+```
+
+失败错误码：
+- `10001` 缺少必填参数（reset_id/code）
+- `10300` 资源不存在（reset_id 不存在）
+- `10402` 资源状态冲突（重置码错误/已失效/次数超限）
+- `10106` 需要重新登录（风控要求）
+
+**POST /api/v1/public/auth/reset_password - 重置密码**
+```typescript
+interface ResetPasswordRequest {
+  reset_token: string;
+  password: string;
+}
+type ResetPasswordResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（reset_token/password）
+- `10003` 参数值超出范围（password 不符合长度/复杂度要求）
+- `10402` 资源状态冲突（reset_token 无效/已过期/已使用）
+- `10106` 需要重新登录（风控要求）
+
+#### 当前用户认证 API（/me/ 路径）
+
+**POST /api/v1/protected/auth/me/change_password - 修改密码**
+```typescript
+interface ChangePasswordRequest {
+  old_password: string;
+  new_password: string;
+}
+type ChangePasswordResponse = ApiResponse
+```
+
+与 `reset_password` 不同，此接口需要验证旧密码。
+
+失败错误码：
+- `10105` 密码错误（old_password 不正确）
+- `10003` 参数值超出范围（new_password 不符合长度/复杂度要求）
+
+**POST /api/v1/protected/auth/me/sessions - 获取活跃会话列表**
+```typescript
+interface SessionsRequest {
+  limit?: number;
+  cursor?: string;
+}
+type SessionsResponse = ApiResponse<PaginatedData<SessionItem>>
+
+interface SessionItem {
+  session_id: string;       // 会话ID（其值等同于 JWT 的 sid）
+  device_type?: string;
+  device_name?: string;
+  ip_address?: string;
+  created_at: string;
+  last_active_at: string;
+  is_current: boolean;
+}
+```
+
+失败错误码：
+- `10003` 参数值超出范围（limit < 1）
+
+**POST /api/v1/protected/auth/me/sessions/revoke - 撤销会话**
+```typescript
+interface RevokeSessionRequest {
+  session_id: string;       // 会话ID（其值等同于 JWT 的 sid）
+}
+type RevokeSessionResponse = ApiResponse
+```
+
+失败错误码：
+- `10300` 资源不存在（泛化：session 不存在或不可见）
+- `10200` 权限不足（尝试撤销非本人会话）
+
+### 用户 API
+
+说明（/public 搜索的隐私语义）：
+- `POST /api/v1/public/user/search_by_*` 仅返回“可被公开发现/可见”的用户，并且仅返回 `UserPublicItem` 字段集合。
+- 对于不可公开发现/不可见的用户：不得返回、不得在错误码或返回结构上暴露其存在性（列表型接口通常体现为“结果为空/缺少该条目”）。
+
+
+**POST /api/v1/public/user/search_by_keyword - 按关键字搜索用户（全局）**
+
+排序语义（契约级）：
+- 默认按**相关性优先**排序（允许综合匹配度/活跃度等信号），同分时以**最近活跃/最近创建时间**做稳定 tie-breaker（用于游标生成）。
+- 在同一 `cursor` 会话内必须保持排序基准一致；跨会话允许排序轻微波动。
+
+```typescript
+interface SearchUsersByKeywordRequest extends SearchBaseParams {
+  kw: string;
+}
+type SearchUsersByKeywordResponse = ApiResponse<PaginatedData<UserPublicItem>>
+```
+
+**POST /api/v1/public/user/search_by_tag - 按标签搜索用户（全局）**
+
+排序语义（契约级）：
+- 默认按**相关性/标签匹配度优先**排序，同分时以**最近活跃/最近创建时间**做稳定 tie-breaker（用于游标生成）。
+- 在同一 `cursor` 会话内必须保持排序基准一致；跨会话允许排序轻微波动。
+
+```typescript
+interface SearchUsersByTagRequest extends SearchBaseParams {
+  tag: string;
+}
+type SearchUsersByTagResponse = ApiResponse<PaginatedData<UserPublicItem>>
+```
+
+**POST /api/v1/public/user/search_by_location - 按位置搜索用户（范围过滤）**
+
+排序语义（契约级）：
+- 默认按**距离优先**排序（由近到远），并使用稳定 tie-breaker（如最近活跃/最近创建时间）保证 `cursor` 可用。
+- 若提供 `kw`，允许在“距离相近”范围内体现关键词相关性，但不得破坏“距离优先”的主序。
+
+```typescript
+interface SearchUsersByLocationRequest extends SearchBaseParams {
+  kw?: string;
+  radius: number;
+}
+type SearchUsersByLocationResponse = ApiResponse<PaginatedData<UserPublicItem>>
+```
+
+**POST /api/v1/public/user/open_the_door - 获取用户资料**
+```typescript
+interface UserOpenTheDoorRequest {
+  user_id: number;
+}
+
+// 详情响应类型：继承基础信息并扩展统计数据，实现 Zero-Lookup
+interface UserDetailData extends UserItem {
+  stats: UserStatsData;
+}
+
+// /public 端点必须身份无关：剔除所有依赖“当前用户上下文”的字段（如 relation）
+type UserPublicDetailData = Omit<UserDetailData, 'relation'>
+type UserOpenTheDoorResponse = ApiResponse<UserPublicDetailData>
+```
+
+说明（隐私与路径分区）：
+- `/public/user/open_the_door` 仅返回该用户“可公开展示”的资料字段集合（`UserPublicDetailData`）。
+
+补充（登录态下的“交互信息”获取方式）：
+- 关系字段：通过 `POST /api/v1/protected/user/relationship` 获取（仅对当前用户有意义，属于交互态数据）。
+- “我的列表/我的设置”等个性化读接口：统一走 `/api/v1/protected/user/me/*`。
+
+说明：用户详情页不需要距离信息（用户点开详情说明已经过了"发现"阶段）。
+
+失败错误码：
+- `10001` 缺少必填参数（user_id）
+- `10310` 用户不存在
+- `10211` 已被对方拉黑（不可访问）
+
+**POST /api/v1/protected/user/relationship - 获取与指定用户的关系**
+```typescript
+interface GetRelationshipRequest {
+  user_id: number;
+}
+type GetRelationshipResponse = ApiResponse<UserRelation>
+```
+
+失败错误码：
+- `10001` 缺少必填参数（user_id）
+- `10310` 用户不存在
+
+**POST /api/v1/public/user/stats - 获取指定用户统计数据**
+```typescript
+interface UserStatsRequest {
+  user_id: number;
+}
+type UserStatsResponse = ApiResponse<UserStatsData>
+
+interface UserStatsData {
+  moments_count: number;
+  friends_count: number;
+  followers_count: number;
+  following_count: number;
+  groups_count: number;
+}
+```
+
+隐私控制：受 `stats_visible` 设置控制。
+
+补充：
+- `/public/` 版本仅保证 `stats_visible='public'` 时可访问。
+- 若 `stats_visible!='public'`，`/public/` 端点应返回 `10310`（用户不存在/不可见）。
+
+**POST /api/v1/public/user/friends - 获取指定用户好友列表**
+```typescript
+interface UserFriendsRequest {
+  user_id: number;
+  limit?: number;
+  cursor?: string;
+}
+type UserFriendsResponse = ApiResponse<PaginatedData<UserInfo>>
+```
+
+隐私控制：受 `friends_visible` 设置控制。
+
+补充：
+- `/public/` 版本仅保证 `friends_visible='public'` 时可访问。
+- 若 `friends_visible!='public'`，`/public/` 端点应返回 `10310`（用户不存在/不可见）。
+
+**POST /api/v1/public/user/following - 获取指定用户关注列表**
+```typescript
+interface UserFollowingRequest {
+  user_id: number;
+  limit?: number;
+  cursor?: string;
+}
+type UserFollowingResponse = ApiResponse<PaginatedData<UserInfo>>
+```
+
+隐私控制：受 `following_visible` 设置控制。
+
+补充：
+- `/public/` 版本仅保证 `following_visible='public'` 时可访问。
+- 若 `following_visible!='public'`，`/public/` 端点应返回 `10310`（用户不存在/不可见）。
+
+**POST /api/v1/public/user/followers - 获取指定用户粉丝列表**
+```typescript
+interface UserFollowersRequest {
+  user_id: number;
+  limit?: number;
+  cursor?: string;
+}
+type UserFollowersResponse = ApiResponse<PaginatedData<UserInfo>>
+```
+
+隐私控制：受 `followers_visible` 设置控制。
+
+补充：
+- `/public/` 版本仅保证 `followers_visible='public'` 时可访问。
+- 若 `followers_visible!='public'`，`/public/` 端点应返回 `10310`（用户不存在/不可见）。
+
+**POST /api/v1/public/user/groups - 获取指定用户加入的公开群组**
+```typescript
+interface UserGroupsRequest {
+  user_id: number;
+  limit?: number;
+  cursor?: string;
+}
+type UserGroupsResponse = ApiResponse<PaginatedData<GroupPublicItem>>
+```
+
+隐私控制：受 `groups_visible` 设置控制。
+
+补充：
+- `/public/` 版本仅保证 `groups_visible='public'` 时可访问。
+- 若 `groups_visible!='public'`，`/public/` 端点应返回 `10310`（用户不存在/不可见）。
+
+仅返回 `is_searchable=true` 的公开群组（过滤语义）。
+
+说明（隐私与路径分区）：
+- 本接口属于“过滤型公开信息”：仅返回可公开发现的群组（`is_searchable=true`），不返回任何不可公开发现/不可见的群组。
+
+失败错误码：
+- `10001` 缺少必填参数（user_id）
+- `10003` 参数值超出范围（limit 等）
+- `10310` 用户不存在
+
+**POST /api/v1/public/user/liked_moments - 获取指定用户点赞的瞬间**
+```typescript
+interface UserLikedMomentsRequest {
+  user_id: number;
+  limit?: number;
+  cursor?: string;
+}
+
+// /public 端点返回身份无关的 MomentPublicItem（不包含 is_liked/is_favorited）
+type UserLikedMomentsResponse = ApiResponse<PaginatedData<MomentPublicItem>>
+```
+
+补充（隐私与路径分区）：
+- 点赞列表属于强隐私行为，新增隐私项 `liked_moments_visible` 控制可见性。
+- `/public/` 版本仅保证 `liked_moments_visible='public'` 时可访问。
+- 若 `liked_moments_visible!='public'`，`/public/` 端点应返回 `10310`（用户不存在/不可见）。
+
+#### 当前用户 API（/me/ 路径）
+
+说明：
+- `/me/*` 端点返回的是"我自己"的资料字段，永远可见，不受隐私设置影响
+- `/me/*` 端点不返回 `*_meta`（如 `is_online_meta/geo_meta/last_online_meta`），也不会将这些字段置为 `null` 来表达隐藏
+
+**POST /api/v1/protected/user/me/profile - 获取当前用户资料**
+```typescript
+interface MyProfileRequest {}
+type MyProfileResponse = ApiResponse<MyProfileData>
+
+interface MyProfileData {
+  user_id: number;
+  nickname: string;
+  avatar_url?: string;
+  bio?: string;
+  tags?: string[];
+  gender?: 'male' | 'female' | 'other';
+  email?: string;
+  phone?: string;
+
+  // location 契约：/me/profile 必须始终返回完整 Location（禁止 null/省略）
+  // 若用户未填位置或位置不可用，服务端必须回退为系统默认位置
+  location: Location;
+
+  is_online: boolean;
+  last_online: string;
+  created_at: string;
+  
+  // 统计信息 (Zero-Lookup)
+  stats: UserStatsData;
+}
+```
+
+**POST /api/v1/protected/user/me/profile/update - 更新用户资料**
+```typescript
+interface UpdateProfileRequest {
+  nickname?: string; // 1-32 characters
+  avatar_file_id?: string;
+  bio?: string; // Max 200 characters
+  tags?: string[]; // Max 10 items, 1-32 chars each
+}
+type UpdateProfileResponse = ApiResponse<MyProfileData>
+```
+
+失败错误码：
+- `10003` 参数值超出范围（如 nickname/bio/tags 长度超限）
+- `10360` 文件/媒体不存在（avatar_file_id 不存在）
+
+**POST /api/v1/protected/user/me/location - 更新用户位置**
+```typescript
+interface UpdateLocationRequest {
+  location: Location;
+}
+type UpdateLocationResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（latitude/longitude）
+- `10003` 参数值超出范围（经纬度范围非法、location_name 长度超限）
+
+**POST /api/v1/protected/user/me/upgrade - 账户升级**
+```typescript
+interface UpgradeAccountRequest {
+  login_id: string;
+  password: string;
+}
+type UpgradeAccountResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（login_id/password）
+- `10003` 参数值超出范围（password 长度不合规）
+- `10400` 资源已存在（login_id 已被占用）
+- `10105` 密码错误
+
+**POST /api/v1/protected/user/me/stats - 获取我的统计数据**
+```typescript
+interface MyStatsRequest {}
+type MyStatsResponse = ApiResponse<UserStatsData>
+```
+
+
+**POST /api/v1/protected/user/me/settings - 获取用户设置**
+```typescript
+interface MySettingsRequest {}
+type MySettingsResponse = ApiResponse<UserSettingsData>
+
+interface UserSettingsData {
+  privacy_level: PrivacyLevel;
+  location_visible: boolean;
+  online_visible: boolean;
+  last_online_visible: boolean;
+  friends_visible: PrivacyLevel;
+  following_visible: PrivacyLevel;
+  followers_visible: PrivacyLevel;
+  groups_visible: PrivacyLevel;
+  moments_visible: PrivacyLevel;
+  liked_moments_visible: PrivacyLevel;
+  stats_visible: PrivacyLevel;
+  allow_follow: boolean;
+  allow_private_chat: 'everyone' | 'friends' | 'nobody';
+  searchable: boolean;
+  phone_searchable: boolean;
+  nickname_searchable: boolean;
+  location_searchable: boolean;
+}
+```
+
+
+设置项的含义和隐私控制规则详见"隐私控制机制"章节。
+
+**POST /api/v1/protected/user/me/settings/update - 更新用户设置**
+```typescript
+interface UpdateSettingsRequest {
+  privacy_level?: PrivacyLevel;
+  location_visible?: boolean;
+  online_visible?: boolean;
+  last_online_visible?: boolean;
+  friends_visible?: PrivacyLevel;
+  following_visible?: PrivacyLevel;
+  followers_visible?: PrivacyLevel;
+  groups_visible?: PrivacyLevel;
+  moments_visible?: PrivacyLevel;
+  liked_moments_visible?: PrivacyLevel;
+  stats_visible?: PrivacyLevel;
+  allow_follow?: boolean;
+  allow_private_chat?: 'everyone' | 'friends' | 'nobody';
+  searchable?: boolean;
+  phone_searchable?: boolean;
+  nickname_searchable?: boolean;
+  location_searchable?: boolean;
+}
+type UpdateSettingsResponse = ApiResponse<UserSettingsData>
+```
+
+失败错误码：
+- `10003` 参数值超出范围（如字段组合不允许/字符串长度超限）
+
+**POST /api/v1/protected/user/me/delete - 删除账户**
+```typescript
+interface DeleteAccountRequest {
+  confirmation: string;  // 必须为 "DELETE_MY_ACCOUNT"
+}
+type DeleteAccountResponse = ApiResponse
+```
+
+失败错误码：
+- `10402` 资源状态冲突（confirmation 不匹配）
+
+**POST /api/v1/protected/user/me/follow - 关注用户**
+```typescript
+interface FollowRequest {
+  user_id: number;
+}
+type FollowResponse = ApiResponse  // 成功时仅返回 code: 0，关系变更通过 WebSocket 推送
+```
+
+失败错误码：
+- `10001` 缺少必填参数（user_id）
+- `10310` 用户不存在
+- `10411` 不能对自己执行此操作
+- `10213` 对方不允许被关注
+- `10211` 已被对方拉黑
+
+关注成功后，若对方已关注自己，自动成为好友（互相关注），触发 WebSocket `MutualFollow` 事件。
+
+**POST /api/v1/protected/user/me/unfollow - 取消关注用户**
+```typescript
+interface UnfollowRequest {
+  user_id: number;
+}
+type UnfollowResponse = ApiResponse  // 成功时仅返回 code: 0，关系变更通过 WebSocket 推送
+```
+
+失败错误码：
+- `10001` 缺少必填参数（user_id）
+- `10310` 用户不存在
+- `10411` 不能对自己执行此操作
+
+取消关注后，如果原本是互相关注（好友），则好友关系自动解除，触发 WebSocket `Unfollowed` 事件。
+
+**POST /api/v1/protected/user/me/block - 拉黑用户**
+```typescript
+interface BlockRequest {
+  user_id: number;
+  reason?: string; // Max 200 characters
+}
+type BlockResponse = ApiResponse  // 成功时仅返回 code: 0
+```
+
+失败错误码：
+- `10001` 缺少必填参数（user_id）
+- `10003` 参数值超出范围（reason 长度超限）
+- `10310` 用户不存在
+- `10411` 不能对自己执行此操作
+
+**POST /api/v1/protected/user/me/unblock - 解除拉黑用户**
+```typescript
+interface UnblockRequest {
+  user_id: number;
+}
+type UnblockResponse = ApiResponse  // 成功时仅返回 code: 0
+```
+
+失败错误码：
+- `10001` 缺少必填参数（user_id）
+- `10310` 用户不存在
+- `10411` 不能对自己执行此操作
+
+**POST /api/v1/protected/user/me/friends - 获取好友列表（互相关注）**
+```typescript
+interface MyFriendsRequest {
+  limit?: number;
+  cursor?: string;
+}
+type MyFriendsResponse = ApiResponse<PaginatedData<FriendListItem>>
+
+interface FriendListItem {
+  user: UserInfo;
+  is_online: boolean;
+  remark?: string;
+  followed_at: string;
+  followed_back_at: string;
+}
+```
+
+失败错误码：
+- 参数与分页：遵循“分页与游标语义”（`10000/10002/10003/10006/10007`）
+
+**POST /api/v1/protected/user/me/following - 获取关注列表**
+```typescript
+interface MyFollowingRequest {
+  limit?: number;
+  cursor?: string;
+}
+type MyFollowingResponse = ApiResponse<PaginatedData<FollowingItem>>
+
+interface FollowingItem {
+  user: UserInfo;
+  followed_at: string;
+  is_mutual: boolean;
+  is_online: boolean; // Snapshot of online status
+}
+```
+
+失败错误码：
+- 参数与分页：遵循“分页与游标语义”（`10000/10002/10003/10006/10007`）
+
+**POST /api/v1/protected/user/me/followers - 获取粉丝列表**
+```typescript
+interface MyFollowersRequest {
+  limit?: number;
+  cursor?: string;
+}
+type MyFollowersResponse = ApiResponse<PaginatedData<FollowerItem>>
+
+interface FollowerItem {
+  user: UserInfo;
+  followed_at: string;
+  is_following_back: boolean;
+  is_online: boolean; // Snapshot of online status
+}
+```
+
+失败错误码：
+- 参数与分页：遵循“分页与游标语义”（`10000/10002/10003/10006/10007`）
+
+**POST /api/v1/protected/user/me/blocked - 获取拉黑列表**
+```typescript
+interface MyBlockedRequest {
+  limit?: number;
+  cursor?: string;
+}
+type MyBlockedResponse = ApiResponse<PaginatedData<BlockedUserItem>>
+
+interface BlockedUserItem {
+  user: UserInfo;
+  blocked_at: string;
+  reason?: string;
+}
+```
+
+失败错误码：
+- 参数与分页：遵循“分页与游标语义”（`10000/10002/10003/10006/10007`）
+
+**POST /api/v1/protected/user/me/remark - 设置好友备注**
+```typescript
+interface SetRemarkRequest {
+  user_id: number;
+  remark?: string;
+}
+type SetRemarkResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（user_id）
+- `10003` 参数值超出范围（remark 长度超限）
+- `10310` 用户不存在
+- `10411` 不能对自己执行此操作
+- `10416` 不是好友关系（仅允许给好友设置备注）
+
+用户在线状态通过 WebSocket 订阅获取，不再提供批量查询 API。
+
+### 生活瞬间 API
+
+说明（/public 搜索的隐私语义）：
+- `POST /api/v1/public/moments/search_by_*` 仅返回“隐私等级为 `public` 的瞬间”，并且仅返回 `MomentPublicItem` 字段集合。
+- 非 `public` 的瞬间不得出现在 `/public` 搜索结果中（列表型接口按过滤处理，而非返回错误）。
+
+
+**POST /api/v1/public/moments/search_by_keyword - 按关键字搜索生活瞬间（全局）**
+
+排序语义（契约级）：
+- 默认按**相关性优先**排序（允许综合匹配度/互动热度等信号），同分时以 `created_at` 倒序作为稳定 tie-breaker（用于游标生成）。
+- 在同一 `cursor` 会话内必须保持排序基准一致；跨会话允许排序轻微波动。
+
+```typescript
+interface SearchMomentsByKeywordRequest extends SearchBaseParams {
+  kw: string;
+}
+type SearchMomentsByKeywordResponse = ApiResponse<PaginatedData<MomentPublicItem>>
+```
+
+**POST /api/v1/public/moments/search_by_tag - 按标签搜索生活瞬间（全局）**
+
+排序语义（契约级）：
+- 默认按**标签相关性/热度优先**排序，同分时以 `created_at` 倒序作为稳定 tie-breaker（用于游标生成）。
+- 在同一 `cursor` 会话内必须保持排序基准一致；跨会话允许排序轻微波动。
+
+```typescript
+interface SearchMomentsByTagRequest extends SearchBaseParams {
+  tag: string;
+}
+type SearchMomentsByTagResponse = ApiResponse<PaginatedData<MomentPublicItem>>
+```
+
+**POST /api/v1/public/moments/search_by_location - 按位置搜索生活瞬间（范围过滤）**
+
+排序语义（契约级）：
+- 默认按**距离优先**排序（由近到远），并使用稳定 tie-breaker（如热度/`created_at`）保证 `cursor` 可用。
+- 若提供 `kw`，允许在“距离相近”范围内体现关键词相关性，但不得破坏“距离优先”的主序。
+
+```typescript
+interface SearchMomentsByLocationRequest extends SearchBaseParams {
+  kw?: string;
+  radius: number;
+}
+type SearchMomentsByLocationResponse = ApiResponse<PaginatedData<MomentPublicItem>>
+```
+
+**POST /api/v1/public/moments/open_the_door - 获取瞬间详情**
+```typescript
+interface MomentOpenTheDoorRequest {
+  moment_id: string;
+}
+type MomentOpenTheDoorResponse = ApiResponse<MomentPublicItem>
+```
+
+说明（隐私与路径分区）：
+- `/public/` 仅允许访问“隐私等级为 `public` 的瞬间”；若瞬间为非 `public`（不可见），返回 `10330`（资源不存在/不可见）。
+
+**POST /api/v1/protected/moments/interaction_state - 获取我对该瞬间的互动状态**
+```typescript
+interface GetMomentInteractionStateRequest {
+  moment_id: string;
+}
+
+interface MomentInteractionStateData {
+  is_liked: boolean;
+  is_favorited: boolean;
+}
+
+type GetMomentInteractionStateResponse = ApiResponse<MomentInteractionStateData>
+```
+
+失败错误码：
+- `10001` 缺少必填参数（moment_id）
+- `10330` 生活瞬间不存在（或不可见）
+
+
+
+**POST /api/v1/public/user/moments - 获取指定用户生活瞬间历史**
+```typescript
+interface UserMomentsRequest {
+  user_id: number;
+  limit?: number;
+  cursor?: string;
+}
+type UserMomentsResponse = ApiResponse<PaginatedData<MomentPublicItem>>
+```
+
+补充（隐私与路径分区）：
+- `/public/` 版本仅保证 `moments_visible='public'` 时可访问。
+- 若 `moments_visible!='public'`，`/public/` 端点应返回 `10310`（用户不存在/不可见）。
+
+**POST /api/v1/protected/moments/create - 创建生活瞬间**
+```typescript
+interface CreateMomentRequest {
+  description: string; // Max length defined in system config (default 2000)
+  location: Location;
+  tags?: string[]; // Max 10 items
+  image_file_ids?: string[]; // Max 9 items
+}
+type CreateMomentResponse = ApiResponse<MomentItem>
+```
+
+失败错误码：
+- `10001` 缺少必填参数（description/location）
+- `10003` 参数值超出范围（description/tags 数量/长度超限等）
+- `10360` 文件/媒体不存在（image_file_ids 中包含不存在的文件）
+
+**POST /api/v1/protected/moments/update - 编辑生活瞬间**
+```typescript
+interface EditMomentRequest {
+  moment_id: string;
+  description?: string; // Max 2000 characters
+  image_file_ids?: string[]; // Max 9 items
+  tags?: string[]; // Max 10 items
+  location?: Location;
+}
+type EditMomentResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（moment_id）
+- `10003` 参数值超出范围
+- `10330` 生活瞬间不存在
+- `10360` 文件/媒体不存在
+- `10200` 权限不足（非本人瞬间不可编辑）
+
+**POST /api/v1/protected/moments/delete - 删除生活瞬间**
+```typescript
+interface DeleteMomentRequest {
+  moment_id: string;
+}
+type DeleteMomentResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（moment_id）
+- `10330` 生活瞬间不存在
+- `10200` 权限不足（非本人瞬间不可删除）
+
+**POST /api/v1/protected/moments/like - 点赞生活瞬间**
+```typescript
+interface LikeMomentRequest {
+  moment_id: string;
+}
+type LikeMomentResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（moment_id）
+- `10330` 生活瞬间不存在
+- `10402` 资源状态冲突（已点赞）
+
+**POST /api/v1/protected/moments/unlike - 取消点赞生活瞬间**
+```typescript
+interface UnlikeMomentRequest {
+  moment_id: string;
+}
+type UnlikeMomentResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（moment_id）
+- `10330` 生活瞬间不存在
+- `10402` 资源状态冲突（未点赞）
+
+**POST /api/v1/protected/moments/favorite - 收藏瞬间**
+```typescript
+interface FavoriteMomentRequest {
+  moment_id: string;
+}
+type FavoriteMomentResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（moment_id）
+- `10330` 生活瞬间不存在
+- `10402` 资源状态冲突（已收藏）
+
+**POST /api/v1/protected/moments/unfavorite - 取消收藏瞬间**
+```typescript
+interface UnfavoriteMomentRequest {
+  moment_id: string;
+}
+type UnfavoriteMomentResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（moment_id）
+- `10330` 生活瞬间不存在
+- `10402` 资源状态冲突（未收藏）
+
+#### 当前用户瞬间 API（/me/ 路径）
+
+**POST /api/v1/protected/moments/me - 我发布的瞬间列表**
+```typescript
+interface MyMomentsRequest {
+  limit?: number;
+  cursor?: string;
+}
+type MyMomentsResponse = ApiResponse<PaginatedData<MomentItem>>
+```
+
+说明：查看自己发布的瞬间历史，不需要距离信息。
+
+失败错误码：
+- 参数与分页：遵循"分页与游标语义"（`10000/10002/10003/10006/10007`）
+
+**POST /api/v1/protected/moments/me/favorites - 我的收藏列表**
+```typescript
+interface MyFavoritesRequest {
+  limit?: number;
+  cursor?: string;
+}
+type MyFavoritesResponse = ApiResponse<PaginatedData<MomentItem>>
+```
+
+说明：查看自己的收藏列表，不需要距离信息。
+
+失败错误码：
+- 参数与分页：遵循"分页与游标语义"（`10000/10002/10003/10006/10007`）
+
+**POST /api/v1/protected/moments/me/liked - 检查瞬间是否已点赞**
+```typescript
+interface CheckLikedRequest {
+  moment_id: string;
+}
+type CheckLikedResponse = ApiResponse<CheckLikedData>
+
+interface CheckLikedData {
+  is_liked: boolean;
+}
+```
+
+失败错误码：
+- `10001` 缺少必填参数（moment_id）
+- `10330` 生活瞬间不存在
+
+**POST /api/v1/protected/moments/me/favorited - 检查瞬间是否已收藏**
+```typescript
+interface CheckFavoritedRequest {
+  moment_id: string;
+}
+type CheckFavoritedResponse = ApiResponse<CheckFavoritedData>
+
+interface CheckFavoritedData {
+  is_favorited: boolean;
+}
+```
+
+失败错误码：
+- `10001` 缺少必填参数（moment_id）
+- `10330` 生活瞬间不存在
+
+**POST /api/v1/public/moments/likes - 获取生活瞬间点赞列表**
+```typescript
+interface MomentLikesRequest {
+  moment_id: string;
+  limit?: number;
+  cursor?: string;
+}
+type MomentLikesResponse = ApiResponse<PaginatedData<MomentLikeItem>>
+
+interface MomentLikeItem {
+  user: UserInfo;
+  liked_at: string;
+}
+```
+
+说明（隐私与路径分区）：
+- 本接口仅用于“隐私等级为 `public` 的瞬间”。
+- 若目标瞬间为非 `public`（不可见），`/public/` 端点应返回 `10330`（资源不存在/不可见）。
+
+失败错误码：
+- 参数与分页：遵循“分页与游标语义”（`10000/10001/10002/10003/10006/10007`）
+- `10330` 生活瞬间不存在
+
+### 评论与点赞 API
+
+**POST /api/v1/protected/comments/create - 添加评论/回复**
+```typescript
+interface CreateCommentRequest {
+  moment_id: string;
+  content: string; // Max length defined in system config (default 500)
+  parent_id?: string;
+}
+type CreateCommentResponse = ApiResponse<CommentListItem>
+```
+
+失败错误码：
+- `10001` 缺少必填参数（moment_id/content）
+- `10003` 参数值超出范围（content 长度超限）
+- `10330` 生活瞬间不存在 / `10340` 父评论不存在
+- `10200` 权限不足（如不可评论/被限制）
+- `10500` 请求过于频繁
+
+**POST /api/v1/protected/comments/delete - 删除评论**
+```typescript
+interface DeleteCommentRequest {
+  comment_id: string;
+}
+type DeleteCommentResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（comment_id）
+- `10340` 评论不存在
+- `10200` 权限不足（非本人评论不可删除）
+
+**POST /api/v1/public/comments - 获取评论列表**
+```typescript
+interface CommentsRequest {
+  moment_id: string;
+  limit?: number;
+  cursor?: string;
+}
+type CommentsResponse = ApiResponse<PaginatedData<CommentListItem>>
+
+排序语义（契约级）：
+- 评论列表默认按 `created_at` **时间倒序**（最新在前）。
+- 同一 `cursor` 会话内必须保持排序基准一致；跨会话允许轻微波动（弱一致）。
+- 若存在置顶/折叠等产品行为，必须由服务端在同一排序规则下给出稳定表现（例如置顶仅影响首屏且不破坏 `cursor` 可用性）。
+```
+
+说明（隐私与路径分区）：
+- 本接口仅用于“隐私等级为 `public` 的瞬间”。
+- 若目标瞬间为非 `public`（不可见），`/public/` 端点应返回 `10330`（资源不存在/不可见）。
+
+说明：
+- 本接口只返回"顶层评论"（必须省略 `parent_id`）
+- 子评论通过 `POST /api/v1/public/comments/replies` 按需分页加载
+
+失败错误码：
+- 参数与分页：遵循“分页与游标语义”（`10000/10001/10002/10003/10006/10007`）
+- `10330` 生活瞬间不存在
+
+**POST /api/v1/public/comments/replies - 获取子评论列表**
+```typescript
+interface CommentRepliesRequest {
+  comment_id: string;
+  limit?: number;
+  cursor?: string;
+}
+type CommentRepliesResponse = ApiResponse<PaginatedData<CommentListItem>>
+
+排序语义（契约级）：
+- 回复列表默认按 `created_at` **时间正序**（最早在前，便于对话阅读）；若产品需要“最新回复在前”，必须在此处明确并与 `cursor` 生成保持一致。
+- 同一 `cursor` 会话内必须保持排序基准一致；跨会话允许轻微波动（弱一致）。
+```
+
+说明（隐私与路径分区）：
+- 子评论的可见性继承父评论/所属瞬间；当父评论存在但不可见时，`/public/` 端点应返回 `10340`（父评论不存在/不可见）。
+
+失败错误码：
+- 参数与分页：遵循“分页与游标语义”（`10000/10001/10002/10003/10006/10007`）
+- `10340` 父评论不存在
+
+**POST /api/v1/protected/comments/like - 点赞评论**
+```typescript
+interface LikeCommentRequest {
+  comment_id: string;
+}
+type LikeCommentResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（comment_id）
+- `10340` 评论不存在
+- `10402` 资源状态冲突（已点赞）
+
+**POST /api/v1/protected/comments/unlike - 取消点赞评论**
+```typescript
+interface UnlikeCommentRequest {
+  comment_id: string;
+}
+type UnlikeCommentResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（comment_id）
+- `10340` 评论不存在
+- `10402` 资源状态冲突（未点赞）
+
+**POST /api/v1/public/comments/likes - 获取评论点赞列表**
+```typescript
+interface CommentLikesRequest {
+  comment_id: string;
+  limit?: number;
+  cursor?: string;
+}
+type CommentLikesResponse = ApiResponse<PaginatedData<CommentLikeItem>>
+
+排序语义（契约级）：
+- 点赞列表默认按 `liked_at` **时间倒序**（最近点赞在前）。
+- 同一 `cursor` 会话内必须保持排序基准一致；跨会话允许轻微波动（弱一致）。
+
+interface CommentLikeItem {
+  user: UserInfo;
+  liked_at: string;
+}
+```
+
+说明（隐私与路径分区）：
+- 评论点赞列表的可见性继承评论/所属瞬间；当评论存在但不可见时，`/public/` 端点应返回 `10340`（评论不存在/不可见）。
+
+失败错误码：
+- 参数与分页：遵循“分页与游标语义”（`10000/10001/10002/10003/10006/10007`）
+- `10340` 评论不存在
+
+### 私聊管理 API
+
+私聊权限和陌生人消息限制规则详见"隐私控制机制"章节。
+
+
+**POST /api/v1/protected/private_chats/me - 获取私聊列表**
+
+排序语义（契约级）：
+- 私聊列表默认按**最近活跃时间**倒序（最新会话在前）。最近活跃时间以服务端视角定义（例如最后一条有效消息/系统事件时间）。
+- 若会话被删除/隐藏（仅影响当前用户视角），列表顺序与分页仍必须可预测且 `cursor` 可用。
+- 同一 `cursor` 会话内必须保持排序基准一致；跨会话允许轻微波动（弱一致）。
+
+```typescript
+interface MyPrivateChatsRequest {
+  limit?: number;
+  cursor?: string;
+}
+type MyPrivateChatsResponse = ApiResponse<PaginatedData<PrivateChatListItem>>
+```
+
+**POST /api/v1/protected/private_chats/open_the_door - 获取私聊详情**
+
+**简化设计**：
+- **唯一寻址**：使用 `target_user_id` 获取与指定用户的会话详情。
+- **明确语义**：若会话存在，返回完整详情；若会话不存在，返回错误码 `10350`（客户端应据此渲染"新会话"空视图）。
+- **可选消息预加载**：支持一次请求获取会话详情和最近消息，减少往返次数。
+
+```typescript
+interface PrivateChatOpenTheDoorRequest {
+  target_user_id: number;
+  recent_messages_limit?: number; // 可选：返回最近 N 条消息（默认 20，最大 50）
+}
+type PrivateChatOpenTheDoorResponse = ApiResponse<PrivateChatDetailData>
+
+interface PrivateChatDetailData {
+  other_user: UserInfo;
+  message_limit?: MessageLimit;
+  unread_count: number;
+  is_muted: boolean;
+  is_pinned: boolean;
+  last_activity_at: string;
+  created_at: string;
+  
+  // 预检标志：当前用户是否允许向对方发送消息（综合隐私设置、黑名单等因素）
+  // UI 应据此禁用输入框或显示提示，避免发送失败带来的糟糕体验
+  can_message: boolean;
+  
+  // 最近消息（默认返回最近 20 条）
+  recent_messages: {
+    items: PrivateMessageItem[];  // 按 sent_at 倒序（最新在前），第一条即为最后一条消息
+    has_more: boolean;            // 是否有更多历史消息
+    next_cursor?: string;         // 用于加载更多历史消息的游标
+  };
+}
+
+interface MessageLimit {
+  remaining: number;
+  total: number;
+  is_unlocked: boolean;
+}
+```
+
+**使用场景**：
+```typescript
+// 场景 1: 打开会话（默认返回最近 20 条消息）
+POST /api/v1/protected/private_chats/open_the_door
+{ target_user_id: 456 }
+// 一次请求完成，用户立即看到会话详情和最近 20 条消息
+
+// 场景 2: 自定义消息数量
+POST /api/v1/protected/private_chats/open_the_door
+{ target_user_id: 456, recent_messages_limit: 50 }
+// 返回最近 50 条消息
+
+// 场景 3: 需要更多历史消息
+POST /api/v1/protected/private_messages/history
+{ target_user_id: 456, cursor: "xxx", limit: 50 }
+// 使用 open_the_door 返回的 next_cursor 继续加载更早的消息
+```
+
+**补充信息获取**：客户端可按需调用以下 API 获取对方用户的关系/状态信息：
+- 用户关系：`POST /api/v1/protected/user/relationship`（`{ user_id: other_user.user_id }`）
+- 用户在线状态：通过 `POST /api/v1/public/user/open_the_door` 获取公开可见字段；关系等交互态信息通过 `POST /api/v1/protected/user/relationship` 获取。
+
+**POST /api/v1/protected/private_chats/update_settings - 更新私聊设置**
+```typescript
+interface UpdatePrivateChatSettingsRequest {
+  target_user_id: number;
+  is_muted?: boolean;
+  is_pinned?: boolean;
+}
+type UpdatePrivateChatSettingsResponse = ApiResponse<PrivateChatDetailData>
+```
+
+**POST /api/v1/protected/private_chats/delete - 删除私聊**
+```typescript
+interface DeletePrivateChatRequest {
+  target_user_id: number;
+}
+type DeletePrivateChatResponse = ApiResponse
+```
+
+// 删除语义：
+// - 隐藏/移除该私聊会话入口
+// - 清空当前用户视角下的该会话历史消息（delete_at 机制）
+// - 不影响对方视角与对方历史数据
+// - 若再次发起私聊，将创建一个新的空白会话（看不到删除前的历史）
+
+### 群组管理 API
+
+说明（/public 搜索的隐私语义）：
+- `POST /api/v1/public/group_chats/search_by_*` 仅返回“隐私等级为 `public` 且 `is_searchable=true` 的群组”，并且仅返回 `GroupPublicItem` 字段集合。
+- 不可公开发现/不可见的群组不得出现在 `/public` 搜索结果中（列表型接口按过滤处理，而非返回错误）。
+
+**POST /api/v1/public/group_chats/search_by_keyword - 按关键字搜索群组（全局）**
+
+排序语义（契约级）：
+- 默认按**相关性优先**排序（允许综合匹配度/活跃度等信号），同分时以**成员数/最近活跃/最近创建时间**做稳定 tie-breaker（用于游标生成）。
+- 在同一 `cursor` 会话内必须保持排序基准一致；跨会话允许排序轻微波动。
+
+```typescript
+interface SearchGroupsByKeywordRequest extends SearchBaseParams {
+  kw: string;
+}
+type SearchGroupsByKeywordResponse = ApiResponse<PaginatedData<GroupPublicItem>>
+```
+
+**POST /api/v1/public/group_chats/search_by_tag - 按标签搜索群组（全局）**
+
+排序语义（契约级）：
+- 默认按**标签相关性/热度优先**排序，同分时以**成员数/最近活跃/最近创建时间**做稳定 tie-breaker（用于游标生成）。
+- 在同一 `cursor` 会话内必须保持排序基准一致；跨会话允许排序轻微波动。
+
+```typescript
+interface SearchGroupsByTagRequest extends SearchBaseParams {
+  tag: string;
+}
+type SearchGroupsByTagResponse = ApiResponse<PaginatedData<GroupPublicItem>>
+```
+
+**POST /api/v1/public/group_chats/search_by_location - 按位置搜索群组（范围过滤）**
+
+排序语义（契约级）：
+- 默认按**距离优先**排序（由近到远），并使用稳定 tie-breaker（如成员数/活跃度/创建时间）保证 `cursor` 可用。
+- 若提供 `kw`，允许在“距离相近”范围内体现关键词相关性，但不得破坏“距离优先”的主序。
+- 在同一 `cursor` 会话内必须保持排序基准一致；跨会话允许排序轻微波动。
+
+```typescript
+interface SearchGroupsByLocationRequest extends SearchBaseParams {
+  kw?: string;
+  radius: number;
+}
+type SearchGroupsByLocationResponse = ApiResponse<PaginatedData<GroupPublicItem>>
+```
+
+**POST /api/v1/public/group_chats/open_the_door - 获取群组详情**
+```typescript
+interface GroupOpenTheDoorRequest {
+  group_chat_id: string;
+}
+// /public 端点必须身份无关：不返回 my_state/unread/is_muted/is_pinned 等当前用户上下文信息
+type GroupPublicDetailData = GroupPublicItem
+type GroupOpenTheDoorResponse = ApiResponse<GroupPublicDetailData>
+```
+
+说明（隐私与路径分区）：
+- `/public/` 仅允许访问“隐私等级为 `public` 的群组”；若群组为非 `public`（不可见），返回 `10320`（资源不存在/不可见）。
+
+**POST /api/v1/protected/group_chats/my_state - 获取我在该群内的状态**
+```typescript
+interface GetMyGroupStateRequest {
+  group_chat_id: string;
+}
+
+type GetMyGroupStateResponse = ApiResponse<GroupMyState>
+```
+
+失败错误码：
+- `10001` 缺少必填参数（group_chat_id）
+- `10320` 资源不存在（群组不存在）
+- `10416` 不是群组成员
+
+**POST /api/v1/public/group_chats/settings - 获取群组设置**
+```typescript
+interface GroupSettingsRequest {
+  group_chat_id: string;
+}
+type GroupSettingsResponse = ApiResponse<GroupSettingsData>
+
+interface GroupSettingsData {
+  group_chat_id: string;
+  settings: GroupSettings;
+  has_password: boolean;
+  created_at: string;
+}
+```
+
+说明（隐私与路径分区）：
+- `/public/` 仅允许访问“隐私等级为 `public` 的群组”。
+- 若群组为非 `public`（不可见），`/public/` 端点应返回 `10320`（资源不存在/不可见）。
+
+失败错误码：
+- `10001` 缺少必填参数（group_chat_id）
+- `10320` 资源不存在（群组不存在）
+
+**POST /api/v1/protected/group_chats/create - 创建群组**
+```typescript
+interface CreateGroupChatRequest {
+  name: string; // 1-64 characters
+  description?: string; // Max 500 characters
+  avatar_file_id?: string;
+  tags?: string[]; // Max 10 items
+  settings?: GroupSettingsInput;
+}
+type CreateGroupChatResponse = ApiResponse  // 成功时仅返回 code: 0，完整数据通过 WebSocket GroupMemberJoined 推送（判断 user.user_id）
+```
+
+失败错误码：
+- `10001` 缺少必填参数（name）
+- `10003` 参数值超出范围（name/description/tags 长度超限）
+- `10360` 文件/媒体不存在（avatar_file_id 不存在）
+```typescript
+interface UpdateGroupChatRequest {
+  group_chat_id: string;
+  name?: string; // 1-64 characters
+  description?: string; // Max 500 characters
+  avatar_file_id?: string;
+  tags?: string[]; // Max 10 items
+  settings?: GroupSettingsInput;
+}
+type UpdateGroupChatResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（group_chat_id）
+- `10320` 资源不存在（群组不存在）
+- `10360` 文件/媒体不存在（avatar_file_id 不存在）
+- `10200` 权限不足（非群主/管理员不可编辑）
+
+**POST /api/v1/protected/group_chats/update_my_settings - 更新我的群组偏好**
+```typescript
+interface UpdateGroupMySettingsRequest {
+  group_chat_id: string;
+  is_muted?: boolean;
+  is_pinned?: boolean;
+}
+type UpdateGroupMySettingsResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（group_chat_id）
+- `10320` 资源不存在（群组不存在）
+- `10416` 不是群组成员
+
+**POST /api/v1/protected/group_chats/delete - 解散群组**
+```typescript
+interface DeleteGroupChatRequest {
+  group_chat_id: string;
+}
+type DeleteGroupChatResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（group_chat_id）
+- `10320` 资源不存在（群组不存在）
+- `10200` 权限不足（仅群主可解散）
+
+### 群组成员管理 API
+
+**POST /api/v1/protected/group_chats/members - 获取成员列表**
+
+排序语义（契约级）：
+- 默认排序：按 `joined_at` **时间正序**（最早加入在前），便于稳定展示与管理（踢人/设管理员等）时定位成员。
+- 过滤 `role`：
+  - 未提供 `role`：返回所有成员，仍按 `joined_at` 时间正序。
+  - 提供 `role`：仅返回该角色子集，仍按 `joined_at` 时间正序生成 `cursor`。
+- 稳定性与一致性：
+  - 同一 `cursor` 会话内必须保持排序基准一致；跨会话允许轻微波动（弱一致）。
+  - 成员在分页期间发生变更（加入/退出/被踢/被封禁）时，客户端可能看到重复或缺失项，必须按 `user.user_id` 去重合并。
+- 约束：禁止按客户端传入的排序字段排序（本接口不提供 `order_by/sort` 参数），避免 `cursor` 语义漂移。
+
+```typescript
+interface GroupMembersRequest {
+  group_chat_id: string;
+  role?: 'owner' | 'admin' | 'member';
+  limit?: number;
+  cursor?: string;
+}
+type GroupMembersResponse = ApiResponse<PaginatedData<GroupMemberItem>>
+
+interface GroupMemberItem {
+  user: UserInfo;
+  role: 'owner' | 'admin' | 'member';
+  joined_at: string;
+  muted_until?: string;
+  is_online: boolean; // Snapshot of online status
+}
+```
+
+失败错误码：
+- `10001` 缺少必填参数（group_chat_id）
+- `10003` 参数值超出范围（limit 等）
+- `10320` 资源不存在（群组不存在）
+
+幂等性（OPTIONAL）：
+- 纯查询端点，不要求 `Idempotency-Key`。
+
+**POST /api/v1/protected/group_chats/members/invite - 邀请成员**
+```typescript
+interface InviteMemberRequest {
+  group_chat_id: string;
+  user_id: number;
+  message?: string; // Max 200 characters
+}
+type InviteMemberResponse = ApiResponse<InviteMemberData>
+
+interface InviteMemberData {
+  invite_id: string;
+  expires_at: string;
+}
+```
+
+失败错误码：
+- `10001` 缺少必填参数（group_chat_id/user_id）
+- `10320` 资源不存在（群组不存在）
+- `10200` 权限不足（仅管理员/群主可邀请，或群组开启全员邀请）
+- `10415` 已在群组中
+- `10414` 群组已满员
+- `10211` 已被对方拉黑
+
+**POST /api/v1/protected/group_chats/members/join - 加入群组**
+
+幂等性（MUST）：
+- 客户端必须携带 `Idempotency-Key`（Header），并在超时/断线/重复点击导致的重试时复用同一个 key，避免重复入群或产生多条入群事件。
+- 服务端必须对相同 `(用户会话/用户) + endpoint + Idempotency-Key` 的重复请求进行幂等处理：
+  - 若首次已加入成功：回放成功响应（`code == 0`），不得产生重复成员记录；
+  - 若首次处理中：返回 22002（处理中）或回放成功（以服务端实现为准，但必须可预测且不产生重复副作用）。
+
+```typescript
+interface JoinGroupRequest {
+  group_chat_id: string;
+  password?: string;
+}
+
+type JoinGroupResponse = ApiResponse  // 成功时仅返回 code: 0，完整数据通过 WebSocket GroupMemberJoined 推送（判断 user.user_id）
+```
+
+失败错误码：
+- `10001` 缺少必填参数（group_chat_id）
+- `10320` 资源不存在（群组不存在）
+- `10212` 群组密码错误
+- `10414` 群组已满员
+- `10415` 已在群组中
+- `10410` 需要申请加入（非公开加入群组）
+- `22000` 幂等键冲突
+- `22002` 幂等操作正在处理中
+
+加入群组时，邀请入群不需要密码；直接加入需要密码（如群组设置了密码）。
+
+**POST /api/v1/protected/group_chats/members/apply - 申请加入**
+
+幂等性（SHOULD）：
+- 建议客户端携带 `Idempotency-Key`（Header），用于弱网重试与重复点击时避免产生重复申请。
+- 服务端应支持幂等语义：
+  - 若同一用户对同一群组存在 `pending` 申请：应返回相同的 `application_id`（回放）或返回业务冲突错误（如 10413/10402 类，具体错误码以 `@api_spec_errors.mdc` 为准），但不得产生多条 `pending` 申请记录。
+
+```typescript
+interface ApplyToGroupRequest {
+  group_chat_id: string;
+  message?: string; // Max 200 characters
+}
+type ApplyToGroupResponse = ApiResponse<ApplyToGroupData>
+
+interface ApplyToGroupData {
+  application_id: string;
+}
+```
+
+失败错误码：
+- `10001` 缺少必填参数（group_chat_id）
+- `10320` 资源不存在（群组不存在）
+- `10414` 群组已满员
+- `10415` 已在群组中
+- `10410` 已有等待中的申请
+
+**POST /api/v1/protected/group_chats/members/set_role - 设置成员角色**
+```typescript
+interface SetMemberRoleRequest {
+  group_chat_id: string;
+  user_id: number;
+  role: 'admin' | 'member';
+}
+type SetMemberRoleResponse = ApiResponse<GroupMemberItem>
+```
+
+失败错误码：
+- `10001` 缺少必填参数（group_chat_id/user_id/role）
+- `10320` 资源不存在（群组不存在）
+- `10416` 不是群组成员
+- `10200` 权限不足（仅群主可设置管理员）
+
+**POST /api/v1/protected/group_chats/members/mute - 禁言成员**
+```typescript
+interface MuteMemberRequest {
+  group_chat_id: string;
+  user_id: number;
+  duration_minutes: number;
+}
+type MuteMemberResponse = ApiResponse<GroupMemberItem>
+```
+
+失败错误码：
+- `10001` 缺少必填参数（group_chat_id/user_id/duration_minutes）
+- `10320` 资源不存在（群组不存在）
+- `10416` 不是群组成员
+- `10200` 权限不足（仅管理员/群主可禁言）
+
+**POST /api/v1/protected/group_chats/members/unmute - 取消禁言成员**
+```typescript
+interface UnmuteMemberRequest {
+  group_chat_id: string;
+  user_id: number;
+}
+type UnmuteMemberResponse = ApiResponse<GroupMemberItem>
+```
+
+失败错误码：
+- `10001` 缺少必填参数（group_chat_id/user_id）
+- `10320` 资源不存在（群组不存在）
+- `10416` 不是群组成员
+- `10200` 权限不足（仅管理员/群主可操作）
+
+**POST /api/v1/protected/group_chats/members/ban - 封禁成员**
+```typescript
+interface BanMemberRequest {
+  group_chat_id: string;
+  user_id: number;
+  reason?: string;
+}
+type BanMemberResponse = ApiResponse<BannedMemberItem>
+```
+
+失败错误码：
+- `10001` 缺少必填参数（group_chat_id/user_id）
+- `10320` 资源不存在（群组不存在）
+- `10416` 不是群组成员
+- `10200` 权限不足（仅管理员/群主可封禁）
+
+封禁后成员将被移出群组且无法再次加入。
+
+**POST /api/v1/protected/group_chats/members/unban - 解除封禁成员**
+```typescript
+interface UnbanMemberRequest {
+  group_chat_id: string;
+  user_id: number;
+}
+type UnbanMemberResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（group_chat_id/user_id）
+- `10320` 资源不存在（群组不存在）
+- `10200` 权限不足（仅管理员/群主可解封）
+
+**POST /api/v1/protected/group_chats/members/banned - 获取封禁列表**
+
+排序语义（契约级）：
+- 默认排序：按 `banned_at` **时间倒序**（最近封禁在前），便于管理端快速处理近期封禁。
+- 稳定性与一致性：
+  - 同一 `cursor` 会话内必须保持排序基准一致；跨会话允许轻微波动（弱一致）。
+  - 在分页期间若发生封禁/解封，客户端可能看到重复或缺失项，必须按 `user.user_id` 去重合并。
+- 约束：本接口不提供自定义排序；`cursor` 必须与 `group_chat_id` 绑定，禁止跨群复用。
+
+```typescript
+interface BannedMembersRequest {
+  group_chat_id: string;
+  limit?: number;
+  cursor?: string;
+}
+type BannedMembersResponse = ApiResponse<PaginatedData<BannedMemberItem>>
+
+interface BannedMemberItem {
+  user: UserInfo;
+  reason?: string;
+  banned_at: string;
+  banned_by?: UserInfo; // 操作管理员
+}
+```
+
+失败错误码：
+- `10001` 缺少必填参数（group_chat_id）
+- `10003` 参数值超出范围（limit 等）
+- `10320` 资源不存在（群组不存在）
+- `10200` 权限不足（仅管理员/群主可查看）
+
+**POST /api/v1/protected/group_chats/members/remove_member - 移除成员**
+```typescript
+interface RemoveMemberRequest {
+  group_chat_id: string;
+  user_id: number;
+}
+type RemoveMemberResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（group_chat_id/user_id）
+- `10320` 资源不存在（群组不存在）
+- `10416` 不是群组成员
+- `10200` 权限不足（仅管理员/群主可移除成员）
+
+**POST /api/v1/protected/group_chats/applications - 获取群组申请列表**
+
+排序语义（契约级）：
+- 默认按 `created_at` **时间倒序**（最新申请在前），便于优先处理近期申请。
+- `status` 过滤仅改变集合，不改变排序基准；`cursor` 必须与 `(group_chat_id, status)` 绑定，禁止跨条件复用。
+- 弱一致：审批发生时可能出现重复/缺失；客户端必须按 `application_id` 去重合并。
+
+幂等性（OPTIONAL）：
+- 纯查询端点，不要求 `Idempotency-Key`。
+
+```typescript
+interface GroupApplicationsRequest {
+  group_chat_id: string;
+  status?: 'pending' | 'accepted' | 'rejected' | 'all';
+  limit?: number;
+  cursor?: string;
+}
+type GroupApplicationsResponse = ApiResponse<PaginatedData<GroupApplicationItem>>
+
+interface GroupApplicationItem {
+  application_id: string;
+  applicant: UserInfo;
+  message?: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  created_at: string;
+  handled_at?: string;
+  handled_by?: UserInfo; // 仅 status != pending 时存在
+}
+```
+
+失败错误码：
+- `10001` 缺少必填参数（group_chat_id）
+- `10003` 参数值超出范围（limit 等）
+- `10320` 资源不存在（群组不存在）
+- `10200` 权限不足（仅管理员/群主可查看）
+
+**POST /api/v1/protected/group_chats/applications/approve - 审批群组申请**
+
+幂等性（MUST）：
+- 客户端必须携带 `Idempotency-Key`（Header），并在超时/断线重试时复用同一个 key，避免重复审批导致重复入群或状态错乱。
+- 服务端必须幂等处理：
+  - 若该 `application_id` 已被批准：回放成功响应（`code == 0`），不得重复产生成员记录；
+  - 若该 `application_id` 已被拒绝：返回“状态冲突”类业务错误（例如 10402），不得将其从 rejected 反转为 accepted（具体错误码以 `@api_spec_errors.mdc` 为准）。
+
+```typescript
+interface ApproveGroupApplicationRequest {
+  application_id: string;
+}
+type ApproveGroupApplicationResponse = ApiResponse<GroupApplicationItem>
+```
+
+失败错误码：
+- `10001` 缺少必填参数（application_id）
+- `10300` 资源不存在（申请不存在）
+- `10200` 权限不足（仅管理员/群主可操作）
+- `10402` 资源状态冲突（申请已处理）
+- `22000` 幂等键冲突
+
+**POST /api/v1/protected/group_chats/applications/reject - 拒绝群组申请**
+
+幂等性（MUST）：
+- 客户端必须携带 `Idempotency-Key`（Header），并在超时/断线重试时复用同一个 key，避免重复拒绝导致状态错乱或重复通知。
+- 服务端必须幂等处理：
+  - 若该 `application_id` 已被拒绝：回放成功响应（`code == 0`）；
+  - 若该 `application_id` 已被批准：返回“状态冲突”类业务错误（例如 10402），不得将其从 accepted 反转为 rejected（具体错误码以 `@api_spec_errors.mdc` 为准）。
+
+```typescript
+interface RejectGroupApplicationRequest {
+  application_id: string;
+  reason?: string;
+}
+type RejectGroupApplicationResponse = ApiResponse<GroupApplicationItem>
+```
+
+失败错误码：
+- `10001` 缺少必填参数（application_id）
+- `10300` 资源不存在（申请不存在）
+- `10200` 权限不足（仅管理员/群主可操作）
+- `10402` 资源状态冲突（申请已处理）
+- `22000` 幂等键冲突
+
+**POST /api/v1/protected/group_chats/transfer_ownership - 转让群主**
+```typescript
+interface TransferOwnershipRequest {
+  group_chat_id: string;
+  new_owner_id: number;
+}
+type TransferOwnershipResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（group_chat_id/new_owner_id）
+- `10320` 资源不存在（群组不存在）
+- `10416` 新群主不是群组成员
+- `10200` 权限不足（仅原群主可转让）
+
+#### 当前用户群组 API（/me/ 路径）
+
+**POST /api/v1/protected/group_chats/me - 获取我的群组**
+```typescript
+interface MyGroupChatsRequest {
+  limit?: number;
+  cursor?: string;
+}
+type MyGroupChatsResponse = ApiResponse<PaginatedData<JoinedGroupItem>>
+```
+
+失败错误码：
+- `10003` 参数值超出范围（limit 等）
+
+**POST /api/v1/protected/group_chats/me/applications/cancel - 取消群组申请**
+```typescript
+interface CancelApplicationRequest {
+  application_id: string;
+}
+type CancelApplicationResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（application_id）
+- `10300` 资源不存在（申请不存在）
+- `10200` 权限不足（仅本人可取消）
+- `10402` 资源状态冲突（申请已处理，无法取消）
+
+**POST /api/v1/protected/group_chats/me/invites - 获取我的群组邀请列表**
+
+排序语义（契约级）：
+- 默认按 `created_at` **时间倒序**（最新邀请在前）。
+- `status` 过滤仅改变集合，不改变排序基准；`cursor` 必须与 `(status)` 绑定，禁止跨条件复用。
+- 若 `expires_at` 存在：过期邀请应在列表中体现为不可操作状态（通过 `status` 或服务端拒绝 accept 并返回状态冲突类错误），但不得“悄悄消失”导致分页抖动。
+
+幂等性（OPTIONAL）：
+- 纯查询端点，不要求 `Idempotency-Key`。
+
+```typescript
+interface MyInvitesRequest {
+  status?: 'pending' | 'accepted' | 'rejected' | 'all';
+  limit?: number;
+  cursor?: string;
+}
+type MyInvitesResponse = ApiResponse<PaginatedData<GroupInviteItem>>
+
+interface GroupInviteItem {
+  invite_id: string;
+  group: GroupInfo;
+  inviter: UserInfo;
+  message?: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  created_at: string;
+  expires_at?: string;
+}
+```
+
+失败错误码：
+- `10003` 参数值超出范围（limit 等）
+
+**POST /api/v1/protected/group_chats/me/invites/accept - 接受群组邀请**
+
+幂等性（MUST）：
+- 客户端必须携带 `Idempotency-Key`（Header），并在超时/断线重试时复用同一个 key，避免重复接受导致重复入群或重复通知。
+- 服务端必须幂等处理：
+  - 若该 `invite_id` 已被接受：回放成功响应（`code == 0`），不得重复产生成员记录；
+  - 若该 `invite_id` 已被拒绝/过期：返回“状态冲突/资源状态”类业务错误（例如 10402），不得将其从 rejected/expired 反转为 accepted（具体错误码以 `@api_spec_errors.mdc` 为准）。
+
+```typescript
+interface AcceptInviteRequest {
+  invite_id: string;
+}
+type AcceptInviteResponse = ApiResponse  // 成功时仅返回 code: 0，完整数据通过 WebSocket GroupMemberJoined 推送（判断 user.user_id）
+```
+
+失败错误码：
+- `10001` 缺少必填参数（invite_id）
+- `10300` 资源不存在（邀请不存在）
+- `10402` 资源状态冲突（邀请已失效/已过期/已处理）
+- `10414` 群组已满员
+- `10415` 已在群组中
+- `22000` 幂等键冲突
+
+**POST /api/v1/protected/group_chats/me/invites/reject - 拒绝群组邀请**
+
+幂等性（MUST）：
+- 客户端必须携带 `Idempotency-Key`（Header），并在超时/断线重试时复用同一个 key，避免重复拒绝导致状态错乱或重复通知。
+- 服务端必须幂等处理：
+  - 若该 `invite_id` 已被拒绝：回放成功响应（`code == 0`）；
+  - 若该 `invite_id` 已被接受：返回“状态冲突/资源状态”类业务错误（例如 10402），不得将其从 accepted 反转为 rejected（具体错误码以 `@api_spec_errors.mdc` 为准）。
+
+```typescript
+interface RejectInviteRequest {
+  invite_id: string;
+}
+type RejectInviteResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（invite_id）
+- `10300` 资源不存在（邀请不存在）
+- `10402` 资源状态冲突（邀请已失效/已过期/已处理）
+- `22000` 幂等键冲突
+
+**POST /api/v1/protected/group_chats/me/leave - 退出群组**
+
+幂等性（SHOULD）：
+- 建议客户端携带 `Idempotency-Key`（Header），用于弱网重试与重复点击时避免重复退群引发状态漂移或重复通知。
+- 服务端应支持幂等语义：
+  - 若用户已不在群内：返回成功（`code == 0`）或返回“状态冲突/资源状态”类业务错误（例如 10416），但必须可预测且不得产生额外副作用（具体错误码以 `@api_spec_errors.mdc` 为准）。
+
+```typescript
+interface LeaveGroupRequest {
+  group_chat_id: string;
+}
+type LeaveGroupResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（group_chat_id）
+- `10320` 资源不存在（群组不存在）
+- `10416` 不是群组成员
+- `10410` 群主不可退出（需先转让群主）
+
+### 私聊消息 API
+
+消息类型：`text` 需要 `content` 字段，其他类型需要 `file_id` 字段。
+
+**发送语义**：
+- 本系统的消息最终态以 WebSocket 推送为准；客户端不得用 send API 的返回值"构造最终展示消息"
+- send API 仅用于：提交发送意图，成功时返回 `code: 0`；完整消息（包括 message_id）通过 WebSocket 推送获取
+
+**POST /api/v1/protected/private_messages/send - 发送私聊消息**
+
+**简化设计**：
+- 支持 **即发即创**：客户端无需预先调用 `create` 接口。
+- **唯一寻址**：使用 `target_user_id`（目标用户ID），明确表达"给谁发消息"。
+
+**安全性与权限**：
+- 必须严格校验接收方的隐私设置（`allow_private_chat`）：
+  - `everyone`：允许
+  - `friends`：仅好友（互相关注）允许
+  - `nobody`：拒绝所有（返回 `10210`）
+- 必须校验黑名单关系：若被对方拉黑，拒绝发送（返回 `10211`）。
+- 陌生人消息限制：若非好友且对方回复前，限制发送条数（返回 `10510`）。
+
+幂等性（MUST）：
+- 客户端必须携带 `Idempotency-Key`（Header）。
+
+```typescript
+interface SendPrivateMessageRequest {
+  target_user_id: number;  // 必填：目标用户ID
+
+  type: SendMessageType;
+  content?: string; // Max 5000 characters
+  file_id?: string;
+  reply_to_message_id?: string;
+}
+type SendPrivateMessageResponse = ApiResponse  // 成功时仅返回 code: 0，完整消息通过 WebSocket 推送
+```
+
+失败错误码：
+- `10001` 缺少必填参数（target_user_id）
+- `10350` 资源不存在（私聊不存在/用户不存在）
+- `10360` 文件/媒体不存在（file_id 不存在）
+- `10211` 已被对方拉黑
+- `10510` 消息数量已达上限（陌生人限制）
+- `22000` 幂等键冲突
+- `22002` 幂等操作正在处理中
+
+**媒体字段语义**：
+- `file_id` 来自"文件与媒体上传 API"，是服务端可识别的媒体引用
+- `media_url/thumbnail_url/...` 由服务端生成并在 history/WebSocket 推送中提供；客户端不得拼接或推断 URL
+
+**POST /api/v1/protected/private_messages/history - 获取私聊消息历史**
+
+**简化设计**：
+- **寻址方式**：统一使用 `target_user_id`，明确表达"获取与谁的历史消息"。
+
+排序语义（契约级）：
+- 默认按 `sent_at` **时间倒序**（最新在前），用于聊天页“从最新向上翻历史”的加载方式。
+- 客户端如需正序渲染，应在本地按 `sent_at` 正序展示，但分页请求仍以服务端倒序与 `cursor` 为准。
+- 编辑/撤回不会改变 `sent_at`（消息在会话中的位置以 `sent_at` 为主），但会更新 `edited_at/is_recalled/recalled_at` 等状态字段；客户端必须按 `message_id` 幂等合并更新。
+- 弱一致：并发收发/撤回/编辑可能导致短时间内重复或缺失；客户端必须按 `message_id` 去重。
+
+```typescript
+interface PrivateMessagesHistoryRequest {
+  target_user_id: number; // 必填：目标用户ID
+  limit?: number;
+  cursor?: string;
+}
+type PrivateMessagesHistoryResponse = ApiResponse<PaginatedData<PrivateMessageItem>>
+
+失败错误码：
+- `10001` 缺少必填参数（target_user_id）
+- `10003` 参数值超出范围（limit 等）
+- `10350` 资源不存在（私聊不存在）
+
+**POST /api/v1/protected/private_messages/update - 编辑私聊消息**
+```typescript
+interface UpdatePrivateMessageRequest {
+  message_id: string;
+  content: string; // Max 5000 characters
+}
+type UpdatePrivateMessageResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（message_id/content）
+- `10350` 资源不存在（消息不存在）
+- `10200` 权限不足（非本人消息/已撤回/不可编辑）
+- `10417` 消息已被撤回
+- `10418` 操作时间窗口已过期
+
+编辑语义：
+- 仅允许编辑自己发送的消息
+- 最终展示以 WebSocket 推送的更新事件为准
+
+**POST /api/v1/protected/private_messages/recall - 撤回私聊消息**
+```typescript
+interface RecallPrivateMessageRequest {
+  message_id: string;
+}
+type RecallPrivateMessageResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（message_id）
+- `10350` 资源不存在（消息不存在）
+- `10200` 权限不足（非本人消息）
+- `10417` 消息已被撤回
+- `10418` 操作时间窗口已过期
+
+发送者只能撤回 2 分钟内的消息。
+
+**POST /api/v1/protected/private_messages/delete - 删除私聊消息**
+```typescript
+interface DeletePrivateMessageRequest {
+  message_id: string;
+}
+type DeletePrivateMessageResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（message_id）
+- `10350` 资源不存在（消息不存在）
+- `10200` 权限不足（非本人会话中的消息）
+
+删除语义：
+- 仅影响当前用户视角（本地隐藏/移除入口），不影响对方视角。
+- 若需撤回发送给对方的消息，请使用 `recall` 接口。
+
+**POST /api/v1/protected/private_messages/mark_as_read - 标记私聊消息已读**
+```typescript
+interface MarkPrivateMessagesReadRequest {
+  target_user_id: number;     // 必填：目标用户ID（标记与该用户的会话已读）
+  up_to_message_id?: string; // inclusive
+}
+type MarkPrivateMessagesReadResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（target_user_id）
+- `10350` 资源不存在（私聊不存在）
+
+**POST /api/v1/protected/private_messages/add_reaction - 添加私聊消息反应**
+```typescript
+interface AddPrivateMessageReactionRequest {
+  message_id: string;
+  type: ReactionType;
+}
+type AddPrivateMessageReactionResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（message_id/type）
+- `10350` 资源不存在（消息不存在）
+- `10402` 资源状态冲突（已添加同类型反应）
+
+reaction 语义：
+- add_reaction 重复添加同一 reaction_type：返回成功（`code === 0`）
+- remove_reaction 删除不存在的 reaction_type：返回成功（`code === 0`）
+- 最终展示以 WebSocket 推送为准（列表/聚合可能延迟更新），客户端不得依赖接口返回即时构造最终反应聚合。
+
+**POST /api/v1/protected/private_messages/remove_reaction - 移除私聊消息反应**
+```typescript
+interface RemovePrivateMessageReactionRequest {
+  message_id: string;
+  type: ReactionType;
+}
+type RemovePrivateMessageReactionResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（message_id/type）
+- `10350` 资源不存在（消息不存在）
+- `10402` 资源状态冲突（未添加该反应）
+
+**POST /api/v1/protected/private_messages/reactions - 获取私聊消息反应列表**
+```typescript
+interface PrivateMessageReactionsRequest {
+  message_id: string;
+  type?: ReactionType;
+  limit?: number;
+  cursor?: string;
+}
+type PrivateMessageReactionsResponse = ApiResponse<PaginatedData<MessageReactionItem>>
+```
+
+失败错误码：
+- `10001` 缺少必填参数（message_id）
+- `10003` 参数值超出范围（limit 等）
+- `10350` 资源不存在（消息不存在）
+
+### 群聊消息 API
+
+**发送语义**：
+- 本系统的消息最终态以 WebSocket 推送为准；客户端不得用 send API 的返回值"构造最终展示消息"
+- send API 仅用于：提交发送意图，成功时返回 `code: 0`；完整消息（包括 message_id）通过 WebSocket 推送获取
+
+**POST /api/v1/protected/group_messages/send - 发送群聊消息**
+
+幂等性（MUST）：
+- 客户端必须携带 `Idempotency-Key`（Header），并在超时/断线重试时复用同一个 key，避免重复发送造成的重复消息。
+- 服务端必须对相同 `(用户会话/用户) + endpoint + Idempotency-Key` 的重复请求进行幂等处理：不得产生重复消息；允许回放首次成功响应。
+
+```typescript
+interface SendGroupMessageRequest {
+  group_chat_id: string;
+  type: SendMessageType;
+  content?: string; // Max 5000 characters
+  file_id?: string;
+  reply_to_message_id?: string;
+  mentions?: number[];
+}
+type SendGroupMessageResponse = ApiResponse  // 成功时仅返回 code: 0，完整消息通过 WebSocket 推送
+```
+
+失败错误码：
+- `10001` 缺少必填参数（group_chat_id/type）
+- `10320` 资源不存在（群组不存在）
+- `10360` 文件/媒体不存在（file_id 不存在）
+- `10416` 不是群组成员
+- `10412` 群组全员禁言或个人禁言
+- `22000` 幂等键冲突
+- `22002` 幂等操作正在处理中
+
+**媒体字段语义**：
+- `file_id` 来自"文件与媒体上传 API"，是服务端可识别的媒体引用
+- `media_url/thumbnail_url/...` 由服务端生成并在 history/WebSocket 推送中提供；客户端不得拼接或推断 URL
+```
+
+**POST /api/v1/protected/group_messages/history - 获取群聊消息历史**
+
+排序语义（契约级）：
+- 默认按 `sent_at` **时间倒序**（最新在前），用于聊天页“从最新向上翻历史”的加载方式。
+- `include_system` 仅影响“是否包含系统消息类型”，不应改变非系统消息的相对顺序；系统消息如参与排序，亦必须遵循同一 `sent_at` 基准与稳定 tie-breaker。
+- 编辑/撤回不会改变 `sent_at`（消息在会话中的位置以 `sent_at` 为主），但会更新 `edited_at/is_recalled/recalled_*` 等状态字段；客户端必须按 `message_id` 幂等合并更新。
+- 弱一致：并发收发/撤回/编辑可能导致短时间内重复或缺失；客户端必须按 `message_id` 去重。
+
+```typescript
+interface GroupMessagesHistoryRequest {
+  group_chat_id: string;
+  limit?: number;
+  cursor?: string;
+  include_system?: boolean;
+}
+type GroupMessagesHistoryResponse = ApiResponse<PaginatedData<GroupMessageItem>>
+
+失败错误码：
+- `10001` 缺少必填参数（group_chat_id）
+- `10003` 参数值超出范围（limit 等）
+- `10320` 资源不存在（群组不存在）
+- `10416` 不是群组成员
+
+**POST /api/v1/protected/group_messages/update - 编辑群聊消息**
+```typescript
+interface UpdateGroupMessageRequest {
+  message_id: string;
+  content: string; // Max 5000 characters
+}
+type UpdateGroupMessageResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（message_id/content）
+- `10350` 资源不存在（消息不存在）
+- `10200` 权限不足（非本人消息/已撤回/不可编辑）
+- `10417` 消息已被撤回
+- `10418` 操作时间窗口已过期
+
+编辑语义：
+- 仅允许编辑自己发送的消息
+- 最终展示以 WebSocket 推送的更新事件为准
+
+**POST /api/v1/protected/group_messages/recall - 撤回群聊消息**
+```typescript
+interface RecallGroupMessageRequest {
+  message_id: string;
+}
+type RecallGroupMessageResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（message_id）
+- `10350` 资源不存在（消息不存在）
+- `10200` 权限不足（非本人消息且非管理员）
+- `10417` 消息已被撤回
+- `10418` 操作时间窗口已过期（针对发送者）
+
+发送者可撤回 2 分钟内消息，管理员/群主可撤回任何消息（无时间限制）。
+
+**POST /api/v1/protected/group_messages/delete - 删除群聊消息**
+```typescript
+interface DeleteGroupMessageRequest {
+  message_id: string;
+  for_everyone?: boolean;
+}
+type DeleteGroupMessageResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（message_id）
+- `10350` 资源不存在（消息不存在）
+- `10200` 权限不足（for_everyone=true 但无权限）
+
+删除语义：
+- `for_everyone=true`：等价于"对所有人撤回/移除展示"（需有权限控制：发送者时间窗内可用；管理员/群主可用）
+- `for_everyone` 省略或为 false：仅影响当前用户视角（本地隐藏/移除入口），不影响他人视角
+
+**POST /api/v1/protected/group_messages/mark_as_read - 标记群聊消息已读**
+```typescript
+interface MarkGroupMessagesReadRequest {
+  group_chat_id: string;
+  up_to_message_id?: string; // inclusive
+}
+type MarkGroupMessagesReadResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（group_chat_id）
+- `10320` 资源不存在（群组不存在）
+- `10416` 不是群组成员
+
+**POST /api/v1/protected/group_messages/read_status - 获取消息已读状态**
+```typescript
+interface MessageReadStatusRequest {
+  message_id: string;
+  limit?: number;
+  cursor?: string;
+}
+type MessageReadStatusResponse = ApiResponse<PaginatedData<MessageReadItem>>
+
+interface MessageReadItem {
+  user: UserInfo;
+  read_at: string;
+}
+```
+
+失败错误码：
+- `10001` 缺少必填参数（message_id）
+- `10003` 参数值超出范围（limit 等）
+- `10350` 资源不存在（消息不存在）
+- `10416` 不是群组成员
+
+**POST /api/v1/protected/group_messages/add_reaction - 添加群聊消息反应**
+```typescript
+interface AddGroupMessageReactionRequest {
+  message_id: string;
+  type: ReactionType;
+}
+type AddGroupMessageReactionResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（message_id/type）
+- `10350` 资源不存在（消息不存在）
+- `10416` 不是群组成员
+- `10402` 资源状态冲突（已添加同类型反应）
+
+reaction 语义：
+- add_reaction 重复添加同一 reaction_type：返回成功（`code === 0`）
+- remove_reaction 删除不存在的 reaction_type：返回成功（`code === 0`）
+- 最终展示以 WebSocket 推送为准（列表/聚合可能延迟更新），客户端不得依赖接口返回即时构造最终反应聚合。
+
+**POST /api/v1/protected/group_messages/remove_reaction - 移除群聊消息反应**
+```typescript
+interface RemoveGroupMessageReactionRequest {
+  message_id: string;
+  type: ReactionType;
+}
+type RemoveGroupMessageReactionResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（message_id/type）
+- `10350` 资源不存在（消息不存在）
+- `10416` 不是群组成员
+- `10402` 资源状态冲突（未添加该反应）
+
+**POST /api/v1/protected/group_messages/reactions - 获取消息反应列表**
+```typescript
+interface GroupMessageReactionsRequest {
+  message_id: string;
+  type?: ReactionType;
+  limit?: number;
+  cursor?: string;
+}
+type GroupMessageReactionsResponse = ApiResponse<PaginatedData<MessageReactionItem>>
+
+interface MessageReactionItem {
+  user: UserInfo;
+  type: ReactionType;
+  created_at: string;
+}
+```
+
+失败错误码：
+- `10001` 缺少必填参数（message_id）
+- `10003` 参数值超出范围（limit 等）
+- `10350` 资源不存在（消息不存在）
+- `10416` 不是群组成员
+
+### 消息通用 API
+
+**POST /api/v1/protected/messages/mark_all_as_read - 标记所有消息已读**
+```typescript
+interface MarkAllMessagesReadRequest {}
+type MarkAllMessagesReadResponse = ApiResponse
+```
+
+
+消息搜索和未读汇总由客户端本地实现。
+
+### 地图渲染 API (智能聚合)
+
+**设计理念**：
+- **服务端智能决策**：客户端只负责“渲染”，不再手动决定“何时拉聚合/何时拉列表”。
+- **视口驱动 (Viewport-Driven)**：完全基于当前视口 (`bounds`) 和缩放级别 (`zoom`)，服务端根据算法（如网格聚合/K-Means）动态返回最适合当前视野的展示项。
+- **高德模式**：
+  - Low Zoom (远)：返回行政区/热门区域的聚合点 (`type: 'cluster'`, `label: '海淀区 500+'`)。
+  - Mid Zoom (中)：分裂为更小的聚合或展示头部热点 (`type: 'cluster'`, `preview_urls: [...]`)。
+  - High Zoom (近)：直接展示具体的 Poi (`type: 'user'/'moment'`, `entity: {...}`)。
+
+**POST /api/v1/public/map/render - 获取地图渲染数据**
+
+```typescript
+interface MapRenderPublicRequest {
+  viewport: MapViewport;
+  // 筛选维度
+  filter?: {
+    data_type?: 'user' | 'group' | 'moment' | 'all'; // 默认 all
+    time_range?: TimeRangeParams; // 仅看最近的瞬间
+  };
+}
+
+type MapRenderResponse = ApiResponse<MapRenderData>
+```
+
+说明（隐私与路径分区）：
+- `/public/map/render` 仅返回地图视野内“可公开展示”的实体（用户/群组/瞬间的 public 可见形态）；非 `public` 的实体必须被过滤掉。
+- `/public` 版本不做任何基于身份上下文的社交筛选；社交筛选（如 `only_friends`）仅在 `/protected/map/render` 下提供。
+
+**POST /api/v1/protected/map/render - 获取地图渲染数据（含社交筛选）**
+```typescript
+interface MapRenderProtectedRequest {
+  viewport: MapViewport;
+  filter?: {
+    data_type?: 'user' | 'group' | 'moment' | 'all';
+    only_friends?: boolean; // 仅看好友 (Map Social 模式)
+    time_range?: TimeRangeParams;
+  };
+}
+
+type MapRenderProtectedResponse = ApiResponse<MapRenderData>
+```
+
+```typescript
+interface MapRenderData {
+  items: MapRenderItem[]; // 混合列表：可能同时包含聚合点和独立点
+  
+  // 提示信息 (如：结果太多，提示用户放大)
+  toast_message?: string; 
+}
+```
+
+失败错误码：
+- `10001` 缺少必填参数 (viewport)
+- `10003` 参数值超出范围 (zoom 异常)
+
+### 举报审核 API
+
+**POST /api/v1/protected/reports/create - 创建举报**
+```typescript
+interface CreateReportRequest {
+  target_type: 'user' | 'moment' | 'comment' | 'message' | 'group';
+  target_id: string;
+
+  // reason 契约（强制，务实约束）：
+  // - 这是“举报原因”的用户输入/选择结果，属于业务内容字段（不是枚举型错误 reason）
+  // - 允许自由文本（例如用户手写或从客户端预设原因列表中选择后填入文本）
+  // - 格式：UTF-8 字符串；禁止仅空白；建议客户端 trim
+  // - 长度：1..200（建议）；超出必须返回 HTTP 200 + `code=10003`
+  reason: string;
+
+  // 可选补充描述（可为空；若提供同样应做基本长度校验）
+  description?: string;
+}
+type CreateReportResponse = ApiResponse<CreateReportData>
+
+interface CreateReportData {
+  report_id: string;
+}
+```
+
+失败错误码：
+- `10001` 缺少必填参数（target_type/target_id/reason）
+- `10003` 参数值超出范围（reason 长度超限）
+- `10300` 资源不存在（target_id 不存在）
+
+**POST /api/v1/protected/reports/me - 我的举报记录**
+```typescript
+interface MyReportsRequest {
+  limit?: number;
+  cursor?: string;
+}
+type MyReportsResponse = ApiResponse<PaginatedData<ReportItem>>
+
+interface ReportItem {
+  report_id: string;
+  target_type: 'user' | 'moment' | 'comment' | 'message' | 'group';
+  target_id: string;
+
+  // reason 契约：
+  // - 与 CreateReportRequest.reason 语义一致：用户提供的举报原因文本
+  // - 必返且为非空字符串（服务端保存并回显）
+  reason: string;
+
+  description?: string;
+  status: 'pending' | 'reviewing' | 'resolved' | 'dismissed';
+  created_at: string;
+  handled_at?: string;
+  
+  // 举报内容快照（便于管理员在内容被删后仍能审核）
+  target_snapshot?: {
+    content?: string;       // 文本内容 / 简介
+    media_urls?: string[];  // 图片/视频封面
+    owner_id?: string;      // 内容发布者ID
+  };
+}
+```
+
+失败错误码：
+- `10003` 参数值超出范围（limit 等）
+
+**POST /api/v1/admin/reports - 举报列表（管理员）**
+```typescript
+interface ReportsRequest {
+  status?: 'pending' | 'reviewing' | 'resolved' | 'dismissed';
+  target_type?: 'user' | 'moment' | 'comment' | 'message' | 'group';
+  limit?: number;
+  cursor?: string;
+}
+type ReportsResponse = ApiResponse<PaginatedData<ReportItem>>
+```
+
+失败错误码：
+- `10003` 参数值超出范围（limit 等）
+- `10204` 非管理员
+- `10205` 管理员权限不足（需要 `admin.reports.read`）
+
+**POST /api/v1/admin/reports/handle - 处理举报（管理员）**
+```typescript
+interface HandleReportRequest {
+  report_id: string;
+  action: 'resolve' | 'dismiss' | 'escalate';
+  note?: string;
+}
+type HandleReportResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（report_id/action）
+- `10204` 非管理员
+- `10205` 管理员权限不足（需要 `admin.reports.write`）
+- `10300` 资源不存在（report_id 不存在）
+
+### 通知中心 API
+
+**POST /api/v1/protected/notifications - 获取通知列表**
+
+> 聚合所有互动类通知（点赞、评论、关注等）。
+> 群组邀请/申请等强业务操作类通知，建议优先使用各业务模块的专用列表接口（如 `group_chats/me/invites`），此处仅作为“消息中心”的历史流水展示。
+
+```typescript
+interface GetNotificationsRequest {
+  limit?: number;
+  cursor?: string;
+  // 可选：按类型筛选
+  type?: 'like' | 'comment' | 'follow' | 'system' | 'mention';
+}
+
+type GetNotificationsResponse = ApiResponse<PaginatedData<NotificationItem>>
+
+interface NotificationItem {
+  notification_id: string;
+  type: 'moment_like' | 'moment_comment' | 'comment_reply' | 'new_follower' | 'mutual_follow' | 'system_announcement' | 'message_mention';
+  is_read: boolean;
+  created_at: string;
+  
+  // 触发者（如点赞人、评论人、关注者）
+  sender?: UserInfo;
+  
+  // 冗余摘要信息（用于列表展示，避免 N+1 查询）
+  title?: string;          // 系统通知标题 / 动作描述
+  content?: string;        // 评论内容 / 公告内容 / 摘要
+  
+  // 关联目标（用于跳转）
+  target_type?: 'moment' | 'comment' | 'user' | 'group' | 'web';
+  target_id?: string | number;  // 主资源ID (moment_id: string, comment_id: string, user_id: number, group_chat_id: string)
+  reference_id?: string;        // 上下文资源ID (moment_id, group_chat_id)
+
+  // 映射关系说明：
+  // - moment_like: target_id=moment_id(string), reference_id=null
+  // - moment_comment: target_id=comment_id(string), reference_id=moment_id
+  // - comment_reply: target_id=reply_id(string), reference_id=moment_id
+  // - new_follower: target_id=user_id(number), reference_id=null
+  // - mutual_follow: target_id=user_id(number), reference_id=null
+  // - group_invite: target_id=invite_id(string), reference_id=group_chat_id
+  // - system: target_id=announcement_id(string), reference_id=null
+  
+  // 目标预览（替代单一 string，支持富文本渲染）
+  target_text_preview?: string; // 目标文本摘要（如被评论的瞬间文字、原评论内容）
+  target_media_url?: string;    // 目标媒体预览（如瞬间封面图、视频封面）
+}
+```
+
+失败错误码：
+- `10003` 参数值超出范围（limit 等）
+
+**POST /api/v1/protected/notifications/unread_count - 获取未读通知计数**
+```typescript
+interface GetUnreadNotificationCountRequest {}
+
+type GetUnreadNotificationCountResponse = ApiResponse<UnreadNotificationCountData>
+
+interface UnreadNotificationCountData {
+  total: number;
+  breakdown?: {
+    like: number;
+    comment: number;
+    follow: number;
+    system: number;
+    mention: number;
+  };
+}
+```
+
+**POST /api/v1/protected/notifications/mark_read - 标记通知已读**
+```typescript
+interface MarkNotificationsReadRequest {
+  // 标记范围：
+  // - 提供 notification_ids：标记指定条目
+  // - 提供 type：标记指定类型的所有未读
+  // - 全空：标记所有未读
+  notification_ids?: string[];
+  type?: 'like' | 'comment' | 'follow' | 'system' | 'mention';
+}
+
+type MarkNotificationsReadResponse = ApiResponse
+```
+
+失败错误码：
+- `10003` 参数值超出范围（notification_ids 数量超限）
+
+### 通知订阅设置 API
+
+```typescript
+interface SubscriptionsData {
+  new_follower_enabled: boolean;
+  mutual_follow_enabled: boolean;
+  group_invite_enabled: boolean;
+  group_invite_response_enabled: boolean;
+  group_application_enabled: boolean;
+  group_application_response_enabled: boolean;
+  message_mention_enabled: boolean;
+  moment_like_enabled: boolean;
+  moment_comment_enabled: boolean;
+  comment_reply_enabled: boolean;
+  system_announcement_enabled: boolean;
+}
+```
+
+**POST /api/v1/protected/subscriptions/me - 获取订阅配置**
+```typescript
+interface MySubscriptionsRequest {}
+type MySubscriptionsResponse = ApiResponse<SubscriptionsData>
+```
+
+
+**POST /api/v1/protected/subscriptions/me/update - 更新订阅配置**
+```typescript
+interface UpdateSubscriptionsRequest {
+  new_follower_enabled?: boolean;
+  mutual_follow_enabled?: boolean;
+  group_invite_enabled?: boolean;
+  group_invite_response_enabled?: boolean;
+  group_application_enabled?: boolean;
+  group_application_response_enabled?: boolean;
+  message_mention_enabled?: boolean;
+  moment_like_enabled?: boolean;
+  moment_comment_enabled?: boolean;
+  comment_reply_enabled?: boolean;
+  system_announcement_enabled?: boolean;
+}
+type UpdateSubscriptionsResponse = ApiResponse
+```
+
+
+### 推送设备管理 API
+
+通知是实时推送机制：在线时通过 WebSocket 推送，离线时通过设备令牌推送。
+
+**POST /api/v1/protected/device_tokens/me/register - 注册设备推送Token**
+```typescript
+interface RegisterDeviceTokenRequest {
+  platform: 'ios' | 'android' | 'harmony' | 'web';
+  device_token: string;
+}
+type RegisterDeviceTokenResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（platform/device_token）
+
+**POST /api/v1/protected/device_tokens/me/unregister - 注销设备推送Token**
+```typescript
+interface UnregisterDeviceTokenRequest {
+  platform: 'ios' | 'android' | 'harmony' | 'web';
+  device_token: string;
+}
+type UnregisterDeviceTokenResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（platform/device_token）
+
+**POST /api/v1/protected/device_tokens/me - 获取设备推送Token列表**
+```typescript
+interface MyDeviceTokensRequest {
+  limit?: number;
+  cursor?: string;
+}
+type MyDeviceTokensResponse = ApiResponse<PaginatedData<DeviceTokenItem>>
+
+interface DeviceTokenItem {
+  device_token_id: string;
+  platform: 'ios' | 'android' | 'harmony' | 'web';
+  device_token: string;
+  created_at: string;
+}
+```
+
+失败错误码：
+- `10003` 参数值超出范围（limit 等）
+
+### 系统健康检查 API
+
+**POST /api/v1/public/system/health - 系统健康检查**
+```typescript
+interface SystemHealthRequest {}
+type SystemHealthResponse = ApiResponse<HealthCheckData>
+
+interface HealthCheckData {
+  status: 'healthy' | 'degraded' | 'unhealthy';
+  version: string;
+  timestamp: string;
+}
+```
+
+说明：系统健康检查属于“默认公开资源”，不涉及用户隐私等级/访问控制分支。
+
+
+### 文件与媒体上传 API
+
+**设计理念**：文件上传采用「先上传，后引用」的安全模式。
+
+**核心原则**：
+- **file_id 与 url 完全解耦**：`file_id` 是客户端标识符，`url` 是服务端内部存储路径，两者之间**没有任何可推导的关系**
+- **每次上传生成唯一 file_id**：即使上传相同文件，也会返回不同的 `file_id`（物理文件可能复用，但标识符独立）
+- **客户端无法判断文件是否已存在**：保护用户隐私，防止通过 file_id 推断文件内容
+
+**安全机制**：
+- 上传 API 返回 `file_id`（而非直接 URL），客户端将 `file_id` 传给业务 API
+- 后端验证：①`file_id` 存在 ②属于当前用户 ③分类匹配使用场景
+- URL 由后端内部解析，客户端无法伪造或篡改
+- **不提供 file_id → url 的公开转换 API**，防止恶意使用
+
+**请求与响应的字段区分**：
+
+| 场景 | 请求字段（客户端发送） | 响应字段（后端返回） |
+|------|----------------------|---------------------|
+| 用户头像 | `avatar_file_id` | `avatar_url` |
+| 群组头像 | `avatar_file_id` | `avatar_url` |
+| 生活瞬间图片 | `image_file_ids[]` | `images[]`（URL数组） |
+| 聊天媒体 | `file_id` | `media_url`、`thumbnail_url` 等 |
+
+**说明**：
+- 请求：客户端只能发送 `file_id`，后端验证后内部解析为 URL
+- 响应：后端返回解析后的 URL，客户端可直接用于显示
+
+**聊天消息发送流程**：
+1. 上传文件 → 获得 `file_id`
+2. 发送消息时只传 `file_id`
+3. 服务端将 `file_id` 转换为实际 `url` 存入消息表
+4. WebSocket 推送消息（包含 `media_url`）
+
+**上传分类与使用场景**：
+
+| 分类 | 用途 | 业务 API 字段 |
+|------|------|--------------|
+| `avatar` | 用户头像 | `update_profile.avatar_file_id` |
+| `group_avatar` | 群组头像 | `create_group / update_group.avatar_file_id` |
+| `moment_image` | 生活瞬间图片 | `create_moment.image_file_ids[]` |
+| `chat_image` | 聊天图片 | `send_message.file_id`（type: 'image'） |
+| `chat_video` | 聊天视频 | `send_message.file_id`（type: 'video'） |
+| `chat_audio` | 聊天语音 | `send_message.file_id`（type: 'audio'） |
+| `chat_file` | 聊天文件 | `send_message.file_id`（type: 'file'） |
+
+**使用流程**：
+1. `presign_upload` 获得上传地址
+2. 客户端直接上传文件
+3. `complete_upload` 获得 `file_id`
+4. 业务 API 传递 `file_id`
+
+### 文件与媒体上传 API (Presigned 模式)
+
+**设计理念**：采用 "Presigned URL" (预签名) 模式。
+- **高性能**：客户端直传云存储（S3/OSS），不占用应用服务器带宽。
+- **兼容性**：支持本地存储模式（Local Storage），通过后端代理接口模拟 S3 行为，无缝切换。
+- **安全性**：上传凭证短期有效，且绑定文件特征。
+
+**核心流程**：
+1. `presign_upload`：申请上传，获取 `upload_url`。
+2. 客户端 PUT 文件到 `upload_url`。
+3. `complete_upload`：通知服务端上传完成，生成业务 `file_id`。
+
+**POST /api/v1/protected/media/presign_upload - 申请上传预签名**
+
+```typescript
+interface PresignUploadRequest {
+  file_name: string;
+  file_size: number;
+  mime_type: string;
+  category: 'avatar' | 'group_avatar' | 'moment_image' | 'chat_image' | 'chat_video' | 'chat_audio' | 'chat_file';
+  md5?: string; // 可选：文件MD5校验
+}
+
+type PresignUploadResponse = ApiResponse<PresignUploadData>
+
+interface PresignUploadData {
+  upload_id: string;       // 临时会话ID
+  upload_url: string;      // 上传目标地址 (S3 Presigned URL)
+  headers: Record<string, string>; // 必须携带的请求头 (如 {"Content-Type": "..."})
+  expires_at: string;      // URL 过期时间
+}
+```
+
+失败错误码：
+- `10002` 参数格式错误（MIME 类型不匹配）
+- `10005` 请求体过大（超出系统配置限制）
+
+**[Client Side Action] 执行上传**
+- Method: `PUT`
+- URL: `upload_url`
+- Headers: `headers` from response
+- Body: File Binary Data
+
+**POST /api/v1/protected/media/complete_upload - 完成上传**
+
+```typescript
+interface CompleteUploadRequest {
+  upload_id: string;
+}
+
+type CompleteUploadResponse = ApiResponse<UploadMediaData>
+
+interface UploadMediaData {
+  file_id: string;         // 最终业务文件ID
+  thumbnail_url?: string;
+  file_size: number;
+  mime_type: string;
+  duration?: number;
+  width?: number;
+  height?: number;
+}
+```
+
+失败错误码：
+- `10360` 上传会话无效或已过期
+- `10402` 文件未上传或校验失败
+
+**分类限制**：
+
+| 分类 | 允许的MIME类型 | 最大大小 | 说明 |
+|------|---------------|---------|------|
+| `avatar` | image/jpeg, image/png, image/webp | 5MB | 用户头像，需支持裁剪/压缩 |
+| `group_avatar` | image/jpeg, image/png, image/webp | 5MB | 群组头像，需支持裁剪/压缩 |
+| `moment_image` | image/jpeg, image/png, image/webp, image/gif | 10MB | 生活瞬间图片，支持动图 |
+| `chat_image` | image/jpeg, image/png, image/webp, image/gif | 10MB | 聊天图片，支持动图 |
+| `chat_video` | video/mp4, video/quicktime | 100MB | 聊天视频，需转码/压缩 |
+| `chat_audio` | audio/mpeg, audio/aac, audio/ogg | 20MB | 聊天语音，需转码 |
+| `chat_file` | 任意类型 | 100MB | 聊天文件，通用文件类型 |
+
+**限制说明**：
+- 超出大小限制：返回 HTTP 200 + `code=10005`（请求体过大）
+- MIME 类型不匹配：返回 HTTP 200 + `code=10002`（参数格式错误）
+- 文件上传失败：返回 HTTP 200 + `code=10600`（服务器内部错误）或具体错误码
+
+
+### 大文件分片上传 API（可选/增强）
+
+**适用场景**：大视频、大文件（> 50MB）或弱网环境。
+**特点**：支持断点续传，健壮性强，但流程稍多。
+**简化设计**：移除复杂的 S3 预签名直传逻辑，采用后端代理分片模式，降低客户端实现难度。
+
+**1. POST /api/v1/protected/media/chunked/init - 初始化分片上传**
+```typescript
+interface InitChunkedUploadRequest {
+  file_name: string;
+  file_size: number;       // 文件总大小（字节）
+  mime_type: string;
+  category: 'chat_video' | 'chat_file';  // 分片上传仅支持视频和文件
+  chunk_count: number;     // 预计分片数量
+}
+
+type InitChunkedUploadResponse = ApiResponse<InitChunkedUploadData>
+
+interface InitChunkedUploadData {
+  upload_id: string;       // 上传会话ID
+  chunk_size: number;      // 推荐的分片大小（字节，例如 2MB）
+}
+```
+
+**2. POST /api/v1/protected/media/chunked/upload - 上传分片**
+```typescript
+// Multipart/form-data
+interface UploadChunkRequest {
+  upload_id: string;
+  chunk_index: number;     // 分片序号（0-indexed）
+  chunk_data: File;        // 分片二进制数据
+}
+
+type UploadChunkResponse = ApiResponse
+```
+失败错误码：`10360`（upload_id 无效或过期）、`10005`（分片过大）
+
+**3. POST /api/v1/protected/media/chunked/finish - 完成分片上传**
+```typescript
+interface FinishChunkedUploadRequest {
+  upload_id: string;
+}
+
+type FinishChunkedUploadResponse = ApiResponse<UploadMediaData> // 返回与普通上传一致的 Data
+```
+失败错误码：`10402`（分片不完整）、`10360`（upload_id 无效）
+
+**4. POST /api/v1/protected/media/chunked/check - 检查分片上传状态**
+
+用于断点续传，查询已上传的分片列表。
+
+```typescript
+interface CheckChunkedUploadRequest {
+  upload_id: string;
+}
+
+type CheckChunkedUploadResponse = ApiResponse<CheckChunkedUploadData>
+
+interface CheckChunkedUploadData {
+  upload_id: string;
+  chunk_size: number;
+  uploaded_chunks: number[]; // 已上传的分片索引列表 (0-indexed, sorted)
+}
+```
+失败错误码：`10360`（upload_id 无效或过期）
+
+
+
+### 信息流 API
+
+**契约约束**：
+- 信息流接口的请求/响应字段语义以本节类型定义为准；不承载"推荐策略/原因解释/实现动机"等说明性内容
+- 是否需要传递位置参数：以该端点的 request 类型字段为唯一依据（字段存在则必须传，字段不存在则不得假设客户端需要传）
+- `source` 等筛选参数的取值域与语义必须在类型定义中明确；不在此处扩展"推荐策略解释"
+
+**POST /api/v1/protected/feed/moments - 获取瞬间信息流**
+
+获取瞬间信息流，支持多种来源筛选。
+
+排序语义（契约级）：
+- `source='following'`：按时间倒序（最新在前）。
+- `source='nearby'`：以地理位置相关信号为主（通常为距离/热度组合）；服务端必须提供稳定 tie-breaker 以生成可用 `cursor`。
+- `source='all'`：综合推荐流（允许排序波动）；客户端必须按"弱一致 + 去重"消费，不得依赖稳定位置。
+
+```typescript
+interface GetFeedMomentsRequest {
+  source?: 'following' | 'nearby' | 'all';  // 来源筛选，默认 'all'
+  reference_point?: GeoPoint;  // 浏览锚点位置，nearby 和 all 模式需要（用于计算距离和推荐）
+  radius?: number;             // 仅 source='nearby' 时有效，搜索半径（米），默认 5000
+  limit?: number;              // 每页数量，默认 20，最大 100
+  cursor?: string;             // 分页游标
+}
+
+type GetFeedMomentsResponse = ApiResponse<PaginatedData<MomentItem>>
+```
+
+失败错误码：
+- `10001` 缺少必填参数（nearby/all 模式缺少 reference_point）
+- `10003` 参数值超出范围（limit/radius 等）
+
+**来源说明**：
+- `following`：仅关注的人发布的瞬间，按时间倒序（不需要 reference_point）
+- `nearby`：附近范围内的瞬间，按距离和热度排序（需要 reference_point）
+- `all`：综合推荐（默认），混合关注动态、附近热门、个性化推荐（需要 reference_point）
+
+**POST /api/v1/protected/feed/groups - 获取群组推荐**
+
+获取附近可加入的群组推荐。
+
+排序语义（契约级）：
+- 主序：以地理位置相关信号为主（通常为距离/热度/活跃度的组合），服务端必须提供稳定 tie-breaker（用于生成可用 `cursor`）。
+- 次序：允许在距离接近时体现"社交信号"（如共同好友/同标签/共同群组倾向），但不得导致同一页/相邻页出现大范围抖动。
+- 稳定性：同一 `cursor` 会话内排序基准必须一致；跨会话允许轻微波动（推荐类接口不保证全局稳定顺序）。
+
+```typescript
+interface GetFeedGroupsRequest {
+  reference_point: GeoPoint;  // 浏览锚点位置（必需，用于计算距离和推荐）
+  radius?: number;            // 搜索半径（米），默认 10000，最大 50000
+  limit?: number;
+  cursor?: string;
+}
+
+type GetFeedGroupsResponse = ApiResponse<PaginatedData<FeedGroupItem>>
+
+interface FeedGroupItem extends GroupItem {
+  friends_in_group?: number; // 群内好友数量
+
+  // 契约约定（零查找优化）：推荐流应尽量返回 my_state（继承自 GroupItem）
+  // - 未加入时：my_state 可省略
+  // - 已加入时：my_state 必须包含 unread/is_muted/is_pinned 等
+}
+```
+
+失败错误码：
+- `10001` 缺少必填参数（reference_point）
+- `10003` 参数值超出范围（limit/radius 等）
+
+**POST /api/v1/protected/feed/users - 获取用户推荐**
+
+获取附近的用户推荐。
+
+排序语义（契约级）：
+- 主序：以地理位置相关信号为主（通常为距离/活跃度的组合），服务端必须提供稳定 tie-breaker（用于生成可用 `cursor`）。
+- 次序：允许综合"社交信号"（如共同好友数、共同标签）提升前排质量，但不得破坏主序的一致性要求。
+- 稳定性：同一 `cursor` 会话内排序基准必须一致；跨会话允许轻微波动（推荐类接口不保证全局稳定顺序）。
+
+```typescript
+interface GetFeedUsersRequest {
+  reference_point: GeoPoint;  // 浏览锚点位置（必需，用于计算距离和推荐）
+  radius?: number;            // 搜索半径（米），默认 5000，最大 50000
+  limit?: number;
+  cursor?: string;
+}
+
+type GetFeedUsersResponse = ApiResponse<PaginatedData<FeedUserItem>>
+
+interface FeedUserItem extends UserItem {
+  mutual_friends_count?: number;  // 共同好友数
+  common_tags?: string[];   // 共同标签
+
+  // 统一：在推荐流场景下，服务端应尽量返回 relation 以减少额外 round-trip
+  // 若因性能策略暂不提供，必须保持字段省略（而非 null）
+}
+```
+
+失败错误码：
+- `10001` 缺少必填参数（reference_point）
+- `10003` 参数值超出范围（limit/radius 等）
+
+**POST /api/v1/protected/feed/trending - 获取热门内容**
+
+获取当前热门的标签、话题等。
+
+```typescript
+interface GetFeedTrendingRequest {
+  limit?: number;           // 默认 20，最大 50
+}
+
+// 登录态：允许返回带互动状态的 MomentItem
+type GetFeedTrendingResponse = ApiResponse<FeedTrendingData>
+
+interface FeedTrendingData {
+  trending_tags: TrendingTagItem[];
+  hot_moments: MomentItem[];  // 最多5个热门瞬间预览
+}
+
+interface TrendingTagItem {
+  name: string;
+  usage_count: number;
+  trend: 'rising' | 'stable' | 'falling';
+  hot_moment_preview?: MomentItem;  // 该标签下的热门瞬间预览
+}
+```
+
+
+
+失败错误码：
+- `10003` 参数值超出范围（limit 等）
+
+**POST /api/v1/protected/feed/feedback - 反馈信息流内容**
+
+用于改进推荐算法。
+
+```typescript
+interface FeedFeedbackRequest {
+  content_type: 'moment' | 'group' | 'user';
+  content_id: string;       // 内容ID
+  action: 'hide' | 'not_interested'; // 仅用于算法负反馈；举报请使用 reports/create
+  reason?: string;          // 可选的反馈原因
+}
+
+type FeedFeedbackResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数
+
+### 标签管理 API
+
+**标签数据类型**：
+```typescript
+interface TagData {
+  name: string;
+  usage_count: number;
+  trend?: 'rising' | 'stable' | 'falling';
+}
+```
+
+**POST /api/v1/public/tags/trending - 获取热门标签**
+```typescript
+interface TrendingTagsRequest {
+  limit?: number;           // 默认20，最大100
+  timeframe?: 'daily' | 'weekly' | 'monthly';  // 默认weekly
+}
+
+type TrendingTagsResponse = ApiResponse<TrendingTagsData>
+
+interface TrendingTagsData {
+  items: TagData[];  // 热门标签固定返回limit条，不分页
+}
+```
+
+说明：标签属于“默认公开资源”，不涉及用户隐私等级/访问控制分支。
+
+失败错误码：
+- `10003` 参数值超出范围（limit 等）
+
+**POST /api/v1/public/tags/suggest - 标签搜索建议**
+```typescript
+interface SuggestTagsRequest {
+  prefix: string;           // 标签前缀（至少1个字符）
+  limit?: number;           // 默认10，最大50
+}
+
+type SuggestTagsResponse = ApiResponse<TagSuggestData>
+
+interface TagSuggestData {
+  items: TagSuggestItem[];  // 建议列表固定返回limit条，不分页
+}
+
+interface TagSuggestItem {
+  name: string;
+  usage_count: number;
+}
+```
+
+说明：标签建议属于“默认公开资源”，不涉及用户隐私等级/访问控制分支。
+
+失败错误码：
+- `10001` 缺少必填参数（prefix）
+- `10003` 参数值超出范围（limit 等）
+
+**POST /api/v1/admin/tags/delete - 删除/屏蔽标签（管理员）**
+```typescript
+interface AdminDeleteTagRequest {
+  tag_name: string;
+}
+type AdminDeleteTagResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（tag_name）
+- `10204` 非管理员
+- `10205` 管理员权限不足（需要 `admin.tags.write`）
+- `10300` 资源不存在（标签不存在）
+
+### 管理员权限（RBAC）API
+
+**设计目标**：
+- **超级管理员（super admin）**：`permissions` 包含 `'*'`，表示拥有全部管理员权限（可授予/回收其他管理员、管理角色/权限等）
+- **普通管理员（admin）**：`permissions` 不包含 `'*'`，通过 **角色/权限表** 获得细粒度权限（例如仅“举报处理”、仅“系统配置”）
+
+**统一访问控制（仅对 `/api/v1/admin/**` 生效）**：
+- 未登录/登录失效：按全局登录态错误处理（`10101`/`10102`）
+- 已登录但不是管理员：返回错误码 `10204`（非管理员）
+- 是管理员但缺少接口要求的权限：返回错误码 `10205`（管理员权限不足）
+
+**权限 key 约定**：
+- `admin.rbac.manage`：管理员权限管理（授权/角色/权限）
+- `admin.reports.read`：查看举报列表
+- `admin.reports.write`：处理举报
+- `admin.config.read`：查看系统配置（list/detail/history/changes）
+- `admin.config.write`：修改系统配置（create/update/delete）
+- `admin.tags.write`：管理标签（删除/屏蔽）
+- `admin.announcements.read`：查看公告列表
+- `admin.announcements.write`：发布/删除公告
+- `admin.users.read`：查看用户列表
+- `admin.users.write`：封禁/解封用户
+- `admin.groups.read`：查看群组列表
+- `admin.groups.write`：解散/封禁群组
+
+**POST /api/v1/admin/rbac/me - 获取我的管理员权限信息（管理员）**
+```typescript
+interface AdminRbacMeRequest {}
+
+type AdminRbacMeResponse = ApiResponse<AdminMeData>
+
+interface AdminMeData {
+  // '*' 表示拥有全部权限（超级管理员）
+  permissions: string[];
+  roles: AdminRoleBasic[];
+}
+
+interface AdminRoleBasic {
+  role_id: string;
+  name: string;
+}
+```
+
+失败错误码：
+- `10204` 非管理员
+
+**权限说明**：
+- 仅要求“是管理员”，不要求 `admin.rbac.manage`（用于前端侧判断 Admin 入口可见性与功能开关）
+
+**POST /api/v1/admin/rbac/permissions - 获取权限字典（管理员）**
+```typescript
+interface AdminRbacPermissionsRequest {}
+type AdminRbacPermissionsResponse = ApiResponse<AdminPermissionsData>
+
+interface AdminPermissionsData {
+  items: AdminPermissionItem[];
+}
+
+interface AdminPermissionItem {
+  key: string;
+  description: string;
+}
+```
+
+失败错误码：
+- `10204` 非管理员
+- `10205` 管理员权限不足
+
+**权限要求**：`admin.rbac.manage`
+
+**POST /api/v1/admin/rbac/roles/list - 获取角色列表（管理员）**
+```typescript
+interface AdminRbacRolesListRequest {}
+type AdminRbacRolesListResponse = ApiResponse<AdminRolesData>
+
+interface AdminRolesData {
+  items: AdminRoleItem[];
+}
+
+interface AdminRoleItem {
+  role_id: string;
+  name: string;
+  description?: string;
+  permissions: string[];
+}
+```
+
+失败错误码：
+- `10204` 非管理员
+- `10205` 管理员权限不足
+
+**权限要求**：`admin.rbac.manage`
+
+**POST /api/v1/admin/rbac/roles/create - 创建角色（管理员）**
+```typescript
+interface AdminRbacRoleCreateRequest {
+  name: string;
+  description?: string;
+}
+type AdminRbacRoleCreateResponse = ApiResponse<AdminRoleItem>
+```
+
+失败错误码：
+- `10204` 非管理员
+- `10205` 管理员权限不足
+- `10400` 角色名已存在
+
+**权限要求**：`admin.rbac.manage`
+
+**POST /api/v1/admin/rbac/roles/update - 更新角色（管理员）**
+```typescript
+interface AdminRbacRoleUpdateRequest {
+  role_id: string;
+  name?: string;
+  description?: string;
+  clear_description?: boolean;
+}
+type AdminRbacRoleUpdateResponse = ApiResponse
+```
+
+失败错误码：
+- `10204` 非管理员
+- `10205` 管理员权限不足
+- `10300` 角色不存在
+- `10400` 角色名已存在
+
+**权限要求**：`admin.rbac.manage`
+
+**POST /api/v1/admin/rbac/roles/delete - 删除角色（管理员）**
+```typescript
+interface AdminRbacRoleDeleteRequest { role_id: string }
+type AdminRbacRoleDeleteResponse = ApiResponse
+```
+
+失败错误码：
+- `10204` 非管理员
+- `10205` 管理员权限不足
+- `10300` 角色不存在
+- `10402` 资源状态冲突（角色正在被使用）
+
+**权限要求**：`admin.rbac.manage`
+
+**POST /api/v1/admin/rbac/roles/set_permissions - 设置角色权限（管理员）**
+```typescript
+interface AdminRbacRoleSetPermissionsRequest {
+  role_id: string;
+  permission_keys: string[];
+}
+type AdminRbacRoleSetPermissionsResponse = ApiResponse
+```
+
+失败错误码：
+- `10204` 非管理员
+- `10205` 管理员权限不足
+- `10300` 角色不存在
+
+**权限要求**：`admin.rbac.manage`
+
+**POST /api/v1/admin/rbac/admins/list - 获取管理员列表（管理员）**
+```typescript
+interface AdminRbacAdminsListRequest {}
+type AdminRbacAdminsListResponse = ApiResponse<AdminAdminsData>
+
+interface AdminAdminsData {
+  items: AdminAdminItem[];
+}
+
+interface AdminAdminItem {
+  user: UserInfo;
+  // '*' 表示拥有全部权限（超级管理员）
+  permissions: string[];
+  roles: AdminRoleBasic[];
+}
+```
+
+失败错误码：
+- `10204` 非管理员
+- `10205` 管理员权限不足
+
+**权限要求**：`admin.rbac.manage`
+
+**POST /api/v1/admin/rbac/admins/grant - 授予/更新管理员（管理员）**
+```typescript
+interface AdminRbacGrantAdminRequest {
+  user_id: number;
+  grant_all_permissions?: boolean;
+  role_ids: string[];
+}
+type AdminRbacGrantAdminResponse = ApiResponse
+```
+
+失败错误码：
+- `10204` 非管理员
+- `10205` 管理员权限不足
+- `10300` 用户不存在/角色不存在
+
+**权限要求**：`admin.rbac.manage`
+
+**额外约束**：
+- 仅超级管理员可将 `grant_all_permissions=true`
+
+**POST /api/v1/admin/rbac/admins/revoke - 撤销管理员（管理员）**
+```typescript
+interface AdminRbacRevokeAdminRequest {
+  user_id: number;
+}
+type AdminRbacRevokeAdminResponse = ApiResponse
+```
+
+失败错误码：
+- `10204` 非管理员
+- `10205` 管理员权限不足
+- `10300` 管理员不存在
+
+**权限要求**：`admin.rbac.manage`
+
+**额外约束**：
+- 撤销超级管理员：仅超级管理员可执行
+
+### 管理员用户管理 API
+
+**POST /api/v1/admin/users/search - 搜索用户（管理员）**
+```typescript
+interface AdminUserSearchRequest {
+  user_id?: number;
+  nickname?: string;
+  login_id?: string;
+  status?: 'normal' | 'banned';
+  user_type?: UserType;
+  limit?: number;
+  cursor?: string;
+}
+type AdminUserSearchResponse = ApiResponse<PaginatedData<AdminUserItem>>
+
+interface AdminUserItem {
+  user_id: number;
+  nickname: string;
+  avatar_url?: string;
+  user_type: UserType;
+  status: 'normal' | 'banned';
+  created_at: string;
+  last_active_at?: string;
+  // 管理员视图补充字段
+  login_id: string; // 手机号/邮箱/登录名
+  is_online: boolean;
+}
+```
+
+失败错误码：
+- `10204` 非管理员
+- `10205` 管理员权限不足（需要 `admin.users.read`）
+
+**POST /api/v1/admin/users/ban - 封禁用户（管理员）**
+```typescript
+interface AdminBanUserRequest {
+  user_id: number;
+  reason?: string;
+  duration_days?: number; // 0 or null = permanent
+}
+type AdminBanUserResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（user_id）
+- `10204` 非管理员
+- `10205` 管理员权限不足（需要 `admin.users.write`）
+- `10310` 用户不存在
+- `10411` 不能对自己执行此操作
+
+**POST /api/v1/admin/users/unban - 解封用户（管理员）**
+```typescript
+interface AdminUnbanUserRequest {
+  user_id: number;
+  reason?: string;
+}
+type AdminUnbanUserResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（user_id）
+- `10204` 非管理员
+- `10205` 管理员权限不足（需要 `admin.users.write`）
+- `10310` 用户不存在
+
+### 管理员群组管理 API
+
+**POST /api/v1/admin/groups/search - 搜索群组（管理员）**
+```typescript
+interface AdminGroupSearchRequest {
+  group_chat_id?: string;
+  name?: string;
+  owner_id?: number;
+  limit?: number;
+  cursor?: string;
+}
+type AdminGroupSearchResponse = ApiResponse<PaginatedData<AdminGroupItem>>
+
+interface AdminGroupItem {
+  group_chat_id: string;
+  name: string;
+  avatar_url?: string;
+  members_count: number;
+  owner: UserInfo;
+  created_at: string;
+}
+```
+
+失败错误码：
+- `10204` 非管理员
+- `10205` 管理员权限不足（需要 `admin.groups.read`）
+
+**POST /api/v1/admin/groups/dismiss - 解散群组（管理员）**
+```typescript
+interface AdminDismissGroupRequest {
+  group_chat_id: string;
+  reason?: string;
+}
+type AdminDismissGroupResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（group_chat_id）
+- `10204` 非管理员
+- `10205` 管理员权限不足（需要 `admin.groups.write`）
+- `10320` 资源不存在（群组不存在）
+
+### 管理员系统公告 API
+
+**POST /api/v1/admin/announcements/create - 发布系统公告（管理员）**
+```typescript
+interface CreateAnnouncementRequest {
+  title: string; // Max 100 characters
+  content: string; // Max 5000 characters
+  severity: 'info' | 'warning' | 'error';
+  action_url?: string;
+  send_push?: boolean; // 是否同时触发离线推送
+}
+type CreateAnnouncementResponse = ApiResponse<CreateAnnouncementData>
+
+interface CreateAnnouncementData {
+  announcement_id: string;
+  created_at: string;
+}
+```
+
+失败错误码：
+- `10001` 缺少必填参数（title/content/severity）
+- `10204` 非管理员
+- `10205` 管理员权限不足（需要 `admin.announcements.write`）
+
+**POST /api/v1/admin/announcements/list - 获取公告列表（管理员）**
+```typescript
+interface AdminAnnouncementListRequest {
+  limit?: number;
+  cursor?: string;
+}
+type AdminAnnouncementListResponse = ApiResponse<PaginatedData<SystemAnnouncementItem>>
+
+interface SystemAnnouncementItem {
+  announcement_id: string;
+  title: string;
+  content: string;
+  severity: 'info' | 'warning' | 'error';
+  action_url?: string;
+  created_at: string;
+  created_by: UserInfo;
+}
+```
+
+失败错误码：
+- `10204` 非管理员
+- `10205` 管理员权限不足（需要 `admin.announcements.read`）
+
+**POST /api/v1/admin/announcements/delete - 删除公告（管理员）**
+```typescript
+interface DeleteAnnouncementRequest {
+  announcement_id: string;
+}
+type DeleteAnnouncementResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（announcement_id）
+- `10204` 非管理员
+- `10205` 管理员权限不足（需要 `admin.announcements.write`）
+- `10300` 资源不存在（公告不存在）
+
+**POST /api/v1/public/announcements - 获取系统公告列表**
+```typescript
+interface PublicAnnouncementListRequest {
+  limit?: number;
+  cursor?: string;
+}
+type PublicAnnouncementListResponse = ApiResponse<PaginatedData<SystemAnnouncementItem>>
+```
+
+说明：系统公告属于“默认公开资源”，不涉及用户隐私等级/访问控制分支。
+
+失败错误码：
+- `10003` 参数值超出范围（limit 等）
+
+
+
+### 系统全局配置 API（Domain-Specific Design）
+
+> 本小节定义"系统全局配置"对外 HTTP 契约：
+> - **强类型聚合**：废弃通用的 KV 结构，改用领域特定的强类型对象（AppConfig），所见即所得。
+> - **冷启动优化**：客户端通过单一接口拉取所有启动所需配置（上传策略、功能开关、默认值等）。
+> - **安全隔离**：敏感配置（如 Secret Key）在后端物理隔离，不在 AppConfig 中定义，杜绝泄漏风险。
+> - **管理端拆分**：管理端按功能模块拆分更新接口，确保每次更新都经过严格的业务校验。
+
+#### 核心类型定义
+
+```typescript
+// 1. 上传策略配置
+interface UploadConfig {
+  image_max_size: number;      // 图片最大字节数 (e.g. 10MB = 10485760)
+  video_max_size: number;      // 视频最大字节数 (e.g. 100MB = 104857600)
+  audio_max_size: number;      // 音频最大字节数
+  file_max_size: number;       // 普通文件最大字节数
+  allowed_image_types: string[]; // e.g. ["image/jpeg", "image/png", "image/gif"]
+  allowed_video_types: string[]; // e.g. ["video/mp4", "video/quicktime"]
+}
+
+// 2. 内容默认值配置
+interface ContentDefaults {
+  default_location_name: string; // 用户未开启定位时的默认地点名 (e.g. "未知星球")
+  default_group_avatar: string;  // 群组默认头像 URL
+  default_user_avatar: string;   // 用户默认头像 URL
+  default_group_settings: GroupSettings; // 创建群组时的默认设置
+}
+
+// 3. 功能开关配置
+interface FeatureSwitches {
+  enable_public_registration: boolean; // 是否开放注册
+  enable_guest_login: boolean;         // 是否允许访客登录
+  enable_moments: boolean;             // 是否开启生活瞬间功能
+  enable_nearby_people: boolean;       // 是否开启附近的人
+}
+
+// 4. 联系与帮助配置
+interface ContactInfo {
+  support_email: string;
+  privacy_policy_url: string;
+  terms_of_service_url: string;
+  official_website: string;
+}
+
+// 5. 系统限制配置
+interface AppLimits {
+  max_group_members: number;      // 群组成员上限 (e.g. 500)
+  max_moment_tags: number;        // 瞬间标签数量上限 (e.g. 10)
+  max_moment_images: number;      // 瞬间图片数量上限 (e.g. 9)
+  moment_description_max_length: number; // 瞬间文字上限 (e.g. 2000)
+  comment_max_length: number;     // 评论文字上限 (e.g. 500)
+  search_radius_max: number;      // 搜索最大半径 (米, e.g. 50000)
+}
+
+// 聚合配置对象（客户端只读）
+interface GlobalSettings {
+  upload: UploadConfig;
+  defaults: ContentDefaults;
+  features: FeatureSwitches;
+  contact: ContactInfo;
+  limits: AppLimits;
+  version: string; // 配置版本号/Hash，用于客户端缓存校验
+}
+```
+
+#### 公开配置读取（客户端）
+
+**POST /api/v1/public/global_settings/fetch - 获取全局启动配置**
+
+说明：全局启动配置属于“默认公开资源”，不涉及用户隐私等级/访问控制分支。
+
+采用**上下文感知 + 版本控制**的拉取模式 (Remote Config 风格)。
+客户端提供环境上下文（OS, Version），服务端可据此返回差异化的功能开关（Feature Flags）。
+
+```typescript
+interface FetchGlobalSettingsRequest {
+  // 客户端环境上下文 (用于灰度发布/功能开关)
+  context: {
+    os: 'ios' | 'android' | 'web' | 'harmony';
+    app_version: string;     // e.g. "1.2.0"
+    device_id?: string;      // 可选：用于特定设备的灰度
+    language?: string;       // e.g. "zh-CN"
+  };
+  
+  // 客户端当前缓存的配置版本号 (ETag机制)
+  // 如果服务端最新版本 == current_version，则返回 action='no_change'，节省带宽
+  current_version?: string;
+}
+
+type FetchGlobalSettingsResponse = ApiResponse<FetchSettingsData>
+
+interface FetchSettingsData {
+  action: 'update' | 'no_change' | 'force_update';
+  
+  // 仅当 action != 'no_change' 时返回
+  config?: GlobalSettings;
+  
+  // 新版本号
+  latest_version: string;
+}
+```
+
+#### 配置管理（管理员）
+
+> 权限要求：
+> - 读取：`admin.config.read`
+> - 更新：`admin.config.write`
+
+**POST /api/v1/admin/global_settings - 获取完整全局配置（管理员）**
+
+返回的结构与公开接口类似，但可能包含额外的管理端元数据（如上次更新人、更新时间）。
+
+```typescript
+interface AdminGetGlobalSettingsRequest {}
+
+type AdminGetGlobalSettingsResponse = ApiResponse<AdminGlobalSettingsData>
+
+interface AdminGlobalSettingsData extends GlobalSettings {
+  updated_at: string;
+  updated_by_user_id: number;
+}
+```
+
+失败错误码：
+- `10204` 非管理员
+- `10205` 管理员权限不足（需要 `admin.config.read`）
+
+**POST /api/v1/admin/global_settings/update_upload - 更新上传策略**
+
+```typescript
+interface UpdateUploadConfigRequest {
+  image_max_size?: number;
+  video_max_size?: number;
+  audio_max_size?: number;
+  file_max_size?: number;
+  allowed_image_types?: string[];
+  allowed_video_types?: string[];
+}
+
+type UpdateUploadConfigResponse = ApiResponse<{
+  upload: UploadConfig;
+  updated_at: string;
+  version: string;
+}>
+```
+
+失败错误码：
+- `10204` 非管理员
+- `10205` 管理员权限不足（需要 `admin.config.write`）
+- `10003` 参数值超出范围（例如设置了负数大小）
+
+**POST /api/v1/admin/global_settings/update_defaults - 更新内容默认值**
+
+```typescript
+interface UpdateDefaultsRequest {
+  default_location_name?: string;
+  default_group_avatar?: string;
+  default_user_avatar?: string;
+  default_group_settings?: Partial<GroupSettings>;
+}
+
+type UpdateDefaultsResponse = ApiResponse<{
+  defaults: ContentDefaults;
+  updated_at: string;
+  version: string;
+}>
+```
+
+失败错误码：
+- `10204` 非管理员
+- `10205` 管理员权限不足（需要 `admin.config.write`）
+
+**POST /api/v1/admin/global_settings/update_features - 更新功能开关**
+
+```typescript
+interface UpdateFeaturesRequest {
+  enable_public_registration?: boolean;
+  enable_guest_login?: boolean;
+  enable_moments?: boolean;
+  enable_nearby_people?: boolean;
+}
+
+type UpdateFeaturesResponse = ApiResponse<{
+  features: FeatureSwitches;
+  updated_at: string;
+  version: string;
+}>
+```
+
+失败错误码：
+- `10204` 非管理员
+- `10205` 管理员权限不足（需要 `admin.config.write`）
+
+**POST /api/v1/admin/global_settings/update_contact - 更新联系信息**
+
+```typescript
+interface UpdateContactRequest {
+  support_email?: string;
+  privacy_policy_url?: string;
+  terms_of_service_url?: string;
+  official_website?: string;
+}
+
+type UpdateContactResponse = ApiResponse<{
+  contact: ContactInfo;
+  updated_at: string;
+  version: string;
+}>
+```
+
+失败错误码：
+- `10204` 非管理员
+- `10205` 管理员权限不足（需要 `admin.config.write`）
+- `10002` 参数格式错误（URL/Email 格式不正确）
+
+**POST /api/v1/admin/global_settings/update_limits - 更新系统限制**
+
+```typescript
+interface UpdateLimitsRequest {
+  max_group_members?: number;
+  max_moment_tags?: number;
+  max_moment_images?: number;
+  moment_description_max_length?: number;
+  comment_max_length?: number;
+  search_radius_max?: number;
+}
+
+type UpdateLimitsResponse = ApiResponse<{
+  limits: AppLimits;
+  updated_at: string;
+  version: string;
+}>
+```
+
+失败错误码：
+- `10204` 非管理员
+- `10205` 管理员权限不足（需要 `admin.config.write`）
+- `10003` 参数值超出范围（例如设置了负数或不合理的极小值）

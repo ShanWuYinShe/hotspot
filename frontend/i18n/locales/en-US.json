@@ -30,7 +30,27 @@
     "profile": "My Profile",
     "create": "Create",
     "search": "Search",
-    "languageSwitch": "Language Switch"
+    "languageSwitch": "Language Switch",
+    "admin": "Admin"
+  },
+  "languages": {
+    "zh-CN": "简体中文",
+    "en-US": "English"
+  },
+  "dashboard": {
+    "anchor": {
+      "update": "Update Location Anchor",
+      "label": "Location Anchor",
+      "notSet": "Anchor Not Set",
+      "updated": "Location Anchor Updated"
+    },
+    "tooltips": {
+      "search": "Global Search",
+      "notifications": "Notifications",
+      "theme": "Switch Theme",
+      "expandSidebar": "Expand Sidebar",
+      "collapseSidebar": "Collapse Sidebar"
+    }
   },
   "common": {
     "user": "User",
@@ -204,9 +224,12 @@
     "settings": "Settings",
     "sessions": "Sessions",
     "tempExperience": "Temporary Experience",
+    "quickExperience": "Quick Experience",
     "addAccount": "Add Account",
     "switchAccount": "Switch Account",
     "logout": "Logout",
+    "lock": "Lock",
+    "guestPrefix": "Guest_",
     "loginRegister": "Login/Register",
     "notLoggedIn": "Not Logged In",
     "loginToAccess": "Login to access more features",
@@ -238,6 +261,10 @@
       "welcomeTemp": "Welcome {name}, start exploring!",
       "tempFailed": "Failed to create temporary account",
       "tryAgain": "Please try again",
+      "welcome": "Welcome to HotSpot",
+      "createFailed": "Creation Failed",
+      "logoutError": "Logout Error",
+      "locked": "Locked",
       "switchSuccess": "Switch Successful",
       "switchedTo": "Switched to {name}",
       "switchFailed": "Switch Failed",
@@ -386,6 +413,62 @@
     "select": {
       "hintMulti": "Multiple selection allowed, press Enter to confirm",
       "errorRequired": "This field cannot be empty"
+    }
+  },
+  "groups": {
+    "title": "Groups",
+    "description": "Discover and join nearby groups",
+    "tabs": {
+      "myGroups": "My Groups",
+      "nearby": "Nearby Groups"
+    },
+    "search": {
+      "placeholder": "Search groups...",
+      "empty": {
+        "title": "No Groups Found",
+        "description": "Try different keywords"
+      }
+    },
+    "actions": {
+      "nearby": "Nearby Groups",
+      "create": "Create Group",
+      "createFirst": "Create First Group"
+    },
+    "myGroups": {
+      "title": "My Groups",
+      "empty": {
+        "title": "No Groups Joined",
+        "description": "Join or create a group to start chatting"
+      }
+    },
+    "recommended": "Recommended",
+    "searchResults": "Search Results",
+    "card": {
+      "joined": "Joined",
+      "members": "{count} Members",
+      "join": "Join",
+      "enter": "Enter Chat",
+      "leave": "Leave Group",
+      "settings": "Settings",
+      "manageMembers": "Manage Members",
+      "leaveConfirmTitle": "Leave Group",
+      "leaveConfirmBody": "Are you sure you want to leave \"{name}\"?",
+      "confirmLeave": "Confirm Leave",
+      "leaveSuccess": "Left successfully",
+      "leaveFailed": "Failed to leave"
+    }
+  },
+  "enums": {
+    "userType": {
+      "temp": "Temporary User",
+      "normal": "Verified User",
+      "admin": "Admin",
+      "system": "System"
+    },
+    "groupRole": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "member": "Member"
     }
   }
 }

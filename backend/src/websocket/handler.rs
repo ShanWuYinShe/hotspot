@@ -11,7 +11,7 @@ use tokio::time::{interval, timeout};
 use uuid::Uuid;
 
 use crate::{
-    repositories::{private_chat_repo::PrivateChatRepository, user_repo::UserRepository},
+    repositories::user_repo::UserRepository,
     state::AppState,
     utils::jwt::JwtUtil,
     websocket::subscription::SubscriptionType,
@@ -58,7 +58,7 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
         _ => {
             // 首帧不是 Auth
             let err_msg = WsMessage::Error {
-                code: 1102,
+                code: 40102,
                 message: "Token 缺失".to_string(),
             };
             if let Ok(json) = serde_json::to_string(&err_msg) {
@@ -74,7 +74,7 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
         Ok(c) => c,
         Err(_) => {
             let err_msg = WsMessage::Error {
-                code: 1101,
+                code: 40101,
                 message: "Token 无效或过期".to_string(),
             };
             if let Ok(json) = serde_json::to_string(&err_msg) {
@@ -89,7 +89,7 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
         Ok(uid) => uid,
         Err(_) => {
             let err_msg = WsMessage::Error {
-                code: 1101,
+                code: 40101,
                 message: "Token 无效或过期".to_string(),
             };
             if let Ok(json) = serde_json::to_string(&err_msg) {
@@ -272,7 +272,7 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
 async fn handle_message(
     msg: Message,
     user_id: i64,
-    nickname: &str,
+    _nickname: &str,
     connection_id: &str,
     state: &AppState,
 ) -> Result<(), String> {
@@ -352,109 +352,44 @@ async fn handle_message(
                     state.ws_manager.send_to_user(user_id, &ack_msg).await?;
                 }
 
-                WsMessage::MarkAsRead {
-                    chat_type,
-                    chat_id,
-                    up_to,
-                } => {
-                    // 处理标记已读请求
-                    tracing::debug!(
-                        "收到标记已读请求: user_id={}, chat_type={}, chat_id={}, up_to={}",
-                        user_id,
-                        chat_type,
-                        chat_id,
-                        up_to
-                    );
-
-                    // 广播已读回执给相关用户
-                    let read_msg = WsMessage::ChatMessageRead {
-                        chat_type: chat_type.clone(),
-                        chat_id: chat_id.clone(),
-                        up_to,
-                        reader_id: user_id,
-                        read_at: chrono::Utc::now().to_rfc3339(),
-                    };
-
-                    // 根据类型推送
-                    if chat_type == "private_chat" {
-                        // 私聊：chat_id 是 private_chat_id（UUID），需要查库确定对方 user_id
-                        if let Ok(private_chat_id) = Uuid::parse_str(&chat_id) {
-                            let chat_repo = PrivateChatRepository::new(state.db.clone());
-                            if let Ok(Some(chat)) = chat_repo.find_by_id(private_chat_id).await {
-                                let other_user_id = if chat.user_a_id == user_id {
-                                    chat.user_b_id
-                                } else if chat.user_b_id == user_id {
-                                    chat.user_a_id
-                                } else {
-                                    // 非成员，不转发
-                                    return Ok(());
-                                };
-                                let _ = state
-                                    .ws_manager
-                                    .send_to_user(other_user_id, &read_msg)
-                                    .await;
-                            }
-                        }
-                    } else if chat_type == "group_chat" {
-                        // 群聊：推送给订阅了该群聊的所有用户
-                        let subscribers = state
-                            .ws_subscription
-                            .get_group_chat_subscribers(&chat_id)
-                            .await;
-                        state
-                            .ws_manager
-                            .send_to_users(&subscribers, &read_msg)
-                            .await;
-                    }
-                }
-
-                WsMessage::Typing {
-                    chat_type,
-                    chat_id,
+                WsMessage::PrivateTyping {
+                    target_user_id,
                     is_typing,
                 } => {
-                    // 处理正在输入事件
-                    let typing_msg = WsMessage::UserTyping {
-                        chat_type: chat_type.clone(),
-                        chat_id: chat_id.clone(),
+                    let typing_msg = WsMessage::PrivateUserTyping {
+                        target_user_id,
                         user_id,
-                        nickname: nickname.to_string(),
                         is_typing,
                     };
 
-                    // 推送给目标
-                    if chat_type == "private_chat" {
-                        // 私聊：chat_id 是 private_chat_id（UUID），需要查库确定对方 user_id
-                        if let Ok(private_chat_id) = Uuid::parse_str(&chat_id) {
-                            let chat_repo = PrivateChatRepository::new(state.db.clone());
-                            if let Ok(Some(chat)) = chat_repo.find_by_id(private_chat_id).await {
-                                let other_user_id = if chat.user_a_id == user_id {
-                                    chat.user_b_id
-                                } else if chat.user_b_id == user_id {
-                                    chat.user_a_id
-                                } else {
-                                    // 非成员，不转发
-                                    return Ok(());
-                                };
-                                let _ = state
-                                    .ws_manager
-                                    .send_to_user(other_user_id, &typing_msg)
-                                    .await;
-                            }
-                        }
-                    } else if chat_type == "group_chat" {
-                        // 群聊：推送给订阅了该群聊的所有用户（排除自己）
-                        let subscribers = state
-                            .ws_subscription
-                            .get_group_chat_subscribers(&chat_id)
-                            .await;
-                        for subscriber_id in subscribers {
-                            if subscriber_id != user_id {
-                                let _ = state
-                                    .ws_manager
-                                    .send_to_user(subscriber_id, &typing_msg)
-                                    .await;
-                            }
+                    // 私聊：推给对方
+                    let _ = state
+                        .ws_manager
+                        .send_to_user(target_user_id, &typing_msg)
+                        .await;
+                }
+
+                WsMessage::GroupTyping {
+                    group_chat_id,
+                    is_typing,
+                } => {
+                    let typing_msg = WsMessage::GroupUserTyping {
+                        group_chat_id: group_chat_id.clone(),
+                        user_id,
+                        is_typing,
+                    };
+
+                    // 群聊：推送给订阅了该群聊的所有用户（排除自己）
+                    let subscribers = state
+                        .ws_subscription
+                        .get_group_chat_subscribers(&group_chat_id)
+                        .await;
+                    for subscriber_id in subscribers {
+                        if subscriber_id != user_id {
+                            let _ = state
+                                .ws_manager
+                                .send_to_user(subscriber_id, &typing_msg)
+                                .await;
                         }
                     }
                 }
@@ -551,7 +486,7 @@ async fn process_subscribe(
             failed.push(FailedSubscriptionItem {
                 source_type: item.source_type.clone(),
                 source_ids: fail_ids,
-                reason: "不支持的订阅类型".to_string(),
+                reason: crate::types::enums::SubscriptionFailureReason::InvalidItem,
             });
         }
     }

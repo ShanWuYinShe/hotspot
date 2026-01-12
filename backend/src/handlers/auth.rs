@@ -19,6 +19,7 @@ use crate::{
     },
     error::{AppError, Result},
     middleware::auth::BearerToken,
+    services::auth_service::ClientType,
     state::AppState,
     utils::validation::Validator,
     utils::web_cookie::{
@@ -46,8 +47,7 @@ pub async fn register(
         .and_then(|v| v.to_str().ok());
     let ip_address = None;
 
-    let client_type =
-        crate::services::auth_service::ClientType::from_opt_str(req.client_type.as_deref());
+    let client_type = ClientType::from_str(&req.client_type)?;
 
     // 调用 Service
     let auth_issue = state
@@ -62,7 +62,7 @@ pub async fn register(
         .await?;
 
     let mut resp_headers = HeaderMap::new();
-    if client_type == crate::services::auth_service::ClientType::Web {
+    if client_type == ClientType::Web {
         let secure = false; // 生产建议改为配置项
         let set_cookie = build_refresh_token_set_cookie(
             &auth_issue.refresh_token_raw,
@@ -95,8 +95,7 @@ pub async fn login(
         .and_then(|v| v.to_str().ok());
     let ip_address = None;
 
-    let client_type =
-        crate::services::auth_service::ClientType::from_opt_str(req.client_type.as_deref());
+    let client_type = ClientType::from_str(&req.client_type)?;
 
     // 调用 Service
     let auth_issue = state
@@ -111,7 +110,7 @@ pub async fn login(
         .await?;
 
     let mut resp_headers = HeaderMap::new();
-    if client_type == crate::services::auth_service::ClientType::Web {
+    if client_type == ClientType::Web {
         let secure = false; // 生产建议改为配置项
         let set_cookie = build_refresh_token_set_cookie(
             &auth_issue.refresh_token_raw,
@@ -144,8 +143,7 @@ pub async fn create_guest(
         .and_then(|v| v.to_str().ok());
     let ip_address = None;
 
-    let client_type =
-        crate::services::auth_service::ClientType::from_opt_str(req.client_type.as_deref());
+    let client_type = ClientType::from_str(&req.client_type)?;
 
     // 调用 Service
     let auth_issue = state
@@ -160,7 +158,7 @@ pub async fn create_guest(
         .await?;
 
     let mut resp_headers = HeaderMap::new();
-    if client_type == crate::services::auth_service::ClientType::Web {
+    if client_type == ClientType::Web {
         let secure = false; // 生产建议改为配置项
         let set_cookie = build_refresh_token_set_cookie(
             &auth_issue.refresh_token_raw,
@@ -193,19 +191,26 @@ pub async fn refresh_token(
     // 实际项目中可以从 extensions 获取 ConnectInfo 或 X-Forwarded-For
     let ip_address = None;
 
-    // client_type 推断：明确传 web/app；否则如果携带 refresh cookie，按 web 处理；默认 app
-    let mut client_type =
-        crate::services::auth_service::ClientType::from_opt_str(req.client_type.as_deref());
-    if req.client_type.is_none() && get_cookie_value(&headers, "hs_refresh_token").is_some() {
-        client_type = crate::services::auth_service::ClientType::Web;
-    }
+    // client_type 强制：客户端必须显式传递，不允许推断
+    let client_type = ClientType::from_str(&req.client_type)?;
 
-    // refresh_token 来源：body 优先；否则从 cookie 读取（web）
-    let refresh_token_raw = if let Some(t) = req.refresh_token.as_deref() {
-        t.to_string()
-    } else {
-        get_cookie_value(&headers, "hs_refresh_token")
-            .ok_or_else(|| AppError::TokenMissing("缺少 refresh_token".to_string()))?
+    // refresh_token 投递规则（强制）：
+    // - app：必须在 body 传 refresh_token
+    // - web：必须不传（从 HttpOnly cookie 读取），若传入则视为参数错误
+    let refresh_token_raw = match client_type {
+        ClientType::App => {
+            req.refresh_token
+                .ok_or_else(|| AppError::BadRequest("app 场景必须提供 refresh_token".to_string()))?
+        }
+        ClientType::Web => {
+            if req.refresh_token.is_some() {
+                return Err(AppError::BadRequest(
+                    "web 场景不得在 body 中传递 refresh_token".to_string(),
+                ));
+            }
+            get_cookie_value(&headers, "hs_refresh_token")
+                .ok_or_else(|| AppError::TokenMissing("缺少 refresh_token cookie".to_string()))?
+        }
     };
 
     // 生产同源模式（推荐由 Nginx 统一入口）：不在后端做 Origin 白名单校验
@@ -225,7 +230,7 @@ pub async fn refresh_token(
         .await?;
 
     let mut resp_headers = HeaderMap::new();
-    if client_type == crate::services::auth_service::ClientType::Web {
+    if client_type == ClientType::Web {
         let secure = false; // 生产建议改为配置项
         let set_cookie = build_refresh_token_set_cookie(
             &auth_issue.refresh_token_raw,

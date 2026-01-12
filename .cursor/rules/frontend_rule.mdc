@@ -1,143 +1,165 @@
 ---
-description: Frontend (Nuxt) AI code generation rules
 globs: frontend/**
+alwaysApply: false
 ---
+## 技术栈与工程规范
 
-# Frontend Development Rules
+## ✅ Self-check Evidence 输出模板（强制）
 
-## 0. 范围与权威来源（强制）
+> 目的：让你在生成/修改前端代码后，用统一格式输出“可复核证据”，避免只口头声称“已遵守规则”。
 
-- **API 规范唯一权威**：所有端点/字段/错误码/WebSocket 事件以 `@api_spec.mdc` 为准。
-- **本文件只约束 AI 生成代码的规则**：不写“产品功能清单”（那属于 `frontend_doc.mdc`）。
-- **禁止硬编码端点**：只能从 `frontend/app/config/api.ts` 引用路径常量。
+### 输出规则
+- 每条 checklist 至少给出一条证据。
+- 证据必须可定位（文件路径 + 锚点/片段 + 一句证明），禁止只写“已遵守/已完成”。
+- 对“否定性条目”（例如 No Hardcoded API Path / No any / No WS Contract）必须给出：
+  - `scope`：检查范围
+  - `probe`：检索模式
+  - `result`：结论（例如 0 matches）
+- **要求**：即使是否定性条目，也必须同时提供 `paths` / `anchors` / `proof`，用于定位检查覆盖范围与关键锚点。
+- **proof 强制要求（必须同时满足）**：
+  - **必须是单句**（只允许一个句号 `。`；不得使用多个句号/分号/换行来拼接多句）。
+  - **必须客观可证伪**：只能陈述可复核事实（基于 `paths/anchors` 或 `scope/probe/result`），不得使用主观评价或含糊措辞。
+  - **禁止主观词/含糊词**：如“看起来/应该/大概/可能/感觉/优雅/更好/更美观/更合理/体验很好/无明显问题”等。
+  - **不得引入第二份契约**：proof 中不得新增或复述端点清单/字段表/错误码表/WS 事件表（契约只在 `@api_spec.mdc`）。
 
-## 1. 核心开发原则与流程（强制）
+### 统一输出模板（按条目逐条填写）
 
-### 技术栈 (Tech Stack)
-- **Framework**: Nuxt v4
-- **UI Component Library**: Nuxt UI v4
-- **Core Library**: Vue 3
+#### Evidence 模板（所有条目通用）
+- item: <checklist item title>
+  - paths:
+    - <path 1>
+    - <path 2>
+  - anchors:
+    - <symbol name or unique snippet 1>
+    - <symbol name or unique snippet 2>
+  - proof: <一句话说明为什么这些 anchors 能证明该条成立（客观、单句、可复核）>
+
+#### Negative Evidence 扩展字段（No X 必备，在同一条 Evidence 内追加）
+- item: <checklist item title>
+  - scope: <检查范围，例如：frontend/** 或 frontend/app/**>
+  - probe: <检索模式，例如："/api/v1/" 或 " as any" 或 "is_super">
+  - result: <0 matches / matches list（如有匹配必须修复，不得解释）>
+  - paths:
+    - <path 1>
+    - <path 2>
+  - anchors:
+    - <symbol name or unique snippet 1>
+    - <symbol name or unique snippet 2>
+  - proof: <单句、客观、可证伪地说明为什么 result + anchors 能证明该条成立，不得使用主观/含糊词>
+
+- **Framework**: Nuxt v4 + Nuxt UI v4
+- **Language**: TypeScript (Strict Mode)
 - **State Management**: Pinia
+- **Data Fetching**: `useFetch` / `$fetch` (via Service Layer)
 
-### 技术选型优先权
-- **Nuxt UI v4 优先**: 构建 UI 时，**必须**优先使用 Nuxt UI v4 提供的组件。
-- **避免原生 HTML**: 严禁在已有现成组件（如 `UButton`, `UCard`, `UInput`）的情况下使用原生 HTML 元素（如 `button`, `div.card`, `input`）。
-- **Nuxt v4 特性优先**: 使用最新特性（Server Functions, Data Fetching）。
+## ✅ 本文件自检范围（Self-check Scope）
 
-### 开发前置流程
-- **MCP 查询机制**: 编写 UI 代码前，先查询文档确认组件属性。
-- **避免臆造**: 严禁臆造组件名或属性。
+> 原则：`@api_spec.mdc` 是“契约唯一权威”。本文件只规定 **前端工程落地（How）**，不得造成“第二份契约”。
 
----
+当你修改 `@frontend_rule.mdc` 时，必须自检：
 
-## 2. 样式管理规范：严格的分层体系（强制）
+### 1) 边界自洽（How-only）
+- ✅ 只写可执行的工程规范：目录结构/分层、请求封装、状态管理、错误处理、缓存策略、WebSocket 落地、类型与 lint 约束等
+- ❌ 不写产品能力与页面流程（What）：这些必须写在 `@frontend_doc.mdc`
 
-### 总体哲学
-**"Vue 文件只负责排版，Config 负责颜值，CSS 负责补位"**
+### 2) 与 `@api_spec.mdc` 的关系（只引用，不复述）
+- ✅ 只用“**小节标题或锚点标题**”引用 `@api_spec.mdc`（禁止“第X章/第X节”编号引用）
+- ❌ 禁止复制粘贴端点清单、字段列表、错误码清单、WebSocket 事件定义到本文件
+- ❌ 禁止在本文件发明任何 API 字段/事件/错误码/envelope 变体；如契约不足，只能推动修改 `@api_spec.mdc`
 
-### Level 1: 组件视觉核心 (`@frontend/app/app.config.ts`)
-- **唯一真理**: 所有 Nuxt UI 组件的**颜色 (Colors)**、**圆角 (Rounding)**、**阴影 (Shadows)**、**边框 (Borders)**、**交互状态 (Hover/Focus)** 必须在此文件中统一定义。
-- **配置原则**: 修改此文件前，**必须查阅 [Nuxt UI 官方文档](https://ui.nuxt.com)**，确保修改的 `slots`, `variants` 等配置项是该组件确实支持的。**严禁臆造配置项**。
-- **零 class 原则**: 在 Vue 文件中使用 Nuxt UI 组件时，**严禁**添加任何涉及视觉风格的 utility class（如 `bg-blue-500`, `rounded-lg`, `shadow-md`, `text-white`）。组件应该仅仅通过其 Props（`variant`, `size`, `color`）就能呈现完美效果。
-- **禁止“CSS 覆盖组件皮肤”**：严禁在 `base.css` 里用选择器去覆盖 Nuxt UI 组件内部结构/slot（例如 `.ui-*`、`[data-slot=...]`、`[data-state=...]` 等）。如果需要统一组件观感，只能通过 `app.config.ts` 的 `ui.*` 配置完成。
+### 3) 规则可执行性与可验证性
+- ✅ 每条规则应能通过代码 review 或静态检查验证（例如：禁止硬编码路径、禁止 any、分层职责边界）
+- ✅ 规则之间不得互相冲突；如冲突，以“本文件范围”内更严格者为准，但不得与 `@api_spec.mdc` 冲突
 
-### Level 2: 非组件样式与原子功能 (`@frontend/app/assets/styles/base.css`)
-- **非 Nuxt UI 元素**: 对于必须使用的原生 HTML 元素（如地图 SDK DOM、图表 SVG），如果涉及视觉样式（颜色、背景），必须使用在此文件中定义的 `@utility` 类。
-- **@utility 规范**: 所有自定义类**必须**使用 `@utility` 指令定义，并以 `hs-` (HotSpot) 开头，例如 `@utility hs-map-frame { ... }`。
-- **特殊效果**: 定义无法通过 Config 实现的复杂动画 (`keyframes` via `@theme`) 或特殊视觉效果。
-- **保持精简**：只包含真正被引用的样式，一旦组件化或被 Config 覆盖即删除。
+### 1. 目录结构与分层（强制）
 
-### Level 3: 布局与尺寸 (Vue Components)
-- **职责限制**: Vue 文件中的 `class` 属性**只能**包含以下类别的 Tailwind 工具类：
-    1.  **Layout (布局)**: `flex`, `grid`, `absolute`, `relative`, `hidden`, `block`, `items-center`, `justify-between` 等。
-    2.  **Sizing (尺寸)**: `w-full`, `h-64`, `min-w-0`, `max-w-md`, `shrink-0` 等。
-    3.  **Spacing (间距)**: `m-4`, `p-6`, `gap-4`, `space-y-2` 等。
-    4.  **Z-Index (层级)**: `z-10`, `z-50`。
-    5.  **Cursor (光标)**: `cursor-pointer` (仅当组件自身不支持通过 prop 设置时)。
-- **严禁行为**:
-    - ❌ `<UButton class="bg-blue-500 text-white">` (颜色/背景禁止)
-    - ❌ `<UCard class="rounded-xl shadow-sm">` (形状/阴影禁止)
-    - ❌ `<div class="text-gray-500 text-sm">` (原生元素的颜色禁止，应使用 `UBadge` 或 `base.css` 中的 `hs-` 类)
-    - ❌ `<style>` 标签禁止出现在 Vue 文件中。
+-   **Service Layer (`app/services/`)**
+    -   必须继承 `BaseService`。
+    -   负责所有 HTTP/WebSocket 通信、错误处理、数据转换。
+    -   **禁止**：Service 层禁止包含任何 UI 状态（Ref/Reactive）或页面逻辑。
+    -   **单例**：Service 必须以单例模式导出。
 
-### Dark Mode & Accessibility
-- **自动化**: 依赖 `app.config.ts` 中的 `dark:` 变体配置，而不是在 Vue 文件中手动写 `dark:bg-xxx`。
+-   **Store Layer (`app/stores/`)**
+    -   使用 `defineStore` (Composition API 风格)。
+    -   负责全局状态管理（User Session, Cache, WebSocket Data）。
+    -   持久化 Store 必须使用 `useHydratedStore` 在组件中访问。
 
----
+-   **Composables (`app/composables/`)**
+    -   封装可复用的**业务逻辑**（如 `useAuth`, `usePermission`）。
+    -   **注意**：纯 UI 交互逻辑（如 Modal 控制）也放在这里，但具体样式由 UI 规则约束。
 
-## 3. Nuxt UI v4 组件使用规范
+### 2. API 交互与数据一致性
 
-### 组件替代映射
-- `UButtonGroup` -> `UFieldGroup` (或 Flex 布局)
-- `USelect` -> `USlider` (范围) 或 `USelectMenu`
-- 面包屑 -> `UBreadcrumb`
-- 空状态 -> `UEmpty` (必须闭合标签)
+-   **路径常量**：必须使用 `app/config/api.ts` 中定义的常量，禁止硬编码 API 路径。
+-   **成功判定**：必须且只能通过 `ApiResponse.code === 0` 判断业务成功。禁止使用 HTTP Status Code (200/201) 作为业务成功的依据。
+-   **消息一致性**：
+    -   **发送消息**：API 调用仅用于提交意图和获取 `message_id`。
+    -   **展示消息**：必须且只能依赖 WebSocket 推送的消息事件来更新本地列表。**禁止**将 API 返回结果直接乐观插入 UI 列表。
+-   **分页处理**：
+    -   `cursor` 是不透明字符串，**禁止**前端尝试解析、解码 or 构造 cursor。
+    -   只能透传后端返回的 `next_cursor`。
 
-### Modal/Slideover 管理
-- **必须**通过 `composables/useModal.ts` 管理，使用 `useOverlay` 实现。
-- **禁止**在 template 中直接编写 `<UModal>`。
+### 3. 数据类型与语义
 
----
-
-## 4. 目录与架构
-
-### Service 层
-- 继承 `BaseService`，单例导出。
-- 只负责数据交互，不负责 UI 逻辑。
-
-### Store 层
-- 使用 `defineStore` 和 Composition API。
-- 持久化 Store 必须在组件中使用 `useHydratedStore` 访问以避免水合不匹配。
-
-### 消息发送流程（强制）
-- **API 仅负责发送**: 调用发送消息 API (`send`) 时，**严禁**直接将消息添加到本地 Store 或 UI 列表。
-- **WebSocket 负责接收**: 必须监听 WebSocket 的 `ChatMessageNew` 事件，收到推送后才构造消息对象并添加到 Store。
-- **一致性保证**: 这种模式确保了前端显示的消息（包括媒体 URL、时间戳、ID）与服务端数据库完全一致，避免了乐观更新导致的数据不一致问题。
-
-### 目录结构
-- `app/components`: UI 组件
-- `app/pages`: 页面
-- `app/layouts`: 布局
-- `app/config`: 配置文件
-- `app/assets/styles`: 全局样式
+-   **时间处理**：
+    -   上传：必须转换为 UTC ISO 8601 字符串。
+    -   展示：接收 UTC 时间，使用本地时区格式化展示。
+-   **ID 类型**：
+    -   `user_id`: `number` (BigInt in backend, safe integer in JS).
+    -   `*_id` (others): `string` (UUID).
+-   **地理位置**：
+    -   前端**禁止**自行计算距离或角度（Haversine 等）。
+    -   必须使用后端返回的 `RelativeLocation` 对象中的 `distance` 和 `bearing_degrees`。
 
 ---
 
-## 5. 代码质量
+## 代码质量与最佳实践
 
-- **类型安全**: 严禁 `any`。
-- **零 Linter 错误**: 保持代码整洁。
-- **Geo 数据访问**: 使用可选链 `user.geo?.distance`，严禁直接访问。
+-   **TypeScript**：
+    -   禁止使用 `any`。
+    -   对后端返回的可选字段（Optional），必须使用可选链（`?.`）或空值合并（`??`）进行安全访问。
+-   **Linter**：生成代码后必须符合项目的 ESLint/Prettier 规则。
+-   **Todo List**：在进行复杂任务时，必须维护 Todo List 并实时更新状态。
 
 ---
 
-## 6. API / WebSocket / 数据语义（强制）
+## 机器可检（Machine-checkable）自检 Checklist（生成/修改代码后必须逐项勾选）
 
-### 6.1 HTTP 与业务成功判定
+说明：以下 checklist 参考 `@frontend_ui.mdc` 的写法。每条都要求“可通过静态检查/代码 review/最小运行验证”来确认。AI 在自检时，应明确指出对应证据，而不是只口头声明“已遵守”。
 
-- **HTTP status 表达错误大类**（401/403/404/409/429/5xx 等），但**业务成功与否仍以 `ApiResponse.code` 为准**（`code === 0` 才是成功）。
-- 失败时优先展示/记录 `message`（如果存在），并按错误码做分流（1101/1102/1106 等）。
+**证据输出格式（强制，Evidence-friendly）**：
+- 每条 checklist 至少给出 1 条证据，证据必须满足以下任一形式：
+  1) **文件路径 + 关键代码片段**（推荐：给出具体文件与相关行附近的原文）
+  2) **文件路径 + 关键符号**（函数/类/常量名）+ 简述“如何被调用/如何被使用”
+  3) **全文检索结论**：明确写出“检索关键词/模式 + 结论（0 matches / matches 列表）”
+- 若某条需要“运行验证”才能确认，必须明确：
+  - 运行验证的入口（例如：进入哪个页面、触发哪个交互）
+  - 期望现象（可观察结果）
+  - 失败时如何定位（优先回到可静态检索的证据点）
 
-### 6.2 时间与时区
+### 工程边界与契约引用（只约束“不要产生第二份契约”）
+1.  [ ] **No Contract Duplication**: 代码与文档中没有复制粘贴 `@api_spec.mdc` 的端点/字段/错误码/事件清单（允许引用小节标题或锚点标题）。
+2.  [ ] **Title-only Citation**: 文档引用 `@api_spec.mdc` 时只使用小节标题或锚点标题，不使用“第X章/第X节”编号引用。
 
-- 服务端所有时间字段是 **UTC ISO 8601 string**；前端展示时转成本地时区。
-- 前端向后端传时间字段也必须是 UTC ISO 8601 string。
+### API 调用与分层（How-only）
+3.  [ ] **Service Only Networking**: `frontend/app/pages/**`、`frontend/app/components/**`、`frontend/app/composables/**` 中没有直接调用 `$fetch`/`useFetch` 去访问后端；所有网络请求都在 `frontend/app/services/**` 内完成。
+4.  [ ] **No Hardcoded API Path**: 前端代码中没有硬编码 `"/api/"`、`"/api/v1/"` 等 API 路径字符串；必须通过 `frontend/app/config/api.ts` 的常量引用。
+5.  [ ] **ApiResponse Code Gate**: 所有业务成功判定都只使用 `ApiResponse.code === 0`；没有使用 HTTP 状态码作为业务成功依据。
+6.  [ ] **Cursor Opaque**: 前端没有解析/解码/构造 `cursor`；仅透传后端返回的 `next_cursor`。
 
-### 6.3 ID 类型
+### WebSocket 与消息一致性（不写事件名/字段名，避免粘贴契约）
+7.  [ ] **No Optimistic Final Message**: Chat 消息列表的“最终展示态”只能来自 WebSocket 的实时事件；send API 返回值仅用于拿 `message_id` 关联本地发送态。
+8.  [ ] **No Local WS Contract**: 前端没有维护“独立的 WS 事件名/字段表”；如需变更，只能推动修改 `@api_spec.mdc`，前端仅消费契约。
 
-- `user_id`：**number**
-- 其他业务 ID（moment_id、group_chat_id、message_id、comment_id、private_chat_id 等）：**string（UUID）**
+### 管理员权限（与最新契约一致）
+9.  [ ] **Admin Super Derivation**: 前端判断超级管理员必须使用 `permissions.includes('*')`；代码中不存在 `is_super` 字段依赖。
 
-### 6.4 分页（cursor）
+### 类型与质量
+10. [ ] **No any**: TypeScript 代码中没有新增 `any`（包括 `as any`）。
+11. [ ] **Optional Field Safety**: 所有可选字段访问都使用 `?.`/`??` 进行安全处理，避免运行时 `undefined` 崩溃。
+12. [ ] **Lint Clean**: 变更后代码在项目既有 lint/format 规则下保持可通过（以项目现有配置为准）。
 
-- cursor 是不透明字符串：只透传 `next_cursor`；禁止解析、拼装、或在前端生成 cursor。
+---
 
-### 6.5 消息一致性（再次强调）
-
-- UI 展示的消息以 WebSocket 推送为准；发送消息接口的返回只用于“发送成功/失败”和必要的本地状态更新（如清空输入框）。
-
-### 6.6 地理数据与距离口径（强制）
-
-- **禁止客户端计算距离/角度**：严禁在前端实现 Haversine、地球半径常量、弧度换算等“从经纬度推导距离/角度”的逻辑。
-- **距离/角度只能来自后端**：列表/详情展示的 `distance/degrees` 必须使用后端返回的 `GeoData.distance` / `GeoData.degrees`。
-- **筛选与范围查询交给后端**：需要“半径/范围”筛选时，只传 `radius` 给后端（`search_by_location` / feed 等），前端不做本地距离过滤。
+## 关联文档
+- UI 样式/App Config/组件封装：`@frontend_ui.mdc`

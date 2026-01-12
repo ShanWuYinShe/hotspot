@@ -3,6 +3,7 @@
     title="输入群组密码"
     :description="groupName ? `加入群组「${groupName}」需要输入密码` : '该群组需要密码才能加入'"
     :close="{ onClick: () => emit('close', null) }"
+    @update:open="(open) => { if (!open) emit('close', null) }"
   >
     <template #body>
       <UFormField label="群组密码" name="password">
@@ -27,7 +28,6 @@
           取消
         </UButton>
         <UButton 
-          :loading="loading" 
           :disabled="!password"
           @click="confirm"
         >
@@ -39,16 +39,11 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
-  groupName?: string
-}>()
+defineProps<{ groupName?: string }>()
 
-const emit = defineEmits<{
-  close: [value: string | null]
-}>()
+const emit = defineEmits<{ close: [value: string | null] }>()
 
 const password = ref('')
-const loading = ref(false)
 
 const confirm = () => {
   if (!password.value) return

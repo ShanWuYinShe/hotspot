@@ -11,10 +11,6 @@ impl MapRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
-
-    pub fn pool(&self) -> &PgPool {
-        &self.pool
-    }
 }
 
 #[derive(Debug, FromRow)]
@@ -25,7 +21,19 @@ pub struct MapClusterRow {
     pub count: i64,
 }
 
+#[derive(Debug, FromRow)]
+pub struct MapEntityRow {
+    pub id: String,
+    pub title: String,
+    pub subtitle: Option<String>,
+    pub cover_url: Option<String>,
+    pub latitude: f64,
+    pub longitude: f64,
+}
+
 impl MapRepository {
+    // ==================== Cluster Queries ====================
+
     pub async fn cluster_users_by_bounds(
         &self,
         west: f64,
@@ -131,6 +139,8 @@ impl MapRepository {
         east: f64,
         north: f64,
         grid_meters: f64,
+        start_time: Option<String>,
+        end_time: Option<String>,
     ) -> Result<Vec<MapClusterRow>> {
         let rows = sqlx::query_as::<_, MapClusterRow>(
             r#"
@@ -144,6 +154,8 @@ impl MapRepository {
               WHERE m.is_deleted = FALSE
                 AND m.location IS NOT NULL
                 AND (m.location::geometry && env.bbox)
+                AND ($6::TIMESTAMPTZ IS NULL OR m.created_at >= $6::TIMESTAMPTZ)
+                AND ($7::TIMESTAMPTZ IS NULL OR m.created_at <= $7::TIMESTAMPTZ)
             )
             SELECT
               CONCAT(
@@ -166,10 +178,128 @@ impl MapRepository {
         .bind(east)
         .bind(north)
         .bind(grid_meters)
+        .bind(start_time)
+        .bind(end_time)
         .fetch_all(&self.pool)
         .await?;
 
         Ok(rows)
     }
-}
 
+    // ==================== Entity Queries ====================
+
+    pub async fn search_users_by_bounds(
+        &self,
+        west: f64,
+        south: f64,
+        east: f64,
+        north: f64,
+        limit: i32,
+    ) -> Result<Vec<MapEntityRow>> {
+        let rows = sqlx::query_as::<_, MapEntityRow>(
+            r#"
+            SELECT
+                u.user_id::text AS id,
+                u.nickname AS title,
+                u.bio AS subtitle,
+                u.avatar_url AS cover_url,
+                ST_Y(u.location::geometry) AS latitude,
+                ST_X(u.location::geometry) AS longitude
+            FROM users u
+            WHERE u.is_deleted = FALSE
+                AND u.is_banned = FALSE
+                AND u.location IS NOT NULL
+                AND (u.location::geometry && ST_MakeEnvelope($1, $2, $3, $4, 4326))
+            LIMIT $5
+            "#,
+        )
+        .bind(west)
+        .bind(south)
+        .bind(east)
+        .bind(north)
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows)
+    }
+
+    pub async fn search_groups_by_bounds(
+        &self,
+        west: f64,
+        south: f64,
+        east: f64,
+        north: f64,
+        limit: i32,
+    ) -> Result<Vec<MapEntityRow>> {
+        let rows = sqlx::query_as::<_, MapEntityRow>(
+            r#"
+            SELECT
+                g.group_chat_id::text AS id,
+                g.name AS title,
+                g.description AS subtitle,
+                g.avatar_url AS cover_url,
+                ST_Y(g.location::geometry) AS latitude,
+                ST_X(g.location::geometry) AS longitude
+            FROM group_chats g
+            WHERE g.is_deleted = FALSE
+                AND g.is_dismissed = FALSE
+                AND g.location IS NOT NULL
+                AND (g.location::geometry && ST_MakeEnvelope($1, $2, $3, $4, 4326))
+            LIMIT $5
+            "#,
+        )
+        .bind(west)
+        .bind(south)
+        .bind(east)
+        .bind(north)
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows)
+    }
+
+    pub async fn search_moments_by_bounds(
+        &self,
+        west: f64,
+        south: f64,
+        east: f64,
+        north: f64,
+        limit: i32,
+        start_time: Option<String>,
+        end_time: Option<String>,
+    ) -> Result<Vec<MapEntityRow>> {
+        // Moments 需要 join user 获取 nickname? 
+        // 简单起见，title=desc, subtitle=user_id or nickname if joined.
+        // MapEntityRow struct fields match.
+        // cover_url: images[1] (Postgres 1-based array index)
+        let rows = sqlx::query_as::<_, MapEntityRow>(
+            r#"
+            SELECT
+                m.moment_id::text AS id,
+                m.description AS title,
+                u.nickname AS subtitle,
+                m.images[1] AS cover_url,
+                ST_Y(m.location::geometry) AS latitude,
+                ST_X(m.location::geometry) AS longitude
+            FROM moments m
+            JOIN users u ON m.user_id = u.user_id
+            WHERE m.is_deleted = FALSE
+                AND m.location IS NOT NULL
+                AND (m.location::geometry && ST_MakeEnvelope($1, $2, $3, $4, 4326))
+                AND ($6::TIMESTAMPTZ IS NULL OR m.created_at >= $6::TIMESTAMPTZ)
+                AND ($7::TIMESTAMPTZ IS NULL OR m.created_at <= $7::TIMESTAMPTZ)
+            LIMIT $5
+            "#,
+        )
+        .bind(west)
+        .bind(south)
+        .bind(east)
+        .bind(north)
+        .bind(limit)
+        .bind(start_time)
+        .bind(end_time)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows)
+    }
+}

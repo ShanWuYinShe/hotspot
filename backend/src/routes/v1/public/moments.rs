@@ -11,6 +11,5 @@ pub fn routes() -> Router<AppState> {
         // 获取指定瞬间信息
         .route("/open_the_door", post(moments::open_the_door))
         // 列表 API
-        .route("/comments", post(moments::get_comments))
         .route("/likes", post(moments::get_likes))
 }

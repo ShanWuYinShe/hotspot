@@ -1,34 +1,30 @@
 <template>
-  <div class="sticky top-0 z-30">
-    <UDashboardNavbar :toggle="false">
-      <template #left>
-        <div class="flex items-center gap-3 min-w-0">
-          <UButton
-            variant="ghost"
-            color="neutral"
-            size="md"
-            icon="i-lucide-arrow-left"
-            :square="true"
-            class="shrink-0"
-            @click="$emit('go-back')"
-          />
+  <header class="flex items-center justify-between px-4 py-3 border-b border-neutral-200 dark:border-neutral-800">
+      <div class="flex items-center gap-3 min-w-0">
+        <UButton
+          variant="ghost"
+          color="neutral"
+          size="md"
+          icon="i-lucide-arrow-left"
+          :square="true"
+          @click="$emit('go-back')"
+        />
 
-          <UUser
-            class="min-w-0 cursor-pointer"
-            :name="userInfo?.nickname || '私聊'"
-            :description="isOnline ? '在线' : lastOnlineText"
-            :avatar="{
-              src: userInfo?.avatar_url,
-              alt: userInfo?.nickname,
-              size: 'md',
-              chip: isOnline ? { color: 'success', position: 'bottom-right', size: '2xs' } : false
-            }"
-            @click="$emit('view-profile')"
-          />
+        <div class="flex items-center gap-3 min-w-0 cursor-pointer" @click="$emit('view-profile')">
+             <UAvatar 
+                :src="userInfo?.avatar_url" 
+                :alt="userInfo?.nickname"
+                size="md"
+                :chip="isOnline ? { color: 'success', position: 'bottom-right', size: '2xs' } : undefined"
+             />
+             <div class="flex flex-col min-w-0">
+                 <span class="text-sm font-medium truncate text-neutral-900 dark:text-white">{{ userInfo?.nickname || '私聊' }}</span>
+                 <span class="text-xs text-neutral-500 dark:text-neutral-400 truncate">{{ isOnline ? '在线' : lastOnlineText }}</span>
+             </div>
         </div>
-      </template>
+      </div>
 
-      <template #right>
+      <div class="flex items-center gap-1">
         <UTooltip text="搜索聊天记录" :portal="false">
           <UButton
             variant="ghost"
@@ -51,19 +47,17 @@
             :square="true"
           />
         </UDropdownMenu>
-      </template>
-    </UDashboardNavbar>
-  </div>
+      </div>
+  </header>
 </template>
 
 <script setup lang="ts">
-import type { UserDetailData } from '~/types/client'
+import type { PrivateChatDetailData } from '~/types/api'
 import type { DropdownMenuItem } from '@nuxt/ui'
 
 interface Props {
-  userInfo?: UserDetailData
-  isOnline?: boolean
-  lastOnline?: string  // ISO 8601 格式的最后在线时间
+  chat?: PrivateChatDetailData
+  loading?: boolean
   menuItems?: DropdownMenuItem[][]
 }
 
@@ -78,26 +72,9 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
-// 离线时显示的最后在线时间文字
-const lastOnlineText = computed(() => {
-  if (!props.userInfo) return '未知';
-  if (props.isOnline) return '';
-  
-  // 如果有最后在线时间，计算友好的显示文字
-  if (props.lastOnline) {
-    const lastActive = new Date(props.lastOnline);
-    const now = new Date();
-    const diff = now.getTime() - lastActive.getTime();
-    
-    if (diff < 60000) return '刚刚在线';  // 1分钟内
-    if (diff < 300000) return '5分钟前在线';  // 5分钟内
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前在线`;
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前在线`;
-    return `${Math.floor(diff / 86400000)}天前在线`;
-  }
-  
-  return '离线';
-})
+const userInfo = computed(() => props.chat?.other_user)
+const isOnline = computed(() => false) // 暂未接入实时在线状态
+const lastOnlineText = computed(() => '离线') // 暂未接入
 
 // 菜单项（默认）
 const defaultMenuItems = computed((): DropdownMenuItem[][] => [

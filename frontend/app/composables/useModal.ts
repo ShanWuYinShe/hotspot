@@ -4,7 +4,7 @@
  */
 
 import type { Component } from 'vue'
-import type { GroupMemberItem, MomentSearchItem } from '~/types/api'
+import type { GroupMemberItem, MomentItem } from '~/types/api'
 
 /** 举报目标类型 */
 export type ReportTargetType = 'user' | 'moment' | 'comment' | 'message' | 'group'
@@ -107,8 +107,8 @@ export function useModal() {
     return typeof result === 'string' ? result : null
   }
 
-  const showEditMoment = async (moment: Pick<MomentSearchItem, 'id' | 'description' | 'tags' | 'images' | 'geo'>): Promise<string | null> => {
-    const result = await openModal<{ mode: 'edit'; moment: Pick<MomentSearchItem, 'id' | 'description' | 'tags' | 'images' | 'geo'> }, unknown>(
+  const showEditMoment = async (moment: Pick<MomentItem, 'moment_id' | 'description' | 'tags' | 'images' | 'location'>): Promise<string | null> => {
+    const result = await openModal<{ mode: 'edit'; moment: Pick<MomentItem, 'moment_id' | 'description' | 'tags' | 'images' | 'location'> }, unknown>(
       () => import('~/components/modals/CreateMomentModal.vue'),
       { mode: 'edit', moment }
     )

@@ -31,7 +31,15 @@ pub fn v1_routes(state: AppState) -> Router<AppState> {
         .nest("/public/comments", public::comments::routes())
         .nest("/public/map", public::map::routes())
         .nest("/public/system", public::system::routes())
+        .nest(
+            "/public/global_settings",
+            public::global_settings::routes(),
+        )
         .nest("/public/tags", public::tags::routes())
+        .nest(
+            "/public/announcements",
+            public::announcements::routes(),
+        )
         .with_state(state.clone())
         .layer(middleware::from_fn_with_state(
             state.clone(),
@@ -71,13 +79,21 @@ pub fn v1_routes(state: AppState) -> Router<AppState> {
         .nest("/protected/feed", protected::feed::routes())
         .nest("/protected/media", protected::media::routes())
         .nest("/protected/messages", protected::messages::routes())
+        .nest(
+            "/protected/notifications",
+            protected::notifications::routes(),
+        )
         .with_state(state.clone())
         .layer(
             ServiceBuilder::new()
                 // 中间件执行顺序（从下到上）：
-                // 1. auth_middleware（认证）
-                // 2. idempotency_middleware（幂等性）
-                // 3. rate_limit_middleware（速率限制）
+                // 1. auth_middleware（认证，注入 user_id）
+                // 2. rate_limit_middleware（速率限制，依赖 user_id）
+                // 3. idempotency_middleware（幂等性，依赖 user_id）
+                .layer(middleware::from_fn_with_state(
+                    state.clone(),
+                    auth_middleware,
+                ))
                 .layer(middleware::from_fn_with_state(
                     state.clone(),
                     rate_limit_middleware,
@@ -85,10 +101,6 @@ pub fn v1_routes(state: AppState) -> Router<AppState> {
                 .layer(middleware::from_fn_with_state(
                     state.clone(),
                     idempotency_middleware,
-                ))
-                .layer(middleware::from_fn_with_state(
-                    state.clone(),
-                    auth_middleware,
                 )),
         );
 
@@ -100,17 +112,13 @@ pub fn v1_routes(state: AppState) -> Router<AppState> {
         .layer(
             ServiceBuilder::new()
                 // 中间件执行顺序（从下到上）：
-                // 1. auth_middleware（认证）
-                // 2. admin_auth_middleware（管理员验证）
-                // 3. idempotency_middleware（幂等性）
-                // 4. rate_limit_middleware（速率限制）
+                // 1. auth_middleware（认证，注入 user_id）
+                // 2. admin_auth_middleware（管理员验证，依赖 user_id）
+                // 3. rate_limit_middleware（速率限制，依赖 user_id）
+                // 4. idempotency_middleware（幂等性，依赖 user_id）
                 .layer(middleware::from_fn_with_state(
                     state.clone(),
-                    rate_limit_middleware,
-                ))
-                .layer(middleware::from_fn_with_state(
-                    state.clone(),
-                    idempotency_middleware,
+                    auth_middleware,
                 ))
                 .layer(middleware::from_fn_with_state(
                     state.clone(),
@@ -118,7 +126,11 @@ pub fn v1_routes(state: AppState) -> Router<AppState> {
                 ))
                 .layer(middleware::from_fn_with_state(
                     state.clone(),
-                    auth_middleware,
+                    rate_limit_middleware,
+                ))
+                .layer(middleware::from_fn_with_state(
+                    state.clone(),
+                    idempotency_middleware,
                 )),
         );
 

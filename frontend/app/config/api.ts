@@ -110,7 +110,6 @@ export const COMMENTS = {
 
 // 私聊 API
 export const PRIVATE_CHATS = {
-  CREATE: `${API.PROTECTED}/private_chats/create`,
   OPEN_THE_DOOR: `${API.PROTECTED}/private_chats/open_the_door`,
   UPDATE_SETTINGS: `${API.PROTECTED}/private_chats/update_settings`,
   DELETE: `${API.PROTECTED}/private_chats/delete`,
@@ -216,6 +215,14 @@ export const REPORTS = {
 
 // 系统配置管理（管理员）
 export const ADMIN_CONFIG = {
+  FETCH: `${API.PUBLIC}/global_settings/fetch`,
+  ADMIN_FETCH: `${API.ADMIN}/global_settings`,
+  ADMIN_UPDATE_UPLOAD: `${API.ADMIN}/global_settings/update_upload`,
+  ADMIN_UPDATE_DEFAULTS: `${API.ADMIN}/global_settings/update_defaults`,
+  ADMIN_UPDATE_FEATURES: `${API.ADMIN}/global_settings/update_features`,
+  ADMIN_UPDATE_CONTACT: `${API.ADMIN}/global_settings/update_contact`,
+  ADMIN_UPDATE_LIMITS: `${API.ADMIN}/global_settings/update_limits`,
+  // Deprecated KV endpoints
   CREATE: `${API.ADMIN}/config/create`,
   DETAIL: `${API.ADMIN}/config/detail`,
   LIST: `${API.ADMIN}/config`,
@@ -241,12 +248,12 @@ export const ADMIN_RBAC = {
 
 // 媒体上传 API
 export const MEDIA = {
-  UPLOAD: `${API.PROTECTED}/media/upload`,
-  INITIATE_UPLOAD: `${API.PROTECTED}/media/initiate_upload`,
-  UPLOAD_CHUNK: `${API.PROTECTED}/media/upload_chunk`,
+  PRESIGN_UPLOAD: `${API.PROTECTED}/media/presign_upload`,
   COMPLETE_UPLOAD: `${API.PROTECTED}/media/complete_upload`,
-  UPLOAD_STATUS: `${API.PROTECTED}/media/upload_status`,
-  ABORT_UPLOAD: `${API.PROTECTED}/media/abort_upload`
+  // Chunked Upload (New Flow)
+  CHUNKED_INIT: `${API.PROTECTED}/media/chunked/init`,
+  CHUNKED_FINISH: `${API.PROTECTED}/media/chunked/finish`,
+  CHUNKED_CHECK: `${API.PROTECTED}/media/chunked/check`
 } as const
 
 // 标签 API
@@ -273,18 +280,14 @@ export const SYSTEM = {
   HEALTH: `${API.PUBLIC}/system/health`
 } as const
 
-// 地图聚合/视口查询 API（用于替代 search_by_location，实现按 zoom/bounds 的瓦片聚合与视口内明细加载）
+// 地图聚合/视口查询 API
 export const MAP = {
-  USERS: {
-    CLUSTER: `${API.PUBLIC}/map/users/cluster`,
-    SEARCH_BY_BOUNDS: `${API.PUBLIC}/map/users/search_by_bounds`
-  },
-  GROUPS: {
-    CLUSTER: `${API.PUBLIC}/map/groups/cluster`,
-    SEARCH_BY_BOUNDS: `${API.PUBLIC}/map/groups/search_by_bounds`
-  },
-  MOMENTS: {
-    CLUSTER: `${API.PUBLIC}/map/moments/cluster`,
-    SEARCH_BY_BOUNDS: `${API.PUBLIC}/map/moments/search_by_bounds`
-  }
+  RENDER: `${API.PUBLIC}/map/render`
+} as const
+
+// 通知中心 API
+export const NOTIFICATIONS = {
+  LIST: `${API.PROTECTED}/notifications`,
+  UNREAD_COUNT: `${API.PROTECTED}/notifications/unread_count`,
+  MARK_READ: `${API.PROTECTED}/notifications/mark_read`
 } as const

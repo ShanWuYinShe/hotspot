@@ -70,6 +70,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         state.redis.clone(),
         state.ws_manager.clone(),
         state.ws_subscription.clone(),
+        event_bus.clone(),
     );
     tokio::spawn(async move {
         event_handler.start(event_receiver).await;

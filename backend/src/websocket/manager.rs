@@ -115,6 +115,27 @@ impl ConnectionManager {
         }
     }
 
+    /// 广播消息给所有在线用户
+    pub async fn broadcast(&self, message: &WsMessage) {
+        let connections = self.connections.read().await;
+        let json_str = match serde_json::to_string(message) {
+            Ok(s) => s,
+            Err(e) => {
+                tracing::error!("序列化消息失败: {}", e);
+                return;
+            }
+        };
+        let ws_message = Message::Text(json_str.into());
+
+        for user_connections in connections.values() {
+            for connection in user_connections {
+                if let Err(e) = connection.sender.send(ws_message.clone()) {
+                    tracing::error!("广播消息失败: connection_id={}, error={}", connection.connection_id, e);
+                }
+            }
+        }
+    }
+
     /// 获取用户的连接数
     pub async fn get_user_connection_count(&self, user_id: i64) -> usize {
         let connections = self.connections.read().await;

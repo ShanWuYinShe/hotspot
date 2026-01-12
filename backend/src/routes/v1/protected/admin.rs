@@ -1,7 +1,7 @@
 use axum::{routing::post, Router};
 
 use crate::{
-    handlers::{admin_rbac, reports, system_config},
+    handlers::{admin_rbac, announcements, group_chats, reports, system_config, tags, user},
     state::AppState,
 };
 
@@ -21,19 +21,45 @@ pub fn admin_routes() -> Router<AppState> {
         .route("/rbac/admins/list", post(admin_rbac::list_admins))
         .route("/rbac/admins/grant", post(admin_rbac::grant_admin))
         .route("/rbac/admins/revoke", post(admin_rbac::revoke_admin))
-        // 系统配置管理
-        .route("/config/create", post(system_config::create))
-        // list
-        .route("/config", post(system_config::get_list))
-        // detail
-        .route("/config/detail", post(system_config::get_config))
-        .route("/config/update", post(system_config::update))
-        .route("/config/delete", post(system_config::delete))
-        // history
-        .route("/config/history", post(system_config::get_config_history))
-        // changes
-        .route("/config/changes", post(system_config::get_changes))
         // 举报审核（管理员）
         .route("/reports", post(reports::get_list))
         .route("/reports/handle", post(reports::handle))
+        // Global Settings (Strongly Typed)
+        .route(
+            "/global_settings",
+            post(system_config::admin_get_global_settings),
+        )
+        .route(
+            "/global_settings/update_upload",
+            post(system_config::admin_update_upload_config),
+        )
+        .route(
+            "/global_settings/update_defaults",
+            post(system_config::admin_update_defaults_config),
+        )
+        .route(
+            "/global_settings/update_features",
+            post(system_config::admin_update_features_config),
+        )
+        .route(
+            "/global_settings/update_contact",
+            post(system_config::admin_update_contact_config),
+        )
+        .route(
+            "/global_settings/update_limits",
+            post(system_config::admin_update_limits_config),
+        )
+        // 用户管理
+        .route("/users/search", post(user::admin_search))
+        .route("/users/ban", post(user::admin_ban))
+        .route("/users/unban", post(user::admin_unban))
+        // 群组管理
+        .route("/groups/search", post(group_chats::admin_search))
+        .route("/groups/dismiss", post(group_chats::admin_dismiss))
+        // 标签管理
+        .route("/tags/delete", post(tags::admin_delete))
+        // 公告管理
+        .route("/announcements/create", post(announcements::admin_create))
+        .route("/announcements/list", post(announcements::admin_list))
+        .route("/announcements/delete", post(announcements::admin_delete))
 }

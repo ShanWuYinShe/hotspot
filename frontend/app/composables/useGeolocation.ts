@@ -89,16 +89,6 @@ const setDefaultPosition = (errorMsg: string, silent: boolean): PositionResult =
   return defaultPosition
 }
 
-const formatAMapAddress = (result: AMap.GeolocationResult): string => {
-  const addr = result.addressComponent
-  if (addr) {
-    if (addr.district && addr.street) return `${addr.district}${addr.street}`
-    if (addr.district && addr.township) return `${addr.district}${addr.township}`
-    if (addr.district) return addr.district
-    if (addr.city) return addr.city
-  }
-  return result.formattedAddress || '未知位置'
-}
 
 const initAMapGeolocation = async (): Promise<AMap.Geolocation | null> => {
   if (amapGeolocation) return amapGeolocation
@@ -177,11 +167,9 @@ export function useGeolocation() {
             
             updateState(position)
             
-            if (result.formattedAddress) {
-              state.locationName = formatAMapAddress(result)
-            } else if (shouldFetchName && !state.locationName) {
-              fetchLocationName(position.coords.latitude, position.coords.longitude)
-            }
+            // 统一使用逆地理编码获取友好的位置名称（包含POI信息）
+            // 即使 shouldFetchName 为 false，也使用 getLocationName 以确保名称友好
+            fetchLocationName(position.coords.latitude, position.coords.longitude)
             
             resolve(position)
           } else {
@@ -225,9 +213,8 @@ export function useGeolocation() {
 
       updateState(position)
 
-      if (result.formattedAddress) {
-        state.locationName = formatAMapAddress(result)
-      }
+      // 使用逆地理编码获取更友好的位置名称（包含POI信息）
+      fetchLocationName(position.coords.latitude, position.coords.longitude)
 
       // ✅ 触发所有注册的回调（比如 useLocationSync）
       watchHandlers.forEach((fn) => {
@@ -239,7 +226,7 @@ export function useGeolocation() {
       })
     }
 
-    const onError = (result: any) => {
+    const onError = (result: unknown) => {
       console.warn('[Geolocation] 监听定位失败', result)
     }
 

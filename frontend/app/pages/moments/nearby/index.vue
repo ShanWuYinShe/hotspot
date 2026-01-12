@@ -1,329 +1,284 @@
 <template>
-    <div class="w-full">
-        <div class="flex items-center gap-3 mb-6">
-            <!-- 搜索输入 -->
-            <UInput
-                v-model="searchQuery"
-                placeholder="搜索动态内容..."
-                icon="i-lucide-search"
-                class="flex-1"
-                :interactive="true"
-            >
-                <template #trailing>
-                    <UButton
-                        v-if="searchQuery !== ''"
-                        color="neutral"
-                        variant="link"
-                        icon="i-lucide-x"
-                        :padded="false"
-                        @click="searchQuery = ''"
-                    />
-                </template>
-            </UInput>
-            
-            <!-- 半径筛选 (Popover) -->
-            <UPopover width="md">
+    <div class="flex flex-col gap-6">
+        <!-- Sticky Header & Filter -->
+        <div class="sticky top-0 z-20 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-sm border-b border-neutral-200 dark:border-neutral-800 -mx-4 sm:-mx-6 px-4 sm:px-6 py-4 space-y-4">
+            <!-- Header -->
+            <div class="flex items-center gap-4">
                 <UButton
+                    variant="ghost"
                     color="neutral"
-                    variant="soft"
-                    icon="i-lucide-sliders-horizontal"
-                    :label="formatDistance(selectedRadius)"
+                    icon="i-lucide-arrow-left"
+                    @click="$router.back()"
                 />
-                <template #content>
-                    <div class="space-y-4">
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm font-medium">搜索半径</span>
-                            <UBadge variant="soft" :label="formatDistance(selectedRadius)" />
-                        </div>
-                        <USlider
-                            v-model="selectedRadius"
-                            :min="1000"
-                            :max="50000"
-                            :step="1000"
-                            @update:model-value="debouncedRefresh"
+                <div>
+                    <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">附近动态</h1>
+                    <p class="text-neutral-500 dark:text-neutral-400 mt-1">发现身边有趣的人和事</p>
+                </div>
+            </div>
+
+            <!-- 筛选工具栏 -->
+            <div class="flex items-center gap-3">
+                <UInput
+                    v-model="searchQuery"
+                    placeholder="搜索动态..."
+                    icon="i-lucide-search"
+                    class="flex-1"
+                    size="sm"
+                >
+                    <template v-if="searchQuery" #trailing>
+                        <UButton
+                            color="neutral"
+                            variant="link"
+                            icon="i-lucide-x"
+                            size="xs"
+                            @click="searchQuery = ''"
                         />
-                        <div class="flex justify-between text-xs">
-                            <span>1km</span>
-                            <span>25km</span>
-                            <span>50km</span>
+                    </template>
+                </UInput>
+                
+                <UPopover :popper="{ placement: 'bottom-end' }">
+                    <UButton
+                        color="neutral"
+                        variant="soft"
+                        icon="i-lucide-sliders-horizontal"
+                        :label="formatDistance(selectedRadius)"
+                        size="sm"
+                    />
+                    <template #content>
+                        <div class="p-4 w-64 space-y-4">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm font-semibold text-neutral-900 dark:text-white">搜索半径</span>
+                                <span class="font-bold text-primary-500">{{ formatDistance(selectedRadius) }}</span>
+                            </div>
+                            <USlider
+                                v-model="selectedRadius"
+                                :min="1000"
+                                :max="50000"
+                                :step="1000"
+                                size="sm"
+                                color="primary"
+                                @update:modelValue="debouncedRefresh"
+                            />
+                            <div class="flex justify-between text-xs text-neutral-400 dark:text-neutral-500">
+                                <span>1km</span>
+                                <span>50km</span>
+                            </div>
                         </div>
-                    </div>
-                </template>
-            </UPopover>
+                    </template>
+                </UPopover>
+            </div>
         </div>
 
-        <!-- 内容区域 -->
-        <div class="relative min-h-[400px]">
-            <!-- 加载状态 -->
-            <div v-if="loading && moments.length === 0" class="flex flex-col gap-6">
-                <USkeleton v-for="i in 3" :key="i" class="h-56" />
-            </div>
+        <div class="space-y-6 pb-12">
+            <!-- 列表内容 -->
+            <div class="min-h-[60vh]">
+                <!-- 加载中 -->
+                <div v-if="loading && moments.length === 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <div v-for="i in 8" :key="i" class="space-y-3">
+                        <div class="flex items-center gap-3">
+                            <USkeleton shape="circle" class="size-10" />
+                            <div class="space-y-1">
+                                <USkeleton class="h-4 w-24" />
+                                <USkeleton class="h-3 w-16" />
+                            </div>
+                        </div>
+                        <USkeleton shape="rectangle" class="h-48 w-full rounded-2xl" />
+                    </div>
+                </div>
 
-            <div v-else-if="filteredMoments.length > 0" class="flex flex-col gap-6">
-                <MomentCard
-                    v-for="moment in filteredMoments"
-                    :key="moment.id"
-                    :moment="moment"
-                    :show-actions="true"
-                    class="w-full"
-                    @click="navigateTo(`/moments/${moment.id}`)"
-                    @like="toggleLike(moment)"
-                    @comment="navigateTo(`/moments/${moment.id}#comments`)"
-                    @share="handleShare(moment)"
-                    @tag-click="handleTagClick"
-                    @deleted="refresh"
-                    @updated="refresh"
-                />
-            </div>
+                <!-- 结果列表 -->
+                <div v-else-if="filteredMoments.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <MomentCard
+                        v-for="moment in filteredMoments"
+                        :key="moment.moment_id"
+                        :moment="moment"
+                        class="w-full"
+                        @click="navigateTo(`/moments/${moment.moment_id}`)"
+                        @like="toggleLike(moment)"
+                        @comment="navigateTo(`/moments/${moment.moment_id}#comments`)"
+                        @share="handleShare(moment)"
+                        @tag-click="searchQuery = $event"
+                        @deleted="refresh"
+                        @updated="refresh"
+                    />
+                </div>
 
-            <!-- 空状态 -->
-            <UEmpty
-                v-else
-                icon="i-lucide-image"
-                title="暂无附近动态"
-                description="这里还有点冷清，成为第一个分享生活瞬间的人吧！"
-                class="py-16"
-            >
-                <template #actions>
-                    <UButton variant="soft" icon="i-lucide-refresh-cw" @click="refresh">重新搜索</UButton>
-                    <UButton icon="i-lucide-camera" @click="openCreateModal">发布动态</UButton>
-                </template>
-            </UEmpty>
-            
-            <!-- 加载更多按钮 -->
-            <div v-if="hasMore && filteredMoments.length > 0" class="flex justify-center mt-12 mb-10">
-                <!-- 触底自动加载：IntersectionObserver + 保留按钮作为兜底 -->
-                <div ref="loadMoreTrigger" class="h-1 w-1" />
-                <USkeleton v-if="loadingMore" class="h-10 w-32" />
-                <UButton
-                  v-else-if="!canAutoLoadMore"
-                  variant="ghost"
-                  size="lg"
-                  color="neutral"
-                  leading-icon="i-lucide-arrow-down"
-                  class="px-8"
-                  @click="loadMore"
+                <!-- 空状态 -->
+                <UEmpty
+                    v-else
+                    icon="i-lucide-camera-off"
+                    title="暂无动态"
+                    description="附近还没有人发布动态，来发一条吧！"
+                    class="py-20 max-w-md mx-auto"
                 >
-                  加载更多
-                </UButton>
-            </div>
-            
-            <!-- 已显示全部提示 -->
-            <div v-else-if="moments.length > 0 && !hasMore" class="text-center mt-12 mb-10">
-                <UBadge color="neutral" variant="soft" size="xs">已显示全部内容</UBadge>
+                    <template #actions>
+                        <UButton
+                            icon="i-lucide-refresh-cw"
+                            variant="soft"
+                            @click="refresh"
+                        >刷新试试</UButton>
+                        <UButton icon="i-lucide-plus" @click="openCreateModal">发布动态</UButton>
+                    </template>
+                </UEmpty>
+
+                <!-- 加载更多 -->
+                <div v-if="hasMore && filteredMoments.length > 0" class="py-8 flex justify-center">
+                     <div ref="loadMoreTrigger" class="h-1 w-1" />
+                     <UButton
+                        :loading="loadingMore"
+                        variant="ghost"
+                        color="neutral"
+                        @click="loadMore"
+                    >
+                        {{ loadingMore ? '加载中...' : '加载更多' }}
+                    </UButton>
+                </div>
             </div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { useMomentsService } from '~/services/moments.service';
-import type { MomentSearchItem } from '~/types/api'
-import type { Moment } from '~/stores/moments.store'
-import { useDashboardHeader } from '~/composables/useDashboardHeader'
+import { useMomentsService } from "~/services/moments.service";
+import type { MomentItem } from "~/types/api";
+import type { Moment } from "~/stores/moments.store";
+import MomentCard from "~/components/cards/MomentCard.vue";
 
+// 附近的动态是公开页面
 definePageMeta({
-    title: '附近动态',
-    description: '发现身边的新鲜事',
-    layout: 'dashboard',
-    dashboardHeader: true,
-    contentWidth: 'full'
-})
+    title: "附近动态",
+    layout: "dashboard",
+    requiresAuth: false
+});
 
-// 基础状态
-const { formatDistance } = useFormatters()
-const locationStore = useLocationStore()
-const geolocation = useGeolocation()
-const { share, isSupported: isShareSupported } = useShare()
-const { copy, isSupported: isClipboardSupported } = useClipboard()
-const { withErrorHandling } = useErrorHandler()
-const dashboardHeader = useDashboardHeader()
-const momentService = useMomentsService()
-const momentsStore = useMomentsStore()
-const modal = useModal()
-const feedback = useFeedbackStore()
+const { formatDistance } = useFormatters();
+const locationStore = useLocationStore();
+const geolocation = useGeolocation();
+const { requireAuth } = useRequireAuth();
+const { share, isSupported: isShareSupported } = useShare();
+const { copy, isSupported: isClipboardSupported } = useClipboard();
+const momentService = useMomentsService();
+const momentsStore = useMomentsStore();
+const modal = useModal();
+const feedback = useFeedbackStore();
 
-// 状态
-const moments = ref<Moment[]>([])
-const loading = ref(false)
-const loadingMore = ref(false)
-const hasMore = ref(true)
-const nextCursor = ref<string>()
-const searchQuery = ref('')
-const selectedRadius = ref(5000)
+const moments = ref<Moment[]>([]);
+const loading = ref(false);
+const loadingMore = ref(false);
+const hasMore = ref(true);
+const nextCursor = ref<string>();
+const searchQuery = ref("");
+const selectedRadius = ref(5000);
 
-const debouncedRefresh = useDebounceFn(() => {
-    refresh()
-}, 500)
+const debouncedRefresh = useDebounceFn(() => refresh(), 500);
 
 const filteredMoments = computed(() => {
-    if (!searchQuery.value.trim()) return moments.value
-    const query = searchQuery.value.toLowerCase()
-    return moments.value.filter(m => 
-        m.description?.toLowerCase().includes(query) || 
-        m.tags?.some(t => t.toLowerCase().includes(query))
-    )
-})
+    if (!searchQuery.value.trim()) return moments.value;
+    const q = searchQuery.value.toLowerCase();
+    return moments.value.filter(
+        (m) =>
+            m.description?.toLowerCase().includes(q) ||
+            m.tags?.some((t) => t.toLowerCase().includes(q)),
+    );
+});
 
-// 操作函数
-const openCreateModal = async () => {
-  const momentId = await modal.showCreateMoment()
-  if (momentId) {
-    refresh()
-  }
+async function openCreateModal() {
+    if (!requireAuth("发布动态")) return;
+    if (await modal.showCreateMoment()) refresh();
 }
 
-const refresh = async () => {
-    loading.value = true
+async function refresh() {
+    loading.value = true;
     try {
-        // 使用 locationStore 的位置，如果没有则获取并更新 store
         let pos = locationStore.coordinates;
         if (!pos) {
             const coords = await geolocation.getCoordinates();
-            // 尝试获取位置名称并更新 store
-            let locationName = '未知位置';
-            try {
-                locationName = await geocoding.getLocationName(coords.latitude, coords.longitude);
-            } catch {
-                // 使用默认名称
-            }
-            locationStore.setLocation(coords.latitude, coords.longitude, locationName);
+            locationStore.setLocation(
+                coords.latitude,
+                coords.longitude,
+                "当前位置",
+            );
             pos = coords;
         }
-
-        const result = await momentService.searchByLocation({
-            latitude: pos.latitude,
-            longitude: pos.longitude,
+        const res = await momentService.searchByLocation({
+            reference_point: {
+                latitude: pos.latitude,
+                longitude: pos.longitude,
+            },
             radius: selectedRadius.value,
-            limit: 20
+            limit: 20,
         });
-        
-        moments.value = result.items as Moment[];
-        // 同步到 store，以便详情页使用缓存
-        momentsStore.setNearbyMoments(result.items as Moment[], result.pagination.has_more, result.pagination.next_cursor);
-        
-        hasMore.value = result.pagination.has_more;
-        nextCursor.value = result.pagination.next_cursor;
-    } catch (error) {
-        console.error('加载附近动态失败:', error);
-        feedback.error('加载附近动态失败')
+        moments.value = (res.items || []) as Moment[];
+        momentsStore.setNearbyMoments(
+            (res.items || []) as Moment[],
+            res.pagination.has_more,
+            res.pagination.next_cursor,
+        );
+        hasMore.value = res.pagination.has_more;
+        nextCursor.value = res.pagination.next_cursor;
+    } catch (e) {
+        feedback.error("加载失败");
     } finally {
         loading.value = false;
     }
-};
+}
 
-// Dashboard header actions（替代每页包 PageLayout 的 header-actions）
-watchEffect(() => {
-  dashboardHeader.setActions([
-    {
-      key: 'refresh',
-      label: '刷新',
-      icon: 'i-lucide-refresh-cw',
-      variant: 'outline',
-      loading: loading.value,
-      action: () => refresh()
-    },
-    {
-      key: 'create',
-      label: '发布动态',
-      icon: 'i-lucide-camera',
-      variant: 'outline',
-      disabled: loading.value,
-      action: () => openCreateModal()
-    }
-  ])
-})
-
-const loadMore = async () => {
+async function loadMore() {
     if (loadingMore.value || !hasMore.value) return;
-    
     loadingMore.value = true;
     try {
         const pos = locationStore.coordinates;
         if (!pos) return;
-
-        const result = await momentService.searchByLocation({
-            latitude: pos.latitude,
-            longitude: pos.longitude,
+        const res = await momentService.searchByLocation({
+            reference_point: {
+                latitude: pos.latitude,
+                longitude: pos.longitude,
+            },
             radius: selectedRadius.value,
             limit: 20,
-            cursor: nextCursor.value
+            cursor: nextCursor.value,
         });
-        
-        moments.value.push(...result.items as Moment[]);
-        hasMore.value = result.pagination.has_more;
-        nextCursor.value = result.pagination.next_cursor;
-        
-        // result.items.length === 0 时：不提示，避免滚动触底时“频繁打扰”
-    } catch (error) {
-        console.error('加载更多失败:', error);
-        feedback.error('加载更多失败')
+        moments.value.push(...((res.items || []) as Moment[]));
+        hasMore.value = res.pagination.has_more;
+        nextCursor.value = res.pagination.next_cursor;
     } finally {
         loadingMore.value = false;
     }
-};
-
-const isBusy = computed(() => loading.value || loadingMore.value)
-const { trigger: loadMoreTrigger, canAutoLoadMore } = useInfiniteLoadMore(
-  loadMore,
-  isBusy,
-  computed(() => hasMore.value),
-  { rootMargin: '600px 0px' }
-)
-
-const handleTagClick = (tag: string) => {
-    searchQuery.value = tag
 }
 
-const toggleLike = async (moment: Moment) => {
+const { trigger: loadMoreTrigger } = useInfiniteLoadMore(
+    loadMore,
+    computed(() => loading.value || loadingMore.value),
+    computed(() => hasMore.value),
+);
+
+async function toggleLike(moment: Moment) {
+    if (!requireAuth("点赞")) return;
     try {
-        // 乐观更新
-        const wasLiked = moment.liked_by_me
-        
+        const wasLiked = moment.liked_by_me;
         if (wasLiked) {
-            await momentService.unlikeMoment({ id: moment.id })
-            moment.liked_by_me = false
-            moment.likes_count--
+            await momentService.unlikeMoment({ moment_id: moment.moment_id });
+            moment.liked_by_me = false;
+            moment.likes_count--;
         } else {
-            await momentService.likeMoment({ id: moment.id })
-            moment.liked_by_me = true
-            moment.likes_count++
+            await momentService.likeMoment({ moment_id: moment.moment_id });
+            moment.liked_by_me = true;
+            moment.likes_count++;
         }
-    } catch (error) {
-        feedback.error('操作失败')
-        // 回滚状态
-        if (moment.liked_by_me !== undefined) {
-             moment.liked_by_me = !moment.liked_by_me
-             moment.likes_count += moment.liked_by_me ? 1 : -1
-        }
+    } catch {
+        feedback.error("操作失败");
     }
 }
 
-const handleShare = async (moment: MomentSearchItem) => {
-    const url = `${useRequestURL().origin}/moments/${moment.id}`
-    const shareData = {
-        title: `${moment.user.nickname}的动态`,
-        text: moment.description,
-        url: url
-    }
-
-    try {
-        if (isShareSupported.value) {
-            await share(shareData)
-        } else if (isClipboardSupported.value) {
-            await copy(url)
-            feedback.success('链接已复制到剪贴板')
-        } else {
-             feedback.error('无法分享', '您的浏览器不支持分享或复制功能')
-        }
-    } catch (error) {
-        console.error('分享失败:', error)
+async function handleShare(moment: MomentItem) {
+    const url = `${location.origin}/moments/${moment.moment_id}`;
+    const data = { title: "分享动态", text: moment.description, url };
+    if (isShareSupported.value) await share(data);
+    else {
+        await copy(url);
+        feedback.success("链接已复制");
     }
 }
 
-onMounted(() => {
-    refresh();
-});
+onMounted(refresh);
 </script>
-
-

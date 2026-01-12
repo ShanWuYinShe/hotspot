@@ -19,8 +19,8 @@ import {
   createSubscribeEvent,
   createUnsubscribeEvent,
   createSetSubscriptionsEvent,
-  createMarkAsReadEvent,
-  createTypingEvent,
+  createPrivateTypingEvent,
+  createGroupTypingEvent,
   parseServerEvent,
   serializeClientEvent
 } from '../types/WebSocketTypes';
@@ -214,24 +214,20 @@ export class WebSocketService {
   // ============================================================================
 
   /**
-   * 标记消息已读
-   */
-  markAsRead(chatType: 'private_chat' | 'group_chat', chatId: string, upTo: string): void {
-    if (!this.isConnected()) {
-      hilog.warn(DOMAIN_NUMBER, TAG, 'WebSocket未连接，无法标记已读');
-      return;
-    }
-    this.send(createMarkAsReadEvent(chatType, chatId, upTo));
-  }
-
-  /**
    * 发送正在输入状态
    */
-  sendTyping(chatType: 'private_chat' | 'group_chat', chatId: string, isTyping: boolean): void {
+  sendPrivateTyping(targetUserId: number, isTyping: boolean): void {
     if (!this.isConnected()) {
       return;
     }
-    this.send(createTypingEvent(chatType, chatId, isTyping));
+    this.send(createPrivateTypingEvent(targetUserId, isTyping));
+  }
+
+  sendGroupTyping(groupChatId: string, isTyping: boolean): void {
+    if (!this.isConnected()) {
+      return;
+    }
+    this.send(createGroupTypingEvent(groupChatId, isTyping));
   }
 
   // ============================================================================
@@ -327,8 +323,9 @@ export class WebSocketService {
         }
         break;
 
-      case 'Heartbeat':
-        // 服务端心跳响应，更新连接状态
+      case 'Pong':
+        // 服务端心跳响应 (Pong)，连接正常
+        hilog.debug(DOMAIN_NUMBER, TAG, '收到服务端Pong');
         break;
 
       case 'SubscribeAck':

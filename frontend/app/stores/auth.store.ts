@@ -126,12 +126,19 @@ export const useAuthStore = defineStore('auth', () => {
     refreshTokenExpiresAt: number
   ) => {
     // 支持从 AuthData（只有 user_id 和 nickname）或完整的 UserDetailData 创建 session
-    const user: UserDetailData = 'geo' in userOrId
+    const user: UserDetailData = 'location' in userOrId
       ? userOrId as UserDetailData
       : {
           user_id: userOrId.user_id,
           nickname: userOrId.nickname,
-          geo: { latitude: 0, longitude: 0, location_name: '', distance: 0, degrees: 0 }
+          location: { latitude: 0, longitude: 0, location_name: '', distance: 0, bearing_degrees: 0 },
+          // 补充 UserItem/UserInfo 必需字段的默认值
+          user_type: 'normal',
+          is_online: null,
+          is_online_meta: { visibility: 'visible' },
+          last_online: null,
+          last_online_meta: { visibility: 'visible' },
+          location_meta: { visibility: 'visible' }
         }
     // 内部存储使用 string key，因为 JavaScript 对象 key 必须是 string
     const userId = String(user.user_id)

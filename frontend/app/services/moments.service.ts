@@ -2,7 +2,7 @@ import { BaseService } from './base.service'
 import { MOMENTS, USER } from '~/config/api'
 import type {
   PaginatedData,
-  MomentSearchItem,
+  MomentItem,
   CreateMomentRequest,
   CreateMomentData,
   UpdateMomentRequest,
@@ -32,15 +32,15 @@ class MomentsService extends BaseService {
   // ============ 搜索 API (public) ============
 
   async searchByKeyword(request: SearchMomentsByKeywordRequest) {
-    return this.publicPost<PaginatedData<MomentSearchItem>>(MOMENTS.SEARCH_BY_KEYWORD, request)
+    return this.publicPost<PaginatedData<MomentItem>>(MOMENTS.SEARCH_BY_KEYWORD, request)
   }
 
   async searchByTag(request: SearchMomentsByTagRequest) {
-    return this.publicPost<PaginatedData<MomentSearchItem>>(MOMENTS.SEARCH_BY_TAG, request)
+    return this.publicPost<PaginatedData<MomentItem>>(MOMENTS.SEARCH_BY_TAG, request)
   }
 
   async searchByLocation(request: SearchMomentsByLocationRequest) {
-    return this.publicPost<PaginatedData<MomentSearchItem>>(MOMENTS.SEARCH_BY_LOCATION, request)
+    return this.publicPost<PaginatedData<MomentItem>>(MOMENTS.SEARCH_BY_LOCATION, request)
   }
 
   async getComments(request: MomentCommentsRequest) {
@@ -49,7 +49,7 @@ class MomentsService extends BaseService {
 
   // 获取指定用户瞬间列表（公开 API）
   async getUserMoments(request: UserMomentsRequest) {
-    return this.publicPost<PaginatedData<MomentSearchItem>>(USER.MOMENTS, request)
+    return this.publicPost<PaginatedData<MomentItem>>(USER.MOMENTS, request)
   }
 
   async getLikes(request: MomentLikesRequest) {
@@ -58,17 +58,17 @@ class MomentsService extends BaseService {
 
   // 获取瞬间详情（通过 ID 获取指定瞬间的详情）
   async openTheDoor(request: MomentOpenTheDoorRequest) {
-    return this.publicPost<MomentSearchItem>(MOMENTS.OPEN_THE_DOOR, request)
+    return this.publicPost<MomentItem>(MOMENTS.OPEN_THE_DOOR, request)
   }
 
   // ============ 操作 API (protected) ============
 
   async create(request: CreateMomentRequest) {
-    return this.post<CreateMomentData>(MOMENTS.CREATE, request)
+    return this.post<MomentItem>(MOMENTS.CREATE, request)
   }
 
   async update(request: UpdateMomentRequest) {
-    return this.post<void>(MOMENTS.UPDATE, request)
+    return this.post<MomentItem>(MOMENTS.UPDATE, request)
   }
 
   async deleteMoment(request: DeleteMomentRequest) {
@@ -101,11 +101,11 @@ class MomentsService extends BaseService {
 
   // 获取当前用户瞬间列表（/me/ API）
   async getMyMoments(request: MyMomentsRequest) {
-    return this.post<PaginatedData<MomentSearchItem>>(MOMENTS.MY, request)
+    return this.post<PaginatedData<MomentItem>>(MOMENTS.MY, request)
   }
 
   async getFavorites(request: MyFavoritesRequest) {
-    return this.post<PaginatedData<MomentSearchItem>>(MOMENTS.MY_FAVORITES, request)
+    return this.post<PaginatedData<MomentItem>>(MOMENTS.MY_FAVORITES, request)
   }
 }
 

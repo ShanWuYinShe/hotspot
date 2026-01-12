@@ -10,7 +10,7 @@ use crate::{
             LikeCommentRequest, MomentCommentsRequest, UnlikeCommentRequest,
         },
         response::{
-            CommentLikeItem, CommentListItem, CreateCommentData, PaginatedData, PaginationMeta,
+            CommentLikeItem, CommentListItem, PaginatedData, PaginationMeta,
             UserInfo,
         },
     },
@@ -46,9 +46,10 @@ impl CommentService {
         &self,
         user_id: i64,
         req: &CreateCommentRequest,
-    ) -> Result<CreateCommentData> {
+    ) -> Result<CommentListItem> {
         let comment_repo = CommentRepository::new(self.db.clone());
         let moment_repo = MomentRepository::new(self.db.clone());
+        let user_repo = UserRepository::new(self.db.clone());
 
         // 验证内容
         if req.content.is_empty() {
@@ -71,7 +72,7 @@ impl CommentService {
             let parent = comment_repo
                 .find_by_id(parent_id)
                 .await?
-                .ok_or_else(|| AppError::NotFound("父评论不存在".to_string()))?;
+                .ok_or_else(|| AppError::CommentNotFound("父评论不存在".to_string()))?;
 
             Some(parent)
         } else {
@@ -87,13 +88,17 @@ impl CommentService {
         // 发布“瞬间被评论”事件：通知瞬间作者（回复/普通评论都算评论）
         if let Some(moment_owner_id) = moment_repo.get_owner(moment_id).await? {
             if moment_owner_id != user_id {
-                self.event_bus.publish(AppEvent::MomentCommented {
-                    moment_id,
-                    comment_id: row.comment_id,
-                    user_id: moment_owner_id,
-                    commenter_id: user_id,
-                    content: req.content.clone(),
-                });
+                let summary_snapshot = moment_repo.get_summary_snapshot(moment_id).await?;
+                if let Some(summary) = summary_snapshot {
+                    self.event_bus.publish(AppEvent::MomentCommented {
+                        moment_id,
+                        moment_summary: summary,
+                        comment_id: row.comment_id,
+                        user_id: moment_owner_id,
+                        commenter_id: user_id,
+                        content: req.content.clone(),
+                    });
+                }
             }
         }
 
@@ -102,6 +107,7 @@ impl CommentService {
             self.event_bus.publish(AppEvent::CommentReplied {
                 moment_id,
                 comment_id: parent.comment_id, // 原评论ID
+                reply_to_content: parent.content, // 原评论内容摘要
                 reply_id: row.comment_id,      // 新回复ID
                 user_id: parent.user_id,       // 原评论作者
                 replier_id: user_id,           // 回复者
@@ -109,8 +115,23 @@ impl CommentService {
             });
         }
 
-        Ok(CreateCommentData {
-            id: row.comment_id.to_string(),
+        // 构造响应
+        let users = user_repo.find_profiles(&[user_id]).await?;
+        let user_info = users.first().ok_or_else(|| AppError::UserNotFound("用户不存在".to_string()))?;
+
+        Ok(CommentListItem {
+            comment_id: row.comment_id.to_string(),
+            user: UserInfo {
+                user_id: user_info.user_id,
+                nickname: user_info.nickname.clone(),
+                avatar_url: user_info.avatar_url.clone(),
+                user_type: user_info.user_type,
+            },
+            content: row.content,
+            parent_id: row.parent_id.map(|id| id.to_string()),
+            created_at: row.created_at.to_rfc3339(),
+            likes_count: 0,
+            replies_count: 0,
         })
     }
 
@@ -118,13 +139,13 @@ impl CommentService {
     pub async fn delete_comment(&self, user_id: i64, req: &DeleteCommentRequest) -> Result<()> {
         let comment_repo = CommentRepository::new(self.db.clone());
 
-        let comment_id = Uuid::parse_str(&req.id)
+        let comment_id = Uuid::parse_str(&req.comment_id)
             .map_err(|_| AppError::BadRequest("无效的评论ID".to_string()))?;
 
         let comment = comment_repo
             .find_by_id(comment_id)
             .await?
-            .ok_or_else(|| AppError::NotFound("评论不存在".to_string()))?;
+            .ok_or_else(|| AppError::CommentNotFound("评论不存在".to_string()))?;
 
         // 只能删除自己的评论
         if comment.user_id != user_id {
@@ -140,12 +161,12 @@ impl CommentService {
     pub async fn like_comment(&self, user_id: i64, req: &LikeCommentRequest) -> Result<()> {
         let comment_repo = CommentRepository::new(self.db.clone());
 
-        let comment_id = Uuid::parse_str(&req.id)
+        let comment_id = Uuid::parse_str(&req.comment_id)
             .map_err(|_| AppError::BadRequest("无效的评论ID".to_string()))?;
 
         // 验证评论存在
         if !comment_repo.exists(comment_id).await? {
-            return Err(AppError::NotFound("评论不存在".to_string()));
+            return Err(AppError::CommentNotFound("评论不存在".to_string()));
         }
 
         let inserted = comment_repo.like_comment(comment_id, user_id).await?;
@@ -159,12 +180,12 @@ impl CommentService {
     pub async fn unlike_comment(&self, user_id: i64, req: &UnlikeCommentRequest) -> Result<()> {
         let comment_repo = CommentRepository::new(self.db.clone());
 
-        let comment_id = Uuid::parse_str(&req.id)
+        let comment_id = Uuid::parse_str(&req.comment_id)
             .map_err(|_| AppError::BadRequest("无效的评论ID".to_string()))?;
 
         // 验证评论存在
         if !comment_repo.exists(comment_id).await? {
-            return Err(AppError::NotFound("评论不存在".to_string()));
+            return Err(AppError::CommentNotFound("评论不存在".to_string()));
         }
 
         let deleted = comment_repo.unlike_comment(comment_id, user_id).await?;
@@ -209,7 +230,7 @@ impl CommentService {
     ) -> Result<PaginatedData<CommentListItem>> {
         let comment_repo = CommentRepository::new(self.db.clone());
 
-        let parent_id = Uuid::parse_str(&req.id)
+        let parent_id = Uuid::parse_str(&req.comment_id)
             .map_err(|_| AppError::BadRequest("无效的评论ID".to_string()))?;
 
         let limit = Validator::validate_limit(req.limit, 100)?;
@@ -238,7 +259,7 @@ impl CommentService {
         let comment_repo = CommentRepository::new(self.db.clone());
         let user_repo = UserRepository::new(self.db.clone());
 
-        let comment_id = Uuid::parse_str(&req.id)
+        let comment_id = Uuid::parse_str(&req.comment_id)
             .map_err(|_| AppError::BadRequest("无效的评论ID".to_string()))?;
 
         let limit = Validator::validate_limit(req.limit, 100)?;
@@ -293,8 +314,6 @@ impl CommentService {
 
         // 收集所有需要查询的用户ID
         let mut user_ids: Vec<i64> = comments.iter().map(|c| c.user_id).collect();
-        let reply_to_ids: Vec<i64> = comments.iter().filter_map(|c| c.reply_to_user_id).collect();
-        user_ids.extend(reply_to_ids);
         user_ids.sort();
         user_ids.dedup();
 
@@ -315,18 +334,8 @@ impl CommentService {
                 let (likes_count, replies_count) =
                     stats.get(&comment.comment_id).copied().unwrap_or((0, 0));
 
-                let reply_to_user = comment.reply_to_user_id.and_then(|reply_to_id| {
-                    let reply_user = user_map.get(&reply_to_id)?;
-                    Some(UserInfo {
-                        user_id: reply_user.user_id,
-                        nickname: reply_user.nickname.clone(),
-                        avatar_url: reply_user.avatar_url.clone(),
-                        user_type: reply_user.user_type,
-                    })
-                });
-
                 Some(CommentListItem {
-                    id: comment.comment_id.to_string(),
+                    comment_id: comment.comment_id.to_string(),
                     user: UserInfo {
                         user_id: user_model.user_id,
                         nickname: user_model.nickname.clone(),
@@ -335,7 +344,6 @@ impl CommentService {
                     },
                     content: comment.content,
                     parent_id: comment.parent_id.map(|id| id.to_string()),
-                    reply_to_user,
                     created_at: comment.created_at.to_rfc3339(),
                     likes_count,
                     replies_count,

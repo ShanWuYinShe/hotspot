@@ -1,6 +1,5 @@
 <template>
   <UModal
-    width="md"
     title="切换账户"
   >
     <template #body>

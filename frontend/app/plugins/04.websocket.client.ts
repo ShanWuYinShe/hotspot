@@ -8,6 +8,7 @@
  */
 import { webSocketService } from '~/services/websocket.service'
 import { ensureRefreshToken } from '~/utils/token'
+import { isAuthErrorCode, isTokenInvalidOrExpiredCode } from '~/utils/apiError'
 
 export default defineNuxtPlugin((nuxtApp) => {
   // 仅在客户端运行
@@ -55,31 +56,26 @@ export default defineNuxtPlugin((nuxtApp) => {
     if (import.meta.dev) {
       console.error('[WS Plugin] Global Error:', error)
     }
-    
-    // 处理特定错误码
-    if (error.code === 1101) {
-      // Token 无效或过期 (服务端返回的错误)
-      console.warn('[WS Plugin] Received 1101 Token Invalid/Expired from server')
-      
-      // 尝试刷新 Token
+
+    // 处理鉴权错误（覆盖 40101/40102/40106 及未来 401xx）
+    if (!isAuthErrorCode(error.code)) return
+
+    // 40101：优先尝试 refresh 再重连
+    if (isTokenInvalidOrExpiredCode(error.code)) {
       const success = authStore.canAttemptRefresh ? await ensureRefreshToken() : false
       if (success) {
-        console.log('[WS Plugin] Token refreshed successfully, triggering reconnection')
-        // 刷新成功后，WebSocketClient 会在下一次重连尝试时自动使用新 Token
-        // 或者我们可以主动触发一次连接
         const url = buildWsUrl()
         webSocketService.connect(url)
-      } else {
-        console.error('[WS Plugin] Failed to refresh token, logging out')
-        // 刷新失败，强制登出
-        // authService.logout() // 或者直接操作 store
-        authStore.logoutCurrent()
-        webSocketService.disconnect()
-        navigateTo('/auth?mode=login')
+        return
       }
     }
+
+    // 40102/40106/其他 401xx：直接登出
+    authStore.logoutCurrent()
+    webSocketService.disconnect()
+    navigateTo('/auth?mode=login')
   })
-  
+
   // 获取配置
   const url = buildWsUrl()
 
@@ -92,9 +88,8 @@ export default defineNuxtPlugin((nuxtApp) => {
       if (import.meta.dev) {
         console.log('[WS Plugin] 认证状态变化:', isAuthenticated)
       }
-      
+
       if (isAuthenticated && authStore.token) {
-        // 确保在浏览器环境且页面已挂载（或即将挂载）时连接
         nextTick(() => {
           webSocketService.connect(url)
         })
@@ -107,7 +102,6 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   nuxtApp.hook('app:mounted', () => {
     appMounted = true
-    // mounted 后补一次：保证已登录用户能连接
     if (authStore.isAuthenticated && authStore.token) {
       webSocketService.connect(url)
     }

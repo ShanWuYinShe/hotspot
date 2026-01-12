@@ -8,11 +8,10 @@ use crate::{handlers::media, state::AppState};
 /// 严格按照 api_spec.mdc 定义
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .route("/upload", post(media::upload))
-        .route("/initiate_upload", post(media::initiate_upload))
-        .route("/upload_part_url", post(media::upload_part_url))
-        .route("/upload_chunk", post(media::upload_chunk))
+        .route("/presign_upload", post(media::presign_upload))
         .route("/complete_upload", post(media::complete_upload))
-        .route("/upload_status", post(media::upload_status))
-        .route("/abort_upload", post(media::abort_upload))
+        // Chunked Upload (Optional/Enhanced)
+        .route("/chunked/init", post(media::init_chunked_upload))
+        .route("/chunked/finish", post(media::finish_chunked_upload))
+        .route("/chunked/check", post(media::check_chunked_upload))
 }

@@ -4,19 +4,95 @@ alwaysApply: false
 ---
 # HotSpot HarmonyOS 应用开发规范
 
+## ✅ 标准自检证据输出模板（强制）
+
+> 用途：AI 在生成/修改 HarmonyOS 代码后，必须按此模板输出“可复核证据”，而不是只写“已遵守/已完成”。
+> 原则：证据必须可定位（路径 + 锚点），并且不引入第二份契约（不复制端点/字段/错误码/事件 payload 列表）。
+>
+> **Proof 句式要求（强制）**：
+> - `proof` 必须是**单句**、**客观**、**可证伪**的陈述。
+> - 禁止出现主观词汇（例如“很好”“优雅”“流畅”“明显”“大概”“应该”）。
+> - 禁止用“已遵守/已完成/无问题”当作 proof；proof 必须解释 anchors / scope+probe+result 为什么足以证明该条成立。
+
+### 输出模板（强制）
+
+对本文件中任意 Checklist 条目，输出一条或多条 Evidence，使用以下**统一字段名**（与其它端保持一致）：
+
+#### Evidence Item（通用）
+- item: <复制原 checklist 的条目标题，例如 "No Hardcoded /api/v1">
+  paths:
+    - <相关文件路径 1>
+    - <相关文件路径 2>
+  anchors:
+    - <符号名/唯一片段/小节标题（用于快速定位）>
+  proof: <必须为单句：这些 anchors 为什幺能证明该 checklist 条目成立（客观可证伪，禁止主观评价）>
+
+#### Negative Check（否定性条目必备：No X）
+- item: <复制原 checklist 的条目标题，例如 "No Hardcoded /api/v1">
+  scope: <检查范围，例如 "harmonyapp/**" 或 "仅本次修改文件列表">
+  probe:
+    - <检索/复核方法 1：例如 搜索关键字 "/api/v1/">
+    - <检索/复核方法 2：例如 搜索关键字 " as any ">
+    - <检索/复核方法 3：例如 编译验证 "hvigor build"（如适用）>
+  result: <结论：0 matches / 命中列表 / 构建通过 / 构建失败位置等>
+  paths:
+    - <本次检查覆盖的文件/目录（可选，但建议写）>
+  anchors:
+    - <若存在需要说明的定位点，可补充（可选）>
+  proof: <必须为单句：scope/probe/result 如何证明该否定性条目成立（客观可证伪，禁止主观评价）>
+
+### 禁止事项（强制）
+
+- 禁止把 `@api_spec.mdc` 的端点/字段/错误码/WS 事件与 payload 列表复制到本文件或自检输出中当作“证据”。
+- 禁止仅输出“已遵守/已完成/无问题”而不提供可复核证据：
+  - 通用条目：必须提供 paths/anchors/proof
+  - 否定性条目（No X）：必须提供 scope/probe/result，并建议同时提供 paths/anchors/proof
+- 禁止用主观词汇当证据（例如“体验很好”“很优雅”“很流畅”）。
+
+---
+
+## 权威边界与引用方式（强制）
+
+- 所有 API 端点、字段、类型、错误码、WebSocket 事件以 `@api_spec.mdc` 为唯一权威来源。
+- 禁止使用数字章节号引用（如“第X章/第X节”）；只允许引用小节标题或锚点标题。
+- 示例代码同样受本规则约束：禁止在示例代码中硬编码 `/api/v1/...` 端点字符串。
+- HarmonyOS 客户端必须通过“端点注册表/常量入口”统一引用 API 端点；端点值以 `@api_spec.mdc` 的“API 端点与类型定义”小节为准。
+
+## ✅ 本规则文档自检范围（Self-check Scope）
+
+> 原则：真正需要自检的是 HarmonyOS 端的“工程落地与实现规则”（本文件），而不是 `@api_spec.mdc`（契约本体）。
+> 本文件只描述 ArkTS/HarmonyOS 的实现约束与工程落地规则；任何外部可观察的 API 契约必须完全以 `@api_spec.mdc` 为准。
+
+当你修改 `@harmony_app_rule.mdc` 时，必须自检以下边界是否被严格遵守：
+
+### 1) 契约不复述、不发明（Contract Citation Boundary）
+- ✅ 允许：引用 `@api_spec.mdc` 的小节标题或锚点标题（如“统一响应格式”“分页与游标语义”“WebSocket 实时事件定义”）。
+- ❌ 禁止：复制粘贴端点清单、字段列表、错误码表、事件 payload 定义到本文件（避免双源漂移）。
+- ❌ 禁止：在本文件发明任何 API 字段/枚举值/错误码/事件名/响应 envelope 变体；如需变更只能在 `@api_spec.mdc` 修改。
+
+### 2) What/How 分离（不要把产品文档写进规则）
+- ✅ 本文件只写“怎么落地（How）”：工程结构、网络封装、状态管理、错误处理、日志埋点（如存在）、性能与体验约束等。
+- ❌ 禁止写“产品范围/页面清单/用户流程（What）”：这些必须放在 `@harmony_app_doc.mdc`。
+
+### 3) 示例代码边界（防止示例成为第二套契约）
+- ✅ 示例只能展示“调用方式/封装方式/错误处理方式”，且必须通过端点常量引用，不得出现具体 `/api/v1/...` 字符串。
+- ❌ 禁止示例里出现与 `@api_spec.mdc` 不一致的字段名、事件名、错误码值（哪怕看起来合理）。
+
 ## ⚠️ 重要说明
 
-**本文档是 HarmonyOS 应用代码生成规则。所有 API 端点、类型定义、WebSocket 事件定义均以 @api_spec.mdc 为准。**
+**本文件是 HarmonyOS 应用代码生成规则。所有 API 端点、类型定义、WebSocket 事件定义均以 @api_spec.mdc 为准。**
 
 **文档职责分工**：
 - **@api_spec.mdc**: API 规范的唯一权威来源（端点、类型、事件、错误码）
-- **@harmony_app_rule.mdc**（本文档）: HarmonyOS/ArkTS 代码生成规则和实现规范
-- **@harmony_app_doc.mdc**: HarmonyOS 应用需求和功能定义
+- **@harmony_app_rule.mdc**（本文件）: HarmonyOS/ArkTS 工程落地与代码生成规则（How）
+- **@harmony_app_doc.mdc**: HarmonyOS 应用需求与功能定义（What）
 
 **开发时必读**：
-1. 首先阅读 @api_spec.mdc 了解完整的 API 规范
-2. 然后阅读本文档了解 HarmonyOS 实现规范
-3. 遇到冲突时，以 @api_spec.mdc 为准
+1. 首先阅读 `@api_spec.mdc` 了解完整的 API 契约（端点/字段/类型/错误码/事件）
+2. 然后阅读本文件了解 HarmonyOS 端实现规范（工程落地与代码生成约束）
+3. 遇到冲突时：
+   - API 契约相关冲突：以 `@api_spec.mdc` 为准
+   - 工程落地相关冲突：以 `@harmony_app_rule.mdc` 为准（但不得改写契约）
 
 **API规范快速引用**：
 - 完整的API端点定义 → @api_spec.mdc API端点与类型定义
@@ -26,14 +102,14 @@ alwaysApply: false
 - 类型转换规范 → @api_spec.mdc 类型转换规范
 - 密码安全策略 → @api_spec.mdc 密码安全策略
 
-## 1. 核心开发约束
+## 核心开发约束
 
-### 1.0 doc/rule 职责分离（强制）
+### doc/rule 职责分离（强制）
 
 - `harmony_app_doc.mdc`：描述产品功能与页面，不写实现细节。
 - `harmony_app_rule.mdc`（本文）：限制 AI 生成代码必须遵守的实现规则与禁忌清单。
 
-### 1.1 官方文档优先原则（强制）
+### 官方文档优先原则（强制）
 
 **核心原则**：
 - **文档优先验证**：使用任何HarmonyOS API、组件前，必须先查阅官方文档确认正确用法
@@ -52,7 +128,7 @@ alwaysApply: false
 - 使用已废弃的 API 方法和参数
 - 不必要的显式类型声明（应利用 TypeScript 结构类型检查）
 
-### 1.2 TypeScript 类型使用规范（强制）
+### TypeScript 类型使用规范（强制）
 
 **结构类型检查优先原则**：
 - **避免显式类型声明**：不需要显式声明变量类型，直接传入符合结构的对象
@@ -65,14 +141,14 @@ alwaysApply: false
 - **禁止 `any`**：严禁在 API 数据处理中使用 `any` 类型。必须定义完整的 Interface。
 - **空值处理**：必须正确处理 API 返回的 `null` 或 `undefined` 值，使用 Optional Chaining (`?.`) 和 Nullish Coalescing (`??`)。
 
-### 1.3 编译质量要求（强制）
+### 编译质量要求（强制）
 
 **零错误零警告政策**：
 - **编译错误**：项目必须保持 `hvigor build` 无编译错误状态
 - **编译警告**：ArkTS代码必须通过所有Linter检查，无警告信息
 - **类型安全**：所有ArkTS代码必须通过严格的类型检查
 
-### 1.4 错误修复约束（强制）
+### 错误修复约束（强制）
 
 **最小化修改原则**：
 - **精确修复**：修复编译错误时，只修改与具体错误直接相关的代码行
@@ -86,9 +162,9 @@ alwaysApply: false
 - 不更改已有的API调用方式
 - 不替换已有的正确实现
 
-## 2. UI 设计与体验规范（Premium Design）
+## UI 设计与体验规范（Premium Design）
 
-### 2.1 设计常量与组件系统（强制）
+### 设计常量与组件系统（强制）
 
 **DesignConstants 使用规范**：
 - **严禁硬编码**：禁止在页面和组件中直接写死颜色值（Hex/RGB）、字号（Number）、圆角、间距等。
@@ -137,7 +213,7 @@ struct MyPage {
 }
 ```
 
-### 2.2 视觉风格 (Apple-Style / HarmonyOS Next Pure)
+### 视觉风格 (Apple-Style / HarmonyOS Next Pure)
 
 **核心视觉风格**：
 - **大标题（Large Titles）**：页面顶部使用大字号标题，随着滚动过渡到导航栏小标题。
@@ -152,7 +228,7 @@ struct MyPage {
   - 列表项加载使用交错动画（Staggered Animation）。
   - 状态切换（如点赞）必须有微动效。
 
-### 2.2 组件实现规范
+### 组件实现规范
 
 **统一组件库**：
 - 必须优先使用项目封装的通用组件（如 `SystemAvatar`, `SystemIcon`, `SystemToast`），确保全应用风格统一。
@@ -162,9 +238,9 @@ struct MyPage {
 - **安全区域**：必须处理刘海屏、挖孔屏的安全区域（`expandSafeArea`）。
 - **沉浸式体验**：状态栏和导航栏背景透明或毛玻璃化，内容延伸至边缘。
 
-## 3. 路由导航规范
+## 路由导航规范
 
-### 3.1 Router API 废弃处理（强制）
+### Router API 废弃处理（强制）
 
 **禁用废弃API**：
 - 完全禁止使用 `@ohos.router` 模块的静态方法
@@ -190,6 +266,8 @@ struct MyPage {
     const routerInstance = this.getUIContext().getRouter();
     routerInstance.back();
   }
+}
+```
 
   // 获取路由参数
   getRouterParams() {
@@ -214,193 +292,142 @@ struct MyPage {
 }
 ```
 
-### 核心原则
+### 路由导航核心原则（避免与“幂等/订阅”章节锚点冲突）
 
 1. **简单直接**：在页面组件中直接使用 `this.getUIContext().getRouter()`
 2. **就近处理**：在需要的地方直接调用，减少抽象层
-3. **禁用废弃 API**：完全避免使用 `@ohos.router` 的静态方法
-4. **避免过度设计**：不创建额外的工具类和复杂的状态管理
 
-### 常用模式
-
-#### 页面跳转
-```typescript
-// 简单跳转
-const routerInstance = this.getUIContext().getRouter();
-await routerInstance.pushUrl({ url: 'pages/TargetPage' });
-
-// 带参数跳转
-const routerInstance = this.getUIContext().getRouter();
-await routerInstance.pushUrl({
-  url: 'pages/TargetPage',
-  params: { id: '123', name: 'test' }
-});
-
-// 替换当前页面
-const routerInstance = this.getUIContext().getRouter();
-await routerInstance.replaceUrl({ url: 'pages/HomePage' });
-```
-
-#### 获取参数
-```typescript
-// 在目标页面获取参数
-const routerInstance = this.getUIContext().getRouter();
-const params = routerInstance.getParams();
-console.log('接收到的参数:', params);
-```
-
-#### 返回操作
-```typescript
-// 返回上一页
-const routerInstance = this.getUIContext().getRouter();
-routerInstance.back();
-
-// 清空路由栈并跳转
-const routerInstance = this.getUIContext().getRouter();
-routerInstance.clear();
-await routerInstance.pushUrl({ url: 'pages/HomePage' });
-```
-
-## 4. 密码安全处理规范
+## 密码安全处理规范
 
 ⚠️ **完整的密码安全策略请参见**: @api_spec.mdc **密码安全策略**
 
-### 4.1 密码传输实现（ArkTS）
+### 密码传输实现（ArkTS）
 
 **核心原则**：客户端 **不做密码哈希**；密码在 **HTTPS/TLS** 中明文传输；服务端进行慢哈希存储。
 
-### 4.2 认证流程实现示例
+### 认证流程实现示例
 
-**核心要点**：所有涉及密码的API（注册、登录、设置密码、重置密码、账户升级）都直接提交 `password` 字段（依赖 TLS 传输安全）。
+**核心要点**：
+- 所有涉及密码的 API（注册、登录、修改密码、重置密码、账户升级）都直接提交 `password` 字段（依赖 TLS 传输安全）。
+- **禁止在示例中硬编码端点字符串**；端点必须来自项目内的统一端点注册表（其值以 `@api_spec.mdc` 的“API 端点与类型定义”为准）。
+- HarmonyOS 端点注册表文件：`harmonyapp/entry/src/main/ets/core/config/ApiEndpoints.ets`
 
-**认证服务示例**：
 ```typescript
+import { ApiEndpoints } from 'harmonyapp/entry/src/main/ets/core/config/ApiEndpoints';
+
 class AuthService {
   private http = new HttpService();
-  
+
   // App 场景：响应体包含 refresh_token（opaque string），建议安全存储
   async login(loginId: string, password: string): Promise<AppAuthData> {
     const loginResponse = await this.http.request<ApiResponse<AppAuthData>>({
       method: 'POST',
-      url: '/api/v1/public/auth/login',
+      url: ApiEndpoints.public.auth.login,
       data: { login_id: loginId, password, client_type: 'app' }
     });
+
     if (loginResponse.code !== 0 || !loginResponse.data) {
       throw new Error(loginResponse.message || '登录失败');
     }
     return loginResponse.data;
   }
-  
+
   async register(loginId: string, nickname: string, password: string): Promise<AppAuthData> {
     const registerResponse = await this.http.request<ApiResponse<AppAuthData>>({
       method: 'POST',
-      url: '/api/v1/public/auth/register',
+      url: ApiEndpoints.public.auth.register,
       data: { login_id: loginId, nickname: nickname, password, client_type: 'app' }
     });
-    
+
     if (registerResponse.code !== 0 || !registerResponse.data) {
       throw new Error(registerResponse.message || '注册失败');
     }
-    
+
     return registerResponse.data;
   }
-  
+
   /**
    * 修改密码
    */
-  async changePassword(oldPassword: string, newPassword: string): Promise<void> {
-    const response = await this.http.request<ApiResponse<void>>({
+  async setPassword(currentPassword: string, newPassword: string): Promise<void> {
+    const response = await this.http.request<ApiResponse<null>>({
       method: 'POST',
-      url: '/api/v1/protected/auth/me/change_password',
+      url: ApiEndpoints.protected.auth.me.changePassword,
       data: {
-        old_password: oldPassword,
+        current_password: currentPassword,
         new_password: newPassword
       }
     });
-    
+
     if (response.code !== 0) {
       throw new Error(response.message || '修改密码失败');
     }
   }
-  
+
   /**
    * 重置密码
    */
-  async resetPassword(resetToken: string, newPassword: string): Promise<void> {
-    // 发送重置密码请求
-    const response = await this.http.request<ApiResponse<void>>({
+  async resetPassword(loginId: string, resetCode: string, newPassword: string): Promise<void> {
+    const response = await this.http.request<ApiResponse<null>>({
       method: 'POST',
-      url: '/api/v1/public/auth/reset_password',
+      url: ApiEndpoints.public.auth.resetPassword,
       data: {
-        reset_token: resetToken,
+        login_id: loginId,
+        reset_code: resetCode,
         password: newPassword
       }
     });
-    
+
     if (response.code !== 0) {
       throw new Error(response.message || '重置密码失败');
     }
   }
-  
+
   /**
    * 账户升级（临时用户转正式用户）
    */
-  async upgradeAccount(loginId: string, password: string): Promise<void> {
-    // 发送账户升级请求
-    const response = await this.http.request<ApiResponse<void>>({
+  async upgradeAccount(nickname: string, loginId: string, password: string): Promise<void> {
+    const response = await this.http.request<ApiResponse<null>>({
       method: 'POST',
-      url: '/api/v1/protected/user/me/upgrade',
+      url: ApiEndpoints.protected.user.me.upgrade,
       data: {
+        nickname,
         login_id: loginId,
         password
       }
     });
-    
+
     if (response.code !== 0) {
       throw new Error(response.message || '账户升级失败');
     }
   }
 }
-```
 
-### 4.3 密码处理最佳实践
+/**
+ * 密码处理注意事项
+ */
+function handlePassword(password: string) {
+  // ❌ 不要在客户端做 hash
+  // const hashed = sha256(password);
 
-**禁止的操作**：
-- ❌ 存储明文密码（内存、缓存、数据库、日志）
-- ❌ 在日志中打印密码相关信息
-- ❌ 将密码写入临时文件
-- ❌ 在客户端做“password_hash / SHA256(password)”并把哈希当密码替身发送（可重放风险）
-
-**推荐的操作**：
-- ✅ 仅在 HTTPS/TLS 下提交 `password`
-- ✅ 密码输入框使用安全输入类型
-- ✅ 密码输入完成后清空输入框
-- ✅ 使用HTTPS传输所有密码相关请求
-
-**安全检查清单**：
-```typescript
-// ✅ 正确的密码处理流程
-async function handleLogin(loginId: string, password: string) {
-  try {
-    // 1. 清空原始密码（可选，通常由作用域自动处理）
-    // password = '';
-    
-    // 2. 使用明文密码（TLS）进行API调用
-    const authData = await authService.login(loginId, password);
-    
-    // 3. 存储Token，不存储密码
-    await storageService.setToken(authData.access_token);
-    
-    return authData;
-  } catch (error) {
-    // 5. 错误处理中不包含密码信息
-    console.error('登录失败');
-    throw error;
-  }
+  // ✅ 直接传递明文（在TLS中）
+  return password;
 }
 ```
 
-## 5. 用户类型判断规范
+### 密码处理最佳实践
+
+**禁止的操作**：
+- ❌ 存储明文密码（内存、缓存、数据库、日志）
+- ❌ 客户端对密码做 hash 后再发送（会导致服务端无法使用慢哈希正确存储和校验）
+- ❌ 在日志中输出 password 或其 hash
+
+**推荐的操作**：
+- ✅ 只在函数作用域使用 password 参数
+- ✅ 立即发起请求，完成后清理变量引用（可选）
+- ✅ 使用统一的错误处理与用户提示，不透露内部细节
+
+## 用户类型判断规范
 
 **用户类型标识规范**（遵循 `@api_spec.mdc` 用户类型标识）：
 - 用户类型通过 `user_type` 字段判断（包含在 UserInfo 等响应类型中）
@@ -420,42 +447,42 @@ async function handleLogin(loginId: string, password: string) {
 - 普通用户：正常显示，无特殊标识
 - 系统用户：显示"官方"标识（emphasize 颜色）
 
-## 6. WebSocket通信规范
+## WebSocket通信规范
 
 **WebSocket设计理念**（完全遵循 `@api_spec.mdc` WebSocket实时事件定义）：
 - **核心定位**：WebSocket 是实时数据推送通道，用于服务端主动向客户端推送所有需要实时处理的数据
 - **API + WebSocket 双通道架构**：API负责历史查询，WebSocket负责实时推送
 - **协作流程**：启动时 API 加载历史 → WebSocket 接收实时推送；重连后 API 补拉离线数据
 
-### 6.1 连接与鉴权（强制，确定性）
+### 连接与鉴权（强制，确定性）
 
 - **连接端点**：`wss://[server]/ws`
 - **鉴权方式**：握手成功后客户端立即发送 `Auth` 事件（payload 携带 `access_token`，可选 `device_fingerprint`）
 - **状态切换**：收到服务端 `ConnectionEstablished` 后，才认为“已连接可用”（此时才允许发送订阅/已读/typing 等业务事件）
-- **失败处理**：服务端发送 `Error` 后会断开；客户端收到 `Error.code=1101`（token 过期/无效）应先刷新 token 再重连
+- **失败处理**：服务端发送 `Error` 后会断开；客户端收到 `Error.code=40101`（token 过期/无效）应先刷新 token 再重连
 
-### 6.2 心跳与重连（强制）
+### 心跳与重连（强制）
 
 - **心跳**：客户端按 `@api_spec.mdc` 的常量发送 `Ping`；收到 `Pong/Heartbeat` 视为连接健康
 - **重连**：按 `@api_spec.mdc` 的指数退避参数实现；重连成功后需要重新鉴权并恢复订阅
 
-### 6.3 订阅管理（强制）
+### 订阅管理（强制）
 
 - 订阅事件：`Subscribe/Unsubscribe/SetSubscriptions`
 - payload 统一 `{ items: SubscriptionItem[] }`，禁止使用其他结构
 
-### 6.4 消息一致性（强制）
+### 消息一致性（强制）
 
 - 发送消息后 **不做本地“假消息插入”**；以 WebSocket 的 `ChatMessageNew` 推送为准
 
-## 7. 系统服务集成规范
+## 系统服务集成规范
 
-### 7.1 位置服务集成
+### 位置服务集成
 
-### 7.1.1 地理数据口径（强制）
+### 地理数据口径（强制）
 
 - **禁止客户端计算距离/角度**：严禁在 ArkTS 中实现 Haversine、地球半径常量、弧度换算等“从经纬度推导距离/角度”的逻辑。
-- **距离/角度只能来自后端**：UI 展示的距离/角度必须使用后端 `GeoData.distance / GeoData.degrees`，客户端只做格式化展示。
+- **距离/角度只能来自后端**：UI 展示的距离/角度必须使用后端 `RelativeLocation.distance / RelativeLocation.bearing_degrees`，客户端只做格式化展示。
 - **范围筛选交给后端**：需要“附近/半径”筛选时，只将 `radius` 作为请求参数交给后端处理，客户端不做本地距离过滤。
 
 **位置服务实现**：
@@ -466,7 +493,7 @@ import abilityAccessCtrl from '@ohos.abilityAccessCtrl';
 class LocationService {
   async requestLocationPermission(context: Context): Promise<boolean> {
     const atManager = abilityAccessCtrl.createAtManager();
-    
+
     try {
       await atManager.requestPermissionsFromUser(context, [
         'ohos.permission.APPROXIMATELY_LOCATION',
@@ -478,14 +505,14 @@ class LocationService {
       return false;
     }
   }
-  
+
   async getCurrentLocation(): Promise<geoLocationManager.Location> {
     const requestInfo: geoLocationManager.CurrentLocationRequest = {
       priority: geoLocationManager.LocationRequestPriority.FIRST_FIX,
       scenario: geoLocationManager.LocationRequestScenario.UNSET,
       maxAccuracy: 0
     };
-    
+
     return new Promise((resolve, reject) => {
       geoLocationManager.getCurrentLocation(requestInfo, (err, location) => {
         if (err) {
@@ -499,7 +526,7 @@ class LocationService {
 }
 ```
 
-### 7.2 存储服务集成
+### 存储服务集成
 
 **Preferences存储服务**：
 ```typescript
@@ -507,7 +534,7 @@ import preferences from '@ohos.data.preferences';
 
 class StorageService {
   private prefs: preferences.Preferences | null = null;
-  
+
   async initialize(context: Context): Promise<void> {
     try {
       this.prefs = await preferences.getPreferences(context, 'hotspot_storage');
@@ -516,19 +543,19 @@ class StorageService {
       throw error;
     }
   }
-  
+
   async setObject<T>(key: string, value: T): Promise<void> {
     if (!this.prefs) await this.initialize();
     await this.prefs.put(key, JSON.stringify(value));
     await this.prefs.flush();
   }
-  
+
   async getObject<T>(key: string, defaultValue: T): Promise<T> {
     if (!this.prefs) await this.initialize();
     const jsonStr = await this.prefs.get(key, '') as string;
-    
+
     if (!jsonStr) return defaultValue;
-    
+
     try {
       return JSON.parse(jsonStr) as T;
     } catch (error) {
@@ -539,9 +566,9 @@ class StorageService {
 }
 ```
 
-## 8. 错误处理规范
+## 错误处理规范
 
-### 8.1 统一错误处理
+### 统一错误处理
 
 **错误处理服务**：
 ```typescript
@@ -550,7 +577,7 @@ import promptAction from '@ohos.promptAction';
 class ErrorHandler {
   static handle(error: Error, context: string = '') {
     console.error(`[${context}] 错误:`, error);
-    
+
     // 根据错误类型进行不同处理
     if (error.message.includes('网络')) {
       this.showNetworkError();
@@ -560,14 +587,14 @@ class ErrorHandler {
       this.showGenericError(error.message);
     }
   }
-  
+
   private static showNetworkError() {
     promptAction.showToast({
       message: '网络连接失败，请检查网络设置',
       duration: 3000
     });
   }
-  
+
   private static showPermissionError() {
     promptAction.showDialog({
       title: '权限不足',
@@ -578,7 +605,7 @@ class ErrorHandler {
       ]
     });
   }
-  
+
   private static showGenericError(message: string) {
     promptAction.showToast({
       message: message || '操作失败，请稍后重试',
@@ -588,9 +615,9 @@ class ErrorHandler {
 }
 ```
 
-## 9. Context 管理规范（强制）
+## Context 管理规范（强制）
 
-### 9.1 Context 获取原则
+### Context 获取原则
 
 **严格的 Context 获取规范**：
 - **@Component 组件专用**：只有使用 `@Component` 装饰器的组件类才能直接调用 `getUIContext().getHostContext()`
@@ -609,432 +636,175 @@ class ErrorHandler {
 @Component
 struct MainPage {
   private locationService = new LocationService();
-  
+
   aboutToAppear() {
     const context = this.getUIContext().getHostContext();
     this.locationService.requestLocationPermission(context);
   }
 }
-
-// ✅ 正确：普通 @Component 组件也可以获取 Context
-@Component
-struct UserProfile {
-  private storageService = new StorageService();
-  
-  aboutToAppear() {
-    const context = this.getUIContext().getHostContext();
-    this.storageService.initialize(context);
-  }
-}
-
-// ✅ 正确：服务类通过参数接收 Context
-class LocationService {
-  async requestLocationPermission(context: Context): Promise<boolean> {
-    // 使用传入的 context
-  }
-}
-
-// ❌ 错误：服务类直接获取 Context
-class LocationService {
-  async requestLocationPermission(): Promise<boolean> {
-    const context = getContext(); // 禁止！
-  }
-}
 ```
 
-### 9.2 Context 传递模式
+### Context 传递模式
 
 **推荐的传递模式**：
 1. **方法参数传递**（最推荐）：需要时通过方法参数传递，用完即释放
 2. **构造函数注入**（适用于需要长期持有的场景）：必须提供 cleanup 方法
 
-**禁止的模式**：
-- 使用静态变量保存 Context（会导致内存泄漏）
-- 在服务类中直接调用 getContext() 等函数
-
-### 9.3 Context 生命周期管理
+### Context 生命周期管理
 
 **Context 的正确管理原则**：
 - **按需传递**：需要时通过方法参数传递，用完即释放
 - **避免长期持有**：尽量避免在类实例中长期保存 Context 引用
-- **空值检查**：使用前必须检查 Context 是否为空
 - **及时释放**：在组件销毁时清理 Context 引用
 
-**使用要点**：
-- `@Component` 组件在 aboutToAppear 中获取 Context 并传递给服务
-- 工具类使用静态方法接收 Context 参数
-- 服务类通过方法参数接收 Context
-- 如需在类中保存 Context，必须提供 cleanup 方法及时清理引用
+## 代码质量管控
 
-## 10. 代码质量管控
-
-### 10.1 代码审查检查点
+### 代码审查检查点
 
 **必检项目**：
 - [ ] 是否使用了废弃的API（如 @ohos.router）
-- [ ] 是否正确使用了装饰器（@State、@Prop、@Link等）
-- [ ] 是否有未处理的异常和错误
-- [ ] 是否正确实现了生命周期方法
-- [ ] 是否遵循了命名规范
-- [ ] 是否有内存泄漏风险
-- [ ] 是否正确处理了权限申请
-- [ ] 是否有性能问题（如不必要的重渲染）
-- [ ] **是否正确管理 Context（非组件类不得直接获取 Context）**
-- [ ] **是否通过依赖注入方式传递 Context**
-- [ ] **是否避免了不必要的显式类型声明**
-- [ ] **是否充分利用了 TypeScript 结构类型检查**
+- [ ] 是否正确管理 Context（非组件类不得直接获取 Context）
+- [ ] 是否充分利用了 TypeScript 结构类型检查
 
-### 10.2 性能优化要求
+### 性能优化要求
 
 **关键性能指标**：
 - 页面加载时间 < 3秒
-- API响应时间 < 5秒
 - 列表滚动流畅度 > 60fps
-- 内存使用合理，无明显泄漏
 
-## 11. 幂等性处理规范
+## 幂等性处理规范
 
 **幂等性设计**（完全遵循 `@api_spec.mdc` 幂等性设计）：
 
-### 11.1 核心原则
+### 幂等核心原则（避免与“路由导航核心原则”章节锚点冲突）
 
 **核心原则（与 `api_spec.mdc` 一致）**：
 - 幂等键由**客户端提供**：对“非幂等意图”（创建资源、发送消息、提交上传完成等）客户端在重试同一次意图时应复用同一个 `Idempotency-Key`（或 `X-Idempotency-Key`）。
 - **未提供幂等键时**：服务端不做幂等去重（避免误去重）。
 - `X-Request-Id` 仅用于链路追踪，**不得**当作幂等键使用。
 
-### 11.2 客户端实现要点
+### 客户端实现要点
 
 - 对需要幂等的接口：在重试同一次操作时复用相同 `Idempotency-Key`；两次独立操作必须使用不同 key。
-- 对查询/天然幂等接口：无需携带 `Idempotency-Key`。
 
-### 11.3 自动幂等的操作
+## API调用规范
 
-**无需客户端处理的操作**：
-- 查询操作（`search_by_*` / `open_the_door` 等）- 天然幂等
-- 幂等的更新/删除操作 - 天然幂等
+### 端点引用规范（强制）
 
-**不需要幂等处理的操作**：
-- 无（是否需要幂等由“是否可能因重试造成重复执行”决定）
+必须：
+- HarmonyOS 客户端不得在任何代码（包括示例/注释/测试）中硬编码 `/api/v1/...` 路径字符串。
+- 所有端点必须通过“端点注册表/常量入口”统一引用；端点值以 `@api_spec.mdc` 的“API 端点与类型定义”小节为准。
+- 端点注册表必须按 “public/protected” 维度分组或提供等价的语义分组，避免误用鉴权要求。
 
-### 11.4 客户端最佳实践
+禁止：
+- 禁止在业务代码中拼接 URL（例如 `'/api/v1/' + xxx`、模板字符串拼接等）。
+- 禁止在服务/工具类里散落端点字符串。
 
-**推荐的操作**：
-- ✅ **对创建/发送/提交类接口**：生成 `Idempotency-Key`（推荐 UUID），并在重试时复用
-- ✅ **对确实是两次独立操作**：即使请求体相同，也必须使用不同 `Idempotency-Key`
-
-**禁止的操作**：
-- ❌ 用请求体 hash 充当幂等键（容易误去重）
-- ❌ 把 `X-Request-Id` 当幂等键使用
-
-**重试策略示例**：
+端点注册表示例（仅示意，端点值必须来自 `@api_spec.mdc`，本文件不写死路径以避免漂移）：
 ```typescript
-class HttpService {
-  async requestWithRetry<T>(config: RequestConfig, maxRetries: number = 3): Promise<T> {
-    let lastError: Error;
-    
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      try {
-        // 直接发送相同请求，服务端自动处理幂等性
-        return await this.request<T>(config);
-      } catch (error) {
-        lastError = error;
-        
-        // 仅网络错误时重试
-        if (this.isNetworkError(error) && attempt < maxRetries - 1) {
-          const delay = Math.pow(2, attempt) * 1000; // 指数退避
-          await new Promise(resolve => setTimeout(resolve, delay));
-          continue;
-        }
-        
-        throw error;
-      }
+const ApiEndpoints = {
+  public: {
+    auth: {
+      login: '<from api_spec: auth.login>',
+      register: '<from api_spec: auth.register>',
+      guest: '<from api_spec: auth.guest>',
+      refreshToken: '<from api_spec: auth.refresh_token>',
+      resetPassword: '<from api_spec: auth.reset_password>'
     }
-    
-    throw lastError;
-  }
-  
-  private isNetworkError(error: any): boolean {
-    return error.code === 'NETWORK_ERROR' || 
-           error.message?.includes('network') ||
-           error.message?.includes('timeout');
-  }
-}
-```
-
-## 12. API调用规范
-
-### 12.1 API路径规范
-
-**严格区分公开和受保护的API端点**：
-- `/api/v1/public/*` - 无需 Token（公开访问）
-- `/api/v1/protected/*` - 必需 Token（认证访问）
-
-**Token使用规范**：
-```typescript
-// ❌ 错误：在 public API 中发送 Token
-httpService.request({
-  method: 'POST',
-  url: '/api/v1/public/user/search_by_keyword',
-  headers: {
-    Authorization: `Bearer ${token}` // 不必要
-  }
-});
-
-// ✅ 正确：public API 不发送 Token
-httpService.request({
-  method: 'POST',
-  url: '/api/v1/public/user/search_by_keyword',
-  data: { kw: 'John', latitude: 0, longitude: 0 }
-});
-
-// ✅ 正确：protected API 必须发送 Token
-httpService.request({
-  method: 'POST',
-  url: '/api/v1/protected/user/update_profile',
-  headers: {
-    Authorization: `Bearer ${token}`
   },
-  data: { nickname: 'New Name' }
-});
+  protected: {
+    user: {
+      me: {
+        profile: '<from api_spec: user.me.profile>',
+        updateProfile: '<from api_spec: user.me.profile_update>',
+        updateLocation: '<from api_spec: user.me.location>'
+      }
+    },
+    privateMessages: {
+      send: '<from api_spec: private_messages.send>'
+    }
+  }
+} as const;
 ```
 
-### 12.2 统一响应处理
+### 统一响应处理（强制）
 
-**响应格式**（完全遵循 `@api_spec.mdc` 统一响应格式）：
+响应 envelope 必须与 `@api_spec.mdc` 的“统一响应格式”完全一致；本文件不裁剪字段，避免实现端误用。
+
 ```typescript
 interface ApiResponse<T = void> {
-  code: number;          // 状态码：0表示成功，非0表示错误
-  message?: string;      // 面向用户的响应消息（可选，失败时必须返回）
-  data?: T;              // 成功时的数据（可选，类型根据具体API而定）
-  request_id: string;    // 每次请求必返，用于链路追踪
+  code: number;        // 0 表示成功，非 0 表示失败
+  message?: string;    // 失败时必须返回；成功时可省略
+  data?: T;            // 成功时的数据
+  request_id: string;  // 每次请求必返，用于链路追踪
 }
 ```
 
-**message 字段使用原则**：
-- ✅ **失败响应**：必须返回 `message`，描述具体错误原因
-- ⚠️ **成功响应**：可选返回 `message`，建议由客户端根据业务上下文自行决定提示内容
+必须：
+- 业务成功判断只能使用 `code === 0`。
+- 失败时必须展示/记录 `message`（不得泄露内部细节），并携带 `request_id` 便于定位。
 
-**响应处理实现**：
-```typescript
-class HttpService {
-  async request<T>(config: RequestConfig): Promise<ApiResponse<T>> {
-    try {
-      const response = await http.request(config);
-      
-      // 解析响应
-      const apiResponse: ApiResponse<T> = JSON.parse(response.result as string);
-      
-      // 检查业务状态码
-      if (apiResponse.code !== 0) {
-        throw new ApiError(apiResponse.code, apiResponse.message);
-      }
-      
-      return apiResponse;
-    } catch (error) {
-      if (error instanceof ApiError) {
-        throw error;
-      }
-      
-      // 网络错误或其他错误
-      throw new NetworkError(error.message);
-    }
-  }
-}
-
-// 自定义错误类
-class ApiError extends Error {
-  constructor(public code: number, message: string) {
-    super(message);
-    this.name = 'ApiError';
-  }
-}
-
-class NetworkError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'NetworkError';
-  }
-}
-```
-
-### 12.3 分页查询规范
+### 分页查询规范
 
 **分页参数**：
 ```typescript
 interface PaginationParams {
-  limit?: number;      // 默认20，最大100
-  cursor?: string;     // 分页游标（不透明字符串）
-}
-
-interface PaginationMeta {
-  has_more: boolean;
-  next_cursor?: string;
+  limit?: number;
+  cursor?: string;
 }
 ```
 
-**分页查询实现**：
-```typescript
-class ListService {
-  private items: any[] = [];
-  private nextCursor: string | undefined;
-  private hasMore: boolean = true;
-  
-  async loadMore() {
-    if (!this.hasMore) {
-      console.info('没有更多数据');
-      return;
-    }
-    
-    const response = await httpService.request({
-      method: 'POST',
-      url: '/api/v1/protected/private_messages/get_history',
-      data: {
-        private_chat_id: 'pc_123',
-        limit: 20,
-        cursor: this.nextCursor // 首次为 undefined
-      }
-    });
-    
-    if (response.code === 0 && response.data) {
-      // 追加数据
-      this.items.push(...response.data.items);
-      
-      // 更新分页状态
-      this.hasMore = response.data.pagination.has_more;
-      this.nextCursor = response.data.pagination.next_cursor;
-    }
-  }
-  
-  reset() {
-    this.items = [];
-    this.nextCursor = undefined;
-    this.hasMore = true;
-  }
-}
-```
-
-### 12.4 错误处理规范
+### API错误处理规范（API调用层）
 
 **错误码处理**：
 ```typescript
 class ApiErrorHandler {
   static handle(error: ApiError) {
     switch (error.code) {
-      // 认证错误
-      case 1101: // Token无效或过期
-      case 1102: // Token缺失
-      case 1106: // 需要重新登录
-        this.handleAuthError();
+      case 40101:
         break;
-      
-      // 权限错误
-      case 1103: // 权限不足
-        this.showError('您没有权限执行此操作');
-        break;
-      
-      // 资源错误
-      case 1200: // 资源不存在
-        this.showError('请求的资源不存在');
-        break;
-      
-      // 速率限制
-      case 1400: // 请求过于频繁
-      case 1401:
-      case 1402:
-      case 1403:
-      case 1404:
-        this.showError('操作过于频繁，请稍后再试');
-        break;
-      
-      // 服务器错误
-      case 5000:
-      case 5001:
-      case 5002:
-        this.showError('服务器繁忙，请稍后再试');
-        break;
-      
       default:
-        this.showError(error.message || '操作失败');
+        break;
     }
-  }
-  
-  private static handleAuthError() {
-    // 清除本地Token
-    storageService.clearToken();
-    
-    // 跳转到登录页
-    router.replaceUrl({ url: 'pages/LoginPage' });
-    
-    // 提示用户
-    promptAction.showToast({ message: '登录已过期，请重新登录' });
-  }
-  
-  private static showError(message: string) {
-    promptAction.showToast({
-      message: message,
-      duration: 2000
-    });
   }
 }
 ```
 
-### 12.5 请求拦截器
+### 请求拦截器
 
 **Token自动注入**：
 ```typescript
 class HttpInterceptor {
   async beforeRequest(config: RequestConfig): Promise<RequestConfig> {
-    // 仅为 protected API 添加 Token
-    if (config.url.includes('/protected/')) {
-      const token = await storageService.getToken();
-      if (token) {
-        config.headers = config.headers || {};
-        config.headers['Authorization'] = `Bearer ${token}`;
-      }
-    }
-    
-    // 添加通用请求头
-    config.headers = config.headers || {};
-    config.headers['Content-Type'] = 'application/json';
-    
     return config;
-  }
-  
-  async afterResponse(response: HttpResponse): Promise<HttpResponse> {
-    // 统一错误处理
-    if (response.responseCode !== 200) {
-      throw new NetworkError(`HTTP ${response.responseCode}`);
-    }
-    
-    return response;
   }
 }
 ```
 
-## 13. 速率限制处理规范（完整规范见 `@api_spec.mdc` 速率限制与配额管理）
+## 速率限制处理规范（完整规范见 `@api_spec.mdc` 速率限制与配额管理）
 
-### 13.1 速率限制响应处理
+### 速率限制响应处理
 
 **核心原则（与 `api_spec.mdc` 一致）**：
-- 服务端依然返回 HTTP 200；速率限制通过 `ApiResponse.code`（1400-1404）表达。
-- 可读取响应头（如 `X-RateLimit-Reset`）做用户提示或延迟重试。
+- 服务端**推荐**返回 HTTP 429（速率限制），响应体仍为 `ApiResponse<T>`；速率限制细分通过 `ApiResponse.code`（42900-42904）表达。
 
-**禁止**以 HTTP 429 作为判断条件（该项目约定所有业务错误都 HTTP 200）。
+### 客户端速率限制预防
 
-**响应头处理**：
+请求节流（示例）：
 ```typescript
+import util from '@ohos.util';
+
 class RateLimitMonitor {
-  // 读取速率限制响应头
+  // 读取速率限制响应头（header 名称以服务端实际返回为准；本处仅演示处理方式）
   checkRateLimitHeaders(response: HttpResponse): void {
-    const limit = response.headers['x-ratelimit-limit'];        // 时间窗口内允许的最大请求数
+    const limit = response.headers['x-ratelimit-limit'];         // 时间窗口内允许的最大请求数
     const remaining = response.headers['x-ratelimit-remaining']; // 当前窗口剩余请求数
-    const reset = response.headers['x-ratelimit-reset'];        // 限制重置时间（Unix时间戳）
-    
+    const reset = response.headers['x-ratelimit-reset'];         // 限制重置时间（Unix时间戳）
+
     if (remaining && limit) {
       const remainingCount = parseInt(remaining);
       const limitCount = parseInt(limit);
-      
+
       // 显示速率限制警告（剩余请求数 < 10%）
       if (remainingCount < limitCount * 0.1) {
         promptAction.showToast({
@@ -1047,7 +817,7 @@ class RateLimitMonitor {
 }
 ```
 
-### 13.2 客户端速率限制预防
+### 客户端速率限制预防
 
 **请求节流**：
 ```typescript
@@ -1056,13 +826,13 @@ import util from '@ohos.util';
 // 防抖函数（搜索输入）
 class DebounceHelper {
   private timeoutId: number | null = null;
-  
+
   debounce(func: Function, delay: number): Function {
     return (...args: any[]) => {
       if (this.timeoutId) {
         clearTimeout(this.timeoutId);
       }
-      
+
       this.timeoutId = setTimeout(() => {
         func(...args);
         this.timeoutId = null;
@@ -1074,11 +844,11 @@ class DebounceHelper {
 // 节流函数（消息发送）
 class ThrottleHelper {
   private lastExecuteTime: number = 0;
-  
+
   throttle(func: Function, interval: number): Function {
     return (...args: any[]) => {
       const now = Date.now();
-      
+
       if (now - this.lastExecuteTime >= interval) {
         func(...args);
         this.lastExecuteTime = now;
@@ -1109,7 +879,7 @@ class RequestQueue {
   private processing: boolean = false;
   private readonly maxConcurrent: number = 3;
   private activeRequests: number = 0;
-  
+
   async enqueue<T>(requestFunc: () => Promise<T>): Promise<T> {
     return new Promise((resolve, reject) => {
       this.queue.push(async () => {
@@ -1120,30 +890,30 @@ class RequestQueue {
           reject(error);
         }
       });
-      
+
       this.processQueue();
     });
   }
-  
+
   private async processQueue(): Promise<void> {
     if (this.processing || this.activeRequests >= this.maxConcurrent) {
       return;
     }
-    
+
     const task = this.queue.shift();
     if (!task) {
       return;
     }
-    
+
     this.processing = true;
     this.activeRequests++;
-    
+
     try {
       await task();
     } finally {
       this.activeRequests--;
       this.processing = false;
-      
+
       if (this.queue.length > 0) {
         this.processQueue();
       }
@@ -1156,10 +926,10 @@ export const requestQueue = new RequestQueue();
 
 // 使用示例
 async function sendMessageQueued(chatId: string, content: string) {
-  return requestQueue.enqueue(() => 
+  return requestQueue.enqueue(() =>
     httpService.request({
       method: 'POST',
-      url: '/api/v1/protected/private_messages/send',
+      url: ApiEndpoints.protected.privateMessages.send,
       data: { id: chatId, type: 'text', content }
     })
   );

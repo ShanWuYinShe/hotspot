@@ -12,19 +12,16 @@ pub struct UploadedFileData {
     pub file_id: Uuid,
     pub url: String,
     pub thumbnail_url: Option<String>,
-    // mime_type, width, height removed as they are unused
     pub file_size: i64,
     pub duration: Option<i32>,
+    pub filename: Option<String>,
+    pub width: Option<i32>,
+    pub height: Option<i32>,
+    pub mime_type: String,
 }
 
 /// 文件验证结果 - validate_file 返回的 URL
 pub type FileValidationResult = String;
-
-/// 已存在文件信息 - 用于物理文件去重，复用 storage_path
-#[derive(Debug, Clone)]
-pub struct ExistingFileInfo {
-    pub storage_path: String,
-}
 
 // 注：分块上传使用 Redis 存储临时会话状态，数据库表 upload_sessions 和 upload_chunks
 // 作为备用方案保留，当前未使用
@@ -65,7 +62,7 @@ impl FileRepository {
                 thumbnail_url, mime_type, file_size, width, height, duration, checksum
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-            RETURNING file_id, url, thumbnail_url, file_size, duration
+            RETURNING file_id, url, thumbnail_url, file_size, duration, original_name, width, height, mime_type
             "#,
             file_id,
             uploader_id,
@@ -90,6 +87,10 @@ impl FileRepository {
             thumbnail_url: row.thumbnail_url,
             file_size: row.file_size,
             duration: row.duration,
+            filename: row.original_name,
+            width: row.width,
+            height: row.height,
+            mime_type: row.mime_type,
         })
     }
 
@@ -142,26 +143,6 @@ impl FileRepository {
         Ok(())
     }
 
-    /// 通过 checksum 查找任意文件（物理文件去重）
-    /// 只返回 storage_path，用于复用物理文件
-    pub async fn find_any_by_checksum(&self, checksum: &str) -> Result<Option<ExistingFileInfo>> {
-        let row = sqlx::query!(
-            r#"
-            SELECT storage_path
-            FROM uploaded_files
-            WHERE checksum = $1 AND is_deleted = FALSE
-            LIMIT 1
-            "#,
-            checksum
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(row.map(|r| ExistingFileInfo {
-            storage_path: r.storage_path,
-        }))
-    }
-
     /// 验证文件所有权并获取完整文件信息（用于消息发送时转换 file_id → 文件数据）
     /// 验证：文件存在、属于当前用户、分类匹配
     pub async fn get_file_for_message(
@@ -173,7 +154,7 @@ impl FileRepository {
         let row = sqlx::query!(
             r#"
             SELECT file_id, uploader_id, category, url, thumbnail_url,
-                   file_size, duration
+                   file_size, duration, original_name, width, height, mime_type
             FROM uploaded_files
             WHERE file_id = $1 AND is_deleted = FALSE
             "#,
@@ -200,6 +181,10 @@ impl FileRepository {
             thumbnail_url: row.thumbnail_url,
             file_size: row.file_size,
             duration: row.duration,
+            filename: row.original_name,
+            width: row.width,
+            height: row.height,
+            mime_type: row.mime_type,
         })
     }
 }

@@ -14,7 +14,7 @@ pub struct PrivateMessageRow {
     pub id: i64,
     pub message_id: Uuid,
     // cursor field removed
-    pub private_chat_id: Uuid,
+    pub chat_id: i64, // 内部 ID
     pub sender_id: i64,
     pub r#type: MessageType,
     pub content: String,
@@ -33,7 +33,7 @@ pub struct PrivateMessageRow {
 
 #[derive(Debug, Clone)]
 pub struct PrivateMessageMeta {
-    pub private_chat_id: Uuid,
+    pub chat_id: i64,
     pub sender_id: i64,
     pub is_recalled: bool,
     pub sent_at: DateTime<Utc>,
@@ -54,7 +54,7 @@ impl PrivateMessageRepository {
         let row = sqlx::query_as!(
             PrivateMessageMeta,
             r#"
-            SELECT private_chat_id, sender_id, is_recalled, sent_at
+            SELECT chat_id, sender_id, is_recalled, sent_at
             FROM private_messages
             WHERE message_id = $1 AND is_deleted = FALSE
             "#,
@@ -70,7 +70,7 @@ impl PrivateMessageRepository {
     #[allow(clippy::too_many_arguments)]
     pub async fn create(
         &self,
-        private_chat_id: Uuid,
+        chat_id: i64,
         sender_id: i64,
         message_type: MessageType,
         content: &str,
@@ -83,14 +83,14 @@ impl PrivateMessageRepository {
         let row = sqlx::query_as!(
             PrivateMessageRow,
             r#"
-            INSERT INTO private_messages (private_chat_id, sender_id, type, content, reply_to_message_id, file_name, file_size, thumbnail_url, duration)
+            INSERT INTO private_messages (chat_id, sender_id, type, content, reply_to_message_id, file_name, file_size, thumbnail_url, duration)
             VALUES ($1, $2, $3::message_type, $4, $5, $6, $7, $8, $9)
-            RETURNING id, message_id, private_chat_id, sender_id,
+            RETURNING id, message_id, chat_id, sender_id,
                       type as "type: MessageType", content, reply_to_message_id,
                       file_name, file_size, thumbnail_url, duration, sent_at, edited_at,
                       is_recalled, recalled_at, is_deleted, deleted_at
             "#,
-            private_chat_id,
+            chat_id,
             sender_id,
             message_type as MessageType,
             content,
@@ -111,7 +111,7 @@ impl PrivateMessageRepository {
         let row = sqlx::query_as!(
             PrivateMessageRow,
             r#"
-            SELECT id, message_id, private_chat_id, sender_id,
+            SELECT id, message_id, chat_id, sender_id,
                    type as "type: MessageType", content, reply_to_message_id,
                    file_name, file_size, thumbnail_url, duration, sent_at, edited_at,
                    is_recalled, recalled_at, is_deleted, deleted_at
@@ -129,7 +129,7 @@ impl PrivateMessageRepository {
     /// 获取私聊消息历史（分页）
     pub async fn list_by_chat(
         &self,
-        private_chat_id: Uuid,
+        chat_id: i64,
         limit: i64,
         cursor: Option<String>,
     ) -> Result<(Vec<PrivateMessageRow>, Option<String>)> {
@@ -142,16 +142,16 @@ impl PrivateMessageRepository {
         let rows = sqlx::query_as!(
             PrivateMessageRow,
             r#"
-            SELECT id, message_id, private_chat_id, sender_id,
+            SELECT id, message_id, chat_id, sender_id,
                    type as "type: MessageType", content, reply_to_message_id,
                    file_name, file_size, thumbnail_url, duration, sent_at, edited_at,
                    is_recalled, recalled_at, is_deleted, deleted_at
             FROM private_messages
-            WHERE private_chat_id = $1 AND id < $2 AND is_deleted = FALSE
+            WHERE chat_id = $1 AND id < $2 AND is_deleted = FALSE
             ORDER BY id DESC
             LIMIT $3
             "#,
-            private_chat_id,
+            chat_id,
             last_id,
             limit
         )
@@ -214,21 +214,21 @@ impl PrivateMessageRepository {
     /// 获取私聊的最后一条消息
     pub async fn get_last_message(
         &self,
-        private_chat_id: Uuid,
+        chat_id: i64,
     ) -> Result<Option<PrivateMessageRow>> {
         let row = sqlx::query_as!(
             PrivateMessageRow,
             r#"
-            SELECT id, message_id, private_chat_id, sender_id,
+            SELECT id, message_id, chat_id, sender_id,
                    type as "type: MessageType", content, reply_to_message_id,
                    file_name, file_size, thumbnail_url, duration, sent_at, edited_at,
                    is_recalled, recalled_at, is_deleted, deleted_at
             FROM private_messages
-            WHERE private_chat_id = $1 AND is_deleted = FALSE
+            WHERE chat_id = $1 AND is_deleted = FALSE
             ORDER BY sent_at DESC
             LIMIT 1
             "#,
-            private_chat_id
+            chat_id
         )
         .fetch_optional(&self.pool)
         .await?;
@@ -240,19 +240,19 @@ impl PrivateMessageRepository {
     /// 用于判断是否应该解锁对方的消息限制
     pub async fn has_messages_from_user(
         &self,
-        private_chat_id: Uuid,
+        chat_id: i64,
         user_id: i64,
     ) -> Result<bool> {
         let exists = sqlx::query_scalar!(
             r#"
             SELECT EXISTS(
                 SELECT 1 FROM private_messages
-                WHERE private_chat_id = $1 
+                WHERE chat_id = $1 
                   AND sender_id = $2 
                   AND is_deleted = FALSE
             ) as "exists!"
             "#,
-            private_chat_id,
+            chat_id,
             user_id
         )
         .fetch_one(&self.pool)
@@ -261,32 +261,32 @@ impl PrivateMessageRepository {
         Ok(exists)
     }
 
-    /// 批量获取私聊的最后一条消息 (Map<private_chat_id, Message>)
+    /// 批量获取私聊的最后一条消息 (Map<chat_id, Message>)
     pub async fn get_last_message_batch(
         &self,
-        private_chat_ids: &[Uuid],
-    ) -> Result<std::collections::HashMap<Uuid, PrivateMessageRow>> {
-        if private_chat_ids.is_empty() {
+        chat_ids: &[i64],
+    ) -> Result<std::collections::HashMap<i64, PrivateMessageRow>> {
+        if chat_ids.is_empty() {
             return Ok(std::collections::HashMap::new());
         }
 
         let rows = sqlx::query_as!(
             PrivateMessageRow,
             r#"
-            SELECT DISTINCT ON (private_chat_id)
-                   id, message_id, private_chat_id, sender_id,
+            SELECT DISTINCT ON (chat_id)
+                   id, message_id, chat_id, sender_id,
                    type as "type: MessageType", content, reply_to_message_id,
                    file_name, file_size, thumbnail_url, duration, sent_at, edited_at,
                    is_recalled, recalled_at, is_deleted, deleted_at
             FROM private_messages
-            WHERE private_chat_id = ANY($1) AND is_deleted = FALSE
-            ORDER BY private_chat_id, sent_at DESC
+            WHERE chat_id = ANY($1) AND is_deleted = FALSE
+            ORDER BY chat_id, sent_at DESC
             "#,
-            private_chat_ids
+            chat_ids
         )
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows.into_iter().map(|r| (r.private_chat_id, r)).collect())
+        Ok(rows.into_iter().map(|r| (r.chat_id, r)).collect())
     }
 }

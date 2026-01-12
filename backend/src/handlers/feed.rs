@@ -7,8 +7,8 @@ use crate::{
             FeedUsersRequest,
         },
         response::{
-            ApiResponse, FeedGroupItem, FeedMomentItem, FeedTrendingData, FeedUserItem,
-            PaginatedData,
+            ApiResponse, FeedGroupItem, FeedTrendingData, FeedUserItem,
+            MomentItem, PaginatedData,
         },
     },
     error::Result,
@@ -21,7 +21,7 @@ pub async fn get_moments(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(req): Json<FeedMomentsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<FeedMomentItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<MomentItem>>>> {
     let result = state.feed_service.get_moments_feed(user_id, req).await?;
     Ok(Json(ApiResponse::success(result)))
 }

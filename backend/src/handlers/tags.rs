@@ -9,6 +9,8 @@ use crate::{
     state::AppState,
 };
 
+// ==================== Public APIs ====================
+
 /// 获取热门标签
 pub async fn trending(
     State(state): State<AppState>,
@@ -25,4 +27,15 @@ pub async fn suggest(
 ) -> Result<Json<ApiResponse<TagSuggestData>>> {
     let response = state.tag_service.suggest(&req_body).await?;
     Ok(Json(ApiResponse::success(response)))
+}
+
+// ==================== Admin APIs ====================
+
+/// 删除/屏蔽标签（管理员）
+pub async fn admin_delete(
+    State(state): State<AppState>,
+    Json(req): Json<crate::dto::request::AdminDeleteTagRequest>,
+) -> Result<Json<ApiResponse<()>>> {
+    state.tag_service.admin_delete_tag(&req).await?;
+    Ok(Json(ApiResponse::success_empty()))
 }

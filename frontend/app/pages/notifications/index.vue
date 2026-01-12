@@ -36,68 +36,68 @@
         </div>
       </template>
 
-      <div>
-        <div class="flex items-center gap-2 pb-4">
-          <UButton
-            :variant="filter === 'all' ? 'solid' : 'ghost'"
-            color="neutral"
-            size="sm"
-            @click="filter = 'all'"
-          >
-            全部
-          </UButton>
-          <UButton
-            :variant="filter === 'unread' ? 'solid' : 'ghost'"
-            color="neutral"
-            size="sm"
-            @click="filter = 'unread'"
-          >
-            未读
-          </UButton>
-        </div>
+      <div class="flex items-center gap-2 pb-4">
+        <UButton
+          :variant="filter === 'all' ? 'solid' : 'ghost'"
+          color="neutral"
+          size="sm"
+          @click="filter = 'all'"
+        >
+          全部
+        </UButton>
+        <UButton
+          :variant="filter === 'unread' ? 'solid' : 'ghost'"
+          color="neutral"
+          size="sm"
+          @click="filter = 'unread'"
+        >
+          未读
+        </UButton>
+      </div>
 
-        <UEmpty
-          v-if="filteredNotifications.length === 0"
-          icon="i-lucide-bell-off"
-          title="暂无通知"
-          description="新的通知会在这里出现"
-        />
+      <UEmpty
+        v-if="filteredNotifications.length === 0"
+        icon="i-lucide-bell-off"
+        title="暂无通知"
+        description="新的通知会在这里出现"
+      />
 
-        <UPageList v-else divide>
-          <UPageCard
-            v-for="n in filteredNotifications"
-            :key="n.id"
-            :title="n.title"
-            :description="n.description"
-            :icon="getNotificationIcon(n.type)"
-            variant="ghost"
-            :to="getNotificationTo(n)"
-            @click="handleOpen(n)"
-          >
-            <template #footer>
-              <div class="flex items-center justify-between gap-3">
-                <UBadge color="neutral" variant="soft" size="xs">
-                  {{ formatTime(n.timestamp) }}
-                </UBadge>
-                <div class="flex items-center gap-2" @click.stop>
-                  <UBadge v-if="!n.read" color="primary" variant="soft" size="xs">
-                    未读
-                  </UBadge>
-                  <UButton
-                    v-if="!n.read"
-                    variant="ghost"
-                    color="neutral"
-                    size="xs"
-                    icon="i-lucide-check"
-                    @click.stop="markAsRead(n.id)"
-                  >
-                    标记已读
-                  </UButton>
-                </div>
+      <div v-else class="divide-y divide-neutral-100 dark:divide-neutral-800 -mx-5 sm:-mx-7">
+        <NuxtLink
+          v-for="n in filteredNotifications"
+          :key="n.id"
+          :to="getNotificationTo(n)"
+          class="block py-4 px-5 sm:px-7 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
+          @click="handleOpen(n)"
+        >
+          <div class="flex items-start gap-4">
+            <div class="bg-neutral-100 dark:bg-neutral-800 p-2 rounded-full shrink-0">
+              <UIcon :name="getNotificationIcon(n.type)" class="size-5 text-neutral-600 dark:text-neutral-400" />
+            </div>
+            
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between gap-2 mb-1">
+                <span class="text-sm font-medium text-neutral-900 dark:text-white truncate">{{ n.title }}</span>
+                <span class="text-xs text-neutral-500">{{ formatTime(n.timestamp) }}</span>
               </div>
-            </template>
-          </UPageCard>
-        </UPageList>
+              <p class="text-sm text-neutral-600 dark:text-neutral-400 line-clamp-2 mb-2">{{ n.description }}</p>
+              
+              <div class="flex items-center justify-end gap-2" @click.stop>
+                <UBadge v-if="!n.read" color="primary" variant="soft" size="xs">未读</UBadge>
+                <UButton
+                  v-if="!n.read"
+                  variant="ghost"
+                  color="neutral"
+                  size="xs"
+                  icon="i-lucide-check"
+                  @click.stop="markAsRead(n.id)"
+                >
+                  标记已读
+                </UButton>
+              </div>
+            </div>
+          </div>
+        </NuxtLink>
       </div>
     </UCard>
   </div>
@@ -109,11 +109,6 @@ definePageMeta({
   title: '通知中心',
   description: '查看实时通知与系统公告',
   layout: 'dashboard',
-  dashboardHeader: true,
-  // 静态 header actions：由 dashboard layout 统一渲染（避免每页 watchEffect/setActions）
-  dashboardActions: [
-    { key: 'settings', label: '通知设置', icon: 'i-lucide-settings', variant: 'outline', to: '/settings' }
-  ]
 })
 
 import type { NotificationItem } from '~/composables/useNotifications'

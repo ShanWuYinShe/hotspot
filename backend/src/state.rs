@@ -1,6 +1,7 @@
 use redis::aio::ConnectionManager;
 use sqlx::PgPool;
 use std::sync::Arc;
+use aws_sdk_s3::{Client as S3Client, config::Region};
 
 use crate::{
     config::Config,
@@ -11,6 +12,7 @@ use crate::{
     },
     services::{
         admin_rbac_service::AdminRbacService,
+        announcement_service::AnnouncementService,
         auth_service::AuthService, comment_service::CommentService,
         device_tokens_service::DeviceTokensService, feed_service::FeedService,
         group_message_service::GroupMessageService, group_service::GroupService,
@@ -56,6 +58,8 @@ pub struct AppState {
     pub system_config_service: SystemConfigService,
     pub presence_service: PresenceService,
     pub admin_rbac_service: AdminRbacService,
+    pub notification_service: crate::services::notification_service::NotificationService,
+    pub announcement_service: AnnouncementService,
 }
 
 impl AppState {
@@ -67,6 +71,17 @@ impl AppState {
         let db = PgPool::connect(&config.database_url).await?;
 
         tracing::debug!("Database connected");
+
+        // 自动运行数据库迁移
+        tracing::info!("Running database migrations...");
+        sqlx::migrate!("./migrations")
+            .run(&db)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to run database migrations: {}", e);
+                e
+            })?;
+        tracing::info!("Database migrations applied successfully");
 
         // 初始化 Redis 连接
         let redis_client = redis::Client::open(config.redis_url.as_str())?;
@@ -94,19 +109,69 @@ impl AppState {
         let comment_service = CommentService::new(&db, &redis, event_bus.clone());
         let group_service = GroupService::new(&db, &redis, event_bus.clone());
         let group_message_service = GroupMessageService::new(&db, &redis, event_bus.clone());
-        let private_chat_service = PrivateChatService::new(db.clone());
+        let private_chat_service = PrivateChatService::new(db.clone(), &redis);
         let private_message_service = PrivateMessageService::new(db.clone(), event_bus.clone());
         let message_common_service = MessageCommonService::new(db.clone());
-        let media_service = MediaService::new(&db, &redis);
+
+        // Init S3 Clients
+        // 直接使用配置的区域，避免在本地开发环境中尝试从 IMDS 加载区域（会产生警告）
+        let region = Region::new(config.s3_region.clone());
+        let shared_config = aws_config::defaults(aws_config::BehaviorVersion::latest())
+            .region(region)
+            .load()
+            .await;
+
+        let s3_internal_config = aws_sdk_s3::config::Builder::from(&shared_config)
+            .endpoint_url(config.s3_endpoint.clone())
+            .force_path_style(true)
+            .credentials_provider(aws_credential_types::Credentials::new(
+                config.s3_access_key.clone(),
+                config.s3_secret_key.clone(),
+                None,
+                None,
+                "Static",
+            ))
+            .build();
+        let s3_internal = S3Client::from_conf(s3_internal_config);
+
+        // Public Endpoint Handling: strip bucket name from S3_PUBLIC_URL if present to get the base endpoint
+        // e.g. http://localhost:9000/hotspot -> http://localhost:9000
+        let s3_bucket = config.s3_bucket.clone();
+        let public_url = config.s3_public_url.clone();
+        let public_endpoint = if public_url.ends_with(&format!("/{}", s3_bucket)) {
+            public_url.trim_end_matches(&format!("/{}", s3_bucket)).to_string()
+        } else {
+            public_url
+        };
+
+        let s3_public_config = aws_sdk_s3::config::Builder::from(&shared_config)
+            .endpoint_url(public_endpoint)
+            .force_path_style(true)
+            .credentials_provider(aws_credential_types::Credentials::new(
+                config.s3_access_key.clone(),
+                config.s3_secret_key.clone(),
+                None,
+                None,
+                "Static",
+            ))
+            .build();
+        let s3_public = S3Client::from_conf(s3_public_config);
+
+        let media_service = MediaService::new(
+            &db,
+            s3_internal,
+            s3_public,
+            s3_bucket,
+        );
         let tag_service = TagService::new(crate::repositories::tag_repo::TagRepository::new(
             db.clone(),
         ));
         let feed_service = FeedService::new(db.clone(), redis.clone());
         let device_tokens_service = DeviceTokensService::new(db.clone());
-        let subscription_service = SubscriptionService::new(db.clone());
+        let subscription_service = SubscriptionService::new(db.clone(), redis.clone());
         let report_service = ReportService::new(db.clone());
         let system_config_service = SystemConfigService::new(db.clone(), redis_client.clone());
-        let presence_service = PresenceService::new(redis.clone());
+        let presence_service = PresenceService::new(redis.clone(), db.clone());
         let admin_rbac_service = AdminRbacService::new(
             AdminRbacRepository::new(db.clone()),
             UserRepository::new(db.clone()),
@@ -115,10 +180,19 @@ impl AppState {
         let map_service = MapService::new(crate::repositories::map_repo::MapRepository::new(
             db.clone(),
         ));
+        let notification_service =
+            crate::services::notification_service::NotificationService::new(&db, &redis, event_bus.clone());
+        let announcement_service = AnnouncementService::new(
+            crate::repositories::announcement_repo::AnnouncementRepository::new(db.clone()),
+            event_bus.clone(),
+        );
 
         tracing::debug!("All services initialized");
 
-        // 启动时确保超级管理员（如果已配置 SUPER_ADMIN_PASSWORD）
+        // 启动时确保超级管理员存在
+        // 规则：
+        // 1. 如果已存在超级管理员，直接通过
+        // 2. 如果不存在超级管理员，必须通过 SUPER_ADMIN_PASSWORD 环境变量创建，否则阻塞启动
         // 这个逻辑是幂等的：仅在没有任何超级管理员时才会创建/升级
         admin_rbac_service
             .ensure_super_admin_bootstrap(&config)
@@ -154,6 +228,8 @@ impl AppState {
             system_config_service,
             presence_service,
             admin_rbac_service,
+            notification_service,
+            announcement_service,
         })
     }
 }

@@ -11,7 +11,7 @@
 -- ============================================================
 CREATE TABLE private_chats (
     id BIGSERIAL PRIMARY KEY,
-    private_chat_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
+    -- 移除了 private_chat_id (UUID)，仅使用内部 ID (BIGINT)
     user_a_id BIGINT NOT NULL,
     user_b_id BIGINT NOT NULL,
     -- 陌生人消息限制字段
@@ -38,18 +38,18 @@ CREATE TRIGGER trigger_private_chats_updated_at
 -- ============================================================
 CREATE TABLE private_chat_settings (
     id BIGSERIAL PRIMARY KEY,
-    private_chat_id UUID NOT NULL,
+    chat_id BIGINT NOT NULL, -- 引用内部 ID
     user_id BIGINT NOT NULL,
     is_muted BOOLEAN NOT NULL DEFAULT FALSE,
     is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
     is_archived BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ,
-    CONSTRAINT unique_private_chat_user_settings UNIQUE (private_chat_id, user_id)
+    CONSTRAINT unique_private_chat_user_settings UNIQUE (chat_id, user_id)
 );
 
 CREATE INDEX idx_private_chat_settings_user ON private_chat_settings (user_id);
-CREATE INDEX idx_private_chat_settings_chat ON private_chat_settings (private_chat_id);
+CREATE INDEX idx_private_chat_settings_chat ON private_chat_settings (chat_id);
 
 CREATE TRIGGER trigger_private_chat_settings_updated_at
     BEFORE UPDATE ON private_chat_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -60,7 +60,7 @@ CREATE TRIGGER trigger_private_chat_settings_updated_at
 CREATE TABLE private_messages (
     id BIGSERIAL PRIMARY KEY,
     message_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
-    private_chat_id UUID NOT NULL,
+    chat_id BIGINT NOT NULL, -- 引用内部 ID
     sender_id BIGINT NOT NULL,
     type message_type NOT NULL DEFAULT 'text',
     content TEXT NOT NULL,
@@ -77,7 +77,7 @@ CREATE TABLE private_messages (
     deleted_at TIMESTAMPTZ
 );
 
-CREATE INDEX idx_private_messages_chat_id ON private_messages (private_chat_id, sent_at DESC) WHERE is_deleted = FALSE;
+CREATE INDEX idx_private_messages_chat_id ON private_messages (chat_id, sent_at DESC) WHERE is_deleted = FALSE;
 CREATE INDEX idx_private_messages_sender ON private_messages (sender_id, sent_at DESC) WHERE is_deleted = FALSE;
 CREATE INDEX idx_private_messages_content_search ON private_messages USING gin (content gin_trgm_ops) WHERE type = 'text' AND is_deleted = FALSE;
 
@@ -87,7 +87,7 @@ CREATE INDEX idx_private_messages_content_search ON private_messages USING gin (
 CREATE TABLE private_message_reactions (
     id BIGSERIAL PRIMARY KEY,
     reaction_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
-    message_id UUID NOT NULL REFERENCES private_messages(message_id) ON DELETE CASCADE,
+    message_id UUID NOT NULL,
     user_id BIGINT NOT NULL,
     type reaction_type NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -97,5 +97,3 @@ CREATE TABLE private_message_reactions (
 CREATE INDEX idx_private_message_reactions_id ON private_message_reactions (reaction_id);
 CREATE INDEX idx_private_message_reactions_message_id ON private_message_reactions (message_id, created_at DESC);
 CREATE INDEX idx_private_message_reactions_user ON private_message_reactions (user_id, created_at DESC);
-
-

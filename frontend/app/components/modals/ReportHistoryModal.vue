@@ -2,55 +2,64 @@
   <UModal
     title="我的举报记录"
     :description="`共 ${reports.length} 条举报记录`"
+    size="lg"
   >
     <template #body>
-      <UTabs
-        v-model="activeTab"
+      <div class="p-6">
+        <UTabs
+          v-model="activeTab"
         :items="tabItems"
-        size="sm"
-        class="mb-4"
+        class="mb-4 w-full"
       />
 
       <section
         ref="listEl"
-        class="max-h-96 overflow-y-auto space-y-3"
+        class="max-h-96 overflow-y-auto space-y-3 px-1"
         @scroll="onListScroll"
       >
         <!-- 举报列表 -->
         <UCard
           v-for="report in filteredReports"
           :key="report.id"
+          variant="subtle"
         >
-          <header class="flex items-start justify-between mb-2">
-            <section class="flex items-center gap-2">
+          <header class="flex items-start justify-between mb-2 gap-2">
+            <section class="flex flex-wrap items-center gap-2">
               <UBadge
                 :color="getStatusColor(report.status)"
                 :label="getStatusLabel(report.status)"
+                variant="soft"
                 size="xs"
               />
-              <UBadge color="neutral" variant="soft" size="xs">{{ getTargetTypeLabel(report.target_type) }}</UBadge>
+              <UBadge color="neutral" variant="outline" size="xs">{{ getTargetTypeLabel(report.target_type) }}</UBadge>
             </section>
-            <UBadge color="neutral" variant="soft" size="xs">{{ formatTime(report.created_at) }}</UBadge>
+            <span class="text-neutral-400 dark:text-neutral-500 text-xs shrink-0">{{ formatTime(report.created_at) }}</span>
           </header>
 
-          <h4 class="font-medium mb-1">{{ getReasonLabel(report.reason) }}</h4>
-          <UBadge v-if="report.description" color="neutral" variant="soft" size="xs" class="mb-2 w-fit max-w-full">
+          <h4 class="font-semibold text-neutral-900 dark:text-white text-sm mb-1">{{ getReasonLabel(report.reason) }}</h4>
+          
+          <UCard
+            v-if="report.description"
+            variant="soft"
+            size="sm"
+            class="text-xs wrap-break-word"
+          >
             {{ report.description }}
-          </UBadge>
+          </UCard>
 
-          <UBadge v-if="report.handled_at" color="neutral" variant="soft" size="xs" class="mt-2">
-            处理时间：{{ formatTime(report.handled_at) }}
-          </UBadge>
+          <div v-if="report.handled_at" class="mt-2 flex items-center gap-1 text-neutral-400 dark:text-neutral-500 text-xs">
+            <UIcon name="i-lucide-check-circle" class="size-3" />
+            处理于 {{ formatTime(report.handled_at) }}
+          </div>
         </UCard>
 
         <!-- 空状态 -->
-        <UAlert
+        <UEmpty
           v-if="!loading && filteredReports.length === 0"
           icon="i-lucide-file-text"
-          color="neutral"
-          variant="soft"
           :title="activeTab === 'all' ? '暂无举报记录' : `暂无${getTabLabel(activeTab)}举报`"
           :description="activeTab === 'all' ? '您还没有提交过任何举报' : '该状态下没有举报记录'"
+          class="py-8"
         />
 
         <!-- 加载状态 -->
@@ -58,38 +67,43 @@
           <USkeleton
             v-for="i in 3"
             :key="i"
-            class="h-20"
+            class="h-24 w-full rounded-2xl"
           />
         </template>
 
-        <!-- 回到顶部（列表很长时） -->
-        <div v-if="showScrollTop" class="sticky bottom-3 flex justify-end">
+        <!-- 回到顶部 -->
+        <div v-if="showScrollTop" class="sticky bottom-2 flex justify-end pointer-events-none">
           <UButton
             variant="soft"
             color="neutral"
             size="sm"
             icon="i-lucide-arrow-up"
+            class="pointer-events-auto"
             @click="scrollToTop"
           />
         </div>
-      </section>
+      </div>
     </template>
 
     <template #footer="{ close }">
-      <UButton
-        variant="outline"
-        icon="i-lucide-refresh-cw"
-        :loading="loading"
-        @click="loadReports"
-      >
-        刷新
-      </UButton>
-      <UButton
-        variant="outline"
-        @click="close"
-      >
-        关闭
-      </UButton>
+      <div class="flex justify-between w-full">
+        <UButton
+            variant="ghost"
+            color="neutral"
+            icon="i-lucide-refresh-cw"
+            :loading="loading"
+            @click="loadReports"
+        >
+            刷新
+        </UButton>
+        <UButton
+            color="neutral"
+            variant="outline"
+            @click="close"
+        >
+            关闭
+        </UButton>
+      </div>
     </template>
   </UModal>
 </template>

@@ -8,9 +8,16 @@ import http from '@ohos.net.http';
 import request from '@ohos.request';
 import common from '@ohos.app.ability.common';
 import { API_BASE_URL, StorageKeys } from '../../constants/AppConstants';
+import { ApiEndpoints } from '../config/ApiEndpoints';
 import { ApiResponse, AppAuthData, HealthCheckData, UploadCategory, UploadMediaData } from '../types/api';
 import { PreferencesUtil } from '../storage/PreferencesUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import {
+  extractApiErrorSnapshot,
+  guessUserMessageFromSnapshot,
+  shouldForceLogoutOnAuthError,
+  isAuthErrorCode
+} from './ApiErrorUtil';
 
 const DOMAIN_NUMBER: number = 0xFF08;
 const TAG: string = 'HttpUtil';
@@ -106,7 +113,7 @@ export class HttpUtil {
         if (!refreshToken) return false;
 
         const baseUrl = await HttpUtil.getBaseUrl();
-        const fullUrl = `${baseUrl}/api/v1/public/auth/refresh_token`;
+        const fullUrl = `${baseUrl}${ApiEndpoints.public.auth.refreshToken}`;
         const httpRequest = http.createHttp();
 
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -137,7 +144,7 @@ export class HttpUtil {
           return true;
         }
 
-        if (payload.code === 1101 || payload.code === 1106) {
+        if (shouldForceLogoutOnAuthError(payload.code, payload.message)) {
           await HttpUtil.clearAuthData();
         }
 
@@ -242,7 +249,7 @@ export class HttpUtil {
       const shouldTryRefresh =
         !retried &&
         hasAuthHeader &&
-        (response.responseCode === 401 || result.code === 1101);
+        (response.responseCode === 401 || isAuthErrorCode(result.code));
       if (shouldTryRefresh) {
         const refreshed = await HttpUtil.ensureRefreshToken();
         if (refreshed) {
@@ -252,9 +259,14 @@ export class HttpUtil {
 
       // 检查业务状态码（业务成功与否以 code 判定）
       if (result.code !== 0) {
-        const errorMsg = `业务错误 [${result.code}]: ${result.message || '未知错误'}`;
-        hilog.error(DOMAIN_NUMBER, TAG, `❌ ${errorMsg}`);
-        throw new Error(errorMsg);
+        const snapshot = extractApiErrorSnapshot(result, response.responseCode);
+        const userMessage = guessUserMessageFromSnapshot(snapshot, '操作失败');
+        hilog.error(DOMAIN_NUMBER, TAG, `❌ 业务错误 [${snapshot.code}]: ${userMessage}`);
+
+        const err = new Error(userMessage) as Error & { code?: number; status?: number };
+        err.code = snapshot.code;
+        err.status = snapshot.status;
+        throw err;
       }
 
       hilog.info(DOMAIN_NUMBER, TAG, `✅ 请求成功: ${method} ${url} (${responseTime}ms)`);
@@ -285,127 +297,34 @@ export class HttpUtil {
   }
 
   /**
-   * 上传文件
-   * 使用 @ohos.request 模块
-   * 注意：fileUri 必须是 request 模块支持的 URI (如 internal://cache/...)
-   * 调用者需负责确保文件已准备好并位于可访问位置
+   * 上传二进制数据到指定 URL (PUT)
+   * 用于 S3 Presigned URL 上传
    */
-  static async uploadFile(
-    context: common.UIAbilityContext,
-    fileUri: string,
-    category: UploadCategory
-  ): Promise<UploadMediaData> {
-    const baseUrl = await HttpUtil.getBaseUrl();
-    const fullUrl = `${baseUrl}/api/v1/protected/media/upload`;
-    const token = await HttpUtil.getToken();
+  static async uploadToUrl(url: string, data: ArrayBuffer, headers: Record<string, string>): Promise<void> {
+    const httpRequest = http.createHttp();
+    try {
+      hilog.info(DOMAIN_NUMBER, TAG, `🚀 开始上传文件到: ${url}`);
+      const response = await httpRequest.request(url, {
+        method: http.RequestMethod.PUT,
+        header: headers,
+        extraData: data,
+        connectTimeout: 60000, // 60秒连接超时
+        readTimeout: 60000     // 60秒读取超时
+      });
 
-    interface UploadTaskState {
-      // 不同系统版本字段名可能不同，保持可选 + 最小依赖
-      responseCode?: number;
-      message?: string;
-      result?: string;
-      data?: string;
-      // eslint-disable-next-line @typescript-eslint/ban-types
-      [key: string]: unknown;
+      hilog.info(DOMAIN_NUMBER, TAG, `📡 上传响应: ${response.responseCode}`);
+
+      if (response.responseCode < 200 || response.responseCode >= 300) {
+        throw new Error(`Upload failed with status ${response.responseCode}`);
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : '未知错误';
+      hilog.error(DOMAIN_NUMBER, TAG, `❌ 上传失败: ${errorMsg}`);
+      throw new Error(errorMsg);
+    } finally {
+      httpRequest.destroy();
     }
-
-    const isRecord = (v: unknown): v is Record<string, unknown> =>
-      typeof v === 'object' && v !== null;
-
-    const extractText = (state: UploadTaskState): string | null => {
-      const candidates = [state.result, state.message, state.data];
-      for (const c of candidates) {
-        if (typeof c === 'string' && c.trim().length > 0) return c;
-      }
-      // 兼容某些实现把响应放在 responseBody / response / body
-      for (const key of ['responseBody', 'response', 'body']) {
-        const v = state[key];
-        if (typeof v === 'string' && v.trim().length > 0) return v;
-      }
-      return null;
-    };
-
-    const parseApiResponse = (text: string): UploadMediaData => {
-      const parsed = JSON.parse(text) as ApiResponse<UploadMediaData>;
-      if (!parsed || typeof parsed !== 'object') {
-        throw new Error('上传响应解析失败');
-      }
-      if (parsed.code !== 0 || !parsed.data) {
-        throw new Error(parsed.message || '上传失败');
-      }
-      return parsed.data;
-    };
-
-    return new Promise((resolve, reject) => {
-      // 从 fileUri 中提取文件名
-      let fileName = 'file';
-      try {
-          const parts = fileUri.split('/');
-          if (parts.length > 0) {
-              fileName = parts[parts.length - 1];
-          }
-      } catch (e) {}
-
-      const uploadConfig: request.UploadConfig = {
-        url: fullUrl,
-        header: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        },
-        method: 'POST',
-        files: [
-          { filename: fileName, name: 'file', uri: fileUri, type: 'application/octet-stream' }
-        ],
-        data: [
-          { name: 'category', value: category }
-        ]
-      };
-
-      try {
-        request.uploadFile(context, uploadConfig).then((uploadTask) => {
-          uploadTask.on('complete', (taskStates) => {
-             // taskStates 的结构在不同版本上可能不同：兼容 array/object
-             const state: UploadTaskState | null =
-               Array.isArray(taskStates) ? (taskStates[0] as UploadTaskState) : (isRecord(taskStates) ? (taskStates as UploadTaskState) : null);
-
-             if (!state) {
-               reject(new Error('上传完成但未收到状态信息'));
-               return;
-             }
-
-             if (typeof state.responseCode === 'number' && state.responseCode >= 400) {
-               reject(new Error(`上传失败(${state.responseCode})`));
-               return;
-             }
-
-             const text = extractText(state);
-             if (!text) {
-               reject(new Error('上传完成但未收到服务端响应'));
-               return;
-             }
-
-             try {
-               resolve(parseApiResponse(text));
-             } catch (e) {
-               reject(e instanceof Error ? e : new Error('上传响应解析失败'));
-             }
-          });
-          
-          uploadTask.on('fail', (taskStates) => {
-             hilog.error(DOMAIN_NUMBER, TAG, `上传任务失败`);
-             reject(new Error('上传失败'));
-          });
-        }).catch((err: Error) => {
-          hilog.error(DOMAIN_NUMBER, TAG, `创建上传任务失败: ${err}`);
-          reject(err);
-        });
-      } catch (err) {
-        hilog.error(DOMAIN_NUMBER, TAG, `上传异常: ${err}`);
-        reject(err);
-      }
-    });
   }
-
 
   /**
    * 获取当前配置信息（用于调试）
@@ -425,8 +344,8 @@ export class HttpUtil {
    */
   static async testConnection(): Promise<ApiResponse<HealthCheckData>> {
     return HttpUtil.request<ApiResponse<HealthCheckData>, object>(
-      '/api/v1/public/system/health', 
-      http.RequestMethod.POST, 
+      ApiEndpoints.public.system.health,
+      http.RequestMethod.POST,
       {}
     );
   }

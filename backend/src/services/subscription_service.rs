@@ -1,5 +1,6 @@
 // src/services/subscription_service.rs - 通知订阅设置服务
 
+use redis::aio::ConnectionManager;
 use sqlx::PgPool;
 
 use crate::{
@@ -11,15 +12,27 @@ use crate::{
 #[derive(Clone)]
 pub struct SubscriptionService {
     db: PgPool,
+    redis: ConnectionManager,
 }
 
 impl SubscriptionService {
-    pub fn new(db: PgPool) -> Self {
-        Self { db }
+    pub fn new(db: PgPool, redis: ConnectionManager) -> Self {
+        Self { db, redis }
     }
 
     /// 获取订阅配置
     pub async fn get_config(&self, user_id: i64) -> Result<SubscriptionsData> {
+        // 1. 尝试从缓存获取
+        use redis::AsyncCommands;
+        let mut conn = self.redis.clone();
+        let key = format!("user:subscription_config:{}", user_id);
+
+        if let Ok(Some(json)) = conn.get::<_, Option<String>>(&key).await {
+            if let Ok(config) = serde_json::from_str(&json) {
+                return Ok(config);
+            }
+        }
+
         let row = sqlx::query!(
             r#"
             SELECT
@@ -42,8 +55,8 @@ impl SubscriptionService {
         .fetch_optional(&self.db)
         .await?;
 
-        match row {
-            Some(r) => Ok(SubscriptionsData {
+        let data = if let Some(r) = row {
+            SubscriptionsData {
                 new_follower_enabled: r.new_follower_enabled,
                 mutual_follow_enabled: r.mutual_follow_enabled,
                 group_invite_enabled: r.group_invite_enabled,
@@ -55,24 +68,30 @@ impl SubscriptionService {
                 moment_comment_enabled: r.moment_comment_enabled,
                 comment_reply_enabled: r.comment_reply_enabled,
                 system_announcement_enabled: r.system_announcement_enabled,
-            }),
-            None => {
-                // 如果没有记录，返回默认值（全部启用）
-                Ok(SubscriptionsData {
-                    new_follower_enabled: true,
-                    mutual_follow_enabled: true,
-                    group_invite_enabled: true,
-                    group_invite_response_enabled: true,
-                    group_application_enabled: true,
-                    group_application_response_enabled: true,
-                    message_mention_enabled: true,
-                    moment_like_enabled: true,
-                    moment_comment_enabled: true,
-                    comment_reply_enabled: true,
-                    system_announcement_enabled: true,
-                })
             }
+        } else {
+            // 如果没有记录，返回默认值（全部启用）
+            SubscriptionsData {
+                new_follower_enabled: true,
+                mutual_follow_enabled: true,
+                group_invite_enabled: true,
+                group_invite_response_enabled: true,
+                group_application_enabled: true,
+                group_application_response_enabled: true,
+                message_mention_enabled: true,
+                moment_like_enabled: true,
+                moment_comment_enabled: true,
+                comment_reply_enabled: true,
+                system_announcement_enabled: true,
+            }
+        };
+
+        // 写入缓存 (1小时)
+        if let Ok(json) = serde_json::to_string(&data) {
+            let _: () = conn.set_ex(&key, json, 3600).await.unwrap_or(());
         }
+
+        Ok(data)
     }
 
     /// 更新订阅配置
@@ -143,6 +162,12 @@ impl SubscriptionService {
         )
         .execute(&self.db)
         .await?;
+
+        // 清除缓存
+        use redis::AsyncCommands;
+        let mut conn = self.redis.clone();
+        let key = format!("user:subscription_config:{}", user_id);
+        let _: () = conn.del(&key).await.unwrap_or(());
 
         Ok(())
     }

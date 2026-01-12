@@ -8,15 +8,22 @@
 import { defineStore } from 'pinia'
 import type { UserInfo } from '~/types/api'
 import type {
-  ChatMessageDeletedEvent,
-  ChatMessageEditedEvent,
-  ChatMessageNewEvent,
-  ChatMessageReadEvent,
-  ChatMessageRecalledEvent,
-  ChatMessageReactionEvent,
+  PrivateMessageNewEvent,
+  PrivateMessageEditedEvent,
+  PrivateMessageRecalledEvent,
+  PrivateMessageDeletedEvent,
+  PrivateMessageReadEvent,
+  PrivateMessageReactionEvent,
+  GroupMessageNewEvent,
+  GroupMessageEditedEvent,
+  GroupMessageRecalledEvent,
+  GroupMessageDeletedEvent,
+  GroupMessageReadEvent,
+  GroupMessageReactionEvent,
+  GroupUserTypingEvent,
+  PrivateUserTypingEvent,
   UserOfflineEvent,
-  UserOnlineEvent,
-  UserTypingEvent
+  UserOnlineEvent
 } from '~/types/websocket'
 
 // 消息类型
@@ -25,7 +32,7 @@ export interface Message {
   type: 'text' | 'image' | 'video' | 'audio' | 'file' | 'system'
   content?: string
   sender: UserInfo
-  reply_to?: string
+  reply_to_message_id?: string
   mentions?: number[]
   sent_at: string
   edited_at?: string
@@ -239,14 +246,44 @@ export const useMessagesStore = defineStore('messages', () => {
   // WebSocket event handlers (single source of truth)
   // ============================================================================
 
-  const handleChatMessageNew = (
-    payload: ChatMessageNewEvent['payload'],
+  // Helper: Find private chat ID by partner user ID
+  const findPrivateChatId = (partnerUserId: number): string | undefined => {
+    for (const [chatId, conv] of _conversations.value.entries()) {
+      if (conv.chat_type === 'private' && conv.target_user_id === partnerUserId) {
+        return chatId
+      }
+    }
+    return undefined
+  }
+
+  // Helper: Find chat ID containing a specific message (slow scan)
+  const findChatIdByMessageId = (messageId: string): string | undefined => {
+    for (const [chatId, msgs] of _messages.value.entries()) {
+      if (msgs.some(m => m.id === messageId)) {
+        return chatId
+      }
+    }
+    return undefined
+  }
+
+  // ------ Private Messages ------
+
+  const handlePrivateMessageNew = (
+    payload: PrivateMessageNewEvent['payload'],
     currentUserId: number | undefined
   ) => {
-    const chatId = payload.chat_id
+    if (!currentUserId) return
+
+    // Determine the partner ID
+    const isFromMe = payload.sender.user_id === currentUserId
+    const partnerId = isFromMe ? payload.target_user_id : payload.sender.user_id
+    
+    const chatId = findPrivateChatId(partnerId)
+    if (!chatId) return // Chat not loaded, ignore or fetch list?
+
     const message: Message = {
-      id: payload.id,
-      type: payload.message_type as Message['type'],
+      id: payload.message_id,
+      type: payload.type as Message['type'],
       content: payload.content || '',
       sender: {
         user_id: payload.sender.user_id,
@@ -254,65 +291,160 @@ export const useMessagesStore = defineStore('messages', () => {
         avatar_url: payload.sender.avatar_url,
         user_type: payload.sender.user_type
       },
-      reply_to: payload.reply_to || undefined,
-      mentions: payload.mentions || undefined,
+      reply_to_message_id: payload.reply_to_message_id || undefined,
+      // mentions: undefined, // Private messages usually don't have mentions
       sent_at: payload.sent_at,
       is_recalled: false,
-      media_url: payload.media_url || undefined,
-      thumbnail_url: payload.thumbnail_url || undefined,
-      file_name: payload.file_name || undefined,
-      file_size: payload.file_size ?? undefined,
-      duration: payload.duration ?? undefined,
-      width: payload.width ?? undefined,
-      height: payload.height ?? undefined
+      // Mapping media fields from nested object to flattened fields
+      media_url: payload.media?.url,
+      thumbnail_url: payload.media?.thumbnail_url,
+      file_name: payload.media?.file_name,
+      file_size: payload.media?.file_size,
+      duration: payload.media?.duration,
+      width: payload.media?.width,
+      height: payload.media?.height,
     }
 
     appendMessage(chatId, message)
 
-    // 会话未加载时：不强行创建（缺少 other_user 信息），只在现有会话上做增量更新
     const conv = _conversations.value.get(chatId)
-    if (!conv) return
+    if (conv) {
+      const isCurrent = _currentConversationId.value === chatId
+      if (!isCurrent && !isFromMe) {
+        _conversations.value.set(chatId, {
+          ...conv,
+          unread_count: (conv.unread_count || 0) + 1
+        })
+      }
+    }
+  }
 
-    const isCurrent = _currentConversationId.value === chatId
-    const isFromMe = currentUserId != null && payload.sender.user_id === currentUserId
-    if (!isCurrent && !isFromMe) {
-      _conversations.value.set(chatId, {
-        ...conv,
-        unread_count: (conv.unread_count || 0) + 1
+  const handlePrivateMessageEdited = (payload: PrivateMessageEditedEvent['payload']) => {
+    const chatId = findChatIdByMessageId(payload.message_id)
+    if (chatId) {
+      updateMessage(chatId, payload.message_id, {
+        content: payload.content,
+        edited_at: payload.edited_at
       })
     }
   }
 
-  const handleChatMessageEdited = (payload: ChatMessageEditedEvent['payload']) => {
-    updateMessage(payload.chat_id, payload.id, {
+  const handlePrivateMessageRecalled = (payload: PrivateMessageRecalledEvent['payload']) => {
+    const chatId = findChatIdByMessageId(payload.message_id)
+    if (chatId) {
+      updateMessage(chatId, payload.message_id, {
+        is_recalled: true,
+        recalled_by: payload.recalled_by,
+        recalled_at: payload.recalled_at
+      })
+    }
+  }
+
+  const handlePrivateMessageDeleted = (payload: PrivateMessageDeletedEvent['payload']) => {
+    const chatId = findChatIdByMessageId(payload.message_id)
+    if (chatId) {
+      removeMessage(chatId, payload.message_id)
+    }
+  }
+
+  const handlePrivateMessageRead = (payload: PrivateMessageReadEvent['payload'], currentUserId: number | undefined) => {
+    // Logic for marking messages as read (e.g. updating 'read' status of messages)
+    // Currently store doesn't track per-message read status for private chats extensively
+  }
+
+  const handlePrivateMessageReaction = (payload: PrivateMessageReactionEvent['payload']) => {
+    // Reaction handling
+  }
+
+  // ------ Group Messages ------
+
+  const handleGroupMessageNew = (
+    payload: GroupMessageNewEvent['payload'],
+    currentUserId: number | undefined
+  ) => {
+    const chatId = payload.group_chat_id // group_chat_id IS the chatId
+    const message: Message = {
+      id: payload.message_id,
+      type: payload.type as Message['type'],
+      content: payload.content || '',
+      sender: {
+        user_id: payload.sender.user_id,
+        nickname: payload.sender.nickname,
+        avatar_url: payload.sender.avatar_url,
+        user_type: payload.sender.user_type
+      },
+      reply_to_message_id: payload.reply_to_message_id || undefined,
+      mentions: payload.mentions || undefined,
+      sent_at: payload.sent_at,
+      is_recalled: false,
+      
+      // Mapping media fields
+      media_url: payload.media?.url,
+      thumbnail_url: payload.media?.thumbnail_url,
+      file_name: payload.media?.file_name,
+      file_size: payload.media?.file_size,
+      duration: payload.media?.duration,
+      width: payload.media?.width,
+      height: payload.media?.height,
+    }
+
+    appendMessage(chatId, message)
+
+    const conv = _conversations.value.get(chatId)
+    if (conv) {
+      const isCurrent = _currentConversationId.value === chatId
+      const isFromMe = currentUserId != null && payload.sender.user_id === currentUserId
+      if (!isCurrent && !isFromMe) {
+        _conversations.value.set(chatId, {
+          ...conv,
+          unread_count: (conv.unread_count || 0) + 1
+        })
+      }
+    }
+  }
+
+  const handleGroupMessageEdited = (payload: GroupMessageEditedEvent['payload']) => {
+    updateMessage(payload.group_chat_id, payload.message_id, {
       content: payload.content,
       edited_at: payload.edited_at
     })
   }
 
-  const handleChatMessageRecalled = (payload: ChatMessageRecalledEvent['payload']) => {
-    updateMessage(payload.chat_id, payload.id, {
+  const handleGroupMessageRecalled = (payload: GroupMessageRecalledEvent['payload']) => {
+    updateMessage(payload.group_chat_id, payload.message_id, {
       is_recalled: true,
       recalled_by: payload.recalled_by,
       recalled_at: payload.recalled_at
     })
   }
 
-  const handleChatMessageDeleted = (payload: ChatMessageDeletedEvent['payload']) => {
-    removeMessage(payload.chat_id, payload.id)
+  const handleGroupMessageDeleted = (payload: GroupMessageDeletedEvent['payload']) => {
+    removeMessage(payload.group_chat_id, payload.message_id)
   }
 
-  const handleChatMessageRead = (_payload: ChatMessageReadEvent['payload'], _currentUserId: number | undefined) => {
-    // 当前 store 不维护 read_count / last_read_at 等衍生状态（避免复杂化）
+  const handleGroupMessageRead = (_payload: GroupMessageReadEvent['payload'], _currentUserId: number | undefined) => {
+    // Read status handling
   }
 
-  const handleChatMessageReaction = (_payload: ChatMessageReactionEvent['payload']) => {
-    // 当前 store 不维护 reaction 列表（避免膨胀），页面/组件可按需扩展
+  const handleGroupMessageReaction = (_payload: GroupMessageReactionEvent['payload']) => {
+    // Reaction handling
   }
 
-  const handleUserTyping = (payload: UserTypingEvent['payload'], currentUserId: number | undefined) => {
+  const handlePrivateUserTyping = (payload: PrivateUserTypingEvent['payload']) => {
+    // 收到 user_id 给 target_user_id 发送的正在输入
+    // 如果我是 target_user_id，说明 user_id 在对我输入
+    // 需要找到对应的私聊会话
+    for (const [chatId, conv] of _conversations.value.entries()) {
+      if (conv.chat_type === 'private' && conv.target_user_id === payload.user_id) {
+        setTyping(chatId, payload.is_typing)
+        break
+      }
+    }
+  }
+
+  const handleGroupUserTyping = (payload: GroupUserTypingEvent['payload'], currentUserId: number | undefined) => {
     if (currentUserId != null && payload.user_id === currentUserId) return
-    setTyping(payload.chat_id, payload.is_typing)
+    setTyping(payload.group_chat_id, payload.is_typing)
   }
 
   const handleUserOnline = (payload: UserOnlineEvent['payload']) => {
@@ -378,13 +510,20 @@ export const useMessagesStore = defineStore('messages', () => {
     clearAll,
 
     // WS handlers
-    handleChatMessageNew,
-    handleChatMessageEdited,
-    handleChatMessageRecalled,
-    handleChatMessageDeleted,
-    handleChatMessageRead,
-    handleChatMessageReaction,
-    handleUserTyping,
+    handlePrivateMessageNew,
+    handlePrivateMessageEdited,
+    handlePrivateMessageRecalled,
+    handlePrivateMessageDeleted,
+    handlePrivateMessageRead,
+    handlePrivateMessageReaction,
+    handleGroupMessageNew,
+    handleGroupMessageEdited,
+    handleGroupMessageRecalled,
+    handleGroupMessageDeleted,
+    handleGroupMessageRead,
+    handleGroupMessageReaction,
+    handlePrivateUserTyping,
+    handleGroupUserTyping,
     handleUserOnline,
     handleUserOffline
   }

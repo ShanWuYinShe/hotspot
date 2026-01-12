@@ -68,6 +68,26 @@ impl GroupMessageRepository {
         Ok(row)
     }
 
+    /// 按消息ID查找消息
+    pub async fn find_by_id(&self, message_id: Uuid) -> Result<Option<GroupMessageRow>> {
+        let row = sqlx::query_as!(
+            GroupMessageRow,
+            r#"
+            SELECT id, message_id, group_chat_id, sender_id,
+                   type as "type: MessageType", content, reply_to_message_id, mentions,
+                   file_name, file_size, thumbnail_url, duration,
+                   sent_at, edited_at, is_recalled, recalled_by, recalled_at, is_deleted, deleted_at
+            FROM group_messages
+            WHERE message_id = $1 AND is_deleted = FALSE
+            "#,
+            message_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(row)
+    }
+
     /// 发送群聊消息
     #[allow(clippy::too_many_arguments)]
     pub async fn create(

@@ -11,10 +11,66 @@ import type {
   DeleteConfigRequest,
   ConfigHistoryRequest,
   ConfigHistoryItem,
-  ConfigChangesRequest
+  ConfigChangesRequest,
+  AdminGlobalSettingsData,
+  AdminGetGlobalSettingsRequest,
+  UpdateUploadConfigRequest,
+  UpdateDefaultsRequest,
+  UpdateFeaturesRequest,
+  UpdateContactRequest,
+  UpdateLimitsRequest,
+  GlobalSettings,
+  UploadConfig,
+  ContentDefaults,
+  FeatureSwitches,
+  ContactInfo,
+  AppLimits
 } from '~/types/api'
 
 class AdminConfigService extends BaseService {
+  // ============ New Strongly Typed Global Settings API ============
+
+  async getGlobalSettings(data: AdminGetGlobalSettingsRequest = {}) {
+    return this.post<AdminGlobalSettingsData>(ADMIN_CONFIG.ADMIN_FETCH, data)
+  }
+
+  async updateUploadConfig(data: UpdateUploadConfigRequest) {
+    return this.post<{ upload: UploadConfig; updated_at: string; version: string }>(
+      ADMIN_CONFIG.ADMIN_UPDATE_UPLOAD,
+      data
+    )
+  }
+
+  async updateDefaults(data: UpdateDefaultsRequest) {
+    return this.post<{ defaults: ContentDefaults; updated_at: string; version: string }>(
+      ADMIN_CONFIG.ADMIN_UPDATE_DEFAULTS,
+      data
+    )
+  }
+
+  async updateFeatures(data: UpdateFeaturesRequest) {
+    return this.post<{ features: FeatureSwitches; updated_at: string; version: string }>(
+      ADMIN_CONFIG.ADMIN_UPDATE_FEATURES,
+      data
+    )
+  }
+
+  async updateContact(data: UpdateContactRequest) {
+    return this.post<{ contact: ContactInfo; updated_at: string; version: string }>(
+      ADMIN_CONFIG.ADMIN_UPDATE_CONTACT,
+      data
+    )
+  }
+
+  async updateLimits(data: UpdateLimitsRequest) {
+    return this.post<{ limits: AppLimits; updated_at: string; version: string }>(
+      ADMIN_CONFIG.ADMIN_UPDATE_LIMITS,
+      data
+    )
+  }
+
+  // ============ Old Generic KV API (Deprecated/Compat) ============
+
   async create(data: CreateConfigRequest) {
     return this.post<CreateConfigData>(ADMIN_CONFIG.CREATE, data)
   }
@@ -46,4 +102,3 @@ class AdminConfigService extends BaseService {
 
 export const adminConfigService = new AdminConfigService()
 export function useAdminConfigService() { return adminConfigService }
-

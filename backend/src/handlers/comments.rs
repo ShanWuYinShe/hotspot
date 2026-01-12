@@ -7,7 +7,7 @@ use crate::{
             LikeCommentRequest, MomentCommentsRequest, UnlikeCommentRequest,
         },
         response::{
-            ApiResponse, CommentLikeItem, CommentListItem, CreateCommentData, PaginatedData,
+            ApiResponse, CommentLikeItem, CommentListItem, PaginatedData,
         },
     },
     error::Result,
@@ -46,7 +46,7 @@ pub async fn create(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(req): Json<CreateCommentRequest>,
-) -> Result<Json<ApiResponse<CreateCommentData>>> {
+) -> Result<Json<ApiResponse<CommentListItem>>> {
     let response = state.comment_service.add_comment(user_id, &req).await?;
     Ok(Json(ApiResponse::success(response)))
 }

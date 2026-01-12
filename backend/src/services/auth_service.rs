@@ -33,10 +33,16 @@ pub enum ClientType {
 }
 
 impl ClientType {
-    pub fn from_opt_str(v: Option<&str>) -> Self {
-        match v.unwrap_or("app") {
-            "web" => Self::Web,
-            _ => Self::App,
+    /// 从字符串解析客户端类型
+    /// 强制：客户端必须显式传递，不允许推断
+    pub fn from_str(v: &str) -> Result<Self> {
+        match v {
+            "web" => Ok(Self::Web),
+            "app" => Ok(Self::App),
+            _ => Err(AppError::BadRequest(format!(
+                "无效的 client_type: {}. 必须是 'web' 或 'app'",
+                v
+            ))),
         }
     }
 }
@@ -760,7 +766,7 @@ impl AuthService {
                     .map(|id| id == s.session_id)
                     .unwrap_or(false);
                 SessionItem {
-                    id: s.session_id.to_string(),
+                    session_id: s.session_id.to_string(),
                     device_type: s.device_type,
                     device_name: s.device_name,
                     ip_address: s.ip_address.map(|ip| ip.to_string()),
@@ -783,7 +789,7 @@ impl AuthService {
     /// 撤销会话
     pub async fn revoke_session(&self, user_id: i64, req: &RevokeSessionRequest) -> Result<()> {
         // 1. 解析会话ID
-        let session_id = uuid::Uuid::parse_str(&req.id)
+        let session_id = uuid::Uuid::parse_str(&req.session_id)
             .map_err(|_| AppError::BadRequest("会话ID格式错误".to_string()))?;
 
         // 2. 查找会话

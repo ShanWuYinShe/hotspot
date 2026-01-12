@@ -8,7 +8,7 @@ import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/Global
 import { ApiClient } from '../../../core/api/ApiClient';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { MyProfileData, MessageType, PrivateMessageItem, GroupMessageItem, SendMessageType, UserInfo } from '../../../core/types/api';
-import type { ServerEvent } from '../../../core/types/WebSocketTypes';
+import type { ServerEvent, PrivateMessageNewEvent, GroupMessageNewEvent } from '../../../core/types/WebSocketTypes';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -59,24 +59,60 @@ struct ChatPage {
   private webSocketService = WebSocketService.getInstance();
   private messageCacheService = MessageCacheService.getInstance();
   private scroller: Scroller = new Scroller();
-  private onChatMessageNew = (event: ServerEvent): void => {
-    if (event.type !== 'ChatMessageNew') return;
-    const payload = event.payload;
-    if (payload.chat_id !== this.chatId || payload.chat_type !== this.chatType) return;
 
-    const newMessage: ChatMessage = {
-      id: payload.id,
-      content: payload.media_url || payload.content || (payload.message_type === 'image' ? '[图片]' : '[非文本消息]'),
+  private onPrivateMessageNew = (event: ServerEvent): void => {
+    if (event.type !== 'PrivateMessageNew') return;
+    if (this.chatType !== 'private_chat') return;
+
+    const payload = (event as PrivateMessageNewEvent).payload;
+    const currentUserId = this.currentUser?.user_id;
+    const targetId = this.targetId;
+
+    if (!currentUserId || !targetId) return;
+
+    // Check relevance
+    const isRelevant = 
+      (payload.sender.user_id === currentUserId && payload.target_user_id === targetId) ||
+      (payload.sender.user_id === targetId && payload.target_user_id === currentUserId);
+    
+    if (!isRelevant) return;
+
+    this.handleNewMessage({
+      id: payload.message_id,
+      content: payload.media?.url || payload.content || (payload.type === 'image' ? '[图片]' : '[非文本消息]'),
       senderId: payload.sender.user_id,
       senderName: payload.sender.nickname,
       senderAvatar: payload.sender.avatar_url,
-      type: payload.message_type,
+      type: payload.type,
+      sentAt: payload.sent_at,
+      isSelf: payload.sender.user_id === currentUserId,
+      isSystem: payload.type === 'system',
+      rawData: payload
+    });
+  }
+
+  private onGroupMessageNew = (event: ServerEvent): void => {
+    if (event.type !== 'GroupMessageNew') return;
+    if (this.chatType !== 'group_chat') return;
+
+    const payload = (event as GroupMessageNewEvent).payload;
+    if (payload.group_chat_id !== this.chatId) return;
+
+    this.handleNewMessage({
+      id: payload.message_id,
+      content: payload.media?.url || payload.content || (payload.type === 'image' ? '[图片]' : '[非文本消息]'),
+      senderId: payload.sender.user_id,
+      senderName: payload.sender.nickname,
+      senderAvatar: payload.sender.avatar_url,
+      type: payload.type,
       sentAt: payload.sent_at,
       isSelf: payload.sender.user_id === this.currentUser?.user_id,
-      isSystem: payload.message_type === 'system',
+      isSystem: payload.type === 'system',
       rawData: payload
-    };
+    });
+  }
 
+  private handleNewMessage(newMessage: ChatMessage) {
     this.messages.push(newMessage);
     this.scrollToBottom();
 
@@ -95,7 +131,7 @@ struct ChatPage {
       sentAt: newMessage.sentAt,
       data: JSON.stringify(newMessage.rawData ?? null)
     });
-  };
+  }
 
   async aboutToAppear() {
     try {
@@ -210,11 +246,13 @@ struct ChatPage {
   }
 
   private subscribeToEvents() {
-    this.webSocketService.on('ChatMessageNew', this.onChatMessageNew);
+    this.webSocketService.on('PrivateMessageNew', this.onPrivateMessageNew);
+    this.webSocketService.on('GroupMessageNew', this.onGroupMessageNew);
   }
 
   private unsubscribeFromEvents() {
-    this.webSocketService.off('ChatMessageNew', this.onChatMessageNew);
+    this.webSocketService.off('PrivateMessageNew', this.onPrivateMessageNew);
+    this.webSocketService.off('GroupMessageNew', this.onGroupMessageNew);
   }
 
   private scrollToBottom() {

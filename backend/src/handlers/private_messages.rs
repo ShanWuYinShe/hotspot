@@ -76,6 +76,7 @@ pub async fn delete(
     Ok(Json(ApiResponse::success_empty()))
 }
 
+
 pub async fn mark_as_read(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,

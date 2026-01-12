@@ -7,13 +7,13 @@
 import type { 
   UserInfo, 
   GroupInfo, 
-  UserRelationship, 
-  GeoData, 
+  UserRelation, 
+  RelativeLocation, 
   GroupSettings, 
-  GroupSearchItem, 
+  GroupItem, 
   PrivacyLevel, 
-  UserSearchItem, 
-  MomentSearchItem,
+  UserItem, 
+  MomentItem,
   UserType,
   MessageType as ApiMessageType
 } from './api'
@@ -24,14 +24,13 @@ import type {
 
 /**
  * 用户详情扩展类型（前端组件使用）
- * 组合自 UserSearchItem 并添加前端需要的字段
+ * 组合自 UserItem 并添加前端需要的字段
  */
-export interface UserDetailData extends UserSearchItem {
-  user_type?: UserType;
+export interface UserDetailData extends UserItem {
   created_at?: string;
   last_active_at?: string;
-  relationship?: UserRelationship;
-  geo: GeoData; // 覆盖基类，要求必填
+  relation?: UserRelation;
+  location: RelativeLocation; // 覆盖基类，要求必填
 }
 
 // ============================================================================
@@ -54,10 +53,10 @@ export interface Coordinates {
 
 /**
  * 群组详情扩展类型（前端组件使用）
- * 组合 GroupSearchItem + GroupSettings 的客户端扩展
+ * 组合 GroupItem + GroupSettings 的客户端扩展
  * API 规范中不存在此类型，仅用于前端组件渲染
  */
-export interface GroupDetailData extends GroupSearchItem {
+export interface GroupDetailData extends GroupItem {
   settings: GroupSettings;
   created_at: string;
   last_activity_at?: string;
@@ -65,7 +64,7 @@ export interface GroupDetailData extends GroupSearchItem {
 
 /**
  * 群组卡片渲染类型（前端组件使用）
- * 合并了 GroupDetailData、GroupSearchItem 和 JoinedGroupItem 的字段
+ * 合并了 GroupDetailData、GroupItem 和 JoinedGroupItem 的字段
  * 用于 GroupCard 等需要渲染不同来源群组数据的组件
  */
 export interface GroupCardData extends GroupDetailData {
@@ -77,12 +76,11 @@ export interface GroupCardData extends GroupDetailData {
 
 /**
  * 动态卡片渲染类型（前端组件使用）
- * 扩展 MomentSearchItem，添加用户关系和点赞状态
+ * 扩展 MomentItem，添加用户关系和点赞状态
  */
-export interface MomentCardData extends MomentSearchItem {
+export interface MomentCardData extends MomentItem {
   // 展平结构，避免重新定义 user 类型
-  relationship?: Partial<UserRelationship>; // 与动态作者的关系
-  liked_by_me?: boolean;
+  relation?: Partial<UserRelation>; // 与动态作者的关系
 }
 
 // ============================================================================
@@ -122,6 +120,7 @@ export interface UserSettings {
     animations: boolean;
     compact_mode: boolean;
     high_contrast: boolean;
+    high_contrast_enabled?: boolean; // Alias for high_contrast
   };
   // 偏好设置（前端本地）
   preferences: {

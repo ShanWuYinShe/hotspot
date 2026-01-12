@@ -119,7 +119,7 @@ struct CreateGroupPage {
         const routerInstance = this.getUIContext().getRouter();
         await routerInstance.replaceUrl({
           url: `features/group/pages/${PageNames.GROUP_DETAIL}`,
-          params: { groupId: response.data.id }
+          params: { groupId: response.data.group_chat_id }
         });
       } else {
         SystemToast.showError(response.message || '创建群组失败', this.getUIContext());

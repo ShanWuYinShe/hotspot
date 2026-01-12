@@ -4,6 +4,7 @@
 use redis::aio::ConnectionManager;
 use sqlx::PgPool;
 use std::sync::Arc;
+use std::str::FromStr; // Add FromStr
 use uuid::Uuid;
 
 use crate::{
@@ -16,7 +17,7 @@ use crate::{
         },
         response::{
             GroupMessageItem, MessageReactionItem, MessageReadItem, PaginatedData, PaginationMeta,
-            SendGroupMessageData, UserInfo,
+            SendGroupMessageData, UserInfo, MessageMedia,
         },
     },
     error::{AppError, Result},
@@ -26,7 +27,7 @@ use crate::{
         group_member_repo::GroupMemberRepository, group_message_repo::GroupMessageRepository,
         message_reactions_repo::MessageReactionsRepository, user_repo::UserRepository,
     },
-    types::enums::{MemberRole, MessageType},
+    types::enums::{MemberRole, MessageType, UserType, ReactionType}, // Add ReactionType
     utils::validation::Validator,
     EventBus,
 };
@@ -48,7 +49,7 @@ impl GroupMessageService {
     pub fn new(db: &PgPool, redis: &ConnectionManager, event_bus: Arc<EventBus>) -> Self {
         Self {
             message_repo: GroupMessageRepository::new(db.clone()),
-            member_repo: GroupMemberRepository::new(db.clone()),
+            member_repo: GroupMemberRepository::new(db.clone(), redis.clone()),
             user_repo: UserRepository::new(db.clone()),
             unread_repo: ChatUnreadRepository::new(db.clone()),
             reactions_repo: MessageReactionsRepository::new(db.clone()),
@@ -70,13 +71,13 @@ impl GroupMessageService {
             Validator::validate_length(content, "消息内容", 1, 10000)?;
         }
 
-        let group_chat_id = Uuid::parse_str(&req.id)
+        let group_chat_id = Uuid::parse_str(&req.group_chat_id)
             .map_err(|_| AppError::BadRequest("无效的群组ID".to_string()))?;
 
         let message_type = MessageType::from_str(&req.r#type)
             .ok_or_else(|| AppError::BadRequest("无效的消息类型".to_string()))?;
 
-        let reply_to_message_id = if let Some(ref id) = req.reply_to {
+        let reply_to_message_id = if let Some(ref id) = req.reply_to_message_id {
             Some(
                 Uuid::parse_str(id)
                     .map_err(|_| AppError::BadRequest("无效的回复消息ID".to_string()))?,
@@ -84,6 +85,40 @@ impl GroupMessageService {
         } else {
             None
         };
+
+        // 准备回复消息快照 (用于事件推送)
+        let mut reply_to_snapshot = None;
+        if let Some(reply_id) = reply_to_message_id {
+            // 尝试获取被回复的消息
+            if let Ok(Some(reply_msg)) = self.message_repo.find_by_id(reply_id).await {
+                // 获取发送者信息
+                let sender_profile = self
+                    .user_repo
+                    .find_profiles(&[reply_msg.sender_id])
+                    .await?
+                    .into_iter()
+                    .next();
+
+                if let Some(sender) = sender_profile {
+                    let preview_content = match reply_msg.r#type {
+                        MessageType::Text => reply_msg.content,
+                        MessageType::Image => "[图片]".to_string(),
+                        MessageType::Video => "[视频]".to_string(),
+                        MessageType::Audio => "[语音]".to_string(),
+                        MessageType::File => "[文件]".to_string(),
+                        MessageType::System => reply_msg.content,
+                        _ => "[未知消息]".to_string(),
+                    };
+
+                    reply_to_snapshot = Some(crate::events::event_types::ReplyToSnapshot {
+                        message_id: reply_id,
+                        user_id: reply_msg.sender_id,
+                        nickname: sender.nickname,
+                        content: preview_content,
+                    });
+                }
+            }
+        }
 
         // mentions 已经是 Option<Vec<i64>>，直接使用
         let mentions = req.mentions.clone();
@@ -105,17 +140,17 @@ impl GroupMessageService {
         // 3. 根据消息类型处理内容和文件
         // - 文本消息：content 必填，file_id 不需要
         // - 媒体消息：file_id 必填，服务端转换为实际 url 存入 content
-        let (content, file_name, file_size, thumbnail_url, duration, media_url) =
+        let (content, media) =
             match message_type {
                 MessageType::Text => {
                     let content = req.content.clone().ok_or_else(|| {
                         AppError::BadRequest("文本消息必须提供 content".to_string())
                     })?;
-                    (content, None, None, None, None, None)
+                    (content, None)
                 }
                 MessageType::System => {
                     let content = req.content.clone().unwrap_or_default();
-                    (content, None, None, None, None, None)
+                    (content, None)
                 }
                 _ => {
                     // 媒体消息：需要 file_id
@@ -141,15 +176,19 @@ impl GroupMessageService {
                     // 标记文件已使用
                     self.file_repo.mark_as_used(file_id).await?;
 
+                    let media = MessageMedia {
+                        url: file_data.url.clone(),
+                        thumbnail_url: file_data.thumbnail_url.clone(),
+                        file_name: file_data.filename.clone(),
+                        file_size: Some(file_data.file_size),
+                        duration: file_data.duration.map(|d| d as f64),
+                        width: file_data.width,
+                        height: file_data.height,
+                        mime_type: Some(file_data.mime_type.clone()),
+                    };
+
                     // 媒体消息的 content 存储实际 url
-                    (
-                        file_data.url.clone(), // content = media_url
-                        None,                  // file_name 暂不存储
-                        Some(file_data.file_size),
-                        file_data.thumbnail_url.clone(),
-                        file_data.duration,
-                        Some(file_data.url),
-                    )
+                    (file_data.url, Some(media))
                 }
             };
 
@@ -163,10 +202,10 @@ impl GroupMessageService {
                 content.clone(),
                 reply_to_message_id,
                 mentions.clone(),
-                file_name.as_deref(),
-                file_size,
-                thumbnail_url.as_deref(),
-                duration,
+                media.as_ref().and_then(|m| m.file_name.as_deref()),
+                media.as_ref().and_then(|m| m.file_size),
+                media.as_ref().and_then(|m| m.thumbnail_url.as_deref()),
+                media.as_ref().and_then(|m| m.duration.map(|d| d as i32)),
             )
             .await?;
 
@@ -190,22 +229,15 @@ impl GroupMessageService {
             message_id: created.message_id,
             group_chat_id,
             sender_id: user_id,
-            message_type: req.r#type.clone(),
+            message_type: message_type, // Use parsed enum
             content: event_content,
-            reply_to: reply_to_message_id,
+            reply_to: reply_to_snapshot,
             mentions,
-            media_url,
-            thumbnail_url,
-            file_name,
-            file_size,
-            duration,
-            width: None,
-            height: None,
+            media,
         });
 
         Ok(SendGroupMessageData {
-            id: created.message_id.to_string(),
-            sent_at: created.sent_at.to_rfc3339(),
+            message_id: created.message_id.to_string(),
         })
     }
 
@@ -217,7 +249,7 @@ impl GroupMessageService {
     ) -> Result<PaginatedData<GroupMessageItem>> {
         // 1. 参数验证
         let limit = Validator::validate_limit(req.limit, 100)? as i64;
-        let group_chat_id = Uuid::parse_str(&req.id)
+        let group_chat_id = Uuid::parse_str(&req.group_chat_id)
             .map_err(|_| AppError::BadRequest("无效的群组ID".to_string()))?;
 
         // 2. 验证用户是否是群成员
@@ -246,8 +278,25 @@ impl GroupMessageService {
             .iter()
             .map(|m| {
                 let user = user_map.get(&m.sender_id);
+                
+                // Construct MessageMedia if it's a media message
+                let media = if m.r#type != MessageType::Text && m.r#type != MessageType::System {
+                    Some(MessageMedia {
+                        url: m.content.clone(), // For media messages, content stores the URL
+                        thumbnail_url: m.thumbnail_url.clone(),
+                        file_name: m.file_name.clone(),
+                        file_size: m.file_size,
+                        duration: m.duration.map(|d| d as f64),
+                        width: None,
+                        height: None,
+                        mime_type: None,
+                    })
+                } else {
+                    None
+                };
+
                 GroupMessageItem {
-                    id: m.message_id.to_string(),
+                    message_id: m.message_id.to_string(),
                     r#type: m.r#type.to_string(),
                     content: Some(m.content.clone()),
                     sender: UserInfo {
@@ -258,23 +307,18 @@ impl GroupMessageService {
                         avatar_url: user.and_then(|u| u.avatar_url.clone()),
                         user_type: user
                             .map(|u| u.user_type)
-                            .unwrap_or(crate::types::enums::UserType::Normal),
+                            .unwrap_or(UserType::Normal),
                     },
-                    reply_to: m.reply_to_message_id.map(|id| id.to_string()),
+                    reply_to_message_id: m.reply_to_message_id.map(|id| id.to_string()),
+                    reply_to: None, // TODO: Populate reply_to snapshot if needed, or leave for separate fetch
                     mentions: m.mentions.clone(),
-                    media_url: None,
-                    thumbnail_url: None,
-                    file_name: None,
-                    file_size: None,
-                    duration: None,
-                    width: None,
-                    height: None,
+                    media,
                     sent_at: m.sent_at.to_rfc3339(),
                     edited_at: m.edited_at.map(|t| t.to_rfc3339()),
                     is_recalled: m.is_recalled,
                     recalled_by: m.recalled_by,
                     recalled_at: m.recalled_at.map(|t| t.to_rfc3339()),
-                    read_count: None,
+                    read_count: None, // TODO: Populate read_count if needed
                 }
             })
             .collect();
@@ -292,7 +336,7 @@ impl GroupMessageService {
     pub async fn update(&self, req: &UpdateGroupMessageRequest, user_id: i64) -> Result<()> {
         // 1. 参数验证
         Validator::validate_length(&req.content, "消息内容", 1, 10000)?;
-        let message_id = Uuid::parse_str(&req.id)
+        let message_id = Uuid::parse_str(&req.message_id)
             .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
 
         // 2. 查询消息元数据
@@ -300,7 +344,7 @@ impl GroupMessageService {
             .message_repo
             .get_meta(message_id)
             .await?
-            .ok_or_else(|| AppError::NotFound("消息不存在".to_string()))?;
+            .ok_or_else(|| AppError::ChatNotFound("消息不存在".to_string()))?;
 
         // 3. 验证权限（只能编辑自己的消息）
         if message.sender_id != user_id {
@@ -330,7 +374,7 @@ impl GroupMessageService {
 
     /// 撤回群聊消息
     pub async fn recall(&self, req: &RecallGroupMessageRequest, user_id: i64) -> Result<()> {
-        let message_id = Uuid::parse_str(&req.id)
+        let message_id = Uuid::parse_str(&req.message_id)
             .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
 
         // 1. 查询消息元数据
@@ -338,7 +382,7 @@ impl GroupMessageService {
             .message_repo
             .get_meta(message_id)
             .await?
-            .ok_or_else(|| AppError::NotFound("消息不存在".to_string()))?;
+            .ok_or_else(|| AppError::ChatNotFound("消息不存在".to_string()))?;
 
         // 2. 验证权限
         let can_recall = if message.sender_id == user_id {
@@ -380,7 +424,7 @@ impl GroupMessageService {
 
     /// 删除群聊消息
     pub async fn delete(&self, req: &DeleteGroupMessageRequest, user_id: i64) -> Result<()> {
-        let message_id = Uuid::parse_str(&req.id)
+        let message_id = Uuid::parse_str(&req.message_id)
             .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
 
         // 1. 查询消息元数据
@@ -388,7 +432,7 @@ impl GroupMessageService {
             .message_repo
             .get_meta(message_id)
             .await?
-            .ok_or_else(|| AppError::NotFound("消息不存在".to_string()))?;
+            .ok_or_else(|| AppError::ChatNotFound("消息不存在".to_string()))?;
 
         // 2. 验证权限
         let for_everyone = req.for_everyone.unwrap_or(false);
@@ -434,7 +478,7 @@ impl GroupMessageService {
         req: &MarkGroupMessagesReadRequest,
         user_id: i64,
     ) -> Result<()> {
-        let group_chat_id = Uuid::parse_str(&req.id)
+        let group_chat_id = Uuid::parse_str(&req.group_chat_id)
             .map_err(|_| AppError::BadRequest("无效的群组ID".to_string()))?;
 
         // 验证用户是否是群成员
@@ -444,7 +488,7 @@ impl GroupMessageService {
 
         // 解析截止消息ID
         let up_to = req
-            .up_to
+            .up_to_message_id
             .as_ref()
             .map(|id| Uuid::parse_str(id))
             .transpose()
@@ -466,7 +510,7 @@ impl GroupMessageService {
     ) -> Result<PaginatedData<MessageReadItem>> {
         let limit = Validator::validate_limit(req.limit, 100)?;
         let cursor = Validator::parse_cursor(req.cursor.as_deref())?;
-        let message_id = Uuid::parse_str(&req.id)
+        let message_id = Uuid::parse_str(&req.message_id)
             .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
 
         // 获取消息元数据
@@ -474,7 +518,7 @@ impl GroupMessageService {
             .message_repo
             .get_meta(message_id)
             .await?
-            .ok_or_else(|| AppError::NotFound("消息不存在".to_string()))?;
+            .ok_or_else(|| AppError::ChatNotFound("消息不存在".to_string()))?;
 
         // 验证用户是否是群成员
         if !self
@@ -511,7 +555,7 @@ impl GroupMessageService {
                         avatar_url: user.and_then(|u| u.avatar_url.clone()),
                         user_type: user
                             .map(|u| u.user_type)
-                            .unwrap_or(crate::types::enums::UserType::Normal),
+                            .unwrap_or(UserType::Normal),
                     },
                     read_at: read_at.to_rfc3339(),
                 }
@@ -533,7 +577,7 @@ impl GroupMessageService {
         req: &AddGroupMessageReactionRequest,
         user_id: i64,
     ) -> Result<()> {
-        let message_id = Uuid::parse_str(&req.id)
+        let message_id = Uuid::parse_str(&req.message_id)
             .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
 
         // 获取消息元数据
@@ -541,7 +585,7 @@ impl GroupMessageService {
             .message_repo
             .get_meta(message_id)
             .await?
-            .ok_or_else(|| AppError::NotFound("消息不存在".to_string()))?;
+            .ok_or_else(|| AppError::ChatNotFound("消息不存在".to_string()))?;
 
         // 验证用户是否是群成员
         if !self
@@ -556,6 +600,18 @@ impl GroupMessageService {
         self.reactions_repo
             .add(message_id, user_id, &req.r#type)
             .await?;
+
+        let reaction_type_enum = ReactionType::from_str(&req.r#type)
+            .map_err(|_| AppError::BadRequest("无效的反应类型".to_string()))?;
+
+        self.event_bus.publish(AppEvent::GroupMessageReaction {
+            message_id,
+            group_chat_id: message.group_chat_id,
+            user_id,
+            reaction_type: reaction_type_enum,
+            action: "add".to_string(),
+        });
+
         Ok(())
     }
 
@@ -565,7 +621,7 @@ impl GroupMessageService {
         req: &RemoveGroupMessageReactionRequest,
         user_id: i64,
     ) -> Result<()> {
-        let message_id = Uuid::parse_str(&req.id)
+        let message_id = Uuid::parse_str(&req.message_id)
             .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
 
         // 获取消息元数据
@@ -573,7 +629,7 @@ impl GroupMessageService {
             .message_repo
             .get_meta(message_id)
             .await?
-            .ok_or_else(|| AppError::NotFound("消息不存在".to_string()))?;
+            .ok_or_else(|| AppError::ChatNotFound("消息不存在".to_string()))?;
 
         // 验证用户是否是群成员
         if !self
@@ -588,6 +644,18 @@ impl GroupMessageService {
         self.reactions_repo
             .remove(message_id, user_id, &req.r#type)
             .await?;
+
+        let reaction_type_enum = ReactionType::from_str(&req.r#type)
+            .map_err(|_| AppError::BadRequest("无效的反应类型".to_string()))?;
+
+        self.event_bus.publish(AppEvent::GroupMessageReaction {
+            message_id,
+            group_chat_id: message.group_chat_id,
+            user_id,
+            reaction_type: reaction_type_enum,
+            action: "remove".to_string(),
+        });
+
         Ok(())
     }
 
@@ -597,7 +665,7 @@ impl GroupMessageService {
         req: &GroupMessageReactionsRequest,
         user_id: i64,
     ) -> Result<PaginatedData<MessageReactionItem>> {
-        let message_id = Uuid::parse_str(&req.id)
+        let message_id = Uuid::parse_str(&req.message_id)
             .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
 
         // 获取消息元数据
@@ -605,7 +673,7 @@ impl GroupMessageService {
             .message_repo
             .get_meta(message_id)
             .await?
-            .ok_or_else(|| AppError::NotFound("消息不存在".to_string()))?;
+            .ok_or_else(|| AppError::ChatNotFound("消息不存在".to_string()))?;
 
         // 验证用户是否是群成员
         if !self

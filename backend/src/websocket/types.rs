@@ -1,4 +1,9 @@
 use serde::{Deserialize, Serialize};
+use crate::dto::response::{MessageMedia, UserInfo};
+use crate::types::enums::{
+    GroupMemberRemovalReason, InviteStatus, MemberRole, MessageType, ReactionType,
+    SubscriptionFailureReason,
+};
 
 /// WebSocket 消息类型定义
 /// 严格遵循 api_spec.mdc WebSocket 实时事件定义
@@ -13,11 +18,6 @@ pub enum WsMessage {
         connection_id: String,
         user_id: i64,
         server_time: String, // ISO 8601 UTC
-    },
-
-    /// 心跳
-    Heartbeat {
-        timestamp: String, // ISO 8601 UTC
     },
 
     // ===== 在线状态事件 =====
@@ -66,10 +66,24 @@ pub enum WsMessage {
         was_mutual: bool,      // 之前是否互相关注
     },
 
+    // ===== 用户资料更新 =====
+    /// 用户资料更新 (头像/昵称)
+    UserProfileUpdated {
+        user_id: i64,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        nickname: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        avatar_url: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        bio: Option<String>,
+        updated_at: String, // ISO 8601 UTC
+    },
+
     // ===== 生活瞬间互动事件 =====
     /// 生活瞬间被点赞
     MomentLiked {
         moment_id: String,
+        moment_summary: MomentSummary,
         user: UserInfo,
         liked_at: String, // ISO 8601 UTC
     },
@@ -77,6 +91,7 @@ pub enum WsMessage {
     /// 生活瞬间被评论
     MomentCommented {
         moment_id: String,
+        moment_summary: MomentSummary,
         comment_id: String,
         user: UserInfo,
         content: String,
@@ -87,6 +102,7 @@ pub enum WsMessage {
     CommentReply {
         moment_id: String,
         comment_id: String, // 原评论ID（被回复的评论）
+        reply_to_content: String, // 原评论内容摘要
         reply_id: String,   // 回复评论ID
         user: UserInfo,     // 回复者
         content: String,
@@ -95,7 +111,7 @@ pub enum WsMessage {
 
     /// 系统公告
     SystemAnnouncement {
-        id: String,
+        announcement_id: String,
         title: String,
         content: String,
         severity: String, // "info" | "warning" | "error"
@@ -105,92 +121,137 @@ pub enum WsMessage {
     },
 
     // ===== 聊天消息事件 =====
-    /// 新消息
-    ChatMessageNew {
-        id: String,
-        chat_type: String, // "private_chat" | "group_chat"
-        chat_id: String,
+    // ----- 私聊 -----
+    /// 新私聊消息
+    PrivateMessageNew {
+        message_id: String,
+        target_user_id: i64, // 接收者ID (对于发送者多端同步=接收方ID)
         sender: UserInfo,
         #[serde(rename = "type")]
-        message_type: String, // "text" | "image" | "video" | "audio" | "file" | "system"
+        message_type: MessageType, // 使用 Enum
         #[serde(skip_serializing_if = "Option::is_none")]
         content: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
-        reply_to: Option<String>,
+        reply_to: Option<MessageReplyTo>,
         #[serde(skip_serializing_if = "Option::is_none")]
-        mentions: Option<Vec<i64>>,
-        // 媒体消息字段（type != 'text' 时，由后端解析 file_id 后填充）
-        #[serde(skip_serializing_if = "Option::is_none")]
-        media_url: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        thumbnail_url: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        file_name: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        file_size: Option<i64>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        duration: Option<i32>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        width: Option<i32>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        height: Option<i32>,
+        media: Option<MessageMedia>,
         sent_at: String, // ISO 8601 UTC
     },
 
-    /// 消息被编辑
-    ChatMessageEdited {
-        id: String,
-        chat_type: String, // "private_chat" | "group_chat"
-        chat_id: String,
+    /// 私聊消息被编辑
+    PrivateMessageEdited {
+        message_id: String,
+        target_user_id: i64,
         content: String,
         edited_at: String, // ISO 8601 UTC
     },
 
-    /// 消息被撤回
-    ChatMessageRecalled {
-        id: String,
-        chat_type: String, // "private_chat" | "group_chat"
-        chat_id: String,
+    /// 私聊消息被撤回
+    PrivateMessageRecalled {
+        message_id: String,
+        target_user_id: i64,
         recalled_by: i64,
         recalled_at: String, // ISO 8601 UTC
     },
 
-    /// 消息被删除
-    ChatMessageDeleted {
-        id: String,
-        chat_type: String, // "private_chat" | "group_chat"
-        chat_id: String,
+    /// 私聊消息被删除
+    PrivateMessageDeleted {
+        message_id: String,
+        target_user_id: i64,
         deleted_by: i64,
-        for_everyone: bool,
         deleted_at: String, // ISO 8601 UTC
     },
 
-    /// 消息反应
-    ChatMessageReaction {
-        id: String,        // 消息ID
-        chat_type: String, // "private_chat" | "group_chat"
-        chat_id: String,
+    /// 私聊消息反应
+    PrivateMessageReaction {
+        message_id: String,
+        target_user_id: i64,
         user: UserInfo,
-        reaction_type: String, // "like" | "love" | "laugh" | "angry" | "sad" | "wow"
+        reaction_type: ReactionType, // 使用 Enum
         has_reaction: bool,    // 操作后状态：true=添加了反应，false=移除了反应
         created_at: String,    // ISO 8601 UTC
     },
 
-    /// 消息已读回执
-    ChatMessageRead {
-        chat_type: String, // "private_chat" | "group_chat"
-        chat_id: String,
-        up_to: String, // 读到哪条消息ID
+    /// 私聊消息已读回执
+    PrivateMessageRead {
+        target_user_id: i64,
+        up_to_message_id: String, // 读到哪条消息ID
         reader_id: i64,
         read_at: String, // ISO 8601 UTC
     },
 
-    /// 用户正在输入
-    UserTyping {
-        chat_type: String, // "private_chat" | "group_chat"
-        chat_id: String,
+    /// 私聊对方正在输入
+    PrivateUserTyping {
+        target_user_id: i64,
         user_id: i64,
-        nickname: String,
+        is_typing: bool,
+    },
+
+    // ----- 群聊 -----
+    /// 新群聊消息
+    GroupMessageNew {
+        message_id: String,
+        group_chat_id: String,
+        sender: UserInfo,
+        #[serde(rename = "type")]
+        message_type: MessageType, // 使用 Enum
+        #[serde(skip_serializing_if = "Option::is_none")]
+        content: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        reply_to: Option<MessageReplyTo>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        mentions: Option<Vec<i64>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        media: Option<MessageMedia>,
+        sent_at: String, // ISO 8601 UTC
+    },
+
+    /// 群聊消息被编辑
+    GroupMessageEdited {
+        message_id: String,
+        group_chat_id: String,
+        content: String,
+        edited_at: String, // ISO 8601 UTC
+    },
+
+    /// 群聊消息被撤回
+    GroupMessageRecalled {
+        message_id: String,
+        group_chat_id: String,
+        recalled_by: i64,
+        recalled_at: String, // ISO 8601 UTC
+    },
+
+    /// 群聊消息被删除
+    GroupMessageDeleted {
+        message_id: String,
+        group_chat_id: String,
+        deleted_by: i64,
+        deleted_at: String, // ISO 8601 UTC
+    },
+
+    /// 群聊消息反应
+    GroupMessageReaction {
+        message_id: String,
+        group_chat_id: String,
+        user: UserInfo,
+        reaction_type: ReactionType, // 使用 Enum
+        has_reaction: bool,
+        created_at: String,
+    },
+
+    /// 群聊消息已读回执
+    GroupMessageRead {
+        group_chat_id: String,
+        up_to_message_id: String,
+        reader_id: i64,
+        read_at: String,
+    },
+
+    /// 群聊成员正在输入
+    GroupUserTyping {
+        group_chat_id: String,
+        user_id: i64,
         is_typing: bool,
     },
 
@@ -199,6 +260,8 @@ pub enum WsMessage {
     GroupMemberJoined {
         group_chat_id: String,
         user: UserInfo,
+        role: MemberRole, // 使用 Enum
+        member_count: i32, // 当前成员总数
         joined_at: String, // ISO 8601 UTC
     },
 
@@ -206,6 +269,8 @@ pub enum WsMessage {
     GroupMemberLeft {
         group_chat_id: String,
         user_id: i64,
+        member_count: i32, // 当前成员总数
+        reason: GroupMemberRemovalReason, // 使用 Enum
         left_at: String, // ISO 8601 UTC
     },
 
@@ -220,8 +285,8 @@ pub enum WsMessage {
     GroupMemberRoleChanged {
         group_chat_id: String,
         user_id: i64,
-        old_role: String,   // "owner" | "admin" | "member"
-        new_role: String,   // "owner" | "admin" | "member"
+        old_role: MemberRole,   // 使用 Enum
+        new_role: MemberRole,   // 使用 Enum
         changed_at: String, // ISO 8601 UTC
     },
 
@@ -249,9 +314,11 @@ pub enum WsMessage {
 
     /// 收到群组邀请
     GroupInviteReceived {
-        id: String,
+        invite_id: String,
         group_chat_id: String,
         group_name: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        group_avatar_url: Option<String>,
         inviter: UserInfo,
         #[serde(skip_serializing_if = "Option::is_none")]
         message: Option<String>,
@@ -260,16 +327,16 @@ pub enum WsMessage {
 
     /// 群组邀请响应
     GroupInviteResponse {
-        id: String,
+        invite_id: String,
         group_chat_id: String,
         user: UserInfo,
-        status: String,       // "accepted" | "rejected"
+        status: InviteStatus, // 使用 Enum
         responded_at: String, // ISO 8601 UTC
     },
 
     /// 收到群组申请
     GroupApplicationReceived {
-        id: String,
+        application_id: String,
         group_chat_id: String,
         applicant: UserInfo,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -279,16 +346,50 @@ pub enum WsMessage {
 
     /// 群组申请响应
     GroupApplicationResponse {
-        id: String,
+        application_id: String,
         group_chat_id: String,
         group_name: String,
-        status: String,       // "accepted" | "rejected"
+        status: InviteStatus, // 使用 Enum (Application 状态通常是 Pending/Accepted/Rejected，复用 InviteStatus 或单独定义)
+        // Check API Spec: GroupApplicationResponse status: 'accepted' | 'rejected'
+        // InviteStatus has 'Accepted' and 'Rejected'
+        // OK to reuse InviteStatus
         responded_at: String, // ISO 8601 UTC
     },
 
     // ===== 系统事件 =====
     /// 错误消息
     Error { code: i32, message: String },
+
+    // ===== 多端同步 (Self-Sync) =====
+    /// 自己在其他设备加入了群组
+    SelfJoinedGroup {
+        group: serde_json::Value, // GroupSearchItem
+        joined_at: String,
+    },
+    /// 自己在其他设备退出了群组
+    SelfLeftGroup {
+        group_chat_id: String,
+        left_at: String,
+    },
+    /// 私聊会话被删除
+    PrivateChatDeleted {
+        target_user_id: i64,
+        deleted_at: String,
+    },
+    /// 私聊设置更新
+    PrivateChatSettingsUpdated {
+        target_user_id: i64,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        is_muted: Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        is_pinned: Option<bool>,
+        updated_at: String,
+    },
+    /// 通知已读状态更新
+    NotificationReadStateUpdated {
+        total_unread_count: i32,
+        read_at: String,
+    },
 
     // ========== 客户端发送事件 (Client → Server) ==========
     /// 鉴权（握手后首帧）
@@ -328,30 +429,17 @@ pub enum WsMessage {
         failed_items: Option<Vec<FailedSubscriptionItem>>,
     },
 
-    /// 标记已读（快速通道）
-    MarkAsRead {
-        chat_type: String, // "private_chat" | "group_chat"
-        chat_id: String,
-        up_to: String, // 读到哪条消息ID
-    },
-
-    /// 正在输入通知
-    Typing {
-        chat_type: String, // "private_chat" | "group_chat"
-        chat_id: String,
+    /// 私聊正在输入
+    PrivateTyping {
+        target_user_id: i64,
         is_typing: bool,
     },
-}
 
-/// 用户基本信息
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct UserInfo {
-    pub user_id: i64,
-    pub nickname: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub avatar_url: Option<String>,
-    /// 用户类型：temp | normal | admin | system
-    pub user_type: crate::types::enums::UserType,
+    /// 群聊正在输入
+    GroupTyping {
+        group_chat_id: String,
+        is_typing: bool,
+    },
 }
 
 /// 群组更新字段
@@ -365,6 +453,24 @@ pub struct GroupUpdatedFields {
     pub avatar_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub settings: Option<serde_json::Value>, // Partial<GroupSettings>
+}
+
+/// 消息回复引用快照
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MessageReplyTo {
+    pub message_id: String,
+    pub user_id: i64,
+    pub nickname: String,
+    pub content: String,
+}
+
+/// 瞬间摘要快照
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MomentSummary {
+    pub moment_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cover_url: Option<String>,
+    pub text_preview: String,
 }
 
 /// 订阅项定义
@@ -381,5 +487,5 @@ pub struct SubscriptionItem {
 pub struct FailedSubscriptionItem {
     pub source_type: String,
     pub source_ids: Vec<String>,
-    pub reason: String,
+    pub reason: SubscriptionFailureReason, // 使用 Enum
 }

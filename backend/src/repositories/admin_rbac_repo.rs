@@ -1,4 +1,3 @@
-use chrono::{DateTime, Utc};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
@@ -10,10 +9,7 @@ use crate::{
 
 #[derive(Debug, Clone, FromRow)]
 pub struct AdminUserRow {
-    pub user_id: i64,
     pub is_super: bool,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, FromRow)]
@@ -27,8 +23,6 @@ pub struct AdminRoleRow {
     pub role_id: Uuid,
     pub name: String,
     pub description: Option<String>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone)]
@@ -55,7 +49,7 @@ impl AdminRbacRepository {
     pub async fn get_admin_user(&self, user_id: i64) -> Result<Option<AdminUserRow>> {
         let row = sqlx::query_as::<_, AdminUserRow>(
             r#"
-            SELECT user_id, is_super, created_at, updated_at
+            SELECT is_super
             FROM admin_users
             WHERE user_id = $1
             "#,
@@ -84,7 +78,7 @@ impl AdminRbacRepository {
     pub async fn list_roles(&self) -> Result<Vec<AdminRoleRow>> {
         let rows = sqlx::query_as::<_, AdminRoleRow>(
             r#"
-            SELECT role_id, name, description, created_at, updated_at
+            SELECT role_id, name, description
             FROM admin_roles
             ORDER BY name ASC
             "#,
@@ -98,7 +92,7 @@ impl AdminRbacRepository {
     pub async fn get_role_by_id(&self, role_id: Uuid) -> Result<Option<AdminRoleRow>> {
         let row = sqlx::query_as::<_, AdminRoleRow>(
             r#"
-            SELECT role_id, name, description, created_at, updated_at
+            SELECT role_id, name, description
             FROM admin_roles
             WHERE role_id = $1
             "#,

@@ -27,7 +27,7 @@ CREATE TRIGGER trigger_tags_updated_at
 CREATE TABLE user_tags (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL,
-    tag_id BIGINT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+    tag_id BIGINT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT unique_user_tag UNIQUE (user_id, tag_id)
 );
@@ -41,7 +41,7 @@ CREATE INDEX idx_user_tags_tag ON user_tags (tag_id);
 CREATE TABLE group_tags (
     id BIGSERIAL PRIMARY KEY,
     group_chat_id UUID NOT NULL,
-    tag_id BIGINT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+    tag_id BIGINT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT unique_group_tag UNIQUE (group_chat_id, tag_id)
 );
@@ -55,7 +55,7 @@ CREATE INDEX idx_group_tags_tag ON group_tags (tag_id);
 CREATE TABLE moment_tags (
     id BIGSERIAL PRIMARY KEY,
     moment_id UUID NOT NULL,
-    tag_id BIGINT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+    tag_id BIGINT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT unique_moment_tag UNIQUE (moment_id, tag_id)
 );

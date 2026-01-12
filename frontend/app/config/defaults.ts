@@ -71,6 +71,22 @@ export const UI_CONSTANTS = {
 }
 
 /**
+ * 聊天相关常量
+ */
+export const CHAT_CONSTANTS = {
+  COMMON_EMOJIS: [
+    "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇",
+    "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚",
+    "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🤩",
+    "🥳", "😏", "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣",
+    "😖", "😫", "😩", "🥺", "😢", "😭", "😤", "😠", "😡", "🤬",
+    "🤯", "😳", "🥵", "🥶", "😱", "😨", "😰", "😥", "😓", "🤗",
+    "🤔", "🤭", "🤫", "🤥",
+  ] as const,
+  ACCEPTED_ATTACHMENTS: "image/*,.pdf,.doc,.docx,.txt" as const,
+}
+
+/**
  * WebSocket 心跳配置（与后端 constants.rs 保持一致）
  */
 export const WS_CONSTANTS = {

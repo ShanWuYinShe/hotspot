@@ -6,8 +6,8 @@
     variant="naked"
     class="py-12"
   >
-    <template #body>
-      <UButton loading variant="ghost" color="neutral" />
+    <template #default>
+      <UButton loading disabled variant="ghost" color="neutral" />
 
       <div
         v-if="showProgress && progress !== undefined"

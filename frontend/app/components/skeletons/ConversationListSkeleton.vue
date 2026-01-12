@@ -1,19 +1,13 @@
 <template>
-  <div class="space-y-3">
+  <div class="space-y-1">
     <!-- 多个会话项骨架 -->
     <div 
       v-for="i in count" 
       :key="i" 
-      class="flex items-center gap-4 p-4"
+      class="lsyb-card-interactive"
     >
       <!-- 头像骨架 -->
-      <div class="relative">
-        <UAvatar
-          size="md"
-          icon="i-lucide-user"
-          color="neutral"
-        />
-      </div>
+      <USkeleton class="size-10 rounded-full shrink-0" />
       
       <!-- 会话信息骨架 -->
       <div class="flex-1 min-w-0 space-y-2">
@@ -30,7 +24,7 @@
           <!-- 未读消息数骨架 -->
           <USkeleton 
             v-if="i % 3 === 0" 
-            class="w-5 h-5 rounded-full"
+            class="size-5 rounded-full"
           />
         </div>
       </div>

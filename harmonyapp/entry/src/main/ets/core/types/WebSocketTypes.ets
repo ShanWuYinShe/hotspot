@@ -84,19 +84,17 @@ export interface FailedSubscriptionItem {
 export type ClientEventType =
   | 'Auth'
   | 'Ping'
-  | 'Pong'
   | 'Subscribe'
   | 'Unsubscribe'
   | 'SetSubscriptions'
-  | 'MarkAsRead'
-  | 'Typing'
+  | 'PrivateTyping'
+  | 'GroupTyping'
 
 /**
  * 服务端推送事件类型
  */
 export type ServerEventType =
   | 'ConnectionEstablished'
-  | 'Heartbeat'
   | 'UserOnline'
   | 'UserOffline'
   | 'UserLocationUpdate'
@@ -107,13 +105,20 @@ export type ServerEventType =
   | 'MomentCommented'
   | 'CommentReply'
   | 'SystemAnnouncement'
-  | 'ChatMessageNew'
-  | 'ChatMessageEdited'
-  | 'ChatMessageRecalled'
-  | 'ChatMessageDeleted'
-  | 'ChatMessageReaction'
-  | 'ChatMessageRead'
-  | 'UserTyping'
+  | 'PrivateMessageNew'
+  | 'PrivateMessageEdited'
+  | 'PrivateMessageRecalled'
+  | 'PrivateMessageDeleted'
+  | 'PrivateMessageReaction'
+  | 'PrivateMessageRead'
+  | 'GroupMessageNew'
+  | 'GroupMessageEdited'
+  | 'GroupMessageRecalled'
+  | 'GroupMessageDeleted'
+  | 'GroupMessageReaction'
+  | 'GroupMessageRead'
+  | 'PrivateUserTyping'
+  | 'GroupUserTyping'
   | 'GroupMemberJoined'
   | 'GroupMemberLeft'
   | 'GroupProfileUpdated'
@@ -157,15 +162,6 @@ export interface PingEvent {
   payload: PingPayload
 }
 
-export interface PongPayload {
-  timestamp: string
-}
-
-export interface PongEvent {
-  type: 'Pong'
-  payload: PongPayload
-}
-
 /**
  * 订阅事件
  */
@@ -197,31 +193,26 @@ export interface SetSubscriptionsEvent {
 }
 
 /**
- * 标记已读事件
- */
-export interface MarkAsReadPayload {
-  chat_type: 'private_chat' | 'group_chat'
-  chat_id: string
-  up_to: string
-}
-
-export interface MarkAsReadEvent {
-  type: 'MarkAsRead'
-  payload: MarkAsReadPayload
-}
-
-/**
  * 正在输入事件
  */
-export interface TypingPayload {
-  chat_type: 'private_chat' | 'group_chat'
-  chat_id: string
+export interface PrivateTypingPayload {
+  target_user_id: number
   is_typing: boolean
 }
 
-export interface TypingEvent {
-  type: 'Typing'
-  payload: TypingPayload
+export interface PrivateTypingEvent {
+  type: 'PrivateTyping'
+  payload: PrivateTypingPayload
+}
+
+export interface GroupTypingPayload {
+  group_chat_id: string
+  is_typing: boolean
+}
+
+export interface GroupTypingEvent {
+  type: 'GroupTyping'
+  payload: GroupTypingPayload
 }
 
 // ============================================================================
@@ -241,13 +232,13 @@ export interface ConnectionEstablishedEvent {
   payload: ConnectionEstablishedPayload
 }
 
-export interface HeartbeatPayload {
+export interface PongPayload {
   timestamp: string
 }
 
-export interface HeartbeatEvent {
-  type: 'Heartbeat'
-  payload: HeartbeatPayload
+export interface PongEvent {
+  type: 'Pong'
+  payload: PongPayload
 }
 
 // ----- 在线状态事件 -----
@@ -377,109 +368,200 @@ export interface SystemAnnouncementEvent {
 
 // ----- 聊天消息事件 -----
 
-export interface ChatMessageNewPayload {
-  id: string
-  chat_type: 'private_chat' | 'group_chat'
-  chat_id: string
-  sender: UserInfo
-  message_type: ReceiveMessageType
-  content?: string
-  reply_to?: string
-  mentions?: number[]
-  media_url?: string
+/**
+ * 消息媒体信息
+ */
+export interface MessageMedia {
+  url: string
   thumbnail_url?: string
   file_name?: string
   file_size?: number
   duration?: number
   width?: number
   height?: number
+  mime_type?: string
+}
+
+// 私聊消息事件
+export interface PrivateMessageNewPayload {
+  message_id: string
+  target_user_id: number
+  sender: UserInfo
+  type: ReceiveMessageType
+  content?: string
+  reply_to_message_id?: string
+  media?: MessageMedia
   sent_at: string
 }
 
-export interface ChatMessageNewEvent {
-  type: 'ChatMessageNew'
-  payload: ChatMessageNewPayload
+export interface PrivateMessageNewEvent {
+  type: 'PrivateMessageNew'
+  payload: PrivateMessageNewPayload
 }
 
-export interface ChatMessageEditedPayload {
-  id: string
-  chat_type: 'private_chat' | 'group_chat'
-  chat_id: string
+export interface PrivateMessageEditedPayload {
+  message_id: string
+  target_user_id: number
   content: string
   edited_at: string
 }
 
-export interface ChatMessageEditedEvent {
-  type: 'ChatMessageEdited'
-  payload: ChatMessageEditedPayload
+export interface PrivateMessageEditedEvent {
+  type: 'PrivateMessageEdited'
+  payload: PrivateMessageEditedPayload
 }
 
-export interface ChatMessageRecalledPayload {
-  id: string
-  chat_type: 'private_chat' | 'group_chat'
-  chat_id: string
+export interface PrivateMessageRecalledPayload {
+  message_id: string
+  target_user_id: number
   recalled_by: number
   recalled_at: string
 }
 
-export interface ChatMessageRecalledEvent {
-  type: 'ChatMessageRecalled'
-  payload: ChatMessageRecalledPayload
+export interface PrivateMessageRecalledEvent {
+  type: 'PrivateMessageRecalled'
+  payload: PrivateMessageRecalledPayload
 }
 
-export interface ChatMessageDeletedPayload {
-  id: string
-  chat_type: 'private_chat' | 'group_chat'
-  chat_id: string
+export interface PrivateMessageDeletedPayload {
+  message_id: string
+  target_user_id: number
   deleted_by: number
-  for_everyone: boolean
   deleted_at: string
 }
 
-export interface ChatMessageDeletedEvent {
-  type: 'ChatMessageDeleted'
-  payload: ChatMessageDeletedPayload
+export interface PrivateMessageDeletedEvent {
+  type: 'PrivateMessageDeleted'
+  payload: PrivateMessageDeletedPayload
 }
 
-export interface ChatMessageReactionPayload {
-  id: string
-  chat_type: 'private_chat' | 'group_chat'
-  chat_id: string
+export interface PrivateMessageReactionPayload {
+  message_id: string
+  target_user_id: number
   user: UserInfo
   reaction_type: ReactionType
   has_reaction: boolean
   created_at: string
 }
 
-export interface ChatMessageReactionEvent {
-  type: 'ChatMessageReaction'
-  payload: ChatMessageReactionPayload
+export interface PrivateMessageReactionEvent {
+  type: 'PrivateMessageReaction'
+  payload: PrivateMessageReactionPayload
 }
 
-export interface ChatMessageReadPayload {
-  chat_type: 'private_chat' | 'group_chat'
-  chat_id: string
-  up_to: string
+export interface PrivateMessageReadPayload {
+  target_user_id: number
+  up_to_message_id: string
   reader_id: number
   read_at: string
 }
 
-export interface ChatMessageReadEvent {
-  type: 'ChatMessageRead'
-  payload: ChatMessageReadPayload
+export interface PrivateMessageReadEvent {
+  type: 'PrivateMessageRead'
+  payload: PrivateMessageReadPayload
 }
 
-export interface UserTypingPayload {
-  chat_type: 'private_chat' | 'group_chat'
-  chat_id: string
+// 群聊消息事件
+export interface GroupMessageNewPayload {
+  message_id: string
+  group_chat_id: string
+  sender: UserInfo
+  type: ReceiveMessageType
+  content?: string
+  reply_to_message_id?: string
+  mentions?: number[]
+  media?: MessageMedia
+  sent_at: string
+}
+
+export interface GroupMessageNewEvent {
+  type: 'GroupMessageNew'
+  payload: GroupMessageNewPayload
+}
+
+export interface GroupMessageEditedPayload {
+  message_id: string
+  group_chat_id: string
+  content: string
+  edited_at: string
+}
+
+export interface GroupMessageEditedEvent {
+  type: 'GroupMessageEdited'
+  payload: GroupMessageEditedPayload
+}
+
+export interface GroupMessageRecalledPayload {
+  message_id: string
+  group_chat_id: string
+  recalled_by: number
+  recalled_at: string
+}
+
+export interface GroupMessageRecalledEvent {
+  type: 'GroupMessageRecalled'
+  payload: GroupMessageRecalledPayload
+}
+
+export interface GroupMessageDeletedPayload {
+  message_id: string
+  group_chat_id: string
+  deleted_by: number
+  for_everyone: boolean
+  deleted_at: string
+}
+
+export interface GroupMessageDeletedEvent {
+  type: 'GroupMessageDeleted'
+  payload: GroupMessageDeletedPayload
+}
+
+export interface GroupMessageReactionPayload {
+  message_id: string
+  group_chat_id: string
+  user: UserInfo
+  reaction_type: ReactionType
+  has_reaction: boolean
+  created_at: string
+}
+
+export interface GroupMessageReactionEvent {
+  type: 'GroupMessageReaction'
+  payload: GroupMessageReactionPayload
+}
+
+export interface GroupMessageReadPayload {
+  group_chat_id: string
+  up_to_message_id: string
+  reader_id: number
+  read_at: string
+}
+
+export interface GroupMessageReadEvent {
+  type: 'GroupMessageRead'
+  payload: GroupMessageReadPayload
+}
+
+export interface PrivateUserTypingPayload {
+  target_user_id: number
   user_id: number
-  nickname: string
   is_typing: boolean
 }
 
-export interface UserTypingEvent {
-  type: 'UserTyping'
-  payload: UserTypingPayload
+export interface PrivateUserTypingEvent {
+  type: 'PrivateUserTyping'
+  payload: PrivateUserTypingPayload
+}
+
+export interface GroupUserTypingPayload {
+  group_chat_id: string
+  user_id: number
+  is_typing: boolean
+}
+
+export interface GroupUserTypingEvent {
+  type: 'GroupUserTyping'
+  payload: GroupUserTypingPayload
 }
 
 // ----- 群组事件 -----
@@ -649,16 +731,15 @@ export interface ErrorEvent {
 export type ClientEvent =
   | AuthEvent
   | PingEvent
-  | PongEvent
   | SubscribeEvent
   | UnsubscribeEvent
   | SetSubscriptionsEvent
-  | MarkAsReadEvent
-  | TypingEvent
+  | PrivateTypingEvent
+  | GroupTypingEvent
 
 export type ServerEvent =
   | ConnectionEstablishedEvent
-  | HeartbeatEvent
+  | PongEvent
   | UserOnlineEvent
   | UserOfflineEvent
   | UserLocationUpdateEvent
@@ -669,13 +750,20 @@ export type ServerEvent =
   | MomentCommentedEvent
   | CommentReplyEvent
   | SystemAnnouncementEvent
-  | ChatMessageNewEvent
-  | ChatMessageEditedEvent
-  | ChatMessageRecalledEvent
-  | ChatMessageDeletedEvent
-  | ChatMessageReactionEvent
-  | ChatMessageReadEvent
-  | UserTypingEvent
+  | PrivateMessageNewEvent
+  | PrivateMessageEditedEvent
+  | PrivateMessageRecalledEvent
+  | PrivateMessageDeletedEvent
+  | PrivateMessageReactionEvent
+  | PrivateMessageReadEvent
+  | GroupMessageNewEvent
+  | GroupMessageEditedEvent
+  | GroupMessageRecalledEvent
+  | GroupMessageDeletedEvent
+  | GroupMessageReactionEvent
+  | GroupMessageReadEvent
+  | PrivateUserTypingEvent
+  | GroupUserTypingEvent
   | GroupMemberJoinedEvent
   | GroupMemberLeftEvent
   | GroupProfileUpdatedEvent
@@ -769,30 +857,28 @@ export function createSetSubscriptionsEvent(items: SubscriptionItem[]): SetSubsc
 }
 
 /**
- * 创建标记已读事件
+ * 创建私聊正在输入事件
  */
-export function createMarkAsReadEvent(
-  chat_type: 'private_chat' | 'group_chat',
-  chat_id: string,
-  up_to: string
-): MarkAsReadEvent {
+export function createPrivateTypingEvent(
+  target_user_id: number,
+  is_typing: boolean
+): PrivateTypingEvent {
   return {
-    type: 'MarkAsRead',
-    payload: { chat_type, chat_id, up_to }
+    type: 'PrivateTyping',
+    payload: { target_user_id, is_typing }
   }
 }
 
 /**
- * 创建正在输入事件
+ * 创建群聊正在输入事件
  */
-export function createTypingEvent(
-  chat_type: 'private_chat' | 'group_chat',
-  chat_id: string,
+export function createGroupTypingEvent(
+  group_chat_id: string,
   is_typing: boolean
-): TypingEvent {
+): GroupTypingEvent {
   return {
-    type: 'Typing',
-    payload: { chat_type, chat_id, is_typing }
+    type: 'GroupTyping',
+    payload: { group_chat_id, is_typing }
   }
 }
 

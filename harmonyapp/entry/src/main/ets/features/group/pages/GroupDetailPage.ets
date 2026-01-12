@@ -356,7 +356,7 @@ struct GroupDetailPage {
                 .layoutWeight(1)
 
                 Column() {
-                  Text(this.groupInfo?.geo?.distance ? `${Math.round(this.groupInfo.geo.distance)}m` : '--')
+                  Text(this.groupInfo?.location?.distance ? `${Math.round(this.groupInfo.location.distance)}m` : '--')
                     .fontSize(DesignConstants.FONT.SIZE.LG)
                     .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
                     .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
@@ -393,13 +393,13 @@ struct GroupDetailPage {
                 .width('100%')
                 .margin({ bottom: DesignConstants.SPACING.MD })
 
-                Text(this.groupInfo?.geo?.location_name || '未知位置')
+                Text(this.groupInfo?.location?.location_name || '未知位置')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
                   .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
                   .width('100%')
 
-                if (this.groupInfo?.geo) {
-                  Text(`${this.groupInfo.geo.latitude.toFixed(6)}, ${this.groupInfo.geo.longitude.toFixed(6)}`)
+                if (this.groupInfo?.location) {
+                  Text(`${this.groupInfo.location.latitude.toFixed(6)}, ${this.groupInfo.location.longitude.toFixed(6)}`)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
                     .width('100%')

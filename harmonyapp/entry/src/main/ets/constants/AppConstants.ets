@@ -20,9 +20,9 @@ export interface BusinessCodeType {
 
 export const BusinessCode: BusinessCodeType = {
   SUCCESS: 0,
-  ERROR: 1000,
-  UNAUTHORIZED: 1002,
-  SERVER_ERROR: 5000
+  ERROR: 40000,
+  UNAUTHORIZED: 40100,
+  SERVER_ERROR: 50000
 };
 
 // 存储键名

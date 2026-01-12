@@ -9,13 +9,14 @@ impl Validator {
     /// - 超出 1..=max_limit 范围 -> 返回错误
     pub fn validate_limit(limit: Option<i32>, max_limit: i32) -> Result<i32> {
         let limit = limit.unwrap_or(DEFAULT_PAGE_LIMIT as i32);
-        if !(1..=max_limit).contains(&limit) {
-            return Err(AppError::BadRequest(format!(
+        if limit < 1 {
+            return Err(AppError::OutOfRange(format!(
                 "limit 必须在 1 到 {} 之间",
                 max_limit
             )));
         }
-        Ok(limit)
+
+        Ok(limit.min(max_limit))
     }
 
     /// 验证可选搜索半径
@@ -24,7 +25,7 @@ impl Validator {
     pub fn validate_radius(radius: Option<i32>, max_radius: i32) -> Result<i32> {
         let radius = radius.unwrap_or(5000);
         if !(1..=max_radius).contains(&radius) {
-            return Err(AppError::BadRequest(format!(
+            return Err(AppError::OutOfRange(format!(
                 "radius 必须在 1 到 {} 之间",
                 max_radius
             )));
@@ -35,7 +36,7 @@ impl Validator {
     /// 验证必填搜索半径 (f64)
     pub fn validate_radius_required(radius: f64, max_radius: f64) -> Result<f64> {
         if !(1.0..=max_radius).contains(&radius) {
-            return Err(AppError::BadRequest(format!(
+            return Err(AppError::OutOfRange(format!(
                 "radius 必须在 1 到 {} 之间",
                 max_radius
             )));
@@ -83,18 +84,5 @@ impl Validator {
     /// - Some(str) -> Ok(Some(String))
     pub fn parse_cursor(cursor: Option<&str>) -> Result<Option<String>> {
         Ok(cursor.map(|c| c.to_string()))
-    }
-
-    /// 解析 ISO 8601 时间字符串
-    pub fn parse_datetime(datetime: Option<&str>) -> Result<Option<chrono::DateTime<chrono::Utc>>> {
-        match datetime {
-            Some(s) => {
-                let dt = chrono::DateTime::parse_from_rfc3339(s)
-                    .map_err(|_| AppError::BadRequest("无效的时间格式".to_string()))?
-                    .with_timezone(&chrono::Utc);
-                Ok(Some(dt))
-            }
-            None => Ok(None),
-        }
     }
 }

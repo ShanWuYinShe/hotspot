@@ -1,0 +1,252 @@
+---
+globs: frontend/**
+alwaysApply: false
+---
+
+## 权威文档与工具
+
+### Nuxt UI 最权威文档
+
+**最权威的 Nuxt UI 文档**：https://ui.nuxt.com/llms-full.txt
+
+该文档包含：
+- 所有组件的完整 API 定义
+- Props、Slots、Events 的详细说明
+- 主题配置的完整规范（`app.config.ts` 配置方式）
+- 最佳实践和示例代码
+- 迁移指南和版本变更
+
+**配置 `app.config.ts` 时，必须且只能参考此权威文档**。
+
+### MCP 工具的作用
+
+**MCP（Meta Component Properties）用于快速查询组件信息**：
+- 查询有哪些可用的 Nuxt UI 组件
+- 查询组件支持哪些 Props 和 Slots
+- 快速了解组件的基本功能
+
+**MCP 使用流程**：
+1. 使用 `mcp_nuxt-ui_list-components` 查询有哪些组件
+2. 使用 `mcp_nuxt-ui_get-component-metadata <ComponentName>` 查询组件的 Props 和 Slots
+3. 根据查询结果，在 `app.config.ts` 中配置对应的 variant、size 等
+
+**MCP 的局限性**：
+- ❌ MCP **不是最权威的文档来源**
+- ❌ MCP 可能不包含所有配置细节
+- ❌ `app.config.ts` 的详细配置方式必须参考权威文档
+
+---
+
+## 工作流程：配置和使用 Nuxt UI 组件
+
+### 场景 1：在 `app.config.ts` 中配置组件样式
+
+**完整流程（强制遵循）**：
+
+1. **查询组件列表**
+   ```bash
+   mcp_nuxt-ui_list-components
+   ```
+   确认要配置的组件名称（如 `Button`、`Input`、`Card`）
+
+2. **查询组件 Props**
+   ```bash
+   mcp_nuxt-ui_get-component-metadata Button
+   ```
+   了解组件支持哪些 props（如 `variant`、`size`、`color`）
+
+3. **参考权威文档**
+   - 打开 https://ui.nuxt.com/llms-full.txt
+   - 查找该组件的配置规范（如 `button` 的 variants、sizes 配置格式）
+
+4. **在 `app.config.ts` 中配置**
+   - 按照权威文档的规范格式配置
+   - 定义 variants、sizes 等选项
+   - 确保配置格式符合 Nuxt UI 文档要求
+
+### 场景 2：在 Vue 文件中使用组件
+
+**完整流程（强制遵循）**：
+
+1. **查询组件列表**
+   ```bash
+   mcp_nuxt-ui_list-components
+   ```
+   确认要使用的组件名称
+
+2. **查询组件 Props**
+   ```bash
+   mcp_nuxt-ui_get-component-metadata Button
+   ```
+   了解组件支持哪些 props
+
+3. **查看 `app.config.ts`**
+   - 查看该组件在 `app.config.ts` 中已定义的 variant、size 等选项
+   - 确认要使用的 variant/size 已在配置中定义
+
+4. **在 Vue 文件中使用**
+   ```vue
+   <UButton variant="solid" size="md">按钮</UButton>
+   ```
+   - 只能通过 props 组合使用 `app.config.ts` 中预定义的配置
+   - **严禁**使用 `:ui` 或 `class` 覆盖配置
+
+---
+
+## 核心原则：配置驱动，严禁覆盖
+
+### 配置 `app.config.ts` 的规范
+
+**配置流程（强制）**：
+1. **查询组件**：通过 MCP 查询有哪些组件可用
+2. **查询 Props**：通过 MCP 查询组件支持哪些 props（如 `variant`、`size`、`color`）
+3. **参考权威文档**：在 https://ui.nuxt.com/llms-full.txt 中查找该组件的配置规范
+4. **配置 `app.config.ts`**：根据权威文档的规范，在 `app.config.ts` 中定义 variants、sizes 等
+5. **在 Vue 中使用**：通过组件的 props（如 `variant="solid"`、`size="md"`）组合使用
+
+**配置原则**：
+- ✅ 所有样式配置必须在 `app.config.ts` 中预定义
+- ✅ 只能通过组件支持的 props（`variant`、`size`、`color` 等）进行组合
+- ✅ 配置必须遵循 Nuxt UI 文档中的规范格式
+- ❌ 禁止在 `app.config.ts` 中定义组件不支持的 variant/size
+- ❌ 禁止猜测 slot 名称或配置格式
+
+### 在 Vue 文件中使用组件的规范
+
+**使用流程（强制）**：
+1. **查询组件**：通过 MCP 确认要使用的组件名称
+2. **查询 Props**：通过 MCP 查询该组件支持哪些 props
+3. **查看配置**：查看 `app.config.ts` 中已定义的 variant、size 等选项
+4. **组合使用**：通过 props 组合使用，如 `<UButton variant="solid" size="md">`
+
+**绝对禁止**：
+- ❌ **严禁**使用 `:ui` prop 覆盖 `app.config.ts` 中的任何配置
+- ❌ **严禁**使用 `class` prop 覆盖组件的视觉样式（背景、边框、圆角、阴影等）
+- ❌ **严禁**使用内联样式覆盖组件样式
+- ❌ **严禁**在 Vue 文件中直接修改组件的样式配置
+
+**唯一允许的方式**：
+- ✅ 通过组件支持的 `variant`、`size`、`color` 等 prop 进行组合
+- ✅ 这些 prop 的值必须在 `app.config.ts` 中已定义
+- ✅ 如果组件不支持 `variant`/`size` prop，则使用 `app.config.ts` 中定义的默认样式，**不得覆盖**
+
+
+---
+
+## 决策树：UI 写在哪里？
+
+当需要实现一个新的 UI 效果时，请按以下顺序决策：
+
+### Step A: 是否属于"全局设计语言"？
+（例如：主色调、圆角风格、按钮交互态、卡片阴影）
+-   **是** -> 修改 `frontend/app/app.config.ts`。
+    -   **配置流程**：
+        1. 通过 MCP 查询组件名称和 props
+        2. 参考权威文档 https://ui.nuxt.com/llms-full.txt 了解配置规范
+        3. 在 `app.config.ts` 中按照文档规范新增 `variant` 或修改 `base` slot（仅当组件支持时）
+        4. 确保使用弹性尺寸（除非是 icon/avatar）
+    -   **禁止**：在 `app.config.ts` 中定义组件不支持的 variant/size
+
+### Step B: 是否是"复用的业务模式"？
+（例如：发送按钮、用户信息卡片、特定布局的列表项）
+-   **是** -> 封装为 **Vue 组件**。
+    -   组件内部固定使用特定的 `variant`/`size` 组合（这些值必须在 `app.config.ts` 中已定义）。
+    -   **禁止**创建"薄封装"或"样式壳"组件（即只透传 props 不包含逻辑/语义的组件）。组件必须包含业务语义、交互逻辑或固定的 A11y 属性。
+    -   **严禁**在语义组件内部使用 `:ui` 或 `class` 覆盖 Nuxt UI 组件的配置。
+    -   **只能**通过 props（`variant`、`size`、`color` 等）组合使用 `app.config.ts` 中预定义的配置。
+
+### Step C: 是否是"一次性布局微调"？
+（例如：某个页面中两个按钮的间距、某个卡片在 Grid 中的跨度）
+-   **是** -> 在 **页面文件** 中使用 Tailwind **布局类** (`m/p/flex/grid/w/h`)。
+    -   **严禁**在此处写视觉样式（颜色/圆角/阴影/边框等）。
+    -   **严禁**使用 `:ui` prop 覆盖组件内部的结构样式。
+    -   **严禁**使用 `class` prop 覆盖组件的视觉样式。
+
+### Step D: 无法用 Tailwind/AppConfig 实现？
+（例如：复杂的 CSS 动画、第三方库样式覆盖、Canvas/SVG 操作）
+-   **是** -> 使用 CSS 文件 (`app/assets/styles/base.css`)。
+    -   **注意**：这是最后的手段，且不能覆盖 Nuxt UI 组件的内部样式。
+
+---
+
+## 分层职责详解
+
+### 1. `app.config.ts` (Design System)
+-   **职责**：定义全站统一的"原子"风格，所有样式配置的**唯一来源**。
+-   **配置流程**：
+    1. 通过 MCP 查询组件名称和 props
+    2. 参考权威文档 https://ui.nuxt.com/llms-full.txt 了解配置规范
+    3. 按照文档规范在 `app.config.ts` 中配置
+-   **内容**：
+    -   `colors`: 语义化颜色 (primary, neutral, danger)。
+    -   组件默认配置：`defaultVariants: { variant: 'solid', size: 'md' }`（仅当组件支持时，需先通过 MCP 确认，详细配置参考权威文档）。
+    -   组件 Slots 定义：`slots: { root: '...', body: '...' }`（通过 MCP 快速了解，详细规范参考权威文档）。
+    -   Variants 定义：`variants: { variant: { solid: '...', outline: '...' } }`（必须参考权威文档的规范格式）。
+-   **Sizing 规则**：使用相对单位 (`w-full`, `max-w-*`)，避免 `px`。
+-   **配置原则**：
+    -   默认样式应适应 95% 的场景，如果某个场景需要特殊配置，优先调整默认值使其通用。
+    -   所有配置必须遵循 Nuxt UI 文档中的规范格式。
+    -   禁止定义组件不支持的 variant/size。
+-   **配置参考**：所有配置必须参考权威文档 https://ui.nuxt.com/llms-full.txt
+
+### 2. 页面 (Pages)
+-   **职责**：布局排版，数据绑定。
+-   **使用规范**：
+    -   通过 MCP 查询要使用的组件和 props
+    -   查看 `app.config.ts` 中已定义的 variant、size 等选项
+    -   通过 props 组合使用，如 `<UButton variant="solid" size="md">`
+-   **规则**：
+    -   只写 `layout` 类 (`flex`, `grid`, `gap`, `p`, `m`)。
+    -   引用语义组件或原子组件。
+    -   **严禁**使用 `:ui` 或 `class` 覆盖 Nuxt UI 组件的配置。
+    -   **只能**使用 `app.config.ts` 中预定义的 variant、size 等配置。
+
+---
+
+## UI 变更自检 Checklist
+
+在生成或修改 UI 代码后，请对照检查：
+
+> 强制要求：任何 UI 变更都必须经过“浏览器真实渲染 + 截图核验”。仅靠代码 review 或静态推理不足以确认 UI 结果符合预期。
+
+### 配置 `app.config.ts` 前
+1.  [ ] **MCP 查询组件**: 已通过 MCP 查询有哪些组件可用
+2.  [ ] **MCP 查询 Props**: 已通过 MCP 查询组件支持哪些 props（variant、size、color 等）
+3.  [ ] **权威文档参考**: 配置 `app.config.ts` 时已参考权威文档 https://ui.nuxt.com/llms-full.txt
+4.  [ ] **配置格式正确**: `app.config.ts` 中的配置格式符合 Nuxt UI 文档规范
+5.  [ ] **No Imaginary Variants**: 没有在 `app.config.ts` 中定义组件不支持的 variant/size
+6.  [ ] **Flexible Sizing**: `app.config.ts` 中没有非必要的固定 `px` 宽度/高度
+
+### 在 Vue 文件中使用组件前
+7.  [ ] **MCP 查询组件**: 已通过 MCP 确认要使用的组件名称
+8.  [ ] **MCP 查询 Props**: 已通过 MCP 查询该组件支持哪些 props
+9.  [ ] **查看配置**: 已查看 `app.config.ts` 中已定义的 variant、size 等选项
+10. [ ] **No Imaginary Props**: 没有在 Vue 文件中使用组件不支持的 prop（如 `size`、`variant`）
+
+### 代码检查
+11. [ ] **No :ui Override**: 页面中**完全没有**使用 `:ui` prop 覆盖组件配置
+12. [ ] **No Class Override**: 页面中**完全没有**使用 `class` prop 覆盖组件的视觉样式（背景/边框/圆角/阴影）
+13. [ ] **No Inline Style**: 页面中**完全没有**使用内联样式覆盖组件样式
+14. [ ] **Config Driven**: 所有视觉风格均来自 `app.config.ts` 的 slots 配置或组件支持的 `variant`/`size`/`color` prop
+15. [ ] **Browser Screenshot Verification via Browser MCP (Mandatory)**: 必须使用浏览器自动化能力完成“真实渲染 + 导航 + 点击/交互 + 截图核验”，并输出可复核证据（截图文件或附件说明）。
+    - **必须**：通过浏览器自动化打开受影响页面（包含必要的登录/前置条件），并完成“变更前 vs 变更后”的截图对比。
+    - **必须**：在截图前执行必要的导航与交互（例如：点击按钮、打开弹窗、切换 Tab、滚动列表、触发 hover/active/disabled/loading/错误态/空态）。
+    - **必须**：截图至少覆盖以下一项（按变更类型选择，允许多项）：
+        - 关键页面/组件的首屏主视图
+        - 关键交互后的状态（如 hover/active/disabled/loading/错误态/空态）
+        - 涉及布局变化时的滚动区域与边界（列表/卡片/表格/弹窗）
+        - 涉及响应式时的至少 3 个断点截图：375px、768px、1920px
+    - **必须**：在提交/自检输出中给出“截图证据”与“复核线索”，至少包含：
+        - scope：本次验证覆盖的页面/路由/组件
+        - probe：执行过的导航与交互步骤摘要（用自然语言列出即可）
+        - result：截图列表（含“变更前/变更后”标识）与存放位置/PR 附件说明### 页面 UI 设计与响应式检查
+16. [ ] **UI 设计合理性**: 页面布局清晰、视觉层次分明、信息组织合理
+17. [ ] **移动端适配 (375px)**: 在移动设备（375px 宽度）上页面布局正常，无元素溢出、重叠或截断
+18. [ ] **平板适配 (768px)**: 在平板设备（768px 宽度）上页面布局合理，充分利用屏幕空间
+19. [ ] **桌面端适配 (1920px)**: 在桌面设备（1920px 宽度）上页面布局美观，内容不会过度拉伸
+20. [ ] **响应式断点**: 页面在不同断点（sm/md/lg/xl）之间切换时过渡平滑，无布局跳跃
+21. [ ] **功能可用性**: 所有交互元素（按钮、链接、表单等）在不同分辨率下均可正常点击和操作
+22. [ ] **文本可读性**: 文本大小、行高、对比度在不同分辨率下均保持良好的可读性
+23. [ ] **图片/媒体适配**: 图片和媒体内容在不同分辨率下正确缩放，不会变形或溢出
+24. [ ] **导航可用性**: 导航菜单在不同分辨率下均可正常访问和使用
+25. [ ] **表单可用性**: 表单元素在不同分辨率下布局合理，输入框大小适中，标签清晰可见

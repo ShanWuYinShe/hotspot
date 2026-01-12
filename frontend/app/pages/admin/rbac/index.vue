@@ -1,368 +1,425 @@
 <template>
-  <div class="w-full">
-    <div v-if="canRenderAdmin">
-      <UCard v-if="!canManageRbac">
-        <div class="py-6">
-          <UEmpty
-            icon="i-lucide-lock-keyhole"
-            title="无权限"
-            description="你没有管理员权限管理（admin.rbac.manage）权限。"
-          />
+    <div class="flex flex-col">
+        <!-- Sticky Header Group -->
+        <div
+            class="sticky top-0 z-10 -mx-3 sm:-mx-4 lg:-mx-6 -mt-5 px-3 sm:px-4 lg:px-6 pt-5 pb-4 mb-6 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800"
+        >
+            <div class="flex flex-col gap-6">
+                <!-- Header -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1
+                            class="text-2xl font-bold text-neutral-900 dark:text-white"
+                        >
+                            权限管理
+                        </h1>
+                        <p class="text-neutral-500 dark:text-neutral-400 mt-1">
+                            基于角色的访问控制 (RBAC)
+                        </p>
+                    </div>
+                    <UButton
+                        variant="ghost"
+                        color="neutral"
+                        icon="i-lucide-arrow-left"
+                        to="/admin"
+                    >
+                        返回控制台
+                    </UButton>
+                </div>
+
+                <UTabs
+                    v-model="selectedTab"
+                    :items="tabs"
+                    class="w-full"
+                    :content="false"
+                />
+            </div>
         </div>
-      </UCard>
 
-      <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- 管理员列表 -->
-        <UCard>
-        <template #header>
-          <div class="flex items-center justify-between gap-3">
-            <div class="flex items-center gap-2">
-              <UIcon name="i-lucide-users-round" :size="20" />
-              <h2 class="font-semibold">管理员</h2>
-            </div>
-            <UButton
-              icon="i-lucide-plus"
-              size="sm"
-              color="primary"
-              @click="openGrantModal()"
-            >
-              授权
-            </UButton>
-          </div>
-        </template>
+        <!-- Content Area -->
+        <div class="space-y-8">
+            <!-- 管理员列表 -->
+            <div v-if="selectedTab === 0" class="space-y-4">
+                <div class="flex justify-end">
+                    <UButton icon="i-lucide-plus" @click="openGrantModal"
+                        >添加管理员</UButton
+                    >
+                </div>
 
-        <UTable
-          :data="admins"
-          :columns="adminColumns"
-          :loading="loadingAdmins"
-          :loading-state="{ icon: 'i-lucide-refresh-cw', label: '加载中...' }"
-          :empty-state="{ icon: 'i-lucide-users-round', label: '暂无管理员' }"
-        >
-          <template #user-data="{ row }">
-            <div class="flex items-center gap-2 min-w-0">
-              <UAvatar :src="row.original.user.avatar_url" :alt="row.original.user.nickname" size="sm" />
-              <div class="min-w-0">
-                <div class="font-medium truncate">{{ row.original.user.nickname }}</div>
-                <UBadge color="neutral" variant="soft" size="xs">ID: {{ row.original.user.user_id }}</UBadge>
-              </div>
-            </div>
-          </template>
-          <template #super-data="{ row }">
-            <UBadge :label="row.original.is_super ? '是' : '否'" :color="row.original.is_super ? 'green' : 'neutral'" variant="soft" />
-          </template>
-          <template #roles-data="{ row }">
-            <div class="flex flex-wrap gap-1">
-              <UBadge
-                v-for="r in row.original.roles"
-                :key="r.id"
-                :label="r.name"
-                color="neutral"
-                variant="subtle"
-                size="xs"
-              />
-              <UBadge v-if="row.original.roles.length === 0" color="neutral" variant="soft" size="xs">无角色</UBadge>
-            </div>
-          </template>
-          <template #actions-data="{ row }">
-            <div class="flex items-center gap-1">
-              <UButton
-                icon="i-lucide-pencil"
-                variant="ghost"
-                color="neutral"
-                size="sm"
-                tooltip="编辑"
-                @click="openGrantModal(row.original)"
-              />
-              <UButton
-                icon="i-lucide-trash-2"
-                variant="ghost"
-                color="error"
-                size="sm"
-                tooltip="撤销"
-                :disabled="row.original.is_super && !adminStore.isSuper"
-                @click="revokeAdmin(row.original.user.user_id)"
-              />
-            </div>
-          </template>
-        </UTable>
-      </UCard>
+                <UCard variant="subtle" class="overflow-hidden">
+                    <div class="-m-5 sm:-m-7">
+                        <UTable
+                            :data="admins"
+                            :columns="adminColumns"
+                            :loading="loadingAdmins"
+                            :empty-state="{
+                                icon: 'i-lucide-users',
+                                label: '暂无管理员',
+                            }"
+                        >
+                        <template #user-cell="{ row }">
+                            <div class="flex items-center gap-3">
+                                <UAvatar
+                                    :src="row.original.user.avatar_url"
+                                    :alt="row.original.user.nickname"
+                                    size="sm"
+                                />
+                                <div>
+                                    <div
+                                        class="font-medium text-neutral-900 dark:text-white"
+                                    >
+                                        {{ row.original.user.nickname }}
+                                    </div>
+                                    <div
+                                        class="text-xs text-neutral-500 dark:text-neutral-400"
+                                    >
+                                        ID: {{ row.original.user.user_id }}
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
 
-      <!-- 角色列表 -->
-      <UCard>
-        <template #header>
-          <div class="flex items-center justify-between gap-3">
-            <div class="flex items-center gap-2">
-              <UIcon name="i-lucide-shield-check" :size="20" />
-              <h2 class="font-semibold">角色</h2>
-            </div>
-            <UButton
-              icon="i-lucide-plus"
-              size="sm"
-              color="primary"
-              @click="openRoleModal()"
-            >
-              新建角色
-            </UButton>
-          </div>
-        </template>
+                        <template #type-cell="{ row }">
+                            <UBadge
+                                :color="
+                                    (row.original.permissions || []).includes(
+                                        '*',
+                                    )
+                                        ? 'error'
+                                        : 'primary'
+                                "
+                                variant="soft"
+                                size="xs"
+                            >
+                                {{
+                                    (row.original.permissions || []).includes(
+                                        "*",
+                                    )
+                                        ? "超级管理员"
+                                        : "普通管理员"
+                                }}
+                            </UBadge>
+                        </template>
 
-        <UTable
-          :data="roles"
-          :columns="roleColumns"
-          :loading="loadingRoles"
-          :loading-state="{ icon: 'i-lucide-refresh-cw', label: '加载中...' }"
-          :empty-state="{ icon: 'i-lucide-shield-check', label: '暂无角色' }"
-        >
-          <template #name-data="{ row }">
-            <div class="min-w-0">
-              <div class="font-medium truncate">{{ row.original.name }}</div>
-              <UBadge v-if="row.original.description" color="neutral" variant="soft" size="xs" class="mt-1 max-w-full truncate">
-                {{ row.original.description }}
-              </UBadge>
+                        <template #role-cell="{ row }">
+                            <div class="flex flex-wrap gap-1">
+                                <UBadge
+                                    v-for="role in row.original.roles"
+                                    :key="role.role_id"
+                                    color="neutral"
+                                    variant="outline"
+                                    size="xs"
+                                >
+                                    {{ role.name }}
+                                </UBadge>
+                            </div>
+                        </template>
+
+                        <template #actions-cell="{ row }">
+                            <div class="flex justify-end gap-2">
+                                <UButton
+                                    variant="ghost"
+                                    color="neutral"
+                                    size="xs"
+                                    icon="i-lucide-edit"
+                                    @click="editAdmin(row.original)"
+                                />
+                                <UButton
+                                    variant="ghost"
+                                    color="error"
+                                    size="xs"
+                                    icon="i-lucide-trash-2"
+                                    @click="revokeAdmin(row.original)"
+                                />
+                            </div>
+                        </template>
+                    </UTable>
+                    </div>
+                </UCard>
             </div>
-          </template>
-          <template #permissions-data="{ row }">
-            <div class="flex flex-wrap gap-1">
-              <UBadge
-                v-for="p in row.original.permissions"
-                :key="p"
-                :label="p"
-                color="neutral"
-                variant="subtle"
-                size="xs"
-              />
-              <UBadge v-if="row.original.permissions.length === 0" color="neutral" variant="soft" size="xs">无权限</UBadge>
+
+            <!-- 角色管理 -->
+            <div v-else-if="selectedTab === 1" class="space-y-4">
+                <div class="flex justify-end">
+                    <UButton icon="i-lucide-plus" @click="openCreateRoleModal"
+                        >创建角色</UButton
+                    >
+                </div>
+
+                <div
+                    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                >
+                    <UCard
+                        v-for="role in roles"
+                        :key="role.role_id"
+                        variant="solid"
+                    >
+                        <template #header>
+                            <div class="flex items-center justify-between">
+                                <h3
+                                    class="font-semibold text-lg text-neutral-900 dark:text-white"
+                                >
+                                    {{ role.name }}
+                                </h3>
+                                <UDropdownMenu :items="getRoleActions(role)">
+                                    <UButton
+                                        variant="ghost"
+                                        color="neutral"
+                                        size="xs"
+                                        icon="i-lucide-more-vertical"
+                                    />
+                                </UDropdownMenu>
+                            </div>
+                        </template>
+
+                        <p
+                            class="text-sm text-neutral-500 dark:text-neutral-400 mb-4 h-10 line-clamp-2"
+                        >
+                            {{ role.description || "暂无描述" }}
+                        </p>
+
+                        <div class="space-y-2">
+                            <div
+                                class="text-xs font-medium text-neutral-500 dark:text-neutral-400"
+                            >
+                                权限 ({{ role.permissions.length }})
+                            </div>
+                            <div
+                                class="flex flex-wrap gap-1 max-h-24 overflow-y-auto"
+                            >
+                                <UBadge
+                                    v-for="perm in role.permissions"
+                                    :key="perm"
+                                    color="neutral"
+                                    variant="soft"
+                                    size="2xs"
+                                >
+                                    {{ perm }}
+                                </UBadge>
+                            </div>
+                        </div>
+                    </UCard>
+                </div>
             </div>
-          </template>
-          <template #actions-data="{ row }">
-            <div class="flex items-center gap-1">
-              <UButton
-                icon="i-lucide-pencil"
-                variant="ghost"
-                color="neutral"
-                size="sm"
-                tooltip="编辑"
-                @click="openRoleModal(row.original)"
-              />
-              <UButton
-                icon="i-lucide-trash-2"
-                variant="ghost"
-                color="error"
-                size="sm"
-                tooltip="删除"
-                @click="deleteRole(row.original.id)"
-              />
+
+            <!-- 权限字典 -->
+            <div v-else-if="selectedTab === 2" class="space-y-4">
+                <UCard variant="subtle" class="overflow-hidden">
+                    <div class="-m-5 sm:-m-7">
+                        <UTable
+                            :data="permissions"
+                            :columns="permissionColumns"
+                            :empty-state="{
+                                icon: 'i-lucide-book-key',
+                                label: '暂无权限定义',
+                            }"
+                        >
+                        <template #key-cell="{ row }">
+                            <span
+                                class="font-mono text-xs text-neutral-900 dark:text-white"
+                                >{{ row.original.key }}</span
+                            >
+                        </template>
+                        <template #description-cell="{ row }">
+                            <span
+                                class="text-neutral-600 dark:text-neutral-300"
+                                >{{ row.original.description }}</span
+                            >
+                        </template>
+                    </UTable>
+                    </div>
+                </UCard>
             </div>
-          </template>
-        </UTable>
-      </UCard>
-      </div>
+        </div>
+
+        <!-- 模态框组件 -->
+        <GrantAdminModal
+            v-model:open="showGrantModal"
+            :title="modalTitle"
+            :is-editing="isEditing"
+            :can-set-super="true"
+            :role-options="roleOptions"
+            :initial="modalInitial"
+            @close="handleModalClose"
+        />
+        <!-- CreateRoleModal 待实现 -->
     </div>
-
-    <div v-else class="w-full space-y-3">
-      <USkeleton class="h-10 w-full" />
-      <USkeleton class="h-10 w-full" />
-      <USkeleton class="h-64 w-full" />
-    </div>
-  </div>
 </template>
 
 <script setup lang="ts">
-import type { TableColumn } from '@nuxt/ui'
-import { useAdminRbacService } from '~/services/admin_rbac.service'
-import { useAdminStore } from '~/stores/admin.store'
-import type { AdminAdminItem, AdminRoleItem, AdminPermissionItem } from '~/types/api'
-import { useDashboardHeader } from '~/composables/useDashboardHeader'
-import { useHydratedStore } from '~/composables/useHydratedStore'
-import type { GrantAdminPayload } from '~/components/modals/admin/GrantAdminModal.vue'
-import type { RolePayload } from '~/components/modals/admin/RoleModal.vue'
+import { useAdminRbacService } from "~/services/admin_rbac.service";
+import GrantAdminModal, {
+    type GrantAdminPayload,
+} from "~/components/modals/admin/GrantAdminModal.vue";
+import type {
+    AdminAdminItem,
+    AdminRoleItem,
+    AdminPermissionItem,
+} from "~/types/api";
 
 definePageMeta({
-  title: '权限管理',
-  description: '管理管理员账号、角色与权限',
-  requiresAuth: true,
-  layout: 'dashboard',
-  middleware: 'admin',
-  dashboardHeader: true
-})
+    layout: "dashboard",
+    requiresAuth: true,
+    middleware: ["admin"],
+});
 
-const rbac = useAdminRbacService()
-const adminStore = useAdminStore()
-const authStore = useAuthStore()
-const isAuthenticated = useHydratedStore(authStore, 'isAuthenticated', false)
-const canRenderAdmin = computed(() => isAuthenticated.value && adminStore.hasAccess)
-const modal = useModal()
-const feedback = useFeedbackStore()
-const { withErrorHandling } = useErrorHandler()
-const dashboardHeader = useDashboardHeader()
-const overlay = useOverlay()
+const rbacService = useAdminRbacService();
+const feedback = useFeedbackStore();
 
-const canManageRbac = computed(() => adminStore.hasPermission('admin.rbac.manage'))
+const selectedTab = ref(0);
+const tabs = [
+    { label: "管理员", slot: "admins", icon: "i-lucide-users" },
+    { label: "角色", slot: "roles", icon: "i-lucide-shield" },
+    { label: "权限字典", slot: "permissions", icon: "i-lucide-book-key" },
+];
 
-const loadingAdmins = ref(false)
-const loadingRoles = ref(false)
-const loadingPerms = ref(false)
+const adminColumns = [
+    { accessorKey: "user", header: "用户" },
+    { accessorKey: "type", header: "类型" },
+    { accessorKey: "role", header: "角色" },
+    { id: "actions", header: "操作", class: "text-right" },
+];
 
-const admins = ref<AdminAdminItem[]>([])
-const roles = ref<AdminRoleItem[]>([])
-const permissions = ref<AdminPermissionItem[]>([])
+const permissionColumns = [
+    { accessorKey: "key", header: "权限Key" },
+    { accessorKey: "description", header: "描述" },
+];
 
-const adminColumns: TableColumn<AdminAdminItem>[] = [
-  { id: 'user', accessorKey: 'user.user_id', header: '用户' },
-  { id: 'super', accessorKey: 'is_super', header: 'Super' },
-  { id: 'roles', accessorKey: 'roles', header: '角色' },
-  { id: 'actions', accessorKey: 'user.user_id', header: '操作' }
-]
+// State
+const loadingAdmins = ref(false);
+const admins = ref<AdminAdminItem[]>([]);
+const roles = ref<AdminRoleItem[]>([]);
+const permissions = ref<AdminPermissionItem[]>([]);
 
-const roleColumns: TableColumn<AdminRoleItem>[] = [
-  { id: 'name', accessorKey: 'name', header: '角色' },
-  { id: 'permissions', accessorKey: 'permissions', header: '权限' },
-  { id: 'actions', accessorKey: 'id', header: '操作' }
-]
+const showGrantModal = ref(false);
+const currentAdmin = ref<AdminAdminItem | undefined>(undefined);
 
-const roleOptions = computed(() => roles.value.map(r => ({ label: r.name, value: r.id })))
-const permissionOptions = computed(() => permissions.value.map(p => ({ label: `${p.key} · ${p.description}`, value: p.key })))
+const modalTitle = computed(() =>
+    currentAdmin.value ? "编辑管理员" : "添加管理员",
+);
+const isEditing = computed(() => !!currentAdmin.value);
+const roleOptions = computed(() =>
+    roles.value.map((r) => ({ label: r.name, value: r.role_id })),
+);
+const modalInitial = computed(() => {
+    if (!currentAdmin.value) return undefined;
+    return {
+        user_id: currentAdmin.value.user.user_id,
+        grant_all_permissions: currentAdmin.value.permissions.includes("*"),
+        role_ids: currentAdmin.value.roles.map((r) => r.role_id),
+    };
+});
 
-const loadAll = async () => {
-  if (!canManageRbac.value) return
-  loadingAdmins.value = true
-  loadingRoles.value = true
-  loadingPerms.value = true
+// Init
+onMounted(async () => {
+    await Promise.all([refreshAdmins(), refreshRoles(), refreshPermissions()]);
+});
 
-  await Promise.all([
-    withErrorHandling(async () => {
-      const res = await rbac.listAdmins()
-      admins.value = res.items
-    }, { title: '加载管理员失败', loading: loadingAdmins }),
-    withErrorHandling(async () => {
-      const res = await rbac.listRoles()
-      roles.value = res.items
-    }, { title: '加载角色失败', loading: loadingRoles }),
-    withErrorHandling(async () => {
-      const res = await rbac.listPermissions()
-      permissions.value = res.items
-    }, { title: '加载权限字典失败', loading: loadingPerms })
-  ])
+async function refreshAdmins() {
+    loadingAdmins.value = true;
+    try {
+        const res = await rbacService.listAdmins();
+        admins.value = res.items;
+    } catch (e) {
+        // error
+    } finally {
+        loadingAdmins.value = false;
+    }
 }
 
-// ===== 授权管理员 =====
-const savingGrant = ref(false)
-const openGrantModal = async (row?: AdminAdminItem) => {
-  const { default: GrantAdminModal } = await import('~/components/modals/admin/GrantAdminModal.vue')
-  const m = overlay.create(GrantAdminModal)
-  const instance = m.open({
-    title: row ? '编辑管理员' : '授权管理员',
-    isEditing: !!row,
-    canSetSuper: adminStore.isSuper,
-    roleOptions: roleOptions.value,
-    initial: row
-      ? {
-          user_id: row.user.user_id,
-          is_super: row.is_super,
-          role_ids: row.roles.map(r => r.id)
+async function refreshRoles() {
+    try {
+        const res = await rbacService.listRoles();
+        roles.value = res.items;
+    } catch (e) {
+        // error
+    }
+}
+
+async function refreshPermissions() {
+    try {
+        const res = await rbacService.listPermissions();
+        permissions.value = res.items;
+    } catch (e) {
+        // error
+    }
+}
+
+// Actions
+function openGrantModal() {
+    currentAdmin.value = undefined;
+    showGrantModal.value = true;
+}
+
+function editAdmin(admin: AdminAdminItem) {
+    currentAdmin.value = admin;
+    showGrantModal.value = true;
+}
+
+async function revokeAdmin(admin: AdminAdminItem) {
+    if (!confirm(`确定要撤销 ${admin.user.nickname} 的管理员权限吗？`)) return;
+    try {
+        await rbacService.revokeAdmin({ user_id: admin.user.user_id });
+        feedback.success("操作成功");
+        refreshAdmins();
+    } catch (e) {
+        feedback.error("操作失败");
+    }
+}
+
+async function handleModalClose(payload: GrantAdminPayload | null) {
+    if (!payload) {
+        showGrantModal.value = false;
+        return;
+    }
+    try {
+        if (isEditing.value) {
+            // Edit not implemented in API yet or reuse grant
+            await rbacService.grantAdmin(payload);
+        } else {
+            await rbacService.grantAdmin(payload);
         }
-      : undefined
-  })
-
-  const payload = await instance.result as GrantAdminPayload | null
-  if (!payload) return
-
-  savingGrant.value = true
-  await withErrorHandling(async () => {
-    await rbac.grantAdmin({
-      user_id: payload.user_id,
-      is_super: adminStore.isSuper ? payload.is_super : undefined,
-      role_ids: payload.role_ids
-    })
-    feedback.success('操作成功', row ? '管理员已更新' : '管理员已授权')
-    await loadAll()
-  }, { title: '保存失败', loading: savingGrant })
-}
-
-const revokeAdmin = async (userId: number) => {
-  const confirmed = await modal.showConfirm({
-    title: '撤销管理员',
-    message: `确定要撤销用户 ${userId} 的管理员权限吗？`,
-    confirmText: '撤销',
-    confirmColor: 'error'
-  })
-  if (!confirmed) return
-
-  await withErrorHandling(async () => {
-    await rbac.revokeAdmin({ user_id: userId })
-    feedback.success('操作成功', '已撤销管理员')
-    await loadAll()
-  }, { title: '撤销失败' })
-}
-
-// ===== 角色管理 =====
-const savingRole = ref(false)
-const openRoleModal = async (row?: AdminRoleItem) => {
-  const { default: RoleModal } = await import('~/components/modals/admin/RoleModal.vue')
-  const m = overlay.create(RoleModal)
-  const instance = m.open({
-    title: row ? '编辑角色' : '新建角色',
-    isEditing: !!row,
-    permissionOptions: permissionOptions.value,
-    initial: row
-      ? { id: row.id, name: row.name, description: row.description, permission_keys: [...row.permissions] }
-      : undefined
-  })
-
-  const payload = await instance.result as RolePayload | null
-  if (!payload) return
-
-  savingRole.value = true
-  await withErrorHandling(async () => {
-    if (!row) {
-      const created = await rbac.createRole({ name: payload.name, description: payload.description })
-      await rbac.setRolePermissions({ id: created.id, permission_keys: payload.permission_keys })
-      feedback.success('角色已创建')
-    } else {
-      await rbac.updateRole({
-        id: row.id,
-        name: payload.name,
-        description: payload.description,
-        clear_description: payload.description === undefined ? true : undefined
-      })
-      await rbac.setRolePermissions({ id: row.id, permission_keys: payload.permission_keys })
-      feedback.success('角色已更新')
+        feedback.success("操作成功");
+        refreshAdmins();
+        showGrantModal.value = false;
+    } catch (e) {
+        feedback.error("操作失败");
     }
-    await loadAll()
-  }, { title: '保存角色失败', loading: savingRole })
 }
 
-const deleteRole = async (id: string) => {
-  const confirmed = await modal.showConfirm({
-    title: '删除角色',
-    message: '确定要删除该角色吗？（该角色将从所有管理员中移除）',
-    confirmText: '删除',
-    confirmColor: 'error'
-  })
-  if (!confirmed) return
-
-  await withErrorHandling(async () => {
-    await rbac.deleteRole({ id })
-    feedback.success('角色已删除')
-    await loadAll()
-  }, { title: '删除失败' })
+function openCreateRoleModal() {
+    // TODO: Implement CreateRoleModal
+    feedback.info("功能开发中");
 }
 
-watchEffect(() => {
-  dashboardHeader.setActions([
-    {
-      key: 'refresh',
-      label: '刷新',
-      icon: 'i-lucide-refresh-cw',
-      variant: 'outline',
-      loading: loadingAdmins.value || loadingRoles.value || loadingPerms.value,
-      action: () => loadAll()
-    }
-  ])
-})
-
-onMounted(() => {
-  loadAll()
-})
+function getRoleActions(role: AdminRoleItem) {
+    return [
+        [
+            {
+                label: "编辑角色",
+                icon: "i-lucide-edit",
+                click: () => {
+                    /* TODO */
+                },
+            },
+            {
+                label: "配置权限",
+                icon: "i-lucide-key",
+                click: () => {
+                    /* TODO */
+                },
+            },
+        ],
+        [
+            {
+                label: "删除角色",
+                icon: "i-lucide-trash-2",
+                color: "error" as const,
+                click: () => {
+                    /* TODO */
+                },
+            },
+        ],
+    ];
+}
 </script>
-

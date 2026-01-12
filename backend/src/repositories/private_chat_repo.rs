@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
-use uuid::Uuid;
 
 use crate::error::Result;
 use crate::utils::pagination::{decode_cursor, encode_cursor, IdCursor};
@@ -10,7 +9,7 @@ use crate::utils::pagination::{decode_cursor, encode_cursor, IdCursor};
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct PrivateChatRow {
     pub id: i64,
-    pub private_chat_id: Uuid,
+    // private_chat_id 已移除
     pub user_a_id: i64,
     pub user_b_id: i64,
     // 陌生人消息限制字段
@@ -26,7 +25,7 @@ pub struct PrivateChatRow {
 /// 私聊设置Row
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct PrivateChatSettingsRow {
-    pub private_chat_id: Uuid,
+    pub chat_id: i64, // 关联内部 ID
     pub user_id: i64,
     pub is_muted: bool,
     pub is_pinned: bool,
@@ -45,24 +44,6 @@ impl PrivateChatRepository {
         Self { pool }
     }
 
-    /// 是否存在（用于仅做存在性校验的场景，避免拉取整行）
-    pub async fn exists(&self, private_chat_id: Uuid) -> Result<bool> {
-        let result = sqlx::query!(
-            r#"
-            SELECT EXISTS(
-                SELECT 1
-                FROM private_chats
-                WHERE private_chat_id = $1 AND is_deleted = FALSE
-            ) as "exists!"
-            "#,
-            private_chat_id
-        )
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(result.exists)
-    }
-
     /// 创建私聊
     pub async fn create(&self, user_a_id: i64, user_b_id: i64) -> Result<PrivateChatRow> {
         // 确保 user_a_id < user_b_id 以保持一致性（虽然表定义不强制，但业务上最好保持有序）
@@ -77,7 +58,7 @@ impl PrivateChatRepository {
             r#"
             INSERT INTO private_chats (user_a_id, user_b_id)
             VALUES ($1, $2)
-            RETURNING id, private_chat_id, user_a_id, user_b_id,
+            RETURNING id, user_a_id, user_b_id,
                       user_a_can_message_freely, user_b_can_message_freely,
                       user_a_sent_count, user_b_sent_count,
                       created_at, is_deleted, deleted_at
@@ -92,18 +73,18 @@ impl PrivateChatRepository {
     }
 
     /// 按ID获取私聊
-    pub async fn find_by_id(&self, private_chat_id: Uuid) -> Result<Option<PrivateChatRow>> {
+    pub async fn find_by_id(&self, chat_id: i64) -> Result<Option<PrivateChatRow>> {
         let row = sqlx::query_as!(
             PrivateChatRow,
             r#"
-            SELECT id, private_chat_id, user_a_id, user_b_id,
+            SELECT id, user_a_id, user_b_id,
                    user_a_can_message_freely, user_b_can_message_freely,
                    user_a_sent_count, user_b_sent_count,
                    created_at, is_deleted, deleted_at
             FROM private_chats
-            WHERE private_chat_id = $1 AND is_deleted = FALSE
+            WHERE id = $1 AND is_deleted = FALSE
             "#,
-            private_chat_id
+            chat_id
         )
         .fetch_optional(&self.pool)
         .await?;
@@ -122,7 +103,7 @@ impl PrivateChatRepository {
         let row = sqlx::query_as!(
             PrivateChatRow,
             r#"
-            SELECT id, private_chat_id, user_a_id, user_b_id,
+            SELECT id, user_a_id, user_b_id,
                    user_a_can_message_freely, user_b_can_message_freely,
                    user_a_sent_count, user_b_sent_count,
                    created_at, is_deleted, deleted_at
@@ -140,18 +121,18 @@ impl PrivateChatRepository {
     }
 
     /// 检查用户是否在私聊中
-    pub async fn is_user_in_chat(&self, private_chat_id: Uuid, user_id: i64) -> Result<bool> {
+    pub async fn is_user_in_chat(&self, chat_id: i64, user_id: i64) -> Result<bool> {
         let exists = sqlx::query_scalar!(
             r#"
             SELECT EXISTS(
                 SELECT 1
                 FROM private_chats
-                WHERE private_chat_id = $1
+                WHERE id = $1
                   AND (user_a_id = $2 OR user_b_id = $2)
                   AND is_deleted = FALSE
             ) as "exists!"
             "#,
-            private_chat_id,
+            chat_id,
             user_id
         )
         .fetch_one(&self.pool)
@@ -161,14 +142,14 @@ impl PrivateChatRepository {
     }
 
     /// 软删除私聊
-    pub async fn soft_delete(&self, private_chat_id: Uuid) -> Result<()> {
+    pub async fn soft_delete(&self, chat_id: i64) -> Result<()> {
         sqlx::query!(
             r#"
             UPDATE private_chats
             SET is_deleted = TRUE, deleted_at = NOW()
-            WHERE private_chat_id = $1
+            WHERE id = $1
             "#,
-            private_chat_id
+            chat_id
         )
         .execute(&self.pool)
         .await?;
@@ -193,7 +174,7 @@ impl PrivateChatRepository {
         let rows = sqlx::query_as!(
             PrivateChatRow,
             r#"
-            SELECT id, private_chat_id, user_a_id, user_b_id,
+            SELECT id, user_a_id, user_b_id,
                 user_a_can_message_freely, user_b_can_message_freely,
                 user_a_sent_count, user_b_sent_count,
                 created_at, is_deleted, deleted_at
@@ -205,10 +186,10 @@ impl PrivateChatRepository {
                 $4::bool = TRUE
                 OR NOT EXISTS (
                     SELECT 1
-                    FROM private_chat_settings s
-                    WHERE s.private_chat_id = private_chats.private_chat_id
-                      AND s.user_id = $1
-                      AND s.is_archived = TRUE
+                    FROM private_chat_settings
+                    WHERE private_chat_settings.chat_id = private_chats.id
+                      AND private_chat_settings.user_id = $1
+                      AND private_chat_settings.is_archived = TRUE
                 )
               )
             ORDER BY id DESC
@@ -233,17 +214,17 @@ impl PrivateChatRepository {
     /// 获取私聊设置
     pub async fn get_settings(
         &self,
-        private_chat_id: Uuid,
+        chat_id: i64,
         user_id: i64,
     ) -> Result<Option<PrivateChatSettingsRow>> {
         let row = sqlx::query_as!(
             PrivateChatSettingsRow,
             r#"
-            SELECT private_chat_id, user_id, is_muted, is_pinned, is_archived, created_at, updated_at
+            SELECT chat_id, user_id, is_muted, is_pinned, is_archived, created_at, updated_at
             FROM private_chat_settings
-            WHERE private_chat_id = $1 AND user_id = $2
+            WHERE chat_id = $1 AND user_id = $2
             "#,
-            private_chat_id,
+            chat_id,
             user_id
         )
         .fetch_optional(&self.pool)
@@ -255,7 +236,7 @@ impl PrivateChatRepository {
     /// 创建或更新私聊设置
     pub async fn upsert_settings(
         &self,
-        private_chat_id: Uuid,
+        chat_id: i64,
         user_id: i64,
         is_muted: Option<bool>,
         is_pinned: Option<bool>,
@@ -264,15 +245,15 @@ impl PrivateChatRepository {
         // 使用 ON CONFLICT 实现 upsert，避免 if-else 分支
         sqlx::query!(
             r#"
-            INSERT INTO private_chat_settings (private_chat_id, user_id, is_muted, is_pinned, is_archived)
+            INSERT INTO private_chat_settings (chat_id, user_id, is_muted, is_pinned, is_archived)
             VALUES ($1, $2, COALESCE($3, FALSE), COALESCE($4, FALSE), COALESCE($5, FALSE))
-            ON CONFLICT (private_chat_id, user_id) DO UPDATE
+            ON CONFLICT (chat_id, user_id) DO UPDATE
             SET is_muted = COALESCE($3, private_chat_settings.is_muted),
                 is_pinned = COALESCE($4, private_chat_settings.is_pinned),
                 is_archived = COALESCE($5, private_chat_settings.is_archived),
                 updated_at = NOW()
             "#,
-            private_chat_id,
+            chat_id,
             user_id,
             is_muted,
             is_pinned,
@@ -288,7 +269,7 @@ impl PrivateChatRepository {
     /// 返回 (can_message_freely, sent_count)
     pub async fn get_message_limit(
         &self,
-        private_chat_id: Uuid,
+        chat_id: i64,
         user_id: i64,
     ) -> Result<(bool, i32)> {
         let row = sqlx::query!(
@@ -297,9 +278,9 @@ impl PrivateChatRepository {
                    user_a_can_message_freely, user_b_can_message_freely,
                    user_a_sent_count, user_b_sent_count
             FROM private_chats
-            WHERE private_chat_id = $1 AND is_deleted = FALSE
+            WHERE id = $1 AND is_deleted = FALSE
             "#,
-            private_chat_id
+            chat_id
         )
         .fetch_optional(&self.pool)
         .await?
@@ -317,16 +298,16 @@ impl PrivateChatRepository {
     }
 
     /// 增加用户发送消息计数
-    pub async fn increment_sent_count(&self, private_chat_id: Uuid, user_id: i64) -> Result<i32> {
+    pub async fn increment_sent_count(&self, chat_id: i64, user_id: i64) -> Result<i32> {
         let row = sqlx::query!(
             r#"
             UPDATE private_chats
             SET user_a_sent_count = CASE WHEN user_a_id = $2 THEN user_a_sent_count + 1 ELSE user_a_sent_count END,
                 user_b_sent_count = CASE WHEN user_b_id = $2 THEN user_b_sent_count + 1 ELSE user_b_sent_count END
-            WHERE private_chat_id = $1 AND (user_a_id = $2 OR user_b_id = $2) AND is_deleted = FALSE
+            WHERE id = $1 AND (user_a_id = $2 OR user_b_id = $2) AND is_deleted = FALSE
             RETURNING user_a_id, user_a_sent_count, user_b_sent_count
             "#,
-            private_chat_id,
+            chat_id,
             user_id
         )
         .fetch_optional(&self.pool)
@@ -350,7 +331,7 @@ impl PrivateChatRepository {
     /// 当 A 回复 B 时，Service 层会调用此方法解锁 B (user_id = B)
     pub async fn unlock_user_messaging_limit(
         &self,
-        private_chat_id: Uuid,
+        chat_id: i64,
         user_id: i64,
     ) -> Result<()> {
         let result = sqlx::query!(
@@ -358,9 +339,9 @@ impl PrivateChatRepository {
             UPDATE private_chats
             SET user_a_can_message_freely = CASE WHEN user_a_id = $2 THEN TRUE ELSE user_a_can_message_freely END,
                 user_b_can_message_freely = CASE WHEN user_b_id = $2 THEN TRUE ELSE user_b_can_message_freely END
-            WHERE private_chat_id = $1 AND (user_a_id = $2 OR user_b_id = $2) AND is_deleted = FALSE
+            WHERE id = $1 AND (user_a_id = $2 OR user_b_id = $2) AND is_deleted = FALSE
             "#,
-            private_chat_id,
+            chat_id,
             user_id
         )
         .execute(&self.pool)

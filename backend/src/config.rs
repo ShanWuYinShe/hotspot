@@ -14,13 +14,20 @@ pub struct Config {
     pub server_host: String,
     pub server_port: u16,
     pub _max_upload_size: usize,
-    pub _upload_dir: String,
     pub rate_limit_global_per_hour: u32,
     pub rate_limit_user_per_hour: u32,
     /// 超级管理员 bootstrap：登录ID（可选，默认 superadmin）
     pub super_admin_login_id: Option<String>,
     /// 超级管理员 bootstrap：初始密码（建议必须设置；未设置则不会自动创建）
     pub super_admin_password: Option<String>,
+    
+    // S3 Configuration
+    pub s3_endpoint: String,
+    pub s3_region: String,
+    pub s3_bucket: String,
+    pub s3_access_key: String,
+    pub s3_secret_key: String,
+    pub s3_public_url: String,
 }
 
 impl Config {
@@ -50,7 +57,6 @@ impl Config {
                 .unwrap_or_else(|_| "10485760".to_string())
                 .parse()
                 .map_err(|_| "Invalid MAX_UPLOAD_SIZE".to_string())?,
-            _upload_dir: env::var("UPLOAD_DIR").unwrap_or_else(|_| "./uploads".to_string()),
             rate_limit_global_per_hour: env::var("RATE_LIMIT_GLOBAL_PER_HOUR")
                 .unwrap_or_else(|_| "1000".to_string())
                 .parse()
@@ -61,6 +67,14 @@ impl Config {
                 .map_err(|_| "Invalid RATE_LIMIT_USER_PER_HOUR".to_string())?,
             super_admin_login_id: env::var("SUPER_ADMIN_LOGIN_ID").ok(),
             super_admin_password: env::var("SUPER_ADMIN_PASSWORD").ok(),
+            
+            // S3 Defaults
+            s3_endpoint: env::var("S3_ENDPOINT").unwrap_or_else(|_| "http://localhost:9000".to_string()),
+            s3_region: env::var("S3_REGION").unwrap_or_else(|_| "us-east-1".to_string()),
+            s3_bucket: env::var("S3_BUCKET").unwrap_or_else(|_| "hotspot".to_string()),
+            s3_access_key: env::var("S3_ACCESS_KEY").unwrap_or_else(|_| "minioadmin".to_string()),
+            s3_secret_key: env::var("S3_SECRET_KEY").unwrap_or_else(|_| "minioadmin".to_string()),
+            s3_public_url: env::var("S3_PUBLIC_URL").unwrap_or_else(|_| "http://localhost:9000/hotspot".to_string()),
         })
     }
 

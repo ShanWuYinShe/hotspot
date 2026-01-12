@@ -164,7 +164,7 @@ export struct SmartSearchComponent {
 
       if (response.code === 0 && response.data) {
         const groupResults: SearchResult[] = response.data.items.map((group: GroupSearchItem): SearchResult => ({
-          id: `group_${group.id}`,
+          id: `group_${group.group_chat_id}`,
           type: 'group',
           title: group.name,
           subtitle: `${group.members_count} 成员`,
@@ -198,7 +198,7 @@ export struct SmartSearchComponent {
 
       if (response.code === 0 && response.data) {
         const momentResults: SearchResult[] = response.data.items.map((moment: MomentSearchItem): SearchResult => ({
-          id: `moment_${moment.id}`,
+          id: `moment_${moment.moment_id}`,
           type: 'moment',
           title: moment.user.nickname,
           subtitle: moment.description.length > 30 ?
@@ -261,7 +261,7 @@ export struct SmartSearchComponent {
         try {
           this.getUIContext().getRouter().pushUrl({
             url: `features/group/pages/${PageNames.GROUP_DETAIL}`,
-            params: { groupId: group.id }
+            params: { groupId: group.group_chat_id }
           });
         } catch (error) {
           hilog.error(DOMAIN_NUMBER, TAG, `跳转群组详情失败: ${error}`);

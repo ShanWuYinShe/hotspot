@@ -92,7 +92,7 @@ export struct GroupPage {
         const routerInstance = this.getUIContext().getRouter();
         await routerInstance.pushUrl({
           url: `features/group/pages/${PageNames.GROUP_DETAIL}`,
-          params: { groupId: group.id }
+          params: { groupId: group.group_chat_id }
         });
       } catch (error) {
         SystemToast.showError('跳转失败', this.getUIContext());
@@ -101,7 +101,7 @@ export struct GroupPage {
     }
 
     try {
-      await ApiClient.joinGroup({ id: group.id });
+      await ApiClient.joinGroup({ id: group.group_chat_id });
       SystemToast.show('加入群组成功', this.getUIContext());
       // 自动刷新列表以更新状态（如果需要）或者跳转到群组聊天页面
       await this.loadNearbyGroups(); 
@@ -250,7 +250,7 @@ export struct GroupPage {
         ListItem() {
           this.buildGroupCard(group)
         }
-      }, (group: GroupSearchItem) => group.id)
+      }, (group: GroupSearchItem) => group.group_chat_id)
     }
     .width('100%')
     .layoutWeight(1)
@@ -276,7 +276,7 @@ export struct GroupPage {
         const routerInstance = this.getUIContext().getRouter();
         await routerInstance.pushUrl({
           url: `features/group/pages/${PageNames.GROUP_DETAIL}`,
-          params: { groupId: group.id }
+          params: { groupId: group.group_chat_id }
         });
       } catch (error) {
         SystemToast.showError('跳转失败', this.getUIContext());
@@ -336,13 +336,15 @@ export struct GroupPage {
       .alignItems(VerticalAlign.Top)
 
       // 位置信息
-      IntelligentLocationCard({
-        latitude: group.geo.latitude,
-        longitude: group.geo.longitude,
-        locationName: group.geo.location_name,
-        distance: group.geo.distance,
-        altitude: 0 // 列表数据暂时不包含海拔信息
-      })
+      if (group.location) {
+        IntelligentLocationCard({
+          latitude: group.location.latitude,
+          longitude: group.location.longitude,
+          locationName: group.location.location_name,
+          distance: group.location.distance,
+          altitude: 0 // 列表数据暂时不包含海拔信息
+        })
+      }
     }
     .width('100%')
   }

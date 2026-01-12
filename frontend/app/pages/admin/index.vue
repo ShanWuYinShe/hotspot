@@ -1,163 +1,106 @@
 <template>
-  <div class="w-full">
-    <div v-if="canRenderAdmin">
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <UCard>
-          <template #header>
-            <div class="flex items-center gap-2">
-              <UIcon name="i-lucide-heart" :size="20" />
-              <h3 class="font-semibold">系统健康状态</h3>
-            </div>
-          </template>
-          
-          <div class="space-y-4">
-            <div class="flex items-center justify-between">
-              <UBadge color="neutral" variant="soft" size="xs">系统状态</UBadge>
-              <UBadge
-                :color="getHealthColor(healthData.status)"
-                :label="getHealthLabel(healthData.status)"
-              />
-            </div>
-            
-            <div class="flex items-center justify-between">
-              <UBadge color="neutral" variant="soft" size="xs">版本</UBadge>
-              <span class="text-sm font-medium tabular-nums">{{ healthData.version }}</span>
-            </div>
-            
-            <div class="flex items-center justify-between">
-              <UBadge color="neutral" variant="soft" size="xs">服务器时间</UBadge>
-              <span class="text-sm font-medium tabular-nums">
-                {{ new Date(healthData.timestamp).toLocaleString() }}
-              </span>
-            </div>
-          </div>
-        </UCard>
+    <div class="flex flex-col gap-6">
+        <!-- Header -->
+        <div>
+            <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">管理控制台</h1>
+            <p class="text-neutral-500 dark:text-neutral-400 mt-1">系统管理与监控</p>
+        </div>
 
-        <UCard>
-          <template #header>
-            <div class="flex items-center gap-2">
-              <UIcon name="i-lucide-bar-chart-3" :size="20" />
-              <h3 class="font-semibold">管理入口</h3>
+        <div class="space-y-8">
+            <!-- 快捷入口 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <UCard
+                    v-for="link in quickLinks"
+                    :key="link.to"
+                    variant="outline"
+                    @click="navigateTo(link.to)"
+                >
+                    <div class="flex flex-col items-center text-center space-y-3 py-4">
+                        <div class="p-3 rounded-full bg-white dark:bg-neutral-800 shadow-sm">
+                            <UIcon :name="link.icon" class="size-8 text-neutral-900 dark:text-white" />
+                        </div>
+                        <h3 class="font-semibold text-lg text-neutral-900 dark:text-white">{{ link.label }}</h3>
+                        <p class="text-sm text-neutral-500 dark:text-neutral-400">{{ link.description }}</p>
+                    </div>
+                </UCard>
             </div>
-          </template>
-          
-          <div class="grid grid-cols-2 gap-3">
-            <UButton variant="outline" color="neutral" block @click="navigateTo('/admin/reports')">
-              举报处理
-            </UButton>
-            <UButton variant="outline" color="neutral" block @click="navigateTo('/admin/config')">
-              系统配置
-            </UButton>
-            <UButton
-              v-if="canManageRbac"
-              variant="outline"
-              color="neutral"
-              block
-              @click="navigateTo('/admin/rbac')"
-            >
-              权限管理
-            </UButton>
-          </div>
-        </UCard>
-      </div>
-    </div>
 
-    <div v-else class="w-full space-y-4">
-      <USkeleton class="h-32 w-full" />
-      <USkeleton class="h-32 w-full" />
+            <!-- 系统健康状态 -->
+            <UCard variant="outline">
+                <template #header>
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-semibold text-lg flex items-center gap-2">
+                            <UIcon name="i-lucide-activity" class="text-primary-500" />
+                            系统状态
+                        </h3>
+                        <UButton variant="ghost" color="neutral" icon="i-lucide-refresh-cw" :loading="checkingHealth" @click="checkHealth" />
+                    </div>
+                </template>
+                
+                <div v-if="healthData" class="space-y-4">
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-medium text-neutral-500 dark:text-neutral-400">状态:</span>
+                        <UBadge :color="healthColor" variant="soft">{{ healthData.status }}</UBadge>
+                    </div>
+                    <div class="flex items-center gap-2">
+                         <span class="text-sm font-medium text-neutral-500 dark:text-neutral-400">版本:</span>
+                         <span class="text-sm font-mono text-neutral-900 dark:text-white">{{ healthData.version }}</span>
+                    </div>
+                     <div class="flex items-center gap-2">
+                         <span class="text-sm font-medium text-neutral-500 dark:text-neutral-400">检查时间:</span>
+                         <span class="text-sm text-neutral-900 dark:text-white">{{ formatTime(healthData.timestamp) }}</span>
+                    </div>
+                </div>
+                <div v-else class="text-center py-4 text-neutral-500 dark:text-neutral-400">
+                    暂无健康数据
+                </div>
+            </UCard>
+        </div>
     </div>
-  </div>
 </template>
 
 <script setup lang="ts">
 import { useSystemService } from '~/services/system.service'
-import { useAdminStore } from '~/stores/admin.store'
-import { useDashboardHeader } from '~/composables/useDashboardHeader'
-import { useHydratedStore } from '~/composables/useHydratedStore'
 
 definePageMeta({
-  title: '系统管理面板',
-  description: '监控系统运行状态和管理平台数据',
-  requiresAuth: true,
-  layout: 'dashboard',
-  middleware: 'admin', // 需要管理员权限
-  dashboardHeader: true
+    layout: 'dashboard',
+    requiresAuth: true,
+    middleware: ['admin']
 })
 
 const systemService = useSystemService()
-const { withErrorHandling } = useErrorHandler()
-const authStore = useAuthStore()
-const adminStore = useAdminStore()
-const dashboardHeader = useDashboardHeader()
+const { formatTime } = useFormatters()
 
-const isAuthenticated = useHydratedStore(authStore, 'isAuthenticated', false)
-const canRenderAdmin = computed(() => isAuthenticated.value && adminStore.hasAccess)
+const quickLinks = [
+    { label: '举报审核', description: '处理用户举报内容', icon: 'i-lucide-shield-alert', to: '/admin/reports' },
+    { label: '系统配置', description: '管理全局系统参数', icon: 'i-lucide-settings-2', to: '/admin/config' },
+    { label: '权限管理', description: 'RBAC 角色与权限', icon: 'i-lucide-key-round', to: '/admin/rbac' }
+]
 
-const canManageRbac = computed(() => adminStore.hasPermission('admin.rbac.manage'))
+const checkingHealth = ref(false)
+const healthData = ref<any>(null)
 
-// 状态管理
-const loading = ref(false)
-const healthData = ref({
-  status: 'healthy',
-  timestamp: new Date().toISOString(),
-  version: '0.0.0'
-})
-
-watchEffect(() => {
-  dashboardHeader.setActions([
-    {
-      key: 'refresh',
-      label: '刷新数据',
-      icon: 'i-lucide-refresh-cw',
-      variant: 'outline',
-      loading: loading.value,
-      action: () => loadHealthData(true)
+const healthColor = computed(() => {
+    switch (healthData.value?.status) {
+        case 'healthy': return 'success'
+        case 'degraded': return 'warning'
+        case 'unhealthy': return 'error'
+        default: return 'neutral'
     }
-  ])
 })
 
-const getHealthColor = (status: string) => {
-  const colors: Record<string, string> = {
-    healthy: 'green',
-    degraded: 'orange',
-    unhealthy: 'red'
-  }
-  return colors[status] || 'neutral'
-}
-
-const getHealthLabel = (status: string) => {
-  const labels: Record<string, string> = {
-    healthy: '健康',
-    degraded: '降级',
-    unhealthy: '异常'
-  }
-  return labels[status] || status
-}
-
-// 方法
-const loadHealthData = async (manual = false) => {
-  await withErrorHandling(async () => {
-    // 调用系统健康检查 API
-    const response = await systemService.healthCheck()
-    // 更新基本信息（来自 API）
-    healthData.value.status = response.status
-    healthData.value.version = response.version
-    healthData.value.timestamp = response.timestamp
-  }, {
-    title: '加载系统状态失败',
-    loading: loading,
-    showToast: manual // 自动刷新失败不弹 Toast，手动刷新时弹
-  })
-}
-
-// 页面加载
 onMounted(() => {
-  loadHealthData(true)
+    checkHealth()
 })
 
-// 定时刷新数据（30秒刷新一次）
-useIntervalFn(() => {
-  loadHealthData(false)
-}, 30000)
+async function checkHealth() {
+    checkingHealth.value = true
+    try {
+        healthData.value = await systemService.healthCheck()
+    } catch (e) {
+        // error
+    } finally {
+        checkingHealth.value = false
+    }
+}
 </script>
-

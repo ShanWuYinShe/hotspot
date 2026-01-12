@@ -18,6 +18,7 @@ export const useUsersStore = defineStore('users', () => {
   }
 
   const setUsers = (users: UserSearchItem[]) => {
+    if (!users || !Array.isArray(users)) return
     users.forEach(user => setUser(user))
   }
 

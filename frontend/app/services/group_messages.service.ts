@@ -3,7 +3,6 @@ import { GROUP_MESSAGES } from '~/config/api'
 import type {
   PaginatedData,
   SendGroupMessageRequest,
-  SendGroupMessageData,
   GroupMessagesHistoryRequest,
   GroupMessageItem,
   UpdateGroupMessageRequest,
@@ -20,7 +19,7 @@ import type {
 
 class GroupMessagesService extends BaseService {
   async send(request: SendGroupMessageRequest) {
-    return this.post<SendGroupMessageData>(GROUP_MESSAGES.SEND, request)
+    return this.post<GroupMessageItem>(GROUP_MESSAGES.SEND, request)
   }
 
   async getGroupMessages(request: GroupMessagesHistoryRequest) {

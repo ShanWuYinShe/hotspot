@@ -28,13 +28,26 @@ function configureAMapSecurity(config: ReturnType<typeof useRuntimeConfig>) {
     return
   }
 
-  // 官方推荐：通过代理服务器转发安全密钥（jscode）
-  // - 默认使用同源 `/_AMapService`（由 Nginx 负责把 jscode 注入到 query）
-  // - 如需跨域部署，可通过 NUXT_PUBLIC_AMAP_SERVICE_HOST 显式指定完整域名
-  const serviceHost = (config.public as { amapServiceHost?: string }).amapServiceHost
-    || `${window.location.origin}/_AMapService`
+  // 根据环境选择不同的安全配置方式
+  const isDev = import.meta.env.DEV
 
-  window._AMapSecurityConfig = { serviceHost }
+  if (isDev) {
+    // 开发环境：直接使用 securityJsCode（方便本地调试）
+    const securityCode = (config.public as { amapSecurityCode?: string }).amapSecurityCode
+    if (securityCode) {
+      window._AMapSecurityConfig = { securityJsCode: securityCode }
+    } else {
+      console.warn('[AMap] 开发环境未配置 NUXT_PUBLIC_AMAP_SECURITY_CODE，安全验证可能失败')
+    }
+  } else {
+    // 生产环境：通过代理服务器转发安全密钥（jscode）
+    // - 默认使用同源 `/_AMapService`（由 Nginx 负责把 jscode 注入到 query）
+    // - 如需跨域部署，可通过 NUXT_PUBLIC_AMAP_SERVICE_HOST 显式指定完整域名
+    const serviceHost = (config.public as { amapServiceHost?: string }).amapServiceHost
+      || `${window.location.origin}/_AMapService`
+
+    window._AMapSecurityConfig = { serviceHost }
+  }
 
   amapSecurityConfigured = true
 }
@@ -191,7 +204,23 @@ declare global {
           district?: string
           street?: string
           township?: string
+          streetNumber?: string
+          neighborhood?: string
+          building?: string
         }
+        pois?: Array<{
+          name: string
+          type: string
+          address: string
+          distance: number
+          location: LngLat
+        }>
+        aois?: Array<{
+          name: string
+          type: string
+          area: string
+          location: LngLat
+        }>
       }
       geocodes?: Array<{
         location: LngLat
@@ -207,7 +236,7 @@ declare global {
       ): void
       watchPosition(): number
       clearWatch(watchId: number): void
-      on(event: string, handler: (e: any) => void): void
+      on(event: string, handler: (e: unknown) => void): void
     }
 
     interface GeolocationOptions {

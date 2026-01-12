@@ -1,33 +1,29 @@
 <template>
-  <div class="sticky top-0 z-30">
-    <UDashboardNavbar :toggle="false">
-      <template #left>
-        <div class="flex items-center gap-3 min-w-0">
-          <UButton
-            variant="ghost"
-            color="neutral"
-            size="md"
-            icon="i-lucide-arrow-left"
-            :square="true"
-            class="shrink-0"
-            @click="$emit('go-back')"
-          />
+  <header class="flex items-center justify-between px-4 py-3 border-b border-neutral-200 dark:border-neutral-800">
+      <div class="flex items-center gap-3 min-w-0">
+        <UButton
+          variant="ghost"
+          color="neutral"
+          size="md"
+          icon="i-lucide-arrow-left"
+          :square="true"
+          @click="$emit('go-back')"
+        />
 
-          <UUser
-            class="min-w-0 cursor-pointer"
-            :name="groupInfo?.name || '群聊'"
-            :description="`${groupInfo?.members_count || 0} 名成员`"
-            :avatar="{
-              src: groupInfo?.avatar_url,
-              alt: groupInfo?.name,
-              size: 'md'
-            }"
-            @click="$emit('view-info')"
-          />
+        <div class="flex items-center gap-3 min-w-0 cursor-pointer" @click="$emit('view-info')">
+             <UAvatar 
+                :src="groupInfo?.avatar_url" 
+                :alt="groupInfo?.name"
+                size="md"
+             />
+             <div class="flex flex-col min-w-0">
+                 <span class="text-sm font-medium truncate text-neutral-900 dark:text-white">{{ groupInfo?.name || '群聊' }}</span>
+                 <span class="text-xs text-neutral-500 dark:text-neutral-400 truncate">{{ groupInfo?.members_count || 0 }} 名成员</span>
+             </div>
         </div>
-      </template>
+      </div>
 
-      <template #right>
+      <div class="flex items-center gap-1">
         <UTooltip text="搜索聊天记录">
           <UButton
             variant="ghost"
@@ -62,17 +58,16 @@
             :square="true"
           />
         </UDropdownMenu>
-      </template>
-    </UDashboardNavbar>
-  </div>
+      </div>
+  </header>
 </template>
 
 <script setup lang="ts">
-import type { GroupSearchItem } from "~/types/api"
+import type { GroupItem } from "~/types/api"
 import type { DropdownMenuItem } from '@nuxt/ui'
 
 interface Props {
-  groupInfo?: GroupSearchItem | null
+  groupInfo?: GroupItem | null
 }
 
 interface Emits {
@@ -106,5 +101,3 @@ const menuItems = computed((): DropdownMenuItem[][] => [
   }]
 ])
 </script>
-
-

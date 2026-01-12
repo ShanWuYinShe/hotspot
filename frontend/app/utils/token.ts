@@ -9,6 +9,12 @@
 
 import type { ApiResponse, AuthData } from '~/types/api'
 import { AUTH } from '~/config/api'
+import {
+  extractApiErrorSnapshot,
+  isSoftTokenRotation,
+  isTokenInvalidOrExpiredCode,
+  shouldForceLogoutOnAuthError
+} from '~/utils/apiError'
 
 // 刷新锁，防止并发刷新
 let isRefreshing = false
@@ -37,11 +43,14 @@ export async function refreshAccessToken(): Promise<boolean> {
     })
 
     if (response.code === 0 && response.data) {
+      const data = response.data
+      const refreshToken = 'refresh_token' in data ? data.refresh_token : null
+
       authStore.updateCurrentTokens(
-        response.data.access_token,
-        response.data.refresh_token,
-        new Date(response.data.access_token_expires_at).getTime(),
-        new Date(response.data.refresh_token_expires_at).getTime()
+        data.access_token,
+        refreshToken,
+        new Date(data.access_token_expires_at).getTime(),
+        new Date(data.refresh_token_expires_at).getTime()
       )
       return true
     }
@@ -49,30 +58,17 @@ export async function refreshAccessToken(): Promise<boolean> {
   } catch (error: unknown) {
     // 关键：refresh_token 真正失效后，不能继续“每分钟刷一次”，必须立刻停止并清理本地会话
     // 否则会形成长期噪音与不必要的后端压力
-    let code: number | undefined
-    let message: string | undefined
-
-    if (error && typeof error === 'object') {
-      const err = error as Record<string, unknown>
-      const data = err.data
-      if (data && typeof data === 'object') {
-        const d = data as Record<string, unknown>
-        if (typeof d.code === 'number') code = d.code
-        if (typeof d.message === 'string') message = d.message
-        if (!message && typeof d.msg === 'string') message = d.msg
-      }
-      if (!message && typeof err.message === 'string') message = err.message
-      if (!code && typeof err.businessCode === 'number') code = err.businessCode
-    }
+    const snapshot = extractApiErrorSnapshot(error)
+    const { code, message } = snapshot
 
     // 后端提示“已被轮换，请重试”时，不要直接登出（并发刷新场景的软失败）
-    if (code === 1101 && message && message.includes('已被轮换')) {
+    if (isTokenInvalidOrExpiredCode(code) && isSoftTokenRotation(message)) {
       if (import.meta.dev) console.warn('[Auth] refresh_token 并发轮换，稍后重试', error)
       return false
     }
 
-    // 真正无效/过期 or 需要重新登录：清理本地会话，终止后续刷新循环
-    if (code === 1106 || (code === 1101 && message && message.includes('无效或已过期'))) {
+    // 真正无效/过期 or 缺失 or 需要重新登录：清理本地会话，终止后续刷新循环
+    if (shouldForceLogoutOnAuthError(code, message)) {
       authStore.logoutCurrent()
     }
 
@@ -101,34 +97,6 @@ export async function ensureRefreshToken(): Promise<boolean> {
   })
 
   return refreshPromise
-}
-
-/**
- * 判断错误是否为 token 过期错误
- */
-export function isTokenExpiredError(error: unknown): boolean {
-  if (!error || typeof error !== 'object') return false
-
-  const err = error as Record<string, unknown>
-
-  // 1) 业务错误（BaseService 主动 throw 的 businessCode）
-  const businessCode = typeof err.businessCode === 'number' ? err.businessCode : undefined
-  if (businessCode === 1101) return true
-
-  // 2) FetchError.data 里通常有后端 ApiResponse 的 code/message
-  const data = err.data
-  if (data && typeof data === 'object') {
-    const d = data as Record<string, unknown>
-    if (typeof d.code === 'number' && d.code === 1101) return true
-    // 兜底：JWT 解析错误原样透出
-    if (typeof d.message === 'string' && d.message.includes('ExpiredSignature')) return true
-    if (typeof d.msg === 'string' && d.msg.includes('ExpiredSignature')) return true
-  }
-
-  // 3) Error.message 兜底
-  if (typeof err.message === 'string' && err.message.includes('ExpiredSignature')) return true
-
-  return false
 }
 
 

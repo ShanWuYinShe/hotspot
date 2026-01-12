@@ -1,115 +1,220 @@
 <template>
-    <UPage>
-        <UPageHeader
-            title="HotSpot"
-            :description="headerDescription"
-            :links="headerLinks"
-        />
-
-        <UPageBody>
-            <div class="space-y-6">
-                <UCard variant="subtle">
-                    <template #header>
-                        <div>
-                            <div class="font-bold tracking-tight">探索</div>
-                            <UBadge color="neutral" variant="soft" size="xs" class="mt-1">
-                              从附近开始，快速进入你想看的内容
-                            </UBadge>
-                        </div>
-                    </template>
-
-                    <UPageGrid>
-                        <UPageCard
-                            title="附近用户"
-                            description="发现周围的朋友"
-                            icon="i-lucide-users"
-                            to="/users/nearby"
-                            variant="soft"
-                        />
-                        <UPageCard
-                            title="附近群组"
-                            description="发现可加入的群组"
-                            icon="i-lucide-users-round"
-                            to="/groups/nearby"
-                            variant="soft"
-                        />
-                        <UPageCard
-                            title="附近瞬间"
-                            description="浏览周边动态"
-                            icon="i-lucide-image"
-                            to="/moments/nearby"
-                            variant="soft"
-                        />
-                    </UPageGrid>
-                </UCard>
-
-                <UCard variant="subtle">
-                    <template #header>
-                        <div class="flex items-center justify-between gap-3">
-                            <div>
-                                <div class="font-bold tracking-tight">我的</div>
-                                <UBadge color="neutral" variant="soft" size="xs" class="mt-1">
-                                  登录后可查看统计、通知与快捷入口
-                                </UBadge>
-                            </div>
-                            <UBadge
-                                v-if="isHydrated && isLoggedIn && unreadCount > 0"
-                                color="info"
-                                variant="soft"
-                                size="sm"
-                            >
-                                {{ unreadCount > 99 ? '99+' : unreadCount }} 未读
-                            </UBadge>
-                        </div>
-                    </template>
-
-                    <div
-                        v-if="!isHydrated"
-                        class="grid grid-cols-2 md:grid-cols-4 gap-4"
-                    >
-                        <USkeleton
-                            v-for="i in 4"
-                            :key="i"
-                            class="h-24"
+    <div class="flex flex-col gap-6">
+        <!-- Header -->
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">
+                    HotSpot
+                </h1>
+                <p class="text-neutral-500 dark:text-neutral-400 mt-1">
+                    {{ headerDescription }}
+                </p>
+            </div>
+            
+            <div class="flex gap-2">
+                <template v-if="!isHydrated">
+                    <USkeleton class="h-8 w-20 rounded-full" />
+                    <USkeleton class="h-8 w-20 rounded-full" />
+                </template>
+                <template v-else>
+                    <div v-for="link in headerLinks" :key="link.label">
+                        <UButton
+                            :label="link.label"
+                            :icon="link.icon"
+                            :color="link.color"
+                            :variant="link.variant"
+                            @click="link.onClick"
                         />
                     </div>
-
-                    <StatsGrid
-                        v-else-if="isLoggedIn"
-                        :stats="statsItems"
-                        :columns="4"
-                    />
-
-                    <UPageGrid v-else>
-                        <UPageCard
-                            title="快速体验"
-                            description="一键创建访客账号，随时升级"
-                            icon="i-lucide-zap"
-                            variant="soft"
-                            :to="undefined"
-                            @click="createTempUser"
-                        />
-                        <UPageCard
-                            title="隐私设置"
-                            description="登录后可配置位置、在线状态与可见性"
-                            icon="i-lucide-shield-check"
-                            variant="soft"
-                            :to="undefined"
-                            @click="openSettings"
-                        />
-                        <UPageCard
-                            title="通知中心"
-                            description="登录后可查看与你相关的实时事件"
-                            icon="i-lucide-bell"
-                            variant="soft"
-                            :to="undefined"
-                            @click="openNotifications"
-                        />
-                    </UPageGrid>
-                </UCard>
+                </template>
             </div>
-        </UPageBody>
-    </UPage>
+        </div>
+
+        <div class="space-y-8">
+            <!-- 探索卡片 -->
+            <div class="space-y-4">
+                <div class="flex items-center gap-2 px-1">
+                    <UIcon
+                        name="i-lucide-compass"
+                        class="size-5 text-primary-500"
+                    />
+                    <h2
+                        class="font-semibold text-lg text-neutral-900 dark:text-white"
+                    >
+                        探索周边
+                    </h2>
+                </div>
+                
+                <div
+                    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                >
+                    <UCard
+                        variant="outline"
+                        @click="navigateTo('/users/nearby')"
+                    >
+                        <div class="flex items-start gap-4">
+                            <div class="lsyb-icon-container-sm">
+                                <UIcon name="i-lucide-users" class="size-6" />
+                            </div>
+                            <div>
+                                <h3
+                                    class="font-medium text-neutral-900 dark:text-white"
+                                >
+                                    附近用户
+                                </h3>
+                                <p
+                                    class="text-sm text-neutral-500 dark:text-neutral-400 mt-1"
+                                >
+                                    发现周围的朋友
+                                </p>
+                            </div>
+                        </div>
+                    </UCard>
+                    <UCard
+                        variant="outline"
+                        @click="navigateTo('/groups/nearby')"
+                    >
+                        <div class="flex items-start gap-4">
+                            <div class="lsyb-icon-container-sm">
+                                <UIcon
+                                    name="i-lucide-users-round"
+                                    class="size-6"
+                                />
+                            </div>
+                            <div>
+                                <h3
+                                    class="font-medium text-neutral-900 dark:text-white"
+                                >
+                                    附近群组
+                                </h3>
+                                <p
+                                    class="text-sm text-neutral-500 dark:text-neutral-400 mt-1"
+                                >
+                                    发现可加入的群组
+                                </p>
+                            </div>
+                        </div>
+                    </UCard>
+                    <UCard
+                        variant="outline"
+                        @click="navigateTo('/moments/nearby')"
+                    >
+                        <div class="flex items-start gap-4">
+                            <div class="lsyb-icon-container-sm">
+                                <UIcon name="i-lucide-image" class="size-6" />
+                            </div>
+                            <div>
+                                <h3
+                                    class="font-medium text-neutral-900 dark:text-white"
+                                >
+                                    附近瞬间
+                                </h3>
+                                <p
+                                    class="text-sm text-neutral-500 dark:text-neutral-400 mt-1"
+                                >
+                                    浏览周边动态
+                                </p>
+                            </div>
+                        </div>
+                    </UCard>
+                </div>
+            </div>
+            
+            <!-- 个人中心/统计 -->
+            <div class="space-y-4">
+                <div class="flex items-center justify-between px-1">
+                    <div class="flex items-center gap-2">
+                        <UIcon
+                            name="i-lucide-user-circle"
+                            class="size-5 text-primary-500"
+                        />
+                        <h2
+                            class="font-semibold text-lg text-neutral-900 dark:text-white"
+                        >
+                            我的
+                        </h2>
+                    </div>
+                    <UBadge
+                        v-if="isHydrated && isLoggedIn && unreadCount > 0"
+                        color="error"
+                        variant="soft"
+                        size="sm"
+                    >
+                        {{ unreadCount > 99 ? "99+" : unreadCount }} 条未读消息
+                    </UBadge>
+                </div>
+
+                <div
+                    v-if="!isHydrated"
+                    class="grid grid-cols-2 md:grid-cols-4 gap-4"
+                >
+                    <USkeleton
+                        v-for="i in 4"
+                        :key="i"
+                        class="h-28 rounded-2xl"
+                    />
+                </div>
+
+                <StatsGrid
+                    v-else-if="isLoggedIn"
+                    :stats="statsItems"
+                    :columns="4"
+                />
+
+                <!-- 未登录引导 -->
+                <div
+                    v-else
+                    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                >
+                    <UCard
+                        variant="outline"
+                        @click="createTempUser"
+                    >
+                        <div
+                            class="flex flex-col items-center text-center py-4 space-y-3"
+                        >
+                            <div class="lsyb-icon-container-md">
+                                <UIcon name="i-lucide-zap" class="size-8" />
+                            </div>
+                            <h3 class="font-medium text-lg">快速体验</h3>
+                            <p class="text-sm text-neutral-500">
+                                一键创建访客账号，无需注册
+                            </p>
+                        </div>
+                    </UCard>
+                    <UCard variant="outline">
+                        <div
+                            class="flex flex-col items-center text-center py-4 space-y-3 opacity-50"
+                        >
+                            <div class="lsyb-icon-container-neutral">
+                                <UIcon
+                                    name="i-lucide-shield-check"
+                                    class="size-8"
+                                />
+                            </div>
+                            <h3 class="font-medium text-lg">隐私设置</h3>
+                            <p class="text-sm text-neutral-500">
+                                登录后管理可见性与隐私
+                            </p>
+                        </div>
+                    </UCard>
+                    <UCard variant="outline">
+                        <div
+                            class="flex flex-col items-center text-center py-4 space-y-3"
+                        >
+                            <div class="lsyb-icon-container-neutral">
+                                <UIcon name="i-lucide-bell" class="size-8" />
+                            </div>
+                            <h3 class="font-medium text-lg">通知中心</h3>
+                            <p class="text-sm text-neutral-500">
+                                登录后查看实时互动消息
+                            </p>
+                        </div>
+                    </UCard>
+                        </div>
+            </div>
+        </div>
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -118,170 +223,191 @@ import { useAuthService } from "~/services/auth.service";
 import { useUsersService } from "~/services/users.service";
 import type { UserStatsData } from "~/types/api";
 import type { AuthState } from "~/stores/auth.store";
+import StatsGrid from "~/components/data/StatsGrid.vue";
 
-// 从数据源获取 SEO 配置
 const seoConfig = getPageSeoConfig("home");
-
-// 使用 Nuxt v4 的 definePageMeta
 definePageMeta({
     title: seoConfig.title,
     description: seoConfig.description,
-    // 首页与全站保持一致：同一套壳（Nginx 直进 / 站内跳转观感一致）
-    layout: 'dashboard',
+    layout: "dashboard",
+    requiresAuth: false  // 首页允许未登录用户访问
 });
-
-// 直接使用 Nuxt v4 的 useSeoMeta
 useSeoMeta(buildSeoMeta("home"));
 
 const modal = useModal();
-const { requireAuth } = useRequireAuth()
-const { withErrorHandling } = useErrorHandler()
-const authService = useAuthService()
-const userService = useUsersService()
-const feedback = useFeedbackStore()
-const isHydrated = ref(false)
-onMounted(() => { isHydrated.value = true })
+const { requireAuth } = useRequireAuth();
+const { withErrorHandling } = useErrorHandler();
+const authService = useAuthService();
+const userService = useUsersService();
+const feedback = useFeedbackStore();
+const isHydrated = ref(false);
 
-// 水合安全：持久化 store 必须通过 useHydratedStore 访问（避免 SSR hydration mismatch）
-const authStore = useAuthStore()
-const messagesStore = useMessagesStore()
-const locationStore = useLocationStore()
+onMounted(() => {
+    isHydrated.value = true;
+});
+
+const authStore = useAuthStore();
+const messagesStore = useMessagesStore();
+const locationStore = useLocationStore();
 
 const DEFAULT_HYDRATED_AUTH_STATE: AuthState = {
     currentUserId: null,
     accounts: {},
-    accountOrder: []
-}
+    accountOrder: [],
+};
+const hydratedAuthState = useHydratedStore(
+    authStore,
+    "authState",
+    DEFAULT_HYDRATED_AUTH_STATE,
+);
+const hydratedIsAuthed = useHydratedStore(authStore, "isAuthenticated", false);
 
-const hydratedAuthState = useHydratedStore(authStore, 'authState', DEFAULT_HYDRATED_AUTH_STATE)
-const hydratedIsAuthed = useHydratedStore(authStore, 'isAuthenticated', false)
-
-const unreadCount = computed(() => messagesStore.totalUnreadCount)
+const unreadCount = computed(() => messagesStore.totalUnreadCount);
 const currentUser = computed(() => {
-    const state = hydratedAuthState.value
-    if (!state.currentUserId) return null
-    const session = state.accounts[state.currentUserId]
-    return session?.user ?? null
-})
-const isLoggedIn = computed(() => hydratedIsAuthed.value)
+    const state = hydratedAuthState.value;
+    if (!state.currentUserId) return null;
+    const session = state.accounts[state.currentUserId];
+    return session?.user ?? null;
+});
+const isLoggedIn = computed(() => hydratedIsAuthed.value);
+const currentLocationName = computed(
+    () => locationStore.locationName || "未设置位置",
+);
 
-const openSettings = () => {
-    if (!requireAuth('进入隐私设置')) return
-    navigateTo('/settings')
-}
-
-const openNotifications = () => {
-    if (!requireAuth('查看通知')) return
-    navigateTo('/notifications')
-}
-
-const currentLocationName = computed(() => locationStore.locationName || '未设置位置')
-
+// 确保服务端和客户端使用相同的默认值，避免 hydration mismatch
 const headerDescription = computed(() => {
-    if (!isLoggedIn.value) return '基于位置的社交平台，发现身边有趣的人和事'
-    if (!currentUser.value) return '欢迎回来'
-    return `你好，${currentUser.value.nickname} · ${currentLocationName.value}`
-})
+    // 在服务端和客户端首次渲染时，isLoggedIn 和 currentUser 可能不同
+    // 使用 useHydratedStore 确保一致性
+    if (!isLoggedIn.value) return "发现身边有趣的人和事";
+    if (!currentUser.value) return "欢迎回来";
+    return `你好，${currentUser.value.nickname} · 当前位置：${currentLocationName.value}`;
+});
 
 const openCreateMoment = async () => {
-    const id = await modal.showCreateMoment()
-    if (id) {
-        await navigateTo(`/moments/${id}`)
-    }
-}
+    const id = await modal.showCreateMoment();
+    if (id) await navigateTo(`/moments/${id}`);
+};
 
 const openCreateGroup = async () => {
-    const id = await modal.showCreateGroup()
-    if (id) {
-        await navigateTo(`/groups/${id}`)
-    }
-}
+    const id = await modal.showCreateGroup();
+    if (id) await navigateTo(`/groups/${id}`);
+};
 
+// 使用 useHydratedStore 确保服务端和客户端一致性
+// 注意：headerLinks 在服务端应该返回空数组，避免渲染不同的内容
 const headerLinks = computed(() => {
-    // 首页不重复展示登录/注册入口：dashboard layout 已提供统一入口
-    // 同时保持 SSR/CSR 结构稳定，避免直进与站内跳转观感割裂
-    if (!isHydrated.value) return []
-    if (!isLoggedIn.value) return []
-
+    // 在服务端和客户端首次渲染时，isLoggedIn 可能不同
+    // 使用 useHydratedStore 确保一致性，但这里需要检查 isHydrated 避免在服务端渲染按钮
+    if (!isHydrated.value || !isLoggedIn.value) return [];
     return [
-        { label: '发瞬间', onClick: openCreateMoment, color: 'primary', variant: 'solid', icon: 'i-lucide-square-pen' },
-        { label: '建群', onClick: openCreateGroup, color: 'neutral', variant: 'outline', icon: 'i-lucide-users-round' },
-    ]
-})
+        {
+            label: "发瞬间",
+            onClick: openCreateMoment,
+            color: "primary",
+            variant: "solid",
+            icon: "i-lucide-square-pen",
+        },
+        {
+            label: "建群",
+            onClick: openCreateGroup,
+            color: "neutral",
+            variant: "outline",
+            icon: "i-lucide-users-round",
+        },
+    ];
+});
 
 const createTempUser = async () => {
-    await withErrorHandling(async () => {
+    await withErrorHandling(
+        async () => {
         const authData = await authService.guest({
             nickname: `访客_${Date.now().toString(36).slice(-4)}`,
-            client_type: 'app',
-        })
+                client_type: "app",
+            });
         authStore.setAccountSession(
             { user_id: authData.user_id, nickname: authData.nickname },
             authData.access_token,
             authData.refresh_token ?? null,
             new Date(authData.access_token_expires_at).getTime(),
-            new Date(authData.refresh_token_expires_at).getTime()
-        )
-        feedback.success('欢迎体验 HotSpot', '临时账户已创建，开始探索吧！')
-    }, {
-        title: '创建失败',
-        fallbackMessage: '请稍后重试'
-    })
-}
+                new Date(authData.refresh_token_expires_at).getTime(),
+            );
+            feedback.success("欢迎体验 HotSpot", "临时账户已创建");
+        },
+        {
+            title: "创建失败",
+            fallbackMessage: "请稍后重试",
+        },
+    );
+};
 
-const loadingStats = ref(false)
-const myStats = ref<UserStatsData | null>(null)
+const loadingStats = ref(false);
+const myStats = ref<UserStatsData | null>(null);
 
 const loadMyStats = async () => {
-    if (!isLoggedIn.value) return
-    if (loadingStats.value) return
-
-    loadingStats.value = true
+    if (!isLoggedIn.value) return;
+    if (loadingStats.value) return;
+    loadingStats.value = true;
     try {
-        myStats.value = await userService.getMyStats()
+        myStats.value = await userService.getMyStats();
     } catch {
-        myStats.value = null
+        myStats.value = null;
     } finally {
-        loadingStats.value = false
+        loadingStats.value = false;
     }
-}
+};
 
-watch(isLoggedIn, (v) => {
-    if (v) void loadMyStats()
-    else myStats.value = null
-}, { immediate: true })
+watch(
+    isLoggedIn,
+    (v) => {
+        if (v) void loadMyStats();
+        else myStats.value = null;
+    },
+    { immediate: true },
+);
 
 const statsItems = computed(() => {
-    const s = myStats.value
+    const s = myStats.value;
     return [
-        { key: 'moments', label: '瞬间', value: s?.moments_count ?? 0, icon: 'i-lucide-image', color: 'primary' as const, onClick: () => { void navigateTo('/moments') } },
-        { key: 'friends', label: '好友', value: s?.friends_count ?? 0, icon: 'i-lucide-users-round', color: 'green' as const, onClick: () => { void navigateTo('/friends') } },
-        { key: 'followers', label: '粉丝', value: s?.followers_count ?? 0, icon: 'i-lucide-users', color: 'blue' as const, onClick: () => { void navigateTo('/followers') } },
-        { key: 'groups', label: '群组', value: s?.groups_count ?? 0, icon: 'i-lucide-users-round', color: 'purple' as const, onClick: () => { void navigateTo('/groups') } }
-    ]
-})
+        {
+            key: "moments",
+            label: "瞬间",
+            value: s?.moments_count ?? 0,
+            icon: "i-lucide-image",
+            color: "primary" as const,
+            onClick: () => navigateTo("/moments"),
+        },
+        {
+            key: "friends",
+            label: "好友",
+            value: s?.friends_count ?? 0,
+            icon: "i-lucide-users-round",
+            color: "primary" as const,
+            onClick: () => navigateTo("/friends"),
+        },
+        {
+            key: "followers",
+            label: "粉丝",
+            value: s?.followers_count ?? 0,
+            icon: "i-lucide-users",
+            color: "primary" as const,
+            onClick: () => navigateTo("/followers"),
+        },
+        {
+            key: "groups",
+            label: "群组",
+            value: s?.groups_count ?? 0,
+            icon: "i-lucide-users-round",
+            color: "primary" as const,
+            onClick: () => navigateTo("/groups"),
+        },
+    ];
+});
 
-// 快捷键管理 - 使用 Nuxt UI v4 原生支持
 defineShortcuts({
-    h: {
-        usingInput: false,
-        handler: () => navigateTo("/"),
-    },
-    g: {
-        usingInput: false,
-        handler: () => navigateTo("/groups"),
-    },
-    c: {
-        usingInput: false,
-        handler: () => navigateTo("/chat"),
-    },
-    u: {
-        usingInput: false,
-        handler: () => navigateTo("/users/nearby"),
-    },
-    p: {
-        usingInput: false,
-        handler: () => navigateTo("/moments"),
-    },
+    h: { usingInput: false, handler: () => navigateTo("/") },
+    g: { usingInput: false, handler: () => navigateTo("/groups") },
+    c: { usingInput: false, handler: () => navigateTo("/chat") },
+    u: { usingInput: false, handler: () => navigateTo("/users/nearby") },
+    p: { usingInput: false, handler: () => navigateTo("/moments") },
 });
 </script>

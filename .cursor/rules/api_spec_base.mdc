@@ -1,0 +1,630 @@
+---
+alwaysApply: true
+---
+# HotSpot API 规范 - 基础原则与类型定义 v0.0.1（契约唯一权威）
+
+> 本文档定义 HotSpot API 设计的基础原则、通用类型定义、命名规范、分页语义、安全性实践等核心内容。
+
+## 权威边界与冲突处理
+
+- 本文件定义 HotSpot API 设计的基础原则与通用类型。
+- 若本文件与任何工程实现、示例代码、其它 doc/rule 文件产生冲突，以本文件为准。
+- 禁止使用数字章节号（如“第X章/第X节”）来引用本文件内容；引用时仅使用小节标题或锚点标题，以降低维护成本。
+
+## 文档说明
+
+本文件定义 **全局契约**：路径分区与身份语义（Public/Protected）、通用类型、分页/游标、幂等性与隐私控制等。
+
+相关文件：
+- 端点定义：`@api_spec_endpoints.mdc`
+- 错误码：`@api_spec_errors.mdc`
+- WebSocket：`@api_spec_websocket.mdc`
+
+重要契约约定（必须）：
+- 所有时间字段使用 UTC，格式为 ISO 8601（如 `1949-10-01T10:01:00Z`）
+- 客户端负责时区转换：接收到 UTC 时间后按用户本地时区展示
+- 客户端发送时间字段也必须使用 UTC ISO 8601（禁止上传本地时区字符串）
+
+## 全局约束（必须/禁止）
+
+本小节声明跨端必须一致遵守的契约级约束。
+
+必须：
+- 所有 HTTP 响应必须使用统一 envelope：`ApiResponse<T>`
+- 业务成功与否只取决于 `ApiResponse.code`（`code === 0` 才是成功），禁止以 HTTP 200/非200 判断业务成功
+- `cursor` 为不透明字符串：客户端只透传；服务端若需解析/编码，必须由后端负责
+- `distance/bearing_degrees` 等地理计算结果必须由后端返回，客户端禁止本地计算用于排序
+- 任意字段的可空性必须与类型定义一致
+- 所有 ID 字段必须使用显式 `xxx_id` 命名（禁止裸 `id`）
+- 所有 `xxx_id` 字段类型：`user_id` 为 safe integer，其它业务 ID 为 UUID string
+- 幂等性：写操作必须支持 `Idempotency-Key`
+
+禁止：
+- 禁止在客户端生成或拼装 `cursor`
+- 禁止返回未定义在本文件中的字段
+- 禁止在示例代码或文档中硬编码与本文件不一致的端点/字段名/错误码
+
+## 路径分区与身份语义（Public vs Protected，契约级）
+
+为避免“/public 端点在登录态下返回额外字段”导致的契约漂移，本规范对 `/public/**` 与 `/protected/**` 做强约束：
+
+- `/api/v1/public/**`
+  - **身份无关**：响应必须与调用者身份无关。
+  - **禁止返回登录态才能计算/才有意义的字段**：包括但不限于 `relation`、`my_state`、`is_liked/is_favorited`、未读数、置顶/免打扰等“仅对当前用户成立”的信息。
+  - 即使客户端携带 `Authorization`，服务端也不得因此在 `/public/**` 响应中增加上述字段（必须保持字段集合稳定）。
+  - **隐私语义（针对存在隐私等级/访问控制的资源）**：`/public/**` 仅允许返回“隐私等级为 `public`”的数据；不得因为资源设置为任何非 `public` 等级（例如 `friends` / `private`，或未来扩展的更多等级）就在 `/public/**` 做任何基于身份关系/登录态的判定。
+  - **默认公开资源**：对不具备“用户可配置隐私等级”的系统/内容资源（例如系统公告、全局启动配置、热门标签、健康检查等），视为默认 `public`，可以直接由 `/public/**` 提供。
+  - **隐私拒绝策略**：当资源存在但因为任何非 `public` 的隐私等级/访问控制而不可见时：
+    - 单体详情/按 ID 获取的端点：`/public/**` 应返回对应资源的“资源不存在/不可见”的 `103xx`（而非 `10200`），以降低信息泄露风险。
+    - 列表/搜索类端点：不可见资源应按“过滤/不返回该条目”处理。
+- `/api/v1/protected/**`
+  - **身份相关**：必须携带 `Authorization: Bearer <access_token>`。
+  - **交互为主**：承载会改变状态的操作（关注/拉黑/点赞/评论/发消息/加群/设置等）。
+  - **个性化读（仅与“我”相关）**：允许提供 `/me/*`、`/feed/*`、通知/会话等“对当前用户成立”的数据读取。
+  - 当资源存在但因隐私/访问控制不可访问时，返回 `10200`（权限不足/隐私限制）。
+
+**分层约束（契约级，必须）**：
+- `/public/**` = 查询（读）。
+- `/protected/**` = 交互（写） + “我的/个性化”读取。
+- 禁止出现“把 `/public/**` 的查询端点复制一份放到 `/protected/**`，仅为了多返回几个字段”的设计。
+- 若确实需要登录态的“交互状态”（例如 `relation`、`is_liked`、`my_state`），应使用**专用的交互态端点**（如 relationship、moment interaction_state、group my_state），而不是提供一套 protected 查询镜像。
+
+> 结论：凡是需要“当前用户上下文”才能返回/才能正确做隐私判定的信息（任何非 `public` 的可见性等级、分组可见、黑名单/拉黑、屏蔽、设备/地区策略等），必须由 `/protected/**` API 提供。
+
+## 从用户使用场景出发的分层（契约级建议）
+
+把客户端当成“真实用户”来用时，通常会自然分成两类体验：
+
+### 未登录/冷启动（Guest Browsing）
+
+目标：让用户**不注册也能理解产品**，但不暴露任何需要身份的个性化信息。
+
+应当可以做（典型）：
+- 浏览公开内容：公开瞬间列表/详情、公开群组详情、公开用户资料页（仅公共字段）
+- 搜索发现：按关键词/标签/地理位置搜索用户/群组/瞬间（返回不含关系/互动/未读的公共形态）
+- 地图浏览：地图渲染（不含“仅好友”筛选）
+- 基础启动配置：全局配置、公告、热门标签
+
+不应当出现（必须禁止）：
+- `relation`（我与 TA 的关系）、`my_state`（我在群内的状态）、`is_liked/is_favorited`（我是否互动过）
+- 未读数、置顶/免打扰、任何只对“当前用户”成立的字段
+- 需要“身份上下文”才能判断的资源访问结果（任何非 `public` 的隐私等级/访问控制），应改走 `/protected/**`
+
+特别说明：
+- “信息流/推荐流（feed）”属于强个性化能力，必须在登录态（含 guest token）下由 `/protected/feed/**` 提供。
+
+### 已登录（Personalized Usage）
+
+目标：提供完整功能与个性化信息，并且能正确执行“非 public 的隐私等级/访问控制”等基于身份的隐私判定。
+
+应当可以做（典型）：
+- 个性化信息流（关注/附近/综合推荐）
+- 显示关系与互动状态：关注/拉黑关系、是否点赞/收藏、是否已加入群等
+- 私聊/群聊/通知/未读数/免打扰/置顶等“我的状态”
+- 访问非 `public` 的资源（在登录态下做隐私判定）
+
+## API 设计原则
+
+### 核心设计理念
+
+**首要原则：清晰明了 > 代码复用**
+
+每个 API 的 response 类型应该：
+1. **自解释**：类型名称清楚表达用途和场景
+2. **精准**：只包含该 API 实际需要返回的字段
+3. **组合优于继承**：通过组合基础类型构建复杂对象，避免深层继承链
+
+**设计规范**：
+
+- **创建操作 (create)**: 仅返回新资源 ID 和客户端无法推断的必要字段 (如 `created_at`).
+- **列表操作 (list)**: 返回 `PaginatedData<ItemType>`，仅包含列表展示所需字段，不包含详情/大字段.
+- **详情获取**: 返回完整对象信息.
+- **上下文敏感**: 区分 "Public" (无身份) 和 "Protected" (有身份) 下的数据形态.
+
+### 强类型要求
+
+- 所有 request/response 必须强类型
+- 类型命名遵循：
+  - Response payload: `XxxData`
+  - 列表项: `XxxItem`
+  - 基础信息: `XxxInfo` (Identity)
+  - 完整信息: `XxxDetail`
+
+---
+
+## 通用类型定义 (Domain Primitives)
+
+本节定义跨模块复用的基础值对象。
+
+### 1. 基础标识与枚举
+
+```typescript
+// 用户类型枚举
+type UserType = 'temp' | 'normal' | 'admin' | 'system';
+
+// 消息类型枚举
+type MessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'system';
+type SendMessageType = Exclude<MessageType, 'system'>;
+
+// 隐私级别枚举
+type PrivacyLevel = 'public' | 'friends' | 'private';
+
+// 反应类型枚举
+type ReactionType = 'like' | 'love' | 'laugh' | 'angry' | 'sad' | 'wow';
+
+// 角色枚举
+type GroupRole = 'owner' | 'admin' | 'member';
+```
+
+### 2. 位置与地理信息
+
+**重要概念：用户真实位置 vs 浏览锚点位置**
+
+本系统区分两种位置：
+
+- **用户真实位置**：通过 `POST /api/v1/protected/user/me/location` 更新；属于用户隐私数据，用于“被其他人发现我/展示我的大致位置”。
+- **浏览锚点位置（reference_point）**：作为请求参数传入；用于“我当前在看哪里/以哪里为基准计算距离”。
+
+核心原则：所有 `distance/bearing_degrees` 等距离结果必须由服务端基于 `reference_point` 计算并返回；客户端不得自行计算用于排序。
+
+```typescript
+// 基础坐标点 (经纬度)
+interface GeoPoint {
+  latitude: number;  // [-90, 90]
+  longitude: number; // [-180, 180]
+}
+
+// 命名位置 (用于存储/展示)
+interface Location extends GeoPoint {
+  location_name: string; // 必填，无名称时使用默认值或空字符串
+}
+
+// 相对位置 (用于搜索结果/附近推荐)
+// distance 和 bearing_degrees 基于 reference_point 计算
+interface RelativeLocation extends Location {
+  distance: number;        // 距离浏览锚点的距离 (米)
+  bearing_degrees: number; // 相对浏览锚点的方位角 [0, 360)
+}
+
+// 视口边界 (用于地图查询)
+interface Bounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
+
+interface MapViewport {
+  bounds: Bounds;
+  zoom: number;
+}
+```
+
+### 3. 分页与元数据
+
+```typescript
+// 分页请求参数
+interface PaginationParams {
+  limit?: number;  // Default: 20, Max: 100
+  cursor?: string; // Opaque string
+}
+
+// 分页响应元数据
+interface PaginationMeta {
+  has_more: boolean;
+  next_cursor?: string;
+}
+
+// 通用分页容器
+interface PaginatedData<T> {
+  items: T[];
+  pagination: PaginationMeta;
+}
+
+// 搜索基础参数（包含浏览锚点位置）
+interface SearchBaseParams {
+  reference_point: GeoPoint; // 浏览锚点位置（用户当前浏览的地理位置，用于计算距离和推荐内容）
+  limit?: number;            // 每页数量，默认 20，最大 100
+  cursor?: string;           // 分页游标
+}
+
+// 字段可见性元数据 (用于隐私控制)
+type FieldVisibility = 'visible' | 'hidden';
+type HiddenReason = 'privacy' | 'blocked' | 'not_available';
+
+interface FieldVisibilityMeta {
+  visibility: FieldVisibility;
+  reason?: HiddenReason;
+}
+```
+
+### 4. 媒体资源
+
+```typescript
+// 媒体图片信息
+interface MomentImage {
+  url: string;
+  width?: number;
+  height?: number;
+  content_type?: string;
+}
+
+// 消息附件/媒体信息
+interface MessageMedia {
+  url: string;
+  thumbnail_url?: string;
+  file_name?: string;
+  file_size?: number;
+  duration?: number;
+  width?: number;
+  height?: number;
+  mime_type?: string;
+}
+```
+
+---
+
+## 领域实体定义 (Domain Entities)
+
+本节定义业务核心对象。遵循 **Identity (Info) -> Item (List) -> Detail (Full)** 的分层模式。
+
+### 1. 用户 (User)
+
+**UserInfo**: 仅包含身份标识，公共且安全。(原 `UserInfo` 重定义为最小集)
+```typescript
+interface UserInfo {
+  user_id: number;      // Safe Integer
+  nickname: string;
+  avatar_url?: string;
+  user_type: UserType;
+}
+```
+
+**UserRelation**: 当前用户与目标用户的关系 (仅 Protected 接口可用)。
+```typescript
+interface UserRelation {
+  is_mutual_follow: boolean;
+  is_following: boolean;
+  is_followed_by: boolean;
+  is_blocked: boolean;
+  is_blocking: boolean;
+  has_pending_follow_request: boolean;
+}
+```
+
+**UserItem**: 列表/搜索结果中的用户对象。
+```typescript
+interface UserItem extends UserInfo {
+  bio?: string;
+  tags?: string[];
+  
+  // 隐私字段 (可能被隐藏)
+  is_online: boolean | null;
+  is_online_meta: FieldVisibilityMeta;
+  
+  last_online: string | null;
+  last_online_meta: FieldVisibilityMeta;
+  
+  // 位置信息（场景相关，且受隐私控制）
+  // - 搜索/发现场景（search_by_*, feed/users）：返回 RelativeLocation（包含距离）
+  // - 列表场景（friends, following, followers）：返回 Location（仅位置名称）或 null
+  location?: RelativeLocation | Location | null; 
+  location_meta: FieldVisibilityMeta;
+
+  // 关系状态 (Optional: 仅在需要且已登录时返回)
+  relation?: UserRelation;
+}
+
+// Public 端点专用：剔除所有“依赖当前用户上下文”的字段
+// 说明：这些别名用于让 /public/** 的 response 类型保持稳定、身份无关。
+type UserPublicItem = Omit<UserItem, 'relation'>;
+```
+
+**UserDetail**: 用户详情页完整数据。
+```typescript
+interface UserDetail extends UserItem {
+  created_at?: string; // 公开注册时间?
+  // 统计数据通常建议单独接口获取，或在此处聚合
+  stats?: UserStats;
+}
+
+interface UserStats {
+  moments_count: number;
+  friends_count: number;
+  followers_count: number;
+  following_count: number;
+}
+```
+
+// 267| (Empty Line)
+
+### 2. 群组 (Group)
+
+**GroupInfo**: 基础标识。(原 `GroupBase`)
+```typescript
+interface GroupInfo {
+  group_chat_id: string; // UUID
+  name: string;
+  avatar_url?: string;
+  members_count: number;
+}
+```
+
+**GroupSettings**: 群组设置。
+```typescript
+interface GroupSettings {
+  join_method: 'open' | 'approval' | 'invite_only';
+  is_searchable: boolean;
+  max_members: number;
+  location: Location;
+}
+
+interface GroupSettingsInput {
+  join_method?: 'open' | 'approval' | 'invite_only';
+  is_searchable?: boolean;
+  max_members?: number;
+  location?: Location;
+}
+```
+
+**GroupMyState**: 当前用户在群内的状态 (仅 Protected 接口可用)。
+```typescript
+interface GroupMyState {
+  role: GroupRole;
+  is_joined: boolean;
+  unread_count: number;
+  is_muted: boolean;
+  is_pinned: boolean;
+  joined_at?: string;
+}
+```
+
+**GroupItem**: 列表/搜索结果/推荐流中的群组对象。
+```typescript
+interface GroupItem extends GroupInfo {
+  description?: string;
+  tags?: string[];
+  has_password: boolean;
+  
+  // 位置信息（场景相关）
+  // - 搜索/发现场景（search_by_*, feed/groups）：返回 RelativeLocation（包含距离）
+  // - 列表场景（user/groups, group_chats/me）：返回 Location（仅位置名称）
+  location?: RelativeLocation | Location;
+  
+  // 我与群组的关系 (Optional: 仅在需要且已登录时返回)
+  my_state?: GroupMyState;
+}
+
+// Public 端点专用：剔除 my_state（我的群内状态/未读/免打扰等）
+type GroupPublicItem = Omit<GroupItem, 'my_state'>;
+
+```
+
+**JoinedGroupItem**: 我加入的群组列表项。
+```typescript
+interface JoinedGroupItem extends GroupItem {
+  // 强制包含 my_state
+  my_state: GroupMyState;
+  
+  // 群组最后活跃时间（群组级别字段，不在 my_state 中）
+  last_activity_at: string;
+}
+```
+
+**GroupDetail**: 群组详情。
+```typescript
+interface GroupDetail extends GroupItem {
+  created_at: string;
+  owner_id: number;
+  // 其他详情配置
+  settings?: GroupSettings; 
+}
+```
+
+### 3. 生活瞬间 (Moment)
+
+**MomentItem**: 信息流中的瞬间对象。
+```typescript
+interface MomentItem {
+  moment_id: string;
+  user: UserInfo; // 作者信息
+  
+  description: string;
+  images?: MomentImage[];
+  tags: string[];
+  
+  // 位置信息（场景相关）
+  // - 搜索/发现场景（search_by_*, feed/*）：返回 RelativeLocation（包含距离）
+  // - 个人历史场景（moments/me/*, user/moments）：返回 Location（仅位置名称）
+  location?: RelativeLocation | Location;
+  
+  created_at: string;
+  
+  // 统计
+  likes_count: number;
+  comments_count: number;
+  
+  // 互动状态：仅登录后返回（未登录时字段不存在）
+  is_liked?: boolean;
+  is_favorited?: boolean;
+}
+
+// Public 端点专用：剔除“互动状态”（依赖当前用户上下文）
+type MomentPublicItem = Omit<MomentItem, 'is_liked' | 'is_favorited'>;
+
+// 时间范围参数（用于地图/搜索等按时间过滤的场景）
+interface TimeRangeParams {
+  // 绝对时间范围（二选一：from/to 可同时提供）
+  from?: string; // UTC ISO 8601
+  to?: string;   // UTC ISO 8601
+
+  // 预设时间范围（与 from/to 互斥；若同时提供，服务端必须返回 10003）
+  preset?: '24h' | '7d' | '30d';
+}
+```
+
+### 4. 评论 (Comment)
+
+**CommentListItem**: 评论列表项。
+```typescript
+interface CommentListItem {
+  comment_id: string;
+  user: UserInfo;
+  content: string;
+  parent_id?: string;       // 父评论ID（回复时存在）
+  created_at: string;
+  likes_count: number;
+  replies_count: number;    // 子评论数量
+}
+```
+
+**CommentLikeItem**: 评论点赞列表项。
+```typescript
+interface CommentLikeItem {
+  user: UserInfo;
+  liked_at: string;
+}
+```
+
+### 5. 消息 (Message)
+
+**MessageReplyTo**: 回复引用快照。
+```typescript
+interface MessageReplyTo {
+  message_id: string;
+  user_id: number;
+  nickname: string;
+  content: string; // 文本预览
+}
+```
+
+**PrivateMessageItem**: 私聊消息。
+```typescript
+interface PrivateMessageItem {
+  message_id: string;
+  type: MessageType;
+  
+  content?: string;
+  media?: MessageMedia;
+  
+  sender: UserInfo;
+  
+  reply_to?: MessageReplyTo;
+  
+  sent_at: string;
+  edited_at?: string;
+  
+  is_recalled: boolean;
+  recalled_at?: string;
+}
+```
+
+**GroupMessageItem**: 群聊消息 (增加提及、已读等)。
+```typescript
+interface GroupMessageItem {
+  message_id: string;
+  type: MessageType;
+  
+  content?: string;
+  media?: MessageMedia;
+  
+  sender: UserInfo;
+  
+  reply_to?: MessageReplyTo;
+  
+  mentions?: number[];  // @UserIDs
+  
+  sent_at: string;
+  edited_at?: string;
+  
+  is_recalled: boolean;
+  recalled_by?: number;
+  recalled_at?: string;
+  
+  read_count?: number;
+}
+```
+
+**PrivateChatListItem**: 私聊会话列表项。
+```typescript
+interface PrivateChatListItem {
+  other_user: UserInfo;
+  unread_count: number;
+  last_message?: {
+    message_id: string;
+    content?: string;
+    type: MessageType;
+    sender_id: number;
+    sent_at: string;
+  };
+  last_activity_at: string;
+  is_muted: boolean;
+  is_pinned: boolean;
+  
+  // 对方在线状态 (快照)
+  is_online: boolean;
+}
+```
+
+---
+
+## 统一响应格式
+
+```typescript
+interface ApiResponse<T = void> {
+  code: number;       // 0: Success, != 0: Error
+  message?: string;   // Required if code != 0
+  data?: T;           // Required if code == 0 and T != void
+  request_id: string; // Trace ID
+}
+```
+
+---
+
+## 地图渲染实体 (Map)
+
+```typescript
+// 地图渲染项 (聚合或实体)
+interface MapRenderItem {
+  id: string; // Unique ID
+  type: 'cluster' | 'user' | 'group' | 'moment';
+  location: GeoPoint;
+  
+  // 聚合数据
+  cluster?: {
+    count: number;
+    label?: string;
+    preview_urls?: string[];
+  };
+
+  // 实体数据 (User/Group/Moment)
+  entity?: {
+    title: string;
+    subtitle?: string;
+    cover_url?: string;
+    payload_id: string; // 原始业务ID
+    category?: string;  // 业务分类
+  };
+}
+```
+
+---
+
+## 补充原则
+
+### 客户端数据提交
+- **只提交意图**：如 `join_group` (intent)，而不是 `insert_member_row` (db action).
+- **不提交计算字段**：如 `distance`, `is_friend` 等由后端计算.
+
+### 隐私控制机制
+- 隐私字段 (`online`, `location`) 必须通过 `value | null` + `meta` 的形式返回，以便客户端区分 "无数据" 和 "无权限"。
+- 搜索结果中，若用户隐藏了位置，`location` 字段应为 `null`，且该记录可能直接被服务端过滤掉 (取决于策略)。
+
+### 密码安全
+- 传输使用 HTTPS。
+- 客户端发送明文 (Over TLS)。
+- 服务端存储 Hash (Argon2/Bcrypt)。
+
+### 幂等性
+- 关键操作 (支付、发消息、创建) 必须检查 `Idempotency-Key` Header。
+- 冲突时返回 `22000` (Idempotency Key Conflict) 或回放之前的成功响应。

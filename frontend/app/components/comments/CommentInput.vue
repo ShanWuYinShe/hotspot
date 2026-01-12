@@ -1,71 +1,62 @@
 <template>
   <div class="w-full">
-    <!-- 回复提示 -->
-    <div v-if="replyTo" class="mb-2">
-      <div class="flex items-center justify-between gap-2">
-        <UAlert
-          class="flex-1 min-w-0"
-          color="neutral"
-          variant="soft"
-          icon="i-lucide-corner-up-left"
-          :title="`回复 @${replyTo.user.nickname}`"
-        />
-        <UButton
-          variant="ghost"
-          size="sm"
-          icon="i-lucide-x"
-          @click="handleCancelReply"
-        />
+    <!-- 回复提示卡片 -->
+    <div
+      v-if="replyTo"
+      class="flex items-center justify-between gap-2 p-3 bg-neutral-50/80 dark:bg-neutral-900/55 rounded-t-3xl border-b border-neutral-100 dark:border-neutral-800"
+    >
+      <div class="flex items-center gap-1.5 text-sm text-neutral-500 dark:text-neutral-400">
+        <UIcon name="i-lucide-corner-up-left" class="size-3" />
+        <span>回复</span>
+        <span class="font-semibold text-neutral-900 dark:text-white">@{{ replyTo.user.nickname }}</span>
       </div>
+      <UButton
+        variant="ghost"
+        color="neutral"
+        icon="i-lucide-x"
+        size="xs"
+        @click="$emit('cancelReply')"
+      />
     </div>
 
-    <!-- 输入框 -->
-    <div class="flex gap-3">
-      <!-- 当前用户头像 -->
-      <UAvatar
-        v-if="hydratedUser"
-        :alt="hydratedUser.nickname"
+    <!-- 输入框卡片 -->
+    <div
+      class="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden"
+      :class="[
+        !!replyTo ? 'rounded-b-3xl border-t-0' : 'rounded-3xl'
+      ]"
+    >
+      <UTextarea
+        v-model="content"
+        :placeholder="placeholder"
         size="sm"
-        class="shrink-0"
-      >
-        {{ hydratedUser.nickname?.charAt(0) }}
-      </UAvatar>
+        :rows="1"
+        :maxrows="5"
+        autoresize
+        variant="none"
+        @keydown.meta.enter="handleSubmit"
+        @keydown.ctrl.enter="handleSubmit"
+      />
+      
+      <div class="flex items-center justify-between px-3 pb-3">
+        <!-- 工具栏 (表情等) - 预留位置 -->
+        <div class="flex gap-1">
+          <UButton variant="ghost" color="neutral" icon="i-lucide-smile" size="xs" disabled />
+          <UButton variant="ghost" color="neutral" icon="i-lucide-image" size="xs" disabled />
+        </div>
 
-      <!-- 输入区域 -->
-      <div class="flex-1">
-        <UTextarea
-          v-model="content"
-          :placeholder="placeholder"
-          :rows="3"
-          :maxlength="500"
-          @keydown.meta.enter="handleSubmit"
-          @keydown.ctrl.enter="handleSubmit"
-        />
-        
-        <!-- 字数统计和操作按钮 -->
-        <div class="flex items-center justify-between mt-2">
-          <UBadge color="neutral" variant="soft" size="xs">
-            {{ content.length }} / 500
-          </UBadge>
-          
-          <div class="flex gap-2">
-            <UButton
-              v-if="replyTo"
-              variant="ghost"
-              size="sm"
-              @click="handleCancelReply"
-            >
-              取消
-            </UButton>
-            <UButton
-              size="sm"
-              :disabled="!canSubmit"
-              :loading="submitting"
-              @click="handleSubmit"
-            >
-              {{ replyTo ? '回复' : '评论' }}
-            </UButton>
-          </div>
+        <div class="flex items-center gap-3">
+          <span v-if="content.length > 0" class="text-sm text-neutral-500 dark:text-neutral-400">{{ content.length }}/500</span>
+          <UButton
+            size="xs"
+            color="primary"
+            variant="solid"
+            :disabled="!canSubmit"
+            :loading="submitting"
+            @click="handleSubmit"
+          >
+            {{ replyTo ? '回复' : '发送' }}
+          </UButton>
         </div>
       </div>
     </div>
@@ -73,90 +64,54 @@
 </template>
 
 <script setup lang="ts">
-import type { CommentListItem } from '~/types/api'
+import type { CommentListItem, UserInfo } from '~/types/api'
 import { useCommentsService } from '~/services/comments.service'
 
-// 扩展类型：包含前端本地管理的点赞状态
-interface CommentWithLikeStatus extends CommentListItem {
-  liked_by_me?: boolean
-}
+interface CommentWithLikeStatus extends CommentListItem { liked_by_me?: boolean; reply_to_user?: UserInfo }
 
-const props = defineProps<{
-  momentId: string
-  replyTo?: CommentWithLikeStatus
-}>()
-
+const props = defineProps<{ momentId: string; replyTo?: CommentWithLikeStatus }>()
 const emit = defineEmits<{
   submit: [comment: CommentWithLikeStatus]
   cancelReply: []
 }>()
 
 const commentsService = useCommentsService()
-// 使用水合安全的 store 访问
 const authStore = useAuthStore()
-const hydratedUser = useHydratedStore(authStore, 'user', null as typeof authStore.user)
 const feedback = useFeedbackStore()
 
-// 状态
 const content = ref('')
 const submitting = ref(false)
 
-// 占位符
-const placeholder = computed(() => {
-  if (props.replyTo) {
-    return `回复 @${props.replyTo.user.nickname}...`
-  }
-  return '写下你的评论...'
-})
+const placeholder = computed(() => props.replyTo ? `回复 @${props.replyTo.user.nickname}...` : '写下你的评论...')
+const canSubmit = computed(() => content.value.trim().length > 0 && !submitting.value)
 
-// 是否可以提交
-const canSubmit = computed(() => {
-  return content.value.trim().length > 0 && !submitting.value
-})
-
-// 提交评论
 const handleSubmit = async () => {
   if (!canSubmit.value) return
-  
   submitting.value = true
   try {
-    const response = await commentsService.create({
+    const res = await commentsService.create({
       moment_id: props.momentId,
       content: content.value.trim(),
-      parent_id: props.replyTo?.id
+      parent_id: props.replyTo?.comment_id
     })
     
-    // 构造新评论对象（用于本地显示）
-    const newComment: CommentWithLikeStatus = {
-      id: response.id,
-      user: {
-        ...(authStore.user!),
-        user_type: 'normal' as const
-      },
+    emit('submit', {
+      comment_id: res.comment_id,
+      user: { ...authStore.user!, user_type: 'normal' },
       content: content.value.trim(),
-      parent_id: props.replyTo?.id,
+      parent_id: props.replyTo?.comment_id,
       reply_to_user: props.replyTo?.user,
       created_at: new Date().toISOString(),
       likes_count: 0,
       replies_count: 0,
       liked_by_me: false
-    }
-    
-    emit('submit', newComment)
-    
-    // 清空输入
+    })
     content.value = ''
-    
     feedback.success(props.replyTo ? '回复成功' : '评论成功')
-  } catch (error: unknown) {
-    feedback.error('发送失败', getErrorMessage(error, '评论发送失败'))
+  } catch (e) {
+    feedback.error('发送失败', getErrorMessage(e))
   } finally {
     submitting.value = false
   }
-}
-
-// 取消回复
-const handleCancelReply = () => {
-  emit('cancelReply')
 }
 </script>

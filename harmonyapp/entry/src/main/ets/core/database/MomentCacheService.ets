@@ -39,17 +39,17 @@ export class MomentCacheService {
 
       for (const moment of moments) {
         const valueBucket: ValuesBucket = {
-          id: moment.id,
+          id: moment.moment_id,
           user_id: moment.user.user_id,
           nickname: moment.user.nickname,
           avatar_url: moment.user.avatar_url || '',
           description: moment.description,
           images: JSON.stringify(moment.images || []),
           tags: JSON.stringify(moment.tags || []),
-          latitude: moment.geo.latitude,
-          longitude: moment.geo.longitude,
-          location_name: moment.geo.location_name,
-          distance: moment.geo.distance,
+          latitude: moment.location?.latitude ?? 0,
+          longitude: moment.location?.longitude ?? 0,
+          location_name: moment.location?.location_name ?? '',
+          distance: moment.location?.distance ?? 0,
           likes_count: moment.likes_count,
           comments_count: moment.comments_count,
           created_at: moment.created_at,

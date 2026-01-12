@@ -8,7 +8,9 @@
  */
 
 import type { PaginatedData, ApiResponse } from '~/types/api'
-import { ensureRefreshToken, isTokenExpiredError } from '~/utils/token'
+import { ensureRefreshToken } from '~/utils/token'
+import { extractApiErrorSnapshot, isTokenInvalidOrExpiredCode } from '~/utils/apiError'
+import type { FetchOptions } from 'ofetch'
 
 export abstract class BaseService {
   /**
@@ -22,7 +24,7 @@ export abstract class BaseService {
    * 核心请求方法
    * 封装了 Token 注入、错误处理和自动重试逻辑
    */
-  private async request<T>(url: string, options: any = {}): Promise<T> {
+  private async request<T>(url: string, options: FetchOptions = {}): Promise<T> {
     const performRequest = async (forceToken?: string) => {
       const token = forceToken ?? this.token
       const headers = { ...options.headers }
@@ -58,7 +60,8 @@ export abstract class BaseService {
     } catch (error) {
       // Token 过期处理
       // 前置条件：本次请求确实带了 access_token（未登录/缺 token 的 401 不应触发 refresh）
-      if (this.token && isTokenExpiredError(error)) {
+      const snapshot = extractApiErrorSnapshot(error)
+      if (this.token && isTokenInvalidOrExpiredCode(snapshot.code)) {
         const refreshed = await ensureRefreshToken()
         if (refreshed) {
           // 使用新 Token 重试
@@ -97,7 +100,7 @@ export abstract class BaseService {
    */
   protected paginate<T>(
     url: string,
-    params: { limit?: number; cursor?: string } & Record<string, any> = {}
+    params: { limit?: number; cursor?: string } & Record<string, string | number | boolean | undefined> = {}
   ): Promise<PaginatedData<T>> {
     return this.post<PaginatedData<T>>(url, params)
   }

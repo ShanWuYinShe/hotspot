@@ -8,19 +8,20 @@
  */
 
 import { defineStore } from 'pinia'
-import type { MomentSearchItem } from '~/types/api'
+import type { MomentItem } from '~/types/api'
 
 /**
  * 客户端动态数据类型
- * 扩展 MomentSearchItem（API 搜索结果），添加客户端状态字段
+ * 扩展 MomentItem（API 搜索结果），添加客户端状态字段
  */
-export interface Moment extends MomentSearchItem {
+export interface Moment extends MomentItem {
   isLiking?: boolean
   isDeleting?: boolean
   optimisticLike?: boolean
   localImages?: string[]
-  is_favorited?: boolean
-  liked_by_me?: boolean
+  // is_liked 和 is_favorited 继承自 MomentItem（可选字段）
+  // 未登录时这些字段不存在（undefined）
+  liked_by_me: boolean  // 客户端状态，用于本地跟踪
 }
 
 export interface MomentComment {
@@ -118,7 +119,7 @@ export const useMomentsStore = defineStore('moments', () => {
     }
 
     newMoments.forEach(moment => {
-      _moments.value[moment.id] = moment
+      _moments.value[moment.moment_id] = moment
     })
     _pagination.value[type] = { hasMore, cursor }
 
@@ -132,7 +133,7 @@ export const useMomentsStore = defineStore('moments', () => {
 
   const addCreatedMoment = (moment: Moment) => {
     const data = { ...moment }
-    _moments.value[moment.id] = data
+    _moments.value[moment.moment_id] = data
     _feeds.value.mine.unshift(data)
     return data
   }
@@ -166,7 +167,7 @@ export const useMomentsStore = defineStore('moments', () => {
     delete _comments.value[momentId]
     Object.keys(_feeds.value).forEach(feedType => {
       const key = feedType as keyof typeof _feeds.value
-      _feeds.value[key] = _feeds.value[key].filter(m => m.id !== momentId)
+      _feeds.value[key] = _feeds.value[key].filter(m => m.moment_id !== momentId)
     })
   }
 
@@ -179,7 +180,7 @@ export const useMomentsStore = defineStore('moments', () => {
   const setSearchResults = (momentsList: Moment[]) => {
     const results = momentsList.map(item => ({ ...item }))
     results.forEach(moment => {
-      _moments.value[moment.id] = moment
+      _moments.value[moment.moment_id] = moment
     })
     return results
   }

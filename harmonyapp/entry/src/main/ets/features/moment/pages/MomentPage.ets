@@ -136,7 +136,7 @@ export struct MomentPage {
 
     try {
       const request: LikeMomentRequest = {
-        moment_id: moment.id
+        moment_id: moment.moment_id
       };
       const response = await ApiClient.likeMoment(request);
       
@@ -285,7 +285,7 @@ export struct MomentPage {
         ListItem() {
           this.buildMomentCard(moment, index)
         }
-      }, (moment: MomentSearchItem) => moment.id)
+      }, (moment: MomentSearchItem) => moment.moment_id)
     }
     .width('100%')
     .layoutWeight(1)
@@ -365,9 +365,9 @@ export struct MomentPage {
                  .objectFit(ImageFit.Cover)
                  .borderRadius(DesignConstants.RADIUS.MD)
                  .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
-                 .geometryTransition('moment_img_' + moment.id + '_' + imgIndex)
+                 .geometryTransition('moment_img_' + moment.moment_id + '_' + imgIndex)
                  .onClick(() => {
-                    this.previewImage(moment.id, moment.images || [], imgIndex);
+                    this.previewImage(moment.moment_id, moment.images || [], imgIndex);
                  })
              }
              .aspectRatio(1)
@@ -398,19 +398,21 @@ export struct MomentPage {
       }
 
       // 位置信息
-      IntelligentLocationCard({
-        latitude: moment.geo.latitude,
-        longitude: moment.geo.longitude,
-        locationName: moment.geo.location_name,
-        distance: moment.geo.distance,
-        altitude: 0 // 列表数据暂时不包含海拔信息，需详情接口获取
-      })
+      if (moment.location) {
+        IntelligentLocationCard({
+          latitude: moment.location.latitude,
+          longitude: moment.location.longitude,
+          locationName: moment.location.location_name,
+          distance: moment.location.distance,
+          altitude: 0 // 列表数据暂时不包含海拔信息，需详情接口获取
+        })
+      }
 
       // 互动区域
       Row({ space: 16 }) {
         Row({ space: 4 }) {
           LikeButton({ 
-            momentId: moment.id, 
+            momentId: moment.moment_id, 
             initialLikesCount: moment.likes_count,
             onLike: () => this.likeMoment(moment, index)
           })

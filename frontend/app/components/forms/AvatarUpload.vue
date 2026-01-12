@@ -10,7 +10,7 @@
                     class="cursor-pointer"
                     @update:model-value="handleFileSelected"
                 >
-                    <div @click="open()">
+                    <div class="relative group cursor-pointer" @click="open()">
                         <UAvatar
                             :alt="user?.nickname"
                             :src="avatarPreview || user?.avatar_url"
@@ -21,9 +21,9 @@
 
                         <!-- 上传按钮覆盖层 -->
                         <div
-                            class="hs-avatar-upload-overlay"
+                            class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full bg-black/50"
                         >
-                            <UIcon name="i-lucide-camera" :size="24" />
+                            <UIcon name="i-lucide-camera" class="size-8 text-white" />
                         </div>
                     </div>
                 </UFileUpload>
@@ -37,7 +37,7 @@
             icon="i-lucide-image"
             label="点击选择或拖拽图片到这里"
             description="仅支持图片，最大 2MB"
-            class="w-full max-w-xs min-h-32"
+            class="w-full max-w-xs h-32"
             @update:model-value="handleFileSelected"
         />
 
@@ -53,8 +53,9 @@
                 <UTooltip text="从本地选择图片文件">
                     <UButton
                         variant="outline"
+                        color="neutral"
                         :disabled="uploading"
-                        leading-icon="i-lucide-image"
+                        icon="i-lucide-image"
                         @click="open()"
                     >
                         选择图片
@@ -66,7 +67,7 @@
                 <UButton
                     color="primary"
                     :loading="uploading"
-                    leading-icon="i-lucide-cloud-upload"
+                    icon="i-lucide-cloud-upload"
                     @click="uploadAvatar"
                 >
                     上传头像
@@ -86,7 +87,7 @@
 </template>
 
 <script setup lang="ts">
-import { useUploadService } from '~/services/upload.service'
+import { useUploadService } from "~/services/upload.service";
 
 interface Props {
     user?: {
@@ -100,7 +101,7 @@ const emit = defineEmits<{
     uploaded: [fileId: string];
 }>();
 
-const feedback = useFeedbackStore()
+const feedback = useFeedbackStore();
 const selectedFile = ref<File | null>(null);
 const avatarPreview = ref<string>("");
 const uploading = ref(false);
@@ -115,17 +116,17 @@ const handleFileSelected = (file: File | null | undefined) => {
 const processFile = (file: File) => {
     // 验证文件类型
     if (!file.type.startsWith("image/")) {
-        feedback.error("文件格式错误", "请选择图片文件")
+        feedback.error("文件格式错误", "请选择图片文件");
         selectedFile.value = null;
         return;
     }
     // 验证文件大小 (2MB)
     if (file.size > 2 * 1024 * 1024) {
-        feedback.error("文件太大", "图片大小不能超过 2MB")
+        feedback.error("文件太大", "图片大小不能超过 2MB");
         selectedFile.value = null;
         return;
     }
-    
+
     // 生成预览
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -143,23 +144,29 @@ const uploadAvatar = async () => {
     try {
         // 使用 upload.service.ts 上传头像
         const uploadService = useUploadService();
-        
+
         try {
-            const response = await uploadService.uploadFile(selectedFile.value, 'avatar');
-            
-            feedback.success("头像上传成功", "您的头像已更新")
+            const response = await uploadService.uploadFile(
+                selectedFile.value,
+                "avatar",
+            );
+
+            feedback.success("头像上传成功", "您的头像已更新");
 
             // 发送上传成功事件（本地预览已在选择文件时生成）
             emit("uploaded", response.file_id);
         } catch (error: unknown) {
-            feedback.error("头像上传失败", getErrorMessage(error, "请稍后重试"))
+            feedback.error(
+                "头像上传失败",
+                getErrorMessage(error, "请稍后重试"),
+            );
             throw error;
         }
 
         // 清理状态
         selectedFile.value = null;
     } catch (error: unknown) {
-        feedback.error("上传失败", getErrorMessage(error, "请稍后重试"))
+        feedback.error("上传失败", getErrorMessage(error, "请稍后重试"));
     } finally {
         uploading.value = false;
     }

@@ -7,23 +7,23 @@ import { defineStore } from 'pinia'
  */
 export const useAdminStore = defineStore('admin', () => {
   const hasAccess = ref(false)
-  const isSuper = ref(false)
   const permissions = ref<string[]>([])
   const checkedAt = ref<number | null>(null)
 
-  const setAccess = (value: boolean, opts?: { isSuper?: boolean; permissions?: string[] }) => {
+  const setAccess = (value: boolean, opts?: { permissions?: string[] }) => {
     hasAccess.value = value
-    isSuper.value = !!opts?.isSuper
     permissions.value = opts?.permissions ?? []
     checkedAt.value = Date.now()
   }
 
   const hasPermission = (key: string) => {
     if (!hasAccess.value) return false
-    if (isSuper.value) return true
     if (permissions.value.includes('*')) return true
     return permissions.value.includes(key)
   }
+
+  // Derived property for convenience, though internal logic uses hasPermission
+  const isSuper = computed(() => permissions.value.includes('*'))
 
   return {
     hasAccess,
@@ -34,4 +34,3 @@ export const useAdminStore = defineStore('admin', () => {
     hasPermission
   }
 })
-

@@ -9,7 +9,7 @@ import { LocationUtil, LocationInfo } from '../../../core/location/LocationUtil'
 import { PageNames } from '../../../constants/AppConstants';
 import { 
   UserSearchItem, 
-  GeoData,
+  RelativeLocation,
   GroupSearchItem, 
   MomentSearchItem 
 } from '../../../core/types/api';
@@ -159,13 +159,13 @@ export struct MapPage {
         const users = response.data.items
           .filter((u: UserSearchItem) => (typeof myId === 'number' ? u.user_id !== myId : true))
           // 位置信息可能因隐私返回 null/undefined，此处直接过滤避免运行时崩溃
-          .filter((u: UserSearchItem) => !!u.geo);
+          .filter((u: UserSearchItem) => !!u.location);
 
         const userMarkers: ExtendedMapMarker[] = users.map((user: UserSearchItem): ExtendedMapMarker => ({
           id: `user_${user.user_id}`,
           type: 'user',
-          latitude: (user.geo as GeoData).latitude,
-          longitude: (user.geo as GeoData).longitude,
+          latitude: (user.location as RelativeLocation).latitude,
+          longitude: (user.location as RelativeLocation).longitude,
           title: user.nickname,
           snippet: user.bio || '用户',
           data: user
@@ -193,10 +193,10 @@ export struct MapPage {
 
       if (response.code === 0 && response.data) {
         const groupMarkers: ExtendedMapMarker[] = response.data.items.map((group: GroupSearchItem): ExtendedMapMarker => ({
-          id: `group_${group.id}`,
+          id: `group_${group.group_chat_id}`,
           type: 'group',
-          latitude: group.geo.latitude,
-          longitude: group.geo.longitude,
+          latitude: group.location!.latitude,
+          longitude: group.location!.longitude,
           title: group.name,
           snippet: `${group.members_count} 成员`,
           data: group
@@ -224,10 +224,10 @@ export struct MapPage {
 
       if (response.code === 0 && response.data) {
         const momentMarkers: ExtendedMapMarker[] = response.data.items.map((moment: MomentSearchItem): ExtendedMapMarker => ({
-          id: `moment_${moment.id}`,
+          id: `moment_${moment.moment_id}`,
           type: 'moment',
-          latitude: moment.geo.latitude,
-          longitude: moment.geo.longitude,
+          latitude: moment.location!.latitude,
+          longitude: moment.location!.longitude,
           title: moment.user.nickname,
           snippet: moment.description.length > 20 ? 
             moment.description.substring(0, 20) + '...' : moment.description,
@@ -286,7 +286,7 @@ export struct MapPage {
         try {
           this.getUIContext().getRouter().pushUrl({
             url: `features/group/pages/${PageNames.GROUP_DETAIL}`,
-            params: { groupId: (marker.data as GroupSearchItem).id }
+            params: { groupId: (marker.data as GroupSearchItem).group_chat_id }
           });
         } catch (error) {
           hilog.error(DOMAIN_NUMBER, TAG, `跳转群组详情失败: ${error}`);
@@ -458,7 +458,7 @@ export struct MapPage {
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .margin({ bottom: 8 })
           
-          Text((this.selectedMarker.data as MomentSearchItem).geo.location_name)
+          Text((this.selectedMarker.data as MomentSearchItem).location!.location_name)
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
             .margin({ bottom: 12 })

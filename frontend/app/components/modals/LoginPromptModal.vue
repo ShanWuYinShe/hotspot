@@ -1,103 +1,130 @@
 <template>
-  <UModal
-    title="需要登录"
-    :description="message"
-  >
+    <UModal title="需要登录" :description="message">
     <template #body="{ close }">
-      <section class="flex justify-center mb-4">
-        <UAvatar
-          icon="i-lucide-lock"
-          size="xl"
-        />
-      </section>
+      <div class="p-6">
+          <div class="flex justify-center mb-6">
+            <UAvatar
+              icon="i-lucide-lock"
+              size="3xl"
+                    color="neutral"
+                    variant="soft"
+            />
+          </div>
 
       <UAlert
-        class="mb-4"
+        class="mb-6"
         color="neutral"
-        variant="soft"
-        icon="i-lucide-lock"
+        variant="subtle"
+        icon="i-lucide-shield"
         title="登录后即可解锁所有功能"
       />
 
-      <UCard variant="soft">
-        <ul class="space-y-2">
-          <li class="flex items-center gap-2">
-            <UBadge color="success" variant="soft" size="xs" square icon="i-lucide-circle-check" />
-            发布和分享生活瞬间
+      <UCard variant="soft" class="mb-2">
+        <ul class="space-y-3">
+          <li class="flex items-center gap-3 text-sm">
+                        <UIcon
+                            name="i-lucide-check-circle-2"
+                            class="shrink-0"
+                            size="18"
+                            color="success"
+                        />
+            <span>发布和分享生活瞬间</span>
           </li>
-          <li class="flex items-center gap-2">
-            <UBadge color="success" variant="soft" size="xs" square icon="i-lucide-circle-check" />
-            与好友互动和聊天
+          <li class="flex items-center gap-3 text-sm">
+                        <UIcon
+                            name="i-lucide-check-circle-2"
+                            class="shrink-0"
+                            size="18"
+                            color="success"
+                        />
+            <span>与好友互动和聊天</span>
           </li>
-          <li class="flex items-center gap-2">
-            <UBadge color="success" variant="soft" size="xs" square icon="i-lucide-circle-check" />
-            加入兴趣群组
+          <li class="flex items-center gap-3 text-sm">
+                        <UIcon
+                            name="i-lucide-check-circle-2"
+                            class="shrink-0"
+                            size="18"
+                            color="success"
+                        />
+            <span>加入兴趣群组</span>
           </li>
-          <li class="flex items-center gap-2">
-            <UBadge color="success" variant="soft" size="xs" square icon="i-lucide-circle-check" />
-            发现附近的人和地点
+          <li class="flex items-center gap-3 text-sm">
+                        <UIcon
+                            name="i-lucide-check-circle-2"
+                            class="shrink-0"
+                            size="18"
+                            color="success"
+                        />
+            <span>发现附近的人和地点</span>
           </li>
         </ul>
       </UCard>
+      </div>
     </template>
 
     <template #footer="{ close }">
-      <nav class="flex flex-col gap-3 w-full">
+      <div class="flex flex-col gap-3 w-full">
         <UButton
-          :block="true"
+          block
+          size="lg"
           @click="() => goToLogin(close)"
         >
           立即登录
         </UButton>
 
-        <p class="text-center text-xs">
-          还没有账号？
+                <div
+                    class="flex items-center justify-center gap-2 text-sm text-neutral-500 dark:text-neutral-400"
+                >
+          <span>还没有账号？</span>
           <UButton
             variant="link"
+            color="primary"
             @click="() => goToRegister(close)"
           >
             立即注册
           </UButton>
-        </p>
+        </div>
+
+        <USeparator label="或" />
 
         <UButton
-          :block="true"
+          block
           color="neutral"
           variant="ghost"
           @click="close"
         >
           继续浏览
         </UButton>
-      </nav>
+      </div>
     </template>
   </UModal>
 </template>
 
 <script setup lang="ts">
 const props = defineProps<{
-  actionName?: string
-  redirectPath?: string
-}>()
+    actionName?: string;
+    redirectPath?: string;
+}>();
 
-const router = useRouter()
+const router = useRouter();
 
 const message = computed(() => {
-  if (props.actionName) return `登录后即可${props.actionName}`
-  return '登录后即可使用完整功能'
-})
+    if (props.actionName) return `登录后即可${props.actionName}`;
+    return "登录后即可使用完整功能";
+});
 
 const goToLogin = (close: () => void) => {
-  close()
-  const query: Record<string, string> = { reason: 'action_required' }
-  if (props.redirectPath) query.redirect = props.redirectPath
-  if (props.actionName) query.action = props.actionName
-  router.push({ path: '/auth', query: { ...query, mode: 'login' } })
-}
+    close();
+    const query: Record<string, string> = { reason: "action_required" };
+    if (props.redirectPath) query.redirect = props.redirectPath;
+    if (props.actionName) query.action = props.actionName;
+    router.push({ path: "/auth", query: { ...query, mode: "login" } });
+};
 
 const goToRegister = (close: () => void) => {
-  close()
-  const query: Record<string, string> = {}
-  if (props.redirectPath) query.redirect = props.redirectPath
-  router.push({ path: '/auth', query: { ...query, mode: 'register' } })
-}
+    close();
+    const query: Record<string, string> = {};
+    if (props.redirectPath) query.redirect = props.redirectPath;
+    router.push({ path: "/auth", query: { ...query, mode: "register" } });
+};
 </script>

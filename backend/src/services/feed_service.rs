@@ -1,27 +1,26 @@
-use std::collections::HashMap;
-
 use redis::aio::ConnectionManager;
 use redis::AsyncCommands;
 use sqlx::PgPool;
+use std::str::FromStr;
 
 use crate::{
+    constants::{FEED_REASON_NEARBY_HOT, FEED_REASON_NEARBY_PEOPLE},
     dto::{
         request::{
             FeedFeedbackRequest, FeedGroupsRequest, FeedMomentsRequest, FeedTrendingRequest,
             FeedUsersRequest,
         },
         response::{
-            FeedGroupItem, FeedMomentItem, FeedTrendingData, FeedUserItem, GeoData,
-            GroupSearchItem, MomentSearchItem, PaginatedData, PaginationMeta, TrendingTagItem,
-            UserSearchItem,
+            FeedGroupItem, FeedTrendingData, FeedUserItem, GroupItem, MomentItem, PaginatedData,
+            PaginationMeta, RelativeLocation, TrendingTagItem, UserItem,
         },
     },
     error::AppError,
     repositories::{
         feed_repo::FeedRepository, group_repo::GroupRepository, moment_repo::MomentRepository,
-        tag_repo::TagRepository, user_online_status_repo::UserOnlineStatusRepository,
-        user_repo::UserRepository, user_settings_repo::UserSettingsRepository,
+        tag_repo::TagRepository, user_repo::UserRepository,
     },
+    types::enums::{FeedFeedbackAction, FeedSource, Trend},
     utils::validation::Validator,
 };
 
@@ -33,21 +32,22 @@ pub struct FeedService {
     user_repo: UserRepository,
     group_repo: GroupRepository,
     tag_repo: TagRepository,
-    user_settings_repo: UserSettingsRepository,
-    online_status_repo: UserOnlineStatusRepository,
+    presence_service: crate::services::presence_service::PresenceService,
 }
 
 impl FeedService {
     pub fn new(pool: PgPool, redis: ConnectionManager) -> Self {
         Self {
-            redis,
+            redis: redis.clone(),
             feed_repo: FeedRepository::new(pool.clone()),
             moment_repo: MomentRepository::new(pool.clone()),
             user_repo: UserRepository::new(pool.clone()),
             group_repo: GroupRepository::new(pool.clone()),
             tag_repo: TagRepository::new(pool.clone()),
-            user_settings_repo: UserSettingsRepository::new(pool.clone()),
-            online_status_repo: UserOnlineStatusRepository::new(pool),
+            presence_service: crate::services::presence_service::PresenceService::new(
+                redis,
+                pool,
+            ),
         }
     }
 
@@ -56,24 +56,25 @@ impl FeedService {
         &self,
         user_id: i64,
         req: FeedMomentsRequest,
-    ) -> Result<PaginatedData<FeedMomentItem>, AppError> {
+    ) -> Result<PaginatedData<MomentItem>, AppError> {
         let limit = Validator::validate_limit(req.limit, 100)? as i32;
         let cursor = req.cursor;
 
-        // 获取用户位置（用于计算距离）
-        let user_location = self.user_repo.get_location(user_id).await?;
+        // 获取用户位置（优先从 Redis 获取）
+        let user_location = self.presence_service.get_user_location(user_id).await?;
         let (user_lat, user_lng) = user_location.unwrap_or((35.154922, 112.682524));
 
         // 根据 source 筛选（使用新的 Feed 方法，返回带距离的结果）
-        let source = req.source.as_deref().unwrap_or("all");
+        let source_str = req.source.as_deref().unwrap_or("all");
+        let source = FeedSource::from_str(source_str).unwrap_or(FeedSource::All);
 
         let (moments, next_cursor) = match source {
-            "following" => {
+            FeedSource::Following => {
                 self.moment_repo
                     .get_following_feed(user_id, user_lat, user_lng, limit, cursor)
                     .await?
             }
-            "nearby" => {
+            FeedSource::Nearby => {
                 let radius = Validator::validate_radius(req.radius, 50000)? as f64;
                 self.moment_repo
                     .get_nearby_feed(user_lat, user_lng, radius, limit, cursor)
@@ -90,38 +91,50 @@ impl FeedService {
         let moment_ids: Vec<_> = moments.iter().map(|m| m.moment_id).collect();
         let tags_map = self.tag_repo.get_moment_tags_batch(&moment_ids).await?;
 
-        let items: Vec<FeedMomentItem> = moments
+        use crate::dto::response::MomentImage;
+        let items: Vec<MomentItem> = moments
             .into_iter()
             .map(|m| {
                 let tags = tags_map.get(&m.moment_id).cloned().unwrap_or_default();
-                FeedMomentItem {
-                    moment: MomentSearchItem {
-                        id: m.moment_id.to_string(),
-                        user: crate::dto::response::UserInfo {
-                            user_id: m.user_id,
-                            nickname: m.nickname,
-                            avatar_url: m.avatar_url,
-                            user_type: m.user_type,
-                        },
-                        description: m.description,
-                        images: Some(m.images),
-                        tags,
-                        created_at: m.created_at.to_rfc3339(),
-                        likes_count: m.likes_count as i32,
-                        comments_count: m.comments_count as i32,
-                        geo: GeoData {
-                            latitude: m.latitude,
-                            longitude: m.longitude,
-                            location_name: m.location_name,
-                            distance: m.distance as i32,
-                            degrees: m.degrees,
-                        },
+                let images = if m.images.is_empty() {
+                    None
+                } else {
+                    Some(
+                        m.images
+                            .iter()
+                            .map(|url| MomentImage {
+                                url: url.clone(),
+                                width: None,
+                                height: None,
+                                content_type: None,
+                            })
+                            .collect(),
+                    )
+                };
+
+                MomentItem {
+                    moment_id: m.moment_id.to_string(),
+                    user: crate::dto::response::UserInfo {
+                        user_id: m.user_id,
+                        nickname: m.nickname,
+                        avatar_url: m.avatar_url,
+                        user_type: m.user_type,
                     },
-                    reason: Some(match source {
-                        "following" => "好友动态".to_string(),
-                        "nearby" => "附近热门".to_string(),
-                        _ => "为你推荐".to_string(),
+                    description: m.description,
+                    images,
+                    tags,
+                    created_at: m.created_at.to_rfc3339(),
+                    likes_count: m.likes_count as i32,
+                    comments_count: m.comments_count as i32,
+                    location: Some(RelativeLocation {
+                        latitude: m.latitude,
+                        longitude: m.longitude,
+                        location_name: m.location_name,
+                        distance: m.distance as i32,
+                        bearing_degrees: m.bearing_degrees,
                     }),
+                    is_liked: None,
+                    is_favorited: None,
                 }
             })
             .collect();
@@ -158,24 +171,26 @@ impl FeedService {
         let items: Vec<FeedGroupItem> = groups
             .into_iter()
             .map(|g| FeedGroupItem {
-                group: GroupSearchItem {
-                    id: g.group_id.to_string(),
+                group: GroupItem {
+                    group_chat_id: g.group_id.to_string(),
                     name: g.name,
                     description: g.description,
                     avatar_url: g.avatar_url,
                     tags: Some(g.tags),
                     members_count: g.member_count,
                     has_password: g.has_password,
-                    geo: GeoData {
+                    location: Some(RelativeLocation {
                         latitude: g.latitude,
                         longitude: g.longitude,
                         location_name: g.location_name,
                         distance: g.distance as i32,
-                        degrees: g.degrees,
-                    },
+                        bearing_degrees: g.bearing_degrees,
+                    }),
                 },
-                reason: Some("附近热门".to_string()),
+                reason: Some(FEED_REASON_NEARBY_HOT.to_string()),
                 friends_in_group: None,
+                my_role: None,
+                is_joined: None,
             })
             .collect();
 
@@ -220,10 +235,16 @@ impl FeedService {
         let user_ids: Vec<i64> = users.iter().map(|u| u.user_id).collect();
 
         // 批量获取在线状态（受隐私设置控制）
-        let online_status_map = self.batch_get_online_status_with_privacy(&user_ids).await;
+        let online_status_map = self
+            .presence_service
+            .batch_get_online_status_with_privacy(&user_ids)
+            .await;
 
         // 批量获取位置可见性设置
-        let location_visible_map = self.batch_get_location_visible(&user_ids).await;
+        let location_visible_map = self
+            .presence_service
+            .batch_get_location_visible(&user_ids)
+            .await;
 
         let items: Vec<FeedUserItem> = users
             .into_iter()
@@ -239,20 +260,20 @@ impl FeedService {
                     .copied()
                     .unwrap_or(true);
 
-                let geo = if location_visible {
-                    Some(GeoData {
+                let location = if location_visible {
+                    Some(RelativeLocation {
                         latitude: u.latitude,
                         longitude: u.longitude,
                         location_name: u.location_name,
                         distance: u.distance as i32,
-                        degrees: u.degrees,
+                        bearing_degrees: u.bearing_degrees,
                     })
                 } else {
                     None
                 };
 
                 FeedUserItem {
-                    user: UserSearchItem {
+                    user: UserItem {
                         user_id: u.user_id,
                         nickname: u.nickname,
                         avatar_url: u.avatar_url,
@@ -261,9 +282,10 @@ impl FeedService {
                         is_online,
                         last_online,
                         user_type: u.user_type,
-                        geo,
+                        location,
+                        relation: None,
                     },
-                    reason: Some("附近的人".to_string()),
+                    reason: Some(FEED_REASON_NEARBY_PEOPLE.to_string()),
                     mutual_friends_count: None,
                     common_tags: None,
                 }
@@ -297,7 +319,7 @@ impl FeedService {
             .map(|t| TrendingTagItem {
                 name: t.name,
                 usage_count: t.usage_count,
-                trend: "stable".to_string(),
+                trend: Trend::Stable.to_string(),
                 hot_moment_preview: None,
             })
             .collect();
@@ -307,14 +329,34 @@ impl FeedService {
 
         // 批量获取标签
         let hot_moment_ids: Vec<_> = hot_moments_raw.iter().map(|m| m.moment_id).collect();
-        let hot_tags_map = self.tag_repo.get_moment_tags_batch(&hot_moment_ids).await?;
+        let hot_tags_map = self
+            .tag_repo
+            .get_moment_tags_batch(&hot_moment_ids)
+            .await?;
 
-        let hot_moments: Vec<MomentSearchItem> = hot_moments_raw
+        use crate::dto::response::MomentImage;
+        let hot_moments: Vec<MomentItem> = hot_moments_raw
             .into_iter()
             .map(|m| {
                 let tags = hot_tags_map.get(&m.moment_id).cloned().unwrap_or_default();
-                MomentSearchItem {
-                    id: m.moment_id.to_string(),
+                let images = if m.images.is_empty() {
+                    None
+                } else {
+                    Some(
+                        m.images
+                            .iter()
+                            .map(|url| MomentImage {
+                                url: url.clone(),
+                                width: None,
+                                height: None,
+                                content_type: None,
+                            })
+                            .collect(),
+                    )
+                };
+
+                MomentItem {
+                    moment_id: m.moment_id.to_string(),
                     user: crate::dto::response::UserInfo {
                         user_id: m.user_id,
                         nickname: m.nickname,
@@ -322,18 +364,20 @@ impl FeedService {
                         user_type: m.user_type,
                     },
                     description: m.description,
-                    images: Some(m.images),
+                    images,
                     tags,
                     created_at: m.created_at.to_rfc3339(),
                     likes_count: m.likes_count as i32,
                     comments_count: m.comments_count as i32,
-                    geo: GeoData {
+                    location: Some(RelativeLocation {
                         latitude: m.latitude,
                         longitude: m.longitude,
                         location_name: m.location_name,
                         distance: m.distance as i32,
-                        degrees: m.degrees,
-                    },
+                        bearing_degrees: m.bearing_degrees,
+                    }),
+                    is_liked: None,
+                    is_favorited: None,
                 }
             })
             .collect();
@@ -350,9 +394,6 @@ impl FeedService {
         user_id: i64,
         req: FeedFeedbackRequest,
     ) -> Result<(), AppError> {
-        use crate::types::enums::FeedFeedbackAction;
-        use std::str::FromStr;
-
         // 验证 content_id 格式
         let content_uuid = uuid::Uuid::parse_str(&req.content_id)
             .map_err(|_| AppError::InvalidInput("无效的 content_id 格式".to_string()))?;
@@ -399,9 +440,8 @@ impl FeedService {
         &self,
         user_id: i64,
         req: &FeedFeedbackRequest,
-        action: crate::types::enums::FeedFeedbackAction,
+        action: FeedFeedbackAction,
     ) -> Result<(), AppError> {
-        use crate::types::enums::FeedFeedbackAction;
         let mut conn = self.redis.clone();
         let redis_key = format!("feed:weights:user:{}", user_id);
 
@@ -440,175 +480,5 @@ impl FeedService {
             .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
 
         Ok(())
-    }
-
-    /// 批量获取用户在线状态（受隐私设置控制）
-    async fn batch_get_online_status_with_privacy(
-        &self,
-        user_ids: &[i64],
-    ) -> HashMap<i64, (Option<bool>, Option<String>)> {
-        if user_ids.is_empty() {
-            return HashMap::new();
-        }
-
-        // 1) 批量拿隐私设置（避免 N+1）
-        let mut settings_map: HashMap<i64, crate::repositories::user_settings_repo::UserSettings> =
-            HashMap::new();
-        if let Ok(settings) = self.user_settings_repo.get_batch(user_ids).await {
-            settings_map = settings.into_iter().map(|s| (s.user_id, s)).collect();
-        }
-
-        // 2) 批量在线状态（Redis pipeline + DB ANY）
-        let online_status_map = self.batch_get_online_status(user_ids).await;
-
-        // 3) 需要 last_online 的用户（离线 + 允许显示）
-        let mut need_last_online_ids: Vec<i64> = Vec::new();
-        for &user_id in user_ids {
-            let settings = settings_map.get(&user_id);
-            let online_visible = settings.map(|s| s.online_visible).unwrap_or(true);
-            let last_online_visible = settings.map(|s| s.last_online_visible).unwrap_or(true);
-            if !online_visible {
-                continue;
-            }
-            let is_online = online_status_map.get(&user_id).copied().unwrap_or(false);
-            if !is_online && last_online_visible {
-                need_last_online_ids.push(user_id);
-            }
-        }
-
-        // 4) Redis MGET last_online
-        let mut last_online_map: HashMap<i64, Option<String>> = HashMap::new();
-        if !need_last_online_ids.is_empty() {
-            let keys: Vec<String> = need_last_online_ids
-                .iter()
-                .map(|id| format!("presence:last_online:{}", id))
-                .collect();
-            let mut conn = self.redis.clone();
-            let values: redis::RedisResult<Vec<Option<String>>> =
-                redis::cmd("MGET").arg(keys).query_async(&mut conn).await;
-            if let Ok(vs) = values {
-                for (idx, v) in vs.into_iter().enumerate() {
-                    last_online_map.insert(need_last_online_ids[idx], v);
-                }
-            }
-        }
-
-        // 5) DB 批量补齐 last_seen_at（仅对 redis miss）
-        let mut miss_ids: Vec<i64> = Vec::new();
-        for &user_id in &need_last_online_ids {
-            if !last_online_map.contains_key(&user_id)
-                || last_online_map
-                    .get(&user_id)
-                    .and_then(|v| v.as_ref())
-                    .is_none()
-            {
-                miss_ids.push(user_id);
-            }
-        }
-        let mut db_last_seen_map: HashMap<i64, Option<String>> = HashMap::new();
-        if !miss_ids.is_empty() {
-            if let Ok(rows) = self.online_status_repo.get_batch_status(&miss_ids).await {
-                for r in rows {
-                    db_last_seen_map.insert(r.user_id, r.last_seen_at.map(|t| t.to_rfc3339()));
-                }
-            }
-        }
-
-        // 6) 组装结果
-        let mut result: HashMap<i64, (Option<bool>, Option<String>)> = HashMap::new();
-        for &user_id in user_ids {
-            let settings = settings_map.get(&user_id);
-            let online_visible = settings.map(|s| s.online_visible).unwrap_or(true);
-            let last_online_visible = settings.map(|s| s.last_online_visible).unwrap_or(true);
-
-            if !online_visible {
-                result.insert(user_id, (None, None));
-                continue;
-            }
-
-            let is_online = online_status_map.get(&user_id).copied().unwrap_or(false);
-            let last_online = if !is_online && last_online_visible {
-                last_online_map
-                    .get(&user_id)
-                    .and_then(|v| v.clone())
-                    .or_else(|| db_last_seen_map.get(&user_id).and_then(|v| v.clone()))
-            } else {
-                None
-            };
-            result.insert(user_id, (Some(is_online), last_online));
-        }
-
-        result
-    }
-
-    /// 批量获取在线状态（内部方法，不检查隐私设置）
-    async fn batch_get_online_status(&self, user_ids: &[i64]) -> HashMap<i64, bool> {
-        if user_ids.is_empty() {
-            return HashMap::new();
-        }
-        let mut result: HashMap<i64, bool> = HashMap::new();
-
-        // 1) Redis：pipeline 批量 ZSCORE
-        let mut conn = self.redis.clone();
-        let mut pipe = redis::pipe();
-        for &user_id in user_ids {
-            pipe.cmd("ZSCORE")
-                .arg(crate::constants::REDIS_KEY_PRESENCE_ONLINE)
-                .arg(user_id);
-        }
-        let redis_scores: redis::RedisResult<Vec<Option<f64>>> = pipe.query_async(&mut conn).await;
-        if let Ok(scores) = redis_scores {
-            for (idx, score) in scores.into_iter().enumerate() {
-                if score.is_some() {
-                    result.insert(user_ids[idx], true);
-                }
-            }
-        }
-
-        // 2) DB：对 Redis 未命中的用户一次性 batch 查询
-        let not_online_ids: Vec<i64> = user_ids
-            .iter()
-            .filter(|id| !result.contains_key(id))
-            .copied()
-            .collect();
-        if !not_online_ids.is_empty() {
-            if let Ok(rows) = self
-                .online_status_repo
-                .get_batch_status(&not_online_ids)
-                .await
-            {
-                result.extend(rows.into_iter().map(|r| (r.user_id, r.is_online)));
-            }
-        }
-
-        // 3) 默认离线
-        for &user_id in user_ids {
-            result.entry(user_id).or_insert(false);
-        }
-
-        result
-    }
-
-    /// 批量获取用户位置可见性设置
-    async fn batch_get_location_visible(&self, user_ids: &[i64]) -> HashMap<i64, bool> {
-        let mut result = HashMap::new();
-
-        if user_ids.is_empty() {
-            return result;
-        }
-
-        // 1. 批量从数据库获取设置
-        if let Ok(settings_list) = self.user_settings_repo.get_batch(user_ids).await {
-            for setting in settings_list {
-                result.insert(setting.user_id, setting.location_visible);
-            }
-        }
-
-        // 2. 对于没有设置的用户，使用默认值 (true)
-        for &user_id in user_ids {
-            result.entry(user_id).or_insert(true);
-        }
-
-        result
     }
 }

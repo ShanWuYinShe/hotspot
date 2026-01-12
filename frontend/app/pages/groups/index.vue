@@ -1,248 +1,271 @@
 <template>
-    <div class="w-full">
-
-        <div class="space-y-4">
-            <!-- 统计卡片 -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <!-- 统计卡片：信息展示，不需要 hover -->
-                <UCard variant="subtle">
-                    <div class="flex items-center gap-4">
-                        <UBadge color="primary" variant="soft" size="lg" square icon="i-lucide-users-round" />
-                        <div class="min-w-0">
-                            <p class="text-2xl font-bold">{{ totalGroups }}</p>
-                            <UBadge color="neutral" variant="soft" size="xs">总群组数</UBadge>
-                        </div>
+    <div class="flex flex-col gap-6">
+        <!-- Sticky Header & Controls -->
+        <div class="sticky top-0 z-20 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-sm border-b border-neutral-200 dark:border-neutral-800 -mx-4 sm:-mx-6 px-4 sm:px-6 py-4 space-y-4">
+            <!-- Header -->
+            <div>
+                <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">{{ $t('groups.title') }}</h1>
+                <p class="text-neutral-500 dark:text-neutral-400 mt-1">{{ $t('groups.description') }}</p>
+            </div>
+            
+            <!-- Tabs -->
+            <div class="flex gap-2 border-b border-neutral-200 dark:border-neutral-800">
+                <NuxtLink
+                    v-for="link in headerLinks"
+                    :key="link.to"
+                    :to="link.to"
+                    class="px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-[2px]"
+                    :class="[
+                        link.active 
+                            ? 'text-primary-600 border-primary-600 dark:text-primary-400 dark:border-primary-400' 
+                            : 'text-neutral-500 border-transparent hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200'
+                    ]"
+                >
+                    <div class="flex items-center gap-2">
+                        <UIcon :name="link.icon" class="size-4" />
+                        {{ link.label }}
                     </div>
-                </UCard>
-
-                <!-- 统计卡片：信息展示，不需要 hover -->
-                <UCard variant="subtle">
-                    <div class="flex items-center gap-4">
-                        <UBadge color="success" variant="soft" size="lg" square icon="i-lucide-star" />
-                        <div class="min-w-0">
-                            <p class="text-2xl font-bold">{{ ownedGroups }}</p>
-                            <UBadge color="neutral" variant="soft" size="xs">我创建的</UBadge>
-                        </div>
-                    </div>
-                </UCard>
-
-                <!-- 统计卡片：信息展示，不需要 hover -->
-                <UCard variant="subtle">
-                    <div class="flex items-center gap-4">
-                        <UBadge color="warning" variant="soft" size="lg" square icon="i-lucide-bell" />
-                        <div class="min-w-0">
-                            <p class="text-2xl font-bold">{{ totalUnreadCount }}</p>
-                            <UBadge color="neutral" variant="soft" size="xs">未读消息</UBadge>
-                        </div>
-                    </div>
-                </UCard>
+                </NuxtLink>
             </div>
 
-            <UCard variant="subtle">
-                <template #header>
-                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                        <div class="flex items-center gap-3 w-full sm:w-auto">
-                            <UInput
-                                v-model="searchQuery"
-                                placeholder="搜索群组..."
-                                icon="i-lucide-search"
-                                class="w-full sm:w-72"
-                            />
-                            <USelectMenu
-                                v-model="activeFilter"
-                                :items="filterOptions"
-                                value-key="value"
-                                class="w-40"
-                            />
-                        </div>
-                    </div>
-                </template>
-
-                <div v-if="loading" class="space-y-3">
-                    <USkeleton v-for="i in 3" :key="i" class="h-24 w-full" />
-                </div>
-
-                <UEmpty
-                    v-else-if="displayGroups.length === 0"
-                    icon="i-lucide-users-round"
-                    title="还没有群组"
-                    description="加入或创建您的第一个群组"
-                    :actions="[{ label: '创建群组', icon: 'i-lucide-plus', onClick: openCreateGroup }]"
+            <!-- 操作栏 -->
+            <div class="flex flex-col sm:flex-row gap-4">
+                <UInput
+                    v-model="searchQuery"
+                    :placeholder="$t('groups.search.placeholder')"
+                    icon="i-lucide-search"
+                    class="flex-1"
+                    :loading="searching"
+                    @update:model-value="handleSearch"
                 />
+                
+                <div class="flex gap-2 shrink-0">
+                    <UButton
+                        to="/groups/nearby"
+                        icon="i-lucide-map-pin"
+                        variant="soft"
+                        color="neutral"
+                    >
+                        {{ $t('groups.actions.nearby') }}
+                    </UButton>
+                    <UButton
+                        icon="i-lucide-plus"
+                        @click="openCreateModal"
+                    >
+                        {{ $t('groups.actions.create') }}
+                    </UButton>
+                </div>
+            </div>
+        </div>
 
-                <div v-else class="space-y-3">
+        <div class="space-y-8 pb-12">
+
+            <!-- 推荐群组 -->
+            <div v-if="!searchQuery && recommendedGroups.length > 0">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="font-semibold text-lg flex items-center gap-2">
+                        <UIcon name="i-lucide-flame" class="text-primary-500" />
+                        {{ $t('groups.recommended') }}
+                    </h2>
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     <GroupCard
-                        v-for="group in displayGroups"
-                        :key="group.id"
-                        :group="toGroupCardData(group)"
-                        @click="enterGroup(group)"
-                        @enter="enterGroup(group)"
-                        @more="showGroupActions(group)"
+                        v-for="group in recommendedGroups"
+                        :key="group.group_chat_id"
+                        :group="group"
+                        @click="handleGroupClick"
+                        @join="handleJoin"
                     />
                 </div>
-            </UCard>
+            </div>
+
+            <!-- 搜索结果 -->
+            <div v-if="searchQuery">
+                <h2 class="font-semibold text-lg mb-4">{{ $t('groups.searchResults') }}</h2>
+                <div v-if="searchResults.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <GroupCard
+                        v-for="group in searchResults"
+                        :key="group.group_chat_id"
+                        :group="group"
+                        @click="handleGroupClick"
+                        @join="handleJoin"
+                    />
+                </div>
+                <UEmpty
+                    v-else
+                    icon="i-lucide-search-x"
+                    :title="$t('groups.search.empty.title')"
+                    :description="$t('groups.search.empty.description')"
+                />
+            </div>
+
+            <!-- 我的群组 -->
+            <div v-if="!searchQuery">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="font-semibold text-lg">{{ $t('groups.myGroups.title') }}</h2>
+                </div>
+                
+                <div v-if="loadingMyGroups" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <GroupCardSkeleton v-for="i in 4" :key="i" />
+                </div>
+                
+                <div v-else-if="myGroups.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <GroupCard
+                        v-for="group in myGroups"
+                        :key="group.group_chat_id"
+                        :group="group"
+                        @click="handleGroupClick"
+                    />
+                </div>
+                
+                <UEmpty
+                    v-else
+                    icon="i-lucide-users"
+                    :title="$t('groups.myGroups.empty.title')"
+                    :description="$t('groups.myGroups.empty.description')"
+                >
+                    <template #actions>
+                        <UButton variant="soft" @click="openCreateModal">{{ $t('groups.actions.createFirst') }}</UButton>
+                    </template>
+                </UEmpty>
+            </div>
         </div>
+
+        <!-- 创建群组模态框 -->
+        <CreateGroupModal
+            v-model:open="showCreateModal"
+            :on-success="handleCreateSuccess"
+        />
     </div>
 </template>
 
 <script setup lang="ts">
-import { getPageSeoConfig, buildSeoMeta } from '~/config/seo'
-import type { JoinedGroupItem } from "~/types/api"
 import { useGroupsService } from '~/services/groups.service'
-import { getErrorMessage } from '~/utils/error'
-import { useDashboardHeader } from '~/composables/useDashboardHeader'
+import type { GroupInfo, JoinedGroupItem, GroupItem } from '~/types/api'
+import GroupCard from '~/components/cards/GroupCard.vue'
+import GroupCardSkeleton from '~/components/skeletons/GroupCardSkeleton.vue'
+import CreateGroupModal from '~/components/modals/CreateGroupModal.vue'
 
-// 从数据源获取 SEO 配置
-const seoConfig = getPageSeoConfig('groups')
+const { requireAuth } = useRequireAuth()
 
 definePageMeta({
-  title: seoConfig.title,
-  description: seoConfig.description,
-  layout: 'dashboard',
-  requiresAuth: true,
-  dashboardHeader: true
+    layout: 'dashboard',
+    requiresAuth: true
 })
 
-// 设置 SEO meta
-useSeoMeta(buildSeoMeta('groups'))
-
-// 服务和状态
+const { t } = useI18n()
+const router = useRouter()
 const groupsService = useGroupsService()
-const { formatTime } = useFormatters()
 const feedback = useFeedbackStore()
-const dashboardHeader = useDashboardHeader()
+const geolocation = useGeolocation()
 
-// 数据状态
-const loading = ref(true)
+// 状态
 const searchQuery = ref('')
-const activeFilter = ref('all')
+const searching = ref(false)
+const showCreateModal = ref(false)
+const loadingMyGroups = ref(true)
+
+// 数据
 const myGroups = ref<JoinedGroupItem[]>([])
+const recommendedGroups = ref<GroupItem[]>([])
+const searchResults = ref<GroupItem[]>([])
 
 // 计算属性
-const totalGroups = computed(() => myGroups.value.length)
-const ownedGroups = computed(() => 
-    myGroups.value.filter((g: JoinedGroupItem) => g.my_role === 'owner').length
-)
-const totalUnreadCount = computed(() =>
-    myGroups.value.reduce((sum, g) => sum + (g.unread_count || 0), 0)
-)
+const headerLinks = computed(() => [
+    { label: t('groups.tabs.myGroups'), icon: 'i-lucide-users', to: '/groups', active: true },
+    { label: t('groups.tabs.nearby'), icon: 'i-lucide-map-pin', to: '/groups/nearby' }
+])
 
-// 显示的群组（搜索 + 筛选）
-const displayGroups = computed(() => {
-    let groups = [...myGroups.value]
-    
-    // 搜索过滤（只搜索名称，JoinedGroupItem 没有 description 字段）
-    if (searchQuery.value.trim()) {
-        const query = searchQuery.value.toLowerCase()
-        groups = groups.filter(g => g.name.toLowerCase().includes(query))
-    }
-    
-    // 应用筛选
-    if (activeFilter.value !== 'all') {
-        switch (activeFilter.value) {
-            case 'owned':
-                groups = groups.filter(g => g.my_role === 'owner')
-                break
-            case 'joined':
-                groups = groups.filter(g => g.my_role !== 'owner')
-                break
-            case 'unread':
-                groups = groups.filter(g => (g.unread_count || 0) > 0)
-                break
-        }
-    }
-    
-    return groups
+// 初始化
+onMounted(async () => {
+    await Promise.all([
+        fetchMyGroups(),
+        fetchRecommendedGroups()
+    ])
 })
 
-// 筛选选项
-const filterOptions = [
-    { label: '全部群组', value: 'all' },
-    { label: '我创建的', value: 'owned' },
-    { label: '我加入的', value: 'joined' },
-    { label: '有未读消息', value: 'unread' }
-]
-
-// 转换群组数据为 GroupCard 可用的格式
-const toGroupCardData = (group: JoinedGroupItem) => ({
-    ...group,
-    // 这是“我的群组”页面：列表项天然已加入，必须显式标记，避免 GroupCard 误判展示“加入”
-    is_member: true,
-    // 已加入群组列表没有 geo 和 has_password，GroupCard 会自动处理
-})
-
-
-// 方法
-const loadMyGroups = async () => {
-    loading.value = true
+// 获取我的群组
+async function fetchMyGroups() {
+    loadingMyGroups.value = true
     try {
-        const response = await groupsService.getJoined()
-        myGroups.value = response.items
-    } catch (error: unknown) {
-        feedback.error('加载失败', getErrorMessage(error))
+        const res = await groupsService.getJoined({ limit: 8 })
+        myGroups.value = res.items
+    } catch (e) {
+        console.error('Failed to fetch my groups', e)
     } finally {
-        loading.value = false
+        loadingMyGroups.value = false
     }
 }
 
-watchEffect(() => {
-  dashboardHeader.setActions([
-    {
-      key: 'refresh',
-      label: '刷新',
-      icon: 'i-lucide-refresh-cw',
-      variant: 'outline',
-      loading: loading.value,
-      action: () => loadMyGroups()
-    },
-    {
-      key: 'create',
-      label: '创建群组',
-      icon: 'i-lucide-plus',
-      variant: 'outline',
-      disabled: loading.value,
-      action: () => openCreateGroup()
-    },
-    {
-      key: 'nearby',
-      label: '附近',
-      icon: 'i-lucide-map',
-      variant: 'outline',
-      disabled: loading.value,
-      action: () => navigateTo('/groups/nearby')
-    }
-  ])
-})
-
-const enterGroup = async (group: JoinedGroupItem) => {
+// 获取推荐群组
+async function fetchRecommendedGroups() {
     try {
-        // 跳转到群聊页面（消息已读标记会在聊天页面中自动处理）
-        await navigateTo(`/chat/groups/${group.id}`)
-    } catch (error) {
-        console.error('进入群组失败:', error)
-        // 即使出错，也允许进入群组
-        await navigateTo(`/chat/groups/${group.id}`)
+        const coords = await geolocation.getCoordinates()
+        // 使用 searchByLocation 模拟附近推荐
+        const res = await groupsService.searchByLocation({
+            reference_point: {
+                latitude: coords.latitude,
+                longitude: coords.longitude,
+            },
+            radius: 10000,
+            limit: 4
+        })
+        recommendedGroups.value = res.items
+    } catch (e) {
+        // error
     }
 }
 
-const modal = useModal()
+// 搜索处理
+const handleSearch = useDebounceFn(async (query: string) => {
+    if (!query.trim()) {
+        searchResults.value = []
+        return
+    }
+    
+    searching.value = true
+    try {
+        const coords = await geolocation.getCoordinates()
+        const res = await groupsService.searchByKeyword({
+            kw: query,
+            reference_point: {
+                latitude: coords.latitude,
+                longitude: coords.longitude,
+            },
+        })
+        searchResults.value = res.items
+    } catch (e) {
+        feedback.error('搜索失败')
+    } finally {
+        searching.value = false
+    }
+}, 300)
 
-const openCreateGroup = async () => {
-    const groupId = await modal.showCreateGroup()
-    if (groupId) {
-        loadMyGroups()
-        feedback.success('群组创建成功')
+// 交互处理
+function handleGroupClick(group: GroupItem) {
+    if (group.my_state?.is_joined) {
+        router.push(`/chat/groups/${group.group_chat_id}`)
+    } else {
+        router.push(`/groups/${group.group_chat_id}`)
     }
 }
 
-const showGroupActions = (group: JoinedGroupItem) => {
-    // 这里可以显示群组操作菜单
-    feedback.info(`群组操作: ${group.name}`)
+function handleJoin(group: GroupItem) {
+    // 符合设计理念：只在执行操作时才要求登录，提供友好的登录引导
+    if (!requireAuth('加入群组')) return
+    router.push(`/groups/${group.group_chat_id}`)
 }
 
+function openCreateModal() {
+    showCreateModal.value = true
+}
 
-// 生命周期
-onMounted(() => {
-    loadMyGroups()
-})
+async function handleCreateSuccess(groupId: string) {
+    showCreateModal.value = false
+    feedback.success('群组创建成功')
+    // 刷新我的群组列表
+    await fetchMyGroups()
+    router.push(`/chat/groups/${groupId}`)
+}
 </script>

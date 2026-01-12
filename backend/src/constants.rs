@@ -42,7 +42,6 @@ pub const TRENDING_MONTHLY_DAYS: i64 = 30;
 
 pub const MESSAGE_RECALL_MINUTES: i64 = 2; // 消息撤回时间窗口
 pub const INVITE_EXPIRE_DAYS: i64 = 7; // 邀请过期时间
-pub const UPLOAD_SESSION_HOURS: i64 = 24; // 上传会话过期时间
 
 // ============================================================
 // WebSocket 心跳配置
@@ -57,3 +56,8 @@ pub const WS_SERVER_PING_INTERVAL_SECS: u64 = 60;
 pub const WS_CONNECTION_TIMEOUT_SECS: u64 =
     WS_HEARTBEAT_INTERVAL_SECS * 2 + WS_HEARTBEAT_TIMEOUT_SECS;
 
+// ============================================================
+// Feed 相关常量
+// ============================================================
+pub const FEED_REASON_NEARBY_HOT: &str = "附近热门";
+pub const FEED_REASON_NEARBY_PEOPLE: &str = "附近的人";

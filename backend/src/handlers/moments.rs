@@ -4,15 +4,15 @@ use crate::{
     dto::{
         request::{
             CheckFavoritedRequest, CheckLikedRequest, CreateMomentRequest, DeleteMomentRequest,
-            FavoriteMomentRequest, LikeMomentRequest, MomentCommentsRequest, MomentLikesRequest,
+            FavoriteMomentRequest, LikeMomentRequest, MomentLikesRequest,
             MomentOpenTheDoorRequest, MyFavoritesRequest, MyMomentsRequest,
             SearchMomentsByKeywordRequest, SearchMomentsByLocationRequest,
             SearchMomentsByTagRequest, UnfavoriteMomentRequest, UnlikeMomentRequest,
             UpdateMomentRequest,
         },
         response::{
-            ApiResponse, CheckFavoritedData, CheckLikedData, CommentListItem, CreateMomentData,
-            MomentLikeItem, MomentSearchItem, PaginatedData,
+            ApiResponse, CheckFavoritedData, CheckLikedData,
+            MomentLikeItem, MomentItem, PaginatedData,
         },
     },
     error::Result,
@@ -25,7 +25,7 @@ use crate::{
 pub async fn search_by_keyword(
     State(state): State<AppState>,
     Json(req): Json<SearchMomentsByKeywordRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<MomentSearchItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<MomentItem>>>> {
     let response = state.moment_service.search_by_keyword(&req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
@@ -34,7 +34,7 @@ pub async fn search_by_keyword(
 pub async fn search_by_tag(
     State(state): State<AppState>,
     Json(req): Json<SearchMomentsByTagRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<MomentSearchItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<MomentItem>>>> {
     let response = state.moment_service.search_by_tag(&req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
@@ -43,26 +43,18 @@ pub async fn search_by_tag(
 pub async fn search_by_location(
     State(state): State<AppState>,
     Json(req): Json<SearchMomentsByLocationRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<MomentSearchItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<MomentItem>>>> {
     let response = state.moment_service.search_by_location(&req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
-/// 获取瞬间评论列表
-pub async fn get_comments(
-    State(state): State<AppState>,
-    Json(req): Json<MomentCommentsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<CommentListItem>>>> {
-    let response = state.moment_service.get_comments_list(&req).await?;
-    Ok(Json(ApiResponse::success(response)))
-}
 
 /// 获取当前用户生活瞬间历史（/me/ API）
 pub async fn get_my_moments(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(req): Json<MyMomentsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<MomentSearchItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<MomentItem>>>> {
     let response = state
         .moment_service
         .get_my_moments_list(user_id, &req)
@@ -74,7 +66,7 @@ pub async fn get_my_moments(
 pub async fn open_the_door(
     State(state): State<AppState>,
     Json(req): Json<MomentOpenTheDoorRequest>,
-) -> Result<Json<ApiResponse<MomentSearchItem>>> {
+) -> Result<Json<ApiResponse<MomentItem>>> {
     let response = state.moment_service.open_the_door(&req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
@@ -94,11 +86,9 @@ pub async fn create(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(req): Json<CreateMomentRequest>,
-) -> Result<Json<ApiResponse<CreateMomentData>>> {
-    let moment_id = state.moment_service.create_moment(user_id, &req).await?;
-    Ok(Json(ApiResponse::success(CreateMomentData {
-        id: moment_id,
-    })))
+) -> Result<Json<ApiResponse<MomentItem>>> {
+    let moment = state.moment_service.create_moment(user_id, &req).await?;
+    Ok(Json(ApiResponse::success(moment)))
 }
 
 pub async fn update(
@@ -186,7 +176,7 @@ pub async fn get_my_favorites(
     State(state): State<AppState>,
     Extension(user_id): Extension<i64>,
     Json(req): Json<MyFavoritesRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<MomentSearchItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<MomentItem>>>> {
     let response = state
         .moment_service
         .get_favorites_list(user_id, &req)

@@ -40,14 +40,13 @@
  * @returns 响应式的值（onMounted 前返回默认值，onMounted 后返回 store 值）
  */
 export function useHydratedStore<
-  TStore extends Record<string, any>,
-  TKey extends keyof TStore,
-  TValue = TStore[TKey]
+  TStore extends object,
+  TKey extends keyof TStore
 >(
   store: TStore,
   key: TKey,
-  defaultValue: TValue
-): ComputedRef<TValue> {
+  defaultValue: (TStore[TKey] extends { value: infer V } ? V : TStore[TKey])
+): ComputedRef<(TStore[TKey] extends { value: infer V } ? V : TStore[TKey])> {
   const mounted = ref(false)
 
   onMounted(() => {
@@ -61,7 +60,10 @@ export function useHydratedStore<
     }
 
     // onMounted 之后：返回 store 的实际值
-    return store[key] as TValue
+    const storeValue = (store as Record<PropertyKey, unknown>)[key as PropertyKey] as TStore[TKey]
+    return isRef(storeValue)
+      ? (storeValue.value as (TStore[TKey] extends { value: infer V } ? V : TStore[TKey]))
+      : (storeValue as (TStore[TKey] extends { value: infer V } ? V : TStore[TKey]))
   })
 }
 
@@ -89,7 +91,7 @@ export function useHydratedStore<
  * ```
  */
 export function useHydratedStoreMultiple<
-  TStore extends Record<string, unknown>,
+  TStore extends object,
   TDefaults extends Partial<Record<keyof TStore, unknown>>
 >(
   store: TStore,
@@ -109,7 +111,10 @@ export function useHydratedStoreMultiple<
       if (!mounted.value) {
         return defaults[k]
       }
-      return store[k as keyof TStore] as unknown as TDefaults[typeof k]
+      const storeValue = (store as Record<PropertyKey, unknown>)[k as PropertyKey] as TStore[keyof TStore]
+      return isRef(storeValue)
+        ? (storeValue.value as unknown as TDefaults[typeof k])
+        : (storeValue as unknown as TDefaults[typeof k])
     })
   }
 

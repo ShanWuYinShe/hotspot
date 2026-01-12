@@ -5,13 +5,14 @@ use crate::{
     dto::{
         request::{
             AdminRbacAdminsListRequest, AdminRbacGrantAdminRequest, AdminRbacMeRequest,
-            AdminRbacPermissionsRequest,
-            AdminRbacRevokeAdminRequest, AdminRbacRoleCreateRequest, AdminRbacRoleDeleteRequest,
-            AdminRbacRoleSetPermissionsRequest, AdminRbacRoleUpdateRequest, AdminRbacRolesListRequest,
+            AdminRbacPermissionsRequest, AdminRbacRevokeAdminRequest, AdminRbacRoleCreateRequest,
+            AdminRbacRoleDeleteRequest, AdminRbacRoleSetPermissionsRequest,
+            AdminRbacRoleUpdateRequest, AdminRbacRolesListRequest,
         },
         response::{
-            AdminAdminsData, AdminAdminItem, AdminMeData, AdminPermissionsData, AdminPermissionItem,
-            AdminRoleBasic, AdminRoleItem, AdminRolesData, ApiResponse, UserInfo,
+            AdminAdminItem, AdminAdminsData, AdminMeData, AdminPermissionItem,
+            AdminPermissionsData, AdminRoleBasic, AdminRoleItem, AdminRolesData, ApiResponse,
+            UserInfo,
         },
     },
     error::{AppError, Result},
@@ -23,10 +24,9 @@ pub async fn me(
     Extension(user_id): Extension<i64>,
     Json(_req): Json<AdminRbacMeRequest>,
 ) -> Result<Json<ApiResponse<AdminMeData>>> {
-    let (is_super, permissions, roles) = state.admin_rbac_service.get_me(user_id).await?;
+    let (_is_super, permissions, roles) = state.admin_rbac_service.get_me(user_id).await?;
 
     Ok(Json(ApiResponse::success(AdminMeData {
-        is_super,
         permissions,
         roles: roles
             .into_iter()
@@ -98,8 +98,8 @@ pub async fn update_role(
     Extension(_user_id): Extension<i64>,
     Json(req): Json<AdminRbacRoleUpdateRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let role_id =
-        Uuid::parse_str(&req.id).map_err(|_| AppError::BadRequest("无效的角色ID".to_string()))?;
+    let role_id = Uuid::parse_str(&req.role_id)
+        .map_err(|_| AppError::BadRequest("无效的角色ID".to_string()))?;
     let desc = if req.clear_description.unwrap_or(false) {
         Some(None)
     } else {
@@ -117,8 +117,8 @@ pub async fn delete_role(
     Extension(_user_id): Extension<i64>,
     Json(req): Json<AdminRbacRoleDeleteRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let role_id =
-        Uuid::parse_str(&req.id).map_err(|_| AppError::BadRequest("无效的角色ID".to_string()))?;
+    let role_id = Uuid::parse_str(&req.role_id)
+        .map_err(|_| AppError::BadRequest("无效的角色ID".to_string()))?;
     state.admin_rbac_service.delete_role(role_id).await?;
     Ok(Json(ApiResponse::success_empty()))
 }
@@ -128,8 +128,8 @@ pub async fn set_role_permissions(
     Extension(_user_id): Extension<i64>,
     Json(req): Json<AdminRbacRoleSetPermissionsRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let role_id =
-        Uuid::parse_str(&req.id).map_err(|_| AppError::BadRequest("无效的角色ID".to_string()))?;
+    let role_id = Uuid::parse_str(&req.role_id)
+        .map_err(|_| AppError::BadRequest("无效的角色ID".to_string()))?;
     state
         .admin_rbac_service
         .set_role_permissions(role_id, &req.permission_keys)
@@ -145,22 +145,30 @@ pub async fn list_admins(
     let rows = state.admin_rbac_service.list_admins().await?;
     let items = rows
         .into_iter()
-        .map(|row| AdminAdminItem {
-            user: UserInfo {
-                user_id: row.user.user_id,
-                nickname: row.user.nickname,
-                avatar_url: row.user.avatar_url,
-                user_type: row.user.user_type,
-            },
-            is_super: row.is_super,
-            roles: row
-                .roles
-                .into_iter()
-                .map(|r| AdminRoleBasic {
-                    id: r.role_id.to_string(),
-                    name: r.name,
-                })
-                .collect(),
+        .map(|row| {
+            let permissions = if row.is_super {
+                vec!["*".to_string()]
+            } else {
+                vec![]
+            };
+
+            AdminAdminItem {
+                user: UserInfo {
+                    user_id: row.user.user_id,
+                    nickname: row.user.nickname,
+                    avatar_url: row.user.avatar_url,
+                    user_type: row.user.user_type,
+                },
+                permissions,
+                roles: row
+                    .roles
+                    .into_iter()
+                    .map(|r| AdminRoleBasic {
+                        id: r.role_id.to_string(),
+                        name: r.name,
+                    })
+                    .collect(),
+            }
         })
         .collect();
 
@@ -183,7 +191,7 @@ pub async fn grant_admin(
         .grant_admin(
             operator_id,
             req.user_id,
-            req.is_super.unwrap_or(false),
+            req.grant_all_permissions.unwrap_or(false),
             &role_ids,
         )
         .await?;
@@ -202,4 +210,3 @@ pub async fn revoke_admin(
         .await?;
     Ok(Json(ApiResponse::success_empty()))
 }
-

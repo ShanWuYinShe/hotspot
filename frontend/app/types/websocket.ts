@@ -3,7 +3,7 @@
  * 严格对应后端 API 规范 (api_spec.mdc)
  */
 
-import type { UserInfo, GroupSettings, MessageType, ReactionType } from './api'
+import type { UserInfo, GroupSettings, MessageType, ReactionType, MessageMedia, JoinedGroupItem, MessageReplyTo } from './api'
 
 // ============================================================================
 // 基础类型
@@ -20,12 +20,20 @@ export type WebSocketState = 'connecting' | 'connected' | 'disconnected' | 'erro
 // 订阅相关
 // ============================================================================
 
-export type SubscriptionSourceType = 'group_chat' | 'user' | 'notification'
-
-export interface SubscriptionItem {
-  source_type: SubscriptionSourceType
-  source_ids: string[]
-}
+// 订阅项定义（批量订阅同类型数据源）
+export type SubscriptionItem =
+  | {
+      source_type: 'group_chat'
+      source_ids: string[] // group_chat_id（UUID string）
+    }
+  | {
+      source_type: 'user'
+      source_ids: number[] // user_id（safe integer, <= Number.MAX_SAFE_INTEGER）
+    }
+  | {
+      source_type: 'notification'
+      source_ids: string[] // notification_type（string）
+    }
 
 // ============================================================================
 // 客户端发送事件 (Client -> Server)
@@ -34,12 +42,11 @@ export interface SubscriptionItem {
 export type ClientEventType =
   | 'Auth'
   | 'Ping'
-  | 'Pong'
   | 'Subscribe'
   | 'Unsubscribe'
   | 'SetSubscriptions'
-  | 'MarkAsRead'
-  | 'Typing'
+  | 'PrivateTyping'
+  | 'GroupTyping'
 
 export interface AuthEvent {
   type: 'Auth'
@@ -56,12 +63,6 @@ export interface PingEvent {
   }
 }
 
-export interface PongEvent {
-  type: 'Pong'
-  payload: {
-    timestamp: string
-  }
-}
 
 export interface SubscribeEvent {
   type: 'Subscribe'
@@ -84,20 +85,18 @@ export interface SetSubscriptionsEvent {
   }
 }
 
-export interface MarkAsReadEvent {
-  type: 'MarkAsRead'
+export interface PrivateTypingEvent {
+  type: 'PrivateTyping'
   payload: {
-    chat_type: 'private_chat' | 'group_chat'
-    chat_id: string
-    up_to: string
+    target_user_id: number
+    is_typing: boolean
   }
 }
 
-export interface TypingEvent {
-  type: 'Typing'
+export interface GroupTypingEvent {
+  type: 'GroupTyping'
   payload: {
-    chat_type: 'private_chat' | 'group_chat'
-    chat_id: string
+    group_chat_id: string
     is_typing: boolean
   }
 }
@@ -105,12 +104,11 @@ export interface TypingEvent {
 export type ClientEvent =
   | AuthEvent
   | PingEvent
-  | PongEvent
   | SubscribeEvent
   | UnsubscribeEvent
   | SetSubscriptionsEvent
-  | MarkAsReadEvent
-  | TypingEvent
+  | PrivateTypingEvent
+  | GroupTypingEvent
 
 // ============================================================================
 // 服务端推送事件 (Server -> Client)
@@ -119,11 +117,12 @@ export type ClientEvent =
 export type ServerEventType =
   // 连接管理
   | 'ConnectionEstablished'
-  | 'Heartbeat'
+  | 'Pong'
   // 用户状态
   | 'UserOnline'
   | 'UserOffline'
   | 'UserLocationUpdate'
+  | 'UserProfileUpdated'
   // 关注关系
   | 'NewFollower'
   | 'MutualFollow'
@@ -133,14 +132,22 @@ export type ServerEventType =
   | 'MomentCommented'
   | 'CommentReply'
   | 'SystemAnnouncement'
-  // 聊天消息
-  | 'ChatMessageNew'
-  | 'ChatMessageEdited'
-  | 'ChatMessageRecalled'
-  | 'ChatMessageDeleted'
-  | 'ChatMessageReaction'
-  | 'ChatMessageRead'
-  | 'UserTyping'
+  // 私聊消息
+  | 'PrivateMessageNew'
+  | 'PrivateMessageEdited'
+  | 'PrivateMessageRecalled'
+  | 'PrivateMessageDeleted'
+  | 'PrivateMessageReaction'
+  | 'PrivateMessageRead'
+  | 'PrivateUserTyping'
+  // 群聊消息
+  | 'GroupMessageNew'
+  | 'GroupMessageEdited'
+  | 'GroupMessageRecalled'
+  | 'GroupMessageDeleted'
+  | 'GroupMessageReaction'
+  | 'GroupMessageRead'
+  | 'GroupUserTyping'
   // 群组
   | 'GroupMemberJoined'
   | 'GroupMemberLeft'
@@ -153,6 +160,13 @@ export type ServerEventType =
   | 'GroupInviteResponse'
   | 'GroupApplicationReceived'
   | 'GroupApplicationResponse'
+  // 多端同步 (Self-Sync)
+  | 'SelfJoinedGroup'
+  | 'SelfLeftGroup'
+  | 'PrivateChatDeleted'
+  | 'PrivateChatSettingsUpdated'
+  | 'NotificationReadStateUpdated'
+  | 'SelfProfileUpdated'
   // 系统
   | 'Error'
   | 'SubscribeAck'
@@ -167,8 +181,8 @@ export interface ConnectionEstablishedEvent {
   }
 }
 
-export interface HeartbeatEvent {
-  type: 'Heartbeat'
+export interface PongEvent {
+  type: 'Pong'
   payload: {
     timestamp: string
   }
@@ -197,9 +211,22 @@ export interface UserLocationUpdateEvent {
   type: 'UserLocationUpdate'
   payload: {
     user_id: number
-    latitude: number
-    longitude: number
-    location_name: string
+    location: {
+      latitude: number
+      longitude: number
+      location_name: string
+    }
+    updated_at: string
+  }
+}
+
+export interface UserProfileUpdatedEvent {
+  type: 'UserProfileUpdated'
+  payload: {
+    user_id: number
+    nickname?: string
+    avatar_url?: string
+    bio?: string
     updated_at: string
   }
 }
@@ -232,10 +259,17 @@ export interface UnfollowedEvent {
 }
 
 // 生活瞬间互动事件
+export interface MomentSummary {
+  moment_id: string
+  cover_url?: string // 封面图 (第一张图片)
+  text_preview: string // 文本内容摘要 (前50字)
+}
+
 export interface MomentLikedEvent {
   type: 'MomentLiked'
   payload: {
     moment_id: string
+    moment_summary: MomentSummary
     user: UserInfo
     liked_at: string
   }
@@ -245,6 +279,7 @@ export interface MomentCommentedEvent {
   type: 'MomentCommented'
   payload: {
     moment_id: string
+    moment_summary: MomentSummary
     comment_id: string
     user: UserInfo
     content: string
@@ -256,9 +291,10 @@ export interface CommentReplyEvent {
   type: 'CommentReply'
   payload: {
     moment_id: string
-    comment_id: string
-    reply_id: string
-    user: UserInfo
+    comment_id: string // 原评论ID（被回复的评论）
+    reply_to_content: string // 原评论内容摘要
+    reply_id: string // 回复评论ID
+    user: UserInfo // 回复者
     content: string
     replied_at: string
   }
@@ -267,7 +303,7 @@ export interface CommentReplyEvent {
 export interface SystemAnnouncementEvent {
   type: 'SystemAnnouncement'
   payload: {
-    id: string
+    announcement_id: string
     title: string
     content: string
     severity: 'info' | 'warning' | 'error'
@@ -276,70 +312,58 @@ export interface SystemAnnouncementEvent {
   }
 }
 
-// 聊天消息事件
-export interface ChatMessageNewEvent {
-  type: 'ChatMessageNew'
+// 私聊消息事件
+export interface PrivateMessageNewEvent {
+  type: 'PrivateMessageNew'
   payload: {
-    id: string
-    chat_type: 'private_chat' | 'group_chat'
-    chat_id: string
+    message_id: string
+    target_user_id: number // 接收者ID (对于发送者多端同步=接收方ID)
     sender: UserInfo
-    message_type: MessageType
-    content?: string
-    reply_to?: string
-    mentions?: number[]
-    // 媒体字段
-    media_url?: string
-    thumbnail_url?: string
-    file_name?: string
-    file_size?: number
-    duration?: number
-    width?: number
-    height?: number
+    type: MessageType
+    content?: string // 文本内容
+    reply_to_message_id?: string
+    reply_to?: MessageReplyTo
+    // 媒体信息
+    media?: MessageMedia
     sent_at: string
   }
 }
 
-export interface ChatMessageEditedEvent {
-  type: 'ChatMessageEdited'
+export interface PrivateMessageEditedEvent {
+  type: 'PrivateMessageEdited'
   payload: {
-    id: string
-    chat_type: 'private_chat' | 'group_chat'
-    chat_id: string
+    message_id: string
+    target_user_id: number
     content: string
     edited_at: string
   }
 }
 
-export interface ChatMessageRecalledEvent {
-  type: 'ChatMessageRecalled'
+export interface PrivateMessageRecalledEvent {
+  type: 'PrivateMessageRecalled'
   payload: {
-    id: string
-    chat_type: 'private_chat' | 'group_chat'
-    chat_id: string
+    message_id: string
+    target_user_id: number
     recalled_by: number
     recalled_at: string
   }
 }
 
-export interface ChatMessageDeletedEvent {
-  type: 'ChatMessageDeleted'
+export interface PrivateMessageDeletedEvent {
+  type: 'PrivateMessageDeleted'
   payload: {
-    id: string
-    chat_type: 'private_chat' | 'group_chat'
-    chat_id: string
+    message_id: string
+    target_user_id: number
     deleted_by: number
-    for_everyone: boolean
     deleted_at: string
   }
 }
 
-export interface ChatMessageReactionEvent {
-  type: 'ChatMessageReaction'
+export interface PrivateMessageReactionEvent {
+  type: 'PrivateMessageReaction'
   payload: {
-    id: string
-    chat_type: 'private_chat' | 'group_chat'
-    chat_id: string
+    message_id: string
+    target_user_id: number
     user: UserInfo
     reaction_type: ReactionType
     has_reaction: boolean
@@ -347,24 +371,101 @@ export interface ChatMessageReactionEvent {
   }
 }
 
-export interface ChatMessageReadEvent {
-  type: 'ChatMessageRead'
+export interface PrivateMessageReadEvent {
+  type: 'PrivateMessageRead'
   payload: {
-    chat_type: 'private_chat' | 'group_chat'
-    chat_id: string
-    up_to: string
+    target_user_id: number
+    up_to_message_id: string
     reader_id: number
     read_at: string
   }
 }
 
-export interface UserTypingEvent {
-  type: 'UserTyping'
+// 群聊消息事件
+export interface GroupMessageNewEvent {
+  type: 'GroupMessageNew'
   payload: {
-    chat_type: 'private_chat' | 'group_chat'
-    chat_id: string
+    message_id: string
+    group_chat_id: string
+    sender: UserInfo
+    type: MessageType
+    content?: string
+    reply_to_message_id?: string
+    reply_to?: MessageReplyTo
+    mentions?: number[] // user_id
+    // 媒体信息
+    media?: MessageMedia
+    sent_at: string
+  }
+}
+
+export interface GroupMessageEditedEvent {
+  type: 'GroupMessageEdited'
+  payload: {
+    message_id: string
+    group_chat_id: string
+    content: string
+    edited_at: string
+  }
+}
+
+export interface GroupMessageRecalledEvent {
+  type: 'GroupMessageRecalled'
+  payload: {
+    message_id: string
+    group_chat_id: string
+    recalled_by: number
+    recalled_at: string
+  }
+}
+
+export interface GroupMessageDeletedEvent {
+  type: 'GroupMessageDeleted'
+  payload: {
+    message_id: string
+    group_chat_id: string
+    deleted_by: number
+    for_everyone: boolean
+    deleted_at: string
+  }
+}
+
+export interface GroupMessageReactionEvent {
+  type: 'GroupMessageReaction'
+  payload: {
+    message_id: string
+    group_chat_id: string
+    user: UserInfo
+    reaction_type: ReactionType
+    has_reaction: boolean
+    created_at: string
+  }
+}
+
+export interface GroupMessageReadEvent {
+  type: 'GroupMessageRead'
+  payload: {
+    group_chat_id: string
+    up_to_message_id: string
+    reader_id: number
+    read_at: string
+  }
+}
+
+export interface PrivateUserTypingEvent {
+  type: 'PrivateUserTyping'
+  payload: {
+    target_user_id: number
     user_id: number
-    nickname: string
+    is_typing: boolean
+  }
+}
+
+export interface GroupUserTypingEvent {
+  type: 'GroupUserTyping'
+  payload: {
+    group_chat_id: string
+    user_id: number
     is_typing: boolean
   }
 }
@@ -375,6 +476,8 @@ export interface GroupMemberJoinedEvent {
   payload: {
     group_chat_id: string
     user: UserInfo
+    role: 'owner' | 'admin' | 'member'
+    member_count: number // 当前成员总数
     joined_at: string
   }
 }
@@ -384,6 +487,8 @@ export interface GroupMemberLeftEvent {
   payload: {
     group_chat_id: string
     user_id: number
+    member_count: number // 当前成员总数
+    reason: 'left' | 'kicked' | 'banned' // 离开原因：主动退出、被移出、被封禁
     left_at: string
   }
 }
@@ -446,9 +551,10 @@ export interface GroupDismissedEvent {
 export interface GroupInviteReceivedEvent {
   type: 'GroupInviteReceived'
   payload: {
-    id: string
+    invite_id: string
     group_chat_id: string
     group_name: string
+    group_avatar_url?: string
     inviter: UserInfo
     message?: string
     created_at: string
@@ -458,7 +564,7 @@ export interface GroupInviteReceivedEvent {
 export interface GroupInviteResponseEvent {
   type: 'GroupInviteResponse'
   payload: {
-    id: string
+    invite_id: string
     group_chat_id: string
     user: UserInfo
     status: 'accepted' | 'rejected'
@@ -469,7 +575,7 @@ export interface GroupInviteResponseEvent {
 export interface GroupApplicationReceivedEvent {
   type: 'GroupApplicationReceived'
   payload: {
-    id: string
+    application_id: string
     group_chat_id: string
     applicant: UserInfo
     message?: string
@@ -480,7 +586,7 @@ export interface GroupApplicationReceivedEvent {
 export interface GroupApplicationResponseEvent {
   type: 'GroupApplicationResponse'
   payload: {
-    id: string
+    application_id: string
     group_chat_id: string
     group_name: string
     status: 'accepted' | 'rejected'
@@ -488,19 +594,76 @@ export interface GroupApplicationResponseEvent {
   }
 }
 
+// 多端同步事件 (Self-Sync)
+export interface SelfJoinedGroupEvent {
+  type: 'SelfJoinedGroup'
+  payload: {
+    group: JoinedGroupItem // 包含 my_role 和 location，确保 Zero-Lookup
+    joined_at: string
+  }
+}
+
+export interface SelfLeftGroupEvent {
+  type: 'SelfLeftGroup'
+  payload: {
+    group_chat_id: string
+    left_at: string
+  }
+}
+
+export interface PrivateChatDeletedEvent {
+  type: 'PrivateChatDeleted'
+  payload: {
+    target_user_id: number
+    deleted_at: string
+  }
+}
+
+export interface PrivateChatSettingsUpdatedEvent {
+  type: 'PrivateChatSettingsUpdated'
+  payload: {
+    target_user_id: number
+    is_muted?: boolean
+    is_pinned?: boolean
+    updated_at: string
+  }
+}
+
+export interface NotificationReadStateUpdatedEvent {
+  type: 'NotificationReadStateUpdated'
+  payload: {
+    total_unread_count: number
+    read_at: string
+  }
+}
+
+export interface SelfProfileUpdatedEvent {
+  type: 'SelfProfileUpdated'
+  payload: {
+    nickname?: string
+    avatar_url?: string
+    bio?: string
+    updated_at: string
+  }
+}
+
 // 订阅确认事件
+export type SubscriptionFailureReason =
+  | 'invalid_item' // 订阅项格式不合法（source_type/source_ids 类型不匹配、空数组等）
+  | 'not_found' // 订阅目标不存在（部分 id 不存在）
+  | 'permission_denied' // 无权限订阅该目标
+  | 'too_many_subscriptions' // 超出订阅数量限制
+  | 'rate_limited' // 触发限流（服务端拒绝本次操作，可稍后重试）
+  | 'internal_error' // 服务端内部错误（可重试）
+
 export interface SubscribeAckEvent {
   type: 'SubscribeAck'
   payload: {
     operation: 'subscribe' | 'unsubscribe' | 'set'
     items: SubscriptionItem[]
-    code: number
-    message?: string
-    failed_items?: {
-      source_type: SubscriptionSourceType
-      source_ids: string[]
-      reason: string
-    }[]
+    code: number // 0表示成功，非0表示失败
+    message?: string // 错误消息（失败时）
+    failed_items?: (SubscriptionItem & { reason: SubscriptionFailureReason })[]
   }
 }
 
@@ -516,10 +679,11 @@ export interface ErrorEvent {
 // 联合类型
 export type ServerEvent =
   | ConnectionEstablishedEvent
-  | HeartbeatEvent
+  | PongEvent
   | UserOnlineEvent
   | UserOfflineEvent
   | UserLocationUpdateEvent
+  | UserProfileUpdatedEvent
   | NewFollowerEvent
   | MutualFollowEvent
   | UnfollowedEvent
@@ -527,13 +691,20 @@ export type ServerEvent =
   | MomentCommentedEvent
   | CommentReplyEvent
   | SystemAnnouncementEvent
-  | ChatMessageNewEvent
-  | ChatMessageEditedEvent
-  | ChatMessageRecalledEvent
-  | ChatMessageDeletedEvent
-  | ChatMessageReactionEvent
-  | ChatMessageReadEvent
-  | UserTypingEvent
+  | PrivateMessageNewEvent
+  | PrivateMessageEditedEvent
+  | PrivateMessageRecalledEvent
+  | PrivateMessageDeletedEvent
+  | PrivateMessageReactionEvent
+  | PrivateMessageReadEvent
+  | GroupMessageNewEvent
+  | GroupMessageEditedEvent
+  | GroupMessageRecalledEvent
+  | GroupMessageDeletedEvent
+  | GroupMessageReactionEvent
+  | GroupMessageReadEvent
+  | PrivateUserTypingEvent
+  | GroupUserTypingEvent
   | GroupMemberJoinedEvent
   | GroupMemberLeftEvent
   | GroupProfileUpdatedEvent
@@ -545,6 +716,12 @@ export type ServerEvent =
   | GroupInviteResponseEvent
   | GroupApplicationReceivedEvent
   | GroupApplicationResponseEvent
+  | SelfJoinedGroupEvent
+  | SelfLeftGroupEvent
+  | PrivateChatDeletedEvent
+  | PrivateChatSettingsUpdatedEvent
+  | NotificationReadStateUpdatedEvent
+  | SelfProfileUpdatedEvent
   | SubscribeAckEvent
   | ErrorEvent
 

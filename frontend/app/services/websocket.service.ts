@@ -9,6 +9,7 @@ import type {
   ClientEventType
 } from '~/types/websocket'
 import { WS_CONSTANTS } from '~/config/defaults'
+import { isTokenInvalidOrExpiredCode } from '~/utils/apiError'
 
 // 类型定义
 type MessageHandler<K extends ServerEventType> = (payload: ServerPayload<K>) => void
@@ -157,14 +158,18 @@ class WebSocketService {
         const key = `${item.source_type}:${id}`
         this.activeSubscriptions.set(key, { 
           source_type: item.source_type, 
-          source_ids: [id] 
+          source_ids: [id] as typeof item.source_ids
         })
       })
     })
 
     // 2. 如果已连接，立即发送订阅请求
     if (this.status === 'connected') {
-      this.send('Subscribe', { items })
+      const payloadItems = items.map(item => ({
+        ...item,
+        source_ids: item.source_ids.map(String)
+      }))
+      this.send('Subscribe', { items: payloadItems })
     }
   }
 
@@ -183,7 +188,11 @@ class WebSocketService {
 
     // 2. 如果已连接，发送取消订阅请求
     if (this.status === 'connected') {
-      this.send('Unsubscribe', { items })
+      const payloadItems = items.map(item => ({
+        ...item,
+        source_ids: item.source_ids.map(String)
+      }))
+      this.send('Unsubscribe', { items: payloadItems })
     }
   }
 
@@ -198,14 +207,18 @@ class WebSocketService {
         const key = `${item.source_type}:${id}`
         this.activeSubscriptions.set(key, { 
           source_type: item.source_type, 
-          source_ids: [id] 
+          source_ids: [id] as typeof item.source_ids
         })
       })
     })
 
     // 2. 如果已连接，发送设置请求
     if (this.status === 'connected') {
-      this.send('SetSubscriptions', { items })
+      const payloadItems = items.map(item => ({
+        ...item,
+        source_ids: item.source_ids.map(String)
+      }))
+      this.send('SetSubscriptions', { items: payloadItems })
     }
   }
 
@@ -285,7 +298,9 @@ class WebSocketService {
   }
 
   private _handleOpen() {
-    console.log('[WS] Socket opened, sending Auth...')
+    if (import.meta.dev) {
+      console.log('[WS] Socket opened, sending Auth...')
+    }
     this.isConnecting = false
     this._sendAuth()
   }
@@ -304,8 +319,8 @@ class WebSocketService {
         this._resyncSubscriptions()
       }
       
-      // 心跳处理：服务端会定期发送 Heartbeat
-      if (message.type === 'Heartbeat') {
+      // 心跳响应处理：接收服务端的 Pong
+      if (message.type === 'Pong') {
         this.missedHeartbeats = 0
         if (this.heartbeatTimeoutTimer) {
           clearTimeout(this.heartbeatTimeoutTimer)
@@ -319,8 +334,8 @@ class WebSocketService {
          if (this.errorHandler) {
            this.errorHandler(message.payload)
          }
-         // 1101 = Token 无效/过期 -> 可能需要刷新 Token 重连
-         if (message.payload.code === 1101) {
+         // 40101 = Token 无效/过期 -> 可能需要刷新 Token 重连
+         if (isTokenInvalidOrExpiredCode(message.payload.code)) {
            console.warn('[WS] Auth error from server, closing connection to trigger reconnect logic')
            // 关闭连接，触发 reconnect 逻辑 (reconnect 会重新调用 tokenProvider 获取新 token)
            this.ws?.close(4001, 'Token Expired') 
@@ -379,11 +394,15 @@ class WebSocketService {
     this.isConnecting = false
     
     if (this.isManuallyDisconnected) {
-      console.log(`[WS] Closed manually (Code: ${event.code})`)
+      if (import.meta.dev) {
+        console.log(`[WS] Closed manually (Code: ${event.code})`)
+      }
       return
     }
 
-    console.log(`[WS] Closed (Code: ${event.code}, Reason: ${event.reason})`)
+    if (import.meta.dev) {
+      console.log(`[WS] Closed (Code: ${event.code}, Reason: ${event.reason})`)
+    }
     this._cleanup()
     this._setStatus('disconnected')
 
@@ -445,7 +464,9 @@ class WebSocketService {
     const jitter = delay * 0.2 * (Math.random() * 2 - 1)
     const finalDelay = Math.max(0, Math.floor(delay + jitter))
 
-    console.log(`[WS] Reconnecting in ${finalDelay}ms... (Attempt ${this.reconnectCount + 1}/${MAX_RECONNECT_ATTEMPTS})`)
+    if (import.meta.dev) {
+      console.log(`[WS] Reconnecting in ${finalDelay}ms... (Attempt ${this.reconnectCount + 1}/${MAX_RECONNECT_ATTEMPTS})`)
+    }
     
     this.reconnectTimer = setTimeout(() => {
       this.reconnectCount++
@@ -485,22 +506,24 @@ class WebSocketService {
 
     // 将 Map 转换为 SubscriptionItem 数组
     const groups: string[] = []
-    const users: string[] = []
+    const users: number[] = []
     const notifs: string[] = []
 
     this.activeSubscriptions.forEach(item => {
-      if (item.source_type === 'group_chat') groups.push(...item.source_ids)
-      else if (item.source_type === 'user') users.push(...item.source_ids)
-      else if (item.source_type === 'notification') notifs.push(...item.source_ids)
+      if (item.source_type === 'group_chat') groups.push(...item.source_ids as string[])
+      else if (item.source_type === 'user') users.push(...item.source_ids as number[])
+      else if (item.source_type === 'notification') notifs.push(...item.source_ids as string[])
     })
 
     const items: SubscriptionItem[] = []
     if (groups.length) items.push({ source_type: 'group_chat', source_ids: [...new Set(groups)] })
-    if (users.length) items.push({ source_type: 'user', source_ids: [...new Set(users)] })
+    if (users.length) items.push({ source_type: 'user', source_ids: [...new Set(users)].map(String) })
     if (notifs.length) items.push({ source_type: 'notification', source_ids: [...new Set(notifs)] })
 
     if (items.length > 0) {
-      console.log('[WS] Resyncing subscriptions...', items)
+      if (import.meta.dev) {
+        console.log('[WS] Resyncing subscriptions...', items)
+      }
       this.send('SetSubscriptions', { items })
     }
   }

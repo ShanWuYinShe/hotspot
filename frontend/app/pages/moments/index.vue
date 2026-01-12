@@ -10,7 +10,6 @@ definePageMeta({
   title: '动态',
   description: '正在跳转...',
   layout: 'dashboard',
-  dashboardHeader: true
 })
 
 await navigateTo('/moments/nearby', { replace: true })

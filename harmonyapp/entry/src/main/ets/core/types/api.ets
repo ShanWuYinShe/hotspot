@@ -18,12 +18,75 @@ export interface PaginatedData<T> {
   pagination: PaginationMeta;
 }
 
-// ==================== 通用类型定义 ====================
+// ==================== 通用类型定义 (Domain Primitives) ====================
 
 export type UserType = 'temp' | 'normal' | 'admin' | 'system';
-export type SendMessageType = 'text' | 'image' | 'video' | 'audio' | 'file';
+export type SendMessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'location';
 export type MessageType = SendMessageType | 'system';
 export type ReactionType = 'like' | 'love' | 'laugh' | 'angry' | 'sad' | 'wow';
+export type PrivacyLevel = 'public' | 'friends' | 'private';
+export type GroupRole = 'owner' | 'admin' | 'member';
+
+// 基础坐标点
+export interface GeoPoint {
+  latitude: number;
+  longitude: number;
+}
+
+// 命名位置
+export interface Location extends GeoPoint {
+  location_name: string;
+}
+
+// 相对位置 (用于搜索结果/附近推荐)
+export interface RelativeLocation extends Location {
+  distance: number;
+  bearing_degrees: number;
+}
+
+// 视口边界
+export interface Bounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
+
+export interface MapViewport {
+  bounds: Bounds;
+  zoom: number;
+}
+
+// 字段可见性元数据
+export type FieldVisibility = 'visible' | 'hidden';
+export type HiddenReason = 'privacy' | 'blocked' | 'not_available';
+
+export interface FieldVisibilityMeta {
+  visibility: FieldVisibility;
+  reason?: HiddenReason;
+}
+
+export interface MomentImage {
+  url: string;
+  width?: number;
+  height?: number;
+  content_type?: string;
+}
+
+export interface MessageMedia {
+  url: string;
+  thumbnail_url?: string;
+  file_name?: string;
+  file_size?: number;
+  duration?: number;
+  width?: number;
+  height?: number;
+  mime_type?: string;
+}
+
+// ==================== 领域实体定义 (Domain Entities) ====================
+
+// 1. 用户 (User)
 
 export interface UserInfo {
   user_id: number;
@@ -32,117 +95,226 @@ export interface UserInfo {
   user_type: UserType;
 }
 
-export interface LocationInfo {
-  latitude: number;
-  longitude: number;
-  name: string;
-}
-
-export interface GeoData {
-  latitude: number;
-  longitude: number;
-  location_name: string;
-  distance: number;
-  degrees: number;
-}
-
-export interface SearchBaseParams {
-  latitude: number;
-  longitude: number;
-  limit?: number;
-  cursor?: string;
-}
-
-export interface GroupInfo {
-  id: string;
-  name: string;
-  avatar_url?: string;
-  members_count: number;
-}
-
-/**
- * 群组设置
- */
-export interface GroupSettings {
-  join_method?: 'open' | 'approval' | 'invite_only';
-  is_searchable?: boolean;
-  max_members?: number;
-  // 输入字段：仅用于创建/更新/加入时提交；不回显；服务端会慢哈希存储
-  password?: string;
-  longitude?: number;
-  latitude?: number;
-  location_name?: string;
-}
-
-/**
- * 用户关系信息
- */
-export interface UserRelationship {
+export interface UserRelation {
   is_mutual_follow: boolean;
   is_following: boolean;
   is_followed_by: boolean;
   is_blocked: boolean;
   is_blocking: boolean;
+  has_pending_follow_request: boolean;
+}
+
+export interface UserItem extends UserInfo {
+  bio?: string;
+  tags?: string[];
+  
+  is_online: boolean | null;
+  is_online_meta: FieldVisibilityMeta;
+  
+  last_online: string | null;
+  last_online_meta: FieldVisibilityMeta;
+  
+  location?: RelativeLocation | null;
+  location_meta: FieldVisibilityMeta;
+
+  relation?: UserRelation;
+}
+
+export interface UserStats {
+  moments_count: number;
+  friends_count: number;
+  followers_count: number;
+  following_count: number;
+}
+
+export interface UserDetailData extends UserItem {
+  created_at?: string;
+  stats?: UserStats;
+}
+
+// 2. 群组 (Group)
+
+export interface GroupInfo {
+  group_chat_id: string;
+  name: string;
+  avatar_url?: string;
+  members_count: number;
+}
+
+export interface GroupMyState {
+  role: GroupRole;
+  is_joined: boolean;
+  unread_count: number;
+  is_muted: boolean;
+  is_pinned: boolean;
+  joined_at?: string;
+}
+
+export interface GroupItem extends GroupInfo {
+  description?: string;
+  tags?: string[];
+  has_password: boolean;
+  location?: RelativeLocation;
+  my_state?: GroupMyState;
+}
+
+export interface JoinedGroupItem extends GroupItem {
+  my_state: GroupMyState;
+  
+  // 兼容旧版扁平化字段 (不推荐，建议迁移到 my_state)
+  my_role: GroupRole;
+  unread_count: number;
+  last_activity_at: string;
+  is_muted: boolean;
+  is_pinned: boolean;
+}
+
+export interface GroupSettings {
+  join_method?: 'open' | 'approval' | 'invite_only';
+  is_searchable?: boolean;
+  max_members?: number;
+  // 输入字段
+  password?: string;
+  // 位置设置 (Input)
+  longitude?: number;
+  latitude?: number;
+  location_name?: string;
+}
+
+export interface GroupDetailData extends GroupItem {
+  created_at: string;
+  owner_id: number;
+  settings?: GroupSettings;
+  
+  // 仅在登录且已加入时返回 (Zero-Lookup)
+  my_role?: GroupRole;
+  is_joined?: boolean;
+  unread_count?: number;
+  is_muted?: boolean;
+  is_pinned?: boolean;
+}
+
+// 3. 生活瞬间 (Moment)
+
+export interface MomentItem {
+  moment_id: string;
+  user: UserInfo;
+  
+  description: string;
+  images?: MomentImage[];
+  tags: string[];
+  
+  location?: RelativeLocation;
+  
+  created_at: string;
+  
+  likes_count: number;
+  comments_count: number;
+  
+  is_liked: boolean;
+  is_favorited: boolean;
+}
+
+// 4. 消息 (Message)
+
+export interface MessageReplyTo {
+  message_id: string;
+  user_id: number;
+  nickname: string;
+  content: string;
+}
+
+export interface PrivateMessageItem {
+  message_id: string;
+  type: MessageType;
+  content?: string;
+  media?: MessageMedia;
+  sender: UserInfo;
+  reply_to_message_id?: string;
+  reply_to?: MessageReplyTo;
+  sent_at: string;
+  edited_at?: string;
+  is_recalled: boolean;
+  recalled_at?: string;
+}
+
+export interface GroupMessageItem {
+  message_id: string;
+  type: MessageType;
+  content?: string;
+  media?: MessageMedia;
+  sender: UserInfo;
+  reply_to_message_id?: string;
+  reply_to?: MessageReplyTo;
+  mentions?: number[];
+  sent_at: string;
+  edited_at?: string;
+  is_recalled: boolean;
+  recalled_by?: number;
+  recalled_at?: string;
+  read_count?: number;
+}
+
+export interface PrivateChatListItem {
+  other_user: UserInfo;
+  unread_count: number;
+  last_message?: {
+    message_id: string;
+    content?: string;
+    type: MessageType;
+    sender_id: number;
+    sent_at: string;
+  };
+  last_activity_at: string;
+  is_muted: boolean;
+  is_pinned: boolean;
+  is_online: boolean;
 }
 
 // ==================== 认证API类型 ====================
 
-/**
- * 通用认证数据类型
- */
-export interface AuthData {
+export interface AuthTokenPairWeb {
   user_id: number;
   nickname: string;
   access_token: string;
-  // Web 场景通常不在 body 返回（使用 HttpOnly Cookie 下发）
-  refresh_token?: string;
   access_token_expires_at: string;
   refresh_token_expires_at: string;
 }
 
-// Web / App 分离（与 @api_spec.mdc 一致）
-export type WebAuthData = Omit<AuthData, 'refresh_token'>;
-export type AppAuthData = AuthData & { refresh_token: string };
+export interface AuthTokenPairApp {
+  user_id: number;
+  nickname: string;
+  access_token: string;
+  refresh_token: string;
+  access_token_expires_at: string;
+  refresh_token_expires_at: string;
+}
 
-/**
- * 用户注册请求
- */
+export type AuthData = AuthTokenPairApp; // HarmonyOS use App type
+
 export interface RegisterRequest {
   login_id: string;
   nickname: string;
   password: string;
-  client_type?: 'web' | 'app';
+  client_type: 'web' | 'app';
 }
 
-/**
- * 用户登录请求
- */
 export interface LoginRequest {
   login_id: string;
   password: string;
-  client_type?: 'web' | 'app';
+  client_type: 'web' | 'app';
 }
 
-/**
- * 创建临时用户请求
- */
-export interface CreateTempRequest {
+export interface GuestRequest {
   nickname: string;
-  client_type?: 'web' | 'app';
+  client_type: 'web' | 'app';
 }
 
-/**
- * 刷新Token请求
- */
 export interface RefreshTokenRequest {
-  // app：在 body 传递；web：可不传（从 HttpOnly cookie 读取）
+  client_type: 'web' | 'app';
   refresh_token?: string;
-  client_type?: 'web' | 'app';
 }
 
-/**
- * 检查认证状态数据
- */
 export interface CheckStatusData {
   user_id: number;
   nickname: string;
@@ -150,9 +322,6 @@ export interface CheckStatusData {
   expires_at: string;
 }
 
-/**
- * 请求密码重置请求
- */
 export interface RequestPasswordResetRequest {
   login_id: string;
 }
@@ -161,9 +330,6 @@ export interface RequestPasswordResetData {
   reset_id: string;
 }
 
-/**
- * 验证重置码请求
- */
 export interface VerifyResetCodeRequest {
   reset_id: string;
   code: string;
@@ -173,32 +339,23 @@ export interface VerifyResetCodeData {
   reset_token: string;
 }
 
-/**
- * 重置密码请求
- */
 export interface ResetPasswordRequest {
   reset_token: string;
   password: string;
 }
 
-/**
- * 修改密码请求
- */
 export interface ChangePasswordRequest {
   old_password: string;
   new_password: string;
 }
 
-/**
- * 获取活跃会话列表请求
- */
-export interface GetSessionsRequest {
+export interface SessionsRequest {
   limit?: number;
   cursor?: string;
 }
 
 export interface SessionItem {
-  id: string;
+  session_id: string;
   device_type?: string;
   device_name?: string;
   ip_address?: string;
@@ -207,72 +364,42 @@ export interface SessionItem {
   is_current: boolean;
 }
 
-/**
- * 撤销会话请求
- */
 export interface RevokeSessionRequest {
-  id: string;
+  session_id: string;
 }
 
 // ==================== 用户API类型 ====================
 
-/**
- * 用户搜索结果项
- */
-export interface UserSearchItem {
-  user_id: number;
-  nickname: string;
-  avatar_url?: string;
-  bio?: string;
-  tags?: string[];
-  is_online?: boolean;      // 在线状态（受 online_visible 隐私设置控制）
-  last_online?: string;     // 最后上线时间（受 last_online_visible 隐私设置控制，仅离线时返回）
-  geo?: GeoData | null;     // 位置信息（受 location_visible 隐私设置控制，为 false 时返回 null）
+export interface SearchBaseParams {
+  reference_point: GeoPoint;
+  limit?: number;
+  cursor?: string;
 }
 
-/**
- * 按关键字搜索用户请求
- */
 export interface SearchUsersByKeywordRequest extends SearchBaseParams {
   kw: string;
 }
 
-/**
- * 按标签搜索用户请求
- */
 export interface SearchUsersByTagRequest extends SearchBaseParams {
   tag: string;
 }
 
-/**
- * 按位置搜索用户请求
- */
 export interface SearchUsersByLocationRequest extends SearchBaseParams {
   kw?: string;
   radius: number;
 }
 
-/**
- * 获取用户资料请求
- */
 export interface UserOpenTheDoorRequest {
-  id: string;
-  latitude: number;
-  longitude: number;
+  user_id: number;
+  reference_point: GeoPoint;
 }
 
-/**
- * 获取用户关系请求
- */
 export interface GetRelationshipRequest {
-  id: string;
+  user_id: number;
 }
 
-/**
- * 获取用户统计请求
- */
-export interface GetUserStatsRequest {
-  id: string;
+export interface UserStatsRequest {
+  user_id: number;
 }
 
 export interface UserStatsData {
@@ -283,26 +410,53 @@ export interface UserStatsData {
   groups_count: number;
 }
 
-/**
- * 当前用户资料数据
- */
+export interface UserFriendsRequest {
+  user_id: number;
+  limit?: number;
+  cursor?: string;
+}
+
+export interface UserFollowingRequest {
+  user_id: number;
+  limit?: number;
+  cursor?: string;
+}
+
+export interface UserFollowersRequest {
+  user_id: number;
+  limit?: number;
+  cursor?: string;
+}
+
+export interface UserGroupsRequest {
+  user_id: number;
+  limit?: number;
+  cursor?: string;
+}
+
+export interface UserLikedMomentsRequest extends SearchBaseParams {
+  user_id: number;
+}
+
+// 当前用户 API
+export interface MyProfileRequest {}
+
 export interface MyProfileData {
   user_id: number;
   nickname: string;
   avatar_url?: string;
   bio?: string;
   tags?: string[];
+  gender?: 'male' | 'female' | 'other';
   email?: string;
   phone?: string;
-  location_name: string;
+  location: Location;
   is_online: boolean;
-  last_online?: string;
+  last_online: string;
   created_at: string;
+  stats: UserStatsData;
 }
 
-/**
- * 更新用户资料请求
- */
 export interface UpdateProfileRequest {
   nickname?: string;
   avatar_file_id?: string;
@@ -310,36 +464,29 @@ export interface UpdateProfileRequest {
   tags?: string[];
 }
 
-/**
- * 更新用户位置请求
- */
 export interface UpdateLocationRequest {
-  latitude: number;
-  longitude: number;
-  location_name?: string;
+  location: Location;
 }
 
-/**
- * 账户升级请求
- */
 export interface UpgradeAccountRequest {
   login_id: string;
   password: string;
 }
 
-/**
- * 用户设置数据
- */
+export interface MyStatsRequest {}
+
+export interface MySettingsRequest {}
+
 export interface UserSettingsData {
-  privacy_level: 'public' | 'friends' | 'private';
+  privacy_level: PrivacyLevel;
   location_visible: boolean;
   online_visible: boolean;
   last_online_visible: boolean;
-  friends_visible: 'public' | 'friends' | 'private';
-  following_visible: 'public' | 'friends' | 'private';
-  followers_visible: 'public' | 'friends' | 'private';
-  moments_visible: 'public' | 'friends' | 'private';
-  stats_visible: 'public' | 'friends' | 'private';
+  friends_visible: PrivacyLevel;
+  following_visible: PrivacyLevel;
+  followers_visible: PrivacyLevel;
+  moments_visible: PrivacyLevel;
+  stats_visible: PrivacyLevel;
   allow_follow: boolean;
   allow_private_chat: 'everyone' | 'friends' | 'nobody';
   searchable: boolean;
@@ -348,19 +495,16 @@ export interface UserSettingsData {
   location_searchable: boolean;
 }
 
-/**
- * 更新用户设置请求
- */
 export interface UpdateSettingsRequest {
-  privacy_level?: 'public' | 'friends' | 'private';
+  privacy_level?: PrivacyLevel;
   location_visible?: boolean;
   online_visible?: boolean;
   last_online_visible?: boolean;
-  friends_visible?: 'public' | 'friends' | 'private';
-  following_visible?: 'public' | 'friends' | 'private';
-  followers_visible?: 'public' | 'friends' | 'private';
-  moments_visible?: 'public' | 'friends' | 'private';
-  stats_visible?: 'public' | 'friends' | 'private';
+  friends_visible?: PrivacyLevel;
+  following_visible?: PrivacyLevel;
+  followers_visible?: PrivacyLevel;
+  moments_visible?: PrivacyLevel;
+  stats_visible?: PrivacyLevel;
   allow_follow?: boolean;
   allow_private_chat?: 'everyone' | 'friends' | 'nobody';
   searchable?: boolean;
@@ -369,277 +513,161 @@ export interface UpdateSettingsRequest {
   location_searchable?: boolean;
 }
 
-/**
- * 删除账户请求
- */
 export interface DeleteAccountRequest {
   confirmation: string;
 }
 
-/**
- * 关注用户请求
- */
-export interface FollowUserRequest {
-  id: string;
+export interface FollowRequest {
+  user_id: number;
 }
 
-/**
- * 取消关注用户请求
- */
-export interface UnfollowUserRequest {
-  id: string;
+export interface UnfollowRequest {
+  user_id: number;
 }
 
-/**
- * 拉黑用户请求
- */
-export interface BlockUserRequest {
-  id: string;
+export interface BlockRequest {
+  user_id: number;
   reason?: string;
 }
 
-/**
- * 解除拉黑用户请求
- */
-export interface UnblockUserRequest {
-  id: string;
+export interface UnblockRequest {
+  user_id: number;
 }
 
-/**
- * 好友列表项
- */
+export interface MyFriendsRequest {
+  limit?: number;
+  cursor?: string;
+}
+
 export interface FriendListItem {
   user: UserInfo;
-  is_online?: boolean;
+  is_online: boolean;
   remark?: string;
   followed_at: string;
   followed_back_at: string;
 }
 
-/**
- * 关注列表项
- */
+export interface MyFollowingRequest {
+  limit?: number;
+  cursor?: string;
+}
+
 export interface FollowingItem {
   user: UserInfo;
   followed_at: string;
   is_mutual: boolean;
+  is_online: boolean;
 }
 
-/**
- * 粉丝列表项
- */
+export interface MyFollowersRequest {
+  limit?: number;
+  cursor?: string;
+}
+
 export interface FollowerItem {
   user: UserInfo;
   followed_at: string;
   is_following_back: boolean;
+  is_online: boolean;
 }
 
-/**
- * 拉黑列表项
- */
+export interface MyBlockedRequest {
+  limit?: number;
+  cursor?: string;
+}
+
 export interface BlockedUserItem {
   user: UserInfo;
   blocked_at: string;
   reason?: string;
 }
 
-/**
- * 设置好友备注请求
- */
-export interface SetFriendRemarkRequest {
-  id: string;
+export interface SetRemarkRequest {
+  user_id: number;
   remark?: string;
-}
-
-/**
- * 获取用户好友列表请求
- */
-export interface GetUserFriendsListRequest {
-  id: string;
-  limit?: number;
-  cursor?: string;
-}
-
-/**
- * 获取用户关注列表请求
- */
-export interface GetUserFollowingListRequest {
-  id: string;
-  limit?: number;
-  cursor?: string;
-}
-
-/**
- * 获取用户粉丝列表请求
- */
-export interface GetUserFollowersListRequest {
-  id: string;
-  limit?: number;
-  cursor?: string;
-}
-
-/**
- * 获取用户加入的公开群组请求
- */
-export interface GetUserGroupsListRequest {
-  id: string;
-  limit?: number;
-  cursor?: string;
-}
-
-/**
- * 获取用户点赞的瞬间请求
- */
-export interface GetUserLikedMomentsListRequest {
-  id: string;
-  latitude: number;
-  longitude: number;
-  limit?: number;
-  cursor?: string;
 }
 
 // ==================== 生活瞬间API类型 ====================
 
-/**
- * 生活瞬间搜索结果项
- */
-export interface MomentSearchItem {
-  id: string;
-  user: UserInfo;
-  description: string;
-  images?: string[];
-  tags: string[];
-  created_at: string;
-  likes_count: number;
-  comments_count: number;
-  geo: GeoData;
-}
-
-/**
- * 按关键字搜索瞬间请求
- */
 export interface SearchMomentsByKeywordRequest extends SearchBaseParams {
   kw: string;
 }
 
-/**
- * 按标签搜索瞬间请求
- */
 export interface SearchMomentsByTagRequest extends SearchBaseParams {
   tag: string;
 }
 
-/**
- * 按位置搜索瞬间请求
- */
 export interface SearchMomentsByLocationRequest extends SearchBaseParams {
   kw?: string;
   radius: number;
 }
 
-/**
- * 获取瞬间详情请求
- */
 export interface MomentOpenTheDoorRequest {
-  id: string;
-  latitude: number;
-  longitude: number;
+  moment_id: string;
+  reference_point: GeoPoint;
 }
 
-/**
- * 获取用户瞬间列表请求
- */
-export interface GetUserMomentsRequest extends SearchBaseParams {
-  id: number;
+export interface UserMomentsRequest extends SearchBaseParams {
+  user_id: number;
 }
 
-/**
- * 创建瞬间请求
- */
 export interface CreateMomentRequest {
   description: string;
-  location: LocationInfo;
+  location: Location;
   tags?: string[];
   image_file_ids?: string[];
 }
 
-export interface CreateMomentData {
-  id: string;
-}
-
-/**
- * 编辑瞬间请求
- */
-export interface EditMomentRequest {
-  id: string;
+export interface UpdateMomentRequest {
+  moment_id: string;
   description?: string;
   image_file_ids?: string[];
   tags?: string[];
-  location?: LocationInfo;
+  location?: Location;
 }
 
-/**
- * 删除瞬间请求
- */
 export interface DeleteMomentRequest {
-  id: string;
+  moment_id: string;
 }
 
-/**
- * 点赞瞬间请求
- */
 export interface LikeMomentRequest {
-  id: string;
+  moment_id: string;
 }
 
-/**
- * 取消点赞瞬间请求
- */
 export interface UnlikeMomentRequest {
-  id: string;
+  moment_id: string;
 }
 
-/**
- * 收藏瞬间请求
- */
 export interface FavoriteMomentRequest {
-  id: string;
+  moment_id: string;
 }
 
-/**
- * 取消收藏瞬间请求
- */
 export interface UnfavoriteMomentRequest {
-  id: string;
+  moment_id: string;
 }
 
-/**
- * 检查瞬间是否已点赞请求
- */
-export interface CheckMomentLikedRequest {
-  id: string;
+export interface MyMomentsRequest extends SearchBaseParams {}
+
+export interface MyFavoritesRequest extends SearchBaseParams {}
+
+export interface CheckLikedRequest {
+  moment_id: string;
 }
 
 export interface CheckLikedData {
   is_liked: boolean;
 }
 
-/**
- * 检查瞬间是否已收藏请求
- */
-export interface CheckMomentFavoritedRequest {
-  id: string;
+export interface CheckFavoritedRequest {
+  moment_id: string;
 }
 
 export interface CheckFavoritedData {
   is_favorited: boolean;
 }
 
-/**
- * 获取瞬间点赞列表请求
- */
-export interface GetMomentLikesRequest {
-  id: string;
+export interface MomentLikesRequest {
+  moment_id: string;
   limit?: number;
   cursor?: string;
 }
@@ -651,77 +679,48 @@ export interface MomentLikeItem {
 
 // ==================== 评论API类型 ====================
 
-/**
- * 添加评论请求
- */
 export interface CreateCommentRequest {
   moment_id: string;
   content: string;
   parent_id?: string;
 }
 
-export interface CreateCommentData {
-  id: string;
-}
-
-/**
- * 删除评论请求
- */
 export interface DeleteCommentRequest {
-  id: string;
+  comment_id: string;
 }
 
-/**
- * 获取评论列表请求
- */
-export interface GetCommentsRequest {
+export interface CommentsRequest {
   moment_id: string;
   limit?: number;
   cursor?: string;
 }
 
-/**
- * 评论列表项
- */
 export interface CommentListItem {
-  id: string;
+  comment_id: string;
   user: UserInfo;
   content: string;
   parent_id?: string;
-  reply_to_user?: UserInfo;
   created_at: string;
   likes_count: number;
   replies_count: number;
 }
 
-/**
- * 获取子评论请求
- */
-export interface GetRepliesRequest {
-  id: string;
+export interface CommentRepliesRequest {
+  comment_id: string;
   limit?: number;
   cursor?: string;
 }
 
-/**
- * 点赞评论请求
- */
 export interface LikeCommentRequest {
-  id: string;
+  comment_id: string;
 }
 
-/**
- * 取消点赞评论请求
- */
 export interface UnlikeCommentRequest {
-  id: string;
+  comment_id: string;
 }
 
-/**
- * 获取评论点赞列表请求
- */
-export interface GetCommentLikesRequest {
-  id: string;
+export interface CommentLikesRequest {
+  comment_id: string;
   limit?: number;
   cursor?: string;
 }
@@ -733,48 +732,13 @@ export interface CommentLikeItem {
 
 // ==================== 私聊管理API类型 ====================
 
-/**
- * 发起私聊请求
- */
-export interface CreatePrivateChatRequest {
-  target_user_id: number;
-  initial_message?: string;
-}
-
-export interface CreatePrivateChatData {
-  id: string;
-}
-
-/**
- * 获取私聊列表请求
- */
-export interface GetPrivateChatsRequest {
+export interface MyPrivateChatsRequest {
   limit?: number;
   cursor?: string;
-  include_archived?: boolean;
 }
 
-export interface PrivateChatLastMessage {
-  id: string;
-  content?: string;
-  type: SendMessageType;
-  sender_id: number;
-  sent_at: string;
-}
-
-export interface PrivateChatListItem {
-  id: string;
-  other_user: UserInfo;
-  unread_count: number;
-  last_message?: PrivateChatLastMessage;
-  last_activity_at: string;
-}
-
-/**
- * 获取私聊详情请求
- */
 export interface PrivateChatOpenTheDoorRequest {
-  id: string;
+  target_user_id: number;
 }
 
 export interface MessageLimit {
@@ -783,100 +747,67 @@ export interface MessageLimit {
   is_unlocked: boolean;
 }
 
+export interface PrivateChatLastMessage {
+  message_id: string;
+  content?: string;
+  type: MessageType;
+  sender_id: number;
+  sent_at: string;
+}
+
 export interface PrivateChatDetailData {
-  id: string;
   other_user: UserInfo;
   message_limit?: MessageLimit;
   unread_count: number;
   is_muted: boolean;
   is_pinned: boolean;
-  is_archived: boolean;
   last_message?: PrivateChatLastMessage;
   last_activity_at: string;
   created_at: string;
+  can_message: boolean;
 }
 
-/**
- * 更新私聊设置请求
- */
 export interface UpdatePrivateChatSettingsRequest {
-  id: string;
+  target_user_id: number;
   is_muted?: boolean;
   is_pinned?: boolean;
-  is_archived?: boolean;
 }
 
-/**
- * 删除私聊请求
- */
 export interface DeletePrivateChatRequest {
-  id: string;
+  target_user_id: number;
 }
 
 // ==================== 群组管理API类型 ====================
 
-/**
- * 群组搜索结果项
- */
-export interface GroupSearchItem {
-  id: string;
-  name: string;
-  description?: string;
-  avatar_url?: string;
-  tags?: string[];
-  members_count: number;
-  has_password: boolean;
-  geo: GeoData;
-}
-
-/**
- * 按关键字搜索群组请求
- */
 export interface SearchGroupsByKeywordRequest extends SearchBaseParams {
   kw: string;
 }
 
-/**
- * 按标签搜索群组请求
- */
 export interface SearchGroupsByTagRequest extends SearchBaseParams {
   tag: string;
 }
 
-/**
- * 按位置搜索群组请求
- */
 export interface SearchGroupsByLocationRequest extends SearchBaseParams {
   kw?: string;
   radius: number;
 }
 
-/**
- * 获取群组详情请求
- */
 export interface GroupOpenTheDoorRequest {
-  id: string;
-  latitude: number;
-  longitude: number;
+  group_chat_id: string;
+  reference_point: GeoPoint;
 }
 
-/**
- * 获取群组设置请求
- */
-export interface GetGroupSettingsRequest {
-  id: string;
+export interface GroupSettingsRequest {
+  group_chat_id: string;
 }
 
 export interface GroupSettingsData {
-  id: string;
+  group_chat_id: string;
   settings: GroupSettings;
   has_password: boolean;
   created_at: string;
 }
 
-/**
- * 创建群组请求
- */
 export interface CreateGroupChatRequest {
   name: string;
   description?: string;
@@ -885,15 +816,8 @@ export interface CreateGroupChatRequest {
   settings?: GroupSettings;
 }
 
-export interface CreateGroupChatData {
-  id: string;
-}
-
-/**
- * 更新群组请求
- */
 export interface UpdateGroupChatRequest {
-  id: string;
+  group_chat_id: string;
   name?: string;
   description?: string;
   avatar_file_id?: string;
@@ -901,18 +825,20 @@ export interface UpdateGroupChatRequest {
   settings?: GroupSettings;
 }
 
-/**
- * 解散群组请求
- */
-export interface DeleteGroupChatRequest {
-  id: string;
+export interface UpdateGroupMySettingsRequest {
+  group_chat_id: string;
+  is_muted?: boolean;
+  is_pinned?: boolean;
 }
 
-/**
- * 获取成员列表请求
- */
-export interface GetMembersRequest {
-  id: string;
+export interface DeleteGroupChatRequest {
+  group_chat_id: string;
+}
+
+// ==================== 群组成员管理API类型 ====================
+
+export interface GroupMembersRequest {
+  group_chat_id: string;
   role?: 'owner' | 'admin' | 'member';
   limit?: number;
   cursor?: string;
@@ -923,90 +849,64 @@ export interface GroupMemberItem {
   role: 'owner' | 'admin' | 'member';
   joined_at: string;
   muted_until?: string;
+  is_online: boolean;
 }
 
-/**
- * 邀请成员请求
- */
 export interface InviteMemberRequest {
-  id: string;
+  group_chat_id: string;
   user_id: number;
   message?: string;
 }
 
 export interface InviteMemberData {
-  id: string;
+  invite_id: string;
   expires_at: string;
 }
 
-/**
- * 加入群组请求
- */
 export interface JoinGroupRequest {
-  id: string;
+  group_chat_id: string;
   password?: string;
 }
 
-/**
- * 申请加入群组请求
- */
 export interface ApplyToGroupRequest {
-  id: string;
+  group_chat_id: string;
   message?: string;
 }
 
 export interface ApplyToGroupData {
-  id: string;
+  application_id: string;
 }
 
-/**
- * 设置成员角色请求
- */
 export interface SetMemberRoleRequest {
-  id: string;
+  group_chat_id: string;
   user_id: number;
   role: 'admin' | 'member';
 }
 
-/**
- * 禁言成员请求
- */
 export interface MuteMemberRequest {
-  id: string;
+  group_chat_id: string;
   user_id: number;
   duration_minutes: number;
 }
 
-/**
- * 取消禁言请求
- */
 export interface UnmuteMemberRequest {
-  id: string;
+  group_chat_id: string;
   user_id: number;
 }
 
-/**
- * 封禁成员请求
- */
 export interface BanMemberRequest {
-  id: string;
+  group_chat_id: string;
   user_id: number;
   reason?: string;
 }
 
-/**
- * 解除封禁请求
- */
 export interface UnbanMemberRequest {
-  id: string;
+  group_chat_id: string;
   user_id: number;
 }
 
-/**
- * 获取封禁列表请求
- */
-export interface GetBannedMembersRequest {
-  id: string;
+export interface BannedMembersRequest {
+  group_chat_id: string;
   limit?: number;
   cursor?: string;
 }
@@ -1015,90 +915,62 @@ export interface BannedMemberItem {
   user: UserInfo;
   reason?: string;
   banned_at: string;
+  banned_by?: UserInfo;
 }
 
-/**
- * 移除成员请求
- */
 export interface RemoveMemberRequest {
-  id: string;
+  group_chat_id: string;
   user_id: number;
 }
 
-/**
- * 获取群组申请列表请求
- */
-export interface GetGroupApplicationsRequest {
-  id: string;
+export interface GroupApplicationsRequest {
+  group_chat_id: string;
   status?: 'pending' | 'accepted' | 'rejected' | 'all';
   limit?: number;
   cursor?: string;
 }
 
 export interface GroupApplicationItem {
-  id: string;
+  application_id: string;
   applicant: UserInfo;
   message?: string;
   status: 'pending' | 'accepted' | 'rejected';
   created_at: string;
   handled_at?: string;
+  handled_by?: UserInfo;
 }
 
-/**
- * 审批群组申请请求
- */
 export interface ApproveGroupApplicationRequest {
   application_id: string;
 }
 
-/**
- * 拒绝群组申请请求
- */
 export interface RejectGroupApplicationRequest {
   application_id: string;
   reason?: string;
 }
 
-/**
- * 转让群主请求
- */
 export interface TransferOwnershipRequest {
-  id: string;
+  group_chat_id: string;
   new_owner_id: number;
 }
 
-/**
- * 获取我加入的群组请求
- */
-export interface GetJoinedGroupChatsRequest {
+export interface MyGroupChatsRequest {
   limit?: number;
   cursor?: string;
 }
 
-export interface JoinedGroupItem extends GroupInfo {
-  my_role: 'owner' | 'admin' | 'member';
-  unread_count: number;
-  last_activity_at: string;
-}
-
-/**
- * 取消群组申请请求
- */
-export interface CancelGroupApplicationRequest {
+export interface CancelApplicationRequest {
   application_id: string;
 }
 
-/**
- * 获取群组邀请列表请求
- */
-export interface GetGroupInvitesRequest {
+export interface MyInvitesRequest {
   status?: 'pending' | 'accepted' | 'rejected' | 'all';
   limit?: number;
   cursor?: string;
 }
 
 export interface GroupInviteItem {
-  id: string;
+  invite_id: string;
   group: GroupInfo;
   inviter: UserInfo;
   message?: string;
@@ -1107,124 +979,64 @@ export interface GroupInviteItem {
   expires_at?: string;
 }
 
-/**
- * 接受群组邀请请求
- */
-export interface AcceptGroupInviteRequest {
+export interface AcceptInviteRequest {
   invite_id: string;
 }
 
-/**
- * 拒绝群组邀请请求
- */
-export interface RejectGroupInviteRequest {
+export interface RejectInviteRequest {
   invite_id: string;
 }
 
-/**
- * 退出群组请求
- */
 export interface LeaveGroupRequest {
-  id: string;
+  group_chat_id: string;
 }
 
 // ==================== 私聊消息API类型 ====================
 
-/**
- * 发送私聊消息请求
- */
 export interface SendPrivateMessageRequest {
-  id: string;
+  target_user_id: number;
   type: SendMessageType;
   content?: string;
   file_id?: string;
-  reply_to?: string;
+  reply_to_message_id?: string;
 }
 
-export interface SendPrivateMessageData {
-  id: string;
-  sent_at: string;
-}
-
-/**
- * 获取私聊消息历史请求
- */
-export interface GetPrivateMessagesRequest {
-  id: string;
+export interface PrivateMessagesHistoryRequest {
+  target_user_id: number;
   limit?: number;
   cursor?: string;
 }
 
-export interface PrivateMessageItem {
-  id: string;
-  type: SendMessageType;
-  content?: string;
-  sender: UserInfo;
-  reply_to?: string;
-  media_url?: string;
-  thumbnail_url?: string;
-  file_name?: string;
-  file_size?: number;
-  duration?: number;
-  width?: number;
-  height?: number;
-  sent_at: string;
-  edited_at?: string;
-  is_recalled: boolean;
-  recalled_at?: string;
-}
-
-/**
- * 编辑私聊消息请求
- */
 export interface UpdatePrivateMessageRequest {
-  id: string;
+  message_id: string;
   content: string;
 }
 
-/**
- * 撤回私聊消息请求
- */
 export interface RecallPrivateMessageRequest {
-  id: string;
+  message_id: string;
 }
 
-/**
- * 删除私聊消息请求
- */
 export interface DeletePrivateMessageRequest {
-  id: string;
+  message_id: string;
 }
 
-/**
- * 标记私聊消息已读请求
- */
 export interface MarkPrivateMessagesReadRequest {
-  id: string;
-  up_to?: string;
+  target_user_id: number;
+  up_to_message_id?: string;
 }
 
-/**
- * 添加私聊消息反应请求
- */
 export interface AddPrivateMessageReactionRequest {
-  id: string;
+  message_id: string;
   type: ReactionType;
 }
 
-/**
- * 移除私聊消息反应请求
- */
 export interface RemovePrivateMessageReactionRequest {
-  id: string;
+  message_id: string;
   type: ReactionType;
 }
 
-/**
- * 获取私聊消息反应列表请求
- */
-export interface GetPrivateMessageReactionsRequest {
-  id: string;
+export interface PrivateMessageReactionsRequest {
+  message_id: string;
   type?: ReactionType;
   limit?: number;
   cursor?: string;
@@ -1238,93 +1050,43 @@ export interface MessageReactionItem {
 
 // ==================== 群聊消息API类型 ====================
 
-// 群聊消息类型包含系统消息，使用 ReceiveMessageType
-
-/**
- * 发送群聊消息请求
- */
 export interface SendGroupMessageRequest {
-  id: string;
+  group_chat_id: string;
   type: SendMessageType;
   content?: string;
   file_id?: string;
-  reply_to?: string;
+  reply_to_message_id?: string;
   mentions?: number[];
 }
 
-export interface SendGroupMessageData {
-  id: string;
-  sent_at: string;
-}
-
-/**
- * 获取群聊消息历史请求
- */
-export interface GetGroupMessagesRequest {
-  id: string;
+export interface GroupMessagesHistoryRequest {
+  group_chat_id: string;
   limit?: number;
   cursor?: string;
   include_system?: boolean;
 }
 
-export interface GroupMessageItem {
-  id: string;
-  type: ReceiveMessageType;
-  content?: string;
-  sender: UserInfo;
-  reply_to?: string;
-  mentions?: number[];
-  media_url?: string;
-  thumbnail_url?: string;
-  file_name?: string;
-  file_size?: number;
-  duration?: number;
-  width?: number;
-  height?: number;
-  sent_at: string;
-  edited_at?: string;
-  is_recalled: boolean;
-  recalled_by?: number;
-  recalled_at?: string;
-  read_count?: number;
-}
-
-/**
- * 编辑群聊消息请求
- */
 export interface UpdateGroupMessageRequest {
-  id: string;
+  message_id: string;
   content: string;
 }
 
-/**
- * 撤回群聊消息请求
- */
 export interface RecallGroupMessageRequest {
-  id: string;
+  message_id: string;
 }
 
-/**
- * 删除群聊消息请求
- */
 export interface DeleteGroupMessageRequest {
-  id: string;
+  message_id: string;
   for_everyone?: boolean;
 }
 
-/**
- * 标记群聊消息已读请求
- */
 export interface MarkGroupMessagesReadRequest {
-  id: string;
-  up_to?: string;
+  group_chat_id: string;
+  up_to_message_id?: string;
 }
 
-/**
- * 获取消息已读状态请求
- */
-export interface GetMessageReadStatusRequest {
-  id: string;
+export interface MessageReadStatusRequest {
+  message_id: string;
   limit?: number;
   cursor?: string;
 }
@@ -1334,37 +1096,68 @@ export interface MessageReadItem {
   read_at: string;
 }
 
-/**
- * 添加群聊消息反应请求
- */
 export interface AddGroupMessageReactionRequest {
-  id: string;
+  message_id: string;
   type: ReactionType;
 }
 
-/**
- * 移除群聊消息反应请求
- */
 export interface RemoveGroupMessageReactionRequest {
-  id: string;
+  message_id: string;
   type: ReactionType;
 }
 
-/**
- * 获取群聊消息反应列表请求
- */
-export interface GetGroupMessageReactionsRequest {
-  id: string;
+export interface GroupMessageReactionsRequest {
+  message_id: string;
   type?: ReactionType;
   limit?: number;
   cursor?: string;
 }
 
+// ==================== 消息通用 API ====================
+
+export interface MarkAllMessagesReadRequest {}
+
+// ==================== 地图渲染 API ====================
+
+export interface MapRenderItem {
+  id: string;
+  type: 'cluster' | 'user' | 'group' | 'moment';
+  location: GeoPoint;
+  
+  cluster?: {
+    count: number;
+    label?: string;
+    preview_urls?: string[];
+  };
+
+  entity?: {
+    title: string;
+    subtitle?: string;
+    cover_url?: string;
+    payload_id: string;
+    category?: string;
+  };
+}
+
+export interface MapRenderRequest {
+  viewport: MapViewport;
+  filter?: {
+    data_type?: 'user' | 'group' | 'moment' | 'all';
+    only_friends?: boolean;
+    time_range?: {
+      start_time?: string;
+      end_time?: string;
+    };
+  };
+}
+
+export interface MapRenderData {
+  items: MapRenderItem[];
+  toast_message?: string;
+}
+
 // ==================== 举报审核API类型 ====================
 
-/**
- * 创建举报请求
- */
 export interface CreateReportRequest {
   target_type: 'user' | 'moment' | 'comment' | 'message' | 'group';
   target_id: string;
@@ -1373,19 +1166,16 @@ export interface CreateReportRequest {
 }
 
 export interface CreateReportData {
-  id: string;
+  report_id: string;
 }
 
-/**
- * 获取我的举报记录请求
- */
-export interface GetMyReportsRequest {
+export interface MyReportsRequest {
   limit?: number;
   cursor?: string;
 }
 
 export interface ReportItem {
-  id: string;
+  report_id: string;
   target_type: 'user' | 'moment' | 'comment' | 'message' | 'group';
   target_id: string;
   reason: string;
@@ -1393,6 +1183,47 @@ export interface ReportItem {
   status: 'pending' | 'reviewing' | 'resolved' | 'dismissed';
   created_at: string;
   handled_at?: string;
+}
+
+// ==================== 通知中心 API ====================
+
+export interface GetNotificationsRequest {
+  limit?: number;
+  cursor?: string;
+  type?: 'like' | 'comment' | 'follow' | 'system' | 'mention';
+}
+
+export interface NotificationItem {
+  notification_id: string;
+  type: 'moment_like' | 'moment_comment' | 'comment_reply' | 'new_follower' | 'mutual_follow' | 'system_announcement' | 'message_mention';
+  is_read: boolean;
+  created_at: string;
+  sender?: UserInfo;
+  title?: string;
+  content?: string;
+  target_type?: 'moment' | 'comment' | 'user' | 'group' | 'web';
+  target_id?: string;
+  reference_id?: string;
+  target_text_preview?: string;
+  target_media_url?: string;
+}
+
+export interface GetUnreadNotificationCountRequest {}
+
+export interface UnreadNotificationCountData {
+  total: number;
+  breakdown?: {
+    like: number;
+    comment: number;
+    follow: number;
+    system: number;
+    mention: number;
+  };
+}
+
+export interface MarkNotificationsReadRequest {
+  notification_ids?: string[];
+  type?: 'like' | 'comment' | 'follow' | 'system' | 'mention';
 }
 
 // ==================== 通知订阅设置API类型 ====================
@@ -1411,6 +1242,8 @@ export interface SubscriptionsData {
   system_announcement_enabled: boolean;
 }
 
+export interface MySubscriptionsRequest {}
+
 export interface UpdateSubscriptionsRequest {
   new_follower_enabled?: boolean;
   mutual_follow_enabled?: boolean;
@@ -1427,31 +1260,31 @@ export interface UpdateSubscriptionsRequest {
 
 // ==================== 推送设备管理API类型 ====================
 
-export type DevicePlatform = 'ios' | 'android' | 'harmony';
-
 export interface RegisterDeviceTokenRequest {
-  platform: DevicePlatform;
+  platform: 'ios' | 'android' | 'harmony' | 'web';
   device_token: string;
 }
 
 export interface UnregisterDeviceTokenRequest {
-  platform: DevicePlatform;
+  platform: 'ios' | 'android' | 'harmony' | 'web';
   device_token: string;
 }
 
-export interface GetDeviceTokensRequest {
+export interface MyDeviceTokensRequest {
   limit?: number;
   cursor?: string;
 }
 
 export interface DeviceTokenItem {
-  id: string;
-  platform: DevicePlatform;
+  device_token_id: string;
+  platform: 'ios' | 'android' | 'harmony' | 'web';
   device_token: string;
   created_at: string;
 }
 
 // ==================== 系统健康检查API类型 ====================
+
+export interface SystemHealthRequest {}
 
 export interface HealthCheckData {
   status: 'healthy' | 'degraded' | 'unhealthy';
@@ -1459,9 +1292,28 @@ export interface HealthCheckData {
   timestamp: string;
 }
 
-// ==================== 文件上传API类型 ====================
+// ==================== 文件与媒体上传API类型 ====================
 
 export type UploadCategory = 'avatar' | 'group_avatar' | 'moment_image' | 'chat_image' | 'chat_video' | 'chat_audio' | 'chat_file';
+
+export interface PresignUploadRequest {
+  file_name: string;
+  file_size: number;
+  mime_type: string;
+  category: UploadCategory;
+  md5?: string;
+}
+
+export interface PresignUploadData {
+  upload_id: string;
+  upload_url: string;
+  headers: Record<string, string>;
+  expires_at: string;
+}
+
+export interface CompleteUploadRequest {
+  upload_id: string;
+}
 
 export interface UploadMediaData {
   file_id: string;
@@ -1473,105 +1325,38 @@ export interface UploadMediaData {
   height?: number;
 }
 
-export interface InitiateUploadRequest {
-  file_name: string;
-  file_size: number;
-  mime_type: string;
-  category: 'chat_video' | 'chat_file';
-  chunk_size?: number;
-}
-
-export interface InitiateUploadData {
-  upload_id: string;
-  chunk_count: number;
-  upload_urls: string[];
-}
-
-export interface UploadChunkData {
-  part_number: number;
-  etag: string;
-}
-
-export interface UploadPartItem {
-  part_number: number;
-  etag: string;
-}
-
-export interface CompleteUploadRequest {
-  upload_id: string;
-  parts: UploadPartItem[];
-}
-
-export interface GetUploadStatusRequest {
-  upload_id: string;
-}
-
-export interface UploadStatusData {
-  upload_id: string;
-  status: 'in_progress' | 'completed' | 'failed';
-  uploaded_parts: number[];
-  total_parts: number;
-  created_at: string;
-  expires_at: string;
-}
-
-export interface AbortUploadRequest {
-  upload_id: string;
-}
-
 // ==================== 信息流API类型 ====================
 
-/**
- * 来源类型
- */
-export type FeedMomentSource = 'following' | 'nearby' | 'all';
-
-/**
- * 获取瞬间信息流请求
- */
 export interface GetFeedMomentsRequest {
-  source?: FeedMomentSource;
+  source?: 'following' | 'nearby' | 'all';
   radius?: number;
   limit?: number;
   cursor?: string;
 }
 
-export interface FeedMomentItem extends MomentSearchItem {
-  reason?: string;
-}
-
-/**
- * 获取群组推荐请求
- */
 export interface GetFeedGroupsRequest {
   radius?: number;
   limit?: number;
   cursor?: string;
 }
 
-export interface FeedGroupItem extends GroupSearchItem {
-  reason?: string;
+export interface FeedGroupItem extends GroupItem {
   friends_in_group?: number;
+  my_role?: GroupRole;
+  is_joined?: boolean;
 }
 
-/**
- * 获取用户推荐请求
- */
 export interface GetFeedUsersRequest {
   radius?: number;
   limit?: number;
   cursor?: string;
 }
 
-export interface FeedUserItem extends UserSearchItem {
-  reason?: string;
+export interface FeedUserItem extends UserItem {
   mutual_friends_count?: number;
   common_tags?: string[];
 }
 
-/**
- * 获取热门内容请求
- */
 export interface GetFeedTrendingRequest {
   limit?: number;
 }
@@ -1580,21 +1365,18 @@ export interface TrendingTagItem {
   name: string;
   usage_count: number;
   trend: 'rising' | 'stable' | 'falling';
-  hot_moment_preview?: MomentSearchItem;
+  hot_moment_preview?: MomentItem;
 }
 
 export interface FeedTrendingData {
   trending_tags: TrendingTagItem[];
-  hot_moments: MomentSearchItem[];
+  hot_moments: MomentItem[];
 }
 
-/**
- * 反馈信息流内容请求
- */
 export interface FeedFeedbackRequest {
   content_type: 'moment' | 'group' | 'user';
   content_id: string;
-  action: 'hide' | 'not_interested' | 'report';
+  action: 'hide' | 'not_interested';
   reason?: string;
 }
 
@@ -1606,7 +1388,7 @@ export interface TagData {
   trend?: 'rising' | 'stable' | 'falling';
 }
 
-export interface GetTrendingTagsRequest {
+export interface TrendingTagsRequest {
   limit?: number;
   timeframe?: 'daily' | 'weekly' | 'monthly';
 }
@@ -1620,6 +1402,102 @@ export interface SuggestTagsRequest {
   limit?: number;
 }
 
-export interface TagSuggestData {
-  items: string[];
+export interface TagSuggestItem {
+  name: string;
+  usage_count: number;
 }
+
+export interface TagSuggestData {
+  items: TagSuggestItem[];
+}
+
+// ==================== 系统配置API类型 ====================
+
+export interface UploadConfig {
+  image_max_size: number;
+  video_max_size: number;
+  audio_max_size: number;
+  file_max_size: number;
+  allowed_image_types: string[];
+  allowed_video_types: string[];
+}
+
+export interface ContentDefaults {
+  default_location_name: string;
+  default_group_avatar: string;
+  default_user_avatar: string;
+  default_group_settings: GroupSettings;
+}
+
+export interface FeatureSwitches {
+  enable_public_registration: boolean;
+  enable_guest_login: boolean;
+  enable_moments: boolean;
+  enable_nearby_people: boolean;
+}
+
+export interface ContactInfo {
+  support_email: string;
+  privacy_policy_url: string;
+  terms_of_service_url: string;
+  official_website: string;
+}
+
+export interface AppLimits {
+  max_group_members: number;
+  max_moment_tags: number;
+  max_moment_images: number;
+  moment_description_max_length: number;
+  comment_max_length: number;
+  search_radius_max: number;
+}
+
+export interface GlobalSettings {
+  upload: UploadConfig;
+  defaults: ContentDefaults;
+  features: FeatureSwitches;
+  contact: ContactInfo;
+  limits: AppLimits;
+  version: string;
+}
+
+export interface FetchGlobalSettingsRequest {
+  context: {
+    os: 'ios' | 'android' | 'web' | 'harmony';
+    app_version: string;
+    device_id?: string;
+    language?: string;
+  };
+  current_version?: string;
+}
+
+export interface FetchSettingsData {
+  action: 'update' | 'no_change' | 'force_update';
+  config?: GlobalSettings;
+  latest_version: string;
+}
+
+// ==================== 管理员系统公告 API ====================
+
+export interface SystemAnnouncementItem {
+  announcement_id: string;
+  title: string;
+  content: string;
+  severity: 'info' | 'warning' | 'error';
+  action_url?: string;
+  created_at: string;
+  created_by: UserInfo;
+}
+
+export interface PublicAnnouncementListRequest {
+  limit?: number;
+  cursor?: string;
+}
+
+// ==================== 客户端扩展类型别名 ====================
+// 这些类型别名用于客户端代码，实际 API 返回的是 MomentItem、GroupItem、UserItem
+// 为了保持代码一致性，使用这些别名
+
+export type MomentSearchItem = MomentItem;
+export type GroupSearchItem = GroupItem;
+export type UserSearchItem = UserItem;

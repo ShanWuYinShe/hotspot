@@ -29,24 +29,7 @@ impl AdminRbacService {
     }
 
     pub async fn ensure_super_admin_bootstrap(&self, config: &Config) -> Result<()> {
-        let password = match &config.super_admin_password {
-            None => {
-                tracing::warn!("SUPER ADMIN bootstrap skipped: SUPER_ADMIN_PASSWORD not set");
-                return Ok(());
-            }
-            Some(p) if p.is_empty() => {
-                tracing::warn!("SUPER ADMIN bootstrap skipped: SUPER_ADMIN_PASSWORD is empty");
-                return Ok(());
-            }
-            Some(p) => p.clone(),
-        };
-
-        let login_id = config
-            .super_admin_login_id
-            .clone()
-            .unwrap_or_else(|| "superadmin".to_string());
-
-        // 如果已存在超级管理员，直接返回
+        // 首先检查是否存在超级管理员
         let existing = sqlx::query_scalar::<_, bool>(
             r#"
             SELECT EXISTS(SELECT 1 FROM admin_users WHERE is_super = TRUE)
@@ -55,9 +38,26 @@ impl AdminRbacService {
         .fetch_one(self.repo.pool())
         .await?;
 
+        // 如果已存在超级管理员，直接返回
         if existing {
+            tracing::info!("Super admin already exists, bootstrap skipped");
             return Ok(());
         }
+
+        // 如果没有超级管理员，必须通过 SUPER_ADMIN_PASSWORD 环境变量创建
+        let password = match &config.super_admin_password {
+            Some(p) if !p.is_empty() => p.clone(),
+            _ => {
+                return Err(AppError::InternalError(
+                    "系统启动失败：未检测到超级管理员，且 SUPER_ADMIN_PASSWORD 环境变量未设置。请设置 SUPER_ADMIN_PASSWORD 环境变量以创建初始超级管理员。".to_string()
+                ));
+            }
+        };
+
+        let login_id = config
+            .super_admin_login_id
+            .clone()
+            .unwrap_or_else(|| "superadmin".to_string());
 
         // 如果 login_id 已存在用户，直接将其升级为超级管理员
         if let Some(user) = self.user_repo.find_by_login_id(&login_id).await? {
@@ -116,14 +116,11 @@ impl AdminRbacService {
     }
 
     pub async fn require_permission(&self, user_id: i64, permission_key: &str) -> Result<()> {
-        // 必须是管理员
-        if !self.is_admin(user_id).await? {
-            return Err(AppError::Forbidden("需要管理员权限".to_string()));
-        }
+        // 必须是管理员（此方法由 admin_auth_middleware 调用，已确保是管理员）
         // 再校验权限（超级管理员会自动放行）
         let ok = self.repo.user_has_permission(user_id, permission_key).await?;
         if !ok {
-            return Err(AppError::Forbidden(format!("缺少权限: {}", permission_key)));
+            return Err(AppError::AdminPermissionDenied(format!("缺少权限: {}", permission_key)));
         }
         Ok(())
     }

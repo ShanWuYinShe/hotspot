@@ -50,7 +50,7 @@ pub async fn admin_auth_middleware(
 
     // 2. 必须是管理员
     if !state.admin_rbac_service.is_admin(user_id).await? {
-        return Err(AppError::Forbidden("需要管理员权限".to_string()));
+        return Err(AppError::NotAdmin);
     }
 
     // 3. 按路由校验权限（超级管理员自动放行）

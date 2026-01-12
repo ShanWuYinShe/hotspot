@@ -1,5 +1,6 @@
 // src/repositories/mod.rs - 数据库访问层模块
 
+pub mod announcement_repo;
 pub mod chat_unread_repo;
 pub mod comment_repo;
 pub mod admin_rbac_repo;
@@ -17,6 +18,7 @@ pub mod group_settings_repo;
 pub mod message_reactions_repo;
 pub mod map_repo;
 pub mod moment_repo;
+pub mod notification_repo;
 pub mod password_reset_repo;
 pub mod private_chat_repo;
 pub mod private_message_repo;

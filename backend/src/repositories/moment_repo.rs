@@ -48,7 +48,7 @@ pub struct MomentSearchRow {
     /// PostGIS 计算的距离（米）
     pub distance: f64,
     /// PostGIS 计算的方位角（0-360度）
-    pub degrees: f64,
+    pub bearing_degrees: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -59,6 +59,38 @@ pub struct MomentRepository {
 impl MomentRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
+    }
+
+    /// 获取瞬间摘要快照（用于事件通知）
+    pub async fn get_summary_snapshot(
+        &self,
+        moment_id: Uuid,
+    ) -> Result<Option<crate::events::event_types::MomentSummarySnapshot>> {
+        let row = sqlx::query!(
+            r#"
+            SELECT moment_id, description, images
+            FROM moments
+            WHERE moment_id = $1
+            "#,
+            moment_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(row.map(|r| {
+            let cover_url = r.images.and_then(|imgs| imgs.first().cloned());
+            let text_preview = if r.description.chars().count() > 50 {
+                format!("{}...", r.description.chars().take(50).collect::<String>())
+            } else {
+                r.description
+            };
+
+            crate::events::event_types::MomentSummarySnapshot {
+                moment_id,
+                cover_url,
+                text_preview,
+            }
+        }))
     }
 
     /// 创建生活瞬间
@@ -140,8 +172,8 @@ impl MomentRepository {
                 COALESCE(m.images, ARRAY[]::TEXT[]) as "images!",
                 m.created_at, m.id,
                 u.nickname, u.avatar_url, u.user_type as "user_type!: crate::types::enums::UserType",
-                COALESCE(l.likes_count, 0) as "likes_count!",
-                COALESCE(c.comments_count, 0) as "comments_count!",
+                (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) as "likes_count!",
+                (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) as "comments_count!",
                 ST_Distance(
                     m.location::geography,
                     ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography
@@ -149,20 +181,9 @@ impl MomentRepository {
                 COALESCE(degrees(ST_Azimuth(
                     ST_SetSRID(ST_MakePoint($2, $3), 4326),
                     m.location
-                )), 0) as "degrees!"
+                )), 0) as "bearing_degrees!"
             FROM moments m
             JOIN users u ON m.user_id = u.user_id
-            LEFT JOIN (
-                SELECT moment_id, COUNT(*) as likes_count
-                FROM moment_likes
-                GROUP BY moment_id
-            ) l ON m.moment_id = l.moment_id
-            LEFT JOIN (
-                SELECT moment_id, COUNT(*) as comments_count
-                FROM comments
-                WHERE is_deleted = FALSE
-                GROUP BY moment_id
-            ) c ON m.moment_id = c.moment_id
             WHERE m.moment_id = ANY($1) AND m.is_deleted = FALSE AND u.is_deleted = FALSE
             ORDER BY "distance!" ASC
             "#,
@@ -190,7 +211,7 @@ impl MomentRepository {
                 likes_count: r.likes_count,
                 comments_count: r.comments_count,
                 distance: r.distance,
-                degrees: r.degrees,
+                bearing_degrees: r.bearing_degrees,
             })
             .collect())
     }
@@ -220,8 +241,8 @@ impl MomentRepository {
                 COALESCE(m.images, ARRAY[]::TEXT[]) as "images!",
                 m.created_at,
                 u.nickname, u.avatar_url, u.user_type as "user_type!: crate::types::enums::UserType",
-                COALESCE(l.likes_count, 0) as "likes_count!",
-                COALESCE(c.comments_count, 0) as "comments_count!",
+                (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) as "likes_count!",
+                (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) as "comments_count!",
                 ST_Distance(
                     m.location::geography,
                     ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography
@@ -229,20 +250,9 @@ impl MomentRepository {
                 COALESCE(degrees(ST_Azimuth(
                     ST_SetSRID(ST_MakePoint($2, $3), 4326),
                     m.location
-                )), 0) as "degrees!"
+                )), 0) as "bearing_degrees!"
             FROM moments m
             JOIN users u ON m.user_id = u.user_id
-            LEFT JOIN (
-                SELECT moment_id, COUNT(*) as likes_count
-                FROM moment_likes
-                GROUP BY moment_id
-            ) l ON m.moment_id = l.moment_id
-            LEFT JOIN (
-                SELECT moment_id, COUNT(*) as comments_count
-                FROM comments
-                WHERE is_deleted = FALSE
-                GROUP BY moment_id
-            ) c ON m.moment_id = c.moment_id
             WHERE m.is_deleted = FALSE 
               AND u.is_deleted = FALSE
               AND m.description ILIKE $1
@@ -267,24 +277,24 @@ impl MomentRepository {
 
         Ok((
             rows.into_iter()
-                .map(|r| MomentSearchRow {
-                    moment_id: r.moment_id,
-                    user_id: r.user_id,
-                    description: r.description,
-                    images: r.images,
-                    latitude: r.latitude,
-                    longitude: r.longitude,
-                    location_name: r.location_name,
-                    created_at: r.created_at,
-                    nickname: r.nickname,
-                    avatar_url: r.avatar_url,
-                    user_type: r.user_type,
-                    likes_count: r.likes_count,
-                    comments_count: r.comments_count,
-                    distance: r.distance,
-                    degrees: r.degrees,
-                })
-                .collect(),
+            .map(|r| MomentSearchRow {
+                moment_id: r.moment_id,
+                user_id: r.user_id,
+                description: r.description,
+                images: r.images,
+                latitude: r.latitude,
+                longitude: r.longitude,
+                location_name: r.location_name,
+                created_at: r.created_at,
+                nickname: r.nickname,
+                avatar_url: r.avatar_url,
+                user_type: r.user_type,
+                likes_count: r.likes_count,
+                comments_count: r.comments_count,
+                distance: r.distance,
+                bearing_degrees: r.bearing_degrees,
+            })
+            .collect(),
             next_cursor,
         ))
     }
@@ -441,21 +451,10 @@ impl MomentRepository {
                 COALESCE(m.images, ARRAY[]::TEXT[]) as "images!", 
                 m.latitude, m.longitude, m.location_name, m.created_at,
                 u.nickname, u.avatar_url, u.user_type as "user_type!: crate::types::enums::UserType",
-                COALESCE(l.likes_count, 0) as "likes_count!",
-                COALESCE(c.comments_count, 0) as "comments_count!"
+                (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) as "likes_count!",
+                (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) as "comments_count!"
             FROM moments m
             JOIN users u ON m.user_id = u.user_id
-            LEFT JOIN (
-                SELECT moment_id, COUNT(*) as likes_count
-                FROM moment_likes
-                GROUP BY moment_id
-            ) l ON m.moment_id = l.moment_id
-            LEFT JOIN (
-                SELECT moment_id, COUNT(*) as comments_count
-                FROM comments
-                WHERE is_deleted = FALSE
-                GROUP BY moment_id
-            ) c ON m.moment_id = c.moment_id
             WHERE m.user_id = $1 AND m.id < $2 AND m.is_deleted = FALSE AND u.is_deleted = FALSE
             ORDER BY m.id DESC
             LIMIT $3
@@ -487,7 +486,7 @@ impl MomentRepository {
                     likes_count: m.likes_count,
                     comments_count: m.comments_count,
                     distance: 0.0,
-                    degrees: 0.0,
+                    bearing_degrees: 0.0,
                 })
                 .collect(),
             next_cursor,
@@ -521,8 +520,8 @@ impl MomentRepository {
                 COALESCE(m.images, ARRAY[]::TEXT[]) as "images!",
                 m.created_at,
                 u.nickname, u.avatar_url, u.user_type as "user_type!: crate::types::enums::UserType",
-                COALESCE(l.likes_count, 0) as "likes_count!",
-                COALESCE(c.comments_count, 0) as "comments_count!",
+                (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) as "likes_count!",
+                (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) as "comments_count!",
                 ST_Distance(
                     m.location::geography, 
                     ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography
@@ -533,20 +532,9 @@ impl MomentRepository {
                         m.location
                     )),
                     0.0
-                ) as "degrees!"
+                ) as "bearing_degrees!"
             FROM moments m
             JOIN users u ON m.user_id = u.user_id
-            LEFT JOIN (
-                SELECT moment_id, COUNT(*) as likes_count
-                FROM moment_likes
-                GROUP BY moment_id
-            ) l ON m.moment_id = l.moment_id
-            LEFT JOIN (
-                SELECT moment_id, COUNT(*) as comments_count
-                FROM comments
-                WHERE is_deleted = FALSE
-                GROUP BY moment_id
-            ) c ON m.moment_id = c.moment_id
             WHERE m.is_deleted = FALSE 
               AND u.is_deleted = FALSE
               AND ($7::TEXT IS NULL OR m.description ILIKE $7)
@@ -591,97 +579,11 @@ impl MomentRepository {
 
         Ok((
             rows.into_iter()
-                .map(|r| MomentSearchRow {
-                    moment_id: r.moment_id,
-                    user_id: r.user_id,
-                    description: r.description,
-                    images: r.images,
-                    latitude: r.latitude,
-                    longitude: r.longitude,
-                    location_name: r.location_name,
-                    created_at: r.created_at,
-                    nickname: r.nickname,
-                    avatar_url: r.avatar_url,
-                    user_type: r.user_type,
-                    likes_count: r.likes_count,
-                    comments_count: r.comments_count,
-                    distance: r.distance,
-                    degrees: r.degrees,
-                })
-                .collect(),
-            next_cursor,
-        ))
-    }
-
-    /// 按视口 bounds 搜索瞬间（用于地图视口内加载；仍由 PostGIS 计算距离/方位角）
-    pub async fn search_by_bounds(
-        &self,
-        west: f64,
-        south: f64,
-        east: f64,
-        north: f64,
-        latitude: f64,
-        longitude: f64,
-        limit: i32,
-    ) -> Result<Vec<MomentSearchRow>> {
-        let rows = sqlx::query!(
-            r#"
-            SELECT 
-                m.id, m.moment_id, m.user_id, m.description,
-                m.latitude, m.longitude, m.location_name,
-                COALESCE(m.images, ARRAY[]::TEXT[]) as "images!",
-                m.created_at,
-                u.nickname, u.avatar_url, u.user_type as "user_type!: crate::types::enums::UserType",
-                COALESCE(l.likes_count, 0) as "likes_count!",
-                COALESCE(c.comments_count, 0) as "comments_count!",
-                ST_Distance(
-                    m.location::geography, 
-                    ST_SetSRID(ST_MakePoint($6, $5), 4326)::geography
-                ) as "distance!",
-                COALESCE(
-                    degrees(ST_Azimuth(
-                        ST_SetSRID(ST_MakePoint($6, $5), 4326),
-                        m.location
-                    )),
-                    0.0
-                ) as "degrees!"
-            FROM moments m
-            JOIN users u ON m.user_id = u.user_id
-            LEFT JOIN (
-                SELECT moment_id, COUNT(*) as likes_count
-                FROM moment_likes
-                GROUP BY moment_id
-            ) l ON m.moment_id = l.moment_id
-            LEFT JOIN (
-                SELECT moment_id, COUNT(*) as comments_count
-                FROM comments
-                WHERE is_deleted = FALSE
-                GROUP BY moment_id
-            ) c ON m.moment_id = c.moment_id
-            WHERE m.is_deleted = FALSE 
-              AND u.is_deleted = FALSE
-              AND (m.location::geometry && ST_MakeEnvelope($1, $2, $3, $4, 4326))
-            ORDER BY "distance!" ASC, m.id ASC
-            LIMIT $7
-            "#,
-            west,
-            south,
-            east,
-            north,
-            latitude,
-            longitude,
-            limit as i64
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(rows
-            .into_iter()
             .map(|r| MomentSearchRow {
                 moment_id: r.moment_id,
                 user_id: r.user_id,
                 description: r.description,
-                images: if r.images.is_empty() { None } else { Some(r.images) },
+                images: r.images,
                 latitude: r.latitude,
                 longitude: r.longitude,
                 location_name: r.location_name,
@@ -689,13 +591,14 @@ impl MomentRepository {
                 nickname: r.nickname,
                 avatar_url: r.avatar_url,
                 user_type: r.user_type,
-                likes_count: r.likes_count as i32,
-                comments_count: r.comments_count as i32,
-                tags: vec![],
+                likes_count: r.likes_count,
+                comments_count: r.comments_count,
                 distance: r.distance,
-                degrees: r.degrees,
+                bearing_degrees: r.bearing_degrees,
             })
-            .collect())
+            .collect(),
+            next_cursor,
+        ))
     }
 
     /// 按标签搜索瞬间
@@ -721,8 +624,8 @@ impl MomentRepository {
                 COALESCE(m.images, ARRAY[]::TEXT[]) as "images!", 
                 m.latitude, m.longitude, m.location_name, m.created_at,
                 u.nickname, u.avatar_url, u.user_type as "user_type!: crate::types::enums::UserType",
-                COALESCE(l.likes_count, 0) as "likes_count!",
-                COALESCE(c.comments_count, 0) as "comments_count!",
+                (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) as "likes_count!",
+                (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) as "comments_count!",
                 ST_Distance(
                     ST_SetSRID(ST_MakePoint(m.longitude, m.latitude), 4326)::geography,
                     ST_SetSRID(ST_MakePoint($4, $5), 4326)::geography
@@ -730,22 +633,11 @@ impl MomentRepository {
                 COALESCE(degrees(ST_Azimuth(
                     ST_SetSRID(ST_MakePoint($4, $5), 4326),
                     ST_SetSRID(ST_MakePoint(m.longitude, m.latitude), 4326)
-                )), 0) as "degrees!"
+                )), 0) as "bearing_degrees!"
             FROM moments m
             INNER JOIN moment_tags mt ON m.moment_id = mt.moment_id
             INNER JOIN tags t ON mt.tag_id = t.id
             JOIN users u ON m.user_id = u.user_id
-            LEFT JOIN (
-                SELECT moment_id, COUNT(*) as likes_count
-                FROM moment_likes
-                GROUP BY moment_id
-            ) l ON m.moment_id = l.moment_id
-            LEFT JOIN (
-                SELECT moment_id, COUNT(*) as comments_count
-                FROM comments
-                WHERE is_deleted = FALSE
-                GROUP BY moment_id
-            ) c ON m.moment_id = c.moment_id
             WHERE t.name = $1 AND m.id < $2 AND m.is_deleted = FALSE AND u.is_deleted = FALSE
             ORDER BY m.id DESC
             LIMIT $3
@@ -779,7 +671,7 @@ impl MomentRepository {
                     likes_count: m.likes_count,
                     comments_count: m.comments_count,
                     distance: m.distance,
-                    degrees: m.degrees,
+                        bearing_degrees: m.bearing_degrees,
                 })
                 .collect(),
             next_cursor,
@@ -808,8 +700,8 @@ impl MomentRepository {
                 COALESCE(m.images, ARRAY[]::TEXT[]) as "images!", 
                 m.latitude, m.longitude, m.location_name, m.created_at,
                 u.nickname, u.avatar_url, u.user_type as "user_type!: crate::types::enums::UserType",
-                COALESCE(l.likes_count, 0) as "likes_count!",
-                COALESCE(c.comments_count, 0) as "comments_count!",
+                (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) as "likes_count!",
+                (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) as "comments_count!",
                 mf.created_at as favorited_at,
                 ST_Distance(
                     ST_SetSRID(ST_MakePoint(m.longitude, m.latitude), 4326)::geography,
@@ -818,21 +710,10 @@ impl MomentRepository {
                 COALESCE(degrees(ST_Azimuth(
                     ST_SetSRID(ST_MakePoint($5, $6), 4326),
                     ST_SetSRID(ST_MakePoint(m.longitude, m.latitude), 4326)
-                )), 0) as "degrees!"
+                )), 0) as "bearing_degrees!"
             FROM moments m
             JOIN moment_favorites mf ON m.moment_id = mf.moment_id
             JOIN users u ON m.user_id = u.user_id
-            LEFT JOIN (
-                SELECT moment_id, COUNT(*) as likes_count
-                FROM moment_likes
-                GROUP BY moment_id
-            ) l ON m.moment_id = l.moment_id
-            LEFT JOIN (
-                SELECT moment_id, COUNT(*) as comments_count
-                FROM comments
-                WHERE is_deleted = FALSE
-                GROUP BY moment_id
-            ) c ON m.moment_id = c.moment_id
             WHERE mf.user_id = $1 
               AND (mf.created_at < $2 OR (mf.created_at = $2 AND m.id < $3))
               AND m.is_deleted = FALSE AND u.is_deleted = FALSE
@@ -873,7 +754,7 @@ impl MomentRepository {
                         likes_count: r.likes_count,
                         comments_count: r.comments_count,
                         distance: r.distance,
-                        degrees: r.degrees,
+                        bearing_degrees: r.bearing_degrees,
                     },
                     r.favorited_at,
                 )
@@ -1014,8 +895,8 @@ impl MomentRepository {
                 COALESCE(m.images, ARRAY[]::TEXT[]) as "images!",
                 m.created_at,
                 u.nickname, u.avatar_url, u.user_type as "user_type!: crate::types::enums::UserType",
-                COALESCE(l.likes_count, 0) as "likes_count!",
-                COALESCE(c.comments_count, 0) as "comments_count!",
+                (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) as "likes_count!",
+                (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) as "comments_count!",
                 ST_Distance(
                     m.location::geography,
                     ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
@@ -1023,20 +904,9 @@ impl MomentRepository {
                 COALESCE(degrees(ST_Azimuth(
                     ST_SetSRID(ST_MakePoint($1, $2), 4326),
                     m.location
-                )), 0) as "degrees!"
+                )), 0) as "bearing_degrees!"
             FROM moments m
             JOIN users u ON m.user_id = u.user_id
-            LEFT JOIN (
-                SELECT moment_id, COUNT(*) as likes_count
-                FROM moment_likes
-                GROUP BY moment_id
-            ) l ON m.moment_id = l.moment_id
-            LEFT JOIN (
-                SELECT moment_id, COUNT(*) as comments_count
-                FROM comments
-                WHERE is_deleted = FALSE
-                GROUP BY moment_id
-            ) c ON m.moment_id = c.moment_id
             WHERE m.is_deleted = FALSE AND u.is_deleted = FALSE
               AND (m.created_at < $3 OR (m.created_at = $3 AND m.id < $4))
             ORDER BY m.created_at DESC, m.id DESC
@@ -1058,24 +928,24 @@ impl MomentRepository {
 
         Ok((
             rows.into_iter()
-                .map(|r| MomentSearchRow {
-                    moment_id: r.moment_id,
-                    user_id: r.user_id,
-                    description: r.description,
-                    images: r.images,
-                    latitude: r.latitude,
-                    longitude: r.longitude,
-                    location_name: r.location_name,
-                    created_at: r.created_at,
-                    nickname: r.nickname,
-                    avatar_url: r.avatar_url,
-                    user_type: r.user_type,
-                    likes_count: r.likes_count,
-                    comments_count: r.comments_count,
-                    distance: r.distance,
-                    degrees: r.degrees,
-                })
-                .collect(),
+            .map(|r| MomentSearchRow {
+                moment_id: r.moment_id,
+                user_id: r.user_id,
+                description: r.description,
+                images: r.images,
+                latitude: r.latitude,
+                longitude: r.longitude,
+                location_name: r.location_name,
+                created_at: r.created_at,
+                nickname: r.nickname,
+                avatar_url: r.avatar_url,
+                user_type: r.user_type,
+                likes_count: r.likes_count,
+                comments_count: r.comments_count,
+                distance: r.distance,
+                bearing_degrees: r.bearing_degrees,
+            })
+            .collect(),
             next_cursor,
         ))
     }
@@ -1103,8 +973,8 @@ impl MomentRepository {
                 COALESCE(m.images, ARRAY[]::TEXT[]) as "images!",
                 m.created_at,
                 u.nickname, u.avatar_url, u.user_type as "user_type!: crate::types::enums::UserType",
-                COALESCE(l.likes_count, 0) as "likes_count!",
-                COALESCE(c.comments_count, 0) as "comments_count!",
+                (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) as "likes_count!",
+                (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) as "comments_count!",
                 ST_Distance(
                     m.location::geography,
                     ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography
@@ -1112,21 +982,10 @@ impl MomentRepository {
                 COALESCE(degrees(ST_Azimuth(
                     ST_SetSRID(ST_MakePoint($2, $3), 4326),
                     m.location
-                )), 0) as "degrees!"
+                )), 0) as "bearing_degrees!"
             FROM moments m
             JOIN users u ON m.user_id = u.user_id
             JOIN user_follows f ON m.user_id = f.following_id AND f.follower_id = $1
-            LEFT JOIN (
-                SELECT moment_id, COUNT(*) as likes_count
-                FROM moment_likes
-                GROUP BY moment_id
-            ) l ON m.moment_id = l.moment_id
-            LEFT JOIN (
-                SELECT moment_id, COUNT(*) as comments_count
-                FROM comments
-                WHERE is_deleted = FALSE
-                GROUP BY moment_id
-            ) c ON m.moment_id = c.moment_id
             WHERE m.is_deleted = FALSE AND u.is_deleted = FALSE
               AND (m.created_at < $4 OR (m.created_at = $4 AND m.id < $5))
             ORDER BY m.created_at DESC, m.id DESC
@@ -1149,24 +1008,24 @@ impl MomentRepository {
 
         Ok((
             rows.into_iter()
-                .map(|r| MomentSearchRow {
-                    moment_id: r.moment_id,
-                    user_id: r.user_id,
-                    description: r.description,
-                    images: r.images,
-                    latitude: r.latitude,
-                    longitude: r.longitude,
-                    location_name: r.location_name,
-                    created_at: r.created_at,
-                    nickname: r.nickname,
-                    avatar_url: r.avatar_url,
-                    user_type: r.user_type,
-                    likes_count: r.likes_count,
-                    comments_count: r.comments_count,
-                    distance: r.distance,
-                    degrees: r.degrees,
-                })
-                .collect(),
+            .map(|r| MomentSearchRow {
+                moment_id: r.moment_id,
+                user_id: r.user_id,
+                description: r.description,
+                images: r.images,
+                latitude: r.latitude,
+                longitude: r.longitude,
+                location_name: r.location_name,
+                created_at: r.created_at,
+                nickname: r.nickname,
+                avatar_url: r.avatar_url,
+                user_type: r.user_type,
+                likes_count: r.likes_count,
+                comments_count: r.comments_count,
+                distance: r.distance,
+                bearing_degrees: r.bearing_degrees,
+            })
+            .collect(),
             next_cursor,
         ))
     }
@@ -1208,29 +1067,27 @@ impl MomentRepository {
                 COALESCE(m.images, ARRAY[]::TEXT[]) as "images!",
                 m.created_at,
                 u.nickname, u.avatar_url, u.user_type as "user_type!: crate::types::enums::UserType",
-                COALESCE(l.likes_count, 0) as "likes_count!",
-                COALESCE(c.comments_count, 0) as "comments_count!",
-                (COALESCE(l.likes_count, 0) + COALESCE(c.comments_count, 0) * 2) as "score!"
+                (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) as "likes_count!",
+                (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) as "comments_count!",
+                (
+                    (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) + 
+                    (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) * 2
+                ) as "score!"
             FROM moments m
             JOIN users u ON m.user_id = u.user_id
-            LEFT JOIN (
-                SELECT moment_id, COUNT(*) as likes_count
-                FROM moment_likes
-                GROUP BY moment_id
-            ) l ON m.moment_id = l.moment_id
-            LEFT JOIN (
-                SELECT moment_id, COUNT(*) as comments_count
-                FROM comments
-                WHERE is_deleted = FALSE
-                GROUP BY moment_id
-            ) c ON m.moment_id = c.moment_id
             WHERE m.is_deleted = FALSE 
               AND u.is_deleted = FALSE
               AND m.created_at >= $2
               AND (
-                  (COALESCE(l.likes_count, 0) + COALESCE(c.comments_count, 0) * 2) < $3
+                  (
+                    (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) + 
+                    (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) * 2
+                  ) < $3
                   OR (
-                      (COALESCE(l.likes_count, 0) + COALESCE(c.comments_count, 0) * 2) = $3
+                      (
+                        (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) + 
+                        (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) * 2
+                      ) = $3
                       AND m.id < $4
                   )
               )
@@ -1252,24 +1109,24 @@ impl MomentRepository {
 
         Ok((
             rows.into_iter()
-                .map(|r| MomentSearchRow {
-                    moment_id: r.moment_id,
-                    user_id: r.user_id,
-                    description: r.description,
-                    images: r.images,
-                    latitude: r.latitude,
-                    longitude: r.longitude,
-                    location_name: r.location_name,
-                    created_at: r.created_at,
-                    nickname: r.nickname,
-                    avatar_url: r.avatar_url,
-                    user_type: r.user_type,
-                    likes_count: r.likes_count,
-                    comments_count: r.comments_count,
-                    distance: 0.0,
-                    degrees: 0.0,
-                })
-                .collect(),
+            .map(|r| MomentSearchRow {
+                moment_id: r.moment_id,
+                user_id: r.user_id,
+                description: r.description,
+                images: r.images,
+                latitude: r.latitude,
+                longitude: r.longitude,
+                location_name: r.location_name,
+                created_at: r.created_at,
+                nickname: r.nickname,
+                avatar_url: r.avatar_url,
+                user_type: r.user_type,
+                likes_count: r.likes_count,
+                comments_count: r.comments_count,
+                distance: 0.0,
+                bearing_degrees: 0.0,
+            })
+            .collect(),
             next_cursor,
         ))
     }
