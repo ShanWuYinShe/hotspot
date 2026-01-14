@@ -1,3 +1,4 @@
+use futures_util::future;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -22,11 +23,20 @@ use crate::{
 pub struct AnnouncementService {
     repo: AnnouncementRepository,
     event_bus: Arc<EventBus>,
+    media_service: crate::services::media_service::MediaService,
 }
 
 impl AnnouncementService {
-    pub fn new(repo: AnnouncementRepository, event_bus: Arc<EventBus>) -> Self {
-        Self { repo, event_bus }
+    pub fn new(
+        repo: AnnouncementRepository,
+        event_bus: Arc<EventBus>,
+        media_service: crate::services::media_service::MediaService,
+    ) -> Self {
+        Self {
+            repo,
+            event_bus,
+            media_service,
+        }
     }
 
     pub async fn create_announcement(
@@ -34,6 +44,15 @@ impl AnnouncementService {
         creator_id: i64,
         req: CreateAnnouncementRequest,
     ) -> Result<CreateAnnouncementData> {
+        // 验证 severity
+        use std::str::FromStr;
+        if crate::types::enums::NotificationSeverity::from_str(&req.severity).is_err() {
+            return Err(AppError::InvalidInput(format!(
+                "无效的通知级别: {}",
+                req.severity
+            )));
+        }
+
         let announcement = self
             .repo
             .create(
@@ -98,20 +117,18 @@ impl AnnouncementService {
         let limit = Validator::validate_limit(limit_opt, 50)? as i64;
         let (rows, next_cursor) = self.repo.list(limit, cursor).await?;
 
-        let items = rows
-            .into_iter()
-            .map(|row| SystemAnnouncementItem {
-                announcement_id: row.announcement_id.to_string(),
-                title: row.title,
-                content: row.content,
-                severity: row.severity,
-                action_url: row.action_url,
-                created_at: row.created_at.to_rfc3339(),
-                created_by: if let (Some(nickname), Some(avatar_url)) = (row.creator_nickname, row.creator_avatar_url) {
+        // 使用 futures_util::future::join_all 来并发签名所有 avatar_url
+        let items: Vec<SystemAnnouncementItem> =
+            future::join_all(rows.into_iter().map(|row| async move {
+                let created_by = if let (Some(nickname), Some(avatar_url)) =
+                    (row.creator_nickname, row.creator_avatar_url)
+                {
+                    let signed_avatar_url =
+                        self.media_service.sign_url_if_path(Some(&avatar_url)).await;
                     Some(UserInfo {
                         user_id: row.created_by,
                         nickname,
-                        avatar_url: Some(avatar_url),
+                        avatar_url: signed_avatar_url,
                         user_type: crate::types::enums::UserType::System,
                     })
                 } else {
@@ -121,9 +138,19 @@ impl AnnouncementService {
                         avatar_url: None,
                         user_type: crate::types::enums::UserType::System,
                     })
-                },
-            })
-            .collect();
+                };
+
+                SystemAnnouncementItem {
+                    announcement_id: row.announcement_id.to_string(),
+                    title: row.title,
+                    content: row.content,
+                    severity: row.severity,
+                    action_url: row.action_url,
+                    created_at: row.created_at.to_rfc3339(),
+                    created_by,
+                }
+            }))
+            .await;
 
         Ok(PaginatedData {
             items,

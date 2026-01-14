@@ -1,21 +1,21 @@
-use axum::{extract::State, Extension, Json};
+use axum::{extract::State, Json};
 
 use crate::{
     dto::{
         request::{
             CheckFavoritedRequest, CheckLikedRequest, CreateMomentRequest, DeleteMomentRequest,
-            FavoriteMomentRequest, LikeMomentRequest, MomentLikesRequest,
-            MomentOpenTheDoorRequest, MyFavoritesRequest, MyMomentsRequest,
-            SearchMomentsByKeywordRequest, SearchMomentsByLocationRequest,
-            SearchMomentsByTagRequest, UnfavoriteMomentRequest, UnlikeMomentRequest,
-            UpdateMomentRequest,
+            FavoriteMomentRequest, LikeMomentRequest, MomentLikesRequest, MomentOpenTheDoorRequest,
+            MyFavoritesRequest, MyMomentsRequest, SearchMomentsByKeywordRequest,
+            SearchMomentsByLocationRequest, SearchMomentsByTagRequest, UnfavoriteMomentRequest,
+            UnlikeMomentRequest, UpdateMomentRequest,
         },
         response::{
-            ApiResponse, CheckFavoritedData, CheckLikedData,
-            MomentLikeItem, MomentItem, PaginatedData,
+            ApiResponse, CheckFavoritedData, CheckLikedData, MomentItem, MomentLikeItem,
+            PaginatedData,
         },
     },
     error::Result,
+    middleware::auth::AuthenticatedUser,
     state::AppState,
 };
 
@@ -48,16 +48,15 @@ pub async fn search_by_location(
     Ok(Json(ApiResponse::success(response)))
 }
 
-
 /// 获取当前用户生活瞬间历史（/me/ API）
 pub async fn get_my_moments(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<MyMomentsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<MomentItem>>>> {
     let response = state
         .moment_service
-        .get_my_moments_list(user_id, &req)
+        .get_my_moments_list(user.user_id, &req)
         .await?;
     Ok(Json(ApiResponse::success(response)))
 }
@@ -84,28 +83,37 @@ pub async fn get_likes(
 
 pub async fn create(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<CreateMomentRequest>,
 ) -> Result<Json<ApiResponse<MomentItem>>> {
-    let moment = state.moment_service.create_moment(user_id, &req).await?;
+    let moment = state
+        .moment_service
+        .create_moment(user.user_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success(moment)))
 }
 
 pub async fn update(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<UpdateMomentRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    state.moment_service.update_moment(user_id, &req).await?;
+    state
+        .moment_service
+        .update_moment(user.user_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success_empty()))
 }
 
 pub async fn delete(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<DeleteMomentRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    state.moment_service.delete_moment(user_id, &req).await?;
+    state
+        .moment_service
+        .delete_moment(user.user_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success_empty()))
 }
 
@@ -113,28 +121,31 @@ pub async fn delete(
 
 pub async fn like(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<LikeMomentRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    state.moment_service.like_moment(user_id, &req).await?;
+    state.moment_service.like_moment(user.user_id, &req).await?;
     Ok(Json(ApiResponse::success_empty()))
 }
 
 pub async fn unlike(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<UnlikeMomentRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    state.moment_service.unlike_moment(user_id, &req).await?;
+    state
+        .moment_service
+        .unlike_moment(user.user_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success_empty()))
 }
 
 pub async fn check_liked(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<CheckLikedRequest>,
 ) -> Result<Json<ApiResponse<CheckLikedData>>> {
-    let is_liked = state.moment_service.check_liked(user_id, &req).await?;
+    let is_liked = state.moment_service.check_liked(user.user_id, &req).await?;
     Ok(Json(ApiResponse::success(CheckLikedData { is_liked })))
 }
 
@@ -142,31 +153,37 @@ pub async fn check_liked(
 
 pub async fn favorite(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<FavoriteMomentRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    state.moment_service.favorite_moment(user_id, &req).await?;
+    state
+        .moment_service
+        .favorite_moment(user.user_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success_empty()))
 }
 
 pub async fn unfavorite(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<UnfavoriteMomentRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
     state
         .moment_service
-        .unfavorite_moment(user_id, &req)
+        .unfavorite_moment(user.user_id, &req)
         .await?;
     Ok(Json(ApiResponse::success_empty()))
 }
 
 pub async fn check_favorited(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<CheckFavoritedRequest>,
 ) -> Result<Json<ApiResponse<CheckFavoritedData>>> {
-    let is_favorited = state.moment_service.check_favorited(user_id, &req).await?;
+    let is_favorited = state
+        .moment_service
+        .check_favorited(user.user_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success(CheckFavoritedData {
         is_favorited,
     })))
@@ -174,12 +191,12 @@ pub async fn check_favorited(
 
 pub async fn get_my_favorites(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<MyFavoritesRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<MomentItem>>>> {
     let response = state
         .moment_service
-        .get_favorites_list(user_id, &req)
+        .get_favorites_list(user.user_id, &req)
         .await?;
     Ok(Json(ApiResponse::success(response)))
 }

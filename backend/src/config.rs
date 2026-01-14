@@ -20,14 +20,18 @@ pub struct Config {
     pub super_admin_login_id: Option<String>,
     /// 超级管理员 bootstrap：初始密码（建议必须设置；未设置则不会自动创建）
     pub super_admin_password: Option<String>,
-    
-    // S3 Configuration
+
+    // S3 Configuration (统一的 S3 endpoint，MinIO 模拟 AWS S3)
     pub s3_endpoint: String,
     pub s3_region: String,
     pub s3_bucket: String,
     pub s3_access_key: String,
     pub s3_secret_key: String,
-    pub s3_public_url: String,
+    /// S3 对外 URL 前缀（用于生成 presigned URL 和公开访问链接）
+    /// 必须配置，确保生成的 URL 在客户端可访问
+    /// - 相对路径（如 /s3）：用于本地 MinIO，隐藏 bucket 名，通过 Nginx 转发
+    /// - 完整 URL（如 https://cdn.example.com）：用于生产环境
+    pub s3_public_base: String,
 }
 
 impl Config {
@@ -67,14 +71,19 @@ impl Config {
                 .map_err(|_| "Invalid RATE_LIMIT_USER_PER_HOUR".to_string())?,
             super_admin_login_id: env::var("SUPER_ADMIN_LOGIN_ID").ok(),
             super_admin_password: env::var("SUPER_ADMIN_PASSWORD").ok(),
-            
-            // S3 Defaults
-            s3_endpoint: env::var("S3_ENDPOINT").unwrap_or_else(|_| "http://localhost:9000".to_string()),
+
+            // S3 Defaults (统一的 S3 endpoint，MinIO 模拟 AWS S3)
+            s3_endpoint: env::var("S3_ENDPOINT")
+                .unwrap_or_else(|_| "http://localhost:9000".to_string()),
             s3_region: env::var("S3_REGION").unwrap_or_else(|_| "us-east-1".to_string()),
             s3_bucket: env::var("S3_BUCKET").unwrap_or_else(|_| "hotspot".to_string()),
-            s3_access_key: env::var("S3_ACCESS_KEY").unwrap_or_else(|_| "minioadmin".to_string()),
-            s3_secret_key: env::var("S3_SECRET_KEY").unwrap_or_else(|_| "minioadmin".to_string()),
-            s3_public_url: env::var("S3_PUBLIC_URL").unwrap_or_else(|_| "http://localhost:9000/hotspot".to_string()),
+            // 敏感信息强制要求配置，不使用默认值
+            s3_access_key: env::var("S3_ACCESS_KEY")
+                .map_err(|_| "S3_ACCESS_KEY must be set".to_string())?,
+            s3_secret_key: env::var("S3_SECRET_KEY")
+                .map_err(|_| "S3_SECRET_KEY must be set".to_string())?,
+            s3_public_base: env::var("S3_PUBLIC_BASE")
+                .map_err(|_| "S3_PUBLIC_BASE must be set".to_string())?,
         })
     }
 

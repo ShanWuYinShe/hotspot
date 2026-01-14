@@ -20,7 +20,11 @@ pub struct AdminRbacService {
 }
 
 impl AdminRbacService {
-    pub fn new(repo: AdminRbacRepository, user_repo: UserRepository, user_settings_repo: UserSettingsRepository) -> Self {
+    pub fn new(
+        repo: AdminRbacRepository,
+        user_repo: UserRepository,
+        user_settings_repo: UserSettingsRepository,
+    ) -> Self {
         Self {
             repo,
             user_repo,
@@ -118,9 +122,15 @@ impl AdminRbacService {
     pub async fn require_permission(&self, user_id: i64, permission_key: &str) -> Result<()> {
         // 必须是管理员（此方法由 admin_auth_middleware 调用，已确保是管理员）
         // 再校验权限（超级管理员会自动放行）
-        let ok = self.repo.user_has_permission(user_id, permission_key).await?;
+        let ok = self
+            .repo
+            .user_has_permission(user_id, permission_key)
+            .await?;
         if !ok {
-            return Err(AppError::AdminPermissionDenied(format!("缺少权限: {}", permission_key)));
+            return Err(AppError::AdminPermissionDenied(format!(
+                "缺少权限: {}",
+                permission_key
+            )));
         }
         Ok(())
     }
@@ -162,8 +172,14 @@ impl AdminRbacService {
         self.repo.delete_role(role_id).await
     }
 
-    pub async fn set_role_permissions(&self, role_id: Uuid, permission_keys: &[String]) -> Result<()> {
-        self.repo.set_role_permissions(role_id, permission_keys).await
+    pub async fn set_role_permissions(
+        &self,
+        role_id: Uuid,
+        permission_keys: &[String],
+    ) -> Result<()> {
+        self.repo
+            .set_role_permissions(role_id, permission_keys)
+            .await
     }
 
     pub async fn list_admins(&self) -> Result<Vec<AdminWithRolesRow>> {
@@ -182,22 +198,36 @@ impl AdminRbacService {
         Ok((is_super, permissions, roles))
     }
 
-    pub async fn grant_admin(&self, operator_id: i64, target_user_id: i64, is_super: bool, role_ids: &[Uuid]) -> Result<()> {
+    pub async fn grant_admin(
+        &self,
+        operator_id: i64,
+        target_user_id: i64,
+        is_super: bool,
+        role_ids: &[Uuid],
+    ) -> Result<()> {
         // 只有超级管理员可以授予/撤销超级管理员
         if is_super && !self.is_super_admin(operator_id).await? {
-            return Err(AppError::Forbidden("只有超级管理员可以授予超级管理员权限".to_string()));
+            return Err(AppError::Forbidden(
+                "只有超级管理员可以授予超级管理员权限".to_string(),
+            ));
         }
 
-        self.repo.upsert_admin_user(target_user_id, is_super).await?;
+        self.repo
+            .upsert_admin_user(target_user_id, is_super)
+            .await?;
         self.repo.ensure_user_type_admin(target_user_id).await?;
-        self.repo.replace_admin_roles(target_user_id, role_ids).await?;
+        self.repo
+            .replace_admin_roles(target_user_id, role_ids)
+            .await?;
         Ok(())
     }
 
     pub async fn revoke_admin(&self, operator_id: i64, target_user_id: i64) -> Result<()> {
         // 只有超级管理员可以撤销超级管理员
         if self.is_super_admin(target_user_id).await? && !self.is_super_admin(operator_id).await? {
-            return Err(AppError::Forbidden("只有超级管理员可以撤销超级管理员权限".to_string()));
+            return Err(AppError::Forbidden(
+                "只有超级管理员可以撤销超级管理员权限".to_string(),
+            ));
         }
 
         self.repo.remove_admin_user(target_user_id).await?;
@@ -205,4 +235,3 @@ impl AdminRbacService {
         Ok(())
     }
 }
-

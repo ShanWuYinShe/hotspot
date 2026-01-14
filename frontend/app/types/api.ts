@@ -226,12 +226,36 @@ export type AppAuthData = AuthTokenPairApp;
 
 export type AuthData = AuthTokenPairWeb | AuthTokenPairApp;
 
+export interface SendVerificationCodeRequest {
+  phone: string;
+  type: 'register' | 'reset_password' | 'change_phone';
+  captcha_token?: string;
+}
+
+export interface SendVerificationCodeData {
+  code_id: string;
+  expires_at: string;
+  retry_after?: number;
+}
+
+export interface VerifyCodeRequest {
+  code_id: string;
+  code: string;
+}
+
+export interface VerifyCodeData {
+  verified: boolean;
+  verify_token: string;
+  expires_at: string;
+}
+
 export interface RegisterRequest {
   login_id: string;
   nickname: string;
   password: string;
   // 强制：客户端必须显式传递，避免服务端推断导致的行为漂移
   client_type: "web" | "app";
+  verify_token?: string; // 可选：如果通过手机验证码注册，提供此 token
 }
 
 export interface LoginRequest {
@@ -269,6 +293,7 @@ export interface CheckStatusData {
 
 export interface RequestPasswordResetRequest {
   login_id: string;
+  verify_token?: string; // 可选：如果通过验证码验证，提供此 token
 }
 
 export interface RequestPasswordResetData {
@@ -568,6 +593,8 @@ export interface MomentItem {
   likes_count: number;
   comments_count: number;
   location?: RelativeLocation;
+  privacy_level: PrivacyLevel; // 可见范围
+  mentions?: number[]; // @ 提及的用户 ID 列表
   // 互动状态：仅登录后返回（未登录时字段不存在）
   is_liked?: boolean;
   is_favorited?: boolean;
@@ -608,6 +635,8 @@ export interface CreateMomentRequest {
   location: Location;
   tags?: string[];
   image_file_ids?: string[];
+  privacy_level?: PrivacyLevel; // 可见范围（不提供时使用用户全局设置）
+  mentions?: number[]; // @ 提及的用户 ID 列表（最多 10 个）
 }
 
 export interface UpdateMomentRequest {
@@ -616,6 +645,8 @@ export interface UpdateMomentRequest {
   image_file_ids?: string[];
   tags?: string[];
   location?: Location;
+  privacy_level?: PrivacyLevel; // 可见范围
+  mentions?: number[]; // @ 提及的用户 ID 列表（最多 10 个）
 }
 
 export interface DeleteMomentRequest {
@@ -677,6 +708,7 @@ export interface CreateCommentRequest {
   moment_id: string;
   content: string;
   parent_id?: string;
+  mentions?: number[]; // @ 提及的用户 ID 列表（最多 10 个）
 }
 
 export interface DeleteCommentRequest {
@@ -694,6 +726,7 @@ export interface CommentListItem {
   user: UserInfo;
   content: string;
   parent_id?: string; // 仅子评论存在；顶层评论必须省略
+  mentions?: number[]; // @ 提及的用户 ID 列表
   created_at: string;
   likes_count: number;
   replies_count: number;
@@ -1039,6 +1072,44 @@ export interface LeaveGroupRequest {
 }
 
 // ============================================================================
+// 群公告 API 类型
+// ============================================================================
+
+export interface GroupAnnouncementItem {
+  announcement_id: string;
+  group_chat_id: string;
+  title: string;
+  content: string;
+  created_by: UserInfo;
+  created_at: string;
+  is_pinned: boolean;
+}
+
+export interface CreateGroupAnnouncementRequest {
+  group_chat_id: string;
+  title: string;
+  content: string;
+  is_pinned?: boolean;
+}
+
+export interface ListGroupAnnouncementsRequest {
+  group_chat_id: string;
+  limit?: number;
+  cursor?: string;
+}
+
+export interface UpdateGroupAnnouncementRequest {
+  announcement_id: string;
+  title?: string;
+  content?: string;
+  is_pinned?: boolean;
+}
+
+export interface DeleteGroupAnnouncementRequest {
+  announcement_id: string;
+}
+
+// ============================================================================
 // 私聊消息 API 类型
 // ============================================================================
 
@@ -1048,6 +1119,8 @@ export interface SendPrivateMessageRequest {
   content?: string;
   file_id?: string;
   reply_to_message_id?: string;
+  location?: Location; // 位置消息信息（当 type='location' 时必填）
+  location_address?: string; // 位置消息详细地址（可选）
 }
 
 export interface PrivateMessagesHistoryRequest {
@@ -1067,6 +1140,11 @@ export interface MessageMedia {
   mime_type?: string;
 }
 
+export interface MessageLocation {
+  location: Location;
+  address?: string; // 详细地址（可选）
+}
+
 export interface PrivateMessageItem {
   message_id: string;
   type: MessageType;
@@ -1075,6 +1153,8 @@ export interface PrivateMessageItem {
   reply_to_message_id?: string;
   reply_to?: MessageReplyTo;
   media?: MessageMedia;
+  location?: Location; // 位置消息
+  location_address?: string; // 位置消息详细地址
   sent_at: string;
   edited_at?: string;
   is_recalled: boolean;
@@ -1133,6 +1213,8 @@ export interface SendGroupMessageRequest {
   file_id?: string;
   reply_to_message_id?: string;
   mentions?: number[];
+  location?: Location; // 位置消息信息（当 type='location' 时必填）
+  location_address?: string; // 位置消息详细地址（可选）
 }
 
 export interface GroupMessagesHistoryRequest {
@@ -1151,6 +1233,8 @@ export interface GroupMessageItem {
   reply_to?: MessageReplyTo;
   mentions?: number[];
   media?: MessageMedia;
+  location?: Location; // 位置消息
+  location_address?: string; // 位置消息详细地址
   sent_at: string;
   edited_at?: string;
   is_recalled: boolean;

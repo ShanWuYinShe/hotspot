@@ -1,4 +1,4 @@
-use axum::{extract::State, Extension, Json};
+use axum::{extract::State, Json};
 
 use crate::{
     dto::{
@@ -10,6 +10,7 @@ use crate::{
         response::{AdminGlobalSettingsData, ApiResponse, FetchSettingsData, GlobalSettings},
     },
     error::Result,
+    middleware::auth::AuthenticatedUser,
     state::AppState,
 };
 
@@ -19,7 +20,10 @@ pub async fn fetch_global_settings(
     State(state): State<AppState>,
     Json(req): Json<FetchGlobalSettingsRequest>,
 ) -> Result<Json<ApiResponse<FetchSettingsData>>> {
-    let data = state.system_config_service.fetch_global_settings(req).await?;
+    let data = state
+        .system_config_service
+        .fetch_global_settings(req)
+        .await?;
     Ok(Json(ApiResponse::success(data)))
 }
 
@@ -27,7 +31,7 @@ pub async fn fetch_global_settings(
 
 pub async fn admin_get_global_settings(
     State(state): State<AppState>,
-    Extension(_user_id): Extension<i64>,
+    _user: AuthenticatedUser,
     Json(_req): Json<AdminGetGlobalSettingsRequest>,
 ) -> Result<Json<ApiResponse<AdminGlobalSettingsData>>> {
     let data = state
@@ -39,60 +43,60 @@ pub async fn admin_get_global_settings(
 
 pub async fn admin_update_upload_config(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<UpdateUploadConfigRequest>,
 ) -> Result<Json<ApiResponse<GlobalSettings>>> {
     let settings = state
         .system_config_service
-        .update_upload_config(req, user_id)
+        .update_upload_config(req, user.user_id)
         .await?;
     Ok(Json(ApiResponse::success(settings)))
 }
 
 pub async fn admin_update_defaults_config(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<UpdateDefaultsRequest>,
 ) -> Result<Json<ApiResponse<GlobalSettings>>> {
     let settings = state
         .system_config_service
-        .update_defaults_config(req, user_id)
+        .update_defaults_config(req, user.user_id)
         .await?;
     Ok(Json(ApiResponse::success(settings)))
 }
 
 pub async fn admin_update_features_config(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<UpdateFeaturesRequest>,
 ) -> Result<Json<ApiResponse<GlobalSettings>>> {
     let settings = state
         .system_config_service
-        .update_features_config(req, user_id)
+        .update_features_config(req, user.user_id)
         .await?;
     Ok(Json(ApiResponse::success(settings)))
 }
 
 pub async fn admin_update_contact_config(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<UpdateContactRequest>,
 ) -> Result<Json<ApiResponse<GlobalSettings>>> {
     let settings = state
         .system_config_service
-        .update_contact_config(req, user_id)
+        .update_contact_config(req, user.user_id)
         .await?;
     Ok(Json(ApiResponse::success(settings)))
 }
 
 pub async fn admin_update_limits_config(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<UpdateLimitsRequest>,
 ) -> Result<Json<ApiResponse<GlobalSettings>>> {
     let settings = state
         .system_config_service
-        .update_limits_config(req, user_id)
+        .update_limits_config(req, user.user_id)
         .await?;
     Ok(Json(ApiResponse::success(settings)))
 }

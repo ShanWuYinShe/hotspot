@@ -87,7 +87,7 @@ impl UserLocationHistoryRepository {
         let row = sqlx::query_scalar!(
             r#"
             SELECT ST_Distance(
-                ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography,
+                COALESCE(location, ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography),
                 ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography
             ) as "distance!"
             FROM user_location_history

@@ -81,7 +81,11 @@ impl GroupInviteRepository {
     }
 
     /// 按 invite_id 更新邀请状态（对外契约使用 UUID 字符串）
-    pub async fn update_status_by_invite_id(&self, invite_id: Uuid, status: InviteStatus) -> Result<()> {
+    pub async fn update_status_by_invite_id(
+        &self,
+        invite_id: Uuid,
+        status: InviteStatus,
+    ) -> Result<()> {
         sqlx::query!(
             r#"
             UPDATE group_invites

@@ -1,6 +1,5 @@
 use redis::aio::ConnectionManager;
 use redis::AsyncCommands;
-use sqlx::PgPool;
 use std::str::FromStr;
 
 use crate::{
@@ -33,21 +32,29 @@ pub struct FeedService {
     group_repo: GroupRepository,
     tag_repo: TagRepository,
     presence_service: crate::services::presence_service::PresenceService,
+    media_service: crate::services::media_service::MediaService,
 }
 
 impl FeedService {
-    pub fn new(pool: PgPool, redis: ConnectionManager) -> Self {
+    pub fn new(
+        redis: ConnectionManager,
+        feed_repo: FeedRepository,
+        moment_repo: MomentRepository,
+        user_repo: UserRepository,
+        group_repo: GroupRepository,
+        tag_repo: TagRepository,
+        presence_service: crate::services::presence_service::PresenceService,
+        media_service: crate::services::media_service::MediaService,
+    ) -> Self {
         Self {
-            redis: redis.clone(),
-            feed_repo: FeedRepository::new(pool.clone()),
-            moment_repo: MomentRepository::new(pool.clone()),
-            user_repo: UserRepository::new(pool.clone()),
-            group_repo: GroupRepository::new(pool.clone()),
-            tag_repo: TagRepository::new(pool.clone()),
-            presence_service: crate::services::presence_service::PresenceService::new(
-                redis,
-                pool,
-            ),
+            redis,
+            feed_repo,
+            moment_repo,
+            user_repo,
+            group_repo,
+            tag_repo,
+            presence_service,
+            media_service,
         }
     }
 
@@ -92,52 +99,66 @@ impl FeedService {
         let tags_map = self.tag_repo.get_moment_tags_batch(&moment_ids).await?;
 
         use crate::dto::response::MomentImage;
-        let items: Vec<MomentItem> = moments
-            .into_iter()
-            .map(|m| {
-                let tags = tags_map.get(&m.moment_id).cloned().unwrap_or_default();
-                let images = if m.images.is_empty() {
-                    None
-                } else {
-                    Some(
-                        m.images
-                            .iter()
-                            .map(|url| MomentImage {
-                                url: url.clone(),
-                                width: None,
-                                height: None,
-                                content_type: None,
-                            })
-                            .collect(),
-                    )
-                };
+        let mut items = Vec::with_capacity(moments.len());
+        for m in moments {
+            let tags = tags_map.get(&m.moment_id).cloned().unwrap_or_default();
 
-                MomentItem {
-                    moment_id: m.moment_id.to_string(),
-                    user: crate::dto::response::UserInfo {
-                        user_id: m.user_id,
-                        nickname: m.nickname,
-                        avatar_url: m.avatar_url,
-                        user_type: m.user_type,
-                    },
-                    description: m.description,
-                    images,
-                    tags,
-                    created_at: m.created_at.to_rfc3339(),
-                    likes_count: m.likes_count as i32,
-                    comments_count: m.comments_count as i32,
-                    location: Some(RelativeLocation {
-                        latitude: m.latitude,
-                        longitude: m.longitude,
-                        location_name: m.location_name,
-                        distance: m.distance as i32,
-                        bearing_degrees: m.bearing_degrees,
-                    }),
-                    is_liked: None,
-                    is_favorited: None,
+            // 动态签名 image paths -> fresh URLs
+            let images = if m.images.is_empty() {
+                None
+            } else {
+                let mut signed_images = Vec::with_capacity(m.images.len());
+                for path in &m.images {
+                    let url = match self.media_service.sign_url(path).await {
+                        Ok(u) => u,
+                        Err(e) => {
+                            tracing::warn!("Failed to sign url for path {}: {}", path, e);
+                            path.clone() // Fallback to path if signing fails
+                        }
+                    };
+                    signed_images.push(MomentImage {
+                        url,
+                        width: None,
+                        height: None,
+                        content_type: None,
+                    });
                 }
-            })
-            .collect();
+                Some(signed_images)
+            };
+
+            // 签名 avatar_url
+            let avatar_url = self
+                .media_service
+                .sign_url_if_path(m.avatar_url.as_deref())
+                .await;
+
+            items.push(MomentItem {
+                moment_id: m.moment_id.to_string(),
+                user: crate::dto::response::UserInfo {
+                    user_id: m.user_id,
+                    nickname: m.nickname,
+                    avatar_url,
+                    user_type: m.user_type,
+                },
+                description: m.description,
+                images,
+                tags,
+                mentions: m.mentions.clone(),
+                privacy_level: m.privacy_level.clone(),
+                created_at: m.created_at.to_rfc3339(),
+                likes_count: m.likes_count as i32,
+                comments_count: m.comments_count as i32,
+                location: RelativeLocation {
+                    latitude: m.latitude,
+                    longitude: m.longitude,
+                    location_name: m.location_name,
+                    distance: m.distance,
+                    bearing_degrees: m.bearing_degrees,
+                },
+                is_liked: None,
+                is_favorited: None,
+            });
+        }
 
         Ok(PaginatedData {
             items,
@@ -168,14 +189,24 @@ impl FeedService {
             .search_by_location(None, user_lat, user_lng, radius, limit, cursor)
             .await?;
 
-        let items: Vec<FeedGroupItem> = groups
-            .into_iter()
-            .map(|g| FeedGroupItem {
+        let mut items = Vec::with_capacity(groups.len());
+        for g in groups {
+            // 签名 avatar_url
+            let avatar_url = self
+                .media_service
+                .sign_url_if_path(g.avatar_url.as_deref())
+                .await;
+
+            items.push(FeedGroupItem {
                 group: GroupItem {
                     group_chat_id: g.group_id.to_string(),
                     name: g.name,
-                    description: g.description,
-                    avatar_url: g.avatar_url,
+                    description: if g.description.is_empty() {
+                        None
+                    } else {
+                        Some(g.description)
+                    },
+                    avatar_url,
                     tags: Some(g.tags),
                     members_count: g.member_count,
                     has_password: g.has_password,
@@ -183,7 +214,7 @@ impl FeedService {
                         latitude: g.latitude,
                         longitude: g.longitude,
                         location_name: g.location_name,
-                        distance: g.distance as i32,
+                        distance: g.distance,
                         bearing_degrees: g.bearing_degrees,
                     }),
                 },
@@ -191,8 +222,8 @@ impl FeedService {
                 friends_in_group: None,
                 my_role: None,
                 is_joined: None,
-            })
-            .collect();
+            });
+        }
 
         Ok(PaginatedData {
             items,
@@ -246,51 +277,55 @@ impl FeedService {
             .batch_get_location_visible(&user_ids)
             .await;
 
-        let items: Vec<FeedUserItem> = users
-            .into_iter()
-            .map(|u| {
-                let (is_online, last_online) = online_status_map
-                    .get(&u.user_id)
-                    .cloned()
-                    .unwrap_or((None, None));
+        let mut items = Vec::with_capacity(users.len());
+        for u in users {
+            let (is_online, last_online) = online_status_map
+                .get(&u.user_id)
+                .cloned()
+                .unwrap_or((None, None));
 
-                // 检查位置是否可见
-                let location_visible = location_visible_map
-                    .get(&u.user_id)
-                    .copied()
-                    .unwrap_or(true);
+            // 检查位置是否可见
+            let location_visible = location_visible_map
+                .get(&u.user_id)
+                .copied()
+                .unwrap_or(true);
 
-                let location = if location_visible {
-                    Some(RelativeLocation {
-                        latitude: u.latitude,
-                        longitude: u.longitude,
-                        location_name: u.location_name,
-                        distance: u.distance as i32,
-                        bearing_degrees: u.bearing_degrees,
-                    })
-                } else {
-                    None
-                };
+            let location = if location_visible {
+                Some(RelativeLocation {
+                    latitude: u.latitude,
+                    longitude: u.longitude,
+                    location_name: u.location_name,
+                    distance: u.distance,
+                    bearing_degrees: u.bearing_degrees,
+                })
+            } else {
+                None
+            };
 
-                FeedUserItem {
-                    user: UserItem {
-                        user_id: u.user_id,
-                        nickname: u.nickname,
-                        avatar_url: u.avatar_url,
-                        bio: u.bio,
-                        tags: Some(u.tags),
-                        is_online,
-                        last_online,
-                        user_type: u.user_type,
-                        location,
-                        relation: None,
-                    },
-                    reason: Some(FEED_REASON_NEARBY_PEOPLE.to_string()),
-                    mutual_friends_count: None,
-                    common_tags: None,
-                }
-            })
-            .collect();
+            // 签名 avatar_url
+            let avatar_url = self
+                .media_service
+                .sign_url_if_path(u.avatar_url.as_deref())
+                .await;
+
+            items.push(FeedUserItem {
+                user: UserItem {
+                    user_id: u.user_id,
+                    nickname: u.nickname,
+                    avatar_url,
+                    bio: if u.bio.is_empty() { None } else { Some(u.bio) },
+                    tags: Some(u.tags),
+                    is_online,
+                    last_online,
+                    user_type: u.user_type,
+                    location,
+                    relation: None,
+                },
+                reason: Some(FEED_REASON_NEARBY_PEOPLE.to_string()),
+                mutual_friends_count: None,
+                common_tags: None,
+            });
+        }
 
         Ok(PaginatedData {
             items,
@@ -329,58 +364,69 @@ impl FeedService {
 
         // 批量获取标签
         let hot_moment_ids: Vec<_> = hot_moments_raw.iter().map(|m| m.moment_id).collect();
-        let hot_tags_map = self
-            .tag_repo
-            .get_moment_tags_batch(&hot_moment_ids)
-            .await?;
+        let hot_tags_map = self.tag_repo.get_moment_tags_batch(&hot_moment_ids).await?;
 
         use crate::dto::response::MomentImage;
-        let hot_moments: Vec<MomentItem> = hot_moments_raw
-            .into_iter()
-            .map(|m| {
-                let tags = hot_tags_map.get(&m.moment_id).cloned().unwrap_or_default();
-                let images = if m.images.is_empty() {
-                    None
-                } else {
-                    Some(
-                        m.images
-                            .iter()
-                            .map(|url| MomentImage {
-                                url: url.clone(),
-                                width: None,
-                                height: None,
-                                content_type: None,
-                            })
-                            .collect(),
-                    )
-                };
+        let mut hot_moments = Vec::with_capacity(hot_moments_raw.len());
+        for m in hot_moments_raw {
+            let tags = hot_tags_map.get(&m.moment_id).cloned().unwrap_or_default();
 
-                MomentItem {
-                    moment_id: m.moment_id.to_string(),
-                    user: crate::dto::response::UserInfo {
-                        user_id: m.user_id,
-                        nickname: m.nickname,
-                        avatar_url: m.avatar_url,
-                        user_type: m.user_type,
-                    },
-                    description: m.description,
-                    images,
-                    tags,
-                    created_at: m.created_at.to_rfc3339(),
-                    likes_count: m.likes_count as i32,
-                    comments_count: m.comments_count as i32,
-                    location: Some(RelativeLocation {
-                        latitude: m.latitude,
-                        longitude: m.longitude,
-                        location_name: m.location_name,
-                        distance: m.distance as i32,
-                        bearing_degrees: m.bearing_degrees,
-                    }),
-                    is_liked: None,
-                    is_favorited: None,
+            // 签名图片 URLs
+            let images = if m.images.is_empty() {
+                None
+            } else {
+                let mut signed_images = Vec::with_capacity(m.images.len());
+                for path in &m.images {
+                    let url = match self.media_service.sign_url(path).await {
+                        Ok(u) => u,
+                        Err(e) => {
+                            tracing::warn!("Failed to sign url for path {}: {}", path, e);
+                            path.clone()
+                        }
+                    };
+                    signed_images.push(MomentImage {
+                        url,
+                        width: None,
+                        height: None,
+                        content_type: None,
+                    });
                 }
-            })
-            .collect();
+                Some(signed_images)
+            };
+
+            // 签名用户头像
+            let avatar_url = self
+                .media_service
+                .sign_url_if_path(m.avatar_url.as_deref())
+                .await;
+
+            hot_moments.push(MomentItem {
+                moment_id: m.moment_id.to_string(),
+                user: crate::dto::response::UserInfo {
+                    user_id: m.user_id,
+                    nickname: m.nickname,
+                    avatar_url,
+                    user_type: m.user_type,
+                },
+                description: m.description,
+                images,
+                tags,
+                mentions: m.mentions.clone(),
+                privacy_level: m.privacy_level.clone(),
+                created_at: m.created_at.to_rfc3339(),
+                likes_count: m.likes_count as i32,
+                comments_count: m.comments_count as i32,
+                location: RelativeLocation {
+                    latitude: m.latitude,
+                    longitude: m.longitude,
+                    location_name: m.location_name,
+                    distance: m.distance,
+                    bearing_degrees: m.bearing_degrees,
+                },
+                is_liked: None,
+                is_favorited: None,
+            });
+        }
 
         Ok(FeedTrendingData {
             trending_tags,
@@ -412,9 +458,6 @@ impl FeedService {
             if r.len() > 200 {
                 return Err(AppError::InvalidInput("反馈原因过长".to_string()));
             }
-        }
-        if matches!(action, FeedFeedbackAction::Report) && reason.is_none() {
-            return Err(AppError::InvalidInput("举报需要填写原因".to_string()));
         }
 
         // 记录反馈到数据库
@@ -449,7 +492,6 @@ impl FeedService {
         let weight_change = match action {
             FeedFeedbackAction::Hide => -1.0,
             FeedFeedbackAction::NotInterested => -2.0,
-            FeedFeedbackAction::Report => -3.0,
             _ => 0.0,
         };
 

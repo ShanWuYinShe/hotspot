@@ -2,7 +2,7 @@ use axum::{
     extract::State,
     http::{header, HeaderMap, HeaderValue},
     response::IntoResponse,
-    Extension, Json,
+    Json,
 };
 
 use crate::{
@@ -10,15 +10,16 @@ use crate::{
         request::{
             ChangePasswordRequest, CheckStatusRequest, GuestRequest, LoginRequest, LogoutRequest,
             RefreshTokenRequest, RegisterRequest, RequestPasswordResetRequest,
-            ResetPasswordRequest, RevokeSessionRequest, SessionsRequest, VerifyResetCodeRequest,
+            ResetPasswordRequest, RevokeSessionRequest, SendVerificationCodeRequest,
+            SessionsRequest, VerifyCodeRequest, VerifyResetCodeRequest,
         },
         response::{
-            ApiResponse, CheckStatusData, PaginatedData, RequestPasswordResetData, SessionItem,
-            VerifyResetCodeData,
+            ApiResponse, CheckStatusData, PaginatedData, RequestPasswordResetData,
+            SendVerificationCodeData, SessionItem, VerifyCodeData, VerifyResetCodeData,
         },
     },
     error::{AppError, Result},
-    middleware::auth::BearerToken,
+    middleware::auth::{AuthenticatedUser, BearerToken},
     services::auth_service::ClientType,
     state::AppState,
     utils::validation::Validator,
@@ -198,10 +199,9 @@ pub async fn refresh_token(
     // - app：必须在 body 传 refresh_token
     // - web：必须不传（从 HttpOnly cookie 读取），若传入则视为参数错误
     let refresh_token_raw = match client_type {
-        ClientType::App => {
-            req.refresh_token
-                .ok_or_else(|| AppError::BadRequest("app 场景必须提供 refresh_token".to_string()))?
-        }
+        ClientType::App => req
+            .refresh_token
+            .ok_or_else(|| AppError::BadRequest("app 场景必须提供 refresh_token".to_string()))?,
         ClientType::Web => {
             if req.refresh_token.is_some() {
                 return Err(AppError::BadRequest(
@@ -248,12 +248,12 @@ pub async fn refresh_token(
 
 pub async fn logout(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     BearerToken(token): BearerToken,
     Json(_req): Json<LogoutRequest>,
 ) -> Result<impl IntoResponse> {
     // 调用 Service
-    state.auth_service.logout(user_id, &token).await?;
+    state.auth_service.logout(user.user_id, &token).await?;
 
     // 清除 refresh cookie（web）
     let secure = false; // 生产建议改为配置项
@@ -293,44 +293,75 @@ pub async fn reset_password(
 
 pub async fn check_status(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     BearerToken(token): BearerToken,
     Json(_req): Json<CheckStatusRequest>,
 ) -> Result<Json<ApiResponse<CheckStatusData>>> {
-    let response = state.auth_service.check_status(user_id, &token).await?;
+    let response = state
+        .auth_service
+        .check_status(user.user_id, &token)
+        .await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
 pub async fn change_password(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<ChangePasswordRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    state.auth_service.change_password(user_id, &req).await?;
+    state
+        .auth_service
+        .change_password(user.user_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success_empty()))
 }
 
 pub async fn list_sessions(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
-    Extension(session_id): Extension<Option<uuid::Uuid>>,
+    user: AuthenticatedUser,
     Json(list_req): Json<SessionsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<SessionItem>>>> {
     let response = state
         .auth_service
-        .list_sessions(user_id, &list_req, session_id)
+        .list_sessions(user.user_id, &list_req, user.session_id)
         .await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
 pub async fn revoke_session(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(revoke_req): Json<RevokeSessionRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
     state
         .auth_service
-        .revoke_session(user_id, &revoke_req)
+        .revoke_session(user.user_id, &revoke_req)
         .await?;
     Ok(Json(ApiResponse::success_empty()))
+}
+
+pub async fn send_verification_code(
+    State(state): State<AppState>,
+    Json(req): Json<SendVerificationCodeRequest>,
+) -> Result<Json<ApiResponse<SendVerificationCodeData>>> {
+    // 参数验证
+    Validator::validate_not_empty(&req.phone, "手机号")?;
+    Validator::validate_not_empty(&req.r#type, "验证码类型")?;
+
+    // 调用 Service
+    let response = state.auth_service.send_verification_code(&req).await?;
+    Ok(Json(ApiResponse::success(response)))
+}
+
+pub async fn verify_code(
+    State(state): State<AppState>,
+    Json(req): Json<VerifyCodeRequest>,
+) -> Result<Json<ApiResponse<VerifyCodeData>>> {
+    // 参数验证
+    Validator::validate_not_empty(&req.code_id, "验证码会话ID")?;
+    Validator::validate_not_empty(&req.code, "验证码")?;
+
+    // 调用 Service
+    let response = state.auth_service.verify_code(&req).await?;
+    Ok(Json(ApiResponse::success(response)))
 }

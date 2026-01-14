@@ -13,4 +13,6 @@ pub fn routes() -> Router<AppState> {
         .route("/settings", post(group_chats::settings))
         // 成员列表
         .route("/members", post(group_chats::members))
+        // 群公告
+        .route("/announcements", post(group_chats::list_announcements))
 }

@@ -9,6 +9,11 @@ pub fn routes() -> Router<AppState> {
         .route("/guest", post(auth::create_guest))
         .route("/refresh_token", post(auth::refresh_token))
         .route(
+            "/send_verification_code",
+            post(auth::send_verification_code),
+        )
+        .route("/verify_code", post(auth::verify_code))
+        .route(
             "/request_password_reset",
             post(auth::request_password_reset),
         )

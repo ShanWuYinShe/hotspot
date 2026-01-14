@@ -61,6 +61,7 @@
 <script setup lang="ts">
 import { useGroupsService } from "~/services/groups.service";
 import { useGroupMessagesService } from "~/services/group_messages.service";
+import { useUploadService } from "~/services/upload.service";
 import type {
     GroupItem,
     GroupMessageItem,
@@ -83,6 +84,7 @@ const router = useRouter();
 const authStore = useAuthStore();
 const groupsService = useGroupsService();
 const messageService = useGroupMessagesService();
+const uploadService = useUploadService();
 const geolocation = useGeolocation();
 const feedback = useFeedbackStore();
 
@@ -102,6 +104,7 @@ const messages = computed<ChatMessage[]>(() => {
     const currentUserId = authStore.user?.user_id;
     return rawMessages.value.map((msg) => ({
         ...msg,
+        id: msg.message_id,
         role:
             msg.sender.user_id === currentUserId
                 ? ("user" as const)
@@ -227,15 +230,24 @@ async function handleSend(payload: {
     content: string;
     fileId?: string;
     type: SendMessageType;
+    file?: File;
 }) {
     if (!groupId) return;
     sending.value = true;
     try {
+        let fileId = payload.fileId;
+
+        if (payload.file && !fileId) {
+            const category = payload.type === 'image' ? 'chat_image' : 'chat_file';
+            const uploadResult = await uploadService.uploadFile(payload.file, category);
+            fileId = uploadResult.file_id;
+        }
+
         await messageService.send({
             group_chat_id: groupId,
             type: payload.type,
             content: payload.content,
-            file_id: payload.fileId,
+            file_id: fileId,
         });
         // 成功发送后不直接插入消息，等待 WebSocket 推送保持一致性
     } catch (e) {

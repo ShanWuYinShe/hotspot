@@ -1,5 +1,14 @@
 -- 002_user_module.sql
--- 用户模块：用户表、设置、关系、位置历史、在线状态、会话、密码重置
+-- 用户模块：用户表、设置、关系、位置历史、在线状态、会话、密码重置、验证码
+
+-- ============================================================
+-- 验证码类型枚举
+-- ============================================================
+CREATE TYPE verification_type AS ENUM (
+    'register',
+    'reset_password',
+    'change_phone'
+);
 
 -- ============================================================
 -- 用户核心表
@@ -12,7 +21,7 @@ CREATE TABLE users (
     password_hash VARCHAR(255),
     nickname VARCHAR(100) NOT NULL,
     avatar_url TEXT,
-    bio TEXT,
+    bio TEXT NOT NULL DEFAULT '', -- 优化：默认空字符串而非 NULL
     email VARCHAR(255),
     phone VARCHAR(20),
     current_latitude DOUBLE PRECISION,
@@ -23,6 +32,8 @@ CREATE TABLE users (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ,
     is_banned BOOLEAN NOT NULL DEFAULT FALSE,
+    ban_reason TEXT, -- 封禁原因
+    banned_until TIMESTAMPTZ, -- 封禁截止时间
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
     deleted_at TIMESTAMPTZ,
     CONSTRAINT check_user_latitude_range CHECK (current_latitude IS NULL OR (current_latitude >= -90 AND current_latitude <= 90)),
@@ -234,3 +245,38 @@ CREATE TABLE password_reset_tokens (
 
 CREATE INDEX idx_password_reset_reset_id ON password_reset_tokens (reset_id) WHERE is_used = FALSE AND is_expired = FALSE;
 CREATE INDEX idx_password_reset_user_id ON password_reset_tokens (user_id, created_at DESC);
+
+-- ============================================================
+-- 验证码表
+-- ============================================================
+CREATE TABLE verification_codes (
+    id BIGSERIAL PRIMARY KEY,
+    code_id VARCHAR(36) NOT NULL UNIQUE DEFAULT uuid_generate_v4()::TEXT,
+    phone VARCHAR(20) NOT NULL,
+    code VARCHAR(10) NOT NULL,
+    type verification_type NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    max_attempts INTEGER NOT NULL DEFAULT 5,
+    verified_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    
+    -- 约束
+    CONSTRAINT check_phone_format CHECK (phone ~ '^\+?[1-9]\d{1,14}$'),
+    CONSTRAINT check_code_length CHECK (LENGTH(code) >= 4 AND LENGTH(code) <= 10),
+    CONSTRAINT check_max_attempts CHECK (max_attempts > 0 AND max_attempts <= 10)
+);
+
+CREATE INDEX idx_verification_codes_phone_type ON verification_codes(phone, type, created_at DESC);
+CREATE INDEX idx_verification_codes_expires_at ON verification_codes(expires_at) WHERE verified_at IS NULL;
+CREATE INDEX idx_verification_codes_code_id ON verification_codes(code_id) WHERE verified_at IS NULL;
+
+COMMENT ON TABLE verification_codes IS '手机验证码表：存储短信验证码，支持注册、重置密码、更换手机号等场景';
+COMMENT ON COLUMN verification_codes.code_id IS '验证码会话ID，对外暴露的业务标识';
+COMMENT ON COLUMN verification_codes.phone IS '手机号（国际格式，如 +8613812345678）';
+COMMENT ON COLUMN verification_codes.code IS '验证码（通常为6位数字）';
+COMMENT ON COLUMN verification_codes.type IS '验证码用途类型';
+COMMENT ON COLUMN verification_codes.expires_at IS '过期时间（通常为5分钟后）';
+COMMENT ON COLUMN verification_codes.attempts IS '已尝试验证次数';
+COMMENT ON COLUMN verification_codes.max_attempts IS '最大允许尝试次数';
+COMMENT ON COLUMN verification_codes.verified_at IS '验证通过时间（NULL表示未验证）';

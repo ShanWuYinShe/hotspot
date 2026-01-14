@@ -1,11 +1,7 @@
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
-use crate::{
-    error::Result,
-    repositories::user_repo::UserProfileRow,
-    types::enums::UserType,
-};
+use crate::{error::Result, repositories::user_repo::UserProfileRow, types::enums::UserType};
 
 #[derive(Debug, Clone, FromRow)]
 pub struct AdminUserRow {
@@ -400,7 +396,11 @@ impl AdminRbacRepository {
         Ok(())
     }
 
-    pub async fn set_role_permissions(&self, role_id: Uuid, permission_keys: &[String]) -> Result<()> {
+    pub async fn set_role_permissions(
+        &self,
+        role_id: Uuid,
+        permission_keys: &[String],
+    ) -> Result<()> {
         sqlx::query(
             r#"
             DELETE FROM admin_role_permissions WHERE role_id = $1
@@ -471,10 +471,13 @@ impl AdminRbacRepository {
                 }
             }
 
-            result.push(AdminWithRolesRow { user, is_super, roles });
+            result.push(AdminWithRolesRow {
+                user,
+                is_super,
+                roles,
+            });
         }
 
         Ok(result)
     }
 }
-

@@ -172,6 +172,13 @@ export const GROUPS = {
     ACCEPT_INVITE: `${API.PROTECTED}/group_chats/me/invites/accept`,
     REJECT_INVITE: `${API.PROTECTED}/group_chats/me/invites/reject`,
     LEAVE: `${API.PROTECTED}/group_chats/me/leave`
+  },
+  // 群公告管理
+  ANNOUNCEMENTS: {
+    LIST: `${API.PUBLIC}/group_chats/announcements`,
+    CREATE: `${API.PROTECTED}/group_chats/announcements/create`,
+    UPDATE: `${API.PROTECTED}/group_chats/announcements/update`,
+    DELETE: `${API.PROTECTED}/group_chats/announcements/delete`
   }
 } as const
 

@@ -267,11 +267,7 @@ impl PrivateChatRepository {
 
     /// 获取用户的消息限制信息
     /// 返回 (can_message_freely, sent_count)
-    pub async fn get_message_limit(
-        &self,
-        chat_id: i64,
-        user_id: i64,
-    ) -> Result<(bool, i32)> {
+    pub async fn get_message_limit(&self, chat_id: i64, user_id: i64) -> Result<(bool, i32)> {
         let row = sqlx::query!(
             r#"
             SELECT user_a_id, user_b_id,
@@ -329,11 +325,7 @@ impl PrivateChatRepository {
 
     /// 解锁指定用户的消息限制
     /// 当 A 回复 B 时，Service 层会调用此方法解锁 B (user_id = B)
-    pub async fn unlock_user_messaging_limit(
-        &self,
-        chat_id: i64,
-        user_id: i64,
-    ) -> Result<()> {
+    pub async fn unlock_user_messaging_limit(&self, chat_id: i64, user_id: i64) -> Result<()> {
         let result = sqlx::query!(
             r#"
             UPDATE private_chats

@@ -1,9 +1,9 @@
-use serde::{Deserialize, Serialize};
 use crate::dto::response::{MessageMedia, UserInfo};
 use crate::types::enums::{
     GroupMemberRemovalReason, InviteStatus, MemberRole, MessageType, ReactionType,
     SubscriptionFailureReason,
 };
+use serde::{Deserialize, Serialize};
 
 /// WebSocket 消息类型定义
 /// 严格遵循 api_spec.mdc WebSocket 实时事件定义
@@ -101,10 +101,10 @@ pub enum WsMessage {
     /// 评论被回复
     CommentReply {
         moment_id: String,
-        comment_id: String, // 原评论ID（被回复的评论）
+        comment_id: String,       // 原评论ID（被回复的评论）
         reply_to_content: String, // 原评论内容摘要
-        reply_id: String,   // 回复评论ID
-        user: UserInfo,     // 回复者
+        reply_id: String,         // 回复评论ID
+        user: UserInfo,           // 回复者
         content: String,
         replied_at: String, // ISO 8601 UTC
     },
@@ -168,8 +168,8 @@ pub enum WsMessage {
         target_user_id: i64,
         user: UserInfo,
         reaction_type: ReactionType, // 使用 Enum
-        has_reaction: bool,    // 操作后状态：true=添加了反应，false=移除了反应
-        created_at: String,    // ISO 8601 UTC
+        has_reaction: bool,          // 操作后状态：true=添加了反应，false=移除了反应
+        created_at: String,          // ISO 8601 UTC
     },
 
     /// 私聊消息已读回执
@@ -260,7 +260,7 @@ pub enum WsMessage {
     GroupMemberJoined {
         group_chat_id: String,
         user: UserInfo,
-        role: MemberRole, // 使用 Enum
+        role: MemberRole,  // 使用 Enum
         member_count: i32, // 当前成员总数
         joined_at: String, // ISO 8601 UTC
     },
@@ -269,9 +269,9 @@ pub enum WsMessage {
     GroupMemberLeft {
         group_chat_id: String,
         user_id: i64,
-        member_count: i32, // 当前成员总数
+        member_count: i32,                // 当前成员总数
         reason: GroupMemberRemovalReason, // 使用 Enum
-        left_at: String, // ISO 8601 UTC
+        left_at: String,                  // ISO 8601 UTC
     },
 
     /// 群组资料更新
@@ -285,9 +285,9 @@ pub enum WsMessage {
     GroupMemberRoleChanged {
         group_chat_id: String,
         user_id: i64,
-        old_role: MemberRole,   // 使用 Enum
-        new_role: MemberRole,   // 使用 Enum
-        changed_at: String, // ISO 8601 UTC
+        old_role: MemberRole, // 使用 Enum
+        new_role: MemberRole, // 使用 Enum
+        changed_at: String,   // ISO 8601 UTC
     },
 
     /// 成员被禁言

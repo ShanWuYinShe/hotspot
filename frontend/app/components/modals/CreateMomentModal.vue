@@ -42,7 +42,7 @@
                                 :key="`${image}-${index}`"
                                 class="lsyb-image-container-aspect"
                             >
-                                <NuxtImg
+                                <img
                                     :src="image.url"
                                     :alt="`原图片 ${index + 1}`"
                                     class="w-full h-full object-cover"
@@ -57,7 +57,7 @@
                             :key="image.file_id"
                             class="lsyb-image-container-aspect group"
                         >
-                            <NuxtImg
+                            <img
                                 :src="image.local_preview"
                                 :alt="`图片 ${index + 1}`"
                                 class="w-full h-full object-cover"

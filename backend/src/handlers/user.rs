@@ -1,24 +1,25 @@
-use axum::{extract::State, Extension, Json};
+use axum::{extract::State, Json};
 
 use crate::{
     dto::{
         request::{
-            BlockRequest, DeleteAccountRequest, FollowRequest, MyBlockedRequest,
-            MyFollowersRequest, MyFollowingRequest, MyFriendsRequest, MyProfileRequest,
-            MySettingsRequest, MyStatsRequest, SearchUsersByKeywordRequest,
+            BlockRequest, DeleteAccountRequest, FollowRequest, GetRelationshipRequest,
+            MyBlockedRequest, MyFollowersRequest, MyFollowingRequest, MyFriendsRequest,
+            MyProfileRequest, MySettingsRequest, MyStatsRequest, SearchUsersByKeywordRequest,
             SearchUsersByLocationRequest, SearchUsersByTagRequest, SetRemarkRequest,
             UnblockRequest, UnfollowRequest, UpdateLocationRequest, UpdateProfileRequest,
             UpdateSettingsRequest, UpgradeAccountRequest, UserFollowersRequest,
             UserFollowingRequest, UserFriendsRequest, UserGroupsRequest, UserLikedMomentsRequest,
-            UserMomentsRequest, UserOpenTheDoorRequest, GetRelationshipRequest, UserStatsRequest,
+            UserMomentsRequest, UserOpenTheDoorRequest, UserStatsRequest,
         },
         response::{
             ApiResponse, AuthData, BlockedUserItem, FollowerItem, FollowingItem, FriendListItem,
             GroupInfo, MomentItem, MyProfileData, PaginatedData, UserDetailData, UserInfo,
-            UserRelation, UserItem, UserSettingsData, UserStatsData,
+            UserItem, UserRelation, UserSettingsData, UserStatsData,
         },
     },
     error::Result,
+    middleware::auth::AuthenticatedUser,
     state::AppState,
 };
 
@@ -90,33 +91,39 @@ fn is_update_settings_empty(req: &UpdateSettingsRequest) -> bool {
 /// 获取当前用户资料
 pub async fn get_my_profile(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(_req): Json<MyProfileRequest>,
 ) -> Result<Json<ApiResponse<MyProfileData>>> {
-    let data = state.user_service.get_me(user_id).await?;
+    let data = state.user_service.get_me(user.user_id).await?;
     Ok(Json(ApiResponse::success(data)))
 }
 
 /// 更新当前用户资料
 pub async fn update_my_profile(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<UpdateProfileRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
     if is_update_profile_empty(&req) {
         return Ok(Json(ApiResponse::success(())));
     }
 
-    state.user_service.update_profile(user_id, &req).await?;
+    state
+        .user_service
+        .update_profile(user.user_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success(())))
 }
 
 pub async fn get_relationship(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<GetRelationshipRequest>,
 ) -> Result<Json<ApiResponse<UserRelation>>> {
-    let response = state.user_service.get_relationship(user_id, &req).await?;
+    let response = state
+        .user_service
+        .get_relationship(user.user_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
@@ -132,33 +139,36 @@ pub async fn get_stats(
 /// 获取当前用户统计数据（/me/ API）
 pub async fn get_my_stats(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(_req): Json<MyStatsRequest>,
 ) -> Result<Json<ApiResponse<UserStatsData>>> {
-    let response = state.user_service.get_my_stats(user_id).await?;
+    let response = state.user_service.get_my_stats(user.user_id).await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
 /// 获取当前用户设置
 pub async fn get_my_settings(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(_req): Json<MySettingsRequest>,
 ) -> Result<Json<ApiResponse<UserSettingsData>>> {
-    let data = state.user_service.get_settings(user_id).await?;
+    let data = state.user_service.get_settings(user.user_id).await?;
     Ok(Json(ApiResponse::success(data)))
 }
 
 /// 更新当前用户设置
 pub async fn update_my_settings(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<UpdateSettingsRequest>,
 ) -> Result<Json<ApiResponse<UserSettingsData>>> {
     if !is_update_settings_empty(&req) {
-        state.user_service.update_settings(user_id, &req).await?;
+        state
+            .user_service
+            .update_settings(user.user_id, &req)
+            .await?;
     }
-    let data = state.user_service.get_settings(user_id).await?;
+    let data = state.user_service.get_settings(user.user_id).await?;
     Ok(Json(ApiResponse::success(data)))
 }
 
@@ -218,31 +228,37 @@ pub async fn get_moments(
 
 pub async fn update_location(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<UpdateLocationRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    state.user_service.update_location(user_id, &req).await?;
+    state
+        .user_service
+        .update_location(user.user_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success_empty()))
 }
 
 pub async fn upgrade_account(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<UpgradeAccountRequest>,
 ) -> Result<Json<ApiResponse<AuthData>>> {
     let auth_data = state
         .user_service
-        .upgrade_account(user_id, &req, &state.config.jwt_secret)
+        .upgrade_account(user.user_id, &req, &state.config.jwt_secret)
         .await?;
     Ok(Json(ApiResponse::success(auth_data)))
 }
 
 pub async fn delete_account(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<DeleteAccountRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    state.user_service.delete_account(user_id, &req).await?;
+    state
+        .user_service
+        .delete_account(user.user_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success_empty()))
 }
 
@@ -250,50 +266,69 @@ pub async fn delete_account(
 
 pub async fn follow(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<FollowRequest>,
 ) -> Result<Json<ApiResponse<UserRelation>>> {
-    state.user_service.follow_user(user_id, &req).await?;
-    let rel_req = GetRelationshipRequest { user_id: req.user_id };
-    let data = state.user_service.get_relationship(user_id, &rel_req).await?;
+    state.user_service.follow_user(user.user_id, &req).await?;
+    let rel_req = GetRelationshipRequest {
+        user_id: req.user_id,
+    };
+    let data = state
+        .user_service
+        .get_relationship(user.user_id, &rel_req)
+        .await?;
     Ok(Json(ApiResponse::success(data)))
 }
 
 pub async fn unfollow(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<UnfollowRequest>,
 ) -> Result<Json<ApiResponse<UserRelation>>> {
-    state.user_service.unfollow_user(user_id, &req).await?;
-    let rel_req = GetRelationshipRequest { user_id: req.user_id };
-    let data = state.user_service.get_relationship(user_id, &rel_req).await?;
+    state.user_service.unfollow_user(user.user_id, &req).await?;
+    let rel_req = GetRelationshipRequest {
+        user_id: req.user_id,
+    };
+    let data = state
+        .user_service
+        .get_relationship(user.user_id, &rel_req)
+        .await?;
     Ok(Json(ApiResponse::success(data)))
 }
 
 pub async fn get_my_friends(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<MyFriendsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<FriendListItem>>>> {
-    let response = state.user_service.get_friends_list(user_id, &req).await?;
+    let response = state
+        .user_service
+        .get_friends_list(user.user_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
 pub async fn get_my_following(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<MyFollowingRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<FollowingItem>>>> {
-    let response = state.user_service.get_following_list(user_id, &req).await?;
+    let response = state
+        .user_service
+        .get_following_list(user.user_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
 pub async fn get_my_followers(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<MyFollowersRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<FollowerItem>>>> {
-    let response = state.user_service.get_followers_list(user_id, &req).await?;
+    let response = state
+        .user_service
+        .get_followers_list(user.user_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
@@ -301,34 +336,44 @@ pub async fn get_my_followers(
 
 pub async fn block(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<BlockRequest>,
 ) -> Result<Json<ApiResponse<UserRelation>>> {
-    state.user_service.block_user(user_id, &req).await?;
-    let rel_req = GetRelationshipRequest { user_id: req.user_id };
-    let data = state.user_service.get_relationship(user_id, &rel_req).await?;
+    state.user_service.block_user(user.user_id, &req).await?;
+    let rel_req = GetRelationshipRequest {
+        user_id: req.user_id,
+    };
+    let data = state
+        .user_service
+        .get_relationship(user.user_id, &rel_req)
+        .await?;
     Ok(Json(ApiResponse::success(data)))
 }
 
 pub async fn unblock(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<UnblockRequest>,
 ) -> Result<Json<ApiResponse<UserRelation>>> {
-    state.user_service.unblock_user(user_id, &req).await?;
-    let rel_req = GetRelationshipRequest { user_id: req.user_id };
-    let data = state.user_service.get_relationship(user_id, &rel_req).await?;
+    state.user_service.unblock_user(user.user_id, &req).await?;
+    let rel_req = GetRelationshipRequest {
+        user_id: req.user_id,
+    };
+    let data = state
+        .user_service
+        .get_relationship(user.user_id, &rel_req)
+        .await?;
     Ok(Json(ApiResponse::success(data)))
 }
 
 pub async fn get_my_blocked(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<MyBlockedRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<BlockedUserItem>>>> {
     let response = state
         .user_service
-        .get_blocked_users_list(user_id, &req)
+        .get_blocked_users_list(user.user_id, &req)
         .await?;
     Ok(Json(ApiResponse::success(response)))
 }
@@ -337,10 +382,13 @@ pub async fn get_my_blocked(
 
 pub async fn set_remark(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<SetRemarkRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    state.user_service.set_friend_remark(user_id, &req).await?;
+    state
+        .user_service
+        .set_friend_remark(user.user_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success_empty()))
 }
 

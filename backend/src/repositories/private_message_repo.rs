@@ -23,6 +23,10 @@ pub struct PrivateMessageRow {
     pub file_size: Option<i64>,
     pub thumbnail_url: Option<String>,
     pub duration: Option<i32>,
+    pub location_latitude: Option<f64>,
+    pub location_longitude: Option<f64>,
+    pub location_name: Option<String>,
+    pub location_address: Option<String>,
     pub sent_at: DateTime<Utc>,
     pub edited_at: Option<DateTime<Utc>>,
     pub is_recalled: bool,
@@ -79,15 +83,21 @@ impl PrivateMessageRepository {
         file_size: Option<i64>,
         thumbnail_url: Option<&str>,
         duration: Option<i32>,
+        location_latitude: Option<f64>,
+        location_longitude: Option<f64>,
+        location_name: Option<&str>,
+        location_address: Option<&str>,
     ) -> Result<PrivateMessageRow> {
         let row = sqlx::query_as!(
             PrivateMessageRow,
             r#"
-            INSERT INTO private_messages (chat_id, sender_id, type, content, reply_to_message_id, file_name, file_size, thumbnail_url, duration)
-            VALUES ($1, $2, $3::message_type, $4, $5, $6, $7, $8, $9)
+            INSERT INTO private_messages (chat_id, sender_id, type, content, reply_to_message_id, file_name, file_size, thumbnail_url, duration, location_latitude, location_longitude, location_name, location_address)
+            VALUES ($1, $2, $3::message_type, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
             RETURNING id, message_id, chat_id, sender_id,
                       type as "type: MessageType", content, reply_to_message_id,
-                      file_name, file_size, thumbnail_url, duration, sent_at, edited_at,
+                      file_name, file_size, thumbnail_url, duration,
+                      location_latitude, location_longitude, location_name, location_address,
+                      sent_at, edited_at,
                       is_recalled, recalled_at, is_deleted, deleted_at
             "#,
             chat_id,
@@ -98,7 +108,11 @@ impl PrivateMessageRepository {
             file_name,
             file_size,
             thumbnail_url,
-            duration
+            duration,
+            location_latitude,
+            location_longitude,
+            location_name,
+            location_address
         )
         .fetch_one(&self.pool)
         .await?;
@@ -113,7 +127,9 @@ impl PrivateMessageRepository {
             r#"
             SELECT id, message_id, chat_id, sender_id,
                    type as "type: MessageType", content, reply_to_message_id,
-                   file_name, file_size, thumbnail_url, duration, sent_at, edited_at,
+                   file_name, file_size, thumbnail_url, duration,
+                   location_latitude, location_longitude, location_name, location_address,
+                   sent_at, edited_at,
                    is_recalled, recalled_at, is_deleted, deleted_at
             FROM private_messages
             WHERE message_id = $1 AND is_deleted = FALSE
@@ -144,7 +160,9 @@ impl PrivateMessageRepository {
             r#"
             SELECT id, message_id, chat_id, sender_id,
                    type as "type: MessageType", content, reply_to_message_id,
-                   file_name, file_size, thumbnail_url, duration, sent_at, edited_at,
+                   file_name, file_size, thumbnail_url, duration,
+                   location_latitude, location_longitude, location_name, location_address,
+                   sent_at, edited_at,
                    is_recalled, recalled_at, is_deleted, deleted_at
             FROM private_messages
             WHERE chat_id = $1 AND id < $2 AND is_deleted = FALSE
@@ -212,16 +230,15 @@ impl PrivateMessageRepository {
     }
 
     /// 获取私聊的最后一条消息
-    pub async fn get_last_message(
-        &self,
-        chat_id: i64,
-    ) -> Result<Option<PrivateMessageRow>> {
+    pub async fn get_last_message(&self, chat_id: i64) -> Result<Option<PrivateMessageRow>> {
         let row = sqlx::query_as!(
             PrivateMessageRow,
             r#"
             SELECT id, message_id, chat_id, sender_id,
                    type as "type: MessageType", content, reply_to_message_id,
-                   file_name, file_size, thumbnail_url, duration, sent_at, edited_at,
+                   file_name, file_size, thumbnail_url, duration,
+                   location_latitude, location_longitude, location_name, location_address,
+                   sent_at, edited_at,
                    is_recalled, recalled_at, is_deleted, deleted_at
             FROM private_messages
             WHERE chat_id = $1 AND is_deleted = FALSE
@@ -238,11 +255,7 @@ impl PrivateMessageRepository {
 
     /// 检查某用户是否在该私聊中发送过消息
     /// 用于判断是否应该解锁对方的消息限制
-    pub async fn has_messages_from_user(
-        &self,
-        chat_id: i64,
-        user_id: i64,
-    ) -> Result<bool> {
+    pub async fn has_messages_from_user(&self, chat_id: i64, user_id: i64) -> Result<bool> {
         let exists = sqlx::query_scalar!(
             r#"
             SELECT EXISTS(
@@ -276,7 +289,9 @@ impl PrivateMessageRepository {
             SELECT DISTINCT ON (chat_id)
                    id, message_id, chat_id, sender_id,
                    type as "type: MessageType", content, reply_to_message_id,
-                   file_name, file_size, thumbnail_url, duration, sent_at, edited_at,
+                   file_name, file_size, thumbnail_url, duration,
+                   location_latitude, location_longitude, location_name, location_address,
+                   sent_at, edited_at,
                    is_recalled, recalled_at, is_deleted, deleted_at
             FROM private_messages
             WHERE chat_id = ANY($1) AND is_deleted = FALSE

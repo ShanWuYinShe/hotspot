@@ -1,4 +1,4 @@
-use axum::{extract::State, Extension, Json};
+use axum::{extract::State, Json};
 
 use crate::{
     dto::{
@@ -6,6 +6,7 @@ use crate::{
         response::{ApiResponse, SubscriptionsData},
     },
     error::Result,
+    middleware::auth::AuthenticatedUser,
     state::AppState,
 };
 
@@ -26,17 +27,17 @@ fn is_update_subscriptions_empty(req: &UpdateSubscriptionsRequest) -> bool {
 /// 获取订阅配置（当前用户）
 pub async fn get_me(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(_req): Json<MySubscriptionsRequest>,
 ) -> Result<Json<ApiResponse<SubscriptionsData>>> {
-    let data = state.subscription_service.get_config(user_id).await?;
+    let data = state.subscription_service.get_config(user.user_id).await?;
     Ok(Json(ApiResponse::success(data)))
 }
 
 /// 更新订阅配置（当前用户）
 pub async fn update_me(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<UpdateSubscriptionsRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
     if is_update_subscriptions_empty(&req) {
@@ -45,7 +46,7 @@ pub async fn update_me(
 
     state
         .subscription_service
-        .update_config(user_id, &req)
+        .update_config(user.user_id, &req)
         .await?;
 
     Ok(Json(ApiResponse::success(())))

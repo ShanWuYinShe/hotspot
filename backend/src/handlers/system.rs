@@ -10,7 +10,9 @@ pub async fn health(
     Json(_req): Json<SystemHealthRequest>,
 ) -> Result<Json<ApiResponse<HealthCheckData>>> {
     Ok(Json(ApiResponse::success(HealthCheckData {
-        status: "healthy".to_string(),
+        status: crate::types::enums::HealthStatus::Healthy
+            .as_str()
+            .to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
         timestamp: chrono::Utc::now().to_rfc3339(),
     })))

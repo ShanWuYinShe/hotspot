@@ -30,6 +30,19 @@ pub fn routes() -> Router<AppState> {
         .route(
             "/applications/reject",
             post(group_chats::reject_application),
+        )
+        // 群公告管理
+        .route(
+            "/announcements/create",
+            post(group_chats::create_announcement),
+        )
+        .route(
+            "/announcements/update",
+            post(group_chats::update_announcement),
+        )
+        .route(
+            "/announcements/delete",
+            post(group_chats::delete_announcement),
         );
 
     // /me 子路由 - 当前用户的群组相关操作

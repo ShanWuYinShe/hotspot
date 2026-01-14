@@ -93,7 +93,88 @@
                         >
                             <div class="text-sm leading-relaxed wrap-break-word">
                                 <slot name="content" :message="message">
-                                    {{ message.content }}
+                                    <!-- Text -->
+                                    <template v-if="message.type === 'text' || !message.type">
+                                        {{ message.content }}
+                                    </template>
+
+                                    <!-- Image -->
+                                    <template v-else-if="message.type === 'image' && message.media">
+                                        <div class="relative group">
+                                            <img 
+                                                :src="message.media.url" 
+                                                :alt="message.content || 'Image'" 
+                                                class="rounded-lg max-w-full max-h-80 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                                @click="openPreview(message.media.url)"
+                                            />
+                                        </div>
+                                    </template>
+
+                                    <!-- Video -->
+                                    <template v-else-if="message.type === 'video' && message.media">
+                                        <video 
+                                            :src="message.media.url" 
+                                            controls 
+                                            class="rounded-lg max-w-full max-h-80 w-full bg-black"
+                                        ></video>
+                                    </template>
+
+                                    <!-- Audio -->
+                                    <template v-else-if="message.type === 'audio' && message.media">
+                                        <audio 
+                                            :src="message.media.url" 
+                                            controls 
+                                            class="w-full min-w-[240px]"
+                                        ></audio>
+                                    </template>
+
+                                    <!-- File -->
+                                    <template v-else-if="message.type === 'file' && message.media">
+                                        <a 
+                                            :href="message.media.url" 
+                                            target="_blank"
+                                            download
+                                            class="flex items-center gap-3 p-3 rounded-lg bg-neutral-100/50 dark:bg-neutral-900/50 hover:bg-neutral-100 dark:hover:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 transition-colors no-underline group"
+                                        >
+                                            <div class="p-2 bg-white dark:bg-neutral-800 rounded-md shadow-sm group-hover:scale-105 transition-transform">
+                                                <UIcon name="i-lucide-file" class="w-5 h-5 text-primary-500" />
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <div class="truncate font-medium text-sm" :class="message.role === 'user' ? 'text-white' : 'text-neutral-900 dark:text-white'">
+                                                    {{ message.media.file_name || message.content || '未命名文件' }}
+                                                </div>
+                                                <div class="text-xs opacity-70 mt-0.5">
+                                                    {{ formatFileSize(message.media.file_size) }}
+                                                </div>
+                                            </div>
+                                            <UIcon name="i-lucide-download" class="w-4 h-4 opacity-70" />
+                                        </a>
+                                    </template>
+
+                                    <!-- Location -->
+                                    <template v-else-if="message.type === 'location' && message.location">
+                                         <div class="flex flex-col gap-2 min-w-[200px]">
+                                            <div class="flex items-start gap-2">
+                                                <div class="mt-0.5 p-1.5 bg-primary-100 dark:bg-primary-900/30 rounded-md">
+                                                    <UIcon name="i-lucide-map-pin" class="w-4 h-4 text-primary-600 dark:text-primary-400" />
+                                                </div>
+                                                <div>
+                                                    <div class="font-medium text-sm">{{ message.location.location_name }}</div>
+                                                    <div v-if="message.location_address" class="text-xs opacity-70 mt-0.5 break-all">
+                                                        {{ message.location_address }}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="text-xs opacity-50 pl-8">
+                                                {{ message.location.latitude.toFixed(6) }}, {{ message.location.longitude.toFixed(6) }}
+                                            </div>
+                                         </div>
+                                    </template>
+
+                                    <!-- Fallback -->
+                                    <template v-else>
+                                         {{ message.content }}
+                                    </template>
                                 </slot>
                             </div>
                         </div>
@@ -135,11 +216,19 @@
                 <div ref="bottomRef" class="h-px w-full" />
             </div>
         </UScrollArea>
+
+        <!-- Image Preview Modal -->
+        <UModal v-model="isOpen">
+            <div class="p-1">
+                <img :src="previewImage || ''" class="w-full h-auto rounded-lg" alt="Preview" />
+            </div>
+        </UModal>
     </div>
 </template>
 
 <script setup lang="ts">
 import type { ClientMessageType } from "~/types/client";
+import type { MessageMedia, Location } from "~/types/api";
 
 // Chat message types
 export interface ChatMessageMetadata {
@@ -154,6 +243,9 @@ export interface ChatMessage {
     role: "user" | "assistant" | "system";
     content?: string;
     type?: ClientMessageType | "typing";
+    media?: MessageMedia;
+    location?: Location;
+    location_address?: string;
     createdAt?: string | Date;
     timestamp?: string;
     metadata?: ChatMessageMetadata;
@@ -232,8 +324,19 @@ const getMessageTimestamp = (
 };
 
 // 显示时间
-const { formatDate } = useFormatters();
+const { formatDate, formatFileSize } = useFormatters();
 const displayTime = (date: string | Date) => formatDate(date, "time");
+
+// Image preview
+const previewImage = ref<string | null>(null);
+const isOpen = computed({
+    get: () => !!previewImage.value,
+    set: (val) => { if (!val) previewImage.value = null; }
+});
+
+const openPreview = (url: string) => {
+    previewImage.value = url;
+};
 
 const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
     const viewport = getScrollViewportEl();

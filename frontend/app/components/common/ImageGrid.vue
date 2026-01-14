@@ -9,7 +9,7 @@
       :key="index"
       class="relative w-full h-full overflow-hidden bg-neutral-100 dark:bg-neutral-800"
     >
-      <NuxtImg
+      <img
         :src="image"
         :alt="`Image ${index + 1}`"
         loading="lazy"

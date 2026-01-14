@@ -1,5 +1,5 @@
 -- 004_group_chat_module.sql
--- 群聊模块：群聊会话、群设置、成员管理、邀请/申请、封禁、群消息、已读状态、消息反应
+-- 群聊模块：群聊会话、群设置、成员管理、邀请/申请、封禁、群消息、已读状态、消息反应、群公告
 
 -- ============================================================
 -- 群聊会话
@@ -8,7 +8,7 @@ CREATE TABLE group_chats (
     id BIGSERIAL PRIMARY KEY,
     group_chat_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
     name VARCHAR(100) NOT NULL,
-    description TEXT,
+    description TEXT NOT NULL DEFAULT '', -- 优化：默认空字符串
     avatar_url TEXT,
     owner_id BIGINT NOT NULL,
     latitude DOUBLE PRECISION,
@@ -19,6 +19,7 @@ CREATE TABLE group_chats (
     updated_at TIMESTAMPTZ,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
     is_dismissed BOOLEAN NOT NULL DEFAULT FALSE,
+    dismiss_reason TEXT, -- 解散原因
     deleted_at TIMESTAMPTZ,
     CONSTRAINT check_group_latitude_range CHECK (latitude IS NULL OR (latitude >= -90 AND latitude <= 90)),
     CONSTRAINT check_group_longitude_range CHECK (longitude IS NULL OR (longitude >= -180 AND longitude <= 180))
@@ -179,6 +180,36 @@ CREATE INDEX idx_group_applications_group_chat_id ON group_applications (group_c
 CREATE INDEX idx_group_applications_applicant ON group_applications (applicant_id, created_at DESC);
 
 -- ============================================================
+-- 群公告表
+-- ============================================================
+CREATE TABLE group_announcements (
+    id BIGSERIAL PRIMARY KEY,
+    announcement_id VARCHAR(36) NOT NULL UNIQUE DEFAULT uuid_generate_v4()::TEXT,
+    group_chat_id VARCHAR(36) NOT NULL,
+    title VARCHAR(100) NOT NULL,
+    content TEXT NOT NULL,
+    created_by BIGINT NOT NULL,
+    is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    
+    -- 约束
+    CONSTRAINT check_title_length CHECK (LENGTH(title) >= 1 AND LENGTH(title) <= 100),
+    CONSTRAINT check_content_length CHECK (LENGTH(content) >= 1 AND LENGTH(content) <= 2000)
+);
+
+CREATE INDEX idx_group_announcements_group_id ON group_announcements(group_chat_id, is_pinned DESC, created_at DESC);
+CREATE INDEX idx_group_announcements_created_by ON group_announcements(created_by);
+
+COMMENT ON TABLE group_announcements IS '群公告表';
+COMMENT ON COLUMN group_announcements.announcement_id IS '公告ID（业务标识）';
+COMMENT ON COLUMN group_announcements.group_chat_id IS '所属群组ID';
+COMMENT ON COLUMN group_announcements.title IS '公告标题';
+COMMENT ON COLUMN group_announcements.content IS '公告内容';
+COMMENT ON COLUMN group_announcements.created_by IS '发布者用户ID';
+COMMENT ON COLUMN group_announcements.is_pinned IS '是否置顶';
+
+-- ============================================================
 -- 群聊消息
 -- ============================================================
 CREATE TABLE group_messages (
@@ -194,19 +225,36 @@ CREATE TABLE group_messages (
     file_size BIGINT,
     thumbnail_url TEXT,
     duration INTEGER,
+    -- 位置消息字段
+    location_latitude DOUBLE PRECISION,
+    location_longitude DOUBLE PRECISION,
+    location_name VARCHAR(200),
+    location_address TEXT,
+    
     sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     edited_at TIMESTAMPTZ,
     is_recalled BOOLEAN NOT NULL DEFAULT FALSE,
     recalled_by BIGINT,
     recalled_at TIMESTAMPTZ,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-    deleted_at TIMESTAMPTZ
+    deleted_at TIMESTAMPTZ,
+    
+    -- 约束：当 type='location' 时，位置字段必须存在
+    CONSTRAINT check_location_fields_group CHECK (
+        (type != 'location') OR 
+        (location_latitude IS NOT NULL AND location_longitude IS NOT NULL AND location_name IS NOT NULL)
+    )
 );
 
 CREATE INDEX idx_group_messages_chat_id ON group_messages (group_chat_id, sent_at DESC) WHERE is_deleted = FALSE;
 CREATE INDEX idx_group_messages_sender ON group_messages (sender_id, sent_at DESC) WHERE is_deleted = FALSE;
 CREATE INDEX idx_group_messages_mentions ON group_messages USING gin (mentions) WHERE mentions IS NOT NULL AND is_deleted = FALSE;
 CREATE INDEX idx_group_messages_content_search ON group_messages USING gin (content gin_trgm_ops) WHERE type = 'text' AND is_deleted = FALSE;
+
+COMMENT ON COLUMN group_messages.location_latitude IS '位置消息的纬度';
+COMMENT ON COLUMN group_messages.location_longitude IS '位置消息的经度';
+COMMENT ON COLUMN group_messages.location_name IS '位置消息的地点名';
+COMMENT ON COLUMN group_messages.location_address IS '位置消息的详细地址（可选）';
 
 -- ============================================================
 -- 群聊消息已读状态
@@ -262,4 +310,3 @@ CREATE TABLE chat_unread_counts (
 CREATE INDEX idx_chat_unread_chat ON chat_unread_counts (chat_type, chat_id);
 CREATE INDEX idx_chat_unread_user ON chat_unread_counts (user_id);
 CREATE INDEX idx_chat_unread_user_count ON chat_unread_counts (user_id, unread_count) WHERE unread_count > 0;
-

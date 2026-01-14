@@ -130,6 +130,8 @@ export type ServerEventType =
   // 生活瞬间
   | 'MomentLiked'
   | 'MomentCommented'
+  | 'MomentMentioned' // 新增：瞬间被@提及
+  | 'CommentMentioned' // 新增：评论被@提及
   | 'CommentReply'
   | 'SystemAnnouncement'
   // 私聊消息
@@ -160,6 +162,9 @@ export type ServerEventType =
   | 'GroupInviteResponse'
   | 'GroupApplicationReceived'
   | 'GroupApplicationResponse'
+  | 'GroupAnnouncementCreated' // 新增：群公告创建
+  | 'GroupAnnouncementUpdated' // 新增：群公告更新
+  | 'GroupAnnouncementDeleted' // 新增：群公告删除
   // 多端同步 (Self-Sync)
   | 'SelfJoinedGroup'
   | 'SelfLeftGroup'
@@ -300,6 +305,28 @@ export interface CommentReplyEvent {
   }
 }
 
+// @ 提及事件
+export interface MomentMentionedEvent {
+  type: 'MomentMentioned'
+  payload: {
+    moment_id: string
+    moment_summary: MomentSummary
+    user: UserInfo // 提及我的人
+    mentioned_at: string
+  }
+}
+
+export interface CommentMentionedEvent {
+  type: 'CommentMentioned'
+  payload: {
+    moment_id: string
+    comment_id: string
+    user: UserInfo // 提及我的人
+    content: string // 评论内容摘要
+    mentioned_at: string
+  }
+}
+
 export interface SystemAnnouncementEvent {
   type: 'SystemAnnouncement'
   payload: {
@@ -325,6 +352,13 @@ export interface PrivateMessageNewEvent {
     reply_to?: MessageReplyTo
     // 媒体信息
     media?: MessageMedia
+    // 位置消息信息
+    location?: {
+      latitude: number
+      longitude: number
+      location_name: string
+    }
+    location_address?: string
     sent_at: string
   }
 }
@@ -395,6 +429,13 @@ export interface GroupMessageNewEvent {
     mentions?: number[] // user_id
     // 媒体信息
     media?: MessageMedia
+    // 位置消息信息
+    location?: {
+      latitude: number
+      longitude: number
+      location_name: string
+    }
+    location_address?: string
     sent_at: string
   }
 }
@@ -594,6 +635,41 @@ export interface GroupApplicationResponseEvent {
   }
 }
 
+// 群公告事件
+export interface GroupAnnouncementCreatedEvent {
+  type: 'GroupAnnouncementCreated'
+  payload: {
+    announcement_id: string
+    group_chat_id: string
+    title: string
+    content: string
+    created_by: UserInfo
+    is_pinned: boolean
+    created_at: string
+  }
+}
+
+export interface GroupAnnouncementUpdatedEvent {
+  type: 'GroupAnnouncementUpdated'
+  payload: {
+    announcement_id: string
+    group_chat_id: string
+    title?: string
+    content?: string
+    is_pinned?: boolean
+    updated_at: string
+  }
+}
+
+export interface GroupAnnouncementDeletedEvent {
+  type: 'GroupAnnouncementDeleted'
+  payload: {
+    announcement_id: string
+    group_chat_id: string
+    deleted_at: string
+  }
+}
+
 // 多端同步事件 (Self-Sync)
 export interface SelfJoinedGroupEvent {
   type: 'SelfJoinedGroup'
@@ -689,6 +765,8 @@ export type ServerEvent =
   | UnfollowedEvent
   | MomentLikedEvent
   | MomentCommentedEvent
+  | MomentMentionedEvent
+  | CommentMentionedEvent
   | CommentReplyEvent
   | SystemAnnouncementEvent
   | PrivateMessageNewEvent
@@ -716,6 +794,9 @@ export type ServerEvent =
   | GroupInviteResponseEvent
   | GroupApplicationReceivedEvent
   | GroupApplicationResponseEvent
+  | GroupAnnouncementCreatedEvent
+  | GroupAnnouncementUpdatedEvent
+  | GroupAnnouncementDeletedEvent
   | SelfJoinedGroupEvent
   | SelfLeftGroupEvent
   | PrivateChatDeletedEvent

@@ -15,17 +15,18 @@ use crate::{
         },
     },
     error::Result,
+    middleware::auth::AuthenticatedUser,
     state::AppState,
 };
-use axum::{extract::State, Extension, Json};
+use axum::{extract::State, Json};
 
 /// 发送群聊消息
 pub async fn send(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<SendGroupMessageRequest>,
 ) -> Result<Json<ApiResponse<SendGroupMessageData>>> {
-    let response = state.group_message_service.send(&req, user_id).await?;
+    let response = state.group_message_service.send(&req, user.user_id).await?;
 
     Ok(Json(ApiResponse::success(response)))
 }
@@ -33,12 +34,12 @@ pub async fn send(
 /// 获取群聊消息历史
 pub async fn history(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<GroupMessagesHistoryRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<GroupMessageItem>>>> {
     let response = state
         .group_message_service
-        .get_history(&req, user_id)
+        .get_history(&req, user.user_id)
         .await?;
 
     Ok(Json(ApiResponse::success(response)))
@@ -47,10 +48,13 @@ pub async fn history(
 /// 编辑群聊消息
 pub async fn update(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<UpdateGroupMessageRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    state.group_message_service.update(&req, user_id).await?;
+    state
+        .group_message_service
+        .update(&req, user.user_id)
+        .await?;
 
     Ok(Json(ApiResponse::success_empty()))
 }
@@ -58,10 +62,13 @@ pub async fn update(
 /// 撤回群聊消息
 pub async fn recall(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<RecallGroupMessageRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    state.group_message_service.recall(&req, user_id).await?;
+    state
+        .group_message_service
+        .recall(&req, user.user_id)
+        .await?;
 
     Ok(Json(ApiResponse::success_empty()))
 }
@@ -69,10 +76,13 @@ pub async fn recall(
 /// 删除群聊消息
 pub async fn delete(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<DeleteGroupMessageRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    state.group_message_service.delete(&req, user_id).await?;
+    state
+        .group_message_service
+        .delete(&req, user.user_id)
+        .await?;
 
     Ok(Json(ApiResponse::success_empty()))
 }
@@ -80,12 +90,12 @@ pub async fn delete(
 /// 标记群聊消息已读
 pub async fn mark_as_read(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<MarkGroupMessagesReadRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
     state
         .group_message_service
-        .mark_as_read(&req, user_id)
+        .mark_as_read(&req, user.user_id)
         .await?;
 
     Ok(Json(ApiResponse::success_empty()))
@@ -94,12 +104,12 @@ pub async fn mark_as_read(
 /// 获取消息已读状态
 pub async fn read_status(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<MessageReadStatusRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<MessageReadItem>>>> {
     let response = state
         .group_message_service
-        .get_read_status(&req, user_id)
+        .get_read_status(&req, user.user_id)
         .await?;
 
     Ok(Json(ApiResponse::success(response)))
@@ -108,12 +118,12 @@ pub async fn read_status(
 /// 添加消息反应
 pub async fn add_reaction(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<AddGroupMessageReactionRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
     state
         .group_message_service
-        .add_reaction(&req, user_id)
+        .add_reaction(&req, user.user_id)
         .await?;
 
     Ok(Json(ApiResponse::success_empty()))
@@ -122,12 +132,12 @@ pub async fn add_reaction(
 /// 移除消息反应
 pub async fn remove_reaction(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<RemoveGroupMessageReactionRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
     state
         .group_message_service
-        .remove_reaction(&req, user_id)
+        .remove_reaction(&req, user.user_id)
         .await?;
 
     Ok(Json(ApiResponse::success_empty()))
@@ -136,12 +146,12 @@ pub async fn remove_reaction(
 /// 获取消息反应列表
 pub async fn reactions(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<GroupMessageReactionsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<MessageReactionItem>>>> {
     let response = state
         .group_message_service
-        .get_reactions_list(&req, user_id)
+        .get_reactions_list(&req, user.user_id)
         .await?;
 
     Ok(Json(ApiResponse::success(response)))

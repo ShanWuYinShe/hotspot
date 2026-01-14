@@ -11,20 +11,20 @@ use crate::utils::pagination::{decode_cursor, encode_cursor, DistanceCursor, IdC
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct UserRow {
     pub user_id: i64,
-    pub login_id: Option<String>,
+    pub login_id: Option<String>, // NULL for temp users
     pub nickname: String,
-    pub password_hash: Option<String>,
-    pub avatar_url: Option<String>,
-    pub bio: Option<String>,
-    pub email: Option<String>,
-    pub phone: Option<String>,
+    pub password_hash: Option<String>, // NULL for temp users
+    pub avatar_url: Option<String>,    // NULL = use default avatar
+    pub bio: String,                   // NOT NULL DEFAULT '' (empty bio = empty string)
+    pub email: Option<String>,         // NULL = user didn't provide
+    pub phone: Option<String>,         // NULL = user didn't provide
     pub user_type: UserType,
-    pub current_latitude: Option<f64>,
-    pub current_longitude: Option<f64>,
-    pub current_location_name: Option<String>,
+    pub current_latitude: Option<f64>, // NULL = location not set (0.0 ≠ NULL)
+    pub current_longitude: Option<f64>, // NULL = location not set
+    pub current_location_name: Option<String>, // NULL = location not set
     pub created_at: DateTime<Utc>,
     pub is_deleted: bool,
-    pub deleted_at: Option<DateTime<Utc>>,
+    pub deleted_at: Option<DateTime<Utc>>, // NULL = not deleted
 }
 
 /// 用户简介Row (用于列表展示，不含敏感信息)
@@ -33,7 +33,7 @@ pub struct UserProfileRow {
     pub user_id: i64,
     pub nickname: String,
     pub avatar_url: Option<String>,
-    pub bio: Option<String>,
+    pub bio: String, // NOT NULL DEFAULT ''
     pub user_type: UserType,
 }
 
@@ -43,7 +43,7 @@ pub struct UserSearchRow {
     pub user_id: i64,
     pub nickname: String,
     pub avatar_url: Option<String>,
-    pub bio: Option<String>,
+    pub bio: String, // NOT NULL DEFAULT ''
     pub user_type: UserType,
     pub latitude: f64,
     pub longitude: f64,
@@ -167,7 +167,6 @@ impl UserRepository {
     }
 
     /// 按ID列表查找用户（带距离计算，使用 PostGIS）
-    /// 按 ID 列表查找用户（带距离计算）
     pub async fn find_by_ids_with_distance(
         &self,
         user_ids: &[i64],
@@ -189,12 +188,12 @@ impl UserRepository {
                 COALESCE(current_longitude, 112.682524) as "longitude!",
                 COALESCE(current_location_name, '南天门') as "location_name!",
                 ST_Distance(
-                    ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography,
-                    ST_SetSRID(ST_MakePoint(COALESCE(current_longitude, 112.682524), COALESCE(current_latitude, 35.154922)), 4326)::geography
+                    COALESCE(location, ST_SetSRID(ST_MakePoint(112.682524, 35.154922), 4326)::geography),
+                    ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography
                 ) as "distance!",
                 COALESCE(degrees(ST_Azimuth(
                     ST_SetSRID(ST_MakePoint($2, $3), 4326),
-                    ST_SetSRID(ST_MakePoint(COALESCE(current_longitude, 112.682524), COALESCE(current_latitude, 35.154922)), 4326)
+                    COALESCE(location::geometry, ST_SetSRID(ST_MakePoint(112.682524, 35.154922), 4326))
                 )), 0) as "bearing_degrees!"
             FROM users
             WHERE user_id = ANY($1) AND is_deleted = FALSE
@@ -404,12 +403,12 @@ impl UserRepository {
                 COALESCE(u.current_longitude, 112.682524) as "longitude!",
                 COALESCE(u.current_location_name, '南天门') as "location_name!",
                 ST_Distance(
-                    ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography,
-                    ST_SetSRID(ST_MakePoint(COALESCE(u.current_longitude, 112.682524), COALESCE(u.current_latitude, 35.154922)), 4326)::geography
+                    COALESCE(u.location, ST_SetSRID(ST_MakePoint(112.682524, 35.154922), 4326)::geography),
+                    ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography
                 ) as "distance!",
                 COALESCE(degrees(ST_Azimuth(
                     ST_SetSRID(ST_MakePoint($2, $3), 4326),
-                    ST_SetSRID(ST_MakePoint(COALESCE(u.current_longitude, 112.682524), COALESCE(u.current_latitude, 35.154922)), 4326)
+                    COALESCE(u.location::geometry, ST_SetSRID(ST_MakePoint(112.682524, 35.154922), 4326))
                 )), 0) as "bearing_degrees!"
             FROM users u
             LEFT JOIN user_settings us ON u.user_id = us.user_id
@@ -481,43 +480,41 @@ impl UserRepository {
                 u.current_latitude as "latitude!",
                 u.current_longitude as "longitude!",
                 COALESCE(u.current_location_name, '南天门') as "location_name!",
-                ST_Distance(
-                    ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
-                    ST_SetSRID(ST_MakePoint(u.current_longitude, u.current_latitude), 4326)::geography
-                ) as "distance!",
+                calc.dist as "distance!",
                 COALESCE(degrees(ST_Azimuth(
                     ST_SetSRID(ST_MakePoint($1, $2), 4326),
-                    ST_SetSRID(ST_MakePoint(u.current_longitude, u.current_latitude), 4326)
+                    u.location::geometry
                 )), 0) as "bearing_degrees!"
             FROM users u
+            CROSS JOIN LATERAL (
+                SELECT ST_Distance(
+                    ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
+                    u.location
+                ) as dist
+            ) calc
             LEFT JOIN user_settings us ON u.user_id = us.user_id
             WHERE u.is_deleted = FALSE
               AND u.current_latitude IS NOT NULL
               AND u.current_longitude IS NOT NULL
+              AND u.location IS NOT NULL
               AND COALESCE(us.searchable, TRUE) = TRUE
               AND COALESCE(us.location_searchable, TRUE) = TRUE
               AND ($7::text IS NULL OR u.nickname ILIKE ('%' || $7 || '%'))
               AND ST_DWithin(
                   ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
-                  ST_SetSRID(ST_MakePoint(u.current_longitude, u.current_latitude), 4326)::geography,
+                  u.location,
                   $3
               )
               -- Keyset Pagination: (distance, id) > (last_dist, last_id)
               -- Since distance is float, we use approximate comparison for distance, and strict for ID
               AND (
-                  ST_Distance(
-                      ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
-                      ST_SetSRID(ST_MakePoint(u.current_longitude, u.current_latitude), 4326)::geography
-                  ) > $4
+                  calc.dist > $4
                   OR (
-                      ST_Distance(
-                          ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
-                          ST_SetSRID(ST_MakePoint(u.current_longitude, u.current_latitude), 4326)::geography
-                      ) = $4
+                      calc.dist = $4
                       AND u.user_id > $5
                   )
               )
-            ORDER BY "distance!" ASC, u.user_id ASC
+            ORDER BY calc.dist ASC, u.user_id ASC
             LIMIT $6
             "#,
             longitude,
@@ -651,15 +648,18 @@ impl UserRepository {
                 u.current_longitude as "longitude!",
                 COALESCE(u.current_location_name, '南天门') as "location_name!",
                 u.user_type as "user_type!: UserType",
-                ST_Distance(
-                    ST_SetSRID(ST_MakePoint(u.current_longitude, u.current_latitude), 4326)::geography,
-                    ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
-                ) as "distance!",
+                calc.dist as "distance!",
                 COALESCE(degrees(ST_Azimuth(
                     ST_SetSRID(ST_MakePoint($1, $2), 4326),
-                    ST_SetSRID(ST_MakePoint(u.current_longitude, u.current_latitude), 4326)
+                    u.location::geometry
                 )), 0) as "bearing_degrees!"
             FROM users u
+            CROSS JOIN LATERAL (
+                SELECT ST_Distance(
+                    ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
+                    u.location
+                ) as dist
+            ) calc
             LEFT JOIN user_settings us ON u.user_id = us.user_id
             WHERE u.is_deleted = FALSE
               AND (us.searchable IS NULL OR us.searchable = TRUE)
@@ -667,26 +667,21 @@ impl UserRepository {
               AND ($3::BIGINT IS NULL OR u.user_id != $3)
               AND u.current_latitude IS NOT NULL
               AND u.current_longitude IS NOT NULL
+              AND u.location IS NOT NULL
               AND ST_DWithin(
-                  ST_SetSRID(ST_MakePoint(u.current_longitude, u.current_latitude), 4326)::geography,
                   ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
+                  u.location,
                   $4
               )
               -- Keyset Pagination: (distance, id) > (last_dist, last_id)
               AND (
-                  ST_Distance(
-                      ST_SetSRID(ST_MakePoint(u.current_longitude, u.current_latitude), 4326)::geography,
-                      ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
-                  ) > $5
+                  calc.dist > $5
                   OR (
-                      ST_Distance(
-                          ST_SetSRID(ST_MakePoint(u.current_longitude, u.current_latitude), 4326)::geography,
-                          ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
-                      ) = $5
+                      calc.dist = $5
                       AND u.user_id > $6
                   )
               )
-            ORDER BY "distance!" ASC, u.user_id ASC
+            ORDER BY calc.dist ASC, u.user_id ASC
             LIMIT $7
             "#,
             user_lng,
@@ -803,7 +798,12 @@ impl UserRepository {
     }
 
     /// 封禁用户
-    pub async fn ban(&self, user_id: i64, reason: Option<&str>, duration_days: Option<i32>) -> Result<()> {
+    pub async fn ban(
+        &self,
+        user_id: i64,
+        reason: Option<&str>,
+        duration_days: Option<i32>,
+    ) -> Result<()> {
         let banned_until = duration_days.and_then(|days| {
             if days > 0 {
                 Some(Utc::now() + chrono::Duration::days(days as i64))

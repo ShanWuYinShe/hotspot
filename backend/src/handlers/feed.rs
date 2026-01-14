@@ -1,4 +1,4 @@
-use axum::{extract::State, Extension, Json};
+use axum::{extract::State, Json};
 
 use crate::{
     dto::{
@@ -7,11 +7,11 @@ use crate::{
             FeedUsersRequest,
         },
         response::{
-            ApiResponse, FeedGroupItem, FeedTrendingData, FeedUserItem,
-            MomentItem, PaginatedData,
+            ApiResponse, FeedGroupItem, FeedTrendingData, FeedUserItem, MomentItem, PaginatedData,
         },
     },
     error::Result,
+    middleware::auth::AuthenticatedUser,
     state::AppState,
 };
 
@@ -19,10 +19,13 @@ use crate::{
 /// POST /api/v1/protected/feed/moments
 pub async fn get_moments(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<FeedMomentsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<MomentItem>>>> {
-    let result = state.feed_service.get_moments_feed(user_id, req).await?;
+    let result = state
+        .feed_service
+        .get_moments_feed(user.user_id, req)
+        .await?;
     Ok(Json(ApiResponse::success(result)))
 }
 
@@ -30,10 +33,13 @@ pub async fn get_moments(
 /// POST /api/v1/protected/feed/groups
 pub async fn get_groups(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<FeedGroupsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<FeedGroupItem>>>> {
-    let result = state.feed_service.get_groups_feed(user_id, req).await?;
+    let result = state
+        .feed_service
+        .get_groups_feed(user.user_id, req)
+        .await?;
     Ok(Json(ApiResponse::success(result)))
 }
 
@@ -41,10 +47,10 @@ pub async fn get_groups(
 /// POST /api/v1/protected/feed/users
 pub async fn get_users(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<FeedUsersRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<FeedUserItem>>>> {
-    let result = state.feed_service.get_users_feed(user_id, req).await?;
+    let result = state.feed_service.get_users_feed(user.user_id, req).await?;
     Ok(Json(ApiResponse::success(result)))
 }
 
@@ -52,10 +58,10 @@ pub async fn get_users(
 /// POST /api/v1/protected/feed/trending
 pub async fn get_trending(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<FeedTrendingRequest>,
 ) -> Result<Json<ApiResponse<FeedTrendingData>>> {
-    let result = state.feed_service.get_trending(user_id, req).await?;
+    let result = state.feed_service.get_trending(user.user_id, req).await?;
     Ok(Json(ApiResponse::success(result)))
 }
 
@@ -63,9 +69,12 @@ pub async fn get_trending(
 /// POST /api/v1/protected/feed/feedback
 pub async fn feedback(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<FeedFeedbackRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    state.feed_service.submit_feedback(user_id, req).await?;
+    state
+        .feed_service
+        .submit_feedback(user.user_id, req)
+        .await?;
     Ok(Json(ApiResponse::success_empty()))
 }

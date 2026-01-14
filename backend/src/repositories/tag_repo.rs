@@ -125,12 +125,9 @@ impl TagRepository {
 
     /// 删除标签（管理员）
     pub async fn delete(&self, tag_name: &str) -> Result<bool> {
-        let result = sqlx::query!(
-            "DELETE FROM tags WHERE name = $1",
-            tag_name
-        )
-        .execute(&self.pool)
-        .await?;
+        let result = sqlx::query!("DELETE FROM tags WHERE name = $1", tag_name)
+            .execute(&self.pool)
+            .await?;
 
         Ok(result.rows_affected() > 0)
     }

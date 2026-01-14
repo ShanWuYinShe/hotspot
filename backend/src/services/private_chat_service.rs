@@ -1,5 +1,3 @@
-use sqlx::PgPool;
-
 use crate::{
     dto::response::{
         MessageLimit, PrivateChatDetailData, PrivateChatLastMessage, PrivateChatListItem, UserInfo,
@@ -31,19 +29,25 @@ pub struct PrivateChatService {
 }
 
 impl PrivateChatService {
-    pub fn new(pool: PgPool, redis: &redis::aio::ConnectionManager) -> Self {
+    pub fn new(
+        repo: PrivateChatRepository,
+        settings_repo: UserSettingsRepository,
+        blocks_repo: UserBlocksRepository,
+        follows_repo: UserFollowsRepository,
+        user_repo: UserRepository,
+        message_repo: PrivateMessageRepository,
+        unread_repo: ChatUnreadRepository,
+        presence_service: crate::services::presence_service::PresenceService,
+    ) -> Self {
         Self {
-            repo: PrivateChatRepository::new(pool.clone()),
-            settings_repo: UserSettingsRepository::new(pool.clone()),
-            blocks_repo: UserBlocksRepository::new(pool.clone()),
-            follows_repo: UserFollowsRepository::new(pool.clone()),
-            user_repo: UserRepository::new(pool.clone()),
-            message_repo: PrivateMessageRepository::new(pool.clone()),
-            unread_repo: ChatUnreadRepository::new(pool.clone()),
-            presence_service: crate::services::presence_service::PresenceService::new(
-                redis.clone(),
-                pool.clone(),
-            ),
+            repo,
+            settings_repo,
+            blocks_repo,
+            follows_repo,
+            user_repo,
+            message_repo,
+            unread_repo,
+            presence_service,
         }
     }
 
@@ -116,12 +120,7 @@ impl PrivateChatService {
         limit: i64,
         cursor: Option<String>,
         include_archived: bool,
-    ) -> Result<(
-        Vec<PrivateChatListItem>,
-        bool,
-        Option<String>,
-    )> {
-
+    ) -> Result<(Vec<PrivateChatListItem>, bool, Option<String>)> {
         // 1. 获取私聊列表基础数据
         let (chats, next_cursor) = self
             .list_by_user(current_user_id, limit, cursor, include_archived)
@@ -159,7 +158,7 @@ impl PrivateChatService {
         // 4. 构建映射
         let user_map: std::collections::HashMap<i64, _> =
             users.into_iter().map(|u| (u.user_id, u)).collect();
-        
+
         // unread_counts key is String
         let unread_map = unread_counts;
 
@@ -194,10 +193,7 @@ impl PrivateChatService {
                     user_type: UserType::Normal,
                 });
 
-            let unread_count = unread_map
-                .get(&chat.id.to_string())
-                .copied()
-                .unwrap_or(0);
+            let unread_count = unread_map.get(&chat.id.to_string()).copied().unwrap_or(0);
 
             let last_message_row = last_messages.get(&chat.id);
             let last_message = last_message_row.map(|m| PrivateChatLastMessage {
@@ -224,7 +220,7 @@ impl PrivateChatService {
                 unread_count: unread_count as i32,
                 last_message,
                 last_activity_at,
-                is_muted: false, // TODO: Load from private_chat_settings
+                is_muted: false,  // TODO: Load from private_chat_settings
                 is_pinned: false, // TODO: Load from private_chat_settings
                 is_online,
             });
@@ -240,8 +236,11 @@ impl PrivateChatService {
         current_user_id: i64,
     ) -> Result<PrivateChatDetailData> {
         // 查找或创建私聊
-        let chat_opt = self.repo.find_by_users(current_user_id, target_user_id).await?;
-        
+        let chat_opt = self
+            .repo
+            .find_by_users(current_user_id, target_user_id)
+            .await?;
+
         let chat = match chat_opt {
             Some(c) => c,
             None => return Err(AppError::ChatNotFound("私聊不存在".to_string())),
@@ -266,26 +265,22 @@ impl PrivateChatService {
         // 获取未读计数
         let unread_count = self
             .unread_repo
-            .get_unread_count(
-                "private_chat",
-                &chat.id.to_string(),
-                current_user_id,
-            )
+            .get_unread_count("private_chat", &chat.id.to_string(), current_user_id)
             .await
             .unwrap_or(0);
 
         // 获取最后一条消息
-        let last_message = self
-            .message_repo
-            .get_last_message(chat.id)
-            .await?
-            .map(|m| PrivateChatLastMessage {
-                message_id: m.message_id.to_string(),
-                content: Some(m.content),
-                r#type: m.r#type.as_str().to_string(),
-                sender_id: m.sender_id,
-                sent_at: m.sent_at.to_rfc3339(),
-            });
+        let last_message =
+            self.message_repo
+                .get_last_message(chat.id)
+                .await?
+                .map(|m| PrivateChatLastMessage {
+                    message_id: m.message_id.to_string(),
+                    content: Some(m.content),
+                    r#type: m.r#type.as_str().to_string(),
+                    sender_id: m.sender_id,
+                    sent_at: m.sent_at.to_rfc3339(),
+                });
 
         let last_activity_at = last_message
             .as_ref()
@@ -305,17 +300,33 @@ impl PrivateChatService {
             true
         } else {
             // 1. 检查当前用户是否被目标用户拉黑
-            let is_blocked = self.blocks_repo.is_blocked(target_user_id, current_user_id).await.unwrap_or(false);
-            
+            let is_blocked = self
+                .blocks_repo
+                .is_blocked(target_user_id, current_user_id)
+                .await
+                .unwrap_or(false);
+
             // 2. 检查目标用户是否允许接收私聊
-            let target_settings = self.settings_repo.find_by_user_id(target_user_id).await.unwrap_or(None);
+            let target_settings = self
+                .settings_repo
+                .find_by_user_id(target_user_id)
+                .await
+                .unwrap_or(None);
             let allow_chat = if let Some(s) = target_settings {
                 if s.allow_private_chat == ChatPermission::Nobody {
                     false
                 } else if s.allow_private_chat == ChatPermission::Friends {
                     // 检查是否是好友（互相关注）
-                    let is_following = self.follows_repo.exists(current_user_id, target_user_id).await.unwrap_or(false);
-                    let is_followed_by = self.follows_repo.exists(target_user_id, current_user_id).await.unwrap_or(false);
+                    let is_following = self
+                        .follows_repo
+                        .exists(current_user_id, target_user_id)
+                        .await
+                        .unwrap_or(false);
+                    let is_followed_by = self
+                        .follows_repo
+                        .exists(target_user_id, current_user_id)
+                        .await
+                        .unwrap_or(false);
                     is_following && is_followed_by
                 } else {
                     true // everyone
@@ -369,10 +380,7 @@ impl PrivateChatService {
         };
 
         // 获取私聊设置
-        let settings = self
-            .repo
-            .get_settings(chat.id, current_user_id)
-            .await?;
+        let settings = self.repo.get_settings(chat.id, current_user_id).await?;
 
         Ok(PrivateChatDetailData {
             other_user: other_user_info,

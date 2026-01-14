@@ -2,9 +2,8 @@
 // 私聊消息Service
 
 use chrono::{Duration, Utc};
-use sqlx::PgPool;
-use std::sync::Arc;
 use std::str::FromStr; // Add FromStr
+use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::{
@@ -18,14 +17,14 @@ use crate::{
             UpdatePrivateMessageRequest,
         },
         response::{
-            MessageReactionItem, PaginatedData, PaginationMeta, PrivateMessageItem,
-            SendPrivateMessageData, UserInfo, MessageMedia,
+            MessageMedia, MessageReactionItem, PaginatedData, PaginationMeta, PrivateMessageItem,
+            SendPrivateMessageData, UserInfo,
         },
     },
     error::{AppError, Result},
     events::event_types::AppEvent,
     repositories::{
-        chat_unread_repo::ChatUnreadRepository, file_repo::FileRepository,
+        chat_unread_repo::ChatUnreadRepository,
         message_reactions_repo::MessageReactionsRepository,
         private_chat_repo::{PrivateChatRepository, PrivateChatRow},
         private_message_repo::PrivateMessageRepository,
@@ -34,6 +33,7 @@ use crate::{
         user_repo::UserRepository,
         user_settings_repo::UserSettingsRepository,
     },
+    services::media_service::MediaService,
     types::enums::{ChatPermission, MessageType, ReactionType},
     utils::validation::Validator,
     EventBus,
@@ -51,22 +51,33 @@ pub struct PrivateMessageService {
     blocks_repo: UserBlocksRepository,
     settings_repo: UserSettingsRepository,
     reactions_repo: MessageReactionsRepository,
-    file_repo: FileRepository,
+    media_service: MediaService,
 }
 
 impl PrivateMessageService {
-    pub fn new(db: PgPool, event_bus: Arc<EventBus>) -> Self {
+    pub fn new(
+        event_bus: Arc<EventBus>,
+        message_repo: PrivateMessageRepository,
+        chat_repo: PrivateChatRepository,
+        user_repo: UserRepository,
+        unread_repo: ChatUnreadRepository,
+        follows_repo: UserFollowsRepository,
+        blocks_repo: UserBlocksRepository,
+        settings_repo: UserSettingsRepository,
+        reactions_repo: MessageReactionsRepository,
+        media_service: MediaService,
+    ) -> Self {
         Self {
-            message_repo: PrivateMessageRepository::new(db.clone()),
-            chat_repo: PrivateChatRepository::new(db.clone()),
-            user_repo: UserRepository::new(db.clone()),
-            unread_repo: ChatUnreadRepository::new(db.clone()),
-            follows_repo: UserFollowsRepository::new(db.clone()),
-            blocks_repo: UserBlocksRepository::new(db.clone()),
-            settings_repo: UserSettingsRepository::new(db.clone()),
-            reactions_repo: MessageReactionsRepository::new(db.clone()),
-            file_repo: FileRepository::new(db.clone()),
             event_bus,
+            message_repo,
+            chat_repo,
+            user_repo,
+            unread_repo,
+            follows_repo,
+            blocks_repo,
+            settings_repo,
+            reactions_repo,
+            media_service,
         }
     }
 
@@ -79,19 +90,23 @@ impl PrivateMessageService {
         use crate::types::enums::UserType;
 
         // 1. 查找现有私聊 (无需权限验证，因为已存在)
-        if let Some(chat) = self.chat_repo.find_by_users(user_id, target_user_id).await? {
+        if let Some(chat) = self
+            .chat_repo
+            .find_by_users(user_id, target_user_id)
+            .await?
+        {
             return Ok(chat);
         }
 
         // 2. 创建新私聊前进行权限验证
-        
+
         // 检查发送者的用户类型：管理员和系统账号不受任何限制
         let sender = self.user_repo.find_by_id(user_id).await?;
         let is_privileged_user = sender
             .as_ref()
             .map(|u| matches!(u.user_type, UserType::Admin | UserType::System))
             .unwrap_or(false);
-        
+
         // 只对普通用户（temp/normal）进行权限检查
         if !is_privileged_user {
             // 检查目标用户是否允许接收私聊
@@ -124,11 +139,7 @@ impl PrivateMessageService {
             }
 
             // 检查当前用户是否被目标用户拉黑
-            if self
-                .blocks_repo
-                .is_blocked(target_user_id, user_id)
-                .await?
-            {
+            if self.blocks_repo.is_blocked(target_user_id, user_id).await? {
                 return Err(AppError::BlockedByUser("已被对方拉黑".to_string()));
             }
         }
@@ -152,7 +163,9 @@ impl PrivateMessageService {
         }
 
         // 查找或创建私聊 (带完整权限检查)
-        let chat = self.ensure_chat_and_check_permission(user_id, target_user_id).await?;
+        let chat = self
+            .ensure_chat_and_check_permission(user_id, target_user_id)
+            .await?;
 
         // 验证用户是否在私聊中（双重保险）
         let other_user_id = if chat.user_a_id == user_id {
@@ -179,10 +192,8 @@ impl PrivateMessageService {
 
             if !is_mutual_follow {
                 // 获取当前用户的消息限制状态
-                let (can_message_freely, sent_count) = self
-                    .chat_repo
-                    .get_message_limit(chat.id, user_id)
-                    .await?;
+                let (can_message_freely, sent_count) =
+                    self.chat_repo.get_message_limit(chat.id, user_id).await?;
 
                 if !can_message_freely {
                     // 检查是否关注了对方
@@ -250,9 +261,10 @@ impl PrivateMessageService {
         // 根据消息类型处理内容和文件
         let (content, media) = match message_type {
             MessageType::Text => {
-                let content = req.content.clone().ok_or_else(|| {
-                    AppError::BadRequest("文本消息必须提供 content".to_string())
-                })?;
+                let content = req
+                    .content
+                    .clone()
+                    .ok_or_else(|| AppError::BadRequest("文本消息必须提供 content".to_string()))?;
                 (content, None)
             }
             MessageType::System => {
@@ -261,9 +273,10 @@ impl PrivateMessageService {
             }
             _ => {
                 // 媒体消息：需要 file_id
-                let file_id_str = req.file_id.as_ref().ok_or_else(|| {
-                    AppError::BadRequest("媒体消息必须提供 file_id".to_string())
-                })?;
+                let file_id_str = req
+                    .file_id
+                    .as_ref()
+                    .ok_or_else(|| AppError::BadRequest("媒体消息必须提供 file_id".to_string()))?;
                 let file_id = Uuid::parse_str(file_id_str)
                     .map_err(|_| AppError::BadRequest("无效的 file_id".to_string()))?;
 
@@ -276,15 +289,28 @@ impl PrivateMessageService {
                     _ => vec![],
                 };
                 let file_data = self
-                    .file_repo
-                    .get_file_for_message(file_id, user_id, &expected_categories)
+                    .media_service
+                    .validate_message_file(file_id, user_id, &expected_categories)
                     .await?;
 
                 // 标记文件已使用
-                self.file_repo.mark_as_used(file_id).await?;
+                self.media_service.mark_as_used(file_id).await?;
+
+                // 为事件和响应生成签名 URL
+                let signed_url = match self.media_service.sign_url(&file_data.storage_path).await {
+                    Ok(u) => u,
+                    Err(e) => {
+                        tracing::warn!(
+                            "Failed to sign url for path {}: {}",
+                            file_data.storage_path,
+                            e
+                        );
+                        file_data.storage_path.clone()
+                    }
+                };
 
                 let media = MessageMedia {
-                    url: file_data.url.clone(),
+                    url: signed_url,
                     thumbnail_url: file_data.thumbnail_url.clone(),
                     file_name: file_data.filename.clone(),
                     file_size: Some(file_data.file_size),
@@ -294,8 +320,8 @@ impl PrivateMessageService {
                     mime_type: Some(file_data.mime_type.clone()),
                 };
 
-                // 媒体消息的 content 存储实际 url
-                (file_data.url, Some(media))
+                // 媒体消息的 content 存储实际 storage_path (Key)
+                (file_data.storage_path, Some(media))
             }
         };
 
@@ -312,6 +338,18 @@ impl PrivateMessageService {
                 media.as_ref().and_then(|m| m.file_size),
                 media.as_ref().and_then(|m| m.thumbnail_url.as_deref()),
                 media.as_ref().and_then(|m| m.duration.map(|d| d as i32)),
+                req.location
+                    .as_ref()
+                    .map(|msg_loc| msg_loc.location.latitude),
+                req.location
+                    .as_ref()
+                    .map(|msg_loc| msg_loc.location.longitude),
+                req.location
+                    .as_ref()
+                    .map(|msg_loc| msg_loc.location.location_name.as_str()),
+                req.location
+                    .as_ref()
+                    .and_then(|msg_loc| msg_loc.address.as_deref()),
             )
             .await?;
 
@@ -324,10 +362,8 @@ impl PrivateMessageService {
                 .await?;
 
             if !is_mutual_follow {
-                let (can_message_freely, _) = self
-                    .chat_repo
-                    .get_message_limit(chat.id, user_id)
-                    .await?;
+                let (can_message_freely, _) =
+                    self.chat_repo.get_message_limit(chat.id, user_id).await?;
 
                 if !can_message_freely {
                     // 增加发送消息计数
@@ -380,7 +416,7 @@ impl PrivateMessageService {
         user_id: i64,
     ) -> Result<PaginatedData<PrivateMessageItem>> {
         let target_user_id = req.target_user_id;
-        
+
         // 查找私聊
         let chat = self
             .chat_repo
@@ -404,47 +440,66 @@ impl PrivateMessageService {
             users.into_iter().map(|u| (u.user_id, u)).collect();
 
         // 构建响应
-        let items: Vec<PrivateMessageItem> = messages
-            .into_iter()
-            .map(|m| {
-                let user = user_map.get(&m.sender_id);
-                PrivateMessageItem {
-                    message_id: m.message_id.to_string(),
-                    r#type: m.r#type.as_str().to_string(),
-                    content: Some(m.content.clone()),
-                    sender: UserInfo {
-                        user_id: m.sender_id,
-                        nickname: user
-                            .map(|u| u.nickname.clone())
-                            .unwrap_or_else(|| "未知用户".to_string()),
-                        avatar_url: user.and_then(|u| u.avatar_url.clone()),
-                        user_type: user
-                            .map(|u| u.user_type)
-                            .unwrap_or(crate::types::enums::UserType::Normal),
-                    },
-                    reply_to_message_id: m.reply_to_message_id.map(|id| id.to_string()),
-                    media: if m.r#type.is_media() {
-                        Some(MessageMedia {
-                            url: m.content.clone(),
-                            thumbnail_url: m.thumbnail_url.clone(),
-                            file_name: m.file_name.clone(),
-                            file_size: m.file_size,
-                            duration: m.duration.map(|d| d as f64),
-                            width: None,
-                            height: None,
-                            mime_type: None, 
-                        })
-                    } else {
-                        None
-                    },
-                    reply_to: None,
-                    sent_at: m.sent_at.to_rfc3339(),
-                    edited_at: m.edited_at.map(|t| t.to_rfc3339()),
-                    is_recalled: m.is_recalled,
-                    recalled_at: m.recalled_at.map(|t| t.to_rfc3339()),
-                }
-            })
-            .collect();
+        let mut items = Vec::with_capacity(messages.len());
+        for m in messages {
+            let user = user_map.get(&m.sender_id);
+
+            let media = if m.r#type.is_media() {
+                let signed_url = match self.media_service.sign_url(&m.content).await {
+                    Ok(u) => u,
+                    Err(e) => {
+                        tracing::warn!("Failed to sign url for path {}: {}", m.content, e);
+                        m.content.clone()
+                    }
+                };
+
+                // 如果有 thumbnail_url，也需要签名
+                let thumbnail_url = if let Some(ref thumb) = m.thumbnail_url {
+                    self.media_service.sign_url_if_path(Some(thumb)).await
+                } else {
+                    None
+                };
+
+                Some(MessageMedia {
+                    url: signed_url,
+                    thumbnail_url,
+                    file_name: m.file_name.clone(),
+                    file_size: m.file_size,
+                    duration: m.duration.map(|d| d as f64),
+                    width: None,
+                    height: None,
+                    mime_type: None,
+                })
+            } else {
+                None
+            };
+
+            items.push(PrivateMessageItem {
+                message_id: m.message_id.to_string(),
+                r#type: m.r#type.as_str().to_string(),
+                content: Some(m.content.clone()),
+                sender: UserInfo {
+                    user_id: m.sender_id,
+                    nickname: user
+                        .map(|u| u.nickname.clone())
+                        .unwrap_or_else(|| "未知用户".to_string()),
+                    avatar_url: self
+                        .media_service
+                        .sign_url_if_path(user.and_then(|u| u.avatar_url.as_deref()))
+                        .await,
+                    user_type: user
+                        .map(|u| u.user_type)
+                        .unwrap_or(crate::types::enums::UserType::Normal),
+                },
+                reply_to_message_id: m.reply_to_message_id.map(|id| id.to_string()),
+                media,
+                reply_to: None,
+                sent_at: m.sent_at.to_rfc3339(),
+                edited_at: m.edited_at.map(|t| t.to_rfc3339()),
+                is_recalled: m.is_recalled,
+                recalled_at: m.recalled_at.map(|t| t.to_rfc3339()),
+            });
+        }
 
         Ok(PaginatedData {
             items,
@@ -495,9 +550,7 @@ impl PrivateMessageService {
         }
 
         // 获取对方ID
-        let other_user_id = self
-            .get_other_user_id(message.chat_id, user_id)
-            .await?;
+        let other_user_id = self.get_other_user_id(message.chat_id, user_id).await?;
 
         // 更新消息内容
         self.message_repo
@@ -543,9 +596,7 @@ impl PrivateMessageService {
         }
 
         // 获取对方ID
-        let other_user_id = self
-            .get_other_user_id(message.chat_id, user_id)
-            .await?;
+        let other_user_id = self.get_other_user_id(message.chat_id, user_id).await?;
 
         // 撤回消息
         self.message_repo.recall(message_id).await?;
@@ -584,9 +635,7 @@ impl PrivateMessageService {
         }
 
         // 获取对方ID（用于事件，虽然此接口不发事件，但保持一致性）
-        let other_user_id = self
-            .get_other_user_id(message.chat_id, user_id)
-            .await?;
+        let other_user_id = self.get_other_user_id(message.chat_id, user_id).await?;
 
         // 删除消息（仅对自己可见，不发布事件）
         self.message_repo.soft_delete(message_id).await?;
@@ -600,7 +649,7 @@ impl PrivateMessageService {
         // 如果是仅对自己删除，target_user_id 是否重要？
         // 我们的事件定义 `PrivateMessageDeleted` 包含 `target_user_id`。
         // 为了支持多端同步，应该填 `other_user_id`，这样客户端能定位到会话。
-        
+
         self.event_bus.publish(AppEvent::PrivateMessageDeleted {
             message_id,
             target_user_id: other_user_id,
@@ -635,12 +684,7 @@ impl PrivateMessageService {
 
         // 更新已读状态
         self.unread_repo
-            .mark_as_read(
-                "private_chat",
-                &chat.id.to_string(),
-                user_id,
-                up_to,
-            )
+            .mark_as_read("private_chat", &chat.id.to_string(), user_id, up_to)
             .await?;
 
         // 发布已读事件（通知消息发送者）
@@ -682,9 +726,7 @@ impl PrivateMessageService {
         }
 
         // 获取对方ID
-        let other_user_id = self
-            .get_other_user_id(message.chat_id, user_id)
-            .await?;
+        let other_user_id = self.get_other_user_id(message.chat_id, user_id).await?;
 
         // 添加反应
         self.reactions_repo
@@ -732,9 +774,7 @@ impl PrivateMessageService {
         }
 
         // 获取对方ID
-        let other_user_id = self
-            .get_other_user_id(message.chat_id, user_id)
-            .await?;
+        let other_user_id = self.get_other_user_id(message.chat_id, user_id).await?;
 
         // 移除反应
         self.reactions_repo

@@ -1,5 +1,4 @@
 use redis::aio::ConnectionManager;
-use sqlx::PgPool;
 use std::str::FromStr;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -8,41 +7,43 @@ use crate::{
     constants::{DEFAULT_LATITUDE, DEFAULT_LOCATION_NAME, DEFAULT_LONGITUDE},
     dto::{
         request::{
-            AcceptInviteRequest, ApplyToGroupRequest, ApproveGroupApplicationRequest, BanMemberRequest,
-            BannedMembersRequest, CancelApplicationRequest, CreateGroupChatRequest,
-            GroupApplicationsRequest, GroupMembersRequest, GroupOpenTheDoorRequest,
-            GroupSettingsRequest, InviteMemberRequest, JoinGroupRequest, LeaveGroupRequest,
-            MuteMemberRequest, MyGroupChatsRequest, MyInvitesRequest, RejectGroupApplicationRequest,
-            RejectInviteRequest, RemoveMemberRequest, SearchGroupsByKeywordRequest,
-            SearchGroupsByLocationRequest, SearchGroupsByTagRequest, SetMemberRoleRequest,
-            TransferOwnershipRequest, UnbanMemberRequest, UnmuteMemberRequest,
-            UpdateGroupChatRequest,
+            AcceptInviteRequest, ApplyToGroupRequest, ApproveGroupApplicationRequest,
+            BanMemberRequest, BannedMembersRequest, CancelApplicationRequest,
+            CreateGroupAnnouncementRequest, CreateGroupChatRequest, DeleteGroupAnnouncementRequest,
+            GroupAnnouncementsRequest, GroupApplicationsRequest, GroupMembersRequest,
+            GroupOpenTheDoorRequest, GroupSettingsRequest, InviteMemberRequest, JoinGroupRequest,
+            LeaveGroupRequest, MuteMemberRequest, MyGroupChatsRequest, MyInvitesRequest,
+            RejectGroupApplicationRequest, RejectInviteRequest, RemoveMemberRequest,
+            SearchGroupsByKeywordRequest, SearchGroupsByLocationRequest, SearchGroupsByTagRequest,
+            SetMemberRoleRequest, TransferOwnershipRequest, UnbanMemberRequest,
+            UnmuteMemberRequest, UpdateGroupAnnouncementRequest, UpdateGroupChatRequest,
         },
         response::{
-            ApplyToGroupData, BannedMemberItem, CreateGroupChatData, RelativeLocation, GroupApplicationItem,
-            GroupDetailData, GroupInfo, GroupInviteItem, GroupMemberItem, GroupItem,
-            GroupSettings, GroupSettingsData, InviteMemberData, JoinedGroupItem, PaginatedData,
-            PaginationMeta, UserInfo,
+            ApplyToGroupData, BannedMemberItem, CreateGroupChatData, GroupAnnouncementItem,
+            GroupApplicationItem, GroupDetailData, GroupInfo, GroupInviteItem, GroupItem,
+            GroupMemberItem, GroupSettings, GroupSettingsData, InviteMemberData, JoinedGroupItem,
+            PaginatedData, PaginationMeta, RelativeLocation, UserInfo,
         },
     },
     error::{AppError, Result},
     events::event_types::AppEvent,
     repositories::{
-        chat_unread_repo::ChatUnreadRepository, group_application_repo::GroupApplicationRepository,
-        group_bans_repo::GroupBansRepository, group_invite_repo::GroupInviteRepository,
+        chat_unread_repo::ChatUnreadRepository,
+        group_announcement_repo::GroupAnnouncementRepository,
+        group_application_repo::GroupApplicationRepository, group_bans_repo::GroupBansRepository,
+        group_invite_repo::GroupInviteRepository,
         group_member_history_repo::GroupMemberHistoryRepository,
         group_member_repo::GroupMemberRepository, group_repo::GroupRepository,
         group_settings_repo::GroupSettingsRepository, tag_repo::TagRepository,
         user_repo::UserRepository,
     },
-    types::enums::{InviteStatus, MemberRole, GroupMemberRemovalReason},
+    types::enums::{GroupMemberRemovalReason, InviteStatus, MemberRole},
     utils::{password::PasswordUtil, validation::Validator},
     EventBus,
 };
 
 #[derive(Clone)]
 pub struct GroupService {
-    db: PgPool,
     event_bus: Arc<EventBus>,
     group_repo: GroupRepository,
     member_repo: GroupMemberRepository,
@@ -51,38 +52,52 @@ pub struct GroupService {
     bans_repo: GroupBansRepository,
     invite_repo: GroupInviteRepository,
     settings_repo: GroupSettingsRepository,
+    announcement_repo: GroupAnnouncementRepository,
     tag_repo: TagRepository,
     user_repo: UserRepository,
-    file_repo: crate::repositories::file_repo::FileRepository,
     unread_repo: ChatUnreadRepository,
     _redis: ConnectionManager,
     presence_service: crate::services::presence_service::PresenceService,
+    media_service: crate::services::media_service::MediaService,
 }
 
-use crate::dto::request::{AdminGroupSearchRequest, AdminDismissGroupRequest};
+use crate::dto::request::{AdminDismissGroupRequest, AdminGroupSearchRequest};
 use crate::dto::response::AdminGroupItem;
 
 impl GroupService {
-    pub fn new(pool: &PgPool, redis: &ConnectionManager, event_bus: Arc<EventBus>) -> Self {
+    pub fn new(
+        event_bus: Arc<EventBus>,
+        group_repo: GroupRepository,
+        member_repo: GroupMemberRepository,
+        history_repo: GroupMemberHistoryRepository,
+        application_repo: GroupApplicationRepository,
+        bans_repo: GroupBansRepository,
+        invite_repo: GroupInviteRepository,
+        settings_repo: GroupSettingsRepository,
+        announcement_repo: GroupAnnouncementRepository,
+        tag_repo: TagRepository,
+        user_repo: UserRepository,
+        unread_repo: ChatUnreadRepository,
+        redis: ConnectionManager,
+        presence_service: crate::services::presence_service::PresenceService,
+        media_service: crate::services::media_service::MediaService,
+    ) -> Self {
         Self {
-            db: pool.clone(),
             event_bus,
-            group_repo: GroupRepository::new(pool.clone()),
-            member_repo: GroupMemberRepository::new(pool.clone(), redis.clone()),
-            history_repo: GroupMemberHistoryRepository::new(pool.clone()),
-            application_repo: GroupApplicationRepository::new(pool.clone()),
-            bans_repo: GroupBansRepository::new(pool.clone()),
-            invite_repo: GroupInviteRepository::new(pool.clone()),
-            settings_repo: GroupSettingsRepository::new(pool.clone()),
-            tag_repo: TagRepository::new(pool.clone()),
-            user_repo: UserRepository::new(pool.clone()),
-            file_repo: crate::repositories::file_repo::FileRepository::new(pool.clone()),
-            unread_repo: ChatUnreadRepository::new(pool.clone()),
-            _redis: redis.clone(),
-            presence_service: crate::services::presence_service::PresenceService::new(
-                redis.clone(),
-                pool.clone(),
-            ),
+            group_repo,
+            member_repo,
+            history_repo,
+            application_repo,
+            bans_repo,
+            invite_repo,
+            settings_repo,
+            announcement_repo,
+            tag_repo,
+            user_repo,
+            unread_repo,
+            _redis: redis,
+            presence_service,
+            media_service,
         }
     }
 
@@ -119,14 +134,15 @@ impl GroupService {
         if let Some(file_id_str) = req.avatar_file_id {
             if let Ok(file_id) = Uuid::parse_str(&file_id_str) {
                 // 验证文件所有权和分类 ('group_avatar')
-                if let Ok(url) = self
-                    .file_repo
+                if let Ok(file_data) = self
+                    .media_service
                     .validate_file(file_id, owner_id, "group_avatar")
                     .await
                 {
-                    avatar_url = Some(url);
+                    // 存储 storage_path 到 DB
+                    avatar_url = Some(file_data);
                     // 标记文件已使用
-                    let _ = self.file_repo.mark_as_used(file_id).await;
+                    let _ = self.media_service.mark_as_used(file_id).await;
                 }
             }
         }
@@ -135,7 +151,7 @@ impl GroupService {
             .group_repo
             .create(
                 req.name.clone(),
-                req.description.clone(),
+                req.description.clone().unwrap_or_default(), // Convert Option<String> to String
                 avatar_url,
                 owner_id,
                 Some(lat),
@@ -166,8 +182,7 @@ impl GroupService {
         // 设置群组标签
         if let Some(tags) = &req.tags {
             if !tags.is_empty() {
-                let tag_repo = TagRepository::new(self.db.clone());
-                tag_repo.set_group_tags(group.group_id, tags).await?;
+                self.tag_repo.set_group_tags(group.group_id, tags).await?;
             }
         }
 
@@ -184,45 +199,59 @@ impl GroupService {
         let limit = Validator::validate_limit(req.limit, 100)?;
         let cursor = req.cursor;
 
-        Validator::validate_coordinates(req.reference_point.latitude, req.reference_point.longitude)?;
+        Validator::validate_coordinates(
+            req.reference_point.latitude,
+            req.reference_point.longitude,
+        )?;
 
         let (results, next_cursor) = self
             .group_repo
-            .search_by_name(&req.kw, req.reference_point.latitude, req.reference_point.longitude, limit, cursor)
+            .search_by_name(
+                &req.kw,
+                req.reference_point.latitude,
+                req.reference_point.longitude,
+                limit,
+                cursor,
+            )
             .await?;
 
         // 批量获取标签
         let group_ids: Vec<Uuid> = results.iter().map(|g| g.group_id).collect();
         let tags_map = self.tag_repo.get_group_tags_batch(&group_ids).await?;
 
-        let items: Vec<GroupItem> = results
-            .into_iter()
-            .map(|g| {
-                let tags = tags_map.get(&g.group_id).cloned();
-                let tags = if tags.as_ref().map(|t| t.is_empty()).unwrap_or(true) {
+        let mut items = Vec::with_capacity(results.len());
+        for g in results {
+            let tags = tags_map.get(&g.group_id).cloned();
+            let tags = if tags.as_ref().map(|t| t.is_empty()).unwrap_or(true) {
+                None
+            } else {
+                tags
+            };
+
+            items.push(GroupItem {
+                group_chat_id: g.group_id.to_string(),
+                name: g.name,
+                description: if g.description.is_empty() {
                     None
                 } else {
-                    tags
-                };
-
-                GroupItem {
-                    group_chat_id: g.group_id.to_string(),
-                    name: g.name,
-                    description: g.description,
-                    avatar_url: g.avatar_url,
-                    tags,
-                    members_count: g.member_count,
-                    has_password: g.has_password,
-                    location: Some(RelativeLocation {
-                        latitude: g.latitude,
-                        longitude: g.longitude,
-                        location_name: g.location_name,
-                        distance: g.distance as i32,
-                        bearing_degrees: g.bearing_degrees,
-                    }),
-                }
-            })
-            .collect();
+                    Some(g.description)
+                },
+                avatar_url: self
+                    .media_service
+                    .sign_url_if_path(g.avatar_url.as_deref())
+                    .await,
+                tags,
+                members_count: g.member_count,
+                has_password: g.has_password,
+                location: Some(RelativeLocation {
+                    latitude: g.latitude,
+                    longitude: g.longitude,
+                    location_name: g.location_name,
+                    distance: g.distance,
+                    bearing_degrees: g.bearing_degrees,
+                }),
+            });
+        }
 
         Ok(PaginatedData {
             items,
@@ -268,34 +297,39 @@ impl GroupService {
         let group_ids: Vec<Uuid> = results.iter().map(|g| g.group_id).collect();
         let tags_map = self.tag_repo.get_group_tags_batch(&group_ids).await?;
 
-        let items: Vec<GroupItem> = results
-            .into_iter()
-            .map(|g| {
-                let tags = tags_map.get(&g.group_id).cloned();
-                let tags = if tags.as_ref().map(|t| t.is_empty()).unwrap_or(true) {
+        let mut items = Vec::with_capacity(results.len());
+        for g in results {
+            let tags = tags_map.get(&g.group_id).cloned();
+            let tags = if tags.as_ref().map(|t| t.is_empty()).unwrap_or(true) {
+                None
+            } else {
+                tags
+            };
+
+            items.push(GroupItem {
+                group_chat_id: g.group_id.to_string(),
+                name: g.name,
+                description: if g.description.is_empty() {
                     None
                 } else {
-                    tags
-                };
-
-                GroupItem {
-                    group_chat_id: g.group_id.to_string(),
-                    name: g.name,
-                    description: g.description,
-                    avatar_url: g.avatar_url,
-                    tags,
-                    members_count: g.member_count,
-                    has_password: g.has_password,
-                    location: Some(RelativeLocation {
-                        latitude: g.latitude,
-                        longitude: g.longitude,
-                        location_name: g.location_name,
-                        distance: g.distance as i32,
-                        bearing_degrees: g.bearing_degrees,
-                    }),
-                }
-            })
-            .collect();
+                    Some(g.description)
+                },
+                avatar_url: self
+                    .media_service
+                    .sign_url_if_path(g.avatar_url.as_deref())
+                    .await,
+                tags,
+                members_count: g.member_count,
+                has_password: g.has_password,
+                location: Some(RelativeLocation {
+                    latitude: g.latitude,
+                    longitude: g.longitude,
+                    location_name: g.location_name,
+                    distance: g.distance,
+                    bearing_degrees: g.bearing_degrees,
+                }),
+            });
+        }
 
         Ok(PaginatedData {
             items,
@@ -328,34 +362,39 @@ impl GroupService {
         let group_ids: Vec<Uuid> = results.iter().map(|g| g.group_id).collect();
         let tags_map = self.tag_repo.get_group_tags_batch(&group_ids).await?;
 
-        let items: Vec<GroupItem> = results
-            .into_iter()
-            .map(|g| {
-                let tags = tags_map.get(&g.group_id).cloned();
-                let tags = if tags.as_ref().map(|t| t.is_empty()).unwrap_or(true) {
+        let mut items = Vec::with_capacity(results.len());
+        for g in results {
+            let tags = tags_map.get(&g.group_id).cloned();
+            let tags = if tags.as_ref().map(|t| t.is_empty()).unwrap_or(true) {
+                None
+            } else {
+                tags
+            };
+
+            items.push(GroupItem {
+                group_chat_id: g.group_id.to_string(),
+                name: g.name,
+                description: if g.description.is_empty() {
                     None
                 } else {
-                    tags
-                };
-
-                GroupItem {
-                    group_chat_id: g.group_id.to_string(),
-                    name: g.name,
-                    description: g.description,
-                    avatar_url: g.avatar_url,
-                    tags,
-                    members_count: g.member_count,
-                    has_password: g.has_password,
-                    location: Some(RelativeLocation {
-                        latitude: g.latitude,
-                        longitude: g.longitude,
-                        location_name: g.location_name,
-                        distance: g.distance as i32,
-                        bearing_degrees: g.bearing_degrees,
-                    }),
-                }
-            })
-            .collect();
+                    Some(g.description)
+                },
+                avatar_url: self
+                    .media_service
+                    .sign_url_if_path(g.avatar_url.as_deref())
+                    .await,
+                tags,
+                members_count: g.member_count,
+                has_password: g.has_password,
+                location: Some(RelativeLocation {
+                    latitude: g.latitude,
+                    longitude: g.longitude,
+                    location_name: g.location_name,
+                    distance: g.distance,
+                    bearing_degrees: g.bearing_degrees,
+                }),
+            });
+        }
 
         Ok(PaginatedData {
             items,
@@ -367,15 +406,26 @@ impl GroupService {
     }
 
     /// 获取群组详情（通过 ID 获取指定群组的详情）
-    pub async fn open_the_door(&self, req: &GroupOpenTheDoorRequest, user_id: Option<i64>) -> Result<GroupDetailData> {
+    pub async fn open_the_door(
+        &self,
+        req: &GroupOpenTheDoorRequest,
+        user_id: Option<i64>,
+    ) -> Result<GroupDetailData> {
         let group_id = Uuid::parse_str(&req.group_chat_id)
             .map_err(|_| AppError::BadRequest("无效的群组ID".to_string()))?;
 
-        Validator::validate_coordinates(req.reference_point.latitude, req.reference_point.longitude)?;
+        Validator::validate_coordinates(
+            req.reference_point.latitude,
+            req.reference_point.longitude,
+        )?;
 
         let groups = self
             .group_repo
-            .find_by_ids_with_distance(&[group_id], req.reference_point.latitude, req.reference_point.longitude)
+            .find_by_ids_with_distance(
+                &[group_id],
+                req.reference_point.latitude,
+                req.reference_point.longitude,
+            )
             .await?;
 
         let group = groups
@@ -383,17 +433,25 @@ impl GroupService {
             .ok_or_else(|| AppError::GroupNotFound("群组不存在".to_string()))?;
 
         // 获取标签
-        let tag_repo = TagRepository::new(self.db.clone());
-        let tags = tag_repo.get_group_tags(group_id).await?;
+        let tags = self.tag_repo.get_group_tags(group_id).await?;
         let tags = if tags.is_empty() { None } else { Some(tags) };
 
         // 获取用户相关信息 (Zero-Lookup)
         let (my_role, is_joined, unread_count, is_muted, is_pinned) = if let Some(uid) = user_id {
             let member = self.member_repo.find_member(group_id, uid).await?;
             if let Some(m) = member {
-                let unread = self.unread_repo.get_unread_count("group_chat", &group_id.to_string(), uid).await?;
+                let unread = self
+                    .unread_repo
+                    .get_unread_count("group_chat", &group_id.to_string(), uid)
+                    .await?;
                 // TODO: Fetch is_muted/is_pinned from DB once columns are added
-                (Some(m.role.to_string()), Some(true), Some(unread as i32), Some(false), Some(false))
+                (
+                    Some(m.role.to_string()),
+                    Some(true),
+                    Some(unread as i32),
+                    Some(false),
+                    Some(false),
+                )
             } else {
                 (None, Some(false), None, None, None)
             }
@@ -404,18 +462,25 @@ impl GroupService {
         let group_item = GroupItem {
             group_chat_id: group.group_id.to_string(),
             name: group.name.clone(),
-            description: group.description.clone(),
-            avatar_url: group.avatar_url.clone(),
+            description: if group.description.is_empty() {
+                None
+            } else {
+                Some(group.description.clone())
+            },
+            avatar_url: self
+                .media_service
+                .sign_url_if_path(group.avatar_url.as_deref())
+                .await,
             tags,
             members_count: group.member_count,
             has_password: group.has_password,
-            location: RelativeLocation {
+            location: Some(RelativeLocation {
                 latitude: group.latitude,
                 longitude: group.longitude,
                 location_name: group.location_name.clone(),
-                distance: group.distance as i32,
+                distance: group.distance,
                 bearing_degrees: group.bearing_degrees,
-            },
+            }),
         };
 
         Ok(GroupDetailData {
@@ -511,13 +576,19 @@ impl GroupService {
         let mut items = Vec::with_capacity(memberships.len());
         for m in &memberships {
             if let Some(g) = group_map.get(&m.group_chat_id) {
-                let unread_count = unread_counts.get(&g.group_id.to_string()).copied().unwrap_or(0);
+                let unread_count = unread_counts
+                    .get(&g.group_id.to_string())
+                    .copied()
+                    .unwrap_or(0);
 
                 items.push(JoinedGroupItem {
                     group_info: GroupInfo {
                         group_chat_id: g.group_id.to_string(),
                         name: g.name.clone(),
-                        avatar_url: g.avatar_url.clone(),
+                        avatar_url: self
+                            .media_service
+                            .sign_url_if_path(g.avatar_url.as_deref())
+                            .await,
                         members_count: g.member_count,
                         location: Some(crate::dto::response::Location {
                             latitude: g.latitude,
@@ -560,14 +631,15 @@ impl GroupService {
         if let Some(file_id_str) = &req.avatar_file_id {
             if let Ok(file_id) = Uuid::parse_str(file_id_str) {
                 // 验证文件所有权和分类 ('group_avatar')
-                if let Ok(url) = self
-                    .file_repo
+                if let Ok(file_data) = self
+                    .media_service
                     .validate_file(file_id, user_id, "group_avatar")
                     .await
                 {
-                    avatar_url = Some(url);
+                    // 存储 storage_path 到 DB
+                    avatar_url = Some(file_data);
                     // 标记文件已使用
-                    let _ = self.file_repo.mark_as_used(file_id).await;
+                    let _ = self.media_service.mark_as_used(file_id).await;
                 }
             }
         }
@@ -614,8 +686,7 @@ impl GroupService {
 
         // 更新标签
         if let Some(tags) = &req.tags {
-            let tag_repo = TagRepository::new(self.db.clone());
-            tag_repo.set_group_tags(group_id, tags).await?;
+            self.tag_repo.set_group_tags(group_id, tags).await?;
         }
 
         // 发布群组资料更新事件（群聊订阅者可实时刷新 UI）
@@ -624,7 +695,10 @@ impl GroupService {
                 group_id,
                 name: updated_name,
                 description: updated_description,
-                avatar_url: avatar_url_for_event,
+                avatar_url: self
+                    .media_service
+                    .sign_url_if_path(avatar_url_for_event.as_deref())
+                    .await,
             });
         }
 
@@ -686,27 +760,28 @@ impl GroupService {
             .batch_get_online_status_with_privacy(&user_ids)
             .await;
 
-        let items = members
-            .into_iter()
-            .map(|m| {
-                let is_online = online_status_map
-                    .get(&m.user_id)
-                    .and_then(|(online, _)| *online);
+        let mut items = Vec::with_capacity(members.len());
+        for m in members {
+            let is_online = online_status_map
+                .get(&m.user_id)
+                .and_then(|(online, _)| *online);
 
-                GroupMemberItem {
-                    user: UserInfo {
-                        user_id: m.user_id,
-                        nickname: m.nickname.unwrap_or_default(),
-                        avatar_url: m.avatar_url,
-                        user_type: m.user_type.unwrap_or(crate::types::enums::UserType::Normal),
-                    },
-                    role: m.role.to_string(),
-                    joined_at: m.joined_at.to_rfc3339(),
-                    muted_until: m.muted_until.map(|t| t.to_rfc3339()),
-                    is_online,
-                }
-            })
-            .collect();
+            items.push(GroupMemberItem {
+                user: UserInfo {
+                    user_id: m.user_id,
+                    nickname: m.nickname.unwrap_or_default(),
+                    avatar_url: self
+                        .media_service
+                        .sign_url_if_path(m.avatar_url.as_deref())
+                        .await,
+                    user_type: m.user_type.unwrap_or(crate::types::enums::UserType::Normal),
+                },
+                role: m.role.to_string(),
+                joined_at: m.joined_at.to_rfc3339(),
+                muted_until: m.muted_until.map(|t| t.to_rfc3339()),
+                is_online,
+            });
+        }
 
         Ok(PaginatedData {
             items,
@@ -747,7 +822,10 @@ impl GroupService {
             invite_id: invite.invite_id,
             group_id,
             group_name: group_info.name,
-            group_avatar_url: group_info.avatar_url,
+            group_avatar_url: self
+                .media_service
+                .sign_url_if_path(group_info.avatar_url.as_deref())
+                .await,
             from_user_id: user_id,
             to_user_id: target_uid,
             message: invite.message.clone(),
@@ -1023,19 +1101,22 @@ impl GroupService {
             .list_by_group(group_id, limit, cursor)
             .await?;
 
-        let items: Vec<_> = bans
-            .into_iter()
-            .map(|b| BannedMemberItem {
+        let mut items = Vec::with_capacity(bans.len());
+        for b in bans {
+            items.push(BannedMemberItem {
                 user: UserInfo {
                     user_id: b.user_id,
                     nickname: b.nickname.unwrap_or_default(),
-                    avatar_url: b.avatar_url,
+                    avatar_url: self
+                        .media_service
+                        .sign_url_if_path(b.avatar_url.as_deref())
+                        .await,
                     user_type: b.user_type.unwrap_or(crate::types::enums::UserType::Normal),
                 },
                 reason: b.reason,
                 banned_at: b.banned_at.to_rfc3339(),
-            })
-            .collect();
+            });
+        }
 
         Ok(PaginatedData {
             items,
@@ -1143,29 +1224,30 @@ impl GroupService {
         let applicant_map: std::collections::HashMap<i64, _> =
             applicants.into_iter().map(|u| (u.user_id, u)).collect();
 
-        let items = apps
-            .into_iter()
-            .map(|a| {
-                let user = applicant_map.get(&a.applicant_id);
-                GroupApplicationItem {
-                    application_id: a.application_id.to_string(),
-                    applicant: UserInfo {
-                        user_id: a.applicant_id,
-                        nickname: user
-                            .map(|u| u.nickname.clone())
-                            .unwrap_or_else(|| "Unknown".to_string()),
-                        avatar_url: user.and_then(|u| u.avatar_url.clone()),
-                        user_type: user
-                            .map(|u| u.user_type)
-                            .unwrap_or(crate::types::enums::UserType::Normal),
-                    },
-                    message: a.message,
-                    status: a.status.to_string(),
-                    created_at: a.created_at.to_rfc3339(),
-                    handled_at: a.handled_at.map(|t| t.to_rfc3339()),
-                }
-            })
-            .collect();
+        let mut items = Vec::with_capacity(apps.len());
+        for a in apps {
+            let user = applicant_map.get(&a.applicant_id);
+            items.push(GroupApplicationItem {
+                application_id: a.application_id.to_string(),
+                applicant: UserInfo {
+                    user_id: a.applicant_id,
+                    nickname: user
+                        .map(|u| u.nickname.clone())
+                        .unwrap_or_else(|| "Unknown".to_string()),
+                    avatar_url: self
+                        .media_service
+                        .sign_url_if_path(user.and_then(|u| u.avatar_url.as_deref()))
+                        .await,
+                    user_type: user
+                        .map(|u| u.user_type)
+                        .unwrap_or(crate::types::enums::UserType::Normal),
+                },
+                message: a.message,
+                status: a.status.to_string(),
+                created_at: a.created_at.to_rfc3339(),
+                handled_at: a.handled_at.map(|t| t.to_rfc3339()),
+            });
+        }
 
         Ok(PaginatedData {
             items,
@@ -1419,44 +1501,48 @@ impl GroupService {
         let inviter_map: std::collections::HashMap<i64, _> =
             inviters.into_iter().map(|u| (u.user_id, u)).collect();
 
-        let items = invites
-            .into_iter()
-            .map(|i| {
-                let g = group_map.get(&i.group_chat_id);
-                let u = inviter_map.get(&i.inviter_id);
+        let mut items = Vec::with_capacity(invites.len());
+        for i in invites {
+            let g = group_map.get(&i.group_chat_id);
+            let u = inviter_map.get(&i.inviter_id);
 
-                GroupInviteItem {
-                    invite_id: i.invite_id.to_string(),
-                    group: GroupInfo {
-                        group_chat_id: i.group_chat_id.to_string(),
-                        name: g
-                            .map(|x| x.name.clone())
-                            .unwrap_or_else(|| "Unknown".to_string()),
-                        avatar_url: g.and_then(|x| x.avatar_url.clone()),
-                        members_count: g.map(|x| x.member_count).unwrap_or(0),
-                        location: g.map(|x| crate::dto::response::Location {
-                            latitude: x.latitude,
-                            longitude: x.longitude,
-                            location_name: x.location_name.clone(),
-                        }),
-                    },
-                    inviter: UserInfo {
-                        user_id: i.inviter_id,
-                        nickname: u
-                            .map(|x| x.nickname.clone())
-                            .unwrap_or_else(|| "Unknown".to_string()),
-                        avatar_url: u.and_then(|x| x.avatar_url.clone()),
-                        user_type: u
-                            .map(|x| x.user_type)
-                            .unwrap_or(crate::types::enums::UserType::Normal),
-                    },
-                    message: i.message,
-                    status: i.status.to_string(),
-                    created_at: i.created_at.to_rfc3339(),
-                    expires_at: Some(i.expires_at.to_rfc3339()),
-                }
-            })
-            .collect();
+            items.push(GroupInviteItem {
+                invite_id: i.invite_id.to_string(),
+                group: GroupInfo {
+                    group_chat_id: i.group_chat_id.to_string(),
+                    name: g
+                        .map(|x| x.name.clone())
+                        .unwrap_or_else(|| "Unknown".to_string()),
+                    avatar_url: self
+                        .media_service
+                        .sign_url_if_path(g.and_then(|x| x.avatar_url.as_deref()))
+                        .await,
+                    members_count: g.map(|x| x.member_count).unwrap_or(0),
+                    location: g.map(|x| crate::dto::response::Location {
+                        latitude: x.latitude,
+                        longitude: x.longitude,
+                        location_name: x.location_name.clone(),
+                    }),
+                },
+                inviter: UserInfo {
+                    user_id: i.inviter_id,
+                    nickname: u
+                        .map(|x| x.nickname.clone())
+                        .unwrap_or_else(|| "Unknown".to_string()),
+                    avatar_url: self
+                        .media_service
+                        .sign_url_if_path(u.and_then(|x| x.avatar_url.as_deref()))
+                        .await,
+                    user_type: u
+                        .map(|x| x.user_type)
+                        .unwrap_or(crate::types::enums::UserType::Normal),
+                },
+                message: i.message,
+                status: i.status.to_string(),
+                created_at: i.created_at.to_rfc3339(),
+                expires_at: Some(i.expires_at.to_rfc3339()),
+            });
+        }
 
         Ok(PaginatedData {
             items,
@@ -1552,7 +1638,10 @@ impl GroupService {
         let cursor = req.cursor.clone();
 
         let group_id = if let Some(gid_str) = &req.group_chat_id {
-            Some(Uuid::parse_str(gid_str).map_err(|_| AppError::BadRequest("Invalid Group ID".to_string()))?)
+            Some(
+                Uuid::parse_str(gid_str)
+                    .map_err(|_| AppError::BadRequest("Invalid Group ID".to_string()))?,
+            )
         } else {
             None
         };
@@ -1562,22 +1651,28 @@ impl GroupService {
             .admin_search(group_id, req.name.as_deref(), req.owner_id, limit, cursor)
             .await?;
 
-        let items = groups
-            .into_iter()
-            .map(|g| AdminGroupItem {
+        let mut items = Vec::with_capacity(groups.len());
+        for g in groups {
+            items.push(AdminGroupItem {
                 group_chat_id: g.group_id.to_string(),
                 name: g.name,
-                avatar_url: g.avatar_url,
+                avatar_url: self
+                    .media_service
+                    .sign_url_if_path(g.avatar_url.as_deref())
+                    .await,
                 members_count: g.member_count as i32,
                 owner: UserInfo {
                     user_id: g.owner_id,
                     nickname: g.owner_nickname,
-                    avatar_url: g.owner_avatar_url,
+                    avatar_url: self
+                        .media_service
+                        .sign_url_if_path(g.owner_avatar_url.as_deref())
+                        .await,
                     user_type: g.owner_user_type,
                 },
                 created_at: g.created_at.to_rfc3339(),
-            })
-            .collect();
+            });
+        }
 
         Ok(PaginatedData {
             items,
@@ -1588,7 +1683,11 @@ impl GroupService {
         })
     }
 
-    pub async fn admin_dismiss_group(&self, admin_id: i64, req: &AdminDismissGroupRequest) -> Result<()> {
+    pub async fn admin_dismiss_group(
+        &self,
+        admin_id: i64,
+        req: &AdminDismissGroupRequest,
+    ) -> Result<()> {
         let group_id = Uuid::parse_str(&req.group_chat_id)
             .map_err(|_| AppError::BadRequest("Invalid Group ID".to_string()))?;
 
@@ -1597,12 +1696,276 @@ impl GroupService {
             return Err(AppError::GroupNotFound("Group not found".to_string()));
         }
 
-        self.group_repo.dismiss(group_id, req.reason.as_deref()).await?;
+        self.group_repo
+            .dismiss(group_id, req.reason.as_deref())
+            .await?;
 
         // 发布群组解散事件
         self.event_bus.publish(AppEvent::GroupDismissed {
             group_id,
             dismissed_by: admin_id,
+        });
+
+        Ok(())
+    }
+
+    // ==================== 群公告管理 ====================
+
+    /// 发布群公告
+    pub async fn create_announcement(
+        &self,
+        user_id: i64,
+        req: &CreateGroupAnnouncementRequest,
+    ) -> Result<GroupAnnouncementItem> {
+        let group_id = Uuid::from_str(&req.group_chat_id)
+            .map_err(|_| AppError::BadRequest("无效的群组ID".to_string()))?;
+
+        // 验证用户是否是群主或管理员
+        let role = self
+            .member_repo
+            .get_member_role(group_id, user_id)
+            .await?
+            .ok_or_else(|| AppError::NotGroupMember("您不是群组成员".to_string()))?;
+
+        if !matches!(role, MemberRole::Owner | MemberRole::Admin) {
+            return Err(AppError::Forbidden(
+                "只有群主和管理员可以发布公告".to_string(),
+            ));
+        }
+
+        // 验证标题和内容长度
+        Validator::validate_not_empty(&req.title, "标题")?;
+        Validator::validate_length(&req.title, "标题", 1, 100)?;
+        Validator::validate_not_empty(&req.content, "内容")?;
+        Validator::validate_length(&req.content, "内容", 1, 2000)?;
+
+        // 创建公告
+        let announcement = self
+            .announcement_repo
+            .create(
+                group_id,
+                req.title.clone(),
+                req.content.clone(),
+                user_id,
+                req.is_pinned.unwrap_or(false),
+            )
+            .await
+            .map_err(|e| AppError::InternalError(e.to_string()))?;
+
+        // 获取创建者信息
+        let creator = self
+            .user_repo
+            .find_profiles(&[user_id])
+            .await?
+            .into_iter()
+            .next()
+            .ok_or_else(|| AppError::UserNotFound("用户不存在".to_string()))?;
+
+        let announcement_item = GroupAnnouncementItem {
+            announcement_id: announcement.announcement_id.to_string(),
+            group_chat_id: announcement.group_chat_id.to_string(),
+            title: announcement.title.clone(),
+            content: announcement.content.clone(),
+            created_by: UserInfo {
+                user_id: creator.user_id,
+                nickname: creator.nickname,
+                avatar_url: self
+                    .media_service
+                    .sign_url_if_path(creator.avatar_url.as_deref())
+                    .await,
+                user_type: creator.user_type,
+            },
+            created_at: announcement.created_at.to_rfc3339(),
+            is_pinned: announcement.is_pinned,
+        };
+
+        // 发布群公告创建事件
+        let announcement_uuid = Uuid::from_str(&announcement.announcement_id)
+            .map_err(|_| AppError::InternalError("无效的公告ID".to_string()))?;
+        self.event_bus.publish(AppEvent::GroupAnnouncementCreated {
+            announcement_id: announcement_uuid,
+            group_id,
+            title: announcement.title,
+            content: announcement.content,
+            created_by_user_id: user_id,
+            is_pinned: announcement.is_pinned,
+        });
+
+        Ok(announcement_item)
+    }
+
+    /// 获取群公告列表
+    pub async fn list_announcements(
+        &self,
+        req: &GroupAnnouncementsRequest,
+    ) -> Result<PaginatedData<GroupAnnouncementItem>> {
+        let group_id = Uuid::from_str(&req.group_chat_id)
+            .map_err(|_| AppError::BadRequest("无效的群组ID".to_string()))?;
+
+        // 验证群组是否存在
+        let _group = self
+            .group_repo
+            .find_by_id(group_id)
+            .await?
+            .ok_or_else(|| AppError::GroupNotFound("群组不存在".to_string()))?;
+
+        let limit = req.limit.unwrap_or(20).min(100) as i64;
+        let announcements = self
+            .announcement_repo
+            .list_by_group(group_id, limit, req.cursor.clone())
+            .await
+            .map_err(|e| AppError::InternalError(e.to_string()))?;
+
+        // 获取所有创建者信息
+        let creator_ids: Vec<i64> = announcements.iter().map(|a| a.created_by).collect();
+        let creators = self.user_repo.find_profiles(&creator_ids).await?;
+        let creators_map: std::collections::HashMap<i64, _> =
+            creators.into_iter().map(|c| (c.user_id, c)).collect();
+
+        // 简化实现：暂不支持真正的cursor分页
+        let has_more = announcements.len() >= limit as usize;
+
+        let mut items = Vec::with_capacity(announcements.len());
+        for announcement in announcements {
+            if let Some(creator) = creators_map.get(&announcement.created_by) {
+                items.push(GroupAnnouncementItem {
+                    announcement_id: announcement.announcement_id.to_string(),
+                    group_chat_id: announcement.group_chat_id.to_string(),
+                    title: announcement.title,
+                    content: announcement.content,
+                    created_by: UserInfo {
+                        user_id: creator.user_id,
+                        nickname: creator.nickname.clone(),
+                        avatar_url: self
+                            .media_service
+                            .sign_url_if_path(creator.avatar_url.as_deref())
+                            .await,
+                        user_type: creator.user_type,
+                    },
+                    created_at: announcement.created_at.to_rfc3339(),
+                    is_pinned: announcement.is_pinned,
+                });
+            }
+        }
+
+        Ok(PaginatedData {
+            items,
+            pagination: PaginationMeta {
+                has_more,
+                next_cursor: None, // 暂不支持cursor
+            },
+        })
+    }
+
+    /// 更新群公告
+    pub async fn update_announcement(
+        &self,
+        user_id: i64,
+        req: &UpdateGroupAnnouncementRequest,
+    ) -> Result<()> {
+        let announcement_id = Uuid::from_str(&req.announcement_id)
+            .map_err(|_| AppError::BadRequest("无效的公告ID".to_string()))?;
+
+        // 获取公告信息
+        let announcement = self
+            .announcement_repo
+            .find_by_id(announcement_id)
+            .await
+            .map_err(|e| AppError::InternalError(e.to_string()))?
+            .ok_or_else(|| AppError::NotFound("公告不存在".to_string()))?;
+
+        // 验证用户是否是群主或管理员
+        let group_chat_uuid = Uuid::from_str(&announcement.group_chat_id)
+            .map_err(|_| AppError::InternalError("无效的群组ID".to_string()))?;
+        let role = self
+            .member_repo
+            .get_member_role(group_chat_uuid, user_id)
+            .await?
+            .ok_or_else(|| AppError::NotGroupMember("您不是群组成员".to_string()))?;
+
+        if !matches!(role, MemberRole::Owner | MemberRole::Admin) {
+            return Err(AppError::Forbidden(
+                "只有群主和管理员可以编辑公告".to_string(),
+            ));
+        }
+
+        // 验证标题和内容长度（如果提供）
+        if let Some(title) = &req.title {
+            Validator::validate_not_empty(title, "标题")?;
+            Validator::validate_length(title, "标题", 1, 100)?;
+        }
+        if let Some(content) = &req.content {
+            Validator::validate_not_empty(content, "内容")?;
+            Validator::validate_length(content, "内容", 1, 2000)?;
+        }
+
+        // 更新公告
+        self.announcement_repo
+            .update(
+                announcement_id,
+                req.title.clone(),
+                req.content.clone(),
+                req.is_pinned,
+            )
+            .await
+            .map_err(|e| AppError::InternalError(e.to_string()))?;
+
+        // 发布群公告更新事件
+        let group_chat_uuid = Uuid::from_str(&announcement.group_chat_id)
+            .map_err(|_| AppError::InternalError("无效的群组ID".to_string()))?;
+        self.event_bus.publish(AppEvent::GroupAnnouncementUpdated {
+            announcement_id,
+            group_id: group_chat_uuid,
+            title: req.title.clone(),
+            content: req.content.clone(),
+            is_pinned: req.is_pinned,
+        });
+
+        Ok(())
+    }
+
+    /// 删除群公告
+    pub async fn delete_announcement(
+        &self,
+        user_id: i64,
+        req: &DeleteGroupAnnouncementRequest,
+    ) -> Result<()> {
+        let announcement_id = Uuid::from_str(&req.announcement_id)
+            .map_err(|_| AppError::BadRequest("无效的公告ID".to_string()))?;
+
+        // 获取公告信息
+        let announcement = self
+            .announcement_repo
+            .find_by_id(announcement_id)
+            .await
+            .map_err(|e| AppError::InternalError(e.to_string()))?
+            .ok_or_else(|| AppError::NotFound("公告不存在".to_string()))?;
+
+        // 验证用户是否是群主或管理员
+        let group_chat_uuid = Uuid::from_str(&announcement.group_chat_id)
+            .map_err(|_| AppError::InternalError("无效的群组ID".to_string()))?;
+        let role = self
+            .member_repo
+            .get_member_role(group_chat_uuid, user_id)
+            .await?
+            .ok_or_else(|| AppError::NotGroupMember("您不是群组成员".to_string()))?;
+
+        if !matches!(role, MemberRole::Owner | MemberRole::Admin) {
+            return Err(AppError::Forbidden(
+                "只有群主和管理员可以删除公告".to_string(),
+            ));
+        }
+
+        // 删除公告
+        self.announcement_repo
+            .delete(announcement_id)
+            .await
+            .map_err(|e| AppError::InternalError(e.to_string()))?;
+
+        // 发布群公告删除事件
+        self.event_bus.publish(AppEvent::GroupAnnouncementDeleted {
+            announcement_id,
+            group_id: group_chat_uuid,
         });
 
         Ok(())

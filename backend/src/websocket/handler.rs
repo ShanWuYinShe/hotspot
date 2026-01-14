@@ -450,7 +450,12 @@ async fn process_subscribe(
 
                     // 订阅用户状态后，立刻推送一次“当前在线状态”，避免前端只收到“变化事件”导致初始状态错误
                     if let Ok(target_user_id) = source_id.parse::<i64>() {
-                        if state.ws_manager.get_user_connection_count(target_user_id).await > 0 {
+                        if state
+                            .ws_manager
+                            .get_user_connection_count(target_user_id)
+                            .await
+                            > 0
+                        {
                             let user_repo = UserRepository::new(state.db.clone());
                             if let Ok(Some(u)) = user_repo.find_by_id(target_user_id).await {
                                 let msg = WsMessage::UserOnline {

@@ -72,10 +72,16 @@ impl TagService {
     }
 
     /// 删除标签（管理员）
-    pub async fn admin_delete_tag(&self, req: &crate::dto::request::AdminDeleteTagRequest) -> Result<()> {
+    pub async fn admin_delete_tag(
+        &self,
+        req: &crate::dto::request::AdminDeleteTagRequest,
+    ) -> Result<()> {
         let deleted = self.tag_repo.delete(&req.tag_name).await?;
         if !deleted {
-            return Err(AppError::NotFound(format!("Tag '{}' not found", req.tag_name)));
+            return Err(AppError::NotFound(format!(
+                "Tag '{}' not found",
+                req.tag_name
+            )));
         }
         Ok(())
     }

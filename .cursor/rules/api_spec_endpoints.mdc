@@ -105,6 +105,7 @@ interface RegisterRequest {
   nickname: string; // 1-32 characters
   password: string; // 8-64 characters
   client_type: 'web' | 'app';  // 客户端必须显式传递，避免服务端推断导致的行为漂移
+  verify_token?: string; // 可选：如果通过手机验证码注册，提供此 token
 }
 
 // 响应体契约：按 client_type 严格分流
@@ -117,6 +118,7 @@ type RegisterResponseApp = ApiResponse<AuthTokenPairApp>  // body 中必须出�
 - `10002` 参数格式错误（如 login_id 格式不合法）
 - `10003` 参数值超出范围（如 nickname 长度超限）
 - `10400` 资源已存在（login_id 已注册）
+- `10402` 资源状态冲突（verify_token 无效或已过期）
 
 **POST /api/v1/public/auth/login - 用户登录**
 ```typescript
@@ -210,10 +212,54 @@ interface CheckStatusData {
 ```
 
 
+**POST /api/v1/public/auth/send_verification_code - 发送验证码**
+```typescript
+interface SendVerificationCodeRequest {
+  phone: string;           // 手机号（需符合格式）
+  type: 'register' | 'reset_password' | 'change_phone'; // 验证码用途
+  captcha_token?: string;  // 可选：图形验证码 token（防机器刷）
+}
+type SendVerificationCodeResponse = ApiResponse<SendVerificationCodeData>
+
+interface SendVerificationCodeData {
+  code_id: string;         // 验证码会话 ID
+  expires_at: string;      // 过期时间（UTC ISO 8601）
+  retry_after?: number;    // 可选：需要等待多少秒后才能重新发送
+}
+```
+
+失败错误码：
+- `10001` 缺少必填参数（phone/type）
+- `10002` 参数格式错误（phone 格式不合法）
+- `10500` 请求过于频繁（同一手机号发送过于频繁）
+- `10501` 超过每分钟请求限制
+- `10503` 超过每日请求限制
+
+**POST /api/v1/public/auth/verify_code - 验证验证码**
+```typescript
+interface VerifyCodeRequest {
+  code_id: string;         // 验证码会话 ID（从 send_verification_code 获取）
+  code: string;            // 用户输入的验证码（通常 6 位数字）
+}
+type VerifyCodeResponse = ApiResponse<VerifyCodeData>
+
+interface VerifyCodeData {
+  verified: boolean;       // 验证是否成功
+  verify_token: string;    // 验证通过后的临时 token（用于后续注册/重置密码等操作）
+  expires_at: string;      // verify_token 过期时间（通常 5-10 分钟）
+}
+```
+
+失败错误码：
+- `10001` 缺少必填参数（code_id/code）
+- `10300` 资源不存在（code_id 不存在或已过期）
+- `10402` 资源状态冲突（验证码错误、已使用、验证次数超限）
+
 **POST /api/v1/public/auth/request_password_reset - 请求密码重置**
 ```typescript
 interface RequestPasswordResetRequest {
   login_id: string;
+  verify_token?: string;   // 可选：如果通过验证码验证，提供此 token
 }
 type RequestPasswordResetResponse = ApiResponse<RequestPasswordResetData>
 
@@ -225,6 +271,7 @@ interface RequestPasswordResetData {
 失败错误码：
 - `10001` 缺少必填参数（login_id）
 - `10106` 需要重新登录（风控要求）
+- `10402` 资源状态冲突（verify_token 无效或已过期）
 
 **POST /api/v1/public/auth/verify_reset_code - 验证重置码**
 ```typescript
@@ -328,7 +375,7 @@ type RevokeSessionResponse = ApiResponse
 interface SearchUsersByKeywordRequest extends SearchBaseParams {
   kw: string;
 }
-type SearchUsersByKeywordResponse = ApiResponse<PaginatedData<UserPublicItem>>
+type SearchUsersByKeywordResponse = ApiResponse<PaginatedData<UserSearchResult>>
 ```
 
 **POST /api/v1/public/user/search_by_tag - 按标签搜索用户（全局）**
@@ -341,7 +388,7 @@ type SearchUsersByKeywordResponse = ApiResponse<PaginatedData<UserPublicItem>>
 interface SearchUsersByTagRequest extends SearchBaseParams {
   tag: string;
 }
-type SearchUsersByTagResponse = ApiResponse<PaginatedData<UserPublicItem>>
+type SearchUsersByTagResponse = ApiResponse<PaginatedData<UserSearchResult>>
 ```
 
 **POST /api/v1/public/user/search_by_location - 按位置搜索用户（范围过滤）**
@@ -355,7 +402,7 @@ interface SearchUsersByLocationRequest extends SearchBaseParams {
   kw?: string;
   radius: number;
 }
-type SearchUsersByLocationResponse = ApiResponse<PaginatedData<UserPublicItem>>
+type SearchUsersByLocationResponse = ApiResponse<PaginatedData<UserSearchResult>>
 ```
 
 **POST /api/v1/public/user/open_the_door - 获取用户资料**
@@ -363,15 +410,7 @@ type SearchUsersByLocationResponse = ApiResponse<PaginatedData<UserPublicItem>>
 interface UserOpenTheDoorRequest {
   user_id: number;
 }
-
-// 详情响应类型：继承基础信息并扩展统计数据，实现 Zero-Lookup
-interface UserDetailData extends UserItem {
-  stats: UserStatsData;
-}
-
-// /public 端点必须身份无关：剔除所有依赖“当前用户上下文”的字段（如 relation）
-type UserPublicDetailData = Omit<UserDetailData, 'relation'>
-type UserOpenTheDoorResponse = ApiResponse<UserPublicDetailData>
+type UserOpenTheDoorResponse = ApiResponse<UserProfileData>
 ```
 
 说明（隐私与路径分区）：
@@ -477,7 +516,7 @@ interface UserGroupsRequest {
   limit?: number;
   cursor?: string;
 }
-type UserGroupsResponse = ApiResponse<PaginatedData<GroupPublicItem>>
+type UserGroupsResponse = ApiResponse<PaginatedData<GroupSearchResult>>
 ```
 
 隐私控制：受 `groups_visible` 设置控制。
@@ -504,8 +543,7 @@ interface UserLikedMomentsRequest {
   cursor?: string;
 }
 
-// /public 端点返回身份无关的 MomentPublicItem（不包含 is_liked/is_favorited）
-type UserLikedMomentsResponse = ApiResponse<PaginatedData<MomentPublicItem>>
+type UserLikedMomentsResponse = ApiResponse<PaginatedData<MomentSearchResult>>
 ```
 
 补充（隐私与路径分区）：
@@ -820,7 +858,7 @@ type SetRemarkResponse = ApiResponse
 ### 生活瞬间 API
 
 说明（/public 搜索的隐私语义）：
-- `POST /api/v1/public/moments/search_by_*` 仅返回“隐私等级为 `public` 的瞬间”，并且仅返回 `MomentPublicItem` 字段集合。
+- `POST /api/v1/public/moments/search_by_*` 仅返回"隐私等级为 `public` 的瞬间"。
 - 非 `public` 的瞬间不得出现在 `/public` 搜索结果中（列表型接口按过滤处理，而非返回错误）。
 
 
@@ -834,7 +872,7 @@ type SetRemarkResponse = ApiResponse
 interface SearchMomentsByKeywordRequest extends SearchBaseParams {
   kw: string;
 }
-type SearchMomentsByKeywordResponse = ApiResponse<PaginatedData<MomentPublicItem>>
+type SearchMomentsByKeywordResponse = ApiResponse<PaginatedData<MomentSearchResult>>
 ```
 
 **POST /api/v1/public/moments/search_by_tag - 按标签搜索生活瞬间（全局）**
@@ -847,7 +885,7 @@ type SearchMomentsByKeywordResponse = ApiResponse<PaginatedData<MomentPublicItem
 interface SearchMomentsByTagRequest extends SearchBaseParams {
   tag: string;
 }
-type SearchMomentsByTagResponse = ApiResponse<PaginatedData<MomentPublicItem>>
+type SearchMomentsByTagResponse = ApiResponse<PaginatedData<MomentSearchResult>>
 ```
 
 **POST /api/v1/public/moments/search_by_location - 按位置搜索生活瞬间（范围过滤）**
@@ -861,7 +899,7 @@ interface SearchMomentsByLocationRequest extends SearchBaseParams {
   kw?: string;
   radius: number;
 }
-type SearchMomentsByLocationResponse = ApiResponse<PaginatedData<MomentPublicItem>>
+type SearchMomentsByLocationResponse = ApiResponse<PaginatedData<MomentSearchResult>>
 ```
 
 **POST /api/v1/public/moments/open_the_door - 获取瞬间详情**
@@ -869,7 +907,7 @@ type SearchMomentsByLocationResponse = ApiResponse<PaginatedData<MomentPublicIte
 interface MomentOpenTheDoorRequest {
   moment_id: string;
 }
-type MomentOpenTheDoorResponse = ApiResponse<MomentPublicItem>
+type MomentOpenTheDoorResponse = ApiResponse<MomentDetailData>
 ```
 
 说明（隐私与路径分区）：
@@ -902,7 +940,7 @@ interface UserMomentsRequest {
   limit?: number;
   cursor?: string;
 }
-type UserMomentsResponse = ApiResponse<PaginatedData<MomentPublicItem>>
+type UserMomentsResponse = ApiResponse<PaginatedData<UserMomentListItem>>
 ```
 
 补充（隐私与路径分区）：
@@ -916,14 +954,17 @@ interface CreateMomentRequest {
   location: Location;
   tags?: string[]; // Max 10 items
   image_file_ids?: string[]; // Max 9 items
+  privacy_level?: PrivacyLevel; // 可见范围（如果不提供，使用用户全局设置 moments_visible）
+  mentions?: number[]; // @ 提及的用户 ID 列表（最多 10 个）
 }
-type CreateMomentResponse = ApiResponse<MomentItem>
+type CreateMomentResponse = ApiResponse<UserMomentListItem>
 ```
 
 失败错误码：
 - `10001` 缺少必填参数（description/location）
 - `10003` 参数值超出范围（description/tags 数量/长度超限等）
 - `10360` 文件/媒体不存在（image_file_ids 中包含不存在的文件）
+- `10310` 用户不存在（mentions 中包含不存在的用户）
 
 **POST /api/v1/protected/moments/update - 编辑生活瞬间**
 ```typescript
@@ -933,6 +974,8 @@ interface EditMomentRequest {
   image_file_ids?: string[]; // Max 9 items
   tags?: string[]; // Max 10 items
   location?: Location;
+  privacy_level?: PrivacyLevel; // 可见范围
+  mentions?: number[]; // @ 提及的用户 ID 列表（最多 10 个）
 }
 type EditMomentResponse = ApiResponse
 ```
@@ -942,6 +985,7 @@ type EditMomentResponse = ApiResponse
 - `10003` 参数值超出范围
 - `10330` 生活瞬间不存在
 - `10360` 文件/媒体不存在
+- `10310` 用户不存在（mentions 中包含不存在的用户）
 - `10200` 权限不足（非本人瞬间不可编辑）
 
 **POST /api/v1/protected/moments/delete - 删除生活瞬间**
@@ -1017,7 +1061,7 @@ interface MyMomentsRequest {
   limit?: number;
   cursor?: string;
 }
-type MyMomentsResponse = ApiResponse<PaginatedData<MomentItem>>
+type MyMomentsResponse = ApiResponse<PaginatedData<UserMomentListItem>>
 ```
 
 说明：查看自己发布的瞬间历史，不需要距离信息。
@@ -1031,7 +1075,7 @@ interface MyFavoritesRequest {
   limit?: number;
   cursor?: string;
 }
-type MyFavoritesResponse = ApiResponse<PaginatedData<MomentItem>>
+type MyFavoritesResponse = ApiResponse<PaginatedData<MomentDetailData>>
 ```
 
 说明：查看自己的收藏列表，不需要距离信息。
@@ -1102,6 +1146,7 @@ interface CreateCommentRequest {
   moment_id: string;
   content: string; // Max length defined in system config (default 500)
   parent_id?: string;
+  mentions?: number[]; // @ 提及的用户 ID 列表（最多 10 个）
 }
 type CreateCommentResponse = ApiResponse<CommentListItem>
 ```
@@ -1110,6 +1155,7 @@ type CreateCommentResponse = ApiResponse<CommentListItem>
 - `10001` 缺少必填参数（moment_id/content）
 - `10003` 参数值超出范围（content 长度超限）
 - `10330` 生活瞬间不存在 / `10340` 父评论不存在
+- `10310` 用户不存在（mentions 中包含不存在的用户）
 - `10200` 权限不足（如不可评论/被限制）
 - `10500` 请求过于频繁
 
@@ -1208,16 +1254,11 @@ interface CommentLikesRequest {
   cursor?: string;
 }
 type CommentLikesResponse = ApiResponse<PaginatedData<CommentLikeItem>>
+```
 
 排序语义（契约级）：
 - 点赞列表默认按 `liked_at` **时间倒序**（最近点赞在前）。
 - 同一 `cursor` 会话内必须保持排序基准一致；跨会话允许轻微波动（弱一致）。
-
-interface CommentLikeItem {
-  user: UserInfo;
-  liked_at: string;
-}
-```
 
 说明（隐私与路径分区）：
 - 评论点赞列表的可见性继承评论/所属瞬间；当评论存在但不可见时，`/public/` 端点应返回 `10340`（评论不存在/不可见）。
@@ -1337,7 +1378,7 @@ type DeletePrivateChatResponse = ApiResponse
 ### 群组管理 API
 
 说明（/public 搜索的隐私语义）：
-- `POST /api/v1/public/group_chats/search_by_*` 仅返回“隐私等级为 `public` 且 `is_searchable=true` 的群组”，并且仅返回 `GroupPublicItem` 字段集合。
+- `POST /api/v1/public/group_chats/search_by_*` 仅返回"隐私等级为 `public` 且 `is_searchable=true` 的群组"。
 - 不可公开发现/不可见的群组不得出现在 `/public` 搜索结果中（列表型接口按过滤处理，而非返回错误）。
 
 **POST /api/v1/public/group_chats/search_by_keyword - 按关键字搜索群组（全局）**
@@ -1350,7 +1391,7 @@ type DeletePrivateChatResponse = ApiResponse
 interface SearchGroupsByKeywordRequest extends SearchBaseParams {
   kw: string;
 }
-type SearchGroupsByKeywordResponse = ApiResponse<PaginatedData<GroupPublicItem>>
+type SearchGroupsByKeywordResponse = ApiResponse<PaginatedData<GroupSearchResult>>
 ```
 
 **POST /api/v1/public/group_chats/search_by_tag - 按标签搜索群组（全局）**
@@ -1363,7 +1404,7 @@ type SearchGroupsByKeywordResponse = ApiResponse<PaginatedData<GroupPublicItem>>
 interface SearchGroupsByTagRequest extends SearchBaseParams {
   tag: string;
 }
-type SearchGroupsByTagResponse = ApiResponse<PaginatedData<GroupPublicItem>>
+type SearchGroupsByTagResponse = ApiResponse<PaginatedData<GroupSearchResult>>
 ```
 
 **POST /api/v1/public/group_chats/search_by_location - 按位置搜索群组（范围过滤）**
@@ -1378,7 +1419,7 @@ interface SearchGroupsByLocationRequest extends SearchBaseParams {
   kw?: string;
   radius: number;
 }
-type SearchGroupsByLocationResponse = ApiResponse<PaginatedData<GroupPublicItem>>
+type SearchGroupsByLocationResponse = ApiResponse<PaginatedData<GroupSearchResult>>
 ```
 
 **POST /api/v1/public/group_chats/open_the_door - 获取群组详情**
@@ -1386,9 +1427,7 @@ type SearchGroupsByLocationResponse = ApiResponse<PaginatedData<GroupPublicItem>
 interface GroupOpenTheDoorRequest {
   group_chat_id: string;
 }
-// /public 端点必须身份无关：不返回 my_state/unread/is_muted/is_pinned 等当前用户上下文信息
-type GroupPublicDetailData = GroupPublicItem
-type GroupOpenTheDoorResponse = ApiResponse<GroupPublicDetailData>
+type GroupOpenTheDoorResponse = ApiResponse<GroupProfileData>
 ```
 
 说明（隐私与路径分区）：
@@ -1400,7 +1439,7 @@ interface GetMyGroupStateRequest {
   group_chat_id: string;
 }
 
-type GetMyGroupStateResponse = ApiResponse<GroupMyState>
+type GetMyGroupStateResponse = ApiResponse<GroupMyStateData>
 ```
 
 失败错误码：
@@ -1417,7 +1456,10 @@ type GroupSettingsResponse = ApiResponse<GroupSettingsData>
 
 interface GroupSettingsData {
   group_chat_id: string;
-  settings: GroupSettings;
+  join_method: 'open' | 'approval' | 'invite_only';
+  is_searchable: boolean;
+  max_members: number;
+  location: Location;
   has_password: boolean;
   created_at: string;
 }
@@ -1438,7 +1480,12 @@ interface CreateGroupChatRequest {
   description?: string; // Max 500 characters
   avatar_file_id?: string;
   tags?: string[]; // Max 10 items
-  settings?: GroupSettingsInput;
+  settings?: {
+    join_method?: 'open' | 'approval' | 'invite_only';
+    is_searchable?: boolean;
+    max_members?: number;
+    location?: Location;
+  };
 }
 type CreateGroupChatResponse = ApiResponse  // 成功时仅返回 code: 0，完整数据通过 WebSocket GroupMemberJoined 推送（判断 user.user_id）
 ```
@@ -1447,6 +1494,8 @@ type CreateGroupChatResponse = ApiResponse  // 成功时仅返回 code: 0，完�
 - `10001` 缺少必填参数（name）
 - `10003` 参数值超出范围（name/description/tags 长度超限）
 - `10360` 文件/媒体不存在（avatar_file_id 不存在）
+
+**POST /api/v1/protected/group_chats/update - 更新群组信息**
 ```typescript
 interface UpdateGroupChatRequest {
   group_chat_id: string;
@@ -1454,7 +1503,12 @@ interface UpdateGroupChatRequest {
   description?: string; // Max 500 characters
   avatar_file_id?: string;
   tags?: string[]; // Max 10 items
-  settings?: GroupSettingsInput;
+  settings?: {
+    join_method?: 'open' | 'approval' | 'invite_only';
+    is_searchable?: boolean;
+    max_members?: number;
+    location?: Location;
+  };
 }
 type UpdateGroupChatResponse = ApiResponse
 ```
@@ -1832,6 +1886,77 @@ type TransferOwnershipResponse = ApiResponse
 - `10416` 新群主不是群组成员
 - `10200` 权限不足（仅原群主可转让）
 
+**POST /api/v1/protected/group_chats/announcements/create - 发布群公告**
+```typescript
+interface CreateGroupAnnouncementRequest {
+  group_chat_id: string;
+  title: string;           // 公告标题（1-100 字符）
+  content: string;         // 公告内容（1-2000 字符）
+  is_pinned?: boolean;     // 是否置顶（默认 false）
+}
+type CreateGroupAnnouncementResponse = ApiResponse<GroupAnnouncementItem>
+```
+
+失败错误码：
+- `10001` 缺少必填参数（group_chat_id/title/content）
+- `10003` 参数值超出范围（title/content 长度超限）
+- `10320` 资源不存在（群组不存在）
+- `10416` 不是群组成员
+- `10200` 权限不足（仅管理员/群主可发布公告）
+
+**POST /api/v1/public/group_chats/announcements - 获取群公告列表**
+
+排序语义（契约级）：
+- 默认按 `is_pinned DESC, created_at DESC` 排序（置顶公告在前，同层级按时间倒序）。
+- 同一 `cursor` 会话内必须保持排序基准一致；跨会话允许轻微波动（弱一致）。
+
+```typescript
+interface GroupAnnouncementsRequest {
+  group_chat_id: string;
+  limit?: number;
+  cursor?: string;
+}
+type GroupAnnouncementsResponse = ApiResponse<PaginatedData<GroupAnnouncementItem>>
+```
+
+说明（隐私与路径分区）：
+- 公告可见性继承群组可见性；当群组存在但不可见时，`/public/` 端点应返回 `10320`（资源不存在/不可见）。
+
+失败错误码：
+- `10001` 缺少必填参数（group_chat_id）
+- `10003` 参数值超出范围（limit 等）
+- `10320` 资源不存在（群组不存在/不可见）
+
+**POST /api/v1/protected/group_chats/announcements/update - 更新群公告**
+```typescript
+interface UpdateGroupAnnouncementRequest {
+  announcement_id: string;
+  title?: string;
+  content?: string;
+  is_pinned?: boolean;
+}
+type UpdateGroupAnnouncementResponse = ApiResponse<GroupAnnouncementItem>
+```
+
+失败错误码：
+- `10001` 缺少必填参数（announcement_id）
+- `10003` 参数值超出范围（title/content 长度超限）
+- `10300` 资源不存在（公告不存在）
+- `10200` 权限不足（仅管理员/群主可编辑公告）
+
+**POST /api/v1/protected/group_chats/announcements/delete - 删除群公告**
+```typescript
+interface DeleteGroupAnnouncementRequest {
+  announcement_id: string;
+}
+type DeleteGroupAnnouncementResponse = ApiResponse
+```
+
+失败错误码：
+- `10001` 缺少必填参数（announcement_id）
+- `10300` 资源不存在（公告不存在）
+- `10200` 权限不足（仅管理员/群主可删除公告）
+
 #### 当前用户群组 API（/me/ 路径）
 
 **POST /api/v1/protected/group_chats/me - 获取我的群组**
@@ -1840,7 +1965,7 @@ interface MyGroupChatsRequest {
   limit?: number;
   cursor?: string;
 }
-type MyGroupChatsResponse = ApiResponse<PaginatedData<JoinedGroupItem>>
+type MyGroupChatsResponse = ApiResponse<PaginatedData<MyGroupItem>>
 ```
 
 失败错误码：
@@ -1988,13 +2113,14 @@ interface SendPrivateMessageRequest {
   type: SendMessageType;
   content?: string; // Max 5000 characters
   file_id?: string;
+  location?: MessageLocation; // 位置消息信息（当 type='location' 时必填）
   reply_to_message_id?: string;
 }
 type SendPrivateMessageResponse = ApiResponse  // 成功时仅返回 code: 0，完整消息通过 WebSocket 推送
 ```
 
 失败错误码：
-- `10001` 缺少必填参数（target_user_id）
+- `10001` 缺少必填参数（target_user_id；type='location' 时缺少 location）
 - `10350` 资源不存在（私聊不存在/用户不存在）
 - `10360` 文件/媒体不存在（file_id 不存在）
 - `10211` 已被对方拉黑
@@ -2002,9 +2128,10 @@ type SendPrivateMessageResponse = ApiResponse  // 成功时仅返回 code: 0，�
 - `22000` 幂等键冲突
 - `22002` 幂等操作正在处理中
 
-**媒体字段语义**：
+**字段语义说明**：
 - `file_id` 来自"文件与媒体上传 API"，是服务端可识别的媒体引用
 - `media_url/thumbnail_url/...` 由服务端生成并在 history/WebSocket 推送中提供；客户端不得拼接或推断 URL
+- `location` 用于发送位置消息，包含经纬度、地点名和可选的详细地址
 
 **POST /api/v1/protected/private_messages/history - 获取私聊消息历史**
 
@@ -2164,6 +2291,7 @@ interface SendGroupMessageRequest {
   type: SendMessageType;
   content?: string; // Max 5000 characters
   file_id?: string;
+  location?: MessageLocation; // 位置消息信息（当 type='location' 时必填）
   reply_to_message_id?: string;
   mentions?: number[];
 }
@@ -2171,7 +2299,7 @@ type SendGroupMessageResponse = ApiResponse  // 成功时仅返回 code: 0，完
 ```
 
 失败错误码：
-- `10001` 缺少必填参数（group_chat_id/type）
+- `10001` 缺少必填参数（group_chat_id/type；type='location' 时缺少 location）
 - `10320` 资源不存在（群组不存在）
 - `10360` 文件/媒体不存在（file_id 不存在）
 - `10416` 不是群组成员
@@ -2179,9 +2307,10 @@ type SendGroupMessageResponse = ApiResponse  // 成功时仅返回 code: 0，完
 - `22000` 幂等键冲突
 - `22002` 幂等操作正在处理中
 
-**媒体字段语义**：
+**字段语义说明**：
 - `file_id` 来自"文件与媒体上传 API"，是服务端可识别的媒体引用
 - `media_url/thumbnail_url/...` 由服务端生成并在 history/WebSocket 推送中提供；客户端不得拼接或推断 URL
+- `location` 用于发送位置消息，包含经纬度、地点名和可选的详细地址
 ```
 
 **POST /api/v1/protected/group_messages/history - 获取群聊消息历史**
@@ -2388,11 +2517,11 @@ interface MapRenderPublicRequest {
   };
 }
 
-type MapRenderResponse = ApiResponse<MapRenderData>
+type MapRenderPublicResponse = ApiResponse<MapRenderData>
 ```
 
 说明（隐私与路径分区）：
-- `/public/map/render` 仅返回地图视野内“可公开展示”的实体（用户/群组/瞬间的 public 可见形态）；非 `public` 的实体必须被过滤掉。
+- `/public/map/render` 仅返回地图视野内"可公开展示"的实体（用户/群组/瞬间的 public 可见形态）；非 `public` 的实体必须被过滤掉。
 - `/public` 版本不做任何基于身份上下文的社交筛选；社交筛选（如 `only_friends`）仅在 `/protected/map/render` 下提供。
 
 **POST /api/v1/protected/map/render - 获取地图渲染数据（含社交筛选）**
@@ -2423,6 +2552,104 @@ interface MapRenderData {
 - `10003` 参数值超出范围 (zoom 异常)
 
 ### 举报审核 API
+
+#### 举报审核流程说明
+
+**流程概述**：
+
+```
+用户提交举报 → 进入审核队列(pending) → 管理员审核(reviewing) → 处理结果(resolved/dismissed)
+```
+
+**状态流转**：
+
+| 状态 | 说明 | 可执行操作 |
+|-----|------|-----------|
+| `pending` | 待审核 | 管理员可开始审核 |
+| `reviewing` | 审核中 | 管理员可处理或升级 |
+| `resolved` | 已处理（确认违规） | 已采取措施（封禁/删除内容） |
+| `dismissed` | 已驳回（无违规） | 审核结束，无需处理 |
+
+**处理动作**：
+
+| 动作 | 含义 | 适用场景 |
+|-----|------|---------|
+| `resolve` | 确认违规并处理 | 内容违反社区规范，需封禁用户/删除内容 |
+| `dismiss` | 驳回举报 | 举报无效/误报/内容合规 |
+| `escalate` | 升级处理 | 需要更高权限管理员/人工复核 |
+
+**典型处理流程**：
+
+1. **用户举报**：
+   ```typescript
+   POST /api/v1/protected/reports/create
+   {
+     target_type: 'moment',
+     target_id: 'moment-123',
+     reason: '垃圾广告',
+     description: '发布大量无关商业广告'
+   }
+   → 返回 { report_id: 'report-456' }
+   ```
+
+2. **管理员查看**：
+   ```typescript
+   POST /api/v1/admin/reports
+   { status: 'pending', limit: 20 }
+   → 返回待审核举报列表（含 target_snapshot）
+   ```
+
+3. **管理员处理**：
+   - **确认违规**：
+     ```typescript
+     POST /api/v1/admin/reports/handle
+     {
+       report_id: 'report-456',
+       action: 'resolve',
+       note: '确认为垃圾广告，已删除内容并警告用户'
+     }
+     // 同时执行：删除瞬间 / 封禁用户（手动或自动）
+     ```
+   
+   - **驳回举报**：
+     ```typescript
+     POST /api/v1/admin/reports/handle
+     {
+       report_id: 'report-456',
+       action: 'dismiss',
+       note: '内容合规，未发现违规行为'
+     }
+     ```
+   
+   - **升级处理**：
+     ```typescript
+     POST /api/v1/admin/reports/handle
+     {
+       report_id: 'report-456',
+       action: 'escalate',
+       note: '需要高级管理员判定是否构成骚扰'
+     }
+     ```
+
+4. **用户查看举报结果**：
+   ```typescript
+   POST /api/v1/protected/reports/me
+   → 返回我的举报记录列表（含处理状态）
+   ```
+
+**内容快照机制**：
+
+举报创建时会保存 `target_snapshot`（目标内容快照），包含：
+- `content`：文本内容/简介
+- `media_urls`：图片/视频封面
+- `owner_id`：内容发布者ID
+
+**目的**：即使原内容被删除，管理员仍可基于快照进行审核。
+
+**权限要求**：
+- 创建举报：任意登录用户
+- 查看举报列表：需要 `admin.reports.read` 权限
+- 处理举报：需要 `admin.reports.write` 权限
 
 **POST /api/v1/protected/reports/create - 创建举报**
 ```typescript
@@ -2617,6 +2844,7 @@ interface SubscriptionsData {
   group_invite_response_enabled: boolean;
   group_application_enabled: boolean;
   group_application_response_enabled: boolean;
+  group_announcement_enabled: boolean;      // 新增：群公告通知开关
   message_mention_enabled: boolean;
   moment_like_enabled: boolean;
   moment_comment_enabled: boolean;
@@ -2641,6 +2869,7 @@ interface UpdateSubscriptionsRequest {
   group_invite_response_enabled?: boolean;
   group_application_enabled?: boolean;
   group_application_response_enabled?: boolean;
+  group_announcement_enabled?: boolean;      // 新增：群公告通知开关
   message_mention_enabled?: boolean;
   moment_like_enabled?: boolean;
   moment_comment_enabled?: boolean;
@@ -2730,6 +2959,177 @@ interface HealthCheckData {
 - URL 由后端内部解析，客户端无法伪造或篡改
 - **不提供 file_id → url 的公开转换 API**，防止恶意使用
 
+**详细安全措施**：
+
+#### 1. 上传前验证
+
+**文件类型校验**：
+- 使用 MIME 类型白名单，拒绝不在允许范围内的文件
+- 不依赖客户端提供的 `mime_type`，服务端需二次验证文件魔数（Magic Number）
+- 示例：拒绝可执行文件（`.exe`, `.sh`, `.bat`）、脚本文件（`.php`, `.jsp`）
+
+**文件大小限制**：
+- 按分类设置不同的大小上限（见"分类限制"表格）
+- 超出限制时返回 `10005`（请求体过大）
+- 限制值可通过系统配置动态调整
+
+**MD5 校验（可选）**：
+- 客户端计算文件 MD5，在 `presign_upload` 时提供
+- 服务端在 `complete_upload` 时验证，防止文件被篡改或传输损坏
+
+#### 2. 上传过程安全
+
+**Presigned URL 有效期**：
+- 默认 15 分钟有效期，过期后无法使用
+- 避免 URL 泄露导致的长期滥用风险
+
+**一次性使用**：
+- 每个 `upload_id` 只能成功完成一次上传
+- 重复调用 `complete_upload` 返回幂等结果或错误
+
+**上传会话隔离**：
+- `upload_id` 与用户会话绑定，其他用户无法使用
+- 防止 URL 被窃取后跨用户滥用
+
+#### 3. 上传后验证
+
+**文件内容扫描**：
+- **病毒扫描**：集成 ClamAV 或云服务（如 AWS S3 Malware Protection）检测恶意文件
+- **内容审核**：图片/视频通过内容审核服务（如阿里云绿网）检测违规内容
+- **异步处理**：扫描/审核异步进行，不阻塞上传流程；检测到问题时删除文件并记录
+
+**所有权验证**：
+- `file_id` 记录上传者 `user_id`
+- 业务 API 使用 `file_id` 时，验证当前用户是否为文件所有者
+- 示例：用户 A 无法使用用户 B 上传的 `file_id`
+
+**分类匹配验证**：
+- `file_id` 记录上传时的 `category`（如 `avatar`, `moment_image`）
+- 业务 API 验证 `category` 是否匹配使用场景
+- 示例：`chat_video` 类型的 `file_id` 不能用于设置头像
+
+#### 4. 存储与访问控制
+
+**文件命名随机化**：
+- 存储文件名使用 UUID 或哈希，与原始文件名解耦
+- 防止通过文件名推断内容或遍历文件
+
+**访问控制**：
+- **私有文件**（聊天图片/视频）：需要签名 URL 访问，验证用户权限
+- **公开文件**（头像/瞬间图片）：可直接访问，但 URL 不可预测
+
+**CDN 防盗链**：
+- 配置 Referer 白名单，防止外部网站盗链
+- 配置 IP 黑名单，阻止恶意爬虫
+
+#### 5. 速率限制与配额
+
+**上传频率限制**：
+- 同一用户每分钟最多上传 10 个文件
+- 超出限制返回 `10501`（超过每分钟请求限制）
+
+**存储配额限制**：
+- 每个用户总存储空间限制（如 1GB）
+- 超出配额返回自定义错误码并提示用户清理旧文件
+
+#### 6. 数据清理与生命周期
+
+**未关联文件清理**：
+- 上传后 24 小时未被业务 API 引用的文件自动删除
+- 避免垃圾文件占用存储空间
+
+**已删除内容清理**：
+- 瞬间/消息删除后，关联的媒体文件延迟 7 天删除
+- 支持用户"后悔"恢复，同时避免长期占用空间
+
+**定期审计**：
+- 定期扫描孤立文件（`file_id` 记录存在但物理文件缺失）
+- 定期扫描冗余文件（物理文件存在但 `file_id` 记录已删除）
+
+#### 7. 敏感信息保护
+
+**元数据脱敏**：
+- 图片 EXIF 信息（GPS 位置/设备型号）在服务端剥离
+- 避免泄露用户隐私信息
+
+**缩略图生成**：
+- 大图自动生成缩略图（如 200x200, 800x800）
+- 客户端优先加载缩略图，节省带宽并提升体验
+
+**视频转码**：
+- 上传的视频统一转码为标准格式（H.264 + AAC）
+- 清除元数据，统一分辨率/码率
+
+#### 8. 错误处理与日志
+
+**详细错误日志**：
+- 记录所有上传失败的详细信息：`user_id`, `file_name`, `mime_type`, `size`, `error_reason`
+- 便于排查问题和发现恶意行为
+
+**异常行为监控**：
+- 监控短时间内大量上传失败（可能的攻击行为）
+- 监控上传异常文件类型（可能的漏洞利用）
+- 触发告警并自动封禁可疑用户
+
+#### 9. 客户端最佳实践
+
+**上传前预检**：
+```typescript
+function validateFileBeforeUpload(file: File, category: string): string | null {
+  const limits = {
+    avatar: { maxSize: 5 * 1024 * 1024, types: ['image/jpeg', 'image/png'] },
+    moment_image: { maxSize: 10 * 1024 * 1024, types: ['image/jpeg', 'image/png', 'image/gif'] },
+    chat_video: { maxSize: 100 * 1024 * 1024, types: ['video/mp4', 'video/quicktime'] },
+  };
+  
+  const limit = limits[category];
+  if (!limit) return '不支持的文件类型';
+  
+  if (file.size > limit.maxSize) {
+    return `文件过大，最大支持 ${limit.maxSize / 1024 / 1024}MB`;
+  }
+  
+  if (!limit.types.includes(file.type)) {
+    return '文件格式不支持';
+  }
+  
+  return null; // 验证通过
+}
+```
+
+**上传进度展示**：
+```typescript
+async function uploadFile(file: File, category: string, onProgress: (percent: number) => void) {
+  // 1. 申请上传
+  const { upload_id, upload_url } = await presignUpload(file.name, file.size, file.type, category);
+  
+  // 2. 上传文件（带进度）
+  await fetch(upload_url, {
+    method: 'PUT',
+    body: file,
+    onUploadProgress: (e) => onProgress(e.loaded / e.total * 100)
+  });
+  
+  // 3. 完成上传
+  const { file_id } = await completeUpload(upload_id);
+  return file_id;
+}
+```
+
+**错误重试**：
+```typescript
+async function uploadWithRetry(file: File, category: string, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await uploadFile(file, category);
+    } catch (error) {
+      if (i === maxRetries - 1) throw error;
+      await sleep(1000 * Math.pow(2, i)); // Exponential backoff
+    }
+  }
+}
+```
+
 **请求与响应的字段区分**：
 
 | 场景 | 请求字段（客户端发送） | 响应字段（后端返回） |
@@ -2770,8 +3170,8 @@ interface HealthCheckData {
 ### 文件与媒体上传 API (Presigned 模式)
 
 **设计理念**：采用 "Presigned URL" (预签名) 模式。
-- **高性能**：客户端直传云存储（S3/OSS），不占用应用服务器带宽。
-- **兼容性**：支持本地存储模式（Local Storage），通过后端代理接口模拟 S3 行为，无缝切换。
+- **高性能**：客户端直传云存储（S3/MinIO），不占用应用服务器带宽。
+- **兼容性**：MinIO 完全模拟 S3 API，本地开发与生产环境使用统一流程，可无缝切换到公有云 S3。
 - **安全性**：上传凭证短期有效，且绑定文件特征。
 
 **核心流程**：
@@ -2852,71 +3252,86 @@ interface UploadMediaData {
 - 文件上传失败：返回 HTTP 200 + `code=10600`（服务器内部错误）或具体错误码
 
 
-### 大文件分片上传 API（可选/增强）
+### 大文件分片上传 API（v2 规划/暂未实现）
 
-**适用场景**：大视频、大文件（> 50MB）或弱网环境。
-**特点**：支持断点续传，健壮性强，但流程稍多。
-**简化设计**：移除复杂的 S3 预签名直传逻辑，采用后端代理分片模式，降低客户端实现难度。
+**适用场景**：大视频、大文件（> 100MB）或弱网环境。
+**特点**：支持断点续传，健壮性强，完全依赖 S3 分片上传能力。
+**设计模式**：采用 **S3 分片直传 (S3 Native Multipart Upload)** 模式，后端只负责生成签名，流量直传 S3。
 
 **1. POST /api/v1/protected/media/chunked/init - 初始化分片上传**
+
+调用 S3 `CreateMultipartUpload`，获取 `upload_id`。
+
 ```typescript
 interface InitChunkedUploadRequest {
   file_name: string;
   file_size: number;       // 文件总大小（字节）
   mime_type: string;
   category: 'chat_video' | 'chat_file';  // 分片上传仅支持视频和文件
-  chunk_count: number;     // 预计分片数量
+  chunk_count?: number;    // 可选：预计分片数量（供参考）
 }
 
 type InitChunkedUploadResponse = ApiResponse<InitChunkedUploadData>
 
 interface InitChunkedUploadData {
-  upload_id: string;       // 上传会话ID
-  chunk_size: number;      // 推荐的分片大小（字节，例如 2MB）
+  upload_id: string;       // S3 的 UploadId
+  key: string;             // S3 的 Key
+  chunk_size: number;      // 推荐的分片大小（字节，例如 5MB）
 }
 ```
 
-**2. POST /api/v1/protected/media/chunked/upload - 上传分片**
+**2. POST /api/v1/protected/media/chunked/presign - 获取分片上传链接**
+
+为指定分片生成 S3 `Presigned PUT URL`。客户端直接 PUT 该 URL 上传分片。
+
 ```typescript
-// Multipart/form-data
-interface UploadChunkRequest {
-  upload_id: string;
-  chunk_index: number;     // 分片序号（0-indexed）
-  chunk_data: File;        // 分片二进制数据
+interface PresignChunkUploadRequest {
+  upload_id: string;       // Init 返回的 upload_id
+  key: string;             // Init 返回的 key
+  part_number: number;     // 分片序号（1-indexed）
 }
 
-type UploadChunkResponse = ApiResponse
+type PresignChunkUploadResponse = ApiResponse<PresignChunkUploadData>
+
+interface PresignChunkUploadData {
+  url: string;             // S3 Presigned URL (PUT)
+  expires_at: string;      // URL 过期时间
+}
 ```
-失败错误码：`10360`（upload_id 无效或过期）、`10005`（分片过大）
 
 **3. POST /api/v1/protected/media/chunked/finish - 完成分片上传**
+
+调用 S3 `CompleteMultipartUpload`。客户端必须提供所有分片的 ETag（上传 S3 后返回）。
+
 ```typescript
 interface FinishChunkedUploadRequest {
   upload_id: string;
+  key: string;
+  parts: ChunkPart[];      // 已上传的分片列表（必须按 part_number 排序）
+}
+
+interface ChunkPart {
+  part_number: number;
+  etag: string;            // S3 返回的 ETag（通常包含引号）
 }
 
 type FinishChunkedUploadResponse = ApiResponse<UploadMediaData> // 返回与普通上传一致的 Data
 ```
-失败错误码：`10402`（分片不完整）、`10360`（upload_id 无效）
 
-**4. POST /api/v1/protected/media/chunked/check - 检查分片上传状态**
+失败错误码：`10402`（分片不完整/校验失败）、`10360`（upload_id 无效）
 
-用于断点续传，查询已上传的分片列表。
+**4. POST /api/v1/protected/media/chunked/abort - 取消分片上传**
+
+调用 S3 `AbortMultipartUpload`，清理碎片。
 
 ```typescript
-interface CheckChunkedUploadRequest {
+interface AbortChunkedUploadRequest {
   upload_id: string;
+  key: string;
 }
 
-type CheckChunkedUploadResponse = ApiResponse<CheckChunkedUploadData>
-
-interface CheckChunkedUploadData {
-  upload_id: string;
-  chunk_size: number;
-  uploaded_chunks: number[]; // 已上传的分片索引列表 (0-indexed, sorted)
-}
+type AbortChunkedUploadResponse = ApiResponse
 ```
-失败错误码：`10360`（upload_id 无效或过期）
 
 
 
@@ -2945,7 +3360,7 @@ interface GetFeedMomentsRequest {
   cursor?: string;             // 分页游标
 }
 
-type GetFeedMomentsResponse = ApiResponse<PaginatedData<MomentItem>>
+type GetFeedMomentsResponse = ApiResponse<PaginatedData<FeedMomentItem>>
 ```
 
 失败错误码：
@@ -2976,12 +3391,26 @@ interface GetFeedGroupsRequest {
 
 type GetFeedGroupsResponse = ApiResponse<PaginatedData<FeedGroupItem>>
 
-interface FeedGroupItem extends GroupItem {
-  friends_in_group?: number; // 群内好友数量
-
-  // 契约约定（零查找优化）：推荐流应尽量返回 my_state（继承自 GroupItem）
-  // - 未加入时：my_state 可省略
-  // - 已加入时：my_state 必须包含 unread/is_muted/is_pinned 等
+interface FeedGroupItem {
+  group_chat_id: string;
+  name: string;
+  avatar_url?: string;
+  members_count: number;
+  description?: string;
+  tags?: string[];
+  has_password: boolean;
+  location: RelativeLocation;
+  friends_in_group?: number;
+  
+  // 我的群内状态（推荐流优化：已加入时返回，未加入时省略）
+  my_state?: {
+    role: GroupRole;
+    is_joined: boolean;
+    unread_count: number;
+    is_muted: boolean;
+    is_pinned: boolean;
+    joined_at?: string;
+  };
 }
 ```
 
@@ -3008,12 +3437,35 @@ interface GetFeedUsersRequest {
 
 type GetFeedUsersResponse = ApiResponse<PaginatedData<FeedUserItem>>
 
-interface FeedUserItem extends UserItem {
-  mutual_friends_count?: number;  // 共同好友数
-  common_tags?: string[];   // 共同标签
-
-  // 统一：在推荐流场景下，服务端应尽量返回 relation 以减少额外 round-trip
-  // 若因性能策略暂不提供，必须保持字段省略（而非 null）
+interface FeedUserItem {
+  user_id: number;
+  nickname: string;
+  avatar_url?: string;
+  user_type: UserType;
+  bio?: string;
+  tags?: string[];
+  
+  // 隐私字段
+  is_online: boolean | null;
+  is_online_meta: FieldVisibilityMeta;
+  last_online: string | null;
+  last_online_meta: FieldVisibilityMeta;
+  location?: RelativeLocation | null;
+  location_meta: FieldVisibilityMeta;
+  
+  // 推荐流专属字段
+  mutual_friends_count?: number;
+  common_tags?: string[];
+  
+  // 关系状态（推荐流优化：尽量返回以减少额外请求）
+  relation?: {
+    is_mutual_follow: boolean;
+    is_following: boolean;
+    is_followed_by: boolean;
+    is_blocked: boolean;
+    is_blocking: boolean;
+    has_pending_follow_request: boolean;
+  };
 }
 ```
 
@@ -3030,19 +3482,18 @@ interface GetFeedTrendingRequest {
   limit?: number;           // 默认 20，最大 50
 }
 
-// 登录态：允许返回带互动状态的 MomentItem
 type GetFeedTrendingResponse = ApiResponse<FeedTrendingData>
 
 interface FeedTrendingData {
   trending_tags: TrendingTagItem[];
-  hot_moments: MomentItem[];  // 最多5个热门瞬间预览
+  hot_moments: FeedMomentItem[];  // 最多5个热门瞬间预览
 }
 
 interface TrendingTagItem {
   name: string;
   usage_count: number;
   trend: 'rising' | 'stable' | 'falling';
-  hot_moment_preview?: MomentItem;  // 该标签下的热门瞬间预览
+  hot_moment_preview?: FeedMomentItem;  // 该标签下的热门瞬间预览
 }
 ```
 
@@ -3659,7 +4110,13 @@ interface AdminGetGlobalSettingsRequest {}
 
 type AdminGetGlobalSettingsResponse = ApiResponse<AdminGlobalSettingsData>
 
-interface AdminGlobalSettingsData extends GlobalSettings {
+interface AdminGlobalSettingsData {
+  upload: UploadConfig;
+  defaults: ContentDefaults;
+  features: FeatureSwitches;
+  contact: ContactInfo;
+  limits: AppLimits;
+  version: string;
   updated_at: string;
   updated_by_user_id: number;
 }
@@ -3780,3 +4237,164 @@ type UpdateLimitsResponse = ApiResponse<{
 - `10204` 非管理员
 - `10205` 管理员权限不足（需要 `admin.config.write`）
 - `10003` 参数值超出范围（例如设置了负数或不合理的极小值）
+
+#### 配置变更历史追踪
+
+**设计目标**：
+- **审计追踪**：记录所有配置变更的完整历史（谁/何时/改了什么/为什么）
+- **回滚能力**：支持管理员查看历史版本，必要时可回滚到之前的配置
+- **问题排查**：当系统行为异常时，可追溯到具体的配置变更
+
+**变更记录结构**：
+
+```typescript
+interface ConfigChangeRecord {
+  change_id: string;                 // 变更记录ID
+  config_type: 'upload' | 'defaults' | 'features' | 'contact' | 'limits'; // 配置类别
+  version_before: string;            // 变更前版本号
+  version_after: string;             // 变更后版本号
+  changed_fields: ConfigFieldChange[]; // 变更字段列表
+  changed_by: UserInfo;              // 操作管理员
+  changed_at: string;                // 变更时间
+  note?: string;                     // 变更说明（可选）
+}
+
+interface ConfigFieldChange {
+  field_path: string;                // 字段路径（如 "upload.image_max_size"）
+  value_before: any;                 // 变更前的值
+  value_after: any;                  // 变更后的值
+}
+```
+
+**POST /api/v1/admin/global_settings/history - 获取配置变更历史（管理员）**
+
+```typescript
+interface GetConfigHistoryRequest {
+  config_type?: 'upload' | 'defaults' | 'features' | 'contact' | 'limits'; // 可选：筛选配置类别
+  start_date?: string;               // 可选：起始日期（UTC ISO 8601）
+  end_date?: string;                 // 可选：结束日期（UTC ISO 8601）
+  changed_by_user_id?: number;       // 可选：筛选操作人
+  limit?: number;                    // 默认 20，最大 100
+  cursor?: string;                   // 分页游标
+}
+
+type GetConfigHistoryResponse = ApiResponse<PaginatedData<ConfigChangeRecord>>
+```
+
+**排序语义**：
+- 默认按 `changed_at DESC`（最新变更在前）
+- Tie-breaker：`change_id ASC`
+- 一致性：强一致
+
+**失败错误码**：
+- `10204` 非管理员
+- `10205` 管理员权限不足（需要 `admin.config.read`）
+- `10003` 参数值超出范围（limit/日期格式错误）
+
+**POST /api/v1/admin/global_settings/changes/:change_id - 获取单个变更详情（管理员）**
+
+```typescript
+interface GetConfigChangeDetailRequest {
+  change_id: string;
+}
+
+type GetConfigChangeDetailResponse = ApiResponse<ConfigChangeDetailData>
+
+interface ConfigChangeDetailData extends ConfigChangeRecord {
+  config_snapshot_before: any;      // 变更前完整配置快照
+  config_snapshot_after: any;       // 变更后完整配置快照
+}
+```
+
+**失败错误码**：
+- `10001` 缺少必填参数（change_id）
+- `10204` 非管理员
+- `10205` 管理员权限不足（需要 `admin.config.read`）
+- `10300` 资源不存在（change_id 不存在）
+
+**变更记录自动生成机制**：
+
+所有配置更新 API（`update_upload`、`update_defaults`、`update_features`、`update_contact`、`update_limits`）在成功执行后，自动生成一条变更记录：
+
+1. **版本号生成**：使用时间戳 + 哈希生成新版本号（如 `v20260113-a1b2c3`）
+2. **字段对比**：比较变更前后的配置，记录所有差异字段
+3. **快照保存**：保存变更前后的完整配置快照（便于回滚）
+4. **操作人记录**：从 JWT 中提取操作管理员信息
+
+**变更历史查询典型场景**：
+
+1. **审计所有变更**：
+   ```typescript
+   POST /api/v1/admin/global_settings/history
+   { limit: 50 }
+   → 返回最近 50 条配置变更记录
+   ```
+
+2. **筛选特定配置类型**：
+   ```typescript
+   POST /api/v1/admin/global_settings/history
+   { config_type: 'features', limit: 20 }
+   → 返回最近 20 条功能开关变更记录
+   ```
+
+3. **查看特定管理员的操作**：
+   ```typescript
+   POST /api/v1/admin/global_settings/history
+   { changed_by_user_id: 12345, limit: 20 }
+   → 返回管理员 12345 的最近 20 条配置操作
+   ```
+
+4. **时间范围筛选**：
+   ```typescript
+   POST /api/v1/admin/global_settings/history
+   {
+     start_date: '2026-01-01T00:00:00Z',
+     end_date: '2026-01-31T23:59:59Z',
+     limit: 100
+   }
+   → 返回 2026年1月的所有配置变更
+   ```
+
+5. **查看变更详情**：
+   ```typescript
+   POST /api/v1/admin/global_settings/changes/change-123
+   → 返回完整变更详情（含变更前后配置快照）
+   ```
+
+**变更记录展示示例**：
+
+```json
+{
+  "change_id": "change-abc123",
+  "config_type": "features",
+  "version_before": "v20260110-xyz789",
+  "version_after": "v20260113-abc123",
+  "changed_fields": [
+    {
+      "field_path": "enable_moments",
+      "value_before": true,
+      "value_after": false
+    },
+    {
+      "field_path": "enable_nearby_people",
+      "value_before": false,
+      "value_after": true
+    }
+  ],
+  "changed_by": {
+    "user_id": 1,
+    "nickname": "Admin",
+    "avatar_url": null,
+    "user_type": "admin"
+  },
+  "changed_at": "2026-01-13T10:30:00Z",
+  "note": "临时关闭生活瞬间功能进行维护"
+}
+```
+
+**最佳实践建议**：
+
+1. **变更说明（note）**：建议管理员在每次配置变更时填写变更原因，便于后续审计和排查
+2. **定期审查**：定期审查配置变更历史，发现异常操作
+3. **权限分离**：`admin.config.read` 和 `admin.config.write` 权限分离，支持只读审计员角色
+4. **变更通知**：关键配置变更（如功能开关）建议通过系统公告通知用户

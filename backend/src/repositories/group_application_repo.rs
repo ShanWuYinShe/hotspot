@@ -145,9 +145,12 @@ impl GroupApplicationRepository {
 
     /// 按 application_id 删除申请（取消申请时使用；对外契约使用 UUID 字符串）
     pub async fn delete_by_application_id(&self, application_id: Uuid) -> Result<()> {
-        sqlx::query!("DELETE FROM group_applications WHERE application_id = $1", application_id)
-            .execute(&self.pool)
-            .await?;
+        sqlx::query!(
+            "DELETE FROM group_applications WHERE application_id = $1",
+            application_id
+        )
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }

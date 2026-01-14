@@ -1,5 +1,4 @@
-use redis::aio::ConnectionManager;
-use sqlx::PgPool;
+use futures_util::future;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -24,14 +23,21 @@ pub struct NotificationService {
     repo: NotificationRepository,
     user_repo: UserRepository,
     event_bus: Arc<EventBus>,
+    media_service: crate::services::media_service::MediaService,
 }
 
 impl NotificationService {
-    pub fn new(db: &PgPool, _redis: &ConnectionManager, event_bus: Arc<EventBus>) -> Self {
+    pub fn new(
+        repo: NotificationRepository,
+        user_repo: UserRepository,
+        event_bus: Arc<EventBus>,
+        media_service: crate::services::media_service::MediaService,
+    ) -> Self {
         Self {
-            repo: NotificationRepository::new(db.clone()),
-            user_repo: UserRepository::new(db.clone()),
+            repo,
+            user_repo,
             event_bus,
+            media_service,
         }
     }
 
@@ -46,31 +52,39 @@ impl NotificationService {
 
         let (rows, next_cursor) = self.repo.list_by_user(user_id, limit, cursor).await?;
 
-        let items = rows
-            .into_iter()
-            .map(|row| NotificationItem {
-                notification_id: row.notification_id.to_string(),
-                r#type: row.r#type.to_string(),
-                title: row.title,
-                content: row.content,
-                created_at: row.created_at.to_rfc3339(),
-                read: row.is_read,
-                sender: if let Some(uid) = row.sender_id {
+        // 使用 futures_util::future::join_all 来并发签名所有 avatar_url
+        let items: Vec<NotificationItem> =
+            future::join_all(rows.into_iter().map(|row| async move {
+                let sender = if let Some(uid) = row.sender_id {
+                    let avatar_url = self
+                        .media_service
+                        .sign_url_if_path(row.sender_avatar_url.as_deref())
+                        .await;
                     Some(UserInfo {
                         user_id: uid,
                         nickname: row.sender_nickname.unwrap_or_default(),
-                        avatar_url: row.sender_avatar_url,
+                        avatar_url,
                         user_type: crate::types::enums::UserType::Normal, // 简化：通知快照不存 UserType，假设为 Normal
                     })
                 } else {
                     None
-                },
-                target_type: row.target_type,
-                target_id: row.target_id,
-                reference_id: row.reference_id,
-                target_preview: row.target_preview,
-            })
-            .collect();
+                };
+
+                NotificationItem {
+                    notification_id: row.notification_id.to_string(),
+                    r#type: row.r#type.to_string(),
+                    title: row.title,
+                    content: row.content,
+                    created_at: row.created_at.to_rfc3339(),
+                    read: row.is_read,
+                    sender,
+                    target_type: row.target_type,
+                    target_id: row.target_id,
+                    reference_id: row.reference_id,
+                    target_preview: row.target_preview,
+                }
+            }))
+            .await;
 
         Ok(PaginatedData {
             items,
@@ -82,10 +96,7 @@ impl NotificationService {
     }
 
     /// 获取未读计数
-    pub async fn get_unread_count(
-        &self,
-        user_id: i64,
-    ) -> Result<UnreadNotificationCountData> {
+    pub async fn get_unread_count(&self, user_id: i64) -> Result<UnreadNotificationCountData> {
         let total = self.repo.count_unread(user_id).await?;
         let breakdown_rows = self.repo.count_unread_breakdown(user_id).await?;
 
@@ -120,11 +131,7 @@ impl NotificationService {
     }
 
     /// 标记已读
-    pub async fn mark_read(
-        &self,
-        user_id: i64,
-        req: MarkNotificationsReadRequest,
-    ) -> Result<()> {
+    pub async fn mark_read(&self, user_id: i64, req: MarkNotificationsReadRequest) -> Result<()> {
         // 1. 按 ID 列表标记
         if let Some(ids) = req.notification_ids {
             if !ids.is_empty() {
@@ -143,21 +150,51 @@ impl NotificationService {
         // 2. 按类型标记
         if let Some(type_enum) = req.r#type {
             match type_enum {
-                NotificationApiType::Like => self.repo.mark_type_read(user_id, NotificationType::Like).await?,
-                NotificationApiType::Comment => {
-                    self.repo.mark_type_read(user_id, NotificationType::Comment).await?;
-                    self.repo.mark_type_read(user_id, NotificationType::Reply).await?;
+                NotificationApiType::Like => {
+                    self.repo
+                        .mark_type_read(user_id, NotificationType::Like)
+                        .await?
                 }
-                NotificationApiType::Follow => self.repo.mark_type_read(user_id, NotificationType::Follow).await?,
-                NotificationApiType::Mention => self.repo.mark_type_read(user_id, NotificationType::Mention).await?,
+                NotificationApiType::Comment => {
+                    self.repo
+                        .mark_type_read(user_id, NotificationType::Comment)
+                        .await?;
+                    self.repo
+                        .mark_type_read(user_id, NotificationType::Reply)
+                        .await?;
+                }
+                NotificationApiType::Follow => {
+                    self.repo
+                        .mark_type_read(user_id, NotificationType::Follow)
+                        .await?
+                }
+                NotificationApiType::Mention => {
+                    self.repo
+                        .mark_type_read(user_id, NotificationType::Mention)
+                        .await?
+                }
                 NotificationApiType::System => {
-                    self.repo.mark_type_read(user_id, NotificationType::System).await?;
-                    self.repo.mark_type_read(user_id, NotificationType::GroupInvite).await?;
-                    self.repo.mark_type_read(user_id, NotificationType::GroupApply).await?;
-                    self.repo.mark_type_read(user_id, NotificationType::GroupKick).await?;
-                    self.repo.mark_type_read(user_id, NotificationType::GroupQuit).await?;
-                    self.repo.mark_type_read(user_id, NotificationType::GroupDismiss).await?;
-                    self.repo.mark_type_read(user_id, NotificationType::GroupAdmin).await?;
+                    self.repo
+                        .mark_type_read(user_id, NotificationType::System)
+                        .await?;
+                    self.repo
+                        .mark_type_read(user_id, NotificationType::GroupInvite)
+                        .await?;
+                    self.repo
+                        .mark_type_read(user_id, NotificationType::GroupApply)
+                        .await?;
+                    self.repo
+                        .mark_type_read(user_id, NotificationType::GroupKick)
+                        .await?;
+                    self.repo
+                        .mark_type_read(user_id, NotificationType::GroupQuit)
+                        .await?;
+                    self.repo
+                        .mark_type_read(user_id, NotificationType::GroupDismiss)
+                        .await?;
+                    self.repo
+                        .mark_type_read(user_id, NotificationType::GroupAdmin)
+                        .await?;
                 }
             }
             return self.publish_unread_update(user_id).await;
@@ -173,10 +210,11 @@ impl NotificationService {
         let total = self.repo.count_unread(user_id).await?;
 
         // 推送 NotificationReadStateUpdated 事件 (Self-Sync)
-        self.event_bus.publish(AppEvent::NotificationReadStateUpdated {
-            user_id,
-            total_unread_count: total as i32,
-        });
+        self.event_bus
+            .publish(AppEvent::NotificationReadStateUpdated {
+                user_id,
+                total_unread_count: total as i32,
+            });
 
         Ok(())
     }

@@ -31,15 +31,9 @@ pub fn v1_routes(state: AppState) -> Router<AppState> {
         .nest("/public/comments", public::comments::routes())
         .nest("/public/map", public::map::routes())
         .nest("/public/system", public::system::routes())
-        .nest(
-            "/public/global_settings",
-            public::global_settings::routes(),
-        )
+        .nest("/public/global_settings", public::global_settings::routes())
         .nest("/public/tags", public::tags::routes())
-        .nest(
-            "/public/announcements",
-            public::announcements::routes(),
-        )
+        .nest("/public/announcements", public::announcements::routes())
         .with_state(state.clone())
         .layer(middleware::from_fn_with_state(
             state.clone(),

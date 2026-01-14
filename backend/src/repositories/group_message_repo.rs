@@ -24,6 +24,10 @@ pub struct GroupMessageRow {
     pub file_size: Option<i64>,
     pub thumbnail_url: Option<String>,
     pub duration: Option<i32>,
+    pub location_latitude: Option<f64>,
+    pub location_longitude: Option<f64>,
+    pub location_name: Option<String>,
+    pub location_address: Option<String>,
     pub sent_at: DateTime<Utc>,
     pub edited_at: Option<DateTime<Utc>>,
     pub is_recalled: bool,
@@ -76,6 +80,7 @@ impl GroupMessageRepository {
             SELECT id, message_id, group_chat_id, sender_id,
                    type as "type: MessageType", content, reply_to_message_id, mentions,
                    file_name, file_size, thumbnail_url, duration,
+                   location_latitude, location_longitude, location_name, location_address,
                    sent_at, edited_at, is_recalled, recalled_by, recalled_at, is_deleted, deleted_at
             FROM group_messages
             WHERE message_id = $1 AND is_deleted = FALSE
@@ -102,15 +107,20 @@ impl GroupMessageRepository {
         file_size: Option<i64>,
         thumbnail_url: Option<&str>,
         duration: Option<i32>,
+        location_latitude: Option<f64>,
+        location_longitude: Option<f64>,
+        location_name: Option<&str>,
+        location_address: Option<&str>,
     ) -> Result<GroupMessageRow> {
         let row = sqlx::query_as!(
             GroupMessageRow,
             r#"
-            INSERT INTO group_messages (group_chat_id, sender_id, type, content, reply_to_message_id, mentions, file_name, file_size, thumbnail_url, duration)
-            VALUES ($1, $2, $3::message_type, $4, $5, $6, $7, $8, $9, $10)
+            INSERT INTO group_messages (group_chat_id, sender_id, type, content, reply_to_message_id, mentions, file_name, file_size, thumbnail_url, duration, location_latitude, location_longitude, location_name, location_address)
+            VALUES ($1, $2, $3::message_type, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             RETURNING id, message_id, group_chat_id, sender_id,
                       type as "type: MessageType", content, reply_to_message_id, mentions,
                       file_name, file_size, thumbnail_url, duration,
+                      location_latitude, location_longitude, location_name, location_address,
                       sent_at, edited_at, is_recalled, recalled_by, recalled_at, is_deleted, deleted_at
             "#,
             group_chat_id,
@@ -122,7 +132,11 @@ impl GroupMessageRepository {
             file_name,
             file_size,
             thumbnail_url,
-            duration
+            duration,
+            location_latitude,
+            location_longitude,
+            location_name,
+            location_address
         )
         .fetch_one(&self.pool)
         .await?;
@@ -150,6 +164,7 @@ impl GroupMessageRepository {
             SELECT id, message_id, group_chat_id, sender_id,
                    type as "type: MessageType", content, reply_to_message_id, mentions,
                    file_name, file_size, thumbnail_url, duration,
+                   location_latitude, location_longitude, location_name, location_address,
                    sent_at, edited_at, is_recalled, recalled_by, recalled_at, is_deleted, deleted_at
             FROM group_messages
             WHERE group_chat_id = $1 AND id < $2 AND is_deleted = FALSE

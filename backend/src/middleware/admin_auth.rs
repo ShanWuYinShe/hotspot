@@ -25,15 +25,44 @@ fn required_permission(path: &str) -> Option<&'static str> {
         return Some("admin.reports.read");
     }
 
-    // 系统配置管理
-    if path.starts_with("/api/v1/admin/config") {
-        if path.ends_with("/create") || path.ends_with("/update") || path.ends_with("/delete") {
+    // 全局配置管理（注意：API 文档中使用 global_settings 而非 config）
+    if path.starts_with("/api/v1/admin/global_settings") {
+        if path.contains("/update_") {
             return Some("admin.config.write");
         }
         return Some("admin.config.read");
     }
 
-    // 未来新增 admin 路由：默认只要求 “是管理员”
+    // 用户管理
+    if path.starts_with("/api/v1/admin/users") {
+        if path.ends_with("/ban") || path.ends_with("/unban") {
+            return Some("admin.users.write");
+        }
+        return Some("admin.users.read");
+    }
+
+    // 群组管理
+    if path.starts_with("/api/v1/admin/groups") {
+        if path.ends_with("/dismiss") {
+            return Some("admin.groups.write");
+        }
+        return Some("admin.groups.read");
+    }
+
+    // 标签管理
+    if path.starts_with("/api/v1/admin/tags") {
+        return Some("admin.tags.write");
+    }
+
+    // 公告管理
+    if path.starts_with("/api/v1/admin/announcements") {
+        if path.ends_with("/create") || path.ends_with("/delete") {
+            return Some("admin.announcements.write");
+        }
+        return Some("admin.announcements.read");
+    }
+
+    // 未来新增 admin 路由：默认只要求 "是管理员"
     None
 }
 
@@ -55,7 +84,10 @@ pub async fn admin_auth_middleware(
 
     // 3. 按路由校验权限（超级管理员自动放行）
     if let Some(permission) = required_permission(req.uri().path()) {
-        state.admin_rbac_service.require_permission(user_id, permission).await?;
+        state
+            .admin_rbac_service
+            .require_permission(user_id, permission)
+            .await?;
     }
 
     // 4. 继续处理请求

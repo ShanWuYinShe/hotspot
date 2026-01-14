@@ -1,5 +1,5 @@
-pub mod auth;
 pub mod announcements;
+pub mod auth;
 pub mod comments;
 pub mod global_settings;
 pub mod group_chats;

@@ -64,9 +64,10 @@ impl MapService {
             .as_ref()
             .and_then(|f| f.data_type.as_deref())
             .unwrap_or("all");
-        
-        let filter_type = MapResourceType::from_str(filter_type_str).unwrap_or(MapResourceType::All);
-        
+
+        let filter_type =
+            MapResourceType::from_str(filter_type_str).unwrap_or(MapResourceType::All);
+
         let (start_time, end_time) = if let Some(f) = &req.filter {
             let _ = f.only_friends; // TODO: Implement only_friends filter
             if let Some(tr) = &f.time_range {
@@ -100,7 +101,11 @@ impl MapService {
                         grid_meters,
                     )
                     .await?;
-                items.extend(users.into_iter().map(|c| self.cluster_to_item(c, MapResourceType::User.as_str())));
+                items.extend(
+                    users
+                        .into_iter()
+                        .map(|c| self.cluster_to_item(c, MapResourceType::User.as_str())),
+                );
             }
 
             if filter_type == MapResourceType::All || filter_type == MapResourceType::Group {
@@ -114,7 +119,11 @@ impl MapService {
                         grid_meters,
                     )
                     .await?;
-                items.extend(groups.into_iter().map(|c| self.cluster_to_item(c, MapResourceType::Group.as_str())));
+                items.extend(
+                    groups
+                        .into_iter()
+                        .map(|c| self.cluster_to_item(c, MapResourceType::Group.as_str())),
+                );
             }
 
             if filter_type == MapResourceType::All || filter_type == MapResourceType::Moment {
@@ -130,7 +139,11 @@ impl MapService {
                         end_time.clone(),
                     )
                     .await?;
-                items.extend(moments.into_iter().map(|c| self.cluster_to_item(c, MapResourceType::Moment.as_str())));
+                items.extend(
+                    moments
+                        .into_iter()
+                        .map(|c| self.cluster_to_item(c, MapResourceType::Moment.as_str())),
+                );
             }
         } else {
             // ==================== 实体模式 ====================
@@ -147,7 +160,11 @@ impl MapService {
                         limit,
                     )
                     .await?;
-                items.extend(users.into_iter().map(|u| self.entity_to_item(u, MapResourceType::User.as_str())));
+                items.extend(
+                    users
+                        .into_iter()
+                        .map(|u| self.entity_to_item(u, MapResourceType::User.as_str())),
+                );
             }
 
             if filter_type == MapResourceType::All || filter_type == MapResourceType::Group {
@@ -161,7 +178,11 @@ impl MapService {
                         limit,
                     )
                     .await?;
-                items.extend(groups.into_iter().map(|g| self.entity_to_item(g, MapResourceType::Group.as_str())));
+                items.extend(
+                    groups
+                        .into_iter()
+                        .map(|g| self.entity_to_item(g, MapResourceType::Group.as_str())),
+                );
             }
 
             if filter_type == MapResourceType::All || filter_type == MapResourceType::Moment {
@@ -177,7 +198,11 @@ impl MapService {
                         end_time.clone(),
                     )
                     .await?;
-                items.extend(moments.into_iter().map(|m| self.entity_to_item(m, MapResourceType::Moment.as_str())));
+                items.extend(
+                    moments
+                        .into_iter()
+                        .map(|m| self.entity_to_item(m, MapResourceType::Moment.as_str())),
+                );
             }
         }
 

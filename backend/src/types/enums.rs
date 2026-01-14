@@ -359,46 +359,6 @@ impl std::fmt::Display for UserType {
 }
 
 // ============================================================
-// 12. 举报处理操作枚举
-// ============================================================
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum ReportHandleAction {
-    Resolve,  // 解决
-    Dismiss,  // 驳回
-    Escalate, // 升级
-}
-
-impl ReportHandleAction {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            ReportHandleAction::Resolve => "resolve",
-            ReportHandleAction::Dismiss => "dismiss",
-            ReportHandleAction::Escalate => "escalate",
-        }
-    }
-}
-
-impl std::fmt::Display for ReportHandleAction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_str())
-    }
-}
-
-impl std::str::FromStr for ReportHandleAction {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "resolve" => Ok(ReportHandleAction::Resolve),
-            "dismiss" => Ok(ReportHandleAction::Dismiss),
-            "escalate" => Ok(ReportHandleAction::Escalate),
-            _ => Err(format!("无效的操作类型: {}", s)),
-        }
-    }
-}
-
-// ============================================================
 // 13. 群组成员移除原因枚举
 // ============================================================
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -478,7 +438,6 @@ pub enum FeedFeedbackAction {
     NotInterested, // 不感兴趣
     Clicked,       // 点击
     Viewed,        // 查看
-    Report,        // 举报 (用于权重调整)
 }
 
 impl FeedFeedbackAction {
@@ -488,7 +447,6 @@ impl FeedFeedbackAction {
             FeedFeedbackAction::NotInterested => "not_interested",
             FeedFeedbackAction::Clicked => "clicked",
             FeedFeedbackAction::Viewed => "viewed",
-            FeedFeedbackAction::Report => "report",
         }
     }
 
@@ -496,9 +454,7 @@ impl FeedFeedbackAction {
     pub fn should_remove_from_feed(&self) -> bool {
         matches!(
             self,
-            FeedFeedbackAction::Hide
-                | FeedFeedbackAction::NotInterested
-                | FeedFeedbackAction::Report
+            FeedFeedbackAction::Hide | FeedFeedbackAction::NotInterested
         )
     }
 }
@@ -518,7 +474,6 @@ impl std::str::FromStr for FeedFeedbackAction {
             "not_interested" => Ok(FeedFeedbackAction::NotInterested),
             "clicked" => Ok(FeedFeedbackAction::Clicked),
             "viewed" => Ok(FeedFeedbackAction::Viewed),
-            "report" => Ok(FeedFeedbackAction::Report),
             _ => Err(format!("无效的反馈操作: {}", s)),
         }
     }
@@ -667,12 +622,12 @@ impl std::str::FromStr for ReactionType {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SubscriptionFailureReason {
-    InvalidItem,        // 订阅项无效
-    NotFound,           // 订阅目标不存在
-    PermissionDenied,   // 权限不足
+    InvalidItem,          // 订阅项无效
+    NotFound,             // 订阅目标不存在
+    PermissionDenied,     // 权限不足
     TooManySubscriptions, // 订阅数量超限
-    RateLimited,        // 触发限流
-    InternalError,      // 内部错误
+    RateLimited,          // 触发限流
+    InternalError,        // 内部错误
 }
 
 impl SubscriptionFailureReason {
@@ -786,6 +741,203 @@ impl std::str::FromStr for Trend {
             "stable" => Ok(Trend::Stable),
             "falling" => Ok(Trend::Falling),
             _ => Err(format!("无效的趋势: {}", s)),
+        }
+    }
+}
+
+// ============================================================
+// DTO 特有枚举（不存储在数据库 ENUM 类型，但可能有 CHECK 约束）
+// ============================================================
+
+// 文件分类（对应 uploaded_files.category CHECK 约束）
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
+#[sqlx(type_name = "varchar")]
+#[serde(rename_all = "snake_case")]
+pub enum FileCategory {
+    Avatar,
+    GroupAvatar,
+    MomentImage,
+    ChatImage,
+    ChatVideo,
+    ChatAudio,
+    ChatFile,
+}
+
+impl FileCategory {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            FileCategory::Avatar => "avatar",
+            FileCategory::GroupAvatar => "group_avatar",
+            FileCategory::MomentImage => "moment_image",
+            FileCategory::ChatImage => "chat_image",
+            FileCategory::ChatVideo => "chat_video",
+            FileCategory::ChatAudio => "chat_audio",
+            FileCategory::ChatFile => "chat_file",
+        }
+    }
+}
+
+impl std::fmt::Display for FileCategory {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl std::str::FromStr for FileCategory {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "avatar" => Ok(FileCategory::Avatar),
+            "group_avatar" => Ok(FileCategory::GroupAvatar),
+            "moment_image" => Ok(FileCategory::MomentImage),
+            "chat_image" => Ok(FileCategory::ChatImage),
+            "chat_video" => Ok(FileCategory::ChatVideo),
+            "chat_audio" => Ok(FileCategory::ChatAudio),
+            "chat_file" => Ok(FileCategory::ChatFile),
+            _ => Err(format!("无效的文件分类: {}", s)),
+        }
+    }
+}
+
+// 收藏操作
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum FavoriteAction {
+    Add,
+    Remove,
+}
+
+// 点赞操作
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum LikeAction {
+    Like,
+    Unlike,
+}
+
+// 举报处理操作（DTO层的，与数据库的 report_status 不同）
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ReportAction {
+    Resolve,
+    Dismiss,
+    Escalate,
+}
+
+impl ReportAction {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ReportAction::Resolve => "resolve",
+            ReportAction::Dismiss => "dismiss",
+            ReportAction::Escalate => "escalate",
+        }
+    }
+}
+
+impl std::fmt::Display for ReportAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl std::str::FromStr for ReportAction {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "resolve" => Ok(ReportAction::Resolve),
+            "dismiss" => Ok(ReportAction::Dismiss),
+            "escalate" => Ok(ReportAction::Escalate),
+            _ => Err(format!("无效的操作类型: {}", s)),
+        }
+    }
+}
+
+// 系统健康检查状态
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum HealthStatus {
+    Healthy,
+    Degraded,
+    Unhealthy,
+}
+
+impl HealthStatus {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            HealthStatus::Healthy => "healthy",
+            HealthStatus::Degraded => "degraded",
+            HealthStatus::Unhealthy => "unhealthy",
+        }
+    }
+}
+
+impl std::fmt::Display for HealthStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+// 配置值类型
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum ConfigValueType {
+    String,
+    Number,
+    Boolean,
+}
+
+impl ConfigValueType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ConfigValueType::String => "string",
+            ConfigValueType::Number => "number",
+            ConfigValueType::Boolean => "boolean",
+        }
+    }
+}
+
+impl std::fmt::Display for ConfigValueType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+// 通知级别
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum NotificationSeverity {
+    Info,
+    Warning,
+    Error,
+}
+
+impl NotificationSeverity {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            NotificationSeverity::Info => "info",
+            NotificationSeverity::Warning => "warning",
+            NotificationSeverity::Error => "error",
+        }
+    }
+}
+
+impl std::fmt::Display for NotificationSeverity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl std::str::FromStr for NotificationSeverity {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "info" => Ok(NotificationSeverity::Info),
+            "warning" => Ok(NotificationSeverity::Warning),
+            "error" => Ok(NotificationSeverity::Error),
+            _ => Err(format!("无效的通知级别: {}", s)),
         }
     }
 }

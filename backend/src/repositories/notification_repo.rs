@@ -189,11 +189,7 @@ impl NotificationRepository {
     }
 
     /// 标记通知已读（单个/批量）
-    pub async fn mark_read(
-        &self,
-        user_id: i64,
-        notification_ids: &[Uuid],
-    ) -> Result<()> {
+    pub async fn mark_read(&self, user_id: i64, notification_ids: &[Uuid]) -> Result<()> {
         sqlx::query!(
             r#"
             UPDATE notifications
@@ -209,11 +205,7 @@ impl NotificationRepository {
     }
 
     /// 标记指定类型的所有通知为已读
-    pub async fn mark_type_read(
-        &self,
-        user_id: i64,
-        r#type: NotificationType,
-    ) -> Result<()> {
+    pub async fn mark_type_read(&self, user_id: i64, r#type: NotificationType) -> Result<()> {
         sqlx::query!(
             r#"
             UPDATE notifications

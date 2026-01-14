@@ -44,6 +44,15 @@ export function formatCount(t: I18nT, count: number | null | undefined): string 
   return t('number.hundredMillions', { n: (count / 100000000).toFixed(1) })
 }
 
+export function formatFileSize(bytes: number | null | undefined): string {
+  if (typeof bytes !== 'number' || Number.isNaN(bytes) || bytes < 0) return '0 B'
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
 export function formatDate(
   locale: string,
   input: string | Date | null | undefined,
@@ -85,7 +94,8 @@ export function createI18nFormatters(t: I18nT, localeRef: Ref<string>) {
     formatDistance: (distance: number | null | undefined) => formatDistanceMeters(t, distance),
     formatDate: (date: string | Date | null | undefined, style: DateFormatStyle = 'short') =>
       formatDate(getLocale(), date, style),
-    formatCount: (count: number | null | undefined) => formatCount(t, count)
+    formatCount: (count: number | null | undefined) => formatCount(t, count),
+    formatFileSize: (bytes: number | null | undefined) => formatFileSize(bytes)
   }
 }
 

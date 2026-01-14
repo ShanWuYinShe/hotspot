@@ -1,4 +1,4 @@
-use axum::{extract::State, Extension, Json};
+use axum::{extract::State, Json};
 use uuid::Uuid;
 
 use crate::{
@@ -16,15 +16,16 @@ use crate::{
         },
     },
     error::{AppError, Result},
+    middleware::auth::AuthenticatedUser,
     state::AppState,
 };
 
 pub async fn me(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(_req): Json<AdminRbacMeRequest>,
 ) -> Result<Json<ApiResponse<AdminMeData>>> {
-    let (_is_super, permissions, roles) = state.admin_rbac_service.get_me(user_id).await?;
+    let (_is_super, permissions, roles) = state.admin_rbac_service.get_me(user.user_id).await?;
 
     Ok(Json(ApiResponse::success(AdminMeData {
         permissions,
@@ -40,7 +41,7 @@ pub async fn me(
 
 pub async fn list_permissions(
     State(state): State<AppState>,
-    Extension(_user_id): Extension<i64>,
+    _user: AuthenticatedUser,
     Json(_req): Json<AdminRbacPermissionsRequest>,
 ) -> Result<Json<ApiResponse<AdminPermissionsData>>> {
     let items = state
@@ -56,7 +57,7 @@ pub async fn list_permissions(
 
 pub async fn list_roles(
     State(state): State<AppState>,
-    Extension(_user_id): Extension<i64>,
+    _user: AuthenticatedUser,
     Json(_req): Json<AdminRbacRolesListRequest>,
 ) -> Result<Json<ApiResponse<AdminRolesData>>> {
     let items = state
@@ -77,7 +78,7 @@ pub async fn list_roles(
 
 pub async fn create_role(
     State(state): State<AppState>,
-    Extension(_user_id): Extension<i64>,
+    _user: AuthenticatedUser,
     Json(req): Json<AdminRbacRoleCreateRequest>,
 ) -> Result<Json<ApiResponse<AdminRoleItem>>> {
     let role_id = state
@@ -95,7 +96,7 @@ pub async fn create_role(
 
 pub async fn update_role(
     State(state): State<AppState>,
-    Extension(_user_id): Extension<i64>,
+    _user: AuthenticatedUser,
     Json(req): Json<AdminRbacRoleUpdateRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
     let role_id = Uuid::parse_str(&req.role_id)
@@ -114,7 +115,7 @@ pub async fn update_role(
 
 pub async fn delete_role(
     State(state): State<AppState>,
-    Extension(_user_id): Extension<i64>,
+    _user: AuthenticatedUser,
     Json(req): Json<AdminRbacRoleDeleteRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
     let role_id = Uuid::parse_str(&req.role_id)
@@ -125,7 +126,7 @@ pub async fn delete_role(
 
 pub async fn set_role_permissions(
     State(state): State<AppState>,
-    Extension(_user_id): Extension<i64>,
+    _user: AuthenticatedUser,
     Json(req): Json<AdminRbacRoleSetPermissionsRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
     let role_id = Uuid::parse_str(&req.role_id)
@@ -139,7 +140,7 @@ pub async fn set_role_permissions(
 
 pub async fn list_admins(
     State(state): State<AppState>,
-    Extension(_user_id): Extension<i64>,
+    _user: AuthenticatedUser,
     Json(_req): Json<AdminRbacAdminsListRequest>,
 ) -> Result<Json<ApiResponse<AdminAdminsData>>> {
     let rows = state.admin_rbac_service.list_admins().await?;
@@ -177,7 +178,7 @@ pub async fn list_admins(
 
 pub async fn grant_admin(
     State(state): State<AppState>,
-    Extension(operator_id): Extension<i64>,
+    operator: AuthenticatedUser,
     Json(req): Json<AdminRbacGrantAdminRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
     let role_ids: Vec<Uuid> = req
@@ -189,7 +190,7 @@ pub async fn grant_admin(
     state
         .admin_rbac_service
         .grant_admin(
-            operator_id,
+            operator.user_id,
             req.user_id,
             req.grant_all_permissions.unwrap_or(false),
             &role_ids,
@@ -201,12 +202,12 @@ pub async fn grant_admin(
 
 pub async fn revoke_admin(
     State(state): State<AppState>,
-    Extension(operator_id): Extension<i64>,
+    operator: AuthenticatedUser,
     Json(req): Json<AdminRbacRevokeAdminRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
     state
         .admin_rbac_service
-        .revoke_admin(operator_id, req.user_id)
+        .revoke_admin(operator.user_id, req.user_id)
         .await?;
     Ok(Json(ApiResponse::success_empty()))
 }

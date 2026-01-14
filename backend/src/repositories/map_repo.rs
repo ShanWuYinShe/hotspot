@@ -54,7 +54,7 @@ impl MapRepository {
               WHERE u.is_deleted = FALSE
                 AND u.is_banned = FALSE
                 AND u.location IS NOT NULL
-                AND (u.location::geometry && env.bbox)
+                AND ST_Intersects(u.location, env.bbox::geography)
             )
             SELECT
               CONCAT(
@@ -103,7 +103,7 @@ impl MapRepository {
               WHERE g.is_deleted = FALSE
                 AND g.is_dismissed = FALSE
                 AND g.location IS NOT NULL
-                AND (g.location::geometry && env.bbox)
+                AND ST_Intersects(g.location, env.bbox::geography)
             )
             SELECT
               CONCAT(
@@ -153,7 +153,7 @@ impl MapRepository {
               FROM moments m, env
               WHERE m.is_deleted = FALSE
                 AND m.location IS NOT NULL
-                AND (m.location::geometry && env.bbox)
+                AND ST_Intersects(m.location, env.bbox::geography)
                 AND ($6::TIMESTAMPTZ IS NULL OR m.created_at >= $6::TIMESTAMPTZ)
                 AND ($7::TIMESTAMPTZ IS NULL OR m.created_at <= $7::TIMESTAMPTZ)
             )
@@ -209,7 +209,7 @@ impl MapRepository {
             WHERE u.is_deleted = FALSE
                 AND u.is_banned = FALSE
                 AND u.location IS NOT NULL
-                AND (u.location::geometry && ST_MakeEnvelope($1, $2, $3, $4, 4326))
+                AND ST_Intersects(u.location, ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography)
             LIMIT $5
             "#,
         )
@@ -244,7 +244,7 @@ impl MapRepository {
             WHERE g.is_deleted = FALSE
                 AND g.is_dismissed = FALSE
                 AND g.location IS NOT NULL
-                AND (g.location::geometry && ST_MakeEnvelope($1, $2, $3, $4, 4326))
+                AND ST_Intersects(g.location, ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography)
             LIMIT $5
             "#,
         )
@@ -268,7 +268,7 @@ impl MapRepository {
         start_time: Option<String>,
         end_time: Option<String>,
     ) -> Result<Vec<MapEntityRow>> {
-        // Moments 需要 join user 获取 nickname? 
+        // Moments 需要 join user 获取 nickname?
         // 简单起见，title=desc, subtitle=user_id or nickname if joined.
         // MapEntityRow struct fields match.
         // cover_url: images[1] (Postgres 1-based array index)
@@ -285,7 +285,7 @@ impl MapRepository {
             JOIN users u ON m.user_id = u.user_id
             WHERE m.is_deleted = FALSE
                 AND m.location IS NOT NULL
-                AND (m.location::geometry && ST_MakeEnvelope($1, $2, $3, $4, 4326))
+                AND ST_Intersects(m.location, ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography)
                 AND ($6::TIMESTAMPTZ IS NULL OR m.created_at >= $6::TIMESTAMPTZ)
                 AND ($7::TIMESTAMPTZ IS NULL OR m.created_at <= $7::TIMESTAMPTZ)
             LIMIT $5

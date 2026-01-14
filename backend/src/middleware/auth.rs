@@ -5,11 +5,7 @@ use axum::{
     response::Response,
 };
 
-use crate::{
-    error::AppError,
-    state::AppState,
-    utils::jwt::JwtUtil,
-};
+use crate::{error::AppError, state::AppState, utils::jwt::JwtUtil};
 
 /// 从请求扩展中提取用户ID
 ///
@@ -104,6 +100,7 @@ where
 /// 已认证用户提取器
 ///
 /// 从请求扩展中提取已认证的用户信息（由 auth_middleware 注入）
+#[derive(Debug)]
 pub struct AuthenticatedUser {
     pub user_id: i64,
     /// 当前请求的会话ID
@@ -137,6 +134,9 @@ where
             .copied()
             .flatten();
 
-        Ok(AuthenticatedUser { user_id, session_id })
+        Ok(AuthenticatedUser {
+            user_id,
+            session_id,
+        })
     }
 }

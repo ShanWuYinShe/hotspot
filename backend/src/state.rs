@@ -1,28 +1,43 @@
+use aws_sdk_s3::{config::Region, Client as S3Client};
 use redis::aio::ConnectionManager;
 use sqlx::PgPool;
 use std::sync::Arc;
-use aws_sdk_s3::{Client as S3Client, config::Region};
 
 use crate::{
     config::Config,
     events::event_bus::EventBus,
     repositories::{
-        admin_rbac_repo::AdminRbacRepository, user_repo::UserRepository,
-        user_settings_repo::UserSettingsRepository,
+        admin_rbac_repo::AdminRbacRepository, announcement_repo::AnnouncementRepository,
+        chat_unread_repo::ChatUnreadRepository, comment_repo::CommentRepository,
+        device_token_repo::DeviceTokenRepository, feed_repo::FeedRepository,
+        group_announcement_repo::GroupAnnouncementRepository,
+        group_application_repo::GroupApplicationRepository, group_bans_repo::GroupBansRepository,
+        group_invite_repo::GroupInviteRepository,
+        group_member_history_repo::GroupMemberHistoryRepository,
+        group_member_repo::GroupMemberRepository, group_message_repo::GroupMessageRepository,
+        group_repo::GroupRepository, group_settings_repo::GroupSettingsRepository,
+        map_repo::MapRepository, moment_repo::MomentRepository,
+        notification_repo::NotificationRepository, password_reset_repo::PasswordResetRepository,
+        private_chat_repo::PrivateChatRepository, private_message_repo::PrivateMessageRepository,
+        report_repo::ReportRepository, session_repo::SessionRepository,
+        system_config_repo::SystemConfigRepository, tag_repo::TagRepository,
+        user_blocks_repo::UserBlocksRepository, user_follows_repo::UserFollowsRepository,
+        user_friend_remarks_repo::UserFriendRemarksRepository,
+        user_location_history_repo::UserLocationHistoryRepository,
+        user_online_status_repo::UserOnlineStatusRepository, user_repo::UserRepository,
+        user_settings_repo::UserSettingsRepository, verification_repo::VerificationRepository,
     },
     services::{
-        admin_rbac_service::AdminRbacService,
-        announcement_service::AnnouncementService,
+        admin_rbac_service::AdminRbacService, announcement_service::AnnouncementService,
         auth_service::AuthService, comment_service::CommentService,
         device_tokens_service::DeviceTokensService, feed_service::FeedService,
         group_message_service::GroupMessageService, group_service::GroupService,
-        map_service::MapService,
-        media_service::MediaService, message_common_service::MessageCommonService,
-        moment_service::MomentService, presence_service::PresenceService,
-        private_chat_service::PrivateChatService, private_message_service::PrivateMessageService,
-        report_service::ReportService, subscription_service::SubscriptionService,
-        system_config_service::SystemConfigService, tag_service::TagService,
-        user_service::UserService,
+        map_service::MapService, media_service::MediaService,
+        message_common_service::MessageCommonService, moment_service::MomentService,
+        presence_service::PresenceService, private_chat_service::PrivateChatService,
+        private_message_service::PrivateMessageService, report_service::ReportService,
+        subscription_service::SubscriptionService, system_config_service::SystemConfigService,
+        tag_service::TagService, user_service::UserService,
     },
     websocket::{
         manager::ConnectionManager as WsConnectionManager, subscription::SubscriptionManager,
@@ -72,17 +87,6 @@ impl AppState {
 
         tracing::debug!("Database connected");
 
-        // 自动运行数据库迁移
-        tracing::info!("Running database migrations...");
-        sqlx::migrate!("./migrations")
-            .run(&db)
-            .await
-            .map_err(|e| {
-                tracing::error!("Failed to run database migrations: {}", e);
-                e
-            })?;
-        tracing::info!("Database migrations applied successfully");
-
         // 初始化 Redis 连接
         let redis_client = redis::Client::open(config.redis_url.as_str())?;
         let redis = ConnectionManager::new(redis_client.clone()).await?;
@@ -96,32 +100,14 @@ impl AppState {
 
         tracing::debug!("WebSocket managers initialized");
 
-        // 初始化所有 Service
-        let auth_service = AuthService::new(
-            &db,
-            &redis,
-            config.jwt_secret.clone(),
-            config.jwt_access_token_expiration,
-            config.jwt_refresh_token_expiration,
-        );
-        let user_service = UserService::new(&db, &redis, event_bus.clone());
-        let moment_service = MomentService::new(&db, &redis, event_bus.clone());
-        let comment_service = CommentService::new(&db, &redis, event_bus.clone());
-        let group_service = GroupService::new(&db, &redis, event_bus.clone());
-        let group_message_service = GroupMessageService::new(&db, &redis, event_bus.clone());
-        let private_chat_service = PrivateChatService::new(db.clone(), &redis);
-        let private_message_service = PrivateMessageService::new(db.clone(), event_bus.clone());
-        let message_common_service = MessageCommonService::new(db.clone());
-
-        // Init S3 Clients
-        // 直接使用配置的区域，避免在本地开发环境中尝试从 IMDS 加载区域（会产生警告）
+        // Init S3 Client
         let region = Region::new(config.s3_region.clone());
         let shared_config = aws_config::defaults(aws_config::BehaviorVersion::latest())
             .region(region)
             .load()
             .await;
 
-        let s3_internal_config = aws_sdk_s3::config::Builder::from(&shared_config)
+        let s3_config = aws_sdk_s3::config::Builder::from(&shared_config)
             .endpoint_url(config.s3_endpoint.clone())
             .force_path_style(true)
             .credentials_provider(aws_credential_types::Credentials::new(
@@ -132,68 +118,214 @@ impl AppState {
                 "Static",
             ))
             .build();
-        let s3_internal = S3Client::from_conf(s3_internal_config);
+        let s3_client = S3Client::from_conf(s3_config);
 
-        // Public Endpoint Handling: strip bucket name from S3_PUBLIC_URL if present to get the base endpoint
-        // e.g. http://localhost:9000/hotspot -> http://localhost:9000
-        let s3_bucket = config.s3_bucket.clone();
-        let public_url = config.s3_public_url.clone();
-        let public_endpoint = if public_url.ends_with(&format!("/{}", s3_bucket)) {
-            public_url.trim_end_matches(&format!("/{}", s3_bucket)).to_string()
-        } else {
-            public_url
-        };
+        // --- Repositories Initialization ---
+        let admin_rbac_repo = AdminRbacRepository::new(db.clone());
+        let announcement_repo = AnnouncementRepository::new(db.clone());
+        let chat_unread_repo = ChatUnreadRepository::new(db.clone());
+        let comment_repo = CommentRepository::new(db.clone());
+        let device_token_repo = DeviceTokenRepository::new(db.clone());
+        let feed_repo = FeedRepository::new(db.clone());
+        // file_repo might be needed for MediaService if refactored
+        let group_announcement_repo = GroupAnnouncementRepository::new(db.clone());
+        let group_application_repo = GroupApplicationRepository::new(db.clone());
+        let group_bans_repo = GroupBansRepository::new(db.clone());
+        let group_invite_repo = GroupInviteRepository::new(db.clone());
+        let group_member_history_repo = GroupMemberHistoryRepository::new(db.clone());
+        let group_member_repo = GroupMemberRepository::new(db.clone(), redis.clone());
+        let group_message_repo = GroupMessageRepository::new(db.clone());
+        let group_repo = GroupRepository::new(db.clone());
+        let group_settings_repo = GroupSettingsRepository::new(db.clone());
+        let map_repo = MapRepository::new(db.clone());
+        let moment_repo = MomentRepository::new(db.clone());
+        let notification_repo = NotificationRepository::new(db.clone());
+        let password_reset_repo = PasswordResetRepository::new(db.clone());
+        let private_chat_repo = PrivateChatRepository::new(db.clone());
+        let private_message_repo = PrivateMessageRepository::new(db.clone());
+        let report_repo = ReportRepository::new(db.clone());
+        let session_repo = SessionRepository::new(db.clone());
+        // subscription_repo not yet implemented
+        let system_config_repo = SystemConfigRepository::new(db.clone());
+        let tag_repo = TagRepository::new(db.clone());
+        let user_blocks_repo = UserBlocksRepository::new(db.clone());
+        let user_follows_repo = UserFollowsRepository::new(db.clone());
+        let user_friend_remarks_repo = UserFriendRemarksRepository::new(db.clone());
+        let user_location_history_repo = UserLocationHistoryRepository::new(db.clone());
+        let user_online_status_repo = UserOnlineStatusRepository::new(db.clone());
+        let user_repo = UserRepository::new(db.clone());
+        let user_settings_repo = UserSettingsRepository::new(db.clone());
+        let verification_repo = VerificationRepository::new(db.clone());
+        let message_reactions_repo =
+            crate::repositories::message_reactions_repo::MessageReactionsRepository::new(
+                db.clone(),
+            );
 
-        let s3_public_config = aws_sdk_s3::config::Builder::from(&shared_config)
-            .endpoint_url(public_endpoint)
-            .force_path_style(true)
-            .credentials_provider(aws_credential_types::Credentials::new(
-                config.s3_access_key.clone(),
-                config.s3_secret_key.clone(),
-                None,
-                None,
-                "Static",
-            ))
-            .build();
-        let s3_public = S3Client::from_conf(s3_public_config);
+        // --- Services Initialization ---
 
         let media_service = MediaService::new(
-            &db,
-            s3_internal,
-            s3_public,
-            s3_bucket,
+            &db, // Assuming MediaService still takes db directly as I didn't refactor its constructor in this session
+            s3_client,
+            config.s3_bucket.clone(),
+            config.s3_public_base.clone(),
+            redis.clone(),
         );
-        let tag_service = TagService::new(crate::repositories::tag_repo::TagRepository::new(
-            db.clone(),
-        ));
-        let feed_service = FeedService::new(db.clone(), redis.clone());
-        let device_tokens_service = DeviceTokensService::new(db.clone());
-        let subscription_service = SubscriptionService::new(db.clone(), redis.clone());
-        let report_service = ReportService::new(db.clone());
-        let system_config_service = SystemConfigService::new(db.clone(), redis_client.clone());
-        let presence_service = PresenceService::new(redis.clone(), db.clone());
-        let admin_rbac_service = AdminRbacService::new(
-            AdminRbacRepository::new(db.clone()),
-            UserRepository::new(db.clone()),
-            UserSettingsRepository::new(db.clone()),
+
+        let presence_service = PresenceService::new(
+            redis.clone(),
+            user_online_status_repo.clone(),
+            user_settings_repo.clone(),
         );
-        let map_service = MapService::new(crate::repositories::map_repo::MapRepository::new(
-            db.clone(),
-        ));
-        let notification_service =
-            crate::services::notification_service::NotificationService::new(&db, &redis, event_bus.clone());
-        let announcement_service = AnnouncementService::new(
-            crate::repositories::announcement_repo::AnnouncementRepository::new(db.clone()),
+
+        let auth_service = AuthService::new(
+            &db, // Still takes db? Yes, signature in grep output showed &db
+            &redis,
+            config.jwt_secret.clone(),
+            config.jwt_access_token_expiration,
+            config.jwt_refresh_token_expiration,
+            user_repo.clone(),
+            session_repo.clone(),
+            password_reset_repo.clone(),
+            verification_repo.clone(),
+        );
+
+        let user_service = UserService::new(
             event_bus.clone(),
+            user_repo.clone(),
+            user_settings_repo.clone(),
+            user_location_history_repo.clone(),
+            user_follows_repo.clone(),
+            user_blocks_repo.clone(),
+            user_friend_remarks_repo.clone(),
+            device_token_repo.clone(),
+            session_repo.clone(),
+            tag_repo.clone(),
+            group_member_repo.clone(),
+            moment_repo.clone(),
+            presence_service.clone(),
+            redis.clone(),
+            media_service.clone(),
+        );
+
+        let moment_service = MomentService::new(
+            redis.clone(),
+            event_bus.clone(),
+            moment_repo.clone(),
+            tag_repo.clone(),
+            user_repo.clone(),
+            user_settings_repo.clone(),
+            media_service.clone(),
+        );
+
+        let comment_service = CommentService::new(
+            event_bus.clone(),
+            redis.clone(),
+            comment_repo.clone(),
+            moment_repo.clone(),
+            user_repo.clone(),
+        );
+
+        let group_service = GroupService::new(
+            event_bus.clone(),
+            group_repo.clone(),
+            group_member_repo.clone(),
+            group_member_history_repo.clone(),
+            group_application_repo.clone(),
+            group_bans_repo.clone(),
+            group_invite_repo.clone(),
+            group_settings_repo.clone(),
+            group_announcement_repo.clone(),
+            tag_repo.clone(),
+            user_repo.clone(),
+            chat_unread_repo.clone(),
+            redis.clone(),
+            presence_service.clone(),
+            media_service.clone(),
+        );
+
+        let group_message_service = GroupMessageService::new(
+            db.clone(),
+            event_bus.clone(),
+            group_message_repo.clone(),
+            group_member_repo.clone(),
+            user_repo.clone(),
+            chat_unread_repo.clone(),
+            message_reactions_repo.clone(),
+            media_service.clone(),
+        );
+
+        let private_chat_service = PrivateChatService::new(
+            private_chat_repo.clone(),
+            user_settings_repo.clone(),
+            user_blocks_repo.clone(),
+            user_follows_repo.clone(),
+            user_repo.clone(),
+            private_message_repo.clone(),
+            chat_unread_repo.clone(),
+            presence_service.clone(),
+        );
+
+        let private_message_service = PrivateMessageService::new(
+            event_bus.clone(),
+            private_message_repo.clone(),
+            private_chat_repo.clone(),
+            user_repo.clone(),
+            chat_unread_repo.clone(),
+            user_follows_repo.clone(),
+            user_blocks_repo.clone(),
+            user_settings_repo.clone(),
+            message_reactions_repo.clone(),
+            media_service.clone(),
+        );
+
+        let message_common_service = MessageCommonService::new(chat_unread_repo.clone());
+
+        let tag_service = TagService::new(tag_repo.clone());
+
+        let feed_service = FeedService::new(
+            redis.clone(),
+            feed_repo.clone(),
+            moment_repo.clone(),
+            user_repo.clone(),
+            group_repo.clone(),
+            tag_repo.clone(),
+            presence_service.clone(),
+            media_service.clone(),
+        );
+
+        let device_tokens_service = DeviceTokensService::new(device_token_repo.clone());
+
+        let subscription_service = SubscriptionService::new(db.clone(), redis.clone());
+
+        let report_service = ReportService::new(report_repo.clone());
+
+        let system_config_service =
+            SystemConfigService::new(system_config_repo.clone(), redis_client.clone());
+
+        let admin_rbac_service = AdminRbacService::new(
+            admin_rbac_repo.clone(),
+            user_repo.clone(),
+            user_settings_repo.clone(),
+        );
+
+        let map_service = MapService::new(map_repo.clone());
+
+        let notification_service = crate::services::notification_service::NotificationService::new(
+            notification_repo.clone(),
+            user_repo.clone(),
+            event_bus.clone(),
+            media_service.clone(),
+        );
+
+        let announcement_service = AnnouncementService::new(
+            announcement_repo.clone(),
+            event_bus.clone(),
+            media_service.clone(),
         );
 
         tracing::debug!("All services initialized");
 
         // 启动时确保超级管理员存在
-        // 规则：
-        // 1. 如果已存在超级管理员，直接通过
-        // 2. 如果不存在超级管理员，必须通过 SUPER_ADMIN_PASSWORD 环境变量创建，否则阻塞启动
-        // 这个逻辑是幂等的：仅在没有任何超级管理员时才会创建/升级
         admin_rbac_service
             .ensure_super_admin_bootstrap(&config)
             .await

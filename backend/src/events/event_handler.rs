@@ -1,16 +1,16 @@
 use redis::aio::ConnectionManager;
 use sqlx::PgPool;
+use std::sync::Arc;
 use tokio::sync::mpsc;
 use tracing::{error, info};
-use std::sync::Arc;
 
 use crate::{
     events::event_types::AppEvent,
-    services::subscription_service::SubscriptionService,
-    services::notification_service::NotificationService,
-    repositories::user_repo::UserRepository,
-    repositories::{group_member_repo::GroupMemberRepository},
+    repositories::group_member_repo::GroupMemberRepository,
     repositories::notification_repo::NotificationType,
+    repositories::user_repo::UserRepository,
+    services::notification_service::NotificationService,
+    services::subscription_service::SubscriptionService,
     websocket::{
         manager::ConnectionManager as WsConnectionManager,
         subscription::SubscriptionManager,
@@ -39,11 +39,19 @@ impl EventHandler {
         ws_manager: WsConnectionManager,
         ws_subscription: SubscriptionManager,
         event_bus: Arc<EventBus>,
+        media_service: crate::services::media_service::MediaService,
     ) -> Self {
         let user_repo = UserRepository::new(db.clone());
         let subscription_service = SubscriptionService::new(db.clone(), redis.clone());
         let group_member_repo = GroupMemberRepository::new(db.clone(), redis.clone());
-        let notification_service = NotificationService::new(&db, &redis, event_bus);
+        let notification_repo =
+            crate::repositories::notification_repo::NotificationRepository::new(db.clone());
+        let notification_service = NotificationService::new(
+            notification_repo,
+            user_repo.clone(),
+            event_bus,
+            media_service,
+        );
 
         Self {
             user_repo,
@@ -103,7 +111,10 @@ impl EventHandler {
     }
 
     /// 持久化通知
-    async fn persist_notification(&self, event: &AppEvent) -> Result<(), Box<dyn std::error::Error>> {
+    async fn persist_notification(
+        &self,
+        event: &AppEvent,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         match event {
             AppEvent::NewFollower {
                 user_id,
@@ -140,7 +151,12 @@ impl EventHandler {
                         Some("moment".to_string()),
                         Some(moment_id.to_string()),
                         None,
-                        Some(moment_summary.cover_url.clone().unwrap_or(moment_summary.text_preview.clone())),
+                        Some(
+                            moment_summary
+                                .cover_url
+                                .clone()
+                                .unwrap_or(moment_summary.text_preview.clone()),
+                        ),
                     )
                     .await?;
             }
@@ -162,7 +178,12 @@ impl EventHandler {
                         Some("moment".to_string()),
                         Some(moment_id.to_string()),
                         Some(comment_id.to_string()),
-                        Some(moment_summary.cover_url.clone().unwrap_or(moment_summary.text_preview.clone())),
+                        Some(
+                            moment_summary
+                                .cover_url
+                                .clone()
+                                .unwrap_or(moment_summary.text_preview.clone()),
+                        ),
                     )
                     .await?;
             }
@@ -218,14 +239,19 @@ impl EventHandler {
                 message,
             } => {
                 // 需要通知所有管理员
-                let admin_ids = self.group_member_repo.list_admin_user_ids(*group_id).await?;
+                let admin_ids = self
+                    .group_member_repo
+                    .list_admin_user_ids(*group_id)
+                    .await?;
                 for admin_id in admin_ids {
                     self.notification_service
                         .create_notification(
                             admin_id,
                             NotificationType::GroupApply,
                             "入群申请".to_string(),
-                            message.clone().unwrap_or_else(|| "申请加入群组".to_string()),
+                            message
+                                .clone()
+                                .unwrap_or_else(|| "申请加入群组".to_string()),
                             Some(*applicant_id),
                             Some("group".to_string()),
                             Some(group_id.to_string()),
@@ -359,7 +385,10 @@ impl EventHandler {
                             user: mutual_user_info.clone(),
                             mutual_at: now.clone(),
                         };
-                        let _ = self.ws_manager.send_to_user(*user_id, &message_for_user).await;
+                        let _ = self
+                            .ws_manager
+                            .send_to_user(*user_id, &message_for_user)
+                            .await;
                     }
                 }
 
@@ -368,7 +397,10 @@ impl EventHandler {
                     .has_notification_subscription(*mutual_user_id, "mutual_follow")
                     .await
                 {
-                    let cfg = self.subscription_service.get_config(*mutual_user_id).await?;
+                    let cfg = self
+                        .subscription_service
+                        .get_config(*mutual_user_id)
+                        .await?;
                     if cfg.mutual_follow_enabled {
                         let message_for_mutual = WsMessage::MutualFollow {
                             user: user_info,
@@ -631,7 +663,10 @@ impl EventHandler {
                     created_at: chrono::Utc::now().to_rfc3339(),
                 };
 
-                let admin_ids = self.group_member_repo.list_admin_user_ids(*group_id).await?;
+                let admin_ids = self
+                    .group_member_repo
+                    .list_admin_user_ids(*group_id)
+                    .await?;
                 let mut recipients = Vec::with_capacity(admin_ids.len());
                 for admin_id in admin_ids {
                     if !self
@@ -648,7 +683,9 @@ impl EventHandler {
                     recipients.push(admin_id);
                 }
 
-                self.ws_manager.send_to_users(&recipients, &ws_message).await;
+                self.ws_manager
+                    .send_to_users(&recipients, &ws_message)
+                    .await;
             }
             AppEvent::GroupApplicationResponse {
                 application_id,
@@ -696,12 +733,14 @@ impl EventHandler {
                     sender,
                     message_type: message_type.clone(),
                     content: content.clone(),
-                    reply_to: reply_to.clone().map(|r| crate::websocket::types::MessageReplyTo {
-                        message_id: r.message_id.to_string(),
-                        user_id: r.user_id,
-                        nickname: r.nickname,
-                        content: r.content,
-                    }),
+                    reply_to: reply_to
+                        .clone()
+                        .map(|r| crate::websocket::types::MessageReplyTo {
+                            message_id: r.message_id.to_string(),
+                            user_id: r.user_id,
+                            nickname: r.nickname,
+                            content: r.content,
+                        }),
                     mentions: mentions.clone(),
                     media: media.clone(),
                     sent_at: chrono::Utc::now().to_rfc3339(),
@@ -856,12 +895,14 @@ impl EventHandler {
                     sender,
                     message_type: message_type.clone(),
                     content: content.clone(),
-                    reply_to: reply_to.clone().map(|r| crate::websocket::types::MessageReplyTo {
-                        message_id: r.message_id.to_string(),
-                        user_id: r.user_id,
-                        nickname: r.nickname,
-                        content: r.content,
-                    }),
+                    reply_to: reply_to
+                        .clone()
+                        .map(|r| crate::websocket::types::MessageReplyTo {
+                            message_id: r.message_id.to_string(),
+                            user_id: r.user_id,
+                            nickname: r.nickname,
+                            content: r.content,
+                        }),
                     media: media.clone(),
                     sent_at: chrono::Utc::now().to_rfc3339(),
                 };
@@ -885,7 +926,10 @@ impl EventHandler {
                     edited_at: edited_at.clone(),
                 };
                 // 发送给接收者
-                let _ = self.ws_manager.send_to_user(*target_user_id, &message).await;
+                let _ = self
+                    .ws_manager
+                    .send_to_user(*target_user_id, &message)
+                    .await;
                 // 发送给发送者（多端同步）
                 let _ = self.ws_manager.send_to_user(*sender_id, &message).await;
             }
@@ -903,7 +947,10 @@ impl EventHandler {
                     recalled_at: recalled_at.clone(),
                 };
                 // 发送给接收者
-                let _ = self.ws_manager.send_to_user(*target_user_id, &message).await;
+                let _ = self
+                    .ws_manager
+                    .send_to_user(*target_user_id, &message)
+                    .await;
                 // 发送给发送者（多端同步）
                 let _ = self.ws_manager.send_to_user(*sender_id, &message).await;
             }
@@ -935,7 +982,10 @@ impl EventHandler {
                     read_at: read_at.clone(),
                 };
                 // 推送给消息发送者 (target_user_id)，告知已读
-                let _ = self.ws_manager.send_to_user(*target_user_id, &message).await;
+                let _ = self
+                    .ws_manager
+                    .send_to_user(*target_user_id, &message)
+                    .await;
                 // 推送给读者自己（多端同步未读状态）
                 let _ = self.ws_manager.send_to_user(*reader_id, &message).await;
             }
@@ -956,7 +1006,10 @@ impl EventHandler {
                     has_reaction: action == "add",
                     created_at: chrono::Utc::now().to_rfc3339(),
                 };
-                let _ = self.ws_manager.send_to_user(*target_user_id, &message).await;
+                let _ = self
+                    .ws_manager
+                    .send_to_user(*target_user_id, &message)
+                    .await;
                 // 也推送给自己（多端同步）
                 let _ = self.ws_manager.send_to_user(*user_id, &message).await;
             }
@@ -971,7 +1024,10 @@ impl EventHandler {
                     user_id: *user_id,
                     is_typing: *is_typing,
                 };
-                let _ = self.ws_manager.send_to_user(*target_user_id, &message).await;
+                let _ = self
+                    .ws_manager
+                    .send_to_user(*target_user_id, &message)
+                    .await;
             }
 
             // ========== 多端同步事件 ==========
@@ -1205,6 +1261,62 @@ impl EventHandler {
                 // 这里简化处理：通过 ws_manager 广播给所有连接
                 // 实际实现中，ws_manager 应该检查用户的订阅状态
                 let _ = self.ws_manager.broadcast(&message).await;
+            }
+
+            // ========== 群公告事件 ==========
+            AppEvent::GroupAnnouncementCreated {
+                group_id, title, ..
+            } => {
+                // 由于 WsMessage 还没有这些新事件变体，暂时跳过
+                // TODO: 添加 WebSocket 消息类型后实现
+                info!(
+                    "GroupAnnouncementCreated event received for group {}: {}",
+                    group_id, title
+                );
+            }
+            AppEvent::GroupAnnouncementUpdated {
+                group_id, title, ..
+            } => {
+                // 由于 WsMessage 还没有这些新事件变体，暂时跳过
+                // TODO: 添加 WebSocket 消息类型后实现
+                info!(
+                    "GroupAnnouncementUpdated event received for group {}: {:?}",
+                    group_id, title
+                );
+            }
+            AppEvent::GroupAnnouncementDeleted { group_id, .. } => {
+                // 由于 WsMessage 还没有这些新事件变体，暂时跳过
+                // TODO: 添加 WebSocket 消息类型后实现
+                info!(
+                    "GroupAnnouncementDeleted event received for group {}",
+                    group_id
+                );
+            }
+
+            // ========== @ 提及事件 ==========
+            AppEvent::MomentMentioned {
+                moment_id,
+                mentioned_user_id,
+                ..
+            } => {
+                // 由于 WsMessage 还没有这些新事件变体，暂时跳过
+                // TODO: 添加 WebSocket 消息类型后实现
+                info!(
+                    "MomentMentioned event received: user {} mentioned in moment {}",
+                    mentioned_user_id, moment_id
+                );
+            }
+            AppEvent::CommentMentioned {
+                comment_id,
+                mentioned_user_id,
+                ..
+            } => {
+                // 由于 WsMessage 还没有这些新事件变体，暂时跳过
+                // TODO: 添加 WebSocket 消息类型后实现
+                info!(
+                    "CommentMentioned event received: user {} mentioned in comment {}",
+                    mentioned_user_id, comment_id
+                );
             }
         }
 

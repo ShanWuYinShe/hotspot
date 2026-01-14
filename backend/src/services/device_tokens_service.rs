@@ -1,5 +1,3 @@
-use sqlx::PgPool;
-
 use crate::{
     dto::{
         request::{
@@ -21,10 +19,8 @@ pub struct DeviceTokensService {
 }
 
 impl DeviceTokensService {
-    pub fn new(pool: PgPool) -> Self {
-        Self {
-            device_token_repo: DeviceTokenRepository::new(pool),
-        }
+    pub fn new(device_token_repo: DeviceTokenRepository) -> Self {
+        Self { device_token_repo }
     }
 
     /// 注册设备Token
@@ -33,7 +29,10 @@ impl DeviceTokensService {
         user_id: i64,
         req: RegisterDeviceTokenRequest,
     ) -> Result<(), AppError> {
-        if !["ios", "android", "web", "harmony"].contains(&req.platform.as_str()) {
+        use crate::types::enums::Platform;
+        use std::str::FromStr;
+
+        if Platform::from_str(&req.platform).is_err() {
             return Err(AppError::InvalidInput(format!(
                 "无效的平台类型: {}",
                 req.platform
@@ -57,7 +56,10 @@ impl DeviceTokensService {
         user_id: i64,
         req: UnregisterDeviceTokenRequest,
     ) -> Result<(), AppError> {
-        if !["ios", "android", "web", "harmony"].contains(&req.platform.as_str()) {
+        use crate::types::enums::Platform;
+        use std::str::FromStr;
+
+        if Platform::from_str(&req.platform).is_err() {
             return Err(AppError::InvalidInput(format!(
                 "无效的平台类型: {}",
                 req.platform

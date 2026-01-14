@@ -66,6 +66,7 @@
 import { usePrivateChatsService } from "~/services/private_chats.service";
 import { usePrivateMessagesService } from "~/services/private_messages.service";
 import { useUsersService } from "~/services/users.service";
+import { useUploadService } from "~/services/upload.service";
 import { isChatNotFoundCode, extractApiErrorSnapshot } from "~/utils/apiError";
 import type {
     PrivateChatDetailData,
@@ -90,6 +91,7 @@ const authStore = useAuthStore();
 const privateChatsService = usePrivateChatsService();
 const privateMessagesService = usePrivateMessagesService();
 const usersService = useUsersService();
+const uploadService = useUploadService();
 const feedback = useFeedbackStore();
 const geolocation = useGeolocation();
 
@@ -272,14 +274,23 @@ async function handleSend(payload: {
     content: string;
     fileId?: string;
     type: SendMessageType;
+    file?: File;
 }) {
     sending.value = true;
     try {
+        let fileId = payload.fileId;
+
+        if (payload.file && !fileId) {
+            const category = payload.type === 'image' ? 'chat_image' : 'chat_file';
+            const uploadResult = await uploadService.uploadFile(payload.file, category);
+            fileId = uploadResult.file_id;
+        }
+
         await privateMessagesService.send({
             target_user_id: targetUserId,
             type: payload.type,
             content: payload.content,
-            file_id: payload.fileId,
+            file_id: fileId,
         });
         // 成功发送后不直接插入消息，等待 WebSocket 推送保持一致性
     } catch (e) {

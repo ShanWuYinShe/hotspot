@@ -18,6 +18,7 @@ pub struct CommentRow {
     pub parent_id: Option<Uuid>,
     pub reply_to_user_id: Option<i64>,
     pub content: String,
+    pub mentions: Option<Vec<i64>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
     pub is_deleted: bool,
@@ -60,20 +61,22 @@ impl CommentRepository {
         content: String,
         parent_id: Option<Uuid>,
         reply_to_user_id: Option<i64>,
+        mentions: Option<Vec<i64>>,
     ) -> Result<CommentRow> {
         let row = sqlx::query_as!(
             CommentRow,
             r#"
-            INSERT INTO comments (moment_id, user_id, content, parent_id, reply_to_user_id)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO comments (moment_id, user_id, content, parent_id, reply_to_user_id, mentions)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING id, comment_id, moment_id, user_id, parent_id, reply_to_user_id, content,
-                      created_at, updated_at, is_deleted, deleted_at
+                      mentions, created_at, updated_at, is_deleted, deleted_at
             "#,
             moment_id,
             user_id,
             content,
             parent_id,
-            reply_to_user_id
+            reply_to_user_id,
+            mentions.as_deref()
         )
         .fetch_one(&self.pool)
         .await?;
@@ -87,7 +90,7 @@ impl CommentRepository {
             CommentRow,
             r#"
             SELECT id, comment_id, moment_id, user_id, parent_id, reply_to_user_id, content,
-                   created_at, updated_at, is_deleted, deleted_at
+                   mentions, created_at, updated_at, is_deleted, deleted_at
             FROM comments
             WHERE comment_id = $1 AND is_deleted = FALSE
             "#,
@@ -203,7 +206,7 @@ impl CommentRepository {
             CommentRow,
             r#"
             SELECT id, comment_id, moment_id, user_id, parent_id, reply_to_user_id, content, 
-                   created_at, updated_at, is_deleted, deleted_at
+                   mentions, created_at, updated_at, is_deleted, deleted_at
             FROM comments
             WHERE moment_id = $1 AND parent_id IS NULL AND id < $2 AND is_deleted = FALSE
             ORDER BY id DESC
@@ -237,7 +240,7 @@ impl CommentRepository {
             CommentRow,
             r#"
             SELECT id, comment_id, moment_id, user_id, parent_id, reply_to_user_id, content, 
-                   created_at, updated_at, is_deleted, deleted_at
+                   mentions, created_at, updated_at, is_deleted, deleted_at
             FROM comments
             WHERE parent_id = $1 AND id < $2 AND is_deleted = FALSE
             ORDER BY id DESC

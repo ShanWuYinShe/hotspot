@@ -239,7 +239,7 @@ impl GroupMemberRepository {
     pub async fn list_admin_user_ids(&self, group_chat_id: Uuid) -> Result<Vec<i64>> {
         let owner_role = MemberRole::Owner.to_string();
         let admin_role = MemberRole::Admin.to_string();
-        
+
         let rows = sqlx::query!(
             r#"
             SELECT user_id

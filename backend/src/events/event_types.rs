@@ -1,9 +1,9 @@
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use crate::dto::response::MessageMedia;
 use crate::types::enums::{
     GroupMemberRemovalReason, InviteStatus, MemberRole, MessageType, ReactionType,
 };
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 /// 应用事件类型
 /// 严格对应 API 文档中定义的 WebSocket 事件
@@ -92,6 +92,28 @@ pub enum AppEvent {
     GroupDismissed {
         group_id: Uuid,
         dismissed_by: i64,
+    },
+    /// 群公告创建
+    GroupAnnouncementCreated {
+        announcement_id: Uuid,
+        group_id: Uuid,
+        title: String,
+        content: String,
+        created_by_user_id: i64,
+        is_pinned: bool,
+    },
+    /// 群公告更新
+    GroupAnnouncementUpdated {
+        announcement_id: Uuid,
+        group_id: Uuid,
+        title: Option<String>,
+        content: Option<String>,
+        is_pinned: Option<bool>,
+    },
+    /// 群公告删除
+    GroupAnnouncementDeleted {
+        announcement_id: Uuid,
+        group_id: Uuid,
     },
     /// 群组邀请发送
     GroupInviteSent {
@@ -242,6 +264,13 @@ pub enum AppEvent {
         commenter_id: i64,
         content: String,
     },
+    MomentMentioned {
+        moment_id: Uuid,
+        mentioned_user_id: i64,
+        mentioning_user_id: i64,
+        moment_text_preview: String,
+        moment_cover_url: Option<String>,
+    },
 
     // ========== 评论相关事件 ==========
     CommentAdded {
@@ -258,12 +287,19 @@ pub enum AppEvent {
     /// 评论被回复
     CommentReplied {
         moment_id: Uuid,
-        comment_id: Uuid, // 原评论ID
+        comment_id: Uuid,         // 原评论ID
         reply_to_content: String, // 原评论摘要
-        reply_id: Uuid,   // 回复评论ID
-        user_id: i64,     // 原评论作者
-        replier_id: i64,  // 回复者
+        reply_id: Uuid,           // 回复评论ID
+        user_id: i64,             // 原评论作者
+        replier_id: i64,          // 回复者
         content: String,
+    },
+    CommentMentioned {
+        moment_id: Uuid,
+        comment_id: Uuid,
+        mentioned_user_id: i64,
+        mentioning_user_id: i64,
+        content_preview: String,
     },
 
     // ========== 系统事件 ==========
@@ -342,6 +378,9 @@ impl AppEvent {
             AppEvent::GroupMemberMuted { .. } => "group_member_muted",
             AppEvent::GroupMemberUnmuted { .. } => "group_member_unmuted",
             AppEvent::GroupDismissed { .. } => "group_dismissed",
+            AppEvent::GroupAnnouncementCreated { .. } => "group_announcement_created",
+            AppEvent::GroupAnnouncementUpdated { .. } => "group_announcement_updated",
+            AppEvent::GroupAnnouncementDeleted { .. } => "group_announcement_deleted",
             AppEvent::GroupInviteSent { .. } => "group_invite_sent",
             AppEvent::GroupInviteResponse { .. } => "group_invite_response",
             AppEvent::GroupApplicationReceived { .. } => "group_application_received",
@@ -372,10 +411,12 @@ impl AppEvent {
             AppEvent::MomentCreated { .. } => "moment_created",
             AppEvent::MomentLiked { .. } => "moment_liked",
             AppEvent::MomentCommented { .. } => "moment_commented",
+            AppEvent::MomentMentioned { .. } => "moment_mentioned",
             // 评论相关
             AppEvent::CommentAdded { .. } => "comment_added",
             AppEvent::CommentLiked { .. } => "comment_liked",
             AppEvent::CommentReplied { .. } => "comment_replied",
+            AppEvent::CommentMentioned { .. } => "comment_mentioned",
             // 系统事件
             AppEvent::SystemNotification { .. } => "system_notification",
             AppEvent::SystemAnnouncement { .. } => "SystemAnnouncement",

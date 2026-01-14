@@ -5,7 +5,6 @@
 //! 新版设计：支持强类型聚合配置 (GlobalSettings) 和版本控制
 
 use redis::AsyncCommands;
-use sqlx::PgPool;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -32,11 +31,8 @@ pub struct SystemConfigService {
 }
 
 impl SystemConfigService {
-    pub fn new(pool: PgPool, redis: Arc<redis::Client>) -> Self {
-        Self {
-            repo: SystemConfigRepository::new(pool),
-            redis,
-        }
+    pub fn new(repo: SystemConfigRepository, redis: Arc<redis::Client>) -> Self {
+        Self { repo, redis }
     }
 
     // ==================== 客户端拉取配置 (Client Fetch) ====================
@@ -72,7 +68,13 @@ impl SystemConfigService {
         // 4. (可选) 根据 req.context 进行灰度/开关处理
         //    例如：如果 client context.os == "android" 且 version < "1.0.0"，禁用某些 feature
         //    这里暂时直接返回通用配置
-        tracing::debug!("Client context: {:?}", req.context);
+        tracing::debug!(
+            "Client context: os={}, version={}, device={:?}, lang={:?}",
+            req.context.os,
+            req.context.app_version,
+            req.context.device_id,
+            req.context.language
+        );
 
         Ok(FetchSettingsData {
             action: "update".to_string(),
@@ -92,12 +94,7 @@ impl SystemConfigService {
         // 实际场景可以优化为一次查询
         let version_config = self.repo.find_by_key("global.version").await?;
         let (updated_at, updated_by) = if let Some(c) = version_config {
-            (
-                c.updated_at
-                    .map(|t| t.to_rfc3339())
-                    .unwrap_or_default(),
-                0,
-            ) // TODO: 记录 updated_by
+            (c.updated_at.map(|t| t.to_rfc3339()).unwrap_or_default(), 0) // TODO: 记录 updated_by
         } else {
             (chrono::Utc::now().to_rfc3339(), 0)
         };
@@ -156,7 +153,10 @@ impl SystemConfigService {
             updates.insert("defaults.default_user_avatar", v);
         }
         if let Some(v) = req.default_group_settings {
-            updates.insert("defaults.default_group_settings", serde_json::to_string(&v)?);
+            updates.insert(
+                "defaults.default_group_settings",
+                serde_json::to_string(&v)?,
+            );
         }
 
         self.batch_update_configs(updates, admin_id).await?;
@@ -228,10 +228,7 @@ impl SystemConfigService {
             updates.insert("limits.max_moment_images", v.to_string());
         }
         if let Some(v) = req.moment_description_max_length {
-            updates.insert(
-                "limits.moment_description_max_length",
-                v.to_string(),
-            );
+            updates.insert("limits.moment_description_max_length", v.to_string());
         }
         if let Some(v) = req.comment_max_length {
             updates.insert("limits.comment_max_length", v.to_string());
@@ -272,7 +269,9 @@ impl SystemConfigService {
                         key.to_string(),
                         value.clone(),
                         None,
-                        "string".to_string(),
+                        crate::types::enums::ConfigValueType::String
+                            .as_str()
+                            .to_string(),
                         "system".to_string(),
                     )
                     .await?;
@@ -316,7 +315,7 @@ impl SystemConfigService {
 
         // 2. 查 DB
         let config = self.repo.find_by_key(key).await?;
-        
+
         // 3. 写入缓存 (如果有值)
         if let Some(c) = &config {
             let _: () = conn.set_ex(&cache_key, &c.value, 3600).await?; // 1 hour TTL
@@ -432,15 +431,15 @@ impl SystemConfigService {
     /// 清除配置缓存
     async fn clear_config_cache(&self, config_key: &str) -> Result<()> {
         let mut conn = self.redis.get_multiplexed_async_connection().await?;
-        
+
         // 1. 清除单个 key 缓存
         let cache_key = format!("{}:{}", REDIS_KEY_CONFIG, config_key);
         let _: () = conn.del(&cache_key).await?;
-        
+
         // 2. 清除 full settings 缓存
         let full_key = format!("{}:full_settings", REDIS_KEY_CONFIG);
         let _: () = conn.del(&full_key).await?;
-        
+
         Ok(())
     }
 

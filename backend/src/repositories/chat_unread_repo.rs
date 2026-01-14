@@ -138,7 +138,8 @@ impl ChatUnreadRepository {
         let rows = match chat_type {
             "private_chat" => {
                 // private_messages uses chat_id (BIGINT)
-                let chat_ids_i64: Vec<i64> = chat_ids.iter()
+                let chat_ids_i64: Vec<i64> = chat_ids
+                    .iter()
                     .filter_map(|id| id.parse::<i64>().ok())
                     .collect();
 
@@ -169,7 +170,8 @@ impl ChatUnreadRepository {
             }
             "group_chat" => {
                 // group_messages uses group_chat_id (UUID)
-                let chat_uuids: Vec<Uuid> = chat_ids.iter()
+                let chat_uuids: Vec<Uuid> = chat_ids
+                    .iter()
                     .filter_map(|id| Uuid::parse_str(id).ok())
                     .collect();
 
@@ -202,5 +204,22 @@ impl ChatUnreadRepository {
         };
 
         Ok(rows.into_iter().map(|r| (r.chat_id, r.count)).collect())
+    }
+
+    /// 标记用户所有会话已读
+    pub async fn mark_all_as_read_for_user(&self, user_id: i64) -> Result<(), AppError> {
+        sqlx::query!(
+            r#"
+            UPDATE chat_unread_counts
+            SET unread_count = 0,
+                last_read_at = NOW(),
+                updated_at = NOW()
+            WHERE user_id = $1
+            "#,
+            user_id
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
     }
 }

@@ -14,6 +14,12 @@ CREATE TABLE moments (
     longitude DOUBLE PRECISION NOT NULL,
     location_name VARCHAR(255) NOT NULL,
     location geography(POINT, 4326) NOT NULL,
+    
+    -- 014: 隐私级别
+    privacy_level privacy_level NOT NULL DEFAULT 'public',
+    -- 016: @提及
+    mentions BIGINT[],
+    
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
@@ -25,6 +31,11 @@ CREATE TABLE moments (
 CREATE INDEX idx_moments_user_id ON moments (user_id, created_at DESC) WHERE is_deleted = FALSE;
 CREATE INDEX idx_moments_location ON moments USING gist (location) WHERE is_deleted = FALSE;
 CREATE INDEX idx_moments_created_at ON moments (created_at DESC) WHERE is_deleted = FALSE;
+CREATE INDEX idx_moments_privacy_level ON moments(privacy_level);
+CREATE INDEX idx_moments_mentions ON moments USING GIN(mentions);
+
+COMMENT ON COLUMN moments.privacy_level IS '可见范围：public=公开，friends=仅好友，private=仅自己';
+COMMENT ON COLUMN moments.mentions IS '@ 提及的用户 ID 列表（最多 10 个）';
 
 CREATE TRIGGER trigger_moments_updated_at
     BEFORE UPDATE ON moments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -70,6 +81,10 @@ CREATE TABLE comments (
     content TEXT NOT NULL,
     parent_id UUID,
     reply_to_user_id BIGINT,
+    
+    -- 016: @提及
+    mentions BIGINT[],
+    
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
@@ -79,6 +94,9 @@ CREATE TABLE comments (
 CREATE INDEX idx_comments_moment_id ON comments (moment_id, created_at DESC) WHERE is_deleted = FALSE;
 CREATE INDEX idx_comments_parent_id ON comments (parent_id, created_at DESC) WHERE parent_id IS NOT NULL AND is_deleted = FALSE;
 CREATE INDEX idx_comments_user_id ON comments (user_id, created_at DESC) WHERE is_deleted = FALSE;
+CREATE INDEX idx_comments_mentions ON comments USING GIN(mentions);
+
+COMMENT ON COLUMN comments.mentions IS '@ 提及的用户 ID 列表（最多 10 个）';
 
 CREATE TRIGGER trigger_comments_updated_at
     BEFORE UPDATE ON comments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -95,5 +113,3 @@ CREATE TABLE comment_likes (
 CREATE INDEX idx_comment_likes_id ON comment_likes (like_id);
 CREATE INDEX idx_comment_likes_comment_id ON comment_likes (comment_id, created_at DESC);
 CREATE INDEX idx_comment_likes_user_id ON comment_likes (user_id, created_at DESC);
-
-

@@ -38,7 +38,7 @@ pub struct RelativeLocation {
     pub latitude: f64,
     pub longitude: f64,
     pub location_name: String,
-    pub distance: i32,
+    pub distance: f64,
     pub bearing_degrees: f64,
 }
 
@@ -91,6 +91,17 @@ pub struct GroupInfo {
 }
 
 #[derive(Debug, Serialize)]
+pub struct GroupAnnouncementItem {
+    pub announcement_id: String,
+    pub group_chat_id: String,
+    pub title: String,
+    pub content: String,
+    pub created_by: UserInfo,
+    pub created_at: String,
+    pub is_pinned: bool,
+}
+
+#[derive(Debug, Serialize)]
 pub struct PaginationMeta {
     pub has_more: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -140,6 +151,21 @@ pub struct CheckStatusData {
     pub user_id: i64,
     pub nickname: String,
     pub is_valid: bool,
+    pub expires_at: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SendVerificationCodeData {
+    pub code_id: String,
+    pub expires_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub retry_after: Option<i32>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct VerifyCodeData {
+    pub verified: bool,
+    pub verify_token: String,
     pub expires_at: String,
 }
 
@@ -278,6 +304,8 @@ pub struct CommentListItem {
     pub content: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub parent_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mentions: Option<Vec<i64>>,
     pub created_at: String,
     pub likes_count: i32,
     pub replies_count: i32,
@@ -910,12 +938,14 @@ pub struct MomentItem {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub images: Option<Vec<MomentImage>>,
     pub tags: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mentions: Option<Vec<i64>>,
+    pub privacy_level: String, // 'public' | 'friends' | 'private'
     pub created_at: String,
     pub likes_count: i32,
     pub comments_count: i32,
-    // API文档: location 应该是可选的（发帖位置包含 geo data，但用户可能不提供位置）
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub location: Option<RelativeLocation>,
+    // 位置信息必填：与API规范和数据库schema一致
+    pub location: RelativeLocation,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_liked: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]

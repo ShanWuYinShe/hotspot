@@ -130,7 +130,11 @@ impl ConnectionManager {
         for user_connections in connections.values() {
             for connection in user_connections {
                 if let Err(e) = connection.sender.send(ws_message.clone()) {
-                    tracing::error!("广播消息失败: connection_id={}, error={}", connection.connection_id, e);
+                    tracing::error!(
+                        "广播消息失败: connection_id={}, error={}",
+                        connection.connection_id,
+                        e
+                    );
                 }
             }
         }

@@ -1,11 +1,11 @@
-use axum::{
-    extract::State,
-    Json,
-};
+use axum::{extract::State, Json};
 
-    use crate::{
+use crate::{
     dto::{
-        request::{GetNotificationsRequest, GetUnreadNotificationCountRequest, MarkNotificationsReadRequest},
+        request::{
+            GetNotificationsRequest, GetUnreadNotificationCountRequest,
+            MarkNotificationsReadRequest,
+        },
         response::{ApiResponse, PaginatedData, UnreadNotificationCountData},
     },
     error::AppError,
@@ -20,7 +20,10 @@ pub async fn list_notifications(
     Json(req): Json<GetNotificationsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<crate::dto::response::NotificationItem>>>, AppError> {
     // Use service from state
-    let data = state.notification_service.list_notifications(user.user_id, req).await?;
+    let data = state
+        .notification_service
+        .list_notifications(user.user_id, req)
+        .await?;
     Ok(Json(ApiResponse::success(data)))
 }
 
@@ -31,7 +34,10 @@ pub async fn get_unread_count(
     _req: Json<GetUnreadNotificationCountRequest>,
 ) -> Result<Json<ApiResponse<UnreadNotificationCountData>>, AppError> {
     // Use service from state
-    let data = state.notification_service.get_unread_count(user.user_id).await?;
+    let data = state
+        .notification_service
+        .get_unread_count(user.user_id)
+        .await?;
     Ok(Json(ApiResponse::success(data)))
 }
 
@@ -42,6 +48,9 @@ pub async fn mark_read(
     Json(req): Json<MarkNotificationsReadRequest>,
 ) -> Result<Json<ApiResponse<()>>, AppError> {
     // Use service from state
-    state.notification_service.mark_read(user.user_id, req).await?;
+    state
+        .notification_service
+        .mark_read(user.user_id, req)
+        .await?;
     Ok(Json(ApiResponse::success(())))
 }

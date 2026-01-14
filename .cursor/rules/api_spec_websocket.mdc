@@ -56,7 +56,7 @@ type ServerEventType =
   // 关注关系
   | "NewFollower" | "MutualFollow" | "Unfollowed"
   // 生活瞬间互动
-  | "MomentLiked" | "MomentCommented" | "CommentReply" | "SystemAnnouncement"
+  | "MomentLiked" | "MomentCommented" | "MomentMentioned" | "CommentReply" | "CommentMentioned" | "SystemAnnouncement"
   // 聊天消息 - 私聊
   | "PrivateMessageNew" | "PrivateMessageEdited" | "PrivateMessageRecalled"
   | "PrivateMessageDeleted" | "PrivateMessageReaction" | "PrivateMessageRead"
@@ -70,6 +70,7 @@ type ServerEventType =
   | "GroupMemberRoleChanged" | "GroupMemberMuted" | "GroupMemberUnmuted" | "GroupDismissed"
   | "GroupInviteReceived" | "GroupInviteResponse"
   | "GroupApplicationReceived" | "GroupApplicationResponse"
+  | "GroupAnnouncementCreated" | "GroupAnnouncementUpdated" | "GroupAnnouncementDeleted"
   // 多端同步 (Self-Sync) - 仅保留特殊场景
   | "PrivateChatDeleted" | "PrivateChatSettingsUpdated"
   | "NotificationReadStateUpdated"
@@ -224,6 +225,23 @@ interface CommentReplyPayload {
 }
 interface CommentReplyEvent extends WebSocketEvent<"CommentReply", CommentReplyPayload> {}
 
+interface MomentMentionedPayload {
+  moment_id: string;
+  moment_summary: MomentSummary;
+  user: UserInfo;            // 提及我的人
+  mentioned_at: string;
+}
+interface MomentMentionedEvent extends WebSocketEvent<"MomentMentioned", MomentMentionedPayload> {}
+
+interface CommentMentionedPayload {
+  moment_id: string;
+  comment_id: string;
+  user: UserInfo;            // 提及我的人
+  content: string;           // 评论内容摘要
+  mentioned_at: string;
+}
+interface CommentMentionedEvent extends WebSocketEvent<"CommentMentioned", CommentMentionedPayload> {}
+
 interface SystemAnnouncementPayload {
   announcement_id: string;
   title: string;
@@ -244,8 +262,9 @@ interface PrivateMessageNewPayload {
   type: MessageType;
   content?: string;       // 文本内容
   reply_to?: MessageReplyTo;
-  // 媒体信息
+  // 媒体/位置信息
   media?: MessageMedia;
+  location?: MessageLocation;
   sent_at: string;
 }
 interface PrivateMessageNewEvent extends WebSocketEvent<"PrivateMessageNew", PrivateMessageNewPayload> {}
@@ -310,8 +329,9 @@ interface GroupMessageNewPayload {
   content?: string;
   reply_to?: MessageReplyTo;
   mentions?: number[];     // user_id
-  // 媒体信息
+  // 媒体/位置信息
   media?: MessageMedia;
+  location?: MessageLocation;
   sent_at: string;
 }
 interface GroupMessageNewEvent extends WebSocketEvent<"GroupMessageNew", GroupMessageNewPayload> {}
@@ -461,6 +481,34 @@ interface GroupApplicationResponsePayload {
   responded_at: string;
 }
 interface GroupApplicationResponseEvent extends WebSocketEvent<"GroupApplicationResponse", GroupApplicationResponsePayload> {}
+
+interface GroupAnnouncementCreatedPayload {
+  announcement_id: string;
+  group_chat_id: string;
+  title: string;
+  content: string;
+  created_by: UserInfo;
+  is_pinned: boolean;
+  created_at: string;
+}
+interface GroupAnnouncementCreatedEvent extends WebSocketEvent<"GroupAnnouncementCreated", GroupAnnouncementCreatedPayload> {}
+
+interface GroupAnnouncementUpdatedPayload {
+  announcement_id: string;
+  group_chat_id: string;
+  title?: string;
+  content?: string;
+  is_pinned?: boolean;
+  updated_at: string;
+}
+interface GroupAnnouncementUpdatedEvent extends WebSocketEvent<"GroupAnnouncementUpdated", GroupAnnouncementUpdatedPayload> {}
+
+interface GroupAnnouncementDeletedPayload {
+  announcement_id: string;
+  group_chat_id: string;
+  deleted_at: string;
+}
+interface GroupAnnouncementDeletedEvent extends WebSocketEvent<"GroupAnnouncementDeleted", GroupAnnouncementDeletedPayload> {}
 
 // 多端同步事件 (Self-Sync)
 // 这些事件仅用于特殊场景（仅影响当前用户的操作），推送给当前用户的其他在线设备
@@ -650,6 +698,9 @@ WebSocket 推送分为**自动推送**和**需要订阅**两种模式。
 | `GroupMemberMuted` | 成员被禁言 |
 | `GroupMemberUnmuted` | 成员解除禁言 |
 | `GroupDismissed` | 群组被解散 |
+| `GroupAnnouncementCreated` | 新群公告发布 |
+| `GroupAnnouncementUpdated` | 群公告更新 |
+| `GroupAnnouncementDeleted` | 群公告删除 |
 
 ### 订阅用户状态
 
@@ -710,6 +761,36 @@ WebSocket 推送分为**自动推送**和**需要订阅**两种模式。
 - 客户端应提示用户取消部分订阅后再试
 - 限制数量由服务端配置决定，客户端不得硬编码假设具体数值
 
+**订阅失败处理**：
+
+| 失败原因 | `reason` 值 | 处理策略 |
+|---------|------------|---------|
+| 订阅项格式错误 | `invalid_item` | 检查客户端代码，修正格式 |
+| 订阅目标不存在 | `not_found` | 从订阅列表移除该项 |
+| 无权限订阅 | `permission_denied` | 提示用户无权限（如已被拉黑/群组已解散） |
+| 超出数量限制 | `too_many_subscriptions` | 提示用户取消部分订阅 |
+| 触发限流 | `rate_limited` | 延迟 1-2 秒后重试 |
+| 服务端内部错误 | `internal_error` | 延迟重试（Exponential Backoff） |
+
+**订阅最佳实践**：
+
+1. **分批订阅**：
+   - 避免一次性订阅大量数据源（建议每批最多 20 个）
+   - 使用 `await waitForAck()` 确保每批订阅成功后再继续
+
+2. **智能订阅**：
+   - 进入页面时订阅，离开页面时取消订阅（节省资源）
+   - 根据用户行为动态调整订阅列表
+
+3. **重连恢复订阅**：
+   - 维护当前订阅列表的缓存
+   - WebSocket 重连后：先重新鉴权，再恢复订阅
+
+4. **处理部分失败**：
+   - 检查 `SubscribeAck` 的 `code` 和 `failed_items`
+   - 根据 `reason` 采取不同策略（移除/提示/重试）
+   - 记录失败日志便于排查问题
+
 ## 推送事件类型与订阅
 
 ### 通知订阅设置与事件映射
@@ -724,6 +805,7 @@ WebSocket 推送分为**自动推送**和**需要订阅**两种模式。
 | 群组邀请响应通知 | `group_invite_response_enabled` | `GroupInviteResponse` | `group_invite_response` |
 | 群组申请通知 | `group_application_enabled` | `GroupApplicationReceived` | `group_application` |
 | 群组申请响应通知 | `group_application_response_enabled` | `GroupApplicationResponse` | `group_application_response` |
+| 群公告通知 | `group_announcement_enabled` | `GroupAnnouncementCreated` | 跟随群聊订阅 |
 | 消息提及通知 | `message_mention_enabled` | `GroupMessageNew` (含 @提及) | 跟随消息订阅 |
 | 瞬间点赞通知 | `moment_like_enabled` | `MomentLiked` | `moment_like` |
 | 瞬间评论通知 | `moment_comment_enabled` | `MomentCommented` | `moment_comment` |

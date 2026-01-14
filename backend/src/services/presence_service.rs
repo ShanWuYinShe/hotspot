@@ -6,7 +6,6 @@
 use chrono::Utc;
 use redis::aio::ConnectionManager as RedisConnectionManager;
 use redis::AsyncCommands;
-use sqlx::PgPool;
 use std::collections::HashMap;
 
 use crate::constants::{REDIS_KEY_PRESENCE_LOCATION, REDIS_KEY_PRESENCE_ONLINE};
@@ -23,11 +22,15 @@ pub struct PresenceService {
 }
 
 impl PresenceService {
-    pub fn new(redis: RedisConnectionManager, pool: PgPool) -> Self {
+    pub fn new(
+        redis: RedisConnectionManager,
+        online_status_repo: UserOnlineStatusRepository,
+        user_settings_repo: UserSettingsRepository,
+    ) -> Self {
         Self {
             redis,
-            online_status_repo: UserOnlineStatusRepository::new(pool.clone()),
-            user_settings_repo: UserSettingsRepository::new(pool.clone()),
+            online_status_repo,
+            user_settings_repo,
         }
     }
 
@@ -112,7 +115,7 @@ impl PresenceService {
         // 添加 UserRepo 可能会导致循环引用 (UserRepo -> ... -> PresenceService -> UserRepo?)
         // UserRepo struct 本身没有引用 PresenceService。是 UserService 引用了两者。
         // 所以给 PresenceService 添加 UserRepo 是安全的。
-        
+
         // 暂时直接查库，避免修改 struct 依赖
         let row = sqlx::query!(
             r#"

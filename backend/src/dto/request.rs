@@ -15,6 +15,8 @@ pub struct RegisterRequest {
     /// 客户端类型：web/app（用于 refresh_token 投递方式）
     /// 强制：客户端必须显式传递，避免服务端推断导致的行为漂移
     pub client_type: String,
+    /// 可选：如果通过手机验证码注册，提供此 token
+    pub verify_token: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -50,8 +52,22 @@ pub struct RefreshTokenRequest {
 pub struct CheckStatusRequest {}
 
 #[derive(Debug, Deserialize)]
+pub struct SendVerificationCodeRequest {
+    pub phone: String,
+    pub r#type: String, // 'register' | 'reset_password' | 'change_phone'
+    pub captcha_token: Option<String>, // 可选：图形验证码 token（防机器刷）
+}
+
+#[derive(Debug, Deserialize)]
+pub struct VerifyCodeRequest {
+    pub code_id: String,
+    pub code: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct RequestPasswordResetRequest {
     pub login_id: String,
+    pub verify_token: Option<String>, // 可选：如果通过验证码验证，提供此 token
 }
 
 #[derive(Debug, Deserialize)]
@@ -224,6 +240,8 @@ pub struct CreateMomentRequest {
     pub location: Location,
     pub tags: Option<Vec<String>>,
     pub image_file_ids: Option<Vec<String>>,
+    pub privacy_level: Option<String>, // 'public' | 'friends' | 'private'，未提供时使用用户全局设置
+    pub mentions: Option<Vec<i64>>,    // @ 提及的用户 ID 列表（最多 10 个）
 }
 
 #[derive(Debug, Deserialize)]
@@ -234,12 +252,20 @@ pub struct Location {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct MessageLocation {
+    pub location: Location,
+    pub address: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct UpdateMomentRequest {
     pub moment_id: String,
     pub description: Option<String>,
     pub image_file_ids: Option<Vec<String>>,
     pub tags: Option<Vec<String>>,
     pub location: Option<Location>,
+    pub privacy_level: Option<String>, // 'public' | 'friends' | 'private'
+    pub mentions: Option<Vec<i64>>,    // @ 提及的用户 ID 列表（最多 10 个）
 }
 
 #[derive(Debug, Deserialize)]
@@ -326,6 +352,7 @@ pub struct CreateCommentRequest {
     pub moment_id: String,
     pub content: String,
     pub parent_id: Option<String>,
+    pub mentions: Option<Vec<i64>>, // @ 提及的用户 ID 列表（最多 10 个）
 }
 
 #[derive(Debug, Deserialize)]
@@ -588,6 +615,36 @@ pub struct TransferOwnershipRequest {
     pub new_owner_id: i64,
 }
 
+// ==================== 群公告 API ====================
+
+#[derive(Debug, Deserialize)]
+pub struct CreateGroupAnnouncementRequest {
+    pub group_chat_id: String,
+    pub title: String,
+    pub content: String,
+    pub is_pinned: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GroupAnnouncementsRequest {
+    pub group_chat_id: String,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateGroupAnnouncementRequest {
+    pub announcement_id: String,
+    pub title: Option<String>,
+    pub content: Option<String>,
+    pub is_pinned: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteGroupAnnouncementRequest {
+    pub announcement_id: String,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct CancelApplicationRequest {
     pub application_id: String,
@@ -616,8 +673,9 @@ pub struct RejectInviteRequest {
 pub struct SendPrivateMessageRequest {
     pub target_user_id: i64,
     pub r#type: String,
-    pub content: Option<String>, // 文本消息必填，媒体消息可选
-    pub file_id: Option<String>, // 媒体消息必填，服务端转换为实际 url
+    pub content: Option<String>,           // 文本消息必填，媒体消息可选
+    pub file_id: Option<String>,           // 媒体消息必填，服务端转换为实际 url
+    pub location: Option<MessageLocation>, // 位置消息必填（当 type='location' 时）
     pub reply_to_message_id: Option<String>,
 }
 
@@ -658,6 +716,7 @@ pub struct SendGroupMessageRequest {
     pub r#type: String,
     pub content: Option<String>,
     pub file_id: Option<String>,
+    pub location: Option<MessageLocation>, // 位置消息必填（当 type='location' 时）
     pub reply_to_message_id: Option<String>,
     pub mentions: Option<Vec<i64>>,
 }
@@ -837,7 +896,7 @@ pub struct PresignUploadRequest {
     pub file_name: String,
     pub file_size: i64,
     pub mime_type: String,
-    pub category: String, // 'avatar' | 'group_avatar' | 'moment_image' | ...
+    pub category: crate::types::enums::FileCategory,
     pub md5: Option<String>,
 }
 
@@ -852,7 +911,7 @@ pub struct InitChunkedUploadRequest {
     pub file_name: String,
     pub file_size: i64,
     pub mime_type: String,
-    pub category: String,
+    pub category: crate::types::enums::FileCategory,
     pub chunk_count: i32,
 }
 
@@ -1020,7 +1079,6 @@ pub struct SuggestTagsRequest {
     pub prefix: String,
     pub limit: Option<i32>,
 }
-
 
 // ==================== 管理员 RBAC（admin/rbac） ====================
 
@@ -1215,7 +1273,6 @@ pub struct SearchUsersByLocationRequest {
     pub cursor: Option<String>,
 }
 
-
 #[derive(Debug, Deserialize)]
 // NOTE: Duplicate removed. Use the canonical `UserOpenTheDoorRequest` with `user_id` defined earlier in this file.
 pub struct MyFriendsRequest {
@@ -1240,4 +1297,3 @@ pub struct MyBlockedRequest {
     pub limit: Option<i32>,
     pub cursor: Option<String>,
 }
-

@@ -30,4 +30,24 @@ impl TokenUtil {
         hasher.update(token.as_bytes());
         hex::encode(hasher.finalize())
     }
+
+    /// 生成数字验证码（6位数字）
+    ///
+    /// 用于短信/邮件验证码
+    pub fn generate_numeric_code(length: usize) -> String {
+        use rand::Rng;
+        let mut rng = rand::rng();
+        (0..length)
+            .map(|_| rng.random_range(0..10).to_string())
+            .collect()
+    }
+
+    /// 生成通用 token（用于 verify_token等）
+    ///
+    /// 生成 URL-safe 的随机 token
+    pub fn generate_token() -> String {
+        let mut bytes = [0u8; 24]; // 24 bytes = 192 bits
+        rand::rng().fill_bytes(&mut bytes);
+        URL_SAFE_NO_PAD.encode(bytes)
+    }
 }

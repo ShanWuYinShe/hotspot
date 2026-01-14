@@ -161,9 +161,16 @@ impl SubscriptionManager {
     }
 
     /// 判断用户是否订阅了某种通知类型
-    pub async fn has_notification_subscription(&self, user_id: i64, notification_type: &str) -> bool {
-        self.has_subscription(user_id, &SubscriptionType::Notification(notification_type.to_string()))
-            .await
+    pub async fn has_notification_subscription(
+        &self,
+        user_id: i64,
+        notification_type: &str,
+    ) -> bool {
+        self.has_subscription(
+            user_id,
+            &SubscriptionType::Notification(notification_type.to_string()),
+        )
+        .await
     }
 }
 

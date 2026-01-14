@@ -97,6 +97,16 @@ pub enum AppError {
     #[error("请求过于频繁: {0}")]
     RateLimitExceeded(String),
 
+    #[error("操作频率限制: {0}")]
+    RateLimited(String),
+
+    // ============ 409xx：资源状态冲突错误 ============
+    #[error("资源状态冲突: {0}")]
+    ResourceStateConflict(String),
+
+    #[error("不是群组成员: {0}")]
+    NotGroupMember(String),
+
     // ============ 500xx/503xx：服务器内部错误 ============
     #[error("内部错误: {0}")]
     InternalError(String),
@@ -134,17 +144,18 @@ impl AppError {
             Self::Jwt(_) => 10101,
             Self::TokenInvalid(_) => 10101,
             Self::TokenMissing(_) => 10102,
-            Self::PasswordError(_) => 10105, // 密码错误
+            Self::PasswordError(_) => 10105,   // 密码错误
             Self::ReLoginRequired(_) => 10106, // 需要重新登录
 
             // 102xx：权限/访问控制
-            Self::Forbidden(_) => 10200, // 权限不足（通用）
-            Self::NotAdmin => 10204, // 非管理员
+            Self::Forbidden(_) => 10200,             // 权限不足（通用）
+            Self::NotAdmin => 10204,                 // 非管理员
             Self::AdminPermissionDenied(_) => 10205, // 管理员权限不足
             Self::PrivateChatNotAllowed(_) => 10210, // 对方不允许接收私聊
-            Self::BlockedByUser(_) => 10211, // 已被对方拉黑
-            Self::GroupPasswordError(_) => 10212, // 群组密码错误
-            Self::FollowNotAllowed(_) => 10213, // 对方不允许被关注
+            Self::NotGroupMember(_) => 10416,        // 不是群组成员
+            Self::BlockedByUser(_) => 10211,         // 已被对方拉黑
+            Self::GroupPasswordError(_) => 10212,    // 群组密码错误
+            Self::FollowNotAllowed(_) => 10213,      // 对方不允许被关注
 
             // 103xx：资源不存在
             Self::UserNotFound(_) => 10310,
@@ -156,7 +167,8 @@ impl AppError {
             Self::NotFound(_) => 10300,
 
             // 104xx：业务冲突
-            Self::Conflict(_) => 10402, // 资源状态冲突
+            Self::Conflict(_) => 10402,                   // 资源状态冲突
+            Self::ResourceStateConflict(_) => 10402,      // 资源状态冲突
             Self::FollowRequestAlreadyExists(_) => 10413, // 关注请求已存在
 
             // 100xx：游标错误
@@ -164,6 +176,7 @@ impl AppError {
 
             // 105xx：速率限制/配额
             Self::RateLimitExceeded(_) => 10500, // 请求过于频繁（通用）
+            Self::RateLimited(_) => 10500,       // 操作频率限制
             Self::MessageLimitReached(_) => 10510, // 消息数量已达上限
 
             // 500xx：服务器内部错误

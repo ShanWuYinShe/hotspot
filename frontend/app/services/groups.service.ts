@@ -47,6 +47,12 @@ import type {
   MyInvitesRequest,
   AcceptInviteRequest,
   RejectInviteRequest,
+  // 群公告类型
+  GroupAnnouncementItem,
+  CreateGroupAnnouncementRequest,
+  ListGroupAnnouncementsRequest,
+  UpdateGroupAnnouncementRequest,
+  DeleteGroupAnnouncementRequest,
 } from "~/types/api";
 
 class GroupsService extends BaseService {
@@ -195,6 +201,33 @@ class GroupsService extends BaseService {
 
   async leaveGroup(request: LeaveGroupRequest) {
     return this.post<void>(GROUPS.ME.LEAVE, request);
+  }
+
+  // ============ 群公告管理 API ============
+
+  async getAnnouncements(request: ListGroupAnnouncementsRequest) {
+    return this.publicPost<PaginatedData<GroupAnnouncementItem>>(
+      GROUPS.ANNOUNCEMENTS.LIST,
+      request
+    );
+  }
+
+  async createAnnouncement(request: CreateGroupAnnouncementRequest) {
+    return this.post<GroupAnnouncementItem>(
+      GROUPS.ANNOUNCEMENTS.CREATE,
+      request
+    );
+  }
+
+  async updateAnnouncement(request: UpdateGroupAnnouncementRequest) {
+    return this.post<GroupAnnouncementItem>(
+      GROUPS.ANNOUNCEMENTS.UPDATE,
+      request
+    );
+  }
+
+  async deleteAnnouncement(request: DeleteGroupAnnouncementRequest) {
+    return this.post<void>(GROUPS.ANNOUNCEMENTS.DELETE, request);
   }
 }
 

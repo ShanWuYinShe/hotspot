@@ -10,7 +10,8 @@ use crate::error::{AppError, Result};
 #[derive(Debug, Clone)]
 pub struct UploadedFileData {
     pub file_id: Uuid,
-    pub url: String,
+    // url 字段已移除，请使用 storage_path 动态生成签名 URL
+    pub storage_path: String,
     pub thumbnail_url: Option<String>,
     pub file_size: i64,
     pub duration: Option<i32>,
@@ -19,12 +20,6 @@ pub struct UploadedFileData {
     pub height: Option<i32>,
     pub mime_type: String,
 }
-
-/// 文件验证结果 - validate_file 返回的 URL
-pub type FileValidationResult = String;
-
-// 注：分块上传使用 Redis 存储临时会话状态，数据库表 upload_sessions 和 upload_chunks
-// 作为备用方案保留，当前未使用
 
 #[derive(Clone)]
 pub struct FileRepository {
@@ -62,7 +57,7 @@ impl FileRepository {
                 thumbnail_url, mime_type, file_size, width, height, duration, checksum
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-            RETURNING file_id, url, thumbnail_url, file_size, duration, original_name, width, height, mime_type
+            RETURNING file_id, url, storage_path, thumbnail_url, file_size, duration, original_name, width, height, mime_type
             "#,
             file_id,
             uploader_id,
@@ -83,7 +78,7 @@ impl FileRepository {
 
         Ok(UploadedFileData {
             file_id: row.file_id,
-            url: row.url,
+            storage_path: row.storage_path,
             thumbnail_url: row.thumbnail_url,
             file_size: row.file_size,
             duration: row.duration,
@@ -94,16 +89,17 @@ impl FileRepository {
         })
     }
 
-    /// 验证文件所有权和分类，返回文件 URL
+    /// 验证文件所有权和分类，返回完整文件信息（不含 URL）
     pub async fn validate_file(
         &self,
         file_id: Uuid,
         uploader_id: i64,
         expected_category: &str,
-    ) -> Result<FileValidationResult> {
+    ) -> Result<UploadedFileData> {
         let row = sqlx::query!(
             r#"
-            SELECT uploader_id, category, url
+            SELECT file_id, uploader_id, category, url, storage_path, thumbnail_url,
+                   file_size, duration, original_name, width, height, mime_type
             FROM uploaded_files
             WHERE file_id = $1 AND is_deleted = FALSE
             "#,
@@ -124,7 +120,17 @@ impl FileRepository {
             )));
         }
 
-        Ok(row.url)
+        Ok(UploadedFileData {
+            file_id: row.file_id,
+            storage_path: row.storage_path,
+            thumbnail_url: row.thumbnail_url,
+            file_size: row.file_size,
+            duration: row.duration,
+            filename: row.original_name,
+            width: row.width,
+            height: row.height,
+            mime_type: row.mime_type,
+        })
     }
 
     /// 标记文件已使用
@@ -153,7 +159,7 @@ impl FileRepository {
     ) -> Result<UploadedFileData> {
         let row = sqlx::query!(
             r#"
-            SELECT file_id, uploader_id, category, url, thumbnail_url,
+            SELECT file_id, uploader_id, category, url, storage_path, thumbnail_url,
                    file_size, duration, original_name, width, height, mime_type
             FROM uploaded_files
             WHERE file_id = $1 AND is_deleted = FALSE
@@ -177,7 +183,7 @@ impl FileRepository {
 
         Ok(UploadedFileData {
             file_id: row.file_id,
-            url: row.url,
+            storage_path: row.storage_path,
             thumbnail_url: row.thumbnail_url,
             file_size: row.file_size,
             duration: row.duration,

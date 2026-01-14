@@ -1,5 +1,5 @@
 -- 007_system_module.sql
--- 系统模块：举报、信息流、系统配置
+-- 系统模块：举报、信息流、系统配置、公告、文件上传
 
 -- ============================================================
 -- 举报
@@ -100,6 +100,26 @@ CREATE INDEX idx_config_history_key ON system_config_history (config_key, change
 CREATE INDEX idx_config_history_changed_by ON system_config_history (changed_by, changed_at DESC);
 
 -- ============================================================
+-- 系统公告
+-- ============================================================
+CREATE TABLE system_announcements (
+    id BIGSERIAL PRIMARY KEY,
+    announcement_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
+    title VARCHAR(100) NOT NULL,
+    content TEXT NOT NULL,
+    severity VARCHAR(20) NOT NULL, -- 'info', 'warning', 'error'
+    action_url TEXT,
+    created_by BIGINT NOT NULL, -- admin user_id
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    send_push BOOLEAN NOT NULL DEFAULT FALSE,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at TIMESTAMPTZ,
+    CONSTRAINT check_announcement_severity CHECK (severity IN ('info', 'warning', 'error'))
+);
+
+CREATE INDEX idx_announcements_created ON system_announcements (created_at DESC) WHERE is_deleted = FALSE;
+
+-- ============================================================
 -- 上传文件（用于管理用户上传的文件，支持 file_id -> url 转换）
 -- ============================================================
 CREATE TABLE uploaded_files (
@@ -109,7 +129,7 @@ CREATE TABLE uploaded_files (
     category VARCHAR(50) NOT NULL,  -- 'avatar', 'group_avatar', 'moment_image', 'chat_image', 'chat_video', 'chat_audio', 'chat_file'
     original_name VARCHAR(255),
     storage_path VARCHAR(500) NOT NULL,  -- 存储路径
-    url VARCHAR(500) NOT NULL,  -- 可访问的URL
+    url VARCHAR(500) NOT NULL,  -- 可访问的URL (注意：虽然保留此字段，但新设计中应通过 sign_url 动态生成，此处存 storage_path 或占位)
     thumbnail_url VARCHAR(500),  -- 缩略图URL（仅图片/视频）
     mime_type VARCHAR(100) NOT NULL,
     file_size BIGINT NOT NULL,  -- 文件大小（字节）
@@ -182,5 +202,3 @@ INSERT INTO system_configs (key, value, type, category, description) VALUES
     ('pagination_max_limit', '100', 'number', 'pagination', '分页最大条数'),
     ('search_rate_limit', '100', 'number', 'rate_limit', '搜索速率限制（次/小时）'),
     ('message_rate_limit', '1000', 'number', 'rate_limit', '消息速率限制（次/小时）');
-
-

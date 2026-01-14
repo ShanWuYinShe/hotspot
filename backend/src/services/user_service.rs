@@ -1,5 +1,4 @@
 use redis::aio::ConnectionManager;
-use sqlx::PgPool;
 use std::collections::HashMap;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -7,33 +6,33 @@ use uuid::Uuid;
 use chrono::{Duration, Utc};
 
 use crate::{
-    constants::{LOCATION_CHANGE_THRESHOLD},
+    constants::LOCATION_CHANGE_THRESHOLD,
     dto::{
         request::{
-            AdminBanUserRequest, AdminUnbanUserRequest, AdminUserSearchRequest,
-            BlockRequest, DeleteAccountRequest, FollowRequest, MyBlockedRequest,
+            AdminBanUserRequest, AdminUnbanUserRequest, AdminUserSearchRequest, BlockRequest,
+            DeleteAccountRequest, FollowRequest, GetRelationshipRequest, MyBlockedRequest,
             MyFollowersRequest, MyFollowingRequest, MyFriendsRequest, SearchUsersByKeywordRequest,
             SearchUsersByLocationRequest, SearchUsersByTagRequest, SetRemarkRequest,
             UnblockRequest, UnfollowRequest, UpdateLocationRequest, UpdateProfileRequest,
             UpdateSettingsRequest, UpgradeAccountRequest, UserFollowersRequest,
             UserFollowingRequest, UserFriendsRequest, UserGroupsRequest, UserLikedMomentsRequest,
-            UserOpenTheDoorRequest, GetRelationshipRequest, UserStatsRequest,
+            UserOpenTheDoorRequest, UserStatsRequest,
         },
         response::{
-            AdminUserItem, AuthData, BlockedUserItem, FollowerItem, FollowingItem, FriendListItem, RelativeLocation,
-            GroupInfo, MomentItem, MomentImage, MyProfileData, PaginatedData, PaginationMeta, UserDetailData,
-            UserInfo, UserRelation, UserItem, UserSettingsData, UserStatsData, Location,
+            AdminUserItem, AuthData, BlockedUserItem, FollowerItem, FollowingItem, FriendListItem,
+            GroupInfo, Location, MomentImage, MomentItem, MyProfileData, PaginatedData,
+            PaginationMeta, RelativeLocation, UserDetailData, UserInfo, UserItem, UserRelation,
+            UserSettingsData, UserStatsData,
         },
     },
     error::{AppError, Result},
     events::event_types::AppEvent,
     repositories::{
-        device_token_repo::DeviceTokenRepository, file_repo::FileRepository,
-        session_repo::SessionRepository, tag_repo::TagRepository,
-        user_blocks_repo::UserBlocksRepository, user_follows_repo::UserFollowsRepository,
+        device_token_repo::DeviceTokenRepository, session_repo::SessionRepository,
+        tag_repo::TagRepository, user_blocks_repo::UserBlocksRepository,
+        user_follows_repo::UserFollowsRepository,
         user_friend_remarks_repo::UserFriendRemarksRepository,
-        user_location_history_repo::UserLocationHistoryRepository,
-        user_repo::UserRepository,
+        user_location_history_repo::UserLocationHistoryRepository, user_repo::UserRepository,
         user_settings_repo::UserSettingsRepository,
     },
     types::enums::{ChatPermission, PrivacyLevel},
@@ -53,30 +52,47 @@ pub struct UserService {
     device_token_repo: DeviceTokenRepository,
     session_repo: SessionRepository,
     tag_repo: TagRepository,
-    file_repo: FileRepository,
+    group_member_repo: crate::repositories::group_member_repo::GroupMemberRepository,
+    moment_repo: crate::repositories::moment_repo::MomentRepository,
     presence_service: crate::services::presence_service::PresenceService,
     redis: ConnectionManager,
+    media_service: crate::services::media_service::MediaService,
 }
 
 impl UserService {
-    pub fn new(pool: &PgPool, redis: &ConnectionManager, event_bus: Arc<EventBus>) -> Self {
+    pub fn new(
+        event_bus: Arc<EventBus>,
+        user_repo: UserRepository,
+        user_settings_repo: UserSettingsRepository,
+        user_location_history_repo: UserLocationHistoryRepository,
+        follows_repo: UserFollowsRepository,
+        blocks_repo: UserBlocksRepository,
+        remarks_repo: UserFriendRemarksRepository,
+        device_token_repo: DeviceTokenRepository,
+        session_repo: SessionRepository,
+        tag_repo: TagRepository,
+        group_member_repo: crate::repositories::group_member_repo::GroupMemberRepository,
+        moment_repo: crate::repositories::moment_repo::MomentRepository,
+        presence_service: crate::services::presence_service::PresenceService,
+        redis: ConnectionManager,
+        media_service: crate::services::media_service::MediaService,
+    ) -> Self {
         Self {
             event_bus,
-            user_repo: UserRepository::new(pool.clone()),
-            user_settings_repo: UserSettingsRepository::new(pool.clone()),
-            user_location_history_repo: UserLocationHistoryRepository::new(pool.clone()),
-            follows_repo: UserFollowsRepository::new(pool.clone()),
-            blocks_repo: UserBlocksRepository::new(pool.clone()),
-            remarks_repo: UserFriendRemarksRepository::new(pool.clone()),
-            device_token_repo: DeviceTokenRepository::new(pool.clone()),
-            session_repo: SessionRepository::new(pool.clone()),
-            tag_repo: TagRepository::new(pool.clone()),
-            file_repo: FileRepository::new(pool.clone()),
-            presence_service: crate::services::presence_service::PresenceService::new(
-                redis.clone(),
-                pool.clone(),
-            ),
-            redis: redis.clone(),
+            user_repo,
+            user_settings_repo,
+            user_location_history_repo,
+            follows_repo,
+            blocks_repo,
+            remarks_repo,
+            device_token_repo,
+            session_repo,
+            tag_repo,
+            group_member_repo,
+            moment_repo,
+            presence_service,
+            redis,
+            media_service,
         }
     }
 
@@ -93,11 +109,20 @@ impl UserService {
         let limit = Validator::validate_limit(req.limit, 100)?;
         let cursor = Self::parse_cursor(req.cursor.as_deref());
 
-        Validator::validate_coordinates(req.reference_point.latitude, req.reference_point.longitude)?;
+        Validator::validate_coordinates(
+            req.reference_point.latitude,
+            req.reference_point.longitude,
+        )?;
 
         let (users, next_cursor) = self
             .user_repo
-            .search_by_keyword(&req.kw, req.reference_point.latitude, req.reference_point.longitude, limit as i64, cursor)
+            .search_by_keyword(
+                &req.kw,
+                req.reference_point.latitude,
+                req.reference_point.longitude,
+                limit as i64,
+                cursor,
+            )
             .await?;
 
         self.build_user_search_results(users, next_cursor).await
@@ -111,7 +136,10 @@ impl UserService {
         let limit = Validator::validate_limit(req.limit, 100)?;
         let cursor = Self::parse_cursor(req.cursor.as_deref());
 
-        Validator::validate_coordinates(req.reference_point.latitude, req.reference_point.longitude)?;
+        Validator::validate_coordinates(
+            req.reference_point.latitude,
+            req.reference_point.longitude,
+        )?;
 
         // 从标签库获取用户ID列表
         let (user_ids, next_cursor) = self
@@ -122,7 +150,11 @@ impl UserService {
         // 根据ID获取用户信息并计算距离
         let users = self
             .user_repo
-            .find_by_ids_with_distance(&user_ids, req.reference_point.latitude, req.reference_point.longitude)
+            .find_by_ids_with_distance(
+                &user_ids,
+                req.reference_point.latitude,
+                req.reference_point.longitude,
+            )
             .await?;
 
         self.build_user_search_results(users, next_cursor).await
@@ -136,7 +168,10 @@ impl UserService {
         let limit = Validator::validate_limit(req.limit, 100)?;
         let cursor = Self::parse_cursor(req.cursor.as_deref());
 
-        Validator::validate_coordinates(req.reference_point.latitude, req.reference_point.longitude)?;
+        Validator::validate_coordinates(
+            req.reference_point.latitude,
+            req.reference_point.longitude,
+        )?;
         Validator::validate_radius_required(req.radius, 50000.0)?;
 
         let (users, next_cursor) = self
@@ -173,8 +208,7 @@ impl UserService {
             .ok_or_else(|| AppError::UserNotFound("用户不存在".to_string()))?;
 
         // 获取用户标签：find_by_ids_with_distance 不包含 tags，因此这里单独查询
-        let tag_repo = TagRepository::new(self.user_repo.pool().clone());
-        let tags = match tag_repo.get_user_tags(user_id).await {
+        let tags = match self.tag_repo.get_user_tags(user_id).await {
             Ok(tags) => {
                 if tags.is_empty() {
                     None
@@ -211,7 +245,7 @@ impl UserService {
                 latitude: user.latitude,
                 longitude: user.longitude,
                 location_name: user.location_name.clone(),
-                distance: user.distance as i32,
+                distance: user.distance,
                 bearing_degrees: user.bearing_degrees,
             })
         } else {
@@ -226,7 +260,11 @@ impl UserService {
                 user_id: user.user_id,
                 nickname: user.nickname.clone(),
                 avatar_url: user.avatar_url.clone(),
-                bio: user.bio.clone(),
+                bio: if user.bio.is_empty() {
+                    None
+                } else {
+                    Some(user.bio.clone())
+                },
                 user_type: user.user_type,
                 tags,
                 is_online,
@@ -255,48 +293,56 @@ impl UserService {
             .await;
 
         // 批量获取位置可见性设置
-        let location_visible_map = self.presence_service.batch_get_location_visible(&user_ids).await;
+        let location_visible_map = self
+            .presence_service
+            .batch_get_location_visible(&user_ids)
+            .await;
 
-        let items: Vec<UserItem> = users
-            .iter()
-            .map(|user| {
-                let (is_online, last_online) = online_status_map
-                    .get(&user.user_id)
-                    .cloned()
-                    .unwrap_or((None, None));
+        let mut items = Vec::with_capacity(users.len());
+        for user in users {
+            let (is_online, last_online) = online_status_map
+                .get(&user.user_id)
+                .cloned()
+                .unwrap_or((None, None));
 
-                // 检查位置是否可见
-                let location_visible = location_visible_map
-                    .get(&user.user_id)
-                    .copied()
-                    .unwrap_or(true);
+            // 检查位置是否可见
+            let location_visible = location_visible_map
+                .get(&user.user_id)
+                .copied()
+                .unwrap_or(true);
 
-                let location = if location_visible {
-                    Some(RelativeLocation {
-                        latitude: user.latitude,
-                        longitude: user.longitude,
-                        location_name: user.location_name.clone(),
-                        distance: user.distance as i32,
-                        bearing_degrees: user.bearing_degrees,
-                    })
-                } else {
+            let location = if location_visible {
+                Some(RelativeLocation {
+                    latitude: user.latitude,
+                    longitude: user.longitude,
+                    location_name: user.location_name.clone(),
+                    distance: user.distance,
+                    bearing_degrees: user.bearing_degrees,
+                })
+            } else {
+                None
+            };
+
+            items.push(UserItem {
+                user_id: user.user_id,
+                nickname: user.nickname.clone(),
+                avatar_url: self
+                    .media_service
+                    .sign_url_if_path(user.avatar_url.as_deref())
+                    .await,
+                bio: if user.bio.is_empty() {
                     None
-                };
-
-                UserItem {
-                    user_id: user.user_id,
-                    nickname: user.nickname.clone(),
-                    avatar_url: user.avatar_url.clone(),
-                    bio: user.bio.clone(),
-                    tags: tags_map.get(&user.user_id).cloned(),
-                    is_online,
-                    last_online,
-                    user_type: user.user_type,
-                    location,
-                    relation: None,
-                }
-            })
-            .collect();
+                } else {
+                    Some(user.bio.clone())
+                },
+                tags: tags_map.get(&user.user_id).cloned(),
+                is_online,
+                last_online,
+                user_type: user.user_type,
+                location,
+                relation: None,
+            });
+        }
 
         Ok(PaginatedData {
             items,
@@ -403,26 +449,33 @@ impl UserService {
             Validator::validate_length(nickname, "昵称", 1, 100)?;
         }
 
-        // 解析 avatar_file_id 为 URL
-        let avatar_url = match &req.avatar_file_id {
+        // 解析 avatar_file_id 为 (url, path)
+        let (_avatar_url, avatar_storage_path) = match &req.avatar_file_id {
             Some(file_id) => {
                 let uuid = Uuid::parse_str(file_id)
                     .map_err(|_| AppError::BadRequest("无效的文件ID格式".to_string()))?;
-                let url = self
-                    .file_repo
+                let file_data = self
+                    .media_service
                     .validate_file(uuid, user_id, "avatar")
                     .await?;
-                self.file_repo.mark_as_used(uuid).await?;
-                Some(url)
+                self.media_service.mark_as_used(uuid).await?;
+                (Some(file_data.clone()), Some(file_data))
             }
-            None => None,
+            None => (None, None),
         };
+
+        // Note: For user profile, we might still be storing URL in DB for now
+        // But for consistency with S3 presign expiration, we should store storage_path.
+        // However, the `user_repo.update_profile` expects `avatar_url`.
+        // If we store `storage_path` in `avatar_url` column, we need to sign it on read.
+        // Let's assume we store `storage_path` in `avatar_url` column for now,
+        // as `avatar_url` in users table is just a string.
 
         self.user_repo
             .update_profile(
                 user_id,
                 req.nickname.as_deref(),
-                avatar_url.as_deref(),
+                avatar_storage_path.as_deref(), // Store storage_path
                 req.bio.as_deref(),
             )
             .await?;
@@ -672,26 +725,31 @@ impl UserService {
         let remarks = self.remarks_repo.get_batch(user_id, &friend_ids).await?;
 
         // 批量获取在线状态（Redis 优先，数据库 Fallback）
-        let online_status_map = self.presence_service.batch_get_online_status_raw(&friend_ids).await;
+        let online_status_map = self
+            .presence_service
+            .batch_get_online_status_raw(&friend_ids)
+            .await;
 
-        let items: Vec<FriendListItem> = mutual_follows
-            .iter()
-            .filter_map(|r| {
-                let user = user_map.get(&r.user_id)?;
-                Some(FriendListItem {
+        let mut items = Vec::with_capacity(mutual_follows.len());
+        for r in mutual_follows {
+            if let Some(user) = user_map.get(&r.user_id) {
+                items.push(FriendListItem {
                     user: UserInfo {
                         user_id: user.user_id,
                         nickname: user.nickname.clone(),
-                        avatar_url: user.avatar_url.clone(),
+                        avatar_url: self
+                            .media_service
+                            .sign_url_if_path(user.avatar_url.as_deref())
+                            .await,
                         user_type: user.user_type,
                     },
                     remark: remarks.get(&r.user_id).cloned(),
                     is_online: online_status_map.get(&r.user_id).copied(),
                     followed_at: r.followed_at.to_rfc3339(),
                     followed_back_at: r.followed_back_at.to_rfc3339(),
-                })
-            })
-            .collect();
+                });
+            }
+        }
 
         let next_cursor_str = next_cursor;
 
@@ -739,27 +797,29 @@ impl UserService {
             .batch_get_online_status_with_privacy(&user_ids)
             .await;
 
-        let items = follow_rows
-            .iter()
-            .filter_map(|r| {
-                let user = user_map.get(&r.following_id)?;
+        let mut items = Vec::with_capacity(follow_rows.len());
+        for r in follow_rows {
+            if let Some(user) = user_map.get(&r.following_id) {
                 let is_online = online_status_map
                     .get(&r.following_id)
                     .and_then(|(online, _)| *online);
 
-                Some(FollowingItem {
+                items.push(FollowingItem {
                     user: UserInfo {
                         user_id: user.user_id,
                         nickname: user.nickname.clone(),
-                        avatar_url: user.avatar_url.clone(),
+                        avatar_url: self
+                            .media_service
+                            .sign_url_if_path(user.avatar_url.as_deref())
+                            .await,
                         user_type: user.user_type,
                     },
                     followed_at: r.created_at.to_rfc3339(),
                     is_mutual: r.is_mutual,
                     is_online,
-                })
-            })
-            .collect();
+                });
+            }
+        }
 
         let next_cursor_str = next_cursor;
 
@@ -807,27 +867,29 @@ impl UserService {
             .batch_get_online_status_with_privacy(&user_ids)
             .await;
 
-        let items = follower_rows
-            .iter()
-            .filter_map(|r| {
-                let user = user_map.get(&r.follower_id)?;
+        let mut items = Vec::with_capacity(follower_rows.len());
+        for r in follower_rows {
+            if let Some(user) = user_map.get(&r.follower_id) {
                 let is_online = online_status_map
                     .get(&r.follower_id)
                     .and_then(|(online, _)| *online);
 
-                Some(FollowerItem {
+                items.push(FollowerItem {
                     user: UserInfo {
                         user_id: user.user_id,
                         nickname: user.nickname.clone(),
-                        avatar_url: user.avatar_url.clone(),
+                        avatar_url: self
+                            .media_service
+                            .sign_url_if_path(user.avatar_url.as_deref())
+                            .await,
                         user_type: user.user_type,
                     },
                     followed_at: r.created_at.to_rfc3339(),
                     is_following_back: r.is_following_back,
                     is_online,
-                })
-            })
-            .collect();
+                });
+            }
+        }
 
         let next_cursor_str = next_cursor;
 
@@ -885,15 +947,18 @@ impl UserService {
 
         let friend_ids: Vec<i64> = mutual_follows.iter().map(|r| r.user_id).collect();
         let users = self.user_repo.find_profiles(&friend_ids).await?;
-        let items = users
-            .into_iter()
-            .map(|u| UserInfo {
+        let mut items = Vec::with_capacity(users.len());
+        for u in users {
+            items.push(UserInfo {
                 user_id: u.user_id,
                 nickname: u.nickname,
-                avatar_url: u.avatar_url,
+                avatar_url: self
+                    .media_service
+                    .sign_url_if_path(u.avatar_url.as_deref())
+                    .await,
                 user_type: u.user_type,
-            })
-            .collect();
+            });
+        }
 
         let next_cursor_str = next_cursor;
 
@@ -950,15 +1015,18 @@ impl UserService {
         }
 
         let users = self.user_repo.find_profiles(&user_ids).await?;
-        let items = users
-            .into_iter()
-            .map(|u| UserInfo {
+        let mut items = Vec::with_capacity(users.len());
+        for u in users {
+            items.push(UserInfo {
                 user_id: u.user_id,
                 nickname: u.nickname,
-                avatar_url: u.avatar_url,
+                avatar_url: self
+                    .media_service
+                    .sign_url_if_path(u.avatar_url.as_deref())
+                    .await,
                 user_type: u.user_type,
-            })
-            .collect();
+            });
+        }
 
         let next_cursor_str = next_cursor;
 
@@ -1015,15 +1083,18 @@ impl UserService {
         }
 
         let users = self.user_repo.find_profiles(&user_ids).await?;
-        let items = users
-            .into_iter()
-            .map(|u| UserInfo {
+        let mut items = Vec::with_capacity(users.len());
+        for u in users {
+            items.push(UserInfo {
                 user_id: u.user_id,
                 nickname: u.nickname,
-                avatar_url: u.avatar_url,
+                avatar_url: self
+                    .media_service
+                    .sign_url_if_path(u.avatar_url.as_deref())
+                    .await,
                 user_type: u.user_type,
-            })
-            .collect();
+            });
+        }
 
         let next_cursor_str = next_cursor;
 
@@ -1064,22 +1135,27 @@ impl UserService {
         let users = self.user_repo.find_profiles(&user_ids).await?;
         let user_map: HashMap<i64, _> = users.into_iter().map(|u| (u.user_id, u)).collect();
 
-        let items = block_rows
-            .iter()
-            .filter_map(|r| {
-                let user = user_map.get(&r.blocked_id)?;
-                Some(BlockedUserItem {
-                    user: UserInfo {
-                        user_id: user.user_id,
-                        nickname: user.nickname.clone(),
-                        avatar_url: user.avatar_url.clone(),
-                        user_type: user.user_type,
-                    },
-                    blocked_at: r.created_at.to_rfc3339(),
-                    reason: r.reason.clone(),
-                })
-            })
-            .collect();
+        let items = {
+            let mut items_vec = Vec::with_capacity(block_rows.len());
+            for r in &block_rows {
+                if let Some(user) = user_map.get(&r.blocked_id) {
+                    items_vec.push(BlockedUserItem {
+                        user: UserInfo {
+                            user_id: user.user_id,
+                            nickname: user.nickname.clone(),
+                            avatar_url: self
+                                .media_service
+                                .sign_url_if_path(user.avatar_url.as_deref())
+                                .await,
+                            user_type: user.user_type,
+                        },
+                        blocked_at: r.created_at.to_rfc3339(),
+                        reason: r.reason.clone(),
+                    });
+                }
+            }
+            items_vec
+        };
 
         let next_cursor_str = next_cursor;
 
@@ -1145,8 +1221,15 @@ impl UserService {
         let profile = MyProfileData {
             user_id: user.user_id,
             nickname: user.nickname,
-            avatar_url: user.avatar_url,
-            bio: user.bio,
+            avatar_url: self
+                .media_service
+                .sign_url_if_path(user.avatar_url.as_deref())
+                .await,
+            bio: if user.bio.is_empty() {
+                None
+            } else {
+                Some(user.bio)
+            },
             tags,
             email,
             phone,
@@ -1450,7 +1533,6 @@ impl UserService {
         Ok(())
     }
 
-
     /// 获取指定用户加入的公开群组
     pub async fn get_user_groups_list(
         &self,
@@ -1466,26 +1548,25 @@ impl UserService {
         let cursor = Self::parse_cursor(req.cursor.as_deref());
         let limit = Validator::validate_limit(req.limit, 100)? as i32;
 
-        let group_member_repo = crate::repositories::group_member_repo::GroupMemberRepository::new(
-            self.user_repo.pool().clone(),
-            self.redis.clone(),
-        );
-
         // 单条 JOIN SQL：直接返回 group_info（避免 N+1 与错误的“成员列表limit=1000计数”）
-        let (rows, next_cursor) = group_member_repo
+        let (rows, next_cursor) = self
+            .group_member_repo
             .list_public_group_infos_by_user(target_user_id, limit, cursor)
             .await?;
 
-        let items = rows
-            .into_iter()
-            .map(|r| GroupInfo {
+        let mut items = Vec::with_capacity(rows.len());
+        for r in rows {
+            items.push(GroupInfo {
                 group_chat_id: r.group_id.to_string(),
                 name: r.name,
-                avatar_url: r.avatar_url,
+                avatar_url: self
+                    .media_service
+                    .sign_url_if_path(r.avatar_url.as_deref())
+                    .await,
                 members_count: r.members_count,
                 location: None,
-            })
-            .collect();
+            });
+        }
 
         Ok(PaginatedData {
             items,
@@ -1526,25 +1607,31 @@ impl UserService {
         }
 
         // 验证坐标
-        Validator::validate_coordinates(req.reference_point.latitude, req.reference_point.longitude)?;
+        Validator::validate_coordinates(
+            req.reference_point.latitude,
+            req.reference_point.longitude,
+        )?;
 
         let cursor = Self::parse_cursor(req.cursor.as_deref());
         let limit = Validator::validate_limit(req.limit, 100)? as i32;
 
         // 获取用户点赞的瞬间
-        let moment_repo =
-            crate::repositories::moment_repo::MomentRepository::new(self.user_repo.pool().clone());
-
         // 这里的 get_user_liked_moments 之前已经被重构为返回 (Vec<MomentLikeRow>, Option<String>)
-        let (moment_likes, next_cursor) = moment_repo
+        let (moment_likes, next_cursor) = self
+            .moment_repo
             .get_user_liked_moments(target_user_id, limit as i64, cursor)
             .await?;
 
         let moment_uuids: Vec<Uuid> = moment_likes.iter().map(|m| m.moment_id).collect();
 
         // 批量获取瞬间信息（带距离计算）
-        let moments = moment_repo
-            .find_by_ids_with_distance(&moment_uuids, req.reference_point.latitude, req.reference_point.longitude)
+        let moments = self
+            .moment_repo
+            .find_by_ids_with_distance(
+                &moment_uuids,
+                req.reference_point.latitude,
+                req.reference_point.longitude,
+            )
             .await?;
 
         // 获取用户信息
@@ -1555,52 +1642,66 @@ impl UserService {
         let user_map: HashMap<i64, _> = users.into_iter().map(|u| (u.user_id, u)).collect();
 
         // 获取统计数据
-        let stats = moment_repo.get_stats_batch(&moment_uuids).await?;
+        let stats = self.moment_repo.get_stats_batch(&moment_uuids).await?;
 
         // 获取标签
         let tags_map = self.tag_repo.get_moment_tags_batch(&moment_uuids).await?;
 
-        let items: Vec<MomentItem> = moments
-            .into_iter()
-            .filter_map(|m| {
-                let user = user_map.get(&m.user_id)?;
+        let mut items = Vec::with_capacity(moments.len());
+        for m in moments {
+            if let Some(user) = user_map.get(&m.user_id) {
                 let (likes_count, comments_count) =
                     stats.get(&m.moment_id).copied().unwrap_or((0, 0));
                 let tags = tags_map.get(&m.moment_id).cloned().unwrap_or_default();
 
-                let images = m.images.into_iter().map(|url| MomentImage {
-                    url,
-                    width: None,
-                    height: None,
-                    content_type: None,
-                }).collect();
+                let mut images = Vec::with_capacity(m.images.len());
+                for path in &m.images {
+                    let url = match self.media_service.sign_url(path).await {
+                        Ok(u) => u,
+                        Err(e) => {
+                            tracing::warn!("Failed to sign url for path {}: {}", path, e);
+                            path.clone()
+                        }
+                    };
+                    images.push(MomentImage {
+                        url,
+                        width: None,
+                        height: None,
+                        content_type: None,
+                    });
+                }
 
-                Some(MomentItem {
+                items.push(MomentItem {
                     moment_id: m.moment_id.to_string(),
                     user: UserInfo {
                         user_id: user.user_id,
                         nickname: user.nickname.clone(),
-                        avatar_url: user.avatar_url.clone(),
+                        avatar_url: self
+                            .media_service
+                            .sign_url_if_path(user.avatar_url.as_deref())
+                            .await,
                         user_type: user.user_type,
                     },
                     description: m.description,
                     images: Some(images),
                     tags,
+                    mentions: m.mentions.clone(),
+                    privacy_level: m.privacy_level.clone(),
                     created_at: m.created_at.to_rfc3339(),
                     likes_count: likes_count as i32,
                     comments_count: comments_count as i32,
-                    location: Some(RelativeLocation {
+                    location: RelativeLocation {
                         latitude: m.latitude,
                         longitude: m.longitude,
                         location_name: m.location_name,
-                        distance: m.distance as i32,
+                        distance: m.distance,
                         bearing_degrees: m.bearing_degrees,
-                    }),
+                    },
                     is_liked: None,
                     is_favorited: None,
-                })
-            })
-            .collect();
+                });
+            }
+        }
 
         Ok(PaginatedData {
             items,
@@ -1620,27 +1721,36 @@ impl UserService {
         let limit = Validator::validate_limit(req.limit, 50)? as i64;
         let cursor = Self::parse_cursor(req.cursor.as_deref());
 
-        let (users, next_cursor) = self.user_repo.admin_search(
-            req.user_id,
-            req.nickname.as_deref(),
-            req.login_id.as_deref(),
-            req.status.as_deref(),
-            req.user_type,
-            limit,
-            cursor
-        ).await?;
+        let (users, next_cursor) = self
+            .user_repo
+            .admin_search(
+                req.user_id,
+                req.nickname.as_deref(),
+                req.login_id.as_deref(),
+                req.status.as_deref(),
+                req.user_type,
+                limit,
+                cursor,
+            )
+            .await?;
 
-        let items = users.into_iter().map(|u| AdminUserItem {
-            user_id: u.user_id,
-            nickname: u.nickname,
-            avatar_url: u.avatar_url,
-            user_type: u.user_type,
-            status: u.status,
-            created_at: u.created_at.to_rfc3339(),
-            last_active_at: u.last_active_at.map(|t| t.to_rfc3339()),
-            login_id: u.login_id.unwrap_or_default(),
-            is_online: false, // TODO: fetch from presence if needed, but not critical for admin list
-        }).collect();
+        let mut items = Vec::with_capacity(users.len());
+        for u in users {
+            items.push(AdminUserItem {
+                user_id: u.user_id,
+                nickname: u.nickname,
+                avatar_url: self
+                    .media_service
+                    .sign_url_if_path(u.avatar_url.as_deref())
+                    .await,
+                user_type: u.user_type,
+                status: u.status,
+                created_at: u.created_at.to_rfc3339(),
+                last_active_at: u.last_active_at.map(|t| t.to_rfc3339()),
+                login_id: u.login_id.unwrap_or_default(),
+                is_online: false, // TODO: fetch from presence if needed, but not critical for admin list
+            });
+        }
 
         Ok(PaginatedData {
             items,
@@ -1657,7 +1767,9 @@ impl UserService {
             return Err(AppError::UserNotFound("用户不存在".to_string()));
         }
         // 2. 执行封禁
-        self.user_repo.ban(req.user_id, req.reason.as_deref(), req.duration_days).await?;
+        self.user_repo
+            .ban(req.user_id, req.reason.as_deref(), req.duration_days)
+            .await?;
         // 3. 强制登出（撤销所有会话）
         self.session_repo.revoke_all_by_user(req.user_id).await?;
         Ok(())
@@ -1669,7 +1781,9 @@ impl UserService {
             return Err(AppError::UserNotFound("用户不存在".to_string()));
         }
         // 2. 执行解封
-        self.user_repo.unban(req.user_id, req.reason.as_deref()).await?;
+        self.user_repo
+            .unban(req.user_id, req.reason.as_deref())
+            .await?;
         Ok(())
     }
 }

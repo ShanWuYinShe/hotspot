@@ -12,18 +12,18 @@ pub struct GroupRow {
     pub id: i64,
     pub group_id: Uuid, // Renamed from group_chat_id to match Service usage
     pub name: String,
-    pub description: Option<String>,
-    pub avatar_url: Option<String>,
+    pub description: String, // NOT NULL DEFAULT '' (empty description = empty string)
+    pub avatar_url: Option<String>, // NULL = use default avatar
     pub owner_id: i64,
-    pub latitude: Option<f64>,
-    pub longitude: Option<f64>,
+    pub latitude: Option<f64>,    // NULL = location not set (0.0 ≠ NULL)
+    pub longitude: Option<f64>,   // NULL = location not set
     pub location: Option<String>, // PostGIS geography type stored as WKT string
-    pub location_name: Option<String>,
+    pub location_name: Option<String>, // NULL = location not set
     pub created_at: DateTime<Utc>,
-    pub updated_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>, // NULL = never updated
     pub is_deleted: bool,
     pub is_dismissed: bool,
-    pub deleted_at: Option<DateTime<Utc>>,
+    pub deleted_at: Option<DateTime<Utc>>, // NULL = not deleted
 }
 
 /// 管理员搜索群组结果
@@ -56,7 +56,7 @@ impl GroupRepository {
     pub async fn create(
         &self,
         name: String,
-        description: Option<String>,
+        description: String, // NOT NULL DEFAULT ''
         avatar_url: Option<String>,
         owner_id: i64,
         latitude: Option<f64>,
@@ -162,12 +162,12 @@ impl GroupRepository {
                 (SELECT COUNT(*)::int4 FROM group_members gm WHERE gm.group_chat_id = g.group_chat_id AND gm.is_deleted = FALSE) as "member_count!",
                 (gs.password_hash IS NOT NULL) as "has_password!",
                 ST_Distance(
-                    ST_SetSRID(ST_MakePoint(COALESCE(g.longitude, 112.682524), COALESCE(g.latitude, 35.154922)), 4326)::geography,
+                    COALESCE(g.location::geography, ST_SetSRID(ST_MakePoint(112.682524, 35.154922), 4326)::geography),
                     ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography
                 ) as "distance!",
                 COALESCE(degrees(ST_Azimuth(
                     ST_SetSRID(ST_MakePoint($2, $3), 4326),
-                    ST_SetSRID(ST_MakePoint(COALESCE(g.longitude, 112.682524), COALESCE(g.latitude, 35.154922)), 4326)
+                    COALESCE(g.location::geometry, ST_SetSRID(ST_MakePoint(112.682524, 35.154922), 4326))
                 )), 0) as "bearing_degrees!",
                 g.created_at as "created_at!",
                 g.updated_at as "updated_at"
@@ -300,10 +300,7 @@ impl GroupRepository {
             SELECT g.id, g.group_chat_id, g.name, g.description, g.avatar_url, g.owner_id,
                    g.latitude, g.longitude, ST_AsText(g.location) as location, g.location_name,
                    g.created_at as "created_at!", g.updated_at as "updated_at", g.is_deleted, g.is_dismissed, g.deleted_at,
-                   ST_Distance(
-                       g.location::geography, 
-                       ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography
-                   ) as "distance!",
+                   calc.dist as "distance!",
                    COALESCE(degrees(ST_Azimuth(
                        ST_SetSRID(ST_MakePoint($2, $1), 4326),
                        g.location::geometry
@@ -311,6 +308,12 @@ impl GroupRepository {
                    (SELECT COUNT(*) FROM group_members gm WHERE gm.group_chat_id = g.group_chat_id AND gm.is_deleted = FALSE) as "member_count!",
                    (s.password_hash IS NOT NULL) as "has_password!"
             FROM group_chats g
+            CROSS JOIN LATERAL (
+                SELECT ST_Distance(
+                    g.location::geography, 
+                    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography
+                ) as dist
+            ) calc
             LEFT JOIN group_settings s ON g.group_chat_id = s.group_chat_id
             WHERE g.is_deleted = FALSE 
               AND g.is_dismissed = FALSE
@@ -327,19 +330,13 @@ impl GroupRepository {
               )
               -- Keyset Pagination: (distance, id) > (last_dist, last_id)
               AND (
-                  ST_Distance(
-                      g.location::geography, 
-                      ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography
-                  ) > $4
+                  calc.dist > $4
                   OR (
-                      ST_Distance(
-                          g.location::geography, 
-                          ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography
-                      ) = $4
+                      calc.dist = $4
                       AND g.id > $5
                   )
               )
-            ORDER BY "distance!" ASC, g.id ASC
+            ORDER BY calc.dist ASC, g.id ASC
             LIMIT $6
             "#,
             latitude,
@@ -360,23 +357,23 @@ impl GroupRepository {
 
         Ok((
             rows.into_iter()
-            .map(|r| GroupSearchRow {
-                group_id: r.group_chat_id,
-                name: r.name,
-                description: r.description,
-                avatar_url: r.avatar_url,
-                latitude: r.latitude.unwrap_or(0.0),
-                longitude: r.longitude.unwrap_or(0.0),
-                location_name: r.location_name.unwrap_or_default(),
-                member_count: r.member_count as i32,
-                has_password: r.has_password,
-                tags: vec![],
-                distance: r.distance,
-                bearing_degrees: r.bearing_degrees,
-                created_at: r.created_at,
-                updated_at: r.updated_at,
-            })
-            .collect(),
+                .map(|r| GroupSearchRow {
+                    group_id: r.group_chat_id,
+                    name: r.name,
+                    description: r.description,
+                    avatar_url: r.avatar_url,
+                    latitude: r.latitude.unwrap_or(0.0),
+                    longitude: r.longitude.unwrap_or(0.0),
+                    location_name: r.location_name.unwrap_or_default(),
+                    member_count: r.member_count as i32,
+                    has_password: r.has_password,
+                    tags: vec![],
+                    distance: r.distance,
+                    bearing_degrees: r.bearing_degrees,
+                    created_at: r.created_at,
+                    updated_at: r.updated_at,
+                })
+                .collect(),
             next_cursor,
         ))
     }
@@ -404,10 +401,7 @@ impl GroupRepository {
             SELECT g.id, g.group_chat_id, g.name, g.description, g.avatar_url, g.owner_id,
                    g.latitude, g.longitude, ST_AsText(g.location) as location, g.location_name,
                    g.created_at as "created_at!", g.updated_at as "updated_at", g.is_deleted, g.is_dismissed, g.deleted_at,
-                   ST_Distance(
-                       g.location::geography, 
-                       ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography
-                   ) as "distance!",
+                   calc.dist as "distance!",
                    COALESCE(degrees(ST_Azimuth(
                        ST_SetSRID(ST_MakePoint($2, $1), 4326),
                        g.location::geometry
@@ -415,6 +409,12 @@ impl GroupRepository {
                    (SELECT COUNT(*) FROM group_members gm WHERE gm.group_chat_id = g.group_chat_id AND gm.is_deleted = FALSE) as "member_count!",
                    (s.password_hash IS NOT NULL) as "has_password!"
             FROM group_chats g
+            CROSS JOIN LATERAL (
+                SELECT ST_Distance(
+                    g.location::geography, 
+                    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography
+                ) as dist
+            ) calc
             LEFT JOIN group_settings s ON g.group_chat_id = s.group_chat_id
             WHERE g.is_deleted = FALSE 
               AND g.is_dismissed = FALSE
@@ -422,19 +422,13 @@ impl GroupRepository {
               AND (g.name ILIKE $3 OR g.description ILIKE $3)
               -- Keyset Pagination: (distance, id) > (last_dist, last_id)
               AND (
-                  ST_Distance(
-                      g.location::geography, 
-                      ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography
-                  ) > $4
+                  calc.dist > $4
                   OR (
-                      ST_Distance(
-                          g.location::geography, 
-                          ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography
-                      ) = $4
+                      calc.dist = $4
                       AND g.id > $5
                   )
               )
-            ORDER BY "distance!" ASC, g.id ASC
+            ORDER BY calc.dist ASC, g.id ASC
             LIMIT $6
             "#,
             latitude,
@@ -454,23 +448,23 @@ impl GroupRepository {
 
         Ok((
             rows.into_iter()
-            .map(|r| GroupSearchRow {
-                group_id: r.group_chat_id,
-                name: r.name,
-                description: r.description,
-                avatar_url: r.avatar_url,
-                latitude: r.latitude.unwrap_or(0.0),
-                longitude: r.longitude.unwrap_or(0.0),
-                location_name: r.location_name.unwrap_or_default(),
-                member_count: r.member_count as i32,
-                has_password: r.has_password,
-                tags: vec![],
-                distance: r.distance,
-                bearing_degrees: r.bearing_degrees,
-                created_at: r.created_at,
-                updated_at: r.updated_at,
-            })
-            .collect(),
+                .map(|r| GroupSearchRow {
+                    group_id: r.group_chat_id,
+                    name: r.name,
+                    description: r.description,
+                    avatar_url: r.avatar_url,
+                    latitude: r.latitude.unwrap_or(0.0),
+                    longitude: r.longitude.unwrap_or(0.0),
+                    location_name: r.location_name.unwrap_or_default(),
+                    member_count: r.member_count as i32,
+                    has_password: r.has_password,
+                    tags: vec![],
+                    distance: r.distance,
+                    bearing_degrees: r.bearing_degrees,
+                    created_at: r.created_at,
+                    updated_at: r.updated_at,
+                })
+                .collect(),
             next_cursor,
         ))
     }
@@ -496,10 +490,7 @@ impl GroupRepository {
             SELECT g.id, g.group_chat_id, g.name, g.description, g.avatar_url, g.owner_id,
                    g.latitude, g.longitude, ST_AsText(g.location) as location, g.location_name,
                    g.created_at as "created_at!", g.updated_at as "updated_at", g.is_deleted, g.is_dismissed, g.deleted_at,
-                   ST_Distance(
-                       g.location::geography, 
-                       ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography
-                   ) as "distance!",
+                   calc.dist as "distance!",
                    COALESCE(degrees(ST_Azimuth(
                        ST_SetSRID(ST_MakePoint($2, $1), 4326),
                        g.location::geometry
@@ -507,6 +498,12 @@ impl GroupRepository {
                    (SELECT COUNT(*) FROM group_members gm WHERE gm.group_chat_id = g.group_chat_id AND gm.is_deleted = FALSE) as "member_count!",
                    (s.password_hash IS NOT NULL) as "has_password!"
             FROM group_chats g
+            CROSS JOIN LATERAL (
+                SELECT ST_Distance(
+                    g.location::geography, 
+                    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography
+                ) as dist
+            ) calc
             INNER JOIN group_tags gt ON g.group_chat_id = gt.group_chat_id
             INNER JOIN tags t ON gt.tag_id = t.id
             LEFT JOIN group_settings s ON g.group_chat_id = s.group_chat_id
@@ -516,19 +513,13 @@ impl GroupRepository {
               AND t.name = $3
               -- Keyset Pagination: (distance, id) > (last_dist, last_id)
               AND (
-                  ST_Distance(
-                      g.location::geography, 
-                      ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography
-                  ) > $4
+                  calc.dist > $4
                   OR (
-                      ST_Distance(
-                          g.location::geography, 
-                          ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography
-                      ) = $4
+                      calc.dist = $4
                       AND g.id > $5
                   )
               )
-            ORDER BY "distance!" ASC, g.id ASC
+            ORDER BY calc.dist ASC, g.id ASC
             LIMIT $6
             "#,
             latitude,
@@ -548,23 +539,23 @@ impl GroupRepository {
 
         Ok((
             rows.into_iter()
-            .map(|r| GroupSearchRow {
-                group_id: r.group_chat_id,
-                name: r.name,
-                description: r.description,
-                avatar_url: r.avatar_url,
-                latitude: r.latitude.unwrap_or(0.0),
-                longitude: r.longitude.unwrap_or(0.0),
-                location_name: r.location_name.unwrap_or_default(),
-                member_count: r.member_count as i32,
-                has_password: r.has_password,
-                tags: vec![],
-                distance: r.distance,
-                bearing_degrees: r.bearing_degrees,
-                created_at: r.created_at,
-                updated_at: r.updated_at,
-            })
-            .collect(),
+                .map(|r| GroupSearchRow {
+                    group_id: r.group_chat_id,
+                    name: r.name,
+                    description: r.description,
+                    avatar_url: r.avatar_url,
+                    latitude: r.latitude.unwrap_or(0.0),
+                    longitude: r.longitude.unwrap_or(0.0),
+                    location_name: r.location_name.unwrap_or_default(),
+                    member_count: r.member_count as i32,
+                    has_password: r.has_password,
+                    tags: vec![],
+                    distance: r.distance,
+                    bearing_degrees: r.bearing_degrees,
+                    created_at: r.created_at,
+                    updated_at: r.updated_at,
+                })
+                .collect(),
             next_cursor,
         ))
     }
@@ -682,8 +673,8 @@ impl GroupRepository {
 pub struct GroupSearchRow {
     pub group_id: Uuid,
     pub name: String,
-    pub description: Option<String>,
-    pub avatar_url: Option<String>,
+    pub description: String,        // NOT NULL DEFAULT ''
+    pub avatar_url: Option<String>, // NULL = use default avatar
     pub latitude: f64,
     pub longitude: f64,
     pub location_name: String,
@@ -695,5 +686,5 @@ pub struct GroupSearchRow {
     /// PostGIS 计算的方位角（0-360度）
     pub bearing_degrees: f64,
     pub created_at: DateTime<Utc>,
-    pub updated_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>, // NULL = never updated
 }

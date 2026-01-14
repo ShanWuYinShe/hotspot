@@ -8,17 +8,18 @@ use crate::{
         request::{
             ChangePasswordRequest, GuestRequest, LoginRequest, RegisterRequest,
             RequestPasswordResetRequest, ResetPasswordRequest, RevokeSessionRequest,
-            SessionsRequest, VerifyResetCodeRequest,
+            SendVerificationCodeRequest, SessionsRequest, VerifyCodeRequest,
+            VerifyResetCodeRequest,
         },
         response::{
             AuthData, CheckStatusData, PaginatedData, PaginationMeta, RequestPasswordResetData,
-            SessionItem, VerifyResetCodeData,
+            SendVerificationCodeData, SessionItem, VerifyCodeData, VerifyResetCodeData,
         },
     },
     error::{AppError, Result},
     repositories::{
         password_reset_repo::PasswordResetRepository, session_repo::SessionRepository,
-        user_repo::UserRepository,
+        user_repo::UserRepository, verification_repo::VerificationRepository,
     },
     utils::{
         id_gen::IdGenerator, jwt::JwtUtil, password::PasswordUtil, token::TokenUtil,
@@ -60,6 +61,7 @@ pub struct AuthService {
     user_repo: UserRepository,
     session_repo: SessionRepository,
     password_reset_repo: PasswordResetRepository,
+    verification_repo: VerificationRepository,
     redis: ConnectionManager,
     jwt_secret: String,
     access_token_expiration: i64,
@@ -73,12 +75,17 @@ impl AuthService {
         jwt_secret: String,
         access_token_expiration: i64,
         refresh_token_expiration: i64,
+        user_repo: UserRepository,
+        session_repo: SessionRepository,
+        password_reset_repo: PasswordResetRepository,
+        verification_repo: VerificationRepository,
     ) -> Self {
         Self {
             db: db.clone(),
-            user_repo: UserRepository::new(db.clone()),
-            session_repo: SessionRepository::new(db.clone()),
-            password_reset_repo: PasswordResetRepository::new(db.clone()),
+            user_repo,
+            session_repo,
+            password_reset_repo,
+            verification_repo,
             redis: redis.clone(),
             jwt_secret,
             access_token_expiration,
@@ -120,6 +127,13 @@ impl AuthService {
         user_agent: Option<&str>,
         device_fingerprint: Option<&str>,
     ) -> Result<AuthIssueResult> {
+        // 0. 如果提供了 verify_token，进行验证（手机号注册场景）
+        if let Some(verify_token) = &req.verify_token {
+            let _phone = self.validate_verify_token(verify_token, "register").await?;
+            // 验证通过，可以继续注册
+            // 注意：这里的 phone 应该与 req.login_id 一致（如果是手机号注册）
+        }
+
         // 1. 检查登录ID是否已存在
         if self.user_repo.exists_by_login_id(&req.login_id).await? {
             return Err(AppError::Conflict("该登录ID已被注册".to_string()));
@@ -570,6 +584,14 @@ impl AuthService {
         &self,
         req: &RequestPasswordResetRequest,
     ) -> Result<RequestPasswordResetData> {
+        // 0. 如果提供了 verify_token，进行验证（手机号重置密码场景）
+        if let Some(verify_token) = &req.verify_token {
+            let _phone = self
+                .validate_verify_token(verify_token, "reset_password")
+                .await?;
+            // 验证通过，可以继续重置密码
+        }
+
         // 安全考虑：避免通过接口响应判断账号是否存在（防用户枚举）
         // 不论 login_id 是否存在，都返回 reset_id（但只有存在账号时才会真实创建重置记录）。
 
@@ -812,5 +834,195 @@ impl AuthService {
         self.remove_session_whitelist(session_id).await?;
 
         Ok(())
+    }
+
+    /// 发送验证码
+    pub async fn send_verification_code(
+        &self,
+        req: &SendVerificationCodeRequest,
+    ) -> Result<SendVerificationCodeData> {
+        // 1. 验证手机号格式
+        Validator::validate_not_empty(&req.phone, "手机号")?;
+
+        // TODO: 集成图形验证码校验
+        let _ = &req.captcha_token;
+
+        // 2. 检查验证码类型
+        let code_type = &req.r#type;
+        if !["register", "reset_password", "change_phone"].contains(&code_type.as_str()) {
+            return Err(AppError::BadRequest("无效的验证码类型".to_string()));
+        }
+
+        // 3. 检查图形验证码 (TODO: 接入真实验证码服务)
+        // 目前仅打印日志，避免 unused warning
+        if let Some(token) = &req.captcha_token {
+            tracing::debug!("收到图形验证码 token: {}", token);
+        }
+
+        // 4. 防刷：检查是否在限流期内（60秒内只能发送一次）
+        let within_60s = self
+            .verification_repo
+            .check_recent_code(&req.phone, code_type, 60)
+            .await
+            .map_err(|e| AppError::InternalError(e.to_string()))?;
+
+        if within_60s {
+            return Err(AppError::RateLimited(
+                "验证码发送过于频繁，请60秒后再试".to_string(),
+            ));
+        }
+
+        // 4. 检查今日发送次数（每天最多10次）
+        let today_count = self
+            .verification_repo
+            .count_today_codes(&req.phone, code_type)
+            .await
+            .map_err(|e| AppError::InternalError(e.to_string()))?;
+
+        if today_count >= 10 {
+            return Err(AppError::RateLimited(
+                "今日验证码发送次数已达上限".to_string(),
+            ));
+        }
+
+        // 5. 生成验证码（6位数字）
+        let code = TokenUtil::generate_numeric_code(6);
+
+        // 6. 计算过期时间（5分钟）
+        let expires_at = Utc::now() + Duration::minutes(5);
+
+        // 7. 保存验证码记录
+        let verification_code = self
+            .verification_repo
+            .create_code(&req.phone, &code, code_type, expires_at)
+            .await
+            .map_err(|e| AppError::InternalError(e.to_string()))?;
+
+        // 8. 发送短信（TODO: 集成第三方短信服务）
+        // 目前仅记录日志
+        tracing::info!(
+            "发送验证码: phone={}, code={}, type={}, code_id={}",
+            req.phone,
+            code,
+            code_type,
+            verification_code.code_id
+        );
+
+        // TODO: 集成阿里云/腾讯云短信服务
+        // let sms_result = self.sms_service.send(
+        //     &req.phone,
+        //     &format!("您的验证码是: {}, 5分钟内有效", code)
+        // ).await?;
+
+        // 9. 返回响应
+        Ok(SendVerificationCodeData {
+            code_id: verification_code.code_id,
+            expires_at: expires_at.to_rfc3339(),
+            retry_after: Some(60),
+        })
+    }
+
+    /// 验证验证码
+    pub async fn verify_code(&self, req: &VerifyCodeRequest) -> Result<VerifyCodeData> {
+        // 1. 查找验证码记录
+        let verification_code = self
+            .verification_repo
+            .find_by_code_id(&req.code_id)
+            .await
+            .map_err(|e| AppError::InternalError(e.to_string()))?
+            .ok_or_else(|| AppError::NotFound("验证码不存在或已失效".to_string()))?;
+
+        // 2. 检查是否已过期
+        if verification_code.expires_at < Utc::now() {
+            return Err(AppError::ResourceStateConflict("验证码已过期".to_string()));
+        }
+
+        // 3. 检查尝试次数
+        if verification_code.attempts >= verification_code.max_attempts {
+            return Err(AppError::ResourceStateConflict(
+                "验证次数已超限，请重新获取验证码".to_string(),
+            ));
+        }
+
+        // 4. 验证验证码
+        if verification_code.code != req.code {
+            // 增加尝试次数
+            self.verification_repo
+                .increment_attempts(&req.code_id)
+                .await
+                .map_err(|e| AppError::InternalError(e.to_string()))?;
+
+            return Err(AppError::ResourceStateConflict("验证码错误".to_string()));
+        }
+
+        // 5. 标记为已验证
+        self.verification_repo
+            .mark_verified(&req.code_id)
+            .await
+            .map_err(|e| AppError::InternalError(e.to_string()))?;
+
+        // 6. 生成 verify_token（用于后续注册/重置密码等操作）
+        let verify_token = TokenUtil::generate_token();
+
+        // 7. 将 verify_token 存储到 Redis（有效期 10 分钟）
+        let verify_token_key = format!("verify_token:{}", verify_token);
+        let verify_token_data = format!("{}:{}", verification_code.phone, verification_code.r#type);
+        let _: () = redis::cmd("SETEX")
+            .arg(&verify_token_key)
+            .arg(600) // 10分钟
+            .arg(&verify_token_data)
+            .query_async(&mut self.redis.clone())
+            .await
+            .map_err(|e| AppError::Redis(e))?;
+
+        let verify_expires_at = Utc::now() + Duration::minutes(10);
+
+        Ok(VerifyCodeData {
+            verified: true,
+            verify_token,
+            expires_at: verify_expires_at.to_rfc3339(),
+        })
+    }
+
+    /// 验证 verify_token（内部方法，用于注册/重置密码时验证）
+    async fn validate_verify_token(
+        &self,
+        verify_token: &str,
+        expected_type: &str,
+    ) -> Result<String> {
+        let verify_token_key = format!("verify_token:{}", verify_token);
+
+        let verify_token_data: Option<String> = redis::cmd("GET")
+            .arg(&verify_token_key)
+            .query_async(&mut self.redis.clone())
+            .await
+            .map_err(|e| AppError::Redis(e))?;
+
+        let verify_token_data = verify_token_data
+            .ok_or_else(|| AppError::ResourceStateConflict("验证令牌无效或已过期".to_string()))?;
+
+        // 解析 phone:type
+        let parts: Vec<&str> = verify_token_data.split(':').collect();
+        if parts.len() != 2 {
+            return Err(AppError::Internal);
+        }
+
+        let phone = parts[0];
+        let code_type = parts[1];
+
+        if code_type != expected_type {
+            return Err(AppError::ResourceStateConflict(
+                "验证令牌类型不匹配".to_string(),
+            ));
+        }
+
+        // 删除已使用的 verify_token
+        let _: () = redis::cmd("DEL")
+            .arg(&verify_token_key)
+            .query_async(&mut self.redis.clone())
+            .await
+            .map_err(|e| AppError::Redis(e))?;
+
+        Ok(phone.to_string())
     }
 }

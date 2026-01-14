@@ -1,4 +1,4 @@
-use axum::{extract::State, Extension, Json};
+use axum::{extract::State, Json};
 
 use crate::{
     dto::{
@@ -6,11 +6,10 @@ use crate::{
             AdminAnnouncementListRequest, CreateAnnouncementRequest, DeleteAnnouncementRequest,
             PublicAnnouncementListRequest,
         },
-        response::{
-            ApiResponse, CreateAnnouncementData, PaginatedData, SystemAnnouncementItem,
-        },
+        response::{ApiResponse, CreateAnnouncementData, PaginatedData, SystemAnnouncementItem},
     },
     error::Result,
+    middleware::auth::AuthenticatedUser,
     state::AppState,
 };
 
@@ -18,12 +17,12 @@ use crate::{
 
 pub async fn admin_create(
     State(state): State<AppState>,
-    Extension(user_id): Extension<i64>,
+    user: AuthenticatedUser,
     Json(req): Json<CreateAnnouncementRequest>,
 ) -> Result<Json<ApiResponse<CreateAnnouncementData>>> {
     let response = state
         .announcement_service
-        .create_announcement(user_id, req)
+        .create_announcement(user.user_id, req)
         .await?;
     Ok(Json(ApiResponse::success(response)))
 }

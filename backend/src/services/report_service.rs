@@ -1,4 +1,3 @@
-use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::{
@@ -18,10 +17,8 @@ pub struct ReportService {
 }
 
 impl ReportService {
-    pub fn new(pool: PgPool) -> Self {
-        Self {
-            report_repo: ReportRepository::new(pool),
-        }
+    pub fn new(report_repo: ReportRepository) -> Self {
+        Self { report_repo }
     }
 
     /// 提交举报
@@ -129,13 +126,13 @@ impl ReportService {
 
     /// 审核举报（管理员）
     pub async fn handle(&self, admin_id: i64, req: HandleReportRequest) -> Result<(), AppError> {
-        use crate::types::enums::ReportHandleAction;
+        use crate::types::enums::ReportAction;
         use std::str::FromStr;
 
         // 验证在Handler层
 
         // 验证action
-        let action = ReportHandleAction::from_str(&req.action)
+        let action = ReportAction::from_str(&req.action)
             .map_err(|_| AppError::InvalidInput("无效的操作类型".to_string()))?;
 
         // 解析report_id
@@ -149,9 +146,9 @@ impl ReportService {
 
         // 根据action映射status
         let status = match action {
-            ReportHandleAction::Resolve => ReportStatus::Resolved,
-            ReportHandleAction::Dismiss => ReportStatus::Dismissed,
-            ReportHandleAction::Escalate => ReportStatus::Reviewing,
+            ReportAction::Resolve => ReportStatus::Resolved,
+            ReportAction::Dismiss => ReportStatus::Dismissed,
+            ReportAction::Escalate => ReportStatus::Reviewing,
         };
 
         // 更新状态
