@@ -1,0 +1,126 @@
+---
+alwaysApply: true
+---
+# HotSpot 后端数据库规范
+
+## 文档定位
+
+本文件只回答"数据库怎么设计（Schema 规范）"：
+- 表结构命名约束与公共字段约定
+- 枚举类型与 JSONB 使用规范
+- 索引与软删除约定
+- 模块级表清单（用于校对迁移与仓库 SQL 一致性）
+
+本文件不回答"API 契约"与"后端实现细节"：
+- API 端点/DTO/错误码以 `@spec/` 下 API 规范为准
+- 代码实现规则以 `@backend_rule.mdc` 为准
+
+## 命名与字段约定
+
+### 主键与业务标识
+
+- 表内自增主键统一为 `id BIGSERIAL PRIMARY KEY`
+- 对外业务标识统一为 `xxx_id`，类型优先 `UUID`，默认值 `uuid_generate_v4()` 或 `gen_random_uuid()`
+- 业务标识列需创建唯一索引
+
+### 时间戳与软删除
+
+- 默认时间字段：`created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()` 与 `updated_at TIMESTAMPTZ`
+- 软删除统一字段：`is_deleted BOOLEAN NOT NULL DEFAULT FALSE` 与 `deleted_at TIMESTAMPTZ`
+- 软删除表的索引必须带 `WHERE is_deleted = FALSE`
+
+### 枚举与约束
+
+- 公共枚举统一放入 `001_prerequisites.sql`
+- 枚举值必须使用小写英文，避免混合大小写
+- 必填字段必须设置 `NOT NULL` 与合理默认值
+- 约束需使用 `check_*` 命名约定
+
+### JSONB 与快照
+
+- JSONB 只用于快照和审计用途（例如 `target_snapshot`、`details`）
+- 快照字段应有用途注释
+- 不允许用 JSONB 替代结构化字段
+
+## 模块级表清单
+
+### 用户模块
+
+- `users`
+- `user_settings`
+- `user_online_status`
+- `user_follows`
+- `follow_requests`
+- `user_blocks`
+- `user_friend_remarks`
+- `user_location_history`
+- `sessions`
+- `password_reset_tokens`
+- `verification_codes`
+
+### 私聊模块
+
+- `private_chats`
+- `private_chat_settings`
+- `private_messages`
+- `private_message_reactions`
+
+### 群聊模块
+
+- `group_chats`
+- `group_settings`
+- `group_members`
+- `group_member_history`
+- `group_user_preferences`
+- `group_bans`
+- `group_invites`
+- `group_applications`
+- `group_announcements`
+- `group_messages`
+- `group_message_read_status`
+- `group_message_reactions`
+- `chat_unread_counts`
+
+### 瞬间与评论模块
+
+- `moments`
+- `moment_likes`
+- `moment_favorites`
+- `moment_tags`
+- `comments`
+- `comment_likes`
+
+### 通知模块
+
+- `notifications`
+- `notification_subscriptions`
+- `device_tokens`
+
+### 系统模块
+
+- `reports`
+- `feed_items`
+- `feed_feedback`
+- `system_configs`
+- `system_config_history`
+- `system_announcements`
+- `uploaded_files`
+- `upload_chunks`
+- `upload_sessions`
+
+### 标签模块
+
+- `tags`
+- `user_tags`
+- `group_tags`
+- `moment_tags`
+
+### 管理员模块
+
+- `admin_users`
+- `admin_permissions`
+- `admin_roles`
+- `admin_role_permissions`
+- `admin_user_roles`
+- `admin_audit_logs`
+- `admin_audit_exports`

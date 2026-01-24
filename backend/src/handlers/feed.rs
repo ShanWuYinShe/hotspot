@@ -16,7 +16,7 @@ use crate::{
 };
 
 /// 获取瞬间信息流
-/// POST /api/v1/protected/feed/moments
+/// POST /api/v1/feed/moments
 pub async fn get_moments(
     State(state): State<AppState>,
     user: AuthenticatedUser,
@@ -30,7 +30,7 @@ pub async fn get_moments(
 }
 
 /// 获取群组推荐
-/// POST /api/v1/protected/feed/groups
+/// POST /api/v1/feed/groups
 pub async fn get_groups(
     State(state): State<AppState>,
     user: AuthenticatedUser,
@@ -44,7 +44,7 @@ pub async fn get_groups(
 }
 
 /// 获取用户推荐
-/// POST /api/v1/protected/feed/users
+/// POST /api/v1/feed/users
 pub async fn get_users(
     State(state): State<AppState>,
     user: AuthenticatedUser,
@@ -55,7 +55,7 @@ pub async fn get_users(
 }
 
 /// 获取热门内容
-/// POST /api/v1/protected/feed/trending
+/// POST /api/v1/feed/trending
 pub async fn get_trending(
     State(state): State<AppState>,
     user: AuthenticatedUser,
@@ -66,7 +66,7 @@ pub async fn get_trending(
 }
 
 /// 提交反馈
-/// POST /api/v1/protected/feed/feedback
+/// POST /api/v1/feed/feedback
 pub async fn feedback(
     State(state): State<AppState>,
     user: AuthenticatedUser,

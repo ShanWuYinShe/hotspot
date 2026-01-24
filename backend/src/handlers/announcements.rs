@@ -10,6 +10,7 @@ use crate::{
     },
     error::Result,
     middleware::auth::AuthenticatedUser,
+    services::admin_audit_service::AuditLogInput,
     state::AppState,
 };
 
@@ -20,9 +21,30 @@ pub async fn admin_create(
     user: AuthenticatedUser,
     Json(req): Json<CreateAnnouncementRequest>,
 ) -> Result<Json<ApiResponse<CreateAnnouncementData>>> {
+    let title = req.title.clone();
+    let details = serde_json::json!({
+        "severity": req.severity,
+        "action_url": req.action_url,
+        "send_push": req.send_push,
+    });
     let response = state
         .announcement_service
         .create_announcement(user.user_id, req)
+        .await?;
+    state
+        .admin_audit_service
+        .record(AuditLogInput {
+            action: "announcement.create".to_string(),
+            operator_id: user.user_id,
+            target_type: "announcement".to_string(),
+            target_id: response.announcement_id.clone(),
+            target_name: Some(title),
+            details: Some(details),
+            before_state: None,
+            after_state: None,
+            ip_address: None,
+            user_agent: None,
+        })
         .await?;
     Ok(Json(ApiResponse::success(response)))
 }
@@ -40,9 +62,26 @@ pub async fn admin_list(
 
 pub async fn admin_delete(
     State(state): State<AppState>,
+    user: AuthenticatedUser,
     Json(req): Json<DeleteAnnouncementRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
+    let announcement_id = req.announcement_id.clone();
     state.announcement_service.delete_announcement(req).await?;
+    state
+        .admin_audit_service
+        .record(AuditLogInput {
+            action: "announcement.delete".to_string(),
+            operator_id: user.user_id,
+            target_type: "announcement".to_string(),
+            target_id: announcement_id,
+            target_name: None,
+            details: None,
+            before_state: None,
+            after_state: None,
+            ip_address: None,
+            user_agent: None,
+        })
+        .await?;
     Ok(Json(ApiResponse::success_empty()))
 }
 

@@ -127,7 +127,7 @@ impl PresenceService {
         )
         .fetch_optional(self.online_status_repo.pool()) // Use existing pool from online_status_repo
         .await
-        .map_err(AppError::Database)?;
+?;
 
         if let Some(r) = row {
             if let (Some(lat), Some(lng)) = (r.current_latitude, r.current_longitude) {

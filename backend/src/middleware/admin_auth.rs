@@ -62,6 +62,14 @@ fn required_permission(path: &str) -> Option<&'static str> {
         return Some("admin.announcements.read");
     }
 
+    // 审计日志
+    if path.starts_with("/api/v1/admin/audit") {
+        if path.contains("/export") {
+            return Some("admin.audit.export");
+        }
+        return Some("admin.audit.read");
+    }
+
     // 未来新增 admin 路由：默认只要求 "是管理员"
     None
 }

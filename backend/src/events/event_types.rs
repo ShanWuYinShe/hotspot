@@ -1,6 +1,6 @@
-use crate::dto::response::MessageMedia;
+use crate::dto::response::{MessageLocation, MessageMedia};
 use crate::types::enums::{
-    GroupMemberRemovalReason, InviteStatus, MemberRole, MessageType, ReactionType,
+    AnnouncementSeverity, GroupRole, MemberLeaveReason, MessageType, ReactionType, ResponseStatus,
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -43,6 +43,19 @@ pub enum AppEvent {
         user_id: i64,
         was_mutual: bool,
     },
+    /// 收到关注请求（当 allow_follow = false 时）
+    FollowRequestReceived {
+        request_id: String,
+        requester_id: i64,
+        target_id: i64,
+    },
+    /// 关注请求被处理
+    FollowRequestHandled {
+        request_id: String,
+        requester_id: i64,
+        target_id: i64,
+        accepted: bool,
+    },
 
     // ========== 群组管理事件 ==========
     GroupCreated {
@@ -53,7 +66,7 @@ pub enum AppEvent {
         group_id: Uuid,
         user_id: i64,
         added_by: i64,
-        role: MemberRole,
+        role: GroupRole,
         member_count: i64,
     },
     GroupMemberRemoved {
@@ -61,7 +74,7 @@ pub enum AppEvent {
         user_id: i64,
         removed_by: i64,
         member_count: i64,
-        reason: GroupMemberRemovalReason,
+        reason: MemberLeaveReason,
     },
     /// 群组资料更新
     GroupProfileUpdated {
@@ -74,8 +87,8 @@ pub enum AppEvent {
     GroupMemberRoleChanged {
         group_id: Uuid,
         user_id: i64,
-        old_role: MemberRole,
-        new_role: MemberRole,
+        old_role: GroupRole,
+        new_role: GroupRole,
     },
     /// 成员被禁言
     GroupMemberMuted {
@@ -131,7 +144,7 @@ pub enum AppEvent {
         group_id: Uuid,
         inviter_id: i64,
         invitee_id: i64,
-        status: InviteStatus,
+        status: ResponseStatus,
     },
     /// 收到群组申请（通知管理员）
     GroupApplicationReceived {
@@ -146,7 +159,7 @@ pub enum AppEvent {
         group_id: Uuid,
         group_name: String,
         applicant_id: i64,
-        status: InviteStatus,
+        status: ResponseStatus,
     },
 
     // ========== 群聊消息事件 ==========
@@ -159,6 +172,7 @@ pub enum AppEvent {
         reply_to: Option<ReplyToSnapshot>,
         mentions: Option<Vec<i64>>,
         media: Option<MessageMedia>,
+        location: Option<MessageLocation>,
     },
     GroupMessageEdited {
         message_id: Uuid,
@@ -206,6 +220,7 @@ pub enum AppEvent {
         content: Option<String>,
         reply_to: Option<ReplyToSnapshot>,
         media: Option<MessageMedia>,
+        location: Option<MessageLocation>,
     },
     PrivateMessageEdited {
         message_id: Uuid,
@@ -312,7 +327,7 @@ pub enum AppEvent {
         announcement_id: String,
         title: String,
         content: String,
-        severity: String,
+        severity: AnnouncementSeverity,
         action_url: Option<String>,
         created_at: String,
     },
@@ -369,6 +384,8 @@ impl AppEvent {
             AppEvent::NewFollower { .. } => "new_follower",
             AppEvent::MutualFollow { .. } => "mutual_follow",
             AppEvent::Unfollowed { .. } => "unfollowed",
+            AppEvent::FollowRequestReceived { .. } => "follow_request_received",
+            AppEvent::FollowRequestHandled { .. } => "follow_request_handled",
             // 群组管理
             AppEvent::GroupCreated { .. } => "group_created",
             AppEvent::GroupMemberAdded { .. } => "group_member_added",

@@ -4,14 +4,14 @@ use sqlx::{FromRow, PgPool};
 use std::str::FromStr;
 
 use crate::error::Result;
-use crate::types::enums::Platform;
+use crate::types::enums::DevicePlatform;
 
 /// 设备Token Row - 数据库查询返回类型
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct DeviceTokenRow {
     pub id: i64,
     pub user_id: i64,
-    pub platform: Platform,
+    pub platform: DevicePlatform,
     pub device_token: String,
     pub created_at: DateTime<Utc>,
 }
@@ -30,7 +30,7 @@ impl DeviceTokenRepository {
     pub async fn register(
         &self,
         user_id: i64,
-        platform: Platform,
+        platform: DevicePlatform,
         device_token: String,
     ) -> Result<()> {
         let platform_str = platform.to_string();
@@ -67,7 +67,7 @@ impl DeviceTokenRepository {
         let rows = sqlx::query_as!(
             DeviceTokenRow,
             r#"
-            SELECT id, user_id, platform as "platform: Platform", device_token, created_at
+            SELECT id, user_id, platform as "platform: DevicePlatform", device_token, created_at
             FROM device_tokens
             WHERE user_id = $1 AND id < $2
             ORDER BY id DESC
@@ -94,20 +94,27 @@ impl DeviceTokenRepository {
     /// 注册或更新设备Token (upsert)
     pub async fn upsert(&self, user_id: i64, platform: &str, device_token: &str) -> Result<()> {
         let platform_enum =
-            Platform::from_str(platform).map_err(crate::error::AppError::BadRequest)?;
+            DevicePlatform::from_str(platform).map_err(crate::error::AppError::BadRequest)?;
 
         self.register(user_id, platform_enum, device_token.to_string())
             .await
     }
 
     /// 注销指定Token
-    pub async fn unregister(&self, user_id: i64, device_token: &str) -> Result<u64> {
+    pub async fn unregister(
+        &self,
+        user_id: i64,
+        platform: DevicePlatform,
+        device_token: &str,
+    ) -> Result<u64> {
+        let platform_str = platform.to_string();
         let result = sqlx::query!(
             r#"
             DELETE FROM device_tokens
-            WHERE user_id = $1 AND device_token = $2
+            WHERE user_id = $1 AND platform = $2::text::platform AND device_token = $3
             "#,
             user_id,
+            platform_str,
             device_token
         )
         .execute(&self.pool)

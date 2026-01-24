@@ -1,0 +1,224 @@
+---
+alwaysApply: true
+---
+# HotSpot API 规范 - 系统与全局配置 API 模块 v0.0.1 (RPC)
+
+> 本文档定义 HotSpot 系统健康检查 (`system`) 和全局配置 (`global_settings`) 相关的 RPC 接口。
+
+## 服务定义
+
+- **Service Namespace**: `system`, `global_settings`
+- **Base Path**: `/api/v1/system/`, `/api/v1/global_settings/`
+
+## 核心类型定义
+
+```typescript
+interface HealthStatus {
+  status: SystemHealthStatus;
+  version: string;
+  timestamp: string;
+}
+
+// 上传策略配置
+interface UploadConfig {
+  image_max_size: number;
+  video_max_size: number;
+  audio_max_size: number;
+  file_max_size: number;
+  allowed_image_types: string[];
+  allowed_video_types: string[];
+}
+
+// 内容默认值配置
+interface ContentDefaults {
+  default_location_name: string;
+  default_group_avatar: string;
+  default_user_avatar: string;
+  default_group_settings: GroupSettings;
+}
+
+// 功能开关配置
+interface FeatureSwitches {
+  enable_public_registration: boolean;
+  enable_guest_login: boolean;
+  enable_moments: boolean;
+  enable_nearby_people: boolean;
+}
+
+// 联系与帮助配置
+interface ContactInfo {
+  support_email: string;
+  privacy_policy_url: string;
+  terms_of_service_url: string;
+  official_website: string;
+}
+
+// 系统限制配置
+interface AppLimits {
+  max_group_members: number;
+  max_moment_tags: number;
+  max_moment_images: number;
+  moment_description_max_length: number;
+  comment_max_length: number;
+  search_radius_max: number;
+}
+
+// 聚合配置对象（客户端只读）
+interface GlobalSettings {
+  upload: UploadConfig;
+  defaults: ContentDefaults;
+  features: FeatureSwitches;
+  contact: ContactInfo;
+  limits: AppLimits;
+}
+
+interface AdminSettings extends GlobalSettings {
+  updated_at: string;
+  updated_by_user_id: number;
+}
+```
+
+## 错误码说明
+
+本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
+
+| 错误码 | 说明 | 相关接口 |
+|-------|------|---------|
+| `10002` | 参数格式错误 | `update_contact`（URL/Email 格式） |
+| `10003` | 参数值超出范围 | `update_upload`、`update_limits` |
+| `10204` | 非管理员 | 所有 admin 接口 |
+| `10205` | 管理员权限不足 | 所有 admin 接口 |
+
+---
+
+## 接口概览（按子域）
+
+| 子域 | 端点 | 说明 | Request | Response |
+|-----|------|------|---------|----------|
+| 系统 | `POST /api/v1/system/health` | 健康检查 | `{}` | `ApiResponse<HealthStatus>` |
+| 全局配置 | `POST /api/v1/global_settings/fetch` | 获取全局启动配置 | `FetchGlobalSettingsRequest` | `ApiResponse<GlobalSettings>` |
+| 管理员配置 | `POST /api/v1/admin/global_settings` | 获取完整全局配置 | `{}` | `ApiResponse<AdminSettings>` |
+| 管理员配置 | `POST /api/v1/admin/global_settings/update_upload` | 更新上传策略 | `UpdateUploadConfigRequest` | `ApiResponse<{ upload: UploadConfig; updated_at: string; }>` |
+| 管理员配置 | `POST /api/v1/admin/global_settings/update_defaults` | 更新内容默认值 | `UpdateDefaultsRequest` | `ApiResponse<{ defaults: ContentDefaults; updated_at: string; }>` |
+| 管理员配置 | `POST /api/v1/admin/global_settings/update_features` | 更新功能开关 | `UpdateFeaturesRequest` | `ApiResponse<{ features: FeatureSwitches; updated_at: string; }>` |
+| 管理员配置 | `POST /api/v1/admin/global_settings/update_contact` | 更新联系信息 | `UpdateContactRequest` | `ApiResponse<{ contact: ContactInfo; updated_at: string; }>` |
+| 管理员配置 | `POST /api/v1/admin/global_settings/update_limits` | 更新系统限制 | `UpdateLimitsRequest` | `ApiResponse<{ limits: AppLimits; updated_at: string; }>` |
+
+## 系统健康检查 API
+
+### POST /api/v1/system/health
+
+系统健康检查。
+
+说明：系统健康检查属于"默认公开资源"，不涉及用户隐私等级/访问控制分支。
+
+**Request**: `{}`
+**Response**: `ApiResponse<HealthStatus>`
+
+---
+
+## 公开配置读取（客户端）
+
+### POST /api/v1/global_settings/fetch
+
+获取全局启动配置。
+
+说明：全局启动配置属于"默认公开资源"。
+
+**Request**:
+```typescript
+type FetchGlobalSettingsRequest = {};
+```
+**Response**: `ApiResponse<GlobalSettings>`
+
+---
+
+## 配置管理（管理员）
+
+> 权限要求：
+> - 读取：`admin.config.read`
+> - 更新：`admin.config.write`
+
+### POST /api/v1/admin/global_settings
+
+获取完整全局配置（管理员）。
+
+**Request**: `{}`
+**Response**: `ApiResponse<AdminSettings>`
+
+**可能错误码**：`10204`、`10205`
+
+### POST /api/v1/admin/global_settings/update_upload
+
+更新上传策略。
+
+**Request**:
+```typescript
+type UpdateUploadConfigRequest = Partial<UploadConfig>;
+```
+**Response**: `ApiResponse<{ upload: UploadConfig; updated_at: string; }>`
+
+**可能错误码**：`10204`、`10205`、`10003`
+
+### POST /api/v1/admin/global_settings/update_defaults
+
+更新内容默认值。
+
+**Request**:
+```typescript
+interface UpdateDefaultsRequest {
+  default_location_name?: string;
+  default_group_avatar?: string;
+  default_user_avatar?: string;
+  default_group_settings?: Partial<GroupSettings>;
+}
+```
+**Response**: `ApiResponse<{ defaults: ContentDefaults; updated_at: string; }>`
+
+**可能错误码**：`10204`、`10205`
+
+### POST /api/v1/admin/global_settings/update_features
+
+更新功能开关。
+
+**Request**:
+```typescript
+interface UpdateFeaturesRequest {
+  enable_public_registration?: boolean;
+  enable_guest_login?: boolean;
+  enable_moments?: boolean;
+  enable_nearby_people?: boolean;
+}
+```
+**Response**: `ApiResponse<{ features: FeatureSwitches; updated_at: string; }>`
+
+**可能错误码**：`10204`、`10205`
+
+### POST /api/v1/admin/global_settings/update_contact
+
+更新联系信息。
+
+**Request**:
+```typescript
+interface UpdateContactRequest {
+  support_email?: string;
+  privacy_policy_url?: string;
+  terms_of_service_url?: string;
+  official_website?: string;
+}
+```
+**Response**: `ApiResponse<{ contact: ContactInfo; updated_at: string; }>`
+
+**可能错误码**：`10204`、`10205`、`10002`
+
+### POST /api/v1/admin/global_settings/update_limits
+
+更新系统限制。
+
+**Request**:
+```typescript
+type UpdateLimitsRequest = Partial<AppLimits>;
+```
+**Response**: `ApiResponse<{ limits: AppLimits; updated_at: string; }>`
+
+**可能错误码**：`10204`、`10205`、`10003`

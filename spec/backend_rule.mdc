@@ -1,0 +1,488 @@
+---
+globs: backend/**
+alwaysApply: false
+---
+
+# HotSpot 后端实现规范（Rust/Axum）v0.0.3
+
+## 文档定位（权威边界）
+
+本文件只回答"如何落地（How）"：
+- Rust/Axum 的实现约束与代码模式
+- 分层架构、错误处理、数据访问等工程规范
+- 不重复 API 规范的端点/类型/错误码清单
+
+权威引用：
+- **API 语义唯一权威**：所有 API 端点 / DTO 字段 / WebSocket 事件 / 错误码以 `@spec/` 下的 API 规范文档为准
+- **后端功能边界**：模块划分、业务能力范围以 `@backend_doc.mdc` 为准
+
+引用方式（强制）：
+- 禁止使用数字章节号引用（如"第X章/第X节"）
+- 只允许引用小节标题或锚点标题
+
+---
+
+## 技术栈约定
+
+- **Rust**: Edition 2021
+- **Web**: Axum 0.7+
+- **DB/Cache**: PostgreSQL + SQLx；Redis
+- **Auth**: JWT（必须含 `sid`）+ bcrypt
+- **WS**: tokio-tungstenite
+- **Log**: tracing
+
+---
+
+## 架构分层（强制）
+
+### 分层职责
+
+```
+Handler → Service → Repository
+   ↓          ↓          ↓
+ 提参/响应  业务逻辑   数据访问
+```
+
+- **Handler**：只做提参/调用 Service/返回 `ApiResponse`；不写业务逻辑、不直接查库
+- **Service**：业务规则/权限/事务/缓存/事件；**不写 SQL**
+- **Repository**：只封装 SQL 与映射；**不含业务判断**；提供 `exists()` 等辅助方法
+
+### Handler 约束
+
+**核心职责（仅限以下）**:
+1. 参数提取：从 HTTP 请求中提取参数（Path/Query/Json/Header）
+2. 认证信息提取：从请求上下文（extensions）读取 `user_id`（Token 可选时可能为 None）
+3. Service 调用：调用对应的 Service 层方法，传入 `Option<i64>` 类型的 user_id
+4. 响应构造：返回统一的 `ApiResponse<T>` 格式
+5. 错误传播：使用 `?` 传播错误到统一错误处理中间件
+
+**禁止事项**：
+- ❌ 不要在 Handler 中编写任何业务逻辑
+- ❌ 不要在 Handler 中直接操作数据库
+- ❌ 不要在 Handler 中做错误到 HTTP/`ApiResponse` 的映射
+- ❌ 不要从请求参数直接接收 `current_user_id` 作为"当前用户"
+- ❌ 不要在 Handler 中判断是否需要返回 `@auth-only` 字段（由 Service 层处理）
+
+**实现要点**:
+- 使用 Axum Extractors（State, Json, Path 等）提取参数
+- 返回类型固定：`Result<Json<ApiResponse<T>>, AppError>`
+- 认证信息从请求上下文（extensions）读取
+- Token 可选 API：user_id 使用 `Option<i64>` 传递给 Service
+
+### Service 约束
+
+**核心职责**:
+1. 业务规则验证：检查业务规则是否满足（权限、状态、配额等）
+2. 数据操作编排：调用 Repository 层进行数据查询/修改
+3. 事务管理：需要多个操作原子执行时使用数据库事务
+4. 缓存策略：决定何时读缓存、写缓存、删缓存
+5. 事件触发：业务操作完成后触发相关事件
+6. 响应差异化：根据 `user_id` 是否存在决定是否返回 `@auth-only` 字段
+
+**设计原则**:
+- ✅ 所有业务逻辑集中在 Service 层
+- ✅ Service 可以调用多个 Repository
+- ✅ Service 可以调用其他 Service（避免循环依赖）
+- ✅ 权限验证在 Service 层完成
+- ✅ Token 可选 API 的方法签名使用 `Option<i64>` 接收 user_id
+- ❌ Service 不直接编写 SQL
+
+**Token 可选 API 的 Service 实现模式**:
+- 方法签名：`fn get_xxx(user_id: Option<i64>, ...) -> Result<XxxCard, AppError>`
+- 查询基础数据（对匿名可见的字段）
+- 若 `user_id.is_some()`：额外查询并填充 `@auth-only` 字段（如 `relation`、`my_state`）
+- 若 `user_id.is_none()`：`@auth-only` 字段设为 `None`
+
+### Repository 约束
+
+**核心职责**:
+1. SQL 封装：将所有 SQL 查询封装为方法
+2. 数据映射：数据库 Row ↔ Rust Model 的转换
+3. 错误转换：将数据库错误转换为 `AppError`
+4. 无业务逻辑：Repository 不包含任何业务规则判断
+
+**设计原则**:
+- ✅ 每个 Repository 对应一个主要的数据库表
+- ✅ 使用 SQLx 的类型安全查询
+- ✅ 所有方法都是纯数据操作（CRUD）
+- ❌ Repository 不调用其他 Repository
+- ❌ Repository 不包含业务逻辑判断
+
+---
+
+## 地理位置计算（强制：只在 DB）
+
+**禁止在 Rust 中计算距离/角度/半径过滤**。距离/范围过滤/距离排序必须在 PostgreSQL/PostGIS 侧完成，确保走 GiST 索引。
+
+**数据库层职责**:
+- 距离计算：`ST_Distance(geography, geography)`
+- 范围查询：`ST_DWithin(geography, geography, radius)`
+- 点创建：`ST_MakePoint(lon, lat)` + `ST_SetSRID(..., 4326)`
+
+**Rust 层允许的操作**:
+- 坐标验证：验证经纬度范围合法性
+- BBox 粗过滤（可选）：仅用于减少候选集
+- 展示层格式化：对数据库返回的 distance 做显示格式化
+
+**索引要求（强制）**:
+- 地理位置字段必须创建 GIST 索引
+- 格式：`CREATE INDEX idx_xxx_location ON xxx USING GIST(location);`
+
+---
+
+## 统一响应格式
+
+**实现要点**:
+- 定义 `ApiResponse<T>` 泛型结构体
+- 字段：`code: i64`, `message: Option<String>`, `data: Option<T>`, `request_id: String`
+- `request_id` 必须回显客户端请求头 `X-Request-Id`；若客户端未提供，则由服务端生成
+
+**辅助方法**:
+- `success(data)`：`code=0`，`data=Some(data)`
+- `error(code, message)`：`code!=0`，`message=Some(message)`，`data=None`
+
+**验收规则**:
+- 顶层字段只允许：`code` / `message` / `data` / `request_id`
+- 业务成功：`code == 0`
+- 业务失败：`code != 0`
+- HTTP 状态码：API 固定返回 200
+
+---
+
+## 错误处理
+
+**实现要点**:
+- 使用 `thiserror::Error` 定义 `AppError` 枚举
+- 统一收敛到 `IntoResponse`：保证任何错误都能产出 `ApiResponse<T>`
+- 错误码取值：只允许从 `@api_spec_errors.mdc` 中选择
+
+**对外错误信息约束**:
+- 禁止在响应中返回调试/内部细节（SQL、文件路径、panic 信息等）
+- 详细上下文仅写入服务端日志，通过 `request_id` 关联排查
+
+**日志要求**:
+- 使用 `tracing`
+- 必须携带 `request_id`
+- 如已鉴权则包含 `user_id`/`sid`
+- 禁止记录密码、Token、隐私内容
+
+---
+
+## 分页（Cursor / Keyset）
+
+**设计原则**:
+- 统一使用键集分页（Keyset Pagination / Cursor-based Pagination）
+- 游标是对 `(排序字段值, 唯一ID)` 元组的编码字符串
+- **禁止使用 OFFSET**
+- API 层对客户端暴露 `cursor?: string`，客户端只透传
+
+**分层职责**:
+- **Handler**：透传 cursor，不解析
+- **Service**：规范化 `limit`（默认 20，范围 1~100），透传 cursor
+- **Repository**：负责 cursor 编码/解码与 keyset 条件构造
+
+**Repository 实现模板**:
+- 解析 cursor：Base64 解码 → (SortValue, UniqueID)
+- 构建查询条件：`WHERE (sort_col, id) < ($last_val, $last_id)`
+- 执行查询：`ORDER BY sort_column DESC, id DESC LIMIT limit + 1`
+- 生成下一页 cursor：取最后一条记录编码
+
+**Cursor 错误处理**:
+- 格式错误（解析失败）：返回对应错误码
+- 无效或过期（格式正确但不可用）：返回对应错误码
+- 客户端建议：清空 cursor 并从第一页重试
+
+---
+
+## 认证（JWT）
+
+**统一路径设计**：
+- 所有 API 使用统一 `/api/v1/` 前缀，不区分 public/protected 路径
+- Token 要求通过中间件控制，而非路径命名
+
+**认证中间件分层**：
+
+**Token 可选（optional_auth）**：
+- 适用于：搜索、详情、公开列表等查询类 API
+- 实现：Token 存在则验证，有效时注入 `user_id`/`sid`；不存在或无效则继续执行
+- 响应差异：Handler/Service 根据是否有 `user_id` 决定返回 `@auth-only` 字段
+
+**Token 必须（auth）**：
+- 适用于：写操作、互动操作、`/me/` 路径、`/feed/` 路径
+- 实现：Token 缺失或无效返回 `10102`（Access Token 缺失）
+
+**管理员验证（admin_auth）**：
+- 适用于：`/admin/` 路径
+- 实现：在 auth 之后检查管理员权限，无权限返回 `10204`（非管理员）
+
+**实现要点**:
+- 从 `Authorization: Bearer <token>` 头提取 JWT Token
+- 验证 Token 有效性（使用 `jsonwebtoken` crate）
+- 提取 `user_id` 和 `sid` 注入到 `req.extensions()`
+- Token 必须模式：失败时返回 `AppError::Unauthorized`
+- Token 可选模式：失败时继续执行，不注入 `user_id`
+
+**会话存储与撤销**:
+- 服务端必须维护会话记录（sessions 表）
+- access_token 校验通过后，必须基于 `sid` 校验会话是否仍有效
+- refresh token 的校验与轮转逻辑在 Service 层完成
+
+---
+
+## 密码安全
+
+**密码安全策略（强制）**:
+1. 客户端：仅在 HTTPS/TLS 中提交明文 `password`
+2. 服务端：使用 `bcrypt`（推荐）或 `Argon2id` 做慢哈希后存储
+3. 验证：使用 `bcrypt::verify(password, stored_hash)`
+
+**关键要求**:
+- ❌ 永不存储明文密码或客户端哈希
+- ✅ 使用 bcrypt crate，work factor=10~12
+
+---
+
+## 数据完整性（无外键约束）
+
+由于不使用数据库外键约束，**Service 层必须严格验证所有引用关系**。
+
+**Repository 层辅助方法**:
+- 提供 `exists()`：用 `SELECT EXISTS(...)`，包含 `is_deleted = FALSE` 条件
+- 接受 `executor` 参数支持事务
+
+**Service 层验证模式**:
+
+**模式1：创建关联资源时验证父资源**
+- 在创建前验证所有引用的资源是否存在
+- 使用 `exists()` 方法检查
+- 不存在时返回 `AppError::NotFound`
+
+**模式2：批量操作时验证所有引用**
+- 逐个验证每个资源
+- 验证失败的项记录到结果中
+- 继续处理其他项
+
+**模式3：关联查询时处理引用缺失**
+- 查询关联数据时使用 `Option<T>`
+- 允许关联数据不存在
+- 返回占位符数据（如"已删除用户"）
+
+---
+
+## 未读计数操作规范
+
+**强制要求**：所有未读计数的读写必须通过 `chat_unread_counts` 表。
+
+**Repository 层实现要点**:
+- 递增未读计数：使用 `INSERT ... ON CONFLICT DO UPDATE` 实现 upsert
+- 清零未读计数：更新 `unread_count = 0`，同时更新 `last_read_at`
+- 查询未读数：不存在时返回 0
+
+**缓存策略**:
+- Redis Key：`unread:{user_id}:{chat_type}:{chat_id}`
+- TTL：1小时
+- 模式：写穿透（Write-through）
+
+---
+
+## 在线状态操作规范
+
+**强制要求**：所有在线状态的读写必须通过 `user_online_status` 表。
+
+**Repository 层实现要点**:
+- 设置在线：递增 `connection_count`，设置 `is_online = TRUE`
+- 设置离线：递减 `connection_count`，归零时设置 `is_online = FALSE`
+- 更新活跃时间：更新 `last_active_at`
+
+**缓存策略**:
+- Redis Key：`online_status:{user_id}`
+- 模式：旁路缓存（Cache-aside）
+
+---
+
+## 速率限制实现规范
+
+**核心原则**:
+- 速率限制在中间件层实现
+- 配额/业务限额检查在 Service 层实现
+- 使用 Redis 实现分布式计数器
+
+**中间件实现要点**:
+- 以"身份维度 + 资源维度"组成 key
+- 首次命中设置过期时间
+- 超限时返回对应错误码和 `Retry-After` 响应头
+
+---
+
+## 幂等性
+
+**启用范围**：创建/发送类接口（发送消息、创建瞬间等）
+
+**实现规则**:
+- 服务端以 `(user_id + api_endpoint + Idempotency-Key)` 作为幂等唯一标识
+- Redis 保存"请求 → 响应"
+- 仅缓存业务成功响应（`code == 0`）
+- TTL 建议 24 小时
+
+**注意**:
+- 幂等不要基于"请求体 hash"推断用户意图
+- 以客户端 `Idempotency-Key` 为准
+
+---
+
+## WebSocket 落地要点
+
+事件/订阅格式严格按 `@api_spec_websocket.mdc` 的定义。
+
+### 连接管理规则
+
+**核心职责**:
+- 维护 `user_id -> Vec<WebSocket连接>` 映射
+- 提供 `send_to_user()`, `broadcast()` 方法
+- 使用 `tokio::sync::RwLock` 保证并发安全
+- 使用 `tokio-tungstenite` crate
+
+**鉴权流程**:
+- 连接建立后必须在规定窗口内完成鉴权
+- 鉴权成功后绑定 `user_id`/`sid` 到连接
+- 鉴权失败或超时：返回错误并断开连接
+
+**心跳机制**:
+- 心跳相关时序参数必须做成可配置项
+- 连接在收到任意有效消息时刷新 idle 计时
+
+### 消息类型实现
+
+- 使用 `#[serde(tag = "type", content = "payload")]` 实现 JSON 序列化
+- 所有字段类型必须与 API 规范严格一致
+- 时间字段使用 ISO 8601 字符串
+
+---
+
+## 数据模型设计原则
+
+**设计原则**:
+- Model 结构与数据库表字段一一对应
+- 使用 `sqlx::FromRow` 自动映射
+- 为 API 响应创建专门的 DTO
+- 不要在 Model 中包含业务逻辑方法
+
+**类型映射规范**:
+
+| 数据库类型 | Rust 类型 | 说明 |
+|-----------|----------|------|
+| `BIGINT` | `i64` | 64 位整数 |
+| `VARCHAR(36)` | `String` | UUID 字符串 |
+| `DOUBLE PRECISION` | `f64` | 浮点数 |
+| `BOOLEAN` | `bool` | 布尔值 |
+| `TIMESTAMPTZ` | `DateTime<Utc>` | 时间戳 |
+| `JSONB` | `serde_json::Value` | JSON 数据 |
+| `ARRAY` | `Vec<T>` | 数组 |
+| `NULL` | `Option<T>` | 可空字段 |
+| `ENUM` | `enum` | 枚举类型 |
+
+**ID 字段说明**:
+- `user_id`: `BIGINT` → `i64`（纯数字用户 ID）
+- 其他业务 ID: `VARCHAR(36)` → `String`（UUID 字符串）
+- 内部主键: `id BIGSERIAL` → `i64`
+
+---
+
+## 测试策略
+
+### 测试分层
+
+**单元测试**（Repository/Service）:
+- 使用 `#[test]` 和 `#[cfg(test)]`
+- Mock 外部依赖
+
+**集成测试**（API 端点）:
+- 使用 `sqlx::test` 宏（自动回滚）
+- 使用 `tower::ServiceExt::oneshot()` 测试路由
+
+### 关键测试场景
+
+| 模块 | 关键场景 |
+|------|----------|
+| 认证 | 注册/登录/Token 刷新/权限验证 |
+| 地理位置 | 附近用户/瞬间搜索（PostGIS）|
+| WebSocket | 连接/订阅/推送/断线重连 |
+| 分页 | 游标边界/空结果/大数据集 |
+
+---
+
+## 代码质量要求
+
+### 必须遵守的规范
+
+**架构约束（强制）**:
+- ✅ Handler → Service → Repository 单向依赖
+- ✅ 地理位置计算使用 PostGIS
+- ✅ 密码安全：TLS 明文提交 + 服务端慢哈希存储
+- ✅ WebSocket 订阅模型
+- ✅ API 响应格式统一使用 `ApiResponse<T>`
+
+**代码规范（强制）**:
+- ✅ 所有异步函数使用 `async/await`
+- ✅ 使用 `?` 传播错误
+- ✅ 参数化查询（SQLx 自动处理）
+- ✅ 遵循 Rust 命名规范（snake_case）
+
+### 自行决策的部分
+
+**完全自主决策**:
+- 文件组织结构和命名
+- 具体的 SQL 查询语句
+- 缓存 key 命名和 TTL
+- 日志内容和级别
+- 测试用例设计
+- 性能优化策略
+
+---
+
+## 快速检查清单
+
+- **路由**：统一 `/api/v1/` 前缀，不区分 public/protected 路径
+- **认证**：Token 可选（查询类）/ Token 必须（写操作/互动/me/feed/admin）
+- **API**：仅 POST；HTTP 固定 200；`ApiResponse.code` 表达业务结果
+- **ID**：`user_id` 是 i64；其他业务 ID 多为 UUID 字符串
+- **时间**：UTC ISO 8601
+- **存在性检查**：优先 `repo.exists()` + `SELECT EXISTS(...)`
+- **分页**：keyset/cursor；cursor 不透明，service 透传
+- **幂等**：客户端对"同一次重试"复用 `Idempotency-Key`
+- **@auth-only**：Token 可选 API 根据 user_id 是否存在决定是否返回
+
+---
+
+## 自检 Checklist
+
+### 契约边界检查
+- [ ] 后端规则中不维护第二份 API 端点/字段/错误码清单
+- [ ] 引用 API 规范时只使用小节标题/锚点标题
+
+### 统一路由检查
+- [ ] 所有路由使用统一 `/api/v1/` 前缀
+- [ ] 不存在 `/public/` 或 `/protected/` 路径前缀
+- [ ] Token 可选/必须通过中间件控制，而非路径命名
+
+### 统一响应检查
+- [ ] 所有 handler 返回 `ApiResponse<T>`
+- [ ] 业务成功判定不依赖 HTTP 状态码
+
+### 分层职责检查
+- [ ] Handler 只做参数提取、调用 Service、返回响应
+- [ ] Service 包含所有业务逻辑，不直接写 SQL
+- [ ] Repository 仅负责 SQL 与数据映射
+- [ ] Token 可选 API 的 Service 方法接收 `Option<i64>` user_id
+
+### 分页检查
+- [ ] 列表查询不使用 OFFSET
+- [ ] cursor 只在 Repository 层解析
+
+### 地理位置检查
+- [ ] 所有距离/范围计算在 PostGIS 完成
+- [ ] 地理位置字段使用 GIST 索引
+
+---
+
+END

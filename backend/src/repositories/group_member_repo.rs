@@ -6,7 +6,7 @@ use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::types::enums::MemberRole;
+use crate::types::enums::GroupRole;
 use crate::utils::pagination::{decode_cursor, encode_cursor, IdCursor};
 
 /// 用户加入群组的基础信息（用于 user/groups 列表）
@@ -26,7 +26,7 @@ pub struct GroupMemberRow {
     pub id: i64,
     pub group_chat_id: Uuid,
     pub user_id: i64,
-    pub role: MemberRole,
+    pub role: GroupRole,
     pub joined_at: DateTime<Utc>,
     pub muted_until: Option<DateTime<Utc>>,
     pub is_deleted: bool,
@@ -39,7 +39,7 @@ pub struct GroupMemberDetailRow {
     pub id: i64,
     pub group_chat_id: Uuid,
     pub user_id: i64,
-    pub role: MemberRole,
+    pub role: GroupRole,
     pub joined_at: DateTime<Utc>,
     pub muted_until: Option<DateTime<Utc>>,
     pub is_deleted: bool,
@@ -66,8 +66,12 @@ impl GroupMemberRepository {
     /// 辅助：清除成员缓存
     async fn invalidate_member_cache(&self, group_chat_id: Uuid, user_id: i64) {
         let mut conn = self.redis.clone();
-        let key = format!("group:member:{}:{}", group_chat_id, user_id);
-        let _: () = conn.del(&key).await.unwrap_or(());
+        let member_key = format!("group:member:{}:{}", group_chat_id, user_id);
+        let role_key = format!("group:member:role:{}:{}", group_chat_id, user_id);
+        let count_key = format!("group:members:count:{}", group_chat_id);
+        let _: () = conn.del(&member_key).await.unwrap_or(());
+        let _: () = conn.del(&role_key).await.unwrap_or(());
+        let _: () = conn.del(&count_key).await.unwrap_or(());
     }
 
     /// 添加成员
@@ -75,7 +79,7 @@ impl GroupMemberRepository {
         &self,
         group_chat_id: Uuid,
         user_id: i64,
-        role: MemberRole,
+        role: GroupRole,
     ) -> Result<()> {
         let role_str = role.to_string();
         sqlx::query!(
@@ -94,6 +98,13 @@ impl GroupMemberRepository {
         let mut conn = self.redis.clone();
         let key = format!("group:member:{}:{}", group_chat_id, user_id);
         let _: () = conn.set_ex(&key, 1, 86400).await.unwrap_or(()); // 24小时
+        let role_key = format!("group:member:role:{}:{}", group_chat_id, user_id);
+        let _: () = conn
+            .set_ex(&role_key, role_str, 1800)
+            .await
+            .unwrap_or(());
+        let count_key = format!("group:members:count:{}", group_chat_id);
+        let _: () = conn.del(&count_key).await.unwrap_or(());
 
         Ok(())
     }
@@ -107,7 +118,7 @@ impl GroupMemberRepository {
         let row = sqlx::query_as!(
             GroupMemberRow,
             r#"
-            SELECT id, group_chat_id, user_id, role as "role: MemberRole", 
+            SELECT id, group_chat_id, user_id, role as "role: GroupRole", 
                    joined_at, muted_until, is_deleted, deleted_at
             FROM group_members
             WHERE group_chat_id = $1 AND user_id = $2 AND is_deleted = FALSE
@@ -126,7 +137,7 @@ impl GroupMemberRepository {
         &self,
         group_chat_id: Uuid,
         user_id: i64,
-        role: MemberRole,
+        role: GroupRole,
     ) -> Result<()> {
         let role_str = role.to_string();
         sqlx::query!(
@@ -171,10 +182,21 @@ impl GroupMemberRepository {
         &self,
         group_chat_id: Uuid,
         user_id: i64,
-    ) -> Result<Option<MemberRole>> {
+    ) -> Result<Option<GroupRole>> {
+        let mut conn = self.redis.clone();
+        let key = format!("group:member:role:{}:{}", group_chat_id, user_id);
+        if let Ok(Some(val)) = conn.get::<_, Option<String>>(&key).await {
+            if val == "none" {
+                return Ok(None);
+            }
+            if let Ok(role) = GroupRole::from_str(&val) {
+                return Ok(Some(role));
+            }
+        }
+
         let row = sqlx::query!(
             r#"
-            SELECT role as "role: MemberRole"
+            SELECT role as "role: GroupRole"
             FROM group_members
             WHERE group_chat_id = $1 AND user_id = $2 AND is_deleted = FALSE
             "#,
@@ -183,7 +205,13 @@ impl GroupMemberRepository {
         )
         .fetch_optional(&self.pool)
         .await?;
-        Ok(row.map(|r| r.role))
+        if let Some(r) = row {
+            let _: () = conn.set_ex(&key, r.role.to_string(), 1800).await.unwrap_or(());
+            Ok(Some(r.role))
+        } else {
+            let _: () = conn.set_ex(&key, "none", 300).await.unwrap_or(());
+            Ok(None)
+        }
     }
 
     /// 检查用户是否是群组成员 (Redis 优先)
@@ -220,6 +248,12 @@ impl GroupMemberRepository {
 
     /// 获取群组成员数量
     pub async fn count_members(&self, group_chat_id: Uuid) -> Result<i64> {
+        let mut conn = self.redis.clone();
+        let key = format!("group:members:count:{}", group_chat_id);
+        if let Ok(Some(val)) = conn.get::<_, Option<i64>>(&key).await {
+            return Ok(val);
+        }
+
         let result = sqlx::query!(
             r#"
             SELECT COUNT(*) as "count!"
@@ -230,6 +264,7 @@ impl GroupMemberRepository {
         )
         .fetch_one(&self.pool)
         .await?;
+        let _: () = conn.set_ex(&key, result.count, 300).await.unwrap_or(());
         Ok(result.count)
     }
 
@@ -237,8 +272,8 @@ impl GroupMemberRepository {
     ///
     /// 用途：群组申请等“需要通知管理员”的场景，避免在事件处理器里做“全量广播”。
     pub async fn list_admin_user_ids(&self, group_chat_id: Uuid) -> Result<Vec<i64>> {
-        let owner_role = MemberRole::Owner.to_string();
-        let admin_role = MemberRole::Admin.to_string();
+        let owner_role = GroupRole::Owner.to_string();
+        let admin_role = GroupRole::Admin.to_string();
 
         let rows = sqlx::query!(
             r#"
@@ -275,7 +310,7 @@ impl GroupMemberRepository {
         let members = sqlx::query_as!(
             GroupMemberDetailRow,
             r#"
-            SELECT m.id, m.group_chat_id, m.user_id, m.role as "role: MemberRole", 
+            SELECT m.id, m.group_chat_id, m.user_id, m.role as "role: GroupRole", 
                    m.joined_at, m.muted_until, m.is_deleted, m.deleted_at,
                    u.nickname, u.avatar_url, u.user_type as "user_type: crate::types::enums::UserType",
                    (m.muted_until > NOW()) as "is_muted"
@@ -316,6 +351,7 @@ impl GroupMemberRepository {
         )
         .execute(&self.pool)
         .await?;
+        self.invalidate_member_cache(group_chat_id, user_id).await;
         Ok(())
     }
 
@@ -373,7 +409,7 @@ impl GroupMemberRepository {
         let members = sqlx::query_as!(
             GroupMemberRow,
             r#"
-            SELECT id, group_chat_id, user_id, role as "role: MemberRole", 
+            SELECT id, group_chat_id, user_id, role as "role: GroupRole", 
                    joined_at, muted_until, is_deleted, deleted_at
             FROM group_members
             WHERE user_id = $1 AND id < $2 AND is_deleted = FALSE

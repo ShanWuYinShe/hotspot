@@ -5,7 +5,6 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub struct GroupAnnouncementRow {
-    pub id: i64,
     pub announcement_id: String, // VARCHAR(36) in DB
     pub group_chat_id: String,   // VARCHAR(36) in DB
     pub title: String,
@@ -13,7 +12,6 @@ pub struct GroupAnnouncementRow {
     pub created_by: i64,
     pub is_pinned: bool,
     pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Clone)]
@@ -40,7 +38,7 @@ impl GroupAnnouncementRepository {
             r#"
             INSERT INTO group_announcements (group_chat_id, title, content, created_by, is_pinned)
             VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, announcement_id, group_chat_id, title, content, created_by, is_pinned, created_at, updated_at
+            RETURNING announcement_id, group_chat_id, title, content, created_by, is_pinned, created_at
             "#,
             &group_chat_id.to_string(),
             title,
@@ -59,7 +57,7 @@ impl GroupAnnouncementRepository {
         let announcement = sqlx::query_as!(
             GroupAnnouncementRow,
             r#"
-            SELECT id, announcement_id, group_chat_id, title, content, created_by, is_pinned, created_at, updated_at
+            SELECT announcement_id, group_chat_id, title, content, created_by, is_pinned, created_at
             FROM group_announcements
             WHERE announcement_id = $1
             "#,
@@ -82,7 +80,7 @@ impl GroupAnnouncementRepository {
         let announcements = sqlx::query_as!(
             GroupAnnouncementRow,
             r#"
-            SELECT id, announcement_id, group_chat_id, title, content, created_by, is_pinned, created_at, updated_at
+            SELECT announcement_id, group_chat_id, title, content, created_by, is_pinned, created_at
             FROM group_announcements
             WHERE group_chat_id = $1
             ORDER BY is_pinned DESC, created_at DESC

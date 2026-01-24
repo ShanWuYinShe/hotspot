@@ -1,4 +1,5 @@
 use futures_util::future;
+use std::str::FromStr;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -11,12 +12,31 @@ use crate::{
     },
     error::Result,
     events::event_types::AppEvent,
-    repositories::notification_repo::{NotificationRepository, NotificationType},
+    repositories::notification_repo::{NotificationRepository, NotificationType as RepoNotificationType},
     repositories::user_repo::UserRepository,
-    types::enums::NotificationApiType,
+    types::enums::{NotificationFilterType, NotificationTargetType, NotificationType},
     utils::validation::Validator,
     EventBus,
 };
+
+/// 将 Repository 层的 NotificationType 转换为 DTO 层的 NotificationType
+fn map_repo_notification_type(repo_type: &RepoNotificationType) -> NotificationType {
+    match repo_type {
+        RepoNotificationType::Like => NotificationType::MomentLike,
+        RepoNotificationType::Comment => NotificationType::MomentComment,
+        RepoNotificationType::Reply => NotificationType::CommentReply,
+        RepoNotificationType::Follow => NotificationType::NewFollower,
+        RepoNotificationType::Mention => NotificationType::MessageMention,
+        RepoNotificationType::System => NotificationType::SystemAnnouncement,
+        // 群组相关通知暂时映射为系统通知
+        RepoNotificationType::GroupInvite
+        | RepoNotificationType::GroupApply
+        | RepoNotificationType::GroupKick
+        | RepoNotificationType::GroupQuit
+        | RepoNotificationType::GroupDismiss
+        | RepoNotificationType::GroupAdmin => NotificationType::SystemAnnouncement,
+    }
+}
 
 #[derive(Clone)]
 pub struct NotificationService {
@@ -50,7 +70,25 @@ impl NotificationService {
         let limit = Validator::validate_limit(req.limit, 50)? as i64;
         let cursor = req.cursor;
 
-        let (rows, next_cursor) = self.repo.list_by_user(user_id, limit, cursor).await?;
+        let type_filters = req.r#type.map(|filter| {
+            let types = match filter {
+                NotificationFilterType::Like => vec![NotificationType::MomentLike],
+                NotificationFilterType::Comment => {
+                    vec![NotificationType::MomentComment, NotificationType::CommentReply]
+                }
+                NotificationFilterType::Follow => {
+                    vec![NotificationType::NewFollower, NotificationType::MutualFollow]
+                }
+                NotificationFilterType::System => vec![NotificationType::SystemAnnouncement],
+                NotificationFilterType::Mention => vec![NotificationType::MessageMention],
+            };
+            types.into_iter().map(|t| t.to_string()).collect()
+        });
+
+        let (rows, next_cursor) = self
+            .repo
+            .list_by_user(user_id, limit, cursor, type_filters)
+            .await?;
 
         // 使用 futures_util::future::join_all 来并发签名所有 avatar_url
         let items: Vec<NotificationItem> =
@@ -70,18 +108,37 @@ impl NotificationService {
                     None
                 };
 
+                let (target_text_preview, target_media_url) = match row.target_preview.clone() {
+                    Some(preview) => {
+                        if preview.starts_with("uploads/") {
+                            let signed = self
+                                .media_service
+                                .sign_url_if_path(Some(&preview))
+                                .await;
+                            (None, signed)
+                        } else if preview.starts_with("http://") || preview.starts_with("https://") {
+                            (None, Some(preview))
+                        } else {
+                            (Some(preview), None)
+                        }
+                    }
+                    None => (None, None),
+                };
+
                 NotificationItem {
                     notification_id: row.notification_id.to_string(),
-                    r#type: row.r#type.to_string(),
-                    title: row.title,
-                    content: row.content,
+                    notification_type: map_repo_notification_type(&row.r#type),
+                    title: Some(row.title),
+                    content: Some(row.content),
                     created_at: row.created_at.to_rfc3339(),
-                    read: row.is_read,
+                    is_read: row.is_read,
                     sender,
-                    target_type: row.target_type,
+                    target_type: row.target_type.as_ref()
+                        .and_then(|t| NotificationTargetType::from_str(t).ok()),
                     target_id: row.target_id,
                     reference_id: row.reference_id,
-                    target_preview: row.target_preview,
+                    target_text_preview,
+                    target_media_url,
                 }
             }))
             .await;
@@ -110,17 +167,17 @@ impl NotificationService {
 
         for (r#type, count) in breakdown_rows {
             match r#type {
-                NotificationType::Like => breakdown.like += count,
-                NotificationType::Comment | NotificationType::Reply => breakdown.comment += count,
-                NotificationType::Follow => breakdown.follow += count,
-                NotificationType::Mention => breakdown.mention += count,
-                NotificationType::System
-                | NotificationType::GroupInvite
-                | NotificationType::GroupApply
-                | NotificationType::GroupKick
-                | NotificationType::GroupQuit
-                | NotificationType::GroupDismiss
-                | NotificationType::GroupAdmin => breakdown.system += count,
+                RepoNotificationType::Like => breakdown.like += count,
+                RepoNotificationType::Comment | RepoNotificationType::Reply => breakdown.comment += count,
+                RepoNotificationType::Follow => breakdown.follow += count,
+                RepoNotificationType::Mention => breakdown.mention += count,
+                RepoNotificationType::System
+                | RepoNotificationType::GroupInvite
+                | RepoNotificationType::GroupApply
+                | RepoNotificationType::GroupKick
+                | RepoNotificationType::GroupQuit
+                | RepoNotificationType::GroupDismiss
+                | RepoNotificationType::GroupAdmin => breakdown.system += count,
             }
         }
 
@@ -150,50 +207,50 @@ impl NotificationService {
         // 2. 按类型标记
         if let Some(type_enum) = req.r#type {
             match type_enum {
-                NotificationApiType::Like => {
+                NotificationFilterType::Like => {
                     self.repo
-                        .mark_type_read(user_id, NotificationType::Like)
+                        .mark_type_read(user_id, RepoNotificationType::Like)
                         .await?
                 }
-                NotificationApiType::Comment => {
+                NotificationFilterType::Comment => {
                     self.repo
-                        .mark_type_read(user_id, NotificationType::Comment)
+                        .mark_type_read(user_id, RepoNotificationType::Comment)
                         .await?;
                     self.repo
-                        .mark_type_read(user_id, NotificationType::Reply)
+                        .mark_type_read(user_id, RepoNotificationType::Reply)
                         .await?;
                 }
-                NotificationApiType::Follow => {
+                NotificationFilterType::Follow => {
                     self.repo
-                        .mark_type_read(user_id, NotificationType::Follow)
+                        .mark_type_read(user_id, RepoNotificationType::Follow)
                         .await?
                 }
-                NotificationApiType::Mention => {
+                NotificationFilterType::Mention => {
                     self.repo
-                        .mark_type_read(user_id, NotificationType::Mention)
+                        .mark_type_read(user_id, RepoNotificationType::Mention)
                         .await?
                 }
-                NotificationApiType::System => {
+                NotificationFilterType::System => {
                     self.repo
-                        .mark_type_read(user_id, NotificationType::System)
+                        .mark_type_read(user_id, RepoNotificationType::System)
                         .await?;
                     self.repo
-                        .mark_type_read(user_id, NotificationType::GroupInvite)
+                        .mark_type_read(user_id, RepoNotificationType::GroupInvite)
                         .await?;
                     self.repo
-                        .mark_type_read(user_id, NotificationType::GroupApply)
+                        .mark_type_read(user_id, RepoNotificationType::GroupApply)
                         .await?;
                     self.repo
-                        .mark_type_read(user_id, NotificationType::GroupKick)
+                        .mark_type_read(user_id, RepoNotificationType::GroupKick)
                         .await?;
                     self.repo
-                        .mark_type_read(user_id, NotificationType::GroupQuit)
+                        .mark_type_read(user_id, RepoNotificationType::GroupQuit)
                         .await?;
                     self.repo
-                        .mark_type_read(user_id, NotificationType::GroupDismiss)
+                        .mark_type_read(user_id, RepoNotificationType::GroupDismiss)
                         .await?;
                     self.repo
-                        .mark_type_read(user_id, NotificationType::GroupAdmin)
+                        .mark_type_read(user_id, RepoNotificationType::GroupAdmin)
                         .await?;
                 }
             }
@@ -224,7 +281,7 @@ impl NotificationService {
     pub async fn create_notification(
         &self,
         user_id: i64,
-        r#type: NotificationType,
+        r#type: RepoNotificationType,
         title: String,
         content: String,
         sender_id: Option<i64>,

@@ -20,6 +20,8 @@ CREATE TYPE privacy_level AS ENUM ('public', 'friends', 'private');
 CREATE TYPE user_type AS ENUM ('temp', 'normal', 'admin', 'system');
 -- 私聊权限：everyone-所有人, friends-仅好友, nobody-禁止
 CREATE TYPE chat_permission AS ENUM ('everyone', 'friends', 'nobody');
+-- 性别
+CREATE TYPE gender AS ENUM ('male', 'female', 'apache_helicopter');
 
 -- 群组相关
 CREATE TYPE join_method AS ENUM ('open', 'approval', 'invite_only');

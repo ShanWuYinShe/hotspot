@@ -4,26 +4,29 @@ use crate::{
     dto::{
         request::{
             BlockRequest, DeleteAccountRequest, FollowRequest, GetRelationshipRequest,
-            MyBlockedRequest, MyFollowersRequest, MyFollowingRequest, MyFriendsRequest,
-            MyProfileRequest, MySettingsRequest, MyStatsRequest, SearchUsersByKeywordRequest,
-            SearchUsersByLocationRequest, SearchUsersByTagRequest, SetRemarkRequest,
-            UnblockRequest, UnfollowRequest, UpdateLocationRequest, UpdateProfileRequest,
-            UpdateSettingsRequest, UpgradeAccountRequest, UserFollowersRequest,
-            UserFollowingRequest, UserFriendsRequest, UserGroupsRequest, UserLikedMomentsRequest,
-            UserMomentsRequest, UserOpenTheDoorRequest, UserStatsRequest,
+            HandleFollowRequestRequest, MyBlockedRequest, MyFollowRequestsRequest,
+            MyFollowersRequest, MyFollowingRequest, MyFriendsRequest, MyProfileRequest,
+            MySettingsRequest, MyStatsRequest, SearchUsersByKeywordRequest,
+            SearchUsersByLocationRequest, SearchUsersByTagRequest, SetRemarkRequest, UnblockRequest,
+            UnfollowRequest, UpdateLocationRequest, UpdateProfileRequest, UpdateSettingsRequest,
+            UpgradeAccountRequest, UserFollowersRequest, UserFollowingRequest, UserFriendsRequest,
+            UserGroupsRequest, UserLikedMomentsRequest, UserMomentsRequest, UserOpenTheDoorRequest,
+            UserStatsRequest,
         },
         response::{
-            ApiResponse, AuthData, BlockedUserItem, FollowerItem, FollowingItem, FriendListItem,
-            GroupInfo, MomentItem, MyProfileData, PaginatedData, UserDetailData, UserInfo,
-            UserItem, UserRelation, UserSettingsData, UserStatsData,
+            AdminUserDetail, ApiResponse, AuthData, BlockedUserItem, FollowRequestItem,
+            FollowerItem, FollowingItem, FriendItem, GroupInfo, MomentItem, MyProfileData,
+            PaginatedData, UserCard, UserInfo, UserItem, UserRelation, UserSettingsData,
+            UserStatsData,
         },
     },
     error::Result,
-    middleware::auth::AuthenticatedUser,
+    middleware::auth::{AuthenticatedUser, OptionalAuthenticatedUser},
+    services::admin_audit_service::AuditLogInput,
     state::AppState,
 };
 
-// ==================== Public APIs ====================
+// ==================== Token 可选 ====================
 
 /// 按关键字搜索用户（全局）
 pub async fn search_by_keyword(
@@ -55,13 +58,17 @@ pub async fn search_by_location(
 /// 获取用户资料（通过 ID 获取指定用户的资料，包含在线状态）
 pub async fn open_the_door(
     State(state): State<AppState>,
+    user: OptionalAuthenticatedUser,
     Json(req): Json<UserOpenTheDoorRequest>,
-) -> Result<Json<ApiResponse<UserDetailData>>> {
-    let response = state.user_service.open_the_door(&req).await?;
+) -> Result<Json<ApiResponse<UserCard>>> {
+    let response = state
+        .user_service
+        .open_the_door(user.user_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
-// ==================== Protected APIs ====================
+// ==================== Token 必须 ====================
 
 fn is_update_profile_empty(req: &UpdateProfileRequest) -> bool {
     req.nickname.is_none()
@@ -78,7 +85,9 @@ fn is_update_settings_empty(req: &UpdateSettingsRequest) -> bool {
         && req.friends_visible.is_none()
         && req.following_visible.is_none()
         && req.followers_visible.is_none()
+        && req.groups_visible.is_none()
         && req.moments_visible.is_none()
+        && req.liked_moments_visible.is_none()
         && req.stats_visible.is_none()
         && req.allow_follow.is_none()
         && req.allow_private_chat.is_none()
@@ -300,7 +309,7 @@ pub async fn get_my_friends(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<MyFriendsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<FriendListItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<FriendItem>>>> {
     let response = state
         .user_service
         .get_friends_list(user.user_id, &req)
@@ -330,6 +339,30 @@ pub async fn get_my_followers(
         .get_followers_list(user.user_id, &req)
         .await?;
     Ok(Json(ApiResponse::success(response)))
+}
+
+pub async fn get_follow_requests(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+    Json(req): Json<MyFollowRequestsRequest>,
+) -> Result<Json<ApiResponse<PaginatedData<FollowRequestItem>>>> {
+    let response = state
+        .user_service
+        .get_follow_requests(user.user_id, &req)
+        .await?;
+    Ok(Json(ApiResponse::success(response)))
+}
+
+pub async fn handle_follow_request(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+    Json(req): Json<HandleFollowRequestRequest>,
+) -> Result<Json<ApiResponse<()>>> {
+    state
+        .user_service
+        .handle_follow_request(user.user_id, &req)
+        .await?;
+    Ok(Json(ApiResponse::success_empty()))
 }
 
 // ==================== 拉黑管理 ====================
@@ -404,16 +437,80 @@ pub async fn admin_search(
 
 pub async fn admin_ban(
     State(state): State<AppState>,
+    admin: AuthenticatedUser,
     Json(req): Json<crate::dto::request::AdminBanUserRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
+    if req.user_id == admin.user_id {
+        return Err(crate::error::AppError::CannotOperateOnSelf);
+    }
+    let operator_is_super = state
+        .admin_rbac_service
+        .is_super_admin(admin.user_id)
+        .await?;
+    if state.admin_rbac_service.is_admin(req.user_id).await? && !operator_is_super {
+        return Err(crate::error::AppError::CannotOperateAdmin(
+            "无法操作管理员账户".to_string(),
+        ));
+    }
     state.user_service.admin_ban_user(&req).await?;
+    let details = serde_json::json!({
+        "reason": req.reason,
+        "duration_days": req.duration_days,
+    });
+    state
+        .admin_audit_service
+        .record(AuditLogInput {
+            action: "user.ban".to_string(),
+            operator_id: admin.user_id,
+            target_type: "user".to_string(),
+            target_id: req.user_id.to_string(),
+            target_name: None,
+            details: Some(details),
+            before_state: None,
+            after_state: None,
+            ip_address: None,
+            user_agent: None,
+        })
+        .await?;
     Ok(Json(ApiResponse::success_empty()))
+}
+
+pub async fn admin_detail(
+    State(state): State<AppState>,
+    _admin: AuthenticatedUser,
+    Json(req): Json<crate::dto::request::AdminUserDetailRequest>,
+) -> Result<Json<ApiResponse<AdminUserDetail>>> {
+    let mut detail = state.user_service.admin_user_detail(&req).await?;
+    detail.ban_history = state
+        .admin_audit_service
+        .get_user_ban_history(req.user_id)
+        .await?;
+    Ok(Json(ApiResponse::success(detail)))
 }
 
 pub async fn admin_unban(
     State(state): State<AppState>,
+    admin: AuthenticatedUser,
     Json(req): Json<crate::dto::request::AdminUnbanUserRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
     state.user_service.admin_unban_user(&req).await?;
+    let details = serde_json::json!({
+        "reason": req.reason,
+    });
+    state
+        .admin_audit_service
+        .record(AuditLogInput {
+            action: "user.unban".to_string(),
+            operator_id: admin.user_id,
+            target_type: "user".to_string(),
+            target_id: req.user_id.to_string(),
+            target_name: None,
+            details: Some(details),
+            before_state: None,
+            after_state: None,
+            ip_address: None,
+            user_agent: None,
+        })
+        .await?;
     Ok(Json(ApiResponse::success_empty()))
 }

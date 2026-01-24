@@ -1,0 +1,115 @@
+---
+alwaysApply: true
+---
+# HotSpot API 规范 - 管理员公告与系统公告 API 模块 v0.0.1 (RPC)
+
+> 本文档定义 HotSpot 系统公告 (`announcements`) 相关的 RPC 接口，包括管理员发布和公开读取。
+
+## 服务定义
+
+- **Service Namespace**: `announcements`, `admin.announcements`
+- **Base Path**: `/api/v1/announcements/`, `/api/v1/admin/announcements/`
+
+## 核心类型定义
+
+```typescript
+// 注：SystemAnnouncementItem 类型定义于 api_spec_common_types.mdc
+
+interface AnnouncementCreated {
+  announcement_id: string;
+  created_at: string;
+}
+```
+
+## 错误码说明
+
+本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
+
+| 错误码 | 说明 | 相关接口 |
+|-------|------|---------|
+| `10001` | 缺少必填参数 | `create`、`delete` |
+| `10003` | 参数值超出范围 | `announcements`（公开列表 limit） |
+| `10204` | 非管理员 | 所有 admin 接口 |
+| `10205` | 管理员权限不足 | `list`（需要 `admin.announcements.read`）、`create`/`delete`（需要 `admin.announcements.write`） |
+| `10300` | 资源不存在 | `delete` |
+
+---
+
+## 查询接口（Token 可选）
+
+## 接口概览（按子域）
+
+| 子域 | 端点 | 说明 | Request | Response |
+|-----|------|------|---------|----------|
+| 公告 | `POST /api/v1/announcements` | 系统公告列表 | `AnnouncementListRequest` | `ApiResponse<PaginatedData<SystemAnnouncementItem>>` |
+| 管理员公告 | `POST /api/v1/admin/announcements/create` | 发布系统公告 | `CreateAnnouncementRequest` | `ApiResponse<AnnouncementCreated>` |
+| 管理员公告 | `POST /api/v1/admin/announcements/list` | 公告列表（管理员） | `AdminAnnouncementListRequest` | `ApiResponse<PaginatedData<SystemAnnouncementItem>>` |
+| 管理员公告 | `POST /api/v1/admin/announcements/delete` | 删除系统公告 | `DeleteAnnouncementRequest` | `ApiResponse` |
+
+### POST /api/v1/announcements
+
+获取系统公告列表。
+
+说明：系统公告属于"默认公开资源"，不涉及用户隐私等级/访问控制分支。
+
+**Request**:
+```typescript
+interface AnnouncementListRequest extends PaginationParams {}
+```
+**Response**: `ApiResponse<PaginatedData<SystemAnnouncementItem>>`
+
+**可能错误码**：`10003`
+
+---
+
+## 管理员接口
+
+### POST /api/v1/admin/announcements/create
+
+发布系统公告（管理员）。
+
+**权限要求**：`admin.announcements.write`
+
+**Request**:
+```typescript
+interface CreateAnnouncementRequest {
+  title: string;
+  content: string;
+  severity: AnnouncementSeverity;
+  action_url?: string;
+  send_push?: boolean;
+}
+```
+**Response**: `ApiResponse<AnnouncementCreated>`
+
+**可能错误码**：`10001`、`10204`、`10205`
+
+### POST /api/v1/admin/announcements/list
+
+获取公告列表（管理员）。
+
+**权限要求**：`admin.announcements.read`
+
+**Request**:
+```typescript
+interface AdminAnnouncementListRequest extends PaginationParams {}
+```
+**Response**: `ApiResponse<PaginatedData<SystemAnnouncementItem>>`
+
+**可能错误码**：`10204`、`10205`
+
+### POST /api/v1/admin/announcements/delete
+
+删除公告（管理员）。
+
+**权限要求**：`admin.announcements.write`
+
+**Request**:
+```typescript
+interface DeleteAnnouncementRequest {
+  announcement_id: string;
+}
+```
+**Response**: `ApiResponse`
+
+**可能错误码**：`10001`、`10204`、`10205`、`10300`

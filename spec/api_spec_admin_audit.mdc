@@ -1,0 +1,170 @@
+---
+alwaysApply: true
+---
+# HotSpot API 规范 - 管理员审计日志 API 模块 v0.0.1 (RPC)
+
+> 本文档定义 HotSpot 管理员审计日志 (`admin/audit`) 相关的 RPC 接口。
+
+## 服务定义
+
+- **Service Namespace**: `admin.audit`
+- **Base Path**: `/api/v1/admin/audit/`
+
+## 核心类型定义
+
+```typescript
+// 审计日志操作类型
+type AuditAction = 
+  | 'user.ban'           // 封禁用户
+  | 'user.unban'         // 解封用户
+  | 'group.dismiss'      // 解散群组
+  | 'announcement.create'// 创建公告
+  | 'announcement.delete'// 删除公告
+  | 'role.create'        // 创建角色
+  | 'role.update'        // 更新角色
+  | 'role.delete'        // 删除角色
+  | 'permission.grant'   // 授予权限
+  | 'permission.revoke'  // 撤销权限
+  | 'config.update';     // 更新系统配置
+
+// 审计日志目标类型
+type AuditTargetType = 'user' | 'group' | 'announcement' | 'role' | 'config';
+
+interface AuditLogItem {
+  log_id: string;
+  action: AuditAction;
+  operator: UserInfo;             // 执行操作的管理员
+  target_type: AuditTargetType;
+  target_id: string;              // 目标资源 ID
+  target_name?: string;           // 目标资源名称（便于展示）
+  details?: Record<string, any>;  // 操作详情（如封禁原因、角色权限变更等）
+  ip_address?: string;
+  user_agent?: string;
+  created_at: string;
+}
+
+interface AuditLogDetail extends AuditLogItem {
+  // 扩展详情
+  before_state?: Record<string, any>;  // 操作前状态（已过滤敏感字段）
+  after_state?: Record<string, any>;   // 操作后状态（已过滤敏感字段）
+}
+```
+
+**安全说明**：
+- `before_state` 和 `after_state` 会自动过滤敏感字段，包括但不限于：
+  - `password`、`password_hash`、`secret`、`token`、`api_key`
+  - `credit_card`、`ssn`、`id_card`
+  - 其他包含 `_secret`、`_key`、`_token` 后缀的字段
+- 敏感字段值会被替换为 `"[REDACTED]"`
+- 导出的审计日志同样遵循此过滤规则
+
+## 错误码说明
+
+本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
+
+| 错误码 | 说明 | 相关接口 |
+|-------|------|---------|
+| `10001` | 缺少必填参数 | `detail` |
+| `10204` | 非管理员 | 所有 admin 接口 |
+| `10205` | 管理员权限不足 | 需要 `admin.audit.read` |
+| `10300` | 日志不存在 | `detail` |
+
+---
+
+## 接口列表
+
+## 接口概览（按子域）
+
+| 子域 | 端点 | 说明 | Request | Response |
+|-----|------|------|---------|----------|
+| 审计日志 | `POST /api/v1/admin/audit/list` | 审计日志列表 | `AuditLogListRequest` | `ApiResponse<PaginatedData<AuditLogItem>>` |
+| 审计日志 | `POST /api/v1/admin/audit/detail` | 审计日志详情 | `AuditLogDetailRequest` | `ApiResponse<AuditLogDetail>` |
+| 审计日志 | `POST /api/v1/admin/audit/export` | 导出审计日志（异步） | `AuditLogExportRequest` | `ApiResponse<AuditLogExportResult>` |
+| 审计日志 | `POST /api/v1/admin/audit/export/status` | 导出任务状态 | `AuditLogExportStatusRequest` | `ApiResponse<AuditLogExportResult>` |
+
+### POST /api/v1/admin/audit/list
+
+查询审计日志列表。
+
+**权限要求**：`admin.audit.read`
+
+**Request**:
+```typescript
+interface AuditLogListRequest extends PaginationParams {
+  action?: AuditAction;           // 按操作类型筛选
+  operator_id?: number;           // 按操作人筛选
+  target_type?: AuditTargetType;  // 按目标类型筛选
+  target_id?: string;             // 按目标 ID 筛选
+  start_time?: string;            // 开始时间（UTC ISO 8601）
+  end_time?: string;              // 结束时间（UTC ISO 8601）
+}
+```
+**Response**: `ApiResponse<PaginatedData<AuditLogItem>>`
+
+**可能错误码**：`10204`、`10205`
+
+### POST /api/v1/admin/audit/detail
+
+获取审计日志详情。
+
+**权限要求**：`admin.audit.read`
+
+**Request**:
+```typescript
+interface AuditLogDetailRequest {
+  log_id: string;
+}
+```
+**Response**: `ApiResponse<AuditLogDetail>`
+
+**可能错误码**：`10001`、`10204`、`10205`、`10300`
+
+### POST /api/v1/admin/audit/export
+
+导出审计日志（异步）。
+
+**权限要求**：`admin.audit.export`
+
+**Request**:
+```typescript
+interface AuditLogExportRequest {
+  action?: AuditAction;
+  operator_id?: number;
+  target_type?: AuditTargetType;
+  start_time?: string;
+  end_time?: string;
+  format?: 'csv' | 'json';  // 默认 csv
+}
+
+interface AuditLogExportResult {
+  export_id: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  download_url?: string;  // 完成后提供（签名 URL，有过期时间）
+  expires_at?: string;    // 下载链接过期时间（建议 1 小时内）
+}
+```
+**Response**: `ApiResponse<AuditLogExportResult>`
+
+**可能错误码**：`10204`、`10205`
+
+**安全说明**：
+- `download_url` 使用签名 URL（如 S3 presigned URL），有时间限制
+- 建议 `expires_at` 设置为 1 小时内过期
+- 下载前会重新验证用户权限
+- 导出文件中的敏感字段同样会被过滤
+
+### POST /api/v1/admin/audit/export/status
+
+查询导出任务状态。
+
+**权限要求**：`admin.audit.export`
+
+**Request**:
+```typescript
+interface AuditLogExportStatusRequest {
+  export_id: string;
+}
+```
+**Response**: `ApiResponse<AuditLogExportResult>`
+
+**可能错误码**：`10001`、`10204`、`10205`、`10300`

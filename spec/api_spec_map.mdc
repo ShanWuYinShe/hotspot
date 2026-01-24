@@ -1,0 +1,73 @@
+---
+alwaysApply: true
+---
+# HotSpot API 规范 - 地图渲染 API 模块 v0.0.1 (RPC)
+
+> 本文档定义 HotSpot 地图渲染 (`map`) 相关的 RPC 接口。
+
+## 服务定义
+
+- **Service Namespace**: `map`
+- **Base Path**: `/api/v1/map/`
+
+## 设计理念
+
+**服务端智能决策**：客户端只负责"渲染"，不再手动决定"何时拉聚合/何时拉列表"。
+
+**视口驱动 (Viewport-Driven)**：完全基于当前视口 (`bounds`) 和缩放级别 (`zoom`)，服务端根据算法（如网格聚合/K-Means）动态返回最适合当前视野的展示项。
+
+**高德模式**：
+- Low Zoom (远)：返回行政区/热门区域的聚合点 (`type: 'cluster'`, `label: '海淀区 500+'`)
+- Mid Zoom (中)：分裂为更小的聚合或展示头部热点 (`type: 'cluster'`, `preview_urls: [...]`)
+- High Zoom (近)：直接展示具体的 Poi (`type: 'user'/'moment'`, `entity: {...}`)
+
+## 核心类型定义
+
+```typescript
+interface MapCanvas {
+  items: MapRenderItem[];
+  toast_message?: string;
+}
+```
+
+## 错误码说明
+
+本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
+
+| 错误码 | 说明 | 相关接口 |
+|-------|------|---------|
+| `10001` | 缺少必填参数 | `render`（viewport） |
+| `10003` | 参数值超出范围 | `render`（zoom 异常） |
+
+---
+
+## 接口列表
+
+## 接口概览（按子域）
+
+| 子域 | 端点 | 说明 | Request | Response |
+|-----|------|------|---------|----------|
+| 地图渲染 | `POST /api/v1/map/render` | 获取地图渲染数据 | `MapRenderRequest` | `ApiResponse<MapCanvas>` |
+
+### POST /api/v1/map/render
+
+获取地图渲染数据。
+
+**说明（Token 可选，响应差异由登录态决定）**：
+- 未登录（不带 token）：仅返回地图视野内"可匿名公开展示"的实体；对匿名不可见实体必须过滤掉
+- 已登录（带 token）：在满足隐私与关系规则前提下，允许返回更多可见实体；并可基于身份上下文做社交筛选（如仅好友）
+
+**Request**:
+```typescript
+interface MapRenderRequest {
+  viewport: MapViewport;
+  filter?: {
+    data_type?: MapDataType;
+    time_range?: TimeRangeParams;
+    only_friends?: boolean;  // 仅登录态生效；仅显示好友
+  };
+}
+```
+**Response**: `ApiResponse<MapCanvas>`
+
+**可能错误码**：`10001`、`10003`

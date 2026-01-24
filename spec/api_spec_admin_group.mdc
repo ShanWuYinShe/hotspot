@@ -1,0 +1,125 @@
+---
+alwaysApply: true
+---
+# HotSpot API 规范 - 管理员群组管理 API 模块 v0.0.1 (RPC)
+
+> 本文档定义 HotSpot 管理员群组管理 (`admin/groups`) 相关的 RPC 接口。
+
+## 服务定义
+
+- **Service Namespace**: `admin.groups`
+- **Base Path**: `/api/v1/admin/groups/`
+
+## 核心类型定义
+
+```typescript
+interface AdminGroupItem extends GroupInfo {
+  owner: UserInfo;
+  created_at: string;
+}
+```
+
+## 错误码说明
+
+本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
+
+| 错误码 | 说明 | 相关接口 |
+|-------|------|---------|
+| `10001` | 缺少必填参数 | `detail`、`dismiss` |
+| `10204` | 非管理员 | 所有 admin 接口 |
+| `10205` | 管理员权限不足 | `search`、`detail`（需要 `admin.groups.read`）、`dismiss`（需要 `admin.groups.write`） |
+| `10320` | 群组不存在 | `detail`、`dismiss` |
+
+---
+
+## 接口列表
+
+## 接口概览（按子域）
+
+| 子域 | 端点 | 说明 | Request | Response |
+|-----|------|------|---------|----------|
+| 群组管理 | `POST /api/v1/admin/groups/search` | 搜索群组 | `AdminGroupSearchRequest` | `ApiResponse<PaginatedData<AdminGroupItem>>` |
+| 群组管理 | `POST /api/v1/admin/groups/detail` | 群组详情 | `AdminGroupDetailRequest` | `ApiResponse<AdminGroupDetail>` |
+| 群组管理 | `POST /api/v1/admin/groups/dismiss` | 解散群组 | `AdminDismissGroupRequest` | `ApiResponse` |
+
+### POST /api/v1/admin/groups/search
+
+搜索群组（管理员）。
+
+**权限要求**：`admin.groups.read`
+
+**Request**:
+```typescript
+interface AdminGroupSearchRequest extends PaginationParams {
+  group_chat_id?: string;
+  name?: string;
+  owner_id?: number;
+}
+```
+**Response**: `ApiResponse<PaginatedData<AdminGroupItem>>`
+
+**可能错误码**：`10204`、`10205`
+
+### POST /api/v1/admin/groups/detail
+
+获取群组详情（管理员）。
+
+**权限要求**：`admin.groups.read`
+
+**Request**:
+```typescript
+interface AdminGroupDetailRequest {
+  group_chat_id: string;
+}
+```
+**Response**: `ApiResponse<AdminGroupDetail>`
+
+```typescript
+interface AdminGroupDetail extends GroupInfo {
+  description?: string;
+  tags?: string[];
+  max_members: number;
+  owner: UserInfo;
+  created_at: string;
+  location?: Location;
+  settings: {
+    join_method: GroupJoinMethod;
+    is_searchable: boolean;
+    has_password: boolean;
+  };
+  // 管理员列表
+  admins?: UserInfo[];
+  // 统计信息
+  stats: {
+    messages_count: number;
+    active_members_today: number;
+  };
+  // 解散历史（如果有）
+  dismissal_history?: AdminDismissalRecord[];
+}
+
+interface AdminDismissalRecord {
+  dismissed_at: string;
+  dismissed_by: UserInfo;
+  reason?: string;
+}
+```
+
+**可能错误码**：`10001`、`10204`、`10205`、`10320`
+
+### POST /api/v1/admin/groups/dismiss
+
+解散群组（管理员）。
+
+**权限要求**：`admin.groups.write`
+
+**Request**:
+```typescript
+interface AdminDismissGroupRequest {
+  group_chat_id: string;
+  reason?: string;
+}
+```
+**Response**: `ApiResponse`
+
+**可能错误码**：`10001`、`10204`、`10205`、`10320`

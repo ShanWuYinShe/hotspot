@@ -13,7 +13,7 @@ use crate::{
     state::AppState,
 };
 
-// ==================== Public APIs ====================
+// ==================== Token 可选 ====================
 
 pub async fn get_comments(
     State(state): State<AppState>,
@@ -39,7 +39,7 @@ pub async fn get_likes(
     Ok(Json(ApiResponse::success(response)))
 }
 
-// ==================== Protected APIs ====================
+// ==================== Token 必须 ====================
 
 pub async fn create(
     State(state): State<AppState>,

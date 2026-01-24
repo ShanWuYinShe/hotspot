@@ -5,7 +5,6 @@ use tokio::sync::RwLock;
 /// 订阅类型 - 根据 API 文档 4.4 节定义
 /// 支持三种订阅源类型：group_chat, user, notification
 ///
-/// 注意：所有 ID 都使用 String 类型（JavaScript 不支持超过 2^53 的整数）
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SubscriptionType {
     /// 群聊消息订阅 - 订阅指定群聊的消息
@@ -14,8 +13,8 @@ pub enum SubscriptionType {
     GroupChat(String),
 
     /// 用户状态订阅 - 订阅用户的在线状态变化、位置更新等
-    /// source_id: user_id (字符串，客户端传递字符串，后端内部解析)
-    User(String),
+    /// source_id: user_id
+    User(i64),
 
     /// 通知订阅 - 订阅特定类型的通知
     /// source_id: notification_type (如 "new_follower", "moment_like" 等)
@@ -134,9 +133,7 @@ impl SubscriptionManager {
     }
 
     /// 获取订阅了某个用户状态的所有用户（用于在线状态推送）
-    ///
-    /// 注意：target_user_id 作为字符串传入（与客户端一致）
-    pub async fn get_user_status_subscribers(&self, target_user_id: &str) -> Vec<i64> {
+    pub async fn get_user_status_subscribers(&self, target_user_id: i64) -> Vec<i64> {
         let channel_key = format!("user:{}", target_user_id);
         let reverse_index = self.reverse_index.read().await;
 
@@ -171,6 +168,31 @@ impl SubscriptionManager {
             &SubscriptionType::Notification(notification_type.to_string()),
         )
         .await
+    }
+
+    /// 获取用户的所有订阅
+    pub async fn get_subscriptions(&self, user_id: i64) -> Vec<SubscriptionType> {
+        let subscriptions = self.subscriptions.read().await;
+        subscriptions
+            .get(&user_id)
+            .map(|set| set.iter().cloned().collect())
+            .unwrap_or_default()
+    }
+
+    /// 统计某类订阅数量（group_chat / user / notification）
+    pub async fn count_by_type(&self, user_id: i64, source_type: &str) -> usize {
+        let subscriptions = self.subscriptions.read().await;
+        let Some(set) = subscriptions.get(&user_id) else {
+            return 0;
+        };
+        set.iter()
+            .filter(|s| match (source_type, s) {
+                ("group_chat", SubscriptionType::GroupChat(_)) => true,
+                ("user", SubscriptionType::User(_)) => true,
+                ("notification", SubscriptionType::Notification(_)) => true,
+                _ => false,
+            })
+            .count()
     }
 }
 

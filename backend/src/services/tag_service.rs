@@ -4,7 +4,7 @@ use crate::{
     constants::{TRENDING_DAILY_DAYS, TRENDING_MONTHLY_DAYS, TRENDING_WEEKLY_DAYS},
     dto::{
         request::{SuggestTagsRequest, TrendingTagsRequest},
-        response::{TagData, TagSuggestData, TagSuggestItem, TrendingTagsData},
+        response::{TagItem, TagSuggestData, TagSuggestItem, TrendingTagsData},
     },
     error::{AppError, Result},
     repositories::tag_repo::TagRepository,
@@ -23,14 +23,20 @@ impl TagService {
 
     /// 获取热门标签
     pub async fn get_trending(&self, req: &TrendingTagsRequest) -> Result<TrendingTagsData> {
+        use crate::types::enums::TagTimeframe;
+
         let limit = Validator::validate_limit(req.limit, 100)? as i64;
-        let timeframe = req.timeframe.as_deref().unwrap_or("weekly");
+        let timeframe = req.timeframe.unwrap_or(TagTimeframe::Weekly);
 
         // 根据时间范围计算开始时间
         let since = match timeframe {
-            "daily" => chrono::Utc::now() - chrono::Duration::days(TRENDING_DAILY_DAYS),
-            "monthly" => chrono::Utc::now() - chrono::Duration::days(TRENDING_MONTHLY_DAYS),
-            _ => chrono::Utc::now() - chrono::Duration::days(TRENDING_WEEKLY_DAYS),
+            TagTimeframe::Daily => chrono::Utc::now() - chrono::Duration::days(TRENDING_DAILY_DAYS),
+            TagTimeframe::Monthly => {
+                chrono::Utc::now() - chrono::Duration::days(TRENDING_MONTHLY_DAYS)
+            }
+            TagTimeframe::Weekly => {
+                chrono::Utc::now() - chrono::Duration::days(TRENDING_WEEKLY_DAYS)
+            }
         };
 
         // 从 tags 表获取热门标签
@@ -38,7 +44,7 @@ impl TagService {
 
         let items = tag_rows
             .into_iter()
-            .map(|r| TagData {
+            .map(|r| TagItem {
                 name: r.name,
                 usage_count: r.usage_count,
                 trend: None,

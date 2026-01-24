@@ -1,6 +1,7 @@
 use crate::{
     dto::response::{
-        MessageLimit, PrivateChatDetailData, PrivateChatLastMessage, PrivateChatListItem, UserInfo,
+        MessageLimit, MessageLocation, MessageMedia, MessageReplyTo, PrivateChatDetailData,
+        PrivateChatLastMessage, PrivateChatListItem, PrivateMessageItem, RecentMessages, UserInfo,
     },
     error::{AppError, Result},
     repositories::{
@@ -12,7 +13,7 @@ use crate::{
         user_repo::UserRepository,
         user_settings_repo::UserSettingsRepository,
     },
-    types::enums::{ChatPermission, UserType},
+    types::enums::{MessageType, PrivateChatPermission, UserType},
 };
 
 /// 私聊服务
@@ -168,6 +169,12 @@ impl PrivateChatService {
             .batch_get_online_status_with_privacy(&other_user_ids)
             .await;
 
+        // 批量获取私聊设置
+        let settings_map = self
+            .repo
+            .get_settings_batch(&chat_ids, current_user_id)
+            .await?;
+
         // 5. 组装结果
         let mut items = Vec::with_capacity(chats.len());
         for chat in chats {
@@ -199,7 +206,7 @@ impl PrivateChatService {
             let last_message = last_message_row.map(|m| PrivateChatLastMessage {
                 message_id: m.message_id.to_string(),
                 content: Some(m.content.clone()),
-                r#type: m.r#type.as_str().to_string(),
+                message_type: m.r#type,
                 sender_id: m.sender_id,
                 sent_at: m.sent_at.to_rfc3339(),
             });
@@ -215,13 +222,18 @@ impl PrivateChatService {
                 .and_then(|(online, _)| *online)
                 .unwrap_or(false);
 
+            // 获取用户的私聊设置
+            let settings = settings_map.get(&chat.id);
+            let is_muted = settings.map(|s| s.is_muted).unwrap_or(false);
+            let is_pinned = settings.map(|s| s.is_pinned).unwrap_or(false);
+
             items.push(PrivateChatListItem {
                 other_user: other_user_info,
                 unread_count: unread_count as i32,
                 last_message,
                 last_activity_at,
-                is_muted: false,  // TODO: Load from private_chat_settings
-                is_pinned: false, // TODO: Load from private_chat_settings
+                is_muted,
+                is_pinned,
                 is_online,
             });
         }
@@ -234,6 +246,7 @@ impl PrivateChatService {
         &self,
         target_user_id: i64,
         current_user_id: i64,
+        recent_messages_limit: Option<i32>,
     ) -> Result<PrivateChatDetailData> {
         // 查找或创建私聊
         let chat_opt = self
@@ -277,7 +290,7 @@ impl PrivateChatService {
                 .map(|m| PrivateChatLastMessage {
                     message_id: m.message_id.to_string(),
                     content: Some(m.content),
-                    r#type: m.r#type.as_str().to_string(),
+                    message_type: m.r#type,
                     sender_id: m.sender_id,
                     sent_at: m.sent_at.to_rfc3339(),
                 });
@@ -313,9 +326,9 @@ impl PrivateChatService {
                 .await
                 .unwrap_or(None);
             let allow_chat = if let Some(s) = target_settings {
-                if s.allow_private_chat == ChatPermission::Nobody {
+                if s.allow_private_chat == PrivateChatPermission::Nobody {
                     false
-                } else if s.allow_private_chat == ChatPermission::Friends {
+                } else if s.allow_private_chat == PrivateChatPermission::Friends {
                     // 检查是否是好友（互相关注）
                     let is_following = self
                         .follows_repo
@@ -382,16 +395,115 @@ impl PrivateChatService {
         // 获取私聊设置
         let settings = self.repo.get_settings(chat.id, current_user_id).await?;
 
+        // 加载最近消息（默认 20 条，最大 50 条）
+        let limit = recent_messages_limit.unwrap_or(20).clamp(1, 50) as i64;
+        let (messages, next_cursor) = self.message_repo.list_by_chat(chat.id, limit, None).await?;
+        let has_more = next_cursor.is_some();
+
+        let reply_ids: Vec<_> = messages
+            .iter()
+            .filter_map(|m| m.reply_to_message_id)
+            .collect();
+        let reply_rows = self.message_repo.find_by_ids(&reply_ids).await?;
+        let reply_sender_ids: Vec<i64> = reply_rows.iter().map(|m| m.sender_id).collect();
+        let reply_senders = self.user_repo.find_profiles(&reply_sender_ids).await?;
+        let reply_sender_map: std::collections::HashMap<i64, _> =
+            reply_senders.into_iter().map(|s| (s.user_id, s)).collect();
+        let reply_map: std::collections::HashMap<_, _> =
+            reply_rows.into_iter().map(|m| (m.message_id, m)).collect();
+
+        // 获取发送者信息
+        let sender_ids: Vec<i64> = messages.iter().map(|m| m.sender_id).collect();
+        let senders = self.user_repo.find_profiles(&sender_ids).await?;
+        let sender_map: std::collections::HashMap<i64, _> =
+            senders.into_iter().map(|s| (s.user_id, s)).collect();
+
+        // 转换消息为响应格式
+        use crate::dto::response::Location;
+
+        let message_items: Vec<PrivateMessageItem> = messages
+            .into_iter()
+            .map(|m| {
+                let sender_info = sender_map.get(&m.sender_id);
+                PrivateMessageItem {
+                    message_id: m.message_id.to_string(),
+                    message_type: m.r#type,
+                    content: Some(m.content.clone()),
+                    sender: sender_info
+                        .map(|s| UserInfo {
+                            user_id: s.user_id,
+                            nickname: s.nickname.clone(),
+                            avatar_url: s.avatar_url.clone(),
+                            user_type: s.user_type,
+                        })
+                        .unwrap_or_else(|| UserInfo {
+                            user_id: m.sender_id,
+                            nickname: "未知用户".to_string(),
+                            avatar_url: None,
+                            user_type: UserType::Normal,
+                        }),
+                    reply_to: m.reply_to_message_id.and_then(|reply_id| {
+                        reply_map.get(&reply_id).map(|reply_msg| {
+                            let reply_sender = reply_sender_map.get(&reply_msg.sender_id);
+                            let preview = if reply_msg.r#type == MessageType::Text {
+                                reply_msg.content.clone()
+                            } else {
+                                String::new()
+                            };
+                            MessageReplyTo {
+                                message_id: reply_msg.message_id.to_string(),
+                                user_id: reply_msg.sender_id,
+                                nickname: reply_sender
+                                    .map(|s| s.nickname.clone())
+                                    .unwrap_or_else(|| "未知用户".to_string()),
+                                content: preview,
+                            }
+                        })
+                    }),
+                    media: m.thumbnail_url.as_ref().map(|url| MessageMedia {
+                        url: url.clone(),
+                        file_name: m.file_name.clone(),
+                        file_size: m.file_size,
+                        thumbnail_url: m.thumbnail_url.clone(),
+                        duration: m.duration.map(|d| d as f64),
+                        width: None,
+                        height: None,
+                        mime_type: None,
+                    }),
+                    location: if m.location_latitude.is_some() {
+                        Some(MessageLocation {
+                            location: Location {
+                                latitude: m.location_latitude.unwrap_or(0.0),
+                                longitude: m.location_longitude.unwrap_or(0.0),
+                                location_name: m.location_name.clone().unwrap_or_default(),
+                            },
+                            address: m.location_address.clone(),
+                        })
+                    } else {
+                        None
+                    },
+                    sent_at: m.sent_at.to_rfc3339(),
+                    edited_at: m.edited_at.map(|t| t.to_rfc3339()),
+                    is_recalled: m.is_recalled,
+                    recalled_at: m.recalled_at.map(|t| t.to_rfc3339()),
+                }
+            })
+            .collect();
+
         Ok(PrivateChatDetailData {
             other_user: other_user_info,
             message_limit,
             unread_count: unread_count as i32,
             is_muted: settings.as_ref().map(|s| s.is_muted).unwrap_or(false),
             is_pinned: settings.as_ref().map(|s| s.is_pinned).unwrap_or(false),
-            last_message,
             last_activity_at,
             created_at: chat.created_at.to_rfc3339(),
             can_message,
+            recent_messages: RecentMessages {
+                items: message_items,
+                has_more,
+                next_cursor,
+            },
         })
     }
 }

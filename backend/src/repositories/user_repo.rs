@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
 
 use crate::error::Result;
-use crate::types::enums::UserType;
+use crate::types::enums::{Gender, UserType};
 
 use crate::utils::pagination::{decode_cursor, encode_cursor, DistanceCursor, IdCursor};
 
@@ -19,6 +19,7 @@ pub struct UserRow {
     pub email: Option<String>,         // NULL = user didn't provide
     pub phone: Option<String>,         // NULL = user didn't provide
     pub user_type: UserType,
+    pub gender: Option<Gender>,
     pub current_latitude: Option<f64>, // NULL = location not set (0.0 ≠ NULL)
     pub current_longitude: Option<f64>, // NULL = location not set
     pub current_location_name: Option<String>, // NULL = location not set
@@ -68,6 +69,26 @@ pub struct UserAdminSearchRow {
     pub last_active_at: Option<DateTime<Utc>>,
 }
 
+/// 管理员用户详情行
+#[derive(Debug, Clone, FromRow)]
+pub struct UserAdminDetailRow {
+    pub user_id: i64,
+    pub nickname: String,
+    pub login_id: Option<String>,
+    pub avatar_url: Option<String>,
+    pub email: Option<String>,
+    pub phone: Option<String>,
+    pub bio: String,
+    pub user_type: UserType,
+    pub is_banned: bool,
+    pub created_at: DateTime<Utc>,
+    pub last_active_at: Option<DateTime<Utc>>,
+    pub is_online: bool,
+    pub current_latitude: Option<f64>,
+    pub current_longitude: Option<f64>,
+    pub current_location_name: Option<String>,
+}
+
 #[derive(Debug, Clone)]
 pub struct UserRepository {
     pool: PgPool,
@@ -76,11 +97,6 @@ pub struct UserRepository {
 impl UserRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
-    }
-
-    /// 获取数据库连接池引用
-    pub fn pool(&self) -> &PgPool {
-        &self.pool
     }
 
     /// 创建用户
@@ -99,6 +115,7 @@ impl UserRepository {
             VALUES ($1, $2, $3, $4, $5)
             RETURNING user_id, login_id, nickname, password_hash, avatar_url, bio,
                       email, phone, user_type as "user_type: UserType",
+                      gender as "gender: Gender",
                       current_latitude, current_longitude, current_location_name,
                       created_at, is_deleted, deleted_at
             "#,
@@ -121,6 +138,7 @@ impl UserRepository {
             r#"
             SELECT user_id, login_id, nickname, password_hash, avatar_url, bio,
                    email, phone, user_type as "user_type: UserType",
+                   gender as "gender: Gender",
                    current_latitude, current_longitude, current_location_name,
                    created_at, is_deleted, deleted_at
             FROM users
@@ -164,6 +182,25 @@ impl UserRepository {
         .await?;
 
         Ok(result.exists)
+    }
+
+    /// 按 user_id 顺序批量获取用户ID（用于布隆过滤器初始化）
+    pub async fn list_user_ids_after(&self, last_user_id: i64, limit: i64) -> Result<Vec<i64>> {
+        let rows = sqlx::query!(
+            r#"
+            SELECT user_id
+            FROM users
+            WHERE user_id > $1 AND is_deleted = FALSE
+            ORDER BY user_id ASC
+            LIMIT $2
+            "#,
+            last_user_id,
+            limit
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.into_iter().map(|r| r.user_id).collect())
     }
 
     /// 按ID列表查找用户（带距离计算，使用 PostGIS）
@@ -231,6 +268,7 @@ impl UserRepository {
             r#"
             SELECT user_id, login_id, nickname, password_hash, avatar_url, bio,
                    email, phone, user_type as "user_type: UserType",
+                   gender as "gender: Gender",
                    current_latitude, current_longitude, current_location_name,
                    created_at, is_deleted, deleted_at
             FROM users
@@ -599,27 +637,6 @@ impl UserRepository {
         Ok(())
     }
 
-    /// 获取用户当前位置
-    pub async fn get_location(&self, user_id: i64) -> Result<Option<(f64, f64)>> {
-        let row = sqlx::query!(
-            r#"
-            SELECT current_latitude, current_longitude
-            FROM users
-            WHERE user_id = $1 AND is_deleted = FALSE
-            "#,
-            user_id
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(
-            row.and_then(|r| match (r.current_latitude, r.current_longitude) {
-                (Some(lat), Some(lng)) => Some((lat, lng)),
-                _ => None,
-            }),
-        )
-    }
-
     /// 按位置搜索用户（用于 Feed，使用 Keyset Pagination，可排除特定用户）
     pub async fn search_for_feed(
         &self,
@@ -797,6 +814,39 @@ impl UserRepository {
         Ok((items, next_cursor))
     }
 
+    /// 管理员获取用户详情
+    pub async fn admin_detail(&self, user_id: i64) -> Result<Option<UserAdminDetailRow>> {
+        let row = sqlx::query_as!(
+            UserAdminDetailRow,
+            r#"
+            SELECT
+                u.user_id,
+                u.nickname,
+                u.login_id as "login_id",
+                u.avatar_url,
+                u.email,
+                u.phone,
+                u.bio,
+                u.user_type as "user_type: UserType",
+                u.is_banned as "is_banned!",
+                u.created_at,
+                uos.last_active_at,
+                COALESCE(uos.is_online, FALSE) as "is_online!",
+                u.current_latitude,
+                u.current_longitude,
+                u.current_location_name
+            FROM users u
+            LEFT JOIN user_online_status uos ON u.user_id = uos.user_id
+            WHERE u.user_id = $1 AND u.is_deleted = FALSE
+            "#,
+            user_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(row)
+    }
+
     /// 封禁用户
     pub async fn ban(
         &self,
@@ -829,7 +879,6 @@ impl UserRepository {
 
     /// 解封用户
     pub async fn unban(&self, user_id: i64, _reason: Option<&str>) -> Result<()> {
-        // TODO: Record unban reason in audit log if available
         sqlx::query!(
             r#"
             UPDATE users

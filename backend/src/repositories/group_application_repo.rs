@@ -4,7 +4,7 @@ use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::types::enums::InviteStatus;
+use crate::types::enums::ApplicationStatus;
 use crate::utils::pagination::{decode_cursor, encode_cursor, IdCursor};
 
 /// 群组申请Row - 数据库查询返回类型
@@ -15,7 +15,7 @@ pub struct GroupApplicationRow {
     pub group_chat_id: Uuid,
     pub applicant_id: i64,
     pub message: Option<String>,
-    pub status: InviteStatus,
+    pub status: ApplicationStatus,
     pub created_at: DateTime<Utc>,
     pub handled_by: Option<i64>,
     pub handled_at: Option<DateTime<Utc>>,
@@ -44,7 +44,7 @@ impl GroupApplicationRepository {
             INSERT INTO group_applications (group_chat_id, applicant_id, message)
             VALUES ($1, $2, $3)
             RETURNING id, application_id, group_chat_id, applicant_id, message,
-                      status as "status: InviteStatus", created_at, handled_by, handled_at
+                      status as "status: ApplicationStatus", created_at, handled_by, handled_at
             "#,
             group_chat_id,
             applicant_id,
@@ -65,7 +65,7 @@ impl GroupApplicationRepository {
             GroupApplicationRow,
             r#"
             SELECT id, application_id, group_chat_id, applicant_id, message,
-                   status as "status: InviteStatus", created_at, handled_by, handled_at
+                   status as "status: ApplicationStatus", created_at, handled_by, handled_at
             FROM group_applications
             WHERE application_id = $1
             "#,
@@ -81,7 +81,7 @@ impl GroupApplicationRepository {
     pub async fn update_status_by_application_id(
         &self,
         application_id: Uuid,
-        status: InviteStatus,
+        status: ApplicationStatus,
         handled_by: i64,
     ) -> Result<()> {
         sqlx::query!(
@@ -91,7 +91,7 @@ impl GroupApplicationRepository {
             WHERE application_id = $1
             "#,
             application_id,
-            status as InviteStatus,
+            status as ApplicationStatus,
             handled_by
         )
         .execute(&self.pool)
@@ -104,7 +104,7 @@ impl GroupApplicationRepository {
     pub async fn list_by_group(
         &self,
         group_chat_id: Uuid,
-        status: Option<InviteStatus>,
+        status: Option<ApplicationStatus>,
         limit: i32,
         cursor: Option<String>,
     ) -> Result<(Vec<GroupApplicationRow>, Option<String>)> {
@@ -119,7 +119,7 @@ impl GroupApplicationRepository {
             GroupApplicationRow,
             r#"
             SELECT id, application_id, group_chat_id, applicant_id, message,
-                   status as "status: InviteStatus", created_at, handled_by, handled_at
+                   status as "status: ApplicationStatus", created_at, handled_by, handled_at
             FROM group_applications
             WHERE group_chat_id = $1 
               AND ($2::text IS NULL OR status::text = $2)

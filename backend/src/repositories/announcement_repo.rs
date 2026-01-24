@@ -57,7 +57,7 @@ impl AnnouncementRepository {
         )
         .fetch_one(&self.pool)
         .await
-        .map_err(AppError::Database)?;
+        ?;
 
         Ok(row)
     }
@@ -80,7 +80,7 @@ impl AnnouncementRepository {
                 a.id, a.announcement_id, a.title, a.content, a.severity, a.action_url, a.created_by, a.created_at, a.send_push,
                 u.nickname as creator_nickname, u.avatar_url as creator_avatar_url
             FROM system_announcements a
-            LEFT JOIN users u ON a.created_by = u.id
+            LEFT JOIN users u ON a.created_by = u.user_id
             WHERE a.is_deleted = FALSE
             AND (a.created_at, a.id) < ($1, $2)
             ORDER BY a.created_at DESC, a.id DESC
@@ -92,7 +92,7 @@ impl AnnouncementRepository {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(AppError::Database)?;
+        ?;
 
         let mut items = rows;
         let mut next_cursor = None;
@@ -117,7 +117,7 @@ impl AnnouncementRepository {
         )
         .execute(&self.pool)
         .await
-        .map_err(AppError::Database)?;
+        ?;
 
         if result.rows_affected() == 0 {
             return Err(AppError::NotFound("公告不存在".to_string()));
@@ -141,7 +141,7 @@ impl AnnouncementRepository {
         )
         .fetch_optional(&self.pool)
         .await
-        .map_err(AppError::Database)?;
+        ?;
 
         Ok(row)
     }

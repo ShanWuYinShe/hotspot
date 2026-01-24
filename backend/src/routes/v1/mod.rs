@@ -1,134 +1,147 @@
 //! API v1 路由模块
 //!
-//! API 路径与 Token 要求规范：
-//! - /public/* 路径不需要认证（无 auth_middleware）
-//! - /protected/* 路径需要认证（应用 auth_middleware）
+//! API 路径与 Token 要求规范（与 spec 对齐）：
+//! - 所有 API 统一使用 `/api/v1/` 前缀
+//! - Token 可选：带 token 则按登录态返回更多字段/更宽权限；不带则按匿名语义返回
+//! - Token 必须：缺失或无效直接拒绝
+//! - 管理员：需要 Token + 管理员权限
 
-pub mod protected;
-pub mod public;
+// 统一的路由模块（按功能域组织）
+pub mod admin;
+pub mod announcements;
+pub mod auth;
+pub mod comments;
+pub mod device_tokens;
+pub mod feed;
+pub mod global_settings;
+pub mod group_chats;
+pub mod group_messages;
+pub mod map;
+pub mod media;
+pub mod messages;
+pub mod moments;
+pub mod notifications;
+pub mod private_chats;
+pub mod private_messages;
+pub mod reports;
+pub mod subscriptions;
+pub mod system;
+pub mod tags;
+pub mod user;
 
 use axum::{middleware, Router};
-use tower::ServiceBuilder;
 
 use crate::{
     middleware::{
         admin_auth::admin_auth_middleware, auth::auth_middleware,
-        idempotency::idempotency_middleware, rate_limit::rate_limit_middleware,
+        auth::optional_auth_middleware, idempotency::idempotency_middleware,
+        rate_limit::rate_limit_middleware, resource_guard::resource_guard_middleware,
     },
     state::AppState,
 };
 
-/// 创建 API v1 的所有路由（public + protected）
+/// 创建 API v1 的所有路由（Token 可选 + Token 必须 + admin）
 /// 返回 Router<AppState>，需要在外层调用 with_state 绑定状态
 pub fn v1_routes(state: AppState) -> Router<AppState> {
-    // ==================== 公开路由 ====================
-    // 无需认证，但有速率限制
-    let public_routes = Router::new()
-        .nest("/public/auth", public::auth::routes())
-        .nest("/public/user", public::user::routes())
-        .nest("/public/group_chats", public::group_chats::routes())
-        .nest("/public/moments", public::moments::routes())
-        .nest("/public/comments", public::comments::routes())
-        .nest("/public/map", public::map::routes())
-        .nest("/public/system", public::system::routes())
-        .nest("/public/global_settings", public::global_settings::routes())
-        .nest("/public/tags", public::tags::routes())
-        .nest("/public/announcements", public::announcements::routes())
-        .with_state(state.clone())
-        .layer(middleware::from_fn_with_state(
-            state.clone(),
-            rate_limit_middleware,
-        ));
+    // axum 0.8 中，from_fn_with_state 在部分场景下会触发复杂的 trait 约束问题。
+    // 这里统一用 from_fn + 闭包捕获 state，保证中间件可组合、类型稳定。
+    let state_for_optional_auth = state.clone();
+    let optional_auth_layer = middleware::from_fn(move |req, next| {
+        let st = state_for_optional_auth.clone();
+        async move { optional_auth_middleware(axum::extract::State(st), req, next).await }
+    });
 
-    // ==================== 受保护路由 ====================
-    // 需要认证，且有幂等性、速率限制中间件
-    let protected_routes = Router::new()
-        .nest("/protected/auth", protected::auth::routes())
-        .nest("/protected/user", protected::user::routes())
-        .nest("/protected/group_chats", protected::group_chats::routes())
-        .nest(
-            "/protected/private_chats",
-            protected::private_chats::routes(),
-        )
-        .nest(
-            "/protected/private_messages",
-            protected::private_messages::routes(),
-        )
-        .nest(
-            "/protected/group_messages",
-            protected::group_messages::routes(),
-        )
-        .nest("/protected/moments", protected::moments::routes())
-        .nest("/protected/comments", protected::comments::routes())
-        .nest("/protected/reports", protected::reports::routes())
-        .nest(
-            "/protected/device_tokens",
-            protected::device_tokens::routes(),
-        )
-        .nest(
-            "/protected/subscriptions",
-            protected::subscriptions::routes(),
-        )
-        .nest("/protected/system", protected::system::routes())
-        .nest("/protected/feed", protected::feed::routes())
-        .nest("/protected/media", protected::media::routes())
-        .nest("/protected/messages", protected::messages::routes())
-        .nest(
-            "/protected/notifications",
-            protected::notifications::routes(),
-        )
+    let state_for_auth = state.clone();
+    let auth_layer = middleware::from_fn(move |req, next| {
+        let st = state_for_auth.clone();
+        async move { auth_middleware(axum::extract::State(st), req, next).await }
+    });
+
+    let state_for_admin_auth = state.clone();
+    let admin_auth_layer = middleware::from_fn(move |req, next| {
+        let st = state_for_admin_auth.clone();
+        async move { admin_auth_middleware(axum::extract::State(st), req, next).await }
+    });
+
+    let state_for_rate = state.clone();
+    let rate_limit_layer = middleware::from_fn(move |req, next| {
+        let st = state_for_rate.clone();
+        async move { rate_limit_middleware(axum::extract::State(st), req, next).await }
+    });
+
+    let state_for_resource_guard = state.clone();
+    let resource_guard_layer = middleware::from_fn(move |req, next| {
+        let st = state_for_resource_guard.clone();
+        async move { resource_guard_middleware(axum::extract::State(st), req, next).await }
+    });
+
+    let state_for_idempotency = state.clone();
+    let idempotency_layer = middleware::from_fn(move |req, next| {
+        let st = state_for_idempotency.clone();
+        async move { idempotency_middleware(axum::extract::State(st), req, next).await }
+    });
+
+    // ==================== Token 可选路由 ====================
+    // 可带 token；带 token 会注入 user_id（用于"登录态差异化返回"/限流维度）
+    let token_optional_routes = Router::new()
+        .nest("/auth", auth::token_optional_routes())
+        .nest("/user", user::token_optional_routes())
+        .nest("/group_chats", group_chats::token_optional_routes())
+        .nest("/moments", moments::token_optional_routes())
+        .nest("/comments", comments::token_optional_routes())
+        .nest("/map", map::token_optional_routes())
+        .nest("/system", system::token_optional_routes())
+        .nest("/global_settings", global_settings::token_optional_routes())
+        .nest("/tags", tags::token_optional_routes())
+        .nest("/announcements", announcements::token_optional_routes())
         .with_state(state.clone())
-        .layer(
-            ServiceBuilder::new()
-                // 中间件执行顺序（从下到上）：
-                // 1. auth_middleware（认证，注入 user_id）
-                // 2. rate_limit_middleware（速率限制，依赖 user_id）
-                // 3. idempotency_middleware（幂等性，依赖 user_id）
-                .layer(middleware::from_fn_with_state(
-                    state.clone(),
-                    auth_middleware,
-                ))
-                .layer(middleware::from_fn_with_state(
-                    state.clone(),
-                    rate_limit_middleware,
-                ))
-                .layer(middleware::from_fn_with_state(
-                    state.clone(),
-                    idempotency_middleware,
-                )),
-        );
+        // 约定：最后添加的 layer 最先执行（outermost）
+        // 期望执行顺序：optional_auth -> rate_limit -> resource_guard
+        .layer(resource_guard_layer.clone())
+        .layer(rate_limit_layer.clone())
+        .layer(optional_auth_layer.clone());
+
+    // ==================== Token 必须路由 ====================
+    // 需要认证，且有幂等性、速率限制中间件
+    let auth_required_routes = Router::new()
+        .nest("/auth", auth::token_required_routes())
+        .nest("/user", user::token_required_routes())
+        .nest("/group_chats", group_chats::token_required_routes())
+        .nest("/private_chats", private_chats::token_required_routes())
+        .nest("/private_messages", private_messages::token_required_routes())
+        .nest("/group_messages", group_messages::token_required_routes())
+        .nest("/moments", moments::token_required_routes())
+        .nest("/comments", comments::token_required_routes())
+        .nest("/reports", reports::token_required_routes())
+        .nest("/device_tokens", device_tokens::token_required_routes())
+        .nest("/subscriptions", subscriptions::token_required_routes())
+        .nest("/system", system::token_required_routes())
+        .nest("/feed", feed::token_required_routes())
+        .nest("/media", media::token_required_routes())
+        .nest("/messages", messages::token_required_routes())
+        .nest("/notifications", notifications::token_required_routes())
+        .with_state(state.clone())
+        // 期望执行顺序：auth -> rate_limit -> resource_guard -> idempotency
+        .layer(idempotency_layer.clone())
+        .layer(resource_guard_layer.clone())
+        .layer(rate_limit_layer.clone())
+        .layer(auth_layer.clone());
 
     // ==================== 管理员路由 ====================
     // 需要管理员权限，应用认证 + 管理员验证 + 其他中间件
     let admin_routes = Router::new()
-        .nest("/admin", protected::admin::admin_routes())
+        .nest("/admin", admin::admin_routes())
         .with_state(state.clone())
-        .layer(
-            ServiceBuilder::new()
-                // 中间件执行顺序（从下到上）：
-                // 1. auth_middleware（认证，注入 user_id）
-                // 2. admin_auth_middleware（管理员验证，依赖 user_id）
-                // 3. rate_limit_middleware（速率限制，依赖 user_id）
-                // 4. idempotency_middleware（幂等性，依赖 user_id）
-                .layer(middleware::from_fn_with_state(
-                    state.clone(),
-                    auth_middleware,
-                ))
-                .layer(middleware::from_fn_with_state(
-                    state.clone(),
-                    admin_auth_middleware,
-                ))
-                .layer(middleware::from_fn_with_state(
-                    state.clone(),
-                    rate_limit_middleware,
-                ))
-                .layer(middleware::from_fn_with_state(
-                    state.clone(),
-                    idempotency_middleware,
-                )),
-        );
+        // 期望执行顺序：auth -> admin_auth -> rate_limit -> resource_guard -> idempotency
+        .layer(idempotency_layer)
+        .layer(resource_guard_layer)
+        .layer(rate_limit_layer)
+        .layer(admin_auth_layer)
+        .layer(auth_layer);
 
     // ==================== 合并 v1 路由 ====================
     // request_id 中间件已提升到 app 全局层，避免 TraceLayer 日志缺失 request_id
-    public_routes.merge(protected_routes).merge(admin_routes)
+    token_optional_routes
+        .merge(auth_required_routes)
+        .merge(admin_routes)
 }

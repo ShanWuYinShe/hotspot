@@ -68,6 +68,54 @@ CREATE INDEX idx_admin_user_roles_user ON admin_user_roles (user_id);
 CREATE INDEX idx_admin_user_roles_role ON admin_user_roles (role_id);
 
 -- ============================================================
+-- 管理员审计日志与导出任务
+-- ============================================================
+CREATE TABLE admin_audit_logs (
+    id BIGSERIAL PRIMARY KEY,
+    log_id UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
+    action TEXT NOT NULL,
+    operator_id BIGINT NOT NULL,
+    target_type TEXT NOT NULL,
+    target_id TEXT NOT NULL,
+    target_name TEXT,
+    details JSONB,
+    before_state JSONB,
+    after_state JSONB,
+    ip_address TEXT,
+    user_agent TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_admin_audit_logs_created_at
+    ON admin_audit_logs (created_at DESC, id DESC);
+CREATE INDEX idx_admin_audit_logs_action
+    ON admin_audit_logs (action);
+CREATE INDEX idx_admin_audit_logs_operator_id
+    ON admin_audit_logs (operator_id);
+CREATE INDEX idx_admin_audit_logs_target
+    ON admin_audit_logs (target_type, target_id);
+
+CREATE TABLE admin_audit_exports (
+    export_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    status TEXT NOT NULL,
+    format TEXT NOT NULL,
+    action TEXT,
+    operator_id BIGINT,
+    target_type TEXT,
+    target_id TEXT,
+    start_time TIMESTAMPTZ,
+    end_time TIMESTAMPTZ,
+    download_key TEXT,
+    expires_at TIMESTAMPTZ,
+    error_message TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_admin_audit_exports_created_at
+    ON admin_audit_exports (created_at DESC);
+
+-- ============================================================
 -- 预置权限字典与角色（可按需扩展）
 -- ============================================================
 INSERT INTO admin_permissions (key, description) VALUES

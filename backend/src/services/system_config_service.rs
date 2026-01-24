@@ -2,7 +2,7 @@
 //!
 //! 管理系统配置项，支持 Redis 缓存和配置变更订阅
 //!
-//! 新版设计：支持强类型聚合配置 (GlobalSettings) 和版本控制
+//! 设计：强类型聚合配置 (GlobalSettings)
 
 use redis::AsyncCommands;
 use std::collections::HashMap;
@@ -17,11 +17,12 @@ use crate::{
         },
         response::{
             AdminGlobalSettingsData, AppLimits, ContactInfo, ContentDefaults, FeatureSwitches,
-            FetchSettingsData, GlobalSettings, UploadConfig,
+            GlobalSettings, Location, UploadConfig,
         },
     },
     error::Result,
     repositories::system_config_repo::SystemConfigRepository,
+    types::enums::GroupJoinMethod,
 };
 
 #[derive(Clone)]
@@ -38,49 +39,12 @@ impl SystemConfigService {
     // ==================== 客户端拉取配置 (Client Fetch) ====================
 
     /// 拉取全局配置 (Client Side)
-    /// 支持版本控制 (ETag-like) 和 上下文感知 (Context-aware)
     pub async fn fetch_global_settings(
         &self,
-        req: FetchGlobalSettingsRequest,
-    ) -> Result<FetchSettingsData> {
-        // 1. 获取当前全局版本号
-        //    我们约定 key="global.version" 存储当前配置的版本号 (hash 或 timestamp)
-        //    每次更新任意配置时，都应更新此版本号
-        let current_server_version = self
-            .get_config_value("global.version")
-            .await?
-            .unwrap_or_else(|| "v1".to_string());
-
-        // 2. 检查版本
-        if let Some(client_version) = req.current_version {
-            if client_version == current_server_version {
-                return Ok(FetchSettingsData {
-                    action: "no_change".to_string(),
-                    config: None,
-                    latest_version: current_server_version,
-                });
-            }
-        }
-
-        // 3. 拉取完整配置
-        let settings = self.get_full_global_settings().await?;
-
-        // 4. (可选) 根据 req.context 进行灰度/开关处理
-        //    例如：如果 client context.os == "android" 且 version < "1.0.0"，禁用某些 feature
-        //    这里暂时直接返回通用配置
-        tracing::debug!(
-            "Client context: os={}, version={}, device={:?}, lang={:?}",
-            req.context.os,
-            req.context.app_version,
-            req.context.device_id,
-            req.context.language
-        );
-
-        Ok(FetchSettingsData {
-            action: "update".to_string(),
-            config: Some(settings),
-            latest_version: current_server_version,
-        })
+        _req: FetchGlobalSettingsRequest,
+    ) -> Result<GlobalSettings> {
+        // spec：不做 Remote Config 版本控制/变更历史；客户端每次直接拉取完整配置即可。
+        self.get_full_global_settings().await
     }
 
     // ==================== 管理员配置管理 (Admin Management) ====================
@@ -89,20 +53,21 @@ impl SystemConfigService {
     pub async fn get_admin_global_settings(&self) -> Result<AdminGlobalSettingsData> {
         let settings = self.get_full_global_settings().await?;
 
-        // 获取最后更新元数据 (取 global.version 的更新记录?)
-        // 为了简单，这里暂且再查一次 global.version 的 updated_at
-        // 实际场景可以优化为一次查询
-        let version_config = self.repo.find_by_key("global.version").await?;
-        let (updated_at, updated_by) = if let Some(c) = version_config {
-            (c.updated_at.map(|t| t.to_rfc3339()).unwrap_or_default(), 0) // TODO: 记录 updated_by
-        } else {
-            (chrono::Utc::now().to_rfc3339(), 0)
-        };
+        // 获取最后更新元信息（不做变更历史，只记录“最后一次更新时间/操作者”）
+        let updated_at = self
+            .get_config_value("meta.updated_at")
+            .await?
+            .unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+        let updated_by_user_id = self
+            .get_config_value("meta.updated_by_user_id")
+            .await?
+            .and_then(|s| s.parse::<i64>().ok())
+            .unwrap_or(0);
 
         Ok(AdminGlobalSettingsData {
             settings,
             updated_at,
-            updated_by_user_id: updated_by,
+            updated_by_user_id,
         })
     }
 
@@ -243,7 +208,7 @@ impl SystemConfigService {
 
     // ==================== 内部辅助方法 ====================
 
-    /// 批量更新配置并刷新版本号
+    /// 批量更新配置（不做版本控制/变更历史）
     async fn batch_update_configs(
         &self,
         updates: HashMap<&str, String>,
@@ -279,21 +244,36 @@ impl SystemConfigService {
                 self.repo.update_tx(&mut tx, key, value.clone()).await?;
             }
 
-            // 记录日志
-            self.repo
-                .log_change_tx(&mut tx, key, old_val, value.clone(), admin_id)
-                .await?;
-
             // 清除缓存
             self.clear_config_cache(key).await?;
         }
 
-        // 更新全局版本号
-        let new_version = uuid::Uuid::new_v4().to_string(); // 简单生成新版本号
-        self.repo
-            .update_tx(&mut tx, "global.version", new_version.clone())
-            .await?;
-        // 也可以记录 version 的变更日志...
+        // 记录“最后更新时间/操作者”（用于 AdminSettings.updated_at / updated_by_user_id）
+        let now = chrono::Utc::now().to_rfc3339();
+        let meta_updates = [
+            ("meta.updated_at", now),
+            ("meta.updated_by_user_id", admin_id.to_string()),
+        ];
+        for (key, value) in meta_updates {
+            let old_val = self.repo.find_by_key(key).await?.map(|c| c.value);
+            if old_val.is_none() {
+                self.repo
+                    .create_tx(
+                        &mut tx,
+                        key.to_string(),
+                        value.clone(),
+                        None,
+                        crate::types::enums::ConfigValueType::String
+                            .as_str()
+                            .to_string(),
+                        "system".to_string(),
+                    )
+                    .await?;
+            } else {
+                self.repo.update_tx(&mut tx, key, value.clone()).await?;
+            }
+            self.clear_config_cache(key).await?;
+        }
 
         tx.commit().await?;
 
@@ -360,13 +340,14 @@ impl SystemConfigService {
             map.get(k)
                 .and_then(|v| serde_json::from_str(v).ok())
                 .unwrap_or(crate::dto::response::GroupSettings {
-                    // Default empty
-                    join_method: Some("open".to_string()),
-                    is_searchable: Some(true),
-                    max_members: Some(500),
-                    longitude: None,
-                    latitude: None,
-                    location_name: None,
+                    join_method: GroupJoinMethod::Open,
+                    is_searchable: true,
+                    max_members: 500,
+                    location: Location {
+                        latitude: 0.0,
+                        longitude: 0.0,
+                        location_name: "Unknown".to_string(),
+                    },
                 })
         };
 
@@ -409,15 +390,12 @@ impl SystemConfigService {
             search_radius_max: get_i32("limits.search_radius_max", 50000),
         };
 
-        let version = get_str("global.version", "v1");
-
         let settings = GlobalSettings {
             upload,
             defaults,
             features,
             contact,
             limits,
-            version,
         };
 
         // 3. 写入缓存

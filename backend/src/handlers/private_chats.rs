@@ -38,7 +38,7 @@ pub async fn me(
     })))
 }
 
-/// 获取私聊详情 - POST /api/v1/protected/private_chats/open_the_door
+/// 获取私聊详情 - POST /api/v1/private_chats/open_the_door
 pub async fn open_the_door(
     State(state): State<AppState>,
     user: AuthenticatedUser,
@@ -46,7 +46,7 @@ pub async fn open_the_door(
 ) -> Result<Json<ApiResponse<PrivateChatDetailData>>> {
     let detail = state
         .private_chat_service
-        .get_details(req.target_user_id, user.user_id)
+        .get_details(req.target_user_id, user.user_id, req.recent_messages_limit)
         .await?;
 
     Ok(Json(ApiResponse::success(detail)))
@@ -71,7 +71,7 @@ pub async fn update_settings(
 
     let detail = state
         .private_chat_service
-        .get_details(req.target_user_id, user.user_id)
+        .get_details(req.target_user_id, user.user_id, None)
         .await?;
 
     Ok(Json(ApiResponse::success(detail)))

@@ -1,0 +1,247 @@
+---
+alwaysApply: true
+---
+# HotSpot API 规范 - 信息流与标签 API 模块 v0.0.1 (RPC)
+
+> 本文档定义 HotSpot 信息流 (`feed`) 和标签 (`tags`) 相关的 RPC 接口。
+
+## 服务定义
+
+- **Service Namespace**: `feed`, `tags`
+- **Base Path**: `/api/v1/feed/`, `/api/v1/tags/`
+
+## 核心类型定义
+
+```typescript
+// FeedGroupItem: 继承 GroupInfo（定义于 api_spec_common_types.mdc）
+interface FeedGroupItem extends GroupInfo {
+  description?: string;
+  tags?: string[];
+  has_password: boolean;
+  location: RelativeLocation;
+  friends_in_group?: number;  // 好友中有多少在该群组内
+  my_state?: MyGroupState;    // 引用 api_spec_common_types.mdc
+}
+
+// FeedUserItem: 继承 UserInfo（定义于 api_spec_common_types.mdc）
+interface FeedUserItem extends UserInfo {
+  bio?: string;
+  tags?: string[];
+  // 隐私受控字段（隐私限制时不返回，不暴露原因）
+  is_online?: boolean;
+  last_online?: string;
+  location?: RelativeLocation;
+  mutual_friends_count?: number;  // 共同好友数
+  common_tags?: string[];
+  relation?: Relationship;
+}
+
+interface TrendingBundle {
+  trending_tags: TrendingTagItem[];
+  hot_moments: FeedMomentItem[];
+}
+
+interface TrendingTagItem {
+  name: string;
+  usage_count: number;
+  trend: TagTrend;
+  hot_moment_preview?: FeedMomentItem;
+}
+
+interface TagItem {
+  name: string;
+  usage_count: number;
+  trend?: TagTrend;
+}
+
+interface TagSuggestItem {
+  name: string;
+  usage_count: number;
+}
+```
+
+## 错误码说明
+
+本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
+
+| 错误码 | 说明 | 相关接口 |
+|-------|------|---------|
+| `10001` | 缺少必填参数 | `feed/moments`、`feed/groups`、`feed/users`、`tags/suggest`、`tags/delete` |
+| `10003` | 参数值超出范围 | 所有带分页参数的接口 |
+| `10204` | 非管理员 | `admin/tags/delete` |
+| `10205` | 管理员权限不足 | `admin/tags/delete` |
+| `10300` | 资源不存在 | `admin/tags/delete` |
+
+---
+
+## 接口概览（按子域）
+
+| 子域 | 端点 | 说明 | Request | Response |
+|-----|------|------|---------|----------|
+| 信息流 | `POST /api/v1/feed/moments` | 获取瞬间信息流 | `GetFeedMomentsRequest` | `ApiResponse<PaginatedData<FeedMomentItem>>` |
+| 信息流 | `POST /api/v1/feed/groups` | 获取群组推荐 | `GetFeedGroupsRequest` | `ApiResponse<PaginatedData<FeedGroupItem>>` |
+| 信息流 | `POST /api/v1/feed/users` | 获取用户推荐 | `GetFeedUsersRequest` | `ApiResponse<PaginatedData<FeedUserItem>>` |
+| 信息流 | `POST /api/v1/feed/trending` | 获取热门内容 | `GetFeedTrendingRequest` | `ApiResponse<TrendingBundle>` |
+| 信息流 | `POST /api/v1/feed/feedback` | 信息流反馈 | `FeedFeedbackRequest` | `ApiResponse` |
+| 标签 | `POST /api/v1/tags/trending` | 热门标签 | `TrendingTagsRequest` | `ApiResponse<TrendingTags>` |
+| 标签 | `POST /api/v1/tags/suggest` | 标签搜索建议 | `SuggestTagsRequest` | `ApiResponse<TagSuggestions>` |
+| 管理员 | `POST /api/v1/admin/tags/delete` | 删除/屏蔽标签 | `AdminDeleteTagRequest` | `ApiResponse` |
+
+## 信息流 API
+
+**契约约束**：
+- 信息流接口的请求/响应字段语义以本节类型定义为准
+- 是否需要传递位置参数：以该端点的 request 类型字段为唯一依据
+
+### POST /api/v1/feed/moments
+
+获取瞬间信息流，支持多种来源筛选。
+
+**排序语义（契约级）**：
+- `source='following'`：按时间倒序（最新在前）
+- `source='nearby'`：以地理位置相关信号为主
+- `source='all'`：综合推荐流（允许排序波动）
+
+**Request**:
+```typescript
+interface GetFeedMomentsRequest extends PaginationParams {
+  source?: FeedSource;
+  reference_point?: GeoPoint;
+  radius?: number;
+}
+```
+**Response**: `ApiResponse<PaginatedData<FeedMomentItem>>`
+
+**来源说明**：
+- `following`：仅关注的人发布的瞬间，按时间倒序（不需要 reference_point）
+- `nearby`：附近范围内的瞬间，按距离和热度排序（需要 reference_point）
+- `all`：综合推荐（默认），混合关注动态、附近热门、个性化推荐（需要 reference_point）
+
+**可能错误码**：`10001`、`10003`
+
+### POST /api/v1/feed/groups
+
+获取附近可加入的群组推荐。
+
+**排序语义（契约级）**：
+- 主序：以地理位置相关信号为主（距离/热度/活跃度的组合）
+- 次序：允许在距离接近时体现"社交信号"（共同好友/同标签）
+
+**Request**:
+```typescript
+interface GetFeedGroupsRequest extends PaginationParams {
+  reference_point: GeoPoint;
+  radius?: number;
+}
+```
+**Response**: `ApiResponse<PaginatedData<FeedGroupItem>>`
+
+**可能错误码**：`10001`、`10003`
+
+### POST /api/v1/feed/users
+
+获取附近的用户推荐。
+
+**排序语义（契约级）**：
+- 主序：以地理位置相关信号为主（距离/活跃度的组合）
+- 次序：允许综合"社交信号"（共同好友数、共同标签）提升前排质量
+
+**Request**:
+```typescript
+interface GetFeedUsersRequest extends PaginationParams {
+  reference_point: GeoPoint;
+  radius?: number;
+}
+```
+**Response**: `ApiResponse<PaginatedData<FeedUserItem>>`
+
+**可能错误码**：`10001`、`10003`
+
+### POST /api/v1/feed/trending
+
+获取热门内容。
+
+**Request**:
+```typescript
+interface GetFeedTrendingRequest {
+  limit?: number;
+}
+```
+**Response**: `ApiResponse<TrendingBundle>`
+
+**可能错误码**：`10003`
+
+### POST /api/v1/feed/feedback
+
+反馈信息流内容（用于改进推荐算法）。
+
+**Request**:
+```typescript
+interface FeedFeedbackRequest {
+  content_type: FeedContentType;
+  content_id: string;
+  action: FeedFeedbackAction;
+  reason?: string;
+}
+```
+**Response**: `ApiResponse`
+
+**可能错误码**：`10001`
+
+---
+
+## 标签管理 API
+
+### POST /api/v1/tags/trending
+
+获取热门标签。
+
+说明：标签属于"默认公开资源"，不涉及用户隐私等级/访问控制分支。
+
+**Request**:
+```typescript
+interface TrendingTagsRequest {
+  limit?: number;
+  timeframe?: TagTimeframe;
+}
+
+interface TrendingTags {
+  items: TagItem[];
+}
+```
+**Response**: `ApiResponse<TrendingTags>`
+
+**可能错误码**：`10003`
+
+### POST /api/v1/tags/suggest
+
+标签搜索建议。
+
+**Request**:
+```typescript
+interface SuggestTagsRequest {
+  prefix: string;
+  limit?: number;
+}
+
+interface TagSuggestions {
+  items: TagSuggestItem[];
+}
+```
+**Response**: `ApiResponse<TagSuggestions>`
+
+**可能错误码**：`10001`、`10003`
+
+### POST /api/v1/admin/tags/delete
+
+删除/屏蔽标签（管理员）。
+
+**Request**:
+```typescript
+interface AdminDeleteTagRequest {
+  tag_name: string;
+}
+```
+**Response**: `ApiResponse`
+
+**可能错误码**：`10001`、`10204`、`10205`、`10300`

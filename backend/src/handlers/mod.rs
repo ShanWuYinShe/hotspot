@@ -1,4 +1,5 @@
 pub mod admin_rbac;
+pub mod admin_audit;
 pub mod announcements;
 pub mod auth;
 pub mod comments;

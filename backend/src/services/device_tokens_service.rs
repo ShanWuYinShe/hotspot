@@ -29,22 +29,14 @@ impl DeviceTokensService {
         user_id: i64,
         req: RegisterDeviceTokenRequest,
     ) -> Result<(), AppError> {
-        use crate::types::enums::Platform;
-        use std::str::FromStr;
-
-        if Platform::from_str(&req.platform).is_err() {
-            return Err(AppError::InvalidInput(format!(
-                "无效的平台类型: {}",
-                req.platform
-            )));
-        }
+        // platform 已是强类型枚举，无需验证
 
         if req.device_token.is_empty() {
-            return Err(AppError::InvalidInput("token不能为空".to_string()));
+            return Err(AppError::InvalidFormat("token不能为空".to_string()));
         }
 
         self.device_token_repo
-            .upsert(user_id, &req.platform, &req.device_token)
+            .upsert(user_id, req.platform.as_str(), &req.device_token)
             .await?;
 
         Ok(())
@@ -56,18 +48,10 @@ impl DeviceTokensService {
         user_id: i64,
         req: UnregisterDeviceTokenRequest,
     ) -> Result<(), AppError> {
-        use crate::types::enums::Platform;
-        use std::str::FromStr;
-
-        if Platform::from_str(&req.platform).is_err() {
-            return Err(AppError::InvalidInput(format!(
-                "无效的平台类型: {}",
-                req.platform
-            )));
-        }
+        // platform 已是强类型枚举，无需验证
 
         self.device_token_repo
-            .unregister(user_id, &req.device_token)
+            .unregister(user_id, req.platform, &req.device_token)
             .await?;
 
         Ok(())
@@ -90,8 +74,8 @@ impl DeviceTokensService {
         let response_items: Vec<DeviceTokenItem> = tokens
             .into_iter()
             .map(|token| DeviceTokenItem {
-                id: token.id.to_string(),
-                platform: token.platform.as_str().to_string(),
+                device_token_id: token.id.to_string(),
+                platform: token.platform,
                 device_token: token.device_token,
                 created_at: token.created_at.to_rfc3339(),
             })

@@ -4,47 +4,60 @@ use crate::{
     dto::{
         request::{
             CheckFavoritedRequest, CheckLikedRequest, CreateMomentRequest, DeleteMomentRequest,
-            FavoriteMomentRequest, LikeMomentRequest, MomentLikesRequest, MomentOpenTheDoorRequest,
-            MyFavoritesRequest, MyMomentsRequest, SearchMomentsByKeywordRequest,
-            SearchMomentsByLocationRequest, SearchMomentsByTagRequest, UnfavoriteMomentRequest,
-            UnlikeMomentRequest, UpdateMomentRequest,
+            FavoriteMomentRequest, GetMomentInteractionStateRequest, LikeMomentRequest,
+            MomentLikesRequest, MomentOpenTheDoorRequest, MyFavoritesRequest, MyMomentsRequest,
+            SearchMomentsByKeywordRequest, SearchMomentsByLocationRequest,
+            SearchMomentsByTagRequest, UnfavoriteMomentRequest, UnlikeMomentRequest,
+            UpdateMomentRequest,
         },
         response::{
-            ApiResponse, CheckFavoritedData, CheckLikedData, MomentItem, MomentLikeItem,
-            PaginatedData,
+            ApiResponse, CheckFavoritedData, CheckLikedData, MomentInteractionStateData,
+            MomentItem, MomentLikeItem, PaginatedData,
         },
     },
     error::Result,
-    middleware::auth::AuthenticatedUser,
+    middleware::auth::{AuthenticatedUser, OptionalAuthenticatedUser},
     state::AppState,
 };
 
-// ==================== Public APIs ====================
+// ==================== Token 可选 ====================
 
 /// 按关键字搜索生活瞬间（全局）
 pub async fn search_by_keyword(
     State(state): State<AppState>,
+    user: OptionalAuthenticatedUser,
     Json(req): Json<SearchMomentsByKeywordRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<MomentItem>>>> {
-    let response = state.moment_service.search_by_keyword(&req).await?;
+    let response = state
+        .moment_service
+        .search_by_keyword(user.user_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
 /// 按标签搜索生活瞬间（全局）
 pub async fn search_by_tag(
     State(state): State<AppState>,
+    user: OptionalAuthenticatedUser,
     Json(req): Json<SearchMomentsByTagRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<MomentItem>>>> {
-    let response = state.moment_service.search_by_tag(&req).await?;
+    let response = state
+        .moment_service
+        .search_by_tag(user.user_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
 /// 按位置搜索生活瞬间（范围过滤）
 pub async fn search_by_location(
     State(state): State<AppState>,
+    user: OptionalAuthenticatedUser,
     Json(req): Json<SearchMomentsByLocationRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<MomentItem>>>> {
-    let response = state.moment_service.search_by_location(&req).await?;
+    let response = state
+        .moment_service
+        .search_by_location(user.user_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
@@ -64,9 +77,13 @@ pub async fn get_my_moments(
 /// 获取瞬间详情（通过 ID 获取指定瞬间的详情）
 pub async fn open_the_door(
     State(state): State<AppState>,
+    user: OptionalAuthenticatedUser,
     Json(req): Json<MomentOpenTheDoorRequest>,
 ) -> Result<Json<ApiResponse<MomentItem>>> {
-    let response = state.moment_service.open_the_door(&req).await?;
+    let response = state
+        .moment_service
+        .open_the_door(user.user_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
@@ -79,7 +96,7 @@ pub async fn get_likes(
     Ok(Json(ApiResponse::success(response)))
 }
 
-// ==================== Protected APIs ====================
+// ==================== Token 必须 ====================
 
 pub async fn create(
     State(state): State<AppState>,
@@ -187,6 +204,19 @@ pub async fn check_favorited(
     Ok(Json(ApiResponse::success(CheckFavoritedData {
         is_favorited,
     })))
+}
+
+/// 获取瞬间互动状态（点赞+收藏）
+pub async fn get_interaction_state(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+    Json(req): Json<GetMomentInteractionStateRequest>,
+) -> Result<Json<ApiResponse<MomentInteractionStateData>>> {
+    let data = state
+        .moment_service
+        .get_interaction_state(user.user_id, &req)
+        .await?;
+    Ok(Json(ApiResponse::success(data)))
 }
 
 pub async fn get_my_favorites(

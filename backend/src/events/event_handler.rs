@@ -5,12 +5,14 @@ use tokio::sync::mpsc;
 use tracing::{error, info};
 
 use crate::{
+    dto::response::Location,
     events::event_types::AppEvent,
     repositories::group_member_repo::GroupMemberRepository,
     repositories::notification_repo::NotificationType,
     repositories::user_repo::UserRepository,
     services::notification_service::NotificationService,
     services::subscription_service::SubscriptionService,
+    types::enums::{AnnouncementSeverity, FollowRequestAction},
     websocket::{
         manager::ConnectionManager as WsConnectionManager,
         subscription::SubscriptionManager,
@@ -280,6 +282,57 @@ impl EventHandler {
                     )
                     .await?;
             }
+            AppEvent::FollowRequestReceived {
+                request_id,
+                requester_id,
+                target_id,
+            } => {
+                // 创建关注请求通知
+                self.notification_service
+                    .create_notification(
+                        *target_id,
+                        NotificationType::Follow,
+                        "新的关注请求".to_string(),
+                        "请求关注你".to_string(),
+                        Some(*requester_id),
+                        Some("follow_request".to_string()),
+                        Some(request_id.clone()),
+                        None,
+                        None,
+                    )
+                    .await?;
+            }
+            AppEvent::FollowRequestHandled {
+                request_id,
+                requester_id,
+                target_id,
+                accepted,
+            } => {
+                // 创建关注请求处理通知
+                let title = if *accepted {
+                    "关注请求已通过"
+                } else {
+                    "关注请求被拒绝"
+                };
+                let content = if *accepted {
+                    "已同意你的关注请求"
+                } else {
+                    "拒绝了你的关注请求"
+                };
+                self.notification_service
+                    .create_notification(
+                        *requester_id,
+                        NotificationType::Follow,
+                        title.to_string(),
+                        content.to_string(),
+                        Some(*target_id),
+                        Some("follow_request".to_string()),
+                        Some(request_id.clone()),
+                        None,
+                        None,
+                    )
+                    .await?;
+            }
             _ => {}
         }
         Ok(())
@@ -309,10 +362,9 @@ impl EventHandler {
                     updated_at: chrono::Utc::now().to_rfc3339(),
                 };
                 // 推送给订阅了该用户状态的用户
-                let user_id_str = user_id.to_string();
                 let subscribers = self
                     .ws_subscription
-                    .get_user_status_subscribers(&user_id_str)
+                    .get_user_status_subscribers(*user_id)
                     .await;
                 self.ws_manager.send_to_users(&subscribers, &message).await;
             }
@@ -324,16 +376,17 @@ impl EventHandler {
             } => {
                 let message = WsMessage::UserLocationUpdate {
                     user_id: *user_id,
-                    latitude: *latitude,
-                    longitude: *longitude,
-                    location_name: location_name.clone(),
+                    location: Location {
+                        latitude: *latitude,
+                        longitude: *longitude,
+                        location_name: location_name.clone(),
+                    },
                     updated_at: chrono::Utc::now().to_rfc3339(),
                 };
                 // 推送给订阅了该用户状态的用户
-                let user_id_str = user_id.to_string();
                 let subscribers = self
                     .ws_subscription
-                    .get_user_status_subscribers(&user_id_str)
+                    .get_user_status_subscribers(*user_id)
                     .await;
                 self.ws_manager.send_to_users(&subscribers, &message).await;
             }
@@ -437,6 +490,64 @@ impl EventHandler {
                     was_mutual: *was_mutual,
                 };
                 let _ = self.ws_manager.send_to_user(*user_id, &message).await;
+            }
+            AppEvent::FollowRequestReceived {
+                request_id,
+                requester_id,
+                target_id,
+            } => {
+                if !self
+                    .ws_subscription
+                    .has_notification_subscription(*target_id, "follow_request")
+                    .await
+                {
+                    return Ok(());
+                }
+                let cfg = self.subscription_service.get_config(*target_id).await?;
+                if !cfg.follow_request_enabled {
+                    return Ok(());
+                }
+                let requester = self.get_user_info(*requester_id).await;
+                let message = WsMessage::FollowRequestReceived {
+                    request_id: request_id.clone(),
+                    requester,
+                    message: None,
+                    requested_at: chrono::Utc::now().to_rfc3339(),
+                };
+                let _ = self.ws_manager.send_to_user(*target_id, &message).await;
+            }
+            AppEvent::FollowRequestHandled {
+                request_id,
+                requester_id,
+                target_id,
+                accepted,
+            } => {
+                if !self
+                    .ws_subscription
+                    .has_notification_subscription(*requester_id, "follow_request_handled")
+                    .await
+                {
+                    return Ok(());
+                }
+                let cfg = self.subscription_service.get_config(*requester_id).await?;
+                if !cfg.follow_request_handled_enabled {
+                    return Ok(());
+                }
+                let target_user = self.get_user_info(*target_id).await;
+                let message = WsMessage::FollowRequestHandled {
+                    request_id: request_id.clone(),
+                    target_user,
+                    action: if *accepted {
+                        FollowRequestAction::Accept
+                    } else {
+                        FollowRequestAction::Reject
+                    },
+                    handled_at: chrono::Utc::now().to_rfc3339(),
+                };
+                let _ = self
+                    .ws_manager
+                    .send_to_user(*requester_id, &message)
+                    .await;
             }
 
             // ========== 群组管理事件 ==========
@@ -725,6 +836,7 @@ impl EventHandler {
                 reply_to,
                 mentions,
                 media,
+                location,
             } => {
                 let sender = self.get_user_info(*sender_id).await;
                 let message = WsMessage::GroupMessageNew {
@@ -733,6 +845,8 @@ impl EventHandler {
                     sender,
                     message_type: message_type.clone(),
                     content: content.clone(),
+                    media: media.clone(),
+                    location: location.clone(),
                     reply_to: reply_to
                         .clone()
                         .map(|r| crate::websocket::types::MessageReplyTo {
@@ -742,7 +856,6 @@ impl EventHandler {
                             content: r.content,
                         }),
                     mentions: mentions.clone(),
-                    media: media.clone(),
                     sent_at: chrono::Utc::now().to_rfc3339(),
                 };
                 let group_id_str = group_chat_id.to_string();
@@ -820,7 +933,7 @@ impl EventHandler {
             } => {
                 let message = WsMessage::GroupMessageRead {
                     group_chat_id: group_chat_id.to_string(),
-                    up_to_message_id: up_to.to_string(),
+                    up_to: up_to.to_string(),
                     reader_id: *reader_id,
                     read_at: read_at.clone(),
                 };
@@ -887,6 +1000,7 @@ impl EventHandler {
                 content,
                 reply_to,
                 media,
+                location,
             } => {
                 let sender = self.get_user_info(*sender_id).await;
                 let message = WsMessage::PrivateMessageNew {
@@ -895,6 +1009,8 @@ impl EventHandler {
                     sender,
                     message_type: message_type.clone(),
                     content: content.clone(),
+                    media: media.clone(),
+                    location: location.clone(),
                     reply_to: reply_to
                         .clone()
                         .map(|r| crate::websocket::types::MessageReplyTo {
@@ -903,7 +1019,6 @@ impl EventHandler {
                             nickname: r.nickname,
                             content: r.content,
                         }),
-                    media: media.clone(),
                     sent_at: chrono::Utc::now().to_rfc3339(),
                 };
                 // 私聊消息直接推送给对方（不需要订阅）
@@ -977,7 +1092,7 @@ impl EventHandler {
             } => {
                 let message = WsMessage::PrivateMessageRead {
                     target_user_id: *target_user_id,
-                    up_to_message_id: up_to.to_string(),
+                    up_to: up_to.to_string(),
                     reader_id: *reader_id,
                     read_at: read_at.clone(),
                 };
@@ -1031,19 +1146,13 @@ impl EventHandler {
             }
 
             // ========== 多端同步事件 ==========
-            AppEvent::SelfJoinedGroup { user_id, group } => {
-                let message = WsMessage::SelfJoinedGroup {
-                    group: group.clone(),
-                    joined_at: chrono::Utc::now().to_rfc3339(),
-                };
-                let _ = self.ws_manager.send_to_user(*user_id, &message).await;
+            // 注：SelfJoinedGroup 和 SelfLeftGroup 通过 GroupMemberJoined/Left 事件处理
+            // 客户端通过判断 user_id 是否是自己来识别多端同步场景
+            AppEvent::SelfJoinedGroup { .. } => {
+                // 由 GroupMemberAdded 事件统一处理
             }
-            AppEvent::SelfLeftGroup { user_id, group_id } => {
-                let message = WsMessage::SelfLeftGroup {
-                    group_chat_id: group_id.to_string(),
-                    left_at: chrono::Utc::now().to_rfc3339(),
-                };
-                let _ = self.ws_manager.send_to_user(*user_id, &message).await;
+            AppEvent::SelfLeftGroup { .. } => {
+                // 由 GroupMemberRemoved 事件统一处理
             }
             AppEvent::PrivateChatDeleted {
                 user_id,
@@ -1234,7 +1343,7 @@ impl EventHandler {
                     announcement_id: uuid::Uuid::new_v4().to_string(),
                     title: title.clone(),
                     content: content.clone(),
-                    severity: "info".to_string(),
+                    severity: AnnouncementSeverity::Info,
                     action_url: None,
                     created_at: chrono::Utc::now().to_rfc3339(),
                 };
@@ -1253,7 +1362,7 @@ impl EventHandler {
                     announcement_id: announcement_id.clone(),
                     title: title.clone(),
                     content: content.clone(),
-                    severity: severity.clone(),
+                    severity: *severity,
                     action_url: action_url.clone(),
                     created_at: created_at.clone(),
                 };
@@ -1265,58 +1374,155 @@ impl EventHandler {
 
             // ========== 群公告事件 ==========
             AppEvent::GroupAnnouncementCreated {
-                group_id, title, ..
+                announcement_id,
+                group_id,
+                title,
+                content,
+                created_by_user_id,
+                is_pinned,
             } => {
-                // 由于 WsMessage 还没有这些新事件变体，暂时跳过
-                // TODO: 添加 WebSocket 消息类型后实现
-                info!(
-                    "GroupAnnouncementCreated event received for group {}: {}",
-                    group_id, title
-                );
+                let created_by = self.get_user_info(*created_by_user_id).await;
+                let message = WsMessage::GroupAnnouncementCreated {
+                    announcement_id: announcement_id.to_string(),
+                    group_chat_id: group_id.to_string(),
+                    title: title.clone(),
+                    content: content.clone(),
+                    created_by,
+                    is_pinned: *is_pinned,
+                    created_at: chrono::Utc::now().to_rfc3339(),
+                };
+                let group_id_str = group_id.to_string();
+                let subscribers = self
+                    .ws_subscription
+                    .get_group_chat_subscribers(&group_id_str)
+                    .await;
+                for uid in subscribers {
+                    let cfg = self.subscription_service.get_config(uid).await?;
+                    if cfg.group_announcement_enabled {
+                        let _ = self.ws_manager.send_to_user(uid, &message).await;
+                    }
+                }
             }
             AppEvent::GroupAnnouncementUpdated {
-                group_id, title, ..
+                announcement_id,
+                group_id,
+                title,
+                content,
+                is_pinned,
             } => {
-                // 由于 WsMessage 还没有这些新事件变体，暂时跳过
-                // TODO: 添加 WebSocket 消息类型后实现
-                info!(
-                    "GroupAnnouncementUpdated event received for group {}: {:?}",
-                    group_id, title
-                );
+                let message = WsMessage::GroupAnnouncementUpdated {
+                    announcement_id: announcement_id.to_string(),
+                    group_chat_id: group_id.to_string(),
+                    title: title.clone(),
+                    content: content.clone(),
+                    is_pinned: *is_pinned,
+                    updated_at: chrono::Utc::now().to_rfc3339(),
+                };
+                let group_id_str = group_id.to_string();
+                let subscribers = self
+                    .ws_subscription
+                    .get_group_chat_subscribers(&group_id_str)
+                    .await;
+                for uid in subscribers {
+                    let cfg = self.subscription_service.get_config(uid).await?;
+                    if cfg.group_announcement_enabled {
+                        let _ = self.ws_manager.send_to_user(uid, &message).await;
+                    }
+                }
             }
-            AppEvent::GroupAnnouncementDeleted { group_id, .. } => {
-                // 由于 WsMessage 还没有这些新事件变体，暂时跳过
-                // TODO: 添加 WebSocket 消息类型后实现
-                info!(
-                    "GroupAnnouncementDeleted event received for group {}",
-                    group_id
-                );
+            AppEvent::GroupAnnouncementDeleted {
+                announcement_id,
+                group_id,
+            } => {
+                let message = WsMessage::GroupAnnouncementDeleted {
+                    announcement_id: announcement_id.to_string(),
+                    group_chat_id: group_id.to_string(),
+                    deleted_at: chrono::Utc::now().to_rfc3339(),
+                };
+                let group_id_str = group_id.to_string();
+                let subscribers = self
+                    .ws_subscription
+                    .get_group_chat_subscribers(&group_id_str)
+                    .await;
+                for uid in subscribers {
+                    let cfg = self.subscription_service.get_config(uid).await?;
+                    if cfg.group_announcement_enabled {
+                        let _ = self.ws_manager.send_to_user(uid, &message).await;
+                    }
+                }
             }
 
             // ========== @ 提及事件 ==========
             AppEvent::MomentMentioned {
                 moment_id,
                 mentioned_user_id,
-                ..
+                mentioning_user_id,
+                moment_text_preview,
+                moment_cover_url,
             } => {
-                // 由于 WsMessage 还没有这些新事件变体，暂时跳过
-                // TODO: 添加 WebSocket 消息类型后实现
-                info!(
-                    "MomentMentioned event received: user {} mentioned in moment {}",
-                    mentioned_user_id, moment_id
-                );
+                if !self
+                    .ws_subscription
+                    .has_notification_subscription(*mentioned_user_id, "message_mention")
+                    .await
+                {
+                    return Ok(());
+                }
+                let cfg = self
+                    .subscription_service
+                    .get_config(*mentioned_user_id)
+                    .await?;
+                if !cfg.message_mention_enabled {
+                    return Ok(());
+                }
+                let user = self.get_user_info(*mentioning_user_id).await;
+                let message = WsMessage::MomentMentioned {
+                    moment_id: moment_id.to_string(),
+                    moment_summary: crate::websocket::types::MomentSummary {
+                        moment_id: moment_id.to_string(),
+                        cover_url: moment_cover_url.clone(),
+                        text_preview: moment_text_preview.clone(),
+                    },
+                    user,
+                    mentioned_at: chrono::Utc::now().to_rfc3339(),
+                };
+                let _ = self
+                    .ws_manager
+                    .send_to_user(*mentioned_user_id, &message)
+                    .await;
             }
             AppEvent::CommentMentioned {
                 comment_id,
                 mentioned_user_id,
-                ..
+                moment_id,
+                mentioning_user_id,
+                content_preview,
             } => {
-                // 由于 WsMessage 还没有这些新事件变体，暂时跳过
-                // TODO: 添加 WebSocket 消息类型后实现
-                info!(
-                    "CommentMentioned event received: user {} mentioned in comment {}",
-                    mentioned_user_id, comment_id
-                );
+                if !self
+                    .ws_subscription
+                    .has_notification_subscription(*mentioned_user_id, "message_mention")
+                    .await
+                {
+                    return Ok(());
+                }
+                let cfg = self
+                    .subscription_service
+                    .get_config(*mentioned_user_id)
+                    .await?;
+                if !cfg.message_mention_enabled {
+                    return Ok(());
+                }
+                let user = self.get_user_info(*mentioning_user_id).await;
+                let message = WsMessage::CommentMentioned {
+                    moment_id: moment_id.to_string(),
+                    comment_id: comment_id.to_string(),
+                    user,
+                    content: content_preview.clone(),
+                    mentioned_at: chrono::Utc::now().to_rfc3339(),
+                };
+                let _ = self
+                    .ws_manager
+                    .send_to_user(*mentioned_user_id, &message)
+                    .await;
             }
         }
 

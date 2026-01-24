@@ -19,6 +19,9 @@ pub struct MapClusterRow {
     pub latitude: f64,
     pub longitude: f64,
     pub count: i64,
+    /// 聚类中前 N 个成员的头像 URL（用于预览）
+    #[sqlx(default)]
+    pub preview_urls: Vec<String>,
 }
 
 #[derive(Debug, FromRow)]
@@ -152,6 +155,7 @@ impl MapRepository {
                 ST_SnapToGrid(ST_Transform(m.location::geometry, 3857), $5) AS p
               FROM moments m, env
               WHERE m.is_deleted = FALSE
+                AND m.privacy_level::text = 'public'
                 AND m.location IS NOT NULL
                 AND ST_Intersects(m.location, env.bbox::geography)
                 AND ($6::TIMESTAMPTZ IS NULL OR m.created_at >= $6::TIMESTAMPTZ)
@@ -284,6 +288,7 @@ impl MapRepository {
             FROM moments m
             JOIN users u ON m.user_id = u.user_id
             WHERE m.is_deleted = FALSE
+                AND m.privacy_level::text = 'public'
                 AND m.location IS NOT NULL
                 AND ST_Intersects(m.location, ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography)
                 AND ($6::TIMESTAMPTZ IS NULL OR m.created_at >= $6::TIMESTAMPTZ)
@@ -291,6 +296,219 @@ impl MapRepository {
             LIMIT $5
             "#,
         )
+        .bind(west)
+        .bind(south)
+        .bind(east)
+        .bind(north)
+        .bind(limit)
+        .bind(start_time)
+        .bind(end_time)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows)
+    }
+
+    // ==================== Friend-filtered Cluster Queries ====================
+
+    pub async fn cluster_friend_users_by_bounds(
+        &self,
+        user_id: i64,
+        west: f64,
+        south: f64,
+        east: f64,
+        north: f64,
+        grid_meters: f64,
+    ) -> Result<Vec<MapClusterRow>> {
+        let rows = sqlx::query_as::<_, MapClusterRow>(
+            r#"
+            WITH friends AS (
+                SELECT following_id AS friend_id FROM user_follows
+                WHERE follower_id = $1 AND is_mutual = TRUE
+            ),
+            env AS (
+              SELECT ST_MakeEnvelope($2, $3, $4, $5, 4326) AS bbox
+            ),
+            snapped AS (
+              SELECT
+                ST_SnapToGrid(ST_Transform(u.location::geometry, 3857), $6) AS p
+              FROM users u
+              JOIN friends f ON u.user_id = f.friend_id
+              CROSS JOIN env
+              WHERE u.is_deleted = FALSE
+                AND u.is_banned = FALSE
+                AND u.location IS NOT NULL
+                AND ST_Intersects(u.location, env.bbox::geography)
+            )
+            SELECT
+              CONCAT(
+                FLOOR(ST_X(p) / $6)::bigint,
+                ':',
+                FLOOR(ST_Y(p) / $6)::bigint,
+                ':',
+                $6::bigint
+              ) AS key,
+              ST_Y(ST_Transform(p, 4326)) AS latitude,
+              ST_X(ST_Transform(p, 4326)) AS longitude,
+              COUNT(*)::bigint AS count
+            FROM snapped
+            GROUP BY p
+            ORDER BY count DESC
+            "#,
+        )
+        .bind(user_id)
+        .bind(west)
+        .bind(south)
+        .bind(east)
+        .bind(north)
+        .bind(grid_meters)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows)
+    }
+
+    pub async fn cluster_friend_moments_by_bounds(
+        &self,
+        user_id: i64,
+        west: f64,
+        south: f64,
+        east: f64,
+        north: f64,
+        grid_meters: f64,
+        start_time: Option<String>,
+        end_time: Option<String>,
+    ) -> Result<Vec<MapClusterRow>> {
+        let rows = sqlx::query_as::<_, MapClusterRow>(
+            r#"
+            WITH friends AS (
+                SELECT following_id AS friend_id FROM user_follows
+                WHERE follower_id = $1 AND is_mutual = TRUE
+            ),
+            env AS (
+              SELECT ST_MakeEnvelope($2, $3, $4, $5, 4326) AS bbox
+            ),
+            snapped AS (
+              SELECT
+                ST_SnapToGrid(ST_Transform(m.location::geometry, 3857), $6) AS p
+              FROM moments m
+              JOIN friends f ON m.user_id = f.friend_id
+              CROSS JOIN env
+              WHERE m.is_deleted = FALSE
+                AND m.location IS NOT NULL
+                AND ST_Intersects(m.location, env.bbox::geography)
+                AND ($7::TIMESTAMPTZ IS NULL OR m.created_at >= $7::TIMESTAMPTZ)
+                AND ($8::TIMESTAMPTZ IS NULL OR m.created_at <= $8::TIMESTAMPTZ)
+            )
+            SELECT
+              CONCAT(
+                FLOOR(ST_X(p) / $6)::bigint,
+                ':',
+                FLOOR(ST_Y(p) / $6)::bigint,
+                ':',
+                $6::bigint
+              ) AS key,
+              ST_Y(ST_Transform(p, 4326)) AS latitude,
+              ST_X(ST_Transform(p, 4326)) AS longitude,
+              COUNT(*)::bigint AS count
+            FROM snapped
+            GROUP BY p
+            ORDER BY count DESC
+            "#,
+        )
+        .bind(user_id)
+        .bind(west)
+        .bind(south)
+        .bind(east)
+        .bind(north)
+        .bind(grid_meters)
+        .bind(start_time)
+        .bind(end_time)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows)
+    }
+
+    // ==================== Friend-filtered Entity Queries ====================
+
+    pub async fn search_friend_users_by_bounds(
+        &self,
+        user_id: i64,
+        west: f64,
+        south: f64,
+        east: f64,
+        north: f64,
+        limit: i32,
+    ) -> Result<Vec<MapEntityRow>> {
+        let rows = sqlx::query_as::<_, MapEntityRow>(
+            r#"
+            WITH friends AS (
+                SELECT following_id AS friend_id FROM user_follows
+                WHERE follower_id = $1 AND is_mutual = TRUE
+            )
+            SELECT
+                u.user_id::text AS id,
+                u.nickname AS title,
+                u.bio AS subtitle,
+                u.avatar_url AS cover_url,
+                ST_Y(u.location::geometry) AS latitude,
+                ST_X(u.location::geometry) AS longitude
+            FROM users u
+            JOIN friends f ON u.user_id = f.friend_id
+            WHERE u.is_deleted = FALSE
+                AND u.is_banned = FALSE
+                AND u.location IS NOT NULL
+                AND ST_Intersects(u.location, ST_MakeEnvelope($2, $3, $4, $5, 4326)::geography)
+            LIMIT $6
+            "#,
+        )
+        .bind(user_id)
+        .bind(west)
+        .bind(south)
+        .bind(east)
+        .bind(north)
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows)
+    }
+
+    pub async fn search_friend_moments_by_bounds(
+        &self,
+        user_id: i64,
+        west: f64,
+        south: f64,
+        east: f64,
+        north: f64,
+        limit: i32,
+        start_time: Option<String>,
+        end_time: Option<String>,
+    ) -> Result<Vec<MapEntityRow>> {
+        let rows = sqlx::query_as::<_, MapEntityRow>(
+            r#"
+            WITH friends AS (
+                SELECT following_id AS friend_id FROM user_follows
+                WHERE follower_id = $1 AND is_mutual = TRUE
+            )
+            SELECT
+                m.moment_id::text AS id,
+                m.description AS title,
+                u.nickname AS subtitle,
+                m.images[1] AS cover_url,
+                ST_Y(m.location::geometry) AS latitude,
+                ST_X(m.location::geometry) AS longitude
+            FROM moments m
+            JOIN users u ON m.user_id = u.user_id
+            JOIN friends f ON m.user_id = f.friend_id
+            WHERE m.is_deleted = FALSE
+                AND m.location IS NOT NULL
+                AND ST_Intersects(m.location, ST_MakeEnvelope($2, $3, $4, $5, 4326)::geography)
+                AND ($7::TIMESTAMPTZ IS NULL OR m.created_at >= $7::TIMESTAMPTZ)
+                AND ($8::TIMESTAMPTZ IS NULL OR m.created_at <= $8::TIMESTAMPTZ)
+            LIMIT $6
+            "#,
+        )
+        .bind(user_id)
         .bind(west)
         .bind(south)
         .bind(east)

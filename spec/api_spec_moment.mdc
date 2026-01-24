@@ -1,0 +1,468 @@
+---
+alwaysApply: true
+---
+# HotSpot API 规范 - 生活瞬间与评论 API 模块 v0.0.1 (RPC)
+
+> 本文档定义 HotSpot 生活瞬间 (`moment`) 和评论 (`comment`) 相关的 RPC 接口。
+
+## 服务定义
+
+- **Service Namespace**: `moment`, `comment`
+- **Base Path**: `/api/v1/moments/`, `/api/v1/comments/`
+
+## 核心类型定义
+
+```typescript
+// 注：MyMomentState、MomentBase、UserMomentListItem 等类型定义于 api_spec_common_types.mdc
+
+interface MomentLikeItem {
+  user: UserInfo;
+  liked_at: string;
+}
+
+interface LikedStatus {
+  is_liked: boolean;
+}
+
+interface FavoritedStatus {
+  is_favorited: boolean;
+}
+
+interface CommentLikeItem {
+  user: UserInfo;
+  liked_at: string;
+}
+```
+
+## 错误码说明
+
+本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
+
+| 错误码 | 说明 | 相关接口 |
+|-------|------|---------|
+| `10001` | 缺少必填参数 | 所有带参数的接口 |
+| `10003` | 参数值超出范围 | `create`、`update`、`comments/create` |
+| `10200` | 权限不足 | `update`、`delete`、`comments/delete` |
+| `10310` | 用户不存在 | `create`、`update`（mentions 无效） |
+| `10330` | 生活瞬间不存在 | 所有瞬间相关接口 |
+| `10340` | 评论不存在 | 所有评论相关接口 |
+| `10360` | 文件/媒体不存在 | `create`、`update` |
+| `10402` | 资源状态冲突 | `like`、`unlike`、`favorite`、`unfavorite`、`comments/like`、`comments/unlike` |
+| `10500` | 请求过于频繁 | `comments/create` |
+
+## 生活瞬间 API
+
+## 接口概览（按子域）
+
+| 子域 | 端点 | 说明 | Request | Response |
+|-----|------|------|---------|----------|
+| 搜索与发现 | `POST /api/v1/moments/search_by_keyword` | 搜索瞬间（关键字） | `SearchMomentsByKeywordRequest` | `ApiResponse<PaginatedData<MomentSearchItem>>` |
+| 搜索与发现 | `POST /api/v1/moments/search_by_tag` | 搜索瞬间（标签） | `SearchMomentsByTagRequest` | `ApiResponse<PaginatedData<MomentSearchItem>>` |
+| 搜索与发现 | `POST /api/v1/moments/search_by_location` | 搜索瞬间（位置） | `SearchMomentsByLocationRequest` | `ApiResponse<PaginatedData<MomentSearchItem>>` |
+| 瞬间详情与互动 | `POST /api/v1/moments/open_the_door` | 瞬间详情 | `MomentOpenTheDoorRequest` | `ApiResponse<MomentCard>` |
+| 瞬间详情与互动 | `POST /api/v1/moments/interaction_state` | 我的互动状态 | `GetMomentInteractionStateRequest` | `ApiResponse<MyMomentState>` |
+| 瞬间详情与互动 | `POST /api/v1/user/moments` | 用户瞬间历史 | `UserMomentsRequest` | `ApiResponse<PaginatedData<UserMomentListItem>>` |
+| 瞬间操作 | `POST /api/v1/moments/create` | 创建瞬间 | `CreateMomentRequest` | `ApiResponse<UserMomentListItem>` |
+| 瞬间操作 | `POST /api/v1/moments/update` | 编辑瞬间 | `EditMomentRequest` | `ApiResponse` |
+| 瞬间操作 | `POST /api/v1/moments/delete` | 删除瞬间 | `DeleteMomentRequest` | `ApiResponse` |
+| 瞬间操作 | `POST /api/v1/moments/like` | 点赞 | `LikeMomentRequest` | `ApiResponse` |
+| 瞬间操作 | `POST /api/v1/moments/unlike` | 取消点赞 | `UnlikeMomentRequest` | `ApiResponse` |
+| 瞬间操作 | `POST /api/v1/moments/favorite` | 收藏 | `FavoriteMomentRequest` | `ApiResponse` |
+| 瞬间操作 | `POST /api/v1/moments/unfavorite` | 取消收藏 | `UnfavoriteMomentRequest` | `ApiResponse` |
+| 我的瞬间 | `POST /api/v1/moments/me` | 我发布的瞬间 | `MyMomentsRequest` | `ApiResponse<PaginatedData<UserMomentListItem>>` |
+| 我的瞬间 | `POST /api/v1/moments/me/favorites` | 我的收藏 | `MyFavoritesRequest` | `ApiResponse<PaginatedData<MomentCard>>` |
+| 我的瞬间 | `POST /api/v1/moments/me/liked` | 检查是否点赞 | `CheckLikedRequest` | `ApiResponse<LikedStatus>` |
+| 我的瞬间 | `POST /api/v1/moments/me/favorited` | 检查是否收藏 | `CheckFavoritedRequest` | `ApiResponse<FavoritedStatus>` |
+| 点赞列表 | `POST /api/v1/moments/likes` | 瞬间点赞列表 | `MomentLikesRequest` | `ApiResponse<PaginatedData<MomentLikeItem>>` |
+| 评论 | `POST /api/v1/comments/create` | 创建评论/回复 | `CreateCommentRequest` | `ApiResponse<CommentListItem>` |
+| 评论 | `POST /api/v1/comments/delete` | 删除评论 | `DeleteCommentRequest` | `ApiResponse` |
+| 评论 | `POST /api/v1/comments` | 顶层评论列表 | `CommentsRequest` | `ApiResponse<PaginatedData<CommentListItem>>` |
+| 评论 | `POST /api/v1/comments/replies` | 子评论列表 | `CommentRepliesRequest` | `ApiResponse<PaginatedData<CommentListItem>>` |
+| 评论点赞 | `POST /api/v1/comments/like` | 点赞评论 | `LikeCommentRequest` | `ApiResponse` |
+| 评论点赞 | `POST /api/v1/comments/unlike` | 取消点赞评论 | `UnlikeCommentRequest` | `ApiResponse` |
+| 评论点赞 | `POST /api/v1/comments/likes` | 评论点赞列表 | `CommentLikesRequest` | `ApiResponse<PaginatedData<CommentLikeItem>>` |
+
+### 搜索与发现
+
+说明（Token 可选的搜索语义）：
+- 未登录（不带 token）：仅返回隐私等级为 `public` 的瞬间；不得在错误码或返回结构上暴露不可见瞬间的存在性
+- 已登录（带 token）：在满足隐私与关系规则前提下，允许返回更多可见瞬间；并可能附带 `@auth-only` 字段
+
+#### POST /api/v1/moments/search_by_keyword
+
+按关键字搜索生活瞬间（全局）。
+
+**排序语义（契约级）**：
+- 默认按**相关性优先**排序，同分时以 `created_at` 倒序作为稳定 tie-breaker
+
+**Request**:
+```typescript
+interface SearchMomentsByKeywordRequest extends SearchBaseParams {
+  kw: string;
+}
+```
+**Response**: `ApiResponse<PaginatedData<MomentSearchItem>>`
+
+#### POST /api/v1/moments/search_by_tag
+
+按标签搜索生活瞬间（全局）。
+
+**Request**:
+```typescript
+interface SearchMomentsByTagRequest extends SearchBaseParams {
+  tag: string;
+}
+```
+**Response**: `ApiResponse<PaginatedData<MomentSearchItem>>`
+
+#### POST /api/v1/moments/search_by_location
+
+按位置搜索生活瞬间（范围过滤）。
+
+**排序语义（契约级）**：
+- 默认按**距离优先**排序（由近到远）
+
+**Request**:
+```typescript
+interface SearchMomentsByLocationRequest extends SearchBaseParams {
+  kw?: string;
+  radius: number;
+}
+```
+**Response**: `ApiResponse<PaginatedData<MomentSearchItem>>`
+
+### 瞬间详情与互动
+
+#### POST /api/v1/moments/open_the_door
+
+获取瞬间详情。
+
+**说明**：未登录（不带 token）仅允许访问隐私等级为 `public` 的瞬间；若瞬间对匿名不可见，返回 `10330`（不存在/不可见）。
+
+**Request**:
+```typescript
+interface MomentOpenTheDoorRequest {
+  moment_id: string;
+}
+```
+**Response**: `ApiResponse<MomentCard>`
+
+#### POST /api/v1/moments/interaction_state
+
+获取我对该瞬间的互动状态。
+
+**Request**:
+```typescript
+interface GetMomentInteractionStateRequest {
+  moment_id: string;
+}
+```
+**Response**: `ApiResponse<MyMomentState>`
+
+**可能错误码**：`10001`、`10330`
+
+#### POST /api/v1/user/moments
+
+获取指定用户生活瞬间历史。
+
+**隐私控制**：受 `moments_visible` 设置控制。
+
+**Request**:
+```typescript
+interface UserMomentsRequest extends PaginationParams {
+  user_id: number;
+}
+```
+**Response**: `ApiResponse<PaginatedData<UserMomentListItem>>`
+
+### 瞬间操作
+
+#### POST /api/v1/moments/create
+
+创建生活瞬间。
+
+**Request**:
+```typescript
+interface MomentUpsertBody {
+  description?: string;
+  location?: Location;
+  tags?: string[];
+  image_file_ids?: string[];
+  privacy_level?: PrivacyLevel;
+  mentions?: number[];
+}
+
+interface CreateMomentRequest extends MomentUpsertBody {
+  description: string; // create 时必填
+  location: Location;  // create 时必填
+}
+```
+**Response**: `ApiResponse<UserMomentListItem>`
+
+**可能错误码**：`10001`、`10003`、`10360`、`10310`
+
+#### POST /api/v1/moments/update
+
+编辑生活瞬间。
+
+**Request**:
+```typescript
+interface EditMomentRequest extends MomentUpsertBody {
+  moment_id: string;
+}
+```
+**Response**: `ApiResponse`
+
+**可能错误码**：`10001`、`10003`、`10330`、`10360`、`10310`、`10200`
+
+#### POST /api/v1/moments/delete
+
+删除生活瞬间。
+
+**Request**:
+```typescript
+interface DeleteMomentRequest {
+  moment_id: string;
+}
+```
+**Response**: `ApiResponse`
+
+**可能错误码**：`10001`、`10330`、`10200`
+
+#### POST /api/v1/moments/like
+
+点赞生活瞬间。
+
+**Request**:
+```typescript
+interface LikeMomentRequest {
+  moment_id: string;
+}
+```
+**Response**: `ApiResponse`
+
+**可能错误码**：`10001`、`10330`、`10402`
+
+#### POST /api/v1/moments/unlike
+
+取消点赞生活瞬间。
+
+**Request**:
+```typescript
+interface UnlikeMomentRequest {
+  moment_id: string;
+}
+```
+**Response**: `ApiResponse`
+
+**可能错误码**：`10001`、`10330`、`10402`
+
+#### POST /api/v1/moments/favorite
+
+收藏瞬间。
+
+**Request**:
+```typescript
+interface FavoriteMomentRequest {
+  moment_id: string;
+}
+```
+**Response**: `ApiResponse`
+
+**可能错误码**：`10001`、`10330`、`10402`
+
+#### POST /api/v1/moments/unfavorite
+
+取消收藏瞬间。
+
+**Request**:
+```typescript
+interface UnfavoriteMomentRequest {
+  moment_id: string;
+}
+```
+**Response**: `ApiResponse`
+
+**可能错误码**：`10001`、`10330`、`10402`
+
+### 当前用户瞬间 API（/me/ 路径）
+
+#### POST /api/v1/moments/me
+
+我发布的瞬间列表。
+
+**Request**:
+```typescript
+interface MyMomentsRequest extends PaginationParams {}
+```
+**Response**: `ApiResponse<PaginatedData<UserMomentListItem>>`
+
+#### POST /api/v1/moments/me/favorites
+
+我的收藏列表。
+
+**Request**:
+```typescript
+interface MyFavoritesRequest extends PaginationParams {}
+```
+**Response**: `ApiResponse<PaginatedData<MomentCard>>`
+
+#### POST /api/v1/moments/me/liked
+
+检查瞬间是否已点赞。
+
+**Request**:
+```typescript
+interface CheckLikedRequest {
+  moment_id: string;
+}
+```
+**Response**: `ApiResponse<LikedStatus>`
+
+**可能错误码**：`10001`、`10330`
+
+#### POST /api/v1/moments/me/favorited
+
+检查瞬间是否已收藏。
+
+**Request**:
+```typescript
+interface CheckFavoritedRequest {
+  moment_id: string;
+}
+```
+**Response**: `ApiResponse<FavoritedStatus>`
+
+**可能错误码**：`10001`、`10330`
+
+#### POST /api/v1/moments/likes
+
+获取生活瞬间点赞列表。
+
+**说明**：本接口仅用于"隐私等级为 `public` 的瞬间"。
+
+**Request**:
+```typescript
+interface MomentLikesRequest extends PaginationParams {
+  moment_id: string;
+}
+```
+**Response**: `ApiResponse<PaginatedData<MomentLikeItem>>`
+
+**可能错误码**：`10330`
+
+---
+
+## 评论与点赞 API
+
+#### POST /api/v1/comments/create
+
+添加评论/回复。
+
+**Request**:
+```typescript
+interface CreateCommentRequest {
+  moment_id: string;
+  content: string;
+  parent_id?: string;
+  mentions?: number[];
+}
+```
+**Response**: `ApiResponse<CommentListItem>`
+
+**可能错误码**：`10001`、`10003`、`10330`、`10340`、`10310`、`10200`、`10500`
+
+#### POST /api/v1/comments/delete
+
+删除评论。
+
+**Request**:
+```typescript
+interface DeleteCommentRequest {
+  comment_id: string;
+}
+```
+**Response**: `ApiResponse`
+
+**可能错误码**：`10001`、`10340`、`10200`
+
+#### POST /api/v1/comments
+
+获取评论列表（顶层评论）。
+
+**排序语义（契约级）**：
+- 评论列表默认按 `created_at` **时间倒序**（最新在前）
+
+**说明**：本接口仅用于"隐私等级为 `public` 的瞬间"。子评论通过 `/comments/replies` 按需分页加载。
+
+**Request**:
+```typescript
+interface CommentsRequest extends PaginationParams {
+  moment_id: string;
+}
+```
+**Response**: `ApiResponse<PaginatedData<CommentListItem>>`
+
+**可能错误码**：`10330`
+
+#### POST /api/v1/comments/replies
+
+获取子评论列表。
+
+**排序语义（契约级）**：
+- 回复列表默认按 `created_at` **时间正序**（最早在前，便于对话阅读）
+
+**Request**:
+```typescript
+interface CommentRepliesRequest extends PaginationParams {
+  comment_id: string;
+}
+```
+**Response**: `ApiResponse<PaginatedData<CommentListItem>>`
+
+**可能错误码**：`10340`
+
+#### POST /api/v1/comments/like
+
+点赞评论。
+
+**Request**:
+```typescript
+interface LikeCommentRequest {
+  comment_id: string;
+}
+```
+**Response**: `ApiResponse`
+
+**可能错误码**：`10001`、`10340`、`10402`
+
+#### POST /api/v1/comments/unlike
+
+取消点赞评论。
+
+**Request**:
+```typescript
+interface UnlikeCommentRequest {
+  comment_id: string;
+}
+```
+**Response**: `ApiResponse`
+
+**可能错误码**：`10001`、`10340`、`10402`
+
+#### POST /api/v1/comments/likes
+
+获取评论点赞列表。
+
+**排序语义（契约级）**：
+- 点赞列表默认按 `liked_at` **时间倒序**（最近点赞在前）
+
+**Request**:
+```typescript
+interface CommentLikesRequest extends PaginationParams {
+  comment_id: string;
+}
+```
+**Response**: `ApiResponse<PaginatedData<CommentLikeItem>>`
+
+**可能错误码**：`10340`

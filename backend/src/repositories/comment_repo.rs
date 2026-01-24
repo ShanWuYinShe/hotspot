@@ -289,6 +289,28 @@ impl CommentRepository {
         let next_cursor = likes.last().map(|l| encode_cursor(&l.id)).transpose()?;
         Ok((likes, next_cursor))
     }
+
+    /// 列出布隆过滤器用的 comment_id（按 id 分页）
+    pub async fn list_comment_ids_after(
+        &self,
+        last_id: i64,
+        limit: i64,
+    ) -> Result<Vec<(i64, Uuid)>> {
+        let rows = sqlx::query!(
+            r#"
+            SELECT id, comment_id
+            FROM comments
+            WHERE id > $1 AND is_deleted = FALSE
+            ORDER BY id
+            LIMIT $2
+            "#,
+            last_id,
+            limit
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows.into_iter().map(|r| (r.id, r.comment_id)).collect())
+    }
 }
 
 /// 评论点赞行

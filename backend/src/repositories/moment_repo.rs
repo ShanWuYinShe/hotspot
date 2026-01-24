@@ -152,6 +152,29 @@ impl MomentRepository {
         Ok(result.exists)
     }
 
+    /// 按自增ID顺序批量获取瞬间ID（用于布隆过滤器初始化）
+    pub async fn list_moment_ids_after(
+        &self,
+        last_id: i64,
+        limit: i64,
+    ) -> Result<Vec<(i64, Uuid)>> {
+        let rows = sqlx::query!(
+            r#"
+            SELECT id, moment_id
+            FROM moments
+            WHERE id > $1 AND is_deleted = FALSE
+            ORDER BY id ASC
+            LIMIT $2
+            "#,
+            last_id,
+            limit
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.into_iter().map(|r| (r.id, r.moment_id)).collect())
+    }
+
     /// 获取瞬间所有者ID
     pub async fn get_owner(&self, moment_id: Uuid) -> Result<Option<i64>> {
         let row = sqlx::query!(
@@ -170,6 +193,7 @@ impl MomentRepository {
         moment_ids: &[Uuid],
         latitude: f64,
         longitude: f64,
+        viewer_id: Option<i64>,
     ) -> Result<Vec<MomentSearchRow>> {
         if moment_ids.is_empty() {
             return Ok(Vec::new());
@@ -198,11 +222,40 @@ impl MomentRepository {
             FROM moments m
             JOIN users u ON m.user_id = u.user_id
             WHERE m.moment_id = ANY($1) AND m.is_deleted = FALSE AND u.is_deleted = FALSE
+              AND (
+                    ($4::BIGINT IS NULL AND m.privacy_level::text = 'public')
+                 OR ($4::BIGINT IS NOT NULL AND (
+                        m.user_id = $4
+                     OR m.privacy_level::text = 'public'
+                     OR (
+                            m.privacy_level::text = 'friends'
+                        AND EXISTS (
+                            SELECT 1
+                            FROM user_follows f1
+                            INNER JOIN user_follows f2
+                                ON f1.following_id = f2.follower_id
+                               AND f1.follower_id = f2.following_id
+                            WHERE f1.follower_id = $4
+                              AND f1.following_id = m.user_id
+                        )
+                     )
+                 ))
+              )
+              AND (
+                    $4::BIGINT IS NULL
+                 OR NOT EXISTS (
+                        SELECT 1
+                        FROM user_blocks b
+                        WHERE (b.blocker_id = m.user_id AND b.blocked_id = $4)
+                           OR (b.blocker_id = $4 AND b.blocked_id = m.user_id)
+                    )
+              )
             ORDER BY "distance!" ASC
             "#,
             moment_ids,
             longitude,
-            latitude
+            latitude,
+            viewer_id
         )
         .fetch_all(&self.pool)
         .await?;
@@ -237,6 +290,7 @@ impl MomentRepository {
         keyword: &str,
         latitude: f64,
         longitude: f64,
+        viewer_id: Option<i64>,
         limit: i32,
         cursor: Option<String>,
     ) -> Result<(Vec<MomentSearchRow>, Option<String>)> {
@@ -273,13 +327,42 @@ impl MomentRepository {
             WHERE m.is_deleted = FALSE 
               AND u.is_deleted = FALSE
               AND m.description ILIKE $1
-              AND (m.created_at < $4 OR (m.created_at = $4 AND m.id < $5))
+              AND (
+                    ($4::BIGINT IS NULL AND m.privacy_level::text = 'public')
+                 OR ($4::BIGINT IS NOT NULL AND (
+                        m.user_id = $4
+                     OR m.privacy_level::text = 'public'
+                     OR (
+                            m.privacy_level::text = 'friends'
+                        AND EXISTS (
+                            SELECT 1
+                            FROM user_follows f1
+                            INNER JOIN user_follows f2
+                                ON f1.following_id = f2.follower_id
+                               AND f1.follower_id = f2.following_id
+                            WHERE f1.follower_id = $4
+                              AND f1.following_id = m.user_id
+                        )
+                     )
+                 ))
+              )
+              AND (
+                    $4::BIGINT IS NULL
+                 OR NOT EXISTS (
+                        SELECT 1
+                        FROM user_blocks b
+                        WHERE (b.blocker_id = m.user_id AND b.blocked_id = $4)
+                           OR (b.blocker_id = $4 AND b.blocked_id = m.user_id)
+                    )
+              )
+              AND (m.created_at < $5 OR (m.created_at = $5 AND m.id < $6))
             ORDER BY m.created_at DESC, m.id DESC
-            LIMIT $6
+            LIMIT $7
             "#,
             search_pattern,
             longitude,
             latitude,
+            viewer_id,
             last_ts,
             last_id,
             limit as i64
@@ -529,6 +612,7 @@ impl MomentRepository {
         keyword: Option<&str>,
         latitude: f64,
         longitude: f64,
+        viewer_id: Option<i64>,
         radius_meters: f64,
         limit: i32,
         cursor: Option<String>,
@@ -573,6 +657,34 @@ impl MomentRepository {
             WHERE m.is_deleted = FALSE 
               AND u.is_deleted = FALSE
               AND ($7::TEXT IS NULL OR m.description ILIKE $7)
+              AND (
+                    ($8::BIGINT IS NULL AND m.privacy_level::text = 'public')
+                 OR ($8::BIGINT IS NOT NULL AND (
+                        m.user_id = $8
+                     OR m.privacy_level::text = 'public'
+                     OR (
+                            m.privacy_level::text = 'friends'
+                        AND EXISTS (
+                            SELECT 1
+                            FROM user_follows f1
+                            INNER JOIN user_follows f2
+                                ON f1.following_id = f2.follower_id
+                               AND f1.follower_id = f2.following_id
+                            WHERE f1.follower_id = $8
+                              AND f1.following_id = m.user_id
+                        )
+                     )
+                 ))
+              )
+              AND (
+                    $8::BIGINT IS NULL
+                 OR NOT EXISTS (
+                        SELECT 1
+                        FROM user_blocks b
+                        WHERE (b.blocker_id = m.user_id AND b.blocked_id = $8)
+                           OR (b.blocker_id = $8 AND b.blocked_id = m.user_id)
+                    )
+              )
               AND ST_DWithin(
                   m.location::geography,
                   ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography,
@@ -595,7 +707,8 @@ impl MomentRepository {
             last_dist,
             last_id,
             limit as i64,
-            search_pattern
+            search_pattern,
+            viewer_id
         )
         .fetch_all(&self.pool)
         .await?;
@@ -639,6 +752,7 @@ impl MomentRepository {
         tag_name: &str,
         latitude: f64,
         longitude: f64,
+        viewer_id: Option<i64>,
         limit: i32,
         cursor: Option<String>,
     ) -> Result<(Vec<MomentSearchRow>, Option<String>)> {
@@ -672,6 +786,34 @@ impl MomentRepository {
             INNER JOIN tags t ON mt.tag_id = t.id
             JOIN users u ON m.user_id = u.user_id
             WHERE t.name = $1 AND m.id < $2 AND m.is_deleted = FALSE AND u.is_deleted = FALSE
+              AND (
+                    ($6::BIGINT IS NULL AND m.privacy_level::text = 'public')
+                 OR ($6::BIGINT IS NOT NULL AND (
+                        m.user_id = $6
+                     OR m.privacy_level::text = 'public'
+                     OR (
+                            m.privacy_level::text = 'friends'
+                        AND EXISTS (
+                            SELECT 1
+                            FROM user_follows f1
+                            INNER JOIN user_follows f2
+                                ON f1.following_id = f2.follower_id
+                               AND f1.follower_id = f2.following_id
+                            WHERE f1.follower_id = $6
+                              AND f1.following_id = m.user_id
+                        )
+                     )
+                 ))
+              )
+              AND (
+                    $6::BIGINT IS NULL
+                 OR NOT EXISTS (
+                        SELECT 1
+                        FROM user_blocks b
+                        WHERE (b.blocker_id = m.user_id AND b.blocked_id = $6)
+                           OR (b.blocker_id = $6 AND b.blocked_id = m.user_id)
+                    )
+              )
             ORDER BY m.id DESC
             LIMIT $3
             "#,
@@ -679,7 +821,8 @@ impl MomentRepository {
             last_id,
             limit as i64,
             longitude,
-            latitude
+            latitude,
+            viewer_id
         )
         .fetch_all(&self.pool)
         .await?;
@@ -837,6 +980,56 @@ impl MomentRepository {
         .fetch_one(&self.pool)
         .await?;
         Ok(exists)
+    }
+
+    /// 批量检查用户对多个瞬间的点赞状态
+    /// 返回用户已点赞的瞬间 ID 集合
+    pub async fn batch_check_liked(
+        &self,
+        moment_ids: &[Uuid],
+        user_id: i64,
+    ) -> Result<std::collections::HashSet<Uuid>> {
+        if moment_ids.is_empty() {
+            return Ok(std::collections::HashSet::new());
+        }
+
+        let liked_ids: Vec<Uuid> = sqlx::query_scalar(
+            r#"
+            SELECT moment_id FROM moment_likes
+            WHERE moment_id = ANY($1) AND user_id = $2
+            "#,
+        )
+        .bind(moment_ids)
+        .bind(user_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(liked_ids.into_iter().collect())
+    }
+
+    /// 批量检查用户对多个瞬间的收藏状态
+    /// 返回用户已收藏的瞬间 ID 集合
+    pub async fn batch_check_favorited(
+        &self,
+        moment_ids: &[Uuid],
+        user_id: i64,
+    ) -> Result<std::collections::HashSet<Uuid>> {
+        if moment_ids.is_empty() {
+            return Ok(std::collections::HashSet::new());
+        }
+
+        let favorited_ids: Vec<Uuid> = sqlx::query_scalar(
+            r#"
+            SELECT moment_id FROM moment_favorites
+            WHERE moment_id = ANY($1) AND user_id = $2
+            "#,
+        )
+        .bind(moment_ids)
+        .bind(user_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(favorited_ids.into_iter().collect())
     }
 
     /// 获取瞬间点赞列表
@@ -1087,7 +1280,7 @@ impl MomentRepository {
         cursor: Option<String>,
     ) -> Result<(Vec<MomentSearchRow>, Option<String>)> {
         // Reuse search_by_location logic without keyword
-        self.search_by_location(None, user_lat, user_lng, radius, limit, cursor)
+        self.search_by_location(None, user_lat, user_lng, None, radius, limit, cursor)
             .await
     }
 

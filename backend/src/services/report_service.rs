@@ -7,7 +7,7 @@ use crate::{
     },
     error::AppError,
     repositories::report_repo::{ReportRepository, ReportRow},
-    types::enums::{ReportStatus, ReportTargetType},
+    types::enums::ReportStatus,
     utils::validation::Validator,
 };
 
@@ -27,21 +27,18 @@ impl ReportService {
         reporter_id: i64,
         req: CreateReportRequest,
     ) -> Result<CreateReportData, AppError> {
-        use std::str::FromStr;
-        // 验证target_type
-        let target_type = ReportTargetType::from_str(&req.target_type)
-            .map_err(|_| AppError::InvalidInput("无效的举报类型".to_string()))?;
+        // target_type 已是强类型枚举
 
         // 验证reason
         if req.reason.trim().is_empty() {
-            return Err(AppError::InvalidInput("举报原因不能为空".to_string()));
+            return Err(AppError::InvalidFormat("举报原因不能为空".to_string()));
         }
 
         let created_report = self
             .report_repo
             .create(
                 reporter_id,
-                target_type,
+                req.target_type,
                 req.target_id,
                 req.reason,
                 req.description,
@@ -85,31 +82,13 @@ impl ReportService {
         _admin_id: i64, // 验证在Handler层
         req: ReportsRequest,
     ) -> Result<PaginatedData<ReportItem>, AppError> {
-        use std::str::FromStr;
         let limit = Validator::validate_limit(req.limit, 100)?;
         let cursor = Validator::parse_cursor(req.cursor.as_deref())?;
 
-        let status = if let Some(s) = req.status {
-            Some(
-                ReportStatus::from_str(&s)
-                    .map_err(|_| AppError::InvalidInput("无效的举报状态".to_string()))?,
-            )
-        } else {
-            None
-        };
-
-        let target_type = if let Some(t) = req.target_type {
-            Some(
-                crate::types::enums::ReportTargetType::from_str(&t)
-                    .map_err(|_| AppError::InvalidInput("无效的举报目标类型".to_string()))?,
-            )
-        } else {
-            None
-        };
-
+        // status 和 target_type 已是强类型枚举，直接使用
         let (reports, next_cursor) = self
             .report_repo
-            .find_all_reports(status, target_type, limit as i32, cursor)
+            .find_all_reports(req.status, req.target_type, limit as i32, cursor)
             .await?;
 
         let response_items: Vec<ReportItem> =
@@ -126,14 +105,9 @@ impl ReportService {
 
     /// 审核举报（管理员）
     pub async fn handle(&self, admin_id: i64, req: HandleReportRequest) -> Result<(), AppError> {
-        use crate::types::enums::ReportAction;
-        use std::str::FromStr;
+        use crate::types::enums::ReportHandleAction;
 
-        // 验证在Handler层
-
-        // 验证action
-        let action = ReportAction::from_str(&req.action)
-            .map_err(|_| AppError::InvalidInput("无效的操作类型".to_string()))?;
+        // action 已是强类型枚举
 
         // 解析report_id
         let report_id = Uuid::parse_str(&req.report_id)
@@ -145,10 +119,10 @@ impl ReportService {
         }
 
         // 根据action映射status
-        let status = match action {
-            ReportAction::Resolve => ReportStatus::Resolved,
-            ReportAction::Dismiss => ReportStatus::Dismissed,
-            ReportAction::Escalate => ReportStatus::Reviewing,
+        let status = match req.action {
+            ReportHandleAction::Resolve => ReportStatus::Resolved,
+            ReportHandleAction::Dismiss => ReportStatus::Dismissed,
+            ReportHandleAction::Escalate => ReportStatus::Reviewing,
         };
 
         // 更新状态
@@ -161,15 +135,25 @@ impl ReportService {
 
     /// 辅助方法：将ReportRow转换为ReportItem
     fn to_report_item(report: ReportRow) -> ReportItem {
+        use crate::dto::response::ReportTargetSnapshot;
+
         ReportItem {
             report_id: report.report_id.to_string(),
-            target_type: report.target_type.to_string(),
+            target_type: report.target_type,
             target_id: report.target_id,
             reason: report.reason,
             description: report.description,
-            status: report.status.to_string(),
+            status: report.status,
             created_at: report.created_at.to_rfc3339(),
+            updated_at: None,
             handled_at: report.handled_at.map(|t| t.to_rfc3339()),
+            resolution_note: report.handler_note,
+            reporter: None,
+            target_snapshot: report.target_snapshot.map(|s| ReportTargetSnapshot {
+                content: s.content,
+                media_urls: s.media_urls,
+                owner_id: s.owner_id.map(|id| id.to_string()),
+            }),
         }
     }
 }

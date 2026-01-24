@@ -233,6 +233,32 @@ impl PrivateChatRepository {
         Ok(row)
     }
 
+    /// 批量获取私聊设置
+    pub async fn get_settings_batch(
+        &self,
+        chat_ids: &[i64],
+        user_id: i64,
+    ) -> Result<std::collections::HashMap<i64, PrivateChatSettingsRow>> {
+        if chat_ids.is_empty() {
+            return Ok(std::collections::HashMap::new());
+        }
+
+        let rows = sqlx::query_as!(
+            PrivateChatSettingsRow,
+            r#"
+            SELECT chat_id, user_id, is_muted, is_pinned, is_archived, created_at, updated_at
+            FROM private_chat_settings
+            WHERE chat_id = ANY($1) AND user_id = $2
+            "#,
+            chat_ids,
+            user_id
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.into_iter().map(|r| (r.chat_id, r)).collect())
+    }
+
     /// 创建或更新私聊设置
     pub async fn upsert_settings(
         &self,

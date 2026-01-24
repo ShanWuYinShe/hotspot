@@ -1,5 +1,4 @@
 use redis::aio::ConnectionManager as RedisConnectionManager;
-use std::str::FromStr;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -7,13 +6,15 @@ use crate::{
     dto::{
         request::{
             CheckFavoritedRequest, CheckLikedRequest, CreateMomentRequest, DeleteMomentRequest,
-            FavoriteMomentRequest, LikeMomentRequest, MomentLikesRequest, MomentOpenTheDoorRequest,
-            MyFavoritesRequest, MyMomentsRequest, SearchMomentsByKeywordRequest,
-            SearchMomentsByLocationRequest, SearchMomentsByTagRequest, UnfavoriteMomentRequest,
-            UnlikeMomentRequest, UpdateMomentRequest, UserMomentsRequest,
+            FavoriteMomentRequest, GetMomentInteractionStateRequest, LikeMomentRequest,
+            MomentLikesRequest, MomentOpenTheDoorRequest, MyFavoritesRequest, MyMomentsRequest,
+            SearchMomentsByKeywordRequest, SearchMomentsByLocationRequest,
+            SearchMomentsByTagRequest, UnfavoriteMomentRequest, UnlikeMomentRequest,
+            UpdateMomentRequest, UserMomentsRequest,
         },
         response::{
-            MomentItem, MomentLikeItem, PaginatedData, PaginationMeta, RelativeLocation, UserInfo,
+            MomentInteractionStateData, MomentItem, MomentLikeItem, PaginatedData, PaginationMeta,
+            RelativeLocation, UserInfo,
         },
     },
     error::{AppError, Result},
@@ -24,7 +25,11 @@ use crate::{
     repositories::user_settings_repo::UserSettingsRepository,
     services::media_service::MediaService,
     types::enums::PrivacyLevel,
-    utils::validation::Validator,
+    utils::{
+        bloom_filter::ResourceExistenceChecker,
+        cache::{cache_keys, CacheManager},
+        validation::Validator,
+    },
     EventBus,
 };
 
@@ -37,6 +42,7 @@ pub struct MomentService {
     user_repo: UserRepository,
     user_settings_repo: UserSettingsRepository,
     media_service: MediaService,
+    cache_manager: CacheManager,
 }
 
 impl MomentService {
@@ -48,6 +54,7 @@ impl MomentService {
         user_repo: UserRepository,
         user_settings_repo: UserSettingsRepository,
         media_service: MediaService,
+        cache_manager: CacheManager,
     ) -> Self {
         Self {
             _redis: redis,
@@ -57,6 +64,7 @@ impl MomentService {
             user_repo,
             user_settings_repo,
             media_service,
+            cache_manager,
         }
     }
 
@@ -68,10 +76,10 @@ impl MomentService {
     ) -> Result<MomentItem> {
         // 验证坐标
         if req.location.latitude < -90.0 || req.location.latitude > 90.0 {
-            return Err(AppError::InvalidInput("纬度必须在-90到90之间".to_string()));
+            return Err(AppError::InvalidFormat("纬度必须在-90到90之间".to_string()));
         }
         if req.location.longitude < -180.0 || req.location.longitude > 180.0 {
-            return Err(AppError::InvalidInput(
+            return Err(AppError::InvalidFormat(
                 "经度必须在-180到180之间".to_string(),
             ));
         }
@@ -102,24 +110,17 @@ impl MomentService {
         }
 
         // 确定隐私级别：未提供时使用用户全局设置 moments_visible
-        let privacy_level = if let Some(level) = &req.privacy_level {
-            // 验证隐私级别有效性
-            match level.as_str() {
-                "public" | "friends" | "private" => level.clone(),
-                _ => return Err(AppError::BadRequest("无效的隐私级别".to_string())),
-            }
+        // privacy_level 已是强类型枚举
+        let privacy_level = if let Some(level) = req.privacy_level {
+            level
         } else {
             // 获取用户全局设置
             let settings = self.user_settings_repo.find_by_user_id(user_id).await?;
             if let Some(settings) = settings {
-                match settings.moments_visible {
-                    PrivacyLevel::Public => "public".to_string(),
-                    PrivacyLevel::Friends => "friends".to_string(),
-                    PrivacyLevel::Private => "private".to_string(),
-                }
+                settings.moments_visible
             } else {
                 // 默认为 public
-                "public".to_string()
+                PrivacyLevel::Public
             }
         };
 
@@ -149,7 +150,7 @@ impl MomentService {
             (None, None, Vec::new())
         };
 
-        // 创建瞬间
+        // 创建瞬间 - 将 PrivacyLevel 转换为字符串
         let moment = self
             .moment_repo
             .create(
@@ -157,12 +158,18 @@ impl MomentService {
                 req.description.clone(),
                 storage_paths.clone(),
                 req.mentions.clone(),
-                privacy_level.clone(),
+                privacy_level.as_str().to_string(),
                 req.location.latitude,
                 req.location.longitude,
                 req.location.location_name.clone(),
             )
             .await?;
+        if let Err(e) = ResourceExistenceChecker::new(self._redis.clone())
+            .record_moment(&moment.moment_id.to_string())
+            .await
+        {
+            tracing::warn!(moment_id = %moment.moment_id, error = %e, "record_moment bloom failed");
+        }
 
         // moment 已创建成功后再标记文件已使用（避免创建失败导致 is_used 脏数据）
         for file_id in image_uuids {
@@ -251,7 +258,6 @@ impl MomentService {
             description: moment.description.clone(),
             images: moment_images,
             mentions: moment.mentions.clone(),
-            privacy_level: moment.privacy_level.clone(),
             tags,
             created_at: moment.created_at.to_rfc3339(),
             likes_count: 0,
@@ -273,10 +279,13 @@ impl MomentService {
         let moment_id = Uuid::parse_str(&req.moment_id)
             .map_err(|_| AppError::BadRequest("无效的瞬间ID".to_string()))?;
 
+        if !self.moment_repo.exists(moment_id).await? {
+            return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
+        }
+
         // 验证所有权
         let owner_id = self
-            .moment_repo
-            .get_owner(moment_id)
+            .get_moment_owner_cached(moment_id)
             .await?
             .ok_or_else(|| AppError::MomentNotFound("瞬间不存在".to_string()))?;
 
@@ -331,10 +340,8 @@ impl MomentService {
             (None, Vec::new())
         };
 
-        let privacy_level = req
-            .privacy_level
-            .as_ref()
-            .and_then(|s| crate::types::enums::PrivacyLevel::from_str(s).ok());
+        // privacy_level 已是强类型枚举，直接使用
+        let privacy_level = req.privacy_level;
 
         self.moment_repo
             .update(
@@ -385,10 +392,13 @@ impl MomentService {
         let moment_id = Uuid::parse_str(&req.moment_id)
             .map_err(|_| AppError::BadRequest("无效的瞬间ID".to_string()))?;
 
+        if !self.moment_repo.exists(moment_id).await? {
+            return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
+        }
+
         // 验证所有权
         let owner_id = self
-            .moment_repo
-            .get_owner(moment_id)
+            .get_moment_owner_cached(moment_id)
             .await?
             .ok_or_else(|| AppError::MomentNotFound("瞬间不存在".to_string()))?;
 
@@ -404,6 +414,7 @@ impl MomentService {
     /// 按关键字搜索生活瞬间（全局）
     pub async fn search_by_keyword(
         &self,
+        viewer_id: Option<i64>,
         req: &SearchMomentsByKeywordRequest,
     ) -> Result<PaginatedData<MomentItem>> {
         let limit = Validator::validate_limit(req.limit, 100)? as i32;
@@ -416,6 +427,7 @@ impl MomentService {
                 &req.kw,
                 req.reference_point.latitude,
                 req.reference_point.longitude,
+                viewer_id,
                 limit,
                 cursor,
             )
@@ -428,6 +440,7 @@ impl MomentService {
     /// 按标签搜索生活瞬间（全局）
     pub async fn search_by_tag(
         &self,
+        viewer_id: Option<i64>,
         req: &SearchMomentsByTagRequest,
     ) -> Result<PaginatedData<MomentItem>> {
         let limit = Validator::validate_limit(req.limit, 100)? as i32;
@@ -440,6 +453,7 @@ impl MomentService {
                 &req.tag,
                 req.reference_point.latitude,
                 req.reference_point.longitude,
+                viewer_id,
                 limit,
                 cursor,
             )
@@ -452,6 +466,7 @@ impl MomentService {
     /// 按位置搜索生活瞬间（范围过滤，距离由 PostGIS 计算）
     pub async fn search_by_location(
         &self,
+        viewer_id: Option<i64>,
         req: &SearchMomentsByLocationRequest,
     ) -> Result<PaginatedData<MomentItem>> {
         Validator::validate_coordinates(
@@ -469,6 +484,7 @@ impl MomentService {
                 req.kw.as_deref(),
                 req.reference_point.latitude,
                 req.reference_point.longitude,
+                viewer_id,
                 req.radius,
                 limit,
                 cursor,
@@ -480,7 +496,11 @@ impl MomentService {
     }
 
     /// 获取瞬间详情（通过 ID 获取指定瞬间的详情）
-    pub async fn open_the_door(&self, req: &MomentOpenTheDoorRequest) -> Result<MomentItem> {
+    pub async fn open_the_door(
+        &self,
+        viewer_id: Option<i64>,
+        req: &MomentOpenTheDoorRequest,
+    ) -> Result<MomentItem> {
         let moment_id = Uuid::parse_str(&req.moment_id)
             .map_err(|_| AppError::BadRequest("无效的瞬间ID".to_string()))?;
 
@@ -497,6 +517,7 @@ impl MomentService {
                 &[moment_id],
                 req.reference_point.latitude,
                 req.reference_point.longitude,
+                viewer_id,
             )
             .await?;
 
@@ -542,7 +563,6 @@ impl MomentService {
             images,
             tags,
             mentions: moment_data.mentions.clone(),
-            privacy_level: moment_data.privacy_level.clone(),
             created_at: moment_data.created_at.to_rfc3339(),
             likes_count: moment_data.likes_count as i32,
             comments_count: moment_data.comments_count as i32,
@@ -667,7 +687,7 @@ impl MomentService {
                     return Err(AppError::Conflict("已点赞过该瞬间".to_string()));
                 }
                 // 发布事件
-                if let Some(owner_id) = self.moment_repo.get_owner(moment_id).await? {
+                if let Some(owner_id) = self.get_moment_owner_cached(moment_id).await? {
                     if owner_id != user_id {
                         let summary_snapshot =
                             self.moment_repo.get_summary_snapshot(moment_id).await?;
@@ -758,6 +778,32 @@ impl MomentService {
             .map_err(|_| AppError::BadRequest("无效的瞬间ID".to_string()))?;
 
         self.moment_repo.is_favorited_by(moment_id, user_id).await
+    }
+
+    /// 获取瞬间互动状态（点赞+收藏）
+    pub async fn get_interaction_state(
+        &self,
+        user_id: i64,
+        req: &GetMomentInteractionStateRequest,
+    ) -> Result<MomentInteractionStateData> {
+        let moment_id = Uuid::parse_str(&req.moment_id)
+            .map_err(|_| AppError::BadRequest("无效的瞬间ID".to_string()))?;
+
+        // 验证瞬间是否存在
+        if !self.moment_repo.exists(moment_id).await? {
+            return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
+        }
+
+        // 并行查询点赞和收藏状态
+        let (is_liked, is_favorited) = tokio::try_join!(
+            self.moment_repo.is_liked_by(moment_id, user_id),
+            self.moment_repo.is_favorited_by(moment_id, user_id)
+        )?;
+
+        Ok(MomentInteractionStateData {
+            is_liked,
+            is_favorited,
+        })
     }
 
     /// 获取用户收藏列表
@@ -852,6 +898,7 @@ impl MomentService {
 
         for m in moments {
             let tags = tags_map.get(&m.moment_id).cloned().unwrap_or_default();
+            let _ = m.privacy_level.as_str();
 
             // 动态签名 image paths -> fresh URLs
             let images = if m.images.is_empty() {
@@ -888,7 +935,6 @@ impl MomentService {
                 images,
                 tags,
                 mentions: m.mentions.clone(),
-                privacy_level: m.privacy_level.clone(),
                 created_at: m.created_at.to_rfc3339(),
                 likes_count: m.likes_count as i32,
                 comments_count: m.comments_count as i32,
@@ -911,5 +957,29 @@ impl MomentService {
                 next_cursor,
             },
         })
+    }
+
+    async fn get_moment_owner_cached(&self, moment_id: Uuid) -> Result<Option<i64>> {
+        let key = moment_id.to_string();
+        let cached = self
+            .cache_manager
+            .get_or_set_with_lock_with_ttl(
+                cache_keys::MOMENT_OWNER,
+                &key,
+                3600,
+                300,
+                || async {
+                    let owner = self
+                        .moment_repo
+                        .get_owner(moment_id)
+                        .await
+                        .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                    Ok(owner)
+                },
+            )
+            .await
+            .map_err(|e| AppError::InternalError(e.to_string()))?;
+
+        Ok(cached)
     }
 }

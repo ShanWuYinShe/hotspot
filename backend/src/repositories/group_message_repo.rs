@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
@@ -70,6 +71,30 @@ impl GroupMessageRepository {
         .await?;
 
         Ok(row)
+    }
+
+    /// 按消息ID批量获取消息
+    pub async fn find_by_ids(&self, message_ids: &[Uuid]) -> Result<Vec<GroupMessageRow>> {
+        if message_ids.is_empty() {
+            return Ok(vec![]);
+        }
+        let rows = sqlx::query_as!(
+            GroupMessageRow,
+            r#"
+            SELECT id, message_id, group_chat_id, sender_id,
+                   type as "type: MessageType", content, reply_to_message_id, mentions,
+                   file_name, file_size, thumbnail_url, duration,
+                   location_latitude, location_longitude, location_name, location_address,
+                   sent_at, edited_at, is_recalled, recalled_by, recalled_at, is_deleted, deleted_at
+            FROM group_messages
+            WHERE message_id = ANY($1) AND is_deleted = FALSE
+            "#,
+            message_ids
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows)
     }
 
     /// 按消息ID查找消息
@@ -234,6 +259,65 @@ impl GroupMessageRepository {
         Ok(())
     }
 
+    /// 统计群组消息总数
+    pub async fn count_by_group(&self, group_chat_id: Uuid) -> Result<i64> {
+        let result = sqlx::query!(
+            r#"
+            SELECT COUNT(*) as "count!"
+            FROM group_messages
+            WHERE group_chat_id = $1 AND is_deleted = FALSE
+            "#,
+            group_chat_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(result.count)
+    }
+
+    /// 统计今日活跃成员数量（按发言用户去重）
+    pub async fn count_active_members_today(&self, group_chat_id: Uuid) -> Result<i64> {
+        let result = sqlx::query!(
+            r#"
+            SELECT COUNT(DISTINCT sender_id) as "count!"
+            FROM group_messages
+            WHERE group_chat_id = $1
+              AND is_deleted = FALSE
+              AND sent_at >= CURRENT_DATE
+            "#,
+            group_chat_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(result.count)
+    }
+
+    /// 批量获取消息已读数量
+    pub async fn get_read_counts(
+        &self,
+        message_ids: &[Uuid],
+    ) -> Result<HashMap<Uuid, i64>> {
+        if message_ids.is_empty() {
+            return Ok(HashMap::new());
+        }
+        let rows = sqlx::query!(
+            r#"
+            SELECT message_id, COUNT(*) as "count!"
+            FROM group_message_read_status
+            WHERE message_id = ANY($1)
+            GROUP BY message_id
+            "#,
+            message_ids
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut map = HashMap::new();
+        for row in rows {
+            map.insert(row.message_id, row.count);
+        }
+        Ok(map)
+    }
+
     /// 获取消息已读用户列表（分页）
     pub async fn get_read_status(
         &self,
@@ -272,5 +356,27 @@ impl GroupMessageRepository {
 
         let result = rows.into_iter().map(|r| (r.user_id, r.read_at)).collect();
         Ok((result, next_cursor))
+    }
+
+    /// 列出布隆过滤器用的 message_id（按 id 分页）
+    pub async fn list_message_ids_after(
+        &self,
+        last_id: i64,
+        limit: i64,
+    ) -> Result<Vec<(i64, Uuid)>> {
+        let rows = sqlx::query!(
+            r#"
+            SELECT id, message_id
+            FROM group_messages
+            WHERE id > $1 AND is_deleted = FALSE
+            ORDER BY id
+            LIMIT $2
+            "#,
+            last_id,
+            limit
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows.into_iter().map(|r| (r.id, r.message_id)).collect())
     }
 }

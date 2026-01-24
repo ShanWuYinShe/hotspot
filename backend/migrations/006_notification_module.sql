@@ -58,10 +58,13 @@ CREATE TABLE notification_subscriptions (
     user_id BIGINT PRIMARY KEY,
     new_follower_enabled BOOLEAN NOT NULL DEFAULT TRUE,        -- 有人关注我
     mutual_follow_enabled BOOLEAN NOT NULL DEFAULT TRUE,       -- 互相关注（成为好友）
+    follow_request_enabled BOOLEAN NOT NULL DEFAULT TRUE,      -- 收到关注请求（需审批时）
+    follow_request_handled_enabled BOOLEAN NOT NULL DEFAULT TRUE, -- 关注请求被处理
     group_invite_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     group_invite_response_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     group_application_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     group_application_response_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    group_announcement_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     message_mention_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     moment_like_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     moment_comment_enabled BOOLEAN NOT NULL DEFAULT TRUE,

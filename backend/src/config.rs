@@ -27,6 +27,8 @@ pub struct Config {
     pub s3_bucket: String,
     pub s3_access_key: String,
     pub s3_secret_key: String,
+    /// 是否强制 path-style（MinIO 建议 true，AWS S3 通常为 false）
+    pub s3_force_path_style: bool,
     /// S3 对外 URL 前缀（用于生成 presigned URL 和公开访问链接）
     /// 必须配置，确保生成的 URL 在客户端可访问
     /// - 相对路径（如 /s3）：用于本地 MinIO，隐藏 bucket 名，通过 Nginx 转发
@@ -82,6 +84,10 @@ impl Config {
                 .map_err(|_| "S3_ACCESS_KEY must be set".to_string())?,
             s3_secret_key: env::var("S3_SECRET_KEY")
                 .map_err(|_| "S3_SECRET_KEY must be set".to_string())?,
+            s3_force_path_style: env::var("S3_FORCE_PATH_STYLE")
+                .unwrap_or_else(|_| "true".to_string())
+                .parse()
+                .map_err(|_| "Invalid S3_FORCE_PATH_STYLE".to_string())?,
             s3_public_base: env::var("S3_PUBLIC_BASE")
                 .map_err(|_| "S3_PUBLIC_BASE must be set".to_string())?,
         })

@@ -9,7 +9,7 @@ use crate::{
     state::AppState,
 };
 
-// ==================== Public APIs ====================
+// ==================== Token 可选 ====================
 
 /// 获取热门标签
 pub async fn trending(

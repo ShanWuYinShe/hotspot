@@ -102,16 +102,14 @@ fn should_check_idempotency(path: &str) -> bool {
     matches!(
         path,
         // 发送消息：必须允许“同内容重复意图”，所以只在客户端提供 key 时去重重试
-        "/api/v1/protected/private_messages/send"
-            | "/api/v1/protected/group_messages/send"
+        "/api/v1/private_messages/send" | "/api/v1/group_messages/send"
             // 创建类：推荐客户端提供 key，避免弱网重试造成重复创建
-            | "/api/v1/protected/moments/create"
-            | "/api/v1/protected/group_chats/create"
-            // 上传：multipart，不应读取 body；仅在客户端提供 key 时去重
-            | "/api/v1/protected/media/upload"
-            | "/api/v1/protected/media/complete_upload"
+            | "/api/v1/moments/create"
+            | "/api/v1/group_chats/create"
+            // 上传：仅在客户端提供 key 时去重
+            | "/api/v1/media/complete_upload"
             // 关注：虽然天然幂等，但可通过 key 去重重试，减少写放大
-            | "/api/v1/protected/user/me/follow"
+            | "/api/v1/user/me/follow"
     )
 }
 

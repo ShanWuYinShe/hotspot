@@ -34,6 +34,9 @@ pub struct GroupAdminSearchRow {
     pub name: String,
     pub avatar_url: Option<String>,
     pub member_count: i64,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+    pub location_name: Option<String>,
     pub owner_id: i64,
     pub owner_nickname: String,
     pub owner_avatar_url: Option<String>,
@@ -105,6 +108,29 @@ impl GroupRepository {
         .await?;
 
         Ok(result.exists)
+    }
+
+    /// 按自增ID顺序批量获取群组ID（用于布隆过滤器初始化）
+    pub async fn list_group_ids_after(
+        &self,
+        last_id: i64,
+        limit: i64,
+    ) -> Result<Vec<(i64, Uuid)>> {
+        let rows = sqlx::query!(
+            r#"
+            SELECT id, group_chat_id
+            FROM group_chats
+            WHERE id > $1 AND is_deleted = FALSE AND is_dismissed = FALSE
+            ORDER BY id ASC
+            LIMIT $2
+            "#,
+            last_id,
+            limit
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.into_iter().map(|r| (r.id, r.group_chat_id)).collect())
     }
 
     /// 获取群组所有者ID
@@ -615,13 +641,16 @@ impl GroupRepository {
                 g.name,
                 g.avatar_url,
                 (SELECT COUNT(*) FROM group_members gm WHERE gm.group_chat_id = g.group_chat_id AND gm.is_deleted = FALSE) as "member_count!",
-                u.id as owner_id,
+                g.latitude,
+                g.longitude,
+                g.location_name,
+                u.user_id as owner_id,
                 u.nickname as owner_nickname,
                 u.avatar_url as owner_avatar_url,
                 u.user_type as "owner_user_type!: crate::types::enums::UserType",
                 g.created_at
             FROM group_chats g
-            JOIN users u ON g.owner_id = u.id
+            JOIN users u ON g.owner_id = u.user_id
             WHERE g.is_deleted = FALSE
               AND g.is_dismissed = FALSE
               AND ($1::uuid IS NULL OR g.group_chat_id = $1)

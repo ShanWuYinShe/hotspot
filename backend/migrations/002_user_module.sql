@@ -17,6 +17,7 @@ CREATE TABLE users (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT UNIQUE NOT NULL,
     user_type user_type NOT NULL DEFAULT 'normal',
+    gender gender,
     login_id VARCHAR(255) UNIQUE,
     password_hash VARCHAR(255),
     nickname VARCHAR(100) NOT NULL,
@@ -72,6 +73,7 @@ CREATE TABLE user_settings (
     following_visible privacy_level NOT NULL DEFAULT 'public',
     followers_visible privacy_level NOT NULL DEFAULT 'public',
     moments_visible privacy_level NOT NULL DEFAULT 'public',
+    liked_moments_visible privacy_level NOT NULL DEFAULT 'public',
     groups_visible privacy_level NOT NULL DEFAULT 'public',
     stats_visible privacy_level NOT NULL DEFAULT 'public',
     
@@ -99,6 +101,7 @@ COMMENT ON COLUMN user_settings.friends_visible IS '好友列表可见性';
 COMMENT ON COLUMN user_settings.following_visible IS '关注列表可见性';
 COMMENT ON COLUMN user_settings.followers_visible IS '粉丝列表可见性';
 COMMENT ON COLUMN user_settings.moments_visible IS '瞬间列表可见性';
+COMMENT ON COLUMN user_settings.liked_moments_visible IS '点赞瞬间列表可见性';
 COMMENT ON COLUMN user_settings.groups_visible IS '群组列表可见性';
 COMMENT ON COLUMN user_settings.stats_visible IS '统计数据可见性';
 COMMENT ON COLUMN user_settings.allow_follow IS '是否允许被关注';
@@ -145,6 +148,41 @@ CREATE INDEX idx_user_follows_follow_id ON user_follows (follow_id);
 CREATE INDEX idx_user_follows_follower ON user_follows (follower_id, created_at DESC);
 CREATE INDEX idx_user_follows_following ON user_follows (following_id, created_at DESC);
 CREATE INDEX idx_user_follows_mutual ON user_follows (follower_id, following_id);
+
+-- ============================================================
+-- 关注请求（当 allow_follow = false 时）
+-- ============================================================
+CREATE TYPE follow_request_status AS ENUM (
+    'pending',   -- 待处理
+    'accepted',  -- 已接受
+    'rejected'   -- 已拒绝
+);
+
+CREATE TABLE follow_requests (
+    id BIGSERIAL PRIMARY KEY,
+    request_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
+    requester_id BIGINT NOT NULL,      -- 请求关注的用户
+    target_id BIGINT NOT NULL,         -- 被请求关注的用户
+    message TEXT,                      -- 附带消息（可选）
+    status follow_request_status NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    handled_at TIMESTAMPTZ,            -- 处理时间
+    CONSTRAINT unique_follow_request UNIQUE (requester_id, target_id),
+    CONSTRAINT check_follow_request_not_self CHECK (requester_id != target_id)
+);
+
+CREATE INDEX idx_follow_requests_request_id ON follow_requests (request_id);
+CREATE INDEX idx_follow_requests_requester ON follow_requests (requester_id, status, created_at DESC);
+CREATE INDEX idx_follow_requests_target ON follow_requests (target_id, status, created_at DESC);
+CREATE INDEX idx_follow_requests_pending ON follow_requests (target_id, created_at DESC) WHERE status = 'pending';
+
+COMMENT ON TABLE follow_requests IS '关注请求表：当用户设置 allow_follow = false 时，关注需要审批';
+COMMENT ON COLUMN follow_requests.request_id IS '关注请求ID，对外暴露的业务标识';
+COMMENT ON COLUMN follow_requests.requester_id IS '请求关注的用户ID';
+COMMENT ON COLUMN follow_requests.target_id IS '被请求关注的用户ID';
+COMMENT ON COLUMN follow_requests.message IS '附带消息';
+COMMENT ON COLUMN follow_requests.status IS '请求状态：pending-待处理, accepted-已接受, rejected-已拒绝';
+COMMENT ON COLUMN follow_requests.handled_at IS '处理时间';
 
 CREATE TABLE user_blocks (
     id BIGSERIAL PRIMARY KEY,

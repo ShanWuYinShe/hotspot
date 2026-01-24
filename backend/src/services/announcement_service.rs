@@ -1,4 +1,5 @@
 use futures_util::future;
+use std::str::FromStr;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -15,6 +16,7 @@ use crate::{
     error::{AppError, Result},
     events::event_types::AppEvent,
     repositories::announcement_repo::AnnouncementRepository,
+    types::enums::AnnouncementSeverity,
     utils::validation::Validator,
     EventBus,
 };
@@ -44,34 +46,28 @@ impl AnnouncementService {
         creator_id: i64,
         req: CreateAnnouncementRequest,
     ) -> Result<CreateAnnouncementData> {
-        // 验证 severity
-        use std::str::FromStr;
-        if crate::types::enums::NotificationSeverity::from_str(&req.severity).is_err() {
-            return Err(AppError::InvalidInput(format!(
-                "无效的通知级别: {}",
-                req.severity
-            )));
-        }
+        // severity 已是强类型枚举，无需验证
 
         let announcement = self
             .repo
             .create(
                 &req.title,
                 &req.content,
-                &req.severity,
+                req.severity.as_str(),
                 req.action_url.as_deref(),
                 req.send_push.unwrap_or(false),
                 creator_id,
             )
             .await?;
 
-        // TODO: If send_push is true, trigger push notification event
         if announcement.send_push {
+            let severity = AnnouncementSeverity::from_str(&announcement.severity)
+                .unwrap_or(AnnouncementSeverity::Info);
             self.event_bus.publish(AppEvent::SystemAnnouncement {
                 announcement_id: announcement.announcement_id.to_string(),
                 title: announcement.title.clone(),
                 content: announcement.content.clone(),
-                severity: announcement.severity.clone(),
+                severity,
                 action_url: announcement.action_url.clone(),
                 created_at: announcement.created_at.to_rfc3339(),
             });
@@ -125,26 +121,27 @@ impl AnnouncementService {
                 {
                     let signed_avatar_url =
                         self.media_service.sign_url_if_path(Some(&avatar_url)).await;
-                    Some(UserInfo {
+                    UserInfo {
                         user_id: row.created_by,
                         nickname,
                         avatar_url: signed_avatar_url,
                         user_type: crate::types::enums::UserType::System,
-                    })
+                    }
                 } else {
-                    Some(UserInfo {
+                    UserInfo {
                         user_id: row.created_by,
                         nickname: "Admin".to_string(),
                         avatar_url: None,
                         user_type: crate::types::enums::UserType::System,
-                    })
+                    }
                 };
 
                 SystemAnnouncementItem {
                     announcement_id: row.announcement_id.to_string(),
                     title: row.title,
                     content: row.content,
-                    severity: row.severity,
+                    severity: AnnouncementSeverity::from_str(&row.severity)
+                        .unwrap_or(AnnouncementSeverity::Info),
                     action_url: row.action_url,
                     created_at: row.created_at.to_rfc3339(),
                     created_by,

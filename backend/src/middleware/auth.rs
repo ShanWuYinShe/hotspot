@@ -7,6 +7,52 @@ use axum::{
 
 use crate::{error::AppError, state::AppState, utils::jwt::JwtUtil};
 
+/// 从请求头提取 Bearer token（不跨 await，避免 Future 非 Send）
+fn extract_bearer_token(req: &Request) -> Result<Option<String>, AppError> {
+    let auth_header = match req
+        .headers()
+        .get("Authorization")
+        .and_then(|h| h.to_str().ok())
+    {
+        Some(v) => v,
+        None => return Ok(None),
+    };
+
+    let token = auth_header
+        .strip_prefix("Bearer ")
+        .ok_or_else(|| AppError::AccessTokenMissing)?;
+
+    Ok(Some(token.to_string()))
+}
+
+/// 验证 token 并返回 (user_id, session_id)
+async fn authenticate_token(state: &AppState, token: &str) -> Result<(i64, uuid::Uuid), AppError> {
+    // 验证 JWT Token
+    let claims = JwtUtil::verify_token(token, &state.config.jwt_secret)?;
+    let user_id = claims
+        .sub
+        .parse::<i64>()
+        .map_err(|_| AppError::Unauthorized("无效的用户ID".to_string()))?;
+
+    // 解析 session_id（sid）
+    let session_id = uuid::Uuid::parse_str(&claims.sid)
+        .map_err(|_| AppError::Unauthorized("无效的Session".to_string()))?;
+
+    // 检查 Token 是否在 Session 白名单中 (Active Session Validation)
+    let whitelist_key = format!("{}:{}", crate::constants::REDIS_KEY_SESSION, claims.sid);
+    let is_valid: bool = redis::cmd("EXISTS")
+        .arg(&whitelist_key)
+        .query_async(&mut state.redis.clone())
+        .await
+        .unwrap_or(false); // Redis error defaults to false (fail closed for security)
+
+    if !is_valid {
+        return Err(AppError::Unauthorized("Session无效或已过期".to_string()));
+    }
+
+    Ok((user_id, session_id))
+}
+
 /// 从请求扩展中提取用户ID
 ///
 /// 在 auth_middleware 之后使用，用于获取已认证用户的ID
@@ -23,51 +69,31 @@ pub async fn auth_middleware(
     mut req: Request,
     next: Next,
 ) -> Result<Response, AppError> {
-    // 1. 提取 Authorization 头
-    let auth_header = req
-        .headers()
-        .get("Authorization")
-        .and_then(|h| h.to_str().ok())
-        .ok_or_else(|| AppError::TokenMissing("缺少认证令牌".to_string()))?;
+    let token = extract_bearer_token(&req)?
+        .ok_or_else(|| AppError::AccessTokenMissing)?;
+    let (user_id, session_id) = authenticate_token(&state, &token).await?;
 
-    // 2. 验证 Bearer 格式
-    let token = auth_header
-        .strip_prefix("Bearer ")
-        .ok_or_else(|| AppError::TokenMissing("令牌格式错误".to_string()))?;
-
-    // 3. 验证 JWT Token
-    let claims = JwtUtil::verify_token(token, &state.config.jwt_secret)?;
-    let user_id = claims
-        .sub
-        .parse::<i64>()
-        .map_err(|_| AppError::Unauthorized("无效的用户ID".to_string()))?;
-
-    // 4. 解析 session_id（sid）
-    let session_id = uuid::Uuid::parse_str(&claims.sid)
-        .map_err(|_| AppError::Unauthorized("无效的Session".to_string()))?;
-
-    // 5. 检查 Token 是否在 Session 白名单中 (Active Session Validation)
-    // Key: session:{sid}
-    // 白名单机制：Session 必须存在于 Redis 中才有效。
-    // 这允许服务端通过删除 Redis Key 来立即废除特定的 Access Token (即使它还没过期)。
-    // 这比黑名单更安全 (Fail Closed)，因为如果 Redis 挂了或 Key 丢失，Token 会被视为无效，
-    // 客户端将通过 refresh_token 流程重新获取 Token 并重建白名单。
-    let whitelist_key = format!("{}:{}", crate::constants::REDIS_KEY_SESSION, claims.sid);
-    let is_valid: bool = redis::cmd("EXISTS")
-        .arg(&whitelist_key)
-        .query_async(&mut state.redis.clone())
-        .await
-        .unwrap_or(false); // Redis error defaults to false (fail closed for security)
-
-    if !is_valid {
-        return Err(AppError::Unauthorized("Session无效或已过期".to_string()));
-    }
-
-    // 6. 将 user_id / session_id 注入到请求扩展中
+    // 将 user_id / session_id 注入到请求扩展中
     req.extensions_mut().insert(user_id);
     req.extensions_mut().insert(Some(session_id));
 
-    // 7. 继续处理请求
+    Ok(next.run(req).await)
+}
+
+/// JWT 可选认证中间件（Token 可选）
+///
+/// - 如果请求未带 Authorization，则直接透传（不注入 user_id）
+/// - 如果请求带了 Authorization，但 token 无效，则返回对应错误（不会“忽略坏 token”）
+pub async fn optional_auth_middleware(
+    State(state): State<AppState>,
+    mut req: Request,
+    next: Next,
+) -> Result<Response, AppError> {
+    if let Some(token) = extract_bearer_token(&req)? {
+        let (user_id, session_id) = authenticate_token(&state, &token).await?;
+        req.extensions_mut().insert(user_id);
+        req.extensions_mut().insert(Some(session_id));
+    }
     Ok(next.run(req).await)
 }
 
@@ -87,11 +113,11 @@ where
             .headers
             .get("Authorization")
             .and_then(|h| h.to_str().ok())
-            .ok_or_else(|| AppError::TokenMissing("缺少认证令牌".to_string()))?;
+            .ok_or_else(|| AppError::AccessTokenMissing)?;
 
         let token = auth_header
             .strip_prefix("Bearer ")
-            .ok_or_else(|| AppError::TokenMissing("令牌格式错误".to_string()))?;
+            .ok_or_else(|| AppError::AccessTokenMissing)?;
 
         Ok(BearerToken(token.to_string()))
     }
@@ -138,5 +164,26 @@ where
             user_id,
             session_id,
         })
+    }
+}
+
+/// 可选登录态提取器
+///
+/// 用于 Token 可选的接口：如果请求上下文里已经注入了 user_id，则返回 Some；
+/// 否则返回 None（不会拒绝请求）。
+#[derive(Debug)]
+pub struct OptionalAuthenticatedUser {
+    pub user_id: Option<i64>,
+}
+
+impl<S> FromRequestParts<S> for OptionalAuthenticatedUser
+where
+    S: Send + Sync,
+{
+    type Rejection = AppError;
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        let user_id = parts.extensions.get::<i64>().copied();
+        Ok(OptionalAuthenticatedUser { user_id })
     }
 }

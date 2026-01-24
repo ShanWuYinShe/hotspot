@@ -150,6 +150,7 @@ impl NotificationRepository {
         user_id: i64,
         limit: i64,
         cursor: Option<String>,
+        type_filters: Option<Vec<String>>,
     ) -> Result<(Vec<NotificationRow>, Option<String>)> {
         let (last_created_at, last_id) = if let Some(c) = cursor {
             decode_cursor::<TimeCursor>(&c)?
@@ -168,13 +169,16 @@ impl NotificationRepository {
                 target_type, target_id, reference_id, target_preview,
                 is_read, created_at
             FROM notifications
-            WHERE user_id = $1 AND (created_at, id) < ($2, $3)
+            WHERE user_id = $1 
+              AND (created_at, id) < ($2, $3)
+              AND ($4::text[] IS NULL OR type::text = ANY($4))
             ORDER BY created_at DESC, id DESC
-            LIMIT $4
+            LIMIT $5
             "#,
             user_id,
             last_created_at,
             last_id,
+            type_filters.as_deref(),
             limit
         )
         .fetch_all(&self.pool)

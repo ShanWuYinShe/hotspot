@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
 
 use crate::error::Result;
-use crate::types::enums::{ChatPermission, PrivacyLevel};
+use crate::types::enums::{PrivacyLevel, PrivateChatPermission};
 
 /// 用户设置Row（与数据库表完全对应）
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
@@ -23,12 +23,14 @@ pub struct UserSettings {
     pub friends_visible: PrivacyLevel, // 'public', 'friends', 'private'
     pub following_visible: PrivacyLevel, // 'public', 'friends', 'private'
     pub followers_visible: PrivacyLevel, // 'public', 'friends', 'private'
+    pub groups_visible: PrivacyLevel, // 'public', 'friends', 'private'
     pub moments_visible: PrivacyLevel, // 'public', 'friends', 'private'
+    pub liked_moments_visible: PrivacyLevel, // 'public', 'friends', 'private'
     pub stats_visible: PrivacyLevel,   // 'public', 'friends', 'private'
 
     // ============ 社交设置 ============
     pub allow_follow: bool,
-    pub allow_private_chat: ChatPermission, // 'everyone', 'friends', 'nobody'
+    pub allow_private_chat: PrivateChatPermission, // 'everyone', 'friends', 'nobody'
 
     // ============ 搜索设置 ============
     pub searchable: bool,
@@ -52,12 +54,14 @@ pub struct UpdateSettingsParams {
     pub friends_visible: Option<PrivacyLevel>,
     pub following_visible: Option<PrivacyLevel>,
     pub followers_visible: Option<PrivacyLevel>,
+    pub groups_visible: Option<PrivacyLevel>,
     pub moments_visible: Option<PrivacyLevel>,
+    pub liked_moments_visible: Option<PrivacyLevel>,
     pub stats_visible: Option<PrivacyLevel>,
 
     // 社交设置
     pub allow_follow: Option<bool>,
-    pub allow_private_chat: Option<ChatPermission>,
+    pub allow_private_chat: Option<PrivateChatPermission>,
 
     // 搜索设置
     pub searchable: Option<bool>,
@@ -90,10 +94,12 @@ impl UserSettingsRepository {
                 friends_visible as "friends_visible: PrivacyLevel",
                 following_visible as "following_visible: PrivacyLevel",
                 followers_visible as "followers_visible: PrivacyLevel",
+                groups_visible as "groups_visible: PrivacyLevel",
                 moments_visible as "moments_visible: PrivacyLevel",
+                liked_moments_visible as "liked_moments_visible: PrivacyLevel",
                 stats_visible as "stats_visible: PrivacyLevel",
                 allow_follow,
-                allow_private_chat as "allow_private_chat: ChatPermission",
+                allow_private_chat as "allow_private_chat: PrivateChatPermission",
                 searchable,
                 phone_searchable,
                 nickname_searchable,
@@ -124,14 +130,16 @@ impl UserSettingsRepository {
                 friends_visible = COALESCE($6, friends_visible),
                 following_visible = COALESCE($7, following_visible),
                 followers_visible = COALESCE($8, followers_visible),
-                moments_visible = COALESCE($9, moments_visible),
-                stats_visible = COALESCE($10, stats_visible),
-                allow_follow = COALESCE($11, allow_follow),
-                allow_private_chat = COALESCE($12, allow_private_chat),
-                searchable = COALESCE($13, searchable),
-                phone_searchable = COALESCE($14, phone_searchable),
-                nickname_searchable = COALESCE($15, nickname_searchable),
-                location_searchable = COALESCE($16, location_searchable),
+                groups_visible = COALESCE($9, groups_visible),
+                moments_visible = COALESCE($10, moments_visible),
+                liked_moments_visible = COALESCE($11, liked_moments_visible),
+                stats_visible = COALESCE($12, stats_visible),
+                allow_follow = COALESCE($13, allow_follow),
+                allow_private_chat = COALESCE($14, allow_private_chat),
+                searchable = COALESCE($15, searchable),
+                phone_searchable = COALESCE($16, phone_searchable),
+                nickname_searchable = COALESCE($17, nickname_searchable),
+                location_searchable = COALESCE($18, location_searchable),
                 updated_at = NOW()
             WHERE user_id = $1
             "#,
@@ -143,10 +151,12 @@ impl UserSettingsRepository {
             params.friends_visible as Option<PrivacyLevel>,
             params.following_visible as Option<PrivacyLevel>,
             params.followers_visible as Option<PrivacyLevel>,
+            params.groups_visible as Option<PrivacyLevel>,
             params.moments_visible as Option<PrivacyLevel>,
+            params.liked_moments_visible as Option<PrivacyLevel>,
             params.stats_visible as Option<PrivacyLevel>,
             params.allow_follow,
-            params.allow_private_chat as Option<ChatPermission>,
+            params.allow_private_chat as Option<PrivateChatPermission>,
             params.searchable,
             params.phone_searchable,
             params.nickname_searchable,
@@ -192,10 +202,12 @@ impl UserSettingsRepository {
                 friends_visible as "friends_visible: PrivacyLevel",
                 following_visible as "following_visible: PrivacyLevel",
                 followers_visible as "followers_visible: PrivacyLevel",
+                groups_visible as "groups_visible: PrivacyLevel",
                 moments_visible as "moments_visible: PrivacyLevel",
+                liked_moments_visible as "liked_moments_visible: PrivacyLevel",
                 stats_visible as "stats_visible: PrivacyLevel",
                 allow_follow,
-                allow_private_chat as "allow_private_chat: ChatPermission",
+                allow_private_chat as "allow_private_chat: PrivateChatPermission",
                 searchable,
                 phone_searchable,
                 nickname_searchable,

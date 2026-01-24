@@ -101,25 +101,21 @@ CREATE INDEX idx_group_member_history_user ON group_member_history (user_id, cre
 CREATE INDEX idx_group_member_history_action ON group_member_history (action, created_at DESC);
 
 -- ============================================================
--- 群组成员个人设置
+-- 群组用户偏好设置（免打扰、置顶）
 -- ============================================================
-CREATE TABLE group_member_settings (
+CREATE TABLE group_user_preferences (
     id BIGSERIAL PRIMARY KEY,
-    group_chat_id UUID NOT NULL,
-    user_id BIGINT NOT NULL,
+    group_chat_id UUID NOT NULL REFERENCES group_chats(group_chat_id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     is_muted BOOLEAN NOT NULL DEFAULT FALSE,
     is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
-    is_archived BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ,
-    CONSTRAINT unique_group_member_settings UNIQUE (group_chat_id, user_id)
+    UNIQUE(group_chat_id, user_id)
 );
 
-CREATE INDEX idx_group_member_settings_user ON group_member_settings (user_id);
-CREATE INDEX idx_group_member_settings_chat ON group_member_settings (group_chat_id);
-
-CREATE TRIGGER trigger_group_member_settings_updated_at
-    BEFORE UPDATE ON group_member_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE INDEX idx_group_user_prefs_user ON group_user_preferences(user_id);
+CREATE INDEX idx_group_user_prefs_group ON group_user_preferences(group_chat_id);
 
 -- ============================================================
 -- 群组封禁记录

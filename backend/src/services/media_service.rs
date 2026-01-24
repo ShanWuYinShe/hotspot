@@ -5,6 +5,7 @@
 
 use aws_sdk_s3::operation::head_object::HeadObjectError;
 use aws_sdk_s3::presigning::PresigningConfig;
+use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::Client as S3Client;
 use sqlx::PgPool;
 use std::time::Duration;
@@ -13,10 +14,9 @@ use uuid::Uuid;
 use crate::{
     dto::{
         request::{
-            CheckChunkedUploadRequest, CompleteUploadRequest, FinishChunkedUploadRequest,
-            InitChunkedUploadRequest, PresignUploadRequest,
+            CompleteUploadRequest, PresignUploadRequest,
         },
-        response::{InitiateUploadData, PresignUploadData, UploadMediaData},
+        response::{PresignUploadData, UploadMediaData},
     },
     error::{AppError, Result},
     repositories::file_repo::FileRepository,
@@ -48,6 +48,15 @@ impl MediaService {
         }
     }
 
+    fn build_public_url(&self, presigned_url: &str, path_and_query: &str) -> String {
+        let base = self.s3_public_base.trim();
+        if base.is_empty() || base.eq_ignore_ascii_case("presigned") {
+            return presigned_url.to_string();
+        }
+        let base_trimmed = base.trim_end_matches('/');
+        format!("{}{}", base_trimmed, path_and_query)
+    }
+
     /// 申请上传（返回 S3 Presigned URL）
     pub async fn presign_upload(
         &self,
@@ -56,15 +65,30 @@ impl MediaService {
     ) -> Result<PresignUploadData> {
         // 调试：记录接收到的 category
         tracing::info!(
-            "presign_upload: user_id={}, category={:?}, file_name={}",
+            "presign_upload: user_id={}, category={:?}, file_name={}, mime_type={}, file_size={}",
             user_id,
             req.category,
-            req.file_name
+            req.file_name,
+            req.mime_type,
+            req.file_size
         );
 
-        // 简单校验
-        if req.file_size > 100 * 1024 * 1024 {
-            return Err(AppError::BadRequest("File too large".to_string()));
+        // 按分类验证 MIME 类型
+        if !req.category.validate_mime_type(&req.mime_type) {
+            return Err(AppError::InvalidFormat(format!(
+                "该分类不支持此 MIME 类型: {} (允许: {:?})",
+                req.mime_type,
+                req.category.allowed_mime_types()
+            )));
+        }
+
+        // 按分类验证文件大小
+        if !req.category.validate_file_size(req.file_size) {
+            return Err(AppError::PayloadTooLarge(format!(
+                "文件大小超出限制: {} 字节 (最大: {} 字节)",
+                req.file_size,
+                req.category.max_file_size()
+            )));
         }
 
         // Suppress unused md5 warning
@@ -112,10 +136,7 @@ impl MediaService {
         })?;
         let path_and_query = uri.path_and_query().map(|pq| pq.as_str()).unwrap_or("");
 
-        // 简单拼接 s3_public_base 和 path_and_query
-        // AWS SDK 生成的 presigned URL 已经是完整可用的，直接使用即可
-        let public_base_trimmed = self.s3_public_base.trim_end_matches('/');
-        let upload_url = format!("{}{}", public_base_trimmed, path_and_query);
+        let upload_url = self.build_public_url(&upload_url, path_and_query);
 
         tracing::debug!(
             "presign_upload: s3_public_base={}, path_and_query={}, final_url={}",
@@ -286,68 +307,28 @@ impl MediaService {
         })
     }
 
-    // ==================== Chunked Upload (TODO) ====================
-    // 这里可以实现 S3 Multipart Upload 的封装
-
-    pub async fn init_chunked_upload(
-        &self,
-        _user_id: i64,
-        req: InitChunkedUploadRequest,
-    ) -> Result<InitiateUploadData> {
-        // Use fields to avoid warnings
-        let _ = req.file_name;
-        let _ = req.file_size;
-        let _ = req.mime_type;
-        let _ = req.category;
-        let _ = req.chunk_count;
-        // TODO: Implement S3 CreateMultipartUpload
-        Err(AppError::InternalError("Not implemented yet".to_string()))
-    }
-
-    pub async fn finish_chunked_upload(
-        &self,
-        _user_id: i64,
-        req: FinishChunkedUploadRequest,
-    ) -> Result<UploadMediaData> {
-        let _ = req.upload_id;
-        // TODO: Implement S3 CompleteMultipartUpload
-        Err(AppError::InternalError("Not implemented yet".to_string()))
-    }
-
-    pub async fn check_chunked_upload(
-        &self,
-        _user_id: i64,
-        req: CheckChunkedUploadRequest,
-    ) -> Result<crate::dto::response::CheckChunkedUploadData> {
-        let _ = req.upload_id;
-        // TODO: Implement S3 ListParts
-        Err(AppError::InternalError("Not implemented yet".to_string()))
-    }
-
     /// 生成下载/访问用的 Presigned URL (GET)
     pub async fn sign_url(&self, key: &str) -> Result<String> {
-        // 如果是完整 URL (http/https 开头)，直接返回，不处理
+        self.sign_url_with_expiry(key, Duration::from_secs(604800)).await
+    }
+
+    /// 生成下载/访问用的 Presigned URL (GET) - 可配置过期时间
+    pub async fn sign_url_with_expiry(
+        &self,
+        key: &str,
+        expires_in: Duration,
+    ) -> Result<String> {
+        // 严格模式：只接受“对象存储 key”（例如 uploads/{user_id}/{uuid}.ext）
+        // 不接受完整 URL，也不做旧格式兼容。
         if key.starts_with("http://") || key.starts_with("https://") {
-            return Ok(key.to_string());
+            return Err(AppError::BadRequest("无效的存储 key".to_string()));
         }
 
-        // 清理 key：去掉前导斜杠和旧的 /media/ 前缀（兼容旧数据）
-        let cleaned_key = key
-            .trim_start_matches('/') // 去掉前导斜杠
-            .trim_start_matches("media/"); // 去掉旧的 /media/ 前缀
+        // 去掉前导斜杠（防止误传 "/uploads/..."）
+        let cleaned_key = key.trim_start_matches('/');
 
-        if key != cleaned_key {
-            tracing::warn!(
-                "sign_url: cleaned old format key: {} -> {}",
-                key,
-                cleaned_key
-            );
-        }
-
-        // 设置较长的过期时间（例如 7 天），以减少客户端频繁刷新的需求
-        // 注意：AWS S3 Presigned URL 最长有效期通常为 7 天
         let presigned_config = PresigningConfig::builder()
-            .expires_in(Duration::from_secs(604800))
+            .expires_in(expires_in)
             .build()
             .map_err(|e| {
                 AppError::InternalError(format!("Failed to build presigning config: {}", e))
@@ -362,8 +343,8 @@ impl MediaService {
             .await
             .map_err(|e| AppError::InternalError(format!("Failed to sign download URL: {}", e)))?;
 
-        let uri_str = presigned_req.uri();
-        let uri_parsed = uri_str.parse::<http::Uri>().map_err(|e| {
+        let presigned_url = presigned_req.uri().to_string();
+        let uri_parsed = presigned_url.parse::<http::Uri>().map_err(|e| {
             AppError::InternalError(format!("Failed to parse presigned URI: {}", e))
         })?;
         let path_and_query = uri_parsed
@@ -371,13 +352,10 @@ impl MediaService {
             .map(|pq| pq.as_str())
             .unwrap_or("");
 
-        // 简单拼接 s3_public_base 和 path_and_query
-        // AWS SDK 生成的 presigned URL 已经是完整可用的，直接使用即可
-        let public_base_trimmed = self.s3_public_base.trim_end_matches('/');
-        let download_url = format!("{}{}", public_base_trimmed, path_and_query);
+        let download_url = self.build_public_url(&presigned_url, path_and_query);
 
         tracing::debug!(
-            "sign_url: key={}, s3_public_base={}, path_and_query={}, final_url={}",
+            "sign_url_with_expiry: key={}, s3_public_base={}, path_and_query={}, final_url={}",
             key,
             self.s3_public_base,
             path_and_query,
@@ -442,6 +420,27 @@ impl MediaService {
             }
             None => None,
         }
+    }
+
+    /// 上传服务端生成内容到对象存储（用于导出等场景）
+    pub async fn upload_bytes(
+        &self,
+        key: &str,
+        content_type: &str,
+        data: Vec<u8>,
+    ) -> Result<String> {
+        let cleaned_key = key.trim_start_matches('/');
+        self.s3_client
+            .put_object()
+            .bucket(&self.bucket)
+            .key(cleaned_key)
+            .content_type(content_type)
+            .body(ByteStream::from(data))
+            .send()
+            .await
+            .map_err(|e| AppError::InternalError(format!("Failed to upload: {}", e)))?;
+
+        Ok(cleaned_key.to_string())
     }
 
     /// 标记文件已使用

@@ -70,6 +70,30 @@ impl PrivateMessageRepository {
         Ok(row)
     }
 
+    /// 按消息ID批量获取消息
+    pub async fn find_by_ids(&self, message_ids: &[Uuid]) -> Result<Vec<PrivateMessageRow>> {
+        if message_ids.is_empty() {
+            return Ok(vec![]);
+        }
+        let rows = sqlx::query_as!(
+            PrivateMessageRow,
+            r#"
+            SELECT id, message_id, chat_id, sender_id,
+                   type as "type: MessageType", content, reply_to_message_id,
+                   file_name, file_size, thumbnail_url, duration,
+                   location_latitude, location_longitude, location_name, location_address,
+                   sent_at, edited_at, is_recalled, recalled_at, is_deleted, deleted_at
+            FROM private_messages
+            WHERE message_id = ANY($1) AND is_deleted = FALSE
+            "#,
+            message_ids
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows)
+    }
+
     /// 创建私聊消息
     #[allow(clippy::too_many_arguments)]
     pub async fn create(
@@ -303,5 +327,27 @@ impl PrivateMessageRepository {
         .await?;
 
         Ok(rows.into_iter().map(|r| (r.chat_id, r)).collect())
+    }
+
+    /// 列出布隆过滤器用的 message_id（按 id 分页）
+    pub async fn list_message_ids_after(
+        &self,
+        last_id: i64,
+        limit: i64,
+    ) -> Result<Vec<(i64, Uuid)>> {
+        let rows = sqlx::query!(
+            r#"
+            SELECT id, message_id
+            FROM private_messages
+            WHERE id > $1 AND is_deleted = FALSE
+            ORDER BY id
+            LIMIT $2
+            "#,
+            last_id,
+            limit
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows.into_iter().map(|r| (r.id, r.message_id)).collect())
     }
 }

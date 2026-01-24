@@ -17,6 +17,7 @@ use crate::{
     },
     error::{AppError, Result},
     middleware::auth::AuthenticatedUser,
+    services::admin_audit_service::AuditLogInput,
     state::AppState,
 };
 
@@ -32,7 +33,7 @@ pub async fn me(
         roles: roles
             .into_iter()
             .map(|r| AdminRoleBasic {
-                id: r.role_id.to_string(),
+                role_id: r.role_id.to_string(),
                 name: r.name,
             })
             .collect(),
@@ -66,7 +67,7 @@ pub async fn list_roles(
         .await?
         .into_iter()
         .map(|(role, permissions)| AdminRoleItem {
-            id: role.role_id.to_string(),
+            role_id: role.role_id.to_string(),
             name: role.name,
             description: role.description,
             permissions,
@@ -78,16 +79,34 @@ pub async fn list_roles(
 
 pub async fn create_role(
     State(state): State<AppState>,
-    _user: AuthenticatedUser,
+    user: AuthenticatedUser,
     Json(req): Json<AdminRbacRoleCreateRequest>,
 ) -> Result<Json<ApiResponse<AdminRoleItem>>> {
     let role_id = state
         .admin_rbac_service
         .create_role(&req.name, req.description.as_deref())
         .await?;
+    let details = serde_json::json!({
+        "description": req.description,
+    });
+    state
+        .admin_audit_service
+        .record(AuditLogInput {
+            action: "role.create".to_string(),
+            operator_id: user.user_id,
+            target_type: "role".to_string(),
+            target_id: role_id.to_string(),
+            target_name: Some(req.name.clone()),
+            details: Some(details),
+            before_state: None,
+            after_state: None,
+            ip_address: None,
+            user_agent: None,
+        })
+        .await?;
 
     Ok(Json(ApiResponse::success(AdminRoleItem {
-        id: role_id.to_string(),
+        role_id: role_id.to_string(),
         name: req.name,
         description: req.description,
         permissions: vec![],
@@ -96,7 +115,7 @@ pub async fn create_role(
 
 pub async fn update_role(
     State(state): State<AppState>,
-    _user: AuthenticatedUser,
+    user: AuthenticatedUser,
     Json(req): Json<AdminRbacRoleUpdateRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
     let role_id = Uuid::parse_str(&req.role_id)
@@ -110,23 +129,57 @@ pub async fn update_role(
         .admin_rbac_service
         .update_role(role_id, req.name.as_deref(), desc)
         .await?;
+    let details = serde_json::json!({
+        "name": req.name,
+        "description": req.description,
+    });
+    state
+        .admin_audit_service
+        .record(AuditLogInput {
+            action: "role.update".to_string(),
+            operator_id: user.user_id,
+            target_type: "role".to_string(),
+            target_id: role_id.to_string(),
+            target_name: req.name.clone(),
+            details: Some(details),
+            before_state: None,
+            after_state: None,
+            ip_address: None,
+            user_agent: None,
+        })
+        .await?;
     Ok(Json(ApiResponse::success_empty()))
 }
 
 pub async fn delete_role(
     State(state): State<AppState>,
-    _user: AuthenticatedUser,
+    user: AuthenticatedUser,
     Json(req): Json<AdminRbacRoleDeleteRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
     let role_id = Uuid::parse_str(&req.role_id)
         .map_err(|_| AppError::BadRequest("无效的角色ID".to_string()))?;
     state.admin_rbac_service.delete_role(role_id).await?;
+    state
+        .admin_audit_service
+        .record(AuditLogInput {
+            action: "role.delete".to_string(),
+            operator_id: user.user_id,
+            target_type: "role".to_string(),
+            target_id: role_id.to_string(),
+            target_name: None,
+            details: None,
+            before_state: None,
+            after_state: None,
+            ip_address: None,
+            user_agent: None,
+        })
+        .await?;
     Ok(Json(ApiResponse::success_empty()))
 }
 
 pub async fn set_role_permissions(
     State(state): State<AppState>,
-    _user: AuthenticatedUser,
+    user: AuthenticatedUser,
     Json(req): Json<AdminRbacRoleSetPermissionsRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
     let role_id = Uuid::parse_str(&req.role_id)
@@ -134,6 +187,24 @@ pub async fn set_role_permissions(
     state
         .admin_rbac_service
         .set_role_permissions(role_id, &req.permission_keys)
+        .await?;
+    let details = serde_json::json!({
+        "permission_keys": req.permission_keys,
+    });
+    state
+        .admin_audit_service
+        .record(AuditLogInput {
+            action: "role.update".to_string(),
+            operator_id: user.user_id,
+            target_type: "role".to_string(),
+            target_id: role_id.to_string(),
+            target_name: None,
+            details: Some(details),
+            before_state: None,
+            after_state: None,
+            ip_address: None,
+            user_agent: None,
+        })
         .await?;
     Ok(Json(ApiResponse::success_empty()))
 }
@@ -165,7 +236,7 @@ pub async fn list_admins(
                     .roles
                     .into_iter()
                     .map(|r| AdminRoleBasic {
-                        id: r.role_id.to_string(),
+                        role_id: r.role_id.to_string(),
                         name: r.name,
                     })
                     .collect(),
@@ -196,6 +267,25 @@ pub async fn grant_admin(
             &role_ids,
         )
         .await?;
+    let details = serde_json::json!({
+        "grant_all_permissions": req.grant_all_permissions,
+        "role_ids": req.role_ids,
+    });
+    state
+        .admin_audit_service
+        .record(AuditLogInput {
+            action: "permission.grant".to_string(),
+            operator_id: operator.user_id,
+            target_type: "user".to_string(),
+            target_id: req.user_id.to_string(),
+            target_name: None,
+            details: Some(details),
+            before_state: None,
+            after_state: None,
+            ip_address: None,
+            user_agent: None,
+        })
+        .await?;
 
     Ok(Json(ApiResponse::success_empty()))
 }
@@ -208,6 +298,21 @@ pub async fn revoke_admin(
     state
         .admin_rbac_service
         .revoke_admin(operator.user_id, req.user_id)
+        .await?;
+    state
+        .admin_audit_service
+        .record(AuditLogInput {
+            action: "permission.revoke".to_string(),
+            operator_id: operator.user_id,
+            target_type: "user".to_string(),
+            target_id: req.user_id.to_string(),
+            target_name: None,
+            details: None,
+            before_state: None,
+            after_state: None,
+            ip_address: None,
+            user_agent: None,
+        })
         .await?;
     Ok(Json(ApiResponse::success_empty()))
 }

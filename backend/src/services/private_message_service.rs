@@ -6,6 +6,8 @@ use std::str::FromStr; // Add FromStr
 use std::sync::Arc;
 use uuid::Uuid;
 
+use redis::aio::ConnectionManager as RedisConnectionManager;
+
 use crate::{
     constants::MESSAGE_RECALL_MINUTES,
     dto::{
@@ -17,8 +19,8 @@ use crate::{
             UpdatePrivateMessageRequest,
         },
         response::{
-            MessageMedia, MessageReactionItem, PaginatedData, PaginationMeta, PrivateMessageItem,
-            SendPrivateMessageData, UserInfo,
+            Location, MessageLocation, MessageMedia, MessageReactionItem, MessageReplyTo,
+            PaginatedData, PaginationMeta, PrivateMessageItem, SendPrivateMessageData, UserInfo,
         },
     },
     error::{AppError, Result},
@@ -34,8 +36,8 @@ use crate::{
         user_settings_repo::UserSettingsRepository,
     },
     services::media_service::MediaService,
-    types::enums::{ChatPermission, MessageType, ReactionType},
-    utils::validation::Validator,
+    types::enums::{PrivateChatPermission, MessageType, ReactionType},
+    utils::{bloom_filter::ResourceExistenceChecker, validation::Validator},
     EventBus,
 };
 
@@ -43,6 +45,7 @@ use crate::{
 #[derive(Clone)]
 pub struct PrivateMessageService {
     event_bus: Arc<EventBus>,
+    redis: RedisConnectionManager,
     message_repo: PrivateMessageRepository,
     chat_repo: PrivateChatRepository,
     user_repo: UserRepository,
@@ -57,6 +60,7 @@ pub struct PrivateMessageService {
 impl PrivateMessageService {
     pub fn new(
         event_bus: Arc<EventBus>,
+        redis: RedisConnectionManager,
         message_repo: PrivateMessageRepository,
         chat_repo: PrivateChatRepository,
         user_repo: UserRepository,
@@ -69,6 +73,7 @@ impl PrivateMessageService {
     ) -> Self {
         Self {
             event_bus,
+            redis,
             message_repo,
             chat_repo,
             user_repo,
@@ -112,11 +117,11 @@ impl PrivateMessageService {
             // 检查目标用户是否允许接收私聊
             let target_settings = self.settings_repo.find_by_user_id(target_user_id).await?;
             if let Some(settings) = target_settings {
-                if settings.allow_private_chat == ChatPermission::Nobody {
+                if settings.allow_private_chat == PrivateChatPermission::Nobody {
                     return Err(AppError::PrivateChatNotAllowed(
                         "对方不允许接收私聊".to_string(),
                     ));
-                } else if settings.allow_private_chat == ChatPermission::Friends {
+                } else if settings.allow_private_chat == PrivateChatPermission::Friends {
                     // 检查是否是好友（互相关注）
                     let is_following = self
                         .follows_repo
@@ -209,9 +214,8 @@ impl PrivateMessageService {
             }
         }
 
-        // 解析消息类型
-        let message_type = MessageType::from_str(&req.r#type)
-            .ok_or_else(|| AppError::BadRequest("无效的消息类型".to_string()))?;
+        // 使用 SendMessageType 的转换方法获取 MessageType
+        let message_type = req.r#type.to_message_type();
 
         // 解析回复消息ID
         let reply_to = req
@@ -245,7 +249,7 @@ impl PrivateMessageService {
                         MessageType::Audio => "[语音]".to_string(),
                         MessageType::File => "[文件]".to_string(),
                         MessageType::System => reply_msg.content,
-                        MessageType::Any | MessageType::Location => reply_msg.content,
+                        MessageType::Location => "[位置]".to_string(),
                     };
 
                     reply_to_snapshot = Some(crate::events::event_types::ReplyToSnapshot {
@@ -353,6 +357,14 @@ impl PrivateMessageService {
             )
             .await?;
 
+        // 记录消息到布隆过滤器
+        if let Err(e) = ResourceExistenceChecker::new(self.redis.clone())
+            .record_message(&message.message_id.to_string())
+            .await
+        {
+            tracing::warn!(message_id = %message.message_id, error = %e, "record_message bloom failed");
+        }
+
         // 发送成功后的处理
         // 只对普通用户（temp/normal）进行消息计数管理
         if !is_privileged_user {
@@ -394,6 +406,15 @@ impl PrivateMessageService {
             None
         };
 
+        let event_location = req.location.as_ref().map(|loc| crate::dto::response::MessageLocation {
+            location: crate::dto::response::Location {
+                latitude: loc.location.latitude,
+                longitude: loc.location.longitude,
+                location_name: loc.location.location_name.clone(),
+            },
+            address: loc.address.clone(),
+        });
+
         self.event_bus.publish(AppEvent::PrivateMessageSent {
             message_id: message.message_id,
             sender_id: user_id,
@@ -402,6 +423,7 @@ impl PrivateMessageService {
             content: event_content,
             reply_to: reply_to_snapshot,
             media,
+            location: event_location,
         });
 
         Ok(SendPrivateMessageData {
@@ -432,6 +454,18 @@ impl PrivateMessageService {
             .message_repo
             .list_by_chat(chat.id, limit, cursor)
             .await?;
+
+        let reply_ids: Vec<Uuid> = messages
+            .iter()
+            .filter_map(|m| m.reply_to_message_id)
+            .collect();
+        let reply_rows = self.message_repo.find_by_ids(&reply_ids).await?;
+        let reply_sender_ids: Vec<i64> = reply_rows.iter().map(|m| m.sender_id).collect();
+        let reply_senders = self.user_repo.find_profiles(&reply_sender_ids).await?;
+        let reply_sender_map: std::collections::HashMap<i64, _> =
+            reply_senders.into_iter().map(|u| (u.user_id, u)).collect();
+        let reply_map: std::collections::HashMap<Uuid, _> =
+            reply_rows.into_iter().map(|m| (m.message_id, m)).collect();
 
         // 批量获取发送者信息
         let sender_ids: Vec<i64> = messages.iter().map(|m| m.sender_id).collect();
@@ -476,7 +510,7 @@ impl PrivateMessageService {
 
             items.push(PrivateMessageItem {
                 message_id: m.message_id.to_string(),
-                r#type: m.r#type.as_str().to_string(),
+                message_type: m.r#type,
                 content: Some(m.content.clone()),
                 sender: UserInfo {
                     user_id: m.sender_id,
@@ -491,9 +525,41 @@ impl PrivateMessageService {
                         .map(|u| u.user_type)
                         .unwrap_or(crate::types::enums::UserType::Normal),
                 },
-                reply_to_message_id: m.reply_to_message_id.map(|id| id.to_string()),
                 media,
-                reply_to: None,
+                location: if let (Some(lat), Some(lng), Some(name)) = (
+                    m.location_latitude,
+                    m.location_longitude,
+                    m.location_name.clone(),
+                ) {
+                    Some(MessageLocation {
+                        location: Location {
+                            latitude: lat,
+                            longitude: lng,
+                            location_name: name,
+                        },
+                        address: m.location_address.clone(),
+                    })
+                } else {
+                    None
+                },
+                reply_to: m.reply_to_message_id.and_then(|reply_id| {
+                    reply_map.get(&reply_id).map(|reply_msg| {
+                        let reply_sender = reply_sender_map.get(&reply_msg.sender_id);
+                        let preview = if reply_msg.r#type == MessageType::Text {
+                            reply_msg.content.clone()
+                        } else {
+                            String::new()
+                        };
+                        MessageReplyTo {
+                            message_id: reply_msg.message_id.to_string(),
+                            user_id: reply_msg.sender_id,
+                            nickname: reply_sender
+                                .map(|u| u.nickname.clone())
+                                .unwrap_or_else(|| "未知用户".to_string()),
+                            content: preview,
+                        }
+                    })
+                }),
                 sent_at: m.sent_at.to_rfc3339(),
                 edited_at: m.edited_at.map(|t| t.to_rfc3339()),
                 is_recalled: m.is_recalled,
@@ -728,20 +794,17 @@ impl PrivateMessageService {
         // 获取对方ID
         let other_user_id = self.get_other_user_id(message.chat_id, user_id).await?;
 
-        // 添加反应
+        // 添加反应 - r#type 已是强类型枚举
         self.reactions_repo
-            .add(message_id, user_id, &req.r#type)
+            .add(message_id, user_id, req.r#type.as_str())
             .await?;
-
-        let reaction_type_enum = ReactionType::from_str(&req.r#type)
-            .map_err(|_| AppError::BadRequest("无效的反应类型".to_string()))?;
 
         // 发布事件
         self.event_bus.publish(AppEvent::PrivateMessageReaction {
             message_id,
             target_user_id: other_user_id,
             user_id,
-            reaction_type: reaction_type_enum,
+            reaction_type: req.r#type,
             action: "add".to_string(),
         });
 
@@ -776,20 +839,17 @@ impl PrivateMessageService {
         // 获取对方ID
         let other_user_id = self.get_other_user_id(message.chat_id, user_id).await?;
 
-        // 移除反应
+        // 移除反应 - r#type 已是强类型枚举
         self.reactions_repo
-            .remove(message_id, user_id, &req.r#type)
+            .remove(message_id, user_id, req.r#type.as_str())
             .await?;
-
-        let reaction_type_enum = ReactionType::from_str(&req.r#type)
-            .map_err(|_| AppError::BadRequest("无效的反应类型".to_string()))?;
 
         // 发布事件
         self.event_bus.publish(AppEvent::PrivateMessageReaction {
             message_id,
             target_user_id: other_user_id,
             user_id,
-            reaction_type: reaction_type_enum,
+            reaction_type: req.r#type,
             action: "remove".to_string(),
         });
 
@@ -823,7 +883,7 @@ impl PrivateMessageService {
 
         let limit = Validator::validate_limit(req.limit, 100)? as i64;
         let cursor = Validator::parse_cursor(req.cursor.as_deref())?;
-        let reaction_type = req.r#type.as_deref();
+        let reaction_type = req.r#type.as_ref().map(|r| r.as_str());
 
         let (reactions, next_cursor) = self
             .reactions_repo
@@ -847,7 +907,7 @@ impl PrivateMessageService {
                         avatar_url: user.avatar_url.clone(),
                         user_type: user.user_type,
                     },
-                    r#type: r.r#type,
+                    reaction_type: ReactionType::from_str(&r.r#type).unwrap_or(ReactionType::Like),
                     created_at: r.created_at.to_rfc3339(),
                 })
             })

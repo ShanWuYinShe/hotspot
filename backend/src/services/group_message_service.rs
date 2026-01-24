@@ -6,6 +6,8 @@ use std::str::FromStr; // Add FromStr
 use std::sync::Arc;
 use uuid::Uuid;
 
+use redis::aio::ConnectionManager as RedisConnectionManager;
+
 use crate::{
     dto::{
         request::{
@@ -15,8 +17,9 @@ use crate::{
             RemoveGroupMessageReactionRequest, SendGroupMessageRequest, UpdateGroupMessageRequest,
         },
         response::{
-            GroupMessageItem, MessageMedia, MessageReactionItem, MessageReadItem, PaginatedData,
-            PaginationMeta, SendGroupMessageData, UserInfo,
+            GroupMessageItem, Location, MessageLocation, MessageMedia, MessageReactionItem,
+            MessageReadItem, MessageReplyTo, PaginatedData, PaginationMeta, SendGroupMessageData,
+            UserInfo,
         },
     },
     error::{AppError, Result},
@@ -27,14 +30,15 @@ use crate::{
         message_reactions_repo::MessageReactionsRepository, user_repo::UserRepository,
     },
     services::media_service::MediaService,
-    types::enums::{MemberRole, MessageType, ReactionType, UserType}, // Add ReactionType
-    utils::validation::Validator,
+    types::enums::{GroupRole, MessageType, ReactionType, UserType},
+    utils::{bloom_filter::ResourceExistenceChecker, validation::Validator},
     EventBus,
 };
 
 #[derive(Clone)]
 pub struct GroupMessageService {
     db: PgPool,
+    redis: RedisConnectionManager,
     event_bus: Arc<EventBus>,
     message_repo: GroupMessageRepository,
     member_repo: GroupMemberRepository,
@@ -47,6 +51,7 @@ pub struct GroupMessageService {
 impl GroupMessageService {
     pub fn new(
         db: PgPool,
+        redis: RedisConnectionManager,
         event_bus: Arc<EventBus>,
         message_repo: GroupMessageRepository,
         member_repo: GroupMemberRepository,
@@ -57,6 +62,7 @@ impl GroupMessageService {
     ) -> Self {
         Self {
             db,
+            redis,
             event_bus,
             message_repo,
             member_repo,
@@ -81,8 +87,8 @@ impl GroupMessageService {
         let group_chat_id = Uuid::parse_str(&req.group_chat_id)
             .map_err(|_| AppError::BadRequest("无效的群组ID".to_string()))?;
 
-        let message_type = MessageType::from_str(&req.r#type)
-            .ok_or_else(|| AppError::BadRequest("无效的消息类型".to_string()))?;
+        // 使用 SendMessageType 的转换方法获取 MessageType
+        let message_type = req.r#type.to_message_type();
 
         let reply_to_message_id = if let Some(ref id) = req.reply_to_message_id {
             Some(
@@ -250,6 +256,14 @@ impl GroupMessageService {
         .execute(&self.db)
         .await?;
 
+        // 记录消息到布隆过滤器
+        if let Err(e) = ResourceExistenceChecker::new(self.redis.clone())
+            .record_message(&created.message_id.to_string())
+            .await
+        {
+            tracing::warn!(message_id = %created.message_id, error = %e, "record_message bloom failed");
+        }
+
         // 6. 发布消息事件（用于实时推送）
         // 注意：媒体消息的 content 字段存储的是 media_url
         let event_content = if message_type == MessageType::Text {
@@ -257,6 +271,15 @@ impl GroupMessageService {
         } else {
             None
         };
+
+        let event_location = req.location.as_ref().map(|loc| crate::dto::response::MessageLocation {
+            location: crate::dto::response::Location {
+                latitude: loc.location.latitude,
+                longitude: loc.location.longitude,
+                location_name: loc.location.location_name.clone(),
+            },
+            address: loc.address.clone(),
+        });
 
         self.event_bus.publish(AppEvent::GroupMessageSent {
             message_id: created.message_id,
@@ -267,6 +290,7 @@ impl GroupMessageService {
             reply_to: reply_to_snapshot,
             mentions,
             media,
+            location: event_location,
         });
 
         Ok(SendGroupMessageData {
@@ -299,6 +323,21 @@ impl GroupMessageService {
             .message_repo
             .list_by_group(group_chat_id, limit, cursor, include_system)
             .await?;
+
+        let reply_ids: Vec<Uuid> = messages
+            .iter()
+            .filter_map(|m| m.reply_to_message_id)
+            .collect();
+        let reply_rows = self.message_repo.find_by_ids(&reply_ids).await?;
+        let reply_sender_ids: Vec<i64> = reply_rows.iter().map(|m| m.sender_id).collect();
+        let reply_senders = self.user_repo.find_profiles(&reply_sender_ids).await?;
+        let reply_sender_map: std::collections::HashMap<i64, _> =
+            reply_senders.into_iter().map(|u| (u.user_id, u)).collect();
+        let reply_map: std::collections::HashMap<Uuid, _> =
+            reply_rows.into_iter().map(|m| (m.message_id, m)).collect();
+
+        let message_ids: Vec<Uuid> = messages.iter().map(|m| m.message_id).collect();
+        let read_counts = self.message_repo.get_read_counts(&message_ids).await?;
 
         // 5. 批量获取发送者信息
         let sender_ids: Vec<i64> = messages.iter().map(|m| m.sender_id).collect();
@@ -344,7 +383,7 @@ impl GroupMessageService {
 
             items.push(GroupMessageItem {
                 message_id: m.message_id.to_string(),
-                r#type: m.r#type.to_string(),
+                message_type: m.r#type,
                 content: Some(m.content.clone()),
                 sender: UserInfo {
                     user_id: m.sender_id,
@@ -357,16 +396,48 @@ impl GroupMessageService {
                         .await,
                     user_type: user.map(|u| u.user_type).unwrap_or(UserType::Normal),
                 },
-                reply_to_message_id: m.reply_to_message_id.map(|id| id.to_string()),
-                reply_to: None, // TODO: Populate reply_to snapshot if needed, or leave for separate fetch
+                reply_to: m.reply_to_message_id.and_then(|reply_id| {
+                    reply_map.get(&reply_id).map(|reply_msg| {
+                        let reply_sender = reply_sender_map.get(&reply_msg.sender_id);
+                        let preview = if reply_msg.r#type == MessageType::Text {
+                            reply_msg.content.clone()
+                        } else {
+                            String::new()
+                        };
+                        MessageReplyTo {
+                            message_id: reply_msg.message_id.to_string(),
+                            user_id: reply_msg.sender_id,
+                            nickname: reply_sender
+                                .map(|u| u.nickname.clone())
+                                .unwrap_or_else(|| "未知用户".to_string()),
+                            content: preview,
+                        }
+                    })
+                }),
                 mentions: m.mentions.clone(),
                 media,
+                location: if let (Some(lat), Some(lng), Some(name)) = (
+                    m.location_latitude,
+                    m.location_longitude,
+                    m.location_name.clone(),
+                ) {
+                    Some(MessageLocation {
+                        location: Location {
+                            latitude: lat,
+                            longitude: lng,
+                            location_name: name,
+                        },
+                        address: m.location_address.clone(),
+                    })
+                } else {
+                    None
+                },
                 sent_at: m.sent_at.to_rfc3339(),
                 edited_at: m.edited_at.map(|t| t.to_rfc3339()),
                 is_recalled: m.is_recalled,
                 recalled_by: m.recalled_by,
                 recalled_at: m.recalled_at.map(|t| t.to_rfc3339()),
-                read_count: None, // TODO: Populate read_count if needed
+                read_count: read_counts.get(&m.message_id).map(|c| *c as i32),
             });
         }
 
@@ -443,7 +514,7 @@ impl GroupMessageService {
                 .member_repo
                 .get_member_role(message.group_chat_id, user_id)
                 .await?;
-            role == Some(MemberRole::Owner) || role == Some(MemberRole::Admin)
+            role == Some(GroupRole::Owner) || role == Some(GroupRole::Admin)
         };
 
         if !can_recall {
@@ -490,7 +561,7 @@ impl GroupMessageService {
                 .member_repo
                 .get_member_role(message.group_chat_id, user_id)
                 .await?;
-            let is_admin = role == Some(MemberRole::Owner) || role == Some(MemberRole::Admin);
+            let is_admin = role == Some(GroupRole::Owner) || role == Some(GroupRole::Admin);
             if !is_admin {
                 return Err(AppError::Forbidden("无权为所有人删除消息".to_string()));
             }
@@ -641,19 +712,16 @@ impl GroupMessageService {
             return Err(AppError::Forbidden("您不是此群组的成员".to_string()));
         }
 
-        // 添加反应
+        // 添加反应 - r#type 已是强类型枚举
         self.reactions_repo
-            .add(message_id, user_id, &req.r#type)
+            .add(message_id, user_id, req.r#type.as_str())
             .await?;
-
-        let reaction_type_enum = ReactionType::from_str(&req.r#type)
-            .map_err(|_| AppError::BadRequest("无效的反应类型".to_string()))?;
 
         self.event_bus.publish(AppEvent::GroupMessageReaction {
             message_id,
             group_chat_id: message.group_chat_id,
             user_id,
-            reaction_type: reaction_type_enum,
+            reaction_type: req.r#type,
             action: "add".to_string(),
         });
 
@@ -685,19 +753,16 @@ impl GroupMessageService {
             return Err(AppError::Forbidden("您不是此群组的成员".to_string()));
         }
 
-        // 移除反应
+        // 移除反应 - r#type 已是强类型枚举
         self.reactions_repo
-            .remove(message_id, user_id, &req.r#type)
+            .remove(message_id, user_id, req.r#type.as_str())
             .await?;
-
-        let reaction_type_enum = ReactionType::from_str(&req.r#type)
-            .map_err(|_| AppError::BadRequest("无效的反应类型".to_string()))?;
 
         self.event_bus.publish(AppEvent::GroupMessageReaction {
             message_id,
             group_chat_id: message.group_chat_id,
             user_id,
-            reaction_type: reaction_type_enum,
+            reaction_type: req.r#type,
             action: "remove".to_string(),
         });
 
@@ -731,7 +796,7 @@ impl GroupMessageService {
 
         let limit = Validator::validate_limit(req.limit, 100)? as i64;
         let cursor = Validator::parse_cursor(req.cursor.as_deref())?;
-        let reaction_type = req.r#type.as_deref();
+        let reaction_type = req.r#type.as_ref().map(|r| r.as_str());
 
         let (reactions, next_cursor) = self
             .reactions_repo
@@ -755,7 +820,7 @@ impl GroupMessageService {
                         avatar_url: user.avatar_url.clone(),
                         user_type: user.user_type,
                     },
-                    r#type: r.r#type,
+                    reaction_type: ReactionType::from_str(&r.r#type).unwrap_or(ReactionType::Like),
                     created_at: r.created_at.to_rfc3339(),
                 })
             })

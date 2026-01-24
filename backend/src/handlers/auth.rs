@@ -48,7 +48,8 @@ pub async fn register(
         .and_then(|v| v.to_str().ok());
     let ip_address = None;
 
-    let client_type = ClientType::from_str(&req.client_type)?;
+    // client_type 已在请求中强类型化，直接使用
+    let client_type = req.client_type;
 
     // 调用 Service
     let auth_issue = state
@@ -72,7 +73,7 @@ pub async fn register(
         );
         resp_headers.insert(
             header::SET_COOKIE,
-            HeaderValue::from_str(&set_cookie).map_err(|_| AppError::Internal)?,
+            HeaderValue::from_str(&set_cookie).map_err(|_| AppError::internal("Cookie header error"))?,
         );
     }
 
@@ -96,7 +97,8 @@ pub async fn login(
         .and_then(|v| v.to_str().ok());
     let ip_address = None;
 
-    let client_type = ClientType::from_str(&req.client_type)?;
+    // client_type 已在请求中强类型化，直接使用
+    let client_type = req.client_type;
 
     // 调用 Service
     let auth_issue = state
@@ -120,7 +122,7 @@ pub async fn login(
         );
         resp_headers.insert(
             header::SET_COOKIE,
-            HeaderValue::from_str(&set_cookie).map_err(|_| AppError::Internal)?,
+            HeaderValue::from_str(&set_cookie).map_err(|_| AppError::internal("Cookie header error"))?,
         );
     }
 
@@ -144,7 +146,8 @@ pub async fn create_guest(
         .and_then(|v| v.to_str().ok());
     let ip_address = None;
 
-    let client_type = ClientType::from_str(&req.client_type)?;
+    // client_type 已在请求中强类型化，直接使用
+    let client_type = req.client_type;
 
     // 调用 Service
     let auth_issue = state
@@ -168,7 +171,7 @@ pub async fn create_guest(
         );
         resp_headers.insert(
             header::SET_COOKIE,
-            HeaderValue::from_str(&set_cookie).map_err(|_| AppError::Internal)?,
+            HeaderValue::from_str(&set_cookie).map_err(|_| AppError::internal("Cookie header error"))?,
         );
     }
 
@@ -192,8 +195,8 @@ pub async fn refresh_token(
     // 实际项目中可以从 extensions 获取 ConnectInfo 或 X-Forwarded-For
     let ip_address = None;
 
-    // client_type 强制：客户端必须显式传递，不允许推断
-    let client_type = ClientType::from_str(&req.client_type)?;
+    // client_type 已在请求中强类型化，直接使用
+    let client_type = req.client_type;
 
     // refresh_token 投递规则（强制）：
     // - app：必须在 body 传 refresh_token
@@ -209,7 +212,7 @@ pub async fn refresh_token(
                 ));
             }
             get_cookie_value(&headers, "hs_refresh_token")
-                .ok_or_else(|| AppError::TokenMissing("缺少 refresh_token cookie".to_string()))?
+                .ok_or_else(|| AppError::RefreshTokenMissing)?
         }
     };
 
@@ -239,7 +242,7 @@ pub async fn refresh_token(
         );
         resp_headers.insert(
             header::SET_COOKIE,
-            HeaderValue::from_str(&set_cookie).map_err(|_| AppError::Internal)?,
+            HeaderValue::from_str(&set_cookie).map_err(|_| AppError::internal("Cookie header error"))?,
         );
     }
 
@@ -261,7 +264,7 @@ pub async fn logout(
     let mut resp_headers = HeaderMap::new();
     resp_headers.insert(
         header::SET_COOKIE,
-        HeaderValue::from_str(&clear_cookie).map_err(|_| AppError::Internal)?,
+        HeaderValue::from_str(&clear_cookie).map_err(|_| AppError::internal("Cookie header error"))?,
     );
 
     Ok((resp_headers, Json(ApiResponse::success_empty())))
@@ -346,7 +349,7 @@ pub async fn send_verification_code(
 ) -> Result<Json<ApiResponse<SendVerificationCodeData>>> {
     // 参数验证
     Validator::validate_not_empty(&req.phone, "手机号")?;
-    Validator::validate_not_empty(&req.r#type, "验证码类型")?;
+    // r#type 已是强类型枚举，反序列化时自动验证
 
     // 调用 Service
     let response = state.auth_service.send_verification_code(&req).await?;

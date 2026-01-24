@@ -7,9 +7,10 @@ use crate::{
     config::Config,
     events::event_bus::EventBus,
     repositories::{
-        admin_rbac_repo::AdminRbacRepository, announcement_repo::AnnouncementRepository,
-        chat_unread_repo::ChatUnreadRepository, comment_repo::CommentRepository,
-        device_token_repo::DeviceTokenRepository, feed_repo::FeedRepository,
+        admin_audit_repo::AdminAuditRepository, admin_rbac_repo::AdminRbacRepository,
+        announcement_repo::AnnouncementRepository, chat_unread_repo::ChatUnreadRepository,
+        comment_repo::CommentRepository, device_token_repo::DeviceTokenRepository,
+        feed_repo::FeedRepository, follow_request_repo::FollowRequestRepository,
         group_announcement_repo::GroupAnnouncementRepository,
         group_application_repo::GroupApplicationRepository, group_bans_repo::GroupBansRepository,
         group_invite_repo::GroupInviteRepository,
@@ -28,11 +29,11 @@ use crate::{
         user_settings_repo::UserSettingsRepository, verification_repo::VerificationRepository,
     },
     services::{
-        admin_rbac_service::AdminRbacService, announcement_service::AnnouncementService,
-        auth_service::AuthService, comment_service::CommentService,
-        device_tokens_service::DeviceTokensService, feed_service::FeedService,
-        group_message_service::GroupMessageService, group_service::GroupService,
-        map_service::MapService, media_service::MediaService,
+        admin_audit_service::AdminAuditService, admin_rbac_service::AdminRbacService,
+        announcement_service::AnnouncementService, auth_service::AuthService,
+        comment_service::CommentService, device_tokens_service::DeviceTokensService,
+        feed_service::FeedService, group_message_service::GroupMessageService,
+        group_service::GroupService, map_service::MapService, media_service::MediaService,
         message_common_service::MessageCommonService, moment_service::MomentService,
         presence_service::PresenceService, private_chat_service::PrivateChatService,
         private_message_service::PrivateMessageService, report_service::ReportService,
@@ -52,6 +53,8 @@ pub struct AppState {
     pub config: Config,
     pub ws_manager: WsConnectionManager,
     pub ws_subscription: SubscriptionManager,
+    // 缓存和防护工具
+    pub resource_checker: crate::utils::bloom_filter::ResourceExistenceChecker,
     // event_bus removed as it is internal to Services
     // Services
     pub auth_service: AuthService,
@@ -73,6 +76,7 @@ pub struct AppState {
     pub system_config_service: SystemConfigService,
     pub presence_service: PresenceService,
     pub admin_rbac_service: AdminRbacService,
+    pub admin_audit_service: AdminAuditService,
     pub notification_service: crate::services::notification_service::NotificationService,
     pub announcement_service: AnnouncementService,
 }
@@ -94,6 +98,12 @@ impl AppState {
 
         tracing::debug!("Redis connected");
 
+        // 初始化缓存和防护工具
+        let resource_checker =
+            crate::utils::bloom_filter::ResourceExistenceChecker::new(redis.clone());
+        let cache_manager = crate::utils::cache::CacheManager::new(redis.clone());
+        tracing::debug!("Cache and bloom filter initialized");
+
         // 初始化 WebSocket 管理器
         let ws_manager = WsConnectionManager::new();
         let ws_subscription = SubscriptionManager::new();
@@ -109,7 +119,7 @@ impl AppState {
 
         let s3_config = aws_sdk_s3::config::Builder::from(&shared_config)
             .endpoint_url(config.s3_endpoint.clone())
-            .force_path_style(true)
+            .force_path_style(config.s3_force_path_style)
             .credentials_provider(aws_credential_types::Credentials::new(
                 config.s3_access_key.clone(),
                 config.s3_secret_key.clone(),
@@ -121,6 +131,7 @@ impl AppState {
         let s3_client = S3Client::from_conf(s3_config);
 
         // --- Repositories Initialization ---
+        let admin_audit_repo = AdminAuditRepository::new(db.clone());
         let admin_rbac_repo = AdminRbacRepository::new(db.clone());
         let announcement_repo = AnnouncementRepository::new(db.clone());
         let chat_unread_repo = ChatUnreadRepository::new(db.clone());
@@ -150,6 +161,7 @@ impl AppState {
         let tag_repo = TagRepository::new(db.clone());
         let user_blocks_repo = UserBlocksRepository::new(db.clone());
         let user_follows_repo = UserFollowsRepository::new(db.clone());
+        let follow_request_repo = FollowRequestRepository::new(db.clone());
         let user_friend_remarks_repo = UserFriendRemarksRepository::new(db.clone());
         let user_location_history_repo = UserLocationHistoryRepository::new(db.clone());
         let user_online_status_repo = UserOnlineStatusRepository::new(db.clone());
@@ -195,6 +207,7 @@ impl AppState {
             user_settings_repo.clone(),
             user_location_history_repo.clone(),
             user_follows_repo.clone(),
+            follow_request_repo.clone(),
             user_blocks_repo.clone(),
             user_friend_remarks_repo.clone(),
             device_token_repo.clone(),
@@ -205,6 +218,7 @@ impl AppState {
             presence_service.clone(),
             redis.clone(),
             media_service.clone(),
+            cache_manager.clone(),
         );
 
         let moment_service = MomentService::new(
@@ -215,6 +229,7 @@ impl AppState {
             user_repo.clone(),
             user_settings_repo.clone(),
             media_service.clone(),
+            cache_manager.clone(),
         );
 
         let comment_service = CommentService::new(
@@ -223,11 +238,13 @@ impl AppState {
             comment_repo.clone(),
             moment_repo.clone(),
             user_repo.clone(),
+            cache_manager.clone(),
         );
 
         let group_service = GroupService::new(
             event_bus.clone(),
             group_repo.clone(),
+            group_message_repo.clone(),
             group_member_repo.clone(),
             group_member_history_repo.clone(),
             group_application_repo.clone(),
@@ -245,6 +262,7 @@ impl AppState {
 
         let group_message_service = GroupMessageService::new(
             db.clone(),
+            redis.clone(),
             event_bus.clone(),
             group_message_repo.clone(),
             group_member_repo.clone(),
@@ -267,6 +285,7 @@ impl AppState {
 
         let private_message_service = PrivateMessageService::new(
             event_bus.clone(),
+            redis.clone(),
             private_message_repo.clone(),
             private_chat_repo.clone(),
             user_repo.clone(),
@@ -308,6 +327,12 @@ impl AppState {
             user_settings_repo.clone(),
         );
 
+        let admin_audit_service = AdminAuditService::new(
+            admin_audit_repo,
+            user_repo.clone(),
+            media_service.clone(),
+        );
+
         let map_service = MapService::new(map_repo.clone());
 
         let notification_service = crate::services::notification_service::NotificationService::new(
@@ -334,6 +359,17 @@ impl AppState {
                 e
             })?;
 
+        // 后台初始化布隆过滤器（避免阻塞启动）
+        {
+            let db = db.clone();
+            let checker = resource_checker.clone();
+            tokio::spawn(async move {
+                if let Err(e) = warmup_bloom_filters(db, checker).await {
+                    tracing::warn!("Bloom filter warmup failed: {}", e);
+                }
+            });
+        }
+
         // Return AppState
         Ok(Self {
             db,
@@ -341,6 +377,7 @@ impl AppState {
             config,
             ws_manager,
             ws_subscription,
+            resource_checker,
             auth_service,
             user_service,
             moment_service,
@@ -360,8 +397,124 @@ impl AppState {
             system_config_service,
             presence_service,
             admin_rbac_service,
+            admin_audit_service,
             notification_service,
             announcement_service,
         })
     }
+}
+
+async fn warmup_bloom_filters(
+    db: PgPool,
+    checker: crate::utils::bloom_filter::ResourceExistenceChecker,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if checker.is_ready().await.unwrap_or(false) {
+        return Ok(());
+    }
+
+    const BATCH_SIZE: i64 = 1000;
+
+    let user_repo = UserRepository::new(db.clone());
+    let group_repo = GroupRepository::new(db.clone());
+    let moment_repo = MomentRepository::new(db.clone());
+
+    // 用户
+    let mut last_user_id = 0;
+    loop {
+        let ids = user_repo.list_user_ids_after(last_user_id, BATCH_SIZE).await?;
+        if ids.is_empty() {
+            break;
+        }
+        checker.sync_users(&ids).await?;
+        if let Some(last) = ids.last() {
+            last_user_id = *last;
+        }
+    }
+
+    // 群组
+    let mut last_group_row_id = 0;
+    loop {
+        let rows = group_repo
+            .list_group_ids_after(last_group_row_id, BATCH_SIZE)
+            .await?;
+        if rows.is_empty() {
+            break;
+        }
+        let group_ids: Vec<String> = rows.iter().map(|(_, gid)| gid.to_string()).collect();
+        checker.sync_groups(&group_ids).await?;
+        if let Some((last_id, _)) = rows.last() {
+            last_group_row_id = *last_id;
+        }
+    }
+
+    // 瞬间
+    let mut last_moment_row_id = 0;
+    loop {
+        let rows = moment_repo
+            .list_moment_ids_after(last_moment_row_id, BATCH_SIZE)
+            .await?;
+        if rows.is_empty() {
+            break;
+        }
+        let moment_ids: Vec<String> = rows.iter().map(|(_, mid)| mid.to_string()).collect();
+        checker.sync_moments(&moment_ids).await?;
+        if let Some((last_id, _)) = rows.last() {
+            last_moment_row_id = *last_id;
+        }
+    }
+
+    // 评论
+    let comment_repo = CommentRepository::new(db.clone());
+    let mut last_comment_row_id = 0;
+    loop {
+        let rows = comment_repo
+            .list_comment_ids_after(last_comment_row_id, BATCH_SIZE)
+            .await?;
+        if rows.is_empty() {
+            break;
+        }
+        let comment_ids: Vec<String> = rows.iter().map(|(_, cid)| cid.to_string()).collect();
+        checker.sync_comments(&comment_ids).await?;
+        if let Some((last_id, _)) = rows.last() {
+            last_comment_row_id = *last_id;
+        }
+    }
+
+    // 消息（群聊消息 + 私聊消息）
+    let group_message_repo = GroupMessageRepository::new(db.clone());
+    let private_message_repo = PrivateMessageRepository::new(db.clone());
+
+    let mut last_group_msg_id = 0;
+    loop {
+        let rows = group_message_repo
+            .list_message_ids_after(last_group_msg_id, BATCH_SIZE)
+            .await?;
+        if rows.is_empty() {
+            break;
+        }
+        let message_ids: Vec<String> = rows.iter().map(|(_, mid)| mid.to_string()).collect();
+        checker.sync_messages(&message_ids).await?;
+        if let Some((last_id, _)) = rows.last() {
+            last_group_msg_id = *last_id;
+        }
+    }
+
+    let mut last_private_msg_id = 0;
+    loop {
+        let rows = private_message_repo
+            .list_message_ids_after(last_private_msg_id, BATCH_SIZE)
+            .await?;
+        if rows.is_empty() {
+            break;
+        }
+        let message_ids: Vec<String> = rows.iter().map(|(_, mid)| mid.to_string()).collect();
+        checker.sync_messages(&message_ids).await?;
+        if let Some((last_id, _)) = rows.last() {
+            last_private_msg_id = *last_id;
+        }
+    }
+
+    checker.set_ready().await?;
+    tracing::info!("Bloom filter warmup completed");
+    Ok(())
 }

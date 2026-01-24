@@ -1,9 +1,6 @@
 use redis::aio::ConnectionManager;
 use redis::AsyncCommands;
-use std::str::FromStr;
-
 use crate::{
-    constants::{FEED_REASON_NEARBY_HOT, FEED_REASON_NEARBY_PEOPLE},
     dto::{
         request::{
             FeedFeedbackRequest, FeedGroupsRequest, FeedMomentsRequest, FeedTrendingRequest,
@@ -19,7 +16,7 @@ use crate::{
         feed_repo::FeedRepository, group_repo::GroupRepository, moment_repo::MomentRepository,
         tag_repo::TagRepository, user_repo::UserRepository,
     },
-    types::enums::{FeedFeedbackAction, FeedSource, Trend},
+    types::enums::{FeedFeedbackAction, FeedSource, TagTrend},
     utils::validation::Validator,
 };
 
@@ -67,13 +64,20 @@ impl FeedService {
         let limit = Validator::validate_limit(req.limit, 100)? as i32;
         let cursor = req.cursor;
 
-        // 获取用户位置（优先从 Redis 获取）
-        let user_location = self.presence_service.get_user_location(user_id).await?;
-        let (user_lat, user_lng) = user_location.unwrap_or((35.154922, 112.682524));
-
         // 根据 source 筛选（使用新的 Feed 方法，返回带距离的结果）
-        let source_str = req.source.as_deref().unwrap_or("all");
-        let source = FeedSource::from_str(source_str).unwrap_or(FeedSource::All);
+        let source = req.source.unwrap_or(FeedSource::All);
+        let reference_point = req.reference_point;
+
+        let (user_lat, user_lng) = if let Some(point) = reference_point {
+            Validator::validate_coordinates(point.latitude, point.longitude)?;
+            (point.latitude, point.longitude)
+        } else if matches!(source, FeedSource::Following) {
+            // 获取用户位置（优先从 Redis 获取）
+            let user_location = self.presence_service.get_user_location(user_id).await?;
+            user_location.unwrap_or((35.154922, 112.682524))
+        } else {
+            return Err(AppError::MissingParameter("reference_point".to_string()));
+        };
 
         let (moments, next_cursor) = match source {
             FeedSource::Following => {
@@ -97,6 +101,16 @@ impl FeedService {
         // 批量获取标签
         let moment_ids: Vec<_> = moments.iter().map(|m| m.moment_id).collect();
         let tags_map = self.tag_repo.get_moment_tags_batch(&moment_ids).await?;
+
+        // 批量查询点赞和收藏状态
+        let liked_set = self
+            .moment_repo
+            .batch_check_liked(&moment_ids, user_id)
+            .await?;
+        let favorited_set = self
+            .moment_repo
+            .batch_check_favorited(&moment_ids, user_id)
+            .await?;
 
         use crate::dto::response::MomentImage;
         let mut items = Vec::with_capacity(moments.len());
@@ -144,7 +158,6 @@ impl FeedService {
                 images,
                 tags,
                 mentions: m.mentions.clone(),
-                privacy_level: m.privacy_level.clone(),
                 created_at: m.created_at.to_rfc3339(),
                 likes_count: m.likes_count as i32,
                 comments_count: m.comments_count as i32,
@@ -155,8 +168,8 @@ impl FeedService {
                     distance: m.distance,
                     bearing_degrees: m.bearing_degrees,
                 },
-                is_liked: None,
-                is_favorited: None,
+                is_liked: Some(liked_set.contains(&m.moment_id)),
+                is_favorited: Some(favorited_set.contains(&m.moment_id)),
             });
         }
 
@@ -172,15 +185,18 @@ impl FeedService {
     /// 获取群组推荐（距离由 PostGIS 计算）
     pub async fn get_groups_feed(
         &self,
-        user_id: i64,
+        _user_id: i64,
         req: FeedGroupsRequest,
     ) -> Result<PaginatedData<FeedGroupItem>, AppError> {
         let limit = Validator::validate_limit(req.limit, 100)? as i32;
         let cursor = req.cursor;
 
-        // 获取用户位置
-        let user_location = self.user_repo.get_location(user_id).await?;
-        let (user_lat, user_lng) = user_location.unwrap_or((35.154922, 112.682524));
+        // 使用请求传入的 reference_point
+        Validator::validate_coordinates(
+            req.reference_point.latitude,
+            req.reference_point.longitude,
+        )?;
+        let (user_lat, user_lng) = (req.reference_point.latitude, req.reference_point.longitude);
         let radius = Validator::validate_radius(req.radius, 50000)? as f64;
 
         // 获取附近群组（使用 PostGIS 计算距离）
@@ -218,7 +234,6 @@ impl FeedService {
                         bearing_degrees: g.bearing_degrees,
                     }),
                 },
-                reason: Some(FEED_REASON_NEARBY_HOT.to_string()),
                 friends_in_group: None,
                 my_role: None,
                 is_joined: None,
@@ -243,9 +258,12 @@ impl FeedService {
         let limit = Validator::validate_limit(req.limit, 100)? as i32; // Using i32 for repo method
         let cursor = req.cursor;
 
-        // 获取用户位置
-        let user_location = self.user_repo.get_location(user_id).await?;
-        let (user_lat, user_lng) = user_location.unwrap_or((35.154922, 112.682524));
+        // 使用请求传入的 reference_point
+        Validator::validate_coordinates(
+            req.reference_point.latitude,
+            req.reference_point.longitude,
+        )?;
+        let (user_lat, user_lng) = (req.reference_point.latitude, req.reference_point.longitude);
         let radius = Validator::validate_radius(req.radius, 50000)? as f64;
 
         // 获取附近用户（使用 PostGIS 计算距离）
@@ -321,7 +339,6 @@ impl FeedService {
                     location,
                     relation: None,
                 },
-                reason: Some(FEED_REASON_NEARBY_PEOPLE.to_string()),
                 mutual_friends_count: None,
                 common_tags: None,
             });
@@ -354,7 +371,7 @@ impl FeedService {
             .map(|t| TrendingTagItem {
                 name: t.name,
                 usage_count: t.usage_count,
-                trend: Trend::Stable.to_string(),
+                trend: TagTrend::Stable,
                 hot_moment_preview: None,
             })
             .collect();
@@ -412,7 +429,6 @@ impl FeedService {
                 images,
                 tags,
                 mentions: m.mentions.clone(),
-                privacy_level: m.privacy_level.clone(),
                 created_at: m.created_at.to_rfc3339(),
                 likes_count: m.likes_count as i32,
                 comments_count: m.comments_count as i32,
@@ -442,11 +458,10 @@ impl FeedService {
     ) -> Result<(), AppError> {
         // 验证 content_id 格式
         let content_uuid = uuid::Uuid::parse_str(&req.content_id)
-            .map_err(|_| AppError::InvalidInput("无效的 content_id 格式".to_string()))?;
+            .map_err(|_| AppError::InvalidFormat("无效的 content_id 格式".to_string()))?;
 
-        // 验证 action
-        let action = FeedFeedbackAction::from_str(&req.action)
-            .map_err(|_| AppError::InvalidInput("无效的反馈操作".to_string()))?;
+        // action 已是强类型枚举，直接使用
+        let action = req.action;
 
         // 可选原因：用于输入约束（并可作为后续审计字段扩展）
         let reason = req
@@ -456,7 +471,7 @@ impl FeedService {
             .filter(|s| !s.is_empty());
         if let Some(r) = reason {
             if r.len() > 200 {
-                return Err(AppError::InvalidInput("反馈原因过长".to_string()));
+                return Err(AppError::InvalidFormat("反馈原因过长".to_string()));
             }
         }
 
@@ -492,7 +507,6 @@ impl FeedService {
         let weight_change = match action {
             FeedFeedbackAction::Hide => -1.0,
             FeedFeedbackAction::NotInterested => -2.0,
-            _ => 0.0,
         };
 
         let content_key = format!("{}:{}", req.content_type, req.content_id);

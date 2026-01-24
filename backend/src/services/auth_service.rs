@@ -22,31 +22,13 @@ use crate::{
         user_repo::UserRepository, verification_repo::VerificationRepository,
     },
     utils::{
-        id_gen::IdGenerator, jwt::JwtUtil, password::PasswordUtil, token::TokenUtil,
-        validation::Validator,
+        bloom_filter::ResourceExistenceChecker, id_gen::IdGenerator, jwt::JwtUtil,
+        password::PasswordUtil, token::TokenUtil, validation::Validator,
     },
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ClientType {
-    Web,
-    App,
-}
-
-impl ClientType {
-    /// 从字符串解析客户端类型
-    /// 强制：客户端必须显式传递，不允许推断
-    pub fn from_str(v: &str) -> Result<Self> {
-        match v {
-            "web" => Ok(Self::Web),
-            "app" => Ok(Self::App),
-            _ => Err(AppError::BadRequest(format!(
-                "无效的 client_type: {}. 必须是 'web' 或 'app'",
-                v
-            ))),
-        }
-    }
-}
+// ClientType 已移至 types::enums 模块
+pub use crate::types::enums::ClientType;
 
 #[derive(Debug, Clone)]
 pub struct AuthIssueResult {
@@ -156,6 +138,12 @@ impl AuthService {
                 Some(password_hash.clone()),
             )
             .await?;
+        if let Err(e) = ResourceExistenceChecker::new(self.redis.clone())
+            .record_user(user_id)
+            .await
+        {
+            tracing::warn!(user_id, error = %e, "record_user bloom failed");
+        }
 
         // 5. 生成 access_token（JWT）+ refresh_token（opaque）
         let session_id = Uuid::new_v4();
@@ -316,6 +304,12 @@ impl AuthService {
         self.user_repo
             .create(user_id, UserType::Temp, None, req.nickname.clone(), None)
             .await?;
+        if let Err(e) = ResourceExistenceChecker::new(self.redis.clone())
+            .record_user(user_id)
+            .await
+        {
+            tracing::warn!(user_id, error = %e, "record_user bloom failed");
+        }
 
         // 3. 生成 access_token（JWT）+ refresh_token（opaque）
         let session_id = Uuid::new_v4();
@@ -423,7 +417,7 @@ impl AuthService {
                 }
 
                 // 既不是当前 Token 也不是前一个 Token -> 无效
-                return Err(AppError::TokenInvalid(
+                return Err(AppError::RefreshTokenInvalid(
                     "Refresh Token 无效或已过期".to_string(),
                 ));
             }
@@ -504,7 +498,7 @@ impl AuthService {
         if !rotated {
             // 典型原因：并发刷新导致当前 refresh_token 已被轮换（但会话本身仍有效）。
             // 不做撤销（避免误杀），提示客户端稍后重试/以最新 token 为准。
-            return Err(AppError::TokenInvalid(
+            return Err(AppError::AccessTokenInvalid(
                 "Refresh Token 已被轮换，请重试".to_string(),
             ));
         }
@@ -609,7 +603,7 @@ impl AuthService {
         // rand 0.9: 通过 rand::rand_core 访问 OsRng
         use rand::rand_core::{OsRng, TryRngCore};
         let mut rng = OsRng;
-        let n = rng.try_next_u32().map_err(|_| AppError::Internal)? % 1_000_000;
+        let n = rng.try_next_u32().map_err(|_| AppError::internal("RNG error"))? % 1_000_000;
         let reset_code = format!("{:06}", n);
 
         // 4) 存储到 DB（15分钟有效，仅存 code_hash）
@@ -844,20 +838,12 @@ impl AuthService {
         // 1. 验证手机号格式
         Validator::validate_not_empty(&req.phone, "手机号")?;
 
-        // TODO: 集成图形验证码校验
-        let _ = &req.captcha_token;
+        // 2. 验证码类型已是强类型枚举，直接使用字符串形式
+        let code_type = req.r#type.as_str();
 
-        // 2. 检查验证码类型
-        let code_type = &req.r#type;
-        if !["register", "reset_password", "change_phone"].contains(&code_type.as_str()) {
-            return Err(AppError::BadRequest("无效的验证码类型".to_string()));
-        }
-
-        // 3. 检查图形验证码 (TODO: 接入真实验证码服务)
-        // 目前仅打印日志，避免 unused warning
-        if let Some(token) = &req.captcha_token {
-            tracing::debug!("收到图形验证码 token: {}", token);
-        }
+        // 3. 检查图形验证码（可选）
+        self.verify_captcha_token(req.captcha_token.as_deref())
+            .await?;
 
         // 4. 防刷：检查是否在限流期内（60秒内只能发送一次）
         let within_60s = self
@@ -898,21 +884,10 @@ impl AuthService {
             .await
             .map_err(|e| AppError::InternalError(e.to_string()))?;
 
-        // 8. 发送短信（TODO: 集成第三方短信服务）
-        // 目前仅记录日志
-        tracing::info!(
-            "发送验证码: phone={}, code={}, type={}, code_id={}",
-            req.phone,
-            code,
-            code_type,
-            verification_code.code_id
-        );
-
-        // TODO: 集成阿里云/腾讯云短信服务
-        // let sms_result = self.sms_service.send(
-        //     &req.phone,
-        //     &format!("您的验证码是: {}, 5分钟内有效", code)
-        // ).await?;
+        // 8. 发送短信（写入发送队列，供外部短信服务消费）
+        let content = format!("您的验证码是: {}, 5分钟内有效", code);
+        self.enqueue_sms(&req.phone, &content, code_type, &verification_code.code_id)
+            .await?;
 
         // 9. 返回响应
         Ok(SendVerificationCodeData {
@@ -920,6 +895,54 @@ impl AuthService {
             expires_at: expires_at.to_rfc3339(),
             retry_after: Some(60),
         })
+    }
+
+    async fn verify_captcha_token(&self, token: Option<&str>) -> Result<()> {
+        let Some(token) = token else {
+            return Ok(());
+        };
+        let key = format!("captcha:token:{}", token);
+        let mut conn = self.redis.clone();
+        let exists: bool = redis::cmd("EXISTS")
+            .arg(&key)
+            .query_async(&mut conn)
+            .await
+            .unwrap_or(false);
+        if !exists {
+            return Err(AppError::InvalidFormat(
+                "图形验证码无效或已过期".to_string(),
+            ));
+        }
+        let _: () = redis::cmd("DEL")
+            .arg(&key)
+            .query_async(&mut conn)
+            .await
+            .unwrap_or(());
+        Ok(())
+    }
+
+    async fn enqueue_sms(
+        &self,
+        phone: &str,
+        content: &str,
+        code_type: &str,
+        code_id: &str,
+    ) -> Result<()> {
+        let payload = serde_json::json!({
+            "phone": phone,
+            "content": content,
+            "type": code_type,
+            "code_id": code_id,
+            "created_at": Utc::now().to_rfc3339(),
+        });
+        let mut conn = self.redis.clone();
+        redis::cmd("LPUSH")
+            .arg("sms:outbox")
+            .arg(payload.to_string())
+            .query_async::<()>(&mut conn)
+            .await
+            .map_err(|e| AppError::InternalError(format!("短信队列写入失败: {}", e)))?;
+        Ok(())
     }
 
     /// 验证验证码
@@ -934,12 +957,12 @@ impl AuthService {
 
         // 2. 检查是否已过期
         if verification_code.expires_at < Utc::now() {
-            return Err(AppError::ResourceStateConflict("验证码已过期".to_string()));
+            return Err(AppError::Conflict("验证码已过期".to_string()));
         }
 
         // 3. 检查尝试次数
         if verification_code.attempts >= verification_code.max_attempts {
-            return Err(AppError::ResourceStateConflict(
+            return Err(AppError::Conflict(
                 "验证次数已超限，请重新获取验证码".to_string(),
             ));
         }
@@ -952,7 +975,7 @@ impl AuthService {
                 .await
                 .map_err(|e| AppError::InternalError(e.to_string()))?;
 
-            return Err(AppError::ResourceStateConflict("验证码错误".to_string()));
+            return Err(AppError::Conflict("验证码错误".to_string()));
         }
 
         // 5. 标记为已验证
@@ -999,19 +1022,19 @@ impl AuthService {
             .map_err(|e| AppError::Redis(e))?;
 
         let verify_token_data = verify_token_data
-            .ok_or_else(|| AppError::ResourceStateConflict("验证令牌无效或已过期".to_string()))?;
+            .ok_or_else(|| AppError::Conflict("验证令牌无效或已过期".to_string()))?;
 
         // 解析 phone:type
         let parts: Vec<&str> = verify_token_data.split(':').collect();
         if parts.len() != 2 {
-            return Err(AppError::Internal);
+            return Err(AppError::internal("Invalid verify token format"));
         }
 
         let phone = parts[0];
         let code_type = parts[1];
 
         if code_type != expected_type {
-            return Err(AppError::ResourceStateConflict(
+            return Err(AppError::Conflict(
                 "验证令牌类型不匹配".to_string(),
             ));
         }

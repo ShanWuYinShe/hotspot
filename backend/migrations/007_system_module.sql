@@ -12,6 +12,7 @@ CREATE TABLE reports (
     target_id VARCHAR(255) NOT NULL,
     reason VARCHAR(255) NOT NULL,
     description TEXT,
+    target_snapshot JSONB,
     status report_status NOT NULL DEFAULT 'pending',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     handled_at TIMESTAMPTZ,
@@ -24,6 +25,8 @@ CREATE TABLE reports (
 CREATE INDEX idx_reports_reporter ON reports (reporter_id, created_at DESC) WHERE is_deleted = FALSE;
 CREATE INDEX idx_reports_status ON reports (status, created_at DESC) WHERE is_deleted = FALSE;
 CREATE INDEX idx_reports_target ON reports (target_type, target_id) WHERE is_deleted = FALSE;
+
+COMMENT ON COLUMN reports.target_snapshot IS '目标内容快照，包含 content, media_urls, owner_id';
 
 -- ============================================================
 -- 信息流

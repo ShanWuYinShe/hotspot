@@ -1,14 +1,26 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, PgPool};
+use sqlx::PgPool;
+use std::str::FromStr;
 use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::enums::{ReportStatus, ReportTargetType};
 use crate::utils::pagination::{decode_cursor, encode_cursor};
 
+/// 目标内容快照
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TargetSnapshot {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub media_urls: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub owner_id: Option<i64>,
+}
+
 /// 举报Row - 数据库查询返回类型
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReportRow {
     pub id: i64,
     pub report_id: Uuid,
@@ -24,6 +36,35 @@ pub struct ReportRow {
     pub handler_note: Option<String>,
     pub is_deleted: bool,
     pub deleted_at: Option<DateTime<Utc>>,
+    pub target_snapshot: Option<TargetSnapshot>,
+}
+
+impl ReportRow {
+    /// 从数据库行构建 ReportRow
+    fn from_row(row: &sqlx::postgres::PgRow) -> Self {
+        use sqlx::Row;
+
+        let target_snapshot_json: Option<serde_json::Value> = row.get("target_snapshot");
+
+        Self {
+            id: row.get("id"),
+            report_id: row.get("report_id"),
+            reporter_id: row.get("reporter_id"),
+            target_type: ReportTargetType::from_str(row.get("target_type"))
+                .unwrap_or(ReportTargetType::Moment),
+            target_id: row.get("target_id"),
+            reason: row.get("reason"),
+            description: row.get("description"),
+            status: ReportStatus::from_str(row.get("status")).unwrap_or(ReportStatus::Pending),
+            created_at: row.get("created_at"),
+            handled_by: row.get("handled_by"),
+            handled_at: row.get("handled_at"),
+            handler_note: row.get("handler_note"),
+            is_deleted: row.get("is_deleted"),
+            deleted_at: row.get("deleted_at"),
+            target_snapshot: target_snapshot_json.and_then(|v| serde_json::from_value(v).ok()),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -63,28 +104,25 @@ impl ReportRepository {
         reason: String,
         description: Option<String>,
     ) -> Result<ReportRow> {
-        let row = sqlx::query_as!(
-            ReportRow,
+        let row = sqlx::query(
             r#"
             INSERT INTO reports (reporter_id, target_type, target_id, reason, description)
             VALUES ($1, $2::report_target_type, $3, $4, $5)
             RETURNING report_id, reporter_id,
-                      target_type as "target_type: ReportTargetType",
-                      target_id, reason, description,
-                      status as "status: ReportStatus",
-                      handled_by, handled_at, handler_note, created_at,
-                      id, is_deleted, deleted_at
+                      target_type, target_id, reason, description,
+                      status, handled_by, handled_at, handler_note, created_at,
+                      id, is_deleted, deleted_at, target_snapshot
             "#,
-            reporter_id,
-            target_type as ReportTargetType,
-            target_id,
-            reason,
-            description
         )
+        .bind(reporter_id)
+        .bind(target_type.to_string())
+        .bind(&target_id)
+        .bind(&reason)
+        .bind(&description)
         .fetch_one(&self.pool)
         .await?;
 
-        Ok(row)
+        Ok(ReportRow::from_row(&row))
     }
 
     /// 更新举报状态
@@ -125,24 +163,25 @@ impl ReportRepository {
             i64::MAX
         };
 
-        let reports = sqlx::query_as!(
-            ReportRow,
+        let rows = sqlx::query(
             r#"
-            SELECT id, report_id, reporter_id, target_type as "target_type: crate::types::enums::ReportTargetType",
-                   target_id, reason, description, status as "status: crate::types::enums::ReportStatus",
-                   created_at, handled_by, handled_at, handler_note, is_deleted, deleted_at
+            SELECT id, report_id, reporter_id, target_type,
+                   target_id, reason, description, status,
+                   created_at, handled_by, handled_at, handler_note,
+                   is_deleted, deleted_at, target_snapshot
             FROM reports
             WHERE reporter_id = $1 AND id < $2 AND is_deleted = FALSE
             ORDER BY id DESC
             LIMIT $3
             "#,
-            reporter_id,
-            last_id,
-            limit as i64
         )
+        .bind(reporter_id)
+        .bind(last_id)
+        .bind(limit as i64)
         .fetch_all(&self.pool)
         .await?;
 
+        let reports: Vec<ReportRow> = rows.iter().map(ReportRow::from_row).collect();
         let next_cursor = reports.last().map(|r| encode_cursor(&r.id)).transpose()?;
         Ok((reports, next_cursor))
     }
@@ -161,12 +200,12 @@ impl ReportRepository {
             i64::MAX
         };
 
-        let reports = sqlx::query_as!(
-            ReportRow,
+        let rows = sqlx::query(
             r#"
-            SELECT id, report_id, reporter_id, target_type as "target_type: crate::types::enums::ReportTargetType",
-                   target_id, reason, description, status as "status: crate::types::enums::ReportStatus",
-                   created_at, handled_by, handled_at, handler_note, is_deleted, deleted_at
+            SELECT id, report_id, reporter_id, target_type,
+                   target_id, reason, description, status,
+                   created_at, handled_by, handled_at, handler_note,
+                   is_deleted, deleted_at, target_snapshot
             FROM reports
             WHERE ($1::report_status IS NULL OR status = $1)
               AND ($2::report_target_type IS NULL OR target_type = $2)
@@ -175,14 +214,15 @@ impl ReportRepository {
             ORDER BY id DESC
             LIMIT $4
             "#,
-            status as Option<ReportStatus>,
-            target_type as Option<crate::types::enums::ReportTargetType>,
-            last_id,
-            limit as i64
         )
+        .bind(status.map(|s| s.to_string()))
+        .bind(target_type.map(|t| t.to_string()))
+        .bind(last_id)
+        .bind(limit as i64)
         .fetch_all(&self.pool)
         .await?;
 
+        let reports: Vec<ReportRow> = rows.iter().map(ReportRow::from_row).collect();
         let next_cursor = reports.last().map(|r| encode_cursor(&r.id)).transpose()?;
         Ok((reports, next_cursor))
     }

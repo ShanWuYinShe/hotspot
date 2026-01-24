@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::error::{AppError, Result};
+use crate::error::Result;
 
 #[derive(Debug, Clone)]
 pub struct PasswordResetRepository {
@@ -43,7 +43,7 @@ impl PasswordResetRepository {
         )
         .execute(&self.pool)
         .await
-        .map_err(AppError::Database)?;
+        ?;
 
         Ok(reset_id)
     }
@@ -69,7 +69,7 @@ impl PasswordResetRepository {
         )
         .fetch_optional(&self.pool)
         .await
-        .map_err(AppError::Database)?;
+        ?;
 
         Ok(row)
     }
@@ -96,7 +96,7 @@ impl PasswordResetRepository {
         )
         .execute(&self.pool)
         .await
-        .map_err(AppError::Database)?;
+        ?;
 
         Ok(())
     }
@@ -123,7 +123,7 @@ impl PasswordResetRepository {
         )
         .fetch_optional(&self.pool)
         .await
-        .map_err(AppError::Database)?;
+        ?;
 
         Ok(row)
     }
@@ -141,7 +141,7 @@ impl PasswordResetRepository {
         )
         .execute(&self.pool)
         .await
-        .map_err(AppError::Database)?;
+        ?;
 
         Ok(())
     }

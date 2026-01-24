@@ -1,0 +1,130 @@
+---
+alwaysApply: true
+---
+# HotSpot API 规范 - 文件与媒体上传 API 模块 v0.0.1 (RPC)
+
+> 本文档定义 HotSpot 文件与媒体上传 (`media`) 相关的 RPC 接口。
+
+## 服务定义
+
+- **Service Namespace**: `media`
+- **Base Path**: `/api/v1/media/`
+
+## 设计理念
+
+文件上传采用「先上传，后引用」的安全模式。
+
+**核心原则**：
+- **file_id 与 url 完全解耦**：`file_id` 是客户端标识符，`url` 是服务端内部存储路径，两者之间**没有任何可推导的关系**
+- **每次上传生成唯一 file_id**：即使上传相同文件，也会返回不同的 `file_id`
+- **客户端无法判断文件是否已存在**：保护用户隐私
+
+**安全机制**：
+- 上传 API 返回 `file_id`（而非直接 URL），客户端将 `file_id` 传给业务 API
+- 后端验证：①`file_id` 存在 ②属于当前用户 ③分类匹配使用场景
+- URL 由后端内部解析，客户端无法伪造或篡改
+- **不提供 file_id → url 的公开转换 API**
+
+## 核心类型定义
+
+```typescript
+interface PresignedUpload {
+  upload_id: string;
+  upload_url: string;
+  headers: Record<string, string>;
+  expires_at: string;
+}
+
+interface UploadedMedia {
+  file_id: string;
+  thumbnail_url?: string;
+  file_size: number;
+  mime_type: string;
+  duration?: number;
+  width?: number;
+  height?: number;
+}
+```
+
+## 分类限制
+
+| 分类 | 允许的MIME类型 | 最大大小 | 说明 |
+|-----|--------------|--------|------|
+| `avatar` | image/jpeg, image/png, image/webp | 5MB | 用户头像 |
+| `group_avatar` | image/jpeg, image/png, image/webp | 5MB | 群组头像 |
+| `moment_image` | image/jpeg, image/png, image/webp, image/gif | 10MB | 生活瞬间图片 |
+| `chat_image` | image/jpeg, image/png, image/webp, image/gif | 10MB | 聊天图片 |
+| `chat_video` | video/mp4, video/quicktime | 100MB | 聊天视频 |
+| `chat_audio` | audio/mpeg, audio/aac, audio/ogg | 20MB | 聊天语音 |
+| `chat_file` | 任意类型 | 100MB | 聊天文件 |
+
+## 错误码说明
+
+本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
+
+| 错误码 | 说明 | 相关接口 |
+|-------|------|---------|
+| `10002` | 参数格式错误 | `presign_upload`（MIME 类型不匹配） |
+| `10005` | 请求体过大 | `presign_upload`（超出系统配置限制） |
+| `10360` | 上传会话无效或已过期 | `complete_upload` |
+| `10402` | 文件未上传或校验失败 | `complete_upload` |
+
+## 接口列表
+
+## 接口概览（按子域）
+
+| 子域 | 端点 | 说明 | Request | Response |
+|-----|------|------|---------|----------|
+| 上传（Presigned） | `POST /api/v1/media/presign_upload` | 申请上传预签名 | `PresignUploadRequest` | `ApiResponse<PresignedUpload>` |
+| 上传（Presigned） | `POST /api/v1/media/complete_upload` | 完成上传 | `CompleteUploadRequest` | `ApiResponse<UploadedMedia>` |
+
+### 文件与媒体上传 API (Presigned 模式)
+
+采用 "Presigned URL" (预签名) 模式：
+- **高性能**：客户端直传云存储（S3/MinIO），不占用应用服务器带宽
+- **兼容性**：MinIO 完全模拟 S3 API，可无缝切换到公有云 S3
+- **安全性**：上传凭证短期有效，且绑定文件特征
+
+**核心流程**：
+1. `presign_upload`：申请上传，获取 `upload_url`
+2. 客户端 PUT 文件到 `upload_url`
+3. `complete_upload`：通知服务端上传完成，生成业务 `file_id`
+
+#### POST /api/v1/media/presign_upload
+
+申请上传预签名。
+
+**Request**:
+```typescript
+interface PresignUploadRequest {
+  file_name: string;
+  file_size: number;
+  mime_type: string;
+  category: MediaCategory;
+  md5?: string;
+}
+```
+**Response**: `ApiResponse<PresignedUpload>`
+
+**可能错误码**：`10002`、`10005`
+
+#### [客户端操作] 执行上传
+
+- Method: `PUT`
+- URL: `upload_url`
+- Headers: `headers` from response
+- Body: File Binary Data
+
+#### POST /api/v1/media/complete_upload
+
+完成上传。
+
+**Request**:
+```typescript
+interface CompleteUploadRequest {
+  upload_id: string;
+}
+```
+**Response**: `ApiResponse<UploadedMedia>`
+
+**可能错误码**：`10360`、`10402`

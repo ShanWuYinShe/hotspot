@@ -4,7 +4,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::types::enums::MemberRole;
+use crate::types::enums::GroupRole;
 
 use std::fmt;
 
@@ -42,8 +42,8 @@ pub struct CreateHistoryParams {
     pub user_id: i64,
     pub action: MemberAction,
     pub operator_id: Option<i64>,
-    pub old_role: Option<MemberRole>,
-    pub new_role: Option<MemberRole>,
+    pub old_role: Option<GroupRole>,
+    pub new_role: Option<GroupRole>,
     pub reason: Option<String>,
     pub muted_until: Option<DateTime<Utc>>,
 }
@@ -71,7 +71,7 @@ impl GroupMemberHistoryRepository {
             action: MemberAction::Join,
             operator_id,
             old_role: None,
-            new_role: Some(MemberRole::Member),
+            new_role: Some(GroupRole::Member),
             reason: None,
             muted_until: None,
         })
@@ -141,8 +141,8 @@ impl GroupMemberHistoryRepository {
         group_chat_id: Uuid,
         user_id: i64,
         operator_id: i64,
-        old_role: MemberRole,
-        new_role: MemberRole,
+        old_role: GroupRole,
+        new_role: GroupRole,
     ) -> Result<Uuid> {
         self.create(CreateHistoryParams {
             group_chat_id,
