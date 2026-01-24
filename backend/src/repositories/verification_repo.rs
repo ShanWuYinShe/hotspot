@@ -4,6 +4,7 @@ use sqlx::PgPool;
 
 #[derive(Debug, Clone)]
 pub struct VerificationCode {
+    #[allow(dead_code)]
     pub id: i64,
     pub code_id: String,
     pub phone: String,
@@ -12,7 +13,9 @@ pub struct VerificationCode {
     pub expires_at: DateTime<Utc>,
     pub attempts: i32,
     pub max_attempts: i32,
+    #[allow(dead_code)]
     pub verified_at: Option<DateTime<Utc>>,
+    #[allow(dead_code)]
     pub created_at: DateTime<Utc>,
 }
 
@@ -143,28 +146,5 @@ impl VerificationRepository {
         .await?;
 
         Ok(count)
-    }
-
-    /// 根据 code_id 获取验证码（别名 get_by_code_id）
-    pub async fn get_by_code_id(&self, code_id: &str) -> Result<Option<VerificationCode>> {
-        self.find_by_code_id(code_id).await
-    }
-
-    /// 根据 verify_token (code_id) 获取 phone（用于注册/重置密码时验证）
-    pub async fn get_phone_by_verify_token(&self, verify_token: &str) -> Result<Option<String>> {
-        let row = sqlx::query!(
-            r#"
-            SELECT phone
-            FROM verification_codes
-            WHERE code_id = $1 
-              AND verified_at IS NOT NULL
-              AND expires_at > NOW()
-            "#,
-            verify_token
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(row.map(|r| r.phone))
     }
 }

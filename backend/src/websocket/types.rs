@@ -542,10 +542,11 @@ pub struct MomentSummary {
 /// 订阅项定义
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SubscriptionItem {
-    /// 数据源类型：group_chat | user | notification
-    pub source_type: String,
-    /// 数据源标识列表（按 source_type 约束类型）
-    pub source_ids: Vec<SubscriptionSourceId>,
+    /// 数据源类型：group | user
+    #[serde(rename = "type")]
+    pub r#type: String,
+    /// 数据源标识列表（按 type 约束类型）
+    pub ids: Vec<SubscriptionSourceId>,
 }
 
 /// 订阅源ID：user 为 number，其他为 string
@@ -559,7 +560,8 @@ pub enum SubscriptionSourceId {
 /// 失败的订阅项
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct FailedSubscriptionItem {
-    pub source_type: String,
-    pub source_ids: Vec<SubscriptionSourceId>,
+    #[serde(rename = "type")]
+    pub r#type: String,
+    pub ids: Vec<SubscriptionSourceId>,
     pub reason: SubscriptionFailureReason, // 使用 Enum
 }

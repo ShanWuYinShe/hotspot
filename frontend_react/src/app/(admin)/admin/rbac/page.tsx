@@ -9,18 +9,19 @@ import { serverApi, isServerSuccess } from '@/lib/api/server';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import { LoadingState } from '@/components/common/loading-state';
 import { RbacManager } from './rbac-manager';
+import { PageHeader } from '@/components/layout';
 import type { AdminRoleItem, AdminPermissionItem, PaginatedData } from '@/types/api';
 
 async function RbacContent() {
   const [rolesRes, permissionsRes] = await Promise.all([
-    serverApi.get<PaginatedData<AdminRoleItem>>(
+    serverApi.post<PaginatedData<AdminRoleItem>>(
       ENDPOINTS.ADMIN.ROLES,
       { limit: 100 },
       { tags: ['admin-roles'], revalidate: 300 }
     ),
-    serverApi.get<AdminPermissionItem[]>(
+    serverApi.post<AdminPermissionItem[]>(
       ENDPOINTS.ADMIN.PERMISSIONS,
-      undefined,
+      {},
       { tags: ['admin-permissions'], revalidate: 300 }
     ),
   ]);
@@ -36,7 +37,7 @@ export default async function AdminRbacPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">{t('rbac')}</h1>
+      <PageHeader title={t('rbac')} description="配置角色与权限范围" />
       
       <Suspense fallback={<LoadingState text="加载中..." />}>
         <RbacContent />

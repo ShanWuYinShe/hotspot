@@ -12,7 +12,7 @@ use crate::{
         },
         response::{
             ApiResponse, CheckFavoritedData, CheckLikedData, MomentInteractionStateData,
-            MomentItem, MomentLikeItem, PaginatedData,
+            MomentCard, MomentItem, MomentLikeItem, PaginatedData, UserMomentListItem,
         },
     },
     error::Result,
@@ -66,7 +66,7 @@ pub async fn get_my_moments(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<MyMomentsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<MomentItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<UserMomentListItem>>>> {
     let response = state
         .moment_service
         .get_my_moments_list(user.user_id, &req)
@@ -79,7 +79,7 @@ pub async fn open_the_door(
     State(state): State<AppState>,
     user: OptionalAuthenticatedUser,
     Json(req): Json<MomentOpenTheDoorRequest>,
-) -> Result<Json<ApiResponse<MomentItem>>> {
+) -> Result<Json<ApiResponse<MomentCard>>> {
     let response = state
         .moment_service
         .open_the_door(user.user_id, &req)
@@ -223,7 +223,7 @@ pub async fn get_my_favorites(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<MyFavoritesRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<MomentItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<MomentCard>>>> {
     let response = state
         .moment_service
         .get_favorites_list(user.user_id, &req)

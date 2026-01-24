@@ -9,10 +9,11 @@ import { serverApi, isServerSuccess } from '@/lib/api/server';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import { LoadingState } from '@/components/common/loading-state';
 import { ReportTable } from './report-table';
+import { PageHeader } from '@/components/layout';
 import type { ReportItem, PaginatedData } from '@/types/api';
 
 async function ReportsContent() {
-  const response = await serverApi.get<PaginatedData<ReportItem>>(
+  const response = await serverApi.post<PaginatedData<ReportItem>>(
     ENDPOINTS.ADMIN.REPORTS,
     { status: 'pending', limit: 50 },
     { tags: ['admin-reports'], revalidate: 60 }
@@ -28,7 +29,7 @@ export default async function AdminReportsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">{t('reports')}</h1>
+      <PageHeader title={t('reports')} description="集中处理待审核举报" />
       
       <Suspense fallback={<LoadingState text="加载中..." />}>
         <ReportsContent />

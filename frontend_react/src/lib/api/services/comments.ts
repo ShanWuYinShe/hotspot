@@ -2,7 +2,7 @@
  * 评论服务
  */
 
-import { get, post, del, generateIdempotencyKey } from '../client';
+import { post, generateIdempotencyKey } from '../client';
 import { ENDPOINTS } from '../endpoints';
 import type {
   ApiResponse,
@@ -20,9 +20,11 @@ export const commentsService = {
     momentId: string,
     params?: { limit?: number; cursor?: string }
   ): Promise<ApiResponse<PaginatedData<CommentListItem>>> {
-    return get<PaginatedData<CommentListItem>>(ENDPOINTS.MOMENTS.COMMENTS(momentId), params, {
-      requireAuth: false,
-    });
+    return post<PaginatedData<CommentListItem>>(
+      ENDPOINTS.MOMENTS.COMMENTS(momentId),
+      { moment_id: momentId, ...(params ?? {}) },
+      { requireAuth: false }
+    );
   },
 
   /**
@@ -38,7 +40,7 @@ export const commentsService = {
    * 删除评论
    */
   async delete(commentId: string): Promise<ApiResponse<void>> {
-    return del<void>(ENDPOINTS.COMMENTS.DELETE(commentId));
+    return post<void>(ENDPOINTS.COMMENTS.DELETE(commentId), { comment_id: commentId });
   },
 
   /**
@@ -48,16 +50,18 @@ export const commentsService = {
     commentId: string,
     params?: { limit?: number; cursor?: string }
   ): Promise<ApiResponse<PaginatedData<CommentListItem>>> {
-    return get<PaginatedData<CommentListItem>>(ENDPOINTS.COMMENTS.REPLIES(commentId), params, {
-      requireAuth: false,
-    });
+    return post<PaginatedData<CommentListItem>>(
+      ENDPOINTS.COMMENTS.REPLIES(commentId),
+      { comment_id: commentId, ...(params ?? {}) },
+      { requireAuth: false }
+    );
   },
 
   /**
    * 点赞评论
    */
   async like(commentId: string): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.COMMENTS.LIKE(commentId), undefined, {
+    return post<void>(ENDPOINTS.COMMENTS.LIKE(commentId), { comment_id: commentId }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
@@ -66,7 +70,7 @@ export const commentsService = {
    * 取消点赞评论
    */
   async unlike(commentId: string): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.COMMENTS.UNLIKE(commentId), undefined, {
+    return post<void>(ENDPOINTS.COMMENTS.UNLIKE(commentId), { comment_id: commentId }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
@@ -78,8 +82,10 @@ export const commentsService = {
     commentId: string,
     params?: { limit?: number; cursor?: string }
   ): Promise<ApiResponse<PaginatedData<CommentLikeItem>>> {
-    return get<PaginatedData<CommentLikeItem>>(ENDPOINTS.COMMENTS.LIKES(commentId), params, {
-      requireAuth: false,
-    });
+    return post<PaginatedData<CommentLikeItem>>(
+      ENDPOINTS.COMMENTS.LIKES(commentId),
+      { comment_id: commentId, ...(params ?? {}) },
+      { requireAuth: false }
+    );
   },
 };

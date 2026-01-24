@@ -5,12 +5,13 @@
 
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
-import { serverApi, isServerSuccess } from '@/lib/api/server';
+import { serverApi, isServerSuccess, isNotFoundError, getServerErrorMessage } from '@/lib/api/server';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import { LoadingState } from '@/components/common/loading-state';
 import { GroupHeader } from './group-header';
 import { GroupMembers } from './group-members';
 import { GroupAnnouncements } from './group-announcements';
+import { ServerErrorCard } from '@/components/common/server-error-card';
 import type { GroupDetailData, GroupMemberItem, GroupAnnouncementItem, PaginatedData } from '@/types/api';
 
 interface GroupPageProps {
@@ -21,23 +22,34 @@ async function GroupContent({ groupId }: { groupId: string }) {
   const [groupRes, membersRes, announcementsRes] = await Promise.all([
     serverApi.post<GroupDetailData>(
       ENDPOINTS.GROUP_CHATS.DETAIL(groupId),
-      undefined,
+      { group_chat_id: groupId },
       { tags: [`group-${groupId}`], revalidate: 60 }
     ),
-    serverApi.get<PaginatedData<GroupMemberItem>>(
+    serverApi.post<PaginatedData<GroupMemberItem>>(
       ENDPOINTS.GROUP_CHATS.MEMBERS(groupId),
-      { limit: 20 },
+      { group_chat_id: groupId, limit: 20 },
       { tags: [`group-${groupId}-members`], revalidate: 60 }
     ),
-    serverApi.get<PaginatedData<GroupAnnouncementItem>>(
+    serverApi.post<PaginatedData<GroupAnnouncementItem>>(
       ENDPOINTS.GROUP_CHATS.ANNOUNCEMENTS(groupId),
-      { limit: 10 },
+      { group_chat_id: groupId, limit: 10 },
       { tags: [`group-${groupId}-announcements`], revalidate: 60 }
     ),
   ]);
 
   if (!isServerSuccess(groupRes)) {
-    notFound();
+    if (isNotFoundError(groupRes)) {
+      notFound();
+    }
+    return (
+      <div className="max-w-4xl mx-auto">
+        <ServerErrorCard
+          title="加载群组失败"
+          description={getServerErrorMessage(groupRes)}
+          requestId={groupRes.request_id}
+        />
+      </div>
+    );
   }
 
   const group = groupRes.data;

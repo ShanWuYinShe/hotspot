@@ -330,8 +330,8 @@ export interface MomentLikeItem {
 // ============================================================================
 
 export interface CommentListItem {
-  user_id: number;
   comment_id: string;
+  user: UserInfo;
   content: string;
   parent_id?: string;
   mentions?: number[];

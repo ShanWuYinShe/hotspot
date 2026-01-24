@@ -1,8 +1,10 @@
 use redis::aio::ConnectionManager as RedisConnectionManager;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::{
+    constants::{DEFAULT_LATITUDE, DEFAULT_LONGITUDE},
     dto::{
         request::{
             CheckFavoritedRequest, CheckLikedRequest, CreateMomentRequest, DeleteMomentRequest,
@@ -13,8 +15,8 @@ use crate::{
             UpdateMomentRequest, UserMomentsRequest,
         },
         response::{
-            MomentInteractionStateData, MomentItem, MomentLikeItem, PaginatedData, PaginationMeta,
-            RelativeLocation, UserInfo,
+            MomentCard, MomentInteractionStateData, MomentItem, MomentLikeItem, MyMomentState,
+            Location, PaginatedData, PaginationMeta, RelativeLocation, UserInfo, UserMomentListItem,
         },
     },
     error::{AppError, Result},
@@ -43,6 +45,26 @@ pub struct MomentService {
     user_settings_repo: UserSettingsRepository,
     media_service: MediaService,
     cache_manager: CacheManager,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct MomentDetailCache {
+    moment_id: String,
+    user_id: i64,
+    nickname: String,
+    avatar_url: Option<String>,
+    user_type: crate::types::enums::UserType,
+    description: String,
+    images: Vec<String>,
+    tags: Vec<String>,
+    mentions: Option<Vec<i64>>,
+    created_at: String,
+    likes_count: i32,
+    comments_count: i32,
+    latitude: f64,
+    longitude: f64,
+    location_name: String,
+    privacy_level: String,
 }
 
 impl MomentService {
@@ -279,8 +301,10 @@ impl MomentService {
         let moment_id = Uuid::parse_str(&req.moment_id)
             .map_err(|_| AppError::BadRequest("无效的瞬间ID".to_string()))?;
 
-        if !self.moment_repo.exists(moment_id).await? {
-            return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
+        match self.moment_repo.get_delete_status(moment_id).await? {
+            None => return Err(AppError::MomentNotFound("瞬间不存在".to_string())),
+            Some(true) => return Err(AppError::AlreadyDeleted("瞬间已删除".to_string())),
+            Some(false) => {}
         }
 
         // 验证所有权
@@ -500,89 +524,115 @@ impl MomentService {
         &self,
         viewer_id: Option<i64>,
         req: &MomentOpenTheDoorRequest,
-    ) -> Result<MomentItem> {
+    ) -> Result<MomentCard> {
         let moment_id = Uuid::parse_str(&req.moment_id)
             .map_err(|_| AppError::BadRequest("无效的瞬间ID".to_string()))?;
 
-        Validator::validate_coordinates(
-            req.reference_point.latitude,
-            req.reference_point.longitude,
-        )?;
-
-        // 使用 find_by_ids_with_distance 获取带距离的详情（包含用户信息和统计数据）
-        // 这样可以避免多次查询，且复用 PostGIS 距离计算
-        let moments = self
-            .moment_repo
-            .find_by_ids_with_distance(
-                &[moment_id],
-                req.reference_point.latitude,
-                req.reference_point.longitude,
-                viewer_id,
-            )
-            .await?;
-
-        let moment_data = moments
-            .first()
-            .ok_or_else(|| AppError::MomentNotFound("瞬间不存在".to_string()))?;
-
-        // 获取标签（find_by_ids_with_distance 目前不包含标签，因为是一对多关系）
-        let tags = self.tag_repo.get_moment_tags(moment_id).await?;
-
-        use crate::dto::response::MomentImage;
-        let images = if moment_data.images.is_empty() {
-            None
+        let moment_data = self.get_moment_detail_cached(moment_id, viewer_id).await?;
+        let images = self.sign_moment_images(&moment_data.images).await;
+        let my_state = if let Some(uid) = viewer_id {
+            let (is_liked, is_favorited) = tokio::try_join!(
+                self.moment_repo.is_liked_by(moment_id, uid),
+                self.moment_repo.is_favorited_by(moment_id, uid)
+            )?;
+            Some(MyMomentState {
+                is_liked,
+                is_favorited,
+            })
         } else {
-            let mut signed_images = Vec::with_capacity(moment_data.images.len());
-            for path in &moment_data.images {
-                let url = match self.media_service.sign_url(path).await {
-                    Ok(u) => u,
-                    Err(e) => {
-                        tracing::warn!("Failed to sign url for path {}: {}", path, e);
-                        path.clone()
-                    }
-                };
-                signed_images.push(MomentImage {
-                    url,
-                    width: None,
-                    height: None,
-                    content_type: None,
-                });
-            }
-            Some(signed_images)
+            None
         };
 
-        Ok(MomentItem {
-            moment_id: moment_data.moment_id.to_string(),
+        Ok(MomentCard {
+            moment_id: moment_data.moment_id,
             user: UserInfo {
                 user_id: moment_data.user_id,
                 nickname: moment_data.nickname.clone(),
-                avatar_url: moment_data.avatar_url.clone(),
+                avatar_url: self
+                    .media_service
+                    .sign_url_if_path(moment_data.avatar_url.as_deref())
+                    .await,
                 user_type: moment_data.user_type,
             },
             description: moment_data.description.clone(),
             images,
+            tags: moment_data.tags.clone(),
+            mentions: moment_data.mentions.clone(),
+            created_at: moment_data.created_at.clone(),
+            likes_count: moment_data.likes_count,
+            comments_count: moment_data.comments_count,
+            location: Location {
+                latitude: moment_data.latitude,
+                longitude: moment_data.longitude,
+                location_name: moment_data.location_name.clone(),
+            },
+            my_state,
+        })
+    }
+
+    async fn get_moment_detail_cached(
+        &self,
+        moment_id: Uuid,
+        viewer_id: Option<i64>,
+    ) -> Result<MomentDetailCache> {
+        let cache_key = moment_id.to_string();
+        if let Ok(Some(Some(cached))) = self
+            .cache_manager
+            .get::<MomentDetailCache>(cache_keys::MOMENT_DETAIL, &cache_key)
+            .await
+        {
+            return Ok(cached);
+        }
+
+        let moments = self
+            .moment_repo
+            .find_by_ids_with_distance(
+                &[moment_id],
+                DEFAULT_LATITUDE,
+                DEFAULT_LONGITUDE,
+                viewer_id,
+            )
+            .await?;
+        let moment_data = moments
+            .first()
+            .ok_or_else(|| AppError::MomentNotFound("瞬间不存在".to_string()))?;
+
+        let tags = self.tag_repo.get_moment_tags(moment_id).await?;
+
+        let detail = MomentDetailCache {
+            moment_id: moment_data.moment_id.to_string(),
+            user_id: moment_data.user_id,
+            nickname: moment_data.nickname.clone(),
+            avatar_url: moment_data.avatar_url.clone(),
+            user_type: moment_data.user_type,
+            description: moment_data.description.clone(),
+            images: moment_data.images.clone(),
             tags,
             mentions: moment_data.mentions.clone(),
             created_at: moment_data.created_at.to_rfc3339(),
             likes_count: moment_data.likes_count as i32,
             comments_count: moment_data.comments_count as i32,
-            is_liked: None,
-            is_favorited: None,
-            location: RelativeLocation {
-                latitude: moment_data.latitude,
-                longitude: moment_data.longitude,
-                location_name: moment_data.location_name.clone(),
-                distance: moment_data.distance,
-                bearing_degrees: moment_data.bearing_degrees,
-            },
-        })
+            latitude: moment_data.latitude,
+            longitude: moment_data.longitude,
+            location_name: moment_data.location_name.clone(),
+            privacy_level: moment_data.privacy_level.clone(),
+        };
+
+        if detail.privacy_level == "public" {
+            let _ = self
+                .cache_manager
+                .set_with_ttl(cache_keys::MOMENT_DETAIL, &cache_key, &detail, 30)
+                .await;
+        }
+
+        Ok(detail)
     }
 
     /// 获取指定用户生活瞬间历史（公开 API，受 moments_visible 隐私设置控制）
     pub async fn get_user_moments_list(
         &self,
         req: &UserMomentsRequest,
-    ) -> Result<PaginatedData<MomentItem>> {
+    ) -> Result<PaginatedData<UserMomentListItem>> {
         let target_user_id = req.user_id;
 
         // 检查 moments_visible 隐私设置
@@ -602,14 +652,16 @@ impl MomentService {
             return Err(AppError::Forbidden("权限不足".to_string()));
         }
 
-        self.get_moments_by_user(
-            target_user_id,
-            req.reference_point.latitude,
-            req.reference_point.longitude,
-            req.limit,
-            req.cursor.as_deref(),
-        )
-        .await
+        let limit = Validator::validate_limit(req.limit, 100)? as i32;
+        let cursor_string = req.cursor.clone();
+
+        let (moments, next_cursor) = self
+            .moment_repo
+            .list_public_by_user(target_user_id, limit, cursor_string)
+            .await?;
+
+        self.build_user_moment_list_from_rows(moments, next_cursor)
+            .await
     }
 
     /// 获取当前用户生活瞬间历史（/me/ API）
@@ -617,35 +669,16 @@ impl MomentService {
         &self,
         user_id: i64,
         req: &MyMomentsRequest,
-    ) -> Result<PaginatedData<MomentItem>> {
-        self.get_moments_by_user(
-            user_id,
-            req.reference_point.latitude,
-            req.reference_point.longitude,
-            req.limit,
-            req.cursor.as_deref(),
-        )
-        .await
-    }
+    ) -> Result<PaginatedData<UserMomentListItem>> {
+        let limit = Validator::validate_limit(req.limit, 100)? as i32;
+        let cursor_string = req.cursor.clone();
 
-    async fn get_moments_by_user(
-        &self,
-        user_id: i64,
-        _latitude: f64,
-        _longitude: f64,
-        limit: Option<i32>,
-        cursor: Option<&str>,
-    ) -> Result<PaginatedData<MomentItem>> {
-        let limit = Validator::validate_limit(limit, 100)? as i32;
-        let cursor_string = cursor.map(|s| s.to_string());
-
-        // list_by_user now returns MomentSearchRow
         let (moments, next_cursor) = self
             .moment_repo
             .list_by_user(user_id, limit, cursor_string)
             .await?;
 
-        self.build_search_results_from_rows(moments, next_cursor)
+        self.build_user_moment_list_from_rows(moments, next_cursor)
             .await
     }
 
@@ -811,26 +844,83 @@ impl MomentService {
         &self,
         user_id: i64,
         req: &MyFavoritesRequest,
-    ) -> Result<PaginatedData<MomentItem>> {
+    ) -> Result<PaginatedData<MomentCard>> {
         let limit = Validator::validate_limit(req.limit, 100)? as i32;
         let cursor = req.cursor.clone();
+
+        let user = self
+            .user_repo
+            .find_by_id(user_id)
+            .await?
+            .ok_or_else(|| AppError::UserNotFound("用户不存在".to_string()))?;
+        let latitude = user.current_latitude.unwrap_or(DEFAULT_LATITUDE);
+        let longitude = user.current_longitude.unwrap_or(DEFAULT_LONGITUDE);
 
         // list_favorites returns (MomentSearchRow, favorited_at)
         let (results, next_cursor) = self
             .moment_repo
             .list_favorites(
                 user_id,
-                req.reference_point.latitude,
-                req.reference_point.longitude,
+                latitude,
+                longitude,
                 limit,
                 cursor,
             )
             .await?;
 
         let search_rows: Vec<MomentSearchRow> = results.into_iter().map(|(m, _)| m).collect();
+        let moment_ids: Vec<Uuid> = search_rows.iter().map(|m| m.moment_id).collect();
+        let liked_ids = self
+            .moment_repo
+            .list_liked_ids_by_user(user_id, &moment_ids)
+            .await?;
+        let liked_set: std::collections::HashSet<Uuid> = liked_ids.into_iter().collect();
 
-        self.build_search_results_from_rows(search_rows, next_cursor)
-            .await
+        let tags_map = self.tag_repo.get_moment_tags_batch(&moment_ids).await?;
+
+        let mut items = Vec::with_capacity(search_rows.len());
+        for m in search_rows {
+            let tags = tags_map.get(&m.moment_id).cloned().unwrap_or_default();
+            let images = self.sign_moment_images(&m.images).await;
+            let my_state = Some(MyMomentState {
+                is_liked: liked_set.contains(&m.moment_id),
+                is_favorited: true,
+            });
+
+            items.push(MomentCard {
+                moment_id: m.moment_id.to_string(),
+                user: UserInfo {
+                    user_id: m.user_id,
+                    nickname: m.nickname,
+                    avatar_url: self
+                        .media_service
+                        .sign_url_if_path(m.avatar_url.as_deref())
+                        .await,
+                    user_type: m.user_type,
+                },
+                description: m.description,
+                images,
+                tags,
+                mentions: m.mentions.clone(),
+                created_at: m.created_at.to_rfc3339(),
+                likes_count: m.likes_count as i32,
+                comments_count: m.comments_count as i32,
+                location: Location {
+                    latitude: m.latitude,
+                    longitude: m.longitude,
+                    location_name: m.location_name,
+                },
+                my_state,
+            });
+        }
+
+        Ok(PaginatedData {
+            items,
+            pagination: PaginationMeta {
+                has_more: next_cursor.is_some(),
+                next_cursor,
+            },
+        })
     }
 
     /// 获取瞬间点赞列表
@@ -891,44 +981,23 @@ impl MomentService {
         let moment_ids: Vec<_> = moments.iter().map(|m| m.moment_id).collect();
         let tags_map = self.tag_repo.get_moment_tags_batch(&moment_ids).await?;
 
-        // Helper: 异步转换 MomentSearchRow -> MomentItem (with fresh URLs)
-        use crate::dto::response::MomentImage;
-
         let mut items = Vec::with_capacity(moments.len());
 
         for m in moments {
             let tags = tags_map.get(&m.moment_id).cloned().unwrap_or_default();
             let _ = m.privacy_level.as_str();
 
-            // 动态签名 image paths -> fresh URLs
-            let images = if m.images.is_empty() {
-                None
-            } else {
-                let mut signed_images = Vec::with_capacity(m.images.len());
-                for path in &m.images {
-                    let url = match self.media_service.sign_url(path).await {
-                        Ok(u) => u,
-                        Err(e) => {
-                            tracing::warn!("Failed to sign url for path {}: {}", path, e);
-                            path.clone() // Fallback to path if signing fails (or should we skip?)
-                        }
-                    };
-                    signed_images.push(MomentImage {
-                        url,
-                        width: None,
-                        height: None,
-                        content_type: None,
-                    });
-                }
-                Some(signed_images)
-            };
+            let images = self.sign_moment_images(&m.images).await;
 
             items.push(MomentItem {
                 moment_id: m.moment_id.to_string(),
                 user: UserInfo {
                     user_id: m.user_id,
                     nickname: m.nickname,
-                    avatar_url: m.avatar_url,
+                    avatar_url: self
+                        .media_service
+                        .sign_url_if_path(m.avatar_url.as_deref())
+                        .await,
                     user_type: m.user_type,
                 },
                 description: m.description,
@@ -959,6 +1028,68 @@ impl MomentService {
         })
     }
 
+    async fn build_user_moment_list_from_rows(
+        &self,
+        moments: Vec<MomentSearchRow>,
+        next_cursor: Option<String>,
+    ) -> Result<PaginatedData<UserMomentListItem>> {
+        let moment_ids: Vec<_> = moments.iter().map(|m| m.moment_id).collect();
+        let tags_map = self.tag_repo.get_moment_tags_batch(&moment_ids).await?;
+
+        let mut items = Vec::with_capacity(moments.len());
+        for m in moments {
+            let tags = tags_map.get(&m.moment_id).cloned().unwrap_or_default();
+            let images = self.sign_moment_images(&m.images).await;
+
+            items.push(UserMomentListItem {
+                moment_id: m.moment_id.to_string(),
+                description: m.description,
+                images,
+                tags,
+                mentions: m.mentions.clone(),
+                created_at: m.created_at.to_rfc3339(),
+                likes_count: m.likes_count as i32,
+                comments_count: m.comments_count as i32,
+                location: Location {
+                    latitude: m.latitude,
+                    longitude: m.longitude,
+                    location_name: m.location_name,
+                },
+            });
+        }
+
+        Ok(PaginatedData {
+            items,
+            pagination: PaginationMeta {
+                has_more: next_cursor.is_some(),
+                next_cursor,
+            },
+        })
+    }
+
+    async fn sign_moment_images(&self, images: &[String]) -> Option<Vec<crate::dto::response::MomentImage>> {
+        if images.is_empty() {
+            return None;
+        }
+        let mut signed_images = Vec::with_capacity(images.len());
+        for path in images {
+            let url = match self.media_service.sign_url(path).await {
+                Ok(u) => u,
+                Err(e) => {
+                    tracing::warn!("Failed to sign url for path {}: {}", path, e);
+                    path.clone()
+                }
+            };
+            signed_images.push(crate::dto::response::MomentImage {
+                url,
+                width: None,
+                height: None,
+                content_type: None,
+            });
+        }
+        Some(signed_images)
+    }
+
     async fn get_moment_owner_cached(&self, moment_id: Uuid) -> Result<Option<i64>> {
         let key = moment_id.to_string();
         let cached = self
@@ -978,7 +1109,7 @@ impl MomentService {
                 },
             )
             .await
-            .map_err(|e| AppError::InternalError(e.to_string()))?;
+            .map_err(|e| AppError::CacheError(e.to_string()))?;
 
         Ok(cached)
     }

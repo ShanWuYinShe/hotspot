@@ -34,11 +34,11 @@ where
     // 1. Base64 解码
     let encrypted_bytes = general_purpose::URL_SAFE_NO_PAD
         .decode(cursor)
-        .map_err(|_| AppError::InvalidFormat("无效的游标格式".to_string()))?;
+        .map_err(|_| AppError::CursorFormatError("无效的游标格式".to_string()))?;
 
     // 2. 提取 Nonce (前12字节) 和 密文
     if encrypted_bytes.len() < 12 {
-        return Err(AppError::InvalidFormat("无效的游标数据".to_string()));
+        return Err(AppError::CursorFormatError("无效的游标数据".to_string()));
     }
     let (nonce_bytes, ciphertext) = encrypted_bytes.split_at(12);
     let nonce = Nonce::from_slice(nonce_bytes);

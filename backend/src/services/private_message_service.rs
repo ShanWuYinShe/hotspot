@@ -612,7 +612,7 @@ impl PrivateMessageService {
 
         // 验证消息未被撤回
         if message.is_recalled {
-            return Err(AppError::BadRequest("已撤回的消息无法编辑".to_string()));
+            return Err(AppError::MessageAlreadyRecalled);
         }
 
         // 获取对方ID
@@ -652,13 +652,15 @@ impl PrivateMessageService {
             return Err(AppError::Forbidden("只能撤回自己发送的消息".to_string()));
         }
 
+        // 验证消息未被撤回
+        if message.is_recalled {
+            return Err(AppError::MessageAlreadyRecalled);
+        }
+
         // 验证撤回时间窗口
         let now = Utc::now();
         if now - message.sent_at > Duration::minutes(MESSAGE_RECALL_MINUTES) {
-            return Err(AppError::BadRequest(format!(
-                "消息发送超过{}分钟，无法撤回",
-                MESSAGE_RECALL_MINUTES
-            )));
+            return Err(AppError::OperationWindowExpired);
         }
 
         // 获取对方ID

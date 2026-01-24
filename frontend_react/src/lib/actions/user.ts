@@ -13,10 +13,10 @@ import { ENDPOINTS } from '@/lib/api/endpoints';
  * 关注用户
  */
 export async function followUser(userId: number) {
-  const response = await serverApi.post(ENDPOINTS.USER.FOLLOW(userId));
+  const response = await serverApi.post(ENDPOINTS.USER.FOLLOW(userId), { user_id: userId }, {});
   if (isServerSuccess(response)) {
-    revalidateTag(`user-${userId}`);
-    revalidateTag('following');
+    revalidateTag(`user-${userId}`, {});
+    revalidateTag('following', {});
   }
   return response;
 }
@@ -25,10 +25,10 @@ export async function followUser(userId: number) {
  * 取消关注用户
  */
 export async function unfollowUser(userId: number) {
-  const response = await serverApi.post(ENDPOINTS.USER.UNFOLLOW(userId));
+  const response = await serverApi.post(ENDPOINTS.USER.UNFOLLOW(userId), { user_id: userId }, {});
   if (isServerSuccess(response)) {
-    revalidateTag(`user-${userId}`);
-    revalidateTag('following');
+    revalidateTag(`user-${userId}`, {});
+    revalidateTag('following', {});
   }
   return response;
 }
@@ -42,10 +42,10 @@ export async function updateProfile(data: {
   bio?: string;
   gender?: 'male' | 'female' | 'other';
 }) {
-  const response = await serverApi.put(ENDPOINTS.USER.ME_PROFILE, data);
+  const response = await serverApi.post(ENDPOINTS.USER.ME_PROFILE, data, {});
   if (isServerSuccess(response)) {
-    revalidateTag('profile');
-    revalidateTag('me');
+    revalidateTag('profile', {});
+    revalidateTag('me', {});
   }
   return response;
 }
@@ -70,9 +70,9 @@ export async function updateSettings(data: {
   nickname_searchable?: boolean;
   location_searchable?: boolean;
 }) {
-  const response = await serverApi.put(ENDPOINTS.USER.ME_SETTINGS, data);
+  const response = await serverApi.post(ENDPOINTS.USER.ME_SETTINGS, data, {});
   if (isServerSuccess(response)) {
-    revalidateTag('settings');
+    revalidateTag('settings', {});
   }
   return response;
 }

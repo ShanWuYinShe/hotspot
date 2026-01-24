@@ -27,10 +27,10 @@ export async function createComment(
     parent_id: data.parent_id,
     mentions: data.reply_to_user_id ? [data.reply_to_user_id] : undefined,
   };
-  const response = await serverApi.post(ENDPOINTS.COMMENTS.CREATE, payload);
+  const response = await serverApi.post(ENDPOINTS.COMMENTS.CREATE, payload, {});
   if (isServerSuccess(response)) {
-    revalidateTag(`moment-${momentId}`);
-    revalidateTag(`comments-${momentId}`);
+    revalidateTag(`moment-${momentId}`, {});
+    revalidateTag(`comments-${momentId}`, {});
   }
   return response;
 }
@@ -39,10 +39,10 @@ export async function createComment(
  * 删除评论
  */
 export async function deleteComment(momentId: string, commentId: string) {
-  const response = await serverApi.delete(ENDPOINTS.COMMENTS.DELETE(commentId));
+  const response = await serverApi.post(ENDPOINTS.COMMENTS.DELETE(commentId), { comment_id: commentId }, {});
   if (isServerSuccess(response)) {
-    revalidateTag(`moment-${momentId}`);
-    revalidateTag(`comments-${momentId}`);
+    revalidateTag(`moment-${momentId}`, {});
+    revalidateTag(`comments-${momentId}`, {});
   }
   return response;
 }
@@ -51,20 +51,17 @@ export async function deleteComment(momentId: string, commentId: string) {
  * 点赞评论
  */
 export async function likeComment(commentId: string) {
-  const response = await serverApi.post(ENDPOINTS.COMMENTS.LIKE(commentId));
+  const response = await serverApi.post(ENDPOINTS.COMMENTS.LIKE(commentId), { comment_id: commentId }, {});
   if (isServerSuccess(response)) {
-    revalidateTag(`comment-${commentId}`);
+    revalidateTag(`comment-${commentId}`, {});
   }
   return response;
 }
 
-/**
- * 取消点赞评论
- */
 export async function unlikeComment(commentId: string) {
-  const response = await serverApi.post(ENDPOINTS.COMMENTS.UNLIKE(commentId));
+  const response = await serverApi.post(ENDPOINTS.COMMENTS.UNLIKE(commentId), { comment_id: commentId }, {});
   if (isServerSuccess(response)) {
-    revalidateTag(`comment-${commentId}`);
+    revalidateTag(`comment-${commentId}`, {});
   }
   return response;
 }

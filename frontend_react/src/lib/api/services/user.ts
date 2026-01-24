@@ -2,7 +2,7 @@
  * 用户服务
  */
 
-import { get, post, put, del, generateIdempotencyKey } from '../client';
+import { post, generateIdempotencyKey } from '../client';
 import { ENDPOINTS } from '../endpoints';
 import type {
   ApiResponse,
@@ -86,7 +86,10 @@ export const userService = {
   async getDetail(userId: number, referencePoint?: GeoPoint): Promise<ApiResponse<UserDetailData>> {
     return post<UserDetailData>(
       ENDPOINTS.USER.DETAIL(userId),
-      referencePoint ? { reference_point: referencePoint } : undefined,
+      {
+        user_id: userId,
+        ...(referencePoint ? { reference_point: referencePoint } : {}),
+      },
       { requireAuth: false }
     );
   },
@@ -95,9 +98,7 @@ export const userService = {
    * 获取用户统计
    */
   async getStats(userId: number): Promise<ApiResponse<UserStatsData>> {
-    return get<UserStatsData>(ENDPOINTS.USER.STATS(userId), undefined, {
-      requireAuth: false,
-    });
+    return post<UserStatsData>(ENDPOINTS.USER.STATS(userId), { user_id: userId }, { requireAuth: false });
   },
 
   /**
@@ -107,9 +108,11 @@ export const userService = {
     userId: number,
     params?: { limit?: number; cursor?: string }
   ): Promise<ApiResponse<PaginatedData<FriendListItem>>> {
-    return get<PaginatedData<FriendListItem>>(ENDPOINTS.USER.FRIENDS(userId), params, {
-      requireAuth: false,
-    });
+    return post<PaginatedData<FriendListItem>>(
+      ENDPOINTS.USER.FRIENDS(userId),
+      { user_id: userId, ...(params ?? {}) },
+      { requireAuth: false }
+    );
   },
 
   /**
@@ -119,9 +122,11 @@ export const userService = {
     userId: number,
     params?: { limit?: number; cursor?: string }
   ): Promise<ApiResponse<PaginatedData<FollowingItem>>> {
-    return get<PaginatedData<FollowingItem>>(ENDPOINTS.USER.FOLLOWING(userId), params, {
-      requireAuth: false,
-    });
+    return post<PaginatedData<FollowingItem>>(
+      ENDPOINTS.USER.FOLLOWING(userId),
+      { user_id: userId, ...(params ?? {}) },
+      { requireAuth: false }
+    );
   },
 
   /**
@@ -131,9 +136,11 @@ export const userService = {
     userId: number,
     params?: { limit?: number; cursor?: string }
   ): Promise<ApiResponse<PaginatedData<FollowerItem>>> {
-    return get<PaginatedData<FollowerItem>>(ENDPOINTS.USER.FOLLOWERS(userId), params, {
-      requireAuth: false,
-    });
+    return post<PaginatedData<FollowerItem>>(
+      ENDPOINTS.USER.FOLLOWERS(userId),
+      { user_id: userId, ...(params ?? {}) },
+      { requireAuth: false }
+    );
   },
 
   // ============================================================================
@@ -144,14 +151,14 @@ export const userService = {
    * 获取当前用户资料
    */
   async getMyProfile(): Promise<ApiResponse<MyProfileData>> {
-    return get<MyProfileData>(ENDPOINTS.USER.ME_PROFILE);
+    return post<MyProfileData>(ENDPOINTS.USER.ME_PROFILE, {});
   },
 
   /**
    * 更新当前用户资料
    */
   async updateProfile(data: UpdateProfileRequest): Promise<ApiResponse<void>> {
-    return put<void>(ENDPOINTS.USER.ME_PROFILE, data, {
+    return post<void>(ENDPOINTS.USER.ME_PROFILE, data, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
@@ -160,7 +167,7 @@ export const userService = {
    * 更新当前用户位置
    */
   async updateLocation(location: Location): Promise<ApiResponse<void>> {
-    return put<void>(ENDPOINTS.USER.ME_LOCATION, { location }, {
+    return post<void>(ENDPOINTS.USER.ME_LOCATION, { location }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
@@ -169,14 +176,14 @@ export const userService = {
    * 获取当前用户设置
    */
   async getMySettings(): Promise<ApiResponse<UserSettingsData>> {
-    return get<UserSettingsData>(ENDPOINTS.USER.ME_SETTINGS);
+    return post<UserSettingsData>(ENDPOINTS.USER.ME_SETTINGS, {});
   },
 
   /**
    * 更新当前用户设置
    */
   async updateSettings(data: UpdateSettingsRequest): Promise<ApiResponse<void>> {
-    return put<void>(ENDPOINTS.USER.ME_SETTINGS, data, {
+    return post<void>(ENDPOINTS.USER.ME_SETTINGS, data, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
@@ -185,28 +192,28 @@ export const userService = {
    * 获取我的好友列表
    */
   async getMyFriends(params?: { limit?: number; cursor?: string }): Promise<ApiResponse<PaginatedData<FriendListItem>>> {
-    return get<PaginatedData<FriendListItem>>(ENDPOINTS.USER.ME_FRIENDS, params);
+    return post<PaginatedData<FriendListItem>>(ENDPOINTS.USER.ME_FRIENDS, params ?? {});
   },
 
   /**
    * 获取我的关注列表
    */
   async getMyFollowing(params?: { limit?: number; cursor?: string }): Promise<ApiResponse<PaginatedData<FollowingItem>>> {
-    return get<PaginatedData<FollowingItem>>(ENDPOINTS.USER.ME_FOLLOWING, params);
+    return post<PaginatedData<FollowingItem>>(ENDPOINTS.USER.ME_FOLLOWING, params ?? {});
   },
 
   /**
    * 获取我的粉丝列表
    */
   async getMyFollowers(params?: { limit?: number; cursor?: string }): Promise<ApiResponse<PaginatedData<FollowerItem>>> {
-    return get<PaginatedData<FollowerItem>>(ENDPOINTS.USER.ME_FOLLOWERS, params);
+    return post<PaginatedData<FollowerItem>>(ENDPOINTS.USER.ME_FOLLOWERS, params ?? {});
   },
 
   /**
    * 获取我的黑名单
    */
   async getMyBlocked(params?: { limit?: number; cursor?: string }): Promise<ApiResponse<PaginatedData<BlockedUserItem>>> {
-    return get<PaginatedData<BlockedUserItem>>(ENDPOINTS.USER.ME_BLOCKED, params);
+    return post<PaginatedData<BlockedUserItem>>(ENDPOINTS.USER.ME_BLOCKED, params ?? {});
   },
 
   // ============================================================================
@@ -217,7 +224,7 @@ export const userService = {
    * 关注用户
    */
   async follow(userId: number): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.USER.FOLLOW(userId), undefined, {
+    return post<void>(ENDPOINTS.USER.FOLLOW(userId), { user_id: userId }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
@@ -226,7 +233,7 @@ export const userService = {
    * 取消关注
    */
   async unfollow(userId: number): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.USER.UNFOLLOW(userId), undefined, {
+    return post<void>(ENDPOINTS.USER.UNFOLLOW(userId), { user_id: userId }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
@@ -235,7 +242,7 @@ export const userService = {
    * 拉黑用户
    */
   async block(userId: number, reason?: string): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.USER.BLOCK(userId), { reason }, {
+    return post<void>(ENDPOINTS.USER.BLOCK(userId), { user_id: userId, reason }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
@@ -244,7 +251,7 @@ export const userService = {
    * 取消拉黑
    */
   async unblock(userId: number): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.USER.UNBLOCK(userId), undefined, {
+    return post<void>(ENDPOINTS.USER.UNBLOCK(userId), { user_id: userId }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
@@ -253,7 +260,7 @@ export const userService = {
    * 设置备注
    */
   async setRemark(userId: number, remark?: string): Promise<ApiResponse<void>> {
-    return put<void>(ENDPOINTS.USER.REMARK(userId), { remark }, {
+    return post<void>(ENDPOINTS.USER.REMARK(userId), { user_id: userId, remark }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
@@ -275,8 +282,6 @@ export const userService = {
    * 删除账号
    */
   async deleteAccount(confirmation: string): Promise<ApiResponse<void>> {
-    return del<void>(ENDPOINTS.USER.DELETE, {
-      body: { confirmation },
-    });
+    return post<void>(ENDPOINTS.USER.DELETE, { confirmation });
   },
 };

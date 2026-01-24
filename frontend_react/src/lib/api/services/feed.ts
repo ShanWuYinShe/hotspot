@@ -2,7 +2,7 @@
  * 信息流服务
  */
 
-import { get, post, generateIdempotencyKey } from '../client';
+import { post, generateIdempotencyKey } from '../client';
 import { ENDPOINTS } from '../endpoints';
 import type {
   ApiResponse,
@@ -48,28 +48,28 @@ export const feedService = {
    * 获取瞬间信息流
    */
   async getMoments(params?: FeedMomentsParams): Promise<ApiResponse<PaginatedData<MomentItem>>> {
-    return get<PaginatedData<MomentItem>>(ENDPOINTS.FEED.MOMENTS, params);
+    return post<PaginatedData<MomentItem>>(ENDPOINTS.FEED.MOMENTS, params ?? {});
   },
 
   /**
    * 获取群组推荐
    */
   async getGroups(params?: FeedGroupsParams): Promise<ApiResponse<PaginatedData<FeedGroupItem>>> {
-    return get<PaginatedData<FeedGroupItem>>(ENDPOINTS.FEED.GROUPS, params);
+    return post<PaginatedData<FeedGroupItem>>(ENDPOINTS.FEED.GROUPS, params ?? {});
   },
 
   /**
    * 获取用户推荐
    */
   async getUsers(params?: FeedUsersParams): Promise<ApiResponse<PaginatedData<FeedUserItem>>> {
-    return get<PaginatedData<FeedUserItem>>(ENDPOINTS.FEED.USERS, params);
+    return post<PaginatedData<FeedUserItem>>(ENDPOINTS.FEED.USERS, params ?? {});
   },
 
   /**
    * 获取热门内容
    */
   async getTrending(limit?: number): Promise<ApiResponse<FeedTrendingData>> {
-    return get<FeedTrendingData>(ENDPOINTS.FEED.TRENDING, limit ? { limit } : undefined);
+    return post<FeedTrendingData>(ENDPOINTS.FEED.TRENDING, limit ? { limit } : {});
   },
 
   /**

@@ -152,6 +152,22 @@ impl MomentRepository {
         Ok(result.exists)
     }
 
+    /// 查询瞬间删除状态（包含已删除记录）
+    pub async fn get_delete_status(&self, moment_id: Uuid) -> Result<Option<bool>> {
+        let row = sqlx::query!(
+            r#"
+            SELECT is_deleted
+            FROM moments
+            WHERE moment_id = $1
+            "#,
+            moment_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(row.map(|r| r.is_deleted))
+    }
+
     /// 按自增ID顺序批量获取瞬间ID（用于布隆过滤器初始化）
     pub async fn list_moment_ids_after(
         &self,
@@ -604,6 +620,101 @@ impl MomentRepository {
                 .collect(),
             next_cursor,
         ))
+    }
+
+    /// 按用户ID查询公开瞬间列表（仅 public）
+    pub async fn list_public_by_user(
+        &self,
+        user_id: i64,
+        limit: i32,
+        cursor: Option<String>,
+    ) -> Result<(Vec<MomentSearchRow>, Option<String>)> {
+        let last_id = if let Some(c) = cursor {
+            decode_cursor::<IdCursor>(&c)?
+        } else {
+            i64::MAX
+        };
+
+        let moments = sqlx::query!(
+            r#"
+            SELECT 
+                m.id, m.moment_id, m.user_id, m.description, 
+                COALESCE(m.images, ARRAY[]::TEXT[]) as "images!",
+                m.mentions,
+                m.privacy_level::text as "privacy_level!",
+                m.latitude, m.longitude, m.location_name, m.created_at,
+                u.nickname, u.avatar_url, u.user_type as "user_type!: crate::types::enums::UserType",
+                (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) as "likes_count!",
+                (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) as "comments_count!"
+            FROM moments m
+            JOIN users u ON m.user_id = u.user_id
+            WHERE m.user_id = $1
+              AND m.privacy_level::text = 'public'
+              AND m.id < $2
+              AND m.is_deleted = FALSE
+              AND u.is_deleted = FALSE
+            ORDER BY m.id DESC
+            LIMIT $3
+            "#,
+            user_id,
+            last_id,
+            limit as i64
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let next_cursor = moments.last().map(|m| encode_cursor(&m.id)).transpose()?;
+
+        Ok((
+            moments
+                .into_iter()
+                .map(|m| MomentSearchRow {
+                    moment_id: m.moment_id,
+                    user_id: m.user_id,
+                    description: m.description,
+                    images: m.images,
+                    mentions: m.mentions,
+                    privacy_level: m.privacy_level,
+                    latitude: m.latitude,
+                    longitude: m.longitude,
+                    location_name: m.location_name,
+                    created_at: m.created_at,
+                    nickname: m.nickname,
+                    avatar_url: m.avatar_url,
+                    user_type: m.user_type,
+                    likes_count: m.likes_count,
+                    comments_count: m.comments_count,
+                    distance: 0.0,
+                    bearing_degrees: 0.0,
+                })
+                .collect(),
+            next_cursor,
+        ))
+    }
+
+    /// 批量检查用户已点赞的瞬间
+    pub async fn list_liked_ids_by_user(
+        &self,
+        user_id: i64,
+        moment_ids: &[Uuid],
+    ) -> Result<Vec<Uuid>> {
+        if moment_ids.is_empty() {
+            return Ok(vec![]);
+        }
+
+        let rows = sqlx::query!(
+            r#"
+            SELECT moment_id
+            FROM moment_likes
+            WHERE user_id = $1 AND moment_id = ANY($2)
+            "#,
+            user_id,
+            moment_ids
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.into_iter().map(|r| r.moment_id).collect())
     }
 
     /// 按位置搜索瞬间（带 PostGIS 距离计算）

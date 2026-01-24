@@ -2,7 +2,7 @@
  * 认证服务
  */
 
-import { post, get, del, generateIdempotencyKey } from '../client';
+import { post, generateIdempotencyKey } from '../client';
 import { ENDPOINTS } from '../endpoints';
 import type {
   ApiResponse,
@@ -92,7 +92,7 @@ export const authService = {
    * 检查登录状态
    */
   async checkStatus(): Promise<ApiResponse<CheckStatusData>> {
-    return get<CheckStatusData>(ENDPOINTS.AUTH.CHECK_STATUS);
+    return post<CheckStatusData>(ENDPOINTS.AUTH.CHECK_STATUS, {});
   },
 
   /**
@@ -108,13 +108,13 @@ export const authService = {
    * 获取会话列表
    */
   async getSessions(params?: { limit?: number; cursor?: string }): Promise<ApiResponse<PaginatedData<SessionItem>>> {
-    return get<PaginatedData<SessionItem>>(ENDPOINTS.AUTH.SESSIONS, params);
+    return post<PaginatedData<SessionItem>>(ENDPOINTS.AUTH.SESSIONS, params ?? {});
   },
 
   /**
    * 撤销会话
    */
   async revokeSession(sessionId: string): Promise<ApiResponse<void>> {
-    return del<void>(ENDPOINTS.AUTH.REVOKE_SESSION(sessionId));
+    return post<void>(ENDPOINTS.AUTH.REVOKE_SESSION(sessionId), { session_id: sessionId });
   },
 };

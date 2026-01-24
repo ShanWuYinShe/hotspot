@@ -4,23 +4,33 @@
  */
 
 import { Suspense } from 'react';
-import { serverApi, isServerSuccess } from '@/lib/api/server';
+import { serverApi, isServerSuccess, isAuthError, getServerErrorMessage } from '@/lib/api/server';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import { LoadingState } from '@/components/common/loading-state';
 import { LoginRequiredCard } from '@/components/common/login-required-card';
 import { ProfileContent } from './profile-content';
+import { ServerErrorCard } from '@/components/common/server-error-card';
 import type { MyProfileData } from '@/types/api';
 
 async function ProfileData() {
-  const response = await serverApi.get<MyProfileData>(
+  const response = await serverApi.post<MyProfileData>(
     ENDPOINTS.USER.ME,
-    undefined,
+    {},
     { tags: ['my-profile'], revalidate: 60 }
   );
 
   if (!isServerSuccess(response)) {
+    if (isAuthError(response)) {
+      return (
+        <LoginRequiredCard actionName="查看个人中心" description="登录后才能查看个人信息。" />
+      );
+    }
     return (
-      <LoginRequiredCard actionName="查看个人中心" description="登录后才能查看个人信息。" />
+      <ServerErrorCard
+        title="加载个人信息失败"
+        description={getServerErrorMessage(response)}
+        requestId={response.request_id}
+      />
     );
   }
 

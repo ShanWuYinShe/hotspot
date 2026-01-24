@@ -115,29 +115,10 @@ impl ConnectionManager {
         }
     }
 
-    /// 广播消息给所有在线用户
-    pub async fn broadcast(&self, message: &WsMessage) {
+    /// 获取所有在线用户ID
+    pub async fn get_online_user_ids(&self) -> Vec<i64> {
         let connections = self.connections.read().await;
-        let json_str = match serde_json::to_string(message) {
-            Ok(s) => s,
-            Err(e) => {
-                tracing::error!("序列化消息失败: {}", e);
-                return;
-            }
-        };
-        let ws_message = Message::Text(json_str.into());
-
-        for user_connections in connections.values() {
-            for connection in user_connections {
-                if let Err(e) = connection.sender.send(ws_message.clone()) {
-                    tracing::error!(
-                        "广播消息失败: connection_id={}, error={}",
-                        connection.connection_id,
-                        e
-                    );
-                }
-            }
-        }
+        connections.keys().copied().collect()
     }
 
     /// 获取用户的连接数

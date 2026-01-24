@@ -576,7 +576,7 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
 - `DATABASE_URL`: PostgreSQL 连接字符串
 - `REDIS_URL`: Redis 连接字符串
 - `JWT_SECRET`: JWT 签名密钥
-- `SERVER_PORT`: 服务端口（默认 8080）
+- `SERVER_PORT`: 服务端口（默认 5496）
 
 ### 数据库迁移
 

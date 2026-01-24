@@ -34,20 +34,20 @@ export function FeedTabs({ defaultSource = 'all' }: FeedTabsProps) {
 
   return (
     <Tabs value={source} onValueChange={handleSourceChange}>
-      <TabsList className="mb-6">
-        <TabsTrigger value="all" disabled={isPending} className="relative">
+      <TabsList className="mb-4 rounded-2xl bg-muted/60 p-1.5 border-2 border-border">
+        <TabsTrigger value="all" disabled={isPending} className="relative rounded-xl px-5 data-[state=active]:bg-background data-[state=active]:shadow-md transition-all duration-200">
           <span className="flex items-center gap-2">
-            <span className="text-sm font-medium">{t('trending')}</span>
+            <span className="text-sm font-semibold">{t('trending')}</span>
           </span>
         </TabsTrigger>
-        <TabsTrigger value="following" disabled={isPending} className="relative">
+        <TabsTrigger value="following" disabled={isPending} className="relative rounded-xl px-5 data-[state=active]:bg-background data-[state=active]:shadow-md transition-all duration-200">
           <span className="flex items-center gap-2">
-            <span className="text-sm font-medium">{t('following')}</span>
+            <span className="text-sm font-semibold">{t('following')}</span>
           </span>
         </TabsTrigger>
-        <TabsTrigger value="nearby" disabled={isPending} className="relative">
+        <TabsTrigger value="nearby" disabled={isPending} className="relative rounded-xl px-5 data-[state=active]:bg-background data-[state=active]:shadow-md transition-all duration-200">
           <span className="flex items-center gap-2">
-            <span className="text-sm font-medium">{t('nearby')}</span>
+            <span className="text-sm font-semibold">{t('nearby')}</span>
           </span>
         </TabsTrigger>
       </TabsList>

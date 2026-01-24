@@ -23,17 +23,27 @@ use crate::{
     error::Result,
     repositories::system_config_repo::SystemConfigRepository,
     types::enums::GroupJoinMethod,
+    utils::cache::{cache_keys, CacheManager},
 };
 
 #[derive(Clone)]
 pub struct SystemConfigService {
     repo: SystemConfigRepository,
     redis: Arc<redis::Client>,
+    cache_manager: CacheManager,
 }
 
 impl SystemConfigService {
-    pub fn new(repo: SystemConfigRepository, redis: Arc<redis::Client>) -> Self {
-        Self { repo, redis }
+    pub fn new(
+        repo: SystemConfigRepository,
+        redis: Arc<redis::Client>,
+        cache_manager: CacheManager,
+    ) -> Self {
+        Self {
+            repo,
+            redis,
+            cache_manager,
+        }
     }
 
     // ==================== 客户端拉取配置 (Client Fetch) ====================
@@ -244,6 +254,13 @@ impl SystemConfigService {
                 self.repo.update_tx(&mut tx, key, value.clone()).await?;
             }
 
+            // 记录变更历史（仅当值发生变化）
+            if old_val.as_deref() != Some(value.as_str()) {
+                self.repo
+                    .insert_history_tx(&mut tx, key, old_val.clone(), &value, admin_id)
+                    .await?;
+            }
+
             // 清除缓存
             self.clear_config_cache(key).await?;
         }
@@ -307,13 +324,19 @@ impl SystemConfigService {
     /// 组装完整 GlobalSettings
     /// 这里可以使用 Multi-Get 优化 DB 查询，或者查出所有配置在内存 Map
     async fn get_full_global_settings(&self) -> Result<GlobalSettings> {
-        let cache_key = format!("{}:full_settings", REDIS_KEY_CONFIG);
-        let mut conn = self.redis.get_multiplexed_async_connection().await?;
+        let cache_key = "full_settings";
 
         // 1. 尝试从缓存获取
-        if let Ok(Some(json)) = conn.get::<_, Option<String>>(&cache_key).await {
-            if let Ok(settings) = serde_json::from_str(&json) {
-                return Ok(settings);
+        match self
+            .cache_manager
+            .get::<GlobalSettings>(cache_keys::SYSTEM_CONFIG, cache_key)
+            .await
+        {
+            Ok(Some(Some(settings))) => return Ok(settings),
+            Ok(Some(None)) => {}
+            Ok(None) => {}
+            Err(e) => {
+                tracing::warn!(error = %e, "get system config cache failed");
             }
         }
 
@@ -399,8 +422,12 @@ impl SystemConfigService {
         };
 
         // 3. 写入缓存
-        if let Ok(json) = serde_json::to_string(&settings) {
-            let _: () = conn.set_ex(&cache_key, json, 3600).await?;
+        if let Err(e) = self
+            .cache_manager
+            .set(cache_keys::SYSTEM_CONFIG, cache_key, &settings)
+            .await
+        {
+            tracing::warn!(error = %e, "set system config cache failed");
         }
 
         Ok(settings)
@@ -410,13 +437,15 @@ impl SystemConfigService {
     async fn clear_config_cache(&self, config_key: &str) -> Result<()> {
         let mut conn = self.redis.get_multiplexed_async_connection().await?;
 
-        // 1. 清除单个 key 缓存
+        // 1. 清除单个 key 缓存（兼容旧 key）
         let cache_key = format!("{}:{}", REDIS_KEY_CONFIG, config_key);
         let _: () = conn.del(&cache_key).await?;
 
-        // 2. 清除 full settings 缓存
-        let full_key = format!("{}:full_settings", REDIS_KEY_CONFIG);
-        let _: () = conn.del(&full_key).await?;
+        // 2. 清除 full settings 缓存（新缓存键）
+        let _ = self
+            .cache_manager
+            .delete(cache_keys::SYSTEM_CONFIG, "full_settings")
+            .await;
 
         Ok(())
     }

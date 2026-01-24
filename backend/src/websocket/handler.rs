@@ -12,6 +12,7 @@ use tokio::time::{interval, timeout};
 use uuid::Uuid;
 
 use crate::{
+    error::AppError,
     repositories::{
         group_member_repo::GroupMemberRepository,
         group_repo::GroupRepository,
@@ -24,6 +25,8 @@ use crate::{
     websocket::subscription::SubscriptionType,
     websocket::types::{FailedSubscriptionItem, SubscriptionItem, SubscriptionSourceId, WsMessage},
 };
+
+const MAX_SUBSCRIPTION_SOURCE_IDS: usize = 200;
 
 /// WebSocket升级处理器
 pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> Response {
@@ -42,11 +45,21 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
         Ok(Some(Ok(Message::Text(text)))) => text,
         Ok(Some(Ok(_))) => {
             // 非文本首帧 -> 直接断开
+            let err = AppError::WebSocketProtocolIncompatible("仅支持文本协议".to_string());
+            let err_msg = WsMessage::Error {
+                code: err.error_code(),
+                message: err.to_string(),
+            };
+            if let Ok(json) = serde_json::to_string(&err_msg) {
+                let _ = sender.send(Message::Text(json.into())).await;
+            }
             let _ = sender.send(Message::Close(None)).await;
             return;
         }
         Ok(Some(Err(_))) | Ok(None) | Err(_) => {
             // 超时/断开/错误 -> 直接断开
+            let err = AppError::WebSocketError("鉴权阶段连接异常".to_string());
+            tracing::debug!(code = err.error_code(), "websocket auth phase error");
             let _ = sender.send(Message::Close(None)).await;
             return;
         }
@@ -55,6 +68,14 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
     let auth_event: WsMessage = match serde_json::from_str(auth_msg.as_str()) {
         Ok(m) => m,
         Err(_) => {
+            let err = AppError::WebSocketMessageFormatError("鉴权消息格式无效".to_string());
+            let err_msg = WsMessage::Error {
+                code: err.error_code(),
+                message: err.to_string(),
+            };
+            if let Ok(json) = serde_json::to_string(&err_msg) {
+                let _ = sender.send(Message::Text(json.into())).await;
+            }
             let _ = sender.send(Message::Close(None)).await;
             return;
         }
@@ -64,9 +85,10 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
         WsMessage::Auth { access_token, .. } => access_token,
         _ => {
             // 首帧不是 Auth
+            let err = AppError::WebSocketAuthFailed("鉴权失败：未提供 Token".to_string());
             let err_msg = WsMessage::Error {
-                code: 20001,
-                message: "鉴权失败：未提供 Token".to_string(),
+                code: err.error_code(),
+                message: err.to_string(),
             };
             if let Ok(json) = serde_json::to_string(&err_msg) {
                 let _ = sender.send(Message::Text(json.into())).await;
@@ -80,9 +102,10 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
     let claims = match JwtUtil::verify_token(&access_token, &state.config.jwt_secret) {
         Ok(c) => c,
         Err(_) => {
+            let err = AppError::WebSocketAuthFailed("鉴权失败：Token 无效或过期".to_string());
             let err_msg = WsMessage::Error {
-                code: 20001,
-                message: "鉴权失败：Token 无效或过期".to_string(),
+                code: err.error_code(),
+                message: err.to_string(),
             };
             if let Ok(json) = serde_json::to_string(&err_msg) {
                 let _ = sender.send(Message::Text(json.into())).await;
@@ -95,9 +118,10 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
     let user_id = match claims.sub.parse::<i64>() {
         Ok(uid) => uid,
         Err(_) => {
+            let err = AppError::WebSocketAuthFailed("鉴权失败：Token 无效或过期".to_string());
             let err_msg = WsMessage::Error {
-                code: 20001,
-                message: "鉴权失败：Token 无效或过期".to_string(),
+                code: err.error_code(),
+                message: err.to_string(),
             };
             if let Ok(json) = serde_json::to_string(&err_msg) {
                 let _ = sender.send(Message::Text(json.into())).await;
@@ -286,8 +310,8 @@ async fn handle_message(
     match msg {
         Message::Text(text) => {
             // 解析客户端消息
-            let client_msg: WsMessage =
-                serde_json::from_str(text.as_str()).map_err(|e| format!("解析消息失败: {}", e))?;
+            let client_msg: WsMessage = serde_json::from_str(text.as_str())
+                .map_err(|e| AppError::WebSocketMessageFormatError(e.to_string()).to_string())?;
 
             match client_msg {
                 WsMessage::Ping { .. } => {
@@ -305,6 +329,19 @@ async fn handle_message(
                     client_msg_id,
                     items,
                 } => {
+                    if let Err(err) = validate_subscription_batch(&items) {
+                        let current_items = build_current_subscription_items(user_id, state).await;
+                        let ack_msg = WsMessage::SubscribeAck {
+                            client_msg_id,
+                            operation: SubscriptionOperation::Subscribe,
+                            items: current_items,
+                            code: err.error_code(),
+                            message: Some(err.to_string()),
+                            failed_items: None,
+                        };
+                        state.ws_manager.send_to_user(user_id, &ack_msg).await?;
+                        return Ok(());
+                    }
                     if is_rate_limited(user_id, state).await {
                         let failed_items =
                             build_failed_items(&items, SubscriptionFailureReason::RateLimited);
@@ -350,6 +387,19 @@ async fn handle_message(
                     client_msg_id,
                     items,
                 } => {
+                    if let Err(err) = validate_subscription_batch(&items) {
+                        let current_items = build_current_subscription_items(user_id, state).await;
+                        let ack_msg = WsMessage::SubscribeAck {
+                            client_msg_id,
+                            operation: SubscriptionOperation::Unsubscribe,
+                            items: current_items,
+                            code: err.error_code(),
+                            message: Some(err.to_string()),
+                            failed_items: None,
+                        };
+                        state.ws_manager.send_to_user(user_id, &ack_msg).await?;
+                        return Ok(());
+                    }
                     if is_rate_limited(user_id, state).await {
                         let failed_items =
                             build_failed_items(&items, SubscriptionFailureReason::RateLimited);
@@ -386,6 +436,19 @@ async fn handle_message(
                     client_msg_id,
                     items,
                 } => {
+                    if let Err(err) = validate_subscription_batch(&items) {
+                        let current_items = build_current_subscription_items(user_id, state).await;
+                        let ack_msg = WsMessage::SubscribeAck {
+                            client_msg_id,
+                            operation: SubscriptionOperation::Set,
+                            items: current_items,
+                            code: err.error_code(),
+                            message: Some(err.to_string()),
+                            failed_items: None,
+                        };
+                        state.ws_manager.send_to_user(user_id, &ack_msg).await?;
+                        return Ok(());
+                    }
                     if is_rate_limited(user_id, state).await {
                         let failed_items =
                             build_failed_items(&items, SubscriptionFailureReason::RateLimited);
@@ -481,7 +544,14 @@ async fn handle_message(
 
         Message::Binary(_) => {
             // 二进制消息通常是客户端误用/探测：这里降到 debug，避免刷屏
-            tracing::debug!("收到二进制消息，暂不支持: user_id={}", user_id);
+            let err =
+                AppError::WebSocketProtocolIncompatible("二进制消息暂不支持".to_string());
+            tracing::debug!(
+                code = err.error_code(),
+                "收到不兼容的二进制消息: user_id={}",
+                user_id
+            );
+            return Err(err.to_string());
         }
 
         Message::Ping(_) => {
@@ -509,10 +579,7 @@ async fn process_subscribe(
 ) -> Vec<FailedSubscriptionItem> {
     let mut failed = Vec::new();
 
-    let mut group_count = state
-        .ws_subscription
-        .count_by_type(user_id, "group_chat")
-        .await;
+    let mut group_count = state.ws_subscription.count_by_type(user_id, "group").await;
     let mut user_count = state.ws_subscription.count_by_type(user_id, "user").await;
 
     let group_repo = GroupRepository::new(state.db.clone());
@@ -521,10 +588,10 @@ async fn process_subscribe(
     let blocks_repo = UserBlocksRepository::new(state.db.clone());
 
     for item in items {
-        if item.source_ids.is_empty() {
+        if item.ids.is_empty() {
             failed.push(FailedSubscriptionItem {
-                source_type: item.source_type.clone(),
-                source_ids: vec![],
+                r#type: item.r#type.clone(),
+                ids: vec![],
                 reason: SubscriptionFailureReason::InvalidItem,
             });
             continue;
@@ -536,9 +603,9 @@ async fn process_subscribe(
         let mut too_many_ids: Vec<SubscriptionSourceId> = Vec::new();
         let mut internal_ids: Vec<SubscriptionSourceId> = Vec::new();
 
-        for source_id in &item.source_ids {
-            match item.source_type.as_str() {
-                "group_chat" => {
+        for source_id in &item.ids {
+            match item.r#type.as_str() {
+                "group" => {
                     let group_id = match source_id {
                         SubscriptionSourceId::String(raw) => match Uuid::parse_str(raw) {
                             Ok(id) => id,
@@ -582,7 +649,7 @@ async fn process_subscribe(
                             continue;
                         }
                     };
-                    let subscription = SubscriptionType::GroupChat(group_id_str);
+                    let subscription = SubscriptionType::Group(group_id_str);
                     if state
                         .ws_subscription
                         .has_subscription(user_id, &subscription)
@@ -669,21 +736,6 @@ async fn process_subscribe(
                         }
                     }
                 }
-                "notification" => {
-                    let kind = match source_id {
-                        SubscriptionSourceId::String(raw) => raw.trim().to_string(),
-                        SubscriptionSourceId::Number(_) => {
-                            invalid_ids.push(source_id.clone());
-                            continue;
-                        }
-                    };
-                    if kind.is_empty() {
-                        invalid_ids.push(source_id.clone());
-                        continue;
-                    }
-                    let subscription = SubscriptionType::Notification(kind);
-                    state.ws_subscription.subscribe(user_id, subscription).await;
-                }
                 _ => {
                     invalid_ids.push(source_id.clone());
                 }
@@ -692,36 +744,36 @@ async fn process_subscribe(
 
         if !invalid_ids.is_empty() {
             failed.push(FailedSubscriptionItem {
-                source_type: item.source_type.clone(),
-                source_ids: invalid_ids,
+                r#type: item.r#type.clone(),
+                ids: invalid_ids,
                 reason: SubscriptionFailureReason::InvalidItem,
             });
         }
         if !not_found_ids.is_empty() {
             failed.push(FailedSubscriptionItem {
-                source_type: item.source_type.clone(),
-                source_ids: not_found_ids,
+                r#type: item.r#type.clone(),
+                ids: not_found_ids,
                 reason: SubscriptionFailureReason::NotFound,
             });
         }
         if !permission_ids.is_empty() {
             failed.push(FailedSubscriptionItem {
-                source_type: item.source_type.clone(),
-                source_ids: permission_ids,
+                r#type: item.r#type.clone(),
+                ids: permission_ids,
                 reason: SubscriptionFailureReason::PermissionDenied,
             });
         }
         if !too_many_ids.is_empty() {
             failed.push(FailedSubscriptionItem {
-                source_type: item.source_type.clone(),
-                source_ids: too_many_ids,
+                r#type: item.r#type.clone(),
+                ids: too_many_ids,
                 reason: SubscriptionFailureReason::TooManySubscriptions,
             });
         }
         if !internal_ids.is_empty() {
             failed.push(FailedSubscriptionItem {
-                source_type: item.source_type.clone(),
-                source_ids: internal_ids,
+                r#type: item.r#type.clone(),
+                ids: internal_ids,
                 reason: SubscriptionFailureReason::InternalError,
             });
         }
@@ -733,14 +785,14 @@ async fn process_subscribe(
 /// 处理取消订阅请求
 async fn process_unsubscribe(user_id: i64, items: &[SubscriptionItem], state: &AppState) {
     for item in items {
-        for source_id in &item.source_ids {
-            match item.source_type.as_str() {
-                "group_chat" => {
+        for source_id in &item.ids {
+            match item.r#type.as_str() {
+                "group" => {
                     let group_id = match source_id {
                         SubscriptionSourceId::String(raw) => raw.clone(),
                         SubscriptionSourceId::Number(_) => continue,
                     };
-                    let subscription = SubscriptionType::GroupChat(group_id);
+                    let subscription = SubscriptionType::Group(group_id);
                     state
                         .ws_subscription
                         .unsubscribe(user_id, &subscription)
@@ -757,17 +809,6 @@ async fn process_unsubscribe(user_id: i64, items: &[SubscriptionItem], state: &A
                         .unsubscribe(user_id, &subscription)
                         .await;
                 }
-                "notification" => {
-                    let kind = match source_id {
-                        SubscriptionSourceId::String(raw) => raw.clone(),
-                        SubscriptionSourceId::Number(_) => continue,
-                    };
-                    let subscription = SubscriptionType::Notification(kind);
-                    state
-                        .ws_subscription
-                        .unsubscribe(user_id, &subscription)
-                        .await;
-                }
                 _ => {
                     // 忽略不支持的类型
                 }
@@ -778,10 +819,25 @@ async fn process_unsubscribe(user_id: i64, items: &[SubscriptionItem], state: &A
 
 async fn is_rate_limited(user_id: i64, state: &AppState) -> bool {
     let limiter = RateLimiter::new(state.redis.clone());
-    limiter
-        .is_rate_limited(&format!("ws_subscribe:{}", user_id), 10, 1)
+    let key = format!("ws_subscribe:{}", user_id);
+    let max_requests = 10;
+    let window_secs = 1;
+    let limited = limiter
+        .is_rate_limited(&key, max_requests, window_secs)
         .await
-        .unwrap_or(false)
+        .unwrap_or(false);
+    if limited {
+        let remaining = limiter
+            .get_remaining(&key, max_requests, window_secs)
+            .await
+            .unwrap_or(0);
+        tracing::debug!(
+            user_id,
+            remaining,
+            "websocket subscribe rate limited"
+        );
+    }
+    limited
 }
 
 fn build_failed_items(
@@ -791,11 +847,19 @@ fn build_failed_items(
     items
         .iter()
         .map(|item| FailedSubscriptionItem {
-            source_type: item.source_type.clone(),
-            source_ids: item.source_ids.clone(),
+            r#type: item.r#type.clone(),
+            ids: item.ids.clone(),
             reason,
         })
         .collect()
+}
+
+fn validate_subscription_batch(items: &[SubscriptionItem]) -> Result<(), AppError> {
+    let total_ids: usize = items.iter().map(|item| item.ids.len()).sum();
+    if total_ids > MAX_SUBSCRIPTION_SOURCE_IDS {
+        return Err(AppError::BatchLimitExceeded);
+    }
+    Ok(())
 }
 
 fn source_id_sort_key(id: &SubscriptionSourceId) -> String {
@@ -814,9 +878,9 @@ async fn build_current_subscription_items(
 
     for sub in subscriptions {
         match sub {
-            SubscriptionType::GroupChat(id) => {
+            SubscriptionType::Group(id) => {
                 grouped
-                    .entry("group_chat".to_string())
+                    .entry("group".to_string())
                     .or_default()
                     .push(SubscriptionSourceId::String(id));
             }
@@ -826,26 +890,17 @@ async fn build_current_subscription_items(
                     .or_default()
                     .push(SubscriptionSourceId::Number(id));
             }
-            SubscriptionType::Notification(id) => {
-                grouped
-                    .entry("notification".to_string())
-                    .or_default()
-                    .push(SubscriptionSourceId::String(id));
-            }
         }
     }
 
     let mut result: Vec<SubscriptionItem> = grouped
         .into_iter()
-        .map(|(source_type, mut source_ids)| {
-            source_ids.sort_by(|a, b| source_id_sort_key(a).cmp(&source_id_sort_key(b)));
-            SubscriptionItem {
-                source_type,
-                source_ids,
-            }
+        .map(|(r#type, mut ids)| {
+            ids.sort_by(|a, b| source_id_sort_key(a).cmp(&source_id_sort_key(b)));
+            SubscriptionItem { r#type, ids }
         })
         .collect();
-    result.sort_by(|a, b| a.source_type.cmp(&b.source_type));
+    result.sort_by(|a, b| a.r#type.cmp(&b.r#type));
     result
 }
 
@@ -860,25 +915,25 @@ fn subscription_ack_code(failed_items: &[FailedSubscriptionItem]) -> i32 {
                 | SubscriptionFailureReason::TooManySubscriptions
         )
     }) {
-        return 20103;
+        return AppError::SubscriptionLimitExceeded.error_code();
     }
     if failed_items
         .iter()
         .any(|i| matches!(i.reason, SubscriptionFailureReason::PermissionDenied))
     {
-        return 20102;
+        return AppError::SubscriptionPermissionDenied("权限不足".to_string()).error_code();
     }
     if failed_items
         .iter()
         .any(|i| matches!(i.reason, SubscriptionFailureReason::NotFound))
     {
-        return 20101;
+        return AppError::SubscriptionChannelNotFound("订阅目标不存在".to_string()).error_code();
     }
     if failed_items
         .iter()
         .any(|i| matches!(i.reason, SubscriptionFailureReason::InvalidItem))
     {
-        return 20104;
+        return AppError::InvalidSubscriptionFormat("订阅项格式无效".to_string()).error_code();
     }
-    20100
+    AppError::SubscriptionFailed("订阅失败".to_string()).error_code()
 }

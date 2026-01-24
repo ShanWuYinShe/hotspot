@@ -51,7 +51,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     };
   }
 
-  componentDidCatch(error: Error, errorInfo: any): void {
+  override componentDidCatch(error: Error, errorInfo: any): void {
     this.setState({
       error,
       errorInfo,
@@ -76,7 +76,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     window.location.reload();
   };
 
-  render(): React.ReactNode {
+  override render(): React.ReactNode {
     if (this.state.hasError) {
       if (this.props.fallback) {
         return this.props.fallback;
@@ -100,7 +100,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
                   this.state.errorInfo?.type === 'network' && 'text-orange-600 dark:text-orange-400',
                   this.state.errorInfo?.type === 'timeout' && 'text-yellow-600 dark:text-yellow-400',
                   this.state.errorInfo?.type === 'server' && 'text-red-600 dark:text-red-400',
-                  this.state.errorInfo?.z.type === 'unknown' && 'text-destructive'
+                  this.state.errorInfo?.type === 'unknown' && 'text-destructive'
                 )}
               />
             </div>

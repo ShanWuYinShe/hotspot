@@ -2,7 +2,7 @@
  * 通知服务
  */
 
-import { get, post, put, generateIdempotencyKey } from '../client';
+import { post, generateIdempotencyKey } from '../client';
 import { ENDPOINTS } from '../endpoints';
 import type {
   ApiResponse,
@@ -22,7 +22,7 @@ export const notificationsService = {
    * 获取通知列表
    */
   async getNotifications(params?: { limit?: number; cursor?: string }): Promise<ApiResponse<PaginatedData<NotificationItem>>> {
-    return get<PaginatedData<NotificationItem>>(ENDPOINTS.NOTIFICATIONS.LIST, params);
+    return post<PaginatedData<NotificationItem>>(ENDPOINTS.NOTIFICATIONS.LIST, params ?? {});
   },
 
   /**
@@ -38,7 +38,7 @@ export const notificationsService = {
    * 标记全部已读
    */
   async markAllRead(): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.NOTIFICATIONS.MARK_ALL_READ, undefined, {
+    return post<void>(ENDPOINTS.NOTIFICATIONS.MARK_ALL_READ, {}, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
@@ -47,7 +47,7 @@ export const notificationsService = {
    * 获取未读数量
    */
   async getUnreadCount(): Promise<ApiResponse<{ count: number }>> {
-    return get<{ count: number }>(ENDPOINTS.NOTIFICATIONS.UNREAD_COUNT);
+    return post<{ count: number }>(ENDPOINTS.NOTIFICATIONS.UNREAD_COUNT, {});
   },
 
   // ============================================================================
@@ -58,14 +58,14 @@ export const notificationsService = {
    * 获取订阅设置
    */
   async getSubscriptions(): Promise<ApiResponse<SubscriptionsData>> {
-    return get<SubscriptionsData>(ENDPOINTS.SUBSCRIPTIONS.GET);
+    return post<SubscriptionsData>(ENDPOINTS.SUBSCRIPTIONS.GET, {});
   },
 
   /**
    * 更新订阅设置
    */
   async updateSubscriptions(data: Partial<SubscriptionsData>): Promise<ApiResponse<void>> {
-    return put<void>(ENDPOINTS.SUBSCRIPTIONS.UPDATE, data, {
+    return post<void>(ENDPOINTS.SUBSCRIPTIONS.UPDATE, data, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
@@ -94,6 +94,6 @@ export const notificationsService = {
    * 获取设备令牌列表
    */
   async getDeviceTokens(params?: { limit?: number; cursor?: string }): Promise<ApiResponse<PaginatedData<DeviceTokenItem>>> {
-    return get<PaginatedData<DeviceTokenItem>>(ENDPOINTS.DEVICE_TOKENS.LIST, params);
+    return post<PaginatedData<DeviceTokenItem>>(ENDPOINTS.DEVICE_TOKENS.LIST, params ?? {});
   },
 };

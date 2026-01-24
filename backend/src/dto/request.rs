@@ -151,7 +151,6 @@ pub struct UserGroupsRequest {
 #[derive(Debug, Deserialize)]
 pub struct UserLikedMomentsRequest {
     pub user_id: i64,
-    pub reference_point: GeoPoint,
     pub limit: Option<i32>,
     pub cursor: Option<String>,
 }
@@ -298,7 +297,6 @@ pub struct UnfavoriteMomentRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct MyFavoritesRequest {
-    pub reference_point: GeoPoint,
     pub limit: Option<i32>,
     pub cursor: Option<String>,
 }
@@ -315,7 +313,6 @@ pub struct SearchMomentsByLocationRequest {
 #[derive(Debug, Deserialize)]
 pub struct MomentOpenTheDoorRequest {
     pub moment_id: String,
-    pub reference_point: GeoPoint,
 }
 
 #[derive(Debug, Deserialize)]
@@ -329,14 +326,12 @@ pub struct SearchMomentsByTagRequest {
 #[derive(Debug, Deserialize)]
 pub struct UserMomentsRequest {
     pub user_id: i64,
-    pub reference_point: GeoPoint,
     pub limit: Option<i32>,
     pub cursor: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct MyMomentsRequest {
-    pub reference_point: GeoPoint,
     pub limit: Option<i32>,
     pub cursor: Option<String>,
 }

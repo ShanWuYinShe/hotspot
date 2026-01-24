@@ -112,7 +112,7 @@ impl MediaService {
             .expires_in(Duration::from_secs(900)) // 15分钟
             .build()
             .map_err(|e| {
-                AppError::InternalError(format!("Failed to build presigning config: {}", e))
+                AppError::ExternalServiceError(format!("Failed to build presigning config: {}", e))
             })?;
 
         let presigned_request = self
@@ -124,7 +124,7 @@ impl MediaService {
             .presigned(presigned_config)
             .await
             .map_err(|e| {
-                AppError::InternalError(format!("Failed to generate presigned URL: {}", e))
+                AppError::ExternalServiceError(format!("Failed to generate presigned URL: {}", e))
             })?;
 
         // 提取 presigned URL 并转换为客户端可访问的 URL
@@ -177,7 +177,7 @@ impl MediaService {
             .query_async(&mut redis_conn)
             .await
             .map_err(|e| {
-                AppError::InternalError(format!("Failed to save upload session: {}", e))
+                AppError::CacheError(format!("Failed to save upload session: {}", e))
             })?;
 
         Ok(PresignUploadData {
@@ -208,7 +208,7 @@ impl MediaService {
                 HeadObjectError::NotFound(_) => {
                     AppError::FileNotFound("File not found in storage".to_string())
                 }
-                err => AppError::InternalError(format!("S3 error: {}", err)),
+                err => AppError::ExternalServiceError(format!("S3 error: {}", err)),
             })?;
 
         let size = head_output
@@ -242,7 +242,7 @@ impl MediaService {
             .arg(&redis_key)
             .query_async(&mut redis_conn)
             .await
-            .map_err(|e| AppError::InternalError(format!("Failed to get upload session: {}", e)))?;
+            .map_err(|e| AppError::CacheError(format!("Failed to get upload session: {}", e)))?;
 
         tracing::debug!(
             "complete_upload: redis_key={}, session_json={:?}",
@@ -331,7 +331,7 @@ impl MediaService {
             .expires_in(expires_in)
             .build()
             .map_err(|e| {
-                AppError::InternalError(format!("Failed to build presigning config: {}", e))
+                AppError::ExternalServiceError(format!("Failed to build presigning config: {}", e))
             })?;
 
         let presigned_req = self
@@ -341,7 +341,7 @@ impl MediaService {
             .key(cleaned_key) // 使用清理后的 key
             .presigned(presigned_config)
             .await
-            .map_err(|e| AppError::InternalError(format!("Failed to sign download URL: {}", e)))?;
+            .map_err(|e| AppError::ExternalServiceError(format!("Failed to sign download URL: {}", e)))?;
 
         let presigned_url = presigned_req.uri().to_string();
         let uri_parsed = presigned_url.parse::<http::Uri>().map_err(|e| {
@@ -438,7 +438,7 @@ impl MediaService {
             .body(ByteStream::from(data))
             .send()
             .await
-            .map_err(|e| AppError::InternalError(format!("Failed to upload: {}", e)))?;
+            .map_err(|e| AppError::ExternalServiceError(format!("Failed to upload: {}", e)))?;
 
         Ok(cleaned_key.to_string())
     }

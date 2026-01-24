@@ -9,10 +9,11 @@ import { serverApi, isServerSuccess } from '@/lib/api/server';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import { LoadingState } from '@/components/common/loading-state';
 import { AuditLogTable } from './audit-log-table';
+import { PageHeader } from '@/components/layout';
 import type { AuditLogItem, PaginatedData } from '@/types/api';
 
 async function AuditContent() {
-  const response = await serverApi.get<PaginatedData<AuditLogItem>>(
+  const response = await serverApi.post<PaginatedData<AuditLogItem>>(
     ENDPOINTS.ADMIN.AUDIT_LOGS,
     { limit: 100 },
     { tags: ['audit-logs'], revalidate: 30 }
@@ -28,7 +29,7 @@ export default async function AdminAuditPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">{t('audit')}</h1>
+      <PageHeader title={t('audit')} description="管理员操作与变更记录" />
       
       <Suspense fallback={<LoadingState text="加载中..." />}>
         <AuditContent />

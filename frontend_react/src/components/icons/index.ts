@@ -5,6 +5,7 @@
  */
 
 import type { LucideIcon } from 'lucide-react';
+export type { LucideIcon } from 'lucide-react';
 export type AppIcon = LucideIcon;
 
 export {

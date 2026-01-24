@@ -11,6 +11,7 @@ import { serverApi, isServerSuccess } from '@/lib/api/server';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import { LoadingState } from '@/components/common/loading-state';
 import { AdminPermissions } from './admin-permissions';
+import { PageHeader } from '@/components/layout';
 import type { AdminMeData } from '@/types/api';
 
 async function DashboardStats() {
@@ -63,9 +64,9 @@ async function DashboardStats() {
 async function AdminInfo() {
   const t = await getTranslations('admin');
   
-  const response = await serverApi.get<AdminMeData>(
+  const response = await serverApi.post<AdminMeData>(
     ENDPOINTS.ADMIN.ME,
-    undefined,
+    {},
     { tags: ['admin-me'], revalidate: 300 }
   );
 
@@ -74,13 +75,10 @@ async function AdminInfo() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">{t('dashboard')}</h1>
-        <p className="text-muted-foreground mt-1">
-          欢迎回来，管理员
-          {isSuperAdmin && <span className="ml-2 text-primary">(超级管理员)</span>}
-        </p>
-      </div>
+      <PageHeader
+        title={t('dashboard')}
+        description={`欢迎回来，管理员${isSuperAdmin ? '（超级管理员）' : ''}`}
+      />
 
       <DashboardStats />
 

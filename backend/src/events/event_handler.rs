@@ -397,14 +397,7 @@ impl EventHandler {
                 follower_id,
                 is_mutual,
             } => {
-                // 通知推送 = 持久化偏好 AND 实时订阅（严格按订阅推送）
-                if !self
-                    .ws_subscription
-                    .has_notification_subscription(*user_id, "new_follower")
-                    .await
-                {
-                    return Ok(());
-                }
+                // 通知推送 = 持久化偏好
                 let cfg = self.subscription_service.get_config(*user_id).await?;
                 if !cfg.new_follower_enabled {
                     return Ok(());
@@ -427,43 +420,31 @@ impl EventHandler {
                 let mutual_user_info = self.get_user_info(*mutual_user_id).await;
                 let now = chrono::Utc::now().to_rfc3339();
 
-                if self
-                    .ws_subscription
-                    .has_notification_subscription(*user_id, "mutual_follow")
-                    .await
-                {
-                    let cfg = self.subscription_service.get_config(*user_id).await?;
-                    if cfg.mutual_follow_enabled {
-                        let message_for_user = WsMessage::MutualFollow {
-                            user: mutual_user_info.clone(),
-                            mutual_at: now.clone(),
-                        };
-                        let _ = self
-                            .ws_manager
-                            .send_to_user(*user_id, &message_for_user)
-                            .await;
-                    }
+                let cfg_for_user = self.subscription_service.get_config(*user_id).await?;
+                if cfg_for_user.mutual_follow_enabled {
+                    let message_for_user = WsMessage::MutualFollow {
+                        user: mutual_user_info.clone(),
+                        mutual_at: now.clone(),
+                    };
+                    let _ = self
+                        .ws_manager
+                        .send_to_user(*user_id, &message_for_user)
+                        .await;
                 }
 
-                if self
-                    .ws_subscription
-                    .has_notification_subscription(*mutual_user_id, "mutual_follow")
-                    .await
-                {
-                    let cfg = self
-                        .subscription_service
-                        .get_config(*mutual_user_id)
-                        .await?;
-                    if cfg.mutual_follow_enabled {
-                        let message_for_mutual = WsMessage::MutualFollow {
-                            user: user_info,
-                            mutual_at: now,
-                        };
-                        let _ = self
-                            .ws_manager
-                            .send_to_user(*mutual_user_id, &message_for_mutual)
-                            .await;
-                    }
+                let cfg_for_mutual = self
+                    .subscription_service
+                    .get_config(*mutual_user_id)
+                    .await?;
+                if cfg_for_mutual.mutual_follow_enabled {
+                    let message_for_mutual = WsMessage::MutualFollow {
+                        user: user_info,
+                        mutual_at: now,
+                    };
+                    let _ = self
+                        .ws_manager
+                        .send_to_user(*mutual_user_id, &message_for_mutual)
+                        .await;
                 }
             }
             AppEvent::Unfollowed {
@@ -471,13 +452,6 @@ impl EventHandler {
                 user_id,
                 was_mutual,
             } => {
-                if !self
-                    .ws_subscription
-                    .has_notification_subscription(*user_id, "unfollowed")
-                    .await
-                {
-                    return Ok(());
-                }
                 // 取消关注：目前偏好表里没有单独的 unfollowed 开关，复用 mutual_follow_enabled 的语义（好友关系变化）
                 let cfg = self.subscription_service.get_config(*user_id).await?;
                 if !cfg.mutual_follow_enabled {
@@ -496,13 +470,6 @@ impl EventHandler {
                 requester_id,
                 target_id,
             } => {
-                if !self
-                    .ws_subscription
-                    .has_notification_subscription(*target_id, "follow_request")
-                    .await
-                {
-                    return Ok(());
-                }
                 let cfg = self.subscription_service.get_config(*target_id).await?;
                 if !cfg.follow_request_enabled {
                     return Ok(());
@@ -522,13 +489,6 @@ impl EventHandler {
                 target_id,
                 accepted,
             } => {
-                if !self
-                    .ws_subscription
-                    .has_notification_subscription(*requester_id, "follow_request_handled")
-                    .await
-                {
-                    return Ok(());
-                }
                 let cfg = self.subscription_service.get_config(*requester_id).await?;
                 if !cfg.follow_request_handled_enabled {
                     return Ok(());
@@ -704,13 +664,6 @@ impl EventHandler {
                 to_user_id,
                 message,
             } => {
-                if !self
-                    .ws_subscription
-                    .has_notification_subscription(*to_user_id, "group_invite")
-                    .await
-                {
-                    return Ok(());
-                }
                 let cfg = self.subscription_service.get_config(*to_user_id).await?;
                 if !cfg.group_invite_enabled {
                     return Ok(());
@@ -736,13 +689,6 @@ impl EventHandler {
                 status,
             } => {
                 // 邀请响应只通知邀请人（通知类事件，按订阅与偏好）
-                if !self
-                    .ws_subscription
-                    .has_notification_subscription(*inviter_id, "group_invite_response")
-                    .await
-                {
-                    return Ok(());
-                }
                 let cfg = self.subscription_service.get_config(*inviter_id).await?;
                 if !cfg.group_invite_response_enabled {
                     return Ok(());
@@ -780,13 +726,6 @@ impl EventHandler {
                     .await?;
                 let mut recipients = Vec::with_capacity(admin_ids.len());
                 for admin_id in admin_ids {
-                    if !self
-                        .ws_subscription
-                        .has_notification_subscription(admin_id, "group_application")
-                        .await
-                    {
-                        continue;
-                    }
                     let cfg = self.subscription_service.get_config(admin_id).await?;
                     if !cfg.group_application_enabled {
                         continue;
@@ -812,13 +751,6 @@ impl EventHandler {
                     status: status.clone(),
                     responded_at: chrono::Utc::now().to_rfc3339(),
                 };
-                if !self
-                    .ws_subscription
-                    .has_notification_subscription(*applicant_id, "group_application_response")
-                    .await
-                {
-                    return Ok(());
-                }
                 let cfg = self.subscription_service.get_config(*applicant_id).await?;
                 if !cfg.group_application_response_enabled {
                     return Ok(());
@@ -1199,13 +1131,6 @@ impl EventHandler {
                 user_id,
                 liker_id,
             } => {
-                if !self
-                    .ws_subscription
-                    .has_notification_subscription(*user_id, "moment_like")
-                    .await
-                {
-                    return Ok(());
-                }
                 let cfg = self.subscription_service.get_config(*user_id).await?;
                 if !cfg.moment_like_enabled {
                     return Ok(());
@@ -1232,13 +1157,6 @@ impl EventHandler {
                 commenter_id,
                 content,
             } => {
-                if !self
-                    .ws_subscription
-                    .has_notification_subscription(*user_id, "moment_comment")
-                    .await
-                {
-                    return Ok(());
-                }
                 let cfg = self.subscription_service.get_config(*user_id).await?;
                 if !cfg.moment_comment_enabled {
                     return Ok(());
@@ -1296,13 +1214,6 @@ impl EventHandler {
                 replier_id,
                 content,
             } => {
-                if !self
-                    .ws_subscription
-                    .has_notification_subscription(*user_id, "comment_reply")
-                    .await
-                {
-                    return Ok(());
-                }
                 let cfg = self.subscription_service.get_config(*user_id).await?;
                 if !cfg.comment_reply_enabled {
                     return Ok(());
@@ -1327,13 +1238,6 @@ impl EventHandler {
                 title,
                 content,
             } => {
-                if !self
-                    .ws_subscription
-                    .has_notification_subscription(*user_id, "system_announcement")
-                    .await
-                {
-                    return Ok(());
-                }
                 let cfg = self.subscription_service.get_config(*user_id).await?;
                 if !cfg.system_announcement_enabled {
                     return Ok(());
@@ -1357,7 +1261,6 @@ impl EventHandler {
                 action_url,
                 created_at,
             } => {
-                // 系统公告推送给所有订阅了 system_announcement 的用户
                 let message = WsMessage::SystemAnnouncement {
                     announcement_id: announcement_id.clone(),
                     title: title.clone(),
@@ -1366,10 +1269,14 @@ impl EventHandler {
                     action_url: action_url.clone(),
                     created_at: created_at.clone(),
                 };
-                // 系统公告需要推送给所有在线用户（如果他们订阅了 system_announcement）
-                // 这里简化处理：通过 ws_manager 广播给所有连接
-                // 实际实现中，ws_manager 应该检查用户的订阅状态
-                let _ = self.ws_manager.broadcast(&message).await;
+                // 系统公告推送给所有在线用户（按通知偏好过滤）
+                let online_users = self.ws_manager.get_online_user_ids().await;
+                for uid in online_users {
+                    let cfg = self.subscription_service.get_config(uid).await?;
+                    if cfg.system_announcement_enabled {
+                        let _ = self.ws_manager.send_to_user(uid, &message).await;
+                    }
+                }
             }
 
             // ========== 群公告事件 ==========
@@ -1460,13 +1367,6 @@ impl EventHandler {
                 moment_text_preview,
                 moment_cover_url,
             } => {
-                if !self
-                    .ws_subscription
-                    .has_notification_subscription(*mentioned_user_id, "message_mention")
-                    .await
-                {
-                    return Ok(());
-                }
                 let cfg = self
                     .subscription_service
                     .get_config(*mentioned_user_id)
@@ -1497,13 +1397,6 @@ impl EventHandler {
                 mentioning_user_id,
                 content_preview,
             } => {
-                if !self
-                    .ws_subscription
-                    .has_notification_subscription(*mentioned_user_id, "message_mention")
-                    .await
-                {
-                    return Ok(());
-                }
                 let cfg = self
                     .subscription_service
                     .get_config(*mentioned_user_id)

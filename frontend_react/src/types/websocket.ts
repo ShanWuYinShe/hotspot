@@ -31,16 +31,12 @@ export type WebSocketState = 'connecting' | 'connected' | 'disconnected' | 'erro
 
 export type SubscriptionItem =
   | {
-      source_type: 'group_chat';
-      source_ids: string[];
+      type: 'group';
+      ids: string[];
     }
   | {
-      source_type: 'user';
-      source_ids: number[];
-    }
-  | {
-      source_type: 'notification';
-      source_ids: string[];
+      type: 'user';
+      ids: number[];
     };
 
 // ============================================================================

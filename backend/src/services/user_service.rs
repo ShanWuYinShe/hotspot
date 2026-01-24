@@ -1,4 +1,3 @@
-use redis::aio::ConnectionManager;
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -7,7 +6,7 @@ use uuid::Uuid;
 use chrono::{Duration, Utc};
 
 use crate::{
-    constants::LOCATION_CHANGE_THRESHOLD,
+    constants::{DEFAULT_LATITUDE, DEFAULT_LONGITUDE, LOCATION_CHANGE_THRESHOLD},
     dto::{
         request::{
             AdminBanUserRequest, AdminUnbanUserRequest, AdminUserDetailRequest,
@@ -68,7 +67,6 @@ pub struct UserService {
     group_member_repo: crate::repositories::group_member_repo::GroupMemberRepository,
     moment_repo: crate::repositories::moment_repo::MomentRepository,
     presence_service: crate::services::presence_service::PresenceService,
-    redis: ConnectionManager,
     media_service: crate::services::media_service::MediaService,
     cache_manager: CacheManager,
 }
@@ -89,7 +87,6 @@ impl UserService {
         group_member_repo: crate::repositories::group_member_repo::GroupMemberRepository,
         moment_repo: crate::repositories::moment_repo::MomentRepository,
         presence_service: crate::services::presence_service::PresenceService,
-        redis: ConnectionManager,
         media_service: crate::services::media_service::MediaService,
         cache_manager: CacheManager,
     ) -> Self {
@@ -108,7 +105,6 @@ impl UserService {
             group_member_repo,
             moment_repo,
             presence_service,
-            redis,
             media_service,
             cache_manager,
         }
@@ -117,6 +113,28 @@ impl UserService {
     /// 透传 cursor 字符串
     fn parse_cursor(cursor: Option<&str>) -> Option<String> {
         cursor.map(|s| s.to_string())
+    }
+
+    fn default_user_settings() -> UserSettingsData {
+        UserSettingsData {
+            privacy_level: PrivacyLevel::Public,
+            location_visible: true,
+            online_visible: true,
+            last_online_visible: true,
+            friends_visible: PrivacyLevel::Public,
+            following_visible: PrivacyLevel::Public,
+            followers_visible: PrivacyLevel::Public,
+            groups_visible: PrivacyLevel::Public,
+            moments_visible: PrivacyLevel::Public,
+            liked_moments_visible: PrivacyLevel::Public,
+            stats_visible: PrivacyLevel::Public,
+            allow_follow: true,
+            allow_private_chat: PrivateChatPermission::Everyone,
+            searchable: true,
+            phone_searchable: true,
+            nickname_searchable: true,
+            location_searchable: true,
+        }
     }
 
     /// 按关键字搜索用户（全局，距离由 PostGIS 计算）
@@ -529,10 +547,14 @@ impl UserService {
         }
 
         // 清除 Profile 缓存
-        use redis::AsyncCommands;
-        let mut conn = self.redis.clone();
-        let key = format!("user:profile:{}", user_id);
-        let _: () = conn.del(&key).await.unwrap_or(());
+        let cache_key = user_id.to_string();
+        if let Err(e) = self
+            .cache_manager
+            .delete(cache_keys::USER_INFO, &cache_key)
+            .await
+        {
+            tracing::warn!(user_id, error = %e, "delete user info cache failed");
+        }
 
         Ok(())
     }
@@ -548,8 +570,13 @@ impl UserService {
         }
 
         // 检查目标用户存在
-        if !self.user_repo.exists(to_user_id).await? {
-            return Err(AppError::UserNotFound("用户不存在".to_string()));
+        let target_user = self
+            .user_repo
+            .find_by_id(to_user_id)
+            .await?
+            .ok_or_else(|| AppError::UserNotFound("用户不存在".to_string()))?;
+        if target_user.user_type == crate::types::enums::UserType::System {
+            return Err(AppError::FollowNotAllowed("对方不允许被关注".to_string()));
         }
 
         // 黑名单检查：对方拉黑我时禁止关注
@@ -563,6 +590,14 @@ impl UserService {
 
         // 已关注则视为幂等成功
         if self.follows_repo.exists(from_user_id, to_user_id).await? {
+            if self
+                .follows_repo
+                .are_mutual_follows(from_user_id, to_user_id)
+                .await?
+            {
+                let err = AppError::AlreadyFriends;
+                tracing::debug!(code = err.error_code(), "already friends");
+            }
             return Ok(());
         }
 
@@ -702,9 +737,7 @@ impl UserService {
             .are_mutual_follows(user_id, friend_id)
             .await?
         {
-            return Err(AppError::BadRequest(
-                "不是好友关系（未互相关注）".to_string(),
-            ));
+            return Err(AppError::NotFriends);
         }
 
         if let Some(remark) = &req.remark {
@@ -727,38 +760,57 @@ impl UserService {
         &self,
         user_ids: &[i64],
     ) -> Result<Vec<crate::repositories::user_repo::UserProfileRow>> {
-        use redis::AsyncCommands;
         if user_ids.is_empty() {
             return Ok(vec![]);
         }
 
         let mut profiles = Vec::with_capacity(user_ids.len());
         let mut missing_ids = Vec::new();
-        let mut conn = self.redis.clone();
+        let cache_ids: Vec<String> = user_ids.iter().map(|id| id.to_string()).collect();
 
-        // 1. 尝试从缓存获取
-        for &id in user_ids {
-            let key = format!("user:profile:{}", id);
-            let cached: Option<String> = conn.get(&key).await.ok().flatten();
-            if let Some(json) = cached {
-                if let Ok(profile) = serde_json::from_str(&json) {
+        // 1. 尝试从缓存获取（批量）
+        let cached = match self
+            .cache_manager
+            .mget::<crate::repositories::user_repo::UserProfileRow>(
+                cache_keys::USER_INFO,
+                &cache_ids,
+            )
+            .await
+        {
+            Ok(v) => v,
+            Err(e) => {
+                tracing::warn!(error = %e, "mget user info cache failed");
+                Vec::new()
+            }
+        };
+
+        if !cached.is_empty() {
+            for (id, value) in cached {
+                if let Some(profile) = value {
                     profiles.push(profile);
-                    continue;
+                } else if let Ok(parsed_id) = id.parse::<i64>() {
+                    missing_ids.push(parsed_id);
                 }
             }
-            missing_ids.push(id);
+        } else {
+            missing_ids.extend_from_slice(user_ids);
         }
 
         // 2. 如果有缺失，从 DB 获取
         if !missing_ids.is_empty() {
             let db_profiles = self.user_repo.find_profiles(&missing_ids).await?;
+            let mut cache_items = Vec::with_capacity(db_profiles.len());
             for profile in db_profiles {
                 // 3. 写入缓存 (TTL 1小时)
-                if let Ok(json) = serde_json::to_string(&profile) {
-                    let key = format!("user:profile:{}", profile.user_id);
-                    let _: () = conn.set_ex(&key, json, 3600).await.unwrap_or(());
-                }
+                cache_items.push((profile.user_id.to_string(), profile.clone()));
                 profiles.push(profile);
+            }
+            if let Err(e) = self
+                .cache_manager
+                .mset(cache_keys::USER_INFO, &cache_items)
+                .await
+            {
+                tracing::warn!(error = %e, "mset user info cache failed");
             }
         }
 
@@ -1405,7 +1457,7 @@ impl UserService {
                 },
             )
             .await
-            .map_err(|e| AppError::InternalError(e.to_string()))?;
+            .map_err(|e| AppError::CacheError(e.to_string()))?;
 
         if let Some(stats) = cached {
             Ok(stats)
@@ -1422,14 +1474,19 @@ impl UserService {
 
     /// 获取用户设置
     pub async fn get_settings(&self, user_id: i64) -> Result<UserSettingsData> {
-        use redis::AsyncCommands;
-        let mut conn = self.redis.clone();
-        let key = format!("user:settings:{}", user_id);
+        let cache_key = user_id.to_string();
 
         // 1. 尝试从缓存获取
-        if let Ok(Some(json)) = conn.get::<_, Option<String>>(&key).await {
-            if let Ok(settings) = serde_json::from_str(&json) {
-                return Ok(settings);
+        match self
+            .cache_manager
+            .get::<UserSettingsData>(cache_keys::USER_SETTINGS, &cache_key)
+            .await
+        {
+            Ok(Some(Some(settings))) => return Ok(settings),
+            Ok(Some(None)) => return Ok(Self::default_user_settings()),
+            Ok(None) => {}
+            Err(e) => {
+                tracing::warn!(user_id, error = %e, "get user settings cache failed");
             }
         }
 
@@ -1459,33 +1516,27 @@ impl UserService {
             };
 
             // 写入缓存 (1小时)
-            if let Ok(json) = serde_json::to_string(&data) {
-                let _: () = conn.set_ex(&key, json, 3600).await.unwrap_or(());
+            if let Err(e) = self
+                .cache_manager
+                .set(cache_keys::USER_SETTINGS, &cache_key, &data)
+                .await
+            {
+                tracing::warn!(user_id, error = %e, "set user settings cache failed");
             }
 
             return Ok(data);
         }
 
         // 返回默认设置
-        Ok(UserSettingsData {
-            privacy_level: PrivacyLevel::Public,
-            location_visible: true,
-            online_visible: true,
-            last_online_visible: true,
-            friends_visible: PrivacyLevel::Public,
-            following_visible: PrivacyLevel::Public,
-            followers_visible: PrivacyLevel::Public,
-            groups_visible: PrivacyLevel::Public,
-            moments_visible: PrivacyLevel::Public,
-            liked_moments_visible: PrivacyLevel::Public,
-            stats_visible: PrivacyLevel::Public,
-            allow_follow: true,
-            allow_private_chat: PrivateChatPermission::Everyone,
-            searchable: true,
-            phone_searchable: true,
-            nickname_searchable: true,
-            location_searchable: true,
-        })
+        if let Err(e) = self
+            .cache_manager
+            .set_null(cache_keys::USER_SETTINGS, &cache_key)
+            .await
+        {
+            tracing::warn!(user_id, error = %e, "set user settings null cache failed");
+        }
+
+        Ok(Self::default_user_settings())
     }
 
     /// 更新用户设置
@@ -1519,10 +1570,14 @@ impl UserService {
         self.user_settings_repo.update(user_id, &params).await?;
 
         // 清除设置缓存
-        use redis::AsyncCommands;
-        let mut conn = self.redis.clone();
-        let key = format!("user:settings:{}", user_id);
-        let _: () = conn.del(&key).await.unwrap_or(());
+        let cache_key = user_id.to_string();
+        if let Err(e) = self
+            .cache_manager
+            .delete(cache_keys::USER_SETTINGS, &cache_key)
+            .await
+        {
+            tracing::warn!(user_id, error = %e, "delete user settings cache failed");
+        }
 
         Ok(())
     }
@@ -1541,7 +1596,7 @@ impl UserService {
 
         // 2. 检查登录ID是否已被使用
         if self.user_repo.exists_by_login_id(&req.login_id).await? {
-            return Err(AppError::Conflict("该登录ID已被注册".to_string()));
+            return Err(AppError::AlreadyExists("该登录ID已被注册".to_string()));
         }
 
         // 3. 对密码进行服务端慢哈希（bcrypt）
@@ -1794,10 +1849,14 @@ impl UserService {
     ) -> Result<PaginatedData<MomentItem>> {
         let target_user_id = req.user_id;
 
-        // 验证用户存在
-        if !self.user_repo.exists(target_user_id).await? {
-            return Err(AppError::UserNotFound("用户不存在".to_string()));
-        }
+        // 验证用户存在并获取参考位置
+        let target_user = self
+            .user_repo
+            .find_by_id(target_user_id)
+            .await?
+            .ok_or_else(|| AppError::UserNotFound("用户不存在".to_string()))?;
+        let reference_lat = target_user.current_latitude.unwrap_or(DEFAULT_LATITUDE);
+        let reference_lng = target_user.current_longitude.unwrap_or(DEFAULT_LONGITUDE);
 
         // 检查 liked_moments_visible 隐私设置
         let settings = self
@@ -1816,12 +1875,6 @@ impl UserService {
             return Err(AppError::Forbidden("权限不足".to_string()));
         }
 
-        // 验证坐标
-        Validator::validate_coordinates(
-            req.reference_point.latitude,
-            req.reference_point.longitude,
-        )?;
-
         let cursor = Self::parse_cursor(req.cursor.as_deref());
         let limit = Validator::validate_limit(req.limit, 100)? as i32;
 
@@ -1839,8 +1892,8 @@ impl UserService {
             .moment_repo
             .find_by_ids_with_distance(
                 &moment_uuids,
-                req.reference_point.latitude,
-                req.reference_point.longitude,
+                reference_lat,
+                reference_lng,
                 None,
             )
             .await?;

@@ -14,10 +14,10 @@ import type { CreateMomentRequest, UpdateMomentRequest } from '@/types/api';
  * 点赞动态
  */
 export async function likeMoment(momentId: string) {
-  const response = await serverApi.post(ENDPOINTS.MOMENTS.LIKE(momentId));
+  const response = await serverApi.post(ENDPOINTS.MOMENTS.LIKE(momentId), { moment_id: momentId }, {});
   if (isServerSuccess(response)) {
-    revalidateTag(`moment-${momentId}`);
-    revalidateTag('feed');
+    revalidateTag(`moment-${momentId}`, {});
+    revalidateTag('feed', {});
   }
   return response;
 }
@@ -26,10 +26,10 @@ export async function likeMoment(momentId: string) {
  * 取消点赞动态
  */
 export async function unlikeMoment(momentId: string) {
-  const response = await serverApi.post(ENDPOINTS.MOMENTS.UNLIKE(momentId));
+  const response = await serverApi.post(ENDPOINTS.MOMENTS.UNLIKE(momentId), { moment_id: momentId }, {});
   if (isServerSuccess(response)) {
-    revalidateTag(`moment-${momentId}`);
-    revalidateTag('feed');
+    revalidateTag(`moment-${momentId}`, {});
+    revalidateTag('feed', {});
   }
   return response;
 }
@@ -38,10 +38,10 @@ export async function unlikeMoment(momentId: string) {
  * 收藏动态
  */
 export async function favoriteMoment(momentId: string) {
-  const response = await serverApi.post(ENDPOINTS.MOMENTS.FAVORITE(momentId));
+  const response = await serverApi.post(ENDPOINTS.MOMENTS.FAVORITE(momentId), { moment_id: momentId }, {});
   if (isServerSuccess(response)) {
-    revalidateTag(`moment-${momentId}`);
-    revalidateTag('favorites');
+    revalidateTag(`moment-${momentId}`, {});
+    revalidateTag('favorites', {});
   }
   return response;
 }
@@ -50,10 +50,10 @@ export async function favoriteMoment(momentId: string) {
  * 取消收藏动态
  */
 export async function unfavoriteMoment(momentId: string) {
-  const response = await serverApi.post(ENDPOINTS.MOMENTS.UNFAVORITE(momentId));
+  const response = await serverApi.post(ENDPOINTS.MOMENTS.UNFAVORITE(momentId), { moment_id: momentId }, {});
   if (isServerSuccess(response)) {
-    revalidateTag(`moment-${momentId}`);
-    revalidateTag('favorites');
+    revalidateTag(`moment-${momentId}`, {});
+    revalidateTag('favorites', {});
   }
   return response;
 }
@@ -62,10 +62,10 @@ export async function unfavoriteMoment(momentId: string) {
  * 删除动态
  */
 export async function deleteMoment(momentId: string) {
-  const response = await serverApi.delete(ENDPOINTS.MOMENTS.DELETE(momentId));
+  const response = await serverApi.post(ENDPOINTS.MOMENTS.DELETE(momentId), { moment_id: momentId }, {});
   if (isServerSuccess(response)) {
-    revalidateTag('feed');
-    revalidateTag('moments');
+    revalidateTag('feed', {});
+    revalidateTag('moments', {});
   }
   return response;
 }
@@ -74,19 +74,26 @@ export async function deleteMoment(momentId: string) {
  * 创建动态
  */
 export async function createMoment(data: CreateMomentRequest) {
-  const response = await serverApi.post(ENDPOINTS.MOMENTS.CREATE, data);
+  const response = await serverApi.post(ENDPOINTS.MOMENTS.CREATE, data, {});
   if (isServerSuccess(response)) {
-    revalidateTag('feed');
-    revalidateTag('moments');
+    revalidateTag('feed', {});
+    revalidateTag('moments', {});
   }
   return response;
 }
 
+/**
+ * 更新动态
+ */
 export async function updateMoment(momentId: string, data: Omit<UpdateMomentRequest, 'moment_id'>) {
-  const response = await serverApi.put(ENDPOINTS.MOMENTS.UPDATE(momentId), data);
+  const response = await serverApi.post(
+    ENDPOINTS.MOMENTS.UPDATE(momentId),
+    { moment_id: momentId, ...data },
+    {}
+  );
   if (isServerSuccess(response)) {
-    revalidateTag(`moment-${momentId}`);
-    revalidateTag('moments');
+    revalidateTag(`moment-${momentId}`, {});
+    revalidateTag('moments', {});
   }
   return response;
 }

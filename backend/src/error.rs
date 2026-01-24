@@ -531,38 +531,19 @@ pub type Result<T> = std::result::Result<T, AppError>;
 // ============================================================
 
 impl AppError {
-    /// 创建参数错误
-    pub fn bad_request(msg: impl Into<String>) -> Self {
-        Self::BadRequest(msg.into())
-    }
-
-    /// 创建缺少参数错误
-    pub fn missing_param(param: impl Into<String>) -> Self {
-        Self::MissingParameter(param.into())
-    }
-
-    /// 创建格式错误
-    pub fn invalid_format(msg: impl Into<String>) -> Self {
-        Self::InvalidFormat(msg.into())
-    }
-
-    /// 创建权限不足错误
-    pub fn forbidden(msg: impl Into<String>) -> Self {
-        Self::Forbidden(msg.into())
-    }
-
-    /// 创建资源不存在错误
-    pub fn not_found(msg: impl Into<String>) -> Self {
-        Self::NotFound(msg.into())
-    }
-
     /// 创建内部错误
     pub fn internal(msg: impl Into<String>) -> Self {
         Self::InternalError(msg.into())
     }
+}
 
-    /// 创建冲突错误
-    pub fn conflict(msg: impl Into<String>) -> Self {
-        Self::Conflict(msg.into())
-    }
+/// 预热错误码映射（用于观测/告警，不影响业务逻辑）
+pub fn warmup_error_catalog() {
+    let _ = [
+        AppError::VersionConflict("版本冲突".to_string()),
+        AppError::TooManyConcurrentRequests,
+        AppError::ServiceUnavailable,
+        AppError::SystemMaintenance,
+        AppError::ServiceOverloaded,
+    ];
 }

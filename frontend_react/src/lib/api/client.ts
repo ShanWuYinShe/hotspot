@@ -214,11 +214,7 @@ export async function get<T>(
   params?: Record<string, string | number | boolean | undefined>,
   options?: Omit<RequestOptions, 'method' | 'body' | 'params'>
 ): Promise<ApiResponse<T>> {
-  return request<T>(endpoint, {
-    ...options,
-    method: 'GET',
-    params,
-  });
+  return post<T>(endpoint, params ?? {}, options);
 }
 
 /**
@@ -232,7 +228,7 @@ export async function post<T>(
   return request<T>(endpoint, {
     ...options,
     method: 'POST',
-    body,
+    body: body === undefined ? {} : body,
   });
 }
 
@@ -244,11 +240,7 @@ export async function put<T>(
   body?: unknown,
   options?: Omit<RequestOptions, 'method' | 'body'>
 ): Promise<ApiResponse<T>> {
-  return request<T>(endpoint, {
-    ...options,
-    method: 'PUT',
-    body,
-  });
+  return post<T>(endpoint, body, options);
 }
 
 /**
@@ -259,11 +251,7 @@ export async function patch<T>(
   body?: unknown,
   options?: Omit<RequestOptions, 'method' | 'body'>
 ): Promise<ApiResponse<T>> {
-  return request<T>(endpoint, {
-    ...options,
-    method: 'PATCH',
-    body,
-  });
+  return post<T>(endpoint, body, options);
 }
 
 /**
@@ -273,10 +261,7 @@ export async function del<T>(
   endpoint: string,
   options?: Omit<RequestOptions, 'method'>
 ): Promise<ApiResponse<T>> {
-  return request<T>(endpoint, {
-    ...options,
-    method: 'DELETE',
-  });
+  return post<T>(endpoint, {}, options);
 }
 
 // ============================================================================
@@ -309,7 +294,7 @@ export async function paginate<T>(
   params?: Record<string, string | number | boolean | undefined> & { cursor?: string; limit?: number },
   options?: Omit<RequestOptions, 'method' | 'body' | 'params'>
 ): Promise<ApiResponse<PaginatedData<T>>> {
-  return get<PaginatedData<T>>(endpoint, params, options);
+  return post<PaginatedData<T>>(endpoint, params ?? {}, options);
 }
 
 /**

@@ -118,7 +118,7 @@ impl AuthService {
 
         // 1. 检查登录ID是否已存在
         if self.user_repo.exists_by_login_id(&req.login_id).await? {
-            return Err(AppError::Conflict("该登录ID已被注册".to_string()));
+            return Err(AppError::AlreadyExists("该登录ID已被注册".to_string()));
         }
 
         // 2. 从数据库序列生成用户ID
@@ -218,6 +218,10 @@ impl AuthService {
             .find_by_login_id(&req.login_id)
             .await?
             .ok_or_else(|| AppError::Unauthorized("用户名或密码错误".to_string()))?;
+
+        if self.user_repo.is_banned(user.user_id).await? {
+            return Err(AppError::AccountBanned("账号已被封禁".to_string()));
+        }
 
         // 2. 验证密码
         let password_hash = user
@@ -466,6 +470,10 @@ impl AuthService {
             .find_by_id(user_id)
             .await?
             .ok_or_else(|| AppError::NotFound("用户不存在".to_string()))?;
+
+        if self.user_repo.is_banned(user_id).await? {
+            return Err(AppError::AccountBanned("账号已被封禁".to_string()));
+        }
 
         // 7. 生成新的 Token (Token Rotation)
         // 保持 Session ID 不变
@@ -850,7 +858,7 @@ impl AuthService {
             .verification_repo
             .check_recent_code(&req.phone, code_type, 60)
             .await
-            .map_err(|e| AppError::InternalError(e.to_string()))?;
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         if within_60s {
             return Err(AppError::RateLimited(
@@ -863,12 +871,10 @@ impl AuthService {
             .verification_repo
             .count_today_codes(&req.phone, code_type)
             .await
-            .map_err(|e| AppError::InternalError(e.to_string()))?;
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         if today_count >= 10 {
-            return Err(AppError::RateLimited(
-                "今日验证码发送次数已达上限".to_string(),
-            ));
+            return Err(AppError::DailyRateLimitExceeded);
         }
 
         // 5. 生成验证码（6位数字）
@@ -882,7 +888,7 @@ impl AuthService {
             .verification_repo
             .create_code(&req.phone, &code, code_type, expires_at)
             .await
-            .map_err(|e| AppError::InternalError(e.to_string()))?;
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         // 8. 发送短信（写入发送队列，供外部短信服务消费）
         let content = format!("您的验证码是: {}, 5分钟内有效", code);
@@ -941,7 +947,7 @@ impl AuthService {
             .arg(payload.to_string())
             .query_async::<()>(&mut conn)
             .await
-            .map_err(|e| AppError::InternalError(format!("短信队列写入失败: {}", e)))?;
+            .map_err(|e| AppError::MessageQueueError(format!("短信队列写入失败: {}", e)))?;
         Ok(())
     }
 
@@ -952,7 +958,7 @@ impl AuthService {
             .verification_repo
             .find_by_code_id(&req.code_id)
             .await
-            .map_err(|e| AppError::InternalError(e.to_string()))?
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?
             .ok_or_else(|| AppError::NotFound("验证码不存在或已失效".to_string()))?;
 
         // 2. 检查是否已过期
@@ -973,7 +979,7 @@ impl AuthService {
             self.verification_repo
                 .increment_attempts(&req.code_id)
                 .await
-                .map_err(|e| AppError::InternalError(e.to_string()))?;
+                .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
             return Err(AppError::Conflict("验证码错误".to_string()));
         }
@@ -982,7 +988,7 @@ impl AuthService {
         self.verification_repo
             .mark_verified(&req.code_id)
             .await
-            .map_err(|e| AppError::InternalError(e.to_string()))?;
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         // 6. 生成 verify_token（用于后续注册/重置密码等操作）
         let verify_token = TokenUtil::generate_token();
@@ -1022,19 +1028,21 @@ impl AuthService {
             .map_err(|e| AppError::Redis(e))?;
 
         let verify_token_data = verify_token_data
-            .ok_or_else(|| AppError::Conflict("验证令牌无效或已过期".to_string()))?;
+            .ok_or_else(|| AppError::VerifyTokenInvalid("验证令牌无效或已过期".to_string()))?;
 
         // 解析 phone:type
         let parts: Vec<&str> = verify_token_data.split(':').collect();
         if parts.len() != 2 {
-            return Err(AppError::internal("Invalid verify token format"));
+            return Err(AppError::VerifyTokenInvalid(
+                "验证令牌格式无效".to_string(),
+            ));
         }
 
         let phone = parts[0];
         let code_type = parts[1];
 
         if code_type != expected_type {
-            return Err(AppError::Conflict(
+            return Err(AppError::VerifyTokenInvalid(
                 "验证令牌类型不匹配".to_string(),
             ));
         }

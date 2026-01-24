@@ -7,7 +7,7 @@ use crate::{
             FeedUsersRequest,
         },
         response::{
-            FeedGroupItem, FeedTrendingData, FeedUserItem, GroupItem, MomentItem, PaginatedData,
+            FeedGroupItem, FeedMomentItem, FeedTrendingData, FeedUserItem, PaginatedData,
             PaginationMeta, RelativeLocation, TrendingTagItem, UserItem,
         },
     },
@@ -60,7 +60,7 @@ impl FeedService {
         &self,
         user_id: i64,
         req: FeedMomentsRequest,
-    ) -> Result<PaginatedData<MomentItem>, AppError> {
+    ) -> Result<PaginatedData<FeedMomentItem>, AppError> {
         let limit = Validator::validate_limit(req.limit, 100)? as i32;
         let cursor = req.cursor;
 
@@ -112,33 +112,11 @@ impl FeedService {
             .batch_check_favorited(&moment_ids, user_id)
             .await?;
 
-        use crate::dto::response::MomentImage;
         let mut items = Vec::with_capacity(moments.len());
         for m in moments {
             let tags = tags_map.get(&m.moment_id).cloned().unwrap_or_default();
 
-            // 动态签名 image paths -> fresh URLs
-            let images = if m.images.is_empty() {
-                None
-            } else {
-                let mut signed_images = Vec::with_capacity(m.images.len());
-                for path in &m.images {
-                    let url = match self.media_service.sign_url(path).await {
-                        Ok(u) => u,
-                        Err(e) => {
-                            tracing::warn!("Failed to sign url for path {}: {}", path, e);
-                            path.clone() // Fallback to path if signing fails
-                        }
-                    };
-                    signed_images.push(MomentImage {
-                        url,
-                        width: None,
-                        height: None,
-                        content_type: None,
-                    });
-                }
-                Some(signed_images)
-            };
+            let images = self.sign_moment_images(&m.images).await;
 
             // 签名 avatar_url
             let avatar_url = self
@@ -146,7 +124,7 @@ impl FeedService {
                 .sign_url_if_path(m.avatar_url.as_deref())
                 .await;
 
-            items.push(MomentItem {
+            items.push(FeedMomentItem {
                 moment_id: m.moment_id.to_string(),
                 user: crate::dto::response::UserInfo {
                     user_id: m.user_id,
@@ -168,8 +146,8 @@ impl FeedService {
                     distance: m.distance,
                     bearing_degrees: m.bearing_degrees,
                 },
-                is_liked: Some(liked_set.contains(&m.moment_id)),
-                is_favorited: Some(favorited_set.contains(&m.moment_id)),
+                is_liked: liked_set.contains(&m.moment_id),
+                is_favorited: favorited_set.contains(&m.moment_id),
             });
         }
 
@@ -214,29 +192,26 @@ impl FeedService {
                 .await;
 
             items.push(FeedGroupItem {
-                group: GroupItem {
-                    group_chat_id: g.group_id.to_string(),
-                    name: g.name,
-                    description: if g.description.is_empty() {
-                        None
-                    } else {
-                        Some(g.description)
-                    },
-                    avatar_url,
-                    tags: Some(g.tags),
-                    members_count: g.member_count,
-                    has_password: g.has_password,
-                    location: Some(RelativeLocation {
-                        latitude: g.latitude,
-                        longitude: g.longitude,
-                        location_name: g.location_name,
-                        distance: g.distance,
-                        bearing_degrees: g.bearing_degrees,
-                    }),
+                group_chat_id: g.group_id.to_string(),
+                name: g.name,
+                avatar_url,
+                members_count: g.member_count,
+                description: if g.description.is_empty() {
+                    None
+                } else {
+                    Some(g.description)
+                },
+                tags: if g.tags.is_empty() { None } else { Some(g.tags) },
+                has_password: g.has_password,
+                location: RelativeLocation {
+                    latitude: g.latitude,
+                    longitude: g.longitude,
+                    location_name: g.location_name,
+                    distance: g.distance,
+                    bearing_degrees: g.bearing_degrees,
                 },
                 friends_in_group: None,
-                my_role: None,
-                is_joined: None,
+                my_state: None,
             });
         }
 
@@ -356,7 +331,7 @@ impl FeedService {
     /// 获取热门内容
     pub async fn get_trending(
         &self,
-        _user_id: i64,
+        user_id: i64,
         req: FeedTrendingRequest,
     ) -> Result<FeedTrendingData, AppError> {
         let limit = Validator::validate_limit(req.limit, 50)? as i64;
@@ -383,33 +358,19 @@ impl FeedService {
         let hot_moment_ids: Vec<_> = hot_moments_raw.iter().map(|m| m.moment_id).collect();
         let hot_tags_map = self.tag_repo.get_moment_tags_batch(&hot_moment_ids).await?;
 
-        use crate::dto::response::MomentImage;
         let mut hot_moments = Vec::with_capacity(hot_moments_raw.len());
+        let liked_set = self
+            .moment_repo
+            .batch_check_liked(&hot_moment_ids, user_id)
+            .await?;
+        let favorited_set = self
+            .moment_repo
+            .batch_check_favorited(&hot_moment_ids, user_id)
+            .await?;
         for m in hot_moments_raw {
             let tags = hot_tags_map.get(&m.moment_id).cloned().unwrap_or_default();
 
-            // 签名图片 URLs
-            let images = if m.images.is_empty() {
-                None
-            } else {
-                let mut signed_images = Vec::with_capacity(m.images.len());
-                for path in &m.images {
-                    let url = match self.media_service.sign_url(path).await {
-                        Ok(u) => u,
-                        Err(e) => {
-                            tracing::warn!("Failed to sign url for path {}: {}", path, e);
-                            path.clone()
-                        }
-                    };
-                    signed_images.push(MomentImage {
-                        url,
-                        width: None,
-                        height: None,
-                        content_type: None,
-                    });
-                }
-                Some(signed_images)
-            };
+            let images = self.sign_moment_images(&m.images).await;
 
             // 签名用户头像
             let avatar_url = self
@@ -417,7 +378,7 @@ impl FeedService {
                 .sign_url_if_path(m.avatar_url.as_deref())
                 .await;
 
-            hot_moments.push(MomentItem {
+            hot_moments.push(FeedMomentItem {
                 moment_id: m.moment_id.to_string(),
                 user: crate::dto::response::UserInfo {
                     user_id: m.user_id,
@@ -439,8 +400,8 @@ impl FeedService {
                     distance: m.distance,
                     bearing_degrees: m.bearing_degrees,
                 },
-                is_liked: None,
-                is_favorited: None,
+                is_liked: liked_set.contains(&m.moment_id),
+                is_favorited: favorited_set.contains(&m.moment_id),
             });
         }
 
@@ -491,6 +452,32 @@ impl FeedService {
         }
 
         Ok(())
+    }
+
+    async fn sign_moment_images(
+        &self,
+        images: &[String],
+    ) -> Option<Vec<crate::dto::response::MomentImage>> {
+        if images.is_empty() {
+            return None;
+        }
+        let mut signed_images = Vec::with_capacity(images.len());
+        for path in images {
+            let url = match self.media_service.sign_url(path).await {
+                Ok(u) => u,
+                Err(e) => {
+                    tracing::warn!("Failed to sign url for path {}: {}", path, e);
+                    path.clone()
+                }
+            };
+            signed_images.push(crate::dto::response::MomentImage {
+                url,
+                width: None,
+                height: None,
+                content_type: None,
+            });
+        }
+        Some(signed_images)
     }
 
     /// 更新推荐权重

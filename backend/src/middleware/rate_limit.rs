@@ -2,35 +2,33 @@ use axum::{extract::Request, extract::State, middleware::Next, response::Respons
 use std::net::IpAddr;
 use std::str::FromStr;
 
-use crate::{error::AppError, state::AppState};
+use crate::{
+    error::AppError,
+    state::AppState,
+    utils::cache::CacheManager,
+};
 
 async fn apply_limit(
-    state: &AppState,
+    cache: &CacheManager,
     key_prefix: &str,
     identity: &str,
     limit: u32,
     window_secs: u64,
 ) -> Result<(), AppError> {
     let key = format!("rate_limit:endpoint:{}:{}", key_prefix, identity);
-    let count: u32 = redis::cmd("INCR")
-        .arg(&key)
-        .query_async(&mut state.redis.clone())
-        .await
-        .unwrap_or(0);
+    let count = cache.incr(&key, 1).await.unwrap_or(0) as u32;
 
     if count == 1 {
-        let _: () = redis::cmd("EXPIRE")
-            .arg(&key)
-            .arg(window_secs)
-            .query_async(&mut state.redis.clone())
-            .await
-            .unwrap_or(());
+        let _ = cache.expire(&key, window_secs).await;
     }
 
     if count > limit {
-        return Err(AppError::RateLimited(
-            "请求过于频繁，请稍后再试".to_string(),
-        ));
+        return Err(match window_secs {
+            60 => AppError::MinuteRateLimitExceeded,
+            3600 => AppError::HourlyRateLimitExceeded,
+            86400 => AppError::DailyRateLimitExceeded,
+            _ => AppError::RateLimited("请求过于频繁，请稍后再试".to_string()),
+        });
     }
 
     Ok(())
@@ -103,31 +101,21 @@ pub async fn rate_limit_middleware(
     req: Request,
     next: Next,
 ) -> Result<Response, AppError> {
+    let cache = CacheManager::new(state.redis.clone());
     // 获取客户端IP
     let client_ip = get_client_ip(&req);
 
     // 检查全局频率限制（按IP）
     let global_key = format!("rate_limit:global:{}", client_ip);
-    let global_count: u32 = redis::cmd("INCR")
-        .arg(&global_key)
-        .query_async(&mut state.redis.clone())
-        .await
-        .unwrap_or(0);
+    let global_count = cache.incr(&global_key, 1).await.unwrap_or(0) as u32;
 
     if global_count == 1 {
         // 设置过期时间（1小时）
-        let _: () = redis::cmd("EXPIRE")
-            .arg(&global_key)
-            .arg(3600)
-            .query_async(&mut state.redis.clone())
-            .await
-            .unwrap_or(());
+        let _ = cache.expire(&global_key, 3600).await;
     }
 
     if global_count > state.config.rate_limit_global_per_hour {
-        return Err(AppError::RateLimited(
-            "请求过于频繁，请稍后再试".to_string(),
-        ));
+        return Err(AppError::HourlyRateLimitExceeded);
     }
 
     let user_id = req.extensions().get::<i64>().copied();
@@ -135,25 +123,14 @@ pub async fn rate_limit_middleware(
     // 如果有用户ID，检查用户级别的频率限制
     if let Some(user_id) = user_id {
         let user_key = format!("rate_limit:user:{}", user_id);
-        let user_count: u32 = redis::cmd("INCR")
-            .arg(&user_key)
-            .query_async(&mut state.redis.clone())
-            .await
-            .unwrap_or(0);
+        let user_count = cache.incr(&user_key, 1).await.unwrap_or(0) as u32;
 
         if user_count == 1 {
-            let _: () = redis::cmd("EXPIRE")
-                .arg(&user_key)
-                .arg(3600)
-                .query_async(&mut state.redis.clone())
-                .await
-                .unwrap_or(());
+            let _ = cache.expire(&user_key, 3600).await;
         }
 
         if user_count > state.config.rate_limit_user_per_hour {
-            return Err(AppError::RateLimited(
-                "请求过于频繁，请稍后再试".to_string(),
-            ));
+            return Err(AppError::HourlyRateLimitExceeded);
         }
     }
 
@@ -162,47 +139,47 @@ pub async fn rate_limit_middleware(
     let method = req.method().as_str();
     match (method, path) {
         ("POST", "/api/v1/auth/send_verification_code") => {
-            apply_limit(&state, "auth:send_code:ip", &client_ip, 5, 60).await?;
+            apply_limit(&cache, "auth:send_code:ip", &client_ip, 5, 60).await?;
         }
         ("POST", "/api/v1/auth/verify_code") => {
-            apply_limit(&state, "auth:verify_code:ip", &client_ip, 30, 600).await?;
+            apply_limit(&cache, "auth:verify_code:ip", &client_ip, 30, 600).await?;
         }
         ("POST", "/api/v1/auth/register") => {
-            apply_limit(&state, "auth:register:ip", &client_ip, 10, 600).await?;
+            apply_limit(&cache, "auth:register:ip", &client_ip, 10, 600).await?;
         }
         ("POST", "/api/v1/auth/login") => {
-            apply_limit(&state, "auth:login:ip", &client_ip, 30, 600).await?;
+            apply_limit(&cache, "auth:login:ip", &client_ip, 30, 600).await?;
         }
         ("POST", "/api/v1/auth/guest") => {
-            apply_limit(&state, "auth:guest:ip", &client_ip, 60, 600).await?;
+            apply_limit(&cache, "auth:guest:ip", &client_ip, 60, 600).await?;
         }
         ("POST", "/api/v1/auth/refresh_token") => {
-            apply_limit(&state, "auth:refresh:ip", &client_ip, 120, 600).await?;
+            apply_limit(&cache, "auth:refresh:ip", &client_ip, 120, 600).await?;
         }
         ("POST", "/api/v1/auth/request_password_reset") => {
-            apply_limit(&state, "auth:reset_request:ip", &client_ip, 5, 60).await?;
+            apply_limit(&cache, "auth:reset_request:ip", &client_ip, 5, 60).await?;
         }
         ("POST", "/api/v1/auth/verify_reset_code") => {
-            apply_limit(&state, "auth:reset_verify:ip", &client_ip, 20, 600).await?;
+            apply_limit(&cache, "auth:reset_verify:ip", &client_ip, 20, 600).await?;
         }
         ("POST", "/api/v1/auth/reset_password") => {
-            apply_limit(&state, "auth:reset:ip", &client_ip, 10, 600).await?;
+            apply_limit(&cache, "auth:reset:ip", &client_ip, 10, 600).await?;
         }
         ("POST", "/api/v1/moments/create") => {
             if let Some(uid) = user_id {
-                apply_limit(&state, "moments:create:user", &uid.to_string(), 20, 60).await?;
+                apply_limit(&cache, "moments:create:user", &uid.to_string(), 20, 60).await?;
             }
         }
         ("POST", "/api/v1/comments/create") => {
             if let Some(uid) = user_id {
-                apply_limit(&state, "comments:create:user", &uid.to_string(), 60, 60).await?;
+                apply_limit(&cache, "comments:create:user", &uid.to_string(), 60, 60).await?;
             }
         }
         ("POST", "/api/v1/reports/create") => {
             let identity = user_id
                 .map(|uid| uid.to_string())
                 .unwrap_or_else(|| client_ip.clone());
-            apply_limit(&state, "reports:create", &identity, 10, 3600).await?;
+            apply_limit(&cache, "reports:create", &identity, 10, 3600).await?;
         }
         _ => {}
     }

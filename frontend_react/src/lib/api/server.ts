@@ -11,10 +11,42 @@ import type { ApiResponse, PaginatedData } from '@/types/api';
 // ============================================================================
 
 const ACCESS_TOKEN_KEY = 'access_token';
+const SERVER_API_ORIGIN = process.env.HOTSPOT_ORIGIN ?? process.env.NEXT_PUBLIC_APP_ORIGIN ?? '';
+const AUTH_ERROR_CODE_MIN = 10100;
+const AUTH_ERROR_CODE_MAX = 10107;
+const NOT_FOUND_CODE_MIN = 10300;
+const NOT_FOUND_CODE_MAX = 10399;
+
+function normalizeForwardedHeader(value: string | null): string | null {
+  if (!value) return null;
+  const first = value.split(',')[0]?.trim();
+  return first ? first : null;
+}
+
+function normalizeOrigin(value: string): string | null {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
+}
+
 async function getApiBaseUrl(): Promise<string> {
+  const envOrigin = SERVER_API_ORIGIN ? normalizeOrigin(SERVER_API_ORIGIN) : null;
+  if (envOrigin) return envOrigin;
+
   const headerStore = await headers();
-  const host = headerStore.get('x-forwarded-host') ?? headerStore.get('host') ?? 'localhost';
-  const proto = headerStore.get('x-forwarded-proto') ?? 'http';
+  const originHeader = normalizeForwardedHeader(headerStore.get('origin'));
+  if (originHeader) {
+    const normalized = normalizeOrigin(originHeader);
+    if (normalized) return normalized;
+  }
+
+  const host =
+    normalizeForwardedHeader(headerStore.get('x-forwarded-host')) ??
+    normalizeForwardedHeader(headerStore.get('host')) ??
+    'localhost';
+  const proto = normalizeForwardedHeader(headerStore.get('x-forwarded-proto')) ?? 'http';
 
   return `${proto}://${host}`;
 }
@@ -35,18 +67,8 @@ async function getAccessToken(): Promise<string | null> {
 /**
  * 构建请求 URL
  */
-async function buildUrl(
-  endpoint: string,
-  params?: Record<string, string | number | boolean | undefined>
-): Promise<string> {
+async function buildUrl(endpoint: string): Promise<string> {
   const url = new URL(endpoint, await getApiBaseUrl());
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined) {
-        url.searchParams.append(key, String(value));
-      }
-    });
-  }
   return url.toString();
 }
 
@@ -68,12 +90,11 @@ interface ServerRequestOptions {
  */
 async function serverRequest<T>(
   endpoint: string,
-  method: string,
   options: ServerRequestOptions = {}
 ): Promise<ApiResponse<T>> {
   const { params, body, requireAuth = true, cache, revalidate, tags } = options;
 
-  const url = await buildUrl(endpoint, params);
+  const url = await buildUrl(endpoint);
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
@@ -86,10 +107,11 @@ async function serverRequest<T>(
     }
   }
 
+  const payload = body === undefined ? (params ?? {}) : body;
   const fetchOptions: RequestInit = {
-    method,
+    method: 'POST',
     headers,
-    body: body ? JSON.stringify(body) : undefined,
+    body: JSON.stringify(payload),
   };
 
   // Next.js 缓存策略
@@ -134,17 +156,6 @@ async function serverRequest<T>(
 
 export const serverApi = {
   /**
-   * GET 请求
-   */
-  get<T>(
-    endpoint: string,
-    params?: Record<string, string | number | boolean | undefined>,
-    options?: Omit<ServerRequestOptions, 'params' | 'body'>
-  ): Promise<ApiResponse<T>> {
-    return serverRequest<T>(endpoint, 'GET', { ...options, params });
-  },
-
-  /**
    * POST 请求
    */
   post<T>(
@@ -152,43 +163,11 @@ export const serverApi = {
     body?: unknown,
     options?: Omit<ServerRequestOptions, 'body'>
   ): Promise<ApiResponse<T>> {
-    return serverRequest<T>(endpoint, 'POST', { ...options, body });
+    return serverRequest<T>(endpoint, { ...options, body });
   },
 
   /**
-   * PUT 请求
-   */
-  put<T>(
-    endpoint: string,
-    body?: unknown,
-    options?: Omit<ServerRequestOptions, 'body'>
-  ): Promise<ApiResponse<T>> {
-    return serverRequest<T>(endpoint, 'PUT', { ...options, body });
-  },
-
-  /**
-   * PATCH 请求
-   */
-  patch<T>(
-    endpoint: string,
-    body?: unknown,
-    options?: Omit<ServerRequestOptions, 'body'>
-  ): Promise<ApiResponse<T>> {
-    return serverRequest<T>(endpoint, 'PATCH', { ...options, body });
-  },
-
-  /**
-   * DELETE 请求
-   */
-  delete<T>(
-    endpoint: string,
-    options?: ServerRequestOptions
-  ): Promise<ApiResponse<T>> {
-    return serverRequest<T>(endpoint, 'DELETE', options);
-  },
-
-  /**
-   * 分页 GET 请求
+   * 分页 POST 请求
    */
   paginate<T>(
     endpoint: string,
@@ -198,7 +177,7 @@ export const serverApi = {
     },
     options?: Omit<ServerRequestOptions, 'params' | 'body'>
   ): Promise<ApiResponse<PaginatedData<T>>> {
-    return serverRequest<PaginatedData<T>>(endpoint, 'GET', { ...options, params });
+    return serverRequest<PaginatedData<T>>(endpoint, { ...options, params });
   },
 };
 
@@ -209,6 +188,28 @@ export function isServerSuccess<T>(
   response: ApiResponse<T>
 ): response is ApiResponse<T> & { data: T } {
   return response.code === 0;
+}
+
+export function isAuthError(response: ApiResponse<unknown>): boolean {
+  return response.code >= AUTH_ERROR_CODE_MIN && response.code <= AUTH_ERROR_CODE_MAX;
+}
+
+export function isNotFoundError(response: ApiResponse<unknown>): boolean {
+  return response.code >= NOT_FOUND_CODE_MIN && response.code <= NOT_FOUND_CODE_MAX;
+}
+
+export function getServerErrorMessage(response: ApiResponse<unknown>): string {
+  const message = response.message?.trim();
+  if (response.code === -1) {
+    if (message?.toLowerCase().includes('timeout')) {
+      return '请求超时，请稍后再试。';
+    }
+    return '网络异常，请检查连接后重试。';
+  }
+  if (message) {
+    return message;
+  }
+  return '服务暂时不可用，请稍后再试。';
 }
 
 /**

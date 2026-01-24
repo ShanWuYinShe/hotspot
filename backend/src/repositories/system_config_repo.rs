@@ -18,20 +18,6 @@ pub struct SystemConfigRow {
     pub updated_at: Option<DateTime<Utc>>,
 }
 
-/// 配置变更历史Row - 数据库查询返回类型
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
-pub struct ConfigChangeHistoryRow {
-    pub id: i64,
-    pub config_key: String,
-    pub old_value: Option<String>,
-    pub new_value: String,
-    pub changed_by: i64,
-    pub changed_at: DateTime<Utc>,
-    // Join fields from users table
-    pub changed_by_nickname: Option<String>,
-    pub changed_by_avatar_url: Option<String>,
-}
-
 #[derive(Debug, Clone)]
 pub struct SystemConfigRepository {
     pool: PgPool,
@@ -114,6 +100,31 @@ impl SystemConfigRepository {
         Ok(())
     }
 
+    /// 记录配置变更历史（事务版）
+    pub async fn insert_history_tx(
+        &self,
+        tx: &mut Transaction<'_, Postgres>,
+        config_key: &str,
+        old_value: Option<String>,
+        new_value: &str,
+        changed_by: i64,
+    ) -> Result<()> {
+        sqlx::query!(
+            r#"
+            INSERT INTO system_config_history (config_key, old_value, new_value, changed_by)
+            VALUES ($1, $2, $3, $4)
+            "#,
+            config_key,
+            old_value,
+            new_value,
+            changed_by
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        Ok(())
+    }
+
     /// 按分类列出配置
     pub async fn list(
         &self,
@@ -147,34 +158,5 @@ impl SystemConfigRepository {
 
         let next_cursor = rows.last().map(|r| encode_cursor(&r.id)).transpose()?;
         Ok((rows, next_cursor))
-    }
-
-    /// 获取单个配置变更详情
-    pub async fn get_config_change_detail(
-        &self,
-        change_id: i64,
-    ) -> Result<Option<ConfigChangeHistoryRow>> {
-        let row = sqlx::query_as!(
-            ConfigChangeHistoryRow,
-            r#"
-            SELECT
-                h.id,
-                h.config_key,
-                h.old_value,
-                h.new_value,
-                h.changed_by,
-                h.changed_at,
-                u.nickname as changed_by_nickname,
-                u.avatar_url as changed_by_avatar_url
-            FROM system_config_history h
-            LEFT JOIN users u ON h.changed_by = u.user_id
-            WHERE h.id = $1
-            "#,
-            change_id
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(row)
     }
 }

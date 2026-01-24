@@ -61,29 +61,35 @@ export function MomentActions({
   };
 
   return (
-    <div className="flex items-center gap-6">
+    <div className="flex items-center gap-2 sm:gap-4">
       <Button
         variant="ghost"
         size="sm"
-        className={cn('gap-1.5', isLiked && 'text-red-500')}
+        className={cn(
+          'gap-2 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all',
+          isLiked && 'text-red-500 bg-red-50 dark:bg-red-950/20'
+        )}
         onClick={handleLikeClick}
       >
-        <Heart className={cn('h-4 w-4', isLiked && 'fill-current')} />
-        <span className="text-xs">{likesCount}</span>
+        <Heart className={cn('h-5 w-5 transition-transform hover:scale-125', isLiked && 'fill-current')} />
+        <span className="text-xs font-medium">{likesCount}</span>
       </Button>
-      <Button variant="ghost" size="sm" className="gap-1.5" asChild>
+      <Button variant="ghost" size="sm" className="gap-2 hover:bg-primary/10 transition-all" asChild>
         <Link href={`/moments/${momentId}#comments`}>
-          <MessageCircle className="h-4 w-4" />
-          <span className="text-xs">{commentsCount}</span>
+          <MessageCircle className="h-5 w-5 transition-transform hover:scale-125" />
+          <span className="text-xs font-medium">{commentsCount}</span>
         </Link>
       </Button>
       <Button
         variant="ghost"
         size="sm"
-        className={cn('gap-1.5', isFavorited && 'text-yellow-500')}
+        className={cn(
+          'gap-2 hover:bg-yellow-50 dark:hover:bg-yellow-950/20 transition-all',
+          isFavorited && 'text-yellow-600 bg-yellow-50 dark:bg-yellow-950/20'
+        )}
         onClick={handleFavoriteClick}
       >
-        <Bookmark className={cn('h-4 w-4', isFavorited && 'fill-current')} />
+        <Bookmark className={cn('h-5 w-5 transition-transform hover:scale-125', isFavorited && 'fill-current')} />
       </Button>
     </div>
   );

@@ -9,10 +9,11 @@ import { serverApi, isServerSuccess } from '@/lib/api/server';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import { LoadingState } from '@/components/common/loading-state';
 import { AnnouncementList } from './announcement-list';
+import { PageHeader } from '@/components/layout';
 import type { AnnouncementItem, PaginatedData } from '@/types/api';
 
 async function AnnouncementsContent() {
-  const response = await serverApi.get<PaginatedData<AnnouncementItem>>(
+  const response = await serverApi.post<PaginatedData<AnnouncementItem>>(
     ENDPOINTS.ADMIN.ANNOUNCEMENTS,
     { limit: 50 },
     { tags: ['admin-announcements'], revalidate: 60 }
@@ -28,7 +29,7 @@ export default async function AdminAnnouncementsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">{t('announcements')}</h1>
+      <PageHeader title={t('announcements')} description="发布与管理系统公告" />
       
       <Suspense fallback={<LoadingState text="加载中..." />}>
         <AnnouncementsContent />

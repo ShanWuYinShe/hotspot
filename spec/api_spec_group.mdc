@@ -887,9 +887,5 @@ interface GroupMessageReactionsRequest extends PaginationParams {
 
 ---
 
-## 消息通用 API
-
-#### POST /api/v1/messages/mark_all_as_read
-
-标记所有消息已读。**Request**: `{}`
+## 消息通用 API#### POST /api/v1/messages/mark_all_as_read标记所有消息已读。**Request**: `{}`
 **Response**: `ApiResponse`

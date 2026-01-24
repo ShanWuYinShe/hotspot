@@ -233,17 +233,17 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     // 更新本地订阅列表
     items.forEach((item) => {
       const existingIndex = subscriptionsRef.current.findIndex(
-        (s) => s.source_type === item.source_type
+        (s) => s.type === item.type
       );
       if (existingIndex >= 0) {
-        // 合并 source_ids
+        // 合并 ids
         const existing = subscriptionsRef.current[existingIndex];
         if (existing) {
           const ids = new Set<string | number>([
-            ...(existing.source_ids as (string | number)[]),
-            ...(item.source_ids as (string | number)[]),
+            ...(existing.ids as (string | number)[]),
+            ...(item.ids as (string | number)[]),
           ]);
-          (existing as { source_ids: (string | number)[] }).source_ids = Array.from(ids);
+          (existing as { ids: (string | number)[] }).ids = Array.from(ids);
         }
       } else {
         subscriptionsRef.current.push(item);
@@ -263,16 +263,16 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     // 更新本地订阅列表
     items.forEach((item) => {
       const existingIndex = subscriptionsRef.current.findIndex(
-        (s) => s.source_type === item.source_type
+        (s) => s.type === item.type
       );
       if (existingIndex >= 0) {
         const existing = subscriptionsRef.current[existingIndex];
         if (existing) {
-          const idsToRemove = new Set<string | number>(item.source_ids as (string | number)[]);
-          (existing as { source_ids: (string | number)[] }).source_ids = (
-            existing.source_ids as (string | number)[]
+          const idsToRemove = new Set<string | number>(item.ids as (string | number)[]);
+          (existing as { ids: (string | number)[] }).ids = (
+            existing.ids as (string | number)[]
           ).filter((id) => !idsToRemove.has(id));
-          if (existing.source_ids.length === 0) {
+          if (existing.ids.length === 0) {
             subscriptionsRef.current.splice(existingIndex, 1);
           }
         }

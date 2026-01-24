@@ -56,7 +56,7 @@ impl Config {
                 .map_err(|_| "Invalid JWT_REFRESH_TOKEN_EXPIRATION".to_string())?,
             server_host: env::var("SERVER_HOST").unwrap_or_else(|_| "0.0.0.0".to_string()),
             server_port: env::var("SERVER_PORT")
-                .unwrap_or_else(|_| "8080".to_string())
+                .unwrap_or_else(|_| "5496".to_string())
                 .parse()
                 .map_err(|_| "Invalid SERVER_PORT".to_string())?,
             _max_upload_size: env::var("MAX_UPLOAD_SIZE")

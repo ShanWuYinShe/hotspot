@@ -234,8 +234,6 @@ pub mod filter_names {
     pub const COMMENT_IDS: &str = "comment_ids";
     /// 消息 ID 过滤器
     pub const MESSAGE_IDS: &str = "message_ids";
-    /// 私聊 ID 过滤器
-    pub const PRIVATE_CHAT_IDS: &str = "private_chat_ids";
 }
 
 const BLOOM_READY_KEY: &str = "bloom:ready";
@@ -336,6 +334,123 @@ impl ResourceExistenceChecker {
     /// 记录消息存在
     pub async fn record_message(&self, message_id: &str) -> Result<(), redis::RedisError> {
         self.bloom.add(filter_names::MESSAGE_IDS, message_id).await
+    }
+
+    /// 批量检查用户是否可能存在
+    pub async fn user_might_exist_batch(
+        &self,
+        user_ids: &[i64],
+    ) -> Result<Vec<bool>, redis::RedisError> {
+        let keys: Vec<String> = user_ids.iter().map(|id| id.to_string()).collect();
+        self.bloom
+            .might_contain_batch(filter_names::USER_IDS, &keys)
+            .await
+    }
+
+    /// 批量检查群组是否可能存在
+    pub async fn group_might_exist_batch(
+        &self,
+        group_ids: &[String],
+    ) -> Result<Vec<bool>, redis::RedisError> {
+        self.bloom
+            .might_contain_batch(filter_names::GROUP_IDS, group_ids)
+            .await
+    }
+
+    /// 批量检查瞬间是否可能存在
+    pub async fn moment_might_exist_batch(
+        &self,
+        moment_ids: &[String],
+    ) -> Result<Vec<bool>, redis::RedisError> {
+        self.bloom
+            .might_contain_batch(filter_names::MOMENT_IDS, moment_ids)
+            .await
+    }
+
+    /// 批量检查评论是否可能存在
+    pub async fn comment_might_exist_batch(
+        &self,
+        comment_ids: &[String],
+    ) -> Result<Vec<bool>, redis::RedisError> {
+        self.bloom
+            .might_contain_batch(filter_names::COMMENT_IDS, comment_ids)
+            .await
+    }
+
+    /// 批量检查消息是否可能存在
+    pub async fn message_might_exist_batch(
+        &self,
+        message_ids: &[String],
+    ) -> Result<Vec<bool>, redis::RedisError> {
+        self.bloom
+            .might_contain_batch(filter_names::MESSAGE_IDS, message_ids)
+            .await
+    }
+
+    /// 批量同步用户到布隆过滤器
+    pub async fn sync_users(&self, user_ids: &[i64]) -> Result<(), redis::RedisError> {
+        let keys: Vec<String> = user_ids.iter().map(|id| id.to_string()).collect();
+        self.bloom.add_batch(filter_names::USER_IDS, &keys).await
+    }
+
+    /// 批量同步群组到布隆过滤器
+    pub async fn sync_groups(&self, group_ids: &[String]) -> Result<(), redis::RedisError> {
+        self.bloom.add_batch(filter_names::GROUP_IDS, group_ids).await
+    }
+
+    /// 批量同步瞬间到布隆过滤器
+    pub async fn sync_moments(&self, moment_ids: &[String]) -> Result<(), redis::RedisError> {
+        self.bloom
+            .add_batch(filter_names::MOMENT_IDS, moment_ids)
+            .await
+    }
+
+    /// 批量同步评论到布隆过滤器
+    pub async fn sync_comments(&self, comment_ids: &[String]) -> Result<(), redis::RedisError> {
+        self.bloom
+            .add_batch(filter_names::COMMENT_IDS, comment_ids)
+            .await
+    }
+
+    /// 批量同步消息到布隆过滤器
+    pub async fn sync_messages(&self, message_ids: &[String]) -> Result<(), redis::RedisError> {
+        self.bloom
+            .add_batch(filter_names::MESSAGE_IDS, message_ids)
+            .await
+    }
+
+    /// 清空全部布隆过滤器（用于重新初始化）
+    pub async fn clear_all(&self) -> Result<(), redis::RedisError> {
+        for name in [
+            filter_names::USER_IDS,
+            filter_names::GROUP_IDS,
+            filter_names::MOMENT_IDS,
+            filter_names::COMMENT_IDS,
+            filter_names::MESSAGE_IDS,
+        ] {
+            self.bloom.clear(name).await?;
+        }
+        Ok(())
+    }
+
+    /// 记录布隆过滤器大小（仅用于诊断/日志）
+    pub async fn log_filter_sizes(&self) {
+        for name in [
+            filter_names::USER_IDS,
+            filter_names::GROUP_IDS,
+            filter_names::MOMENT_IDS,
+            filter_names::COMMENT_IDS,
+            filter_names::MESSAGE_IDS,
+        ] {
+            match self.bloom.size_bytes(name).await {
+                Ok(size) => {
+                    tracing::info!(filter = name, size_bytes = size, "bloom size");
+                }
+                Err(e) => {
+                    tracing::warn!(filter = name, error = %e, "bloom size check failed");
+                }
+            }
+        }
     }
 }
 

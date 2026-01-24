@@ -85,7 +85,7 @@ export function CommentSection({
       const result = await createComment(momentId, {
         content: newComment,
         parent_id: replyTo?.comment_id,
-        reply_to_user_id: replyTo?.user_id,
+        reply_to_user_id: replyTo?.user?.user_id,
       });
 
       if (result.code === 0) {

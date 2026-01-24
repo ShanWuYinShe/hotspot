@@ -5,11 +5,12 @@
 
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
-import { serverApi, isServerSuccess } from '@/lib/api/server';
+import { serverApi, isServerSuccess, isNotFoundError, getServerErrorMessage } from '@/lib/api/server';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import { LoadingState } from '@/components/common/loading-state';
 import { MomentDetail } from './moment-detail';
 import { CommentSection } from './comment-section';
+import { ServerErrorCard } from '@/components/common/server-error-card';
 import type { MomentItem, CommentListItem, PaginatedData } from '@/types/api';
 
 interface MomentPageProps {
@@ -20,18 +21,29 @@ async function MomentContent({ momentId }: { momentId: string }) {
   const [momentRes, commentsRes] = await Promise.all([
     serverApi.post<MomentItem>(
       ENDPOINTS.MOMENTS.DETAIL(momentId),
-      undefined,
+      { moment_id: momentId },
       { tags: [`moment-${momentId}`], revalidate: 60 }
     ),
-    serverApi.get<PaginatedData<CommentListItem>>(
+    serverApi.post<PaginatedData<CommentListItem>>(
       ENDPOINTS.MOMENTS.COMMENTS(momentId),
-      { limit: 20 },
+      { moment_id: momentId, limit: 20 },
       { tags: [`comments-${momentId}`], revalidate: 30 }
     ),
   ]);
 
   if (!isServerSuccess(momentRes)) {
-    notFound();
+    if (isNotFoundError(momentRes)) {
+      notFound();
+    }
+    return (
+      <div className="max-w-2xl mx-auto">
+        <ServerErrorCard
+          title="加载瞬间失败"
+          description={getServerErrorMessage(momentRes)}
+          requestId={momentRes.request_id}
+        />
+      </div>
+    );
   }
 
   const moment = momentRes.data;

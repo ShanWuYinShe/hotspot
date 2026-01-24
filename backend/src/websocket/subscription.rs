@@ -3,33 +3,27 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 /// 订阅类型 - 根据 API 文档 4.4 节定义
-/// 支持三种订阅源类型：group_chat, user, notification
+/// 支持两种订阅源类型：group, user
 ///
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SubscriptionType {
     /// 群聊消息订阅 - 订阅指定群聊的消息
     /// source_id: group_chat_id (UUID 字符串)
     /// 私聊消息自动推送，不需要订阅
-    GroupChat(String),
+    Group(String),
 
     /// 用户状态订阅 - 订阅用户的在线状态变化、位置更新等
     /// source_id: user_id
     User(i64),
 
-    /// 通知订阅 - 订阅特定类型的通知
-    /// source_id: notification_type (如 "new_follower", "moment_like" 等)
-    Notification(String),
 }
 
 impl SubscriptionType {
     /// 转换为频道字符串
     pub fn to_channel(&self) -> String {
         match self {
-            SubscriptionType::GroupChat(group_id) => format!("group_chat:{}", group_id),
+            SubscriptionType::Group(group_id) => format!("group:{}", group_id),
             SubscriptionType::User(user_id) => format!("user:{}", user_id),
-            SubscriptionType::Notification(notification_type) => {
-                format!("notification:{}", notification_type)
-            }
         }
     }
 }
@@ -123,7 +117,7 @@ impl SubscriptionManager {
 
     /// 获取订阅了某个群聊的所有用户（用于群聊消息推送）
     pub async fn get_group_chat_subscribers(&self, group_id: &str) -> Vec<i64> {
-        let channel_key = format!("group_chat:{}", group_id);
+        let channel_key = format!("group:{}", group_id);
         let reverse_index = self.reverse_index.read().await;
 
         reverse_index
@@ -143,31 +137,16 @@ impl SubscriptionManager {
             .unwrap_or_default()
     }
 
-    /// 获取订阅了某种通知类型的所有用户
     /// 判断用户是否订阅了指定订阅项
     ///
     /// 说明：
     /// - WebSocket 推送必须严格按订阅执行（不允许“直接推送/广播”绕过订阅）
-    /// - 对 notification 订阅：语义是“我只接收与我相关的该类型事件”
     pub async fn has_subscription(&self, user_id: i64, subscription: &SubscriptionType) -> bool {
         let subscriptions = self.subscriptions.read().await;
         subscriptions
             .get(&user_id)
             .map(|set| set.contains(subscription))
             .unwrap_or(false)
-    }
-
-    /// 判断用户是否订阅了某种通知类型
-    pub async fn has_notification_subscription(
-        &self,
-        user_id: i64,
-        notification_type: &str,
-    ) -> bool {
-        self.has_subscription(
-            user_id,
-            &SubscriptionType::Notification(notification_type.to_string()),
-        )
-        .await
     }
 
     /// 获取用户的所有订阅
@@ -179,7 +158,7 @@ impl SubscriptionManager {
             .unwrap_or_default()
     }
 
-    /// 统计某类订阅数量（group_chat / user / notification）
+    /// 统计某类订阅数量（group / user）
     pub async fn count_by_type(&self, user_id: i64, source_type: &str) -> usize {
         let subscriptions = self.subscriptions.read().await;
         let Some(set) = subscriptions.get(&user_id) else {
@@ -187,9 +166,8 @@ impl SubscriptionManager {
         };
         set.iter()
             .filter(|s| match (source_type, s) {
-                ("group_chat", SubscriptionType::GroupChat(_)) => true,
+                ("group", SubscriptionType::Group(_)) => true,
                 ("user", SubscriptionType::User(_)) => true,
-                ("notification", SubscriptionType::Notification(_)) => true,
                 _ => false,
             })
             .count()

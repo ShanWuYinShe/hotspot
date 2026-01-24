@@ -152,6 +152,36 @@ impl UserRepository {
         Ok(row)
     }
 
+    /// 检查账号是否被封禁（考虑临时封禁过期）
+    pub async fn is_banned(&self, user_id: i64) -> Result<bool> {
+        let row = sqlx::query!(
+            r#"
+            SELECT is_banned, banned_until
+            FROM users
+            WHERE user_id = $1
+            "#,
+            user_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        let Some(row) = row else {
+            return Ok(false);
+        };
+
+        if !row.is_banned {
+            return Ok(false);
+        }
+
+        if let Some(until) = row.banned_until {
+            if until <= chrono::Utc::now() {
+                return Ok(false);
+            }
+        }
+
+        Ok(true)
+    }
+
     /// 批量获取用户简介（不含敏感信息）
     pub async fn find_profiles(&self, user_ids: &[i64]) -> Result<Vec<UserProfileRow>> {
         if user_ids.is_empty() {

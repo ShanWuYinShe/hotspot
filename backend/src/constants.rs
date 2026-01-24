@@ -47,12 +47,12 @@ pub const INVITE_EXPIRE_DAYS: i64 = 7; // 邀请过期时间
 // WebSocket 心跳配置
 // ============================================================
 /// 客户端心跳间隔（秒）
-pub const WS_HEARTBEAT_INTERVAL_SECS: u64 = 45;
+pub const WS_HEARTBEAT_INTERVAL_SECS: u64 = 30;
 /// 心跳响应超时时间（秒）
 pub const WS_HEARTBEAT_TIMEOUT_SECS: u64 = 10;
 /// 服务端心跳发送间隔（秒）- 略长于客户端间隔
-pub const WS_SERVER_PING_INTERVAL_SECS: u64 = 60;
-/// 服务端连接超时时间（秒）= HEARTBEAT_INTERVAL * 2 + HEARTBEAT_TIMEOUT
-pub const WS_CONNECTION_TIMEOUT_SECS: u64 =
-    WS_HEARTBEAT_INTERVAL_SECS * 2 + WS_HEARTBEAT_TIMEOUT_SECS;
+pub const WS_SERVER_PING_INTERVAL_SECS: u64 =
+    WS_HEARTBEAT_INTERVAL_SECS + WS_HEARTBEAT_TIMEOUT_SECS;
+/// 服务端连接超时时间（秒）- 与规范保持一致（90 秒）
+pub const WS_CONNECTION_TIMEOUT_SECS: u64 = WS_HEARTBEAT_INTERVAL_SECS * 3;
 

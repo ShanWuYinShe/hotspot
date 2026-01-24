@@ -2,7 +2,7 @@
  * 系统服务
  */
 
-import { get, post } from '../client';
+import { post } from '../client';
 import { ENDPOINTS } from '../endpoints';
 import type {
   ApiResponse,
@@ -35,9 +35,7 @@ export const systemService = {
    * 健康检查
    */
   async healthCheck(): Promise<ApiResponse<HealthCheckData>> {
-    return get<HealthCheckData>(ENDPOINTS.SYSTEM.HEALTH, undefined, {
-      requireAuth: false,
-    });
+    return post<HealthCheckData>(ENDPOINTS.SYSTEM.HEALTH, {}, { requireAuth: false });
   },
 
   /**
@@ -53,35 +51,43 @@ export const systemService = {
    * 获取公告列表
    */
   async getAnnouncements(params?: { limit?: number; cursor?: string }): Promise<ApiResponse<PaginatedData<AnnouncementItem>>> {
-    return get<PaginatedData<AnnouncementItem>>(ENDPOINTS.ANNOUNCEMENTS.LIST, params, {
-      requireAuth: false,
-    });
+    return post<PaginatedData<AnnouncementItem>>(
+      ENDPOINTS.ANNOUNCEMENTS.LIST,
+      params ?? {},
+      { requireAuth: false }
+    );
   },
 
   /**
    * 获取公告详情
    */
   async getAnnouncementDetail(announcementId: string): Promise<ApiResponse<AnnouncementItem>> {
-    return get<AnnouncementItem>(ENDPOINTS.ANNOUNCEMENTS.DETAIL(announcementId), undefined, {
-      requireAuth: false,
-    });
+    return post<AnnouncementItem>(
+      ENDPOINTS.ANNOUNCEMENTS.DETAIL(announcementId),
+      { announcement_id: announcementId },
+      { requireAuth: false }
+    );
   },
 
   /**
    * 获取热门标签
    */
   async getTrendingTags(params?: { limit?: number; timeframe?: 'daily' | 'weekly' | 'monthly' }): Promise<ApiResponse<{ items: TagData[] }>> {
-    return get<{ items: TagData[] }>(ENDPOINTS.TAGS.TRENDING, params, {
-      requireAuth: false,
-    });
+    return post<{ items: TagData[] }>(
+      ENDPOINTS.TAGS.TRENDING,
+      params ?? {},
+      { requireAuth: false }
+    );
   },
 
   /**
    * 获取标签建议
    */
   async suggestTags(prefix: string, limit?: number): Promise<ApiResponse<{ items: TagSuggestItem[] }>> {
-    return get<{ items: TagSuggestItem[] }>(ENDPOINTS.TAGS.SUGGEST, { prefix, limit }, {
-      requireAuth: false,
-    });
+    return post<{ items: TagSuggestItem[] }>(
+      ENDPOINTS.TAGS.SUGGEST,
+      { prefix, limit },
+      { requireAuth: false }
+    );
   },
 };

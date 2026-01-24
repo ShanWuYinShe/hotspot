@@ -8,17 +8,24 @@ use crate::{
     },
     error::{AppError, Result},
     repositories::tag_repo::TagRepository,
-    utils::validation::Validator,
+    utils::{
+        cache::{cache_keys, CacheManager},
+        validation::Validator,
+    },
 };
 
 #[derive(Clone)]
 pub struct TagService {
     tag_repo: TagRepository,
+    cache_manager: CacheManager,
 }
 
 impl TagService {
-    pub fn new(tag_repo: TagRepository) -> Self {
-        Self { tag_repo }
+    pub fn new(tag_repo: TagRepository, cache_manager: CacheManager) -> Self {
+        Self {
+            tag_repo,
+            cache_manager,
+        }
     }
 
     /// 获取热门标签
@@ -27,31 +34,56 @@ impl TagService {
 
         let limit = Validator::validate_limit(req.limit, 100)? as i64;
         let timeframe = req.timeframe.unwrap_or(TagTimeframe::Weekly);
+        let cache_key = format!("{}:{}", timeframe.as_str(), limit);
 
-        // 根据时间范围计算开始时间
-        let since = match timeframe {
-            TagTimeframe::Daily => chrono::Utc::now() - chrono::Duration::days(TRENDING_DAILY_DAYS),
-            TagTimeframe::Monthly => {
-                chrono::Utc::now() - chrono::Duration::days(TRENDING_MONTHLY_DAYS)
-            }
-            TagTimeframe::Weekly => {
-                chrono::Utc::now() - chrono::Duration::days(TRENDING_WEEKLY_DAYS)
-            }
-        };
+        let cached = self
+            .cache_manager
+            .get_or_set_with_lock_with_ttl(
+                cache_keys::TRENDING_TAGS,
+                &cache_key,
+                300,
+                60,
+                || async {
+                    // 根据时间范围计算开始时间
+                    let since = match timeframe {
+                        TagTimeframe::Daily => {
+                            chrono::Utc::now() - chrono::Duration::days(TRENDING_DAILY_DAYS)
+                        }
+                        TagTimeframe::Monthly => {
+                            chrono::Utc::now() - chrono::Duration::days(TRENDING_MONTHLY_DAYS)
+                        }
+                        TagTimeframe::Weekly => {
+                            chrono::Utc::now() - chrono::Duration::days(TRENDING_WEEKLY_DAYS)
+                        }
+                    };
 
-        // 从 tags 表获取热门标签
-        let tag_rows = self.tag_repo.get_trending(limit, since).await?;
+                    // 从 tags 表获取热门标签
+                    let tag_rows = self
+                        .tag_repo
+                        .get_trending(limit, since)
+                        .await
+                        .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
 
-        let items = tag_rows
-            .into_iter()
-            .map(|r| TagItem {
-                name: r.name,
-                usage_count: r.usage_count,
-                trend: None,
-            })
-            .collect();
+                    let items = tag_rows
+                        .into_iter()
+                        .map(|r| TagItem {
+                            name: r.name,
+                            usage_count: r.usage_count,
+                            trend: None,
+                        })
+                        .collect();
 
-        Ok(TrendingTagsData { items })
+                    Ok(Some(TrendingTagsData { items }))
+                },
+            )
+            .await
+            .map_err(|e| AppError::CacheError(e.to_string()))?;
+
+        if let Some(data) = cached {
+            return Ok(data);
+        }
+
+        Ok(TrendingTagsData { items: vec![] })
     }
 
     /// 标签搜索建议

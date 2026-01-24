@@ -14,6 +14,7 @@ use crate::{
         user_settings_repo::UserSettingsRepository,
     },
     types::enums::{MessageType, PrivateChatPermission, UserType},
+    utils::cache::{cache_keys, CacheManager},
 };
 
 /// 私聊服务
@@ -27,6 +28,7 @@ pub struct PrivateChatService {
     message_repo: PrivateMessageRepository,
     unread_repo: ChatUnreadRepository,
     presence_service: crate::services::presence_service::PresenceService,
+    cache_manager: CacheManager,
 }
 
 impl PrivateChatService {
@@ -39,6 +41,7 @@ impl PrivateChatService {
         message_repo: PrivateMessageRepository,
         unread_repo: ChatUnreadRepository,
         presence_service: crate::services::presence_service::PresenceService,
+        cache_manager: CacheManager,
     ) -> Self {
         Self {
             repo,
@@ -49,6 +52,7 @@ impl PrivateChatService {
             message_repo,
             unread_repo,
             presence_service,
+            cache_manager,
         }
     }
 
@@ -111,6 +115,16 @@ impl PrivateChatService {
             .upsert_settings(chat.id, current_user_id, is_muted, is_pinned, is_archived)
             .await?;
 
+        // 失效缓存
+        let cache_key = format!("{}:{}", chat.id, current_user_id);
+        if let Err(e) = self
+            .cache_manager
+            .delete(cache_keys::PRIVATE_CHAT_SETTINGS, &cache_key)
+            .await
+        {
+            tracing::warn!(error = %e, "delete private chat settings cache failed");
+        }
+
         Ok(())
     }
 
@@ -171,8 +185,7 @@ impl PrivateChatService {
 
         // 批量获取私聊设置
         let settings_map = self
-            .repo
-            .get_settings_batch(&chat_ids, current_user_id)
+            .get_settings_batch_cached(&chat_ids, current_user_id)
             .await?;
 
         // 5. 组装结果
@@ -393,7 +406,7 @@ impl PrivateChatService {
         };
 
         // 获取私聊设置
-        let settings = self.repo.get_settings(chat.id, current_user_id).await?;
+        let settings = self.get_settings_cached(chat.id, current_user_id).await?;
 
         // 加载最近消息（默认 20 条，最大 50 条）
         let limit = recent_messages_limit.unwrap_or(20).clamp(1, 50) as i64;
@@ -505,5 +518,97 @@ impl PrivateChatService {
                 next_cursor,
             },
         })
+    }
+
+    async fn get_settings_cached(
+        &self,
+        chat_id: i64,
+        user_id: i64,
+    ) -> Result<Option<crate::repositories::private_chat_repo::PrivateChatSettingsRow>> {
+        let cache_key = format!("{}:{}", chat_id, user_id);
+        let cached = self
+            .cache_manager
+            .get_or_set_with_lock_with_ttl(
+                cache_keys::PRIVATE_CHAT_SETTINGS,
+                &cache_key,
+                300,
+                60,
+                || async {
+                    let settings = self
+                        .repo
+                        .get_settings(chat_id, user_id)
+                        .await
+                        .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                    Ok(settings)
+                },
+            )
+            .await
+            .map_err(|e| AppError::CacheError(e.to_string()))?;
+
+        Ok(cached)
+    }
+
+    async fn get_settings_batch_cached(
+        &self,
+        chat_ids: &[i64],
+        user_id: i64,
+    ) -> Result<std::collections::HashMap<i64, crate::repositories::private_chat_repo::PrivateChatSettingsRow>>
+    {
+        if chat_ids.is_empty() {
+            return Ok(std::collections::HashMap::new());
+        }
+
+        let cache_ids: Vec<String> = chat_ids
+            .iter()
+            .map(|id| format!("{}:{}", id, user_id))
+            .collect();
+        let cached = self
+            .cache_manager
+            .mget::<crate::repositories::private_chat_repo::PrivateChatSettingsRow>(
+                cache_keys::PRIVATE_CHAT_SETTINGS,
+                &cache_ids,
+            )
+            .await
+            .map_err(|e| AppError::CacheError(e.to_string()))?;
+
+        let mut settings_map: std::collections::HashMap<
+            i64,
+            crate::repositories::private_chat_repo::PrivateChatSettingsRow,
+        > = std::collections::HashMap::new();
+        let mut missing_chat_ids = Vec::new();
+
+        for (cache_id, value) in cached {
+            if let Some(setting) = value {
+                if let Some((chat_str, _)) = cache_id.split_once(':') {
+                    if let Ok(chat_id) = chat_str.parse::<i64>() {
+                        settings_map.insert(chat_id, setting);
+                    }
+                }
+            } else if let Some((chat_str, _)) = cache_id.split_once(':') {
+                if let Ok(chat_id) = chat_str.parse::<i64>() {
+                    missing_chat_ids.push(chat_id);
+                }
+            }
+        }
+
+        if !missing_chat_ids.is_empty() {
+            let db_settings = self
+                .repo
+                .get_settings_batch(&missing_chat_ids, user_id)
+                .await?;
+            let mut cache_pairs = Vec::new();
+            for (chat_id, setting) in db_settings {
+                settings_map.insert(chat_id, setting.clone());
+                cache_pairs.push((format!("{}:{}", chat_id, user_id), setting));
+            }
+            if !cache_pairs.is_empty() {
+                let _ = self
+                    .cache_manager
+                    .mset(cache_keys::PRIVATE_CHAT_SETTINGS, &cache_pairs)
+                    .await;
+            }
+        }
+
+        Ok(settings_map)
     }
 }

@@ -31,22 +31,26 @@ export function MomentCard({
   onDelete,
 }: MomentCardProps) {
   return (
-    <Card className="group transition-all duration-300 hover:shadow-lg hover:shadow-primary/10">
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between mb-3">
+    <Card className="group overflow-hidden border-2 transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:border-primary/30">
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between mb-4">
           <Link
             href={`/users/${moment.user.user_id}`}
-            className="flex items-center gap-3 transition-colors hover:text-primary"
+            className="flex items-center gap-3 transition-all hover:scale-[1.02]"
           >
-            <UserAvatar user={moment.user} size="md" />
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/0 rounded-full blur-sm" />
+              <UserAvatar user={moment.user} size="md" />
+            </div>
             <div>
-              <p className="font-medium text-sm">{moment.user.nickname}</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="font-semibold text-base">{moment.user.nickname}</p>
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
                 {formatRelativeTime(moment.created_at)}
                 {moment.location && (
                   <>
-                    {' · '}
-                    <MapPin className="h-3 w-3 inline" /> {formatDistance(moment.location.distance)}
+                    <span className="mx-1">·</span>
+                    <MapPin className="h-3 w-3 text-primary" />
+                    <span className="text-primary">{formatDistance(moment.location.distance)}</span>
                   </>
                 )}
               </p>
@@ -64,12 +68,12 @@ export function MomentCard({
           href={`/moments/${moment.moment_id}`}
           className="block transition-transform group-hover:scale-[1.01]"
         >
-          <p className="text-sm whitespace-pre-wrap mb-3 leading-relaxed">{moment.description}</p>
+          <p className="text-sm whitespace-pre-wrap mb-4 leading-relaxed text-foreground/90">{moment.description}</p>
 
           {moment.images && moment.images.length > 0 && (
             <div
               className={cn(
-                'grid gap-2 mb-3 overflow-hidden rounded-lg',
+                'grid gap-3 mb-4 overflow-hidden rounded-2xl',
                 moment.images.length === 1 && 'grid-cols-1',
                 moment.images.length === 2 && 'grid-cols-2',
                 moment.images.length >= 3 && 'grid-cols-3'
@@ -78,8 +82,9 @@ export function MomentCard({
               {moment.images.slice(0, 9).map((image, index) => (
                 <div
                   key={index}
-                  className="relative aspect-square overflow-hidden bg-muted transition-transform duration-300 hover:scale-105"
+                  className="relative aspect-square overflow-hidden bg-muted transition-all duration-300 hover:scale-105 cursor-pointer group/img"
                 >
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity duration-300" />
                   <Image
                     src={image.url}
                     alt=""
@@ -93,12 +98,12 @@ export function MomentCard({
           )}
 
           {moment.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mb-3">
+            <div className="flex flex-wrap gap-2 mb-3">
               {moment.tags.map((tag) => (
                 <Badge
                   key={tag}
                   variant="secondary"
-                  className="text-xs transition-colors hover:bg-primary/20 hover:text-primary"
+                  className="text-xs font-medium transition-all hover:bg-primary/20 hover:text-primary hover:scale-105 cursor-pointer border-0"
                 >
                   #{tag}
                 </Badge>
@@ -108,7 +113,7 @@ export function MomentCard({
         </Link>
       </CardContent>
 
-      <CardFooter className="px-4 py-3 border-t bg-muted/30">
+      <CardFooter className="px-5 py-4 border-t-2 bg-muted/50">
         <MomentActions
           momentId={moment.moment_id}
           likesCount={moment.likes_count}

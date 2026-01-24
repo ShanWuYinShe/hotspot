@@ -178,11 +178,13 @@ interface UserProfileUpdatedEvent extends WebSocketEvent<"UserProfileUpdated", U
 **在线/输入状态事件触发约定**：
 
 - **UserOnline**
-  - 触发：用户任意设备建立 WebSocket 连接并完成 `Auth` 鉴权后，服务端将该用户标记为在线；当且仅当存在对该用户的 `user` 订阅时推送给订阅者
+  - 触发：用户任意设备建立 WebSocket 连接并完成 `Auth` 鉴权后，服务端将该用户标记为在线
+  - 推送：推送给所有已订阅该用户状态（`type: 'user'`）的订阅者
   - 多设备：同一用户多设备在线只会维持"在线"状态；重复连接不应反复产生"离线/上线抖动"
 
 - **UserOffline**
-  - 触发：用户所有 WebSocket 连接都断开后（连接计数归零），服务端将其标记为离线，并向订阅者推送
+  - 触发：用户所有 WebSocket 连接都断开后（连接计数归零），服务端将其标记为离线
+  - 推送：推送给所有已订阅该用户状态（`type: 'user'`）的订阅者
   - 离线时间：`offline_at` 为服务端判定离线的时间（UTC ISO 8601）
 
 - **PrivateUserTyping / GroupUserTyping**
@@ -195,7 +197,8 @@ interface UserProfileUpdatedEvent extends WebSocketEvent<"UserProfileUpdated", U
   - Typing 状态属于"瞬时状态"，不落库、不补发历史
 
 - **UserLocationUpdate**
-  - 触发：用户调用“更新我的位置”的 HTTP API 成功后触发；服务端仅推送给订阅该用户 `user` 状态的订阅者（端点路径与请求/响应字段以 `@api_spec_endpoints.mdc` 中对应条目为准）
+  - 触发：用户调用"更新我的位置"的 HTTP API 成功后触发
+  - 推送：推送给所有已订阅该用户状态（`type: 'user'`）的订阅者
   - 该事件用于"实时更新"，客户端冷启动/重连应以 HTTP API 的数据为准
 
 **关注关系事件**：
@@ -614,23 +617,14 @@ interface GroupTypingEvent extends WebSocketEvent<"GroupTyping", GroupTypingPayl
 
 **订阅管理**：
 
-WebSocket订阅机制提供三种事件类型，使用统一的订阅项数组格式：
+WebSocket订阅机制提供用户状态订阅和群组订阅两种类型：
 
 ```typescript
-// 订阅项定义（批量订阅同类型数据源）
-type SubscriptionItem =
-  | {
-      source_type: 'group_chat';
-      source_ids: string[]; // group_chat_id（UUID string）
-    }
-  | {
-      source_type: 'user';
-      source_ids: number[]; // user_id（safe integer, <= Number.MAX_SAFE_INTEGER）
-    }
-  | {
-      source_type: 'notification';
-      source_ids: string[]; // notification_type（string）
-    };
+// 订阅项定义（两种类型）
+type SubscriptionItem = {
+  type: 'user' | 'group';
+  ids: string[];  // user_id（数字字符串化）或 group_chat_id（UUID string）
+};
 
 // 1. Subscribe - 增量订阅（追加到现有订阅）
 interface SubscribePayload {
@@ -657,7 +651,7 @@ interface SetSubscriptionsEvent extends WebSocketEvent<"SetSubscriptions", SetSu
 
 // 订阅失败原因：使用稳定枚举，避免各端对 reason 文案/含义漂移
 type SubscriptionFailureReason =
-  | 'invalid_item'          // 订阅项格式不合法（source_type/source_ids 类型不匹配、空数组等）
+  | 'invalid_item'          // 订阅项格式不合法（type/ids 类型不匹配、空数组等）
   | 'not_found'             // 订阅目标不存在（部分 id 不存在）
   | 'permission_denied'     // 无权限订阅该目标
   | 'too_many_subscriptions'// 超出订阅数量限制
@@ -703,9 +697,62 @@ WebSocket 推送分为**自动推送**和**需要订阅**两种模式。
 | `PrivateMessageRead` | 消息已读状态 |
 | `PrivateUserTyping` | 对方正在输入 |
 
+**通知事件**（根据通知偏好设置自动推送）：
+
+以下事件根据用户的持久化通知偏好设置自动推送：
+
+| 事件 | 说明 | 对应通知偏好设置 |
+|-----|------|----------------|
+| `NewFollower` | 新关注者 | `new_follower_enabled` |
+| `MutualFollow` | 互相关注（成为好友） | `mutual_follow_enabled` |
+| `Unfollowed` | 取消关注 | `unfollowed_enabled` |
+| `FollowRequestReceived` | 收到关注请求（需审批） | `follow_request_enabled` |
+| `FollowRequestHandled` | 关注请求被处理 | `follow_request_handled_enabled` |
+| `MomentLiked` | 瞬间被点赞 | `moment_like_enabled` |
+| `MomentCommented` | 瞬间被评论 | `moment_comment_enabled` |
+| `CommentReply` | 评论被回复 | `comment_reply_enabled` |
+| `MomentMentioned` | 在瞬间中被提及 | `moment_mentioned_enabled` |
+| `CommentMentioned` | 在评论中被提及 | `comment_mentioned_enabled` |
+| `GroupInviteReceived` | 收到群组邀请 | `group_invite_enabled` |
+| `GroupInviteResponse` | 群组邀请响应 | `group_invite_response_enabled` |
+| `GroupApplicationReceived` | 收到入群申请 | `group_application_enabled` |
+| `GroupApplicationResponse` | 入群申请响应 | `group_application_response_enabled` |
+| `SystemAnnouncement` | 系统公告 | `system_announcement_enabled` |
+
+**多端同步事件**（仅推送给当前用户的其他设备）：
+- `PrivateChatDeleted` - 私聊删除
+- `PrivateChatSettingsUpdated` - 私聊设置更新
+- `NotificationReadStateUpdated` - 通知已读状态更新
+
+**自动推送说明**：
+1. **私聊消息**：始终自动推送给相关用户
+2. **通知事件**：基于持久化偏好设置自动推送
+3. **用户状态**：需要订阅才能接收（见下文）
+4. **群聊消息**：需要订阅才能接收（见下文）
+
+### 订阅用户状态
+
+**订阅参数**：`{type: 'user', ids: [user_id 列表(数字字符串化)]}`
+
+**推送事件**：
+
+**用户状态事件** (`user_id` 相关)：
+
+| 事件 | 说明 |
+|-----|------|
+| `UserOnline` | 用户上线 |
+| `UserOffline` | 用户离线 |
+| `UserLocationUpdate` | 用户位置更新 |
+| `UserProfileUpdated` | 用户资料更新 (头像/昵称) |
+
+**智能默认订阅**：
+- **聊天界面自动订阅**：当用户打开与某人的私聊界面时，自动订阅该用户的在线状态
+- **关注关系自动订阅**：新建立互相关注关系（成为好友）时，询问用户是否订阅对方状态
+- **全局设置**：提供"始终订阅好友状态"的全局设置选项
+
 ### 订阅群聊消息
 
-**订阅参数**：`{source_type: 'group_chat', source_ids: [group_chat_id 列表(string, UUID)]}`
+**订阅参数**：`{type: 'group', ids: [group_chat_id 列表(string, UUID)]}`
 
 **推送事件**：
 
@@ -736,41 +783,9 @@ WebSocket 推送分为**自动推送**和**需要订阅**两种模式。
 | `GroupAnnouncementUpdated` | 群公告更新 |
 | `GroupAnnouncementDeleted` | 群公告删除 |
 
-### 订阅用户状态
-
-**订阅参数**：`{source_type: 'user', source_ids: [用户ID列表(number, safe integer, <= Number.MAX_SAFE_INTEGER)]}`
-
-**推送事件**：
-
-| 事件 | 说明 |
-|-----|------|
-| `UserOnline` | 用户上线 |
-| `UserOffline` | 用户离线 |
-| `UserLocationUpdate` | 用户位置更新 |
-| `UserProfileUpdated` | 用户资料更新 (头像/昵称) |
-
-### 订阅通知
-
-**订阅参数**：`{source_type: 'notification', source_ids: [notification_type 列表(string)]}`
-
-**推送事件**：
-
-| 通知类型 | 事件 | 说明 |
-|---------|-----|------|
-| `new_follower` | `NewFollower` | 新关注者 |
-| `mutual_follow` | `MutualFollow` | 互相关注（成为好友） |
-| `unfollowed` | `Unfollowed` | 取消关注 |
-| `follow_request` | `FollowRequestReceived` | 收到关注请求（需审批） |
-| `follow_request_handled` | `FollowRequestHandled` | 关注请求被处理 |
-| `moment_like` | `MomentLiked` | 瞬间被点赞 |
-| `moment_comment` | `MomentCommented` | 瞬间被评论 |
-| `comment_reply` | `CommentReply` | 评论被回复 |
-| `group_invite` | `GroupInviteReceived` | 收到群组邀请 |
-| `group_invite_response` | `GroupInviteResponse` | 群组邀请响应 |
-| `group_application` | `GroupApplicationReceived` | 收到入群申请 |
-| `group_application_response` | `GroupApplicationResponse` | 入群申请响应 |
-| `system_announcement` | `SystemAnnouncement` | 系统公告 |
-
+**智能默认订阅**：
+- **加入群组自动订阅**：加入群组时自动订阅该群组
+- **离开群组自动取消**：离开群组时自动取消订阅
 
 ### 订阅操作说明
 
@@ -786,10 +801,8 @@ WebSocket 推送分为**自动推送**和**需要订阅**两种模式。
 
 | 订阅类型 | 数量限制 | 说明 |
 |---------|---------|------|
-| 群聊（`group_chat`） | 最多 100 个 | 超出限制时返回错误码 `20103`（订阅数量超出限制） |
-| 用户（`user`） | 最多 500 个 | 超出限制时返回错误码 `20103`（订阅数量超出限制） |
-| 通知（`notification`） | 无限制 | 可订阅所有通知类型 |
-| 私聊消息 | 自动推送 | 无需订阅，不计入限制 |
+| 用户状态（`user`） | 最多 500 个 | 超出限制时返回错误码 `20103`（订阅数量超出限制） |
+| 群聊（`group`） | 最多 100 个 | 超出限制时返回错误码 `20103`（订阅数量超出限制） |
 
 **限制说明**：
 - 超出限制时：服务端在 `SubscribeAck` 事件中返回 `code !== 0`，错误码为 `20103`（订阅数量超出限制）
@@ -816,7 +829,7 @@ WebSocket 推送分为**自动推送**和**需要订阅**两种模式。
 
 2. **智能订阅**：
    - 进入页面时订阅，离开页面时取消订阅（节省资源）
-   - 根据用户行为动态调整订阅列表
+   - 根据用户行为动态调整订阅列表（如：打开聊天界面时订阅用户状态）
 
 3. **重连恢复订阅**：
    - 维护当前订阅列表的缓存
@@ -830,29 +843,136 @@ WebSocket 推送分为**自动推送**和**需要订阅**两种模式。
 
 ## 推送事件类型与订阅
 
-### 通知订阅设置与事件映射
+### 事件推送分类 (平衡订阅模型)
 
-通知事件受**两层控制**：持久化偏好设置（API）+ 实时订阅（WebSocket）。最终推送逻辑：`推送 = 持久化偏好 AND 实时订阅`
+所有 WebSocket 事件分为三类：
 
-| 设置项 | API 字段 | WebSocket 事件 | 订阅参数 |
-|-------|---------|---------------|---------|
-| 新关注者通知 | `new_follower_enabled` | `NewFollower` | `new_follower` |
-| 互相关注通知 | `mutual_follow_enabled` | `MutualFollow` | `mutual_follow` |
-| 关注请求通知 | `follow_request_enabled` | `FollowRequestReceived` | `follow_request` |
-| 请求处理通知 | `follow_request_handled_enabled` | `FollowRequestHandled` | `follow_request_handled` |
-| 群组邀请通知 | `group_invite_enabled` | `GroupInviteReceived` | `group_invite` |
-| 群组邀请响应通知 | `group_invite_response_enabled` | `GroupInviteResponse` | `group_invite_response` |
-| 群组申请通知 | `group_application_enabled` | `GroupApplicationReceived` | `group_application` |
-| 群组申请响应通知 | `group_application_response_enabled` | `GroupApplicationResponse` | `group_application_response` |
-| 群公告通知 | `group_announcement_enabled` | `GroupAnnouncementCreated` | 跟随群聊订阅 |
-| 消息提及通知 | `message_mention_enabled` | `GroupMessageNew` (含 @提及) | 跟随消息订阅 |
-| 瞬间点赞通知 | `moment_like_enabled` | `MomentLiked` | `moment_like` |
-| 瞬间评论通知 | `moment_comment_enabled` | `MomentCommented` | `moment_comment` |
-| 评论回复通知 | `comment_reply_enabled` | `CommentReply` | `comment_reply` |
-| 系统公告通知 | `system_announcement_enabled` | `SystemAnnouncement` | `system_announcement` |
+#### 1. 自动推送事件 (无需订阅)
+这些事件基于用户关系或系统状态自动推送：
 
-### 推送机制
+**连接管理事件** (始终自动推送)：
+- `ConnectionEstablished` - 连接建立成功
+- `Pong` - 心跳响应
+- `Error` - 错误通知
+- `SubscribeAck` - 订阅操作响应
 
-- **在线用户**：检查持久化偏好 + 实时订阅，通过 WebSocket 推送
-- **离线用户**：检查持久化偏好，通过设备令牌推送
+**私聊消息事件** (基于聊天关系自动推送)：
+- `PrivateMessageNew` - 新消息
+- `PrivateMessageEdited` - 消息被编辑
+- `PrivateMessageRecalled` - 消息被撤回
+- `PrivateMessageDeleted` - 消息被删除
+- `PrivateMessageReaction` - 消息反应（表情）
+- `PrivateMessageRead` - 消息已读状态
+- `PrivateUserTyping` - 对方正在输入
+
+**通知事件** (基于持久化偏好设置自动推送)：
+| 事件 | 说明 | 对应通知偏好设置 |
+|------|------|----------------|
+| `NewFollower` | 新关注者 | `new_follower_enabled` |
+| `MutualFollow` | 互相关注（成为好友） | `mutual_follow_enabled` |
+| `Unfollowed` | 取消关注 | `unfollowed_enabled` |
+| `FollowRequestReceived` | 收到关注请求（需审批） | `follow_request_enabled` |
+| `FollowRequestHandled` | 关注请求被处理 | `follow_request_handled_enabled` |
+| `MomentLiked` | 瞬间被点赞 | `moment_like_enabled` |
+| `MomentCommented` | 瞬间被评论 | `moment_comment_enabled` |
+| `CommentReply` | 评论被回复 | `comment_reply_enabled` |
+| `MomentMentioned` | 在瞬间中被提及 | `moment_mentioned_enabled` |
+| `CommentMentioned` | 在评论中被提及 | `comment_mentioned_enabled` |
+| `GroupInviteReceived` | 收到群组邀请 | `group_invite_enabled` |
+| `GroupInviteResponse` | 群组邀请响应 | `group_invite_response_enabled` |
+| `GroupApplicationReceived` | 收到入群申请 | `group_application_enabled` |
+| `GroupApplicationResponse` | 入群申请响应 | `group_application_response_enabled` |
+| `SystemAnnouncement` | 系统公告 | `system_announcement_enabled` |
+
+**多端同步事件** (仅推送给当前用户的其他设备)：
+- `PrivateChatDeleted` - 私聊删除
+- `PrivateChatSettingsUpdated` - 私聊设置更新
+- `NotificationReadStateUpdated` - 通知已读状态更新
+
+#### 2. 订阅推送事件 (需要显式订阅)
+
+**用户状态事件** (需要订阅 `user` 类型)：
+- `UserOnline` - 用户上线
+- `UserOffline` - 用户离线  
+- `UserLocationUpdate` - 用户位置更新
+- `UserProfileUpdated` - 用户资料更新
+
+**群聊消息事件** (需要订阅 `group` 类型)：
+- `GroupMessageNew` - 新消息
+- `GroupMessageEdited` - 消息被编辑
+- `GroupMessageRecalled` - 消息被撤回
+- `GroupMessageDeleted` - 消息被删除
+- `GroupMessageReaction` - 消息反应（表情）
+- `GroupMessageRead` - 消息已读状态
+- `GroupUserTyping` - 成员正在输入
+
+**群组管理事件** (需要订阅 `group` 类型)：
+- `GroupMemberJoined` - 新成员加入
+- `GroupMemberLeft` - 成员离开
+- `GroupProfileUpdated` - 群组资料更新
+- `GroupMemberRoleChanged` - 成员角色变更
+- `GroupMemberMuted` - 成员被禁言
+- `GroupMemberUnmuted` - 成员解除禁言
+- `GroupDismissed` - 群组被解散
+- `GroupAnnouncementCreated` - 新群公告发布
+- `GroupAnnouncementUpdated` - 群公告更新
+- `GroupAnnouncementDeleted` - 群公告删除
+
+#### 3. 智能默认订阅
+
+为了平衡性能与用户体验，系统提供智能默认订阅机制：
+
+1. **聊天界面自动订阅**：
+   - 当用户打开与某人的私聊界面时，自动订阅该用户的在线状态（`user` 类型）
+   - 离开界面时自动取消订阅
+
+2. **关注关系自动订阅**：
+   - 新建立互相关注关系（成为好友）时，询问用户是否订阅对方状态
+   - 提供"始终订阅好友状态"的全局设置选项
+
+3. **群聊自动订阅**：
+   - 加入群组时自动订阅该群组
+   - 离开群组时自动取消订阅
+
+### 订阅类型定义
+
+```typescript
+// 订阅项定义（两种类型）
+type SubscriptionItem = {
+  type: 'user' | 'group';
+  ids: string[];  // user_id（数字字符串化）或 group_chat_id（UUID string）
+};
+```
+
+### 订阅模型优势
+
+1. **性能优化**：
+   - 避免广播风暴：用户状态仅推送给实际关心的订阅者
+   - 减少移动设备电池消耗：只接收相关状态更新
+
+2. **隐私控制**：
+   - 用户可以精细控制谁能看到自己的在线状态
+   - 位置更新只推送给已授权的订阅者
+
+3. **业务灵活性**：
+   - 支持"特别关注"功能：用户可以标记重要联系人
+   - 支持临时订阅：仅在需要时订阅（如打开聊天界面时）
+
+4. **客户端简化**：
+   - 统一的订阅模型：仅需管理两种订阅类型
+   - 智能默认减少用户配置负担
+
+### 通知推送机制
+
+通知事件作为**自动推送**的一部分，仅受**持久化偏好设置**控制。用户无需订阅即可接收已启用的通知类型。
+
+**推送逻辑**：
+- **在线用户**：检查持久化偏好设置，通过 WebSocket 自动推送
+- **离线用户**：检查持久化偏好设置，通过设备令牌推送
 - **冷启动**：通过各业务 API 获取待处理数据
+
+**优势**：
+1. **简化客户端**：无需管理通知类型订阅，所有通知自动推送
+2. **一致性**：WebSocket 推送与设备推送使用相同逻辑
+3. **用户友好**：用户在设置页面关闭通知后立即生效
+4. **减少复杂度**：与私聊消息采用相同的自动推送模式

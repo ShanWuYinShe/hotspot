@@ -4,6 +4,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use uuid::Uuid;
 
 use crate::{
     dto::{
@@ -24,9 +25,39 @@ use crate::{
     state::AppState,
     utils::validation::Validator,
     utils::web_cookie::{
-        build_refresh_token_clear_cookie, build_refresh_token_set_cookie, get_cookie_value,
+        build_csrf_token_clear_cookie, build_csrf_token_set_cookie, build_refresh_token_clear_cookie,
+        build_refresh_token_set_cookie, get_cookie_value,
     },
 };
+
+fn append_set_cookie(headers: &mut HeaderMap, cookie: String) -> Result<()> {
+    headers.append(
+        header::SET_COOKIE,
+        HeaderValue::from_str(&cookie).map_err(|_| AppError::internal("Cookie header error"))?,
+    );
+    Ok(())
+}
+
+fn validate_csrf_token(headers: &HeaderMap) -> Result<()> {
+    if let Some(fetch_site) = headers.get("Sec-Fetch-Site").and_then(|v| v.to_str().ok()) {
+        if fetch_site.eq_ignore_ascii_case("cross-site") {
+            return Err(AppError::Forbidden("CSRF：跨站请求被拒绝".to_string()));
+        }
+    }
+
+    let csrf_cookie = get_cookie_value(headers, "hs_csrf_token")
+        .ok_or_else(|| AppError::Forbidden("CSRF token 缺失".to_string()))?;
+    let csrf_header = headers
+        .get("X-CSRF-Token")
+        .and_then(|v| v.to_str().ok())
+        .ok_or_else(|| AppError::Forbidden("CSRF token 缺失".to_string()))?;
+
+    if csrf_cookie != csrf_header {
+        return Err(AppError::Forbidden("CSRF token 无效".to_string()));
+    }
+
+    Ok(())
+}
 
 pub async fn register(
     State(state): State<AppState>,
@@ -66,15 +97,19 @@ pub async fn register(
     let mut resp_headers = HeaderMap::new();
     if client_type == ClientType::Web {
         let secure = false; // 生产建议改为配置项
+        let csrf_token = Uuid::new_v4().to_string();
         let set_cookie = build_refresh_token_set_cookie(
             &auth_issue.refresh_token_raw,
             state.config.jwt_refresh_token_expiration,
             secure,
         );
-        resp_headers.insert(
-            header::SET_COOKIE,
-            HeaderValue::from_str(&set_cookie).map_err(|_| AppError::internal("Cookie header error"))?,
+        let csrf_cookie = build_csrf_token_set_cookie(
+            &csrf_token,
+            state.config.jwt_refresh_token_expiration,
+            secure,
         );
+        append_set_cookie(&mut resp_headers, set_cookie)?;
+        append_set_cookie(&mut resp_headers, csrf_cookie)?;
     }
 
     Ok((resp_headers, Json(ApiResponse::success(auth_issue.data))))
@@ -115,15 +150,19 @@ pub async fn login(
     let mut resp_headers = HeaderMap::new();
     if client_type == ClientType::Web {
         let secure = false; // 生产建议改为配置项
+        let csrf_token = Uuid::new_v4().to_string();
         let set_cookie = build_refresh_token_set_cookie(
             &auth_issue.refresh_token_raw,
             state.config.jwt_refresh_token_expiration,
             secure,
         );
-        resp_headers.insert(
-            header::SET_COOKIE,
-            HeaderValue::from_str(&set_cookie).map_err(|_| AppError::internal("Cookie header error"))?,
+        let csrf_cookie = build_csrf_token_set_cookie(
+            &csrf_token,
+            state.config.jwt_refresh_token_expiration,
+            secure,
         );
+        append_set_cookie(&mut resp_headers, set_cookie)?;
+        append_set_cookie(&mut resp_headers, csrf_cookie)?;
     }
 
     Ok((resp_headers, Json(ApiResponse::success(auth_issue.data))))
@@ -164,15 +203,19 @@ pub async fn create_guest(
     let mut resp_headers = HeaderMap::new();
     if client_type == ClientType::Web {
         let secure = false; // 生产建议改为配置项
+        let csrf_token = Uuid::new_v4().to_string();
         let set_cookie = build_refresh_token_set_cookie(
             &auth_issue.refresh_token_raw,
             state.config.jwt_refresh_token_expiration,
             secure,
         );
-        resp_headers.insert(
-            header::SET_COOKIE,
-            HeaderValue::from_str(&set_cookie).map_err(|_| AppError::internal("Cookie header error"))?,
+        let csrf_cookie = build_csrf_token_set_cookie(
+            &csrf_token,
+            state.config.jwt_refresh_token_expiration,
+            secure,
         );
+        append_set_cookie(&mut resp_headers, set_cookie)?;
+        append_set_cookie(&mut resp_headers, csrf_cookie)?;
     }
 
     Ok((resp_headers, Json(ApiResponse::success(auth_issue.data))))
@@ -198,6 +241,10 @@ pub async fn refresh_token(
     // client_type 已在请求中强类型化，直接使用
     let client_type = req.client_type;
 
+    if client_type == ClientType::Web {
+        validate_csrf_token(&headers)?;
+    }
+
     // refresh_token 投递规则（强制）：
     // - app：必须在 body 传 refresh_token
     // - web：必须不传（从 HttpOnly cookie 读取），若传入则视为参数错误
@@ -216,10 +263,6 @@ pub async fn refresh_token(
         }
     };
 
-    // 生产同源模式（推荐由 Nginx 统一入口）：不在后端做 Origin 白名单校验
-    // - CORS/Origin/Referer 等安全策略应在反向代理层按环境统一配置
-    // - Web refresh_token 使用 HttpOnly Cookie，依赖同源部署与 Cookie SameSite 策略降低 CSRF 风险
-
     // 调用 Service
     let auth_issue = state
         .auth_service
@@ -235,15 +278,19 @@ pub async fn refresh_token(
     let mut resp_headers = HeaderMap::new();
     if client_type == ClientType::Web {
         let secure = false; // 生产建议改为配置项
+        let csrf_token = Uuid::new_v4().to_string();
         let set_cookie = build_refresh_token_set_cookie(
             &auth_issue.refresh_token_raw,
             state.config.jwt_refresh_token_expiration,
             secure,
         );
-        resp_headers.insert(
-            header::SET_COOKIE,
-            HeaderValue::from_str(&set_cookie).map_err(|_| AppError::internal("Cookie header error"))?,
+        let csrf_cookie = build_csrf_token_set_cookie(
+            &csrf_token,
+            state.config.jwt_refresh_token_expiration,
+            secure,
         );
+        append_set_cookie(&mut resp_headers, set_cookie)?;
+        append_set_cookie(&mut resp_headers, csrf_cookie)?;
     }
 
     Ok((resp_headers, Json(ApiResponse::success(auth_issue.data))))
@@ -261,11 +308,10 @@ pub async fn logout(
     // 清除 refresh cookie（web）
     let secure = false; // 生产建议改为配置项
     let clear_cookie = build_refresh_token_clear_cookie(secure);
+    let clear_csrf_cookie = build_csrf_token_clear_cookie(secure);
     let mut resp_headers = HeaderMap::new();
-    resp_headers.insert(
-        header::SET_COOKIE,
-        HeaderValue::from_str(&clear_cookie).map_err(|_| AppError::internal("Cookie header error"))?,
-    );
+    append_set_cookie(&mut resp_headers, clear_cookie)?;
+    append_set_cookie(&mut resp_headers, clear_csrf_cookie)?;
 
     Ok((resp_headers, Json(ApiResponse::success_empty())))
 }

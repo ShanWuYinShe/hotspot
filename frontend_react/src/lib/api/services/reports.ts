@@ -2,7 +2,7 @@
  * 举报服务
  */
 
-import { get, post, generateIdempotencyKey } from '../client';
+import { post, generateIdempotencyKey } from '../client';
 import { ENDPOINTS } from '../endpoints';
 import type {
   ApiResponse,
@@ -25,6 +25,6 @@ export const reportsService = {
    * 获取我的举报列表
    */
   async getMyReports(params?: { limit?: number; cursor?: string }): Promise<ApiResponse<PaginatedData<ReportItem>>> {
-    return get<PaginatedData<ReportItem>>(ENDPOINTS.REPORTS.MY_REPORTS, params);
+    return post<PaginatedData<ReportItem>>(ENDPOINTS.REPORTS.MY_REPORTS, params ?? {});
   },
 };

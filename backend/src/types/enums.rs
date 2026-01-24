@@ -378,29 +378,11 @@ impl MessageType {
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
-        match s.to_lowercase().as_str() {
-            "text" => Some(MessageType::Text),
-            "image" => Some(MessageType::Image),
-            "video" => Some(MessageType::Video),
-            "audio" => Some(MessageType::Audio),
-            "file" => Some(MessageType::File),
-            "location" => Some(MessageType::Location),
-            "system" => Some(MessageType::System),
-            _ => None,
-        }
-    }
-
     pub fn is_media(&self) -> bool {
         matches!(
             self,
             MessageType::Image | MessageType::Video | MessageType::Audio | MessageType::File
         )
-    }
-
-    /// 是否是可发送的消息类型（排除 System）
-    pub fn is_sendable(&self) -> bool {
-        !matches!(self, MessageType::System)
     }
 }
 
@@ -1575,65 +1557,12 @@ impl std::fmt::Display for ConfigValueType {
 // 查询过滤专用枚举（内部使用，仅用于 Repository 层过滤）
 // ============================================================
 
-/// 消息类型过滤（含 Any 变体，仅用于查询）
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum MessageTypeFilter {
-    Any,      // 匹配所有类型
-    Specific(MessageType),
-}
-
-impl MessageTypeFilter {
-    pub fn matches(&self, msg_type: MessageType) -> bool {
-        match self {
-            MessageTypeFilter::Any => true,
-            MessageTypeFilter::Specific(t) => *t == msg_type,
-        }
-    }
-}
-
-impl Default for MessageTypeFilter {
-    fn default() -> Self {
-        MessageTypeFilter::Any
-    }
-}
-
-/// 举报状态过滤（含 Any 变体，仅用于查询）
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ReportStatusFilter {
-    Any,      // 匹配所有状态
-    Specific(ReportStatus),
-}
-
-impl ReportStatusFilter {
-    pub fn matches(&self, status: ReportStatus) -> bool {
-        match self {
-            ReportStatusFilter::Any => true,
-            ReportStatusFilter::Specific(s) => *s == status,
-        }
-    }
-}
-
-impl Default for ReportStatusFilter {
-    fn default() -> Self {
-        ReportStatusFilter::Any
-    }
-}
-
 /// 申请状态过滤（含 Any 变体，仅用于查询）
 /// API 规范中使用 'pending' | 'accepted' | 'rejected' | 'all' 字符串
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ApplicationStatusFilter {
     Any,
     Specific(ApplicationStatus),
-}
-
-impl ApplicationStatusFilter {
-    pub fn matches(&self, status: ApplicationStatus) -> bool {
-        match self {
-            ApplicationStatusFilter::Any => true,
-            ApplicationStatusFilter::Specific(s) => *s == status,
-        }
-    }
 }
 
 impl Default for ApplicationStatusFilter {
@@ -1671,5 +1600,7 @@ impl serde::Serialize for ApplicationStatusFilter {
 }
 
 // ============================================================
+
+
 
 

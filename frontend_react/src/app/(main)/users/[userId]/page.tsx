@@ -5,11 +5,12 @@
 
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
-import { serverApi, isServerSuccess } from '@/lib/api/server';
+import { serverApi, isServerSuccess, isNotFoundError, getServerErrorMessage } from '@/lib/api/server';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import { LoadingState } from '@/components/common/loading-state';
 import { UserProfileHeader } from './user-profile-header';
 import { UserMomentsList } from './user-moments-list';
+import { ServerErrorCard } from '@/components/common/server-error-card';
 import type { UserDetailData, MomentItem, PaginatedData } from '@/types/api';
 
 interface UserPageProps {
@@ -21,18 +22,29 @@ async function UserContent({ userId }: { userId: string }) {
   const [userRes, momentsRes] = await Promise.all([
     serverApi.post<UserDetailData>(
       ENDPOINTS.USER.DETAIL(numericUserId),
-      undefined,
+      { user_id: numericUserId },
       { tags: [`user-${userId}`], revalidate: 60 }
     ),
     serverApi.post<PaginatedData<MomentItem>>(
       ENDPOINTS.USER.MOMENTS(numericUserId),
-      { limit: 20 },
+      { user_id: numericUserId, limit: 20 },
       { tags: [`user-${userId}-moments`], revalidate: 60 }
     ),
   ]);
 
   if (!isServerSuccess(userRes)) {
-    notFound();
+    if (isNotFoundError(userRes)) {
+      notFound();
+    }
+    return (
+      <div className="max-w-2xl mx-auto">
+        <ServerErrorCard
+          title="加载用户失败"
+          description={getServerErrorMessage(userRes)}
+          requestId={userRes.request_id}
+        />
+      </div>
+    );
   }
 
   const user = userRes.data;

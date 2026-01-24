@@ -2,7 +2,7 @@
  * 私聊服务
  */
 
-import { get, post, put, del, generateIdempotencyKey } from '../client';
+import { post, generateIdempotencyKey } from '../client';
 import { ENDPOINTS } from '../endpoints';
 import type {
   ApiResponse,
@@ -24,14 +24,14 @@ export const privateChatService = {
    * 获取私聊会话列表
    */
   async getChats(params?: { limit?: number; cursor?: string }): Promise<ApiResponse<PaginatedData<PrivateChatListItem>>> {
-    return get<PaginatedData<PrivateChatListItem>>(ENDPOINTS.PRIVATE_CHATS.LIST, params);
+    return post<PaginatedData<PrivateChatListItem>>(ENDPOINTS.PRIVATE_CHATS.LIST, params ?? {});
   },
 
   /**
    * 获取私聊会话详情
    */
   async getChatDetail(userId: number): Promise<ApiResponse<PrivateChatDetailData>> {
-    return get<PrivateChatDetailData>(ENDPOINTS.PRIVATE_CHATS.DETAIL(userId));
+    return post<PrivateChatDetailData>(ENDPOINTS.PRIVATE_CHATS.DETAIL(userId), { target_user_id: userId });
   },
 
   /**
@@ -41,16 +41,20 @@ export const privateChatService = {
     userId: number,
     settings: { is_muted?: boolean; is_pinned?: boolean }
   ): Promise<ApiResponse<void>> {
-    return put<void>(ENDPOINTS.PRIVATE_CHATS.SETTINGS(userId), settings, {
+    return post<void>(
+      ENDPOINTS.PRIVATE_CHATS.SETTINGS(userId),
+      { target_user_id: userId, ...settings },
+      {
       idempotencyKey: generateIdempotencyKey(),
-    });
+      }
+    );
   },
 
   /**
    * 删除私聊会话
    */
   async deleteChat(userId: number): Promise<ApiResponse<void>> {
-    return del<void>(ENDPOINTS.PRIVATE_CHATS.DELETE(userId));
+    return post<void>(ENDPOINTS.PRIVATE_CHATS.DELETE(userId), { target_user_id: userId });
   },
 
   // ============================================================================
@@ -64,7 +68,10 @@ export const privateChatService = {
     userId: number,
     params?: { limit?: number; cursor?: string }
   ): Promise<ApiResponse<PaginatedData<PrivateMessageItem>>> {
-    return get<PaginatedData<PrivateMessageItem>>(ENDPOINTS.PRIVATE_MESSAGES.HISTORY(userId), params);
+    return post<PaginatedData<PrivateMessageItem>>(ENDPOINTS.PRIVATE_MESSAGES.HISTORY(userId), {
+      target_user_id: userId,
+      ...(params ?? {}),
+    });
   },
 
   /**
@@ -80,7 +87,7 @@ export const privateChatService = {
    * 编辑消息
    */
   async editMessage(messageId: string, content: string): Promise<ApiResponse<void>> {
-    return put<void>(ENDPOINTS.PRIVATE_MESSAGES.UPDATE(messageId), { content }, {
+    return post<void>(ENDPOINTS.PRIVATE_MESSAGES.UPDATE(messageId), { message_id: messageId, content }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
@@ -89,7 +96,7 @@ export const privateChatService = {
    * 撤回消息
    */
   async recallMessage(messageId: string): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.PRIVATE_MESSAGES.RECALL(messageId), undefined, {
+    return post<void>(ENDPOINTS.PRIVATE_MESSAGES.RECALL(messageId), { message_id: messageId }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
@@ -98,7 +105,7 @@ export const privateChatService = {
    * 删除消息
    */
   async deleteMessage(messageId: string): Promise<ApiResponse<void>> {
-    return del<void>(ENDPOINTS.PRIVATE_MESSAGES.DELETE(messageId));
+    return post<void>(ENDPOINTS.PRIVATE_MESSAGES.DELETE(messageId), { message_id: messageId });
   },
 
   /**
@@ -107,7 +114,10 @@ export const privateChatService = {
   async markRead(userId: number, upToMessageId?: string): Promise<ApiResponse<void>> {
     return post<void>(
       ENDPOINTS.PRIVATE_MESSAGES.MARK_READ(userId),
-      upToMessageId ? { up_to_message_id: upToMessageId } : undefined,
+      {
+        target_user_id: userId,
+        ...(upToMessageId ? { up_to_message_id: upToMessageId } : {}),
+      },
       { idempotencyKey: generateIdempotencyKey() }
     );
   },
@@ -123,14 +133,17 @@ export const privateChatService = {
     messageId: string,
     params?: { type?: ReactionType; limit?: number; cursor?: string }
   ): Promise<ApiResponse<PaginatedData<MessageReactionItem>>> {
-    return get<PaginatedData<MessageReactionItem>>(ENDPOINTS.PRIVATE_MESSAGES.REACTIONS(messageId), params);
+    return post<PaginatedData<MessageReactionItem>>(ENDPOINTS.PRIVATE_MESSAGES.REACTIONS(messageId), {
+      message_id: messageId,
+      ...(params ?? {}),
+    });
   },
 
   /**
    * 添加反应
    */
   async addReaction(messageId: string, type: ReactionType): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.PRIVATE_MESSAGES.ADD_REACTION(messageId), { type }, {
+    return post<void>(ENDPOINTS.PRIVATE_MESSAGES.ADD_REACTION(messageId), { message_id: messageId, type }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
@@ -139,6 +152,9 @@ export const privateChatService = {
    * 移除反应
    */
   async removeReaction(messageId: string, type: ReactionType): Promise<ApiResponse<void>> {
-    return del<void>(ENDPOINTS.PRIVATE_MESSAGES.REMOVE_REACTION(messageId, type));
+    return post<void>(ENDPOINTS.PRIVATE_MESSAGES.REMOVE_REACTION(messageId, type), {
+      message_id: messageId,
+      type,
+    });
   },
 };

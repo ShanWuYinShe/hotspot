@@ -146,7 +146,7 @@ impl GroupMessageService {
         // 检查是否被禁言
         if let Some(muted_until) = member.muted_until {
             if muted_until > chrono::Utc::now() {
-                return Err(AppError::Forbidden("您已被禁言，无法发送消息".to_string()));
+                return Err(AppError::UserMuted);
             }
         }
 
@@ -471,7 +471,7 @@ impl GroupMessageService {
 
         // 4. 验证消息状态
         if message.is_recalled {
-            return Err(AppError::BadRequest("已撤回的消息无法编辑".to_string()));
+            return Err(AppError::MessageAlreadyRecalled);
         }
 
         // 5. 更新消息
@@ -503,27 +503,27 @@ impl GroupMessageService {
             .ok_or_else(|| AppError::ChatNotFound("消息不存在".to_string()))?;
 
         // 2. 验证权限
-        let can_recall = if message.sender_id == user_id {
+        if message.sender_id == user_id {
             // 发送者可以撤回自己的消息（2分钟内）
             let now = chrono::Utc::now();
             let elapsed = now.signed_duration_since(message.sent_at);
-            elapsed.num_minutes() < 2
+            if elapsed.num_minutes() >= 2 {
+                return Err(AppError::OperationWindowExpired);
+            }
         } else {
             // 检查是否是管理员/群主
             let role = self
                 .member_repo
                 .get_member_role(message.group_chat_id, user_id)
                 .await?;
-            role == Some(GroupRole::Owner) || role == Some(GroupRole::Admin)
-        };
-
-        if !can_recall {
-            return Err(AppError::Forbidden("无权撤回此消息".to_string()));
+            if role != Some(GroupRole::Owner) && role != Some(GroupRole::Admin) {
+                return Err(AppError::Forbidden("无权撤回此消息".to_string()));
+            }
         }
 
         // 3. 验证消息状态
         if message.is_recalled {
-            return Err(AppError::BadRequest("消息已被撤回".to_string()));
+            return Err(AppError::MessageAlreadyRecalled);
         }
 
         // 4. 撤回消息

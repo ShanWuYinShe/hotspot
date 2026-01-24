@@ -1,10 +1,11 @@
 use redis::aio::ConnectionManager;
+use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::{
-    constants::{DEFAULT_LATITUDE, DEFAULT_LOCATION_NAME, DEFAULT_LONGITUDE},
+    constants::{DEFAULT_LATITUDE, DEFAULT_LOCATION_NAME, DEFAULT_LONGITUDE, DEFAULT_PAGE_LIMIT},
     dto::{
         request::{
             AcceptInviteRequest, AdminGroupDetailRequest, ApplyToGroupRequest,
@@ -35,12 +36,19 @@ use crate::{
         group_application_repo::GroupApplicationRepository, group_bans_repo::GroupBansRepository,
         group_invite_repo::GroupInviteRepository,
         group_member_history_repo::GroupMemberHistoryRepository,
-        group_member_repo::GroupMemberRepository, group_message_repo::GroupMessageRepository,
-        group_repo::GroupRepository, group_settings_repo::GroupSettingsRepository,
+        group_member_repo::{GroupMemberDetailRow, GroupMemberRepository},
+        group_message_repo::GroupMessageRepository,
+        group_repo::GroupRepository,
+        group_settings_repo::{GroupSettings as GroupSettingsRow, GroupSettingsRepository},
         tag_repo::TagRepository, user_repo::UserRepository,
     },
     types::enums::{ApplicationStatus, GroupJoinMethod, GroupRole, MemberLeaveReason, ResponseStatus},
-    utils::{bloom_filter::ResourceExistenceChecker, password::PasswordUtil, validation::Validator},
+    utils::{
+        bloom_filter::ResourceExistenceChecker,
+        cache::{cache_keys, CacheManager},
+        password::PasswordUtil,
+        validation::Validator,
+    },
     EventBus,
 };
 
@@ -62,10 +70,17 @@ pub struct GroupService {
     _redis: ConnectionManager,
     presence_service: crate::services::presence_service::PresenceService,
     media_service: crate::services::media_service::MediaService,
+    cache_manager: CacheManager,
 }
 
 use crate::dto::request::{AdminDismissGroupRequest, AdminGroupSearchRequest};
 use crate::dto::response::AdminGroupItem;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct CachedGroupMembers {
+    members: Vec<GroupMemberDetailRow>,
+    next_cursor: Option<String>,
+}
 
 impl GroupService {
     pub fn new(
@@ -85,6 +100,7 @@ impl GroupService {
         redis: ConnectionManager,
         presence_service: crate::services::presence_service::PresenceService,
         media_service: crate::services::media_service::MediaService,
+        cache_manager: CacheManager,
     ) -> Self {
         Self {
             event_bus,
@@ -103,7 +119,128 @@ impl GroupService {
             _redis: redis,
             presence_service,
             media_service,
+            cache_manager,
         }
+    }
+
+    async fn get_group_cached(&self, group_id: Uuid) -> Result<crate::repositories::group_repo::GroupRow> {
+        let cache_key = group_id.to_string();
+        let cached = self
+            .cache_manager
+            .get_or_set_with_lock(cache_keys::GROUP_INFO, &cache_key, || async {
+                let group = self
+                    .group_repo
+                    .find_by_id(group_id)
+                    .await
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(group)
+            })
+            .await
+            .map_err(|e| AppError::CacheError(e.to_string()))?;
+
+        cached.ok_or_else(|| AppError::GroupNotFound("群组不存在".to_string()))
+    }
+
+    async fn get_group_settings_cached(
+        &self,
+        group_id: Uuid,
+    ) -> Result<Option<GroupSettingsRow>> {
+        let cache_key = group_id.to_string();
+        let cached = self
+            .cache_manager
+            .get_or_set_with_lock(cache_keys::GROUP_SETTINGS, &cache_key, || async {
+                let settings = self
+                    .settings_repo
+                    .find_by_group(group_id)
+                    .await
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(settings)
+            })
+            .await
+            .map_err(|e| AppError::CacheError(e.to_string()))?;
+
+        Ok(cached)
+    }
+
+    async fn invalidate_group_caches(&self, group_id: Uuid) {
+        let cache_key = group_id.to_string();
+        if let Err(e) = self
+            .cache_manager
+            .delete(cache_keys::GROUP_INFO, &cache_key)
+            .await
+        {
+            tracing::warn!(group_id = %cache_key, error = %e, "delete group info cache failed");
+        }
+        if let Err(e) = self
+            .cache_manager
+            .delete(cache_keys::GROUP_SETTINGS, &cache_key)
+            .await
+        {
+            tracing::warn!(group_id = %cache_key, error = %e, "delete group settings cache failed");
+        }
+        let ids = vec![cache_key];
+        if let Err(e) = self
+            .cache_manager
+            .delete_batch(cache_keys::GROUP_MEMBERS, &ids)
+            .await
+        {
+            tracing::warn!(error = %e, "delete group members cache failed");
+        }
+    }
+
+    async fn invalidate_group_members_cache(&self, group_id: Uuid) {
+        let ids = vec![group_id.to_string()];
+        if let Err(e) = self
+            .cache_manager
+            .delete_batch(cache_keys::GROUP_MEMBERS, &ids)
+            .await
+        {
+            tracing::warn!(error = %e, "delete group members cache failed");
+        }
+    }
+
+    async fn get_group_members_cached(
+        &self,
+        group_id: Uuid,
+        role: Option<&str>,
+        limit: i32,
+        cursor: Option<String>,
+    ) -> Result<(Vec<GroupMemberDetailRow>, Option<String>)> {
+        if role.is_some() || cursor.is_some() || limit != DEFAULT_PAGE_LIMIT as i32 {
+            return self
+                .member_repo
+                .list_by_group(group_id, role, limit, cursor)
+                .await;
+        }
+
+        let cache_key = group_id.to_string();
+        let cached = self
+            .cache_manager
+            .get_or_set_with_lock_with_ttl(
+                cache_keys::GROUP_MEMBERS,
+                &cache_key,
+                30,
+                10,
+                || async {
+                    let (members, next_cursor) = self
+                        .member_repo
+                        .list_by_group(group_id, None, limit, None)
+                        .await
+                        .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                    Ok(Some(CachedGroupMembers {
+                        members,
+                        next_cursor,
+                    }))
+                },
+            )
+            .await
+            .map_err(|e| AppError::CacheError(e.to_string()))?;
+
+        if let Some(data) = cached {
+            return Ok((data.members, data.next_cursor));
+        }
+
+        Ok((Vec::new(), None))
     }
 
     pub async fn create_group(
@@ -518,13 +655,9 @@ impl GroupService {
         let group_id = Uuid::parse_str(&req.group_chat_id)
             .map_err(|_| AppError::BadRequest("无效的群组ID".to_string()))?;
 
-        let group = self
-            .group_repo
-            .find_by_id(group_id)
-            .await?
-            .ok_or_else(|| AppError::GroupNotFound("群组不存在".to_string()))?;
+        let group = self.get_group_cached(group_id).await?;
 
-        let settings = self.settings_repo.find_by_group(group_id).await?;
+        let settings = self.get_group_settings_cached(group_id).await?;
         let has_password = settings
             .as_ref()
             .map(|s| s.password_hash.is_some())
@@ -679,6 +812,14 @@ impl GroupService {
         };
 
         if let Some(s) = req.settings {
+            if let Some(max_members) = s.max_members {
+                let member_count = self.member_repo.count_members(group_id).await?;
+                if member_count > max_members as i64 {
+                    return Err(AppError::BusinessRuleViolation(
+                        "当前成员数已超过新上限".to_string(),
+                    ));
+                }
+            }
             // settings_repo.update 签名: (group_chat_id, join_method?, is_searchable?, max_members?, password_hash?)
             self.settings_repo
                 .update(
@@ -716,6 +857,9 @@ impl GroupService {
         if let Some(tags) = &req.tags {
             self.tag_repo.set_group_tags(group_id, tags).await?;
         }
+
+        // 失效群组缓存
+        self.invalidate_group_caches(group_id).await;
 
         // 发布群组资料更新事件（群聊订阅者可实时刷新 UI）
         if updated_name.is_some() || updated_description.is_some() || has_avatar_update {
@@ -756,6 +900,9 @@ impl GroupService {
 
         self.group_repo.soft_delete(group_id).await?;
 
+        // 失效群组缓存
+        self.invalidate_group_caches(group_id).await;
+
         // 发布群组解散事件
         self.event_bus.publish(AppEvent::GroupDismissed {
             group_id,
@@ -772,14 +919,13 @@ impl GroupService {
         let group_id = Uuid::parse_str(&req.group_chat_id)
             .map_err(|_| AppError::BadRequest("Invalid Group ID".to_string()))?;
 
-        let limit = Validator::validate_limit(req.limit, 100)? as i64;
+        let limit = Validator::validate_limit(req.limit, 100)?;
         let cursor = req.cursor;
 
         // 转换 GroupRole 枚举为字符串用于数据库查询
         let role = req.role.as_ref().map(|r| r.as_str());
         let (members, next_cursor) = self
-            .member_repo
-            .list_by_group(group_id, role, limit as i32, cursor)
+            .get_group_members_cached(group_id, role, limit, cursor)
             .await?;
 
         // 批量获取在线状态
@@ -835,17 +981,27 @@ impl GroupService {
             return Err(AppError::Forbidden("Not a member".to_string()));
         }
 
+        let settings = self.get_group_settings_cached(group_id).await?;
+        if let Some(max_members) = settings.as_ref().and_then(|s| s.max_members) {
+            let member_count = self.member_repo.count_members(group_id).await?;
+            if member_count >= max_members as i64 {
+                return Err(AppError::GroupFull);
+            }
+        }
+
         let invite = self
             .invite_repo
             .create(group_id, user_id, target_uid, req.message)
             .await?;
 
         // 发布“群组邀请已发送”事件（用于 WS 通知被邀请者）
-        let group_info = self
-            .group_repo
-            .find_by_id(group_id)
-            .await?
-            .ok_or_else(|| AppError::GroupNotFound("Group not found".to_string()))?;
+        let group_info = self.get_group_cached(group_id).await.map_err(|err| {
+            if matches!(err, AppError::GroupNotFound(_)) {
+                AppError::GroupNotFound("Group not found".to_string())
+            } else {
+                err
+            }
+        })?;
 
         self.event_bus.publish(AppEvent::GroupInviteSent {
             invite_id: invite.invite_id,
@@ -883,11 +1039,18 @@ impl GroupService {
         }
 
         if self.member_repo.is_member(group_id, user_id).await? {
-            return Err(AppError::BadRequest("Already a member".to_string()));
+            return Err(AppError::AlreadyInGroup);
         }
 
         // 获取群组设置以检查密码
-        let settings = self.settings_repo.find_by_group(group_id).await?;
+        let settings = self.get_group_settings_cached(group_id).await?;
+
+        if let Some(max_members) = settings.as_ref().and_then(|s| s.max_members) {
+            let member_count = self.member_repo.count_members(group_id).await?;
+            if member_count >= max_members as i64 {
+                return Err(AppError::GroupFull);
+            }
+        }
 
         if let Some(password) = &req.password {
             if let Some(stored_hash) = settings.as_ref().and_then(|s| s.password_hash.as_ref()) {
@@ -911,6 +1074,9 @@ impl GroupService {
         self.history_repo
             .record_join(group_id, user_id, None)
             .await?;
+
+        // 失效群组成员缓存
+        self.invalidate_group_members_cache(group_id).await;
 
         // 获取最新成员数
         let member_count = self.member_repo.count_members(group_id).await?;
@@ -936,7 +1102,15 @@ impl GroupService {
             .map_err(|_| AppError::BadRequest("Invalid Group ID".to_string()))?;
 
         if self.member_repo.is_member(group_id, user_id).await? {
-            return Err(AppError::BadRequest("Already a member".to_string()));
+            return Err(AppError::AlreadyInGroup);
+        }
+
+        let settings = self.get_group_settings_cached(group_id).await?;
+        if let Some(max_members) = settings.as_ref().and_then(|s| s.max_members) {
+            let member_count = self.member_repo.count_members(group_id).await?;
+            if member_count >= max_members as i64 {
+                return Err(AppError::GroupFull);
+            }
         }
 
         let app = self
@@ -1414,13 +1588,22 @@ impl GroupService {
             .record_join(app.group_chat_id, app.applicant_id, Some(user_id))
             .await?;
 
+        // 失效群组成员缓存
+        self.invalidate_group_members_cache(app.group_chat_id).await;
+
         // 1) 通知申请者审批结果（通知类事件）
         let group_name = self
-            .group_repo
-            .find_by_id(app.group_chat_id)
-            .await?
+            .get_group_cached(app.group_chat_id)
+            .await
             .map(|g| g.name)
-            .unwrap_or_else(|| "Unknown".to_string());
+            .unwrap_or_else(|err| {
+                if matches!(err, AppError::GroupNotFound(_)) {
+                    "Unknown".to_string()
+                } else {
+                    tracing::warn!(error = %err, "load group name failed");
+                    "Unknown".to_string()
+                }
+            });
         self.event_bus.publish(AppEvent::GroupApplicationResponse {
             application_id,
             group_id: app.group_chat_id,
@@ -1476,11 +1659,17 @@ impl GroupService {
 
         // 通知申请者审批结果（通知类事件）
         let group_name = self
-            .group_repo
-            .find_by_id(app.group_chat_id)
-            .await?
+            .get_group_cached(app.group_chat_id)
+            .await
             .map(|g| g.name)
-            .unwrap_or_else(|| "Unknown".to_string());
+            .unwrap_or_else(|err| {
+                if matches!(err, AppError::GroupNotFound(_)) {
+                    "Unknown".to_string()
+                } else {
+                    tracing::warn!(error = %err, "load group name failed");
+                    "Unknown".to_string()
+                }
+            });
         self.event_bus.publish(AppEvent::GroupApplicationResponse {
             application_id,
             group_id: app.group_chat_id,
@@ -1828,17 +2017,13 @@ impl GroupService {
         let group_id = Uuid::parse_str(&req.group_chat_id)
             .map_err(|_| AppError::BadRequest("无效的群组ID".to_string()))?;
 
-        let group = self
-            .group_repo
-            .find_by_id(group_id)
-            .await?
-            .ok_or_else(|| AppError::GroupNotFound("群组不存在".to_string()))?;
+        let group = self.get_group_cached(group_id).await?;
 
         let members_count = self.member_repo.count_members(group_id).await? as i32;
         let tags = self.tag_repo.get_group_tags(group_id).await?;
         let tags = if tags.is_empty() { None } else { Some(tags) };
 
-        let settings = self.settings_repo.find_by_group(group_id).await?;
+        let settings = self.get_group_settings_cached(group_id).await?;
         let join_method = settings
             .as_ref()
             .map(|s| GroupJoinMethod::from_str(&s.join_method).unwrap_or(GroupJoinMethod::Open))
@@ -2062,11 +2247,7 @@ impl GroupService {
             .map_err(|_| AppError::BadRequest("无效的群组ID".to_string()))?;
 
         // 验证群组是否存在
-        let _group = self
-            .group_repo
-            .find_by_id(group_id)
-            .await?
-            .ok_or_else(|| AppError::GroupNotFound("群组不存在".to_string()))?;
+        let _group = self.get_group_cached(group_id).await?;
 
         let limit = req.limit.unwrap_or(20).min(100) as i64;
         let announcements = self

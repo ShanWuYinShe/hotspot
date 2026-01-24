@@ -2,7 +2,7 @@
  * 群聊消息服务
  */
 
-import { get, post, put, del, generateIdempotencyKey } from '../client';
+import { post, generateIdempotencyKey } from '../client';
 import { ENDPOINTS } from '../endpoints';
 import type {
   ApiResponse,
@@ -26,7 +26,10 @@ export const groupChatService = {
     groupId: string,
     params?: { limit?: number; cursor?: string; include_system?: boolean }
   ): Promise<ApiResponse<PaginatedData<GroupMessageItem>>> {
-    return get<PaginatedData<GroupMessageItem>>(ENDPOINTS.GROUP_MESSAGES.HISTORY(groupId), params);
+    return post<PaginatedData<GroupMessageItem>>(ENDPOINTS.GROUP_MESSAGES.HISTORY(groupId), {
+      group_chat_id: groupId,
+      ...(params ?? {}),
+    });
   },
 
   /**
@@ -42,7 +45,7 @@ export const groupChatService = {
    * 编辑消息
    */
   async editMessage(messageId: string, content: string): Promise<ApiResponse<void>> {
-    return put<void>(ENDPOINTS.GROUP_MESSAGES.UPDATE(messageId), { content }, {
+    return post<void>(ENDPOINTS.GROUP_MESSAGES.UPDATE(messageId), { message_id: messageId, content }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
@@ -51,7 +54,7 @@ export const groupChatService = {
    * 撤回消息
    */
   async recallMessage(messageId: string): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.GROUP_MESSAGES.RECALL(messageId), undefined, {
+    return post<void>(ENDPOINTS.GROUP_MESSAGES.RECALL(messageId), { message_id: messageId }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
@@ -60,8 +63,9 @@ export const groupChatService = {
    * 删除消息
    */
   async deleteMessage(messageId: string, forEveryone?: boolean): Promise<ApiResponse<void>> {
-    return del<void>(ENDPOINTS.GROUP_MESSAGES.DELETE(messageId), {
-      params: forEveryone ? { for_everyone: true } : undefined,
+    return post<void>(ENDPOINTS.GROUP_MESSAGES.DELETE(messageId), {
+      message_id: messageId,
+      ...(forEveryone ? { for_everyone: true } : {}),
     });
   },
 
@@ -71,7 +75,10 @@ export const groupChatService = {
   async markRead(groupId: string, upToMessageId?: string): Promise<ApiResponse<void>> {
     return post<void>(
       ENDPOINTS.GROUP_MESSAGES.MARK_READ(groupId),
-      upToMessageId ? { up_to_message_id: upToMessageId } : undefined,
+      {
+        group_chat_id: groupId,
+        ...(upToMessageId ? { up_to_message_id: upToMessageId } : {}),
+      },
       { idempotencyKey: generateIdempotencyKey() }
     );
   },
@@ -83,7 +90,10 @@ export const groupChatService = {
     messageId: string,
     params?: { limit?: number; cursor?: string }
   ): Promise<ApiResponse<PaginatedData<MessageReadItem>>> {
-    return get<PaginatedData<MessageReadItem>>(ENDPOINTS.GROUP_MESSAGES.READ_STATUS(messageId), params);
+    return post<PaginatedData<MessageReadItem>>(ENDPOINTS.GROUP_MESSAGES.READ_STATUS(messageId), {
+      message_id: messageId,
+      ...(params ?? {}),
+    });
   },
 
   // ============================================================================
@@ -97,14 +107,17 @@ export const groupChatService = {
     messageId: string,
     params?: { type?: ReactionType; limit?: number; cursor?: string }
   ): Promise<ApiResponse<PaginatedData<MessageReactionItem>>> {
-    return get<PaginatedData<MessageReactionItem>>(ENDPOINTS.GROUP_MESSAGES.REACTIONS(messageId), params);
+    return post<PaginatedData<MessageReactionItem>>(ENDPOINTS.GROUP_MESSAGES.REACTIONS(messageId), {
+      message_id: messageId,
+      ...(params ?? {}),
+    });
   },
 
   /**
    * 添加反应
    */
   async addReaction(messageId: string, type: ReactionType): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.GROUP_MESSAGES.ADD_REACTION(messageId), { type }, {
+    return post<void>(ENDPOINTS.GROUP_MESSAGES.ADD_REACTION(messageId), { message_id: messageId, type }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
@@ -113,6 +126,9 @@ export const groupChatService = {
    * 移除反应
    */
   async removeReaction(messageId: string, type: ReactionType): Promise<ApiResponse<void>> {
-    return del<void>(ENDPOINTS.GROUP_MESSAGES.REMOVE_REACTION(messageId, type));
+    return post<void>(ENDPOINTS.GROUP_MESSAGES.REMOVE_REACTION(messageId, type), {
+      message_id: messageId,
+      type,
+    });
   },
 };

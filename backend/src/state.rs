@@ -216,7 +216,6 @@ impl AppState {
             group_member_repo.clone(),
             moment_repo.clone(),
             presence_service.clone(),
-            redis.clone(),
             media_service.clone(),
             cache_manager.clone(),
         );
@@ -258,6 +257,7 @@ impl AppState {
             redis.clone(),
             presence_service.clone(),
             media_service.clone(),
+            cache_manager.clone(),
         );
 
         let group_message_service = GroupMessageService::new(
@@ -281,6 +281,7 @@ impl AppState {
             private_message_repo.clone(),
             chat_unread_repo.clone(),
             presence_service.clone(),
+            cache_manager.clone(),
         );
 
         let private_message_service = PrivateMessageService::new(
@@ -299,7 +300,7 @@ impl AppState {
 
         let message_common_service = MessageCommonService::new(chat_unread_repo.clone());
 
-        let tag_service = TagService::new(tag_repo.clone());
+        let tag_service = TagService::new(tag_repo.clone(), cache_manager.clone());
 
         let feed_service = FeedService::new(
             redis.clone(),
@@ -318,8 +319,11 @@ impl AppState {
 
         let report_service = ReportService::new(report_repo.clone());
 
-        let system_config_service =
-            SystemConfigService::new(system_config_repo.clone(), redis_client.clone());
+        let system_config_service = SystemConfigService::new(
+            system_config_repo.clone(),
+            redis_client.clone(),
+            cache_manager.clone(),
+        );
 
         let admin_rbac_service = AdminRbacService::new(
             admin_rbac_repo.clone(),
@@ -411,6 +415,9 @@ async fn warmup_bloom_filters(
     if checker.is_ready().await.unwrap_or(false) {
         return Ok(());
     }
+
+    // 清空旧过滤器，避免脏数据影响初始化
+    checker.clear_all().await?;
 
     const BATCH_SIZE: i64 = 1000;
 
@@ -515,6 +522,7 @@ async fn warmup_bloom_filters(
     }
 
     checker.set_ready().await?;
+    checker.log_filter_sizes().await;
     tracing::info!("Bloom filter warmup completed");
     Ok(())
 }

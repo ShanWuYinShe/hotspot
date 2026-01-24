@@ -393,6 +393,48 @@ pub struct MomentItem {
     pub is_favorited: Option<bool>,
 }
 
+/// 瞬间详情 - API 文档: MomentCard
+#[derive(Debug, Serialize)]
+pub struct MomentCard {
+    pub moment_id: String,
+    pub user: UserInfo,
+    pub description: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub images: Option<Vec<MomentImage>>,
+    pub tags: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mentions: Option<Vec<i64>>,
+    pub created_at: String,
+    pub likes_count: i32,
+    pub comments_count: i32,
+    pub location: Location,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub my_state: Option<MyMomentState>,
+}
+
+/// 我的瞬间互动状态 - API 文档: MyMomentState
+#[derive(Debug, Serialize, Clone)]
+pub struct MyMomentState {
+    pub is_liked: bool,
+    pub is_favorited: bool,
+}
+
+/// 用户瞬间列表项 - API 文档: UserMomentListItem
+#[derive(Debug, Serialize)]
+pub struct UserMomentListItem {
+    pub moment_id: String,
+    pub description: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub images: Option<Vec<MomentImage>>,
+    pub tags: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mentions: Option<Vec<i64>>,
+    pub created_at: String,
+    pub likes_count: i32,
+    pub comments_count: i32,
+    pub location: Location,
+}
+
 /// 瞬间点赞项 - API 文档: MomentLikeItem
 #[derive(Debug, Serialize)]
 pub struct MomentLikeItem {
@@ -960,14 +1002,21 @@ pub struct PresignUploadData {
 /// 信息流群组项 - API 文档: FeedGroupItem
 #[derive(Debug, Serialize)]
 pub struct FeedGroupItem {
-    #[serde(flatten)]
-    pub group: GroupItem,
+    pub group_chat_id: String,
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub avatar_url: Option<String>,
+    pub members_count: i32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<String>>,
+    pub has_password: bool,
+    pub location: RelativeLocation,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub friends_in_group: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub my_role: Option<GroupRole>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub is_joined: Option<bool>,
+    pub my_state: Option<GroupMyStateData>,
 }
 
 /// 信息流用户项 - API 文档: FeedUserItem
@@ -981,6 +1030,25 @@ pub struct FeedUserItem {
     pub common_tags: Option<Vec<String>>,
 }
 
+/// 信息流瞬间项 - API 文档: FeedMomentItem
+#[derive(Debug, Serialize)]
+pub struct FeedMomentItem {
+    pub moment_id: String,
+    pub user: UserInfo,
+    pub description: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub images: Option<Vec<MomentImage>>,
+    pub tags: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mentions: Option<Vec<i64>>,
+    pub created_at: String,
+    pub likes_count: i32,
+    pub comments_count: i32,
+    pub location: RelativeLocation,
+    pub is_liked: bool,
+    pub is_favorited: bool,
+}
+
 /// 热门标签项 - API 文档: TrendingTagItem
 #[derive(Debug, Serialize)]
 pub struct TrendingTagItem {
@@ -988,14 +1056,14 @@ pub struct TrendingTagItem {
     pub usage_count: i32,
     pub trend: TagTrend,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub hot_moment_preview: Option<MomentItem>,
+    pub hot_moment_preview: Option<FeedMomentItem>,
 }
 
 /// 信息流热门数据 - API 文档: FeedTrendingData
 #[derive(Debug, Serialize)]
 pub struct FeedTrendingData {
     pub trending_tags: Vec<TrendingTagItem>,
-    pub hot_moments: Vec<MomentItem>,
+    pub hot_moments: Vec<FeedMomentItem>,
 }
 
 // ============================================================
@@ -1003,7 +1071,7 @@ pub struct FeedTrendingData {
 // ============================================================
 
 /// 标签项 - API 文档: TagItem
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TagItem {
     pub name: String,
     pub usage_count: i32,
@@ -1012,7 +1080,7 @@ pub struct TagItem {
 }
 
 /// 热门标签数据 - API 文档: TrendingTagsData
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TrendingTagsData {
     pub items: Vec<TagItem>,
 }

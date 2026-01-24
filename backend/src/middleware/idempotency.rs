@@ -18,6 +18,7 @@ use sha2::{Digest, Sha256};
 use crate::{error::AppError, state::AppState};
 
 const IDEMPOTENCY_TTL_SECONDS: usize = 24 * 60 * 60; // 24小时
+const IDEMPOTENCY_LOCK_TTL_SECONDS: usize = 30; // 处理锁TTL
 
 /// 幂等性中间件
 ///
@@ -32,10 +33,17 @@ pub async fn idempotency_middleware(
         return Ok(next.run(req).await);
     }
 
-    // 2. 读取客户端幂等键：没有则直接透传，避免误去重
+    // 2. 读取客户端幂等键：没有则根据端点规则决定是否强制
     let client_key = match extract_client_idempotency_key(req.headers()) {
         Some(v) => v,
-        None => return Ok(next.run(req).await),
+        None => {
+            if requires_idempotency_key(req.uri().path()) {
+                return Err(AppError::MissingParameter(
+                    "Idempotency-Key".to_string(),
+                ));
+            }
+            return Ok(next.run(req).await);
+        }
     };
 
     // 3. 提取上下文
@@ -53,6 +61,7 @@ pub async fn idempotency_middleware(
 
     // 6. 检查缓存
     let cache_key = format!("idempotency:{}", hashed_key);
+    let meta_key = format!("idempotency:meta:{}:{}", user_id, client_key);
     let mut redis_conn = state.redis.clone();
 
     if let Ok(Some(cached_response)) = redis_conn.get::<&str, Option<String>>(&cache_key).await {
@@ -64,10 +73,34 @@ pub async fn idempotency_middleware(
         ));
     }
 
-    // 7. 执行业务逻辑
+    if let Ok(Some(endpoint)) = redis_conn.get::<&str, Option<String>>(&meta_key).await {
+        if endpoint != req.uri().path() {
+            return Err(AppError::IdempotencyKeyConflict(
+                "幂等键已用于其他请求".to_string(),
+            ));
+        }
+        return Err(AppError::IdempotencyCacheExpired);
+    }
+
+    // 7. 加锁，防止并发重复执行
+    let lock_key = format!("idempotency:lock:{}", hashed_key);
+    let lock_result: Option<String> = redis::cmd("SET")
+        .arg(&lock_key)
+        .arg("1")
+        .arg("NX")
+        .arg("EX")
+        .arg(IDEMPOTENCY_LOCK_TTL_SECONDS)
+        .query_async(&mut redis_conn)
+        .await
+        .unwrap_or(None);
+    if lock_result.is_none() {
+        return Err(AppError::IdempotencyOperationInProgress);
+    }
+
+    // 8. 执行业务逻辑
     let response = next.run(req).await;
 
-    // 8. 只缓存业务成功（ApiResponse.code == 0）
+    // 9. 只缓存业务成功（ApiResponse.code == 0）
     //    注意：业务成功与否以 ApiResponse.code 为准，不依赖 HTTP status。
     let (parts, body) = response.into_parts();
     let bytes = axum::body::to_bytes(body, usize::MAX)
@@ -89,7 +122,21 @@ pub async fn idempotency_middleware(
             .query_async(&mut redis_conn)
             .await
             .unwrap_or_default();
+
+        let _: () = redis::cmd("SETEX")
+            .arg(&meta_key)
+            .arg(IDEMPOTENCY_TTL_SECONDS * 2)
+            .arg(endpoint)
+            .query_async(&mut redis_conn)
+            .await
+            .unwrap_or_default();
     }
+
+    let _: () = redis::cmd("DEL")
+        .arg(&lock_key)
+        .query_async(&mut redis_conn)
+        .await
+        .unwrap_or_default();
 
     // 9. 重新构建响应并写入幂等相关 header
     let mut response = Response::from_parts(parts, Body::from(bytes));
@@ -106,11 +153,18 @@ fn should_check_idempotency(path: &str) -> bool {
             // 创建类：推荐客户端提供 key，避免弱网重试造成重复创建
             | "/api/v1/moments/create"
             | "/api/v1/group_chats/create"
+            // 群组成员操作
+            | "/api/v1/group_chats/members/join"
+            | "/api/v1/group_chats/members/apply"
             // 上传：仅在客户端提供 key 时去重
             | "/api/v1/media/complete_upload"
             // 关注：虽然天然幂等，但可通过 key 去重重试，减少写放大
             | "/api/v1/user/me/follow"
     )
+}
+
+fn requires_idempotency_key(path: &str) -> bool {
+    matches!(path, "/api/v1/group_chats/members/join")
 }
 
 fn extract_client_idempotency_key(headers: &HeaderMap) -> Option<String> {

@@ -6,6 +6,7 @@ import { serverApi, isServerSuccess } from '@/lib/api/server';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { PageHeader } from '@/components/layout';
 import type { HealthCheckData } from '@/types/api';
 
 function getStatusColor(status: HealthCheckData['status']) {
@@ -22,16 +23,17 @@ function getStatusColor(status: HealthCheckData['status']) {
 }
 
 export default async function HealthPage() {
-  const response = await serverApi.get<HealthCheckData>(ENDPOINTS.SYSTEM.HEALTH, undefined, {
+  const response = await serverApi.post<HealthCheckData>(ENDPOINTS.SYSTEM.HEALTH, {}, {
     revalidate: 30,
   });
 
   if (!isServerSuccess(response)) {
     return (
-      <div className="max-w-lg mx-auto">
+      <div className="max-w-lg mx-auto space-y-6">
+        <PageHeader title="系统健康检查" description="查看当前服务状态" />
         <Card>
           <CardHeader>
-            <CardTitle>系统健康检查</CardTitle>
+            <CardTitle>系统状态</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
             当前无法获取系统状态，请稍后再试。
@@ -44,10 +46,11 @@ export default async function HealthPage() {
   const data = response.data;
 
   return (
-    <div className="max-w-lg mx-auto">
+    <div className="max-w-lg mx-auto space-y-6">
+      <PageHeader title="系统健康检查" description="查看当前服务状态" />
       <Card>
         <CardHeader>
-          <CardTitle>系统健康检查</CardTitle>
+          <CardTitle>系统状态</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <div className="flex items-center justify-between">

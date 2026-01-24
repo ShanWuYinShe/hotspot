@@ -47,9 +47,9 @@ export function GroupChatRoom({ groupId, initialGroup }: GroupChatRoomProps) {
   // 订阅群聊消息
   useEffect(() => {
     if (isConnected && groupId) {
-      subscribe([{ source_type: 'group_chat', source_ids: [groupId] }]);
+      subscribe([{ type: 'group', ids: [groupId] }]);
       return () => {
-        unsubscribe([{ source_type: 'group_chat', source_ids: [groupId] }]);
+        unsubscribe([{ type: 'group', ids: [groupId] }]);
       };
     }
   }, [isConnected, groupId, subscribe, unsubscribe]);

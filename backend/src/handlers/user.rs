@@ -16,8 +16,8 @@ use crate::{
         response::{
             AdminUserDetail, ApiResponse, AuthData, BlockedUserItem, FollowRequestItem,
             FollowerItem, FollowingItem, FriendItem, GroupInfo, MomentItem, MyProfileData,
-            PaginatedData, UserCard, UserInfo, UserItem, UserRelation, UserSettingsData,
-            UserStatsData,
+            PaginatedData, UserCard, UserInfo, UserItem, UserMomentListItem, UserRelation,
+            UserSettingsData, UserStatsData,
         },
     },
     error::Result,
@@ -230,7 +230,7 @@ pub async fn get_liked_moments(
 pub async fn get_moments(
     State(state): State<AppState>,
     Json(req): Json<UserMomentsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<MomentItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<UserMomentListItem>>>> {
     let response = state.moment_service.get_user_moments_list(&req).await?;
     Ok(Json(ApiResponse::success(response)))
 }

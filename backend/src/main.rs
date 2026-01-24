@@ -18,6 +18,8 @@ use axum::Router;
 use std::sync::Arc;
 use std::time::Duration;
 use tower_http::trace::TraceLayer;
+
+use crate::error::AppError;
 use tracing::Span;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -54,6 +56,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 加载配置
     let config = Config::from_env()?;
     tracing::debug!("Configuration loaded");
+    error::warmup_error_catalog();
 
     // 创建事件总线
     let (event_bus, event_receiver) = EventBus::new();
@@ -87,7 +90,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             check_interval.tick().await;
             let timeout_connections = ws_manager_clone.check_timeout().await;
             for connection_id in timeout_connections {
-                tracing::warn!("WebSocket连接超时，移除连接: {}", connection_id);
+                let err = AppError::WebSocketHeartbeatTimeout;
+                tracing::warn!(
+                    code = err.error_code(),
+                    "WebSocket连接超时，移除连接: {}",
+                    connection_id
+                );
                 ws_manager_clone.remove_connection(&connection_id).await;
             }
         }

@@ -2,7 +2,7 @@
  * 群组服务
  */
 
-import { get, post, put, del, generateIdempotencyKey } from '../client';
+import { post, generateIdempotencyKey } from '../client';
 import { ENDPOINTS } from '../endpoints';
 import type {
   ApiResponse,
@@ -72,7 +72,10 @@ export const groupsService = {
   async getDetail(groupId: string, referencePoint?: GeoPoint): Promise<ApiResponse<GroupDetailData>> {
     return post<GroupDetailData>(
       ENDPOINTS.GROUP_CHATS.DETAIL(groupId),
-      referencePoint ? { reference_point: referencePoint } : undefined,
+      {
+        group_chat_id: groupId,
+        ...(referencePoint ? { reference_point: referencePoint } : {}),
+      },
       { requireAuth: false }
     );
   },
@@ -93,22 +96,26 @@ export const groupsService = {
       settings?: GroupSettings;
     }
   ): Promise<ApiResponse<void>> {
-    return put<void>(ENDPOINTS.GROUP_CHATS.UPDATE(groupId), data, {
+    return post<void>(ENDPOINTS.GROUP_CHATS.UPDATE(groupId), { group_chat_id: groupId, ...data }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
 
   async delete(groupId: string): Promise<ApiResponse<void>> {
-    return del<void>(ENDPOINTS.GROUP_CHATS.DELETE(groupId));
+    return post<void>(ENDPOINTS.GROUP_CHATS.DELETE(groupId), { group_chat_id: groupId });
   },
 
   async updateMySettings(
     groupId: string,
     settings: { is_muted?: boolean; is_pinned?: boolean }
   ): Promise<ApiResponse<void>> {
-    return put<void>(ENDPOINTS.GROUP_CHATS.MY_SETTINGS(groupId), settings, {
+    return post<void>(
+      ENDPOINTS.GROUP_CHATS.MY_SETTINGS(groupId),
+      { group_chat_id: groupId, ...settings },
+      {
       idempotencyKey: generateIdempotencyKey(),
-    });
+      }
+    );
   },
 
   // ============================================================================
@@ -119,37 +126,54 @@ export const groupsService = {
     groupId: string,
     params?: { role?: 'owner' | 'admin' | 'member'; limit?: number; cursor?: string }
   ): Promise<ApiResponse<PaginatedData<GroupMemberItem>>> {
-    return get<PaginatedData<GroupMemberItem>>(ENDPOINTS.GROUP_CHATS.MEMBERS(groupId), params);
+    return post<PaginatedData<GroupMemberItem>>(ENDPOINTS.GROUP_CHATS.MEMBERS(groupId), {
+      group_chat_id: groupId,
+      ...(params ?? {}),
+    });
   },
 
   async setMemberRole(groupId: string, userId: number, role: 'admin' | 'member'): Promise<ApiResponse<void>> {
-    return put<void>(ENDPOINTS.GROUP_CHATS.MEMBER_ROLE(groupId, userId), { role }, {
+    return post<void>(
+      ENDPOINTS.GROUP_CHATS.MEMBER_ROLE(groupId, userId),
+      { group_chat_id: groupId, user_id: userId, role },
+      {
       idempotencyKey: generateIdempotencyKey(),
-    });
+      }
+    );
   },
 
   async muteMember(groupId: string, userId: number, durationMinutes: number): Promise<ApiResponse<void>> {
     return post<void>(
       ENDPOINTS.GROUP_CHATS.MEMBER_MUTE(groupId, userId),
-      { duration_minutes: durationMinutes },
+      { group_chat_id: groupId, user_id: userId, duration_minutes: durationMinutes },
       { idempotencyKey: generateIdempotencyKey() }
     );
   },
 
   async unmuteMember(groupId: string, userId: number): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.GROUP_CHATS.MEMBER_UNMUTE(groupId, userId), undefined, {
+    return post<void>(ENDPOINTS.GROUP_CHATS.MEMBER_UNMUTE(groupId, userId), {
+      group_chat_id: groupId,
+      user_id: userId,
+    }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
 
   async banMember(groupId: string, userId: number, reason?: string): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.GROUP_CHATS.MEMBER_BAN(groupId, userId), { reason }, {
+    return post<void>(ENDPOINTS.GROUP_CHATS.MEMBER_BAN(groupId, userId), {
+      group_chat_id: groupId,
+      user_id: userId,
+      reason,
+    }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
 
   async unbanMember(groupId: string, userId: number): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.GROUP_CHATS.MEMBER_UNBAN(groupId, userId), undefined, {
+    return post<void>(ENDPOINTS.GROUP_CHATS.MEMBER_UNBAN(groupId, userId), {
+      group_chat_id: groupId,
+      user_id: userId,
+    }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
@@ -158,15 +182,24 @@ export const groupsService = {
     groupId: string,
     params?: { limit?: number; cursor?: string }
   ): Promise<ApiResponse<PaginatedData<BannedMemberItem>>> {
-    return get<PaginatedData<BannedMemberItem>>(ENDPOINTS.GROUP_CHATS.BANNED_MEMBERS(groupId), params);
+    return post<PaginatedData<BannedMemberItem>>(ENDPOINTS.GROUP_CHATS.BANNED_MEMBERS(groupId), {
+      group_chat_id: groupId,
+      ...(params ?? {}),
+    });
   },
 
   async removeMember(groupId: string, userId: number): Promise<ApiResponse<void>> {
-    return del<void>(ENDPOINTS.GROUP_CHATS.MEMBER(groupId, userId));
+    return post<void>(ENDPOINTS.GROUP_CHATS.MEMBER(groupId, userId), {
+      group_chat_id: groupId,
+      user_id: userId,
+    });
   },
 
   async transferOwnership(groupId: string, newOwnerId: number): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.GROUP_CHATS.TRANSFER(groupId), { new_owner_id: newOwnerId }, {
+    return post<void>(ENDPOINTS.GROUP_CHATS.TRANSFER(groupId), {
+      group_chat_id: groupId,
+      new_owner_id: newOwnerId,
+    }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
@@ -176,19 +209,25 @@ export const groupsService = {
   // ============================================================================
 
   async join(groupId: string, password?: string): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.GROUP_CHATS.JOIN(groupId), password ? { password } : undefined, {
+    return post<void>(ENDPOINTS.GROUP_CHATS.JOIN(groupId), {
+      group_chat_id: groupId,
+      ...(password ? { password } : {}),
+    }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
 
   async leave(groupId: string): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.GROUP_CHATS.LEAVE(groupId), undefined, {
+    return post<void>(ENDPOINTS.GROUP_CHATS.LEAVE(groupId), { group_chat_id: groupId }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
 
   async apply(groupId: string, message?: string): Promise<ApiResponse<{ application_id: string }>> {
-    return post<{ application_id: string }>(ENDPOINTS.GROUP_CHATS.APPLY(groupId), { message }, {
+    return post<{ application_id: string }>(ENDPOINTS.GROUP_CHATS.APPLY(groupId), {
+      group_chat_id: groupId,
+      message,
+    }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
@@ -196,7 +235,7 @@ export const groupsService = {
   async invite(groupId: string, userId: number, message?: string): Promise<ApiResponse<{ invite_id: string }>> {
     return post<{ invite_id: string }>(
       ENDPOINTS.GROUP_CHATS.INVITE(groupId),
-      { user_id: userId, message },
+      { group_chat_id: groupId, user_id: userId, message },
       { idempotencyKey: generateIdempotencyKey() }
     );
   },
@@ -209,17 +248,20 @@ export const groupsService = {
     groupId: string,
     params?: { status?: 'pending' | 'accepted' | 'rejected' | 'all'; limit?: number; cursor?: string }
   ): Promise<ApiResponse<PaginatedData<GroupApplicationItem>>> {
-    return get<PaginatedData<GroupApplicationItem>>(ENDPOINTS.GROUP_CHATS.APPLICATIONS(groupId), params);
+    return post<PaginatedData<GroupApplicationItem>>(ENDPOINTS.GROUP_CHATS.APPLICATIONS(groupId), {
+      group_chat_id: groupId,
+      ...(params ?? {}),
+    });
   },
 
   async approveApplication(applicationId: string): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.GROUP_CHATS.APPROVE_APPLICATION(applicationId), undefined, {
+    return post<void>(ENDPOINTS.GROUP_CHATS.APPROVE_APPLICATION(applicationId), { application_id: applicationId }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
 
   async rejectApplication(applicationId: string, reason?: string): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.GROUP_CHATS.REJECT_APPLICATION(applicationId), { reason }, {
+    return post<void>(ENDPOINTS.GROUP_CHATS.REJECT_APPLICATION(applicationId), { application_id: applicationId, reason }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
@@ -231,17 +273,17 @@ export const groupsService = {
   async getMyInvites(
     params?: { status?: 'pending' | 'accepted' | 'rejected' | 'all'; limit?: number; cursor?: string }
   ): Promise<ApiResponse<PaginatedData<GroupInviteItem>>> {
-    return get<PaginatedData<GroupInviteItem>>(ENDPOINTS.GROUP_CHATS.MY_INVITES, params);
+    return post<PaginatedData<GroupInviteItem>>(ENDPOINTS.GROUP_CHATS.MY_INVITES, params ?? {});
   },
 
   async acceptInvite(inviteId: string): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.GROUP_CHATS.ACCEPT_INVITE(inviteId), undefined, {
+    return post<void>(ENDPOINTS.GROUP_CHATS.ACCEPT_INVITE(inviteId), { invite_id: inviteId }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
 
   async rejectInvite(inviteId: string): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.GROUP_CHATS.REJECT_INVITE(inviteId), undefined, {
+    return post<void>(ENDPOINTS.GROUP_CHATS.REJECT_INVITE(inviteId), { invite_id: inviteId }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
@@ -254,14 +296,20 @@ export const groupsService = {
     groupId: string,
     params?: { limit?: number; cursor?: string }
   ): Promise<ApiResponse<PaginatedData<GroupAnnouncementItem>>> {
-    return get<PaginatedData<GroupAnnouncementItem>>(ENDPOINTS.GROUP_CHATS.ANNOUNCEMENTS(groupId), params);
+    return post<PaginatedData<GroupAnnouncementItem>>(ENDPOINTS.GROUP_CHATS.ANNOUNCEMENTS(groupId), {
+      group_chat_id: groupId,
+      ...(params ?? {}),
+    });
   },
 
   async createAnnouncement(
     groupId: string,
     data: { title: string; content: string; is_pinned?: boolean }
   ): Promise<ApiResponse<GroupAnnouncementItem>> {
-    return post<GroupAnnouncementItem>(ENDPOINTS.GROUP_CHATS.ANNOUNCEMENTS(groupId), data, {
+    return post<GroupAnnouncementItem>(ENDPOINTS.GROUP_CHATS.ANNOUNCEMENTS(groupId), {
+      group_chat_id: groupId,
+      ...data,
+    }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
@@ -270,13 +318,13 @@ export const groupsService = {
     announcementId: string,
     data: { title?: string; content?: string; is_pinned?: boolean }
   ): Promise<ApiResponse<void>> {
-    return put<void>(ENDPOINTS.GROUP_CHATS.ANNOUNCEMENT(announcementId), data, {
+    return post<void>(ENDPOINTS.GROUP_CHATS.ANNOUNCEMENT(announcementId), { announcement_id: announcementId, ...data }, {
       idempotencyKey: generateIdempotencyKey(),
     });
   },
 
   async deleteAnnouncement(announcementId: string): Promise<ApiResponse<void>> {
-    return del<void>(ENDPOINTS.GROUP_CHATS.ANNOUNCEMENT(announcementId));
+    return post<void>(ENDPOINTS.GROUP_CHATS.ANNOUNCEMENT(announcementId), { announcement_id: announcementId });
   },
 
   // ============================================================================
@@ -284,6 +332,6 @@ export const groupsService = {
   // ============================================================================
 
   async getMyGroups(params?: { limit?: number; cursor?: string }): Promise<ApiResponse<PaginatedData<JoinedGroupItem>>> {
-    return get<PaginatedData<JoinedGroupItem>>(ENDPOINTS.USER.ME_GROUPS, params);
+    return post<PaginatedData<JoinedGroupItem>>(ENDPOINTS.USER.ME_GROUPS, params ?? {});
   },
 };
