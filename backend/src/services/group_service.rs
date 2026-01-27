@@ -136,7 +136,7 @@ impl GroupService {
                 Ok(group)
             })
             .await
-            .map_err(|e| AppError::CacheError(e.to_string()))?;
+            .map_err(|e| AppError::InternalError(e.to_string()))?;
 
         cached.ok_or_else(|| AppError::GroupNotFound("群组不存在".to_string()))
     }
@@ -157,7 +157,7 @@ impl GroupService {
                 Ok(settings)
             })
             .await
-            .map_err(|e| AppError::CacheError(e.to_string()))?;
+            .map_err(|e| AppError::InternalError(e.to_string()))?;
 
         Ok(cached)
     }
@@ -234,7 +234,7 @@ impl GroupService {
                 },
             )
             .await
-            .map_err(|e| AppError::CacheError(e.to_string()))?;
+            .map_err(|e| AppError::InternalError(e.to_string()))?;
 
         if let Some(data) = cached {
             return Ok((data.members, data.next_cursor));
@@ -262,9 +262,11 @@ impl GroupService {
             .unwrap_or_else(|| DEFAULT_LOCATION_NAME.to_string());
 
         // 获取设置（使用默认值如果未提供）
-        let settings = req.settings.unwrap_or_default();
+        let join_method = req.join_method.unwrap_or(GroupJoinMethod::Open);
+        let is_searchable = req.is_searchable.unwrap_or(true);
+        let max_members = req.max_members.or(Some(500));
 
-        if let Some(location) = settings.location.as_ref() {
+        if let Some(location) = req.location.as_ref() {
             Validator::validate_coordinates(location.latitude, location.longitude)?;
             lat = location.latitude;
             lng = location.longitude;
@@ -326,9 +328,9 @@ impl GroupService {
         self.settings_repo
             .create(
                 group.group_id,
-                settings.join_method.as_str(),
-                settings.is_searchable,
-                settings.max_members,
+                join_method.as_str(),
+                is_searchable,
+                max_members,
                 hashed_password.as_deref(),
             )
             .await?;
@@ -395,13 +397,13 @@ impl GroupService {
                 tags,
                 members_count: g.member_count,
                 has_password: g.has_password,
-                location: Some(RelativeLocation {
+                location: RelativeLocation {
                     latitude: g.latitude,
                     longitude: g.longitude,
                     location_name: g.location_name,
                     distance: g.distance,
                     bearing_degrees: g.bearing_degrees,
-                }),
+                },
             });
         }
 
@@ -473,13 +475,13 @@ impl GroupService {
                 tags,
                 members_count: g.member_count,
                 has_password: g.has_password,
-                location: Some(RelativeLocation {
+                location: RelativeLocation {
                     latitude: g.latitude,
                     longitude: g.longitude,
                     location_name: g.location_name,
                     distance: g.distance,
                     bearing_degrees: g.bearing_degrees,
-                }),
+                },
             });
         }
 
@@ -538,13 +540,13 @@ impl GroupService {
                 tags,
                 members_count: g.member_count,
                 has_password: g.has_password,
-                location: Some(RelativeLocation {
+                location: RelativeLocation {
                     latitude: g.latitude,
                     longitude: g.longitude,
                     location_name: g.location_name,
                     distance: g.distance,
                     bearing_degrees: g.bearing_degrees,
-                }),
+                },
             });
         }
 
@@ -589,7 +591,7 @@ impl GroupService {
         let tags = if tags.is_empty() { None } else { Some(tags) };
 
         // 获取用户相关信息 (Zero-Lookup)
-        let (my_role, is_joined, unread_count, is_muted, is_pinned) = if let Some(uid) = user_id {
+        let my_state = if let Some(uid) = user_id {
             let member = self.member_repo.find_member(group_id, uid).await?;
             if let Some(m) = member {
                 let unread = self
@@ -602,21 +604,27 @@ impl GroupService {
                     .await?
                     .map(|p| (p.is_muted, p.is_pinned))
                     .unwrap_or((false, false));
-                (
-                    Some(m.role),
-                    Some(true),
-                    Some(unread as i32),
-                    Some(prefs.0),
-                    Some(prefs.1),
-                )
+                Some(GroupMyStateData {
+                    role: m.role,
+                    is_joined: true,
+                    unread_count: unread as i32,
+                    is_muted: prefs.0,
+                    is_pinned: prefs.1,
+                    joined_at: Some(m.joined_at.to_rfc3339()),
+                })
             } else {
-                (None, Some(false), None, None, None)
+                None
             }
         } else {
-            (None, None, None, None, None)
+            None
         };
+        let owner_id = self
+            .group_repo
+            .get_owner(group_id)
+            .await?
+            .ok_or_else(|| AppError::GroupNotFound("群组不存在".to_string()))?;
 
-        let group_item = GroupItem {
+        Ok(GroupDetailData {
             group_chat_id: group.group_id.to_string(),
             name: group.name.clone(),
             description: if group.description.is_empty() {
@@ -631,22 +639,14 @@ impl GroupService {
             tags,
             members_count: group.member_count,
             has_password: group.has_password,
-            location: Some(RelativeLocation {
+            location: Location {
                 latitude: group.latitude,
                 longitude: group.longitude,
                 location_name: group.location_name.clone(),
-                distance: group.distance,
-                bearing_degrees: group.bearing_degrees,
-            }),
-        };
-
-        Ok(GroupDetailData {
-            group: group_item,
-            my_role,
-            is_joined,
-            unread_count,
-            is_muted,
-            is_pinned,
+            },
+            created_at: group.created_at.to_rfc3339(),
+            owner_id,
+            my_state,
         })
     }
 
@@ -713,11 +713,12 @@ impl GroupService {
         // 3. 批量查询（并行执行）
         // 使用 find_by_ids_with_distance 获取详情，传入 0,0 作为坐标（此处不关心距离）
         let group_id_strs: Vec<String> = group_ids.iter().map(|id| id.to_string()).collect();
-        let (groups, unread_counts) = tokio::try_join!(
+        let (groups, unread_counts, tags_map) = tokio::try_join!(
             self.group_repo
                 .find_by_ids_with_distance(&group_ids, 0.0, 0.0),
             self.unread_repo
-                .get_unread_count_batch("group_chat", &group_id_strs, user_id)
+                .get_unread_count_batch("group_chat", &group_id_strs, user_id),
+            self.tag_repo.get_group_tags_batch(&group_ids)
         )?;
 
         // 4. 构建映射
@@ -732,6 +733,8 @@ impl GroupService {
                     .get(&g.group_id.to_string())
                     .copied()
                     .unwrap_or(0);
+                let tags = tags_map.get(&g.group_id).cloned();
+                let tags = tags.filter(|t| !t.is_empty());
 
                 items.push(JoinedGroupItem {
                     group_info: GroupInfo {
@@ -742,15 +745,22 @@ impl GroupService {
                             .sign_url_if_path(g.avatar_url.as_deref())
                             .await,
                         members_count: g.member_count,
-                        location: Some(crate::dto::response::Location {
-                            latitude: g.latitude,
-                            longitude: g.longitude,
-                            location_name: g.location_name.clone(),
-                        }),
                     },
-                    my_role: m.role,
-                    unread_count: unread_count as i32,
+                    description: if g.description.is_empty() {
+                        None
+                    } else {
+                        Some(g.description.clone())
+                    },
+                    tags,
+                    has_password: g.has_password,
+                    location: Location {
+                        latitude: g.latitude,
+                        longitude: g.longitude,
+                        location_name: g.location_name.clone(),
+                    },
                     last_activity_at: g.updated_at.unwrap_or(g.created_at).to_rfc3339(),
+                    role: m.role,
+                    unread_count: unread_count as i32,
                 });
             }
         }
@@ -811,41 +821,42 @@ impl GroupService {
             None => None,
         };
 
-        if let Some(s) = req.settings {
-            if let Some(max_members) = s.max_members {
-                let member_count = self.member_repo.count_members(group_id).await?;
-                if member_count > max_members as i64 {
-                    return Err(AppError::BusinessRuleViolation(
-                        "当前成员数已超过新上限".to_string(),
-                    ));
-                }
+        if let Some(max_members) = req.max_members {
+            let member_count = self.member_repo.count_members(group_id).await?;
+            if member_count > max_members as i64 {
+                return Err(AppError::BusinessRuleViolation(
+                    "当前成员数已超过新上限".to_string(),
+                ));
             }
+        }
+
+        let has_settings_update = req.join_method.is_some()
+            || req.is_searchable.is_some()
+            || req.max_members.is_some()
+            || password_hash.is_some();
+        if has_settings_update {
             // settings_repo.update 签名: (group_chat_id, join_method?, is_searchable?, max_members?, password_hash?)
             self.settings_repo
                 .update(
                     group_id,
-                    s.join_method.as_ref().map(|j| j.as_str()),
-                    s.is_searchable,
-                    s.max_members,
+                    req.join_method.as_ref().map(|j| j.as_str()),
+                    req.is_searchable,
+                    req.max_members,
                     password_hash.as_deref(),
                 )
                 .await?;
+        }
 
-            // 如果提供了位置信息，更新群组位置
-            if let Some(loc) = &s.location {
-                Validator::validate_coordinates(loc.latitude, loc.longitude)?;
-                self.group_repo
-                    .update_location(
-                        group_id,
-                        loc.latitude,
-                        loc.longitude,
-                        loc.location_name.clone(),
-                    )
-                    .await?;
-            }
-        } else if password_hash.is_some() {
-            self.settings_repo
-                .update(group_id, None, None, None, password_hash.as_deref())
+        // 如果提供了位置信息，更新群组位置
+        if let Some(loc) = &req.location {
+            Validator::validate_coordinates(loc.latitude, loc.longitude)?;
+            self.group_repo
+                .update_location(
+                    group_id,
+                    loc.latitude,
+                    loc.longitude,
+                    loc.location_name.clone(),
+                )
                 .await?;
         }
 
@@ -1833,11 +1844,6 @@ impl GroupService {
                         .sign_url_if_path(g.and_then(|x| x.avatar_url.as_deref()))
                         .await,
                     members_count: g.map(|x| x.member_count).unwrap_or(0),
-                    location: g.map(|x| crate::dto::response::Location {
-                        latitude: x.latitude,
-                        longitude: x.longitude,
-                        location_name: x.location_name.clone(),
-                    }),
                 },
                 inviter: UserInfo {
                     user_id: i.inviter_id,

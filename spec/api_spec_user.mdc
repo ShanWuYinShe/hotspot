@@ -10,6 +10,11 @@ alwaysApply: true
 - **Service Namespace**: `user`
 - **Base Path**: `/api/v1/user/`
 
+## 契约引用
+
+- 公共基础类型：`@api_spec_common_types.mdc`
+- 错误码：`@api_spec_errors.mdc`
+
 ## 核心类型定义
 
 ```typescript
@@ -27,7 +32,7 @@ interface MyCard {
   avatar_url?: string;
   bio?: string;
   tags?: string[];
-  gender?: Gender;  // 引用 api_spec_common_types.mdc
+  gender?: Gender;  // 引用 @api_spec_common_types.mdc
   email?: string;
   phone?: string;
   location: Location;
@@ -152,8 +157,8 @@ interface BlockedUserItem {
 ### 用户搜索
 
 说明（Token 可选的搜索语义）：
-- 未登录（不带 token）：仅返回可被匿名公开发现/可见的用户；不得在错误码或返回结构上暴露不可见用户的存在性
-- 已登录（带 token）：在满足隐私与关系规则前提下，允许返回更多可见用户；并可能附带 `@auth-only` 字段
+- 未登录（不带 token）：仅返回可被匿名公开发现/可见的用户；响应字段以 `UserSearchItem` 定义为准
+- 已登录（带 token）：在满足隐私与关系规则前提下，允许返回更多可见用户；响应字段以 `UserSearchItem` 定义为准
 
 #### POST /api/v1/user/search_by_keyword
 
@@ -205,6 +210,7 @@ interface SearchUsersByLocationRequest extends SearchBaseParams {
 #### POST /api/v1/user/open_the_door
 
 获取用户资料详情。
+Token 可选；登录态返回 `UserCard.relation`。
 
 **Request**:
 ```typescript
@@ -246,9 +252,12 @@ interface UserStatsRequest {
 
 #### POST /api/v1/user/friends
 
-获取指定用户的好友列表（好友 = 双方互相关注的用户）。
+获取指定用户好友列表（好友 = 双方互相关注的用户）。
 
 **隐私控制**：受 `friends_visible` 设置控制。
+
+**排序语义（契约级）**：
+- 默认按 `followed_back_at` **时间倒序**（最近成为好友在前）
 
 **Request**:
 ```typescript
@@ -264,6 +273,9 @@ interface UserFriendsRequest extends PaginationParams {
 
 **隐私控制**：受 `following_visible` 设置控制。
 
+**排序语义（契约级）**：
+- 默认按 `followed_at` **时间倒序**（最近关注在前）
+
 **Request**:
 ```typescript
 interface UserFollowingRequest extends PaginationParams {
@@ -277,6 +289,9 @@ interface UserFollowingRequest extends PaginationParams {
 获取指定用户粉丝列表。
 
 **隐私控制**：受 `followers_visible` 设置控制。
+
+**排序语义（契约级）**：
+- 默认按 `followed_at` **时间倒序**（最近关注在前）
 
 **Request**:
 ```typescript
@@ -361,7 +376,7 @@ interface UpdateLocationRequest {
 
 #### POST /api/v1/user/me/upgrade
 
-账户升级（访客 → 正式用户）。
+账户升级（访客升级为正式用户）。
 
 **Request**:
 ```typescript
@@ -394,7 +409,7 @@ interface UpgradeAccountRequest {
 
 **Request**:
 ```typescript
-type UpdateSettingsRequest = Partial<UserSettings>;
+interface UpdateSettingsRequest extends Partial<UserSettings> {}
 ```
 **Response**: `ApiResponse<UserSettings>`
 
@@ -420,11 +435,18 @@ interface DeleteAccountRequest {
 
 **Request**:
 ```typescript
+// 关注来源类型（用于统计和展示"为什么被关注"）
+type FollowSource = 'moment' | 'search' | 'recommendation' | 'profile' | 'group';
+
 interface FollowRequest {
   user_id: number;
+  source?: FollowSource;        // 可选：关注来源（用于心理学优化，让被关注者知道来源）
+  source_moment_id?: string;    // 可选：如果是通过瞬间关注，提供瞬间 ID
 }
 ```
 **Response**: `ApiResponse`
+
+**心理学设计说明**：`source` 字段让被关注者了解"为什么被关注"（如"通过你的瞬间"），增强用户发布内容的正向反馈。
 
 **可能错误码**：`10001`、`10310`、`10411`、`10213`、`10211`
 
@@ -508,13 +530,6 @@ interface MyFollowersRequest extends PaginationParams {}
 **Request**:
 ```typescript
 interface MyFollowRequestsRequest extends PaginationParams {}
-
-interface FollowRequestItem {
-  request_id: string;
-  requester: UserInfo;
-  message?: string;
-  requested_at: string;
-}
 ```
 **Response**: `ApiResponse<PaginatedData<FollowRequestItem>>`
 

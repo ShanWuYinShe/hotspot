@@ -95,7 +95,7 @@ impl MomentService {
         &self,
         user_id: i64,
         req: &CreateMomentRequest,
-    ) -> Result<MomentItem> {
+    ) -> Result<UserMomentListItem> {
         // 验证坐标
         if req.location.latitude < -90.0 || req.location.latitude > 90.0 {
             return Err(AppError::InvalidFormat("纬度必须在-90到90之间".to_string()));
@@ -217,12 +217,6 @@ impl MomentService {
             Vec::new()
         };
 
-        // 获取创建者信息
-        let users = self.user_repo.find_profiles(&[user_id]).await?;
-        let user_info = users
-            .first()
-            .ok_or_else(|| AppError::UserNotFound("用户不存在".to_string()))?;
-
         // 构造响应
         use crate::dto::response::MomentImage;
         let moment_images: Option<Vec<MomentImage>> = if let Some(urls) = signed_urls {
@@ -269,14 +263,8 @@ impl MomentService {
             }
         }
 
-        Ok(MomentItem {
+        Ok(UserMomentListItem {
             moment_id: moment.moment_id.to_string(),
-            user: UserInfo {
-                user_id: user_info.user_id,
-                nickname: user_info.nickname.clone(),
-                avatar_url: user_info.avatar_url.clone(),
-                user_type: user_info.user_type,
-            },
             description: moment.description.clone(),
             images: moment_images,
             mentions: moment.mentions.clone(),
@@ -284,14 +272,10 @@ impl MomentService {
             created_at: moment.created_at.to_rfc3339(),
             likes_count: 0,
             comments_count: 0,
-            is_liked: Some(false),
-            is_favorited: Some(false),
-            location: RelativeLocation {
+            location: Location {
                 latitude: req.location.latitude,
                 longitude: req.location.longitude,
                 location_name: req.location.location_name.clone(),
-                distance: 0.0,
-                bearing_degrees: 0.0,
             },
         })
     }
@@ -1007,8 +991,6 @@ impl MomentService {
                 created_at: m.created_at.to_rfc3339(),
                 likes_count: m.likes_count as i32,
                 comments_count: m.comments_count as i32,
-                is_liked: None,
-                is_favorited: None,
                 location: RelativeLocation {
                     latitude: m.latitude,
                     longitude: m.longitude,
@@ -1109,7 +1091,7 @@ impl MomentService {
                 },
             )
             .await
-            .map_err(|e| AppError::CacheError(e.to_string()))?;
+            .map_err(|e| AppError::InternalError(e.to_string()))?;
 
         Ok(cached)
     }

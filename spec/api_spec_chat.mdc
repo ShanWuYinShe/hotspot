@@ -10,6 +10,12 @@ alwaysApply: true
 - **Service Namespace**: `private_chats`, `private_messages`
 - **Base Path**: `/api/v1/private_chats/`, `/api/v1/private_messages/`
 
+## 契约引用
+
+- 公共基础类型：`@api_spec_common_types.mdc`
+- 错误码：`@api_spec_errors.mdc`
+- WebSocket：`@api_spec_websocket.mdc`
+
 ## 核心类型定义
 
 ```typescript
@@ -152,9 +158,7 @@ interface DeletePrivateChatRequest {
 
 消息类型：`text` 需要 `content` 字段，其他类型需要 `file_id` 字段。
 
-**发送语义**：
-- 本系统的消息最终态以 WebSocket 推送为准
-- send API 仅用于：提交发送意图，成功时返回 `code: 0`；完整消息通过 WebSocket 推送获取
+**发送语义**：API 调用仅提交发送意图和获取 `message_id`，消息最终态通过 WebSocket 推送获取。
 
 #### POST /api/v1/private_messages/send
 

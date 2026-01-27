@@ -102,7 +102,7 @@ pub async fn create(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<CreateMomentRequest>,
-) -> Result<Json<ApiResponse<MomentItem>>> {
+) -> Result<Json<ApiResponse<UserMomentListItem>>> {
     let moment = state
         .moment_service
         .create_moment(user.user_id, &req)

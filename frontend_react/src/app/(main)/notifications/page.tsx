@@ -1,62 +1,111 @@
-/**
- * 通知页面 (Server Component)
- * 服务端获取通知列表
- */
+'use client';
 
-import { Suspense } from 'react';
-import { getTranslations } from 'next-intl/server';
-import { serverApi, isServerSuccess, isAuthError, getServerErrorMessage } from '@/lib/api/server';
-import { ENDPOINTS } from '@/lib/api/endpoints';
-import { LoadingState } from '@/components/common/loading-state';
-import { LoginRequiredCard } from '@/components/common/login-required-card';
-import { NotificationList } from './notification-list';
-import { NotificationSettings } from './notification-settings';
-import { PageHeader } from '@/components/layout';
-import { ServerErrorCard } from '@/components/common/server-error-card';
-import type { NotificationItem, PaginatedData } from '@/types/api';
+import { useEffect } from 'react';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 
-async function NotificationsContent() {
-  const response = await serverApi.post<PaginatedData<NotificationItem>>(
-    ENDPOINTS.NOTIFICATIONS.LIST,
-    { limit: 50 },
-    { tags: ['notifications'], revalidate: 30 }
-  );
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { NotificationService } from '@/lib/api/services/notifications';
+import { PaginatedData, NotificationItem } from '@/types/api';
+import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
+import { useNotificationsStore } from '@/stores/notifications';
 
-  if (!isServerSuccess(response)) {
-    if (isAuthError(response)) {
-      return (
-        <LoginRequiredCard actionName="查看通知" description="登录后才能查看通知消息。" />
-      );
+export default function NotificationsPage() {
+  const t = useTranslations('notifications');
+  const tCommon = useTranslations('common');
+  const { setItems, setUnreadCount, markRead } = useNotificationsStore();
+
+  const { data: unreadData } = useQuery({
+    queryKey: ['notifications-unread'],
+    queryFn: async () => {
+      const res = await NotificationService.unreadCount();
+      if (res.code !== 0) throw new Error(res.message);
+      return res.data!;
+    },
+  });
+
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['notifications'],
+    queryFn: async ({ pageParam }): Promise<PaginatedData<NotificationItem>> => {
+      const res = await NotificationService.list({ cursor: pageParam as string | undefined });
+      if (res.code !== 0) throw new Error(res.message);
+      return res.data!;
+    },
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.pagination.next_cursor,
+  });
+
+  useEffect(() => {
+    if (data) {
+      setItems(data.pages.flatMap((page) => page.items));
     }
-    return (
-      <ServerErrorCard
-        title="加载通知失败"
-        description={getServerErrorMessage(response)}
-        requestId={response.request_id}
-      />
-    );
-  }
+  }, [data, setItems]);
 
-  const notifications = response.data?.items ?? [];
+  useEffect(() => {
+    if (unreadData) {
+      setUnreadCount(unreadData.total);
+    }
+  }, [setUnreadCount, unreadData]);
 
-  return <NotificationList notifications={notifications} />;
-}
+  const { ref } = useInfiniteScroll({
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  });
 
-export default async function NotificationsPage() {
-  const t = await getTranslations('notifications');
+  const handleMarkAllRead = async () => {
+    const res = await NotificationService.markRead();
+    if (res.code === 0) {
+      markRead(data?.pages.flatMap((page) => page.items.map((item) => item.notification_id)) ?? []);
+      setUnreadCount(0);
+      toast.success(tCommon('saved'));
+    } else {
+      toast.error(res.message || tCommon('retry'));
+    }
+  };
+
+  const items = data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <PageHeader
-        title={t('title')}
-        description="及时掌握互动、系统与聊天提醒"
-      />
+    <div className="max-w-3xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">{t('title')}</h1>
+        <Button variant="outline" onClick={handleMarkAllRead}>
+          {t('markAllRead')}
+        </Button>
+      </div>
 
-      <Suspense fallback={<LoadingState text="加载中..." />}>
-        <NotificationsContent />
-      </Suspense>
-
-      <NotificationSettings />
+      {items.length > 0 ? (
+        <div className="space-y-3">
+          {items.map((item) => (
+            <Card key={item.notification_id}>
+              <CardContent className="p-4 space-y-1">
+                <div className="flex items-center justify-between">
+                  <div className="font-semibold">{item.title ?? item.type}</div>
+                  {!item.is_read ? <span className="text-xs text-primary">{t('new')}</span> : null}
+                </div>
+                {item.content ? <p className="text-sm text-muted-foreground">{item.content}</p> : null}
+              </CardContent>
+            </Card>
+          ))}
+          <div ref={ref} className="flex justify-center p-4">
+            {isFetchingNextPage ? (
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-transparent border-current" />
+            ) : null}
+          </div>
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">{t('empty')}</CardContent>
+        </Card>
+      )}
     </div>
   );
 }

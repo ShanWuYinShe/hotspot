@@ -1,7 +1,7 @@
-use crate::dto::response::{Location, MessageMedia, MessageLocation, UserInfo};
+use crate::dto::response::{Location, MessageLocation, MessageMedia, UserInfo};
 use crate::types::enums::{
-    AnnouncementSeverity, FollowRequestAction, GroupRole, MemberLeaveReason, MessageType,
-    ReactionType, ResponseStatus, SubscriptionFailureReason, SubscriptionOperation,
+    AnnouncementSeverity, GroupRole, MessageType, ReactionType, SubscriptionFailureReason,
+    SubscriptionOperation,
 };
 use serde::{Deserialize, Serialize};
 
@@ -45,6 +45,7 @@ pub enum WsMessage {
 
     // ===== 关注关系事件 =====
     /// 新增关注者（有人关注了我）
+    /// 心理学优化：通过 source 让被关注者了解"为什么被关注"
     NewFollower {
         user: UserInfo,
         followed_at: String, // ISO 8601 UTC
@@ -55,13 +56,6 @@ pub enum WsMessage {
     MutualFollow {
         user: UserInfo,
         mutual_at: String, // ISO 8601 UTC
-    },
-
-    /// 取消关注（好友关系解除）
-    Unfollowed {
-        user_id: i64,
-        unfollowed_at: String, // ISO 8601 UTC
-        was_mutual: bool,      // 之前是否互相关注
     },
 
     /// 收到关注请求（当 allow_follow 设置为需要审批时）
@@ -77,21 +71,8 @@ pub enum WsMessage {
     FollowRequestHandled {
         request_id: String,
         target_user: UserInfo, // 被请求关注的用户
-        action: FollowRequestAction, // "accept" | "reject"
+        action: String,        // 固定为 "accept"
         handled_at: String,    // ISO 8601 UTC
-    },
-
-    // ===== 用户资料更新 =====
-    /// 用户资料更新 (头像/昵称)
-    UserProfileUpdated {
-        user_id: i64,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        nickname: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        avatar_url: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        bio: Option<String>,
-        updated_at: String, // ISO 8601 UTC
     },
 
     // ===== 生活瞬间互动事件 =====
@@ -279,56 +260,9 @@ pub enum WsMessage {
     GroupMemberJoined {
         group_chat_id: String,
         user: UserInfo,
-        role: GroupRole,  // 使用 Enum
+        role: GroupRole,   // 使用 Enum
         member_count: i32, // 当前成员总数
         joined_at: String, // ISO 8601 UTC
-    },
-
-    /// 成员离开群组
-    GroupMemberLeft {
-        group_chat_id: String,
-        user_id: i64,
-        member_count: i32,                // 当前成员总数
-        reason: MemberLeaveReason, // 使用 Enum
-        left_at: String,                  // ISO 8601 UTC
-    },
-
-    /// 群组资料更新
-    GroupProfileUpdated {
-        group_chat_id: String,
-        updated_fields: GroupUpdatedFields,
-        updated_at: String, // ISO 8601 UTC
-    },
-
-    /// 成员角色变更
-    GroupMemberRoleChanged {
-        group_chat_id: String,
-        user_id: i64,
-        old_role: GroupRole, // 使用 Enum
-        new_role: GroupRole, // 使用 Enum
-        changed_at: String,   // ISO 8601 UTC
-    },
-
-    /// 成员被禁言
-    GroupMemberMuted {
-        group_chat_id: String,
-        user_id: i64,
-        muted_until: String, // ISO 8601 UTC
-        muted_at: String,    // ISO 8601 UTC
-    },
-
-    /// 成员取消禁言
-    GroupMemberUnmuted {
-        group_chat_id: String,
-        user_id: i64,
-        unmuted_at: String, // ISO 8601 UTC
-    },
-
-    /// 群组解散
-    GroupDismissed {
-        group_chat_id: String,
-        dismissed_by: i64,
-        dismissed_at: String, // ISO 8601 UTC
     },
 
     /// 收到群组邀请
@@ -349,7 +283,7 @@ pub enum WsMessage {
         invite_id: String,
         group_chat_id: String,
         user: UserInfo,
-        status: ResponseStatus,
+        status: String,       // 固定为 "accepted"
         responded_at: String, // ISO 8601 UTC
     },
 
@@ -368,7 +302,7 @@ pub enum WsMessage {
         application_id: String,
         group_chat_id: String,
         group_name: String,
-        status: ResponseStatus,
+        status: String,       // 固定为 "accepted"
         responded_at: String, // ISO 8601 UTC
     },
 
@@ -384,68 +318,24 @@ pub enum WsMessage {
         created_at: String, // ISO 8601 UTC
     },
 
-    /// 群公告更新
-    GroupAnnouncementUpdated {
-        announcement_id: String,
-        group_chat_id: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        title: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        content: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        is_pinned: Option<bool>,
-        updated_at: String, // ISO 8601 UTC
-    },
-
-    /// 群公告删除
-    GroupAnnouncementDeleted {
-        announcement_id: String,
-        group_chat_id: String,
-        deleted_at: String, // ISO 8601 UTC
-    },
-
     // ===== 提及事件 =====
-    /// 瞬间中被 @ 提及
-    MomentMentioned {
+    /// 瞬间或评论中被 @ 提及
+    MessageMentioned {
+        target_type: String, // "moment" | "comment"
         moment_id: String,
-        moment_summary: MomentSummary,
-        user: UserInfo, // 提及我的人
-        mentioned_at: String, // ISO 8601 UTC
-    },
-
-    /// 评论中被 @ 提及
-    CommentMentioned {
-        moment_id: String,
-        comment_id: String,
-        user: UserInfo, // 提及我的人
-        content: String, // 评论内容摘要
+        #[serde(skip_serializing_if = "Option::is_none")]
+        comment_id: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        moment_summary: Option<MomentSummary>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        comment_preview: Option<String>,
+        user: UserInfo,       // 提及我的人
         mentioned_at: String, // ISO 8601 UTC
     },
 
     // ===== 系统事件 =====
     /// 错误消息
     Error { code: i32, message: String },
-
-    // ===== 多端同步 (Self-Sync) =====
-    /// 私聊会话被删除
-    PrivateChatDeleted {
-        target_user_id: i64,
-        deleted_at: String,
-    },
-    /// 私聊设置更新
-    PrivateChatSettingsUpdated {
-        target_user_id: i64,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        is_muted: Option<bool>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        is_pinned: Option<bool>,
-        updated_at: String,
-    },
-    /// 通知已读状态更新
-    NotificationReadStateUpdated {
-        total_unread_count: i32,
-        read_at: String,
-    },
 
     // ========== 客户端发送事件 (Client → Server) ==========
     /// 鉴权（握手后首帧）
@@ -468,31 +358,39 @@ pub enum WsMessage {
     /// 订阅（增量订阅）
     Subscribe {
         client_msg_id: String, // 客户端生成，用于与 SubscribeAck 对齐
-        items: Vec<SubscriptionItem>,
+        #[serde(rename = "type")]
+        r#type: String,
+        ids: Vec<SubscriptionSourceId>,
     },
 
     /// 取消订阅
     Unsubscribe {
         client_msg_id: String, // 客户端生成，用于与 SubscribeAck 对齐
-        items: Vec<SubscriptionItem>,
+        #[serde(rename = "type")]
+        r#type: String,
+        ids: Vec<SubscriptionSourceId>,
     },
 
     /// 替换式订阅（覆盖现有订阅）
     SetSubscriptions {
         client_msg_id: String, // 客户端生成，用于与 SubscribeAck 对齐
-        items: Vec<SubscriptionItem>,
+        #[serde(rename = "type")]
+        r#type: String,
+        ids: Vec<SubscriptionSourceId>,
     },
 
     /// 订阅确认（服务端响应）
     SubscribeAck {
         client_msg_id: String, // 回传客户端消息ID
         operation: SubscriptionOperation,
-        items: Vec<SubscriptionItem>,
+        #[serde(rename = "type")]
+        r#type: String,
+        ids: Vec<SubscriptionSourceId>,
         code: i32,
         #[serde(skip_serializing_if = "Option::is_none")]
         message: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
-        failed_items: Option<Vec<FailedSubscriptionItem>>,
+        failed_ids: Option<Vec<FailedSubscriptionId>>,
     },
 
     /// 私聊正在输入
@@ -506,19 +404,6 @@ pub enum WsMessage {
         group_chat_id: String,
         is_typing: bool,
     },
-}
-
-/// 群组更新字段
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct GroupUpdatedFields {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub avatar_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub settings: Option<serde_json::Value>, // Partial<GroupSettings>
 }
 
 /// 消息回复引用快照
@@ -539,16 +424,6 @@ pub struct MomentSummary {
     pub text_preview: String,
 }
 
-/// 订阅项定义
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct SubscriptionItem {
-    /// 数据源类型：group | user
-    #[serde(rename = "type")]
-    pub r#type: String,
-    /// 数据源标识列表（按 type 约束类型）
-    pub ids: Vec<SubscriptionSourceId>,
-}
-
 /// 订阅源ID：user 为 number，其他为 string
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(untagged)]
@@ -557,11 +432,16 @@ pub enum SubscriptionSourceId {
     Number(i64),
 }
 
-/// 失败的订阅项
+/// 失败的订阅ID
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct FailedSubscriptionItem {
-    #[serde(rename = "type")]
-    pub r#type: String,
-    pub ids: Vec<SubscriptionSourceId>,
-    pub reason: SubscriptionFailureReason, // 使用 Enum
+#[serde(untagged)]
+pub enum FailedSubscriptionId {
+    Number {
+        id: i64,
+        reason: SubscriptionFailureReason, // 使用 Enum
+    },
+    String {
+        id: String,
+        reason: SubscriptionFailureReason, // 使用 Enum
+    },
 }

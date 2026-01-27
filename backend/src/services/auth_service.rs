@@ -185,6 +185,13 @@ impl AuthService {
         } else {
             Some(refresh_token.clone())
         };
+        let refresh_token_expires_at = if client_type == ClientType::Web {
+            None
+        } else {
+            Some(
+                (Utc::now() + Duration::seconds(self.refresh_token_expiration)).to_rfc3339(),
+            )
+        };
 
         Ok(AuthIssueResult {
             data: AuthData {
@@ -194,10 +201,8 @@ impl AuthService {
                 refresh_token: refresh_token_in_body,
                 access_token_expires_at: (Utc::now()
                     + Duration::seconds(self.access_token_expiration))
-                .to_rfc3339(),
-                refresh_token_expires_at: (Utc::now()
-                    + Duration::seconds(self.refresh_token_expiration))
-                .to_rfc3339(),
+                    .to_rfc3339(),
+                refresh_token_expires_at,
             },
             refresh_token_raw: refresh_token,
         })
@@ -273,6 +278,13 @@ impl AuthService {
         } else {
             Some(refresh_token.clone())
         };
+        let refresh_token_expires_at = if client_type == ClientType::Web {
+            None
+        } else {
+            Some(
+                (Utc::now() + Duration::seconds(self.refresh_token_expiration)).to_rfc3339(),
+            )
+        };
 
         Ok(AuthIssueResult {
             data: AuthData {
@@ -283,9 +295,7 @@ impl AuthService {
                 access_token_expires_at: (Utc::now()
                     + Duration::seconds(self.access_token_expiration))
                 .to_rfc3339(),
-                refresh_token_expires_at: (Utc::now()
-                    + Duration::seconds(self.refresh_token_expiration))
-                .to_rfc3339(),
+                refresh_token_expires_at,
             },
             refresh_token_raw: refresh_token,
         })
@@ -354,6 +364,15 @@ impl AuthService {
             Some(refresh_token.clone())
         };
 
+        let refresh_token_expires_at = if client_type == ClientType::Web {
+            None
+        } else {
+            Some(
+                (Utc::now() + Duration::seconds(self.refresh_token_expiration))
+                    .to_rfc3339()
+            )
+        };
+
         Ok(AuthIssueResult {
             data: AuthData {
                 user_id,
@@ -363,9 +382,7 @@ impl AuthService {
                 access_token_expires_at: (Utc::now()
                     + Duration::seconds(self.access_token_expiration))
                 .to_rfc3339(),
-                refresh_token_expires_at: (Utc::now()
-                    + Duration::seconds(self.refresh_token_expiration))
-                .to_rfc3339(),
+                refresh_token_expires_at,
             },
             refresh_token_raw: refresh_token,
         })
@@ -506,7 +523,7 @@ impl AuthService {
         if !rotated {
             // 典型原因：并发刷新导致当前 refresh_token 已被轮换（但会话本身仍有效）。
             // 不做撤销（避免误杀），提示客户端稍后重试/以最新 token 为准。
-            return Err(AppError::AccessTokenInvalid(
+            return Err(AppError::RefreshTokenInvalid(
                 "Refresh Token 已被轮换，请重试".to_string(),
             ));
         }
@@ -520,6 +537,13 @@ impl AuthService {
         } else {
             Some(new_refresh_token.clone())
         };
+        let refresh_token_expires_at = if client_type == ClientType::Web {
+            None
+        } else {
+            Some(
+                (Utc::now() + Duration::seconds(self.refresh_token_expiration)).to_rfc3339(),
+            )
+        };
 
         Ok(AuthIssueResult {
             data: AuthData {
@@ -530,9 +554,7 @@ impl AuthService {
                 access_token_expires_at: (Utc::now()
                     + Duration::seconds(self.access_token_expiration))
                 .to_rfc3339(),
-                refresh_token_expires_at: (Utc::now()
-                    + Duration::seconds(self.refresh_token_expiration))
-                .to_rfc3339(),
+                refresh_token_expires_at,
             },
             refresh_token_raw: new_refresh_token,
         })
@@ -559,8 +581,24 @@ impl AuthService {
         Ok(())
     }
 
-    /// 检查认证状态
-    pub async fn check_status(&self, user_id: i64, token: &str) -> Result<CheckStatusData> {
+    /// 检查认证状态（Token 可选）
+    pub async fn check_status(
+        &self,
+        user_id: Option<i64>,
+        token: Option<&str>,
+    ) -> Result<CheckStatusData> {
+        let (user_id, token) = match (user_id, token) {
+            (Some(uid), Some(token)) => (uid, token),
+            _ => {
+                return Ok(CheckStatusData {
+                    is_valid: false,
+                    user_id: None,
+                    nickname: None,
+                    expires_at: None,
+                });
+            }
+        };
+
         // 1. 验证 Token
         let claims = JwtUtil::verify_token(token, &self.jwt_secret)?;
 
@@ -572,12 +610,14 @@ impl AuthService {
             .ok_or_else(|| AppError::NotFound("用户不存在".to_string()))?;
 
         Ok(CheckStatusData {
-            user_id,
-            nickname: user.nickname,
             is_valid: true,
-            expires_at: chrono::DateTime::<Utc>::from_timestamp(claims.exp, 0)
-                .unwrap_or_else(|| Utc::now())
-                .to_rfc3339(),
+            user_id: Some(user_id),
+            nickname: Some(user.nickname),
+            expires_at: Some(
+                chrono::DateTime::<Utc>::from_timestamp(claims.exp, 0)
+                    .unwrap_or_else(|| Utc::now())
+                    .to_rfc3339(),
+            ),
         })
     }
 
@@ -793,7 +833,10 @@ impl AuthService {
                     session_id: s.session_id.to_string(),
                     device_type: s.device_type,
                     device_name: s.device_name,
-                    ip_address: s.ip_address.map(|ip| ip.to_string()),
+                    ip_address: s
+                        .ip_address
+                        .map(|ip| mask_ip_address(&ip.to_string())),
+                    ip_location: None,
                     created_at: s.created_at.to_rfc3339(),
                     last_active_at: s.last_active_at.to_rfc3339(),
                     is_current,
@@ -858,7 +901,7 @@ impl AuthService {
             .verification_repo
             .check_recent_code(&req.phone, code_type, 60)
             .await
-            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+            .map_err(|e| AppError::InternalError(e.to_string()))?;
 
         if within_60s {
             return Err(AppError::RateLimited(
@@ -871,7 +914,7 @@ impl AuthService {
             .verification_repo
             .count_today_codes(&req.phone, code_type)
             .await
-            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+            .map_err(|e| AppError::InternalError(e.to_string()))?;
 
         if today_count >= 10 {
             return Err(AppError::DailyRateLimitExceeded);
@@ -888,7 +931,7 @@ impl AuthService {
             .verification_repo
             .create_code(&req.phone, &code, code_type, expires_at)
             .await
-            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+            .map_err(|e| AppError::InternalError(e.to_string()))?;
 
         // 8. 发送短信（写入发送队列，供外部短信服务消费）
         let content = format!("您的验证码是: {}, 5分钟内有效", code);
@@ -947,7 +990,7 @@ impl AuthService {
             .arg(payload.to_string())
             .query_async::<()>(&mut conn)
             .await
-            .map_err(|e| AppError::MessageQueueError(format!("短信队列写入失败: {}", e)))?;
+            .map_err(|e| AppError::InternalError(format!("短信队列写入失败: {}", e)))?;
         Ok(())
     }
 
@@ -958,7 +1001,7 @@ impl AuthService {
             .verification_repo
             .find_by_code_id(&req.code_id)
             .await
-            .map_err(|e| AppError::DatabaseError(e.to_string()))?
+            .map_err(|e| AppError::InternalError(e.to_string()))?
             .ok_or_else(|| AppError::NotFound("验证码不存在或已失效".to_string()))?;
 
         // 2. 检查是否已过期
@@ -979,7 +1022,7 @@ impl AuthService {
             self.verification_repo
                 .increment_attempts(&req.code_id)
                 .await
-                .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+                .map_err(|e| AppError::InternalError(e.to_string()))?;
 
             return Err(AppError::Conflict("验证码错误".to_string()));
         }
@@ -988,7 +1031,7 @@ impl AuthService {
         self.verification_repo
             .mark_verified(&req.code_id)
             .await
-            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+            .map_err(|e| AppError::InternalError(e.to_string()))?;
 
         // 6. 生成 verify_token（用于后续注册/重置密码等操作）
         let verify_token = TokenUtil::generate_token();
@@ -1056,4 +1099,13 @@ impl AuthService {
 
         Ok(phone.to_string())
     }
+}
+
+fn mask_ip_address(ip: &str) -> String {
+    let parts: Vec<&str> = ip.split('.').collect();
+    if parts.len() == 4 {
+        return format!("{}.{}.xxx.xxx", parts[0], parts[1]);
+    }
+    // IPv6 或未知格式统一脱敏
+    "xxxx:xxxx:xxxx:xxxx".to_string()
 }

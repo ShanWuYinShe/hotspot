@@ -10,6 +10,11 @@ alwaysApply: true
 - **Service Namespace**: `system`, `global_settings`
 - **Base Path**: `/api/v1/system/`, `/api/v1/global_settings/`
 
+## 契约引用
+
+- 公共基础类型：`@api_spec_common_types.mdc`
+- 错误码：`@api_spec_errors.mdc`
+
 ## 核心类型定义
 
 ```typescript
@@ -110,7 +115,7 @@ interface AdminSettings extends GlobalSettings {
 
 系统健康检查。
 
-说明：系统健康检查属于"默认公开资源"，不涉及用户隐私等级/访问控制分支。
+**说明**：系统健康检查为公开资源，无需认证。
 
 **Request**: `{}`
 **Response**: `ApiResponse<HealthStatus>`
@@ -123,11 +128,11 @@ interface AdminSettings extends GlobalSettings {
 
 获取全局启动配置。
 
-说明：全局启动配置属于"默认公开资源"。
+**说明**：全局启动配置为公开资源，无需认证。
 
 **Request**:
 ```typescript
-type FetchGlobalSettingsRequest = {};
+interface FetchGlobalSettingsRequest {}
 ```
 **Response**: `ApiResponse<GlobalSettings>`
 
@@ -154,7 +159,7 @@ type FetchGlobalSettingsRequest = {};
 
 **Request**:
 ```typescript
-type UpdateUploadConfigRequest = Partial<UploadConfig>;
+interface UpdateUploadConfigRequest extends Partial<UploadConfig> {}
 ```
 **Response**: `ApiResponse<{ upload: UploadConfig; updated_at: string; }>`
 
@@ -217,7 +222,7 @@ interface UpdateContactRequest {
 
 **Request**:
 ```typescript
-type UpdateLimitsRequest = Partial<AppLimits>;
+interface UpdateLimitsRequest extends Partial<AppLimits> {}
 ```
 **Response**: `ApiResponse<{ limits: AppLimits; updated_at: string; }>`
 

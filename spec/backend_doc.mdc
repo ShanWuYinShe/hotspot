@@ -56,7 +56,7 @@ HotSpot 是一个基于地理位置的社交平台，支持用户发现附近的
 
 系统采用**统一路径 + Token 决定响应**的设计模式：
 - 所有 API 统一使用 `/api/v1/` 前缀，不区分 public/protected 路径
-- Token 可选：查询类 API（搜索、详情）可不带 Token，带 Token 时返回 `@auth-only` 字段
+- Token 可选：查询类 API（搜索、详情）可不带 Token；若类型定义含 `@auth-only` 字段，登录态返回这些字段
 - Token 必须：写操作、互动操作、`/me/` 路径、`/feed/` 路径、`/admin/` 路径必须携带有效 Token
 
 详见 `@api_spec_common_types.mdc` 的"路径设计与 Token 语义"。
@@ -127,7 +127,7 @@ HotSpot 是一个基于地理位置的社交平台，支持用户发现附近的
 - 消息反应：添加/移除/列表
 - 输入状态通知
 
-详见 `@api_spec_chat.mdc`
+详见 `@api_spec_group.mdc`
 
 #### 举报（report）
 
@@ -146,10 +146,16 @@ HotSpot 是一个基于地理位置的社交平台，支持用户发现附近的
 
 详见 `@api_spec_notification.mdc`
 
+#### 公告（announcement）
+
+- 系统公告列表（公开）
+- 管理员发布/删除系统公告
+
+详见 `@api_spec_admin_announcement.mdc`
+
 #### 媒体上传（media）
 
 - 小文件预签名上传（≤100MB）
-- 大文件分块上传（初始化/分块签名/完成/状态/取消）
 
 详见 `@api_spec_media.mdc`
 
@@ -173,7 +179,6 @@ HotSpot 是一个基于地理位置的社交平台，支持用户发现附近的
 
 - 健康检查
 - 全局配置获取
-- 系统公告列表
 
 详见 `@api_spec_system.mdc`
 
@@ -187,7 +192,7 @@ HotSpot 是一个基于地理位置的社交平台，支持用户发现附近的
 - **系统公告**：发布/删除公告
 - **系统配置**：查看/更新各类配置、变更历史追踪
 
-详见 `@api_spec_admin_*.mdc` 系列文档
+详见 `@api_spec_admin_rbac.mdc`、`@api_spec_admin_user.mdc`、`@api_spec_admin_group.mdc`、`@api_spec_admin_announcement.mdc`、`@api_spec_admin_audit.mdc`、`@api_spec_admin_report.mdc`
 
 ### WebSocket（实时能力）
 
@@ -200,31 +205,21 @@ HotSpot 是一个基于地理位置的社交平台，支持用户发现附近的
 - **连接管理事件**：ConnectionEstablished, Pong, Error, SubscribeAck
 - **私聊消息事件**：New/Edited/Recalled/Deleted/Reaction/Read
 - **私聊输入状态**：PrivateUserTyping
+- **通知事件**：NewFollower, MutualFollow, FollowRequestReceived, FollowRequestHandled（仅接受）, MomentLiked, MomentCommented, CommentReply, MessageMentioned, GroupInviteReceived/Response（仅接受）, GroupApplicationReceived/Response（仅接受）, SystemAnnouncement（基于通知偏好自动推送）
 
 #### 需要订阅后推送
 
-**群聊订阅（group_chat）**：
+**群聊订阅（group）**：
 - 群消息事件：New/Edited/Recalled/Deleted/Reaction/Read
-- 群成员事件：Joined/Left/RoleChanged/Muted/Unmuted
-- 群资料事件：ProfileUpdated, Dismissed
-- 群公告事件：AnnouncementCreated/Updated/Deleted
+- 群成员事件：Joined
+- 群公告事件：AnnouncementCreated
 - 群输入状态：GroupUserTyping
 
 **用户状态订阅（user）**：
 - 在线状态：UserOnline, UserOffline
 - 位置更新：UserLocationUpdate
-- 资料更新：UserProfileUpdated
 
-**通知订阅（notification）**：
-- 关注关系：NewFollower, MutualFollow, Unfollowed
-- 瞬间互动：MomentLiked, MomentCommented, MomentMentioned
-- 评论互动：CommentReply, CommentMentioned
-- 群组交互：GroupInviteReceived/Response, GroupApplicationReceived/Response
-- 系统通知：SystemAnnouncement
-
-**多端同步事件（Self-Sync）**：
-- PrivateChatDeleted, PrivateChatSettingsUpdated
-- NotificationReadStateUpdated
+说明：资料/设置/成员变动等低实时或负向结果通过 HTTP 刷新获取。
 
 ### 明确不做（Out of scope）
 
@@ -365,7 +360,7 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
 #### user（用户模块）
 
 - **职责**：用户资料管理、用户搜索、关系管理（好友/关注/拉黑）、位置更新
-- **数据存储**：users、user_settings、follows、blocks、friend_remarks、sessions、user_location_history、user_online_status 表
+- **数据存储**：users、user_settings、user_follows、user_blocks、user_friend_remarks、sessions、user_location_history、user_online_status 表
 - **依赖**：auth
 - **被依赖**：几乎所有模块
 
@@ -379,7 +374,7 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
 #### chat（聊天模块）
 
 - **职责**：私聊会话管理、私聊消息、群聊消息
-- **数据存储**：private_chats、private_messages、group_messages、message_reactions、chat_unread_counts 表
+- **数据存储**：private_chats、private_messages、group_messages、private_message_reactions、group_message_reactions、chat_unread_counts 表
 - **依赖**：auth、user、group
 - **被依赖**：notification、feed
 
@@ -402,14 +397,14 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
 #### notification（通知模块）
 
 - **职责**：通知中心、未读计数、推送分发
-- **数据存储**：notifications 表、subscriptions 表、device_tokens 表
+- **数据存储**：notifications 表、notification_subscriptions 表、device_tokens 表
 - **依赖**：auth、user
 - **被依赖**：无（通过事件解耦）
 
 #### media（媒体上传模块）
 
 - **职责**：文件上传（头像、群组图片、瞬间图片、通用文件）
-- **数据存储**：对象存储（OSS/S3）、media_files 表（元数据）
+- **数据存储**：对象存储（OSS/S3）、uploaded_files、upload_sessions、upload_chunks 表
 - **依赖**：auth
 - **被依赖**：user、group、moment、chat
 
@@ -422,10 +417,17 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
 
 #### system（系统模块）
 
-- **职责**：健康检查、全局配置、系统公告
-- **数据存储**：system_configs、announcements 表
+- **职责**：健康检查、全局配置
+- **数据存储**：system_configs、system_config_history 表
 - **依赖**：无
 - **被依赖**：无
+
+#### announcement（公告模块）
+
+- **职责**：系统公告列表（公开）与公告管理
+- **数据存储**：system_announcements 表
+- **依赖**：无
+- **被依赖**：notification
 
 ### 数据聚合模块
 
@@ -448,7 +450,7 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
 #### admin（管理员模块）
 
 - **职责**：RBAC、用户管理、群组管理、举报审核、公告管理、配置管理
-- **数据存储**：admin_roles、admin_permissions、user_admins、config_change_logs 表
+- **数据存储**：admin_users、admin_roles、admin_permissions、admin_role_permissions、admin_user_roles、admin_audit_logs、admin_audit_exports 表
 - **依赖**：auth、user、group、report
 - **被依赖**：无
 
@@ -516,7 +518,7 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
 
 ### Redis 使用场景
 
-| 场景 | Key 模式示例 | 说明 |
+| 场景 | Key 模式 | 说明 |
 |------|-------------|------|
 | 会话管理 | `session:{session_id}` | JWT 验证结果缓存 |
 | 未读计数 | `unread:{user_id}:{chat_type}:{chat_id}` | 聊天未读计数 |

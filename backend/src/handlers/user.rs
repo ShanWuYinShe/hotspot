@@ -15,7 +15,7 @@ use crate::{
         },
         response::{
             AdminUserDetail, ApiResponse, AuthData, BlockedUserItem, FollowRequestItem,
-            FollowerItem, FollowingItem, FriendItem, GroupInfo, MomentItem, MyProfileData,
+            FollowerItem, FollowingItem, FriendItem, GroupItem, MomentItem, MyProfileData,
             PaginatedData, UserCard, UserInfo, UserItem, UserMomentListItem, UserRelation,
             UserSettingsData, UserStatsData,
         },
@@ -212,7 +212,7 @@ pub async fn get_followers(
 pub async fn get_groups(
     State(state): State<AppState>,
     Json(req): Json<UserGroupsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<GroupInfo>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<GroupItem>>>> {
     let response = state.user_service.get_user_groups_list(&req).await?;
     Ok(Json(ApiResponse::success(response)))
 }

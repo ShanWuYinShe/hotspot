@@ -1,94 +1,121 @@
-/**
- * 聊天页面 (Server Component)
- * 服务端获取会话列表
- */
+'use client';
 
-import { Suspense } from 'react';
-import { getTranslations } from 'next-intl/server';
-import { MessageCircle } from '@/components/icons';
-import { serverApi, isServerSuccess, isAuthError, getServerErrorMessage } from '@/lib/api/server';
-import { ENDPOINTS } from '@/lib/api/endpoints';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { useTranslations } from 'next-intl';
+import { useInfiniteQuery } from '@tanstack/react-query';
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PrivateChatItem } from '@/components/chat/private-chat-item';
+import { GroupChatItem } from '@/components/chat/group-chat-item';
 import { Card, CardContent } from '@/components/ui/card';
-import { LoadingState } from '@/components/common/loading-state';
-import { EmptyState } from '@/components/common/empty-state';
-import { LoginRequiredCard } from '@/components/common/login-required-card';
-import { ConversationItem } from '@/components/cards/conversation-item';
-import { PageHeader } from '@/components/layout';
-import { ServerErrorCard } from '@/components/common/server-error-card';
-import type { PrivateChatListItem, PaginatedData } from '@/types/api';
+import { PrivateChatService } from '@/lib/api/services/chat';
+import { GroupService } from '@/lib/api/services/groups';
+import { PaginatedData, PrivateChatListItem, MyGroupItem } from '@/types/api';
+import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
 
-async function ConversationList() {
-  const t = await getTranslations('chat');
-  
-  const response = await serverApi.post<PaginatedData<PrivateChatListItem>>(
-    ENDPOINTS.PRIVATE_CHATS.LIST,
-    { limit: 50 },
-    { tags: ['private-chats'], revalidate: 30 }
-  );
+export default function ChatPage() {
+  const t = useTranslations('chat');
+  const tGroups = useTranslations('groups');
+  const tCommon = useTranslations('common');
 
-  if (!isServerSuccess(response)) {
-    if (isAuthError(response)) {
-      return (
-        <LoginRequiredCard actionName="查看聊天列表" description="登录后才能查看会话列表。" />
-      );
-    }
-    return (
-      <ServerErrorCard
-        title="加载聊天失败"
-        description={getServerErrorMessage(response)}
-        requestId={response.request_id}
-      />
-    );
-  }
+  const {
+    data: privateChatsData,
+    fetchNextPage: fetchNextPrivate,
+    hasNextPage: hasNextPrivate,
+    isFetchingNextPage: isFetchingPrivate,
+  } = useInfiniteQuery({
+    queryKey: ['private-chats'],
+    queryFn: async ({ pageParam }): Promise<PaginatedData<PrivateChatListItem>> => {
+      const res = await PrivateChatService.list({ cursor: pageParam as string | undefined });
+      if (res.code !== 0) throw new Error(res.message);
+      return res.data!;
+    },
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.pagination.next_cursor,
+  });
 
-  const conversations = response.data?.items ?? [];
+  const {
+    data: groupsData,
+    fetchNextPage: fetchNextGroups,
+    hasNextPage: hasNextGroups,
+    isFetchingNextPage: isFetchingGroups,
+  } = useInfiniteQuery({
+    queryKey: ['group-chats'],
+    queryFn: async ({ pageParam }): Promise<PaginatedData<MyGroupItem>> => {
+      const res = await GroupService.myGroups({ cursor: pageParam as string | undefined });
+      if (res.code !== 0) throw new Error(res.message);
+      return res.data!;
+    },
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.pagination.next_cursor,
+  });
 
-  if (conversations.length === 0) {
-    return (
-      <Card>
-        <CardContent className="p-6">
-          <EmptyState
-            icon={MessageCircle}
-            title={t('noConversations')}
-            description="开始和朋友聊天吧"
-          />
-        </CardContent>
-      </Card>
-    );
-  }
+  const privateChats = privateChatsData?.pages.flatMap((page) => page.items) ?? [];
+  const groups = groupsData?.pages.flatMap((page) => page.items) ?? [];
 
-  return (
-    <Card>
-      <CardContent className="p-2">
-        <ScrollArea className="h-[calc(100vh-200px)]">
-          <div className="space-y-1">
-            {conversations.map((conversation) => (
-              <ConversationItem
-                key={conversation.other_user.user_id}
-                conversation={conversation}
-              />
-            ))}
-          </div>
-        </ScrollArea>
-      </CardContent>
-    </Card>
-  );
-}
+  const { ref: privateRef } = useInfiniteScroll({
+    hasNextPage: hasNextPrivate,
+    isFetchingNextPage: isFetchingPrivate,
+    fetchNextPage: fetchNextPrivate,
+  });
 
-export default async function ChatPage() {
-  const t = await getTranslations('chat');
+  const { ref: groupRef } = useInfiniteScroll({
+    hasNextPage: hasNextGroups,
+    isFetchingNextPage: isFetchingGroups,
+    fetchNextPage: fetchNextGroups,
+  });
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <PageHeader
-        title={t('title')}
-        description="掌握最近的消息与未读提醒"
-      />
+    <div className="max-w-3xl mx-auto space-y-6">
+      <h1 className="text-2xl font-bold">{t('title')}</h1>
 
-      <Suspense fallback={<LoadingState text="加载中..." />}>
-        <ConversationList />
-      </Suspense>
+      <Tabs defaultValue="private">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="private">{t('title')}</TabsTrigger>
+          <TabsTrigger value="groups">{tGroups('title')}</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="private" className="space-y-3 mt-6">
+          {privateChats.length > 0 ? (
+            <>
+              {privateChats.map((chat) => (
+                <PrivateChatItem key={chat.other_user.user_id} chat={chat} />
+              ))}
+              <div ref={privateRef} className="flex justify-center p-4">
+                {isFetchingPrivate ? (
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-transparent border-current" />
+                ) : null}
+              </div>
+            </>
+          ) : (
+            <Card>
+              <CardContent className="py-12 text-center text-muted-foreground">
+                {t('empty')}
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="groups" className="space-y-3 mt-6">
+          {groups.length > 0 ? (
+            <>
+              {groups.map((group) => (
+                <GroupChatItem key={group.group_chat_id} group={group} />
+              ))}
+              <div ref={groupRef} className="flex justify-center p-4">
+                {isFetchingGroups ? (
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-transparent border-current" />
+                ) : null}
+              </div>
+            </>
+          ) : (
+            <Card>
+              <CardContent className="py-12 text-center text-muted-foreground">
+                {tCommon('empty')}
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

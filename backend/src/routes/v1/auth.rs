@@ -16,6 +16,7 @@ pub fn token_optional_routes() -> Router<AppState> {
         .route("/login", post(auth::login))
         .route("/guest", post(auth::create_guest))
         .route("/refresh_token", post(auth::refresh_token))
+        .route("/check_status", post(auth::check_status))
         .route(
             "/send_verification_code",
             post(auth::send_verification_code),
@@ -33,8 +34,7 @@ pub fn token_optional_routes() -> Router<AppState> {
 pub fn token_required_routes() -> Router<AppState> {
     // 主路由 - 基础认证操作
     let main_routes = Router::new()
-        .route("/logout", post(auth::logout))
-        .route("/check_status", post(auth::check_status));
+        .route("/logout", post(auth::logout));
 
     // /me 子路由 - 当前用户认证相关操作
     let me_routes = Router::new()

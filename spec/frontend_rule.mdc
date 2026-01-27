@@ -10,7 +10,7 @@ alwaysApply: false
 
 ## 技术栈
 
-- **Framework**: Next.js 15 (App Router)
+- **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript (Strict Mode)
 - **UI Library**: shadcn/ui + Tailwind CSS 4
 - **State Management**: Zustand (客户端状态) + TanStack Query v5 (服务端状态)
@@ -68,16 +68,16 @@ alwaysApply: false
 
 当你修改 `@frontend_rule.mdc` 时，必须自检：
 
-### 1) 边界自洽（How-only）
+### 边界自洽（How-only）
 - 只写可执行的工程规范：目录结构/分层、请求封装、状态管理、错误处理、缓存策略、WebSocket 落地、类型与 lint 约束等
 - 不写产品能力与页面流程（What）：这些必须写在 `@frontend_doc.mdc`
 
-### 2) 与 `@api_spec.mdc` 的关系（只引用，不复述）
+### 与 `@api_spec.mdc` 的关系（只引用，不复述）
 - 只用"**小节标题或锚点标题**"引用 `@api_spec.mdc`（禁止"第X章/第X节"编号引用）
 - 禁止复制粘贴端点清单、字段列表、错误码清单、WebSocket 事件定义到本文件
 - 禁止在本文件发明任何 API 字段/事件/错误码/envelope 变体；如契约不足，只能推动修改 `@api_spec.mdc`
 
-### 3) 规则可执行性与可验证性
+### 规则可执行性与可验证性
 - 每条规则应能通过代码 review 或静态检查验证（例如：禁止硬编码路径、禁止 any、分层职责边界）
 - 规则之间不得互相冲突；如冲突，以"本文件范围"内更严格者为准，但不得与 `@api_spec.mdc` 冲突
 
@@ -216,11 +216,12 @@ Next.js App Router 默认使用 Server Components，只有在需要时才使用 
 // page.tsx (Server Component)
 import { Suspense } from 'react';
 import { serverApi, isServerSuccess } from '@/lib/api/server';
+import { ENDPOINTS } from '@/lib/api/endpoints';
 import { LoadingState } from '@/components/common/loading-state';
 import { InteractiveList } from './interactive-list';
 
 async function DataContent() {
-  const response = await serverApi.get('/endpoint', {}, { tags: ['cache-tag'] });
+  const response = await serverApi.post(ENDPOINTS.FEED.MOMENTS, { limit: 20 }, { tags: ['cache-tag'] });
   const data = isServerSuccess(response) ? response.data : [];
   return <InteractiveList initialData={data} />;
 }
@@ -290,9 +291,10 @@ export function FollowButton({ userId, isFollowing }) {
 
 import { revalidateTag } from 'next/cache';
 import { serverApi, isServerSuccess } from '@/lib/api/server';
+import { ENDPOINTS } from '@/lib/api/endpoints';
 
 export async function likeMoment(momentId: string) {
-  const response = await serverApi.post(`/moments/${momentId}/likes`);
+  const response = await serverApi.post(ENDPOINTS.MOMENTS.LIKE, { moment_id: momentId });
   if (isServerSuccess(response)) {
     revalidateTag(`moment-${momentId}`);
     revalidateTag('feed');
@@ -373,7 +375,7 @@ export async function likeMoment(momentId: string) {
 ### Token 管理
 - Access Token 存储在内存（Zustand store）。
 - Refresh Token 存储在 httpOnly cookie（推荐）或 localStorage。
-- API 客户端自动处理 Token 刷新（401 时自动重试）。
+- API 客户端应基于 `ApiResponse.code` 处理 Token 刷新与重试。
 
 ### 路由保护
 - 使用 Next.js middleware 进行路由保护。
@@ -413,26 +415,26 @@ export async function likeMoment(momentId: string) {
 说明：以下 checklist 每条都要求"可通过静态检查/代码 review/最小运行验证"来确认。AI 在自检时，应明确指出对应证据，而不是只口头声明"已遵守"。
 
 ### 工程边界与契约引用
-1.  [ ] **No Contract Duplication**: 代码与文档中没有复制粘贴 `@api_spec.mdc` 的端点/字段/错误码/事件清单。
-2.  [ ] **Title-only Citation**: 文档引用 `@api_spec.mdc` 时只使用小节标题或锚点标题。
+1.  [ ] **No Contract Duplication**: 代码与文档中没有复制粘贴 `@api_spec.mdc` 的端点/字段/错误码/事件清单
+2.  [ ] **Title-only Citation**: 文档引用 `@api_spec.mdc` 时只使用小节标题或锚点标题
 
 ### API 调用与分层
-3.  [ ] **Service Only Networking**: `src/app/**`、`src/components/**`、`src/hooks/**` 中没有直接调用 `fetch` 访问后端 API；所有网络请求都通过 `src/lib/api/services/**` 完成。
-4.  [ ] **No Hardcoded API Path**: 前端代码中没有硬编码 `"/api/"`、`"/api/v1/"` 等 API 路径字符串；必须通过 `src/lib/api/endpoints.ts` 的常量引用。
-5.  [ ] **ApiResponse Code Gate**: 所有业务成功判定都只使用 `ApiResponse.code === 0`；没有使用 HTTP 状态码作为业务成功依据。
-6.  [ ] **Cursor Opaque**: 前端没有解析/解码/构造 `cursor`；仅透传后端返回的 `next_cursor`。
+3.  [ ] **Service Only Networking**: `src/app/**`、`src/components/**`、`src/hooks/**` 中没有直接调用 `fetch` 访问后端 API；所有网络请求都通过 `src/lib/api/services/**` 完成
+4.  [ ] **No Hardcoded API Path**: 前端代码中没有硬编码 `"/api/"`、`"/api/v1/"` 等 API 路径字符串；必须通过 `src/lib/api/endpoints.ts` 的常量引用
+5.  [ ] **ApiResponse Code Gate**: 所有业务成功判定都只使用 `ApiResponse.code === 0`；没有使用 HTTP 状态码作为业务成功的依据
+6.  [ ] **Cursor Opaque**: 前端没有解析/解码/构造 `cursor`；仅透传后端返回的 `next_cursor`
 
 ### WebSocket 与消息一致性
-7.  [ ] **No Optimistic Final Message**: Chat 消息列表的"最终展示态"只能来自 WebSocket 的实时事件；send API 返回值仅用于拿 `message_id` 关联本地发送态。
-8.  [ ] **No Local WS Contract**: 前端没有维护"独立的 WS 事件名/字段表"；如需变更，只能推动修改 `@api_spec.mdc`。
+7.  [ ] **No Optimistic Final Message**: Chat 消息列表的"最终展示态"只能来自 WebSocket 的实时事件；send API 返回值仅用于拿 `message_id` 关联本地发送态
+8.  [ ] **No Local WS Contract**: 前端没有维护"独立的 WS 事件名/字段表"；如需变更，只能推动修改 `@api_spec.mdc`
 
 ### 管理员权限
-9.  [ ] **Admin Super Derivation**: 前端判断超级管理员必须使用 `permissions.includes('*')`；代码中不存在 `is_super` 字段依赖。
+9.  [ ] **Admin Super Derivation**: 前端判断超级管理员必须使用 `permissions.includes('*')`；代码中不存在 `is_super` 字段依赖
 
 ### 类型与质量
-10. [ ] **No any**: TypeScript 代码中没有新增 `any`（包括 `as any`）。
-11. [ ] **Optional Field Safety**: 所有可选字段访问都使用 `?.`/`??` 进行安全处理。
-12. [ ] **Lint Clean**: 变更后代码在项目既有 lint/format 规则下保持可通过。
+10. [ ] **No any**: TypeScript 代码中没有新增 `any`（包括 `as any`）
+11. [ ] **Optional Field Safety**: 所有可选字段访问都使用 `?.`/`??` 进行安全处理
+12. [ ] **Lint Clean**: 变更后代码在项目既有 lint/format 规则下保持可通过
 
 ---
 

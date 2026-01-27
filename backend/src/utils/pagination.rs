@@ -25,7 +25,6 @@ static CIPHER: Lazy<Aes256Gcm> = Lazy::new(|| {
 /// 用于生成和解析不透明的游标字符串 (Opaque Cursor)。
 /// 游标通常是 (排序值, 唯一ID) 元组的编码字符串。
 /// 为了保证不透明性，游标内容经过 AES-256-GCM 加密。
-
 /// 解码游标字符串为指定类型
 pub fn decode_cursor<T>(cursor: &str) -> Result<T>
 where
@@ -84,7 +83,6 @@ where
 /// 通用游标类型定义
 ///
 /// 针对常见的排序场景提供标准元组结构
-
 /// 默认排序游标 (ID)
 /// 适用于: ORDER BY id DESC
 pub type IdCursor = i64;

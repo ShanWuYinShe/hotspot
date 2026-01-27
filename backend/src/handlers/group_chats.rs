@@ -25,7 +25,7 @@ use crate::{
         },
     },
     error::Result,
-    middleware::auth::AuthenticatedUser,
+    middleware::auth::{AuthenticatedUser, OptionalAuthenticatedUser},
     services::admin_audit_service::AuditLogInput,
     state::AppState,
 };
@@ -63,71 +63,23 @@ pub async fn search_by_location(
 ///
 /// 支持可选认证：
 /// - 未登录：返回基础群组信息
-/// - 已登录：额外返回 is_joined, my_role 等字段（Zero-Lookup）
+/// - 已登录：额外返回 my_state（Zero-Lookup）
 pub async fn open_the_door(
     State(state): State<AppState>,
-    headers: axum::http::HeaderMap,
+    user: OptionalAuthenticatedUser,
     Json(req): Json<GroupOpenTheDoorRequest>,
 ) -> Result<Json<ApiResponse<GroupDetailData>>> {
-    // 提取 Authorization header
-    let auth_header = headers.get("Authorization");
-    tracing::info!("Authorization header exists: {}", auth_header.is_some());
-
-    // 尝试从 Authorization header 提取用户ID（可选认证）
-    let user_id = auth_header
-        .and_then(|h| {
-            let header_str = h.to_str().ok()?;
-            tracing::info!("Authorization header value: {}", header_str);
-            Some(header_str)
-        })
-        .and_then(|h| {
-            let token = h.strip_prefix("Bearer ")?;
-            tracing::info!(
-                "Extracted token (first 20 chars): {}...",
-                &token[..token.len().min(20)]
-            );
-            Some(token)
-        })
-        .and_then(|token| {
-            match crate::utils::jwt::JwtUtil::verify_token(token, &state.config.jwt_secret) {
-                Ok(claims) => {
-                    tracing::info!(
-                        "JWT verified successfully: sub={}, sid={}",
-                        claims.sub,
-                        claims.sid
-                    );
-                    Some(claims)
-                }
-                Err(e) => {
-                    tracing::error!("JWT verification failed: {:?}", e);
-                    None
-                }
-            }
-        })
-        .and_then(|claims| match claims.sub.parse::<i64>() {
-            Ok(uid) => {
-                tracing::info!("Parsed user_id: {}", uid);
-                Some(uid)
-            }
-            Err(e) => {
-                tracing::error!("Failed to parse user_id from sub '{}': {:?}", claims.sub, e);
-                None
-            }
-        });
-
     tracing::info!(
-        "open_the_door: group_id={}, user_id={:?}, has_auth_header={}",
+        "open_the_door: group_id={}, user_id={:?}",
         req.group_chat_id,
-        user_id,
-        auth_header.is_some()
+        user.user_id
     );
 
-    let response = state.group_service.open_the_door(&req, user_id).await?;
+    let response = state.group_service.open_the_door(&req, user.user_id).await?;
 
     tracing::info!(
-        "open_the_door response: is_joined={:?}, my_role={:?}",
-        response.is_joined,
-        response.my_role
+        "open_the_door response: has_my_state={}",
+        response.my_state.is_some()
     );
 
     Ok(Json(ApiResponse::success(response)))

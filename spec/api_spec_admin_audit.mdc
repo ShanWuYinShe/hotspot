@@ -10,6 +10,11 @@ alwaysApply: true
 - **Service Namespace**: `admin.audit`
 - **Base Path**: `/api/v1/admin/audit/`
 
+## 契约引用
+
+- 公共基础类型：`@api_spec_common_types.mdc`
+- 错误码：`@api_spec_errors.mdc`
+
 ## 核心类型定义
 
 ```typescript
@@ -30,6 +35,20 @@ type AuditAction =
 // 审计日志目标类型
 type AuditTargetType = 'user' | 'group' | 'announcement' | 'role' | 'config';
 
+// 审计日志操作详情（强类型，按 action 区分）
+type AuditDetails = 
+  | { type: 'user.ban'; reason?: string; duration_days?: number }
+  | { type: 'user.unban'; reason?: string }
+  | { type: 'group.dismiss'; reason?: string }
+  | { type: 'announcement.create'; title: string }
+  | { type: 'announcement.delete'; title: string }
+  | { type: 'role.create'; role_name: string; permissions: string[] }
+  | { type: 'role.update'; role_name: string; added_permissions?: string[]; removed_permissions?: string[] }
+  | { type: 'role.delete'; role_name: string }
+  | { type: 'permission.grant'; permission: string }
+  | { type: 'permission.revoke'; permission: string }
+  | { type: 'config.update'; config_key: string };
+
 interface AuditLogItem {
   log_id: string;
   action: AuditAction;
@@ -37,20 +56,35 @@ interface AuditLogItem {
   target_type: AuditTargetType;
   target_id: string;              // 目标资源 ID
   target_name?: string;           // 目标资源名称（便于展示）
-  details?: Record<string, any>;  // 操作详情（如封禁原因、角色权限变更等）
-  ip_address?: string;
-  user_agent?: string;
+  details?: AuditDetails;         // 操作详情（强类型）
+  ip_location?: string;           // IP 地理位置（如 "北京市"），所有管理员可见
+  ip_address?: string;            // @super-admin-only: 完整 IP 地址，仅超级管理员可见
+  device_summary?: string;        // 设备摘要（如 "Chrome on Windows"），脱敏后的 UA 信息
   created_at: string;
 }
 
+// 状态快照类型（用于 before_state / after_state）
+type StateSnapshot = 
+  | { type: 'user'; nickname?: string; status?: string; roles?: string[] }
+  | { type: 'group'; name?: string; members_count?: number }
+  | { type: 'role'; name?: string; permissions?: string[] }
+  | { type: 'config'; value?: string };
+
 interface AuditLogDetail extends AuditLogItem {
   // 扩展详情
-  before_state?: Record<string, any>;  // 操作前状态（已过滤敏感字段）
-  after_state?: Record<string, any>;   // 操作后状态（已过滤敏感字段）
+  before_state?: StateSnapshot;   // 操作前状态（已过滤敏感字段）
+  after_state?: StateSnapshot;    // 操作后状态（已过滤敏感字段）
 }
 ```
 
 **安全说明**：
+
+**字段可见性**：
+- `ip_location`：所有具有 `admin.audit.read` 权限的管理员可见
+- `ip_address`：仅超级管理员可见（`@super-admin-only`），普通管理员响应中不包含此字段
+- `device_summary`：从 User-Agent 脱敏提取的设备摘要，不暴露完整 UA 字符串
+
+**状态快照过滤**：
 - `before_state` 和 `after_state` 会自动过滤敏感字段，包括但不限于：
   - `password`、`password_hash`、`secret`、`token`、`api_key`
   - `credit_card`、`ssn`、`id_card`
@@ -66,7 +100,7 @@ interface AuditLogDetail extends AuditLogItem {
 |-------|------|---------|
 | `10001` | 缺少必填参数 | `detail` |
 | `10204` | 非管理员 | 所有 admin 接口 |
-| `10205` | 管理员权限不足 | 需要 `admin.audit.read` |
+| `10205` | 管理员权限不足 | `detail`（需 `admin.audit.read`） |
 | `10300` | 日志不存在 | `detail` |
 
 ---

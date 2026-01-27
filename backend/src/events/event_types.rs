@@ -38,11 +38,6 @@ pub enum AppEvent {
         user_id: i64,
         mutual_user_id: i64,
     },
-    Unfollowed {
-        follower_id: i64,
-        user_id: i64,
-        was_mutual: bool,
-    },
     /// 收到关注请求（当 allow_follow = false 时）
     FollowRequestReceived {
         request_id: String,
@@ -383,7 +378,6 @@ impl AppEvent {
             // 关注关系
             AppEvent::NewFollower { .. } => "new_follower",
             AppEvent::MutualFollow { .. } => "mutual_follow",
-            AppEvent::Unfollowed { .. } => "unfollowed",
             AppEvent::FollowRequestReceived { .. } => "follow_request_received",
             AppEvent::FollowRequestHandled { .. } => "follow_request_handled",
             // 群组管理

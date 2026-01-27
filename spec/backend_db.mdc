@@ -22,6 +22,7 @@ alwaysApply: true
 - 表内自增主键统一为 `id BIGSERIAL PRIMARY KEY`
 - 对外业务标识统一为 `xxx_id`，类型优先 `UUID`，默认值 `uuid_generate_v4()` 或 `gen_random_uuid()`
 - 业务标识列需创建唯一索引
+- 例外：`user_id` 为纯数字（BIGINT），不使用 UUID
 
 ### 时间戳与软删除
 

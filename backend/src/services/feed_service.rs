@@ -312,10 +312,10 @@ impl FeedService {
                     last_online,
                     user_type: u.user_type,
                     location,
-                    relation: None,
                 },
                 mutual_friends_count: None,
                 common_tags: None,
+                relation: None,
             });
         }
 

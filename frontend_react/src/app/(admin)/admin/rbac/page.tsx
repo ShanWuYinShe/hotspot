@@ -1,47 +1,48 @@
-/**
- * 权限管理页面 (Server Component)
- * 服务端获取角色和权限数据
- */
+'use client';
 
-import { Suspense } from 'react';
-import { getTranslations } from 'next-intl/server';
-import { serverApi, isServerSuccess } from '@/lib/api/server';
-import { ENDPOINTS } from '@/lib/api/endpoints';
-import { LoadingState } from '@/components/common/loading-state';
-import { RbacManager } from './rbac-manager';
-import { PageHeader } from '@/components/layout';
-import type { AdminRoleItem, AdminPermissionItem, PaginatedData } from '@/types/api';
+import { useQuery } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 
-async function RbacContent() {
-  const [rolesRes, permissionsRes] = await Promise.all([
-    serverApi.post<PaginatedData<AdminRoleItem>>(
-      ENDPOINTS.ADMIN.ROLES,
-      { limit: 100 },
-      { tags: ['admin-roles'], revalidate: 300 }
-    ),
-    serverApi.post<AdminPermissionItem[]>(
-      ENDPOINTS.ADMIN.PERMISSIONS,
-      {},
-      { tags: ['admin-permissions'], revalidate: 300 }
-    ),
-  ]);
+import { Card, CardContent } from '@/components/ui/card';
+import { AdminRbacService } from '@/lib/api/services/admin/rbac';
 
-  const roles = isServerSuccess(rolesRes) ? rolesRes.data?.items ?? [] : [];
-  const permissions = isServerSuccess(permissionsRes) ? permissionsRes.data ?? [] : [];
+export default function AdminRbacPage() {
+  const t = useTranslations('admin');
+  const tCommon = useTranslations('common');
 
-  return <RbacManager roles={roles} permissions={permissions} />;
-}
+  const { data: roles } = useQuery({
+    queryKey: ['admin-roles'],
+    queryFn: async () => {
+      const res = await AdminRbacService.roles();
+      if (res.code !== 0) throw new Error(res.message);
+      return res.data?.items ?? [];
+    },
+  });
 
-export default async function AdminRbacPage() {
-  const t = await getTranslations('admin');
+  const { data: permissions } = useQuery({
+    queryKey: ['admin-permissions'],
+    queryFn: async () => {
+      const res = await AdminRbacService.permissions();
+      if (res.code !== 0) throw new Error(res.message);
+      return res.data?.items ?? [];
+    },
+  });
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t('rbac')} description="配置角色与权限范围" />
-      
-      <Suspense fallback={<LoadingState text="加载中..." />}>
-        <RbacContent />
-      </Suspense>
+      <h1 className="text-2xl font-bold">{t('rbac')}</h1>
+      <Card>
+        <CardContent className="py-6">
+          <div className="font-semibold">{t('rbac')}</div>
+          <p className="text-sm text-muted-foreground">{roles?.length ?? 0} {tCommon('view')}</p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent className="py-6">
+          <div className="font-semibold">{t('title')}</div>
+          <p className="text-sm text-muted-foreground">{permissions?.length ?? 0} {tCommon('view')}</p>
+        </CardContent>
+      </Card>
     </div>
   );
 }

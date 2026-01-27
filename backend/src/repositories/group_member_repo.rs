@@ -16,8 +16,15 @@ pub struct UserJoinedGroupInfoRow {
     pub member_row_id: i64,
     pub group_id: Uuid,
     pub name: String,
+    pub description: Option<String>,
     pub avatar_url: Option<String>,
     pub members_count: i32,
+    pub has_password: bool,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub location_name: String,
+    pub distance: f64,
+    pub bearing_degrees: f64,
 }
 
 /// 基础群组成员Row (对应数据库表)
@@ -293,6 +300,23 @@ impl GroupMemberRepository {
         Ok(rows.into_iter().map(|r| r.user_id).collect())
     }
 
+    /// 获取群组所有成员 user_id
+    pub async fn list_member_user_ids(&self, group_chat_id: Uuid) -> Result<Vec<i64>> {
+        let rows = sqlx::query!(
+            r#"
+            SELECT user_id
+            FROM group_members
+            WHERE group_chat_id = $1
+              AND is_deleted = FALSE
+            "#,
+            group_chat_id
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.into_iter().map(|r| r.user_id).collect())
+    }
+
     /// 按群组ID查询成员列表 (需要用户详情)
     pub async fn list_by_group(
         &self,
@@ -439,6 +463,8 @@ impl GroupMemberRepository {
         user_id: i64,
         limit: i32,
         cursor: Option<String>,
+        origin_latitude: f64,
+        origin_longitude: f64,
     ) -> Result<(Vec<UserJoinedGroupInfoRow>, Option<String>)> {
         let last_id = if let Some(c) = cursor {
             decode_cursor::<IdCursor>(&c)?
@@ -453,8 +479,21 @@ impl GroupMemberRepository {
                 m.id as member_row_id,
                 g.group_chat_id as "group_id!",
                 g.name as "name!",
+                g.description,
                 g.avatar_url,
-                COALESCE(cnt.member_count, 0)::int4 as "members_count!"
+                COALESCE(cnt.member_count, 0)::int4 as "members_count!",
+                (gs.password_hash IS NOT NULL) as "has_password!",
+                COALESCE(g.latitude, 35.154922) as "latitude!",
+                COALESCE(g.longitude, 112.682524) as "longitude!",
+                COALESCE(g.location_name, '南天门') as "location_name!",
+                ST_Distance(
+                    COALESCE(g.location::geography, ST_SetSRID(ST_MakePoint(112.682524, 35.154922), 4326)::geography),
+                    ST_SetSRID(ST_MakePoint($4, $5), 4326)::geography
+                ) as "distance!",
+                COALESCE(degrees(ST_Azimuth(
+                    ST_SetSRID(ST_MakePoint($4, $5), 4326),
+                    COALESCE(g.location::geometry, ST_SetSRID(ST_MakePoint(112.682524, 35.154922), 4326))
+                )), 0) as "bearing_degrees!"
             FROM group_members m
             JOIN group_chats g
               ON m.group_chat_id = g.group_chat_id
@@ -478,7 +517,9 @@ impl GroupMemberRepository {
             "#,
             user_id,
             last_id,
-            limit as i64
+            limit as i64,
+            origin_longitude,
+            origin_latitude
         )
         .fetch_all(&self.pool)
         .await?;

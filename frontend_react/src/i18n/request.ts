@@ -1,23 +1,42 @@
 import { getRequestConfig } from 'next-intl/server';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
+import { IntlErrorCode } from 'next-intl';
 
-import { defaultLocale, type Locale, locales } from './config';
+import { defaultLocale, locales } from './config';
+
+const LOCALE_COOKIE = 'locale';
+
+const resolveLocale = async () => {
+  const cookieStore = await cookies();
+  const cookieLocale = cookieStore.get(LOCALE_COOKIE)?.value;
+  if (cookieLocale && locales.includes(cookieLocale as typeof locales[number])) {
+    return cookieLocale as typeof locales[number];
+  }
+
+  const headerStore = await headers();
+  const acceptLanguage = headerStore.get('accept-language') ?? '';
+  const lowered = acceptLanguage.toLowerCase();
+  if (lowered.includes('zh')) {
+    return 'zh';
+  }
+
+  return defaultLocale;
+};
 
 export default getRequestConfig(async () => {
-  const cookieStore = await cookies();
-  const localeCookie = cookieStore.get('locale')?.value;
-  let locale: Locale = defaultLocale;
-
-  if (localeCookie) {
-    const normalized =
-      localeCookie === 'zh-CN' ? 'zh' : localeCookie === 'en-US' ? 'en' : localeCookie;
-    if (locales.includes(normalized as Locale)) {
-      locale = normalized as Locale;
-    }
-  }
+  const locale = await resolveLocale();
+  const messages = (await import(`../../messages/${locale}.json`)).default;
 
   return {
     locale,
-    messages: (await import(`../../messages/${locale}.json`)).default,
+    messages,
+    getMessageFallback({ namespace, key }) {
+      return namespace ? `${namespace}.${key}` : key;
+    },
+    onError(error) {
+      if (error.code !== IntlErrorCode.MISSING_MESSAGE) {
+        console.error(error);
+      }
+    },
   };
 });

@@ -10,10 +10,16 @@ alwaysApply: true
 - **Service Namespace**: `announcements`, `admin.announcements`
 - **Base Path**: `/api/v1/announcements/`, `/api/v1/admin/announcements/`
 
+## 契约引用
+
+- 公共基础类型：`@api_spec_common_types.mdc`
+- 错误码：`@api_spec_errors.mdc`
+- WebSocket：`@api_spec_websocket.mdc`
+
 ## 核心类型定义
 
 ```typescript
-// 注：SystemAnnouncementItem 类型定义于 api_spec_common_types.mdc
+// 注：SystemAnnouncementItem 类型定义于 @api_spec_common_types.mdc
 
 interface AnnouncementCreated {
   announcement_id: string;

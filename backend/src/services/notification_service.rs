@@ -9,8 +9,9 @@ use crate::{
         response::{
             NotificationItem, PaginatedData, PaginationMeta, UnreadNotificationCountData, UserInfo,
         },
+        types::StringOrNumberId,
     },
-    error::Result,
+    error::{AppError, Result},
     events::event_types::AppEvent,
     repositories::notification_repo::{NotificationRepository, NotificationType as RepoNotificationType},
     repositories::user_repo::UserRepository,
@@ -22,19 +23,20 @@ use crate::{
 /// 将 Repository 层的 NotificationType 转换为 DTO 层的 NotificationType
 fn map_repo_notification_type(repo_type: &RepoNotificationType) -> NotificationType {
     match repo_type {
-        RepoNotificationType::Like => NotificationType::MomentLike,
-        RepoNotificationType::Comment => NotificationType::MomentComment,
-        RepoNotificationType::Reply => NotificationType::CommentReply,
-        RepoNotificationType::Follow => NotificationType::NewFollower,
-        RepoNotificationType::Mention => NotificationType::MessageMention,
-        RepoNotificationType::System => NotificationType::SystemAnnouncement,
-        // 群组相关通知暂时映射为系统通知
-        RepoNotificationType::GroupInvite
-        | RepoNotificationType::GroupApply
-        | RepoNotificationType::GroupKick
-        | RepoNotificationType::GroupQuit
-        | RepoNotificationType::GroupDismiss
-        | RepoNotificationType::GroupAdmin => NotificationType::SystemAnnouncement,
+        RepoNotificationType::MomentLike => NotificationType::MomentLike,
+        RepoNotificationType::MomentComment => NotificationType::MomentComment,
+        RepoNotificationType::CommentReply => NotificationType::CommentReply,
+        RepoNotificationType::NewFollower => NotificationType::NewFollower,
+        RepoNotificationType::MutualFollow => NotificationType::MutualFollow,
+        RepoNotificationType::FollowRequest => NotificationType::FollowRequest,
+        RepoNotificationType::FollowRequestHandled => NotificationType::FollowRequestHandled,
+        RepoNotificationType::GroupInvite => NotificationType::GroupInvite,
+        RepoNotificationType::GroupInviteResponse => NotificationType::GroupInviteResponse,
+        RepoNotificationType::GroupApplication => NotificationType::GroupApplication,
+        RepoNotificationType::GroupApplicationResponse => NotificationType::GroupApplicationResponse,
+        RepoNotificationType::GroupAnnouncement => NotificationType::GroupAnnouncement,
+        RepoNotificationType::SystemAnnouncement => NotificationType::SystemAnnouncement,
+        RepoNotificationType::MessageMention => NotificationType::MessageMention,
     }
 }
 
@@ -76,10 +78,20 @@ impl NotificationService {
                 NotificationFilterType::Comment => {
                     vec![NotificationType::MomentComment, NotificationType::CommentReply]
                 }
-                NotificationFilterType::Follow => {
-                    vec![NotificationType::NewFollower, NotificationType::MutualFollow]
-                }
-                NotificationFilterType::System => vec![NotificationType::SystemAnnouncement],
+                NotificationFilterType::Follow => vec![
+                    NotificationType::NewFollower,
+                    NotificationType::MutualFollow,
+                    NotificationType::FollowRequest,
+                    NotificationType::FollowRequestHandled,
+                ],
+                NotificationFilterType::System => vec![
+                    NotificationType::GroupInvite,
+                    NotificationType::GroupInviteResponse,
+                    NotificationType::GroupApplication,
+                    NotificationType::GroupApplicationResponse,
+                    NotificationType::GroupAnnouncement,
+                    NotificationType::SystemAnnouncement,
+                ],
                 NotificationFilterType::Mention => vec![NotificationType::MessageMention],
             };
             types.into_iter().map(|t| t.to_string()).collect()
@@ -91,8 +103,7 @@ impl NotificationService {
             .await?;
 
         // 使用 futures_util::future::join_all 来并发签名所有 avatar_url
-        let items: Vec<NotificationItem> =
-            future::join_all(rows.into_iter().map(|row| async move {
+        let items: Vec<NotificationItem> = future::join_all(rows.into_iter().map(|row| async move {
                 let sender = if let Some(uid) = row.sender_id {
                     let avatar_url = self
                         .media_service
@@ -125,7 +136,10 @@ impl NotificationService {
                     None => (None, None),
                 };
 
-                NotificationItem {
+                let target_type = parse_notification_target_type(row.target_type)?;
+                let target_id = parse_notification_target_id(target_type, row.target_id)?;
+
+                Ok(NotificationItem {
                     notification_id: row.notification_id.to_string(),
                     notification_type: map_repo_notification_type(&row.r#type),
                     title: Some(row.title),
@@ -133,15 +147,16 @@ impl NotificationService {
                     created_at: row.created_at.to_rfc3339(),
                     is_read: row.is_read,
                     sender,
-                    target_type: row.target_type.as_ref()
-                        .and_then(|t| NotificationTargetType::from_str(t).ok()),
-                    target_id: row.target_id,
+                    target_type,
+                    target_id,
                     reference_id: row.reference_id,
                     target_text_preview,
                     target_media_url,
-                }
+                })
             }))
-            .await;
+            .await
+            .into_iter()
+            .collect::<Result<Vec<_>>>()?;
 
         Ok(PaginatedData {
             items,
@@ -167,17 +182,21 @@ impl NotificationService {
 
         for (r#type, count) in breakdown_rows {
             match r#type {
-                RepoNotificationType::Like => breakdown.like += count,
-                RepoNotificationType::Comment | RepoNotificationType::Reply => breakdown.comment += count,
-                RepoNotificationType::Follow => breakdown.follow += count,
-                RepoNotificationType::Mention => breakdown.mention += count,
-                RepoNotificationType::System
-                | RepoNotificationType::GroupInvite
-                | RepoNotificationType::GroupApply
-                | RepoNotificationType::GroupKick
-                | RepoNotificationType::GroupQuit
-                | RepoNotificationType::GroupDismiss
-                | RepoNotificationType::GroupAdmin => breakdown.system += count,
+                RepoNotificationType::MomentLike => breakdown.like += count,
+                RepoNotificationType::MomentComment | RepoNotificationType::CommentReply => {
+                    breakdown.comment += count
+                }
+                RepoNotificationType::NewFollower
+                | RepoNotificationType::MutualFollow
+                | RepoNotificationType::FollowRequest
+                | RepoNotificationType::FollowRequestHandled => breakdown.follow += count,
+                RepoNotificationType::MessageMention => breakdown.mention += count,
+                RepoNotificationType::GroupInvite
+                | RepoNotificationType::GroupInviteResponse
+                | RepoNotificationType::GroupApplication
+                | RepoNotificationType::GroupApplicationResponse
+                | RepoNotificationType::GroupAnnouncement
+                | RepoNotificationType::SystemAnnouncement => breakdown.system += count,
             }
         }
 
@@ -209,48 +228,54 @@ impl NotificationService {
             match type_enum {
                 NotificationFilterType::Like => {
                     self.repo
-                        .mark_type_read(user_id, RepoNotificationType::Like)
+                        .mark_type_read(user_id, RepoNotificationType::MomentLike)
                         .await?
                 }
                 NotificationFilterType::Comment => {
                     self.repo
-                        .mark_type_read(user_id, RepoNotificationType::Comment)
+                        .mark_type_read(user_id, RepoNotificationType::MomentComment)
                         .await?;
                     self.repo
-                        .mark_type_read(user_id, RepoNotificationType::Reply)
+                        .mark_type_read(user_id, RepoNotificationType::CommentReply)
                         .await?;
                 }
                 NotificationFilterType::Follow => {
                     self.repo
-                        .mark_type_read(user_id, RepoNotificationType::Follow)
-                        .await?
+                        .mark_type_read(user_id, RepoNotificationType::NewFollower)
+                        .await?;
+                    self.repo
+                        .mark_type_read(user_id, RepoNotificationType::MutualFollow)
+                        .await?;
+                    self.repo
+                        .mark_type_read(user_id, RepoNotificationType::FollowRequest)
+                        .await?;
+                    self.repo
+                        .mark_type_read(user_id, RepoNotificationType::FollowRequestHandled)
+                        .await?;
                 }
                 NotificationFilterType::Mention => {
                     self.repo
-                        .mark_type_read(user_id, RepoNotificationType::Mention)
+                        .mark_type_read(user_id, RepoNotificationType::MessageMention)
                         .await?
                 }
                 NotificationFilterType::System => {
                     self.repo
-                        .mark_type_read(user_id, RepoNotificationType::System)
-                        .await?;
-                    self.repo
                         .mark_type_read(user_id, RepoNotificationType::GroupInvite)
                         .await?;
                     self.repo
-                        .mark_type_read(user_id, RepoNotificationType::GroupApply)
+                        .mark_type_read(user_id, RepoNotificationType::GroupInviteResponse)
                         .await?;
                     self.repo
-                        .mark_type_read(user_id, RepoNotificationType::GroupKick)
+                        .mark_type_read(user_id, RepoNotificationType::GroupApplication)
                         .await?;
                     self.repo
-                        .mark_type_read(user_id, RepoNotificationType::GroupQuit)
+                        .mark_type_read(user_id, RepoNotificationType::GroupApplicationResponse)
                         .await?;
                     self.repo
-                        .mark_type_read(user_id, RepoNotificationType::GroupDismiss)
+                        .mark_type_read(user_id, RepoNotificationType::GroupAnnouncement)
                         .await?;
                     self.repo
-                        .mark_type_read(user_id, RepoNotificationType::GroupAdmin)
+                        .mark_type_read(user_id, RepoNotificationType::SystemAnnouncement)
                         .await?;
                 }
             }
@@ -318,5 +343,32 @@ impl NotificationService {
             .await?;
 
         Ok(())
+    }
+}
+
+fn parse_notification_target_type(
+    raw: Option<String>,
+) -> Result<Option<NotificationTargetType>> {
+    match raw {
+        None => Ok(None),
+        Some(value) => NotificationTargetType::from_str(&value)
+            .map(Some)
+            .map_err(|_| AppError::InternalError("通知数据不合法: target_type 无效".to_string())),
+    }
+}
+
+/// 解析通知目标 ID
+fn parse_notification_target_id(
+    target_type: Option<NotificationTargetType>,
+    target_id: Option<String>,
+) -> Result<Option<StringOrNumberId>> {
+    match (target_type, target_id) {
+        (Some(NotificationTargetType::User), Some(value)) => value
+            .parse::<i64>()
+            .map(|id| Some(StringOrNumberId::Number(id)))
+            .map_err(|_| AppError::InternalError("通知数据不合法: user target_id 非数字".to_string())),
+        (Some(NotificationTargetType::User), None) => Ok(None),
+        (_, Some(value)) => Ok(Some(StringOrNumberId::String(value))),
+        (_, None) => Ok(None),
     }
 }

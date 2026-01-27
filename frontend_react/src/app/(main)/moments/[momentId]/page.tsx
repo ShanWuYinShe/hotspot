@@ -1,74 +1,83 @@
-/**
- * 瞬间详情页面 (Server Component)
- * 服务端获取瞬间详情和评论
- */
+'use client';
 
-import { Suspense } from 'react';
-import { notFound } from 'next/navigation';
-import { serverApi, isServerSuccess, isNotFoundError, getServerErrorMessage } from '@/lib/api/server';
-import { ENDPOINTS } from '@/lib/api/endpoints';
-import { LoadingState } from '@/components/common/loading-state';
-import { MomentDetail } from './moment-detail';
-import { CommentSection } from './comment-section';
-import { ServerErrorCard } from '@/components/common/server-error-card';
-import type { MomentItem, CommentListItem, PaginatedData } from '@/types/api';
+import { useParams, useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
+import { Loader2, ArrowLeft } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
-interface MomentPageProps {
-  params: Promise<{ momentId: string }>;
-}
+import { MomentService } from '@/lib/api/services/moments';
+import { Button } from '@/components/ui/button';
+import { MomentCard } from '@/components/cards/moment-card';
+import { FeedMomentItem } from '@/types/api';
+import { CommentList } from '@/components/comments/comment-list';
 
-async function MomentContent({ momentId }: { momentId: string }) {
-  const [momentRes, commentsRes] = await Promise.all([
-    serverApi.post<MomentItem>(
-      ENDPOINTS.MOMENTS.DETAIL(momentId),
-      { moment_id: momentId },
-      { tags: [`moment-${momentId}`], revalidate: 60 }
-    ),
-    serverApi.post<PaginatedData<CommentListItem>>(
-      ENDPOINTS.MOMENTS.COMMENTS(momentId),
-      { moment_id: momentId, limit: 20 },
-      { tags: [`comments-${momentId}`], revalidate: 30 }
-    ),
-  ]);
+export default function MomentDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const t = useTranslations('moments.detail');
+  const tCommon = useTranslations('common');
+  const momentId = params.momentId as string;
 
-  if (!isServerSuccess(momentRes)) {
-    if (isNotFoundError(momentRes)) {
-      notFound();
-    }
+  const { data: moment, isLoading, error } = useQuery({
+    queryKey: ['moment', momentId],
+    queryFn: async () => {
+      const res = await MomentService.getDetail(momentId);
+      if (res.code !== 0) throw new Error(res.message);
+      return res.data!;
+    },
+  });
+
+  if (isLoading) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <ServerErrorCard
-          title="加载瞬间失败"
-          description={getServerErrorMessage(momentRes)}
-          requestId={momentRes.request_id}
-        />
+      <div className="flex h-[50vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
-  const moment = momentRes.data;
-  const comments = isServerSuccess(commentsRes) ? commentsRes.data?.items ?? [] : [];
-  const commentsPagination = isServerSuccess(commentsRes) ? commentsRes.data?.pagination : undefined;
+  if (error || !moment) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <h2 className="text-xl font-semibold mb-2">{t('notFound')}</h2>
+        <p className="text-muted-foreground mb-4">{tCommon('retry')}</p>
+        <Button onClick={() => router.back()}>{tCommon('back')}</Button>
+      </div>
+    );
+  }
+
+  // Convert MomentCard to FeedMomentItem for reuse of MomentCard component
+  // (In real app, might want separate components or unified type usage)
+  const feedItem: FeedMomentItem = {
+      ...moment,
+      // Map MomentCard specific fields if necessary or ensuring types align
+      is_liked: moment.my_state?.is_liked ?? false,
+      is_favorited: moment.my_state?.is_favorited ?? false,
+      // MomentCard has absolute Location, FeedMomentItem has RelativeLocation
+      // We can adapt or just cast if the UI component handles it.
+      // MomentCard component expects FeedMomentItem.
+      // Location is compatible (RelativeLocation extends Location).
+      // But we need to ensure 'distance' and 'bearing_degrees' are handled gracefully if missing.
+      location: {
+          ...moment.location,
+          distance: 0, // Detail view usually implies we are "there" or distance is less relevant/unknown without reference
+          bearing_degrees: 0
+      }
+  };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <MomentDetail moment={moment} />
-      <CommentSection 
-        momentId={momentId} 
-        initialComments={comments} 
-        commentsCount={moment.comments_count}
-        initialPagination={commentsPagination}
-      />
+    <div className="max-w-2xl mx-auto">
+      <div className="mb-4">
+        <Button variant="ghost" size="sm" onClick={() => router.back()}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          {tCommon('back')}
+        </Button>
+      </div>
+      
+      <MomentCard moment={feedItem} />
+      
+      <div className="mt-8">
+        <CommentList momentId={momentId} />
+      </div>
     </div>
-  );
-}
-
-export default async function MomentPage({ params }: MomentPageProps) {
-  const { momentId } = await params;
-
-  return (
-    <Suspense fallback={<LoadingState text="加载中..." />}>
-      <MomentContent momentId={momentId} />
-    </Suspense>
   );
 }

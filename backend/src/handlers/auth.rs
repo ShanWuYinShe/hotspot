@@ -20,7 +20,7 @@ use crate::{
         },
     },
     error::{AppError, Result},
-    middleware::auth::{AuthenticatedUser, BearerToken},
+    middleware::auth::{AuthenticatedUser, BearerToken, OptionalAuthenticatedUser},
     services::auth_service::ClientType,
     state::AppState,
     utils::validation::Validator,
@@ -342,13 +342,17 @@ pub async fn reset_password(
 
 pub async fn check_status(
     State(state): State<AppState>,
-    user: AuthenticatedUser,
-    BearerToken(token): BearerToken,
+    user: OptionalAuthenticatedUser,
+    headers: axum::http::HeaderMap,
     Json(_req): Json<CheckStatusRequest>,
 ) -> Result<Json<ApiResponse<CheckStatusData>>> {
+    let token = headers
+        .get("Authorization")
+        .and_then(|h| h.to_str().ok())
+        .and_then(|h| h.strip_prefix("Bearer "));
     let response = state
         .auth_service
-        .check_status(user.user_id, &token)
+        .check_status(user.user_id, token)
         .await?;
     Ok(Json(ApiResponse::success(response)))
 }

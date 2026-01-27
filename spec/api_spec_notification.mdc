@@ -10,6 +10,12 @@ alwaysApply: true
 - **Service Namespace**: `notifications`, `subscriptions`, `device_tokens`
 - **Base Path**: `/api/v1/notifications/`, `/api/v1/subscriptions/`, `/api/v1/device_tokens/`
 
+## 契约引用
+
+- 公共基础类型：`@api_spec_common_types.mdc`
+- 错误码：`@api_spec_errors.mdc`
+- WebSocket：`@api_spec_websocket.mdc`
+
 ## 核心类型定义
 
 ```typescript
@@ -22,7 +28,7 @@ interface NotificationItem {
   title?: string;
   content?: string;
   target_type?: NotificationTargetType;
-  target_id?: string | number;
+  target_id?: string;           // 统一为 string（user_id 转为字符串格式）
   reference_id?: string;
   target_text_preview?: string;
   target_media_url?: string;
@@ -95,15 +101,25 @@ interface DeviceTokenItem {
 获取通知列表。
 
 > 聚合所有互动类通知（点赞、评论、关注等）。群组邀请/申请等强业务操作类通知，建议优先使用各业务模块的专用列表接口。
+> `group_announcement_enabled` 仅影响通知中心/推送展示，不影响群聊订阅事件的实时下发。
 
-**映射关系说明**：
-- moment_like: target_id=moment_id(string), reference_id=null
-- moment_comment: target_id=comment_id(string), reference_id=moment_id
-- comment_reply: target_id=reply_id(string), reference_id=moment_id
-- new_follower: target_id=user_id(number), reference_id=null
-- mutual_follow: target_id=user_id(number), reference_id=null
-- group_invite: target_id=invite_id(string), reference_id=group_chat_id
-- system: target_id=announcement_id(string), reference_id=null
+**映射关系说明**（所有 target_id 统一为 string 类型）：
+- moment_like: target_id=moment_id, reference_id=null
+- moment_comment: target_id=comment_id, reference_id=moment_id
+- comment_reply: target_id=reply_id, reference_id=moment_id
+- message_mention: target_id=moment_id 或 comment_id，若为 comment 则 reference_id=moment_id
+- new_follower: target_id=user_id（字符串格式）, reference_id=null
+- mutual_follow: target_id=user_id（字符串格式）, reference_id=null
+- follow_request: target_id=request_id, reference_id=null
+- follow_request_handled: target_id=request_id, reference_id=null
+- group_invite: target_id=invite_id, reference_id=group_chat_id
+- group_invite_response: target_id=invite_id, reference_id=group_chat_id
+- group_application: target_id=application_id, reference_id=group_chat_id
+- group_application_response: target_id=application_id, reference_id=group_chat_id
+- group_announcement: target_id=announcement_id, reference_id=group_chat_id
+- system_announcement: target_id=announcement_id, reference_id=null
+
+WebSocket 仅推送正向互动与系统公告，拒绝/取消等结果在通知列表获取。
 
 **Request**:
 ```typescript
@@ -126,10 +142,10 @@ interface GetNotificationsRequest extends PaginationParams {
 
 标记通知已读。
 
-**标记范围**：
-- 提供 `notification_ids`：标记指定条目
-- 提供 `type`：标记指定类型的所有未读
-- 全空：标记所有未读
+**处理规则**：
+- 提供 `notification_ids`：仅标记指定条目
+- 提供 `type`：标记该类型的全部未读
+- 二者都为空：标记全部未读
 
 **Request**:
 ```typescript
@@ -159,7 +175,7 @@ interface MarkNotificationsReadRequest {
 
 **Request**:
 ```typescript
-type UpdateSubscriptionsRequest = Partial<Subscriptions>;
+interface UpdateSubscriptionsRequest extends Partial<Subscriptions> {}
 ```
 **Response**: `ApiResponse`
 

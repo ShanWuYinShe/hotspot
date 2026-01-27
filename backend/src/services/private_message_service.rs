@@ -419,7 +419,7 @@ impl PrivateMessageService {
             message_id: message.message_id,
             sender_id: user_id,
             target_user_id: other_user_id, // 接收者
-            message_type: message_type,    // Use parsed enum
+            message_type,    // Use parsed enum
             content: event_content,
             reply_to: reply_to_snapshot,
             media,

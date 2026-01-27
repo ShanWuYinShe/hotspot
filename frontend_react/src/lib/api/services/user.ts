@@ -1,287 +1,112 @@
-/**
- * 用户服务
- */
-
-import { post, generateIdempotencyKey } from '../client';
-import { ENDPOINTS } from '../endpoints';
-import type {
-  ApiResponse,
-  PaginatedData,
-  UserItem,
-  UserDetailData,
-  UserStatsData,
-  MyProfileData,
-  UserSettingsData,
-  UpdateProfileRequest,
-  UpdateSettingsRequest,
-  FriendListItem,
-  FollowingItem,
-  FollowerItem,
+import { apiClient } from '@/lib/api/client';
+import { ENDPOINTS } from '@/lib/api/endpoints';
+import {
   BlockedUserItem,
-  GeoPoint,
-  Location,
+  FollowRequestItem,
+  FollowSource,
+  FollowerItem,
+  FollowingItem,
+  FriendItem,
+  MyCard,
+  PaginatedData,
+  Relationship,
+  UserCard,
+  UserInfo,
+  UserSearchItem,
+  UserSettings,
+  UserStats,
+  UserMomentListItem,
+  MomentSearchItem,
+  GroupSearchItem,
 } from '@/types/api';
 
-export interface SearchByKeywordParams {
-  kw: string;
-  reference_point: GeoPoint;
-  limit?: number;
-  cursor?: string;
-}
+export const UserService = {
+  searchByKeyword: (params: { kw: string; cursor?: string; limit?: number; reference_point?: { latitude: number; longitude: number } }) =>
+    apiClient.post<PaginatedData<UserSearchItem>>(ENDPOINTS.USER.SEARCH_BY_KEYWORD, params),
 
-export interface SearchByTagParams {
-  tag: string;
-  reference_point: GeoPoint;
-  limit?: number;
-  cursor?: string;
-}
+  searchByTag: (params: { tag: string; cursor?: string; limit?: number; reference_point?: { latitude: number; longitude: number } }) =>
+    apiClient.post<PaginatedData<UserSearchItem>>(ENDPOINTS.USER.SEARCH_BY_TAG, params),
 
-export interface SearchByLocationParams {
-  reference_point: GeoPoint;
-  radius: number;
-  kw?: string;
-  limit?: number;
-  cursor?: string;
-}
+  searchByLocation: (params: { radius: number; kw?: string; cursor?: string; limit?: number; reference_point?: { latitude: number; longitude: number } }) =>
+    apiClient.post<PaginatedData<UserSearchItem>>(ENDPOINTS.USER.SEARCH_BY_LOCATION, params),
 
-export const userService = {
-  // ============================================================================
-  // 搜索
-  // ============================================================================
+  openTheDoor: (userId: number) =>
+    apiClient.post<UserCard>(ENDPOINTS.USER.OPEN_THE_DOOR, { user_id: userId }),
 
-  /**
-   * 按关键词搜索用户
-   */
-  async searchByKeyword(params: SearchByKeywordParams): Promise<ApiResponse<PaginatedData<UserItem>>> {
-    return post<PaginatedData<UserItem>>(ENDPOINTS.USER.SEARCH_BY_KEYWORD, params, {
-      requireAuth: false,
-    });
-  },
+  relationship: (userId: number) =>
+    apiClient.post<Relationship>(ENDPOINTS.USER.RELATIONSHIP, { user_id: userId }),
 
-  /**
-   * 按标签搜索用户
-   */
-  async searchByTag(params: SearchByTagParams): Promise<ApiResponse<PaginatedData<UserItem>>> {
-    return post<PaginatedData<UserItem>>(ENDPOINTS.USER.SEARCH_BY_TAG, params, {
-      requireAuth: false,
-    });
-  },
+  stats: (userId: number) =>
+    apiClient.post<UserStats>(ENDPOINTS.USER.STATS, { user_id: userId }),
 
-  /**
-   * 按位置搜索用户
-   */
-  async searchByLocation(params: SearchByLocationParams): Promise<ApiResponse<PaginatedData<UserItem>>> {
-    return post<PaginatedData<UserItem>>(ENDPOINTS.USER.SEARCH_BY_LOCATION, params, {
-      requireAuth: false,
-    });
-  },
+  friends: (userId: number, params?: { cursor?: string; limit?: number }) =>
+    apiClient.post<PaginatedData<UserInfo>>(ENDPOINTS.USER.FRIENDS, { user_id: userId, ...params }),
 
-  // ============================================================================
-  // 用户详情
-  // ============================================================================
+  following: (userId: number, params?: { cursor?: string; limit?: number }) =>
+    apiClient.post<PaginatedData<UserInfo>>(ENDPOINTS.USER.FOLLOWING, { user_id: userId, ...params }),
 
-  /**
-   * 获取用户详情
-   */
-  async getDetail(userId: number, referencePoint?: GeoPoint): Promise<ApiResponse<UserDetailData>> {
-    return post<UserDetailData>(
-      ENDPOINTS.USER.DETAIL(userId),
-      {
-        user_id: userId,
-        ...(referencePoint ? { reference_point: referencePoint } : {}),
-      },
-      { requireAuth: false }
-    );
-  },
+  followers: (userId: number, params?: { cursor?: string; limit?: number }) =>
+    apiClient.post<PaginatedData<UserInfo>>(ENDPOINTS.USER.FOLLOWERS, { user_id: userId, ...params }),
 
-  /**
-   * 获取用户统计
-   */
-  async getStats(userId: number): Promise<ApiResponse<UserStatsData>> {
-    return post<UserStatsData>(ENDPOINTS.USER.STATS(userId), { user_id: userId }, { requireAuth: false });
-  },
+  groups: (userId: number, params?: { cursor?: string; limit?: number }) =>
+    apiClient.post<PaginatedData<GroupSearchItem>>(ENDPOINTS.USER.GROUPS, { user_id: userId, ...params }),
 
-  /**
-   * 获取用户好友列表
-   */
-  async getFriends(
-    userId: number,
-    params?: { limit?: number; cursor?: string }
-  ): Promise<ApiResponse<PaginatedData<FriendListItem>>> {
-    return post<PaginatedData<FriendListItem>>(
-      ENDPOINTS.USER.FRIENDS(userId),
-      { user_id: userId, ...(params ?? {}) },
-      { requireAuth: false }
-    );
-  },
+  likedMoments: (userId: number, params?: { cursor?: string; limit?: number }) =>
+    apiClient.post<PaginatedData<MomentSearchItem>>(ENDPOINTS.USER.LIKED_MOMENTS, { user_id: userId, ...params }),
 
-  /**
-   * 获取用户关注列表
-   */
-  async getFollowing(
-    userId: number,
-    params?: { limit?: number; cursor?: string }
-  ): Promise<ApiResponse<PaginatedData<FollowingItem>>> {
-    return post<PaginatedData<FollowingItem>>(
-      ENDPOINTS.USER.FOLLOWING(userId),
-      { user_id: userId, ...(params ?? {}) },
-      { requireAuth: false }
-    );
-  },
+  getProfile: () => apiClient.post<MyCard>(ENDPOINTS.USER.ME_PROFILE),
 
-  /**
-   * 获取用户粉丝列表
-   */
-  async getFollowers(
-    userId: number,
-    params?: { limit?: number; cursor?: string }
-  ): Promise<ApiResponse<PaginatedData<FollowerItem>>> {
-    return post<PaginatedData<FollowerItem>>(
-      ENDPOINTS.USER.FOLLOWERS(userId),
-      { user_id: userId, ...(params ?? {}) },
-      { requireAuth: false }
-    );
-  },
+  updateProfile: (data: Partial<MyCard>) =>
+    apiClient.post<MyCard>(ENDPOINTS.USER.ME_PROFILE_UPDATE, data),
 
-  // ============================================================================
-  // 当前用户
-  // ============================================================================
+  updateLocation: (location: { latitude: number; longitude: number; location_name: string }) =>
+    apiClient.post(ENDPOINTS.USER.ME_LOCATION, { location }),
 
-  /**
-   * 获取当前用户资料
-   */
-  async getMyProfile(): Promise<ApiResponse<MyProfileData>> {
-    return post<MyProfileData>(ENDPOINTS.USER.ME_PROFILE, {});
-  },
+  upgrade: (data: { password: string; verify_token?: string }) =>
+    apiClient.post(ENDPOINTS.USER.ME_UPGRADE, data),
 
-  /**
-   * 更新当前用户资料
-   */
-  async updateProfile(data: UpdateProfileRequest): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.USER.ME_PROFILE, data, {
-      idempotencyKey: generateIdempotencyKey(),
-    });
-  },
+  myStats: () => apiClient.post<UserStats>(ENDPOINTS.USER.ME_STATS),
 
-  /**
-   * 更新当前用户位置
-   */
-  async updateLocation(location: Location): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.USER.ME_LOCATION, { location }, {
-      idempotencyKey: generateIdempotencyKey(),
-    });
-  },
+  mySettings: () => apiClient.post<UserSettings>(ENDPOINTS.USER.ME_SETTINGS),
 
-  /**
-   * 获取当前用户设置
-   */
-  async getMySettings(): Promise<ApiResponse<UserSettingsData>> {
-    return post<UserSettingsData>(ENDPOINTS.USER.ME_SETTINGS, {});
-  },
+  updateMySettings: (data: Partial<UserSettings>) =>
+    apiClient.post<UserSettings>(ENDPOINTS.USER.ME_SETTINGS_UPDATE, data),
 
-  /**
-   * 更新当前用户设置
-   */
-  async updateSettings(data: UpdateSettingsRequest): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.USER.ME_SETTINGS, data, {
-      idempotencyKey: generateIdempotencyKey(),
-    });
-  },
+  deleteAccount: (data: { password: string }) => apiClient.post(ENDPOINTS.USER.ME_DELETE, data),
 
-  /**
-   * 获取我的好友列表
-   */
-  async getMyFriends(params?: { limit?: number; cursor?: string }): Promise<ApiResponse<PaginatedData<FriendListItem>>> {
-    return post<PaginatedData<FriendListItem>>(ENDPOINTS.USER.ME_FRIENDS, params ?? {});
-  },
+  follow: (data: { user_id: number; source?: FollowSource; source_moment_id?: string }) =>
+    apiClient.post(ENDPOINTS.USER.ME_FOLLOW, data),
 
-  /**
-   * 获取我的关注列表
-   */
-  async getMyFollowing(params?: { limit?: number; cursor?: string }): Promise<ApiResponse<PaginatedData<FollowingItem>>> {
-    return post<PaginatedData<FollowingItem>>(ENDPOINTS.USER.ME_FOLLOWING, params ?? {});
-  },
+  unfollow: (userId: number) => apiClient.post(ENDPOINTS.USER.ME_UNFOLLOW, { user_id: userId }),
 
-  /**
-   * 获取我的粉丝列表
-   */
-  async getMyFollowers(params?: { limit?: number; cursor?: string }): Promise<ApiResponse<PaginatedData<FollowerItem>>> {
-    return post<PaginatedData<FollowerItem>>(ENDPOINTS.USER.ME_FOLLOWERS, params ?? {});
-  },
+  block: (userId: number) => apiClient.post(ENDPOINTS.USER.ME_BLOCK, { user_id: userId }),
 
-  /**
-   * 获取我的黑名单
-   */
-  async getMyBlocked(params?: { limit?: number; cursor?: string }): Promise<ApiResponse<PaginatedData<BlockedUserItem>>> {
-    return post<PaginatedData<BlockedUserItem>>(ENDPOINTS.USER.ME_BLOCKED, params ?? {});
-  },
+  unblock: (userId: number) => apiClient.post(ENDPOINTS.USER.ME_UNBLOCK, { user_id: userId }),
 
-  // ============================================================================
-  // 关系操作
-  // ============================================================================
+  myFriends: (params?: { cursor?: string; limit?: number }) =>
+    apiClient.post<PaginatedData<FriendItem>>(ENDPOINTS.USER.ME_FRIENDS, params ?? {}),
 
-  /**
-   * 关注用户
-   */
-  async follow(userId: number): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.USER.FOLLOW(userId), { user_id: userId }, {
-      idempotencyKey: generateIdempotencyKey(),
-    });
-  },
+  myFollowing: (params?: { cursor?: string; limit?: number }) =>
+    apiClient.post<PaginatedData<FollowingItem>>(ENDPOINTS.USER.ME_FOLLOWING, params ?? {}),
 
-  /**
-   * 取消关注
-   */
-  async unfollow(userId: number): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.USER.UNFOLLOW(userId), { user_id: userId }, {
-      idempotencyKey: generateIdempotencyKey(),
-    });
-  },
+  myFollowers: (params?: { cursor?: string; limit?: number }) =>
+    apiClient.post<PaginatedData<FollowerItem>>(ENDPOINTS.USER.ME_FOLLOWERS, params ?? {}),
 
-  /**
-   * 拉黑用户
-   */
-  async block(userId: number, reason?: string): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.USER.BLOCK(userId), { user_id: userId, reason }, {
-      idempotencyKey: generateIdempotencyKey(),
-    });
-  },
+  myFollowRequests: (params?: { cursor?: string; limit?: number }) =>
+    apiClient.post<PaginatedData<FollowRequestItem>>(ENDPOINTS.USER.ME_FOLLOW_REQUESTS, params ?? {}),
 
-  /**
-   * 取消拉黑
-   */
-  async unblock(userId: number): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.USER.UNBLOCK(userId), { user_id: userId }, {
-      idempotencyKey: generateIdempotencyKey(),
-    });
-  },
+  handleFollowRequest: (data: { request_id: string; action: 'accept' | 'reject' }) =>
+    apiClient.post(ENDPOINTS.USER.ME_HANDLE_FOLLOW_REQUEST, data),
 
-  /**
-   * 设置备注
-   */
-  async setRemark(userId: number, remark?: string): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.USER.REMARK(userId), { user_id: userId, remark }, {
-      idempotencyKey: generateIdempotencyKey(),
-    });
-  },
+  myBlocked: (params?: { cursor?: string; limit?: number }) =>
+    apiClient.post<PaginatedData<BlockedUserItem>>(ENDPOINTS.USER.ME_BLOCKED, params ?? {}),
 
-  // ============================================================================
-  // 账号操作
-  // ============================================================================
+  remark: (data: { user_id: number; remark: string }) =>
+    apiClient.post(ENDPOINTS.USER.ME_REMARK, data),
 
-  /**
-   * 升级账号（访客升级为正式用户）
-   */
-  async upgradeAccount(login_id: string, password: string): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.USER.UPGRADE, { login_id, password }, {
-      idempotencyKey: generateIdempotencyKey(),
-    });
-  },
-
-  /**
-   * 删除账号
-   */
-  async deleteAccount(confirmation: string): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.USER.DELETE, { confirmation });
-  },
+  userMoments: (userId: number, params?: { cursor?: string; limit?: number }) =>
+    apiClient.post<PaginatedData<UserMomentListItem>>(ENDPOINTS.MOMENTS.USER_MOMENTS, {
+      user_id: userId,
+      ...params,
+    }),
 };

@@ -10,20 +10,34 @@ alwaysApply: true
 - **Service Namespace**: `feed`, `tags`
 - **Base Path**: `/api/v1/feed/`, `/api/v1/tags/`
 
+## 契约引用
+
+- 公共基础类型：`@api_spec_common_types.mdc`
+- 错误码：`@api_spec_errors.mdc`
+
 ## 核心类型定义
 
 ```typescript
-// FeedGroupItem: 继承 GroupInfo（定义于 api_spec_common_types.mdc）
+// 推荐理由类型（心理学优化：让用户了解为什么推荐）
+type RecommendationType = 'friend_liked' | 'nearby' | 'trending' | 'following' | 'tag_match';
+
+interface RecommendationContext {
+  type: RecommendationType;
+  // 社交证明（仅 friend_liked 类型时存在）
+  friends_preview?: UserInfo[];  // 最多2个点赞的好友
+}
+
+// FeedGroupItem: 继承 GroupInfo（定义于 @api_spec_common_types.mdc）
 interface FeedGroupItem extends GroupInfo {
   description?: string;
   tags?: string[];
   has_password: boolean;
   location: RelativeLocation;
   friends_in_group?: number;  // 好友中有多少在该群组内
-  my_state?: MyGroupState;    // 引用 api_spec_common_types.mdc
+  my_state?: MyGroupState;    // 引用 @api_spec_common_types.mdc
 }
 
-// FeedUserItem: 继承 UserInfo（定义于 api_spec_common_types.mdc）
+// FeedUserItem: 继承 UserInfo（定义于 @api_spec_common_types.mdc）
 interface FeedUserItem extends UserInfo {
   bio?: string;
   tags?: string[];
@@ -90,8 +104,9 @@ interface TagSuggestItem {
 ## 信息流 API
 
 **契约约束**：
-- 信息流接口的请求/响应字段语义以本节类型定义为准
-- 是否需要传递位置参数：以该端点的 request 类型字段为唯一依据
+- 信息流接口依赖登录态，未携带有效 token 返回 `10102`
+- 响应字段以各端点类型定义为准
+- 位置参数是否需要传递，以该端点的 Request 类型为准
 
 ### POST /api/v1/feed/moments
 

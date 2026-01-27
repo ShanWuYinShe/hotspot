@@ -1,91 +1,185 @@
-/**
- * 群组详情页面 (Server Component)
- * 服务端获取群组详情
- */
+'use client';
 
-import { Suspense } from 'react';
-import { notFound } from 'next/navigation';
-import { serverApi, isServerSuccess, isNotFoundError, getServerErrorMessage } from '@/lib/api/server';
-import { ENDPOINTS } from '@/lib/api/endpoints';
-import { LoadingState } from '@/components/common/loading-state';
-import { GroupHeader } from './group-header';
-import { GroupMembers } from './group-members';
-import { GroupAnnouncements } from './group-announcements';
-import { ServerErrorCard } from '@/components/common/server-error-card';
-import type { GroupDetailData, GroupMemberItem, GroupAnnouncementItem, PaginatedData } from '@/types/api';
+import { useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 
-interface GroupPageProps {
-  params: Promise<{ groupId: string }>;
-}
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { GroupService } from '@/lib/api/services/groups';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
 
-async function GroupContent({ groupId }: { groupId: string }) {
-  const [groupRes, membersRes, announcementsRes] = await Promise.all([
-    serverApi.post<GroupDetailData>(
-      ENDPOINTS.GROUP_CHATS.DETAIL(groupId),
-      { group_chat_id: groupId },
-      { tags: [`group-${groupId}`], revalidate: 60 }
-    ),
-    serverApi.post<PaginatedData<GroupMemberItem>>(
-      ENDPOINTS.GROUP_CHATS.MEMBERS(groupId),
-      { group_chat_id: groupId, limit: 20 },
-      { tags: [`group-${groupId}-members`], revalidate: 60 }
-    ),
-    serverApi.post<PaginatedData<GroupAnnouncementItem>>(
-      ENDPOINTS.GROUP_CHATS.ANNOUNCEMENTS(groupId),
-      { group_chat_id: groupId, limit: 10 },
-      { tags: [`group-${groupId}-announcements`], revalidate: 60 }
-    ),
-  ]);
+export default function GroupDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const groupId = params.groupId as string;
+  const t = useTranslations('groups');
+  const tCommon = useTranslations('common');
+  const [password, setPassword] = useState('');
+  const [passwordOpen, setPasswordOpen] = useState(false);
 
-  if (!isServerSuccess(groupRes)) {
-    if (isNotFoundError(groupRes)) {
-      notFound();
+  const { data: group } = useQuery({
+    queryKey: ['group', groupId],
+    queryFn: async () => {
+      const res = await GroupService.openTheDoor(groupId);
+      if (res.code !== 0) throw new Error(res.message);
+      return res.data!;
+    },
+    enabled: !!groupId,
+  });
+
+  const { data: settings } = useQuery({
+    queryKey: ['group-settings', groupId],
+    queryFn: async () => {
+      const res = await GroupService.settings(groupId);
+      if (res.code !== 0) throw new Error(res.message);
+      return res.data!;
+    },
+    enabled: !!groupId,
+  });
+
+  const {
+    data: announcementsData,
+    fetchNextPage: fetchNextAnnouncements,
+    hasNextPage: hasNextAnnouncements,
+    isFetchingNextPage: isFetchingAnnouncements,
+  } = useInfiniteQuery({
+    queryKey: ['group-announcements', groupId],
+    queryFn: async ({ pageParam }) => {
+      const res = await GroupService.announcements(groupId, { cursor: pageParam as string | undefined });
+      if (res.code !== 0) throw new Error(res.message);
+      return res.data!;
+    },
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.pagination.next_cursor,
+    enabled: !!groupId,
+  });
+
+  const { ref: announcementsRef } = useInfiniteScroll({
+    hasNextPage: hasNextAnnouncements,
+    isFetchingNextPage: isFetchingAnnouncements,
+    fetchNextPage: fetchNextAnnouncements,
+  });
+
+  const announcements = announcementsData?.pages.flatMap((page) => page.items) ?? [];
+
+  const handleJoin = async () => {
+    if (!settings) {
+      return;
     }
-    return (
-      <div className="max-w-4xl mx-auto">
-        <ServerErrorCard
-          title="加载群组失败"
-          description={getServerErrorMessage(groupRes)}
-          requestId={groupRes.request_id}
-        />
-      </div>
-    );
-  }
+    if (settings.settings.join_method === 'approval') {
+      const res = await GroupService.apply({ group_chat_id: groupId });
+      if (res.code === 0) {
+        toast.success(tCommon('submit'));
+      } else {
+        toast.error(res.message || tCommon('retry'));
+      }
+      return;
+    }
+    if (settings.has_password) {
+      setPasswordOpen(true);
+      return;
+    }
+    const res = await GroupService.join({ group_chat_id: groupId });
+    if (res.code === 0) {
+      toast.success(tCommon('submit'));
+    } else {
+      toast.error(res.message || tCommon('retry'));
+    }
+  };
 
-  const group = groupRes.data;
-  const members = isServerSuccess(membersRes) ? membersRes.data?.items ?? [] : [];
-  const announcements = isServerSuccess(announcementsRes) ? announcementsRes.data?.items ?? [] : [];
+  const handleJoinWithPassword = async () => {
+    const res = await GroupService.join({ group_chat_id: groupId, password });
+    if (res.code === 0) {
+      toast.success(tCommon('submit'));
+      setPasswordOpen(false);
+    } else {
+      toast.error(res.message || tCommon('retry'));
+    }
+  };
+
+  const handleLeave = async () => {
+    const res = await GroupService.leave({ group_chat_id: groupId });
+    if (res.code === 0) {
+      toast.success(tCommon('submit'));
+      router.push('/groups');
+    } else {
+      toast.error(res.message || tCommon('retry'));
+    }
+  };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <GroupHeader group={group} />
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 space-y-6">
-          <GroupAnnouncements 
-            groupId={groupId} 
-            announcements={announcements}
-            isAdmin={group.my_role === 'owner' || group.my_role === 'admin'}
-          />
-        </div>
-        <div>
-          <GroupMembers 
-            groupId={groupId} 
-            members={members}
-            totalCount={group.members_count}
-          />
-        </div>
+    <div className="max-w-3xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">{group?.name ?? t('title')}</h1>
+        {group?.my_state?.is_joined ? (
+          <Button variant="outline" onClick={handleLeave}>
+            {t('leave')}
+          </Button>
+        ) : (
+          <Button onClick={handleJoin}>{t('join')}</Button>
+        )}
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('announcements')}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <p className="text-sm text-muted-foreground">{group?.description ?? tCommon('empty')}</p>
+          {group?.tags?.length ? (
+            <div className="flex flex-wrap gap-2">
+              {group.tags.map((tag) => (
+                <span key={tag} className="rounded-full bg-muted px-3 py-1 text-xs">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          ) : null}
+          {announcements.length > 0 ? (
+            <div className="space-y-2 pt-2">
+              {announcements.map((item) => (
+                <div key={item.announcement_id} className="rounded-lg border p-3 text-sm">
+                  <div className="font-semibold">{item.title}</div>
+                  <div className="text-muted-foreground">{item.content}</div>
+                </div>
+              ))}
+              <div ref={announcementsRef} className="flex justify-center p-2">
+                {isFetchingAnnouncements ? (
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-t-transparent border-current" />
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">{tCommon('empty')}</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="flex flex-wrap gap-3">
+        <Button variant="outline" onClick={() => router.push(`/groups/${groupId}/members`)}>
+          {t('members')}
+        </Button>
+        <Button variant="outline" onClick={() => router.push(`/groups/${groupId}/settings`)}>
+          {t('settings')}
+        </Button>
+      </div>
+
+      <Dialog open={passwordOpen} onOpenChange={setPasswordOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('password')}</DialogTitle>
+          </DialogHeader>
+          <Input value={password} onChange={(event) => setPassword(event.target.value)} placeholder={t('enterPassword')} />
+          <DialogFooter>
+            <Button onClick={handleJoinWithPassword}>{tCommon('confirm')}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
-  );
-}
-
-export default async function GroupPage({ params }: GroupPageProps) {
-  const { groupId } = await params;
-
-  return (
-    <Suspense fallback={<LoadingState text="加载中..." />}>
-      <GroupContent groupId={groupId} />
-    </Suspense>
   );
 }

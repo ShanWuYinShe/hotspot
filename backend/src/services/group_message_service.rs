@@ -285,7 +285,7 @@ impl GroupMessageService {
             message_id: created.message_id,
             group_chat_id,
             sender_id: user_id,
-            message_type: message_type, // Use parsed enum
+            message_type, // Use parsed enum
             content: event_content,
             reply_to: reply_to_snapshot,
             mentions,

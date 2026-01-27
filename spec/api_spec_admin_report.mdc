@@ -10,11 +10,14 @@ alwaysApply: true
 - **Service Namespace**: `admin.reports`
 - **Base Path**: `/api/v1/admin/reports/`
 
+## 契约引用
+
+- 公共基础类型：`@api_spec_common_types.mdc`
+- 错误码：`@api_spec_errors.mdc`
+
 ## 核心类型定义
 
-```typescript
-// 复用 ReportItem（见 api_spec_report.mdc）
-```
+本模块复用 `ReportItem`（见 `@api_spec_report.mdc`）。
 
 ## 错误码说明
 

@@ -8,7 +8,7 @@ alwaysApply: true
 ## 权威边界与冲突处理
 
 - 本文件定义 HotSpot API 设计的基础原则与通用类型。
-- 若本文件与任何工程实现、示例代码、其它 doc/rule 文件产生冲突，以本文件为准。
+- 若本文件与任何工程实现或其它 doc/rule 文件产生冲突，以本文件为准。
 - 禁止使用数字章节号（如“第X章/第X节”）来引用本文件内容；引用时仅使用小节标题或锚点标题，以降低维护成本。
 
 ## 文档说明
@@ -16,7 +16,7 @@ alwaysApply: true
 本文件定义 **全局契约**：路径设计与 Token 语义、通用类型、分页/游标、幂等性与隐私控制等。
 
 相关文件：
-- 端点定义：`@api_spec_endpoints.mdc`
+- 端点定义：`@api_spec.mdc`（索引入口，详见各模块条目）
 - 错误码：`@api_spec_errors.mdc`
 - WebSocket：`@api_spec_websocket.mdc`
 
@@ -32,17 +32,18 @@ alwaysApply: true
 必须：
 - 所有 HTTP 响应必须使用统一 envelope：`ApiResponse<T>`
 - 业务成功与否只取决于 `ApiResponse.code`（`code === 0` 才是成功），禁止以 HTTP 200/非200 判断业务成功
+- HotSpot 对外 HTTP API 仅允许使用 POST；对象存储直传的 PUT/POST 仅发生在存储服务域名上，不属于 HotSpot API 契约
 - `cursor` 为不透明字符串：客户端只透传；服务端若需解析/编码，必须由后端负责
 - `distance/bearing_degrees` 等地理计算结果必须由后端返回，客户端禁止本地计算用于排序
 - 任意字段的可空性必须与类型定义一致
 - 所有 ID 字段必须使用显式 `xxx_id` 命名（禁止裸 `id`）
 - 所有 `xxx_id` 字段类型：`user_id` 为 safe integer，其它业务 ID 为 UUID string
-- 幂等性：写操作必须支持 `Idempotency-Key`
+- 幂等性：写操作必须支持 `Idempotency-Key`；对可能重复提交或重试的操作客户端必须携带；未显式标注 MUST 的写操作客户端可选但服务端需接受
 
 禁止：
 - 禁止在客户端生成或拼装 `cursor`
 - 禁止返回未定义在本文件中的字段
-- 禁止在示例代码或文档中硬编码与本文件不一致的端点/字段名/错误码
+- 禁止在任何文档中硬编码与本文件不一致的端点/字段名/错误码
 
 ## 路径设计与 Token 语义（契约级）
 
@@ -76,7 +77,7 @@ alwaysApply: true
 
 | 场景 | Token 要求 | 响应差异 |
 |-----|----------|---------|
-| 查询类（搜索/详情/列表） | **可选** | 有 Token 时返回 `@auth-only` 字段 |
+| 查询类（搜索/详情/列表） | **可选** | 若类型定义含 `@auth-only` 字段，登录态返回这些字段 |
 | 写操作（create/update/delete） | **必须** | 缺少 token 返回 `10102` |
 | 互动操作（like/follow/block 等） | **必须** | 缺少 token 返回 `10102` |
 | `*/me/*` 路径（如 `/api/v1/user/me/*`） | **必须** | 当前用户专属数据 |
@@ -85,20 +86,7 @@ alwaysApply: true
 
 ### @auth-only 字段标注机制
 
-在类型定义中，使用 `// @auth-only` 注释标记仅登录态返回的字段：
-
-```typescript
-interface UserCard {
-  // === 公共字段（始终返回）===
-  user_id: number;
-  nickname: string;
-  avatar_url?: string;
-  // ...
-  
-  // === @auth-only 以下字段仅登录态返回 ===
-  relation?: Relationship;
-}
-```
+在类型定义中，使用 `// @auth-only` 注释标记仅登录态返回的字段。
 
 **客户端处理**：
 - 未登录时：`@auth-only` 字段不存在于响应中（`undefined`）
@@ -232,7 +220,10 @@ type TagTimeframe = 'daily' | 'weekly' | 'monthly';
 type NotificationFilterType = 'like' | 'comment' | 'follow' | 'system' | 'mention';
 type NotificationType = 
   | 'moment_like' | 'moment_comment' | 'comment_reply'
-  | 'new_follower' | 'mutual_follow' 
+  | 'new_follower' | 'mutual_follow' | 'follow_request' | 'follow_request_handled'
+  | 'group_invite' | 'group_invite_response'
+  | 'group_application' | 'group_application_response'
+  | 'group_announcement'
   | 'system_announcement' | 'message_mention';
 type NotificationTargetType = 'moment' | 'comment' | 'user' | 'group' | 'web';
 
@@ -262,10 +253,15 @@ type MapItemType = 'cluster' | 'user' | 'group' | 'moment';
 
 本系统区分两种位置：
 
-- **用户真实位置**：通过 `POST /api/v1/user/me/location` 更新；属于用户隐私数据，用于“被其他人发现我/展示我的大致位置”。
+- **用户真实位置**：通过“更新我的位置”接口更新；属于用户隐私数据，用于“被其他人发现我/展示我的大致位置”。
 - **浏览锚点位置（reference_point）**：作为请求参数传入；用于“我当前在看哪里/以哪里为基准计算距离”。
 
 核心原则：所有 `distance/bearing_degrees` 等距离结果必须由服务端基于 `reference_point` 计算并返回；客户端不得自行计算用于排序。
+
+**隐私与精度策略（契约级）**：
+- 服务端可基于隐私设置、关系与登录态对位置/距离做降精度或匿名化处理
+- 客户端只用于展示，不得将距离/方位作为精确导航或本地排序依据
+- 为防止位置反推，服务端可对短时间内的查询结果做稳定或随机化处理
 
 ```typescript
 // 基础坐标点 (经纬度)
@@ -280,7 +276,7 @@ interface Location extends GeoPoint {
 }
 
 // 相对位置 (用于搜索结果/附近推荐)
-// distance 和 bearing_degrees 基于 reference_point 计算
+// distance 和 bearing_degrees 基于 reference_point 计算，且可能被服务端降精度
 interface RelativeLocation extends Location {
   distance: number;        // 距离浏览锚点的距离 (米)
   bearing_degrees: number; // 相对浏览锚点的方位角 [0, 360)
@@ -373,7 +369,7 @@ interface MessageLocation {
 
 ### 用户 (User)
 
-**说明**：每个类型都是独立完整的，不使用继承和类型操作符，保持清晰简洁。
+**说明**：类型定义以显式字段为准；文档允许使用 `extends` 表达字段复用，但契约以展开后的字段集合为准。
 
 **UserInfo**: 用户基础信息（用于嵌套在其他对象中）
 ```typescript
@@ -421,6 +417,14 @@ interface UserCard extends UserInfo {
   
   // === @auth-only 以下字段仅登录态返回 ===
   relation?: Relationship;
+  
+  // 社交上下文（心理学优化：展示与当前用户的共同点，增强连接感）
+  social_context?: {
+    mutual_friends_count: number;       // 共同好友数
+    mutual_friends_preview?: UserInfo[];  // 前2-3个共同好友
+    common_groups_count?: number;       // 共同群组数
+    common_tags?: string[];             // 共同兴趣标签
+  };
 }
 ```
 
@@ -597,7 +601,7 @@ interface UserMomentListItem extends MomentBase {
 
 说明：此类型不包含 user 字段，因为在"查看某个用户的瞬间列表"场景下，user 信息已知且冗余。
 
-**FeedMomentItem**: 信息流瞬间列表项（继承 MomentBase，带互动状态）
+**FeedMomentItem**: 信息流瞬间列表项（继承 MomentBase，带互动状态和推荐理由）
 ```typescript
 interface FeedMomentItem extends MomentBase {
   user: UserInfo;
@@ -606,8 +610,14 @@ interface FeedMomentItem extends MomentBase {
   // 互动状态（内联，因为 Feed 端点必然返回互动状态）
   is_liked: boolean;
   is_favorited: boolean;
+  
+  // 推荐理由（可选，让用户了解为什么看到这条内容）
+  // 类型定义见 @api_spec_feed.mdc
+  recommendation?: RecommendationContext;
 }
 ```
+
+**心理学设计说明**：`recommendation` 字段通过展示推荐理由（如"你的好友觉得很赞"、"附近热门"）让用户感到内容被精心筛选，增强社交认同感。
 
 ### 评论 (Comment)
 
@@ -752,399 +762,29 @@ interface MapRenderItem {
 
 ### 分页与排序约定
 
-本节统一说明所有列表类 API 的分页与排序规则。
+本节只描述“契约级”规则，不包含客户端实现建议。
 
-#### 分页机制
+#### 分页机制（契约级）
 
-**Cursor-based Pagination（游标分页）**：
-- 所有列表 API 使用基于游标的分页，而非 offset-based
-- `cursor` 是**不透明字符串**（opaque string），客户端禁止解析/生成
-- 服务端负责 cursor 的编码/解码与有效性校验
+- 所有列表接口使用游标分页，禁止 offset 分页。
+- `cursor` 为**完全不透明字符串**（客户端禁止解析/构造/修改，格式可能随版本变化）。
+- 统一使用 `PaginationParams` 与 `PaginatedData<T>`（类型定义见本文“分页与元数据”小节）。
 
-**分页参数**：
-```typescript
-interface PaginationParams {
-  limit?: number;  // 每页数量，默认 20，最大 100
-  cursor?: string; // 游标（首次请求省略，后续请求使用 next_cursor）
-}
-```
+#### 排序语义（契约级）
 
-**分页响应**：
-```typescript
-interface PaginatedData<T> {
-  items: T[];                    // 当前页数据
-  pagination: {
-    has_more: boolean;           // 是否有更多数据
-    next_cursor?: string;        // 下一页游标（has_more=true 时存在）
-  };
-}
-```
+- 每个列表接口必须声明默认排序主序、稳定 tie-breaker、以及一致性级别（强一致/弱一致）。
+- 时间类列表必须提供稳定 tie-breaker（使用资源主键）。
+- 地理相关列表必须以服务端计算的 `distance` 作为主序，客户端不得本地计算或重排。
 
-**使用流程**：
-```typescript
-// 第一页（无 cursor）
-POST /api/v1/xxx { limit: 20 }
-→ { items: [...], pagination: { has_more: true, next_cursor: "abc123" } }
+#### 去重（契约级）
 
-// 第二页（使用 next_cursor）
-POST /api/v1/xxx { limit: 20, cursor: "abc123" }
-→ { items: [...], pagination: { has_more: true, next_cursor: "def456" } }
+- 客户端必须按资源主键去重（用户：`user_id`；群组：`group_chat_id`；瞬间：`moment_id`；评论：`comment_id`；消息：`message_id`；通知：`notification_id`）。
 
-// 最后一页
-POST /api/v1/xxx { limit: 20, cursor: "xyz789" }
-→ { items: [...], pagination: { has_more: false } }
-```
+### 隐私与可见性（契约级）
 
-#### 排序规则分类
-
-根据业务场景，排序规则分为三类：
-
-##### 时间倒序（Time DESC）- 最常见
-
-**适用场景**：消息历史、评论列表、通知列表、私聊列表等
-
-**排序基准**：`created_at DESC` 或 `sent_at DESC`（最新在前）
-
-**稳定性要求**：
-- **强一致**：同一 `cursor` 会话内必须保持排序一致
-- **Tie-breaker**：当时间戳相同时，使用主键（id）作为稳定排序
-- **并发处理**：客户端必须按 `xxx_id` 去重（可能出现重复/缺失）
-
-**示例**：
-- 私聊消息历史：`sent_at DESC` + `message_id ASC` (tie-breaker)
-- 评论列表：`created_at DESC` + `comment_id ASC` (tie-breaker)
-- 通知列表：`created_at DESC` + `notification_id ASC` (tie-breaker)
-
-##### 时间正序（Time ASC）- 特殊场景
-
-**适用场景**：评论回复列表（对话阅读顺序）
-
-**排序基准**：`created_at ASC`（最早在前）
-
-**说明**：便于按时间顺序阅读对话，早期回复在前
-
-##### 距离优先（Distance）- 地理相关
-
-**适用场景**：按位置搜索（用户/群组/瞬间）
-
-**排序基准**：`distance ASC, created_at DESC` (tie-breaker)
-
-**要求**：
-- `distance` 必须由服务端计算（基于 `reference_point`）
-- 客户端禁止本地计算距离用于排序
-- 距离相近时，使用时间戳作为 tie-breaker
-
-##### 相关性优先（Relevance）- 搜索场景
-
-**适用场景**：关键词搜索、标签搜索
-
-**排序基准**：`relevance_score DESC, created_at DESC` (tie-breaker)
-
-**弱一致性**：
-- 允许跨会话排序波动（推荐算法更新）
-- 同一 `cursor` 会话内必须保持基准一致
-- 客户端按 `xxx_id` 去重处理重复项
-
-##### 综合推荐（Recommendation）- 信息流
-
-**适用场景**：信息流（`/feed/**`）、推荐列表
-
-**排序基准**：多因子综合（热度、时间、社交关系、个性化）
-
-**弱一致性**：
-- **允许排序波动**：推荐结果可能随时间变化
-- **强去重要求**：客户端必须按 `xxx_id` 严格去重
-- **cursor 有效期**：建议服务端设置 cursor 短期有效（如5分钟）
-
-#### Cursor 稳定性与一致性
-
-**Cursor 会话约束**：
-- **同一会话**：使用同一个 `cursor` 链（首次 → next_cursor → next_cursor...）
-- **跨会话**：重新开始分页（不使用旧 cursor）
-
-**一致性级别**：
-
-| 场景类型 | 一致性要求 | 排序稳定性 | 去重要求 |
-|---------|-----------|-----------|---------|
-| 消息历史 | 强一致 | 强稳定（时间+ID） | 必须去重 |
-| 评论列表 | 强一致 | 强稳定（时间+ID） | 必须去重 |
-| 搜索结果 | 弱一致 | 弱稳定（允许波动） | 必须去重 |
-| 信息流 | 弱一致 | 允许波动 | 严格去重 |
-| 推荐列表 | 弱一致 | 允许波动 | 严格去重 |
-
-**Cursor 过期处理**：
-- 服务端返回 `10007`（游标无效或已过期）
-- 客户端应重新开始分页（cursor 置空）
-
-#### 去重策略
-
-**为什么需要去重**：
-- 并发写入可能导致 cursor 锚点漂移
-- 推荐算法更新可能导致结果重复
-- 多端同步可能导致时间戳冲突
-
-**去重方法**：
-- 客户端维护已加载的 ID 集合（Set）
-- 收到新数据时，过滤掉已存在的 ID
-- 仅将未加载过的数据追加到显示列表
-
-**去重字段**：
-- 用户：`user_id`
-- 群组：`group_chat_id`
-- 瞬间：`moment_id`
-- 评论：`comment_id`
-- 消息：`message_id`
-- 通知：`notification_id`
-
-#### 排序语义声明规范
-
-每个列表 API 应在文档中明确声明排序语义：
-
-**声明模板**：
-```markdown
-排序语义（契约级）：
-- 默认按 [排序字段] [ASC/DESC] 排序（[业务含义]）
-- Tie-breaker：[次要排序字段]（用于生成稳定 cursor）
-- 一致性：[强一致/弱一致]
-- 稳定性：同一 cursor 会话内必须保持基准一致；跨会话[允许/禁止]波动
-```
-
-**示例**：
-```markdown
-排序语义（契约级）：
-- 默认按 sent_at 时间倒序（最新消息在前）
-- Tie-breaker：message_id ASC（确保相同时间戳的消息顺序稳定）
-- 一致性：强一致
-- 稳定性：同一 cursor 会话内必须保持基准一致；跨会话禁止波动
-```
-
-#### 客户端最佳实践
-
-1. **无限滚动加载**：
-   - 检查加载状态（避免重复请求）
-   - 使用 `next_cursor` 作为下一页参数（首次为空）
-   - 去重后追加到显示列表
-   - 更新 `hasMore` 和 `nextCursor` 状态
-
-2. **下拉刷新**：
-   - 清空去重集合和 cursor
-   - 清空显示列表
-   - 重新加载第一页数据
-
-3. **Cursor 过期处理**：
-   - 收到 `10007` 错误码时，自动触发刷新
-   - 重置 cursor 后重新加载
-
-### 客户端数据提交
-- **只提交意图**：如 `join_group` (intent)，而不是 `insert_member_row` (db action).
-- **不提交计算字段**：如 `distance`, `is_friend` 等由后端计算.
-
-### 隐私控制机制（详细说明）
-
-本节详细说明用户隐私设置的语义、优先级和判定逻辑。
-
-#### 隐私设置字段概览
-
-用户隐私设置通过 `UserSettings` 定义（共14个字段），分为三类：
-
-**1. 隐私可见性设置（PrivacyLevel类型：public/friends/private）**
-- `privacy_level`: 全局默认隐私级别
-- `friends_visible`: 好友列表可见性
-- `following_visible`: 关注列表可见性
-- `followers_visible`: 粉丝列表可见性
-- `groups_visible`: 群组列表可见性
-- `moments_visible`: 瞬间列表可见性
-- `liked_moments_visible`: 点赞瞬间列表可见性
-- `stats_visible`: 统计数据可见性
-
-**2. 布尔开关类设置**
-- `location_visible`: 是否显示位置信息
-- `online_visible`: 是否显示在线状态
-- `last_online_visible`: 是否显示最后在线时间
-- `allow_follow`: 是否允许被关注
-- `allow_private_chat`: 私聊权限（everyone/friends/nobody）
-
-**3. 搜索可见性设置**
-- `searchable`: 是否可被搜索（总开关）
-- `phone_searchable`: 是否可通过手机号搜索
-- `nickname_searchable`: 是否可通过昵称搜索
-- `location_searchable`: 是否可通过位置搜索
-
-#### 隐私级别（PrivacyLevel）语义
-
-> 类型定义见"通用类型定义"小节的"基础标识与枚举"。
-
-**语义定义**：
-- `public`: 所有人可见（包括未登录用户）
-- `friends`: 仅好友可见（好友 = 双方互相关注的用户）
-- `private`: 仅自己可见（他人完全不可见）
-
-**判定逻辑**：
-- `public`：所有人可见（包括未登录用户）
-- `friends`：仅好友可见（好友 = 双方互相关注的用户）
-- `private`：仅自己可见（他人完全不可见）
-- 自己永远可见自己的所有内容
-
-#### 字段间的优先级与组合规则
-
-##### `privacy_level` 全局默认值
-
-`privacy_level` 是**全局默认隐私级别**，作用于以下场景：
-- 创建新瞬间时，若未指定 `privacy_level`，使用 `moments_visible` 值
-- 未来新增功能的默认隐私级别
-
-**注意**：`privacy_level` 本身不直接控制任何现有字段，而是作为默认值参与计算。
-
-##### 具体字段优先于全局默认
-
-当某个资源有专门的可见性字段时，以专门字段为准：
-- 查看好友列表：以 `friends_visible` 为准（不看 `privacy_level`）
-- 查看瞬间列表：以 `moments_visible` 为准
-- 查看统计数据：以 `stats_visible` 为准
-
-##### 布尔开关的绝对控制
-
-布尔类开关具有**绝对否决权**：
-- `location_visible=false`：无论 `privacy_level` 如何，位置信息都不可见
-- `online_visible=false`：无论关系如何，在线状态都不可见
-- `allow_follow=false`：任何人都无法关注（已有关注不受影响）
-
-##### 搜索开关的层级关系
-
-搜索可见性遵循**总开关→分开关**层级：
-```typescript
-canSearchByPhone = searchable && phone_searchable
-canSearchByNickname = searchable && nickname_searchable
-canSearchByLocation = searchable && location_searchable && location_visible
-```
-
-**示例**：
-- `searchable=false`：无论其他开关如何，用户完全不可被搜索
-- `searchable=true, phone_searchable=false`：可通过昵称/位置搜索，但不可通过手机号搜索
-
-##### 黑名单的优先级（最高）
-
-**黑名单具有最高优先级**，覆盖所有其他设置：
-- 被拉黑：返回 `10211`，无法查看任何信息
-- 主动拉黑：对方不会出现在任何列表中
-
-#### 典型场景的判定流程
-
-##### 场景1：查看用户资料（UserCard）
-
-**检查顺序**：
-1. **黑名单检查**（最高优先级）：被拉黑返回 `10211`
-2. **基础资料**（始终可见）：`user_id`, `nickname`, `avatar_url`, `bio`
-3. **在线状态**：根据 `online_visible` 决定是否返回
-   - 可见：返回 `is_online` 值
-   - 不可见：返回 `null` + `meta` 说明原因
-4. **位置信息**：根据 `location_visible` 决定是否返回
-   - 可见：返回 `location` 值
-   - 不可见：返回 `null` + `meta` 说明原因
-5. **统计数据**：根据 `stats_visible` 的隐私等级判定
-   - 不可见时：返回 `10310`
-
-##### 场景2：搜索用户（UserSearchResult）
-
-**搜索可见条件**（AND 逻辑）：
-1. `searchable=true`（总开关）
-2. 未被对方拉黑
-3. 未拉黑对方
-4. 匹配搜索类型：
-   - 手机号搜索：`phone_searchable=true`
-   - 昵称搜索：`nickname_searchable=true`
-   - 位置搜索：`location_searchable=true` 且 `location_visible=true`
-   - 其他类型：默认允许
-
-##### 场景3：查看好友列表（UserFriendsRequest）
-
-**可见性判定**（`/api/v1/user/friends`）：
-- `friends_visible='private'`：返回 `10310`（不存在/不可见）
-- `friends_visible='friends'`：仅好友可见，否则返回 `10310`
-- `friends_visible='public'`：所有人可见，返回列表
-
-##### 场景4：发送私聊消息（SendPrivateMessageRequest）
-
-**检查顺序**：
-1. **黑名单检查**：被拉黑返回 `10211`
-2. **私聊权限检查**（`allow_private_chat`）：
-   - `everyone`：允许
-   - `friends`：仅好友允许，否则返回 `10210`
-   - `nobody`：拒绝所有，返回 `10210`
-3. **陌生人消息限制**（非好友）：
-   - 统计未回复消息数
-   - 超出上限返回 `10510`
-
-##### 场景5：查看瞬间列表（UserMomentsRequest）
-
-**可见性判定**（`/api/v1/user/moments`，Token 可选）：
-1. **列表级判定**（`moments_visible`）：
-   - `'private'`：返回 `10310`（不存在/不可见）
-   - `'friends'`：仅好友可见，否则返回 `10310`
-   - `'public'`：继续下一步
-2. **瞬间级过滤**（`privacy_level`）：
-   - `'public'`：所有人可见
-   - `'friends'`：仅好友可见
-   - `'private'`：仅本人可见
-3. **最终返回**：满足两层条件的瞬间列表
-
-#### 隐私字段的响应格式
-
-对于隐私受控字段，采用"不存在即不可见"的设计原则：
-- **字段存在**：表示可见，返回实际值
-- **字段不存在（undefined）**：表示不可见（无论原因是隐私设置、拉黑还是其他）
-
-**重要原则**：不暴露隐私原因
-- 不使用 `null` 表示"被隐藏"（避免与"未设置"混淆）
-- 不返回任何元数据说明为何不可见（避免暴露用户隐私设置）
-
-**示例**：用户资料中的位置信息 `location?: Location`
-- 可见时：`{ ..., location: { latitude: 30.0, ... } }`
-- 不可见时：`{ ... }`（字段不存在）
-
-**客户端处理**：
-- 字段存在时：正常显示
-- 字段不存在时：显示"暂无信息"或不显示该项（不应提示"已隐藏"）
-
-#### 基于 Token 的隐私语义差异
-
-##### 未登录请求
-- **身份无关**：响应中不包含 `@auth-only` 字段
-- **仅返回 public 可见内容**：任何非 `public` 的资源都不得出现
-- **错误码策略**：
-  - 单体资源（详情页）：返回 `103xx`（资源不存在/不可见）
-  - 列表资源（搜索）：按过滤处理，不返回不可见项
-
-##### 已登录请求
-- **身份相关**：响应中包含 `@auth-only` 字段，如 `relation`、`my_state` 等
-- **支持 friends/private 可见性**：可以基于关注关系判定
-- **错误码策略**：
-  - 资源存在但不可访问：返回 `10200`（权限不足）
-  - 资源不存在：返回 `103xx`
-
-#### 总结：隐私判定优先级（从高到低）
-
-1. **黑名单**（最高优先级，覆盖一切）
-   - 被拉黑：返回 `10211`，无法查看任何信息
-   - 主动拉黑：对方不会出现在任何列表中
-
-2. **布尔绝对开关**
-   - `allow_follow=false`：无法关注
-   - `allow_private_chat=nobody`：无法发私聊
-   - `location_visible=false`：位置信息不可见
-   - `online_visible=false`：在线状态不可见
-
-3. **搜索总开关**
-   - `searchable=false`：完全不可被搜索
-
-4. **具体字段的 PrivacyLevel**
-   - `friends_visible`、`moments_visible`、`stats_visible` 等
-   - 根据 `public/friends/private` 判定
-
-5. **全局默认值**（最低优先级）
-   - `privacy_level`：仅作为新功能的默认值
-
-**记忆口诀**：黑名单 > 绝对开关 > 搜索总开关 > 具体字段 > 全局默认
+- 隐私受控字段采用“字段不存在即不可见”的策略，禁止用 `null` 表达“隐藏”。
+- Token 可选的查询类接口：匿名不可见资源的详情返回对应 `103xx`；列表/搜索按过滤处理，不返回不可见项。
+- 已登录访问：资源存在但不可访问返回 `10200`（或更细分的 `1021x`）。
 
 ### 密码安全
 - 传输使用 HTTPS。
@@ -1185,13 +825,12 @@ canSearchByLocation = searchable && location_searchable && location_visible
 - **格式**：`{client_id}-{timestamp_ms}-{random}`
 - **长度**：32-64 字符
 - **字符集**：`[a-zA-Z0-9-_]`
-- **示例**：`web-1705123456789-a1b2c3d4e5f6`
+- **要求**：同一用户对同一接口的同一次重试必须复用同一个 `Idempotency-Key`
 
-#### 服务端处理规则
+#### 服务端行为（契约级）
 
-- **缓存 TTL**：24 小时
-- **存储结构**：`{key, user_id, endpoint, response_body, created_at}`
-- **Key 绑定**：`Idempotency-Key` 绑定 `user_id`，同一 key 不同用户视为不同请求
+- `Idempotency-Key` 绑定当前用户，同一 key 不同用户视为不同请求
+- Key 有效期：服务端保证至少 24 小时内有效（具体实现细节不对外暴露）
 
 #### 响应行为
 

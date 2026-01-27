@@ -10,6 +10,11 @@ alwaysApply: true
 - **Service Namespace**: `admin.rbac`
 - **Base Path**: `/api/v1/admin/rbac/`
 
+## 契约引用
+
+- 公共基础类型：`@api_spec_common_types.mdc`
+- 错误码：`@api_spec_errors.mdc`
+
 ## 设计目标
 
 - **超级管理员（super admin）**：`permissions` 包含 `'*'`，表示拥有全部管理员权限
@@ -23,6 +28,8 @@ alwaysApply: true
 - 是管理员但缺少接口要求的权限：返回错误码 `10205`（管理员权限不足）
 
 ## 权限 key 约定
+
+所有管理员权限键必须严格遵循以下约定：
 
 | 权限 key | 说明 |
 |----------|------|

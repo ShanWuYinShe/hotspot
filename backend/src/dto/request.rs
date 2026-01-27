@@ -3,12 +3,15 @@
 //! 所有请求类型与 API 规范 (spec/api_spec_*.mdc) 一一对应
 //! 枚举类型字段使用 crate::types::enums 中定义的类型，确保类型安全
 
-use crate::types::enums::{
-    AnnouncementSeverity, ApplicationStatusFilter, ClientType, DevicePlatform, FeedContentType,
-    FeedFeedbackAction, FeedSource, GroupJoinMethod, GroupRole, MapDataType, MediaCategory,
-    NotificationFilterType, PrivacyLevel, PrivateChatPermission, ReactionType, ReportHandleAction,
-    ReportStatus, ReportTargetType, SendMessageType, SetableGroupRole, TagTimeframe,
-    UserAccountStatus, UserType, VerificationCodeType,
+use crate::{
+    dto::types::ReportTargetId,
+    types::enums::{
+        AnnouncementSeverity, ApplicationStatusFilter, ClientType, DevicePlatform, FeedContentType,
+        FeedFeedbackAction, FeedSource, GroupJoinMethod, GroupRole, MapDataType, MediaCategory,
+        NotificationFilterType, PrivacyLevel, PrivateChatPermission, ReactionType,
+        ReportHandleAction, ReportStatus, ReportTargetType, SendMessageType, SetableGroupRole,
+        TagTimeframe, UserAccountStatus, UserType, VerificationCodeType,
+    },
 };
 use serde::{Deserialize, Serialize};
 
@@ -433,26 +436,6 @@ pub struct DeletePrivateChatRequest {
 
 // ==================== 群组管理 API ====================
 
-#[derive(Debug, Deserialize, Default)]
-pub struct GroupSettings {
-    #[serde(default)]
-    pub join_method: GroupJoinMethod,
-    #[serde(default = "default_true")]
-    pub is_searchable: bool,
-    pub max_members: Option<i32>,
-    pub location: Option<Location>,
-}
-
-impl Default for GroupJoinMethod {
-    fn default() -> Self {
-        GroupJoinMethod::Open
-    }
-}
-
-fn default_true() -> bool {
-    true
-}
-
 #[derive(Debug, Deserialize, serde::Serialize)]
 pub struct GroupSettingsUpdate {
     pub join_method: Option<GroupJoinMethod>,
@@ -468,7 +451,10 @@ pub struct CreateGroupChatRequest {
     pub avatar_file_id: Option<String>,
     pub tags: Option<Vec<String>>,
     pub password: Option<String>, // 群组密码（设置后加入需要验证）
-    pub settings: Option<GroupSettings>,
+    pub join_method: Option<GroupJoinMethod>,
+    pub is_searchable: Option<bool>,
+    pub max_members: Option<i32>,
+    pub location: Option<Location>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -516,7 +502,10 @@ pub struct UpdateGroupChatRequest {
     pub avatar_file_id: Option<String>,
     pub tags: Option<Vec<String>>,
     pub password: Option<String>, // 设置/更新群组密码（传空字符串清除密码）
-    pub settings: Option<GroupSettingsUpdate>,
+    pub join_method: Option<GroupJoinMethod>,
+    pub is_searchable: Option<bool>,
+    pub max_members: Option<i32>,
+    pub location: Option<Location>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -840,7 +829,7 @@ pub struct MarkAllMessagesReadRequest {}
 #[derive(Debug, Deserialize)]
 pub struct CreateReportRequest {
     pub target_type: ReportTargetType,
-    pub target_id: String,
+    pub target_id: ReportTargetId,
     pub reason: String,
     pub description: Option<String>,
 }

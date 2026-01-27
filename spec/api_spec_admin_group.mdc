@@ -10,6 +10,11 @@ alwaysApply: true
 - **Service Namespace**: `admin.groups`
 - **Base Path**: `/api/v1/admin/groups/`
 
+## 契约引用
+
+- 公共基础类型：`@api_spec_common_types.mdc`
+- 错误码：`@api_spec_errors.mdc`
+
 ## 核心类型定义
 
 ```typescript
@@ -27,7 +32,7 @@ interface AdminGroupItem extends GroupInfo {
 |-------|------|---------|
 | `10001` | 缺少必填参数 | `detail`、`dismiss` |
 | `10204` | 非管理员 | 所有 admin 接口 |
-| `10205` | 管理员权限不足 | `search`、`detail`（需要 `admin.groups.read`）、`dismiss`（需要 `admin.groups.write`） |
+| `10205` | 管理员权限不足 | `search`、`detail`（需 `admin.groups.read`）、`dismiss`（需 `admin.groups.write`） |
 | `10320` | 群组不存在 | `detail`、`dismiss` |
 
 ---

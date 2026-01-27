@@ -148,14 +148,19 @@ pub async fn idempotency_middleware(
 fn should_check_idempotency(path: &str) -> bool {
     matches!(
         path,
-        // 发送消息：必须允许“同内容重复意图”，所以只在客户端提供 key 时去重重试
+        // 发送消息：客户端必须提供 key（但同内容不同 key 允许重复意图）
         "/api/v1/private_messages/send" | "/api/v1/group_messages/send"
-            // 创建类：推荐客户端提供 key，避免弱网重试造成重复创建
+            // 创建类
             | "/api/v1/moments/create"
+            | "/api/v1/reports/create"
             | "/api/v1/group_chats/create"
             // 群组成员操作
             | "/api/v1/group_chats/members/join"
             | "/api/v1/group_chats/members/apply"
+            | "/api/v1/group_chats/applications/approve"
+            | "/api/v1/group_chats/applications/reject"
+            | "/api/v1/group_chats/me/invites/accept"
+            | "/api/v1/group_chats/me/invites/reject"
             // 上传：仅在客户端提供 key 时去重
             | "/api/v1/media/complete_upload"
             // 关注：虽然天然幂等，但可通过 key 去重重试，减少写放大
@@ -164,7 +169,18 @@ fn should_check_idempotency(path: &str) -> bool {
 }
 
 fn requires_idempotency_key(path: &str) -> bool {
-    matches!(path, "/api/v1/group_chats/members/join")
+    matches!(
+        path,
+        "/api/v1/private_messages/send"
+            | "/api/v1/group_messages/send"
+            | "/api/v1/moments/create"
+            | "/api/v1/reports/create"
+            | "/api/v1/group_chats/members/join"
+            | "/api/v1/group_chats/applications/approve"
+            | "/api/v1/group_chats/applications/reject"
+            | "/api/v1/group_chats/me/invites/accept"
+            | "/api/v1/group_chats/me/invites/reject"
+    )
 }
 
 fn extract_client_idempotency_key(headers: &HeaderMap) -> Option<String> {

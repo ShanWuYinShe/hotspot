@@ -9,36 +9,40 @@ use crate::utils::pagination::{decode_cursor, encode_cursor, TimeCursor};
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "notification_type", rename_all = "snake_case")]
 pub enum NotificationType {
-    Like,
-    Comment,
-    Reply,
-    Follow,
-    Mention,
-    System,
+    MomentLike,
+    MomentComment,
+    CommentReply,
+    NewFollower,
+    MutualFollow,
+    FollowRequest,
+    FollowRequestHandled,
     GroupInvite,
-    GroupApply,
-    GroupKick,
-    GroupQuit,
-    GroupDismiss,
-    GroupAdmin,
+    GroupInviteResponse,
+    GroupApplication,
+    GroupApplicationResponse,
+    GroupAnnouncement,
+    SystemAnnouncement,
+    MessageMention,
 }
 
 impl std::str::FromStr for NotificationType {
     type Err = String;
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s {
-            "like" => Ok(NotificationType::Like),
-            "comment" => Ok(NotificationType::Comment),
-            "reply" => Ok(NotificationType::Reply),
-            "follow" => Ok(NotificationType::Follow),
-            "mention" => Ok(NotificationType::Mention),
-            "system" => Ok(NotificationType::System),
+            "moment_like" => Ok(NotificationType::MomentLike),
+            "moment_comment" => Ok(NotificationType::MomentComment),
+            "comment_reply" => Ok(NotificationType::CommentReply),
+            "new_follower" => Ok(NotificationType::NewFollower),
+            "mutual_follow" => Ok(NotificationType::MutualFollow),
+            "follow_request" => Ok(NotificationType::FollowRequest),
+            "follow_request_handled" => Ok(NotificationType::FollowRequestHandled),
             "group_invite" => Ok(NotificationType::GroupInvite),
-            "group_apply" => Ok(NotificationType::GroupApply),
-            "group_kick" => Ok(NotificationType::GroupKick),
-            "group_quit" => Ok(NotificationType::GroupQuit),
-            "group_dismiss" => Ok(NotificationType::GroupDismiss),
-            "group_admin" => Ok(NotificationType::GroupAdmin),
+            "group_invite_response" => Ok(NotificationType::GroupInviteResponse),
+            "group_application" => Ok(NotificationType::GroupApplication),
+            "group_application_response" => Ok(NotificationType::GroupApplicationResponse),
+            "group_announcement" => Ok(NotificationType::GroupAnnouncement),
+            "system_announcement" => Ok(NotificationType::SystemAnnouncement),
+            "message_mention" => Ok(NotificationType::MessageMention),
             _ => Err(format!("Invalid notification type: {}", s)),
         }
     }
@@ -47,18 +51,20 @@ impl std::str::FromStr for NotificationType {
 impl std::fmt::Display for NotificationType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
-            NotificationType::Like => "like",
-            NotificationType::Comment => "comment",
-            NotificationType::Reply => "reply",
-            NotificationType::Follow => "follow",
-            NotificationType::Mention => "mention",
-            NotificationType::System => "system",
+            NotificationType::MomentLike => "moment_like",
+            NotificationType::MomentComment => "moment_comment",
+            NotificationType::CommentReply => "comment_reply",
+            NotificationType::NewFollower => "new_follower",
+            NotificationType::MutualFollow => "mutual_follow",
+            NotificationType::FollowRequest => "follow_request",
+            NotificationType::FollowRequestHandled => "follow_request_handled",
             NotificationType::GroupInvite => "group_invite",
-            NotificationType::GroupApply => "group_apply",
-            NotificationType::GroupKick => "group_kick",
-            NotificationType::GroupQuit => "group_quit",
-            NotificationType::GroupDismiss => "group_dismiss",
-            NotificationType::GroupAdmin => "group_admin",
+            NotificationType::GroupInviteResponse => "group_invite_response",
+            NotificationType::GroupApplication => "group_application",
+            NotificationType::GroupApplicationResponse => "group_application_response",
+            NotificationType::GroupAnnouncement => "group_announcement",
+            NotificationType::SystemAnnouncement => "system_announcement",
+            NotificationType::MessageMention => "message_mention",
         };
         write!(f, "{}", s)
     }

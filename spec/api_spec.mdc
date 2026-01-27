@@ -59,7 +59,7 @@ alwaysApply: true
 ## 权威边界与冲突处理
 
 - 本规范定义 HotSpot 前后端交互使用的 HTTP API 与 WebSocket 数据契约（端点、字段、类型、错误码、事件、响应 envelope）。
-- 若本规范与任何工程实现、示例代码、其它 doc/rule 文件产生冲突，以本规范为准。
+- 若本规范与任何工程实现或其它 doc/rule 文件产生冲突，以本规范为准。
 - 禁止使用数字章节号（如"第X章/第X节"）来引用本规范内容；引用时仅使用小节标题或锚点标题，以降低维护成本。
 
 ## 文档说明
@@ -67,7 +67,7 @@ alwaysApply: true
 - 本规范为 **Contract Only**：只定义对外可观测的端点/字段/类型/错误码/事件。
 - 所有实现细节、自检、工程化约束不属于本规范范围。
 
-通用约定（如时间格式、分页/幂等、Token 可选/必须语义、`@auth-only` 字段）统一放在 `api_spec_common_types.mdc`，避免在索引文件重复。
+通用约定（如时间格式、分页/幂等、Token 可选/必须语义、`@auth-only` 字段）统一放在 `@api_spec_common_types.mdc`，避免在索引文件重复。
 
 ## 快速索引
 
@@ -98,7 +98,7 @@ alwaysApply: true
 | `/api/v1/user/` | `api_spec_user.mdc` |
 | `/api/v1/moments/`, `/api/v1/comments/` | `api_spec_moment.mdc` |
 | `/api/v1/private_chats/`, `/api/v1/private_messages/` | `api_spec_chat.mdc` |
-| `/api/v1/group_chats/`, `/api/v1/group_messages/` | `api_spec_group.mdc` |
+| `/api/v1/group_chats/`, `/api/v1/group_messages/`, `/api/v1/messages/` | `api_spec_group.mdc` |
 | `/api/v1/feed/`, `/api/v1/tags/` | `api_spec_feed.mdc` |
 | `/api/v1/map/` | `api_spec_map.mdc` |
 | `/api/v1/media/` | `api_spec_media.mdc` |

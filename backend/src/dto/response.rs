@@ -7,11 +7,14 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 // 导入所有需要的枚举类型
-use crate::types::enums::{
-    AnnouncementSeverity, ApplicationStatus, DevicePlatform, Gender, GroupJoinMethod,
-    GroupRole, MapItemType, MessageType, NotificationTargetType, NotificationType, PrivacyLevel,
-    PrivateChatPermission, ReactionType, ReportStatus, ReportTargetType, SystemHealthStatus,
-    TagTrend, UserAccountStatus, UserType,
+use crate::{
+    dto::types::{ReportTargetId, StringOrNumberId},
+    types::enums::{
+        AnnouncementSeverity, ApplicationStatus, DevicePlatform, Gender, GroupJoinMethod,
+        GroupRole, MapItemType, MessageType, NotificationTargetType, NotificationType, PrivacyLevel,
+        PrivateChatPermission, ReactionType, ReportStatus, ReportTargetType, SystemHealthStatus,
+        TagTrend, UserAccountStatus, UserType,
+    },
 };
 
 // ============================================================
@@ -159,8 +162,6 @@ pub struct UserItem {
     pub last_online: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub location: Option<RelativeLocation>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub relation: Option<UserRelation>,
 }
 
 /// 用户详情 - API 文档: UserCard
@@ -181,9 +182,18 @@ pub struct UserCard {
     pub last_online: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub location: Option<Location>,
-    pub stats: UserStatsData,
+    pub stats: UserCardStats,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub relation: Option<UserRelation>,
+}
+
+/// 用户卡片统计数据（不含群组数） - API 文档: UserCard.stats
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct UserCardStats {
+    pub moments_count: i32,
+    pub friends_count: i32,
+    pub followers_count: i32,
+    pub following_count: i32,
 }
 
 /// 用户统计数据 - API 文档: UserStats
@@ -299,16 +309,20 @@ pub struct AuthData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub refresh_token: Option<String>,
     pub access_token_expires_at: String,
-    pub refresh_token_expires_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refresh_token_expires_at: Option<String>,
 }
 
 /// 认证状态检查数据 - API 文档: CheckStatusData
 #[derive(Debug, Serialize)]
 pub struct CheckStatusData {
-    pub user_id: i64,
-    pub nickname: String,
     pub is_valid: bool,
-    pub expires_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_id: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nickname: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expires_at: Option<String>,
 }
 
 /// 发送验证码数据 - API 文档: SendVerificationCodeData
@@ -350,6 +364,8 @@ pub struct SessionItem {
     pub device_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ip_address: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ip_location: Option<String>,
     pub created_at: String,
     pub last_active_at: String,
     pub is_current: bool,
@@ -387,10 +403,6 @@ pub struct MomentItem {
     pub likes_count: i32,
     pub comments_count: i32,
     pub location: RelativeLocation,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub is_liked: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub is_favorited: Option<bool>,
 }
 
 /// 瞬间详情 - API 文档: MomentCard
@@ -499,8 +511,6 @@ pub struct GroupInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub avatar_url: Option<String>,
     pub members_count: i32,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub location: Option<Location>,
 }
 
 /// 群组搜索/列表项 - API 文档: GroupSearchItem
@@ -516,25 +526,27 @@ pub struct GroupItem {
     pub tags: Option<Vec<String>>,
     pub members_count: i32,
     pub has_password: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub location: Option<RelativeLocation>,
+    pub location: RelativeLocation,
 }
 
 /// 群组详情（含我的状态）- API 文档: GroupCard
 #[derive(Debug, Serialize)]
 pub struct GroupDetailData {
-    #[serde(flatten)]
-    pub group: GroupItem,
+    pub group_chat_id: String,
+    pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub my_role: Option<GroupRole>,
+    pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub is_joined: Option<bool>,
+    pub avatar_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub unread_count: Option<i32>,
+    pub tags: Option<Vec<String>>,
+    pub members_count: i32,
+    pub has_password: bool,
+    pub location: Location,
+    pub created_at: String,
+    pub owner_id: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub is_muted: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub is_pinned: Option<bool>,
+    pub my_state: Option<GroupMyStateData>,
 }
 
 /// 我在群内的状态 - API 文档: Membership
@@ -572,9 +584,15 @@ pub struct GroupSettingsData {
 pub struct JoinedGroupItem {
     #[serde(flatten)]
     pub group_info: GroupInfo,
-    pub my_role: GroupRole,
-    pub unread_count: i32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<String>>,
+    pub has_password: bool,
+    pub location: Location,
     pub last_activity_at: String,
+    pub role: GroupRole,
+    pub unread_count: i32,
 }
 
 /// 群公告项 - API 文档: GroupAnnouncementItem
@@ -856,20 +874,14 @@ pub struct ReportTargetSnapshot {
 pub struct ReportItem {
     pub report_id: String,
     pub target_type: ReportTargetType,
-    pub target_id: String,
+    pub target_id: ReportTargetId,
     pub reason: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     pub status: ReportStatus,
     pub created_at: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub updated_at: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub handled_at: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub resolution_note: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub reporter: Option<UserInfo>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub target_snapshot: Option<ReportTargetSnapshot>,
 }
@@ -914,7 +926,7 @@ pub struct NotificationItem {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub target_type: Option<NotificationTargetType>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub target_id: Option<String>,
+    pub target_id: Option<StringOrNumberId>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reference_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1028,6 +1040,8 @@ pub struct FeedUserItem {
     pub mutual_friends_count: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub common_tags: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub relation: Option<UserRelation>,
 }
 
 /// 信息流瞬间项 - API 文档: FeedMomentItem
@@ -1310,7 +1324,7 @@ pub struct AdminUserDetail {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub location: Option<Location>,
     pub is_online: bool,
-    pub stats: UserStatsData,
+    pub stats: UserCardStats,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ban_history: Option<Vec<AdminBanRecord>>,
 }

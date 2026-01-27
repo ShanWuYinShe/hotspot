@@ -10,6 +10,11 @@ alwaysApply: true
 - **Service Namespace**: `auth`
 - **Base Path**: `/api/v1/auth/`
 
+## 契约引用
+
+- 公共基础类型：`@api_spec_common_types.mdc`
+- 错误码：`@api_spec_errors.mdc`
+
 ## 核心类型定义
 
 ```typescript
@@ -34,7 +39,8 @@ interface AuthTokenPairApp {
 }
 
 interface SessionItem {
-  session_id: string;
+  display_id: string;           // 展示用短标识（如 "ses_abc123"），用于用户辨识
+  revoke_token: string;         // 撤销用一次性令牌，用于调用 revoke 接口
   device_type?: string;
   device_name?: string;
   ip_address?: string;          // 脱敏显示（如 "192.168.xxx.xxx"），防止被用于跟踪
@@ -42,6 +48,17 @@ interface SessionItem {
   created_at: string;
   last_active_at: string;
   is_current: boolean;
+}
+// 安全说明：
+// - display_id 仅用于展示，不可用于任何 API 操作
+// - revoke_token 是一次性令牌，撤销后立即失效；刷新会话列表会生成新的 revoke_token
+// - 真实的 session_id 不对外暴露，防止被用于批量撤销攻击或会话劫持
+
+interface AuthStatus {
+  is_valid: boolean;
+  user_id?: number;
+  nickname?: string;
+  expires_at?: string;
 }
 ```
 
@@ -185,16 +202,9 @@ interface RefreshTokenRequest {
 检查认证状态。
 
 **Request**: `{}`
-**Response**:
-```typescript
-interface AuthStatus {
-  user_id: number;
-  nickname: string;
-  is_valid: boolean;
-  expires_at: string;
-}
-```
 **Response**: `ApiResponse<AuthStatus>`
+
+**说明**：Token 可选；未登录时返回 `is_valid: false`。
 
 ### POST /api/v1/auth/send_verification_code
 
@@ -242,14 +252,6 @@ interface VerificationResult {
 ### POST /api/v1/auth/request_password_reset
 
 请求密码重置。
-
-**安全流程说明**：
-密码重置必须先通过手机验证码验证身份，完整流程如下：
-1. 调用 `send_verification_code` 发送验证码（type='reset_password'）
-2. 调用 `verify_code` 验证验证码，获得 `verify_token`
-3. 调用本接口 `request_password_reset` 并传入 `verify_token`（必填）
-4. 调用 `verify_reset_code` 验证邮件/短信中的重置码
-5. 调用 `reset_password` 执行密码重置
 
 **Request**:
 ```typescript
@@ -338,9 +340,14 @@ interface SessionsRequest extends PaginationParams {}
 **Request**:
 ```typescript
 interface RevokeSessionRequest {
-  session_id: string;
+  revoke_token: string;  // 来自 SessionItem.revoke_token，一次性令牌
 }
 ```
 **Response**: `ApiResponse`
 
-**可能错误码**：`10300`、`10200`
+**安全说明**：
+- `revoke_token` 是一次性令牌，使用后立即失效
+- 即使 token 泄露，攻击者也只能撤销一次，无法批量操作
+- 若需再次撤销同一会话（如撤销失败重试），需重新获取会话列表获得新的 `revoke_token`
+
+**可能错误码**：`10300`（令牌无效或已使用）、`10200`（无权限撤销该会话）

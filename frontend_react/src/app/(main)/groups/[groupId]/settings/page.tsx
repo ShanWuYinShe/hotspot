@@ -1,54 +1,134 @@
-/**
- * 群组设置页面 (Server Component)
- */
+'use client';
 
-import { serverApi, isServerSuccess, isAuthError, getServerErrorMessage } from '@/lib/api/server';
-import { ENDPOINTS } from '@/lib/api/endpoints';
+import { useParams } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { toast } from 'sonner';
+import { useEffect } from 'react';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LoginRequiredCard } from '@/components/common/login-required-card';
-import { GroupSettingsForm } from './group-settings-form';
-import { ServerErrorCard } from '@/components/common/server-error-card';
-import type { GroupDetailData } from '@/types/api';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { GroupService } from '@/lib/api/services/groups';
 
-interface GroupSettingsPageProps {
-  params: Promise<{ groupId: string }>;
-}
+const createSchema = (message: string) =>
+  z.object({
+    name: z.string().min(1, message),
+    description: z.string().optional(),
+    tags: z.string().optional(),
+    join_method: z.enum(['open', 'approval', 'invite_only']),
+  });
 
-export default async function GroupSettingsPage({ params }: GroupSettingsPageProps) {
-  const { groupId } = await params;
-  const response = await serverApi.post<GroupDetailData>(
-    ENDPOINTS.GROUP_CHATS.DETAIL(groupId),
-    { group_chat_id: groupId },
-    { tags: [`group-${groupId}`], revalidate: 60 }
-  );
+export default function GroupSettingsPage() {
+  const params = useParams();
+  const groupId = params.groupId as string;
+  const t = useTranslations('groups');
+  const tCommon = useTranslations('common');
 
-  if (!isServerSuccess(response)) {
-    if (isAuthError(response)) {
-      return (
-        <div className="max-w-2xl mx-auto">
-          <LoginRequiredCard actionName="管理群组" description="登录后才能管理群组设置。" />
-        </div>
-      );
+  const { data: group } = useQuery({
+    queryKey: ['group-detail', groupId],
+    queryFn: async () => {
+      const res = await GroupService.openTheDoor(groupId);
+      if (res.code !== 0) throw new Error(res.message);
+      return res.data!;
+    },
+    enabled: !!groupId,
+  });
+
+  const { data: settings } = useQuery({
+    queryKey: ['group-settings', groupId],
+    queryFn: async () => {
+      const res = await GroupService.settings(groupId);
+      if (res.code !== 0) throw new Error(res.message);
+      return res.data!;
+    },
+    enabled: !!groupId,
+  });
+
+  const form = useForm<z.infer<ReturnType<typeof createSchema>>>({
+    resolver: zodResolver(createSchema(tCommon('empty'))),
+    defaultValues: {
+      name: '',
+      description: '',
+      tags: '',
+      join_method: 'open',
+    },
+  });
+
+  const { reset } = form;
+
+  useEffect(() => {
+    if (group || settings) {
+      reset({
+        name: group?.name ?? '',
+        description: group?.description ?? '',
+        tags: group?.tags?.join(', ') ?? '',
+        join_method: settings?.settings.join_method ?? 'open',
+      });
     }
-    return (
-      <div className="max-w-2xl mx-auto">
-        <ServerErrorCard
-          title="加载群组设置失败"
-          description={getServerErrorMessage(response)}
-          requestId={response.request_id}
-        />
-      </div>
-    );
-  }
+  }, [group, reset, settings]);
+
+  const onSubmit = async (values: z.infer<ReturnType<typeof createSchema>>) => {
+    const tags = values.tags?.split(',').map((tag) => tag.trim()).filter(Boolean);
+    const res = await GroupService.update({
+      group_chat_id: groupId,
+      name: values.name,
+      description: values.description,
+      tags,
+      join_method: values.join_method,
+    });
+    if (res.code === 0) {
+      toast.success(tCommon('saved'));
+    } else {
+      toast.error(res.message || tCommon('retry'));
+    }
+  };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-3xl mx-auto space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>群组设置</CardTitle>
+          <CardTitle>{t('settings')}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <GroupSettingsForm group={response.data} />
+        <CardContent className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t('name')}</label>
+              <Input {...form.register('name')} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t('description')}</label>
+              <Textarea {...form.register('description')} className="min-h-[100px]" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t('tags')}</label>
+              <Input {...form.register('tags')} placeholder={t('tagsPlaceholder')} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t('joinMethod')}</label>
+              <Select
+                value={form.watch('join_method')}
+                onValueChange={(value) =>
+                  form.setValue('join_method', value as 'open' | 'approval' | 'invite_only')
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t('joinMethod')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="open">{t('joinMethodOpen')}</SelectItem>
+                  <SelectItem value="approval">{t('joinMethodApproval')}</SelectItem>
+                  <SelectItem value="invite_only">{t('joinMethodInvite')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button type="submit">{tCommon('save')}</Button>
+          </form>
         </CardContent>
       </Card>
     </div>

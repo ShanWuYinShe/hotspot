@@ -1,22 +1,7 @@
-/**
- * 地图服务
- */
+import { apiClient } from '@/lib/api/client';
+import { ENDPOINTS } from '@/lib/api/endpoints';
+import { MapCanvas, MapRenderRequest } from '@/types/api';
 
-import { post } from '../client';
-import { ENDPOINTS } from '../endpoints';
-import type {
-  ApiResponse,
-  MapRenderRequest,
-  MapRenderData,
-} from '@/types/api';
-
-export const mapService = {
-  /**
-   * 获取地图渲染数据
-   */
-  async render(params: MapRenderRequest): Promise<ApiResponse<MapRenderData>> {
-    return post<MapRenderData>(ENDPOINTS.MAP.RENDER, params, {
-      requireAuth: false,
-    });
-  },
+export const MapService = {
+  render: (data: MapRenderRequest) => apiClient.post<MapCanvas>(ENDPOINTS.MAP.RENDER, data),
 };

@@ -1,83 +1,27 @@
-/**
- * 信息流服务
- */
-
-import { post, generateIdempotencyKey } from '../client';
-import { ENDPOINTS } from '../endpoints';
-import type {
-  ApiResponse,
-  PaginatedData,
-  MomentItem,
+import { apiClient } from '@/lib/api/client';
+import { ENDPOINTS } from '@/lib/api/endpoints';
+import {
   FeedGroupItem,
+  FeedMomentItem,
   FeedUserItem,
-  FeedTrendingData,
-  FeedSource,
+  GetFeedMomentsRequest,
+  PaginatedData,
+  TrendingBundle,
 } from '@/types/api';
 
-export interface FeedMomentsParams {
-  source?: FeedSource;
-  radius?: number;
-  limit?: number;
-  cursor?: string;
-  [key: string]: string | number | boolean | undefined;
-}
+export const FeedService = {
+  getMoments: (params: GetFeedMomentsRequest) =>
+    apiClient.post<PaginatedData<FeedMomentItem>>(ENDPOINTS.FEED.MOMENTS, params),
 
-export interface FeedGroupsParams {
-  radius?: number;
-  limit?: number;
-  cursor?: string;
-  [key: string]: string | number | boolean | undefined;
-}
+  getGroups: (params: { reference_point: { latitude: number; longitude: number }; radius?: number; cursor?: string; limit?: number }) =>
+    apiClient.post<PaginatedData<FeedGroupItem>>(ENDPOINTS.FEED.GROUPS, params),
 
-export interface FeedUsersParams {
-  radius?: number;
-  limit?: number;
-  cursor?: string;
-  [key: string]: string | number | boolean | undefined;
-}
+  getUsers: (params: { reference_point: { latitude: number; longitude: number }; radius?: number; cursor?: string; limit?: number }) =>
+    apiClient.post<PaginatedData<FeedUserItem>>(ENDPOINTS.FEED.USERS, params),
 
-export interface FeedFeedbackParams {
-  content_type: 'moment' | 'group' | 'user';
-  content_id: string;
-  action: 'hide' | 'not_interested' | 'report';
-  reason?: string;
-}
+  getTrending: (params?: { reference_point?: { latitude: number; longitude: number } }) =>
+    apiClient.post<TrendingBundle>(ENDPOINTS.FEED.TRENDING, params ?? {}),
 
-export const feedService = {
-  /**
-   * 获取瞬间信息流
-   */
-  async getMoments(params?: FeedMomentsParams): Promise<ApiResponse<PaginatedData<MomentItem>>> {
-    return post<PaginatedData<MomentItem>>(ENDPOINTS.FEED.MOMENTS, params ?? {});
-  },
-
-  /**
-   * 获取群组推荐
-   */
-  async getGroups(params?: FeedGroupsParams): Promise<ApiResponse<PaginatedData<FeedGroupItem>>> {
-    return post<PaginatedData<FeedGroupItem>>(ENDPOINTS.FEED.GROUPS, params ?? {});
-  },
-
-  /**
-   * 获取用户推荐
-   */
-  async getUsers(params?: FeedUsersParams): Promise<ApiResponse<PaginatedData<FeedUserItem>>> {
-    return post<PaginatedData<FeedUserItem>>(ENDPOINTS.FEED.USERS, params ?? {});
-  },
-
-  /**
-   * 获取热门内容
-   */
-  async getTrending(limit?: number): Promise<ApiResponse<FeedTrendingData>> {
-    return post<FeedTrendingData>(ENDPOINTS.FEED.TRENDING, limit ? { limit } : {});
-  },
-
-  /**
-   * 提交信息流反馈
-   */
-  async submitFeedback(data: FeedFeedbackParams): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.FEED.FEEDBACK, data, {
-      idempotencyKey: generateIdempotencyKey(),
-    });
-  },
+  feedback: (data: { target_type: 'moment' | 'group' | 'user'; target_id: string; action: 'hide' | 'not_interested' }) =>
+    apiClient.post(ENDPOINTS.FEED.FEEDBACK, data),
 };

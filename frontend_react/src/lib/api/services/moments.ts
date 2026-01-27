@@ -1,201 +1,59 @@
-/**
- * 瞬间服务
- */
-
-import { post, generateIdempotencyKey } from '../client';
-import { ENDPOINTS } from '../endpoints';
-import type {
-  ApiResponse,
-  PaginatedData,
-  MomentItem,
+import { apiClient } from '@/lib/api/client';
+import { ENDPOINTS } from '@/lib/api/endpoints';
+import {
   CreateMomentRequest,
-  UpdateMomentRequest,
+  EditMomentRequest,
+  FavoritedStatus,
+  LikedStatus,
+  MomentCard,
   MomentLikeItem,
-  GeoPoint,
+  PaginatedData,
+  UserMomentListItem,
 } from '@/types/api';
 
-export interface SearchByKeywordParams {
-  kw: string;
-  reference_point: GeoPoint;
-  limit?: number;
-  cursor?: string;
-}
+export const MomentService = {
+  create: (data: CreateMomentRequest) =>
+    apiClient.post<UserMomentListItem>(ENDPOINTS.MOMENTS.CREATE, data),
 
-export interface SearchByTagParams {
-  tag: string;
-  reference_point: GeoPoint;
-  limit?: number;
-  cursor?: string;
-}
+  update: (data: EditMomentRequest) =>
+    apiClient.post(ENDPOINTS.MOMENTS.UPDATE, data),
 
-export interface SearchByLocationParams {
-  reference_point: GeoPoint;
-  radius: number;
-  kw?: string;
-  limit?: number;
-  cursor?: string;
-}
+  getDetail: (momentId: string) =>
+    apiClient.post<MomentCard>(ENDPOINTS.MOMENTS.OPEN_THE_DOOR, { moment_id: momentId }),
 
-export const momentsService = {
-  // ============================================================================
-  // 搜索
-  // ============================================================================
+  interactionState: (momentId: string) =>
+    apiClient.post(ENDPOINTS.MOMENTS.INTERACTION_STATE, { moment_id: momentId }),
 
-  /**
-   * 按关键词搜索瞬间
-   */
-  async searchByKeyword(params: SearchByKeywordParams): Promise<ApiResponse<PaginatedData<MomentItem>>> {
-    return post<PaginatedData<MomentItem>>(ENDPOINTS.MOMENTS.SEARCH_BY_KEYWORD, params, {
-      requireAuth: false,
-    });
-  },
+  listMyMoments: (params?: { cursor?: string; limit?: number }) =>
+    apiClient.post<PaginatedData<UserMomentListItem>>(ENDPOINTS.MOMENTS.ME, params ?? {}),
 
-  /**
-   * 按标签搜索瞬间
-   */
-  async searchByTag(params: SearchByTagParams): Promise<ApiResponse<PaginatedData<MomentItem>>> {
-    return post<PaginatedData<MomentItem>>(ENDPOINTS.MOMENTS.SEARCH_BY_TAG, params, {
-      requireAuth: false,
-    });
-  },
+  listUserMoments: (userId: number, params?: { cursor?: string; limit?: number }) =>
+    apiClient.post<PaginatedData<UserMomentListItem>>(ENDPOINTS.MOMENTS.USER_MOMENTS, { user_id: userId, ...params }),
 
-  /**
-   * 按位置搜索瞬间
-   */
-  async searchByLocation(params: SearchByLocationParams): Promise<ApiResponse<PaginatedData<MomentItem>>> {
-    return post<PaginatedData<MomentItem>>(ENDPOINTS.MOMENTS.SEARCH_BY_LOCATION, params, {
-      requireAuth: false,
-    });
-  },
+  listMyFavorites: (params?: { cursor?: string; limit?: number }) =>
+    apiClient.post<PaginatedData<MomentCard>>(ENDPOINTS.MOMENTS.ME_FAVORITES, params ?? {}),
 
-  // ============================================================================
-  // CRUD
-  // ============================================================================
+  checkLiked: (momentId: string) =>
+    apiClient.post<LikedStatus>(ENDPOINTS.MOMENTS.ME_LIKED, { moment_id: momentId }),
 
-  /**
-   * 获取瞬间详情
-   */
-  async getDetail(momentId: string, referencePoint?: GeoPoint): Promise<ApiResponse<MomentItem>> {
-    return post<MomentItem>(
-      ENDPOINTS.MOMENTS.DETAIL(momentId),
-      {
-        moment_id: momentId,
-        ...(referencePoint ? { reference_point: referencePoint } : {}),
-      },
-      { requireAuth: false }
-    );
-  },
+  checkFavorited: (momentId: string) =>
+    apiClient.post<FavoritedStatus>(ENDPOINTS.MOMENTS.ME_FAVORITED, { moment_id: momentId }),
 
-  /**
-   * 创建瞬间
-   */
-  async create(data: CreateMomentRequest): Promise<ApiResponse<MomentItem>> {
-    return post<MomentItem>(ENDPOINTS.MOMENTS.CREATE, data, {
-      idempotencyKey: generateIdempotencyKey(),
-    });
-  },
+  likes: (momentId: string, params?: { cursor?: string; limit?: number }) =>
+    apiClient.post<PaginatedData<MomentLikeItem>>(ENDPOINTS.MOMENTS.LIKES, { moment_id: momentId, ...params }),
 
-  /**
-   * 更新瞬间
-   */
-  async update(momentId: string, data: Omit<UpdateMomentRequest, 'moment_id'>): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.MOMENTS.UPDATE(momentId), { moment_id: momentId, ...data }, {
-      idempotencyKey: generateIdempotencyKey(),
-    });
-  },
+  like: (momentId: string) =>
+    apiClient.post(ENDPOINTS.MOMENTS.LIKE, { moment_id: momentId }),
 
-  /**
-   * 删除瞬间
-   */
-  async delete(momentId: string): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.MOMENTS.DELETE(momentId), { moment_id: momentId });
-  },
+  unlike: (momentId: string) =>
+    apiClient.post(ENDPOINTS.MOMENTS.UNLIKE, { moment_id: momentId }),
 
-  // ============================================================================
-  // 互动
-  // ============================================================================
+  favorite: (momentId: string) =>
+    apiClient.post(ENDPOINTS.MOMENTS.FAVORITE, { moment_id: momentId }),
 
-  /**
-   * 点赞瞬间
-   */
-  async like(momentId: string): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.MOMENTS.LIKE(momentId), { moment_id: momentId }, {
-      idempotencyKey: generateIdempotencyKey(),
-    });
-  },
+  unfavorite: (momentId: string) =>
+    apiClient.post(ENDPOINTS.MOMENTS.UNFAVORITE, { moment_id: momentId }),
 
-  /**
-   * 取消点赞
-   */
-  async unlike(momentId: string): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.MOMENTS.UNLIKE(momentId), { moment_id: momentId }, {
-      idempotencyKey: generateIdempotencyKey(),
-    });
-  },
-
-  /**
-   * 收藏瞬间
-   */
-  async favorite(momentId: string): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.MOMENTS.FAVORITE(momentId), { moment_id: momentId }, {
-      idempotencyKey: generateIdempotencyKey(),
-    });
-  },
-
-  /**
-   * 取消收藏
-   */
-  async unfavorite(momentId: string): Promise<ApiResponse<void>> {
-    return post<void>(ENDPOINTS.MOMENTS.UNFAVORITE(momentId), { moment_id: momentId }, {
-      idempotencyKey: generateIdempotencyKey(),
-    });
-  },
-
-  /**
-   * 获取点赞列表
-   */
-  async getLikes(
-    momentId: string,
-    params?: { limit?: number; cursor?: string }
-  ): Promise<ApiResponse<PaginatedData<MomentLikeItem>>> {
-    return post<PaginatedData<MomentLikeItem>>(
-      ENDPOINTS.MOMENTS.LIKES(momentId),
-      { moment_id: momentId, ...(params ?? {}) },
-      { requireAuth: false }
-    );
-  },
-
-  // ============================================================================
-  // 用户瞬间
-  // ============================================================================
-
-  /**
-   * 获取用户瞬间列表
-   */
-  async getUserMoments(
-    userId: number,
-    params: { reference_point: GeoPoint; limit?: number; cursor?: string }
-  ): Promise<ApiResponse<PaginatedData<MomentItem>>> {
-    return post<PaginatedData<MomentItem>>(ENDPOINTS.USER.MOMENTS(userId), params, {
-      requireAuth: false,
-    });
-  },
-
-  /**
-   * 获取我的瞬间列表
-   */
-  async getMyMoments(
-    params: { reference_point: GeoPoint; limit?: number; cursor?: string }
-  ): Promise<ApiResponse<PaginatedData<MomentItem>>> {
-    return post<PaginatedData<MomentItem>>(ENDPOINTS.USER.ME_MOMENTS, params);
-  },
-
-  /**
-   * 获取我的收藏列表
-   */
-  async getMyFavorites(
-    params: { reference_point: GeoPoint; limit?: number; cursor?: string }
-  ): Promise<ApiResponse<PaginatedData<MomentItem>>> {
-    return post<PaginatedData<MomentItem>>(ENDPOINTS.USER.ME_FAVORITES, params);
-  },
+  delete: (momentId: string) =>
+    apiClient.post(ENDPOINTS.MOMENTS.DELETE, { moment_id: momentId }),
 };

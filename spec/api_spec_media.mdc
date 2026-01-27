@@ -10,20 +10,24 @@ alwaysApply: true
 - **Service Namespace**: `media`
 - **Base Path**: `/api/v1/media/`
 
+## 契约引用
+
+- 公共基础类型：`@api_spec_common_types.mdc`
+- 错误码：`@api_spec_errors.mdc`
+
 ## 设计理念
 
 文件上传采用「先上传，后引用」的安全模式。
 
 **核心原则**：
-- **file_id 与 url 完全解耦**：`file_id` 是客户端标识符，`url` 是服务端内部存储路径，两者之间**没有任何可推导的关系**
+- **file_id 与 url 完全解耦**：`file_id` 是客户端标识符，`url` 是服务端内部存储路径
 - **每次上传生成唯一 file_id**：即使上传相同文件，也会返回不同的 `file_id`
 - **客户端无法判断文件是否已存在**：保护用户隐私
 
 **安全机制**：
-- 上传 API 返回 `file_id`（而非直接 URL），客户端将 `file_id` 传给业务 API
-- 后端验证：①`file_id` 存在 ②属于当前用户 ③分类匹配使用场景
-- URL 由后端内部解析，客户端无法伪造或篡改
-- **不提供 file_id → url 的公开转换 API**
+- 上传 API 返回 `file_id`，客户端将 `file_id` 传给业务 API
+- 后端验证：`file_id` 存在性、用户权限、分类匹配
+- URL 由后端内部解析，客户端无法伪造
 
 ## 核心类型定义
 
@@ -80,14 +84,14 @@ interface UploadedMedia {
 
 ### 文件与媒体上传 API (Presigned 模式)
 
-采用 "Presigned URL" (预签名) 模式：
-- **高性能**：客户端直传云存储（S3/MinIO），不占用应用服务器带宽
+采用 "Presigned URL" 模式：
+- **高性能**：客户端直传云存储，不占用应用服务器带宽
 - **兼容性**：MinIO 完全模拟 S3 API，可无缝切换到公有云 S3
 - **安全性**：上传凭证短期有效，且绑定文件特征
 
 **核心流程**：
 1. `presign_upload`：申请上传，获取 `upload_url`
-2. 客户端 PUT 文件到 `upload_url`
+2. 客户端对 `upload_url` 执行对象存储直传（仅发生在存储服务域名上，不属于 HotSpot API）
 3. `complete_upload`：通知服务端上传完成，生成业务 `file_id`
 
 #### POST /api/v1/media/presign_upload
@@ -110,7 +114,7 @@ interface PresignUploadRequest {
 
 #### [客户端操作] 执行上传
 
-- Method: `PUT`
+- Method: `PUT`（对象存储直传，仅发生在存储服务域名上）
 - URL: `upload_url`
 - Headers: `headers` from response
 - Body: File Binary Data

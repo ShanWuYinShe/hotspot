@@ -1,84 +1,36 @@
-# HotSpot React Frontend
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-基于 Next.js 15 + React 19 + shadcn/ui 的前端项目。
+## Getting Started
 
-## 技术栈
-
-| 类别 | 选型 | 说明 |
-|------|------|------|
-| 框架 | Next.js 15 | App Router 模式 |
-| UI 库 | shadcn/ui + Tailwind CSS | 基于 Radix UI |
-| 状态管理 | Zustand | 客户端状态 |
-| 数据获取 | TanStack Query v5 | 服务端状态管理 |
-| 国际化 | next-intl | 中英文支持 |
-| 表单 | React Hook Form + Zod | 类型安全的表单验证 |
-| 图标 | Lucide React | 与 shadcn/ui 配套 |
-
-## 目录结构
-
-```
-frontend_react/
-├── src/
-│   ├── app/                    # Next.js App Router 路由
-│   │   ├── (auth)/             # 认证相关页面组
-│   │   ├── (main)/             # 主应用页面组
-│   │   └── (admin)/            # 管理后台页面组
-│   ├── components/             # UI 组件
-│   │   ├── ui/                 # shadcn/ui 基础组件
-│   │   ├── common/             # 通用业务组件
-│   │   ├── cards/              # 卡片组件
-│   │   └── forms/              # 表单组件
-│   ├── hooks/                  # 自定义 Hooks
-│   ├── lib/                    # 工具库
-│   │   ├── api/                # API 客户端和服务层
-│   │   ├── websocket/          # WebSocket 管理
-│   │   └── utils/              # 工具函数
-│   ├── stores/                 # Zustand stores
-│   ├── types/                  # TypeScript 类型定义
-│   └── i18n/                   # 国际化配置
-├── messages/                   # i18n 翻译文件
-│   ├── en.json
-│   └── zh.json
-└── public/                     # 静态资源
-```
-
-## 开发指南
-
-### 安装依赖
+First, run the development server:
 
 ```bash
-pnpm install
-```
-
-### 启动开发服务器
-
-```bash
+npm run dev
+# or
+yarn dev
+# or
 pnpm dev
+# or
+bun dev
 ```
 
-### 构建生产版本
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-```bash
-pnpm build
-```
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-### 代码检查
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-```bash
-pnpm lint
-```
+## Learn More
 
-## 环境变量
+To learn more about Next.js, take a look at the following resources:
 
-创建 `.env.local` 文件：
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-```bash
-NEXT_PUBLIC_API_URL=http://localhost:8080
-NEXT_PUBLIC_WS_URL=ws://localhost:8080/ws
-```
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## 规范文档
+## Deploy on Vercel
 
-- 功能说明：`spec/frontend_doc.mdc`
-- 工程规范：`spec/frontend_rule.mdc`
-- API 契约：`spec/api_spec.mdc`
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

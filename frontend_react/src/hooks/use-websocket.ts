@@ -1,344 +1,339 @@
 'use client';
 
-import { useEffect, useRef, useCallback, useState } from 'react';
-import { useAuthStore } from '@/stores/auth';
-import type {
-  WebSocketState,
-  ClientEvent,
-  ServerEvent,
-  SubscriptionItem,
-  ServerEventPayloadMap,
-} from '@/types/websocket';
+import { useEffect } from 'react';
 
-const resolveWebSocketUrl = () => {
-  if (typeof location === 'undefined') {
+import { websocketClient } from '@/lib/websocket/client';
+import { useAuthStore } from '@/stores/auth';
+import { useChatStore } from '@/stores/chat';
+import { useNotificationsStore } from '@/stores/notifications';
+import { MessageLocation, MessageMedia, MessageReplyTo, MessageType, UserInfo } from '@/types/api';
+import { AnyWebSocketEvent } from '@/types/websocket';
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const parseMessageType = (value: unknown): MessageType =>
+  typeof value === 'string' ? (value as MessageType) : 'text';
+
+const parseUserInfo = (value: unknown): UserInfo | null => {
+  if (!isRecord(value)) {
     return null;
   }
-  const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  return `${protocol}://${location.host}/ws`;
+  if (typeof value.user_id !== 'number' || typeof value.nickname !== 'string' || typeof value.user_type !== 'string') {
+    return null;
+  }
+  return value as unknown as UserInfo;
 };
-const HEARTBEAT_INTERVAL = 30000; // 30 秒
-const PONG_TIMEOUT = 10000; // 10 秒
-const RECONNECT_BASE_DELAY = 1000; // 1 秒
-const RECONNECT_MAX_DELAY = 30000; // 30 秒
-const AUTH_TIMEOUT = 5000; // 5 秒
 
-type EventHandler<K extends keyof ServerEventPayloadMap> = (
-  payload: ServerEventPayloadMap[K]
-) => void;
+const parseMessageMedia = (value: unknown): MessageMedia | undefined => {
+  if (!isRecord(value) || typeof value.url !== 'string') {
+    return undefined;
+  }
+  return {
+    url: value.url,
+    thumbnail_url: typeof value.thumbnail_url === 'string' ? value.thumbnail_url : undefined,
+    file_name: typeof value.file_name === 'string' ? value.file_name : undefined,
+    file_size: typeof value.file_size === 'number' ? value.file_size : undefined,
+    duration: typeof value.duration === 'number' ? value.duration : undefined,
+    width: typeof value.width === 'number' ? value.width : undefined,
+    height: typeof value.height === 'number' ? value.height : undefined,
+    mime_type: typeof value.mime_type === 'string' ? value.mime_type : undefined,
+  };
+};
 
-interface UseWebSocketOptions {
-  autoConnect?: boolean;
-  onConnect?: () => void;
-  onDisconnect?: () => void;
-  onError?: (error: string) => void;
-}
+const parseMessageLocation = (value: unknown): MessageLocation | undefined => {
+  if (!isRecord(value) || !isRecord(value.location)) {
+    return undefined;
+  }
+  const location = value.location;
+  if (
+    typeof location.latitude !== 'number' ||
+    typeof location.longitude !== 'number' ||
+    typeof location.location_name !== 'string'
+  ) {
+    return undefined;
+  }
+  return {
+    location: {
+      latitude: location.latitude,
+      longitude: location.longitude,
+      location_name: location.location_name,
+    },
+    address: typeof value.address === 'string' ? value.address : undefined,
+  };
+};
 
-export function useWebSocket(options: UseWebSocketOptions = {}) {
-  const { autoConnect = true, onConnect, onDisconnect, onError } = options;
-  
-  const [state, setState] = useState<WebSocketState>('disconnected');
-  const [connectionId, setConnectionId] = useState<string | null>(null);
-  
-  const wsRef = useRef<WebSocket | null>(null);
-  const heartbeatTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const pongTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const reconnectAttemptsRef = useRef(0);
-  const isAuthenticatedRef = useRef(false);
-  const eventHandlersRef = useRef<Map<string, Set<EventHandler<keyof ServerEventPayloadMap>>>>(new Map());
-  const subscriptionsRef = useRef<SubscriptionItem[]>([]);
-  const connectRef = useRef<() => void>(() => {});
-  
-  const getAccessToken = useAuthStore((state) => state.getAccessToken);
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+const parseMessageReplyTo = (value: unknown): MessageReplyTo | undefined => {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  if (
+    typeof value.message_id !== 'string' ||
+    typeof value.user_id !== 'number' ||
+    typeof value.nickname !== 'string' ||
+    typeof value.content !== 'string'
+  ) {
+    return undefined;
+  }
+  return {
+    message_id: value.message_id,
+    user_id: value.user_id,
+    nickname: value.nickname,
+    content: value.content,
+  };
+};
 
-  // 清理定时器
-  const clearTimers = useCallback(() => {
-    if (heartbeatTimerRef.current) {
-      clearInterval(heartbeatTimerRef.current);
-      heartbeatTimerRef.current = null;
+export function useWebSocket() {
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const currentUserId = useAuthStore((state) => state.user?.user_id ?? null);
+  const {
+    appendPrivateMessage,
+    appendGroupMessage,
+    updatePrivateMessage,
+    updateGroupMessage,
+    setPrivateTyping,
+    setGroupTyping,
+  } = useChatStore();
+  const { incrementUnread } = useNotificationsStore();
+
+  useEffect(() => {
+    if (accessToken) {
+      websocketClient.connect(accessToken);
+    } else {
+      websocketClient.disconnect();
     }
-    if (pongTimeoutRef.current) {
-      clearTimeout(pongTimeoutRef.current);
-      pongTimeoutRef.current = null;
-    }
-    if (reconnectTimerRef.current) {
-      clearTimeout(reconnectTimerRef.current);
-      reconnectTimerRef.current = null;
-    }
-  }, []);
+  }, [accessToken]);
 
-  // 发送消息
-  const send = useCallback((event: ClientEvent) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(event));
-    }
-  }, []);
-
-  // 开始心跳
-  const startHeartbeat = useCallback(() => {
-    heartbeatTimerRef.current = setInterval(() => {
-      send({
-        type: 'Ping',
-        payload: { timestamp: new Date().toISOString() },
-      });
-
-      // 设置 Pong 超时
-      pongTimeoutRef.current = setTimeout(() => {
-        // Pong 超时，断开连接并重连
-        wsRef.current?.close();
-      }, PONG_TIMEOUT);
-    }, HEARTBEAT_INTERVAL);
-  }, [send]);
-
-  // 处理服务端消息
-  const handleMessage = useCallback((event: MessageEvent) => {
-    try {
-      const data = JSON.parse(event.data) as ServerEvent;
-      
-      // 处理特殊事件
-      switch (data.type) {
-        case 'ConnectionEstablished':
-          isAuthenticatedRef.current = true;
-          setConnectionId(data.payload.connection_id);
-          setState('connected');
-          reconnectAttemptsRef.current = 0;
-          startHeartbeat();
-          onConnect?.();
-          
-          // 恢复订阅
-          if (subscriptionsRef.current.length > 0) {
-            send({
-              type: 'SetSubscriptions',
-              payload: { items: subscriptionsRef.current },
-            });
-          }
-          break;
-
-        case 'Pong':
-          // 清除 Pong 超时
-          if (pongTimeoutRef.current) {
-            clearTimeout(pongTimeoutRef.current);
-            pongTimeoutRef.current = null;
-          }
-          break;
-
-        case 'Error':
-          onError?.(data.payload.message);
-          break;
+  useEffect(() => {
+    const unsubscribe = websocketClient.on((event: AnyWebSocketEvent) => {
+      if (!isRecord(event.payload)) {
+        return;
       }
 
-      // 调用注册的事件处理器
-      const handlers = eventHandlersRef.current.get(data.type);
-      if (handlers) {
-        handlers.forEach((handler) => {
-          (handler as EventHandler<typeof data.type>)(data.payload as ServerEventPayloadMap[typeof data.type]);
+      if (event.type === 'PrivateMessageNew') {
+        const payload = event.payload;
+        const sender = parseUserInfo(payload.sender);
+        const targetUserId = typeof payload.target_user_id === 'number' ? payload.target_user_id : null;
+        const messageId = typeof payload.message_id === 'string' ? payload.message_id : null;
+        const sentAt = typeof payload.sent_at === 'string' ? payload.sent_at : null;
+
+        if (!sender || !targetUserId || !messageId || !sentAt) {
+          return;
+        }
+
+        const partnerId = sender.user_id === currentUserId ? targetUserId : sender.user_id;
+
+        appendPrivateMessage(partnerId, {
+          message_id: messageId,
+          type: parseMessageType(payload.type),
+          content: typeof payload.content === 'string' ? payload.content : undefined,
+          media: parseMessageMedia(payload.media),
+          location: parseMessageLocation(payload.location),
+          sender,
+          reply_to: parseMessageReplyTo(payload.reply_to),
+          sent_at: sentAt,
+          is_recalled: false,
         });
+        return;
       }
-    } catch {
-      console.error('Failed to parse WebSocket message');
-    }
-  }, [onConnect, onError, send, startHeartbeat]);
 
-  // 重连
-  const reconnect = useCallback(() => {
-    if (reconnectTimerRef.current) return;
+      if (event.type === 'GroupMessageNew') {
+        const payload = event.payload;
+        const sender = parseUserInfo(payload.sender);
+        const groupId = typeof payload.group_chat_id === 'string' ? payload.group_chat_id : null;
+        const messageId = typeof payload.message_id === 'string' ? payload.message_id : null;
+        const sentAt = typeof payload.sent_at === 'string' ? payload.sent_at : null;
 
-    const delay = Math.min(
-      RECONNECT_BASE_DELAY * Math.pow(2, reconnectAttemptsRef.current),
-      RECONNECT_MAX_DELAY
-    );
-
-    reconnectTimerRef.current = setTimeout(() => {
-      reconnectTimerRef.current = null;
-      reconnectAttemptsRef.current++;
-      connectRef.current();
-    }, delay);
-  }, []);
-
-  // 连接
-  const connect = useCallback(() => {
-    if (!isAuthenticated) return;
-    
-    const token = getAccessToken();
-    if (!token) return;
-
-    // 关闭现有连接
-    if (wsRef.current) {
-      wsRef.current.close();
-    }
-
-    clearTimers();
-    setState('connecting');
-    isAuthenticatedRef.current = false;
-
-    const wsUrl = resolveWebSocketUrl();
-    if (!wsUrl) return;
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      // 发送认证消息
-      send({
-        type: 'Auth',
-        payload: { access_token: token },
-      });
-
-      // 设置认证超时
-      setTimeout(() => {
-        if (!isAuthenticatedRef.current) {
-          ws.close();
-          onError?.('Authentication timeout');
+        if (!sender || !groupId || !messageId || !sentAt) {
+          return;
         }
-      }, AUTH_TIMEOUT);
-    };
 
-    ws.onmessage = handleMessage;
-
-    ws.onclose = () => {
-      clearTimers();
-      setState('disconnected');
-      setConnectionId(null);
-      onDisconnect?.();
-      
-      // 自动重连
-      if (isAuthenticated) {
-        reconnect();
+        appendGroupMessage(groupId, {
+          message_id: messageId,
+          type: parseMessageType(payload.type),
+          content: typeof payload.content === 'string' ? payload.content : undefined,
+          media: parseMessageMedia(payload.media),
+          location: parseMessageLocation(payload.location),
+          sender,
+          reply_to: parseMessageReplyTo(payload.reply_to),
+          mentions: Array.isArray(payload.mentions) ? (payload.mentions as number[]) : undefined,
+          sent_at: sentAt,
+          is_recalled: false,
+        });
+        return;
       }
-    };
 
-    ws.onerror = () => {
-      setState('error');
-    };
-  }, [isAuthenticated, getAccessToken, clearTimers, send, handleMessage, onDisconnect, onError, reconnect]);
+      if (event.type === 'PrivateMessageEdited') {
+        const payload = event.payload;
+        const messageId = typeof payload.message_id === 'string' ? payload.message_id : null;
+        const targetUserId = typeof payload.target_user_id === 'number' ? payload.target_user_id : null;
+        const content = typeof payload.content === 'string' ? payload.content : null;
+        const editedAt = typeof payload.edited_at === 'string' ? payload.edited_at : null;
 
-  useEffect(() => {
-    connectRef.current = connect;
-  }, [connect]);
-
-  // 断开连接
-  const disconnect = useCallback(() => {
-    clearTimers();
-    reconnectAttemptsRef.current = 0;
-    
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
-  }, [clearTimers]);
-
-  // 订阅
-  const subscribe = useCallback((items: SubscriptionItem[]) => {
-    // 更新本地订阅列表
-    items.forEach((item) => {
-      const existingIndex = subscriptionsRef.current.findIndex(
-        (s) => s.type === item.type
-      );
-      if (existingIndex >= 0) {
-        // 合并 ids
-        const existing = subscriptionsRef.current[existingIndex];
-        if (existing) {
-          const ids = new Set<string | number>([
-            ...(existing.ids as (string | number)[]),
-            ...(item.ids as (string | number)[]),
-          ]);
-          (existing as { ids: (string | number)[] }).ids = Array.from(ids);
+        if (!messageId || !targetUserId || !content || !editedAt) {
+          return;
         }
-      } else {
-        subscriptionsRef.current.push(item);
+
+        updatePrivateMessage(targetUserId, messageId, (msg) => ({
+          ...msg,
+          content,
+          edited_at: editedAt,
+        }));
+        return;
       }
-    });
 
-    if (state === 'connected') {
-      send({
-        type: 'Subscribe',
-        payload: { items },
-      });
-    }
-  }, [state, send]);
+      if (event.type === 'GroupMessageEdited') {
+        const payload = event.payload;
+        const messageId = typeof payload.message_id === 'string' ? payload.message_id : null;
+        const groupId = typeof payload.group_chat_id === 'string' ? payload.group_chat_id : null;
+        const content = typeof payload.content === 'string' ? payload.content : null;
+        const editedAt = typeof payload.edited_at === 'string' ? payload.edited_at : null;
 
-  // 取消订阅
-  const unsubscribe = useCallback((items: SubscriptionItem[]) => {
-    // 更新本地订阅列表
-    items.forEach((item) => {
-      const existingIndex = subscriptionsRef.current.findIndex(
-        (s) => s.type === item.type
-      );
-      if (existingIndex >= 0) {
-        const existing = subscriptionsRef.current[existingIndex];
-        if (existing) {
-          const idsToRemove = new Set<string | number>(item.ids as (string | number)[]);
-          (existing as { ids: (string | number)[] }).ids = (
-            existing.ids as (string | number)[]
-          ).filter((id) => !idsToRemove.has(id));
-          if (existing.ids.length === 0) {
-            subscriptionsRef.current.splice(existingIndex, 1);
-          }
+        if (!messageId || !groupId || !content || !editedAt) {
+          return;
         }
+
+        updateGroupMessage(groupId, messageId, (msg) => ({
+          ...msg,
+          content,
+          edited_at: editedAt,
+        }));
+        return;
+      }
+
+      if (event.type === 'PrivateMessageRecalled') {
+        const payload = event.payload;
+        const messageId = typeof payload.message_id === 'string' ? payload.message_id : null;
+        const targetUserId = typeof payload.target_user_id === 'number' ? payload.target_user_id : null;
+        const recalledAt = typeof payload.recalled_at === 'string' ? payload.recalled_at : null;
+
+        if (!messageId || !targetUserId || !recalledAt) {
+          return;
+        }
+
+        updatePrivateMessage(targetUserId, messageId, (msg) => ({
+          ...msg,
+          is_recalled: true,
+          recalled_at: recalledAt,
+        }));
+        return;
+      }
+
+      if (event.type === 'GroupMessageRecalled') {
+        const payload = event.payload;
+        const messageId = typeof payload.message_id === 'string' ? payload.message_id : null;
+        const groupId = typeof payload.group_chat_id === 'string' ? payload.group_chat_id : null;
+        const recalledAt = typeof payload.recalled_at === 'string' ? payload.recalled_at : null;
+
+        if (!messageId || !groupId || !recalledAt) {
+          return;
+        }
+
+        updateGroupMessage(groupId, messageId, (msg) => ({
+          ...msg,
+          is_recalled: true,
+          recalled_at: recalledAt,
+        }));
+        return;
+      }
+
+      if (event.type === 'PrivateMessageDeleted') {
+        const payload = event.payload;
+        const messageId = typeof payload.message_id === 'string' ? payload.message_id : null;
+        const targetUserId = typeof payload.target_user_id === 'number' ? payload.target_user_id : null;
+        if (!messageId || !targetUserId) {
+          return;
+        }
+        updatePrivateMessage(targetUserId, messageId, (msg) => ({
+          ...msg,
+          content: undefined,
+          media: undefined,
+          location: undefined,
+          is_recalled: true,
+          recalled_at: typeof payload.deleted_at === 'string' ? payload.deleted_at : msg.recalled_at,
+        }));
+        return;
+      }
+
+      if (event.type === 'GroupMessageDeleted') {
+        const payload = event.payload;
+        const messageId = typeof payload.message_id === 'string' ? payload.message_id : null;
+        const groupId = typeof payload.group_chat_id === 'string' ? payload.group_chat_id : null;
+        if (!messageId || !groupId) {
+          return;
+        }
+        updateGroupMessage(groupId, messageId, (msg) => ({
+          ...msg,
+          content: undefined,
+          media: undefined,
+          location: undefined,
+          is_recalled: true,
+          recalled_at: typeof payload.deleted_at === 'string' ? payload.deleted_at : msg.recalled_at,
+        }));
+        return;
+      }
+
+      if (event.type === 'PrivateUserTyping') {
+        const payload = event.payload;
+        const userId = typeof payload.user_id === 'number' ? payload.user_id : null;
+        const isTyping = typeof payload.is_typing === 'boolean' ? payload.is_typing : null;
+        if (userId !== null && isTyping !== null) {
+          setPrivateTyping(userId, isTyping);
+        }
+        return;
+      }
+
+      if (event.type === 'GroupUserTyping') {
+        const payload = event.payload;
+        const groupId = typeof payload.group_chat_id === 'string' ? payload.group_chat_id : null;
+        const userId = typeof payload.user_id === 'number' ? payload.user_id : null;
+        const isTyping = typeof payload.is_typing === 'boolean' ? payload.is_typing : null;
+        if (groupId && userId !== null && isTyping !== null) {
+          setGroupTyping(groupId, userId, isTyping);
+        }
+        return;
+      }
+
+      if (
+        event.type === 'MomentLiked' ||
+        event.type === 'MomentCommented' ||
+        event.type === 'CommentReply' ||
+        event.type === 'MessageMentioned' ||
+        event.type === 'SystemAnnouncement' ||
+        event.type === 'NewFollower' ||
+        event.type === 'MutualFollow' ||
+        event.type === 'FollowRequestReceived' ||
+        event.type === 'FollowRequestHandled' ||
+        event.type === 'GroupInviteReceived' ||
+        event.type === 'GroupInviteResponse' ||
+        event.type === 'GroupApplicationReceived' ||
+        event.type === 'GroupApplicationResponse' ||
+        event.type === 'GroupAnnouncementCreated'
+      ) {
+        incrementUnread();
       }
     });
-
-    if (state === 'connected') {
-      send({
-        type: 'Unsubscribe',
-        payload: { items },
-      });
-    }
-  }, [state, send]);
-
-  // 注册事件处理器
-  const on = useCallback(<K extends keyof ServerEventPayloadMap>(
-    eventType: K,
-    handler: EventHandler<K>
-  ) => {
-    if (!eventHandlersRef.current.has(eventType)) {
-      eventHandlersRef.current.set(eventType, new Set());
-    }
-    eventHandlersRef.current.get(eventType)?.add(handler as EventHandler<keyof ServerEventPayloadMap>);
-
-    // 返回取消注册函数
-    return () => {
-      eventHandlersRef.current.get(eventType)?.delete(handler as EventHandler<keyof ServerEventPayloadMap>);
-    };
-  }, []);
-
-  // 发送打字状态
-  const sendTyping = useCallback((targetUserId: number, isTyping: boolean) => {
-    send({
-      type: 'PrivateTyping',
-      payload: { target_user_id: targetUserId, is_typing: isTyping },
-    });
-  }, [send]);
-
-  const sendGroupTyping = useCallback((groupChatId: string, isTyping: boolean) => {
-    send({
-      type: 'GroupTyping',
-      payload: { group_chat_id: groupChatId, is_typing: isTyping },
-    });
-  }, [send]);
-
-  // 自动连接
-  useEffect(() => {
-    if (autoConnect && isAuthenticated) {
-      connect();
-    }
 
     return () => {
-      disconnect();
+      unsubscribe();
     };
-  }, [autoConnect, isAuthenticated, connect, disconnect]);
+  }, [
+    appendGroupMessage,
+    appendPrivateMessage,
+    currentUserId,
+    incrementUnread,
+    setGroupTyping,
+    setPrivateTyping,
+    updateGroupMessage,
+    updatePrivateMessage,
+  ]);
 
   return {
-    state,
-    connectionId,
-    isConnected: state === 'connected',
-    connect,
-    disconnect,
-    subscribe,
-    unsubscribe,
-    on,
-    sendTyping,
-    sendGroupTyping,
+    subscribeUsers: (userIds: number[]) => websocketClient.subscribeUsers(userIds),
+    subscribeGroups: (groupIds: string[]) => websocketClient.subscribeGroups(groupIds),
+    sendPrivateTyping: (userId: number, isTyping: boolean) =>
+      websocketClient.sendPrivateTyping(userId, isTyping),
+    sendGroupTyping: (groupId: string, isTyping: boolean) =>
+      websocketClient.sendGroupTyping(groupId, isTyping),
   };
 }

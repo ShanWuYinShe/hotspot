@@ -1,39 +1,60 @@
-/**
- * 审计日志页面 (Server Component)
- * 服务端获取审计日志
- */
+'use client';
 
-import { Suspense } from 'react';
-import { getTranslations } from 'next-intl/server';
-import { serverApi, isServerSuccess } from '@/lib/api/server';
-import { ENDPOINTS } from '@/lib/api/endpoints';
-import { LoadingState } from '@/components/common/loading-state';
-import { AuditLogTable } from './audit-log-table';
-import { PageHeader } from '@/components/layout';
-import type { AuditLogItem, PaginatedData } from '@/types/api';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 
-async function AuditContent() {
-  const response = await serverApi.post<PaginatedData<AuditLogItem>>(
-    ENDPOINTS.ADMIN.AUDIT_LOGS,
-    { limit: 100 },
-    { tags: ['audit-logs'], revalidate: 30 }
-  );
+import { Card, CardContent } from '@/components/ui/card';
+import { AdminAuditService } from '@/lib/api/services/admin/audit';
+import { AuditLogItem, PaginatedData } from '@/types/api';
+import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
 
-  const logs = isServerSuccess(response) ? response.data?.items ?? [] : [];
+export default function AdminAuditPage() {
+  const t = useTranslations('admin');
+  const tCommon = useTranslations('common');
 
-  return <AuditLogTable logs={logs} />;
-}
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['admin-audit'],
+    queryFn: async ({ pageParam }): Promise<PaginatedData<AuditLogItem>> => {
+      const res = await AdminAuditService.list({ cursor: pageParam as string | undefined });
+      if (res.code !== 0) throw new Error(res.message);
+      return res.data!;
+    },
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.pagination.next_cursor,
+  });
 
-export default async function AdminAuditPage() {
-  const t = await getTranslations('admin');
+  const { ref } = useInfiniteScroll({ hasNextPage, isFetchingNextPage, fetchNextPage });
+  const logs = data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t('audit')} description="管理员操作与变更记录" />
-      
-      <Suspense fallback={<LoadingState text="加载中..." />}>
-        <AuditContent />
-      </Suspense>
+      <h1 className="text-2xl font-bold">{t('audit')}</h1>
+      {logs.length > 0 ? (
+        <div className="space-y-3">
+          {logs.map((log) => (
+            <Card key={log.log_id}>
+              <CardContent className="p-4">
+                <div className="font-semibold">{log.action}</div>
+                <div className="text-xs text-muted-foreground">{log.target_id}</div>
+              </CardContent>
+            </Card>
+          ))}
+          <div ref={ref} className="flex justify-center p-4">
+            {isFetchingNextPage ? (
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-transparent border-current" />
+            ) : null}
+          </div>
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">{tCommon('empty')}</CardContent>
+        </Card>
+      )}
     </div>
   );
 }

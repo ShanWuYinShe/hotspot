@@ -6,19 +6,24 @@ use tracing::{error, info};
 
 use crate::{
     dto::response::Location,
-    events::event_types::AppEvent,
-    repositories::group_member_repo::GroupMemberRepository,
-    repositories::notification_repo::NotificationType,
-    repositories::user_repo::UserRepository,
-    services::notification_service::NotificationService,
-    services::subscription_service::SubscriptionService,
-    types::enums::{AnnouncementSeverity, FollowRequestAction},
+    events::{
+        event_bus::EventBus,
+        event_types::AppEvent,
+    },
+    repositories::{
+        group_member_repo::GroupMemberRepository,
+        notification_repo::NotificationType,
+        user_repo::UserRepository,
+    },
+    services::{
+        notification_service::NotificationService,
+        subscription_service::SubscriptionService,
+    },
     websocket::{
         manager::ConnectionManager as WsConnectionManager,
         subscription::SubscriptionManager,
-        types::{GroupUpdatedFields, WsMessage},
+        types::WsMessage,
     },
-    EventBus,
 };
 
 /// 事件处理器
@@ -121,17 +126,52 @@ impl EventHandler {
             AppEvent::NewFollower {
                 user_id,
                 follower_id,
+                is_mutual,
                 ..
             } => {
+                if *is_mutual {
+                    return Ok(());
+                }
                 self.notification_service
                     .create_notification(
                         *user_id,
-                        NotificationType::Follow,
+                        NotificationType::NewFollower,
                         "新增关注".to_string(),
                         "关注了你".to_string(),
                         Some(*follower_id),
                         Some("user".to_string()),
                         Some(follower_id.to_string()),
+                        None,
+                        None,
+                    )
+                    .await?;
+            }
+            AppEvent::MutualFollow {
+                user_id,
+                mutual_user_id,
+            } => {
+                self.notification_service
+                    .create_notification(
+                        *user_id,
+                        NotificationType::MutualFollow,
+                        "互相关注".to_string(),
+                        "与你成为好友".to_string(),
+                        Some(*mutual_user_id),
+                        Some("user".to_string()),
+                        Some(mutual_user_id.to_string()),
+                        None,
+                        None,
+                    )
+                    .await?;
+                self.notification_service
+                    .create_notification(
+                        *mutual_user_id,
+                        NotificationType::MutualFollow,
+                        "互相关注".to_string(),
+                        "与你成为好友".to_string(),
+                        Some(*user_id),
+                        Some("user".to_string()),
+                        Some(user_id.to_string()),
                         None,
                         None,
                     )
@@ -146,7 +186,7 @@ impl EventHandler {
                 self.notification_service
                     .create_notification(
                         *user_id,
-                        NotificationType::Like,
+                        NotificationType::MomentLike,
                         "瞬间获赞".to_string(),
                         "点赞了你的瞬间".to_string(),
                         Some(*liker_id),
@@ -173,7 +213,7 @@ impl EventHandler {
                 self.notification_service
                     .create_notification(
                         *user_id,
-                        NotificationType::Comment,
+                        NotificationType::MomentComment,
                         "瞬间评论".to_string(),
                         content.clone(),
                         Some(*commenter_id),
@@ -201,7 +241,7 @@ impl EventHandler {
                 self.notification_service
                     .create_notification(
                         *user_id,
-                        NotificationType::Reply,
+                        NotificationType::CommentReply,
                         "收到回复".to_string(),
                         content.clone(),
                         Some(*replier_id),
@@ -234,6 +274,30 @@ impl EventHandler {
                     )
                     .await?;
             }
+            AppEvent::GroupInviteResponse {
+                invite_id,
+                group_id,
+                inviter_id,
+                invitee_id,
+                status,
+            } => {
+                if status.as_str() != "accepted" {
+                    return Ok(());
+                }
+                self.notification_service
+                    .create_notification(
+                        *inviter_id,
+                        NotificationType::GroupInviteResponse,
+                        "群组邀请已接受".to_string(),
+                        "对方已接受你的群组邀请".to_string(),
+                        Some(*invitee_id),
+                        Some("group".to_string()),
+                        Some(group_id.to_string()),
+                        Some(invite_id.to_string()),
+                        None,
+                    )
+                    .await?;
+            }
             AppEvent::GroupApplicationReceived {
                 application_id,
                 group_id,
@@ -249,7 +313,7 @@ impl EventHandler {
                     self.notification_service
                         .create_notification(
                             admin_id,
-                            NotificationType::GroupApply,
+                            NotificationType::GroupApplication,
                             "入群申请".to_string(),
                             message
                                 .clone()
@@ -263,6 +327,96 @@ impl EventHandler {
                         .await?;
                 }
             }
+            AppEvent::GroupApplicationResponse {
+                application_id,
+                group_id,
+                group_name,
+                applicant_id,
+                status,
+            } => {
+                if status.as_str() != "accepted" {
+                    return Ok(());
+                }
+                self.notification_service
+                    .create_notification(
+                        *applicant_id,
+                        NotificationType::GroupApplicationResponse,
+                        "入群申请已通过".to_string(),
+                        format!("已通过加入群组: {}", group_name),
+                        None,
+                        Some("group".to_string()),
+                        Some(group_id.to_string()),
+                        Some(application_id.to_string()),
+                        None,
+                    )
+                    .await?;
+            }
+            AppEvent::GroupAnnouncementCreated {
+                announcement_id,
+                group_id,
+                title,
+                content,
+                created_by_user_id,
+                ..
+            } => {
+                let member_ids = self
+                    .group_member_repo
+                    .list_member_user_ids(*group_id)
+                    .await?;
+                for member_id in member_ids {
+                    if member_id == *created_by_user_id {
+                        continue;
+                    }
+                    self.notification_service
+                        .create_notification(
+                            member_id,
+                            NotificationType::GroupAnnouncement,
+                            title.clone(),
+                            content.clone(),
+                            Some(*created_by_user_id),
+                            Some("group".to_string()),
+                            Some(group_id.to_string()),
+                            Some(announcement_id.to_string()),
+                            None,
+                        )
+                        .await?;
+                }
+            }
+            AppEvent::SystemAnnouncement {
+                announcement_id,
+                title,
+                content,
+                action_url,
+                ..
+            } => {
+                let mut last_user_id = 0;
+                loop {
+                    let user_ids = self.user_repo.list_user_ids_after(last_user_id, 1000).await?;
+                    if user_ids.is_empty() {
+                        break;
+                    }
+                    for uid in &user_ids {
+                        self.notification_service
+                            .create_notification(
+                                *uid,
+                                NotificationType::SystemAnnouncement,
+                                title.clone(),
+                                content.clone(),
+                                None,
+                                action_url.as_ref().map(|_| "web".to_string()),
+                                action_url.clone(),
+                                Some(announcement_id.clone()),
+                                None,
+                            )
+                            .await?;
+                    }
+                    if let Some(last) = user_ids.last() {
+                        last_user_id = *last;
+                    } else {
+                        break;
+                    }
+                }
+            }
             AppEvent::SystemNotification {
                 user_id,
                 title,
@@ -271,7 +425,7 @@ impl EventHandler {
                 self.notification_service
                     .create_notification(
                         *user_id,
-                        NotificationType::System,
+                        NotificationType::SystemAnnouncement,
                         title.clone(),
                         content.clone(),
                         None, // System has no sender
@@ -291,11 +445,11 @@ impl EventHandler {
                 self.notification_service
                     .create_notification(
                         *target_id,
-                        NotificationType::Follow,
+                        NotificationType::FollowRequest,
                         "新的关注请求".to_string(),
                         "请求关注你".to_string(),
                         Some(*requester_id),
-                        Some("follow_request".to_string()),
+                        None,
                         Some(request_id.clone()),
                         None,
                         None,
@@ -308,25 +462,20 @@ impl EventHandler {
                 target_id,
                 accepted,
             } => {
+                if !accepted {
+                    return Ok(());
+                }
                 // 创建关注请求处理通知
-                let title = if *accepted {
-                    "关注请求已通过"
-                } else {
-                    "关注请求被拒绝"
-                };
-                let content = if *accepted {
-                    "已同意你的关注请求"
-                } else {
-                    "拒绝了你的关注请求"
-                };
+                let title = "关注请求已通过";
+                let content = "已同意你的关注请求";
                 self.notification_service
                     .create_notification(
                         *requester_id,
-                        NotificationType::Follow,
+                        NotificationType::FollowRequestHandled,
                         title.to_string(),
                         content.to_string(),
                         Some(*target_id),
-                        Some("follow_request".to_string()),
+                        None,
                         Some(request_id.clone()),
                         None,
                         None,
@@ -348,26 +497,7 @@ impl EventHandler {
             AppEvent::UserRegistered { .. } => {
                 // 注册事件不需要 WebSocket 推送
             }
-            AppEvent::UserProfileUpdated {
-                user_id,
-                nickname,
-                avatar_url,
-                bio,
-            } => {
-                let message = WsMessage::UserProfileUpdated {
-                    user_id: *user_id,
-                    nickname: nickname.clone(),
-                    avatar_url: avatar_url.clone(),
-                    bio: bio.clone(),
-                    updated_at: chrono::Utc::now().to_rfc3339(),
-                };
-                // 推送给订阅了该用户状态的用户
-                let subscribers = self
-                    .ws_subscription
-                    .get_user_status_subscribers(*user_id)
-                    .await;
-                self.ws_manager.send_to_users(&subscribers, &message).await;
-            }
+            AppEvent::UserProfileUpdated { .. } => {}
             AppEvent::UserLocationUpdated {
                 user_id,
                 latitude,
@@ -447,24 +577,6 @@ impl EventHandler {
                         .await;
                 }
             }
-            AppEvent::Unfollowed {
-                follower_id,
-                user_id,
-                was_mutual,
-            } => {
-                // 取消关注：目前偏好表里没有单独的 unfollowed 开关，复用 mutual_follow_enabled 的语义（好友关系变化）
-                let cfg = self.subscription_service.get_config(*user_id).await?;
-                if !cfg.mutual_follow_enabled {
-                    return Ok(());
-                }
-
-                let message = WsMessage::Unfollowed {
-                    user_id: *follower_id,
-                    unfollowed_at: chrono::Utc::now().to_rfc3339(),
-                    was_mutual: *was_mutual,
-                };
-                let _ = self.ws_manager.send_to_user(*user_id, &message).await;
-            }
             AppEvent::FollowRequestReceived {
                 request_id,
                 requester_id,
@@ -489,6 +601,9 @@ impl EventHandler {
                 target_id,
                 accepted,
             } => {
+                if !accepted {
+                    return Ok(());
+                }
                 let cfg = self.subscription_service.get_config(*requester_id).await?;
                 if !cfg.follow_request_handled_enabled {
                     return Ok(());
@@ -497,11 +612,7 @@ impl EventHandler {
                 let message = WsMessage::FollowRequestHandled {
                     request_id: request_id.clone(),
                     target_user,
-                    action: if *accepted {
-                        FollowRequestAction::Accept
-                    } else {
-                        FollowRequestAction::Reject
-                    },
+                    action: "accept".to_string(),
                     handled_at: chrono::Utc::now().to_rfc3339(),
                 };
                 let _ = self
@@ -543,118 +654,12 @@ impl EventHandler {
                     .await;
                 self.ws_manager.send_to_users(&subscribers, &message).await;
             }
-            AppEvent::GroupMemberRemoved {
-                group_id,
-                user_id,
-                member_count,
-                reason,
-                ..
-            } => {
-                let message = WsMessage::GroupMemberLeft {
-                    group_chat_id: group_id.to_string(),
-                    user_id: *user_id,
-                    member_count: *member_count as i32,
-                    reason: reason.clone(),
-                    left_at: chrono::Utc::now().to_rfc3339(),
-                };
-                let group_id_str = group_id.to_string();
-                let subscribers = self
-                    .ws_subscription
-                    .get_group_chat_subscribers(&group_id_str)
-                    .await;
-                self.ws_manager.send_to_users(&subscribers, &message).await;
-                let _ = self.ws_manager.send_to_user(*user_id, &message).await;
-            }
-            AppEvent::GroupProfileUpdated {
-                group_id,
-                name,
-                description,
-                avatar_url,
-            } => {
-                let message = WsMessage::GroupProfileUpdated {
-                    group_chat_id: group_id.to_string(),
-                    updated_fields: GroupUpdatedFields {
-                        name: name.clone(),
-                        description: description.clone(),
-                        avatar_url: avatar_url.clone(),
-                        settings: None,
-                    },
-                    updated_at: chrono::Utc::now().to_rfc3339(),
-                };
-                let group_id_str = group_id.to_string();
-                let subscribers = self
-                    .ws_subscription
-                    .get_group_chat_subscribers(&group_id_str)
-                    .await;
-                self.ws_manager.send_to_users(&subscribers, &message).await;
-            }
-            AppEvent::GroupMemberRoleChanged {
-                group_id,
-                user_id,
-                old_role,
-                new_role,
-            } => {
-                let message = WsMessage::GroupMemberRoleChanged {
-                    group_chat_id: group_id.to_string(),
-                    user_id: *user_id,
-                    old_role: old_role.clone(),
-                    new_role: new_role.clone(),
-                    changed_at: chrono::Utc::now().to_rfc3339(),
-                };
-                let group_id_str = group_id.to_string();
-                let subscribers = self
-                    .ws_subscription
-                    .get_group_chat_subscribers(&group_id_str)
-                    .await;
-                self.ws_manager.send_to_users(&subscribers, &message).await;
-            }
-            AppEvent::GroupMemberMuted {
-                group_id,
-                user_id,
-                muted_until,
-            } => {
-                let message = WsMessage::GroupMemberMuted {
-                    group_chat_id: group_id.to_string(),
-                    user_id: *user_id,
-                    muted_until: muted_until.clone(),
-                    muted_at: chrono::Utc::now().to_rfc3339(),
-                };
-                let group_id_str = group_id.to_string();
-                let subscribers = self
-                    .ws_subscription
-                    .get_group_chat_subscribers(&group_id_str)
-                    .await;
-                self.ws_manager.send_to_users(&subscribers, &message).await;
-            }
-            AppEvent::GroupMemberUnmuted { group_id, user_id } => {
-                let message = WsMessage::GroupMemberUnmuted {
-                    group_chat_id: group_id.to_string(),
-                    user_id: *user_id,
-                    unmuted_at: chrono::Utc::now().to_rfc3339(),
-                };
-                let group_id_str = group_id.to_string();
-                let subscribers = self
-                    .ws_subscription
-                    .get_group_chat_subscribers(&group_id_str)
-                    .await;
-                self.ws_manager.send_to_users(&subscribers, &message).await;
-            }
-            AppEvent::GroupDismissed {
-                group_id,
-                dismissed_by,
-            } => {
-                let message = WsMessage::GroupDismissed {
-                    group_chat_id: group_id.to_string(),
-                    dismissed_by: *dismissed_by,
-                    dismissed_at: chrono::Utc::now().to_rfc3339(),
-                };
-                let group_id_str = group_id.to_string();
-                let subscribers = self
-                    .ws_subscription
-                    .get_group_chat_subscribers(&group_id_str)
-                    .await;
-                self.ws_manager.send_to_users(&subscribers, &message).await;
-            }
+            AppEvent::GroupMemberRemoved { .. } => {}
+            AppEvent::GroupProfileUpdated { .. } => {}
+            AppEvent::GroupMemberRoleChanged { .. } => {}
+            AppEvent::GroupMemberMuted { .. } => {}
+            AppEvent::GroupMemberUnmuted { .. } => {}
+            AppEvent::GroupDismissed { .. } => {}
             AppEvent::GroupInviteSent {
                 invite_id,
                 group_id,
@@ -688,6 +693,9 @@ impl EventHandler {
                 invitee_id,
                 status,
             } => {
+                if status.as_str() != "accepted" {
+                    return Ok(());
+                }
                 // 邀请响应只通知邀请人（通知类事件，按订阅与偏好）
                 let cfg = self.subscription_service.get_config(*inviter_id).await?;
                 if !cfg.group_invite_response_enabled {
@@ -699,7 +707,7 @@ impl EventHandler {
                     invite_id: invite_id.to_string(),
                     group_chat_id: group_id.to_string(),
                     user,
-                    status: status.clone(),
+                    status: "accepted".to_string(),
                     responded_at: chrono::Utc::now().to_rfc3339(),
                 };
                 let _ = self.ws_manager.send_to_user(*inviter_id, &message).await;
@@ -744,11 +752,14 @@ impl EventHandler {
                 applicant_id,
                 status,
             } => {
+                if status.as_str() != "accepted" {
+                    return Ok(());
+                }
                 let message = WsMessage::GroupApplicationResponse {
                     application_id: application_id.to_string(),
                     group_chat_id: group_id.to_string(),
                     group_name: group_name.clone(),
-                    status: status.clone(),
+                    status: "accepted".to_string(),
                     responded_at: chrono::Utc::now().to_rfc3339(),
                 };
                 let cfg = self.subscription_service.get_config(*applicant_id).await?;
@@ -1078,48 +1089,12 @@ impl EventHandler {
             }
 
             // ========== 多端同步事件 ==========
-            // 注：SelfJoinedGroup 和 SelfLeftGroup 通过 GroupMemberJoined/Left 事件处理
-            // 客户端通过判断 user_id 是否是自己来识别多端同步场景
-            AppEvent::SelfJoinedGroup { .. } => {
-                // 由 GroupMemberAdded 事件统一处理
-            }
-            AppEvent::SelfLeftGroup { .. } => {
-                // 由 GroupMemberRemoved 事件统一处理
-            }
-            AppEvent::PrivateChatDeleted {
-                user_id,
-                target_user_id,
-            } => {
-                let message = WsMessage::PrivateChatDeleted {
-                    target_user_id: *target_user_id,
-                    deleted_at: chrono::Utc::now().to_rfc3339(),
-                };
-                let _ = self.ws_manager.send_to_user(*user_id, &message).await;
-            }
-            AppEvent::PrivateChatSettingsUpdated {
-                user_id,
-                target_user_id,
-                is_muted,
-                is_pinned,
-            } => {
-                let message = WsMessage::PrivateChatSettingsUpdated {
-                    target_user_id: *target_user_id,
-                    is_muted: *is_muted,
-                    is_pinned: *is_pinned,
-                    updated_at: chrono::Utc::now().to_rfc3339(),
-                };
-                let _ = self.ws_manager.send_to_user(*user_id, &message).await;
-            }
-            AppEvent::NotificationReadStateUpdated {
-                user_id,
-                total_unread_count,
-            } => {
-                let message = WsMessage::NotificationReadStateUpdated {
-                    total_unread_count: *total_unread_count,
-                    read_at: chrono::Utc::now().to_rfc3339(),
-                };
-                let _ = self.ws_manager.send_to_user(*user_id, &message).await;
-            }
+            // 注：SelfJoinedGroup 由 GroupMemberJoined 统一处理；SelfLeftGroup 不做推送
+            AppEvent::SelfJoinedGroup { .. } => {}
+            AppEvent::SelfLeftGroup { .. } => {}
+            AppEvent::PrivateChatDeleted { .. } => {}
+            AppEvent::PrivateChatSettingsUpdated { .. } => {}
+            AppEvent::NotificationReadStateUpdated { .. } => {}
 
             // ========== 瞬间相关事件 ==========
             AppEvent::MomentCreated { moment_id, user_id } => {
@@ -1233,26 +1208,7 @@ impl EventHandler {
             }
 
             // ========== 系统事件 ==========
-            AppEvent::SystemNotification {
-                user_id,
-                title,
-                content,
-            } => {
-                let cfg = self.subscription_service.get_config(*user_id).await?;
-                if !cfg.system_announcement_enabled {
-                    return Ok(());
-                }
-
-                let message = WsMessage::SystemAnnouncement {
-                    announcement_id: uuid::Uuid::new_v4().to_string(),
-                    title: title.clone(),
-                    content: content.clone(),
-                    severity: AnnouncementSeverity::Info,
-                    action_url: None,
-                    created_at: chrono::Utc::now().to_rfc3339(),
-                };
-                let _ = self.ws_manager.send_to_user(*user_id, &message).await;
-            }
+            AppEvent::SystemNotification { .. } => {}
             AppEvent::SystemAnnouncement {
                 announcement_id,
                 title,
@@ -1310,54 +1266,8 @@ impl EventHandler {
                     }
                 }
             }
-            AppEvent::GroupAnnouncementUpdated {
-                announcement_id,
-                group_id,
-                title,
-                content,
-                is_pinned,
-            } => {
-                let message = WsMessage::GroupAnnouncementUpdated {
-                    announcement_id: announcement_id.to_string(),
-                    group_chat_id: group_id.to_string(),
-                    title: title.clone(),
-                    content: content.clone(),
-                    is_pinned: *is_pinned,
-                    updated_at: chrono::Utc::now().to_rfc3339(),
-                };
-                let group_id_str = group_id.to_string();
-                let subscribers = self
-                    .ws_subscription
-                    .get_group_chat_subscribers(&group_id_str)
-                    .await;
-                for uid in subscribers {
-                    let cfg = self.subscription_service.get_config(uid).await?;
-                    if cfg.group_announcement_enabled {
-                        let _ = self.ws_manager.send_to_user(uid, &message).await;
-                    }
-                }
-            }
-            AppEvent::GroupAnnouncementDeleted {
-                announcement_id,
-                group_id,
-            } => {
-                let message = WsMessage::GroupAnnouncementDeleted {
-                    announcement_id: announcement_id.to_string(),
-                    group_chat_id: group_id.to_string(),
-                    deleted_at: chrono::Utc::now().to_rfc3339(),
-                };
-                let group_id_str = group_id.to_string();
-                let subscribers = self
-                    .ws_subscription
-                    .get_group_chat_subscribers(&group_id_str)
-                    .await;
-                for uid in subscribers {
-                    let cfg = self.subscription_service.get_config(uid).await?;
-                    if cfg.group_announcement_enabled {
-                        let _ = self.ws_manager.send_to_user(uid, &message).await;
-                    }
-                }
-            }
+            AppEvent::GroupAnnouncementUpdated { .. } => {}
+            AppEvent::GroupAnnouncementDeleted { .. } => {}
 
             // ========== @ 提及事件 ==========
             AppEvent::MomentMentioned {
@@ -1375,13 +1285,16 @@ impl EventHandler {
                     return Ok(());
                 }
                 let user = self.get_user_info(*mentioning_user_id).await;
-                let message = WsMessage::MomentMentioned {
+                let message = WsMessage::MessageMentioned {
+                    target_type: "moment".to_string(),
                     moment_id: moment_id.to_string(),
-                    moment_summary: crate::websocket::types::MomentSummary {
+                    comment_id: None,
+                    moment_summary: Some(crate::websocket::types::MomentSummary {
                         moment_id: moment_id.to_string(),
                         cover_url: moment_cover_url.clone(),
                         text_preview: moment_text_preview.clone(),
-                    },
+                    }),
+                    comment_preview: None,
                     user,
                     mentioned_at: chrono::Utc::now().to_rfc3339(),
                 };
@@ -1405,11 +1318,13 @@ impl EventHandler {
                     return Ok(());
                 }
                 let user = self.get_user_info(*mentioning_user_id).await;
-                let message = WsMessage::CommentMentioned {
+                let message = WsMessage::MessageMentioned {
+                    target_type: "comment".to_string(),
                     moment_id: moment_id.to_string(),
-                    comment_id: comment_id.to_string(),
+                    comment_id: Some(comment_id.to_string()),
+                    moment_summary: None,
+                    comment_preview: Some(content_preview.clone()),
                     user,
-                    content: content_preview.clone(),
                     mentioned_at: chrono::Utc::now().to_rfc3339(),
                 };
                 let _ = self

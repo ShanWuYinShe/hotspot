@@ -317,7 +317,15 @@ impl AppState {
 
         let subscription_service = SubscriptionService::new(db.clone(), redis.clone());
 
-        let report_service = ReportService::new(report_repo.clone());
+        let report_service = ReportService::new(
+            report_repo.clone(),
+            user_repo.clone(),
+            moment_repo.clone(),
+            comment_repo.clone(),
+            group_repo.clone(),
+            private_message_repo.clone(),
+            group_message_repo.clone(),
+        );
 
         let system_config_service = SystemConfigService::new(
             system_config_repo.clone(),

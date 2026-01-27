@@ -10,6 +10,11 @@ alwaysApply: true
 - **Service Namespace**: `admin.users`
 - **Base Path**: `/api/v1/admin/users/`
 
+## 契约引用
+
+- 公共基础类型：`@api_spec_common_types.mdc`
+- 错误码：`@api_spec_errors.mdc`
+
 ## 核心类型定义
 
 ```typescript
@@ -30,8 +35,8 @@ interface AdminUserItem extends UserInfo {
 |-------|------|---------|
 | `10001` | 缺少必填参数 | `detail`、`ban`、`unban` |
 | `10204` | 非管理员 | 所有 admin 接口 |
-| `10205` | 管理员权限不足 | `search`、`detail`（需要 `admin.users.read`）、`ban`/`unban`（需要 `admin.users.write`） |
-| `10206` | 无法操作管理员账户 | `ban`（普通管理员无法封禁其他管理员） |
+| `10205` | 管理员权限不足 | `search`、`detail`（需 `admin.users.read`）、`ban`/`unban`（需 `admin.users.write`） |
+| `10206` | 无法操作管理员账户 | `ban` |
 | `10310` | 用户不存在 | `detail`、`ban`、`unban` |
 | `10411` | 不能对自己执行此操作 | `ban` |
 

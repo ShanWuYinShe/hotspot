@@ -543,7 +543,7 @@ impl PrivateChatService {
                 },
             )
             .await
-            .map_err(|e| AppError::CacheError(e.to_string()))?;
+            .map_err(|e| AppError::InternalError(e.to_string()))?;
 
         Ok(cached)
     }
@@ -569,7 +569,7 @@ impl PrivateChatService {
                 &cache_ids,
             )
             .await
-            .map_err(|e| AppError::CacheError(e.to_string()))?;
+            .map_err(|e| AppError::InternalError(e.to_string()))?;
 
         let mut settings_map: std::collections::HashMap<
             i64,

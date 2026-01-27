@@ -10,10 +10,15 @@ alwaysApply: true
 - **Service Namespace**: `moment`, `comment`
 - **Base Path**: `/api/v1/moments/`, `/api/v1/comments/`
 
+## 契约引用
+
+- 公共基础类型：`@api_spec_common_types.mdc`
+- 错误码：`@api_spec_errors.mdc`
+
 ## 核心类型定义
 
 ```typescript
-// 注：MyMomentState、MomentBase、UserMomentListItem 等类型定义于 api_spec_common_types.mdc
+// 注：MyMomentState、MomentBase、UserMomentListItem 等类型定义于 @api_spec_common_types.mdc
 
 interface MomentLikeItem {
   user: UserInfo;
@@ -85,8 +90,8 @@ interface CommentLikeItem {
 ### 搜索与发现
 
 说明（Token 可选的搜索语义）：
-- 未登录（不带 token）：仅返回隐私等级为 `public` 的瞬间；不得在错误码或返回结构上暴露不可见瞬间的存在性
-- 已登录（带 token）：在满足隐私与关系规则前提下，允许返回更多可见瞬间；并可能附带 `@auth-only` 字段
+- 未登录（不带 token）：仅返回隐私等级为 `public` 的瞬间；响应字段以 `MomentSearchItem` 定义为准
+- 已登录（带 token）：在满足隐私与关系规则前提下，允许返回更多可见瞬间；响应字段以 `MomentSearchItem` 定义为准
 
 #### POST /api/v1/moments/search_by_keyword
 
@@ -136,6 +141,7 @@ interface SearchMomentsByLocationRequest extends SearchBaseParams {
 #### POST /api/v1/moments/open_the_door
 
 获取瞬间详情。
+Token 可选；登录态返回 `MomentCard.my_state`。
 
 **说明**：未登录（不带 token）仅允许访问隐私等级为 `public` 的瞬间；若瞬间对匿名不可见，返回 `10330`（不存在/不可见）。
 
@@ -183,18 +189,13 @@ interface UserMomentsRequest extends PaginationParams {
 
 **Request**:
 ```typescript
-interface MomentUpsertBody {
-  description?: string;
-  location?: Location;
+interface CreateMomentRequest {
+  description: string;
+  location: Location;
   tags?: string[];
   image_file_ids?: string[];
   privacy_level?: PrivacyLevel;
   mentions?: number[];
-}
-
-interface CreateMomentRequest extends MomentUpsertBody {
-  description: string; // create 时必填
-  location: Location;  // create 时必填
 }
 ```
 **Response**: `ApiResponse<UserMomentListItem>`
@@ -207,8 +208,14 @@ interface CreateMomentRequest extends MomentUpsertBody {
 
 **Request**:
 ```typescript
-interface EditMomentRequest extends MomentUpsertBody {
+interface EditMomentRequest {
   moment_id: string;
+  description?: string;
+  location?: Location;
+  tags?: string[];
+  image_file_ids?: string[];
+  privacy_level?: PrivacyLevel;
+  mentions?: number[];
 }
 ```
 **Response**: `ApiResponse`

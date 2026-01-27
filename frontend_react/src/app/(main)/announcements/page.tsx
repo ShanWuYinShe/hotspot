@@ -1,59 +1,60 @@
-/**
- * 系统公告页面 (Server Component)
- */
+'use client';
 
-import { serverApi, isServerSuccess } from '@/lib/api/server';
-import { ENDPOINTS } from '@/lib/api/endpoints';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { EmptyState } from '@/components/common/empty-state';
-import { Megaphone } from '@/components/icons';
-import { formatRelativeTime } from '@/lib/utils';
-import { PageHeader } from '@/components/layout';
-import type { AnnouncementItem, PaginatedData } from '@/types/api';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 
-export default async function AnnouncementsPage() {
-  const response = await serverApi.post<PaginatedData<AnnouncementItem>>(
-    ENDPOINTS.ANNOUNCEMENTS.LIST,
-    { limit: 50 },
-    { revalidate: 60, tags: ['announcements'] }
-  );
+import { Card, CardContent } from '@/components/ui/card';
+import { AnnouncementService } from '@/lib/api/services/announcements';
+import { PaginatedData, SystemAnnouncementItem } from '@/types/api';
+import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
 
-  const items = isServerSuccess(response) ? response.data?.items ?? [] : [];
-  const header = (
-    <PageHeader title="系统公告" description="平台更新与重要通知" />
-  );
+export default function AnnouncementsPage() {
+  const t = useTranslations('notifications');
+  const tCommon = useTranslations('common');
 
-  if (items.length === 0) {
-    return (
-      <div className="max-w-2xl mx-auto space-y-6">
-        {header}
-        <EmptyState icon={Megaphone} title="暂无公告" description="系统公告将在这里展示" />
-      </div>
-    );
-  }
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['announcements'],
+    queryFn: async ({ pageParam }): Promise<PaginatedData<SystemAnnouncementItem>> => {
+      const res = await AnnouncementService.list({ cursor: pageParam as string | undefined });
+      if (res.code !== 0) throw new Error(res.message);
+      return res.data!;
+    },
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.pagination.next_cursor,
+  });
+
+  const { ref } = useInfiniteScroll({ hasNextPage, isFetchingNextPage, fetchNextPage });
+  const items = data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {header}
-      <div className="space-y-4">
-        {items.map((announcement) => (
-          <Card key={announcement.announcement_id}>
-            <CardHeader>
-              <div className="flex items-center justify-between gap-3">
-                <CardTitle className="text-lg">{announcement.title}</CardTitle>
-                <Badge variant="secondary">{announcement.severity}</Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <p className="text-sm text-muted-foreground">{announcement.content}</p>
-              <p className="text-xs text-muted-foreground">
-                {formatRelativeTime(announcement.created_at)}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+    <div className="max-w-3xl mx-auto space-y-6">
+      <h1 className="text-2xl font-bold">{t('title')}</h1>
+      {items.length > 0 ? (
+        <div className="space-y-3">
+          {items.map((item) => (
+            <Card key={item.announcement_id}>
+              <CardContent className="p-4 space-y-2">
+                <div className="font-semibold">{item.title}</div>
+                <p className="text-sm text-muted-foreground">{item.content}</p>
+              </CardContent>
+            </Card>
+          ))}
+          <div ref={ref} className="flex justify-center p-4">
+            {isFetchingNextPage ? (
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-transparent border-current" />
+            ) : null}
+          </div>
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">{tCommon('empty')}</CardContent>
+        </Card>
+      )}
     </div>
   );
 }

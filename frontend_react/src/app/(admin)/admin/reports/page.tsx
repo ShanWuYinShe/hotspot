@@ -1,39 +1,76 @@
-/**
- * 举报管理页面 (Server Component)
- * 服务端获取举报列表
- */
+'use client';
 
-import { Suspense } from 'react';
-import { getTranslations } from 'next-intl/server';
-import { serverApi, isServerSuccess } from '@/lib/api/server';
-import { ENDPOINTS } from '@/lib/api/endpoints';
-import { LoadingState } from '@/components/common/loading-state';
-import { ReportTable } from './report-table';
-import { PageHeader } from '@/components/layout';
-import type { ReportItem, PaginatedData } from '@/types/api';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 
-async function ReportsContent() {
-  const response = await serverApi.post<PaginatedData<ReportItem>>(
-    ENDPOINTS.ADMIN.REPORTS,
-    { status: 'pending', limit: 50 },
-    { tags: ['admin-reports'], revalidate: 60 }
-  );
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { AdminReportService } from '@/lib/api/services/admin/reports';
+import { PaginatedData, ReportItem } from '@/types/api';
+import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
 
-  const reports = isServerSuccess(response) ? response.data?.items ?? [] : [];
+export default function AdminReportsPage() {
+  const t = useTranslations('admin');
+  const tCommon = useTranslations('common');
 
-  return <ReportTable reports={reports} />;
-}
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['admin-reports'],
+    queryFn: async ({ pageParam }): Promise<PaginatedData<ReportItem>> => {
+      const res = await AdminReportService.list({ cursor: pageParam as string | undefined });
+      if (res.code !== 0) throw new Error(res.message);
+      return res.data!;
+    },
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.pagination.next_cursor,
+  });
 
-export default async function AdminReportsPage() {
-  const t = await getTranslations('admin');
+  const { ref } = useInfiniteScroll({ hasNextPage, isFetchingNextPage, fetchNextPage });
+  const reports = data?.pages.flatMap((page) => page.items) ?? [];
+
+  const handleResolve = async (reportId: string) => {
+    const res = await AdminReportService.handle({ report_id: reportId, action: 'resolve' });
+    if (res.code === 0) {
+      toast.success(tCommon('saved'));
+    } else {
+      toast.error(res.message || tCommon('retry'));
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t('reports')} description="集中处理待审核举报" />
-      
-      <Suspense fallback={<LoadingState text="加载中..." />}>
-        <ReportsContent />
-      </Suspense>
+      <h1 className="text-2xl font-bold">{t('reports')}</h1>
+      {reports.length > 0 ? (
+        <div className="space-y-3">
+          {reports.map((report) => (
+            <Card key={report.report_id}>
+              <CardContent className="flex items-center justify-between p-4">
+                <div>
+                  <div className="font-semibold">{report.reason}</div>
+                  <div className="text-xs text-muted-foreground">{report.target_type}</div>
+                </div>
+                <Button size="sm" onClick={() => handleResolve(report.report_id)}>
+                  {tCommon('confirm')}
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+          <div ref={ref} className="flex justify-center p-4">
+            {isFetchingNextPage ? (
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-transparent border-current" />
+            ) : null}
+          </div>
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">{tCommon('empty')}</CardContent>
+        </Card>
+      )}
     </div>
   );
 }

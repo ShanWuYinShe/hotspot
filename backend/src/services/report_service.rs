@@ -4,21 +4,49 @@ use crate::{
     dto::{
         request::{CreateReportRequest, HandleReportRequest, MyReportsRequest, ReportsRequest},
         response::{CreateReportData, PaginatedData, PaginationMeta, ReportItem},
+        types::ReportTargetId,
     },
     error::AppError,
-    repositories::report_repo::{ReportRepository, ReportRow},
-    types::enums::ReportStatus,
+    repositories::{
+        comment_repo::CommentRepository, group_message_repo::GroupMessageRepository,
+        group_repo::GroupRepository, moment_repo::MomentRepository,
+        private_message_repo::PrivateMessageRepository, report_repo::{ReportRepository, ReportRow},
+        user_repo::UserRepository,
+    },
+    types::enums::{ReportStatus, ReportTargetType},
     utils::validation::Validator,
 };
 
 #[derive(Debug, Clone)]
 pub struct ReportService {
     report_repo: ReportRepository,
+    user_repo: UserRepository,
+    moment_repo: MomentRepository,
+    comment_repo: CommentRepository,
+    group_repo: GroupRepository,
+    private_message_repo: PrivateMessageRepository,
+    group_message_repo: GroupMessageRepository,
 }
 
 impl ReportService {
-    pub fn new(report_repo: ReportRepository) -> Self {
-        Self { report_repo }
+    pub fn new(
+        report_repo: ReportRepository,
+        user_repo: UserRepository,
+        moment_repo: MomentRepository,
+        comment_repo: CommentRepository,
+        group_repo: GroupRepository,
+        private_message_repo: PrivateMessageRepository,
+        group_message_repo: GroupMessageRepository,
+    ) -> Self {
+        Self {
+            report_repo,
+            user_repo,
+            moment_repo,
+            comment_repo,
+            group_repo,
+            private_message_repo,
+            group_message_repo,
+        }
     }
 
     /// 提交举报
@@ -29,18 +57,26 @@ impl ReportService {
     ) -> Result<CreateReportData, AppError> {
         // target_type 已是强类型枚举
 
-        // 验证reason
-        if req.reason.trim().is_empty() {
+        // 验证 reason
+        let reason = req.reason.trim().to_string();
+        if reason.is_empty() {
             return Err(AppError::InvalidFormat("举报原因不能为空".to_string()));
         }
+        if reason.chars().count() > 200 {
+            return Err(AppError::OutOfRange("举报原因长度超出范围".to_string()));
+        }
+
+        let target_type = req.target_type;
+        let target_id = normalize_report_target_id(target_type, req.target_id)?;
+        self.validate_target_exists(target_type, &target_id).await?;
 
         let created_report = self
             .report_repo
             .create(
                 reporter_id,
-                req.target_type,
-                req.target_id,
-                req.reason,
+                target_type,
+                target_id,
+                reason,
                 req.description,
             )
             .await?;
@@ -64,8 +100,10 @@ impl ReportService {
             .find_reports_by_reporter(reporter_id, limit as i32, cursor)
             .await?;
 
-        let response_items: Vec<ReportItem> =
-            reports.into_iter().map(Self::to_report_item).collect();
+        let response_items: Vec<ReportItem> = reports
+            .into_iter()
+            .map(Self::to_report_item)
+            .collect::<Result<Vec<_>, _>>()?;
 
         Ok(PaginatedData {
             items: response_items,
@@ -91,8 +129,10 @@ impl ReportService {
             .find_all_reports(req.status, req.target_type, limit as i32, cursor)
             .await?;
 
-        let response_items: Vec<ReportItem> =
-            reports.into_iter().map(Self::to_report_item).collect();
+        let response_items: Vec<ReportItem> = reports
+            .into_iter()
+            .map(Self::to_report_item)
+            .collect::<Result<Vec<_>, _>>()?;
 
         Ok(PaginatedData {
             items: response_items,
@@ -134,26 +174,116 @@ impl ReportService {
     }
 
     /// 辅助方法：将ReportRow转换为ReportItem
-    fn to_report_item(report: ReportRow) -> ReportItem {
+    fn to_report_item(report: ReportRow) -> Result<ReportItem, AppError> {
         use crate::dto::response::ReportTargetSnapshot;
 
-        ReportItem {
+        let target_id = match report.target_type {
+            ReportTargetType::User => report
+                .target_id
+                .parse::<i64>()
+                .map(ReportTargetId::Number)
+                .map_err(|_| {
+                    AppError::InternalError("举报数据不合法: user target_id 非数字".to_string())
+                })?,
+            _ => ReportTargetId::String(report.target_id),
+        };
+
+        Ok(ReportItem {
             report_id: report.report_id.to_string(),
             target_type: report.target_type,
-            target_id: report.target_id,
+            target_id,
             reason: report.reason,
             description: report.description,
             status: report.status,
             created_at: report.created_at.to_rfc3339(),
-            updated_at: None,
             handled_at: report.handled_at.map(|t| t.to_rfc3339()),
-            resolution_note: report.handler_note,
-            reporter: None,
             target_snapshot: report.target_snapshot.map(|s| ReportTargetSnapshot {
                 content: s.content,
                 media_urls: s.media_urls,
                 owner_id: s.owner_id.map(|id| id.to_string()),
             }),
+        })
+    }
+}
+
+impl ReportService {
+    async fn validate_target_exists(
+        &self,
+        target_type: ReportTargetType,
+        target_id: &str,
+    ) -> Result<(), AppError> {
+        match target_type {
+            ReportTargetType::User => {
+                let user_id = target_id
+                    .parse::<i64>()
+                    .map_err(|_| AppError::InvalidFormat("target_id 无效".to_string()))?;
+                if !self.user_repo.exists(user_id).await? {
+                    return Err(AppError::NotFound("举报目标不存在".to_string()));
+                }
+            }
+            ReportTargetType::Moment => {
+                let moment_id = uuid::Uuid::parse_str(target_id)
+                    .map_err(|_| AppError::InvalidFormat("target_id 无效".to_string()))?;
+                if !self.moment_repo.exists(moment_id).await? {
+                    return Err(AppError::NotFound("举报目标不存在".to_string()));
+                }
+            }
+            ReportTargetType::Comment => {
+                let comment_id = uuid::Uuid::parse_str(target_id)
+                    .map_err(|_| AppError::InvalidFormat("target_id 无效".to_string()))?;
+                if !self.comment_repo.exists(comment_id).await? {
+                    return Err(AppError::NotFound("举报目标不存在".to_string()));
+                }
+            }
+            ReportTargetType::Group => {
+                let group_id = uuid::Uuid::parse_str(target_id)
+                    .map_err(|_| AppError::InvalidFormat("target_id 无效".to_string()))?;
+                if !self.group_repo.exists(group_id).await? {
+                    return Err(AppError::NotFound("举报目标不存在".to_string()));
+                }
+            }
+            ReportTargetType::Message => {
+                let message_id = uuid::Uuid::parse_str(target_id)
+                    .map_err(|_| AppError::InvalidFormat("target_id 无效".to_string()))?;
+                let private_exists = self
+                    .private_message_repo
+                    .find_by_id(message_id)
+                    .await?
+                    .is_some();
+                if private_exists {
+                    return Ok(());
+                }
+                let group_exists = self
+                    .group_message_repo
+                    .find_by_id(message_id)
+                    .await?
+                    .is_some();
+                if !group_exists {
+                    return Err(AppError::NotFound("举报目标不存在".to_string()));
+                }
+            }
         }
+        Ok(())
+    }
+}
+
+fn normalize_report_target_id(
+    target_type: crate::types::enums::ReportTargetType,
+    target_id: ReportTargetId,
+) -> Result<String, AppError> {
+    match (target_type, target_id) {
+        (crate::types::enums::ReportTargetType::User, ReportTargetId::Number(id)) => Ok(id.to_string()),
+        (crate::types::enums::ReportTargetType::User, ReportTargetId::String(_)) => Err(
+            AppError::InvalidFormat("target_id 必须为 number".to_string()),
+        ),
+        (_, ReportTargetId::String(value)) => {
+            if value.trim().is_empty() {
+                return Err(AppError::InvalidFormat("target_id 不能为空".to_string()));
+            }
+            Ok(value)
+        }
+        (_, ReportTargetId::Number(_)) => Err(AppError::InvalidFormat(
+            "target_id 必须为 string".to_string(),
+        )),
     }
 }

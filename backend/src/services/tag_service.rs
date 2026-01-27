@@ -77,7 +77,7 @@ impl TagService {
                 },
             )
             .await
-            .map_err(|e| AppError::CacheError(e.to_string()))?;
+            .map_err(|e| AppError::InternalError(e.to_string()))?;
 
         if let Some(data) = cached {
             return Ok(data);

@@ -252,27 +252,14 @@ pub enum AppError {
 
     // ============================================================
     // 10600-10699：服务端错误（可重试/稍后再试）
+    // 安全说明：统一返回 10600，禁止向客户端暴露具体的技术栈细节
     // ============================================================
 
     /// 10600 - 服务器内部错误（通用）
+    /// 注：数据库/缓存/消息队列/外部服务错误均统一映射到此错误码
+    /// 详细错误信息仅记录在服务端日志中，通过 request_id 关联排查
     #[error("服务器内部错误: {0}")]
     InternalError(String),
-
-    /// 10601 - 数据库错误
-    #[error("数据库错误: {0}")]
-    DatabaseError(String),
-
-    /// 10602 - 缓存服务错误
-    #[error("缓存服务错误: {0}")]
-    CacheError(String),
-
-    /// 10603 - 消息队列错误
-    #[error("消息队列错误: {0}")]
-    MessageQueueError(String),
-
-    /// 10604 - 外部服务调用失败
-    #[error("外部服务调用失败: {0}")]
-    ExternalServiceError(String),
 
     /// 10610 - 服务暂时不可用
     #[error("服务暂时不可用")]
@@ -446,15 +433,14 @@ impl AppError {
             Self::MessageLimitReached(_) => 10510,
 
             // 10600-10699：服务端错误
+            // 安全说明：所有内部错误统一返回 10600，不暴露具体技术栈
             Self::InternalError(_) => 10600,
-            Self::DatabaseError(_) | Self::Sqlx(_) => 10601,
-            Self::CacheError(_) | Self::Redis(_) => 10602,
-            Self::MessageQueueError(_) => 10603,
-            Self::ExternalServiceError(_) => 10604,
+            Self::Sqlx(_) => 10600,      // 数据库错误 -> 统一为 10600
+            Self::Redis(_) => 10600,     // 缓存错误 -> 统一为 10600
+            Self::SerdeJson(_) => 10600, // 序列化错误 -> 统一为 10600
             Self::ServiceUnavailable => 10610,
             Self::SystemMaintenance => 10611,
             Self::ServiceOverloaded => 10612,
-            Self::SerdeJson(_) => 10600,
 
             // 20000-20999：WebSocket 业务期错误
             Self::WebSocketError(_) => 20000,

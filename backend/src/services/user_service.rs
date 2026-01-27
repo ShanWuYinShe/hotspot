@@ -21,9 +21,9 @@ use crate::{
         },
         response::{
             AdminUserDetail, AdminUserItem, AuthData, BlockedUserItem, FollowRequestItem,
-            FollowerItem, FollowingItem, FriendItem, GroupInfo, Location, MomentImage, MomentItem,
-            MyProfileData, PaginatedData, PaginationMeta, RelativeLocation, UserCard, UserInfo,
-            UserItem, UserRelation, UserSettingsData, UserStatsData,
+            FollowerItem, FollowingItem, FriendItem, GroupItem, Location, MomentImage,
+            MomentItem, MyProfileData, PaginatedData, PaginationMeta, RelativeLocation, UserCard,
+            UserCardStats, UserInfo, UserItem, UserRelation, UserSettingsData, UserStatsData,
         },
     },
     error::{AppError, Result},
@@ -296,7 +296,13 @@ impl UserService {
         };
 
         // 获取统计数据
-        let stats = self.get_stats(user_id).await?;
+        let stats_data = self.get_stats(user_id).await?;
+        let stats = UserCardStats {
+            moments_count: stats_data.moments_count,
+            friends_count: stats_data.friends_count,
+            followers_count: stats_data.followers_count,
+            following_count: stats_data.following_count,
+        };
 
         let relation = if let Some(current_user_id) = viewer_id {
             if current_user_id == user_id {
@@ -400,7 +406,6 @@ impl UserService {
                 last_online,
                 user_type: user.user_type,
                 location,
-                relation: None,
             });
         }
 
@@ -651,19 +656,7 @@ impl UserService {
             return Err(AppError::Conflict("尚未关注该用户".to_string()));
         }
 
-        // 先计算是否为互相关注（用于推送“好友关系解除”）
-        let was_mutual = self
-            .follows_repo
-            .are_mutual_follows(from_user_id, to_user_id)
-            .await?;
-
         self.follows_repo.delete(from_user_id, to_user_id).await?;
-
-        self.event_bus.publish(AppEvent::Unfollowed {
-            follower_id: from_user_id,
-            user_id: to_user_id,
-            was_mutual,
-        });
         Ok(())
     }
 
@@ -1457,7 +1450,7 @@ impl UserService {
                 },
             )
             .await
-            .map_err(|e| AppError::CacheError(e.to_string()))?;
+            .map_err(|e| AppError::InternalError(e.to_string()))?;
 
         if let Some(stats) = cached {
             Ok(stats)
@@ -1641,6 +1634,11 @@ impl UserService {
             )
             .await?;
 
+        let refresh_token_expires_at = Some(
+            (Utc::now() + Duration::seconds(refresh_token_expiration))
+                .to_rfc3339()
+        );
+
         Ok(AuthData {
             user_id,
             nickname: user.nickname,
@@ -1648,8 +1646,7 @@ impl UserService {
             refresh_token: Some(refresh_token),
             access_token_expires_at: (Utc::now() + Duration::seconds(access_token_expiration))
                 .to_rfc3339(),
-            refresh_token_expires_at: (Utc::now() + Duration::seconds(refresh_token_expiration))
-                .to_rfc3339(),
+            refresh_token_expires_at,
         })
     }
 
@@ -1675,7 +1672,7 @@ impl UserService {
     pub async fn get_user_groups_list(
         &self,
         req: &UserGroupsRequest,
-    ) -> Result<PaginatedData<GroupInfo>> {
+    ) -> Result<PaginatedData<GroupItem>> {
         let target_user_id = req.user_id;
 
         // 验证用户存在
@@ -1704,20 +1701,40 @@ impl UserService {
         // 单条 JOIN SQL：直接返回 group_info（避免 N+1 与错误的“成员列表limit=1000计数”）
         let (rows, next_cursor) = self
             .group_member_repo
-            .list_public_group_infos_by_user(target_user_id, limit, cursor)
+            .list_public_group_infos_by_user(
+                target_user_id,
+                limit,
+                cursor,
+                DEFAULT_LATITUDE,
+                DEFAULT_LONGITUDE,
+            )
             .await?;
+
+        let group_ids: Vec<Uuid> = rows.iter().map(|r| r.group_id).collect();
+        let tags_map = self.tag_repo.get_group_tags_batch(&group_ids).await?;
 
         let mut items = Vec::with_capacity(rows.len());
         for r in rows {
-            items.push(GroupInfo {
+            let tags = tags_map.get(&r.group_id).cloned();
+            let tags = tags.filter(|t| !t.is_empty());
+            items.push(GroupItem {
                 group_chat_id: r.group_id.to_string(),
                 name: r.name,
+                description: r.description,
                 avatar_url: self
                     .media_service
                     .sign_url_if_path(r.avatar_url.as_deref())
                     .await,
+                tags,
                 members_count: r.members_count,
-                location: None,
+                has_password: r.has_password,
+                location: RelativeLocation {
+                    latitude: r.latitude,
+                    longitude: r.longitude,
+                    location_name: r.location_name,
+                    distance: r.distance,
+                    bearing_degrees: r.bearing_degrees,
+                },
             });
         }
 
@@ -1960,8 +1977,6 @@ impl UserService {
                         distance: m.distance,
                         bearing_degrees: m.bearing_degrees,
                     },
-                    is_liked: None,
-                    is_favorited: None,
                 });
             }
         }
@@ -2068,7 +2083,13 @@ impl UserService {
             None
         };
 
-        let stats = self.get_stats(user.user_id).await?;
+        let stats_data = self.get_stats(user.user_id).await?;
+        let stats = UserCardStats {
+            moments_count: stats_data.moments_count,
+            friends_count: stats_data.friends_count,
+            followers_count: stats_data.followers_count,
+            following_count: stats_data.following_count,
+        };
 
         Ok(AdminUserDetail {
             user_id: user.user_id,

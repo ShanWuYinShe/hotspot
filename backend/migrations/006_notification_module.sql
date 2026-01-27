@@ -6,18 +6,20 @@
 -- 通知类型枚举
 -- ============================================================
 CREATE TYPE notification_type AS ENUM (
-    'like',             -- 点赞 (moment, comment)
-    'comment',          -- 评论 (moment)
-    'reply',            -- 回复 (comment)
-    'follow',           -- 关注
-    'mention',          -- @提及
-    'system',           -- 系统通知
-    'group_invite',     -- 群组邀请
-    'group_apply',      -- 入群申请
-    'group_kick',       -- 被移出群
-    'group_quit',       -- 成员退群
-    'group_dismiss',    -- 群解散
-    'group_admin'       -- 设置管理员
+    'moment_like',              -- 瞬间点赞
+    'moment_comment',           -- 瞬间评论
+    'comment_reply',            -- 评论回复
+    'new_follower',             -- 新关注
+    'mutual_follow',            -- 互相关注
+    'follow_request',           -- 关注请求
+    'follow_request_handled',   -- 关注请求处理
+    'group_invite',             -- 群组邀请
+    'group_invite_response',    -- 群组邀请响应
+    'group_application',        -- 群组申请
+    'group_application_response', -- 群组申请响应
+    'group_announcement',       -- 群公告
+    'system_announcement',      -- 系统公告
+    'message_mention'           -- @提及
 );
 
 -- ============================================================

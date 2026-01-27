@@ -3,20 +3,21 @@ alwaysApply: true
 ---
 # HotSpot API 规范 - 举报审核 API 模块 v0.0.1 (RPC)
 
-> 本文档定义 HotSpot 举报审核 (`reports`) 相关的 RPC 接口。管理员审核接口定义于 `api_spec_admin_*.mdc`。
+> 本文档定义 HotSpot 举报审核 (`reports`) 相关的 RPC 接口。管理员审核接口定义于 `@api_spec_admin_report.mdc`。
 
 ## 服务定义
 
 - **Service Namespace**: `reports`
 - **Base Path**: `/api/v1/reports/`
 
+## 契约引用
+
+- 公共基础类型：`@api_spec_common_types.mdc`
+- 错误码：`@api_spec_errors.mdc`
+
 ## 举报审核流程说明
 
-**流程概述**：
-
-```
-用户提交举报 → 进入审核队列(pending) → 管理员审核(reviewing) → 处理结果(resolved/dismissed)
-```
+举报处理的状态流转为：`pending` 进入 `reviewing`，最终为 `resolved` 或 `dismissed`。
 
 **状态流转**：
 
@@ -59,7 +60,7 @@ interface ReportCreated {
 interface ReportItem {
   report_id: string;
   target_type: ReportTargetType;
-  target_id: string;
+  target_id: string;            // 统一为 string（user_id 需转为字符串格式）
   reason: string;
   description?: string;
   status: ReportStatus;
@@ -102,14 +103,15 @@ interface ReportItem {
 ```typescript
 interface CreateReportRequest {
   target_type: ReportTargetType;
-  target_id: string;
+  target_id: string;            // 统一为 string（user_id 需转为字符串格式，如 "12345"）
   reason: string;
   description?: string;
 }
 ```
 
 **字段说明**：
-- `reason`：举报原因的用户输入/选择结果，UTF-8 字符串，1-200 字符
+- `reason`：举报原因，1-200 字符
+- `target_id`：统一为 string 类型；举报用户时将 `user_id` 转为字符串格式（如 `"12345"`）
 
 **Response**: `ApiResponse<ReportCreated>`
 
