@@ -20,11 +20,11 @@ import type {
 
 class AuthService extends BaseService {
   async register<T extends AuthData = AuthData>(data: RegisterRequest) {
-    return this.publicPost<T>(AUTH.REGISTER, data)
+    return this.post<T>(AUTH.REGISTER, data)
   }
 
   async login<T extends AuthData = AuthData>(data: LoginRequest) {
-    return this.publicPost<T>(AUTH.LOGIN, data)
+    return this.post<T>(AUTH.LOGIN, data)
   }
 
   async logout() {
@@ -32,7 +32,7 @@ class AuthService extends BaseService {
   }
 
   async guest<T extends AuthData = AuthData>(data: GuestRequest) {
-    return this.publicPost<T>(AUTH.GUEST, data)
+    return this.post<T>(AUTH.GUEST, data)
   }
 
   async checkStatus() {
@@ -40,15 +40,15 @@ class AuthService extends BaseService {
   }
 
   async requestPasswordReset(data: RequestPasswordResetRequest) {
-    return this.publicPost<RequestPasswordResetData>(AUTH.REQUEST_PASSWORD_RESET, data)
+    return this.post<RequestPasswordResetData>(AUTH.REQUEST_PASSWORD_RESET, data)
   }
 
   async verifyResetCode(data: VerifyResetCodeRequest) {
-    return this.publicPost<VerifyResetCodeData>(AUTH.VERIFY_RESET_CODE, data)
+    return this.post<VerifyResetCodeData>(AUTH.VERIFY_RESET_CODE, data)
   }
 
   async resetPassword(data: ResetPasswordRequest) {
-    return this.publicPost<void>(AUTH.RESET_PASSWORD, data)
+    return this.post<void>(AUTH.RESET_PASSWORD, data)
   }
 
   // ============ 当前用户认证相关 API（/me/ 路径）============

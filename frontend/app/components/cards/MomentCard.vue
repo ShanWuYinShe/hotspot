@@ -1,7 +1,7 @@
 <template>
     <UCard
         variant="outline"
-        class="h-full flex flex-col"
+        class="h-full flex flex-col card-interactive"
         @click="$emit('click', moment)"
     >
         <!-- 主体内容 -->
@@ -98,7 +98,8 @@
                     :color="(moment.is_liked ?? false) ? 'error' : 'neutral'"
                     :icon="(moment.is_liked ?? false) ? 'i-lucide-heart-fill' : 'i-lucide-heart'"
                     :label="moment.likes_count ? String(moment.likes_count) : '点赞'"
-                    class="justify-center"
+                    class="justify-center transition-transform"
+                    :class="{ 'scale-110': likeAnimating }"
                     :loading="likeLoading"
                     @click="handleLike"
                 />
@@ -170,6 +171,8 @@ const isMyMoment = computed(
 );
 
 const likeLoading = ref(false);
+const likeAnimating = ref(false);
+
 const handleLike = async () => {
     // 未登录时 is_liked 不存在（undefined），需要先登录
     if (props.moment.is_liked === undefined) {
@@ -193,6 +196,9 @@ const handleLike = async () => {
             await momentService.unlikeMoment({ moment_id: props.moment.moment_id });
         } else {
             await momentService.likeMoment({ moment_id: props.moment.moment_id });
+            // 点赞成功动画
+            likeAnimating.value = true;
+            setTimeout(() => { likeAnimating.value = false; }, 200);
         }
     } catch (e) {
         // Revert

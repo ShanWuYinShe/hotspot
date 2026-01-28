@@ -24,35 +24,35 @@ class AdminRbacService extends BaseService {
   }
 
   async listRoles() {
-    return this.post<AdminRolesData>(ADMIN_RBAC.ROLES_LIST, {})
+    return this.post<AdminRolesData>(ADMIN_RBAC.ROLES.LIST, {})
   }
 
   async createRole(request: AdminRbacRoleCreateRequest) {
-    return this.post<AdminRoleItem>(ADMIN_RBAC.ROLES_CREATE, request)
+    return this.post<AdminRoleItem>(ADMIN_RBAC.ROLES.CREATE, request)
   }
 
   async updateRole(request: AdminRbacRoleUpdateRequest) {
-    return this.post<void>(ADMIN_RBAC.ROLES_UPDATE, request)
+    return this.post<void>(ADMIN_RBAC.ROLES.UPDATE, request)
   }
 
   async deleteRole(request: AdminRbacRoleDeleteRequest) {
-    return this.post<void>(ADMIN_RBAC.ROLES_DELETE, request)
+    return this.post<void>(ADMIN_RBAC.ROLES.DELETE, request)
   }
 
   async setRolePermissions(request: AdminRbacRoleSetPermissionsRequest) {
-    return this.post<void>(ADMIN_RBAC.ROLES_SET_PERMISSIONS, request)
+    return this.post<void>(ADMIN_RBAC.ROLES.SET_PERMISSIONS, request)
   }
 
   async listAdmins() {
-    return this.post<AdminAdminsData>(ADMIN_RBAC.ADMINS_LIST, {})
+    return this.post<AdminAdminsData>(ADMIN_RBAC.ADMINS.LIST, {})
   }
 
   async grantAdmin(request: AdminRbacGrantAdminRequest) {
-    return this.post<void>(ADMIN_RBAC.ADMINS_GRANT, request)
+    return this.post<void>(ADMIN_RBAC.ADMINS.GRANT, request)
   }
 
   async revokeAdmin(request: AdminRbacRevokeAdminRequest) {
-    return this.post<void>(ADMIN_RBAC.ADMINS_REVOKE, request)
+    return this.post<void>(ADMIN_RBAC.ADMINS.REVOKE, request)
   }
 }
 
@@ -60,4 +60,3 @@ export const adminRbacService = new AdminRbacService()
 export function useAdminRbacService() {
   return adminRbacService
 }
-

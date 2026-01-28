@@ -39,8 +39,8 @@ import type {
   LeaveGroupRequest,
   // 申请管理类型
   GroupApplicationsRequest,
-  ApproveApplicationRequest,
-  RejectApplicationRequest,
+  ApproveGroupApplicationRequest,
+  RejectGroupApplicationRequest,
   CancelApplicationRequest,
   TransferOwnershipRequest,
   // 邀请管理类型
@@ -56,38 +56,38 @@ import type {
 } from "~/types/api";
 
 class GroupsService extends BaseService {
-  // ============ 搜索 API (public) ============
+  // ============ 搜索 API ============
 
   async searchByKeyword(request: SearchGroupsByKeywordRequest) {
-    return this.publicPost<PaginatedData<GroupItem>>(
+    return this.post<PaginatedData<GroupItem>>(
       GROUPS.SEARCH_BY_KEYWORD,
       request,
     );
   }
 
   async searchByTag(request: SearchGroupsByTagRequest) {
-    return this.publicPost<PaginatedData<GroupItem>>(
+    return this.post<PaginatedData<GroupItem>>(
       GROUPS.SEARCH_BY_TAG,
       request,
     );
   }
 
   async searchByLocation(request: SearchGroupsByLocationRequest) {
-    return this.publicPost<PaginatedData<GroupItem>>(
+    return this.post<PaginatedData<GroupItem>>(
       GROUPS.SEARCH_BY_LOCATION,
       request,
     );
   }
 
   async getSettings(request: { group_chat_id: string }) {
-    return this.publicPost<GroupSettingsData>(GROUPS.SETTINGS, request);
+    return this.post<GroupSettingsData>(GROUPS.SETTINGS, request);
   }
 
   async openTheDoor(request: GroupOpenTheDoorRequest) {
-    return this.publicPost<GroupDetailData>(GROUPS.OPEN_THE_DOOR, request);
+    return this.post<GroupDetailData>(GROUPS.OPEN_THE_DOOR, request);
   }
 
-  // ============ 群组管理 API (protected) ============
+  // ============ 群组管理 API ============
 
   async create(request: CreateGroupChatRequest) {
     return this.post<CreateGroupChatData>(GROUPS.CREATE, request);
@@ -112,7 +112,7 @@ class GroupsService extends BaseService {
   // ============ 成员管理 API ============
 
   async getMembers(request: GroupMembersRequest) {
-    return this.publicPost<PaginatedData<GroupMemberItem>>(
+    return this.post<PaginatedData<GroupMemberItem>>(
       GROUPS.MEMBERS.LIST,
       request,
     );
@@ -170,11 +170,11 @@ class GroupsService extends BaseService {
     );
   }
 
-  async approveApplication(request: ApproveApplicationRequest) {
+  async approveApplication(request: ApproveGroupApplicationRequest) {
     return this.post<GroupApplicationItem>(GROUPS.APPLICATIONS.APPROVE, request);
   }
 
-  async rejectApplication(request: RejectApplicationRequest) {
+  async rejectApplication(request: RejectGroupApplicationRequest) {
     return this.post<GroupApplicationItem>(GROUPS.APPLICATIONS.REJECT, request);
   }
 
@@ -206,7 +206,7 @@ class GroupsService extends BaseService {
   // ============ 群公告管理 API ============
 
   async getAnnouncements(request: ListGroupAnnouncementsRequest) {
-    return this.publicPost<PaginatedData<GroupAnnouncementItem>>(
+    return this.post<PaginatedData<GroupAnnouncementItem>>(
       GROUPS.ANNOUNCEMENTS.LIST,
       request
     );

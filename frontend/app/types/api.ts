@@ -1712,71 +1712,6 @@ export interface UpdateLimitsRequest {
   search_radius_max?: number;
 }
 
-// 保持兼容或用于通用KV管理的旧结构（如果还需要）
-export interface CreateConfigRequest {
-  key: string;
-  value: string;
-  type: "string" | "number" | "boolean";
-  category: string;
-  description: string;
-}
-
-export interface CreateConfigData {
-  key: string;
-}
-
-export interface ConfigDetailRequest {
-  key: string;
-  // limit?: number; // Removed as it's a detail request
-}
-
-export interface ConfigItem {
-  key: string;
-  value: string;
-  type: "string" | "number" | "boolean";
-  category: string;
-  description: string;
-  updated_at: string;
-}
-
-export interface ConfigListRequest {
-  category?: string;
-  limit?: number;
-  cursor?: string;
-}
-
-export interface UpdateConfigRequest {
-  key: string;
-  value: string;
-}
-
-export interface DeleteConfigRequest {
-  key: string;
-}
-
-export interface ConfigHistoryRequest {
-  key: string;
-  limit?: number;
-  cursor?: string;
-}
-
-export interface ConfigHistoryItem {
-  history_id: string;
-  key: string;
-  old_value: string;
-  new_value: string;
-  changed_by: number;
-  changed_at: string;
-}
-
-export interface ConfigChangesRequest {
-  start_time?: string;
-  end_time?: string;
-  changed_by?: number;
-  limit?: number;
-  cursor?: string;
-}
-
 // ============================================================================
 // 管理员 RBAC API 类型
 // ============================================================================
@@ -1895,7 +1830,112 @@ export interface MarkNotificationsReadRequest {
   type?: 'like' | 'comment' | 'follow' | 'system' | 'mention';
 }
 
-// ==================== 管理员系统公告 API ====================
+// ============================================================================
+// 关注请求 API 类型
+// ============================================================================
+
+export interface FollowRequestItem {
+  request_id: string;
+  user: UserInfo;
+  message?: string;
+  created_at: string;
+}
+
+export interface FollowRequestsRequest {
+  limit?: number;
+  cursor?: string;
+}
+
+export interface HandleFollowRequestRequest {
+  request_id: string;
+  action: 'accept' | 'reject';
+}
+
+// ============================================================================
+// 管理员用户管理 API 类型
+// ============================================================================
+
+export interface AdminUserSearchRequest {
+  kw?: string;
+  status?: 'normal' | 'banned';
+  user_type?: UserType;
+  limit?: number;
+  cursor?: string;
+}
+
+export interface AdminUserDetailRequest {
+  user_id: number;
+}
+
+export interface AdminUserItem {
+  user_id: number;
+  nickname: string;
+  avatar_url?: string;
+  user_type: UserType;
+  status: 'normal' | 'banned';
+  email?: string;
+  phone?: string;
+  created_at: string;
+  last_login_at?: string;
+  moments_count: number;
+  groups_count: number;
+}
+
+export interface AdminUserDetailData extends AdminUserItem {
+  bio?: string;
+  tags?: string[];
+  banned_at?: string;
+  banned_reason?: string;
+  banned_by?: UserInfo;
+}
+
+export interface AdminBanUserRequest {
+  user_id: number;
+  reason?: string;
+}
+
+export interface AdminUnbanUserRequest {
+  user_id: number;
+}
+
+// ============================================================================
+// 管理员群组管理 API 类型
+// ============================================================================
+
+export interface AdminGroupSearchRequest {
+  kw?: string;
+  limit?: number;
+  cursor?: string;
+}
+
+export interface AdminGroupDetailRequest {
+  group_chat_id: string;
+}
+
+export interface AdminGroupItem {
+  group_chat_id: string;
+  name: string;
+  avatar_url?: string;
+  description?: string;
+  owner_id: number;
+  owner?: UserInfo;
+  members_count: number;
+  created_at: string;
+}
+
+export interface AdminGroupDetailData extends AdminGroupItem {
+  tags?: string[];
+  settings?: GroupSettings;
+}
+
+export interface AdminDismissGroupRequest {
+  group_chat_id: string;
+  reason?: string;
+}
+
+// ============================================================================
+// 系统公告 API 类型
+// ============================================================================
 
 export interface SystemAnnouncementItem {
   announcement_id: string;
@@ -1910,4 +1950,84 @@ export interface SystemAnnouncementItem {
 export interface PublicAnnouncementListRequest {
   limit?: number;
   cursor?: string;
+}
+
+export interface AdminCreateAnnouncementRequest {
+  title: string;
+  content: string;
+  severity: 'info' | 'warning' | 'error';
+  action_url?: string;
+}
+
+export interface AdminAnnouncementListRequest {
+  limit?: number;
+  cursor?: string;
+}
+
+export interface AdminDeleteAnnouncementRequest {
+  announcement_id: string;
+}
+
+// ============================================================================
+// 审计日志 API 类型
+// ============================================================================
+
+export type AuditAction =
+  | 'user_ban'
+  | 'user_unban'
+  | 'group_dismiss'
+  | 'report_handle'
+  | 'announcement_create'
+  | 'announcement_delete'
+  | 'admin_grant'
+  | 'admin_revoke'
+  | 'role_create'
+  | 'role_update'
+  | 'role_delete'
+  | 'config_update';
+
+export interface AuditLogItem {
+  audit_id: string;
+  action: AuditAction;
+  operator: UserInfo;
+  target_type?: 'user' | 'group' | 'announcement' | 'report' | 'role' | 'config';
+  target_id?: string;
+  details?: Record<string, unknown>;
+  created_at: string;
+  ip_address?: string;
+}
+
+export interface AdminAuditListRequest {
+  action?: AuditAction;
+  operator_id?: number;
+  target_type?: 'user' | 'group' | 'announcement' | 'report' | 'role' | 'config';
+  target_id?: string;
+  start_time?: string;
+  end_time?: string;
+  limit?: number;
+  cursor?: string;
+}
+
+export interface AdminAuditDetailRequest {
+  audit_id: string;
+}
+
+export interface AdminAuditExportRequest {
+  action?: AuditAction;
+  operator_id?: number;
+  target_type?: 'user' | 'group' | 'announcement' | 'report' | 'role' | 'config';
+  start_time?: string;
+  end_time?: string;
+  format?: 'csv' | 'json';
+}
+
+export interface AdminAuditExportData {
+  task_id: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  download_url?: string;
+  expires_at?: string;
+}
+
+export interface AdminAuditExportStatusRequest {
+  task_id: string;
 }

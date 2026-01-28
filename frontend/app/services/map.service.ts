@@ -8,7 +8,7 @@ class MapService extends BaseService {
    * 根据 zoom 和 viewport 动态返回聚合点(Cluster)或实体点(Entity)
    */
   async render(request: MapRenderRequest) {
-    return this.publicPost<MapRenderData>(MAP.RENDER, request)
+    return this.post<MapRenderData>(MAP.RENDER, request)
   }
 }
 

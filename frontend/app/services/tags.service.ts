@@ -9,11 +9,11 @@ import type {
 
 class TagsService extends BaseService {
   async getTrending(request: TrendingTagsRequest = {}) {
-    return this.publicPost<TrendingTagsData>(TAGS.TRENDING, request)
+    return this.post<TrendingTagsData>(TAGS.TRENDING, request)
   }
 
   async suggest(request: SuggestTagsRequest) {
-    return this.publicPost<TagSuggestData>(TAGS.SUGGEST, request)
+    return this.post<TagSuggestData>(TAGS.SUGGEST, request)
   }
 }
 

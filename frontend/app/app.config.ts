@@ -1,11 +1,17 @@
 export default defineAppConfig({
   ui: {
+    // ========================================================================
+    // Color Tokens - Social App Palette
+    // ========================================================================
     colors: {
-      primary: "teal",
-      neutral: "slate",
+      primary: "blue",      // 主色调 - 活力蓝
+      neutral: "slate",     // 中性色
+      // Nuxt UI 自动支持: success, warning, error
     },
 
-    // Global
+    // ========================================================================
+    // Global Settings
+    // ========================================================================
     icon: {
       base: "inline-block align-middle shrink-0 text-current",
     },
@@ -304,21 +310,37 @@ export default defineAppConfig({
 
     card: {
       slots: {
-        root: "bg-white dark:bg-neutral-900 ring-1 ring-neutral-200 dark:ring-neutral-800 rounded-3xl shadow-sm transition-all duration-200 ease-out hover:shadow-md",
-        header: "p-5 sm:p-7 border-b border-neutral-100 dark:border-neutral-800/50",
-        body: "p-5 sm:p-7",
-        footer: "p-5 sm:p-7 border-t border-neutral-100 dark:border-neutral-800/50 bg-neutral-50/30 dark:bg-neutral-900/30 rounded-b-3xl",
+        root: "bg-white dark:bg-neutral-900 ring-1 ring-neutral-200 dark:ring-neutral-800 rounded-3xl shadow-sm transition-all duration-200 ease-out",
+        header: "p-5 sm:p-6 border-b border-neutral-100 dark:border-neutral-800/50",
+        body: "p-5 sm:p-6",
+        footer: "p-5 sm:p-6 border-t border-neutral-100 dark:border-neutral-800/50 bg-neutral-50/30 dark:bg-neutral-900/30 rounded-b-3xl",
       },
       variants: {
         variant: {
-          outline: { root: "bg-transparent ring-1 ring-neutral-200 dark:ring-neutral-800 shadow-none hover:shadow-none hover:bg-neutral-50/50 dark:hover:bg-neutral-900/50" },
-          solid: { root: "bg-white dark:bg-neutral-900 shadow-sm hover:shadow-md" },
-          soft: { root: "bg-neutral-50/80 dark:bg-neutral-900/50 ring-0 shadow-none hover:bg-neutral-100/80 dark:hover:bg-neutral-900/80" },
+          // 默认静态卡片
+          solid: { root: "bg-white dark:bg-neutral-900 shadow-sm" },
+          // 边框卡片
+          outline: { root: "bg-transparent ring-1 ring-neutral-200 dark:ring-neutral-800 shadow-none" },
+          // 柔和背景
+          soft: { root: "bg-neutral-50/80 dark:bg-neutral-900/50 ring-0 shadow-none" },
+          // 微妙背景
           subtle: { root: "bg-neutral-50/40 dark:bg-neutral-900/20 ring-1 ring-neutral-200/50 dark:ring-neutral-800/50 shadow-none" },
         },
+        // 新增：交互变体（独立于 variant，可组合使用）
+        interactive: {
+          true: { root: "cursor-pointer hover:shadow-lg hover:-translate-y-0.5 hover:ring-primary-200 dark:hover:ring-primary-800 active:scale-[0.98]" },
+          false: { root: "" },
+        },
       },
+      compoundVariants: [
+        // outline + interactive 组合
+        { variant: "outline", interactive: true, class: { root: "hover:bg-neutral-50/50 dark:hover:bg-neutral-900/50" } },
+        // soft + interactive 组合
+        { variant: "soft", interactive: true, class: { root: "hover:bg-neutral-100/80 dark:hover:bg-neutral-900/80" } },
+      ],
       defaultVariants: {
         variant: "solid",
+        interactive: false,
       },
     },
 

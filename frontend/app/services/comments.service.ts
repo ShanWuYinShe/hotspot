@@ -3,10 +3,9 @@ import { COMMENTS } from '~/config/api'
 import type {
   PaginatedData,
   CreateCommentRequest,
-  CreateCommentData,
+  CommentListItem,
   DeleteCommentRequest,
   CommentsRequest,
-  CommentListItem,
   CommentRepliesRequest,
   LikeCommentRequest,
   UnlikeCommentRequest,
@@ -24,11 +23,11 @@ class CommentsService extends BaseService {
   }
 
   async getList(request: CommentsRequest) {
-    return this.publicPost<PaginatedData<CommentListItem>>(COMMENTS.LIST, request)
+    return this.post<PaginatedData<CommentListItem>>(COMMENTS.LIST, request)
   }
 
   async getReplies(request: CommentRepliesRequest) {
-    return this.publicPost<PaginatedData<CommentListItem>>(COMMENTS.REPLIES, request)
+    return this.post<PaginatedData<CommentListItem>>(COMMENTS.REPLIES, request)
   }
 
   async like(request: LikeCommentRequest) {
@@ -40,7 +39,7 @@ class CommentsService extends BaseService {
   }
 
   async getLikes(request: CommentLikesRequest) {
-    return this.publicPost<PaginatedData<CommentLikeItem>>(COMMENTS.LIKES, request)
+    return this.post<PaginatedData<CommentLikeItem>>(COMMENTS.LIKES, request)
   }
 }
 

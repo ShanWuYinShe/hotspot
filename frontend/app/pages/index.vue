@@ -45,76 +45,27 @@
                     </h2>
                 </div>
                 
-                <div
-                    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-                >
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     <UCard
+                        v-for="item in exploreItems"
+                        :key="item.to"
                         variant="outline"
-                        @click="navigateTo('/users/nearby')"
+                        class="card-feature"
+                        @click="navigateTo(item.to)"
                     >
                         <div class="flex items-start gap-4">
-                            <div class="lsyb-icon-container-sm">
-                                <UIcon name="i-lucide-users" class="size-6" />
+                            <div class="lsyb-icon-container-sm card-feature-icon">
+                                <UIcon :name="item.icon" class="size-6" />
                             </div>
-                            <div>
-                                <h3
-                                    class="font-medium text-neutral-900 dark:text-white"
-                                >
-                                    附近用户
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-medium text-neutral-900 dark:text-white card-feature-title">
+                                    {{ item.title }}
                                 </h3>
-                                <p
-                                    class="text-sm text-neutral-500 dark:text-neutral-400 mt-1"
-                                >
-                                    发现周围的朋友
+                                <p class="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+                                    {{ item.description }}
                                 </p>
                             </div>
-                        </div>
-                    </UCard>
-                    <UCard
-                        variant="outline"
-                        @click="navigateTo('/groups/nearby')"
-                    >
-                        <div class="flex items-start gap-4">
-                            <div class="lsyb-icon-container-sm">
-                                <UIcon
-                                    name="i-lucide-users-round"
-                                    class="size-6"
-                                />
-                            </div>
-                            <div>
-                                <h3
-                                    class="font-medium text-neutral-900 dark:text-white"
-                                >
-                                    附近群组
-                                </h3>
-                                <p
-                                    class="text-sm text-neutral-500 dark:text-neutral-400 mt-1"
-                                >
-                                    发现可加入的群组
-                                </p>
-                            </div>
-                        </div>
-                    </UCard>
-                    <UCard
-                        variant="outline"
-                        @click="navigateTo('/moments/nearby')"
-                    >
-                        <div class="flex items-start gap-4">
-                            <div class="lsyb-icon-container-sm">
-                                <UIcon name="i-lucide-image" class="size-6" />
-                            </div>
-                            <div>
-                                <h3
-                                    class="font-medium text-neutral-900 dark:text-white"
-                                >
-                                    附近瞬间
-                                </h3>
-                                <p
-                                    class="text-sm text-neutral-500 dark:text-neutral-400 mt-1"
-                                >
-                                    浏览周边动态
-                                </p>
-                            </div>
+                            <UIcon name="i-lucide-chevron-right" class="size-5 text-neutral-300 dark:text-neutral-600 card-feature-arrow" />
                         </div>
                     </UCard>
                 </div>
@@ -162,56 +113,44 @@
                 />
 
                 <!-- 未登录引导 -->
-                <div
-                    v-else
-                    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-                >
-                    <UCard
-                        variant="outline"
-                        @click="createTempUser"
-                    >
-                        <div
-                            class="flex flex-col items-center text-center py-4 space-y-3"
-                        >
-                            <div class="lsyb-icon-container-md">
+                <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- 快速体验 - 可点击 -->
+                    <UCard variant="outline" class="card-feature" @click="createTempUser">
+                        <div class="flex flex-col items-center text-center py-4 space-y-3">
+                            <div class="lsyb-icon-container-md card-feature-icon">
                                 <UIcon name="i-lucide-zap" class="size-8" />
                             </div>
-                            <h3 class="font-medium text-lg">快速体验</h3>
-                            <p class="text-sm text-neutral-500">
+                            <h3 class="font-medium text-lg card-feature-title">快速体验</h3>
+                            <p class="text-sm text-neutral-500 dark:text-neutral-400">
                                 一键创建访客账号，无需注册
                             </p>
                         </div>
                     </UCard>
-                    <UCard variant="outline">
-                        <div
-                            class="flex flex-col items-center text-center py-4 space-y-3 opacity-50"
-                        >
+                    <!-- 隐私设置 - 禁用状态 -->
+                    <UCard variant="outline" class="opacity-50">
+                        <div class="flex flex-col items-center text-center py-4 space-y-3">
                             <div class="lsyb-icon-container-neutral">
-                                <UIcon
-                                    name="i-lucide-shield-check"
-                                    class="size-8"
-                                />
+                                <UIcon name="i-lucide-shield-check" class="size-8" />
                             </div>
-                            <h3 class="font-medium text-lg">隐私设置</h3>
-                            <p class="text-sm text-neutral-500">
+                            <h3 class="font-medium text-lg text-neutral-900 dark:text-white">隐私设置</h3>
+                            <p class="text-sm text-neutral-500 dark:text-neutral-400">
                                 登录后管理可见性与隐私
                             </p>
                         </div>
                     </UCard>
-                    <UCard variant="outline">
-                        <div
-                            class="flex flex-col items-center text-center py-4 space-y-3"
-                        >
+                    <!-- 通知中心 - 禁用状态 -->
+                    <UCard variant="outline" class="opacity-50">
+                        <div class="flex flex-col items-center text-center py-4 space-y-3">
                             <div class="lsyb-icon-container-neutral">
                                 <UIcon name="i-lucide-bell" class="size-8" />
                             </div>
-                            <h3 class="font-medium text-lg">通知中心</h3>
-                            <p class="text-sm text-neutral-500">
+                            <h3 class="font-medium text-lg text-neutral-900 dark:text-white">通知中心</h3>
+                            <p class="text-sm text-neutral-500 dark:text-neutral-400">
                                 登录后查看实时互动消息
                             </p>
                         </div>
                     </UCard>
-                        </div>
+                </div>
             </div>
         </div>
     </div>
@@ -402,6 +341,28 @@ const statsItems = computed(() => {
         },
     ];
 });
+
+// 探索卡片数据
+const exploreItems = [
+    {
+        to: "/users/nearby",
+        icon: "i-lucide-users",
+        title: "附近用户",
+        description: "发现周围的朋友",
+    },
+    {
+        to: "/groups/nearby",
+        icon: "i-lucide-users-round",
+        title: "附近群组",
+        description: "发现可加入的群组",
+    },
+    {
+        to: "/moments/nearby",
+        icon: "i-lucide-image",
+        title: "附近瞬间",
+        description: "浏览周边动态",
+    },
+];
 
 defineShortcuts({
     h: { usingInput: false, handler: () => navigateTo("/") },

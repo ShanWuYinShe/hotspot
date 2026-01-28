@@ -5,10 +5,10 @@
     <div class="flex flex-col gap-6">
       <!-- Header Section -->
       <div class="flex flex-col gap-2 text-center mb-2">
-        <h1 class="text-xl font-bold text-gray-900 dark:text-white">
+        <h1 class="text-xl font-bold text-neutral-900 dark:text-white">
           {{ activeTitle }}
         </h1>
-        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">
+        <p class="text-sm font-medium text-neutral-600 dark:text-neutral-400">
           {{ activeDescription }}
         </p>
       </div>

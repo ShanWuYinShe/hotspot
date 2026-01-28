@@ -1,7 +1,7 @@
 <template>
   <UCard
         variant="outline"
-    class="h-full flex flex-col group"
+    class="h-full flex flex-col group card-interactive"
     @click="$emit('click', user)"
   >
     <template #header>

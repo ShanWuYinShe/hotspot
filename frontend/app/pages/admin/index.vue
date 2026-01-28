@@ -72,9 +72,13 @@ const systemService = useSystemService()
 const { formatTime } = useFormatters()
 
 const quickLinks = [
+    { label: '用户管理', description: '管理平台用户账户', icon: 'i-lucide-users', to: '/admin/users' },
+    { label: '群组管理', description: '管理平台群组', icon: 'i-lucide-users-2', to: '/admin/groups' },
     { label: '举报审核', description: '处理用户举报内容', icon: 'i-lucide-shield-alert', to: '/admin/reports' },
+    { label: '系统公告', description: '发布系统公告通知', icon: 'i-lucide-megaphone', to: '/admin/announcements' },
     { label: '系统配置', description: '管理全局系统参数', icon: 'i-lucide-settings-2', to: '/admin/config' },
-    { label: '权限管理', description: 'RBAC 角色与权限', icon: 'i-lucide-key-round', to: '/admin/rbac' }
+    { label: '权限管理', description: 'RBAC 角色与权限', icon: 'i-lucide-key-round', to: '/admin/rbac' },
+    { label: '审计日志', description: '查看系统操作记录', icon: 'i-lucide-scroll-text', to: '/admin/audit' }
 ]
 
 const checkingHealth = ref(false)

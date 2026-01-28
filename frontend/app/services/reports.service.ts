@@ -1,5 +1,5 @@
 import { BaseService } from './base.service'
-import { REPORTS } from '~/config/api'
+import { REPORTS, ADMIN_REPORTS } from '~/config/api'
 import type {
   PaginatedData,
   CreateReportRequest,
@@ -21,11 +21,11 @@ class ReportsService extends BaseService {
 
   // ============ Admin ============
   async adminList(request: ReportsRequest = {}) {
-    return this.post<PaginatedData<ReportItem>>(REPORTS.ADMIN_LIST, request)
+    return this.post<PaginatedData<ReportItem>>(ADMIN_REPORTS.LIST, request)
   }
 
   async adminHandle(request: HandleReportRequest) {
-    return this.post<void>(REPORTS.ADMIN_HANDLE, request)
+    return this.post<void>(ADMIN_REPORTS.HANDLE, request)
   }
 }
 

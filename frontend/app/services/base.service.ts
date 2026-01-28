@@ -10,7 +10,13 @@
 import type { PaginatedData, ApiResponse } from '~/types/api'
 import { ensureRefreshToken } from '~/utils/token'
 import { extractApiErrorSnapshot, isTokenInvalidOrExpiredCode } from '~/utils/apiError'
-import type { FetchOptions } from 'ofetch'
+
+interface FetchOptions {
+  method?: string
+  headers?: Record<string, string>
+  body?: unknown
+  credentials?: 'include' | 'omit' | 'same-origin'
+}
 
 export abstract class BaseService {
   /**
@@ -74,21 +80,14 @@ export abstract class BaseService {
 
   /**
    * POST 请求
+   * 
+   * 统一的 POST 请求方法，自动处理 Token 注入：
+   * - 如果用户已登录，自动携带 access_token
+   * - 如果用户未登录，不携带 token
+   * 
+   * 注意：API 的认证要求由后端控制，前端统一使用此方法
    */
   protected post<T>(url: string, body?: object): Promise<T> {
-    return this.request<T>(url, {
-      method: 'POST',
-      body
-    })
-  }
-
-  /**
-   * 公开 POST 请求（无需认证）
-   * 
-   * 虽然 request 方法会自动处理 token，但显式分开可以提高代码可读性
-   * 且此处不强制 token 存在，request 内部 logic 兼容 token 为空的情况
-   */
-  protected publicPost<T>(url: string, body?: object): Promise<T> {
     return this.request<T>(url, {
       method: 'POST',
       body
