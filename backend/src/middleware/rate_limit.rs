@@ -101,6 +101,25 @@ pub async fn rate_limit_middleware(
     // 获取客户端IP
     let client_ip = get_client_ip(&req);
 
+    let user_id = req.extensions().get::<i64>().copied();
+
+    // 动态获取限流配置的辅助函数
+    let get_limit = |key: &str, default: u32| {
+        let state = state.clone();
+        let key = key.to_string();
+        async move {
+            let config_key = format!("rate_limit.{}", key);
+            match state
+                .system_config_service
+                .get_config_value(&config_key)
+                .await
+            {
+                Ok(Some(val)) => val.parse::<u32>().unwrap_or(default),
+                _ => default,
+            }
+        }
+    };
+
     // 检查全局频率限制（按IP）
     let global_key = format!("rate_limit:global:{}", client_ip);
     let global_count = cache.incr(&global_key, 1).await.unwrap_or(0) as u32;
@@ -110,11 +129,10 @@ pub async fn rate_limit_middleware(
         let _ = cache.expire(&global_key, 3600).await;
     }
 
-    if global_count > state.config.rate_limit_global_per_hour {
+    let global_limit = get_limit("global_per_hour", state.config.rate_limit_global_per_hour).await;
+    if global_count > global_limit {
         return Err(AppError::HourlyRateLimitExceeded);
     }
-
-    let user_id = req.extensions().get::<i64>().copied();
 
     // 如果有用户ID，检查用户级别的频率限制
     if let Some(user_id) = user_id {
@@ -125,7 +143,8 @@ pub async fn rate_limit_middleware(
             let _ = cache.expire(&user_key, 3600).await;
         }
 
-        if user_count > state.config.rate_limit_user_per_hour {
+        let user_limit = get_limit("user_per_hour", state.config.rate_limit_user_per_hour).await;
+        if user_count > user_limit {
             return Err(AppError::HourlyRateLimitExceeded);
         }
     }
@@ -135,131 +154,107 @@ pub async fn rate_limit_middleware(
     let method = req.method().as_str();
     match (method, path) {
         ("POST", "/api/v1/auth/send_verification_code") => {
-            apply_limit(
-                &cache,
-                "auth:send_code:ip",
-                &client_ip,
+            let limit = get_limit(
+                "send_code_per_minute",
                 state.config.rate_limit_send_code_per_minute,
-                60,
             )
-            .await?;
+            .await;
+            apply_limit(&cache, "auth:send_code:ip", &client_ip, limit, 60).await?;
         }
         ("POST", "/api/v1/auth/verify_code") => {
-            apply_limit(
-                &cache,
-                "auth:verify_code:ip",
-                &client_ip,
+            let limit = get_limit(
+                "verify_code_per_10minutes",
                 state.config.rate_limit_verify_code_per_10minutes,
-                600,
             )
-            .await?;
+            .await;
+            apply_limit(&cache, "auth:verify_code:ip", &client_ip, limit, 600).await?;
         }
         ("POST", "/api/v1/auth/register") => {
-            apply_limit(
-                &cache,
-                "auth:register:ip",
-                &client_ip,
+            let limit = get_limit(
+                "register_per_10minutes",
                 state.config.rate_limit_register_per_10minutes,
-                600,
             )
-            .await?;
+            .await;
+            apply_limit(&cache, "auth:register:ip", &client_ip, limit, 600).await?;
         }
         ("POST", "/api/v1/auth/login") => {
-            apply_limit(
-                &cache,
-                "auth:login:ip",
-                &client_ip,
+            let limit = get_limit(
+                "login_per_10minutes",
                 state.config.rate_limit_login_per_10minutes,
-                600,
             )
-            .await?;
+            .await;
+            apply_limit(&cache, "auth:login:ip", &client_ip, limit, 600).await?;
         }
         ("POST", "/api/v1/auth/guest") => {
-            apply_limit(
-                &cache,
-                "auth:guest:ip",
-                &client_ip,
+            let limit = get_limit(
+                "guest_per_10minutes",
                 state.config.rate_limit_guest_per_10minutes,
-                600,
             )
-            .await?;
+            .await;
+            apply_limit(&cache, "auth:guest:ip", &client_ip, limit, 600).await?;
         }
         ("POST", "/api/v1/auth/refresh_token") => {
-            apply_limit(
-                &cache,
-                "auth:refresh:ip",
-                &client_ip,
+            let limit = get_limit(
+                "refresh_per_10minutes",
                 state.config.rate_limit_refresh_per_10minutes,
-                600,
             )
-            .await?;
+            .await;
+            apply_limit(&cache, "auth:refresh:ip", &client_ip, limit, 600).await?;
         }
         ("POST", "/api/v1/auth/request_password_reset") => {
-            apply_limit(
-                &cache,
-                "auth:reset_request:ip",
-                &client_ip,
+            let limit = get_limit(
+                "reset_request_per_minute",
                 state.config.rate_limit_reset_request_per_minute,
-                60,
             )
-            .await?;
+            .await;
+            apply_limit(&cache, "auth:reset_request:ip", &client_ip, limit, 60).await?;
         }
         ("POST", "/api/v1/auth/verify_reset_code") => {
-            apply_limit(
-                &cache,
-                "auth:reset_verify:ip",
-                &client_ip,
+            let limit = get_limit(
+                "reset_verify_per_10minutes",
                 state.config.rate_limit_reset_verify_per_10minutes,
-                600,
             )
-            .await?;
+            .await;
+            apply_limit(&cache, "auth:reset_verify:ip", &client_ip, limit, 600).await?;
         }
         ("POST", "/api/v1/auth/reset_password") => {
-            apply_limit(
-                &cache,
-                "auth:reset:ip",
-                &client_ip,
+            let limit = get_limit(
+                "reset_per_10minutes",
                 state.config.rate_limit_reset_per_10minutes,
-                600,
             )
-            .await?;
+            .await;
+            apply_limit(&cache, "auth:reset:ip", &client_ip, limit, 600).await?;
         }
         ("POST", "/api/v1/moments/create") => {
             if let Some(uid) = user_id {
-                apply_limit(
-                    &cache,
-                    "moments:create:user",
-                    &uid.to_string(),
+                let limit = get_limit(
+                    "moments_create_per_minute",
                     state.config.rate_limit_moments_create_per_minute,
-                    60,
                 )
-                .await?;
+                .await;
+                apply_limit(&cache, "moments:create:user", &uid.to_string(), limit, 60).await?;
             }
         }
         ("POST", "/api/v1/comments/create") => {
             if let Some(uid) = user_id {
-                apply_limit(
-                    &cache,
-                    "comments:create:user",
-                    &uid.to_string(),
+                let limit = get_limit(
+                    "comments_create_per_minute",
                     state.config.rate_limit_comments_create_per_minute,
-                    60,
                 )
-                .await?;
+                .await;
+                apply_limit(&cache, "comments:create:user", &uid.to_string(), limit, 60).await?;
             }
         }
         ("POST", "/api/v1/reports/create") => {
             let identity = user_id
                 .map(|uid| uid.to_string())
                 .unwrap_or_else(|| client_ip.clone());
-            apply_limit(
-                &cache,
-                "reports:create",
-                &identity,
+            let limit = get_limit(
+                "reports_create_per_hour",
                 state.config.rate_limit_reports_create_per_hour,
-                3600,
             )
-            .await?;
+            .await;
+            apply_limit(&cache, "reports:create", &identity, limit, 3600).await?;
         }
         _ => {}
     }

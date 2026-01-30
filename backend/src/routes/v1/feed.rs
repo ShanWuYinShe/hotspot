@@ -10,7 +10,7 @@ use crate::{handlers::feed, state::AppState};
 
 /// Token 可选的信息流路由
 pub fn token_optional_routes() -> Router<AppState> {
-    Router::new().route("/suggest", post(feed::suggest))
+    Router::new()
 }
 
 /// Token 必须的信息流路由

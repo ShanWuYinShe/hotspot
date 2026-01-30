@@ -14,6 +14,11 @@
 	import Settings from 'lucide-svelte/icons/settings';
 	import LogOut from 'lucide-svelte/icons/log-out';
 	import Menu from 'lucide-svelte/icons/menu';
+	import Plus from 'lucide-svelte/icons/plus';
+	import Image from 'lucide-svelte/icons/image';
+	import UsersRound from 'lucide-svelte/icons/users-round';
+	import CreateMomentModal from './create-moment-modal.svelte';
+	import CreateGroupModal from './create-group-modal.svelte';
 
 	interface Props {
 		onMenuClick?: () => void;
@@ -22,6 +27,8 @@
 
 	let { onMenuClick, showMenu = true }: Props = $props();
 	let showSearchModal = $state(false);
+	let showCreateMoment = $state(false);
+	let showCreateGroup = $state(false);
 
 	onMount(() => {
 		const handleKeydown = (event: KeyboardEvent) => {
@@ -42,6 +49,22 @@
 
 	function handleAuthEntry() {
 		uiStore.openLoginModal();
+	}
+
+	function openCreateMoment() {
+		if (!authStore.isAuthenticated) {
+			uiStore.openLoginModal();
+			return;
+		}
+		showCreateMoment = true;
+	}
+
+	function openCreateGroup() {
+		if (!authStore.isAuthenticated) {
+			uiStore.openLoginModal();
+			return;
+		}
+		showCreateGroup = true;
 	}
 </script>
 
@@ -77,6 +100,27 @@
 
 			<!-- Theme toggle -->
 			<ThemeToggle />
+
+			<!-- Create Menu -->
+			<DropdownMenu.Root>
+				<DropdownMenu.Trigger>
+					{#snippet child({ props })}
+						<Button variant="ghost" size="icon" class="rounded-full" {...props}>
+							<Plus class="h-5 w-5" />
+						</Button>
+					{/snippet}
+				</DropdownMenu.Trigger>
+				<DropdownMenu.Content align="end">
+					<DropdownMenu.Item onclick={openCreateMoment}>
+						<Image class="mr-2 h-4 w-4" />
+						发布动态
+					</DropdownMenu.Item>
+					<DropdownMenu.Item onclick={openCreateGroup}>
+						<UsersRound class="mr-2 h-4 w-4" />
+						创建群组
+					</DropdownMenu.Item>
+				</DropdownMenu.Content>
+			</DropdownMenu.Root>
 
 			{#if authStore.isAuthenticated}
 				<!-- Notifications -->
@@ -141,3 +185,5 @@
 </header>
 
 <SearchModal bind:open={showSearchModal} />
+<CreateMomentModal bind:open={showCreateMoment} />
+<CreateGroupModal bind:open={showCreateGroup} />

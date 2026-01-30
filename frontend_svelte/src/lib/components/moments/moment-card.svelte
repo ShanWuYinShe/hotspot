@@ -165,20 +165,22 @@ function getInitialFavorited(m: FeedMomentItem | MomentCardType | MomentSearchIt
 
 </script>
 
-<Card class="cursor-pointer overflow-hidden border-0 bg-card/70 backdrop-blur-sm transition-all hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-0.5">
-	<CardHeader class="pb-3">
+<Card class="group/card cursor-pointer overflow-hidden border border-border/60 bg-card/90 dark:bg-card/30 backdrop-blur-md transition-all duration-300 hover:border-primary/50 hover:bg-card hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 dark:hover:bg-card/60 dark:hover:border-primary/40">
+	<CardHeader class="pb-3 pt-4">
 		<div class="flex items-start justify-between gap-3">
-			<a href="/users/{moment.user.user_id}" class="group flex items-center gap-3">
-				<Avatar class="h-10 w-10 ring-2 ring-primary/10 transition-all group-hover:ring-primary/30">
-					<AvatarImage src={moment.user.avatar_url} alt={moment.user.nickname} />
-					<AvatarFallback class="bg-primary/10 text-primary">{moment.user.nickname.slice(0, 2)}</AvatarFallback>
-				</Avatar>
+			<a href="/users/{moment.user.user_id}" class="group/user flex items-center gap-3">
+				<div class="relative">
+					<Avatar class="h-10 w-10 ring-2 ring-transparent transition-all duration-300 group-hover/user:ring-primary/20">
+						<AvatarImage src={moment.user.avatar_url} alt={moment.user.nickname} />
+						<AvatarFallback class="bg-primary/5 text-primary font-medium">{moment.user.nickname.slice(0, 2)}</AvatarFallback>
+					</Avatar>
+				</div>
 				<div>
-					<p class="font-medium transition-colors group-hover:text-primary">{moment.user.nickname}</p>
+					<p class="font-semibold text-foreground transition-colors group-hover/user:text-primary">{moment.user.nickname}</p>
 					<div class="flex items-center gap-2 text-xs text-muted-foreground">
 						<span>{formatTime(moment.created_at)}</span>
 						{#if 'location' in moment && moment.location && 'distance' in moment.location}
-							<span class="flex items-center gap-0.5">
+							<span class="flex items-center gap-0.5 rounded-full bg-muted/50 px-1.5 py-0.5">
 								<MapPin class="h-3 w-3" />
 								{formatDistance(moment.location.distance)}
 							</span>
@@ -189,7 +191,7 @@ function getInitialFavorited(m: FeedMomentItem | MomentCardType | MomentSearchIt
 			{#if 'recommendation' in moment && moment.recommendation}
 				{@const recMeta = getRecommendationMeta(moment.recommendation.type)}
 				{#if recMeta}
-					<Badge variant="secondary" class="gap-1 rounded-full border-0 px-2 py-1 text-[11px] font-medium {recMeta.className}">
+					<Badge variant="secondary" class="gap-1 rounded-full border-0 px-2.5 py-0.5 text-[10px] font-medium shadow-sm {recMeta.className}">
 						{#if moment.recommendation.type === 'friend_liked'}
 							<Users class="h-3 w-3" />
 						{:else if moment.recommendation.type === 'nearby'}
@@ -209,74 +211,87 @@ function getInitialFavorited(m: FeedMomentItem | MomentCardType | MomentSearchIt
 	</CardHeader>
 
 	<CardContent class="pb-3">
-		<a href="/moments/{moment.moment_id}" class="block">
-			<p class="whitespace-pre-wrap text-sm leading-relaxed">{moment.description}</p>
+		<a href="/moments/{moment.moment_id}" class="block space-y-3">
+			{#if moment.description}
+				<p class="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">{moment.description}</p>
+			{/if}
 
 			{#if moment.images && moment.images.length > 0}
-				<div class="mt-3 grid gap-1.5 {moment.images.length === 1 ? '' : moment.images.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}">
+				<div class="grid gap-1.5 overflow-hidden rounded-xl border border-border/20 {moment.images.length === 1 ? '' : moment.images.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}">
 					{#each moment.images.slice(0, 9) as image, i}
-						<div class="relative aspect-square overflow-hidden rounded-xl bg-muted {moment.images.length === 1 ? 'max-h-80' : ''}">
-							<img
-								src={image.url}
-								alt="瞬间图片 {i + 1}"
-								class="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
-								loading="lazy"
-							/>
-							{#if i === 8 && moment.images.length > 9}
-								<div class="absolute inset-0 flex items-center justify-center bg-black/50 text-lg font-medium text-white">
-									+{moment.images.length - 9}
-								</div>
-							{/if}
-						</div>
+						{#if moment.images.length === 1}
+							<div class="relative overflow-hidden bg-muted/30">
+								<img
+									src={image.url}
+									alt="瞬间图片"
+									class="h-auto w-full object-cover transition-transform duration-500 hover:scale-105"
+									loading="lazy"
+								/>
+							</div>
+						{:else}
+							<div class="relative aspect-square overflow-hidden bg-muted/30">
+								<img
+									src={image.url}
+									alt="瞬间图片 {i + 1}"
+									class="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
+									loading="lazy"
+								/>
+								{#if i === 8 && moment.images.length > 9}
+									<div class="absolute inset-0 flex items-center justify-center bg-black/60 text-lg font-medium text-white backdrop-blur-[2px]">
+										+{moment.images.length - 9}
+									</div>
+								{/if}
+							</div>
+						{/if}
 					{/each}
 				</div>
 			{/if}
 
 			{#if moment.tags && moment.tags.length > 0}
-				<div class="mt-3 flex flex-wrap gap-1.5">
+				<div class="flex flex-wrap gap-1.5 pt-1">
 					{#each moment.tags as tag}
-						<Badge variant="secondary" class="rounded-full text-xs font-normal">#{tag}</Badge>
+						<Badge variant="outline" class="rounded-md border-primary/10 bg-primary/5 px-2 py-0 text-xs font-normal text-primary hover:bg-primary/10">#{tag}</Badge>
 					{/each}
 				</div>
 			{/if}
 		</a>
 	</CardContent>
 
-	<CardFooter class="border-t border-border/50 pt-3">
-		<div class="flex w-full items-center justify-between">
-			<div class="flex gap-0.5">
+	<CardFooter class="border-t border-border/40 bg-muted/5 py-2 transition-colors group-hover/card:bg-muted/20">
+		<div class="flex w-full items-center justify-between px-1">
+			<div class="flex gap-4">
 				<Button
 					variant="ghost"
 					size="sm"
-					class="gap-1.5 rounded-full transition-all {isLiked ? 'text-red-500 hover:text-red-600 hover:bg-red-500/10' : 'hover:text-red-500 hover:bg-red-500/10'}"
+					class="h-8 gap-1.5 rounded-full px-2 text-muted-foreground transition-all hover:bg-red-500/10 hover:text-red-500 {isLiked ? 'text-red-500 bg-red-500/5' : ''}"
 					onclick={handleLike}
 				>
 					<Heart class="h-4 w-4 {isLiked ? 'fill-current' : ''}" />
-					<span class="text-xs">{likesCount > 0 ? likesCount : ''}</span>
+					<span class="text-xs font-medium">{likesCount > 0 ? likesCount : '点赞'}</span>
 				</Button>
 				<Button 
 					variant="ghost" 
 					size="sm" 
-					class="gap-1.5 rounded-full hover:text-primary hover:bg-primary/10" 
+					class="h-8 gap-1.5 rounded-full px-2 text-muted-foreground hover:bg-primary/10 hover:text-primary" 
 					onclick={() => goto(`/moments/${moment.moment_id}`)}
 				>
 					<MessageCircle class="h-4 w-4" />
-					<span class="text-xs">{moment.comments_count > 0 ? moment.comments_count : ''}</span>
+					<span class="text-xs font-medium">{moment.comments_count > 0 ? moment.comments_count : '评论'}</span>
 				</Button>
 			</div>
-			<div class="flex gap-0.5">
+			<div class="flex gap-1">
 				<Button
 					variant="ghost"
-					size="sm"
-					class="rounded-full transition-all {isFavorited ? 'text-yellow-500 hover:text-yellow-600 hover:bg-yellow-500/10' : 'hover:text-yellow-500 hover:bg-yellow-500/10'}"
+					size="icon"
+					class="h-8 w-8 rounded-full text-muted-foreground transition-all hover:bg-yellow-500/10 hover:text-yellow-500 {isFavorited ? 'text-yellow-500 bg-yellow-500/5' : ''}"
 					onclick={handleFavorite}
 				>
 					<Bookmark class="h-4 w-4 {isFavorited ? 'fill-current' : ''}" />
 				</Button>
 				<Button 
 					variant="ghost" 
-					size="sm" 
-					class="rounded-full hover:text-primary hover:bg-primary/10"
+					size="icon" 
+					class="h-8 w-8 rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary"
 					onclick={handleShare}
 				>
 					<Share2 class="h-4 w-4" />

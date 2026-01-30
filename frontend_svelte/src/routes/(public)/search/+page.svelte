@@ -12,6 +12,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
 	import { Skeleton } from '$lib/components/ui/skeleton';
+	import MomentCard from '$lib/components/moments/moment-card.svelte';
 	import type { UserSearchItem, MomentSearchItem, GroupSearchItem } from '$lib/types/api';
 	import Search from 'lucide-svelte/icons/search';
 	import Users from 'lucide-svelte/icons/users';
@@ -215,7 +216,7 @@
 											<div class="min-w-0 flex-1">
 												<p class="font-medium">{user.nickname}</p>
 												{#if user.bio}
-													<p class="truncate text-sm text-muted-foreground">{user.bio}</p>
+													<p class="line-clamp-3 text-sm text-muted-foreground">{user.bio}</p>
 												{/if}
 												{#if user.tags && user.tags.length > 0}
 													<div class="mt-1 flex flex-wrap gap-1">
@@ -262,29 +263,7 @@
 					<div class="columns-1 gap-3 sm:columns-2 lg:columns-3">
 						{#each moments as moment (moment.moment_id)}
 							<div class="mb-3 break-inside-avoid">
-								<a href="/moments/{moment.moment_id}">
-									<Card class="cursor-pointer transition-colors hover:bg-accent/50">
-										<CardContent class="p-4">
-											<div class="flex gap-3">
-												<Avatar class="h-10 w-10">
-													<AvatarImage src={moment.user.avatar_url} alt={moment.user.nickname} />
-													<AvatarFallback>{moment.user.nickname.slice(0, 2)}</AvatarFallback>
-												</Avatar>
-												<div class="min-w-0 flex-1">
-													<p class="font-medium">{moment.user.nickname}</p>
-													<p class="line-clamp-3 text-sm text-muted-foreground">{moment.description}</p>
-													{#if moment.images && moment.images.length > 0}
-														<div class="mt-2 grid grid-cols-3 gap-1">
-															{#each moment.images.slice(0, 3) as image}
-																<img src={image.url} alt="" class="h-20 w-full rounded object-cover" />
-															{/each}
-														</div>
-													{/if}
-												</div>
-											</div>
-										</CardContent>
-									</Card>
-								</a>
+								<MomentCard {moment} />
 							</div>
 						{/each}
 					</div>
@@ -327,7 +306,7 @@
 											<div class="min-w-0 flex-1">
 												<p class="font-medium">{group.name}</p>
 												{#if group.description}
-													<p class="truncate text-sm text-muted-foreground">{group.description}</p>
+													<p class="line-clamp-3 text-sm text-muted-foreground">{group.description}</p>
 												{/if}
 												<p class="text-xs text-muted-foreground">{group.members_count} 成员</p>
 											</div>

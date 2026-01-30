@@ -64,6 +64,7 @@ pub struct UserSuggestRow {
     pub avatar_url: Option<String>,
     pub bio: String,
     pub user_type: UserType,
+    pub distance: Option<f64>,
 }
 
 /// 管理员搜索用户结果
@@ -545,41 +546,87 @@ impl UserRepository {
         &self,
         prefix: &str,
         limit: i64,
+        location: Option<(f64, f64)>,
     ) -> Result<Vec<UserSuggestRow>> {
         let search_pattern = format!("%{}%", prefix);
-        let rows = sqlx::query!(
-            r#"
-            SELECT 
-                u.user_id,
-                u.nickname,
-                u.avatar_url,
-                u.bio,
-                u.user_type as "user_type!: UserType"
-            FROM users u
-            LEFT JOIN user_settings us ON u.user_id = us.user_id
-            WHERE u.nickname ILIKE $1 
-              AND u.is_deleted = FALSE
-              AND u.user_type IN ('normal', 'temp')
-              AND COALESCE(us.searchable, TRUE) = TRUE
-            ORDER BY u.user_id DESC
-            LIMIT $2
-            "#,
-            search_pattern,
-            limit
-        )
-        .fetch_all(&self.pool)
-        .await?;
 
-        Ok(rows
-            .into_iter()
-            .map(|r| UserSuggestRow {
-                user_id: r.user_id,
-                nickname: r.nickname,
-                avatar_url: r.avatar_url,
-                bio: r.bio,
-                user_type: r.user_type,
-            })
-            .collect())
+        if let Some((lat, lng)) = location {
+            let rows = sqlx::query!(
+                r#"
+                SELECT 
+                    u.user_id,
+                    u.nickname,
+                    u.avatar_url,
+                    u.bio,
+                    u.user_type as "user_type!: UserType",
+                    ST_Distance(
+                        COALESCE(u.location, ST_SetSRID(ST_MakePoint(112.682524, 35.154922), 4326)::geography),
+                        ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography
+                    ) as "distance!"
+                FROM users u
+                LEFT JOIN user_settings us ON u.user_id = us.user_id
+                WHERE u.nickname ILIKE $1 
+                  AND u.is_deleted = FALSE
+                  AND u.user_type IN ('normal', 'temp')
+                  AND COALESCE(us.searchable, TRUE) = TRUE
+                ORDER BY "distance!" ASC
+                LIMIT $2
+                "#,
+                search_pattern,
+                limit,
+                lng,
+                lat
+            )
+            .fetch_all(&self.pool)
+            .await?;
+
+            Ok(rows
+                .into_iter()
+                .map(|r| UserSuggestRow {
+                    user_id: r.user_id,
+                    nickname: r.nickname,
+                    avatar_url: r.avatar_url,
+                    bio: r.bio,
+                    user_type: r.user_type,
+                    distance: Some(r.distance),
+                })
+                .collect())
+        } else {
+            let rows = sqlx::query!(
+                r#"
+                SELECT 
+                    u.user_id,
+                    u.nickname,
+                    u.avatar_url,
+                    u.bio,
+                    u.user_type as "user_type!: UserType"
+                FROM users u
+                LEFT JOIN user_settings us ON u.user_id = us.user_id
+                WHERE u.nickname ILIKE $1 
+                  AND u.is_deleted = FALSE
+                  AND u.user_type IN ('normal', 'temp')
+                  AND COALESCE(us.searchable, TRUE) = TRUE
+                ORDER BY u.user_id DESC
+                LIMIT $2
+                "#,
+                search_pattern,
+                limit
+            )
+            .fetch_all(&self.pool)
+            .await?;
+
+            Ok(rows
+                .into_iter()
+                .map(|r| UserSuggestRow {
+                    user_id: r.user_id,
+                    nickname: r.nickname,
+                    avatar_url: r.avatar_url,
+                    bio: r.bio,
+                    user_type: r.user_type,
+                    distance: None,
+                })
+                .collect())
+        }
     }
 
     /// 按位置搜索附近用户（PostGIS 计算距离，受隐私设置控制）

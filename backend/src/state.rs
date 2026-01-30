@@ -37,8 +37,9 @@ use crate::{
         message_common_service::MessageCommonService, moment_service::MomentService,
         presence_service::PresenceService, private_chat_service::PrivateChatService,
         private_message_service::PrivateMessageService, report_service::ReportService,
-        subscription_service::SubscriptionService, system_config_service::SystemConfigService,
-        tag_service::TagService, user_service::UserService,
+        search_service::SearchService, subscription_service::SubscriptionService,
+        system_config_service::SystemConfigService, tag_service::TagService,
+        user_service::UserService,
     },
     websocket::{
         manager::ConnectionManager as WsConnectionManager, subscription::SubscriptionManager,
@@ -55,6 +56,7 @@ pub struct AppState {
     pub ws_subscription: SubscriptionManager,
     // 缓存和防护工具
     pub resource_checker: crate::utils::bloom_filter::ResourceExistenceChecker,
+    pub auth_cache: crate::utils::auth_cache::AuthCache,
     // event_bus removed as it is internal to Services
     // Services
     pub auth_service: AuthService,
@@ -79,6 +81,7 @@ pub struct AppState {
     pub admin_audit_service: AdminAuditService,
     pub notification_service: crate::services::notification_service::NotificationService,
     pub announcement_service: AnnouncementService,
+    pub search_service: SearchService,
 }
 
 impl AppState {
@@ -102,6 +105,10 @@ impl AppState {
         let resource_checker =
             crate::utils::bloom_filter::ResourceExistenceChecker::new(redis.clone());
         let cache_manager = crate::utils::cache::CacheManager::new(redis.clone());
+        let auth_cache = crate::utils::auth_cache::AuthCache::new(
+            10_000, // 最大缓存 10000 个 token
+            300,    // TTL 5 分钟
+        );
         tracing::debug!("Cache and bloom filter initialized");
 
         // 初始化 WebSocket 管理器
@@ -357,6 +364,15 @@ impl AppState {
             media_service.clone(),
         );
 
+        let search_service = SearchService::new(
+            redis.clone(),
+            user_repo.clone(),
+            group_repo.clone(),
+            tag_repo.clone(),
+            moment_repo.clone(),
+            media_service.clone(),
+        );
+
         tracing::debug!("All services initialized");
 
         // 启动时确保超级管理员存在
@@ -387,6 +403,7 @@ impl AppState {
             ws_manager,
             ws_subscription,
             resource_checker,
+            auth_cache,
             auth_service,
             user_service,
             moment_service,
@@ -409,6 +426,7 @@ impl AppState {
             admin_audit_service,
             notification_service,
             announcement_service,
+            search_service,
         })
     }
 }

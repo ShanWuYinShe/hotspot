@@ -1,0 +1,99 @@
+---
+alwaysApply: true
+---
+# HotSpot API 规范 - 搜索与发现 API 模块 v0.0.1 (RPC)
+
+> 本文档定义 HotSpot 全局搜索 (`search`) 相关的 RPC 接口。
+> 旨在提供基于地理位置和语义的综合搜索能力。
+
+## 服务定义
+
+- **Service Namespace**: `search`
+- **Base Path**: `/api/v1/search/`
+
+## 契约引用
+
+- 公共基础类型：`@api_spec_common_types.mdc`
+- 错误码：`@api_spec_errors.mdc`
+
+## 核心类型定义
+
+```typescript
+// 引用 @api_spec_common_types.mdc 中的 UserInfo, GroupInfo, GeoPoint
+
+interface TagSuggestItem {
+  name: string;
+  usage_count: number;
+}
+
+interface UserSuggestItem extends UserInfo {
+  bio?: string;
+  tags?: string[];
+  distance?: number; // 距离（米），仅当请求包含 location 时返回
+}
+
+interface GroupSuggestItem extends GroupInfo {
+  description?: string;
+  tags?: string[];
+  has_password: boolean;
+  distance?: number; // 距离（米），仅当请求包含 location 时返回
+}
+
+interface MomentSuggestItem {
+  moment_id: string;
+  description: string;
+  images?: MomentImage[];
+  tags?: string[];
+  user: UserInfo;
+  distance?: number; // 距离（米），仅当请求包含 location 时返回
+}
+
+type SearchSuggestItem =
+  | { type: 'tag'; payload: TagSuggestItem }
+  | { type: 'user'; payload: UserSuggestItem }
+  | { type: 'group'; payload: GroupSuggestItem }
+  | { type: 'moment'; payload: MomentSuggestItem };
+
+interface SearchSuggestions {
+  items: SearchSuggestItem[];
+}
+```
+
+## 错误码说明
+
+本模块使用的错误码定义于 `@api_spec_errors.mdc`。
+
+## 接口概览
+
+| 端点 | 说明 | Request | Response |
+|------|------|---------|----------|
+| `POST /api/v1/search/suggest` | 综合搜索建议 | `SearchSuggestRequest` | `ApiResponse<SearchSuggestions>` |
+
+## 搜索 API
+
+### POST /api/v1/search/suggest
+
+综合搜索建议（标签、用户、群组、瞬间）。
+
+**说明**：
+- Token 可选；未登录时仅返回公开内容。
+- 建议用于搜索框输入提示与全局发现入口。
+- **LBS 优化**：如果提供 `location`，将优先返回附近的匹配结果（如附近的群组、用户）。
+
+**Request**:
+```typescript
+interface SearchSuggestRequest {
+  prefix: string;
+  limit?: number; // 每类建议的上限，默认 5
+  location?: GeoPoint; // 可选，用于 LBS 优先排序
+}
+```
+
+**Response**: `ApiResponse<SearchSuggestions>`
+
+**排序逻辑**：
+1. **完全匹配**优先。
+2. **有位置参数时**：距离近的优先（在匹配度相近的情况下）。
+3. **无位置参数时**：热度/活跃度高的优先。
+
+**可能错误码**：`10001`、`10003`

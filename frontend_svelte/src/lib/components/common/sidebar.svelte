@@ -29,7 +29,10 @@
 
 	const mainNavItems: NavItem[] = [
 		{ href: '/', label: '首页', icon: Home },
-		{ href: '/explore', label: '探索', icon: Compass }
+		{ href: '/explore', label: '探索', icon: Compass },
+		{ href: '/users/nearby', label: '附近的人', icon: UsersRound },
+		{ href: '/groups/nearby', label: '附近群组', icon: UsersRound },
+		{ href: '/moments/nearby', label: '附近动态', icon: Image }
 	];
 
 const personalNavItems: NavItem[] = [

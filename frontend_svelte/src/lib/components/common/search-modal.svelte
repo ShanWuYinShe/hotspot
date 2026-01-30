@@ -2,8 +2,9 @@
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { feedService, tagsService } from '$lib/api/services';
+	import { searchService, tagsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
+	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import { Button } from '$lib/components/ui/button';
@@ -96,21 +97,28 @@
 		}
 	}
 
-async function loadSuggestions(prefix: string) {
-	if (!prefix) {
-		suggestions = [];
-		return;
+	async function loadSuggestions(prefix: string) {
+		if (!prefix) {
+			suggestions = [];
+			return;
+		}
+		isSuggesting = true;
+		try {
+			const response = await searchService.suggest({
+				prefix,
+				limit: 10,
+				location: {
+					latitude: mapAnchorStore.latitude,
+					longitude: mapAnchorStore.longitude
+				}
+			});
+			suggestions = isSuccess(response) && response.data ? response.data.items : [];
+		} catch {
+			suggestions = [];
+		} finally {
+			isSuggesting = false;
+		}
 	}
-	isSuggesting = true;
-	try {
-		const response = await feedService.suggest({ prefix, limit: 10 });
-		suggestions = isSuccess(response) && response.data ? response.data.items : [];
-	} catch {
-		suggestions = [];
-	} finally {
-		isSuggesting = false;
-	}
-}
 
 	function handleTagClick(tag: string) {
 		handleSearchNavigate(tag);
@@ -213,7 +221,7 @@ async function loadSuggestions(prefix: string) {
 </script>
 
 <Dialog.Root bind:open onOpenChange={(value) => { open = value; onOpenChange?.(value); }}>
-	<Dialog.Content class="sm:max-w-3xl">
+	<Dialog.Content class="flex max-h-[85vh] flex-col sm:max-w-3xl">
 		<Dialog.Header>
 			<Dialog.Title class="flex items-center gap-2">
 				<Search class="h-5 w-5 text-primary" />
@@ -222,7 +230,7 @@ async function loadSuggestions(prefix: string) {
 			<Dialog.Description>输入关键词，点击搜索进入结果页</Dialog.Description>
 		</Dialog.Header>
 
-		<div class="mt-4 space-y-4">
+		<div class="flex-1 overflow-y-auto min-h-0 py-4 px-1 space-y-4">
 			<form
 				class="flex items-center gap-2"
 				onsubmit={(event) => {

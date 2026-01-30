@@ -355,13 +355,22 @@ pub struct VerifyResetCodeData {
 }
 
 /// 会话信息项 - API 文档: SessionItem
+///
+/// 安全说明：
+/// - display_id: 用于展示的短标识（如 "ses_abc123"），不可用于任何操作
+/// - revoke_token: 一次性撤销令牌，使用后立即失效
+/// - 真实的 session_id 不对外暴露，防止批量撤销攻击
 #[derive(Debug, Serialize)]
 pub struct SessionItem {
-    pub session_id: String,
+    /// 展示用的会话标识（如 "ses_abc123"）
+    pub display_id: String,
+    /// 一次性撤销令牌，用于调用 revoke 接口
+    pub revoke_token: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub device_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub device_name: Option<String>,
+    /// IP 地址（已脱敏，如 "192.168.xxx.xxx"）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ip_address: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1136,6 +1145,8 @@ pub struct UserSuggestItem {
     pub bio: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub distance: Option<f64>,
 }
 
 /// 群组建议项 - API 文档: GroupSuggestItem
@@ -1147,6 +1158,8 @@ pub struct GroupSuggestItem {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<String>>,
     pub has_password: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub distance: Option<f64>,
 }
 
 /// 瞬间建议项 - API 文档: MomentSuggestItem
@@ -1159,6 +1172,8 @@ pub struct MomentSuggestItem {
     pub user: UserInfo,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub distance: Option<f64>,
 }
 
 // ============================================================

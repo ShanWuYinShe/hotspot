@@ -383,10 +383,24 @@ pub async fn revoke_session(
     user: AuthenticatedUser,
     Json(revoke_req): Json<RevokeSessionRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
+    // 撤销会话
     state
         .auth_service
         .revoke_session(user.user_id, &revoke_req)
         .await?;
+
+    // 清除认证缓存（异步执行，不阻塞响应）
+    // 注意：由于 revoke_session 已经从 Redis 获取了 session_id，
+    // 这里我们需要重新获取或者修改 API 以返回 session_id
+    // 为了简化，我们使用更激进的策略：清除该用户的所有缓存
+    tokio::spawn({
+        let auth_cache = state.auth_cache.clone();
+        let user_id = user.user_id;
+        async move {
+            auth_cache.invalidate_by_user(user_id).await;
+        }
+    });
+
     Ok(Json(ApiResponse::success_empty()))
 }
 

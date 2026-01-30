@@ -12,6 +12,8 @@
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 	import Crosshair from 'lucide-svelte/icons/crosshair';
 
+	import SlidersHorizontal from 'lucide-svelte/icons/sliders-horizontal';
+
 	interface Props {
 		open: boolean;
 		onOpenChange?: (open: boolean) => void;
@@ -31,6 +33,7 @@
 	let hasInit = $state(false);
 	let hasSyncedFromAnchor = $state(false);
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+	let searchRadius = $state(mapAnchorStore.radius);
 
 	type MapClickEvent = {
 		lnglat?: AMap.LngLat;
@@ -90,7 +93,6 @@ async function handleDoubleClick(event: MapClickEvent) {
 	longitude = nextLng;
 	map.setCenter([nextLng, nextLat]);
 	await reverseGeocode(nextLat, nextLng);
-	toast.info('已选中该位置，请点击“设为锚点”确认');
 }
 
 	async function initMap() {
@@ -140,8 +142,8 @@ async function handleDoubleClick(event: MapClickEvent) {
 	}
 
 	function handleConfirm() {
-		mapAnchorStore.setAnchor(latitude, longitude, locationName || undefined);
-		toast.success('浏览锚点已更新');
+		mapAnchorStore.setAnchor(latitude, longitude, locationName || undefined, searchRadius);
+		toast.success(`浏览锚点已更新`);
 		handleClose();
 	}
 
@@ -152,10 +154,11 @@ async function handleDoubleClick(event: MapClickEvent) {
 
 	$effect(() => {
 		if (open) {
-			if (!hasSyncedFromAnchor) {
+				if (!hasSyncedFromAnchor) {
 				latitude = mapAnchorStore.latitude;
 				longitude = mapAnchorStore.longitude;
 				locationName = mapAnchorStore.name;
+				searchRadius = mapAnchorStore.radius;
 
 				if (!hasInit) {
 					initMap();
@@ -176,7 +179,7 @@ async function handleDoubleClick(event: MapClickEvent) {
 </script>
 
 <Dialog.Root bind:open onOpenChange={(value) => { open = value; onOpenChange?.(value); }}>
-	<Dialog.Content class="sm:max-w-4xl">
+	<Dialog.Content class="flex h-[85vh] flex-col sm:max-w-4xl">
 		<Dialog.Header>
 			<Dialog.Title class="flex items-center gap-2">
 				<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-primary/20 to-primary/10">
@@ -189,8 +192,8 @@ async function handleDoubleClick(event: MapClickEvent) {
 			</Dialog.Title>
 		</Dialog.Header>
 
-		<div class="mt-4 space-y-4">
-			<div class="relative h-[55vh] overflow-hidden rounded-2xl border bg-muted sm:h-[60vh]">
+		<div class="flex flex-1 flex-col min-h-0 gap-4 py-4">
+			<div class="relative flex-1 overflow-hidden rounded-2xl border bg-muted">
 				<div class="h-full w-full touch-none" bind:this={mapContainer}></div>
 
 				{#if !isMapAvailable}
@@ -247,6 +250,30 @@ async function handleDoubleClick(event: MapClickEvent) {
 						<Button class="gap-2" onclick={handleConfirm} disabled={!locationName}>
 							设为锚点
 						</Button>
+					</div>
+				</CardContent>
+			</Card>
+
+			<Card class="border-0 bg-card/50">
+				<CardContent class="flex flex-col gap-3 p-4">
+					<div class="flex items-center justify-between">
+						<div class="flex items-center gap-2 text-sm font-medium">
+							<SlidersHorizontal class="h-4 w-4 text-primary" />
+							<span>搜索范围</span>
+						</div>
+						<span class="text-sm font-medium text-primary">{searchRadius} km</span>
+					</div>
+					<input
+						type="range"
+						min="1"
+						max="50"
+						step="1"
+						class="h-2 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
+						bind:value={searchRadius}
+					/>
+					<div class="flex justify-between text-xs text-muted-foreground">
+						<span>1km</span>
+						<span>50km</span>
 					</div>
 				</CardContent>
 			</Card>

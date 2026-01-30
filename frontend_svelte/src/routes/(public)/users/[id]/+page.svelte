@@ -13,6 +13,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
+	import MomentCard from '$lib/components/moments/moment-card.svelte';
 	import type { UserCard, UserInfo, UserMomentListItem } from '$lib/types/api';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import MapPin from 'lucide-svelte/icons/map-pin';
@@ -360,35 +361,15 @@
 						</CardContent>
 					</Card>
 				{:else}
-					<div class="columns-1 gap-4 sm:columns-2">
+					<div class="columns-1 gap-4 sm:columns-2 lg:columns-3">
 						{#each moments as moment (moment.moment_id)}
 							<div class="mb-4 break-inside-avoid">
-								<Card class="overflow-hidden border-0 bg-card/70 shadow-sm shadow-black/5 transition-shadow hover:shadow-lg hover:shadow-black/10">
-									<a href="/moments/{moment.moment_id}" class="block p-4 hover:bg-accent/40">
-										<p class="line-clamp-3 whitespace-pre-wrap text-sm leading-relaxed">{moment.description}</p>
-										{#if moment.images && moment.images.length > 0}
-											<div class="mt-3 flex gap-2 overflow-x-auto">
-												{#each moment.images.slice(0, 4) as image, i}
-													<img
-														src={image.url}
-														alt="图片 {i + 1}"
-														class="h-20 w-20 rounded-lg object-cover"
-													/>
-												{/each}
-												{#if moment.images.length > 4}
-													<div class="flex h-20 w-20 items-center justify-center rounded-lg bg-muted text-sm text-muted-foreground">
-														+{moment.images.length - 4}
-													</div>
-												{/if}
-											</div>
-										{/if}
-										<div class="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
-											<span>{moment.likes_count} 点赞</span>
-											<span>{moment.comments_count} 评论</span>
-											<span>{new Date(moment.created_at).toLocaleDateString('zh-CN')}</span>
-										</div>
-									</a>
-								</Card>
+								<MomentCard moment={{
+									...moment,
+									user: user!,
+									is_liked: false,
+									is_favorited: false
+								}} />
 							</div>
 						{/each}
 					</div>

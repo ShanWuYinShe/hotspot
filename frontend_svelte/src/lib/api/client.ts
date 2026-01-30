@@ -159,6 +159,14 @@ async function request<T>(
 			body: body ? JSON.stringify(body) : undefined
 		});
 
+		if (!response.ok) {
+			return {
+				code: -1,
+				message: `HTTP Error: ${response.status}`,
+				request_id: ''
+			};
+		}
+
 		const data = (await response.json()) as ApiResponse<T>;
 
 		// Token 过期处理（仅在非重试且有 Token 时）

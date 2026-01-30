@@ -14,6 +14,9 @@ export { momentsService } from './moments';
 // 评论
 export { commentsService } from './comments';
 
+// 搜索
+export { searchService } from './search';
+
 // 信息流
 export { feedService, tagsService } from './feed';
 

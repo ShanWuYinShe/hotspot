@@ -55,13 +55,6 @@ export const feedService = {
 	},
 
 	/**
-	 * 综合搜索建议
-	 */
-	suggest(params: { prefix: string; limit?: number }) {
-		return post<SearchSuggestions>(FEED.SUGGEST, params);
-	},
-
-	/**
 	 * 提交信息流反馈
 	 */
 	submitFeedback(data: {

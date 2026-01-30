@@ -176,6 +176,7 @@ export interface FeedUserItem extends UserInfo {
 export interface UserSuggestItem extends UserInfo {
 	bio?: string;
 	tags?: string[];
+	distance?: number;
 }
 
 export interface UserSuggestions {
@@ -311,6 +312,7 @@ export interface GroupSuggestItem extends GroupInfo {
 	description?: string;
 	tags?: string[];
 	has_password: boolean;
+	distance?: number;
 }
 
 export interface GroupSuggestions {
@@ -382,6 +384,16 @@ export interface GroupAnnouncementItem {
 	is_pinned: boolean;
 }
 
+export interface GroupApplicationItem {
+	application_id: string;
+	applicant: UserInfo;
+	message?: string;
+	status: ApplicationStatus;
+	created_at: string;
+	handled_at?: string;
+	handled_by?: UserInfo;
+}
+
 // ============== 瞬间类型 ==============
 
 export interface MyMomentState {
@@ -424,6 +436,7 @@ export interface MomentSuggestItem {
 	images?: MomentImage[];
 	tags?: string[];
 	user: UserInfo;
+	distance?: number;
 }
 
 export interface MomentSuggestions {
@@ -663,6 +676,12 @@ export type SearchSuggestItem =
 
 export interface SearchSuggestions {
 	items: SearchSuggestItem[];
+}
+
+export interface SearchSuggestRequest {
+	prefix: string;
+	limit?: number;
+	location?: GeoPoint;
 }
 
 // ============== API 响应类型 ==============

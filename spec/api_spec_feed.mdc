@@ -73,33 +73,8 @@ interface TagSuggestItem {
   usage_count: number;
 }
 
-interface UserSuggestItem extends UserInfo {
-  bio?: string;
-  tags?: string[];
-}
-
-interface GroupSuggestItem extends GroupInfo {
-  description?: string;
-  tags?: string[];
-  has_password: boolean;
-}
-
-interface MomentSuggestItem {
-  moment_id: string;
-  description: string;
-  images?: MomentImage[];
-  tags?: string[];
-  user: UserInfo;
-}
-
-type SearchSuggestItem =
-  | { type: 'tag'; payload: TagSuggestItem }
-  | { type: 'user'; payload: UserSuggestItem }
-  | { type: 'group'; payload: GroupSuggestItem }
-  | { type: 'moment'; payload: MomentSuggestItem };
-
-interface SearchSuggestions {
-  items: SearchSuggestItem[];
+interface TagSuggestions {
+  items: TagSuggestItem[];
 }
 ```
 
@@ -109,8 +84,8 @@ interface SearchSuggestions {
 
 | 错误码 | 说明 | 相关接口 |
 |-------|------|---------|
-| `10001` | 缺少必填参数 | `feed/moments`、`feed/groups`、`feed/users`、`feed/suggest`、`tags/suggest`、`tags/delete` |
-| `10003` | 参数值超出范围 | 所有带分页参数的接口、`feed/suggest` |
+| `10001` | 缺少必填参数 | `feed/moments`、`feed/groups`、`feed/users`、`tags/suggest`、`tags/delete` |
+| `10003` | 参数值超出范围 | 所有带分页参数的接口 |
 | `10204` | 非管理员 | `admin/tags/delete` |
 | `10205` | 管理员权限不足 | `admin/tags/delete` |
 | `10300` | 资源不存在 | `admin/tags/delete` |
@@ -126,7 +101,6 @@ interface SearchSuggestions {
 | 信息流 | `POST /api/v1/feed/users` | 获取用户推荐 | `GetFeedUsersRequest` | `ApiResponse<PaginatedData<FeedUserItem>>` |
 | 信息流 | `POST /api/v1/feed/trending` | 获取热门内容 | `GetFeedTrendingRequest` | `ApiResponse<TrendingBundle>` |
 | 信息流 | `POST /api/v1/feed/feedback` | 信息流反馈 | `FeedFeedbackRequest` | `ApiResponse` |
-| 信息流 | `POST /api/v1/feed/suggest` | 综合搜索建议 | `FeedSuggestRequest` | `ApiResponse<SearchSuggestions>` |
 | 标签 | `POST /api/v1/tags/trending` | 热门标签 | `TrendingTagsRequest` | `ApiResponse<TrendingTags>` |
 | 标签 | `POST /api/v1/tags/suggest` | 标签搜索建议 | `SuggestTagsRequest` | `ApiResponse<TagSuggestions>` |
 | 管理员 | `POST /api/v1/admin/tags/delete` | 删除/屏蔽标签 | `AdminDeleteTagRequest` | `ApiResponse` |
@@ -215,25 +189,6 @@ interface GetFeedTrendingRequest {
 **Response**: `ApiResponse<TrendingBundle>`
 
 **可能错误码**：`10003`
-
-### POST /api/v1/feed/suggest
-
-综合搜索建议（标签、用户、群组、瞬间）。
-
-说明：
-- Token 可选；未登录时仅返回公开内容。
-- 建议用于搜索框输入提示与全局发现入口。
-
-**Request**:
-```typescript
-interface FeedSuggestRequest {
-  prefix: string;
-  limit?: number; // 每类建议的上限
-}
-```
-**Response**: `ApiResponse<SearchSuggestions>`
-
-**可能错误码**：`10001`、`10003`
 
 ### POST /api/v1/feed/feedback
 

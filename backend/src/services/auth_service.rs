@@ -24,7 +24,8 @@ use crate::{
     },
     utils::{
         bloom_filter::ResourceExistenceChecker, id_gen::IdGenerator, jwt::JwtUtil,
-        password::PasswordUtil, token::TokenUtil, validation::Validator,
+        password::PasswordUtil, session_token::SessionTokenGenerator, token::TokenUtil,
+        validation::Validator,
     },
 };
 
@@ -49,6 +50,7 @@ pub struct AuthService {
     jwt_secret: String,
     access_token_expiration: i64,
     refresh_token_expiration: i64,
+    session_token_gen: SessionTokenGenerator,
 }
 
 impl AuthService {
@@ -63,6 +65,8 @@ impl AuthService {
         password_reset_repo: PasswordResetRepository,
         verification_repo: VerificationRepository,
     ) -> Self {
+        let session_token_gen = SessionTokenGenerator::new(&jwt_secret);
+
         Self {
             db: db.clone(),
             user_repo,
@@ -73,6 +77,7 @@ impl AuthService {
             jwt_secret,
             access_token_expiration,
             refresh_token_expiration,
+            session_token_gen,
         }
     }
 
@@ -832,24 +837,41 @@ impl AuthService {
             .list_by_user(user_id, limit, cursor)
             .await?;
 
-        let items = sessions
-            .into_iter()
-            .map(|s| {
-                let is_current = current_session_id
-                    .map(|id| id == s.session_id)
-                    .unwrap_or(false);
-                SessionItem {
-                    session_id: s.session_id.to_string(),
-                    device_type: s.device_type,
-                    device_name: s.device_name,
-                    ip_address: s.ip_address.map(|ip| mask_ip_address(&ip.to_string())),
-                    ip_location: None,
-                    created_at: s.created_at.to_rfc3339(),
-                    last_active_at: s.last_active_at.to_rfc3339(),
-                    is_current,
-                }
-            })
-            .collect();
+        let mut items = Vec::with_capacity(sessions.len());
+        for s in sessions {
+            let is_current = current_session_id
+                .map(|id| id == s.session_id)
+                .unwrap_or(false);
+
+            // 生成 display_id 和 revoke_token
+            let display_id = self.session_token_gen.generate_display_id(s.session_id);
+            let revoke_token = self
+                .session_token_gen
+                .generate_revoke_token(s.session_id, user_id);
+
+            // 将 revoke_token 存储到 Redis（TTL: 5 分钟）
+            // 用于后续验证和一次性使用
+            let revoke_key = format!("revoke_token:{}", revoke_token);
+            let _: () = redis::cmd("SETEX")
+                .arg(&revoke_key)
+                .arg(300) // 5 分钟 TTL
+                .arg(s.session_id.to_string())
+                .query_async(&mut self.redis.clone())
+                .await
+                .map_err(|e| AppError::Redis(e))?;
+
+            items.push(SessionItem {
+                display_id,
+                revoke_token,
+                device_type: s.device_type,
+                device_name: s.device_name,
+                ip_address: s.ip_address.map(|ip| mask_ip_address(&ip.to_string())),
+                ip_location: None,
+                created_at: s.created_at.to_rfc3339(),
+                last_active_at: s.last_active_at.to_rfc3339(),
+                is_current,
+            });
+        }
 
         Ok(PaginatedData {
             items,
@@ -860,32 +882,95 @@ impl AuthService {
         })
     }
 
-    /// 撤销会话
+    /// 撤销会话（使用一次性 revoke_token）
+    ///
+    /// ## 安全特性
+    ///
+    /// - revoke_token 是一次性令牌，使用后立即失效
+    /// - 即使 token 泄露，攻击者也只能撤销一次
+    /// - 真实的 session_id 不对外暴露
     pub async fn revoke_session(&self, user_id: i64, req: &RevokeSessionRequest) -> Result<()> {
-        // 1. 解析会话ID
-        let session_id = uuid::Uuid::parse_str(&req.session_id)
-            .map_err(|_| AppError::BadRequest("会话ID格式错误".to_string()))?;
+        // 1. 验证 revoke_token 格式
+        if !self
+            .session_token_gen
+            .verify_revoke_token_format(&req.revoke_token)
+        {
+            return Err(AppError::BadRequest("令牌格式错误".to_string()));
+        }
 
-        // 2. 查找会话
+        // 2. 从 Redis 查询 revoke_token 对应的 session_id
+        let revoke_key = format!("revoke_token:{}", req.revoke_token);
+        let session_id_str: Option<String> = redis::cmd("GET")
+            .arg(&revoke_key)
+            .query_async(&mut self.redis.clone())
+            .await
+            .map_err(|e| AppError::Redis(e))?;
+
+        let session_id_str =
+            session_id_str.ok_or_else(|| AppError::NotFound("令牌无效或已使用".to_string()))?;
+
+        let session_id = Uuid::parse_str(&session_id_str)
+            .map_err(|_| AppError::InternalError("无效的会话ID".to_string()))?;
+
+        // 3. 立即删除 revoke_token（一次性使用）
+        let _: () = redis::cmd("DEL")
+            .arg(&revoke_key)
+            .query_async(&mut self.redis.clone())
+            .await
+            .map_err(|e| AppError::Redis(e))?;
+
+        // 4. 查找会话并验证所有权
         let session = self
             .session_repo
             .find_by_id(session_id)
             .await?
             .ok_or_else(|| AppError::NotFound("会话不存在".to_string()))?;
 
-        // 3. 验证会话所有权
         if session.user_id != user_id {
             return Err(AppError::Forbidden("无权操作该会话".to_string()));
         }
 
-        // 4. 删除会话（数据库）
+        // 5. 撤销会话（数据库）
         self.session_repo.delete(session_id).await?;
 
-        // 5. 移除 Session 白名单（Active Invalidation）
+        // 6. 移除 Session 白名单（Active Invalidation）
         // 确保 Access Token 立即失效
         self.remove_session_whitelist(session_id).await?;
 
+        tracing::info!(
+            user_id = user_id,
+            session_id = %session_id,
+            "Session revoked successfully"
+        );
+
         Ok(())
+    }
+
+    /// 撤销会话时清除认证缓存（需要在 handler 层调用）
+    ///
+    /// 注意：此方法在 revoke_session() 之后调用，用于清除 auth_cache
+    pub fn invalidate_session_cache(
+        auth_cache: &crate::utils::auth_cache::AuthCache,
+        session_id: Uuid,
+    ) {
+        tokio::spawn({
+            let auth_cache = auth_cache.clone();
+            async move {
+                auth_cache.invalidate_by_session(session_id).await;
+            }
+        });
+    }
+
+    /// 撤销所有会话时清除认证缓存（需要在 handler 层调用）
+    ///
+    /// 注意：此方法在撤销所有会话后调用，用于清除 auth_cache
+    pub fn invalidate_user_cache(auth_cache: &crate::utils::auth_cache::AuthCache, user_id: i64) {
+        tokio::spawn({
+            let auth_cache = auth_cache.clone();
+            async move {
+                auth_cache.invalidate_by_user(user_id).await;
+            }
+        });
     }
 
     /// 发送验证码

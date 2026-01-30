@@ -190,7 +190,7 @@
 </script>
 
 <Dialog.Root bind:open onOpenChange={(value) => { open = value; onOpenChange?.(value); }}>
-	<Dialog.Content class="sm:max-w-2xl">
+	<Dialog.Content class="flex max-h-[85vh] flex-col sm:max-w-2xl">
 		<Dialog.Header>
 			<Dialog.Title class="flex items-center gap-2">
 				<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-primary/20 to-primary/10">
@@ -203,7 +203,7 @@
 			</Dialog.Title>
 		</Dialog.Header>
 
-		<div class="mt-4 space-y-4">
+		<div class="flex-1 overflow-y-auto min-h-0 py-4 px-1 space-y-4">
 			<div class="space-y-2">
 				<Label for="moment-description">内容</Label>
 				<Textarea
@@ -301,7 +301,7 @@
 			</Card>
 		</div>
 
-		<Dialog.Footer class="mt-6">
+		<Dialog.Footer class="pt-2">
 			<Button variant="outline" onclick={() => { open = false; onOpenChange?.(false); }}>
 				取消
 			</Button>

@@ -102,7 +102,8 @@ pub struct SessionsRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct RevokeSessionRequest {
-    pub session_id: String,
+    /// 一次性撤销令牌（来自 SessionItem.revoke_token）
+    pub revoke_token: String,
 }
 
 // ==================== 用户模块请求 ====================
@@ -1062,9 +1063,10 @@ pub struct FeedFeedbackRequest {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct FeedSuggestRequest {
+pub struct SearchSuggestRequest {
     pub prefix: String,
     pub limit: Option<i32>,
+    pub location: Option<GeoPoint>,
 }
 
 // ==================== 标签管理 API ====================

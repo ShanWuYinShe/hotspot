@@ -11,13 +11,15 @@ const STORAGE_KEY = 'hotspot_map_anchor';
 const DEFAULTS = {
 	latitude: 35.154921,
 	longitude: 112.68253,
-	name: '南天门'
+	name: '南天门',
+	radius: 5 // Default 5km
 };
 
 export interface MapAnchor {
 	latitude: number;
 	longitude: number;
 	name?: string;
+	radius?: number;
 	updatedAt: number;
 }
 
@@ -79,16 +81,31 @@ class MapAnchorStore {
 		return this.#anchor.name || '';
 	}
 
+	get radius() {
+		return this.#anchor.radius || 5;
+	}
+
 	get displayName() {
 		return this.#anchor.name || `${this.#anchor.latitude.toFixed(4)}, ${this.#anchor.longitude.toFixed(4)}`;
 	}
 
 	/** 设置锚点 */
-	setAnchor(latitude: number, longitude: number, name?: string) {
+	setAnchor(latitude: number, longitude: number, name?: string, radius?: number) {
 		this.#anchor = {
 			latitude,
 			longitude,
 			name,
+			radius: radius || this.#anchor.radius || 5,
+			updatedAt: Date.now()
+		};
+		saveToStorage(this.#anchor);
+	}
+
+	/** 设置搜索半径 */
+	setRadius(radius: number) {
+		this.#anchor = {
+			...this.#anchor,
+			radius,
 			updatedAt: Date.now()
 		};
 		saveToStorage(this.#anchor);

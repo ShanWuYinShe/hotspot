@@ -401,38 +401,85 @@ impl GroupRepository {
     }
 
     /// 搜索建议：按名称/描述前缀匹配群组（轻量字段）
-    pub async fn suggest_by_name(&self, prefix: &str, limit: i64) -> Result<Vec<GroupSuggestRow>> {
+    pub async fn suggest_by_name(
+        &self,
+        prefix: &str,
+        limit: i64,
+        location: Option<(f64, f64)>,
+    ) -> Result<Vec<GroupSuggestRow>> {
         let search_pattern = format!("%{}%", prefix);
-        let rows = sqlx::query!(
-            r#"
-            SELECT g.group_chat_id, g.name, g.description, g.avatar_url,
-                   (SELECT COUNT(*) FROM group_members gm WHERE gm.group_chat_id = g.group_chat_id AND gm.is_deleted = FALSE) as "member_count!",
-                   (s.password_hash IS NOT NULL) as "has_password!"
-            FROM group_chats g
-            LEFT JOIN group_settings s ON g.group_chat_id = s.group_chat_id
-            WHERE g.is_deleted = FALSE
-              AND g.is_dismissed = FALSE
-              AND (g.name ILIKE $1 OR g.description ILIKE $1)
-            ORDER BY g.id DESC
-            LIMIT $2
-            "#,
-            search_pattern,
-            limit
-        )
-        .fetch_all(&self.pool)
-        .await?;
 
-        Ok(rows
-            .into_iter()
-            .map(|r| GroupSuggestRow {
-                group_id: r.group_chat_id,
-                name: r.name,
-                description: r.description,
-                avatar_url: r.avatar_url,
-                member_count: r.member_count as i32,
-                has_password: r.has_password,
-            })
-            .collect())
+        if let Some((lat, lng)) = location {
+            let rows = sqlx::query!(
+                r#"
+                SELECT g.group_chat_id, g.name, g.description, g.avatar_url,
+                       (SELECT COUNT(*) FROM group_members gm WHERE gm.group_chat_id = g.group_chat_id AND gm.is_deleted = FALSE) as "member_count!",
+                       (s.password_hash IS NOT NULL) as "has_password!",
+                       ST_Distance(
+                           g.location::geography, 
+                           ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography
+                       ) as "distance!"
+                FROM group_chats g
+                LEFT JOIN group_settings s ON g.group_chat_id = s.group_chat_id
+                WHERE g.is_deleted = FALSE
+                  AND g.is_dismissed = FALSE
+                  AND (g.name ILIKE $1 OR g.description ILIKE $1)
+                ORDER BY "distance!" ASC
+                LIMIT $2
+                "#,
+                search_pattern,
+                limit,
+                lng,
+                lat
+            )
+            .fetch_all(&self.pool)
+            .await?;
+
+            Ok(rows
+                .into_iter()
+                .map(|r| GroupSuggestRow {
+                    group_id: r.group_chat_id,
+                    name: r.name,
+                    description: r.description,
+                    avatar_url: r.avatar_url,
+                    member_count: r.member_count as i32,
+                    has_password: r.has_password,
+                    distance: Some(r.distance),
+                })
+                .collect())
+        } else {
+            let rows = sqlx::query!(
+                r#"
+                SELECT g.group_chat_id, g.name, g.description, g.avatar_url,
+                       (SELECT COUNT(*) FROM group_members gm WHERE gm.group_chat_id = g.group_chat_id AND gm.is_deleted = FALSE) as "member_count!",
+                       (s.password_hash IS NOT NULL) as "has_password!"
+                FROM group_chats g
+                LEFT JOIN group_settings s ON g.group_chat_id = s.group_chat_id
+                WHERE g.is_deleted = FALSE
+                  AND g.is_dismissed = FALSE
+                  AND (g.name ILIKE $1 OR g.description ILIKE $1)
+                ORDER BY g.id DESC
+                LIMIT $2
+                "#,
+                search_pattern,
+                limit
+            )
+            .fetch_all(&self.pool)
+            .await?;
+
+            Ok(rows
+                .into_iter()
+                .map(|r| GroupSuggestRow {
+                    group_id: r.group_chat_id,
+                    name: r.name,
+                    description: r.description,
+                    avatar_url: r.avatar_url,
+                    member_count: r.member_count as i32,
+                    has_password: r.has_password,
+                    distance: None,
+                })
+                .collect())
+        }
     }
 
     /// 全局搜索群组（不限范围，按关键词匹配，Keyset Pagination）
@@ -758,4 +805,5 @@ pub struct GroupSuggestRow {
     pub avatar_url: Option<String>,
     pub member_count: i32,
     pub has_password: bool,
+    pub distance: Option<f64>,
 }

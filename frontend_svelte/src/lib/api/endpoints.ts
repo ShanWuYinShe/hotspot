@@ -230,8 +230,14 @@ export const FEED = {
 	GROUPS: `${API_BASE}/feed/groups`,
 	USERS: `${API_BASE}/feed/users`,
 	TRENDING: `${API_BASE}/feed/trending`,
-	FEEDBACK: `${API_BASE}/feed/feedback`,
-	SUGGEST: `${API_BASE}/feed/suggest`
+	FEEDBACK: `${API_BASE}/feed/feedback`
+} as const;
+
+// ============================================================================
+// 搜索 API
+// ============================================================================
+export const SEARCH = {
+	SUGGEST: `${API_BASE}/search/suggest`
 } as const;
 
 // ============================================================================
@@ -399,6 +405,7 @@ export const ENDPOINTS = {
 	GROUP_MESSAGES,
 	MESSAGES,
 	FEED,
+	SEARCH,
 	TAGS,
 	MAP,
 	MEDIA,

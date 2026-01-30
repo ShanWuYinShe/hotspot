@@ -24,6 +24,7 @@ pub mod notifications;
 pub mod private_chats;
 pub mod private_messages;
 pub mod reports;
+pub mod search;
 pub mod subscriptions;
 pub mod system;
 pub mod tags;
@@ -93,6 +94,7 @@ pub fn v1_routes(state: AppState) -> Router<AppState> {
         .nest("/system", system::token_optional_routes())
         .nest("/global_settings", global_settings::token_optional_routes())
         .nest("/feed", feed::token_optional_routes())
+        .nest("/search", search::routes())
         .nest("/tags", tags::token_optional_routes())
         .nest("/announcements", announcements::token_optional_routes())
         .with_state(state.clone())
