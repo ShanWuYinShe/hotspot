@@ -11,9 +11,9 @@ use crate::{
     dto::types::{ReportTargetId, StringOrNumberId},
     types::enums::{
         AnnouncementSeverity, ApplicationStatus, DevicePlatform, Gender, GroupJoinMethod,
-        GroupRole, MapItemType, MessageType, NotificationTargetType, NotificationType, PrivacyLevel,
-        PrivateChatPermission, ReactionType, ReportStatus, ReportTargetType, SystemHealthStatus,
-        TagTrend, UserAccountStatus, UserType,
+        GroupRole, MapItemType, MessageType, NotificationTargetType, NotificationType,
+        PrivacyLevel, PrivateChatPermission, ReactionType, ReportStatus, ReportTargetType,
+        SystemHealthStatus, TagTrend, UserAccountStatus, UserType,
     },
 };
 
@@ -127,9 +127,9 @@ pub struct UserInfo {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UserRelation {
     pub is_mutual_follow: bool,
-    pub is_following: bool,       // 我是否关注了对方
-    pub is_followed_by: bool,     // 对方是否关注了我
-    pub is_blocked: bool,         // 我是否拉黑了对方
+    pub is_following: bool,   // 我是否关注了对方
+    pub is_followed_by: bool, // 对方是否关注了我
+    pub is_blocked: bool,     // 我是否拉黑了对方
     pub has_pending_follow_request: bool,
 }
 
@@ -895,7 +895,7 @@ pub struct ReportItem {
 pub struct SubscriptionsData {
     pub new_follower_enabled: bool,
     pub mutual_follow_enabled: bool,
-    pub follow_request_enabled: bool,         // 收到关注请求（需审批时）
+    pub follow_request_enabled: bool, // 收到关注请求（需审批时）
     pub follow_request_handled_enabled: bool, // 关注请求被处理
     pub group_invite_enabled: bool,
     pub group_invite_response_enabled: bool,
@@ -1110,6 +1110,55 @@ pub struct TagSuggestData {
 pub struct TagSuggestItem {
     pub name: String,
     pub usage_count: i32,
+}
+
+/// 综合搜索建议数据 - API 文档: SearchSuggestions
+#[derive(Debug, Serialize)]
+pub struct SearchSuggestions {
+    pub items: Vec<SearchSuggestItem>,
+}
+
+/// 综合搜索建议项 - API 文档: SearchSuggestItem
+#[derive(Debug, Serialize)]
+#[serde(tag = "type", content = "payload", rename_all = "snake_case")]
+pub enum SearchSuggestItem {
+    Tag(TagSuggestItem),
+    User(UserSuggestItem),
+    Group(GroupSuggestItem),
+    Moment(MomentSuggestItem),
+}
+
+/// 用户建议项 - API 文档: UserSuggestItem
+#[derive(Debug, Serialize)]
+pub struct UserSuggestItem {
+    pub user: UserInfo,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bio: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<String>>,
+}
+
+/// 群组建议项 - API 文档: GroupSuggestItem
+#[derive(Debug, Serialize)]
+pub struct GroupSuggestItem {
+    pub group: GroupInfo,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<String>>,
+    pub has_password: bool,
+}
+
+/// 瞬间建议项 - API 文档: MomentSuggestItem
+#[derive(Debug, Serialize)]
+pub struct MomentSuggestItem {
+    pub moment_id: String,
+    pub description: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub images: Option<Vec<MomentImage>>,
+    pub user: UserInfo,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<String>>,
 }
 
 // ============================================================

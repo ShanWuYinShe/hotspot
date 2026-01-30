@@ -353,7 +353,7 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
 #### auth（认证模块）
 
 - **职责**：用户注册、登录、Token 管理、会话管理、密码重置
-- **数据存储**：users 表、sessions 表、Redis (refresh token)
+- **数据存储**：users 表、sessions 表、Redis (session 白名单)
 - **依赖**：无（基础模块）
 - **被依赖**：所有需要认证的模块
 
@@ -518,19 +518,104 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
 
 ### Redis 使用场景
 
-| 场景 | Key 模式 | 说明 |
-|------|-------------|------|
-| 会话管理 | `session:{session_id}` | JWT 验证结果缓存 |
-| 未读计数 | `unread:{user_id}:{chat_type}:{chat_id}` | 聊天未读计数 |
-| 在线状态 | `online_status:{user_id}` | 用户在线状态 |
-| 热门标签 | `tags:trending:{timeframe}` | 标签缓存 |
-| 限流计数 | `ratelimit:{user_id}:{api}:{window}` | 速率限制 |
+| 场景 | Key 模式 | 数据类型 | TTL | 说明 |
+|------|-------------|---------|-----|------|
+| 会话管理 | `session:{session_id}` | String | 与 JWT_ACCESS_TOKEN_EXPIRATION 一致（默认 900秒） | 会话白名单 |
+| 未读计数 | **PostgreSQL: chat_unread_counts 表** | - | - | ❌ 未使用 Redis，直接从 DB 查询 |
+| 在线用户列表 | `presence:online_users` | ZSET | 无 TTL（定期清理） | 在线用户列表（sorted set） |
+| 用户位置 | `presence:location:{user_id}` | String | 建议设置 3600秒 | 用户地理位置缓存 |
+| 用户信息缓存 | `cache:user:info:{user_id}` | JSON | 3600±600秒 | 用户详情缓存 |
+| 用户设置缓存 | `cache:user:settings:{user_id}` | JSON | 3600±600秒 | 用户设置缓存 |
+| 用户统计缓存 | `cache:user:stats:{user_id}` | JSON | 3600±600秒 | 用户统计缓存 |
+| 群组信息缓存 | `cache:group:info:{group_id}` | JSON | 3600±600秒 | 群组详情缓存 |
+| 群组设置缓存 | `cache:group:settings:{group_id}` | JSON | 3600±600秒 | 群组设置缓存 |
+| 群组成员缓存 | `cache:group:members:{group_id}` | JSON | 3600±600秒 | 群组成员列表缓存 |
+| 瞬间详情缓存 | `cache:moment:detail:{moment_id}` | JSON | 3600±600秒 | 瞬间详情缓存 |
+| 瞬间作者缓存 | `cache:moment:owner:{moment_id}` | JSON | 3600±600秒 | 瞬间作者缓存 |
+| 私聊设置缓存 | `cache:private_chat:settings:{chat_id}` | JSON | 3600±600秒 | 私聊设置缓存 |
+| 热门标签缓存 | `cache:trending:tags:{timeframe}:{limit}` | JSON | 300秒 | 热门标签列表缓存 |
+| 系统配置缓存（完整） | `cache:system:config:full_settings` | JSON | 3600±600秒 | 系统配置完整缓存 |
+| 系统配置缓存（单个值） | `config:{config_key}` | String | 3600秒 | 系统配置单个值缓存（如 `config:upload.image_max_size`） |
+| 全局 IP 限速 | `rate_limit:global:{client_ip}` | Counter | 3600秒 | 全局每小时请求限制 |
+| 用户限速 | `rate_limit:user:{user_id}` | Counter | 3600秒 | 单用户每小时请求限制 |
+| 验证码发送限速 | `rate_limit:endpoint:auth:send_code:ip:{client_ip}` | Counter | 60秒 | 5次/分钟 |
+| 注册限速 | `rate_limit:endpoint:auth:register:ip:{client_ip}` | Counter | 600秒 | 10次/10分钟 |
+| 登录限速 | `rate_limit:endpoint:auth:login:ip:{client_ip}` | Counter | 600秒 | 30次/10分钟 |
+| 创建瞬间限速 | `rate_limit:endpoint:moments:create:user:{user_id}` | Counter | 60秒 | 20次/分钟 |
+| 创建评论限速 | `rate_limit:endpoint:comments:create:user:{user_id}` | Counter | 60秒 | 60次/分钟 |
+| 缓存锁 | `lock:{prefix}:{id}` | String | 5秒 | 防止缓存击穿的互斥锁 |
 
 ### 缓存更新原则
 
 - **写时更新**：业务操作时同步更新 Redis
 - **读时优先缓存**：API 查询优先读取 Redis
 - **一致性保证**：使用 Redis 事务或 Lua 脚本
+
+---
+
+## 速率限制实现规范
+
+### 速率限制维度
+
+| 限制类型 | Redis Key 模式 | 默认值 | 配置项 | 说明 |
+|---------|---------------|--------|--------|------|
+| 全局 IP 限速 | `rate_limit:global:{client_ip}` | 1000次/小时 | `RATE_LIMIT_GLOBAL_PER_HOUR` | 防止单 IP 滥用 |
+| 用户限速 | `rate_limit:user:{user_id}` | 5000次/小时 | `RATE_LIMIT_USER_PER_HOUR` | 防止单用户滥用 |
+| 验证码发送 | `rate_limit:endpoint:auth:send_code:ip:{client_ip}` | 5次/分钟 | `RATE_LIMIT_SEND_CODE_PER_MINUTE` | 防止验证码滥用 |
+| 验证码验证 | `rate_limit:endpoint:auth:verify_code:ip:{client_ip}` | 30次/10分钟 | `RATE_LIMIT_VERIFY_CODE_PER_10MINUTES` | 防止验证码暴力破解 |
+| 注册 | `rate_limit:endpoint:auth:register:ip:{client_ip}` | 10次/10分钟 | `RATE_LIMIT_REGISTER_PER_10MINUTES` | 防止批量注册 |
+| 登录 | `rate_limit:endpoint:auth:login:ip:{client_ip}` | 30次/10分钟 | `RATE_LIMIT_LOGIN_PER_10MINUTES` | 防止暴力破解 |
+| 访客创建 | `rate_limit:endpoint:auth:guest:ip:{client_ip}` | 60次/10分钟 | `RATE_LIMIT_GUEST_PER_10MINUTES` | 防止访客滥用 |
+| Token 刷新 | `rate_limit:endpoint:auth:refresh:ip:{client_ip}` | 120次/10分钟 | `RATE_LIMIT_REFRESH_PER_10MINUTES` | 防止 Token 滥用 |
+| 密码重置请求 | `rate_limit:endpoint:auth:reset_request:ip:{client_ip}` | 5次/分钟 | `RATE_LIMIT_RESET_REQUEST_PER_MINUTE` | 防止密码重置滥用 |
+| 密码重置验证 | `rate_limit:endpoint:auth:reset_verify:ip:{client_ip}` | 20次/10分钟 | `RATE_LIMIT_RESET_VERIFY_PER_10MINUTES` | 防止密码重置滥用 |
+| 密码重置 | `rate_limit:endpoint:auth:reset:ip:{client_ip}` | 10次/10分钟 | `RATE_LIMIT_RESET_PER_10MINUTES` | 防止密码重置滥用 |
+| 创建瞬间 | `rate_limit:endpoint:moments:create:user:{user_id}` | 20次/分钟 | `RATE_LIMIT_MOMENTS_CREATE_PER_MINUTE` | 防止瞬间刷屏 |
+| 创建评论 | `rate_limit:endpoint:comments:create:user:{user_id}` | 60次/分钟 | `RATE_LIMIT_COMMENTS_CREATE_PER_MINUTE` | 防止评论刷屏 |
+| 举报 | `rate_limit:endpoint:reports:create:{identity}` | 10次/小时 | `RATE_LIMIT_REPORTS_CREATE_PER_HOUR` | 防止举报滥用 |
+
+### 环境变量配置
+
+在 `.env` 文件中配置：
+
+```bash
+# ============================================================
+# 速率限制
+# ============================================================
+# 所有端点限速值均可通过环境变量配置，无需修改代码
+
+# 全局和用户级限速
+RATE_LIMIT_GLOBAL_PER_HOUR=1000           # 全局每小时请求限制
+RATE_LIMIT_USER_PER_HOUR=5000             # 单用户每小时请求限制
+
+# 认证端点限速
+RATE_LIMIT_SEND_CODE_PER_MINUTE=5          # 验证码发送：5次/分钟
+RATE_LIMIT_VERIFY_CODE_PER_10MINUTES=30    # 验证码验证：30次/10分钟
+RATE_LIMIT_REGISTER_PER_10MINUTES=10       # 注册：10次/10分钟
+RATE_LIMIT_LOGIN_PER_10MINUTES=30          # 登录：30次/10分钟
+RATE_LIMIT_GUEST_PER_10MINUTES=60          # 访客创建：60次/10分钟
+RATE_LIMIT_REFRESH_PER_10MINUTES=120       # Token 刷新：120次/10分钟
+RATE_LIMIT_RESET_REQUEST_PER_MINUTE=5       # 密码重置请求：5次/分钟
+RATE_LIMIT_RESET_VERIFY_PER_10MINUTES=20    # 密码重置验证：20次/10分钟
+RATE_LIMIT_RESET_PER_10MINUTES=10          # 密码重置：10次/10分钟
+
+# 内容创建限速
+RATE_LIMIT_MOMENTS_CREATE_PER_MINUTE=20     # 创建瞬间：20次/分钟
+RATE_LIMIT_COMMENTS_CREATE_PER_MINUTE=60     # 创建评论：60次/分钟
+RATE_LIMIT_REPORTS_CREATE_PER_HOUR=10       # 举报：10次/小时
+```
+
+### 实现细节
+
+- **全局 IP 限速**和**用户限速**：使用简单的计数器（`INCR` + `EXPIRE`）
+- **端点级限速**：使用 `rate_limit:endpoint:{endpoint_prefix}:{identity}` 格式
+- **限速检查**：在中间件层（`rate_limit_middleware`）实现
+- **超限响应**：返回对应的错误码（`10501`, `10502`, `10503`）
+- **错误码映射**：
+  - `10500`：请求过于频繁（通用）
+  - `10501`：超过每分钟请求限制
+  - `10502`：超过每小时请求限制
+  - `10503`：超过每日请求限制
 
 ---
 

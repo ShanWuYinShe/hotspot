@@ -33,9 +33,9 @@ use axum::{middleware, Router};
 
 use crate::{
     middleware::{
-        admin_auth::admin_auth_middleware, auth::auth_middleware,
-        auth::optional_auth_middleware, idempotency::idempotency_middleware,
-        rate_limit::rate_limit_middleware, resource_guard::resource_guard_middleware,
+        admin_auth::admin_auth_middleware, auth::auth_middleware, auth::optional_auth_middleware,
+        idempotency::idempotency_middleware, rate_limit::rate_limit_middleware,
+        resource_guard::resource_guard_middleware,
     },
     state::AppState,
 };
@@ -92,6 +92,7 @@ pub fn v1_routes(state: AppState) -> Router<AppState> {
         .nest("/map", map::token_optional_routes())
         .nest("/system", system::token_optional_routes())
         .nest("/global_settings", global_settings::token_optional_routes())
+        .nest("/feed", feed::token_optional_routes())
         .nest("/tags", tags::token_optional_routes())
         .nest("/announcements", announcements::token_optional_routes())
         .with_state(state.clone())
@@ -108,7 +109,10 @@ pub fn v1_routes(state: AppState) -> Router<AppState> {
         .nest("/user", user::token_required_routes())
         .nest("/group_chats", group_chats::token_required_routes())
         .nest("/private_chats", private_chats::token_required_routes())
-        .nest("/private_messages", private_messages::token_required_routes())
+        .nest(
+            "/private_messages",
+            private_messages::token_required_routes(),
+        )
         .nest("/group_messages", group_messages::token_required_routes())
         .nest("/moments", moments::token_required_routes())
         .nest("/comments", comments::token_required_routes())

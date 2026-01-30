@@ -552,8 +552,12 @@ impl PrivateChatService {
         &self,
         chat_ids: &[i64],
         user_id: i64,
-    ) -> Result<std::collections::HashMap<i64, crate::repositories::private_chat_repo::PrivateChatSettingsRow>>
-    {
+    ) -> Result<
+        std::collections::HashMap<
+            i64,
+            crate::repositories::private_chat_repo::PrivateChatSettingsRow,
+        >,
+    > {
         if chat_ids.is_empty() {
             return Ok(std::collections::HashMap::new());
         }

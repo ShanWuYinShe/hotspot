@@ -87,11 +87,27 @@ impl AdminRbacService {
                 Some(login_id.clone()),
                 "Super Admin".to_string(),
                 Some(password_hash),
+                None,
+                None,
+                None,
             )
             .await?;
 
-        // 创建默认 user_settings（使用 DB 默认值）
+        // 创建默认 user_settings 并禁用搜索/私聊
         self.user_settings_repo.create(user.user_id).await?;
+        use crate::repositories::user_settings_repo::UpdateSettingsParams;
+        use crate::types::enums::PrivateChatPermission;
+        let params = UpdateSettingsParams {
+            searchable: Some(false),
+            phone_searchable: Some(false),
+            nickname_searchable: Some(false),
+            location_searchable: Some(false),
+            allow_private_chat: Some(PrivateChatPermission::Nobody),
+            ..Default::default()
+        };
+        self.user_settings_repo
+            .update(user.user_id, &params)
+            .await?;
 
         // 标记为超级管理员
         self.repo.upsert_admin_user(user.user_id, true).await?;

@@ -69,8 +69,7 @@ pub async fn auth_middleware(
     mut req: Request,
     next: Next,
 ) -> Result<Response, AppError> {
-    let token = extract_bearer_token(&req)?
-        .ok_or_else(|| AppError::AccessTokenMissing)?;
+    let token = extract_bearer_token(&req)?.ok_or_else(|| AppError::AccessTokenMissing)?;
     let (user_id, session_id) = authenticate_token(&state, &token).await?;
 
     // 将 user_id / session_id 注入到请求扩展中

@@ -53,11 +53,7 @@ pub fn build_refresh_token_set_cookie(
 /// 约定：
 /// - Path 使用 "/"：保持与 refresh_token 一致
 /// - SameSite 策略与 refresh_token 对齐
-pub fn build_csrf_token_set_cookie(
-    csrf_token: &str,
-    max_age_seconds: i64,
-    secure: bool,
-) -> String {
+pub fn build_csrf_token_set_cookie(csrf_token: &str, max_age_seconds: i64, secure: bool) -> String {
     let same_site = if secure { "None" } else { "Lax" };
 
     let mut cookie = format!(

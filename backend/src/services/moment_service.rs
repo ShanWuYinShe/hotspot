@@ -8,15 +8,16 @@ use crate::{
     dto::{
         request::{
             CheckFavoritedRequest, CheckLikedRequest, CreateMomentRequest, DeleteMomentRequest,
-            FavoriteMomentRequest, GetMomentInteractionStateRequest, LikeMomentRequest,
-            MomentLikesRequest, MomentOpenTheDoorRequest, MyFavoritesRequest, MyMomentsRequest,
-            SearchMomentsByKeywordRequest, SearchMomentsByLocationRequest,
+            EditMomentRequest, FavoriteMomentRequest, GetMomentInteractionStateRequest,
+            LikeMomentRequest, MomentLikesRequest, MomentOpenTheDoorRequest, MyFavoritesRequest,
+            MyMomentsRequest, SearchMomentsByKeywordRequest, SearchMomentsByLocationRequest,
             SearchMomentsByTagRequest, UnfavoriteMomentRequest, UnlikeMomentRequest,
-            UpdateMomentRequest, UserMomentsRequest,
+            UserMomentsRequest,
         },
         response::{
-            MomentCard, MomentInteractionStateData, MomentItem, MomentLikeItem, MyMomentState,
-            Location, PaginatedData, PaginationMeta, RelativeLocation, UserInfo, UserMomentListItem,
+            Location, MomentCard, MomentInteractionStateData, MomentItem, MomentLikeItem,
+            MyMomentState, PaginatedData, PaginationMeta, RelativeLocation, UserInfo,
+            UserMomentListItem,
         },
     },
     error::{AppError, Result},
@@ -281,7 +282,7 @@ impl MomentService {
     }
 
     /// 编辑瞬间
-    pub async fn update_moment(&self, user_id: i64, req: &UpdateMomentRequest) -> Result<()> {
+    pub async fn update_moment(&self, user_id: i64, req: &EditMomentRequest) -> Result<()> {
         let moment_id = Uuid::parse_str(&req.moment_id)
             .map_err(|_| AppError::BadRequest("无效的瞬间ID".to_string()))?;
 
@@ -570,12 +571,7 @@ impl MomentService {
 
         let moments = self
             .moment_repo
-            .find_by_ids_with_distance(
-                &[moment_id],
-                DEFAULT_LATITUDE,
-                DEFAULT_LONGITUDE,
-                viewer_id,
-            )
+            .find_by_ids_with_distance(&[moment_id], DEFAULT_LATITUDE, DEFAULT_LONGITUDE, viewer_id)
             .await?;
         let moment_data = moments
             .first()
@@ -843,13 +839,7 @@ impl MomentService {
         // list_favorites returns (MomentSearchRow, favorited_at)
         let (results, next_cursor) = self
             .moment_repo
-            .list_favorites(
-                user_id,
-                latitude,
-                longitude,
-                limit,
-                cursor,
-            )
+            .list_favorites(user_id, latitude, longitude, limit, cursor)
             .await?;
 
         let search_rows: Vec<MomentSearchRow> = results.into_iter().map(|(m, _)| m).collect();
@@ -1049,7 +1039,10 @@ impl MomentService {
         })
     }
 
-    async fn sign_moment_images(&self, images: &[String]) -> Option<Vec<crate::dto::response::MomentImage>> {
+    async fn sign_moment_images(
+        &self,
+        images: &[String],
+    ) -> Option<Vec<crate::dto::response::MomentImage>> {
         if images.is_empty() {
             return None;
         }
@@ -1076,20 +1069,14 @@ impl MomentService {
         let key = moment_id.to_string();
         let cached = self
             .cache_manager
-            .get_or_set_with_lock_with_ttl(
-                cache_keys::MOMENT_OWNER,
-                &key,
-                3600,
-                300,
-                || async {
-                    let owner = self
-                        .moment_repo
-                        .get_owner(moment_id)
-                        .await
-                        .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
-                    Ok(owner)
-                },
-            )
+            .get_or_set_with_lock_with_ttl(cache_keys::MOMENT_OWNER, &key, 3600, 300, || async {
+                let owner = self
+                    .moment_repo
+                    .get_owner(moment_id)
+                    .await
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(owner)
+            })
             .await
             .map_err(|e| AppError::InternalError(e.to_string()))?;
 

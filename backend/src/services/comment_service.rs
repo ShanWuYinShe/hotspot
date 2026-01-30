@@ -52,7 +52,6 @@ impl CommentService {
             user_repo,
             cache_manager,
         }
-
     }
 
     /// 添加评论
@@ -66,11 +65,9 @@ impl CommentService {
             return Err(AppError::BadRequest("评论内容不能为空".to_string()));
         }
 
-
         if req.content.len() > 1000 {
             return Err(AppError::BadRequest("评论内容过长".to_string()));
         }
-
 
         // 验证 mentions（最多 10 个）
         if let Some(mentions) = &req.mentions {
@@ -86,11 +83,8 @@ impl CommentService {
                         mentioned_user_id
                     )));
                 }
-
             }
-
         }
-
 
         // 验证瞬间存在
         let moment_id = Uuid::parse_str(&req.moment_id)
@@ -126,7 +120,6 @@ impl CommentService {
             )
             .await?;
 
-
         // 记录评论到布隆过滤器
         if let Err(e) = ResourceExistenceChecker::new(self.redis.clone())
             .record_comment(&row.comment_id.to_string())
@@ -149,11 +142,8 @@ impl CommentService {
                         content: req.content.clone(),
                     });
                 }
-
             }
-
         }
-
 
         // 如果是回复评论，发布评论回复事件
         if let Some(parent) = parent_comment {
@@ -167,7 +157,6 @@ impl CommentService {
                 content: req.content.clone(),
             });
         }
-
 
         // 触发 @ 提及事件
         if let Some(mentions) = &req.mentions {
@@ -186,11 +175,8 @@ impl CommentService {
                         },
                     });
                 }
-
             }
-
         }
-
 
         // 构造响应
         let users = self.user_repo.find_profiles(&[user_id]).await?;
@@ -231,7 +217,6 @@ impl CommentService {
             return Err(AppError::Forbidden("无权删除该评论".to_string()));
         }
 
-
         self.comment_repo.soft_delete(comment_id).await?;
 
         Ok(())
@@ -246,7 +231,6 @@ impl CommentService {
         if !self.comment_repo.exists(comment_id).await? {
             return Err(AppError::CommentNotFound("评论不存在".to_string()));
         }
-
 
         let inserted = self.comment_repo.like_comment(comment_id, user_id).await?;
         if !inserted {
@@ -265,7 +249,6 @@ impl CommentService {
         if !self.comment_repo.exists(comment_id).await? {
             return Err(AppError::CommentNotFound("评论不存在".to_string()));
         }
-
 
         let deleted = self
             .comment_repo
@@ -388,7 +371,6 @@ impl CommentService {
             return Ok(Vec::new());
         }
 
-
         // 收集所有需要查询的用户ID
         let mut user_ids: Vec<i64> = comments.iter().map(|c| c.user_id).collect();
         user_ids.sort();
@@ -436,20 +418,14 @@ impl CommentService {
         let key = moment_id.to_string();
         let cached = self
             .cache_manager
-            .get_or_set_with_lock_with_ttl(
-                cache_keys::MOMENT_OWNER,
-                &key,
-                3600,
-                300,
-                || async {
-                    let owner = self
-                        .moment_repo
-                        .get_owner(moment_id)
-                        .await
-                        .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
-                    Ok(owner)
-                },
-            )
+            .get_or_set_with_lock_with_ttl(cache_keys::MOMENT_OWNER, &key, 3600, 300, || async {
+                let owner = self
+                    .moment_repo
+                    .get_owner(moment_id)
+                    .await
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(owner)
+            })
             .await
             .map_err(|e| AppError::InternalError(e.to_string()))?;
 

@@ -33,8 +33,7 @@ pub fn token_optional_routes() -> Router<AppState> {
 /// Token 必须的认证路由
 pub fn token_required_routes() -> Router<AppState> {
     // 主路由 - 基础认证操作
-    let main_routes = Router::new()
-        .route("/logout", post(auth::logout));
+    let main_routes = Router::new().route("/logout", post(auth::logout));
 
     // /me 子路由 - 当前用户认证相关操作
     let me_routes = Router::new()

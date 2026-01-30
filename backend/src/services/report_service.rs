@@ -8,9 +8,12 @@ use crate::{
     },
     error::AppError,
     repositories::{
-        comment_repo::CommentRepository, group_message_repo::GroupMessageRepository,
-        group_repo::GroupRepository, moment_repo::MomentRepository,
-        private_message_repo::PrivateMessageRepository, report_repo::{ReportRepository, ReportRow},
+        comment_repo::CommentRepository,
+        group_message_repo::GroupMessageRepository,
+        group_repo::GroupRepository,
+        moment_repo::MomentRepository,
+        private_message_repo::PrivateMessageRepository,
+        report_repo::{ReportRepository, ReportRow},
         user_repo::UserRepository,
     },
     types::enums::{ReportStatus, ReportTargetType},
@@ -72,13 +75,7 @@ impl ReportService {
 
         let created_report = self
             .report_repo
-            .create(
-                reporter_id,
-                target_type,
-                target_id,
-                reason,
-                req.description,
-            )
+            .create(reporter_id, target_type, target_id, reason, req.description)
             .await?;
 
         Ok(CreateReportData {
@@ -272,7 +269,9 @@ fn normalize_report_target_id(
     target_id: ReportTargetId,
 ) -> Result<String, AppError> {
     match (target_type, target_id) {
-        (crate::types::enums::ReportTargetType::User, ReportTargetId::Number(id)) => Ok(id.to_string()),
+        (crate::types::enums::ReportTargetType::User, ReportTargetId::Number(id)) => {
+            Ok(id.to_string())
+        }
         (crate::types::enums::ReportTargetType::User, ReportTargetId::String(_)) => Err(
             AppError::InvalidFormat("target_id 必须为 number".to_string()),
         ),

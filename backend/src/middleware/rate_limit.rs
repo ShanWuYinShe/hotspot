@@ -2,11 +2,7 @@ use axum::{extract::Request, extract::State, middleware::Next, response::Respons
 use std::net::IpAddr;
 use std::str::FromStr;
 
-use crate::{
-    error::AppError,
-    state::AppState,
-    utils::cache::CacheManager,
-};
+use crate::{error::AppError, state::AppState, utils::cache::CacheManager};
 
 async fn apply_limit(
     cache: &CacheManager,
@@ -139,47 +135,131 @@ pub async fn rate_limit_middleware(
     let method = req.method().as_str();
     match (method, path) {
         ("POST", "/api/v1/auth/send_verification_code") => {
-            apply_limit(&cache, "auth:send_code:ip", &client_ip, 5, 60).await?;
+            apply_limit(
+                &cache,
+                "auth:send_code:ip",
+                &client_ip,
+                state.config.rate_limit_send_code_per_minute,
+                60,
+            )
+            .await?;
         }
         ("POST", "/api/v1/auth/verify_code") => {
-            apply_limit(&cache, "auth:verify_code:ip", &client_ip, 30, 600).await?;
+            apply_limit(
+                &cache,
+                "auth:verify_code:ip",
+                &client_ip,
+                state.config.rate_limit_verify_code_per_10minutes,
+                600,
+            )
+            .await?;
         }
         ("POST", "/api/v1/auth/register") => {
-            apply_limit(&cache, "auth:register:ip", &client_ip, 10, 600).await?;
+            apply_limit(
+                &cache,
+                "auth:register:ip",
+                &client_ip,
+                state.config.rate_limit_register_per_10minutes,
+                600,
+            )
+            .await?;
         }
         ("POST", "/api/v1/auth/login") => {
-            apply_limit(&cache, "auth:login:ip", &client_ip, 30, 600).await?;
+            apply_limit(
+                &cache,
+                "auth:login:ip",
+                &client_ip,
+                state.config.rate_limit_login_per_10minutes,
+                600,
+            )
+            .await?;
         }
         ("POST", "/api/v1/auth/guest") => {
-            apply_limit(&cache, "auth:guest:ip", &client_ip, 60, 600).await?;
+            apply_limit(
+                &cache,
+                "auth:guest:ip",
+                &client_ip,
+                state.config.rate_limit_guest_per_10minutes,
+                600,
+            )
+            .await?;
         }
         ("POST", "/api/v1/auth/refresh_token") => {
-            apply_limit(&cache, "auth:refresh:ip", &client_ip, 120, 600).await?;
+            apply_limit(
+                &cache,
+                "auth:refresh:ip",
+                &client_ip,
+                state.config.rate_limit_refresh_per_10minutes,
+                600,
+            )
+            .await?;
         }
         ("POST", "/api/v1/auth/request_password_reset") => {
-            apply_limit(&cache, "auth:reset_request:ip", &client_ip, 5, 60).await?;
+            apply_limit(
+                &cache,
+                "auth:reset_request:ip",
+                &client_ip,
+                state.config.rate_limit_reset_request_per_minute,
+                60,
+            )
+            .await?;
         }
         ("POST", "/api/v1/auth/verify_reset_code") => {
-            apply_limit(&cache, "auth:reset_verify:ip", &client_ip, 20, 600).await?;
+            apply_limit(
+                &cache,
+                "auth:reset_verify:ip",
+                &client_ip,
+                state.config.rate_limit_reset_verify_per_10minutes,
+                600,
+            )
+            .await?;
         }
         ("POST", "/api/v1/auth/reset_password") => {
-            apply_limit(&cache, "auth:reset:ip", &client_ip, 10, 600).await?;
+            apply_limit(
+                &cache,
+                "auth:reset:ip",
+                &client_ip,
+                state.config.rate_limit_reset_per_10minutes,
+                600,
+            )
+            .await?;
         }
         ("POST", "/api/v1/moments/create") => {
             if let Some(uid) = user_id {
-                apply_limit(&cache, "moments:create:user", &uid.to_string(), 20, 60).await?;
+                apply_limit(
+                    &cache,
+                    "moments:create:user",
+                    &uid.to_string(),
+                    state.config.rate_limit_moments_create_per_minute,
+                    60,
+                )
+                .await?;
             }
         }
         ("POST", "/api/v1/comments/create") => {
             if let Some(uid) = user_id {
-                apply_limit(&cache, "comments:create:user", &uid.to_string(), 60, 60).await?;
+                apply_limit(
+                    &cache,
+                    "comments:create:user",
+                    &uid.to_string(),
+                    state.config.rate_limit_comments_create_per_minute,
+                    60,
+                )
+                .await?;
             }
         }
         ("POST", "/api/v1/reports/create") => {
             let identity = user_id
                 .map(|uid| uid.to_string())
                 .unwrap_or_else(|| client_ip.clone());
-            apply_limit(&cache, "reports:create", &identity, 10, 3600).await?;
+            apply_limit(
+                &cache,
+                "reports:create",
+                &identity,
+                state.config.rate_limit_reports_create_per_hour,
+                3600,
+            )
+            .await?;
         }
         _ => {}
     }

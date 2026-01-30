@@ -1,14 +1,13 @@
-use redis::aio::ConnectionManager;
-use redis::AsyncCommands;
 use crate::{
     dto::{
         request::{
-            FeedFeedbackRequest, FeedGroupsRequest, FeedMomentsRequest, FeedTrendingRequest,
-            FeedUsersRequest,
+            FeedFeedbackRequest, FeedGroupsRequest, FeedMomentsRequest, FeedSuggestRequest,
+            FeedTrendingRequest, FeedUsersRequest,
         },
         response::{
-            FeedGroupItem, FeedMomentItem, FeedTrendingData, FeedUserItem, PaginatedData,
-            PaginationMeta, RelativeLocation, TrendingTagItem, UserItem,
+            FeedGroupItem, FeedMomentItem, FeedTrendingData, FeedUserItem, GroupSuggestItem,
+            MomentSuggestItem, PaginatedData, PaginationMeta, RelativeLocation, SearchSuggestItem,
+            SearchSuggestions, TagSuggestItem, TrendingTagItem, UserItem, UserSuggestItem,
         },
     },
     error::AppError,
@@ -19,6 +18,8 @@ use crate::{
     types::enums::{FeedFeedbackAction, FeedSource, TagTrend},
     utils::validation::Validator,
 };
+use redis::aio::ConnectionManager;
+use redis::AsyncCommands;
 
 #[derive(Clone)]
 pub struct FeedService {
@@ -201,7 +202,11 @@ impl FeedService {
                 } else {
                     Some(g.description)
                 },
-                tags: if g.tags.is_empty() { None } else { Some(g.tags) },
+                tags: if g.tags.is_empty() {
+                    None
+                } else {
+                    Some(g.tags)
+                },
                 has_password: g.has_password,
                 location: RelativeLocation {
                     latitude: g.latitude,
@@ -409,6 +414,126 @@ impl FeedService {
             trending_tags,
             hot_moments,
         })
+    }
+
+    /// 综合搜索建议（用户/群组/瞬间/标签）
+    pub async fn suggest(
+        &self,
+        viewer_id: Option<i64>,
+        req: FeedSuggestRequest,
+    ) -> Result<SearchSuggestions, AppError> {
+        Validator::validate_not_empty(&req.prefix, "prefix")?;
+        let limit = Validator::validate_limit(req.limit, 20)? as i64;
+
+        let tag_rows = self.tag_repo.suggest(&req.prefix, limit).await?;
+        let user_rows = self
+            .user_repo
+            .suggest_by_nickname(&req.prefix, limit)
+            .await?;
+        let group_rows = self.group_repo.suggest_by_name(&req.prefix, limit).await?;
+        let moment_rows = self
+            .moment_repo
+            .suggest_by_keyword(&req.prefix, viewer_id, limit as i32)
+            .await?;
+
+        let user_ids: Vec<_> = user_rows.iter().map(|u| u.user_id).collect();
+        let group_ids: Vec<_> = group_rows.iter().map(|g| g.group_id).collect();
+        let moment_ids: Vec<_> = moment_rows.iter().map(|m| m.moment_id).collect();
+
+        let user_tags = self.tag_repo.get_user_tags_batch(&user_ids).await?;
+        let group_tags = self.tag_repo.get_group_tags_batch(&group_ids).await?;
+        let moment_tags = self.tag_repo.get_moment_tags_batch(&moment_ids).await?;
+
+        let mut items: Vec<SearchSuggestItem> = Vec::new();
+
+        for tag in tag_rows {
+            items.push(SearchSuggestItem::Tag(TagSuggestItem {
+                name: tag.name,
+                usage_count: tag.usage_count,
+            }));
+        }
+
+        for user in user_rows {
+            let avatar_url = self
+                .media_service
+                .sign_url_if_path(user.avatar_url.as_deref())
+                .await;
+            let tags = user_tags
+                .get(&user.user_id)
+                .cloned()
+                .filter(|t| !t.is_empty());
+            let bio = if user.bio.trim().is_empty() {
+                None
+            } else {
+                Some(user.bio)
+            };
+
+            items.push(SearchSuggestItem::User(UserSuggestItem {
+                user: crate::dto::response::UserInfo {
+                    user_id: user.user_id,
+                    nickname: user.nickname,
+                    avatar_url,
+                    user_type: user.user_type,
+                },
+                bio,
+                tags,
+            }));
+        }
+
+        for group in group_rows {
+            let avatar_url = self
+                .media_service
+                .sign_url_if_path(group.avatar_url.as_deref())
+                .await;
+            let tags = group_tags
+                .get(&group.group_id)
+                .cloned()
+                .filter(|t| !t.is_empty());
+            let description = if group.description.trim().is_empty() {
+                None
+            } else {
+                Some(group.description)
+            };
+
+            items.push(SearchSuggestItem::Group(GroupSuggestItem {
+                group: crate::dto::response::GroupInfo {
+                    group_chat_id: group.group_id.to_string(),
+                    name: group.name,
+                    avatar_url,
+                    members_count: group.member_count,
+                },
+                description,
+                tags,
+                has_password: group.has_password,
+            }));
+        }
+
+        for moment in moment_rows {
+            let avatar_url = self
+                .media_service
+                .sign_url_if_path(moment.avatar_url.as_deref())
+                .await;
+            let images = self.sign_moment_images(&moment.images).await;
+            let tags = moment_tags
+                .get(&moment.moment_id)
+                .cloned()
+                .filter(|t| !t.is_empty());
+
+            items.push(SearchSuggestItem::Moment(MomentSuggestItem {
+                moment_id: moment.moment_id.to_string(),
+                description: moment.description,
+                images,
+                user: crate::dto::response::UserInfo {
+                    user_id: moment.user_id,
+                    nickname: moment.nickname,
+                    avatar_url,
+                    user_type: moment.user_type,
+                },
+                tags,
+            }));
+        }
+
+        Ok(SearchSuggestions { items })
     }
 
     /// 提交反馈

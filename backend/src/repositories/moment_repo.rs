@@ -55,6 +55,19 @@ pub struct MomentSearchRow {
     pub bearing_degrees: f64,
 }
 
+/// 瞬间建议Row - 轻量返回
+#[derive(Debug, Clone)]
+pub struct MomentSuggestRow {
+    pub moment_id: Uuid,
+    pub user_id: i64,
+    pub description: String,
+    pub images: Vec<String>,
+    pub created_at: DateTime<Utc>,
+    pub nickname: String,
+    pub avatar_url: Option<String>,
+    pub user_type: crate::types::enums::UserType,
+}
+
 #[derive(Debug, Clone)]
 pub struct MomentRepository {
     pool: PgPool,
@@ -415,6 +428,79 @@ impl MomentRepository {
                 .collect(),
             next_cursor,
         ))
+    }
+
+    /// 搜索建议：按描述关键字匹配（轻量字段）
+    pub async fn suggest_by_keyword(
+        &self,
+        keyword: &str,
+        viewer_id: Option<i64>,
+        limit: i32,
+    ) -> Result<Vec<MomentSuggestRow>> {
+        let search_pattern = format!("%{}%", keyword);
+        let rows = sqlx::query!(
+            r#"
+            SELECT 
+                m.moment_id, m.user_id, m.description,
+                COALESCE(m.images, ARRAY[]::TEXT[]) as "images!",
+                m.created_at,
+                u.nickname, u.avatar_url, u.user_type as "user_type!: crate::types::enums::UserType"
+            FROM moments m
+            JOIN users u ON m.user_id = u.user_id
+            WHERE m.is_deleted = FALSE 
+              AND u.is_deleted = FALSE
+              AND m.description ILIKE $1
+              AND (
+                    ($2::BIGINT IS NULL AND m.privacy_level::text = 'public')
+                 OR ($2::BIGINT IS NOT NULL AND (
+                        m.user_id = $2
+                     OR m.privacy_level::text = 'public'
+                     OR (
+                            m.privacy_level::text = 'friends'
+                        AND EXISTS (
+                            SELECT 1
+                            FROM user_follows f1
+                            INNER JOIN user_follows f2
+                                ON f1.following_id = f2.follower_id
+                               AND f1.follower_id = f2.following_id
+                            WHERE f1.follower_id = $2
+                              AND f1.following_id = m.user_id
+                        )
+                     )
+                 ))
+              )
+              AND (
+                    $2::BIGINT IS NULL
+                 OR NOT EXISTS (
+                        SELECT 1
+                        FROM user_blocks b
+                        WHERE (b.blocker_id = m.user_id AND b.blocked_id = $2)
+                           OR (b.blocker_id = $2 AND b.blocked_id = m.user_id)
+                    )
+              )
+            ORDER BY m.created_at DESC
+            LIMIT $3
+            "#,
+            search_pattern,
+            viewer_id,
+            limit as i64
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r| MomentSuggestRow {
+                moment_id: r.moment_id,
+                user_id: r.user_id,
+                description: r.description,
+                images: r.images,
+                created_at: r.created_at,
+                nickname: r.nickname,
+                avatar_url: r.avatar_url,
+                user_type: r.user_type,
+            })
+            .collect())
     }
 
     /// 更新生活瞬间

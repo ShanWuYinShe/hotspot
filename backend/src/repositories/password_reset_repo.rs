@@ -42,8 +42,7 @@ impl PasswordResetRepository {
             expires_at
         )
         .execute(&self.pool)
-        .await
-        ?;
+        .await?;
 
         Ok(reset_id)
     }
@@ -68,8 +67,7 @@ impl PasswordResetRepository {
             reset_id
         )
         .fetch_optional(&self.pool)
-        .await
-        ?;
+        .await?;
 
         Ok(row)
     }
@@ -95,8 +93,7 @@ impl PasswordResetRepository {
             expires_at
         )
         .execute(&self.pool)
-        .await
-        ?;
+        .await?;
 
         Ok(())
     }
@@ -122,8 +119,7 @@ impl PasswordResetRepository {
             reset_token_hash
         )
         .fetch_optional(&self.pool)
-        .await
-        ?;
+        .await?;
 
         Ok(row)
     }
@@ -140,8 +136,7 @@ impl PasswordResetRepository {
             used_at
         )
         .execute(&self.pool)
-        .await
-        ?;
+        .await?;
 
         Ok(())
     }

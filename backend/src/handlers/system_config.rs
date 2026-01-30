@@ -3,9 +3,8 @@ use axum::{extract::State, Json};
 use crate::{
     dto::{
         request::{
-            AdminGetGlobalSettingsRequest, FetchGlobalSettingsRequest,
-            UpdateContactRequest, UpdateDefaultsRequest, UpdateFeaturesRequest,
-            UpdateLimitsRequest,
+            AdminGetGlobalSettingsRequest, FetchGlobalSettingsRequest, UpdateContactRequest,
+            UpdateDefaultsRequest, UpdateFeaturesRequest, UpdateLimitsRequest,
             UpdateUploadConfigRequest,
         },
         response::{

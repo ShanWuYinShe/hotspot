@@ -12,7 +12,7 @@ use crate::{
             AdminBanUserRequest, AdminUnbanUserRequest, AdminUserDetailRequest,
             AdminUserSearchRequest, BlockRequest, DeleteAccountRequest, FollowRequest,
             GetRelationshipRequest, HandleFollowRequestRequest, MyBlockedRequest,
-            MyFollowersRequest, MyFollowingRequest, MyFollowRequestsRequest, MyFriendsRequest,
+            MyFollowRequestsRequest, MyFollowersRequest, MyFollowingRequest, MyFriendsRequest,
             SearchUsersByKeywordRequest, SearchUsersByLocationRequest, SearchUsersByTagRequest,
             SetRemarkRequest, UnblockRequest, UnfollowRequest, UpdateLocationRequest,
             UpdateProfileRequest, UpdateSettingsRequest, UpgradeAccountRequest,
@@ -21,23 +21,19 @@ use crate::{
         },
         response::{
             AdminUserDetail, AdminUserItem, AuthData, BlockedUserItem, FollowRequestItem,
-            FollowerItem, FollowingItem, FriendItem, GroupItem, Location, MomentImage,
-            MomentItem, MyProfileData, PaginatedData, PaginationMeta, RelativeLocation, UserCard,
+            FollowerItem, FollowingItem, FriendItem, GroupItem, Location, MomentImage, MomentItem,
+            MyProfileData, PaginatedData, PaginationMeta, RelativeLocation, UserCard,
             UserCardStats, UserInfo, UserItem, UserRelation, UserSettingsData, UserStatsData,
         },
     },
     error::{AppError, Result},
     events::event_types::AppEvent,
     repositories::{
-        device_token_repo::DeviceTokenRepository,
-        follow_request_repo::FollowRequestRepository,
-        session_repo::SessionRepository,
-        tag_repo::TagRepository,
-        user_blocks_repo::UserBlocksRepository,
-        user_follows_repo::UserFollowsRepository,
+        device_token_repo::DeviceTokenRepository, follow_request_repo::FollowRequestRepository,
+        session_repo::SessionRepository, tag_repo::TagRepository,
+        user_blocks_repo::UserBlocksRepository, user_follows_repo::UserFollowsRepository,
         user_friend_remarks_repo::UserFriendRemarksRepository,
-        user_location_history_repo::UserLocationHistoryRepository,
-        user_repo::UserRepository,
+        user_location_history_repo::UserLocationHistoryRepository, user_repo::UserRepository,
         user_settings_repo::UserSettingsRepository,
     },
     types::enums::{PrivacyLevel, PrivateChatPermission, UserAccountStatus},
@@ -309,11 +305,8 @@ impl UserService {
                 None
             } else {
                 Some(
-                    self.get_relationship(
-                        current_user_id,
-                        &GetRelationshipRequest { user_id },
-                    )
-                    .await?,
+                    self.get_relationship(current_user_id, &GetRelationshipRequest { user_id })
+                        .await?,
                 )
             }
         } else {
@@ -1429,26 +1422,20 @@ impl UserService {
         let key = user_id.to_string();
         let cached = self
             .cache_manager
-            .get_or_set_with_lock_with_ttl(
-                cache_keys::USER_STATS,
-                &key,
-                300,
-                60,
-                || async {
-                    let (moments_count, friends_count, followers_count, following_count, groups_count) =
-                        self.user_repo
-                            .get_stats_counts(user_id)
-                            .await
-                            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
-                    Ok(Some(UserStatsData {
-                        moments_count: moments_count as i32,
-                        friends_count: friends_count as i32,
-                        followers_count: followers_count as i32,
-                        following_count: following_count as i32,
-                        groups_count: groups_count as i32,
-                    }))
-                },
-            )
+            .get_or_set_with_lock_with_ttl(cache_keys::USER_STATS, &key, 300, 60, || async {
+                let (moments_count, friends_count, followers_count, following_count, groups_count) =
+                    self.user_repo
+                        .get_stats_counts(user_id)
+                        .await
+                        .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(Some(UserStatsData {
+                    moments_count: moments_count as i32,
+                    friends_count: friends_count as i32,
+                    followers_count: followers_count as i32,
+                    following_count: following_count as i32,
+                    groups_count: groups_count as i32,
+                }))
+            })
             .await
             .map_err(|e| AppError::InternalError(e.to_string()))?;
 
@@ -1634,10 +1621,8 @@ impl UserService {
             )
             .await?;
 
-        let refresh_token_expires_at = Some(
-            (Utc::now() + Duration::seconds(refresh_token_expiration))
-                .to_rfc3339()
-        );
+        let refresh_token_expires_at =
+            Some((Utc::now() + Duration::seconds(refresh_token_expiration)).to_rfc3339());
 
         Ok(AuthData {
             user_id,
@@ -1763,8 +1748,7 @@ impl UserService {
 
         let requester_ids: Vec<i64> = rows.iter().map(|r| r.requester_id).collect();
         let profiles = self.user_repo.find_profiles(&requester_ids).await?;
-        let profile_map: HashMap<i64, _> =
-            profiles.into_iter().map(|u| (u.user_id, u)).collect();
+        let profile_map: HashMap<i64, _> = profiles.into_iter().map(|u| (u.user_id, u)).collect();
 
         let mut items = Vec::with_capacity(rows.len());
         for row in rows {
@@ -1804,8 +1788,8 @@ impl UserService {
         user_id: i64,
         req: &HandleFollowRequestRequest,
     ) -> Result<()> {
-        let request_id =
-            Uuid::parse_str(&req.request_id).map_err(|_| AppError::BadRequest("无效请求ID".to_string()))?;
+        let request_id = Uuid::parse_str(&req.request_id)
+            .map_err(|_| AppError::BadRequest("无效请求ID".to_string()))?;
         let accept = match req.action.as_str() {
             "accept" => true,
             "reject" => false,
@@ -1907,12 +1891,7 @@ impl UserService {
         // 批量获取瞬间信息（带距离计算）
         let moments = self
             .moment_repo
-            .find_by_ids_with_distance(
-                &moment_uuids,
-                reference_lat,
-                reference_lng,
-                None,
-            )
+            .find_by_ids_with_distance(&moment_uuids, reference_lat, reference_lng, None)
             .await?;
 
         // 获取用户信息
@@ -2045,10 +2024,7 @@ impl UserService {
         })
     }
 
-    pub async fn admin_user_detail(
-        &self,
-        req: &AdminUserDetailRequest,
-    ) -> Result<AdminUserDetail> {
+    pub async fn admin_user_detail(&self, req: &AdminUserDetailRequest) -> Result<AdminUserDetail> {
         let user = self
             .user_repo
             .admin_detail(req.user_id)

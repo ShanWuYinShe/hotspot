@@ -106,10 +106,7 @@ impl GroupMemberRepository {
         let key = format!("group:member:{}:{}", group_chat_id, user_id);
         let _: () = conn.set_ex(&key, 1, 86400).await.unwrap_or(()); // 24小时
         let role_key = format!("group:member:role:{}:{}", group_chat_id, user_id);
-        let _: () = conn
-            .set_ex(&role_key, role_str, 1800)
-            .await
-            .unwrap_or(());
+        let _: () = conn.set_ex(&role_key, role_str, 1800).await.unwrap_or(());
         let count_key = format!("group:members:count:{}", group_chat_id);
         let _: () = conn.del(&count_key).await.unwrap_or(());
 
@@ -213,7 +210,10 @@ impl GroupMemberRepository {
         .fetch_optional(&self.pool)
         .await?;
         if let Some(r) = row {
-            let _: () = conn.set_ex(&key, r.role.to_string(), 1800).await.unwrap_or(());
+            let _: () = conn
+                .set_ex(&key, r.role.to_string(), 1800)
+                .await
+                .unwrap_or(());
             Ok(Some(r.role))
         } else {
             let _: () = conn.set_ex(&key, "none", 300).await.unwrap_or(());

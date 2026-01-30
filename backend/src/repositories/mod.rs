@@ -1,7 +1,7 @@
 // src/repositories/mod.rs - 数据库访问层模块
 
-pub mod admin_rbac_repo;
 pub mod admin_audit_repo;
+pub mod admin_rbac_repo;
 pub mod announcement_repo;
 pub mod chat_unread_repo;
 pub mod comment_repo;

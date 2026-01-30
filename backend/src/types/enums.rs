@@ -888,9 +888,9 @@ impl MediaCategory {
     /// 返回该分类的最大文件大小（字节）
     pub fn max_file_size(&self) -> i64 {
         match self {
-            MediaCategory::Avatar | MediaCategory::GroupAvatar => 5 * 1024 * 1024,   // 5MB
+            MediaCategory::Avatar | MediaCategory::GroupAvatar => 5 * 1024 * 1024, // 5MB
             MediaCategory::MomentImage | MediaCategory::ChatImage => 10 * 1024 * 1024, // 10MB
-            MediaCategory::ChatAudio => 20 * 1024 * 1024, // 20MB
+            MediaCategory::ChatAudio => 20 * 1024 * 1024,                          // 20MB
             MediaCategory::ChatVideo | MediaCategory::ChatFile => 100 * 1024 * 1024, // 100MB
         }
     }
@@ -1600,10 +1600,19 @@ impl<'de> serde::Deserialize<'de> for ApplicationStatusFilter {
         let s = String::deserialize(deserializer)?;
         match s.to_lowercase().as_str() {
             "all" => Ok(ApplicationStatusFilter::Any),
-            "pending" => Ok(ApplicationStatusFilter::Specific(ApplicationStatus::Pending)),
-            "accepted" => Ok(ApplicationStatusFilter::Specific(ApplicationStatus::Accepted)),
-            "rejected" => Ok(ApplicationStatusFilter::Specific(ApplicationStatus::Rejected)),
-            _ => Err(serde::de::Error::custom(format!("无效的申请状态过滤: {}", s))),
+            "pending" => Ok(ApplicationStatusFilter::Specific(
+                ApplicationStatus::Pending,
+            )),
+            "accepted" => Ok(ApplicationStatusFilter::Specific(
+                ApplicationStatus::Accepted,
+            )),
+            "rejected" => Ok(ApplicationStatusFilter::Specific(
+                ApplicationStatus::Rejected,
+            )),
+            _ => Err(serde::de::Error::custom(format!(
+                "无效的申请状态过滤: {}",
+                s
+            ))),
         }
     }
 }
@@ -1621,7 +1630,3 @@ impl serde::Serialize for ApplicationStatusFilter {
 }
 
 // ============================================================
-
-
-
-

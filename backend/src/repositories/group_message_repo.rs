@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
+use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -292,10 +292,7 @@ impl GroupMessageRepository {
     }
 
     /// 批量获取消息已读数量
-    pub async fn get_read_counts(
-        &self,
-        message_ids: &[Uuid],
-    ) -> Result<HashMap<Uuid, i64>> {
+    pub async fn get_read_counts(&self, message_ids: &[Uuid]) -> Result<HashMap<Uuid, i64>> {
         if message_ids.is_empty() {
             return Ok(HashMap::new());
         }

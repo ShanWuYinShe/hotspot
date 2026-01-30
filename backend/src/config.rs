@@ -16,6 +16,19 @@ pub struct Config {
     pub _max_upload_size: usize,
     pub rate_limit_global_per_hour: u32,
     pub rate_limit_user_per_hour: u32,
+    // 端点级限速配置
+    pub rate_limit_send_code_per_minute: u32,
+    pub rate_limit_verify_code_per_10minutes: u32,
+    pub rate_limit_register_per_10minutes: u32,
+    pub rate_limit_login_per_10minutes: u32,
+    pub rate_limit_guest_per_10minutes: u32,
+    pub rate_limit_refresh_per_10minutes: u32,
+    pub rate_limit_reset_request_per_minute: u32,
+    pub rate_limit_reset_verify_per_10minutes: u32,
+    pub rate_limit_reset_per_10minutes: u32,
+    pub rate_limit_moments_create_per_minute: u32,
+    pub rate_limit_comments_create_per_minute: u32,
+    pub rate_limit_reports_create_per_hour: u32,
     /// 超级管理员 bootstrap：登录ID（可选，默认 superadmin）
     pub super_admin_login_id: Option<String>,
     /// 超级管理员 bootstrap：初始密码（建议必须设置；未设置则不会自动创建）
@@ -71,6 +84,58 @@ impl Config {
                 .unwrap_or_else(|_| "5000".to_string())
                 .parse()
                 .map_err(|_| "Invalid RATE_LIMIT_USER_PER_HOUR".to_string())?,
+            rate_limit_send_code_per_minute: env::var("RATE_LIMIT_SEND_CODE_PER_MINUTE")
+                .unwrap_or_else(|_| "5".to_string())
+                .parse()
+                .map_err(|_| "Invalid RATE_LIMIT_SEND_CODE_PER_MINUTE".to_string())?,
+            rate_limit_verify_code_per_10minutes: env::var("RATE_LIMIT_VERIFY_CODE_PER_10MINUTES")
+                .unwrap_or_else(|_| "30".to_string())
+                .parse()
+                .map_err(|_| "Invalid RATE_LIMIT_VERIFY_CODE_PER_10MINUTES".to_string())?,
+            rate_limit_register_per_10minutes: env::var("RATE_LIMIT_REGISTER_PER_10MINUTES")
+                .unwrap_or_else(|_| "10".to_string())
+                .parse()
+                .map_err(|_| "Invalid RATE_LIMIT_REGISTER_PER_10MINUTES".to_string())?,
+            rate_limit_login_per_10minutes: env::var("RATE_LIMIT_LOGIN_PER_10MINUTES")
+                .unwrap_or_else(|_| "30".to_string())
+                .parse()
+                .map_err(|_| "Invalid RATE_LIMIT_LOGIN_PER_10MINUTES".to_string())?,
+            rate_limit_guest_per_10minutes: env::var("RATE_LIMIT_GUEST_PER_10MINUTES")
+                .unwrap_or_else(|_| "60".to_string())
+                .parse()
+                .map_err(|_| "Invalid RATE_LIMIT_GUEST_PER_10MINUTES".to_string())?,
+            rate_limit_refresh_per_10minutes: env::var("RATE_LIMIT_REFRESH_PER_10MINUTES")
+                .unwrap_or_else(|_| "120".to_string())
+                .parse()
+                .map_err(|_| "Invalid RATE_LIMIT_REFRESH_PER_10MINUTES".to_string())?,
+            rate_limit_reset_request_per_minute: env::var("RATE_LIMIT_RESET_REQUEST_PER_MINUTE")
+                .unwrap_or_else(|_| "5".to_string())
+                .parse()
+                .map_err(|_| "Invalid RATE_LIMIT_RESET_REQUEST_PER_MINUTE".to_string())?,
+            rate_limit_reset_verify_per_10minutes: env::var(
+                "RATE_LIMIT_RESET_VERIFY_PER_10MINUTES",
+            )
+            .unwrap_or_else(|_| "20".to_string())
+            .parse()
+            .map_err(|_| "Invalid RATE_LIMIT_RESET_VERIFY_PER_10MINUTES".to_string())?,
+            rate_limit_reset_per_10minutes: env::var("RATE_LIMIT_RESET_PER_10MINUTES")
+                .unwrap_or_else(|_| "10".to_string())
+                .parse()
+                .map_err(|_| "Invalid RATE_LIMIT_RESET_PER_10MINUTES".to_string())?,
+            rate_limit_moments_create_per_minute: env::var("RATE_LIMIT_MOMENTS_CREATE_PER_MINUTE")
+                .unwrap_or_else(|_| "20".to_string())
+                .parse()
+                .map_err(|_| "Invalid RATE_LIMIT_MOMENTS_CREATE_PER_MINUTE".to_string())?,
+            rate_limit_comments_create_per_minute: env::var(
+                "RATE_LIMIT_COMMENTS_CREATE_PER_MINUTE",
+            )
+            .unwrap_or_else(|_| "60".to_string())
+            .parse()
+            .map_err(|_| "Invalid RATE_LIMIT_COMMENTS_CREATE_PER_MINUTE".to_string())?,
+            rate_limit_reports_create_per_hour: env::var("RATE_LIMIT_REPORTS_CREATE_PER_HOUR")
+                .unwrap_or_else(|_| "10".to_string())
+                .parse()
+                .map_err(|_| "Invalid RATE_LIMIT_REPORTS_CREATE_PER_HOUR".to_string())?,
             super_admin_login_id: env::var("SUPER_ADMIN_LOGIN_ID").ok(),
             super_admin_password: env::var("SUPER_ADMIN_PASSWORD").ok(),
 

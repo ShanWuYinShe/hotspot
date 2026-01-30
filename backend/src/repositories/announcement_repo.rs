@@ -116,8 +116,7 @@ impl AnnouncementRepository {
             announcement_id
         )
         .execute(&self.pool)
-        .await
-        ?;
+        .await?;
 
         if result.rows_affected() == 0 {
             return Err(AppError::NotFound("公告不存在".to_string()));

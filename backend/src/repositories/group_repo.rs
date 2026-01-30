@@ -111,11 +111,7 @@ impl GroupRepository {
     }
 
     /// 按自增ID顺序批量获取群组ID（用于布隆过滤器初始化）
-    pub async fn list_group_ids_after(
-        &self,
-        last_id: i64,
-        limit: i64,
-    ) -> Result<Vec<(i64, Uuid)>> {
+    pub async fn list_group_ids_after(&self, last_id: i64, limit: i64) -> Result<Vec<(i64, Uuid)>> {
         let rows = sqlx::query!(
             r#"
             SELECT id, group_chat_id
@@ -402,6 +398,41 @@ impl GroupRepository {
                 .collect(),
             next_cursor,
         ))
+    }
+
+    /// 搜索建议：按名称/描述前缀匹配群组（轻量字段）
+    pub async fn suggest_by_name(&self, prefix: &str, limit: i64) -> Result<Vec<GroupSuggestRow>> {
+        let search_pattern = format!("%{}%", prefix);
+        let rows = sqlx::query!(
+            r#"
+            SELECT g.group_chat_id, g.name, g.description, g.avatar_url,
+                   (SELECT COUNT(*) FROM group_members gm WHERE gm.group_chat_id = g.group_chat_id AND gm.is_deleted = FALSE) as "member_count!",
+                   (s.password_hash IS NOT NULL) as "has_password!"
+            FROM group_chats g
+            LEFT JOIN group_settings s ON g.group_chat_id = s.group_chat_id
+            WHERE g.is_deleted = FALSE
+              AND g.is_dismissed = FALSE
+              AND (g.name ILIKE $1 OR g.description ILIKE $1)
+            ORDER BY g.id DESC
+            LIMIT $2
+            "#,
+            search_pattern,
+            limit
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r| GroupSuggestRow {
+                group_id: r.group_chat_id,
+                name: r.name,
+                description: r.description,
+                avatar_url: r.avatar_url,
+                member_count: r.member_count as i32,
+                has_password: r.has_password,
+            })
+            .collect())
     }
 
     /// 全局搜索群组（不限范围，按关键词匹配，Keyset Pagination）
@@ -716,4 +747,15 @@ pub struct GroupSearchRow {
     pub bearing_degrees: f64,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>, // NULL = never updated
+}
+
+/// 群组建议Row - 轻量返回
+#[derive(Debug, Clone)]
+pub struct GroupSuggestRow {
+    pub group_id: Uuid,
+    pub name: String,
+    pub description: String,
+    pub avatar_url: Option<String>,
+    pub member_count: i32,
+    pub has_password: bool,
 }

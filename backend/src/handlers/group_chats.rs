@@ -5,17 +5,16 @@ use crate::{
         request::{
             AcceptInviteRequest, AdminDismissGroupRequest, AdminGroupDetailRequest,
             AdminGroupSearchRequest, ApplyToGroupRequest, ApproveGroupApplicationRequest,
-            BanMemberRequest,
-            BannedMembersRequest, CancelApplicationRequest, CreateGroupAnnouncementRequest,
-            CreateGroupChatRequest, DeleteGroupAnnouncementRequest, GetMyGroupStateRequest,
-            GroupAnnouncementsRequest, GroupApplicationsRequest, GroupMembersRequest,
-            GroupOpenTheDoorRequest, GroupSettingsRequest, InviteMemberRequest, JoinGroupRequest,
-            LeaveGroupRequest, MuteMemberRequest, MyGroupChatsRequest, MyInvitesRequest,
-            RejectGroupApplicationRequest, RejectInviteRequest, RemoveMemberRequest,
-            SearchGroupsByKeywordRequest, SearchGroupsByLocationRequest, SearchGroupsByTagRequest,
-            SetMemberRoleRequest, TransferOwnershipRequest, UnbanMemberRequest,
-            UnmuteMemberRequest, UpdateGroupAnnouncementRequest, UpdateGroupChatRequest,
-            UpdateGroupMySettingsRequest,
+            BanMemberRequest, BannedMembersRequest, CancelApplicationRequest,
+            CreateGroupAnnouncementRequest, CreateGroupChatRequest, DeleteGroupAnnouncementRequest,
+            GetMyGroupStateRequest, GroupAnnouncementsRequest, GroupApplicationsRequest,
+            GroupMembersRequest, GroupOpenTheDoorRequest, GroupSettingsRequest,
+            InviteMemberRequest, JoinGroupRequest, LeaveGroupRequest, MuteMemberRequest,
+            MyGroupChatsRequest, MyInvitesRequest, RejectGroupApplicationRequest,
+            RejectInviteRequest, RemoveMemberRequest, SearchGroupsByKeywordRequest,
+            SearchGroupsByLocationRequest, SearchGroupsByTagRequest, SetMemberRoleRequest,
+            TransferOwnershipRequest, UnbanMemberRequest, UnmuteMemberRequest,
+            UpdateGroupAnnouncementRequest, UpdateGroupChatRequest, UpdateGroupMySettingsRequest,
         },
         response::{
             AdminGroupDetail, AdminGroupItem, ApiResponse, ApplyToGroupData, BannedMemberItem,
@@ -75,7 +74,10 @@ pub async fn open_the_door(
         user.user_id
     );
 
-    let response = state.group_service.open_the_door(&req, user.user_id).await?;
+    let response = state
+        .group_service
+        .open_the_door(&req, user.user_id)
+        .await?;
 
     tracing::info!(
         "open_the_door response: has_my_state={}",
@@ -278,24 +280,24 @@ pub async fn approve_application(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<ApproveGroupApplicationRequest>,
-) -> Result<Json<ApiResponse<()>>> {
-    state
+) -> Result<Json<ApiResponse<GroupApplicationItem>>> {
+    let response = state
         .group_service
         .approve_application(user.user_id, req)
         .await?;
-    Ok(Json(ApiResponse::success_empty()))
+    Ok(Json(ApiResponse::success(response)))
 }
 
 pub async fn reject_application(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<RejectGroupApplicationRequest>,
-) -> Result<Json<ApiResponse<()>>> {
-    state
+) -> Result<Json<ApiResponse<GroupApplicationItem>>> {
+    let response = state
         .group_service
         .reject_application(user.user_id, req)
         .await?;
-    Ok(Json(ApiResponse::success_empty()))
+    Ok(Json(ApiResponse::success(response)))
 }
 
 pub async fn cancel_application(
@@ -421,12 +423,12 @@ pub async fn update_announcement(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<UpdateGroupAnnouncementRequest>,
-) -> Result<Json<ApiResponse<()>>> {
-    state
+) -> Result<Json<ApiResponse<GroupAnnouncementItem>>> {
+    let response = state
         .group_service
         .update_announcement(user.user_id, &req)
         .await?;
-    Ok(Json(ApiResponse::success_empty()))
+    Ok(Json(ApiResponse::success(response)))
 }
 
 /// 删除群公告
@@ -448,10 +450,7 @@ pub async fn get_my_state(
     user: AuthenticatedUser,
     Json(req): Json<GetMyGroupStateRequest>,
 ) -> Result<Json<ApiResponse<GroupMyStateData>>> {
-    let data = state
-        .group_service
-        .get_my_state(user.user_id, &req)
-        .await?;
+    let data = state.group_service.get_my_state(user.user_id, &req).await?;
     Ok(Json(ApiResponse::success(data)))
 }
 

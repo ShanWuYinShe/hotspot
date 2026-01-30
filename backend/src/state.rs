@@ -339,11 +339,8 @@ impl AppState {
             user_settings_repo.clone(),
         );
 
-        let admin_audit_service = AdminAuditService::new(
-            admin_audit_repo,
-            user_repo.clone(),
-            media_service.clone(),
-        );
+        let admin_audit_service =
+            AdminAuditService::new(admin_audit_repo, user_repo.clone(), media_service.clone());
 
         let map_service = MapService::new(map_repo.clone());
 
@@ -436,7 +433,9 @@ async fn warmup_bloom_filters(
     // 用户
     let mut last_user_id = 0;
     loop {
-        let ids = user_repo.list_user_ids_after(last_user_id, BATCH_SIZE).await?;
+        let ids = user_repo
+            .list_user_ids_after(last_user_id, BATCH_SIZE)
+            .await?;
         if ids.is_empty() {
             break;
         }

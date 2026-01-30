@@ -6,22 +6,16 @@ use tracing::{error, info};
 
 use crate::{
     dto::response::Location,
-    events::{
-        event_bus::EventBus,
-        event_types::AppEvent,
-    },
+    events::{event_bus::EventBus, event_types::AppEvent},
     repositories::{
-        group_member_repo::GroupMemberRepository,
-        notification_repo::NotificationType,
+        group_member_repo::GroupMemberRepository, notification_repo::NotificationType,
         user_repo::UserRepository,
     },
     services::{
-        notification_service::NotificationService,
-        subscription_service::SubscriptionService,
+        notification_service::NotificationService, subscription_service::SubscriptionService,
     },
     websocket::{
-        manager::ConnectionManager as WsConnectionManager,
-        subscription::SubscriptionManager,
+        manager::ConnectionManager as WsConnectionManager, subscription::SubscriptionManager,
         types::WsMessage,
     },
 };
@@ -391,7 +385,10 @@ impl EventHandler {
             } => {
                 let mut last_user_id = 0;
                 loop {
-                    let user_ids = self.user_repo.list_user_ids_after(last_user_id, 1000).await?;
+                    let user_ids = self
+                        .user_repo
+                        .list_user_ids_after(last_user_id, 1000)
+                        .await?;
                     if user_ids.is_empty() {
                         break;
                     }
@@ -615,10 +612,7 @@ impl EventHandler {
                     action: "accept".to_string(),
                     handled_at: chrono::Utc::now().to_rfc3339(),
                 };
-                let _ = self
-                    .ws_manager
-                    .send_to_user(*requester_id, &message)
-                    .await;
+                let _ = self.ws_manager.send_to_user(*requester_id, &message).await;
             }
 
             // ========== 群组管理事件 ==========

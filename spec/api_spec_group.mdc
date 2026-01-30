@@ -121,6 +121,7 @@ interface MessageReadItem {
 | 搜索与发现 | `POST /api/v1/group_chats/search_by_keyword` | 搜索群组（关键字） | `SearchGroupsByKeywordRequest` | `ApiResponse<PaginatedData<GroupSearchItem>>` |
 | 搜索与发现 | `POST /api/v1/group_chats/search_by_tag` | 搜索群组（标签） | `SearchGroupsByTagRequest` | `ApiResponse<PaginatedData<GroupSearchItem>>` |
 | 搜索与发现 | `POST /api/v1/group_chats/search_by_location` | 搜索群组（位置） | `SearchGroupsByLocationRequest` | `ApiResponse<PaginatedData<GroupSearchItem>>` |
+| 搜索与发现 | `POST /api/v1/group_chats/suggest` | 群组搜索建议 | `SuggestGroupsRequest` | `ApiResponse<GroupSuggestions>` |
 | 群组详情 | `POST /api/v1/group_chats/open_the_door` | 群组详情 | `GroupOpenTheDoorRequest` | `ApiResponse<GroupCard>` |
 | 群组详情 | `POST /api/v1/group_chats/my_state` | 我在群内状态 | `GetMyGroupStateRequest` | `ApiResponse<MyGroupState>` |
 | 群组详情 | `POST /api/v1/group_chats/settings` | 群组设置（含只读字段） | `GroupSettingsRequest` | `ApiResponse<GroupSettingsResponse>` |
@@ -207,6 +208,29 @@ interface SearchGroupsByLocationRequest extends SearchBaseParams {
 }
 ```
 **Response**: `ApiResponse<PaginatedData<GroupSearchItem>>`
+
+#### POST /api/v1/group_chats/suggest
+
+群组搜索建议（用于搜索框输入提示）。
+
+**Request**:
+```typescript
+interface SuggestGroupsRequest {
+  prefix: string;
+  limit?: number;
+}
+
+interface GroupSuggestItem extends GroupInfo {
+  description?: string;
+  tags?: string[];
+  has_password?: boolean;
+}
+
+interface GroupSuggestions {
+  items: GroupSuggestItem[];
+}
+```
+**Response**: `ApiResponse<GroupSuggestions>`
 
 ### 群组详情
 

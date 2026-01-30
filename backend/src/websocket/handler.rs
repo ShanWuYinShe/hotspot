@@ -13,10 +13,8 @@ use uuid::Uuid;
 use crate::{
     error::AppError,
     repositories::{
-        group_member_repo::GroupMemberRepository,
-        group_repo::GroupRepository,
-        user_blocks_repo::UserBlocksRepository,
-        user_repo::UserRepository,
+        group_member_repo::GroupMemberRepository, group_repo::GroupRepository,
+        user_blocks_repo::UserBlocksRepository, user_repo::UserRepository,
     },
     state::AppState,
     types::enums::{SubscriptionFailureReason, SubscriptionOperation},
@@ -561,8 +559,7 @@ async fn handle_message(
 
         Message::Binary(_) => {
             // 二进制消息通常是客户端误用/探测：这里降到 debug，避免刷屏
-            let err =
-                AppError::WebSocketProtocolIncompatible("二进制消息暂不支持".to_string());
+            let err = AppError::WebSocketProtocolIncompatible("二进制消息暂不支持".to_string());
             tracing::debug!(
                 code = err.error_code(),
                 "收到不兼容的二进制消息: user_id={}",
@@ -611,46 +608,70 @@ async fn process_subscribe(
                     SubscriptionSourceId::String(raw) => match Uuid::parse_str(raw) {
                         Ok(id) => id,
                         Err(_) => {
-                            failed.push(build_failed_id(source_id, SubscriptionFailureReason::InvalidItem));
+                            failed.push(build_failed_id(
+                                source_id,
+                                SubscriptionFailureReason::InvalidItem,
+                            ));
                             continue;
                         }
                     },
                     SubscriptionSourceId::Number(_) => {
-                        failed.push(build_failed_id(source_id, SubscriptionFailureReason::InvalidItem));
+                        failed.push(build_failed_id(
+                            source_id,
+                            SubscriptionFailureReason::InvalidItem,
+                        ));
                         continue;
                     }
                 };
                 let exists = match group_repo.exists(group_id).await {
                     Ok(v) => v,
                     Err(_) => {
-                        failed.push(build_failed_id(source_id, SubscriptionFailureReason::InternalError));
+                        failed.push(build_failed_id(
+                            source_id,
+                            SubscriptionFailureReason::InternalError,
+                        ));
                         continue;
                     }
                 };
                 if !exists {
-                    failed.push(build_failed_id(source_id, SubscriptionFailureReason::NotFound));
+                    failed.push(build_failed_id(
+                        source_id,
+                        SubscriptionFailureReason::NotFound,
+                    ));
                     continue;
                 }
                 let is_member = match group_member_repo.is_member(group_id, user_id).await {
                     Ok(v) => v,
                     Err(_) => {
-                        failed.push(build_failed_id(source_id, SubscriptionFailureReason::InternalError));
+                        failed.push(build_failed_id(
+                            source_id,
+                            SubscriptionFailureReason::InternalError,
+                        ));
                         continue;
                     }
                 };
                 if !is_member {
-                    failed.push(build_failed_id(source_id, SubscriptionFailureReason::PermissionDenied));
+                    failed.push(build_failed_id(
+                        source_id,
+                        SubscriptionFailureReason::PermissionDenied,
+                    ));
                     continue;
                 }
                 if group_count >= 100 {
-                    failed.push(build_failed_id(source_id, SubscriptionFailureReason::TooManySubscriptions));
+                    failed.push(build_failed_id(
+                        source_id,
+                        SubscriptionFailureReason::TooManySubscriptions,
+                    ));
                     continue;
                 }
 
                 let group_id_str = match source_id {
                     SubscriptionSourceId::String(raw) => raw.clone(),
                     SubscriptionSourceId::Number(_) => {
-                        failed.push(build_failed_id(source_id, SubscriptionFailureReason::InvalidItem));
+                        failed.push(build_failed_id(
+                            source_id,
+                            SubscriptionFailureReason::InvalidItem,
+                        ));
                         continue;
                     }
                 };
@@ -670,40 +691,61 @@ async fn process_subscribe(
                 let target_user_id = match source_id {
                     SubscriptionSourceId::Number(id) => *id,
                     SubscriptionSourceId::String(_) => {
-                        failed.push(build_failed_id(source_id, SubscriptionFailureReason::InvalidItem));
+                        failed.push(build_failed_id(
+                            source_id,
+                            SubscriptionFailureReason::InvalidItem,
+                        ));
                         continue;
                     }
                 };
                 let exists = match user_repo.exists(target_user_id).await {
                     Ok(v) => v,
                     Err(_) => {
-                        failed.push(build_failed_id(source_id, SubscriptionFailureReason::InternalError));
+                        failed.push(build_failed_id(
+                            source_id,
+                            SubscriptionFailureReason::InternalError,
+                        ));
                         continue;
                     }
                 };
                 if !exists {
-                    failed.push(build_failed_id(source_id, SubscriptionFailureReason::NotFound));
+                    failed.push(build_failed_id(
+                        source_id,
+                        SubscriptionFailureReason::NotFound,
+                    ));
                     continue;
                 }
                 let blocked = match blocks_repo.exists(target_user_id, user_id).await {
                     Ok(v) => v,
                     Err(_) => {
-                        failed.push(build_failed_id(source_id, SubscriptionFailureReason::InternalError));
+                        failed.push(build_failed_id(
+                            source_id,
+                            SubscriptionFailureReason::InternalError,
+                        ));
                         continue;
                     }
                 } || match blocks_repo.exists(user_id, target_user_id).await {
                     Ok(v) => v,
                     Err(_) => {
-                        failed.push(build_failed_id(source_id, SubscriptionFailureReason::InternalError));
+                        failed.push(build_failed_id(
+                            source_id,
+                            SubscriptionFailureReason::InternalError,
+                        ));
                         continue;
                     }
                 };
                 if blocked {
-                    failed.push(build_failed_id(source_id, SubscriptionFailureReason::PermissionDenied));
+                    failed.push(build_failed_id(
+                        source_id,
+                        SubscriptionFailureReason::PermissionDenied,
+                    ));
                     continue;
                 }
                 if user_count >= 500 {
-                    failed.push(build_failed_id(source_id, SubscriptionFailureReason::TooManySubscriptions));
+                    failed.push(build_failed_id(
+                        source_id,
+                        SubscriptionFailureReason::TooManySubscriptions,
+                    ));
                     continue;
                 }
 
@@ -738,7 +780,10 @@ async fn process_subscribe(
                 }
             }
             _ => {
-                failed.push(build_failed_id(source_id, SubscriptionFailureReason::InvalidItem));
+                failed.push(build_failed_id(
+                    source_id,
+                    SubscriptionFailureReason::InvalidItem,
+                ));
             }
         }
     }
@@ -814,11 +859,7 @@ async fn is_rate_limited(user_id: i64, state: &AppState) -> bool {
             .get_remaining(&key, max_requests, window_secs)
             .await
             .unwrap_or(0);
-        tracing::debug!(
-            user_id,
-            remaining,
-            "websocket subscribe rate limited"
-        );
+        tracing::debug!(user_id, remaining, "websocket subscribe rate limited");
     }
     limited
 }
@@ -908,10 +949,12 @@ fn subscription_ack_code(failed_ids: &[FailedSubscriptionId]) -> i32 {
     }) {
         return AppError::SubscriptionLimitExceeded.error_code();
     }
-    if failed_ids
-        .iter()
-        .any(|i| matches!(failure_reason(i), SubscriptionFailureReason::PermissionDenied))
-    {
+    if failed_ids.iter().any(|i| {
+        matches!(
+            failure_reason(i),
+            SubscriptionFailureReason::PermissionDenied
+        )
+    }) {
         return AppError::SubscriptionPermissionDenied("权限不足".to_string()).error_code();
     }
     if failed_ids

@@ -4,15 +4,15 @@ use crate::{
     dto::{
         request::{
             CheckFavoritedRequest, CheckLikedRequest, CreateMomentRequest, DeleteMomentRequest,
-            FavoriteMomentRequest, GetMomentInteractionStateRequest, LikeMomentRequest,
-            MomentLikesRequest, MomentOpenTheDoorRequest, MyFavoritesRequest, MyMomentsRequest,
-            SearchMomentsByKeywordRequest, SearchMomentsByLocationRequest,
+            EditMomentRequest, FavoriteMomentRequest, GetMomentInteractionStateRequest,
+            LikeMomentRequest, MomentLikesRequest, MomentOpenTheDoorRequest, MyFavoritesRequest,
+            MyMomentsRequest, SearchMomentsByKeywordRequest, SearchMomentsByLocationRequest,
             SearchMomentsByTagRequest, UnfavoriteMomentRequest, UnlikeMomentRequest,
-            UpdateMomentRequest,
         },
         response::{
-            ApiResponse, CheckFavoritedData, CheckLikedData, MomentInteractionStateData,
-            MomentCard, MomentItem, MomentLikeItem, PaginatedData, UserMomentListItem,
+            ApiResponse, CheckFavoritedData, CheckLikedData, MomentCard,
+            MomentInteractionStateData, MomentItem, MomentLikeItem, PaginatedData,
+            UserMomentListItem,
         },
     },
     error::Result,
@@ -113,7 +113,7 @@ pub async fn create(
 pub async fn update(
     State(state): State<AppState>,
     user: AuthenticatedUser,
-    Json(req): Json<UpdateMomentRequest>,
+    Json(req): Json<EditMomentRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
     state
         .moment_service

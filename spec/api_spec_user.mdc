@@ -126,6 +126,7 @@ interface BlockedUserItem {
 | 用户搜索 | `POST /api/v1/user/search_by_keyword` | 按关键字搜索用户 | `SearchUsersByKeywordRequest` | `ApiResponse<PaginatedData<UserSearchItem>>` |
 | 用户搜索 | `POST /api/v1/user/search_by_tag` | 按标签搜索用户 | `SearchUsersByTagRequest` | `ApiResponse<PaginatedData<UserSearchItem>>` |
 | 用户搜索 | `POST /api/v1/user/search_by_location` | 按位置搜索用户 | `SearchUsersByLocationRequest` | `ApiResponse<PaginatedData<UserSearchItem>>` |
+| 用户搜索 | `POST /api/v1/user/suggest` | 用户搜索建议 | `SuggestUsersRequest` | `ApiResponse<UserSuggestions>` |
 | 用户资料 | `POST /api/v1/user/open_the_door` | 用户资料详情 | `UserOpenTheDoorRequest` | `ApiResponse<UserCard>` |
 | 用户资料 | `POST /api/v1/user/relationship` | 获取关系 | `GetRelationshipRequest` | `ApiResponse<Relationship>` |
 | 用户资料 | `POST /api/v1/user/stats` | 用户统计 | `UserStatsRequest` | `ApiResponse<UserStats>` |
@@ -204,6 +205,28 @@ interface SearchUsersByLocationRequest extends SearchBaseParams {
 }
 ```
 **Response**: `ApiResponse<PaginatedData<UserSearchItem>>`
+
+#### POST /api/v1/user/suggest
+
+用户搜索建议（用于搜索框输入提示）。
+
+**Request**:
+```typescript
+interface SuggestUsersRequest {
+  prefix: string;
+  limit?: number;
+}
+
+interface UserSuggestItem extends UserInfo {
+  bio?: string;
+  tags?: string[];
+}
+
+interface UserSuggestions {
+  items: UserSuggestItem[];
+}
+```
+**Response**: `ApiResponse<UserSuggestions>`
 
 ### 用户资料
 

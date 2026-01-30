@@ -25,8 +25,8 @@ use crate::{
     state::AppState,
     utils::validation::Validator,
     utils::web_cookie::{
-        build_csrf_token_clear_cookie, build_csrf_token_set_cookie, build_refresh_token_clear_cookie,
-        build_refresh_token_set_cookie, get_cookie_value,
+        build_csrf_token_clear_cookie, build_csrf_token_set_cookie,
+        build_refresh_token_clear_cookie, build_refresh_token_set_cookie, get_cookie_value,
     },
 };
 
@@ -350,10 +350,7 @@ pub async fn check_status(
         .get("Authorization")
         .and_then(|h| h.to_str().ok())
         .and_then(|h| h.strip_prefix("Bearer "));
-    let response = state
-        .auth_service
-        .check_status(user.user_id, token)
-        .await?;
+    let response = state.auth_service.check_status(user.user_id, token).await?;
     Ok(Json(ApiResponse::success(response)))
 }
 

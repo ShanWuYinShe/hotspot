@@ -3,16 +3,16 @@ use axum::{extract::State, Json};
 use crate::{
     dto::{
         request::{
-            FeedFeedbackRequest, FeedGroupsRequest, FeedMomentsRequest, FeedTrendingRequest,
-            FeedUsersRequest,
+            FeedFeedbackRequest, FeedGroupsRequest, FeedMomentsRequest, FeedSuggestRequest,
+            FeedTrendingRequest, FeedUsersRequest,
         },
         response::{
             ApiResponse, FeedGroupItem, FeedMomentItem, FeedTrendingData, FeedUserItem,
-            PaginatedData,
+            PaginatedData, SearchSuggestions,
         },
     },
     error::Result,
-    middleware::auth::AuthenticatedUser,
+    middleware::auth::{AuthenticatedUser, OptionalAuthenticatedUser},
     state::AppState,
 };
 
@@ -63,6 +63,17 @@ pub async fn get_trending(
     Json(req): Json<FeedTrendingRequest>,
 ) -> Result<Json<ApiResponse<FeedTrendingData>>> {
     let result = state.feed_service.get_trending(user.user_id, req).await?;
+    Ok(Json(ApiResponse::success(result)))
+}
+
+/// 综合搜索建议
+/// POST /api/v1/feed/suggest
+pub async fn suggest(
+    State(state): State<AppState>,
+    user: OptionalAuthenticatedUser,
+    Json(req): Json<FeedSuggestRequest>,
+) -> Result<Json<ApiResponse<SearchSuggestions>>> {
+    let result = state.feed_service.suggest(user.user_id, req).await?;
     Ok(Json(ApiResponse::success(result)))
 }
 

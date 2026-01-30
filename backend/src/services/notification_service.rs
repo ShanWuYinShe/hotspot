@@ -13,7 +13,9 @@ use crate::{
     },
     error::{AppError, Result},
     events::event_types::AppEvent,
-    repositories::notification_repo::{NotificationRepository, NotificationType as RepoNotificationType},
+    repositories::notification_repo::{
+        NotificationRepository, NotificationType as RepoNotificationType,
+    },
     repositories::user_repo::UserRepository,
     types::enums::{NotificationFilterType, NotificationTargetType, NotificationType},
     utils::validation::Validator,
@@ -33,7 +35,9 @@ fn map_repo_notification_type(repo_type: &RepoNotificationType) -> NotificationT
         RepoNotificationType::GroupInvite => NotificationType::GroupInvite,
         RepoNotificationType::GroupInviteResponse => NotificationType::GroupInviteResponse,
         RepoNotificationType::GroupApplication => NotificationType::GroupApplication,
-        RepoNotificationType::GroupApplicationResponse => NotificationType::GroupApplicationResponse,
+        RepoNotificationType::GroupApplicationResponse => {
+            NotificationType::GroupApplicationResponse
+        }
         RepoNotificationType::GroupAnnouncement => NotificationType::GroupAnnouncement,
         RepoNotificationType::SystemAnnouncement => NotificationType::SystemAnnouncement,
         RepoNotificationType::MessageMention => NotificationType::MessageMention,
@@ -76,7 +80,10 @@ impl NotificationService {
             let types = match filter {
                 NotificationFilterType::Like => vec![NotificationType::MomentLike],
                 NotificationFilterType::Comment => {
-                    vec![NotificationType::MomentComment, NotificationType::CommentReply]
+                    vec![
+                        NotificationType::MomentComment,
+                        NotificationType::CommentReply,
+                    ]
                 }
                 NotificationFilterType::Follow => vec![
                     NotificationType::NewFollower,
@@ -103,7 +110,8 @@ impl NotificationService {
             .await?;
 
         // 使用 futures_util::future::join_all 来并发签名所有 avatar_url
-        let items: Vec<NotificationItem> = future::join_all(rows.into_iter().map(|row| async move {
+        let items: Vec<NotificationItem> =
+            future::join_all(rows.into_iter().map(|row| async move {
                 let sender = if let Some(uid) = row.sender_id {
                     let avatar_url = self
                         .media_service
@@ -122,12 +130,10 @@ impl NotificationService {
                 let (target_text_preview, target_media_url) = match row.target_preview.clone() {
                     Some(preview) => {
                         if preview.starts_with("uploads/") {
-                            let signed = self
-                                .media_service
-                                .sign_url_if_path(Some(&preview))
-                                .await;
+                            let signed = self.media_service.sign_url_if_path(Some(&preview)).await;
                             (None, signed)
-                        } else if preview.starts_with("http://") || preview.starts_with("https://") {
+                        } else if preview.starts_with("http://") || preview.starts_with("https://")
+                        {
                             (None, Some(preview))
                         } else {
                             (Some(preview), None)
@@ -346,9 +352,7 @@ impl NotificationService {
     }
 }
 
-fn parse_notification_target_type(
-    raw: Option<String>,
-) -> Result<Option<NotificationTargetType>> {
+fn parse_notification_target_type(raw: Option<String>) -> Result<Option<NotificationTargetType>> {
     match raw {
         None => Ok(None),
         Some(value) => NotificationTargetType::from_str(&value)
@@ -366,7 +370,9 @@ fn parse_notification_target_id(
         (Some(NotificationTargetType::User), Some(value)) => value
             .parse::<i64>()
             .map(|id| Some(StringOrNumberId::Number(id)))
-            .map_err(|_| AppError::InternalError("通知数据不合法: user target_id 非数字".to_string())),
+            .map_err(|_| {
+                AppError::InternalError("通知数据不合法: user target_id 非数字".to_string())
+            }),
         (Some(NotificationTargetType::User), None) => Ok(None),
         (_, Some(value)) => Ok(Some(StringOrNumberId::String(value))),
         (_, None) => Ok(None),

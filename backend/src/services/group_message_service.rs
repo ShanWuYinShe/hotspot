@@ -272,14 +272,17 @@ impl GroupMessageService {
             None
         };
 
-        let event_location = req.location.as_ref().map(|loc| crate::dto::response::MessageLocation {
-            location: crate::dto::response::Location {
-                latitude: loc.location.latitude,
-                longitude: loc.location.longitude,
-                location_name: loc.location.location_name.clone(),
-            },
-            address: loc.address.clone(),
-        });
+        let event_location =
+            req.location
+                .as_ref()
+                .map(|loc| crate::dto::response::MessageLocation {
+                    location: crate::dto::response::Location {
+                        latitude: loc.location.latitude,
+                        longitude: loc.location.longitude,
+                        location_name: loc.location.location_name.clone(),
+                    },
+                    address: loc.address.clone(),
+                });
 
         self.event_bus.publish(AppEvent::GroupMessageSent {
             message_id: created.message_id,

@@ -278,7 +278,7 @@ pub struct MessageLocation {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct UpdateMomentRequest {
+pub struct EditMomentRequest {
     pub moment_id: String,
     pub description: Option<String>,
     pub image_file_ids: Option<Vec<String>>,
@@ -485,7 +485,6 @@ pub struct SearchGroupsByLocationRequest {
 #[derive(Debug, Deserialize)]
 pub struct GroupOpenTheDoorRequest {
     pub group_chat_id: String,
-    pub reference_point: GeoPoint,
 }
 
 #[derive(Debug, Deserialize)]
@@ -864,8 +863,8 @@ pub struct MySubscriptionsRequest {}
 pub struct UpdateSubscriptionsRequest {
     pub new_follower_enabled: Option<bool>,
     pub mutual_follow_enabled: Option<bool>,
-    pub follow_request_enabled: Option<bool>,           // 收到关注请求（需审批时）
-    pub follow_request_handled_enabled: Option<bool>,   // 关注请求被处理
+    pub follow_request_enabled: Option<bool>, // 收到关注请求（需审批时）
+    pub follow_request_handled_enabled: Option<bool>, // 关注请求被处理
     pub group_invite_enabled: Option<bool>,
     pub group_invite_response_enabled: Option<bool>,
     pub group_application_enabled: Option<bool>,
@@ -973,8 +972,7 @@ pub struct MapRenderRequest {
 // ==================== 系统全局配置 API (Client Fetch) ====================
 
 #[derive(Debug, Deserialize)]
-pub struct FetchGlobalSettingsRequest {
-}
+pub struct FetchGlobalSettingsRequest {}
 
 // ==================== 管理员系统配置更新 API ====================
 
@@ -1061,6 +1059,12 @@ pub struct FeedFeedbackRequest {
     pub content_id: String,
     pub action: FeedFeedbackAction,
     pub reason: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FeedSuggestRequest {
+    pub prefix: String,
+    pub limit: Option<i32>,
 }
 
 // ==================== 标签管理 API ====================

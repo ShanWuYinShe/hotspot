@@ -6,7 +6,9 @@ use crate::{
             AuditLogDetailRequest, AuditLogExportRequest, AuditLogExportStatusRequest,
             AuditLogListRequest,
         },
-        response::{ApiResponse, AuditLogDetail, AuditLogExportResult, AuditLogItem, PaginatedData},
+        response::{
+            ApiResponse, AuditLogDetail, AuditLogExportResult, AuditLogItem, PaginatedData,
+        },
     },
     error::Result,
     middleware::auth::AuthenticatedUser,
@@ -36,7 +38,10 @@ pub async fn export(
     user: AuthenticatedUser,
     Json(req): Json<AuditLogExportRequest>,
 ) -> Result<Json<ApiResponse<AuditLogExportResult>>> {
-    let response = state.admin_audit_service.export_logs(user.user_id, req).await?;
+    let response = state
+        .admin_audit_service
+        .export_logs(user.user_id, req)
+        .await?;
     Ok(Json(ApiResponse::success(response)))
 }
 

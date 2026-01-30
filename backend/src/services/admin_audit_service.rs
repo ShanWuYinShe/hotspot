@@ -39,8 +39,7 @@ const ALLOWED_AUDIT_ACTIONS: [&str; 11] = [
     "permission.revoke",
     "config.update",
 ];
-const ALLOWED_AUDIT_TARGET_TYPES: [&str; 5] =
-    ["user", "group", "announcement", "role", "config"];
+const ALLOWED_AUDIT_TARGET_TYPES: [&str; 5] = ["user", "group", "announcement", "role", "config"];
 
 #[derive(Debug, Clone)]
 pub struct AuditLogInput {
@@ -93,10 +92,7 @@ impl AdminAuditService {
         Ok(())
     }
 
-    pub async fn list_logs(
-        &self,
-        req: AuditLogListRequest,
-    ) -> Result<PaginatedData<AuditLogItem>> {
+    pub async fn list_logs(&self, req: AuditLogListRequest) -> Result<PaginatedData<AuditLogItem>> {
         validate_action(&req.action)?;
         validate_target_type(&req.target_type)?;
         let limit = Validator::validate_limit(req.limit, 100)? as i64;
@@ -155,13 +151,11 @@ impl AdminAuditService {
     ) -> Result<AuditLogExportResult> {
         validate_action(&req.action)?;
         validate_target_type(&req.target_type)?;
-        let format = req
-            .format
-            .as_deref()
-            .unwrap_or("csv")
-            .to_lowercase();
+        let format = req.format.as_deref().unwrap_or("csv").to_lowercase();
         if format != "csv" && format != "json" {
-            return Err(AppError::InvalidFormat("format 仅支持 csv/json".to_string()));
+            return Err(AppError::InvalidFormat(
+                "format 仅支持 csv/json".to_string(),
+            ));
         }
 
         let filter = AuditLogFilter {
@@ -188,10 +182,7 @@ impl AdminAuditService {
             .await?;
 
         let export_id = export_row.export_id;
-        let rows = self
-            .repo
-            .list_logs_for_export(filter, EXPORT_LIMIT)
-            .await?;
+        let rows = self.repo.list_logs_for_export(filter, EXPORT_LIMIT).await?;
         let items = self.map_rows_to_items(rows).await?;
 
         let content = if format == "json" {
@@ -215,13 +206,7 @@ impl AdminAuditService {
         if let Err(e) = upload_result {
             let _ = self
                 .repo
-                .update_export(
-                    export_id,
-                    "failed",
-                    None,
-                    None,
-                    Some(e.to_string()),
-                )
+                .update_export(export_id, "failed", None, None, Some(e.to_string()))
                 .await;
             return Err(AppError::InternalError("导出失败".to_string()));
         }
@@ -289,14 +274,8 @@ impl AdminAuditService {
         })
     }
 
-    pub async fn get_user_ban_history(
-        &self,
-        user_id: i64,
-    ) -> Result<Option<Vec<AdminBanRecord>>> {
-        let rows = self
-            .repo
-            .list_user_ban_logs(&user_id.to_string())
-            .await?;
+    pub async fn get_user_ban_history(&self, user_id: i64) -> Result<Option<Vec<AdminBanRecord>>> {
+        let rows = self.repo.list_user_ban_logs(&user_id.to_string()).await?;
         if rows.is_empty() {
             return Ok(None);
         }
@@ -393,7 +372,11 @@ impl AdminAuditService {
 
     async fn get_operator_map(&self, operator_ids: &[i64]) -> HashMap<i64, UserInfo> {
         let mut map = HashMap::new();
-        let profiles = self.user_repo.find_profiles(operator_ids).await.unwrap_or_default();
+        let profiles = self
+            .user_repo
+            .find_profiles(operator_ids)
+            .await
+            .unwrap_or_default();
         for profile in profiles {
             let avatar_url = self
                 .media_service
@@ -454,9 +437,7 @@ fn redact_value(value: &Value) -> Value {
             }
             Value::Object(result)
         }
-        Value::Array(items) => {
-            Value::Array(items.iter().map(redact_value).collect())
-        }
+        Value::Array(items) => Value::Array(items.iter().map(redact_value).collect()),
         _ => value.clone(),
     }
 }

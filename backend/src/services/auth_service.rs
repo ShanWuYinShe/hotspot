@@ -4,6 +4,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::{
+    constants::{DEFAULT_LATITUDE, DEFAULT_LOCATION_NAME, DEFAULT_LONGITUDE},
     dto::{
         request::{
             ChangePasswordRequest, GuestRequest, LoginRequest, RegisterRequest,
@@ -129,6 +130,7 @@ impl AuthService {
 
         // 4. 创建用户
         use crate::types::enums::UserType;
+        let default_location_name = DEFAULT_LOCATION_NAME.to_string();
         self.user_repo
             .create(
                 user_id,
@@ -136,6 +138,9 @@ impl AuthService {
                 Some(req.login_id.clone()),
                 req.nickname.clone(),
                 Some(password_hash.clone()),
+                Some(DEFAULT_LATITUDE),
+                Some(DEFAULT_LONGITUDE),
+                Some(default_location_name),
             )
             .await?;
         if let Err(e) = ResourceExistenceChecker::new(self.redis.clone())
@@ -188,9 +193,7 @@ impl AuthService {
         let refresh_token_expires_at = if client_type == ClientType::Web {
             None
         } else {
-            Some(
-                (Utc::now() + Duration::seconds(self.refresh_token_expiration)).to_rfc3339(),
-            )
+            Some((Utc::now() + Duration::seconds(self.refresh_token_expiration)).to_rfc3339())
         };
 
         Ok(AuthIssueResult {
@@ -201,7 +204,7 @@ impl AuthService {
                 refresh_token: refresh_token_in_body,
                 access_token_expires_at: (Utc::now()
                     + Duration::seconds(self.access_token_expiration))
-                    .to_rfc3339(),
+                .to_rfc3339(),
                 refresh_token_expires_at,
             },
             refresh_token_raw: refresh_token,
@@ -281,9 +284,7 @@ impl AuthService {
         let refresh_token_expires_at = if client_type == ClientType::Web {
             None
         } else {
-            Some(
-                (Utc::now() + Duration::seconds(self.refresh_token_expiration)).to_rfc3339(),
-            )
+            Some((Utc::now() + Duration::seconds(self.refresh_token_expiration)).to_rfc3339())
         };
 
         Ok(AuthIssueResult {
@@ -315,8 +316,18 @@ impl AuthService {
 
         // 2. 创建用户（无密码）
         use crate::types::enums::UserType;
+        let default_location_name = DEFAULT_LOCATION_NAME.to_string();
         self.user_repo
-            .create(user_id, UserType::Temp, None, req.nickname.clone(), None)
+            .create(
+                user_id,
+                UserType::Temp,
+                None,
+                req.nickname.clone(),
+                None,
+                Some(DEFAULT_LATITUDE),
+                Some(DEFAULT_LONGITUDE),
+                Some(default_location_name),
+            )
             .await?;
         if let Err(e) = ResourceExistenceChecker::new(self.redis.clone())
             .record_user(user_id)
@@ -367,10 +378,7 @@ impl AuthService {
         let refresh_token_expires_at = if client_type == ClientType::Web {
             None
         } else {
-            Some(
-                (Utc::now() + Duration::seconds(self.refresh_token_expiration))
-                    .to_rfc3339()
-            )
+            Some((Utc::now() + Duration::seconds(self.refresh_token_expiration)).to_rfc3339())
         };
 
         Ok(AuthIssueResult {
@@ -540,9 +548,7 @@ impl AuthService {
         let refresh_token_expires_at = if client_type == ClientType::Web {
             None
         } else {
-            Some(
-                (Utc::now() + Duration::seconds(self.refresh_token_expiration)).to_rfc3339(),
-            )
+            Some((Utc::now() + Duration::seconds(self.refresh_token_expiration)).to_rfc3339())
         };
 
         Ok(AuthIssueResult {
@@ -651,7 +657,10 @@ impl AuthService {
         // rand 0.9: 通过 rand::rand_core 访问 OsRng
         use rand::rand_core::{OsRng, TryRngCore};
         let mut rng = OsRng;
-        let n = rng.try_next_u32().map_err(|_| AppError::internal("RNG error"))? % 1_000_000;
+        let n = rng
+            .try_next_u32()
+            .map_err(|_| AppError::internal("RNG error"))?
+            % 1_000_000;
         let reset_code = format!("{:06}", n);
 
         // 4) 存储到 DB（15分钟有效，仅存 code_hash）
@@ -833,9 +842,7 @@ impl AuthService {
                     session_id: s.session_id.to_string(),
                     device_type: s.device_type,
                     device_name: s.device_name,
-                    ip_address: s
-                        .ip_address
-                        .map(|ip| mask_ip_address(&ip.to_string())),
+                    ip_address: s.ip_address.map(|ip| mask_ip_address(&ip.to_string())),
                     ip_location: None,
                     created_at: s.created_at.to_rfc3339(),
                     last_active_at: s.last_active_at.to_rfc3339(),
@@ -1076,9 +1083,7 @@ impl AuthService {
         // 解析 phone:type
         let parts: Vec<&str> = verify_token_data.split(':').collect();
         if parts.len() != 2 {
-            return Err(AppError::VerifyTokenInvalid(
-                "验证令牌格式无效".to_string(),
-            ));
+            return Err(AppError::VerifyTokenInvalid("验证令牌格式无效".to_string()));
         }
 
         let phone = parts[0];

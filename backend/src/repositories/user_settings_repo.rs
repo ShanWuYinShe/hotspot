@@ -23,7 +23,7 @@ pub struct UserSettings {
     pub friends_visible: PrivacyLevel, // 'public', 'friends', 'private'
     pub following_visible: PrivacyLevel, // 'public', 'friends', 'private'
     pub followers_visible: PrivacyLevel, // 'public', 'friends', 'private'
-    pub groups_visible: PrivacyLevel, // 'public', 'friends', 'private'
+    pub groups_visible: PrivacyLevel,  // 'public', 'friends', 'private'
     pub moments_visible: PrivacyLevel, // 'public', 'friends', 'private'
     pub liked_moments_visible: PrivacyLevel, // 'public', 'friends', 'private'
     pub stats_visible: PrivacyLevel,   // 'public', 'friends', 'private'

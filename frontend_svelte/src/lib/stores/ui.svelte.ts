@@ -1,0 +1,101 @@
+/**
+ * UI 状态管理
+ * 管理模态框、跳转状态等
+ */
+
+import { browser } from '$app/environment';
+import { goto } from '$app/navigation';
+
+const REDIRECT_KEY = 'hotspot_redirect_url';
+
+class UIStore {
+	// 登录模态框状态
+	#showLoginModal = $state(false);
+	#loginModalCallback = $state<(() => void) | null>(null);
+	
+	// ==================== 登录模态框 ====================
+	
+	get showLoginModal() {
+		return this.#showLoginModal;
+	}
+	
+	get loginModalCallback() {
+		return this.#loginModalCallback;
+	}
+	
+	/**
+	 * 打开登录模态框
+	 * @param callback 登录成功后的回调
+	 */
+	openLoginModal(callback?: () => void) {
+		this.#showLoginModal = true;
+		this.#loginModalCallback = callback ?? null;
+	}
+	
+	closeLoginModal() {
+		this.#showLoginModal = false;
+		this.#loginModalCallback = null;
+	}
+	
+	/** 登录成功后执行回调 */
+	onLoginSuccess() {
+		const callback = this.#loginModalCallback;
+		const redirectUrl = this.hasRedirectUrl() ? this.getAndClearRedirectUrl() : null;
+		this.closeLoginModal();
+		if (callback) {
+			callback();
+		}
+		if (redirectUrl && browser) {
+			const currentUrl = window.location.pathname + window.location.search;
+			if (redirectUrl !== currentUrl) {
+				goto(redirectUrl);
+			}
+		}
+	}
+	
+	// ==================== 重定向管理 ====================
+	
+	/** 保存当前 URL，用于登录后返回 */
+	saveRedirectUrl(url?: string) {
+		if (!browser) return;
+		const targetUrl = url ?? window.location.pathname + window.location.search;
+		// 不保存认证相关页面
+		if (!targetUrl.startsWith('/auth')) {
+			sessionStorage.setItem(REDIRECT_KEY, targetUrl);
+		}
+	}
+	
+	/** 获取并清除保存的重定向 URL */
+	getAndClearRedirectUrl(): string {
+		if (!browser) return '/';
+		const url = sessionStorage.getItem(REDIRECT_KEY);
+		sessionStorage.removeItem(REDIRECT_KEY);
+		return url || '/';
+	}
+	
+	/** 检查是否有保存的重定向 URL */
+	hasRedirectUrl(): boolean {
+		if (!browser) return false;
+		return !!sessionStorage.getItem(REDIRECT_KEY);
+	}
+}
+
+export const uiStore = new UIStore();
+
+// ==================== 工具函数 ====================
+
+/**
+ * 需要登录的操作包装器
+ * 如果未登录，打开登录模态框；已登录则直接执行
+ */
+export function requireAuth(
+	isAuthenticated: boolean,
+	action: () => void,
+	options?: { openModal?: boolean }
+) {
+	if (isAuthenticated) {
+		action();
+	} else if (options?.openModal !== false) {
+		uiStore.openLoginModal(action);
+	}
+}

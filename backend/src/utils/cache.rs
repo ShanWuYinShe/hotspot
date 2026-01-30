@@ -30,10 +30,10 @@ pub struct CacheConfig {
 impl Default for CacheConfig {
     fn default() -> Self {
         Self {
-            base_ttl_secs: 3600,       // 1 小时
-            ttl_jitter_secs: 600,      // 10 分钟随机波动
-            null_ttl_secs: 60,         // 空值缓存 1 分钟
-            lock_timeout_secs: 5,      // 锁超时 5 秒
+            base_ttl_secs: 3600,  // 1 小时
+            ttl_jitter_secs: 600, // 10 分钟随机波动
+            null_ttl_secs: 60,    // 空值缓存 1 分钟
+            lock_timeout_secs: 5, // 锁超时 5 秒
         }
     }
 }
@@ -162,14 +162,11 @@ impl CacheManager {
     }
 
     /// 设置空值缓存（防止缓存穿透）
-    pub async fn set_null(
-        &self,
-        prefix: &str,
-        id: &str,
-    ) -> Result<(), redis::RedisError> {
+    pub async fn set_null(&self, prefix: &str, id: &str) -> Result<(), redis::RedisError> {
         let key = self.make_key(prefix, id);
         let mut conn = self.redis.clone();
-        conn.set_ex::<_, _, ()>(&key, NULL_MARKER, self.config.null_ttl_secs).await?;
+        conn.set_ex::<_, _, ()>(&key, NULL_MARKER, self.config.null_ttl_secs)
+            .await?;
         Ok(())
     }
 
@@ -182,7 +179,8 @@ impl CacheManager {
     ) -> Result<(), redis::RedisError> {
         let key = self.make_key(prefix, id);
         let mut conn = self.redis.clone();
-        conn.set_ex::<_, _, ()>(&key, NULL_MARKER, null_ttl_secs).await?;
+        conn.set_ex::<_, _, ()>(&key, NULL_MARKER, null_ttl_secs)
+            .await?;
         Ok(())
     }
 
@@ -248,7 +246,9 @@ impl CacheManager {
     where
         T: Serialize + DeserializeOwned + Clone,
         F: FnOnce() -> Fut,
-        Fut: std::future::Future<Output = Result<Option<T>, Box<dyn std::error::Error + Send + Sync>>>,
+        Fut: std::future::Future<
+            Output = Result<Option<T>, Box<dyn std::error::Error + Send + Sync>>,
+        >,
     {
         // 先尝试从缓存获取
         if let Some(cached) = self.get::<T>(prefix, id).await? {
@@ -310,7 +310,9 @@ impl CacheManager {
     where
         T: Serialize + DeserializeOwned + Clone,
         F: FnOnce() -> Fut,
-        Fut: std::future::Future<Output = Result<Option<T>, Box<dyn std::error::Error + Send + Sync>>>,
+        Fut: std::future::Future<
+            Output = Result<Option<T>, Box<dyn std::error::Error + Send + Sync>>,
+        >,
     {
         if let Some(cached) = self.get::<T>(prefix, id).await? {
             return Ok(cached);
@@ -391,11 +393,7 @@ impl CacheManager {
             let key = self.make_key(prefix, id);
             let ttl = self.get_ttl_with_jitter();
             let serialized = serde_json::to_string(value).unwrap_or_default();
-            pipe.cmd("SET")
-                .arg(&key)
-                .arg(serialized)
-                .arg("EX")
-                .arg(ttl);
+            pipe.cmd("SET").arg(&key).arg(serialized).arg("EX").arg(ttl);
         }
 
         pipe.query_async::<()>(&mut conn).await?;

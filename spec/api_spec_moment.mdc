@@ -64,6 +64,7 @@ interface CommentLikeItem {
 | 搜索与发现 | `POST /api/v1/moments/search_by_keyword` | 搜索瞬间（关键字） | `SearchMomentsByKeywordRequest` | `ApiResponse<PaginatedData<MomentSearchItem>>` |
 | 搜索与发现 | `POST /api/v1/moments/search_by_tag` | 搜索瞬间（标签） | `SearchMomentsByTagRequest` | `ApiResponse<PaginatedData<MomentSearchItem>>` |
 | 搜索与发现 | `POST /api/v1/moments/search_by_location` | 搜索瞬间（位置） | `SearchMomentsByLocationRequest` | `ApiResponse<PaginatedData<MomentSearchItem>>` |
+| 搜索与发现 | `POST /api/v1/moments/suggest` | 瞬间搜索建议 | `SuggestMomentsRequest` | `ApiResponse<MomentSuggestions>` |
 | 瞬间详情与互动 | `POST /api/v1/moments/open_the_door` | 瞬间详情 | `MomentOpenTheDoorRequest` | `ApiResponse<MomentCard>` |
 | 瞬间详情与互动 | `POST /api/v1/moments/interaction_state` | 我的互动状态 | `GetMomentInteractionStateRequest` | `ApiResponse<MyMomentState>` |
 | 瞬间详情与互动 | `POST /api/v1/user/moments` | 用户瞬间历史 | `UserMomentsRequest` | `ApiResponse<PaginatedData<UserMomentListItem>>` |
@@ -135,6 +136,27 @@ interface SearchMomentsByLocationRequest extends SearchBaseParams {
 }
 ```
 **Response**: `ApiResponse<PaginatedData<MomentSearchItem>>`
+
+#### POST /api/v1/moments/suggest
+
+瞬间搜索建议（用于搜索框输入提示）。
+
+**Request**:
+```typescript
+interface SuggestMomentsRequest {
+  prefix: string;
+  limit?: number;
+}
+
+interface MomentSuggestItem extends MomentBase {
+  user: UserInfo;
+}
+
+interface MomentSuggestions {
+  items: MomentSuggestItem[];
+}
+```
+**Response**: `ApiResponse<MomentSuggestions>`
 
 ### 瞬间详情与互动
 

@@ -337,10 +337,7 @@ impl AdminAuditRepository {
         Ok(rows)
     }
 
-    pub async fn list_group_dismiss_logs(
-        &self,
-        target_id: &str,
-    ) -> Result<Vec<AuditLogDetailRow>> {
+    pub async fn list_group_dismiss_logs(&self, target_id: &str) -> Result<Vec<AuditLogDetailRow>> {
         let rows = sqlx::query_as::<_, AuditLogDetailRow>(
             r#"
             SELECT id, log_id, action, operator_id, target_type, target_id, target_name,

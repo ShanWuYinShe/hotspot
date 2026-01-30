@@ -7,11 +7,11 @@ use crate::{
             HandleFollowRequestRequest, MyBlockedRequest, MyFollowRequestsRequest,
             MyFollowersRequest, MyFollowingRequest, MyFriendsRequest, MyProfileRequest,
             MySettingsRequest, MyStatsRequest, SearchUsersByKeywordRequest,
-            SearchUsersByLocationRequest, SearchUsersByTagRequest, SetRemarkRequest, UnblockRequest,
-            UnfollowRequest, UpdateLocationRequest, UpdateProfileRequest, UpdateSettingsRequest,
-            UpgradeAccountRequest, UserFollowersRequest, UserFollowingRequest, UserFriendsRequest,
-            UserGroupsRequest, UserLikedMomentsRequest, UserMomentsRequest, UserOpenTheDoorRequest,
-            UserStatsRequest,
+            SearchUsersByLocationRequest, SearchUsersByTagRequest, SetRemarkRequest,
+            UnblockRequest, UnfollowRequest, UpdateLocationRequest, UpdateProfileRequest,
+            UpdateSettingsRequest, UpgradeAccountRequest, UserFollowersRequest,
+            UserFollowingRequest, UserFriendsRequest, UserGroupsRequest, UserLikedMomentsRequest,
+            UserMomentsRequest, UserOpenTheDoorRequest, UserStatsRequest,
         },
         response::{
             AdminUserDetail, ApiResponse, AuthData, BlockedUserItem, FollowRequestItem,
@@ -61,10 +61,7 @@ pub async fn open_the_door(
     user: OptionalAuthenticatedUser,
     Json(req): Json<UserOpenTheDoorRequest>,
 ) -> Result<Json<ApiResponse<UserCard>>> {
-    let response = state
-        .user_service
-        .open_the_door(user.user_id, &req)
-        .await?;
+    let response = state.user_service.open_the_door(user.user_id, &req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
 

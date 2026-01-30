@@ -10,8 +10,8 @@
 
 use redis::aio::ConnectionManager;
 use redis::AsyncCommands;
-use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
 /// 布隆过滤器配置
 #[derive(Debug, Clone)]
@@ -89,10 +89,7 @@ impl RedisBloomFilter {
         let mut pipe = redis::pipe();
 
         for index in indices {
-            pipe.cmd("SETBIT")
-                .arg(&redis_key)
-                .arg(index)
-                .arg(1);
+            pipe.cmd("SETBIT").arg(&redis_key).arg(index).arg(1);
         }
 
         pipe.query_async::<Vec<i32>>(&mut conn).await?;
@@ -116,10 +113,7 @@ impl RedisBloomFilter {
         for key in keys {
             let indices = self.get_hash_indices(key, filter_name);
             for index in indices {
-                pipe.cmd("SETBIT")
-                    .arg(&redis_key)
-                    .arg(index)
-                    .arg(1);
+                pipe.cmd("SETBIT").arg(&redis_key).arg(index).arg(1);
             }
         }
 
@@ -144,9 +138,7 @@ impl RedisBloomFilter {
         let mut pipe = redis::pipe();
 
         for index in &indices {
-            pipe.cmd("GETBIT")
-                .arg(&redis_key)
-                .arg(*index);
+            pipe.cmd("GETBIT").arg(&redis_key).arg(*index);
         }
 
         let results: Vec<i32> = pipe.query_async(&mut conn).await?;
@@ -179,9 +171,7 @@ impl RedisBloomFilter {
         let mut pipe = redis::pipe();
         for (_, indices) in &all_indices {
             for index in indices {
-                pipe.cmd("GETBIT")
-                    .arg(&redis_key)
-                    .arg(*index);
+                pipe.cmd("GETBIT").arg(&redis_key).arg(*index);
             }
         }
 
@@ -239,7 +229,7 @@ pub mod filter_names {
 const BLOOM_READY_KEY: &str = "bloom:ready";
 
 /// 资源存在性检查器
-/// 
+///
 /// 封装布隆过滤器检查逻辑，提供更友好的 API
 #[derive(Clone)]
 pub struct ResourceExistenceChecker {
@@ -395,7 +385,9 @@ impl ResourceExistenceChecker {
 
     /// 批量同步群组到布隆过滤器
     pub async fn sync_groups(&self, group_ids: &[String]) -> Result<(), redis::RedisError> {
-        self.bloom.add_batch(filter_names::GROUP_IDS, group_ids).await
+        self.bloom
+            .add_batch(filter_names::GROUP_IDS, group_ids)
+            .await
     }
 
     /// 批量同步瞬间到布隆过滤器
@@ -465,20 +457,20 @@ mod tests {
             hash_count: 7,
             expected_elements: 1000,
         };
-        
+
         // 简单验证哈希索引生成
         let filter = RedisBloomFilter {
             redis: unsafe { std::mem::zeroed() }, // 测试时不使用 Redis
             config,
         };
-        
+
         let indices = filter.get_hash_indices("test_key", "test_filter");
         assert_eq!(indices.len(), 7);
-        
+
         // 相同的键应该产生相同的索引
         let indices2 = filter.get_hash_indices("test_key", "test_filter");
         assert_eq!(indices, indices2);
-        
+
         // 不同的键应该产生不同的索引
         let indices3 = filter.get_hash_indices("different_key", "test_filter");
         assert_ne!(indices, indices3);

@@ -56,6 +56,16 @@ pub struct UserSearchRow {
     pub bearing_degrees: f64,
 }
 
+/// 用户建议Row - 轻量返回
+#[derive(Debug, Clone)]
+pub struct UserSuggestRow {
+    pub user_id: i64,
+    pub nickname: String,
+    pub avatar_url: Option<String>,
+    pub bio: String,
+    pub user_type: UserType,
+}
+
 /// 管理员搜索用户结果
 #[derive(Debug, Clone, FromRow)]
 pub struct UserAdminSearchRow {
@@ -107,12 +117,18 @@ impl UserRepository {
         login_id: Option<String>,
         nickname: String,
         password_hash: Option<String>,
+        current_latitude: Option<f64>,
+        current_longitude: Option<f64>,
+        current_location_name: Option<String>,
     ) -> Result<UserRow> {
         let row = sqlx::query_as!(
             UserRow,
             r#"
-            INSERT INTO users (user_id, user_type, login_id, nickname, password_hash)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO users (
+                user_id, user_type, login_id, nickname, password_hash,
+                current_latitude, current_longitude, current_location_name
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING user_id, login_id, nickname, password_hash, avatar_url, bio,
                       email, phone, user_type as "user_type: UserType",
                       gender as "gender: Gender",
@@ -123,7 +139,10 @@ impl UserRepository {
             user_type as UserType,
             login_id,
             nickname,
-            password_hash
+            password_hash,
+            current_latitude,
+            current_longitude,
+            current_location_name
         )
         .fetch_one(&self.pool)
         .await?;
@@ -263,7 +282,9 @@ impl UserRepository {
                     COALESCE(location::geometry, ST_SetSRID(ST_MakePoint(112.682524, 35.154922), 4326))
                 )), 0) as "bearing_degrees!"
             FROM users
-            WHERE user_id = ANY($1) AND is_deleted = FALSE
+            WHERE user_id = ANY($1)
+              AND is_deleted = FALSE
+              AND user_type IN ('normal', 'temp')
             ORDER BY "distance!" ASC
             "#,
             user_ids,
@@ -482,6 +503,7 @@ impl UserRepository {
             LEFT JOIN user_settings us ON u.user_id = us.user_id
             WHERE u.nickname ILIKE $1 
               AND u.is_deleted = FALSE 
+              AND u.user_type IN ('normal', 'temp')
               AND u.user_id < $4
               AND COALESCE(us.searchable, TRUE) = TRUE
             ORDER BY u.user_id DESC
@@ -516,6 +538,48 @@ impl UserRepository {
                 .collect(),
             next_cursor,
         ))
+    }
+
+    /// 搜索建议：按昵称前缀匹配用户（轻量字段）
+    pub async fn suggest_by_nickname(
+        &self,
+        prefix: &str,
+        limit: i64,
+    ) -> Result<Vec<UserSuggestRow>> {
+        let search_pattern = format!("%{}%", prefix);
+        let rows = sqlx::query!(
+            r#"
+            SELECT 
+                u.user_id,
+                u.nickname,
+                u.avatar_url,
+                u.bio,
+                u.user_type as "user_type!: UserType"
+            FROM users u
+            LEFT JOIN user_settings us ON u.user_id = us.user_id
+            WHERE u.nickname ILIKE $1 
+              AND u.is_deleted = FALSE
+              AND u.user_type IN ('normal', 'temp')
+              AND COALESCE(us.searchable, TRUE) = TRUE
+            ORDER BY u.user_id DESC
+            LIMIT $2
+            "#,
+            search_pattern,
+            limit
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r| UserSuggestRow {
+                user_id: r.user_id,
+                nickname: r.nickname,
+                avatar_url: r.avatar_url,
+                bio: r.bio,
+                user_type: r.user_type,
+            })
+            .collect())
     }
 
     /// 按位置搜索附近用户（PostGIS 计算距离，受隐私设置控制）
@@ -565,6 +629,7 @@ impl UserRepository {
               AND u.current_latitude IS NOT NULL
               AND u.current_longitude IS NOT NULL
               AND u.location IS NOT NULL
+              AND u.user_type IN ('normal', 'temp')
               AND COALESCE(us.searchable, TRUE) = TRUE
               AND COALESCE(us.location_searchable, TRUE) = TRUE
               AND ($7::text IS NULL OR u.nickname ILIKE ('%' || $7 || '%'))

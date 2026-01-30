@@ -54,10 +54,7 @@ pub async fn resource_guard_middleware(
             if len > MAX_GUARD_BODY_BYTES {
                 return (
                     StatusCode::OK,
-                    Json(ApiResponse::<()>::error(
-                        10005,
-                        "请求体过大".to_string(),
-                    )),
+                    Json(ApiResponse::<()>::error(10005, "请求体过大".to_string())),
                 )
                     .into_response();
             }
@@ -68,10 +65,7 @@ pub async fn resource_guard_middleware(
             Err(_) => {
                 return (
                     StatusCode::OK,
-                    Json(ApiResponse::<()>::error(
-                        10005,
-                        "请求体过大".to_string(),
-                    )),
+                    Json(ApiResponse::<()>::error(10005, "请求体过大".to_string())),
                 )
                     .into_response();
             }
@@ -105,7 +99,11 @@ pub async fn resource_guard_middleware(
                 }
             }
         } else {
-            match state.resource_checker.user_might_exist_batch(&user_ids).await {
+            match state
+                .resource_checker
+                .user_might_exist_batch(&user_ids)
+                .await
+            {
                 Ok(v) => v,
                 Err(e) => {
                     tracing::warn!("Bloom filter batch check failed: {}", e);
@@ -118,10 +116,7 @@ pub async fn resource_guard_middleware(
             tracing::debug!("Bloom filter rejected user_id={}", rejected_id);
             return (
                 StatusCode::OK,
-                Json(ApiResponse::<()>::error(
-                    10310,
-                    "用户不存在".to_string(),
-                )),
+                Json(ApiResponse::<()>::error(10310, "用户不存在".to_string())),
             )
                 .into_response();
         }
@@ -130,7 +125,11 @@ pub async fn resource_guard_middleware(
     let group_ids: Vec<String> = extracted.group_ids.iter().cloned().collect();
     if !group_ids.is_empty() {
         let results = if group_ids.len() == 1 {
-            match state.resource_checker.group_might_exist(&group_ids[0]).await {
+            match state
+                .resource_checker
+                .group_might_exist(&group_ids[0])
+                .await
+            {
                 Ok(v) => vec![v],
                 Err(e) => {
                     tracing::warn!("Bloom filter check failed: {}", e);
@@ -138,7 +137,11 @@ pub async fn resource_guard_middleware(
                 }
             }
         } else {
-            match state.resource_checker.group_might_exist_batch(&group_ids).await {
+            match state
+                .resource_checker
+                .group_might_exist_batch(&group_ids)
+                .await
+            {
                 Ok(v) => v,
                 Err(e) => {
                     tracing::warn!("Bloom filter batch check failed: {}", e);
@@ -151,10 +154,7 @@ pub async fn resource_guard_middleware(
             tracing::debug!("Bloom filter rejected group_id={}", rejected_id);
             return (
                 StatusCode::OK,
-                Json(ApiResponse::<()>::error(
-                    10320,
-                    "群组不存在".to_string(),
-                )),
+                Json(ApiResponse::<()>::error(10320, "群组不存在".to_string())),
             )
                 .into_response();
         }
@@ -192,10 +192,7 @@ pub async fn resource_guard_middleware(
             tracing::debug!("Bloom filter rejected moment_id={}", rejected_id);
             return (
                 StatusCode::OK,
-                Json(ApiResponse::<()>::error(
-                    10330,
-                    "瞬间不存在".to_string(),
-                )),
+                Json(ApiResponse::<()>::error(10330, "瞬间不存在".to_string())),
             )
                 .into_response();
         }
@@ -233,10 +230,7 @@ pub async fn resource_guard_middleware(
             tracing::debug!("Bloom filter rejected comment_id={}", rejected_id);
             return (
                 StatusCode::OK,
-                Json(ApiResponse::<()>::error(
-                    10340,
-                    "评论不存在".to_string(),
-                )),
+                Json(ApiResponse::<()>::error(10340, "评论不存在".to_string())),
             )
                 .into_response();
         }
@@ -274,10 +268,7 @@ pub async fn resource_guard_middleware(
             tracing::debug!("Bloom filter rejected message_id={}", rejected_id);
             return (
                 StatusCode::OK,
-                Json(ApiResponse::<()>::error(
-                    10350,
-                    "消息不存在".to_string(),
-                )),
+                Json(ApiResponse::<()>::error(10350, "消息不存在".to_string())),
             )
                 .into_response();
         }
@@ -373,4 +364,3 @@ fn collect_ids_from_value(value: &Value, out: &mut ExtractedIds) {
         _ => {}
     }
 }
-

@@ -13,9 +13,7 @@ use uuid::Uuid;
 
 use crate::{
     dto::{
-        request::{
-            CompleteUploadRequest, PresignUploadRequest,
-        },
+        request::{CompleteUploadRequest, PresignUploadRequest},
         response::{PresignUploadData, UploadMediaData},
     },
     error::{AppError, Result},
@@ -111,9 +109,7 @@ impl MediaService {
         let presigned_config = PresigningConfig::builder()
             .expires_in(Duration::from_secs(900)) // 15分钟
             .build()
-            .map_err(|e| {
-                AppError::InternalError(format!("预签名配置构建失败: {}", e))
-            })?;
+            .map_err(|e| AppError::InternalError(format!("预签名配置构建失败: {}", e)))?;
 
         let presigned_request = self
             .s3_client
@@ -123,9 +119,7 @@ impl MediaService {
             .content_type(&req.mime_type)
             .presigned(presigned_config)
             .await
-            .map_err(|e| {
-                AppError::InternalError(format!("预签名 URL 生成失败: {}", e))
-            })?;
+            .map_err(|e| AppError::InternalError(format!("预签名 URL 生成失败: {}", e)))?;
 
         // 提取 presigned URL 并转换为客户端可访问的 URL
         let upload_url = presigned_request.uri().to_string();
@@ -176,9 +170,7 @@ impl MediaService {
             .arg(session_data.to_string())
             .query_async(&mut redis_conn)
             .await
-            .map_err(|e| {
-                AppError::InternalError(format!("上传会话保存失败: {}", e))
-            })?;
+            .map_err(|e| AppError::InternalError(format!("上传会话保存失败: {}", e)))?;
 
         Ok(PresignUploadData {
             upload_id: s3_key.clone(), // 返回 S3 Key 作为 upload_id，供 complete_upload 使用
@@ -309,15 +301,12 @@ impl MediaService {
 
     /// 生成下载/访问用的 Presigned URL (GET)
     pub async fn sign_url(&self, key: &str) -> Result<String> {
-        self.sign_url_with_expiry(key, Duration::from_secs(604800)).await
+        self.sign_url_with_expiry(key, Duration::from_secs(604800))
+            .await
     }
 
     /// 生成下载/访问用的 Presigned URL (GET) - 可配置过期时间
-    pub async fn sign_url_with_expiry(
-        &self,
-        key: &str,
-        expires_in: Duration,
-    ) -> Result<String> {
+    pub async fn sign_url_with_expiry(&self, key: &str, expires_in: Duration) -> Result<String> {
         // 严格模式：只接受“对象存储 key”（例如 uploads/{user_id}/{uuid}.ext）
         // 不接受完整 URL，也不做旧格式兼容。
         if key.starts_with("http://") || key.starts_with("https://") {
@@ -330,9 +319,7 @@ impl MediaService {
         let presigned_config = PresigningConfig::builder()
             .expires_in(expires_in)
             .build()
-            .map_err(|e| {
-                AppError::InternalError(format!("预签名配置构建失败: {}", e))
-            })?;
+            .map_err(|e| AppError::InternalError(format!("预签名配置构建失败: {}", e)))?;
 
         let presigned_req = self
             .s3_client

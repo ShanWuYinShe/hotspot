@@ -7,7 +7,7 @@ use crate::{
     },
     error::{AppError, Result},
     repositories::map_repo::{MapClusterRow, MapEntityRow, MapRepository},
-    types::enums::{MapItemType, MapDataType},
+    types::enums::{MapDataType, MapItemType},
     utils::validation::Validator,
 };
 

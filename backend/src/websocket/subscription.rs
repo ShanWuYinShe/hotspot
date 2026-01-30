@@ -15,7 +15,6 @@ pub enum SubscriptionType {
     /// 用户状态订阅 - 订阅用户的在线状态变化、位置更新等
     /// source_id: user_id
     User(i64),
-
 }
 
 impl SubscriptionType {

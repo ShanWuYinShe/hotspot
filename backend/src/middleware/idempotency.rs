@@ -38,9 +38,7 @@ pub async fn idempotency_middleware(
         Some(v) => v,
         None => {
             if requires_idempotency_key(req.uri().path()) {
-                return Err(AppError::MissingParameter(
-                    "Idempotency-Key".to_string(),
-                ));
+                return Err(AppError::MissingParameter("Idempotency-Key".to_string()));
             }
             return Ok(next.run(req).await);
         }

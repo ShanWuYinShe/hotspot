@@ -36,7 +36,7 @@ use crate::{
         user_settings_repo::UserSettingsRepository,
     },
     services::media_service::MediaService,
-    types::enums::{PrivateChatPermission, MessageType, ReactionType},
+    types::enums::{MessageType, PrivateChatPermission, ReactionType},
     utils::{bloom_filter::ResourceExistenceChecker, validation::Validator},
     EventBus,
 };
@@ -406,20 +406,23 @@ impl PrivateMessageService {
             None
         };
 
-        let event_location = req.location.as_ref().map(|loc| crate::dto::response::MessageLocation {
-            location: crate::dto::response::Location {
-                latitude: loc.location.latitude,
-                longitude: loc.location.longitude,
-                location_name: loc.location.location_name.clone(),
-            },
-            address: loc.address.clone(),
-        });
+        let event_location =
+            req.location
+                .as_ref()
+                .map(|loc| crate::dto::response::MessageLocation {
+                    location: crate::dto::response::Location {
+                        latitude: loc.location.latitude,
+                        longitude: loc.location.longitude,
+                        location_name: loc.location.location_name.clone(),
+                    },
+                    address: loc.address.clone(),
+                });
 
         self.event_bus.publish(AppEvent::PrivateMessageSent {
             message_id: message.message_id,
             sender_id: user_id,
             target_user_id: other_user_id, // 接收者
-            message_type,    // Use parsed enum
+            message_type,                  // Use parsed enum
             content: event_content,
             reply_to: reply_to_snapshot,
             media,

@@ -2,12 +2,8 @@ use axum::{extract::State, Json};
 
 use crate::{
     dto::{
-        request::{
-            CompleteUploadRequest, PresignUploadRequest,
-        },
-        response::{
-            ApiResponse, PresignUploadData, UploadMediaData,
-        },
+        request::{CompleteUploadRequest, PresignUploadRequest},
+        response::{ApiResponse, PresignUploadData, UploadMediaData},
     },
     error::Result,
     middleware::auth::AuthenticatedUser,
