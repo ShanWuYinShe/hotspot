@@ -238,14 +238,14 @@ export const usersService = {
 	 * 关注用户
 	 */
 	follow(data: { user_id: number; source?: string }) {
-		return post<{ status: 'followed' | 'pending' }>(USER.ME.FOLLOW, data);
+		return post<Relationship>(USER.ME.FOLLOW, data);
 	},
 
 	/**
 	 * 取消关注
 	 */
 	unfollow(data: { user_id: number }) {
-		return post<void>(USER.ME.UNFOLLOW, data);
+		return post<Relationship>(USER.ME.UNFOLLOW, data);
 	},
 
 	/**

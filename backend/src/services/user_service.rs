@@ -563,26 +563,63 @@ impl UserService {
     pub async fn follow_user(&self, from_user_id: i64, req: &FollowRequest) -> Result<()> {
         let to_user_id = req.user_id;
 
+        // 1. 自我操作检查
         if from_user_id == to_user_id {
+            tracing::warn!(
+                user_id = from_user_id,
+                action = "follow_user",
+                reason = "self_operation",
+                error_code = 10411,
+                "关注失败：不能关注自己"
+            );
             return Err(AppError::BadRequest("不能关注自己".to_string()));
         }
 
-        // 检查目标用户存在
+        // 2. 检查目标用户存在
         let target_user = self
             .user_repo
             .find_by_id(to_user_id)
             .await?
-            .ok_or_else(|| AppError::UserNotFound("用户不存在".to_string()))?;
+            .ok_or_else(|| {
+                tracing::warn!(
+                    from_user_id,
+                    to_user_id,
+                    action = "follow_user",
+                    reason = "target_not_found",
+                    error_code = 10310,
+                    "关注失败：目标用户不存在"
+                );
+                AppError::UserNotFound("用户不存在".to_string())
+            })?;
+
+        // 3. 系统用户检查
         if target_user.user_type == crate::types::enums::UserType::System {
+            tracing::warn!(
+                from_user_id,
+                to_user_id,
+                user_type = ?target_user.user_type,
+                action = "follow_user",
+                reason = "system_user",
+                error_code = 10213,
+                "关注失败：系统用户不允许被关注"
+            );
             return Err(AppError::FollowNotAllowed("对方不允许被关注".to_string()));
         }
 
-        // 黑名单检查：对方拉黑我时禁止关注
+        // 4. 黑名单检查：对方拉黑我时禁止关注
         if self
             .blocks_repo
             .is_blocked(to_user_id, from_user_id)
             .await?
         {
+            tracing::warn!(
+                from_user_id,
+                to_user_id,
+                action = "follow_user",
+                reason = "blocked_by_target",
+                error_code = 10211,
+                "关注失败：已被对方拉黑"
+            );
             return Err(AppError::BlockedByUser("已被对方拉黑".to_string()));
         }
 
@@ -641,15 +678,51 @@ impl UserService {
         let to_user_id = req.user_id;
 
         if from_user_id == to_user_id {
+            tracing::warn!(
+                user_id = from_user_id,
+                action = "unfollow_user",
+                reason = "self_operation",
+                error_code = 10411,
+                "取消关注失败：不能取消关注自己"
+            );
             return Err(AppError::BadRequest("不能取消关注自己".to_string()));
         }
 
         // 强约束：未关注则返回冲突错误
         if !self.follows_repo.exists(from_user_id, to_user_id).await? {
+            tracing::warn!(
+                from_user_id,
+                to_user_id,
+                action = "unfollow_user",
+                reason = "not_following",
+                error_code = 10410,
+                "取消关注失败：尚未关注该用户"
+            );
             return Err(AppError::Conflict("尚未关注该用户".to_string()));
         }
 
-        self.follows_repo.delete(from_user_id, to_user_id).await?;
+        self.follows_repo
+            .delete(from_user_id, to_user_id)
+            .await
+            .map_err(|e| {
+                tracing::error!(
+                    from_user_id,
+                    to_user_id,
+                    action = "unfollow_user",
+                    error = %e,
+                    error_type = "database",
+                    "取消关注失败"
+                );
+                e
+            })?;
+
+        tracing::info!(
+            from_user_id,
+            to_user_id,
+            action = "unfollow_user",
+            result = "success",
+            "取消关注成功"
+        );
         Ok(())
     }
 
@@ -702,14 +775,51 @@ impl UserService {
         let to_user_id = req.user_id;
 
         if from_user_id == to_user_id {
+            tracing::warn!(
+                user_id = from_user_id,
+                action = "unblock_user",
+                reason = "self_operation",
+                error_code = 10411,
+                "解除拉黑失败：不能解除拉黑自己"
+            );
             return Err(AppError::BadRequest("不能解除拉黑自己".to_string()));
         }
 
         // 强约束：未拉黑则返回冲突错误
         if !self.blocks_repo.exists(from_user_id, to_user_id).await? {
+            tracing::warn!(
+                from_user_id,
+                to_user_id,
+                action = "unblock_user",
+                reason = "not_blocked",
+                error_code = 10410,
+                "解除拉黑失败：尚未拉黑该用户"
+            );
             return Err(AppError::Conflict("尚未拉黑该用户".to_string()));
         }
-        self.blocks_repo.delete(from_user_id, to_user_id).await?;
+
+        self.blocks_repo
+            .delete(from_user_id, to_user_id)
+            .await
+            .map_err(|e| {
+                tracing::error!(
+                    from_user_id,
+                    to_user_id,
+                    action = "unblock_user",
+                    error = %e,
+                    error_type = "database",
+                    "解除拉黑失败"
+                );
+                e
+            })?;
+
+        tracing::info!(
+            from_user_id,
+            to_user_id,
+            action = "unblock_user",
+            result = "success",
+            "解除拉黑成功"
+        );
         Ok(())
     }
 

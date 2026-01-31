@@ -75,15 +75,18 @@ async function refreshToken(): Promise<boolean> {
 	const cfg = getConfig();
 
 	try {
+		// Web 端：不在 body 中传递 refresh_token（从 HttpOnly Cookie 中读取）
+		// 严格遵循 @spec/api_spec_auth.mdc 规范：
+		// - client_type='web'：请求体不得携带 refresh_token
 		const response = await fetch(`${cfg.baseUrl}${AUTH.REFRESH_TOKEN}`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'
 			},
-			credentials: 'include', // 携带 HttpOnly Cookie
+			credentials: 'include', // 携带 HttpOnly Cookie（包含 hs_refresh_token）
 			body: JSON.stringify({
-				client_type: 'web',
-				refresh_token: cfg.getRefreshToken?.() // App 端需要传递
+				client_type: 'web'
+				// ✅ 不添加 refresh_token 字段（Web 端从 Cookie 读取）
 			})
 		});
 

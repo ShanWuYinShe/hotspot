@@ -6,6 +6,7 @@
 	import LoginModal from '$lib/components/common/login-modal.svelte';
 	import { locationStore } from '$lib/stores/location.svelte';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
+	import { initializeWebSocket } from '$lib/stores/websocket-lifecycle.svelte';
 	import { loadAMapPlugin } from '$lib/utils/amap';
 
 	let { children } = $props();
@@ -56,6 +57,7 @@
 
 	onMount(() => {
 		initLocation();
+		initializeWebSocket();
 	});
 </script>
 

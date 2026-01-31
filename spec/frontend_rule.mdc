@@ -263,7 +263,7 @@ export function InteractiveList({ initialData }) {
 // user-card.tsx (Server Component - 可在 Server Component 中使用)
 import { FollowButton } from './follow-button';
 
-export function UserCard({ user }) {
+export function UserCard({ user }: { user: UserSearchItem }) {
   return (
     <Card>
       <UserAvatar user={user} />

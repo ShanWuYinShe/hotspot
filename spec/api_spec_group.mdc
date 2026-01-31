@@ -122,7 +122,7 @@ interface MessageReadItem {
 | 搜索与发现 | `POST /api/v1/group_chats/search_by_tag` | 搜索群组（标签） | `SearchGroupsByTagRequest` | `ApiResponse<PaginatedData<GroupSearchItem>>` |
 | 搜索与发现 | `POST /api/v1/group_chats/search_by_location` | 搜索群组（位置） | `SearchGroupsByLocationRequest` | `ApiResponse<PaginatedData<GroupSearchItem>>` |
 | 搜索与发现 | `POST /api/v1/group_chats/suggest` | 群组搜索建议 | `SuggestGroupsRequest` | `ApiResponse<GroupSuggestions>` |
-| 群组详情 | `POST /api/v1/group_chats/open_the_door` | 群组详情 | `GroupOpenTheDoorRequest` | `ApiResponse<GroupCard>` |
+| 群组详情 | `POST /api/v1/group_chats/open_the_door` | 群组详情 | `GroupOpenTheDoorRequest` | `ApiResponse<GroupSearchItem>` |
 | 群组详情 | `POST /api/v1/group_chats/my_state` | 我在群内状态 | `GetMyGroupStateRequest` | `ApiResponse<MyGroupState>` |
 | 群组详情 | `POST /api/v1/group_chats/settings` | 群组设置（含只读字段） | `GroupSettingsRequest` | `ApiResponse<GroupSettingsResponse>` |
 | 群组操作 | `POST /api/v1/group_chats/create` | 创建群组 | `CreateGroupChatRequest` | `ApiResponse` |
@@ -148,7 +148,7 @@ interface MessageReadItem {
 | 群公告 | `POST /api/v1/group_chats/announcements` | 公告列表 | `GroupAnnouncementsRequest` | `ApiResponse<PaginatedData<GroupAnnouncementItem>>` |
 | 群公告 | `POST /api/v1/group_chats/announcements/update` | 更新公告 | `UpdateGroupAnnouncementRequest` | `ApiResponse<GroupAnnouncementItem>` |
 | 群公告 | `POST /api/v1/group_chats/announcements/delete` | 删除公告 | `DeleteGroupAnnouncementRequest` | `ApiResponse` |
-| 我的群组 | `POST /api/v1/group_chats/me` | 我的群组列表 | `MyGroupChatsRequest` | `ApiResponse<PaginatedData<MyGroupItem>>` |
+| 我的群组 | `POST /api/v1/group_chats/me` | 我的群组列表 | `MyGroupChatsRequest` | `ApiResponse<PaginatedData<MyGroupSearchItem>>` |
 | 我的群组 | `POST /api/v1/group_chats/me/applications/cancel` | 取消申请 | `CancelApplicationRequest` | `ApiResponse` |
 | 我的群组 | `POST /api/v1/group_chats/me/invites` | 我的邀请列表 | `MyInvitesRequest` | `ApiResponse<PaginatedData<GroupInviteItem>>` |
 | 我的群组 | `POST /api/v1/group_chats/me/invites/accept` | 接受邀请 | `AcceptInviteRequest` | `ApiResponse` |
@@ -169,8 +169,8 @@ interface MessageReadItem {
 ### 搜索与发现
 
 说明（Token 可选的搜索语义）：
-- 未登录（不带 token）：仅返回隐私等级为 `public` 且 `is_searchable=true` 的群组；响应字段以 `GroupSearchItem` 定义为准
-- 已登录（带 token）：在满足隐私与关系规则前提下，允许返回更多可见群组；响应字段以 `GroupSearchItem` 定义为准
+- 未登录（不带 token）：仅返回隐私等级为 `public` 且 `is_searchable=true` 的群组；不返回 `@auth-only` 字段
+- 已登录（带 token）：在满足隐私与关系规则前提下，允许返回更多可见群组；返回完整的 `GroupSearchItem`（包括 `@auth-only` 字段）
 
 #### POST /api/v1/group_chats/search_by_keyword
 
@@ -220,11 +220,7 @@ interface SuggestGroupsRequest {
   limit?: number;
 }
 
-interface GroupSuggestItem extends GroupInfo {
-  description?: string;
-  tags?: string[];
-  has_password?: boolean;
-}
+// GroupSuggestItem 定义于 @api_spec_search.mdc
 
 interface GroupSuggestions {
   items: GroupSuggestItem[];
@@ -237,7 +233,7 @@ interface GroupSuggestions {
 #### POST /api/v1/group_chats/open_the_door
 
 获取群组详情。
-Token 可选；登录态返回 `GroupCard.my_state`。
+Token 可选；登录态返回 `GroupSearchItem.my_state`。
 
 **Request**:
 ```typescript
@@ -245,7 +241,7 @@ interface GroupOpenTheDoorRequest {
   group_chat_id: string;
 }
 ```
-**Response**: `ApiResponse<GroupCard>`
+**Response**: `ApiResponse<GroupSearchItem>`
 
 #### POST /api/v1/group_chats/my_state
 
@@ -675,7 +671,7 @@ interface DeleteGroupAnnouncementRequest {
 ```typescript
 interface MyGroupChatsRequest extends PaginationParams {}
 ```
-**Response**: `ApiResponse<PaginatedData<MyGroupItem>>`
+**Response**: `ApiResponse<PaginatedData<MyGroupSearchItem>>`
 
 **可能错误码**：`10003`
 
@@ -776,7 +772,6 @@ interface SendGroupMessageRequest {
   type: SendMessageType;
   content?: string;
   file_id?: string;
-  location?: MessageLocation;
   reply_to_message_id?: string;
   mentions?: number[];
 }

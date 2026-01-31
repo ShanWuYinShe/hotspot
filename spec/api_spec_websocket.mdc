@@ -155,7 +155,7 @@ interface UserOfflineEvent extends WebSocketEvent<"UserOffline", UserOfflinePayl
 
 interface UserLocationUpdatePayload {
   user_id: number;
-  location: Location;
+  location: NativeLocation;
   updated_at: string;
 }
 interface UserLocationUpdateEvent extends WebSocketEvent<"UserLocationUpdate", UserLocationUpdatePayload> {}
@@ -303,9 +303,8 @@ interface PrivateMessageNewPayload {
   type: MessageType;
   content?: string;       // 文本内容
   reply_to?: MessageReplyTo;
-  // 媒体/位置信息
+  // 媒体信息
   media?: MessageMedia;
-  location?: MessageLocation;
   sent_at: string;
 }
 interface PrivateMessageNewEvent extends WebSocketEvent<"PrivateMessageNew", PrivateMessageNewPayload> {}
@@ -370,9 +369,8 @@ interface GroupMessageNewPayload {
   content?: string;
   reply_to?: MessageReplyTo;
   mentions?: number[];     // user_id
-  // 媒体/位置信息
+  // 媒体信息
   media?: MessageMedia;
-  location?: MessageLocation;
   sent_at: string;
 }
 interface GroupMessageNewEvent extends WebSocketEvent<"GroupMessageNew", GroupMessageNewPayload> {}

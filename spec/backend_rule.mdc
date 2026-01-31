@@ -88,9 +88,9 @@ Handler → Service → Repository
 - ❌ Service 不直接编写 SQL
 
 **Token 可选 API 的 Service 实现模式**:
-- 方法签名：`fn get_xxx(user_id: Option<i64>, ...) -> Result<XxxCard, AppError>`
+- 方法签名：`fn get_xxx(user_id: Option<i64>, ...) -> Result<XxxSearchItem, AppError>`
 - 查询基础数据（对匿名可见的字段）
-- 若 `user_id.is_some()`：额外查询并填充 `@auth-only` 字段（如 `relation`、`my_state`）
+- 若 `user_id.is_some()`：额外查询并填充 `@auth-only` 字段（如 `relation`、`my_state`、`stats`、`social_context`）
 - 若 `user_id.is_none()`：`@auth-only` 字段设为 `None`
 
 ### Repository 约束

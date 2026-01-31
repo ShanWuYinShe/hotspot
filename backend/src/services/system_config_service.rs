@@ -13,11 +13,12 @@ use crate::{
     dto::{
         request::{
             FetchGlobalSettingsRequest, UpdateContactRequest, UpdateDefaultsRequest,
-            UpdateFeaturesRequest, UpdateLimitsRequest, UpdateUploadConfigRequest,
+            UpdateFeaturesRequest, UpdateLimitsRequest, UpdateRateLimitsRequest,
+            UpdateUploadConfigRequest,
         },
         response::{
             AdminGlobalSettingsData, AppLimits, ContactInfo, ContentDefaults, FeatureSwitches,
-            GlobalSettings, Location, UploadConfig,
+            GlobalSettings, Location, RateLimitConfig, UploadConfig,
         },
     },
     error::Result,
@@ -210,6 +211,61 @@ impl SystemConfigService {
         }
         if let Some(v) = req.search_radius_max {
             updates.insert("limits.search_radius_max", v.to_string());
+        }
+
+        self.batch_update_configs(updates, admin_id).await?;
+        self.get_full_global_settings().await
+    }
+
+    /// 更新频率限制配置
+    pub async fn update_rate_limits_config(
+        &self,
+        req: UpdateRateLimitsRequest,
+        admin_id: i64,
+    ) -> Result<GlobalSettings> {
+        let mut updates = HashMap::new();
+
+        if let Some(v) = req.global_per_hour {
+            updates.insert("rate_limits.global_per_hour", v.to_string());
+        }
+        if let Some(v) = req.user_per_hour {
+            updates.insert("rate_limits.user_per_hour", v.to_string());
+        }
+        if let Some(v) = req.auth_send_code_per_minute {
+            updates.insert("rate_limits.auth_send_code_per_minute", v.to_string());
+        }
+        if let Some(v) = req.auth_verify_code_per_10minutes {
+            updates.insert("rate_limits.auth_verify_code_per_10minutes", v.to_string());
+        }
+        if let Some(v) = req.auth_register_per_10minutes {
+            updates.insert("rate_limits.auth_register_per_10minutes", v.to_string());
+        }
+        if let Some(v) = req.auth_login_per_10minutes {
+            updates.insert("rate_limits.auth_login_per_10minutes", v.to_string());
+        }
+        if let Some(v) = req.auth_guest_per_10minutes {
+            updates.insert("rate_limits.auth_guest_per_10minutes", v.to_string());
+        }
+        if let Some(v) = req.auth_refresh_per_10minutes {
+            updates.insert("rate_limits.auth_refresh_per_10minutes", v.to_string());
+        }
+        if let Some(v) = req.auth_reset_request_per_minute {
+            updates.insert("rate_limits.auth_reset_request_per_minute", v.to_string());
+        }
+        if let Some(v) = req.auth_reset_verify_per_10minutes {
+            updates.insert("rate_limits.auth_reset_verify_per_10minutes", v.to_string());
+        }
+        if let Some(v) = req.auth_reset_per_10minutes {
+            updates.insert("rate_limits.auth_reset_per_10minutes", v.to_string());
+        }
+        if let Some(v) = req.moments_create_per_minute {
+            updates.insert("rate_limits.moments_create_per_minute", v.to_string());
+        }
+        if let Some(v) = req.comments_create_per_minute {
+            updates.insert("rate_limits.comments_create_per_minute", v.to_string());
+        }
+        if let Some(v) = req.reports_create_per_hour {
+            updates.insert("rate_limits.reports_create_per_hour", v.to_string());
         }
 
         self.batch_update_configs(updates, admin_id).await?;
@@ -413,12 +469,39 @@ impl SystemConfigService {
             search_radius_max: get_i32("limits.search_radius_max", 50000),
         };
 
+        let get_u32 =
+            |k: &str, default: u32| map.get(k).and_then(|v| v.parse().ok()).unwrap_or(default);
+
+        let rate_limits = RateLimitConfig {
+            global_per_hour: get_u32("rate_limits.global_per_hour", 1000),
+            user_per_hour: get_u32("rate_limits.user_per_hour", 5000),
+            auth_send_code_per_minute: get_u32("rate_limits.auth_send_code_per_minute", 5),
+            auth_verify_code_per_10minutes: get_u32(
+                "rate_limits.auth_verify_code_per_10minutes",
+                30,
+            ),
+            auth_register_per_10minutes: get_u32("rate_limits.auth_register_per_10minutes", 10),
+            auth_login_per_10minutes: get_u32("rate_limits.auth_login_per_10minutes", 30),
+            auth_guest_per_10minutes: get_u32("rate_limits.auth_guest_per_10minutes", 60),
+            auth_refresh_per_10minutes: get_u32("rate_limits.auth_refresh_per_10minutes", 120),
+            auth_reset_request_per_minute: get_u32("rate_limits.auth_reset_request_per_minute", 5),
+            auth_reset_verify_per_10minutes: get_u32(
+                "rate_limits.auth_reset_verify_per_10minutes",
+                20,
+            ),
+            auth_reset_per_10minutes: get_u32("rate_limits.auth_reset_per_10minutes", 10),
+            moments_create_per_minute: get_u32("rate_limits.moments_create_per_minute", 20),
+            comments_create_per_minute: get_u32("rate_limits.comments_create_per_minute", 60),
+            reports_create_per_hour: get_u32("rate_limits.reports_create_per_hour", 10),
+        };
+
         let settings = GlobalSettings {
             upload,
             defaults,
             features,
             contact,
             limits,
+            rate_limits,
         };
 
         // 3. 写入缓存

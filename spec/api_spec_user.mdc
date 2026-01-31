@@ -26,7 +26,7 @@ interface UserStats {
   groups_count: number;
 }
 
-interface MyCard {
+interface MyProfile {
   user_id: number;
   nickname: string;
   avatar_url?: string;
@@ -91,7 +91,7 @@ interface FollowRequestItem {
   requested_at: string;
 }
 
-interface BlockedUserItem {
+interface BlockedUserSearchItem {
   user: UserInfo;
   blocked_at: string;
   reason?: string;
@@ -127,7 +127,7 @@ interface BlockedUserItem {
 | 用户搜索 | `POST /api/v1/user/search_by_tag` | 按标签搜索用户 | `SearchUsersByTagRequest` | `ApiResponse<PaginatedData<UserSearchItem>>` |
 | 用户搜索 | `POST /api/v1/user/search_by_location` | 按位置搜索用户 | `SearchUsersByLocationRequest` | `ApiResponse<PaginatedData<UserSearchItem>>` |
 | 用户搜索 | `POST /api/v1/user/suggest` | 用户搜索建议 | `SuggestUsersRequest` | `ApiResponse<UserSuggestions>` |
-| 用户资料 | `POST /api/v1/user/open_the_door` | 用户资料详情 | `UserOpenTheDoorRequest` | `ApiResponse<UserCard>` |
+| 用户资料 | `POST /api/v1/user/open_the_door` | 用户资料详情 | `UserOpenTheDoorRequest` | `ApiResponse<UserSearchItem>` |
 | 用户资料 | `POST /api/v1/user/relationship` | 获取关系 | `GetRelationshipRequest` | `ApiResponse<Relationship>` |
 | 用户资料 | `POST /api/v1/user/stats` | 用户统计 | `UserStatsRequest` | `ApiResponse<UserStats>` |
 | 用户资料 | `POST /api/v1/user/friends` | 用户好友列表 | `UserFriendsRequest` | `ApiResponse<PaginatedData<UserInfo>>` |
@@ -135,8 +135,8 @@ interface BlockedUserItem {
 | 用户资料 | `POST /api/v1/user/followers` | 用户粉丝列表 | `UserFollowersRequest` | `ApiResponse<PaginatedData<UserInfo>>` |
 | 用户资料 | `POST /api/v1/user/groups` | 用户群组列表 | `UserGroupsRequest` | `ApiResponse<PaginatedData<GroupSearchItem>>` |
 | 用户资料 | `POST /api/v1/user/liked_moments` | 用户点赞瞬间列表 | `UserLikedMomentsRequest` | `ApiResponse<PaginatedData<MomentSearchItem>>` |
-| 当前用户 | `POST /api/v1/user/me/profile` | 我的资料 | `{}` | `ApiResponse<MyCard>` |
-| 当前用户 | `POST /api/v1/user/me/profile/update` | 更新我的资料 | `UpdateProfileRequest` | `ApiResponse<MyCard>` |
+| 当前用户 | `POST /api/v1/user/me/profile` | 我的资料 | `{}` | `ApiResponse<MyProfile>` |
+| 当前用户 | `POST /api/v1/user/me/profile/update` | 更新我的资料 | `UpdateProfileRequest` | `ApiResponse<MyProfile>` |
 | 当前用户 | `POST /api/v1/user/me/location` | 更新我的位置 | `UpdateLocationRequest` | `ApiResponse` |
 | 当前用户 | `POST /api/v1/user/me/upgrade` | 访客升级 | `UpgradeAccountRequest` | `ApiResponse` |
 | 当前用户 | `POST /api/v1/user/me/stats` | 我的统计 | `{}` | `ApiResponse<UserStats>` |
@@ -152,14 +152,14 @@ interface BlockedUserItem {
 | 当前用户 | `POST /api/v1/user/me/followers` | 我的粉丝列表 | `MyFollowersRequest` | `ApiResponse<PaginatedData<FollowerItem>>` |
 | 当前用户 | `POST /api/v1/user/me/follow_requests` | 待审批关注请求 | `MyFollowRequestsRequest` | `ApiResponse<PaginatedData<FollowRequestItem>>` |
 | 当前用户 | `POST /api/v1/user/me/follow_requests/handle` | 处理关注请求 | `HandleFollowRequestRequest` | `ApiResponse` |
-| 当前用户 | `POST /api/v1/user/me/blocked` | 我的拉黑列表 | `MyBlockedRequest` | `ApiResponse<PaginatedData<BlockedUserItem>>` |
+| 当前用户 | `POST /api/v1/user/me/blocked` | 我的拉黑列表 | `MyBlockedRequest` | `ApiResponse<PaginatedData<BlockedUserSearchItem>>` |
 | 当前用户 | `POST /api/v1/user/me/remark` | 设置好友备注 | `SetRemarkRequest` | `ApiResponse` |
 
 ### 用户搜索
 
 说明（Token 可选的搜索语义）：
-- 未登录（不带 token）：仅返回可被匿名公开发现/可见的用户；响应字段以 `UserSearchItem` 定义为准
-- 已登录（带 token）：在满足隐私与关系规则前提下，允许返回更多可见用户；响应字段以 `UserSearchItem` 定义为准
+- 未登录（不带 token）：仅返回可被匿名公开发现/可见的用户；不返回 `@auth-only` 字段
+- 已登录（带 token）：在满足隐私与关系规则前提下，允许返回更多可见用户；返回完整的 `UserSearchItem`（包括 `@auth-only` 字段）
 
 #### POST /api/v1/user/search_by_keyword
 
@@ -217,10 +217,7 @@ interface SuggestUsersRequest {
   limit?: number;
 }
 
-interface UserSuggestItem extends UserInfo {
-  bio?: string;
-  tags?: string[];
-}
+// UserSuggestItem 定义于 @api_spec_search.mdc
 
 interface UserSuggestions {
   items: UserSuggestItem[];
@@ -233,7 +230,7 @@ interface UserSuggestions {
 #### POST /api/v1/user/open_the_door
 
 获取用户资料详情。
-Token 可选；登录态返回 `UserCard.relation`。
+Token 可选；登录态返回完整的 `UserSearchItem`（包括 `@auth-only` 字段如 `relation`、`social_context`、`stats`）；未登录态不返回 `@auth-only` 字段。
 
 **Request**:
 ```typescript
@@ -241,7 +238,7 @@ interface UserOpenTheDoorRequest {
   user_id: number;
 }
 ```
-**Response**: `ApiResponse<UserCard>`
+**Response**: `ApiResponse<UserSearchItem>`
 
 **可能错误码**：`10001`、`10310`、`10211`
 
@@ -364,7 +361,7 @@ interface UserLikedMomentsRequest extends PaginationParams {
 获取当前用户资料。
 
 **Request**: `{}`
-**Response**: `ApiResponse<MyCard>`
+**Response**: `ApiResponse<MyProfile>`
 
 #### POST /api/v1/user/me/profile/update
 
@@ -379,7 +376,7 @@ interface UpdateProfileRequest {
   tags?: string[];
 }
 ```
-**Response**: `ApiResponse<MyCard>`
+**Response**: `ApiResponse<MyProfile>`
 
 **可能错误码**：`10003`、`10360`
 
@@ -579,7 +576,7 @@ interface HandleFollowRequestRequest {
 ```typescript
 interface MyBlockedRequest extends PaginationParams {}
 ```
-**Response**: `ApiResponse<PaginatedData<BlockedUserItem>>`
+**Response**: `ApiResponse<PaginatedData<BlockedUserSearchItem>>`
 
 #### POST /api/v1/user/me/remark
 

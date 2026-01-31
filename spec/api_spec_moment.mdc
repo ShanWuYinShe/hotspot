@@ -65,7 +65,7 @@ interface CommentLikeItem {
 | 搜索与发现 | `POST /api/v1/moments/search_by_tag` | 搜索瞬间（标签） | `SearchMomentsByTagRequest` | `ApiResponse<PaginatedData<MomentSearchItem>>` |
 | 搜索与发现 | `POST /api/v1/moments/search_by_location` | 搜索瞬间（位置） | `SearchMomentsByLocationRequest` | `ApiResponse<PaginatedData<MomentSearchItem>>` |
 | 搜索与发现 | `POST /api/v1/moments/suggest` | 瞬间搜索建议 | `SuggestMomentsRequest` | `ApiResponse<MomentSuggestions>` |
-| 瞬间详情与互动 | `POST /api/v1/moments/open_the_door` | 瞬间详情 | `MomentOpenTheDoorRequest` | `ApiResponse<MomentCard>` |
+| 瞬间详情与互动 | `POST /api/v1/moments/open_the_door` | 瞬间详情 | `MomentOpenTheDoorRequest` | `ApiResponse<MomentSearchItem>` |
 | 瞬间详情与互动 | `POST /api/v1/moments/interaction_state` | 我的互动状态 | `GetMomentInteractionStateRequest` | `ApiResponse<MyMomentState>` |
 | 瞬间详情与互动 | `POST /api/v1/user/moments` | 用户瞬间历史 | `UserMomentsRequest` | `ApiResponse<PaginatedData<UserMomentListItem>>` |
 | 瞬间操作 | `POST /api/v1/moments/create` | 创建瞬间 | `CreateMomentRequest` | `ApiResponse<UserMomentListItem>` |
@@ -76,7 +76,7 @@ interface CommentLikeItem {
 | 瞬间操作 | `POST /api/v1/moments/favorite` | 收藏 | `FavoriteMomentRequest` | `ApiResponse` |
 | 瞬间操作 | `POST /api/v1/moments/unfavorite` | 取消收藏 | `UnfavoriteMomentRequest` | `ApiResponse` |
 | 我的瞬间 | `POST /api/v1/moments/me` | 我发布的瞬间 | `MyMomentsRequest` | `ApiResponse<PaginatedData<UserMomentListItem>>` |
-| 我的瞬间 | `POST /api/v1/moments/me/favorites` | 我的收藏 | `MyFavoritesRequest` | `ApiResponse<PaginatedData<MomentCard>>` |
+| 我的瞬间 | `POST /api/v1/moments/me/favorites` | 我的收藏 | `MyFavoritesRequest` | `ApiResponse<PaginatedData<MomentSearchItem>>` |
 | 我的瞬间 | `POST /api/v1/moments/me/liked` | 检查是否点赞 | `CheckLikedRequest` | `ApiResponse<LikedStatus>` |
 | 我的瞬间 | `POST /api/v1/moments/me/favorited` | 检查是否收藏 | `CheckFavoritedRequest` | `ApiResponse<FavoritedStatus>` |
 | 点赞列表 | `POST /api/v1/moments/likes` | 瞬间点赞列表 | `MomentLikesRequest` | `ApiResponse<PaginatedData<MomentLikeItem>>` |
@@ -148,9 +148,7 @@ interface SuggestMomentsRequest {
   limit?: number;
 }
 
-interface MomentSuggestItem extends MomentBase {
-  user: UserInfo;
-}
+// MomentSuggestItem 定义于 @api_spec_search.mdc
 
 interface MomentSuggestions {
   items: MomentSuggestItem[];
@@ -163,7 +161,7 @@ interface MomentSuggestions {
 #### POST /api/v1/moments/open_the_door
 
 获取瞬间详情。
-Token 可选；登录态返回 `MomentCard.my_state`。
+Token 可选；登录态返回 `MomentSearchItem.my_state`。
 
 **说明**：未登录（不带 token）仅允许访问隐私等级为 `public` 的瞬间；若瞬间对匿名不可见，返回 `10330`（不存在/不可见）。
 
@@ -173,7 +171,7 @@ interface MomentOpenTheDoorRequest {
   moment_id: string;
 }
 ```
-**Response**: `ApiResponse<MomentCard>`
+**Response**: `ApiResponse<MomentSearchItem>`
 
 #### POST /api/v1/moments/interaction_state
 
@@ -334,7 +332,7 @@ interface MyMomentsRequest extends PaginationParams {}
 ```typescript
 interface MyFavoritesRequest extends PaginationParams {}
 ```
-**Response**: `ApiResponse<PaginatedData<MomentCard>>`
+**Response**: `ApiResponse<PaginatedData<MomentSearchItem>>`
 
 #### POST /api/v1/moments/me/liked
 

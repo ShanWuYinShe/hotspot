@@ -77,28 +77,41 @@
 
 		isActionLoading = true;
 		try {
-			if (isFollowing) {
-				const response = await usersService.unfollow({ user_id: userId });
-				if (isSuccess(response)) {
-					isFollowing = false;
-					toast.success('已取消关注');
-				} else {
-					toast.error(response.message || '操作失败');
+		if (isFollowing || isFollowPending) {
+			const response = await usersService.unfollow({ user_id: userId });
+			if (isSuccess(response) && response.data) {
+				// 使用后端返回的 UserRelation 更新状态
+				isFollowing = response.data.is_following;
+				isFollowPending = response.data.has_pending_follow_request;
+				toast.success('已取消关注');
+			} else {
+				toast.error(response.message || '操作失败');
+			}
+		} else {
+			const response = await usersService.follow({ user_id: userId });
+			if (isSuccess(response) && response.data) {
+				// 使用后端返回的 UserRelation 判断关注状态
+				if (response.data.has_pending_follow_request) {
+					isFollowPending = true;
+					toast.success('已发送关注请求，等待对方审批');
+				} else if (response.data.is_following) {
+					isFollowing = true;
+					isFollowPending = false;
+					toast.success('关注成功');
 				}
 			} else {
-				const response = await usersService.follow({ user_id: userId });
-				if (isSuccess(response) && response.data) {
-					if (response.data.status === 'followed') {
-						isFollowing = true;
-						toast.success('关注成功');
-					} else {
-						isFollowPending = true;
-						toast.success('已发送关注请求');
-					}
+				// 处理具体的错误码
+				if (response.code === 10213) {
+					toast.error('对方不允许被关注');
+				} else if (response.code === 10211) {
+					toast.error('已被对方拉黑');
+				} else if (response.code === 10411) {
+					toast.error('不能关注自己');
 				} else {
 					toast.error(response.message || '操作失败');
 				}
 			}
+		}
 		} catch {
 			toast.error('操作失败');
 		} finally {

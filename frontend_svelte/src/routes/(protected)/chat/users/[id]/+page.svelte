@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { privateChatsService, privateMessagesService, usersService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
+	import { websocketStore, subscriptionManager, eventHandlers } from '$lib/websocket';
+	import type { PrivateMessageNewPayload } from '$lib/websocket/types';
 	import { Button } from '$lib/components/ui/button';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import { Textarea } from '$lib/components/ui/textarea';
@@ -23,6 +25,8 @@
 	let isLoading = $state(true);
 	let messageText = $state('');
 	let isSending = $state(false);
+	let isOtherUserTyping = $state(false);
+	let typingTimer: ReturnType<typeof setTimeout> | null = null;
 
 	async function loadChat() {
 		try {
@@ -65,34 +69,47 @@
 				idempotencyKey: crypto.randomUUID()
 			});
 
-			if (isSuccess(response)) {
-				// 添加到消息列表（简化版，实际应该等 WebSocket 推送）
-				messages = [
-					...messages,
-					{
-						message_id: `local-${Date.now()}`,
-						type: 'text',
-						content: text,
-						sender: {
-							user_id: authStore.currentUserId!,
-							nickname: authStore.currentAccount?.nickname || '',
-							avatar_url: authStore.currentAccount?.avatar_url,
-							user_type: 'normal'
-						},
-						sent_at: new Date().toISOString(),
-						is_recalled: false
-					}
-				];
-			} else {
+			if (!isSuccess(response)) {
 				messageText = text;
 				toast.error(response.message || '发送失败');
 			}
+			// ✅ 不在本地添加消息，等待 WebSocket 推送（规范要求）
 		} catch {
 			messageText = text;
 			toast.error('发送失败');
 		} finally {
 			isSending = false;
 		}
+	}
+
+	/**
+	 * 处理输入变化（发送正在输入状态）
+	 */
+	function handleInput() {
+		// 发送正在输入状态
+		if (websocketStore.connectionState === 'connected') {
+			websocketStore.send({
+				type: 'PrivateTyping',
+				payload: {
+					target_user_id: userId,
+					is_typing: true
+				}
+			});
+		}
+
+		// 3秒后自动发送停止输入
+		if (typingTimer) clearTimeout(typingTimer);
+		typingTimer = setTimeout(() => {
+			if (websocketStore.connectionState === 'connected') {
+				websocketStore.send({
+					type: 'PrivateTyping',
+					payload: {
+						target_user_id: userId,
+						is_typing: false
+					}
+				});
+			}
+		}, 3000);
 	}
 
 	function formatTime(dateStr: string): string {
@@ -106,6 +123,87 @@
 
 	onMount(() => {
 		loadChat();
+
+		// 连接 WebSocket（如果未连接）
+		if (websocketStore.connectionState === 'disconnected') {
+			websocketStore.connect();
+		}
+
+		// 订阅对方用户状态
+		subscriptionManager.subscribe('user', [userId]);
+
+		// 监听私聊消息
+		const unsubscribeMessage = eventHandlers.onPrivateMessage((payload: PrivateMessageNewPayload) => {
+			// 只处理与当前聊天相关的消息
+			if (
+				payload.target_user_id === userId ||
+				(payload.sender.user_id === userId && payload.target_user_id === authStore.currentUserId)
+			) {
+				// 将 WebSocket 消息转换为 PrivateMessageItem
+				const newMessage: PrivateMessageItem = {
+					message_id: payload.message_id,
+					type: payload.type,
+					content: payload.content,
+					sender: payload.sender,
+					sent_at: payload.sent_at,
+					is_recalled: false,
+					media: payload.media,
+					location: payload.location,
+					reply_to: payload.reply_to
+				};
+
+				// 添加到消息列表
+				messages = [...messages, newMessage];
+
+				// 标记已读
+				privateMessagesService.markAsRead({ target_user_id: userId });
+			}
+		});
+
+		// 监听对方正在输入
+		const unsubscribeTyping = websocketStore.on('PrivateUserTyping', (payload: any) => {
+			if (payload.user_id === userId) {
+				isOtherUserTyping = payload.is_typing;
+			}
+		});
+
+		// 监听消息撤回
+		const unsubscribeRecalled = websocketStore.on('PrivateMessageRecalled', (payload: any) => {
+			if (
+				payload.target_user_id === userId ||
+				(payload.recalled_by === userId && payload.target_user_id === authStore.currentUserId)
+			) {
+				messages = messages.map((msg) =>
+					msg.message_id === payload.message_id ? { ...msg, is_recalled: true } : msg
+				);
+			}
+		});
+
+		// 监听消息编辑
+		const unsubscribeEdited = websocketStore.on('PrivateMessageEdited', (payload: any) => {
+			if (
+				payload.target_user_id === userId ||
+				payload.target_user_id === authStore.currentUserId
+			) {
+				messages = messages.map((msg) =>
+					msg.message_id === payload.message_id ? { ...msg, content: payload.content } : msg
+				);
+			}
+		});
+
+		// 组件卸载时清理
+		onDestroy(() => {
+			unsubscribeMessage();
+			unsubscribeTyping();
+			unsubscribeRecalled();
+			unsubscribeEdited();
+
+			// 取消订阅
+			subscriptionManager.unsubscribe('user', [userId]);
+
+			// 清除正在输入定时器
+			if (typingTimer) clearTimeout(typingTimer);
+		});
 	});
 </script>
 
@@ -126,7 +224,7 @@
 			<a href="/users/{userId}" class="flex items-center gap-3">
 				<Avatar class="h-10 w-10">
 					<AvatarImage src={otherUser.avatar_url} alt={otherUser.nickname} />
-					<AvatarFallback>{otherUser.nickname.slice(0, 2)}</AvatarFallback>
+					<AvatarFallback>{(otherUser.nickname || '用户').slice(0, 2)}</AvatarFallback>
 				</Avatar>
 				<span class="font-medium">{otherUser.nickname}</span>
 			</a>
@@ -165,7 +263,7 @@
 							{#if !isSelf(message)}
 								<Avatar class="h-8 w-8">
 									<AvatarImage src={message.sender.avatar_url} alt={message.sender.nickname} />
-									<AvatarFallback>{message.sender.nickname.slice(0, 2)}</AvatarFallback>
+									<AvatarFallback>{(message.sender.nickname || '用户').slice(0, 2)}</AvatarFallback>
 								</Avatar>
 							{/if}
 							<div>
@@ -201,6 +299,13 @@
 
 	<!-- Input -->
 	<div class="border-t pt-4">
+		<!-- 对方正在输入提示 -->
+		{#if isOtherUserTyping}
+			<div class="mb-2 text-xs text-muted-foreground">
+				{otherUser?.nickname ?? '对方'} 正在输入...
+			</div>
+		{/if}
+
 		<div class="flex gap-2">
 			<Textarea
 				placeholder="输入消息..."
@@ -208,6 +313,7 @@
 				rows={1}
 				class="min-h-[40px] resize-none"
 				disabled={isSending}
+				oninput={handleInput}
 				onkeydown={(e) => {
 					if (e.key === 'Enter' && !e.shiftKey) {
 						e.preventDefault();

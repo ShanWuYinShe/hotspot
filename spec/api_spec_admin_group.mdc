@@ -17,10 +17,33 @@ alwaysApply: true
 
 ## 核心类型定义
 
+**AdminGroupSearchItem**: 管理员群组统一搜索类型（用于列表、搜索、详情等所有场景，返回完全相同的字段）
+
 ```typescript
-interface AdminGroupItem extends GroupInfo {
+interface AdminGroupSearchItem extends GroupInfo {
   owner: UserInfo;
   created_at: string;
+  description?: string;
+  tags?: string[];
+  max_members: number;
+  location?: RelativeLocation;  // distance/bearing_degrees 为 undefined（管理员查询不需要距离）
+  settings: {
+    join_method: GroupJoinMethod;
+    is_searchable: boolean;
+    has_password: boolean;
+  };
+  admins?: UserInfo[];
+  stats: {
+    messages_count: number;
+    active_members_today: number;
+  };
+  dismissal_history?: AdminDismissalRecord[];
+}
+
+interface AdminDismissalRecord {
+  dismissed_at: string;
+  dismissed_by: UserInfo;
+  reason?: string;
 }
 ```
 
@@ -43,8 +66,8 @@ interface AdminGroupItem extends GroupInfo {
 
 | 子域 | 端点 | 说明 | Request | Response |
 |-----|------|------|---------|----------|
-| 群组管理 | `POST /api/v1/admin/groups/search` | 搜索群组 | `AdminGroupSearchRequest` | `ApiResponse<PaginatedData<AdminGroupItem>>` |
-| 群组管理 | `POST /api/v1/admin/groups/detail` | 群组详情 | `AdminGroupDetailRequest` | `ApiResponse<AdminGroupDetail>` |
+| 群组管理 | `POST /api/v1/admin/groups/search` | 搜索群组 | `AdminGroupSearchRequest` | `ApiResponse<PaginatedData<AdminGroupSearchItem>>` |
+| 群组管理 | `POST /api/v1/admin/groups/detail` | 群组详情 | `AdminGroupDetailRequest` | `ApiResponse<AdminGroupSearchItem>` |
 | 群组管理 | `POST /api/v1/admin/groups/dismiss` | 解散群组 | `AdminDismissGroupRequest` | `ApiResponse` |
 
 ### POST /api/v1/admin/groups/search
@@ -61,7 +84,7 @@ interface AdminGroupSearchRequest extends PaginationParams {
   owner_id?: number;
 }
 ```
-**Response**: `ApiResponse<PaginatedData<AdminGroupItem>>`
+**Response**: `ApiResponse<PaginatedData<AdminGroupSearchItem>>`
 
 **可能错误码**：`10204`、`10205`
 
@@ -77,38 +100,7 @@ interface AdminGroupDetailRequest {
   group_chat_id: string;
 }
 ```
-**Response**: `ApiResponse<AdminGroupDetail>`
-
-```typescript
-interface AdminGroupDetail extends GroupInfo {
-  description?: string;
-  tags?: string[];
-  max_members: number;
-  owner: UserInfo;
-  created_at: string;
-  location?: Location;
-  settings: {
-    join_method: GroupJoinMethod;
-    is_searchable: boolean;
-    has_password: boolean;
-  };
-  // 管理员列表
-  admins?: UserInfo[];
-  // 统计信息
-  stats: {
-    messages_count: number;
-    active_members_today: number;
-  };
-  // 解散历史（如果有）
-  dismissal_history?: AdminDismissalRecord[];
-}
-
-interface AdminDismissalRecord {
-  dismissed_at: string;
-  dismissed_by: UserInfo;
-  reason?: string;
-}
-```
+**Response**: `ApiResponse<AdminGroupSearchItem>`
 
 **可能错误码**：`10001`、`10204`、`10205`、`10320`
 

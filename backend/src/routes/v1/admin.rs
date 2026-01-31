@@ -62,6 +62,10 @@ pub fn admin_routes() -> Router<AppState> {
             "/global_settings/update_limits",
             post(system_config::admin_update_limits_config),
         )
+        .route(
+            "/global_settings/update_rate_limits",
+            post(system_config::admin_update_rate_limits_config),
+        )
         // 用户管理
         .route("/users/search", post(user::admin_search))
         .route("/users/detail", post(user::admin_detail))

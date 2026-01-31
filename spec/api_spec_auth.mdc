@@ -107,12 +107,53 @@ interface AuthStatus {
 | 会话管理 | `POST /api/v1/auth/me/sessions` | 获取会话列表 | `SessionsRequest` | `ApiResponse<PaginatedData<SessionItem>>` |
 | 会话管理 | `POST /api/v1/auth/me/sessions/revoke` | 撤销会话 | `RevokeSessionRequest` | `ApiResponse` |
 
-### 客户端类型与 refresh_token 投递
+### 客户端类型与 Token 投递策略
 
-- Web / App 分离：服务端必须能区分客户端类型，并据此决定 refresh_token 的投递方式与校验口径
-- 响应体契约：
-  - `client_type='web'`：返回 `ApiResponse<AuthTokenPairWeb>`，响应体中不得出现 `refresh_token`
-  - `client_type='app'`：返回 `ApiResponse<AuthTokenPairApp>`，响应体中必须出现 `refresh_token`（opaque string）
+#### Web 端（`client_type='web'`）
+
+**Token 投递方式**：通过 `Set-Cookie` Header
+
+```http
+Set-Cookie: access_token=<token>; HttpOnly; Secure; SameSite=Lax; Path=/api; Max-Age=<access_token_ttl>
+Set-Cookie: refresh_token=<token>; HttpOnly; Secure; SameSite=Lax; Path=/api/v1/auth/refresh_token; Max-Age=<refresh_token_ttl>
+```
+
+**关键配置**：
+- `access_token` Cookie:
+  - `Path=/api` - 所有 API 请求都自动携带
+  - `HttpOnly` - 防止 JavaScript 访问
+  - `Secure` - 仅 HTTPS 传输
+  - `SameSite=Lax` - 防止 CSRF 攻击
+  
+- `refresh_token` Cookie:
+  - `Path=/api/v1/auth/refresh_token` - **仅**在调用 refresh_token API 时自动携带
+  - `HttpOnly` - 防止 JavaScript 访问
+  - `Secure` - 仅 HTTPS 传输
+  - `SameSite=Lax` - 防止 CSRF 攻击
+
+**响应体契约**：
+- 返回 `ApiResponse<AuthTokenPairWeb>`
+- 响应体中不得出现 `refresh_token`
+- `access_token` 在响应体中返回（供前端内存存储使用）
+
+#### App 端（`client_type='app'`）
+
+**Token 投递方式**：通过响应体
+
+**响应体契约**：
+- 返回 `ApiResponse<AuthTokenPairApp>`
+- 响应体中必须出现 `access_token` 和 `refresh_token`
+- 客户端负责安全存储（Keychain/Keystore）
+
+#### Token 自动携带规则（Web 端）
+
+| 场景 | access_token Cookie | refresh_token Cookie |
+|------|---------------------|----------------------|
+| 登录/注册/访客 | ✅ 设置 | ✅ 设置 |
+| 刷新 Token | ✅ 更新 | ✅ 更新 |
+| 登出 | ✅ 清除（Max-Age=0） | ✅ 清除（Max-Age=0） |
+| 普通 API 请求 | ✅ 自动携带 | ❌ 不携带（Path 限制） |
+| 调用 refresh_token API | ✅ 自动携带 | ✅ 自动携带（Path 匹配） |
 
 ### POST /api/v1/auth/register
 
@@ -156,6 +197,17 @@ interface LoginRequest {
 
 **Request**: `{}`
 **Response**: `ApiResponse`
+
+**Web 端行为**：
+```http
+Set-Cookie: access_token=; HttpOnly; Secure; SameSite=Lax; Path=/api; Max-Age=0
+Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Lax; Path=/api/v1/auth/refresh_token; Max-Age=0
+```
+- 通过 `Max-Age=0` 立即清除 access_token 和 refresh_token Cookie
+- 前端无需手动清除 Cookie
+
+**App 端行为**：
+- 客户端需要自行清除存储的 access_token 和 refresh_token
 
 ### POST /api/v1/auth/guest
 

@@ -101,6 +101,8 @@
 	let removeTarget = $state<GroupMember | null>(null);
 	let removeSubmitting = $state(false);
 
+	let showLeaveDialog = $state(false);
+
 	function getJoinMethodLabel(method?: GroupSettings['join_method']) {
 		switch (method) {
 			case 'open':
@@ -556,15 +558,18 @@
 		}
 	}
 
-	async function handleLeave() {
+	function confirmLeave() {
 		if (!authStore.isAuthenticated) {
 			uiStore.saveRedirectUrl();
 			uiStore.openLoginModal();
 			return;
 		}
-		if (!confirm('确定要退出该群组吗？')) return;
+		showLeaveDialog = true;
+	}
 
+	async function handleLeave() {
 		isLeaving = true;
+		showLeaveDialog = false;
 		try {
 			const response = await groupsService.leave({ group_chat_id: groupId });
 			if (isSuccess(response)) {
@@ -658,10 +663,13 @@
 
 					<div class="flex flex-wrap gap-3">
 						{#if group.my_state?.is_joined}
-							<Button variant="outline" onclick={() => goto('/groups')}>
+							<Button onclick={() => goto(`/chat/groups/${groupId}`)}>
+								进入群聊
+							</Button>
+							<Button variant="outline" disabled class="cursor-default">
 								已加入
 							</Button>
-							<Button variant="outline" onclick={handleLeave} disabled={isLeaving}>
+							<Button variant="outline" onclick={confirmLeave} disabled={isLeaving}>
 								{#if isLeaving}
 									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 								{/if}
@@ -1269,6 +1277,31 @@
 					<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 				{/if}
 				确认移除
+			</Button>
+		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- 退出群组确认对话框 -->
+<Dialog.Root bind:open={showLeaveDialog}>
+	<Dialog.Content class="sm:max-w-md">
+		<Dialog.Header>
+			<Dialog.Title>退出群组</Dialog.Title>
+			<Dialog.Description>确认要退出该群组吗？退出后将无法查看群组内容。</Dialog.Description>
+		</Dialog.Header>
+		<div class="rounded-xl border border-border/60 bg-muted/30 px-4 py-3">
+			<div class="text-sm font-medium">{group?.name ?? '群组'}</div>
+			<div class="mt-1 text-xs text-muted-foreground">
+				{group?.members_count ?? 0} 位成员
+			</div>
+		</div>
+		<Dialog.Footer>
+			<Button variant="outline" onclick={() => (showLeaveDialog = false)}>取消</Button>
+			<Button variant="destructive" onclick={handleLeave} disabled={isLeaving}>
+				{#if isLeaving}
+					<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+				{/if}
+				确认退出
 			</Button>
 		</Dialog.Footer>
 	</Dialog.Content>

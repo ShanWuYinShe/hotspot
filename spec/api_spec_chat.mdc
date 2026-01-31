@@ -180,7 +180,6 @@ interface SendPrivateMessageRequest {
   type: SendMessageType;
   content?: string;
   file_id?: string;
-  location?: MessageLocation;
   reply_to_message_id?: string;
 }
 ```

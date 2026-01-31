@@ -27,24 +27,3 @@ export function requireAuth(redirectTo?: string): boolean {
 	return true;
 }
 
-/**
- * 检查是否需要访客状态
- * @param redirectTo 已认证时重定向的路径
- */
-export function requireGuest(redirectTo = '/'): boolean {
-	if (!browser) return true;
-
-	if (authStore.isAuthenticated) {
-		goto(redirectTo);
-		return false;
-	}
-
-	return true;
-}
-
-/**
- * 获取重定向 URL（带 redirect 参数）
- */
-export function getAuthRedirectUrl(currentPath: string): string {
-	return currentPath;
-}

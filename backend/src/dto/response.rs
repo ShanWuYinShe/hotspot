@@ -1229,6 +1229,28 @@ pub struct AppLimits {
     pub search_radius_max: i32,
 }
 
+/// 频率限制配置 - API 文档: RateLimitConfig
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RateLimitConfig {
+    // 全局限速
+    pub global_per_hour: u32,
+    pub user_per_hour: u32,
+    // 认证相关限速
+    pub auth_send_code_per_minute: u32,
+    pub auth_verify_code_per_10minutes: u32,
+    pub auth_register_per_10minutes: u32,
+    pub auth_login_per_10minutes: u32,
+    pub auth_guest_per_10minutes: u32,
+    pub auth_refresh_per_10minutes: u32,
+    pub auth_reset_request_per_minute: u32,
+    pub auth_reset_verify_per_10minutes: u32,
+    pub auth_reset_per_10minutes: u32,
+    // 业务相关限速
+    pub moments_create_per_minute: u32,
+    pub comments_create_per_minute: u32,
+    pub reports_create_per_hour: u32,
+}
+
 /// 全局设置 - API 文档: GlobalSettings
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GlobalSettings {
@@ -1237,6 +1259,7 @@ pub struct GlobalSettings {
     pub features: FeatureSwitches,
     pub contact: ContactInfo,
     pub limits: AppLimits,
+    pub rate_limits: RateLimitConfig,
 }
 
 /// 管理员全局设置数据 - API 文档: AdminGlobalSettingsData
@@ -1280,6 +1303,13 @@ pub struct UpdateContactConfigData {
 #[derive(Debug, Serialize)]
 pub struct UpdateLimitsConfigData {
     pub limits: AppLimits,
+    pub updated_at: String,
+}
+
+/// 更新频率限制响应
+#[derive(Debug, Serialize)]
+pub struct UpdateRateLimitsConfigData {
+    pub rate_limits: RateLimitConfig,
     pub updated_at: String,
 }
 

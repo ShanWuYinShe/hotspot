@@ -75,6 +75,26 @@ alwaysApply: true
 
 ### Token 处理规则
 
+#### Token 携带方式（优先级从高到低）
+
+**Web 端**（推荐）：
+1. **Cookie 方式**（推荐，自动携带）
+   - `access_token` Cookie：所有 `/api/*` 请求自动携带
+   - `refresh_token` Cookie：仅 `/api/v1/auth/refresh_token` 请求自动携带
+   - 配置：`HttpOnly; Secure; SameSite=Lax`
+   
+2. **Header 方式**（备用）
+   - `Authorization: Bearer <access_token>`
+   - 用于特殊场景（如跨域、SSR 预渲染等）
+
+**App 端**：
+- `Authorization: Bearer <access_token>`
+- 客户端从响应体获取 token 并存储在 Keychain/Keystore
+
+**优先级**：如果同时存在 Cookie 和 Header，优先使用 Header
+
+#### Token 验证规则
+
 | 场景 | Token 要求 | 响应差异 |
 |-----|----------|---------|
 | 查询类（搜索/详情/列表） | **可选** | 若类型定义含 `@auth-only` 字段，登录态返回这些字段 |
@@ -83,6 +103,11 @@ alwaysApply: true
 | `*/me/*` 路径（如 `/api/v1/user/me/*`） | **必须** | 当前用户专属数据 |
 | `/feed/*` 路径 | **必须** | 个性化推荐依赖身份 |
 | `/admin/*` 路径 | **必须**+权限 | 管理员功能 |
+
+**说明**：
+- 所有 API 都应该检查本地是否存在有效 token，如果存在则自动携带
+- Web 端通过 Cookie 自动携带，无需前端代码手动处理
+- App 端需要在每个请求的 Header 中手动添加 `Authorization` 字段
 
 ### @auth-only 字段标注机制
 
@@ -145,19 +170,18 @@ alwaysApply: true
 **设计规范**：
 
 - **创建操作 (create)**: 仅返回新资源 ID 和客户端无法推断的必要字段 (如 `created_at`).
-- **列表操作 (list)**: 返回 `PaginatedData<ItemType>`，仅包含列表展示所需字段，不包含详情/大字段.
-- **详情获取**: 返回完整对象信息.
+- **列表/搜索/详情操作**: 统一使用 `XxxSearchItem` 类型，通过 `@auth-only` 字段区分登录态和非登录态的响应差异.
 - **上下文敏感**：同一路径下，区分“未登录（不带 token）”与“已登录（带 token）”的数据形态差异（通过 `@auth-only` 字段体现）。
 
 ### 强类型要求
 
 - 所有 request/response 必须强类型
 - 类型命名遵循：
-  - 详情/资料: `XxxCard` (如 `UserCard`, `MomentCard`)
-  - 列表项: `XxxItem` (如 `FriendItem`, `CommentListItem`)
+  - 统一搜索类型: `XxxSearchItem` (如 `UserSearchItem`, `GroupSearchItem`, `MomentSearchItem` - 用于列表、搜索、详情等所有场景，因为获取详情也是一种指定目标的搜索)
   - 基础信息: `XxxInfo` (嵌入用，如 `UserInfo`, `GroupInfo`)
   - 我的状态: `MyXxxState` (如 `MyGroupState`, `MyMomentState`)
   - 关系: `Relationship`
+  - 特定场景列表项: `XxxListItem` (如 `CommentListItem`, `FeedMomentItem` - 仅当需要特殊字段时使用)
 
 ---
 
@@ -172,7 +196,7 @@ alwaysApply: true
 type UserType = 'temp' | 'normal' | 'admin' | 'system';
 
 // 消息类型枚举
-type MessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'location' | 'system';
+type MessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'system';
 type SendMessageType = Exclude<MessageType, 'system'>;
 
 // 隐私级别枚举
@@ -270,17 +294,26 @@ interface GeoPoint {
   longitude: number; // [-180, 180]
 }
 
-// 命名位置 (用于存储/展示)
+// 位置信息 (包含坐标和位置名称)
+// 用途：仅用于 request 请求参数
 interface Location extends GeoPoint {
   location_name: string; // 必填，无名称时使用默认值或空字符串
 }
 
-// 相对位置 (用于搜索结果/附近推荐)
+// 相对位置 (用于所有 response 响应数据)
+// 用途：所有 response 中的位置字段统一使用此类型
 // distance 和 bearing_degrees 基于 reference_point 计算，且可能被服务端降精度
-interface RelativeLocation extends Location {
-  distance: number;        // 距离浏览锚点的距离 (米)
-  bearing_degrees: number; // 相对浏览锚点的方位角 [0, 360)
+interface RelativeLocation extends GeoPoint {
+  location_name: string;       // 位置名称
+  distance?: number;           // 距离浏览锚点的距离 (米)，有参考点时有值，否则为 undefined
+  bearing_degrees?: number;    // 相对浏览锚点的方位角 [0, 360)，有参考点时有值，否则为 undefined
 }
+
+// 使用说明：
+// - Request 参数：使用 Location（只有坐标+名称）
+// - Response 数据：统一使用 RelativeLocation
+//   - 搜索/列表/Feed：distance 和 bearing_degrees 有值
+//   - 详情/Admin/用户自己的内容：distance 和 bearing_degrees 为 undefined
 
 // 视口边界 (用于地图查询)
 interface Bounds {
@@ -353,19 +386,13 @@ interface MessageMedia {
   height?: number;
   mime_type?: string;
 }
-
-// 位置消息信息
-interface MessageLocation {
-  location: Location;  // 经纬度和地点名
-  address?: string;    // 详细地址（可选）
-}
 ```
 
 ---
 
 ## 领域实体定义 (Domain Entities)
 
-本节定义业务核心对象。遵循 **Info (嵌入) -> Item (列表) -> Card (详情)** 的分层模式。
+本节定义业务核心对象。遵循 **Info (嵌入) -> SearchItem (统一搜索)** 的分层模式。
 
 ### 用户 (User)
 
@@ -381,7 +408,7 @@ interface UserInfo {
 }
 ```
 
-**UserSearchItem**: 用户搜索结果（继承 UserInfo）
+**UserSearchItem**: 用户统一搜索类型（用于列表、搜索、详情等所有场景）
 ```typescript
 interface UserSearchItem extends UserInfo {
   bio?: string;
@@ -391,24 +418,13 @@ interface UserSearchItem extends UserInfo {
   is_online?: boolean;      // 在线状态
   last_online?: string;     // 最后在线时间
   
-  // 位置信息（RelativeLocation 包含距离）
+  // 位置信息：使用 RelativeLocation
+  // - 搜索/列表场景：distance 和 bearing_degrees 有值
+  // - 详情场景：distance 和 bearing_degrees 为 undefined
   location?: RelativeLocation;
-}
-```
-
-**UserCard**: 用户资料详情（继承 UserInfo）
-```typescript
-interface UserCard extends UserInfo {
-  bio?: string;
-  tags?: string[];
   
-  // 隐私受控字段（隐私限制时不返回，不暴露原因）
-  is_online?: boolean;      // 在线状态
-  last_online?: string;     // 最后在线时间
-  location?: Location;      // 位置信息
-  
-  // 统计信息
-  stats: {
+  // 统计信息（详情页返回，搜索/列表可选返回）
+  stats?: {
     moments_count: number;
     friends_count: number;  // 好友数量（好友 = 互相关注）
     followers_count: number;
@@ -419,6 +435,7 @@ interface UserCard extends UserInfo {
   relation?: Relationship;
   
   // 社交上下文（心理学优化：展示与当前用户的共同点，增强连接感）
+  // 详情页返回，搜索/列表不返回
   social_context?: {
     mutual_friends_count: number;       // 共同好友数
     mutual_friends_preview?: UserInfo[];  // 前2-3个共同好友
@@ -454,27 +471,21 @@ interface GroupInfo {
 }
 ```
 
-**GroupSearchItem**: 群组搜索结果（继承 GroupInfo）
+**GroupSearchItem**: 群组统一搜索类型（用于列表、搜索、详情等所有场景）
 ```typescript
 interface GroupSearchItem extends GroupInfo {
   description?: string;
   tags?: string[];
   has_password: boolean;
   
-  // 位置信息（RelativeLocation 包含距离）
+  // 位置信息：使用 RelativeLocation
+  // - 搜索/列表场景：distance 和 bearing_degrees 有值
+  // - 详情场景：distance 和 bearing_degrees 为 undefined
   location: RelativeLocation;
-}
-```
-
-**GroupCard**: 群组详情（继承 GroupInfo）
-```typescript
-interface GroupCard extends GroupInfo {
-  description?: string;
-  tags?: string[];
-  has_password: boolean;
-  location: Location;
-  created_at: string;
-  owner_id: number;
+  
+  // 详情页返回，搜索/列表不返回
+  created_at?: string;
+  owner_id?: number;
   
   // === @auth-only 以下字段仅登录态返回 ===
   my_state?: MyGroupState;
@@ -487,7 +498,7 @@ interface GroupSettings {
   join_method: GroupJoinMethod;
   is_searchable: boolean;
   max_members: number;
-  location: Location;
+  location: RelativeLocation;  // distance/bearing_degrees 为 undefined（配置不需要距离）
 }
 ```
 
@@ -509,7 +520,7 @@ interface MyGroupItem extends GroupInfo {
   description?: string;
   tags?: string[];
   has_password: boolean;
-  location: Location;
+  location: RelativeLocation;  // distance/bearing_degrees 为 undefined（用户自己的群组不需要距离）
   last_activity_at: string;
   
   // 我的状态（内联，因为 MyGroupItem 必然包含我的状态）
@@ -563,25 +574,22 @@ interface MomentBase {
 }
 ```
 
-**MomentSearchItem**: 瞬间搜索结果（继承 MomentBase）
+**MomentSearchItem**: 瞬间统一搜索类型（用于列表、搜索、详情等所有场景）
 ```typescript
 interface MomentSearchItem extends MomentBase {
   user: UserInfo;
-  location: RelativeLocation;  // 搜索结果包含相对距离
-}
-```
-注意：不返回 `privacy_level`，隐私过滤在服务端完成，能出现在结果中的都是对当前用户可见的。
-
-**MomentCard**: 瞬间详情（继承 MomentBase）
-```typescript
-interface MomentCard extends MomentBase {
-  user: UserInfo;
-  location: Location;  // 详情使用绝对位置
+  
+  // 位置信息：使用 RelativeLocation
+  // - 搜索/列表场景：distance 和 bearing_degrees 有值
+  // - 详情场景：distance 和 bearing_degrees 为 undefined
+  location: RelativeLocation;
   
   // === @auth-only 以下字段仅登录态返回 ===
   my_state?: MyMomentState;
 }
 ```
+
+注意：不返回 `privacy_level`，隐私过滤在服务端完成，能出现在结果中的都是对当前用户可见的。
 
 **MyMomentState**: 我对瞬间的互动状态（@auth-only）
 ```typescript
@@ -594,7 +602,7 @@ interface MyMomentState {
 **UserMomentListItem**: 用户瞬间列表项（继承 MomentBase，用于查看某个用户的瞬间历史）
 ```typescript
 interface UserMomentListItem extends MomentBase {
-  location: Location;
+  location: RelativeLocation;  // distance/bearing_degrees 为 undefined（用户时间线不需要距离）
   // 注：不包含 user 字段，因为查询时 user 已知
 }
 ```
@@ -663,7 +671,6 @@ interface MessageBase {
   
   content?: string;
   media?: MessageMedia;
-  location?: MessageLocation;
   
   sender: UserInfo;
   

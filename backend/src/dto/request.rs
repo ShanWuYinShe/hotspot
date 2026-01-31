@@ -1024,6 +1024,28 @@ pub struct UpdateLimitsRequest {
     pub search_radius_max: Option<i32>,
 }
 
+/// 更新频率限制配置请求 - API 文档: UpdateRateLimitsRequest
+#[derive(Debug, Deserialize, Serialize)]
+pub struct UpdateRateLimitsRequest {
+    // 全局限速
+    pub global_per_hour: Option<u32>,
+    pub user_per_hour: Option<u32>,
+    // 认证相关限速
+    pub auth_send_code_per_minute: Option<u32>,
+    pub auth_verify_code_per_10minutes: Option<u32>,
+    pub auth_register_per_10minutes: Option<u32>,
+    pub auth_login_per_10minutes: Option<u32>,
+    pub auth_guest_per_10minutes: Option<u32>,
+    pub auth_refresh_per_10minutes: Option<u32>,
+    pub auth_reset_request_per_minute: Option<u32>,
+    pub auth_reset_verify_per_10minutes: Option<u32>,
+    pub auth_reset_per_10minutes: Option<u32>,
+    // 业务相关限速
+    pub moments_create_per_minute: Option<u32>,
+    pub comments_create_per_minute: Option<u32>,
+    pub reports_create_per_hour: Option<u32>,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct FeedMomentsRequest {
     pub source: Option<FeedSource>,

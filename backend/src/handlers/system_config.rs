@@ -5,12 +5,12 @@ use crate::{
         request::{
             AdminGetGlobalSettingsRequest, FetchGlobalSettingsRequest, UpdateContactRequest,
             UpdateDefaultsRequest, UpdateFeaturesRequest, UpdateLimitsRequest,
-            UpdateUploadConfigRequest,
+            UpdateRateLimitsRequest, UpdateUploadConfigRequest,
         },
         response::{
             AdminGlobalSettingsData, ApiResponse, GlobalSettings, UpdateContactConfigData,
             UpdateDefaultsConfigData, UpdateFeaturesConfigData, UpdateLimitsConfigData,
-            UpdateUploadConfigData,
+            UpdateRateLimitsConfigData, UpdateUploadConfigData,
         },
     },
     error::Result,
@@ -212,6 +212,40 @@ pub async fn admin_update_limits_config(
         .await?;
     Ok(Json(ApiResponse::success(UpdateLimitsConfigData {
         limits: settings.limits,
+        updated_at: chrono::Utc::now().to_rfc3339(),
+    })))
+}
+
+pub async fn admin_update_rate_limits_config(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+    Json(req): Json<UpdateRateLimitsRequest>,
+) -> Result<Json<ApiResponse<UpdateRateLimitsConfigData>>> {
+    let details = serde_json::json!({
+        "section": "rate_limits",
+        "payload": serde_json::to_value(&req).unwrap_or_else(|_| serde_json::json!({})),
+    });
+    let settings = state
+        .system_config_service
+        .update_rate_limits_config(req, user.user_id)
+        .await?;
+    state
+        .admin_audit_service
+        .record(AuditLogInput {
+            action: "config.update".to_string(),
+            operator_id: user.user_id,
+            target_type: "config".to_string(),
+            target_id: "rate_limits".to_string(),
+            target_name: Some("rate_limits".to_string()),
+            details: Some(details),
+            before_state: None,
+            after_state: None,
+            ip_address: None,
+            user_agent: None,
+        })
+        .await?;
+    Ok(Json(ApiResponse::success(UpdateRateLimitsConfigData {
+        rate_limits: settings.rate_limits,
         updated_at: chrono::Utc::now().to_rfc3339(),
     })))
 }

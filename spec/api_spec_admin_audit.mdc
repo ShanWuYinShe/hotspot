@@ -49,7 +49,16 @@ type AuditDetails =
   | { type: 'permission.revoke'; permission: string }
   | { type: 'config.update'; config_key: string };
 
-interface AuditLogItem {
+// 状态快照类型（用于 before_state / after_state）
+type StateSnapshot = 
+  | { type: 'user'; nickname?: string; status?: string; roles?: string[] }
+  | { type: 'group'; name?: string; members_count?: number }
+  | { type: 'role'; name?: string; permissions?: string[] }
+  | { type: 'config'; value?: string };
+
+**AuditLogSearchItem**: 审计日志统一搜索类型（用于列表、搜索、详情等所有场景，返回完全相同的字段）
+
+interface AuditLogSearchItem {
   log_id: string;
   action: AuditAction;
   operator: UserInfo;             // 执行操作的管理员
@@ -61,17 +70,6 @@ interface AuditLogItem {
   ip_address?: string;            // @super-admin-only: 完整 IP 地址，仅超级管理员可见
   device_summary?: string;        // 设备摘要（如 "Chrome on Windows"），脱敏后的 UA 信息
   created_at: string;
-}
-
-// 状态快照类型（用于 before_state / after_state）
-type StateSnapshot = 
-  | { type: 'user'; nickname?: string; status?: string; roles?: string[] }
-  | { type: 'group'; name?: string; members_count?: number }
-  | { type: 'role'; name?: string; permissions?: string[] }
-  | { type: 'config'; value?: string };
-
-interface AuditLogDetail extends AuditLogItem {
-  // 扩展详情
   before_state?: StateSnapshot;   // 操作前状态（已过滤敏感字段）
   after_state?: StateSnapshot;    // 操作后状态（已过滤敏感字段）
 }
@@ -111,8 +109,8 @@ interface AuditLogDetail extends AuditLogItem {
 
 | 子域 | 端点 | 说明 | Request | Response |
 |-----|------|------|---------|----------|
-| 审计日志 | `POST /api/v1/admin/audit/list` | 审计日志列表 | `AuditLogListRequest` | `ApiResponse<PaginatedData<AuditLogItem>>` |
-| 审计日志 | `POST /api/v1/admin/audit/detail` | 审计日志详情 | `AuditLogDetailRequest` | `ApiResponse<AuditLogDetail>` |
+| 审计日志 | `POST /api/v1/admin/audit/list` | 审计日志列表 | `AuditLogListRequest` | `ApiResponse<PaginatedData<AuditLogSearchItem>>` |
+| 审计日志 | `POST /api/v1/admin/audit/detail` | 审计日志详情 | `AuditLogDetailRequest` | `ApiResponse<AuditLogSearchItem>` |
 | 审计日志 | `POST /api/v1/admin/audit/export` | 导出审计日志（异步） | `AuditLogExportRequest` | `ApiResponse<AuditLogExportResult>` |
 | 审计日志 | `POST /api/v1/admin/audit/export/status` | 导出任务状态 | `AuditLogExportStatusRequest` | `ApiResponse<AuditLogExportResult>` |
 
@@ -133,7 +131,7 @@ interface AuditLogListRequest extends PaginationParams {
   end_time?: string;              // 结束时间（UTC ISO 8601）
 }
 ```
-**Response**: `ApiResponse<PaginatedData<AuditLogItem>>`
+**Response**: `ApiResponse<PaginatedData<AuditLogSearchItem>>`
 
 **可能错误码**：`10204`、`10205`
 
@@ -149,7 +147,7 @@ interface AuditLogDetailRequest {
   log_id: string;
 }
 ```
-**Response**: `ApiResponse<AuditLogDetail>`
+**Response**: `ApiResponse<AuditLogSearchItem>`
 
 **可能错误码**：`10001`、`10204`、`10205`、`10300`
 

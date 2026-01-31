@@ -83,19 +83,4 @@ class UIStore {
 export const uiStore = new UIStore();
 
 // ==================== 工具函数 ====================
-
-/**
- * 需要登录的操作包装器
- * 如果未登录，打开登录模态框；已登录则直接执行
- */
-export function requireAuth(
-	isAuthenticated: boolean,
-	action: () => void,
-	options?: { openModal?: boolean }
-) {
-	if (isAuthenticated) {
-		action();
-	} else if (options?.openModal !== false) {
-		uiStore.openLoginModal(action);
-	}
-}
+// 注：需要登录检查请使用 @lib/utils/auth-guard.ts 中的 requireAuth()

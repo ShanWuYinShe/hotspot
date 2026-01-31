@@ -17,13 +17,37 @@ alwaysApply: true
 
 ## 核心类型定义
 
+**AdminUserSearchItem**: 管理员用户统一搜索类型（用于列表、搜索、详情等所有场景，返回完全相同的字段）
+
 ```typescript
-interface AdminUserItem extends UserInfo {
+interface AdminUserSearchItem extends UserInfo {
   status: UserAccountStatus;
   created_at: string;
   last_active_at?: string;
   login_id: string;
   is_online: boolean;
+  email?: string;
+  phone?: string;
+  bio?: string;
+  tags?: string[];
+  location?: RelativeLocation;  // distance/bearing_degrees 为 undefined（管理员查询不需要距离）
+  stats: {
+    moments_count: number;
+    friends_count: number;
+    followers_count: number;
+    following_count: number;
+    groups_count: number;
+  };
+  ban_history?: AdminBanRecord[];
+}
+
+interface AdminBanRecord {
+  banned_at: string;
+  banned_by: UserInfo;
+  reason?: string;
+  duration_days?: number;
+  unbanned_at?: string;
+  unbanned_by?: UserInfo;
 }
 ```
 
@@ -48,8 +72,8 @@ interface AdminUserItem extends UserInfo {
 
 | 子域 | 端点 | 说明 | Request | Response |
 |-----|------|------|---------|----------|
-| 用户管理 | `POST /api/v1/admin/users/search` | 搜索用户 | `AdminUserSearchRequest` | `ApiResponse<PaginatedData<AdminUserItem>>` |
-| 用户管理 | `POST /api/v1/admin/users/detail` | 用户详情 | `AdminUserDetailRequest` | `ApiResponse<AdminUserDetail>` |
+| 用户管理 | `POST /api/v1/admin/users/search` | 搜索用户 | `AdminUserSearchRequest` | `ApiResponse<PaginatedData<AdminUserSearchItem>>` |
+| 用户管理 | `POST /api/v1/admin/users/detail` | 用户详情 | `AdminUserDetailRequest` | `ApiResponse<AdminUserSearchItem>` |
 | 用户管理 | `POST /api/v1/admin/users/ban` | 封禁用户 | `AdminBanUserRequest` | `ApiResponse` |
 | 用户管理 | `POST /api/v1/admin/users/unban` | 解封用户 | `AdminUnbanUserRequest` | `ApiResponse` |
 
@@ -69,7 +93,7 @@ interface AdminUserSearchRequest extends PaginationParams {
   user_type?: UserType;
 }
 ```
-**Response**: `ApiResponse<PaginatedData<AdminUserItem>>`
+**Response**: `ApiResponse<PaginatedData<AdminUserSearchItem>>`
 
 **可能错误码**：`10204`、`10205`
 
@@ -85,41 +109,7 @@ interface AdminUserDetailRequest {
   user_id: number;
 }
 ```
-**Response**: `ApiResponse<AdminUserDetail>`
-
-```typescript
-interface AdminUserDetail extends UserInfo {
-  status: UserAccountStatus;
-  created_at: string;
-  last_active_at?: string;
-  login_id: string;
-  email?: string;
-  phone?: string;
-  bio?: string;
-  tags?: string[];
-  location?: Location;
-  is_online: boolean;
-  // 统计信息
-  stats: {
-    moments_count: number;
-    friends_count: number;
-    followers_count: number;
-    following_count: number;
-    groups_count: number;
-  };
-  // 封禁历史
-  ban_history?: AdminBanRecord[];
-}
-
-interface AdminBanRecord {
-  banned_at: string;
-  banned_by: UserInfo;
-  reason?: string;
-  duration_days?: number;
-  unbanned_at?: string;
-  unbanned_by?: UserInfo;
-}
-```
+**Response**: `ApiResponse<AdminUserSearchItem>`
 
 **可能错误码**：`10001`、`10204`、`10205`、`10310`
 

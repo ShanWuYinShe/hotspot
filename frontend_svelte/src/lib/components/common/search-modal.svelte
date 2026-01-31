@@ -134,52 +134,68 @@
 	}
 
 	function handleSuggestionClick(item: SearchSuggestItem) {
+		if (!item?.payload) return;
+		
 		if (item.type === 'tag') {
 			const tag = item.payload.name;
-			saveRecent(tag);
-			closeModal();
-			goto(`/search?tag=${encodeURIComponent(tag)}`);
+			if (tag) {
+				saveRecent(tag);
+				closeModal();
+				goto(`/search?tag=${encodeURIComponent(tag)}`);
+			}
 			return;
 		}
 
 		closeModal();
 
-		if (item.type === 'user') {
+		if (item.type === 'user' && item.payload.user_id) {
 			goto(`/users/${item.payload.user_id}`);
 			return;
 		}
 
-		if (item.type === 'group') {
+		if (item.type === 'group' && item.payload.group_chat_id) {
 			goto(`/groups/${item.payload.group_chat_id}`);
 			return;
 		}
 
-		goto(`/moments/${item.payload.moment_id}`);
+		if (item.type === 'moment' && item.payload.moment_id) {
+			goto(`/moments/${item.payload.moment_id}`);
+		}
 	}
 
 	function getSuggestionTitle(item: SearchSuggestItem): string {
+		if (!item?.payload) return '未知';
+		
 		switch (item.type) {
 			case 'tag':
-				return `#${item.payload.name}`;
+				return `#${item.payload.name || ''}`;
 			case 'user':
-				return item.payload.nickname;
+				return item.payload.nickname || '未知用户';
 			case 'group':
-				return item.payload.name;
+				return item.payload.name || '未知群组';
 			case 'moment':
 				return item.payload.description || '瞬间';
+			default:
+				return '未知';
 		}
 	}
 
 	function getSuggestionSubtitle(item: SearchSuggestItem): string | null {
+		if (!item?.payload) return null;
+		
 		switch (item.type) {
 			case 'tag':
-				return `使用 ${item.payload.usage_count} 次`;
+				return `使用 ${item.payload.usage_count || 0} 次`;
 			case 'user':
 				return item.payload.bio || null;
 			case 'group':
-				return item.payload.description || `${item.payload.members_count} 位成员`;
-			case 'moment':
-				return `来自 ${item.payload.user.nickname}`;
+				return item.payload.description || `${item.payload.members_count || 0} 位成员`;
+			case 'moment': {
+				const momentPayload = item.payload;
+				return momentPayload.user?.nickname ? `来自 ${momentPayload.user.nickname}` : null;
+			}
+			default:
+				return null;
 		}
 	}
 
@@ -312,20 +328,24 @@
 														<div class="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
 															<Hash class="h-4 w-4" />
 														</div>
-													{:else if item.type === 'user'}
+													{:else if item.type === 'user' && item.payload}
 														<Avatar class="h-9 w-9">
-															<AvatarImage src={item.payload.avatar_url} alt={item.payload.nickname} />
-															<AvatarFallback>{item.payload.nickname.slice(0, 2)}</AvatarFallback>
+															<AvatarImage src={item.payload.avatar_url} alt={item.payload.nickname || '用户'} />
+															<AvatarFallback>{(item.payload.nickname || '用户').slice(0, 2)}</AvatarFallback>
 														</Avatar>
-													{:else if item.type === 'group'}
+													{:else if item.type === 'group' && item.payload}
 														<Avatar class="h-9 w-9">
-															<AvatarImage src={item.payload.avatar_url} alt={item.payload.name} />
-															<AvatarFallback>{item.payload.name.slice(0, 2)}</AvatarFallback>
+															<AvatarImage src={item.payload.avatar_url} alt={item.payload.name || '群组'} />
+															<AvatarFallback>{(item.payload.name || '群组').slice(0, 2)}</AvatarFallback>
+														</Avatar>
+													{:else if item.type === 'moment' && item.payload?.user}
+														<Avatar class="h-9 w-9">
+															<AvatarImage src={item.payload.user.avatar_url} alt={item.payload.user.nickname || '用户'} />
+															<AvatarFallback>{(item.payload.user.nickname || '用户').slice(0, 2)}</AvatarFallback>
 														</Avatar>
 													{:else}
 														<Avatar class="h-9 w-9">
-															<AvatarImage src={item.payload.user.avatar_url} alt={item.payload.user.nickname} />
-															<AvatarFallback>{item.payload.user.nickname.slice(0, 2)}</AvatarFallback>
+															<AvatarFallback>?</AvatarFallback>
 														</Avatar>
 													{/if}
 													<div class="min-w-0 flex-1">

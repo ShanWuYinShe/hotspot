@@ -88,7 +88,7 @@ impl SessionTokenGenerator {
         if token.is_empty() {
             return false;
         }
-        
+
         // 检查 Base64 格式和长度
         use base64::engine::Engine;
         match base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(token) {
