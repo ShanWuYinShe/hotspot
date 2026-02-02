@@ -878,6 +878,8 @@ interface MessageReadStatusRequest extends PaginationParams {
 
 添加群聊消息反应。
 
+**幂等性**：重复添加同一 reaction_type 返回成功（不报错），客户端无需担心重复操作。
+
 **Request**:
 ```typescript
 interface AddGroupMessageReactionRequest {
@@ -887,11 +889,13 @@ interface AddGroupMessageReactionRequest {
 ```
 **Response**: `ApiResponse`
 
-**可能错误码**：`10001`、`10350`、`10416`、`10402`
+**可能错误码**：`10001`、`10350`、`10416`
 
 #### POST /api/v1/group_messages/remove_reaction
 
 移除群聊消息反应。
+
+**幂等性**：重复移除同一 reaction_type 返回成功（不报错），客户端无需担心重复操作。
 
 **Request**:
 ```typescript
@@ -902,7 +906,7 @@ interface RemoveGroupMessageReactionRequest {
 ```
 **Response**: `ApiResponse`
 
-**可能错误码**：`10001`、`10350`、`10416`、`10402`
+**可能错误码**：`10001`、`10350`、`10416`
 
 #### POST /api/v1/group_messages/reactions
 

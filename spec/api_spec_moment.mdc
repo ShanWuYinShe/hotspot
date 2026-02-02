@@ -52,8 +52,7 @@ interface CommentLikeItem {
 | `10330` | 生活瞬间不存在 | 所有瞬间相关接口 |
 | `10340` | 评论不存在 | 所有评论相关接口 |
 | `10360` | 文件/媒体不存在 | `create`、`update` |
-| `10402` | 资源状态冲突 | `like`、`unlike`、`favorite`、`unfavorite`、`comments/like`、`comments/unlike` |
-| `10500` | 请求过于频繁 | `comments/create` |
+| `10500` | 请求过于频繁 | `create`、`comments/create` |
 
 ## 生活瞬间 API
 
@@ -67,7 +66,6 @@ interface CommentLikeItem {
 | 搜索与发现 | `POST /api/v1/moments/suggest` | 瞬间搜索建议 | `SuggestMomentsRequest` | `ApiResponse<MomentSuggestions>` |
 | 瞬间详情与互动 | `POST /api/v1/moments/open_the_door` | 瞬间详情 | `MomentOpenTheDoorRequest` | `ApiResponse<MomentSearchItem>` |
 | 瞬间详情与互动 | `POST /api/v1/moments/interaction_state` | 我的互动状态 | `GetMomentInteractionStateRequest` | `ApiResponse<MyMomentState>` |
-| 瞬间详情与互动 | `POST /api/v1/user/moments` | 用户瞬间历史 | `UserMomentsRequest` | `ApiResponse<PaginatedData<UserMomentListItem>>` |
 | 瞬间操作 | `POST /api/v1/moments/create` | 创建瞬间 | `CreateMomentRequest` | `ApiResponse<UserMomentListItem>` |
 | 瞬间操作 | `POST /api/v1/moments/update` | 编辑瞬间 | `EditMomentRequest` | `ApiResponse` |
 | 瞬间操作 | `POST /api/v1/moments/delete` | 删除瞬间 | `DeleteMomentRequest` | `ApiResponse` |
@@ -187,20 +185,6 @@ interface GetMomentInteractionStateRequest {
 
 **可能错误码**：`10001`、`10330`
 
-#### POST /api/v1/user/moments
-
-获取指定用户生活瞬间历史。
-
-**隐私控制**：受 `moments_visible` 设置控制。
-
-**Request**:
-```typescript
-interface UserMomentsRequest extends PaginationParams {
-  user_id: number;
-}
-```
-**Response**: `ApiResponse<PaginatedData<UserMomentListItem>>`
-
 ### 瞬间操作
 
 #### POST /api/v1/moments/create
@@ -220,7 +204,7 @@ interface CreateMomentRequest {
 ```
 **Response**: `ApiResponse<UserMomentListItem>`
 
-**可能错误码**：`10001`、`10003`、`10360`、`10310`
+**可能错误码**：`10001`、`10003`、`10360`、`10310`、`10500`
 
 #### POST /api/v1/moments/update
 
@@ -260,6 +244,8 @@ interface DeleteMomentRequest {
 
 点赞生活瞬间。
 
+**幂等性**：重复点赞返回成功（不报错），客户端无需担心重复操作。
+
 **Request**:
 ```typescript
 interface LikeMomentRequest {
@@ -268,11 +254,13 @@ interface LikeMomentRequest {
 ```
 **Response**: `ApiResponse`
 
-**可能错误码**：`10001`、`10330`、`10402`
+**可能错误码**：`10001`、`10330`
 
 #### POST /api/v1/moments/unlike
 
 取消点赞生活瞬间。
+
+**幂等性**：重复取消点赞返回成功（不报错），客户端无需担心重复操作。
 
 **Request**:
 ```typescript
@@ -282,11 +270,13 @@ interface UnlikeMomentRequest {
 ```
 **Response**: `ApiResponse`
 
-**可能错误码**：`10001`、`10330`、`10402`
+**可能错误码**：`10001`、`10330`
 
 #### POST /api/v1/moments/favorite
 
 收藏瞬间。
+
+**幂等性**：重复收藏返回成功（不报错），客户端无需担心重复操作。
 
 **Request**:
 ```typescript
@@ -296,11 +286,13 @@ interface FavoriteMomentRequest {
 ```
 **Response**: `ApiResponse`
 
-**可能错误码**：`10001`、`10330`、`10402`
+**可能错误码**：`10001`、`10330`
 
 #### POST /api/v1/moments/unfavorite
 
 取消收藏瞬间。
+
+**幂等性**：重复取消收藏返回成功（不报错），客户端无需担心重复操作。
 
 **Request**:
 ```typescript
@@ -310,7 +302,7 @@ interface UnfavoriteMomentRequest {
 ```
 **Response**: `ApiResponse`
 
-**可能错误码**：`10001`、`10330`、`10402`
+**可能错误码**：`10001`、`10330`
 
 ### 当前用户瞬间 API（/me/ 路径）
 
@@ -453,6 +445,8 @@ interface CommentRepliesRequest extends PaginationParams {
 
 点赞评论。
 
+**幂等性**：重复点赞返回成功（不报错），客户端无需担心重复操作。
+
 **Request**:
 ```typescript
 interface LikeCommentRequest {
@@ -461,11 +455,13 @@ interface LikeCommentRequest {
 ```
 **Response**: `ApiResponse`
 
-**可能错误码**：`10001`、`10340`、`10402`
+**可能错误码**：`10001`、`10340`
 
 #### POST /api/v1/comments/unlike
 
 取消点赞评论。
+
+**幂等性**：重复取消点赞返回成功（不报错），客户端无需担心重复操作。
 
 **Request**:
 ```typescript
@@ -475,7 +471,7 @@ interface UnlikeCommentRequest {
 ```
 **Response**: `ApiResponse`
 
-**可能错误码**：`10001`、`10340`、`10402`
+**可能错误码**：`10001`、`10340`
 
 #### POST /api/v1/comments/likes
 

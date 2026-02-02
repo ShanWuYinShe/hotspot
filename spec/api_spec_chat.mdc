@@ -58,7 +58,6 @@ interface MessageReactionItem {
 | `10211` | 已被对方拉黑 | `send` |
 | `10350` | 消息/会话不存在 | 所有消息相关接口 |
 | `10360` | 文件/媒体不存在 | `send` |
-| `10402` | 资源状态冲突 | `add_reaction`、`remove_reaction` |
 | `10417` | 消息已被撤回 | `update`、`recall` |
 | `10418` | 操作时间窗口已过期 | `update`、`recall` |
 | `10510` | 消息数量已达上限 | `send`（陌生人限制） |
@@ -106,8 +105,13 @@ interface MyPrivateChatsRequest extends PaginationParams {}
 
 **简化设计**：
 - **唯一寻址**：使用 `target_user_id` 获取与指定用户的会话详情
-- **明确语义**：若会话存在，返回完整详情；若会话不存在，返回错误码 `10350`
+- **自动创建**：若会话不存在，自动创建空会话并返回（首次聊天更流畅）
 - **可选消息预加载**：支持一次请求获取会话详情和最近消息
+
+**首次聊天流程**：
+1. 调用 `open_the_door` 检查或创建会话
+2. 自动返回会话详情（无论是否是首次聊天）
+3. 直接调用 `send` 发送消息
 
 **Request**:
 ```typescript
@@ -117,6 +121,8 @@ interface PrivateChatOpenTheDoorRequest {
 }
 ```
 **Response**: `ApiResponse<Conversation>`
+
+**可能错误码**：`10001`、`10310`、`10211`
 
 #### POST /api/v1/private_chats/update_settings
 
@@ -268,7 +274,7 @@ interface MarkPrivateMessagesReadRequest {
 
 添加私聊消息反应。
 
-**reaction 语义**：重复添加同一 reaction_type 返回成功。
+**幂等性**：重复添加同一 reaction_type 返回成功（不报错），客户端无需担心重复操作。
 
 **Request**:
 ```typescript
@@ -279,11 +285,13 @@ interface AddPrivateMessageReactionRequest {
 ```
 **Response**: `ApiResponse`
 
-**可能错误码**：`10001`、`10350`、`10402`
+**可能错误码**：`10001`、`10350`
 
 #### POST /api/v1/private_messages/remove_reaction
 
 移除私聊消息反应。
+
+**幂等性**：重复移除同一 reaction_type 返回成功（不报错），客户端无需担心重复操作。
 
 **Request**:
 ```typescript
@@ -294,7 +302,7 @@ interface RemovePrivateMessageReactionRequest {
 ```
 **Response**: `ApiResponse`
 
-**可能错误码**：`10001`、`10350`、`10402`
+**可能错误码**：`10001`、`10350`
 
 #### POST /api/v1/private_messages/reactions
 

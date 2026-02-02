@@ -27,7 +27,7 @@ interface UserStats {
 }
 
 interface MyProfile {
-  // user_id 可从 access_token (JWT) 解析，无需返回
+  user_id: number;
   nickname: string;
   avatar_url?: string;
   bio?: string;
@@ -83,13 +83,6 @@ interface FollowerItem {
   is_online?: boolean;        // 隐私受控：对方隐私设置时不返回
 }
 
-interface FollowRequestItem {
-  request_id: string;
-  requester: UserInfo;
-  message?: string;
-  requested_at: string;
-}
-
 interface BlockedUserSearchItem {
   user: UserInfo;
   blocked_at: string;
@@ -114,7 +107,7 @@ interface BlockedUserSearchItem {
 | `10400` | 资源已存在 | `me/upgrade` |
 | `10402` | 资源状态冲突 | `me/delete` |
 | `10411` | 不能对自己执行此操作 | `follow`、`unfollow`、`block`、`unblock`、`remark` |
-| `10420` | 不是好友关系 | `me/remark` |
+| `10421` | 未关注该用户 | `me/remark` |
 
 ## 接口列表
 
@@ -133,6 +126,7 @@ interface BlockedUserSearchItem {
 | 用户资料 | `POST /api/v1/user/following` | 用户关注列表 | `UserFollowingRequest` | `ApiResponse<PaginatedData<UserInfo>>` |
 | 用户资料 | `POST /api/v1/user/followers` | 用户粉丝列表 | `UserFollowersRequest` | `ApiResponse<PaginatedData<UserInfo>>` |
 | 用户资料 | `POST /api/v1/user/groups` | 用户群组列表 | `UserGroupsRequest` | `ApiResponse<PaginatedData<GroupSearchItem>>` |
+| 用户资料 | `POST /api/v1/user/moments` | 用户瞬间历史 | `UserMomentsRequest` | `ApiResponse<PaginatedData<UserMomentListItem>>` |
 | 用户资料 | `POST /api/v1/user/liked_moments` | 用户点赞瞬间列表 | `UserLikedMomentsRequest` | `ApiResponse<PaginatedData<MomentSearchItem>>` |
 | 当前用户 | `POST /api/v1/user/me/profile` | 我的资料 | `{}` | `ApiResponse<MyProfile>` |
 | 当前用户 | `POST /api/v1/user/me/profile/update` | 更新我的资料 | `UpdateProfileRequest` | `ApiResponse<MyProfile>` |
@@ -149,10 +143,8 @@ interface BlockedUserSearchItem {
 | 当前用户 | `POST /api/v1/user/me/friends` | 我的好友列表 | `MyFriendsRequest` | `ApiResponse<PaginatedData<FriendItem>>` |
 | 当前用户 | `POST /api/v1/user/me/following` | 我的关注列表 | `MyFollowingRequest` | `ApiResponse<PaginatedData<FollowingItem>>` |
 | 当前用户 | `POST /api/v1/user/me/followers` | 我的粉丝列表 | `MyFollowersRequest` | `ApiResponse<PaginatedData<FollowerItem>>` |
-| 当前用户 | `POST /api/v1/user/me/follow_requests` | 待审批关注请求 | `MyFollowRequestsRequest` | `ApiResponse<PaginatedData<FollowRequestItem>>` |
-| 当前用户 | `POST /api/v1/user/me/follow_requests/handle` | 处理关注请求 | `HandleFollowRequestRequest` | `ApiResponse` |
 | 当前用户 | `POST /api/v1/user/me/blocked` | 我的拉黑列表 | `MyBlockedRequest` | `ApiResponse<PaginatedData<BlockedUserSearchItem>>` |
-| 当前用户 | `POST /api/v1/user/me/remark` | 设置好友备注 | `SetRemarkRequest` | `ApiResponse` |
+| 当前用户 | `POST /api/v1/user/me/remark` | 设置备注 | `SetRemarkRequest` | `ApiResponse` |
 
 ### 用户搜索
 
@@ -333,6 +325,22 @@ interface UserGroupsRequest extends PaginationParams {
 }
 ```
 **Response**: `ApiResponse<PaginatedData<GroupSearchItem>>`
+
+**可能错误码**：`10001`、`10003`、`10310`
+
+#### POST /api/v1/user/moments
+
+获取指定用户生活瞬间历史。
+
+**隐私控制**：受 `moments_visible` 设置控制。
+
+**Request**:
+```typescript
+interface UserMomentsRequest extends PaginationParams {
+  user_id: number;
+}
+```
+**Response**: `ApiResponse<PaginatedData<UserMomentListItem>>`
 
 **可能错误码**：`10001`、`10003`、`10310`
 
@@ -542,31 +550,6 @@ interface MyFollowersRequest extends PaginationParams {}
 ```
 **Response**: `ApiResponse<PaginatedData<FollowerItem>>`
 
-#### POST /api/v1/user/me/follow_requests
-
-获取待审批的关注请求列表（当 `allow_follow` 设置为需要审批时）。
-
-**Request**:
-```typescript
-interface MyFollowRequestsRequest extends PaginationParams {}
-```
-**Response**: `ApiResponse<PaginatedData<FollowRequestItem>>`
-
-#### POST /api/v1/user/me/follow_requests/handle
-
-处理关注请求（接受/拒绝）。
-
-**Request**:
-```typescript
-interface HandleFollowRequestRequest {
-  request_id: string;
-  action: 'accept' | 'reject';
-}
-```
-**Response**: `ApiResponse`
-
-**可能错误码**：`10001`、`10300`（请求不存在）
-
 #### POST /api/v1/user/me/blocked
 
 获取拉黑列表。
@@ -579,15 +562,17 @@ interface MyBlockedRequest extends PaginationParams {}
 
 #### POST /api/v1/user/me/remark
 
-设置好友备注（仅允许对好友设置备注，好友 = 互相关注）。
+设置用户备注（允许给我关注的任何人设置备注，方便记忆和管理）。
+
+**权限要求**：必须已关注该用户。
 
 **Request**:
 ```typescript
 interface SetRemarkRequest {
   user_id: number;
-  remark?: string;
+  remark?: string;  // 为空则清除备注
 }
 ```
 **Response**: `ApiResponse`
 
-**可能错误码**：`10001`、`10003`、`10310`、`10411`、`10420`
+**可能错误码**：`10001`、`10003`、`10310`、`10411`、`10421`
