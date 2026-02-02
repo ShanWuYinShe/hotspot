@@ -5,7 +5,7 @@
 //! 注意：此功能依赖用户模块迁移（migrations/002_user_module.sql）
 
 use chrono::{DateTime, Utc};
-use sqlx::{PgPool, Row};
+use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
 use crate::error::{AppError, Result};
@@ -17,7 +17,7 @@ pub struct FollowRequestRepository {
 }
 
 /// 关注请求数据行
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, FromRow)]
 pub struct FollowRequestRow {
     pub id: i64,
     pub request_id: Uuid,
@@ -42,14 +42,14 @@ impl FollowRequestRepository {
         message: Option<String>,
     ) -> Result<Uuid> {
         // 检查是否已有待处理的请求
-        let existing: Option<Uuid> = sqlx::query_scalar(
+        let existing = sqlx::query_scalar!(
             r#"
             SELECT request_id FROM follow_requests
             WHERE requester_id = $1 AND target_id = $2 AND status = 'pending'
             "#,
+            requester_id,
+            target_id
         )
-        .bind(requester_id)
-        .bind(target_id)
         .fetch_optional(&self.pool)
         .await?;
 
@@ -60,7 +60,7 @@ impl FollowRequestRepository {
         }
 
         // 创建新请求（如果有之前被拒绝的请求，更新为 pending）
-        let request_id: Uuid = sqlx::query_scalar(
+        let request_id = sqlx::query_scalar!(
             r#"
             INSERT INTO follow_requests (requester_id, target_id, message, status, created_at)
             VALUES ($1, $2, $3, 'pending', NOW())
@@ -71,10 +71,10 @@ impl FollowRequestRepository {
                 handled_at = NULL
             RETURNING request_id
             "#,
+            requester_id,
+            target_id,
+            message
         )
-        .bind(requester_id)
-        .bind(target_id)
-        .bind(message)
         .fetch_one(&self.pool)
         .await?;
 
@@ -83,20 +83,20 @@ impl FollowRequestRepository {
 
     /// 检查是否存在待处理的关注请求
     pub async fn has_pending_request(&self, requester_id: i64, target_id: i64) -> Result<bool> {
-        let result: bool = sqlx::query_scalar(
+        let result = sqlx::query_scalar!(
             r#"
             SELECT EXISTS(
                 SELECT 1 FROM follow_requests
                 WHERE requester_id = $1 AND target_id = $2 AND status = 'pending'
             )
             "#,
+            requester_id,
+            target_id
         )
-        .bind(requester_id)
-        .bind(target_id)
         .fetch_one(&self.pool)
         .await?;
 
-        Ok(result)
+        Ok(result.unwrap_or(false))
     }
 
     /// 获取用户收到的关注请求列表（待处理）
@@ -112,7 +112,8 @@ impl FollowRequestRepository {
             i64::MAX
         };
 
-        let rows = sqlx::query(
+        let rows = sqlx::query_as!(
+            FollowRequestRow,
             r#"
             SELECT 
                 id, request_id, requester_id, target_id, message,
@@ -122,24 +123,12 @@ impl FollowRequestRepository {
             ORDER BY id DESC
             LIMIT $3
             "#,
+            user_id,
+            last_id,
+            limit as i64
         )
-        .bind(user_id)
-        .bind(last_id)
-        .bind(limit as i64)
         .fetch_all(&self.pool)
         .await?;
-
-        let rows: Vec<FollowRequestRow> = rows
-            .into_iter()
-            .map(|row| FollowRequestRow {
-                id: row.get("id"),
-                request_id: row.get("request_id"),
-                requester_id: row.get("requester_id"),
-                target_id: row.get("target_id"),
-                message: row.get("message"),
-                created_at: row.get("created_at"),
-            })
-            .collect();
 
         let next_cursor = rows
             .last()
@@ -158,42 +147,36 @@ impl FollowRequestRepository {
     ) -> Result<Option<FollowRequestRow>> {
         let status = if accept { "accepted" } else { "rejected" };
 
-        let row = sqlx::query(
+        let row = sqlx::query_as!(
+            FollowRequestRow,
             r#"
             UPDATE follow_requests
-            SET status = $1::follow_request_status, handled_at = NOW()
+            SET status = $1::TEXT::follow_request_status, handled_at = NOW()
             WHERE request_id = $2 AND target_id = $3 AND status = 'pending'
             RETURNING 
                 id, request_id, requester_id, target_id, message,
                 created_at
             "#,
+            status,
+            request_id,
+            target_id
         )
-        .bind(status)
-        .bind(request_id)
-        .bind(target_id)
         .fetch_optional(&self.pool)
         .await?;
 
-        Ok(row.map(|r| FollowRequestRow {
-            id: r.get("id"),
-            request_id: r.get("request_id"),
-            requester_id: r.get("requester_id"),
-            target_id: r.get("target_id"),
-            message: r.get("message"),
-            created_at: r.get("created_at"),
-        }))
+        Ok(row)
     }
 
     /// 删除关注请求（用于取消）
     pub async fn delete(&self, requester_id: i64, target_id: i64) -> Result<bool> {
-        let result = sqlx::query(
+        let result = sqlx::query!(
             r#"
             DELETE FROM follow_requests
             WHERE requester_id = $1 AND target_id = $2 AND status = 'pending'
             "#,
+            requester_id,
+            target_id
         )
-        .bind(requester_id)
-        .bind(target_id)
         .execute(&self.pool)
         .await?;
 

@@ -10,6 +10,7 @@
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import type { ReportItem, ReportStatus } from '$lib/types/api';
+	import { formatDateTime } from '$lib/utils/format';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import Flag from 'lucide-svelte/icons/flag';
 	import MoreVertical from 'lucide-svelte/icons/more-vertical';
@@ -66,10 +67,6 @@
 		} catch {
 			toast.error('操作失败');
 		}
-	}
-
-	function formatDate(dateStr: string): string {
-		return new Date(dateStr).toLocaleString('zh-CN');
 	}
 
 	function getReasonText(reason: string): string {
@@ -216,7 +213,7 @@
 											{/if}
 										</div>
 										<p class="mt-2 text-xs text-muted-foreground">
-											{formatDate(report.created_at)}
+											{formatDateTime(report.created_at)}
 										</p>
 									</div>
 								</div>

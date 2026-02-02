@@ -2,6 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
 
+use crate::constants::{DEFAULT_LATITUDE, DEFAULT_LOCATION_NAME, DEFAULT_LONGITUDE};
 use crate::error::Result;
 use crate::types::enums::{Gender, UserType};
 
@@ -24,8 +25,9 @@ pub struct UserRow {
     pub current_longitude: Option<f64>, // NULL = location not set
     pub current_location_name: Option<String>, // NULL = location not set
     pub created_at: DateTime<Utc>,
-    pub is_deleted: bool,
-    pub deleted_at: Option<DateTime<Utc>>, // NULL = not deleted
+    pub is_banned: bool,               // 是否被封禁
+    pub ban_reason: Option<String>,    // 封禁原因
+    pub banned_until: Option<DateTime<Utc>>, // 封禁截止时间（NULL=永久封禁）
 }
 
 /// 用户简介Row (用于列表展示，不含敏感信息)
@@ -65,6 +67,30 @@ pub struct UserSuggestRow {
     pub bio: String,
     pub user_type: UserType,
     pub distance: Option<f64>,
+}
+
+/// 用户封禁状态Row
+#[derive(Debug, Clone)]
+struct UserBanStatusRow {
+    is_banned: bool,
+    banned_until: Option<DateTime<Utc>>,
+}
+
+/// 用户位置Row
+#[derive(Debug, Clone)]
+struct UserLocationRow {
+    current_latitude: Option<f64>,
+    current_longitude: Option<f64>,
+}
+
+/// 用户统计Row
+#[derive(Debug, Clone)]
+struct UserStatsRow {
+    moments_count: i64,
+    friends_count: i64,
+    followers_count: i64,
+    following_count: i64,
+    groups_count: i64,
 }
 
 /// 管理员搜索用户结果
@@ -134,7 +160,7 @@ impl UserRepository {
                       email, phone, user_type as "user_type: UserType",
                       gender as "gender: Gender",
                       current_latitude, current_longitude, current_location_name,
-                      created_at, is_deleted, deleted_at
+                      created_at, is_banned, ban_reason, banned_until
             "#,
             user_id,
             user_type as UserType,
@@ -160,9 +186,9 @@ impl UserRepository {
                    email, phone, user_type as "user_type: UserType",
                    gender as "gender: Gender",
                    current_latitude, current_longitude, current_location_name,
-                   created_at, is_deleted, deleted_at
+                   created_at, is_banned, ban_reason, banned_until
             FROM users
-            WHERE user_id = $1 AND is_deleted = FALSE
+            WHERE user_id = $1 AND is_banned = FALSE
             "#,
             user_id
         )
@@ -174,7 +200,8 @@ impl UserRepository {
 
     /// 检查账号是否被封禁（考虑临时封禁过期）
     pub async fn is_banned(&self, user_id: i64) -> Result<bool> {
-        let row = sqlx::query!(
+        let row = sqlx::query_as!(
+            UserBanStatusRow,
             r#"
             SELECT is_banned, banned_until
             FROM users
@@ -212,7 +239,7 @@ impl UserRepository {
             r#"
             SELECT user_id, nickname, avatar_url, bio, user_type as "user_type: UserType"
             FROM users
-            WHERE user_id = ANY($1) AND is_deleted = FALSE
+            WHERE user_id = ANY($1) AND is_banned = FALSE
             "#,
             user_ids
         )
@@ -224,23 +251,23 @@ impl UserRepository {
 
     /// 检查用户是否存在
     pub async fn exists(&self, user_id: i64) -> Result<bool> {
-        let result = sqlx::query!(
-            r#"SELECT EXISTS(SELECT 1 FROM users WHERE user_id = $1 AND is_deleted = FALSE) as "exists!""#,
+        let exists = sqlx::query_scalar!(
+            r#"SELECT EXISTS(SELECT 1 FROM users WHERE user_id = $1 AND is_banned = FALSE) as "exists!""#,
             user_id
         )
         .fetch_one(&self.pool)
         .await?;
 
-        Ok(result.exists)
+        Ok(exists)
     }
 
     /// 按 user_id 顺序批量获取用户ID（用于布隆过滤器初始化）
     pub async fn list_user_ids_after(&self, last_user_id: i64, limit: i64) -> Result<Vec<i64>> {
-        let rows = sqlx::query!(
+        let user_ids = sqlx::query_scalar!(
             r#"
             SELECT user_id
             FROM users
-            WHERE user_id > $1 AND is_deleted = FALSE
+            WHERE user_id > $1 AND is_banned = FALSE
             ORDER BY user_id ASC
             LIMIT $2
             "#,
@@ -250,10 +277,13 @@ impl UserRepository {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows.into_iter().map(|r| r.user_id).collect())
+        Ok(user_ids)
     }
 
     /// 按ID列表查找用户（带距离计算，使用 PostGIS）
+    ///
+    /// 注意：SQL 中的默认位置值（35.154922, 112.682524, '南天门'）
+    /// 对应 constants::{DEFAULT_LATITUDE, DEFAULT_LONGITUDE, DEFAULT_LOCATION_NAME}
     pub async fn find_by_ids_with_distance(
         &self,
         user_ids: &[i64],
@@ -263,6 +293,12 @@ impl UserRepository {
         if user_ids.is_empty() {
             return Ok(vec![]);
         }
+
+        // 验证默认值与常量一致
+        debug_assert_eq!(35.154922, DEFAULT_LATITUDE);
+        debug_assert_eq!(112.682524, DEFAULT_LONGITUDE);
+        debug_assert_eq!("南天门", DEFAULT_LOCATION_NAME);
+
         let rows = sqlx::query!(
             r#"
             SELECT 
@@ -284,7 +320,7 @@ impl UserRepository {
                 )), 0) as "bearing_degrees!"
             FROM users
             WHERE user_id = ANY($1)
-              AND is_deleted = FALSE
+              AND is_banned = FALSE
               AND user_type IN ('normal', 'temp')
             ORDER BY "distance!" ASC
             "#,
@@ -322,9 +358,9 @@ impl UserRepository {
                    email, phone, user_type as "user_type: UserType",
                    gender as "gender: Gender",
                    current_latitude, current_longitude, current_location_name,
-                   created_at, is_deleted, deleted_at
+                   created_at, is_banned, ban_reason, banned_until
             FROM users
-            WHERE login_id = $1 AND is_deleted = FALSE
+            WHERE login_id = $1 AND is_banned = FALSE
             "#,
             login_id
         )
@@ -338,7 +374,7 @@ impl UserRepository {
     pub async fn exists_by_login_id(&self, login_id: &str) -> Result<bool> {
         let exists = sqlx::query!(
             r#"
-            SELECT EXISTS(SELECT 1 FROM users WHERE login_id = $1 AND is_deleted = FALSE) AS "exists!"
+            SELECT EXISTS(SELECT 1 FROM users WHERE login_id = $1 AND is_banned = FALSE) AS "exists!"
             "#,
             login_id
         )
@@ -403,6 +439,28 @@ impl UserRepository {
         Ok(())
     }
 
+    /// 获取用户当前位置（仅经纬度）
+    pub async fn get_current_location(&self, user_id: i64) -> Result<Option<(f64, f64)>> {
+        let row = sqlx::query_as!(
+            UserLocationRow,
+            r#"
+            SELECT current_latitude, current_longitude
+            FROM users
+            WHERE user_id = $1 AND is_banned = FALSE
+            "#,
+            user_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(
+            row.and_then(|r| match (r.current_latitude, r.current_longitude) {
+                (Some(lat), Some(lng)) => Some((lat, lng)),
+                _ => None,
+            }),
+        )
+    }
+
     /// 更新用户密码
     pub async fn update_password(&self, user_id: i64, password_hash: String) -> Result<()> {
         sqlx::query!(
@@ -447,12 +505,35 @@ impl UserRepository {
         Ok(())
     }
 
-    /// 软删除用户
-    pub async fn soft_delete(&self, user_id: i64) -> Result<()> {
+    /// 封禁用户（软删除已废弃，改用封禁）
+    pub async fn ban_user(
+        &self,
+        user_id: i64,
+        reason: Option<&str>,
+        until: Option<DateTime<Utc>>,
+    ) -> Result<()> {
         sqlx::query!(
             r#"
             UPDATE users
-            SET is_deleted = TRUE, deleted_at = NOW()
+            SET is_banned = TRUE, ban_reason = $2, banned_until = $3
+            WHERE user_id = $1
+            "#,
+            user_id,
+            reason,
+            until
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// 解封用户
+    pub async fn unban_user(&self, user_id: i64) -> Result<()> {
+        sqlx::query!(
+            r#"
+            UPDATE users
+            SET is_banned = FALSE, ban_reason = NULL, banned_until = NULL
             WHERE user_id = $1
             "#,
             user_id
@@ -465,6 +546,9 @@ impl UserRepository {
 
     /// 按昵称搜索用户（带距离计算，受隐私设置控制）
     /// - 过滤 searchable = false 的用户
+    ///
+    /// 注意：SQL 中的默认位置值（35.154922, 112.682524, '南天门'）
+    /// 对应 constants::{DEFAULT_LATITUDE, DEFAULT_LONGITUDE, DEFAULT_LOCATION_NAME}
     pub async fn search_by_keyword(
         &self,
         keyword: &str,
@@ -480,6 +564,11 @@ impl UserRepository {
         } else {
             i64::MAX
         };
+
+        // 验证默认值与常量一致
+        debug_assert_eq!(35.154922, DEFAULT_LATITUDE);
+        debug_assert_eq!(112.682524, DEFAULT_LONGITUDE);
+        debug_assert_eq!("南天门", DEFAULT_LOCATION_NAME);
 
         let rows = sqlx::query!(
             r#"
@@ -503,7 +592,7 @@ impl UserRepository {
             FROM users u
             LEFT JOIN user_settings us ON u.user_id = us.user_id
             WHERE u.nickname ILIKE $1 
-              AND u.is_deleted = FALSE 
+              AND u.is_banned = FALSE 
               AND u.user_type IN ('normal', 'temp')
               AND u.user_id < $4
               AND COALESCE(us.searchable, TRUE) = TRUE
@@ -514,15 +603,27 @@ impl UserRepository {
             longitude,
             latitude,
             last_id,
-            limit
+            limit + 1  // 使用 limit + 1 来判断是否有更多数据
         )
         .fetch_all(&self.pool)
         .await?;
 
-        let next_cursor = rows.last().map(|r| encode_cursor(&r.user_id)).transpose()?;
+        // 判断是否有更多数据
+        let has_more = rows.len() > limit as usize;
+        let rows_to_return: Vec<_> = rows.into_iter().take(limit as usize).collect();
+
+        let next_cursor = if has_more {
+            rows_to_return
+                .last()
+                .map(|r| encode_cursor(&r.user_id))
+                .transpose()?
+        } else {
+            None
+        };
 
         Ok((
-            rows.into_iter()
+            rows_to_return
+                .into_iter()
                 .map(|r| UserSearchRow {
                     user_id: r.user_id,
                     nickname: r.nickname,
@@ -566,7 +667,7 @@ impl UserRepository {
                 FROM users u
                 LEFT JOIN user_settings us ON u.user_id = us.user_id
                 WHERE u.nickname ILIKE $1 
-                  AND u.is_deleted = FALSE
+                  AND u.is_banned = FALSE
                   AND u.user_type IN ('normal', 'temp')
                   AND COALESCE(us.searchable, TRUE) = TRUE
                 ORDER BY "distance!" ASC
@@ -603,7 +704,7 @@ impl UserRepository {
                 FROM users u
                 LEFT JOIN user_settings us ON u.user_id = us.user_id
                 WHERE u.nickname ILIKE $1 
-                  AND u.is_deleted = FALSE
+                  AND u.is_banned = FALSE
                   AND u.user_type IN ('normal', 'temp')
                   AND COALESCE(us.searchable, TRUE) = TRUE
                 ORDER BY u.user_id DESC
@@ -632,6 +733,9 @@ impl UserRepository {
     /// 按位置搜索附近用户（PostGIS 计算距离，受隐私设置控制）
     /// - 过滤 searchable = false 的用户
     /// - 过滤 location_searchable = false 的用户
+    ///
+    /// 注意：SQL 中的默认位置值（35.154922, 112.682524, '南天门'）
+    /// 对应 constants::{DEFAULT_LATITUDE, DEFAULT_LONGITUDE, DEFAULT_LOCATION_NAME}
     pub async fn search_by_location(
         &self,
         kw: Option<&str>,
@@ -647,6 +751,11 @@ impl UserRepository {
         } else {
             (0.0, 0)
         };
+
+        // 验证默认值与常量一致
+        debug_assert_eq!(35.154922, DEFAULT_LATITUDE);
+        debug_assert_eq!(112.682524, DEFAULT_LONGITUDE);
+        debug_assert_eq!("南天门", DEFAULT_LOCATION_NAME);
 
         let rows = sqlx::query!(
             r#"
@@ -672,7 +781,7 @@ impl UserRepository {
                 ) as dist
             ) calc
             LEFT JOIN user_settings us ON u.user_id = us.user_id
-            WHERE u.is_deleted = FALSE
+            WHERE u.is_banned = FALSE
               AND u.current_latitude IS NOT NULL
               AND u.current_longitude IS NOT NULL
               AND u.location IS NOT NULL
@@ -702,19 +811,28 @@ impl UserRepository {
             radius,
             last_dist,
             last_id,
-            limit,
+            limit + 1,  // 使用 limit + 1 来判断是否有更多数据
             kw
         )
         .fetch_all(&self.pool)
         .await?;
 
-        let next_cursor = rows
-            .last()
-            .map(|r| encode_cursor(&(r.distance, r.user_id)))
-            .transpose()?;
+        // 判断是否有更多数据
+        let has_more = rows.len() > limit as usize;
+        let rows_to_return: Vec<_> = rows.into_iter().take(limit as usize).collect();
+
+        let next_cursor = if has_more {
+            rows_to_return
+                .last()
+                .map(|r| encode_cursor(&(r.distance, r.user_id)))
+                .transpose()?
+        } else {
+            None
+        };
 
         Ok((
-            rows.into_iter()
+            rows_to_return
+                .into_iter()
                 .map(|r| UserSearchRow {
                     user_id: r.user_id,
                     nickname: r.nickname,
@@ -735,19 +853,20 @@ impl UserRepository {
 
     /// 获取用户统计数据（一次 SQL 聚合，减少多次 COUNT 往返）
     pub async fn get_stats_counts(&self, user_id: i64) -> Result<(i64, i64, i64, i64, i64)> {
-        let row = sqlx::query!(
+        let row = sqlx::query_as_unchecked!(
+            UserStatsRow,
             r#"
             SELECT
-                (SELECT COUNT(*) FROM moments WHERE user_id = $1 AND is_deleted = FALSE) as "moments_count!",
+                (SELECT COUNT(*) FROM moments WHERE user_id = $1 AND is_deleted = FALSE) as moments_count,
                 (SELECT COUNT(*)
                  FROM user_follows f1
                  INNER JOIN user_follows f2
                    ON f1.following_id = f2.follower_id
                   AND f1.follower_id = f2.following_id
-                 WHERE f1.follower_id = $1) as "friends_count!",
-                (SELECT COUNT(*) FROM user_follows WHERE following_id = $1) as "followers_count!",
-                (SELECT COUNT(*) FROM user_follows WHERE follower_id = $1) as "following_count!",
-                (SELECT COUNT(*) FROM group_members WHERE user_id = $1 AND is_deleted = FALSE) as "groups_count!"
+                 WHERE f1.follower_id = $1) as friends_count,
+                (SELECT COUNT(*) FROM user_follows WHERE following_id = $1) as followers_count,
+                (SELECT COUNT(*) FROM user_follows WHERE follower_id = $1) as following_count,
+                (SELECT COUNT(*) FROM group_members WHERE user_id = $1 AND is_deleted = FALSE) as groups_count
             "#,
             user_id
         )
@@ -780,6 +899,9 @@ impl UserRepository {
     }
 
     /// 按位置搜索用户（用于 Feed，使用 Keyset Pagination，可排除特定用户）
+    ///
+    /// 注意：SQL 中的默认位置值（35.154922, 112.682524, '南天门'）
+    /// 对应 constants::{DEFAULT_LATITUDE, DEFAULT_LONGITUDE, DEFAULT_LOCATION_NAME}
     pub async fn search_for_feed(
         &self,
         user_lat: f64,
@@ -795,6 +917,11 @@ impl UserRepository {
         } else {
             (0.0, 0)
         };
+
+        // 验证默认值与常量一致
+        debug_assert_eq!(35.154922, DEFAULT_LATITUDE);
+        debug_assert_eq!(112.682524, DEFAULT_LONGITUDE);
+        debug_assert_eq!("南天门", DEFAULT_LOCATION_NAME);
 
         let rows = sqlx::query!(
             r#"
@@ -820,7 +947,7 @@ impl UserRepository {
                 ) as dist
             ) calc
             LEFT JOIN user_settings us ON u.user_id = us.user_id
-            WHERE u.is_deleted = FALSE
+            WHERE u.is_banned = FALSE
               AND (us.searchable IS NULL OR us.searchable = TRUE)
               AND (us.location_searchable IS NULL OR us.location_searchable = TRUE)
               AND ($3::BIGINT IS NULL OR u.user_id != $3)
@@ -919,7 +1046,7 @@ impl UserRepository {
                 uos.last_active_at
             FROM users u
             LEFT JOIN user_online_status uos ON u.user_id = uos.user_id
-            WHERE u.is_deleted = FALSE
+            WHERE u.is_banned = FALSE
               AND ($1::BIGINT IS NULL OR u.user_id = $1)
               AND ($2::TEXT IS NULL OR u.nickname ILIKE $2)
               AND ($3::TEXT IS NULL OR u.login_id ILIKE $3)
@@ -979,7 +1106,7 @@ impl UserRepository {
                 u.current_location_name
             FROM users u
             LEFT JOIN user_online_status uos ON u.user_id = uos.user_id
-            WHERE u.user_id = $1 AND u.is_deleted = FALSE
+            WHERE u.user_id = $1 AND u.is_banned = FALSE
             "#,
             user_id
         )

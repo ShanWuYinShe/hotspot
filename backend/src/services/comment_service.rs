@@ -90,6 +90,10 @@ impl CommentService {
         let moment_id = Uuid::parse_str(&req.moment_id)
             .map_err(|_| AppError::BadRequest("无效的瞬间ID".to_string()))?;
 
+        if !self.moment_repo.exists(moment_id).await? {
+            return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
+        }
+
         // 如果是回复，验证父评论存在并获取父评论信息
         let parent_comment = if let Some(parent_id_str) = &req.parent_id {
             let parent_id = Uuid::parse_str(parent_id_str)

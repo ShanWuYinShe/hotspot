@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool, Postgres, Transaction};
 
 use crate::error::Result;
+use crate::types::enums::ConfigValueType;
 use crate::utils::pagination::{decode_cursor, encode_cursor};
 
 /// 系统配置Row - 数据库查询返回类型
@@ -11,9 +12,9 @@ pub struct SystemConfigRow {
     pub id: i64,
     pub key: String,
     pub value: String,
-    pub config_type: Option<String>, // 使用 Option 以兼容 sqlx 宏
-    pub category: Option<String>,    // 使用 Option 以兼容 sqlx 宏
-    pub description: Option<String>, // description 在数据库中是 TEXT，可能为 NULL
+    pub config_type: ConfigValueType, // 配置值类型（ENUM）
+    pub category: String,             // 配置分类
+    pub description: Option<String>,  // 配置描述（可选）
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
 }
@@ -37,7 +38,9 @@ impl SystemConfigRepository {
         let row = sqlx::query_as!(
             SystemConfigRow,
             r#"
-            SELECT id, key, value, type as config_type, category, description, created_at, updated_at
+            SELECT id, key, value, 
+                   type as "config_type: ConfigValueType",
+                   category, description, created_at, updated_at
             FROM system_configs
             WHERE key = $1 AND is_deleted = FALSE
             "#,
@@ -56,20 +59,22 @@ impl SystemConfigRepository {
         key: String,
         value: String,
         description: Option<String>,
-        config_type: String,
+        config_type: ConfigValueType,
         category: String,
     ) -> Result<SystemConfigRow> {
         let row = sqlx::query_as!(
             SystemConfigRow,
             r#"
             INSERT INTO system_configs (key, value, description, type, category)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, key, value, type as config_type, category, description, created_at, updated_at
+            VALUES ($1, $2, $3, $4::text::config_value_type, $5)
+            RETURNING id, key, value, 
+                      type as "config_type: ConfigValueType",
+                      category, description, created_at, updated_at
             "#,
             key,
             value,
             description,
-            config_type,
+            config_type.as_str(),
             category
         )
         .fetch_one(&mut **tx)
@@ -138,10 +143,13 @@ impl SystemConfigRepository {
             i64::MAX
         };
 
+        // 查询 limit + 1 条以判断是否有更多数据
         let rows = sqlx::query_as!(
             SystemConfigRow,
             r#"
-            SELECT id, key, value, type as config_type, category, description, created_at, updated_at
+            SELECT id, key, value, 
+                   type as "config_type: ConfigValueType",
+                   category, description, created_at, updated_at
             FROM system_configs
             WHERE ($1::text IS NULL OR category = $1)
               AND id < $2 
@@ -151,12 +159,13 @@ impl SystemConfigRepository {
             "#,
             category,
             last_id,
-            limit as i64
+            (limit + 1) as i64
         )
         .fetch_all(&self.pool)
         .await?;
 
-        let next_cursor = rows.last().map(|r| encode_cursor(&r.id)).transpose()?;
-        Ok((rows, next_cursor))
+        crate::utils::pagination::paginate_with_limit_plus_one(rows, limit, |r| {
+            encode_cursor(&r.id)
+        })
     }
 }

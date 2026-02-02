@@ -26,6 +26,9 @@ class NotificationStore {
 	// 未读数量
 	unreadCount = $derived(this.unreadNotifications.length);
 
+	// 清理函数数组（用于取消 WebSocket 监听）
+	private cleanupFunctions: (() => void)[] = [];
+
 	constructor() {
 		if (!browser) return;
 
@@ -34,11 +37,11 @@ class NotificationStore {
 	}
 
 	/**
-	 * 注册通知事件处理器
+	 * 注册通知事件处理器（现在所有 payload 都有类型提示了！）
 	 */
 	private registerNotificationHandlers() {
 		// 新增关注者
-		websocketStore.on('NewFollower', (payload: any) => {
+		this.cleanupFunctions.push(websocketStore.on('NewFollower', (payload) => {
 			this.addNotification({
 				id: `follower_${Date.now()}`,
 				type: 'follower',
@@ -47,10 +50,10 @@ class NotificationStore {
 				timestamp: payload.followed_at,
 				read: false
 			});
-		});
+		}));
 
 		// 互相关注
-		websocketStore.on('MutualFollow', (payload: any) => {
+		this.cleanupFunctions.push(websocketStore.on('MutualFollow', (payload) => {
 			this.addNotification({
 				id: `mutual_${Date.now()}`,
 				type: 'mutual',
@@ -59,10 +62,10 @@ class NotificationStore {
 				timestamp: payload.mutual_at,
 				read: false
 			});
-		});
+		}));
 
 		// 动态被点赞
-		websocketStore.on('MomentLiked', (payload: any) => {
+		this.cleanupFunctions.push(websocketStore.on('MomentLiked', (payload) => {
 			this.addNotification({
 				id: `like_${payload.moment_id}_${Date.now()}`,
 				type: 'like',
@@ -71,10 +74,10 @@ class NotificationStore {
 				timestamp: payload.liked_at,
 				read: false
 			});
-		});
+		}));
 
 		// 动态被评论
-		websocketStore.on('MomentCommented', (payload: any) => {
+		this.cleanupFunctions.push(websocketStore.on('MomentCommented', (payload) => {
 			this.addNotification({
 				id: `comment_${payload.comment_id}`,
 				type: 'comment',
@@ -83,10 +86,10 @@ class NotificationStore {
 				timestamp: payload.commented_at,
 				read: false
 			});
-		});
+		}));
 
 		// 评论被回复
-		websocketStore.on('CommentReply', (payload: any) => {
+		this.cleanupFunctions.push(websocketStore.on('CommentReply', (payload) => {
 			this.addNotification({
 				id: `reply_${payload.reply_id}`,
 				type: 'reply',
@@ -95,10 +98,10 @@ class NotificationStore {
 				timestamp: payload.replied_at,
 				read: false
 			});
-		});
+		}));
 
 		// 群组邀请
-		websocketStore.on('GroupInviteReceived', (payload: any) => {
+		this.cleanupFunctions.push(websocketStore.on('GroupInviteReceived', (payload) => {
 			this.addNotification({
 				id: `invite_${payload.invite_id}`,
 				type: 'group_invite',
@@ -107,10 +110,10 @@ class NotificationStore {
 				timestamp: payload.created_at,
 				read: false
 			});
-		});
+		}));
 
 		// 入群申请
-		websocketStore.on('GroupApplicationReceived', (payload: any) => {
+		this.cleanupFunctions.push(websocketStore.on('GroupApplicationReceived', (payload) => {
 			this.addNotification({
 				id: `application_${payload.application_id}`,
 				type: 'group_application',
@@ -119,10 +122,10 @@ class NotificationStore {
 				timestamp: payload.created_at,
 				read: false
 			});
-		});
+		}));
 
 		// 系统公告
-		websocketStore.on('SystemAnnouncement', (payload: any) => {
+		this.cleanupFunctions.push(websocketStore.on('SystemAnnouncement', (payload) => {
 			this.addNotification({
 				id: `announcement_${payload.announcement_id}`,
 				type: 'system',
@@ -131,7 +134,7 @@ class NotificationStore {
 				timestamp: payload.created_at,
 				read: false
 			});
-		});
+		}));
 	}
 
 	/**
@@ -162,6 +165,15 @@ class NotificationStore {
 	 */
 	markAsRead(id: string) {
 		this.unreadNotifications = this.unreadNotifications.filter((n) => n.id !== id);
+	}
+
+	/**
+	 * 清理所有 WebSocket 监听器
+	 * 注：虽然这是单例通常不需要清理，但为了一致性和可测试性提供此方法
+	 */
+	destroy() {
+		this.cleanupFunctions.forEach((cleanup) => cleanup());
+		this.cleanupFunctions = [];
 	}
 }
 

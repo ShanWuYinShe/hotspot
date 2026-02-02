@@ -81,6 +81,3 @@ class UIStore {
 }
 
 export const uiStore = new UIStore();
-
-// ==================== 工具函数 ====================
-// 注：需要登录检查请使用 @lib/utils/auth-guard.ts 中的 requireAuth()

@@ -1,0 +1,242 @@
+/**
+ * 批量已读标记 Hook
+ * 
+ * 功能：
+ * 1. 使用 IntersectionObserver 检测消息可见性
+ * 2. 批量标记：收集可见的未读消息 ID，定时批量发送
+ * 3. 防抖优化：避免频繁 API 调用
+ * 4. 离开页面时：批量标记所有可见过的消息
+ */
+
+import { onMount } from 'svelte';
+import { authStore } from '$lib/stores/auth.svelte';
+
+export interface UseBatchMarkReadOptions {
+	/**
+	 * 标记已读的 API 调用函数
+	 */
+	markAsRead: (messageIds?: string[]) => Promise<void>;
+	
+	/**
+	 * 防抖延迟（毫秒）
+	 * @default 2000
+	 */
+	debounceMs?: number;
+	
+	/**
+	 * 消息在视口内停留多久才标记为已读（毫秒）
+	 * @default 1000
+	 */
+	visibilityThreshold?: number;
+	
+	/**
+	 * 是否启用批量标记
+	 * @default true
+	 */
+	enabled?: boolean;
+}
+
+export interface BatchMarkReadResult {
+	/**
+	 * 注册消息元素用于可见性检测
+	 */
+	observe: (element: HTMLElement, messageId: string) => void;
+	
+	/**
+	 * 取消观察消息元素
+	 */
+	unobserve: (element: HTMLElement) => void;
+	
+	/**
+	 * 立即标记所有可见过的消息为已读
+	 */
+	markAllVisibleAsRead: () => Promise<void>;
+	
+	/**
+	 * 清理资源
+	 */
+	cleanup: () => void;
+}
+
+/**
+ * 使用批量已读标记
+ */
+export function useBatchMarkRead(options: UseBatchMarkReadOptions): BatchMarkReadResult {
+	const {
+		markAsRead,
+		debounceMs = 2000,
+		visibilityThreshold = 1000,
+		enabled = true
+	} = options;
+
+	// 已可见的消息 ID 数组（Svelte 5 $state 无法追踪 Set 内部变化，使用数组）
+	let visibleMessageIds = $state<string[]>([]);
+	
+	// 等待标记的消息 ID 数组
+	let pendingMessageIds = $state<string[]>([]);
+	
+	// 消息元素与 ID 的映射
+	const elementToIdMap = new Map<HTMLElement, string>();
+	
+	// 消息可见时间戳
+	const visibilityTimestamps = new Map<string, number>();
+	
+	// IntersectionObserver 实例
+	let observer: IntersectionObserver | null = null;
+	
+	// 防抖定时器
+	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+	/**
+	 * 批量标记已读
+	 */
+	async function batchMarkAsRead() {
+		if (!enabled || pendingMessageIds.length === 0) return;
+
+		const idsToMark = [...pendingMessageIds];
+		pendingMessageIds = [];
+
+		try {
+			await markAsRead(idsToMark);
+			console.log(`[BatchMarkRead] 已标记 ${idsToMark.length} 条消息为已读`);
+		} catch (error) {
+			console.error('[BatchMarkRead] 标记已读失败:', error);
+			// 失败时重新加入队列
+			pendingMessageIds = [...pendingMessageIds, ...idsToMark];
+		}
+	}
+
+	/**
+	 * 调度批量标记（防抖）
+	 */
+	function scheduleBatchMarkAsRead() {
+		if (debounceTimer) clearTimeout(debounceTimer);
+		debounceTimer = setTimeout(() => {
+			batchMarkAsRead();
+		}, debounceMs);
+	}
+
+	/**
+	 * 处理元素可见性变化
+	 */
+	function handleIntersection(entries: IntersectionObserverEntry[]) {
+		if (!enabled) return;
+
+		const now = Date.now();
+
+		entries.forEach(entry => {
+			const messageId = elementToIdMap.get(entry.target as HTMLElement);
+			if (!messageId) return;
+
+			if (entry.isIntersecting) {
+				// 元素进入视口
+				if (!visibilityTimestamps.has(messageId)) {
+					visibilityTimestamps.set(messageId, now);
+				}
+
+				// 检查是否停留足够时间
+				const visibleSince = visibilityTimestamps.get(messageId)!;
+				const visibleDuration = now - visibleSince;
+
+				if (visibleDuration >= visibilityThreshold) {
+					// 标记为可见（使用数组操作）
+					if (!visibleMessageIds.includes(messageId)) {
+						visibleMessageIds = [...visibleMessageIds, messageId];
+						pendingMessageIds = [...pendingMessageIds, messageId];
+						scheduleBatchMarkAsRead();
+					}
+				} else {
+					// 尚未停留足够时间，稍后再检查
+					setTimeout(() => {
+						if (elementToIdMap.has(entry.target as HTMLElement)) {
+							handleIntersection([entry]);
+						}
+					}, visibilityThreshold - visibleDuration);
+				}
+			} else {
+				// 元素离开视口
+				visibilityTimestamps.delete(messageId);
+			}
+		});
+	}
+
+	/**
+	 * 初始化 IntersectionObserver
+	 */
+	function initObserver() {
+		if (observer || !enabled) return;
+
+		observer = new IntersectionObserver(handleIntersection, {
+			root: null, // 视口
+			rootMargin: '0px',
+			threshold: 0.5 // 50% 可见时触发
+		});
+	}
+
+	/**
+	 * 注册消息元素用于可见性检测
+	 */
+	function observe(element: HTMLElement, messageId: string) {
+		if (!enabled || !observer) return;
+
+		elementToIdMap.set(element, messageId);
+		observer.observe(element);
+	}
+
+	/**
+	 * 取消观察消息元素
+	 */
+	function unobserve(element: HTMLElement) {
+		if (!observer) return;
+
+		observer.unobserve(element);
+		elementToIdMap.delete(element);
+	}
+
+	/**
+	 * 立即标记所有可见过的消息为已读
+	 */
+	async function markAllVisibleAsRead() {
+		if (debounceTimer) {
+			clearTimeout(debounceTimer);
+			debounceTimer = null;
+		}
+		await batchMarkAsRead();
+	}
+
+	/**
+	 * 清理资源
+	 */
+	function cleanup() {
+		if (observer) {
+			observer.disconnect();
+			observer = null;
+		}
+		if (debounceTimer) {
+			clearTimeout(debounceTimer);
+			debounceTimer = null;
+		}
+		elementToIdMap.clear();
+		visibilityTimestamps.clear();
+		visibleMessageIds.clear();
+		pendingMessageIds.clear();
+	}
+
+	// 初始化
+	onMount(() => {
+		initObserver();
+
+		// 页面卸载时批量标记
+		return () => {
+			markAllVisibleAsRead();
+			cleanup();
+		};
+	});
+
+	return {
+		observe,
+		unobserve,
+		markAllVisibleAsRead,
+		cleanup
+	};
+}

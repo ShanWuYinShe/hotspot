@@ -25,10 +25,6 @@ pub struct GroupMessageRow {
     pub file_size: Option<i64>,
     pub thumbnail_url: Option<String>,
     pub duration: Option<i32>,
-    pub location_latitude: Option<f64>,
-    pub location_longitude: Option<f64>,
-    pub location_name: Option<String>,
-    pub location_address: Option<String>,
     pub sent_at: DateTime<Utc>,
     pub edited_at: Option<DateTime<Utc>>,
     pub is_recalled: bool,
@@ -84,7 +80,6 @@ impl GroupMessageRepository {
             SELECT id, message_id, group_chat_id, sender_id,
                    type as "type: MessageType", content, reply_to_message_id, mentions,
                    file_name, file_size, thumbnail_url, duration,
-                   location_latitude, location_longitude, location_name, location_address,
                    sent_at, edited_at, is_recalled, recalled_by, recalled_at, is_deleted, deleted_at
             FROM group_messages
             WHERE message_id = ANY($1) AND is_deleted = FALSE
@@ -105,7 +100,6 @@ impl GroupMessageRepository {
             SELECT id, message_id, group_chat_id, sender_id,
                    type as "type: MessageType", content, reply_to_message_id, mentions,
                    file_name, file_size, thumbnail_url, duration,
-                   location_latitude, location_longitude, location_name, location_address,
                    sent_at, edited_at, is_recalled, recalled_by, recalled_at, is_deleted, deleted_at
             FROM group_messages
             WHERE message_id = $1 AND is_deleted = FALSE
@@ -132,20 +126,15 @@ impl GroupMessageRepository {
         file_size: Option<i64>,
         thumbnail_url: Option<&str>,
         duration: Option<i32>,
-        location_latitude: Option<f64>,
-        location_longitude: Option<f64>,
-        location_name: Option<&str>,
-        location_address: Option<&str>,
     ) -> Result<GroupMessageRow> {
         let row = sqlx::query_as!(
             GroupMessageRow,
             r#"
-            INSERT INTO group_messages (group_chat_id, sender_id, type, content, reply_to_message_id, mentions, file_name, file_size, thumbnail_url, duration, location_latitude, location_longitude, location_name, location_address)
-            VALUES ($1, $2, $3::message_type, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            INSERT INTO group_messages (group_chat_id, sender_id, type, content, reply_to_message_id, mentions, file_name, file_size, thumbnail_url, duration)
+            VALUES ($1, $2, $3::message_type, $4, $5, $6, $7, $8, $9, $10)
             RETURNING id, message_id, group_chat_id, sender_id,
                       type as "type: MessageType", content, reply_to_message_id, mentions,
                       file_name, file_size, thumbnail_url, duration,
-                      location_latitude, location_longitude, location_name, location_address,
                       sent_at, edited_at, is_recalled, recalled_by, recalled_at, is_deleted, deleted_at
             "#,
             group_chat_id,
@@ -157,11 +146,7 @@ impl GroupMessageRepository {
             file_name,
             file_size,
             thumbnail_url,
-            duration,
-            location_latitude,
-            location_longitude,
-            location_name,
-            location_address
+            duration
         )
         .fetch_one(&self.pool)
         .await?;
@@ -183,13 +168,13 @@ impl GroupMessageRepository {
             i64::MAX
         };
 
+        // 查询 limit + 1 条以判断是否有更多数据
         let rows = sqlx::query_as!(
             GroupMessageRow,
             r#"
             SELECT id, message_id, group_chat_id, sender_id,
                    type as "type: MessageType", content, reply_to_message_id, mentions,
                    file_name, file_size, thumbnail_url, duration,
-                   location_latitude, location_longitude, location_name, location_address,
                    sent_at, edited_at, is_recalled, recalled_by, recalled_at, is_deleted, deleted_at
             FROM group_messages
             WHERE group_chat_id = $1 AND id < $2 AND is_deleted = FALSE
@@ -199,14 +184,15 @@ impl GroupMessageRepository {
             "#,
             group_chat_id,
             last_id,
-            limit,
+            limit + 1,
             include_system
         )
         .fetch_all(&self.pool)
         .await?;
 
-        let next_cursor = rows.last().map(|r| encode_cursor(&r.id)).transpose()?;
-        Ok((rows, next_cursor))
+        crate::utils::pagination::paginate_with_limit_plus_one(rows, limit as i32, |r| {
+            encode_cursor(&r.id)
+        })
     }
 
     /// 更新消息内容
@@ -341,17 +327,25 @@ impl GroupMessageRepository {
             message_id,
             last_read_at,
             last_user_id,
-            limit
+            limit + 1 // 使用 limit + 1 来判断是否有更多数据
         )
         .fetch_all(&self.pool)
         .await?;
 
-        let next_cursor = rows
-            .last()
-            .map(|r| encode_cursor(&(r.read_at, r.user_id)))
-            .transpose()?;
+        // 判断是否有更多数据
+        let has_more = rows.len() > limit as usize;
+        let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
 
-        let result = rows.into_iter().map(|r| (r.user_id, r.read_at)).collect();
+        let next_cursor = if has_more {
+            items
+                .last()
+                .map(|r| encode_cursor(&(r.read_at, r.user_id)))
+                .transpose()?
+        } else {
+            None
+        };
+
+        let result = items.into_iter().map(|r| (r.user_id, r.read_at)).collect();
         Ok((result, next_cursor))
     }
 

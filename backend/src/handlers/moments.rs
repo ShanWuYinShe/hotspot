@@ -10,9 +10,8 @@ use crate::{
             SearchMomentsByTagRequest, UnfavoriteMomentRequest, UnlikeMomentRequest,
         },
         response::{
-            ApiResponse, CheckFavoritedData, CheckLikedData, MomentCard,
-            MomentInteractionStateData, MomentItem, MomentLikeItem, PaginatedData,
-            UserMomentListItem,
+            ApiResponse, CheckFavoritedData, CheckLikedData, MomentInteractionStateData,
+            MomentLikeItem, MomentSearchItem, PaginatedData, UserMomentListItem,
         },
     },
     error::Result,
@@ -27,7 +26,7 @@ pub async fn search_by_keyword(
     State(state): State<AppState>,
     user: OptionalAuthenticatedUser,
     Json(req): Json<SearchMomentsByKeywordRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<MomentItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<MomentSearchItem>>>> {
     let response = state
         .moment_service
         .search_by_keyword(user.user_id, &req)
@@ -40,7 +39,7 @@ pub async fn search_by_tag(
     State(state): State<AppState>,
     user: OptionalAuthenticatedUser,
     Json(req): Json<SearchMomentsByTagRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<MomentItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<MomentSearchItem>>>> {
     let response = state
         .moment_service
         .search_by_tag(user.user_id, &req)
@@ -53,7 +52,7 @@ pub async fn search_by_location(
     State(state): State<AppState>,
     user: OptionalAuthenticatedUser,
     Json(req): Json<SearchMomentsByLocationRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<MomentItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<MomentSearchItem>>>> {
     let response = state
         .moment_service
         .search_by_location(user.user_id, &req)
@@ -79,7 +78,7 @@ pub async fn open_the_door(
     State(state): State<AppState>,
     user: OptionalAuthenticatedUser,
     Json(req): Json<MomentOpenTheDoorRequest>,
-) -> Result<Json<ApiResponse<MomentCard>>> {
+) -> Result<Json<ApiResponse<MomentSearchItem>>> {
     let response = state
         .moment_service
         .open_the_door(user.user_id, &req)
@@ -223,7 +222,7 @@ pub async fn get_my_favorites(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<MyFavoritesRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<MomentCard>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<MomentSearchItem>>>> {
     let response = state
         .moment_service
         .get_favorites_list(user.user_id, &req)

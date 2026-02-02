@@ -105,8 +105,8 @@ CREATE INDEX idx_group_member_history_action ON group_member_history (action, cr
 -- ============================================================
 CREATE TABLE group_user_preferences (
     id BIGSERIAL PRIMARY KEY,
-    group_chat_id UUID NOT NULL REFERENCES group_chats(group_chat_id) ON DELETE CASCADE,
-    user_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    group_chat_id UUID NOT NULL,
+    user_id BIGINT NOT NULL,
     is_muted BOOLEAN NOT NULL DEFAULT FALSE,
     is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -221,11 +221,6 @@ CREATE TABLE group_messages (
     file_size BIGINT,
     thumbnail_url TEXT,
     duration INTEGER,
-    -- 位置消息字段
-    location_latitude DOUBLE PRECISION,
-    location_longitude DOUBLE PRECISION,
-    location_name VARCHAR(200),
-    location_address TEXT,
     
     sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     edited_at TIMESTAMPTZ,
@@ -233,24 +228,13 @@ CREATE TABLE group_messages (
     recalled_by BIGINT,
     recalled_at TIMESTAMPTZ,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-    deleted_at TIMESTAMPTZ,
-    
-    -- 约束：当 type='location' 时，位置字段必须存在
-    CONSTRAINT check_location_fields_group CHECK (
-        (type != 'location') OR 
-        (location_latitude IS NOT NULL AND location_longitude IS NOT NULL AND location_name IS NOT NULL)
-    )
+    deleted_at TIMESTAMPTZ
 );
 
 CREATE INDEX idx_group_messages_chat_id ON group_messages (group_chat_id, sent_at DESC) WHERE is_deleted = FALSE;
 CREATE INDEX idx_group_messages_sender ON group_messages (sender_id, sent_at DESC) WHERE is_deleted = FALSE;
 CREATE INDEX idx_group_messages_mentions ON group_messages USING gin (mentions) WHERE mentions IS NOT NULL AND is_deleted = FALSE;
 CREATE INDEX idx_group_messages_content_search ON group_messages USING gin (content gin_trgm_ops) WHERE type = 'text' AND is_deleted = FALSE;
-
-COMMENT ON COLUMN group_messages.location_latitude IS '位置消息的纬度';
-COMMENT ON COLUMN group_messages.location_longitude IS '位置消息的经度';
-COMMENT ON COLUMN group_messages.location_name IS '位置消息的地点名';
-COMMENT ON COLUMN group_messages.location_address IS '位置消息的详细地址（可选）';
 
 -- ============================================================
 -- 群聊消息已读状态

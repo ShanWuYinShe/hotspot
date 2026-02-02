@@ -9,7 +9,6 @@ use crate::{
         response::{
             NotificationItem, PaginatedData, PaginationMeta, UnreadNotificationCountData, UserInfo,
         },
-        types::StringOrNumberId,
     },
     error::{AppError, Result},
     events::event_types::AppEvent,
@@ -361,20 +360,10 @@ fn parse_notification_target_type(raw: Option<String>) -> Result<Option<Notifica
     }
 }
 
-/// 解析通知目标 ID
+/// 解析通知目标 ID（统一为 string 格式）
 fn parse_notification_target_id(
-    target_type: Option<NotificationTargetType>,
+    _target_type: Option<NotificationTargetType>,
     target_id: Option<String>,
-) -> Result<Option<StringOrNumberId>> {
-    match (target_type, target_id) {
-        (Some(NotificationTargetType::User), Some(value)) => value
-            .parse::<i64>()
-            .map(|id| Some(StringOrNumberId::Number(id)))
-            .map_err(|_| {
-                AppError::InternalError("通知数据不合法: user target_id 非数字".to_string())
-            }),
-        (Some(NotificationTargetType::User), None) => Ok(None),
-        (_, Some(value)) => Ok(Some(StringOrNumberId::String(value))),
-        (_, None) => Ok(None),
-    }
+) -> Result<Option<String>> {
+    Ok(target_id)
 }

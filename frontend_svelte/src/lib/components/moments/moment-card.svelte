@@ -3,8 +3,9 @@
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import { momentsService } from '$lib/api/services';
-	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
+	import { useOptimisticToggle } from '$lib/hooks/use-optimistic.svelte';
+	import { formatRelativeTime, formatDistance } from '$lib/utils/format';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import { Card, CardContent, CardFooter, CardHeader } from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
@@ -20,131 +21,72 @@
 	import Users from 'lucide-svelte/icons/users';
 	import UserCheck from 'lucide-svelte/icons/user-check';
 
-interface Props {
-	moment: FeedMomentItem | MomentCardType | MomentSearchItem;
-}
+	interface Props {
+		moment: FeedMomentItem | MomentCardType | MomentSearchItem;
+	}
 
 	let { moment }: Props = $props();
 
-	// 从 moment 获取初始状态的辅助函数
-function getInitialLiked(m: FeedMomentItem | MomentCardType | MomentSearchItem): boolean {
-	if ('is_liked' in m) return m.is_liked;
-	if ('my_state' in m) return m.my_state?.is_liked ?? false;
-	return false;
-}
-
-function getInitialFavorited(m: FeedMomentItem | MomentCardType | MomentSearchItem): boolean {
-	if ('is_favorited' in m) return m.is_favorited;
-	if ('my_state' in m) return m.my_state?.is_favorited ?? false;
-	return false;
-}
-
-	// 本地状态（乐观更新）
-	let isLiked = $state(false);
-	let isFavorited = $state(false);
-	let likesCount = $state(0);
-
-	// 当 moment prop 变化时重新初始化状态
-	$effect(() => {
-		isLiked = getInitialLiked(moment);
-		isFavorited = getInitialFavorited(moment);
-		likesCount = moment.likes_count;
+	// 使用 $derived 自动计算初始状态（当 moment prop 变化时自动更新）
+	const initialLiked = $derived.by(() => {
+		if ('is_liked' in moment) return moment.is_liked;
+		if ('my_state' in moment) return moment.my_state?.is_liked ?? false;
+		return false;
 	});
 
-	async function doLike() {
-		// 乐观更新
-		const wasLiked = isLiked;
-		isLiked = !isLiked;
-		likesCount += isLiked ? 1 : -1;
+	const initialFavorited = $derived.by(() => {
+		if ('is_favorited' in moment) return moment.is_favorited;
+		if ('my_state' in moment) return moment.my_state?.is_favorited ?? false;
+		return false;
+	});
 
-		try {
-			const response = isLiked
-				? await momentsService.like({ moment_id: moment.moment_id })
-				: await momentsService.unlike({ moment_id: moment.moment_id });
+	// 乐观更新 Hooks
+	const likeAction = useOptimisticToggle({
+		initialValue: () => initialLiked,
+		initialCount: () => moment.likes_count,
+		onTrue: () => momentsService.like({ moment_id: moment.moment_id }),
+		onFalse: () => momentsService.unlike({ moment_id: moment.moment_id })
+	});
 
-			if (!isSuccess(response)) {
-				// 回滚
-				isLiked = wasLiked;
-				likesCount += wasLiked ? 1 : -1;
-				toast.error(response.message || '操作失败');
-			}
-		} catch {
-			// 回滚
-			isLiked = wasLiked;
-			likesCount += wasLiked ? 1 : -1;
-			toast.error('操作失败');
-		}
-	}
+	const favoriteAction = useOptimisticToggle({
+		initialValue: () => initialFavorited,
+		onTrue: () => momentsService.favorite({ moment_id: moment.moment_id }),
+		onFalse: () => momentsService.unfavorite({ moment_id: moment.moment_id })
+	});
 
 	function handleLike() {
 		if (!authStore.isAuthenticated) {
-			// 打开登录模态框，登录成功后执行点赞
-			uiStore.openLoginModal(doLike);
+			uiStore.openLoginModal(likeAction.toggle);
 			return;
 		}
-		doLike();
-	}
-
-	async function doFavorite() {
-		const wasFavorited = isFavorited;
-		isFavorited = !isFavorited;
-
-		try {
-			const response = isFavorited
-				? await momentsService.favorite({ moment_id: moment.moment_id })
-				: await momentsService.unfavorite({ moment_id: moment.moment_id });
-
-			if (!isSuccess(response)) {
-				isFavorited = wasFavorited;
-				toast.error(response.message || '操作失败');
-			}
-		} catch {
-			isFavorited = wasFavorited;
-			toast.error('操作失败');
-		}
+		likeAction.toggle();
 	}
 
 	function handleFavorite() {
 		if (!authStore.isAuthenticated) {
-			uiStore.openLoginModal(doFavorite);
+			uiStore.openLoginModal(favoriteAction.toggle);
 			return;
 		}
-		doFavorite();
+		favoriteAction.toggle();
 	}
+
+	// 使用 $derived 预计算分享数据
+	const shareData = $derived({
+		title: `${moment.user.nickname} 的瞬间`,
+		text: moment.description.slice(0, 100),
+		url: `${window.location.origin}/moments/${moment.moment_id}`
+	});
 
 	function handleShare() {
 		if (navigator.share) {
-			navigator.share({
-				title: `${moment.user.nickname} 的瞬间`,
-				text: moment.description.slice(0, 100),
-				url: `${window.location.origin}/moments/${moment.moment_id}`
-			}).catch(() => {});
+			navigator.share(shareData).catch(() => {});
 		} else {
 			// 复制链接
-			navigator.clipboard.writeText(`${window.location.origin}/moments/${moment.moment_id}`);
+			navigator.clipboard.writeText(shareData.url);
 			toast.success('链接已复制');
 		}
 	}
 
-	function formatTime(dateStr: string): string {
-		const date = new Date(dateStr);
-		const now = new Date();
-		const diff = now.getTime() - date.getTime();
-		const minutes = Math.floor(diff / 60000);
-		const hours = Math.floor(diff / 3600000);
-		const days = Math.floor(diff / 86400000);
-
-		if (minutes < 1) return '刚刚';
-		if (minutes < 60) return `${minutes}分钟前`;
-		if (hours < 24) return `${hours}小时前`;
-		if (days < 7) return `${days}天前`;
-		return date.toLocaleDateString('zh-CN');
-	}
-
-	function formatDistance(meters: number): string {
-		if (meters < 1000) return `${Math.round(meters)}m`;
-		return `${(meters / 1000).toFixed(1)}km`;
-	}
 
 	function getRecommendationMeta(type?: string) {
 		switch (type) {
@@ -162,23 +104,22 @@ function getInitialFavorited(m: FeedMomentItem | MomentCardType | MomentSearchIt
 				return null;
 		}
 	}
-
 </script>
 
-<Card class="group/card cursor-pointer overflow-hidden border border-border/60 bg-card/90 dark:bg-card/30 backdrop-blur-md transition-all duration-300 hover:border-primary/50 hover:bg-card hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 dark:hover:bg-card/60 dark:hover:border-primary/40">
+<Card variant="accent" glow="soft" interactive class="group/card cursor-pointer overflow-hidden animate-bounce-in">
 	<CardHeader class="pb-3 pt-4">
 		<div class="flex items-start justify-between gap-3">
 			<a href="/users/{moment.user.user_id}" class="group/user flex items-center gap-3">
 				<div class="relative">
-					<Avatar class="h-10 w-10 ring-2 ring-transparent transition-all duration-300 group-hover/user:ring-primary/20">
+					<Avatar glow class="h-10 w-10">
 						<AvatarImage src={moment.user.avatar_url} alt={moment.user.nickname} />
-						<AvatarFallback class="bg-primary/5 text-primary font-medium">{moment.user.nickname.slice(0, 2)}</AvatarFallback>
+						<AvatarFallback class="bg-linear-to-br from-primary/20 to-secondary/20 text-primary font-bold">{moment.user.nickname.slice(0, 2)}</AvatarFallback>
 					</Avatar>
 				</div>
 				<div>
 					<p class="font-semibold text-foreground transition-colors group-hover/user:text-primary">{moment.user.nickname}</p>
 					<div class="flex items-center gap-2 text-xs text-muted-foreground">
-						<span>{formatTime(moment.created_at)}</span>
+						<span>{formatRelativeTime(moment.created_at)}</span>
 						{#if 'location' in moment && moment.location && 'distance' in moment.location}
 							<span class="flex items-center gap-0.5 rounded-full bg-muted/50 px-1.5 py-0.5">
 								<MapPin class="h-3 w-3" />
@@ -191,19 +132,19 @@ function getInitialFavorited(m: FeedMomentItem | MomentCardType | MomentSearchIt
 			{#if 'recommendation' in moment && moment.recommendation}
 				{@const recMeta = getRecommendationMeta(moment.recommendation.type)}
 				{#if recMeta}
-					<Badge variant="secondary" class="gap-1 rounded-full border-0 px-2.5 py-0.5 text-[10px] font-medium shadow-sm {recMeta.className}">
+					<Badge variant="accent" class="gap-1.5 px-3 py-1.5 {recMeta.className}">
 						{#if moment.recommendation.type === 'friend_liked'}
-							<Users class="h-3 w-3" />
+							<Users class="h-3.5 w-3.5" />
 						{:else if moment.recommendation.type === 'nearby'}
-							<MapPin class="h-3 w-3" />
+							<MapPin class="h-3.5 w-3.5" />
 						{:else if moment.recommendation.type === 'trending'}
-							<TrendingUp class="h-3 w-3" />
+							<TrendingUp class="h-3.5 w-3.5" />
 						{:else if moment.recommendation.type === 'following'}
-							<UserCheck class="h-3 w-3" />
+							<UserCheck class="h-3.5 w-3.5" />
 						{:else if moment.recommendation.type === 'tag_match'}
-							<Sparkles class="h-3 w-3" />
+							<Sparkles class="h-3.5 w-3.5" />
 						{/if}
-						<span>{recMeta.label}</span>
+						<span class="font-bold text-[11px]">{recMeta.label}</span>
 					</Badge>
 				{/if}
 			{/if}
@@ -217,7 +158,7 @@ function getInitialFavorited(m: FeedMomentItem | MomentCardType | MomentSearchIt
 			{/if}
 
 			{#if moment.images && moment.images.length > 0}
-				<div class="grid gap-1.5 overflow-hidden rounded-xl border border-border/20 {moment.images.length === 1 ? '' : moment.images.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}">
+				<div class="grid gap-2 overflow-hidden rounded-2xl border-2 border-primary/10 {moment.images.length === 1 ? '' : moment.images.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}">
 					{#each moment.images.slice(0, 9) as image, i}
 						{#if moment.images.length === 1}
 							<div class="relative overflow-hidden bg-muted/30">
@@ -248,9 +189,9 @@ function getInitialFavorited(m: FeedMomentItem | MomentCardType | MomentSearchIt
 			{/if}
 
 			{#if moment.tags && moment.tags.length > 0}
-				<div class="flex flex-wrap gap-1.5 pt-1">
+				<div class="flex flex-wrap gap-2 pt-1">
 					{#each moment.tags as tag}
-						<Badge variant="outline" class="rounded-md border-primary/10 bg-primary/5 px-2 py-0 text-xs font-normal text-primary hover:bg-primary/10">#{tag}</Badge>
+						<Badge variant="default" class="text-xs">#{tag}</Badge>
 					{/each}
 				</div>
 			{/if}
@@ -259,43 +200,43 @@ function getInitialFavorited(m: FeedMomentItem | MomentCardType | MomentSearchIt
 
 	<CardFooter class="border-t border-border/40 bg-muted/5 py-2 transition-colors group-hover/card:bg-muted/20">
 		<div class="flex w-full items-center justify-between px-1">
-			<div class="flex gap-4">
-				<Button
-					variant="ghost"
-					size="sm"
-					class="h-8 gap-1.5 rounded-full px-2 text-muted-foreground transition-all hover:bg-red-500/10 hover:text-red-500 {isLiked ? 'text-red-500 bg-red-500/5' : ''}"
-					onclick={handleLike}
-				>
-					<Heart class="h-4 w-4 {isLiked ? 'fill-current' : ''}" />
-					<span class="text-xs font-medium">{likesCount > 0 ? likesCount : '点赞'}</span>
-				</Button>
-				<Button 
-					variant="ghost" 
-					size="sm" 
-					class="h-8 gap-1.5 rounded-full px-2 text-muted-foreground hover:bg-primary/10 hover:text-primary" 
-					onclick={() => goto(`/moments/${moment.moment_id}`)}
-				>
-					<MessageCircle class="h-4 w-4" />
-					<span class="text-xs font-medium">{moment.comments_count > 0 ? moment.comments_count : '评论'}</span>
-				</Button>
-			</div>
-			<div class="flex gap-1">
-				<Button
-					variant="ghost"
-					size="icon"
-					class="h-8 w-8 rounded-full text-muted-foreground transition-all hover:bg-yellow-500/10 hover:text-yellow-500 {isFavorited ? 'text-yellow-500 bg-yellow-500/5' : ''}"
-					onclick={handleFavorite}
-				>
-					<Bookmark class="h-4 w-4 {isFavorited ? 'fill-current' : ''}" />
-				</Button>
-				<Button 
-					variant="ghost" 
-					size="icon" 
-					class="h-8 w-8 rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary"
-					onclick={handleShare}
-				>
-					<Share2 class="h-4 w-4" />
-				</Button>
+			<div class="flex gap-3">
+		<Button
+			variant="ghost"
+			size="sm"
+			class={likeAction.isOn ? 'bg-red-500/15 text-red-500' : ''}
+			onclick={handleLike}
+			disabled={likeAction.isLoading}
+		>
+				<Heart class="h-5 w-5 transition-all {likeAction.isOn && 'fill-current animate-bounce-in'}" />
+				<span class="font-semibold text-sm">{likeAction.count > 0 ? likeAction.count : '点赞'}</span>
+			</Button>
+			<Button 
+				variant="ghost" 
+				size="sm"
+				onclick={() => goto(`/moments/${moment.moment_id}`)}
+			>
+				<MessageCircle class="h-5 w-5" />
+				<span class="font-semibold text-sm">{moment.comments_count > 0 ? moment.comments_count : '评论'}</span>
+			</Button>
+		</div>
+		<div class="flex gap-2">
+		<Button
+			variant="ghost"
+			size="icon"
+			class={favoriteAction.isOn ? 'bg-yellow-500/15 text-yellow-500' : ''}
+			onclick={handleFavorite}
+			disabled={favoriteAction.isLoading}
+		>
+				<Bookmark class="h-5 w-5 {favoriteAction.isOn && 'fill-current animate-bounce-in'}" />
+			</Button>
+			<Button 
+				variant="ghost" 
+				size="icon"
+				onclick={handleShare}
+			>
+				<Share2 class="h-5 w-5" />
+			</Button>
 			</div>
 		</div>
 	</CardFooter>

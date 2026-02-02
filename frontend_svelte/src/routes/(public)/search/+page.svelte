@@ -8,11 +8,12 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Card, CardContent } from '$lib/components/ui/card';
-	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-	import { Badge } from '$lib/components/ui/badge';
 	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
-	import { Skeleton } from '$lib/components/ui/skeleton';
 	import MomentCard from '$lib/components/moments/moment-card.svelte';
+	import UserCard from '$lib/components/common/user-card.svelte';
+	import GroupCard from '$lib/components/common/group-card.svelte';
+	import MasonryLayout from '$lib/components/common/masonry-layout.svelte';
+	import MasonryLayoutItem from '$lib/components/common/masonry-layout-item.svelte';
 	import type { UserSearchItem, MomentSearchItem, GroupSearchItem } from '$lib/types/api';
 	import Search from 'lucide-svelte/icons/search';
 	import Users from 'lucide-svelte/icons/users';
@@ -20,16 +21,24 @@
 	import UsersRound from 'lucide-svelte/icons/users-round';
 	import X from 'lucide-svelte/icons/x';
 
-	let keyword = $state($page.url.searchParams.get('q') || '');
-	let tagQuery = $state('');
-	let lastQuery = $state<string | null>(null);
-	let lastTag = $state<string | null>(null);
+	// 从 URL 获取初始搜索词（$derived 使 URL 变化时更新）
+	const initialKeyword = $derived($page.url.searchParams.get('q') || '');
+	const initialTag = $derived($page.url.searchParams.get('tag') || '');
+
+	let keyword = $state('');
 	let currentTab = $state<'users' | 'moments' | 'groups'>('users');
+
+	$effect(() => {
+		keyword = initialKeyword;
+	});
 	let isLoading = $state(false);
 
 	let users = $state<UserSearchItem[]>([]);
 	let moments = $state<MomentSearchItem[]>([]);
 	let groups = $state<GroupSearchItem[]>([]);
+	
+	// 用于防止重复触发搜索
+	let lastSearchedQuery = $state<string>('');
 
 	function getReferencePoint() {
 		return {
@@ -38,19 +47,20 @@
 		};
 	}
 
-	async function handleSearch() {
-		if (!keyword.trim()) return;
-
+	/**
+	 * 执行关键词搜索
+	 */
+	async function performKeywordSearch(searchTerm: string) {
+		if (!searchTerm || searchTerm === lastSearchedQuery) return;
+		
 		isLoading = true;
-		lastQuery = keyword.trim();
-		tagQuery = '';
-		goto(`/search?q=${encodeURIComponent(keyword.trim())}`, { replaceState: true });
+		lastSearchedQuery = searchTerm;
 
 		try {
 			const [usersRes, momentsRes, groupsRes] = await Promise.all([
-				usersService.searchByKeyword({ reference_point: getReferencePoint(), kw: keyword.trim(), limit: 20 }),
-				momentsService.searchByKeyword({ reference_point: getReferencePoint(), kw: keyword.trim(), limit: 20 }),
-				groupsService.searchByKeyword({ reference_point: getReferencePoint(), kw: keyword.trim(), limit: 20 })
+				usersService.searchByKeyword({ reference_point: getReferencePoint(), kw: searchTerm, limit: 20 }),
+				momentsService.searchByKeyword({ reference_point: getReferencePoint(), kw: searchTerm, limit: 20 }),
+				groupsService.searchByKeyword({ reference_point: getReferencePoint(), kw: searchTerm, limit: 20 })
 			]);
 
 			if (isSuccess(usersRes) && usersRes.data) {
@@ -69,20 +79,20 @@
 		}
 	}
 
-	async function handleTagSearch(nextTag: string) {
-		if (!nextTag) return;
+	/**
+	 * 执行标签搜索
+	 */
+	async function performTagSearch(tag: string) {
+		if (!tag || tag === lastSearchedQuery) return;
 
 		isLoading = true;
-		lastTag = nextTag;
-		keyword = nextTag;
-		tagQuery = nextTag;
-		goto(`/search?tag=${encodeURIComponent(nextTag)}`, { replaceState: true });
+		lastSearchedQuery = tag;
 
 		try {
 			const [usersRes, momentsRes, groupsRes] = await Promise.all([
-				usersService.searchByTag({ reference_point: getReferencePoint(), tag: nextTag, limit: 20 }),
-				momentsService.searchByTag({ reference_point: getReferencePoint(), tag: nextTag, limit: 20 }),
-				groupsService.searchByTag({ reference_point: getReferencePoint(), tag: nextTag, limit: 20 })
+				usersService.searchByTag({ reference_point: getReferencePoint(), tag, limit: 20 }),
+				momentsService.searchByTag({ reference_point: getReferencePoint(), tag, limit: 20 }),
+				groupsService.searchByTag({ reference_point: getReferencePoint(), tag, limit: 20 })
 			]);
 
 			if (isSuccess(usersRes) && usersRes.data) {
@@ -99,29 +109,47 @@
 		} finally {
 			isLoading = false;
 		}
+	}
+
+	/**
+	 * 处理输入框的搜索（按回车或点击搜索按钮）
+	 */
+	async function handleSearch() {
+		const searchTerm = keyword.trim();
+		if (!searchTerm) return;
+
+		// 更新 URL（不触发 effect）
+		goto(`/search?q=${encodeURIComponent(searchTerm)}`, { replaceState: true, noScroll: true });
+		
+		// 执行搜索
+		await performKeywordSearch(searchTerm);
 	}
 
 	function clearSearch() {
 		keyword = '';
-		tagQuery = '';
 		users = [];
 		moments = [];
 		groups = [];
+		lastSearchedQuery = '';
 		goto('/search', { replaceState: true });
 	}
 
-	// 页面加载时如果有 query 参数则自动搜索
+	// 监听 URL 参数变化，执行搜索（只在首次加载或外部跳转时触发）
 	$effect(() => {
 		const q = $page.url.searchParams.get('q');
 		const tag = $page.url.searchParams.get('tag');
-		if (tag && tag !== lastTag) {
-			handleTagSearch(tag);
+		
+		// 优先处理标签搜索
+		if (tag) {
+			keyword = tag;
+			performTagSearch(tag);
 			return;
 		}
-		if (q && q !== lastQuery) {
+		
+		// 处理关键词搜索
+		if (q) {
 			keyword = q;
-			tagQuery = '';
-			handleSearch();
+			performKeywordSearch(q);
 		}
 	});
 </script>
@@ -183,19 +211,13 @@
 			<!-- Users -->
 			<TabsContent value="users" class="mt-6">
 				{#if isLoading}
-					<div class="space-y-2">
-						{#each Array(3) as _}
-							<Card>
-								<CardContent class="flex items-center gap-4 p-4">
-									<Skeleton class="h-12 w-12 rounded-full" />
-									<div class="flex-1 space-y-2">
-										<Skeleton class="h-4 w-24" />
-										<Skeleton class="h-3 w-48" />
-									</div>
-								</CardContent>
-							</Card>
+					<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
+						{#each Array(6) as _}
+							<MasonryLayoutItem>
+								<div class="h-48 animate-pulse rounded-2xl bg-muted"></div>
+							</MasonryLayoutItem>
 						{/each}
-					</div>
+					</MasonryLayout>
 				{:else if users.length === 0}
 					<Card>
 						<CardContent class="py-8 text-center text-muted-foreground">
@@ -203,56 +225,26 @@
 						</CardContent>
 					</Card>
 				{:else}
-					<div class="columns-1 gap-3 sm:columns-2 xl:columns-3">
+					<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
 						{#each users as user (user.user_id)}
-							<div class="mb-3 break-inside-avoid">
-								<a href="/users/{user.user_id}">
-									<Card class="cursor-pointer transition-colors hover:bg-accent/50">
-										<CardContent class="flex items-center gap-4 p-4">
-											<Avatar class="h-12 w-12">
-												<AvatarImage src={user.avatar_url} alt={user.nickname} />
-												<AvatarFallback>{user.nickname.slice(0, 2)}</AvatarFallback>
-											</Avatar>
-											<div class="min-w-0 flex-1">
-												<p class="font-medium">{user.nickname}</p>
-												{#if user.bio}
-													<p class="line-clamp-3 text-sm text-muted-foreground">{user.bio}</p>
-												{/if}
-												{#if user.tags && user.tags.length > 0}
-													<div class="mt-1 flex flex-wrap gap-1">
-														{#each user.tags.slice(0, 3) as tag}
-															<Badge variant="secondary" class="text-xs">#{tag}</Badge>
-														{/each}
-													</div>
-												{/if}
-											</div>
-										</CardContent>
-									</Card>
-								</a>
-							</div>
+							<MasonryLayoutItem>
+								<UserCard {user} showBio showTags showDistance variant="square" />
+							</MasonryLayoutItem>
 						{/each}
-					</div>
+					</MasonryLayout>
 				{/if}
 			</TabsContent>
 
 			<!-- Moments -->
 			<TabsContent value="moments" class="mt-6">
 				{#if isLoading}
-					<div class="space-y-2">
-						{#each Array(3) as _}
-							<Card>
-								<CardContent class="p-4">
-									<div class="flex gap-3">
-										<Skeleton class="h-10 w-10 rounded-full" />
-										<div class="flex-1 space-y-2">
-											<Skeleton class="h-4 w-24" />
-											<Skeleton class="h-4 w-full" />
-										</div>
-									</div>
-								</CardContent>
-							</Card>
+					<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={20}>
+						{#each Array(6) as _}
+							<MasonryLayoutItem>
+								<div class="h-64 animate-pulse rounded-2xl bg-muted"></div>
+							</MasonryLayoutItem>
 						{/each}
-					</div>
+					</MasonryLayout>
 				{:else if moments.length === 0}
 					<Card>
 						<CardContent class="py-8 text-center text-muted-foreground">
@@ -260,32 +252,26 @@
 						</CardContent>
 					</Card>
 				{:else}
-					<div class="columns-1 gap-3 sm:columns-2 lg:columns-3">
+					<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={20}>
 						{#each moments as moment (moment.moment_id)}
-							<div class="mb-3 break-inside-avoid">
+							<MasonryLayoutItem>
 								<MomentCard {moment} />
-							</div>
+							</MasonryLayoutItem>
 						{/each}
-					</div>
+					</MasonryLayout>
 				{/if}
 			</TabsContent>
 
 			<!-- Groups -->
 			<TabsContent value="groups" class="mt-6">
 				{#if isLoading}
-					<div class="space-y-2">
-						{#each Array(3) as _}
-							<Card>
-								<CardContent class="flex items-center gap-4 p-4">
-									<Skeleton class="h-12 w-12 rounded-full" />
-									<div class="flex-1 space-y-2">
-										<Skeleton class="h-4 w-24" />
-										<Skeleton class="h-3 w-16" />
-									</div>
-								</CardContent>
-							</Card>
+					<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
+						{#each Array(6) as _}
+							<MasonryLayoutItem>
+								<div class="h-52 animate-pulse rounded-2xl bg-muted"></div>
+							</MasonryLayoutItem>
 						{/each}
-					</div>
+					</MasonryLayout>
 				{:else if groups.length === 0}
 					<Card>
 						<CardContent class="py-8 text-center text-muted-foreground">
@@ -293,29 +279,13 @@
 						</CardContent>
 					</Card>
 				{:else}
-					<div class="columns-1 gap-3 sm:columns-2 xl:columns-3">
+					<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
 						{#each groups as group (group.group_chat_id)}
-							<div class="mb-3 break-inside-avoid">
-								<a href="/groups/{group.group_chat_id}">
-									<Card class="cursor-pointer transition-colors hover:bg-accent/50">
-										<CardContent class="flex items-center gap-4 p-4">
-											<Avatar class="h-12 w-12">
-												<AvatarImage src={group.avatar_url} alt={group.name} />
-												<AvatarFallback>{group.name.slice(0, 2)}</AvatarFallback>
-											</Avatar>
-											<div class="min-w-0 flex-1">
-												<p class="font-medium">{group.name}</p>
-												{#if group.description}
-													<p class="line-clamp-3 text-sm text-muted-foreground">{group.description}</p>
-												{/if}
-												<p class="text-xs text-muted-foreground">{group.members_count} 成员</p>
-											</div>
-										</CardContent>
-									</Card>
-								</a>
-							</div>
+							<MasonryLayoutItem>
+								<GroupCard {group} showMembers showDistance variant="square" />
+							</MasonryLayoutItem>
 						{/each}
-					</div>
+					</MasonryLayout>
 				{/if}
 			</TabsContent>
 		</Tabs>

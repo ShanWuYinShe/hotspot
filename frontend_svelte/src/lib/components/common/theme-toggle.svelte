@@ -4,8 +4,7 @@
 	import Sun from 'lucide-svelte/icons/sun';
 	import Moon from 'lucide-svelte/icons/moon';
 
-	// 使用 $derived 来响应式获取当前模式
-	let currentMode = $derived(mode.current);
+	const currentMode = $derived(mode.current);
 </script>
 
 <Button variant="ghost" size="icon" onclick={toggleMode}>

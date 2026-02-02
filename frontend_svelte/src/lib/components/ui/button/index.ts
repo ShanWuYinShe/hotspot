@@ -1,26 +1,94 @@
 import Root from './button.svelte';
 
 import { tv, type VariantProps } from 'tailwind-variants';
+import { cn } from '$lib/utils';
 
+// Game UI - Neubrutalism button variants with hard shadows
 export const buttonVariants = tv({
-	base: 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
+	base: cn(
+		'inline-flex items-center justify-center gap-2',
+		'whitespace-nowrap font-semibold',
+		'rounded-xl border-[2px]',
+		'transition-all duration-150 ease-[cubic-bezier(0.4,0,0.2,1)]',
+		'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/40 focus-visible:ring-offset-2',
+		'disabled:pointer-events-none disabled:opacity-50',
+		'cursor-pointer',
+		'[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0'
+	),
 	variants: {
 		variant: {
-			default:
-				'bg-primary text-primary-foreground shadow-sm shadow-primary/25 ring-1 ring-primary/20 hover:bg-primary/90 hover:shadow-md hover:shadow-primary/25 hover:ring-primary/30',
-			destructive:
-				'bg-destructive text-destructive-foreground shadow-sm shadow-destructive/20 hover:bg-destructive/90',
-			outline:
-				'border border-input/70 bg-background/80 shadow-sm hover:border-primary/30 hover:bg-accent/60 hover:text-accent-foreground',
-			secondary: 'bg-secondary text-secondary-foreground shadow-sm shadow-black/5 hover:bg-secondary/80',
-			ghost: 'hover:bg-accent/60 hover:text-accent-foreground',
-			link: 'text-primary underline-offset-4 hover:underline'
+			default: cn(
+				// Primary button - purple theme
+				'bg-primary border-primary text-primary-foreground',
+				// Hard shadow using current color
+				'shadow-[3px_3px_0px_currentColor]',
+				// Hover - move up-left, increase shadow
+				'hover:-translate-x-[1px] hover:-translate-y-[1px]',
+				'hover:shadow-[4px_4px_0px_currentColor]',
+				// Active - press down effect
+				'active:translate-x-[2px] active:translate-y-[2px]',
+				'active:shadow-[1px_1px_0px_currentColor]',
+				// Glow effect in dark mode
+				'dark:shadow-[3px_3px_0px_currentColor,0_0_20px_theme(colors.glow-primary)]',
+				'dark:hover:shadow-[4px_4px_0px_currentColor,0_0_30px_theme(colors.glow-primary)]'
+			),
+			accent: cn(
+				// Accent button - pink theme
+				'bg-accent border-accent text-accent-foreground',
+				'shadow-[3px_3px_0px_currentColor]',
+				'hover:-translate-x-[1px] hover:-translate-y-[1px]',
+				'hover:shadow-[4px_4px_0px_currentColor]',
+				'active:translate-x-[2px] active:translate-y-[2px]',
+				'active:shadow-[1px_1px_0px_currentColor]',
+				'dark:shadow-[3px_3px_0px_currentColor,0_0_20px_theme(colors.glow-accent)]',
+				'dark:hover:shadow-[4px_4px_0px_currentColor,0_0_30px_theme(colors.glow-accent)]'
+			),
+			destructive: cn(
+				// Destructive button - red theme
+				'bg-destructive border-destructive text-destructive-foreground',
+				'shadow-[3px_3px_0px_currentColor]',
+				'hover:-translate-x-[1px] hover:-translate-y-[1px]',
+				'hover:shadow-[4px_4px_0px_currentColor]',
+				'active:translate-x-[2px] active:translate-y-[2px]',
+				'active:shadow-[1px_1px_0px_currentColor]'
+			),
+			outline: cn(
+				// Outline button
+				'bg-background border-primary text-primary',
+				'shadow-[3px_3px_0px_theme(colors.primary)]',
+				'hover:-translate-x-[1px] hover:-translate-y-[1px]',
+				'hover:bg-primary/5',
+				'hover:shadow-[4px_4px_0px_theme(colors.primary)]',
+				'active:translate-x-[2px] active:translate-y-[2px]',
+				'active:shadow-[1px_1px_0px_theme(colors.primary)]'
+			),
+			secondary: cn(
+				// Secondary button - blue theme
+				'bg-secondary border-secondary text-secondary-foreground',
+				'shadow-[3px_3px_0px_currentColor]',
+				'hover:-translate-x-[1px] hover:-translate-y-[1px]',
+				'hover:shadow-[4px_4px_0px_currentColor]',
+				'active:translate-x-[2px] active:translate-y-[2px]',
+				'active:shadow-[1px_1px_0px_currentColor]'
+			),
+			ghost: cn(
+				// Ghost button - no border/shadow until hover
+				'border-transparent text-foreground',
+				'hover:bg-primary/10 hover:border-primary/20 hover:text-primary',
+				'active:bg-primary/15'
+			),
+			link: cn(
+				// Link button - no border/shadow
+				'border-transparent',
+				'text-primary underline-offset-4',
+				'hover:underline'
+			)
 		},
 		size: {
-			default: 'h-9 px-4 py-2',
-			sm: 'h-8 rounded-md px-3 text-xs',
-			lg: 'h-10 rounded-md px-8',
-			icon: 'h-9 w-9'
+			default: 'h-11 px-6 py-3 text-sm',
+			sm: 'h-9 px-4 py-2 text-xs',
+			lg: 'h-13 px-8 py-4 text-base rounded-2xl',
+			icon: 'h-11 w-11'
 		}
 	},
 	defaultVariants: {

@@ -153,16 +153,16 @@ impl GroupSettingsRepository {
         group_chat_id: Uuid,
         user_id: i64,
     ) -> Result<Option<GroupUserPreferences>> {
-        // 使用 query_as_unchecked 绕过编译时检查（新表迁移后可改为 query_as!）
-        let prefs: Option<GroupUserPreferences> = sqlx::query_as(
+        let prefs = sqlx::query_as!(
+            GroupUserPreferences,
             r#"
             SELECT id, group_chat_id, user_id, is_muted, is_pinned, created_at, updated_at
             FROM group_user_preferences
             WHERE group_chat_id = $1 AND user_id = $2
             "#,
+            group_chat_id,
+            user_id
         )
-        .bind(group_chat_id)
-        .bind(user_id)
         .fetch_optional(&self.pool)
         .await?;
 
@@ -177,8 +177,7 @@ impl GroupSettingsRepository {
         is_muted: Option<bool>,
         is_pinned: Option<bool>,
     ) -> Result<()> {
-        // 使用 query 绕过编译时检查（新表迁移后可改为 query!）
-        sqlx::query(
+        sqlx::query!(
             r#"
             INSERT INTO group_user_preferences (group_chat_id, user_id, is_muted, is_pinned)
             VALUES ($1, $2, COALESCE($3, FALSE), COALESCE($4, FALSE))
@@ -187,11 +186,11 @@ impl GroupSettingsRepository {
                 is_pinned = COALESCE($4, group_user_preferences.is_pinned),
                 updated_at = NOW()
             "#,
+            group_chat_id,
+            user_id,
+            is_muted,
+            is_pinned
         )
-        .bind(group_chat_id)
-        .bind(user_id)
-        .bind(is_muted)
-        .bind(is_pinned)
         .execute(&self.pool)
         .await?;
 

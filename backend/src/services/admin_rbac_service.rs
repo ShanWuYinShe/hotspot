@@ -34,13 +34,7 @@ impl AdminRbacService {
 
     pub async fn ensure_super_admin_bootstrap(&self, config: &Config) -> Result<()> {
         // 首先检查是否存在超级管理员
-        let existing = sqlx::query_scalar::<_, bool>(
-            r#"
-            SELECT EXISTS(SELECT 1 FROM admin_users WHERE is_super = TRUE)
-            "#,
-        )
-        .fetch_one(self.repo.pool())
-        .await?;
+        let existing = self.repo.super_admin_exists().await?;
 
         // 如果已存在超级管理员，直接返回
         if existing {
@@ -61,7 +55,7 @@ impl AdminRbacService {
         let login_id = config
             .super_admin_login_id
             .clone()
-            .unwrap_or_else(|| "superadmin".to_string());
+            .unwrap_or("superadmin".to_string());
 
         // 如果 login_id 已存在用户，直接将其升级为超级管理员
         if let Some(user) = self.user_repo.find_by_login_id(&login_id).await? {

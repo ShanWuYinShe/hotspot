@@ -11,6 +11,7 @@
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import type { GroupCard } from '$lib/types/api';
+	import { formatDate } from '$lib/utils/format';
 	import Search from 'lucide-svelte/icons/search';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import MoreVertical from 'lucide-svelte/icons/more-vertical';
@@ -65,10 +66,6 @@
 		} catch {
 			toast.error('操作失败');
 		}
-	}
-
-	function formatDate(dateStr: string): string {
-		return new Date(dateStr).toLocaleDateString('zh-CN');
 	}
 
 	onMount(() => {

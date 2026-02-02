@@ -36,6 +36,16 @@
 	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
 	--color-sidebar-border: var(--sidebar-border);
 	--color-sidebar-ring: var(--sidebar-ring);
+	
+	/* Game UI - Glow effect colors */
+	--color-glow-primary: var(--glow-primary);
+	--color-glow-accent: var(--glow-accent);
+	--color-glow-success: var(--glow-success);
+	
+	/* Neubrutalism - Hard shadow colors */
+	--color-shadow-light: var(--shadow-light);
+	--color-shadow-dark: var(--shadow-dark);
+	
 	--radius: 0.625rem;
 }
 
@@ -47,19 +57,32 @@
 	--card-foreground: oklch(0.17 0.02 260);
 	--popover: oklch(0.995 0.004 260);
 	--popover-foreground: oklch(0.17 0.02 260);
-	--primary: oklch(0.65 0.2 255);
+	
+	/* Game UI Colors - Social Blue Theme */
+	--primary: oklch(0.60 0.20 250); /* Social Blue #2563EB */
 	--primary-foreground: oklch(0.985 0 0);
-	--secondary: oklch(0.95 0.015 260);
-	--secondary-foreground: oklch(0.22 0.02 260);
+	--secondary: oklch(0.75 0.15 240); /* Sky Blue #60A5FA */
+	--secondary-foreground: oklch(0.17 0.02 260);
+	--accent: oklch(0.65 0.22 10); /* Vibrant Pink #F43F5E */
+	--accent-foreground: oklch(0.985 0 0);
+	
 	--muted: oklch(0.965 0.012 260);
 	--muted-foreground: oklch(0.5 0.03 260);
-	--accent: oklch(0.93 0.03 255);
-	--accent-foreground: oklch(0.22 0.02 260);
 	--destructive: oklch(0.577 0.245 27.325);
 	--destructive-foreground: oklch(0.985 0 0);
 	--border: oklch(0.88 0.02 260);
 	--input: oklch(0.9 0.02 260);
-	--ring: oklch(0.65 0.2 255);
+	--ring: oklch(0.60 0.20 250);
+	
+	/* Glow effect colors */
+	--glow-primary: oklch(0.60 0.20 250 / 0.5);
+	--glow-accent: oklch(0.65 0.22 10 / 0.4);
+	--glow-success: oklch(0.70 0.18 150 / 0.4);
+	
+	/* Hard shadow colors (Neubrutalism) */
+	--shadow-light: oklch(0.88 0.08 240 / 0.9);
+	--shadow-dark: oklch(0.88 0.08 240 / 0.6);
+	
 	--chart-1: oklch(0.646 0.222 41.116);
 	--chart-2: oklch(0.6 0.118 184.704);
 	--chart-3: oklch(0.398 0.07 227.392);
@@ -67,12 +90,12 @@
 	--chart-5: oklch(0.769 0.188 70.08);
 	--sidebar: oklch(0.985 0.006 260);
 	--sidebar-foreground: oklch(0.17 0.02 260);
-	--sidebar-primary: oklch(0.65 0.2 255);
+	--sidebar-primary: oklch(0.60 0.20 250);
 	--sidebar-primary-foreground: oklch(0.985 0 0);
-	--sidebar-accent: oklch(0.94 0.02 255);
-	--sidebar-accent-foreground: oklch(0.22 0.02 260);
+	--sidebar-accent: oklch(0.75 0.15 240);
+	--sidebar-accent-foreground: oklch(0.17 0.02 260);
 	--sidebar-border: oklch(0.88 0.02 260);
-	--sidebar-ring: oklch(0.65 0.2 255);
+	--sidebar-ring: oklch(0.60 0.20 250);
 }
 
 /* Dark mode variables */
@@ -83,19 +106,32 @@
 	--card-foreground: oklch(0.98 0.003 260);
 	--popover: oklch(0.19 0.02 260);
 	--popover-foreground: oklch(0.98 0.003 260);
-	--primary: oklch(0.78 0.14 255);
+	
+	/* Game UI Colors - Social Blue Theme (Dark) */
+	--primary: oklch(0.68 0.18 250); /* Brighter Social Blue */
 	--primary-foreground: oklch(0.16 0.02 260);
-	--secondary: oklch(0.25 0.02 260);
+	--secondary: oklch(0.65 0.14 240); /* Brighter Sky Blue */
 	--secondary-foreground: oklch(0.98 0.003 260);
+	--accent: oklch(0.70 0.20 10); /* Brighter Vibrant Pink */
+	--accent-foreground: oklch(0.98 0.003 260);
+	
 	--muted: oklch(0.25 0.02 260);
 	--muted-foreground: oklch(0.7 0.03 260);
-	--accent: oklch(0.32 0.03 250);
-	--accent-foreground: oklch(0.98 0.003 260);
 	--destructive: oklch(0.704 0.191 22.216);
 	--destructive-foreground: oklch(0.985 0 0);
 	--border: oklch(0.3 0.02 260);
 	--input: oklch(0.3 0.02 260);
-	--ring: oklch(0.78 0.14 255);
+	--ring: oklch(0.68 0.18 250);
+	
+	/* Glow effect colors (stronger in dark mode) */
+	--glow-primary: oklch(0.68 0.18 250 / 0.6);
+	--glow-accent: oklch(0.70 0.20 10 / 0.5);
+	--glow-success: oklch(0.75 0.16 150 / 0.5);
+	
+	/* Hard shadow colors (Neubrutalism) */
+	--shadow-light: oklch(0.25 0.12 250 / 0.8);
+	--shadow-dark: oklch(0.12 0.10 260 / 0.9);
+	
 	--chart-1: oklch(0.488 0.243 264.376);
 	--chart-2: oklch(0.696 0.17 162.48);
 	--chart-3: oklch(0.985 0 0);
@@ -103,28 +139,253 @@
 	--chart-5: oklch(0.769 0.188 70.08);
 	--sidebar: oklch(0.17 0.02 260);
 	--sidebar-foreground: oklch(0.98 0.003 260);
-	--sidebar-primary: oklch(0.78 0.14 255);
+	--sidebar-primary: oklch(0.68 0.18 250);
 	--sidebar-primary-foreground: oklch(0.16 0.02 260);
-	--sidebar-accent: oklch(0.26 0.02 260);
+	--sidebar-accent: oklch(0.65 0.14 240);
 	--sidebar-accent-foreground: oklch(0.98 0.003 260);
 	--sidebar-border: oklch(0.28 0.02 260);
-	--sidebar-ring: oklch(0.78 0.14 255);
+	--sidebar-ring: oklch(0.68 0.18 250);
 }
 
 @layer base {
 	* {
 		@apply border-border;
 	}
+	
+	/* 防止最外层出现滚动条 */
+	html,
 	body {
-		@apply bg-background text-foreground;
+		@apply h-full overflow-hidden bg-background text-foreground;
+		/* Game UI - Enhanced gradients with social blue theme */
 		background-image:
-			radial-gradient(900px circle at 10% -20%, oklch(0.92 0.08 255 / 0.4), transparent 60%),
-			radial-gradient(1000px circle at 90% -10%, oklch(0.92 0.06 190 / 0.35), transparent 65%);
+			radial-gradient(1000px circle at 15% -10%, oklch(0.85 0.15 250 / 0.5), transparent 55%),
+			radial-gradient(1200px circle at 85% 0%, oklch(0.88 0.12 240 / 0.45), transparent 60%),
+			radial-gradient(800px circle at 50% 100%, oklch(0.90 0.10 10 / 0.3), transparent 65%);
 		background-attachment: fixed;
 	}
+	
 	.dark body {
+		/* Game UI - Enhanced dark gradients with glow effect */
 		background-image:
-			radial-gradient(900px circle at 10% -20%, oklch(0.35 0.08 255 / 0.35), transparent 60%),
-			radial-gradient(1000px circle at 90% -10%, oklch(0.32 0.06 190 / 0.3), transparent 65%);
+			radial-gradient(1000px circle at 15% -10%, oklch(0.25 0.12 250 / 0.5), transparent 55%),
+			radial-gradient(1200px circle at 85% 0%, oklch(0.22 0.10 240 / 0.45), transparent 60%),
+			radial-gradient(800px circle at 50% 100%, oklch(0.20 0.08 10 / 0.35), transparent 65%);
+	}
+
+	/* 隐藏滚动条但保留功能 */
+	.no-scrollbar::-webkit-scrollbar {
+		display: none;
+	}
+	.no-scrollbar {
+		-ms-overflow-style: none;
+		scrollbar-width: none;
+	}
+	
+	/* Custom scrollbar for game UI */
+	.custom-scrollbar::-webkit-scrollbar {
+		width: 8px;
+		height: 8px;
+	}
+	
+	.custom-scrollbar::-webkit-scrollbar-track {
+		@apply bg-muted/30 rounded-full;
+	}
+	
+	.custom-scrollbar::-webkit-scrollbar-thumb {
+		@apply bg-primary/30 rounded-full;
+		@apply hover:bg-primary/50;
+		@apply transition-colors duration-200;
+	}
+	
+	.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+		@apply bg-primary/20;
+		box-shadow: 0 0 8px var(--color-glow-primary);
+	}
+	
+	/* Game UI - Claymorphism Animations */
+	@keyframes bounce-in {
+		0% {
+			transform: scale(0.95);
+			opacity: 0.8;
+		}
+		50% {
+			transform: scale(1.02);
+		}
+		100% {
+			transform: scale(1);
+			opacity: 1;
+		}
+	}
+	
+	@keyframes glow-pulse {
+		0%, 100% {
+			box-shadow: 0 0 20px var(--glow-color, var(--color-glow-primary));
+			opacity: 1;
+		}
+		50% {
+			box-shadow: 0 0 40px var(--glow-color, var(--color-glow-primary));
+			opacity: 0.9;
+		}
+	}
+	
+	@keyframes press-down {
+		0% {
+			transform: translateY(0) scale(1);
+		}
+		100% {
+			transform: translateY(2px) scale(0.98);
+		}
+	}
+	
+	@keyframes shake {
+		0%, 100% { transform: translateX(0); }
+		25% { transform: translateX(-4px); }
+		75% { transform: translateX(4px); }
+	}
+	
+	/* Accessibility - respect user preferences */
+	@media (prefers-reduced-motion: reduce) {
+		*,
+		*::before,
+		*::after {
+			animation-duration: 0.01ms !important;
+			animation-iteration-count: 1 !important;
+			transition-duration: 0.01ms !important;
+		}
+		
+		.animate-bounce-in,
+		.animate-glow-pulse,
+		.animate-shake {
+			animation: none !important;
+		}
+	}
+}
+
+/* Utility classes layer */
+@layer utilities {
+	/* Game UI Animations */
+	.animate-bounce-in {
+		animation: bounce-in 400ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
+	}
+	
+	.animate-glow-pulse {
+		animation: glow-pulse 2s ease-in-out infinite;
+	}
+	
+	.animate-shake {
+		animation: shake 0.4s ease-in-out;
+	}
+	
+	.active\:press-down:active {
+		animation: press-down 150ms ease-out forwards;
+	}
+	
+	/* Focus styles for game UI */
+	.focus-game {
+		@apply focus-visible:outline-none;
+		@apply focus-visible:ring-4 focus-visible:ring-primary/40;
+		@apply focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+	}
+	
+	/* Neubrutalism Card styles */
+	.card-game {
+		@apply rounded-2xl border-[2px];
+		box-shadow: 3px 3px 0px var(--shadow-dark, oklch(0.25 0.12 250 / 0.8));
+		transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+	}
+	
+	.card-game:hover {
+		transform: translate(-2px, -2px);
+		box-shadow: 5px 5px 0px var(--shadow-dark, oklch(0.25 0.12 250 / 0.8));
+	}
+	
+	.card-game:active {
+		transform: translate(1px, 1px);
+		box-shadow: 2px 2px 0px var(--shadow-dark, oklch(0.25 0.12 250 / 0.8));
+	}
+	
+	@media (min-width: 768px) {
+		.card-game {
+			@apply rounded-3xl border-[3px];
+			box-shadow: 4px 4px 0px var(--shadow-dark, oklch(0.25 0.12 250 / 0.8));
+		}
+		
+		.card-game:hover {
+			box-shadow: 6px 6px 0px var(--shadow-dark, oklch(0.25 0.12 250 / 0.8));
+		}
+	}
+	
+	@media (min-width: 1024px) {
+		.card-game {
+			@apply border-[4px];
+			box-shadow: 5px 5px 0px var(--shadow-dark, oklch(0.25 0.12 250 / 0.8));
+		}
+		
+		.card-game:hover {
+			box-shadow: 7px 7px 0px var(--shadow-dark, oklch(0.25 0.12 250 / 0.8));
+		}
+	}
+	
+	/* Button styles with hard shadow */
+	.btn-game {
+		border: 2px solid currentColor;
+		box-shadow: 3px 3px 0px currentColor;
+		transition: all 150ms ease;
+	}
+	
+	.btn-game:hover {
+		transform: translate(-1px, -1px);
+		box-shadow: 4px 4px 0px currentColor;
+	}
+	
+	.btn-game:active {
+		transform: translate(2px, 2px);
+		box-shadow: 1px 1px 0px currentColor;
+	}
+	
+	/* Input styles with focus glow */
+	.input-game {
+		@apply border-2 border-input rounded-xl;
+		@apply bg-background;
+		@apply px-4 py-3;
+		@apply transition-all duration-150;
+	}
+	
+	.input-game:focus {
+		@apply border-primary outline-none;
+		box-shadow: 0 0 0 4px var(--glow-primary);
+	}
+	
+	/* Masonry 布局由组件处理，这里保留一些辅助类 */
+	.masonry-container {
+		position: relative;
+		width: 100%;
+	}
+	
+	.masonry-item {
+		position: absolute;
+		box-sizing: border-box;
+	}
+	
+	/* ============ 移动端安全区域支持 ============ */
+	/* 为移动浏览器底部工具栏预留空间 */
+	:root {
+		--safe-area-inset-top: env(safe-area-inset-top, 0px);
+		--safe-area-inset-right: env(safe-area-inset-right, 0px);
+		--safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+		--safe-area-inset-left: env(safe-area-inset-left, 0px);
+	}
+	
+	/* 底部固定元素需要添加安全区域padding */
+	.safe-area-bottom {
+		padding-bottom: calc(var(--safe-area-inset-bottom) + 1rem);
+	}
+	
+	/* 全屏内容需要考虑所有安全区域 */
+	.safe-area-all {
+		padding-top: var(--safe-area-inset-top);
+		padding-right: var(--safe-area-inset-right);
+		padding-bottom: var(--safe-area-inset-bottom);
+		padding-left: var(--safe-area-inset-left);
 	}
 }

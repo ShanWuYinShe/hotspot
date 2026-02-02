@@ -4,7 +4,7 @@ use axum::{
     response::Response,
 };
 
-use crate::{error::AppError, middleware::auth::extract_user_id, state::AppState};
+use crate::{error::AppError, state::AppState};
 
 fn required_permission(path: &str) -> Option<&'static str> {
     // RBAC 自检：只要是管理员即可访问（用于前端判断可见性/权限）
@@ -82,8 +82,12 @@ pub async fn admin_auth_middleware(
     req: Request,
     next: Next,
 ) -> Result<Response, AppError> {
-    // 1. 提取用户ID（由 auth_middleware 注入）
-    let user_id = extract_user_id(&req)?;
+    // 1. 提取用户ID（由 auth_middleware 注入到 request extensions）
+    let user_id = req
+        .extensions()
+        .get::<i64>()
+        .copied()
+        .ok_or_else(|| AppError::Unauthorized("未认证".to_string()))?;
 
     // 2. 必须是管理员
     if !state.admin_rbac_service.is_admin(user_id).await? {

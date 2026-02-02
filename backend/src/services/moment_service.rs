@@ -15,9 +15,8 @@ use crate::{
             UserMomentsRequest,
         },
         response::{
-            Location, MomentCard, MomentInteractionStateData, MomentItem, MomentLikeItem,
-            MyMomentState, PaginatedData, PaginationMeta, RelativeLocation, UserInfo,
-            UserMomentListItem,
+            MomentInteractionStateData, MomentLikeItem, MomentSearchItem, MyMomentState,
+            PaginatedData, PaginationMeta, RelativeLocation, UserInfo, UserMomentListItem,
         },
     },
     error::{AppError, Result},
@@ -182,9 +181,9 @@ impl MomentService {
                 storage_paths.clone(),
                 req.mentions.clone(),
                 privacy_level.as_str().to_string(),
-                req.location.latitude,
-                req.location.longitude,
-                req.location.location_name.clone(),
+                Some(req.location.latitude),
+                Some(req.location.longitude),
+                Some(req.location.location_name.clone()),
             )
             .await?;
         if let Err(e) = ResourceExistenceChecker::new(self._redis.clone())
@@ -273,10 +272,12 @@ impl MomentService {
             created_at: moment.created_at.to_rfc3339(),
             likes_count: 0,
             comments_count: 0,
-            location: Location {
+            location: RelativeLocation {
                 latitude: req.location.latitude,
                 longitude: req.location.longitude,
                 location_name: req.location.location_name.clone(),
+                distance: None,
+                bearing_degrees: None,
             },
         })
     }
@@ -425,7 +426,7 @@ impl MomentService {
         &self,
         viewer_id: Option<i64>,
         req: &SearchMomentsByKeywordRequest,
-    ) -> Result<PaginatedData<MomentItem>> {
+    ) -> Result<PaginatedData<MomentSearchItem>> {
         let limit = Validator::validate_limit(req.limit, 100)? as i32;
         let cursor = req.cursor.clone();
 
@@ -451,7 +452,7 @@ impl MomentService {
         &self,
         viewer_id: Option<i64>,
         req: &SearchMomentsByTagRequest,
-    ) -> Result<PaginatedData<MomentItem>> {
+    ) -> Result<PaginatedData<MomentSearchItem>> {
         let limit = Validator::validate_limit(req.limit, 100)? as i32;
         let cursor = req.cursor.clone();
 
@@ -477,7 +478,7 @@ impl MomentService {
         &self,
         viewer_id: Option<i64>,
         req: &SearchMomentsByLocationRequest,
-    ) -> Result<PaginatedData<MomentItem>> {
+    ) -> Result<PaginatedData<MomentSearchItem>> {
         Validator::validate_coordinates(
             req.reference_point.latitude,
             req.reference_point.longitude,
@@ -509,7 +510,7 @@ impl MomentService {
         &self,
         viewer_id: Option<i64>,
         req: &MomentOpenTheDoorRequest,
-    ) -> Result<MomentCard> {
+    ) -> Result<MomentSearchItem> {
         let moment_id = Uuid::parse_str(&req.moment_id)
             .map_err(|_| AppError::BadRequest("无效的瞬间ID".to_string()))?;
 
@@ -528,7 +529,7 @@ impl MomentService {
             None
         };
 
-        Ok(MomentCard {
+        Ok(MomentSearchItem {
             moment_id: moment_data.moment_id,
             user: UserInfo {
                 user_id: moment_data.user_id,
@@ -546,10 +547,12 @@ impl MomentService {
             created_at: moment_data.created_at.clone(),
             likes_count: moment_data.likes_count,
             comments_count: moment_data.comments_count,
-            location: Location {
+            location: RelativeLocation {
                 latitude: moment_data.latitude,
                 longitude: moment_data.longitude,
                 location_name: moment_data.location_name.clone(),
+                distance: None, // 详情场景不需要距离
+                bearing_degrees: None,
             },
             my_state,
         })
@@ -592,9 +595,9 @@ impl MomentService {
             created_at: moment_data.created_at.to_rfc3339(),
             likes_count: moment_data.likes_count as i32,
             comments_count: moment_data.comments_count as i32,
-            latitude: moment_data.latitude,
-            longitude: moment_data.longitude,
-            location_name: moment_data.location_name.clone(),
+            latitude: moment_data.latitude.unwrap_or(0.0),
+            longitude: moment_data.longitude.unwrap_or(0.0),
+            location_name: moment_data.location_name.clone().unwrap_or_default(),
             privacy_level: moment_data.privacy_level.clone(),
         };
 
@@ -824,7 +827,7 @@ impl MomentService {
         &self,
         user_id: i64,
         req: &MyFavoritesRequest,
-    ) -> Result<PaginatedData<MomentCard>> {
+    ) -> Result<PaginatedData<MomentSearchItem>> {
         let limit = Validator::validate_limit(req.limit, 100)? as i32;
         let cursor = req.cursor.clone();
 
@@ -861,7 +864,7 @@ impl MomentService {
                 is_favorited: true,
             });
 
-            items.push(MomentCard {
+            items.push(MomentSearchItem {
                 moment_id: m.moment_id.to_string(),
                 user: UserInfo {
                     user_id: m.user_id,
@@ -879,10 +882,12 @@ impl MomentService {
                 created_at: m.created_at.to_rfc3339(),
                 likes_count: m.likes_count as i32,
                 comments_count: m.comments_count as i32,
-                location: Location {
-                    latitude: m.latitude,
-                    longitude: m.longitude,
-                    location_name: m.location_name,
+                location: RelativeLocation {
+                    latitude: m.latitude.unwrap_or(0.0),
+                    longitude: m.longitude.unwrap_or(0.0),
+                    location_name: m.location_name.unwrap_or_default(),
+                    distance: None,
+                    bearing_degrees: None,
                 },
                 my_state,
             });
@@ -950,7 +955,7 @@ impl MomentService {
         &self,
         moments: Vec<MomentSearchRow>,
         next_cursor: Option<String>,
-    ) -> Result<PaginatedData<MomentItem>> {
+    ) -> Result<PaginatedData<MomentSearchItem>> {
         // 批量获取标签
         let moment_ids: Vec<_> = moments.iter().map(|m| m.moment_id).collect();
         let tags_map = self.tag_repo.get_moment_tags_batch(&moment_ids).await?;
@@ -963,7 +968,7 @@ impl MomentService {
 
             let images = self.sign_moment_images(&m.images).await;
 
-            items.push(MomentItem {
+            items.push(MomentSearchItem {
                 moment_id: m.moment_id.to_string(),
                 user: UserInfo {
                     user_id: m.user_id,
@@ -982,12 +987,13 @@ impl MomentService {
                 likes_count: m.likes_count as i32,
                 comments_count: m.comments_count as i32,
                 location: RelativeLocation {
-                    latitude: m.latitude,
-                    longitude: m.longitude,
-                    location_name: m.location_name,
+                    latitude: m.latitude.unwrap_or(0.0),
+                    longitude: m.longitude.unwrap_or(0.0),
+                    location_name: m.location_name.unwrap_or_default(),
                     distance: m.distance,
                     bearing_degrees: m.bearing_degrees,
                 },
+                my_state: None,
             });
         }
 
@@ -1022,10 +1028,12 @@ impl MomentService {
                 created_at: m.created_at.to_rfc3339(),
                 likes_count: m.likes_count as i32,
                 comments_count: m.comments_count as i32,
-                location: Location {
-                    latitude: m.latitude,
-                    longitude: m.longitude,
-                    location_name: m.location_name,
+                location: RelativeLocation {
+                    latitude: m.latitude.unwrap_or(0.0),
+                    longitude: m.longitude.unwrap_or(0.0),
+                    location_name: m.location_name.unwrap_or_default(),
+                    distance: None,
+                    bearing_degrees: None,
                 },
             });
         }

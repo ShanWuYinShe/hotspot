@@ -33,25 +33,28 @@ CREATE TABLE users (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ,
     is_banned BOOLEAN NOT NULL DEFAULT FALSE,
-    ban_reason TEXT, -- 封禁原因
-    banned_until TIMESTAMPTZ, -- 封禁截止时间
-    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-    deleted_at TIMESTAMPTZ,
+    ban_reason TEXT,
+    banned_until TIMESTAMPTZ,
     CONSTRAINT check_user_latitude_range CHECK (current_latitude IS NULL OR (current_latitude >= -90 AND current_latitude <= 90)),
     CONSTRAINT check_user_longitude_range CHECK (current_longitude IS NULL OR (current_longitude >= -180 AND current_longitude <= 180))
 );
 
-CREATE INDEX idx_users_user_id ON users (user_id) WHERE is_deleted = FALSE;
-CREATE INDEX idx_users_login_id ON users (login_id) WHERE login_id IS NOT NULL AND is_deleted = FALSE;
-CREATE INDEX idx_users_nickname ON users USING gin (nickname gin_trgm_ops) WHERE is_deleted = FALSE;
-CREATE INDEX idx_users_location ON users USING gist (location) WHERE location IS NOT NULL AND is_deleted = FALSE;
+CREATE INDEX idx_users_user_id ON users (user_id) WHERE is_banned = FALSE;
+CREATE INDEX idx_users_login_id ON users (login_id) WHERE login_id IS NOT NULL AND is_banned = FALSE;
+CREATE INDEX idx_users_nickname ON users USING gin (nickname gin_trgm_ops) WHERE is_banned = FALSE;
+CREATE INDEX idx_users_location ON users USING gist (location) WHERE location IS NOT NULL AND is_banned = FALSE;
+
+COMMENT ON TABLE users IS '用户表：核心用户信息，不支持删除，只能封禁';
+COMMENT ON COLUMN users.is_banned IS '是否被封禁（用于账号停用、管理员封禁等场景）';
+COMMENT ON COLUMN users.ban_reason IS '封禁原因';
+COMMENT ON COLUMN users.banned_until IS '封禁截止时间（NULL表示永久封禁）';
 
 CREATE TRIGGER trigger_users_updated_at
     BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER trigger_users_location_sync
     BEFORE INSERT OR UPDATE OF current_latitude, current_longitude ON users
-    FOR EACH ROW WHEN (NEW.current_latitude IS NOT NULL AND NEW.current_longitude IS NOT NULL)
+    FOR EACH ROW
     EXECUTE FUNCTION sync_user_location();
 
 -- ============================================================
@@ -318,3 +321,15 @@ COMMENT ON COLUMN verification_codes.expires_at IS '过期时间（通常为5分
 COMMENT ON COLUMN verification_codes.attempts IS '已尝试验证次数';
 COMMENT ON COLUMN verification_codes.max_attempts IS '最大允许尝试次数';
 COMMENT ON COLUMN verification_codes.verified_at IS '验证通过时间（NULL表示未验证）';
+
+-- ============================================================
+-- 验证码清理策略
+-- ============================================================
+-- 建议：定期清理超过 24 小时的验证码记录，防止表膨胀
+-- 方式1（手动定时任务）：
+--   DELETE FROM verification_codes WHERE created_at < NOW() - INTERVAL '24 hours';
+-- 方式2（PostgreSQL pg_cron扩展）：
+--   SELECT cron.schedule('cleanup-verification-codes', '0 2 * * *', 
+--     $$ DELETE FROM verification_codes WHERE created_at < NOW() - INTERVAL '24 hours' $$);
+-- 方式3（应用层定时任务）：
+--   在应用启动时使用 tokio::spawn 定时执行清理

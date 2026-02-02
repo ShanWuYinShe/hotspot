@@ -1,3 +1,4 @@
+use crate::dto::response::RelativeLocation;
 use redis::aio::ConnectionManager;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -24,9 +25,9 @@ use crate::{
         response::{
             AdminGroupDetail, AdminGroupSettingsSummary, AdminGroupStats, ApplyToGroupData,
             BannedMemberItem, GroupAnnouncementItem, GroupApplicationItem, GroupDetailData,
-            GroupInfo, GroupInviteItem, GroupItem, GroupMemberItem, GroupMyStateData,
-            GroupSettings, GroupSettingsData, InviteMemberData, JoinedGroupItem, Location,
-            PaginatedData, PaginationMeta, RelativeLocation, UserInfo,
+            GroupInfo, GroupInviteItem, GroupMemberItem, GroupMyStateData, GroupSearchItem,
+            GroupSettings, GroupSettingsData, InviteMemberData, MyGroupItem, PaginatedData,
+            PaginationMeta, UserInfo,
         },
     },
     error::{AppError, Result},
@@ -79,7 +80,7 @@ pub struct GroupService {
 }
 
 use crate::dto::request::{AdminDismissGroupRequest, AdminGroupSearchRequest};
-use crate::dto::response::AdminGroupItem;
+use crate::dto::response::AdminGroupSearchItem;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct CachedGroupMembers {
@@ -350,7 +351,7 @@ impl GroupService {
     pub async fn search_by_keyword(
         &self,
         req: SearchGroupsByKeywordRequest,
-    ) -> Result<PaginatedData<GroupItem>> {
+    ) -> Result<PaginatedData<GroupSearchItem>> {
         let limit = Validator::validate_limit(req.limit, 100)?;
         let cursor = req.cursor;
 
@@ -383,7 +384,7 @@ impl GroupService {
                 tags
             };
 
-            items.push(GroupItem {
+            items.push(GroupSearchItem {
                 group_chat_id: g.group_id.to_string(),
                 name: g.name,
                 description: if g.description.is_empty() {
@@ -402,8 +403,8 @@ impl GroupService {
                     latitude: g.latitude,
                     longitude: g.longitude,
                     location_name: g.location_name,
-                    distance: g.distance,
-                    bearing_degrees: g.bearing_degrees,
+                    distance: Some(g.distance),
+                    bearing_degrees: Some(g.distance),
                 },
             });
         }
@@ -421,7 +422,7 @@ impl GroupService {
     pub async fn search_by_tag(
         &self,
         req: SearchGroupsByTagRequest,
-    ) -> Result<PaginatedData<GroupItem>> {
+    ) -> Result<PaginatedData<GroupSearchItem>> {
         let limit = Validator::validate_limit(req.limit, 100)?;
         let cursor = req.cursor;
 
@@ -461,7 +462,7 @@ impl GroupService {
                 tags
             };
 
-            items.push(GroupItem {
+            items.push(GroupSearchItem {
                 group_chat_id: g.group_id.to_string(),
                 name: g.name,
                 description: if g.description.is_empty() {
@@ -480,8 +481,8 @@ impl GroupService {
                     latitude: g.latitude,
                     longitude: g.longitude,
                     location_name: g.location_name,
-                    distance: g.distance,
-                    bearing_degrees: g.bearing_degrees,
+                    distance: Some(g.distance),
+                    bearing_degrees: Some(g.distance),
                 },
             });
         }
@@ -499,7 +500,7 @@ impl GroupService {
     pub async fn search_by_location(
         &self,
         req: SearchGroupsByLocationRequest,
-    ) -> Result<PaginatedData<GroupItem>> {
+    ) -> Result<PaginatedData<GroupSearchItem>> {
         let limit = Validator::validate_limit(req.limit, 100)?;
         let cursor = req.cursor;
 
@@ -526,7 +527,7 @@ impl GroupService {
                 tags
             };
 
-            items.push(GroupItem {
+            items.push(GroupSearchItem {
                 group_chat_id: g.group_id.to_string(),
                 name: g.name,
                 description: if g.description.is_empty() {
@@ -545,8 +546,8 @@ impl GroupService {
                     latitude: g.latitude,
                     longitude: g.longitude,
                     location_name: g.location_name,
-                    distance: g.distance,
-                    bearing_degrees: g.bearing_degrees,
+                    distance: Some(g.distance),
+                    bearing_degrees: Some(g.distance),
                 },
             });
         }
@@ -624,10 +625,12 @@ impl GroupService {
             tags,
             members_count,
             has_password,
-            location: Location {
+            location: RelativeLocation {
                 latitude: group.latitude.unwrap_or(0.0),
                 longitude: group.longitude.unwrap_or(0.0),
                 location_name: group.location_name.clone().unwrap_or_default(),
+                distance: None,
+                bearing_degrees: None,
             },
             created_at: group.created_at.to_rfc3339(),
             owner_id: group.owner_id,
@@ -659,8 +662,10 @@ impl GroupService {
                     .unwrap_or(GroupJoinMethod::Open),
                 is_searchable: settings.as_ref().map(|s| s.is_searchable).unwrap_or(true),
                 max_members: settings.as_ref().and_then(|s| s.max_members).unwrap_or(500),
-                location: Location {
+                location: RelativeLocation {
                     latitude: group.latitude.unwrap_or(0.0),
+                    distance: None,
+                    bearing_degrees: None,
                     longitude: group.longitude.unwrap_or(0.0),
                     location_name: group.location_name.clone().unwrap_or_default(),
                 },
@@ -674,7 +679,7 @@ impl GroupService {
         &self,
         user_id: i64,
         req: MyGroupChatsRequest,
-    ) -> Result<PaginatedData<JoinedGroupItem>> {
+    ) -> Result<PaginatedData<MyGroupItem>> {
         let limit = Validator::validate_limit(req.limit, 100)?;
         let cursor = req.cursor;
 
@@ -723,7 +728,7 @@ impl GroupService {
                 let tags = tags_map.get(&g.group_id).cloned();
                 let tags = tags.filter(|t| !t.is_empty());
 
-                items.push(JoinedGroupItem {
+                items.push(MyGroupItem {
                     group_info: GroupInfo {
                         group_chat_id: g.group_id.to_string(),
                         name: g.name.clone(),
@@ -740,10 +745,12 @@ impl GroupService {
                     },
                     tags,
                     has_password: g.has_password,
-                    location: Location {
+                    location: RelativeLocation {
                         latitude: g.latitude,
                         longitude: g.longitude,
                         location_name: g.location_name.clone(),
+                        distance: None,
+                        bearing_degrees: None,
                     },
                     last_activity_at: g.updated_at.unwrap_or(g.created_at).to_rfc3339(),
                     role: m.role,
@@ -2016,7 +2023,7 @@ impl GroupService {
     pub async fn admin_search_groups(
         &self,
         req: &AdminGroupSearchRequest,
-    ) -> Result<PaginatedData<AdminGroupItem>> {
+    ) -> Result<PaginatedData<AdminGroupSearchItem>> {
         let limit = Validator::validate_limit(req.limit, 50)? as i64;
         let cursor = req.cursor.clone();
 
@@ -2039,15 +2046,17 @@ impl GroupService {
             let location = if let (Some(lat), Some(lng), Some(name)) =
                 (g.latitude, g.longitude, g.location_name.clone())
             {
-                Some(Location {
+                Some(RelativeLocation {
                     latitude: lat,
                     longitude: lng,
                     location_name: name,
+                    distance: None,
+                    bearing_degrees: None,
                 })
             } else {
                 None
             };
-            items.push(AdminGroupItem {
+            items.push(AdminGroupSearchItem {
                 group_chat_id: g.group_id.to_string(),
                 name: g.name,
                 avatar_url: self
@@ -2149,10 +2158,12 @@ impl GroupService {
         let location = if let (Some(lat), Some(lng), Some(name)) =
             (group.latitude, group.longitude, group.location_name.clone())
         {
-            Some(Location {
+            Some(RelativeLocation {
                 latitude: lat,
                 longitude: lng,
                 location_name: name,
+                distance: None,
+                bearing_degrees: None,
             })
         } else {
             None

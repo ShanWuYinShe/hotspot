@@ -23,6 +23,8 @@ export type AnnouncementSeverity = 'info' | 'warning' | 'error';
 export type TagTrend = 'rising' | 'stable' | 'falling';
 export type TagTimeframe = 'daily' | 'weekly' | 'monthly';
 export type NotificationFilterType = 'like' | 'comment' | 'follow' | 'system' | 'mention';
+export type VerificationCodeType = 'register' | 'reset_password' | 'change_phone';
+export type ReportTargetType = 'user' | 'moment' | 'comment' | 'message' | 'group';
 export type NotificationType =
 	| 'moment_like'
 	| 'moment_comment'
@@ -173,10 +175,14 @@ export interface FeedUserItem extends UserInfo {
 	relation?: Relationship;
 }
 
-export interface UserSuggestItem extends UserInfo {
-	bio?: string;
-	tags?: string[];
-	distance?: number;
+// 用户建议项 - API 规范: @api_spec_search.mdc UserSuggestItem
+// 用途：显示用户基本信息，点击后跳转到用户主页
+export interface UserSuggestItem {
+	user_id: number;
+	nickname: string;
+	avatar_url?: string;
+	bio?: string; // 个性签名，用于副标题展示
+	distance?: number; // 距离（米），仅当请求包含 location 时返回
 }
 
 export interface UserSuggestions {
@@ -184,7 +190,6 @@ export interface UserSuggestions {
 }
 
 export interface Relationship {
-	is_mutual_follow: boolean;
 	is_following: boolean;
 	is_followed_by: boolean;
 	is_blocked: boolean;
@@ -276,7 +281,6 @@ export interface UserSettings {
 }
 
 export interface MyCard {
-	user_id: number;
 	nickname: string;
 	avatar_url?: string;
 	bio?: string;
@@ -289,7 +293,6 @@ export interface MyCard {
 	last_online: string;
 	created_at: string;
 	stats: UserStats;
-	user_type?: UserType;
 }
 
 // ============== 群组类型 ==============
@@ -308,11 +311,15 @@ export interface GroupSearchItem extends GroupInfo {
 	location: RelativeLocation;
 }
 
-export interface GroupSuggestItem extends GroupInfo {
-	description?: string;
-	tags?: string[];
-	has_password: boolean;
-	distance?: number;
+// 群组建议项 - API 规范: @api_spec_search.mdc GroupSuggestItem
+// 用途：显示群组基本信息，点击后跳转到群组页
+export interface GroupSuggestItem {
+	group_chat_id: string;
+	name: string;
+	avatar_url?: string;
+	description?: string; // 群组简介，用于副标题展示（优先于成员数）
+	members_count: number; // 成员数量，当无 description 时显示"X 位成员"
+	distance?: number; // 距离（米），仅当请求包含 location 时返回
 }
 
 export interface GroupSuggestions {
@@ -367,11 +374,12 @@ export interface GroupSettings {
 	location: Location;
 }
 
-export interface GroupMember {
+export interface GroupMemberItem {
 	user: UserInfo;
 	role: GroupRole;
 	joined_at: string;
 	muted_until?: string;
+	is_online?: boolean; // 成员是否在线
 }
 
 export interface GroupAnnouncementItem {
@@ -430,13 +438,14 @@ export interface MomentSearchItem extends MomentBase {
 	location: RelativeLocation;
 }
 
+// 瞬间建议项 - API 规范: @api_spec_search.mdc MomentSuggestItem
+// 用途：显示瞬间预览信息，点击后跳转到瞬间详情页
 export interface MomentSuggestItem {
 	moment_id: string;
-	description: string;
-	images?: MomentImage[];
-	tags?: string[];
-	user: UserInfo;
-	distance?: number;
+	content: string; // 瞬间文字内容（后端限制长度为前100字符）
+	author_nickname: string; // 作者昵称，用于显示"来自 XXX"
+	author_avatar_url?: string; // 作者头像，用于显示作者头像而非瞬间图片
+	distance?: number; // 距离（米），仅当请求包含 location 时返回
 }
 
 export interface MomentSuggestions {
@@ -505,7 +514,6 @@ export interface MessageBase {
 	reply_to?: MessageReplyTo;
 	sent_at: string;
 	edited_at?: string;
-	is_recalled: boolean;
 	recalled_at?: string;
 }
 
@@ -526,7 +534,18 @@ export interface MessageReadItem {
 	read_at: string;
 }
 
-export type PrivateMessageItem = MessageBase;
+export interface PrivateMessageItem {
+	message_id: string;
+	type: MessageType;
+	content?: string;
+	media?: MessageMedia;
+	location?: MessageLocation;
+	sender_id: number;
+	reply_to?: MessageReplyTo;
+	sent_at: string;
+	edited_at?: string;
+	recalled_at?: string;
+}
 
 export interface GroupMessageItem extends MessageBase {
 	mentions?: number[];
@@ -559,11 +578,6 @@ export interface Conversation {
 	last_activity_at: string;
 	created_at: string;
 	can_message: boolean;
-	recent_messages: {
-		items: PrivateMessageItem[];
-		has_more: boolean;
-		next_cursor?: string;
-	};
 }
 
 export interface GroupChatListItem {
@@ -730,7 +744,6 @@ export interface RefreshTokenRequest {
 
 // ============== 举报类型 ==============
 
-export type ReportTargetType = 'user' | 'moment' | 'comment' | 'group' | 'message';
 export type ReportReason = string;
 
 export interface ReportItem {
@@ -876,12 +889,64 @@ export interface ReportCreated {
 // ============== 会话管理类型 ==============
 
 export interface SessionItem {
-	session_id: string;
+	display_id: string; // 用户可见的会话ID（如 "ses_abc123"）
+	revoke_token: string; // 一次性撤销令牌
 	device_name?: string;
 	device_type?: string;
 	ip_address?: string;
-	location?: string;
+	ip_location?: string; // IP地理位置信息
 	last_active_at: string;
 	created_at: string;
 	is_current: boolean;
+}
+
+// ============== 分享系统 ==============
+
+export type ShareType = 'location' | 'moment' | 'group' | 'user';
+
+export interface LocationSharePayload {
+	latitude: number;
+	longitude: number;
+	location_name: string;
+}
+
+export interface MomentSharePayload {
+	moment_id: string;
+}
+
+export interface GroupSharePayload {
+	group_id: string;
+}
+
+export interface UserSharePayload {
+	user_id: number;
+}
+
+export type SharePayload =
+	| LocationSharePayload
+	| MomentSharePayload
+	| GroupSharePayload
+	| UserSharePayload;
+
+export interface Share {
+	share_id: string;
+	share_code: string;
+	share_type: ShareType;
+	creator: UserInfo;
+	payload: SharePayload;
+	created_at: string;
+}
+
+// 分享请求
+export interface CreateShareRequest {
+	share_type: ShareType;
+	payload: SharePayload;
+}
+
+export interface GetShareRequest {
+	share_code: string;
+}
+
+export interface ApplyShareRequest {
+	share_code: string;
 }

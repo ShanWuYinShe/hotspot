@@ -14,9 +14,9 @@ use crate::{
             UserMomentsRequest, UserOpenTheDoorRequest, UserStatsRequest,
         },
         response::{
-            AdminUserDetail, ApiResponse, AuthData, BlockedUserItem, FollowRequestItem,
-            FollowerItem, FollowingItem, FriendItem, GroupItem, MomentItem, MyProfileData,
-            PaginatedData, UserCard, UserInfo, UserItem, UserMomentListItem, UserRelation,
+            AdminUserDetail, ApiResponse, AuthData, BlockedUserSearchItem, FollowRequestItem,
+            FollowerItem, FollowingItem, FriendItem, GroupSearchItem, MomentSearchItem, MyProfile,
+            PaginatedData, UserInfo, UserMomentListItem, UserRelation, UserSearchItem,
             UserSettingsData, UserStatsData,
         },
     },
@@ -32,7 +32,7 @@ use crate::{
 pub async fn search_by_keyword(
     State(state): State<AppState>,
     Json(req): Json<SearchUsersByKeywordRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<UserItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<UserSearchItem>>>> {
     let response = state.user_service.search_by_keyword(&req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
@@ -41,7 +41,7 @@ pub async fn search_by_keyword(
 pub async fn search_by_tag(
     State(state): State<AppState>,
     Json(req): Json<SearchUsersByTagRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<UserItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<UserSearchItem>>>> {
     let response = state.user_service.search_by_tag(&req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
@@ -50,7 +50,7 @@ pub async fn search_by_tag(
 pub async fn search_by_location(
     State(state): State<AppState>,
     Json(req): Json<SearchUsersByLocationRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<UserItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<UserSearchItem>>>> {
     let response = state.user_service.search_by_location(&req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
@@ -60,7 +60,7 @@ pub async fn open_the_door(
     State(state): State<AppState>,
     user: OptionalAuthenticatedUser,
     Json(req): Json<UserOpenTheDoorRequest>,
-) -> Result<Json<ApiResponse<UserCard>>> {
+) -> Result<Json<ApiResponse<UserSearchItem>>> {
     let response = state.user_service.open_the_door(user.user_id, &req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
@@ -99,7 +99,7 @@ pub async fn get_my_profile(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(_req): Json<MyProfileRequest>,
-) -> Result<Json<ApiResponse<MyProfileData>>> {
+) -> Result<Json<ApiResponse<MyProfile>>> {
     let data = state.user_service.get_me(user.user_id).await?;
     Ok(Json(ApiResponse::success(data)))
 }
@@ -209,7 +209,7 @@ pub async fn get_followers(
 pub async fn get_groups(
     State(state): State<AppState>,
     Json(req): Json<UserGroupsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<GroupItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<GroupSearchItem>>>> {
     let response = state.user_service.get_user_groups_list(&req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
@@ -218,7 +218,7 @@ pub async fn get_groups(
 pub async fn get_liked_moments(
     State(state): State<AppState>,
     Json(req): Json<UserLikedMomentsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<MomentItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<MomentSearchItem>>>> {
     let response = state.user_service.get_user_liked_moments_list(&req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
@@ -400,7 +400,7 @@ pub async fn get_my_blocked(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<MyBlockedRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<BlockedUserItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<BlockedUserSearchItem>>>> {
     let response = state
         .user_service
         .get_blocked_users_list(user.user_id, &req)
@@ -427,7 +427,7 @@ pub async fn set_remark(
 pub async fn admin_search(
     State(state): State<AppState>,
     Json(req): Json<crate::dto::request::AdminUserSearchRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<crate::dto::response::AdminUserItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<crate::dto::response::AdminUserSearchItem>>>> {
     let response = state.user_service.admin_search_users(&req).await?;
     Ok(Json(ApiResponse::success(response)))
 }

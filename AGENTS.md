@@ -3,7 +3,8 @@
 ## Project Overview
 
 - **Backend**: Rust (Axum 0.7+) + PostgreSQL + Redis + PostGIS
-- **Frontend**: Next.js 16 (App Router) + React 19 + TypeScript + TanStack Query + Zustand
+- **Frontend (React)**: Next.js 16 (App Router) + React 19 + TypeScript + TanStack Query + Zustand (`frontend_react/`)
+- **Frontend (Svelte)**: SvelteKit 2 + Svelte 5 + TypeScript + Tailwind CSS 4 (`frontend_svelte/`)
 - **Mobile**: HarmonyOS (ArkTS)
 - **API Style**: JSON-RPC (all endpoints use POST, unified `/api/v1/` prefix)
 
@@ -11,7 +12,7 @@
 
 ## Build, Lint, and Test Commands
 
-### Frontend (`frontend_react/`)
+### Frontend React (`frontend_react/`)
 
 ```bash
 cd frontend_react
@@ -33,6 +34,23 @@ pnpm type-check           # TypeScript type check
 # Testing (if configured)
 pnpm test                 # Run all tests
 pnpm test -- <test_file>  # Run single test file
+```
+
+### Frontend Svelte (`frontend_svelte/`)
+
+```bash
+cd frontend_svelte
+
+# Development
+pnpm dev                  # Start dev server (localhost:5173)
+
+# Build
+pnpm build                # Production build
+pnpm preview              # Preview production build
+
+# Type Checking
+pnpm check                # Svelte check + TypeScript
+pnpm check:watch          # Watch mode type checking
 ```
 
 ### Backend (`backend/`)
@@ -68,8 +86,13 @@ cargo fmt -- --check       # Check formatting without changes
 
 ```bash
 # After completing testing or before finishing work
+# React frontend (Next.js)
 pkill -f "next dev"
 pkill -f "node.*next"
+
+# Svelte frontend (Vite)
+pkill -f "vite dev"
+pkill -f "node.*vite"
 ```
 
 **DO NOT leave the dev server running** - The user will run it themselves. Only start it when specifically needed for testing, and stop it immediately after.
@@ -103,6 +126,21 @@ pkill -f "node.*next"
 - **Messages**: API only submits intent + gets `message_id`. UI only shows WebSocket-pushed messages. NO API→UI direct insert
 - **WebSocket**: Event types from `@api_spec_websocket.mdc`. NO local event definitions
 - **Dev Server Management**: DO NOT automatically run `pnpm dev`. The user will run it themselves. If you must run it for testing, shut it down immediately after use with `pkill -f "next dev"` or `pkill -f "node.*next"`
+
+### Frontend (SvelteKit/Svelte)
+
+- **API Calls**: All through `src/lib/api/services/*`. NO direct fetch in components/routes
+- **POST Only**: All API endpoints use POST method. NO GET/PUT/DELETE (per @spec/api_spec.mdc)
+- **Paths**: Use `src/lib/api/endpoints.ts` constants. NO hardcoded `/api/v1/` strings
+- **Success**: Check `ApiResponse.code === 0`. NOT HTTP status code
+- **State**: Svelte 5 Runes (`$state`, `$derived`, `$effect`) for reactive state
+- **Stores**: Use `.svelte.ts` files with rune-based stores in `src/lib/stores/`
+- **Cursor**: Opaque string. NO parsing/decoding/construction by frontend
+- **Messages**: API only submits intent + gets `message_id`. UI only shows WebSocket-pushed messages. NO API→UI direct insert
+- **WebSocket**: Event types from `@api_spec_websocket.mdc`. Store in `src/lib/websocket/`
+- **UI Components**: bits-ui for headless components, lucide-svelte for icons, svelte-sonner for toasts
+- **Styling**: Tailwind CSS 4 with tailwind-variants for component variants
+- **Dev Server Management**: DO NOT automatically run `pnpm dev`. The user will run it themselves. If you must run it for testing, shut it down immediately after use with `pkill -f "vite dev"` or `pkill -f "node.*vite"`
 
 ---
 
@@ -141,6 +179,24 @@ import { FeedService } from "../../lib/api/services";
 
 - **Rule**: Always use absolute imports from `@/` (configured in tsconfig.json)
 - **NO relative paths** like `../components/Button` or `../../lib/utils`
+
+#### Frontend (SvelteKit/Svelte)
+
+```typescript
+// ✅ CORRECT: Absolute imports from $lib
+import { Button } from "$lib/components/ui/button.svelte";
+import { authStore } from "$lib/stores/auth.svelte";
+import { feedService } from "$lib/api/services";
+
+// ❌ INCORRECT: Relative paths
+import { Button } from "../components/ui/button.svelte";
+import { authStore } from "../../stores/auth.svelte";
+```
+
+- **Rule**: Always use absolute imports from `$lib` (SvelteKit alias for `src/lib/`)
+- **NO relative paths** like `../components/` or `../../lib/`
+- Svelte component files use `.svelte` extension
+- Rune-based store files use `.svelte.ts` extension
 
 ### Naming Conventions
 
@@ -192,6 +248,32 @@ function getUserProfile() {}
 - **Components**: `PascalCase` (e.g., `Button`, `AuthTabs`)
 - **Types/Interfaces**: `PascalCase` (e.g., `ApiResponse<T>`, `AuthData`)
 - **Constants**: `UPPER_SNAKE_CASE` (e.g., `API_BASE`, `ENDPOINTS`)
+
+#### Frontend (SvelteKit/Svelte)
+
+```typescript
+// Components (files use kebab-case)
+// File: user-avatar.svelte, moment-card.svelte
+
+// Stores (rune-based with .svelte.ts)
+// File: auth.svelte.ts
+export const authStore = createAuthStore();
+
+// Types/Interfaces
+export interface ApiResponse<T> {}
+export type FeedSource = "all" | "following" | "nearby";
+
+// Variables/Functions
+const userId = 123;
+let isLoading = $state(false);  // Svelte 5 rune
+function getUserProfile() {}
+```
+
+- **Variables/Functions**: `camelCase` (e.g., `getUserInfo`, `isLoading`)
+- **Component Files**: `kebab-case.svelte` (e.g., `user-card.svelte`, `moment-card.svelte`)
+- **Store Files**: `kebab-case.svelte.ts` (e.g., `auth.svelte.ts`, `toast.svelte.ts`)
+- **Types/Interfaces**: `PascalCase` (e.g., `ApiResponse<T>`, `AuthData`)
+- **Svelte 5 Runes**: Use `$state`, `$derived`, `$effect` for reactivity
 
 ### TypeScript
 
@@ -353,6 +435,8 @@ const handleLike = async (momentId: string) => {
 **API Specification Files:**
 
 - `@spec/api_spec.mdc` - Main API specification
+- `@spec/api_spec_common_types.mdc` - Common type definitions
+- `@spec/api_spec_errors.mdc` - Error code definitions
 - `@spec/api_spec_auth.mdc` - Authentication endpoints
 - `@spec/api_spec_user.mdc` - User management endpoints
 - `@spec/api_spec_moment.mdc` - Moments/posts endpoints
@@ -361,8 +445,25 @@ const handleLike = async (momentId: string) => {
 - `@spec/api_spec_feed.mdc` - Feed/trending endpoints
 - `@spec/api_spec_notification.mdc` - Notification endpoints
 - `@spec/api_spec_system.mdc` - System config endpoints
-- `@spec/api_spec_errors.mdc` - Error code definitions
 - `@spec/api_spec_websocket.mdc` - WebSocket event definitions
+- `@spec/api_spec_search.mdc` - Search endpoints
+- `@spec/api_spec_share.mdc` - Share endpoints
+- `@spec/api_spec_map.mdc` - Map/location endpoints
+- `@spec/api_spec_media.mdc` - Media/file upload endpoints
+- `@spec/api_spec_report.mdc` - User report endpoints
+- `@spec/api_spec_admin_user.mdc` - Admin user management endpoints
+- `@spec/api_spec_admin_group.mdc` - Admin group management endpoints
+- `@spec/api_spec_admin_report.mdc` - Admin report management endpoints
+- `@spec/api_spec_admin_rbac.mdc` - Admin RBAC endpoints
+- `@spec/api_spec_admin_audit.mdc` - Admin audit log endpoints
+- `@spec/api_spec_admin_announcement.mdc` - Admin announcement endpoints
+
+**Documentation Files:**
+
+- `@spec/backend_doc.mdc` - Backend architecture documentation
+- `@spec/frontend_doc.mdc` - Frontend functionality documentation
+- `@spec/backend_rule.mdc` - Backend coding rules
+- `@spec/frontend_rule.mdc` - Frontend coding rules
 
 ---
 
@@ -480,7 +581,7 @@ await feedService.getMoments("/api/v1/feed/moments");
 
 ## File Structure Reference
 
-### Frontend (`frontend_react/`)
+### Frontend React (`frontend_react/`)
 
 ```
 src/
@@ -504,13 +605,85 @@ src/
 └── types/          # TypeScript type definitions
 ```
 
-### Key Files
+### Key Files (React)
 
 - **API Client**: `src/lib/api/client.ts` - Unified HTTP client with token injection
 - **Endpoints**: `src/lib/api/endpoints.ts` - Centralized API path constants
 - **Services**: `src/lib/api/services/` - Business logic layer (17 service files)
 - **Auth Store**: `src/stores/auth.ts` - Multi-account state management
 - **Types**: `src/types/api.ts` - Complete API type definitions
+
+### Frontend Svelte (`frontend_svelte/`)
+
+```
+src/
+├── routes/               # SvelteKit file-based routing
+│   ├── (admin)/         # Admin pages (protected)
+│   │   └── admin/       # /admin/* routes
+│   ├── (auth)/          # Auth pages
+│   │   └── auth/        # /auth page
+│   ├── (protected)/     # Authenticated user pages
+│   │   ├── dashboard/   # User dashboard
+│   │   ├── profile/     # User profile
+│   │   ├── chat/        # Private chat
+│   │   ├── groups/      # User's groups
+│   │   ├── moments/     # User's moments
+│   │   ├── settings/    # User settings
+│   │   ├── followers/   # Followers list
+│   │   ├── follows/     # Following list
+│   │   ├── friends/     # Friends list
+│   │   └── notifications/ # Notifications
+│   ├── (public)/        # Public pages (no auth required)
+│   │   ├── users/       # User profiles, nearby users
+│   │   ├── moments/     # Moment detail, nearby moments
+│   │   ├── groups/      # Group detail, nearby groups
+│   │   ├── search/      # Search page
+│   │   └── share/       # Share link page
+│   ├── +layout.svelte   # Root layout
+│   └── +page.svelte     # Home page
+├── lib/
+│   ├── api/             # API layer
+│   │   ├── client.ts    # HTTP client with auth
+│   │   ├── endpoints.ts # Centralized API paths
+│   │   └── services/    # Service modules (15+ files)
+│   ├── components/      # Svelte components
+│   │   ├── common/      # Shared components (sidebar, navbar, modals)
+│   │   ├── home/        # Dashboard components
+│   │   ├── moments/     # Moment-related components
+│   │   └── ui/          # Base UI components
+│   ├── stores/          # Svelte 5 rune-based stores (.svelte.ts)
+│   │   ├── auth.svelte.ts
+│   │   ├── toast.svelte.ts
+│   │   ├── location.svelte.ts
+│   │   ├── notification.svelte.ts
+│   │   ├── message.svelte.ts
+│   │   └── ui.svelte.ts
+│   ├── websocket/       # WebSocket management
+│   │   ├── index.ts     # WebSocket client
+│   │   ├── store.svelte.ts
+│   │   ├── handlers.ts  # Event handlers
+│   │   └── types.ts     # WS event types
+│   ├── hooks/           # Custom Svelte hooks (.svelte.ts)
+│   │   ├── use-pagination.svelte.ts
+│   │   ├── use-optimistic.svelte.ts
+│   │   └── use-api-call.svelte.ts
+│   ├── attachments/     # Svelte actions (use: directives)
+│   │   ├── autofocus.ts
+│   │   └── touch-feedback.ts
+│   └── assets/          # Static assets
+├── hooks.client.ts      # Client-side hooks
+├── hooks.server.ts      # Server-side hooks
+└── app.d.ts             # TypeScript app declarations
+```
+
+### Key Files (Svelte)
+
+- **API Client**: `src/lib/api/client.ts` - Unified HTTP client with token injection
+- **Endpoints**: `src/lib/api/endpoints.ts` - Centralized API path constants
+- **Services**: `src/lib/api/services/` - Business logic layer (15+ service files)
+- **Auth Store**: `src/lib/stores/auth.svelte.ts` - Authentication state with Svelte 5 runes
+- **WebSocket**: `src/lib/websocket/` - Real-time communication layer
+- **Root Layout**: `src/routes/+layout.svelte` - App-wide layout and providers
 
 ---
 

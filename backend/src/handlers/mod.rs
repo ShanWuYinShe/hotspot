@@ -16,6 +16,7 @@ pub mod private_chats;
 pub mod private_messages;
 pub mod reports;
 pub mod search;
+pub mod share;
 pub mod subscriptions;
 pub mod system;
 pub mod system_config;

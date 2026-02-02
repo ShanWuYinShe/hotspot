@@ -5,8 +5,8 @@
 // ============================================================
 // 默认位置（南天门）
 // ============================================================
-pub const DEFAULT_LATITUDE: f64 = 35.154921;
-pub const DEFAULT_LONGITUDE: f64 = 112.68253;
+pub const DEFAULT_LATITUDE: f64 = 35.154922;
+pub const DEFAULT_LONGITUDE: f64 = 112.682524;
 pub const DEFAULT_LOCATION_NAME: &str = "南天门";
 
 // 位置变化阈值（米）

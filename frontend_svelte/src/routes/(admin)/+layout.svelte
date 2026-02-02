@@ -59,7 +59,7 @@
 	<div class="min-h-screen bg-background">
 		<Navbar onMenuClick={() => (sidebarOpen = !sidebarOpen)} />
 
-		<div class="flex min-h-[calc(100vh-4rem)] bg-muted/30">
+		<div class="flex min-h-[calc(100dvh-4rem)] bg-muted/30">
 			<!-- Admin sidebar -->
 			<aside class="hidden w-64 shrink-0 bg-sidebar text-sidebar-foreground md:block">
 				<nav class="space-y-1 p-4">
@@ -90,8 +90,11 @@
 					onkeydown={(e) => e.key === 'Escape' && closeSidebar()}
 					aria-label="关闭侧边栏"
 				></button>
-				<aside class="fixed left-0 top-14 z-50 h-[calc(100vh-3.5rem)] w-64 bg-sidebar text-sidebar-foreground md:hidden">
-					<nav class="space-y-1 p-4">
+				<aside 
+					class="fixed left-0 top-14 z-50 w-64 bg-sidebar text-sidebar-foreground md:hidden"
+					style="height: calc(100dvh - 3.5rem - env(safe-area-inset-bottom, 0px));"
+				>
+					<nav class="space-y-1 p-4" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
 						<h2 class="mb-4 px-3 text-lg font-semibold">管理后台</h2>
 						{#each adminNavItems as item}
 							<a
@@ -113,7 +116,7 @@
 			{/if}
 
 			<!-- Main content -->
-			<main class="flex-1 rounded-2xl bg-card/70 p-4 shadow-sm shadow-black/5 mx-3 md:mx-4 md:p-6">
+			<main class="flex-1 rounded-2xl bg-card/70 p-4 shadow-sm shadow-black/5 mx-3 md:mx-4 md:p-6" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
 				<div class="mx-auto w-full max-w-6xl">
 					{@render children()}
 				</div>
@@ -124,8 +127,8 @@
 	<div class="min-h-screen bg-background">
 		<Navbar onMenuClick={() => (sidebarOpen = !sidebarOpen)} />
 
-		<div class="flex min-h-[calc(100vh-4rem)] bg-muted/30">
-			<main class="flex-1 rounded-2xl bg-card/70 p-4 shadow-sm shadow-black/5 mx-3 md:mx-4 md:p-6">
+		<div class="flex min-h-[calc(100dvh-4rem)] bg-muted/30">
+			<main class="flex-1 rounded-2xl bg-card/70 p-4 shadow-sm shadow-black/5 mx-3 md:mx-4 md:p-6" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
 				<div class="mx-auto w-full max-w-6xl">
 					<div class="flex flex-col items-center justify-center py-20 text-center">
 						<div class="mb-4 rounded-full bg-muted p-6">

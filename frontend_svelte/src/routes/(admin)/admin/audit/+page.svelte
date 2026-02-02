@@ -9,6 +9,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import type { AuditLogItem } from '$lib/types/api';
+	import { formatDateTime } from '$lib/utils/format';
 	import Search from 'lucide-svelte/icons/search';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import FileText from 'lucide-svelte/icons/file-text';
@@ -44,10 +45,6 @@
 		} finally {
 			isLoading = false;
 		}
-	}
-
-	function formatDate(dateStr: string): string {
-		return new Date(dateStr).toLocaleString('zh-CN');
 	}
 
 	function getActionBadge(action: string) {
@@ -149,7 +146,7 @@
 							</div>
 							<div class="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
 								<Clock class="h-3 w-3" />
-								{formatDate(log.created_at)}
+								{formatDateTime(log.created_at)}
 							</div>
 						</div>
 					{/each}

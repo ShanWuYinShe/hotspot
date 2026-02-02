@@ -81,10 +81,6 @@
 		}
 	}
 
-	function formatDate(dateStr: string): string {
-		return new Date(dateStr).toLocaleDateString('zh-CN');
-	}
-
 	function getStatusBadge(status: string) {
 		switch (status) {
 			case 'normal':

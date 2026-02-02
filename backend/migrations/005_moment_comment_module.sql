@@ -10,10 +10,10 @@ CREATE TABLE moments (
     user_id BIGINT NOT NULL,
     description TEXT NOT NULL,
     images TEXT[],
-    latitude DOUBLE PRECISION NOT NULL,
-    longitude DOUBLE PRECISION NOT NULL,
-    location_name VARCHAR(255) NOT NULL,
-    location geography(POINT, 4326) NOT NULL,
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
+    location_name VARCHAR(255),
+    location geography(POINT, 4326),
     
     -- 014: 隐私级别
     privacy_level privacy_level NOT NULL DEFAULT 'public',
@@ -24,9 +24,19 @@ CREATE TABLE moments (
     updated_at TIMESTAMPTZ,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
     deleted_at TIMESTAMPTZ,
-    CONSTRAINT check_moment_latitude_range CHECK (latitude >= -90 AND latitude <= 90),
-    CONSTRAINT check_moment_longitude_range CHECK (longitude >= -180 AND longitude <= 180)
+    CONSTRAINT check_moment_latitude_range CHECK (latitude IS NULL OR (latitude >= -90 AND latitude <= 90)),
+    CONSTRAINT check_moment_longitude_range CHECK (longitude IS NULL OR (longitude >= -180 AND longitude <= 180)),
+    CONSTRAINT check_moment_location_consistency CHECK (
+        (latitude IS NULL AND longitude IS NULL AND location_name IS NULL AND location IS NULL) OR
+        (latitude IS NOT NULL AND longitude IS NOT NULL AND location_name IS NOT NULL AND location IS NOT NULL)
+    )
 );
+
+COMMENT ON TABLE moments IS '生活瞬间表：用户发布的动态内容';
+COMMENT ON COLUMN moments.latitude IS '纬度（客户端必须提供，后端不设默认值）';
+COMMENT ON COLUMN moments.longitude IS '经度（客户端必须提供，后端不设默认值）';
+COMMENT ON COLUMN moments.location_name IS '位置名称（客户端必须提供）';
+COMMENT ON COLUMN moments.location IS 'PostGIS 地理位置字段（由触发器自动同步）';
 
 CREATE INDEX idx_moments_user_id ON moments (user_id, created_at DESC) WHERE is_deleted = FALSE;
 CREATE INDEX idx_moments_location ON moments USING gist (location) WHERE is_deleted = FALSE;

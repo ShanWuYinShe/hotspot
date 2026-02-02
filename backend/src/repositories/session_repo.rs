@@ -131,7 +131,8 @@ impl SessionRepository {
             i64::MAX
         };
 
-        let sessions = sqlx::query_as!(
+        // 查询 limit + 1 条以判断是否有更多数据
+        let rows = sqlx::query_as!(
             SessionRow,
             r#"
             SELECT id, session_id, user_id, device_type, device_name, device_fingerprint,
@@ -145,17 +146,15 @@ impl SessionRepository {
             "#,
             user_id,
             last_id,
-            limit as i64
+            (limit + 1) as i64
         )
         .fetch_all(&self.pool)
         .await?;
 
-        let next_cursor = sessions
-            .last()
-            .map(|last| encode_cursor(&last.id))
-            .transpose()?;
-
-        Ok((sessions, next_cursor))
+        // 使用通用分页函数处理结果
+        crate::utils::pagination::paginate_with_limit_plus_one(rows, limit, |item| {
+            encode_cursor(&item.id)
+        })
     }
 
     /// 删除会话（撤销）

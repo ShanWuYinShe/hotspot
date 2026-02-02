@@ -1,7 +1,7 @@
 use crate::{
     dto::response::{
-        MessageLimit, MessageLocation, MessageMedia, MessageReplyTo, PrivateChatDetailData,
-        PrivateChatLastMessage, PrivateChatListItem, PrivateMessageItem, RecentMessages, UserInfo,
+        MessageLimit, MessageMedia, MessageReplyTo, PrivateChatDetailData, PrivateChatLastMessage,
+        PrivateChatListItem, PrivateMessageItem, RecentMessages, UserInfo,
     },
     error::{AppError, Result},
     repositories::{
@@ -432,7 +432,6 @@ impl PrivateChatService {
             senders.into_iter().map(|s| (s.user_id, s)).collect();
 
         // 转换消息为响应格式
-        use crate::dto::response::Location;
 
         let message_items: Vec<PrivateMessageItem> = messages
             .into_iter()
@@ -483,18 +482,6 @@ impl PrivateChatService {
                         height: None,
                         mime_type: None,
                     }),
-                    location: if m.location_latitude.is_some() {
-                        Some(MessageLocation {
-                            location: Location {
-                                latitude: m.location_latitude.unwrap_or(0.0),
-                                longitude: m.location_longitude.unwrap_or(0.0),
-                                location_name: m.location_name.clone().unwrap_or_default(),
-                            },
-                            address: m.location_address.clone(),
-                        })
-                    } else {
-                        None
-                    },
                     sent_at: m.sent_at.to_rfc3339(),
                     edited_at: m.edited_at.map(|t| t.to_rfc3339()),
                     is_recalled: m.is_recalled,

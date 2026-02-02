@@ -1,55 +1,28 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { momentsService } from '$lib/api/services';
-	import { isSuccess } from '$lib/api/client';
-	import { toast } from '$lib/stores/toast.svelte';
+	import { usePagination } from '$lib/hooks/use-pagination.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { Card, CardContent } from '$lib/components/ui/card';
-	import { Skeleton } from '$lib/components/ui/skeleton';
-	import MomentCard from '$lib/components/moments/moment-card.svelte';
+	import { Card } from '$lib/components/ui/card';
+	import ListSkeleton from '$lib/components/common/list-skeleton.svelte';
+	import EmptyState from '$lib/components/common/empty-state.svelte';
+	import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
 	import CreateMomentModal from '$lib/components/common/create-moment-modal.svelte';
 	import type { UserMomentListItem } from '$lib/types/api';
 	import Plus from 'lucide-svelte/icons/plus';
 	import Image from 'lucide-svelte/icons/image';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 
-	let moments = $state<UserMomentListItem[]>([]);
-	let isLoading = $state(true);
-	let isLoadingMore = $state(false);
-	let hasMore = $state(true);
-	let cursor = $state<string | undefined>(undefined);
+	const pagination = usePagination<UserMomentListItem>({
+		uniqueKey: 'moment_id'
+	});
 	let showCreateMoment = $state(false);
 
 	async function loadMoments(refresh = false) {
-		if (refresh) {
-			cursor = undefined;
-			hasMore = true;
-			isLoading = true;
-		} else {
-			isLoadingMore = true;
-		}
-
-		try {
-			const response = await momentsService.getMyMoments({
-				limit: 20,
-				cursor: refresh ? undefined : cursor
-			});
-
-			if (isSuccess(response) && response.data) {
-				if (refresh) {
-					moments = response.data.items;
-				} else {
-					moments = [...moments, ...response.data.items];
-				}
-				hasMore = response.data.pagination.has_more;
-				cursor = response.data.pagination.next_cursor;
-			}
-		} catch {
-			toast.error('加载失败');
-		} finally {
-			isLoading = false;
-			isLoadingMore = false;
-		}
+		await pagination.load(
+			(cursor) => momentsService.getMyMoments({ limit: 20, cursor }),
+			refresh
+		);
 	}
 
 	onMount(() => {
@@ -65,8 +38,8 @@
 	<div class="flex items-center justify-between">
 		<h1 class="text-2xl font-bold">我的瞬间</h1>
 		<div class="flex gap-2">
-			<Button variant="outline" size="sm" onclick={() => loadMoments(true)} disabled={isLoading}>
-				<RefreshCw class="mr-2 h-4 w-4 {isLoading ? 'animate-spin' : ''}" />
+			<Button variant="outline" size="sm" onclick={() => loadMoments(true)} disabled={pagination.loading}>
+				<RefreshCw class="mr-2 h-4 w-4 {pagination.loading ? 'animate-spin' : ''}" />
 				刷新
 			</Button>
 			<Button size="sm" onclick={() => (showCreateMoment = true)}>
@@ -76,36 +49,20 @@
 		</div>
 	</div>
 
-	{#if isLoading}
-		<div class="space-y-4">
-			{#each Array(3) as _}
-				<Card>
-					<CardContent class="p-4">
-						<div class="space-y-3">
-							<Skeleton class="h-4 w-full" />
-							<Skeleton class="h-4 w-3/4" />
-							<Skeleton class="h-32 w-full" />
-						</div>
-					</CardContent>
-				</Card>
-			{/each}
-		</div>
-	{:else if moments.length === 0}
-		<Card>
-			<CardContent class="flex flex-col items-center justify-center py-12">
-				<Image class="mb-4 h-12 w-12 text-muted-foreground" />
-				<p class="mb-2 text-lg font-medium">还没有瞬间</p>
-				<p class="mb-4 text-muted-foreground">发布你的第一个瞬间吧</p>
-				<Button onclick={() => (showCreateMoment = true)}>
-					<Plus class="mr-2 h-4 w-4" />
-					发布瞬间
-				</Button>
-			</CardContent>
-		</Card>
+	{#if pagination.loading}
+		<ListSkeleton type="moment" count={3} layout="grid" />
+	{:else if pagination.items.length === 0}
+		<EmptyState 
+			icon={Image} 
+			title="还没有瞬间" 
+			description="发布你的第一个瞬间吧" 
+			actionText="发布瞬间"
+			onAction={() => (showCreateMoment = true)}
+		/>
 	{:else}
 		<div class="space-y-4">
 			<div class="columns-1 gap-4 sm:columns-2 xl:columns-3">
-				{#each moments as moment (moment.moment_id)}
+				{#each pagination.items as moment (moment.moment_id)}
 					<div class="mb-4 break-inside-avoid">
 						<Card class="overflow-hidden">
 							<a href="/moments/{moment.moment_id}" class="block p-4 hover:bg-accent/50">
@@ -137,20 +94,11 @@
 				{/each}
 			</div>
 
-			{#if hasMore}
-				<div class="flex justify-center">
-					<Button
-						variant="outline"
-						onclick={() => loadMoments(false)}
-						disabled={isLoadingMore}
-					>
-						{#if isLoadingMore}
-							<RefreshCw class="mr-2 h-4 w-4 animate-spin" />
-						{/if}
-						加载更多
-					</Button>
-				</div>
-			{/if}
+			<LoadMoreButton
+				loading={pagination.loadingMore}
+				hasMore={pagination.hasMore}
+				onLoadMore={() => loadMoments(false)}
+			/>
 		</div>
 	{/if}
 </div>

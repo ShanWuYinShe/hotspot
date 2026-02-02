@@ -1,7 +1,10 @@
 use aws_sdk_s3::{config::Region, Client as S3Client};
+use moka::future::Cache;
 use redis::aio::ConnectionManager;
-use sqlx::PgPool;
+use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::sync::Arc;
+use std::time::Duration;
+use tokio::sync::broadcast;
 
 use crate::{
     config::Config,
@@ -41,6 +44,7 @@ use crate::{
         system_config_service::SystemConfigService, tag_service::TagService,
         user_service::UserService,
     },
+    utils::cache_invalidation::{start_invalidation_listener, InvalidationEvent},
     websocket::{
         manager::ConnectionManager as WsConnectionManager, subscription::SubscriptionManager,
     },
@@ -56,7 +60,14 @@ pub struct AppState {
     pub ws_subscription: SubscriptionManager,
     // 缓存和防护工具
     pub resource_checker: crate::utils::bloom_filter::ResourceExistenceChecker,
-    pub auth_cache: crate::utils::auth_cache::AuthCache,
+    pub cache_manager: crate::utils::cache::CacheManager,
+    /// L1 本地缓存：Token -> (UserId, SessionId)
+    /// TTL: 60s (短 TTL 配合 Redis Pub/Sub 实现分布式一致性)
+    pub token_cache: Cache<String, (i64, uuid::Uuid)>,
+    /// L1 本地黑名单：SessionId -> ()
+    /// 用于处理分布式环境下的会话撤销，TTL 略大于 token_cache (e.g. 70s)
+    pub revoked_sessions: Cache<String, ()>,
+
     // event_bus removed as it is internal to Services
     // Services
     pub auth_service: AuthService,
@@ -89,10 +100,22 @@ impl AppState {
         config: Config,
         event_bus: Arc<EventBus>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        // 初始化数据库连接池
-        let db = PgPool::connect(&config.database_url).await?;
+        // 初始化数据库连接池（使用配置参数，适配分布式部署）
+        let db = PgPoolOptions::new()
+            .max_connections(config.db_pool_max_connections)
+            .min_connections(config.db_pool_min_connections)
+            .acquire_timeout(Duration::from_secs(config.db_pool_acquire_timeout_secs))
+            .idle_timeout(Duration::from_secs(config.db_pool_idle_timeout_secs))
+            .max_lifetime(Duration::from_secs(config.db_pool_max_lifetime_secs))
+            .test_before_acquire(config.db_pool_test_before_acquire)
+            .connect(&config.database_url)
+            .await?;
 
-        tracing::debug!("Database connected");
+        tracing::info!(
+            max_connections = config.db_pool_max_connections,
+            min_connections = config.db_pool_min_connections,
+            "Database connection pool initialized"
+        );
 
         // 初始化 Redis 连接
         let redis_client = redis::Client::open(config.redis_url.as_str())?;
@@ -105,10 +128,68 @@ impl AppState {
         let resource_checker =
             crate::utils::bloom_filter::ResourceExistenceChecker::new(redis.clone());
         let cache_manager = crate::utils::cache::CacheManager::new(redis.clone());
-        let auth_cache = crate::utils::auth_cache::AuthCache::new(
-            10_000, // 最大缓存 10000 个 token
-            300,    // TTL 5 分钟
-        );
+
+        // 初始化 L1 Token 缓存 (TTL 60s)
+        let token_cache = Cache::builder()
+            .time_to_live(std::time::Duration::from_secs(60))
+            .max_capacity(100_000)
+            .build();
+
+        // 初始化 L1 会话黑名单 (TTL 70s)
+        let revoked_sessions = Cache::builder()
+            .time_to_live(std::time::Duration::from_secs(70))
+            .max_capacity(10_000)
+            .build();
+
+        // 启动 Redis 缓存失效监听器（增大容量以防消息丢失）
+        let (tx, mut rx) = broadcast::channel::<InvalidationEvent>(1000);
+        let _listener_handle = start_invalidation_listener(config.redis_url.clone(), tx);
+
+        // 启动本地缓存清理任务
+        let revoked_sessions_clone = revoked_sessions.clone();
+        tokio::spawn(async move {
+            tracing::info!("Local cache invalidation handler started");
+            while let Ok(event) = rx.recv().await {
+                match event {
+                    InvalidationEvent::SessionRevoked {
+                        user_id,
+                        session_id,
+                    } => {
+                        tracing::debug!(user_id, %session_id, "Received session revocation event, adding to local blacklist");
+                        // 将撤销的 Session ID 加入本地黑名单
+                        revoked_sessions_clone.insert(session_id, ()).await;
+                    }
+                    InvalidationEvent::UserProfileUpdated { user_id } => {
+                        tracing::debug!(user_id, "Received user profile update event");
+                        // 用户资料更新事件（L1 缓存暂时只处理会话，用户资料走 L2 Redis）
+                    }
+                    InvalidationEvent::GroupInfoUpdated { group_id } => {
+                        tracing::debug!(%group_id, "Received group info update event");
+                        // 群组信息更新事件
+                    }
+                    InvalidationEvent::GroupMemberChanged { group_id } => {
+                        tracing::debug!(%group_id, "Received group member change event");
+                        // 群组成员变更事件
+                    }
+                    InvalidationEvent::MomentUpdated { moment_id } => {
+                        tracing::debug!(%moment_id, "Received moment update event");
+                        // 瞬间内容更新事件
+                    }
+                    InvalidationEvent::MomentDeleted { moment_id } => {
+                        tracing::debug!(%moment_id, "Received moment delete event");
+                        // 瞬间删除事件
+                    }
+                    InvalidationEvent::CommentChanged {
+                        moment_id,
+                        comment_id,
+                    } => {
+                        tracing::debug!(%moment_id, %comment_id, "Received comment change event");
+                        // 评论变更事件
+                    }
+                }
+            }
+        });
+
         tracing::debug!("Cache and bloom filter initialized");
 
         // 初始化 WebSocket 管理器
@@ -145,7 +226,7 @@ impl AppState {
         let comment_repo = CommentRepository::new(db.clone());
         let device_token_repo = DeviceTokenRepository::new(db.clone());
         let feed_repo = FeedRepository::new(db.clone());
-        // file_repo might be needed for MediaService if refactored
+        let file_repo = crate::repositories::file_repo::FileRepository::new(db.clone());
         let group_announcement_repo = GroupAnnouncementRepository::new(db.clone());
         let group_application_repo = GroupApplicationRepository::new(db.clone());
         let group_bans_repo = GroupBansRepository::new(db.clone());
@@ -175,15 +256,19 @@ impl AppState {
         let user_repo = UserRepository::new(db.clone());
         let user_settings_repo = UserSettingsRepository::new(db.clone());
         let verification_repo = VerificationRepository::new(db.clone());
-        let message_reactions_repo =
-            crate::repositories::message_reactions_repo::MessageReactionsRepository::new(
+        let private_message_reactions_repo =
+            crate::repositories::private_message_reactions_repo::PrivateMessageReactionsRepository::new(
+                db.clone(),
+            );
+        let group_message_reactions_repo =
+            crate::repositories::group_message_reactions_repo::GroupMessageReactionsRepository::new(
                 db.clone(),
             );
 
         // --- Services Initialization ---
 
         let media_service = MediaService::new(
-            &db, // Assuming MediaService still takes db directly as I didn't refactor its constructor in this session
+            file_repo.clone(),
             s3_client,
             config.s3_bucket.clone(),
             config.s3_public_base.clone(),
@@ -194,6 +279,7 @@ impl AppState {
             redis.clone(),
             user_online_status_repo.clone(),
             user_settings_repo.clone(),
+            user_repo.clone(),
         );
 
         let auth_service = AuthService::new(
@@ -225,6 +311,7 @@ impl AppState {
             presence_service.clone(),
             media_service.clone(),
             cache_manager.clone(),
+            resource_checker.clone(),
         );
 
         let moment_service = MomentService::new(
@@ -273,9 +360,10 @@ impl AppState {
             event_bus.clone(),
             group_message_repo.clone(),
             group_member_repo.clone(),
+            group_repo.clone(),
             user_repo.clone(),
             chat_unread_repo.clone(),
-            message_reactions_repo.clone(),
+            group_message_reactions_repo.clone(),
             media_service.clone(),
         );
 
@@ -301,7 +389,7 @@ impl AppState {
             user_follows_repo.clone(),
             user_blocks_repo.clone(),
             user_settings_repo.clone(),
-            message_reactions_repo.clone(),
+            private_message_reactions_repo.clone(),
             media_service.clone(),
         );
 
@@ -403,7 +491,7 @@ impl AppState {
             ws_manager,
             ws_subscription,
             resource_checker,
-            auth_cache,
+            cache_manager,
             auth_service,
             user_service,
             moment_service,
@@ -427,6 +515,8 @@ impl AppState {
             notification_service,
             announcement_service,
             search_service,
+            token_cache,
+            revoked_sessions,
         })
     }
 }

@@ -21,12 +21,39 @@ pub fn get_cookie_value(headers: &HeaderMap, cookie_name: &str) -> Option<String
     None
 }
 
+/// 生成 access_token 的 Set-Cookie 字符串（HttpOnly）
+///
+/// 约定：
+/// - Path=/api：所有 API 请求自动携带
+/// - HttpOnly：防止 JavaScript 访问
+/// - SameSite=Lax：防止 CSRF 攻击
+/// - Secure：仅 HTTPS 传输（生产环境）
+pub fn build_access_token_set_cookie(
+    access_token: &str,
+    max_age_seconds: i64,
+    secure: bool,
+) -> String {
+    let same_site = if secure { "None" } else { "Lax" };
+
+    let mut cookie = format!(
+        "hs_access_token={}; Max-Age={}; Path=/api; HttpOnly; SameSite={}",
+        access_token, max_age_seconds, same_site
+    );
+
+    if secure {
+        cookie.push_str("; Secure");
+    }
+
+    cookie
+}
+
 /// 生成 refresh_token 的 Set-Cookie 字符串（HttpOnly）
 ///
 /// 约定：
-/// - Path 使用 "/"：避免在反向代理/网关加前缀（如 /backend/api）时导致 Cookie 不随请求携带
-/// - CSRF 保护采用 Double Submit Token（Cookie + Header）
-/// - 如果 `secure=true`，则 SameSite=None；否则 SameSite=Lax（兼容本地 http）
+/// - Path=/api/v1/auth/refresh_token：仅刷新 token API 自动携带
+/// - HttpOnly：防止 JavaScript 访问
+/// - SameSite=Lax：防止 CSRF 攻击
+/// - Secure：仅 HTTPS 传输（生产环境）
 pub fn build_refresh_token_set_cookie(
     refresh_token: &str,
     max_age_seconds: i64,
@@ -34,10 +61,9 @@ pub fn build_refresh_token_set_cookie(
 ) -> String {
     let same_site = if secure { "None" } else { "Lax" };
 
-    // 注意：这里不设置 Domain，让其跟随当前 Host（更安全）
-    // 同时设置 Max-Age，避免仅靠 Expires 的时区差异
+    // 注意：Path 限制为 /api/v1/auth/refresh_token，仅刷新 API 可用
     let mut cookie = format!(
-        "hs_refresh_token={}; Max-Age={}; Path=/; HttpOnly; SameSite={}",
+        "hs_refresh_token={}; Max-Age={}; Path=/api/v1/auth/refresh_token; HttpOnly; SameSite={}",
         refresh_token, max_age_seconds, same_site
     );
 
@@ -68,12 +94,28 @@ pub fn build_csrf_token_set_cookie(csrf_token: &str, max_age_seconds: i64, secur
     cookie
 }
 
+/// 清除 access_token cookie（登出/强制失效）
+pub fn build_access_token_clear_cookie(secure: bool) -> String {
+    let same_site = if secure { "None" } else { "Lax" };
+
+    let mut cookie = format!(
+        "hs_access_token=; Max-Age=0; Path=/api; HttpOnly; SameSite={}",
+        same_site
+    );
+
+    if secure {
+        cookie.push_str("; Secure");
+    }
+
+    cookie
+}
+
 /// 清除 refresh_token cookie（登出/强制失效）
 pub fn build_refresh_token_clear_cookie(secure: bool) -> String {
     let same_site = if secure { "None" } else { "Lax" };
 
     let mut cookie = format!(
-        "hs_refresh_token=; Max-Age=0; Path=/; HttpOnly; SameSite={}",
+        "hs_refresh_token=; Max-Age=0; Path=/api/v1/auth/refresh_token; HttpOnly; SameSite={}",
         same_site
     );
 

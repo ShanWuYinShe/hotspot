@@ -19,32 +19,43 @@ alwaysApply: true
 ## 核心类型定义
 
 ```typescript
-// 引用 @api_spec_common_types.mdc 中的 UserInfo, GroupInfo, GeoPoint
+// 引用 @api_spec_common_types.mdc 中的 GeoPoint
 
+// 标签建议项
+// 用途：显示标签名和热度，点击后跳转到标签搜索结果页
 interface TagSuggestItem {
   name: string;
-  usage_count: number;
+  usage_count: number; // 使用次数，用于显示"使用 X 次"
 }
 
-interface UserSuggestItem extends UserInfo {
-  bio?: string;
-  tags?: string[];
+// 用户建议项
+// 用途：显示用户基本信息，点击后跳转到用户主页
+interface UserSuggestItem {
+  user_id: number;
+  nickname: string;
+  avatar_url?: string;
+  bio?: string; // 个性签名，用于副标题展示
   distance?: number; // 距离（米），仅当请求包含 location 时返回
 }
 
-interface GroupSuggestItem extends GroupInfo {
-  description?: string;
-  tags?: string[];
-  has_password: boolean;
+// 群组建议项
+// 用途：显示群组基本信息，点击后跳转到群组页
+interface GroupSuggestItem {
+  group_chat_id: string;
+  name: string;
+  avatar_url?: string;
+  description?: string; // 群组简介，用于副标题展示（优先于成员数）
+  members_count: number; // 成员数量，当无 description 时显示"X 位成员"
   distance?: number; // 距离（米），仅当请求包含 location 时返回
 }
 
+// 瞬间建议项
+// 用途：显示瞬间预览信息，点击后跳转到瞬间详情页
 interface MomentSuggestItem {
   moment_id: string;
-  description: string;
-  images?: MomentImage[];
-  tags?: string[];
-  user: UserInfo;
+  content: string; // 瞬间文字内容（后端建议限制长度，如前100字符）
+  author_nickname: string; // 作者昵称，用于显示"来自 XXX"
+  author_avatar_url?: string; // 作者头像，用于显示作者头像而非瞬间图片
   distance?: number; // 距离（米），仅当请求包含 location 时返回
 }
 

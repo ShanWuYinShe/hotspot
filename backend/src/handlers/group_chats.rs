@@ -17,10 +17,10 @@ use crate::{
             UpdateGroupAnnouncementRequest, UpdateGroupChatRequest, UpdateGroupMySettingsRequest,
         },
         response::{
-            AdminGroupDetail, AdminGroupItem, ApiResponse, ApplyToGroupData, BannedMemberItem,
-            GroupAnnouncementItem, GroupApplicationItem, GroupDetailData, GroupInviteItem,
-            GroupItem, GroupMemberItem, GroupMyStateData, GroupSettingsData, InviteMemberData,
-            JoinedGroupItem, PaginatedData,
+            AdminGroupDetail, AdminGroupSearchItem, ApiResponse, ApplyToGroupData,
+            BannedMemberItem, GroupAnnouncementItem, GroupApplicationItem, GroupDetailData,
+            GroupInviteItem, GroupMemberItem, GroupMyStateData, GroupSearchItem, GroupSettingsData,
+            InviteMemberData, MyGroupItem, PaginatedData,
         },
     },
     error::Result,
@@ -35,7 +35,7 @@ use crate::{
 pub async fn search_by_keyword(
     State(state): State<AppState>,
     Json(req): Json<SearchGroupsByKeywordRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<GroupItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<GroupSearchItem>>>> {
     let response = state.group_service.search_by_keyword(req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
@@ -44,7 +44,7 @@ pub async fn search_by_keyword(
 pub async fn search_by_tag(
     State(state): State<AppState>,
     Json(req): Json<SearchGroupsByTagRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<GroupItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<GroupSearchItem>>>> {
     let response = state.group_service.search_by_tag(req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
@@ -53,7 +53,7 @@ pub async fn search_by_tag(
 pub async fn search_by_location(
     State(state): State<AppState>,
     Json(req): Json<SearchGroupsByLocationRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<GroupItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<GroupSearchItem>>>> {
     let response = state.group_service.search_by_location(req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
@@ -120,7 +120,7 @@ pub async fn me(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<MyGroupChatsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<JoinedGroupItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<MyGroupItem>>>> {
     let response = state.group_service.get_joined(user.user_id, req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
@@ -346,7 +346,7 @@ pub async fn reject_invite(
 pub async fn admin_search(
     State(state): State<AppState>,
     Json(req): Json<AdminGroupSearchRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<AdminGroupItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<AdminGroupSearchItem>>>> {
     let response = state.group_service.admin_search_groups(&req).await?;
     Ok(Json(ApiResponse::success(response)))
 }

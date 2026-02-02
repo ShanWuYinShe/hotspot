@@ -1,8 +1,8 @@
-//! 系统配置服务
-//!
-//! 管理系统配置项，支持 Redis 缓存和配置变更订阅
-//!
-//! 设计：强类型聚合配置 (GlobalSettings)
+// 系统配置服务
+//
+// 管理系统配置项，支持 Redis 缓存和配置变更订阅
+//
+// 设计：强类型聚合配置 (GlobalSettings)
 
 use redis::AsyncCommands;
 use std::collections::HashMap;
@@ -18,7 +18,7 @@ use crate::{
         },
         response::{
             AdminGlobalSettingsData, AppLimits, ContactInfo, ContentDefaults, FeatureSwitches,
-            GlobalSettings, Location, RateLimitConfig, UploadConfig,
+            GlobalSettings, RateLimitConfig, RelativeLocation, UploadConfig,
         },
     },
     error::Result,
@@ -225,8 +225,11 @@ impl SystemConfigService {
     ) -> Result<GlobalSettings> {
         let mut updates = HashMap::new();
 
-        if let Some(v) = req.global_per_hour {
-            updates.insert("rate_limits.global_per_hour", v.to_string());
+        if let Some(v) = req.ip_per_hour {
+            updates.insert("rate_limits.ip_per_hour", v.to_string());
+        }
+        if let Some(v) = req.user_per_5minutes {
+            updates.insert("rate_limits.user_per_5minutes", v.to_string());
         }
         if let Some(v) = req.user_per_hour {
             updates.insert("rate_limits.user_per_hour", v.to_string());
@@ -300,9 +303,7 @@ impl SystemConfigService {
                         key.to_string(),
                         value.clone(),
                         None,
-                        crate::types::enums::ConfigValueType::String
-                            .as_str()
-                            .to_string(),
+                        crate::types::enums::ConfigValueType::String,
                         "system".to_string(),
                     )
                     .await?;
@@ -317,8 +318,8 @@ impl SystemConfigService {
                     .await?;
             }
 
-            // 清除缓存
-            self.clear_config_cache(key).await?;
+            // 清除单个配置项的 Redis 缓存（实时生效的关键）
+            self.clear_single_config_cache(key).await?;
         }
 
         // 记录“最后更新时间/操作者”（用于 AdminSettings.updated_at / updated_by_user_id）
@@ -336,19 +337,20 @@ impl SystemConfigService {
                         key.to_string(),
                         value.clone(),
                         None,
-                        crate::types::enums::ConfigValueType::String
-                            .as_str()
-                            .to_string(),
+                        crate::types::enums::ConfigValueType::String,
                         "system".to_string(),
                     )
                     .await?;
             } else {
                 self.repo.update_tx(&mut tx, key, value.clone()).await?;
             }
-            self.clear_config_cache(key).await?;
+            self.clear_single_config_cache(key).await?;
         }
 
         tx.commit().await?;
+
+        // 清除完整配置缓存（只需清除一次）
+        self.clear_full_settings_cache().await?;
 
         // 广播配置更新事件 (通知其他服务实例/客户端)
         self.publish_config_update("global.settings").await?;
@@ -402,8 +404,7 @@ impl SystemConfigService {
         let map: HashMap<String, String> = configs.into_iter().map(|c| (c.key, c.value)).collect();
 
         // 辅助闭包：获取值或默认值
-        let get_str =
-            |k: &str, default: &str| map.get(k).cloned().unwrap_or_else(|| default.to_string());
+        let get_str = |k: &str, default: &str| map.get(k).cloned().unwrap_or(default.to_string());
         let get_int =
             |k: &str, default: i64| map.get(k).and_then(|v| v.parse().ok()).unwrap_or(default);
         let get_i32 =
@@ -422,10 +423,12 @@ impl SystemConfigService {
                     join_method: GroupJoinMethod::Open,
                     is_searchable: true,
                     max_members: 500,
-                    location: Location {
+                    location: RelativeLocation {
                         latitude: 0.0,
                         longitude: 0.0,
                         location_name: "Unknown".to_string(),
+                        distance: None,
+                        bearing_degrees: None,
                     },
                 })
         };
@@ -473,7 +476,8 @@ impl SystemConfigService {
             |k: &str, default: u32| map.get(k).and_then(|v| v.parse().ok()).unwrap_or(default);
 
         let rate_limits = RateLimitConfig {
-            global_per_hour: get_u32("rate_limits.global_per_hour", 1000),
+            ip_per_hour: get_u32("rate_limits.ip_per_hour", 20000),
+            user_per_5minutes: get_u32("rate_limits.user_per_5minutes", 500),
             user_per_hour: get_u32("rate_limits.user_per_hour", 5000),
             auth_send_code_per_minute: get_u32("rate_limits.auth_send_code_per_minute", 5),
             auth_verify_code_per_10minutes: get_u32(
@@ -516,21 +520,27 @@ impl SystemConfigService {
         Ok(settings)
     }
 
-    /// 清除配置缓存
-    async fn clear_config_cache(&self, config_key: &str) -> Result<()> {
+    /// 清除单个配置项的 Redis 缓存
+    async fn clear_single_config_cache(&self, config_key: &str) -> Result<()> {
         let mut conn = self.redis.get_multiplexed_async_connection().await?;
-
-        // 1. 清除单个 key 缓存（兼容旧 key）
         let cache_key = format!("{}:{}", REDIS_KEY_CONFIG, config_key);
         let _: () = conn.del(&cache_key).await?;
+        Ok(())
+    }
 
-        // 2. 清除 full settings 缓存（新缓存键）
+    /// 清除完整配置缓存（full_settings）
+    async fn clear_full_settings_cache(&self) -> Result<()> {
         let _ = self
             .cache_manager
             .delete(cache_keys::SYSTEM_CONFIG, "full_settings")
             .await;
-
         Ok(())
+    }
+
+    /// 清除配置缓存（兼容旧接口）
+    async fn clear_config_cache(&self, config_key: &str) -> Result<()> {
+        self.clear_single_config_cache(config_key).await?;
+        self.clear_full_settings_cache().await
     }
 
     /// 发布配置更新事件（通过 Redis Pub/Sub）

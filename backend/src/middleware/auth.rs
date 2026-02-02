@@ -37,7 +37,7 @@ use std::time::Instant;
 use crate::{
     error::AppError,
     state::AppState,
-    utils::{auth_cache::AuthCacheEntry, jwt::JwtUtil},
+    utils::{jwt::JwtUtil, web_cookie::get_cookie_value},
 };
 
 /// 认证失败原因（用于日志和监控）
@@ -82,24 +82,32 @@ impl AuthFailureReason {
     }
 }
 
-/// 从请求头提取 Bearer token
+/// 从请求头或 Cookie 提取 access token
+///
+/// 优先级：
+/// 1. Authorization Header (Bearer token)
+/// 2. Cookie (hs_access_token)
 ///
 /// 这是一个同步函数，避免跨 await 持有 Request 引用导致 Future 非 Send
 fn extract_bearer_token(req: &Request) -> Result<Option<String>, AuthFailureReason> {
-    let auth_header = match req
+    // 优先从 Authorization Header 提取
+    if let Some(auth_header) = req
         .headers()
         .get("Authorization")
         .and_then(|h| h.to_str().ok())
     {
-        Some(v) => v,
-        None => return Ok(None),
-    };
+        let token = auth_header
+            .strip_prefix("Bearer ")
+            .ok_or(AuthFailureReason::InvalidFormat)?;
+        return Ok(Some(token.to_string()));
+    }
 
-    let token = auth_header
-        .strip_prefix("Bearer ")
-        .ok_or(AuthFailureReason::InvalidFormat)?;
+    // 备选：从 Cookie 提取
+    if let Some(cookie_token) = get_cookie_value(req.headers(), "hs_access_token") {
+        return Ok(Some(cookie_token));
+    }
 
-    Ok(Some(token.to_string()))
+    Ok(None)
 }
 
 /// 验证 token 并返回 (user_id, session_id)
@@ -118,22 +126,25 @@ async fn authenticate_token(
     state: &AppState,
     token: &str,
 ) -> Result<(i64, uuid::Uuid), AuthFailureReason> {
-    let start = Instant::now();
+    // 1. 尝试从 L1 本地缓存获取
+    // 性能优化：优先查本地缓存，避免 Redis RTT 和 CPU 签名计算
+    if let Some((user_id, session_id)) = state.token_cache.get(token).await {
+        // 检查是否在本地黑名单中 (处理分布式撤销)
+        if state.revoked_sessions.contains_key(&session_id.to_string()) {
+            tracing::debug!(
+                user_id,
+                session_id = %session_id,
+                "Token found in local cache but session is in revoked blacklist"
+            );
+            return Err(AuthFailureReason::SessionRevoked);
+        }
 
-    // 1. 查询缓存
-    if let Some(cached) = state.auth_cache.get(token).await {
-        let elapsed = start.elapsed();
-        tracing::debug!(
-            user_id = cached.user_id,
-            session_id = %cached.session_id,
-            elapsed_us = elapsed.as_micros(),
-            cache_hit = true,
-            "Authentication succeeded (cache hit)"
-        );
-        return Ok((cached.user_id, cached.session_id));
+        return Ok((user_id, session_id));
     }
 
-    // 2. 缓存未命中，验证 JWT
+    let start = Instant::now();
+
+    // 2. 验证 JWT
     let claims = JwtUtil::verify_token(token, &state.config.jwt_secret).map_err(|e| {
         tracing::debug!(error = %e, "JWT verification failed");
         match e {
@@ -144,13 +155,23 @@ async fn authenticate_token(
         }
     })?;
 
-    let user_id = claims
-        .sub
-        .parse::<i64>()
-        .map_err(|_| AuthFailureReason::InvalidUserId)?;
+    let user_id = claims.sub.parse::<i64>().map_err(|e| {
+        tracing::warn!(
+            error = %e,
+            sub = %claims.sub,
+            "Failed to parse user_id from JWT claims"
+        );
+        AuthFailureReason::InvalidUserId
+    })?;
 
-    let session_id =
-        uuid::Uuid::parse_str(&claims.sid).map_err(|_| AuthFailureReason::InvalidSessionId)?;
+    let session_id = uuid::Uuid::parse_str(&claims.sid).map_err(|e| {
+        tracing::warn!(
+            error = %e,
+            sid = %claims.sid,
+            "Failed to parse session_id from JWT claims"
+        );
+        AuthFailureReason::InvalidSessionId
+    })?;
 
     // 3. 检查 Session 白名单（Active Session Validation）
     let whitelist_key = format!("{}:{}", crate::constants::REDIS_KEY_SESSION, claims.sid);
@@ -176,16 +197,10 @@ async fn authenticate_token(
         return Err(AuthFailureReason::SessionRevoked);
     }
 
-    // 4. 验证成功，更新缓存
+    // 4. 写入 L1 本地缓存
     state
-        .auth_cache
-        .set(
-            token.to_string(),
-            AuthCacheEntry {
-                user_id,
-                session_id,
-            },
-        )
+        .token_cache
+        .insert(token.to_string(), (user_id, session_id))
         .await;
 
     let elapsed = start.elapsed();
@@ -193,25 +208,10 @@ async fn authenticate_token(
         user_id = user_id,
         session_id = %session_id,
         elapsed_us = elapsed.as_micros(),
-        cache_hit = false,
         "Authentication succeeded (cache miss)"
     );
 
     Ok((user_id, session_id))
-}
-
-/// 从请求扩展中提取用户ID（遗留兼容函数，建议使用 AuthenticatedUser 提取器）
-///
-/// 在 auth_middleware 之后使用，用于获取已认证用户的ID
-#[deprecated(
-    since = "0.0.1",
-    note = "Use AuthenticatedUser extractor instead for better type safety"
-)]
-pub fn extract_user_id(req: &Request) -> Result<i64, AppError> {
-    req.extensions()
-        .get::<i64>()
-        .copied()
-        .ok_or_else(|| AppError::Unauthorized("未认证".to_string()))
 }
 
 /// JWT 必须认证中间件

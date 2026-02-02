@@ -4,7 +4,6 @@ use sqlx::PgPool;
 
 #[derive(Debug, Clone)]
 pub struct VerificationCode {
-    #[allow(dead_code)]
     pub id: i64,
     pub code_id: String,
     pub phone: String,
@@ -13,9 +12,7 @@ pub struct VerificationCode {
     pub expires_at: DateTime<Utc>,
     pub attempts: i32,
     pub max_attempts: i32,
-    #[allow(dead_code)]
     pub verified_at: Option<DateTime<Utc>>,
-    #[allow(dead_code)]
     pub created_at: DateTime<Utc>,
 }
 

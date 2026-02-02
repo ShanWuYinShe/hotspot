@@ -4,9 +4,9 @@
 	import { ModeWatcher } from 'mode-watcher';
 	import { Toaster } from '$lib/components/ui/sonner';
 	import LoginModal from '$lib/components/common/login-modal.svelte';
+	import PageLoading from '$lib/components/common/page-loading.svelte';
 	import { locationStore } from '$lib/stores/location.svelte';
-	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
-	import { initializeWebSocket } from '$lib/stores/websocket-lifecycle.svelte';
+	import { mapAnchorStore, DEFAULT_ANCHOR_NAME } from '$lib/stores/map-anchor.svelte';
 	import { loadAMapPlugin } from '$lib/utils/amap';
 
 	let { children } = $props();
@@ -50,14 +50,14 @@
 			location_name: name
 		});
 
-		if (mapAnchorStore.name === '南天门') {
+		if (mapAnchorStore.name === DEFAULT_ANCHOR_NAME) {
 			mapAnchorStore.setAnchor(geoPoint.latitude, geoPoint.longitude, name);
 		}
 	}
 
 	onMount(() => {
 		initLocation();
-		initializeWebSocket();
+		// 注：WebSocket 在 hooks.client.ts 中初始化，无需在组件中管理
 	});
 </script>
 
@@ -71,5 +71,6 @@
 <ModeWatcher />
 <Toaster position="top-center" richColors />
 <LoginModal />
+<PageLoading />
 
 {@render children()}

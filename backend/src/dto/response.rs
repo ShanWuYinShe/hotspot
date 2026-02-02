@@ -7,14 +7,11 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 // 导入所有需要的枚举类型
-use crate::{
-    dto::types::{ReportTargetId, StringOrNumberId},
-    types::enums::{
-        AnnouncementSeverity, ApplicationStatus, DevicePlatform, Gender, GroupJoinMethod,
-        GroupRole, MapItemType, MessageType, NotificationTargetType, NotificationType,
-        PrivacyLevel, PrivateChatPermission, ReactionType, ReportStatus, ReportTargetType,
-        SystemHealthStatus, TagTrend, UserAccountStatus, UserType,
-    },
+use crate::types::enums::{
+    AnnouncementSeverity, ApplicationStatus, DevicePlatform, Gender, GroupJoinMethod, GroupRole,
+    MapItemType, MessageType, NotificationTargetType, NotificationType, PrivacyLevel,
+    PrivateChatPermission, ReactionType, ReportStatus, ReportTargetType, ShareType,
+    SystemHealthStatus, TagTrend, UserAccountStatus, UserType,
 };
 
 // ============================================================
@@ -67,22 +64,20 @@ impl ApiResponse<()> {
 // 通用基础类型 (API 文档定义)
 // ============================================================
 
-/// 位置信息 - API 文档: Location
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Location {
-    pub latitude: f64,
-    pub longitude: f64,
-    pub location_name: String,
-}
-
 /// 相对位置 - API 文档: RelativeLocation
-#[derive(Debug, Serialize, Clone)]
+/// 用途：所有 response 响应数据中的位置字段统一使用此类型
+/// - 搜索/列表/Feed 场景：distance 和 bearing_degrees 有值（计算相对距离）
+/// - 详情/Admin/用户自己的内容：distance 和 bearing_degrees 为 None（不需要距离）
+/// 注意：如果 moment 没有位置信息，整个 location 字段应为 Option<RelativeLocation>
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RelativeLocation {
     pub latitude: f64,
     pub longitude: f64,
     pub location_name: String,
-    pub distance: f64,
-    pub bearing_degrees: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub distance: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bearing_degrees: Option<f64>,
 }
 
 /// 消息限制 - API 文档: MessageLimit
@@ -143,9 +138,27 @@ pub struct FollowRequestItem {
     pub requested_at: String,
 }
 
-/// 用户搜索/列表项 - API 文档: UserSearchItem
-#[derive(Debug, Serialize, Clone, Default)]
-pub struct UserItem {
+/// 社交上下文（展示与当前用户的共同点）- API 文档: UserSearchItem.social_context
+#[derive(Debug, Serialize, Clone)]
+pub struct SocialContext {
+    pub mutual_friends_count: i32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mutual_friends_preview: Option<Vec<UserInfo>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub common_groups_count: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub common_tags: Option<Vec<String>>,
+}
+
+/// 用户搜索/列表/详情统一类型 - API 文档: UserSearchItem
+/// 根据是否有认证 token，返回不同字段：
+/// - 基础字段（始终返回）: user_id, nickname, avatar_url, user_type, bio, tags, is_online, last_online, location
+/// - @auth-only 字段（仅登录态返回）: stats, relation, social_context
+/// 注：location 使用 RelativeLocation，根据场景：
+///   - 搜索/列表场景：distance 和 bearing_degrees 有值
+///   - 详情场景：distance 和 bearing_degrees 为 None
+#[derive(Debug, Serialize, Clone)]
+pub struct UserSearchItem {
     pub user_id: i64,
     pub nickname: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -162,29 +175,13 @@ pub struct UserItem {
     pub last_online: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub location: Option<RelativeLocation>,
-}
-
-/// 用户详情 - API 文档: UserCard
-#[derive(Debug, Serialize)]
-pub struct UserCard {
-    pub user_id: i64,
-    pub nickname: String,
+    // @auth-only 字段（登录态返回）
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub avatar_url: Option<String>,
-    pub user_type: UserType,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub bio: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tags: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub is_online: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_online: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub location: Option<Location>,
-    pub stats: UserCardStats,
+    pub stats: Option<UserCardStats>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub relation: Option<UserRelation>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub social_context: Option<SocialContext>,
 }
 
 /// 用户卡片统计数据（不含群组数） - API 文档: UserCard.stats
@@ -206,9 +203,9 @@ pub struct UserStatsData {
     pub groups_count: i32,
 }
 
-/// 当前用户资料 - API 文档: MyProfileData
+/// 当前用户资料 - API 文档: MyProfile
 #[derive(Debug, Serialize)]
-pub struct MyProfileData {
+pub struct MyProfile {
     pub user_id: i64,
     pub nickname: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -223,7 +220,7 @@ pub struct MyProfileData {
     pub email: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub phone: Option<String>,
-    pub location: Location,
+    pub location: RelativeLocation,
     pub is_online: bool,
     pub last_online: String,
     pub created_at: String,
@@ -287,9 +284,9 @@ pub struct FollowerItem {
     pub is_online: Option<bool>, // 隐私受控：对方隐私设置时不返回
 }
 
-/// 拉黑用户列表项 - API 文档: BlockedUserItem
+/// 拉黑用户列表项 - API 文档: BlockedUserSearchItem
 #[derive(Debug, Serialize)]
-pub struct BlockedUserItem {
+pub struct BlockedUserSearchItem {
     pub user: UserInfo,
     pub blocked_at: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -396,10 +393,15 @@ pub struct MomentImage {
     pub content_type: Option<String>,
 }
 
-/// 瞬间列表/搜索项 - API 文档: MomentSearchItem
-/// 注意：不返回 privacy_level，隐私过滤在服务端完成
-#[derive(Debug, Serialize)]
-pub struct MomentItem {
+/// 瞬间搜索/列表/详情统一类型 - API 文档: MomentSearchItem
+/// 根据是否有认证 token 和场景，返回不同字段：
+/// - 基础字段（始终返回）: moment_id, user, description, images, tags, mentions, created_at, likes_count, comments_count, location
+/// - @auth-only 字段（仅登录态返回）: my_state
+/// 注：location 使用 RelativeLocation，根据场景：
+///   - 搜索/列表场景：distance 和 bearing_degrees 有值
+///   - 详情场景：distance 和 bearing_degrees 为 None
+#[derive(Debug, Serialize, Clone)]
+pub struct MomentSearchItem {
     pub moment_id: String,
     pub user: UserInfo,
     pub description: String,
@@ -412,23 +414,7 @@ pub struct MomentItem {
     pub likes_count: i32,
     pub comments_count: i32,
     pub location: RelativeLocation,
-}
-
-/// 瞬间详情 - API 文档: MomentCard
-#[derive(Debug, Serialize)]
-pub struct MomentCard {
-    pub moment_id: String,
-    pub user: UserInfo,
-    pub description: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub images: Option<Vec<MomentImage>>,
-    pub tags: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub mentions: Option<Vec<i64>>,
-    pub created_at: String,
-    pub likes_count: i32,
-    pub comments_count: i32,
-    pub location: Location,
+    // @auth-only 字段（登录态返回）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub my_state: Option<MyMomentState>,
 }
@@ -453,7 +439,7 @@ pub struct UserMomentListItem {
     pub created_at: String,
     pub likes_count: i32,
     pub comments_count: i32,
-    pub location: Location,
+    pub location: RelativeLocation,
 }
 
 /// 瞬间点赞项 - API 文档: MomentLikeItem
@@ -524,7 +510,7 @@ pub struct GroupInfo {
 
 /// 群组搜索/列表项 - API 文档: GroupSearchItem
 #[derive(Debug, Serialize)]
-pub struct GroupItem {
+pub struct GroupSearchItem {
     pub group_chat_id: String,
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -551,7 +537,7 @@ pub struct GroupDetailData {
     pub tags: Option<Vec<String>>,
     pub members_count: i32,
     pub has_password: bool,
-    pub location: Location,
+    pub location: RelativeLocation,
     pub created_at: String,
     pub owner_id: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -576,7 +562,7 @@ pub struct GroupSettings {
     pub join_method: GroupJoinMethod,
     pub is_searchable: bool,
     pub max_members: i32,
-    pub location: Location,
+    pub location: RelativeLocation,
 }
 
 /// 群组设置数据（含 ID）
@@ -588,9 +574,9 @@ pub struct GroupSettingsData {
     pub created_at: String,
 }
 
-/// 已加入的群组项 - API 文档: JoinedGroupItem
+/// 已加入的群组项 - API 文档: MyGroupItem
 #[derive(Debug, Serialize)]
-pub struct JoinedGroupItem {
+pub struct MyGroupItem {
     #[serde(flatten)]
     pub group_info: GroupInfo,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -598,7 +584,7 @@ pub struct JoinedGroupItem {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<String>>,
     pub has_password: bool,
-    pub location: Location,
+    pub location: RelativeLocation,
     pub last_activity_at: String,
     pub role: GroupRole,
     pub unread_count: i32,
@@ -769,14 +755,6 @@ pub struct MessageMedia {
     pub mime_type: Option<String>,
 }
 
-/// 位置消息信息 - API 文档: MessageLocation
-#[derive(Debug, Serialize, Clone, Deserialize)]
-pub struct MessageLocation {
-    pub location: Location,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub address: Option<String>,
-}
-
 /// 发送私聊消息返回数据
 #[derive(Debug, Serialize)]
 pub struct SendPrivateMessageData {
@@ -796,8 +774,6 @@ pub struct PrivateMessageItem {
     pub reply_to: Option<MessageReplyTo>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub media: Option<MessageMedia>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub location: Option<MessageLocation>,
     pub sent_at: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub edited_at: Option<String>,
@@ -827,8 +803,6 @@ pub struct GroupMessageItem {
     pub mentions: Option<Vec<i64>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub media: Option<MessageMedia>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub location: Option<MessageLocation>,
     pub sent_at: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub edited_at: Option<String>,
@@ -883,7 +857,7 @@ pub struct ReportTargetSnapshot {
 pub struct ReportItem {
     pub report_id: String,
     pub target_type: ReportTargetType,
-    pub target_id: ReportTargetId,
+    pub target_id: String, // 统一为 string（user_id 也转为字符串格式）
     pub reason: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
@@ -935,7 +909,7 @@ pub struct NotificationItem {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub target_type: Option<NotificationTargetType>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub target_id: Option<StringOrNumberId>,
+    pub target_id: Option<String>, // 统一为 string（user_id 也转为字符串格式）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reference_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1044,13 +1018,22 @@ pub struct FeedGroupItem {
 #[derive(Debug, Serialize)]
 pub struct FeedUserItem {
     #[serde(flatten)]
-    pub user: UserItem,
+    pub user: UserSearchItem,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mutual_friends_count: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub common_tags: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub relation: Option<UserRelation>,
+}
+
+/// 推荐上下文（推荐理由）- API 文档: RecommendationContext
+#[derive(Debug, Serialize, Clone)]
+pub struct RecommendationContext {
+    #[serde(rename = "type")]
+    pub recommendation_type: crate::types::enums::RecommendationType,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub friends_preview: Option<Vec<UserInfo>>,
 }
 
 /// 信息流瞬间项 - API 文档: FeedMomentItem
@@ -1070,6 +1053,8 @@ pub struct FeedMomentItem {
     pub location: RelativeLocation,
     pub is_liked: bool,
     pub is_favorited: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recommendation: Option<RecommendationContext>,
 }
 
 /// 热门标签项 - API 文档: TrendingTagItem
@@ -1127,7 +1112,7 @@ pub struct SearchSuggestions {
     pub items: Vec<SearchSuggestItem>,
 }
 
-/// 综合搜索建议项 - API 文档: SearchSuggestItem
+/// 综合搜索建议项 - API 规范: @api_spec_search.mdc SearchSuggestItem
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", content = "payload", rename_all = "snake_case")]
 pub enum SearchSuggestItem {
@@ -1137,41 +1122,53 @@ pub enum SearchSuggestItem {
     Moment(MomentSuggestItem),
 }
 
-/// 用户建议项 - API 文档: UserSuggestItem
+/// 用户建议项 - API 规范: @api_spec_search.mdc UserSuggestItem
+/// 用途：显示用户基本信息，点击后跳转到用户主页
 #[derive(Debug, Serialize)]
 pub struct UserSuggestItem {
-    pub user: UserInfo,
+    pub user_id: i64,
+    pub nickname: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub avatar_url: Option<String>,
+    /// 个性签名，用于副标题展示
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bio: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tags: Option<Vec<String>>,
+    /// 距离（米），仅当请求包含 location 时返回
     #[serde(skip_serializing_if = "Option::is_none")]
     pub distance: Option<f64>,
 }
 
-/// 群组建议项 - API 文档: GroupSuggestItem
+/// 群组建议项 - API 规范: @api_spec_search.mdc GroupSuggestItem
+/// 用途：显示群组基本信息，点击后跳转到群组页
 #[derive(Debug, Serialize)]
 pub struct GroupSuggestItem {
-    pub group: GroupInfo,
+    pub group_chat_id: String,
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub avatar_url: Option<String>,
+    /// 群组简介，用于副标题展示（优先于成员数）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tags: Option<Vec<String>>,
-    pub has_password: bool,
+    /// 成员数量，当无 description 时显示"X 位成员"
+    pub members_count: i32,
+    /// 距离（米），仅当请求包含 location 时返回
     #[serde(skip_serializing_if = "Option::is_none")]
     pub distance: Option<f64>,
 }
 
-/// 瞬间建议项 - API 文档: MomentSuggestItem
+/// 瞬间建议项 - API 规范: @api_spec_search.mdc MomentSuggestItem
+/// 用途：显示瞬间预览信息，点击后跳转到瞬间详情页
 #[derive(Debug, Serialize)]
 pub struct MomentSuggestItem {
     pub moment_id: String,
-    pub description: String,
+    /// 瞬间文字内容（后端建议限制长度，如前100字符）
+    pub content: String,
+    /// 作者昵称，用于显示"来自 XXX"
+    pub author_nickname: String,
+    /// 作者头像，用于显示作者头像而非瞬间图片
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub images: Option<Vec<MomentImage>>,
-    pub user: UserInfo,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tags: Option<Vec<String>>,
+    pub author_avatar_url: Option<String>,
+    /// 距离（米），仅当请求包含 location 时返回
     #[serde(skip_serializing_if = "Option::is_none")]
     pub distance: Option<f64>,
 }
@@ -1232,8 +1229,10 @@ pub struct AppLimits {
 /// 频率限制配置 - API 文档: RateLimitConfig
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RateLimitConfig {
-    // 全局限速
-    pub global_per_hour: u32,
+    // IP级限速（单IP限制，考虑多用户共享同一IP的场景）
+    pub ip_per_hour: u32,
+    // 用户级限流
+    pub user_per_5minutes: u32,
     pub user_per_hour: u32,
     // 认证相关限速
     pub auth_send_code_per_minute: u32,
@@ -1378,9 +1377,9 @@ pub struct AdminMeData {
 // 管理员用户管理相关类型
 // ============================================================
 
-/// 管理员用户项 - API 文档: AdminUserItem
+/// 管理员用户项 - API 文档: AdminUserSearchItem
 #[derive(Debug, Serialize)]
-pub struct AdminUserItem {
+pub struct AdminUserSearchItem {
     pub user_id: i64,
     pub nickname: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1416,7 +1415,7 @@ pub struct AdminUserDetail {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub location: Option<Location>,
+    pub location: Option<RelativeLocation>,
     pub is_online: bool,
     pub stats: UserCardStats,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1442,16 +1441,16 @@ pub struct AdminBanRecord {
 // 管理员群组管理相关类型
 // ============================================================
 
-/// 管理员群组项 - API 文档: AdminGroupItem
+/// 管理员群组项 - API 文档: AdminGroupSearchItem
 #[derive(Debug, Serialize)]
-pub struct AdminGroupItem {
+pub struct AdminGroupSearchItem {
     pub group_chat_id: String,
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub avatar_url: Option<String>,
     pub members_count: i32,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub location: Option<Location>,
+    pub location: Option<RelativeLocation>,
     pub owner: UserInfo,
     pub created_at: String,
 }
@@ -1465,7 +1464,7 @@ pub struct AdminGroupDetail {
     pub avatar_url: Option<String>,
     pub members_count: i32,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub location: Option<Location>,
+    pub location: Option<RelativeLocation>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1638,4 +1637,21 @@ pub struct MapRenderData {
     pub items: Vec<MapRenderItem>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub toast_message: Option<String>,
+}
+
+// ============================================================
+// 位置分享相关响应
+// ============================================================
+
+// ==================== 分享模块响应 ====================
+
+/// 分享信息 - API 文档: Share
+#[derive(Debug, Serialize, Clone)]
+pub struct Share {
+    pub share_id: String,
+    pub share_code: String,
+    pub share_type: ShareType,
+    pub creator: UserInfo,
+    pub payload: serde_json::Value,
+    pub created_at: String,
 }

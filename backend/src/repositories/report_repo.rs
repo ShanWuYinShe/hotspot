@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
-use std::str::FromStr;
+use sqlx::{types::Json, FromRow, PgPool};
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -9,7 +8,8 @@ use crate::types::enums::{ReportStatus, ReportTargetType};
 use crate::utils::pagination::{decode_cursor, encode_cursor};
 
 /// 目标内容快照
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "jsonb")]
 pub struct TargetSnapshot {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub content: Option<String>,
@@ -20,7 +20,7 @@ pub struct TargetSnapshot {
 }
 
 /// 举报Row - 数据库查询返回类型
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct ReportRow {
     pub id: i64,
     pub report_id: Uuid,
@@ -36,35 +36,7 @@ pub struct ReportRow {
     pub handler_note: Option<String>,
     pub is_deleted: bool,
     pub deleted_at: Option<DateTime<Utc>>,
-    pub target_snapshot: Option<TargetSnapshot>,
-}
-
-impl ReportRow {
-    /// 从数据库行构建 ReportRow
-    fn from_row(row: &sqlx::postgres::PgRow) -> Self {
-        use sqlx::Row;
-
-        let target_snapshot_json: Option<serde_json::Value> = row.get("target_snapshot");
-
-        Self {
-            id: row.get("id"),
-            report_id: row.get("report_id"),
-            reporter_id: row.get("reporter_id"),
-            target_type: ReportTargetType::from_str(row.get("target_type"))
-                .unwrap_or(ReportTargetType::Moment),
-            target_id: row.get("target_id"),
-            reason: row.get("reason"),
-            description: row.get("description"),
-            status: ReportStatus::from_str(row.get("status")).unwrap_or(ReportStatus::Pending),
-            created_at: row.get("created_at"),
-            handled_by: row.get("handled_by"),
-            handled_at: row.get("handled_at"),
-            handler_note: row.get("handler_note"),
-            is_deleted: row.get("is_deleted"),
-            deleted_at: row.get("deleted_at"),
-            target_snapshot: target_snapshot_json.and_then(|v| serde_json::from_value(v).ok()),
-        }
-    }
+    pub target_snapshot: Option<Json<TargetSnapshot>>,
 }
 
 #[derive(Debug, Clone)]
@@ -104,25 +76,29 @@ impl ReportRepository {
         reason: String,
         description: Option<String>,
     ) -> Result<ReportRow> {
-        let row = sqlx::query(
+        let row = sqlx::query_as!(
+            ReportRow,
             r#"
             INSERT INTO reports (reporter_id, target_type, target_id, reason, description)
-            VALUES ($1, $2::report_target_type, $3, $4, $5)
-            RETURNING report_id, reporter_id,
-                      target_type, target_id, reason, description,
-                      status, handled_by, handled_at, handler_note, created_at,
-                      id, is_deleted, deleted_at, target_snapshot
+            VALUES ($1, $2::text::report_target_type, $3, $4, $5)
+            RETURNING id, report_id, reporter_id,
+                      target_type as "target_type!: ReportTargetType",
+                      target_id, reason, description,
+                      status as "status!: ReportStatus",
+                      handled_by, handled_at, handler_note, created_at,
+                      is_deleted, deleted_at,
+                      target_snapshot as "target_snapshot: Json<TargetSnapshot>"
             "#,
+            reporter_id,
+            target_type.as_str(),
+            target_id,
+            reason,
+            description
         )
-        .bind(reporter_id)
-        .bind(target_type.to_string())
-        .bind(&target_id)
-        .bind(&reason)
-        .bind(&description)
         .fetch_one(&self.pool)
         .await?;
 
-        Ok(ReportRow::from_row(&row))
+        Ok(row)
     }
 
     /// 更新举报状态
@@ -163,27 +139,38 @@ impl ReportRepository {
             i64::MAX
         };
 
-        let rows = sqlx::query(
+        let reports = sqlx::query_as!(
+            ReportRow,
             r#"
-            SELECT id, report_id, reporter_id, target_type,
-                   target_id, reason, description, status,
+            SELECT id, report_id, reporter_id,
+                   target_type as "target_type!: ReportTargetType",
+                   target_id, reason, description,
+                   status as "status!: ReportStatus",
                    created_at, handled_by, handled_at, handler_note,
-                   is_deleted, deleted_at, target_snapshot
+                   is_deleted, deleted_at,
+                   target_snapshot as "target_snapshot: Json<TargetSnapshot>"
             FROM reports
             WHERE reporter_id = $1 AND id < $2 AND is_deleted = FALSE
             ORDER BY id DESC
             LIMIT $3
             "#,
+            reporter_id,
+            last_id,
+            (limit + 1) as i64
         )
-        .bind(reporter_id)
-        .bind(last_id)
-        .bind(limit as i64)
         .fetch_all(&self.pool)
         .await?;
-
-        let reports: Vec<ReportRow> = rows.iter().map(ReportRow::from_row).collect();
-        let next_cursor = reports.last().map(|r| encode_cursor(&r.id)).transpose()?;
-        Ok((reports, next_cursor))
+        
+        // 判断是否有更多数据
+        let has_more = reports.len() > limit as usize;
+        let reports_to_return: Vec<_> = reports.into_iter().take(limit as usize).collect();
+        
+        let next_cursor = if has_more {
+            reports_to_return.last().map(|r| encode_cursor(&r.id)).transpose()?
+        } else {
+            None
+        };
+        Ok((reports_to_return, next_cursor))
     }
 
     /// 查询所有举报列表
@@ -200,30 +187,45 @@ impl ReportRepository {
             i64::MAX
         };
 
-        let rows = sqlx::query(
+        let status_str = status.as_ref().map(|s| s.as_str());
+        let target_type_str = target_type.as_ref().map(|t| t.as_str());
+        
+        let reports = sqlx::query_as!(
+            ReportRow,
             r#"
-            SELECT id, report_id, reporter_id, target_type,
-                   target_id, reason, description, status,
+            SELECT id, report_id, reporter_id,
+                   target_type as "target_type!: ReportTargetType",
+                   target_id, reason, description,
+                   status as "status!: ReportStatus",
                    created_at, handled_by, handled_at, handler_note,
-                   is_deleted, deleted_at, target_snapshot
+                   is_deleted, deleted_at,
+                   target_snapshot as "target_snapshot: Json<TargetSnapshot>"
             FROM reports
-            WHERE ($1::report_status IS NULL OR status = $1)
-              AND ($2::report_target_type IS NULL OR target_type = $2)
+            WHERE ($1::text IS NULL OR status::text = $1)
+              AND ($2::text IS NULL OR target_type::text = $2)
               AND id < $3
               AND is_deleted = FALSE
             ORDER BY id DESC
             LIMIT $4
             "#,
+            status_str,
+            target_type_str,
+            last_id,
+            (limit + 1) as i64
         )
-        .bind(status.map(|s| s.to_string()))
-        .bind(target_type.map(|t| t.to_string()))
-        .bind(last_id)
-        .bind(limit as i64)
         .fetch_all(&self.pool)
         .await?;
-
-        let reports: Vec<ReportRow> = rows.iter().map(ReportRow::from_row).collect();
-        let next_cursor = reports.last().map(|r| encode_cursor(&r.id)).transpose()?;
-        Ok((reports, next_cursor))
+        
+        // 判断是否有更多数据
+        let has_more = reports.len() > limit as usize;
+        let reports_to_return: Vec<_> = reports.into_iter().take(limit as usize).collect();
+        
+        let next_cursor = if has_more {
+            reports_to_return.last().map(|r| encode_cursor(&r.id)).transpose()?
+        } else {
+            None
+        };
+        
+        Ok((reports_to_return, next_cursor))
     }
 }

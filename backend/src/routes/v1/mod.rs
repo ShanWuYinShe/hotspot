@@ -25,6 +25,7 @@ pub mod private_chats;
 pub mod private_messages;
 pub mod reports;
 pub mod search;
+pub mod share;
 pub mod subscriptions;
 pub mod system;
 pub mod tags;
@@ -123,6 +124,7 @@ pub fn v1_routes(state: AppState) -> Router<AppState> {
         .nest("/subscriptions", subscriptions::token_required_routes())
         .nest("/system", system::token_required_routes())
         .nest("/feed", feed::token_required_routes())
+        .nest("/share", share::share_routes())
         .nest("/media", media::token_required_routes())
         .nest("/messages", messages::token_required_routes())
         .nest("/notifications", notifications::token_required_routes())

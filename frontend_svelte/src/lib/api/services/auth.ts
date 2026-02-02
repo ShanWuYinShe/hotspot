@@ -12,7 +12,8 @@ import type {
 	GuestRequest,
 	RefreshTokenRequest,
 	SessionItem,
-	PaginatedData
+	PaginatedData,
+	VerificationCodeType
 } from '$lib/types/api';
 
 export const authService = {
@@ -61,44 +62,53 @@ export const authService = {
 	 */
 	checkStatus() {
 		return post<{
-			is_authenticated: boolean;
-			user_id?: number;
-			nickname?: string;
+			is_valid: boolean;
+			expires_at?: string;
 		}>(AUTH.CHECK_STATUS);
 	},
 
 	/**
 	 * 发送验证码
 	 */
-	sendVerificationCode(data: { login_id: string; purpose: 'register' | 'reset_password' }) {
-		return post<{ expires_at: string }>(AUTH.SEND_VERIFICATION_CODE, data, { skipAuth: true });
+	sendVerificationCode(data: { phone: string; type: VerificationCodeType; captcha_token?: string }) {
+		return post<{ code_id: string; expires_at: string; retry_after?: number }>(
+			AUTH.SEND_VERIFICATION_CODE,
+			data,
+			{ skipAuth: true }
+		);
 	},
 
 	/**
 	 * 校验验证码
 	 */
-	verifyCode(data: { login_id: string; code: string; purpose: 'register' | 'reset_password' }) {
-		return post<{ verify_token: string }>(AUTH.VERIFY_CODE, data, { skipAuth: true });
+	verifyCode(data: { code_id: string; code: string }) {
+		return post<{ verified: boolean; verify_token: string; expires_at: string }>(
+			AUTH.VERIFY_CODE,
+			data,
+			{
+				skipAuth: true
+			}
+		);
 	},
 
 	/**
 	 * 请求重置密码
 	 */
-	requestPasswordReset(data: { login_id: string }) {
-		return post<{ expires_at: string }>(AUTH.REQUEST_PASSWORD_RESET, data, { skipAuth: true });
+	requestPasswordReset(data: { login_id: string; verify_token: string }) {
+		return post<{ reset_id: string }>(AUTH.REQUEST_PASSWORD_RESET, data, { skipAuth: true });
 	},
 
 	/**
 	 * 校验重置码
 	 */
-	verifyResetCode(data: { login_id: string; code: string }) {
+	verifyResetCode(data: { reset_id: string; code: string }) {
 		return post<{ reset_token: string }>(AUTH.VERIFY_RESET_CODE, data, { skipAuth: true });
 	},
 
 	/**
 	 * 重置密码
 	 */
-	resetPassword(data: { reset_token: string; new_password: string }) {
+	resetPassword(data: { reset_token: string; password: string }) {
 		return post<void>(AUTH.RESET_PASSWORD, data, { skipAuth: true });
 	},
 
@@ -119,7 +129,7 @@ export const authService = {
 	/**
 	 * 撤销会话
 	 */
-	revokeSession(data: { session_id: string }) {
+	revokeSession(data: { revoke_token: string }) {
 		return post<void>(AUTH.ME.REVOKE_SESSION, data);
 	}
 };

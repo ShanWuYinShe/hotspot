@@ -72,17 +72,6 @@ impl SearchService {
                 .suggest_by_keyword(&req.prefix, viewer_id, limit as i32, location)
         )?;
 
-        let user_ids: Vec<_> = user_rows.iter().map(|u| u.user_id).collect();
-        let group_ids: Vec<_> = group_rows.iter().map(|g| g.group_id).collect();
-        let moment_ids: Vec<_> = moment_rows.iter().map(|m| m.moment_id).collect();
-
-        // 批量获取标签（标签建议本身不需要额外标签）
-        let (user_tags, group_tags, moment_tags) = tokio::try_join!(
-            self.tag_repo.get_user_tags_batch(&user_ids),
-            self.tag_repo.get_group_tags_batch(&group_ids),
-            self.tag_repo.get_moment_tags_batch(&moment_ids)
-        )?;
-
         let mut items: Vec<SearchSuggestItem> = Vec::new();
 
         // 1. 标签建议
@@ -99,10 +88,6 @@ impl SearchService {
                 .media_service
                 .sign_url_if_path(user.avatar_url.as_deref())
                 .await;
-            let tags = user_tags
-                .get(&user.user_id)
-                .cloned()
-                .filter(|t| !t.is_empty());
             let bio = if user.bio.trim().is_empty() {
                 None
             } else {
@@ -110,14 +95,10 @@ impl SearchService {
             };
 
             items.push(SearchSuggestItem::User(UserSuggestItem {
-                user: crate::dto::response::UserInfo {
-                    user_id: user.user_id,
-                    nickname: user.nickname,
-                    avatar_url,
-                    user_type: user.user_type,
-                },
+                user_id: user.user_id,
+                nickname: user.nickname,
+                avatar_url,
                 bio,
-                tags,
                 distance: user.distance,
             }));
         }
@@ -128,10 +109,6 @@ impl SearchService {
                 .media_service
                 .sign_url_if_path(group.avatar_url.as_deref())
                 .await;
-            let tags = group_tags
-                .get(&group.group_id)
-                .cloned()
-                .filter(|t| !t.is_empty());
             let description = if group.description.trim().is_empty() {
                 None
             } else {
@@ -139,42 +116,34 @@ impl SearchService {
             };
 
             items.push(SearchSuggestItem::Group(GroupSuggestItem {
-                group: crate::dto::response::GroupInfo {
-                    group_chat_id: group.group_id.to_string(),
-                    name: group.name,
-                    avatar_url,
-                    members_count: group.member_count,
-                },
+                group_chat_id: group.group_id.to_string(),
+                name: group.name,
+                avatar_url,
                 description,
-                tags,
-                has_password: group.has_password,
+                members_count: group.member_count,
                 distance: group.distance,
             }));
         }
 
         // 4. 瞬间建议
         for moment in moment_rows {
-            let avatar_url = self
+            let author_avatar_url = self
                 .media_service
                 .sign_url_if_path(moment.avatar_url.as_deref())
                 .await;
-            let images = self.sign_moment_images(&moment.images).await;
-            let tags = moment_tags
-                .get(&moment.moment_id)
-                .cloned()
-                .filter(|t| !t.is_empty());
+
+            // 限制内容长度为前100个字符
+            let content = if moment.description.chars().count() > 100 {
+                moment.description.chars().take(100).collect::<String>() + "..."
+            } else {
+                moment.description
+            };
 
             items.push(SearchSuggestItem::Moment(MomentSuggestItem {
                 moment_id: moment.moment_id.to_string(),
-                description: moment.description,
-                images,
-                user: crate::dto::response::UserInfo {
-                    user_id: moment.user_id,
-                    nickname: moment.nickname,
-                    avatar_url,
-                    user_type: moment.user_type,
-                },
-                tags,
+                content,
+                author_nickname: moment.nickname,
+                author_avatar_url,
                 distance: moment.distance,
             }));
         }
@@ -182,7 +151,11 @@ impl SearchService {
         // 排序逻辑：
         // 1. 如果有 location，按 distance 排序 (混合排序)
         // 2. 如果没有 location，保持各类别的默认顺序 (或者可以按热度/匹配度混合)
-        // 目前简单实现：如果有 location，对所有带 distance 的 item 进行混合排序
+        //
+        // 注意：这是跨类型（用户/群组/瞬间/标签）混合搜索的特殊场景
+        // 距离计算已在各个 repository 的数据库层完成（使用 PostGIS）
+        // 这里只是对来自不同表的结果进行最终的混合排序
+        // 如果要在数据库层完成，需要使用 UNION ALL 重构整个查询架构
         if location.is_some() {
             items.sort_by(|a, b| {
                 let dist_a = get_distance(a).unwrap_or(f64::MAX);

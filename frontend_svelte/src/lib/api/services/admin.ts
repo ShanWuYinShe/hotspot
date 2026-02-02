@@ -380,5 +380,27 @@ export const adminGlobalSettingsService = {
 		search_radius_max?: number;
 	}) {
 		return post<void>(ADMIN_GLOBAL_SETTINGS.UPDATE_LIMITS, data);
+	},
+
+	/**
+	 * 更新频率限制
+	 */
+	updateRateLimits(data: {
+		global_per_hour?: number;
+		user_per_hour?: number;
+		auth_send_code_per_minute?: number;
+		auth_verify_code_per_10minutes?: number;
+		auth_register_per_10minutes?: number;
+		auth_login_per_10minutes?: number;
+		auth_guest_per_10minutes?: number;
+		auth_refresh_per_10minutes?: number;
+		auth_reset_request_per_minute?: number;
+		auth_reset_verify_per_10minutes?: number;
+		auth_reset_per_10minutes?: number;
+		moments_create_per_minute?: number;
+		comments_create_per_minute?: number;
+		reports_create_per_hour?: number;
+	}) {
+		return post<void>(ADMIN_GLOBAL_SETTINGS.UPDATE_RATE_LIMITS, data);
 	}
 };

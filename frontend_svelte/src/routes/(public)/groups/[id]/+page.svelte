@@ -7,6 +7,7 @@
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
+	import { usePagination } from '$lib/hooks/use-pagination.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
@@ -28,9 +29,11 @@
 		GroupCard,
 		GroupSettings,
 		GroupAnnouncementItem,
-		GroupMember,
-		SetableGroupRole
+		GroupMemberItem,
+		SetableGroupRole,
+		GroupRole
 	} from '$lib/types/api';
+	import { formatDateTime } from '$lib/utils/format';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import Users from 'lucide-svelte/icons/users';
 	import MapPin from 'lucide-svelte/icons/map-pin';
@@ -60,24 +63,25 @@
 	let settingsLoaded = $state(false);
 	let currentTab = $state<'overview' | 'announcements' | 'members'>('overview');
 
-	let announcements = $state<GroupAnnouncementItem[]>([]);
-	let announcementsLoading = $state(false);
-	let announcementsCursor = $state<string | undefined>(undefined);
-	let announcementsHasMore = $state(true);
+	// 使用 usePagination hook 统一管理公告和成员的分页状态
+	const announcementsPagination = usePagination<GroupAnnouncementItem>({
+		initialLoading: false,
+		uniqueKey: 'announcement_id'
+	});
 	let announcementsLoaded = $state(false);
 
-	let members = $state<GroupMember[]>([]);
-	let membersLoading = $state(false);
-	let membersCursor = $state<string | undefined>(undefined);
-	let membersHasMore = $state(true);
+	const membersPagination = usePagination<GroupMemberItem>({
+		initialLoading: false,
+		uniqueKey: (item) => item.user.user_id
+	});
 	let membersLoaded = $state(false);
 
-	let canAccessGroupData = $derived(authStore.isAuthenticated && !!group?.my_state?.is_joined);
-	let canManageGroup = $derived(
+	const canAccessGroupData = $derived(authStore.isAuthenticated && !!group?.my_state?.is_joined);
+	const canManageGroup = $derived(
 		authStore.isAuthenticated &&
 			(group?.my_state?.role === 'owner' || group?.my_state?.role === 'admin')
 	);
-	let isOwner = $derived(group?.my_state?.role === 'owner');
+	const isOwner = $derived(group?.my_state?.role === 'owner');
 
 	let showAnnouncementDialog = $state(false);
 	let announcementTitle = $state('');
@@ -89,16 +93,16 @@
 	let announcementToDelete = $state<GroupAnnouncementItem | null>(null);
 
 	let showMuteDialog = $state(false);
-	let muteTarget = $state<GroupMember | null>(null);
+	let muteTarget = $state<GroupMemberItem | null>(null);
 	let muteDurationMinutes = $state('30');
 	let muteSubmitting = $state(false);
 
 	let showRoleDialog = $state(false);
-	let roleTarget = $state<GroupMember | null>(null);
+	let roleTarget = $state<GroupMemberItem | null>(null);
 	let roleSubmitting = $state(false);
 
 	let showRemoveDialog = $state(false);
-	let removeTarget = $state<GroupMember | null>(null);
+	let removeTarget = $state<GroupMemberItem | null>(null);
 	let removeSubmitting = $state(false);
 
 	let showLeaveDialog = $state(false);
@@ -116,14 +120,10 @@
 		}
 	}
 
-	function getRoleLabel(role: GroupMember['role']) {
+	function getRoleLabel(role: GroupMemberItem['role']) {
 		if (role === 'owner') return '群主';
 		if (role === 'admin') return '管理员';
 		return '成员';
-	}
-
-	function formatDate(dateStr: string): string {
-		return new Date(dateStr).toLocaleString('zh-CN');
 	}
 
 	const mutePresets = [
@@ -202,12 +202,14 @@
 			if (isSuccess(response) && response.data) {
 				const updated = response.data;
 				if (editingAnnouncement) {
-					announcements = announcements.map((item) =>
-						item.announcement_id === updated.announcement_id ? updated : item
+					// 更新已有公告
+					announcementsPagination.updateItem((item) =>
+						item.announcement_id === updated.announcement_id ? updated : null
 					);
 					toast.success('公告已更新');
 				} else {
-					announcements = [updated, ...announcements];
+					// 添加新公告到列表开头
+					announcementsPagination.addItem(updated);
 					toast.success('公告已发布');
 				}
 				showAnnouncementDialog = false;
@@ -237,7 +239,8 @@
 		try {
 			const response = await groupsService.deleteAnnouncement({ announcement_id: targetId });
 			if (isSuccess(response)) {
-				announcements = announcements.filter((item) => item.announcement_id !== targetId);
+				// 从列表中删除公告
+				announcementsPagination.removeItem((item) => item.announcement_id === targetId);
 				toast.success('公告已删除');
 			} else {
 				toast.error(response.message || '删除失败');
@@ -247,7 +250,7 @@
 		}
 	}
 
-	function canManageMember(member: GroupMember) {
+	function canManageMember(member: GroupMemberItem) {
 		if (!canManageGroup) return false;
 		if (member.user.user_id === authStore.currentUserId) return false;
 		if (member.role === 'owner') return false;
@@ -255,11 +258,11 @@
 		return true;
 	}
 
-	function canChangeRole(member: GroupMember) {
+	function canChangeRole(member: GroupMemberItem) {
 		return isOwner && member.role !== 'owner' && member.user.user_id !== authStore.currentUserId;
 	}
 
-	function openMuteDialog(member: GroupMember) {
+	function openMuteDialog(member: GroupMemberItem) {
 		if (!canManageMember(member)) return;
 		muteTarget = member;
 		muteDurationMinutes = '30';
@@ -288,8 +291,9 @@
 			});
 			if (isSuccess(response) && response.data) {
 				const updated = response.data;
-				members = members.map((item) =>
-					item.user.user_id === updated.user.user_id ? updated : item
+				// 更新成员状态
+				membersPagination.updateItem((item) =>
+					item.user.user_id === updated.user.user_id ? updated : null
 				);
 				toast.success('已设置禁言');
 				showMuteDialog = false;
@@ -304,7 +308,7 @@
 		}
 	}
 
-	async function handleUnmuteMember(member: GroupMember) {
+	async function handleUnmuteMember(member: GroupMemberItem) {
 		if (!authStore.isAuthenticated) {
 			uiStore.saveRedirectUrl();
 			uiStore.openLoginModal();
@@ -319,8 +323,9 @@
 			});
 			if (isSuccess(response) && response.data) {
 				const updated = response.data;
-				members = members.map((item) =>
-					item.user.user_id === updated.user.user_id ? updated : item
+				// 更新成员状态
+				membersPagination.updateItem((item) =>
+					item.user.user_id === updated.user.user_id ? updated : null
 				);
 				toast.success('已解除禁言');
 			} else {
@@ -331,7 +336,7 @@
 		}
 	}
 
-	function openRoleDialog(member: GroupMember) {
+	function openRoleDialog(member: GroupMemberItem) {
 		if (!canChangeRole(member)) return;
 		roleTarget = member;
 		showRoleDialog = true;
@@ -354,8 +359,9 @@
 			});
 			if (isSuccess(response) && response.data) {
 				const updated = response.data;
-				members = members.map((item) =>
-					item.user.user_id === updated.user.user_id ? updated : item
+				// 更新成员角色
+				membersPagination.updateItem((item) =>
+					item.user.user_id === updated.user.user_id ? updated : null
 				);
 				toast.success('成员角色已更新');
 				showRoleDialog = false;
@@ -370,7 +376,7 @@
 		}
 	}
 
-	function openRemoveDialog(member: GroupMember) {
+	function openRemoveDialog(member: GroupMemberItem) {
 		if (!canManageMember(member)) return;
 		removeTarget = member;
 		showRemoveDialog = true;
@@ -391,7 +397,8 @@
 				user_id: removeTarget.user.user_id
 			});
 			if (isSuccess(response)) {
-				members = members.filter((item) => item.user.user_id !== removeTarget!.user.user_id);
+				// 从成员列表中删除
+				membersPagination.removeItem((item) => item.user.user_id === removeTarget!.user.user_id);
 				if (group) {
 					group = { ...group, members_count: Math.max(0, group.members_count - 1) };
 				}
@@ -415,14 +422,11 @@
 			if (isSuccess(response) && response.data) {
 				group = response.data;
 				if (!response.data.my_state?.is_joined) {
-					announcements = [];
-					members = [];
+					// 未加入群组，重置分页状态
+					announcementsPagination.reset();
+					membersPagination.reset();
 					announcementsLoaded = false;
 					membersLoaded = false;
-					announcementsCursor = undefined;
-					membersCursor = undefined;
-					announcementsHasMore = true;
-					membersHasMore = true;
 				}
 			} else {
 				toast.error(response.message || '群组不存在');
@@ -448,61 +452,40 @@
 		}
 	}
 
+	// 使用 usePagination hook，简化分页逻辑
 	async function loadAnnouncements(refresh = false) {
 		if (!canAccessGroupData) return;
-		if (refresh) {
-			announcementsLoading = true;
-			announcementsCursor = undefined;
-			announcementsHasMore = true;
-		} else {
-			announcementsLoading = true;
-		}
 
-		try {
-			const response = await groupsService.getAnnouncements({
-				group_chat_id: groupId,
-				limit: 10,
-				cursor: refresh ? undefined : announcementsCursor
-			});
-			if (isSuccess(response) && response.data) {
-				announcements = refresh ? response.data.items : [...announcements, ...response.data.items];
-				announcementsHasMore = response.data.pagination.has_more;
-				announcementsCursor = response.data.pagination.next_cursor;
-				announcementsLoaded = true;
-			}
-		} catch {
-			// ignore
-		} finally {
-			announcementsLoading = false;
+		await announcementsPagination.load(
+			(cursor) =>
+				groupsService.getAnnouncements({
+					group_chat_id: groupId,
+					limit: 10,
+					cursor
+				}),
+			refresh
+		);
+
+		if (!announcementsPagination.error) {
+			announcementsLoaded = true;
 		}
 	}
 
 	async function loadMembers(refresh = false) {
 		if (!canAccessGroupData) return;
-		if (refresh) {
-			membersLoading = true;
-			membersCursor = undefined;
-			membersHasMore = true;
-		} else {
-			membersLoading = true;
-		}
 
-		try {
-			const response = await groupsService.getMembers({
-				group_chat_id: groupId,
-				limit: 20,
-				cursor: refresh ? undefined : membersCursor
-			});
-			if (isSuccess(response) && response.data) {
-				members = refresh ? response.data.items : [...members, ...response.data.items];
-				membersHasMore = response.data.pagination.has_more;
-				membersCursor = response.data.pagination.next_cursor;
-				membersLoaded = true;
-			}
-		} catch {
-			// ignore
-		} finally {
-			membersLoading = false;
+		await membersPagination.load(
+			(cursor) =>
+				groupsService.getMembers({
+					group_chat_id: groupId,
+					limit: 20,
+					cursor
+				}),
+			refresh
+		);
+
+		if (!membersPagination.error) {
+			membersLoaded = true;
 		}
 	}
 
@@ -602,6 +585,161 @@
 	onMount(() => {
 		loadGroup();
 		loadSettings();
+
+		// 监听群组成员离开事件
+		const handleMemberLeft = (e: CustomEvent<{
+			group_chat_id: string;
+			user_id: number;
+			member_count: number;
+		}>) => {
+			if (e.detail.group_chat_id === groupId) {
+				// 从成员列表中移除
+				membersPagination.removeItem((item) => item.user.user_id === e.detail.user_id);
+				// 更新群组成员数量
+				if (group) {
+					group = { ...group, members_count: e.detail.member_count };
+				}
+			}
+		};
+
+		// 监听群组成员被移除事件
+		const handleMemberRemoved = (e: CustomEvent<{
+			group_chat_id: string;
+			user_id: number;
+			member_count: number;
+			is_current_user: boolean;
+		}>) => {
+			if (e.detail.group_chat_id === groupId) {
+				// 从成员列表中移除
+				membersPagination.removeItem((item) => item.user.user_id === e.detail.user_id);
+				// 更新群组成员数量
+				if (group) {
+					group = { ...group, members_count: e.detail.member_count };
+				}
+				// 如果被移除的是当前用户，重新加载群组信息
+				if (e.detail.is_current_user) {
+					loadGroup();
+				}
+			}
+		};
+
+		// 监听群组成员角色变更事件
+		const handleMemberRoleChanged = (e: CustomEvent<{
+			group_chat_id: string;
+			user_id: number;
+			old_role: string;
+			new_role: string;
+		}>) => {
+			if (e.detail.group_chat_id === groupId) {
+				// 更新成员角色
+				membersPagination.updateItem((item) => {
+					if (item.user.user_id === e.detail.user_id) {
+						return { ...item, role: e.detail.new_role as GroupRole };
+					}
+					return null;
+				});
+				// 如果角色变更的是当前用户，重新加载群组信息以更新权限
+				if (e.detail.user_id === authStore.currentUserId) {
+					loadGroup();
+				}
+			}
+		};
+
+		// 监听群组成员被禁言事件
+		const handleMemberMuted = (e: CustomEvent<{
+			group_chat_id: string;
+			user_id: number;
+			muted_until?: string;
+		}>) => {
+			if (e.detail.group_chat_id === groupId) {
+				// 更新成员禁言状态
+				membersPagination.updateItem((item) => {
+					if (item.user.user_id === e.detail.user_id) {
+						return { ...item, muted_until: e.detail.muted_until };
+					}
+					return null;
+				});
+				// 如果被禁言的是当前用户，重新加载群组信息
+				if (e.detail.user_id === authStore.currentUserId) {
+					loadGroup();
+				}
+			}
+		};
+
+		// 监听群组成员解除禁言事件
+		const handleMemberUnmuted = (e: CustomEvent<{
+			group_chat_id: string;
+			user_id: number;
+		}>) => {
+			if (e.detail.group_chat_id === groupId) {
+				// 更新成员禁言状态
+				membersPagination.updateItem((item) => {
+					if (item.user.user_id === e.detail.user_id) {
+						return { ...item, muted_until: undefined };
+					}
+					return null;
+				});
+				// 如果解除禁言的是当前用户，重新加载群组信息
+				if (e.detail.user_id === authStore.currentUserId) {
+					loadGroup();
+				}
+			}
+		};
+
+		// 监听群公告更新事件
+		const handleAnnouncementUpdated = (e: CustomEvent<{
+			group_chat_id: string;
+			announcement_id: string;
+			content: string;
+		}>) => {
+			if (e.detail.group_chat_id === groupId) {
+				// 更新公告内容
+				announcementsPagination.updateItem((item) => {
+					if (item.announcement_id === e.detail.announcement_id) {
+						return { ...item, content: e.detail.content };
+					}
+					return null;
+				});
+			}
+		};
+
+		// 监听群组信息更新事件
+		const handleGroupUpdated = (e: CustomEvent<{
+			group_chat_id: string;
+			updated_fields: {
+				name?: string;
+				avatar_url?: string;
+				description?: string;
+			};
+		}>) => {
+			if (e.detail.group_chat_id === groupId && group) {
+				// 更新群组信息
+				group = {
+					...group,
+					...e.detail.updated_fields
+				};
+			}
+		};
+
+		// 注册事件监听器
+		window.addEventListener('group-member-left', handleMemberLeft as EventListener);
+		window.addEventListener('group-member-removed', handleMemberRemoved as EventListener);
+		window.addEventListener('group-member-role-changed', handleMemberRoleChanged as EventListener);
+		window.addEventListener('group-member-muted', handleMemberMuted as EventListener);
+		window.addEventListener('group-member-unmuted', handleMemberUnmuted as EventListener);
+		window.addEventListener('group-announcement-updated', handleAnnouncementUpdated as EventListener);
+		window.addEventListener('group-updated', handleGroupUpdated as EventListener);
+
+		// 清理函数
+		return () => {
+			window.removeEventListener('group-member-left', handleMemberLeft as EventListener);
+			window.removeEventListener('group-member-removed', handleMemberRemoved as EventListener);
+			window.removeEventListener('group-member-role-changed', handleMemberRoleChanged as EventListener);
+			window.removeEventListener('group-member-muted', handleMemberMuted as EventListener);
+			window.removeEventListener('group-member-unmuted', handleMemberUnmuted as EventListener);
+			window.removeEventListener('group-announcement-updated', handleAnnouncementUpdated as EventListener);
+			window.removeEventListener('group-updated', handleGroupUpdated as EventListener);
+		};
 	});
 </script>
 
@@ -806,40 +944,40 @@
 								size="sm"
 								class="rounded-full"
 								onclick={() => loadAnnouncements(true)}
-								disabled={announcementsLoading}
-							>
-								<RefreshCw class="mr-1.5 h-3.5 w-3.5" />
-								刷新
+							disabled={announcementsPagination.loading}
+						>
+							<RefreshCw class="mr-1.5 h-3.5 w-3.5" />
+							刷新
+						</Button>
+						{#if canManageGroup}
+							<Button size="sm" class="rounded-full" onclick={() => openAnnouncementDialog()}>
+								<Plus class="mr-1.5 h-3.5 w-3.5" />
+								发布公告
 							</Button>
-							{#if canManageGroup}
-								<Button size="sm" class="rounded-full" onclick={() => openAnnouncementDialog()}>
-									<Plus class="mr-1.5 h-3.5 w-3.5" />
-									发布公告
-								</Button>
-							{/if}
-						</div>
+						{/if}
 					</div>
-					{#if announcementsLoading && announcements.length === 0}
-						<div class="space-y-3">
-							{#each Array(3) as _}
-								<Card class="border-0 bg-card/60 shadow-sm shadow-black/5">
-									<CardContent class="space-y-2 p-4">
-										<Skeleton class="h-4 w-40" />
-										<Skeleton class="h-4 w-full" />
-										<Skeleton class="h-3 w-32" />
-									</CardContent>
-								</Card>
-							{/each}
-						</div>
-					{:else if announcements.length === 0}
-						<Card class="border-0 bg-card/60 shadow-sm shadow-black/5">
-							<CardContent class="py-10 text-center text-sm text-muted-foreground">
-								暂无公告
-							</CardContent>
-						</Card>
-					{:else}
-						<div class="space-y-3">
-							{#each announcements as announcement (announcement.announcement_id)}
+				</div>
+				{#if announcementsPagination.loading && announcementsPagination.items.length === 0}
+					<div class="space-y-3">
+						{#each Array(3) as _}
+							<Card class="border-0 bg-card/60 shadow-sm shadow-black/5">
+								<CardContent class="space-y-2 p-4">
+									<Skeleton class="h-4 w-40" />
+									<Skeleton class="h-4 w-full" />
+									<Skeleton class="h-3 w-32" />
+								</CardContent>
+							</Card>
+						{/each}
+					</div>
+				{:else if announcementsPagination.items.length === 0}
+					<Card class="border-0 bg-card/60 shadow-sm shadow-black/5">
+						<CardContent class="py-10 text-center text-sm text-muted-foreground">
+							暂无公告
+						</CardContent>
+					</Card>
+				{:else}
+					<div class="space-y-3">
+						{#each announcementsPagination.items as announcement (announcement.announcement_id)}
 								<Card class="border-0 bg-card/70 shadow-sm shadow-black/5">
 									<CardContent class="p-4">
 										<div class="flex items-start justify-between gap-3">
@@ -852,7 +990,7 @@
 												</div>
 												<p class="whitespace-pre-wrap text-sm text-muted-foreground">{announcement.content}</p>
 												<div class="text-xs text-muted-foreground">
-													{announcement.created_by.nickname} · {formatDate(announcement.created_at)}
+													{announcement.created_by.nickname} · {formatDateTime(announcement.created_at)}
 												</div>
 											</div>
 											{#if canManageGroup}
@@ -879,24 +1017,40 @@
 										</div>
 									</CardContent>
 								</Card>
-							{/each}
+						{/each}
+					</div>
+					{#if announcementsPagination.hasMore}
+						<div class="flex justify-center pt-2">
+							<Button
+								variant="outline"
+								size="sm"
+								class="rounded-full"
+								onclick={() => loadAnnouncements(false)}
+								disabled={announcementsPagination.loadingMore}
+							>
+								{#if announcementsPagination.loadingMore}
+									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+								{/if}
+								加载更多
+							</Button>
 						</div>
-						{#if announcementsHasMore}
-							<div class="flex justify-center pt-2">
-								<Button
-									variant="outline"
-									size="sm"
-									class="rounded-full"
-									onclick={() => loadAnnouncements(false)}
-									disabled={announcementsLoading}
-								>
-									{#if announcementsLoading}
-										<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-									{/if}
-									加载更多
-								</Button>
-							</div>
-						{/if}
+					{/if}
+					{/if}
+					{#if announcementsPagination.hasMore}
+						<div class="flex justify-center pt-2">
+							<Button
+								variant="outline"
+								size="sm"
+								class="rounded-full"
+								onclick={() => loadAnnouncements(false)}
+								disabled={announcementsPagination.loadingMore}
+							>
+								{#if announcementsPagination.loadingMore}
+									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+								{/if}
+								加载更多
+							</Button>
+						</div>
 					{/if}
 				{/if}
 			</TabsContent>
@@ -927,46 +1081,46 @@
 							<p class="mt-1 text-xs text-muted-foreground">支持群主/管理员进行禁言与角色管理</p>
 						</div>
 						<div class="flex flex-wrap gap-2">
-							<Button
-								variant="outline"
-								size="sm"
-								class="rounded-full"
-								onclick={() => loadMembers(true)}
-								disabled={membersLoading}
-							>
-								<RefreshCw class="mr-1.5 h-3.5 w-3.5" />
-								刷新
-							</Button>
-							{#if canManageGroup}
-								<Badge variant="secondary" class="rounded-full px-3 py-1 text-[11px]">可管理成员</Badge>
-							{/if}
-						</div>
+						<Button
+							variant="outline"
+							size="sm"
+							class="rounded-full"
+							onclick={() => loadMembers(true)}
+							disabled={membersPagination.loading}
+						>
+							<RefreshCw class="mr-1.5 h-3.5 w-3.5" />
+							刷新
+						</Button>
+						{#if canManageGroup}
+							<Badge variant="secondary" class="rounded-full px-3 py-1 text-[11px]">可管理成员</Badge>
+						{/if}
 					</div>
-					{#if membersLoading && members.length === 0}
-						<div class="columns-1 gap-3 sm:columns-2 lg:columns-3">
-							{#each Array(6) as _}
-								<div class="mb-3 break-inside-avoid">
-									<Card class="border-0 bg-card/60 shadow-sm shadow-black/5">
-										<CardContent class="flex items-center gap-3 p-4">
-											<Skeleton class="h-10 w-10 rounded-full" />
-											<div class="flex-1 space-y-2">
-												<Skeleton class="h-3 w-24" />
-												<Skeleton class="h-3 w-32" />
-											</div>
-										</CardContent>
-									</Card>
-								</div>
-							{/each}
-						</div>
-					{:else if members.length === 0}
-						<Card class="border-0 bg-card/60 shadow-sm shadow-black/5">
-							<CardContent class="py-10 text-center text-sm text-muted-foreground">
-								暂无成员
-							</CardContent>
-						</Card>
-					{:else}
-						<div class="columns-1 gap-3 sm:columns-2 lg:columns-3">
-							{#each members as member (member.user.user_id)}
+				</div>
+				{#if membersPagination.loading && membersPagination.items.length === 0}
+					<div class="columns-1 gap-3 sm:columns-2 lg:columns-3">
+						{#each Array(6) as _}
+							<div class="mb-3 break-inside-avoid">
+								<Card class="border-0 bg-card/60 shadow-sm shadow-black/5">
+									<CardContent class="flex items-center gap-3 p-4">
+										<Skeleton class="h-10 w-10 rounded-full" />
+										<div class="flex-1 space-y-2">
+											<Skeleton class="h-3 w-24" />
+											<Skeleton class="h-3 w-32" />
+										</div>
+									</CardContent>
+								</Card>
+							</div>
+						{/each}
+					</div>
+				{:else if membersPagination.items.length === 0}
+					<Card class="border-0 bg-card/60 shadow-sm shadow-black/5">
+						<CardContent class="py-10 text-center text-sm text-muted-foreground">
+							暂无成员
+						</CardContent>
+					</Card>
+				{:else}
+					<div class="columns-1 gap-3 sm:columns-2 lg:columns-3">
+						{#each membersPagination.items as member (member.user.user_id)}
 								<div class="mb-3 break-inside-avoid">
 									<Card class="border-0 bg-card/70 shadow-sm shadow-black/5 transition-colors hover:bg-accent/40">
 										<CardContent class="flex items-center gap-3 p-4">
@@ -984,11 +1138,11 @@
 														<Badge variant="secondary" class="rounded-full text-[10px]">{getRoleLabel(member.role)}</Badge>
 													</div>
 													<p class="text-xs text-muted-foreground">
-														加入于 {formatDate(member.joined_at)}
+														加入于 {formatDateTime(member.joined_at)}
 													</p>
 												{#if member.muted_until}
 													<p class="text-xs text-destructive/80">
-														禁言至 {formatDate(member.muted_until)}
+														禁言至 {formatDateTime(member.muted_until)}
 													</p>
 												{/if}
 												</div>
@@ -1036,25 +1190,25 @@
 										</CardContent>
 									</Card>
 								</div>
-							{/each}
+						{/each}
+					</div>
+					{#if membersPagination.hasMore}
+						<div class="flex justify-center pt-2">
+							<Button
+								variant="outline"
+								size="sm"
+								class="rounded-full"
+								onclick={() => loadMembers(false)}
+								disabled={membersPagination.loadingMore}
+							>
+								{#if membersPagination.loadingMore}
+									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+								{/if}
+								加载更多
+							</Button>
 						</div>
-						{#if membersHasMore}
-							<div class="flex justify-center pt-2">
-								<Button
-									variant="outline"
-									size="sm"
-									class="rounded-full"
-									onclick={() => loadMembers(false)}
-									disabled={membersLoading}
-								>
-									{#if membersLoading}
-										<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-									{/if}
-									加载更多
-								</Button>
-							</div>
-						{/if}
 					{/if}
+				{/if}
 				{/if}
 			</TabsContent>
 		</Tabs>
@@ -1062,7 +1216,7 @@
 		<Card>
 			<CardContent class="py-12 text-center">
 				<p class="text-muted-foreground">群组不存在或已被解散</p>
-				<Button variant="outline" class="mt-4" onclick={() => goto('/explore?tab=nearby&nearby=groups')}>
+				<Button variant="outline" class="mt-4" onclick={() => goto('/groups/nearby')}>
 					去探索群组
 				</Button>
 			</CardContent>

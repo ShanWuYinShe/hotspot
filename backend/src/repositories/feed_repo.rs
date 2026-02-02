@@ -19,10 +19,10 @@ impl FeedRepository {
         feed_item_id: Uuid,
         action: &str,
     ) -> Result<()> {
-        sqlx::query!(
+        let _ = sqlx::query!(
             r#"
             INSERT INTO feed_feedback (user_id, feed_item_id, action)
-            VALUES ($1, $2, $3)
+            VALUES ($1, $2, $3::text::feed_feedback_action)
             "#,
             user_id,
             feed_item_id,

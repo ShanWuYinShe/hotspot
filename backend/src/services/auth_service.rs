@@ -23,8 +23,13 @@ use crate::{
         user_repo::UserRepository, verification_repo::VerificationRepository,
     },
     utils::{
-        bloom_filter::ResourceExistenceChecker, id_gen::IdGenerator, jwt::JwtUtil,
-        password::PasswordUtil, session_token::SessionTokenGenerator, token::TokenUtil,
+        bloom_filter::ResourceExistenceChecker,
+        cache_invalidation::{CacheInvalidator, InvalidationEvent},
+        id_gen::IdGenerator,
+        jwt::JwtUtil,
+        password::PasswordUtil,
+        session_token::SessionTokenGenerator,
+        token::TokenUtil,
         validation::Validator,
     },
 };
@@ -51,6 +56,7 @@ pub struct AuthService {
     access_token_expiration: i64,
     refresh_token_expiration: i64,
     session_token_gen: SessionTokenGenerator,
+    cache_invalidator: CacheInvalidator,
 }
 
 impl AuthService {
@@ -66,6 +72,7 @@ impl AuthService {
         verification_repo: VerificationRepository,
     ) -> Self {
         let session_token_gen = SessionTokenGenerator::new(&jwt_secret);
+        let cache_invalidator = CacheInvalidator::new(redis.clone());
 
         Self {
             db: db.clone(),
@@ -78,6 +85,7 @@ impl AuthService {
             access_token_expiration,
             refresh_token_expiration,
             session_token_gen,
+            cache_invalidator,
         }
     }
 
@@ -91,7 +99,15 @@ impl AuthService {
             .arg(user_id)
             .query_async(&mut self.redis.clone())
             .await
-            .map_err(|e| AppError::Redis(e))?;
+            .map_err(|e| {
+                tracing::error!(
+                    session_id = %session_id,
+                    user_id,
+                    error = %e,
+                    "Failed to set session whitelist in Redis"
+                );
+                AppError::Redis(e)
+            })?;
         Ok(())
     }
 
@@ -102,7 +118,14 @@ impl AuthService {
             .arg(&key)
             .query_async(&mut self.redis.clone())
             .await
-            .map_err(|e| AppError::Redis(e))?;
+            .map_err(|e| {
+                tracing::error!(
+                    session_id = %session_id,
+                    error = %e,
+                    "Failed to remove session whitelist from Redis"
+                );
+                AppError::Redis(e)
+            })?;
         Ok(())
     }
 
@@ -124,6 +147,10 @@ impl AuthService {
 
         // 1. 检查登录ID是否已存在
         if self.user_repo.exists_by_login_id(&req.login_id).await? {
+            tracing::warn!(
+                login_id = %req.login_id,
+                "Register failed: login_id already exists"
+            );
             return Err(AppError::AlreadyExists("该登录ID已被注册".to_string()));
         }
 
@@ -230,18 +257,39 @@ impl AuthService {
             .user_repo
             .find_by_login_id(&req.login_id)
             .await?
-            .ok_or_else(|| AppError::Unauthorized("用户名或密码错误".to_string()))?;
+            .ok_or_else(|| {
+                tracing::warn!(
+                    login_id = %req.login_id,
+                    "Login failed: user not found"
+                );
+                AppError::Unauthorized("用户名或密码错误".to_string())
+            })?;
 
         if self.user_repo.is_banned(user.user_id).await? {
+            tracing::warn!(
+                user_id = user.user_id,
+                login_id = %req.login_id,
+                "Login failed: account banned"
+            );
             return Err(AppError::AccountBanned("账号已被封禁".to_string()));
         }
 
         // 2. 验证密码
-        let password_hash = user
-            .password_hash
-            .ok_or_else(|| AppError::Unauthorized("该账号未设置密码".to_string()))?;
+        let password_hash = user.password_hash.ok_or_else(|| {
+            tracing::warn!(
+                user_id = user.user_id,
+                login_id = %req.login_id,
+                "Login failed: account has no password (guest account)"
+            );
+            AppError::Unauthorized("该账号未设置密码".to_string())
+        })?;
 
         if !PasswordUtil::verify_password(&req.password, &password_hash)? {
+            tracing::warn!(
+                user_id = user.user_id,
+                login_id = %req.login_id,
+                "Login failed: incorrect password"
+            );
             return Err(AppError::PasswordError("用户名或密码错误".to_string()));
         }
 
@@ -432,10 +480,12 @@ impl AuthService {
                     // !!! 安全警告：检测到 Token 重用 !!!
                     // 这意味着有人（可能是攻击者）试图使用一个已经被轮换过的旧 Token。
                     // 应对措施：立即撤销该会话，切断攻击者和合法用户的访问。
-                    tracing::warn!(
-                        "Refresh Token Reuse Detected! Revoking session. SessionId: {}, UserId: {}",
-                        compromised_session.session_id,
-                        compromised_session.user_id
+                    tracing::error!(
+                        session_id = %compromised_session.session_id,
+                        user_id = compromised_session.user_id,
+                        device_fingerprint = ?compromised_session.device_fingerprint,
+                        user_agent = ?compromised_session.user_agent,
+                        "SECURITY ALERT: Refresh token reuse detected - revoking session"
                     );
                     self.session_repo
                         .revoke(compromised_session.session_id)
@@ -451,6 +501,7 @@ impl AuthService {
                 }
 
                 // 既不是当前 Token 也不是前一个 Token -> 无效
+                tracing::debug!("Refresh token not found in current or previous tokens");
                 return Err(AppError::RefreshTokenInvalid(
                     "Refresh Token 无效或已过期".to_string(),
                 ));
@@ -464,11 +515,11 @@ impl AuthService {
         if let (Some(req_ua), Some(session_ua)) = (user_agent, &session.user_agent) {
             if req_ua != session_ua {
                 tracing::warn!(
-                    "Token Refresh blocked due to User-Agent mismatch. SessionId: {}, UserId: {}, ReqUA: {}, SessionUA: {}",
-                    session.session_id,
+                    session_id = %session.session_id,
                     user_id,
-                    req_ua,
-                    session_ua
+                    request_user_agent = req_ua,
+                    session_user_agent = session_ua,
+                    "Refresh token blocked: User-Agent mismatch"
                 );
                 // 不撤销会话，只拒绝这次刷新，防止因为浏览器升级等原因导致误杀
                 return Err(AppError::ReLoginRequired(
@@ -482,11 +533,11 @@ impl AuthService {
         {
             if req_fp != session_fp {
                 tracing::warn!(
-                    "Token Refresh blocked due to Device Fingerprint mismatch. SessionId: {}, UserId: {}, ReqFP: {}, SessionFP: {}",
-                    session.session_id,
+                    session_id = %session.session_id,
                     user_id,
-                    req_fp,
-                    session_fp
+                    request_fingerprint = req_fp,
+                    session_fingerprint = session_fp,
+                    "Refresh token blocked: device fingerprint mismatch"
                 );
                 return Err(AppError::ReLoginRequired(
                     "设备环境异常，请重新登录".to_string(),
@@ -495,13 +546,21 @@ impl AuthService {
         }
 
         // 6. 查找用户
-        let user = self
-            .user_repo
-            .find_by_id(user_id)
-            .await?
-            .ok_or_else(|| AppError::NotFound("用户不存在".to_string()))?;
+        let user = self.user_repo.find_by_id(user_id).await?.ok_or_else(|| {
+            tracing::error!(
+                user_id,
+                session_id = %session.session_id,
+                "Refresh token failed: user not found (data inconsistency)"
+            );
+            AppError::NotFound("用户不存在".to_string())
+        })?;
 
         if self.user_repo.is_banned(user_id).await? {
+            tracing::warn!(
+                user_id,
+                session_id = %session.session_id,
+                "Refresh token failed: account banned"
+            );
             return Err(AppError::AccountBanned("账号已被封禁".to_string()));
         }
 
@@ -536,6 +595,11 @@ impl AuthService {
         if !rotated {
             // 典型原因：并发刷新导致当前 refresh_token 已被轮换（但会话本身仍有效）。
             // 不做撤销（避免误杀），提示客户端稍后重试/以最新 token 为准。
+            tracing::warn!(
+                session_id = %session.session_id,
+                user_id,
+                "Refresh token rotation failed: concurrent refresh detected"
+            );
             return Err(AppError::RefreshTokenInvalid(
                 "Refresh Token 已被轮换，请重试".to_string(),
             ));
@@ -575,19 +639,62 @@ impl AuthService {
     pub async fn logout(&self, user_id: i64, token: &str) -> Result<()> {
         // 1. 解析 access_token，拿到 sid
         let claims = JwtUtil::verify_token(token, &self.jwt_secret)?;
-        let sid = Uuid::parse_str(&claims.sid)
-            .map_err(|_| AppError::Unauthorized("无效的Session".to_string()))?;
+        let sid = Uuid::parse_str(&claims.sid).map_err(|e| {
+            tracing::error!(
+                user_id,
+                sid = %claims.sid,
+                error = %e,
+                "Logout failed: invalid session_id in JWT"
+            );
+            AppError::Unauthorized("无效的Session".to_string())
+        })?;
 
         // 2. 撤销会话（DB + Redis 白名单）
         if let Some(session) = self.session_repo.find_by_id(sid).await? {
             if session.user_id == user_id {
                 self.session_repo.revoke(session.session_id).await?;
                 self.remove_session_whitelist(session.session_id).await?;
+
+                tracing::info!(
+                    user_id,
+                    session_id = %sid,
+                    "User logged out successfully"
+                );
+            } else {
+                tracing::warn!(
+                    request_user_id = user_id,
+                    session_user_id = session.user_id,
+                    session_id = %sid,
+                    "Logout: user_id mismatch (non-critical)"
+                );
             }
+        } else {
+            tracing::debug!(
+                user_id,
+                session_id = %sid,
+                "Logout: session not found (already revoked or expired)"
+            );
         }
 
         // 登出主要动作是撤销 Refresh Token（会话），并移除 Redis 中的 Session 白名单。
         // 这确保了 Access Token 即使在有效期内也无法通过 AuthMiddleware 验证。
+
+        // 广播缓存失效消息
+        if let Err(e) = self
+            .cache_invalidator
+            .publish(InvalidationEvent::SessionRevoked {
+                user_id,
+                session_id: sid.to_string(),
+            })
+            .await
+        {
+            tracing::warn!(
+                user_id,
+                session_id = %sid,
+                error = %e,
+                "Failed to publish session revocation event"
+            );
+        }
 
         Ok(())
     }
@@ -614,11 +721,13 @@ impl AuthService {
         let claims = JwtUtil::verify_token(token, &self.jwt_secret)?;
 
         // 2. 查找用户
-        let user = self
-            .user_repo
-            .find_by_id(user_id)
-            .await?
-            .ok_or_else(|| AppError::NotFound("用户不存在".to_string()))?;
+        let user = self.user_repo.find_by_id(user_id).await?.ok_or_else(|| {
+            tracing::error!(
+                user_id,
+                "Check status failed: user not found (data inconsistency)"
+            );
+            AppError::NotFound("用户不存在".to_string())
+        })?;
 
         Ok(CheckStatusData {
             is_valid: true,
@@ -638,12 +747,11 @@ impl AuthService {
         req: &RequestPasswordResetRequest,
     ) -> Result<RequestPasswordResetData> {
         // 0. 如果提供了 verify_token，进行验证（手机号重置密码场景）
-        if let Some(verify_token) = &req.verify_token {
-            let _phone = self
-                .validate_verify_token(verify_token, "reset_password")
-                .await?;
-            // 验证通过，可以继续重置密码
-        }
+        // 验证 verify_token（必填）
+        let _phone = self
+            .validate_verify_token(&req.verify_token, "reset_password")
+            .await?;
+        // 验证通过，可以继续重置密码
 
         // 安全考虑：避免通过接口响应判断账号是否存在（防用户枚举）
         // 不论 login_id 是否存在，都返回 reset_id（但只有存在账号时才会真实创建重置记录）。
@@ -705,19 +813,34 @@ impl AuthService {
         &self,
         req: &VerifyResetCodeRequest,
     ) -> Result<VerifyResetCodeData> {
-        let reset_id = uuid::Uuid::parse_str(&req.reset_id)
-            .map_err(|_| AppError::BadRequest("reset_id 格式错误".to_string()))?;
+        let reset_id = uuid::Uuid::parse_str(&req.reset_id).map_err(|e| {
+            tracing::debug!(
+                reset_id = %req.reset_id,
+                error = %e,
+                "Verify reset code failed: invalid reset_id format"
+            );
+            AppError::BadRequest("reset_id 格式错误".to_string())
+        })?;
 
         let Some(row) = self
             .password_reset_repo
             .find_valid_by_reset_id(reset_id)
             .await?
         else {
+            tracing::debug!(
+                reset_id = %reset_id,
+                "Verify reset code failed: reset request not found or expired"
+            );
             return Err(AppError::BadRequest("重置请求不存在或已过期".to_string()));
         };
 
         // 1) 校验验证码（bcrypt）
         if !PasswordUtil::verify_password(&req.code, &row.code_hash)? {
+            tracing::warn!(
+                reset_id = %reset_id,
+                user_id = row.user_id,
+                "Verify reset code failed: incorrect code"
+            );
             return Err(AppError::BadRequest("验证码错误".to_string()));
         }
 
@@ -743,9 +866,16 @@ impl AuthService {
             .find_valid_by_reset_token_hash(&reset_token_hash)
             .await?
         else {
+            tracing::debug!("Reset password failed: reset token invalid or expired");
             return Err(AppError::Unauthorized("重置Token无效或已过期".to_string()));
         };
         let user_id = row.user_id;
+
+        tracing::info!(
+            user_id,
+            reset_id = %row.id,
+            "Password reset initiated"
+        );
 
         // 2. 对密码进行服务端慢哈希（bcrypt）
         let password_hash = PasswordUtil::hash_password(&req.password)?;
@@ -763,15 +893,48 @@ impl AuthService {
         // 5. 撤销所有会话（强制重新登录）
         let revoked_session_ids = self.session_repo.revoke_all_by_user(user_id).await?;
         if !revoked_session_ids.is_empty() {
+            tracing::info!(
+                user_id,
+                reset_id = %row.id,
+                revoked_sessions_count = revoked_session_ids.len(),
+                "Password reset completed: all sessions revoked"
+            );
+
             let keys: Vec<String> = revoked_session_ids
-                .into_iter()
+                .iter()
                 .map(|sid| format!("{}:{}", crate::constants::REDIS_KEY_SESSION, sid))
                 .collect();
             let _: () = redis::cmd("DEL")
                 .arg(keys)
                 .query_async(&mut self.redis.clone())
                 .await
-                .map_err(|e| AppError::Redis(e))?;
+                .map_err(|e| {
+                    tracing::error!(
+                        user_id,
+                        error = %e,
+                        "Reset password: failed to delete session whitelists from Redis"
+                    );
+                    AppError::Redis(e)
+                })?;
+        }
+
+        // 广播所有被撤销的会话失效
+        for sid in &revoked_session_ids {
+            if let Err(e) = self
+                .cache_invalidator
+                .publish(InvalidationEvent::SessionRevoked {
+                    user_id,
+                    session_id: sid.to_string(),
+                })
+                .await
+            {
+                tracing::warn!(
+                    user_id,
+                    session_id = %sid,
+                    error = %e,
+                    "Reset password: failed to publish session revocation event"
+                );
+            }
         }
 
         Ok(())
@@ -780,21 +943,28 @@ impl AuthService {
     /// 修改密码（需要验证旧密码）
     pub async fn change_password(&self, user_id: i64, req: &ChangePasswordRequest) -> Result<()> {
         // 1. 查找用户
-        let user = self
-            .user_repo
-            .find_by_id(user_id)
-            .await?
-            .ok_or_else(|| AppError::NotFound("用户不存在".to_string()))?;
+        let user = self.user_repo.find_by_id(user_id).await?.ok_or_else(|| {
+            tracing::error!(user_id, "Change password failed: user not found");
+            AppError::NotFound("用户不存在".to_string())
+        })?;
 
         // 2. 验证用户是否有密码（临时用户没有密码）
         let stored_hash = user.password_hash.as_ref().ok_or_else(|| {
+            tracing::warn!(
+                user_id,
+                user_type = ?user.user_type,
+                "Change password failed: guest account has no password"
+            );
             AppError::BadRequest("临时用户请使用账户升级功能设置密码".to_string())
         })?;
 
         // 3. 验证旧密码
         if !PasswordUtil::verify_password(&req.old_password, stored_hash)? {
+            tracing::warn!(user_id, "Change password failed: incorrect old password");
             return Err(AppError::PasswordError("当前密码错误".to_string()));
         }
+
+        tracing::info!(user_id, "Password changed successfully");
 
         // 4. 对新密码进行服务端慢哈希（bcrypt）
         let new_password_hash = PasswordUtil::hash_password(&req.new_password)?;
@@ -807,15 +977,47 @@ impl AuthService {
         // 6. 撤销所有会话（强制重新登录）
         let revoked_session_ids = self.session_repo.revoke_all_by_user(user_id).await?;
         if !revoked_session_ids.is_empty() {
+            tracing::info!(
+                user_id,
+                revoked_sessions_count = revoked_session_ids.len(),
+                "Password changed: all sessions revoked"
+            );
+
             let keys: Vec<String> = revoked_session_ids
-                .into_iter()
+                .iter()
                 .map(|sid| format!("{}:{}", crate::constants::REDIS_KEY_SESSION, sid))
                 .collect();
             let _: () = redis::cmd("DEL")
                 .arg(keys)
                 .query_async(&mut self.redis.clone())
                 .await
-                .map_err(|e| AppError::Redis(e))?;
+                .map_err(|e| {
+                    tracing::error!(
+                        user_id,
+                        error = %e,
+                        "Change password: failed to delete session whitelists from Redis"
+                    );
+                    AppError::Redis(e)
+                })?;
+        }
+
+        // 广播所有被撤销的会话失效
+        for sid in &revoked_session_ids {
+            if let Err(e) = self
+                .cache_invalidator
+                .publish(InvalidationEvent::SessionRevoked {
+                    user_id,
+                    session_id: sid.to_string(),
+                })
+                .await
+            {
+                tracing::warn!(
+                    user_id,
+                    session_id = %sid,
+                    error = %e,
+                    "Change password: failed to publish session revocation event"
+                );
+            }
         }
 
         Ok(())
@@ -858,7 +1060,15 @@ impl AuthService {
                 .arg(s.session_id.to_string())
                 .query_async(&mut self.redis.clone())
                 .await
-                .map_err(|e| AppError::Redis(e))?;
+                .map_err(|e| {
+                    tracing::error!(
+                        user_id,
+                        session_id = %s.session_id,
+                        error = %e,
+                        "List sessions: failed to store revoke_token in Redis"
+                    );
+                    AppError::Redis(e)
+                })?;
 
             items.push(SessionItem {
                 display_id,
@@ -895,6 +1105,11 @@ impl AuthService {
             .session_token_gen
             .verify_revoke_token_format(&req.revoke_token)
         {
+            tracing::debug!(
+                user_id,
+                revoke_token_prefix = &req.revoke_token[..req.revoke_token.len().min(8)],
+                "Revoke session failed: invalid token format"
+            );
             return Err(AppError::BadRequest("令牌格式错误".to_string()));
         }
 
@@ -904,29 +1119,69 @@ impl AuthService {
             .arg(&revoke_key)
             .query_async(&mut self.redis.clone())
             .await
-            .map_err(|e| AppError::Redis(e))?;
+            .map_err(|e| {
+                tracing::error!(
+                    user_id,
+                    error = %e,
+                    "Revoke session failed: Redis GET error"
+                );
+                AppError::Redis(e)
+            })?;
 
-        let session_id_str =
-            session_id_str.ok_or_else(|| AppError::NotFound("令牌无效或已使用".to_string()))?;
+        let session_id_str = session_id_str.ok_or_else(|| {
+            tracing::debug!(
+                user_id,
+                "Revoke session failed: token not found or already used"
+            );
+            AppError::NotFound("令牌无效或已使用".to_string())
+        })?;
 
-        let session_id = Uuid::parse_str(&session_id_str)
-            .map_err(|_| AppError::InternalError("无效的会话ID".to_string()))?;
+        let session_id = Uuid::parse_str(&session_id_str).map_err(|e| {
+            tracing::error!(
+                user_id,
+                session_id_str = %session_id_str,
+                error = %e,
+                "Revoke session failed: invalid session_id in Redis"
+            );
+            AppError::InternalError("无效的会话ID".to_string())
+        })?;
 
         // 3. 立即删除 revoke_token（一次性使用）
         let _: () = redis::cmd("DEL")
             .arg(&revoke_key)
             .query_async(&mut self.redis.clone())
             .await
-            .map_err(|e| AppError::Redis(e))?;
+            .map_err(|e| {
+                tracing::error!(
+                    user_id,
+                    session_id = %session_id,
+                    error = %e,
+                    "Revoke session: failed to delete revoke_token from Redis"
+                );
+                AppError::Redis(e)
+            })?;
 
         // 4. 查找会话并验证所有权
         let session = self
             .session_repo
             .find_by_id(session_id)
             .await?
-            .ok_or_else(|| AppError::NotFound("会话不存在".to_string()))?;
+            .ok_or_else(|| {
+                tracing::warn!(
+                    user_id,
+                    session_id = %session_id,
+                    "Revoke session failed: session not found"
+                );
+                AppError::NotFound("会话不存在".to_string())
+            })?;
 
         if session.user_id != user_id {
+            tracing::error!(
+                request_user_id = user_id,
+                session_user_id = session.user_id,
+                session_id = %session_id,
+                "SECURITY: Attempted to revoke session owned by another user"
+            );
             return Err(AppError::Forbidden("无权操作该会话".to_string()));
         }
 
@@ -937,6 +1192,23 @@ impl AuthService {
         // 确保 Access Token 立即失效
         self.remove_session_whitelist(session_id).await?;
 
+        // 广播缓存失效消息
+        if let Err(e) = self
+            .cache_invalidator
+            .publish(InvalidationEvent::SessionRevoked {
+                user_id,
+                session_id: session_id.to_string(),
+            })
+            .await
+        {
+            tracing::warn!(
+                user_id,
+                session_id = %session_id,
+                error = %e,
+                "Failed to publish session revocation event"
+            );
+        }
+
         tracing::info!(
             user_id = user_id,
             session_id = %session_id,
@@ -944,33 +1216,6 @@ impl AuthService {
         );
 
         Ok(())
-    }
-
-    /// 撤销会话时清除认证缓存（需要在 handler 层调用）
-    ///
-    /// 注意：此方法在 revoke_session() 之后调用，用于清除 auth_cache
-    pub fn invalidate_session_cache(
-        auth_cache: &crate::utils::auth_cache::AuthCache,
-        session_id: Uuid,
-    ) {
-        tokio::spawn({
-            let auth_cache = auth_cache.clone();
-            async move {
-                auth_cache.invalidate_by_session(session_id).await;
-            }
-        });
-    }
-
-    /// 撤销所有会话时清除认证缓存（需要在 handler 层调用）
-    ///
-    /// 注意：此方法在撤销所有会话后调用，用于清除 auth_cache
-    pub fn invalidate_user_cache(auth_cache: &crate::utils::auth_cache::AuthCache, user_id: i64) {
-        tokio::spawn({
-            let auth_cache = auth_cache.clone();
-            async move {
-                auth_cache.invalidate_by_user(user_id).await;
-            }
-        });
     }
 
     /// 发送验证码
@@ -993,9 +1238,22 @@ impl AuthService {
             .verification_repo
             .check_recent_code(&req.phone, code_type, 60)
             .await
-            .map_err(|e| AppError::InternalError(e.to_string()))?;
+            .map_err(|e| {
+                tracing::error!(
+                    phone = %req.phone,
+                    code_type,
+                    error = %e,
+                    "Send verification code: failed to check recent code"
+                );
+                AppError::InternalError(e.to_string())
+            })?;
 
         if within_60s {
+            tracing::debug!(
+                phone = %req.phone,
+                code_type,
+                "Send verification code blocked: rate limited (60s)"
+            );
             return Err(AppError::RateLimited(
                 "验证码发送过于频繁，请60秒后再试".to_string(),
             ));
@@ -1006,9 +1264,23 @@ impl AuthService {
             .verification_repo
             .count_today_codes(&req.phone, code_type)
             .await
-            .map_err(|e| AppError::InternalError(e.to_string()))?;
+            .map_err(|e| {
+                tracing::error!(
+                    phone = %req.phone,
+                    code_type,
+                    error = %e,
+                    "Send verification code: failed to count today codes"
+                );
+                AppError::InternalError(e.to_string())
+            })?;
 
         if today_count >= 10 {
+            tracing::warn!(
+                phone = %req.phone,
+                code_type,
+                today_count,
+                "Send verification code blocked: daily limit exceeded"
+            );
             return Err(AppError::DailyRateLimitExceeded);
         }
 
@@ -1018,12 +1290,33 @@ impl AuthService {
         // 6. 计算过期时间（5分钟）
         let expires_at = Utc::now() + Duration::minutes(5);
 
+        tracing::debug!(
+            phone = %req.phone,
+            code_type,
+            "Generating verification code"
+        );
+
         // 7. 保存验证码记录
         let verification_code = self
             .verification_repo
             .create_code(&req.phone, &code, code_type, expires_at)
             .await
-            .map_err(|e| AppError::InternalError(e.to_string()))?;
+            .map_err(|e| {
+                tracing::error!(
+                    phone = %req.phone,
+                    code_type,
+                    error = %e,
+                    "Send verification code: failed to create code record"
+                );
+                AppError::InternalError(e.to_string())
+            })?;
+
+        tracing::info!(
+            phone = %req.phone,
+            code_type,
+            code_id = %verification_code.code_id,
+            "Verification code sent successfully"
+        );
 
         // 8. 发送短信（写入发送队列，供外部短信服务消费）
         let content = format!("您的验证码是: {}, 5分钟内有效", code);
@@ -1048,8 +1341,15 @@ impl AuthService {
             .arg(&key)
             .query_async(&mut conn)
             .await
-            .unwrap_or(false);
+            .unwrap_or_else(|e| {
+                tracing::error!(
+                    error = %e,
+                    "Verify captcha: Redis EXISTS failed"
+                );
+                false
+            });
         if !exists {
+            tracing::debug!("Verify captcha failed: token not found or expired");
             return Err(AppError::InvalidFormat(
                 "图形验证码无效或已过期".to_string(),
             ));
@@ -1058,7 +1358,12 @@ impl AuthService {
             .arg(&key)
             .query_async(&mut conn)
             .await
-            .unwrap_or(());
+            .unwrap_or_else(|e| {
+                tracing::warn!(
+                    error = %e,
+                    "Verify captcha: Redis DEL failed (non-critical)"
+                );
+            });
         Ok(())
     }
 
@@ -1082,7 +1387,16 @@ impl AuthService {
             .arg(payload.to_string())
             .query_async::<()>(&mut conn)
             .await
-            .map_err(|e| AppError::InternalError(format!("短信队列写入失败: {}", e)))?;
+            .map_err(|e| {
+                tracing::error!(
+                    phone = %phone,
+                    code_type,
+                    code_id,
+                    error = %e,
+                    "Failed to enqueue SMS to Redis"
+                );
+                AppError::InternalError(format!("短信队列写入失败: {}", e))
+            })?;
         Ok(())
     }
 
@@ -1093,16 +1407,42 @@ impl AuthService {
             .verification_repo
             .find_by_code_id(&req.code_id)
             .await
-            .map_err(|e| AppError::InternalError(e.to_string()))?
-            .ok_or_else(|| AppError::NotFound("验证码不存在或已失效".to_string()))?;
+            .map_err(|e| {
+                tracing::error!(
+                    code_id = %req.code_id,
+                    error = %e,
+                    "Verify code: failed to find code record"
+                );
+                AppError::InternalError(e.to_string())
+            })?
+            .ok_or_else(|| {
+                tracing::debug!(
+                    code_id = %req.code_id,
+                    "Verify code failed: code not found or expired"
+                );
+                AppError::NotFound("验证码不存在或已失效".to_string())
+            })?;
 
         // 2. 检查是否已过期
         if verification_code.expires_at < Utc::now() {
+            tracing::debug!(
+                code_id = %req.code_id,
+                phone = %verification_code.phone,
+                expires_at = %verification_code.expires_at,
+                "Verify code failed: code expired"
+            );
             return Err(AppError::Conflict("验证码已过期".to_string()));
         }
 
         // 3. 检查尝试次数
         if verification_code.attempts >= verification_code.max_attempts {
+            tracing::warn!(
+                code_id = %req.code_id,
+                phone = %verification_code.phone,
+                attempts = verification_code.attempts,
+                max_attempts = verification_code.max_attempts,
+                "Verify code failed: max attempts exceeded"
+            );
             return Err(AppError::Conflict(
                 "验证次数已超限，请重新获取验证码".to_string(),
             ));
@@ -1114,16 +1454,43 @@ impl AuthService {
             self.verification_repo
                 .increment_attempts(&req.code_id)
                 .await
-                .map_err(|e| AppError::InternalError(e.to_string()))?;
+                .map_err(|e| {
+                    tracing::error!(
+                        code_id = %req.code_id,
+                        error = %e,
+                        "Verify code: failed to increment attempts"
+                    );
+                    AppError::InternalError(e.to_string())
+                })?;
 
+            tracing::warn!(
+                code_id = %req.code_id,
+                phone = %verification_code.phone,
+                attempts = verification_code.attempts + 1,
+                "Verify code failed: incorrect code"
+            );
             return Err(AppError::Conflict("验证码错误".to_string()));
         }
+
+        tracing::info!(
+            code_id = %req.code_id,
+            phone = %verification_code.phone,
+            code_type = %verification_code.r#type,
+            "Verification code verified successfully"
+        );
 
         // 5. 标记为已验证
         self.verification_repo
             .mark_verified(&req.code_id)
             .await
-            .map_err(|e| AppError::InternalError(e.to_string()))?;
+            .map_err(|e| {
+                tracing::error!(
+                    code_id = %req.code_id,
+                    error = %e,
+                    "Verify code: failed to mark as verified"
+                );
+                AppError::InternalError(e.to_string())
+            })?;
 
         // 6. 生成 verify_token（用于后续注册/重置密码等操作）
         let verify_token = TokenUtil::generate_token();
@@ -1137,7 +1504,15 @@ impl AuthService {
             .arg(&verify_token_data)
             .query_async(&mut self.redis.clone())
             .await
-            .map_err(|e| AppError::Redis(e))?;
+            .map_err(|e| {
+                tracing::error!(
+                    code_id = %req.code_id,
+                    phone = %verification_code.phone,
+                    error = %e,
+                    "Verify code: failed to store verify_token in Redis"
+                );
+                AppError::Redis(e)
+            })?;
 
         let verify_expires_at = Utc::now() + Duration::minutes(10);
 
@@ -1160,14 +1535,27 @@ impl AuthService {
             .arg(&verify_token_key)
             .query_async(&mut self.redis.clone())
             .await
-            .map_err(|e| AppError::Redis(e))?;
+            .map_err(|e| {
+                tracing::error!(
+                    expected_type,
+                    error = %e,
+                    "Validate verify token: Redis GET failed"
+                );
+                AppError::Redis(e)
+            })?;
 
-        let verify_token_data = verify_token_data
-            .ok_or_else(|| AppError::VerifyTokenInvalid("验证令牌无效或已过期".to_string()))?;
+        let verify_token_data = verify_token_data.ok_or_else(|| {
+            tracing::debug!("Validate verify token failed: token not found or expired");
+            AppError::VerifyTokenInvalid("验证令牌无效或已过期".to_string())
+        })?;
 
         // 解析 phone:type
         let parts: Vec<&str> = verify_token_data.split(':').collect();
         if parts.len() != 2 {
+            tracing::error!(
+                verify_token_data = %verify_token_data,
+                "Validate verify token failed: invalid data format in Redis"
+            );
             return Err(AppError::VerifyTokenInvalid("验证令牌格式无效".to_string()));
         }
 
@@ -1175,6 +1563,12 @@ impl AuthService {
         let code_type = parts[1];
 
         if code_type != expected_type {
+            tracing::warn!(
+                phone = %phone,
+                actual_type = code_type,
+                expected_type,
+                "Validate verify token failed: type mismatch"
+            );
             return Err(AppError::VerifyTokenInvalid(
                 "验证令牌类型不匹配".to_string(),
             ));
@@ -1185,7 +1579,21 @@ impl AuthService {
             .arg(&verify_token_key)
             .query_async(&mut self.redis.clone())
             .await
-            .map_err(|e| AppError::Redis(e))?;
+            .map_err(|e| {
+                tracing::error!(
+                    phone = %phone,
+                    expected_type,
+                    error = %e,
+                    "Validate verify token: Redis DEL failed"
+                );
+                AppError::Redis(e)
+            })?;
+
+        tracing::debug!(
+            phone = %phone,
+            expected_type,
+            "Verify token validated and consumed successfully"
+        );
 
         Ok(phone.to_string())
     }

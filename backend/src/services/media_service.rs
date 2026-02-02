@@ -7,7 +7,6 @@ use aws_sdk_s3::operation::head_object::HeadObjectError;
 use aws_sdk_s3::presigning::PresigningConfig;
 use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::Client as S3Client;
-use sqlx::PgPool;
 use std::time::Duration;
 use uuid::Uuid;
 
@@ -31,14 +30,14 @@ pub struct MediaService {
 
 impl MediaService {
     pub fn new(
-        db: &PgPool,
+        file_repo: FileRepository,
         s3_client: S3Client,
         bucket: String,
         s3_public_base: String,
         redis: redis::aio::ConnectionManager,
     ) -> Self {
         Self {
-            file_repo: FileRepository::new(db.clone()),
+            file_repo,
             s3_client,
             bucket,
             s3_public_base,

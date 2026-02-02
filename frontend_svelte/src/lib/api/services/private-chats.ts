@@ -25,7 +25,7 @@ export const privateChatsService = {
 	/**
 	 * 获取/创建与指定用户的私聊
 	 */
-	openChat(data: { target_user_id: number; recent_messages_limit?: number }) {
+	openChat(data: { target_user_id: number }) {
 		return post<Conversation>(PRIVATE_CHATS.OPEN_THE_DOOR, data);
 	},
 

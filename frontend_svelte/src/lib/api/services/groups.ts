@@ -5,12 +5,13 @@
 import { post, paginate } from '../client';
 import { GROUPS, GROUP_MESSAGES } from '../endpoints';
 import type {
+	ApplicationStatus,
 	GroupCard,
 	GroupSearchItem,
 	GroupSuggestions,
 	GroupInfo,
 	GroupSettings,
-	GroupMember,
+	GroupMemberItem,
 	GroupAnnouncementItem,
 	GroupApplicationItem,
 	MyGroupState,
@@ -151,7 +152,7 @@ export const groupsService = {
 	 * 获取成员列表
 	 */
 	getMembers(params: { group_chat_id: string; limit?: number; cursor?: string }) {
-		return paginate<GroupMember>(GROUPS.MEMBERS.LIST, params);
+		return paginate<GroupMemberItem>(GROUPS.MEMBERS.LIST, params);
 	},
 
 	/**
@@ -179,21 +180,21 @@ export const groupsService = {
 	 * 设置成员角色
 	 */
 	setRole(data: { group_chat_id: string; user_id: number; role: SetableGroupRole }) {
-		return post<GroupMember>(GROUPS.MEMBERS.SET_ROLE, data);
+		return post<GroupMemberItem>(GROUPS.MEMBERS.SET_ROLE, data);
 	},
 
 	/**
 	 * 禁言成员
 	 */
 	mute(data: { group_chat_id: string; user_id: number; duration_minutes: number }) {
-		return post<GroupMember>(GROUPS.MEMBERS.MUTE, data);
+		return post<GroupMemberItem>(GROUPS.MEMBERS.MUTE, data);
 	},
 
 	/**
 	 * 解除禁言
 	 */
 	unmute(data: { group_chat_id: string; user_id: number }) {
-		return post<GroupMember>(GROUPS.MEMBERS.UNMUTE, data);
+		return post<GroupMemberItem>(GROUPS.MEMBERS.UNMUTE, data);
 	},
 
 	/**
@@ -299,12 +300,15 @@ export const groupsService = {
 	/**
 	 * 获取收到的群组邀请
 	 */
-	getInvites(params?: { limit?: number; cursor?: string }) {
+	getInvites(params?: { limit?: number; cursor?: string; status?: ApplicationStatus | 'all' }) {
 		return paginate<{
 			invite_id: string;
 			group: GroupInfo;
 			inviter: UserInfo;
+			message?: string;
+			status: ApplicationStatus;
 			created_at: string;
+			expires_at?: string;
 		}>(GROUPS.ME.INVITES, params);
 	},
 

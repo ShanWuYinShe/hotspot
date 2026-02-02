@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
+use crate::constants::{DEFAULT_LATITUDE, DEFAULT_LOCATION_NAME, DEFAULT_LONGITUDE};
 use crate::error::Result;
 use crate::utils::pagination::{decode_cursor, encode_cursor, DistanceCursor};
 
@@ -161,6 +162,9 @@ impl GroupRepository {
     }
 
     /// 按ID列表查找群组（带距离计算，使用 PostGIS）
+    ///
+    /// 注意：SQL 中的默认位置值（35.154922, 112.682524, '南天门'）
+    /// 对应 constants::{DEFAULT_LATITUDE, DEFAULT_LONGITUDE, DEFAULT_LOCATION_NAME}
     pub async fn find_by_ids_with_distance(
         &self,
         group_ids: &[Uuid],
@@ -170,6 +174,11 @@ impl GroupRepository {
         if group_ids.is_empty() {
             return Ok(vec![]);
         }
+
+        // 验证默认值与常量一致
+        debug_assert_eq!(35.154922, DEFAULT_LATITUDE);
+        debug_assert_eq!(112.682524, DEFAULT_LONGITUDE);
+        debug_assert_eq!("南天门", DEFAULT_LOCATION_NAME);
 
         let rows = sqlx::query!(
             r#"
@@ -299,6 +308,17 @@ impl GroupRepository {
         Ok(())
     }
 
+    /// 更新群聊最后活跃时间
+    pub async fn touch_updated_at(&self, group_chat_id: Uuid) -> Result<()> {
+        sqlx::query!(
+            r#"UPDATE group_chats SET updated_at = NOW() WHERE group_chat_id = $1"#,
+            group_chat_id
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
     /// 发现附近群组（按位置范围过滤，Keyset Pagination）
     /// 位置参数用于：1. 过滤指定范围内的群组  2. 计算距离用于排序
     pub async fn search_by_location(
@@ -366,19 +386,28 @@ impl GroupRepository {
             radius_meters,
             last_dist,
             last_id,
-            limit as i64,
+            (limit + 1) as i64,  // 使用 limit + 1 来判断是否有更多数据
             kw
         )
         .fetch_all(&self.pool)
         .await?;
 
-        let next_cursor = rows
-            .last()
-            .map(|r| encode_cursor(&(r.distance, r.id)))
-            .transpose()?;
+        // 判断是否有更多数据
+        let has_more = rows.len() > limit as usize;
+        let rows_to_return: Vec<_> = rows.into_iter().take(limit as usize).collect();
+
+        let next_cursor = if has_more {
+            rows_to_return
+                .last()
+                .map(|r| encode_cursor(&(r.distance, r.id)))
+                .transpose()?
+        } else {
+            None
+        };
 
         Ok((
-            rows.into_iter()
+            rows_to_return
+                .into_iter()
                 .map(|r| GroupSearchRow {
                     group_id: r.group_chat_id,
                     name: r.name,
@@ -540,18 +569,27 @@ impl GroupRepository {
             search_pattern,
             last_dist,
             last_id,
-            limit as i64
+            (limit + 1) as i64  // 使用 limit + 1 来判断是否有更多数据
         )
         .fetch_all(&self.pool)
         .await?;
 
-        let next_cursor = rows
-            .last()
-            .map(|r| encode_cursor(&(r.distance, r.id)))
-            .transpose()?;
+        // 判断是否有更多数据
+        let has_more = rows.len() > limit as usize;
+        let rows_to_return: Vec<_> = rows.into_iter().take(limit as usize).collect();
+
+        let next_cursor = if has_more {
+            rows_to_return
+                .last()
+                .map(|r| encode_cursor(&(r.distance, r.id)))
+                .transpose()?
+        } else {
+            None
+        };
 
         Ok((
-            rows.into_iter()
+            rows_to_return
+                .into_iter()
                 .map(|r| GroupSearchRow {
                     group_id: r.group_chat_id,
                     name: r.name,
@@ -631,18 +669,27 @@ impl GroupRepository {
             tag_name,
             last_dist,
             last_id,
-            limit as i64
+            (limit + 1) as i64  // 使用 limit + 1 来判断是否有更多数据
         )
         .fetch_all(&self.pool)
         .await?;
 
-        let next_cursor = rows
-            .last()
-            .map(|r| encode_cursor(&(r.distance, r.id)))
-            .transpose()?;
+        // 判断是否有更多数据
+        let has_more = rows.len() > limit as usize;
+        let rows_to_return: Vec<_> = rows.into_iter().take(limit as usize).collect();
+
+        let next_cursor = if has_more {
+            rows_to_return
+                .last()
+                .map(|r| encode_cursor(&(r.distance, r.id)))
+                .transpose()?
+        } else {
+            None
+        };
 
         Ok((
-            rows.into_iter()
+            rows_to_return
+                .into_iter()
                 .map(|r| GroupSearchRow {
                     group_id: r.group_chat_id,
                     name: r.name,

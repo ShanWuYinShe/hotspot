@@ -1,4 +1,4 @@
-use crate::dto::response::{MessageLocation, MessageMedia};
+use crate::dto::response::MessageMedia;
 use crate::types::enums::{
     AnnouncementSeverity, GroupRole, MemberLeaveReason, MessageType, ReactionType, ResponseStatus,
 };
@@ -167,7 +167,6 @@ pub enum AppEvent {
         reply_to: Option<ReplyToSnapshot>,
         mentions: Option<Vec<i64>>,
         media: Option<MessageMedia>,
-        location: Option<MessageLocation>,
     },
     GroupMessageEdited {
         message_id: Uuid,
@@ -215,7 +214,6 @@ pub enum AppEvent {
         content: Option<String>,
         reply_to: Option<ReplyToSnapshot>,
         media: Option<MessageMedia>,
-        location: Option<MessageLocation>,
     },
     PrivateMessageEdited {
         message_id: Uuid,

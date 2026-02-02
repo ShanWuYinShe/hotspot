@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
 	import { searchService, tagsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
@@ -31,11 +30,11 @@
 	let trendingTags = $state<TrendingTag[]>([]);
 	let suggestions = $state<SearchSuggestItem[]>([]);
 	let recentSearches = $state<string[]>([]);
-	let trimmedKeyword = $derived(keyword.trim());
-	let recentMatches = $derived(
+	const trimmedKeyword = $derived(keyword.trim());
+	const recentMatches = $derived(
 		trimmedKeyword ? recentSearches.filter((item) => item.includes(trimmedKeyword)).slice(0, 6) : []
 	);
-	let hasSuggestions = $derived(recentMatches.length > 0 || suggestions.length > 0);
+	const hasSuggestions = $derived(recentMatches.length > 0 || suggestions.length > 0);
 	let suggestTimer: ReturnType<typeof setTimeout> | null = null;
 
 	const RECENT_KEY = 'hotspot_recent_searches';
@@ -58,6 +57,27 @@
 		recentSearches = next;
 		try {
 			localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+		} catch {
+			// ignore
+		}
+	}
+
+	function removeRecent(term: string) {
+		if (!browser) return;
+		const next = recentSearches.filter((item) => item !== term);
+		recentSearches = next;
+		try {
+			localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+		} catch {
+			// ignore
+		}
+	}
+
+	function clearAllRecent() {
+		if (!browser) return;
+		recentSearches = [];
+		try {
+			localStorage.removeItem(RECENT_KEY);
 		} catch {
 			// ignore
 		}
@@ -174,7 +194,7 @@
 			case 'group':
 				return item.payload.name || '未知群组';
 			case 'moment':
-				return item.payload.description || '瞬间';
+				return item.payload.content || '瞬间';
 			default:
 				return '未知';
 		}
@@ -190,10 +210,8 @@
 				return item.payload.bio || null;
 			case 'group':
 				return item.payload.description || `${item.payload.members_count || 0} 位成员`;
-			case 'moment': {
-				const momentPayload = item.payload;
-				return momentPayload.user?.nickname ? `来自 ${momentPayload.user.nickname}` : null;
-			}
+			case 'moment':
+				return item.payload.author_nickname ? `来自 ${item.payload.author_nickname}` : null;
 			default:
 				return null;
 		}
@@ -212,27 +230,50 @@
 		}
 	}
 
+	// 打开对话框时加载数据，关闭时清理
 	$effect(() => {
 		if (open) {
 			loadRecent();
 			loadTrendingTags();
+		} else {
+			// 关闭时清理所有状态
+			keyword = '';
+			suggestions = [];
+			if (suggestTimer) {
+				clearTimeout(suggestTimer);
+				suggestTimer = null;
+			}
 		}
 	});
 
+	// 搜索建议防抖
 	$effect(() => {
-		if (!open) return;
+		if (!open) {
+			// Modal 关闭时不执行搜索建议
+			return;
+		}
+		
+		// 清除之前的定时器
 		if (suggestTimer) clearTimeout(suggestTimer);
+		
+		// 如果没有输入，清空建议
 		if (!trimmedKeyword) {
 			suggestions = [];
 			return;
 		}
+		
+		// 防抖：250ms 后执行搜索建议
 		suggestTimer = setTimeout(() => {
 			loadSuggestions(trimmedKeyword);
 		}, 250);
-	});
 
-	onMount(() => {
-		loadRecent();
+		// 清理函数
+		return () => {
+			if (suggestTimer) {
+				clearTimeout(suggestTimer);
+				suggestTimer = null;
+			}
+		};
 	});
 </script>
 
@@ -281,10 +322,6 @@
 			{#if trimmedKeyword}
 				<Card class="border-0 bg-card/50">
 					<CardContent class="space-y-3 p-4">
-						<div class="flex items-center gap-2 text-sm font-medium">
-							<TrendingUp class="h-4 w-4 text-muted-foreground" />
-							搜索建议
-						</div>
 						{#if isSuggesting}
 							<div class="space-y-2">
 								{#each Array(3) as _}
@@ -297,15 +334,42 @@
 							<div class="space-y-4">
 								{#if recentMatches.length > 0}
 									<div class="space-y-2">
-										<div class="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-											<Clock class="h-3 w-3" />
-											最近搜索
+										<div class="flex items-center justify-between">
+											<div class="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+												<Clock class="h-3 w-3" />
+												匹配的搜索历史
+											</div>
+											<Button
+												variant="ghost"
+												size="sm"
+												class="h-6 px-2 text-xs text-muted-foreground hover:text-destructive hover:scale-105 active:scale-95 transition-all"
+												onclick={clearAllRecent}
+											>
+												清空全部
+											</Button>
 										</div>
 										<div class="flex flex-wrap gap-2">
 											{#each recentMatches as term}
-												<Button variant="secondary" size="sm" class="rounded-full" onclick={() => handleSearchNavigate(term)}>
-													{term}
-												</Button>
+												<div class="group flex items-center gap-1 rounded-full bg-secondary/80 pl-3 pr-1 py-1 transition-all hover:bg-secondary hover:shadow-md hover:scale-105">
+													<button
+														type="button"
+														class="text-sm font-medium transition-colors hover:text-primary"
+														onclick={() => handleSearchNavigate(term)}
+													>
+														{term}
+													</button>
+													<button
+														type="button"
+														class="flex items-center justify-center rounded-full p-1 opacity-60 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-all hover:bg-destructive/20 hover:text-destructive hover:scale-110 active:scale-95"
+														onclick={(e) => {
+															e.stopPropagation();
+															removeRecent(term);
+														}}
+														aria-label="删除"
+													>
+														<X class="h-3.5 w-3.5" />
+													</button>
+												</div>
 											{/each}
 										</div>
 									</div>
@@ -338,10 +402,10 @@
 															<AvatarImage src={item.payload.avatar_url} alt={item.payload.name || '群组'} />
 															<AvatarFallback>{(item.payload.name || '群组').slice(0, 2)}</AvatarFallback>
 														</Avatar>
-													{:else if item.type === 'moment' && item.payload?.user}
+													{:else if item.type === 'moment' && item.payload}
 														<Avatar class="h-9 w-9">
-															<AvatarImage src={item.payload.user.avatar_url} alt={item.payload.user.nickname || '用户'} />
-															<AvatarFallback>{(item.payload.user.nickname || '用户').slice(0, 2)}</AvatarFallback>
+															<AvatarImage src={item.payload.author_avatar_url} alt={item.payload.author_nickname || '用户'} />
+															<AvatarFallback>{(item.payload.author_nickname || '用户').slice(0, 2)}</AvatarFallback>
 														</Avatar>
 													{:else}
 														<Avatar class="h-9 w-9">
@@ -373,18 +437,47 @@
 				<div class="grid gap-4 sm:grid-cols-2">
 					<Card class="border-0 bg-card/50">
 						<CardContent class="space-y-3 p-4">
-							<div class="flex items-center gap-2 text-sm font-medium">
-								<Clock class="h-4 w-4 text-muted-foreground" />
-								最近搜索
+							<div class="flex items-center justify-between">
+								<div class="flex items-center gap-2 text-sm font-medium">
+									<Clock class="h-4 w-4 text-muted-foreground" />
+									最近搜索
+								</div>
+								{#if recentSearches.length > 0}
+									<Button
+										variant="ghost"
+										size="sm"
+										class="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+										onclick={clearAllRecent}
+									>
+										清空全部
+									</Button>
+								{/if}
 							</div>
 							{#if recentSearches.length === 0}
 								<p class="text-sm text-muted-foreground">暂无搜索记录</p>
 							{:else}
 								<div class="flex flex-wrap gap-2">
 									{#each recentSearches as term}
-										<Button variant="secondary" size="sm" class="rounded-full" onclick={() => handleRecentClick(term)}>
-											{term}
-										</Button>
+										<div class="group flex items-center gap-1 rounded-full bg-secondary/80 pl-3 pr-1 py-1 transition-all hover:bg-secondary hover:shadow-md hover:scale-105">
+											<button
+												type="button"
+												class="text-sm font-medium transition-colors hover:text-primary"
+												onclick={() => handleRecentClick(term)}
+											>
+												{term}
+											</button>
+											<button
+												type="button"
+												class="flex items-center justify-center rounded-full p-1 opacity-60 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-all hover:bg-destructive/20 hover:text-destructive hover:scale-110 active:scale-95"
+												onclick={(e) => {
+													e.stopPropagation();
+													removeRecent(term);
+												}}
+												aria-label="删除"
+											>
+												<X class="h-3.5 w-3.5" />
+											</button>
+										</div>
 									{/each}
 								</div>
 							{/if}

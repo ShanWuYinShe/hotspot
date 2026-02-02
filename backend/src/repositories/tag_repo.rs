@@ -26,6 +26,34 @@ pub struct TagSuggestRow {
     pub usage_count: i32,
 }
 
+/// 标签ID和序号（用于批量查找或创建）
+#[derive(Debug, Clone)]
+struct TagIdOrdRow {
+    id: i64,
+    ord: i64,
+}
+
+/// 瞬间标签批量查询行
+#[derive(Debug, Clone)]
+struct MomentTagBatchRow {
+    moment_id: Uuid,
+    name: String,
+}
+
+/// 用户标签批量查询行
+#[derive(Debug, Clone)]
+struct UserTagBatchRow {
+    user_id: i64,
+    name: String,
+}
+
+/// 群组标签批量查询行
+#[derive(Debug, Clone)]
+struct GroupTagBatchRow {
+    group_chat_id: Uuid,
+    name: String,
+}
+
 #[derive(Debug, Clone)]
 pub struct TagRepository {
     pool: PgPool,
@@ -45,7 +73,8 @@ impl TagRepository {
         }
 
         // 真正的批量 upsert：一次 SQL 完成「创建缺失 + 查询现有」，并按输入顺序返回 tag_id
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as!(
+            TagIdOrdRow,
             r#"
             WITH input AS (
                 SELECT *
@@ -57,7 +86,7 @@ impl TagRepository {
                 FROM input
                 ON CONFLICT (name) DO NOTHING
             )
-            SELECT tg.id, input.ord
+            SELECT tg.id, input.ord as "ord!"
             FROM input
             INNER JOIN tags tg ON tg.name = input.name
             ORDER BY input.ord ASC
@@ -100,7 +129,8 @@ impl TagRepository {
     /// 标签搜索建议（前缀匹配）
     pub async fn suggest(&self, prefix: &str, limit: i64) -> Result<Vec<TagSuggestRow>> {
         let pattern = format!("{}%", prefix);
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as!(
+            TagSuggestRow,
             r#"
             SELECT name, usage_count
             FROM tags
@@ -114,13 +144,7 @@ impl TagRepository {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows
-            .into_iter()
-            .map(|r| TagSuggestRow {
-                name: r.name,
-                usage_count: r.usage_count,
-            })
-            .collect())
+        Ok(rows)
     }
 
     /// 删除标签（管理员）
@@ -163,7 +187,7 @@ impl TagRepository {
 
     /// 获取用户标签
     pub async fn get_user_tags(&self, user_id: i64) -> Result<Vec<String>> {
-        let rows = sqlx::query!(
+        let names = sqlx::query_scalar!(
             r#"
             SELECT t.name
             FROM tags t
@@ -176,7 +200,7 @@ impl TagRepository {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows.into_iter().map(|r| r.name).collect())
+        Ok(names)
     }
 
     /// 按标签搜索用户（返回用户ID列表）
@@ -192,7 +216,7 @@ impl TagRepository {
             i64::MAX
         };
 
-        let rows = sqlx::query!(
+        let user_ids = sqlx::query_scalar!(
             r#"
             SELECT ut.user_id
             FROM user_tags ut
@@ -207,8 +231,6 @@ impl TagRepository {
         )
         .fetch_all(&self.pool)
         .await?;
-
-        let user_ids: Vec<i64> = rows.into_iter().map(|r| r.user_id).collect();
 
         let next_cursor = user_ids
             .last()
@@ -252,7 +274,7 @@ impl TagRepository {
 
     /// 获取群组标签
     pub async fn get_group_tags(&self, group_chat_id: Uuid) -> Result<Vec<String>> {
-        let rows = sqlx::query!(
+        let names = sqlx::query_scalar!(
             r#"
             SELECT t.name
             FROM tags t
@@ -265,7 +287,7 @@ impl TagRepository {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows.into_iter().map(|r| r.name).collect())
+        Ok(names)
     }
 
     // ==================== 瞬间标签操作 ====================
@@ -299,7 +321,7 @@ impl TagRepository {
 
     /// 获取瞬间标签
     pub async fn get_moment_tags(&self, moment_id: Uuid) -> Result<Vec<String>> {
-        let rows = sqlx::query!(
+        let names = sqlx::query_scalar!(
             r#"
             SELECT t.name
             FROM tags t
@@ -312,7 +334,7 @@ impl TagRepository {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows.into_iter().map(|r| r.name).collect())
+        Ok(names)
     }
 
     /// 批量获取瞬间标签
@@ -324,7 +346,8 @@ impl TagRepository {
             return Ok(std::collections::HashMap::new());
         }
 
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as!(
+            MomentTagBatchRow,
             r#"
             SELECT mt.moment_id, t.name
             FROM moment_tags mt
@@ -355,7 +378,8 @@ impl TagRepository {
             return Ok(std::collections::HashMap::new());
         }
 
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as!(
+            UserTagBatchRow,
             r#"
             SELECT ut.user_id, t.name
             FROM user_tags ut
@@ -386,7 +410,8 @@ impl TagRepository {
             return Ok(std::collections::HashMap::new());
         }
 
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as!(
+            GroupTagBatchRow,
             r#"
             SELECT gt.group_chat_id, t.name
             FROM group_tags gt

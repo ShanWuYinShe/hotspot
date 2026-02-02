@@ -68,8 +68,9 @@ impl SessionTokenGenerator {
         let payload = format!("{}:{}:{}:{}", session_id, user_id, salt, timestamp);
 
         // HMAC-SHA256 签名
-        let mut mac =
-            HmacSha256::new_from_slice(&self.secret).expect("HMAC can take key of any size");
+        // 注意：HMAC 可以接受任意大小的密钥，因此这里理论上不会失败
+        let mut mac = HmacSha256::new_from_slice(&self.secret)
+            .expect("HMAC accepts keys of any size; this should never fail");
         mac.update(payload.as_bytes());
         let result = mac.finalize();
         let signature = result.into_bytes();
@@ -105,7 +106,8 @@ mod tests {
     #[test]
     fn test_generate_display_id() {
         let generator = SessionTokenGenerator::new("test_secret");
-        let session_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap();
+        let session_id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000")
+            .expect("Valid UUID should parse successfully");
         let display_id = generator.generate_display_id(session_id);
 
         assert_eq!(display_id, "ses_550e8400");

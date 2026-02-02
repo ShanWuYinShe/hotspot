@@ -45,7 +45,8 @@ impl MapRepository {
         north: f64,
         grid_meters: f64,
     ) -> Result<Vec<MapClusterRow>> {
-        let rows = sqlx::query_as::<_, MapClusterRow>(
+        let rows = sqlx::query_as_unchecked!(
+            MapClusterRow,
             r#"
             WITH env AS (
               SELECT ST_MakeEnvelope($1, $2, $3, $4, 4326) AS bbox
@@ -54,7 +55,7 @@ impl MapRepository {
               SELECT
                 ST_SnapToGrid(ST_Transform(u.location::geometry, 3857), $5) AS p
               FROM users u, env
-              WHERE u.is_deleted = FALSE
+              WHERE u.is_banned = FALSE
                 AND u.is_banned = FALSE
                 AND u.location IS NOT NULL
                 AND ST_Intersects(u.location, env.bbox::geography)
@@ -69,17 +70,18 @@ impl MapRepository {
               ) AS key,
               ST_Y(ST_Transform(p, 4326)) AS latitude,
               ST_X(ST_Transform(p, 4326)) AS longitude,
-              COUNT(*)::bigint AS count
+              COUNT(*)::bigint AS count,
+              ARRAY[]::text[] AS preview_urls
             FROM snapped
             GROUP BY p
             ORDER BY count DESC
             "#,
+            west,
+            south,
+            east,
+            north,
+            grid_meters
         )
-        .bind(west)
-        .bind(south)
-        .bind(east)
-        .bind(north)
-        .bind(grid_meters)
         .fetch_all(&self.pool)
         .await?;
 
@@ -94,7 +96,8 @@ impl MapRepository {
         north: f64,
         grid_meters: f64,
     ) -> Result<Vec<MapClusterRow>> {
-        let rows = sqlx::query_as::<_, MapClusterRow>(
+        let rows = sqlx::query_as_unchecked!(
+            MapClusterRow,
             r#"
             WITH env AS (
               SELECT ST_MakeEnvelope($1, $2, $3, $4, 4326) AS bbox
@@ -118,17 +121,18 @@ impl MapRepository {
               ) AS key,
               ST_Y(ST_Transform(p, 4326)) AS latitude,
               ST_X(ST_Transform(p, 4326)) AS longitude,
-              COUNT(*)::bigint AS count
+              COUNT(*)::bigint AS count,
+              ARRAY[]::text[] AS preview_urls
             FROM snapped
             GROUP BY p
             ORDER BY count DESC
             "#,
+            west,
+            south,
+            east,
+            north,
+            grid_meters
         )
-        .bind(west)
-        .bind(south)
-        .bind(east)
-        .bind(north)
-        .bind(grid_meters)
         .fetch_all(&self.pool)
         .await?;
 
@@ -145,7 +149,8 @@ impl MapRepository {
         start_time: Option<String>,
         end_time: Option<String>,
     ) -> Result<Vec<MapClusterRow>> {
-        let rows = sqlx::query_as::<_, MapClusterRow>(
+        let rows = sqlx::query_as_unchecked!(
+            MapClusterRow,
             r#"
             WITH env AS (
               SELECT ST_MakeEnvelope($1, $2, $3, $4, 4326) AS bbox
@@ -171,19 +176,20 @@ impl MapRepository {
               ) AS key,
               ST_Y(ST_Transform(p, 4326)) AS latitude,
               ST_X(ST_Transform(p, 4326)) AS longitude,
-              COUNT(*)::bigint AS count
+              COUNT(*)::bigint AS count,
+              ARRAY[]::text[] AS preview_urls
             FROM snapped
             GROUP BY p
             ORDER BY count DESC
             "#,
+            west,
+            south,
+            east,
+            north,
+            grid_meters,
+            start_time,
+            end_time
         )
-        .bind(west)
-        .bind(south)
-        .bind(east)
-        .bind(north)
-        .bind(grid_meters)
-        .bind(start_time)
-        .bind(end_time)
         .fetch_all(&self.pool)
         .await?;
 
@@ -200,7 +206,8 @@ impl MapRepository {
         north: f64,
         limit: i32,
     ) -> Result<Vec<MapEntityRow>> {
-        let rows = sqlx::query_as::<_, MapEntityRow>(
+        let rows = sqlx::query_as_unchecked!(
+            MapEntityRow,
             r#"
             SELECT
                 u.user_id::text AS id,
@@ -210,18 +217,18 @@ impl MapRepository {
                 ST_Y(u.location::geometry) AS latitude,
                 ST_X(u.location::geometry) AS longitude
             FROM users u
-            WHERE u.is_deleted = FALSE
+            WHERE u.is_banned = FALSE
                 AND u.is_banned = FALSE
                 AND u.location IS NOT NULL
                 AND ST_Intersects(u.location, ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography)
             LIMIT $5
             "#,
+            west,
+            south,
+            east,
+            north,
+            limit as i64
         )
-        .bind(west)
-        .bind(south)
-        .bind(east)
-        .bind(north)
-        .bind(limit)
         .fetch_all(&self.pool)
         .await?;
         Ok(rows)
@@ -235,7 +242,8 @@ impl MapRepository {
         north: f64,
         limit: i32,
     ) -> Result<Vec<MapEntityRow>> {
-        let rows = sqlx::query_as::<_, MapEntityRow>(
+        let rows = sqlx::query_as_unchecked!(
+            MapEntityRow,
             r#"
             SELECT
                 g.group_chat_id::text AS id,
@@ -251,12 +259,12 @@ impl MapRepository {
                 AND ST_Intersects(g.location, ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography)
             LIMIT $5
             "#,
+            west,
+            south,
+            east,
+            north,
+            limit as i64
         )
-        .bind(west)
-        .bind(south)
-        .bind(east)
-        .bind(north)
-        .bind(limit)
         .fetch_all(&self.pool)
         .await?;
         Ok(rows)
@@ -276,7 +284,8 @@ impl MapRepository {
         // 简单起见，title=desc, subtitle=user_id or nickname if joined.
         // MapEntityRow struct fields match.
         // cover_url: images[1] (Postgres 1-based array index)
-        let rows = sqlx::query_as::<_, MapEntityRow>(
+        let rows = sqlx::query_as_unchecked!(
+            MapEntityRow,
             r#"
             SELECT
                 m.moment_id::text AS id,
@@ -295,14 +304,14 @@ impl MapRepository {
                 AND ($7::TIMESTAMPTZ IS NULL OR m.created_at <= $7::TIMESTAMPTZ)
             LIMIT $5
             "#,
+            west,
+            south,
+            east,
+            north,
+            limit as i64,
+            start_time,
+            end_time
         )
-        .bind(west)
-        .bind(south)
-        .bind(east)
-        .bind(north)
-        .bind(limit)
-        .bind(start_time)
-        .bind(end_time)
         .fetch_all(&self.pool)
         .await?;
         Ok(rows)
@@ -319,11 +328,17 @@ impl MapRepository {
         north: f64,
         grid_meters: f64,
     ) -> Result<Vec<MapClusterRow>> {
-        let rows = sqlx::query_as::<_, MapClusterRow>(
+        let rows = sqlx::query_as_unchecked!(
+            MapClusterRow,
             r#"
             WITH friends AS (
                 SELECT following_id AS friend_id FROM user_follows
-                WHERE follower_id = $1 AND is_mutual = TRUE
+                WHERE follower_id = $1
+                  AND EXISTS (
+                    SELECT 1 FROM user_follows uf2
+                    WHERE uf2.follower_id = user_follows.following_id
+                      AND uf2.following_id = $1
+                  )
             ),
             env AS (
               SELECT ST_MakeEnvelope($2, $3, $4, $5, 4326) AS bbox
@@ -334,7 +349,7 @@ impl MapRepository {
               FROM users u
               JOIN friends f ON u.user_id = f.friend_id
               CROSS JOIN env
-              WHERE u.is_deleted = FALSE
+              WHERE u.is_banned = FALSE
                 AND u.is_banned = FALSE
                 AND u.location IS NOT NULL
                 AND ST_Intersects(u.location, env.bbox::geography)
@@ -349,18 +364,19 @@ impl MapRepository {
               ) AS key,
               ST_Y(ST_Transform(p, 4326)) AS latitude,
               ST_X(ST_Transform(p, 4326)) AS longitude,
-              COUNT(*)::bigint AS count
+              COUNT(*)::bigint AS count,
+              ARRAY[]::text[] AS preview_urls
             FROM snapped
             GROUP BY p
             ORDER BY count DESC
             "#,
+            user_id,
+            west,
+            south,
+            east,
+            north,
+            grid_meters
         )
-        .bind(user_id)
-        .bind(west)
-        .bind(south)
-        .bind(east)
-        .bind(north)
-        .bind(grid_meters)
         .fetch_all(&self.pool)
         .await?;
 
@@ -378,11 +394,17 @@ impl MapRepository {
         start_time: Option<String>,
         end_time: Option<String>,
     ) -> Result<Vec<MapClusterRow>> {
-        let rows = sqlx::query_as::<_, MapClusterRow>(
+        let rows = sqlx::query_as_unchecked!(
+            MapClusterRow,
             r#"
             WITH friends AS (
                 SELECT following_id AS friend_id FROM user_follows
-                WHERE follower_id = $1 AND is_mutual = TRUE
+                WHERE follower_id = $1
+                  AND EXISTS (
+                    SELECT 1 FROM user_follows uf2
+                    WHERE uf2.follower_id = user_follows.following_id
+                      AND uf2.following_id = $1
+                  )
             ),
             env AS (
               SELECT ST_MakeEnvelope($2, $3, $4, $5, 4326) AS bbox
@@ -409,20 +431,21 @@ impl MapRepository {
               ) AS key,
               ST_Y(ST_Transform(p, 4326)) AS latitude,
               ST_X(ST_Transform(p, 4326)) AS longitude,
-              COUNT(*)::bigint AS count
+              COUNT(*)::bigint AS count,
+              ARRAY[]::text[] AS preview_urls
             FROM snapped
             GROUP BY p
             ORDER BY count DESC
             "#,
+            user_id,
+            west,
+            south,
+            east,
+            north,
+            grid_meters,
+            start_time,
+            end_time
         )
-        .bind(user_id)
-        .bind(west)
-        .bind(south)
-        .bind(east)
-        .bind(north)
-        .bind(grid_meters)
-        .bind(start_time)
-        .bind(end_time)
         .fetch_all(&self.pool)
         .await?;
 
@@ -440,11 +463,17 @@ impl MapRepository {
         north: f64,
         limit: i32,
     ) -> Result<Vec<MapEntityRow>> {
-        let rows = sqlx::query_as::<_, MapEntityRow>(
+        let rows = sqlx::query_as_unchecked!(
+            MapEntityRow,
             r#"
             WITH friends AS (
                 SELECT following_id AS friend_id FROM user_follows
-                WHERE follower_id = $1 AND is_mutual = TRUE
+                WHERE follower_id = $1
+                  AND EXISTS (
+                    SELECT 1 FROM user_follows uf2
+                    WHERE uf2.follower_id = user_follows.following_id
+                      AND uf2.following_id = $1
+                  )
             )
             SELECT
                 u.user_id::text AS id,
@@ -455,19 +484,19 @@ impl MapRepository {
                 ST_X(u.location::geometry) AS longitude
             FROM users u
             JOIN friends f ON u.user_id = f.friend_id
-            WHERE u.is_deleted = FALSE
+            WHERE u.is_banned = FALSE
                 AND u.is_banned = FALSE
                 AND u.location IS NOT NULL
                 AND ST_Intersects(u.location, ST_MakeEnvelope($2, $3, $4, $5, 4326)::geography)
             LIMIT $6
             "#,
+            user_id,
+            west,
+            south,
+            east,
+            north,
+            limit as i64
         )
-        .bind(user_id)
-        .bind(west)
-        .bind(south)
-        .bind(east)
-        .bind(north)
-        .bind(limit)
         .fetch_all(&self.pool)
         .await?;
         Ok(rows)
@@ -484,11 +513,17 @@ impl MapRepository {
         start_time: Option<String>,
         end_time: Option<String>,
     ) -> Result<Vec<MapEntityRow>> {
-        let rows = sqlx::query_as::<_, MapEntityRow>(
+        let rows = sqlx::query_as_unchecked!(
+            MapEntityRow,
             r#"
             WITH friends AS (
                 SELECT following_id AS friend_id FROM user_follows
-                WHERE follower_id = $1 AND is_mutual = TRUE
+                WHERE follower_id = $1
+                  AND EXISTS (
+                    SELECT 1 FROM user_follows uf2
+                    WHERE uf2.follower_id = user_follows.following_id
+                      AND uf2.following_id = $1
+                  )
             )
             SELECT
                 m.moment_id::text AS id,
@@ -507,15 +542,15 @@ impl MapRepository {
                 AND ($8::TIMESTAMPTZ IS NULL OR m.created_at <= $8::TIMESTAMPTZ)
             LIMIT $6
             "#,
+            user_id,
+            west,
+            south,
+            east,
+            north,
+            limit as i64,
+            start_time,
+            end_time
         )
-        .bind(user_id)
-        .bind(west)
-        .bind(south)
-        .bind(east)
-        .bind(north)
-        .bind(limit)
-        .bind(start_time)
-        .bind(end_time)
         .fetch_all(&self.pool)
         .await?;
         Ok(rows)

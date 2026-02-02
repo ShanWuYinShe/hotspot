@@ -25,6 +25,7 @@ use crate::{
     state::AppState,
     utils::validation::Validator,
     utils::web_cookie::{
+        build_access_token_clear_cookie, build_access_token_set_cookie,
         build_csrf_token_clear_cookie, build_csrf_token_set_cookie,
         build_refresh_token_clear_cookie, build_refresh_token_set_cookie, get_cookie_value,
     },
@@ -35,6 +36,34 @@ fn append_set_cookie(headers: &mut HeaderMap, cookie: String) -> Result<()> {
         header::SET_COOKIE,
         HeaderValue::from_str(&cookie).map_err(|_| AppError::internal("Cookie header error"))?,
     );
+    Ok(())
+}
+
+/// 统一设置认证相关的 Cookie（access_token + refresh_token + csrf_token）
+fn append_auth_cookies(
+    headers: &mut HeaderMap,
+    access_token_raw: &str,
+    access_token_expiration: i64,
+    refresh_token_raw: &str,
+    refresh_token_expiration: i64,
+    secure: bool,
+) -> Result<()> {
+    let csrf_token = Uuid::new_v4().to_string();
+
+    // access_token Cookie: Path=/api (所有 API 请求自动携带)
+    let access_cookie =
+        build_access_token_set_cookie(access_token_raw, access_token_expiration, secure);
+
+    // refresh_token Cookie: Path=/api/v1/auth/refresh_token (仅刷新 API 携带)
+    let refresh_cookie =
+        build_refresh_token_set_cookie(refresh_token_raw, refresh_token_expiration, secure);
+
+    // CSRF token Cookie
+    let csrf_cookie = build_csrf_token_set_cookie(&csrf_token, refresh_token_expiration, secure);
+
+    append_set_cookie(headers, access_cookie)?;
+    append_set_cookie(headers, refresh_cookie)?;
+    append_set_cookie(headers, csrf_cookie)?;
     Ok(())
 }
 
@@ -97,19 +126,14 @@ pub async fn register(
     let mut resp_headers = HeaderMap::new();
     if client_type == ClientType::Web {
         let secure = false; // 生产建议改为配置项
-        let csrf_token = Uuid::new_v4().to_string();
-        let set_cookie = build_refresh_token_set_cookie(
+        append_auth_cookies(
+            &mut resp_headers,
+            &auth_issue.data.access_token,
+            state.config.jwt_access_token_expiration,
             &auth_issue.refresh_token_raw,
             state.config.jwt_refresh_token_expiration,
             secure,
-        );
-        let csrf_cookie = build_csrf_token_set_cookie(
-            &csrf_token,
-            state.config.jwt_refresh_token_expiration,
-            secure,
-        );
-        append_set_cookie(&mut resp_headers, set_cookie)?;
-        append_set_cookie(&mut resp_headers, csrf_cookie)?;
+        )?;
     }
 
     Ok((resp_headers, Json(ApiResponse::success(auth_issue.data))))
@@ -150,19 +174,14 @@ pub async fn login(
     let mut resp_headers = HeaderMap::new();
     if client_type == ClientType::Web {
         let secure = false; // 生产建议改为配置项
-        let csrf_token = Uuid::new_v4().to_string();
-        let set_cookie = build_refresh_token_set_cookie(
+        append_auth_cookies(
+            &mut resp_headers,
+            &auth_issue.data.access_token,
+            state.config.jwt_access_token_expiration,
             &auth_issue.refresh_token_raw,
             state.config.jwt_refresh_token_expiration,
             secure,
-        );
-        let csrf_cookie = build_csrf_token_set_cookie(
-            &csrf_token,
-            state.config.jwt_refresh_token_expiration,
-            secure,
-        );
-        append_set_cookie(&mut resp_headers, set_cookie)?;
-        append_set_cookie(&mut resp_headers, csrf_cookie)?;
+        )?;
     }
 
     Ok((resp_headers, Json(ApiResponse::success(auth_issue.data))))
@@ -203,19 +222,14 @@ pub async fn create_guest(
     let mut resp_headers = HeaderMap::new();
     if client_type == ClientType::Web {
         let secure = false; // 生产建议改为配置项
-        let csrf_token = Uuid::new_v4().to_string();
-        let set_cookie = build_refresh_token_set_cookie(
+        append_auth_cookies(
+            &mut resp_headers,
+            &auth_issue.data.access_token,
+            state.config.jwt_access_token_expiration,
             &auth_issue.refresh_token_raw,
             state.config.jwt_refresh_token_expiration,
             secure,
-        );
-        let csrf_cookie = build_csrf_token_set_cookie(
-            &csrf_token,
-            state.config.jwt_refresh_token_expiration,
-            secure,
-        );
-        append_set_cookie(&mut resp_headers, set_cookie)?;
-        append_set_cookie(&mut resp_headers, csrf_cookie)?;
+        )?;
     }
 
     Ok((resp_headers, Json(ApiResponse::success(auth_issue.data))))
@@ -278,19 +292,14 @@ pub async fn refresh_token(
     let mut resp_headers = HeaderMap::new();
     if client_type == ClientType::Web {
         let secure = false; // 生产建议改为配置项
-        let csrf_token = Uuid::new_v4().to_string();
-        let set_cookie = build_refresh_token_set_cookie(
+        append_auth_cookies(
+            &mut resp_headers,
+            &auth_issue.data.access_token,
+            state.config.jwt_access_token_expiration,
             &auth_issue.refresh_token_raw,
             state.config.jwt_refresh_token_expiration,
             secure,
-        );
-        let csrf_cookie = build_csrf_token_set_cookie(
-            &csrf_token,
-            state.config.jwt_refresh_token_expiration,
-            secure,
-        );
-        append_set_cookie(&mut resp_headers, set_cookie)?;
-        append_set_cookie(&mut resp_headers, csrf_cookie)?;
+        )?;
     }
 
     Ok((resp_headers, Json(ApiResponse::success(auth_issue.data))))
@@ -305,12 +314,15 @@ pub async fn logout(
     // 调用 Service
     state.auth_service.logout(user.user_id, &token).await?;
 
-    // 清除 refresh cookie（web）
+    // 清除所有认证相关 Cookie（web）
     let secure = false; // 生产建议改为配置项
-    let clear_cookie = build_refresh_token_clear_cookie(secure);
+    let clear_access_cookie = build_access_token_clear_cookie(secure);
+    let clear_refresh_cookie = build_refresh_token_clear_cookie(secure);
     let clear_csrf_cookie = build_csrf_token_clear_cookie(secure);
+
     let mut resp_headers = HeaderMap::new();
-    append_set_cookie(&mut resp_headers, clear_cookie)?;
+    append_set_cookie(&mut resp_headers, clear_access_cookie)?;
+    append_set_cookie(&mut resp_headers, clear_refresh_cookie)?;
     append_set_cookie(&mut resp_headers, clear_csrf_cookie)?;
 
     Ok((resp_headers, Json(ApiResponse::success_empty())))
@@ -388,18 +400,6 @@ pub async fn revoke_session(
         .auth_service
         .revoke_session(user.user_id, &revoke_req)
         .await?;
-
-    // 清除认证缓存（异步执行，不阻塞响应）
-    // 注意：由于 revoke_session 已经从 Redis 获取了 session_id，
-    // 这里我们需要重新获取或者修改 API 以返回 session_id
-    // 为了简化，我们使用更激进的策略：清除该用户的所有缓存
-    tokio::spawn({
-        let auth_cache = state.auth_cache.clone();
-        let user_id = user.user_id;
-        async move {
-            auth_cache.invalidate_by_user(user_id).await;
-        }
-    });
 
     Ok(Json(ApiResponse::success_empty()))
 }

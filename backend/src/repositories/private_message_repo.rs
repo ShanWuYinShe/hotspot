@@ -23,10 +23,6 @@ pub struct PrivateMessageRow {
     pub file_size: Option<i64>,
     pub thumbnail_url: Option<String>,
     pub duration: Option<i32>,
-    pub location_latitude: Option<f64>,
-    pub location_longitude: Option<f64>,
-    pub location_name: Option<String>,
-    pub location_address: Option<String>,
     pub sent_at: DateTime<Utc>,
     pub edited_at: Option<DateTime<Utc>>,
     pub is_recalled: bool,
@@ -81,7 +77,6 @@ impl PrivateMessageRepository {
             SELECT id, message_id, chat_id, sender_id,
                    type as "type: MessageType", content, reply_to_message_id,
                    file_name, file_size, thumbnail_url, duration,
-                   location_latitude, location_longitude, location_name, location_address,
                    sent_at, edited_at, is_recalled, recalled_at, is_deleted, deleted_at
             FROM private_messages
             WHERE message_id = ANY($1) AND is_deleted = FALSE
@@ -107,20 +102,15 @@ impl PrivateMessageRepository {
         file_size: Option<i64>,
         thumbnail_url: Option<&str>,
         duration: Option<i32>,
-        location_latitude: Option<f64>,
-        location_longitude: Option<f64>,
-        location_name: Option<&str>,
-        location_address: Option<&str>,
     ) -> Result<PrivateMessageRow> {
         let row = sqlx::query_as!(
             PrivateMessageRow,
             r#"
-            INSERT INTO private_messages (chat_id, sender_id, type, content, reply_to_message_id, file_name, file_size, thumbnail_url, duration, location_latitude, location_longitude, location_name, location_address)
-            VALUES ($1, $2, $3::message_type, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            INSERT INTO private_messages (chat_id, sender_id, type, content, reply_to_message_id, file_name, file_size, thumbnail_url, duration)
+            VALUES ($1, $2, $3::message_type, $4, $5, $6, $7, $8, $9)
             RETURNING id, message_id, chat_id, sender_id,
                       type as "type: MessageType", content, reply_to_message_id,
                       file_name, file_size, thumbnail_url, duration,
-                      location_latitude, location_longitude, location_name, location_address,
                       sent_at, edited_at,
                       is_recalled, recalled_at, is_deleted, deleted_at
             "#,
@@ -132,11 +122,7 @@ impl PrivateMessageRepository {
             file_name,
             file_size,
             thumbnail_url,
-            duration,
-            location_latitude,
-            location_longitude,
-            location_name,
-            location_address
+            duration
         )
         .fetch_one(&self.pool)
         .await?;
@@ -152,7 +138,6 @@ impl PrivateMessageRepository {
             SELECT id, message_id, chat_id, sender_id,
                    type as "type: MessageType", content, reply_to_message_id,
                    file_name, file_size, thumbnail_url, duration,
-                   location_latitude, location_longitude, location_name, location_address,
                    sent_at, edited_at,
                    is_recalled, recalled_at, is_deleted, deleted_at
             FROM private_messages
@@ -179,13 +164,13 @@ impl PrivateMessageRepository {
             i64::MAX
         };
 
+        // 查询 limit + 1 条以判断是否有更多数据
         let rows = sqlx::query_as!(
             PrivateMessageRow,
             r#"
             SELECT id, message_id, chat_id, sender_id,
                    type as "type: MessageType", content, reply_to_message_id,
                    file_name, file_size, thumbnail_url, duration,
-                   location_latitude, location_longitude, location_name, location_address,
                    sent_at, edited_at,
                    is_recalled, recalled_at, is_deleted, deleted_at
             FROM private_messages
@@ -195,13 +180,14 @@ impl PrivateMessageRepository {
             "#,
             chat_id,
             last_id,
-            limit
+            limit + 1
         )
         .fetch_all(&self.pool)
         .await?;
 
-        let next_cursor = rows.last().map(|r| encode_cursor(&r.id)).transpose()?;
-        Ok((rows, next_cursor))
+        crate::utils::pagination::paginate_with_limit_plus_one(rows, limit as i32, |r| {
+            encode_cursor(&r.id)
+        })
     }
 
     /// 更新消息内容
@@ -261,7 +247,6 @@ impl PrivateMessageRepository {
             SELECT id, message_id, chat_id, sender_id,
                    type as "type: MessageType", content, reply_to_message_id,
                    file_name, file_size, thumbnail_url, duration,
-                   location_latitude, location_longitude, location_name, location_address,
                    sent_at, edited_at,
                    is_recalled, recalled_at, is_deleted, deleted_at
             FROM private_messages
@@ -314,7 +299,6 @@ impl PrivateMessageRepository {
                    id, message_id, chat_id, sender_id,
                    type as "type: MessageType", content, reply_to_message_id,
                    file_name, file_size, thumbnail_url, duration,
-                   location_latitude, location_longitude, location_name, location_address,
                    sent_at, edited_at,
                    is_recalled, recalled_at, is_deleted, deleted_at
             FROM private_messages

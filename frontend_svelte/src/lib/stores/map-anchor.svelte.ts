@@ -7,11 +7,14 @@ import { browser } from '$app/environment';
 
 const STORAGE_KEY = 'hotspot_map_anchor';
 
+/** 默认锚点名称（未自定义时的占位），与后端一致 */
+export const DEFAULT_ANCHOR_NAME = '南天门';
+
 // 默认位置（与后端默认值一致）
 const DEFAULTS = {
 	latitude: 35.154921,
 	longitude: 112.68253,
-	name: '南天门',
+	name: DEFAULT_ANCHOR_NAME,
 	radius: 5 // Default 5km
 };
 

@@ -12,6 +12,7 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Label } from '$lib/components/ui/label';
 import type { SystemAnnouncementItem, AnnouncementSeverity } from '$lib/types/api';
+	import { formatDateTime } from '$lib/utils/format';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import Plus from 'lucide-svelte/icons/plus';
 	import Megaphone from 'lucide-svelte/icons/megaphone';
@@ -105,10 +106,6 @@ let announcements = $state<SystemAnnouncementItem[]>([]);
 		}
 	}
 
-	function formatDate(dateStr: string): string {
-		return new Date(dateStr).toLocaleString('zh-CN');
-	}
-
 	function getSeverityBadge(s: AnnouncementSeverity) {
 		switch (s) {
 			case 'error':
@@ -182,7 +179,7 @@ let announcements = $state<SystemAnnouncementItem[]>([]);
 										{announcement.content}
 									</p>
 									<p class="mt-2 text-xs text-muted-foreground">
-										发布于 {formatDate(announcement.created_at)}
+										发布于 {formatDateTime(announcement.created_at)}
 									</p>
 								</div>
 								<Button

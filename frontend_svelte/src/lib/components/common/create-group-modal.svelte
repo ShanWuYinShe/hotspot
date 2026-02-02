@@ -38,7 +38,7 @@
 	let isSubmitting = $state(false);
 	let showLocationPicker = $state(false);
 
-	let tags = $derived(
+	const tags = $derived(
 		tagsInput
 			.split(/[,，\s]+/)
 			.map((tag) => tag.replace(/^#/, '').trim())

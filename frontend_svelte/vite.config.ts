@@ -4,4 +4,11 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
+	preview:
+	{
+		allowedHosts: [".yinghuoren.com", ".chaoset.com"]
+	},
+	server: {
+		allowedHosts: [".yinghuoren.com", ".chaoset.com"]
+	}
 });

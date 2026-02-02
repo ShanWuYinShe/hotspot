@@ -1,14 +1,15 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
+	import { notificationStore } from '$lib/stores/notification.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+	import { RippleButton } from '$lib/components/ui/interactive';
 	import ThemeToggle from './theme-toggle.svelte';
 	import SearchModal from './search-modal.svelte';
-	import Bell from 'lucide-svelte/icons/bell';
+	import NotificationDropdown from './notification-dropdown.svelte';
 	import Search from 'lucide-svelte/icons/search';
 	import User from 'lucide-svelte/icons/user';
 	import Settings from 'lucide-svelte/icons/settings';
@@ -30,7 +31,8 @@
 	let showCreateMoment = $state(false);
 	let showCreateGroup = $state(false);
 
-	onMount(() => {
+	// 监听快捷键（Cmd/Ctrl + K 打开搜索）
+	$effect(() => {
 		const handleKeydown = (event: KeyboardEvent) => {
 			if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
 				event.preventDefault();
@@ -70,72 +72,86 @@
 
 <header
 	class="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 shadow-md shadow-black/10 backdrop-blur supports-backdrop-filter:bg-background/60"
+	style="padding-top: env(safe-area-inset-top, 0px);"
 >
-	<div class="mx-auto flex h-16 w-full items-center gap-3 px-4 md:px-6">
+	<div class="mx-auto flex h-14 w-full items-center gap-1.5 px-3 sm:h-16 sm:gap-3 sm:px-4 md:px-6">
 		{#if showMenu}
-			<Button variant="ghost" size="icon" class="mr-2 md:hidden" onclick={onMenuClick}>
+			<RippleButton 
+				variant="icon"
+				size="icon"
+				class="shrink-0 md:hidden"
+				onclick={onMenuClick}
+				circular
+			>
 				<Menu class="h-5 w-5" />
-			</Button>
+			</RippleButton>
 		{/if}
 
 		<!-- Logo -->
-		<a href="/" class="flex items-center gap-2 rounded-xl px-2 py-1 transition-all hover:bg-accent/60">
-			<div class="flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20">
-				<img src="/logo_32.png" alt="HotSpot" class="h-6 w-6 rounded-md" />
+		<a href="/" class="flex shrink-0 items-center gap-2 rounded-xl px-1.5 py-1 transition-all hover:bg-accent/60 sm:px-2">
+			<div class="flex h-8 w-8 items-center justify-center rounded-xl bg-linear-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20 sm:h-9 sm:w-9">
+				<img src="/logo_32.png" alt="HotSpot" class="h-5 w-5 rounded-md sm:h-6 sm:w-6" />
 			</div>
 			<span class="hidden text-lg font-bold sm:inline-block bg-linear-to-r from-primary to-primary/60 bg-clip-text text-transparent">HotSpot</span>
 		</a>
 
 		<!-- Right side -->
-		<div class="ml-auto flex items-center gap-2">
-			<Button
-				variant="ghost"
+		<div class="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
+			<RippleButton
+				variant="icon"
 				size="icon"
-				class="rounded-full"
+				class="h-9 w-9 sm:h-10 sm:w-10"
 				aria-label="打开搜索"
 				onclick={() => (showSearchModal = true)}
+				circular
 			>
-				<Search class="h-5 w-5" />
-			</Button>
+				<Search class="h-4 w-4 sm:h-5 sm:w-5" />
+			</RippleButton>
 
-			<!-- Theme toggle -->
-			<ThemeToggle />
-
-			<!-- Create Menu -->
-			<DropdownMenu.Root>
-				<DropdownMenu.Trigger>
-					{#snippet child({ props })}
-						<Button variant="ghost" size="icon" class="rounded-full" {...props}>
-							<Plus class="h-5 w-5" />
-						</Button>
-					{/snippet}
-				</DropdownMenu.Trigger>
-				<DropdownMenu.Content align="end">
-					<DropdownMenu.Item onclick={openCreateMoment}>
-						<Image class="mr-2 h-4 w-4" />
-						发布动态
-					</DropdownMenu.Item>
-					<DropdownMenu.Item onclick={openCreateGroup}>
-						<UsersRound class="mr-2 h-4 w-4" />
-						创建群组
-					</DropdownMenu.Item>
-				</DropdownMenu.Content>
-			</DropdownMenu.Root>
+			<!-- Theme toggle - 在小屏幕上隐藏 -->
+			<div class="hidden sm:block">
+				<ThemeToggle />
+			</div>
 
 			{#if authStore.isAuthenticated}
-				<!-- Notifications -->
-				<Button variant="ghost" size="icon" onclick={() => goto('/notifications')} class="relative">
-					<Bell class="h-5 w-5" />
-				</Button>
+				<!-- Create Menu - 仅登录后显示 -->
+				<DropdownMenu.Root>
+					<DropdownMenu.Trigger>
+						{#snippet child({ props })}
+							<RippleButton
+								variant="icon"
+								size="icon"
+								class="h-9 w-9 sm:h-10 sm:w-10"
+								{...props}
+								circular
+							>
+								<Plus class="h-4 w-4 sm:h-5 sm:w-5" />
+							</RippleButton>
+						{/snippet}
+					</DropdownMenu.Trigger>
+					<DropdownMenu.Content align="end">
+						<DropdownMenu.Item onclick={openCreateMoment}>
+							<Image class="mr-2 h-4 w-4" />
+							发布动态
+						</DropdownMenu.Item>
+						<DropdownMenu.Item onclick={openCreateGroup}>
+							<UsersRound class="mr-2 h-4 w-4" />
+							创建群组
+						</DropdownMenu.Item>
+					</DropdownMenu.Content>
+				</DropdownMenu.Root>
+
+				<!-- Notifications Dropdown -->
+				<NotificationDropdown />
 
 				<!-- User menu -->
 				<DropdownMenu.Root>
 					<DropdownMenu.Trigger>
 						{#snippet child({ props })}
-							<button {...props} class="inline-flex items-center justify-center rounded-full p-1 hover:bg-accent transition-colors">
+							<button {...props} class="inline-flex items-center justify-center rounded-full p-0.5 hover:bg-accent transition-colors sm:p-1">
 								<Avatar class="h-8 w-8 ring-2 ring-primary/20">
 									<AvatarImage src={authStore.currentAccount?.avatar_url} />
-									<AvatarFallback class="bg-primary/10 text-primary">
+									<AvatarFallback class="bg-primary/10 text-primary text-xs">
 										{authStore.currentAccount?.nickname?.slice(0, 2) ?? 'U'}
 									</AvatarFallback>
 								</Avatar>
@@ -178,7 +194,20 @@
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>
 			{:else}
-				<Button size="sm" class="rounded-full" onclick={handleAuthEntry}>登录 / 注册</Button>
+				<!-- 未登录：移动端显示图标，桌面端显示文字 -->
+				<RippleButton
+					variant="icon"
+					size="icon"
+					class="h-9 w-9 sm:hidden"
+					aria-label="登录或注册"
+					onclick={handleAuthEntry}
+					circular
+				>
+					<User class="h-4 w-4" />
+				</RippleButton>
+				<Button size="sm" class="hidden rounded-full sm:inline-flex" onclick={handleAuthEntry}>
+					登录 / 注册
+				</Button>
 			{/if}
 		</div>
 	</div>

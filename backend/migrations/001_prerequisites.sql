@@ -30,7 +30,7 @@ CREATE TYPE invitation_status AS ENUM ('pending', 'accepted', 'rejected', 'expir
 CREATE TYPE member_action AS ENUM ('join', 'leave', 'removed', 'banned', 'unbanned', 'role_changed', 'muted', 'unmuted');
 
 -- 消息相关
-CREATE TYPE message_type AS ENUM ('text', 'image', 'video', 'audio', 'file', 'location', 'system');
+CREATE TYPE message_type AS ENUM ('text', 'image', 'video', 'audio', 'file', 'system');
 CREATE TYPE reaction_type AS ENUM ('like', 'love', 'laugh', 'angry', 'sad', 'wow');
 
 -- 举报相关
@@ -48,6 +48,15 @@ CREATE TYPE feed_item_type AS ENUM ('moment', 'group_card', 'system');
 -- 设备相关
 CREATE TYPE platform AS ENUM ('ios', 'android', 'web', 'harmony');
 
+-- 系统配置相关
+CREATE TYPE config_value_type AS ENUM ('string', 'number', 'boolean', 'json');
+
+-- 反馈相关
+CREATE TYPE feed_feedback_action AS ENUM ('hide', 'not_interested', 'clicked', 'viewed');
+
+-- 上传相关
+CREATE TYPE upload_status AS ENUM ('pending', 'uploading', 'completed', 'failed', 'cancelled');
+
 -- ============================================================
 -- 3. 通用触发器函数
 -- ============================================================
@@ -60,30 +69,24 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 用户位置同步函数（带默认值）
+-- 用户位置同步函数
 CREATE OR REPLACE FUNCTION sync_user_location()
 RETURNS TRIGGER AS $$
 BEGIN
-    -- 如果经纬度为空，使用默认值（南天门）
-    IF NEW.current_latitude IS NULL THEN
-        NEW.current_latitude := 35.154922;
+    -- 只有当经纬度都不为空时才同步 geography 字段
+    IF NEW.current_latitude IS NOT NULL AND NEW.current_longitude IS NOT NULL THEN
+        NEW.location := ST_SetSRID(ST_MakePoint(NEW.current_longitude, NEW.current_latitude), 4326)::geography;
+        NEW.location_updated_at := NOW();
+    ELSE
+        NEW.location := NULL;
+        NEW.location_updated_at := NULL;
     END IF;
-    IF NEW.current_longitude IS NULL THEN
-        NEW.current_longitude := 112.682524;
-    END IF;
-    IF NEW.current_location_name IS NULL THEN
-        NEW.current_location_name := '南天门';
-    END IF;
-    
-    -- 同步 geography 字段
-    NEW.location := ST_SetSRID(ST_MakePoint(NEW.current_longitude, NEW.current_latitude), 4326)::geography;
-    NEW.location_updated_at := NOW();
     
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-COMMENT ON FUNCTION sync_user_location() IS '同步用户位置信息，确保 location geography 字段与经纬度字段保持一致，并为空值设置默认位置（南天门）';
+COMMENT ON FUNCTION sync_user_location() IS '同步用户位置信息，确保 location geography 字段与经纬度字段保持一致';
 
 CREATE OR REPLACE FUNCTION sync_group_location()
 RETURNS TRIGGER AS $$

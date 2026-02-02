@@ -35,6 +35,7 @@ alwaysApply: true
 |-----|------|
 | [api_spec_feed.mdc](api_spec_feed.mdc) | 信息流与标签管理 API |
 | [api_spec_map.mdc](api_spec_map.mdc) | 地图渲染 API |
+| [api_spec_share.mdc](api_spec_share.mdc) | 通用分享系统 API（位置、动态、群组等） |
 
 ### 辅助功能 API
 
@@ -80,6 +81,7 @@ alwaysApply: true
 - **群组与群聊**：`api_spec_group.mdc`
 - **信息流与标签**：`api_spec_feed.mdc`
 - **地图**：`api_spec_map.mdc`
+- **分享系统**：`api_spec_share.mdc`
 - **文件上传**：`api_spec_media.mdc`
 - **通知**：`api_spec_notification.mdc`
 - **举报**：`api_spec_report.mdc`
@@ -101,6 +103,7 @@ alwaysApply: true
 | `/api/v1/group_chats/`, `/api/v1/group_messages/`, `/api/v1/messages/` | `api_spec_group.mdc` |
 | `/api/v1/feed/`, `/api/v1/tags/` | `api_spec_feed.mdc` |
 | `/api/v1/map/` | `api_spec_map.mdc` |
+| `/api/v1/share/` | `api_spec_share.mdc` |
 | `/api/v1/media/` | `api_spec_media.mdc` |
 | `/api/v1/notifications/`, `/api/v1/subscriptions/`, `/api/v1/device_tokens/` | `api_spec_notification.mdc` |
 | `/api/v1/reports/` | `api_spec_report.mdc` |

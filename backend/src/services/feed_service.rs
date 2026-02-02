@@ -1,4 +1,5 @@
 use crate::{
+    constants::{DEFAULT_LATITUDE, DEFAULT_LONGITUDE},
     dto::{
         request::{
             FeedFeedbackRequest, FeedGroupsRequest, FeedMomentsRequest, FeedTrendingRequest,
@@ -6,7 +7,7 @@ use crate::{
         },
         response::{
             FeedGroupItem, FeedMomentItem, FeedTrendingData, FeedUserItem, PaginatedData,
-            PaginationMeta, RelativeLocation, TrendingTagItem, UserItem,
+            PaginationMeta, TrendingTagItem, UserSearchItem,
         },
     },
     error::AppError,
@@ -72,9 +73,9 @@ impl FeedService {
             Validator::validate_coordinates(point.latitude, point.longitude)?;
             (point.latitude, point.longitude)
         } else if matches!(source, FeedSource::Following) {
-            // 获取用户位置（优先从 Redis 获取）
+            // 获取用户位置（优先从 Redis 获取），使用常量作为默认值
             let user_location = self.presence_service.get_user_location(user_id).await?;
-            user_location.unwrap_or((35.154922, 112.682524))
+            user_location.unwrap_or((DEFAULT_LATITUDE, DEFAULT_LONGITUDE))
         } else {
             return Err(AppError::MissingParameter("reference_point".to_string()));
         };
@@ -139,15 +140,16 @@ impl FeedService {
                 created_at: m.created_at.to_rfc3339(),
                 likes_count: m.likes_count as i32,
                 comments_count: m.comments_count as i32,
-                location: RelativeLocation {
-                    latitude: m.latitude,
-                    longitude: m.longitude,
-                    location_name: m.location_name,
+                location: crate::dto::response::RelativeLocation {
+                    latitude: m.latitude.unwrap_or(0.0),
+                    longitude: m.longitude.unwrap_or(0.0),
+                    location_name: m.location_name.unwrap_or_default(),
                     distance: m.distance,
                     bearing_degrees: m.bearing_degrees,
                 },
                 is_liked: liked_set.contains(&m.moment_id),
                 is_favorited: favorited_set.contains(&m.moment_id),
+                recommendation: None, // TODO: 实现推荐理由计算逻辑
             });
         }
 
@@ -207,12 +209,12 @@ impl FeedService {
                     Some(g.tags)
                 },
                 has_password: g.has_password,
-                location: RelativeLocation {
+                location: crate::dto::response::RelativeLocation {
                     latitude: g.latitude,
                     longitude: g.longitude,
                     location_name: g.location_name,
-                    distance: g.distance,
-                    bearing_degrees: g.bearing_degrees,
+                    distance: Some(g.distance),
+                    bearing_degrees: Some(g.bearing_degrees),
                 },
                 friends_in_group: None, // TODO: Implement social graph logic to populate this
                 my_state: None,         // TODO: Implement social graph logic to populate this
@@ -288,12 +290,12 @@ impl FeedService {
                 .unwrap_or(true);
 
             let location = if location_visible {
-                Some(RelativeLocation {
+                Some(crate::dto::response::RelativeLocation {
                     latitude: u.latitude,
                     longitude: u.longitude,
                     location_name: u.location_name,
-                    distance: u.distance,
-                    bearing_degrees: u.bearing_degrees,
+                    distance: Some(u.distance),
+                    bearing_degrees: Some(u.bearing_degrees),
                 })
             } else {
                 None
@@ -306,7 +308,7 @@ impl FeedService {
                 .await;
 
             items.push(FeedUserItem {
-                user: UserItem {
+                user: UserSearchItem {
                     user_id: u.user_id,
                     nickname: u.nickname,
                     avatar_url,
@@ -316,6 +318,9 @@ impl FeedService {
                     last_online,
                     user_type: u.user_type,
                     location,
+                    stats: None,
+                    relation: None,
+                    social_context: None,
                 },
                 mutual_friends_count: None, // TODO: Implement social graph logic to populate this
                 common_tags: None,          // TODO: Implement tag matching logic to populate this
@@ -397,15 +402,16 @@ impl FeedService {
                 created_at: m.created_at.to_rfc3339(),
                 likes_count: m.likes_count as i32,
                 comments_count: m.comments_count as i32,
-                location: RelativeLocation {
-                    latitude: m.latitude,
-                    longitude: m.longitude,
-                    location_name: m.location_name,
+                location: crate::dto::response::RelativeLocation {
+                    latitude: m.latitude.unwrap_or(0.0),
+                    longitude: m.longitude.unwrap_or(0.0),
+                    location_name: m.location_name.unwrap_or_default(),
                     distance: m.distance,
                     bearing_degrees: m.bearing_degrees,
                 },
                 is_liked: liked_set.contains(&m.moment_id),
                 is_favorited: favorited_set.contains(&m.moment_id),
+                recommendation: None, // TODO: 实现推荐理由计算逻辑
             });
         }
 

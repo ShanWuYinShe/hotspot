@@ -4,10 +4,11 @@
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import { Card, CardContent } from '$lib/components/ui/card';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
+	import ListSkeleton from '$lib/components/common/list-skeleton.svelte';
+	import EmptyState from '$lib/components/common/empty-state.svelte';
 	import type { NotificationItem, NotificationFilterType } from '$lib/types/api';
 	import Bell from 'lucide-svelte/icons/bell';
 	import Heart from 'lucide-svelte/icons/heart';
@@ -15,7 +16,6 @@
 	import UserPlus from 'lucide-svelte/icons/user-plus';
 	import AtSign from 'lucide-svelte/icons/at-sign';
 	import Info from 'lucide-svelte/icons/info';
-	import Check from 'lucide-svelte/icons/check';
 	import CheckCheck from 'lucide-svelte/icons/check-check';
 
 	let notifications = $state<NotificationItem[]>([]);
@@ -119,26 +119,9 @@
 
 		<TabsContent value={currentFilter ?? 'all'} class="mt-4">
 			{#if isLoading}
-				<div class="space-y-2">
-					{#each Array(5) as _}
-						<Card>
-							<CardContent class="flex items-center gap-4 p-4">
-								<Skeleton class="h-10 w-10 rounded-full" />
-								<div class="flex-1 space-y-2">
-									<Skeleton class="h-4 w-48" />
-									<Skeleton class="h-3 w-24" />
-								</div>
-							</CardContent>
-						</Card>
-					{/each}
-				</div>
+				<ListSkeleton type="notification" count={5} layout="list" />
 			{:else if notifications.length === 0}
-				<Card>
-					<CardContent class="flex flex-col items-center justify-center py-12">
-						<Bell class="mb-4 h-12 w-12 text-muted-foreground" />
-						<p class="text-muted-foreground">暂无通知</p>
-					</CardContent>
-				</Card>
+				<EmptyState icon={Bell} title="暂无通知" />
 			{:else}
 				<div class="space-y-2">
 					{#each notifications as notification (notification.notification_id)}

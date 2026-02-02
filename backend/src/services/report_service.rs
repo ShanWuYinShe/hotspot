@@ -4,7 +4,6 @@ use crate::{
     dto::{
         request::{CreateReportRequest, HandleReportRequest, MyReportsRequest, ReportsRequest},
         response::{CreateReportData, PaginatedData, PaginationMeta, ReportItem},
-        types::ReportTargetId,
     },
     error::AppError,
     repositories::{
@@ -174,29 +173,18 @@ impl ReportService {
     fn to_report_item(report: ReportRow) -> Result<ReportItem, AppError> {
         use crate::dto::response::ReportTargetSnapshot;
 
-        let target_id = match report.target_type {
-            ReportTargetType::User => report
-                .target_id
-                .parse::<i64>()
-                .map(ReportTargetId::Number)
-                .map_err(|_| {
-                    AppError::InternalError("举报数据不合法: user target_id 非数字".to_string())
-                })?,
-            _ => ReportTargetId::String(report.target_id),
-        };
-
         Ok(ReportItem {
             report_id: report.report_id.to_string(),
             target_type: report.target_type,
-            target_id,
+            target_id: report.target_id, // 已统一为 String
             reason: report.reason,
             description: report.description,
             status: report.status,
             created_at: report.created_at.to_rfc3339(),
             handled_at: report.handled_at.map(|t| t.to_rfc3339()),
             target_snapshot: report.target_snapshot.map(|s| ReportTargetSnapshot {
-                content: s.content,
-                media_urls: s.media_urls,
+                content: s.content.clone(),
+                media_urls: s.media_urls.clone(),
                 owner_id: s.owner_id.map(|id| id.to_string()),
             }),
         })
@@ -264,25 +252,13 @@ impl ReportService {
     }
 }
 
+/// 规范化 target_id（统一为 string，验证非空）
 fn normalize_report_target_id(
-    target_type: crate::types::enums::ReportTargetType,
-    target_id: ReportTargetId,
+    _target_type: crate::types::enums::ReportTargetType,
+    target_id: String,
 ) -> Result<String, AppError> {
-    match (target_type, target_id) {
-        (crate::types::enums::ReportTargetType::User, ReportTargetId::Number(id)) => {
-            Ok(id.to_string())
-        }
-        (crate::types::enums::ReportTargetType::User, ReportTargetId::String(_)) => Err(
-            AppError::InvalidFormat("target_id 必须为 number".to_string()),
-        ),
-        (_, ReportTargetId::String(value)) => {
-            if value.trim().is_empty() {
-                return Err(AppError::InvalidFormat("target_id 不能为空".to_string()));
-            }
-            Ok(value)
-        }
-        (_, ReportTargetId::Number(_)) => Err(AppError::InvalidFormat(
-            "target_id 必须为 string".to_string(),
-        )),
+    if target_id.trim().is_empty() {
+        return Err(AppError::InvalidFormat("target_id 不能为空".to_string()));
     }
+    Ok(target_id)
 }

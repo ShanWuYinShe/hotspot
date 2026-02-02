@@ -12,7 +12,7 @@
 </script>
 
 <AvatarPrimitive.Image
-	class={cn('aspect-square h-full w-full', className)}
+	class={cn('aspect-square h-full w-full object-cover', className)}
 	{src}
 	{alt}
 	{...restProps}

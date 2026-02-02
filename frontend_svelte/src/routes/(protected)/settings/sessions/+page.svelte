@@ -51,12 +51,12 @@
 		}
 	}
 
-	async function revoke(sessionId: string) {
-		isRevoking = sessionId;
+	async function revoke(revokeToken: string) {
+		isRevoking = revokeToken;
 		try {
-			const response = await authService.revokeSession({ session_id: sessionId });
+			const response = await authService.revokeSession({ revoke_token: revokeToken });
 			if (isSuccess(response)) {
-				sessions = sessions.filter((item) => item.session_id !== sessionId);
+				sessions = sessions.filter((item) => item.revoke_token !== revokeToken);
 				toast.success('已撤销会话');
 			} else {
 				toast.error(response.message || '撤销失败');
@@ -112,7 +112,7 @@
 		</Card>
 	{:else}
 		<div class="space-y-3">
-			{#each sessions as session (session.session_id)}
+			{#each sessions as session (session.display_id)}
 				<Card class="border-0 bg-card/70 shadow-sm shadow-black/5">
 					<CardContent class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
 						<div class="min-w-0">
@@ -123,17 +123,17 @@
 								{/if}
 							</div>
 							<div class="mt-1 text-xs text-muted-foreground">
-								{session.location || '未知位置'} · 最后活跃 {formatTime(session.last_active_at)}
+								{session.ip_location || '未知位置'} · 最后活跃 {formatTime(session.last_active_at)}
 							</div>
 						</div>
 						<div>
 							<Button
 								variant="outline"
 								size="sm"
-								disabled={session.is_current || isRevoking === session.session_id}
-								onclick={() => revoke(session.session_id)}
+								disabled={session.is_current || isRevoking === session.revoke_token}
+								onclick={() => revoke(session.revoke_token)}
 							>
-								{#if isRevoking === session.session_id}
+								{#if isRevoking === session.revoke_token}
 									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 								{/if}
 								撤销

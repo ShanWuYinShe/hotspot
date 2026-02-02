@@ -18,10 +18,9 @@ pub struct MomentRow {
     pub images: Vec<String>,
     pub mentions: Option<Vec<i64>>,
     pub privacy_level: String,
-    pub latitude: f64,
-    pub longitude: f64,
-    pub location: String, // PostGIS geography type stored as WKT string (NOT NULL in DB)
-    pub location_name: String,
+    pub latitude: Option<f64>,        // 可选：客户端提供
+    pub longitude: Option<f64>,       // 可选：客户端提供
+    pub location_name: Option<String>, // 可选：客户端提供
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
     pub is_deleted: bool,
@@ -38,9 +37,9 @@ pub struct MomentSearchRow {
     pub images: Vec<String>,
     pub mentions: Option<Vec<i64>>,
     pub privacy_level: String,
-    pub latitude: f64,
-    pub longitude: f64,
-    pub location_name: String,
+    pub latitude: Option<f64>,        // 可选：客户端提供
+    pub longitude: Option<f64>,       // 可选：客户端提供
+    pub location_name: Option<String>, // 可选：客户端提供
     pub created_at: DateTime<Utc>,
     // 用户信息
     pub nickname: String,
@@ -49,10 +48,10 @@ pub struct MomentSearchRow {
     // 统计信息
     pub likes_count: i64,
     pub comments_count: i64,
-    /// PostGIS 计算的距离（米）
-    pub distance: f64,
-    /// PostGIS 计算的方位角（0-360度）
-    pub bearing_degrees: f64,
+    /// PostGIS 计算的距离（米）- 仅在有位置时返回
+    pub distance: Option<f64>,
+    /// PostGIS 计算的方位角（0-360度）- 仅在有位置时返回
+    pub bearing_degrees: Option<f64>,
 }
 
 /// 瞬间建议Row - 轻量返回
@@ -67,6 +66,29 @@ pub struct MomentSuggestRow {
     pub avatar_url: Option<String>,
     pub user_type: crate::types::enums::UserType,
     pub distance: Option<f64>,
+}
+
+/// 瞬间摘要Row - 用于事件通知
+#[derive(Debug, Clone)]
+struct MomentSummaryRow {
+    moment_id: Uuid,
+    description: String,
+    images: Option<Vec<String>>,
+}
+
+/// 瞬间ID对Row - 用于布隆过滤器初始化
+#[derive(Debug, Clone)]
+struct MomentIdPairRow {
+    id: i64,
+    moment_id: Uuid,
+}
+
+/// 瞬间统计Row - 用于批量查询点赞评论数
+#[derive(Debug, Clone)]
+struct MomentStatsRow {
+    moment_id: Uuid,
+    likes_count: i64,
+    comments_count: i64,
 }
 
 #[derive(Debug, Clone)]
@@ -84,7 +106,8 @@ impl MomentRepository {
         &self,
         moment_id: Uuid,
     ) -> Result<Option<crate::events::event_types::MomentSummarySnapshot>> {
-        let row = sqlx::query!(
+        let row = sqlx::query_as!(
+            MomentSummaryRow,
             r#"
             SELECT moment_id, description, images
             FROM moments
@@ -104,7 +127,7 @@ impl MomentRepository {
             };
 
             crate::events::event_types::MomentSummarySnapshot {
-                moment_id,
+                moment_id: r.moment_id,
                 cover_url,
                 text_preview,
             }
@@ -120,9 +143,9 @@ impl MomentRepository {
         images: Option<Vec<String>>,
         mentions: Option<Vec<i64>>,
         privacy_level: String,
-        latitude: f64,
-        longitude: f64,
-        location_name: String,
+        latitude: Option<f64>,
+        longitude: Option<f64>,
+        location_name: Option<String>,
     ) -> Result<MomentRow> {
         let privacy_level_str = privacy_level.to_string();
         let row = sqlx::query_as!(
@@ -134,9 +157,7 @@ impl MomentRepository {
                       COALESCE(images, ARRAY[]::TEXT[]) as "images!",
                       mentions,
                       privacy_level::text as "privacy_level!",
-                      latitude, longitude, 
-                      ST_AsText(location) as "location!",
-                      location_name,
+                      latitude, longitude, location_name,
                       created_at, updated_at, is_deleted, deleted_at
             "#,
             user_id,
@@ -146,7 +167,7 @@ impl MomentRepository {
             privacy_level_str,
             latitude,
             longitude,
-            location_name
+            location_name.as_deref()
         )
         .fetch_one(&self.pool)
         .await?;
@@ -156,19 +177,19 @@ impl MomentRepository {
 
     /// 检查瞬间是否存在
     pub async fn exists(&self, moment_id: Uuid) -> Result<bool> {
-        let result = sqlx::query!(
+        let exists = sqlx::query_scalar!(
             r#"SELECT EXISTS(SELECT 1 FROM moments WHERE moment_id = $1 AND is_deleted = FALSE) as "exists!""#,
             moment_id
         )
         .fetch_one(&self.pool)
         .await?;
 
-        Ok(result.exists)
+        Ok(exists)
     }
 
     /// 查询瞬间删除状态（包含已删除记录）
     pub async fn get_delete_status(&self, moment_id: Uuid) -> Result<Option<bool>> {
-        let row = sqlx::query!(
+        let is_deleted = sqlx::query_scalar!(
             r#"
             SELECT is_deleted
             FROM moments
@@ -179,7 +200,7 @@ impl MomentRepository {
         .fetch_optional(&self.pool)
         .await?;
 
-        Ok(row.map(|r| r.is_deleted))
+        Ok(is_deleted)
     }
 
     /// 按自增ID顺序批量获取瞬间ID（用于布隆过滤器初始化）
@@ -188,7 +209,8 @@ impl MomentRepository {
         last_id: i64,
         limit: i64,
     ) -> Result<Vec<(i64, Uuid)>> {
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as!(
+            MomentIdPairRow,
             r#"
             SELECT id, moment_id
             FROM moments
@@ -207,14 +229,14 @@ impl MomentRepository {
 
     /// 获取瞬间所有者ID
     pub async fn get_owner(&self, moment_id: Uuid) -> Result<Option<i64>> {
-        let row = sqlx::query!(
+        let user_id = sqlx::query_scalar!(
             r#"SELECT user_id FROM moments WHERE moment_id = $1 AND is_deleted = FALSE"#,
             moment_id
         )
         .fetch_optional(&self.pool)
         .await?;
 
-        Ok(row.map(|r| r.user_id))
+        Ok(user_id)
     }
 
     /// 按ID列表查找瞬间（带用户信息、统计和距离计算）
@@ -244,14 +266,14 @@ impl MomentRepository {
                 ST_Distance(
                     m.location::geography,
                     ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography
-                ) as "distance!",
+                ) as "distance",
                 COALESCE(degrees(ST_Azimuth(
                     ST_SetSRID(ST_MakePoint($2, $3), 4326),
                     m.location
-                )), 0) as "bearing_degrees!"
+                )), 0) as "bearing_degrees"
             FROM moments m
             JOIN users u ON m.user_id = u.user_id
-            WHERE m.moment_id = ANY($1) AND m.is_deleted = FALSE AND u.is_deleted = FALSE
+            WHERE m.moment_id = ANY($1) AND m.is_deleted = FALSE AND u.is_banned = FALSE
               AND (
                     ($4::BIGINT IS NULL AND m.privacy_level::text = 'public')
                  OR ($4::BIGINT IS NOT NULL AND (
@@ -280,7 +302,7 @@ impl MomentRepository {
                            OR (b.blocker_id = $4 AND b.blocked_id = m.user_id)
                     )
               )
-            ORDER BY "distance!" ASC
+            ORDER BY distance ASC
             "#,
             moment_ids,
             longitude,
@@ -347,15 +369,15 @@ impl MomentRepository {
                 ST_Distance(
                     m.location::geography,
                     ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography
-                ) as "distance!",
+                ) as "distance",
                 COALESCE(degrees(ST_Azimuth(
                     ST_SetSRID(ST_MakePoint($2, $3), 4326),
                     m.location
-                )), 0) as "bearing_degrees!"
+                )), 0) as "bearing_degrees"
             FROM moments m
             JOIN users u ON m.user_id = u.user_id
             WHERE m.is_deleted = FALSE 
-              AND u.is_deleted = FALSE
+              AND u.is_banned = FALSE
               AND m.description ILIKE $1
               AND (
                     ($4::BIGINT IS NULL AND m.privacy_level::text = 'public')
@@ -395,18 +417,27 @@ impl MomentRepository {
             viewer_id,
             last_ts,
             last_id,
-            limit as i64
+            (limit + 1) as i64  // 使用 limit + 1 来判断是否有更多数据
         )
         .fetch_all(&self.pool)
         .await?;
 
-        let next_cursor = rows
-            .last()
-            .map(|r| encode_cursor(&(r.created_at, r.id)))
-            .transpose()?;
+        // 判断是否有更多数据
+        let has_more = rows.len() > limit as usize;
+        let rows_to_return: Vec<_> = rows.into_iter().take(limit as usize).collect();
+
+        let next_cursor = if has_more {
+            rows_to_return
+                .last()
+                .map(|r| encode_cursor(&(r.created_at, r.id)))
+                .transpose()?
+        } else {
+            None
+        };
 
         Ok((
-            rows.into_iter()
+            rows_to_return
+                .into_iter()
                 .map(|r| MomentSearchRow {
                     moment_id: r.moment_id,
                     user_id: r.user_id,
@@ -452,11 +483,11 @@ impl MomentRepository {
                     ST_Distance(
                         m.location::geography,
                         ST_SetSRID(ST_MakePoint($4, $5), 4326)::geography
-                    ) as "distance!"
+                    ) as "distance"
                 FROM moments m
                 JOIN users u ON m.user_id = u.user_id
                 WHERE m.is_deleted = FALSE 
-                  AND u.is_deleted = FALSE
+                  AND u.is_banned = FALSE
                   AND m.description ILIKE $1
                   AND (
                         ($2::BIGINT IS NULL AND m.privacy_level::text = 'public')
@@ -486,7 +517,7 @@ impl MomentRepository {
                                OR (b.blocker_id = $2 AND b.blocked_id = m.user_id)
                         )
                   )
-                ORDER BY "distance!" ASC
+                ORDER BY distance ASC
                 LIMIT $3
                 "#,
                 search_pattern,
@@ -509,7 +540,7 @@ impl MomentRepository {
                     nickname: r.nickname,
                     avatar_url: r.avatar_url,
                     user_type: r.user_type,
-                    distance: Some(r.distance),
+                    distance: r.distance,
                 })
                 .collect())
         } else {
@@ -523,7 +554,7 @@ impl MomentRepository {
                 FROM moments m
                 JOIN users u ON m.user_id = u.user_id
                 WHERE m.is_deleted = FALSE 
-                  AND u.is_deleted = FALSE
+                  AND u.is_banned = FALSE
                   AND m.description ILIKE $1
                   AND (
                         ($2::BIGINT IS NULL AND m.privacy_level::text = 'public')
@@ -732,6 +763,7 @@ impl MomentRepository {
             i64::MAX
         };
 
+        // 查询 limit + 1 条以判断是否有更多数据
         let moments = sqlx::query!(
             r#"
             SELECT 
@@ -745,21 +777,32 @@ impl MomentRepository {
                 (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) as "comments_count!"
             FROM moments m
             JOIN users u ON m.user_id = u.user_id
-            WHERE m.user_id = $1 AND m.id < $2 AND m.is_deleted = FALSE AND u.is_deleted = FALSE
+            WHERE m.user_id = $1 AND m.id < $2 AND m.is_deleted = FALSE AND u.is_banned = FALSE
             ORDER BY m.id DESC
             LIMIT $3
             "#,
             user_id,
             last_id,
-            limit as i64
+            (limit + 1) as i64
         )
         .fetch_all(&self.pool)
         .await?;
 
-        let next_cursor = moments.last().map(|m| encode_cursor(&m.id)).transpose()?;
+        // 判断是否有更多数据
+        let has_more = moments.len() > limit as usize;
+        let moments_to_return: Vec<_> = moments.into_iter().take(limit as usize).collect();
+
+        let next_cursor = if has_more {
+            moments_to_return
+                .last()
+                .map(|m| encode_cursor(&m.id))
+                .transpose()?
+        } else {
+            None
+        };
 
         Ok((
-            moments
+            moments_to_return
                 .into_iter()
                 .map(|m| MomentSearchRow {
                     moment_id: m.moment_id,
@@ -777,8 +820,8 @@ impl MomentRepository {
                     user_type: m.user_type,
                     likes_count: m.likes_count,
                     comments_count: m.comments_count,
-                    distance: 0.0,
-                    bearing_degrees: 0.0,
+                    distance: Some(0.0),
+                    bearing_degrees: Some(0.0),
                 })
                 .collect(),
             next_cursor,
@@ -798,6 +841,7 @@ impl MomentRepository {
             i64::MAX
         };
 
+        // 查询 limit + 1 条以判断是否有更多数据
         let moments = sqlx::query!(
             r#"
             SELECT 
@@ -815,21 +859,32 @@ impl MomentRepository {
               AND m.privacy_level::text = 'public'
               AND m.id < $2
               AND m.is_deleted = FALSE
-              AND u.is_deleted = FALSE
+              AND u.is_banned = FALSE
             ORDER BY m.id DESC
             LIMIT $3
             "#,
             user_id,
             last_id,
-            limit as i64
+            (limit + 1) as i64
         )
         .fetch_all(&self.pool)
         .await?;
 
-        let next_cursor = moments.last().map(|m| encode_cursor(&m.id)).transpose()?;
+        // 判断是否有更多数据
+        let has_more = moments.len() > limit as usize;
+        let moments_to_return: Vec<_> = moments.into_iter().take(limit as usize).collect();
+
+        let next_cursor = if has_more {
+            moments_to_return
+                .last()
+                .map(|m| encode_cursor(&m.id))
+                .transpose()?
+        } else {
+            None
+        };
 
         Ok((
-            moments
+            moments_to_return
                 .into_iter()
                 .map(|m| MomentSearchRow {
                     moment_id: m.moment_id,
@@ -847,8 +902,8 @@ impl MomentRepository {
                     user_type: m.user_type,
                     likes_count: m.likes_count,
                     comments_count: m.comments_count,
-                    distance: 0.0,
-                    bearing_degrees: 0.0,
+                    distance: Some(0.0),
+                    bearing_degrees: Some(0.0),
                 })
                 .collect(),
             next_cursor,
@@ -912,14 +967,14 @@ impl MomentRepository {
                 u.nickname, u.avatar_url, u.user_type as "user_type!: crate::types::enums::UserType",
                 (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) as "likes_count!",
                 (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) as "comments_count!",
-                calc.dist as "distance!",
+                calc.dist as "distance",
                 COALESCE(
                     degrees(ST_Azimuth(
                         ST_SetSRID(ST_MakePoint($2, $1), 4326),
                         m.location
                     )),
                     0.0
-                ) as "bearing_degrees!"
+                ) as "bearing_degrees"
             FROM moments m
             CROSS JOIN LATERAL (
                 SELECT ST_Distance(
@@ -929,7 +984,7 @@ impl MomentRepository {
             ) calc
             JOIN users u ON m.user_id = u.user_id
             WHERE m.is_deleted = FALSE 
-              AND u.is_deleted = FALSE
+              AND u.is_banned = FALSE
               AND ($7::TEXT IS NULL OR m.description ILIKE $7)
               AND (
                     ($8::BIGINT IS NULL AND m.privacy_level::text = 'public')
@@ -980,21 +1035,30 @@ impl MomentRepository {
             radius_meters,
             last_dist,
             last_id,
-            limit as i64,
+            (limit + 1) as i64,  // 使用 limit + 1 来判断是否有更多数据
             search_pattern,
             viewer_id
         )
         .fetch_all(&self.pool)
         .await?;
 
-        // Construct next cursor from last item
-        let next_cursor = rows
-            .last()
-            .map(|r| encode_cursor(&(r.distance, r.id)))
-            .transpose()?;
+        // 判断是否有更多数据
+        let has_more = rows.len() > limit as usize;
+        let rows_to_return: Vec<_> = rows.into_iter().take(limit as usize).collect();
+
+        // 只有在 has_more 为 true 时才生成 cursor
+        let next_cursor = if has_more {
+            rows_to_return
+                .last()
+                .map(|r| encode_cursor(&(r.distance, r.id)))
+                .transpose()?
+        } else {
+            None
+        };
 
         Ok((
-            rows.into_iter()
+            rows_to_return
+                .into_iter()
                 .map(|r| MomentSearchRow {
                     moment_id: r.moment_id,
                     user_id: r.user_id,
@@ -1050,16 +1114,16 @@ impl MomentRepository {
                 ST_Distance(
                     m.location::geography,
                     ST_SetSRID(ST_MakePoint($4, $5), 4326)::geography
-                ) as "distance!",
+                ) as "distance",
                 COALESCE(degrees(ST_Azimuth(
                     ST_SetSRID(ST_MakePoint($4, $5), 4326),
                     m.location
-                )), 0) as "bearing_degrees!"
+                )), 0) as "bearing_degrees"
             FROM moments m
             INNER JOIN moment_tags mt ON m.moment_id = mt.moment_id
             INNER JOIN tags t ON mt.tag_id = t.id
             JOIN users u ON m.user_id = u.user_id
-            WHERE t.name = $1 AND m.id < $2 AND m.is_deleted = FALSE AND u.is_deleted = FALSE
+            WHERE t.name = $1 AND m.id < $2 AND m.is_deleted = FALSE AND u.is_banned = FALSE
               AND (
                     ($6::BIGINT IS NULL AND m.privacy_level::text = 'public')
                  OR ($6::BIGINT IS NOT NULL AND (
@@ -1093,7 +1157,7 @@ impl MomentRepository {
             "#,
             tag_name,
             last_id,
-            limit as i64,
+            (limit + 1) as i64,  // 使用 limit + 1 来判断是否有更多数据
             longitude,
             latitude,
             viewer_id
@@ -1101,10 +1165,21 @@ impl MomentRepository {
         .fetch_all(&self.pool)
         .await?;
 
-        let next_cursor = moments.last().map(|m| encode_cursor(&m.id)).transpose()?;
+        // 判断是否有更多数据
+        let has_more = moments.len() > limit as usize;
+        let moments_to_return: Vec<_> = moments.into_iter().take(limit as usize).collect();
+
+        let next_cursor = if has_more {
+            moments_to_return
+                .last()
+                .map(|m| encode_cursor(&m.id))
+                .transpose()?
+        } else {
+            None
+        };
 
         Ok((
-            moments
+            moments_to_return
                 .into_iter()
                 .map(|m| MomentSearchRow {
                     moment_id: m.moment_id,
@@ -1160,36 +1235,44 @@ impl MomentRepository {
                 ST_Distance(
                     m.location::geography,
                     ST_SetSRID(ST_MakePoint($5, $6), 4326)::geography
-                ) as "distance!",
+                ) as "distance",
                 COALESCE(degrees(ST_Azimuth(
                     ST_SetSRID(ST_MakePoint($5, $6), 4326),
                     m.location
-                )), 0) as "bearing_degrees!"
+                )), 0) as "bearing_degrees"
             FROM moments m
             JOIN moment_favorites mf ON m.moment_id = mf.moment_id
             JOIN users u ON m.user_id = u.user_id
             WHERE mf.user_id = $1 
               AND (mf.created_at < $2 OR (mf.created_at = $2 AND m.id < $3))
-              AND m.is_deleted = FALSE AND u.is_deleted = FALSE
+              AND m.is_deleted = FALSE AND u.is_banned = FALSE
             ORDER BY mf.created_at DESC, m.id DESC
             LIMIT $4
             "#,
             user_id,
             last_ts,
             last_id,
-            limit as i64,
+            (limit + 1) as i64,
             longitude,
             latitude
         )
         .fetch_all(&self.pool)
         .await?;
 
-        let next_cursor = rows
-            .last()
-            .map(|r| encode_cursor(&(r.favorited_at, r.id)))
-            .transpose()?;
+        // 判断是否有更多数据
+        let has_more = rows.len() > limit as usize;
+        let rows_to_return: Vec<_> = rows.into_iter().take(limit as usize).collect();
 
-        let results = rows
+        let next_cursor = if has_more {
+            rows_to_return
+                .last()
+                .map(|r| encode_cursor(&(r.favorited_at, r.id)))
+                .transpose()?
+        } else {
+            None
+        };
+
+        let results = rows_to_return
             .into_iter()
             .map(|r| {
                 (
@@ -1267,14 +1350,14 @@ impl MomentRepository {
             return Ok(std::collections::HashSet::new());
         }
 
-        let liked_ids: Vec<Uuid> = sqlx::query_scalar(
+        let liked_ids = sqlx::query_scalar!(
             r#"
             SELECT moment_id FROM moment_likes
             WHERE moment_id = ANY($1) AND user_id = $2
             "#,
+            moment_ids,
+            user_id
         )
-        .bind(moment_ids)
-        .bind(user_id)
         .fetch_all(&self.pool)
         .await?;
 
@@ -1292,14 +1375,14 @@ impl MomentRepository {
             return Ok(std::collections::HashSet::new());
         }
 
-        let favorited_ids: Vec<Uuid> = sqlx::query_scalar(
+        let favorited_ids = sqlx::query_scalar!(
             r#"
             SELECT moment_id FROM moment_favorites
             WHERE moment_id = ANY($1) AND user_id = $2
             "#,
+            moment_ids,
+            user_id
         )
-        .bind(moment_ids)
-        .bind(user_id)
         .fetch_all(&self.pool)
         .await?;
 
@@ -1319,7 +1402,8 @@ impl MomentRepository {
             i64::MAX
         };
 
-        let likes = sqlx::query_as!(
+        // 查询 limit + 1 条以判断是否有更多数据
+        let rows = sqlx::query_as!(
             MomentLikeRow,
             r#"
             SELECT id, moment_id, user_id, created_at
@@ -1330,13 +1414,14 @@ impl MomentRepository {
             "#,
             moment_id,
             last_id,
-            limit
+            limit + 1
         )
         .fetch_all(&self.pool)
         .await?;
 
-        let next_cursor = likes.last().map(|l| encode_cursor(&l.id)).transpose()?;
-        Ok((likes, next_cursor))
+        crate::utils::pagination::paginate_with_limit_plus_one(rows, limit as i32, |l| {
+            encode_cursor(&l.id)
+        })
     }
 
     /// 批量获取瞬间的点赞和评论数量
@@ -1348,12 +1433,13 @@ impl MomentRepository {
             return Ok(std::collections::HashMap::new());
         }
 
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as_unchecked!(
+            MomentStatsRow,
             r#"
             SELECT 
-                m.moment_id as "moment_id!",
-                COALESCE(l.likes_count, 0) as "likes_count!",
-                COALESCE(c.comments_count, 0) as "comments_count!"
+                m.moment_id,
+                COALESCE(l.likes_count, 0) as likes_count,
+                COALESCE(c.comments_count, 0) as comments_count
             FROM unnest($1::uuid[]) as m(moment_id)
             LEFT JOIN (
                 SELECT moment_id, COUNT(*) as likes_count
@@ -1408,14 +1494,14 @@ impl MomentRepository {
                 ST_Distance(
                     m.location::geography,
                     ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
-                ) as "distance!",
+                ) as "distance",
                 COALESCE(degrees(ST_Azimuth(
                     ST_SetSRID(ST_MakePoint($1, $2), 4326),
                     m.location
-                )), 0) as "bearing_degrees!"
+                )), 0) as "bearing_degrees"
             FROM moments m
             JOIN users u ON m.user_id = u.user_id
-            WHERE m.is_deleted = FALSE AND u.is_deleted = FALSE
+            WHERE m.is_deleted = FALSE AND u.is_banned = FALSE
               AND (m.created_at < $3 OR (m.created_at = $3 AND m.id < $4))
             ORDER BY m.created_at DESC, m.id DESC
             LIMIT $5
@@ -1424,18 +1510,27 @@ impl MomentRepository {
             user_lat,
             last_ts,
             last_id,
-            limit as i64
+            (limit + 1) as i64  // 使用 limit + 1 来判断是否有更多数据
         )
         .fetch_all(&self.pool)
         .await?;
 
-        let next_cursor = rows
-            .last()
-            .map(|r| encode_cursor(&(r.created_at, r.id)))
-            .transpose()?;
+        // 判断是否有更多数据
+        let has_more = rows.len() > limit as usize;
+        let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
+
+        let next_cursor = if has_more {
+            items
+                .last()
+                .map(|r| encode_cursor(&(r.created_at, r.id)))
+                .transpose()?
+        } else {
+            None
+        };
 
         Ok((
-            rows.into_iter()
+            items
+                .into_iter()
                 .map(|r| MomentSearchRow {
                     moment_id: r.moment_id,
                     user_id: r.user_id,
@@ -1490,15 +1585,15 @@ impl MomentRepository {
                 ST_Distance(
                     m.location::geography,
                     ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography
-                ) as "distance!",
+                ) as "distance",
                 COALESCE(degrees(ST_Azimuth(
                     ST_SetSRID(ST_MakePoint($2, $3), 4326),
                     m.location
-                )), 0) as "bearing_degrees!"
+                )), 0) as "bearing_degrees"
             FROM moments m
             JOIN users u ON m.user_id = u.user_id
             JOIN user_follows f ON m.user_id = f.following_id AND f.follower_id = $1
-            WHERE m.is_deleted = FALSE AND u.is_deleted = FALSE
+            WHERE m.is_deleted = FALSE AND u.is_banned = FALSE
               AND (m.created_at < $4 OR (m.created_at = $4 AND m.id < $5))
             ORDER BY m.created_at DESC, m.id DESC
             LIMIT $6
@@ -1592,7 +1687,7 @@ impl MomentRepository {
             FROM moments m
             JOIN users u ON m.user_id = u.user_id
             WHERE m.is_deleted = FALSE 
-              AND u.is_deleted = FALSE
+              AND u.is_banned = FALSE
               AND m.created_at >= $2
               AND (
                   (
@@ -1610,7 +1705,7 @@ impl MomentRepository {
             ORDER BY "score!" DESC, m.id DESC
             LIMIT $1
             "#,
-            limit as i64,
+            (limit + 1) as i64,
             since,
             last_score,
             last_id
@@ -1618,13 +1713,22 @@ impl MomentRepository {
         .fetch_all(&self.pool)
         .await?;
 
-        let next_cursor = rows
-            .last()
-            .map(|r| encode_cursor(&(r.score, r.id)))
-            .transpose()?;
+        // 判断是否有更多数据
+        let has_more = rows.len() > limit as usize;
+        let rows_to_return: Vec<_> = rows.into_iter().take(limit as usize).collect();
+
+        let next_cursor = if has_more {
+            rows_to_return
+                .last()
+                .map(|r| encode_cursor(&(r.score, r.id)))
+                .transpose()?
+        } else {
+            None
+        };
 
         Ok((
-            rows.into_iter()
+            rows_to_return
+                .into_iter()
                 .map(|r| MomentSearchRow {
                     moment_id: r.moment_id,
                     user_id: r.user_id,
@@ -1641,8 +1745,8 @@ impl MomentRepository {
                     user_type: r.user_type,
                     likes_count: r.likes_count,
                     comments_count: r.comments_count,
-                    distance: 0.0,
-                    bearing_degrees: 0.0,
+                    distance: Some(0.0),
+                    bearing_degrees: Some(0.0),
                 })
                 .collect(),
             next_cursor,
@@ -1662,6 +1766,7 @@ impl MomentRepository {
             i64::MAX
         };
 
+        // 查询 limit + 1 条以判断是否有更多数据
         let rows = sqlx::query_as!(
             MomentLikeRow,
             r#"
@@ -1673,13 +1778,14 @@ impl MomentRepository {
             "#,
             user_id,
             last_id,
-            limit
+            limit + 1
         )
         .fetch_all(&self.pool)
         .await?;
 
-        let next_cursor = rows.last().map(|r| encode_cursor(&r.id)).transpose()?;
-        Ok((rows, next_cursor))
+        crate::utils::pagination::paginate_with_limit_plus_one(rows, limit as i32, |r| {
+            encode_cursor(&r.id)
+        })
     }
 }
 

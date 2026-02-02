@@ -7,6 +7,7 @@
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
+	import { usePagination } from '$lib/hooks/use-pagination.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
@@ -34,22 +35,21 @@
 	let isActionLoading = $state(false);
 	let currentTab = $state<'moments' | 'followers' | 'following'>('moments');
 
-	let moments = $state<UserMomentListItem[]>([]);
-	let followers = $state<UserInfo[]>([]);
-	let following = $state<UserInfo[]>([]);
+	// 使用 usePagination hook 统一管理三个 tab 的分页状态
+	const momentsPagination = usePagination<UserMomentListItem>({
+		initialLoading: false,
+		uniqueKey: 'moment_id'
+	});
 
-	let momentsLoading = $state(false);
-	let followersLoading = $state(false);
-	let followingLoading = $state(false);
-	let momentsLoadingMore = $state(false);
-	let followersLoadingMore = $state(false);
-	let followingLoadingMore = $state(false);
-	let momentsCursor = $state<string | undefined>(undefined);
-	let followersCursor = $state<string | undefined>(undefined);
-	let followingCursor = $state<string | undefined>(undefined);
-	let momentsHasMore = $state(true);
-	let followersHasMore = $state(true);
-	let followingHasMore = $state(true);
+	const followersPagination = usePagination<UserInfo>({
+		initialLoading: false,
+		uniqueKey: 'user_id'
+	});
+
+	const followingPagination = usePagination<UserInfo>({
+		initialLoading: false,
+		uniqueKey: 'user_id'
+	});
 
 	async function loadUser() {
 		try {
@@ -119,93 +119,61 @@
 		}
 	}
 
+	// 使用 usePagination hook，大大简化分页逻辑
 	async function loadMoments(refresh = false) {
-		if (refresh) {
-			momentsLoading = true;
-			momentsCursor = undefined;
-			momentsHasMore = true;
-		} else {
-			momentsLoadingMore = true;
-		}
-		try {
-			const response = await usersService.getMoments({
-				user_id: userId,
-				limit: 12,
-				cursor: refresh ? undefined : momentsCursor
-			});
-			if (isSuccess(response) && response.data) {
-				moments = refresh ? response.data.items : [...moments, ...response.data.items];
-				momentsHasMore = response.data.pagination.has_more;
-				momentsCursor = response.data.pagination.next_cursor;
-			}
-		} catch {
+		await momentsPagination.load(
+			(cursor) =>
+				usersService.getMoments({
+					user_id: userId,
+					limit: 12,
+					cursor
+				}),
+			refresh
+		);
+
+		if (momentsPagination.error) {
 			toast.error('加载瞬间失败');
-		} finally {
-			momentsLoading = false;
-			momentsLoadingMore = false;
 		}
 	}
 
 	async function loadFollowers(refresh = false) {
-		if (refresh) {
-			followersLoading = true;
-			followersCursor = undefined;
-			followersHasMore = true;
-		} else {
-			followersLoadingMore = true;
-		}
-		try {
-			const response = await usersService.getFollowers({
-				user_id: userId,
-				limit: 20,
-				cursor: refresh ? undefined : followersCursor
-			});
-			if (isSuccess(response) && response.data) {
-				followers = refresh ? response.data.items : [...followers, ...response.data.items];
-				followersHasMore = response.data.pagination.has_more;
-				followersCursor = response.data.pagination.next_cursor;
-			}
-		} catch {
+		await followersPagination.load(
+			(cursor) =>
+				usersService.getFollowers({
+					user_id: userId,
+					limit: 20,
+					cursor
+				}),
+			refresh
+		);
+
+		if (followersPagination.error) {
 			toast.error('加载粉丝失败');
-		} finally {
-			followersLoading = false;
-			followersLoadingMore = false;
 		}
 	}
 
 	async function loadFollowing(refresh = false) {
-		if (refresh) {
-			followingLoading = true;
-			followingCursor = undefined;
-			followingHasMore = true;
-		} else {
-			followingLoadingMore = true;
-		}
-		try {
-			const response = await usersService.getFollowing({
-				user_id: userId,
-				limit: 20,
-				cursor: refresh ? undefined : followingCursor
-			});
-			if (isSuccess(response) && response.data) {
-				following = refresh ? response.data.items : [...following, ...response.data.items];
-				followingHasMore = response.data.pagination.has_more;
-				followingCursor = response.data.pagination.next_cursor;
-			}
-		} catch {
+		await followingPagination.load(
+			(cursor) =>
+				usersService.getFollowing({
+					user_id: userId,
+					limit: 20,
+					cursor
+				}),
+			refresh
+		);
+
+		if (followingPagination.error) {
 			toast.error('加载关注失败');
-		} finally {
-			followingLoading = false;
-			followingLoadingMore = false;
 		}
 	}
 
 	function handleTabChange(next: string) {
 		const target = next as 'moments' | 'followers' | 'following';
 		currentTab = target;
-		if (target === 'moments' && moments.length === 0) loadMoments(true);
-		if (target === 'followers' && followers.length === 0) loadFollowers(true);
-		if (target === 'following' && following.length === 0) loadFollowing(true);
+		if (target === 'moments' && momentsPagination.items.length === 0) loadMoments(true);
+		if (target === 'followers' && followersPagination.items.length === 0) loadFollowers(true);
+		if (target === 'following' && followingPagination.items.length === 0) loadFollowing(true);
 	}
 
 	onMount(() => {
@@ -352,7 +320,7 @@
 			</TabsList>
 
 			<TabsContent value="moments" class="mt-6">
-				{#if momentsLoading}
+				{#if momentsPagination.loading}
 					<div class="space-y-4">
 						{#each Array(3) as _}
 							<Card>
@@ -366,7 +334,7 @@
 							</Card>
 						{/each}
 					</div>
-				{:else if moments.length === 0}
+				{:else if momentsPagination.items.length === 0}
 					<Card>
 						<CardContent class="flex flex-col items-center justify-center py-12">
 							<Image class="mb-4 h-10 w-10 text-muted-foreground" />
@@ -375,7 +343,7 @@
 					</Card>
 				{:else}
 					<div class="columns-1 gap-4 sm:columns-2 lg:columns-3">
-						{#each moments as moment (moment.moment_id)}
+						{#each momentsPagination.items as moment (moment.moment_id)}
 							<div class="mb-4 break-inside-avoid">
 								<MomentCard moment={{
 									...moment,
@@ -386,10 +354,10 @@
 							</div>
 						{/each}
 					</div>
-					{#if momentsHasMore}
+					{#if momentsPagination.hasMore}
 						<div class="flex justify-center pt-4">
-							<Button variant="outline" onclick={() => loadMoments(false)} disabled={momentsLoadingMore}>
-								{#if momentsLoadingMore}
+							<Button variant="outline" onclick={() => loadMoments(false)} disabled={momentsPagination.loadingMore}>
+								{#if momentsPagination.loadingMore}
 									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 								{/if}
 								加载更多
@@ -400,7 +368,7 @@
 			</TabsContent>
 
 			<TabsContent value="followers" class="mt-6">
-				{#if followersLoading}
+				{#if followersPagination.loading}
 					<div class="space-y-2">
 						{#each Array(5) as _}
 							<Card>
@@ -414,7 +382,7 @@
 							</Card>
 						{/each}
 					</div>
-				{:else if followers.length === 0}
+				{:else if followersPagination.items.length === 0}
 					<Card>
 						<CardContent class="flex flex-col items-center justify-center py-12">
 							<Users class="mb-4 h-10 w-10 text-muted-foreground" />
@@ -423,7 +391,7 @@
 					</Card>
 				{:else}
 					<div class="grid gap-3 sm:grid-cols-2">
-						{#each followers as follower (follower.user_id)}
+						{#each followersPagination.items as follower (follower.user_id)}
 							<a href="/users/{follower.user_id}">
 								<Card class="cursor-pointer border-0 bg-card/70 shadow-sm shadow-black/5 transition-shadow hover:shadow-lg hover:shadow-black/10">
 									<CardContent class="flex items-center gap-3 p-4">
@@ -440,10 +408,10 @@
 							</a>
 						{/each}
 					</div>
-					{#if followersHasMore}
+					{#if followersPagination.hasMore}
 						<div class="flex justify-center pt-4">
-							<Button variant="outline" onclick={() => loadFollowers(false)} disabled={followersLoadingMore}>
-								{#if followersLoadingMore}
+							<Button variant="outline" onclick={() => loadFollowers(false)} disabled={followersPagination.loadingMore}>
+								{#if followersPagination.loadingMore}
 									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 								{/if}
 								加载更多
@@ -454,7 +422,7 @@
 			</TabsContent>
 
 			<TabsContent value="following" class="mt-6">
-				{#if followingLoading}
+				{#if followingPagination.loading}
 					<div class="space-y-2">
 						{#each Array(5) as _}
 							<Card>
@@ -468,7 +436,7 @@
 							</Card>
 						{/each}
 					</div>
-				{:else if following.length === 0}
+				{:else if followingPagination.items.length === 0}
 					<Card>
 						<CardContent class="flex flex-col items-center justify-center py-12">
 							<Users class="mb-4 h-10 w-10 text-muted-foreground" />
@@ -477,7 +445,7 @@
 					</Card>
 				{:else}
 					<div class="grid gap-3 sm:grid-cols-2">
-						{#each following as follow (follow.user_id)}
+						{#each followingPagination.items as follow (follow.user_id)}
 							<a href="/users/{follow.user_id}">
 								<Card class="cursor-pointer border-0 bg-card/70 shadow-sm shadow-black/5 transition-shadow hover:shadow-lg hover:shadow-black/10">
 									<CardContent class="flex items-center gap-3 p-4">
@@ -494,10 +462,10 @@
 							</a>
 						{/each}
 					</div>
-					{#if followingHasMore}
+					{#if followingPagination.hasMore}
 						<div class="flex justify-center pt-4">
-							<Button variant="outline" onclick={() => loadFollowing(false)} disabled={followingLoadingMore}>
-								{#if followingLoadingMore}
+							<Button variant="outline" onclick={() => loadFollowing(false)} disabled={followingPagination.loadingMore}>
+								{#if followingPagination.loadingMore}
 									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 								{/if}
 								加载更多

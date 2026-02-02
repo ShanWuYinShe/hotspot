@@ -4,6 +4,7 @@
  * 特性：
  * - 所有请求使用 POST 方法
  * - 自动注入 Authorization Token
+ * - 自动注入 CSRF Token (Web 端)
  * - 401 时自动刷新 Token 并重试
  * - 幂等性支持 (Idempotency-Key)
  * - 业务成功判断: code === 0
@@ -11,6 +12,9 @@
 
 import type { ApiResponse, PaginatedData } from '$lib/types/api';
 import { AUTH } from './endpoints';
+
+// Re-export types for external use
+export type { ApiResponse, PaginatedData };
 
 // Token 无效或过期的错误码
 const TOKEN_INVALID_CODES = [10101, 10102, 10103, 10104, 10106];
@@ -20,6 +24,22 @@ let isRefreshing = false;
 // 等待刷新 Token 完成的 Promise
 let refreshPromise: Promise<boolean> | null = null;
 
+/**
+ * 从 Cookie 中读取指定名称的值
+ */
+function getCookie(name: string): string | null {
+	if (typeof document === 'undefined') return null;
+	
+	const cookies = document.cookie.split(';');
+	for (const cookie of cookies) {
+		const [key, value] = cookie.trim().split('=');
+		if (key === name) {
+			return value;
+		}
+	}
+	return null;
+}
+
 export interface RequestOptions {
 	/** 自定义请求头 */
 	headers?: Record<string, string>;
@@ -27,6 +47,10 @@ export interface RequestOptions {
 	skipAuth?: boolean;
 	/** 幂等键 */
 	idempotencyKey?: string;
+	/** 请求超时时间（毫秒），默认 30000ms */
+	timeout?: number;
+	/** AbortSignal，用于取消请求 */
+	signal?: AbortSignal;
 }
 
 export interface ApiClientConfig {
@@ -75,15 +99,25 @@ async function refreshToken(): Promise<boolean> {
 	const cfg = getConfig();
 
 	try {
+		// 读取 CSRF Token (Web 端需要)
+		const csrfToken = getCookie('hs_csrf_token');
+		
 		// Web 端：不在 body 中传递 refresh_token（从 HttpOnly Cookie 中读取）
 		// 严格遵循 @spec/api_spec_auth.mdc 规范：
 		// - client_type='web'：请求体不得携带 refresh_token
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json'
+		};
+		
+		// 添加 CSRF Token header (Web 端必需)
+		if (csrfToken) {
+			headers['X-CSRF-Token'] = csrfToken;
+		}
+		
 		const response = await fetch(`${cfg.baseUrl}${AUTH.REFRESH_TOKEN}`, {
 			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			credentials: 'include', // 携带 HttpOnly Cookie（包含 hs_refresh_token）
+			headers,
+			credentials: 'include', // 携带 HttpOnly Cookie（包含 hs_refresh_token 和 hs_csrf_token）
 			body: JSON.stringify({
 				client_type: 'web'
 				// ✅ 不添加 refresh_token 字段（Web 端从 Cookie 读取）
@@ -103,7 +137,8 @@ async function refreshToken(): Promise<boolean> {
 		// 刷新失败，清除 Token
 		cfg.clearToken();
 		return false;
-	} catch {
+	} catch (error) {
+		if (dev) console.error('[TokenRefresh] Token 刷新异常:', error);
 		cfg.clearToken();
 		return false;
 	}
@@ -149,28 +184,72 @@ async function request<T>(
 		}
 	}
 
+	// 注入 CSRF Token (Web 端需要)
+	// 对于需要 CSRF 保护的端点（如 refresh_token），自动添加
+	const csrfToken = getCookie('hs_csrf_token');
+	if (csrfToken) {
+		headers['X-CSRF-Token'] = csrfToken;
+	}
+
 	// 幂等键
 	if (options.idempotencyKey) {
 		headers['Idempotency-Key'] = options.idempotencyKey;
 	}
+
+	// 设置超时控制
+	const timeout = options.timeout ?? 30000; // 默认 30 秒
+	const controller = new AbortController();
+	const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+	// 合并 signal（支持外部取消 + 内部超时）
+	const signal = options.signal
+		? combineSignals([options.signal, controller.signal])
+		: controller.signal;
 
 	try {
 		const response = await fetch(`${cfg.baseUrl}${url}`, {
 			method: 'POST',
 			headers,
 			credentials: 'include',
-			body: body ? JSON.stringify(body) : undefined
+			body: body ? JSON.stringify(body) : undefined,
+			signal
 		});
 
+		// 清除超时定时器
+		clearTimeout(timeoutId);
+
+		// 处理 HTTP 错误
 		if (!response.ok) {
+			let errorMessage = `HTTP Error: ${response.status}`;
+			let requestId = response.headers.get('X-Request-ID') || '';
+			
+			// 尝试读取响应体中的错误信息
+			try {
+				const errorBody = await response.json();
+				if (errorBody.message) errorMessage = errorBody.message;
+				if (errorBody.request_id) requestId = errorBody.request_id;
+			} catch {
+				// 忽略响应体解析错误
+			}
+			
 			return {
 				code: -1,
-				message: `HTTP Error: ${response.status}`,
-				request_id: ''
+				message: errorMessage,
+				request_id: requestId
 			};
 		}
 
-		const data = (await response.json()) as ApiResponse<T>;
+		// 安全解析 JSON
+		let data: ApiResponse<T>;
+		try {
+			data = (await response.json()) as ApiResponse<T>;
+		} catch (parseError) {
+			return {
+				code: -1,
+				message: `响应解析失败: ${response.statusText}`,
+				request_id: response.headers.get('X-Request-ID') || ''
+			};
+		}
 
 		// Token 过期处理（仅在非重试且有 Token 时）
 		if (!isRetry && !options.skipAuth && cfg.getToken() && isTokenInvalidError(data.code)) {
@@ -183,13 +262,61 @@ async function request<T>(
 
 		return data;
 	} catch (error) {
-		// 网络错误
+		// 清除超时定时器
+		clearTimeout(timeoutId);
+
+		// 处理取消和超时错误
+		if (error instanceof Error) {
+			if (error.name === 'AbortError') {
+				// 检查是超时还是手动取消
+				if (options.signal?.aborted) {
+					return {
+						code: -1,
+						message: '请求已取消',
+						request_id: ''
+					};
+				} else {
+					return {
+						code: -1,
+						message: `请求超时（${timeout / 1000}秒）`,
+						request_id: ''
+					};
+				}
+			}
+			
+			// 其他错误
+			if (dev) console.error('[API] Request error:', error);
+			return {
+				code: -1,
+				message: error.message || '请求失败',
+				request_id: ''
+			};
+		}
+
+		// 网络错误或未知错误
 		return {
 			code: -1,
-			message: error instanceof Error ? error.message : '网络请求失败',
+			message: '网络请求失败',
 			request_id: ''
 		};
 	}
+}
+
+/**
+ * 合并多个 AbortSignal
+ */
+function combineSignals(signals: AbortSignal[]): AbortSignal {
+	const controller = new AbortController();
+
+	for (const signal of signals) {
+		if (signal.aborted) {
+			controller.abort();
+			break;
+		}
+		signal.addEventListener('abort', () => controller.abort(), { once: true });
+	}
+
+	return controller.signal;
 }
 
 /**

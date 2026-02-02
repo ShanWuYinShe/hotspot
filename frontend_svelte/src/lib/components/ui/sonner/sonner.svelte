@@ -8,10 +8,12 @@
 		class: className,
 		...restProps
 	}: Props & { class?: string } = $props();
+
+	const theme = $derived(mode.current);
 </script>
 
 <Sonner
-	theme={mode.current}
+	theme={theme}
 	class="toaster group"
 	toastOptions={{
 		classes: {

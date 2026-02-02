@@ -12,12 +12,14 @@ use std::env;
 use crate::error::{AppError, Result};
 
 // 使用 JWT_SECRET 派生加密密钥
+// 注意：这里使用 Lazy 确保只初始化一次
+// 如果初始化失败，所有使用 CIPHER 的地方都会返回错误
 static CIPHER: Lazy<Aes256Gcm> = Lazy::new(|| {
-    let secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+    let secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set for cursor encryption");
     let mut hasher = Sha256::new();
     hasher.update(secret.as_bytes());
     let key = hasher.finalize();
-    Aes256Gcm::new_from_slice(&key).expect("Invalid key length")
+    Aes256Gcm::new_from_slice(&key).expect("SHA-256 always produces valid AES-256 key length")
 });
 
 /// 分页游标工具
@@ -70,7 +72,7 @@ where
     // 3. 加密
     let ciphertext = CIPHER
         .encrypt(nonce, plaintext.as_ref())
-        .expect("Encryption failure"); // Should theoretically not fail
+        .map_err(|_| AppError::InternalError("Cursor encryption failed".to_string()))?;
 
     // 4. 拼接 Nonce + 密文
     let mut encrypted_bytes = nonce_bytes.to_vec();
@@ -94,3 +96,46 @@ pub type TimeCursor = (chrono::DateTime<chrono::Utc>, i64);
 /// 距离排序游标 (Distance, ID)
 /// 适用于: ORDER BY distance ASC, id ASC
 pub type DistanceCursor = (f64, i64);
+
+/// 通用分页处理函数（使用 limit+1 模式）
+///
+/// # 参数
+/// - `rows`: 查询结果（应该使用 `limit + 1` 查询）
+/// - `limit`: 实际需要返回的条数
+/// - `get_cursor_value`: 从项目中提取游标值的函数
+///
+/// # 返回
+/// - `items`: 截取后的实际数据（最多 `limit` 条）
+/// - `next_cursor`: 如果有更多数据则返回 `Some(cursor)`，否则返回 `None`
+///
+/// # 示例
+/// ```rust
+/// let rows = query.fetch_all().await?; // 查询了 limit + 1 条
+/// let (items, next_cursor) = paginate_with_limit_plus_one(
+///     rows,
+///     limit,
+///     |item| encode_cursor(&item.id)
+/// )?;
+/// ```
+pub fn paginate_with_limit_plus_one<T, F>(
+    rows: Vec<T>,
+    limit: i32,
+    get_cursor_value: F,
+) -> Result<(Vec<T>, Option<String>)>
+where
+    F: FnOnce(&T) -> Result<String>,
+{
+    let has_more = rows.len() > limit as usize;
+    let items: Vec<T> = rows.into_iter().take(limit as usize).collect();
+
+    let next_cursor = if has_more {
+        items
+            .last()
+            .map(|item| get_cursor_value(item))
+            .transpose()?
+    } else {
+        None
+    };
+
+    Ok((items, next_cursor))
+}

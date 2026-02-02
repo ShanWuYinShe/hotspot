@@ -102,6 +102,49 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
     tracing::debug!("WebSocket timeout checker started");
 
+    // 启动监控指标输出任务
+    let state_clone = state.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(60));
+        loop {
+            interval.tick().await;
+
+            // 输出缓存指标
+            let hit_rate = state_clone.cache_manager.metrics().get_hit_rate();
+            let hits = state_clone
+                .cache_manager
+                .metrics()
+                .hits
+                .load(std::sync::atomic::Ordering::Relaxed);
+            let misses = state_clone
+                .cache_manager
+                .metrics()
+                .misses
+                .load(std::sync::atomic::Ordering::Relaxed);
+            let errors = state_clone
+                .cache_manager
+                .metrics()
+                .errors
+                .load(std::sync::atomic::Ordering::Relaxed);
+
+            tracing::info!(
+                cache_hit_rate = %format!("{:.2}%", hit_rate * 100.0),
+                cache_hits = hits,
+                cache_misses = misses,
+                cache_errors = errors,
+                "缓存性能指标"
+            );
+
+            // 输出数据库连接池指标
+            tracing::info!(
+                pool_size = state_clone.db.size(),
+                pool_idle = state_clone.db.num_idle(),
+                "数据库连接池状态"
+            );
+        }
+    });
+    tracing::debug!("Monitoring metrics task started");
+
     // 创建路由
     // 明确挂载各版本 API，方便后续支持 v2、v3 等版本
     let app: Router = Router::new()

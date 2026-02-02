@@ -5,7 +5,7 @@ use tokio::sync::mpsc;
 use tracing::{error, info};
 
 use crate::{
-    dto::response::Location,
+    dto::request::Location,
     events::{event_bus::EventBus, event_types::AppEvent},
     repositories::{
         group_member_repo::GroupMemberRepository, notification_repo::NotificationType,
@@ -773,7 +773,6 @@ impl EventHandler {
                 reply_to,
                 mentions,
                 media,
-                location,
             } => {
                 let sender = self.get_user_info(*sender_id).await;
                 let message = WsMessage::GroupMessageNew {
@@ -783,7 +782,6 @@ impl EventHandler {
                     message_type: message_type.clone(),
                     content: content.clone(),
                     media: media.clone(),
-                    location: location.clone(),
                     reply_to: reply_to
                         .clone()
                         .map(|r| crate::websocket::types::MessageReplyTo {
@@ -937,7 +935,6 @@ impl EventHandler {
                 content,
                 reply_to,
                 media,
-                location,
             } => {
                 let sender = self.get_user_info(*sender_id).await;
                 let message = WsMessage::PrivateMessageNew {
@@ -947,7 +944,6 @@ impl EventHandler {
                     message_type: message_type.clone(),
                     content: content.clone(),
                     media: media.clone(),
-                    location: location.clone(),
                     reply_to: reply_to
                         .clone()
                         .map(|r| crate::websocket::types::MessageReplyTo {

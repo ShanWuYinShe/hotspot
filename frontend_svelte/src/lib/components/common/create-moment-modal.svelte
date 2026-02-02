@@ -47,7 +47,7 @@
 
 	const MAX_IMAGES = 9;
 
-	let tags = $derived(
+	const tags = $derived(
 		tagsInput
 			.split(/[,，\s]+/)
 			.map((tag) => tag.replace(/^#/, '').trim())

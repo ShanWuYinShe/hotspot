@@ -54,9 +54,8 @@ CREATE TABLE feed_feedback (
     feedback_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
     feed_item_id UUID NOT NULL,
     user_id BIGINT NOT NULL,
-    action VARCHAR(20) NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT check_feedback_action CHECK (action IN ('hide', 'not_interested', 'clicked', 'viewed'))
+    action feed_feedback_action NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_feed_feedback_feedback_id ON feed_feedback (feedback_id);
@@ -71,14 +70,13 @@ CREATE TABLE system_configs (
     config_id UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
     key VARCHAR(100) UNIQUE NOT NULL,
     value TEXT NOT NULL,
-    type VARCHAR(20) NOT NULL,
+    type config_value_type NOT NULL,
     category VARCHAR(50) NOT NULL,
     description TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-    deleted_at TIMESTAMPTZ,
-    CONSTRAINT check_config_type CHECK (type IN ('string', 'number', 'boolean'))
+    deleted_at TIMESTAMPTZ
 );
 
 CREATE INDEX idx_system_configs_config_id ON system_configs (config_id) WHERE is_deleted = FALSE;
@@ -174,18 +172,17 @@ CREATE TABLE upload_sessions (
     file_name VARCHAR(255) NOT NULL,
     file_size BIGINT NOT NULL,
     mime_type VARCHAR(100) NOT NULL,
-    chunk_size INTEGER NOT NULL DEFAULT 5242880,  -- 默认5MB
+    chunk_size INTEGER NOT NULL DEFAULT 5242880,
     total_chunks INTEGER NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'in_progress',  -- 'in_progress', 'completed', 'failed', 'aborted'
+    status upload_status NOT NULL DEFAULT 'pending',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ,
-    expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '24 hours'),
-    CONSTRAINT check_upload_status CHECK (status IN ('in_progress', 'completed', 'failed', 'aborted'))
+    expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '24 hours')
 );
 
 CREATE INDEX idx_upload_sessions_upload_id ON upload_sessions (upload_id);
 CREATE INDEX idx_upload_sessions_uploader ON upload_sessions (uploader_id, created_at DESC);
-CREATE INDEX idx_upload_sessions_expires ON upload_sessions (expires_at) WHERE status = 'in_progress';
+CREATE INDEX idx_upload_sessions_expires ON upload_sessions (expires_at) WHERE status = 'pending' OR status = 'uploading';
 
 CREATE TRIGGER trigger_upload_sessions_updated_at
     BEFORE UPDATE ON upload_sessions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

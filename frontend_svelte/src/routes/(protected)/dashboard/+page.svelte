@@ -53,7 +53,7 @@
 		</Card>
 
 		<Card class="cursor-pointer transition-shadow hover:shadow-lg">
-			<a href="/explore?tab=nearby&nearby=users">
+			<a href="/users/nearby">
 				<CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
 					<CardTitle class="text-sm font-medium">附近</CardTitle>
 					<MapPin class="h-4 w-4 text-muted-foreground" />

@@ -9,10 +9,50 @@
 use redis::aio::ConnectionManager;
 use redis::AsyncCommands;
 use serde::{de::DeserializeOwned, Serialize};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 
 /// 空值标记
 const NULL_MARKER: &str = "__NULL__";
+
+/// 缓存指标
+#[derive(Debug, Clone)]
+pub struct CacheMetrics {
+    pub hits: Arc<AtomicU64>,
+    pub misses: Arc<AtomicU64>,
+    pub errors: Arc<AtomicU64>,
+}
+
+impl Default for CacheMetrics {
+    fn default() -> Self {
+        Self {
+            hits: Arc::new(AtomicU64::new(0)),
+            misses: Arc::new(AtomicU64::new(0)),
+            errors: Arc::new(AtomicU64::new(0)),
+        }
+    }
+}
+
+impl CacheMetrics {
+    pub fn get_hit_rate(&self) -> f64 {
+        let hits = self.hits.load(Ordering::Relaxed);
+        let misses = self.misses.load(Ordering::Relaxed);
+        let total = hits + misses;
+
+        if total == 0 {
+            0.0
+        } else {
+            hits as f64 / total as f64
+        }
+    }
+
+    pub fn reset(&self) {
+        self.hits.store(0, Ordering::Relaxed);
+        self.misses.store(0, Ordering::Relaxed);
+        self.errors.store(0, Ordering::Relaxed);
+    }
+}
 
 /// 缓存配置
 #[derive(Debug, Clone)]
@@ -69,6 +109,7 @@ pub mod cache_keys {
 pub struct CacheManager {
     redis: ConnectionManager,
     config: CacheConfig,
+    metrics: CacheMetrics,
 }
 
 impl CacheManager {
@@ -77,7 +118,16 @@ impl CacheManager {
     }
 
     pub fn with_config(redis: ConnectionManager, config: CacheConfig) -> Self {
-        Self { redis, config }
+        Self {
+            redis,
+            config,
+            metrics: CacheMetrics::default(),
+        }
+    }
+
+    /// 获取缓存指标
+    pub fn metrics(&self) -> &CacheMetrics {
+        &self.metrics
     }
 
     /// 生成带随机波动的过期时间
@@ -115,7 +165,22 @@ impl CacheManager {
         let key = self.make_key(prefix, id);
         let mut conn = self.redis.clone();
 
-        let value: Option<String> = conn.get(&key).await?;
+        let result = conn.get(&key).await;
+
+        // 记录指标
+        match &result {
+            Ok(Some(_)) => {
+                self.metrics.hits.fetch_add(1, Ordering::Relaxed);
+            }
+            Ok(None) => {
+                self.metrics.misses.fetch_add(1, Ordering::Relaxed);
+            }
+            Err(_) => {
+                self.metrics.errors.fetch_add(1, Ordering::Relaxed);
+            }
+        }
+
+        let value: Option<String> = result?;
 
         match value {
             Some(v) if v == NULL_MARKER => Ok(Some(None)), // 空值缓存
@@ -227,11 +292,68 @@ impl CacheManager {
     }
 
     /// 释放锁
+    ///
+    /// ⚠️ 警告：此方法不验证锁的所有者，可能误删其他进程的锁
+    /// 建议使用 `unlock_with_owner` 替代
     pub async fn unlock(&self, lock_name: &str) -> Result<(), redis::RedisError> {
         let key = format!("lock:{}", lock_name);
         let mut conn = self.redis.clone();
         conn.del::<_, ()>(&key).await?;
         Ok(())
+    }
+
+    /// 尝试获取锁（带所有者标识）
+    ///
+    /// 使用 owner_id 作为锁的值，确保只有持有者可以释放锁
+    pub async fn try_lock_with_owner(
+        &self,
+        lock_name: &str,
+        owner_id: &str,
+    ) -> Result<bool, redis::RedisError> {
+        let key = format!("lock:{}", lock_name);
+        let mut conn = self.redis.clone();
+
+        // SET key owner_id NX EX seconds
+        let result: Option<String> = redis::cmd("SET")
+            .arg(&key)
+            .arg(owner_id)
+            .arg("NX")
+            .arg("EX")
+            .arg(self.config.lock_timeout_secs)
+            .query_async(&mut conn)
+            .await?;
+
+        Ok(result.is_some())
+    }
+
+    /// 释放锁（验证所有者）
+    ///
+    /// 使用 Lua 脚本保证原子性：仅当锁的值为 owner_id 时才删除
+    /// 返回 true 表示成功释放，false 表示锁不存在或不属于当前所有者
+    pub async fn unlock_with_owner(
+        &self,
+        lock_name: &str,
+        owner_id: &str,
+    ) -> Result<bool, redis::RedisError> {
+        let key = format!("lock:{}", lock_name);
+        let mut conn = self.redis.clone();
+
+        // Lua 脚本保证原子性：仅当锁的值为 owner_id 时才删除
+        let script = r#"
+            if redis.call("GET", KEYS[1]) == ARGV[1] then
+                return redis.call("DEL", KEYS[1])
+            else
+                return 0
+            end
+        "#;
+
+        let result: i32 = redis::Script::new(script)
+            .key(&key)
+            .arg(owner_id)
+            .invoke_async(&mut conn)
+            .await?;
+
+        Ok(result == 1)
     }
 
     /// 带锁的缓存获取/设置
@@ -411,6 +533,27 @@ impl CacheManager {
         let mut conn = self.redis.clone();
         conn.expire::<_, ()>(key, ttl_secs as i64).await?;
         Ok(())
+    }
+
+    /// 执行 Lua 脚本
+    ///
+    /// 用于需要原子性操作的场景（如限流、分布式锁等）
+    pub async fn eval_script<T>(
+        &self,
+        script: &str,
+        keys: &[&str],
+        args: &[&str],
+    ) -> Result<T, redis::RedisError>
+    where
+        T: redis::FromRedisValue,
+    {
+        let mut conn = self.redis.clone();
+
+        redis::Script::new(script)
+            .key(keys)
+            .arg(args)
+            .invoke_async(&mut conn)
+            .await
     }
 }
 

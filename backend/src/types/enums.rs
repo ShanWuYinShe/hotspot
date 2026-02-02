@@ -118,6 +118,50 @@ impl std::str::FromStr for Gender {
     }
 }
 
+/// 关注来源
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum FollowSource {
+    Moment,         // 通过瞬间
+    Search,         // 通过搜索
+    Recommendation, // 通过推荐
+    Profile,        // 通过个人主页
+    Group,          // 通过群组
+}
+
+impl FollowSource {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            FollowSource::Moment => "moment",
+            FollowSource::Search => "search",
+            FollowSource::Recommendation => "recommendation",
+            FollowSource::Profile => "profile",
+            FollowSource::Group => "group",
+        }
+    }
+}
+
+impl std::fmt::Display for FollowSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl std::str::FromStr for FollowSource {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "moment" => Ok(FollowSource::Moment),
+            "search" => Ok(FollowSource::Search),
+            "recommendation" => Ok(FollowSource::Recommendation),
+            "profile" => Ok(FollowSource::Profile),
+            "group" => Ok(FollowSource::Group),
+            _ => Err(format!("无效的关注来源: {}", s)),
+        }
+    }
+}
+
 // ============================================================
 // 隐私与权限相关枚举
 // ============================================================
@@ -356,13 +400,12 @@ impl std::fmt::Display for MemberLeaveReason {
 #[sqlx(type_name = "message_type", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum MessageType {
-    Text,     // 文本
-    Image,    // 图片
-    Video,    // 视频
-    Audio,    // 音频
-    File,     // 文件
-    Location, // 位置
-    System,   // 系统消息
+    Text,   // 文本
+    Image,  // 图片
+    Video,  // 视频
+    Audio,  // 音频
+    File,   // 文件
+    System, // 系统消息
 }
 
 impl MessageType {
@@ -373,7 +416,6 @@ impl MessageType {
             MessageType::Video => "video",
             MessageType::Audio => "audio",
             MessageType::File => "file",
-            MessageType::Location => "location",
             MessageType::System => "system",
         }
     }
@@ -401,7 +443,6 @@ pub enum SendMessageType {
     Video,
     Audio,
     File,
-    Location,
 }
 
 impl SendMessageType {
@@ -412,7 +453,6 @@ impl SendMessageType {
             SendMessageType::Video => "video",
             SendMessageType::Audio => "audio",
             SendMessageType::File => "file",
-            SendMessageType::Location => "location",
         }
     }
 
@@ -423,7 +463,6 @@ impl SendMessageType {
             SendMessageType::Video => MessageType::Video,
             SendMessageType::Audio => MessageType::Audio,
             SendMessageType::File => MessageType::File,
-            SendMessageType::Location => MessageType::Location,
         }
     }
 }
@@ -444,7 +483,6 @@ impl std::str::FromStr for SendMessageType {
             "video" => Ok(SendMessageType::Video),
             "audio" => Ok(SendMessageType::Audio),
             "file" => Ok(SendMessageType::File),
-            "location" => Ok(SendMessageType::Location),
             _ => Err(format!("无效的可发送消息类型: {}", s)),
         }
     }
@@ -544,6 +582,12 @@ impl std::str::FromStr for ReportStatus {
     }
 }
 
+impl std::convert::From<String> for ReportStatus {
+    fn from(s: String) -> Self {
+        s.parse().unwrap_or(ReportStatus::Pending)
+    }
+}
+
 /// 举报目标类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
 #[sqlx(type_name = "report_target_type", rename_all = "lowercase")]
@@ -586,6 +630,12 @@ impl std::str::FromStr for ReportTargetType {
             "group" => Ok(ReportTargetType::Group),
             _ => Err(format!("无效的举报目标类型: {}", s)),
         }
+    }
+}
+
+impl std::convert::From<String> for ReportTargetType {
+    fn from(s: String) -> Self {
+        s.parse().unwrap_or(ReportTargetType::Moment)
     }
 }
 
@@ -1549,13 +1599,15 @@ impl std::fmt::Display for FavoriteAction {
     }
 }
 
-/// 配置值类型（内部使用）
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+/// 配置值类型
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Type)]
+#[sqlx(type_name = "config_value_type", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum ConfigValueType {
     String,
     Number,
     Boolean,
+    Json,
 }
 
 impl ConfigValueType {
@@ -1564,11 +1616,42 @@ impl ConfigValueType {
             ConfigValueType::String => "string",
             ConfigValueType::Number => "number",
             ConfigValueType::Boolean => "boolean",
+            ConfigValueType::Json => "json",
         }
     }
 }
 
 impl std::fmt::Display for ConfigValueType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+/// 上传状态
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Type)]
+#[sqlx(type_name = "upload_status", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
+pub enum UploadStatus {
+    Pending,
+    Uploading,
+    Completed,
+    Failed,
+    Cancelled,
+}
+
+impl UploadStatus {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            UploadStatus::Pending => "pending",
+            UploadStatus::Uploading => "uploading",
+            UploadStatus::Completed => "completed",
+            UploadStatus::Failed => "failed",
+            UploadStatus::Cancelled => "cancelled",
+        }
+    }
+}
+
+impl std::fmt::Display for UploadStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.as_str())
     }
@@ -1625,6 +1708,84 @@ impl serde::Serialize for ApplicationStatusFilter {
         match self {
             ApplicationStatusFilter::Any => serializer.serialize_str("all"),
             ApplicationStatusFilter::Specific(s) => serializer.serialize_str(s.as_str()),
+        }
+    }
+}
+
+// ============================================================
+// 推荐系统枚举
+// ============================================================
+
+/// 推荐理由类型 - API 文档: RecommendationType
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RecommendationType {
+    FriendLiked, // 好友点赞
+    Nearby,      // 附近热门
+    Trending,    // 热门趋势
+    Following,   // 关注的人
+    TagMatch,    // 标签匹配
+}
+
+impl RecommendationType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            RecommendationType::FriendLiked => "friend_liked",
+            RecommendationType::Nearby => "nearby",
+            RecommendationType::Trending => "trending",
+            RecommendationType::Following => "following",
+            RecommendationType::TagMatch => "tag_match",
+        }
+    }
+}
+
+// ============================================================
+// 位置分享相关枚举
+// ============================================================
+
+/// 分享类型
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
+#[sqlx(type_name = "VARCHAR", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
+pub enum ShareType {
+    Location, // 位置分享
+    Moment,   // 动态分享
+    Group,    // 群组分享
+    User,     // 用户分享
+}
+
+impl Default for ShareType {
+    fn default() -> Self {
+        ShareType::Location
+    }
+}
+
+impl ShareType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ShareType::Location => "location",
+            ShareType::Moment => "moment",
+            ShareType::Group => "group",
+            ShareType::User => "user",
+        }
+    }
+}
+
+impl std::fmt::Display for ShareType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl std::str::FromStr for ShareType {
+    type Err = String;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "location" => Ok(ShareType::Location),
+            "moment" => Ok(ShareType::Moment),
+            "group" => Ok(ShareType::Group),
+            "user" => Ok(ShareType::User),
+            _ => Err(format!("Unknown ShareType: {}", s)),
         }
     }
 }

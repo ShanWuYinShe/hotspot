@@ -7,7 +7,8 @@
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import { Badge } from '$lib/components/ui/badge';
-	import { Skeleton } from '$lib/components/ui/skeleton';
+	import ListSkeleton from '$lib/components/common/list-skeleton.svelte';
+	import EmptyState from '$lib/components/common/empty-state.svelte';
 	import CreateGroupModal from '$lib/components/common/create-group-modal.svelte';
 	import type { MyGroupItem } from '$lib/types/api';
 	import Plus from 'lucide-svelte/icons/plus';
@@ -57,33 +58,20 @@
 	</div>
 
 	{#if isLoading}
-		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-			{#each Array(6) as _}
-				<Card>
-					<CardContent class="flex items-center gap-4 p-4">
-						<Skeleton class="h-12 w-12 rounded-full" />
-						<div class="flex-1 space-y-2">
-							<Skeleton class="h-4 w-24" />
-							<Skeleton class="h-3 w-16" />
-						</div>
-					</CardContent>
-				</Card>
-			{/each}
-		</div>
+		<ListSkeleton type="group" count={6} layout="grid" />
 	{:else if groups.length === 0}
-		<Card>
-			<CardContent class="flex flex-col items-center justify-center py-12">
-				<Users class="mb-4 h-12 w-12 text-muted-foreground" />
-				<p class="text-lg font-medium">还没有加入群组</p>
-				<p class="mt-1 text-muted-foreground">去探索或创建一个群组吧</p>
-				<div class="mt-4 flex gap-3">
-					<a href="/explore?tab=nearby&nearby=groups">
-						<Button variant="outline">发现附近群组</Button>
-					</a>
-					<Button onclick={() => (showCreateGroup = true)}>创建群组</Button>
-				</div>
-			</CardContent>
-		</Card>
+		<EmptyState 
+			icon={Users} 
+			title="还没有加入群组" 
+			description="去探索或创建一个群组吧"
+		>
+			<div class="mt-4 flex gap-3">
+				<a href="/groups/nearby">
+					<Button variant="outline">发现附近群组</Button>
+				</a>
+				<Button onclick={() => (showCreateGroup = true)}>创建群组</Button>
+			</div>
+		</EmptyState>
 	{:else}
 		<div class="columns-1 gap-4 sm:columns-2 xl:columns-3">
 			{#each groups as group (group.group_chat_id)}

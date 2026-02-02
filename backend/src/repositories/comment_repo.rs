@@ -202,7 +202,8 @@ impl CommentRepository {
             i64::MAX
         };
 
-        let comments = sqlx::query_as!(
+        // 查询 limit + 1 条以判断是否有更多数据
+        let rows = sqlx::query_as!(
             CommentRow,
             r#"
             SELECT id, comment_id, moment_id, user_id, parent_id, reply_to_user_id, content, 
@@ -214,13 +215,14 @@ impl CommentRepository {
             "#,
             moment_id,
             last_id,
-            limit as i64
+            (limit + 1) as i64
         )
         .fetch_all(&self.pool)
         .await?;
 
-        let next_cursor = comments.last().map(|c| encode_cursor(&c.id)).transpose()?;
-        Ok((comments, next_cursor))
+        crate::utils::pagination::paginate_with_limit_plus_one(rows, limit, |c| {
+            encode_cursor(&c.id)
+        })
     }
 
     /// 获取评论的回复列表
@@ -236,7 +238,8 @@ impl CommentRepository {
             i64::MAX
         };
 
-        let replies = sqlx::query_as!(
+        // 查询 limit + 1 条以判断是否有更多数据
+        let rows = sqlx::query_as!(
             CommentRow,
             r#"
             SELECT id, comment_id, moment_id, user_id, parent_id, reply_to_user_id, content, 
@@ -248,13 +251,14 @@ impl CommentRepository {
             "#,
             parent_id,
             last_id,
-            limit as i64
+            (limit + 1) as i64
         )
         .fetch_all(&self.pool)
         .await?;
 
-        let next_cursor = replies.last().map(|c| encode_cursor(&c.id)).transpose()?;
-        Ok((replies, next_cursor))
+        crate::utils::pagination::paginate_with_limit_plus_one(rows, limit, |c| {
+            encode_cursor(&c.id)
+        })
     }
 
     /// 获取评论点赞列表
@@ -270,6 +274,7 @@ impl CommentRepository {
             i64::MAX
         };
 
+        // 查询 limit + 1 条以判断是否有更多数据
         let likes = sqlx::query_as!(
             CommentLikeRow,
             r#"
@@ -281,13 +286,14 @@ impl CommentRepository {
             "#,
             comment_id,
             last_id,
-            limit
+            limit + 1
         )
         .fetch_all(&self.pool)
         .await?;
 
-        let next_cursor = likes.last().map(|l| encode_cursor(&l.id)).transpose()?;
-        Ok((likes, next_cursor))
+        crate::utils::pagination::paginate_with_limit_plus_one(likes, limit as i32, |l| {
+            encode_cursor(&l.id)
+        })
     }
 
     /// 列出布隆过滤器用的 comment_id（按 id 分页）

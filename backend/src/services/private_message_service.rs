@@ -19,15 +19,15 @@ use crate::{
             UpdatePrivateMessageRequest,
         },
         response::{
-            Location, MessageLocation, MessageMedia, MessageReactionItem, MessageReplyTo,
-            PaginatedData, PaginationMeta, PrivateMessageItem, SendPrivateMessageData, UserInfo,
+            MessageMedia, MessageReactionItem, MessageReplyTo, PaginatedData, PaginationMeta,
+            PrivateMessageItem, SendPrivateMessageData, UserInfo,
         },
     },
     error::{AppError, Result},
     events::event_types::AppEvent,
     repositories::{
         chat_unread_repo::ChatUnreadRepository,
-        message_reactions_repo::MessageReactionsRepository,
+        private_message_reactions_repo::PrivateMessageReactionsRepository,
         private_chat_repo::{PrivateChatRepository, PrivateChatRow},
         private_message_repo::PrivateMessageRepository,
         user_blocks_repo::UserBlocksRepository,
@@ -53,7 +53,7 @@ pub struct PrivateMessageService {
     follows_repo: UserFollowsRepository,
     blocks_repo: UserBlocksRepository,
     settings_repo: UserSettingsRepository,
-    reactions_repo: MessageReactionsRepository,
+    reactions_repo: PrivateMessageReactionsRepository,
     media_service: MediaService,
 }
 
@@ -68,7 +68,7 @@ impl PrivateMessageService {
         follows_repo: UserFollowsRepository,
         blocks_repo: UserBlocksRepository,
         settings_repo: UserSettingsRepository,
-        reactions_repo: MessageReactionsRepository,
+        reactions_repo: PrivateMessageReactionsRepository,
         media_service: MediaService,
     ) -> Self {
         Self {
@@ -249,7 +249,6 @@ impl PrivateMessageService {
                         MessageType::Audio => "[语音]".to_string(),
                         MessageType::File => "[文件]".to_string(),
                         MessageType::System => reply_msg.content,
-                        MessageType::Location => "[位置]".to_string(),
                     };
 
                     reply_to_snapshot = Some(crate::events::event_types::ReplyToSnapshot {
@@ -342,18 +341,6 @@ impl PrivateMessageService {
                 media.as_ref().and_then(|m| m.file_size),
                 media.as_ref().and_then(|m| m.thumbnail_url.as_deref()),
                 media.as_ref().and_then(|m| m.duration.map(|d| d as i32)),
-                req.location
-                    .as_ref()
-                    .map(|msg_loc| msg_loc.location.latitude),
-                req.location
-                    .as_ref()
-                    .map(|msg_loc| msg_loc.location.longitude),
-                req.location
-                    .as_ref()
-                    .map(|msg_loc| msg_loc.location.location_name.as_str()),
-                req.location
-                    .as_ref()
-                    .and_then(|msg_loc| msg_loc.address.as_deref()),
             )
             .await?;
 
@@ -406,18 +393,6 @@ impl PrivateMessageService {
             None
         };
 
-        let event_location =
-            req.location
-                .as_ref()
-                .map(|loc| crate::dto::response::MessageLocation {
-                    location: crate::dto::response::Location {
-                        latitude: loc.location.latitude,
-                        longitude: loc.location.longitude,
-                        location_name: loc.location.location_name.clone(),
-                    },
-                    address: loc.address.clone(),
-                });
-
         self.event_bus.publish(AppEvent::PrivateMessageSent {
             message_id: message.message_id,
             sender_id: user_id,
@@ -426,7 +401,6 @@ impl PrivateMessageService {
             content: event_content,
             reply_to: reply_to_snapshot,
             media,
-            location: event_location,
         });
 
         Ok(SendPrivateMessageData {
@@ -529,22 +503,6 @@ impl PrivateMessageService {
                         .unwrap_or(crate::types::enums::UserType::Normal),
                 },
                 media,
-                location: if let (Some(lat), Some(lng), Some(name)) = (
-                    m.location_latitude,
-                    m.location_longitude,
-                    m.location_name.clone(),
-                ) {
-                    Some(MessageLocation {
-                        location: Location {
-                            latitude: lat,
-                            longitude: lng,
-                            location_name: name,
-                        },
-                        address: m.location_address.clone(),
-                    })
-                } else {
-                    None
-                },
                 reply_to: m.reply_to_message_id.and_then(|reply_id| {
                     reply_map.get(&reply_id).map(|reply_msg| {
                         let reply_sender = reply_sender_map.get(&reply_msg.sender_id);

@@ -13,9 +13,10 @@ pub async fn health(
     State(state): State<AppState>,
     Json(_req): Json<SystemHealthRequest>,
 ) -> Result<Json<ApiResponse<HealthCheckData>>> {
+    // 数据库健康检查（基础设施检查，不涉及业务逻辑）
     let db_ok = match tokio::time::timeout(
         Duration::from_secs(2),
-        sqlx::query("SELECT 1").execute(&state.db),
+        sqlx::query!(r#"SELECT 1 as "check!""#).fetch_one(&state.db),
     )
     .await
     {

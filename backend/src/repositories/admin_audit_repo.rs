@@ -92,7 +92,8 @@ impl AdminAuditRepository {
     }
 
     pub async fn create_log(&self, input: NewAuditLog) -> Result<AuditLogDetailRow> {
-        let row = sqlx::query_as::<_, AuditLogDetailRow>(
+        let row = sqlx::query_as_unchecked!(
+            AuditLogDetailRow,
             r#"
             INSERT INTO admin_audit_logs (
                 action, operator_id, target_type, target_id, target_name,
@@ -100,20 +101,20 @@ impl AdminAuditRepository {
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             RETURNING
-                id, log_id, action, operator_id, target_type, target_id, target_name,
+                log_id, action, operator_id, target_type, target_id, target_name,
                 details, before_state, after_state, ip_address, user_agent, created_at
             "#,
+            input.action,
+            input.operator_id,
+            input.target_type,
+            input.target_id,
+            input.target_name,
+            input.details,
+            input.before_state,
+            input.after_state,
+            input.ip_address,
+            input.user_agent
         )
-        .bind(input.action)
-        .bind(input.operator_id)
-        .bind(input.target_type)
-        .bind(input.target_id)
-        .bind(input.target_name)
-        .bind(input.details)
-        .bind(input.before_state)
-        .bind(input.after_state)
-        .bind(input.ip_address)
-        .bind(input.user_agent)
         .fetch_one(&self.pool)
         .await?;
 
@@ -232,15 +233,16 @@ impl AdminAuditRepository {
     }
 
     pub async fn get_detail(&self, log_id: Uuid) -> Result<Option<AuditLogDetailRow>> {
-        let row = sqlx::query_as::<_, AuditLogDetailRow>(
+        let row = sqlx::query_as_unchecked!(
+            AuditLogDetailRow,
             r#"
             SELECT log_id, action, operator_id, target_type, target_id, target_name,
                    details, before_state, after_state, ip_address, user_agent, created_at
             FROM admin_audit_logs
             WHERE log_id = $1
             "#,
+            log_id
         )
-        .bind(log_id)
         .fetch_optional(&self.pool)
         .await?;
 
@@ -248,7 +250,8 @@ impl AdminAuditRepository {
     }
 
     pub async fn create_export(&self, params: AuditExportParams) -> Result<AuditExportRow> {
-        let row = sqlx::query_as::<_, AuditExportRow>(
+        let row = sqlx::query_as_unchecked!(
+            AuditExportRow,
             r#"
             INSERT INTO admin_audit_exports (
                 status, format, action, operator_id, target_type, target_id, start_time, end_time
@@ -257,15 +260,15 @@ impl AdminAuditRepository {
             RETURNING
                 export_id, status, download_key, expires_at
             "#,
+            params.status,
+            params.format,
+            params.action,
+            params.operator_id,
+            params.target_type,
+            params.target_id,
+            params.start_time,
+            params.end_time
         )
-        .bind(params.status)
-        .bind(params.format)
-        .bind(params.action)
-        .bind(params.operator_id)
-        .bind(params.target_type)
-        .bind(params.target_id)
-        .bind(params.start_time)
-        .bind(params.end_time)
         .fetch_one(&self.pool)
         .await?;
 
@@ -280,7 +283,8 @@ impl AdminAuditRepository {
         expires_at: Option<DateTime<Utc>>,
         error_message: Option<String>,
     ) -> Result<AuditExportRow> {
-        let row = sqlx::query_as::<_, AuditExportRow>(
+        let row = sqlx::query_as_unchecked!(
+            AuditExportRow,
             r#"
             UPDATE admin_audit_exports
             SET status = $2,
@@ -292,12 +296,12 @@ impl AdminAuditRepository {
             RETURNING
                 export_id, status, download_key, expires_at
             "#,
+            export_id,
+            status,
+            download_key,
+            expires_at,
+            error_message
         )
-        .bind(export_id)
-        .bind(status)
-        .bind(download_key)
-        .bind(expires_at)
-        .bind(error_message)
         .fetch_one(&self.pool)
         .await?;
 
@@ -305,14 +309,15 @@ impl AdminAuditRepository {
     }
 
     pub async fn get_export(&self, export_id: Uuid) -> Result<Option<AuditExportRow>> {
-        let row = sqlx::query_as::<_, AuditExportRow>(
+        let row = sqlx::query_as_unchecked!(
+            AuditExportRow,
             r#"
             SELECT export_id, status, download_key, expires_at
             FROM admin_audit_exports
             WHERE export_id = $1
             "#,
+            export_id
         )
-        .bind(export_id)
         .fetch_optional(&self.pool)
         .await?;
 
@@ -320,17 +325,18 @@ impl AdminAuditRepository {
     }
 
     pub async fn list_user_ban_logs(&self, target_id: &str) -> Result<Vec<AuditLogDetailRow>> {
-        let rows = sqlx::query_as::<_, AuditLogDetailRow>(
+        let rows = sqlx::query_as_unchecked!(
+            AuditLogDetailRow,
             r#"
-            SELECT id, log_id, action, operator_id, target_type, target_id, target_name,
+            SELECT log_id, action, operator_id, target_type, target_id, target_name,
                    details, before_state, after_state, ip_address, user_agent, created_at
             FROM admin_audit_logs
             WHERE target_id = $1
               AND action IN ('user.ban', 'user.unban')
-            ORDER BY created_at ASC, id ASC
+            ORDER BY created_at ASC
             "#,
+            target_id
         )
-        .bind(target_id)
         .fetch_all(&self.pool)
         .await?;
 
@@ -338,17 +344,18 @@ impl AdminAuditRepository {
     }
 
     pub async fn list_group_dismiss_logs(&self, target_id: &str) -> Result<Vec<AuditLogDetailRow>> {
-        let rows = sqlx::query_as::<_, AuditLogDetailRow>(
+        let rows = sqlx::query_as_unchecked!(
+            AuditLogDetailRow,
             r#"
-            SELECT id, log_id, action, operator_id, target_type, target_id, target_name,
+            SELECT log_id, action, operator_id, target_type, target_id, target_name,
                    details, before_state, after_state, ip_address, user_agent, created_at
             FROM admin_audit_logs
             WHERE target_id = $1
               AND action = 'group.dismiss'
-            ORDER BY created_at ASC, id ASC
+            ORDER BY created_at ASC
             "#,
+            target_id
         )
-        .bind(target_id)
         .fetch_all(&self.pool)
         .await?;
 

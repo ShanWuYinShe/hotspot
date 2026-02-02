@@ -15,40 +15,40 @@ websocket/
 
 ## 快速开始
 
-### 1. 初始化 WebSocket（在根 Layout 中）
+### 1. 初始化 WebSocket（自动完成）
 
-```typescript
-import { initializeWebSocket } from '$lib/stores/websocket-lifecycle.svelte';
+WebSocket 在客户端入口 `src/hooks.client.ts` 中初始化：应用加载时 `websocketStore` 已就绪，并会在 `beforeunload` 时调用 `websocketStore.disconnect()` 做清理。连接由 `websocketStore` 内部根据认证状态（`authStore`）自动管理。
 
-onMount(() => {
-  initializeWebSocket(); // 自动监听登录状态，登录后自动连接
-});
-```
+**特点**：
+- ✅ 应用启动时 WebSocket 模块已加载
+- ✅ 登录时自动连接，登出时自动断开
+- ✅ 无需在组件中手动 connect/disconnect
 
 ### 2. 在聊天页面中使用
+
+推荐使用 `$effect` 的 cleanup 在组件卸载时自动取消订阅与监听（与项目内实践一致）：
 
 ```typescript
 import { websocketStore, subscriptionManager, eventHandlers } from '$lib/websocket';
 
-onMount(() => {
-  // 订阅对方用户状态
-  subscriptionManager.subscribe('user', [targetUserId]);
-  
-  // 监听私聊消息
+$effect(() => {
+  const userId = targetUserId; // 依赖当前会话
+  subscriptionManager.subscribe('user', [userId]);
+
   const unsubscribe = eventHandlers.onPrivateMessage((payload) => {
-    if (payload.target_user_id === targetUserId) {
-      // 添加到消息列表
+    if (payload.target_user_id === userId) {
       messages = [...messages, convertToMessageItem(payload)];
     }
   });
-  
-  // 组件卸载时清理
-  onDestroy(() => {
+
+  return () => {
     unsubscribe();
-    subscriptionManager.unsubscribe('user', [targetUserId]);
-  });
+    subscriptionManager.unsubscribe('user', [userId]);
+  };
 });
 ```
+
+也可使用 `onMount` + `onDestroy` 注册与清理，效果等价。
 
 ### 3. 发送正在输入状态
 
@@ -106,19 +106,26 @@ console.log(notificationStore.unreadNotifications);
 
 ### websocketStore
 
-#### 方法
+#### 响应式状态（使用 $state）
 
-- `connect(url?)` - 连接 WebSocket
-- `disconnect()` - 断开连接
-- `send(event)` - 发送事件
-- `on(eventType, handler)` - 监听事件
-- `off(eventType, handler?)` - 移除监听
-
-#### 状态
-
-- `connectionState` - 连接状态
+- `connectionState` - 连接状态 (`'disconnected' | 'connecting' | 'authenticating' | 'connected' | 'reconnecting' | 'failed'`)
 - `connectionId` - 连接 ID
 - `lastError` - 最后的错误信息
+
+#### 派生状态（使用 $derived）
+
+- `isConnected` - 是否已连接（`connectionState === 'connected'`）
+- `isConnecting` - 是否正在连接中（`connecting | authenticating | reconnecting`）
+- `canSendMessage` - 是否可以发送消息（`connectionState === 'connected'`）
+
+#### 方法
+
+- `connect(url?): void` - 连接 WebSocket
+- `disconnect(): void` - 断开连接
+- `send(event): void` - 发送事件（未连接时自动入队）
+- `on<T>(eventType, handler): () => void` - 监听事件（返回清理函数）
+- `off(eventType, handler?): void` - 移除监听
+- `debug()` - 打印调试信息（控制台使用 `window.__debugWebSocket()`）
 
 ### subscriptionManager
 
@@ -162,13 +169,11 @@ if (isSuccess(response)) {
 ### 2. 订阅管理最佳实践
 
 ```typescript
-// ✅ 推荐：在组件中管理订阅
-onMount(() => {
-  subscriptionManager.subscribe('group', [groupId]);
-  
-  onDestroy(() => {
-    subscriptionManager.unsubscribe('group', [groupId]);
-  });
+// ✅ 推荐：用 $effect 的 cleanup 在组件卸载时自动取消订阅
+$effect(() => {
+  const id = groupId;
+  subscriptionManager.subscribe('group', [id]);
+  return () => subscriptionManager.unsubscribe('group', [id]);
 });
 
 // ❌ 不推荐：全局订阅所有（会导致性能问题）

@@ -3,15 +3,12 @@
 //! 所有请求类型与 API 规范 (spec/api_spec_*.mdc) 一一对应
 //! 枚举类型字段使用 crate::types::enums 中定义的类型，确保类型安全
 
-use crate::{
-    dto::types::ReportTargetId,
-    types::enums::{
-        AnnouncementSeverity, ApplicationStatusFilter, ClientType, DevicePlatform, FeedContentType,
-        FeedFeedbackAction, FeedSource, GroupJoinMethod, GroupRole, MapDataType, MediaCategory,
-        NotificationFilterType, PrivacyLevel, PrivateChatPermission, ReactionType,
-        ReportHandleAction, ReportStatus, ReportTargetType, SendMessageType, SetableGroupRole,
-        TagTimeframe, UserAccountStatus, UserType, VerificationCodeType,
-    },
+use crate::types::enums::{
+    AnnouncementSeverity, ApplicationStatusFilter, ClientType, DevicePlatform, FeedContentType,
+    FeedFeedbackAction, FeedSource, GroupJoinMethod, GroupRole, MapDataType, MediaCategory,
+    NotificationFilterType, PrivacyLevel, PrivateChatPermission, ReactionType, ReportHandleAction,
+    ReportStatus, ReportTargetType, SendMessageType, SetableGroupRole, ShareType, TagTimeframe,
+    UserAccountStatus, UserType, VerificationCodeType,
 };
 use serde::{Deserialize, Serialize};
 
@@ -73,7 +70,7 @@ pub struct VerifyCodeRequest {
 #[derive(Debug, Deserialize)]
 pub struct RequestPasswordResetRequest {
     pub login_id: String,
-    pub verify_token: Option<String>, // 可选：如果通过验证码验证，提供此 token
+    pub verify_token: String, // 必填，来自 verify_code 接口
 }
 
 #[derive(Debug, Deserialize)]
@@ -215,6 +212,8 @@ pub struct DeleteAccountRequest {
 #[derive(Debug, Deserialize)]
 pub struct FollowRequest {
     pub user_id: i64,
+    pub source: Option<crate::types::enums::FollowSource>, // 可选：关注来源
+    pub source_moment_id: Option<String>,                  // 可选：如果是通过瞬间关注，提供瞬间 ID
 }
 
 #[derive(Debug, Deserialize)]
@@ -250,7 +249,7 @@ pub struct MyFollowRequestsRequest {
 #[derive(Debug, Deserialize)]
 pub struct HandleFollowRequestRequest {
     pub request_id: String,
-    pub action: String, // "accept" | "reject"
+    pub action: crate::types::enums::FollowRequestAction,
 }
 
 // ==================== 生活瞬间 API ====================
@@ -270,12 +269,6 @@ pub struct Location {
     pub latitude: f64,
     pub longitude: f64,
     pub location_name: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct MessageLocation {
-    pub location: Location,
-    pub address: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -695,7 +688,6 @@ pub struct SendPrivateMessageRequest {
     pub r#type: SendMessageType,
     pub content: Option<String>,
     pub file_id: Option<String>,
-    pub location: Option<MessageLocation>,
     pub reply_to_message_id: Option<String>,
 }
 
@@ -736,7 +728,6 @@ pub struct SendGroupMessageRequest {
     pub r#type: SendMessageType,
     pub content: Option<String>,
     pub file_id: Option<String>,
-    pub location: Option<MessageLocation>,
     pub reply_to_message_id: Option<String>,
     pub mentions: Option<Vec<i64>>,
 }
@@ -829,7 +820,7 @@ pub struct MarkAllMessagesReadRequest {}
 #[derive(Debug, Deserialize)]
 pub struct CreateReportRequest {
     pub target_type: ReportTargetType,
-    pub target_id: ReportTargetId,
+    pub target_id: String, // 统一为 string（user_id 也转为字符串格式）
     pub reason: String,
     pub description: Option<String>,
 }
@@ -1027,8 +1018,10 @@ pub struct UpdateLimitsRequest {
 /// 更新频率限制配置请求 - API 文档: UpdateRateLimitsRequest
 #[derive(Debug, Deserialize, Serialize)]
 pub struct UpdateRateLimitsRequest {
-    // 全局限速
-    pub global_per_hour: Option<u32>,
+    // IP级限速（单IP限制，考虑多用户共享同一IP的场景）
+    pub ip_per_hour: Option<u32>,
+    // 用户级限流
+    pub user_per_5minutes: Option<u32>,
     pub user_per_hour: Option<u32>,
     // 认证相关限速
     pub auth_send_code_per_minute: Option<u32>,
@@ -1366,4 +1359,49 @@ pub struct MyFollowersRequest {
 pub struct MyBlockedRequest {
     pub limit: Option<i32>,
     pub cursor: Option<String>,
+}
+
+// ==================== 位置分享模块请求 ====================
+
+// ==================== 分享模块请求 ====================
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(tag = "share_type", rename_all = "lowercase")]
+pub enum SharePayload {
+    Location {
+        latitude: f64,
+        longitude: f64,
+        location_name: String,
+    },
+    Moment {
+        moment_id: String,
+    },
+    Group {
+        group_id: String,
+    },
+    User {
+        user_id: i64,
+    },
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateShareRequest {
+    pub share_type: ShareType,
+    #[serde(flatten)]
+    pub payload: serde_json::Value,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetShareRequest {
+    pub share_code: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ApplyShareRequest {
+    pub share_code: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteLocationShareRequest {
+    pub share_id: String,
 }

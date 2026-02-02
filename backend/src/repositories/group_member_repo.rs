@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
+use crate::constants::{DEFAULT_LATITUDE, DEFAULT_LOCATION_NAME, DEFAULT_LONGITUDE};
 use crate::error::Result;
 use crate::types::enums::GroupRole;
 use crate::utils::pagination::{decode_cursor, encode_cursor, IdCursor};
@@ -458,6 +459,9 @@ impl GroupMemberRepository {
     ///
     /// - 只返回：群组未删除/未解散 + 成员关系未删除 + (group_settings.is_searchable=true)
     /// - 使用 group_members.id 做 keyset 分页（与 list_by_user 保持一致的分页语义）
+    ///
+    /// 注意：SQL 中的默认位置值（35.154922, 112.682524, '南天门'）
+    /// 对应 constants::{DEFAULT_LATITUDE, DEFAULT_LONGITUDE, DEFAULT_LOCATION_NAME}
     pub async fn list_public_group_infos_by_user(
         &self,
         user_id: i64,
@@ -471,6 +475,11 @@ impl GroupMemberRepository {
         } else {
             i64::MAX
         };
+
+        // 验证默认值与常量一致
+        debug_assert_eq!(35.154922, DEFAULT_LATITUDE);
+        debug_assert_eq!(112.682524, DEFAULT_LONGITUDE);
+        debug_assert_eq!("南天门", DEFAULT_LOCATION_NAME);
 
         let rows = sqlx::query_as!(
             UserJoinedGroupInfoRow,

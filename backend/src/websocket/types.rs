@@ -1,4 +1,7 @@
-use crate::dto::response::{Location, MessageLocation, MessageMedia, UserInfo};
+use crate::dto::{
+    request::Location,
+    response::{MessageMedia, UserInfo},
+};
 use crate::types::enums::{
     AnnouncementSeverity, GroupRole, MessageType, ReactionType, SubscriptionFailureReason,
     SubscriptionOperation,
@@ -39,7 +42,7 @@ pub enum WsMessage {
     /// 用户位置更新
     UserLocationUpdate {
         user_id: i64,
-        location: Location,
+        location: Location, // WebSocket 位置更新事件使用 request::Location
         updated_at: String, // ISO 8601 UTC
     },
 
@@ -130,8 +133,6 @@ pub enum WsMessage {
         #[serde(skip_serializing_if = "Option::is_none")]
         media: Option<MessageMedia>,
         #[serde(skip_serializing_if = "Option::is_none")]
-        location: Option<MessageLocation>,
-        #[serde(skip_serializing_if = "Option::is_none")]
         reply_to: Option<MessageReplyTo>,
         sent_at: String, // ISO 8601 UTC
     },
@@ -197,8 +198,6 @@ pub enum WsMessage {
         content: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         media: Option<MessageMedia>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        location: Option<MessageLocation>,
         #[serde(skip_serializing_if = "Option::is_none")]
         reply_to: Option<MessageReplyTo>,
         #[serde(skip_serializing_if = "Option::is_none")]

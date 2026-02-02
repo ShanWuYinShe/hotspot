@@ -1,0 +1,407 @@
+# 分享系统 API 规范
+
+## 概述
+
+分享系统提供统一的分享机制，支持多种内容类型的分享（位置、动态、群组等）。
+
+### 设计理念
+
+- **用完就扔**：分享是一次性操作，无需复杂管理
+- **类型可扩展**：支持多种分享类型，统一接口
+- **极简化**：只保留核心功能（创建、访问、应用）
+
+## 分享类型
+
+### ShareType（枚举）
+
+```typescript
+type ShareType = 'location' | 'moment' | 'group' | 'user';
+```
+
+**当前支持**：
+- `location`：位置分享（用于让其他用户设置浏览锚点）
+
+**规划支持**：
+- `moment`：动态分享
+- `group`：群组分享
+- `user`：用户名片分享
+
+## 数据结构
+
+### Share（通用分享对象）
+
+```typescript
+interface Share {
+  share_id: string;           // 分享ID（UUID）
+  share_code: string;          // 6位分享码（字母数字）
+  share_type: ShareType;       // 分享类型
+  creator: UserBrief;          // 创建者信息
+  payload: SharePayload;       // 类型特定的数据
+  created_at: string;          // 创建时间（ISO 8601）
+}
+```
+
+### SharePayload（类型特定数据）
+
+根据 `share_type` 不同，`payload` 结构不同：
+
+#### LocationSharePayload
+
+```typescript
+interface LocationSharePayload {
+  latitude: number;            // 纬度（-90 到 90）
+  longitude: number;           // 经度（-180 到 180）
+  location_name: string;       // 位置名称
+}
+```
+
+## API 端点
+
+### 1. 创建分享
+
+**端点**：`POST /api/v1/share/create`
+
+**权限**：需要登录
+
+**请求参数**：
+
+```typescript
+interface CreateShareRequest {
+  share_type: ShareType;       // 分享类型
+  payload: SharePayload;       // 类型特定数据
+}
+```
+
+**位置分享示例**：
+
+```json
+{
+  "share_type": "location",
+  "payload": {
+    "latitude": 39.9042,
+    "longitude": 116.4074,
+    "location_name": "天安门广场"
+  }
+}
+```
+
+**响应**：
+
+```json
+{
+  "code": 0,
+  "data": {
+    "share_id": "550e8400-e29b-41d4-a716-446655440000",
+    "share_code": "ABC123",
+    "share_type": "location",
+    "creator": {
+      "user_id": 1001,
+      "nickname": "张三",
+      "avatar_url": "https://cdn.example.com/avatars/1001.jpg"
+    },
+    "payload": {
+      "latitude": 39.9042,
+      "longitude": 116.4074,
+      "location_name": "天安门广场"
+    },
+    "created_at": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+**业务逻辑**：
+- 生成唯一的6位分享码（大小写字母+数字，避免混淆字符）
+- 验证 payload 数据有效性（根据 share_type）
+- 位置分享：验证经纬度范围、位置名称长度
+
+**错误码**：
+- `10001`：缺少必填参数（share_type 或 payload 缺失）
+- `10002`：参数格式错误（share_type 不支持、payload 格式错误等）
+- `10102`：Access Token 缺失
+
+---
+
+### 2. 获取分享详情
+
+**端点**：`POST /api/v1/share/get`
+
+**权限**：无需登录（公开访问）
+
+**请求参数**：
+
+```typescript
+interface GetShareRequest {
+  share_code: string;          // 分享码
+}
+```
+
+**响应**：同 `CreateShareRequest` 的 data 结构
+
+**业务逻辑**：
+- 根据分享码查询分享详情
+- 无需权限检查（所有分享都是公开的）
+
+**错误码**：
+- `10300`：资源不存在（分享不存在或已删除）
+- `10002`：参数格式错误（分享码格式错误）
+
+---
+
+### 3. 应用分享
+
+**端点**：`POST /api/v1/share/apply`
+
+**权限**：需要登录
+
+**请求参数**：
+
+```typescript
+interface ApplyShareRequest {
+  share_code: string;          // 分享码
+}
+```
+
+**响应**：
+
+```json
+{
+  "code": 0,
+  "message": "应用成功"
+}
+```
+
+**业务逻辑**：
+
+根据 `share_type` 执行不同操作：
+
+#### location（位置分享）
+- 更新用户的浏览锚点位置（纬度、经度）
+- 保持用户原有的浏览半径偏好不变
+
+#### moment（动态分享，规划中）
+- 跳转到动态详情页
+
+#### group（群组分享，规划中）
+- 跳转到群组详情页
+
+#### user（用户分享，规划中）
+- 跳转到用户主页
+
+**错误码**：
+- `10300`：资源不存在（分享不存在或已删除）
+- `10102`：Access Token 缺失
+
+---
+
+## 数据库设计建议
+
+### shares 表
+
+```sql
+CREATE TABLE shares (
+    share_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    share_code VARCHAR(6) UNIQUE NOT NULL,
+    share_type VARCHAR(20) NOT NULL,
+    creator_user_id BIGINT NOT NULL,
+    payload JSONB NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    
+    CONSTRAINT fk_creator FOREIGN KEY (creator_user_id) 
+        REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- 索引
+CREATE UNIQUE INDEX idx_shares_code ON shares(share_code);
+CREATE INDEX idx_shares_creator ON shares(creator_user_id);
+CREATE INDEX idx_shares_type ON shares(share_type);
+CREATE INDEX idx_shares_created_at ON shares(created_at DESC);
+```
+
+**字段说明**：
+- `share_id`：主键，UUID
+- `share_code`：6位分享码，唯一索引
+- `share_type`：分享类型（location/moment/group/user）
+- `creator_user_id`：创建者用户ID
+- `payload`：JSONB 字段，存储类型特定数据
+- `created_at`：创建时间
+
+---
+
+## 分享码生成规则
+
+### 字符集
+
+使用 `[A-Z0-9]` 共 36 个字符，排除易混淆字符：
+- 排除：`0`（数字零，与字母O混淆）
+- 排除：`O`（字母O，与数字0混淆）
+- 排除：`I`（字母I，与数字1混淆）
+- 排除：`1`（数字1，与字母I混淆）
+
+**实际字符集**：`[A-HJ-NP-Z2-9]` 共 32 个字符
+
+### 长度与碰撞概率
+
+- **6位分享码**：32^6 = 1,073,741,824 种组合
+- **碰撞概率**（生日悖论）：
+  - 100万条：0.046%
+  - 1000万条：4.66%
+  - 建议：单实例分享数 < 500万
+
+### 生成算法
+
+```rust
+use rand::Rng;
+
+const CHARSET: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+fn generate_share_code() -> String {
+    let mut rng = rand::thread_rng();
+    (0..6)
+        .map(|_| {
+            let idx = rng.gen_range(0..CHARSET.len());
+            CHARSET[idx] as char
+        })
+        .collect()
+}
+```
+
+---
+
+## 前端集成示例
+
+### 创建位置分享
+
+```typescript
+import { createShare } from '@/lib/api/services/share';
+
+async function shareCurrentLocation() {
+  const response = await createShare({
+    share_type: 'location',
+    payload: {
+      latitude: 39.9042,
+      longitude: 116.4074,
+      location_name: '天安门广场'
+    }
+  });
+
+  if (response.code === 0) {
+    const shareUrl = `${window.location.origin}/share/${response.data.share_code}`;
+    // 复制链接或分享
+    await navigator.clipboard.writeText(shareUrl);
+  }
+}
+```
+
+### 访问分享
+
+```typescript
+import { getShare, applyShare } from '@/lib/api/services/share';
+
+async function viewShare(shareCode: string) {
+  const response = await getShare({ share_code: shareCode });
+  
+  if (response.code === 0) {
+    const share = response.data;
+    
+    // 根据类型展示不同UI
+    if (share.share_type === 'location') {
+      // 显示位置信息
+      // 提供"设为浏览锚点"按钮
+    }
+  }
+}
+
+async function applyLocationShare(shareCode: string) {
+  const response = await applyShare({ share_code: shareCode });
+  
+  if (response.code === 0) {
+    // 跳转到主页，开始探索
+    window.location.href = '/';
+  }
+}
+```
+
+---
+
+## 未来扩展
+
+### 动态分享（Moment Share）
+
+```typescript
+interface MomentSharePayload {
+  moment_id: string;           // 动态ID
+}
+```
+
+### 群组分享（Group Share）
+
+```typescript
+interface GroupSharePayload {
+  group_id: string;            // 群组ID
+}
+```
+
+### 用户分享（User Share）
+
+```typescript
+interface UserSharePayload {
+  user_id: number;             // 用户ID
+}
+```
+
+---
+
+## 最佳实践
+
+### 分享码显示
+
+```typescript
+// 格式化分享码（易读）
+function formatShareCode(code: string): string {
+  // ABC123 → ABC-123
+  return code.slice(0, 3) + '-' + code.slice(3);
+}
+```
+
+### 错误处理
+
+```typescript
+async function handleShareError(error: ApiError) {
+  switch (error.code) {
+    case 10300:
+      toast.error('分享不存在或已失效');
+      break;
+    case 10102:
+      toast.error('请先登录');
+      openLoginModal();
+      break;
+    default:
+      toast.error('操作失败，请稍后重试');
+  }
+}
+```
+
+### 分享链接格式
+
+```
+https://hotspot.app/share/{share_code}
+```
+
+**示例**：
+- `https://hotspot.app/share/ABC123`
+- `https://hotspot.app/share/XYZ789`
+
+---
+
+## 注意事项
+
+1. **分享码唯一性**：生成时检查唯一性，重复则重新生成
+2. **并发安全**：使用数据库唯一索引保证分享码不重复
+3. **垃圾清理**：建议定期清理超过90天的分享记录（可选）
+4. **防滥用**：建议限制单用户每日创建分享次数（如100次）
+
+---
+
+## 变更记录
+
+- 2024-01-15：初始版本，支持位置分享

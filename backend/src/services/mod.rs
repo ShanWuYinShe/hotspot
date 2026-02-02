@@ -17,6 +17,7 @@ pub mod private_chat_service;
 pub mod private_message_service;
 pub mod report_service;
 pub mod search_service;
+pub mod share_service;
 pub mod subscription_service;
 pub mod system_config_service;
 pub mod tag_service;

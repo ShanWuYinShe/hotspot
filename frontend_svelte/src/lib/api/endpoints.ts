@@ -256,6 +256,15 @@ export const MAP = {
 } as const;
 
 // ============================================================================
+// 位置分享 API
+// ============================================================================
+export const SHARE = {
+	CREATE: `${API_BASE}/share/create`,
+	GET: `${API_BASE}/share/get`,
+	APPLY: `${API_BASE}/share/apply`
+} as const;
+
+// ============================================================================
 // 媒体上传 API
 // ============================================================================
 export const MEDIA = {
@@ -329,7 +338,8 @@ export const ADMIN_GLOBAL_SETTINGS = {
 	UPDATE_DEFAULTS: `${API_BASE}/admin/global_settings/update_defaults`,
 	UPDATE_FEATURES: `${API_BASE}/admin/global_settings/update_features`,
 	UPDATE_CONTACT: `${API_BASE}/admin/global_settings/update_contact`,
-	UPDATE_LIMITS: `${API_BASE}/admin/global_settings/update_limits`
+	UPDATE_LIMITS: `${API_BASE}/admin/global_settings/update_limits`,
+	UPDATE_RATE_LIMITS: `${API_BASE}/admin/global_settings/update_rate_limits`
 } as const;
 
 // 管理员 - RBAC
@@ -408,6 +418,7 @@ export const ENDPOINTS = {
 	SEARCH,
 	TAGS,
 	MAP,
+	SHARE,
 	MEDIA,
 	NOTIFICATIONS,
 	SUBSCRIPTIONS,

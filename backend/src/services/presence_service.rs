@@ -11,7 +11,8 @@ use std::collections::HashMap;
 use crate::constants::{REDIS_KEY_PRESENCE_LOCATION, REDIS_KEY_PRESENCE_ONLINE};
 use crate::error::{AppError, Result};
 use crate::repositories::{
-    user_online_status_repo::UserOnlineStatusRepository, user_settings_repo::UserSettingsRepository,
+    user_online_status_repo::UserOnlineStatusRepository, user_repo::UserRepository,
+    user_settings_repo::UserSettingsRepository,
 };
 
 #[derive(Clone)]
@@ -19,6 +20,7 @@ pub struct PresenceService {
     redis: RedisConnectionManager,
     online_status_repo: UserOnlineStatusRepository,
     user_settings_repo: UserSettingsRepository,
+    user_repo: UserRepository,
 }
 
 impl PresenceService {
@@ -26,11 +28,13 @@ impl PresenceService {
         redis: RedisConnectionManager,
         online_status_repo: UserOnlineStatusRepository,
         user_settings_repo: UserSettingsRepository,
+        user_repo: UserRepository,
     ) -> Self {
         Self {
             redis,
             online_status_repo,
             user_settings_repo,
+            user_repo,
         }
     }
 
@@ -112,28 +116,11 @@ impl PresenceService {
         // 为了方便 FeedService 调用，我们在 PresenceService 内部直接查库比较好。
         // 但是 PresenceService 没有 UserRepo。
         // 我们可以直接用 sqlx 查询，或者添加 UserRepo 字段。
-        // 添加 UserRepo 可能会导致循环引用 (UserRepo -> ... -> PresenceService -> UserRepo?)
-        // UserRepo struct 本身没有引用 PresenceService。是 UserService 引用了两者。
-        // 所以给 PresenceService 添加 UserRepo 是安全的。
-
-        // 暂时直接查库，避免修改 struct 依赖
-        let row = sqlx::query!(
-            r#"
-            SELECT current_latitude, current_longitude
-            FROM users
-            WHERE user_id = $1 AND is_deleted = FALSE
-            "#,
-            user_id
-        )
-        .fetch_optional(self.online_status_repo.pool()) // Use existing pool from online_status_repo
-        .await?;
-
-        if let Some(r) = row {
-            if let (Some(lat), Some(lng)) = (r.current_latitude, r.current_longitude) {
-                // 回填 Redis
-                let _ = self.update_location_cache(user_id, lat, lng).await;
-                return Ok(Some((lat, lng)));
-            }
+        // 从数据库查询位置
+        if let Some((lat, lng)) = self.user_repo.get_current_location(user_id).await? {
+            // 回填 Redis
+            let _ = self.update_location_cache(user_id, lat, lng).await;
+            return Ok(Some((lat, lng)));
         }
 
         Ok(None)

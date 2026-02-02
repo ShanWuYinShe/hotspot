@@ -171,8 +171,10 @@
 				<TabsTrigger value="guest">访客</TabsTrigger>
 			</TabsList>
 
-			<!-- 登录 -->
-			<TabsContent value="login">
+			<!-- 固定最小高度以防止跳动 -->
+			<div class="min-h-[320px]">
+				<!-- 登录 -->
+				<TabsContent value="login">
 				<form onsubmit={(e) => { e.preventDefault(); handleLogin(); }} class="space-y-4 pt-4">
 					<div class="space-y-2">
 						<Label for="modal-login-id">账号</Label>
@@ -301,6 +303,7 @@
 					</Button>
 				</form>
 			</TabsContent>
+			</div>
 		</Tabs>
 	</Dialog.Content>
 </Dialog.Root>

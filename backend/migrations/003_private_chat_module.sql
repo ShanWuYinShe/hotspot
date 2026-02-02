@@ -69,34 +69,18 @@ CREATE TABLE private_messages (
     file_size BIGINT,
     thumbnail_url TEXT,
     duration INTEGER,
-    -- 位置消息字段
-    location_latitude DOUBLE PRECISION,
-    location_longitude DOUBLE PRECISION,
-    location_name VARCHAR(200),
-    location_address TEXT,
     
     sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     edited_at TIMESTAMPTZ,
     is_recalled BOOLEAN NOT NULL DEFAULT FALSE,
     recalled_at TIMESTAMPTZ,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-    deleted_at TIMESTAMPTZ,
-    
-    -- 约束：当 type='location' 时，位置字段必须存在
-    CONSTRAINT check_location_fields_private CHECK (
-        (type != 'location') OR 
-        (location_latitude IS NOT NULL AND location_longitude IS NOT NULL AND location_name IS NOT NULL)
-    )
+    deleted_at TIMESTAMPTZ
 );
 
 CREATE INDEX idx_private_messages_chat_id ON private_messages (chat_id, sent_at DESC) WHERE is_deleted = FALSE;
 CREATE INDEX idx_private_messages_sender ON private_messages (sender_id, sent_at DESC) WHERE is_deleted = FALSE;
 CREATE INDEX idx_private_messages_content_search ON private_messages USING gin (content gin_trgm_ops) WHERE type = 'text' AND is_deleted = FALSE;
-
-COMMENT ON COLUMN private_messages.location_latitude IS '位置消息的纬度';
-COMMENT ON COLUMN private_messages.location_longitude IS '位置消息的经度';
-COMMENT ON COLUMN private_messages.location_name IS '位置消息的地点名';
-COMMENT ON COLUMN private_messages.location_address IS '位置消息的详细地址（可选）';
 
 -- ============================================================
 -- 私聊消息反应

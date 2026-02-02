@@ -20,10 +20,11 @@ use crate::{
             UserLikedMomentsRequest, UserOpenTheDoorRequest, UserStatsRequest,
         },
         response::{
-            AdminUserDetail, AdminUserItem, AuthData, BlockedUserItem, FollowRequestItem,
-            FollowerItem, FollowingItem, FriendItem, GroupItem, Location, MomentImage, MomentItem,
-            MyProfileData, PaginatedData, PaginationMeta, RelativeLocation, UserCard,
-            UserCardStats, UserInfo, UserItem, UserRelation, UserSettingsData, UserStatsData,
+            AdminUserDetail, AdminUserSearchItem, AuthData, BlockedUserSearchItem,
+            FollowRequestItem, FollowerItem, FollowingItem, FriendItem, GroupSearchItem,
+            MomentImage, MomentSearchItem, MyProfile, PaginatedData, PaginationMeta,
+            RelativeLocation, UserCardStats, UserInfo, UserRelation, UserSearchItem,
+            UserSettingsData, UserStatsData,
         },
     },
     error::{AppError, Result},
@@ -65,6 +66,19 @@ pub struct UserService {
     presence_service: crate::services::presence_service::PresenceService,
     media_service: crate::services::media_service::MediaService,
     cache_manager: CacheManager,
+    resource_checker: crate::utils::bloom_filter::ResourceExistenceChecker,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+struct UserDetailCache {
+    pub user_id: i64,
+    pub nickname: String,
+    pub avatar_url: Option<String>,
+    pub bio: String,
+    pub user_type: crate::types::enums::UserType,
+    pub current_latitude: Option<f64>,
+    pub current_longitude: Option<f64>,
+    pub current_location_name: Option<String>,
 }
 
 impl UserService {
@@ -85,6 +99,7 @@ impl UserService {
         presence_service: crate::services::presence_service::PresenceService,
         media_service: crate::services::media_service::MediaService,
         cache_manager: CacheManager,
+        resource_checker: crate::utils::bloom_filter::ResourceExistenceChecker,
     ) -> Self {
         Self {
             event_bus,
@@ -103,6 +118,7 @@ impl UserService {
             presence_service,
             media_service,
             cache_manager,
+            resource_checker,
         }
     }
 
@@ -137,7 +153,7 @@ impl UserService {
     pub async fn search_by_keyword(
         &self,
         req: &SearchUsersByKeywordRequest,
-    ) -> Result<PaginatedData<UserItem>> {
+    ) -> Result<PaginatedData<UserSearchItem>> {
         let limit = Validator::validate_limit(req.limit, 100)?;
         let cursor = Self::parse_cursor(req.cursor.as_deref());
 
@@ -164,7 +180,7 @@ impl UserService {
     pub async fn search_by_tag(
         &self,
         req: &SearchUsersByTagRequest,
-    ) -> Result<PaginatedData<UserItem>> {
+    ) -> Result<PaginatedData<UserSearchItem>> {
         let limit = Validator::validate_limit(req.limit, 100)?;
         let cursor = Self::parse_cursor(req.cursor.as_deref());
 
@@ -196,7 +212,7 @@ impl UserService {
     pub async fn search_by_location(
         &self,
         req: &SearchUsersByLocationRequest,
-    ) -> Result<PaginatedData<UserItem>> {
+    ) -> Result<PaginatedData<UserSearchItem>> {
         let limit = Validator::validate_limit(req.limit, 100)?;
         let cursor = Self::parse_cursor(req.cursor.as_deref());
 
@@ -226,14 +242,60 @@ impl UserService {
         &self,
         viewer_id: Option<i64>,
         req: &UserOpenTheDoorRequest,
-    ) -> Result<UserCard> {
+    ) -> Result<UserSearchItem> {
         let user_id = req.user_id;
 
-        let user = self
-            .user_repo
-            .find_by_id(user_id)
-            .await?
-            .ok_or_else(|| AppError::UserNotFound("用户不存在".to_string()))?;
+        // 1. 布隆过滤器预检查 (防止缓存穿透)
+        if !self
+            .resource_checker
+            .user_might_exist(user_id)
+            .await
+            .unwrap_or(true)
+        {
+            tracing::debug!(user_id, "Bloom filter blocked non-existent user request");
+            return Err(AppError::UserNotFound("用户不存在".to_string()));
+        }
+
+        // 2. 尝试从 Redis 缓存获取 (Read-Through)
+        let cache_key = format!("user:detail:{}", user_id);
+        let cached_user = self
+            .cache_manager
+            .get::<UserDetailCache>(cache_keys::USER_INFO, &cache_key) // 复用 USER_INFO namespace
+            .await
+            .unwrap_or(None);
+
+        let user_detail = if let Some(Some(cache)) = cached_user {
+            cache
+        } else {
+            // 3. 缓存未命中，查询数据库
+            let user = self
+                .user_repo
+                .find_by_id(user_id)
+                .await?
+                .ok_or_else(|| AppError::UserNotFound("用户不存在".to_string()))?;
+
+            let detail = UserDetailCache {
+                user_id: user.user_id,
+                nickname: user.nickname,
+                avatar_url: user.avatar_url,
+                bio: user.bio,
+                user_type: user.user_type,
+                current_latitude: user.current_latitude,
+                current_longitude: user.current_longitude,
+                current_location_name: user.current_location_name,
+            };
+
+            // 4. 写入缓存 (1小时)
+            if let Err(e) = self
+                .cache_manager
+                .set(cache_keys::USER_INFO, &cache_key, &detail)
+                .await
+            {
+                tracing::warn!(user_id, error = %e, "set user detail cache failed");
+            }
+
+            detail
+        };
 
         if let Some(viewer_id) = viewer_id {
             if viewer_id != user_id && self.blocks_repo.is_blocked(user_id, viewer_id).await? {
@@ -275,14 +337,16 @@ impl UserService {
             .unwrap_or(true);
         let location = if location_visible {
             if let (Some(lat), Some(lng), Some(name)) = (
-                user.current_latitude,
-                user.current_longitude,
-                user.current_location_name.clone(),
+                user_detail.current_latitude,
+                user_detail.current_longitude,
+                user_detail.current_location_name.clone(),
             ) {
-                Some(Location {
+                Some(RelativeLocation {
                     latitude: lat,
                     longitude: lng,
                     location_name: name,
+                    distance: None, // 详情场景不需要距离
+                    bearing_degrees: None,
                 })
             } else {
                 None
@@ -313,25 +377,26 @@ impl UserService {
             None
         };
 
-        Ok(UserCard {
-            user_id: user.user_id,
-            nickname: user.nickname.clone(),
+        Ok(UserSearchItem {
+            user_id: user_detail.user_id,
+            nickname: user_detail.nickname.clone(),
             avatar_url: self
                 .media_service
-                .sign_url_if_path(user.avatar_url.as_deref())
+                .sign_url_if_path(user_detail.avatar_url.as_deref())
                 .await,
-            user_type: user.user_type,
-            bio: if user.bio.is_empty() {
+            user_type: user_detail.user_type,
+            bio: if user_detail.bio.is_empty() {
                 None
             } else {
-                Some(user.bio.clone())
+                Some(user_detail.bio.clone())
             },
             tags,
             is_online,
             last_online,
             location,
-            stats,
+            stats: Some(stats), // @auth-only 字段
             relation,
+            social_context: None, // TODO: 实现社交上下文计算逻辑
         })
     }
 
@@ -340,7 +405,7 @@ impl UserService {
         &self,
         users: Vec<crate::repositories::user_repo::UserSearchRow>,
         next_cursor: Option<String>,
-    ) -> Result<PaginatedData<UserItem>> {
+    ) -> Result<PaginatedData<UserSearchItem>> {
         // 批量获取标签
         let user_ids: Vec<i64> = users.iter().map(|u| u.user_id).collect();
         let tags_map = self.tag_repo.get_user_tags_batch(&user_ids).await?;
@@ -375,14 +440,14 @@ impl UserService {
                     latitude: user.latitude,
                     longitude: user.longitude,
                     location_name: user.location_name.clone(),
-                    distance: user.distance,
-                    bearing_degrees: user.bearing_degrees,
+                    distance: Some(user.distance),
+                    bearing_degrees: Some(user.bearing_degrees),
                 })
             } else {
                 None
             };
 
-            items.push(UserItem {
+            items.push(UserSearchItem {
                 user_id: user.user_id,
                 nickname: user.nickname.clone(),
                 avatar_url: self
@@ -399,6 +464,9 @@ impl UserService {
                 last_online,
                 user_type: user.user_type,
                 location,
+                stats: None,          // 搜索/列表场景不返回统计数据
+                relation: None,       // 搜索/列表场景不返回关系
+                social_context: None, // 搜索/列表场景不返回社交上下文
             });
         }
 
@@ -498,6 +566,13 @@ impl UserService {
             location_name: req.location.location_name.clone(),
         });
 
+        // 清除详情缓存 (因为位置更新了)
+        let detail_key = format!("user:detail:{}", user_id);
+        let _ = self
+            .cache_manager
+            .delete(cache_keys::USER_INFO, &detail_key)
+            .await;
+
         Ok(())
     }
 
@@ -544,15 +619,18 @@ impl UserService {
             self.tag_repo.set_user_tags(user_id, tags).await?;
         }
 
-        // 清除 Profile 缓存
+        // 清除 Profile 缓存 (包括列表简介和详情)
         let cache_key = user_id.to_string();
-        if let Err(e) = self
+        let detail_key = format!("user:detail:{}", user_id);
+
+        let _ = self
             .cache_manager
             .delete(cache_keys::USER_INFO, &cache_key)
-            .await
-        {
-            tracing::warn!(user_id, error = %e, "delete user info cache failed");
-        }
+            .await;
+        let _ = self
+            .cache_manager
+            .delete(cache_keys::USER_INFO, &detail_key)
+            .await;
 
         Ok(())
     }
@@ -1337,7 +1415,7 @@ impl UserService {
         &self,
         user_id: i64,
         req: &MyBlockedRequest,
-    ) -> Result<PaginatedData<BlockedUserItem>> {
+    ) -> Result<PaginatedData<BlockedUserSearchItem>> {
         let limit = Validator::validate_limit(req.limit, 100)?;
         let cursor = Self::parse_cursor(req.cursor.as_deref());
 
@@ -1364,7 +1442,7 @@ impl UserService {
             let mut items_vec = Vec::with_capacity(block_rows.len());
             for r in &block_rows {
                 if let Some(user) = user_map.get(&r.blocked_id) {
-                    items_vec.push(BlockedUserItem {
+                    items_vec.push(BlockedUserSearchItem {
                         user: UserInfo {
                             user_id: user.user_id,
                             nickname: user.nickname.clone(),
@@ -1394,7 +1472,7 @@ impl UserService {
     }
 
     /// 获取我的资料
-    pub async fn get_me(&self, user_id: i64) -> Result<MyProfileData> {
+    pub async fn get_me(&self, user_id: i64) -> Result<MyProfile> {
         // 1. 获取用户信息
         let user = self
             .user_repo
@@ -1426,32 +1504,38 @@ impl UserService {
         // 6. 构造profile (location 契约：必须返回完整 Location，无数据时使用默认值)
         let location = if let Some(name) = location_name {
             if let Some(loc) = self.user_location_history_repo.get_latest(user_id).await? {
-                Location {
+                RelativeLocation {
                     latitude: loc.latitude,
                     longitude: loc.longitude,
                     location_name: name,
+                    distance: None,
+                    bearing_degrees: None,
                 }
             } else {
                 // 有名称但无坐标（可能是默认位置），构造默认 Location
-                Location {
+                RelativeLocation {
                     latitude: 0.0,
                     longitude: 0.0,
                     location_name: name,
+                    distance: None,
+                    bearing_degrees: None,
                 }
             }
         } else {
             // 无位置信息时使用系统默认位置
-            Location {
+            RelativeLocation {
                 latitude: 0.0,
                 longitude: 0.0,
                 location_name: "未知星球".to_string(),
+                distance: None,
+                bearing_degrees: None,
             }
         };
 
         // 7. 获取用户统计数据
         let stats_data = self.get_stats(user_id).await?;
 
-        let profile = MyProfileData {
+        let profile = MyProfile {
             user_id: user.user_id,
             nickname: user.nickname,
             avatar_url: self
@@ -1751,11 +1835,16 @@ impl UserService {
             return Err(AppError::BadRequest("确认字符串不匹配".to_string()));
         }
 
-        // 软删除用户
-        self.user_repo.soft_delete(user_id).await?;
+        // 封禁用户（永久封禁代替软删除）
+        self.user_repo
+            .ban_user(user_id, Some("用户主动注销"), None)
+            .await?;
 
         // 注销所有设备 token
         self.device_token_repo.unregister_all(user_id).await?;
+
+        // 撤销所有会话
+        self.session_repo.revoke_all_by_user(user_id).await?;
 
         // 撤销所有会话
         self.session_repo.revoke_all_by_user(user_id).await?;
@@ -1767,7 +1856,7 @@ impl UserService {
     pub async fn get_user_groups_list(
         &self,
         req: &UserGroupsRequest,
-    ) -> Result<PaginatedData<GroupItem>> {
+    ) -> Result<PaginatedData<GroupSearchItem>> {
         let target_user_id = req.user_id;
 
         // 验证用户存在
@@ -1812,7 +1901,7 @@ impl UserService {
         for r in rows {
             let tags = tags_map.get(&r.group_id).cloned();
             let tags = tags.filter(|t| !t.is_empty());
-            items.push(GroupItem {
+            items.push(GroupSearchItem {
                 group_chat_id: r.group_id.to_string(),
                 name: r.name,
                 description: r.description,
@@ -1827,8 +1916,8 @@ impl UserService {
                     latitude: r.latitude,
                     longitude: r.longitude,
                     location_name: r.location_name,
-                    distance: r.distance,
-                    bearing_degrees: r.bearing_degrees,
+                    distance: Some(r.distance),
+                    bearing_degrees: Some(r.bearing_degrees),
                 },
             });
         }
@@ -1869,7 +1958,7 @@ impl UserService {
                     user_id: row.requester_id,
                     nickname: requester
                         .map(|u| u.nickname.clone())
-                        .unwrap_or_else(|| "未知用户".to_string()),
+                        .unwrap_or("未知用户".to_string()),
                     avatar_url: self
                         .media_service
                         .sign_url_if_path(requester.and_then(|u| u.avatar_url.as_deref()))
@@ -1900,14 +1989,9 @@ impl UserService {
     ) -> Result<()> {
         let request_id = Uuid::parse_str(&req.request_id)
             .map_err(|_| AppError::BadRequest("无效请求ID".to_string()))?;
-        let accept = match req.action.as_str() {
-            "accept" => true,
-            "reject" => false,
-            _ => {
-                return Err(AppError::BadRequest(
-                    "无效操作，必须为 accept 或 reject".to_string(),
-                ))
-            }
+        let accept = match req.action {
+            crate::types::enums::FollowRequestAction::Accept => true,
+            crate::types::enums::FollowRequestAction::Reject => false,
         };
 
         let row = self
@@ -1957,7 +2041,7 @@ impl UserService {
     pub async fn get_user_liked_moments_list(
         &self,
         req: &UserLikedMomentsRequest,
-    ) -> Result<PaginatedData<MomentItem>> {
+    ) -> Result<PaginatedData<MomentSearchItem>> {
         let target_user_id = req.user_id;
 
         // 验证用户存在并获取参考位置
@@ -2041,7 +2125,7 @@ impl UserService {
                     });
                 }
 
-                items.push(MomentItem {
+                items.push(MomentSearchItem {
                     moment_id: m.moment_id.to_string(),
                     user: UserInfo {
                         user_id: user.user_id,
@@ -2060,12 +2144,13 @@ impl UserService {
                     likes_count: likes_count as i32,
                     comments_count: comments_count as i32,
                     location: RelativeLocation {
-                        latitude: m.latitude,
-                        longitude: m.longitude,
-                        location_name: m.location_name,
+                        latitude: m.latitude.unwrap_or(0.0),
+                        longitude: m.longitude.unwrap_or(0.0),
+                        location_name: m.location_name.unwrap_or_default(),
                         distance: m.distance,
                         bearing_degrees: m.bearing_degrees,
                     },
+                    my_state: None,
                 });
             }
         }
@@ -2084,7 +2169,7 @@ impl UserService {
     pub async fn admin_search_users(
         &self,
         req: &AdminUserSearchRequest,
-    ) -> Result<PaginatedData<AdminUserItem>> {
+    ) -> Result<PaginatedData<AdminUserSearchItem>> {
         let limit = Validator::validate_limit(req.limit, 50)? as i64;
         let cursor = Self::parse_cursor(req.cursor.as_deref());
 
@@ -2109,7 +2194,7 @@ impl UserService {
 
         let mut items = Vec::with_capacity(users.len());
         for u in users {
-            items.push(AdminUserItem {
+            items.push(AdminUserSearchItem {
                 user_id: u.user_id,
                 nickname: u.nickname,
                 avatar_url: self
@@ -2160,10 +2245,12 @@ impl UserService {
             user.current_longitude,
             user.current_location_name.clone(),
         ) {
-            Some(Location {
+            Some(RelativeLocation {
                 latitude: lat,
                 longitude: lng,
                 location_name: name,
+                distance: None,
+                bearing_degrees: None,
             })
         } else {
             None

@@ -1,19 +1,25 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
-	import { toast } from '$lib/stores/toast.svelte';
-	import { feedService, tagsService, usersService, groupsService } from '$lib/api/services';
+	import { feedService, tagsService, momentsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
+	import { usePagination } from '$lib/hooks/use-pagination.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Badge } from '$lib/components/ui/badge';
-	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import MomentCard from '$lib/components/moments/moment-card.svelte';
-	import type { UserStats, FeedMomentItem, TrendingTag, UserSearchItem, GroupSearchItem } from '$lib/types/api';
+	import DashboardStats from '$lib/components/home/dashboard-stats.svelte';
+	import TrendingTags from '$lib/components/home/trending-tags.svelte';
+	import RecommendedUsers from '$lib/components/home/recommended-users.svelte';
+	import RecommendedGroups from '$lib/components/home/recommended-groups.svelte';
+	import ListSkeleton from '$lib/components/common/list-skeleton.svelte';
+	import EmptyState from '$lib/components/common/empty-state.svelte';
+	import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
+	import type { FeedMomentItem, MomentSearchItem, TrendingTag } from '$lib/types/api';
 	import MapPin from 'lucide-svelte/icons/map-pin';
 	import Users from 'lucide-svelte/icons/users';
 	import Image from 'lucide-svelte/icons/image';
@@ -21,10 +27,8 @@
 	import ArrowRight from 'lucide-svelte/icons/arrow-right';
 	import Sparkles from 'lucide-svelte/icons/sparkles';
 	import Compass from 'lucide-svelte/icons/compass';
-	import TrendingUp from 'lucide-svelte/icons/trending-up';
-	import Heart from 'lucide-svelte/icons/heart';
-	import Hash from 'lucide-svelte/icons/hash';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
+	import Hash from 'lucide-svelte/icons/hash';
 
 	const features = [
 		{
@@ -57,40 +61,23 @@
 		}
 	];
 
-	// 已登录用户的状态
-	let stats = $state<UserStats | null>(null);
-	let statsLoading = $state(false);
-	
-	// 探索内容状态
-	let trendingTags = $state<TrendingTag[]>([]);
-	let recommendedUsers = $state<UserSearchItem[]>([]);
-	let recommendedGroups = $state<GroupSearchItem[]>([]);
-	let feedMoments = $state<FeedMomentItem[]>([]);
-	
-	// 加载状态
-	let loadingTags = $state(false);
-	let loadingUsers = $state(false);
-	let loadingGroups = $state(false);
-	let loadingFeed = $state(false);
-	let loadingMoreFeed = $state(false);
-	
-	// 分页状态
-	let feedCursor = $state<string | undefined>(undefined);
-	let feedHasMore = $state(true);
+	let refreshTrigger = $state(0);
+	let showExplore = $state(false);
 
-	async function loadStats() {
-		if (!authStore.isAuthenticated) return;
-		statsLoading = true;
-		try {
-			const response = await usersService.getMyStats();
-			if (isSuccess(response) && response.data) {
-				stats = response.data;
-			}
-		} catch {
-			// ignore
-		} finally {
-			statsLoading = false;
-		}
+	// Data states for Explore mode
+	let trendingTags = $state([] as TrendingTag[]);
+	let loadingTags = $state(true);
+
+	const feed = usePagination<FeedMomentItem | MomentSearchItem>({
+		uniqueKey: 'moment_id',
+		initialLoading: true
+	});
+
+	function getAnchor() {
+		return {
+			latitude: mapAnchorStore.latitude,
+			longitude: mapAnchorStore.longitude
+		};
 	}
 
 	async function loadTrendingTags() {
@@ -98,7 +85,7 @@
 		try {
 			const response = await tagsService.getTrending({ limit: 10 });
 			if (isSuccess(response) && response.data) {
-				trendingTags = response.data.items ?? [];
+				trendingTags = response.data.items;
 			}
 		} catch {
 			// ignore
@@ -107,114 +94,77 @@
 		}
 	}
 
-	async function loadRecommendedUsers() {
-		loadingUsers = true;
-		try {
-			const response = await usersService.searchByLocation({
-				reference_point: {
-					latitude: mapAnchorStore.latitude,
-					longitude: mapAnchorStore.longitude
-				},
-				radius: mapAnchorStore.radius * 1000,
-				limit: 6
-			});
-			if (isSuccess(response) && response.data) {
-				recommendedUsers = response.data.items ?? [];
-			}
-		} catch {
-			// ignore
-		} finally {
-			loadingUsers = false;
-		}
-	}
-
-	async function loadRecommendedGroups() {
-		loadingGroups = true;
-		try {
-			const response = await groupsService.searchByLocation({
-				reference_point: {
-					latitude: mapAnchorStore.latitude,
-					longitude: mapAnchorStore.longitude
-				},
-				radius: mapAnchorStore.radius * 1000,
-				limit: 6
-			});
-			if (isSuccess(response) && response.data) {
-				recommendedGroups = response.data.items ?? [];
-			}
-		} catch {
-			// ignore
-		} finally {
-			loadingGroups = false;
-		}
-	}
-
 	async function loadFeed(refresh = false) {
-		if (refresh) {
-			feedMoments = [];
-			feedCursor = undefined;
-			feedHasMore = true;
-			loadingFeed = true;
-		} else {
-			loadingMoreFeed = true;
-		}
-
-		try {
-			const response = await feedService.getMoments({
-				source: 'all',
-				reference_point: {
-					latitude: mapAnchorStore.latitude,
-					longitude: mapAnchorStore.longitude
-				},
-				limit: 20,
-				cursor: refresh ? undefined : feedCursor
-			});
-
-			if (isSuccess(response) && response.data) {
-				feedMoments = refresh ? response.data.items ?? [] : [...feedMoments, ...(response.data.items ?? [])];
-				feedHasMore = response.data.pagination?.has_more ?? false;
-				feedCursor = response.data.pagination?.next_cursor;
+		// 如果未登录且不处于探索模式，不加载
+		if (!authStore.isAuthenticated && !showExplore) return;
+		
+		await feed.load(async (cursor) => {
+			if (authStore.isAuthenticated) {
+				return await feedService.getMoments({
+					source: 'all',
+					reference_point: getAnchor(),
+					limit: 20,
+					cursor
+				});
+			} else {
+				// 未登录：显示附近动态
+				return await momentsService.searchByLocation({
+					reference_point: getAnchor(),
+					radius: mapAnchorStore.radius * 1000,
+					limit: 20,
+					cursor
+				});
 			}
-		} catch {
-			if (refresh) toast.error('加载动态失败');
-		} finally {
-			loadingFeed = false;
-			loadingMoreFeed = false;
-		}
+		}, refresh);
 	}
 
 	function refreshAll() {
-		loadTrendingTags();
-		loadRecommendedUsers();
-		loadRecommendedGroups();
-		loadFeed(true);
+		refreshTrigger++;
+		if (showExplore || authStore.isAuthenticated) {
+			if (showExplore) loadTrendingTags();
+			loadFeed(true);
+		}
 	}
 
 	function handleGetStarted() {
 		uiStore.openLoginModal(() => refreshAll());
 	}
 
+	function handleExplore() {
+		showExplore = true;
+		refreshAll();
+	}
+
 	onMount(() => {
 		if (authStore.isAuthenticated) {
-			loadStats();
 			refreshAll();
 		}
 	});
 
+	// 监听位置变化自动刷新（添加防抖避免频繁请求）
+	// 使用 untrack 防止追踪 refreshAll 内部的响应式访问（特别是 refreshTrigger 的自引用）
+	let locationDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+	
 	$effect(() => {
-		if (authStore.isAuthenticated) {
-			loadStats();
-		} else {
-			stats = null;
+		if (authStore.isAuthenticated || showExplore) {
+			mapAnchorStore.anchor.updatedAt;
+			
+			// 清除之前的定时器
+			if (locationDebounceTimer) clearTimeout(locationDebounceTimer);
+			
+			// 500ms 防抖
+			locationDebounceTimer = setTimeout(() => {
+				untrack(() => refreshAll());
+			}, 500);
 		}
-	});
 
-	// 监听地图锚点变化
-	$effect(() => {
-		if (authStore.isAuthenticated) {
-			mapAnchorStore.anchor.updatedAt; // Dependency
-			refreshAll();
-		}
+		// 清理函数
+		return () => {
+			if (locationDebounceTimer) {
+				clearTimeout(locationDebounceTimer);
+				locationDebounceTimer = null;
+			}
+		};
 	});
 </script>
 
@@ -249,15 +199,97 @@
 						立即开始
 						<ArrowRight class="h-4 w-4" />
 					</Button>
-					<Button size="lg" variant="outline" class="rounded-full px-8" onclick={() => goto('/explore')}>
+					<Button size="lg" variant="outline" class="rounded-full px-8" onclick={handleExplore}>
 						先逛逛看
 					</Button>
 				</div>
 			</div>
 		</section>
 
-		<!-- Features -->
-		<section>
+		{#if showExplore}
+			<!-- Explore Content (Trending + Feed) -->
+			<div class="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+				<div class="flex items-center justify-between">
+					<div class="space-y-1">
+						<h2 class="text-2xl font-bold tracking-tight">探索发现</h2>
+						<p class="text-muted-foreground">发现附近的精彩人与事</p>
+					</div>
+					<Button variant="ghost" size="icon" class="rounded-full" onclick={refreshAll}>
+						<RefreshCw class="h-4 w-4 {feed.loading ? 'animate-spin' : ''}" />
+					</Button>
+				</div>
+
+				<!-- Trending Topics -->
+				{#if !loadingTags && trendingTags.length > 0}
+					<section class="space-y-4">
+						<div class="flex items-center gap-2 px-1">
+							<Hash class="h-5 w-5 text-primary" />
+							<h3 class="text-lg font-semibold tracking-tight">热门话题</h3>
+						</div>
+						<div class="flex flex-wrap gap-2">
+							{#each trendingTags as tag}
+								<a href="/search?tag={encodeURIComponent(tag.name)}" class="group">
+									<Badge variant="secondary" class="cursor-pointer rounded-full px-3 py-1.5 text-sm transition-all hover:bg-primary/10 hover:text-primary">
+										#{tag.name}
+										<span class="ml-1.5 text-xs opacity-50 group-hover:opacity-100">{tag.usage_count}</span>
+									</Badge>
+								</a>
+							{/each}
+						</div>
+					</section>
+				{/if}
+
+				<!-- Moments Feed -->
+				<section class="space-y-6">
+					<div class="flex items-center justify-between px-1">
+						<div class="flex items-center gap-2">
+							<Sparkles class="h-5 w-5 text-primary" />
+							<h3 class="text-lg font-semibold tracking-tight">推荐动态</h3>
+						</div>
+					</div>
+
+					{#if feed.loading}
+						<div class="columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4">
+							{#each Array(6) as _}
+								<div class="mb-3 break-inside-avoid">
+									<ListSkeleton type="moment" count={1} layout="list" />
+								</div>
+							{/each}
+						</div>
+					{:else if feed.error}
+						<EmptyState 
+							icon={Compass} 
+							title="加载动态失败" 
+							description="请检查网络连接后重试" 
+							actionText="重试"
+							onAction={() => loadFeed(true)}
+						/>
+					{:else if feed.items.length === 0}
+						<EmptyState 
+							icon={Compass} 
+							title="暂无推荐" 
+							description="去发布一些内容，或者探索更多区域吧" 
+						/>
+					{:else}
+						<div class="columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4">
+							{#each feed.items as moment (moment.moment_id)}
+								<div class="mb-3 break-inside-avoid">
+									<MomentCard {moment} />
+								</div>
+							{/each}
+						</div>
+						
+						<LoadMoreButton
+							loading={feed.loadingMore}
+							hasMore={feed.hasMore}
+							onLoadMore={() => loadFeed(false)}
+						/>
+					{/if}
+				</section>
+			</div>
+		{:else}
+			<!-- Features -->
+			<section>
 			<div class="mb-8 text-center">
 				<h2 class="mb-2 text-2xl font-bold md:text-3xl">核心功能</h2>
 				<p class="text-muted-foreground">探索 HotSpot 为你提供的精彩体验</p>
@@ -278,6 +310,7 @@
 				{/each}
 			</div>
 		</section>
+		{/if}
 
 		<!-- Stats section -->
 		<section class="rounded-2xl bg-linear-to-r from-primary/5 to-secondary/5 p-8 md:p-12">
@@ -308,231 +341,22 @@
 						</h1>
 						<p class="text-muted-foreground">发现附近的精彩内容</p>
 					</div>
-					<Button variant="ghost" size="icon" class="rounded-full" onclick={refreshAll} disabled={loadingFeed}>
-						<RefreshCw class="h-4 w-4 {loadingFeed ? 'animate-spin' : ''}" />
+					<Button variant="ghost" size="icon" class="rounded-full" onclick={refreshAll} disabled={feed.loading}>
+						<RefreshCw class="h-4 w-4 {feed.loading ? 'animate-spin' : ''}" />
 					</Button>
 				</div>
 
-				<!-- Quick stats -->
-				<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-					<Card class="border-0 bg-linear-to-br from-pink-500/10 to-rose-500/10">
-						<CardContent class="flex items-center gap-4 p-6">
-							<div class="rounded-2xl bg-pink-500/20 p-3">
-								<Heart class="h-6 w-6 text-pink-500" />
-							</div>
-							<div>
-								{#if statsLoading}
-									<Skeleton class="h-7 w-10" />
-								{:else}
-									<p class="text-2xl font-bold">{stats?.moments_count ?? 0}</p>
-								{/if}
-								<p class="text-sm text-muted-foreground">我的动态</p>
-							</div>
-						</CardContent>
-					</Card>
-					<Card class="border-0 bg-linear-to-br from-blue-500/10 to-cyan-500/10">
-						<CardContent class="flex items-center gap-4 p-6">
-							<div class="rounded-2xl bg-blue-500/20 p-3">
-								<Users class="h-6 w-6 text-blue-500" />
-							</div>
-							<div>
-								{#if statsLoading}
-									<Skeleton class="h-7 w-10" />
-								{:else}
-									<p class="text-2xl font-bold">{stats?.followers_count ?? 0}</p>
-								{/if}
-								<p class="text-sm text-muted-foreground">关注者</p>
-							</div>
-						</CardContent>
-					</Card>
-					<Card class="border-0 bg-linear-to-br from-purple-500/10 to-violet-500/10">
-						<CardContent class="flex items-center gap-4 p-6">
-							<div class="rounded-2xl bg-purple-500/20 p-3">
-								<TrendingUp class="h-6 w-6 text-purple-500" />
-							</div>
-							<div>
-								{#if statsLoading}
-									<Skeleton class="h-7 w-10" />
-								{:else}
-									<p class="text-2xl font-bold">{stats?.friends_count ?? 0}</p>
-								{/if}
-								<p class="text-sm text-muted-foreground">好友数量</p>
-							</div>
-						</CardContent>
-					</Card>
-					<Card class="border-0 bg-linear-to-br from-emerald-500/10 to-teal-500/10">
-						<CardContent class="flex items-center gap-4 p-6">
-							<div class="rounded-2xl bg-emerald-500/20 p-3">
-								<Users class="h-6 w-6 text-emerald-500" />
-							</div>
-							<div>
-								{#if statsLoading}
-									<Skeleton class="h-7 w-10" />
-								{:else}
-									<p class="text-2xl font-bold">{stats?.groups_count ?? 0}</p>
-								{/if}
-								<p class="text-sm text-muted-foreground">我的群组</p>
-							</div>
-						</CardContent>
-					</Card>
-				</div>
+				<DashboardStats {refreshTrigger} />
 			</section>
 
 			<!-- Trending Topics -->
-			{#if trendingTags.length > 0}
-				<section class="space-y-4">
-					<div class="flex items-center gap-2 px-1">
-						<Hash class="h-5 w-5 text-primary" />
-						<h2 class="text-lg font-semibold tracking-tight">热门话题</h2>
-					</div>
-					<div class="flex flex-wrap gap-2">
-						{#each trendingTags as tag}
-							<a href="/search?tag={encodeURIComponent(tag.name)}" class="group">
-								<Badge variant="secondary" class="cursor-pointer rounded-full px-3 py-1.5 text-sm transition-all hover:bg-primary/10 hover:text-primary">
-									#{tag.name}
-									<span class="ml-1.5 text-xs opacity-50 group-hover:opacity-100">{tag.usage_count}</span>
-								</Badge>
-							</a>
-						{/each}
-					</div>
-				</section>
-			{/if}
+			<TrendingTags {refreshTrigger} />
 
 			<!-- Recommended Users -->
-			{#if loadingUsers}
-				<section class="space-y-4">
-					<div class="flex items-center justify-between">
-						<div class="flex items-center gap-2 px-1">
-							<Users class="h-5 w-5 text-primary" />
-							<h2 class="text-lg font-semibold tracking-tight">推荐用户</h2>
-						</div>
-					</div>
-					<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-						{#each Array(6) as _}
-							<Card class="border-0 bg-card/50">
-								<CardContent class="p-6">
-									<div class="flex items-center gap-4">
-										<Skeleton class="h-12 w-12 rounded-full" />
-										<div class="flex-1 space-y-2">
-											<Skeleton class="h-4 w-24" />
-											<Skeleton class="h-3 w-16" />
-										</div>
-									</div>
-									<Skeleton class="mt-3 h-4 w-full" />
-									<Skeleton class="mt-1.5 h-4 w-3/4" />
-								</CardContent>
-							</Card>
-						{/each}
-					</div>
-				</section>
-			{:else if recommendedUsers.length > 0}
-				<section class="space-y-4">
-					<div class="flex items-center justify-between">
-						<div class="flex items-center gap-2 px-1">
-							<Users class="h-5 w-5 text-primary" />
-							<h2 class="text-lg font-semibold tracking-tight">推荐用户</h2>
-						</div>
-						<a href="/users/nearby" class="text-sm font-medium text-muted-foreground hover:underline">
-							查看更多
-						</a>
-					</div>
-					<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-						{#each recommendedUsers as user}
-							<a href="/users/{user.user_id}" class="group">
-								<Card class="group/card h-full cursor-pointer border-0 bg-card/50 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5">
-									<CardContent class="p-6">
-										<div class="flex items-center gap-4">
-											<Avatar class="h-12 w-12 ring-2 ring-transparent transition-all duration-300 group-hover/card:ring-primary/20">
-												<AvatarImage src={user.avatar_url} alt={user.nickname} />
-												<AvatarFallback>{(user.nickname || '用户').slice(0, 2)}</AvatarFallback>
-											</Avatar>
-											<div class="min-w-0 flex-1">
-												<h3 class="truncate font-semibold">{user.nickname}</h3>
-												{#if user.location?.distance}
-													<p class="flex items-center gap-1 text-xs text-muted-foreground">
-														<MapPin class="h-3 w-3" />
-														{(user.location.distance / 1000).toFixed(1)} km
-													</p>
-												{/if}
-											</div>
-										</div>
-										{#if user.bio}
-											<p class="mt-3 line-clamp-2 text-sm text-muted-foreground">{user.bio}</p>
-										{/if}
-									</CardContent>
-								</Card>
-							</a>
-						{/each}
-					</div>
-				</section>
-			{/if}
+			<RecommendedUsers {refreshTrigger} />
 
 			<!-- Recommended Groups -->
-			{#if loadingGroups}
-				<section class="space-y-4">
-					<div class="flex items-center justify-between">
-						<div class="flex items-center gap-2 px-1">
-							<Users class="h-5 w-5 text-primary" />
-							<h2 class="text-lg font-semibold tracking-tight">推荐群组</h2>
-						</div>
-					</div>
-					<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-						{#each Array(6) as _}
-							<Card class="border-0 bg-card/50">
-								<CardContent class="p-6">
-									<div class="flex items-center gap-4">
-										<Skeleton class="h-12 w-12 rounded-full" />
-										<div class="flex-1 space-y-2">
-											<Skeleton class="h-4 w-24" />
-											<Skeleton class="h-3 w-20" />
-										</div>
-									</div>
-									<Skeleton class="mt-3 h-4 w-full" />
-									<Skeleton class="mt-1.5 h-4 w-3/4" />
-								</CardContent>
-							</Card>
-						{/each}
-					</div>
-				</section>
-			{:else if recommendedGroups.length > 0}
-				<section class="space-y-4">
-					<div class="flex items-center justify-between">
-						<div class="flex items-center gap-2 px-1">
-							<Users class="h-5 w-5 text-primary" />
-							<h2 class="text-lg font-semibold tracking-tight">推荐群组</h2>
-						</div>
-						<a href="/groups/nearby" class="text-sm font-medium text-muted-foreground hover:underline">
-							查看更多
-						</a>
-					</div>
-					<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-						{#each recommendedGroups as group}
-							<a href="/groups/{group.group_chat_id}" class="group">
-								<Card class="group/card h-full cursor-pointer border-0 bg-card/50 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5">
-									<CardContent class="p-6">
-										<div class="flex items-center gap-4">
-											<Avatar class="h-12 w-12 ring-2 ring-transparent transition-all duration-300 group-hover/card:ring-primary/20">
-												<AvatarImage src={group.avatar_url} alt={group.name} />
-												<AvatarFallback>{(group.name || '群组').slice(0, 2)}</AvatarFallback>
-											</Avatar>
-											<div class="min-w-0 flex-1">
-												<h3 class="truncate font-semibold">{group.name}</h3>
-												<p class="flex items-center gap-1 text-xs text-muted-foreground">
-													<Users class="h-3 w-3" />
-													{group.members_count} 位成员
-												</p>
-											</div>
-										</div>
-										{#if group.description}
-											<p class="mt-3 line-clamp-2 text-sm text-muted-foreground">{group.description}</p>
-										{/if}
-									</CardContent>
-								</Card>
-							</a>
-						{/each}
-					</div>
-				</section>
-			{/if}
+			<RecommendedGroups {refreshTrigger} />
 
 			<!-- Moments Feed -->
 			<section class="space-y-6">
@@ -543,10 +367,10 @@
 					</div>
 				</div>
 
-				{#if loadingFeed}
-					<div class="columns-1 gap-4 sm:columns-2 lg:columns-3">
+				{#if feed.loading}
+					<div class="columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4">
 						{#each Array(6) as _}
-							<div class="mb-4 break-inside-avoid">
+							<div class="mb-3 break-inside-avoid">
 								<Card class="border-0 bg-card/50">
 									<CardContent class="space-y-3 p-4">
 										<div class="flex items-center gap-3">
@@ -564,7 +388,7 @@
 							</div>
 						{/each}
 					</div>
-				{:else if feedMoments.length === 0}
+				{:else if feed.items.length === 0}
 					<div class="flex flex-col items-center justify-center py-16 text-center">
 						<Compass class="mb-4 h-12 w-12 text-muted-foreground/50" />
 						<h3 class="text-lg font-medium">暂无推荐</h3>
@@ -573,18 +397,18 @@
 						</p>
 					</div>
 				{:else}
-					<div class="columns-1 gap-4 sm:columns-2 lg:columns-3">
-						{#each feedMoments as moment (moment.moment_id)}
-							<div class="mb-4 break-inside-avoid">
+					<div class="columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4">
+						{#each feed.items as moment (moment.moment_id)}
+							<div class="mb-3 break-inside-avoid">
 								<MomentCard {moment} />
 							</div>
 						{/each}
 					</div>
 					
-					{#if feedHasMore}
+					{#if feed.hasMore}
 						<div class="flex justify-center pt-4">
-							<Button variant="outline" class="rounded-full px-8" onclick={() => loadFeed(false)} disabled={loadingMoreFeed}>
-								{#if loadingMoreFeed}
+							<Button variant="outline" class="rounded-full px-8" onclick={() => loadFeed(false)} disabled={feed.loadingMore}>
+								{#if feed.loadingMore}
 									<RefreshCw class="mr-2 h-4 w-4 animate-spin" />
 									加载中...
 								{:else}

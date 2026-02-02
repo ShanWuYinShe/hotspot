@@ -17,17 +17,16 @@ use crate::{
             RemoveGroupMessageReactionRequest, SendGroupMessageRequest, UpdateGroupMessageRequest,
         },
         response::{
-            GroupMessageItem, Location, MessageLocation, MessageMedia, MessageReactionItem,
-            MessageReadItem, MessageReplyTo, PaginatedData, PaginationMeta, SendGroupMessageData,
-            UserInfo,
+            GroupMessageItem, MessageMedia, MessageReactionItem, MessageReadItem, MessageReplyTo,
+            PaginatedData, PaginationMeta, SendGroupMessageData, UserInfo,
         },
     },
     error::{AppError, Result},
     events::event_types::AppEvent,
     repositories::{
         chat_unread_repo::ChatUnreadRepository, group_member_repo::GroupMemberRepository,
-        group_message_repo::GroupMessageRepository,
-        message_reactions_repo::MessageReactionsRepository, user_repo::UserRepository,
+        group_message_repo::GroupMessageRepository, group_repo::GroupRepository,
+        group_message_reactions_repo::GroupMessageReactionsRepository, user_repo::UserRepository,
     },
     services::media_service::MediaService,
     types::enums::{GroupRole, MessageType, ReactionType, UserType},
@@ -42,9 +41,10 @@ pub struct GroupMessageService {
     event_bus: Arc<EventBus>,
     message_repo: GroupMessageRepository,
     member_repo: GroupMemberRepository,
+    group_repo: GroupRepository,
     user_repo: UserRepository,
     unread_repo: ChatUnreadRepository,
-    reactions_repo: MessageReactionsRepository,
+    reactions_repo: GroupMessageReactionsRepository,
     media_service: MediaService,
 }
 
@@ -55,9 +55,10 @@ impl GroupMessageService {
         event_bus: Arc<EventBus>,
         message_repo: GroupMessageRepository,
         member_repo: GroupMemberRepository,
+        group_repo: GroupRepository,
         user_repo: UserRepository,
         unread_repo: ChatUnreadRepository,
-        reactions_repo: MessageReactionsRepository,
+        reactions_repo: GroupMessageReactionsRepository,
         media_service: MediaService,
     ) -> Self {
         Self {
@@ -66,6 +67,7 @@ impl GroupMessageService {
             event_bus,
             message_repo,
             member_repo,
+            group_repo,
             user_repo,
             unread_repo,
             reactions_repo,
@@ -86,6 +88,11 @@ impl GroupMessageService {
 
         let group_chat_id = Uuid::parse_str(&req.group_chat_id)
             .map_err(|_| AppError::BadRequest("无效的群组ID".to_string()))?;
+
+        // 验证群组是否存在
+        if !self.group_repo.exists(group_chat_id).await? {
+            return Err(AppError::GroupNotFound("群组不存在".to_string()));
+        }
 
         // 使用 SendMessageType 的转换方法获取 MessageType
         let message_type = req.r#type.to_message_type();
@@ -120,7 +127,6 @@ impl GroupMessageService {
                         MessageType::Audio => "[语音]".to_string(),
                         MessageType::File => "[文件]".to_string(),
                         MessageType::System => reply_msg.content,
-                        _ => "[未知消息]".to_string(),
                     };
 
                     reply_to_snapshot = Some(crate::events::event_types::ReplyToSnapshot {
@@ -233,28 +239,11 @@ impl GroupMessageService {
                 media.as_ref().and_then(|m| m.file_size),
                 media.as_ref().and_then(|m| m.thumbnail_url.as_deref()),
                 media.as_ref().and_then(|m| m.duration.map(|d| d as i32)),
-                req.location
-                    .as_ref()
-                    .map(|msg_loc| msg_loc.location.latitude),
-                req.location
-                    .as_ref()
-                    .map(|msg_loc| msg_loc.location.longitude),
-                req.location
-                    .as_ref()
-                    .map(|msg_loc| msg_loc.location.location_name.as_str()),
-                req.location
-                    .as_ref()
-                    .and_then(|msg_loc| msg_loc.address.as_deref()),
             )
             .await?;
 
         // 5. 更新群聊最后活跃时间（通过更新updated_at字段）
-        sqlx::query!(
-            r#"UPDATE group_chats SET updated_at = NOW() WHERE group_chat_id = $1"#,
-            group_chat_id
-        )
-        .execute(&self.db)
-        .await?;
+        self.group_repo.touch_updated_at(group_chat_id).await?;
 
         // 记录消息到布隆过滤器
         if let Err(e) = ResourceExistenceChecker::new(self.redis.clone())
@@ -272,18 +261,6 @@ impl GroupMessageService {
             None
         };
 
-        let event_location =
-            req.location
-                .as_ref()
-                .map(|loc| crate::dto::response::MessageLocation {
-                    location: crate::dto::response::Location {
-                        latitude: loc.location.latitude,
-                        longitude: loc.location.longitude,
-                        location_name: loc.location.location_name.clone(),
-                    },
-                    address: loc.address.clone(),
-                });
-
         self.event_bus.publish(AppEvent::GroupMessageSent {
             message_id: created.message_id,
             group_chat_id,
@@ -293,7 +270,6 @@ impl GroupMessageService {
             reply_to: reply_to_snapshot,
             mentions,
             media,
-            location: event_location,
         });
 
         Ok(SendGroupMessageData {
@@ -392,7 +368,7 @@ impl GroupMessageService {
                     user_id: m.sender_id,
                     nickname: user
                         .map(|u| u.nickname.clone())
-                        .unwrap_or_else(|| "未知用户".to_string()),
+                        .unwrap_or("未知用户".to_string()),
                     avatar_url: self
                         .media_service
                         .sign_url_if_path(user.and_then(|u| u.avatar_url.as_deref()))
@@ -412,29 +388,13 @@ impl GroupMessageService {
                             user_id: reply_msg.sender_id,
                             nickname: reply_sender
                                 .map(|u| u.nickname.clone())
-                                .unwrap_or_else(|| "未知用户".to_string()),
+                                .unwrap_or("未知用户".to_string()),
                             content: preview,
                         }
                     })
                 }),
                 mentions: m.mentions.clone(),
                 media,
-                location: if let (Some(lat), Some(lng), Some(name)) = (
-                    m.location_latitude,
-                    m.location_longitude,
-                    m.location_name.clone(),
-                ) {
-                    Some(MessageLocation {
-                        location: Location {
-                            latitude: lat,
-                            longitude: lng,
-                            location_name: name,
-                        },
-                        address: m.location_address.clone(),
-                    })
-                } else {
-                    None
-                },
                 sent_at: m.sent_at.to_rfc3339(),
                 edited_at: m.edited_at.map(|t| t.to_rfc3339()),
                 is_recalled: m.is_recalled,

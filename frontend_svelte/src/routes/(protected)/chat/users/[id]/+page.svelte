@@ -1,15 +1,17 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { privateChatsService, privateMessagesService, usersService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { authStore } from '$lib/stores/auth.svelte';
+	import { messageStore } from '$lib/stores/message.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { websocketStore, subscriptionManager, eventHandlers } from '$lib/websocket';
 	import type { PrivateMessageNewPayload } from '$lib/websocket/types';
+	import { useBatchMarkRead } from '$lib/hooks/use-batch-mark-read.svelte';
+	import { autofocus } from '$lib/attachments';
 	import { Button } from '$lib/components/ui/button';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-	import { Textarea } from '$lib/components/ui/textarea';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { ScrollArea } from '$lib/components/ui/scroll-area';
 	import type { PrivateMessageItem, UserInfo } from '$lib/types/api';
@@ -27,6 +29,21 @@
 	let isSending = $state(false);
 	let isOtherUserTyping = $state(false);
 	let typingTimer: ReturnType<typeof setTimeout> | null = null;
+	let shouldFocusInput = $state(0); // 用于触发重新聚焦
+	let isSubscribed = $state(false); // 订阅状态
+	let isAttemptingSubscribe = $state(false); // 是否正在尝试订阅
+
+	const canSendMessage = $derived(isSubscribed);
+
+	// ✨ 批量已读逻辑
+	const batchMarkRead = useBatchMarkRead({
+		markAsRead: async (messageIds) => {
+			// 私聊消息的标记已读是按对话标记的，不需要传 messageIds
+			await privateMessagesService.markAsRead({ target_user_id: userId });
+		},
+		debounceMs: 2000,
+		visibilityThreshold: 1000
+	});
 
 	async function loadChat() {
 		try {
@@ -45,8 +62,7 @@
 				messages = messagesResponse.data.items.reverse();
 			}
 
-			// 标记已读
-			await privateMessagesService.markAsRead({ target_user_id: userId });
+			// ✅ 不再立即标记已读，等待消息可见时自动标记
 		} catch {
 			toast.error('加载失败');
 		} finally {
@@ -55,7 +71,7 @@
 	}
 
 	async function sendMessage() {
-		if (!messageText.trim()) return;
+		if (!messageText.trim() || !canSendMessage) return;
 
 		isSending = true;
 		const text = messageText.trim();
@@ -72,6 +88,9 @@
 			if (!isSuccess(response)) {
 				messageText = text;
 				toast.error(response.message || '发送失败');
+			} else {
+				// 发送成功后重新聚焦输入框
+				shouldFocusInput++; // 触发重新聚焦
 			}
 			// ✅ 不在本地添加消息，等待 WebSocket 推送（规范要求）
 		} catch {
@@ -86,8 +105,8 @@
 	 * 处理输入变化（发送正在输入状态）
 	 */
 	function handleInput() {
-		// 发送正在输入状态
-		if (websocketStore.connectionState === 'connected') {
+		// 发送正在输入状态（使用派生状态）
+		if (websocketStore.isConnected) {
 			websocketStore.send({
 				type: 'PrivateTyping',
 				payload: {
@@ -100,7 +119,7 @@
 		// 3秒后自动发送停止输入
 		if (typingTimer) clearTimeout(typingTimer);
 		typingTimer = setTimeout(() => {
-			if (websocketStore.connectionState === 'connected') {
+			if (websocketStore.isConnected) {
 				websocketStore.send({
 					type: 'PrivateTyping',
 					payload: {
@@ -118,20 +137,37 @@
 	}
 
 	function isSelf(message: PrivateMessageItem): boolean {
-		return message.sender.user_id === authStore.currentUserId;
+		return message.sender_id === authStore.currentUserId;
+	}
+
+	/**
+	 * Svelte action：观察消息可见性
+	 */
+	function observeMessage(node: HTMLElement, params: { messageId: string; isSelf: boolean }) {
+		// 只观察对方发送的消息（不观察自己发送的消息）
+		if (!params.isSelf) {
+			batchMarkRead.observe(node, params.messageId);
+		}
+
+		return {
+			update(newParams: { messageId: string; isSelf: boolean }) {
+				if (newParams.isSelf) {
+					batchMarkRead.unobserve(node);
+				} else {
+					batchMarkRead.observe(node, newParams.messageId);
+				}
+			},
+			destroy() {
+				batchMarkRead.unobserve(node);
+			}
+		};
 	}
 
 	onMount(() => {
-		loadChat();
+		// ✅ 立即清除这个对话的未读计数
+		messageStore.markConversationAsRead(`private_${userId}`);
 
-		// 连接 WebSocket（如果未连接）
-		if (websocketStore.connectionState === 'disconnected') {
-			websocketStore.connect();
-		}
-
-		// 订阅对方用户状态
-		subscriptionManager.subscribe('user', [userId]);
-
+		// 先注册消息监听器（确保不会错过任何消息）
 		// 监听私聊消息
 		const unsubscribeMessage = eventHandlers.onPrivateMessage((payload: PrivateMessageNewPayload) => {
 			// 只处理与当前聊天相关的消息
@@ -144,9 +180,8 @@
 					message_id: payload.message_id,
 					type: payload.type,
 					content: payload.content,
-					sender: payload.sender,
+					sender_id: payload.sender.user_id,
 					sent_at: payload.sent_at,
-					is_recalled: false,
 					media: payload.media,
 					location: payload.location,
 					reply_to: payload.reply_to
@@ -155,32 +190,32 @@
 				// 添加到消息列表
 				messages = [...messages, newMessage];
 
-				// 标记已读
-				privateMessagesService.markAsRead({ target_user_id: userId });
+				// ✅ 清除未读计数（因为用户正在查看这个对话）
+				messageStore.markConversationAsRead(`private_${userId}`);
 			}
 		});
 
-		// 监听对方正在输入
-		const unsubscribeTyping = websocketStore.on('PrivateUserTyping', (payload: any) => {
+		// 监听对方正在输入（类型自动推断！）
+		const unsubscribeTyping = websocketStore.on('PrivateUserTyping', (payload) => {
 			if (payload.user_id === userId) {
 				isOtherUserTyping = payload.is_typing;
 			}
 		});
 
-		// 监听消息撤回
-		const unsubscribeRecalled = websocketStore.on('PrivateMessageRecalled', (payload: any) => {
+		// 监听消息撤回（类型自动推断！）
+		const unsubscribeRecalled = websocketStore.on('PrivateMessageRecalled', (payload) => {
 			if (
 				payload.target_user_id === userId ||
 				(payload.recalled_by === userId && payload.target_user_id === authStore.currentUserId)
 			) {
 				messages = messages.map((msg) =>
-					msg.message_id === payload.message_id ? { ...msg, is_recalled: true } : msg
+					msg.message_id === payload.message_id ? { ...msg, recalled_at: payload.recalled_at } : msg
 				);
 			}
 		});
 
-		// 监听消息编辑
-		const unsubscribeEdited = websocketStore.on('PrivateMessageEdited', (payload: any) => {
+		// 监听消息编辑（类型自动推断！）
+		const unsubscribeEdited = websocketStore.on('PrivateMessageEdited', (payload) => {
 			if (
 				payload.target_user_id === userId ||
 				payload.target_user_id === authStore.currentUserId
@@ -191,19 +226,61 @@
 			}
 		});
 
-		// 组件卸载时清理
-		onDestroy(() => {
+		// 加载聊天数据（异步，不阻塞）
+		loadChat();
+
+		// ✅ 返回清理函数（Svelte 5 的新方式）
+		return () => {
 			unsubscribeMessage();
 			unsubscribeTyping();
 			unsubscribeRecalled();
 			unsubscribeEdited();
 
 			// 取消订阅
-			subscriptionManager.unsubscribe('user', [userId]);
+			if (isSubscribed) {
+				subscriptionManager.unsubscribe('user', [userId]);
+			}
 
 			// 清除正在输入定时器
 			if (typingTimer) clearTimeout(typingTimer);
-		});
+		};
+	});
+
+	/**
+	 * 响应式订阅管理（等待 WebSocket 连接完成）
+	 * 使用 $effect 监听连接状态，自动订阅/恢复订阅
+	 */
+	$effect(() => {
+		// 使用 derived 状态检查连接
+		const connected = websocketStore.isConnected;
+		
+		if (!connected) {
+			// 连接断开，重置订阅状态
+			if (isSubscribed) {
+				console.log('[Chat] WebSocket 断开，重置订阅状态');
+				isSubscribed = false;
+			}
+			return;
+		}
+
+		// WebSocket 已连接，尝试订阅
+		if (!isSubscribed && !isAttemptingSubscribe) {
+			isAttemptingSubscribe = true;
+			
+			console.log('[Chat] WebSocket 已连接，订阅用户:', userId);
+			
+			subscriptionManager.subscribe('user', [userId]).then((success) => {
+				isSubscribed = success;
+				isAttemptingSubscribe = false;
+				
+				if (success) {
+					console.log('[Chat] ✅ 订阅成功');
+				} else {
+					console.warn('[Chat] ❌ 订阅失败，将在重连后重试');
+					toast.warning('消息订阅失败，正在重试...');
+				}
+			});
+		}
 	});
 </script>
 
@@ -211,9 +288,9 @@
 	<title>与 {otherUser?.nickname ?? '用户'} 的对话 - HotSpot</title>
 </svelte:head>
 
-<div class="flex h-[calc(100vh-8rem)] flex-col">
+<div class="flex h-[calc(100dvh-8rem)] flex-col overflow-hidden rounded-xl border border-border/50 bg-card shadow-lg">
 	<!-- Header -->
-	<div class="flex items-center gap-3 border-b pb-4">
+	<div class="flex h-16 items-center gap-3 border-b border-border/50 bg-card/80 px-4 backdrop-blur-sm">
 		<Button variant="ghost" size="icon" onclick={() => history.back()}>
 			<ArrowLeft class="h-5 w-5" />
 		</Button>
@@ -237,7 +314,7 @@
 	</div>
 
 	<!-- Messages -->
-	<ScrollArea class="flex-1 py-4">
+	<ScrollArea class="flex-1 bg-muted/20 py-4">
 		{#if isLoading}
 			<div class="space-y-4 px-4">
 				{#each Array(5) as _, i}
@@ -256,40 +333,35 @@
 				<p class="text-muted-foreground">开始聊天吧</p>
 			</div>
 		{:else}
-			<div class="space-y-4 px-4">
+			<div class="space-y-3 px-4">
 				{#each messages as message (message.message_id)}
-					<div class="flex {isSelf(message) ? 'justify-end' : ''}">
-						<div class="flex max-w-[70%] gap-2 {isSelf(message) ? 'flex-row-reverse' : ''}">
-							{#if !isSelf(message)}
-								<Avatar class="h-8 w-8">
-									<AvatarImage src={message.sender.avatar_url} alt={message.sender.nickname} />
-									<AvatarFallback>{(message.sender.nickname || '用户').slice(0, 2)}</AvatarFallback>
-								</Avatar>
-							{/if}
-							<div>
-								<div
-									class="rounded-lg px-3 py-2 {isSelf(message)
-										? 'bg-primary text-primary-foreground'
-										: 'bg-muted'}"
-								>
-									{#if message.is_recalled}
-										<p class="text-sm italic opacity-70">消息已撤回</p>
-									{:else if message.type === 'text'}
-										<p class="whitespace-pre-wrap text-sm">{message.content}</p>
-									{:else if message.type === 'image' && message.media}
-										<img
-											src={message.media.url}
-											alt="图片"
-											class="max-w-[200px] rounded"
-										/>
-									{:else}
-										<p class="text-sm">[{message.type}]</p>
-									{/if}
-								</div>
-								<p class="mt-1 text-xs text-muted-foreground {isSelf(message) ? 'text-right' : ''}">
-									{formatTime(message.sent_at)}
-								</p>
+					<div
+						class="flex {isSelf(message) ? 'justify-end' : ''}"
+						use:observeMessage={{ messageId: message.message_id, isSelf: isSelf(message) }}
+					>
+						<div class="flex max-w-[70%] flex-col gap-1">
+							<div
+								class="rounded-2xl px-4 py-2.5 {isSelf(message)
+									? 'bg-primary text-primary-foreground shadow-md shadow-primary/20 border border-primary/30'
+									: 'bg-card text-card-foreground shadow-md border border-border/50'}"
+							>
+								{#if message.recalled_at != null}
+									<p class="text-sm italic opacity-70">消息已撤回</p>
+								{:else if message.type === 'text'}
+									<p class="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
+								{:else if message.type === 'image' && message.media}
+									<img
+										src={message.media.url}
+										alt="图片"
+										class="max-w-[250px] rounded-lg"
+									/>
+								{:else}
+									<p class="text-sm">[{message.type}]</p>
+								{/if}
 							</div>
+							<p class="px-2 text-xs text-muted-foreground {isSelf(message) ? 'text-right' : ''}">
+								{formatTime(message.sent_at)}
+							</p>
 						</div>
 					</div>
 				{/each}
@@ -298,7 +370,23 @@
 	</ScrollArea>
 
 	<!-- Input -->
-	<div class="border-t pt-4">
+	<div class="border-t border-border/50 bg-card/80 pt-4 px-4 pb-4 backdrop-blur-sm">
+		{#if !isSubscribed && !isLoading}
+			<div class="rounded-xl bg-yellow-500/10 border border-yellow-500/30 px-4 py-2.5 text-center mb-3">
+				<p class="text-sm text-yellow-700 dark:text-yellow-300 flex items-center justify-center gap-2">
+					{#if isAttemptingSubscribe}
+						<Loader2 class="h-4 w-4 animate-spin" />
+						正在连接服务器...
+					{:else if !websocketStore.isConnected}
+						<Loader2 class="h-4 w-4 animate-spin" />
+						等待 WebSocket 连接...
+					{:else}
+						订阅失败，正在重试...
+					{/if}
+				</p>
+			</div>
+		{/if}
+		
 		<!-- 对方正在输入提示 -->
 		{#if isOtherUserTyping}
 			<div class="mb-2 text-xs text-muted-foreground">
@@ -307,11 +395,12 @@
 		{/if}
 
 		<div class="flex gap-2">
-			<Textarea
+			<textarea
+				{@attach autofocus(shouldFocusInput)}
 				placeholder="输入消息..."
 				bind:value={messageText}
 				rows={1}
-				class="min-h-[40px] resize-none"
+				class="min-h-[40px] flex w-full resize-none rounded-md border border-input bg-background/80 px-3 py-2 text-base shadow-sm shadow-black/5 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
 				disabled={isSending}
 				oninput={handleInput}
 				onkeydown={(e) => {
@@ -320,10 +409,11 @@
 						sendMessage();
 					}
 				}}
-			/>
+			></textarea>
 			<Button
 				size="icon"
 				onclick={sendMessage}
+				onmousedown={(e) => e.preventDefault()}
 				disabled={!messageText.trim() || isSending}
 			>
 				{#if isSending}
