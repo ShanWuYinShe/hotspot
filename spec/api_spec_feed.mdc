@@ -183,7 +183,7 @@ interface GetFeedUsersRequest extends PaginationParams {
 **Request**:
 ```typescript
 interface GetFeedTrendingRequest {
-  limit?: number;
+  limit?: number;  // 默认 20，最大 100
 }
 ```
 **Response**: `ApiResponse<TrendingBundle>`
@@ -220,7 +220,7 @@ interface FeedFeedbackRequest {
 **Request**:
 ```typescript
 interface TrendingTagsRequest {
-  limit?: number;
+  limit?: number;  // 默认 10，最大 50（热门标签列表）
   timeframe?: TagTimeframe;
 }
 
@@ -240,7 +240,7 @@ interface TrendingTags {
 ```typescript
 interface SuggestTagsRequest {
   prefix: string;
-  limit?: number;
+  limit?: number;  // 默认 5，最大 20（建议类接口使用较小默认值）
 }
 
 interface TagSuggestions {

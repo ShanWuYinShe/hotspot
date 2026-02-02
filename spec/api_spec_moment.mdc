@@ -145,7 +145,7 @@ interface SearchMomentsByLocationRequest extends SearchBaseParams {
 ```typescript
 interface SuggestMomentsRequest {
   prefix: string;
-  limit?: number;
+  limit?: number;  // 默认 5，最大 20（建议类接口使用较小默认值）
 }
 
 // MomentSuggestItem 定义于 @api_spec_search.mdc

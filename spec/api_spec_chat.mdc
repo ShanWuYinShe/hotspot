@@ -28,11 +28,9 @@ interface Conversation {
   last_activity_at: string;
   created_at: string;
   can_message: boolean;
-  recent_messages: {
-    items: PrivateMessageItem[];
-    has_more: boolean;
-    next_cursor?: string;
-  };
+  
+  // 注：消息列表应通过 /api/v1/private_messages/history 接口获取
+  // 避免 open_the_door 接口返回过大数据
 }
 
 interface MessageLimit {
@@ -115,7 +113,7 @@ interface MyPrivateChatsRequest extends PaginationParams {}
 ```typescript
 interface PrivateChatOpenTheDoorRequest {
   target_user_id: number;
-  recent_messages_limit?: number;
+  recent_messages_limit?: number;  // 默认 20，最大 50（最近消息，不宜过多）
 }
 ```
 **Response**: `ApiResponse<Conversation>`
