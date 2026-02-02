@@ -79,9 +79,16 @@ alwaysApply: true
 
 **Web 端**（推荐）：
 1. **Cookie 方式**（推荐，自动携带）
-   - `access_token` Cookie：所有 `/api/*` 请求自动携带
-   - `refresh_token` Cookie：仅 `/api/v1/auth/refresh_token` 请求自动携带
-   - 配置：`HttpOnly; Secure; SameSite=Lax`
+   - `access_token` Cookie：
+     - 作用范围：所有 `/api/*` 请求自动携带
+     - 配置：`HttpOnly; Secure; SameSite=Lax; Path=/api; Max-Age=3600`
+     - Max-Age 由服务端根据 token 过期时间动态设置
+   
+   - `refresh_token` Cookie：
+     - 作用范围：仅 `/api/v1/auth/refresh_token` 请求自动携带
+     - 配置：`HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth/refresh_token; Max-Age=604800`
+     - SameSite=Strict 提供更强的 CSRF 防护
+     - Path 限制确保 refresh_token 只在刷新端点携带
    
 2. **Header 方式**（备用）
    - `Authorization: Bearer <access_token>`
@@ -218,6 +225,15 @@ type ClientType = 'web' | 'app';
 
 // === 状态枚举 ===
 type UserAccountStatus = 'normal' | 'banned';
+
+// 用户在线状态（参考 @api_spec_websocket.mdc）
+type UserPresenceStatus = 
+  | 'online'      // 正在活跃（有 WebSocket 连接且 5 分钟内有活动）
+  | 'idle'        // 空闲/离开（有连接但 5 分钟没活动）
+  | 'dnd'         // 请勿打扰（用户主动设置）
+  | 'invisible'   // 隐身（对他人显示为 offline）
+  | 'offline';    // 离线（无连接）
+
 type ApplicationStatus = 'pending' | 'accepted' | 'rejected';
 type ResponseStatus = 'accepted' | 'rejected';  // 用于邀请/申请响应
 type ReportStatus = 'pending' | 'reviewing' | 'resolved' | 'dismissed';
@@ -415,8 +431,9 @@ interface UserSearchItem extends UserInfo {
   tags?: string[];
   
   // 隐私受控字段（隐私限制时不返回，不暴露原因）
-  is_online?: boolean;      // 在线状态
-  last_online?: string;     // 最后在线时间
+  presence_status?: UserPresenceStatus;  // 用户状态（online/idle/dnd/invisible/offline）
+  status_text?: string;                  // 自定义状态文本（如"开会中"）
+  last_online?: string;                  // 最后在线时间（offline 时有值）
   
   // 位置信息：使用 RelativeLocation
   // - 搜索/列表场景：distance 和 bearing_degrees 有值
@@ -448,12 +465,13 @@ interface UserSearchItem extends UserInfo {
 **Relationship**: 用户关系信息（@auth-only）
 ```typescript
 interface Relationship {
-  is_mutual_follow: boolean;
   is_following: boolean;       // 我是否关注了对方
   is_followed_by: boolean;     // 对方是否关注了我
   is_blocked: boolean;         // 我是否拉黑了对方
   // 注意：不返回"对方是否拉黑了我"（is_blocking），这是对方的隐私
   has_pending_follow_request: boolean;
+  
+  // 互相关注可由客户端计算：is_following && is_followed_by
 }
 ```
 
@@ -663,38 +681,43 @@ interface MessageReplyTo {
 }
 ```
 
-**MessageBase**: 消息通用字段（内部复用，不直接使用）。
+**PrivateMessageItem**: 私聊消息。
 ```typescript
-interface MessageBase {
+interface PrivateMessageItem {
   message_id: string;
   type: MessageType;
   
   content?: string;
   media?: MessageMedia;
   
-  sender: UserInfo;
+  sender_id: number;  // 私聊场景：会话双方已知，只需 ID
   
   reply_to?: MessageReplyTo;
   
   sent_at: string;
   edited_at?: string;
-  
-  is_recalled: boolean;
-  recalled_at?: string;
+  recalled_at?: string;  // 存在即表示已撤回
 }
 ```
 
-**PrivateMessageItem**: 私聊消息。
+**GroupMessageItem**: 群聊消息。
 ```typescript
-interface PrivateMessageItem extends MessageBase {}
-```
-
-**GroupMessageItem**: 群聊消息 (增加提及、已读等)。
-```typescript
-interface GroupMessageItem extends MessageBase {
-  mentions?: number[];  // @UserIDs
+interface GroupMessageItem {
+  message_id: string;
+  type: MessageType;
   
+  content?: string;
+  media?: MessageMedia;
+  
+  sender: UserInfo;  // 群聊场景：需要完整用户信息
+  
+  reply_to?: MessageReplyTo;
+  mentions?: number[];  // @UserIDs
   recalled_by?: number;
+  
+  sent_at: string;
+  edited_at?: string;
+  recalled_at?: string;  // 存在即表示已撤回
   
   read_count?: number;
 }
@@ -717,7 +740,8 @@ interface PrivateChatListItem {
   is_pinned: boolean;
   
   // 对方在线状态 (快照)
-  is_online: boolean;
+  presence_status: UserPresenceStatus;
+  status_text?: string;  // 自定义状态文本
 }
 ```
 

@@ -21,9 +21,13 @@ alwaysApply: true
 // 认证响应负载：按 client_type 拆分，避免 refresh_token 语义漂移
 // Web：refresh_token 绝不出现在 body（通常由 HttpOnly Cookie 承载）
 // App：refresh_token 必须出现在 body，客户端负责安全存储
+// 
+// JWT 设计原则：
+// - JWT (access_token) 中只存储不可变信息：user_id
+// - 可变信息（nickname、头像等）应通过 /api/v1/user/me/profile 获取
+// - 避免 JWT 中的信息与实际数据不一致
 interface AuthTokenPairWeb {
   user_id: number;
-  nickname: string;
   access_token: string;
   access_token_expires_at: string;
   // 注：Web 端 refresh_token 通过 HttpOnly Cookie 传输，响应体中不返回任何 refresh_token 相关信息
@@ -31,7 +35,6 @@ interface AuthTokenPairWeb {
 
 interface AuthTokenPairApp {
   user_id: number;
-  nickname: string;
   access_token: string;
   refresh_token: string;
   access_token_expires_at: string;
@@ -56,9 +59,10 @@ interface SessionItem {
 
 interface AuthStatus {
   is_valid: boolean;
-  user_id?: number;
-  nickname?: string;
-  expires_at?: string;
+  expires_at?: string;  // 仅当 is_valid === true 时返回
+  
+  // 注：user_id 可从 access_token (JWT) 解析
+  // 如需完整用户信息（nickname、头像等），应调用 /api/v1/user/me/profile
 }
 ```
 
