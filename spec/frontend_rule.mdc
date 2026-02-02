@@ -361,8 +361,9 @@ export async function likeMoment(momentId: string) {
 - 实现指数退避重连策略。
 
 ### 心跳机制
-- 客户端每 30 秒发送一次心跳。
-- 10 秒内未收到响应视为连接异常，触发重连。
+- 心跳参数由服务端通过 `ConnectionEstablished.config` 动态下发，客户端不得硬编码。
+- 按 `config.ping_interval` 间隔发送心跳。
+- `config.ping_timeout` 时间内未收到响应视为连接异常，触发重连。
 
 ### 事件处理
 - 消息事件通过 Zustand store 或 TanStack Query 的 `queryClient.setQueryData` 更新 UI。
