@@ -1,7 +1,7 @@
 ---
 alwaysApply: true
 ---
-# HotSpot API 规范 - WebSocket 实时事件定义 v0.1.0（契约唯一权威）
+# HotSpot API 规范 - WebSocket 实时事件定义 v0.0.1（契约唯一权威）
 
 > 本文档定义 HotSpot WebSocket 实时事件、连接与鉴权规范、订阅机制等。
 

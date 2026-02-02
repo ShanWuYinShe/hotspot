@@ -78,14 +78,14 @@ interface AuthStatus {
 | `10103` | Refresh Token 无效或过期 | `refresh_token` |
 | `10104` | Refresh Token 缺失 | `refresh_token` |
 | `10105` | 密码错误 | `login`, `change_password` |
-| `10106` | 需要重新登录 | `refresh_token`, `request_password_reset`, `verify_reset_code`, `reset_password` |
-| `10107` | 验证 Token 无效或已过期 | `request_password_reset`, `register` |
+| `10106` | 需要重新登录 | `refresh_token` |
+| `10107` | 验证 Token 无效或已过期 | `register`, `reset_password` |
 | `10200` | 权限不足 | `sessions/revoke` |
 | `10201` | 账号被封禁 | `login` |
-| `10300` | 资源不存在 | `verify_code`, `verify_reset_code`, `sessions/revoke` |
-| `10310` | 用户不存在 | `login` |
+| `10300` | 资源不存在 | `verify_code`, `sessions/revoke` |
+| `10310` | 用户不存在 | `login`, `reset_password` |
 | `10400` | 资源已存在 | `register` |
-| `10402` | 资源状态冲突 | `register`, `verify_code`, `request_password_reset`, `verify_reset_code`, `reset_password` |
+| `10402` | 资源状态冲突 | `register`, `verify_code` |
 | `10500` | 请求过于频繁 | `send_verification_code` |
 | `10501` | 超过每分钟请求限制 | `send_verification_code` |
 | `10503` | 超过每日请求限制 | `send_verification_code` |
@@ -104,8 +104,6 @@ interface AuthStatus {
 | 认证 | `POST /api/v1/auth/check_status` | 检查认证状态 | `{}` | `ApiResponse<AuthStatus>` |
 | 验证码 | `POST /api/v1/auth/send_verification_code` | 发送验证码 | `SendVerificationCodeRequest` | `ApiResponse<VerificationCodeSent>` |
 | 验证码 | `POST /api/v1/auth/verify_code` | 校验验证码 | `VerifyCodeRequest` | `ApiResponse<VerificationResult>` |
-| 密码重置 | `POST /api/v1/auth/request_password_reset` | 发起重置密码 | `RequestPasswordResetRequest` | `ApiResponse<ResetRequested>` |
-| 密码重置 | `POST /api/v1/auth/verify_reset_code` | 校验重置码 | `VerifyResetCodeRequest` | `ApiResponse<ResetVerified>` |
 | 密码重置 | `POST /api/v1/auth/reset_password` | 重置密码 | `ResetPasswordRequest` | `ApiResponse` |
 | 账户安全 | `POST /api/v1/auth/me/change_password` | 修改密码 | `ChangePasswordRequest` | `ApiResponse` |
 | 会话管理 | `POST /api/v1/auth/me/sessions` | 获取会话列表 | `SessionsRequest` | `ApiResponse<PaginatedData<SessionItem>>` |
@@ -305,60 +303,34 @@ interface VerificationResult {
 
 **可能错误码**：`10001`、`10300`、`10402`
 
-### POST /api/v1/auth/request_password_reset
-
-请求密码重置。
-
-**Request**:
-```typescript
-interface RequestPasswordResetRequest {
-  login_id: string;
-  verify_token: string;  // 必填，来自 verify_code 接口
-}
-
-interface ResetRequested {
-  reset_id: string;
-}
-```
-**Response**: `ApiResponse<ResetRequested>`
-
-**可能错误码**：`10001`、`10106`、`10402`、`10107`
-
-**注意**：`10107` 表示 verify_token 无效或已过期
-
-### POST /api/v1/auth/verify_reset_code
-
-验证密码重置码。
-
-**Request**:
-```typescript
-interface VerifyResetCodeRequest {
-  reset_id: string;
-  code: string;
-}
-
-interface ResetVerified {
-  reset_token: string;
-}
-```
-**Response**: `ApiResponse<ResetVerified>`
-
-**可能错误码**：`10001`、`10300`、`10402`、`10106`
-
 ### POST /api/v1/auth/reset_password
 
-执行密码重置。
+重置密码（忘记密码场景）。
+
+**流程说明**：
+1. 用户输入手机号/邮箱，调用 `send_verification_code` 获取验证码
+2. 用户输入验证码，调用 `verify_code` 验证成功后获得 `verify_token`（短期有效，建议 5 分钟）
+3. 用户输入新密码，调用 `reset_password` 完成重置
 
 **Request**:
 ```typescript
 interface ResetPasswordRequest {
-  reset_token: string;
-  password: string;
+  login_id: string;       // 手机号或邮箱（用于验证 verify_token 的绑定）
+  verify_token: string;   // 来自 verify_code 接口，短期有效
+  new_password: string;   // 新密码
 }
 ```
 **Response**: `ApiResponse`
 
-**可能错误码**：`10001`、`10003`、`10402`、`10106`
+**可能错误码**：
+- `10001`：缺少必填参数
+- `10003`：密码格式不符合要求（长度、复杂度等）
+- `10107`：verify_token 无效或已过期
+- `10310`：用户不存在（login_id 无效）
+
+**安全说明**：
+- verify_token 使用后立即失效，不可重复使用
+- verify_token 与 login_id 绑定，防止跨账户攻击
 
 ### 当前用户认证 API（/me/ 路径）
 
