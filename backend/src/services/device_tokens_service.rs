@@ -66,15 +66,12 @@ impl DeviceTokensService {
         let limit = Validator::validate_limit(req.limit, 100)? as i32;
         let cursor = req.cursor;
 
-        let (tokens, next_cursor) = self
-            .device_token_repo
-            .list_by_user(user_id, limit, cursor)
-            .await?;
+        let (tokens, next_cursor) = (self.device_token_repo.list_by_user(user_id).await?, None);
 
         let response_items: Vec<DeviceTokenItem> = tokens
             .into_iter()
             .map(|token| DeviceTokenItem {
-                device_token_id: token.id.to_string(),
+                device_token_id: token.token_id.to_string(),
                 platform: token.platform,
                 device_token: token.device_token,
                 created_at: token.created_at.to_rfc3339(),
