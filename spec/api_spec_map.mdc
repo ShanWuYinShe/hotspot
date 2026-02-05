@@ -26,6 +26,12 @@ alwaysApply: true
 - Mid Zoom (中)：分裂为更小的聚合或展示头部热点 (`type: 'cluster'`, `preview_urls: [...]`)
 - High Zoom (近)：直接展示具体的 Poi (`type: 'user'/'moment'`, `entity: {...}`)
 
+## 接口概览（按子域）
+
+| 子域 | 端点 | 说明 | Request | Response |
+|-----|------|------|---------|----------|
+| 地图渲染 | `POST /api/v1/map/render` | 获取地图渲染数据 | `MapRenderRequest` | `ApiResponse<MapCanvas>` |
+
 ## 核心类型定义
 
 ```typescript
@@ -45,14 +51,7 @@ interface MapCanvas {
 | `10003` | 参数值超出范围 | `render`（zoom） |
 
 ---
-
-## 接口列表
-
-## 接口概览（按子域）
-
-| 子域 | 端点 | 说明 | Request | Response |
-|-----|------|------|---------|----------|
-| 地图渲染 | `POST /api/v1/map/render` | 获取地图渲染数据 | `MapRenderRequest` | `ApiResponse<MapCanvas>` |
+## API 详情
 
 ### POST /api/v1/map/render
 

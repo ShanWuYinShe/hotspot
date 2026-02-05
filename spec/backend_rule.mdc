@@ -382,9 +382,9 @@ Handler → Service → Repository
 | `ENUM` | `enum` | 枚举类型 |
 
 **ID 字段说明**:
-- `user_id`: `BIGINT` → `i64`（纯数字用户 ID）
-- 其他业务 ID: `VARCHAR(36)` → `String`（UUID 字符串）
-- 内部主键: `id BIGSERIAL` → `i64`
+- 数据库层：`user_id` 和 `group_id` 为 `BIGINT` → Rust `i64`；其他业务 ID 为 `VARCHAR(36)` → Rust `String`
+- API 层：所有 `*_id` 字段统一序列化为 `String`（前端视为不透明字符串）
+- 内部主键：`id BIGSERIAL` → Rust `i64`（不暴露给 API）
 
 ---
 
@@ -445,7 +445,7 @@ Handler → Service → Repository
 - **路由**：统一 `/api/v1/` 前缀，不区分 public/protected 路径
 - **认证**：Token 可选（查询类）/ Token 必须（写操作/互动/me/feed/admin）
 - **API**：仅 POST；HTTP 固定 200；`ApiResponse.code` 表达业务结果
-- **ID**：`user_id` 是 i64；其他业务 ID 多为 UUID 字符串
+- **ID**：API 层所有 `*_id` 统一为 `String`；Rust 内部 `user_id`/`group_id` 为 `i64`
 - **时间**：UTC ISO 8601
 - **存在性检查**：优先 `repo.exists()` + `SELECT EXISTS(...)`
 - **分页**：keyset/cursor；cursor 不透明，service 透传

@@ -3,21 +3,48 @@ alwaysApply: true
 ---
 # HotSpot API 规范 - 系统与全局配置 API 模块 v0.0.1 (RPC)
 
-> 本文档定义 HotSpot 系统健康检查 (`system`) 和全局配置 (`global_settings`) 相关的 RPC 接口。
+> 本文档定义 HotSpot 系统健康检查 (`system`)、全局配置 (`global_settings`) 和系统公告 (`announcements`) 相关的公开 RPC 接口。
 
 ## 服务定义
 
-- **Service Namespace**: `system`, `global_settings`
-- **Base Path**: `/api/v1/system/`, `/api/v1/global_settings/`
+- **Service Namespace**: `system`, `global_settings`, `announcements`
+- **Base Path**: `/api/v1/system/`, `/api/v1/global_settings/`, `/api/v1/announcements`
 
 ## 契约引用
 
 - 公共基础类型：`@api_spec_common_types.mdc`
 - 错误码：`@api_spec_errors.mdc`
+- 管理员配置管理：`@api_spec_admin_config.mdc`
+
+## 接口概览（按子域）
+
+| 子域 | 端点 | 说明 | Request | Response |
+|-----|------|------|---------|----------|
+| 版本 | `POST /api/v1/meta` | API 版本元信息 | `{}` | `ApiResponse<ApiVersionMeta>` |
+| 系统 | `POST /api/v1/system/health` | 健康检查 | `{}` | `ApiResponse<HealthStatus>` |
+| 全局配置 | `POST /api/v1/global_settings/fetch` | 获取全局启动配置 | `FetchGlobalSettingsRequest` | `ApiResponse<GlobalSettings>` |
+| 公告 | `POST /api/v1/announcements` | 系统公告列表 | `AnnouncementListRequest` | `ApiResponse<PaginatedData<SystemAnnouncementItem>>` |
 
 ## 核心类型定义
 
 ```typescript
+// API 版本元信息
+interface ApiVersionMeta {
+  version: string;                    // 当前 API 版本号，如 "v1"
+  status: ApiVersionStatus;           // 版本状态
+  deprecated_at?: string;             // 废弃公告发布时间（ISO 8601）
+  sunset_at?: string;                 // 计划下线时间（ISO 8601）
+  migration_guide_url?: string;       // 迁移指南链接
+  successor_version?: string;         // 建议迁移的目标版本，如 "v2"
+  message?: string;                   // 给开发者的提示信息
+}
+
+// API 版本状态
+type ApiVersionStatus = 
+  | 'active'      // 正常使用中
+  | 'deprecated'  // 已废弃，但仍可用
+  | 'sunset';     // 已下线，不可用
+
 interface HealthStatus {
   status: SystemHealthStatus;
   version: string;
@@ -101,10 +128,8 @@ interface GlobalSettings {
   rate_limits: RateLimitConfig;   // 频率限制配置
 }
 
-interface AdminSettings extends GlobalSettings {
-  updated_at: string;
-  updated_by_user_id: number;
-}
+// 公告列表请求参数
+interface AnnouncementListRequest extends PaginationParams {}
 ```
 
 ## 错误码说明
@@ -113,26 +138,60 @@ interface AdminSettings extends GlobalSettings {
 
 | 错误码 | 说明 | 相关接口 |
 |-------|------|---------|
-| `10002` | 参数格式错误 | `update_contact`（URL/Email 格式） |
-| `10003` | 参数值超出范围 | `update_upload`、`update_limits`、`update_rate_limits` |
-| `10204` | 非管理员 | 所有 admin 接口 |
-| `10205` | 管理员权限不足 | 所有 admin 接口 |
+| `10003` | 参数值超出范围 | `announcements`（limit 超出范围） |
 
 ---
 
-## 接口概览（按子域）
+## API 版本元信息
 
-| 子域 | 端点 | 说明 | Request | Response |
-|-----|------|------|---------|----------|
-| 系统 | `POST /api/v1/system/health` | 健康检查 | `{}` | `ApiResponse<HealthStatus>` |
-| 全局配置 | `POST /api/v1/global_settings/fetch` | 获取全局启动配置 | `FetchGlobalSettingsRequest` | `ApiResponse<GlobalSettings>` |
-| 管理员配置 | `POST /api/v1/admin/global_settings` | 获取完整全局配置 | `{}` | `ApiResponse<AdminSettings>` |
-| 管理员配置 | `POST /api/v1/admin/global_settings/update_upload` | 更新上传策略 | `UpdateUploadConfigRequest` | `ApiResponse<{ upload: UploadConfig; updated_at: string; }>` |
-| 管理员配置 | `POST /api/v1/admin/global_settings/update_defaults` | 更新内容默认值 | `UpdateDefaultsRequest` | `ApiResponse<{ defaults: ContentDefaults; updated_at: string; }>` |
-| 管理员配置 | `POST /api/v1/admin/global_settings/update_features` | 更新功能开关 | `UpdateFeaturesRequest` | `ApiResponse<{ features: FeatureSwitches; updated_at: string; }>` |
-| 管理员配置 | `POST /api/v1/admin/global_settings/update_contact` | 更新联系信息 | `UpdateContactRequest` | `ApiResponse<{ contact: ContactInfo; updated_at: string; }>` |
-| 管理员配置 | `POST /api/v1/admin/global_settings/update_limits` | 更新系统限制 | `UpdateLimitsRequest` | `ApiResponse<{ limits: AppLimits; updated_at: string; }>` |
-| 管理员配置 | `POST /api/v1/admin/global_settings/update_rate_limits` | 更新频率限制 | `UpdateRateLimitsRequest` | `ApiResponse<{ rate_limits: RateLimitConfig; updated_at: string; }>` |
+### POST /api/v1/meta
+
+获取当前 API 版本的元信息，包括废弃状态和下线计划。
+
+**说明**：
+- 此接口为公开资源，无需认证
+- 每个 API 版本（如 v1, v2）都应在其路径下提供此端点
+- 客户端应在启动时调用此接口，检查当前使用的 API 版本状态
+- 若版本状态为 `deprecated`，客户端应提示用户更新应用
+- 若版本状态为 `sunset`，该版本所有其他接口将返回错误
+
+**Request**: `{}`
+
+**Response**: `ApiResponse<ApiVersionMeta>`
+
+**响应示例**（正常版本）:
+```json
+{
+  "success": true,
+  "data": {
+    "version": "v1",
+    "status": "active"
+  }
+}
+```
+
+**响应示例**（已废弃版本）:
+```json
+{
+  "success": true,
+  "data": {
+    "version": "v1",
+    "status": "deprecated",
+    "deprecated_at": "2025-01-15T00:00:00Z",
+    "sunset_at": "2025-07-15T00:00:00Z",
+    "migration_guide_url": "https://docs.hotspot.app/api/migration/v1-to-v2",
+    "successor_version": "v2",
+    "message": "API v1 将于 2025-07-15 下线，请尽快迁移至 v2"
+  }
+}
+```
+
+**客户端处理建议**：
+- `active`: 正常使用，无需处理
+- `deprecated`: 显示提示横幅，建议用户更新应用；记录日志以便追踪迁移进度
+- `sunset`: 显示强制更新弹窗，阻止继续使用
+
+---
 
 ## 系统健康检查 API
 
@@ -163,151 +222,20 @@ interface FetchGlobalSettingsRequest {}
 
 ---
 
-## 配置管理（管理员）
+## 系统公告
 
-> 权限要求：
-> - 读取：`admin.config.read`
-> - 更新：`admin.config.write`
+### POST /api/v1/announcements
 
-### POST /api/v1/admin/global_settings
+获取系统公告列表。
 
-获取完整全局配置（管理员）。
-
-**Request**: `{}`
-**Response**: `ApiResponse<AdminSettings>`
-
-**可能错误码**：`10204`、`10205`
-
-### POST /api/v1/admin/global_settings/update_upload
-
-更新上传策略。
+**说明**：
+- 系统公告属于"默认公开资源"，无需认证
+- 返回的 `SystemAnnouncementItem` 中 `@admin-only` 字段（如 `created_by`、`view_count` 等）仅对管理员可见
 
 **Request**:
 ```typescript
-interface UpdateUploadConfigRequest extends Partial<UploadConfig> {}
+interface AnnouncementListRequest extends PaginationParams {}
 ```
-**Response**: `ApiResponse<{ upload: UploadConfig; updated_at: string; }>`
+**Response**: `ApiResponse<PaginatedData<SystemAnnouncementItem>>`
 
-**可能错误码**：`10204`、`10205`、`10003`
-
-### POST /api/v1/admin/global_settings/update_defaults
-
-更新内容默认值。
-
-**Request**:
-```typescript
-interface UpdateDefaultsRequest {
-  default_location_name?: string;
-  default_group_avatar?: string;
-  default_user_avatar?: string;
-  default_group_settings?: Partial<GroupSettings>;
-}
-```
-**Response**: `ApiResponse<{ defaults: ContentDefaults; updated_at: string; }>`
-
-**可能错误码**：`10204`、`10205`
-
-### POST /api/v1/admin/global_settings/update_features
-
-更新功能开关。
-
-**Request**:
-```typescript
-interface UpdateFeaturesRequest {
-  enable_public_registration?: boolean;
-  enable_guest_login?: boolean;
-  enable_moments?: boolean;
-  enable_nearby_people?: boolean;
-}
-```
-**Response**: `ApiResponse<{ features: FeatureSwitches; updated_at: string; }>`
-
-**可能错误码**：`10204`、`10205`
-
-### POST /api/v1/admin/global_settings/update_contact
-
-更新联系信息。
-
-**Request**:
-```typescript
-interface UpdateContactRequest {
-  support_email?: string;
-  privacy_policy_url?: string;
-  terms_of_service_url?: string;
-  official_website?: string;
-}
-```
-**Response**: `ApiResponse<{ contact: ContactInfo; updated_at: string; }>`
-
-**可能错误码**：`10204`、`10205`、`10002`
-
-### POST /api/v1/admin/global_settings/update_limits
-
-更新系统限制。
-
-**Request**:
-```typescript
-interface UpdateLimitsRequest extends Partial<AppLimits> {}
-```
-**Response**: `ApiResponse<{ limits: AppLimits; updated_at: string; }>`
-
-**可能错误码**：`10204`、`10205`、`10003`
-
-### POST /api/v1/admin/global_settings/update_rate_limits
-
-更新频率限制配置。
-
-**说明**：动态调整 Rate Limit 策略，无需重启服务即可生效。
-
-**Request**:
-```typescript
-interface UpdateRateLimitsRequest extends Partial<RateLimitConfig> {
-  // 全局限速（可选）
-  global_per_hour?: number;
-  user_per_hour?: number;
-  
-  // 认证相关限速（可选）
-  auth_send_code_per_minute?: number;
-  auth_verify_code_per_10minutes?: number;
-  auth_register_per_10minutes?: number;
-  auth_login_per_10minutes?: number;
-  auth_guest_per_10minutes?: number;
-  auth_refresh_per_10minutes?: number;
-  auth_reset_request_per_minute?: number;
-  auth_reset_verify_per_10minutes?: number;
-  auth_reset_per_10minutes?: number;
-  
-  // 业务相关限速（可选）
-  moments_create_per_minute?: number;
-  comments_create_per_minute?: number;
-  reports_create_per_hour?: number;
-}
-```
-**Response**: `ApiResponse<{ rate_limits: RateLimitConfig; updated_at: string; }>`
-
-**验证规则**：
-- 所有值必须为正整数
-- 全局限速建议范围：`100-10000` 次/小时
-- 用户限速建议范围：`500-50000` 次/小时
-- 认证相关限速建议最小值：
-  - 验证码发送：`>= 3` 次/分钟
-  - 登录：`>= 10` 次/10分钟
-  - 注册：`>= 5` 次/10分钟
-- 业务限速建议最小值：
-  - 创建瞬间：`>= 5` 次/分钟
-  - 创建评论：`>= 20` 次/分钟
-  - 举报：`>= 5` 次/小时
-
-**注意事项**：
-- 配置立即生效，影响所有后续请求
-- 降低限制值时，可能导致正常用户受影响，建议谨慎操作
-- 修改后建议监控错误码 `10500-10503` 的触发频率
-- 建议在低峰期调整配置
-
-**可能错误码**：`10204`、`10205`、`10003`（值超出合理范围）
-
-**使用场景**：
-1. **应对攻击**：检测到恶意请求时，临时降低限制值
-2. **业务调整**：根据实际业务需求调整限制策略
-3. **性能优化**：在服务器负载高时降低限制，负载低时提高限制
-4. **特殊活动**：活动期间临时提高某些接口的限制值
+**可能错误码**：`10003`

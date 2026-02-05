@@ -3,12 +3,12 @@ alwaysApply: true
 ---
 # HotSpot API 规范 - 群组 API 模块 v0.0.1 (RPC)
 
-> 本文档定义 HotSpot 群组管理 (`group_chats`)、群组成员管理和群聊消息 (`group_messages`) 相关的 RPC 接口。
+> 本文档定义 HotSpot 群组管理 (`groups`)、群组成员管理和群聊消息 (`group_messages`) 相关的 RPC 接口。
 
 ## 服务定义
 
-- **Service Namespace**: `group_chats`, `group_messages`
-- **Base Path**: `/api/v1/group_chats/`, `/api/v1/group_messages/`
+- **Service Namespace**: `groups`, `group_messages`
+- **Base Path**: `/api/v1/groups/`, `/api/v1/group_messages/`
 
 ## 契约引用
 
@@ -16,13 +16,63 @@ alwaysApply: true
 - 错误码：`@api_spec_errors.mdc`
 - WebSocket：`@api_spec_websocket.mdc`
 
+## 接口概览（按子域）
+
+| 子域 | 端点 | 说明 | Request | Response |
+|-----|------|------|---------|----------|
+| 搜索与发现 | `POST /api/v1/groups/search_by_keyword` | 搜索群组（关键字） | `SearchGroupsByKeywordRequest` | `ApiResponse<PaginatedData<GroupSearchItem>>` |
+| 搜索与发现 | `POST /api/v1/groups/search_by_tag` | 搜索群组（标签） | `SearchGroupsByTagRequest` | `ApiResponse<PaginatedData<GroupSearchItem>>` |
+| 搜索与发现 | `POST /api/v1/groups/search_by_location` | 搜索群组（位置） | `SearchGroupsByLocationRequest` | `ApiResponse<PaginatedData<GroupSearchItem>>` |
+| 搜索与发现 | `POST /api/v1/groups/suggest` | 群组搜索建议 | `SuggestGroupsRequest` | `ApiResponse<PaginatedData<GroupSuggestItem>>` |
+| 群组详情 | `POST /api/v1/groups/open_the_door` | 群组详情 | `GroupOpenTheDoorRequest` | `ApiResponse<GroupSearchItem>` |
+| 群组详情 | `POST /api/v1/groups/settings` | 群组设置（含只读字段） | `GroupSettingsRequest` | `ApiResponse<GroupSettingsResponse>` |
+| 群组操作 | `POST /api/v1/groups/create` | 创建群组 | `CreateGroupRequest` | `ApiResponse` |
+| 群组操作 | `POST /api/v1/groups/update` | 更新群组 | `UpdateGroupRequest` | `ApiResponse` |
+| 群组操作 | `POST /api/v1/groups/update_my_settings` | 更新我的群组偏好 | `UpdateGroupMySettingsRequest` | `ApiResponse` |
+| 群组操作 | `POST /api/v1/groups/delete` | 解散群组 | `DeleteGroupRequest` | `ApiResponse` |
+| 成员管理 | `POST /api/v1/groups/members` | 成员列表 | `GroupMembersRequest` | `ApiResponse<PaginatedData<GroupMemberItem>>` |
+| 成员管理 | `POST /api/v1/groups/members/invite` | 邀请成员 | `InviteMemberRequest` | `ApiResponse<Invitation>` |
+| 成员管理 | `POST /api/v1/groups/members/join` | 加入群组 | `JoinGroupRequest` | `ApiResponse` |
+| 成员管理 | `POST /api/v1/groups/members/apply` | 申请加入 | `ApplyToGroupRequest` | `ApiResponse<Application>` |
+| 成员管理 | `POST /api/v1/groups/members/set_role` | 设置角色 | `SetMemberRoleRequest` | `ApiResponse<GroupMemberItem>` |
+| 成员管理 | `POST /api/v1/groups/members/mute` | 禁言成员 | `MuteMemberRequest` | `ApiResponse<GroupMemberItem>` |
+| 成员管理 | `POST /api/v1/groups/members/unmute` | 取消禁言 | `UnmuteMemberRequest` | `ApiResponse<GroupMemberItem>` |
+| 成员管理 | `POST /api/v1/groups/members/ban` | 封禁成员 | `BanMemberRequest` | `ApiResponse<BannedMemberItem>` |
+| 成员管理 | `POST /api/v1/groups/members/unban` | 解除封禁 | `UnbanMemberRequest` | `ApiResponse` |
+| 成员管理 | `POST /api/v1/groups/members/banned` | 封禁列表 | `BannedMembersRequest` | `ApiResponse<PaginatedData<BannedMemberItem>>` |
+| 成员管理 | `POST /api/v1/groups/members/remove_member` | 移除成员 | `RemoveMemberRequest` | `ApiResponse` |
+| 申请管理 | `POST /api/v1/groups/applications` | 申请列表 | `GroupApplicationsRequest` | `ApiResponse<PaginatedData<GroupApplicationItem>>` |
+| 申请管理 | `POST /api/v1/groups/applications/approve` | 同意申请 | `ApproveGroupApplicationRequest` | `ApiResponse<GroupApplicationItem>` |
+| 申请管理 | `POST /api/v1/groups/applications/reject` | 拒绝申请 | `RejectGroupApplicationRequest` | `ApiResponse<GroupApplicationItem>` |
+| 群组操作 | `POST /api/v1/groups/transfer_ownership` | 转让群主 | `TransferOwnershipRequest` | `ApiResponse` |
+| 群公告 | `POST /api/v1/groups/announcements/create` | 发布公告 | `CreateGroupAnnouncementRequest` | `ApiResponse<GroupAnnouncementItem>` |
+| 群公告 | `POST /api/v1/groups/announcements` | 公告列表 | `GroupAnnouncementsRequest` | `ApiResponse<PaginatedData<GroupAnnouncementItem>>` |
+| 群公告 | `POST /api/v1/groups/announcements/update` | 更新公告 | `UpdateGroupAnnouncementRequest` | `ApiResponse<GroupAnnouncementItem>` |
+| 群公告 | `POST /api/v1/groups/announcements/delete` | 删除公告 | `DeleteGroupAnnouncementRequest` | `ApiResponse` |
+| 我的群组 | `POST /api/v1/groups/me` | 我的群组列表 | `MyGroupsRequest` | `ApiResponse<PaginatedData<GroupSearchItem>>` |
+| 我的群组 | `POST /api/v1/groups/me/applications/cancel` | 取消申请 | `CancelApplicationRequest` | `ApiResponse` |
+| 我的群组 | `POST /api/v1/groups/me/invites` | 我的邀请列表 | `MyInvitesRequest` | `ApiResponse<PaginatedData<GroupInviteItem>>` |
+| 我的群组 | `POST /api/v1/groups/me/invites/accept` | 接受邀请 | `AcceptInviteRequest` | `ApiResponse` |
+| 我的群组 | `POST /api/v1/groups/me/invites/reject` | 拒绝邀请 | `RejectInviteRequest` | `ApiResponse` |
+| 我的群组 | `POST /api/v1/groups/me/leave` | 退出群组 | `LeaveGroupRequest` | `ApiResponse` |
+| 群聊消息 | `POST /api/v1/group_messages/send` | 发送消息 | `SendGroupMessageRequest` | `ApiResponse` |
+| 群聊消息 | `POST /api/v1/group_messages/history` | 消息历史 | `GroupMessagesHistoryRequest` | `ApiResponse<PaginatedData<GroupMessageItem>>` |
+| 群聊消息 | `POST /api/v1/group_messages/update` | 编辑消息 | `UpdateGroupMessageRequest` | `ApiResponse` |
+| 群聊消息 | `POST /api/v1/group_messages/recall` | 撤回消息 | `RecallGroupMessageRequest` | `ApiResponse` |
+| 群聊消息 | `POST /api/v1/group_messages/delete` | 删除消息 | `DeleteGroupMessageRequest` | `ApiResponse` |
+| 群聊消息 | `POST /api/v1/group_messages/mark_as_read` | 标记已读 | `MarkGroupMessagesReadRequest` | `ApiResponse` |
+| 群聊消息 | `POST /api/v1/group_messages/add_reaction` | 添加反应 | `AddGroupMessageReactionRequest` | `ApiResponse` |
+| 群聊消息 | `POST /api/v1/group_messages/remove_reaction` | 移除反应 | `RemoveGroupMessageReactionRequest` | `ApiResponse` |
+| 群聊消息 | `POST /api/v1/group_messages/reactions` | 反应列表 | `GroupMessageReactionsRequest` | `ApiResponse<PaginatedData<MessageReactionItem>>` |
+| 群聊消息 | `POST /api/v1/group_messages/mark_all_as_read` | 标记全部群聊已读 | `{}` | `ApiResponse` |
+
 ## 核心类型定义
 
 ```typescript
 // 注：GroupInfo、GroupSettings、GroupMemberItem、MyGroupState 等类型定义于 @api_spec_common_types.mdc
 
 interface GroupSettingsResponse {
-  group_chat_id: string;
+  group_id: string;
   settings: GroupSettings;
   has_password: boolean;
   created_at: string;
@@ -77,11 +127,6 @@ interface GroupInviteItem {
   created_at: string;
   expires_at?: string;
 }
-
-interface MessageReadItem {
-  user: UserInfo;
-  read_at: string;
-}
 ```
 
 ## 错误码说明
@@ -114,65 +159,13 @@ interface MessageReadItem {
 
 ## 群组管理 API
 
-## 接口概览（按子域）
-
-| 子域 | 端点 | 说明 | Request | Response |
-|-----|------|------|---------|----------|
-| 搜索与发现 | `POST /api/v1/group_chats/search_by_keyword` | 搜索群组（关键字） | `SearchGroupsByKeywordRequest` | `ApiResponse<PaginatedData<GroupSearchItem>>` |
-| 搜索与发现 | `POST /api/v1/group_chats/search_by_tag` | 搜索群组（标签） | `SearchGroupsByTagRequest` | `ApiResponse<PaginatedData<GroupSearchItem>>` |
-| 搜索与发现 | `POST /api/v1/group_chats/search_by_location` | 搜索群组（位置） | `SearchGroupsByLocationRequest` | `ApiResponse<PaginatedData<GroupSearchItem>>` |
-| 搜索与发现 | `POST /api/v1/group_chats/suggest` | 群组搜索建议 | `SuggestGroupsRequest` | `ApiResponse<GroupSuggestions>` |
-| 群组详情 | `POST /api/v1/group_chats/open_the_door` | 群组详情 | `GroupOpenTheDoorRequest` | `ApiResponse<GroupSearchItem>` |
-| 群组详情 | `POST /api/v1/group_chats/my_state` | 我在群内状态 | `GetMyGroupStateRequest` | `ApiResponse<MyGroupState>` |
-| 群组详情 | `POST /api/v1/group_chats/settings` | 群组设置（含只读字段） | `GroupSettingsRequest` | `ApiResponse<GroupSettingsResponse>` |
-| 群组操作 | `POST /api/v1/group_chats/create` | 创建群组 | `CreateGroupChatRequest` | `ApiResponse` |
-| 群组操作 | `POST /api/v1/group_chats/update` | 更新群组 | `UpdateGroupChatRequest` | `ApiResponse` |
-| 群组操作 | `POST /api/v1/group_chats/update_my_settings` | 更新我的群组偏好 | `UpdateGroupMySettingsRequest` | `ApiResponse` |
-| 群组操作 | `POST /api/v1/group_chats/delete` | 解散群组 | `DeleteGroupChatRequest` | `ApiResponse` |
-| 成员管理 | `POST /api/v1/group_chats/members` | 成员列表 | `GroupMembersRequest` | `ApiResponse<PaginatedData<GroupMemberItem>>` |
-| 成员管理 | `POST /api/v1/group_chats/members/invite` | 邀请成员 | `InviteMemberRequest` | `ApiResponse<Invitation>` |
-| 成员管理 | `POST /api/v1/group_chats/members/join` | 加入群组 | `JoinGroupRequest` | `ApiResponse` |
-| 成员管理 | `POST /api/v1/group_chats/members/apply` | 申请加入 | `ApplyToGroupRequest` | `ApiResponse<Application>` |
-| 成员管理 | `POST /api/v1/group_chats/members/set_role` | 设置角色 | `SetMemberRoleRequest` | `ApiResponse<GroupMemberItem>` |
-| 成员管理 | `POST /api/v1/group_chats/members/mute` | 禁言成员 | `MuteMemberRequest` | `ApiResponse<GroupMemberItem>` |
-| 成员管理 | `POST /api/v1/group_chats/members/unmute` | 取消禁言 | `UnmuteMemberRequest` | `ApiResponse<GroupMemberItem>` |
-| 成员管理 | `POST /api/v1/group_chats/members/ban` | 封禁成员 | `BanMemberRequest` | `ApiResponse<BannedMemberItem>` |
-| 成员管理 | `POST /api/v1/group_chats/members/unban` | 解除封禁 | `UnbanMemberRequest` | `ApiResponse` |
-| 成员管理 | `POST /api/v1/group_chats/members/banned` | 封禁列表 | `BannedMembersRequest` | `ApiResponse<PaginatedData<BannedMemberItem>>` |
-| 成员管理 | `POST /api/v1/group_chats/members/remove_member` | 移除成员 | `RemoveMemberRequest` | `ApiResponse` |
-| 申请管理 | `POST /api/v1/group_chats/applications` | 申请列表 | `GroupApplicationsRequest` | `ApiResponse<PaginatedData<GroupApplicationItem>>` |
-| 申请管理 | `POST /api/v1/group_chats/applications/approve` | 同意申请 | `ApproveGroupApplicationRequest` | `ApiResponse<GroupApplicationItem>` |
-| 申请管理 | `POST /api/v1/group_chats/applications/reject` | 拒绝申请 | `RejectGroupApplicationRequest` | `ApiResponse<GroupApplicationItem>` |
-| 群组操作 | `POST /api/v1/group_chats/transfer_ownership` | 转让群主 | `TransferOwnershipRequest` | `ApiResponse` |
-| 群公告 | `POST /api/v1/group_chats/announcements/create` | 发布公告 | `CreateGroupAnnouncementRequest` | `ApiResponse<GroupAnnouncementItem>` |
-| 群公告 | `POST /api/v1/group_chats/announcements` | 公告列表 | `GroupAnnouncementsRequest` | `ApiResponse<PaginatedData<GroupAnnouncementItem>>` |
-| 群公告 | `POST /api/v1/group_chats/announcements/update` | 更新公告 | `UpdateGroupAnnouncementRequest` | `ApiResponse<GroupAnnouncementItem>` |
-| 群公告 | `POST /api/v1/group_chats/announcements/delete` | 删除公告 | `DeleteGroupAnnouncementRequest` | `ApiResponse` |
-| 我的群组 | `POST /api/v1/group_chats/me` | 我的群组列表 | `MyGroupChatsRequest` | `ApiResponse<PaginatedData<MyGroupSearchItem>>` |
-| 我的群组 | `POST /api/v1/group_chats/me/applications/cancel` | 取消申请 | `CancelApplicationRequest` | `ApiResponse` |
-| 我的群组 | `POST /api/v1/group_chats/me/invites` | 我的邀请列表 | `MyInvitesRequest` | `ApiResponse<PaginatedData<GroupInviteItem>>` |
-| 我的群组 | `POST /api/v1/group_chats/me/invites/accept` | 接受邀请 | `AcceptInviteRequest` | `ApiResponse` |
-| 我的群组 | `POST /api/v1/group_chats/me/invites/reject` | 拒绝邀请 | `RejectInviteRequest` | `ApiResponse` |
-| 我的群组 | `POST /api/v1/group_chats/me/leave` | 退出群组 | `LeaveGroupRequest` | `ApiResponse` |
-| 群聊消息 | `POST /api/v1/group_messages/send` | 发送消息 | `SendGroupMessageRequest` | `ApiResponse` |
-| 群聊消息 | `POST /api/v1/group_messages/history` | 消息历史 | `GroupMessagesHistoryRequest` | `ApiResponse<PaginatedData<GroupMessageItem>>` |
-| 群聊消息 | `POST /api/v1/group_messages/update` | 编辑消息 | `UpdateGroupMessageRequest` | `ApiResponse` |
-| 群聊消息 | `POST /api/v1/group_messages/recall` | 撤回消息 | `RecallGroupMessageRequest` | `ApiResponse` |
-| 群聊消息 | `POST /api/v1/group_messages/delete` | 删除消息 | `DeleteGroupMessageRequest` | `ApiResponse` |
-| 群聊消息 | `POST /api/v1/group_messages/mark_as_read` | 标记已读 | `MarkGroupMessagesReadRequest` | `ApiResponse` |
-| 群聊消息 | `POST /api/v1/group_messages/read_status` | 已读状态 | `MessageReadStatusRequest` | `ApiResponse<PaginatedData<MessageReadItem>>` |
-| 群聊消息 | `POST /api/v1/group_messages/add_reaction` | 添加反应 | `AddGroupMessageReactionRequest` | `ApiResponse` |
-| 群聊消息 | `POST /api/v1/group_messages/remove_reaction` | 移除反应 | `RemoveGroupMessageReactionRequest` | `ApiResponse` |
-| 群聊消息 | `POST /api/v1/group_messages/reactions` | 反应列表 | `GroupMessageReactionsRequest` | `ApiResponse<PaginatedData<MessageReactionItem>>` |
-| 消息通用 | `POST /api/v1/messages/mark_all_as_read` | 标记全部已读 | `{}` | `ApiResponse` |
-
 ### 搜索与发现
 
 说明（Token 可选的搜索语义）：
 - 未登录（不带 token）：仅返回隐私等级为 `public` 且 `is_searchable=true` 的群组；不返回 `@auth-only` 字段
 - 已登录（带 token）：在满足隐私与关系规则前提下，允许返回更多可见群组；返回完整的 `GroupSearchItem`（包括 `@auth-only` 字段）
 
-#### POST /api/v1/group_chats/search_by_keyword
+#### POST /api/v1/groups/search_by_keyword
 
 按关键字搜索群组（全局）。
 
@@ -184,7 +177,7 @@ interface SearchGroupsByKeywordRequest extends SearchBaseParams {
 ```
 **Response**: `ApiResponse<PaginatedData<GroupSearchItem>>`
 
-#### POST /api/v1/group_chats/search_by_tag
+#### POST /api/v1/groups/search_by_tag
 
 按标签搜索群组（全局）。
 
@@ -196,7 +189,7 @@ interface SearchGroupsByTagRequest extends SearchBaseParams {
 ```
 **Response**: `ApiResponse<PaginatedData<GroupSearchItem>>`
 
-#### POST /api/v1/group_chats/search_by_location
+#### POST /api/v1/groups/search_by_location
 
 按位置搜索群组（范围过滤）。
 
@@ -209,28 +202,24 @@ interface SearchGroupsByLocationRequest extends SearchBaseParams {
 ```
 **Response**: `ApiResponse<PaginatedData<GroupSearchItem>>`
 
-#### POST /api/v1/group_chats/suggest
+#### POST /api/v1/groups/suggest
 
 群组搜索建议（用于搜索框输入提示）。
 
 **Request**:
 ```typescript
-interface SuggestGroupsRequest {
-  prefix: string;
-  limit?: number;  // 默认 5，最大 20（建议类接口使用较小默认值）
-}
-
 // GroupSuggestItem 定义于 @api_spec_search.mdc
 
-interface GroupSuggestions {
-  items: GroupSuggestItem[];
+interface SuggestGroupsRequest extends PaginationParams {
+  prefix: string;
 }
+// Note: limit 默认 5，最大 20（建议类接口使用较小默认值）
 ```
-**Response**: `ApiResponse<GroupSuggestions>`
+**Response**: `ApiResponse<PaginatedData<GroupSuggestItem>>`
 
 ### 群组详情
 
-#### POST /api/v1/group_chats/open_the_door
+#### POST /api/v1/groups/open_the_door
 
 获取群组详情。
 Token 可选；登录态返回 `GroupSearchItem.my_state`。
@@ -238,33 +227,19 @@ Token 可选；登录态返回 `GroupSearchItem.my_state`。
 **Request**:
 ```typescript
 interface GroupOpenTheDoorRequest {
-  group_chat_id: string;
+  group_id: string;
 }
 ```
 **Response**: `ApiResponse<GroupSearchItem>`
 
-#### POST /api/v1/group_chats/my_state
-
-获取我在该群内的状态。
-
-**Request**:
-```typescript
-interface GetMyGroupStateRequest {
-  group_chat_id: string;
-}
-```
-**Response**: `ApiResponse<MyGroupState>`
-
-**可能错误码**：`10001`、`10320`、`10416`
-
-#### POST /api/v1/group_chats/settings
+#### POST /api/v1/groups/settings
 
 获取群组设置。
 
 **Request**:
 ```typescript
 interface GroupSettingsRequest {
-  group_chat_id: string;
+  group_id: string;
 }
 ```
 **Response**: `ApiResponse<GroupSettingsResponse>`
@@ -273,13 +248,13 @@ interface GroupSettingsRequest {
 
 ### 群组操作
 
-#### POST /api/v1/group_chats/create
+#### POST /api/v1/groups/create
 
 创建群组。
 
 **Request**:
 ```typescript
-interface CreateGroupChatRequest {
+interface CreateGroupRequest {
   name: string;
   description?: string;
   avatar_file_id?: string;
@@ -295,14 +270,14 @@ interface CreateGroupChatRequest {
 
 **可能错误码**：`10001`、`10003`、`10360`
 
-#### POST /api/v1/group_chats/update
+#### POST /api/v1/groups/update
 
 更新群组信息。
 
 **Request**:
 ```typescript
-interface UpdateGroupChatRequest {
-  group_chat_id: string;
+interface UpdateGroupRequest {
+  group_id: string;
   name?: string;
   description?: string;
   avatar_file_id?: string;
@@ -318,14 +293,14 @@ interface UpdateGroupChatRequest {
 
 **可能错误码**：`10001`、`10320`、`10360`、`10200`
 
-#### POST /api/v1/group_chats/update_my_settings
+#### POST /api/v1/groups/update_my_settings
 
 更新我的群组偏好。
 
 **Request**:
 ```typescript
 interface UpdateGroupMySettingsRequest {
-  group_chat_id: string;
+  group_id: string;
   is_muted?: boolean;
   is_pinned?: boolean;
 }
@@ -334,14 +309,14 @@ interface UpdateGroupMySettingsRequest {
 
 **可能错误码**：`10001`、`10320`、`10416`
 
-#### POST /api/v1/group_chats/delete
+#### POST /api/v1/groups/delete
 
 解散群组。
 
 **Request**:
 ```typescript
-interface DeleteGroupChatRequest {
-  group_chat_id: string;
+interface DeleteGroupRequest {
+  group_id: string;
 }
 ```
 **Response**: `ApiResponse`
@@ -352,7 +327,7 @@ interface DeleteGroupChatRequest {
 
 ## 群组成员管理 API
 
-#### POST /api/v1/group_chats/members
+#### POST /api/v1/groups/members
 
 获取成员列表。
 
@@ -361,7 +336,7 @@ interface DeleteGroupChatRequest {
 **Request**:
 ```typescript
 interface GroupMembersRequest extends PaginationParams {
-  group_chat_id: string;
+  group_id: string;
   role?: GroupRole;
 }
 ```
@@ -369,15 +344,15 @@ interface GroupMembersRequest extends PaginationParams {
 
 **可能错误码**：`10001`、`10003`、`10320`
 
-#### POST /api/v1/group_chats/members/invite
+#### POST /api/v1/groups/members/invite
 
 邀请成员。
 
 **Request**:
 ```typescript
 interface InviteMemberRequest {
-  group_chat_id: string;
-  user_id: number;
+  group_id: string;
+  user_id: string;
   message?: string;
 }
 ```
@@ -385,7 +360,7 @@ interface InviteMemberRequest {
 
 **可能错误码**：`10001`、`10320`、`10200`、`10415`、`10414`、`10211`
 
-#### POST /api/v1/group_chats/members/join
+#### POST /api/v1/groups/members/join
 
 加入群组。
 
@@ -394,7 +369,7 @@ interface InviteMemberRequest {
 **Request**:
 ```typescript
 interface JoinGroupRequest {
-  group_chat_id: string;
+  group_id: string;
   password?: string;
 }
 ```
@@ -402,7 +377,7 @@ interface JoinGroupRequest {
 
 **可能错误码**：`10001`、`10320`、`10212`、`10414`、`10415`、`10410`、`22000`、`22002`
 
-#### POST /api/v1/group_chats/members/apply
+#### POST /api/v1/groups/members/apply
 
 申请加入。
 
@@ -411,7 +386,7 @@ interface JoinGroupRequest {
 **Request**:
 ```typescript
 interface ApplyToGroupRequest {
-  group_chat_id: string;
+  group_id: string;
   message?: string;
 }
 ```
@@ -419,15 +394,15 @@ interface ApplyToGroupRequest {
 
 **可能错误码**：`10001`、`10320`、`10414`、`10415`、`10410`
 
-#### POST /api/v1/group_chats/members/set_role
+#### POST /api/v1/groups/members/set_role
 
 设置成员角色。
 
 **Request**:
 ```typescript
 interface SetMemberRoleRequest {
-  group_chat_id: string;
-  user_id: number;
+  group_id: string;
+  user_id: string;
   role: SetableGroupRole;  // 引用 @api_spec_common_types.mdc
 }
 ```
@@ -435,15 +410,15 @@ interface SetMemberRoleRequest {
 
 **可能错误码**：`10001`、`10320`、`10416`、`10200`
 
-#### POST /api/v1/group_chats/members/mute
+#### POST /api/v1/groups/members/mute
 
 禁言成员。
 
 **Request**:
 ```typescript
 interface MuteMemberRequest {
-  group_chat_id: string;
-  user_id: number;
+  group_id: string;
+  user_id: string;
   duration_minutes: number;
 }
 ```
@@ -451,30 +426,30 @@ interface MuteMemberRequest {
 
 **可能错误码**：`10001`、`10320`、`10416`、`10200`
 
-#### POST /api/v1/group_chats/members/unmute
+#### POST /api/v1/groups/members/unmute
 
 取消禁言成员。
 
 **Request**:
 ```typescript
 interface UnmuteMemberRequest {
-  group_chat_id: string;
-  user_id: number;
+  group_id: string;
+  user_id: string;
 }
 ```
 **Response**: `ApiResponse<GroupMemberItem>`
 
 **可能错误码**：`10001`、`10320`、`10416`、`10200`
 
-#### POST /api/v1/group_chats/members/ban
+#### POST /api/v1/groups/members/ban
 
 封禁成员。封禁后成员将被移出群组且无法再次加入。
 
 **Request**:
 ```typescript
 interface BanMemberRequest {
-  group_chat_id: string;
-  user_id: number;
+  group_id: string;
+  user_id: string;
   reason?: string;
 }
 ```
@@ -482,22 +457,22 @@ interface BanMemberRequest {
 
 **可能错误码**：`10001`、`10320`、`10416`、`10200`
 
-#### POST /api/v1/group_chats/members/unban
+#### POST /api/v1/groups/members/unban
 
 解除封禁成员。
 
 **Request**:
 ```typescript
 interface UnbanMemberRequest {
-  group_chat_id: string;
-  user_id: number;
+  group_id: string;
+  user_id: string;
 }
 ```
 **Response**: `ApiResponse`
 
 **可能错误码**：`10001`、`10320`、`10200`
 
-#### POST /api/v1/group_chats/members/banned
+#### POST /api/v1/groups/members/banned
 
 获取封禁列表。
 
@@ -506,22 +481,22 @@ interface UnbanMemberRequest {
 **Request**:
 ```typescript
 interface BannedMembersRequest extends PaginationParams {
-  group_chat_id: string;
+  group_id: string;
 }
 ```
 **Response**: `ApiResponse<PaginatedData<BannedMemberItem>>`
 
 **可能错误码**：`10001`、`10003`、`10320`、`10200`
 
-#### POST /api/v1/group_chats/members/remove_member
+#### POST /api/v1/groups/members/remove_member
 
 移除成员。
 
 **Request**:
 ```typescript
 interface RemoveMemberRequest {
-  group_chat_id: string;
-  user_id: number;
+  group_id: string;
+  user_id: string;
 }
 ```
 **Response**: `ApiResponse`
@@ -530,7 +505,7 @@ interface RemoveMemberRequest {
 
 ### 群组申请管理
 
-#### POST /api/v1/group_chats/applications
+#### POST /api/v1/groups/applications
 
 获取群组申请列表。
 
@@ -539,7 +514,7 @@ interface RemoveMemberRequest {
 **Request**:
 ```typescript
 interface GroupApplicationsRequest extends PaginationParams {
-  group_chat_id: string;
+  group_id: string;
   status?: ApplicationStatus | 'all';
 }
 ```
@@ -547,7 +522,7 @@ interface GroupApplicationsRequest extends PaginationParams {
 
 **可能错误码**：`10001`、`10003`、`10320`、`10200`
 
-#### POST /api/v1/group_chats/applications/approve
+#### POST /api/v1/groups/applications/approve
 
 审批群组申请。
 
@@ -563,7 +538,7 @@ interface ApproveGroupApplicationRequest {
 
 **可能错误码**：`10001`、`10300`、`10200`、`10402`、`22000`
 
-#### POST /api/v1/group_chats/applications/reject
+#### POST /api/v1/groups/applications/reject
 
 拒绝群组申请。
 
@@ -580,15 +555,15 @@ interface RejectGroupApplicationRequest {
 
 **可能错误码**：`10001`、`10300`、`10200`、`10402`、`22000`
 
-#### POST /api/v1/group_chats/transfer_ownership
+#### POST /api/v1/groups/transfer_ownership
 
 转让群主。
 
 **Request**:
 ```typescript
 interface TransferOwnershipRequest {
-  group_chat_id: string;
-  new_owner_id: number;
+  group_id: string;
+  new_owner_id: string;
 }
 ```
 **Response**: `ApiResponse`
@@ -597,14 +572,14 @@ interface TransferOwnershipRequest {
 
 ### 群公告管理
 
-#### POST /api/v1/group_chats/announcements/create
+#### POST /api/v1/groups/announcements/create
 
 发布群公告。
 
 **Request**:
 ```typescript
 interface CreateGroupAnnouncementRequest {
-  group_chat_id: string;
+  group_id: string;
   title: string;
   content: string;
   is_pinned?: boolean;
@@ -614,7 +589,7 @@ interface CreateGroupAnnouncementRequest {
 
 **可能错误码**：`10001`、`10003`、`10320`、`10416`、`10200`
 
-#### POST /api/v1/group_chats/announcements
+#### POST /api/v1/groups/announcements
 
 获取群公告列表。
 
@@ -623,14 +598,14 @@ interface CreateGroupAnnouncementRequest {
 **Request**:
 ```typescript
 interface GroupAnnouncementsRequest extends PaginationParams {
-  group_chat_id: string;
+  group_id: string;
 }
 ```
 **Response**: `ApiResponse<PaginatedData<GroupAnnouncementItem>>`
 
 **可能错误码**：`10001`、`10003`、`10320`
 
-#### POST /api/v1/group_chats/announcements/update
+#### POST /api/v1/groups/announcements/update
 
 更新群公告。
 
@@ -647,7 +622,7 @@ interface UpdateGroupAnnouncementRequest {
 
 **可能错误码**：`10001`、`10003`、`10300`、`10200`
 
-#### POST /api/v1/group_chats/announcements/delete
+#### POST /api/v1/groups/announcements/delete
 
 删除群公告。
 
@@ -663,19 +638,21 @@ interface DeleteGroupAnnouncementRequest {
 
 ### 当前用户群组 API（/me/ 路径）
 
-#### POST /api/v1/group_chats/me
+#### POST /api/v1/groups/me
 
 获取我的群组。
 
 **Request**:
 ```typescript
-interface MyGroupChatsRequest extends PaginationParams {}
+interface MyGroupsRequest extends PaginationParams {}
 ```
-**Response**: `ApiResponse<PaginatedData<MyGroupSearchItem>>`
+**Response**: `ApiResponse<PaginatedData<GroupSearchItem>>`
+
+**说明**：登录态必定返回 `my_state` 字段，包含 `role`、`is_joined`、`unread_count`、`is_muted`、`is_pinned`、`joined_at` 等群组内状态。
 
 **可能错误码**：`10003`
 
-#### POST /api/v1/group_chats/me/applications/cancel
+#### POST /api/v1/groups/me/applications/cancel
 
 取消群组申请。
 
@@ -689,7 +666,7 @@ interface CancelApplicationRequest {
 
 **可能错误码**：`10001`、`10300`、`10200`、`10402`
 
-#### POST /api/v1/group_chats/me/invites
+#### POST /api/v1/groups/me/invites
 
 获取我的群组邀请列表。
 
@@ -705,7 +682,7 @@ interface MyInvitesRequest extends PaginationParams {
 
 **可能错误码**：`10003`
 
-#### POST /api/v1/group_chats/me/invites/accept
+#### POST /api/v1/groups/me/invites/accept
 
 接受群组邀请。
 
@@ -721,7 +698,7 @@ interface AcceptInviteRequest {
 
 **可能错误码**：`10001`、`10300`、`10402`、`10414`、`10415`、`22000`
 
-#### POST /api/v1/group_chats/me/invites/reject
+#### POST /api/v1/groups/me/invites/reject
 
 拒绝群组邀请。
 
@@ -737,7 +714,7 @@ interface RejectInviteRequest {
 
 **可能错误码**：`10001`、`10300`、`10402`、`22000`
 
-#### POST /api/v1/group_chats/me/leave
+#### POST /api/v1/groups/me/leave
 
 退出群组。
 
@@ -746,7 +723,7 @@ interface RejectInviteRequest {
 **Request**:
 ```typescript
 interface LeaveGroupRequest {
-  group_chat_id: string;
+  group_id: string;
 }
 ```
 **Response**: `ApiResponse`
@@ -768,12 +745,12 @@ interface LeaveGroupRequest {
 **Request**:
 ```typescript
 interface SendGroupMessageRequest {
-  group_chat_id: string;
+  group_id: string;
   type: SendMessageType;
   content?: string;
   file_id?: string;
   reply_to_message_id?: string;
-  mentions?: number[];
+  mentions?: string[];
 }
 ```
 **Response**: `ApiResponse`（完整消息通过 WebSocket 推送）
@@ -789,7 +766,7 @@ interface SendGroupMessageRequest {
 **Request**:
 ```typescript
 interface GroupMessagesHistoryRequest extends PaginationParams {
-  group_chat_id: string;
+  group_id: string;
   include_system?: boolean;
 }
 ```
@@ -852,27 +829,13 @@ interface DeleteGroupMessageRequest {
 **Request**:
 ```typescript
 interface MarkGroupMessagesReadRequest {
-  group_chat_id: string;
+  group_id: string;
   up_to_message_id?: string;
 }
 ```
 **Response**: `ApiResponse`
 
 **可能错误码**：`10001`、`10320`、`10416`
-
-#### POST /api/v1/group_messages/read_status
-
-获取消息已读状态。
-
-**Request**:
-```typescript
-interface MessageReadStatusRequest extends PaginationParams {
-  message_id: string;
-}
-```
-**Response**: `ApiResponse<PaginatedData<MessageReadItem>>`
-
-**可能错误码**：`10001`、`10003`、`10350`、`10416`
 
 #### POST /api/v1/group_messages/add_reaction
 
@@ -925,11 +888,9 @@ interface GroupMessageReactionsRequest extends PaginationParams {
 
 ---
 
-## 消息通用 API
+### POST /api/v1/group_messages/mark_all_as_read
 
-### POST /api/v1/messages/mark_all_as_read
-
-标记所有消息已读。
+标记所有群聊消息已读。
 
 **Request**: `{}`
 **Response**: `ApiResponse`

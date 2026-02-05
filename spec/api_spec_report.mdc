@@ -50,6 +50,13 @@ alwaysApply: true
 - 查看举报列表：需要 `admin.reports.read` 权限
 - 处理举报：需要 `admin.reports.write` 权限
 
+## 接口概览（按子域）
+
+| 子域 | 端点 | 说明 | Request | Response |
+|-----|------|------|---------|----------|
+| 举报 | `POST /api/v1/reports/create` | 创建举报 | `CreateReportRequest` | `ApiResponse<ReportCreated>` |
+| 举报 | `POST /api/v1/reports/me` | 我的举报记录 | `MyReportsRequest` | `ApiResponse<PaginatedData<ReportItem>>` |
+
 ## 核心类型定义
 
 ```typescript
@@ -85,13 +92,6 @@ interface ReportItem {
 | `10300` | 资源不存在 | `create`（target_id 不存在） |
 
 ---
-
-## 接口概览（按子域）
-
-| 子域 | 端点 | 说明 | Request | Response |
-|-----|------|------|---------|----------|
-| 举报 | `POST /api/v1/reports/create` | 创建举报 | `CreateReportRequest` | `ApiResponse<ReportCreated>` |
-| 举报 | `POST /api/v1/reports/me` | 我的举报记录 | `MyReportsRequest` | `ApiResponse<PaginatedData<ReportItem>>` |
 
 ## 用户举报 API
 

@@ -15,6 +15,33 @@ alwaysApply: true
 - 公共基础类型：`@api_spec_common_types.mdc`
 - 错误码：`@api_spec_errors.mdc`
 
+## 接口概览（按子域）
+
+| 子域 | 端点 | 说明 | Request | Response |
+|-----|------|------|---------|----------|
+| 搜索与发现 | `POST /api/v1/moments/search_by_keyword` | 搜索瞬间（关键字） | `SearchMomentsByKeywordRequest` | `ApiResponse<PaginatedData<MomentSearchItem>>` |
+| 搜索与发现 | `POST /api/v1/moments/search_by_tag` | 搜索瞬间（标签） | `SearchMomentsByTagRequest` | `ApiResponse<PaginatedData<MomentSearchItem>>` |
+| 搜索与发现 | `POST /api/v1/moments/search_by_location` | 搜索瞬间（位置） | `SearchMomentsByLocationRequest` | `ApiResponse<PaginatedData<MomentSearchItem>>` |
+| 搜索与发现 | `POST /api/v1/moments/suggest` | 瞬间搜索建议 | `SuggestMomentsRequest` | `ApiResponse<PaginatedData<MomentSuggestItem>>` |
+| 瞬间详情 | `POST /api/v1/moments/open_the_door` | 瞬间详情 | `MomentOpenTheDoorRequest` | `ApiResponse<MomentSearchItem>` |
+| 瞬间操作 | `POST /api/v1/moments/create` | 创建瞬间 | `CreateMomentRequest` | `ApiResponse<UserMomentListItem>` |
+| 瞬间操作 | `POST /api/v1/moments/update` | 编辑瞬间 | `EditMomentRequest` | `ApiResponse` |
+| 瞬间操作 | `POST /api/v1/moments/delete` | 删除瞬间 | `DeleteMomentRequest` | `ApiResponse` |
+| 瞬间操作 | `POST /api/v1/moments/like` | 点赞 | `LikeMomentRequest` | `ApiResponse` |
+| 瞬间操作 | `POST /api/v1/moments/unlike` | 取消点赞 | `UnlikeMomentRequest` | `ApiResponse` |
+| 瞬间操作 | `POST /api/v1/moments/favorite` | 收藏 | `FavoriteMomentRequest` | `ApiResponse` |
+| 瞬间操作 | `POST /api/v1/moments/unfavorite` | 取消收藏 | `UnfavoriteMomentRequest` | `ApiResponse` |
+| 我的瞬间 | `POST /api/v1/moments/me` | 我发布的瞬间 | `MyMomentsRequest` | `ApiResponse<PaginatedData<UserMomentListItem>>` |
+| 我的瞬间 | `POST /api/v1/moments/me/favorites` | 我的收藏 | `MyFavoritesRequest` | `ApiResponse<PaginatedData<MomentSearchItem>>` |
+| 点赞列表 | `POST /api/v1/moments/likes` | 瞬间点赞列表 | `MomentLikesRequest` | `ApiResponse<PaginatedData<MomentLikeItem>>` |
+| 评论 | `POST /api/v1/comments/create` | 创建评论/回复 | `CreateCommentRequest` | `ApiResponse<CommentListItem>` |
+| 评论 | `POST /api/v1/comments/delete` | 删除评论 | `DeleteCommentRequest` | `ApiResponse` |
+| 评论 | `POST /api/v1/comments` | 顶层评论列表 | `CommentsRequest` | `ApiResponse<PaginatedData<CommentListItem>>` |
+| 评论 | `POST /api/v1/comments/replies` | 子评论列表 | `CommentRepliesRequest` | `ApiResponse<PaginatedData<CommentListItem>>` |
+| 评论点赞 | `POST /api/v1/comments/like` | 点赞评论 | `LikeCommentRequest` | `ApiResponse` |
+| 评论点赞 | `POST /api/v1/comments/unlike` | 取消点赞评论 | `UnlikeCommentRequest` | `ApiResponse` |
+| 评论点赞 | `POST /api/v1/comments/likes` | 评论点赞列表 | `CommentLikesRequest` | `ApiResponse<PaginatedData<CommentLikeItem>>` |
+
 ## 核心类型定义
 
 ```typescript
@@ -23,14 +50,6 @@ alwaysApply: true
 interface MomentLikeItem {
   user: UserInfo;
   liked_at: string;
-}
-
-interface LikedStatus {
-  is_liked: boolean;
-}
-
-interface FavoritedStatus {
-  is_favorited: boolean;
 }
 
 interface CommentLikeItem {
@@ -55,36 +74,6 @@ interface CommentLikeItem {
 | `10500` | 请求过于频繁 | `create`、`comments/create` |
 
 ## 生活瞬间 API
-
-## 接口概览（按子域）
-
-| 子域 | 端点 | 说明 | Request | Response |
-|-----|------|------|---------|----------|
-| 搜索与发现 | `POST /api/v1/moments/search_by_keyword` | 搜索瞬间（关键字） | `SearchMomentsByKeywordRequest` | `ApiResponse<PaginatedData<MomentSearchItem>>` |
-| 搜索与发现 | `POST /api/v1/moments/search_by_tag` | 搜索瞬间（标签） | `SearchMomentsByTagRequest` | `ApiResponse<PaginatedData<MomentSearchItem>>` |
-| 搜索与发现 | `POST /api/v1/moments/search_by_location` | 搜索瞬间（位置） | `SearchMomentsByLocationRequest` | `ApiResponse<PaginatedData<MomentSearchItem>>` |
-| 搜索与发现 | `POST /api/v1/moments/suggest` | 瞬间搜索建议 | `SuggestMomentsRequest` | `ApiResponse<MomentSuggestions>` |
-| 瞬间详情与互动 | `POST /api/v1/moments/open_the_door` | 瞬间详情 | `MomentOpenTheDoorRequest` | `ApiResponse<MomentSearchItem>` |
-| 瞬间详情与互动 | `POST /api/v1/moments/interaction_state` | 我的互动状态 | `GetMomentInteractionStateRequest` | `ApiResponse<MyMomentState>` |
-| 瞬间操作 | `POST /api/v1/moments/create` | 创建瞬间 | `CreateMomentRequest` | `ApiResponse<UserMomentListItem>` |
-| 瞬间操作 | `POST /api/v1/moments/update` | 编辑瞬间 | `EditMomentRequest` | `ApiResponse` |
-| 瞬间操作 | `POST /api/v1/moments/delete` | 删除瞬间 | `DeleteMomentRequest` | `ApiResponse` |
-| 瞬间操作 | `POST /api/v1/moments/like` | 点赞 | `LikeMomentRequest` | `ApiResponse` |
-| 瞬间操作 | `POST /api/v1/moments/unlike` | 取消点赞 | `UnlikeMomentRequest` | `ApiResponse` |
-| 瞬间操作 | `POST /api/v1/moments/favorite` | 收藏 | `FavoriteMomentRequest` | `ApiResponse` |
-| 瞬间操作 | `POST /api/v1/moments/unfavorite` | 取消收藏 | `UnfavoriteMomentRequest` | `ApiResponse` |
-| 我的瞬间 | `POST /api/v1/moments/me` | 我发布的瞬间 | `MyMomentsRequest` | `ApiResponse<PaginatedData<UserMomentListItem>>` |
-| 我的瞬间 | `POST /api/v1/moments/me/favorites` | 我的收藏 | `MyFavoritesRequest` | `ApiResponse<PaginatedData<MomentSearchItem>>` |
-| 我的瞬间 | `POST /api/v1/moments/me/liked` | 检查是否点赞 | `CheckLikedRequest` | `ApiResponse<LikedStatus>` |
-| 我的瞬间 | `POST /api/v1/moments/me/favorited` | 检查是否收藏 | `CheckFavoritedRequest` | `ApiResponse<FavoritedStatus>` |
-| 点赞列表 | `POST /api/v1/moments/likes` | 瞬间点赞列表 | `MomentLikesRequest` | `ApiResponse<PaginatedData<MomentLikeItem>>` |
-| 评论 | `POST /api/v1/comments/create` | 创建评论/回复 | `CreateCommentRequest` | `ApiResponse<CommentListItem>` |
-| 评论 | `POST /api/v1/comments/delete` | 删除评论 | `DeleteCommentRequest` | `ApiResponse` |
-| 评论 | `POST /api/v1/comments` | 顶层评论列表 | `CommentsRequest` | `ApiResponse<PaginatedData<CommentListItem>>` |
-| 评论 | `POST /api/v1/comments/replies` | 子评论列表 | `CommentRepliesRequest` | `ApiResponse<PaginatedData<CommentListItem>>` |
-| 评论点赞 | `POST /api/v1/comments/like` | 点赞评论 | `LikeCommentRequest` | `ApiResponse` |
-| 评论点赞 | `POST /api/v1/comments/unlike` | 取消点赞评论 | `UnlikeCommentRequest` | `ApiResponse` |
-| 评论点赞 | `POST /api/v1/comments/likes` | 评论点赞列表 | `CommentLikesRequest` | `ApiResponse<PaginatedData<CommentLikeItem>>` |
 
 ### 搜索与发现
 
@@ -141,25 +130,21 @@ interface SearchMomentsByLocationRequest extends SearchBaseParams {
 
 **Request**:
 ```typescript
-interface SuggestMomentsRequest {
-  prefix: string;
-  limit?: number;  // 默认 5，最大 20（建议类接口使用较小默认值）
-}
-
 // MomentSuggestItem 定义于 @api_spec_search.mdc
 
-interface MomentSuggestions {
-  items: MomentSuggestItem[];
+interface SuggestMomentsRequest extends PaginationParams {
+  prefix: string;
 }
+// Note: limit 默认 5，最大 20（建议类接口使用较小默认值）
 ```
-**Response**: `ApiResponse<MomentSuggestions>`
+**Response**: `ApiResponse<PaginatedData<MomentSuggestItem>>`
 
-### 瞬间详情与互动
+### 瞬间详情
 
 #### POST /api/v1/moments/open_the_door
 
 获取瞬间详情。
-Token 可选；登录态返回 `MomentSearchItem.my_state`。
+Token 可选；登录态返回 `MomentSearchItem.my_state`（包含 `is_liked` 和 `is_favorited`）。
 
 **说明**：未登录（不带 token）仅允许访问隐私等级为 `public` 的瞬间；若瞬间对匿名不可见，返回 `10330`（不存在/不可见）。
 
@@ -170,20 +155,6 @@ interface MomentOpenTheDoorRequest {
 }
 ```
 **Response**: `ApiResponse<MomentSearchItem>`
-
-#### POST /api/v1/moments/interaction_state
-
-获取我对该瞬间的互动状态。
-
-**Request**:
-```typescript
-interface GetMomentInteractionStateRequest {
-  moment_id: string;
-}
-```
-**Response**: `ApiResponse<MyMomentState>`
-
-**可能错误码**：`10001`、`10330`
 
 ### 瞬间操作
 
@@ -199,7 +170,7 @@ interface CreateMomentRequest {
   tags?: string[];
   image_file_ids?: string[];
   privacy_level?: PrivacyLevel;
-  mentions?: number[];
+  mentions?: string[];
 }
 ```
 **Response**: `ApiResponse<UserMomentListItem>`
@@ -219,7 +190,7 @@ interface EditMomentRequest {
   tags?: string[];
   image_file_ids?: string[];
   privacy_level?: PrivacyLevel;
-  mentions?: number[];
+  mentions?: string[];
 }
 ```
 **Response**: `ApiResponse`
@@ -326,34 +297,6 @@ interface MyFavoritesRequest extends PaginationParams {}
 ```
 **Response**: `ApiResponse<PaginatedData<MomentSearchItem>>`
 
-#### POST /api/v1/moments/me/liked
-
-检查瞬间是否已点赞。
-
-**Request**:
-```typescript
-interface CheckLikedRequest {
-  moment_id: string;
-}
-```
-**Response**: `ApiResponse<LikedStatus>`
-
-**可能错误码**：`10001`、`10330`
-
-#### POST /api/v1/moments/me/favorited
-
-检查瞬间是否已收藏。
-
-**Request**:
-```typescript
-interface CheckFavoritedRequest {
-  moment_id: string;
-}
-```
-**Response**: `ApiResponse<FavoritedStatus>`
-
-**可能错误码**：`10001`、`10330`
-
 #### POST /api/v1/moments/likes
 
 获取生活瞬间点赞列表。
@@ -384,7 +327,7 @@ interface CreateCommentRequest {
   moment_id: string;
   content: string;
   parent_id?: string;
-  mentions?: number[];
+  mentions?: string[];
 }
 ```
 **Response**: `ApiResponse<CommentListItem>`

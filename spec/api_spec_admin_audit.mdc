@@ -15,6 +15,15 @@ alwaysApply: true
 - 公共基础类型：`@api_spec_common_types.mdc`
 - 错误码：`@api_spec_errors.mdc`
 
+## 接口概览（按子域）
+
+| 子域 | 端点 | 说明 | Request | Response |
+|-----|------|------|---------|----------|
+| 审计日志 | `POST /api/v1/admin/audit/list` | 审计日志列表 | `AuditLogListRequest` | `ApiResponse<PaginatedData<AuditLogSearchItem>>` |
+| 审计日志 | `POST /api/v1/admin/audit/detail` | 审计日志详情 | `AuditLogDetailRequest` | `ApiResponse<AuditLogSearchItem>` |
+| 审计日志 | `POST /api/v1/admin/audit/export` | 导出审计日志（异步） | `AuditLogExportRequest` | `ApiResponse<AuditLogExportResult>` |
+| 审计日志 | `POST /api/v1/admin/audit/export/status` | 导出任务状态 | `AuditLogExportStatusRequest` | `ApiResponse<AuditLogExportResult>` |
+
 ## 核心类型定义
 
 ```typescript
@@ -103,17 +112,6 @@ interface AuditLogSearchItem {
 
 ---
 
-## 接口列表
-
-## 接口概览（按子域）
-
-| 子域 | 端点 | 说明 | Request | Response |
-|-----|------|------|---------|----------|
-| 审计日志 | `POST /api/v1/admin/audit/list` | 审计日志列表 | `AuditLogListRequest` | `ApiResponse<PaginatedData<AuditLogSearchItem>>` |
-| 审计日志 | `POST /api/v1/admin/audit/detail` | 审计日志详情 | `AuditLogDetailRequest` | `ApiResponse<AuditLogSearchItem>` |
-| 审计日志 | `POST /api/v1/admin/audit/export` | 导出审计日志（异步） | `AuditLogExportRequest` | `ApiResponse<AuditLogExportResult>` |
-| 审计日志 | `POST /api/v1/admin/audit/export/status` | 导出任务状态 | `AuditLogExportStatusRequest` | `ApiResponse<AuditLogExportResult>` |
-
 ### POST /api/v1/admin/audit/list
 
 查询审计日志列表。
@@ -124,7 +122,7 @@ interface AuditLogSearchItem {
 ```typescript
 interface AuditLogListRequest extends PaginationParams {
   action?: AuditAction;           // 按操作类型筛选
-  operator_id?: number;           // 按操作人筛选
+  operator_id?: string;           // 按操作人筛选
   target_type?: AuditTargetType;  // 按目标类型筛选
   target_id?: string;             // 按目标 ID 筛选
   start_time?: string;            // 开始时间（UTC ISO 8601）
@@ -161,7 +159,7 @@ interface AuditLogDetailRequest {
 ```typescript
 interface AuditLogExportRequest {
   action?: AuditAction;
-  operator_id?: number;
+  operator_id?: string;
   target_type?: AuditTargetType;
   start_time?: string;
   end_time?: string;

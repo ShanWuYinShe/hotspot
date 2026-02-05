@@ -16,6 +16,12 @@ alwaysApply: true
 - 公共基础类型：`@api_spec_common_types.mdc`
 - 错误码：`@api_spec_errors.mdc`
 
+## 接口概览
+
+| 端点 | 说明 | Request | Response |
+|------|------|---------|----------|
+| `POST /api/v1/search/suggest` | 综合搜索建议 | `SearchSuggestRequest` | `ApiResponse<SearchSuggestions>` |
+
 ## 核心类型定义
 
 ```typescript
@@ -31,7 +37,7 @@ interface TagSuggestItem {
 // 用户建议项
 // 用途：显示用户基本信息，点击后跳转到用户主页
 interface UserSuggestItem {
-  user_id: number;
+  user_id: string;
   nickname: string;
   avatar_url?: string;
   bio?: string; // 个性签名，用于副标题展示
@@ -41,7 +47,7 @@ interface UserSuggestItem {
 // 群组建议项
 // 用途：显示群组基本信息，点击后跳转到群组页
 interface GroupSuggestItem {
-  group_chat_id: string;
+  group_id: string;
   name: string;
   avatar_url?: string;
   description?: string; // 群组简介，用于副标题展示（优先于成员数）
@@ -72,13 +78,12 @@ interface SearchSuggestions {
 
 ## 错误码说明
 
-本模块使用的错误码定义于 `@api_spec_errors.mdc`。
+本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
 
-## 接口概览
-
-| 端点 | 说明 | Request | Response |
-|------|------|---------|----------|
-| `POST /api/v1/search/suggest` | 综合搜索建议 | `SearchSuggestRequest` | `ApiResponse<SearchSuggestions>` |
+| 错误码 | 说明 | 相关接口 |
+|-------|------|---------|
+| `10001` | 缺少必填参数 | `suggest`（prefix 缺失） |
+| `10003` | 参数值超出范围 | `suggest`（limit 超出限制） |
 
 ## 搜索 API
 
@@ -93,11 +98,11 @@ interface SearchSuggestions {
 
 **Request**:
 ```typescript
-interface SearchSuggestRequest {
+interface SearchSuggestRequest extends PaginationParams {
   prefix: string;
-  limit?: number; // 每类建议的上限，默认 5
   location?: GeoPoint; // 可选，用于 LBS 优先排序
 }
+// Note: limit 表示每类建议的上限，默认 5
 ```
 
 **Response**: `ApiResponse<SearchSuggestions>`

@@ -367,7 +367,7 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
 #### group（群组模块）
 
 - **职责**：群组 CRUD、成员管理、权限控制、群组搜索、邀请/申请流程
-- **数据存储**：group_chats、group_settings、group_members、group_invites、group_applications 表
+- **数据存储**：groups、group_settings、group_members、group_invites、group_applications 表
 - **依赖**：auth、user
 - **被依赖**：chat、notification
 
@@ -469,8 +469,9 @@ HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture）�
 
 - **内部主键**：自增 ID（BIGSERIAL），用于数据库内部高效查询和排序
 - **业务 ID**：
-  - 用户：纯数字 ID（`user_id: BIGINT`），便于传播和分片
-  - 其他资源：UUID 字符串（如 `moment_id`, `group_chat_id`）
+  - 数据库层：`user_id` 和 `group_id` 使用 `BIGINT`，其他使用 `UUID`
+  - API 层：所有 `*_id` 字段统一为 `string` 类型（前端视为不透明字符串）
+  - 序列化：后端在 API 边界将 `i64` 序列化为 `String`
 
 #### 外键策略：不使用数据库外键约束
 

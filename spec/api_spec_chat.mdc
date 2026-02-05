@@ -16,6 +16,25 @@ alwaysApply: true
 - 错误码：`@api_spec_errors.mdc`
 - WebSocket：`@api_spec_websocket.mdc`
 
+## 接口概览（按子域）
+
+| 子域 | 端点 | 说明 | Request | Response |
+|-----|------|------|---------|----------|
+| 私聊管理 | `POST /api/v1/private_chats/me` | 私聊列表 | `MyPrivateChatsRequest` | `ApiResponse<PaginatedData<PrivateChatListItem>>` |
+| 私聊管理 | `POST /api/v1/private_chats/open_the_door` | 私聊详情 | `PrivateChatOpenTheDoorRequest` | `ApiResponse<Conversation>` |
+| 私聊管理 | `POST /api/v1/private_chats/update_settings` | 更新会话设置 | `UpdatePrivateChatSettingsRequest` | `ApiResponse<Conversation>` |
+| 私聊管理 | `POST /api/v1/private_chats/delete` | 删除私聊会话（仅自己视角） | `DeletePrivateChatRequest` | `ApiResponse` |
+| 私聊消息 | `POST /api/v1/private_messages/send` | 发送私聊消息 | `SendPrivateMessageRequest` | `ApiResponse` |
+| 私聊消息 | `POST /api/v1/private_messages/history` | 私聊消息历史 | `PrivateMessagesHistoryRequest` | `ApiResponse<PaginatedData<PrivateMessageItem>>` |
+| 私聊消息 | `POST /api/v1/private_messages/update` | 编辑私聊消息 | `UpdatePrivateMessageRequest` | `ApiResponse` |
+| 私聊消息 | `POST /api/v1/private_messages/recall` | 撤回私聊消息 | `RecallPrivateMessageRequest` | `ApiResponse` |
+| 私聊消息 | `POST /api/v1/private_messages/delete` | 删除私聊消息（仅自己视角） | `DeletePrivateMessageRequest` | `ApiResponse` |
+| 私聊消息 | `POST /api/v1/private_messages/mark_as_read` | 标记已读 | `MarkPrivateMessagesReadRequest` | `ApiResponse` |
+| 私聊消息 | `POST /api/v1/private_messages/add_reaction` | 添加反应 | `AddPrivateMessageReactionRequest` | `ApiResponse` |
+| 私聊消息 | `POST /api/v1/private_messages/remove_reaction` | 移除反应 | `RemovePrivateMessageReactionRequest` | `ApiResponse` |
+| 私聊消息 | `POST /api/v1/private_messages/reactions` | 反应列表 | `PrivateMessageReactionsRequest` | `ApiResponse<PaginatedData<MessageReactionItem>>` |
+| 私聊消息 | `POST /api/v1/private_messages/mark_all_as_read` | 标记全部私聊已读 | `{}` | `ApiResponse` |
+
 ## 核心类型定义
 
 ```typescript
@@ -64,24 +83,6 @@ interface MessageReactionItem {
 | `22000` | 幂等键冲突 | `send` |
 | `22002` | 幂等操作正在处理中 | `send` |
 
-## 接口概览（按子域）
-
-| 子域 | 端点 | 说明 | Request | Response |
-|-----|------|------|---------|----------|
-| 私聊管理 | `POST /api/v1/private_chats/me` | 私聊列表 | `MyPrivateChatsRequest` | `ApiResponse<PaginatedData<PrivateChatListItem>>` |
-| 私聊管理 | `POST /api/v1/private_chats/open_the_door` | 私聊详情 | `PrivateChatOpenTheDoorRequest` | `ApiResponse<Conversation>` |
-| 私聊管理 | `POST /api/v1/private_chats/update_settings` | 更新会话设置 | `UpdatePrivateChatSettingsRequest` | `ApiResponse<Conversation>` |
-| 私聊管理 | `POST /api/v1/private_chats/delete` | 删除私聊会话（仅自己视角） | `DeletePrivateChatRequest` | `ApiResponse` |
-| 私聊消息 | `POST /api/v1/private_messages/send` | 发送私聊消息 | `SendPrivateMessageRequest` | `ApiResponse` |
-| 私聊消息 | `POST /api/v1/private_messages/history` | 私聊消息历史 | `PrivateMessagesHistoryRequest` | `ApiResponse<PaginatedData<PrivateMessageItem>>` |
-| 私聊消息 | `POST /api/v1/private_messages/update` | 编辑私聊消息 | `UpdatePrivateMessageRequest` | `ApiResponse` |
-| 私聊消息 | `POST /api/v1/private_messages/recall` | 撤回私聊消息 | `RecallPrivateMessageRequest` | `ApiResponse` |
-| 私聊消息 | `POST /api/v1/private_messages/delete` | 删除私聊消息（仅自己视角） | `DeletePrivateMessageRequest` | `ApiResponse` |
-| 私聊消息 | `POST /api/v1/private_messages/mark_as_read` | 标记已读 | `MarkPrivateMessagesReadRequest` | `ApiResponse` |
-| 私聊消息 | `POST /api/v1/private_messages/add_reaction` | 添加反应 | `AddPrivateMessageReactionRequest` | `ApiResponse` |
-| 私聊消息 | `POST /api/v1/private_messages/remove_reaction` | 移除反应 | `RemovePrivateMessageReactionRequest` | `ApiResponse` |
-| 私聊消息 | `POST /api/v1/private_messages/reactions` | 反应列表 | `PrivateMessageReactionsRequest` | `ApiResponse<PaginatedData<MessageReactionItem>>` |
-
 ## 私聊管理 API
 
 私聊权限和陌生人消息限制规则详见 `@api_spec_common_types.mdc` 中的"隐私控制机制"章节。
@@ -116,7 +117,7 @@ interface MyPrivateChatsRequest extends PaginationParams {}
 **Request**:
 ```typescript
 interface PrivateChatOpenTheDoorRequest {
-  target_user_id: number;
+  target_user_id: string;
   recent_messages_limit?: number;  // 默认 20，最大 50（最近消息，不宜过多）
 }
 ```
@@ -131,7 +132,7 @@ interface PrivateChatOpenTheDoorRequest {
 **Request**:
 ```typescript
 interface UpdatePrivateChatSettingsRequest {
-  target_user_id: number;
+  target_user_id: string;
   is_muted?: boolean;
   is_pinned?: boolean;
 }
@@ -151,7 +152,7 @@ interface UpdatePrivateChatSettingsRequest {
 **Request**:
 ```typescript
 interface DeletePrivateChatRequest {
-  target_user_id: number;
+  target_user_id: string;
 }
 ```
 **Response**: `ApiResponse`
@@ -180,7 +181,7 @@ interface DeletePrivateChatRequest {
 **Request**:
 ```typescript
 interface SendPrivateMessageRequest {
-  target_user_id: number;
+  target_user_id: string;
   type: SendMessageType;
   content?: string;
   file_id?: string;
@@ -201,7 +202,7 @@ interface SendPrivateMessageRequest {
 **Request**:
 ```typescript
 interface PrivateMessagesHistoryRequest extends PaginationParams {
-  target_user_id: number;
+  target_user_id: string;
 }
 ```
 **Response**: `ApiResponse<PaginatedData<PrivateMessageItem>>`
@@ -262,7 +263,7 @@ interface DeletePrivateMessageRequest {
 **Request**:
 ```typescript
 interface MarkPrivateMessagesReadRequest {
-  target_user_id: number;
+  target_user_id: string;
   up_to_message_id?: string;
 }
 ```

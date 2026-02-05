@@ -56,6 +56,7 @@ alwaysApply: true
 | [api_spec_admin_announcement.mdc](api_spec_admin_announcement.mdc) | 系统公告管理 API |
 | [api_spec_admin_audit.mdc](api_spec_admin_audit.mdc) | 审计日志查询与导出 API |
 | [api_spec_admin_report.mdc](api_spec_admin_report.mdc) | 举报审核（管理员）API |
+| [api_spec_admin_tag.mdc](api_spec_admin_tag.mdc) | 管理员标签管理 API |
 
 ## 权威边界与冲突处理
 
@@ -91,16 +92,18 @@ alwaysApply: true
 - **管理员群组管理**：`api_spec_admin_group.mdc`
 - **系统公告**：`api_spec_admin_announcement.mdc`
 - **审计日志**：`api_spec_admin_audit.mdc`
+- **管理员标签管理**：`api_spec_admin_tag.mdc`
 
 ### 按路径前缀
 
 | 路径前缀 | 对应文档 |
 |---------|---------|
+| `/api/v1/meta` | `api_spec_system.mdc` |
 | `/api/v1/auth/` | `api_spec_auth.mdc` |
 | `/api/v1/user/` | `api_spec_user.mdc` |
 | `/api/v1/moments/`, `/api/v1/comments/` | `api_spec_moment.mdc` |
 | `/api/v1/private_chats/`, `/api/v1/private_messages/` | `api_spec_chat.mdc` |
-| `/api/v1/group_chats/`, `/api/v1/group_messages/`, `/api/v1/messages/` | `api_spec_group.mdc` |
+| `/api/v1/groups/`, `/api/v1/group_messages/`, `/api/v1/messages/` | `api_spec_group.mdc` |
 | `/api/v1/feed/`, `/api/v1/tags/` | `api_spec_feed.mdc` |
 | `/api/v1/map/` | `api_spec_map.mdc` |
 | `/api/v1/share/` | `api_spec_share.mdc` |
@@ -113,3 +116,4 @@ alwaysApply: true
 | `/api/v1/admin/groups/` | `api_spec_admin_group.mdc` |
 | `/api/v1/admin/announcements/`, `/api/v1/announcements/` | `api_spec_admin_announcement.mdc` |
 | `/api/v1/admin/audit/` | `api_spec_admin_audit.mdc` |
+| `/api/v1/admin/tags/` | `api_spec_admin_tag.mdc` |

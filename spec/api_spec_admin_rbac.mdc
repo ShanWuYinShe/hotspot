@@ -48,6 +48,21 @@ alwaysApply: true
 | `admin.audit.read` | 查看审计日志 |
 | `admin.audit.export` | 导出审计日志 |
 
+## 接口概览（按子域）
+
+| 子域 | 端点 | 说明 | Request | Response |
+|-----|------|------|---------|----------|
+| 权限 | `POST /api/v1/admin/rbac/me` | 我的管理员权限 | `{}` | `ApiResponse<AdminPermissions>` |
+| 权限 | `POST /api/v1/admin/rbac/permissions` | 权限字典 | `{}` | `ApiResponse<{ items: AdminPermissionItem[] }>` |
+| 角色 | `POST /api/v1/admin/rbac/roles/list` | 角色列表 | `AdminRbacRolesListRequest` | `ApiResponse<PaginatedData<AdminRoleItem>>` |
+| 角色 | `POST /api/v1/admin/rbac/roles/create` | 创建角色 | `AdminRbacRoleCreateRequest` | `ApiResponse<AdminRoleItem>` |
+| 角色 | `POST /api/v1/admin/rbac/roles/update` | 更新角色 | `AdminRbacRoleUpdateRequest` | `ApiResponse` |
+| 角色 | `POST /api/v1/admin/rbac/roles/delete` | 删除角色 | `AdminRbacRoleDeleteRequest` | `ApiResponse` |
+| 角色 | `POST /api/v1/admin/rbac/roles/set_permissions` | 设置角色权限 | `AdminRbacRoleSetPermissionsRequest` | `ApiResponse` |
+| 管理员 | `POST /api/v1/admin/rbac/admins/list` | 管理员列表 | `AdminRbacAdminsListRequest` | `ApiResponse<PaginatedData<AdminAdminItem>>` |
+| 管理员 | `POST /api/v1/admin/rbac/admins/grant` | 授权/更新管理员 | `AdminRbacGrantAdminRequest` | `ApiResponse` |
+| 管理员 | `POST /api/v1/admin/rbac/admins/revoke` | 撤销管理员 | `AdminRbacRevokeAdminRequest` | `ApiResponse` |
+
 ## 核心类型定义
 
 ```typescript
@@ -94,22 +109,7 @@ interface AdminAdminItem {
 
 ---
 
-## 接口列表
-
-## 接口概览（按子域）
-
-| 子域 | 端点 | 说明 | Request | Response |
-|-----|------|------|---------|----------|
-| 权限 | `POST /api/v1/admin/rbac/me` | 我的管理员权限 | `{}` | `ApiResponse<AdminPermissions>` |
-| 权限 | `POST /api/v1/admin/rbac/permissions` | 权限字典 | `{}` | `ApiResponse<{ items: AdminPermissionItem[] }>` |
-| 角色 | `POST /api/v1/admin/rbac/roles/list` | 角色列表 | `{}` | `ApiResponse<{ items: AdminRoleItem[] }>` |
-| 角色 | `POST /api/v1/admin/rbac/roles/create` | 创建角色 | `AdminRbacRoleCreateRequest` | `ApiResponse<AdminRoleItem>` |
-| 角色 | `POST /api/v1/admin/rbac/roles/update` | 更新角色 | `AdminRbacRoleUpdateRequest` | `ApiResponse` |
-| 角色 | `POST /api/v1/admin/rbac/roles/delete` | 删除角色 | `AdminRbacRoleDeleteRequest` | `ApiResponse` |
-| 角色 | `POST /api/v1/admin/rbac/roles/set_permissions` | 设置角色权限 | `AdminRbacRoleSetPermissionsRequest` | `ApiResponse` |
-| 管理员 | `POST /api/v1/admin/rbac/admins/list` | 管理员列表 | `{}` | `ApiResponse<{ items: AdminAdminItem[] }>` |
-| 管理员 | `POST /api/v1/admin/rbac/admins/grant` | 授权/更新管理员 | `AdminRbacGrantAdminRequest` | `ApiResponse` |
-| 管理员 | `POST /api/v1/admin/rbac/admins/revoke` | 撤销管理员 | `AdminRbacRevokeAdminRequest` | `ApiResponse` |
+## API 详情
 
 ### POST /api/v1/admin/rbac/me
 
@@ -139,8 +139,11 @@ interface AdminAdminItem {
 
 **权限要求**：`admin.rbac.manage`
 
-**Request**: `{}`
-**Response**: `ApiResponse<{ items: AdminRoleItem[] }>`
+**Request**:
+```typescript
+interface AdminRbacRolesListRequest extends PaginationParams {}
+```
+**Response**: `ApiResponse<PaginatedData<AdminRoleItem>>`
 
 **可能错误码**：`10204`、`10205`
 
@@ -219,8 +222,11 @@ interface AdminRbacRoleSetPermissionsRequest {
 
 **权限要求**：`admin.rbac.manage`
 
-**Request**: `{}`
-**Response**: `ApiResponse<{ items: AdminAdminItem[] }>`
+**Request**:
+```typescript
+interface AdminRbacAdminsListRequest extends PaginationParams {}
+```
+**Response**: `ApiResponse<PaginatedData<AdminAdminItem>>`
 
 **可能错误码**：`10204`、`10205`
 
@@ -235,7 +241,7 @@ interface AdminRbacRoleSetPermissionsRequest {
 **Request**:
 ```typescript
 interface AdminRbacGrantAdminRequest {
-  user_id: number;
+  user_id: string;
   grant_all_permissions?: boolean;
   role_ids: string[];
 }
@@ -255,7 +261,7 @@ interface AdminRbacGrantAdminRequest {
 **Request**:
 ```typescript
 interface AdminRbacRevokeAdminRequest {
-  user_id: number;
+  user_id: string;
 }
 ```
 **Response**: `ApiResponse`

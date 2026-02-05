@@ -15,6 +15,23 @@ alwaysApply: true
 - 公共基础类型：`@api_spec_common_types.mdc`
 - 错误码：`@api_spec_errors.mdc`
 
+## 接口概览（按子域）
+
+| 子域 | 端点 | 说明 | Request | Response |
+|-----|------|------|---------|----------|
+| 认证 | `POST /api/v1/auth/register` | 用户注册 | `RegisterRequest` | `ApiResponse<AuthTokenPairWeb \| AuthTokenPairApp>` |
+| 认证 | `POST /api/v1/auth/login` | 用户登录 | `LoginRequest` | `ApiResponse<AuthTokenPairWeb \| AuthTokenPairApp>` |
+| 认证 | `POST /api/v1/auth/logout` | 用户登出 | `{}` | `ApiResponse` |
+| 认证 | `POST /api/v1/auth/guest` | 创建访客用户 | `GuestRequest` | `ApiResponse<AuthTokenPairWeb \| AuthTokenPairApp>` |
+| 认证 | `POST /api/v1/auth/refresh_token` | 刷新 Token | `RefreshTokenRequest` | `ApiResponse<AuthTokenPairWeb \| AuthTokenPairApp>` |
+| 认证 | `POST /api/v1/auth/check_status` | 检查认证状态 | `{}` | `ApiResponse<AuthStatus>` |
+| 验证码 | `POST /api/v1/auth/send_verification_code` | 发送验证码 | `SendVerificationCodeRequest` | `ApiResponse<VerificationCodeSent>` |
+| 验证码 | `POST /api/v1/auth/verify_code` | 校验验证码 | `VerifyCodeRequest` | `ApiResponse<VerificationResult>` |
+| 密码重置 | `POST /api/v1/auth/reset_password` | 重置密码 | `ResetPasswordRequest` | `ApiResponse` |
+| 账户安全 | `POST /api/v1/auth/me/change_password` | 修改密码 | `ChangePasswordRequest` | `ApiResponse` |
+| 会话管理 | `POST /api/v1/auth/me/sessions` | 获取会话列表 | `SessionsRequest` | `ApiResponse<PaginatedData<SessionItem>>` |
+| 会话管理 | `POST /api/v1/auth/me/sessions/revoke` | 撤销会话 | `RevokeSessionRequest` | `ApiResponse` |
+
 ## 核心类型定义
 
 ```typescript
@@ -27,14 +44,14 @@ alwaysApply: true
 // - 可变信息（nickname、头像等）应通过 /api/v1/user/me/profile 获取
 // - 避免 JWT 中的信息与实际数据不一致
 interface AuthTokenPairWeb {
-  user_id: number;
+  user_id: string;
   access_token: string;
   access_token_expires_at: string;
   // 注：Web 端 refresh_token 通过 HttpOnly Cookie 传输，响应体中不返回任何 refresh_token 相关信息
 }
 
 interface AuthTokenPairApp {
-  user_id: number;
+  user_id: string;
   access_token: string;
   refresh_token: string;
   access_token_expires_at: string;
@@ -65,49 +82,6 @@ interface AuthStatus {
   // 如需完整用户信息（nickname、头像等），应调用 /api/v1/user/me/profile
 }
 ```
-
-## 错误码说明
-
-本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
-
-| 错误码 | 说明 | 相关接口 |
-|-------|------|---------|
-| `10001` | 缺少必填参数 | 所有接口 |
-| `10002` | 参数格式错误 | `register`, `send_verification_code` |
-| `10003` | 参数值超出范围 | `register`, `guest`, `reset_password`, `change_password` |
-| `10103` | Refresh Token 无效或过期 | `refresh_token` |
-| `10104` | Refresh Token 缺失 | `refresh_token` |
-| `10105` | 密码错误 | `login`, `change_password` |
-| `10106` | 需要重新登录 | `refresh_token` |
-| `10107` | 验证 Token 无效或已过期 | `register`, `reset_password` |
-| `10200` | 权限不足 | `sessions/revoke` |
-| `10201` | 账号被封禁 | `login` |
-| `10300` | 资源不存在 | `verify_code`, `sessions/revoke` |
-| `10310` | 用户不存在 | `login`, `reset_password` |
-| `10400` | 资源已存在 | `register` |
-| `10402` | 资源状态冲突 | `register`, `verify_code` |
-| `10500` | 请求过于频繁 | `send_verification_code` |
-| `10501` | 超过每分钟请求限制 | `send_verification_code` |
-| `10503` | 超过每日请求限制 | `send_verification_code` |
-
-## 接口列表
-
-## 接口概览（按子域）
-
-| 子域 | 端点 | 说明 | Request | Response |
-|-----|------|------|---------|----------|
-| 认证 | `POST /api/v1/auth/register` | 用户注册 | `RegisterRequest` | `ApiResponse<AuthTokenPairWeb \| AuthTokenPairApp>` |
-| 认证 | `POST /api/v1/auth/login` | 用户登录 | `LoginRequest` | `ApiResponse<AuthTokenPairWeb \| AuthTokenPairApp>` |
-| 认证 | `POST /api/v1/auth/logout` | 用户登出 | `{}` | `ApiResponse` |
-| 认证 | `POST /api/v1/auth/guest` | 创建访客用户 | `GuestRequest` | `ApiResponse<AuthTokenPairWeb \| AuthTokenPairApp>` |
-| 认证 | `POST /api/v1/auth/refresh_token` | 刷新 Token | `RefreshTokenRequest` | `ApiResponse<AuthTokenPairWeb \| AuthTokenPairApp>` |
-| 认证 | `POST /api/v1/auth/check_status` | 检查认证状态 | `{}` | `ApiResponse<AuthStatus>` |
-| 验证码 | `POST /api/v1/auth/send_verification_code` | 发送验证码 | `SendVerificationCodeRequest` | `ApiResponse<VerificationCodeSent>` |
-| 验证码 | `POST /api/v1/auth/verify_code` | 校验验证码 | `VerifyCodeRequest` | `ApiResponse<VerificationResult>` |
-| 密码重置 | `POST /api/v1/auth/reset_password` | 重置密码 | `ResetPasswordRequest` | `ApiResponse` |
-| 账户安全 | `POST /api/v1/auth/me/change_password` | 修改密码 | `ChangePasswordRequest` | `ApiResponse` |
-| 会话管理 | `POST /api/v1/auth/me/sessions` | 获取会话列表 | `SessionsRequest` | `ApiResponse<PaginatedData<SessionItem>>` |
-| 会话管理 | `POST /api/v1/auth/me/sessions/revoke` | 撤销会话 | `RevokeSessionRequest` | `ApiResponse` |
 
 ### 客户端类型与 Token 投递策略
 
@@ -156,6 +130,30 @@ Set-Cookie: refresh_token=<token>; HttpOnly; Secure; SameSite=Lax; Path=/api/v1/
 | 登出 | ✅ 清除（Max-Age=0） | ✅ 清除（Max-Age=0） |
 | 普通 API 请求 | ✅ 自动携带 | ❌ 不携带（Path 限制） |
 | 调用 refresh_token API | ✅ 自动携带 | ✅ 自动携带（Path 匹配） |
+
+## 错误码说明
+
+本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
+
+| 错误码 | 说明 | 相关接口 |
+|-------|------|---------|
+| `10001` | 缺少必填参数 | 所有接口 |
+| `10002` | 参数格式错误 | `register`, `send_verification_code` |
+| `10003` | 参数值超出范围 | `register`, `guest`, `reset_password`, `change_password` |
+| `10103` | Refresh Token 无效或过期 | `refresh_token` |
+| `10104` | Refresh Token 缺失 | `refresh_token` |
+| `10105` | 密码错误 | `login`, `change_password` |
+| `10106` | 需要重新登录 | `refresh_token` |
+| `10107` | 验证 Token 无效或已过期 | `register`, `reset_password` |
+| `10200` | 权限不足 | `sessions/revoke` |
+| `10201` | 账号被封禁 | `login` |
+| `10300` | 资源不存在 | `verify_code`, `sessions/revoke` |
+| `10310` | 用户不存在 | `login`, `reset_password` |
+| `10400` | 资源已存在 | `register` |
+| `10402` | 资源状态冲突 | `register`, `verify_code` |
+| `10500` | 请求过于频繁 | `send_verification_code` |
+| `10501` | 超过每分钟请求限制 | `send_verification_code` |
+| `10503` | 超过每日请求限制 | `send_verification_code` |
 
 ### POST /api/v1/auth/register
 

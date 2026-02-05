@@ -15,6 +15,22 @@ alwaysApply: true
 - 公共基础类型：`@api_spec_common_types.mdc`
 - 错误码：`@api_spec_errors.mdc`
 
+---
+
+## 接口概览（按子域）
+
+| 子域 | 端点 | 说明 | Request | Response |
+|-----|------|------|---------|----------|
+| 信息流 | `POST /api/v1/feed/moments` | 获取瞬间信息流 | `GetFeedMomentsRequest` | `ApiResponse<PaginatedData<FeedMomentItem>>` |
+| 信息流 | `POST /api/v1/feed/groups` | 获取群组推荐 | `GetFeedGroupsRequest` | `ApiResponse<PaginatedData<FeedGroupItem>>` |
+| 信息流 | `POST /api/v1/feed/users` | 获取用户推荐 | `GetFeedUsersRequest` | `ApiResponse<PaginatedData<FeedUserItem>>` |
+| 信息流 | `POST /api/v1/feed/trending` | 获取热门内容 | `GetFeedTrendingRequest` | `ApiResponse<TrendingBundle>` |
+| 信息流 | `POST /api/v1/feed/feedback` | 信息流反馈 | `FeedFeedbackRequest` | `ApiResponse` |
+| 标签 | `POST /api/v1/tags/trending` | 热门标签 | `TrendingTagsRequest` | `ApiResponse<PaginatedData<TagItem>>` |
+| 标签 | `POST /api/v1/tags/suggest` | 标签搜索建议 | `SuggestTagsRequest` | `ApiResponse<PaginatedData<TagSuggestItem>>` |
+
+---
+
 ## 核心类型定义
 
 ```typescript
@@ -72,10 +88,6 @@ interface TagSuggestItem {
   name: string;
   usage_count: number;
 }
-
-interface TagSuggestions {
-  items: TagSuggestItem[];
-}
 ```
 
 ## 错误码说明
@@ -84,26 +96,10 @@ interface TagSuggestions {
 
 | 错误码 | 说明 | 相关接口 |
 |-------|------|---------|
-| `10001` | 缺少必填参数 | `feed/moments`、`feed/groups`、`feed/users`、`tags/suggest`、`tags/delete` |
+| `10001` | 缺少必填参数 | `feed/moments`、`feed/groups`、`feed/users`、`tags/suggest` |
 | `10003` | 参数值超出范围 | 所有带分页参数的接口 |
-| `10204` | 非管理员 | `admin/tags/delete` |
-| `10205` | 管理员权限不足 | `admin/tags/delete` |
-| `10300` | 资源不存在 | `admin/tags/delete` |
 
 ---
-
-## 接口概览（按子域）
-
-| 子域 | 端点 | 说明 | Request | Response |
-|-----|------|------|---------|----------|
-| 信息流 | `POST /api/v1/feed/moments` | 获取瞬间信息流 | `GetFeedMomentsRequest` | `ApiResponse<PaginatedData<FeedMomentItem>>` |
-| 信息流 | `POST /api/v1/feed/groups` | 获取群组推荐 | `GetFeedGroupsRequest` | `ApiResponse<PaginatedData<FeedGroupItem>>` |
-| 信息流 | `POST /api/v1/feed/users` | 获取用户推荐 | `GetFeedUsersRequest` | `ApiResponse<PaginatedData<FeedUserItem>>` |
-| 信息流 | `POST /api/v1/feed/trending` | 获取热门内容 | `GetFeedTrendingRequest` | `ApiResponse<TrendingBundle>` |
-| 信息流 | `POST /api/v1/feed/feedback` | 信息流反馈 | `FeedFeedbackRequest` | `ApiResponse` |
-| 标签 | `POST /api/v1/tags/trending` | 热门标签 | `TrendingTagsRequest` | `ApiResponse<TrendingTags>` |
-| 标签 | `POST /api/v1/tags/suggest` | 标签搜索建议 | `SuggestTagsRequest` | `ApiResponse<TagSuggestions>` |
-| 管理员 | `POST /api/v1/admin/tags/delete` | 删除/屏蔽标签 | `AdminDeleteTagRequest` | `ApiResponse` |
 
 ## 信息流 API
 
@@ -125,14 +121,14 @@ interface TagSuggestions {
 ```typescript
 interface GetFeedMomentsRequest extends PaginationParams {
   source?: FeedSource;
-  reference_point?: GeoPoint;
+  reference_point: GeoPoint;
   radius?: number;
 }
 ```
 **Response**: `ApiResponse<PaginatedData<FeedMomentItem>>`
 
 **来源说明**：
-- `following`：仅关注的人发布的瞬间，按时间倒序（不需要 reference_point）
+- `following`：仅关注的人发布的瞬间，按时间倒序（暂时没用到，但是仍然需要 reference_point，）
 - `nearby`：附近范围内的瞬间，按距离和热度排序（需要 reference_point）
 - `all`：综合推荐（默认），混合关注动态、附近热门、个性化推荐（需要 reference_point）
 
@@ -182,9 +178,8 @@ interface GetFeedUsersRequest extends PaginationParams {
 
 **Request**:
 ```typescript
-interface GetFeedTrendingRequest {
-  limit?: number;  // 默认 20，最大 100
-}
+interface GetFeedTrendingRequest extends PaginationParams {}
+// Note: limit 默认 20，最大 100
 ```
 **Response**: `ApiResponse<TrendingBundle>`
 
@@ -219,16 +214,12 @@ interface FeedFeedbackRequest {
 
 **Request**:
 ```typescript
-interface TrendingTagsRequest {
-  limit?: number;  // 默认 10，最大 50（热门标签列表）
+interface TrendingTagsRequest extends PaginationParams {
   timeframe?: TagTimeframe;
 }
-
-interface TrendingTags {
-  items: TagItem[];
-}
+// Note: limit 默认 10，最大 50（热门标签列表）
 ```
-**Response**: `ApiResponse<TrendingTags>`
+**Response**: `ApiResponse<PaginatedData<TagItem>>`
 
 **可能错误码**：`10003`
 
@@ -238,29 +229,11 @@ interface TrendingTags {
 
 **Request**:
 ```typescript
-interface SuggestTagsRequest {
+interface SuggestTagsRequest extends PaginationParams {
   prefix: string;
-  limit?: number;  // 默认 5，最大 20（建议类接口使用较小默认值）
 }
-
-interface TagSuggestions {
-  items: TagSuggestItem[];
-}
+// Note: limit 默认 5，最大 20（建议类接口使用较小默认值）
 ```
-**Response**: `ApiResponse<TagSuggestions>`
+**Response**: `ApiResponse<PaginatedData<TagSuggestItem>>`
 
 **可能错误码**：`10001`、`10003`
-
-### POST /api/v1/admin/tags/delete
-
-删除/屏蔽标签（管理员）。
-
-**Request**:
-```typescript
-interface AdminDeleteTagRequest {
-  tag_name: string;
-}
-```
-**Response**: `ApiResponse`
-
-**可能错误码**：`10001`、`10204`、`10205`、`10300`

@@ -15,6 +15,15 @@ alwaysApply: true
 - 公共基础类型：`@api_spec_common_types.mdc`
 - 错误码：`@api_spec_errors.mdc`
 
+## 接口概览（按子域）
+
+| 子域 | 端点 | 说明 | Request | Response |
+|-----|------|------|---------|----------|
+| 用户管理 | `POST /api/v1/admin/users/search` | 搜索用户 | `AdminUserSearchRequest` | `ApiResponse<PaginatedData<AdminUserSearchItem>>` |
+| 用户管理 | `POST /api/v1/admin/users/detail` | 用户详情 | `AdminUserDetailRequest` | `ApiResponse<AdminUserSearchItem>` |
+| 用户管理 | `POST /api/v1/admin/users/ban` | 封禁用户 | `AdminBanUserRequest` | `ApiResponse` |
+| 用户管理 | `POST /api/v1/admin/users/unban` | 解封用户 | `AdminUnbanUserRequest` | `ApiResponse` |
+
 ## 核心类型定义
 
 **AdminUserSearchItem**: 管理员用户统一搜索类型（用于列表、搜索、详情等所有场景，返回完全相同的字段）
@@ -66,16 +75,7 @@ interface AdminBanRecord {
 
 ---
 
-## 接口列表
-
-## 接口概览（按子域）
-
-| 子域 | 端点 | 说明 | Request | Response |
-|-----|------|------|---------|----------|
-| 用户管理 | `POST /api/v1/admin/users/search` | 搜索用户 | `AdminUserSearchRequest` | `ApiResponse<PaginatedData<AdminUserSearchItem>>` |
-| 用户管理 | `POST /api/v1/admin/users/detail` | 用户详情 | `AdminUserDetailRequest` | `ApiResponse<AdminUserSearchItem>` |
-| 用户管理 | `POST /api/v1/admin/users/ban` | 封禁用户 | `AdminBanUserRequest` | `ApiResponse` |
-| 用户管理 | `POST /api/v1/admin/users/unban` | 解封用户 | `AdminUnbanUserRequest` | `ApiResponse` |
+## API 详情
 
 ### POST /api/v1/admin/users/search
 
@@ -86,7 +86,7 @@ interface AdminBanRecord {
 **Request**:
 ```typescript
 interface AdminUserSearchRequest extends PaginationParams {
-  user_id?: number;
+  user_id?: string;
   nickname?: string;
   login_id?: string;
   status?: UserAccountStatus;
@@ -106,7 +106,7 @@ interface AdminUserSearchRequest extends PaginationParams {
 **Request**:
 ```typescript
 interface AdminUserDetailRequest {
-  user_id: number;
+  user_id: string;
 }
 ```
 **Response**: `ApiResponse<AdminUserSearchItem>`
@@ -128,7 +128,7 @@ interface AdminUserDetailRequest {
 **Request**:
 ```typescript
 interface AdminBanUserRequest {
-  user_id: number;
+  user_id: string;
   reason?: string;
   duration_days?: number;  // 0 or null = permanent
 }
@@ -146,7 +146,7 @@ interface AdminBanUserRequest {
 **Request**:
 ```typescript
 interface AdminUnbanUserRequest {
-  user_id: number;
+  user_id: string;
   reason?: string;
 }
 ```

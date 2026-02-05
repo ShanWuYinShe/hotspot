@@ -16,6 +16,19 @@ alwaysApply: true
 - 错误码：`@api_spec_errors.mdc`
 - WebSocket：`@api_spec_websocket.mdc`
 
+## 接口概览（按子域）
+
+| 子域 | 端点 | 说明 | Request | Response |
+|-----|------|------|---------|----------|
+| 通知中心 | `POST /api/v1/notifications` | 通知列表 | `GetNotificationsRequest` | `ApiResponse<PaginatedData<NotificationItem>>` |
+| 通知中心 | `POST /api/v1/notifications/unread_count` | 未读计数 | `{}` | `ApiResponse<UnreadCount>` |
+| 通知中心 | `POST /api/v1/notifications/mark_read` | 标记已读 | `MarkNotificationsReadRequest` | `ApiResponse` |
+| 订阅设置 | `POST /api/v1/subscriptions/me` | 获取订阅配置 | `{}` | `ApiResponse<Subscriptions>` |
+| 订阅设置 | `POST /api/v1/subscriptions/me/update` | 更新订阅配置 | `UpdateSubscriptionsRequest` | `ApiResponse` |
+| 设备令牌 | `POST /api/v1/device_tokens/me/register` | 注册设备 Token | `RegisterDeviceTokenRequest` | `ApiResponse` |
+| 设备令牌 | `POST /api/v1/device_tokens/me/unregister` | 注销设备 Token | `UnregisterDeviceTokenRequest` | `ApiResponse` |
+| 设备令牌 | `POST /api/v1/device_tokens/me` | 我的设备 Token 列表 | `MyDeviceTokensRequest` | `ApiResponse<PaginatedData<DeviceTokenItem>>` |
+
 ## 核心类型定义
 
 ```typescript
@@ -48,8 +61,6 @@ interface UnreadCount {
 interface Subscriptions {
   new_follower_enabled: boolean;
   mutual_follow_enabled: boolean;
-  follow_request_enabled: boolean;            // 收到关注请求（需审批时）
-  follow_request_handled_enabled: boolean;    // 关注请求被处理
   group_invite_enabled: boolean;
   group_invite_response_enabled: boolean;
   group_application_enabled: boolean;
@@ -81,19 +92,6 @@ interface DeviceTokenItem {
 
 ---
 
-## 接口概览（按子域）
-
-| 子域 | 端点 | 说明 | Request | Response |
-|-----|------|------|---------|----------|
-| 通知中心 | `POST /api/v1/notifications` | 通知列表 | `GetNotificationsRequest` | `ApiResponse<PaginatedData<NotificationItem>>` |
-| 通知中心 | `POST /api/v1/notifications/unread_count` | 未读计数 | `{}` | `ApiResponse<UnreadCount>` |
-| 通知中心 | `POST /api/v1/notifications/mark_read` | 标记已读 | `MarkNotificationsReadRequest` | `ApiResponse` |
-| 订阅设置 | `POST /api/v1/subscriptions/me` | 获取订阅配置 | `{}` | `ApiResponse<Subscriptions>` |
-| 订阅设置 | `POST /api/v1/subscriptions/me/update` | 更新订阅配置 | `UpdateSubscriptionsRequest` | `ApiResponse` |
-| 设备令牌 | `POST /api/v1/device_tokens/me/register` | 注册设备 Token | `RegisterDeviceTokenRequest` | `ApiResponse` |
-| 设备令牌 | `POST /api/v1/device_tokens/me/unregister` | 注销设备 Token | `UnregisterDeviceTokenRequest` | `ApiResponse` |
-| 设备令牌 | `POST /api/v1/device_tokens/me` | 我的设备 Token 列表 | `MyDeviceTokensRequest` | `ApiResponse<PaginatedData<DeviceTokenItem>>` |
-
 ## 通知中心 API
 
 ### POST /api/v1/notifications
@@ -110,13 +108,11 @@ interface DeviceTokenItem {
 - message_mention: target_id=moment_id 或 comment_id，若为 comment 则 reference_id=moment_id
 - new_follower: target_id=user_id（字符串格式）, reference_id=null
 - mutual_follow: target_id=user_id（字符串格式）, reference_id=null
-- follow_request: target_id=request_id, reference_id=null
-- follow_request_handled: target_id=request_id, reference_id=null
-- group_invite: target_id=invite_id, reference_id=group_chat_id
-- group_invite_response: target_id=invite_id, reference_id=group_chat_id
-- group_application: target_id=application_id, reference_id=group_chat_id
-- group_application_response: target_id=application_id, reference_id=group_chat_id
-- group_announcement: target_id=announcement_id, reference_id=group_chat_id
+- group_invite: target_id=invite_id, reference_id=group_id
+- group_invite_response: target_id=invite_id, reference_id=group_id
+- group_application: target_id=application_id, reference_id=group_id
+- group_application_response: target_id=application_id, reference_id=group_id
+- group_announcement: target_id=announcement_id, reference_id=group_id
 - system_announcement: target_id=announcement_id, reference_id=null
 
 WebSocket 仅推送正向互动与系统公告，拒绝/取消等结果在通知列表获取。

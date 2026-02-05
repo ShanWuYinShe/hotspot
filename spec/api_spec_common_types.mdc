@@ -37,7 +37,7 @@ alwaysApply: true
 - `distance/bearing_degrees` 等地理计算结果必须由后端返回，客户端禁止本地计算用于排序
 - 任意字段的可空性必须与类型定义一致
 - 所有 ID 字段必须使用显式 `xxx_id` 命名（禁止裸 `id`）
-- 所有 `xxx_id` 字段类型：`user_id` 为 safe integer，其它业务 ID 为 UUID string
+- 所有 `xxx_id` 字段在 API 层统一为 `string` 类型（前端视为不透明字符串，不关心内部是数字还是 UUID）
 - 幂等性：写操作必须支持 `Idempotency-Key`；对可能重复提交或重试的操作客户端必须携带；未显式标注 MUST 的写操作客户端可选但服务端需接受
 
 禁止：
@@ -60,7 +60,7 @@ alwaysApply: true
 ├── moments/        # 瞬间相关
 ├── comments/       # 评论相关
 ├── private_chats/  # 私聊
-├── group_chats/    # 群聊相关
+├── groups/    # 群聊相关
 ├── feed/           # 信息流
 ├── map/            # 地图渲染
 ├── tags/           # 标签
@@ -260,7 +260,7 @@ type TagTimeframe = 'daily' | 'weekly' | 'monthly';
 type NotificationFilterType = 'like' | 'comment' | 'follow' | 'system' | 'mention';
 type NotificationType = 
   | 'moment_like' | 'moment_comment' | 'comment_reply'
-  | 'new_follower' | 'mutual_follow' | 'follow_request' | 'follow_request_handled'
+  | 'new_follower' | 'mutual_follow'
   | 'group_invite' | 'group_invite_response'
   | 'group_application' | 'group_application_response'
   | 'group_announcement'
@@ -270,6 +270,9 @@ type NotificationTargetType = 'moment' | 'comment' | 'user' | 'group' | 'web';
 // === 信息流 ===
 type FeedContentType = 'moment' | 'group' | 'user';
 type FeedFeedbackAction = 'hide' | 'not_interested';
+
+// === 关注来源（心理学优化：让被关注者了解"为什么被关注"）===
+type FollowSource = 'moment' | 'search' | 'recommendation' | 'profile' | 'group';
 
 // === 设备 ===
 type DevicePlatform = 'ios' | 'android' | 'harmony' | 'web';
@@ -350,8 +353,8 @@ interface MapViewport {
 ```typescript
 // 分页请求参数
 interface PaginationParams {
-  limit?: number;  // Default: 20, Max: 100
-  cursor?: string; // Opaque string
+  limit?: number;  // default: 20, max: 100
+  cursor?: string; // 不透明字符串，客户端只透传
 }
 
 // 分页响应元数据
@@ -366,11 +369,10 @@ interface PaginatedData<T> {
   pagination: PaginationMeta;
 }
 
-// 搜索基础参数（包含浏览锚点位置）
-interface SearchBaseParams {
-  reference_point: GeoPoint; // 浏览锚点位置（用户当前浏览的地理位置，用于计算距离和推荐内容）
-  limit?: number;            // 每页数量，默认 20，最大 100
-  cursor?: string;           // 分页游标
+// 搜索基础参数（包含浏览锚点位置，继承分页参数）
+// 说明：reference_point 是客户端必须传入的有效地理位置，服务端用于计算距离和推荐内容
+interface SearchBaseParams extends PaginationParams {
+  reference_point: GeoPoint; // 浏览锚点位置（客户端必须传入有效坐标）
 }
 
 // 时间范围参数
@@ -417,7 +419,7 @@ interface MessageMedia {
 **UserInfo**: 用户基础信息（用于嵌套在其他对象中）
 ```typescript
 interface UserInfo {
-  user_id: number;
+  user_id: string;
   nickname: string;
   avatar_url?: string;
   user_type: UserType;
@@ -482,7 +484,7 @@ interface Relationship {
 **GroupInfo**: 群组基础信息（用于嵌套在其他对象中）
 ```typescript
 interface GroupInfo {
-  group_chat_id: string;
+  group_id: string;
   name: string;
   avatar_url?: string;
   members_count: number;
@@ -503,7 +505,7 @@ interface GroupSearchItem extends GroupInfo {
   
   // 详情页返回，搜索/列表不返回
   created_at?: string;
-  owner_id?: number;
+  owner_id?: string;
   
   // === @auth-only 以下字段仅登录态返回 ===
   my_state?: MyGroupState;
@@ -532,29 +534,11 @@ interface MyGroupState {
 }
 ```
 
-**MyGroupItem**: 我的群组列表项（继承 GroupInfo，仅登录态可用）
-```typescript
-interface MyGroupItem extends GroupInfo {
-  description?: string;
-  tags?: string[];
-  has_password: boolean;
-  location: RelativeLocation;  // distance/bearing_degrees 为 undefined（用户自己的群组不需要距离）
-  last_activity_at: string;
-  
-  // 我的状态（内联，因为 MyGroupItem 必然包含我的状态）
-  role: GroupRole;
-  unread_count: number;
-  is_muted: boolean;
-  is_pinned: boolean;
-  joined_at: string;
-}
-```
-
 **GroupAnnouncementItem**: 群公告列表项
 ```typescript
 interface GroupAnnouncementItem {
   announcement_id: string;
-  group_chat_id: string;
+  group_id: string;
   title: string;
   content: string;
   created_by: UserInfo;
@@ -572,7 +556,12 @@ interface SystemAnnouncementItem {
   severity: AnnouncementSeverity;
   action_url?: string;
   created_at: string;
-  created_by: UserInfo;
+  
+  // === @admin-only: 以下字段仅管理员可见 ===
+  created_by?: UserInfo;        // @admin-only: 创建者信息
+  send_push?: boolean;          // @admin-only: 是否发送推送
+  push_sent_at?: string;        // @admin-only: 推送发送时间
+  view_count?: number;          // @admin-only: 查看次数
 }
 ```
 
@@ -585,7 +574,7 @@ interface MomentBase {
   description: string;
   images?: MomentImage[];
   tags: string[];
-  mentions?: number[];
+  mentions?: string[];
   created_at: string;
   likes_count: number;
   comments_count: number;
@@ -654,7 +643,7 @@ interface CommentListItem {
   user: UserInfo;
   content: string;
   parent_id?: string;       // 父评论ID（回复时存在）
-  mentions?: number[];      // @ 提及的用户 ID 列表
+  mentions?: string[];      // @ 提及的用户 ID 列表
   created_at: string;
   likes_count: number;
   replies_count: number;    // 子评论数量
@@ -675,7 +664,7 @@ interface CommentLikeItem {
 ```typescript
 interface MessageReplyTo {
   message_id: string;
-  user_id: number;
+  user_id: string;
   nickname: string;
   content: string; // 文本预览
 }
@@ -690,7 +679,7 @@ interface PrivateMessageItem {
   content?: string;
   media?: MessageMedia;
   
-  sender_id: number;  // 私聊场景：会话双方已知，只需 ID
+  sender_id: string;  // 私聊场景：会话双方已知，只需 ID
   
   reply_to?: MessageReplyTo;
   
@@ -712,8 +701,8 @@ interface GroupMessageItem {
   sender: UserInfo;  // 群聊场景：需要完整用户信息
   
   reply_to?: MessageReplyTo;
-  mentions?: number[];  // @UserIDs
-  recalled_by?: number;
+  mentions?: string[];  // @UserIDs
+  recalled_by?: string;
   
   sent_at: string;
   edited_at?: string;
@@ -732,7 +721,7 @@ interface PrivateChatListItem {
     message_id: string;
     content?: string;
     type: MessageType;
-    sender_id: number;
+    sender_id: string;
     sent_at: string;
   };
   last_activity_at: string;
@@ -765,7 +754,7 @@ interface ApiResponse<T = void> {
 ```typescript
 // 地图渲染项 (聚合或实体)
 interface MapRenderItem {
-  id: string; // Unique ID
+  render_id: string;  // 渲染项唯一 ID（聚合时由服务端生成，实体时为 payload_id）
   type: MapItemType;
   location: GeoPoint;
   
@@ -781,8 +770,8 @@ interface MapRenderItem {
     title: string;
     subtitle?: string;
     cover_url?: string;
-    payload_id: string; // 原始业务ID
-    category?: string;  // 业务分类
+    payload_id: string;  // 原始业务 ID（user_id / group_id / moment_id）
+    category?: string;   // 业务分类
   };
 }
 ```
@@ -809,7 +798,7 @@ interface MapRenderItem {
 
 #### 去重（契约级）
 
-- 客户端必须按资源主键去重（用户：`user_id`；群组：`group_chat_id`；瞬间：`moment_id`；评论：`comment_id`；消息：`message_id`；通知：`notification_id`）。
+- 客户端必须按资源主键去重（用户：`user_id`；群组：`group_id`；瞬间：`moment_id`；评论：`comment_id`；消息：`message_id`；通知：`notification_id`）。
 
 ### 隐私与可见性（契约级）
 

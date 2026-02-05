@@ -344,8 +344,7 @@ export async function likeMoment(momentId: string) {
 - 展示：接收 UTC 时间，使用本地时区格式化展示。
 
 ### ID 类型
-- `user_id`: `number` (BigInt in backend, safe integer in JS)。
-- `*_id` (others): `string` (UUID)。
+- 所有 `*_id` 字段在 API 层统一为 `string` 类型（前端视为不透明字符串，不关心内部是数字还是 UUID）。
 
 ### 地理位置
 - 前端**禁止**自行计算距离或角度（Haversine 等）。

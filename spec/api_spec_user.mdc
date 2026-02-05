@@ -15,6 +15,40 @@ alwaysApply: true
 - 公共基础类型：`@api_spec_common_types.mdc`
 - 错误码：`@api_spec_errors.mdc`
 
+## 接口概览（按子域）
+
+| 子域 | 端点 | 说明 | Request | Response |
+|-----|------|------|---------|----------|
+| 用户搜索 | `POST /api/v1/user/search_by_keyword` | 按关键字搜索用户 | `SearchUsersByKeywordRequest` | `ApiResponse<PaginatedData<UserSearchItem>>` |
+| 用户搜索 | `POST /api/v1/user/search_by_tag` | 按标签搜索用户 | `SearchUsersByTagRequest` | `ApiResponse<PaginatedData<UserSearchItem>>` |
+| 用户搜索 | `POST /api/v1/user/search_by_location` | 按位置搜索用户 | `SearchUsersByLocationRequest` | `ApiResponse<PaginatedData<UserSearchItem>>` |
+| 用户搜索 | `POST /api/v1/user/suggest` | 用户搜索建议 | `SuggestUsersRequest` | `ApiResponse<PaginatedData<UserSuggestItem>>` |
+| 用户资料 | `POST /api/v1/user/open_the_door` | 用户资料详情 | `UserOpenTheDoorRequest` | `ApiResponse<UserSearchItem>` |
+| 用户资料 | `POST /api/v1/user/stats` | 用户统计 | `UserStatsRequest` | `ApiResponse<UserStats>` |
+| 用户资料 | `POST /api/v1/user/friends` | 用户好友列表 | `UserFriendsRequest` | `ApiResponse<PaginatedData<UserInfo>>` |
+| 用户资料 | `POST /api/v1/user/following` | 用户关注列表 | `UserFollowingRequest` | `ApiResponse<PaginatedData<UserInfo>>` |
+| 用户资料 | `POST /api/v1/user/followers` | 用户粉丝列表 | `UserFollowersRequest` | `ApiResponse<PaginatedData<UserInfo>>` |
+| 用户资料 | `POST /api/v1/user/groups` | 用户群组列表 | `UserGroupsRequest` | `ApiResponse<PaginatedData<GroupSearchItem>>` |
+| 用户资料 | `POST /api/v1/user/moments` | 用户瞬间历史 | `UserMomentsRequest` | `ApiResponse<PaginatedData<UserMomentListItem>>` |
+| 用户资料 | `POST /api/v1/user/liked_moments` | 用户点赞瞬间列表 | `UserLikedMomentsRequest` | `ApiResponse<PaginatedData<MomentSearchItem>>` |
+| 当前用户 | `POST /api/v1/user/me/profile` | 我的资料 | `{}` | `ApiResponse<MyProfile>` |
+| 当前用户 | `POST /api/v1/user/me/profile/update` | 更新我的资料 | `UpdateProfileRequest` | `ApiResponse<MyProfile>` |
+| 当前用户 | `POST /api/v1/user/me/location` | 更新我的位置 | `UpdateLocationRequest` | `ApiResponse` |
+| 当前用户 | `POST /api/v1/user/me/upgrade` | 访客升级 | `UpgradeAccountRequest` | `ApiResponse` |
+| 当前用户 | `POST /api/v1/user/me/stats` | 我的统计 | `{}` | `ApiResponse<UserStats>` |
+| 当前用户 | `POST /api/v1/user/me/settings` | 我的设置 | `{}` | `ApiResponse<UserSettings>` |
+| 当前用户 | `POST /api/v1/user/me/settings/update` | 更新我的设置 | `UpdateSettingsRequest` | `ApiResponse<UserSettings>` |
+| 当前用户 | `POST /api/v1/user/me/delete` | 删除账户 | `DeleteAccountRequest` | `ApiResponse` |
+| 当前用户 | `POST /api/v1/user/me/follow` | 关注用户 | `FollowRequest` | `ApiResponse` |
+| 当前用户 | `POST /api/v1/user/me/unfollow` | 取消关注 | `UnfollowRequest` | `ApiResponse` |
+| 当前用户 | `POST /api/v1/user/me/block` | 拉黑用户 | `BlockRequest` | `ApiResponse` |
+| 当前用户 | `POST /api/v1/user/me/unblock` | 解除拉黑 | `UnblockRequest` | `ApiResponse` |
+| 当前用户 | `POST /api/v1/user/me/friends` | 我的好友列表 | `MyFriendsRequest` | `ApiResponse<PaginatedData<FriendItem>>` |
+| 当前用户 | `POST /api/v1/user/me/following` | 我的关注列表 | `MyFollowingRequest` | `ApiResponse<PaginatedData<FollowingItem>>` |
+| 当前用户 | `POST /api/v1/user/me/followers` | 我的粉丝列表 | `MyFollowersRequest` | `ApiResponse<PaginatedData<FollowerItem>>` |
+| 当前用户 | `POST /api/v1/user/me/blocked` | 我的拉黑列表 | `MyBlockedRequest` | `ApiResponse<PaginatedData<BlockedUserSearchItem>>` |
+| 当前用户 | `POST /api/v1/user/me/remark` | 设置备注 | `SetRemarkRequest` | `ApiResponse` |
+
 ## 核心类型定义
 
 ```typescript
@@ -27,7 +61,7 @@ interface UserStats {
 }
 
 interface MyProfile {
-  user_id: number;
+  user_id: string;
   nickname: string;
   avatar_url?: string;
   bio?: string;
@@ -109,42 +143,7 @@ interface BlockedUserSearchItem {
 | `10411` | 不能对自己执行此操作 | `follow`、`unfollow`、`block`、`unblock`、`remark` |
 | `10421` | 未关注该用户 | `me/remark` |
 
-## 接口列表
-
-## 接口概览（按子域）
-
-| 子域 | 端点 | 说明 | Request | Response |
-|-----|------|------|---------|----------|
-| 用户搜索 | `POST /api/v1/user/search_by_keyword` | 按关键字搜索用户 | `SearchUsersByKeywordRequest` | `ApiResponse<PaginatedData<UserSearchItem>>` |
-| 用户搜索 | `POST /api/v1/user/search_by_tag` | 按标签搜索用户 | `SearchUsersByTagRequest` | `ApiResponse<PaginatedData<UserSearchItem>>` |
-| 用户搜索 | `POST /api/v1/user/search_by_location` | 按位置搜索用户 | `SearchUsersByLocationRequest` | `ApiResponse<PaginatedData<UserSearchItem>>` |
-| 用户搜索 | `POST /api/v1/user/suggest` | 用户搜索建议 | `SuggestUsersRequest` | `ApiResponse<UserSuggestions>` |
-| 用户资料 | `POST /api/v1/user/open_the_door` | 用户资料详情 | `UserOpenTheDoorRequest` | `ApiResponse<UserSearchItem>` |
-| 用户资料 | `POST /api/v1/user/relationship` | 获取关系 | `GetRelationshipRequest` | `ApiResponse<Relationship>` |
-| 用户资料 | `POST /api/v1/user/stats` | 用户统计 | `UserStatsRequest` | `ApiResponse<UserStats>` |
-| 用户资料 | `POST /api/v1/user/friends` | 用户好友列表 | `UserFriendsRequest` | `ApiResponse<PaginatedData<UserInfo>>` |
-| 用户资料 | `POST /api/v1/user/following` | 用户关注列表 | `UserFollowingRequest` | `ApiResponse<PaginatedData<UserInfo>>` |
-| 用户资料 | `POST /api/v1/user/followers` | 用户粉丝列表 | `UserFollowersRequest` | `ApiResponse<PaginatedData<UserInfo>>` |
-| 用户资料 | `POST /api/v1/user/groups` | 用户群组列表 | `UserGroupsRequest` | `ApiResponse<PaginatedData<GroupSearchItem>>` |
-| 用户资料 | `POST /api/v1/user/moments` | 用户瞬间历史 | `UserMomentsRequest` | `ApiResponse<PaginatedData<UserMomentListItem>>` |
-| 用户资料 | `POST /api/v1/user/liked_moments` | 用户点赞瞬间列表 | `UserLikedMomentsRequest` | `ApiResponse<PaginatedData<MomentSearchItem>>` |
-| 当前用户 | `POST /api/v1/user/me/profile` | 我的资料 | `{}` | `ApiResponse<MyProfile>` |
-| 当前用户 | `POST /api/v1/user/me/profile/update` | 更新我的资料 | `UpdateProfileRequest` | `ApiResponse<MyProfile>` |
-| 当前用户 | `POST /api/v1/user/me/location` | 更新我的位置 | `UpdateLocationRequest` | `ApiResponse` |
-| 当前用户 | `POST /api/v1/user/me/upgrade` | 访客升级 | `UpgradeAccountRequest` | `ApiResponse` |
-| 当前用户 | `POST /api/v1/user/me/stats` | 我的统计 | `{}` | `ApiResponse<UserStats>` |
-| 当前用户 | `POST /api/v1/user/me/settings` | 我的设置 | `{}` | `ApiResponse<UserSettings>` |
-| 当前用户 | `POST /api/v1/user/me/settings/update` | 更新我的设置 | `UpdateSettingsRequest` | `ApiResponse<UserSettings>` |
-| 当前用户 | `POST /api/v1/user/me/delete` | 删除账户 | `DeleteAccountRequest` | `ApiResponse` |
-| 当前用户 | `POST /api/v1/user/me/follow` | 关注用户 | `FollowRequest` | `ApiResponse` |
-| 当前用户 | `POST /api/v1/user/me/unfollow` | 取消关注 | `UnfollowRequest` | `ApiResponse` |
-| 当前用户 | `POST /api/v1/user/me/block` | 拉黑用户 | `BlockRequest` | `ApiResponse` |
-| 当前用户 | `POST /api/v1/user/me/unblock` | 解除拉黑 | `UnblockRequest` | `ApiResponse` |
-| 当前用户 | `POST /api/v1/user/me/friends` | 我的好友列表 | `MyFriendsRequest` | `ApiResponse<PaginatedData<FriendItem>>` |
-| 当前用户 | `POST /api/v1/user/me/following` | 我的关注列表 | `MyFollowingRequest` | `ApiResponse<PaginatedData<FollowingItem>>` |
-| 当前用户 | `POST /api/v1/user/me/followers` | 我的粉丝列表 | `MyFollowersRequest` | `ApiResponse<PaginatedData<FollowerItem>>` |
-| 当前用户 | `POST /api/v1/user/me/blocked` | 我的拉黑列表 | `MyBlockedRequest` | `ApiResponse<PaginatedData<BlockedUserSearchItem>>` |
-| 当前用户 | `POST /api/v1/user/me/remark` | 设置备注 | `SetRemarkRequest` | `ApiResponse` |
+## API 详情
 
 ### 用户搜索
 
@@ -203,18 +202,14 @@ interface SearchUsersByLocationRequest extends SearchBaseParams {
 
 **Request**:
 ```typescript
-interface SuggestUsersRequest {
-  prefix: string;
-  limit?: number;  // 默认 5，最大 20（建议类接口使用较小默认值）
-}
-
 // UserSuggestItem 定义于 @api_spec_search.mdc
 
-interface UserSuggestions {
-  items: UserSuggestItem[];
+interface SuggestUsersRequest extends PaginationParams {
+  prefix: string;
 }
+// Note: limit 默认 5，最大 20（建议类接口使用较小默认值）
 ```
-**Response**: `ApiResponse<UserSuggestions>`
+**Response**: `ApiResponse<PaginatedData<UserSuggestItem>>`
 
 ### 用户资料
 
@@ -226,26 +221,12 @@ Token 可选；登录态返回完整的 `UserSearchItem`（包括 `@auth-only` �
 **Request**:
 ```typescript
 interface UserOpenTheDoorRequest {
-  user_id: number;
+  user_id: string;
 }
 ```
 **Response**: `ApiResponse<UserSearchItem>`
 
 **可能错误码**：`10001`、`10310`、`10211`
-
-#### POST /api/v1/user/relationship
-
-获取与指定用户的关系。
-
-**Request**:
-```typescript
-interface GetRelationshipRequest {
-  user_id: number;
-}
-```
-**Response**: `ApiResponse<Relationship>`
-
-**可能错误码**：`10001`、`10310`
 
 #### POST /api/v1/user/stats
 
@@ -256,7 +237,7 @@ interface GetRelationshipRequest {
 **Request**:
 ```typescript
 interface UserStatsRequest {
-  user_id: number;
+  user_id: string;
 }
 ```
 **Response**: `ApiResponse<UserStats>`
@@ -273,7 +254,7 @@ interface UserStatsRequest {
 **Request**:
 ```typescript
 interface UserFriendsRequest extends PaginationParams {
-  user_id: number;
+  user_id: string;
 }
 ```
 **Response**: `ApiResponse<PaginatedData<UserInfo>>`
@@ -290,7 +271,7 @@ interface UserFriendsRequest extends PaginationParams {
 **Request**:
 ```typescript
 interface UserFollowingRequest extends PaginationParams {
-  user_id: number;
+  user_id: string;
 }
 ```
 **Response**: `ApiResponse<PaginatedData<UserInfo>>`
@@ -307,7 +288,7 @@ interface UserFollowingRequest extends PaginationParams {
 **Request**:
 ```typescript
 interface UserFollowersRequest extends PaginationParams {
-  user_id: number;
+  user_id: string;
 }
 ```
 **Response**: `ApiResponse<PaginatedData<UserInfo>>`
@@ -321,7 +302,7 @@ interface UserFollowersRequest extends PaginationParams {
 **Request**:
 ```typescript
 interface UserGroupsRequest extends PaginationParams {
-  user_id: number;
+  user_id: string;
 }
 ```
 **Response**: `ApiResponse<PaginatedData<GroupSearchItem>>`
@@ -337,7 +318,7 @@ interface UserGroupsRequest extends PaginationParams {
 **Request**:
 ```typescript
 interface UserMomentsRequest extends PaginationParams {
-  user_id: number;
+  user_id: string;
 }
 ```
 **Response**: `ApiResponse<PaginatedData<UserMomentListItem>>`
@@ -353,7 +334,7 @@ interface UserMomentsRequest extends PaginationParams {
 **Request**:
 ```typescript
 interface UserLikedMomentsRequest extends PaginationParams {
-  user_id: number;
+  user_id: string;
 }
 ```
 **Response**: `ApiResponse<PaginatedData<MomentSearchItem>>`
@@ -462,11 +443,10 @@ interface DeleteAccountRequest {
 
 **Request**:
 ```typescript
-// 关注来源类型（用于统计和展示"为什么被关注"）
-type FollowSource = 'moment' | 'search' | 'recommendation' | 'profile' | 'group';
+// FollowSource 定义于 @api_spec_common_types.mdc
 
 interface FollowRequest {
-  user_id: number;
+  user_id: string;
   source?: FollowSource;        // 可选：关注来源（用于心理学优化，让被关注者知道来源）
   source_moment_id?: string;    // 可选：如果是通过瞬间关注，提供瞬间 ID
 }
@@ -484,7 +464,7 @@ interface FollowRequest {
 **Request**:
 ```typescript
 interface UnfollowRequest {
-  user_id: number;
+  user_id: string;
 }
 ```
 **Response**: `ApiResponse`
@@ -498,7 +478,7 @@ interface UnfollowRequest {
 **Request**:
 ```typescript
 interface BlockRequest {
-  user_id: number;
+  user_id: string;
   reason?: string;
 }
 ```
@@ -513,7 +493,7 @@ interface BlockRequest {
 **Request**:
 ```typescript
 interface UnblockRequest {
-  user_id: number;
+  user_id: string;
 }
 ```
 **Response**: `ApiResponse`
@@ -569,7 +549,7 @@ interface MyBlockedRequest extends PaginationParams {}
 **Request**:
 ```typescript
 interface SetRemarkRequest {
-  user_id: number;
+  user_id: string;
   remark?: string;  // 为空则清除备注
 }
 ```

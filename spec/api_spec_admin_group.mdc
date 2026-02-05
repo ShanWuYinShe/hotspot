@@ -15,6 +15,14 @@ alwaysApply: true
 - 公共基础类型：`@api_spec_common_types.mdc`
 - 错误码：`@api_spec_errors.mdc`
 
+## 接口概览（按子域）
+
+| 子域 | 端点 | 说明 | Request | Response |
+|-----|------|------|---------|----------|
+| 群组管理 | `POST /api/v1/admin/groups/search` | 搜索群组 | `AdminGroupSearchRequest` | `ApiResponse<PaginatedData<AdminGroupSearchItem>>` |
+| 群组管理 | `POST /api/v1/admin/groups/detail` | 群组详情 | `AdminGroupDetailRequest` | `ApiResponse<AdminGroupSearchItem>` |
+| 群组管理 | `POST /api/v1/admin/groups/dismiss` | 解散群组 | `AdminDismissGroupRequest` | `ApiResponse` |
+
 ## 核心类型定义
 
 **AdminGroupSearchItem**: 管理员群组统一搜索类型（用于列表、搜索、详情等所有场景，返回完全相同的字段）
@@ -60,15 +68,7 @@ interface AdminDismissalRecord {
 
 ---
 
-## 接口列表
-
-## 接口概览（按子域）
-
-| 子域 | 端点 | 说明 | Request | Response |
-|-----|------|------|---------|----------|
-| 群组管理 | `POST /api/v1/admin/groups/search` | 搜索群组 | `AdminGroupSearchRequest` | `ApiResponse<PaginatedData<AdminGroupSearchItem>>` |
-| 群组管理 | `POST /api/v1/admin/groups/detail` | 群组详情 | `AdminGroupDetailRequest` | `ApiResponse<AdminGroupSearchItem>` |
-| 群组管理 | `POST /api/v1/admin/groups/dismiss` | 解散群组 | `AdminDismissGroupRequest` | `ApiResponse` |
+## API 详情
 
 ### POST /api/v1/admin/groups/search
 
@@ -79,9 +79,9 @@ interface AdminDismissalRecord {
 **Request**:
 ```typescript
 interface AdminGroupSearchRequest extends PaginationParams {
-  group_chat_id?: string;
+  group_id?: string;
   name?: string;
-  owner_id?: number;
+  owner_id?: string;
 }
 ```
 **Response**: `ApiResponse<PaginatedData<AdminGroupSearchItem>>`
@@ -97,7 +97,7 @@ interface AdminGroupSearchRequest extends PaginationParams {
 **Request**:
 ```typescript
 interface AdminGroupDetailRequest {
-  group_chat_id: string;
+  group_id: string;
 }
 ```
 **Response**: `ApiResponse<AdminGroupSearchItem>`
@@ -113,7 +113,7 @@ interface AdminGroupDetailRequest {
 **Request**:
 ```typescript
 interface AdminDismissGroupRequest {
-  group_chat_id: string;
+  group_id: string;
   reason?: string;
 }
 ```

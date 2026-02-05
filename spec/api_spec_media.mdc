@@ -15,6 +15,13 @@ alwaysApply: true
 - 公共基础类型：`@api_spec_common_types.mdc`
 - 错误码：`@api_spec_errors.mdc`
 
+## 接口概览（按子域）
+
+| 子域 | 端点 | 说明 | Request | Response |
+|-----|------|------|---------|----------|
+| 上传（Presigned） | `POST /api/v1/media/presign_upload` | 申请上传预签名 | `PresignUploadRequest` | `ApiResponse<PresignedUpload>` |
+| 上传（Presigned） | `POST /api/v1/media/complete_upload` | 完成上传 | `CompleteUploadRequest` | `ApiResponse<UploadedMedia>` |
+
 ## 设计理念
 
 文件上传采用「先上传，后引用」的安全模式。
@@ -73,14 +80,7 @@ interface UploadedMedia {
 | `10360` | 上传会话无效或已过期 | `complete_upload` |
 | `10402` | 文件未上传或校验失败 | `complete_upload` |
 
-## 接口列表
-
-## 接口概览（按子域）
-
-| 子域 | 端点 | 说明 | Request | Response |
-|-----|------|------|---------|----------|
-| 上传（Presigned） | `POST /api/v1/media/presign_upload` | 申请上传预签名 | `PresignUploadRequest` | `ApiResponse<PresignedUpload>` |
-| 上传（Presigned） | `POST /api/v1/media/complete_upload` | 完成上传 | `CompleteUploadRequest` | `ApiResponse<UploadedMedia>` |
+## API 详情
 
 ### 文件与媒体上传 API (Presigned 模式)
 

@@ -15,6 +15,13 @@ alwaysApply: true
 - 公共基础类型：`@api_spec_common_types.mdc`
 - 错误码：`@api_spec_errors.mdc`
 
+## 接口概览（按子域）
+
+| 子域 | 端点 | 说明 | Request | Response |
+|-----|------|------|---------|----------|
+| 举报审核 | `POST /api/v1/admin/reports` | 举报列表（管理员） | `ReportsRequest` | `ApiResponse<PaginatedData<ReportItem>>` |
+| 举报审核 | `POST /api/v1/admin/reports/handle` | 处理举报 | `HandleReportRequest` | `ApiResponse` |
+
 ## 核心类型定义
 
 本模块复用 `ReportItem`（见 `@api_spec_report.mdc`）。
@@ -31,13 +38,6 @@ alwaysApply: true
 | `10300` | 资源不存在 | `handle` |
 
 ---
-
-## 接口概览（按子域）
-
-| 子域 | 端点 | 说明 | Request | Response |
-|-----|------|------|---------|----------|
-| 举报审核 | `POST /api/v1/admin/reports` | 举报列表（管理员） | `ReportsRequest` | `ApiResponse<PaginatedData<ReportItem>>` |
-| 举报审核 | `POST /api/v1/admin/reports/handle` | 处理举报 | `HandleReportRequest` | `ApiResponse` |
 
 ## 管理员接口
 
