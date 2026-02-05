@@ -138,7 +138,7 @@ pub async fn get_stats(
     State(state): State<AppState>,
     Json(req): Json<UserStatsRequest>,
 ) -> Result<Json<ApiResponse<UserStatsData>>> {
-    let response = state.user_service.get_user_stats(&req).await?;
+    let response = state.user_service.get_stats(req.user_id).await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
@@ -148,7 +148,7 @@ pub async fn get_my_stats(
     user: AuthenticatedUser,
     Json(_req): Json<MyStatsRequest>,
 ) -> Result<Json<ApiResponse<UserStatsData>>> {
-    let response = state.user_service.get_my_stats(user.user_id).await?;
+    let response = state.user_service.get_stats(user.user_id).await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
@@ -182,8 +182,8 @@ pub async fn update_my_settings(
 pub async fn get_friends(
     State(state): State<AppState>,
     Json(req): Json<UserFriendsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<UserInfo>>>> {
-    let response = state.user_service.get_user_friends_list(&req).await?;
+) -> Result<Json<ApiResponse<PaginatedData<FriendItem>>>> {
+    let response = state.user_service.get_friends_list(req.user_id, &req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
@@ -191,8 +191,8 @@ pub async fn get_friends(
 pub async fn get_following(
     State(state): State<AppState>,
     Json(req): Json<UserFollowingRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<UserInfo>>>> {
-    let response = state.user_service.get_user_following_list(&req).await?;
+) -> Result<Json<ApiResponse<PaginatedData<FollowingItem>>>> {
+    let response = state.user_service.get_following_list(req.user_id, &req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
@@ -200,8 +200,8 @@ pub async fn get_following(
 pub async fn get_followers(
     State(state): State<AppState>,
     Json(req): Json<UserFollowersRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<UserInfo>>>> {
-    let response = state.user_service.get_user_followers_list(&req).await?;
+) -> Result<Json<ApiResponse<PaginatedData<FollowerItem>>>> {
+    let response = state.user_service.get_followers_list(req.user_id, &req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
@@ -218,7 +218,7 @@ pub async fn get_groups(
 pub async fn get_liked_moments(
     State(state): State<AppState>,
     Json(req): Json<UserLikedMomentsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<MomentSearchItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<UserMomentListItem>>>> {
     let response = state.user_service.get_user_liked_moments_list(&req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
@@ -307,9 +307,14 @@ pub async fn get_my_friends(
     user: AuthenticatedUser,
     Json(req): Json<MyFriendsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<FriendItem>>>> {
+    let service_req = UserFriendsRequest {
+        user_id: user.user_id,
+        cursor: req.cursor,
+        limit: req.limit,
+    };
     let response = state
         .user_service
-        .get_friends_list(user.user_id, &req)
+        .get_friends_list(user.user_id, &service_req)
         .await?;
     Ok(Json(ApiResponse::success(response)))
 }
@@ -319,9 +324,14 @@ pub async fn get_my_following(
     user: AuthenticatedUser,
     Json(req): Json<MyFollowingRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<FollowingItem>>>> {
+    let service_req = UserFollowingRequest {
+        user_id: user.user_id,
+        cursor: req.cursor,
+        limit: req.limit,
+    };
     let response = state
         .user_service
-        .get_following_list(user.user_id, &req)
+        .get_following_list(user.user_id, &service_req)
         .await?;
     Ok(Json(ApiResponse::success(response)))
 }
@@ -331,9 +341,14 @@ pub async fn get_my_followers(
     user: AuthenticatedUser,
     Json(req): Json<MyFollowersRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<FollowerItem>>>> {
+    let service_req = UserFollowersRequest {
+        user_id: user.user_id,
+        cursor: req.cursor,
+        limit: req.limit,
+    };
     let response = state
         .user_service
-        .get_followers_list(user.user_id, &req)
+        .get_followers_list(user.user_id, &service_req)
         .await?;
     Ok(Json(ApiResponse::success(response)))
 }
@@ -461,12 +476,8 @@ pub async fn admin_ban(
             operator_id: admin.user_id,
             target_type: "user".to_string(),
             target_id: req.user_id.to_string(),
-            target_name: None,
             details: Some(details),
-            before_state: None,
-            after_state: None,
             ip_address: None,
-            user_agent: None,
         })
         .await?;
     Ok(Json(ApiResponse::success_empty()))
@@ -501,12 +512,8 @@ pub async fn admin_unban(
             operator_id: admin.user_id,
             target_type: "user".to_string(),
             target_id: req.user_id.to_string(),
-            target_name: None,
             details: Some(details),
-            before_state: None,
-            after_state: None,
             ip_address: None,
-            user_agent: None,
         })
         .await?;
     Ok(Json(ApiResponse::success_empty()))
