@@ -12,15 +12,19 @@ alwaysApply: true
 
 ## 契约引用
 
-- 公共基础类型：`@api_spec_common_types.mdc`
-- 错误码：`@api_spec_errors.mdc`
-- 系统配置类型：`@api_spec_system.mdc`（复用 `UploadConfig`、`ContentDefaults` 等类型定义）
+- 公共基础类型：`@api_spec_common.mdc`
+- 错误码：`@spec/api_spec_errors.mdc`
+- 系统配置类型：`@api_spec_common.mdc`（复用 `UploadConfig`、`ContentDefaults` 等类型定义）
+
+## 幂等性（管理员写操作）
+
+- 所有具有更新语义的管理员接口必须携带 `Idempotency-Key`。
 
 ## 接口概览
 
 | 端点 | 说明 | Request | Response |
 |------|------|---------|----------|
-| `POST /api/v1/admin/global_settings` | 获取完整全局配置 | `{}` | `ApiResponse<AdminSettings>` |
+| `POST /api/v1/admin/global_settings/get` | 获取完整全局配置 | `{}` | `ApiResponse<GlobalSettings>` |
 | `POST /api/v1/admin/global_settings/update_upload` | 更新上传策略 | `UpdateUploadConfigRequest` | `ApiResponse<{ upload: UploadConfig; updated_at: string; }>` |
 | `POST /api/v1/admin/global_settings/update_defaults` | 更新内容默认值 | `UpdateDefaultsRequest` | `ApiResponse<{ defaults: ContentDefaults; updated_at: string; }>` |
 | `POST /api/v1/admin/global_settings/update_features` | 更新功能开关 | `UpdateFeaturesRequest` | `ApiResponse<{ features: FeatureSwitches; updated_at: string; }>` |
@@ -31,7 +35,7 @@ alwaysApply: true
 ## 核心类型定义
 
 ```typescript
-// 注：以下配置子类型定义于 @api_spec_system.mdc
+// 注：以下配置子类型定义于 @api_spec_common.mdc
 // - UploadConfig: 上传策略配置
 // - ContentDefaults: 内容默认值配置
 // - FeatureSwitches: 功能开关配置
@@ -40,16 +44,12 @@ alwaysApply: true
 // - RateLimitConfig: 频率限制配置
 // - GlobalSettings: 聚合配置对象
 
-// 管理员配置（扩展 GlobalSettings）
-interface AdminSettings extends GlobalSettings {
-  updated_at: string;
-  updated_by_user_id: string;
-}
+// GlobalSettings 定义于 @api_spec_common.mdc（含 @admin-only 字段）
 ```
 
 ## 错误码说明
 
-本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
+本模块使用的错误码定义于 `@spec/api_spec_errors.mdc`，主要涉及：
 
 | 错误码 | 说明 | 相关接口 |
 |-------|------|---------|
@@ -57,6 +57,8 @@ interface AdminSettings extends GlobalSettings {
 | `10003` | 参数值超出范围 | `update_upload`、`update_limits`、`update_rate_limits` |
 | `10204` | 非管理员 | 所有接口 |
 | `10205` | 管理员权限不足 | 所有接口 |
+| `22000` | 幂等键冲突 | 所有更新接口 |
+| `22002` | 幂等操作正在处理中 | 所有更新接口 |
 
 ---
 
@@ -66,12 +68,12 @@ interface AdminSettings extends GlobalSettings {
 > - 读取：`admin.config.read`
 > - 更新：`admin.config.write`
 
-### POST /api/v1/admin/global_settings
+### POST /api/v1/admin/global_settings/get
 
 获取完整全局配置（管理员）。
 
 **Request**: `{}`
-**Response**: `ApiResponse<AdminSettings>`
+**Response**: `ApiResponse<GlobalSettings>`
 
 **可能错误码**：`10204`、`10205`
 
@@ -81,7 +83,9 @@ interface AdminSettings extends GlobalSettings {
 
 **Request**:
 ```typescript
-interface UpdateUploadConfigRequest extends Partial<UploadConfig> {}
+interface UpdateUploadConfigRequest {
+  upload: Partial<UploadConfig>;
+}
 ```
 **Response**: `ApiResponse<{ upload: UploadConfig; updated_at: string; }>`
 
@@ -144,7 +148,9 @@ interface UpdateContactRequest {
 
 **Request**:
 ```typescript
-interface UpdateLimitsRequest extends Partial<AppLimits> {}
+interface UpdateLimitsRequest {
+  limits: Partial<AppLimits>;
+}
 ```
 **Response**: `ApiResponse<{ limits: AppLimits; updated_at: string; }>`
 
@@ -158,26 +164,8 @@ interface UpdateLimitsRequest extends Partial<AppLimits> {}
 
 **Request**:
 ```typescript
-interface UpdateRateLimitsRequest extends Partial<RateLimitConfig> {
-  // 全局限速（可选）
-  global_per_hour?: number;
-  user_per_hour?: number;
-  
-  // 认证相关限速（可选）
-  auth_send_code_per_minute?: number;
-  auth_verify_code_per_10minutes?: number;
-  auth_register_per_10minutes?: number;
-  auth_login_per_10minutes?: number;
-  auth_guest_per_10minutes?: number;
-  auth_refresh_per_10minutes?: number;
-  auth_reset_request_per_minute?: number;
-  auth_reset_verify_per_10minutes?: number;
-  auth_reset_per_10minutes?: number;
-  
-  // 业务相关限速（可选）
-  moments_create_per_minute?: number;
-  comments_create_per_minute?: number;
-  reports_create_per_hour?: number;
+interface UpdateRateLimitsRequest {
+  rate_limits: Partial<RateLimitConfig>;
 }
 ```
 **Response**: `ApiResponse<{ rate_limits: RateLimitConfig; updated_at: string; }>`
@@ -185,7 +173,7 @@ interface UpdateRateLimitsRequest extends Partial<RateLimitConfig> {
 **验证规则**：
 - 所有值必须为正整数
 - 全局限速建议范围：`100-10000` 次/小时
-- 用户限速建议范围：`500-50000` 次/小时
+- 用户限速建议范围：`500-50_000` 次/小时
 - 认证相关限速建议最小值：
   - 验证码发送：`>= 3` 次/分钟
   - 登录：`>= 10` 次/10分钟

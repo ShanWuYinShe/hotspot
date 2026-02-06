@@ -12,8 +12,12 @@ alwaysApply: true
 
 ## 契约引用
 
-- 公共基础类型：`@api_spec_common_types.mdc`
-- 错误码：`@api_spec_errors.mdc`
+- 公共基础类型：`@api_spec_common.mdc`
+- 错误码：`@spec/api_spec_errors.mdc`
+
+## 幂等性（管理员写操作）
+
+- 所有具有删除/屏蔽语义的管理员接口必须携带 `Idempotency-Key`。
 
 ## 接口概览（按子域）
 
@@ -31,7 +35,7 @@ interface AdminDeleteTagRequest {
 
 ## 错误码说明
 
-本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
+本模块使用的错误码定义于 `@spec/api_spec_errors.mdc`，主要涉及：
 
 | 错误码 | 说明 | 相关接口 |
 |-------|------|---------|
@@ -39,6 +43,8 @@ interface AdminDeleteTagRequest {
 | `10204` | 非管理员 | `delete` |
 | `10205` | 管理员权限不足 | `delete`（需要 `admin.tags.write`） |
 | `10300` | 资源不存在 | `delete` |
+| `22000` | 幂等键冲突 | `delete` |
+| `22002` | 幂等操作正在处理中 | `delete` |
 
 ---
 

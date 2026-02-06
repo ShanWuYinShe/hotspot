@@ -12,8 +12,8 @@ alwaysApply: true
 
 ## 契约引用
 
-- 公共基础类型：`@api_spec_common_types.mdc`
-- 错误码：`@api_spec_errors.mdc`
+- 公共基础类型：`@api_spec_common.mdc`
+- 错误码：`@spec/api_spec_errors.mdc`
 
 ## 接口概览（按子域）
 
@@ -39,6 +39,8 @@ alwaysApply: true
 ## 核心类型定义
 
 ```typescript
+type MediaCategory = 'avatar' | 'group_avatar' | 'moment_image' | 'chat_image' | 'chat_video' | 'chat_audio' | 'chat_file';
+
 interface PresignedUpload {
   upload_id: string;
   upload_url: string;
@@ -71,22 +73,22 @@ interface UploadedMedia {
 
 ## 错误码说明
 
-本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
+本模块使用的错误码定义于 `@spec/api_spec_errors.mdc`，主要涉及：
 
 | 错误码 | 说明 | 相关接口 |
 |-------|------|---------|
 | `10002` | 参数格式错误 | `presign_upload`（MIME 类型不匹配） |
 | `10005` | 请求体过大 | `presign_upload`（超出系统配置限制） |
-| `10360` | 上传会话无效或已过期 | `complete_upload` |
-| `10402` | 文件未上传或校验失败 | `complete_upload` |
+| `10360` | 文件/媒体不存在 | `complete_upload`（上传会话无效或已过期） |
+| `10402` | 资源状态冲突 | `complete_upload`（文件未上传或校验失败） |
 
 ## API 详情
 
 ### 文件与媒体上传 API (Presigned 模式)
 
 采用 "Presigned URL" 模式：
-- **高性能**：客户端直传云存储，不占用应用服务器带宽
-- **兼容性**：MinIO 完全模拟 S3 API，可无缝切换到公有云 S3
+- **高性能**：客户端直传对象存储，不占用应用服务器带宽
+- **兼容性**：支持 S3 兼容对象存储
 - **安全性**：上传凭证短期有效，且绑定文件特征
 
 **核心流程**：
@@ -122,6 +124,8 @@ interface PresignUploadRequest {
 #### POST /api/v1/media/complete_upload
 
 完成上传。
+
+**幂等性**：同一 `upload_id` 的重复提交必须返回相同的 `UploadedMedia`。
 
 **Request**:
 ```typescript

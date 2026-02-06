@@ -12,8 +12,9 @@ alwaysApply: true
 
 ## 契约引用
 
-- 公共基础类型：`@api_spec_common_types.mdc`
-- 错误码：`@api_spec_errors.mdc`
+- 公共基础类型：`@api_spec_common.mdc`
+- 错误码：`@spec/api_spec_errors.mdc`
+- 管理员举报审核：`@api_spec_admin_report.mdc`
 
 ## 举报审核流程说明
 
@@ -64,32 +65,20 @@ interface ReportCreated {
   report_id: string;
 }
 
-interface ReportItem {
-  report_id: string;
-  target_type: ReportTargetType;
-  target_id: string;            // 统一为 string（user_id 需转为字符串格式）
-  reason: string;
-  description?: string;
-  status: ReportStatus;
-  created_at: string;
-  handled_at?: string;
-  target_snapshot?: {
-    content?: string;
-    media_urls?: string[];
-    owner_id?: string;
-  };
-}
+// ReportItem 定义于 @api_spec_common.mdc（含 @admin-only 字段）
 ```
 
 ## 错误码说明
 
-本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
+本模块使用的错误码定义于 `@spec/api_spec_errors.mdc`，主要涉及：
 
 | 错误码 | 说明 | 相关接口 |
 |-------|------|---------|
 | `10001` | 缺少必填参数 | `create` |
 | `10003` | 参数值超出范围 | `create`（reason 长度）、`me`（limit） |
 | `10300` | 资源不存在 | `create`（target_id 不存在） |
+| `22000` | 幂等键冲突 | `create` |
+| `22002` | 幂等操作正在处理中 | `create` |
 
 ---
 
@@ -99,11 +88,13 @@ interface ReportItem {
 
 创建举报。
 
+**幂等性（MUST）**：客户端必须携带 `Idempotency-Key`。
+
 **Request**:
 ```typescript
 interface CreateReportRequest {
   target_type: ReportTargetType;
-  target_id: string;            // 统一为 string（user_id 需转为字符串格式，如 "12345"）
+  target_id: string;            // 统一为 string（user_id 需转为字符串格式）
   reason: string;
   description?: string;
 }
@@ -111,19 +102,23 @@ interface CreateReportRequest {
 
 **字段说明**：
 - `reason`：举报原因，1-200 字符
-- `target_id`：统一为 string 类型；举报用户时将 `user_id` 转为字符串格式（如 `"12345"`）
+- `target_id`：统一为 string 类型；举报用户时将 `user_id` 转为字符串格式
 
 **Response**: `ApiResponse<ReportCreated>`
 
-**可能错误码**：`10001`、`10003`、`10300`
+**可能错误码**：`10001`、`10003`、`10300`、`22000`、`22002`
 
 ### POST /api/v1/reports/me
 
 我的举报记录。
 
+**可见性**：仅当前用户可见（`@owner-only`）。
+
 **Request**:
 ```typescript
-interface MyReportsRequest extends PaginationParams {}
+interface MyReportsRequest {
+  pagination?: PaginationParams;
+}
 ```
 **Response**: `ApiResponse<PaginatedData<ReportItem>>`
 

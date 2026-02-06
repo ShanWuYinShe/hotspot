@@ -12,8 +12,8 @@ alwaysApply: true
 
 ## 契约引用
 
-- 公共基础类型：`@api_spec_common_types.mdc`
-- 错误码：`@api_spec_errors.mdc`
+- 公共基础类型：`@api_spec_common.mdc`
+- 错误码：`@spec/api_spec_errors.mdc`
 
 ## 设计目标
 
@@ -22,10 +22,14 @@ alwaysApply: true
 
 ## 统一访问控制
 
-仅对 `/api/v1/admin/**` 生效：
+仅对 /api/v1/admin/ 路径下接口生效：
 - 未登录/登录失效：按全局登录态错误处理（`10101`/`10102`）
 - 已登录但不是管理员：返回错误码 `10204`（非管理员）
 - 是管理员但缺少接口要求的权限：返回错误码 `10205`（管理员权限不足）
+
+## 幂等性（管理员写操作）
+
+- 所有具有创建/更新/删除/授权语义的管理员接口必须携带 `Idempotency-Key`。
 
 ## 权限 key 约定
 
@@ -97,15 +101,18 @@ interface AdminAdminItem {
 
 ## 错误码说明
 
-本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
+本模块使用的错误码定义于 `@spec/api_spec_errors.mdc`，主要涉及：
 
 | 错误码 | 说明 | 相关接口 |
 |-------|------|---------|
+| `10002` | 参数格式错误 | `set_permissions`（permission_keys 含无效值） |
 | `10204` | 非管理员 | 所有 admin 接口 |
 | `10205` | 管理员权限不足 | 所有需要 `admin.rbac.manage` 的接口 |
 | `10300` | 资源不存在 | `update`、`delete`、`set_permissions`、`grant`、`revoke` |
 | `10400` | 角色名已存在 | `create`、`update` |
 | `10402` | 资源状态冲突 | `delete`（角色正在被使用） |
+| `22000` | 幂等键冲突 | 角色/管理员相关写操作 |
+| `22002` | 幂等操作正在处理中 | 角色/管理员相关写操作 |
 
 ---
 
@@ -141,7 +148,9 @@ interface AdminAdminItem {
 
 **Request**:
 ```typescript
-interface AdminRbacRolesListRequest extends PaginationParams {}
+interface AdminRbacRolesListRequest {
+  pagination?: PaginationParams;
+}
 ```
 **Response**: `ApiResponse<PaginatedData<AdminRoleItem>>`
 
@@ -214,7 +223,9 @@ interface AdminRbacRoleSetPermissionsRequest {
 ```
 **Response**: `ApiResponse`
 
-**可能错误码**：`10204`、`10205`、`10300`
+**说明**：`permission_keys` 必须来自权限字典（`admin/rbac/permissions`）。
+
+**可能错误码**：`10002`、`10204`、`10205`、`10300`
 
 ### POST /api/v1/admin/rbac/admins/list
 
@@ -224,7 +235,9 @@ interface AdminRbacRoleSetPermissionsRequest {
 
 **Request**:
 ```typescript
-interface AdminRbacAdminsListRequest extends PaginationParams {}
+interface AdminRbacAdminsListRequest {
+  pagination?: PaginationParams;
+}
 ```
 **Response**: `ApiResponse<PaginatedData<AdminAdminItem>>`
 

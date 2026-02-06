@@ -3,27 +3,34 @@ alwaysApply: true
 ---
 # HotSpot API 规范 - 系统与全局配置 API 模块 v0.0.1 (RPC)
 
-> 本文档定义 HotSpot 系统健康检查 (`system`)、全局配置 (`global_settings`) 和系统公告 (`announcements`) 相关的公开 RPC 接口。
+> 本文档定义 HotSpot 系统健康检查 (`system`)、全局配置 (`global_settings`)、系统公告 (`announcements`) 与版本元信息 (`meta`) 相关的公开 RPC 接口。
 
 ## 服务定义
 
-- **Service Namespace**: `system`, `global_settings`, `announcements`
-- **Base Path**: `/api/v1/system/`, `/api/v1/global_settings/`, `/api/v1/announcements`
+- **Service Namespaces**:
+  - `system`
+  - `global_settings`
+  - `announcements`
+  - `meta`
+- **Base Paths**:
+  - `/api/v1/system/`
+  - `/api/v1/global_settings/`
+  - `/api/v1/announcements/`
 
 ## 契约引用
 
-- 公共基础类型：`@api_spec_common_types.mdc`
-- 错误码：`@api_spec_errors.mdc`
+- 公共基础类型：`@api_spec_common.mdc`
+- 错误码：`@spec/api_spec_errors.mdc`
 - 管理员配置管理：`@api_spec_admin_config.mdc`
 
 ## 接口概览（按子域）
 
 | 子域 | 端点 | 说明 | Request | Response |
 |-----|------|------|---------|----------|
-| 版本 | `POST /api/v1/meta` | API 版本元信息 | `{}` | `ApiResponse<ApiVersionMeta>` |
+| 版本 | `POST /api/v1/system/meta` | API 版本元信息 | `{}` | `ApiResponse<ApiVersionMeta>` |
 | 系统 | `POST /api/v1/system/health` | 健康检查 | `{}` | `ApiResponse<HealthStatus>` |
 | 全局配置 | `POST /api/v1/global_settings/fetch` | 获取全局启动配置 | `FetchGlobalSettingsRequest` | `ApiResponse<GlobalSettings>` |
-| 公告 | `POST /api/v1/announcements` | 系统公告列表 | `AnnouncementListRequest` | `ApiResponse<PaginatedData<SystemAnnouncementItem>>` |
+| 公告 | `POST /api/v1/announcements/list` | 系统公告列表 | `AnnouncementListRequest` | `ApiResponse<PaginatedData<SystemAnnouncementItem>>` |
 
 ## 核心类型定义
 
@@ -32,18 +39,20 @@ alwaysApply: true
 interface ApiVersionMeta {
   version: string;                    // 当前 API 版本号，如 "v1"
   status: ApiVersionStatus;           // 版本状态
-  deprecated_at?: string;             // 废弃公告发布时间（ISO 8601）
-  sunset_at?: string;                 // 计划下线时间（ISO 8601）
-  migration_guide_url?: string;       // 迁移指南链接
-  successor_version?: string;         // 建议迁移的目标版本，如 "v2"
-  message?: string;                   // 给开发者的提示信息
+  deprecated_at?: string;             // 进入废弃状态时间（UTC ISO 8601）
+  sunset_at?: string;                 // 计划下线时间（UTC ISO 8601）
+  message?: string;                   // 面向客户端的提示信息
+  recommended_version?: string;       // 推荐升级的版本号（如 "v2"）
 }
 
 // API 版本状态
 type ApiVersionStatus = 
   | 'active'      // 正常使用中
   | 'deprecated'  // 已废弃，但仍可用
-  | 'sunset';     // 已下线，不可用
+  | 'sunset';     // 即将下线或已停止
+
+// 系统健康状态
+type SystemHealthStatus = 'healthy' | 'degraded' | 'unhealthy';
 
 interface HealthStatus {
   status: SystemHealthStatus;
@@ -51,90 +60,17 @@ interface HealthStatus {
   timestamp: string;
 }
 
-// 上传策略配置
-interface UploadConfig {
-  image_max_size: number;
-  video_max_size: number;
-  audio_max_size: number;
-  file_max_size: number;
-  allowed_image_types: string[];
-  allowed_video_types: string[];
-}
-
-// 内容默认值配置
-interface ContentDefaults {
-  default_location_name: string;
-  default_group_avatar: string;
-  default_user_avatar: string;
-  default_group_settings: GroupSettings;
-}
-
-// 功能开关配置
-interface FeatureSwitches {
-  enable_public_registration: boolean;
-  enable_guest_login: boolean;
-  enable_moments: boolean;
-  enable_nearby_people: boolean;
-}
-
-// 联系与帮助配置
-interface ContactInfo {
-  support_email: string;
-  privacy_policy_url: string;
-  terms_of_service_url: string;
-  official_website: string;
-}
-
-// 系统限制配置
-interface AppLimits {
-  max_group_members: number;
-  max_moment_tags: number;
-  max_moment_images: number;
-  moment_description_max_length: number;
-  comment_max_length: number;
-  search_radius_max: number;
-}
-
-// 频率限制配置（速率限制）
-interface RateLimitConfig {
-  // 全局限速
-  global_per_hour: number;          // 全局每小时请求限制（按 IP）
-  user_per_hour: number;            // 单用户每小时请求限制
-  
-  // 认证相关限速
-  auth_send_code_per_minute: number;          // 验证码发送：N次/分钟
-  auth_verify_code_per_10minutes: number;     // 验证码验证：N次/10分钟
-  auth_register_per_10minutes: number;        // 注册：N次/10分钟
-  auth_login_per_10minutes: number;           // 登录：N次/10分钟
-  auth_guest_per_10minutes: number;           // 访客创建：N次/10分钟
-  auth_refresh_per_10minutes: number;         // Token 刷新：N次/10分钟
-  auth_reset_request_per_minute: number;      // 密码重置请求：N次/分钟
-  auth_reset_verify_per_10minutes: number;    // 密码重置验证：N次/10分钟
-  auth_reset_per_10minutes: number;           // 密码重置：N次/10分钟
-  
-  // 业务相关限速
-  moments_create_per_minute: number;    // 创建瞬间：N次/分钟
-  comments_create_per_minute: number;   // 创建评论：N次/分钟
-  reports_create_per_hour: number;      // 举报：N次/小时
-}
-
-// 聚合配置对象（客户端只读）
-interface GlobalSettings {
-  upload: UploadConfig;
-  defaults: ContentDefaults;
-  features: FeatureSwitches;
-  contact: ContactInfo;
-  limits: AppLimits;
-  rate_limits: RateLimitConfig;   // 频率限制配置
-}
+// 配置类型定义于 @api_spec_common.mdc
 
 // 公告列表请求参数
-interface AnnouncementListRequest extends PaginationParams {}
+interface AnnouncementListRequest {
+  pagination?: PaginationParams;
+}
 ```
 
 ## 错误码说明
 
-本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
+本模块使用的错误码定义于 `@spec/api_spec_errors.mdc`，主要涉及：
 
 | 错误码 | 说明 | 相关接口 |
 |-------|------|---------|
@@ -144,52 +80,23 @@ interface AnnouncementListRequest extends PaginationParams {}
 
 ## API 版本元信息
 
-### POST /api/v1/meta
+### POST /api/v1/system/meta
 
 获取当前 API 版本的元信息，包括废弃状态和下线计划。
 
 **说明**：
 - 此接口为公开资源，无需认证
-- 每个 API 版本（如 v1, v2）都应在其路径下提供此端点
+- 每个 API 版本都应在其路径下提供此端点
 - 客户端应在启动时调用此接口，检查当前使用的 API 版本状态
-- 若版本状态为 `deprecated`，客户端应提示用户更新应用
-- 若版本状态为 `sunset`，该版本所有其他接口将返回错误
 
 **Request**: `{}`
 
 **Response**: `ApiResponse<ApiVersionMeta>`
 
-**响应示例**（正常版本）:
-```json
-{
-  "success": true,
-  "data": {
-    "version": "v1",
-    "status": "active"
-  }
-}
-```
-
-**响应示例**（已废弃版本）:
-```json
-{
-  "success": true,
-  "data": {
-    "version": "v1",
-    "status": "deprecated",
-    "deprecated_at": "2025-01-15T00:00:00Z",
-    "sunset_at": "2025-07-15T00:00:00Z",
-    "migration_guide_url": "https://docs.hotspot.app/api/migration/v1-to-v2",
-    "successor_version": "v2",
-    "message": "API v1 将于 2025-07-15 下线，请尽快迁移至 v2"
-  }
-}
-```
-
 **客户端处理建议**：
 - `active`: 正常使用，无需处理
-- `deprecated`: 显示提示横幅，建议用户更新应用；记录日志以便追踪迁移进度
-- `sunset`: 显示强制更新弹窗，阻止继续使用
+- `deprecated`: 提示用户升级；可展示 `message` 并引导更新
+- `sunset`: 强制升级或提示服务不可用
 
 ---
 
@@ -224,7 +131,7 @@ interface FetchGlobalSettingsRequest {}
 
 ## 系统公告
 
-### POST /api/v1/announcements
+### POST /api/v1/announcements/list
 
 获取系统公告列表。
 
@@ -234,7 +141,9 @@ interface FetchGlobalSettingsRequest {}
 
 **Request**:
 ```typescript
-interface AnnouncementListRequest extends PaginationParams {}
+interface AnnouncementListRequest {
+  pagination?: PaginationParams;
+}
 ```
 **Response**: `ApiResponse<PaginatedData<SystemAnnouncementItem>>`
 

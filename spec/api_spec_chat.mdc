@@ -7,13 +7,17 @@ alwaysApply: true
 
 ## 服务定义
 
-- **Service Namespace**: `private_chats`, `private_messages`
-- **Base Path**: `/api/v1/private_chats/`, `/api/v1/private_messages/`
+- **Service Namespaces**:
+  - `private_chats`
+  - `private_messages`
+- **Base Paths**:
+  - `/api/v1/private_chats/`
+  - `/api/v1/private_messages/`
 
 ## 契约引用
 
-- 公共基础类型：`@api_spec_common_types.mdc`
-- 错误码：`@api_spec_errors.mdc`
+- 公共基础类型：`@api_spec_common.mdc`
+- 错误码：`@spec/api_spec_errors.mdc`
 - WebSocket：`@api_spec_websocket.mdc`
 
 ## 接口概览（按子域）
@@ -21,14 +25,14 @@ alwaysApply: true
 | 子域 | 端点 | 说明 | Request | Response |
 |-----|------|------|---------|----------|
 | 私聊管理 | `POST /api/v1/private_chats/me` | 私聊列表 | `MyPrivateChatsRequest` | `ApiResponse<PaginatedData<PrivateChatListItem>>` |
-| 私聊管理 | `POST /api/v1/private_chats/open_the_door` | 私聊详情 | `PrivateChatOpenTheDoorRequest` | `ApiResponse<Conversation>` |
-| 私聊管理 | `POST /api/v1/private_chats/update_settings` | 更新会话设置 | `UpdatePrivateChatSettingsRequest` | `ApiResponse<Conversation>` |
-| 私聊管理 | `POST /api/v1/private_chats/delete` | 删除私聊会话（仅自己视角） | `DeletePrivateChatRequest` | `ApiResponse` |
+| 私聊管理 | `POST /api/v1/private_chats/open_the_door` | 私聊详情 | `PrivateChatOpenTheDoorRequest` | `ApiResponse<PrivateChatOpenResult>` |
+| 私聊管理 | `POST /api/v1/private_chats/update_settings` | 更新会话设置 | `UpdatePrivateChatSettingsRequest` | `ApiResponse<PrivateChatDetail>` |
+| 私聊管理 | `POST /api/v1/private_chats/delete` | 删除私聊会话（仅当前用户视角） | `DeletePrivateChatRequest` | `ApiResponse` |
 | 私聊消息 | `POST /api/v1/private_messages/send` | 发送私聊消息 | `SendPrivateMessageRequest` | `ApiResponse` |
 | 私聊消息 | `POST /api/v1/private_messages/history` | 私聊消息历史 | `PrivateMessagesHistoryRequest` | `ApiResponse<PaginatedData<PrivateMessageItem>>` |
 | 私聊消息 | `POST /api/v1/private_messages/update` | 编辑私聊消息 | `UpdatePrivateMessageRequest` | `ApiResponse` |
 | 私聊消息 | `POST /api/v1/private_messages/recall` | 撤回私聊消息 | `RecallPrivateMessageRequest` | `ApiResponse` |
-| 私聊消息 | `POST /api/v1/private_messages/delete` | 删除私聊消息（仅自己视角） | `DeletePrivateMessageRequest` | `ApiResponse` |
+| 私聊消息 | `POST /api/v1/private_messages/delete` | 删除私聊消息（仅当前用户视角） | `DeletePrivateMessageRequest` | `ApiResponse` |
 | 私聊消息 | `POST /api/v1/private_messages/mark_as_read` | 标记已读 | `MarkPrivateMessagesReadRequest` | `ApiResponse` |
 | 私聊消息 | `POST /api/v1/private_messages/add_reaction` | 添加反应 | `AddPrivateMessageReactionRequest` | `ApiResponse` |
 | 私聊消息 | `POST /api/v1/private_messages/remove_reaction` | 移除反应 | `RemovePrivateMessageReactionRequest` | `ApiResponse` |
@@ -38,8 +42,8 @@ alwaysApply: true
 ## 核心类型定义
 
 ```typescript
-interface Conversation {
-  other_user: UserInfo;
+interface PrivateChatDetail {
+  target_user: UserInfo;
   message_limit?: MessageLimit;
   unread_count: number;
   is_muted: boolean;
@@ -47,9 +51,31 @@ interface Conversation {
   last_activity_at: string;
   created_at: string;
   can_message: boolean;
+}
+
+interface PrivateChatListItem {
+  other_user: UserInfo;
+  unread_count: number;
+  last_message?: {
+    message_id: string;
+    content?: string;
+    type: MessageType;
+    share_code?: string;
+    sender_id: string;
+    sent_at: string;
+  };
+  last_activity_at: string;
+  is_muted: boolean;
+  is_pinned: boolean;
   
-  // 注：消息列表应通过 /api/v1/private_messages/history 接口获取
-  // 避免 open_the_door 接口返回过大数据
+  // 对方在线状态 (快照)
+  presence_status: UserPresenceStatus;
+  status_text?: string;  // 自定义状态文本
+}
+
+interface PrivateChatOpenResult {
+  chat: PrivateChatDetail;
+  recent_messages?: PaginatedData<PrivateMessageItem>;
 }
 
 interface MessageLimit {
@@ -58,16 +84,27 @@ interface MessageLimit {
   is_unlocked: boolean;
 }
 
-interface MessageReactionItem {
-  user: UserInfo;
-  type: ReactionType;
-  created_at: string;
+interface PrivateMessageItem {
+  message_id: string;
+  type: MessageType;
+  
+  content?: string;
+  media?: MessageMedia;
+  share_code?: string;
+  
+  sender_id: string;  // 私聊场景：会话双方已知，只需 ID
+  
+  reply_to?: MessageReplyTo;
+  
+  sent_at: string;
+  edited_at?: string;
+  recalled_at?: string;  // 存在即表示已撤回
 }
 ```
 
 ## 错误码说明
 
-本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
+本模块使用的错误码定义于 `@spec/api_spec_errors.mdc`，主要涉及：
 
 | 错误码 | 说明 | 相关接口 |
 |-------|------|---------|
@@ -85,7 +122,9 @@ interface MessageReactionItem {
 
 ## 私聊管理 API
 
-私聊权限和陌生人消息限制规则详见 `@api_spec_common_types.mdc` 中的"隐私控制机制"章节。
+私聊权限和陌生人消息限制规则详见 `@api_spec_common.mdc` 中的"隐私控制机制"章节。
+
+**可见性**：仅当前用户可见（`@owner-only`）。
 
 #### POST /api/v1/private_chats/me
 
@@ -96,7 +135,9 @@ interface MessageReactionItem {
 
 **Request**:
 ```typescript
-interface MyPrivateChatsRequest extends PaginationParams {}
+interface MyPrivateChatsRequest {
+  pagination?: PaginationParams;
+}
 ```
 **Response**: `ApiResponse<PaginatedData<PrivateChatListItem>>`
 
@@ -109,19 +150,24 @@ interface MyPrivateChatsRequest extends PaginationParams {}
 - **自动创建**：若会话不存在，自动创建空会话并返回（首次聊天更流畅）
 - **可选消息预加载**：支持一次请求获取会话详情和最近消息
 
+**幂等语义**：
+- 同一 `target_user_id` 的重复调用应返回同一会话（create-if-missing + 幂等）
+
 **首次聊天流程**：
 1. 调用 `open_the_door` 检查或创建会话
 2. 自动返回会话详情（无论是否是首次聊天）
 3. 直接调用 `send` 发送消息
 
+**可选返回**：当请求包含 `recent_messages` 时，响应包含最近消息列表（`PaginatedData<PrivateMessageItem>`）。
+
 **Request**:
 ```typescript
 interface PrivateChatOpenTheDoorRequest {
   target_user_id: string;
-  recent_messages_limit?: number;  // 默认 20，最大 50（最近消息，不宜过多）
+  recent_messages?: PaginationParams;  // 可选；默认 limit=20，最大 50
 }
 ```
-**Response**: `ApiResponse<Conversation>`
+**Response**: `ApiResponse<PrivateChatOpenResult>`
 
 **可能错误码**：`10001`、`10310`、`10211`
 
@@ -137,7 +183,7 @@ interface UpdatePrivateChatSettingsRequest {
   is_pinned?: boolean;
 }
 ```
-**Response**: `ApiResponse<Conversation>`
+**Response**: `ApiResponse<PrivateChatDetail>`
 
 #### POST /api/v1/private_chats/delete
 
@@ -161,7 +207,12 @@ interface DeletePrivateChatRequest {
 
 ## 私聊消息 API
 
-消息类型：`text` 需要 `content` 字段，其他类型需要 `file_id` 字段。
+消息类型：
+- `text` 需要 `content`
+- `image`/`video`/`audio`/`file` 需要 `file_id`
+- `share` 需要 `share_code`
+
+**可见性**：仅会话参与者可见（`@participant-only`）。
 
 **发送语义**：API 调用仅提交发送意图和获取 `message_id`，消息最终态通过 WebSocket 推送获取。
 
@@ -185,6 +236,7 @@ interface SendPrivateMessageRequest {
   type: SendMessageType;
   content?: string;
   file_id?: string;
+  share_code?: string;
   reply_to_message_id?: string;
 }
 ```
@@ -201,7 +253,8 @@ interface SendPrivateMessageRequest {
 
 **Request**:
 ```typescript
-interface PrivateMessagesHistoryRequest extends PaginationParams {
+interface PrivateMessagesHistoryRequest {
+  pagination?: PaginationParams;
   target_user_id: string;
 }
 ```
@@ -213,7 +266,7 @@ interface PrivateMessagesHistoryRequest extends PaginationParams {
 
 编辑私聊消息。
 
-**编辑语义**：仅允许编辑自己发送的消息，最终展示以 WebSocket 推送的更新事件为准。
+**编辑语义**：仅允许编辑当前用户发送的消息，最终展示以 WebSocket 推送的更新事件为准。
 
 **Request**:
 ```typescript
@@ -311,7 +364,8 @@ interface RemovePrivateMessageReactionRequest {
 
 **Request**:
 ```typescript
-interface PrivateMessageReactionsRequest extends PaginationParams {
+interface PrivateMessageReactionsRequest {
+  pagination?: PaginationParams;
   message_id: string;
   type?: ReactionType;
 }

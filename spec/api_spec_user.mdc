@@ -12,8 +12,9 @@ alwaysApply: true
 
 ## 契约引用
 
-- 公共基础类型：`@api_spec_common_types.mdc`
-- 错误码：`@api_spec_errors.mdc`
+- 公共基础类型：`@api_spec_common.mdc`
+- 错误码：`@spec/api_spec_errors.mdc`
+- 搜索建议类型：`@api_spec_search.mdc`
 
 ## 接口概览（按子域）
 
@@ -52,13 +53,18 @@ alwaysApply: true
 ## 核心类型定义
 
 ```typescript
-interface UserStats {
-  moments_count: number;
-  friends_count: number;  // 好友数量（好友 = 双方互相关注）
-  followers_count: number;
-  following_count: number;
-  groups_count: number;
-}
+// 性别枚举
+type Gender = 'male' | 'female' | 'apache_helicopter';
+
+// 隐私级别枚举
+// 注：'friends' 表示"好友可见"，好友 = 双方互相关注的用户
+type PrivacyLevel = 'public' | 'friends' | 'private';
+
+// 私聊权限
+// 注：'friends' 表示"仅好友"，好友 = 双方互相关注的用户
+type PrivateChatPermission = 'everyone' | 'friends' | 'nobody';
+
+// UserStats / UserSearchItem 定义于 @api_spec_common.mdc
 
 interface MyProfile {
   user_id: string;
@@ -66,11 +72,11 @@ interface MyProfile {
   avatar_url?: string;
   bio?: string;
   tags?: string[];
-  gender?: Gender;  // 引用 @api_spec_common_types.mdc
+  gender?: Gender;
   email?: string;
   phone?: string;
-  location: Location;
-  is_online: boolean;
+  location: RelativeLocation;
+  presence_status: UserPresenceStatus;
   last_online: string;
   created_at: string;
   stats: UserStats;
@@ -84,7 +90,6 @@ interface UserSettings {
   following_visible: PrivacyLevel;
   followers_visible: PrivacyLevel;
   groups_visible: PrivacyLevel;
-  moments_visible: PrivacyLevel;
   liked_moments_visible: PrivacyLevel;
   stats_visible: PrivacyLevel;
   allow_follow: boolean;
@@ -97,7 +102,8 @@ interface UserSettings {
 
 interface FriendItem {
   user: UserInfo;
-  is_online?: boolean;        // 隐私受控：对方隐私设置时不返回
+  presence_status?: UserPresenceStatus;  // 隐私受控：对方隐私设置时不返回
+  last_online?: string;
   remark?: string;
   followed_at: string;        // 我关注对方的时间
   followed_back_at: string;   // 对方回关我的时间（成为好友的时间）
@@ -107,14 +113,16 @@ interface FollowingItem {
   user: UserInfo;
   followed_at: string;
   is_mutual: boolean;
-  is_online?: boolean;        // 隐私受控：对方隐私设置时不返回
+  presence_status?: UserPresenceStatus;  // 隐私受控：对方隐私设置时不返回
+  last_online?: string;
 }
 
 interface FollowerItem {
   user: UserInfo;
   followed_at: string;
   is_following_back: boolean;
-  is_online?: boolean;        // 隐私受控：对方隐私设置时不返回
+  presence_status?: UserPresenceStatus;  // 隐私受控：对方隐私设置时不返回
+  last_online?: string;
 }
 
 interface BlockedUserSearchItem {
@@ -126,7 +134,7 @@ interface BlockedUserSearchItem {
 
 ## 错误码说明
 
-本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
+本模块使用的错误码定义于 `@spec/api_spec_errors.mdc`，主要涉及：
 
 | 错误码 | 说明 | 相关接口 |
 |-------|------|---------|
@@ -140,7 +148,7 @@ interface BlockedUserSearchItem {
 | `10360` | 文件/媒体不存在 | `me/profile/update` |
 | `10400` | 资源已存在 | `me/upgrade` |
 | `10402` | 资源状态冲突 | `me/delete` |
-| `10411` | 不能对自己执行此操作 | `follow`、`unfollow`、`block`、`unblock`、`remark` |
+| `10411` | 不能对自身执行此操作 | `follow`、`unfollow`、`block`、`unblock`、`remark` |
 | `10421` | 未关注该用户 | `me/remark` |
 
 ## API 详情
@@ -161,7 +169,8 @@ interface BlockedUserSearchItem {
 
 **Request**:
 ```typescript
-interface SearchUsersByKeywordRequest extends SearchBaseParams {
+interface SearchUsersByKeywordRequest {
+  search: SearchBaseParams;
   kw: string;
 }
 ```
@@ -173,7 +182,8 @@ interface SearchUsersByKeywordRequest extends SearchBaseParams {
 
 **Request**:
 ```typescript
-interface SearchUsersByTagRequest extends SearchBaseParams {
+interface SearchUsersByTagRequest {
+  search: SearchBaseParams;
   tag: string;
 }
 ```
@@ -189,7 +199,8 @@ interface SearchUsersByTagRequest extends SearchBaseParams {
 
 **Request**:
 ```typescript
-interface SearchUsersByLocationRequest extends SearchBaseParams {
+interface SearchUsersByLocationRequest {
+  search: SearchBaseParams;
   kw?: string;
   radius: number;
 }
@@ -200,11 +211,14 @@ interface SearchUsersByLocationRequest extends SearchBaseParams {
 
 用户搜索建议（用于搜索框输入提示）。
 
+**说明**：必须提供 `reference_point`（用户拒绝定位时使用 fallback）。
+
 **Request**:
 ```typescript
 // UserSuggestItem 定义于 @api_spec_search.mdc
 
-interface SuggestUsersRequest extends PaginationParams {
+interface SuggestUsersRequest {
+  search: SearchBaseParams;
   prefix: string;
 }
 // Note: limit 默认 5，最大 20（建议类接口使用较小默认值）
@@ -253,7 +267,8 @@ interface UserStatsRequest {
 
 **Request**:
 ```typescript
-interface UserFriendsRequest extends PaginationParams {
+interface UserFriendsRequest {
+  pagination?: PaginationParams;
   user_id: string;
 }
 ```
@@ -270,7 +285,8 @@ interface UserFriendsRequest extends PaginationParams {
 
 **Request**:
 ```typescript
-interface UserFollowingRequest extends PaginationParams {
+interface UserFollowingRequest {
+  pagination?: PaginationParams;
   user_id: string;
 }
 ```
@@ -287,7 +303,8 @@ interface UserFollowingRequest extends PaginationParams {
 
 **Request**:
 ```typescript
-interface UserFollowersRequest extends PaginationParams {
+interface UserFollowersRequest {
+  pagination?: PaginationParams;
   user_id: string;
 }
 ```
@@ -301,7 +318,8 @@ interface UserFollowersRequest extends PaginationParams {
 
 **Request**:
 ```typescript
-interface UserGroupsRequest extends PaginationParams {
+interface UserGroupsRequest {
+  pagination?: PaginationParams;
   user_id: string;
 }
 ```
@@ -313,11 +331,12 @@ interface UserGroupsRequest extends PaginationParams {
 
 获取指定用户生活瞬间历史。
 
-**隐私控制**：受 `moments_visible` 设置控制。
+**说明**：生活瞬间统一为公开内容，未登录也可访问。
 
 **Request**:
 ```typescript
-interface UserMomentsRequest extends PaginationParams {
+interface UserMomentsRequest {
+  pagination?: PaginationParams;
   user_id: string;
 }
 ```
@@ -333,7 +352,8 @@ interface UserMomentsRequest extends PaginationParams {
 
 **Request**:
 ```typescript
-interface UserLikedMomentsRequest extends PaginationParams {
+interface UserLikedMomentsRequest {
+  pagination?: PaginationParams;
   user_id: string;
 }
 ```
@@ -342,7 +362,8 @@ interface UserLikedMomentsRequest extends PaginationParams {
 ### 当前用户 API（/me/ 路径）
 
 说明：
-- `/me/*` 端点返回的是"我自己"的资料字段，永远可见，不受隐私设置影响
+- `/me/*` 端点返回的是当前用户的资料字段，永远可见，不受隐私设置影响
+**可见性**：仅当前用户可见（`@owner-only`）。
 
 #### POST /api/v1/user/me/profile
 
@@ -417,7 +438,9 @@ interface UpgradeAccountRequest {
 
 **Request**:
 ```typescript
-interface UpdateSettingsRequest extends Partial<UserSettings> {}
+interface UpdateSettingsRequest {
+  settings: Partial<UserSettings>;
+}
 ```
 **Response**: `ApiResponse<UserSettings>`
 
@@ -426,6 +449,8 @@ interface UpdateSettingsRequest extends Partial<UserSettings> {}
 #### POST /api/v1/user/me/delete
 
 删除账户。
+
+**幂等性（SHOULD）**：建议客户端携带 `Idempotency-Key`。
 
 **Request**:
 ```typescript
@@ -439,11 +464,15 @@ interface DeleteAccountRequest {
 
 #### POST /api/v1/user/me/follow
 
-关注用户。关注成功后，若对方已关注自己，自动成为好友，触发 WebSocket `MutualFollow` 事件。
+关注用户。关注成功后，若对方已关注当前用户，自动成为好友，触发 WebSocket `MutualFollow` 事件。
+
+**规则说明**：
+- 不存在关注申请流程
+- 对方 `allow_follow=false` 时直接返回失败（`10213`）
 
 **Request**:
 ```typescript
-// FollowSource 定义于 @api_spec_common_types.mdc
+// FollowSource 定义于 @api_spec_common.mdc
 
 interface FollowRequest {
   user_id: string;
@@ -506,7 +535,9 @@ interface UnblockRequest {
 
 **Request**:
 ```typescript
-interface MyFriendsRequest extends PaginationParams {}
+interface MyFriendsRequest {
+  pagination?: PaginationParams;
+}
 ```
 **Response**: `ApiResponse<PaginatedData<FriendItem>>`
 
@@ -516,7 +547,9 @@ interface MyFriendsRequest extends PaginationParams {}
 
 **Request**:
 ```typescript
-interface MyFollowingRequest extends PaginationParams {}
+interface MyFollowingRequest {
+  pagination?: PaginationParams;
+}
 ```
 **Response**: `ApiResponse<PaginatedData<FollowingItem>>`
 
@@ -526,7 +559,9 @@ interface MyFollowingRequest extends PaginationParams {}
 
 **Request**:
 ```typescript
-interface MyFollowersRequest extends PaginationParams {}
+interface MyFollowersRequest {
+  pagination?: PaginationParams;
+}
 ```
 **Response**: `ApiResponse<PaginatedData<FollowerItem>>`
 
@@ -536,7 +571,9 @@ interface MyFollowersRequest extends PaginationParams {}
 
 **Request**:
 ```typescript
-interface MyBlockedRequest extends PaginationParams {}
+interface MyBlockedRequest {
+  pagination?: PaginationParams;
+}
 ```
 **Response**: `ApiResponse<PaginatedData<BlockedUserSearchItem>>`
 

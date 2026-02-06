@@ -12,8 +12,8 @@ alwaysApply: true
 
 ## 契约引用
 
-- 公共基础类型：`@api_spec_common_types.mdc`
-- 错误码：`@api_spec_errors.mdc`
+- 公共基础类型：`@api_spec_common.mdc`
+- 错误码：`@spec/api_spec_errors.mdc`
 
 ## 接口概览（按子域）
 
@@ -35,20 +35,19 @@ alwaysApply: true
 ## 核心类型定义
 
 ```typescript
-// 认证响应负载：按 client_type 拆分，避免 refresh_token 语义漂移
-// Web：refresh_token 绝不出现在 body（通常由 HttpOnly Cookie 承载）
-// App：refresh_token 必须出现在 body，客户端负责安全存储
+// 验证码类型
+type VerificationCodeType = 'register' | 'reset_password' | 'change_phone';
+
+// 认证响应负载：按 client_type 拆分
+// Web：仅通过 HttpOnly Cookie 传递 token，响应体不包含任何 token 字段
+// App：access_token/refresh_token 出现在 body，客户端负责安全存储
 // 
 // JWT 设计原则：
 // - JWT (access_token) 中只存储不可变信息：user_id
 // - 可变信息（nickname、头像等）应通过 /api/v1/user/me/profile 获取
 // - 避免 JWT 中的信息与实际数据不一致
-interface AuthTokenPairWeb {
-  user_id: string;
-  access_token: string;
-  access_token_expires_at: string;
-  // 注：Web 端 refresh_token 通过 HttpOnly Cookie 传输，响应体中不返回任何 refresh_token 相关信息
-}
+// - Token 失效通过黑名单机制实现（登出/撤销时写入黑名单，直至过期）
+type AuthTokenPairWeb = Record<string, never>; // Web 端 data 为空对象
 
 interface AuthTokenPairApp {
   user_id: string;
@@ -78,8 +77,7 @@ interface AuthStatus {
   is_valid: boolean;
   expires_at?: string;  // 仅当 is_valid === true 时返回
   
-  // 注：user_id 可从 access_token (JWT) 解析
-  // 如需完整用户信息（nickname、头像等），应调用 /api/v1/user/me/profile
+  // 注：如需完整用户信息（nickname、头像等），应调用 /api/v1/user/me/profile
 }
 ```
 
@@ -89,9 +87,11 @@ interface AuthStatus {
 
 **Token 投递方式**：通过 `Set-Cookie` Header
 
+**Web 端禁止使用 `Authorization` Header**。
+
 ```http
-Set-Cookie: access_token=<token>; HttpOnly; Secure; SameSite=Lax; Path=/api; Max-Age=<access_token_ttl>
-Set-Cookie: refresh_token=<token>; HttpOnly; Secure; SameSite=Lax; Path=/api/v1/auth/refresh_token; Max-Age=<refresh_token_ttl>
+Set-Cookie: access_token=<token>; HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=<access_token_ttl>
+Set-Cookie: refresh_token=<token>; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth/refresh_token; Max-Age=<refresh_token_ttl>
 ```
 
 **关键配置**：
@@ -99,18 +99,17 @@ Set-Cookie: refresh_token=<token>; HttpOnly; Secure; SameSite=Lax; Path=/api/v1/
   - `Path=/api` - 所有 API 请求都自动携带
   - `HttpOnly` - 防止 JavaScript 访问
   - `Secure` - 仅 HTTPS 传输
-  - `SameSite=Lax` - 防止 CSRF 攻击
+- `SameSite=Strict` - 提供更强的 CSRF 防护
   
 - `refresh_token` Cookie:
   - `Path=/api/v1/auth/refresh_token` - **仅**在调用 refresh_token API 时自动携带
   - `HttpOnly` - 防止 JavaScript 访问
   - `Secure` - 仅 HTTPS 传输
-  - `SameSite=Lax` - 防止 CSRF 攻击
+- `SameSite=Strict` - 防止 CSRF 攻击
 
 **响应体契约**：
 - 返回 `ApiResponse<AuthTokenPairWeb>`
-- 响应体中不得出现 `refresh_token`
-- `access_token` 在响应体中返回（供前端内存存储使用）
+- 响应体中不包含任何 token 值，`data` 为空对象
 
 #### App 端（`client_type='app'`）
 
@@ -133,7 +132,7 @@ Set-Cookie: refresh_token=<token>; HttpOnly; Secure; SameSite=Lax; Path=/api/v1/
 
 ## 错误码说明
 
-本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
+本模块使用的错误码定义于 `@spec/api_spec_errors.mdc`，主要涉及：
 
 | 错误码 | 说明 | 相关接口 |
 |-------|------|---------|
@@ -154,10 +153,14 @@ Set-Cookie: refresh_token=<token>; HttpOnly; Secure; SameSite=Lax; Path=/api/v1/
 | `10500` | 请求过于频繁 | `send_verification_code` |
 | `10501` | 超过每分钟请求限制 | `send_verification_code` |
 | `10503` | 超过每日请求限制 | `send_verification_code` |
+| `22000` | 幂等键冲突 | `register`、`guest`、`reset_password`、`change_password` |
+| `22002` | 幂等操作正在处理中 | `register`、`guest`、`reset_password`、`change_password` |
 
 ### POST /api/v1/auth/register
 
 用户注册。
+
+**幂等性（MUST）**：客户端必须携带 `Idempotency-Key`。
 
 **Request**:
 ```typescript
@@ -195,13 +198,15 @@ interface LoginRequest {
 
 用户登出。
 
+**失效规则**：登出会将当前 access_token 与 refresh_token 写入黑名单，直至过期。
+
 **Request**: `{}`
 **Response**: `ApiResponse`
 
 **Web 端行为**：
 ```http
-Set-Cookie: access_token=; HttpOnly; Secure; SameSite=Lax; Path=/api; Max-Age=0
-Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Lax; Path=/api/v1/auth/refresh_token; Max-Age=0
+Set-Cookie: access_token=; HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=0
+Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth/refresh_token; Max-Age=0
 ```
 - 通过 `Max-Age=0` 立即清除 access_token 和 refresh_token Cookie
 - 前端无需手动清除 Cookie
@@ -212,6 +217,8 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Lax; Path=/api/v1/auth/re
 ### POST /api/v1/auth/guest
 
 创建访客用户。
+
+**幂等性（MUST）**：客户端必须携带 `Idempotency-Key`。
 
 **Request**:
 ```typescript
@@ -305,6 +312,8 @@ interface VerificationResult {
 
 重置密码（忘记密码场景）。
 
+**幂等性（MUST）**：客户端必须携带 `Idempotency-Key`。
+
 **流程说明**：
 1. 用户输入手机号/邮箱，调用 `send_verification_code` 获取验证码
 2. 用户输入验证码，调用 `verify_code` 验证成功后获得 `verify_token`（短期有效，建议 5 分钟）
@@ -332,9 +341,13 @@ interface ResetPasswordRequest {
 
 ### 当前用户认证 API（/me/ 路径）
 
+**可见性**：仅当前用户可见（`@owner-only`）。
+
 #### POST /api/v1/auth/me/change_password
 
 修改密码（需要验证旧密码）。
+
+**幂等性（MUST）**：客户端必须携带 `Idempotency-Key`。
 
 **Request**:
 ```typescript
@@ -351,9 +364,13 @@ interface ChangePasswordRequest {
 
 获取活跃会话列表。
 
+**黑名单语义**：登出/撤销会话会将对应 token 写入黑名单，直至 token 过期。
+
 **Request**:
 ```typescript
-interface SessionsRequest extends PaginationParams {}
+interface SessionsRequest {
+  pagination?: PaginationParams;
+}
 ```
 **Response**: `ApiResponse<PaginatedData<SessionItem>>`
 
@@ -375,5 +392,6 @@ interface RevokeSessionRequest {
 - `revoke_token` 是一次性令牌，使用后立即失效
 - 即使 token 泄露，攻击者也只能撤销一次，无法批量操作
 - 若需再次撤销同一会话（如撤销失败重试），需重新获取会话列表获得新的 `revoke_token`
+- 撤销操作会将对应 token 写入黑名单，直至过期
 
 **可能错误码**：`10300`（令牌无效或已使用）、`10200`（无权限撤销该会话）

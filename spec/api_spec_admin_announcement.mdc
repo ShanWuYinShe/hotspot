@@ -12,9 +12,13 @@ alwaysApply: true
 
 ## 契约引用
 
-- 公共基础类型：`@api_spec_common_types.mdc`
-- 错误码：`@api_spec_errors.mdc`
-- 公开公告 API：`@api_spec_system.mdc`（`POST /api/v1/announcements`）
+- 公共基础类型：`@api_spec_common.mdc`
+- 错误码：`@spec/api_spec_errors.mdc`
+- 公开公告 API（不属于本模块 Base Paths）：`@api_spec_system.mdc`（`POST /api/v1/announcements/list`）
+
+## 幂等性（管理员写操作）
+
+- 所有具有发布/删除语义的管理员接口必须携带 `Idempotency-Key`。
 
 ## 接口概览
 
@@ -24,13 +28,13 @@ alwaysApply: true
 | `POST /api/v1/admin/announcements/delete` | 删除系统公告 | `DeleteAnnouncementRequest` | `ApiResponse` |
 
 **说明**：
-- 公告列表查询统一使用 `POST /api/v1/announcements`（定义于 `@api_spec_system.mdc`）
+- 公告列表查询统一使用 `POST /api/v1/announcements/list`（定义于 `@api_spec_system.mdc`）
 - 管理员查询公告列表时，`SystemAnnouncementItem` 会返回 `@admin-only` 字段（如 `created_by`、`view_count` 等）
 
 ## 核心类型定义
 
 ```typescript
-// 注：SystemAnnouncementItem 类型定义于 @api_spec_common_types.mdc
+// 注：SystemAnnouncementItem 类型定义于 @api_spec_common.mdc
 
 interface AnnouncementCreated {
   announcement_id: string;
@@ -40,7 +44,7 @@ interface AnnouncementCreated {
 
 ## 错误码说明
 
-本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
+本模块使用的错误码定义于 `@spec/api_spec_errors.mdc`，主要涉及：
 
 | 错误码 | 说明 | 相关接口 |
 |-------|------|---------|
@@ -48,6 +52,8 @@ interface AnnouncementCreated {
 | `10204` | 非管理员 | 所有接口 |
 | `10205` | 管理员权限不足 | `create`/`delete`（需要 `admin.announcements.write`） |
 | `10300` | 资源不存在 | `delete` |
+| `22000` | 幂等键冲突 | `create`、`delete` |
+| `22002` | 幂等操作正在处理中 | `create`、`delete` |
 
 ---
 

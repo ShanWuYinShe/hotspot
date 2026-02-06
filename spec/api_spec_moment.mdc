@@ -7,13 +7,18 @@ alwaysApply: true
 
 ## 服务定义
 
-- **Service Namespace**: `moment`, `comment`
-- **Base Path**: `/api/v1/moments/`, `/api/v1/comments/`
+- **Service Namespaces**:
+  - `moment`
+  - `comment`
+- **Base Paths**:
+  - `/api/v1/moments/`
+  - `/api/v1/comments/`
 
 ## 契约引用
 
-- 公共基础类型：`@api_spec_common_types.mdc`
-- 错误码：`@api_spec_errors.mdc`
+- 公共基础类型：`@api_spec_common.mdc`
+- 错误码：`@spec/api_spec_errors.mdc`
+- 搜索建议类型：`@api_spec_search.mdc`
 
 ## 接口概览（按子域）
 
@@ -36,7 +41,7 @@ alwaysApply: true
 | 点赞列表 | `POST /api/v1/moments/likes` | 瞬间点赞列表 | `MomentLikesRequest` | `ApiResponse<PaginatedData<MomentLikeItem>>` |
 | 评论 | `POST /api/v1/comments/create` | 创建评论/回复 | `CreateCommentRequest` | `ApiResponse<CommentListItem>` |
 | 评论 | `POST /api/v1/comments/delete` | 删除评论 | `DeleteCommentRequest` | `ApiResponse` |
-| 评论 | `POST /api/v1/comments` | 顶层评论列表 | `CommentsRequest` | `ApiResponse<PaginatedData<CommentListItem>>` |
+| 评论 | `POST /api/v1/comments/list` | 顶层评论列表 | `CommentsRequest` | `ApiResponse<PaginatedData<CommentListItem>>` |
 | 评论 | `POST /api/v1/comments/replies` | 子评论列表 | `CommentRepliesRequest` | `ApiResponse<PaginatedData<CommentListItem>>` |
 | 评论点赞 | `POST /api/v1/comments/like` | 点赞评论 | `LikeCommentRequest` | `ApiResponse` |
 | 评论点赞 | `POST /api/v1/comments/unlike` | 取消点赞评论 | `UnlikeCommentRequest` | `ApiResponse` |
@@ -45,7 +50,7 @@ alwaysApply: true
 ## 核心类型定义
 
 ```typescript
-// 注：MyMomentState、MomentBase、UserMomentListItem 等类型定义于 @api_spec_common_types.mdc
+// 注：MomentBase、UserMomentListItem 等类型定义于 @api_spec_common.mdc
 
 interface MomentLikeItem {
   user: UserInfo;
@@ -56,11 +61,22 @@ interface CommentLikeItem {
   user: UserInfo;
   liked_at: string;
 }
+
+interface CommentListItem {
+  comment_id: string;
+  user: UserInfo;
+  content: string;
+  parent_id?: string;       // 父评论ID（回复时存在）
+  mentions?: string[];      // @ 提及的用户 ID 列表
+  created_at: string;
+  likes_count: number;
+  replies_count: number;    // 子评论数量
+}
 ```
 
 ## 错误码说明
 
-本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
+本模块使用的错误码定义于 `@spec/api_spec_errors.mdc`，主要涉及：
 
 | 错误码 | 说明 | 相关接口 |
 |-------|------|---------|
@@ -72,14 +88,16 @@ interface CommentLikeItem {
 | `10340` | 评论不存在 | 所有评论相关接口 |
 | `10360` | 文件/媒体不存在 | `create`、`update` |
 | `10500` | 请求过于频繁 | `create`、`comments/create` |
+| `22000` | 幂等键冲突 | `create`、`comments/create` |
+| `22002` | 幂等操作正在处理中 | `create`、`comments/create` |
 
 ## 生活瞬间 API
 
 ### 搜索与发现
 
 说明（Token 可选的搜索语义）：
-- 未登录（不带 token）：仅返回隐私等级为 `public` 的瞬间；响应字段以 `MomentSearchItem` 定义为准
-- 已登录（带 token）：在满足隐私与关系规则前提下，允许返回更多可见瞬间；响应字段以 `MomentSearchItem` 定义为准
+- 所有生活瞬间均为公开内容，未登录也可访问
+- 登录态会返回 `@auth-only` 字段（如 `my_state`）
 
 #### POST /api/v1/moments/search_by_keyword
 
@@ -90,7 +108,8 @@ interface CommentLikeItem {
 
 **Request**:
 ```typescript
-interface SearchMomentsByKeywordRequest extends SearchBaseParams {
+interface SearchMomentsByKeywordRequest {
+  search: SearchBaseParams;
   kw: string;
 }
 ```
@@ -102,7 +121,8 @@ interface SearchMomentsByKeywordRequest extends SearchBaseParams {
 
 **Request**:
 ```typescript
-interface SearchMomentsByTagRequest extends SearchBaseParams {
+interface SearchMomentsByTagRequest {
+  search: SearchBaseParams;
   tag: string;
 }
 ```
@@ -117,7 +137,8 @@ interface SearchMomentsByTagRequest extends SearchBaseParams {
 
 **Request**:
 ```typescript
-interface SearchMomentsByLocationRequest extends SearchBaseParams {
+interface SearchMomentsByLocationRequest {
+  search: SearchBaseParams;
   kw?: string;
   radius: number;
 }
@@ -128,11 +149,14 @@ interface SearchMomentsByLocationRequest extends SearchBaseParams {
 
 瞬间搜索建议（用于搜索框输入提示）。
 
+**说明**：必须提供 `reference_point`（用户拒绝定位时使用 fallback）。
+
 **Request**:
 ```typescript
 // MomentSuggestItem 定义于 @api_spec_search.mdc
 
-interface SuggestMomentsRequest extends PaginationParams {
+interface SuggestMomentsRequest {
+  search: SearchBaseParams;
   prefix: string;
 }
 // Note: limit 默认 5，最大 20（建议类接口使用较小默认值）
@@ -145,8 +169,6 @@ interface SuggestMomentsRequest extends PaginationParams {
 
 获取瞬间详情。
 Token 可选；登录态返回 `MomentSearchItem.my_state`（包含 `is_liked` 和 `is_favorited`）。
-
-**说明**：未登录（不带 token）仅允许访问隐私等级为 `public` 的瞬间；若瞬间对匿名不可见，返回 `10330`（不存在/不可见）。
 
 **Request**:
 ```typescript
@@ -162,6 +184,8 @@ interface MomentOpenTheDoorRequest {
 
 创建生活瞬间。
 
+**幂等性（MUST）**：客户端必须携带 `Idempotency-Key`。
+
 **Request**:
 ```typescript
 interface CreateMomentRequest {
@@ -169,13 +193,12 @@ interface CreateMomentRequest {
   location: Location;
   tags?: string[];
   image_file_ids?: string[];
-  privacy_level?: PrivacyLevel;
   mentions?: string[];
 }
 ```
 **Response**: `ApiResponse<UserMomentListItem>`
 
-**可能错误码**：`10001`、`10003`、`10360`、`10310`、`10500`
+**可能错误码**：`10001`、`10003`、`10360`、`10310`、`10500`、`22000`、`22002`
 
 #### POST /api/v1/moments/update
 
@@ -186,10 +209,9 @@ interface CreateMomentRequest {
 interface EditMomentRequest {
   moment_id: string;
   description?: string;
-  location?: Location;
+  location: Location;
   tags?: string[];
   image_file_ids?: string[];
-  privacy_level?: PrivacyLevel;
   mentions?: string[];
 }
 ```
@@ -283,7 +305,9 @@ interface UnfavoriteMomentRequest {
 
 **Request**:
 ```typescript
-interface MyMomentsRequest extends PaginationParams {}
+interface MyMomentsRequest {
+  pagination?: PaginationParams;
+}
 ```
 **Response**: `ApiResponse<PaginatedData<UserMomentListItem>>`
 
@@ -293,7 +317,9 @@ interface MyMomentsRequest extends PaginationParams {}
 
 **Request**:
 ```typescript
-interface MyFavoritesRequest extends PaginationParams {}
+interface MyFavoritesRequest {
+  pagination?: PaginationParams;
+}
 ```
 **Response**: `ApiResponse<PaginatedData<MomentSearchItem>>`
 
@@ -301,11 +327,10 @@ interface MyFavoritesRequest extends PaginationParams {}
 
 获取生活瞬间点赞列表。
 
-**说明**：本接口仅用于"隐私等级为 `public` 的瞬间"。
-
 **Request**:
 ```typescript
-interface MomentLikesRequest extends PaginationParams {
+interface MomentLikesRequest {
+  pagination?: PaginationParams;
   moment_id: string;
 }
 ```
@@ -321,6 +346,8 @@ interface MomentLikesRequest extends PaginationParams {
 
 添加评论/回复。
 
+**幂等性（MUST）**：客户端必须携带 `Idempotency-Key`。
+
 **Request**:
 ```typescript
 interface CreateCommentRequest {
@@ -332,7 +359,7 @@ interface CreateCommentRequest {
 ```
 **Response**: `ApiResponse<CommentListItem>`
 
-**可能错误码**：`10001`、`10003`、`10330`、`10340`、`10310`、`10200`、`10500`
+**可能错误码**：`10001`、`10003`、`10330`、`10340`、`10310`、`10200`、`10500`、`22000`、`22002`
 
 #### POST /api/v1/comments/delete
 
@@ -348,18 +375,17 @@ interface DeleteCommentRequest {
 
 **可能错误码**：`10001`、`10340`、`10200`
 
-#### POST /api/v1/comments
+#### POST /api/v1/comments/list
 
 获取评论列表（顶层评论）。
 
 **排序语义（契约级）**：
 - 评论列表默认按 `created_at` **时间倒序**（最新在前）
 
-**说明**：本接口仅用于"隐私等级为 `public` 的瞬间"。子评论通过 `/comments/replies` 按需分页加载。
-
 **Request**:
 ```typescript
-interface CommentsRequest extends PaginationParams {
+interface CommentsRequest {
+  pagination?: PaginationParams;
   moment_id: string;
 }
 ```
@@ -376,7 +402,8 @@ interface CommentsRequest extends PaginationParams {
 
 **Request**:
 ```typescript
-interface CommentRepliesRequest extends PaginationParams {
+interface CommentRepliesRequest {
+  pagination?: PaginationParams;
   comment_id: string;
 }
 ```
@@ -425,7 +452,8 @@ interface UnlikeCommentRequest {
 
 **Request**:
 ```typescript
-interface CommentLikesRequest extends PaginationParams {
+interface CommentLikesRequest {
+  pagination?: PaginationParams;
   comment_id: string;
 }
 ```

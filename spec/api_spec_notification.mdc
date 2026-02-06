@@ -3,28 +3,30 @@ alwaysApply: true
 ---
 # HotSpot API 规范 - 通知相关 API 模块 v0.0.1 (RPC)
 
-> 本文档定义 HotSpot 通知中心 (`notifications`)、订阅设置 (`subscriptions`) 和设备令牌管理 (`device_tokens`) 相关的 RPC 接口。
+> 本文档定义 HotSpot 通知中心 (`notifications`) 和设备令牌管理 (`device_tokens`) 相关的 RPC 接口。
 
 ## 服务定义
 
-- **Service Namespace**: `notifications`, `subscriptions`, `device_tokens`
-- **Base Path**: `/api/v1/notifications/`, `/api/v1/subscriptions/`, `/api/v1/device_tokens/`
+- **Service Namespaces**:
+  - `notifications`
+  - `device_tokens`
+- **Base Paths**:
+  - `/api/v1/notifications/`
+  - `/api/v1/device_tokens/`
 
 ## 契约引用
 
-- 公共基础类型：`@api_spec_common_types.mdc`
-- 错误码：`@api_spec_errors.mdc`
+- 公共基础类型：`@api_spec_common.mdc`
+- 错误码：`@spec/api_spec_errors.mdc`
 - WebSocket：`@api_spec_websocket.mdc`
 
 ## 接口概览（按子域）
 
 | 子域 | 端点 | 说明 | Request | Response |
 |-----|------|------|---------|----------|
-| 通知中心 | `POST /api/v1/notifications` | 通知列表 | `GetNotificationsRequest` | `ApiResponse<PaginatedData<NotificationItem>>` |
+| 通知中心 | `POST /api/v1/notifications/list` | 通知列表 | `GetNotificationsRequest` | `ApiResponse<PaginatedData<NotificationItem>>` |
 | 通知中心 | `POST /api/v1/notifications/unread_count` | 未读计数 | `{}` | `ApiResponse<UnreadCount>` |
 | 通知中心 | `POST /api/v1/notifications/mark_read` | 标记已读 | `MarkNotificationsReadRequest` | `ApiResponse` |
-| 订阅设置 | `POST /api/v1/subscriptions/me` | 获取订阅配置 | `{}` | `ApiResponse<Subscriptions>` |
-| 订阅设置 | `POST /api/v1/subscriptions/me/update` | 更新订阅配置 | `UpdateSubscriptionsRequest` | `ApiResponse` |
 | 设备令牌 | `POST /api/v1/device_tokens/me/register` | 注册设备 Token | `RegisterDeviceTokenRequest` | `ApiResponse` |
 | 设备令牌 | `POST /api/v1/device_tokens/me/unregister` | 注销设备 Token | `UnregisterDeviceTokenRequest` | `ApiResponse` |
 | 设备令牌 | `POST /api/v1/device_tokens/me` | 我的设备 Token 列表 | `MyDeviceTokensRequest` | `ApiResponse<PaginatedData<DeviceTokenItem>>` |
@@ -32,6 +34,20 @@ alwaysApply: true
 ## 核心类型定义
 
 ```typescript
+type NotificationFilterType = 'like' | 'comment' | 'follow' | 'system' | 'mention';
+
+type NotificationType = 
+  | 'moment_like' | 'moment_comment' | 'comment_reply'
+  | 'new_follower' | 'mutual_follow'
+  | 'group_invite' | 'group_invite_response'
+  | 'group_application' | 'group_application_response'
+  | 'group_announcement'
+  | 'system_announcement' | 'message_mention';
+
+type NotificationTargetType = 'moment' | 'comment' | 'user' | 'group' | 'web';
+
+type DevicePlatform = 'ios' | 'android' | 'harmony' | 'web';
+
 interface NotificationItem {
   notification_id: string;
   type: NotificationType;
@@ -58,32 +74,19 @@ interface UnreadCount {
   };
 }
 
-interface Subscriptions {
-  new_follower_enabled: boolean;
-  mutual_follow_enabled: boolean;
-  group_invite_enabled: boolean;
-  group_invite_response_enabled: boolean;
-  group_application_enabled: boolean;
-  group_application_response_enabled: boolean;
-  group_announcement_enabled: boolean;
-  message_mention_enabled: boolean;
-  moment_like_enabled: boolean;
-  moment_comment_enabled: boolean;
-  comment_reply_enabled: boolean;
-  system_announcement_enabled: boolean;
-}
-
 interface DeviceTokenItem {
   device_token_id: string;
   platform: DevicePlatform;
-  device_token: string;
+  device_token_masked: string; // 脱敏后的 token 展示（不可用于请求）
   created_at: string;
 }
 ```
 
+说明：`device_token_masked` 仅用于展示与管理，不可用于请求或鉴权。
+
 ## 错误码说明
 
-本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
+本模块使用的错误码定义于 `@spec/api_spec_errors.mdc`，主要涉及：
 
 | 错误码 | 说明 | 相关接口 |
 |-------|------|---------|
@@ -94,13 +97,13 @@ interface DeviceTokenItem {
 
 ## 通知中心 API
 
-### POST /api/v1/notifications
+**可见性**：仅当前用户可见（`@owner-only`）。
+
+### POST /api/v1/notifications/list
 
 获取通知列表。
 
 > 聚合所有互动类通知（点赞、评论、关注等）。群组邀请/申请等强业务操作类通知，建议优先使用各业务模块的专用列表接口。
-> `group_announcement_enabled` 仅影响通知中心/推送展示，不影响群聊订阅事件的实时下发。
-
 **映射关系说明**（所有 target_id 统一为 string 类型）：
 - moment_like: target_id=moment_id, reference_id=null
 - moment_comment: target_id=comment_id, reference_id=moment_id
@@ -119,7 +122,8 @@ WebSocket 仅推送正向互动与系统公告，拒绝/取消等结果在通知
 
 **Request**:
 ```typescript
-interface GetNotificationsRequest extends PaginationParams {
+interface GetNotificationsRequest {
+  pagination?: PaginationParams;
   type?: NotificationFilterType;
 }
 ```
@@ -154,32 +158,11 @@ interface MarkNotificationsReadRequest {
 
 **可能错误码**：`10003`
 
----
-
-## 通知订阅设置 API
-
-### POST /api/v1/subscriptions/me
-
-获取订阅配置。
-
-**Request**: `{}`
-**Response**: `ApiResponse<Subscriptions>`
-
-### POST /api/v1/subscriptions/me/update
-
-更新订阅配置。
-
-**Request**:
-```typescript
-interface UpdateSubscriptionsRequest extends Partial<Subscriptions> {}
-```
-**Response**: `ApiResponse`
-
----
-
 ## 推送设备管理 API
 
 通知是实时推送机制：在线时通过 WebSocket 推送，离线时通过设备令牌推送。
+
+**可见性**：仅当前用户可见（`@owner-only`）。
 
 ### POST /api/v1/device_tokens/me/register
 
@@ -217,7 +200,9 @@ interface UnregisterDeviceTokenRequest {
 
 **Request**:
 ```typescript
-interface MyDeviceTokensRequest extends PaginationParams {}
+interface MyDeviceTokensRequest {
+  pagination?: PaginationParams;
+}
 ```
 **Response**: `ApiResponse<PaginatedData<DeviceTokenItem>>`
 

@@ -12,8 +12,12 @@ alwaysApply: true
 
 ## 契约引用
 
-- 公共基础类型：`@api_spec_common_types.mdc`
-- 错误码：`@api_spec_errors.mdc`
+- 公共基础类型：`@api_spec_common.mdc`
+- 错误码：`@spec/api_spec_errors.mdc`
+
+## 幂等性（管理员写操作）
+
+- 导出相关写操作（`export`）必须携带 `Idempotency-Key`。
 
 ## 接口概览（按子域）
 
@@ -37,12 +41,17 @@ type AuditAction =
   | 'role.create'        // 创建角色
   | 'role.update'        // 更新角色
   | 'role.delete'        // 删除角色
+  | 'role.set_permissions' // 设置角色权限
+  | 'admin.grant'        // 授权管理员
+  | 'admin.revoke'       // 撤销管理员
+  | 'report.handle'      // 处理举报
+  | 'tag.delete'         // 删除/屏蔽标签
   | 'permission.grant'   // 授予权限
   | 'permission.revoke'  // 撤销权限
   | 'config.update';     // 更新系统配置
 
 // 审计日志目标类型
-type AuditTargetType = 'user' | 'group' | 'announcement' | 'role' | 'config';
+type AuditTargetType = 'user' | 'group' | 'announcement' | 'role' | 'admin' | 'report' | 'tag' | 'config';
 
 // 审计日志操作详情（强类型，按 action 区分）
 type AuditDetails = 
@@ -54,6 +63,11 @@ type AuditDetails =
   | { type: 'role.create'; role_name: string; permissions: string[] }
   | { type: 'role.update'; role_name: string; added_permissions?: string[]; removed_permissions?: string[] }
   | { type: 'role.delete'; role_name: string }
+  | { type: 'role.set_permissions'; role_name: string; permissions: string[] }
+  | { type: 'admin.grant'; target_user_id: string; role_ids: string[]; grant_all_permissions?: boolean }
+  | { type: 'admin.revoke'; target_user_id: string }
+  | { type: 'report.handle'; report_id: string; action: string; note?: string }
+  | { type: 'tag.delete'; tag_name: string }
   | { type: 'permission.grant'; permission: string }
   | { type: 'permission.revoke'; permission: string }
   | { type: 'config.update'; config_key: string };
@@ -101,7 +115,7 @@ interface AuditLogSearchItem {
 
 ## 错误码说明
 
-本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
+本模块使用的错误码定义于 `@spec/api_spec_errors.mdc`，主要涉及：
 
 | 错误码 | 说明 | 相关接口 |
 |-------|------|---------|
@@ -109,6 +123,8 @@ interface AuditLogSearchItem {
 | `10204` | 非管理员 | 所有 admin 接口 |
 | `10205` | 管理员权限不足 | `detail`（需 `admin.audit.read`） |
 | `10300` | 日志不存在 | `detail` |
+| `22000` | 幂等键冲突 | `export` |
+| `22002` | 幂等操作正在处理中 | `export` |
 
 ---
 
@@ -120,7 +136,8 @@ interface AuditLogSearchItem {
 
 **Request**:
 ```typescript
-interface AuditLogListRequest extends PaginationParams {
+interface AuditLogListRequest {
+  pagination?: PaginationParams;
   action?: AuditAction;           // 按操作类型筛选
   operator_id?: string;           // 按操作人筛选
   target_type?: AuditTargetType;  // 按目标类型筛选

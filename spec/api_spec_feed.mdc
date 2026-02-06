@@ -7,13 +7,17 @@ alwaysApply: true
 
 ## 服务定义
 
-- **Service Namespace**: `feed`, `tags`
-- **Base Path**: `/api/v1/feed/`, `/api/v1/tags/`
+- **Service Namespaces**:
+  - `feed`
+  - `tags`
+- **Base Paths**:
+  - `/api/v1/feed/`
+  - `/api/v1/tags/`
 
 ## 契约引用
 
-- 公共基础类型：`@api_spec_common_types.mdc`
-- 错误码：`@api_spec_errors.mdc`
+- 公共基础类型：`@api_spec_common.mdc`
+- 错误码：`@spec/api_spec_errors.mdc`
 
 ---
 
@@ -34,6 +38,21 @@ alwaysApply: true
 ## 核心类型定义
 
 ```typescript
+// 信息流来源
+type FeedSource = 'following' | 'nearby' | 'all';
+
+// 信息流内容类型
+type FeedContentType = 'moment' | 'group' | 'user';
+
+// 信息流反馈动作
+type FeedFeedbackAction = 'hide' | 'not_interested';
+
+// 标签趋势
+type TagTrend = 'rising' | 'stable' | 'falling';
+
+// 标签时间范围
+type TagTimeframe = 'daily' | 'weekly' | 'monthly';
+
 // 推荐理由类型（心理学优化：让用户了解为什么推荐）
 type RecommendationType = 'friend_liked' | 'nearby' | 'trending' | 'following' | 'tag_match';
 
@@ -43,22 +62,38 @@ interface RecommendationContext {
   friends_preview?: UserInfo[];  // 最多2个点赞的好友
 }
 
-// FeedGroupItem: 继承 GroupInfo（定义于 @api_spec_common_types.mdc）
-interface FeedGroupItem extends GroupInfo {
+// FeedMomentItem: 信息流瞬间列表项（组合 MomentBase，带互动状态和推荐理由）
+interface FeedMomentItem {
+  moment: MomentBase;
+  user: UserInfo;
+  location: RelativeLocation;
+  
+  // 互动状态（内联，因为 Feed 端点必然返回互动状态）
+  is_liked: boolean;
+  is_favorited: boolean;
+  
+  // 推荐理由（可选，让用户了解为什么看到这条内容）
+  recommendation?: RecommendationContext;
+}
+
+// FeedGroupItem: 组合 GroupInfo（定义于 @api_spec_common.mdc）
+interface FeedGroupItem {
+  group: GroupInfo;
   description?: string;
   tags?: string[];
   has_password: boolean;
   location: RelativeLocation;
   friends_in_group?: number;  // 好友中有多少在该群组内
-  my_state?: MyGroupState;    // 引用 @api_spec_common_types.mdc
+  my_state?: MyGroupState;    // 引用 @api_spec_common.mdc
 }
 
-// FeedUserItem: 继承 UserInfo（定义于 @api_spec_common_types.mdc）
-interface FeedUserItem extends UserInfo {
+// FeedUserItem: 组合 UserInfo（定义于 @api_spec_common.mdc）
+interface FeedUserItem {
+  user: UserInfo;
   bio?: string;
   tags?: string[];
   // 隐私受控字段（隐私限制时不返回，不暴露原因）
-  is_online?: boolean;
+  presence_status?: UserPresenceStatus;
   last_online?: string;
   location?: RelativeLocation;
   mutual_friends_count?: number;  // 共同好友数
@@ -84,15 +119,11 @@ interface TagItem {
   trend?: TagTrend;
 }
 
-interface TagSuggestItem {
-  name: string;
-  usage_count: number;
-}
 ```
 
 ## 错误码说明
 
-本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
+本模块使用的错误码定义于 `@spec/api_spec_errors.mdc`，主要涉及：
 
 | 错误码 | 说明 | 相关接口 |
 |-------|------|---------|
@@ -119,7 +150,8 @@ interface TagSuggestItem {
 
 **Request**:
 ```typescript
-interface GetFeedMomentsRequest extends PaginationParams {
+interface GetFeedMomentsRequest {
+  pagination?: PaginationParams;
   source?: FeedSource;
   reference_point: GeoPoint;
   radius?: number;
@@ -144,7 +176,8 @@ interface GetFeedMomentsRequest extends PaginationParams {
 
 **Request**:
 ```typescript
-interface GetFeedGroupsRequest extends PaginationParams {
+interface GetFeedGroupsRequest {
+  pagination?: PaginationParams;
   reference_point: GeoPoint;
   radius?: number;
 }
@@ -163,7 +196,8 @@ interface GetFeedGroupsRequest extends PaginationParams {
 
 **Request**:
 ```typescript
-interface GetFeedUsersRequest extends PaginationParams {
+interface GetFeedUsersRequest {
+  pagination?: PaginationParams;
   reference_point: GeoPoint;
   radius?: number;
 }
@@ -178,8 +212,10 @@ interface GetFeedUsersRequest extends PaginationParams {
 
 **Request**:
 ```typescript
-interface GetFeedTrendingRequest extends PaginationParams {}
-// Note: limit 默认 20，最大 100
+interface GetFeedTrendingRequest {
+  tags_limit?: number;    // 默认 10，最大 50
+  moments_limit?: number; // 默认 20，最大 100
+}
 ```
 **Response**: `ApiResponse<TrendingBundle>`
 
@@ -214,7 +250,8 @@ interface FeedFeedbackRequest {
 
 **Request**:
 ```typescript
-interface TrendingTagsRequest extends PaginationParams {
+interface TrendingTagsRequest {
+  pagination?: PaginationParams;
   timeframe?: TagTimeframe;
 }
 // Note: limit 默认 10，最大 50（热门标签列表）
@@ -227,9 +264,12 @@ interface TrendingTagsRequest extends PaginationParams {
 
 标签搜索建议。
 
+**说明**：必须提供 `reference_point`（用户拒绝定位时使用 fallback）。
+
 **Request**:
 ```typescript
-interface SuggestTagsRequest extends PaginationParams {
+interface SuggestTagsRequest {
+  search: SearchBaseParams;
   prefix: string;
 }
 // Note: limit 默认 5，最大 20（建议类接口使用较小默认值）

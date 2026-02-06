@@ -3,683 +3,97 @@ globs: backend/**
 alwaysApply: false
 ---
 
-# HotSpot 后端文档 v0.0.3（功能范围与模块边界）
+# HotSpot 后端文档（What）
 
 ## 文档定位（权威边界）
 
-本文件只回答"后端有什么（What）"：
-- 后端提供的业务能力与模块边界
-- 关键业务流程与用户可感知行为（说明性）
-- 非目标（Out of scope）
+本文件只回答"后端提供什么能力"：
+- 业务能力与模块边界
+- 对外行为与关键用户可感知流程（说明性）
+- Out of scope
 
-本文件不回答"怎么做（How）"：
-- 任何可执行的代码生成/工程约束：以 `@backend_rule.mdc` 为准
-- 任何 API 端点、字段、错误码、WebSocket 事件与数据类型契约：以 `@spec/` 下的 API 规范文档为准（契约唯一权威）
-- 数据库表结构与字段规范：以 `@backend_db.mdc` 为准
+本文件不包含：
+- 任何工程实现细节、数据库结构、缓存策略
+- API 端点/字段/错误码/WS 事件定义
 
-引用方式说明（强制）：
-- 禁止使用数字章节号引用（如"第X章/第X节"）
-- 只允许引用小节标题或锚点标题
-
----
-
-## 项目概述
-
-### 项目简介
-
-HotSpot 是一个基于地理位置的社交平台，支持用户发现附近的人和热点、创建和加入群组、分享生活瞬间、实时消息通讯等功能。
-
-### 技术栈
-
-- **编程语言**: Rust (Edition 2021)
-- **Web 框架**: Axum 0.7+
-- **数据库**: PostgreSQL 15+ (主数据库) + Redis 7+ (缓存/会话)
-- **地理计算**: PostGIS
-- **认证**: JWT (jsonwebtoken) + bcrypt (密码哈希)
-- **WebSocket**: tokio-tungstenite
-- **ORM**: SQLx (异步 SQL 工具包)
-- **序列化**: serde + serde_json
-- **异步运行时**: Tokio
-- **日志**: tracing + tracing-subscriber
-
-### 核心特性
-
-- 100+ API 端点（统一使用 `/api/v1/` 路径前缀，Token 决定响应差异）
-- 实时 WebSocket 通讯（双层订阅机制）
-- 基于地理位置的搜索和推荐
-- 多层级权限控制
-- 事件驱动的通知系统
-- 完整的用户关系管理（好友、关注、拉黑）
-- 聊天消息与通知分离设计
-
-### 路径与认证模式
-
-系统采用**统一路径 + Token 决定响应**的设计模式：
-- 所有 API 统一使用 `/api/v1/` 前缀，不区分 public/protected 路径
-- Token 可选：查询类 API（搜索、详情）可不带 Token；若类型定义含 `@auth-only` 字段，登录态返回这些字段
-- Token 必须：写操作、互动操作、`/me/` 路径、`/feed/` 路径、`/admin/` 路径必须携带有效 Token
-
-详见 `@api_spec_common_types.mdc` 的"路径设计与 Token 语义"。
+权威引用：
+- **API 契约**：`@spec/api_spec.mdc`
+- **通用契约**：`@api_spec_common.mdc`
+- **错误码**：`@spec/api_spec_errors.mdc`
+- **实现规范**：`@backend_rule.mdc`
 
 ---
 
-## 后端功能范围
+## 系统能力概览（按域）
 
-### 已支持的业务能力（按域划分）
+### 认证与会话（auth）
+- 注册/登录/访客/刷新/登出/状态检查
+- Web 端 Cookie、App 端 Header 的统一兼容
+- 会话撤销后立即失效（对用户可感知）
 
-#### 认证与会话（auth）
+### 用户（user）
+- 用户搜索与资料详情
+- 关系管理：关注/取消关注、拉黑/取消拉黑、关系查询
+- 当前用户：资料、位置、设置、统计、注销
 
-- 注册/登录/访客（guest）创建
-- refresh_token 刷新（旋转刷新令牌）
-- 登出、检查登录状态
-- 当前用户会话列表与撤销（多设备会话）
-- 验证码发送与验证（手机号注册/密码重置）
-- 密码重置流程
+### 群组（group）
+- 群组创建/更新/解散
+- 成员管理：加入/退出、邀请/申请与审核
+- 角色与权限、群公告管理
 
-详见 `@api_spec_auth.mdc`
+### 私聊与群聊（chat）
+- 会话列表/详情、消息发送与历史
+- 消息编辑/撤回/删除、反应
+- 未读计数以 WebSocket 增量维护为主，服务端仅用于冷启动校准
 
-#### 用户（user）
+### 生活瞬间与评论（moment/comment）
+- 发布/编辑/删除
+- 点赞/收藏与评论/回复
+- 搜索与详情
 
-- 用户搜索（关键词 / 标签 / 位置）
-- 用户资料详情（`open_the_door`）
-- 关系：follow/unfollow、block/unblock、relationship 查询
-- 当前用户：profile、location、settings、stats、upgrade、delete
-- 好友/关注/粉丝列表
-- 好友备注设置
+### 信息流与搜索（feed/search/tags）
+- 信息流推荐、热门内容
+- 搜索建议与标签发现
 
-详见 `@api_spec_user.mdc`
+### 地图（map）
+- 视口驱动的地图渲染与聚合
 
-#### 生活瞬间（moment）
-
-- 搜索（关键词 / 标签 / 位置）与详情（`open_the_door`）
-- 创建/编辑/删除
-- 点赞/取消点赞、收藏/取消收藏
-- 当前用户：我发布的、我收藏的、点赞/收藏状态检查
-- 评论系统（创建/删除/回复/点赞）
-- 点赞列表
-
-详见 `@api_spec_moment.mdc`
-
-#### 私聊（chat - private）
-
-- 私聊会话管理（列表、详情、设置、删除）
-- 消息：发送、历史分页、编辑/撤回/删除、标记已读
-- 消息反应：添加/移除/列表
-- 输入状态通知
-
-详见 `@api_spec_chat.mdc`
-
-#### 群组（group）
-
-- 群组搜索（关键词 / 标签 / 位置）、详情（`open_the_door`）
-- 创建/更新/解散
-- 成员管理：列表、邀请、申请/审批、加入/退出、踢人
-- 成员状态：禁言/解禁、封禁/解封、角色设置
-- 群主转让
-- 群公告管理
-
-详见 `@api_spec_group.mdc`
-
-#### 群聊消息（chat - group）
-
-- 消息：发送、历史分页、编辑/撤回/删除、标记已读
-- 已读状态查询
-- 消息反应：添加/移除/列表
-- 输入状态通知
-
-详见 `@api_spec_group.mdc`
-
-#### 举报（report）
-
-- 用户发起举报
-- 查看我的举报记录
-
-详见 `@api_spec_report.mdc`
-
-#### 通知（notification）
-
-- 通知列表获取
-- 未读计数
-- 标记已读
-- 订阅配置管理
+### 通知与设备令牌（notification/device_tokens）
+- 通知列表、未读计数、已读标记
 - 设备推送令牌管理
 
-详见 `@api_spec_notification.mdc`
+### 举报（report）
+- 创建举报与我的举报记录
 
-#### 公告（announcement）
+### 分享（share）
+- 创建/解析/应用分享
 
-- 系统公告列表（公开）
-- 管理员发布/删除系统公告
+### 媒体上传（media）
+- 预签名上传流程
+- 对象存储为 S3 兼容；开发环境可使用 MinIO
 
-详见 `@api_spec_admin_announcement.mdc`
+### 系统与公告（system/global_settings/announcements）
+- 健康检查与版本元信息
+- 全局配置读取与系统公告
 
-#### 媒体上传（media）
-
-- 小文件预签名上传（≤100MB）
-
-详见 `@api_spec_media.mdc`
-
-#### 信息流（feed）
-
-- 瞬间信息流（支持来源筛选：following/nearby/all）
-- 群组推荐
-- 用户推荐
-- 热门内容（trending）
-- 内容反馈
-
-详见 `@api_spec_feed.mdc`
-
-#### 地图服务（map）
-
-- 智能聚合渲染（视口驱动）
-
-详见 `@api_spec_map.mdc`
-
-#### 系统（system）
-
-- 健康检查
-- 全局配置获取
-
-详见 `@api_spec_system.mdc`
-
-#### 管理员功能（admin）
-
-- **权限管理（RBAC）**：查询/授予/撤销管理员、角色/权限管理
-- **用户管理**：搜索/封禁/解封用户
-- **群组管理**：搜索/解散群组
-- **举报审核**：查看/处理举报
-- **标签管理**：删除/屏蔽标签
-- **系统公告**：发布/删除公告
-- **系统配置**：查看/更新各类配置、变更历史追踪
-
-详见 `@api_spec_admin_rbac.mdc`、`@api_spec_admin_user.mdc`、`@api_spec_admin_group.mdc`、`@api_spec_admin_announcement.mdc`、`@api_spec_admin_audit.mdc`、`@api_spec_admin_report.mdc`
-
-### WebSocket（实时能力）
-
-所有 WebSocket 事件定义详见 `@api_spec_websocket.mdc`。
-
-**事件分类（按订阅需求）**：
-
-#### 自动推送（无需订阅）
-
-- **连接管理事件**：ConnectionEstablished, Pong, Error, SubscribeAck
-- **私聊消息事件**：New/Edited/Recalled/Deleted/Reaction/Read
-- **私聊输入状态**：PrivateUserTyping
-- **通知事件**：NewFollower, MutualFollow, FollowRequestReceived, FollowRequestHandled（仅接受）, MomentLiked, MomentCommented, CommentReply, MessageMentioned, GroupInviteReceived/Response（仅接受）, GroupApplicationReceived/Response（仅接受）, SystemAnnouncement（基于通知偏好自动推送）
-
-#### 需要订阅后推送
-
-**群聊订阅（group）**：
-- 群消息事件：New/Edited/Recalled/Deleted/Reaction/Read
-- 群成员事件：Joined
-- 群公告事件：AnnouncementCreated
-- 群输入状态：GroupUserTyping
-
-**用户状态订阅（user）**：
-- 在线状态：UserOnline, UserOffline
-- 位置更新：UserLocationUpdate
-
-说明：资料/设置/成员变动等低实时或负向结果通过 HTTP 刷新获取。
-
-### 明确不做（Out of scope）
-
-- **客户端解析 cursor**：cursor 是不透明字符串，客户端只透传
-- **在应用层计算地理距离**：距离/范围过滤必须由 PostGIS 完成
-- **消息搜索 API**：由客户端本地实现
-- **未读汇总 API**：由客户端本地统计
-- **批量在线状态查询 API**：通过 WebSocket 订阅实现
+### 管理后台（admin）
+- RBAC 与管理员授权
+- 用户/群组/举报管理
+- 标签管理
+- 系统公告与系统配置
+- 审计日志与导出
 
 ---
 
-## 系统架构设计
+## 实时能力（WebSocket）
 
-### 整体架构
-
-HotSpot 后端采用**单体分层架构**（Monolithic Layered Architecture），基于 Rust + Axum 构建高性能、类型安全的 Web 服务。
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        Client Layer                         │
-│          (Web/Mobile App, WebSocket Clients)                │
-└────────────────────────┬────────────────────────────────────┘
-                         │ HTTPS / WSS
-┌────────────────────────▼────────────────────────────────────┐
-│                     Load Balancer                           │
-│                  (Nginx / Traefik)                          │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-        ┌────────────────┴────────────────┐
-        │                                 │
-┌───────▼──────────┐            ┌────────▼─────────┐
-│   HTTP Server    │            │  WebSocket Server │
-│   (Axum/Tokio)   │            │   (Tungstenite)   │
-└───────┬──────────┘            └────────┬──────────┘
-        │                                │
-        └────────────────┬───────────────┘
-                         │
-┌────────────────────────▼────────────────────────────────────┐
-│                  Application Layer                          │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │              Middleware Chain                        │   │
-│  │  RequestId → OptionalAuth/Auth → RateLimit → Idemp   │   │
-│  └──────────────────────────────────────────────────────┘   │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │              Route Layer                             │   │
-│  │  /api/v1/*（统一路径，Token 决定响应差异）              │   │
-│  └──────────────────────────────────────────────────────┘   │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │              Handler Layer                           │   │
-│  │  参数验证、调用 Service、构造响应                      │   │
-│  └──────────────────────────────────────────────────────┘   │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │              Service Layer                           │   │
-│  │  业务逻辑、权限检查、事务管理、缓存策略                 │   │
-│  └──────────────────────────────────────────────────────┘   │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │              Repository Layer                        │   │
-│  │  SQL 查询、数据映射、缓存读写                          │   │
-│  └──────────────────────────────────────────────────────┘   │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-        ┌────────────────┴────────────────┐
-        │                                 │
-┌───────▼──────────┐            ┌────────▼─────────┐
-│   PostgreSQL     │            │      Redis       │
-│  (主数据库)       │            │  (缓存/会话)      │
-│  - 用户数据       │            │  - 未读计数       │
-│  - 群组数据       │            │  - 频率限制       │
-│  - 消息记录       │            │  - 活跃会话       │
-│  - 生活瞬间       │            │  - 在线状态       │
-└──────────────────┘            └──────────────────┘
-```
-
-### 认证中间件分层
-
-中间件根据 Token 要求分为三种模式：
-
-**Token 可选模式（optional_auth）**：
-- 适用于：搜索、详情、列表等查询类 API
-- 行为：Token 存在则验证并注入 user_id；不存在或无效则继续执行（匿名访问）
-- 响应差异：通过 `@auth-only` 字段区分登录态/匿名态
-
-**Token 必须模式（auth）**：
-- 适用于：写操作、互动操作、`/me/` 路径、`/feed/` 路径
-- 行为：Token 缺失或无效返回 `10102`（Access Token 缺失）
-
-**管理员模式（admin_auth）**：
-- 适用于：`/admin/` 路径
-- 行为：在 auth 之后额外检查管理员权限
-
-### 分层职责概述
-
-#### Handler Layer（控制器层）
-
-- 提取和验证请求参数
-- 调用 Service 层处理业务逻辑
-- 构造统一格式的响应（`ApiResponse<T>`）
-- 错误通过 `?` 向上传播到统一错误处理层
-
-#### Service Layer（业务逻辑层）
-
-- 实现核心业务逻辑
-- 权限验证和业务规则检查
-- 事务管理（跨多个 Repository 操作）
-- 缓存策略（读缓存、写缓存、缓存失效）
-- 调用 Repository 层进行数据操作
-
-#### Repository Layer（数据访问层）
-
-- 封装所有数据库操作
-- 执行 SQL 查询（使用 SQLx）
-- 数据映射（DB Row ↔ Domain Model）
-- Redis 缓存读写
-- 不包含业务逻辑
-
-### 设计原则
-
-- **单一职责原则（SRP）**：每层只负责自己的职责
-- **依赖倒置原则（DIP）**：上层依赖下层的抽象
-- **开闭原则（OCP）**：通过中间件扩展功能
-- **接口隔离原则（ISP）**：细粒度划分接口
+- 连接、鉴权、订阅与事件推送
+- 事件与订阅模型以 `@api_spec_websocket.mdc` 为准
 
 ---
 
-## 模块划分
-
-系统按业务域拆分模块（以 `backend/src` 实际目录为准）：
-
-### 核心业务模块
-
-#### auth（认证模块）
-
-- **职责**：用户注册、登录、Token 管理、会话管理、密码重置
-- **数据存储**：users 表、sessions 表、Redis (session 白名单)
-- **依赖**：无（基础模块）
-- **被依赖**：所有需要认证的模块
-
-#### user（用户模块）
-
-- **职责**：用户资料管理、用户搜索、关系管理（好友/关注/拉黑）、位置更新
-- **数据存储**：users、user_settings、user_follows、user_blocks、user_friend_remarks、sessions、user_location_history、user_online_status 表
-- **依赖**：auth
-- **被依赖**：几乎所有模块
-
-#### group（群组模块）
-
-- **职责**：群组 CRUD、成员管理、权限控制、群组搜索、邀请/申请流程
-- **数据存储**：groups、group_settings、group_members、group_invites、group_applications 表
-- **依赖**：auth、user
-- **被依赖**：chat、notification
-
-#### chat（聊天模块）
-
-- **职责**：私聊会话管理、私聊消息、群聊消息
-- **数据存储**：private_chats、private_messages、group_messages、private_message_reactions、group_message_reactions、chat_unread_counts 表
-- **依赖**：auth、user、group
-- **被依赖**：notification、feed
-
-#### moment（瞬间模块）
-
-- **职责**：发布瞬间、搜索瞬间、点赞/收藏、编辑/删除
-- **数据存储**：moments、moment_likes、moment_favorites 表
-- **依赖**：auth、user、media
-- **被依赖**：comment、feed
-
-#### comment（评论模块）
-
-- **职责**：发布评论、回复评论、删除评论、点赞评论
-- **数据存储**：comments、comment_likes 表
-- **依赖**：auth、user、moment
-- **被依赖**：notification
-
-### 辅助功能模块
-
-#### notification（通知模块）
-
-- **职责**：通知中心、未读计数、推送分发
-- **数据存储**：notifications 表、notification_subscriptions 表、device_tokens 表
-- **依赖**：auth、user
-- **被依赖**：无（通过事件解耦）
-
-#### media（媒体上传模块）
-
-- **职责**：文件上传（头像、群组图片、瞬间图片、通用文件）
-- **数据存储**：对象存储（OSS/S3）、uploaded_files、upload_sessions、upload_chunks 表
-- **依赖**：auth
-- **被依赖**：user、group、moment、chat
-
-#### report（举报模块）
-
-- **职责**：用户举报、举报记录查询
-- **数据存储**：reports 表
-- **依赖**：auth、user
-- **被依赖**：admin
-
-#### system（系统模块）
-
-- **职责**：健康检查、全局配置
-- **数据存储**：system_configs、system_config_history 表
-- **依赖**：无
-- **被依赖**：无
-
-#### announcement（公告模块）
-
-- **职责**：系统公告列表（公开）与公告管理
-- **数据存储**：system_announcements 表
-- **依赖**：无
-- **被依赖**：notification
-
-### 数据聚合模块
-
-#### feed（信息流模块）
-
-- **职责**：个性化推荐内容、热门内容、反馈
-- **数据存储**：feed_feedback 表
-- **依赖**：auth、user、moment、group
-- **被依赖**：无
-
-#### map（地图模块）
-
-- **职责**：智能聚合渲染
-- **数据存储**：无专用表（查询 users、groups、moments）
-- **依赖**：auth、user、group、moment
-- **被依赖**：无
-
-### 管理模块
-
-#### admin（管理员模块）
-
-- **职责**：RBAC、用户管理、群组管理、举报审核、公告管理、配置管理
-- **数据存储**：admin_users、admin_roles、admin_permissions、admin_role_permissions、admin_user_roles、admin_audit_logs、admin_audit_exports 表
-- **依赖**：auth、user、group、report
-- **被依赖**：无
-
----
-
-## 数据库设计
-
-### 权威来源
-
-- **表结构定义**：`backend/migrations/*.sql` 迁移文件是唯一权威来源
-- **业务语义**：对外 API 语义以 `@spec/` 下的 API 规范文档为准
-
-### 核心设计原则
-
-#### 双 ID 策略
-
-- **内部主键**：自增 ID（BIGSERIAL），用于数据库内部高效查询和排序
-- **业务 ID**：
-  - 数据库层：`user_id` 和 `group_id` 使用 `BIGINT`，其他使用 `UUID`
-  - API 层：所有 `*_id` 字段统一为 `string` 类型（前端视为不透明字符串）
-  - 序列化：后端在 API 边界将 `i64` 序列化为 `String`
-
-#### 外键策略：不使用数据库外键约束
-
-**设计理由**：
-- 高并发写入性能优化
-- 避免锁竞争
-- 分片友好
-- 软删除更可控
-
-**数据完整性保证**：由 Service 层严格验证所有引用关系
-
-#### 软删除策略
-
-- 所有关键表包含 `is_deleted` 和 `deleted_at` 字段
-- 删除操作标记 `is_deleted = TRUE`，而非物理删除
-- 关联数据通过定时任务异步清理
-
-#### PostgreSQL ENUM 类型
-
-系统使用 PostgreSQL ENUM 类型确保数据一致性，枚举值定义以 `@api_spec_common_types.mdc` 为准。
-
-### 高并发场景下的表分离
-
-为减少锁竞争，将高频更新的字段从主表中分离：
-
-#### chat_unread_counts 表
-
-- **目的**：独立管理每个用户在每个聊天的未读计数
-- **好处**：消息发送和成员管理可并行进行
-
-#### user_online_status 表
-
-- **目的**：独立管理用户在线状态和活跃时间
-- **好处**：用户基础信息查询和在线状态更新解耦
-
-### 索引策略
-
-- **地理位置字段**：必须使用 GIST 索引
-- **外键字段**：建议创建索引
-- **软删除字段**：建议创建部分索引（`WHERE is_deleted = FALSE`）
-
----
-
-## 缓存策略
-
-### Redis 使用场景
-
-| 场景 | Key 模式 | 数据类型 | TTL | 说明 |
-|------|-------------|---------|-----|------|
-| 会话管理 | `session:{session_id}` | String | 与 JWT_ACCESS_TOKEN_EXPIRATION 一致（默认 900秒） | 会话白名单 |
-| 未读计数 | **PostgreSQL: chat_unread_counts 表** | - | - | ❌ 未使用 Redis，直接从 DB 查询 |
-| 在线用户列表 | `presence:online_users` | ZSET | 无 TTL（定期清理） | 在线用户列表（sorted set） |
-| 用户位置 | `presence:location:{user_id}` | String | 建议设置 3600秒 | 用户地理位置缓存 |
-| 用户信息缓存 | `cache:user:info:{user_id}` | JSON | 3600±600秒 | 用户详情缓存 |
-| 用户设置缓存 | `cache:user:settings:{user_id}` | JSON | 3600±600秒 | 用户设置缓存 |
-| 用户统计缓存 | `cache:user:stats:{user_id}` | JSON | 3600±600秒 | 用户统计缓存 |
-| 群组信息缓存 | `cache:group:info:{group_id}` | JSON | 3600±600秒 | 群组详情缓存 |
-| 群组设置缓存 | `cache:group:settings:{group_id}` | JSON | 3600±600秒 | 群组设置缓存 |
-| 群组成员缓存 | `cache:group:members:{group_id}` | JSON | 3600±600秒 | 群组成员列表缓存 |
-| 瞬间详情缓存 | `cache:moment:detail:{moment_id}` | JSON | 3600±600秒 | 瞬间详情缓存 |
-| 瞬间作者缓存 | `cache:moment:owner:{moment_id}` | JSON | 3600±600秒 | 瞬间作者缓存 |
-| 私聊设置缓存 | `cache:private_chat:settings:{chat_id}` | JSON | 3600±600秒 | 私聊设置缓存 |
-| 热门标签缓存 | `cache:trending:tags:{timeframe}:{limit}` | JSON | 300秒 | 热门标签列表缓存 |
-| 系统配置缓存（完整） | `cache:system:config:full_settings` | JSON | 3600±600秒 | 系统配置完整缓存 |
-| 系统配置缓存（单个值） | `config:{config_key}` | String | 3600秒 | 系统配置单个值缓存（如 `config:upload.image_max_size`） |
-| 全局 IP 限速 | `rate_limit:global:{client_ip}` | Counter | 3600秒 | 全局每小时请求限制 |
-| 用户限速 | `rate_limit:user:{user_id}` | Counter | 3600秒 | 单用户每小时请求限制 |
-| 验证码发送限速 | `rate_limit:endpoint:auth:send_code:ip:{client_ip}` | Counter | 60秒 | 5次/分钟 |
-| 注册限速 | `rate_limit:endpoint:auth:register:ip:{client_ip}` | Counter | 600秒 | 10次/10分钟 |
-| 登录限速 | `rate_limit:endpoint:auth:login:ip:{client_ip}` | Counter | 600秒 | 30次/10分钟 |
-| 创建瞬间限速 | `rate_limit:endpoint:moments:create:user:{user_id}` | Counter | 60秒 | 20次/分钟 |
-| 创建评论限速 | `rate_limit:endpoint:comments:create:user:{user_id}` | Counter | 60秒 | 60次/分钟 |
-| 缓存锁 | `lock:{prefix}:{id}` | String | 5秒 | 防止缓存击穿的互斥锁 |
-
-### 缓存更新原则
-
-- **写时更新**：业务操作时同步更新 Redis
-- **读时优先缓存**：API 查询优先读取 Redis
-- **一致性保证**：使用 Redis 事务或 Lua 脚本
-
----
-
-## 速率限制实现规范
-
-### 速率限制维度
-
-| 限制类型 | Redis Key 模式 | 默认值 | 配置项 | 说明 |
-|---------|---------------|--------|--------|------|
-| 全局 IP 限速 | `rate_limit:global:{client_ip}` | 1000次/小时 | `RATE_LIMIT_GLOBAL_PER_HOUR` | 防止单 IP 滥用 |
-| 用户限速 | `rate_limit:user:{user_id}` | 5000次/小时 | `RATE_LIMIT_USER_PER_HOUR` | 防止单用户滥用 |
-| 验证码发送 | `rate_limit:endpoint:auth:send_code:ip:{client_ip}` | 5次/分钟 | `RATE_LIMIT_SEND_CODE_PER_MINUTE` | 防止验证码滥用 |
-| 验证码验证 | `rate_limit:endpoint:auth:verify_code:ip:{client_ip}` | 30次/10分钟 | `RATE_LIMIT_VERIFY_CODE_PER_10MINUTES` | 防止验证码暴力破解 |
-| 注册 | `rate_limit:endpoint:auth:register:ip:{client_ip}` | 10次/10分钟 | `RATE_LIMIT_REGISTER_PER_10MINUTES` | 防止批量注册 |
-| 登录 | `rate_limit:endpoint:auth:login:ip:{client_ip}` | 30次/10分钟 | `RATE_LIMIT_LOGIN_PER_10MINUTES` | 防止暴力破解 |
-| 访客创建 | `rate_limit:endpoint:auth:guest:ip:{client_ip}` | 60次/10分钟 | `RATE_LIMIT_GUEST_PER_10MINUTES` | 防止访客滥用 |
-| Token 刷新 | `rate_limit:endpoint:auth:refresh:ip:{client_ip}` | 120次/10分钟 | `RATE_LIMIT_REFRESH_PER_10MINUTES` | 防止 Token 滥用 |
-| 密码重置请求 | `rate_limit:endpoint:auth:reset_request:ip:{client_ip}` | 5次/分钟 | `RATE_LIMIT_RESET_REQUEST_PER_MINUTE` | 防止密码重置滥用 |
-| 密码重置验证 | `rate_limit:endpoint:auth:reset_verify:ip:{client_ip}` | 20次/10分钟 | `RATE_LIMIT_RESET_VERIFY_PER_10MINUTES` | 防止密码重置滥用 |
-| 密码重置 | `rate_limit:endpoint:auth:reset:ip:{client_ip}` | 10次/10分钟 | `RATE_LIMIT_RESET_PER_10MINUTES` | 防止密码重置滥用 |
-| 创建瞬间 | `rate_limit:endpoint:moments:create:user:{user_id}` | 20次/分钟 | `RATE_LIMIT_MOMENTS_CREATE_PER_MINUTE` | 防止瞬间刷屏 |
-| 创建评论 | `rate_limit:endpoint:comments:create:user:{user_id}` | 60次/分钟 | `RATE_LIMIT_COMMENTS_CREATE_PER_MINUTE` | 防止评论刷屏 |
-| 举报 | `rate_limit:endpoint:reports:create:{identity}` | 10次/小时 | `RATE_LIMIT_REPORTS_CREATE_PER_HOUR` | 防止举报滥用 |
-
-### 环境变量配置
-
-在 `.env` 文件中配置：
-
-```bash
-# ============================================================
-# 速率限制
-# ============================================================
-# 所有端点限速值均可通过环境变量配置，无需修改代码
-
-# 全局和用户级限速
-RATE_LIMIT_GLOBAL_PER_HOUR=1000           # 全局每小时请求限制
-RATE_LIMIT_USER_PER_HOUR=5000             # 单用户每小时请求限制
-
-# 认证端点限速
-RATE_LIMIT_SEND_CODE_PER_MINUTE=5          # 验证码发送：5次/分钟
-RATE_LIMIT_VERIFY_CODE_PER_10MINUTES=30    # 验证码验证：30次/10分钟
-RATE_LIMIT_REGISTER_PER_10MINUTES=10       # 注册：10次/10分钟
-RATE_LIMIT_LOGIN_PER_10MINUTES=30          # 登录：30次/10分钟
-RATE_LIMIT_GUEST_PER_10MINUTES=60          # 访客创建：60次/10分钟
-RATE_LIMIT_REFRESH_PER_10MINUTES=120       # Token 刷新：120次/10分钟
-RATE_LIMIT_RESET_REQUEST_PER_MINUTE=5       # 密码重置请求：5次/分钟
-RATE_LIMIT_RESET_VERIFY_PER_10MINUTES=20    # 密码重置验证：20次/10分钟
-RATE_LIMIT_RESET_PER_10MINUTES=10          # 密码重置：10次/10分钟
-
-# 内容创建限速
-RATE_LIMIT_MOMENTS_CREATE_PER_MINUTE=20     # 创建瞬间：20次/分钟
-RATE_LIMIT_COMMENTS_CREATE_PER_MINUTE=60     # 创建评论：60次/分钟
-RATE_LIMIT_REPORTS_CREATE_PER_HOUR=10       # 举报：10次/小时
-```
-
-### 实现细节
-
-- **全局 IP 限速**和**用户限速**：使用简单的计数器（`INCR` + `EXPIRE`）
-- **端点级限速**：使用 `rate_limit:endpoint:{endpoint_prefix}:{identity}` 格式
-- **限速检查**：在中间件层（`rate_limit_middleware`）实现
-- **超限响应**：返回对应的错误码（`10501`, `10502`, `10503`）
-- **错误码映射**：
-  - `10500`：请求过于频繁（通用）
-  - `10501`：超过每分钟请求限制
-  - `10502`：超过每小时请求限制
-  - `10503`：超过每日请求限制
-
----
-
-## 安全策略
-
-### 认证与授权
-
-- **密码安全**：服务端使用 bcrypt/Argon2id 慢哈希存储
-- **Token 管理**：Access Token + Refresh Token 双令牌机制
-- **权限控制**：路由级认证 + 资源级验证
-
-### 防御措施
-
-| 威胁 | 防御手段 |
-|------|----------|
-| SQL 注入 | 参数化查询（SQLx 自动防护）|
-| XSS | 输出转义（前端框架处理）|
-| CSRF | Token 验证 |
-| 暴力破解 | 速率限制 |
-
----
-
-## 性能优化指导
-
-### 数据库优化
-
-- 使用 EXPLAIN ANALYZE 分析慢查询
-- 避免 N+1 查询（使用 JOIN 或批量查询）
-- 地理位置查询必须使用 PostGIS + GIST 索引
-- 使用游标分页而非 OFFSET
-
-### 并发优化
-
-- 使用 Tokio 异步运行时
-- 适当调整连接池大小
-- WebSocket 推送使用 tokio::spawn
-
----
-
-## 开发与运维
-
-### 环境配置
-
-必需的环境变量：
-- `DATABASE_URL`: PostgreSQL 连接字符串
-- `REDIS_URL`: Redis 连接字符串
-- `JWT_SECRET`: JWT 签名密钥
-- `SERVER_PORT`: 服务端口（默认 5496）
-
-### 数据库迁移
-
-SQLx 迁移文件必须能够独立运行，不依赖外部模板数据库：
-- 第一个迁移文件必须创建所有 PostgreSQL 扩展
-- 使用 `CREATE EXTENSION IF NOT EXISTS` 确保幂等性
-
-### 监控指标
-
-建议监控：
-- API 响应时间（P50、P95、P99）
-- WebSocket 消息延迟
-- 数据库连接池使用率
-- Redis 缓存命中率
-
----
-
-END
+## 非目标（Out of scope）
+
+- 支付/交易能力
+- 端侧离线同步算法
+- 消息全文搜索

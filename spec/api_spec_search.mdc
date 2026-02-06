@@ -13,57 +13,21 @@ alwaysApply: true
 
 ## 契约引用
 
-- 公共基础类型：`@api_spec_common_types.mdc`
-- 错误码：`@api_spec_errors.mdc`
+- 公共基础类型：`@api_spec_common.mdc`
+- 错误码：`@spec/api_spec_errors.mdc`
 
 ## 接口概览
 
 | 端点 | 说明 | Request | Response |
 |------|------|---------|----------|
-| `POST /api/v1/search/suggest` | 综合搜索建议 | `SearchSuggestRequest` | `ApiResponse<SearchSuggestions>` |
+| `POST /api/v1/search/suggest` | 综合搜索建议 | `SearchSuggestRequest` | `ApiResponse<PaginatedData<SearchSuggestItem>>` |
 
 ## 核心类型定义
 
 ```typescript
-// 引用 @api_spec_common_types.mdc 中的 GeoPoint
+// 引用 @api_spec_common.mdc 中的 GeoPoint
 
-// 标签建议项
-// 用途：显示标签名和热度，点击后跳转到标签搜索结果页
-interface TagSuggestItem {
-  name: string;
-  usage_count: number; // 使用次数，用于显示"使用 X 次"
-}
-
-// 用户建议项
-// 用途：显示用户基本信息，点击后跳转到用户主页
-interface UserSuggestItem {
-  user_id: string;
-  nickname: string;
-  avatar_url?: string;
-  bio?: string; // 个性签名，用于副标题展示
-  distance?: number; // 距离（米），仅当请求包含 location 时返回
-}
-
-// 群组建议项
-// 用途：显示群组基本信息，点击后跳转到群组页
-interface GroupSuggestItem {
-  group_id: string;
-  name: string;
-  avatar_url?: string;
-  description?: string; // 群组简介，用于副标题展示（优先于成员数）
-  members_count: number; // 成员数量，当无 description 时显示"X 位成员"
-  distance?: number; // 距离（米），仅当请求包含 location 时返回
-}
-
-// 瞬间建议项
-// 用途：显示瞬间预览信息，点击后跳转到瞬间详情页
-interface MomentSuggestItem {
-  moment_id: string;
-  content: string; // 瞬间文字内容（后端建议限制长度，如前100字符）
-  author_nickname: string; // 作者昵称，用于显示"来自 XXX"
-  author_avatar_url?: string; // 作者头像，用于显示作者头像而非瞬间图片
-  distance?: number; // 距离（米），仅当请求包含 location 时返回
-}
+// 搜索建议类型定义于 @api_spec_common.mdc
 
 type SearchSuggestItem =
   | { type: 'tag'; payload: TagSuggestItem }
@@ -71,14 +35,11 @@ type SearchSuggestItem =
   | { type: 'group'; payload: GroupSuggestItem }
   | { type: 'moment'; payload: MomentSuggestItem };
 
-interface SearchSuggestions {
-  items: SearchSuggestItem[];
-}
 ```
 
 ## 错误码说明
 
-本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
+本模块使用的错误码定义于 `@spec/api_spec_errors.mdc`，主要涉及：
 
 | 错误码 | 说明 | 相关接口 |
 |-------|------|---------|
@@ -94,22 +55,23 @@ interface SearchSuggestions {
 **说明**：
 - Token 可选；未登录时仅返回公开内容。
 - 建议用于搜索框输入提示与全局发现入口。
-- **LBS 优化**：如果提供 `location`，将优先返回附近的匹配结果（如附近的群组、用户）。
+- **LBS 优化**：必须提供 `reference_point`，用于优先返回附近的匹配结果（如附近的群组、用户）。
 
 **Request**:
 ```typescript
-interface SearchSuggestRequest extends PaginationParams {
+interface SearchSuggestRequest {
+  pagination?: PaginationParams;
   prefix: string;
-  location?: GeoPoint; // 可选，用于 LBS 优先排序
+  reference_point: GeoPoint; // 必填，用于 LBS 优先排序（用户拒绝定位时使用 fallback）
 }
-// Note: limit 表示每类建议的上限，默认 5
+// Note: limit 表示总返回条数，默认 5，最大 20
 ```
 
-**Response**: `ApiResponse<SearchSuggestions>`
+**Response**: `ApiResponse<PaginatedData<SearchSuggestItem>>`
 
 **排序逻辑**：
 1. **完全匹配**优先。
-2. **有位置参数时**：距离近的优先（在匹配度相近的情况下）。
-3. **无位置参数时**：热度/活跃度高的优先。
+2. **距离优先**（在匹配度相近的情况下）。
+3. **热度/活跃度**作为辅助排序信号。
 
 **可能错误码**：`10001`、`10003`

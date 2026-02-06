@@ -1,445 +1,87 @@
 ---
-globs: frontend_react/**
+globs: frontend_svelte/**
 alwaysApply: false
 ---
 
-# HotSpot React 前端工程规范 v0.0.1（How）
+# HotSpot 前端实现规范（SvelteKit / How）
 
-> 本文件是前端 "How" 文档，定义工程实现规范、目录结构、分层架构、代码约束等。
-> 功能说明请参阅 `@frontend_doc.mdc`，API 契约请参阅 `@api_spec.mdc`。
+## 文档定位（权威边界）
+
+本文件只描述工程实现规范与目录结构，不复述 API 契约。
+
+权威引用：
+- **API 契约**：`@spec/api_spec.mdc`
+- **通用契约**：`@api_spec_common.mdc`
+- **错误码**：`@spec/api_spec_errors.mdc`
+- **功能边界**：`@frontend_doc.mdc`
+
+---
 
 ## 技术栈
 
-- **Framework**: Next.js 16 (App Router)
-- **Language**: TypeScript (Strict Mode)
-- **UI Library**: shadcn/ui + Tailwind CSS 4
-- **State Management**: Zustand (客户端状态) + TanStack Query v5 (服务端状态)
-- **Data Fetching**: fetch API (via Service Layer)
-- **Form**: React Hook Form + Zod
-- **i18n**: next-intl
-- **Icons**: Lucide React
-
-## Self-check Evidence 输出模板（强制）
-
-> 目的：让你在生成/修改前端代码后，用统一格式输出"可复核证据"，避免只口头声称"已遵守规则"。
-
-### 输出规则
-- 每条 checklist 至少给出一条证据。
-- 证据必须可定位（文件路径 + 锚点/片段 + 一句证明），禁止只写"已遵守/已完成"。
-- 对"否定性条目"（例如 No Hardcoded API Path / No any / No WS Contract）必须给出：
-  - `scope`：检查范围
-  - `probe`：检索模式
-  - `result`：结论（例如 0 matches）
-- **要求**：即使是否定性条目，也必须同时提供 `paths` / `anchors` / `proof`，用于定位检查覆盖范围与关键锚点。
-- **proof 强制要求（必须同时满足）**：
-  - **必须是单句**（只允许一个句号 `。`；不得使用多个句号/分号/换行来拼接多句）。
-  - **必须客观可证伪**：只能陈述可复核事实（基于 `paths/anchors` 或 `scope/probe/result`），不得使用主观评价或含糊措辞。
-  - **禁止主观词/含糊词**：如"看起来/应该/大概/可能/感觉/优雅/更好/更美观/更合理/体验很好/无明显问题"等。
-  - **不得引入第二份契约**：proof 中不得新增或复述端点清单/字段表/错误码表/WS 事件表（契约只在 `@api_spec.mdc`）。
-
-### 统一输出模板（按条目逐条填写）
-
-#### Evidence 模板（所有条目通用）
-- item: <checklist item title>
-  - paths:
-    - <path 1>
-    - <path 2>
-  - anchors:
-    - <symbol name or unique snippet 1>
-    - <symbol name or unique snippet 2>
-  - proof: <一句话说明为什么这些 anchors 能证明该条成立（客观、单句、可复核）>
-
-#### Negative Evidence 扩展字段（No X 必备，在同一条 Evidence 内追加）
-- item: <checklist item title>
-  - scope: <检查范围，例如：frontend_react/** 或 frontend_react/src/**>
-  - probe: <检索模式，例如："/api/v1/" 或 " as any" 或 "is_super">
-  - result: <0 matches / matches list（如有匹配必须修复，不得解释）>
-  - paths:
-    - <path 1>
-    - <path 2>
-  - anchors:
-    - <symbol name or unique snippet 1>
-    - <symbol name or unique snippet 2>
-  - proof: <单句、客观、可证伪地说明为什么 result + anchors 能证明该条成立，不得使用主观/含糊词>
-
-## 本文件自检范围（Self-check Scope）
-
-> 原则：`@api_spec.mdc` 是"契约唯一权威"。本文件只规定 **前端工程落地（How）**，不得造成"第二份契约"。
-
-当你修改 `@frontend_rule.mdc` 时，必须自检：
-
-### 边界自洽（How-only）
-- 只写可执行的工程规范：目录结构/分层、请求封装、状态管理、错误处理、缓存策略、WebSocket 落地、类型与 lint 约束等
-- 不写产品能力与页面流程（What）：这些必须写在 `@frontend_doc.mdc`
-
-### 与 `@api_spec.mdc` 的关系（只引用，不复述）
-- 只用"**小节标题或锚点标题**"引用 `@api_spec.mdc`（禁止"第X章/第X节"编号引用）
-- 禁止复制粘贴端点清单、字段列表、错误码清单、WebSocket 事件定义到本文件
-- 禁止在本文件发明任何 API 字段/事件/错误码/envelope 变体；如契约不足，只能推动修改 `@api_spec.mdc`
-
-### 规则可执行性与可验证性
-- 每条规则应能通过代码 review 或静态检查验证（例如：禁止硬编码路径、禁止 any、分层职责边界）
-- 规则之间不得互相冲突；如冲突，以"本文件范围"内更严格者为准，但不得与 `@api_spec.mdc` 冲突
+- SvelteKit（Svelte 5）
+- TypeScript（严格模式）
+- Vite
 
 ---
 
-## 目录结构与分层（强制）
+## 目录与分层（必须）
 
-```
-frontend_react/
-├── src/
-│   ├── app/                        # Next.js App Router 路由
-│   │   ├── (auth)/                 # 认证相关页面组（无需登录）
-│   │   │   ├── login/page.tsx
-│   │   │   └── layout.tsx
-│   │   ├── (main)/                 # 主应用页面组（需要登录）
-│   │   │   ├── layout.tsx
-│   │   │   ├── page.tsx
-│   │   │   ├── search/page.tsx
-│   │   │   ├── feed/page.tsx
-│   │   │   ├── moments/
-│   │   │   ├── users/
-│   │   │   ├── groups/
-│   │   │   ├── chat/
-│   │   │   ├── notifications/page.tsx
-│   │   │   └── settings/page.tsx
-│   │   ├── (admin)/                # 管理后台页面组
-│   │   │   ├── layout.tsx
-│   │   │   ├── page.tsx
-│   │   │   └── ...
-│   │   ├── layout.tsx              # 根布局
-│   │   ├── globals.css             # 全局样式
-│   │   └── providers.tsx           # 全局 Provider
-│   ├── components/                 # UI 组件
-│   │   ├── ui/                     # shadcn/ui 基础组件
-│   │   ├── common/                 # 通用业务组件
-│   │   ├── cards/                  # 卡片组件
-│   │   ├── chat/                   # 聊天相关组件
-│   │   ├── forms/                  # 表单组件
-│   │   ├── modals/                 # 模态框组件
-│   │   └── skeletons/              # 骨架屏组件
-│   ├── hooks/                      # 自定义 Hooks
-│   │   ├── use-auth.ts
-│   │   ├── use-websocket.ts
-│   │   ├── use-infinite-scroll.ts
-│   │   └── ...
-│   ├── lib/                        # 工具库
-│   │   ├── api/                    # API 客户端
-│   │   │   ├── client.ts           # 基础 HTTP 客户端
-│   │   │   ├── endpoints.ts        # API 路径常量
-│   │   │   └── services/           # 业务服务层
-│   │   │       ├── auth.ts
-│   │   │       ├── user.ts
-│   │   │       ├── moments.ts
-│   │   │       └── ...
-│   │   ├── websocket/              # WebSocket 管理
-│   │   │   ├── client.ts
-│   │   │   ├── events.ts
-│   │   │   └── handlers.ts
-│   │   ├── utils/                  # 工具函数
-│   │   └── validations/            # Zod schemas
-│   ├── stores/                     # Zustand stores
-│   │   ├── auth.ts
-│   │   ├── location.ts
-│   │   ├── settings.ts
-│   │   └── feedback.ts
-│   ├── types/                      # TypeScript 类型定义
-│   │   ├── api.ts                  # API 类型
-│   │   ├── websocket.ts            # WebSocket 类型
-│   │   └── client.ts               # 客户端扩展类型
-│   └── i18n/                       # 国际化配置
-│       ├── config.ts
-│       └── request.ts
-├── messages/                       # i18n 翻译文件
-│   ├── en.json
-│   └── zh.json
-├── public/                         # 静态资源
-└── 配置文件
-```
-
-### 分层职责
-
-- **Service Layer (`src/lib/api/services/`)**
-  - 负责所有 HTTP 通信、错误处理、数据转换。
-  - 所有 Service 方法返回 `Promise<ApiResponse<T>>`。
-  - **禁止**：Service 层禁止包含任何 UI 状态（useState/useReducer）或组件逻辑。
-
-- **Server API (`src/lib/api/server.ts`)**
-  - 服务端专用 API 客户端，用于 Server Components 和 Server Actions。
-  - 从 cookies 获取认证 Token。
-  - 支持 Next.js 缓存策略（`revalidate`, `tags`）。
-
-- **Server Actions (`src/lib/actions/`)**
-  - 使用 `'use server'` 标记，处理数据变更操作。
-  - 配合 `revalidateTag` 实现缓存失效。
-  - 支持 optimistic updates。
-
-- **Store Layer (`src/stores/`)**
-  - 使用 Zustand 管理客户端全局状态（User Session, Location, Settings）。
-  - **禁止**：Store 中直接调用 API；API 调用必须通过 Service 或 TanStack Query。
-
-- **Hooks Layer (`src/hooks/`)**
-  - 封装可复用的业务逻辑（如 `useAuth`, `useWebSocket`, `useInfiniteScroll`）。
-  - 可以组合使用 Service、Store、TanStack Query。
-
-- **Components (`src/components/`)**
-  - 纯 UI 组件，接收 props，不直接调用 Service。
-  - 数据获取通过 TanStack Query hooks 或父组件传递。
-
-- **Pages (`src/app/`)**
-  - 组合 Components、Hooks，处理路由参数和页面级逻辑。
+- `src/routes/`：页面与路由（`+page.svelte` / `+page.ts` / `+layout.svelte`）
+- `src/routes/(public)/(protected)/(admin)/(auth)`：按访问级别分组
+- `src/lib/api/`：HTTP 客户端与服务层
+  - `client.ts`：统一请求封装
+  - `endpoints.ts`：API 路径常量
+  - `services/*.ts`：业务 API 调用
+- `src/lib/stores/`：全局状态（Svelte stores）
+- `src/lib/components/`：可复用组件
+- `src/lib/hooks/`：可复用逻辑封装
+- `src/lib/attachments/`：Svelte actions
 
 ---
 
-## SSR 与组件架构（强制）
+## API 调用规范
 
-### Server Components 优先原则
-
-Next.js App Router 默认使用 Server Components，只有在需要时才使用 Client Components。
-
-**必须是 Server Component 的场景：**
-- 页面入口文件（`page.tsx`），数据获取应在服务端完成
-- 布局文件（`layout.tsx`），静态结构应服务端渲染
-- 纯展示组件（无交互、无 hooks）
-
-**必须是 Client Component 的场景：**
-- 使用 React hooks（useState, useEffect, useContext 等）
-- 使用浏览器 API（localStorage, window, navigator 等）
-- 需要事件处理（onClick, onChange 等）
-- 使用第三方客户端库（next-themes, zustand 等）
-
-### 组件拆分模式
-
-将页面拆分为 Server Component（数据获取 + 静态结构）和 Client Component（交互逻辑）：
-
-```tsx
-// page.tsx (Server Component)
-import { Suspense } from 'react';
-import { serverApi, isServerSuccess } from '@/lib/api/server';
-import { ENDPOINTS } from '@/lib/api/endpoints';
-import { LoadingState } from '@/components/common/loading-state';
-import { InteractiveList } from './interactive-list';
-
-async function DataContent() {
-  const response = await serverApi.post(ENDPOINTS.FEED.MOMENTS, { limit: 20 }, { tags: ['cache-tag'] });
-  const data = isServerSuccess(response) ? response.data : [];
-  return <InteractiveList initialData={data} />;
-}
-
-export default function Page() {
-  return (
-    <Suspense fallback={<LoadingState />}>
-      <DataContent />
-    </Suspense>
-  );
-}
-
-// interactive-list.tsx (Client Component)
-'use client';
-
-import { useOptimistic, useTransition } from 'react';
-import { someAction } from '@/lib/actions';
-
-export function InteractiveList({ initialData }) {
-  const [isPending, startTransition] = useTransition();
-  const [optimisticData, updateOptimisticData] = useOptimistic(initialData);
-  
-  const handleAction = (id) => {
-    startTransition(async () => {
-      updateOptimisticData(/* optimistic update */);
-      await someAction(id);
-    });
-  };
-  
-  return (/* render with optimisticData */);
-}
-```
-
-### 卡片组件拆分
-
-卡片组件应拆分为展示（Server）和交互（Client）部分：
-
-```tsx
-// user-card.tsx (Server Component - 可在 Server Component 中使用)
-import { FollowButton } from './follow-button';
-
-export function UserCard({ user }: { user: UserSearchItem }) {
-  return (
-    <Card>
-      <UserAvatar user={user} />
-      <span>{user.nickname}</span>
-      <FollowButton userId={user.user_id} isFollowing={user.is_following} />
-    </Card>
-  );
-}
-
-// follow-button.tsx (Client Component)
-'use client';
-
-export function FollowButton({ userId, isFollowing }) {
-  // 处理关注交互
-}
-```
-
-### Server Actions 使用
-
-使用 Server Actions 替代客户端 API 调用进行数据变更：
-
-```tsx
-// src/lib/actions/moments.ts
-'use server';
-
-import { revalidateTag } from 'next/cache';
-import { serverApi, isServerSuccess } from '@/lib/api/server';
-import { ENDPOINTS } from '@/lib/api/endpoints';
-
-export async function likeMoment(momentId: string) {
-  const response = await serverApi.post(ENDPOINTS.MOMENTS.LIKE, { moment_id: momentId });
-  if (isServerSuccess(response)) {
-    revalidateTag(`moment-${momentId}`);
-    revalidateTag('feed');
-  }
-  return response;
-}
-```
-
-### 禁止事项
-
-- **禁止**在页面级组件无脑添加 `'use client'`
-- **禁止**在 Server Component 中使用 hooks
-- **禁止**在纯展示组件中添加 `'use client'`
-- **禁止**在 Server Actions 中返回不可序列化的数据
+- **禁止硬编码路径**：必须通过 `src/lib/api/endpoints.ts`
+- **成功判定**：仅使用 `ApiResponse.code === 0`
+- **HTTP 层错误**：通过 try/catch 处理网络/超时/非 200（见通用契约）
+- **仅在 HTTP 200 时解析**：非 200 直接视为请求失败，不解析 `ApiResponse`
+- **Cursor 不透明**：前端只透传 `next_cursor`
+- **RPC + JSON**：仅 POST，不实现 REST 风格
 
 ---
 
-## API 交互与数据一致性
+## Token 与安全
 
-### 路径常量
-- 必须使用 `src/lib/api/endpoints.ts` 中定义的常量，禁止硬编码 API 路径。
-
-### 成功判定
-- 必须且只能通过 `ApiResponse.code === 0` 判断业务成功。
-- 禁止使用 HTTP Status Code (200/201) 作为业务成功的依据。
-
-### 消息一致性
-- **发送消息**：API 调用仅用于提交意图和获取 `message_id`。
-- **展示消息**：必须且只能依赖 WebSocket 推送的消息事件来更新本地列表。
-- **禁止**：将 API 返回结果直接乐观插入 UI 列表。
-
-### 分页处理
-- `cursor` 是不透明字符串，**禁止**前端尝试解析、解码或构造 cursor。
-- 只能透传后端返回的 `next_cursor`。
-
-### TanStack Query 使用规范
-- 列表数据使用 `useInfiniteQuery` 管理分页。
-- 详情数据使用 `useQuery` 缓存。
-- 写操作使用 `useMutation`，成功后通过 `queryClient.invalidateQueries` 或 `setQueryData` 更新缓存。
-
----
-
-## 数据类型与语义
-
-### 时间处理
-- 上传：必须转换为 UTC ISO 8601 字符串。
-- 展示：接收 UTC 时间，使用本地时区格式化展示。
-
-### ID 类型
-- 所有 `*_id` 字段在 API 层统一为 `string` 类型（前端视为不透明字符串，不关心内部是数字还是 UUID）。
-
-### 地理位置
-- 前端**禁止**自行计算距离或角度（Haversine 等）。
-- 必须使用后端返回的 `RelativeLocation` 对象中的 `distance` 和 `bearing_degrees`。
+- Web 端仅使用 HttpOnly Cookie，禁止在 localStorage/sessionStorage 存储 Refresh Token
+- App 端使用 `Authorization: Bearer`（如有跨端场景）
+- 前端不解析 JWT，只按业务接口返回值处理登录态
 
 ---
 
 ## WebSocket 规范
 
-### 连接管理
-- 使用 `useWebSocket` hook 管理连接生命周期。
-- 连接建立后必须在 5 秒内完成鉴权。
-- 实现指数退避重连策略。
-
-### 心跳机制
-- 心跳参数由服务端通过 `ConnectionEstablished.config` 动态下发，客户端不得硬编码。
-- 按 `config.ping_interval` 间隔发送心跳。
-- `config.ping_timeout` 时间内未收到响应视为连接异常，触发重连。
-
-### 事件处理
-- 消息事件通过 Zustand store 或 TanStack Query 的 `queryClient.setQueryData` 更新 UI。
-- **禁止**在前端维护独立的事件类型定义；事件类型以 `@api_spec_websocket.mdc` 为准。
+- 事件名与 payload 结构以 `@api_spec_websocket.mdc` 为准
+- 可在前端定义**镜像类型**（仅映射契约，不得扩展）
+- 消息最终态以 WebSocket 推送为准
 
 ---
 
-## 认证与授权
+## 位置与距离
 
-### Token 管理
-- Access Token 存储在内存（Zustand store）。
-- Refresh Token 存储在 httpOnly cookie（推荐）或 localStorage。
-- API 客户端应基于 `ApiResponse.code` 处理 Token 刷新与重试。
-
-### 路由保护
-- 使用 Next.js middleware 进行路由保护。
-- 受保护路由组 `(main)` 和 `(admin)` 需要登录。
-- 管理后台路由额外检查管理员权限。
-
-### 管理员权限判断
-- 判断超级管理员必须使用 `permissions.includes('*')`。
-- 代码中不存在 `is_super` 字段依赖。
+- 位置请求使用 `Location`，响应使用 `RelativeLocation`
+- 禁止前端自行计算距离/角度
 
 ---
 
-## 代码质量与最佳实践
+## 数据格式（契约级）
 
-### TypeScript
-- 禁止使用 `any`（包括 `as any`）。
-- 对后端返回的可选字段（Optional），必须使用可选链（`?.`）或空值合并（`??`）进行安全访问。
-- 所有 API 响应必须有明确的类型定义。
-
-### React 规范
-- 组件使用函数式组件 + Hooks。
-- 避免在 render 中创建新的对象/函数，使用 `useMemo`/`useCallback`。
-- 列表渲染必须提供稳定的 `key`。
-
-### Linter
-- 生成代码后必须符合项目的 ESLint/Prettier 规则。
-- 提交前运行 `pnpm lint` 确保无错误。
-
-### 国际化
-- 所有用户可见文本必须使用 `useTranslations` hook。
-- 翻译 key 使用点分隔命名空间（如 `auth.login.title`）。
+- 所有时间字段为 UTC ISO 8601，前端负责时区转换
+- 所有 `xxx_id` 字段按 `string` 处理，不做数值运算
 
 ---
 
-## 机器可检（Machine-checkable）自检 Checklist
+## TypeScript 约束
 
-说明：以下 checklist 每条都要求"可通过静态检查/代码 review/最小运行验证"来确认。AI 在自检时，应明确指出对应证据，而不是只口头声明"已遵守"。
-
-### 工程边界与契约引用
-1.  [ ] **No Contract Duplication**: 代码与文档中没有复制粘贴 `@api_spec.mdc` 的端点/字段/错误码/事件清单
-2.  [ ] **Title-only Citation**: 文档引用 `@api_spec.mdc` 时只使用小节标题或锚点标题
-
-### API 调用与分层
-3.  [ ] **Service Only Networking**: `src/app/**`、`src/components/**`、`src/hooks/**` 中没有直接调用 `fetch` 访问后端 API；所有网络请求都通过 `src/lib/api/services/**` 完成
-4.  [ ] **No Hardcoded API Path**: 前端代码中没有硬编码 `"/api/"`、`"/api/v1/"` 等 API 路径字符串；必须通过 `src/lib/api/endpoints.ts` 的常量引用
-5.  [ ] **ApiResponse Code Gate**: 所有业务成功判定都只使用 `ApiResponse.code === 0`；没有使用 HTTP 状态码作为业务成功的依据
-6.  [ ] **Cursor Opaque**: 前端没有解析/解码/构造 `cursor`；仅透传后端返回的 `next_cursor`
-
-### WebSocket 与消息一致性
-7.  [ ] **No Optimistic Final Message**: Chat 消息列表的"最终展示态"只能来自 WebSocket 的实时事件；send API 返回值仅用于拿 `message_id` 关联本地发送态
-8.  [ ] **No Local WS Contract**: 前端没有维护"独立的 WS 事件名/字段表"；如需变更，只能推动修改 `@api_spec.mdc`
-
-### 管理员权限
-9.  [ ] **Admin Super Derivation**: 前端判断超级管理员必须使用 `permissions.includes('*')`；代码中不存在 `is_super` 字段依赖
-
-### 类型与质量
-10. [ ] **No any**: TypeScript 代码中没有新增 `any`（包括 `as any`）
-11. [ ] **Optional Field Safety**: 所有可选字段访问都使用 `?.`/`??` 进行安全处理
-12. [ ] **Lint Clean**: 变更后代码在项目既有 lint/format 规则下保持可通过
-
----
-
-## 关联文档
-
-- 功能说明：`@frontend_doc.mdc`
-- API 契约：`@api_spec.mdc`
-- WebSocket 事件：`@api_spec_websocket.mdc`
+- 禁止 `any`
+- 访问可选字段必须使用 `?.`/`??`

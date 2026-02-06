@@ -12,97 +12,122 @@ alwaysApply: true
 
 ## 契约引用
 
-- 公共基础类型：`@api_spec_common_types.mdc`
-- 错误码：`@api_spec_errors.mdc`
+- 公共基础类型：`@api_spec_common.mdc`
+- 错误码：`@spec/api_spec_errors.mdc`
 
 ## 接口概览（按子域）
 
 | 子域 | 端点 | 说明 | Request | Response |
 |-----|------|------|---------|----------|
-| 分享 | `POST /api/v1/share/create` | 创建分享 | `CreateShareRequest` | `ApiResponse<Share>` |
-| 分享 | `POST /api/v1/share/get` | 获取分享详情 | `GetShareRequest` | `ApiResponse<Share>` |
-| 分享 | `POST /api/v1/share/apply` | 应用分享 | `ApplyShareRequest` | `ApiResponse` |
+| 分享 | `POST /api/v1/share/create` | 创建分享 | `CreateShareRequest` | `ApiResponse<ShareCreated>` |
+| 分享 | `POST /api/v1/share/get` | 获取分享详情 | `GetShareRequest` | `ApiResponse<ShareDetail>` |
+| 分享 | `POST /api/v1/share/apply` | 应用分享 | `ApplyShareRequest` | `ApiResponse<ShareApplyResult>` |
 
 ## 设计理念
 
-分享系统提供统一的分享机制，支持多种内容类型的分享。
-
-**核心原则**：
-- **用完就扔**：分享是一次性操作，无需复杂管理
-- **类型可扩展**：支持多种分享类型，统一接口
-- **极简化**：只保留核心功能（创建、访问、应用）
+- **统一承载**：用户/群组/动态/锚点位置均使用同一分享机制
+- **一次创建，多端复用**：分享码可用于 Web/App 统一解析
+- **最小信息暴露**：分享码仅暴露必要目标信息，敏感字段不出现在分享记录中
 
 ## 核心类型定义
 
 ```typescript
-// 分享类型枚举
-type ShareType = 'location' | 'moment' | 'group' | 'user';
+type ShareType = 'user' | 'group' | 'moment' | 'reference_point';
 
-// 分享对象
-interface Share {
-  share_id: string;           // 分享 ID（UUID）
-  share_code: string;         // 6 位分享码（字母数字）
-  share_type: ShareType;      // 分享类型
-  creator: UserInfo;          // 创建者信息
-  payload: SharePayload;      // 类型特定的数据
-  created_at: string;         // 创建时间（ISO 8601）
+interface ShareBase {
+  share_id: string;
+  share_code: string;
+  share_type: ShareType;
+  creator: UserInfo;
+  created_at: string;
+  expires_at?: string;
 }
 
-// 分享创建结果
 interface ShareCreated {
   share_id: string;
   share_code: string;
-}
-```
-
-### 类型特定 Payload
-
-根据 `share_type` 不同，`payload` 结构不同：
-
-```typescript
-// 位置分享（当前支持）
-interface LocationSharePayload {
-  latitude: number;           // 纬度（-90 到 90）
-  longitude: number;          // 经度（-180 到 180）
-  location_name: string;      // 位置名称
+  expires_at?: string;
 }
 
-// 动态分享（规划中）
-interface MomentSharePayload {
-  moment_id: string;          // 动态 ID
-}
-
-// 群组分享（规划中）
-interface GroupSharePayload {
-  group_id: string;           // 群组 ID
-}
-
-// 用户分享（规划中）
 interface UserSharePayload {
-  user_id: string;            // 用户 ID
+  user_id: string;
 }
 
-// 联合类型
-type SharePayload = LocationSharePayload | MomentSharePayload | GroupSharePayload | UserSharePayload;
+interface GroupSharePayload {
+  group_id: string;
+}
+
+interface MomentSharePayload {
+  moment_id: string;
+}
+
+interface ReferencePointSharePayload {
+  reference_point: Location;
+}
+
+type SharePayload =
+  | UserSharePayload
+  | GroupSharePayload
+  | MomentSharePayload
+  | ReferencePointSharePayload;
+
+interface SharePreview {
+  title: string;
+  subtitle?: string;
+  cover_url?: string;
+}
+
+interface ShareDetail {
+  share: ShareBase;
+  payload: SharePayload;
+  preview?: SharePreview;
+}
+
+type ShareApplyAction =
+  | { type: 'navigate_user'; user_id: string }
+  | { type: 'navigate_group'; group_id: string }
+  | { type: 'navigate_moment'; moment_id: string }
+  | { type: 'update_reference_point'; reference_point: Location };
+
+interface ShareApplyResult {
+  share_type: ShareType;
+  action: ShareApplyAction;
+}
 ```
+
+说明：`preview` 为展示用摘要，服务端可根据权限与可见性策略选择是否返回。
 
 ## 分享码规则
 
 - **字符集**：`[A-HJ-NP-Z2-9]` 共 32 个字符（排除易混淆字符 0/O/1/I）
-- **长度**：6 位
-- **组合数**：32^6 ≈ 10.7 亿种
+- **长度**：8 位
+- **组合数**：32^8 ≈ 1.1 万亿种
 - **唯一性**：数据库唯一索引保证
+- **大小写**：不区分大小写，服务端统一转换为大写
+- **校验**：必须完全匹配字符集与长度，禁止空格、连字符、前后缀
+
+**反滥用要求**：
+- 对 share_code 解析与 apply 必须启用限流与失败次数惩罚（如 IP/用户维度）
+- 对连续失败的 share_code 请求可触发临时拒绝或验证码校验
+
+## 有效期规则
+
+- 分享可设置有效期（`expires_at`）
+- 过期分享在 `get`/`apply` 中返回 `10300`
 
 ## 错误码说明
 
-本模块使用的错误码定义于 `@api_spec_errors.mdc`，主要涉及：
+本模块使用的错误码定义于 `@spec/api_spec_errors.mdc`，主要涉及：
 
 | 错误码 | 说明 | 相关接口 |
 |-------|------|---------|
-| `10001` | 缺少必填参数 | `create` |
+| `10001` | 缺少必填参数 | `create`、`get`、`apply` |
 | `10002` | 参数格式错误 | `create`（share_type 不支持、payload 格式错误） |
+| `10003` | 参数值超出范围 | `create`（expires_in_seconds 超出限制） |
 | `10102` | Access Token 缺失 | `create`、`apply` |
-| `10300` | 资源不存在 | `get`、`apply`（分享不存在） |
+| `10300` | 资源不存在 | `get`、`apply`（分享不存在或目标不存在） |
+| `22000` | 幂等键冲突 | `create` |
+| `22002` | 幂等操作正在处理中 | `create` |
 
 ## 分享 API
 
@@ -112,22 +137,26 @@ type SharePayload = LocationSharePayload | MomentSharePayload | GroupSharePayloa
 
 **权限要求**：需要登录
 
+**幂等性（MUST）**：客户端必须携带 `Idempotency-Key`。
+
 **Request**:
 ```typescript
 interface CreateShareRequest {
-  share_type: ShareType;      // 分享类型
-  payload: SharePayload;      // 类型特定数据
+  share_type: ShareType;
+  payload: SharePayload;
+  expires_in_seconds?: number; // 可选，默认由系统配置
 }
 ```
 
-**Response**: `ApiResponse<Share>`
+**Response**: `ApiResponse<ShareCreated>`
 
 **业务规则**：
-- 生成唯一的 6 位分享码
-- 验证 payload 数据有效性（根据 share_type）
-- 位置分享：验证经纬度范围、位置名称长度（1-100 字符）
+- 校验 payload 与 share_type 匹配
+- 校验目标资源存在且可访问
+- `reference_point`：校验经纬度范围与 `location_name` 长度（1-100 字符）
+- `expires_in_seconds` 若提供，必须为正整数且不超过系统允许上限
 
-**可能错误码**：`10001`、`10002`、`10102`
+**可能错误码**：`10001`、`10002`、`10003`、`10102`、`10300`、`22000`、`22002`
 
 ---
 
@@ -140,52 +169,33 @@ interface CreateShareRequest {
 **Request**:
 ```typescript
 interface GetShareRequest {
-  share_code: string;         // 6 位分享码
+  share_code: string;         // 不区分大小写，服务端统一转换为大写
 }
 ```
 
-**Response**: `ApiResponse<Share>`
+**Response**: `ApiResponse<ShareDetail>`
 
-**业务规则**：
-- 根据分享码查询分享详情
-- 无需权限检查（所有分享都是公开的）
-
-**可能错误码**：`10002`、`10300`
+**可能错误码**：`10001`、`10300`
 
 ---
 
 ### POST /api/v1/share/apply
 
-应用分享。根据分享类型执行不同操作。
+应用分享。
 
 **权限要求**：需要登录
 
 **Request**:
 ```typescript
 interface ApplyShareRequest {
-  share_code: string;         // 6 位分享码
+  share_code: string;         // 不区分大小写，服务端统一转换为大写
 }
 ```
 
-**Response**: `ApiResponse`
+**Response**: `ApiResponse<ShareApplyResult>`
 
-**业务规则**：
+**行为说明**：
+- `navigate_user` / `navigate_group` / `navigate_moment`：客户端跳转到对应详情页
+- `update_reference_point`：服务端更新用户浏览锚点位置，并返回最新锚点
 
-根据 `share_type` 执行不同操作：
-
-| 类型 | 操作 | 说明 |
-|-----|------|------|
-| `location` | 更新用户浏览锚点 | 设置用户的浏览锚点位置（纬度、经度），保持原有浏览半径不变 |
-| `moment` | 跳转到动态详情 | 规划中 |
-| `group` | 跳转到群组详情 | 规划中 |
-| `user` | 跳转到用户主页 | 规划中 |
-
-**可能错误码**：`10102`、`10300`
-
-## 注意事项
-
-1. **分享码唯一性**：生成时检查唯一性，重复则重新生成
-2. **并发安全**：使用数据库唯一索引保证分享码不重复
-3. **垃圾清理**：建议定期清理超过 90 天的分享记录（可选）
-4. **防滥用**：建议限制单用户每日创建分享次数（如 100 次）
-5. **分享链接格式**：`https://hotspot.app/share/{share_code}`
+**可能错误码**：`10001`、`10102`、`10300`

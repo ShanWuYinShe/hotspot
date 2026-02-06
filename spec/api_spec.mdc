@@ -15,8 +15,8 @@ alwaysApply: true
 
 | 文件 | 说明 |
 |-----|------|
-| [api_spec_common_types.mdc](api_spec_common_types.mdc) | API 设计原则、通用类型定义、命名规范、分页语义、安全性实践等 |
-| [api_spec_errors.mdc](api_spec_errors.mdc) | 所有 HTTP API 和 WebSocket 错误码定义 |
+| [api_spec_common.mdc](api_spec_common.mdc) | API 设计原则、通用类型定义、命名规范、分页语义、安全性实践 |
+| [@spec/api_spec_errors.mdc](api_spec_errors.mdc) | 所有 HTTP API 和 WebSocket 错误码定义 |
 | [api_spec_websocket.mdc](api_spec_websocket.mdc) | WebSocket 事件、连接与鉴权规范、订阅机制 |
 
 ### 核心业务 API
@@ -42,7 +42,7 @@ alwaysApply: true
 | 文件 | 说明 |
 |-----|------|
 | [api_spec_media.mdc](api_spec_media.mdc) | 文件与媒体上传 API（Presigned 模式） |
-| [api_spec_notification.mdc](api_spec_notification.mdc) | 通知中心、订阅设置、设备令牌管理 API |
+| [api_spec_notification.mdc](api_spec_notification.mdc) | 通知中心、设备推送令牌管理 API |
 | [api_spec_report.mdc](api_spec_report.mdc) | 用户举报 API |
 | [api_spec_system.mdc](api_spec_system.mdc) | 系统健康检查与全局配置 API |
 
@@ -64,12 +64,17 @@ alwaysApply: true
 - 若本规范与任何工程实现或其它 doc/rule 文件产生冲突，以本规范为准。
 - 禁止使用数字章节号（如"第X章/第X节"）来引用本规范内容；引用时仅使用小节标题或锚点标题，以降低维护成本。
 
+**内部优先级**（本规范内部冲突时）：
+1. `@api_spec_common.mdc`
+2. `@spec/api_spec_errors.mdc`
+3. 各模块 `@api_spec_*.mdc`
+
 ## 文档说明
 
 - 本规范为 **Contract Only**：只定义对外可观测的端点/字段/类型/错误码/事件。
 - 所有实现细节、自检、工程化约束不属于本规范范围。
 
-通用约定（如时间格式、分页/幂等、Token 可选/必须语义、`@auth-only` 字段）统一放在 `@api_spec_common_types.mdc`，避免在索引文件重复。
+通用约定（如时间格式、分页/幂等、Token 可选/必须语义、`@auth-only` 字段）统一放在 `@api_spec_common.mdc`，避免在索引文件重复。
 
 ## 快速索引
 
@@ -98,7 +103,7 @@ alwaysApply: true
 
 | 路径前缀 | 对应文档 |
 |---------|---------|
-| `/api/v1/meta` | `api_spec_system.mdc` |
+| `/api/v1/system/meta` | `api_spec_system.mdc` |
 | `/api/v1/auth/` | `api_spec_auth.mdc` |
 | `/api/v1/user/` | `api_spec_user.mdc` |
 | `/api/v1/moments/`, `/api/v1/comments/` | `api_spec_moment.mdc` |
@@ -108,12 +113,12 @@ alwaysApply: true
 | `/api/v1/map/` | `api_spec_map.mdc` |
 | `/api/v1/share/` | `api_spec_share.mdc` |
 | `/api/v1/media/` | `api_spec_media.mdc` |
-| `/api/v1/notifications/`, `/api/v1/subscriptions/`, `/api/v1/device_tokens/` | `api_spec_notification.mdc` |
+| `/api/v1/notifications/`, `/api/v1/device_tokens/` | `api_spec_notification.mdc` |
 | `/api/v1/reports/` | `api_spec_report.mdc` |
-| `/api/v1/system/`, `/api/v1/global_settings/` | `api_spec_system.mdc` |
+| `/api/v1/system/`, `/api/v1/global_settings/`, `/api/v1/announcements/list` | `api_spec_system.mdc` |
 | `/api/v1/admin/rbac/` | `api_spec_admin_rbac.mdc` |
 | `/api/v1/admin/users/` | `api_spec_admin_user.mdc` |
 | `/api/v1/admin/groups/` | `api_spec_admin_group.mdc` |
-| `/api/v1/admin/announcements/`, `/api/v1/announcements/` | `api_spec_admin_announcement.mdc` |
+| `/api/v1/admin/announcements/` | `api_spec_admin_announcement.mdc` |
 | `/api/v1/admin/audit/` | `api_spec_admin_audit.mdc` |
 | `/api/v1/admin/tags/` | `api_spec_admin_tag.mdc` |
