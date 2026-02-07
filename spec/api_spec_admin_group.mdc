@@ -23,13 +23,13 @@ alwaysApply: true
 
 | 子域 | 端点 | 说明 | Request | Response |
 |-----|------|------|---------|----------|
-| 群组管理 | `POST /api/v1/admin/groups/search` | 搜索群组 | `AdminGroupSearchRequest` | `ApiResponse<PaginatedData<GroupSearchItem>>` |
-| 群组管理 | `POST /api/v1/admin/groups/detail` | 群组详情 | `AdminGroupDetailRequest` | `ApiResponse<GroupSearchItem>` |
+| 群组管理 | `POST /api/v1/admin/groups/search` | 搜索群组 | `AdminGroupSearchRequest` | `ApiResponse<PaginatedData<GroupItem>>` |
+| 群组管理 | `POST /api/v1/admin/groups/detail` | 群组详情 | `AdminGroupDetailRequest` | `ApiResponse<GroupItem>` |
 | 群组管理 | `POST /api/v1/admin/groups/dismiss` | 解散群组 | `AdminDismissGroupRequest` | `ApiResponse` |
 
 ## 核心类型定义
 
-**GroupSearchItem**: 管理员接口返回 `GroupSearchItem`，包含 `@admin-only` 字段（见 `@api_spec_common.mdc`）。
+**GroupItem**: 管理员接口返回 `GroupItem`，包含 `@admin-only` 字段（见 `@api_spec_common.mdc`）。
 
 ## 错误码说明
 
@@ -63,7 +63,7 @@ interface AdminGroupSearchRequest {
   owner_id?: string;
 }
 ```
-**Response**: `ApiResponse<PaginatedData<GroupSearchItem>>`
+**Response**: `ApiResponse<PaginatedData<GroupItem>>`
 
 **可能错误码**：`10204`、`10205`
 
@@ -79,7 +79,7 @@ interface AdminGroupDetailRequest {
   group_id: string;
 }
 ```
-**Response**: `ApiResponse<GroupSearchItem>`
+**Response**: `ApiResponse<GroupItem>`
 
 **可能错误码**：`10001`、`10204`、`10205`、`10320`
 

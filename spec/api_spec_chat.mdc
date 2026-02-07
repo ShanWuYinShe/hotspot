@@ -24,9 +24,9 @@ alwaysApply: true
 
 | 子域 | 端点 | 说明 | Request | Response |
 |-----|------|------|---------|----------|
-| 私聊管理 | `POST /api/v1/private_chats/me` | 私聊列表 | `MyPrivateChatsRequest` | `ApiResponse<PaginatedData<PrivateChatListItem>>` |
+| 私聊管理 | `POST /api/v1/private_chats/me` | 私聊列表 | `MyPrivateChatsRequest` | `ApiResponse<PaginatedData<PrivateChatItem>>` |
 | 私聊管理 | `POST /api/v1/private_chats/open_the_door` | 私聊详情 | `PrivateChatOpenTheDoorRequest` | `ApiResponse<PrivateChatOpenResult>` |
-| 私聊管理 | `POST /api/v1/private_chats/update_settings` | 更新会话设置 | `UpdatePrivateChatSettingsRequest` | `ApiResponse<PrivateChatDetail>` |
+| 私聊管理 | `POST /api/v1/private_chats/update_settings` | 更新会话设置 | `UpdatePrivateChatSettingsRequest` | `ApiResponse<PrivateChatItem>` |
 | 私聊管理 | `POST /api/v1/private_chats/delete` | 删除私聊会话（仅当前用户视角） | `DeletePrivateChatRequest` | `ApiResponse` |
 | 私聊消息 | `POST /api/v1/private_messages/send` | 发送私聊消息 | `SendPrivateMessageRequest` | `ApiResponse` |
 | 私聊消息 | `POST /api/v1/private_messages/history` | 私聊消息历史 | `PrivateMessagesHistoryRequest` | `ApiResponse<PaginatedData<PrivateMessageItem>>` |
@@ -42,20 +42,15 @@ alwaysApply: true
 ## 核心类型定义
 
 ```typescript
-interface PrivateChatDetail {
-  target_user: UserInfo;
-  message_limit?: MessageLimit;
+// PrivateChatItem: 私聊统一数据类型（用于列表、详情等所有场景）
+interface PrivateChatItem {
+  other_user: UserInfo;
   unread_count: number;
   is_muted: boolean;
   is_pinned: boolean;
   last_activity_at: string;
-  created_at: string;
-  can_message: boolean;
-}
-
-interface PrivateChatListItem {
-  other_user: UserInfo;
-  unread_count: number;
+  
+  // 列表场景返回
   last_message?: {
     message_id: string;
     content?: string;
@@ -64,17 +59,18 @@ interface PrivateChatListItem {
     sender_id: string;
     sent_at: string;
   };
-  last_activity_at: string;
-  is_muted: boolean;
-  is_pinned: boolean;
   
-  // 对方在线状态 (快照)
-  presence_status: UserPresenceStatus;
-  status_text?: string;  // 自定义状态文本
+  // 隐私受控（对方隐私设置时不返回）
+  presence_status?: UserPresenceStatus;
+  
+  // 详情场景返回
+  message_limit?: MessageLimit;
+  created_at?: string;
+  can_message?: boolean;
 }
 
 interface PrivateChatOpenResult {
-  chat: PrivateChatDetail;
+  chat: PrivateChatItem;
   recent_messages?: PaginatedData<PrivateMessageItem>;
 }
 
@@ -99,6 +95,7 @@ interface PrivateMessageItem {
   sent_at: string;
   edited_at?: string;
   recalled_at?: string;  // 存在即表示已撤回
+  is_read?: boolean;     // 消息是否已被对方读取
 }
 ```
 
@@ -139,7 +136,7 @@ interface MyPrivateChatsRequest {
   pagination?: PaginationParams;
 }
 ```
-**Response**: `ApiResponse<PaginatedData<PrivateChatListItem>>`
+**Response**: `ApiResponse<PaginatedData<PrivateChatItem>>`
 
 #### POST /api/v1/private_chats/open_the_door
 
@@ -183,7 +180,7 @@ interface UpdatePrivateChatSettingsRequest {
   is_pinned?: boolean;
 }
 ```
-**Response**: `ApiResponse<PrivateChatDetail>`
+**Response**: `ApiResponse<PrivateChatItem>`
 
 #### POST /api/v1/private_chats/delete
 

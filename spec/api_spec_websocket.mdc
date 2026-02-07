@@ -749,34 +749,20 @@ type GetSubscriptionsEvent = { type: "GetSubscriptions"; payload: GetSubscriptio
 WebSocket订阅机制提供用户状态订阅和群组订阅两种类型：
 
 ```typescript
-// 订阅项定义（两种类型）
-// 单次订阅请求仅允许一个 type，不同 type 需分开请求
-interface SubscriptionItemUser {
-  type: 'user';
-  ids: string[];     // user_id（string）
-}
-interface SubscriptionItemGroup {
-  type: 'group';
-  ids: string[];     // group_id（string）
-}
-type SubscriptionItem = SubscriptionItemUser | SubscriptionItemGroup;
-
-// SetSubscriptions - 替换式订阅（覆盖现有订阅）
-// ids 为空表示清空该类型订阅
+// 订阅操作类型
+// - subscribe: 增量添加（进入场景时订阅新的 ID）
+// - unsubscribe: 增量移除（退出场景时取消订阅）
+// - set: 全量覆盖（重连时同步完整订阅列表，ids 为空则清空该类型订阅）
 type SubscriptionOperation = 'subscribe' | 'unsubscribe' | 'set';
 
-interface SetSubscriptionsPayloadBase {
+// SetSubscriptions - 订阅管理（扁平结构）
+// 单次请求仅允许一个 type，不同 type 需分开请求
+interface SetSubscriptionsPayload {
   client_msg_id: string;       // 客户端生成，用于与 SubscribeAck 对齐（建议：UUID）
+  operation: SubscriptionOperation;
+  type: 'user' | 'group';     // 订阅类型
+  ids: string[];               // 订阅目标 ID 列表（user_id 或 group_id）
 }
-interface SetSubscriptionsPayloadUser {
-  base: SetSubscriptionsPayloadBase;
-  subscription: SubscriptionItemUser;
-}
-interface SetSubscriptionsPayloadGroup {
-  base: SetSubscriptionsPayloadBase;
-  subscription: SubscriptionItemGroup;
-}
-type SetSubscriptionsPayload = SetSubscriptionsPayloadUser | SetSubscriptionsPayloadGroup;
 type SetSubscriptionsEvent = { type: "SetSubscriptions"; payload: SetSubscriptionsPayload; };
 
 // 订阅确认事件（服务端回复）
@@ -792,22 +778,15 @@ interface FailedSubscriptionId {
   reason: SubscriptionFailureReason;
 }
 
-interface SubscribeAckPayloadBase {
-  client_msg_id: string;                               // 回传客户端消息ID，用于与本次订阅请求一一对应
-  operation: SubscriptionOperation;
+interface SubscribeAckPayload {
+  client_msg_id: string;                             // 回传客户端消息ID
+  operation: SubscriptionOperation;                  // 回传操作类型
+  type: 'user' | 'group';                           // 回传订阅类型
+  ids: string[];                                     // 回传订阅 ID 列表
   code: number;                                      // 0表示成功，非0表示失败
   message?: string;                                  // 错误消息（失败时）
-  failed_ids?: FailedSubscriptionId[];               // 失败的订阅 id（id 类型与 type 对应）
+  failed_ids?: FailedSubscriptionId[];               // 失败的订阅 id
 }
-interface SubscribeAckPayloadUser {
-  base: SubscribeAckPayloadBase;
-  subscription: SubscriptionItemUser;
-}
-interface SubscribeAckPayloadGroup {
-  base: SubscribeAckPayloadBase;
-  subscription: SubscriptionItemGroup;
-}
-type SubscribeAckPayload = SubscribeAckPayloadUser | SubscribeAckPayloadGroup;
 type SubscribeAckEvent = { type: "SubscribeAck"; payload: SubscribeAckPayload; };
 ```
 
@@ -830,19 +809,18 @@ WebSocket 推送分为**自动推送**和**订阅推送**两种模式（详见�
 
 **订阅方式**：
 
-客户端使用 `SetSubscriptions` 管理订阅列表（覆盖式）：
+客户端使用 `SetSubscriptions` 管理订阅列表，支持三种操作：
 
-- 不支持单条订阅/取消接口，仅允许按分类覆盖式设置
-
-- **添加订阅**：发送完整列表（包含新增项）
-- **移除订阅**：发送完整列表（不包含移除项）
-- **清空订阅**：发送空数组 `ids: []`
-
-客户端本地维护订阅状态，需要更改时发送完整列表（`ids` 全部为 string）。
+- **`subscribe`（增量添加）**：进入场景时，发送新增的 ID 列表
+- **`unsubscribe`（增量移除）**：退出场景时，发送要移除的 ID 列表
+- **`set`（全量覆盖）**：重连后同步完整订阅列表，`ids` 为空则清空该类型订阅
 
 **场景管理**：
-- 进入场景：按需订阅对应分类的 id 列表
-- 退出场景：立即从该分类列表移除对应 id，并发送 `SetSubscriptions`
+- 进入场景：使用 `subscribe` 操作添加需要订阅的 ID
+- 退出场景：使用 `unsubscribe` 操作移除不再需要的 ID
+- 重连恢复：使用 `set` 操作发送完整的本地订阅列表，确保与服务端同步
+
+客户端本地维护订阅状态，所有 `ids` 为 string 类型。
 
 **类型约束**：
 - 单次订阅请求仅允许一个 `type`，不同类型需分开请求

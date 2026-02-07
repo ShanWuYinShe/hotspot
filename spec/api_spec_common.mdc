@@ -226,18 +226,17 @@ alwaysApply: true
 **设计规范**：
 
 - **创建操作 (create)**: 仅返回新资源 ID 和客户端无法推断的必要字段 (如 `created_at`).
-- **列表/搜索/详情操作**: 统一使用 `XxxSearchItem` 类型，通过 `@auth-only` 字段区分登录态和非登录态的响应差异.
+- **列表/搜索/详情/Feed操作**: 统一使用 `XxxItem` 类型，通过 `@auth-only`/`@admin-only` 等字段标注区分不同上下文的响应差异.
 - **上下文敏感**：同一路径下，区分“未登录（不带 token）”与“已登录（带 token）”的数据形态差异（通过 `@auth-only` 字段体现）。
 
 ### 强类型要求
 
 - 所有 request/response 必须强类型
 - 类型命名遵循：
-  - 统一搜索类型: `XxxSearchItem` (如 `UserSearchItem`, `GroupSearchItem`, `MomentSearchItem` - 用于列表、搜索、详情等所有场景，因为获取详情也是一种指定目标的搜索)
+  - 统一数据类型: `XxxItem` (如 `UserItem`, `GroupItem`, `MomentItem` - 用于列表、搜索、详情、Feed 等所有场景，通过 `@auth-only`/`@admin-only` 等标注控制不同上下文的字段可见性)
   - 基础信息: `XxxInfo` (嵌入用，如 `UserInfo`, `GroupInfo`)
   - 我的状态: `MyXxxState` (如 `MyGroupState`)
   - 关系: `Relationship`
-  - 特定场景列表项: `XxxListItem` (如 `UserMomentListItem` - 仅当需要特殊字段时使用)
 
 ### 类型归属与复用规则（契约级）
 
@@ -287,6 +286,15 @@ type AnnouncementSeverity = 'info' | 'warning' | 'error';
 
 // === 关注来源（心理学优化：让被关注者了解"为什么被关注"）===
 type FollowSource = 'moment' | 'search' | 'recommendation' | 'profile' | 'group';
+
+// === 推荐理由类型（心理学优化：让用户了解为什么推荐）===
+type RecommendationType = 'friend_liked' | 'nearby' | 'trending' | 'following' | 'tag_match';
+
+interface RecommendationContext {
+  type: RecommendationType;
+  // 社交证明（仅 friend_liked 类型时存在）
+  friends_preview?: UserInfo[];  // 最多2个点赞的好友
+}
 ```
 
 ### 位置与地理信息
@@ -335,9 +343,12 @@ interface RelativeLocation {
 
 // 使用说明：
 // - Request 参数：使用 Location（只有坐标+名称）
-// - Response 数据：统一使用 RelativeLocation（share.apply 的 update_reference_point 例外，返回 Location）
-//   - 搜索/列表/Feed：distance 和 bearing_degrees 有值
-  //   - 详情/Admin/当前用户的内容：distance 和 bearing_degrees 为 undefined
+// - Response 数据：
+//   - 经过距离/角度计算的：使用 RelativeLocation
+//     - 搜索/列表/Feed：distance 和 bearing_degrees 有值
+//     - 详情/Admin/当前用户的内容：distance 和 bearing_degrees 为 undefined
+//   - 直接映射自 Request 的（未经距离/角度计算）：使用 Location
+//     - 如：GroupSettings.location、MyProfile.location 等配置/个人数据
 
 ```
 
@@ -360,7 +371,10 @@ interface PaginatedData<T> {
 }
 
 // 搜索基础参数（包含浏览锚点位置，组合分页参数）
-// 说明：reference_point 是客户端必须传入的有效地理位置，服务端用于计算距离和推荐内容
+// 说明：reference_point 是客户端必须传入的有效地理位置
+// - 服务端可能用于距离计算、地理位置排序、推荐优化等
+// - 即使是纯关键字搜索，服务端也可能利用 reference_point 优化排序（附近的结果更靠前）
+// - 客户端拒绝定位时使用 fallback 坐标
 interface SearchBaseParams {
   pagination?: PaginationParams;
   reference_point: GeoPoint; // 浏览锚点位置（客户端必须传入有效坐标，拒绝定位时使用 fallback）
@@ -427,16 +441,15 @@ interface AdminBanRecord {
   unbanned_by?: UserInfo;
 }
 
-**UserSearchItem**: 用户统一搜索类型（用于列表、搜索、详情等所有场景）
+**UserItem**: 用户统一数据类型（用于列表、搜索、详情、Feed 等所有场景）
 ```typescript
-interface UserSearchItem {
+interface UserItem {
   user: UserInfo;
   bio?: string;
   tags?: string[];
   
   // 隐私受控字段（隐私限制时不返回，不暴露原因）
   presence_status?: UserPresenceStatus;  // 用户状态（online/offline）
-  status_text?: string;                  // 自定义状态文本（如"开会中"）
   last_online?: string;                  // 最后在线时间（offline 时有值）
   
   // 位置信息：使用 RelativeLocation
@@ -451,7 +464,7 @@ interface UserSearchItem {
   relation?: Relationship;
   
   // 社交上下文（心理学优化：展示与当前用户的共同点，增强连接感）
-  // 详情页返回，搜索/列表不返回
+  // 详情页/Feed 返回，搜索/列表不返回
   social_context?: {
     mutual_friends_count: number;       // 共同好友数
     mutual_friends_preview?: UserInfo[];  // 前2-3个共同好友
@@ -500,9 +513,9 @@ interface GroupInfo {
 }
 ```
 
-**GroupSearchItem**: 群组统一搜索类型（用于列表、搜索、详情等所有场景）
+**GroupItem**: 群组统一数据类型（用于列表、搜索、详情、Feed 等所有场景）
 ```typescript
-interface GroupSearchItem {
+interface GroupItem {
   group: GroupInfo;
   description?: string;
   tags?: string[];
@@ -519,6 +532,9 @@ interface GroupSearchItem {
   
   // === @auth-only 以下字段仅登录态返回 ===
   my_state?: MyGroupState;
+  
+  // Feed 场景返回（好友中有多少在该群组内）
+  friends_in_group?: number;
 
   // === @admin-only 以下字段仅管理员返回 ===
   owner?: UserInfo;
@@ -548,7 +564,7 @@ interface GroupSettings {
   join_method: GroupJoinMethod;
   is_searchable: boolean;
   max_members: number;
-  location: RelativeLocation;  // distance/bearing_degrees 为 undefined（配置不需要距离）
+  location: Location;  // 直接映射自请求，不经过距离/角度计算
 }
 ```
 
@@ -616,15 +632,15 @@ interface MomentBase {
 }
 ```
 
-**MomentSearchItem**: 瞬间统一搜索类型（用于列表、搜索、详情等所有场景）
+**MomentItem**: 瞬间统一数据类型（用于列表、搜索、详情、Feed、用户瞬间历史等所有场景）
 ```typescript
-interface MomentSearchItem {
+interface MomentItem {
   moment: MomentBase;
   user: UserInfo;
   
   // 位置信息：使用 RelativeLocation
-  // - 搜索/列表场景：distance 和 bearing_degrees 有值
-  // - 详情场景：distance 和 bearing_degrees 为 undefined
+  // - 搜索/列表/Feed 场景：distance 和 bearing_degrees 有值
+  // - 详情/用户瞬间历史场景：distance 和 bearing_degrees 为 undefined
   location: RelativeLocation;
   
   // === @auth-only 以下字段仅登录态返回 ===
@@ -632,21 +648,13 @@ interface MomentSearchItem {
     is_liked: boolean;
     is_favorited: boolean;
   };
+  
+  // Feed 场景返回（推荐理由，让用户了解为什么看到这条内容）
+  recommendation?: RecommendationContext;
 }
 ```
 
 注意：`privacy_level` 不对非拥有者暴露，生活瞬间的可见性由服务端过滤控制。
-
-**UserMomentListItem**: 用户瞬间列表项（组合 MomentBase，用于查看某个用户的瞬间历史）
-```typescript
-interface UserMomentListItem {
-  moment: MomentBase;
-  location: RelativeLocation;  // distance/bearing_degrees 为 undefined（用户时间线不需要距离）
-  // 注：不包含 user 字段，因为查询时 user 已知
-}
-```
-
-说明：此类型不包含 user 字段，因为在"查看某个用户的瞬间列表"场景下，user 信息已知且冗余。
 
 ### 消息 (Message)
 

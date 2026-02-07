@@ -23,8 +23,8 @@ alwaysApply: true
 
 | 子域 | 端点 | 说明 | Request | Response |
 |-----|------|------|---------|----------|
-| 审计日志 | `POST /api/v1/admin/audit/list` | 审计日志列表 | `AuditLogListRequest` | `ApiResponse<PaginatedData<AuditLogSearchItem>>` |
-| 审计日志 | `POST /api/v1/admin/audit/detail` | 审计日志详情 | `AuditLogDetailRequest` | `ApiResponse<AuditLogSearchItem>` |
+| 审计日志 | `POST /api/v1/admin/audit/list` | 审计日志列表 | `AuditLogListRequest` | `ApiResponse<PaginatedData<AuditLogItem>>` |
+| 审计日志 | `POST /api/v1/admin/audit/detail` | 审计日志详情 | `AuditLogDetailRequest` | `ApiResponse<AuditLogItem>` |
 | 审计日志 | `POST /api/v1/admin/audit/export` | 导出审计日志（异步） | `AuditLogExportRequest` | `ApiResponse<AuditLogExportResult>` |
 | 审计日志 | `POST /api/v1/admin/audit/export/status` | 导出任务状态 | `AuditLogExportStatusRequest` | `ApiResponse<AuditLogExportResult>` |
 
@@ -79,9 +79,9 @@ type StateSnapshot =
   | { type: 'role'; name?: string; permissions?: string[] }
   | { type: 'config'; value?: string };
 
-**AuditLogSearchItem**: 审计日志统一搜索类型（用于列表、搜索、详情等所有场景，返回完全相同的字段）
+**AuditLogItem**: 审计日志统一数据类型（用于列表、搜索、详情等所有场景，返回完全相同的字段）
 
-interface AuditLogSearchItem {
+interface AuditLogItem {
   log_id: string;
   action: AuditAction;
   operator: UserInfo;             // 执行操作的管理员
@@ -146,7 +146,7 @@ interface AuditLogListRequest {
   end_time?: string;              // 结束时间（UTC ISO 8601）
 }
 ```
-**Response**: `ApiResponse<PaginatedData<AuditLogSearchItem>>`
+**Response**: `ApiResponse<PaginatedData<AuditLogItem>>`
 
 **可能错误码**：`10204`、`10205`
 
@@ -162,7 +162,7 @@ interface AuditLogDetailRequest {
   log_id: string;
 }
 ```
-**Response**: `ApiResponse<AuditLogSearchItem>`
+**Response**: `ApiResponse<AuditLogItem>`
 
 **可能错误码**：`10001`、`10204`、`10205`、`10300`
 

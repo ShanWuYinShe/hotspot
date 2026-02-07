@@ -24,25 +24,25 @@ alwaysApply: true
 
 | 子域 | 端点 | 说明 | Request | Response |
 |-----|------|------|---------|----------|
-| 搜索与发现 | `POST /api/v1/moments/search_by_keyword` | 搜索瞬间（关键字） | `SearchMomentsByKeywordRequest` | `ApiResponse<PaginatedData<MomentSearchItem>>` |
-| 搜索与发现 | `POST /api/v1/moments/search_by_tag` | 搜索瞬间（标签） | `SearchMomentsByTagRequest` | `ApiResponse<PaginatedData<MomentSearchItem>>` |
-| 搜索与发现 | `POST /api/v1/moments/search_by_location` | 搜索瞬间（位置） | `SearchMomentsByLocationRequest` | `ApiResponse<PaginatedData<MomentSearchItem>>` |
+| 搜索与发现 | `POST /api/v1/moments/search_by_keyword` | 搜索瞬间（关键字） | `SearchMomentsByKeywordRequest` | `ApiResponse<PaginatedData<MomentItem>>` |
+| 搜索与发现 | `POST /api/v1/moments/search_by_tag` | 搜索瞬间（标签） | `SearchMomentsByTagRequest` | `ApiResponse<PaginatedData<MomentItem>>` |
+| 搜索与发现 | `POST /api/v1/moments/search_by_location` | 搜索瞬间（位置） | `SearchMomentsByLocationRequest` | `ApiResponse<PaginatedData<MomentItem>>` |
 | 搜索与发现 | `POST /api/v1/moments/suggest` | 瞬间搜索建议 | `SuggestMomentsRequest` | `ApiResponse<PaginatedData<MomentSuggestItem>>` |
-| 瞬间详情 | `POST /api/v1/moments/open_the_door` | 瞬间详情 | `MomentOpenTheDoorRequest` | `ApiResponse<MomentSearchItem>` |
-| 瞬间操作 | `POST /api/v1/moments/create` | 创建瞬间 | `CreateMomentRequest` | `ApiResponse<UserMomentListItem>` |
+| 瞬间详情 | `POST /api/v1/moments/open_the_door` | 瞬间详情 | `MomentOpenTheDoorRequest` | `ApiResponse<MomentItem>` |
+| 瞬间操作 | `POST /api/v1/moments/create` | 创建瞬间 | `CreateMomentRequest` | `ApiResponse<MomentItem>` |
 | 瞬间操作 | `POST /api/v1/moments/update` | 编辑瞬间 | `EditMomentRequest` | `ApiResponse` |
 | 瞬间操作 | `POST /api/v1/moments/delete` | 删除瞬间 | `DeleteMomentRequest` | `ApiResponse` |
 | 瞬间操作 | `POST /api/v1/moments/like` | 点赞 | `LikeMomentRequest` | `ApiResponse` |
 | 瞬间操作 | `POST /api/v1/moments/unlike` | 取消点赞 | `UnlikeMomentRequest` | `ApiResponse` |
 | 瞬间操作 | `POST /api/v1/moments/favorite` | 收藏 | `FavoriteMomentRequest` | `ApiResponse` |
 | 瞬间操作 | `POST /api/v1/moments/unfavorite` | 取消收藏 | `UnfavoriteMomentRequest` | `ApiResponse` |
-| 我的瞬间 | `POST /api/v1/moments/me` | 我发布的瞬间 | `MyMomentsRequest` | `ApiResponse<PaginatedData<UserMomentListItem>>` |
-| 我的瞬间 | `POST /api/v1/moments/me/favorites` | 我的收藏 | `MyFavoritesRequest` | `ApiResponse<PaginatedData<MomentSearchItem>>` |
+| 我的瞬间 | `POST /api/v1/moments/me` | 我发布的瞬间 | `MyMomentsRequest` | `ApiResponse<PaginatedData<MomentItem>>` |
+| 我的瞬间 | `POST /api/v1/moments/me/favorites` | 我的收藏 | `MyFavoritesRequest` | `ApiResponse<PaginatedData<MomentItem>>` |
 | 点赞列表 | `POST /api/v1/moments/likes` | 瞬间点赞列表 | `MomentLikesRequest` | `ApiResponse<PaginatedData<MomentLikeItem>>` |
-| 评论 | `POST /api/v1/comments/create` | 创建评论/回复 | `CreateCommentRequest` | `ApiResponse<CommentListItem>` |
+| 评论 | `POST /api/v1/comments/create` | 创建评论/回复 | `CreateCommentRequest` | `ApiResponse<CommentItem>` |
 | 评论 | `POST /api/v1/comments/delete` | 删除评论 | `DeleteCommentRequest` | `ApiResponse` |
-| 评论 | `POST /api/v1/comments/list` | 顶层评论列表 | `CommentsRequest` | `ApiResponse<PaginatedData<CommentListItem>>` |
-| 评论 | `POST /api/v1/comments/replies` | 子评论列表 | `CommentRepliesRequest` | `ApiResponse<PaginatedData<CommentListItem>>` |
+| 评论 | `POST /api/v1/comments/list` | 顶层评论列表 | `CommentsRequest` | `ApiResponse<PaginatedData<CommentItem>>` |
+| 评论 | `POST /api/v1/comments/replies` | 子评论列表 | `CommentRepliesRequest` | `ApiResponse<PaginatedData<CommentItem>>` |
 | 评论点赞 | `POST /api/v1/comments/like` | 点赞评论 | `LikeCommentRequest` | `ApiResponse` |
 | 评论点赞 | `POST /api/v1/comments/unlike` | 取消点赞评论 | `UnlikeCommentRequest` | `ApiResponse` |
 | 评论点赞 | `POST /api/v1/comments/likes` | 评论点赞列表 | `CommentLikesRequest` | `ApiResponse<PaginatedData<CommentLikeItem>>` |
@@ -50,7 +50,7 @@ alwaysApply: true
 ## 核心类型定义
 
 ```typescript
-// 注：MomentBase、UserMomentListItem 等类型定义于 @api_spec_common.mdc
+// 注：MomentBase、MomentItem 等类型定义于 @api_spec_common.mdc
 
 interface MomentLikeItem {
   user: UserInfo;
@@ -62,7 +62,7 @@ interface CommentLikeItem {
   liked_at: string;
 }
 
-interface CommentListItem {
+interface CommentItem {
   comment_id: string;
   user: UserInfo;
   content: string;
@@ -71,6 +71,9 @@ interface CommentListItem {
   created_at: string;
   likes_count: number;
   replies_count: number;    // 子评论数量
+  
+  // === @auth-only 以下字段仅登录态返回 ===
+  is_liked?: boolean;       // 当前用户是否已点赞该评论
 }
 ```
 
@@ -113,7 +116,7 @@ interface SearchMomentsByKeywordRequest {
   kw: string;
 }
 ```
-**Response**: `ApiResponse<PaginatedData<MomentSearchItem>>`
+**Response**: `ApiResponse<PaginatedData<MomentItem>>`
 
 #### POST /api/v1/moments/search_by_tag
 
@@ -126,7 +129,7 @@ interface SearchMomentsByTagRequest {
   tag: string;
 }
 ```
-**Response**: `ApiResponse<PaginatedData<MomentSearchItem>>`
+**Response**: `ApiResponse<PaginatedData<MomentItem>>`
 
 #### POST /api/v1/moments/search_by_location
 
@@ -143,7 +146,7 @@ interface SearchMomentsByLocationRequest {
   radius: number;
 }
 ```
-**Response**: `ApiResponse<PaginatedData<MomentSearchItem>>`
+**Response**: `ApiResponse<PaginatedData<MomentItem>>`
 
 #### POST /api/v1/moments/suggest
 
@@ -168,7 +171,7 @@ interface SuggestMomentsRequest {
 #### POST /api/v1/moments/open_the_door
 
 获取瞬间详情。
-Token 可选；登录态返回 `MomentSearchItem.my_state`（包含 `is_liked` 和 `is_favorited`）。
+Token 可选；登录态返回 `MomentItem.my_state`（包含 `is_liked` 和 `is_favorited`）。
 
 **Request**:
 ```typescript
@@ -176,7 +179,7 @@ interface MomentOpenTheDoorRequest {
   moment_id: string;
 }
 ```
-**Response**: `ApiResponse<MomentSearchItem>`
+**Response**: `ApiResponse<MomentItem>`
 
 ### 瞬间操作
 
@@ -196,7 +199,7 @@ interface CreateMomentRequest {
   mentions?: string[];
 }
 ```
-**Response**: `ApiResponse<UserMomentListItem>`
+**Response**: `ApiResponse<MomentItem>`
 
 **可能错误码**：`10001`、`10003`、`10360`、`10310`、`10500`、`22000`、`22002`
 
@@ -209,7 +212,7 @@ interface CreateMomentRequest {
 interface EditMomentRequest {
   moment_id: string;
   description?: string;
-  location: Location;
+  location?: Location;
   tags?: string[];
   image_file_ids?: string[];
   mentions?: string[];
@@ -309,7 +312,7 @@ interface MyMomentsRequest {
   pagination?: PaginationParams;
 }
 ```
-**Response**: `ApiResponse<PaginatedData<UserMomentListItem>>`
+**Response**: `ApiResponse<PaginatedData<MomentItem>>`
 
 #### POST /api/v1/moments/me/favorites
 
@@ -321,7 +324,7 @@ interface MyFavoritesRequest {
   pagination?: PaginationParams;
 }
 ```
-**Response**: `ApiResponse<PaginatedData<MomentSearchItem>>`
+**Response**: `ApiResponse<PaginatedData<MomentItem>>`
 
 #### POST /api/v1/moments/likes
 
@@ -357,7 +360,7 @@ interface CreateCommentRequest {
   mentions?: string[];
 }
 ```
-**Response**: `ApiResponse<CommentListItem>`
+**Response**: `ApiResponse<CommentItem>`
 
 **可能错误码**：`10001`、`10003`、`10330`、`10340`、`10310`、`10200`、`10500`、`22000`、`22002`
 
@@ -389,7 +392,7 @@ interface CommentsRequest {
   moment_id: string;
 }
 ```
-**Response**: `ApiResponse<PaginatedData<CommentListItem>>`
+**Response**: `ApiResponse<PaginatedData<CommentItem>>`
 
 **可能错误码**：`10330`
 
@@ -407,7 +410,7 @@ interface CommentRepliesRequest {
   comment_id: string;
 }
 ```
-**Response**: `ApiResponse<PaginatedData<CommentListItem>>`
+**Response**: `ApiResponse<PaginatedData<CommentItem>>`
 
 **可能错误码**：`10340`
 

@@ -53,7 +53,16 @@ interface NotificationItem {
   type: NotificationType;
   is_read: boolean;
   created_at: string;
-  sender?: UserInfo;
+  
+  // 操作者信息
+  sender?: UserInfo;              // 最新操作者（聚合时为最近一个操作者）
+  
+  // 聚合支持（服务端按 type + target_id 分组）
+  // 展示效果："张三和其他5人赞了你的瞬间"
+  aggregated_count?: number;      // 总操作人数（>1 表示已聚合）
+  actors_preview?: UserInfo[];    // 操作者预览（最多3个，聚合时返回）
+  
+  // 通知内容
   title?: string;
   content?: string;
   target_type?: NotificationTargetType;

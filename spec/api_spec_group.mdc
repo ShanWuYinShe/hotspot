@@ -25,9 +25,9 @@ alwaysApply: true
 
 | 子域 | 端点 | 说明 | Request | Response |
 |-----|------|------|---------|----------|
-| 搜索与发现 | `POST /api/v1/groups/search_by_keyword` | 搜索群组（关键字） | `SearchGroupsByKeywordRequest` | `ApiResponse<PaginatedData<GroupSearchItem>>` |
-| 搜索与发现 | `POST /api/v1/groups/search_by_tag` | 搜索群组（标签） | `SearchGroupsByTagRequest` | `ApiResponse<PaginatedData<GroupSearchItem>>` |
-| 搜索与发现 | `POST /api/v1/groups/search_by_location` | 搜索群组（位置） | `SearchGroupsByLocationRequest` | `ApiResponse<PaginatedData<GroupSearchItem>>` |
+| 搜索与发现 | `POST /api/v1/groups/search_by_keyword` | 搜索群组（关键字） | `SearchGroupsByKeywordRequest` | `ApiResponse<PaginatedData<GroupItem>>` |
+| 搜索与发现 | `POST /api/v1/groups/search_by_tag` | 搜索群组（标签） | `SearchGroupsByTagRequest` | `ApiResponse<PaginatedData<GroupItem>>` |
+| 搜索与发现 | `POST /api/v1/groups/search_by_location` | 搜索群组（位置） | `SearchGroupsByLocationRequest` | `ApiResponse<PaginatedData<GroupItem>>` |
 | 搜索与发现 | `POST /api/v1/groups/suggest` | 群组搜索建议 | `SuggestGroupsRequest` | `ApiResponse<PaginatedData<GroupSuggestItem>>` |
 | 群组详情 | `POST /api/v1/groups/open_the_door` | 群组详情 | `GroupOpenTheDoorRequest` | `ApiResponse<GroupOpenResult>` |
 | 群组详情 | `POST /api/v1/groups/settings` | 群组设置（含只读字段） | `GroupSettingsRequest` | `ApiResponse<GroupSettingsResponse>` |
@@ -54,7 +54,7 @@ alwaysApply: true
 | 群公告 | `POST /api/v1/groups/announcements` | 公告列表 | `GroupAnnouncementsRequest` | `ApiResponse<PaginatedData<GroupAnnouncementItem>>` |
 | 群公告 | `POST /api/v1/groups/announcements/update` | 更新公告 | `UpdateGroupAnnouncementRequest` | `ApiResponse<GroupAnnouncementItem>` |
 | 群公告 | `POST /api/v1/groups/announcements/delete` | 删除公告 | `DeleteGroupAnnouncementRequest` | `ApiResponse` |
-| 我的群组 | `POST /api/v1/groups/me` | 我的群组列表 | `MyGroupsRequest` | `ApiResponse<PaginatedData<GroupSearchItem>>` |
+| 我的群组 | `POST /api/v1/groups/me` | 我的群组列表 | `MyGroupsRequest` | `ApiResponse<PaginatedData<GroupItem>>` |
 | 我的群组 | `POST /api/v1/groups/me/applications/cancel` | 取消申请 | `CancelApplicationRequest` | `ApiResponse` |
 | 我的群组 | `POST /api/v1/groups/me/invites` | 我的邀请列表 | `MyInvitesRequest` | `ApiResponse<PaginatedData<GroupInviteItem>>` |
 | 我的群组 | `POST /api/v1/groups/me/invites/accept` | 接受邀请 | `AcceptInviteRequest` | `ApiResponse` |
@@ -109,7 +109,7 @@ interface GroupSettingsResponse {
 }
 
 interface GroupOpenResult {
-  group: GroupSearchItem;
+  group: GroupItem;
   recent_messages?: PaginatedData<GroupMessageItem>;
 }
 
@@ -199,7 +199,7 @@ interface GroupInviteItem {
 
 说明（Token 可选的搜索语义）：
 - 未登录（不带 token）：仅返回 `is_searchable=true` 的群组；不返回 `@auth-only` 字段
-- 已登录（带 token）：在满足关系与可见性规则前提下，允许返回更多可见群组；返回完整的 `GroupSearchItem`（包括 `@auth-only` 字段）
+- 已登录（带 token）：在满足关系与可见性规则前提下，允许返回更多可见群组；返回完整的 `GroupItem`（包括 `@auth-only` 字段）
 
 #### POST /api/v1/groups/search_by_keyword
 
@@ -212,7 +212,7 @@ interface SearchGroupsByKeywordRequest {
   kw: string;
 }
 ```
-**Response**: `ApiResponse<PaginatedData<GroupSearchItem>>`
+**Response**: `ApiResponse<PaginatedData<GroupItem>>`
 
 #### POST /api/v1/groups/search_by_tag
 
@@ -225,7 +225,7 @@ interface SearchGroupsByTagRequest {
   tag: string;
 }
 ```
-**Response**: `ApiResponse<PaginatedData<GroupSearchItem>>`
+**Response**: `ApiResponse<PaginatedData<GroupItem>>`
 
 #### POST /api/v1/groups/search_by_location
 
@@ -239,7 +239,7 @@ interface SearchGroupsByLocationRequest {
   radius: number;
 }
 ```
-**Response**: `ApiResponse<PaginatedData<GroupSearchItem>>`
+**Response**: `ApiResponse<PaginatedData<GroupItem>>`
 
 #### POST /api/v1/groups/suggest
 
@@ -264,7 +264,7 @@ interface SuggestGroupsRequest {
 #### POST /api/v1/groups/open_the_door
 
 获取群组详情。
-Token 可选；登录态返回 `GroupSearchItem.my_state`。
+Token 可选；登录态返回 `GroupItem.my_state`。
 可选返回最近消息（`recent_messages`）。
 
 **Request**:
@@ -332,7 +332,7 @@ interface UpdateGroupRequest {
   join_method?: GroupJoinMethod;
   is_searchable?: boolean;
   max_members?: number;
-  location: Location;
+  location?: Location;
 }
 ```
 **Response**: `ApiResponse`
@@ -714,7 +714,7 @@ interface MyGroupsRequest {
   pagination?: PaginationParams;
 }
 ```
-**Response**: `ApiResponse<PaginatedData<GroupSearchItem>>`
+**Response**: `ApiResponse<PaginatedData<GroupItem>>`
 
 **说明**：登录态必定返回 `my_state` 字段，包含 `role`、`is_joined`、`unread_count`、`is_muted`、`is_pinned`、`joined_at` 等群组内状态。
 

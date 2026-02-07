@@ -25,9 +25,9 @@ alwaysApply: true
 
 | 子域 | 端点 | 说明 | Request | Response |
 |-----|------|------|---------|----------|
-| 信息流 | `POST /api/v1/feed/moments` | 获取瞬间信息流 | `GetFeedMomentsRequest` | `ApiResponse<PaginatedData<FeedMomentItem>>` |
-| 信息流 | `POST /api/v1/feed/groups` | 获取群组推荐 | `GetFeedGroupsRequest` | `ApiResponse<PaginatedData<FeedGroupItem>>` |
-| 信息流 | `POST /api/v1/feed/users` | 获取用户推荐 | `GetFeedUsersRequest` | `ApiResponse<PaginatedData<FeedUserItem>>` |
+| 信息流 | `POST /api/v1/feed/moments` | 获取瞬间信息流 | `GetFeedMomentsRequest` | `ApiResponse<PaginatedData<MomentItem>>` |
+| 信息流 | `POST /api/v1/feed/groups` | 获取群组推荐 | `GetFeedGroupsRequest` | `ApiResponse<PaginatedData<GroupItem>>` |
+| 信息流 | `POST /api/v1/feed/users` | 获取用户推荐 | `GetFeedUsersRequest` | `ApiResponse<PaginatedData<UserItem>>` |
 | 信息流 | `POST /api/v1/feed/trending` | 获取热门内容 | `GetFeedTrendingRequest` | `ApiResponse<TrendingBundle>` |
 | 信息流 | `POST /api/v1/feed/feedback` | 信息流反馈 | `FeedFeedbackRequest` | `ApiResponse` |
 | 标签 | `POST /api/v1/tags/trending` | 热门标签 | `TrendingTagsRequest` | `ApiResponse<PaginatedData<TagItem>>` |
@@ -38,6 +38,12 @@ alwaysApply: true
 ## 核心类型定义
 
 ```typescript
+// 注：MomentItem、GroupItem、UserItem、RecommendationContext 等类型定义于 @api_spec_common.mdc
+// Feed 端点直接复用这些统一类型：
+// - MomentItem：Feed 场景下 my_state 和 recommendation 字段会被填充
+// - GroupItem：Feed 场景下 my_state 和 friends_in_group 字段会被填充
+// - UserItem：Feed 场景下 relation 和 social_context 字段会被填充
+
 // 信息流来源
 type FeedSource = 'following' | 'nearby' | 'all';
 
@@ -53,64 +59,16 @@ type TagTrend = 'rising' | 'stable' | 'falling';
 // 标签时间范围
 type TagTimeframe = 'daily' | 'weekly' | 'monthly';
 
-// 推荐理由类型（心理学优化：让用户了解为什么推荐）
-type RecommendationType = 'friend_liked' | 'nearby' | 'trending' | 'following' | 'tag_match';
-
-interface RecommendationContext {
-  type: RecommendationType;
-  // 社交证明（仅 friend_liked 类型时存在）
-  friends_preview?: UserInfo[];  // 最多2个点赞的好友
-}
-
-// FeedMomentItem: 信息流瞬间列表项（组合 MomentBase，带互动状态和推荐理由）
-interface FeedMomentItem {
-  moment: MomentBase;
-  user: UserInfo;
-  location: RelativeLocation;
-  
-  // 互动状态（内联，因为 Feed 端点必然返回互动状态）
-  is_liked: boolean;
-  is_favorited: boolean;
-  
-  // 推荐理由（可选，让用户了解为什么看到这条内容）
-  recommendation?: RecommendationContext;
-}
-
-// FeedGroupItem: 组合 GroupInfo（定义于 @api_spec_common.mdc）
-interface FeedGroupItem {
-  group: GroupInfo;
-  description?: string;
-  tags?: string[];
-  has_password: boolean;
-  location: RelativeLocation;
-  friends_in_group?: number;  // 好友中有多少在该群组内
-  my_state?: MyGroupState;    // 引用 @api_spec_common.mdc
-}
-
-// FeedUserItem: 组合 UserInfo（定义于 @api_spec_common.mdc）
-interface FeedUserItem {
-  user: UserInfo;
-  bio?: string;
-  tags?: string[];
-  // 隐私受控字段（隐私限制时不返回，不暴露原因）
-  presence_status?: UserPresenceStatus;
-  last_online?: string;
-  location?: RelativeLocation;
-  mutual_friends_count?: number;  // 共同好友数
-  common_tags?: string[];
-  relation?: Relationship;
-}
-
 interface TrendingBundle {
   trending_tags: TrendingTagItem[];
-  hot_moments: FeedMomentItem[];
+  hot_moments: MomentItem[];
 }
 
 interface TrendingTagItem {
   name: string;
   usage_count: number;
   trend: TagTrend;
-  hot_moment_preview?: FeedMomentItem;
+  hot_moment_preview?: MomentItem;
 }
 
 interface TagItem {
@@ -118,7 +76,6 @@ interface TagItem {
   usage_count: number;
   trend?: TagTrend;
 }
-
 ```
 
 ## 错误码说明
@@ -157,7 +114,7 @@ interface GetFeedMomentsRequest {
   radius?: number;
 }
 ```
-**Response**: `ApiResponse<PaginatedData<FeedMomentItem>>`
+**Response**: `ApiResponse<PaginatedData<MomentItem>>`
 
 **来源说明**：
 - `following`：仅关注的人发布的瞬间，按时间倒序（暂时没用到，但是仍然需要 reference_point，）
@@ -182,7 +139,7 @@ interface GetFeedGroupsRequest {
   radius?: number;
 }
 ```
-**Response**: `ApiResponse<PaginatedData<FeedGroupItem>>`
+**Response**: `ApiResponse<PaginatedData<GroupItem>>`
 
 **可能错误码**：`10001`、`10003`
 
@@ -202,7 +159,7 @@ interface GetFeedUsersRequest {
   radius?: number;
 }
 ```
-**Response**: `ApiResponse<PaginatedData<FeedUserItem>>`
+**Response**: `ApiResponse<PaginatedData<UserItem>>`
 
 **可能错误码**：`10001`、`10003`
 
