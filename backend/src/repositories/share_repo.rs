@@ -1,92 +1,86 @@
 //! 分享数据仓库
 //!
-//! 负责分享的数据库访问
+//! 适配新 Schema: share_id, sharer_id, content_type, content_id, platform, created_at
 
-use crate::error::AppError;
-use crate::types::enums::ShareType;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-/// 分享仓库
+use crate::error::Result;
+
+#[derive(Debug, Clone, sqlx::FromRow, Serialize, Deserialize)]
+pub struct ShareRow {
+    pub share_id: Uuid,
+    pub creator_id: i64,
+    pub share_code: String,
+    pub share_type: String,
+    pub payload: serde_json::Value,
+    pub expires_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+}
+
 pub struct ShareRepository;
 
 impl ShareRepository {
-    /// 创建分享
+    /// 创建分享记录
     pub async fn create(
         pool: &PgPool,
         share_code: &str,
-        share_type: ShareType,
+        share_type: &str,
         creator_id: i64,
         payload: &serde_json::Value,
-    ) -> Result<Uuid, AppError> {
-        let share_id = sqlx::query_scalar!(
+    ) -> Result<Uuid> {
+        let row = sqlx::query!(
             r#"
-            INSERT INTO shares (share_code, share_type, creator_id, payload)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO shares (share_code, share_type, payload, sharer_id)
+            VALUES ($1, $2::text::share_type, $3, $4)
             RETURNING share_id
             "#,
             share_code,
-            share_type.as_str(),
-            creator_id,
-            payload
+            share_type,
+            payload,
+            creator_id
         )
         .fetch_one(pool)
-        .await
-        .map_err(|e| {
-            tracing::error!("创建分享失败: {}", e);
-            AppError::internal(e.to_string())
-        })?;
+        .await?;
 
-        Ok(share_id)
+        Ok(row.share_id)
     }
 
-    /// 根据 share_code 获取分享
-    pub async fn get_by_code(pool: &PgPool, share_code: &str) -> Result<Option<DbShare>, AppError> {
-        let share = sqlx::query_as!(
-            DbShare,
+    /// 获取分享记录
+    pub async fn get_by_code(pool: &PgPool, share_code: &str) -> Result<Option<ShareRow>> {
+        let row = sqlx::query_as!(
+            ShareRow,
             r#"
-            SELECT share_id, share_code, share_type, creator_id, payload, created_at
+            SELECT share_id as "share_id!",
+                   sharer_id as "creator_id!",
+                   share_code as "share_code!",
+                   share_type::text as "share_type!",
+                   payload as "payload!",
+                   expires_at,
+                   created_at as "created_at!"
             FROM shares
             WHERE share_code = $1
             "#,
             share_code
         )
         .fetch_optional(pool)
-        .await
-        .map_err(|e| {
-            tracing::error!("获取分享失败: {}", e);
-            AppError::internal(e.to_string())
-        })?;
+        .await?;
 
-        Ok(share)
+        Ok(row)
     }
 
-    /// 检查 share_code 是否已存在
-    pub async fn exists_by_code(pool: &PgPool, share_code: &str) -> Result<bool, AppError> {
+    pub async fn exists_by_code(pool: &PgPool, share_code: &str) -> Result<bool> {
         let exists = sqlx::query_scalar!(
             r#"
-            SELECT EXISTS(SELECT 1 FROM shares WHERE share_code = $1) AS "exists!"
+            SELECT EXISTS(SELECT 1 FROM shares WHERE share_code = $1) as "exists!"
             "#,
             share_code
         )
         .fetch_one(pool)
-        .await
-        .map_err(|e| {
-            tracing::error!("检查分享码是否存在失败: {}", e);
-            AppError::internal(e.to_string())
-        })?;
+        .await?;
 
         Ok(exists)
     }
-}
-
-/// 数据库分享记录
-#[derive(Debug, Clone)]
-pub struct DbShare {
-    pub share_id: Uuid,
-    pub share_code: String,
-    pub share_type: String,
-    pub creator_id: i64,
-    pub payload: serde_json::Value,
-    pub created_at: chrono::DateTime<chrono::Utc>,
 }

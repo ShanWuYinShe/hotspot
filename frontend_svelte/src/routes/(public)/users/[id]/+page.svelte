@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { page } from '$app/stores';
-	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { usersService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
@@ -25,13 +23,15 @@
 	import UserCheck from 'lucide-svelte/icons/user-check';
 	import UserMinus from 'lucide-svelte/icons/user-minus';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
+	import type { PageData } from './$types';
 
-	const userId = parseInt($page.params.id!);
+	let { data }: { data: PageData } = $props();
 
-	let user = $state<UserCard | null>(null);
-	let isLoading = $state(true);
-	let isFollowing = $state(false);
-	let isFollowPending = $state(false);
+	const userId = data.userId;
+
+	let user = $state<UserCard | null>(data.user);
+	let isFollowing = $state(data.user?.relation?.is_following ?? false);
+	let isFollowPending = $state(data.user?.relation?.has_pending_follow_request ?? false);
 	let isActionLoading = $state(false);
 	let currentTab = $state<'moments' | 'followers' | 'following'>('moments');
 
@@ -51,22 +51,6 @@
 		uniqueKey: 'user_id'
 	});
 
-	async function loadUser() {
-		try {
-			const response = await usersService.getUser({ user_id: userId });
-			if (isSuccess(response) && response.data) {
-				user = response.data;
-				isFollowing = user.relation?.is_following ?? false;
-				isFollowPending = user.relation?.has_pending_follow_request ?? false;
-			} else {
-				toast.error(response.message || '用户不存在');
-			}
-		} catch {
-			toast.error('加载失败');
-		} finally {
-			isLoading = false;
-		}
-	}
 
 	async function handleFollow() {
 		if (!authStore.isAuthenticated) {
@@ -176,9 +160,13 @@
 		if (target === 'following' && followingPagination.items.length === 0) loadFollowing(true);
 	}
 
-	onMount(() => {
-		loadUser();
-		loadMoments(true);
+	// 在用户数据加载后，显示错误或加载瞬间列表
+	$effect(() => {
+		if (data.error) {
+			toast.error(data.error);
+		} else if (user) {
+			loadMoments(true);
+		}
 	});
 </script>
 
@@ -195,22 +183,17 @@
 		<h1 class="text-2xl font-bold">用户主页</h1>
 	</div>
 
-	{#if isLoading}
+	{#if !user}
 		<Card>
 			<CardContent class="p-6">
 				<div class="flex flex-col items-center gap-4">
-					<Skeleton class="h-24 w-24 rounded-full" />
-					<Skeleton class="h-6 w-32" />
-					<Skeleton class="h-4 w-48" />
-					<div class="flex gap-8">
-						<Skeleton class="h-12 w-20" />
-						<Skeleton class="h-12 w-20" />
-						<Skeleton class="h-12 w-20" />
-					</div>
+					<p class="text-muted-foreground">
+						{data.error || '用户不存在'}
+					</p>
 				</div>
 			</CardContent>
 		</Card>
-	{:else if user}
+	{:else}
 		<Card class="border-0 bg-card/70 shadow-sm shadow-black/5 ring-1 ring-border/40">
 			<CardContent class="space-y-6 p-6">
 				<div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">

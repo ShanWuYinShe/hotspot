@@ -44,7 +44,7 @@ alwaysApply: true
 | [api_spec_media.mdc](api_spec_media.mdc) | 文件与媒体上传 API（Presigned 模式） |
 | [api_spec_notification.mdc](api_spec_notification.mdc) | 通知中心、设备推送令牌管理 API |
 | [api_spec_report.mdc](api_spec_report.mdc) | 用户举报 API |
-| [api_spec_system.mdc](api_spec_system.mdc) | 系统健康检查与全局配置 API |
+| [api_spec_system.mdc](api_spec_system.mdc) | 系统健康检查、版本信息、公告、冷启动 API |
 
 ### 管理员 API
 
@@ -54,7 +54,8 @@ alwaysApply: true
 | [api_spec_admin_user.mdc](api_spec_admin_user.mdc) | 管理员用户管理 API（搜索、详情、封禁、解封） |
 | [api_spec_admin_group.mdc](api_spec_admin_group.mdc) | 管理员群组管理 API（搜索、详情、解散） |
 | [api_spec_admin_announcement.mdc](api_spec_admin_announcement.mdc) | 系统公告管理 API |
-| [api_spec_admin_audit.mdc](api_spec_admin_audit.mdc) | 审计日志查询与导出 API |
+| [api_spec_admin_config.mdc](api_spec_admin_config.mdc) | 管理员配置管理 API（GlobalSettings） |
+| [api_spec_admin_audit.mdc](api_spec_admin_audit.mdc) | 审计日志查询 API |
 | [api_spec_admin_report.mdc](api_spec_admin_report.mdc) | 举报审核（管理员）API |
 | [api_spec_admin_tag.mdc](api_spec_admin_tag.mdc) | 管理员标签管理 API |
 
@@ -85,14 +86,16 @@ alwaysApply: true
 - **瞬间与评论**：`api_spec_moment.mdc`
 - **私聊**：`api_spec_chat.mdc`
 - **群组与群聊**：`api_spec_group.mdc`
-- **信息流与标签**：`api_spec_feed.mdc`
+- **信息流**：`api_spec_feed.mdc`
+- **搜索与发现（含标签）**：`api_spec_search.mdc`
 - **地图**：`api_spec_map.mdc`
 - **分享系统**：`api_spec_share.mdc`
 - **文件上传**：`api_spec_media.mdc`
 - **通知**：`api_spec_notification.mdc`
 - **举报**：`api_spec_report.mdc`
-- **系统配置**：`api_spec_system.mdc`
+- **系统**：`api_spec_system.mdc`
 - **管理员 RBAC**：`api_spec_admin_rbac.mdc`
+- **管理员配置**：`api_spec_admin_config.mdc`
 - **管理员用户管理**：`api_spec_admin_user.mdc`
 - **管理员群组管理**：`api_spec_admin_group.mdc`
 - **系统公告**：`api_spec_admin_announcement.mdc`
@@ -105,18 +108,20 @@ alwaysApply: true
 |---------|---------|
 | `/api/v1/system/meta` | `api_spec_system.mdc` |
 | `/api/v1/auth/` | `api_spec_auth.mdc` |
-| `/api/v1/user/` | `api_spec_user.mdc` |
+| `/api/v1/users/` | `api_spec_user.mdc` |
 | `/api/v1/moments/`, `/api/v1/comments/` | `api_spec_moment.mdc` |
 | `/api/v1/private_chats/`, `/api/v1/private_messages/` | `api_spec_chat.mdc` |
-| `/api/v1/groups/`, `/api/v1/group_messages/`, `/api/v1/messages/` | `api_spec_group.mdc` |
-| `/api/v1/feed/`, `/api/v1/tags/` | `api_spec_feed.mdc` |
+| `/api/v1/groups/`, `/api/v1/group_messages/` | `api_spec_group.mdc` |
+| `/api/v1/feed/` | `api_spec_feed.mdc` |
+| `/api/v1/search/`, `/api/v1/tags/` | `api_spec_search.mdc` |
 | `/api/v1/map/` | `api_spec_map.mdc` |
 | `/api/v1/share/` | `api_spec_share.mdc` |
 | `/api/v1/media/` | `api_spec_media.mdc` |
-| `/api/v1/notifications/`, `/api/v1/device_tokens/` | `api_spec_notification.mdc` |
+| `/api/v1/notifications/` | `api_spec_notification.mdc` |
 | `/api/v1/reports/` | `api_spec_report.mdc` |
-| `/api/v1/system/`, `/api/v1/global_settings/`, `/api/v1/announcements/list` | `api_spec_system.mdc` |
+| `/api/v1/system/` | `api_spec_system.mdc` |
 | `/api/v1/admin/rbac/` | `api_spec_admin_rbac.mdc` |
+| `/api/v1/admin/global_settings/` | `api_spec_admin_config.mdc` |
 | `/api/v1/admin/users/` | `api_spec_admin_user.mdc` |
 | `/api/v1/admin/groups/` | `api_spec_admin_group.mdc` |
 | `/api/v1/admin/announcements/` | `api_spec_admin_announcement.mdc` |

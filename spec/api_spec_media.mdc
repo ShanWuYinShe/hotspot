@@ -20,6 +20,7 @@ alwaysApply: true
 | 子域 | 端点 | 说明 | Request | Response |
 |-----|------|------|---------|----------|
 | 上传（Presigned） | `POST /api/v1/media/presign_upload` | 申请上传预签名 | `PresignUploadRequest` | `ApiResponse<PresignedUpload>` |
+| 上传（Presigned） | `POST /api/v1/media/batch_presign_upload` | 批量申请上传预签名 | `BatchPresignUploadRequest` | `ApiResponse<BatchPresignedUpload>` |
 | 上传（Presigned） | `POST /api/v1/media/complete_upload` | 完成上传 | `CompleteUploadRequest` | `ApiResponse<UploadedMedia>` |
 
 ## 设计理念
@@ -120,6 +121,29 @@ interface PresignUploadRequest {
 - URL: `upload_url`
 - Headers: `headers` from response
 - Body: File Binary Data
+
+#### POST /api/v1/media/batch_presign_upload
+
+批量申请上传预签名。适用于瞬间发布（多图）、聊天批量发文件等场景。
+
+**Request**:
+```typescript
+interface BatchPresignUploadRequest {
+  files: PresignUploadRequest[];  // 最多 9 个文件（与瞬间图片上限一致）
+}
+
+interface BatchPresignedUpload {
+  uploads: PresignedUpload[];     // 与请求 files 一一对应
+}
+```
+**Response**: `ApiResponse<BatchPresignedUpload>`
+
+**可能错误码**：`10002`、`10003`（文件数量超出限制）、`10005`
+
+**说明**：
+- 批量预签名是原子操作：任一文件校验失败则整批失败
+- 每个文件独立获得 `upload_url`，客户端可并发上传
+- 上传完成后逐个调用 `complete_upload` 确认
 
 #### POST /api/v1/media/complete_upload
 

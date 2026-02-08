@@ -280,7 +280,7 @@
 					</Card>
 				{:else}
 					<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
-						{#each groups as group (group.group_chat_id)}
+						{#each groups as group (group.group_id)}
 							<MasonryLayoutItem>
 								<GroupCard {group} showMembers showDistance variant="square" />
 							</MasonryLayoutItem>

@@ -79,8 +79,11 @@ impl MediaService {
             )));
         }
 
+        let file_size = u64::try_from(req.file_size)
+            .map_err(|_| AppError::InvalidFormat("文件大小无效".to_string()))?;
+
         // 按分类验证文件大小
-        if !req.category.validate_file_size(req.file_size) {
+        if !req.category.validate_file_size(file_size) {
             return Err(AppError::PayloadTooLarge(format!(
                 "文件大小超出限制: {} 字节 (最大: {} 字节)",
                 req.file_size,

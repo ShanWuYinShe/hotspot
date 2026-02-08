@@ -226,7 +226,17 @@ export class NotificationScheduler extends BaseSingleton {
    * 获取配置
    */
   getConfig(): SchedulerConfig {
-    return ConfigMerger.merge({} as SchedulerConfig, this.config);
+    const result: SchedulerConfig = {
+      quietHours: this.config.quietHours,
+      batchDelay: this.config.batchDelay,
+      maxBatchSize: this.config.maxBatchSize,
+      retryAttempts: this.config.retryAttempts,
+      retryDelay: this.config.retryDelay,
+      enableThrottling: this.config.enableThrottling,
+      throttleWindow: this.config.throttleWindow,
+      maxNotificationsPerWindow: this.config.maxNotificationsPerWindow
+    };
+    return result;
   }
   
   /**

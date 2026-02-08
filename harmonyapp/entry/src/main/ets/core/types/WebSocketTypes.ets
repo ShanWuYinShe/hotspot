@@ -3,41 +3,16 @@
  * 严格遵循 api_spec.mdc WebSocket 实时事件定义
  */
 
+import { UserInfo, ReactionType, GroupSettings } from './api';
+
 // ============================================================================
 // 通用类型
 // ============================================================================
 
 /**
- * 用户基本信息
- */
-export interface UserInfo {
-  user_id: number
-  nickname: string
-  avatar_url?: string
-  user_type: 'temp' | 'normal' | 'admin' | 'system'
-}
-
-/**
- * 反应类型
- */
-export type ReactionType = 'like' | 'love' | 'laugh' | 'angry' | 'sad' | 'wow'
-
-/**
  * 消息类型（接收时使用，包含系统消息）
  */
 export type ReceiveMessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'system'
-
-/**
- * 群组设置（部分）
- */
-export interface GroupSettings {
-  join_method?: 'open' | 'approval' | 'invite_only'
-  is_searchable?: boolean
-  max_members?: number
-  longitude?: number
-  latitude?: number
-  location_name?: string
-}
 
 /**
  * 群组更新字段
@@ -55,23 +30,21 @@ export interface GroupUpdatedFields {
 
 /**
  * 订阅项定义
- * 注意: source_ids 类型根据 source_type 不同而不同
- *   - group_chat: string[] (群聊ID)
- *   - user: number[] (用户ID)
- *   - notification: string[] (通知类型)
+ * 注意: ids 类型根据 type 不同而不同
+ *   - group: string[] (群组ID)
+ *   - user: string[] (用户ID)
  */
 export interface SubscriptionItem {
-  source_type: 'group_chat' | 'user' | 'notification'
-  source_ids: string[]
+  type: 'group' | 'user'
+  ids: string[]
 }
 
 /**
  * 失败的订阅项
  */
-export interface FailedSubscriptionItem {
-  source_type: 'group_chat' | 'user' | 'notification'
-  source_ids: string[]
-  reason: string
+export interface FailedSubscriptionId {
+  subscription_id: string
+  reason: 'invalid' | 'denied' | 'error'
 }
 
 // ============================================================================
@@ -87,6 +60,7 @@ export type ClientEventType =
   | 'Subscribe'
   | 'Unsubscribe'
   | 'SetSubscriptions'
+  | 'GetSubscriptions'
   | 'PrivateTyping'
   | 'GroupTyping'
 
@@ -95,15 +69,20 @@ export type ClientEventType =
  */
 export type ServerEventType =
   | 'ConnectionEstablished'
+  | 'Pong'
+  | 'BatchEvents'
   | 'UserOnline'
   | 'UserOffline'
+  | 'UserPresenceUpdate'
   | 'UserLocationUpdate'
   | 'NewFollower'
   | 'MutualFollow'
-  | 'Unfollowed'
+  | 'FollowRequestReceived'
+  | 'FollowRequestHandled'
   | 'MomentLiked'
   | 'MomentCommented'
   | 'CommentReply'
+  | 'MessageMentioned'
   | 'SystemAnnouncement'
   | 'PrivateMessageNew'
   | 'PrivateMessageEdited'
@@ -111,26 +90,30 @@ export type ServerEventType =
   | 'PrivateMessageDeleted'
   | 'PrivateMessageReaction'
   | 'PrivateMessageRead'
+  | 'PrivateUserTyping'
   | 'GroupMessageNew'
   | 'GroupMessageEdited'
   | 'GroupMessageRecalled'
   | 'GroupMessageDeleted'
   | 'GroupMessageReaction'
   | 'GroupMessageRead'
-  | 'PrivateUserTyping'
   | 'GroupUserTyping'
   | 'GroupMemberJoined'
   | 'GroupMemberLeft'
-  | 'GroupProfileUpdated'
+  | 'GroupMemberRemoved'
   | 'GroupMemberRoleChanged'
   | 'GroupMemberMuted'
   | 'GroupMemberUnmuted'
-  | 'GroupDismissed'
   | 'GroupInviteReceived'
   | 'GroupInviteResponse'
   | 'GroupApplicationReceived'
   | 'GroupApplicationResponse'
+  | 'GroupAnnouncementCreated'
+  | 'GroupAnnouncementUpdated'
+  | 'GroupUpdated'
+  | 'GroupDeleted'
   | 'SubscribeAck'
+  | 'SubscriptionsSnapshot'
   | 'Error'
 
 // ============================================================================
@@ -154,7 +137,6 @@ export interface AuthEvent {
  * 心跳事件
  */
 export interface PingPayload {
-  timestamp: string
 }
 
 export interface PingEvent {
@@ -166,7 +148,9 @@ export interface PingEvent {
  * 订阅事件
  */
 export interface SubscribePayload {
-  items: SubscriptionItem[]
+  client_msg_id: string
+  type: SubscriptionItem['type']
+  ids: string[]
 }
 
 export interface SubscribeEvent {
@@ -175,7 +159,9 @@ export interface SubscribeEvent {
 }
 
 export interface UnsubscribePayload {
-  items: SubscriptionItem[]
+  client_msg_id: string
+  type: SubscriptionItem['type']
+  ids: string[]
 }
 
 export interface UnsubscribeEvent {
@@ -184,7 +170,18 @@ export interface UnsubscribeEvent {
 }
 
 export interface SetSubscriptionsPayload {
-  items: SubscriptionItem[]
+  client_msg_id: string
+  type: SubscriptionItem['type']
+  ids: string[]
+}
+
+export interface GetSubscriptionsPayload {
+  client_msg_id: string
+}
+
+export interface GetSubscriptionsEvent {
+  type: 'GetSubscriptions'
+  payload: GetSubscriptionsPayload
 }
 
 export interface SetSubscriptionsEvent {
@@ -206,7 +203,7 @@ export interface PrivateTypingEvent {
 }
 
 export interface GroupTypingPayload {
-  group_chat_id: string
+  group_id: string
   is_typing: boolean
 }
 
@@ -219,12 +216,44 @@ export interface GroupTypingEvent {
 // 服务端推送事件定义
 // ============================================================================
 
+/**
+ * 服务端推送事件基础接口（包含 event_id 用于去重）
+ */
+export interface ServerWebSocketEvent<TType extends ServerEventType = ServerEventType, TPayload = unknown> {
+  type: TType
+  payload: TPayload
+  event_id: string  // 事件唯一ID（UUID），用于客户端去重（幂等性保障）
+}
+
 // ----- 连接管理事件 -----
+
+/**
+ * ConnectionEstablished 配置信息
+ */
+export interface ConnectionConfig {
+  ping_interval: number  // 心跳间隔（秒）
+  ping_timeout: number   // Pong 超时（秒）
+  max_subscriptions: {
+    user: number   // 用户订阅上限
+    group: number  // 群组订阅上限
+  }
+}
+
+/**
+ * ConnectionEstablished 未读计数
+ */
+export interface UnreadCounts {
+  messages: number        // 未读私聊消息数
+  group_messages: number  // 未读群聊消息数
+  notifications: number   // 未读通知数
+}
 
 export interface ConnectionEstablishedPayload {
   connection_id: string
   user_id: number
-  server_time: string
+  server_time: string  // 服务端当前时间（UTC ISO 8601），客户端用于判断断开时长
+  config: ConnectionConfig  // 服务端配置（动态配置，客户端不得硬编码）
+  unread_counts: UnreadCounts  // 未读计数（快速显示角标）
 }
 
 export interface ConnectionEstablishedEvent {
@@ -233,7 +262,6 @@ export interface ConnectionEstablishedEvent {
 }
 
 export interface PongPayload {
-  timestamp: string
 }
 
 export interface PongEvent {
@@ -241,12 +269,37 @@ export interface PongEvent {
   payload: PongPayload
 }
 
+/**
+ * 批量事件推送（性能优化）
+ */
+export interface BatchEventsPayload {
+  batch_id: string  // 批次ID（UUID）
+  events: ServerWebSocketEvent[]  // 多个事件（已包含 event_id）
+}
+
+export interface BatchEventsEvent {
+  type: 'BatchEvents'
+  payload: BatchEventsPayload
+}
+
 // ----- 在线状态事件 -----
+
+/**
+ * 用户状态类型
+ */
+export type UserPresenceStatus =
+  | 'online'      // 正在活跃（有 WebSocket 连接且 5 分钟内有活动）
+  | 'idle'        // 空闲/离开（有连接但 5 分钟没活动）
+  | 'dnd'         // 请勿打扰（用户主动设置）
+  | 'invisible'   // 隐身（对他人显示为 offline）
+  | 'offline'     // 离线（无连接）
 
 export interface UserOnlinePayload {
   user_id: number
   nickname: string
   avatar_url?: string
+  status: UserPresenceStatus  // 状态类型
+  status_text?: string  // 自定义状态文本（如"开会中"、"勿扰"）
   online_at: string
 }
 
@@ -257,12 +310,29 @@ export interface UserOnlineEvent {
 
 export interface UserOfflinePayload {
   user_id: number
+  status: UserPresenceStatus  // 固定为 'offline'
+  last_seen?: string  // 最后在线时间（可选）
   offline_at: string
 }
 
 export interface UserOfflineEvent {
   type: 'UserOffline'
   payload: UserOfflinePayload
+}
+
+/**
+ * 用户状态变更（online/idle/dnd/invisible 之间切换）
+ */
+export interface UserPresenceUpdatePayload {
+  user_id: number
+  status: UserPresenceStatus  // 新状态
+  status_text?: string  // 自定义状态文本
+  updated_at: string
+}
+
+export interface UserPresenceUpdateEvent {
+  type: 'UserPresenceUpdate'
+  payload: UserPresenceUpdatePayload
 }
 
 export interface UserLocationUpdatePayload {
@@ -301,15 +371,34 @@ export interface MutualFollowEvent {
   payload: MutualFollowPayload
 }
 
-export interface UnfollowedPayload {
-  user_id: number
-  unfollowed_at: string
-  was_mutual: boolean
+/**
+ * 收到关注请求（当 allow_follow 设置为需要审批时）
+ */
+export interface FollowRequestReceivedPayload {
+  request_id: string
+  requester: UserInfo
+  message?: string
+  requested_at: string
 }
 
-export interface UnfollowedEvent {
-  type: 'Unfollowed'
-  payload: UnfollowedPayload
+export interface FollowRequestReceivedEvent {
+  type: 'FollowRequestReceived'
+  payload: FollowRequestReceivedPayload
+}
+
+/**
+ * 关注请求被处理（发送给请求方）
+ */
+export interface FollowRequestHandledPayload {
+  request_id: string
+  target_user: UserInfo  // 被请求关注的用户
+  action: 'accept'  // 仅接受时推送，拒绝不通过 WebSocket 推送
+  handled_at: string
+}
+
+export interface FollowRequestHandledEvent {
+  type: 'FollowRequestHandled'
+  payload: FollowRequestHandledPayload
 }
 
 // ----- 生活瞬间互动事件 -----
@@ -340,9 +429,10 @@ export interface MomentCommentedEvent {
 
 export interface CommentReplyPayload {
   moment_id: string
-  comment_id: string
-  reply_id: string
-  user: UserInfo
+  comment_id: string  // 原评论ID（被回复的评论）
+  reply_to_content: string  // 原评论内容摘要
+  reply_id: string  // 回复评论ID
+  user: UserInfo  // 回复者
   content: string
   replied_at: string
 }
@@ -350,6 +440,28 @@ export interface CommentReplyPayload {
 export interface CommentReplyEvent {
   type: 'CommentReply'
   payload: CommentReplyPayload
+}
+
+/**
+ * 在内容中被提及
+ */
+export interface MessageMentionedPayload {
+  target_type: 'moment' | 'comment'
+  moment_id: string
+  comment_id?: string
+  moment_summary?: {
+    moment_id: string
+    cover_url?: string  // 封面图 (第一张图片)
+    text_preview: string  // 文本内容摘要 (前50字)
+  }
+  comment_preview?: string
+  user: UserInfo  // 提及我的人
+  mentioned_at: string
+}
+
+export interface MessageMentionedEvent {
+  type: 'MessageMentioned'
+  payload: MessageMentionedPayload
 }
 
 export interface SystemAnnouncementPayload {
@@ -464,7 +576,7 @@ export interface PrivateMessageReadEvent {
 // 群聊消息事件
 export interface GroupMessageNewPayload {
   message_id: string
-  group_chat_id: string
+  group_id: string
   sender: UserInfo
   type: ReceiveMessageType
   content?: string
@@ -481,7 +593,7 @@ export interface GroupMessageNewEvent {
 
 export interface GroupMessageEditedPayload {
   message_id: string
-  group_chat_id: string
+  group_id: string
   content: string
   edited_at: string
 }
@@ -493,7 +605,7 @@ export interface GroupMessageEditedEvent {
 
 export interface GroupMessageRecalledPayload {
   message_id: string
-  group_chat_id: string
+  group_id: string
   recalled_by: number
   recalled_at: string
 }
@@ -505,7 +617,7 @@ export interface GroupMessageRecalledEvent {
 
 export interface GroupMessageDeletedPayload {
   message_id: string
-  group_chat_id: string
+  group_id: string
   deleted_by: number
   for_everyone: boolean
   deleted_at: string
@@ -518,7 +630,7 @@ export interface GroupMessageDeletedEvent {
 
 export interface GroupMessageReactionPayload {
   message_id: string
-  group_chat_id: string
+  group_id: string
   user: UserInfo
   reaction_type: ReactionType
   has_reaction: boolean
@@ -531,7 +643,7 @@ export interface GroupMessageReactionEvent {
 }
 
 export interface GroupMessageReadPayload {
-  group_chat_id: string
+  group_id: string
   up_to_message_id: string
   reader_id: number
   read_at: string
@@ -554,7 +666,7 @@ export interface PrivateUserTypingEvent {
 }
 
 export interface GroupUserTypingPayload {
-  group_chat_id: string
+  group_id: string
   user_id: number
   is_typing: boolean
 }
@@ -567,8 +679,10 @@ export interface GroupUserTypingEvent {
 // ----- 群组事件 -----
 
 export interface GroupMemberJoinedPayload {
-  group_chat_id: string
+  group_id: string
   user: UserInfo
+  role: 'owner' | 'admin' | 'member'  // 引用 @api_spec_common_types.mdc
+  member_count: number  // 当前成员总数
   joined_at: string
 }
 
@@ -577,10 +691,14 @@ export interface GroupMemberJoinedEvent {
   payload: GroupMemberJoinedPayload
 }
 
+/**
+ * 成员离开（自愿离开）
+ */
 export interface GroupMemberLeftPayload {
-  group_chat_id: string
-  user_id: number
+  group_id: string
+  user: UserInfo
   left_at: string
+  member_count: number  // 剩余成员总数
 }
 
 export interface GroupMemberLeftEvent {
@@ -588,22 +706,32 @@ export interface GroupMemberLeftEvent {
   payload: GroupMemberLeftPayload
 }
 
-export interface GroupProfileUpdatedPayload {
-  group_chat_id: string
-  updated_fields: GroupUpdatedFields
-  updated_at: string
+/**
+ * 成员被移除（被踢出/被封禁）
+ */
+export interface GroupMemberRemovedPayload {
+  group_id: string
+  user: UserInfo
+  removed_by: number  // user_id（操作者）
+  reason?: 'kicked' | 'banned'  // 移除原因
+  removed_at: string
+  member_count: number
 }
 
-export interface GroupProfileUpdatedEvent {
-  type: 'GroupProfileUpdated'
-  payload: GroupProfileUpdatedPayload
+export interface GroupMemberRemovedEvent {
+  type: 'GroupMemberRemoved'
+  payload: GroupMemberRemovedPayload
 }
 
+/**
+ * 成员角色变更
+ */
 export interface GroupMemberRoleChangedPayload {
-  group_chat_id: string
-  user_id: number
-  old_role: 'owner' | 'admin' | 'member'
+  group_id: string
+  user: UserInfo
+  old_role: 'owner' | 'admin' | 'member'  // 引用 @api_spec_common_types.mdc
   new_role: 'owner' | 'admin' | 'member'
+  changed_by: number  // user_id（操作者）
   changed_at: string
 }
 
@@ -612,10 +740,15 @@ export interface GroupMemberRoleChangedEvent {
   payload: GroupMemberRoleChangedPayload
 }
 
+/**
+ * 成员被禁言
+ */
 export interface GroupMemberMutedPayload {
-  group_chat_id: string
-  user_id: number
-  muted_until: string
+  group_id: string
+  user: UserInfo
+  muted_by: number  // user_id（操作者）
+  muted_until?: string  // 禁言结束时间（null 表示永久禁言）
+  reason?: string
   muted_at: string
 }
 
@@ -624,9 +757,13 @@ export interface GroupMemberMutedEvent {
   payload: GroupMemberMutedPayload
 }
 
+/**
+ * 成员解除禁言
+ */
 export interface GroupMemberUnmutedPayload {
-  group_chat_id: string
-  user_id: number
+  group_id: string
+  user: UserInfo
+  unmuted_by: number  // user_id（操作者）
   unmuted_at: string
 }
 
@@ -635,21 +772,77 @@ export interface GroupMemberUnmutedEvent {
   payload: GroupMemberUnmutedPayload
 }
 
-export interface GroupDismissedPayload {
-  group_chat_id: string
-  dismissed_by: number
-  dismissed_at: string
+/**
+ * 群公告创建
+ */
+export interface GroupAnnouncementCreatedPayload {
+  group_id: string
+  announcement_id: string
+  content: string
+  created_by: number  // user_id（操作者）
+  created_at: string
 }
 
-export interface GroupDismissedEvent {
-  type: 'GroupDismissed'
-  payload: GroupDismissedPayload
+export interface GroupAnnouncementCreatedEvent {
+  type: 'GroupAnnouncementCreated'
+  payload: GroupAnnouncementCreatedPayload
+}
+
+/**
+ * 群公告更新
+ */
+export interface GroupAnnouncementUpdatedPayload {
+  group_id: string
+  announcement_id: string
+  content: string  // 更新后的内容
+  updated_by: number  // user_id（操作者）
+  updated_at: string
+}
+
+export interface GroupAnnouncementUpdatedEvent {
+  type: 'GroupAnnouncementUpdated'
+  payload: GroupAnnouncementUpdatedPayload
+}
+
+/**
+ * 群组信息更新
+ */
+export interface GroupUpdatedPayload {
+  group_id: string
+  updated_fields: {  // 只包含变更的字段
+    name?: string
+    avatar_url?: string
+    description?: string
+  }
+  updated_by: number  // user_id（操作者）
+  updated_at: string
+}
+
+export interface GroupUpdatedEvent {
+  type: 'GroupUpdated'
+  payload: GroupUpdatedPayload
+}
+
+/**
+ * 群组解散
+ */
+export interface GroupDeletedPayload {
+  group_id: string
+  deleted_by: number  // user_id（操作者）
+  deleted_at: string
+  reason?: string
+}
+
+export interface GroupDeletedEvent {
+  type: 'GroupDeleted'
+  payload: GroupDeletedPayload
 }
 
 export interface GroupInviteReceivedPayload {
-  id: string
-  group_chat_id: string
+  invite_id: string
+  group_id: string
   group_name: string
+  group_avatar_url?: string
   inviter: UserInfo
   message?: string
   created_at: string
@@ -661,10 +854,10 @@ export interface GroupInviteReceivedEvent {
 }
 
 export interface GroupInviteResponsePayload {
-  id: string
-  group_chat_id: string
+  invite_id: string
+  group_id: string
   user: UserInfo
-  status: 'accepted' | 'rejected'
+  status: 'accepted'  // 仅接受时推送，拒绝不通过 WebSocket 推送
   responded_at: string
 }
 
@@ -674,8 +867,8 @@ export interface GroupInviteResponseEvent {
 }
 
 export interface GroupApplicationReceivedPayload {
-  id: string
-  group_chat_id: string
+  application_id: string
+  group_id: string
   applicant: UserInfo
   message?: string
   created_at: string
@@ -687,10 +880,10 @@ export interface GroupApplicationReceivedEvent {
 }
 
 export interface GroupApplicationResponsePayload {
-  id: string
-  group_chat_id: string
+  application_id: string
+  group_id: string
   group_name: string
-  status: 'accepted' | 'rejected'
+  status: 'accepted'  // 仅接受时推送，拒绝不通过 WebSocket 推送
   responded_at: string
 }
 
@@ -702,16 +895,33 @@ export interface GroupApplicationResponseEvent {
 // ----- 系统事件 -----
 
 export interface SubscribeAckPayload {
+  client_msg_id: string
   operation: 'subscribe' | 'unsubscribe' | 'set'
-  items: SubscriptionItem[]
+  type: SubscriptionItem['type']
+  ids: string[]
   code: number
   message?: string
-  failed_items?: FailedSubscriptionItem[]
+  failed_ids?: FailedSubscriptionId[]
 }
 
 export interface SubscribeAckEvent {
   type: 'SubscribeAck'
   payload: SubscribeAckPayload
+}
+
+/**
+ * 订阅状态快照（响应 GetSubscriptions）
+ */
+export interface SubscriptionsSnapshotPayload {
+  client_msg_id: string  // 回传客户端消息ID
+  user_ids: string[]  // 当前订阅的用户ID列表
+  group_ids: string[]  // 当前订阅的群组ID列表
+  total_count: number  // 总订阅数（user_ids.length + group_ids.length）
+}
+
+export interface SubscriptionsSnapshotEvent {
+  type: 'SubscriptionsSnapshot'
+  payload: SubscriptionsSnapshotPayload
 }
 
 export interface ErrorPayload {
@@ -734,21 +944,26 @@ export type ClientEvent =
   | SubscribeEvent
   | UnsubscribeEvent
   | SetSubscriptionsEvent
+  | GetSubscriptionsEvent
   | PrivateTypingEvent
   | GroupTypingEvent
 
 export type ServerEvent =
   | ConnectionEstablishedEvent
   | PongEvent
+  | BatchEventsEvent
   | UserOnlineEvent
   | UserOfflineEvent
+  | UserPresenceUpdateEvent
   | UserLocationUpdateEvent
   | NewFollowerEvent
   | MutualFollowEvent
-  | UnfollowedEvent
+  | FollowRequestReceivedEvent
+  | FollowRequestHandledEvent
   | MomentLikedEvent
   | MomentCommentedEvent
   | CommentReplyEvent
+  | MessageMentionedEvent
   | SystemAnnouncementEvent
   | PrivateMessageNewEvent
   | PrivateMessageEditedEvent
@@ -756,26 +971,30 @@ export type ServerEvent =
   | PrivateMessageDeletedEvent
   | PrivateMessageReactionEvent
   | PrivateMessageReadEvent
+  | PrivateUserTypingEvent
   | GroupMessageNewEvent
   | GroupMessageEditedEvent
   | GroupMessageRecalledEvent
   | GroupMessageDeletedEvent
   | GroupMessageReactionEvent
   | GroupMessageReadEvent
-  | PrivateUserTypingEvent
   | GroupUserTypingEvent
   | GroupMemberJoinedEvent
   | GroupMemberLeftEvent
-  | GroupProfileUpdatedEvent
+  | GroupMemberRemovedEvent
   | GroupMemberRoleChangedEvent
   | GroupMemberMutedEvent
   | GroupMemberUnmutedEvent
-  | GroupDismissedEvent
   | GroupInviteReceivedEvent
   | GroupInviteResponseEvent
   | GroupApplicationReceivedEvent
   | GroupApplicationResponseEvent
+  | GroupAnnouncementCreatedEvent
+  | GroupAnnouncementUpdatedEvent
+  | GroupUpdatedEvent
+  | GroupDeletedEvent
   | SubscribeAckEvent
+  | SubscriptionsSnapshotEvent
   | ErrorEvent
 
 // ============================================================================
@@ -807,9 +1026,7 @@ export interface ReconnectConfig {
 export function createPingEvent(): PingEvent {
   return {
     type: 'Ping',
-    payload: {
-      timestamp: new Date().toISOString()
-    }
+    payload: {}
   }
 }
 
@@ -829,31 +1046,59 @@ export function createAuthEvent(accessToken: string, deviceFingerprint?: string)
 /**
  * 创建订阅事件
  */
-export function createSubscribeEvent(items: SubscriptionItem[]): SubscribeEvent {
+export function createSubscribeEvent(item: SubscriptionItem, clientMsgId?: string): SubscribeEvent {
   return {
     type: 'Subscribe',
-    payload: { items }
+    payload: {
+      client_msg_id: clientMsgId ?? generateClientMsgId(),
+      type: item.type,
+      ids: item.ids
+    }
   }
 }
 
 /**
  * 创建取消订阅事件
  */
-export function createUnsubscribeEvent(items: SubscriptionItem[]): UnsubscribeEvent {
+export function createUnsubscribeEvent(item: SubscriptionItem, clientMsgId?: string): UnsubscribeEvent {
   return {
     type: 'Unsubscribe',
-    payload: { items }
+    payload: {
+      client_msg_id: clientMsgId ?? generateClientMsgId(),
+      type: item.type,
+      ids: item.ids
+    }
   }
 }
 
 /**
  * 创建替换式订阅事件
  */
-export function createSetSubscriptionsEvent(items: SubscriptionItem[]): SetSubscriptionsEvent {
+export function createSetSubscriptionsEvent(item: SubscriptionItem, clientMsgId?: string): SetSubscriptionsEvent {
   return {
     type: 'SetSubscriptions',
-    payload: { items }
+    payload: {
+      client_msg_id: clientMsgId ?? generateClientMsgId(),
+      type: item.type,
+      ids: item.ids
+    }
   }
+}
+
+/**
+ * 创建订阅状态查询事件
+ */
+export function createGetSubscriptionsEvent(clientMsgId?: string): GetSubscriptionsEvent {
+  return {
+    type: 'GetSubscriptions',
+    payload: {
+      client_msg_id: clientMsgId ?? generateClientMsgId()
+    }
+  }
+}
+
+function generateClientMsgId(): string {
+  return `${Date.now()}-${Math.floor(Math.random() * 1e9)}`
 }
 
 /**
@@ -873,22 +1118,83 @@ export function createPrivateTypingEvent(
  * 创建群聊正在输入事件
  */
 export function createGroupTypingEvent(
-  group_chat_id: string,
+  group_id: string,
   is_typing: boolean
 ): GroupTypingEvent {
   return {
     type: 'GroupTyping',
-    payload: { group_chat_id, is_typing }
+    payload: { group_id, is_typing }
   }
 }
 
 /**
- * 解析服务端事件
+ * 已处理的事件ID集合（用于去重，维护最近1000个）
  */
-export function parseServerEvent(data: string): ServerEvent | null {
+const processedEventIds: Set<string> = new Set()
+const MAX_PROCESSED_EVENT_IDS = 1000
+
+/**
+ * 检查事件是否已处理（基于 event_id 去重）
+ */
+function isEventProcessed(eventId: string): boolean {
+  return processedEventIds.has(eventId)
+}
+
+/**
+ * 标记事件已处理
+ */
+function markEventProcessed(eventId: string): void {
+  // 如果超过最大数量，删除最旧的（FIFO）
+  if (processedEventIds.size >= MAX_PROCESSED_EVENT_IDS) {
+    const firstId = processedEventIds.values().next().value
+    processedEventIds.delete(firstId)
+  }
+  processedEventIds.add(eventId)
+}
+
+/**
+ * 解析服务端事件（支持 ServerWebSocketEvent 格式，包含 event_id）
+ * 返回 ServerEvent 或 BatchEventsEvent
+ */
+export function parseServerEvent(data: string): ServerEvent | BatchEventsEvent | null {
   try {
-    const event = JSON.parse(data) as ServerEvent
-    return event
+    const raw = JSON.parse(data)
+    
+    // 检查是否是批量事件
+    if (raw.type === 'BatchEvents' && raw.payload && raw.payload.events) {
+      // 批量事件本身不需要 event_id，但内部事件需要逐个处理
+      // 对批量事件中的每个事件进行去重检查
+      const batchEvent = raw as BatchEventsEvent
+      batchEvent.payload.events = batchEvent.payload.events.filter((subEvent) => {
+        if (subEvent.event_id) {
+          if (isEventProcessed(subEvent.event_id)) {
+            console.warn(`批量事件中重复事件已忽略: ${subEvent.event_id}`)
+            return false
+          }
+          markEventProcessed(subEvent.event_id)
+        }
+        return true
+      })
+      return batchEvent
+    }
+    
+    // 检查是否有 event_id（ServerWebSocketEvent 格式）
+    if (raw.event_id) {
+      const eventId = raw.event_id as string
+      
+      // 去重检查
+      if (isEventProcessed(eventId)) {
+        console.warn(`重复事件已忽略: ${eventId}`)
+        return null
+      }
+      
+      // 标记为已处理
+      markEventProcessed(eventId)
+    }
+    
+    // 转换为 ServerEvent（移除 event_id，因为类型定义中不包含）
+    const { event_id, ...event } = raw
+    return event as ServerEvent
   } catch (e) {
     console.error('Failed to parse WebSocket message:', e)
     return null

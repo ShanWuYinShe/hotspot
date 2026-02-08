@@ -1,23 +1,21 @@
 //! 群聊消息反应仓库
 //!
-//! 管理群聊消息的反应（点赞、表情等）
+//! 适配新 Schema: (message_id, user_id) 复合主键
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
-use crate::error::{AppError, Result};
-use crate::utils::pagination::{decode_cursor, encode_cursor, IdCursor};
+use crate::error::Result;
+use crate::utils::pagination::{decode_cursor, encode_cursor, TimeCursor};
+use crate::types::enums::ReactionType;
 
-/// 群聊消息反应行
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct GroupMessageReactionRow {
-    pub id: i64,
-    pub reaction_id: Uuid,
     pub message_id: Uuid,
     pub user_id: i64,
-    pub r#type: String, // 'like', 'love', 'laugh', 'angry', 'sad', 'wow'
+    pub reaction_type: ReactionType,
     pub created_at: DateTime<Utc>,
 }
 
@@ -36,103 +34,85 @@ impl GroupMessageReactionsRepository {
         &self,
         message_id: Uuid,
         user_id: i64,
-        reaction_type: &str,
-    ) -> Result<GroupMessageReactionRow> {
-        // 强约束：重复添加反应应返回冲突，而不是"更新/保持原值"
+        reaction_type: ReactionType,
+    ) -> Result<Option<GroupMessageReactionRow>> {
         let row = sqlx::query_as!(
             GroupMessageReactionRow,
             r#"
-            INSERT INTO group_message_reactions (message_id, user_id, type)
-            VALUES ($1, $2, $3::TEXT::reaction_type)
-            ON CONFLICT (message_id, user_id, type) DO NOTHING
-            RETURNING id, reaction_id, message_id, user_id, 
-                      type::TEXT as "type!", created_at
+            INSERT INTO group_message_reactions (message_id, user_id, reaction_type)
+            VALUES ($1, $2, $3::text::reaction_type)
+            ON CONFLICT (message_id, user_id) DO UPDATE 
+            SET reaction_type = EXCLUDED.reaction_type, created_at = NOW()
+            RETURNING message_id, user_id, reaction_type as "reaction_type: ReactionType", created_at
             "#,
             message_id,
             user_id,
-            reaction_type
+            reaction_type as ReactionType
         )
         .fetch_optional(&self.pool)
         .await?;
 
-        row.ok_or_else(|| AppError::Conflict("已添加过该反应".to_string()))
+        Ok(row)
     }
 
     /// 移除群聊消息反应
-    pub async fn remove(&self, message_id: Uuid, user_id: i64, reaction_type: &str) -> Result<()> {
-        let result = sqlx::query!(
+    pub async fn remove(&self, message_id: Uuid, user_id: i64) -> Result<()> {
+        sqlx::query!(
             r#"
             DELETE FROM group_message_reactions
-            WHERE message_id = $1 AND user_id = $2 AND type = $3::TEXT::reaction_type
+            WHERE message_id = $1 AND user_id = $2
             "#,
             message_id,
-            user_id,
-            reaction_type
+            user_id
         )
         .execute(&self.pool)
         .await?;
-
-        if result.rows_affected() == 0 {
-            return Err(AppError::Conflict("尚未添加该反应".to_string()));
-        }
-
         Ok(())
     }
 
-    /// 获取消息的所有反应（按类型过滤）
+    /// 列出消息反应
     pub async fn list_by_message(
         &self,
         message_id: Uuid,
-        reaction_type: Option<&str>,
+        filter_type: Option<ReactionType>,
         limit: i64,
         cursor: Option<String>,
     ) -> Result<(Vec<GroupMessageReactionRow>, Option<String>)> {
-        let last_id = if let Some(c) = cursor {
-            decode_cursor::<IdCursor>(&c)?
+        let (last_ts, last_uid) = if let Some(c) = cursor {
+            decode_cursor::<TimeCursor>(&c)?
         } else {
-            i64::MAX
+            (DateTime::<Utc>::MAX_UTC, i64::MAX)
         };
 
-        // 查询 limit + 1 条以判断是否有更多数据
-        let rows = if let Some(r_type) = reaction_type {
-            sqlx::query_as!(
-                GroupMessageReactionRow,
-                r#"
-                SELECT id, reaction_id, message_id, user_id, 
-                       type::TEXT as "type!", created_at
-                FROM group_message_reactions
-                WHERE message_id = $1 AND type = $2::TEXT::reaction_type AND id < $3
-                ORDER BY id DESC
-                LIMIT $4
-                "#,
-                message_id,
-                r_type,
-                last_id,
-                limit + 1
-            )
-            .fetch_all(&self.pool)
-            .await?
+        let rows = sqlx::query_as!(
+            GroupMessageReactionRow,
+            r#"
+            SELECT message_id, user_id, reaction_type as "reaction_type: ReactionType", created_at
+            FROM group_message_reactions
+            WHERE message_id = $1
+              AND ($2::text IS NULL OR reaction_type = $2::text::reaction_type)
+              AND (created_at, user_id) < ($3, $4)
+            ORDER BY created_at DESC, user_id DESC
+            LIMIT $5
+            "#,
+            message_id,
+            filter_type.map(|t| t.to_string()),
+            last_ts,
+            last_uid,
+            limit + 1
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let has_more = rows.len() > limit as usize;
+        let rows_to_return: Vec<_> = rows.into_iter().take(limit as usize).collect();
+
+        let next_cursor = if has_more {
+            rows_to_return.last().map(|r| encode_cursor(&(r.created_at, r.user_id))).transpose()?
         } else {
-            sqlx::query_as!(
-                GroupMessageReactionRow,
-                r#"
-                SELECT id, reaction_id, message_id, user_id, 
-                       type::TEXT as "type!", created_at
-                FROM group_message_reactions
-                WHERE message_id = $1 AND id < $2
-                ORDER BY id DESC
-                LIMIT $3
-                "#,
-                message_id,
-                last_id,
-                limit + 1
-            )
-            .fetch_all(&self.pool)
-            .await?
+            None
         };
 
-        crate::utils::pagination::paginate_with_limit_plus_one(rows, limit as i32, |r| {
-            encode_cursor(&r.id)
-        })
+        Ok((rows_to_return, next_cursor))
     }
 }

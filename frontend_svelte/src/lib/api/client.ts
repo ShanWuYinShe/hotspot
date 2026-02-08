@@ -10,6 +10,7 @@
  * - 业务成功判断: code === 0
  */
 
+import { dev } from '$app/environment';
 import type { ApiResponse, PaginatedData } from '$lib/types/api';
 import { AUTH } from './endpoints';
 
@@ -33,7 +34,7 @@ function getCookie(name: string): string | null {
 	const cookies = document.cookie.split(';');
 	for (const cookie of cookies) {
 		const [key, value] = cookie.trim().split('=');
-		if (key === name) {
+		if (key === name && value !== undefined) {
 			return value;
 		}
 	}

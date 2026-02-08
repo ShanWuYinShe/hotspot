@@ -12,7 +12,7 @@ pub struct GroupBanRow {
     pub id: i64,
     pub ban_id: Uuid,
     // cursor field removed
-    pub group_chat_id: Uuid,
+    pub group_id: i64,
     pub user_id: i64,
     pub banned_by: i64,
     pub reason: Option<String>,
@@ -38,23 +38,23 @@ impl GroupBansRepository {
     /// 添加封禁记录
     pub async fn ban(
         &self,
-        group_chat_id: Uuid,
+        group_id: i64,
         user_id: i64,
         banned_by: i64,
         reason: Option<String>,
     ) -> Result<()> {
         sqlx::query!(
             r#"
-            INSERT INTO group_bans (group_chat_id, user_id, banned_by, reason)
+            INSERT INTO group_bans (group_id, user_id, banned_by, reason)
             VALUES ($1, $2, $3, $4)
-            ON CONFLICT (group_chat_id, user_id) DO UPDATE SET
+            ON CONFLICT (group_id, user_id) DO UPDATE SET
                 banned_by = $3,
                 reason = $4,
                 banned_at = NOW(),
                 unbanned_at = NULL,
                 unbanned_by = NULL
             "#,
-            group_chat_id,
+            group_id,
             user_id,
             banned_by,
             reason
@@ -66,14 +66,14 @@ impl GroupBansRepository {
     }
 
     /// 解除封禁
-    pub async fn unban(&self, group_chat_id: Uuid, user_id: i64, unbanned_by: i64) -> Result<bool> {
+    pub async fn unban(&self, group_id: i64, user_id: i64, unbanned_by: i64) -> Result<bool> {
         let result = sqlx::query!(
             r#"
             UPDATE group_bans
             SET unbanned_at = NOW(), unbanned_by = $3
-            WHERE group_chat_id = $1 AND user_id = $2 AND unbanned_at IS NULL
+            WHERE group_id = $1 AND user_id = $2 AND unbanned_at IS NULL
             "#,
-            group_chat_id,
+            group_id,
             user_id,
             unbanned_by
         )
@@ -84,15 +84,15 @@ impl GroupBansRepository {
     }
 
     /// 检查用户是否被封禁
-    pub async fn is_banned(&self, group_chat_id: Uuid, user_id: i64) -> Result<bool> {
+    pub async fn is_banned(&self, group_id: i64, user_id: i64) -> Result<bool> {
         let result = sqlx::query!(
             r#"
             SELECT EXISTS(
                 SELECT 1 FROM group_bans 
-                WHERE group_chat_id = $1 AND user_id = $2 AND unbanned_at IS NULL
+                WHERE group_id = $1 AND user_id = $2 AND unbanned_at IS NULL
             ) as "exists!"
             "#,
-            group_chat_id,
+            group_id,
             user_id
         )
         .fetch_one(&self.pool)
@@ -104,7 +104,7 @@ impl GroupBansRepository {
     /// 获取群组封禁列表
     pub async fn list_by_group(
         &self,
-        group_chat_id: Uuid,
+        group_id: i64,
         limit: i32,
         cursor: Option<String>,
     ) -> Result<(Vec<GroupBanRow>, Option<String>)> {
@@ -117,16 +117,16 @@ impl GroupBansRepository {
         let rows = sqlx::query_as!(
             GroupBanRow,
             r#"
-            SELECT b.id, b.ban_id, b.group_chat_id, b.user_id, 
+            SELECT b.id, b.ban_id, b.group_id, b.user_id, 
                    b.banned_by, b.reason, b.banned_at, b.unbanned_at, b.unbanned_by,
                    u.nickname, u.avatar_url, u.user_type as "user_type: crate::types::enums::UserType"
             FROM group_bans b
             LEFT JOIN users u ON u.user_id = b.user_id
-            WHERE b.group_chat_id = $1 AND b.unbanned_at IS NULL AND b.id < $2
+            WHERE b.group_id = $1 AND b.unbanned_at IS NULL AND b.id < $2
             ORDER BY b.id DESC
             LIMIT $3
             "#,
-            group_chat_id,
+            group_id,
             last_id,
             limit as i64
         )

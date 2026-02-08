@@ -21,7 +21,7 @@ use crate::{
     },
     error::{AppError, Result},
     middleware::auth::{AuthenticatedUser, BearerToken, OptionalAuthenticatedUser},
-    services::auth_service::ClientType,
+    types::enums::ClientType,
     state::AppState,
     utils::validation::Validator,
     utils::web_cookie::{

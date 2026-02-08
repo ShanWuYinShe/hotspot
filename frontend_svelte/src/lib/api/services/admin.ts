@@ -18,7 +18,7 @@ import type {
 	AdminRole,
 	AdminUser,
 	UserCard,
-	GroupCard,
+	AdminGroupSearchItem,
 	GroupSettings,
 	SystemAnnouncementItem,
 	AnnouncementCreated,
@@ -161,26 +161,21 @@ export const adminGroupsService = {
 	/**
 	 * 搜索群组
 	 */
-	search(params: { group_chat_id?: string; name?: string; owner_id?: number; limit?: number; cursor?: string }) {
-		return paginate<GroupCard>(ADMIN_GROUPS.SEARCH, params);
+	search(params: { group_id?: string; name?: string; owner_id?: string; limit?: number; cursor?: string }) {
+		return paginate<AdminGroupSearchItem>(ADMIN_GROUPS.SEARCH, params);
 	},
 
 	/**
 	 * 获取群组详情
 	 */
-	getDetail(data: { group_chat_id: string }) {
-		return post<
-			GroupCard & {
-				members_count: number;
-				created_at: string;
-			}
-		>(ADMIN_GROUPS.DETAIL, data);
+	getDetail(data: { group_id: string }) {
+		return post<AdminGroupSearchItem>(ADMIN_GROUPS.DETAIL, data);
 	},
 
 	/**
 	 * 解散群组
 	 */
-	dismiss(data: { group_chat_id: string; reason: string }) {
+	dismiss(data: { group_id: string; reason: string }) {
 		return post<void>(ADMIN_GROUPS.DISMISS, data);
 	}
 };

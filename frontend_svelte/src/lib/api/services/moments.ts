@@ -8,10 +8,7 @@ import type {
 	MomentCard,
 	MomentSearchItem,
 	MomentSuggestions,
-	MyMomentState,
 	MomentLikeItem,
-	LikedStatus,
-	FavoritedStatus,
 	GeoPoint,
 	Location,
 	PrivacyLevel,
@@ -62,13 +59,6 @@ export const momentsService = {
 	 */
 	getMoment(data: { moment_id: string }) {
 		return post<MomentCard>(MOMENTS.OPEN_THE_DOOR, data);
-	},
-
-	/**
-	 * 获取交互状态
-	 */
-	getInteractionState(data: { moment_id: string }) {
-		return post<MyMomentState>(MOMENTS.INTERACTION_STATE, data);
 	},
 
 	/**
@@ -158,19 +148,5 @@ export const momentsService = {
 	 */
 	getMyFavorites(params?: { limit?: number; cursor?: string }) {
 		return paginate<MomentCard>(MOMENTS.ME.FAVORITES, params);
-	},
-
-	/**
-	 * 获取我点赞的瞬间
-	 */
-	getMyLiked(data: { moment_id: string }) {
-		return post<LikedStatus>(MOMENTS.ME.LIKED, data);
-	},
-
-	/**
-	 * 获取收藏我的瞬间的用户（已弃用）
-	 */
-	getMyFavorited(data: { moment_id: string }) {
-		return post<FavoritedStatus>(MOMENTS.ME.FAVORITED, data);
 	}
 };

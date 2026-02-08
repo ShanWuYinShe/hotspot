@@ -38,7 +38,7 @@ impl fmt::Display for MemberAction {
 
 /// 创建历史记录的参数
 pub struct CreateHistoryParams {
-    pub group_chat_id: Uuid,
+    pub group_id: i64,
     pub user_id: i64,
     pub action: MemberAction,
     pub operator_id: Option<i64>,
@@ -61,12 +61,12 @@ impl GroupMemberHistoryRepository {
     /// 记录成员加入
     pub async fn record_join(
         &self,
-        group_chat_id: Uuid,
+        group_id: i64,
         user_id: i64,
         operator_id: Option<i64>,
     ) -> Result<Uuid> {
         self.create(CreateHistoryParams {
-            group_chat_id,
+            group_id,
             user_id,
             action: MemberAction::Join,
             operator_id,
@@ -79,9 +79,9 @@ impl GroupMemberHistoryRepository {
     }
 
     /// 记录成员离开
-    pub async fn record_leave(&self, group_chat_id: Uuid, user_id: i64) -> Result<Uuid> {
+    pub async fn record_leave(&self, group_id: i64, user_id: i64) -> Result<Uuid> {
         self.create(CreateHistoryParams {
-            group_chat_id,
+            group_id,
             user_id,
             action: MemberAction::Leave,
             operator_id: Some(user_id), // 自己操作
@@ -96,13 +96,13 @@ impl GroupMemberHistoryRepository {
     /// 记录成员被移除
     pub async fn record_removed(
         &self,
-        group_chat_id: Uuid,
+        group_id: i64,
         user_id: i64,
         operator_id: i64,
         reason: Option<String>,
     ) -> Result<Uuid> {
         self.create(CreateHistoryParams {
-            group_chat_id,
+            group_id,
             user_id,
             action: MemberAction::Removed,
             operator_id: Some(operator_id),
@@ -117,13 +117,13 @@ impl GroupMemberHistoryRepository {
     /// 记录成员被封禁
     pub async fn record_banned(
         &self,
-        group_chat_id: Uuid,
+        group_id: i64,
         user_id: i64,
         operator_id: i64,
         reason: Option<String>,
     ) -> Result<Uuid> {
         self.create(CreateHistoryParams {
-            group_chat_id,
+            group_id,
             user_id,
             action: MemberAction::Banned,
             operator_id: Some(operator_id),
@@ -138,14 +138,14 @@ impl GroupMemberHistoryRepository {
     /// 记录角色变更
     pub async fn record_role_changed(
         &self,
-        group_chat_id: Uuid,
+        group_id: i64,
         user_id: i64,
         operator_id: i64,
         old_role: GroupRole,
         new_role: GroupRole,
     ) -> Result<Uuid> {
         self.create(CreateHistoryParams {
-            group_chat_id,
+            group_id,
             user_id,
             action: MemberAction::RoleChanged,
             operator_id: Some(operator_id),
@@ -160,13 +160,13 @@ impl GroupMemberHistoryRepository {
     /// 记录成员被禁言
     pub async fn record_muted(
         &self,
-        group_chat_id: Uuid,
+        group_id: i64,
         user_id: i64,
         operator_id: i64,
         muted_until: DateTime<Utc>,
     ) -> Result<Uuid> {
         self.create(CreateHistoryParams {
-            group_chat_id,
+            group_id,
             user_id,
             action: MemberAction::Muted,
             operator_id: Some(operator_id),
@@ -181,12 +181,12 @@ impl GroupMemberHistoryRepository {
     /// 记录成员被解除禁言
     pub async fn record_unmuted(
         &self,
-        group_chat_id: Uuid,
+        group_id: i64,
         user_id: i64,
         operator_id: i64,
     ) -> Result<Uuid> {
         self.create(CreateHistoryParams {
-            group_chat_id,
+            group_id,
             user_id,
             action: MemberAction::Unmuted,
             operator_id: Some(operator_id),
@@ -207,11 +207,11 @@ impl GroupMemberHistoryRepository {
         let history_id = sqlx::query_scalar!(
             r#"
             INSERT INTO group_member_history 
-                (group_chat_id, user_id, action, operator_id, old_role, new_role, reason, muted_until)
+                (group_id, user_id, action, operator_id, old_role, new_role, reason, muted_until)
             VALUES ($1, $2, $3::text::member_action, $4, $5::text::member_role, $6::text::member_role, $7, $8)
             RETURNING history_id
             "#,
-            params.group_chat_id,
+            params.group_id,
             params.user_id,
             action_str,
             params.operator_id,

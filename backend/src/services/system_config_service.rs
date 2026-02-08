@@ -287,36 +287,23 @@ impl SystemConfigService {
             return Ok(());
         }
 
-        let mut tx = self.repo.pool().begin().await?;
-
         for (key, value) in updates {
             // 获取旧值用于日志
-            let old_val = self.repo.find_by_key(key).await?.map(|c| c.value);
+            let old_val = self
+                .repo
+                .find_by_key(key)
+                .await?
+                .and_then(|c| config_value_to_string(c.config_value));
 
-            // Upsert (Create or Update)
-            // 这里简化为：如果不存在则 create，存在则 update
-            // 实际上 repo 可能没有 upsert，需手动判断
-            if old_val.is_none() {
-                self.repo
-                    .create_tx(
-                        &mut tx,
-                        key.to_string(),
-                        value.clone(),
-                        None,
-                        crate::types::enums::ConfigValueType::String,
-                        "system".to_string(),
-                    )
-                    .await?;
-            } else {
-                self.repo.update_tx(&mut tx, key, value.clone()).await?;
-            }
-
-            // 记录变更历史（仅当值发生变化）
-            if old_val.as_deref() != Some(value.as_str()) {
-                self.repo
-                    .insert_history_tx(&mut tx, key, old_val.clone(), &value, admin_id)
-                    .await?;
-            }
+            self.repo
+                .upsert(
+                    key.to_string(),
+                    serde_json::Value::String(value.clone()),
+                    None,
+                    false,
+                    Some(admin_id),
+                )
+                .await?;
 
             // 清除单个配置项的 Redis 缓存（实时生效的关键）
             self.clear_single_config_cache(key).await?;
@@ -329,25 +316,17 @@ impl SystemConfigService {
             ("meta.updated_by_user_id", admin_id.to_string()),
         ];
         for (key, value) in meta_updates {
-            let old_val = self.repo.find_by_key(key).await?.map(|c| c.value);
-            if old_val.is_none() {
-                self.repo
-                    .create_tx(
-                        &mut tx,
-                        key.to_string(),
-                        value.clone(),
-                        None,
-                        crate::types::enums::ConfigValueType::String,
-                        "system".to_string(),
-                    )
-                    .await?;
-            } else {
-                self.repo.update_tx(&mut tx, key, value.clone()).await?;
-            }
+            self.repo
+                .upsert(
+                    key.to_string(),
+                    serde_json::Value::String(value.clone()),
+                    None,
+                    false,
+                    Some(admin_id),
+                )
+                .await?;
             self.clear_single_config_cache(key).await?;
         }
-
-        tx.commit().await?;
 
         // 清除完整配置缓存（只需清除一次）
         self.clear_full_settings_cache().await?;
@@ -373,10 +352,12 @@ impl SystemConfigService {
 
         // 3. 写入缓存 (如果有值)
         if let Some(c) = &config {
-            let _: () = conn.set_ex(&cache_key, &c.value, 3600).await?; // 1 hour TTL
+            if let Some(val) = config_value_to_string(c.config_value.clone()) {
+                let _: () = conn.set_ex(&cache_key, &val, 3600).await?; // 1 hour TTL
+            }
         }
 
-        Ok(config.map(|c| c.value))
+        Ok(config.and_then(|c| config_value_to_string(c.config_value)))
     }
 
     /// 组装完整 GlobalSettings
@@ -400,8 +381,11 @@ impl SystemConfigService {
 
         // 2. 查询所有配置
         // 假设 list(None, 1000, None) 能拉取所有需要的配置
-        let (configs, _) = self.repo.list(None, 1000, None).await?;
-        let map: HashMap<String, String> = configs.into_iter().map(|c| (c.key, c.value)).collect();
+        let configs = self.repo.list_all().await?;
+        let map: HashMap<String, String> = configs
+            .into_iter()
+            .filter_map(|c| config_value_to_string(c.config_value).map(|v| (c.config_key, v)))
+            .collect();
 
         // 辅助闭包：获取值或默认值
         let get_str = |k: &str, default: &str| map.get(k).cloned().unwrap_or(default.to_string());
@@ -554,5 +538,15 @@ impl SystemConfigService {
             .publish(REDIS_CHANNEL_CONFIG_UPDATES, message.to_string())
             .await;
         Ok(())
+    }
+}
+
+fn config_value_to_string(value: serde_json::Value) -> Option<String> {
+    match value {
+        serde_json::Value::String(v) => Some(v),
+        serde_json::Value::Number(v) => Some(v.to_string()),
+        serde_json::Value::Bool(v) => Some(v.to_string()),
+        serde_json::Value::Null => None,
+        other => serde_json::to_string(&other).ok(),
     }
 }

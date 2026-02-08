@@ -3,16 +3,12 @@ alwaysApply: true
 ---
 # HotSpot API 规范 - 信息流与标签 API 模块 v0.0.1 (RPC)
 
-> 本文档定义 HotSpot 信息流 (`feed`) 和标签 (`tags`) 相关的 RPC 接口。
+> 本文档定义 HotSpot 信息流 (`feed`) 相关的 RPC 接口。标签相关 API 已移至 `@api_spec_search.mdc`。
 
 ## 服务定义
 
-- **Service Namespaces**:
-  - `feed`
-  - `tags`
-- **Base Paths**:
-  - `/api/v1/feed/`
-  - `/api/v1/tags/`
+- **Service Namespace**: `feed`
+- **Base Path**: `/api/v1/feed/`
 
 ## 契约引用
 
@@ -30,8 +26,6 @@ alwaysApply: true
 | 信息流 | `POST /api/v1/feed/users` | 获取用户推荐 | `GetFeedUsersRequest` | `ApiResponse<PaginatedData<UserItem>>` |
 | 信息流 | `POST /api/v1/feed/trending` | 获取热门内容 | `GetFeedTrendingRequest` | `ApiResponse<TrendingBundle>` |
 | 信息流 | `POST /api/v1/feed/feedback` | 信息流反馈 | `FeedFeedbackRequest` | `ApiResponse` |
-| 标签 | `POST /api/v1/tags/trending` | 热门标签 | `TrendingTagsRequest` | `ApiResponse<PaginatedData<TagItem>>` |
-| 标签 | `POST /api/v1/tags/suggest` | 标签搜索建议 | `SuggestTagsRequest` | `ApiResponse<PaginatedData<TagSuggestItem>>` |
 
 ---
 
@@ -53,11 +47,7 @@ type FeedContentType = 'moment' | 'group' | 'user';
 // 信息流反馈动作
 type FeedFeedbackAction = 'hide' | 'not_interested';
 
-// 标签趋势
-type TagTrend = 'rising' | 'stable' | 'falling';
-
-// 标签时间范围
-type TagTimeframe = 'daily' | 'weekly' | 'monthly';
+// 标签相关类型（TagTrend、TagItem 等）定义于 @api_spec_search.mdc
 
 interface TrendingBundle {
   trending_tags: TrendingTagItem[];
@@ -67,14 +57,8 @@ interface TrendingBundle {
 interface TrendingTagItem {
   name: string;
   usage_count: number;
-  trend: TagTrend;
+  trend: TagTrend;  // TagTrend 定义于 @api_spec_search.mdc
   hot_moment_preview?: MomentItem;
-}
-
-interface TagItem {
-  name: string;
-  usage_count: number;
-  trend?: TagTrend;
 }
 ```
 
@@ -117,7 +101,7 @@ interface GetFeedMomentsRequest {
 **Response**: `ApiResponse<PaginatedData<MomentItem>>`
 
 **来源说明**：
-- `following`：仅关注的人发布的瞬间，按时间倒序（暂时没用到，但是仍然需要 reference_point，）
+- `following`：仅关注的人发布的瞬间，按时间倒序（需要 `reference_point`，用于 `MomentItem.location` 的距离/方位计算）
 - `nearby`：附近范围内的瞬间，按距离和热度排序（需要 reference_point）
 - `all`：综合推荐（默认），混合关注动态、附近热门、个性化推荐（需要 reference_point）
 
@@ -195,42 +179,6 @@ interface FeedFeedbackRequest {
 
 **可能错误码**：`10001`
 
----
 
-## 标签管理 API
 
-### POST /api/v1/tags/trending
-
-获取热门标签。
-
-说明：标签属于"默认公开资源"，不涉及用户隐私等级/访问控制分支。
-
-**Request**:
-```typescript
-interface TrendingTagsRequest {
-  pagination?: PaginationParams;
-  timeframe?: TagTimeframe;
-}
-// Note: limit 默认 10，最大 50（热门标签列表）
-```
-**Response**: `ApiResponse<PaginatedData<TagItem>>`
-
-**可能错误码**：`10003`
-
-### POST /api/v1/tags/suggest
-
-标签搜索建议。
-
-**说明**：必须提供 `reference_point`（用户拒绝定位时使用 fallback）。
-
-**Request**:
-```typescript
-interface SuggestTagsRequest {
-  search: SearchBaseParams;
-  prefix: string;
-}
-// Note: limit 默认 5，最大 20（建议类接口使用较小默认值）
-```
-**Response**: `ApiResponse<PaginatedData<TagSuggestItem>>`
-
-**可能错误码**：`10001`、`10003`
+> **注**：标签相关 API（`tags/trending`、`tags/suggest`）已移至 `@api_spec_search.mdc` 搜索与发现模块。

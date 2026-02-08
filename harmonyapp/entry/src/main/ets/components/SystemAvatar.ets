@@ -9,18 +9,22 @@ import { UserTypeUtil } from '../core/utils/UserTypeUtil';
 @Component
 export struct SystemAvatar {
   @Prop src: string | Resource | undefined;
+  @Prop avatarUrl: string | undefined;
   @Prop name: string = '';
   @Prop size: number = 40; // Default size in vp
   @Prop isOnline: boolean = false;
   @Prop showBorder: boolean = false;
   @Prop shape: 'circle' | 'squircle' | 'square' = 'circle';
-  @Prop userInfo: UserInfo | undefined; // Optional UserInfo to display temp/system badge
+  @Prop userInfo: UserInfo | undefined;
 
   build() {
+    const actualSrc: string | Resource | undefined = this.avatarUrl ?? this.src;
+    const actualName: string = this.name;
+
     Stack({ alignContent: Alignment.BottomEnd }) {
       // Main Avatar Image
-      if (this.src) {
-        Image(this.src)
+      if (actualSrc) {
+        Image(actualSrc)
           .width(this.size)
           .height(this.size)
           .objectFit(ImageFit.Cover)
@@ -30,11 +34,28 @@ export struct SystemAvatar {
       } else {
         // Initials Fallback
         Flex({ justifyContent: FlexAlign.Center, alignItems: ItemAlign.Center }) {
-          Text(this.getInitials(this.name))
+          Text(this.getInitials(actualName))
             .fontSize(this.size * 0.4)
             .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
             .fontColor(Color.White)
+            .width(this.size)
+            .height(this.size)
+            .backgroundColor(this.generateAvatarColor(actualName))
+            .borderRadius(this.getBorderRadius())
+            .border(this.showBorder ? { width: 2, color: DesignConstants.COLOR.SECONDARY_BG_LIGHT } : undefined)
         }
+      }
+
+      // Online Status Indicator
+      if (this.isOnline) {
+        Row()
+          .width(this.size * 0.28)
+          .height(this.size * 0.28)
+          .position({ x: '85%', y: '75%' })
+          .backgroundColor(DesignConstants.COLOR.ONLINE_STATUS)
+          .borderRadius(this.size * 0.5)
+      }
+    }
         .width(this.size)
         .height(this.size)
         .backgroundColor(this.generateAvatarColor(this.name))

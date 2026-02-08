@@ -37,20 +37,6 @@ import { TimerManager } from '../../../core/utils/TimerManager';
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG: string = 'IndexPage';
 
-const WS_NOTIFICATION_SOURCE_IDS: string[] = [
-  'new_follower',
-  'mutual_follow',
-  'unfollowed',
-  'moment_like',
-  'moment_comment',
-  'comment_reply',
-  'group_invite',
-  'group_invite_response',
-  'group_application',
-  'group_application_response',
-  'system_announcement',
-];
-
 @Entry
 @Component
 struct Index {
@@ -252,13 +238,7 @@ struct Index {
     if (this.wsNotificationsBound) return;
     this.wsNotificationsBound = true;
 
-    // 连接建立后再订阅（未 connected 时 subscribe 会被忽略）
-    this.webSocketService.on('ConnectionEstablished', (_e: ServerEvent) => {
-      this.webSocketService.subscribe([{
-        source_type: 'notification',
-        source_ids: WS_NOTIFICATION_SOURCE_IDS
-      }]);
-    });
+    // 通知事件为自动推送，无需显式订阅
 
     // 通用处理：把“与我相关的通知事件”落到 SmartNotificationService
     const handle = async (event: ServerEvent) => {
@@ -351,7 +331,7 @@ struct Index {
               message: `${p.inviter.nickname} 邀请你加入「${p.group_name}」`,
               read: false,
               actionable: false,
-              metadata: { type: 'group_invite', targetId: String(p.group_chat_id) }
+              metadata: { type: 'group_invite', targetId: String(p.group_id) }
             }, { immediate: true });
             break;
           }
@@ -364,7 +344,7 @@ struct Index {
               message: p.status === 'accepted' ? '对方已接受你的群组邀请' : '对方拒绝了你的群组邀请',
               read: false,
               actionable: false,
-              metadata: { type: 'group_invite_response', targetId: String(p.group_chat_id) }
+              metadata: { type: 'group_invite_response', targetId: String(p.group_id) }
             }, { immediate: true });
             break;
           }
@@ -377,7 +357,7 @@ struct Index {
               message: `${p.applicant.nickname} 申请加入群组`,
               read: false,
               actionable: false,
-              metadata: { type: 'group_application', targetId: String(p.group_chat_id) }
+              metadata: { type: 'group_application', targetId: String(p.group_id) }
             }, { immediate: true });
             break;
           }
@@ -390,7 +370,7 @@ struct Index {
               message: p.status === 'accepted' ? `你已加入「${p.group_name}」` : `你的入群申请被拒绝`,
               read: false,
               actionable: false,
-              metadata: { type: 'group_application_response', targetId: String(p.group_chat_id) }
+              metadata: { type: 'group_application_response', targetId: String(p.group_id) }
             }, { immediate: true });
             break;
           }

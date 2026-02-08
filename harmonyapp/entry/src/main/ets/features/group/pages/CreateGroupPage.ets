@@ -13,7 +13,7 @@ import { SystemToast } from '../../../components/SystemToast';
 import { IconButton, AppIcon, IconSize } from '../../../components/SystemIcon';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { PasswordSecurityUtil } from '../../../core/security/PasswordSecurityUtil';
-import { CreateGroupChatRequest } from '../../../core/types/api';
+import { CreateGroupRequest } from '../../../core/types/api';
 
 @Entry
 @Component
@@ -99,7 +99,7 @@ struct CreateGroupPage {
 
     this.isCreating = true;
     try {
-      const request: CreateGroupChatRequest = {
+      const request: CreateGroupRequest = {
         name: this.groupName.trim(),
         description: this.groupDescription.trim() || undefined,
         settings: {
@@ -119,7 +119,7 @@ struct CreateGroupPage {
         const routerInstance = this.getUIContext().getRouter();
         await routerInstance.replaceUrl({
           url: `features/group/pages/${PageNames.GROUP_DETAIL}`,
-          params: { groupId: response.data.group_chat_id }
+          params: { groupId: response.data.group_id }
         });
       } else {
         SystemToast.showError(response.message || '创建群组失败', this.getUIContext());

@@ -108,6 +108,21 @@ export enum NotificationEvent {
 }
 
 /**
+ * 创建通知输入参数（不包含 id 和 timestamp）
+ */
+export interface CreateNotificationInput {
+  type: 'system' | 'performance' | 'social' | 'security';
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  title: string;
+  message: string;
+  read: boolean;
+  actionable: boolean;
+  actions?: NotificationAction[];
+  metadata?: NotificationMetadata;
+  expiresAt?: number;
+}
+
+/**
  * 事件监听器类型
  */
 export type NotificationEventListener = (
@@ -295,14 +310,31 @@ export class SmartNotificationService extends BaseSingleton {
    * 获取配置
    */
   getConfig(): NotificationConfig {
-    return ConfigMerger.merge({} as NotificationConfig, this.config);
+    const result: NotificationConfig = {
+      enablePerformanceAlerts: this.config.enablePerformanceAlerts,
+      enableSocialNotifications: this.config.enableSocialNotifications,
+      enableSecurityAlerts: this.config.enableSecurityAlerts,
+      maxNotifications: this.config.maxNotifications,
+      autoCleanupDays: this.config.autoCleanupDays,
+      quietHours: this.config.quietHours,
+      batchDelay: this.config.batchDelay,
+      enableThrottling: this.config.enableThrottling,
+      position: this.config.position,
+      animation: this.config.animation,
+      duration: this.config.duration,
+      maxVisible: this.config.maxVisible,
+      enableSound: this.config.enableSound,
+      enableVibration: this.config.enableVibration,
+      theme: this.config.theme
+    };
+    return result;
   }
   
   /**
    * 创建通知
    */
   async createNotification(
-    notification: Omit<SmartNotification, 'id' | 'timestamp'>,
+    notification: CreateNotificationInput,
     options?: {
       immediate?: boolean;
       delay?: number;
@@ -329,26 +361,65 @@ export class SmartNotificationService extends BaseSingleton {
       if (!this.scheduler) {
         await this.initializeSubServices();
         if (!this.scheduler) {
-            throw new Error('NotificationScheduler not initialized');
+          throw new Error('NotificationScheduler not initialized');
         }
       }
 
       if (options?.immediate) {
         // 立即发送
-        notificationId = await this.scheduler!.sendImmediately(notification, options.callback);
+        const fullNotification: SmartNotification = {
+          id: this.generateId(),
+          timestamp: Date.now(),
+          type: notification.type,
+          priority: notification.priority,
+          title: notification.title,
+          message: notification.message,
+          read: notification.read,
+          actionable: notification.actionable,
+          actions: notification.actions,
+          metadata: notification.metadata,
+          expiresAt: notification.expiresAt
+        };
+        notificationId = await this.scheduler!.sendImmediately(fullNotification, options.callback);
       } else if (options?.delay) {
         // 延迟发送
-        const taskId = this.scheduler!.schedule(notification, options.delay, options.callback);
+        const fullNotification: SmartNotification = {
+          id: this.generateId(),
+          timestamp: Date.now(),
+          type: notification.type,
+          priority: notification.priority,
+          title: notification.title,
+          message: notification.message,
+          read: notification.read,
+          actionable: notification.actionable,
+          actions: notification.actions,
+          metadata: notification.metadata,
+          expiresAt: notification.expiresAt
+        };
+        const taskId = this.scheduler!.schedule(fullNotification, options.delay, options.callback);
         // 对于调度任务，我们返回任务ID作为通知ID
         notificationId = taskId;
       } else {
         // 默认立即发送
-        notificationId = await this.scheduler!.sendImmediately(notification, options.callback);
+        const fullNotification: SmartNotification = {
+          id: this.generateId(),
+          timestamp: Date.now(),
+          type: notification.type,
+          priority: notification.priority,
+          title: notification.title,
+          message: notification.message,
+          read: notification.read,
+          actionable: notification.actionable,
+          actions: notification.actions,
+          metadata: notification.metadata,
+          expiresAt: notification.expiresAt
+        };
+        notificationId = await this.scheduler!.sendImmediately(fullNotification, options.callback);
       }
       
       if (notificationId) {
         // 触发创建事件
-        this.emitEvent(NotificationEvent.CREATED, { id: notificationId, ...notification } as SmartNotification);
+        this.emitEvent(NotificationEvent.CREATED, { id: notificationId, notification: fullNotification });
         
         // 更新性能指标
         this.performanceMetrics.successCount++;

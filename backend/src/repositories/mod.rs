@@ -1,8 +1,10 @@
 // src/repositories/mod.rs - 数据库访问层模块
+// 统一导出所有 Repository 模块
 
 pub mod admin_audit_repo;
 pub mod admin_rbac_repo;
 pub mod announcement_repo;
+pub mod chat_conversations_state_repo;
 pub mod chat_unread_repo;
 pub mod comment_repo;
 pub mod device_token_repo;
@@ -16,8 +18,8 @@ pub mod group_invite_repo;
 pub mod group_member_history_repo;
 pub mod group_member_repo;
 pub mod group_message_repo;
-pub mod group_repo;
 pub mod group_settings_repo;
+pub mod group_repo;
 pub mod map_repo;
 pub mod private_message_reactions_repo;
 pub mod group_message_reactions_repo;
@@ -35,7 +37,7 @@ pub mod user_blocks_repo;
 pub mod user_follows_repo;
 pub mod user_friend_remarks_repo;
 pub mod user_location_history_repo;
-pub mod user_online_status_repo;
 pub mod user_repo;
 pub mod user_settings_repo;
 pub mod verification_repo;
+pub mod user_online_status_repo;

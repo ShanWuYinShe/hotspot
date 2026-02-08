@@ -78,7 +78,7 @@ impl SearchService {
         for tag in tag_rows {
             items.push(SearchSuggestItem::Tag(TagSuggestItem {
                 name: tag.name,
-                usage_count: tag.usage_count,
+                usage_count: tag.usage_count.unwrap_or(0),
             }));
         }
 

@@ -6,7 +6,6 @@ import { post, paginate } from '../client';
 import { GROUPS, GROUP_MESSAGES } from '../endpoints';
 import type {
 	ApplicationStatus,
-	GroupCard,
 	GroupSearchItem,
 	GroupSuggestions,
 	GroupInfo,
@@ -14,8 +13,6 @@ import type {
 	GroupMemberItem,
 	GroupAnnouncementItem,
 	GroupApplicationItem,
-	MyGroupState,
-	MyGroupItem,
 	GroupMessageItem,
 	MessageLocation,
 	MessageReactionItem,
@@ -70,21 +67,14 @@ export const groupsService = {
 	/**
 	 * 获取群组详情
 	 */
-	getGroup(data: { group_chat_id: string }) {
-		return post<GroupCard>(GROUPS.OPEN_THE_DOOR, data);
-	},
-
-	/**
-	 * 获取我在群组中的状态
-	 */
-	getMyState(data: { group_chat_id: string }) {
-		return post<MyGroupState>(GROUPS.MY_STATE, data);
+	getGroup(data: { group_id: string }) {
+		return post<GroupSearchItem>(GROUPS.OPEN_THE_DOOR, data);
 	},
 
 	/**
 	 * 获取群组设置
 	 */
-	getSettings(data: { group_chat_id: string }) {
+	getSettings(data: { group_id: string }) {
 		return post<GroupSettings>(GROUPS.SETTINGS, data);
 	},
 
@@ -111,7 +101,7 @@ export const groupsService = {
 	 * 更新群组
 	 */
 	update(data: {
-		group_chat_id: string;
+		group_id: string;
 		name?: string;
 		description?: string;
 		avatar_file_id?: string;
@@ -128,21 +118,21 @@ export const groupsService = {
 	/**
 	 * 更新我的群组设置
 	 */
-	updateMySettings(data: { group_chat_id: string; is_muted?: boolean; is_pinned?: boolean }) {
+	updateMySettings(data: { group_id: string; is_muted?: boolean; is_pinned?: boolean }) {
 		return post<void>(GROUPS.UPDATE_MY_SETTINGS, data);
 	},
 
 	/**
 	 * 解散群组
 	 */
-	delete(data: { group_chat_id: string }) {
+	delete(data: { group_id: string }) {
 		return post<void>(GROUPS.DELETE, data);
 	},
 
 	/**
 	 * 转让群主
 	 */
-	transferOwnership(data: { group_chat_id: string; new_owner_id: number }) {
+	transferOwnership(data: { group_id: string; new_owner_id: number }) {
 		return post<void>(GROUPS.TRANSFER_OWNERSHIP, data);
 	},
 
@@ -151,70 +141,70 @@ export const groupsService = {
 	/**
 	 * 获取成员列表
 	 */
-	getMembers(params: { group_chat_id: string; limit?: number; cursor?: string }) {
+	getMembers(params: { group_id: string; limit?: number; cursor?: string }) {
 		return paginate<GroupMemberItem>(GROUPS.MEMBERS.LIST, params);
 	},
 
 	/**
 	 * 邀请成员
 	 */
-	invite(data: { group_chat_id: string; user_ids: number[] }) {
+	invite(data: { group_id: string; user_ids: number[] }) {
 		return post<void>(GROUPS.MEMBERS.INVITE, data);
 	},
 
 	/**
 	 * 直接加入（开放群）
 	 */
-	join(data: { group_chat_id: string; password?: string }) {
+	join(data: { group_id: string; password?: string }) {
 		return post<void>(GROUPS.MEMBERS.JOIN, data);
 	},
 
 	/**
 	 * 申请加入
 	 */
-	apply(data: { group_chat_id: string; message?: string }) {
+	apply(data: { group_id: string; message?: string }) {
 		return post<void>(GROUPS.MEMBERS.APPLY, data);
 	},
 
 	/**
 	 * 设置成员角色
 	 */
-	setRole(data: { group_chat_id: string; user_id: number; role: SetableGroupRole }) {
+	setRole(data: { group_id: string; user_id: number; role: SetableGroupRole }) {
 		return post<GroupMemberItem>(GROUPS.MEMBERS.SET_ROLE, data);
 	},
 
 	/**
 	 * 禁言成员
 	 */
-	mute(data: { group_chat_id: string; user_id: number; duration_minutes: number }) {
+	mute(data: { group_id: string; user_id: number; duration_minutes: number }) {
 		return post<GroupMemberItem>(GROUPS.MEMBERS.MUTE, data);
 	},
 
 	/**
 	 * 解除禁言
 	 */
-	unmute(data: { group_chat_id: string; user_id: number }) {
+	unmute(data: { group_id: string; user_id: number }) {
 		return post<GroupMemberItem>(GROUPS.MEMBERS.UNMUTE, data);
 	},
 
 	/**
 	 * 封禁成员
 	 */
-	ban(data: { group_chat_id: string; user_id: number; reason?: string }) {
+	ban(data: { group_id: string; user_id: number; reason?: string }) {
 		return post<void>(GROUPS.MEMBERS.BAN, data);
 	},
 
 	/**
 	 * 解除封禁
 	 */
-	unban(data: { group_chat_id: string; user_id: number }) {
+	unban(data: { group_id: string; user_id: number }) {
 		return post<void>(GROUPS.MEMBERS.UNBAN, data);
 	},
 
 	/**
 	 * 获取封禁列表
 	 */
-	getBanned(params: { group_chat_id: string; limit?: number; cursor?: string }) {
+	getBanned(params: { group_id: string; limit?: number; cursor?: string }) {
 		return paginate<{ user: UserInfo; banned_at: string; reason?: string }>(
 			GROUPS.MEMBERS.BANNED,
 			params
@@ -224,7 +214,7 @@ export const groupsService = {
 	/**
 	 * 移除成员
 	 */
-	removeMember(data: { group_chat_id: string; user_id: number }) {
+	removeMember(data: { group_id: string; user_id: number }) {
 		return post<void>(GROUPS.MEMBERS.REMOVE_MEMBER, data);
 	},
 
@@ -233,7 +223,7 @@ export const groupsService = {
 	/**
 	 * 获取入群申请列表
 	 */
-	getApplications(params: { group_chat_id: string; limit?: number; cursor?: string }) {
+	getApplications(params: { group_id: string; limit?: number; cursor?: string }) {
 		return paginate<GroupApplicationItem>(GROUPS.APPLICATIONS.LIST, params);
 	},
 
@@ -256,14 +246,14 @@ export const groupsService = {
 	/**
 	 * 获取群公告列表
 	 */
-	getAnnouncements(params: { group_chat_id: string; limit?: number; cursor?: string }) {
+	getAnnouncements(params: { group_id: string; limit?: number; cursor?: string }) {
 		return paginate<GroupAnnouncementItem>(GROUPS.ANNOUNCEMENTS.LIST, params);
 	},
 
 	/**
 	 * 发布群公告
 	 */
-	createAnnouncement(data: { group_chat_id: string; title: string; content: string; is_pinned?: boolean }) {
+	createAnnouncement(data: { group_id: string; title: string; content: string; is_pinned?: boolean }) {
 		return post<GroupAnnouncementItem>(GROUPS.ANNOUNCEMENTS.CREATE, data);
 	},
 
@@ -287,13 +277,13 @@ export const groupsService = {
 	 * 获取我加入的群组列表
 	 */
 	getMyGroups(params?: { limit?: number; cursor?: string }) {
-		return paginate<MyGroupItem>(GROUPS.ME.LIST, params);
+		return paginate<GroupSearchItem>(GROUPS.ME.LIST, params);
 	},
 
 	/**
 	 * 取消入群申请
 	 */
-	cancelApplication(data: { group_chat_id: string }) {
+	cancelApplication(data: { group_id: string }) {
 		return post<void>(GROUPS.ME.CANCEL_APPLICATION, data);
 	},
 
@@ -329,7 +319,7 @@ export const groupsService = {
 	/**
 	 * 退出群组
 	 */
-	leave(data: { group_chat_id: string }) {
+	leave(data: { group_id: string }) {
 		return post<void>(GROUPS.ME.LEAVE, data);
 	}
 };
@@ -339,7 +329,7 @@ export const groupMessagesService = {
 	 * 发送群消息
 	 */
 	send(data: {
-		group_chat_id: string;
+		group_id: string;
 		type: SendMessageType;
 		content?: string;
 		file_id?: string;
@@ -356,7 +346,7 @@ export const groupMessagesService = {
 	 * 获取消息历史
 	 */
 	getHistory(params: {
-		group_chat_id: string;
+		group_id: string;
 		limit?: number;
 		cursor?: string;
 		include_system?: boolean;
@@ -388,7 +378,7 @@ export const groupMessagesService = {
 	/**
 	 * 标记已读
 	 */
-	markAsRead(data: { group_chat_id: string; up_to_message_id?: string }) {
+	markAsRead(data: { group_id: string; up_to_message_id?: string }) {
 		return post<void>(GROUP_MESSAGES.MARK_AS_READ, data);
 	},
 

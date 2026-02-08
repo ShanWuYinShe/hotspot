@@ -95,7 +95,7 @@ class MessageStore {
 					return;
 				}
 
-				const conversationId = `group_${payload.group_chat_id}`;
+				const conversationId = `group_${payload.group_id}`;
 				const existing = this.unreadConversations.get(conversationId);
 
 				if (existing) {

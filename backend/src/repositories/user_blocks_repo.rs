@@ -1,12 +1,17 @@
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
-
+use crate::utils::pagination::{decode_cursor, encode_cursor, TimeCursor};
 use crate::error::Result;
-use crate::utils::pagination::{decode_cursor, encode_cursor, IdCursor};
 
 #[derive(Debug, Clone)]
 pub struct UserBlocksRepository {
     pool: PgPool,
+}
+
+#[derive(Debug, Clone)]
+pub struct BlockEdgeRow {
+    pub user_id: i64,
+    pub created_at: DateTime<Utc>,
 }
 
 impl UserBlocksRepository {
@@ -14,107 +19,78 @@ impl UserBlocksRepository {
         Self { pool }
     }
 
-    pub async fn create(
-        &self,
-        blocker_id: i64,
-        blocked_id: i64,
-        reason: Option<String>,
-    ) -> Result<bool> {
-        let result = sqlx::query!(
-            r#"
-            INSERT INTO user_blocks (blocker_id, blocked_id, reason)
-            VALUES ($1, $2, $3)
-            ON CONFLICT (blocker_id, blocked_id) DO NOTHING
-            "#,
-            blocker_id,
-            blocked_id,
-            reason
-        )
-        .execute(&self.pool)
-        .await?;
-
-        Ok(result.rows_affected() > 0)
-    }
-
-    pub async fn delete(&self, blocker_id: i64, blocked_id: i64) -> Result<()> {
+    pub async fn block(&self, blocker_id: i64, blocked_id: i64) -> Result<()> {
         sqlx::query!(
-            r#"
-            DELETE FROM user_blocks
-            WHERE blocker_id = $1 AND blocked_id = $2
-            "#,
-            blocker_id,
-            blocked_id
-        )
-        .execute(&self.pool)
-        .await?;
-
+            "INSERT INTO blocks (blocker_id, blocked_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+            blocker_id, blocked_id
+        ).execute(&self.pool).await?;
         Ok(())
     }
 
-    pub async fn exists(&self, blocker_id: i64, blocked_id: i64) -> Result<bool> {
-        let result = sqlx::query!(
-            r#"
-            SELECT EXISTS(
-                SELECT 1 FROM user_blocks
-                WHERE blocker_id = $1 AND blocked_id = $2
-            ) as "exists!"
-            "#,
-            blocker_id,
-            blocked_id
-        )
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(result.exists)
+    pub async fn unblock(&self, blocker_id: i64, blocked_id: i64) -> Result<()> {
+        sqlx::query!(
+            "DELETE FROM blocks WHERE blocker_id = $1 AND blocked_id = $2",
+            blocker_id, blocked_id
+        ).execute(&self.pool).await?;
+        Ok(())
     }
 
-    /// 检查 blocker_id 是否拉黑了 blocked_id
     pub async fn is_blocked(&self, blocker_id: i64, blocked_id: i64) -> Result<bool> {
-        self.exists(blocker_id, blocked_id).await
+        let row = sqlx::query_scalar!(
+            "SELECT EXISTS(SELECT 1 FROM blocks WHERE blocker_id = $1 AND blocked_id = $2)",
+            blocker_id, blocked_id
+        ).fetch_one(&self.pool).await?;
+        Ok(row.unwrap_or(false))
     }
 
-    /// 获取拉黑列表（包含详细信息）
-    pub async fn list_blocked_detail(
+    pub async fn list_blocked(
         &self,
-        user_id: i64,
-        limit: i32,
+        blocker_id: i64,
+        limit: i64,
         cursor: Option<String>,
-    ) -> Result<(Vec<BlockedDetailRow>, Option<String>)> {
-        let last_id = if let Some(c) = cursor {
-            decode_cursor::<IdCursor>(&c)?
+    ) -> Result<(Vec<BlockEdgeRow>, Option<String>)> {
+        let (last_ts, last_id) = if let Some(c) = cursor {
+            decode_cursor::<TimeCursor>(&c)?
         } else {
-            i64::MAX
+            (DateTime::<Utc>::MAX_UTC, i64::MAX)
         };
 
-        let rows: Vec<BlockedDetailRow> = sqlx::query_as!(
-            BlockedDetailRow,
+        let rows = sqlx::query!(
             r#"
-            SELECT id, blocked_id, reason, created_at
-            FROM user_blocks
-            WHERE blocker_id = $1 AND id < $2
-            ORDER BY id DESC
-            LIMIT $3
+            SELECT blocked_id as "user_id!", created_at as "created_at!"
+            FROM blocks
+            WHERE blocker_id = $1
+              AND (created_at, blocked_id) < ($2, $3)
+            ORDER BY created_at DESC, blocked_id DESC
+            LIMIT $4
             "#,
-            user_id,
+            blocker_id,
+            last_ts,
             last_id,
-            limit as i64
+            limit + 1
         )
         .fetch_all(&self.pool)
         .await?;
 
-        let next_cursor = rows
-            .last()
-            .map(|last| encode_cursor(&last.id))
-            .transpose()?;
-        Ok((rows, next_cursor))
-    }
-}
+        let has_more = rows.len() > limit as usize;
+        let items: Vec<BlockEdgeRow> = rows
+            .into_iter()
+            .take(limit as usize)
+            .map(|r| BlockEdgeRow {
+                user_id: r.user_id,
+                created_at: r.created_at,
+            })
+            .collect();
 
-/// 拉黑列表查询结果（包含详细信息）
-#[derive(Debug, Clone, sqlx::FromRow)]
-pub struct BlockedDetailRow {
-    pub id: i64,
-    pub blocked_id: i64,
-    pub reason: Option<String>,
-    pub created_at: DateTime<Utc>,
+        let next_cursor = if has_more {
+            items
+                .last()
+                .map(|r| encode_cursor(&(r.created_at, r.user_id)))
+                .transpose()?
+        } else {
+            None
+        };
+
+        Ok((items, next_cursor))
+    }
 }

@@ -4,7 +4,7 @@
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import { Card, CardContent } from '$lib/components/ui/card';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import { Badge } from '$lib/components/ui/badge';
 	import ListSkeleton from '$lib/components/common/list-skeleton.svelte';
@@ -74,9 +74,9 @@
 		</EmptyState>
 	{:else}
 		<div class="columns-1 gap-4 sm:columns-2 xl:columns-3">
-			{#each groups as group (group.group_chat_id)}
+			{#each groups as group (group.group_id)}
 				<div class="mb-4 break-inside-avoid">
-					<a href="/groups/{group.group_chat_id}">
+					<a href="/groups/{group.group_id}">
 						<Card class="cursor-pointer border-0 bg-card/70 shadow-sm shadow-black/5 transition-shadow hover:shadow-lg hover:shadow-black/10">
 							<CardContent class="flex items-center gap-4 p-4">
 								<Avatar class="h-12 w-12">
@@ -86,11 +86,11 @@
 								<div class="min-w-0 flex-1">
 									<div class="flex items-center justify-between">
 										<p class="truncate font-medium">{group.name}</p>
-										{#if group.unread_count > 0}
-											<Badge variant="destructive">
-												{group.unread_count > 99 ? '99+' : group.unread_count}
-											</Badge>
-										{/if}
+							{#if (group.my_state?.unread_count ?? 0) > 0}
+								<Badge variant="destructive">
+									{(group.my_state?.unread_count ?? 0) > 99 ? '99+' : (group.my_state?.unread_count ?? 0)}
+								</Badge>
+							{/if}
 									</div>
 									<p class="text-sm text-muted-foreground">
 										{group.members_count} 成员

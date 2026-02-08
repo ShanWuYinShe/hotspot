@@ -283,17 +283,27 @@ struct LoginPage {
     await AuthAccountManager.upsertAndActivate(authData);
 
     const userInfo: MyProfileData = {
-      user_id: authData.user_id,
       nickname: authData.nickname,
       avatar_url: '',
       bio: '',
       tags: [],
       email: '',
       phone: '',
-      location_name: '',
+      location: {
+        latitude: 0,
+        longitude: 0,
+        location_name: ''
+      },
       is_online: true,
       last_online: '',
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      stats: {
+        moments_count: 0,
+        friends_count: 0,
+        followers_count: 0,
+        following_count: 0,
+        groups_count: 0
+      }
     };
     this.stateManager.updateUser(userInfo);
     await HttpUtil.setToken(authData.access_token);

@@ -13,12 +13,12 @@ use crate::{
         request::{
             AddGroupMessageReactionRequest, DeleteGroupMessageRequest,
             GroupMessageReactionsRequest, GroupMessagesHistoryRequest,
-            MarkGroupMessagesReadRequest, RecallGroupMessageRequest,
+            MarkGroupMessagesReadRequest, MessageReadStatusRequest, RecallGroupMessageRequest,
             RemoveGroupMessageReactionRequest, SendGroupMessageRequest, UpdateGroupMessageRequest,
         },
         response::{
-            GroupMessageItem, MessageMedia, MessageReactionItem, MessageReplyTo, PaginatedData,
-            PaginationMeta, SendGroupMessageData, UserInfo,
+            GroupMessageItem, MessageMedia, MessageReactionItem, MessageReplyTo, MessageReadItem,
+            PaginatedData, PaginationMeta, SendGroupMessageData, UserInfo,
         },
     },
     error::{AppError, Result},
@@ -87,16 +87,17 @@ impl GroupMessageService {
             Validator::validate_length(content, "消息内容", 1, 10000)?;
         }
 
-        let group_id = Uuid::parse_str(&req.group_id)
+        let group_id = req
+            .group_chat_id
+            .parse::<i64>()
             .map_err(|_| AppError::BadRequest("无效的群组ID".to_string()))?;
 
         // 验证群组是否存在
-        if !self.group_repo.exists(group_id).await? {
+        if self.group_repo.find_by_id(group_id).await?.is_none() {
             return Err(AppError::GroupNotFound("群组不存在".to_string()));
         }
 
-        // 使用 SendMessageType 的转换方法获取 MessageType
-        let message_type = req.r#type.to_message_type();
+        let message_type = req.r#type;
 
         let reply_to_message_id = if let Some(ref id) = req.reply_to_message_id {
             Some(
@@ -127,13 +128,14 @@ impl GroupMessageService {
                         MessageType::Video => "[视频]".to_string(),
                         MessageType::Audio => "[语音]".to_string(),
                         MessageType::File => "[文件]".to_string(),
+                        MessageType::Location => "[位置]".to_string(),
                         MessageType::System => reply_msg.content.clone().unwrap_or_default(),
                     };
 
                     reply_to_snapshot = Some(crate::events::event_types::ReplyToSnapshot {
                         message_id: reply_id,
                         user_id: reply_msg.sender_id,
-                        nickname: sender.nickname,
+                        nickname: sender.nickname.unwrap_or_else(|| "未知用户".to_string()),
                         content: preview_content,
                     });
                 }
@@ -161,7 +163,7 @@ impl GroupMessageService {
         // - 文本消息：content 必填，file_id 不需要
         // - 媒体消息：file_id 必填，服务端转换为实际 url 存入 content
         let (content, media) = match message_type {
-            MessageType::Text => {
+            MessageType::Text | MessageType::Location => {
                 let content = req
                     .content
                     .clone()
@@ -236,18 +238,14 @@ impl GroupMessageService {
             "height": m.height,
             "mime_type": m.mime_type
         }));
-        let media_url = media.as_ref().map(|m| m.url.clone());
 
         let created = self
             .message_repo
             .create(
                 group_id,
                 user_id,
-                "",
-                None,
                 message_type,
-                Some(content.as_str()),
-                media_url.as_deref(),
+                Some(content.clone()),
                 media_meta,
                 reply_to_message_id,
                 mentions.clone(),
@@ -267,7 +265,7 @@ impl GroupMessageService {
 
         // 6. 发布消息事件（用于实时推送）
         // 注意：媒体消息的 content 字段存储的是 media_url
-        let event_content = if message_type == MessageType::Text {
+        let event_content = if matches!(message_type, MessageType::Text | MessageType::System | MessageType::Location) {
             req.content.clone()
         } else {
             None
@@ -275,7 +273,7 @@ impl GroupMessageService {
 
         self.event_bus.publish(AppEvent::GroupMessageSent {
             message_id: created.message_id,
-            group_id,
+            group_chat_id: group_id,
             sender_id: user_id,
             message_type, // Use parsed enum
             content: event_content,
@@ -289,6 +287,20 @@ impl GroupMessageService {
         })
     }
 
+    pub async fn get_read_status(
+        &self,
+        _req: &MessageReadStatusRequest,
+        _user_id: i64,
+    ) -> Result<PaginatedData<MessageReadItem>> {
+        Ok(PaginatedData {
+            items: Vec::new(),
+            pagination: PaginationMeta {
+                has_more: false,
+                next_cursor: None,
+            },
+        })
+    }
+
     /// 获取群聊消息历史
     pub async fn get_history(
         &self,
@@ -297,7 +309,9 @@ impl GroupMessageService {
     ) -> Result<PaginatedData<GroupMessageItem>> {
         // 1. 参数验证
         let limit = Validator::validate_limit(req.limit, 100)? as i64;
-        let group_id = Uuid::parse_str(&req.group_id)
+        let group_id = req
+            .group_chat_id
+            .parse::<i64>()
             .map_err(|_| AppError::BadRequest("无效的群组ID".to_string()))?;
 
         // 2. 验证用户是否是群成员
@@ -312,7 +326,7 @@ impl GroupMessageService {
         // 4. 查询消息历史
         let (messages, next_cursor) = self
             .message_repo
-            .list_by_group(group_id, limit, cursor, include_system)
+            .list_by_group(group_id, user_id, limit, cursor, include_system)
             .await?;
 
         let reply_ids: Vec<Uuid> = messages
@@ -342,7 +356,7 @@ impl GroupMessageService {
             let user = user_map.get(&m.sender_id);
 
             // Construct MessageMedia if it's a media message
-            let media = if m.r#type != MessageType::Text && m.r#type != MessageType::System {
+            let media = if matches!(m.r#type, MessageType::Image | MessageType::Video | MessageType::Audio | MessageType::File) {
                 let content_str = m.content.clone().unwrap_or_default();
                 let signed_url = match self.media_service.sign_url(&content_str).await {
                     Ok(u) => u,
@@ -352,32 +366,61 @@ impl GroupMessageService {
                     }
                 };
 
-                // 如果有 thumbnail_url，也需要签名
-                let thumbnail_url = None;
+                let meta = m.metadata.as_object();
+                let thumbnail_url = meta
+                    .and_then(|obj| obj.get("thumbnail_url"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+                let file_name = meta
+                    .and_then(|obj| obj.get("file_name"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+                let file_size = meta.and_then(|obj| obj.get("file_size")).and_then(|v| v.as_i64());
+                let duration = meta.and_then(|obj| obj.get("duration")).and_then(|v| v.as_f64());
+                let width = meta.and_then(|obj| obj.get("width")).and_then(|v| v.as_i64()).map(|v| v as i32);
+                let height = meta.and_then(|obj| obj.get("height")).and_then(|v| v.as_i64()).map(|v| v as i32);
+                let mime_type = meta
+                    .and_then(|obj| obj.get("mime_type"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
 
                 Some(MessageMedia {
                     url: signed_url, // For media messages, content stores the URL
                     thumbnail_url,
-                    file_name: Some(String::new()),
-                    file_size: None,
-                    duration: None,
-                    width: None,
-                    height: None,
-                    mime_type: None,
+                    file_name,
+                    file_size,
+                    duration,
+                    width,
+                    height,
+                    mime_type,
                 })
             } else {
                 None
             };
 
+            let mentions = m
+                .mentions
+                .as_array()
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_i64())
+                        .collect::<Vec<i64>>()
+                })
+                .filter(|arr| !arr.is_empty());
+
             items.push(GroupMessageItem {
                 message_id: m.message_id.to_string(),
                 message_type: m.r#type,
-                content: m.content.clone(),
+                content: if matches!(m.r#type, MessageType::Text | MessageType::System | MessageType::Location) {
+                    m.content.clone()
+                } else {
+                    None
+                },
                 sender: UserInfo {
                     user_id: m.sender_id,
                     nickname: user
-                        .map(|u| u.nickname.clone())
-                        .unwrap_or("未知用户".to_string()),
+                        .and_then(|u| u.nickname.clone())
+                        .unwrap_or_else(|| "未知用户".to_string()),
                     avatar_url: self
                         .media_service
                         .sign_url_if_path(user.and_then(|u| u.avatar_url.as_deref()))
@@ -396,18 +439,19 @@ impl GroupMessageService {
                             message_id: reply_msg.message_id.to_string(),
                             user_id: reply_msg.sender_id,
                             nickname: reply_sender
-                                .map(|u| u.nickname.clone())
-                                .unwrap_or("未知用户".to_string()),
+                                .and_then(|u| u.nickname.clone())
+                                .unwrap_or_else(|| "未知用户".to_string()),
                             content: preview.unwrap_or_default(),
                         }
                     })
                 }),
-                mentions: m.mentions.clone(),
+                mentions,
                 media,
                 sent_at: m.sent_at.to_rfc3339(),
                 edited_at: m.edited_at.map(|t| t.to_rfc3339()),
-                recalled_by: None,
-                recalled_at: if m.is_recalled { Some(m.sent_at.to_rfc3339()) } else { None },
+                is_recalled: m.is_recalled,
+                recalled_by: m.recalled_by,
+                recalled_at: m.recalled_at.map(|t| t.to_rfc3339()),
                 read_count: read_counts.get(&m.message_id).map(|c| *c as i32),
             });
         }
@@ -453,7 +497,7 @@ impl GroupMessageService {
         // 6. 发布编辑事件
         self.event_bus.publish(AppEvent::GroupMessageEdited {
             message_id,
-            group_id: message.group_id,
+            group_chat_id: message.group_id,
             content: req.content.clone(),
             edited_at: chrono::Utc::now().to_rfc3339(),
         });
@@ -503,7 +547,7 @@ impl GroupMessageService {
         // 5. 发布撤回事件
         self.event_bus.publish(AppEvent::GroupMessageRecalled {
             message_id,
-            group_id: message.group_id,
+            group_chat_id: message.group_id,
             recalled_by: user_id,
             recalled_at: chrono::Utc::now().to_rfc3339(),
         });
@@ -548,12 +592,18 @@ impl GroupMessageService {
         }
 
         // 3. 删除消息
-        self.message_repo.soft_delete(message_id).await?;
+        if for_everyone {
+            self.message_repo
+                .delete_for_everyone(message_id, user_id)
+                .await?;
+        } else {
+            self.message_repo.delete_for_user(message_id, user_id).await?;
+        }
 
         // 4. 发布删除事件
         self.event_bus.publish(AppEvent::GroupMessageDeleted {
             message_id,
-            group_id: message.group_id,
+            group_chat_id: message.group_id,
             deleted_by: user_id,
             for_everyone,
         });
@@ -567,7 +617,9 @@ impl GroupMessageService {
         req: &MarkGroupMessagesReadRequest,
         user_id: i64,
     ) -> Result<()> {
-        let group_id = Uuid::parse_str(&req.group_id)
+        let group_id = req
+            .group_chat_id
+            .parse::<i64>()
             .map_err(|_| AppError::BadRequest("无效的群组ID".to_string()))?;
 
         // 验证用户是否是群成员
@@ -585,7 +637,7 @@ impl GroupMessageService {
 
         // 更新已读状态
         self.unread_repo
-            .mark_as_read(group_id, user_id)
+            .mark_as_read("group", &group_id.to_string(), user_id, up_to)
             .await?;
 
         Ok(())
@@ -617,13 +669,11 @@ impl GroupMessageService {
         }
 
         // 添加反应 - r#type 已是强类型枚举
-        self.reactions_repo
-            .add(message_id, user_id, req.r#type.as_str())
-            .await?;
+        self.reactions_repo.add(message_id, user_id, req.r#type).await?;
 
         self.event_bus.publish(AppEvent::GroupMessageReaction {
             message_id,
-            group_id: message.group_id,
+            group_chat_id: message.group_id,
             user_id,
             reaction_type: req.r#type,
             action: "add".to_string(),
@@ -658,13 +708,11 @@ impl GroupMessageService {
         }
 
         // 移除反应 - r#type 已是强类型枚举
-        self.reactions_repo
-            .remove(message_id, user_id, req.r#type.as_str())
-            .await?;
+        self.reactions_repo.remove(message_id, user_id).await?;
 
         self.event_bus.publish(AppEvent::GroupMessageReaction {
             message_id,
-            group_id: message.group_id,
+            group_chat_id: message.group_id,
             user_id,
             reaction_type: req.r#type,
             action: "remove".to_string(),
@@ -700,7 +748,7 @@ impl GroupMessageService {
 
         let limit = Validator::validate_limit(req.limit, 100)? as i64;
         let cursor = Validator::parse_cursor(req.cursor.as_deref())?;
-        let reaction_type = req.r#type.as_ref().map(|r| r.as_str());
+        let reaction_type = req.r#type;
 
         let (reactions, next_cursor) = self
             .reactions_repo
@@ -720,11 +768,11 @@ impl GroupMessageService {
                 Some(MessageReactionItem {
                     user: UserInfo {
                         user_id: user.user_id,
-                        nickname: user.nickname.clone(),
+                        nickname: user.nickname.clone().unwrap_or_else(|| "未知用户".to_string()),
                         avatar_url: user.avatar_url.clone(),
                         user_type: user.user_type,
                     },
-                    reaction_type: ReactionType::from_str(&r.reaction_type).unwrap_or(ReactionType::Like),
+                    reaction_type: r.reaction_type,
                     created_at: r.created_at.to_rfc3339(),
                 })
             })

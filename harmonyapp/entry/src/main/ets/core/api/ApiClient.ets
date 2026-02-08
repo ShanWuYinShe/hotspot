@@ -16,12 +16,12 @@ import {
   PresignUploadData,
   CompleteUploadRequest,
   UploadCategory,
-
+  
   // 认证相关
-  AppAuthData,
+  AuthData,
   RegisterRequest,
   LoginRequest,
-  CreateTempRequest,
+  CreateReportRequest,
   RefreshTokenRequest,
   CheckStatusData,
   RequestPasswordResetRequest,
@@ -30,10 +30,10 @@ import {
   VerifyResetCodeData,
   ResetPasswordRequest,
   ChangePasswordRequest,
-  GetSessionsRequest,
+  SessionsRequest,
   SessionItem,
   RevokeSessionRequest,
-
+  
   // 用户管理
   UserSearchItem,
   SearchUsersByKeywordRequest,
@@ -42,7 +42,7 @@ import {
   UserOpenTheDoorRequest,
   GetRelationshipRequest,
   UserRelation,
-  GetUserStatsRequest,
+  UserStatsRequest,
   UserStatsData,
   MyProfileData,
   UpdateProfileRequest,
@@ -51,26 +51,26 @@ import {
   UserSettingsData,
   UpdateSettingsRequest,
   DeleteAccountRequest,
-  FollowUserRequest,
-  UnfollowUserRequest,
-  BlockUserRequest,
-  UnblockUserRequest,
+  FollowRequest,
+  UnfollowRequest,
+  BlockRequest,
+  UnblockRequest,
   FriendListItem,
   FollowingItem,
   FollowerItem,
   BlockedUserItem,
-  SetFriendRemarkRequest,
-  GetUserFriendsListRequest,
-  GetUserFollowingListRequest,
-  GetUserFollowersListRequest,
-
+  SetRemarkRequest,
+  UserFriendsRequest,
+  UserFollowingRequest,
+  UserFollowersRequest,
+  
   // 生活瞬间
   MomentSearchItem,
   SearchMomentsByKeywordRequest,
   SearchMomentsByTagRequest,
   SearchMomentsByLocationRequest,
   MomentOpenTheDoorRequest,
-  GetUserMomentsRequest,
+  UserMomentsRequest,
   CreateMomentRequest,
   EditMomentRequest,
   DeleteMomentRequest,
@@ -78,130 +78,35 @@ import {
   UnlikeMomentRequest,
   FavoriteMomentRequest,
   UnfavoriteMomentRequest,
-  CheckMomentLikedRequest,
+  CheckLikedRequest,
   CheckLikedData,
-  CheckMomentFavoritedRequest,
+  CheckFavoritedRequest,
   CheckFavoritedData,
-  GetMomentLikesRequest,
+  MomentLikesRequest,
   MomentLikeItem,
-
+  
   // 评论
   CreateCommentRequest,
   DeleteCommentRequest,
-  GetCommentsRequest,
+  CommentsRequest,
   CommentListItem,
-  GetRepliesRequest,
-  LikeCommentRequest,
+  CommentRepliesRequest,
+  CommentLikeRequest,
   UnlikeCommentRequest,
-  GetCommentLikesRequest,
+  CommentLikesRequest,
   CommentLikeItem,
-
+  
   // 私聊管理
-  GetPrivateChatsRequest,
-  PrivateChatListItem,
-  PrivateChatOpenTheDoorRequest,
-  PrivateChatDetailData,
-  UpdatePrivateChatSettingsRequest,
-  DeletePrivateChatRequest,
-
-  // 群组管理
-  GroupSearchItem,
-  SearchGroupsByKeywordRequest,
-  SearchGroupsByTagRequest,
-  SearchGroupsByLocationRequest,
-  GroupOpenTheDoorRequest,
-  GetGroupSettingsRequest,
-  GroupSettingsData,
-  CreateGroupChatRequest,
-  UpdateGroupChatRequest,
-  DeleteGroupChatRequest,
-  GetMembersRequest,
-  GroupMemberItem,
-  InviteMemberRequest,
-  InviteMemberData,
-  JoinGroupRequest,
-  ApplyToGroupRequest,
-  ApplyToGroupData,
-  SetMemberRoleRequest,
-  MuteMemberRequest,
-  UnmuteMemberRequest,
-  BanMemberRequest,
-  UnbanMemberRequest,
-  GetBannedMembersRequest,
-  BannedMemberItem,
-  RemoveMemberRequest,
-  GetGroupApplicationsRequest,
-  GroupApplicationItem,
-  ApproveGroupApplicationRequest,
-  RejectGroupApplicationRequest,
-  TransferOwnershipRequest,
-  GetJoinedGroupChatsRequest,
-  JoinedGroupItem,
-  CancelGroupApplicationRequest,
+  MyPrivateChatsRequest,
   GetGroupInvitesRequest,
-  GroupInviteItem,
-  AcceptGroupInviteRequest,
-  RejectGroupInviteRequest,
-  LeaveGroupRequest,
-
-  // 私聊消息
-  SendPrivateMessageRequest,
   GetPrivateMessagesRequest,
-  PrivateMessageItem,
-  UpdatePrivateMessageRequest,
-  RecallPrivateMessageRequest,
-  DeletePrivateMessageRequest,
-  MarkPrivateMessagesReadRequest,
-  AddPrivateMessageReactionRequest,
-  RemovePrivateMessageReactionRequest,
   GetPrivateMessageReactionsRequest,
-  MessageReactionItem,
-
-  // 群聊消息
-  SendGroupMessageRequest,
   GetGroupMessagesRequest,
-  GroupMessageItem,
-  UpdateGroupMessageRequest,
-  RecallGroupMessageRequest,
-  DeleteGroupMessageRequest,
-  MarkGroupMessagesReadRequest,
   GetMessageReadStatusRequest,
-  MessageReadItem,
-  AddGroupMessageReactionRequest,
-  RemoveGroupMessageReactionRequest,
   GetGroupMessageReactionsRequest,
-
-  // 举报
-  CreateReportRequest,
-  CreateReportData,
-  GetMyReportsRequest,
-  ReportItem,
-
-  // 订阅设置
-  SubscriptionsData,
-  UpdateSubscriptionsRequest,
-
-  // 设备推送
-  RegisterDeviceTokenRequest,
-  UnregisterDeviceTokenRequest,
-  GetDeviceTokensRequest,
-  DeviceTokenItem,
-
-  // 系统健康
-  HealthCheckData,
-
-  // 信息流
-  GetFeedMomentsRequest,
-  GetFeedGroupsRequest,
-  FeedGroupItem,
-  GetFeedUsersRequest,
-  FeedUserItem,
-  GetFeedTrendingRequest,
-  FeedTrendingData,
-  FeedFeedbackRequest,
-
-  // 标签
-  GetTrendingTagsRequest,
+  MyReportsRequest,
+  MyDeviceTokensRequest,
+  TrendingTagsRequest,
   TrendingTagsData,
   SuggestTagsRequest,
   TagSuggestData,
@@ -750,8 +655,8 @@ export class ApiClient {
   /**
    * 获取私聊列表
    */
-  static async getPrivateChats(params: GetPrivateChatsRequest): Promise<ApiResponse<PaginatedData<PrivateChatListItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<PrivateChatListItem>>, GetPrivateChatsRequest>(ApiEndpoints.protected.privateChats.me, params);
+  static async getPrivateChats(params: MyPrivateChatsRequest): Promise<ApiResponse<PaginatedData<PrivateChatListItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<PrivateChatListItem>>, MyPrivateChatsRequest>(ApiEndpoints.protected.privateChats.me, params);
   }
 
   /**
@@ -781,161 +686,161 @@ export class ApiClient {
    * 按关键字搜索群组
    */
   static async searchGroupsByKeyword(params: SearchGroupsByKeywordRequest): Promise<ApiResponse<PaginatedData<GroupSearchItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<GroupSearchItem>>, SearchGroupsByKeywordRequest>(ApiEndpoints.public.groupChats.searchByKeyword, params);
+    return HttpUtil.post<ApiResponse<PaginatedData<GroupSearchItem>>, SearchGroupsByKeywordRequest>(ApiEndpoints.public.groups.searchByKeyword, params);
   }
 
   /**
    * 按标签搜索群组
    */
   static async searchGroupsByTag(params: SearchGroupsByTagRequest): Promise<ApiResponse<PaginatedData<GroupSearchItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<GroupSearchItem>>, SearchGroupsByTagRequest>(ApiEndpoints.public.groupChats.searchByTag, params);
+    return HttpUtil.post<ApiResponse<PaginatedData<GroupSearchItem>>, SearchGroupsByTagRequest>(ApiEndpoints.public.groups.searchByTag, params);
   }
 
   /**
    * 按位置搜索群组
    */
   static async searchGroupsByLocation(params: SearchGroupsByLocationRequest): Promise<ApiResponse<PaginatedData<GroupSearchItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<GroupSearchItem>>, SearchGroupsByLocationRequest>(ApiEndpoints.public.groupChats.searchByLocation, params);
+    return HttpUtil.post<ApiResponse<PaginatedData<GroupSearchItem>>, SearchGroupsByLocationRequest>(ApiEndpoints.public.groups.searchByLocation, params);
   }
 
   /**
    * 获取群组详情
    */
   static async getGroupDetail(params: GroupOpenTheDoorRequest): Promise<ApiResponse<GroupSearchItem>> {
-    return HttpUtil.post<ApiResponse<GroupSearchItem>, GroupOpenTheDoorRequest>(ApiEndpoints.public.groupChats.openTheDoor, params);
+    return HttpUtil.post<ApiResponse<GroupSearchItem>, GroupOpenTheDoorRequest>(ApiEndpoints.public.groups.openTheDoor, params);
   }
 
   /**
    * 获取群组设置
    */
   static async getGroupSettings(params: GetGroupSettingsRequest): Promise<ApiResponse<GroupSettingsData>> {
-    return HttpUtil.post<ApiResponse<GroupSettingsData>, GetGroupSettingsRequest>(ApiEndpoints.public.groupChats.settings, params);
+    return HttpUtil.post<ApiResponse<GroupSettingsData>, GetGroupSettingsRequest>(ApiEndpoints.public.groups.settings, params);
   }
 
   /**
    * 获取群组成员列表
    */
   static async getGroupMembers(params: GetMembersRequest): Promise<ApiResponse<PaginatedData<GroupMemberItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<GroupMemberItem>>, GetMembersRequest>(ApiEndpoints.public.groupChats.members, params);
+    return HttpUtil.post<ApiResponse<PaginatedData<GroupMemberItem>>, GetMembersRequest>(ApiEndpoints.public.groups.members, params);
   }
 
   /**
    * 创建群组
    */
-  static async createGroupChat(params: CreateGroupChatRequest): Promise<ApiResponse<JoinedGroupItem>> {
-    return HttpUtil.post<ApiResponse<JoinedGroupItem>, CreateGroupChatRequest>(ApiEndpoints.protected.groupChats.create, params);
+  static async createGroupChat(params: CreateGroupRequest): Promise<ApiResponse<JoinedGroupItem>> {
+    return HttpUtil.post<ApiResponse<JoinedGroupItem>, CreateGroupRequest>(ApiEndpoints.protected.groups.create, params);
   }
 
   /**
    * 更新群组
    */
-  static async updateGroupChat(params: UpdateGroupChatRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, UpdateGroupChatRequest>(ApiEndpoints.protected.groupChats.update, params);
+  static async updateGroupChat(params: UpdateGroupRequest): Promise<ApiResponse<void>> {
+    return HttpUtil.post<ApiResponse<void>, UpdateGroupRequest>(ApiEndpoints.protected.groups.update, params);
   }
 
   /**
    * 解散群组
    */
-  static async deleteGroupChat(params: DeleteGroupChatRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, DeleteGroupChatRequest>(ApiEndpoints.protected.groupChats.delete, params);
+  static async deleteGroupChat(params: DeleteGroupRequest): Promise<ApiResponse<void>> {
+    return HttpUtil.post<ApiResponse<void>, DeleteGroupRequest>(ApiEndpoints.protected.groups.delete, params);
   }
 
   /**
    * 邀请成员
    */
   static async inviteMember(params: InviteMemberRequest): Promise<ApiResponse<InviteMemberData>> {
-    return HttpUtil.post<ApiResponse<InviteMemberData>, InviteMemberRequest>(ApiEndpoints.protected.groupChats.members.invite, params);
+    return HttpUtil.post<ApiResponse<InviteMemberData>, InviteMemberRequest>(ApiEndpoints.protected.groups.members.invite, params);
   }
 
   /**
    * 加入群组
    */
   static async joinGroup(params: JoinGroupRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, JoinGroupRequest>(ApiEndpoints.protected.groupChats.members.join, params);
+    return HttpUtil.post<ApiResponse<void>, JoinGroupRequest>(ApiEndpoints.protected.groups.members.join, params);
   }
 
   /**
    * 申请加入群组
    */
   static async applyToGroup(params: ApplyToGroupRequest): Promise<ApiResponse<ApplyToGroupData>> {
-    return HttpUtil.post<ApiResponse<ApplyToGroupData>, ApplyToGroupRequest>(ApiEndpoints.protected.groupChats.members.apply, params);
+    return HttpUtil.post<ApiResponse<ApplyToGroupData>, ApplyToGroupRequest>(ApiEndpoints.protected.groups.members.apply, params);
   }
 
   /**
    * 设置成员角色
    */
   static async setMemberRole(params: SetMemberRoleRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, SetMemberRoleRequest>(ApiEndpoints.protected.groupChats.members.setRole, params);
+    return HttpUtil.post<ApiResponse<void>, SetMemberRoleRequest>(ApiEndpoints.protected.groups.members.setRole, params);
   }
 
   /**
    * 禁言成员
    */
   static async muteMember(params: MuteMemberRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, MuteMemberRequest>(ApiEndpoints.protected.groupChats.members.mute, params);
+    return HttpUtil.post<ApiResponse<void>, MuteMemberRequest>(ApiEndpoints.protected.groups.members.mute, params);
   }
 
   /**
    * 取消禁言
    */
   static async unmuteMember(params: UnmuteMemberRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, UnmuteMemberRequest>(ApiEndpoints.protected.groupChats.members.unmute, params);
+    return HttpUtil.post<ApiResponse<void>, UnmuteMemberRequest>(ApiEndpoints.protected.groups.members.unmute, params);
   }
 
   /**
    * 封禁成员
    */
   static async banMember(params: BanMemberRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, BanMemberRequest>(ApiEndpoints.protected.groupChats.members.ban, params);
+    return HttpUtil.post<ApiResponse<void>, BanMemberRequest>(ApiEndpoints.protected.groups.members.ban, params);
   }
 
   /**
    * 解除封禁
    */
   static async unbanMember(params: UnbanMemberRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, UnbanMemberRequest>(ApiEndpoints.protected.groupChats.members.unban, params);
+    return HttpUtil.post<ApiResponse<void>, UnbanMemberRequest>(ApiEndpoints.protected.groups.members.unban, params);
   }
 
   /**
    * 获取封禁列表
    */
   static async getBannedMembers(params: GetBannedMembersRequest): Promise<ApiResponse<PaginatedData<BannedMemberItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<BannedMemberItem>>, GetBannedMembersRequest>(ApiEndpoints.protected.groupChats.members.banned, params);
+    return HttpUtil.post<ApiResponse<PaginatedData<BannedMemberItem>>, GetBannedMembersRequest>(ApiEndpoints.protected.groups.members.banned, params);
   }
 
   /**
    * 移除成员
    */
   static async removeMember(params: RemoveMemberRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, RemoveMemberRequest>(ApiEndpoints.protected.groupChats.members.removeMember, params);
+    return HttpUtil.post<ApiResponse<void>, RemoveMemberRequest>(ApiEndpoints.protected.groups.members.removeMember, params);
   }
 
   /**
    * 获取群组申请列表
    */
   static async getGroupApplications(params: GetGroupApplicationsRequest): Promise<ApiResponse<PaginatedData<GroupApplicationItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<GroupApplicationItem>>, GetGroupApplicationsRequest>(ApiEndpoints.protected.groupChats.applications.list, params);
+    return HttpUtil.post<ApiResponse<PaginatedData<GroupApplicationItem>>, GetGroupApplicationsRequest>(ApiEndpoints.protected.groups.applications.list, params);
   }
 
   /**
    * 审批群组申请
    */
   static async approveGroupApplication(params: ApproveGroupApplicationRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, ApproveGroupApplicationRequest>(ApiEndpoints.protected.groupChats.applications.approve, params);
+    return HttpUtil.post<ApiResponse<void>, ApproveGroupApplicationRequest>(ApiEndpoints.protected.groups.applications.approve, params);
   }
 
   /**
    * 拒绝群组申请
    */
   static async rejectGroupApplication(params: RejectGroupApplicationRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, RejectGroupApplicationRequest>(ApiEndpoints.protected.groupChats.applications.reject, params);
+    return HttpUtil.post<ApiResponse<void>, RejectGroupApplicationRequest>(ApiEndpoints.protected.groups.applications.reject, params);
   }
 
   /**
    * 转让群主
    */
   static async transferOwnership(params: TransferOwnershipRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, TransferOwnershipRequest>(ApiEndpoints.protected.groupChats.transferOwnership, params);
+    return HttpUtil.post<ApiResponse<void>, TransferOwnershipRequest>(ApiEndpoints.protected.groups.transferOwnership, params);
   }
 
   // ==================== 当前用户群组 API（/me/）====================
@@ -943,43 +848,55 @@ export class ApiClient {
   /**
    * 获取我加入的群组
    */
-  static async getJoinedGroups(params: GetJoinedGroupChatsRequest): Promise<ApiResponse<PaginatedData<JoinedGroupItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<JoinedGroupItem>>, GetJoinedGroupChatsRequest>(ApiEndpoints.protected.groupChats.me.list, params);
+  static async getJoinedGroups(params: MyJoinedGroupsRequest): Promise<ApiResponse<PaginatedData<JoinedGroupItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<JoinedGroupItem>>, MyJoinedGroupsRequest>(ApiEndpoints.protected.groups.me.list, params);
+  }
+
+  static async getGroupInvites(params: MyGroupInvitesRequest): Promise<ApiResponse<PaginatedData<GroupInviteItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<GroupInviteItem>>, MyGroupInvitesRequest>(ApiEndpoints.protected.groups.me.invites, params);
+  }
+
+  static async getPrivateMessages(params: GetPrivateMessagesRequest): Promise<ApiResponse<PaginatedData<PrivateMessageItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<PrivateMessageItem>>, GetPrivateMessagesRequest>(ApiEndpoints.protected.privateMessages.history, params);
+  }
+
+  static async getPrivateMessageReactions(params: GetPrivateMessageReactionsRequest): Promise<ApiResponse<PaginatedData<MessageReactionItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<MessageReactionItem>>, GetPrivateMessageReactionsRequest>(ApiEndpoints.protected.privateMessages.reactions, params);
   }
 
   /**
    * 取消群组申请
    */
   static async cancelGroupApplication(params: CancelGroupApplicationRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, CancelGroupApplicationRequest>(ApiEndpoints.protected.groupChats.applications.cancel, params);
+    return HttpUtil.post<ApiResponse<void>, CancelGroupApplicationRequest>(ApiEndpoints.protected.groups.applications.cancel, params);
   }
 
   /**
    * 获取我的群组邀请
    */
   static async getGroupInvites(params: GetGroupInvitesRequest): Promise<ApiResponse<PaginatedData<GroupInviteItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<GroupInviteItem>>, GetGroupInvitesRequest>(ApiEndpoints.protected.groupChats.me.invites, params);
+    return HttpUtil.post<ApiResponse<PaginatedData<GroupInviteItem>>, GetGroupInvitesRequest>(ApiEndpoints.protected.groups.me.invites, params);
   }
 
   /**
    * 接受群组邀请
    */
   static async acceptGroupInvite(params: AcceptGroupInviteRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, AcceptGroupInviteRequest>(ApiEndpoints.protected.groupChats.me.acceptInvite, params);
+    return HttpUtil.post<ApiResponse<void>, AcceptGroupInviteRequest>(ApiEndpoints.protected.groups.me.acceptInvite, params);
   }
 
   /**
    * 拒绝群组邀请
    */
   static async rejectGroupInvite(params: RejectGroupInviteRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, RejectGroupInviteRequest>(ApiEndpoints.protected.groupChats.me.rejectInvite, params);
+    return HttpUtil.post<ApiResponse<void>, RejectGroupInviteRequest>(ApiEndpoints.protected.groups.me.rejectInvite, params);
   }
 
   /**
    * 退出群组
    */
   static async leaveGroup(params: LeaveGroupRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, LeaveGroupRequest>(ApiEndpoints.protected.groupChats.me.leave, params);
+    return HttpUtil.post<ApiResponse<void>, LeaveGroupRequest>(ApiEndpoints.protected.groups.me.leave, params);
   }
 
   // ==================== 私聊消息 API ====================

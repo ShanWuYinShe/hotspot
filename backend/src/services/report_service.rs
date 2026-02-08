@@ -74,7 +74,13 @@ impl ReportService {
 
         let created_report = self
             .report_repo
-            .create(reporter_id, target_type, target_id, reason, req.description)
+            .create(
+                reporter_id,
+                target_type,
+                &target_id,
+                &reason,
+                req.description,
+            )
             .await?;
 
         Ok(CreateReportData {
@@ -163,7 +169,7 @@ impl ReportService {
 
         // 更新状态
         self.report_repo
-            .update_status(report_id, status, admin_id, req.note.clone())
+            .update_status(report_id, status, req.action, req.note.clone(), admin_id)
             .await?;
 
         Ok(())
@@ -172,6 +178,35 @@ impl ReportService {
     /// 辅助方法：将ReportRow转换为ReportItem
     fn to_report_item(report: ReportRow) -> Result<ReportItem, AppError> {
         use crate::dto::response::ReportTargetSnapshot;
+
+        let target_snapshot = report.target_snapshot.and_then(|value| {
+            let content = value
+                .get("content")
+                .and_then(|v| v.as_str())
+                .map(|v| v.to_string());
+            let media_urls = value.get("media_urls").and_then(|v| {
+                v.as_array().map(|arr| {
+                    arr.iter()
+                        .filter_map(|item| item.as_str().map(|s| s.to_string()))
+                        .collect::<Vec<_>>()
+                })
+            });
+            let owner_id = value.get("owner_id").and_then(|v| {
+                v.as_str()
+                    .map(|s| s.to_string())
+                    .or_else(|| v.as_i64().map(|id| id.to_string()))
+            });
+
+            if content.is_none() && media_urls.is_none() && owner_id.is_none() {
+                None
+            } else {
+                Some(ReportTargetSnapshot {
+                    content,
+                    media_urls,
+                    owner_id,
+                })
+            }
+        });
 
         Ok(ReportItem {
             report_id: report.report_id.to_string(),
@@ -182,11 +217,7 @@ impl ReportService {
             status: report.status,
             created_at: report.created_at.to_rfc3339(),
             handled_at: report.handled_at.map(|t| t.to_rfc3339()),
-            target_snapshot: report.target_snapshot.map(|s| ReportTargetSnapshot {
-                content: s.content.clone(),
-                media_urls: s.media_urls.clone(),
-                owner_id: s.owner_id.map(|id| id.to_string()),
-            }),
+            target_snapshot,
         })
     }
 }
@@ -221,7 +252,8 @@ impl ReportService {
                 }
             }
             ReportTargetType::Group => {
-                let group_id = uuid::Uuid::parse_str(target_id)
+                let group_id = target_id
+                    .parse::<i64>()
                     .map_err(|_| AppError::InvalidFormat("target_id 无效".to_string()))?;
                 if !self.group_repo.exists(group_id).await? {
                     return Err(AppError::NotFound("举报目标不存在".to_string()));

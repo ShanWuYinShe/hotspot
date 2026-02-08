@@ -89,9 +89,13 @@ where
 /// 适用于: ORDER BY id DESC
 pub type IdCursor = i64;
 
-/// 时间排序游标 (Time, ID)
+/// 时间+ID排序游标 (Time, i64 ID)
 /// 适用于: ORDER BY created_at DESC, id DESC
 pub type TimeCursor = (chrono::DateTime<chrono::Utc>, i64);
+
+/// 时间+UUID排序游标 (Time, Uuid ID)
+/// 适用于: ORDER BY created_at DESC, uuid DESC
+pub type TimeIdCursor = (chrono::DateTime<chrono::Utc>, uuid::Uuid);
 
 /// 距离排序游标 (Distance, ID)
 /// 适用于: ORDER BY distance ASC, id ASC

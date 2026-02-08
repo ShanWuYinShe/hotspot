@@ -292,10 +292,14 @@ impl AppState {
             session_repo.clone(),
             password_reset_repo.clone(),
             verification_repo.clone(),
+            user_settings_repo.clone(),
         );
 
         let user_service = UserService::new(
             event_bus.clone(),
+            redis.clone(),
+            config.jwt_access_token_expiration,
+            config.jwt_refresh_token_expiration,
             user_repo.clone(),
             user_settings_repo.clone(),
             user_location_history_repo.clone(),
@@ -327,11 +331,10 @@ impl AppState {
 
         let comment_service = CommentService::new(
             event_bus.clone(),
-            redis.clone(),
             comment_repo.clone(),
             moment_repo.clone(),
             user_repo.clone(),
-            cache_manager.clone(),
+            media_service.clone(),
         );
 
         let group_service = GroupService::new(

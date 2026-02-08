@@ -56,7 +56,7 @@ impl AnnouncementService {
                 req.severity.as_str(),
                 req.action_url.as_deref(),
                 req.send_push.unwrap_or(false),
-                creator_id,
+                Some(creator_id),
             )
             .await?;
 
@@ -111,25 +111,26 @@ impl AnnouncementService {
         cursor: Option<String>,
     ) -> Result<PaginatedData<SystemAnnouncementItem>> {
         let limit = Validator::validate_limit(limit_opt, 50)? as i64;
-        let (rows, next_cursor) = self.repo.list(limit, cursor).await?;
+        let (rows, next_cursor) = self.repo.list(limit, cursor.as_deref()).await?;
 
         // 使用 futures_util::future::join_all 来并发签名所有 avatar_url
         let items: Vec<SystemAnnouncementItem> =
             future::join_all(rows.into_iter().map(|row| async move {
+                let publisher_id = row.publisher_id.unwrap_or_default();
                 let created_by = if let (Some(nickname), Some(avatar_url)) =
-                    (row.creator_nickname, row.creator_avatar_url)
+                    (row.publisher_nickname.clone(), row.publisher_avatar_url.clone())
                 {
                     let signed_avatar_url =
                         self.media_service.sign_url_if_path(Some(&avatar_url)).await;
                     UserInfo {
-                        user_id: row.created_by,
+                        user_id: publisher_id,
                         nickname,
                         avatar_url: signed_avatar_url,
                         user_type: crate::types::enums::UserType::System,
                     }
                 } else {
                     UserInfo {
-                        user_id: row.created_by,
+                        user_id: publisher_id,
                         nickname: "Admin".to_string(),
                         avatar_url: None,
                         user_type: crate::types::enums::UserType::System,

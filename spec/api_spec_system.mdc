@@ -3,34 +3,26 @@ alwaysApply: true
 ---
 # HotSpot API 规范 - 系统与全局配置 API 模块 v0.0.1 (RPC)
 
-> 本文档定义 HotSpot 系统健康检查 (`system`)、全局配置 (`global_settings`)、系统公告 (`announcements`) 与版本元信息 (`meta`) 相关的公开 RPC 接口。
+> 本文档定义 HotSpot 系统相关的公开 RPC 接口，包括健康检查、版本元信息、全局配置和系统公告。所有端点统一在 `/api/v1/system/` 路径下。
 
 ## 服务定义
 
-- **Service Namespaces**:
-  - `system`
-  - `global_settings`
-  - `announcements`
-  - `meta`
-- **Base Paths**:
-  - `/api/v1/system/`
-  - `/api/v1/global_settings/`
-  - `/api/v1/announcements/`
+- **Service Namespace**: `system`
+- **Base Path**: `/api/v1/system/`
 
 ## 契约引用
 
 - 公共基础类型：`@api_spec_common.mdc`
 - 错误码：`@spec/api_spec_errors.mdc`
-- 管理员配置管理：`@api_spec_admin_config.mdc`
 
 ## 接口概览（按子域）
 
 | 子域 | 端点 | 说明 | Request | Response |
 |-----|------|------|---------|----------|
 | 版本 | `POST /api/v1/system/meta` | API 版本元信息 | `{}` | `ApiResponse<ApiVersionMeta>` |
-| 系统 | `POST /api/v1/system/health` | 健康检查 | `{}` | `ApiResponse<HealthStatus>` |
-| 全局配置 | `POST /api/v1/global_settings/fetch` | 获取全局启动配置 | `FetchGlobalSettingsRequest` | `ApiResponse<GlobalSettings>` |
-| 公告 | `POST /api/v1/announcements/list` | 系统公告列表 | `AnnouncementListRequest` | `ApiResponse<PaginatedData<SystemAnnouncementItem>>` |
+| 健康 | `POST /api/v1/system/health` | 健康检查 | `{}` | `ApiResponse<HealthStatus>` |
+| 公告 | `POST /api/v1/system/announcements` | 系统公告列表 | `AnnouncementListRequest` | `ApiResponse<PaginatedData<SystemAnnouncementItem>>` |
+| 冷启动 | `POST /api/v1/system/bootstrap` | 已认证用户冷启动聚合 | `{}` | `ApiResponse<BootstrapResponse>` |
 
 ## 核心类型定义
 
@@ -60,12 +52,7 @@ interface HealthStatus {
   timestamp: string;
 }
 
-// 配置类型定义于 @api_spec_common.mdc
-
-// 公告列表请求参数
-interface AnnouncementListRequest {
-  pagination?: PaginationParams;
-}
+// SystemAnnouncementItem 定义于 @api_spec_common.mdc
 ```
 
 ## 错误码说明
@@ -74,7 +61,7 @@ interface AnnouncementListRequest {
 
 | 错误码 | 说明 | 相关接口 |
 |-------|------|---------|
-| `10003` | 参数值超出范围 | `announcements`（limit 超出范围） |
+| `10003` | 参数值超出范围 | `system/announcements`（limit 超出范围） |
 
 ---
 
@@ -113,31 +100,15 @@ interface AnnouncementListRequest {
 
 ---
 
-## 公开配置读取（客户端）
+## 系统公告 API
 
-### POST /api/v1/global_settings/fetch
-
-获取全局启动配置。
-
-**说明**：全局启动配置为公开资源，无需认证。
-
-**Request**:
-```typescript
-interface FetchGlobalSettingsRequest {}
-```
-**Response**: `ApiResponse<GlobalSettings>`
-
----
-
-## 系统公告
-
-### POST /api/v1/announcements/list
+### POST /api/v1/system/announcements
 
 获取系统公告列表。
 
 **说明**：
 - 系统公告属于"默认公开资源"，无需认证
-- 返回的 `SystemAnnouncementItem` 中 `@admin-only` 字段（如 `created_by`、`view_count` 等）仅对管理员可见
+- 返回的 `SystemAnnouncementItem` 中 `@admin-only` 字段（如 `created_by`、`view_count` 等）仅对系统管理员可见
 
 **Request**:
 ```typescript
@@ -148,3 +119,35 @@ interface AnnouncementListRequest {
 **Response**: `ApiResponse<PaginatedData<SystemAnnouncementItem>>`
 
 **可能错误码**：`10003`
+
+---
+
+## 冷启动聚合 API
+
+### POST /api/v1/system/bootstrap
+
+已认证用户冷启动聚合接口。一次请求获取冷启动所需的全部个人化数据，减少客户端并发请求数。
+
+**说明**：
+- 此接口**需要认证**（Token 必须）
+- 仅返回需要鉴权才能获取的个人化数据
+- 公开数据（系统公告）应通过 `system/announcements` 独立获取并缓存
+- 全局配置（`GlobalSettings`）为管理员数据，通过 `admin/global_settings/get` 获取
+- 客户端应在 App 冷启动、从后台恢复等场景调用
+
+**Request**: `{}`
+
+**Response**: `ApiResponse<BootstrapResponse>`
+
+```typescript
+interface BootstrapResponse {
+  profile: MyProfile;           // 当前用户资料（用于导航栏头像/昵称展示）
+  unread: {
+    notifications: UnreadCount; // 通知未读计数（含分类）
+    private_chats: number;      // 有未读消息的私聊会话数
+    group_chats: number;        // 有未读消息的群聊数
+  };
+}
+// MyProfile 定义于 @api_spec_user.mdc
+// UnreadCount 定义于 @api_spec_notification.mdc
+```

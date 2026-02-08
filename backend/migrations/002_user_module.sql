@@ -1,145 +1,212 @@
 -- ============================================================
 -- 002_user_module.sql
--- 用户模块：用户、统计、设置、关系
+-- 用户模块：核心用户、认证、关系、设备
 -- ============================================================
 
--- 1. 用户表
+-- ─── 用户表 ─────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS users (
-    user_id BIGSERIAL PRIMARY KEY,
-    username VARCHAR(50) UNIQUE NOT NULL,
-    email VARCHAR(255) UNIQUE,
-    phone VARCHAR(20) UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    
-    nickname VARCHAR(50),
-    avatar_url TEXT,
-    bio TEXT,
-    gender user_gender DEFAULT 'unknown',
-    birthday DATE,
-    
-    user_type VARCHAR(20) DEFAULT 'normal', -- normal, official, admin
-    status user_status DEFAULT 'active',
-    
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    last_login_at TIMESTAMPTZ,
-    deleted_at TIMESTAMPTZ
-);
+    user_id             BIGINT          PRIMARY KEY,  -- 应用层生成（Snowflake）
+    username            VARCHAR(50)     UNIQUE,       -- 登录 ID
+    email               VARCHAR(255)    UNIQUE,
+    phone               VARCHAR(20)     UNIQUE,
+    password_hash       VARCHAR(255),
+    nickname            VARCHAR(50)     NOT NULL,
+    avatar_url          TEXT,
+    bio                 TEXT,
+    user_type           user_type       NOT NULL DEFAULT 'normal',
+    status              user_status     NOT NULL DEFAULT 'normal',
+    -- PostGIS 位置
+    location            GEOGRAPHY(POINT, 4326),
+    location_name       VARCHAR(255),
+    location_updated_at TIMESTAMPTZ,
+    -- 注册 & 登录
+    register_ip         INET,
+    register_location   VARCHAR(255),
+    last_login_ip       INET,
+    last_login_location VARCHAR(255),
+    last_login_at       TIMESTAMPTZ,
+    -- 时间戳
+    created_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    deleted_at          TIMESTAMPTZ
+) WITH (fillfactor = 90);
 
-CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);
-CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at);
+-- 索引
+CREATE INDEX idx_users_username_trgm ON users USING GIN(username gin_trgm_ops);
+CREATE INDEX idx_users_nickname_trgm ON users USING GIN(nickname gin_trgm_ops);
+CREATE INDEX idx_users_email         ON users(email)    WHERE email IS NOT NULL;
+CREATE INDEX idx_users_phone         ON users(phone)    WHERE phone IS NOT NULL;
+CREATE INDEX idx_users_location      ON users USING GIST(location);
+CREATE INDEX idx_users_created_at    ON users(created_at);
 
--- 2. 用户统计表 (无外键)
-CREATE TABLE IF NOT EXISTS user_stats (
-    user_id BIGINT PRIMARY KEY, -- 对应 users.user_id
-    moments_count INTEGER DEFAULT 0,
-    following_count INTEGER DEFAULT 0,
-    followers_count INTEGER DEFAULT 0,
-    likes_received INTEGER DEFAULT 0,
-    groups_count INTEGER DEFAULT 0,
-    reactions_given INTEGER DEFAULT 0,
-    
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+CREATE TRIGGER tr_users_updated_at
+    BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_timestamp();
 
--- 3. 用户设置表 (无外键)
+-- ─── 用户设置 ───────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS user_settings (
-    user_id BIGINT PRIMARY KEY, -- 对应 users.user_id
-    language VARCHAR(10) DEFAULT 'zh-CN',
-    theme VARCHAR(10) DEFAULT 'system',
-    notifications_enabled BOOLEAN DEFAULT TRUE,
-    privacy_settings JSONB DEFAULT '{}'::jsonb,
-    preferences JSONB DEFAULT '{}'::jsonb,
-    
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    
-    CONSTRAINT check_preferences_is_object CHECK (jsonb_typeof(preferences) = 'object'),
-    CONSTRAINT check_privacy_is_object CHECK (jsonb_typeof(privacy_settings) = 'object')
+    user_id             BIGINT      PRIMARY KEY,
+    -- 隐私控制
+    privacy_level       privacy_level NOT NULL DEFAULT 'public',
+    location_visible    BOOLEAN     NOT NULL DEFAULT TRUE,
+    presence_visible    BOOLEAN     NOT NULL DEFAULT TRUE,
+    friends_visible     privacy_level NOT NULL DEFAULT 'public',
+    following_visible   privacy_level NOT NULL DEFAULT 'public',
+    followers_visible   privacy_level NOT NULL DEFAULT 'public',
+    groups_visible      privacy_level NOT NULL DEFAULT 'public',
+    liked_moments_visible privacy_level NOT NULL DEFAULT 'public',
+    stats_visible       privacy_level NOT NULL DEFAULT 'public',
+    -- 互动控制
+    allow_follow        BOOLEAN     NOT NULL DEFAULT TRUE,
+    allow_private_chat  VARCHAR(20) NOT NULL DEFAULT 'everyone'
+        CHECK (allow_private_chat IN ('everyone', 'friends', 'nobody')),
+    -- 搜索发现
+    searchable          BOOLEAN     NOT NULL DEFAULT TRUE,
+    phone_searchable    BOOLEAN     NOT NULL DEFAULT FALSE,
+    nickname_searchable BOOLEAN     NOT NULL DEFAULT TRUE,
+    location_searchable BOOLEAN     NOT NULL DEFAULT TRUE,
+    -- 时间戳
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 4. 关注关系表 (无外键)
+CREATE TRIGGER tr_user_settings_updated_at
+    BEFORE UPDATE ON user_settings FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+
+-- ─── 在线状态（高频更新，低 fillfactor 启用 HOT）────────────
+CREATE TABLE IF NOT EXISTS user_online_status (
+    user_id         BIGINT      PRIMARY KEY,
+    is_online       BOOLEAN     NOT NULL DEFAULT FALSE,
+    last_active_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    connection_count INTEGER    NOT NULL DEFAULT 0,
+    client_ip       INET,
+    device_info     JSONB
+) WITH (fillfactor = 70);
+
+-- ─── 用户统计 Bucket（分片减少行锁争用）────────────────────
+CREATE TABLE IF NOT EXISTS user_stats_buckets (
+    user_id         BIGINT      NOT NULL,
+    bucket_id       SMALLINT    NOT NULL,
+    moments_count   INTEGER     NOT NULL DEFAULT 0,
+    friends_count   INTEGER     NOT NULL DEFAULT 0,
+    following_count INTEGER     NOT NULL DEFAULT 0,
+    followers_count INTEGER     NOT NULL DEFAULT 0,
+    groups_count    INTEGER     NOT NULL DEFAULT 0,
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, bucket_id)
+);
+CREATE INDEX idx_user_stats_user ON user_stats_buckets(user_id);
+
+-- ─── 关注关系 ───────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS follows (
-    follower_id BIGINT NOT NULL, -- 关注者
-    following_id BIGINT NOT NULL, -- 被关注者
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    
+    follower_id     BIGINT      NOT NULL,
+    following_id    BIGINT      NOT NULL,
+    source          follow_source,
+    source_moment_id UUID,                          -- source='moment' 时记录来源瞬间
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (follower_id, following_id)
 );
+-- 覆盖索引：查我的关注列表
+CREATE INDEX idx_follows_follower ON follows(follower_id, created_at DESC) INCLUDE (following_id);
+-- 覆盖索引：查我的粉丝列表
+CREATE INDEX idx_follows_following ON follows(following_id, created_at DESC) INCLUDE (follower_id);
 
-CREATE INDEX IF NOT EXISTS idx_follows_follower ON follows(follower_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_follows_following ON follows(following_id, created_at DESC);
-
--- 5. 关注请求表 (无外键)
-CREATE TABLE IF NOT EXISTS follow_requests (
-    request_id UUID PRIMARY KEY DEFAULT uuidv7(),
-    requester_id BIGINT NOT NULL,
-    target_id BIGINT NOT NULL,
-    status VARCHAR(20) DEFAULT 'pending', -- pending, accepted, rejected
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_follow_requests_target ON follow_requests(target_id, status, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_follow_requests_requester ON follow_requests(requester_id, status, created_at DESC);
-
--- 6. 黑名单表 (无外键)
+-- ─── 拉黑关系 ───────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS blocks (
-    blocker_id BIGINT NOT NULL,
-    blocked_id BIGINT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    
+    blocker_id  BIGINT      NOT NULL,
+    blocked_id  BIGINT      NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (blocker_id, blocked_id)
 );
+CREATE INDEX idx_blocks_blocked ON blocks(blocked_id, created_at DESC);
 
--- 7. 密码重置记录 (无外键)
-CREATE TABLE IF NOT EXISTS password_resets (
-    reset_id UUID PRIMARY KEY DEFAULT uuidv7(),
-    user_id BIGINT NOT NULL,
-    token VARCHAR(255) NOT NULL,
-    expires_at TIMESTAMPTZ NOT NULL,
-    used BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+-- ─── 用户标签关联 ───────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS user_tags (
+    user_id     BIGINT      NOT NULL,
+    tag_id      UUID        NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, tag_id)
+);
+CREATE INDEX idx_user_tags_tag ON user_tags(tag_id);
+
+-- ─── 好友备注 ───────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS user_friend_remarks (
+    user_id     BIGINT      NOT NULL,
+    friend_id   BIGINT      NOT NULL,
+    remark      VARCHAR(100),
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, friend_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets(token);
-CREATE INDEX IF NOT EXISTS idx_password_resets_user ON password_resets(user_id);
+CREATE TRIGGER tr_user_friend_remarks_updated_at
+    BEFORE UPDATE ON user_friend_remarks FOR EACH ROW EXECUTE FUNCTION update_timestamp();
 
--- 8. 验证码记录 (无外键)
+-- ─── 登录会话（简化版：用 session_id 直接撤销）──────────────
+CREATE TABLE IF NOT EXISTS sessions (
+    session_id              UUID        PRIMARY KEY DEFAULT uuidv7(),
+    user_id                 BIGINT      NOT NULL,
+    device_type             VARCHAR(50),
+    device_name             VARCHAR(100),
+    ip_address              INET,
+    ip_location             VARCHAR(255),
+    user_agent              TEXT,
+    access_token_hash       VARCHAR(255) NOT NULL,
+    refresh_token_hash      VARCHAR(255) NOT NULL,
+    previous_refresh_token_hash VARCHAR(255),   -- Token 轮换：保留上一代 refresh_token hash
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_active_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at              TIMESTAMPTZ NOT NULL,
+    is_revoked              BOOLEAN     NOT NULL DEFAULT FALSE,
+    revoked_at              TIMESTAMPTZ
+);
+CREATE INDEX idx_sessions_user    ON sessions(user_id, created_at DESC);
+CREATE INDEX idx_sessions_refresh ON sessions(refresh_token_hash) WHERE is_revoked = FALSE;
+CREATE INDEX idx_sessions_prev_refresh ON sessions(previous_refresh_token_hash) WHERE previous_refresh_token_hash IS NOT NULL AND is_revoked = FALSE;
+
+-- ─── 验证码 ─────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS verification_codes (
-    code_id UUID PRIMARY KEY DEFAULT uuidv7(),
-    target VARCHAR(255) NOT NULL, -- email or phone
-    code VARCHAR(10) NOT NULL,
-    type VARCHAR(20) NOT NULL, -- register, login, reset_password
-    expires_at TIMESTAMPTZ NOT NULL,
-    used BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    code_id     UUID                    PRIMARY KEY DEFAULT uuidv7(),
+    target      VARCHAR(255)            NOT NULL,   -- 手机号/邮箱
+    code        VARCHAR(10)             NOT NULL,
+    type        verification_code_type  NOT NULL,
+    verify_token VARCHAR(255),                      -- 验证成功后生成的一次性 token
+    expires_at  TIMESTAMPTZ             NOT NULL,
+    used        BOOLEAN                 NOT NULL DEFAULT FALSE,
+    created_at  TIMESTAMPTZ             NOT NULL DEFAULT NOW()
 );
+CREATE INDEX idx_verify_codes_target ON verification_codes(target, type, used);
+CREATE INDEX idx_verify_codes_token  ON verification_codes(verify_token) WHERE verify_token IS NOT NULL AND used = FALSE;
 
-CREATE INDEX IF NOT EXISTS idx_verification_codes_target ON verification_codes(target, type, used);
+-- ─── 密码重置 ───────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS password_resets (
+    reset_id    UUID        PRIMARY KEY DEFAULT uuidv7(),
+    user_id     BIGINT      NOT NULL,
+    token       VARCHAR(255) NOT NULL,
+    expires_at  TIMESTAMPTZ NOT NULL,
+    used        BOOLEAN     NOT NULL DEFAULT FALSE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_pwd_resets_token ON password_resets(token);
 
--- 9. 设备Token表 (无外键)
+-- ─── 推送设备令牌 ──────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS device_tokens (
-    token_id UUID PRIMARY KEY DEFAULT uuidv7(),
-    user_id BIGINT NOT NULL,
-    device_token VARCHAR(255) NOT NULL,
-    platform VARCHAR(20) NOT NULL, -- ios, android, harmony
-    last_active_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    
-    UNIQUE(user_id, device_token)
+    token_id        UUID        PRIMARY KEY DEFAULT uuidv7(),
+    user_id         BIGINT      NOT NULL,
+    platform        VARCHAR(20) NOT NULL,   -- ios, android, harmony, web
+    device_token    VARCHAR(512) NOT NULL,
+    device_name     VARCHAR(100),
+    last_active_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (user_id, platform, device_token)
 );
+CREATE INDEX idx_device_tokens_user ON device_tokens(user_id);
 
-CREATE INDEX IF NOT EXISTS idx_device_tokens_user ON device_tokens(user_id);
-
--- 10. 用户位置历史 (无外键)
+-- ─── 位置历史 ───────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS user_location_history (
-    history_id UUID PRIMARY KEY DEFAULT uuidv7(),
-    user_id BIGINT NOT NULL,
-    location GEOGRAPHY(POINT, 4326) NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    history_id  UUID        PRIMARY KEY DEFAULT uuidv7(),
+    user_id     BIGINT      NOT NULL,
+    location    GEOGRAPHY(POINT, 4326) NOT NULL,
+    location_name VARCHAR(255),
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-
-CREATE INDEX IF NOT EXISTS idx_user_location_history_user ON user_location_history(user_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_user_location_history_geo ON user_location_history USING GIST(location);
+CREATE INDEX idx_user_loc_hist_user ON user_location_history(user_id, created_at DESC);
+CREATE INDEX idx_user_loc_hist_geo  ON user_location_history USING GIST(location);

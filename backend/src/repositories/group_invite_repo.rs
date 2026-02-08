@@ -6,20 +6,19 @@ use uuid::Uuid;
 use crate::constants::INVITE_EXPIRE_DAYS;
 use crate::error::Result;
 use crate::types::enums::ApplicationStatus;
-use crate::utils::pagination::{decode_cursor, encode_cursor, IdCursor};
+use crate::utils::pagination::{decode_cursor, encode_cursor, TimeIdCursor};
 
 /// 群组邀请Row - 数据库查询返回类型
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct GroupInviteRow {
-    pub id: i64,
     pub invite_id: Uuid,
-    pub group_chat_id: Uuid,
+    pub group_id: i64,
     pub inviter_id: i64,
     pub invitee_id: i64,
     pub message: Option<String>,
     pub status: ApplicationStatus,
     pub created_at: DateTime<Utc>,
-    pub expires_at: DateTime<Utc>,
+    pub expires_at: Option<DateTime<Utc>>,
     pub responded_at: Option<DateTime<Utc>>,
 }
 
@@ -36,7 +35,7 @@ impl GroupInviteRepository {
     /// 创建邀请
     pub async fn create(
         &self,
-        group_chat_id: Uuid,
+        group_id: i64,
         inviter_id: i64,
         invitee_id: i64,
         message: Option<String>,
@@ -45,12 +44,12 @@ impl GroupInviteRepository {
         let row = sqlx::query_as!(
             GroupInviteRow,
             r#"
-            INSERT INTO group_invites (group_chat_id, inviter_id, invitee_id, message, expires_at)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, invite_id, group_chat_id, inviter_id, invitee_id, message,
-                      status as "status: ApplicationStatus", created_at, expires_at, responded_at
+            INSERT INTO group_requests (group_id, user_id, operator_id, type, message, expires_at)
+            VALUES ($1, $3, $2, 'invite', $4, $5)
+            RETURNING request_id as "invite_id!", group_id, operator_id as "inviter_id!", user_id as "invitee_id!", message,
+                      COALESCE(status, 'pending'::request_status) as "status!: ApplicationStatus", created_at, expires_at, handled_at as responded_at
             "#,
-            group_chat_id,
+            group_id,
             inviter_id,
             invitee_id,
             message,
@@ -67,10 +66,10 @@ impl GroupInviteRepository {
         let row = sqlx::query_as!(
             GroupInviteRow,
             r#"
-            SELECT id, invite_id, group_chat_id, inviter_id, invitee_id, message,
-                   status as "status: ApplicationStatus", created_at, expires_at, responded_at
-            FROM group_invites
-            WHERE invite_id = $1
+            SELECT request_id as "invite_id!", group_id, operator_id as "inviter_id!", user_id as "invitee_id!", message,
+                   COALESCE(status, 'pending'::request_status) as "status!: ApplicationStatus", created_at, expires_at, handled_at as responded_at
+            FROM group_requests
+            WHERE request_id = $1 AND type = 'invite'
             "#,
             invite_id
         )
@@ -88,9 +87,9 @@ impl GroupInviteRepository {
     ) -> Result<()> {
         sqlx::query!(
             r#"
-            UPDATE group_invites
-            SET status = $2, responded_at = NOW()
-            WHERE invite_id = $1
+            UPDATE group_requests
+            SET status = $2, handled_at = NOW()
+            WHERE request_id = $1 AND type = 'invite'
             "#,
             invite_id,
             status as ApplicationStatus
@@ -110,27 +109,34 @@ impl GroupInviteRepository {
         cursor: Option<String>,
     ) -> Result<(Vec<GroupInviteRow>, Option<String>)> {
         let status_str = status.map(|s| s.to_string());
-        let last_id = if let Some(c) = cursor {
-            decode_cursor::<IdCursor>(&c)?
+        let (cursor_time, cursor_id) = if let Some(c) = cursor {
+            let (time, id) = decode_cursor::<TimeIdCursor>(&c)?;
+            (Some(time), Some(id))
         } else {
-            i64::MAX
+            (None, None)
         };
 
         let rows = sqlx::query_as!(
             GroupInviteRow,
             r#"
-            SELECT id, invite_id, group_chat_id, inviter_id, invitee_id, message,
-                   status as "status: ApplicationStatus", created_at, expires_at, responded_at
-            FROM group_invites
-            WHERE invitee_id = $1 
+            SELECT request_id as "invite_id!", group_id, operator_id as "inviter_id!", user_id as "invitee_id!", message,
+                   COALESCE(status, 'pending'::request_status) as "status!: ApplicationStatus", created_at, expires_at, handled_at as responded_at
+            FROM group_requests
+            WHERE user_id = $1
+              AND type = 'invite'
               AND ($2::text IS NULL OR status::text = $2)
-              AND id < $3
-            ORDER BY id DESC
-            LIMIT $4
+              AND (
+                  $3::timestamptz IS NULL
+                  OR created_at < $3
+                  OR (created_at = $3 AND request_id < $4)
+              )
+            ORDER BY created_at DESC, request_id DESC
+            LIMIT $5
             "#,
             user_id,
             status_str,
-            last_id,
+            cursor_time,
+            cursor_id,
             limit as i64
         )
         .fetch_all(&self.pool)
@@ -138,7 +144,7 @@ impl GroupInviteRepository {
 
         let next_cursor = rows
             .last()
-            .map(|last| encode_cursor(&last.id))
+            .map(|last| encode_cursor(&(last.created_at, last.invite_id)))
             .transpose()?;
 
         Ok((rows, next_cursor))

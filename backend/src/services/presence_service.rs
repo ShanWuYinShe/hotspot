@@ -12,7 +12,7 @@ use crate::constants::{REDIS_KEY_PRESENCE_LOCATION, REDIS_KEY_PRESENCE_ONLINE};
 use crate::error::{AppError, Result};
 use crate::repositories::{
     user_online_status_repo::UserOnlineStatusRepository, user_repo::UserRepository,
-    user_settings_repo::UserSettingsRepository,
+    user_settings_repo::{UserSettingsRepository, UserSettingsRow},
 };
 
 #[derive(Clone)]
@@ -140,11 +140,9 @@ impl PresenceService {
             .flatten();
 
         // 默认值：true（如果没有设置记录）
-        let online_visible = settings.as_ref().map(|s| s.online_visible).unwrap_or(true);
-        let last_online_visible = settings
-            .as_ref()
-            .map(|s| s.last_online_visible)
-            .unwrap_or(true);
+        let online_visible = Self::privacy_bool(settings.as_ref(), "online_visible", true);
+        let last_online_visible =
+            Self::privacy_bool(settings.as_ref(), "last_online_visible", true);
 
         // 如果用户不允许显示在线状态，返回 None
         if !online_visible {
@@ -175,7 +173,7 @@ impl PresenceService {
         }
 
         // 1) 批量拿隐私设置（避免 N+1）
-        let mut settings_map: HashMap<i64, crate::repositories::user_settings_repo::UserSettings> =
+        let mut settings_map: HashMap<i64, crate::repositories::user_settings_repo::UserSettingsRow> =
             HashMap::new();
         if let Ok(settings) = self.user_settings_repo.get_batch(user_ids).await {
             settings_map = settings.into_iter().map(|s| (s.user_id, s)).collect();
@@ -188,8 +186,8 @@ impl PresenceService {
         let mut need_last_online_ids: Vec<i64> = Vec::new();
         for &user_id in user_ids {
             let settings = settings_map.get(&user_id);
-            let online_visible = settings.map(|s| s.online_visible).unwrap_or(true);
-            let last_online_visible = settings.map(|s| s.last_online_visible).unwrap_or(true);
+            let online_visible = Self::privacy_bool(settings, "online_visible", true);
+            let last_online_visible = Self::privacy_bool(settings, "last_online_visible", true);
             if !online_visible {
                 continue;
             }
@@ -234,7 +232,7 @@ impl PresenceService {
         if !miss_ids.is_empty() {
             if let Ok(rows) = self.online_status_repo.get_batch_status(&miss_ids).await {
                 for r in rows {
-                    db_last_seen_map.insert(r.user_id, r.last_seen_at.map(|t| t.to_rfc3339()));
+                    db_last_seen_map.insert(r.user_id, r.last_active_at.map(|t| t.to_rfc3339()));
                 }
             }
         }
@@ -243,8 +241,8 @@ impl PresenceService {
         let mut result: HashMap<i64, (Option<bool>, Option<String>)> = HashMap::new();
         for &user_id in user_ids {
             let settings = settings_map.get(&user_id);
-            let online_visible = settings.map(|s| s.online_visible).unwrap_or(true);
-            let last_online_visible = settings.map(|s| s.last_online_visible).unwrap_or(true);
+            let online_visible = Self::privacy_bool(settings, "online_visible", true);
+            let last_online_visible = Self::privacy_bool(settings, "last_online_visible", true);
 
             if !online_visible {
                 result.insert(user_id, (None, None));
@@ -276,7 +274,10 @@ impl PresenceService {
         // 真正的批量查询：避免 N+1
         if let Ok(settings) = self.user_settings_repo.get_batch(user_ids).await {
             for s in settings {
-                result.insert(s.user_id, s.location_visible);
+                result.insert(
+                    s.user_id,
+                    Self::privacy_bool(Some(&s), "location_visible", true),
+                );
             }
         }
 
@@ -317,7 +318,7 @@ impl PresenceService {
         match self.online_status_repo.get_status(user_id).await {
             Ok(Some(status)) => {
                 let last_online = if !status.is_online {
-                    status.last_seen_at.map(|t| t.to_rfc3339())
+                    status.last_active_at.map(|t| t.to_rfc3339())
                 } else {
                     None
                 };
@@ -375,5 +376,12 @@ impl PresenceService {
         }
 
         result
+    }
+
+    fn privacy_bool(settings: Option<&UserSettingsRow>, key: &str, default: bool) -> bool {
+        settings
+            .and_then(|s| s.privacy_settings.get(key))
+            .and_then(|v| v.as_bool())
+            .unwrap_or(default)
     }
 }

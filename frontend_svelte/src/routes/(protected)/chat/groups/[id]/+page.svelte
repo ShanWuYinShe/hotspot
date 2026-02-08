@@ -50,7 +50,7 @@
 	const batchMarkRead = useBatchMarkRead({
 		markAsRead: async (messageIds) => {
 			// 群聊消息的标记已读是按群组标记的，不需要传 messageIds
-			await groupMessagesService.markAsRead({ group_chat_id: groupId });
+			await groupMessagesService.markAsRead({ group_id: groupId });
 		},
 		debounceMs: 2000,
 		visibilityThreshold: 1000
@@ -58,7 +58,7 @@
 
 	async function loadGroup() {
 		try {
-			const response = await groupsService.getGroup({ group_chat_id: groupId });
+			const response = await groupsService.getGroup({ group_id: groupId });
 			if (isSuccess(response) && response.data) {
 				group = response.data;
 			} else {
@@ -77,7 +77,7 @@
 
 		try {
 			const response = await groupMessagesService.getHistory({
-				group_chat_id: groupId,
+				group_id: groupId,
 				limit: 50,
 				cursor: loadMore ? cursor : undefined,
 				include_system: true
@@ -132,7 +132,7 @@
 			const mentions = extractMentions(text);
 
 			const response = await groupMessagesService.send({
-				group_chat_id: groupId,
+				group_id: groupId,
 				type: 'text',
 				content: text,
 				mentions: mentions.length > 0 ? mentions : undefined,
@@ -308,7 +308,7 @@
 
 		// 先注册消息监听器（确保不会错过任何消息）
 		const unsubscribeMessage = eventHandlers.onGroupMessage((payload: GroupMessageNewPayload) => {
-			if (payload.group_chat_id === groupId) {
+			if (payload.group_id === groupId) {
 				const newMessage: GroupMessageItem = {
 					message_id: payload.message_id,
 					type: payload.type,
@@ -338,7 +338,7 @@
 		});
 
 		const unsubscribeRecalled = websocketStore.on('GroupMessageRecalled', (payload) => {
-			if (payload.group_chat_id === groupId) {
+			if (payload.group_id === groupId) {
 				messages = messages.map((msg) =>
 					msg.message_id === payload.message_id ? { ...msg, recalled_at: payload.recalled_at } : msg
 				);
@@ -346,7 +346,7 @@
 		});
 
 		const unsubscribeEdited = websocketStore.on('GroupMessageEdited', (payload) => {
-			if (payload.group_chat_id === groupId) {
+			if (payload.group_id === groupId) {
 				messages = messages.map((msg) =>
 					msg.message_id === payload.message_id ? { ...msg, content: payload.content } : msg
 				);
@@ -354,7 +354,7 @@
 		});
 
 		const unsubscribeMemberJoined = websocketStore.on('GroupMemberJoined', (payload) => {
-			if (payload.group_chat_id === groupId) {
+			if (payload.group_id === groupId) {
 				toast.success(`${payload.user.nickname} 加入了群组`);
 				// 更新群组成员数量
 				if (group) {
@@ -365,11 +365,11 @@
 
 		// 监听群组成员离开事件
 		const handleMemberLeft = (e: CustomEvent<{
-			group_chat_id: string;
+			group_id: string;
 			user_id: number;
 			member_count: number;
 		}>) => {
-			if (e.detail.group_chat_id === groupId) {
+			if (e.detail.group_id === groupId) {
 				// 更新群组成员数量
 				if (group) {
 					group = { ...group, members_count: e.detail.member_count };
@@ -379,12 +379,12 @@
 
 		// 监听群组成员被移除事件
 		const handleMemberRemoved = (e: CustomEvent<{
-			group_chat_id: string;
+			group_id: string;
 			user_id: number;
 			member_count: number;
 			is_current_user: boolean;
 		}>) => {
-			if (e.detail.group_chat_id === groupId) {
+			if (e.detail.group_id === groupId) {
 				// 更新群组成员数量
 				if (group) {
 					group = { ...group, members_count: e.detail.member_count };
@@ -398,14 +398,14 @@
 
 		// 监听群组信息更新事件
 		const handleGroupUpdated = (e: CustomEvent<{
-			group_chat_id: string;
+			group_id: string;
 			updated_fields: {
 				name?: string;
 				avatar_url?: string;
 				description?: string;
 			};
 		}>) => {
-			if (e.detail.group_chat_id === groupId && group) {
+			if (e.detail.group_id === groupId && group) {
 				// 更新群组信息
 				group = {
 					...group,

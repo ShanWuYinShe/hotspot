@@ -60,23 +60,23 @@ alwaysApply: true
 
 ```
 /api/v1/
-├── auth/           # 认证（登录/注册/刷新 token）
-├── user/           # 用户相关
-├── moments/        # 瞬间相关
-├── comments/       # 评论相关
-├── private_chats/  # 私聊
-├── groups/    # 群聊相关
-├── feed/           # 信息流
-├── map/            # 地图渲染
-├── tags/           # 标签
-├── reports/        # 举报
-├── notifications/  # 通知
-├── device_tokens/  # 设备推送
-├── media/          # 媒体上传
-├── system/         # 系统健康检查与版本元信息
-├── global_settings/# 全局配置
-├── announcements/  # 系统公告
-└── admin/          # 管理员
+├── auth/              # 认证（登录/注册/刷新 token）
+├── users/             # 用户相关（搜索/资料/关系）
+├── moments/           # 瞬间相关（搜索/CRUD/互动）
+├── comments/          # 评论相关
+├── private_chats/     # 私聊管理
+├── private_messages/  # 私聊消息
+├── groups/            # 群组相关（搜索/管理/成员/公告）
+├── group_messages/    # 群聊消息
+├── feed/              # 信息流（推荐/热门）
+├── map/               # 地图渲染
+├── search/            # 搜索与发现（综合建议/标签）
+├── reports/           # 举报
+├── notifications/     # 通知中心（通知/偏好/推送设备）
+├── media/             # 媒体上传
+├── share/             # 分享系统
+├── system/            # 系统（健康/版本/配置/公告）
+└── admin/             # 管理员
 ```
 
 ### Token 处理规则
@@ -109,7 +109,7 @@ alwaysApply: true
 | 查询类（搜索/详情/列表） | **可选** | 若类型定义含 `@auth-only` 字段，登录态返回这些字段 |
 | 写操作（create/update/delete） | **必须** | 缺少 token 返回认证错误 |
 | 互动操作（like/follow/block 等） | **必须** | 缺少 token 返回认证错误 |
-| `*/me/*` 路径（如 `/api/v1/user/me/*`） | **必须** | 当前用户专属数据 |
+| `*/me/*` 路径（如 `/api/v1/users/me/*`） | **必须** | 当前用户专属数据 |
 | `/feed/*` 路径 | **必须** | 个性化推荐依赖身份 |
 | `/admin/*` 路径 | **必须**+权限 | 管理员功能 |
 
@@ -139,15 +139,26 @@ alwaysApply: true
 
 **说明**：当整个响应仅对特定视角可见时，优先在接口的 Response 说明中标注 `@owner-only`；仅当同一类型内混合可见字段时才使用字段级标注。
 
-### @admin-only 字段标注机制
+### @admin-only 字段标注机制（系统管理员）
 
 `xxx-only` 仅表示字段在非该视角下不返回（等同于可选字段）。
 
 **可见性规则**：
-- 仅管理员可见
+- 仅**系统管理员**可见（拥有 admin RBAC 权限的用户）
 - `@super-admin-only` 是更严格的管理员可见范围
+- **不要与群组管理员混淆**：群组管理员使用 `@group-admin-only`
 
-**说明**：当整个响应仅对管理员可见时，优先在接口的 Response 说明中标注 `@admin-only`；仅当同一类型内混合可见字段时才使用字段级标注。
+**说明**：当整个响应仅对系统管理员可见时，优先在接口的 Response 说明中标注 `@admin-only`；仅当同一类型内混合可见字段时才使用字段级标注。
+
+### @group-admin-only 字段标注机制（群组管理员）
+
+`xxx-only` 仅表示字段在非该视角下不返回（等同于可选字段）。
+
+**可见性规则**：
+- 仅**群组管理员**可见（群组内 role 为 `owner` 或 `admin` 的成员）
+- 系统管理员在具备相应权限时也可见
+
+**说明**：用于群组内的管理类字段/接口，如成员管理、申请审核、群组设置等。当整个响应仅对群组管理员可见时，优先在接口的 Response 说明中标注 `@group-admin-only`；仅当同一类型内混合可见字段时才使用字段级标注。
 
 ### @member-only 字段标注机制
 
@@ -265,6 +276,10 @@ type UserType = 'temp' | 'normal' | 'admin' | 'system';
 // 反应类型枚举
 type ReactionType = 'like' | 'love' | 'laugh' | 'angry' | 'sad' | 'wow';
 
+// 隐私级别枚举（跨模块复用：用户设置、瞬间等）
+// 注：'friends' 表示"好友可见"，好友 = 双方互相关注的用户
+type PrivacyLevel = 'public' | 'friends' | 'private';
+
 // 角色枚举
 type GroupRole = 'owner' | 'admin' | 'member';
 
@@ -292,8 +307,6 @@ type RecommendationType = 'friend_liked' | 'nearby' | 'trending' | 'following' |
 
 interface RecommendationContext {
   type: RecommendationType;
-  // 社交证明（仅 friend_liked 类型时存在）
-  friends_preview?: UserInfo[];  // 最多2个点赞的好友
 }
 ```
 
@@ -402,7 +415,7 @@ interface MessageMedia {
 
 ## 领域实体定义 (Domain Entities)
 
-本节定义业务核心对象。遵循 **Info (嵌入) -> SearchItem (统一搜索)** 的分层模式。
+本节定义业务核心对象。遵循 **Info (嵌入用) → Item (统一数据类型)** 的分层模式。通过 `@auth-only`/`@admin-only`/`@group-admin-only` 等标注控制不同上下文的字段可见性。
 
 ### 用户 (User)
 
@@ -431,15 +444,6 @@ interface UserStats {
 
 // 账号状态（管理员视角）
 type UserAccountStatus = 'normal' | 'banned';
-
-interface AdminBanRecord {
-  banned_at: string;
-  banned_by: UserInfo;
-  reason?: string;
-  duration_days?: number;
-  unbanned_at?: string;
-  unbanned_by?: UserInfo;
-}
 
 **UserItem**: 用户统一数据类型（用于列表、搜索、详情、Feed 等所有场景）
 ```typescript
@@ -483,7 +487,6 @@ interface UserItem {
   last_login_location?: string;
   email?: string;
   phone?: string;
-  ban_history?: AdminBanRecord[];
 }
 ```
 
@@ -526,6 +529,9 @@ interface GroupItem {
   // - 详情场景：distance 和 bearing_degrees 为 undefined
   location: RelativeLocation;
   
+  // 列表/详情页返回
+  last_activity_at?: string;     // 最近活跃时间（最后消息/公告/成员变动等）
+  
   // 详情页返回，搜索/列表不返回
   created_at?: string;
   owner_id?: string;
@@ -536,11 +542,14 @@ interface GroupItem {
   // Feed 场景返回（好友中有多少在该群组内）
   friends_in_group?: number;
 
-  // === @admin-only 以下字段仅管理员返回 ===
-  owner?: UserInfo;
-  max_members?: number;
+  // === @group-admin-only 以下字段仅群组管理员返回 ===
   join_method?: GroupJoinMethod;
   is_searchable?: boolean;
+  max_members?: number;
+  settings_location?: Location;  // 群组配置位置（原始 Location，非 RelativeLocation）
+
+  // === @admin-only 以下字段仅系统管理员返回 ===
+  owner?: UserInfo;
   admins?: UserInfo[];
   stats?: {
     messages_count: number;
@@ -548,14 +557,6 @@ interface GroupItem {
     reports_count?: number;
     last_reported_at?: string;
   };
-  dismissal_history?: AdminDismissalRecord[];
-}
-```
-
-interface AdminDismissalRecord {
-  dismissed_at: string;
-  dismissed_by: UserInfo;
-  reason?: string;
 }
 
 **GroupSettings**: 群组设置（可修改的配置项）
@@ -629,6 +630,8 @@ interface MomentBase {
   created_at: string;
   likes_count: number;
   comments_count: number;
+  shares_count: number;
+  reactions_count: number;    // emoji reactions 总数（不含 like）
 }
 ```
 
@@ -643,10 +646,14 @@ interface MomentItem {
   // - 详情/用户瞬间历史场景：distance 和 bearing_degrees 为 undefined
   location: RelativeLocation;
   
+  // === @owner-only 以下字段仅资源拥有者返回 ===
+  privacy_level?: PrivacyLevel;   // 仅拥有者可见，服务端过滤控制可见性
+  
   // === @auth-only 以下字段仅登录态返回 ===
   my_state?: {
     is_liked: boolean;
     is_favorited: boolean;
+    my_reactions?: ReactionType[];  // 当前用户添加的 emoji reactions
   };
   
   // Feed 场景返回（推荐理由，让用户了解为什么看到这条内容）
@@ -654,7 +661,7 @@ interface MomentItem {
 }
 ```
 
-注意：`privacy_level` 不对非拥有者暴露，生活瞬间的可见性由服务端过滤控制。
+注意：`privacy_level` 不对非拥有者暴露，生活瞬间的可见性由服务端过滤控制。仅资源拥有者在详情/我的瞬间列表中可见 `privacy_level`。
 
 ### 消息 (Message)
 
@@ -668,10 +675,17 @@ interface MessageReplyTo {
   share_code?: string;
 }
 
-interface MessageReactionItem {
+// ReactionItem: 通用反应列表项（消息反应、瞬间反应等场景复用）
+interface ReactionItem {
   user: UserInfo;
   type: ReactionType;
   created_at: string;
+}
+
+// MessageSent: 消息发送响应（私聊/群聊共用，支持客户端乐观更新）
+interface MessageSent {
+  message_id: string;
+  sent_at: string;    // 服务端确定的发送时间
 }
 ```
 
@@ -740,78 +754,6 @@ interface ReportItem {
     media_urls?: string[];
     owner_id?: string;
   };
-}
-```
-
-### 系统配置 (System Settings)
-
-```typescript
-interface UploadConfig {
-  image_max_size: number;
-  video_max_size: number;
-  audio_max_size: number;
-  file_max_size: number;
-  allowed_image_types: string[];
-  allowed_video_types: string[];
-}
-
-interface ContentDefaults {
-  default_location_name: string;
-  default_group_avatar: string;
-  default_user_avatar: string;
-  default_group_settings: GroupSettings;
-}
-
-interface FeatureSwitches {
-  enable_public_registration: boolean;
-  enable_guest_login: boolean;
-  enable_moments: boolean;
-  enable_nearby_people: boolean;
-}
-
-interface ContactInfo {
-  support_email: string;
-  privacy_policy_url: string;
-  terms_of_service_url: string;
-  official_website: string;
-}
-
-interface AppLimits {
-  max_group_members: number;
-  max_moment_tags: number;
-  max_moment_images: number;
-  moment_description_max_length: number;
-  comment_max_length: number;
-  search_radius_max: number;
-}
-
-interface RateLimitConfig {
-  global_per_hour: number;
-  user_per_hour: number;
-  auth_send_code_per_minute: number;
-  auth_verify_code_per_10minutes: number;
-  auth_register_per_10minutes: number;
-  auth_login_per_10minutes: number;
-  auth_guest_per_10minutes: number;
-  auth_refresh_per_10minutes: number;
-  auth_reset_request_per_minute: number;
-  auth_reset_verify_per_10minutes: number;
-  auth_reset_per_10minutes: number;
-  moments_create_per_minute: number;
-  comments_create_per_minute: number;
-  reports_create_per_hour: number;
-}
-
-interface GlobalSettings {
-  upload: UploadConfig;
-  defaults: ContentDefaults;
-  features: FeatureSwitches;
-  contact: ContactInfo;
-  limits: AppLimits;
-  rate_limits: RateLimitConfig;
-  // @admin-only
-  updated_at?: string;
-  updated_by_user_id?: string;
 }
 ```
 
@@ -943,10 +885,10 @@ interface ApiResponse<T = void> {
 - 举报创建：`reports/create`
 - 分享创建：`share/create`
 - 群组创建与公告：`groups/create`、`groups/announcements/create`
-- 群组加入/申请/审核：`groups/members/join`、`groups/members/apply`、`groups/applications/approve`、`groups/applications/reject`
+- 群组加入/审核：`groups/members/join`、`groups/applications/approve`、`groups/applications/reject`
 - 群组邀请处理：`groups/me/invites/accept`、`groups/me/invites/reject`
 - 管理员操作（所有具有“创建/处理/封禁/解散”语义的 admin 写操作）
 
 #### 建议使用幂等键的接口（SHOULD）
 
-- 重要且不可逆的变更操作（如 `user/me/delete`、`groups/delete`、`groups/transfer_ownership`）
+- 重要且不可逆的变更操作（如 `users/me/delete`、`groups/delete`、`groups/transfer_ownership`）

@@ -5,14 +5,13 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
-use uuid::Uuid;
 
 use crate::error::Result;
 
 /// 群组设置Row（如果group_repo.rs中已定义，可以从那里导入）
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct GroupSettings {
-    pub group_chat_id: Uuid,
+    pub group_id: i64,
     pub join_method: String,
     pub is_searchable: bool,
     pub max_members: Option<i32>,
@@ -25,7 +24,7 @@ pub struct GroupSettings {
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct GroupUserPreferences {
     pub id: i64,
-    pub group_chat_id: Uuid,
+    pub group_id: i64,
     pub user_id: i64,
     pub is_muted: bool,
     pub is_pinned: bool,
@@ -46,18 +45,18 @@ impl GroupSettingsRepository {
     /// 根据群聊ID查找群组设置（静态方法）
     pub async fn find_by_group_id(
         pool: &PgPool,
-        group_chat_id: Uuid,
+        group_id: i64,
     ) -> Result<Option<GroupSettings>> {
         let settings = sqlx::query_as!(
             GroupSettings,
             r#"
-            SELECT group_chat_id, join_method::TEXT as "join_method!", 
+            SELECT group_id, join_method::TEXT as "join_method!", 
                    is_searchable, max_members, password_hash,
                    created_at, updated_at
             FROM group_settings
-            WHERE group_chat_id = $1
+            WHERE group_id = $1
             "#,
-            group_chat_id
+            group_id
         )
         .fetch_optional(pool)
         .await?;
@@ -66,14 +65,14 @@ impl GroupSettingsRepository {
     }
 
     /// 根据群聊ID查找群组设置（实例方法）
-    pub async fn find_by_group(&self, group_chat_id: Uuid) -> Result<Option<GroupSettings>> {
-        Self::find_by_group_id(&self.pool, group_chat_id).await
+    pub async fn find_by_group(&self, group_id: i64) -> Result<Option<GroupSettings>> {
+        Self::find_by_group_id(&self.pool, group_id).await
     }
 
     /// 更新群组设置
     pub async fn update(
         &self,
-        group_chat_id: Uuid,
+        group_id: i64,
         join_method: Option<&str>,
         is_searchable: Option<bool>,
         max_members: Option<i32>,
@@ -82,14 +81,14 @@ impl GroupSettingsRepository {
         sqlx::query!(
             r#"
             UPDATE group_settings
-            SET join_method = COALESCE($2, join_method::TEXT)::join_method,
+            SET join_method = COALESCE($2, join_method::TEXT)::group_join_method,
                 is_searchable = COALESCE($3, is_searchable),
                 max_members = COALESCE($4, max_members),
                 password_hash = COALESCE($5, password_hash),
                 updated_at = NOW()
-            WHERE group_chat_id = $1
+            WHERE group_id = $1
             "#,
-            group_chat_id,
+            group_id,
             join_method,
             is_searchable,
             max_members,
@@ -102,15 +101,15 @@ impl GroupSettingsRepository {
     }
 
     /// 清除群组密码
-    pub async fn clear_password(&self, group_chat_id: Uuid) -> Result<()> {
+    pub async fn clear_password(&self, group_id: i64) -> Result<()> {
         sqlx::query!(
             r#"
             UPDATE group_settings
             SET password_hash = NULL,
                 updated_at = NOW()
-            WHERE group_chat_id = $1
+            WHERE group_id = $1
             "#,
-            group_chat_id
+            group_id
         )
         .execute(&self.pool)
         .await?;
@@ -121,7 +120,7 @@ impl GroupSettingsRepository {
     /// 创建群组设置（通常由触发器自动创建，此方法用于特殊情况）
     pub async fn create(
         &self,
-        group_chat_id: Uuid,
+        group_id: i64,
         join_method: &str,
         is_searchable: bool,
         max_members: Option<i32>,
@@ -129,11 +128,11 @@ impl GroupSettingsRepository {
     ) -> Result<()> {
         sqlx::query!(
             r#"
-            INSERT INTO group_settings (group_chat_id, join_method, is_searchable, max_members, password_hash)
-            VALUES ($1, $2::TEXT::join_method, $3, $4, $5)
-            ON CONFLICT (group_chat_id) DO NOTHING
+            INSERT INTO group_settings (group_id, join_method, is_searchable, max_members, password_hash)
+            VALUES ($1, $2::TEXT::group_join_method, $3, $4, $5)
+            ON CONFLICT (group_id) DO NOTHING
             "#,
-            group_chat_id,
+            group_id,
             join_method,
             is_searchable,
             max_members,
@@ -150,17 +149,17 @@ impl GroupSettingsRepository {
     /// 获取用户群组偏好设置
     pub async fn find_user_preferences(
         &self,
-        group_chat_id: Uuid,
+        group_id: i64,
         user_id: i64,
     ) -> Result<Option<GroupUserPreferences>> {
         let prefs = sqlx::query_as!(
             GroupUserPreferences,
             r#"
-            SELECT id, group_chat_id, user_id, is_muted, is_pinned, created_at, updated_at
+            SELECT id, group_id, user_id, is_muted, is_pinned, created_at, updated_at
             FROM group_user_preferences
-            WHERE group_chat_id = $1 AND user_id = $2
+            WHERE group_id = $1 AND user_id = $2
             "#,
-            group_chat_id,
+            group_id,
             user_id
         )
         .fetch_optional(&self.pool)
@@ -172,21 +171,21 @@ impl GroupSettingsRepository {
     /// 创建或更新用户群组偏好设置
     pub async fn upsert_user_preferences(
         &self,
-        group_chat_id: Uuid,
+        group_id: i64,
         user_id: i64,
         is_muted: Option<bool>,
         is_pinned: Option<bool>,
     ) -> Result<()> {
         sqlx::query!(
             r#"
-            INSERT INTO group_user_preferences (group_chat_id, user_id, is_muted, is_pinned)
+            INSERT INTO group_user_preferences (group_id, user_id, is_muted, is_pinned)
             VALUES ($1, $2, COALESCE($3, FALSE), COALESCE($4, FALSE))
-            ON CONFLICT (group_chat_id, user_id) DO UPDATE
+            ON CONFLICT (group_id, user_id) DO UPDATE
             SET is_muted = COALESCE($3, group_user_preferences.is_muted),
                 is_pinned = COALESCE($4, group_user_preferences.is_pinned),
                 updated_at = NOW()
             "#,
-            group_chat_id,
+            group_id,
             user_id,
             is_muted,
             is_pinned

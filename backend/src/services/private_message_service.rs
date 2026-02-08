@@ -1,22 +1,20 @@
-// src/services/private_message_service.rs
-// 私聊消息Service
+//! 私聊消息服务层实现
+//!
+//! 适配新 Schema: message_id(UUID), chat_id(UUID), metadata(media)
 
-use chrono::{Duration, Utc};
-use std::str::FromStr; // Add FromStr
+use std::collections::HashMap;
 use std::sync::Arc;
+
+use chrono::Utc;
+use redis::aio::ConnectionManager as RedisConnectionManager;
 use uuid::Uuid;
 
-use redis::aio::ConnectionManager as RedisConnectionManager;
-
 use crate::{
-    constants::MESSAGE_RECALL_MINUTES,
     dto::{
         request::{
-            AddPrivateMessageReactionRequest, DeletePrivateMessageRequest,
-            MarkPrivateMessagesReadRequest, PrivateMessageReactionsRequest,
-            PrivateMessagesHistoryRequest, RecallPrivateMessageRequest,
-            RemovePrivateMessageReactionRequest, SendPrivateMessageRequest,
-            UpdatePrivateMessageRequest,
+            AddPrivateMessageReactionRequest, DeletePrivateMessageRequest, MarkPrivateMessagesReadRequest,
+            PrivateMessageReactionsRequest, PrivateMessagesHistoryRequest, RecallPrivateMessageRequest,
+            RemovePrivateMessageReactionRequest, SendPrivateMessageRequest, UpdatePrivateMessageRequest,
         },
         response::{
             MessageMedia, MessageReactionItem, MessageReplyTo, PaginatedData, PaginationMeta,
@@ -24,24 +22,22 @@ use crate::{
         },
     },
     error::{AppError, Result},
-    events::event_types::AppEvent,
+    events::event_types::{AppEvent, ReplyToSnapshot},
     repositories::{
         chat_unread_repo::ChatUnreadRepository,
+        private_chat_repo::PrivateChatRepository,
         private_message_reactions_repo::PrivateMessageReactionsRepository,
-        private_chat_repo::{PrivateChatRepository, PrivateChatRow},
         private_message_repo::PrivateMessageRepository,
         user_blocks_repo::UserBlocksRepository,
         user_follows_repo::UserFollowsRepository,
         user_repo::UserRepository,
         user_settings_repo::UserSettingsRepository,
     },
-    services::media_service::MediaService,
-    types::enums::{MessageType, PrivateChatPermission, ReactionType},
-    utils::{bloom_filter::ResourceExistenceChecker, validation::Validator},
+    types::enums::{MessageType, ReactionType, UserType},
+    utils::validation::Validator,
     EventBus,
 };
 
-/// 私聊消息服务
 #[derive(Clone)]
 pub struct PrivateMessageService {
     event_bus: Arc<EventBus>,
@@ -54,7 +50,7 @@ pub struct PrivateMessageService {
     blocks_repo: UserBlocksRepository,
     settings_repo: UserSettingsRepository,
     reactions_repo: PrivateMessageReactionsRepository,
-    media_service: MediaService,
+    media_service: crate::services::media_service::MediaService,
 }
 
 impl PrivateMessageService {
@@ -69,7 +65,7 @@ impl PrivateMessageService {
         blocks_repo: UserBlocksRepository,
         settings_repo: UserSettingsRepository,
         reactions_repo: PrivateMessageReactionsRepository,
-        media_service: MediaService,
+        media_service: crate::services::media_service::MediaService,
     ) -> Self {
         Self {
             event_bus,
@@ -86,231 +82,75 @@ impl PrivateMessageService {
         }
     }
 
-    // 查找或创建私聊并验证权限
-    async fn ensure_chat_and_check_permission(
-        &self,
-        user_id: i64,
-        target_user_id: i64,
-    ) -> Result<PrivateChatRow> {
-        use crate::types::enums::UserType;
+    /// 发送私聊消息
+    pub async fn send(&self, req: &SendPrivateMessageRequest, user_id: i64) -> Result<SendPrivateMessageData> {
+        if user_id == req.target_user_id {
+            return Err(AppError::CannotOperateOnSelf);
+        }
 
-        // 1. 查找现有私聊 (无需权限验证，因为已存在)
-        if let Some(chat) = self
-            .chat_repo
-            .find_by_users(user_id, target_user_id)
+        if let Some(content) = req.content.as_deref() {
+            Validator::validate_length(content, "消息内容", 1, 10000)?;
+        }
+
+        // 校验目标用户存在
+        let _receiver = self
+            .user_repo
+            .find_by_id(req.target_user_id)
+            .await?
+            .ok_or_else(|| AppError::UserNotFound("接收者不存在".to_string()))?;
+
+        // 黑名单检查
+        if self
+            .blocks_repo
+            .is_blocked(req.target_user_id, user_id)
             .await?
         {
-            return Ok(chat);
+            return Err(AppError::BlockedByUser("已被对方拉黑".to_string()));
         }
 
-        // 2. 创建新私聊前进行权限验证
+        // 创建/获取会话
+        let chat = self.chat_repo.get_or_create(user_id, req.target_user_id).await?;
 
-        // 检查发送者的用户类型：管理员和系统账号不受任何限制
-        let sender = self.user_repo.find_by_id(user_id).await?;
-        let is_privileged_user = sender
-            .as_ref()
-            .map(|u| matches!(u.user_type, UserType::Admin | UserType::System))
-            .unwrap_or(false);
-
-        // 只对普通用户（temp/normal）进行权限检查
-        if !is_privileged_user {
-            // 检查目标用户是否允许接收私聊
-            let target_settings = self.settings_repo.find_by_user_id(target_user_id).await?;
-            if let Some(settings) = target_settings {
-                if settings.allow_private_chat == PrivateChatPermission::Nobody {
-                    return Err(AppError::PrivateChatNotAllowed(
-                        "对方不允许接收私聊".to_string(),
-                    ));
-                } else if settings.allow_private_chat == PrivateChatPermission::Friends {
-                    // 检查是否是好友（互相关注）
-                    let is_following = self
-                        .follows_repo
-                        .exists(user_id, target_user_id)
-                        .await
-                        .unwrap_or(false);
-                    let is_followed_by = self
-                        .follows_repo
-                        .exists(target_user_id, user_id)
-                        .await
-                        .unwrap_or(false);
-                    let is_mutual_follow = is_following && is_followed_by;
-
-                    if !is_mutual_follow {
-                        return Err(AppError::PrivateChatNotAllowed(
-                            "对方仅允许好友发起私聊".to_string(),
-                        ));
-                    }
-                }
-            }
-
-            // 检查当前用户是否被目标用户拉黑
-            if self.blocks_repo.is_blocked(target_user_id, user_id).await? {
-                return Err(AppError::BlockedByUser("已被对方拉黑".to_string()));
-            }
-        }
-
-        // 创建新私聊
-        let chat = self.chat_repo.create(user_id, target_user_id).await?;
-        Ok(chat)
-    }
-
-    /// 发送私聊消息
-    pub async fn send(
-        &self,
-        req: &SendPrivateMessageRequest,
-        user_id: i64,
-    ) -> Result<SendPrivateMessageData> {
-        use crate::types::enums::UserType;
-
-        let target_user_id = req.target_user_id;
-        if user_id == target_user_id {
-            return Err(AppError::BadRequest("不能与自己发送私聊消息".to_string()));
-        }
-
-        // 查找或创建私聊 (带完整权限检查)
-        let chat = self
-            .ensure_chat_and_check_permission(user_id, target_user_id)
-            .await?;
-
-        // 验证用户是否在私聊中（双重保险）
-        let other_user_id = if chat.user_a_id == user_id {
-            chat.user_b_id
-        } else if chat.user_b_id == user_id {
-            chat.user_a_id
-        } else {
-            return Err(AppError::Forbidden("您不是此私聊的成员".to_string()));
-        };
-
-        // 获取发送者的用户类型
-        let sender = self.user_repo.find_by_id(user_id).await?;
-        let is_privileged_user = sender
-            .as_ref()
-            .map(|u| matches!(u.user_type, UserType::Admin | UserType::System))
-            .unwrap_or(false);
-
-        // 只对普通用户（temp/normal）检查陌生人消息限制
-        if !is_privileged_user {
-            let is_mutual_follow = self
-                .follows_repo
-                .are_mutual_follows(user_id, other_user_id)
-                .await?;
-
-            if !is_mutual_follow {
-                // 获取当前用户的消息限制状态
-                let (can_message_freely, sent_count) =
-                    self.chat_repo.get_message_limit(chat.id, user_id).await?;
-
-                if !can_message_freely {
-                    // 检查是否关注了对方
-                    let is_following = self.follows_repo.exists(user_id, other_user_id).await?;
-                    let limit = if is_following { 3 } else { 1 };
-
-                    if sent_count >= limit {
-                        return Err(AppError::MessageLimitReached(
-                            "消息数量已达上限，等待对方回复".to_string(),
-                        ));
-                    }
-                }
-            }
-        }
-
-        // 使用 SendMessageType 的转换方法获取 MessageType
-        let message_type = req.r#type.to_message_type();
-
-        // 解析回复消息ID
-        let reply_to = req
+        let reply_to_message_id = req
             .reply_to_message_id
             .as_ref()
-            .map(|id| Uuid::parse_str(id))
-            .transpose()
-            .map_err(|_| AppError::BadRequest("无效的回复消息ID".to_string()))?;
+            .and_then(|id| Uuid::parse_str(id).ok());
 
-        // 准备回复消息快照 (用于事件推送)
-        let mut reply_to_snapshot = None;
-        if let Some(reply_id) = reply_to {
-            // 尝试获取被回复的消息
-            if let Ok(Some(reply_msg)) = self.message_repo.find_by_id(reply_id).await {
-                // 获取发送者信息
-                // 注意：这里可能会有额外的数据库查询，但为了实时体验是值得的
-                // 暂时简单的用 user_repo.find_by_id (如果不暴露 profile 方法)
-                // 或者复用 find_profiles
-                let sender_profile = self
-                    .user_repo
-                    .find_profiles(&[reply_msg.sender_id])
-                    .await?
-                    .into_iter()
-                    .next();
-
-                if let Some(sender) = sender_profile {
-                    let preview_content = match reply_msg.r#type {
-                        MessageType::Text => reply_msg.content,
-                        MessageType::Image => "[图片]".to_string(),
-                        MessageType::Video => "[视频]".to_string(),
-                        MessageType::Audio => "[语音]".to_string(),
-                        MessageType::File => "[文件]".to_string(),
-                        MessageType::System => reply_msg.content,
-                    };
-
-                    reply_to_snapshot = Some(crate::events::event_types::ReplyToSnapshot {
-                        message_id: reply_id,
-                        user_id: reply_msg.sender_id,
-                        nickname: sender.nickname,
-                        content: preview_content,
-                    });
-                }
-            }
-        }
-
-        // 根据消息类型处理内容和文件
-        let (content, media) = match message_type {
-            MessageType::Text => {
+        let (content, media, metadata) = match req.r#type {
+            MessageType::Text | MessageType::System | MessageType::Location => {
                 let content = req
                     .content
                     .clone()
-                    .ok_or_else(|| AppError::BadRequest("文本消息必须提供 content".to_string()))?;
-                (content, None)
+                    .ok_or_else(|| AppError::BadRequest("消息内容不能为空".to_string()))?;
+                (content, None, None)
             }
-            MessageType::System => {
-                let content = req.content.clone().unwrap_or_default();
-                (content, None)
-            }
-            _ => {
-                // 媒体消息：需要 file_id
-                let file_id_str = req
+            MessageType::Image | MessageType::Video | MessageType::Audio | MessageType::File => {
+                let file_id = req
                     .file_id
                     .as_ref()
                     .ok_or_else(|| AppError::BadRequest("媒体消息必须提供 file_id".to_string()))?;
-                let file_id = Uuid::parse_str(file_id_str)
+                let file_uuid = Uuid::parse_str(file_id)
                     .map_err(|_| AppError::BadRequest("无效的 file_id".to_string()))?;
 
-                // 验证文件所有权并获取文件信息
-                let expected_categories = match message_type {
+                let expected_categories = match req.r#type {
                     MessageType::Image => vec!["chat_image"],
                     MessageType::Video => vec!["chat_video"],
                     MessageType::Audio => vec!["chat_audio"],
                     MessageType::File => vec!["chat_file"],
                     _ => vec![],
                 };
+
                 let file_data = self
                     .media_service
-                    .validate_message_file(file_id, user_id, &expected_categories)
+                    .validate_message_file(file_uuid, user_id, &expected_categories)
                     .await?;
+                self.media_service.mark_as_used(file_uuid).await?;
 
-                // 标记文件已使用
-                self.media_service.mark_as_used(file_id).await?;
-
-                // 为事件和响应生成签名 URL
-                let signed_url = match self.media_service.sign_url(&file_data.storage_path).await {
-                    Ok(u) => u,
-                    Err(e) => {
-                        tracing::warn!(
-                            "Failed to sign url for path {}: {}",
-                            file_data.storage_path,
-                            e
-                        );
-                        file_data.storage_path.clone()
-                    }
-                };
+                let signed_url = self
+                    .media_service
+                    .sign_url(&file_data.storage_path)
+                    .await
+                    .unwrap_or_else(|_| file_data.storage_path.clone());
 
                 let media = MessageMedia {
                     url: signed_url,
@@ -323,204 +163,172 @@ impl PrivateMessageService {
                     mime_type: Some(file_data.mime_type.clone()),
                 };
 
-                // 媒体消息的 content 存储实际 storage_path (Key)
-                (file_data.storage_path, Some(media))
+                let meta = serde_json::json!({
+                    "thumbnail_url": file_data.thumbnail_url,
+                    "file_name": file_data.filename,
+                    "size": file_data.file_size,
+                    "duration": file_data.duration,
+                    "width": file_data.width,
+                    "height": file_data.height,
+                    "mime_type": file_data.mime_type,
+                });
+
+                (file_data.storage_path, Some(media), Some(meta))
             }
         };
 
-        // 创建消息
-        let message = self
+        let created = self
             .message_repo
             .create(
-                chat.id,
+                chat.chat_id,
                 user_id,
-                message_type,
-                &content,
-                reply_to,
-                media.as_ref().and_then(|m| m.file_name.as_deref()),
-                media.as_ref().and_then(|m| m.file_size),
-                media.as_ref().and_then(|m| m.thumbnail_url.as_deref()),
-                media.as_ref().and_then(|m| m.duration.map(|d| d as i32)),
+                req.target_user_id,
+                req.r#type,
+                Some(content.clone()),
+                metadata,
+                reply_to_message_id,
             )
             .await?;
 
-        // 记录消息到布隆过滤器
-        if let Err(e) = ResourceExistenceChecker::new(self.redis.clone())
-            .record_message(&message.message_id.to_string())
-            .await
-        {
-            tracing::warn!(message_id = %message.message_id, error = %e, "record_message bloom failed");
-        }
+        let reply_to_snapshot = if let Some(reply_id) = reply_to_message_id {
+            self.message_repo
+                .find_by_ids(&[reply_id])
+                .await?
+                .into_iter()
+                .next()
+                .and_then(|row| {
+                    let preview = match row.r#type {
+                        MessageType::Text => row.content.unwrap_or_default(),
+                        MessageType::Image => "[图片]".to_string(),
+                        MessageType::Video => "[视频]".to_string(),
+                        MessageType::Audio => "[语音]".to_string(),
+                        MessageType::File => "[文件]".to_string(),
+                        MessageType::Location => "[位置]".to_string(),
+                        MessageType::System => row.content.unwrap_or_default(),
+                    };
 
-        // 发送成功后的处理
-        // 只对普通用户（temp/normal）进行消息计数管理
-        if !is_privileged_user {
-            let is_mutual_follow = self
-                .follows_repo
-                .are_mutual_follows(user_id, other_user_id)
-                .await?;
-
-            if !is_mutual_follow {
-                let (can_message_freely, _) =
-                    self.chat_repo.get_message_limit(chat.id, user_id).await?;
-
-                if !can_message_freely {
-                    // 增加发送消息计数
-                    self.chat_repo
-                        .increment_sent_count(chat.id, user_id)
-                        .await?;
-                }
-            }
-        }
-
-        // 无论发送者是谁，只要回复了对方的消息，就解锁对方的消息限制
-        // （即使是管理员回复普通用户，也应该解锁对方的限制）
-        let other_has_sent = self
-            .message_repo
-            .has_messages_from_user(chat.id, other_user_id)
-            .await?;
-        if other_has_sent {
-            // 对方发过消息给我，我回复了，解锁对方
-            self.chat_repo
-                .unlock_user_messaging_limit(chat.id, other_user_id)
-                .await?;
-        }
-
-        // 发布私聊消息事件
-        let event_content = if message_type == MessageType::Text {
-            req.content.clone()
+                    Some(ReplyToSnapshot {
+                        message_id: reply_id,
+                        user_id: row.sender_id,
+                        nickname: String::new(),
+                        content: preview,
+                    })
+                })
         } else {
             None
         };
 
+        let event_content = match req.r#type {
+            MessageType::Text | MessageType::Location | MessageType::System => req.content.clone(),
+            _ => None,
+        };
+
         self.event_bus.publish(AppEvent::PrivateMessageSent {
-            message_id: message.message_id,
+            message_id: created.message_id,
             sender_id: user_id,
-            target_user_id: other_user_id, // 接收者
-            message_type,                  // Use parsed enum
+            target_user_id: req.target_user_id,
+            message_type: req.r#type,
             content: event_content,
             reply_to: reply_to_snapshot,
             media,
         });
 
         Ok(SendPrivateMessageData {
-            message_id: message.message_id.to_string(),
+            message_id: created.message_id.to_string(),
         })
     }
 
-    /// 获取私聊消息历史
+    /// 获取历史记录
     pub async fn get_history(
         &self,
         req: &PrivateMessagesHistoryRequest,
         user_id: i64,
     ) -> Result<PaginatedData<PrivateMessageItem>> {
-        let target_user_id = req.target_user_id;
-
-        // 查找私聊
         let chat = self
             .chat_repo
-            .find_by_users(user_id, target_user_id)
+            .find_by_users(user_id, req.target_user_id)
             .await?
-            .ok_or_else(|| AppError::ChatNotFound("私聊不存在".to_string()))?;
+            .ok_or_else(|| AppError::ChatNotFound("会话不存在".to_string()))?;
 
         let limit = Validator::validate_limit(req.limit, 100)? as i64;
-        let cursor = Validator::parse_cursor(req.cursor.as_deref())?;
-
-        // 获取消息列表
         let (messages, next_cursor) = self
             .message_repo
-            .list_by_chat(chat.id, limit, cursor)
+            .list_by_chat(chat.chat_id, user_id, limit, req.cursor.clone())
             .await?;
 
-        let reply_ids: Vec<Uuid> = messages
-            .iter()
-            .filter_map(|m| m.reply_to_message_id)
-            .collect();
+        let reply_ids: Vec<Uuid> = messages.iter().filter_map(|m| m.reply_to_message_id).collect();
         let reply_rows = self.message_repo.find_by_ids(&reply_ids).await?;
         let reply_sender_ids: Vec<i64> = reply_rows.iter().map(|m| m.sender_id).collect();
         let reply_senders = self.user_repo.find_profiles(&reply_sender_ids).await?;
-        let reply_sender_map: std::collections::HashMap<i64, _> =
+        let reply_sender_map: HashMap<i64, _> =
             reply_senders.into_iter().map(|u| (u.user_id, u)).collect();
-        let reply_map: std::collections::HashMap<Uuid, _> =
-            reply_rows.into_iter().map(|m| (m.message_id, m)).collect();
+        let reply_map: HashMap<Uuid, _> = reply_rows.into_iter().map(|m| (m.message_id, m)).collect();
 
-        // 批量获取发送者信息
         let sender_ids: Vec<i64> = messages.iter().map(|m| m.sender_id).collect();
-        let users = self.user_repo.find_profiles(&sender_ids).await?;
-        let user_map: std::collections::HashMap<i64, _> =
-            users.into_iter().map(|u| (u.user_id, u)).collect();
+        let senders = self.user_repo.find_profiles(&sender_ids).await?;
+        let sender_map: HashMap<i64, _> = senders.into_iter().map(|u| (u.user_id, u)).collect();
 
-        // 构建响应
         let mut items = Vec::with_capacity(messages.len());
         for m in messages {
-            let user = user_map.get(&m.sender_id);
+            let sender = sender_map.get(&m.sender_id);
 
-            let media = if m.r#type.is_media() {
-                let signed_url = match self.media_service.sign_url(&m.content).await {
-                    Ok(u) => u,
-                    Err(e) => {
-                        tracing::warn!("Failed to sign url for path {}: {}", m.content, e);
-                        m.content.clone()
-                    }
-                };
-
-                // 如果有 thumbnail_url，也需要签名
-                let thumbnail_url = if let Some(ref thumb) = m.thumbnail_url {
-                    self.media_service.sign_url_if_path(Some(thumb)).await
-                } else {
-                    None
-                };
-
+            let media = if matches!(m.r#type, MessageType::Image | MessageType::Video | MessageType::Audio | MessageType::File) {
+                let path = m.content.clone().unwrap_or_default();
+                let signed_url = self
+                    .media_service
+                    .sign_url(&path)
+                    .await
+                    .unwrap_or(path);
                 Some(MessageMedia {
                     url: signed_url,
-                    thumbnail_url,
+                    thumbnail_url: m.thumbnail_url.clone(),
                     file_name: m.file_name.clone(),
                     file_size: m.file_size,
-                    duration: m.duration.map(|d| d as f64),
-                    width: None,
-                    height: None,
-                    mime_type: None,
+                    duration: m.duration,
+                    width: m.width,
+                    height: m.height,
+                    mime_type: m.mime_type.clone(),
                 })
             } else {
                 None
             };
 
+            let reply_to = m.reply_to_message_id.and_then(|reply_id| {
+                reply_map.get(&reply_id).map(|reply_msg| {
+                    let reply_sender = reply_sender_map.get(&reply_msg.sender_id);
+                    let preview = if reply_msg.r#type == MessageType::Text {
+                        reply_msg.content.clone().unwrap_or_default()
+                    } else {
+                        String::new()
+                    };
+                    MessageReplyTo {
+                        message_id: reply_msg.message_id.to_string(),
+                        user_id: reply_msg.sender_id,
+                        nickname: reply_sender
+                            .and_then(|u| u.nickname.clone())
+                            .unwrap_or_else(|| "未知用户".to_string()),
+                        content: preview,
+                    }
+                })
+            });
+
             items.push(PrivateMessageItem {
                 message_id: m.message_id.to_string(),
                 message_type: m.r#type,
-                content: Some(m.content.clone()),
+                content: if media.is_some() { None } else { m.content.clone() },
                 sender: UserInfo {
                     user_id: m.sender_id,
-                    nickname: user
-                        .map(|u| u.nickname.clone())
+                    nickname: sender
+                        .and_then(|u| u.nickname.clone())
                         .unwrap_or_else(|| "未知用户".to_string()),
                     avatar_url: self
                         .media_service
-                        .sign_url_if_path(user.and_then(|u| u.avatar_url.as_deref()))
+                        .sign_url_if_path(sender.and_then(|u| u.avatar_url.as_deref()))
                         .await,
-                    user_type: user
-                        .map(|u| u.user_type)
-                        .unwrap_or(crate::types::enums::UserType::Normal),
+                    user_type: sender.map(|u| u.user_type).unwrap_or(UserType::Normal),
                 },
+                reply_to,
                 media,
-                reply_to: m.reply_to_message_id.and_then(|reply_id| {
-                    reply_map.get(&reply_id).map(|reply_msg| {
-                        let reply_sender = reply_sender_map.get(&reply_msg.sender_id);
-                        let preview = if reply_msg.r#type == MessageType::Text {
-                            reply_msg.content.clone()
-                        } else {
-                            String::new()
-                        };
-                        MessageReplyTo {
-                            message_id: reply_msg.message_id.to_string(),
-                            user_id: reply_msg.sender_id,
-                            nickname: reply_sender
-                                .map(|u| u.nickname.clone())
-                                .unwrap_or_else(|| "未知用户".to_string()),
-                            content: preview,
-                        }
-                    })
-                }),
                 sent_at: m.sent_at.to_rfc3339(),
                 edited_at: m.edited_at.map(|t| t.to_rfc3339()),
                 is_recalled: m.is_recalled,
@@ -537,58 +345,43 @@ impl PrivateMessageService {
         })
     }
 
-    /// 获取私聊对方ID
-    async fn get_other_user_id(&self, chat_id: i64, user_id: i64) -> Result<i64> {
-        let chat = self
-            .chat_repo
-            .find_by_id(chat_id)
-            .await?
-            .ok_or_else(|| AppError::ChatNotFound("私聊不存在".to_string()))?;
-
-        if chat.user_a_id == user_id {
-            Ok(chat.user_b_id)
-        } else if chat.user_b_id == user_id {
-            Ok(chat.user_a_id)
-        } else {
-            Err(AppError::Forbidden("您不是此私聊的成员".to_string()))
-        }
-    }
-
-    /// 编辑私聊消息
     pub async fn update(&self, req: &UpdatePrivateMessageRequest, user_id: i64) -> Result<()> {
+        Validator::validate_length(&req.content, "消息内容", 1, 10000)?;
         let message_id = Uuid::parse_str(&req.message_id)
             .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
 
-        // 获取消息元数据
         let message = self
             .message_repo
             .get_meta(message_id)
             .await?
             .ok_or_else(|| AppError::ChatNotFound("消息不存在".to_string()))?;
 
-        // 验证是否是发送者
         if message.sender_id != user_id {
-            return Err(AppError::Forbidden("只能编辑自己发送的消息".to_string()));
+            return Err(AppError::Forbidden("无权编辑此消息".to_string()));
         }
 
-        // 验证消息未被撤回
         if message.is_recalled {
             return Err(AppError::MessageAlreadyRecalled);
         }
 
-        // 获取对方ID
-        let other_user_id = self.get_other_user_id(message.chat_id, user_id).await?;
+        if message.r#type != MessageType::Text {
+            return Err(AppError::BadRequest("仅支持编辑文本消息".to_string()));
+        }
 
-        // 更新消息内容
         self.message_repo
-            .update_content(message_id, &req.content)
+            .update_content(message_id, req.content.clone())
             .await?;
 
-        // 发布事件
+        let target_user_id = if message.sender_id == user_id {
+            message.receiver_id
+        } else {
+            message.sender_id
+        };
+
         self.event_bus.publish(AppEvent::PrivateMessageEdited {
             message_id,
             sender_id: user_id,
-            target_user_id: other_user_id,
+            target_user_id,
             content: req.content.clone(),
             edited_at: Utc::now().to_rfc3339(),
         });
@@ -596,114 +389,75 @@ impl PrivateMessageService {
         Ok(())
     }
 
-    /// 撤回私聊消息
     pub async fn recall(&self, req: &RecallPrivateMessageRequest, user_id: i64) -> Result<()> {
         let message_id = Uuid::parse_str(&req.message_id)
             .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
 
-        // 获取消息元数据
         let message = self
             .message_repo
             .get_meta(message_id)
             .await?
             .ok_or_else(|| AppError::ChatNotFound("消息不存在".to_string()))?;
 
-        // 验证是否是发送者
         if message.sender_id != user_id {
-            return Err(AppError::Forbidden("只能撤回自己发送的消息".to_string()));
+            return Err(AppError::Forbidden("无权撤回此消息".to_string()));
         }
 
-        // 验证消息未被撤回
         if message.is_recalled {
             return Err(AppError::MessageAlreadyRecalled);
         }
 
-        // 验证撤回时间窗口
-        let now = Utc::now();
-        if now - message.sent_at > Duration::minutes(MESSAGE_RECALL_MINUTES) {
+        let elapsed = Utc::now().signed_duration_since(message.sent_at);
+        if elapsed.num_minutes() >= 2 {
             return Err(AppError::OperationWindowExpired);
         }
 
-        // 获取对方ID
-        let other_user_id = self.get_other_user_id(message.chat_id, user_id).await?;
-
-        // 撤回消息
         self.message_repo.recall(message_id).await?;
 
-        // 发布事件
         self.event_bus.publish(AppEvent::PrivateMessageRecalled {
             message_id,
-            sender_id: user_id,
-            target_user_id: other_user_id,
+            sender_id: message.sender_id,
+            target_user_id: message.receiver_id,
             recalled_by: user_id,
-            recalled_at: now.to_rfc3339(),
+            recalled_at: Utc::now().to_rfc3339(),
         });
 
         Ok(())
     }
 
-    /// 删除私聊消息
     pub async fn delete(&self, req: &DeletePrivateMessageRequest, user_id: i64) -> Result<()> {
         let message_id = Uuid::parse_str(&req.message_id)
             .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
-
-        // 获取消息元数据
         let message = self
             .message_repo
             .get_meta(message_id)
             .await?
             .ok_or_else(|| AppError::ChatNotFound("消息不存在".to_string()))?;
 
-        // 验证用户是否在私聊中
-        if !self
-            .chat_repo
-            .is_user_in_chat(message.chat_id, user_id)
-            .await?
-        {
-            return Err(AppError::Forbidden("您不是此私聊的成员".to_string()));
-        }
+        self.message_repo.delete_for_user(message_id, user_id).await?;
 
-        // 获取对方ID（用于事件，虽然此接口不发事件，但保持一致性）
-        let other_user_id = self.get_other_user_id(message.chat_id, user_id).await?;
-
-        // 删除消息（仅对自己可见，不发布事件）
-        self.message_repo.soft_delete(message_id).await?;
-
-        // 这里原逻辑不发事件，但 Spec 现在的事件定义包含 PrivateMessageDeleted
-        // 如果要支持多端同步删除，应该发事件。
-        // 但 API Spec 对于删除接口说明：
-        // "本操作仅影响当前用户视角" -> 通常意味着软删除或标记删除，且不通知对方。
-        // 但多端同步（我自己的其他设备）需要知道。
-        // 所以我们还是发一个事件，但 target_user_id 应该怎么填？
-        // 如果是仅对自己删除，target_user_id 是否重要？
-        // 我们的事件定义 `PrivateMessageDeleted` 包含 `target_user_id`。
-        // 为了支持多端同步，应该填 `other_user_id`，这样客户端能定位到会话。
+        let target_user_id = if message.sender_id == user_id {
+            message.receiver_id
+        } else {
+            message.sender_id
+        };
 
         self.event_bus.publish(AppEvent::PrivateMessageDeleted {
             message_id,
-            target_user_id: other_user_id,
+            target_user_id,
             deleted_by: user_id,
         });
 
         Ok(())
     }
 
-    /// 标记私聊消息已读
-    pub async fn mark_as_read(
-        &self,
-        req: &MarkPrivateMessagesReadRequest,
-        user_id: i64,
-    ) -> Result<()> {
-        let target_user_id = req.target_user_id;
-
-        // 查找私聊
+    pub async fn mark_as_read(&self, req: &MarkPrivateMessagesReadRequest, user_id: i64) -> Result<()> {
         let chat = self
             .chat_repo
-            .find_by_users(user_id, target_user_id)
+            .find_by_users(user_id, req.target_user_id)
             .await?
-            .ok_or_else(|| AppError::ChatNotFound("私聊不存在".to_string()))?;
+            .ok_or_else(|| AppError::ChatNotFound("会话不存在".to_string()))?;
 
-        // 解析截止消息ID
         let up_to = req
             .up_to_message_id
             .as_ref()
@@ -711,15 +465,13 @@ impl PrivateMessageService {
             .transpose()
             .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
 
-        // 更新已读状态
-        self.unread_repo
-            .mark_as_read("private_chat", &chat.id.to_string(), user_id, up_to)
-            .await?;
-
-        // 发布已读事件（通知消息发送者）
         if let Some(up_to_id) = up_to {
+            self.unread_repo
+                .mark_as_read("private", &chat.chat_id.to_string(), user_id, Some(up_to_id))
+                .await?;
+
             self.event_bus.publish(AppEvent::PrivateMessageRead {
-                target_user_id, // 被读消息的所属会话对方ID (即发送者)
+                target_user_id: req.target_user_id,
                 reader_id: user_id,
                 up_to: up_to_id,
                 read_at: Utc::now().to_rfc3339(),
@@ -729,43 +481,26 @@ impl PrivateMessageService {
         Ok(())
     }
 
-    /// 添加消息反应
-    pub async fn add_reaction(
-        &self,
-        req: &AddPrivateMessageReactionRequest,
-        user_id: i64,
-    ) -> Result<()> {
+    pub async fn add_reaction(&self, req: &AddPrivateMessageReactionRequest, user_id: i64) -> Result<()> {
         let message_id = Uuid::parse_str(&req.message_id)
             .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
-
-        // 获取消息
         let message = self
             .message_repo
-            .find_by_id(message_id)
+            .get_meta(message_id)
             .await?
             .ok_or_else(|| AppError::ChatNotFound("消息不存在".to_string()))?;
 
-        // 验证用户是否在私聊中
-        if !self
-            .chat_repo
-            .is_user_in_chat(message.chat_id, user_id)
-            .await?
-        {
-            return Err(AppError::Forbidden("您不是此私聊的成员".to_string()));
-        }
+        self.reactions_repo.add(message_id, user_id, req.r#type).await?;
 
-        // 获取对方ID
-        let other_user_id = self.get_other_user_id(message.chat_id, user_id).await?;
+        let target_user_id = if message.sender_id == user_id {
+            message.receiver_id
+        } else {
+            message.sender_id
+        };
 
-        // 添加反应 - r#type 已是强类型枚举
-        self.reactions_repo
-            .add(message_id, user_id, req.r#type.as_str())
-            .await?;
-
-        // 发布事件
         self.event_bus.publish(AppEvent::PrivateMessageReaction {
             message_id,
-            target_user_id: other_user_id,
+            target_user_id,
             user_id,
             reaction_type: req.r#type,
             action: "add".to_string(),
@@ -774,43 +509,26 @@ impl PrivateMessageService {
         Ok(())
     }
 
-    /// 移除消息反应
-    pub async fn remove_reaction(
-        &self,
-        req: &RemovePrivateMessageReactionRequest,
-        user_id: i64,
-    ) -> Result<()> {
+    pub async fn remove_reaction(&self, req: &RemovePrivateMessageReactionRequest, user_id: i64) -> Result<()> {
         let message_id = Uuid::parse_str(&req.message_id)
             .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
-
-        // 获取消息
         let message = self
             .message_repo
-            .find_by_id(message_id)
+            .get_meta(message_id)
             .await?
             .ok_or_else(|| AppError::ChatNotFound("消息不存在".to_string()))?;
 
-        // 验证用户是否在私聊中
-        if !self
-            .chat_repo
-            .is_user_in_chat(message.chat_id, user_id)
-            .await?
-        {
-            return Err(AppError::Forbidden("您不是此私聊的成员".to_string()));
-        }
+        self.reactions_repo.remove(message_id, user_id).await?;
 
-        // 获取对方ID
-        let other_user_id = self.get_other_user_id(message.chat_id, user_id).await?;
+        let target_user_id = if message.sender_id == user_id {
+            message.receiver_id
+        } else {
+            message.sender_id
+        };
 
-        // 移除反应 - r#type 已是强类型枚举
-        self.reactions_repo
-            .remove(message_id, user_id, req.r#type.as_str())
-            .await?;
-
-        // 发布事件
         self.event_bus.publish(AppEvent::PrivateMessageReaction {
             message_id,
-            target_user_id: other_user_id,
+            target_user_id,
             user_id,
             reaction_type: req.r#type,
             action: "remove".to_string(),
@@ -819,58 +537,36 @@ impl PrivateMessageService {
         Ok(())
     }
 
-    /// 获取消息反应列表
     pub async fn get_reactions_list(
         &self,
         req: &PrivateMessageReactionsRequest,
-        user_id: i64,
+        _user_id: i64,
     ) -> Result<PaginatedData<MessageReactionItem>> {
         let message_id = Uuid::parse_str(&req.message_id)
             .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
 
-        // 获取消息
-        let message = self
-            .message_repo
-            .find_by_id(message_id)
-            .await?
-            .ok_or_else(|| AppError::ChatNotFound("消息不存在".to_string()))?;
-
-        // 验证用户是否在私聊中
-        if !self
-            .chat_repo
-            .is_user_in_chat(message.chat_id, user_id)
-            .await?
-        {
-            return Err(AppError::Forbidden("您不是此私聊的成员".to_string()));
-        }
-
         let limit = Validator::validate_limit(req.limit, 100)? as i64;
-        let cursor = Validator::parse_cursor(req.cursor.as_deref())?;
-        let reaction_type = req.r#type.as_ref().map(|r| r.as_str());
-
         let (reactions, next_cursor) = self
             .reactions_repo
-            .list_by_message(message_id, reaction_type, limit, cursor)
+            .list_by_message(message_id, req.r#type, limit, req.cursor.clone())
             .await?;
 
-        // 批量获取用户信息
         let user_ids: Vec<i64> = reactions.iter().map(|r| r.user_id).collect();
         let users = self.user_repo.find_profiles(&user_ids).await?;
-        let user_map: std::collections::HashMap<i64, _> =
-            users.into_iter().map(|u| (u.user_id, u)).collect();
+        let user_map: HashMap<i64, _> = users.into_iter().map(|u| (u.user_id, u)).collect();
 
-        let items: Vec<MessageReactionItem> = reactions
+        let items = reactions
             .into_iter()
             .filter_map(|r| {
                 let user = user_map.get(&r.user_id)?;
                 Some(MessageReactionItem {
-                    user: UserInfo {
-                        user_id: user.user_id,
-                        nickname: user.nickname.clone(),
-                        avatar_url: user.avatar_url.clone(),
-                        user_type: user.user_type,
-                    },
-                    reaction_type: ReactionType::from_str(&r.r#type).unwrap_or(ReactionType::Like),
+                        user: UserInfo {
+                            user_id: user.user_id,
+                            nickname: user.nickname.clone().unwrap_or_else(|| "未知用户".to_string()),
+                            avatar_url: user.avatar_url.clone(),
+                            user_type: user.user_type,
+                        },
+                    reaction_type: r.reaction_type,
                     created_at: r.created_at.to_rfc3339(),
                 })
             })

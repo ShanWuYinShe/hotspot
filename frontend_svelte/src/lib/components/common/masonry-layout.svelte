@@ -75,14 +75,14 @@
 	});
 
 	let container: HTMLDivElement;
-	let items: HTMLElement[] = [];
+	let items = $state<HTMLElement[]>([]);
 	let containerWidth = $state(0);
 	let containerHeight = $state(0);
 	let currentColumns = $state(1);
 	let isReady = $state(false);
 
 	// 记录每列的当前高度
-	let columnHeights: number[] = $state([]);
+	let columnHeights = $state<number[]>([]);
 
 	/**
 	 * 根据窗口宽度计算列数

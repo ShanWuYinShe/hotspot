@@ -46,18 +46,103 @@ export class ConfigMerger {
    * @param source 源配置对象
    * @returns 合并后的新配置对象
    */
-  static merge<T extends Record<string, Object>>(
+  static merge<T>(
     target: T, 
-    source: Record<string, Object>
+    source: Partial<T>
   ): T {
-    const result: Record<string, Object> = {};
+    const result: T = {} as T;
     
     // 复制目标对象的所有属性
     const targetKeys = Object.keys(target);
     for (let i = 0; i < targetKeys.length; i++) {
       const key = targetKeys[i];
-      result[key] = target[key];
+      (result as Record<string, Object>)[key] = target[key];
     }
+    
+    // 合并源对象的属性
+    const sourceKeys = Object.keys(source);
+    for (let i = 0; i < sourceKeys.length; i++) {
+      const key = sourceKeys[i];
+      if (source[key] !== undefined) {
+        (result as Record<string, Object>)[key] = source[key];
+      }
+    }
+    
+    return result;
+  }
+  
+  /**
+   * 合并多个配置对象
+   * @param target 目标配置对象
+   * @param sources 多个源配置对象
+   * @returns 合并后的新配置对象
+   */
+  static mergeMultiple<T>(
+    target: T,
+    sources: Partial<T>[]
+  ): T {
+    let result = target;
+    
+    for (let i = 0; i < sources.length; i++) {
+      result = ConfigMerger.merge(result, sources[i]);
+    }
+    
+    return result;
+  }
+  
+  /**
+   * 条件合并：只有当条件为真时才合并
+   * @param target 目标配置对象
+   * @param source 源配置对象
+   * @param condition 合并条件
+   * @returns 合并后的新配置对象
+   */
+  static mergeIf<T>(
+    target: T,
+    source: Partial<T>,
+    condition: boolean
+  ): T {
+    if (condition) {
+      return ConfigMerger.merge(target, source);
+    }
+    return target;
+  }
+  
+  /**
+   * 安全合并：只合并存在的属性
+   * @param target 目标配置对象
+   * @param source 源配置对象
+   * @returns 合并后的新配置对象
+   */
+  static safeMerge<T>(
+    target: T,
+    source: Partial<T>
+  ): T {
+    const result: T = {} as T;
+    
+    // 复制目标对象
+    const targetKeys = Object.keys(target);
+    for (let i = 0; i < targetKeys.length; i++) {
+      const key = targetKeys[i];
+      (result as Record<string, Object>)[key] = target[key];
+    }
+    
+    // 安全合并源对象
+    const sourceKeys = Object.keys(source);
+    for (let i = 0; i < sourceKeys.length; i++) {
+      const key = sourceKeys[i];
+      const value = source[key];
+      
+      if (value !== undefined && value !== null) {
+        // 检查目标对象是否有这个键
+        if (targetKeys.includes(key)) {
+          (result as Record<string, Object>)[key] = value;
+        }
+      }
+    }
+    
+    return result;
+  }
     
     // 合并源对象的属性
     const sourceKeys = Object.keys(source);

@@ -12,7 +12,6 @@ import type {
 	UserStats,
 	UserSettings,
 	MyCard,
-	Relationship,
 	FriendItem,
 	FollowingItem,
 	FollowerItem,
@@ -22,7 +21,9 @@ import type {
 	Location,
 	GroupSearchItem,
 	UserMomentListItem,
-	MomentSearchItem
+	MomentSearchItem,
+	FollowSource,
+	Relationship
 } from '$lib/types/api';
 
 export const usersService = {
@@ -69,13 +70,6 @@ export const usersService = {
 	 */
 	getUser(data: { user_id: number }) {
 		return post<UserCard>(USER.OPEN_THE_DOOR, data);
-	},
-
-	/**
-	 * 获取与用户的关系
-	 */
-	getRelationship(data: { user_id: number }) {
-		return post<Relationship>(USER.RELATIONSHIP, data);
 	},
 
 	/**
@@ -237,7 +231,7 @@ export const usersService = {
 	/**
 	 * 关注用户
 	 */
-	follow(data: { user_id: number; source?: string }) {
+	follow(data: { user_id: number; source?: FollowSource; source_moment_id?: string }) {
 		return post<Relationship>(USER.ME.FOLLOW, data);
 	},
 

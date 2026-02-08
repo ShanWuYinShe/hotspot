@@ -153,8 +153,8 @@
 				/>
 			{:else}
 				<div class="space-y-6">
-					{#each groupChats as group (group.group_chat_id)}
-						<a href="/chat/groups/{group.group_chat_id}">
+					{#each groupChats as group (group.group_id)}
+						<a href="/chat/groups/{group.group_id}">
 							<Card variant="default" glow="soft" interactive class="cursor-pointer">
 								<CardContent class="flex items-center gap-4 p-5">
 									<Avatar class="h-14 w-14" glow>
@@ -166,24 +166,24 @@
 									<div class="min-w-0 flex-1">
 										<div class="flex items-center justify-between mb-1.5">
 											<div class="flex items-center gap-2 min-w-0 flex-1">
-												<p class="font-semibold text-base truncate">{group.name}</p>
-												{#if group.role === 'owner'}
-													<Badge variant="default" class="text-xs shrink-0">群主</Badge>
-												{:else if group.role === 'admin'}
-													<Badge variant="secondary" class="text-xs shrink-0">管理员</Badge>
-												{/if}
-											</div>
+											<p class="font-semibold text-base truncate">{group.name}</p>
+											{#if group.my_state?.role === 'owner'}
+												<Badge variant="default" class="text-xs shrink-0">群主</Badge>
+											{:else if group.my_state?.role === 'admin'}
+												<Badge variant="secondary" class="text-xs shrink-0">管理员</Badge>
+											{/if}
+										</div>
 											<span class="text-xs text-muted-foreground shrink-0 ml-2">
 												{group.members_count} 人
 											</span>
 										</div>
 										<div class="flex items-center justify-between gap-2">
 											<p class="text-sm text-muted-foreground leading-relaxed">
-												{formatRelativeTime(group.last_activity_at)}
+												{formatRelativeTime(group.my_state?.joined_at ?? group.created_at ?? '')}
 											</p>
-											{#if group.unread_count > 0}
+											{#if (group.my_state?.unread_count ?? 0) > 0}
 												<Badge variant="destructive" class="ml-2 shrink-0">
-													{group.unread_count > 99 ? '99+' : group.unread_count}
+													{(group.my_state?.unread_count ?? 0) > 99 ? '99+' : (group.my_state?.unread_count ?? 0)}
 												</Badge>
 											{/if}
 										</div>

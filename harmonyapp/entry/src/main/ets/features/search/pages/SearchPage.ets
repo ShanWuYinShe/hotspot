@@ -260,7 +260,7 @@ struct SearchPage {
       const routerInstance = this.getUIContext().getRouter();
       await routerInstance.pushUrl({
         url: `features/group/pages/${PageNames.GROUP_DETAIL}`,
-        params: { groupId: item.group_chat_id }
+        params: { groupId: item.group_id }
       });
     })
   }

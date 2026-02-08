@@ -14,7 +14,7 @@
 
 	// ✨ 使用新的 usePagination Hook
 	const pagination = usePagination<GroupSearchItem>({
-		uniqueKey: 'group_chat_id'
+		uniqueKey: 'group_id'
 	});
 
 	function getAnchor() {
@@ -90,7 +90,7 @@
 			animated={true}
 			animationDelay={50}
 		>
-			{#each pagination.items as group (group.group_chat_id)}
+			{#each pagination.items as group (group.group_id)}
 				<MasonryLayoutItem>
 					<GroupCard
 						{group}

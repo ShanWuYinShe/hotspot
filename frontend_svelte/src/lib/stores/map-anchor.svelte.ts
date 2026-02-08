@@ -64,33 +64,31 @@ class MapAnchorStore {
 		}
 	}
 
-	get anchor() {
-		return this.#anchor;
-	}
+	// ==================== Derived State（所有公开属性）====================
 
-	get initialized() {
-		return this.#initialized;
-	}
+	/** 地图锚点对象 */
+	anchor = $derived(this.#anchor);
 
-	get latitude() {
-		return this.#anchor.latitude;
-	}
+	/** 是否已初始化 */
+	initialized = $derived(this.#initialized);
 
-	get longitude() {
-		return this.#anchor.longitude;
-	}
+	/** 纬度 */
+	latitude = $derived(this.#anchor.latitude);
 
-	get name() {
-		return this.#anchor.name || '';
-	}
+	/** 经度 */
+	longitude = $derived(this.#anchor.longitude);
 
-	get radius() {
-		return this.#anchor.radius || 5;
-	}
+	/** 锚点名称 */
+	name = $derived(this.#anchor.name || '');
 
-	get displayName() {
-		return this.#anchor.name || `${this.#anchor.latitude.toFixed(4)}, ${this.#anchor.longitude.toFixed(4)}`;
-	}
+	/** 搜索半径（公里） */
+	radius = $derived(this.#anchor.radius || 5);
+
+	/** 显示名称（如果没有名称则显示坐标） */
+	displayName = $derived(
+		this.#anchor.name || 
+		`${this.#anchor.latitude.toFixed(4)}, ${this.#anchor.longitude.toFixed(4)}`
+	);
 
 	/** 设置锚点 */
 	setAnchor(latitude: number, longitude: number, name?: string, radius?: number) {

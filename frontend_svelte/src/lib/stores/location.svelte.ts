@@ -55,29 +55,27 @@ class LocationStore {
 		}
 	}
 
-	get current() {
-		return this.#current;
-	}
+	// ==================== Derived State（所有公开属性）====================
 
-	get lastUpdated() {
-		return this.#lastUpdated;
-	}
+	/** 当前位置 */
+	current = $derived(this.#current);
 
-	get permissionDenied() {
-		return this.#permissionDenied;
-	}
+	/** 最后更新时间 */
+	lastUpdated = $derived(this.#lastUpdated);
 
-	get isLoading() {
-		return this.#isLoading;
-	}
+	/** 权限被拒绝 */
+	permissionDenied = $derived(this.#permissionDenied);
 
-	get geoPoint(): GeoPoint | null {
-		if (!this.#current) return null;
-		return {
+	/** 正在加载中 */
+	isLoading = $derived(this.#isLoading);
+
+	/** 提取经纬度坐标 */
+	geoPoint = $derived(
+		this.#current ? {
 			latitude: this.#current.latitude,
 			longitude: this.#current.longitude
-		};
-	}
+		} : null
+	);
 
 	#persist() {
 		saveToStorage({

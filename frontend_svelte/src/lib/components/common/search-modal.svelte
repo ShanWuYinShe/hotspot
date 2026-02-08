@@ -173,8 +173,8 @@
 			return;
 		}
 
-		if (item.type === 'group' && item.payload.group_chat_id) {
-			goto(`/groups/${item.payload.group_chat_id}`);
+		if (item.type === 'group' && item.payload.group_id) {
+			goto(`/groups/${item.payload.group_id}`);
 			return;
 		}
 

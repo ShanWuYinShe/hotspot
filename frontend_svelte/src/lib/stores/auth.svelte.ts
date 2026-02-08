@@ -73,48 +73,44 @@ class AuthStore {
 		}
 	}
 
-	// ==================== Getters ====================
+	// ==================== Derived State（所有公开属性）====================
 
-	get accounts() {
-		return this.#accounts;
-	}
+	/** 所有账户列表 */
+	accounts = $derived(this.#accounts);
 
-	get currentUserId() {
-		return this.#currentUserId;
-	}
+	/** 当前用户 ID */
+	currentUserId = $derived(this.#currentUserId);
 
-	get profile() {
-		return this.#profile;
-	}
+	/** 用户资料卡片 */
+	profile = $derived(this.#profile);
 
-	get initialized() {
-		return this.#initialized;
-	}
+	/** 是否已初始化 */
+	initialized = $derived(this.#initialized);
 
 	/** 当前账户信息 */
-	get currentAccount(): AccountInfo | undefined {
-		return this.#accounts.find((a) => a.user_id === this.#currentUserId && !a.is_locked);
-	}
+	currentAccount = $derived(
+		this.#accounts.find((a) => a.user_id === this.#currentUserId && !a.is_locked)
+	);
 
 	/** 当前 Token */
-	get token(): string | null {
-		return this.currentAccount?.access_token ?? null;
-	}
+	token = $derived(
+		this.currentAccount?.access_token ?? null
+	);
 
 	/** 是否已认证 */
-	get isAuthenticated(): boolean {
-		return !!this.currentAccount?.access_token;
-	}
+	isAuthenticated = $derived(
+		!!this.currentAccount?.access_token
+	);
 
 	/** 可用账户列表（未锁定） */
-	get availableAccounts(): AccountInfo[] {
-		return this.#accounts.filter((a) => !a.is_locked);
-	}
+	availableAccounts = $derived(
+		this.#accounts.filter((a) => !a.is_locked)
+	);
 
 	/** 锁定账户列表 */
-	get lockedAccounts(): AccountInfo[] {
-		return this.#accounts.filter((a) => a.is_locked);
-	}
+	lockedAccounts = $derived(
+		this.#accounts.filter((a) => a.is_locked)
+	);
 
 	// ==================== Actions ====================
 
@@ -141,8 +137,12 @@ class AuthStore {
 		};
 
 		if (existingIndex >= 0) {
-			// 更新现有账户
-			this.#accounts[existingIndex] = accountInfo;
+			// 更新现有账户（不可变更新）
+			this.#accounts = [
+				...this.#accounts.slice(0, existingIndex),
+				accountInfo,
+				...this.#accounts.slice(existingIndex + 1)
+			];
 		} else {
 			// 添加新账户
 			this.#accounts = [...this.#accounts, accountInfo];
@@ -184,7 +184,13 @@ class AuthStore {
 	lockAccount(userId: number) {
 		const index = this.#accounts.findIndex((a) => a.user_id === userId);
 		if (index >= 0) {
-			this.#accounts[index] = { ...this.#accounts[index], is_locked: true };
+			const account = this.#accounts[index]!;
+			// 不可变更新
+			this.#accounts = [
+				...this.#accounts.slice(0, index),
+				{ ...account, is_locked: true } as AccountInfo,
+				...this.#accounts.slice(index + 1)
+			];
 
 			// 如果锁定的是当前账户，切换到其他账户
 			if (this.#currentUserId === userId) {
@@ -201,7 +207,13 @@ class AuthStore {
 	unlockAccount(userId: number) {
 		const index = this.#accounts.findIndex((a) => a.user_id === userId);
 		if (index >= 0) {
-			this.#accounts[index] = { ...this.#accounts[index], is_locked: false };
+			const account = this.#accounts[index]!;
+			// 不可变更新
+			this.#accounts = [
+				...this.#accounts.slice(0, index),
+				{ ...account, is_locked: false } as AccountInfo,
+				...this.#accounts.slice(index + 1)
+			];
 			this.#persist();
 		}
 	}
@@ -224,11 +236,17 @@ class AuthStore {
 
 		const index = this.#accounts.findIndex((a) => a.user_id === this.#currentUserId);
 		if (index >= 0) {
-			this.#accounts[index] = {
-				...this.#accounts[index],
-				access_token: accessToken,
-				access_token_expires_at: expiresAt
-			};
+			const account = this.#accounts[index]!;
+			// 不可变更新
+			this.#accounts = [
+				...this.#accounts.slice(0, index),
+				{
+					...account,
+					access_token: accessToken,
+					access_token_expires_at: expiresAt
+				} as AccountInfo,
+				...this.#accounts.slice(index + 1)
+			];
 			this.#persist();
 		}
 	}
@@ -239,11 +257,17 @@ class AuthStore {
 
 		const index = this.#accounts.findIndex((a) => a.user_id === this.#currentUserId);
 		if (index >= 0) {
-			this.#accounts[index] = {
-				...this.#accounts[index],
-				access_token: '',
-				access_token_expires_at: ''
-			};
+			const account = this.#accounts[index]!;
+			// 不可变更新
+			this.#accounts = [
+				...this.#accounts.slice(0, index),
+				{
+					...account,
+					access_token: '',
+					access_token_expires_at: ''
+				} as AccountInfo,
+				...this.#accounts.slice(index + 1)
+			];
 			this.#persist();
 		}
 	}
@@ -256,11 +280,17 @@ class AuthStore {
 		if (profile && this.#currentUserId !== null) {
 			const index = this.#accounts.findIndex((a) => a.user_id === this.#currentUserId);
 			if (index >= 0) {
-				this.#accounts[index] = {
-					...this.#accounts[index],
-					nickname: profile.nickname,
-					avatar_url: profile.avatar_url
-				};
+				const account = this.#accounts[index]!;
+				// 不可变更新
+				this.#accounts = [
+					...this.#accounts.slice(0, index),
+					{
+						...account,
+						nickname: profile.nickname,
+						avatar_url: profile.avatar_url
+					} as AccountInfo,
+					...this.#accounts.slice(index + 1)
+				];
 				this.#persist();
 			}
 		}

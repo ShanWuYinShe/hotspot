@@ -21,6 +21,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DistributedSyncService, SyncData } from '../../../core/services/DistributedSyncService';
 import { SmartNotificationService } from '../../../core/services/SmartNotificationService';
 import { AccessibilityManager } from '../../../core/accessibility/AccessibilityManager';
+import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 
 interface GroupSyncData {
   groupId: string;
@@ -237,7 +238,9 @@ struct GroupDetailPage {
   }
 
   private async syncGroupData(): Promise<void> {
-    if (!this.groupInfo || !this.currentUser?.user_id) return;
+    if (!this.groupInfo) return;
+    const userId = await AuthAccountManager.getCurrentUserId();
+    if (!userId) return;
     try {
       const syncDataObject: GroupSyncData = {
         groupId: this.groupId,
@@ -247,7 +250,7 @@ struct GroupDetailPage {
       };
       
       const syncData: SyncData = {
-        userId: this.currentUser.user_id,
+        userId: userId,
         dataType: 'groups',
         data: syncDataObject,
         timestamp: Date.now(),

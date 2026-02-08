@@ -241,7 +241,7 @@ export class NotificationDataManager extends BaseSingleton {
       }
       
       // 合并更新
-      const updatedNotification = ConfigMerger.merge(notification, updates);
+      const updatedNotification = ConfigMerger.merge(notification, updates as Partial<SmartNotification>);
       
       // 验证更新后的通知
       this.validateNotification(updatedNotification);

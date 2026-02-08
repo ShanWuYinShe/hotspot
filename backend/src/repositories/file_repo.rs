@@ -1,16 +1,20 @@
 //! 文件仓库 - 管理上传文件的数据库操作
+//!
+//! 适配新 Schema：
+//! - media_files 表仅存储核心存储信息
+//! - 元数据存储在 meta JSONB 字段中
+//! - 移除 category, is_deleted 字段
 
 use sqlx::PgPool;
 use uuid::Uuid;
+use serde_json::json;
 
 use crate::error::{AppError, Result};
 
-/// 上传文件数据 - 用于 create_file 返回
-/// 只包含业务需要的字段
+/// 上传文件数据 - 用于业务层传输
 #[derive(Debug, Clone)]
 pub struct UploadedFileData {
     pub file_id: Uuid,
-    // url 字段已移除，请使用 storage_path 动态生成签名 URL
     pub storage_path: String,
     pub thumbnail_url: Option<String>,
     pub file_size: i64,
@@ -31,14 +35,14 @@ impl FileRepository {
         Self { pool }
     }
 
-    /// 创建上传文件记录（指定 file_id）
-    /// 每次上传都生成新的 file_id 和 url，客户端无法判断文件是否已存在
+    /// 创建上传文件记录
+    /// 将分散的元数据打包存入 meta JSONB 字段
     #[allow(clippy::too_many_arguments)]
     pub async fn create_file_with_id(
         &self,
         file_id: Uuid,
         uploader_id: i64,
-        category: &str,
+        _category: &str, // 数据库不再存储 category，仅在 upload_sessions 中保留
         original_name: Option<&str>,
         storage_path: &str,
         url: &str,
@@ -50,58 +54,66 @@ impl FileRepository {
         duration: Option<i32>,
         checksum: Option<&str>,
     ) -> Result<UploadedFileData> {
+        // 构建 meta JSONB
+        let meta = json!({
+            "size": file_size,
+            "mime_type": mime_type,
+            "width": width,
+            "height": height,
+            "duration": duration,
+            "original_name": original_name
+        });
+
         let row = sqlx::query!(
             r#"
-            INSERT INTO uploaded_files (
-                file_id, uploader_id, category, original_name, storage_path, url,
-                thumbnail_url, mime_type, file_size, width, height, duration, checksum
+            INSERT INTO media_files (
+                file_id, uploader_id, url, thumbnail_url, storage_path, meta, hash_md5
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-            RETURNING file_id, url, storage_path, thumbnail_url, file_size, duration, original_name, width, height, mime_type
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING file_id, url, storage_path, thumbnail_url, meta, hash_md5
             "#,
             file_id,
             uploader_id,
-            category,
-            original_name,
-            storage_path,
             url,
             thumbnail_url,
-            mime_type,
-            file_size,
-            width,
-            height,
-            duration,
+            storage_path,
+            meta,
             checksum
         )
         .fetch_one(&self.pool)
         .await?;
 
+        // 解析 meta
+        let meta_json = row.meta.unwrap_or(json!({}));
+        
         Ok(UploadedFileData {
             file_id: row.file_id,
             storage_path: row.storage_path,
             thumbnail_url: row.thumbnail_url,
-            file_size: row.file_size,
-            duration: row.duration,
-            filename: row.original_name,
-            width: row.width,
-            height: row.height,
-            mime_type: row.mime_type,
+            file_size: meta_json["size"].as_i64().unwrap_or(0),
+            duration: meta_json["duration"].as_i64().map(|v| v as i32),
+            filename: meta_json["original_name"].as_str().map(|s| s.to_string()),
+            width: meta_json["width"].as_i64().map(|v| v as i32),
+            height: meta_json["height"].as_i64().map(|v| v as i32),
+            mime_type: meta_json["mime_type"].as_str().unwrap_or("application/octet-stream").to_string(),
         })
     }
 
-    /// 验证文件所有权和分类，返回完整文件信息（不含 URL）
+    /// 验证文件所有权并返回信息
+    /// 注意：不再验证 category，因为 category 信息不在 media_files 表中
+    /// 如果必须验证 category，需要 join upload_sessions 表 (但 session 可能已清除)
+    /// 或者信任调用方传入的 file_id 是合法的
     pub async fn validate_file(
         &self,
         file_id: Uuid,
         uploader_id: i64,
-        expected_category: &str,
+        _expected_category: &str, 
     ) -> Result<UploadedFileData> {
         let row = sqlx::query!(
             r#"
-            SELECT file_id, uploader_id, category, url, storage_path, thumbnail_url,
-                   file_size, duration, original_name, width, height, mime_type
-            FROM uploaded_files
-            WHERE file_id = $1 AND is_deleted = FALSE
+            SELECT file_id, uploader_id, url, storage_path, thumbnail_url, meta
+            FROM media_files
+            WHERE file_id = $1
             "#,
             file_id
         )
@@ -113,33 +125,33 @@ impl FileRepository {
             return Err(AppError::Forbidden("无权操作此文件".to_string()));
         }
 
-        if row.category != expected_category {
-            return Err(AppError::BadRequest(format!(
-                "文件分类不匹配，期望 {}，实际 {}",
-                expected_category, row.category
-            )));
-        }
+        let meta_json = row.meta.unwrap_or(json!({}));
+
+        // (可选) 如果 meta 中存储了 category，可以在这里验证
+        // 目前 schema meta 中未强制存储 category
 
         Ok(UploadedFileData {
             file_id: row.file_id,
             storage_path: row.storage_path,
             thumbnail_url: row.thumbnail_url,
-            file_size: row.file_size,
-            duration: row.duration,
-            filename: row.original_name,
-            width: row.width,
-            height: row.height,
-            mime_type: row.mime_type,
+            file_size: meta_json["size"].as_i64().unwrap_or(0),
+            duration: meta_json["duration"].as_i64().map(|v| v as i32),
+            filename: meta_json["original_name"].as_str().map(|s| s.to_string()),
+            width: meta_json["width"].as_i64().map(|v| v as i32),
+            height: meta_json["height"].as_i64().map(|v| v as i32),
+            mime_type: meta_json["mime_type"].as_str().unwrap_or("").to_string(),
         })
     }
 
-    /// 标记文件已使用
+    /// 标记文件已使用 (Legacy: schema 中移除了 is_used/used_at)
+    /// 如果业务需要保留"引用计数"或"使用状态"，应通过关联表查询 (e.g. JOIN moment_images)
+    /// 这里的实现视为空操作，或者如果确实需要，应更新 expires_at = NULL (表示永久存储)
     pub async fn mark_as_used(&self, file_id: Uuid) -> Result<()> {
         sqlx::query!(
             r#"
-            UPDATE uploaded_files
-            SET is_used = TRUE, used_at = NOW()
-            WHERE file_id = $1 AND is_deleted = FALSE
+            UPDATE media_files
+            SET expires_at = NULL -- 永久保留
+            WHERE file_id = $1
             "#,
             file_id
         )
@@ -149,48 +161,14 @@ impl FileRepository {
         Ok(())
     }
 
-    /// 验证文件所有权并获取完整文件信息（用于消息发送时转换 file_id → 文件数据）
-    /// 验证：文件存在、属于当前用户、分类匹配
+    /// 获取文件用于消息
     pub async fn get_file_for_message(
         &self,
         file_id: Uuid,
         uploader_id: i64,
-        expected_categories: &[&str],
+        _expected_categories: &[&str],
     ) -> Result<UploadedFileData> {
-        let row = sqlx::query!(
-            r#"
-            SELECT file_id, uploader_id, category, url, storage_path, thumbnail_url,
-                   file_size, duration, original_name, width, height, mime_type
-            FROM uploaded_files
-            WHERE file_id = $1 AND is_deleted = FALSE
-            "#,
-            file_id
-        )
-        .fetch_optional(&self.pool)
-        .await?
-        .ok_or_else(|| AppError::NotFound("文件不存在".to_string()))?;
-
-        if row.uploader_id != uploader_id {
-            return Err(AppError::Forbidden("无权使用此文件".to_string()));
-        }
-
-        if !expected_categories.contains(&row.category.as_str()) {
-            return Err(AppError::BadRequest(format!(
-                "文件分类不匹配，期望 {:?}，实际 {}",
-                expected_categories, row.category
-            )));
-        }
-
-        Ok(UploadedFileData {
-            file_id: row.file_id,
-            storage_path: row.storage_path,
-            thumbnail_url: row.thumbnail_url,
-            file_size: row.file_size,
-            duration: row.duration,
-            filename: row.original_name,
-            width: row.width,
-            height: row.height,
-            mime_type: row.mime_type,
-        })
+        // 复用 validate_file 逻辑 (忽略 category 检查)
+        self.validate_file(file_id, uploader_id, "").await
     }
 }

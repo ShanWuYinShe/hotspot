@@ -321,7 +321,7 @@ export interface PrivateUserTypingPayload {
 // 群聊消息
 export interface GroupMessageNewPayload {
 	message_id: string;
-	group_chat_id: string;
+	group_id: string;
 	sender: UserInfo;
 	type: MessageType;
 	content?: string;
@@ -334,28 +334,28 @@ export interface GroupMessageNewPayload {
 
 export interface GroupMessageEditedPayload {
 	message_id: string;
-	group_chat_id: string;
+	group_id: string;
 	content: string;
 	edited_at: string;
 }
 
 export interface GroupMessageRecalledPayload {
 	message_id: string;
-	group_chat_id: string;
+	group_id: string;
 	recalled_by: number;
 	recalled_at: string;
 }
 
 export interface GroupMessageDeletedPayload {
 	message_id: string;
-	group_chat_id: string;
+	group_id: string;
 	deleted_by: number;
 	deleted_at: string;
 }
 
 export interface GroupMessageReactionPayload {
 	message_id: string;
-	group_chat_id: string;
+	group_id: string;
 	user: UserInfo;
 	reaction_type: ReactionType;
 	has_reaction: boolean;
@@ -363,21 +363,21 @@ export interface GroupMessageReactionPayload {
 }
 
 export interface GroupMessageReadPayload {
-	group_chat_id: string;
+	group_id: string;
 	up_to: string;
 	reader_id: number;
 	read_at: string;
 }
 
 export interface GroupUserTypingPayload {
-	group_chat_id: string;
+	group_id: string;
 	user_id: number;
 	is_typing: boolean;
 }
 
 // 群组管理
 export interface GroupMemberJoinedPayload {
-	group_chat_id: string;
+	group_id: string;
 	user: UserInfo;
 	role: GroupRole;
 	member_count: number;
@@ -386,7 +386,7 @@ export interface GroupMemberJoinedPayload {
 
 export interface GroupInviteReceivedPayload {
 	invite_id: string;
-	group_chat_id: string;
+	group_id: string;
 	group_name: string;
 	group_avatar_url?: string;
 	inviter: UserInfo;
@@ -396,7 +396,7 @@ export interface GroupInviteReceivedPayload {
 
 export interface GroupInviteResponsePayload {
 	invite_id: string;
-	group_chat_id: string;
+	group_id: string;
 	user: UserInfo;
 	status: 'accepted';
 	responded_at: string;
@@ -404,7 +404,7 @@ export interface GroupInviteResponsePayload {
 
 export interface GroupApplicationReceivedPayload {
 	application_id: string;
-	group_chat_id: string;
+	group_id: string;
 	applicant: UserInfo;
 	message?: string;
 	created_at: string;
@@ -412,7 +412,7 @@ export interface GroupApplicationReceivedPayload {
 
 export interface GroupApplicationResponsePayload {
 	application_id: string;
-	group_chat_id: string;
+	group_id: string;
 	group_name: string;
 	status: 'accepted';
 	responded_at: string;
@@ -420,7 +420,7 @@ export interface GroupApplicationResponsePayload {
 
 export interface GroupAnnouncementCreatedPayload {
 	announcement_id: string;
-	group_chat_id: string;
+	group_id: string;
 	title: string;
 	content: string;
 	created_by: UserInfo;
@@ -430,7 +430,7 @@ export interface GroupAnnouncementCreatedPayload {
 
 // 成员离开（自愿离开）
 export interface GroupMemberLeftPayload {
-	group_chat_id: string;
+	group_id: string;
 	user: UserInfo;
 	left_at: string;
 	member_count: number; // 剩余成员总数
@@ -438,7 +438,7 @@ export interface GroupMemberLeftPayload {
 
 // 成员被移除（被踢出/被封禁）
 export interface GroupMemberRemovedPayload {
-	group_chat_id: string;
+	group_id: string;
 	user: UserInfo;
 	removed_by: number; // user_id（操作者）
 	reason?: 'kicked' | 'banned'; // 移除原因
@@ -448,7 +448,7 @@ export interface GroupMemberRemovedPayload {
 
 // 成员角色变更
 export interface GroupMemberRoleChangedPayload {
-	group_chat_id: string;
+	group_id: string;
 	user: UserInfo;
 	old_role: GroupRole; // 引用 @api_spec_common_types.mdc
 	new_role: GroupRole;
@@ -458,7 +458,7 @@ export interface GroupMemberRoleChangedPayload {
 
 // 成员被禁言
 export interface GroupMemberMutedPayload {
-	group_chat_id: string;
+	group_id: string;
 	user: UserInfo;
 	muted_by: number; // user_id（操作者）
 	muted_until?: string; // 禁言结束时间（null 表示永久禁言）
@@ -468,7 +468,7 @@ export interface GroupMemberMutedPayload {
 
 // 成员解除禁言
 export interface GroupMemberUnmutedPayload {
-	group_chat_id: string;
+	group_id: string;
 	user: UserInfo;
 	unmuted_by: number; // user_id（操作者）
 	unmuted_at: string;
@@ -476,7 +476,7 @@ export interface GroupMemberUnmutedPayload {
 
 // 群公告更新
 export interface GroupAnnouncementUpdatedPayload {
-	group_chat_id: string;
+	group_id: string;
 	announcement_id: string;
 	content: string; // 更新后的内容
 	updated_by: number; // user_id（操作者）
@@ -485,7 +485,7 @@ export interface GroupAnnouncementUpdatedPayload {
 
 // 群组信息更新
 export interface GroupUpdatedPayload {
-	group_chat_id: string;
+	group_id: string;
 	updated_fields: { // 只包含变更的字段
 		name?: string;
 		avatar_url?: string;
@@ -497,7 +497,7 @@ export interface GroupUpdatedPayload {
 
 // 群组解散
 export interface GroupDeletedPayload {
-	group_chat_id: string;
+	group_id: string;
 	deleted_by: number; // user_id（操作者）
 	deleted_at: string;
 	reason?: string;
@@ -564,7 +564,7 @@ export interface PrivateTypingPayload {
 }
 
 export interface GroupTypingPayload {
-	group_chat_id: string;
+	group_id: string;
 	is_typing: boolean;
 }
 

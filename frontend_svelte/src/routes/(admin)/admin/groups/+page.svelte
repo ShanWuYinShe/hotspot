@@ -56,9 +56,9 @@
 		if (!confirm('确定要解散该群组吗？此操作不可逆。')) return;
 
 		try {
-			const response = await adminGroupsService.dismiss({ group_chat_id: groupId, reason: '管理员操作' });
+			const response = await adminGroupsService.dismiss({ group_id: groupId, reason: '管理员操作' });
 			if (isSuccess(response)) {
-				groups = groups.filter(g => g.group_chat_id !== groupId);
+				groups = groups.filter(g => g.group_id !== groupId);
 				toast.success('已解散群组');
 			} else {
 				toast.error(response.message || '操作失败');
@@ -128,7 +128,7 @@
 				<div class="py-8 text-center text-muted-foreground">暂无群组数据</div>
 			{:else}
 				<div class="divide-y">
-					{#each groups as group (group.group_chat_id)}
+					{#each groups as group (group.group_id)}
 						<div class="flex items-center gap-4 py-4">
 							<Avatar class="h-10 w-10">
 								<AvatarImage src={group.avatar_url} alt={group.name} />
@@ -163,7 +163,7 @@
 								<DropdownMenu.Content align="end">
 									<DropdownMenu.Item>
 										{#snippet child({ props })}
-											<a href="/groups/{group.group_chat_id}" {...props}>
+											<a href="/groups/{group.group_id}" {...props}>
 												<Eye class="mr-2 h-4 w-4" />
 												查看详情
 											</a>
@@ -172,7 +172,7 @@
 									<DropdownMenu.Separator />
 									<DropdownMenu.Item class="text-destructive">
 										{#snippet child({ props })}
-											<button {...props} onclick={() => handleDissolve(group.group_chat_id)}>
+											<button {...props} onclick={() => handleDissolve(group.group_id)}>
 												<Trash2 class="mr-2 h-4 w-4" />
 												解散群组
 											</button>

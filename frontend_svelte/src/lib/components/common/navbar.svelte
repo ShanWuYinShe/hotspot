@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
@@ -32,7 +33,7 @@
 	let showCreateGroup = $state(false);
 
 	// 监听快捷键（Cmd/Ctrl + K 打开搜索）
-	$effect(() => {
+	onMount(() => {
 		const handleKeydown = (event: KeyboardEvent) => {
 			if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
 				event.preventDefault();

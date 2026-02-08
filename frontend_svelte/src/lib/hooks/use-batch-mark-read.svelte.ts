@@ -218,8 +218,9 @@ export function useBatchMarkRead(options: UseBatchMarkReadOptions): BatchMarkRea
 		}
 		elementToIdMap.clear();
 		visibilityTimestamps.clear();
-		visibleMessageIds.clear();
-		pendingMessageIds.clear();
+		// 数组使用重新赋值清空，不是 .clear()
+		visibleMessageIds = [];
+		pendingMessageIds = [];
 	}
 
 	// 初始化

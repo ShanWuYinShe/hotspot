@@ -120,11 +120,11 @@
 	}
 
 	let itemRects = $state<ItemRect[]>([]);
-	let columnHeights: number[] = $state([]);
+	let columnHeights = $state<number[]>([]);
 	let totalHeight = $state(0);
 	let visibleItems = $state<ItemRect[]>([]);
 
-	// 已测量高度的项目缓存
+	// 已测量高度的项目缓存（纯缓存，不需要响应式）
 	const measuredHeights = new Map<string | number, number>();
 
 	/**
@@ -161,25 +161,25 @@
 		const cols = currentColumns;
 		const colWidth = calculateColumnWidth(containerWidth, cols, gap);
 
-		// 初始化列高度
-		columnHeights = new Array(cols).fill(0);
-		itemRects = [];
+		// 初始化列高度（使用 let 避免响应式问题）
+		const tempColumnHeights = new Array(cols).fill(0);
+		const tempItemRects: ItemRect[] = [];
 
 		items.forEach((item, index) => {
 			const key = keyFn(item, index);
 			
 			// 找到最短的列
-			const columnIndex = getShortestColumn();
+			const columnIndex = tempColumnHeights.indexOf(Math.min(...tempColumnHeights));
 			
 			// 计算位置
 			const x = columnIndex * (colWidth + gap);
-			const y = columnHeights[columnIndex];
+			const y = tempColumnHeights[columnIndex];
 			
 			// 使用缓存的高度或估计高度
 			const height = measuredHeights.get(key) ?? estimatedItemHeight;
 			
 			// 创建 rect
-			itemRects.push({
+			tempItemRects.push({
 				index,
 				x,
 				y,
@@ -189,11 +189,13 @@
 			});
 			
 			// 更新列高度
-			columnHeights[columnIndex] += height + gap;
+			tempColumnHeights[columnIndex] += height + gap;
 		});
 
-		// 设置总高度
-		totalHeight = Math.max(...columnHeights);
+		// 一次性更新所有响应式状态
+		columnHeights = tempColumnHeights;
+		itemRects = tempItemRects;
+		totalHeight = Math.max(...tempColumnHeights);
 	}
 
 	/**

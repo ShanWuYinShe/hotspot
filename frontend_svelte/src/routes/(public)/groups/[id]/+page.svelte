@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { groupsService } from '$lib/api/services';
@@ -8,6 +7,7 @@
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { usePagination } from '$lib/hooks/use-pagination.svelte';
+	import type { PageData } from './$types';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
@@ -50,11 +50,12 @@
 	import UserMinus from 'lucide-svelte/icons/user-minus';
 	import UserCog from 'lucide-svelte/icons/user-cog';
 
-	const groupId = $page.params.id!;
+	let { data }: { data: PageData } = $props();
 
-	let group = $state<GroupCard | null>(null);
+	const groupId = data.groupId;
+
+	let group = $state<GroupCard | null>(data.group);
 	let settings = $state<GroupSettings | null>(null);
-	let isLoading = $state(true);
 	let isJoining = $state(false);
 	let isLeaving = $state(false);
 	let showJoinDialog = $state(false);
@@ -193,7 +194,7 @@
 					is_pinned: announcementPinned
 				})
 				: await groupsService.createAnnouncement({
-					group_chat_id: groupId,
+					group_id: groupId,
 					title,
 					content,
 					is_pinned: announcementPinned
@@ -285,7 +286,7 @@
 		muteSubmitting = true;
 		try {
 			const response = await groupsService.mute({
-				group_chat_id: groupId,
+				group_id: groupId,
 				user_id: muteTarget.user.user_id,
 				duration_minutes: duration
 			});
@@ -318,7 +319,7 @@
 
 		try {
 			const response = await groupsService.unmute({
-				group_chat_id: groupId,
+				group_id: groupId,
 				user_id: member.user.user_id
 			});
 			if (isSuccess(response) && response.data) {
@@ -353,7 +354,7 @@
 		roleSubmitting = true;
 		try {
 			const response = await groupsService.setRole({
-				group_chat_id: groupId,
+				group_id: groupId,
 				user_id: roleTarget.user.user_id,
 				role
 			});
@@ -393,7 +394,7 @@
 		removeSubmitting = true;
 		try {
 			const response = await groupsService.removeMember({
-				group_chat_id: groupId,
+				group_id: groupId,
 				user_id: removeTarget.user.user_id
 			});
 			if (isSuccess(response)) {
@@ -415,10 +416,10 @@
 		}
 	}
 
+	// 刷新群组信息（加入/离开群组后使用）
 	async function loadGroup() {
-		isLoading = true;
 		try {
-			const response = await groupsService.getGroup({ group_chat_id: groupId });
+			const response = await groupsService.getGroup({ group_id: groupId });
 			if (isSuccess(response) && response.data) {
 				group = response.data;
 				if (!response.data.my_state?.is_joined) {
@@ -433,15 +434,13 @@
 			}
 		} catch {
 			toast.error('加载失败');
-		} finally {
-			isLoading = false;
 		}
 	}
 
 	async function loadSettings() {
 		if (!authStore.isAuthenticated || settingsLoaded) return;
 		try {
-			const response = await groupsService.getSettings({ group_chat_id: groupId });
+			const response = await groupsService.getSettings({ group_id: groupId });
 			if (isSuccess(response) && response.data) {
 				settings = response.data;
 			}
@@ -459,7 +458,7 @@
 		await announcementsPagination.load(
 			(cursor) =>
 				groupsService.getAnnouncements({
-					group_chat_id: groupId,
+					group_id: groupId,
 					limit: 10,
 					cursor
 				}),
@@ -477,7 +476,7 @@
 		await membersPagination.load(
 			(cursor) =>
 				groupsService.getMembers({
-					group_chat_id: groupId,
+					group_id: groupId,
 					limit: 20,
 					cursor
 				}),
@@ -517,11 +516,11 @@
 		try {
 			const response = joinMethod === 'approval'
 				? await groupsService.apply({
-					group_chat_id: groupId,
+					group_id: groupId,
 					message: joinMessage.trim() || undefined
 				})
 				: await groupsService.join({
-					group_chat_id: groupId,
+					group_id: groupId,
 					password: joinPassword.trim() || undefined
 				});
 
@@ -554,7 +553,7 @@
 		isLeaving = true;
 		showLeaveDialog = false;
 		try {
-			const response = await groupsService.leave({ group_chat_id: groupId });
+			const response = await groupsService.leave({ group_id: groupId });
 			if (isSuccess(response)) {
 				toast.success('已退出群组');
 				settingsLoaded = false;
@@ -583,16 +582,20 @@
 	});
 
 	onMount(() => {
-		loadGroup();
+		// 显示加载错误
+		if (data.error) {
+			toast.error(data.error);
+		}
+		
 		loadSettings();
 
 		// 监听群组成员离开事件
 		const handleMemberLeft = (e: CustomEvent<{
-			group_chat_id: string;
+			group_id: string;
 			user_id: number;
 			member_count: number;
 		}>) => {
-			if (e.detail.group_chat_id === groupId) {
+			if (e.detail.group_id === groupId) {
 				// 从成员列表中移除
 				membersPagination.removeItem((item) => item.user.user_id === e.detail.user_id);
 				// 更新群组成员数量
@@ -604,12 +607,12 @@
 
 		// 监听群组成员被移除事件
 		const handleMemberRemoved = (e: CustomEvent<{
-			group_chat_id: string;
+			group_id: string;
 			user_id: number;
 			member_count: number;
 			is_current_user: boolean;
 		}>) => {
-			if (e.detail.group_chat_id === groupId) {
+			if (e.detail.group_id === groupId) {
 				// 从成员列表中移除
 				membersPagination.removeItem((item) => item.user.user_id === e.detail.user_id);
 				// 更新群组成员数量
@@ -625,12 +628,12 @@
 
 		// 监听群组成员角色变更事件
 		const handleMemberRoleChanged = (e: CustomEvent<{
-			group_chat_id: string;
+			group_id: string;
 			user_id: number;
 			old_role: string;
 			new_role: string;
 		}>) => {
-			if (e.detail.group_chat_id === groupId) {
+			if (e.detail.group_id === groupId) {
 				// 更新成员角色
 				membersPagination.updateItem((item) => {
 					if (item.user.user_id === e.detail.user_id) {
@@ -647,11 +650,11 @@
 
 		// 监听群组成员被禁言事件
 		const handleMemberMuted = (e: CustomEvent<{
-			group_chat_id: string;
+			group_id: string;
 			user_id: number;
 			muted_until?: string;
 		}>) => {
-			if (e.detail.group_chat_id === groupId) {
+			if (e.detail.group_id === groupId) {
 				// 更新成员禁言状态
 				membersPagination.updateItem((item) => {
 					if (item.user.user_id === e.detail.user_id) {
@@ -668,10 +671,10 @@
 
 		// 监听群组成员解除禁言事件
 		const handleMemberUnmuted = (e: CustomEvent<{
-			group_chat_id: string;
+			group_id: string;
 			user_id: number;
 		}>) => {
-			if (e.detail.group_chat_id === groupId) {
+			if (e.detail.group_id === groupId) {
 				// 更新成员禁言状态
 				membersPagination.updateItem((item) => {
 					if (item.user.user_id === e.detail.user_id) {
@@ -688,11 +691,11 @@
 
 		// 监听群公告更新事件
 		const handleAnnouncementUpdated = (e: CustomEvent<{
-			group_chat_id: string;
+			group_id: string;
 			announcement_id: string;
 			content: string;
 		}>) => {
-			if (e.detail.group_chat_id === groupId) {
+			if (e.detail.group_id === groupId) {
 				// 更新公告内容
 				announcementsPagination.updateItem((item) => {
 					if (item.announcement_id === e.detail.announcement_id) {
@@ -705,14 +708,14 @@
 
 		// 监听群组信息更新事件
 		const handleGroupUpdated = (e: CustomEvent<{
-			group_chat_id: string;
+			group_id: string;
 			updated_fields: {
 				name?: string;
 				avatar_url?: string;
 				description?: string;
 			};
 		}>) => {
-			if (e.detail.group_chat_id === groupId && group) {
+			if (e.detail.group_id === groupId && group) {
 				// 更新群组信息
 				group = {
 					...group,
@@ -755,22 +758,17 @@
 		<h1 class="text-2xl font-bold">群组详情</h1>
 	</div>
 
-	{#if isLoading}
+	{#if !group}
 		<Card>
 			<CardContent class="p-6">
 				<div class="flex flex-col items-center gap-4">
-					<Skeleton class="h-24 w-24 rounded-full" />
-					<Skeleton class="h-6 w-32" />
-					<Skeleton class="h-4 w-48" />
-					<div class="flex gap-8">
-						<Skeleton class="h-12 w-20" />
-						<Skeleton class="h-12 w-20" />
-						<Skeleton class="h-12 w-20" />
-					</div>
+					<p class="text-muted-foreground">
+						{data.error || '群组不存在'}
+					</p>
 				</div>
 			</CardContent>
 		</Card>
-	{:else if group}
+	{:else}
 		<Card class="border-0 bg-card/80 shadow-lg shadow-black/5 ring-1 ring-border/50">
 			<CardContent class="space-y-6 p-6">
 				<div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">

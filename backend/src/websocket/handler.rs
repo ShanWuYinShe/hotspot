@@ -162,7 +162,10 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
     // 获取用户信息
     let user_repo = crate::repositories::user_repo::UserRepository::new(state.db.clone());
     let (nickname, avatar_url) = match user_repo.find_by_id(user_id).await {
-        Ok(Some(u)) => (u.nickname, u.avatar_url),
+        Ok(Some(u)) => (
+            u.nickname.unwrap_or_else(|| "Unknown".to_string()),
+            u.avatar_url,
+        ),
         _ => ("Unknown".to_string(), None),
     };
 
@@ -344,7 +347,7 @@ async fn handle_message(
                     }
                     if is_rate_limited(user_id, state).await {
                         let failed_ids =
-                            build_failed_ids(&ids, SubscriptionFailureReason::RateLimited);
+                            build_failed_ids(&ids, SubscriptionFailureReason::InternalError);
                         let current_ids =
                             build_current_subscription_ids(user_id, state, &r#type).await;
                         let ack_msg = WsMessage::SubscribeAck {
@@ -408,7 +411,7 @@ async fn handle_message(
                     }
                     if is_rate_limited(user_id, state).await {
                         let failed_ids =
-                            build_failed_ids(&ids, SubscriptionFailureReason::RateLimited);
+                            build_failed_ids(&ids, SubscriptionFailureReason::InternalError);
                         let current_ids =
                             build_current_subscription_ids(user_id, state, &r#type).await;
                         let ack_msg = WsMessage::SubscribeAck {
@@ -451,7 +454,7 @@ async fn handle_message(
                             build_current_subscription_ids(user_id, state, &r#type).await;
                         let ack_msg = WsMessage::SubscribeAck {
                             client_msg_id,
-                            operation: SubscriptionOperation::Set,
+                            operation: SubscriptionOperation::Subscribe,
                             r#type,
                             ids: current_ids,
                             code: err.error_code(),
@@ -463,12 +466,12 @@ async fn handle_message(
                     }
                     if is_rate_limited(user_id, state).await {
                         let failed_ids =
-                            build_failed_ids(&ids, SubscriptionFailureReason::RateLimited);
+                            build_failed_ids(&ids, SubscriptionFailureReason::InternalError);
                         let current_ids =
                             build_current_subscription_ids(user_id, state, &r#type).await;
                         let ack_msg = WsMessage::SubscribeAck {
                             client_msg_id,
-                            operation: SubscriptionOperation::Set,
+                            operation: SubscriptionOperation::Subscribe,
                             r#type,
                             ids: current_ids,
                             code: 20103,
@@ -490,7 +493,7 @@ async fn handle_message(
                     // 发送确认
                     let ack_msg = WsMessage::SubscribeAck {
                         client_msg_id,
-                        operation: SubscriptionOperation::Set,
+                        operation: SubscriptionOperation::Subscribe,
                         r#type,
                         ids: current_ids,
                         code,
@@ -605,23 +608,17 @@ async fn process_subscribe(
         match source_type {
             "group" => {
                 let group_id = match source_id {
-                    SubscriptionSourceId::String(raw) => match Uuid::parse_str(raw) {
+                    SubscriptionSourceId::String(raw) => match raw.parse::<i64>() {
                         Ok(id) => id,
                         Err(_) => {
                             failed.push(build_failed_id(
                                 source_id,
-                                SubscriptionFailureReason::InvalidItem,
+                                SubscriptionFailureReason::InvalidTopic,
                             ));
                             continue;
                         }
                     },
-                    SubscriptionSourceId::Number(_) => {
-                        failed.push(build_failed_id(
-                            source_id,
-                            SubscriptionFailureReason::InvalidItem,
-                        ));
-                        continue;
-                    }
+                    SubscriptionSourceId::Number(id) => *id,
                 };
                 let exists = match group_repo.exists(group_id).await {
                     Ok(v) => v,
@@ -636,7 +633,7 @@ async fn process_subscribe(
                 if !exists {
                     failed.push(build_failed_id(
                         source_id,
-                        SubscriptionFailureReason::NotFound,
+                        SubscriptionFailureReason::InvalidTopic,
                     ));
                     continue;
                 }
@@ -653,27 +650,21 @@ async fn process_subscribe(
                 if !is_member {
                     failed.push(build_failed_id(
                         source_id,
-                        SubscriptionFailureReason::PermissionDenied,
+                        SubscriptionFailureReason::Forbidden,
                     ));
                     continue;
                 }
                 if group_count >= 100 {
                     failed.push(build_failed_id(
                         source_id,
-                        SubscriptionFailureReason::TooManySubscriptions,
+                        SubscriptionFailureReason::InternalError,
                     ));
                     continue;
                 }
 
                 let group_id_str = match source_id {
                     SubscriptionSourceId::String(raw) => raw.clone(),
-                    SubscriptionSourceId::Number(_) => {
-                        failed.push(build_failed_id(
-                            source_id,
-                            SubscriptionFailureReason::InvalidItem,
-                        ));
-                        continue;
-                    }
+                    SubscriptionSourceId::Number(id) => id.to_string(),
                 };
                 let subscription = SubscriptionType::Group(group_id_str);
                 if state
@@ -693,7 +684,7 @@ async fn process_subscribe(
                     SubscriptionSourceId::String(_) => {
                         failed.push(build_failed_id(
                             source_id,
-                            SubscriptionFailureReason::InvalidItem,
+                            SubscriptionFailureReason::InvalidTopic,
                         ));
                         continue;
                     }
@@ -711,11 +702,11 @@ async fn process_subscribe(
                 if !exists {
                     failed.push(build_failed_id(
                         source_id,
-                        SubscriptionFailureReason::NotFound,
+                        SubscriptionFailureReason::InvalidTopic,
                     ));
                     continue;
                 }
-                let blocked = match blocks_repo.exists(target_user_id, user_id).await {
+                let blocked = match blocks_repo.is_blocked(target_user_id, user_id).await {
                     Ok(v) => v,
                     Err(_) => {
                         failed.push(build_failed_id(
@@ -724,7 +715,7 @@ async fn process_subscribe(
                         ));
                         continue;
                     }
-                } || match blocks_repo.exists(user_id, target_user_id).await {
+                } || match blocks_repo.is_blocked(user_id, target_user_id).await {
                     Ok(v) => v,
                     Err(_) => {
                         failed.push(build_failed_id(
@@ -737,14 +728,14 @@ async fn process_subscribe(
                 if blocked {
                     failed.push(build_failed_id(
                         source_id,
-                        SubscriptionFailureReason::PermissionDenied,
+                        SubscriptionFailureReason::Forbidden,
                     ));
                     continue;
                 }
                 if user_count >= 500 {
                     failed.push(build_failed_id(
                         source_id,
-                        SubscriptionFailureReason::TooManySubscriptions,
+                        SubscriptionFailureReason::InternalError,
                     ));
                     continue;
                 }
@@ -771,7 +762,7 @@ async fn process_subscribe(
                     if let Ok(Some(u)) = user_repo.find_by_id(target_user_id).await {
                         let msg = WsMessage::UserOnline {
                             user_id: target_user_id,
-                            nickname: u.nickname,
+                            nickname: u.nickname.unwrap_or_else(|| "Unknown".to_string()),
                             avatar_url: u.avatar_url,
                             online_at: chrono::Utc::now().to_rfc3339(),
                         };
@@ -782,7 +773,7 @@ async fn process_subscribe(
             _ => {
                 failed.push(build_failed_id(
                     source_id,
-                    SubscriptionFailureReason::InvalidItem,
+                    SubscriptionFailureReason::InvalidTopic,
                 ));
             }
         }
@@ -943,29 +934,22 @@ fn subscription_ack_code(failed_ids: &[FailedSubscriptionId]) -> i32 {
     if failed_ids.iter().any(|i| {
         matches!(
             failure_reason(i),
-            SubscriptionFailureReason::RateLimited
-                | SubscriptionFailureReason::TooManySubscriptions
+            SubscriptionFailureReason::InternalError
         )
     }) {
-        return AppError::SubscriptionLimitExceeded.error_code();
+        return AppError::SubscriptionFailed("订阅失败".to_string()).error_code();
     }
     if failed_ids.iter().any(|i| {
         matches!(
             failure_reason(i),
-            SubscriptionFailureReason::PermissionDenied
+            SubscriptionFailureReason::Forbidden
         )
     }) {
         return AppError::SubscriptionPermissionDenied("权限不足".to_string()).error_code();
     }
     if failed_ids
         .iter()
-        .any(|i| matches!(failure_reason(i), SubscriptionFailureReason::NotFound))
-    {
-        return AppError::SubscriptionChannelNotFound("订阅目标不存在".to_string()).error_code();
-    }
-    if failed_ids
-        .iter()
-        .any(|i| matches!(failure_reason(i), SubscriptionFailureReason::InvalidItem))
+        .any(|i| matches!(failure_reason(i), SubscriptionFailureReason::InvalidTopic))
     {
         return AppError::InvalidSubscriptionFormat("订阅项格式无效".to_string()).error_code();
     }

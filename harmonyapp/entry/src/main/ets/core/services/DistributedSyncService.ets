@@ -10,9 +10,10 @@ import { ApiClient } from '../api/ApiClient';
 import { GlobalStateManager } from '../state/GlobalStateManager';
 import { PreferencesUtil } from '../storage/PreferencesUtil';
 import { MyProfileData } from '../types/api';
+import { AuthAccountManager } from '../state/AuthAccountManager';
 
 export interface SyncData {
-  userId: string;
+  userId: number;
   dataType: 'user_profile' | 'messages' | 'moments' | 'groups';
   data: object;
   timestamp: number;
@@ -271,9 +272,10 @@ export class DistributedSyncService {
     try {
       const remoteUser = syncData.data as MyProfileData;
       const currentUser = GlobalStateManager.getInstance().getCurrentUser();
+      const currentUserId = await AuthAccountManager.getCurrentUserId();
       
       // 如果是自己的数据（跨设备同步），更新本地状态
-      if (currentUser && currentUser.user_id === remoteUser.user_id) {
+      if (currentUser && currentUserId && syncData.userId === currentUserId) {
         // 比较时间戳，使用最新的数据
         const localTime = new Date(currentUser.created_at).getTime(); // 注意：这里简化处理，实际应有 updatedAt
         if (syncData.timestamp > localTime) {

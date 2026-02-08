@@ -1,23 +1,21 @@
 <script lang="ts">
-	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { toast } from '$lib/stores/toast.svelte';
-	import { getShare, applyShare } from '$lib/api/services/share';
+	import { applyShare } from '$lib/api/services/share';
 	import { isSuccess } from '$lib/api/client';
 	import { MapPin, Share2, Copy, UsersRound } from 'lucide-svelte';
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-	import PageLoading from '$lib/components/common/page-loading.svelte';
 	import type { Share, LocationSharePayload } from '$lib/types/api';
+	import type { PageData } from './$types';
 
-	const shareCode = $page.params.code as string;
+	let { data }: { data: PageData } = $props();
 
-	let share = $state<Share | null>(null);
-	let isLoading = $state(true);
+	const shareCode = data.shareCode;
+	const share = $state<Share | null>(data.share);
 	let isApplying = $state(false);
-	let hasError = $state(false);
 
 	// 复制分享链接
 	async function copyShareLink() {
@@ -53,29 +51,11 @@
 		}
 	}
 
-	// 加载分享详情
-	async function loadShare() {
-		isLoading = true;
-		hasError = false;
-
-		try {
-			const response = await getShare({ share_code: shareCode });
-			if (isSuccess(response)) {
-				share = response.data;
-			} else {
-				hasError = true;
-				toast.error('加载失败', response.message ?? '未知错误');
-			}
-		} catch (error) {
-			hasError = true;
-			toast.error('网络错误', '请检查网络连接');
-		} finally {
-			isLoading = false;
-		}
-	}
-
+	// 显示错误信息（一次性操作）
 	onMount(() => {
-		loadShare();
+		if (data.error) {
+			toast.error(data.error);
+		}
 	});
 </script>
 
@@ -84,13 +64,11 @@
 </svelte:head>
 
 <div class="container mx-auto max-w-4xl px-4 py-8">
-	{#if isLoading}
-		<PageLoading />
-	{:else if hasError || !share}
+	{#if !share}
 		<Card class="border-destructive/50">
 			<CardHeader>
 				<CardTitle class="text-destructive">无法加载分享</CardTitle>
-				<CardDescription>此分享不存在或已被删除</CardDescription>
+				<CardDescription>{data.error || '此分享不存在或已被删除'}</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<Button variant="outline" onclick={() => goto('/')}>返回首页</Button>

@@ -57,18 +57,35 @@
 	const currentPathname = $derived($page.url.pathname);
 	const currentParams = $derived($page.url.searchParams);
 
-	function isActive(href: string): boolean {
-		const url = new URL(href, $page.url.origin);
-
-		if (url.pathname !== currentPathname) return false;
-		if (url.searchParams.toString().length === 0) {
+	// 预计算所有导航项的激活状态
+	const activeStates = $derived.by(() => {
+		const states = new Map<string, boolean>();
+		
+		const checkActive = (href: string): boolean => {
+			const url = new URL(href, $page.url.origin);
+			
+			if (url.pathname !== currentPathname) return false;
+			if (url.searchParams.toString().length === 0) {
+				return true;
+			}
+			
+			for (const [key, value] of url.searchParams) {
+				if (currentParams.get(key) !== value) return false;
+			}
 			return true;
-		}
-
-		for (const [key, value] of url.searchParams) {
-			if (currentParams.get(key) !== value) return false;
-		}
-		return true;
+		};
+		
+		// 预计算所有导航项
+		[...mainNavItems, ...personalNavItems, ...adminNavItems].forEach(item => {
+			states.set(item.href, checkActive(item.href));
+		});
+		
+		return states;
+	});
+	
+	// 辅助函数：从 Map 中获取激活状态
+	function isActive(href: string): boolean {
+		return activeStates.get(href) ?? false;
 	}
 
 	function handleNavClick(item: NavItem, e: MouseEvent) {

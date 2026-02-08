@@ -33,7 +33,7 @@ impl TagService {
         use crate::types::enums::TagTimeframe;
 
         let limit = Validator::validate_limit(req.limit, 100)? as i64;
-        let timeframe = req.timeframe.unwrap_or(TagTimeframe::Weekly);
+        let timeframe = req.timeframe.unwrap_or(TagTimeframe::Week);
         let cache_key = format!("{}:{}", timeframe.as_str(), limit);
 
         let cached = self
@@ -44,23 +44,10 @@ impl TagService {
                 300,
                 60,
                 || async {
-                    // 根据时间范围计算开始时间
-                    let since = match timeframe {
-                        TagTimeframe::Daily => {
-                            chrono::Utc::now() - chrono::Duration::days(TRENDING_DAILY_DAYS)
-                        }
-                        TagTimeframe::Monthly => {
-                            chrono::Utc::now() - chrono::Duration::days(TRENDING_MONTHLY_DAYS)
-                        }
-                        TagTimeframe::Weekly => {
-                            chrono::Utc::now() - chrono::Duration::days(TRENDING_WEEKLY_DAYS)
-                        }
-                    };
-
                     // 从 tags 表获取热门标签
                     let tag_rows = self
                         .tag_repo
-                        .get_trending(limit, since)
+                        .get_trending(limit)
                         .await
                         .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
 
@@ -68,7 +55,7 @@ impl TagService {
                         .into_iter()
                         .map(|r| TagItem {
                             name: r.name,
-                            usage_count: r.usage_count,
+                            usage_count: r.usage_count.unwrap_or(0),
                             trend: None,
                         })
                         .collect();
@@ -102,7 +89,7 @@ impl TagService {
             .into_iter()
             .map(|r| TagSuggestItem {
                 name: r.name,
-                usage_count: r.usage_count,
+                usage_count: r.usage_count.unwrap_or(0),
             })
             .collect();
 

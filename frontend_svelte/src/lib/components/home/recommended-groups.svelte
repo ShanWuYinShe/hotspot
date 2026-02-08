@@ -73,7 +73,7 @@
 			</a>
 		</div>
 		<div class="columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4">
-			{#each groups as group (group.group_chat_id)}
+			{#each groups as group (group.group_id)}
 				<div class="mb-3 break-inside-avoid">
 					<GroupCard {group} showDistance showMembers variant="square" />
 				</div>

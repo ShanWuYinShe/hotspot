@@ -73,8 +73,8 @@ impl DeviceTokenRepository {
     }
 
     pub async fn upsert(&self, user_id: i64, platform: &str, device_token: &str) -> Result<()> {
-        let platform_enum =
-            DevicePlatform::from_str(platform).map_err(crate::error::AppError::BadRequest)?;
+        let platform_enum = DevicePlatform::from_str(platform)
+            .map_err(|e| crate::error::AppError::BadRequest(e.to_string()))?;
 
         self.register(user_id, platform_enum, device_token.to_string())
             .await

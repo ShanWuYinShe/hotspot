@@ -10,15 +10,13 @@
 	}
 
 	let { value = $bindable(''), onValueChange, children, ...restProps }: Props = $props();
-
-	// 同步外部绑定到内部
-	function handleValueChange(newValue: string) {
-		value = newValue;
-		onValueChange?.(newValue);
-	}
 </script>
 
-<TabsPrimitive.Root value={value} onValueChange={handleValueChange} {...restProps}>
+<TabsPrimitive.Root 
+	bind:value 
+	onValueChange={onValueChange} 
+	{...restProps}
+>
 	{#if children}
 		{@render children()}
 	{/if}

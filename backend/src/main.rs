@@ -1,6 +1,7 @@
 mod config;
 mod constants;
 mod dto;
+mod models;
 mod error;
 mod events;
 mod handlers;

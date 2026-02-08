@@ -54,18 +54,18 @@ pub enum AppEvent {
 
     // ========== 群组管理事件 ==========
     GroupCreated {
-        group_id: Uuid,
+        group_id: i64,
         creator_id: i64,
     },
     GroupMemberAdded {
-        group_id: Uuid,
+        group_id: i64,
         user_id: i64,
         added_by: i64,
         role: GroupRole,
         member_count: i64,
     },
     GroupMemberRemoved {
-        group_id: Uuid,
+        group_id: i64,
         user_id: i64,
         removed_by: i64,
         member_count: i64,
@@ -73,38 +73,38 @@ pub enum AppEvent {
     },
     /// 群组资料更新
     GroupProfileUpdated {
-        group_id: Uuid,
+        group_id: i64,
         name: Option<String>,
         description: Option<String>,
         avatar_url: Option<String>,
     },
     /// 成员角色变更
     GroupMemberRoleChanged {
-        group_id: Uuid,
+        group_id: i64,
         user_id: i64,
         old_role: GroupRole,
         new_role: GroupRole,
     },
     /// 成员被禁言
     GroupMemberMuted {
-        group_id: Uuid,
+        group_id: i64,
         user_id: i64,
         muted_until: String,
     },
     /// 成员取消禁言
     GroupMemberUnmuted {
-        group_id: Uuid,
+        group_id: i64,
         user_id: i64,
     },
     /// 群组解散
     GroupDismissed {
-        group_id: Uuid,
+        group_id: i64,
         dismissed_by: i64,
     },
     /// 群公告创建
     GroupAnnouncementCreated {
         announcement_id: Uuid,
-        group_id: Uuid,
+        group_id: i64,
         title: String,
         content: String,
         created_by_user_id: i64,
@@ -113,7 +113,7 @@ pub enum AppEvent {
     /// 群公告更新
     GroupAnnouncementUpdated {
         announcement_id: Uuid,
-        group_id: Uuid,
+        group_id: i64,
         title: Option<String>,
         content: Option<String>,
         is_pinned: Option<bool>,
@@ -121,12 +121,12 @@ pub enum AppEvent {
     /// 群公告删除
     GroupAnnouncementDeleted {
         announcement_id: Uuid,
-        group_id: Uuid,
+        group_id: i64,
     },
     /// 群组邀请发送
     GroupInviteSent {
         invite_id: Uuid,
-        group_id: Uuid,
+        group_id: i64,
         group_name: String,
         group_avatar_url: Option<String>,
         from_user_id: i64,
@@ -136,7 +136,7 @@ pub enum AppEvent {
     /// 群组邀请响应
     GroupInviteResponse {
         invite_id: Uuid,
-        group_id: Uuid,
+        group_id: i64,
         inviter_id: i64,
         invitee_id: i64,
         status: ResponseStatus,
@@ -144,14 +144,14 @@ pub enum AppEvent {
     /// 收到群组申请（通知管理员）
     GroupApplicationReceived {
         application_id: Uuid,
-        group_id: Uuid,
+        group_id: i64,
         applicant_id: i64,
         message: Option<String>,
     },
     /// 群组申请响应（通知申请者）
     GroupApplicationResponse {
         application_id: Uuid,
-        group_id: Uuid,
+        group_id: i64,
         group_name: String,
         applicant_id: i64,
         status: ResponseStatus,
@@ -160,7 +160,7 @@ pub enum AppEvent {
     // ========== 群聊消息事件 ==========
     GroupMessageSent {
         message_id: Uuid,
-        group_chat_id: Uuid,
+        group_chat_id: i64,
         sender_id: i64,
         message_type: MessageType,
         content: Option<String>,
@@ -170,37 +170,37 @@ pub enum AppEvent {
     },
     GroupMessageEdited {
         message_id: Uuid,
-        group_chat_id: Uuid,
+        group_chat_id: i64,
         content: String,
         edited_at: String,
     },
     GroupMessageRecalled {
         message_id: Uuid,
-        group_chat_id: Uuid,
+        group_chat_id: i64,
         recalled_by: i64,
         recalled_at: String,
     },
     GroupMessageDeleted {
         message_id: Uuid,
-        group_chat_id: Uuid,
+        group_chat_id: i64,
         deleted_by: i64,
         for_everyone: bool,
     },
     GroupMessageRead {
-        group_chat_id: Uuid,
+        group_chat_id: i64,
         reader_id: i64,
         up_to: Uuid,
         read_at: String,
     },
     GroupMessageReaction {
         message_id: Uuid,
-        group_chat_id: Uuid,
+        group_chat_id: i64,
         user_id: i64,
         reaction_type: ReactionType,
         action: String, // "add" | "remove"
     },
     GroupUserTyping {
-        group_chat_id: Uuid,
+        group_chat_id: i64,
         user_id: i64,
         is_typing: bool,
     },
@@ -332,7 +332,7 @@ pub enum AppEvent {
     },
     SelfLeftGroup {
         user_id: i64,
-        group_id: Uuid,
+        group_id: i64,
     },
     PrivateChatDeleted {
         user_id: i64,

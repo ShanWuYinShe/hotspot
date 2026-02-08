@@ -69,7 +69,7 @@ impl EventHandler {
         match self.user_repo.find_by_id(user_id).await {
             Ok(Some(user)) => crate::dto::response::UserInfo {
                 user_id: user.user_id,
-                nickname: user.nickname,
+                nickname: user.nickname.unwrap_or_default(),
                 avatar_url: user.avatar_url,
                 user_type: user.user_type,
             },

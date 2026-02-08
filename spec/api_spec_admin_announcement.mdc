@@ -14,7 +14,7 @@ alwaysApply: true
 
 - 公共基础类型：`@api_spec_common.mdc`
 - 错误码：`@spec/api_spec_errors.mdc`
-- 公开公告 API（不属于本模块 Base Paths）：`@api_spec_system.mdc`（`POST /api/v1/announcements/list`）
+- 公开公告 API（不属于本模块 Base Paths）：`@api_spec_system.mdc`（`POST /api/v1/system/announcements`）
 
 ## 幂等性（管理员写操作）
 
@@ -28,7 +28,7 @@ alwaysApply: true
 | `POST /api/v1/admin/announcements/delete` | 删除系统公告 | `DeleteAnnouncementRequest` | `ApiResponse` |
 
 **说明**：
-- 公告列表查询统一使用 `POST /api/v1/announcements/list`（定义于 `@api_spec_system.mdc`）
+- 公告列表查询统一使用 `POST /api/v1/system/announcements`（定义于 `@api_spec_system.mdc`）
 - 管理员查询公告列表时，`SystemAnnouncementItem` 会返回 `@admin-only` 字段（如 `created_by`、`view_count` 等）
 
 ## 核心类型定义

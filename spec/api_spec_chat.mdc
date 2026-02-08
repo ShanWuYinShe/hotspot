@@ -28,7 +28,7 @@ alwaysApply: true
 | 私聊管理 | `POST /api/v1/private_chats/open_the_door` | 私聊详情 | `PrivateChatOpenTheDoorRequest` | `ApiResponse<PrivateChatOpenResult>` |
 | 私聊管理 | `POST /api/v1/private_chats/update_settings` | 更新会话设置 | `UpdatePrivateChatSettingsRequest` | `ApiResponse<PrivateChatItem>` |
 | 私聊管理 | `POST /api/v1/private_chats/delete` | 删除私聊会话（仅当前用户视角） | `DeletePrivateChatRequest` | `ApiResponse` |
-| 私聊消息 | `POST /api/v1/private_messages/send` | 发送私聊消息 | `SendPrivateMessageRequest` | `ApiResponse` |
+| 私聊消息 | `POST /api/v1/private_messages/send` | 发送私聊消息 | `SendPrivateMessageRequest` | `ApiResponse<MessageSent>` |
 | 私聊消息 | `POST /api/v1/private_messages/history` | 私聊消息历史 | `PrivateMessagesHistoryRequest` | `ApiResponse<PaginatedData<PrivateMessageItem>>` |
 | 私聊消息 | `POST /api/v1/private_messages/update` | 编辑私聊消息 | `UpdatePrivateMessageRequest` | `ApiResponse` |
 | 私聊消息 | `POST /api/v1/private_messages/recall` | 撤回私聊消息 | `RecallPrivateMessageRequest` | `ApiResponse` |
@@ -36,7 +36,7 @@ alwaysApply: true
 | 私聊消息 | `POST /api/v1/private_messages/mark_as_read` | 标记已读 | `MarkPrivateMessagesReadRequest` | `ApiResponse` |
 | 私聊消息 | `POST /api/v1/private_messages/add_reaction` | 添加反应 | `AddPrivateMessageReactionRequest` | `ApiResponse` |
 | 私聊消息 | `POST /api/v1/private_messages/remove_reaction` | 移除反应 | `RemovePrivateMessageReactionRequest` | `ApiResponse` |
-| 私聊消息 | `POST /api/v1/private_messages/reactions` | 反应列表 | `PrivateMessageReactionsRequest` | `ApiResponse<PaginatedData<MessageReactionItem>>` |
+| 私聊消息 | `POST /api/v1/private_messages/reactions` | 反应列表 | `PrivateMessageReactionsRequest` | `ApiResponse<PaginatedData<ReactionItem>>` |
 | 私聊消息 | `POST /api/v1/private_messages/mark_all_as_read` | 标记全部私聊已读 | `{}` | `ApiResponse` |
 
 ## 核心类型定义
@@ -64,20 +64,21 @@ interface PrivateChatItem {
   presence_status?: UserPresenceStatus;
   
   // 详情场景返回
-  message_limit?: MessageLimit;
   created_at?: string;
-  can_message?: boolean;
+  can_message: boolean;
+  cant_message_reason?: CantMessageReason; // 仅 can_message=false 时返回
 }
+
+// 不可发消息原因
+type CantMessageReason = 
+  | 'blocked'           // 已被对方拉黑
+  | 'privacy'           // 对方隐私设置不允许
+  | 'stranger_limit'    // 陌生人消息限额已用完
+  | 'account_suspended';// 账号被限制
 
 interface PrivateChatOpenResult {
   chat: PrivateChatItem;
   recent_messages?: PaginatedData<PrivateMessageItem>;
-}
-
-interface MessageLimit {
-  remaining: number;
-  total: number;
-  is_unlocked: boolean;
 }
 
 interface PrivateMessageItem {
@@ -237,7 +238,7 @@ interface SendPrivateMessageRequest {
   reply_to_message_id?: string;
 }
 ```
-**Response**: `ApiResponse`
+**Response**: `ApiResponse<MessageSent>`（`MessageSent` 定义于 `@api_spec_common.mdc`）
 
 **可能错误码**：`10001`、`10350`、`10360`、`10211`、`10510`、`22000`、`22002`
 
@@ -367,6 +368,6 @@ interface PrivateMessageReactionsRequest {
   type?: ReactionType;
 }
 ```
-**Response**: `ApiResponse<PaginatedData<MessageReactionItem>>`
+**Response**: `ApiResponse<PaginatedData<ReactionItem>>`
 
 **可能错误码**：`10001`、`10003`、`10350`

@@ -27,11 +27,9 @@
 	import MoreVertical from 'lucide-svelte/icons/more-vertical';
 	import Info from 'lucide-svelte/icons/info';
 	import UserPlus from 'lucide-svelte/icons/user-plus';
-	import UserMinus from 'lucide-svelte/icons/user-minus';
 	import Share2 from 'lucide-svelte/icons/share-2';
 	import Flag from 'lucide-svelte/icons/flag';
 	import type { GroupInfo } from '$lib/types/api';
-	import { cn } from '$lib/utils';
 
 	interface Props {
 		/** 群组数据 */
@@ -64,7 +62,7 @@
 	}: Props = $props();
 
 	// 计算实际链接
-	const actualHref = $derived(href ?? `/groups/${group.group_chat_id}`);
+	const actualHref = $derived(href ?? `/groups/${group.group_id}`);
 
 	// 获取距离信息（单位：米）
 	const distance = $derived.by(() => {
@@ -74,9 +72,15 @@
 	});
 
 	// 获取未读数
-	const unreadCount = $derived(
-		showUnread && 'unread_count' in group ? (group.unread_count as number) : 0
-	);
+	const unreadCount = $derived.by(() => {
+		if (!showUnread) return 0;
+		const groupWithState = group as { my_state?: { unread_count?: number } };
+		if (groupWithState.my_state?.unread_count != null) {
+			return groupWithState.my_state.unread_count;
+		}
+		const groupWithUnread = group as { unread_count?: number };
+		return groupWithUnread.unread_count ?? 0;
+	});
 
 	// 获取是否私密
 	const isPrivate = $derived('has_password' in group ? group.has_password : false);
@@ -99,24 +103,13 @@
 		toast.info('加入群组功能开发中');
 	}
 
-	function handleLeaveGroup(e: MouseEvent) {
-		e.preventDefault();
-		e.stopPropagation();
-		if (!authStore.isAuthenticated) {
-			uiStore.openLoginModal();
-			return;
-		}
-		// TODO: 实现退出群组功能
-		toast.info('退出群组功能开发中');
-	}
-
 	async function handleShare(e: MouseEvent) {
 		e.preventDefault();
 		e.stopPropagation();
 		const shareData = {
 			title: `${group.name} - HotSpot`,
 			text: `加入 ${group.name} 群组`,
-			url: `${window.location.origin}/groups/${group.group_chat_id}`
+			url: `${window.location.origin}/groups/${group.group_id}`
 		};
 
 		if (navigator.share) {
@@ -156,9 +149,9 @@
 		<CardContent class="p-5">
 			{#if variant === 'square'}
 				<!-- 方块模式：Pinterest/小红书风格，高度自适应 -->
-				<!-- 使用group_chat_id的哈希值生成稳定的随机高度 -->
+				<!-- 使用group_id的哈希值生成稳定的随机高度 -->
 				{@const heightVariants = [125, 145, 165, 135, 155, 140, 150, 160]}
-				{@const idHash = group.group_chat_id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)}
+				{@const idHash = group.group_id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)}
 				{@const minHeight = heightVariants[idHash % heightVariants.length]}
 				<div class="flex flex-col justify-between space-y-2.5" style="min-height: {minHeight}px;">
 					<!-- 头像和基本信息 -->

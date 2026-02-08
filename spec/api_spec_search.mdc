@@ -3,31 +3,38 @@ alwaysApply: true
 ---
 # HotSpot API 规范 - 搜索与发现 API 模块 v0.0.1 (RPC)
 
-> 本文档定义 HotSpot 全局搜索 (`search`) 相关的 RPC 接口。
-> 旨在提供基于地理位置和语义的综合搜索能力。
+> 本文档定义 HotSpot 全局搜索 (`search`) 和标签 (`tags`) 相关的 RPC 接口。
+> 旨在提供基于地理位置和语义的综合搜索与发现能力。
 
 ## 服务定义
 
-- **Service Namespace**: `search`
-- **Base Path**: `/api/v1/search/`
+- **Service Namespaces**:
+  - `search`
+  - `tags`
+- **Base Paths**:
+  - `/api/v1/search/`
+  - `/api/v1/tags/`
 
 ## 契约引用
 
 - 公共基础类型：`@api_spec_common.mdc`
 - 错误码：`@spec/api_spec_errors.mdc`
 
-## 接口概览
+## 接口概览（按子域）
 
-| 端点 | 说明 | Request | Response |
-|------|------|---------|----------|
-| `POST /api/v1/search/suggest` | 综合搜索建议 | `SearchSuggestRequest` | `ApiResponse<PaginatedData<SearchSuggestItem>>` |
+| 子域 | 端点 | 说明 | Request | Response |
+|-----|------|------|---------|----------|
+| 搜索 | `POST /api/v1/search/suggest` | 综合搜索建议 | `SearchSuggestRequest` | `ApiResponse<SearchSuggestResponse>` |
+| 标签 | `POST /api/v1/tags/trending` | 热门标签 | `TrendingTagsRequest` | `ApiResponse<PaginatedData<TagItem>>` |
+| 标签 | `POST /api/v1/tags/suggest` | 标签搜索建议 | `SuggestTagsRequest` | `ApiResponse<PaginatedData<TagSuggestItem>>` |
 
 ## 核心类型定义
 
 ```typescript
-// 引用 @api_spec_common.mdc 中的 GeoPoint
+// 搜索建议类型定义于 @api_spec_common.mdc（TagSuggestItem, UserSuggestItem, GroupSuggestItem, MomentSuggestItem）
 
-// 搜索建议类型定义于 @api_spec_common.mdc
+// 搜索建议类型（支持按类型过滤）
+type SearchSuggestType = 'tag' | 'user' | 'group' | 'moment';
 
 type SearchSuggestItem =
   | { type: 'tag'; payload: TagSuggestItem }
@@ -35,6 +42,21 @@ type SearchSuggestItem =
   | { type: 'group'; payload: GroupSuggestItem }
   | { type: 'moment'; payload: MomentSuggestItem };
 
+interface SearchSuggestResponse {
+  items: SearchSuggestItem[];
+}
+
+// 标签趋势（从 feed 模块迁入）
+type TagTrend = 'rising' | 'stable' | 'falling';
+
+// 标签时间范围
+type TagTimeframe = 'daily' | 'weekly' | 'monthly';
+
+interface TagItem {
+  name: string;
+  usage_count: number;
+  trend?: TagTrend;
+}
 ```
 
 ## 错误码说明
@@ -43,8 +65,8 @@ type SearchSuggestItem =
 
 | 错误码 | 说明 | 相关接口 |
 |-------|------|---------|
-| `10001` | 缺少必填参数 | `suggest`（prefix 缺失） |
-| `10003` | 参数值超出范围 | `suggest`（limit 超出限制） |
+| `10001` | 缺少必填参数 | `suggest`（prefix 缺失）、`tags/suggest`（prefix 缺失） |
+| `10003` | 参数值超出范围 | `suggest`（limit 超出限制）、`tags/trending`（limit 超出限制） |
 
 ## 搜索 API
 
@@ -55,7 +77,8 @@ type SearchSuggestItem =
 **说明**：
 - Token 可选；未登录时仅返回公开内容。
 - 建议用于搜索框输入提示与全局发现入口。
-- **LBS 优化**：必须提供 `reference_point`，用于优先返回附近的匹配结果（如附近的群组、用户）。
+- **LBS 优化**：必须提供 `reference_point`，用于优先返回附近的匹配结果。
+- **类型过滤**：通过 `types` 参数可限定返回特定类型的结果，替代各模块独立的 suggest 端点。
 
 **Request**:
 ```typescript
@@ -63,15 +86,58 @@ interface SearchSuggestRequest {
   pagination?: PaginationParams;
   prefix: string;
   reference_point: GeoPoint; // 必填，用于 LBS 优先排序（用户拒绝定位时使用 fallback）
+  types?: SearchSuggestType[];  // 可选：限定返回的类型（如 ['user', 'group']）。为空则返回所有类型。
 }
 // Note: limit 表示总返回条数，默认 5，最大 20
 ```
 
-**Response**: `ApiResponse<PaginatedData<SearchSuggestItem>>`
+**Response**: `ApiResponse<SearchSuggestResponse>`
 
 **排序逻辑**：
 1. **完全匹配**优先。
 2. **距离优先**（在匹配度相近的情况下）。
 3. **热度/活跃度**作为辅助排序信号。
+
+**可能错误码**：`10001`、`10003`
+
+---
+
+## 标签 API
+
+> 标签是跨模块使用的概念（用户标签、群组标签、瞬间标签），归入搜索与发现模块管理。
+
+### POST /api/v1/tags/trending
+
+获取热门标签。
+
+说明：标签属于"默认公开资源"，不涉及用户隐私等级/访问控制分支。
+
+**Request**:
+```typescript
+interface TrendingTagsRequest {
+  pagination?: PaginationParams;
+  timeframe?: TagTimeframe;
+}
+// Note: limit 默认 10，最大 50（热门标签列表）
+```
+**Response**: `ApiResponse<PaginatedData<TagItem>>`
+
+**可能错误码**：`10003`
+
+### POST /api/v1/tags/suggest
+
+标签搜索建议。
+
+**说明**：用于内容发布时的标签输入提示。必须提供 `reference_point`（用户拒绝定位时使用 fallback）。
+
+**Request**:
+```typescript
+interface SuggestTagsRequest {
+  search: SearchBaseParams;
+  prefix: string;
+}
+// Note: limit 默认 5，最大 20（建议类接口使用较小默认值）
+```
+**Response**: `ApiResponse<PaginatedData<TagSuggestItem>>`
 
 **可能错误码**：`10001`、`10003`

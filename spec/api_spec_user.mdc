@@ -7,48 +7,43 @@ alwaysApply: true
 
 ## 服务定义
 
-- **Service Namespace**: `user`
-- **Base Path**: `/api/v1/user/`
+- **Service Namespace**: `users`
+- **Base Path**: `/api/v1/users/`
 
 ## 契约引用
 
 - 公共基础类型：`@api_spec_common.mdc`
 - 错误码：`@spec/api_spec_errors.mdc`
-- 搜索建议类型：`@api_spec_search.mdc`
+- 搜索建议：`@api_spec_search.mdc`（per-module suggest 已移除，使用全局 `search/suggest`）
 
 ## 接口概览（按子域）
 
 | 子域 | 端点 | 说明 | Request | Response |
 |-----|------|------|---------|----------|
-| 用户搜索 | `POST /api/v1/user/search_by_keyword` | 按关键字搜索用户 | `SearchUsersByKeywordRequest` | `ApiResponse<PaginatedData<UserItem>>` |
-| 用户搜索 | `POST /api/v1/user/search_by_tag` | 按标签搜索用户 | `SearchUsersByTagRequest` | `ApiResponse<PaginatedData<UserItem>>` |
-| 用户搜索 | `POST /api/v1/user/search_by_location` | 按位置搜索用户 | `SearchUsersByLocationRequest` | `ApiResponse<PaginatedData<UserItem>>` |
-| 用户搜索 | `POST /api/v1/user/suggest` | 用户搜索建议 | `SuggestUsersRequest` | `ApiResponse<PaginatedData<UserSuggestItem>>` |
-| 用户资料 | `POST /api/v1/user/open_the_door` | 用户资料详情 | `UserOpenTheDoorRequest` | `ApiResponse<UserItem>` |
-| 用户资料 | `POST /api/v1/user/stats` | 用户统计 | `UserStatsRequest` | `ApiResponse<UserStats>` |
-| 用户资料 | `POST /api/v1/user/friends` | 用户好友列表 | `UserFriendsRequest` | `ApiResponse<PaginatedData<UserInfo>>` |
-| 用户资料 | `POST /api/v1/user/following` | 用户关注列表 | `UserFollowingRequest` | `ApiResponse<PaginatedData<UserInfo>>` |
-| 用户资料 | `POST /api/v1/user/followers` | 用户粉丝列表 | `UserFollowersRequest` | `ApiResponse<PaginatedData<UserInfo>>` |
-| 用户资料 | `POST /api/v1/user/groups` | 用户群组列表 | `UserGroupsRequest` | `ApiResponse<PaginatedData<GroupItem>>` |
-| 用户资料 | `POST /api/v1/user/moments` | 用户瞬间历史 | `UserMomentsRequest` | `ApiResponse<PaginatedData<MomentItem>>` |
-| 用户资料 | `POST /api/v1/user/liked_moments` | 用户点赞瞬间列表 | `UserLikedMomentsRequest` | `ApiResponse<PaginatedData<MomentItem>>` |
-| 当前用户 | `POST /api/v1/user/me/profile` | 我的资料 | `{}` | `ApiResponse<MyProfile>` |
-| 当前用户 | `POST /api/v1/user/me/profile/update` | 更新我的资料 | `UpdateProfileRequest` | `ApiResponse<MyProfile>` |
-| 当前用户 | `POST /api/v1/user/me/location` | 更新我的位置 | `UpdateLocationRequest` | `ApiResponse` |
-| 当前用户 | `POST /api/v1/user/me/upgrade` | 访客升级 | `UpgradeAccountRequest` | `ApiResponse` |
-| 当前用户 | `POST /api/v1/user/me/stats` | 我的统计 | `{}` | `ApiResponse<UserStats>` |
-| 当前用户 | `POST /api/v1/user/me/settings` | 我的设置 | `{}` | `ApiResponse<UserSettings>` |
-| 当前用户 | `POST /api/v1/user/me/settings/update` | 更新我的设置 | `UpdateSettingsRequest` | `ApiResponse<UserSettings>` |
-| 当前用户 | `POST /api/v1/user/me/delete` | 删除账户 | `DeleteAccountRequest` | `ApiResponse` |
-| 当前用户 | `POST /api/v1/user/me/follow` | 关注用户 | `FollowRequest` | `ApiResponse` |
-| 当前用户 | `POST /api/v1/user/me/unfollow` | 取消关注 | `UnfollowRequest` | `ApiResponse` |
-| 当前用户 | `POST /api/v1/user/me/block` | 拉黑用户 | `BlockRequest` | `ApiResponse` |
-| 当前用户 | `POST /api/v1/user/me/unblock` | 解除拉黑 | `UnblockRequest` | `ApiResponse` |
-| 当前用户 | `POST /api/v1/user/me/friends` | 我的好友列表 | `MyFriendsRequest` | `ApiResponse<PaginatedData<FriendItem>>` |
-| 当前用户 | `POST /api/v1/user/me/following` | 我的关注列表 | `MyFollowingRequest` | `ApiResponse<PaginatedData<FollowingItem>>` |
-| 当前用户 | `POST /api/v1/user/me/followers` | 我的粉丝列表 | `MyFollowersRequest` | `ApiResponse<PaginatedData<FollowerItem>>` |
-| 当前用户 | `POST /api/v1/user/me/blocked` | 我的拉黑列表 | `MyBlockedRequest` | `ApiResponse<PaginatedData<BlockedUserItem>>` |
-| 当前用户 | `POST /api/v1/user/me/remark` | 设置备注 | `SetRemarkRequest` | `ApiResponse` |
+| 用户搜索 | `POST /api/v1/users/search` | 搜索用户（支持关键字/标签/位置组合） | `SearchUsersRequest` | `ApiResponse<PaginatedData<UserItem>>` |
+| 用户资料 | `POST /api/v1/users/open_the_door` | 用户资料详情 | `UserOpenTheDoorRequest` | `ApiResponse<UserItem>` |
+| 用户资料 | `POST /api/v1/users/friends` | 用户好友列表 | `UserFriendsRequest` | `ApiResponse<PaginatedData<UserInfo>>` |
+| 用户资料 | `POST /api/v1/users/following` | 用户关注列表 | `UserFollowingRequest` | `ApiResponse<PaginatedData<UserInfo>>` |
+| 用户资料 | `POST /api/v1/users/followers` | 用户粉丝列表 | `UserFollowersRequest` | `ApiResponse<PaginatedData<UserInfo>>` |
+| 用户资料 | `POST /api/v1/users/groups` | 用户群组列表 | `UserGroupsRequest` | `ApiResponse<PaginatedData<GroupItem>>` |
+| 用户资料 | `POST /api/v1/users/moments` | 用户瞬间历史 | `UserMomentsRequest` | `ApiResponse<PaginatedData<MomentItem>>` |
+| 用户资料 | `POST /api/v1/users/liked_moments` | 用户点赞瞬间列表 | `UserLikedMomentsRequest` | `ApiResponse<PaginatedData<MomentItem>>` |
+| 当前用户 | `POST /api/v1/users/me/profile/get` | 我的资料 | `{}` | `ApiResponse<MyProfile>` |
+| 当前用户 | `POST /api/v1/users/me/profile/update` | 更新我的资料 | `UpdateProfileRequest` | `ApiResponse<MyProfile>` |
+| 当前用户 | `POST /api/v1/users/me/location` | 更新我的位置 | `UpdateLocationRequest` | `ApiResponse` |
+| 当前用户 | `POST /api/v1/users/me/upgrade` | 访客升级 | `UpgradeAccountRequest` | `ApiResponse` |
+| 当前用户 | `POST /api/v1/users/me/settings/get` | 我的设置 | `{}` | `ApiResponse<UserSettings>` |
+| 当前用户 | `POST /api/v1/users/me/settings/update` | 更新我的设置 | `UpdateSettingsRequest` | `ApiResponse<UserSettings>` |
+| 当前用户 | `POST /api/v1/users/me/delete` | 删除账户 | `DeleteAccountRequest` | `ApiResponse` |
+| 当前用户 | `POST /api/v1/users/me/follow` | 关注用户 | `FollowRequest` | `ApiResponse` |
+| 当前用户 | `POST /api/v1/users/me/unfollow` | 取消关注 | `UnfollowRequest` | `ApiResponse` |
+| 当前用户 | `POST /api/v1/users/me/block` | 拉黑用户 | `BlockRequest` | `ApiResponse` |
+| 当前用户 | `POST /api/v1/users/me/unblock` | 解除拉黑 | `UnblockRequest` | `ApiResponse` |
+| 当前用户 | `POST /api/v1/users/me/friends` | 我的好友列表 | `MyFriendsRequest` | `ApiResponse<PaginatedData<FriendItem>>` |
+| 当前用户 | `POST /api/v1/users/me/following` | 我的关注列表 | `MyFollowingRequest` | `ApiResponse<PaginatedData<FollowingItem>>` |
+| 当前用户 | `POST /api/v1/users/me/followers` | 我的粉丝列表 | `MyFollowersRequest` | `ApiResponse<PaginatedData<FollowerItem>>` |
+| 当前用户 | `POST /api/v1/users/me/blocked` | 我的拉黑列表 | `MyBlockedRequest` | `ApiResponse<PaginatedData<BlockedUserItem>>` |
+| 当前用户 | `POST /api/v1/users/me/remark` | 设置备注 | `SetRemarkRequest` | `ApiResponse` |
 
 ## 核心类型定义
 
@@ -56,9 +51,7 @@ alwaysApply: true
 // 性别枚举
 type Gender = 'male' | 'female' | 'apache_helicopter';
 
-// 隐私级别枚举
-// 注：'friends' 表示"好友可见"，好友 = 双方互相关注的用户
-type PrivacyLevel = 'public' | 'friends' | 'private';
+// PrivacyLevel 定义于 @api_spec_common.mdc
 
 // 私聊权限
 // 注：'friends' 表示"仅好友"，好友 = 双方互相关注的用户
@@ -159,75 +152,34 @@ interface BlockedUserItem {
 - 未登录（不带 token）：仅返回可被匿名公开发现/可见的用户；不返回 `@auth-only` 字段
 - 已登录（带 token）：在满足隐私与关系规则前提下，允许返回更多可见用户；返回完整的 `UserItem`（包括 `@auth-only` 字段）
 
-#### POST /api/v1/user/search_by_keyword
+#### POST /api/v1/users/search
 
-按关键字搜索用户（全局）。
+统一搜索用户。支持关键字、标签、位置范围三种条件的自由组合。
 
 **排序语义（契约级）**：
-- 默认按**相关性优先**排序，同分时以**最近活跃/最近创建时间**做稳定 tie-breaker
+- 默认 `sort_by='relevance'`：按相关性优先排序，同分时以最近活跃时间做稳定 tie-breaker
+- `sort_by='distance'`：按距离由近到远排序（需要 `radius`），距离相近时体现关键词相关性
+- `sort_by='newest'`：按注册时间倒序
 - 在同一 `cursor` 会话内必须保持排序基准一致；跨会话允许排序轻微波动
 
+**后端实现说明**：使用 PostgreSQL 的 `($param IS NULL OR condition)` 模式处理可选参数，单条静态 SQL 即可覆盖所有搜索组合，无需 if-else 分支。
+
 **Request**:
 ```typescript
-interface SearchUsersByKeywordRequest {
+interface SearchUsersRequest {
   search: SearchBaseParams;
-  kw: string;
+  keyword?: string;    // 关键字搜索（匹配昵称、bio 等）
+  tag?: string;        // 标签筛选
+  radius?: number;     // 位置范围（米），配合 search.reference_point 使用
+  sort_by?: 'relevance' | 'distance' | 'newest';  // 默认: relevance
 }
+// 至少提供 keyword、tag、radius 中的一个
 ```
 **Response**: `ApiResponse<PaginatedData<UserItem>>`
-
-#### POST /api/v1/user/search_by_tag
-
-按标签搜索用户（全局）。
-
-**Request**:
-```typescript
-interface SearchUsersByTagRequest {
-  search: SearchBaseParams;
-  tag: string;
-}
-```
-**Response**: `ApiResponse<PaginatedData<UserItem>>`
-
-#### POST /api/v1/user/search_by_location
-
-按位置搜索用户（范围过滤）。
-
-**排序语义（契约级）**：
-- 默认按**距离优先**排序（由近到远）
-- 若提供 `kw`，允许在"距离相近"范围内体现关键词相关性，但不得破坏"距离优先"的主序
-
-**Request**:
-```typescript
-interface SearchUsersByLocationRequest {
-  search: SearchBaseParams;
-  kw?: string;
-  radius: number;
-}
-```
-**Response**: `ApiResponse<PaginatedData<UserItem>>`
-
-#### POST /api/v1/user/suggest
-
-用户搜索建议（用于搜索框输入提示）。
-
-**说明**：必须提供 `reference_point`（用户拒绝定位时使用 fallback）。
-
-**Request**:
-```typescript
-// UserSuggestItem 定义于 @api_spec_search.mdc
-
-interface SuggestUsersRequest {
-  search: SearchBaseParams;
-  prefix: string;
-}
-// Note: limit 默认 5，最大 20（建议类接口使用较小默认值）
-```
-**Response**: `ApiResponse<PaginatedData<UserSuggestItem>>`
 
 ### 用户资料
 
-#### POST /api/v1/user/open_the_door
+#### POST /api/v1/users/open_the_door
 
 获取用户资料详情。
 Token 可选；登录态返回完整的 `UserItem`（包括 `@auth-only` 字段如 `relation`、`social_context`、`stats`）；未登录态不返回 `@auth-only` 字段。
@@ -242,21 +194,7 @@ interface UserOpenTheDoorRequest {
 
 **可能错误码**：`10001`、`10310`、`10211`
 
-#### POST /api/v1/user/stats
-
-获取指定用户统计数据。
-
-**隐私控制**：受 `stats_visible` 设置控制。
-
-**Request**:
-```typescript
-interface UserStatsRequest {
-  user_id: string;
-}
-```
-**Response**: `ApiResponse<UserStats>`
-
-#### POST /api/v1/user/friends
+#### POST /api/v1/users/friends
 
 获取指定用户好友列表（好友 = 双方互相关注的用户）。
 
@@ -274,7 +212,7 @@ interface UserFriendsRequest {
 ```
 **Response**: `ApiResponse<PaginatedData<UserInfo>>`
 
-#### POST /api/v1/user/following
+#### POST /api/v1/users/following
 
 获取指定用户关注列表。
 
@@ -292,7 +230,7 @@ interface UserFollowingRequest {
 ```
 **Response**: `ApiResponse<PaginatedData<UserInfo>>`
 
-#### POST /api/v1/user/followers
+#### POST /api/v1/users/followers
 
 获取指定用户粉丝列表。
 
@@ -310,7 +248,7 @@ interface UserFollowersRequest {
 ```
 **Response**: `ApiResponse<PaginatedData<UserInfo>>`
 
-#### POST /api/v1/user/groups
+#### POST /api/v1/users/groups
 
 获取指定用户加入的公开群组。
 
@@ -327,7 +265,7 @@ interface UserGroupsRequest {
 
 **可能错误码**：`10001`、`10003`、`10310`
 
-#### POST /api/v1/user/moments
+#### POST /api/v1/users/moments
 
 获取指定用户生活瞬间历史。
 
@@ -344,7 +282,7 @@ interface UserMomentsRequest {
 
 **可能错误码**：`10001`、`10003`、`10310`
 
-#### POST /api/v1/user/liked_moments
+#### POST /api/v1/users/liked_moments
 
 获取指定用户点赞的瞬间。
 
@@ -365,14 +303,14 @@ interface UserLikedMomentsRequest {
 - `/me/*` 端点返回的是当前用户的资料字段，永远可见，不受隐私设置影响
 **可见性**：仅当前用户可见（`@owner-only`）。
 
-#### POST /api/v1/user/me/profile
+#### POST /api/v1/users/me/profile/get
 
 获取当前用户资料。
 
 **Request**: `{}`
 **Response**: `ApiResponse<MyProfile>`
 
-#### POST /api/v1/user/me/profile/update
+#### POST /api/v1/users/me/profile/update
 
 更新用户资料。
 
@@ -390,7 +328,7 @@ interface UpdateProfileRequest {
 
 **可能错误码**：`10003`、`10360`
 
-#### POST /api/v1/user/me/location
+#### POST /api/v1/users/me/location
 
 更新用户位置。
 
@@ -404,7 +342,7 @@ interface UpdateLocationRequest {
 
 **可能错误码**：`10001`、`10003`
 
-#### POST /api/v1/user/me/upgrade
+#### POST /api/v1/users/me/upgrade
 
 账户升级（访客升级为正式用户）。
 
@@ -419,21 +357,14 @@ interface UpgradeAccountRequest {
 
 **可能错误码**：`10001`、`10003`、`10400`、`10105`
 
-#### POST /api/v1/user/me/stats
-
-获取我的统计数据。
-
-**Request**: `{}`
-**Response**: `ApiResponse<UserStats>`
-
-#### POST /api/v1/user/me/settings
+#### POST /api/v1/users/me/settings/get
 
 获取用户设置。
 
 **Request**: `{}`
 **Response**: `ApiResponse<UserSettings>`
 
-#### POST /api/v1/user/me/settings/update
+#### POST /api/v1/users/me/settings/update
 
 更新用户设置。
 
@@ -447,7 +378,7 @@ interface UpdateSettingsRequest {
 
 **可能错误码**：`10003`
 
-#### POST /api/v1/user/me/delete
+#### POST /api/v1/users/me/delete
 
 删除账户。
 
@@ -463,7 +394,7 @@ interface DeleteAccountRequest {
 
 **可能错误码**：`10402`
 
-#### POST /api/v1/user/me/follow
+#### POST /api/v1/users/me/follow
 
 关注用户。关注成功后，若对方已关注当前用户，自动成为好友，触发 WebSocket `MutualFollow` 事件。
 
@@ -487,7 +418,7 @@ interface FollowRequest {
 
 **可能错误码**：`10001`、`10310`、`10411`、`10213`、`10211`
 
-#### POST /api/v1/user/me/unfollow
+#### POST /api/v1/users/me/unfollow
 
 取消关注用户。取消关注后，如果原本是好友，则好友关系自动解除。
 
@@ -501,7 +432,7 @@ interface UnfollowRequest {
 
 **可能错误码**：`10001`、`10310`、`10411`
 
-#### POST /api/v1/user/me/block
+#### POST /api/v1/users/me/block
 
 拉黑用户。
 
@@ -516,7 +447,7 @@ interface BlockRequest {
 
 **可能错误码**：`10001`、`10003`、`10310`、`10411`
 
-#### POST /api/v1/user/me/unblock
+#### POST /api/v1/users/me/unblock
 
 解除拉黑用户。
 
@@ -530,7 +461,7 @@ interface UnblockRequest {
 
 **可能错误码**：`10001`、`10310`、`10411`
 
-#### POST /api/v1/user/me/friends
+#### POST /api/v1/users/me/friends
 
 获取好友列表（好友 = 双方互相关注的用户）。
 
@@ -542,7 +473,7 @@ interface MyFriendsRequest {
 ```
 **Response**: `ApiResponse<PaginatedData<FriendItem>>`
 
-#### POST /api/v1/user/me/following
+#### POST /api/v1/users/me/following
 
 获取关注列表。
 
@@ -554,7 +485,7 @@ interface MyFollowingRequest {
 ```
 **Response**: `ApiResponse<PaginatedData<FollowingItem>>`
 
-#### POST /api/v1/user/me/followers
+#### POST /api/v1/users/me/followers
 
 获取粉丝列表。
 
@@ -566,7 +497,7 @@ interface MyFollowersRequest {
 ```
 **Response**: `ApiResponse<PaginatedData<FollowerItem>>`
 
-#### POST /api/v1/user/me/blocked
+#### POST /api/v1/users/me/blocked
 
 获取拉黑列表。
 
@@ -578,7 +509,7 @@ interface MyBlockedRequest {
 ```
 **Response**: `ApiResponse<PaginatedData<BlockedUserItem>>`
 
-#### POST /api/v1/user/me/remark
+#### POST /api/v1/users/me/remark
 
 设置用户备注（允许给我关注的任何人设置备注，方便记忆和管理）。
 

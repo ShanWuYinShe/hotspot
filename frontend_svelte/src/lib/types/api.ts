@@ -25,6 +25,7 @@ export type TagTimeframe = 'daily' | 'weekly' | 'monthly';
 export type NotificationFilterType = 'like' | 'comment' | 'follow' | 'system' | 'mention';
 export type VerificationCodeType = 'register' | 'reset_password' | 'change_phone';
 export type ReportTargetType = 'user' | 'moment' | 'comment' | 'message' | 'group';
+export type FollowSource = 'moment' | 'search' | 'recommendation' | 'profile' | 'group';
 export type NotificationType =
 	| 'moment_like'
 	| 'moment_comment'
@@ -298,7 +299,7 @@ export interface MyCard {
 // ============== 群组类型 ==============
 
 export interface GroupInfo {
-	group_chat_id: string;
+	group_id: string;
 	name: string;
 	avatar_url?: string;
 	members_count: number;
@@ -309,12 +310,15 @@ export interface GroupSearchItem extends GroupInfo {
 	tags?: string[];
 	has_password: boolean;
 	location: RelativeLocation;
+	created_at?: string;
+	owner_id?: string;
+	my_state?: MyGroupState;
 }
 
 // 群组建议项 - API 规范: @api_spec_search.mdc GroupSuggestItem
 // 用途：显示群组基本信息，点击后跳转到群组页
 export interface GroupSuggestItem {
-	group_chat_id: string;
+	group_id: string;
 	name: string;
 	avatar_url?: string;
 	description?: string; // 群组简介，用于副标题展示（优先于成员数）
@@ -335,28 +339,8 @@ export interface MyGroupState {
 	joined_at?: string;
 }
 
-export interface MyGroupItem extends GroupInfo {
-	description?: string;
-	tags?: string[];
-	has_password: boolean;
-	location: Location;
-	last_activity_at: string;
-	role: GroupRole;
-	unread_count: number;
-	is_muted: boolean;
-	is_pinned: boolean;
-	joined_at: string;
-}
-
-export interface GroupCard extends GroupInfo {
-	description?: string;
-	tags?: string[];
-	has_password: boolean;
-	location: Location;
-	created_at: string;
-	owner_id: number;
-	my_state?: MyGroupState;
-}
+export type MyGroupItem = GroupSearchItem;
+export type GroupCard = GroupSearchItem;
 
 export interface FeedGroupItem extends GroupInfo {
 	description?: string;
@@ -384,7 +368,7 @@ export interface GroupMemberItem {
 
 export interface GroupAnnouncementItem {
 	announcement_id: string;
-	group_chat_id: string;
+	group_id: string;
 	title: string;
 	content: string;
 	created_by: UserInfo;
@@ -580,22 +564,6 @@ export interface Conversation {
 	can_message: boolean;
 }
 
-export interface GroupChatListItem {
-	group: GroupInfo;
-	unread_count: number;
-	last_message?: {
-		message_id: string;
-		content?: string;
-		type: MessageType;
-		sender: UserInfo;
-		sent_at: string;
-	};
-	last_activity_at: string;
-	is_muted: boolean;
-	is_pinned: boolean;
-	my_role: GroupRole;
-}
-
 // ============== 通知类型 ==============
 
 export interface NotificationItem {
@@ -784,6 +752,32 @@ export interface AdminUser {
 	roles: AdminRole[];
 	granted_at: string;
 	granted_by?: UserInfo;
+}
+
+export interface AdminDismissalRecord {
+	dismissed_at: string;
+	dismissed_by: UserInfo;
+	reason?: string;
+}
+
+export interface AdminGroupSearchItem extends GroupInfo {
+	owner: UserInfo;
+	created_at: string;
+	description?: string;
+	tags?: string[];
+	max_members: number;
+	location?: RelativeLocation;
+	settings: {
+		join_method: GroupJoinMethod;
+		is_searchable: boolean;
+		has_password: boolean;
+	};
+	admins?: UserInfo[];
+	stats: {
+		messages_count: number;
+		active_members_today: number;
+	};
+	dismissal_history?: AdminDismissalRecord[];
 }
 
 export interface AuditLogItem {

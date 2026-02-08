@@ -15,7 +15,7 @@ use crate::{
         feed_repo::FeedRepository, group_repo::GroupRepository, moment_repo::MomentRepository,
         tag_repo::TagRepository, user_repo::UserRepository,
     },
-    types::enums::{FeedFeedbackAction, FeedSource, TagTrend},
+    types::enums::{FeedContentType, FeedFeedbackAction, FeedSource, TagTrend},
     utils::validation::Validator,
 };
 use redis::aio::ConnectionManager;
@@ -182,7 +182,7 @@ impl FeedService {
         // 获取附近群组（使用 PostGIS 计算距离）
         let (groups, next_cursor) = self
             .group_repo
-            .search_by_location(None, user_lat, user_lng, radius, limit, cursor)
+            .search_by_location(None, user_lng, user_lat, radius, limit, cursor)
             .await?;
 
         let mut items = Vec::with_capacity(groups.len());
@@ -252,8 +252,8 @@ impl FeedService {
         let (users, next_cursor) = self
             .user_repo
             .search_for_feed(
-                user_lat,
                 user_lng,
+                user_lat,
                 radius,
                 limit as i64,
                 cursor,
@@ -348,13 +348,13 @@ impl FeedService {
             chrono::Utc::now() - chrono::Duration::days(crate::constants::TRENDING_WEEKLY_DAYS);
 
         // 获取热门标签
-        let tags = self.tag_repo.get_trending(limit, since).await?;
+        let tags = self.tag_repo.get_trending(limit).await?;
 
         let trending_tags: Vec<TrendingTagItem> = tags
             .into_iter()
             .map(|t| TrendingTagItem {
                 name: t.name,
-                usage_count: t.usage_count,
+                usage_count: t.usage_count.unwrap_or(0),
                 trend: TagTrend::Stable,
                 hot_moment_preview: None,
             })
@@ -427,9 +427,11 @@ impl FeedService {
         user_id: i64,
         req: FeedFeedbackRequest,
     ) -> Result<(), AppError> {
-        // 验证 content_id 格式
-        let content_uuid = uuid::Uuid::parse_str(&req.content_id)
-            .map_err(|_| AppError::InvalidFormat("无效的 content_id 格式".to_string()))?;
+        // 验证 content_id 格式（moment 必须是 UUID）
+        if matches!(req.content_type, FeedContentType::Moment) {
+            uuid::Uuid::parse_str(&req.content_id)
+                .map_err(|_| AppError::InvalidFormat("无效的 content_id 格式".to_string()))?;
+        }
 
         // action 已是强类型枚举，直接使用
         let action = req.action;
@@ -445,10 +447,17 @@ impl FeedService {
                 return Err(AppError::InvalidFormat("反馈原因过长".to_string()));
             }
         }
+        let reason = reason.map(str::to_string);
 
         // 记录反馈到数据库
         self.feed_repo
-            .record_feedback(user_id, content_uuid, action.as_str())
+            .record_feedback(
+                user_id,
+                req.content_type.to_string(),
+                req.content_id.clone(),
+                action.as_str().to_string(),
+                reason,
+            )
             .await?;
 
         // 更新Redis中的推荐权重
@@ -504,6 +513,8 @@ impl FeedService {
         let weight_change = match action {
             FeedFeedbackAction::Hide => -1.0,
             FeedFeedbackAction::NotInterested => -2.0,
+            FeedFeedbackAction::Dislike => -3.0,
+            FeedFeedbackAction::Report => -5.0,
         };
 
         let content_key = format!("{}:{}", req.content_type, req.content_id);

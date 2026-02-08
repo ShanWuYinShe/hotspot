@@ -476,8 +476,12 @@ pub async fn admin_ban(
             operator_id: admin.user_id,
             target_type: "user".to_string(),
             target_id: req.user_id.to_string(),
+            target_name: None,
             details: Some(details),
+            before_state: None,
+            after_state: None,
             ip_address: None,
+            user_agent: None,
         })
         .await?;
     Ok(Json(ApiResponse::success_empty()))
@@ -512,8 +516,12 @@ pub async fn admin_unban(
             operator_id: admin.user_id,
             target_type: "user".to_string(),
             target_id: req.user_id.to_string(),
+            target_name: None,
             details: Some(details),
+            before_state: None,
+            after_state: None,
             ip_address: None,
+            user_agent: None,
         })
         .await?;
     Ok(Json(ApiResponse::success_empty()))

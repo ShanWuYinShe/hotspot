@@ -17,6 +17,7 @@ import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon, SystemIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { MessageCacheService, MessageCacheItem } from '../../../core/database/MessageCacheService';
+import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG: string = 'ChatPage';
@@ -60,12 +61,12 @@ struct ChatPage {
   private messageCacheService = MessageCacheService.getInstance();
   private scroller: Scroller = new Scroller();
 
-  private onPrivateMessageNew = (event: ServerEvent): void => {
+  private onPrivateMessageNew = async (event: ServerEvent): Promise<void> => {
     if (event.type !== 'PrivateMessageNew') return;
     if (this.chatType !== 'private_chat') return;
 
     const payload = (event as PrivateMessageNewEvent).payload;
-    const currentUserId = this.currentUser?.user_id;
+    const currentUserId = await AuthAccountManager.getCurrentUserId();
     const targetId = this.targetId;
 
     if (!currentUserId || !targetId) return;
@@ -91,13 +92,14 @@ struct ChatPage {
     });
   }
 
-  private onGroupMessageNew = (event: ServerEvent): void => {
+  private onGroupMessageNew = async (event: ServerEvent): Promise<void> => {
     if (event.type !== 'GroupMessageNew') return;
     if (this.chatType !== 'group_chat') return;
 
     const payload = (event as GroupMessageNewEvent).payload;
-    if (payload.group_chat_id !== this.chatId) return;
+    if (payload.group_id !== this.chatId) return;
 
+    const currentUserId = await AuthAccountManager.getCurrentUserId();
     this.handleNewMessage({
       id: payload.message_id,
       content: payload.media?.url || payload.content || (payload.type === 'image' ? '[图片]' : '[非文本消息]'),
@@ -106,7 +108,7 @@ struct ChatPage {
       senderAvatar: payload.sender.avatar_url,
       type: payload.type,
       sentAt: payload.sent_at,
-      isSelf: payload.sender.user_id === this.currentUser?.user_id,
+      isSelf: payload.sender.user_id === currentUserId,
       isSystem: payload.type === 'system',
       rawData: payload
     });
@@ -182,7 +184,7 @@ struct ChatPage {
         }
       }
 
-      const newMessages = items.reverse().map(item => this.convertMessage(item));
+      const newMessages = await Promise.all(items.reverse().map(item => this.convertMessage(item)));
       this.messages = newMessages;
       
       // 3. 更新缓存
@@ -205,10 +207,10 @@ struct ChatPage {
     const cachedMessages = await this.messageCacheService.getCachedMessages(this.chatId);
     if (cachedMessages.length > 0) {
       // 缓存是倒序取出的（最新的在前），需要反转回正序（旧的在前）
-      const messages = cachedMessages.reverse().map(item => {
+      const messages = await Promise.all(cachedMessages.reverse().map(async item => {
         const rawData = JSON.parse(item.data);
-        return this.convertMessage(rawData);
-      });
+        return await this.convertMessage(rawData);
+      }));
       this.messages = messages;
       this.scrollToBottom();
       hilog.info(DOMAIN_NUMBER, TAG, `Loaded ${messages.length} messages from cache`);
@@ -229,14 +231,37 @@ struct ChatPage {
     await this.messageCacheService.cacheMessages(this.chatId, cacheItems);
   }
 
-  private convertMessage(item: PrivateMessageItem | GroupMessageItem): ChatMessage {
-    const isSelf = item.sender.user_id === this.currentUser?.user_id;
+  private async convertMessage(item: PrivateMessageItem | GroupMessageItem): Promise<ChatMessage> {
+    const currentUserId = await AuthAccountManager.getCurrentUserId();
+    
+    // PrivateMessageItem 使用 sender_id，GroupMessageItem 使用 sender
+    let senderId: number;
+    let senderName: string;
+    let senderAvatar: string | undefined;
+    let isSelf: boolean;
+    
+    if ('sender_id' in item) {
+      // PrivateMessageItem
+      senderId = item.sender_id;
+      isSelf = senderId === currentUserId;
+      // 对于私聊消息，sender_id 需要从其他地方获取用户信息
+      // 这里暂时使用占位符，实际应该从缓存或API获取
+      senderName = `User ${senderId}`;
+      senderAvatar = undefined;
+    } else {
+      // GroupMessageItem
+      senderId = item.sender.user_id;
+      senderName = item.sender.nickname;
+      senderAvatar = item.sender.avatar_url;
+      isSelf = senderId === currentUserId;
+    }
+    
     return {
-      id: item.id,
-      content: item.media_url || item.content || (item.type === 'image' ? '[图片]' : '[非文本消息]'),
-      senderId: item.sender.user_id,
-      senderName: item.sender.nickname,
-      senderAvatar: item.sender.avatar_url,
+      id: item.message_id,
+      content: item.media?.url || item.content || (item.type === 'image' ? '[图片]' : '[非文本消息]'),
+      senderId: senderId,
+      senderName: senderName,
+      senderAvatar: senderAvatar,
       type: item.type,
       sentAt: item.sent_at,
       isSelf: isSelf,

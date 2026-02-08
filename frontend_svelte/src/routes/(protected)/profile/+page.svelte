@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { usersService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { authStore } from '$lib/stores/auth.svelte';
@@ -44,8 +45,8 @@
 	let bio = $state(profile?.bio ?? '');
 	let tags = $state(profile?.tags?.join(', ') ?? '');
 	
-	// 初始化时更新 authStore
-	$effect(() => {
+	// 初始化时更新 authStore（一次性操作）
+	onMount(() => {
 		if (profile) {
 			authStore.setProfile(profile);
 		}

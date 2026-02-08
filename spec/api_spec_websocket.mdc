@@ -718,7 +718,6 @@ type SubscriptionsSnapshotEvent = { type: "SubscriptionsSnapshot"; payload: Subs
 interface AuthPayload {
   client_type: ClientType;
   access_token?: string; // App 端必填，Web 端不传
-  device_fingerprint?: string;
 }
 type AuthEvent = { type: "Auth"; payload: AuthPayload; };
 

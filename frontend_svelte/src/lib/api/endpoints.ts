@@ -41,7 +41,6 @@ export const USER = {
 	SUGGEST: `${API_BASE}/user/suggest`,
 	// 获取指定用户信息
 	OPEN_THE_DOOR: `${API_BASE}/user/open_the_door`,
-	RELATIONSHIP: `${API_BASE}/user/relationship`,
 	STATS: `${API_BASE}/user/stats`,
 	FRIENDS: `${API_BASE}/user/friends`,
 	FOLLOWING: `${API_BASE}/user/following`,
@@ -85,7 +84,6 @@ export const MOMENTS = {
 	SUGGEST: `${API_BASE}/moments/suggest`,
 	// 获取指定瞬间信息
 	OPEN_THE_DOOR: `${API_BASE}/moments/open_the_door`,
-	INTERACTION_STATE: `${API_BASE}/moments/interaction_state`,
 	LIKES: `${API_BASE}/moments/likes`,
 	// 操作
 	CREATE: `${API_BASE}/moments/create`,
@@ -98,9 +96,7 @@ export const MOMENTS = {
 	// 当前用户
 	ME: {
 		LIST: `${API_BASE}/moments/me`,
-		FAVORITES: `${API_BASE}/moments/me/favorites`,
-		LIKED: `${API_BASE}/moments/me/liked`,
-		FAVORITED: `${API_BASE}/moments/me/favorited`
+		FAVORITES: `${API_BASE}/moments/me/favorites`
 	}
 } as const;
 
@@ -147,55 +143,54 @@ export const PRIVATE_MESSAGES = {
 // ============================================================================
 export const GROUPS = {
 	// 搜索
-	SEARCH_BY_KEYWORD: `${API_BASE}/group_chats/search_by_keyword`,
-	SEARCH_BY_TAG: `${API_BASE}/group_chats/search_by_tag`,
-	SEARCH_BY_LOCATION: `${API_BASE}/group_chats/search_by_location`,
-	SUGGEST: `${API_BASE}/group_chats/suggest`,
+	SEARCH_BY_KEYWORD: `${API_BASE}/groups/search_by_keyword`,
+	SEARCH_BY_TAG: `${API_BASE}/groups/search_by_tag`,
+	SEARCH_BY_LOCATION: `${API_BASE}/groups/search_by_location`,
+	SUGGEST: `${API_BASE}/groups/suggest`,
 	// 获取指定群组信息
-	OPEN_THE_DOOR: `${API_BASE}/group_chats/open_the_door`,
-	MY_STATE: `${API_BASE}/group_chats/my_state`,
-	SETTINGS: `${API_BASE}/group_chats/settings`,
+	OPEN_THE_DOOR: `${API_BASE}/groups/open_the_door`,
+	SETTINGS: `${API_BASE}/groups/settings`,
 	// 操作
-	CREATE: `${API_BASE}/group_chats/create`,
-	UPDATE: `${API_BASE}/group_chats/update`,
-	UPDATE_MY_SETTINGS: `${API_BASE}/group_chats/update_my_settings`,
-	DELETE: `${API_BASE}/group_chats/delete`,
-	TRANSFER_OWNERSHIP: `${API_BASE}/group_chats/transfer_ownership`,
+	CREATE: `${API_BASE}/groups/create`,
+	UPDATE: `${API_BASE}/groups/update`,
+	UPDATE_MY_SETTINGS: `${API_BASE}/groups/update_my_settings`,
+	DELETE: `${API_BASE}/groups/delete`,
+	TRANSFER_OWNERSHIP: `${API_BASE}/groups/transfer_ownership`,
 	// 成员管理
 	MEMBERS: {
-		LIST: `${API_BASE}/group_chats/members`,
-		INVITE: `${API_BASE}/group_chats/members/invite`,
-		JOIN: `${API_BASE}/group_chats/members/join`,
-		APPLY: `${API_BASE}/group_chats/members/apply`,
-		SET_ROLE: `${API_BASE}/group_chats/members/set_role`,
-		MUTE: `${API_BASE}/group_chats/members/mute`,
-		UNMUTE: `${API_BASE}/group_chats/members/unmute`,
-		BAN: `${API_BASE}/group_chats/members/ban`,
-		UNBAN: `${API_BASE}/group_chats/members/unban`,
-		BANNED: `${API_BASE}/group_chats/members/banned`,
-		REMOVE_MEMBER: `${API_BASE}/group_chats/members/remove_member`
+		LIST: `${API_BASE}/groups/members`,
+		INVITE: `${API_BASE}/groups/members/invite`,
+		JOIN: `${API_BASE}/groups/members/join`,
+		APPLY: `${API_BASE}/groups/members/apply`,
+		SET_ROLE: `${API_BASE}/groups/members/set_role`,
+		MUTE: `${API_BASE}/groups/members/mute`,
+		UNMUTE: `${API_BASE}/groups/members/unmute`,
+		BAN: `${API_BASE}/groups/members/ban`,
+		UNBAN: `${API_BASE}/groups/members/unban`,
+		BANNED: `${API_BASE}/groups/members/banned`,
+		REMOVE_MEMBER: `${API_BASE}/groups/members/remove_member`
 	},
 	// 申请管理
 	APPLICATIONS: {
-		LIST: `${API_BASE}/group_chats/applications`,
-		APPROVE: `${API_BASE}/group_chats/applications/approve`,
-		REJECT: `${API_BASE}/group_chats/applications/reject`
+		LIST: `${API_BASE}/groups/applications`,
+		APPROVE: `${API_BASE}/groups/applications/approve`,
+		REJECT: `${API_BASE}/groups/applications/reject`
 	},
 	// 群公告
 	ANNOUNCEMENTS: {
-		LIST: `${API_BASE}/group_chats/announcements`,
-		CREATE: `${API_BASE}/group_chats/announcements/create`,
-		UPDATE: `${API_BASE}/group_chats/announcements/update`,
-		DELETE: `${API_BASE}/group_chats/announcements/delete`
+		LIST: `${API_BASE}/groups/announcements`,
+		CREATE: `${API_BASE}/groups/announcements/create`,
+		UPDATE: `${API_BASE}/groups/announcements/update`,
+		DELETE: `${API_BASE}/groups/announcements/delete`
 	},
 	// 当前用户
 	ME: {
-		LIST: `${API_BASE}/group_chats/me`,
-		CANCEL_APPLICATION: `${API_BASE}/group_chats/me/applications/cancel`,
-		INVITES: `${API_BASE}/group_chats/me/invites`,
-		ACCEPT_INVITE: `${API_BASE}/group_chats/me/invites/accept`,
-		REJECT_INVITE: `${API_BASE}/group_chats/me/invites/reject`,
-		LEAVE: `${API_BASE}/group_chats/me/leave`
+		LIST: `${API_BASE}/groups/me`,
+		CANCEL_APPLICATION: `${API_BASE}/groups/me/applications/cancel`,
+		INVITES: `${API_BASE}/groups/me/invites`,
+		ACCEPT_INVITE: `${API_BASE}/groups/me/invites/accept`,
+		REJECT_INVITE: `${API_BASE}/groups/me/invites/reject`,
+		LEAVE: `${API_BASE}/groups/me/leave`
 	}
 } as const;
 

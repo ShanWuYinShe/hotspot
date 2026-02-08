@@ -61,7 +61,7 @@ impl UserFriendRemarksRepository {
 
         let rows = sqlx::query!(
             r#"
-            SELECT friend_id, remark
+            SELECT friend_id, remark as "remark!"
             FROM user_friend_remarks
             WHERE user_id = $1 AND friend_id = ANY($2)
             "#,
@@ -73,7 +73,7 @@ impl UserFriendRemarksRepository {
 
         Ok(rows
             .into_iter()
-            .filter_map(|r| r.remark.map(|remark| (r.friend_id, remark)))
+            .map(|r| (r.friend_id, r.remark))
             .collect())
     }
 }

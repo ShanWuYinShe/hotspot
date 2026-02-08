@@ -1,94 +1,123 @@
+//! 动态瞬间仓库层实现
+//! 
+//! 适配新 Schema: moment_id (UUID), user_id (BIGINT), 分区表 moments_partitioned
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
+use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::error::Result;
+use crate::types::enums::UserType;
+use crate::utils::pagination::{decode_cursor, encode_cursor, TimeIdCursor};
 
-use crate::utils::pagination::{decode_cursor, encode_cursor, DistanceCursor, IdCursor};
-
-/// 生活瞬间Row - 数据库查询返回类型
-/// 注意：tags 已移至单独的 moment_tags 关联表，通过 TagRepository 获取
+/// 瞬间基础行数据
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct MomentRow {
-    pub id: i64,
     pub moment_id: Uuid,
     pub user_id: i64,
-    pub description: String,
-    pub images: Vec<String>,
+    pub description: Option<String>,
     pub mentions: Option<Vec<i64>>,
+    pub location_name: Option<String>,
     pub privacy_level: String,
-    pub latitude: Option<f64>,        // 可选：客户端提供
-    pub longitude: Option<f64>,       // 可选：客户端提供
-    pub location_name: Option<String>, // 可选：客户端提供
+    pub view_count: i32,
+    pub like_count: i32,
+    pub comments_count: i32,
+    pub share_count: i32,
     pub created_at: DateTime<Utc>,
-    pub updated_at: Option<DateTime<Utc>>,
-    pub is_deleted: bool,
+    pub updated_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
 }
 
-/// 瞬间搜索结果Row - 包含用户信息、统计数据和距离（统一搜索结果结构）
-#[derive(Debug, Clone)]
-pub struct MomentSearchRow {
-    // id removed as it is only used for cursor generation in repo
+/// 瞬间详情行（带用户信息）
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+pub struct MomentDetailRow {
     pub moment_id: Uuid,
     pub user_id: i64,
+    pub description: Option<String>,
+    pub mentions: Option<Vec<i64>>,
+    pub location_name: Option<String>,
+    pub privacy_level: String,
+    pub view_count: i32,
+    pub like_count: i32,
+    pub comments_count: i32,
+    pub share_count: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    
+    // Joined fields
+    pub user_nickname: Option<String>,
+    pub user_avatar_url: Option<String>,
+    
+    // LBS fields (Result of ST_X/Y or ST_Distance)
+    pub longitude: Option<f64>,
+    pub latitude: Option<f64>,
+    pub distance: Option<f64>,
+}
+
+/// Feed 流瞬间行（带用户信息 + 图片）
+#[derive(Debug, Clone, FromRow)]
+pub struct FeedMomentRow {
+    pub moment_id: Uuid,
+    pub user_id: i64,
+    pub nickname: String,
+    pub avatar_url: Option<String>,
+    pub user_type: UserType,
     pub description: String,
     pub images: Vec<String>,
     pub mentions: Option<Vec<i64>>,
-    pub privacy_level: String,
-    pub latitude: Option<f64>,        // 可选：客户端提供
-    pub longitude: Option<f64>,       // 可选：客户端提供
-    pub location_name: Option<String>, // 可选：客户端提供
     pub created_at: DateTime<Utc>,
-    // 用户信息
-    pub nickname: String,
-    pub avatar_url: Option<String>,
-    pub user_type: crate::types::enums::UserType,
-    // 统计信息
-    pub likes_count: i64,
-    pub comments_count: i64,
-    /// PostGIS 计算的距离（米）- 仅在有位置时返回
+    pub likes_count: i32,
+    pub comments_count: i32,
+    pub location_name: Option<String>,
+    pub longitude: Option<f64>,
+    pub latitude: Option<f64>,
     pub distance: Option<f64>,
-    /// PostGIS 计算的方位角（0-360度）- 仅在有位置时返回
     pub bearing_degrees: Option<f64>,
 }
 
-/// 瞬间建议Row - 轻量返回
-#[derive(Debug, Clone)]
+/// 搜索建议瞬间行
+#[derive(Debug, Clone, FromRow)]
 pub struct MomentSuggestRow {
     pub moment_id: Uuid,
-    pub user_id: i64,
     pub description: String,
-    pub images: Vec<String>,
-    pub created_at: DateTime<Utc>,
     pub nickname: String,
     pub avatar_url: Option<String>,
-    pub user_type: crate::types::enums::UserType,
     pub distance: Option<f64>,
 }
 
-/// 瞬间摘要Row - 用于事件通知
-#[derive(Debug, Clone)]
-struct MomentSummaryRow {
-    moment_id: Uuid,
-    description: String,
-    images: Option<Vec<String>>,
+/// 瞬间列表行（不含用户信息）
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+pub struct MomentListRow {
+    pub moment_id: Uuid,
+    pub description: Option<String>,
+    pub mentions: Option<Vec<i64>>,
+    pub location_name: Option<String>,
+    pub longitude: Option<f64>,
+    pub latitude: Option<f64>,
+    pub like_count: i32,
+    pub comments_count: i32,
+    pub created_at: DateTime<Utc>,
 }
 
-/// 瞬间ID对Row - 用于布隆过滤器初始化
-#[derive(Debug, Clone)]
-struct MomentIdPairRow {
-    id: i64,
-    moment_id: Uuid,
+/// 瞬间图片行
+#[derive(Debug, Clone, FromRow)]
+pub struct MomentImageRow {
+    pub moment_id: Uuid,
+    pub url: String,
+    pub width: Option<i32>,
+    pub height: Option<i32>,
+    pub sort_order: Option<i32>,
 }
 
-/// 瞬间统计Row - 用于批量查询点赞评论数
-#[derive(Debug, Clone)]
-struct MomentStatsRow {
-    moment_id: Uuid,
-    likes_count: i64,
-    comments_count: i64,
+/// 瞬间点赞用户行
+#[derive(Debug, Clone, FromRow)]
+pub struct MomentLikeRow {
+    pub user_id: i64,
+    pub user_nickname: Option<String>,
+    pub user_avatar_url: Option<String>,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone)]
@@ -101,73 +130,38 @@ impl MomentRepository {
         Self { pool }
     }
 
-    /// 获取瞬间摘要快照（用于事件通知）
-    pub async fn get_summary_snapshot(
-        &self,
-        moment_id: Uuid,
-    ) -> Result<Option<crate::events::event_types::MomentSummarySnapshot>> {
-        let row = sqlx::query_as!(
-            MomentSummaryRow,
-            r#"
-            SELECT moment_id, description, images
-            FROM moments
-            WHERE moment_id = $1
-            "#,
-            moment_id
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(row.map(|r| {
-            let cover_url = r.images.and_then(|imgs| imgs.first().cloned());
-            let text_preview = if r.description.chars().count() > 50 {
-                format!("{}...", r.description.chars().take(50).collect::<String>())
-            } else {
-                r.description
-            };
-
-            crate::events::event_types::MomentSummarySnapshot {
-                moment_id: r.moment_id,
-                cover_url,
-                text_preview,
-            }
-        }))
-    }
-
-    /// 创建生活瞬间
-    /// 注意：tags 已移至 moment_tags 关联表，创建后需单独调用 TagRepository.set_moment_tags
+    /// 创建瞬间
     pub async fn create(
         &self,
         user_id: i64,
-        description: String,
-        images: Option<Vec<String>>,
+        description: Option<String>,
         mentions: Option<Vec<i64>>,
-        privacy_level: String,
-        latitude: Option<f64>,
-        longitude: Option<f64>,
+        lon: Option<f64>,
+        lat: Option<f64>,
         location_name: Option<String>,
+        privacy_level: String,
     ) -> Result<MomentRow> {
-        let privacy_level_str = privacy_level.to_string();
-        let row = sqlx::query_as!(
+        // 使用 query_as_unchecked! 绕过编译期 geography 类型检查
+        let row = sqlx::query_as_unchecked!(
             MomentRow,
             r#"
-            INSERT INTO moments (user_id, description, images, mentions, privacy_level, latitude, longitude, location_name)
-            VALUES ($1, $2, $3, $4, $5::text::privacy_level, $6, $7, $8)
-            RETURNING id, moment_id, user_id, description, 
-                      COALESCE(images, ARRAY[]::TEXT[]) as "images!",
-                      mentions,
-                      privacy_level::text as "privacy_level!",
-                      latitude, longitude, location_name,
-                      created_at, updated_at, is_deleted, deleted_at
+            INSERT INTO moments_partitioned (user_id, description, mentions, location, location_name, privacy_level)
+            VALUES ($1, $2, $3,
+                    CASE WHEN $4::float8 IS NOT NULL AND $5::float8 IS NOT NULL 
+                         THEN ST_SetSRID(ST_MakePoint($4, $5), 4326)::geography 
+                         ELSE NULL END, 
+                    $6, $7)
+            RETURNING moment_id, user_id, description, mentions, location_name, privacy_level,
+                      view_count, like_count, comments_count, share_count,
+                      created_at, updated_at, deleted_at
             "#,
             user_id,
             description,
-            images.as_deref(),
             mentions.as_deref(),
-            privacy_level_str,
-            latitude,
-            longitude,
-            location_name.as_deref()
+            lon,
+            lat,
+            location_name,
+            privacy_level
         )
         .fetch_one(&self.pool)
         .await?;
@@ -175,294 +169,434 @@ impl MomentRepository {
         Ok(row)
     }
 
-    /// 检查瞬间是否存在
-    pub async fn exists(&self, moment_id: Uuid) -> Result<bool> {
-        let exists = sqlx::query_scalar!(
-            r#"SELECT EXISTS(SELECT 1 FROM moments WHERE moment_id = $1 AND is_deleted = FALSE) as "exists!""#,
-            moment_id
-        )
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(exists)
-    }
-
-    /// 查询瞬间删除状态（包含已删除记录）
-    pub async fn get_delete_status(&self, moment_id: Uuid) -> Result<Option<bool>> {
-        let is_deleted = sqlx::query_scalar!(
+    /// 根据 ID 查找
+    pub async fn find_by_id(&self, moment_id: Uuid) -> Result<Option<MomentRow>> {
+        let row = sqlx::query_as_unchecked!(
+            MomentRow,
             r#"
-            SELECT is_deleted
+            SELECT moment_id, user_id, description, mentions, location_name, privacy_level,
+                   view_count, like_count, comments_count, share_count,
+                   created_at, updated_at, deleted_at
             FROM moments
-            WHERE moment_id = $1
+            WHERE moment_id = $1 AND deleted_at IS NULL
             "#,
             moment_id
         )
         .fetch_optional(&self.pool)
         .await?;
 
-        Ok(is_deleted)
+        Ok(row)
     }
 
-    /// 按自增ID顺序批量获取瞬间ID（用于布隆过滤器初始化）
-    pub async fn list_moment_ids_after(
-        &self,
-        last_id: i64,
-        limit: i64,
-    ) -> Result<Vec<(i64, Uuid)>> {
-        let rows = sqlx::query_as!(
-            MomentIdPairRow,
+    /// 获取动态详情（带用户信息和坐标）
+    pub async fn get_detail(&self, moment_id: Uuid, viewer_lon: Option<f64>, viewer_lat: Option<f64>) -> Result<Option<MomentDetailRow>> {
+        let row = sqlx::query_as_unchecked!(
+            MomentDetailRow,
             r#"
-            SELECT id, moment_id
-            FROM moments
-            WHERE id > $1 AND is_deleted = FALSE
-            ORDER BY id ASC
-            LIMIT $2
-            "#,
-            last_id,
-            limit
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(rows.into_iter().map(|r| (r.id, r.moment_id)).collect())
-    }
-
-    /// 获取瞬间所有者ID
-    pub async fn get_owner(&self, moment_id: Uuid) -> Result<Option<i64>> {
-        let user_id = sqlx::query_scalar!(
-            r#"SELECT user_id FROM moments WHERE moment_id = $1 AND is_deleted = FALSE"#,
-            moment_id
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(user_id)
-    }
-
-    /// 按ID列表查找瞬间（带用户信息、统计和距离计算）
-    pub async fn find_by_ids_with_distance(
-        &self,
-        moment_ids: &[Uuid],
-        latitude: f64,
-        longitude: f64,
-        viewer_id: Option<i64>,
-    ) -> Result<Vec<MomentSearchRow>> {
-        if moment_ids.is_empty() {
-            return Ok(Vec::new());
-        }
-
-        let rows = sqlx::query!(
-            r#"
-            SELECT 
-                m.moment_id, m.user_id, m.description,
-                m.latitude, m.longitude, m.location_name,
-                COALESCE(m.images, ARRAY[]::TEXT[]) as "images!",
-                m.mentions,
-                m.privacy_level::text as "privacy_level!",
-                m.created_at, m.id,
-                u.nickname, u.avatar_url, u.user_type as "user_type!: crate::types::enums::UserType",
-                (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) as "likes_count!",
-                (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) as "comments_count!",
-                ST_Distance(
-                    m.location::geography,
-                    ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography
-                ) as "distance",
-                COALESCE(degrees(ST_Azimuth(
-                    ST_SetSRID(ST_MakePoint($2, $3), 4326),
-                    m.location
-                )), 0) as "bearing_degrees"
+            SELECT m.moment_id, m.user_id, m.description, m.mentions, m.location_name, m.privacy_level,
+                   m.view_count, m.like_count, m.comments_count, m.share_count,
+                   m.created_at, m.updated_at,
+                   u.nickname as user_nickname, u.avatar_url as user_avatar_url,
+                   ST_X(m.location::geometry) as longitude,
+                   ST_Y(m.location::geometry) as latitude,
+                   CASE WHEN $2::float8 IS NOT NULL AND $3::float8 IS NOT NULL 
+                        THEN ST_Distance(m.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography)
+                        ELSE NULL END as distance
             FROM moments m
             JOIN users u ON m.user_id = u.user_id
-            WHERE m.moment_id = ANY($1) AND m.is_deleted = FALSE AND u.is_banned = FALSE
-              AND (
-                    ($4::BIGINT IS NULL AND m.privacy_level::text = 'public')
-                 OR ($4::BIGINT IS NOT NULL AND (
-                        m.user_id = $4
-                     OR m.privacy_level::text = 'public'
-                     OR (
-                            m.privacy_level::text = 'friends'
-                        AND EXISTS (
-                            SELECT 1
-                            FROM user_follows f1
-                            INNER JOIN user_follows f2
-                                ON f1.following_id = f2.follower_id
-                               AND f1.follower_id = f2.following_id
-                            WHERE f1.follower_id = $4
-                              AND f1.following_id = m.user_id
-                        )
-                     )
-                 ))
-              )
-              AND (
-                    $4::BIGINT IS NULL
-                 OR NOT EXISTS (
-                        SELECT 1
-                        FROM user_blocks b
-                        WHERE (b.blocker_id = m.user_id AND b.blocked_id = $4)
-                           OR (b.blocker_id = $4 AND b.blocked_id = m.user_id)
-                    )
-              )
-            ORDER BY distance ASC
+            WHERE m.moment_id = $1 AND m.deleted_at IS NULL
             "#,
-            moment_ids,
-            longitude,
-            latitude,
-            viewer_id
+            moment_id,
+            viewer_lon,
+            viewer_lat
         )
-        .fetch_all(&self.pool)
+        .fetch_optional(&self.pool)
         .await?;
 
-        Ok(rows
-            .into_iter()
-            .map(|r| MomentSearchRow {
-                moment_id: r.moment_id,
-                user_id: r.user_id,
-                description: r.description,
-                images: r.images,
-                mentions: r.mentions,
-                privacy_level: r.privacy_level,
-                latitude: r.latitude,
-                longitude: r.longitude,
-                location_name: r.location_name,
-                created_at: r.created_at,
-                nickname: r.nickname,
-                avatar_url: r.avatar_url,
-                user_type: r.user_type,
-                likes_count: r.likes_count,
-                comments_count: r.comments_count,
-                distance: r.distance,
-                bearing_degrees: r.bearing_degrees,
-            })
-            .collect())
+        Ok(row)
     }
 
-    /// 按关键字搜索生活瞬间（全局，按时间倒序）
-    pub async fn search_by_keyword(
+    /// 列出用户的动态 Feed
+    pub async fn list_feed(
         &self,
-        keyword: &str,
-        latitude: f64,
-        longitude: f64,
-        viewer_id: Option<i64>,
-        limit: i32,
+        user_id: i64,
+        limit: i64,
         cursor: Option<String>,
-    ) -> Result<(Vec<MomentSearchRow>, Option<String>)> {
+    ) -> Result<(Vec<MomentDetailRow>, Option<String>)> {
         let (last_ts, last_id) = if let Some(c) = cursor {
-            decode_cursor::<(DateTime<Utc>, i64)>(&c)?
+            decode_cursor::<TimeIdCursor>(&c)?
         } else {
-            (DateTime::<Utc>::MAX_UTC, i64::MAX)
+            (DateTime::<Utc>::MAX_UTC, Uuid::max())
         };
 
-        let search_pattern = format!("%{}%", keyword);
-
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as_unchecked!(
+            MomentDetailRow,
             r#"
-            SELECT 
-                m.id, m.moment_id, m.user_id, m.description,
-                m.latitude, m.longitude, m.location_name,
-                COALESCE(m.images, ARRAY[]::TEXT[]) as "images!",
-                m.mentions,
-                m.privacy_level::text as "privacy_level!",
-                m.created_at,
-                u.nickname, u.avatar_url, u.user_type as "user_type!: crate::types::enums::UserType",
-                (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) as "likes_count!",
-                (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) as "comments_count!",
-                ST_Distance(
-                    m.location::geography,
-                    ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography
-                ) as "distance",
-                COALESCE(degrees(ST_Azimuth(
-                    ST_SetSRID(ST_MakePoint($2, $3), 4326),
-                    m.location
-                )), 0) as "bearing_degrees"
+            SELECT m.moment_id, m.user_id, m.description, m.mentions, m.location_name, m.privacy_level,
+                   m.view_count, m.like_count, m.comments_count, m.share_count,
+                   m.created_at, m.updated_at,
+                   u.nickname as user_nickname, u.avatar_url as user_avatar_url,
+                   ST_X(m.location::geometry) as longitude,
+                   ST_Y(m.location::geometry) as latitude,
+                   NULL::float8 as distance
             FROM moments m
             JOIN users u ON m.user_id = u.user_id
-            WHERE m.is_deleted = FALSE 
-              AND u.is_banned = FALSE
-              AND m.description ILIKE $1
-              AND (
-                    ($4::BIGINT IS NULL AND m.privacy_level::text = 'public')
-                 OR ($4::BIGINT IS NOT NULL AND (
-                        m.user_id = $4
-                     OR m.privacy_level::text = 'public'
-                     OR (
-                            m.privacy_level::text = 'friends'
-                        AND EXISTS (
-                            SELECT 1
-                            FROM user_follows f1
-                            INNER JOIN user_follows f2
-                                ON f1.following_id = f2.follower_id
-                               AND f1.follower_id = f2.following_id
-                            WHERE f1.follower_id = $4
-                              AND f1.following_id = m.user_id
-                        )
-                     )
-                 ))
-              )
-              AND (
-                    $4::BIGINT IS NULL
-                 OR NOT EXISTS (
-                        SELECT 1
-                        FROM user_blocks b
-                        WHERE (b.blocker_id = m.user_id AND b.blocked_id = $4)
-                           OR (b.blocker_id = $4 AND b.blocked_id = m.user_id)
-                    )
-              )
-              AND (m.created_at < $5 OR (m.created_at = $5 AND m.id < $6))
-            ORDER BY m.created_at DESC, m.id DESC
-            LIMIT $7
+            WHERE (m.user_id = $1 OR m.privacy_level = 'public' OR 
+                  (m.privacy_level = 'friends' AND EXISTS(SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = m.user_id)))
+              AND m.deleted_at IS NULL
+              AND (m.created_at, m.moment_id) < ($2, $3)
+            ORDER BY m.created_at DESC, m.moment_id DESC
+            LIMIT $4
             "#,
-            search_pattern,
-            longitude,
-            latitude,
-            viewer_id,
+            user_id,
             last_ts,
             last_id,
-            (limit + 1) as i64  // 使用 limit + 1 来判断是否有更多数据
+            limit + 1
         )
         .fetch_all(&self.pool)
         .await?;
 
-        // 判断是否有更多数据
         let has_more = rows.len() > limit as usize;
-        let rows_to_return: Vec<_> = rows.into_iter().take(limit as usize).collect();
+        let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
+        
+        let next_cursor = if has_more {
+            items.last().map(|r| encode_cursor(&(r.created_at, r.moment_id))).transpose()?
+        } else {
+            None
+        };
+
+        Ok((items, next_cursor))
+    }
+
+    /// 关注流（仅关注 + 自己）
+    pub async fn get_following_feed(
+        &self,
+        user_id: i64,
+        viewer_lat: f64,
+        viewer_lng: f64,
+        limit: i32,
+        cursor: Option<String>,
+    ) -> Result<(Vec<FeedMomentRow>, Option<String>)> {
+        let (last_ts, last_id) = if let Some(c) = cursor {
+            decode_cursor::<TimeIdCursor>(&c)?
+        } else {
+            (DateTime::<Utc>::MAX_UTC, Uuid::max())
+        };
+
+        let rows = sqlx::query_as_unchecked!(
+            FeedMomentRow,
+            r#"
+            SELECT m.moment_id,
+                   m.user_id,
+                   COALESCE(u.nickname, '') as "nickname!",
+                   u.avatar_url as "avatar_url?",
+                   u.user_type as "user_type: UserType",
+                   COALESCE(m.description, '') as "description!",
+                   COALESCE(
+                       ARRAY_REMOVE(ARRAY_AGG(mi.url ORDER BY mi.sort_order ASC, mi.created_at ASC), NULL),
+                       ARRAY[]::text[]
+                   ) as "images!",
+                   m.mentions,
+                   m.created_at as "created_at!",
+                   m.like_count as "likes_count!",
+                   m.comments_count as "comments_count!",
+                   m.location_name,
+                   ST_X(m.location::geometry) as longitude,
+                   ST_Y(m.location::geometry) as latitude,
+                   CASE WHEN m.location IS NOT NULL
+                        THEN ST_Distance(m.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography)
+                        ELSE NULL END as distance,
+                   CASE WHEN m.location IS NOT NULL
+                        THEN degrees(ST_Azimuth(ST_SetSRID(ST_MakePoint($2, $3), 4326), m.location::geometry))
+                        ELSE NULL END as bearing_degrees
+            FROM moments m
+            JOIN users u ON m.user_id = u.user_id
+            LEFT JOIN moment_images mi ON m.moment_id = mi.moment_id
+            LEFT JOIN follows f ON f.following_id = m.user_id AND f.follower_id = $1
+            WHERE m.deleted_at IS NULL
+              AND (m.user_id = $1 OR f.follower_id IS NOT NULL)
+              AND (
+                  m.user_id = $1
+                  OR m.privacy_level = 'public'
+                  OR (
+                      m.privacy_level = 'friends'
+                      AND EXISTS(
+                          SELECT 1 FROM follows f2 WHERE f2.follower_id = m.user_id AND f2.following_id = $1
+                      )
+                  )
+              )
+              AND (m.created_at, m.moment_id) < ($4, $5)
+            GROUP BY m.moment_id, m.user_id, u.nickname, u.avatar_url, u.user_type,
+                     m.description, m.mentions, m.created_at, m.like_count, m.comments_count,
+                     m.location_name, m.location
+            ORDER BY m.created_at DESC, m.moment_id DESC
+            LIMIT $6
+            "#,
+            user_id,
+            viewer_lng,
+            viewer_lat,
+            last_ts,
+            last_id,
+            limit as i64 + 1
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let has_more = rows.len() > limit as usize;
+        let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
 
         let next_cursor = if has_more {
-            rows_to_return
+            items
                 .last()
-                .map(|r| encode_cursor(&(r.created_at, r.id)))
+                .map(|r| encode_cursor(&(r.created_at, r.moment_id)))
                 .transpose()?
         } else {
             None
         };
 
-        Ok((
-            rows_to_return
-                .into_iter()
-                .map(|r| MomentSearchRow {
-                    moment_id: r.moment_id,
-                    user_id: r.user_id,
-                    description: r.description,
-                    images: r.images,
-                    mentions: r.mentions,
-                    privacy_level: r.privacy_level,
-                    latitude: r.latitude,
-                    longitude: r.longitude,
-                    location_name: r.location_name,
-                    created_at: r.created_at,
-                    nickname: r.nickname,
-                    avatar_url: r.avatar_url,
-                    user_type: r.user_type,
-                    likes_count: r.likes_count,
-                    comments_count: r.comments_count,
-                    distance: r.distance,
-                    bearing_degrees: r.bearing_degrees,
-                })
-                .collect(),
-            next_cursor,
-        ))
+        Ok((items, next_cursor))
     }
 
-    /// 搜索建议：按描述关键字匹配（轻量字段）
+    /// 附近流（公共）
+    pub async fn get_nearby_feed(
+        &self,
+        viewer_lat: f64,
+        viewer_lng: f64,
+        radius: f64,
+        limit: i32,
+        cursor: Option<String>,
+    ) -> Result<(Vec<FeedMomentRow>, Option<String>)> {
+        #[derive(Debug, Serialize, Deserialize)]
+        struct DistanceMomentCursor(f64, Uuid);
+
+        let (last_dist, last_id) = if let Some(c) = cursor {
+            let DistanceMomentCursor(dist, id) = decode_cursor::<DistanceMomentCursor>(&c)?;
+            (dist, id)
+        } else {
+            (0.0, Uuid::nil())
+        };
+
+        let rows = sqlx::query_as_unchecked!(
+            FeedMomentRow,
+            r#"
+            SELECT m.moment_id,
+                   m.user_id,
+                   COALESCE(u.nickname, '') as "nickname!",
+                   u.avatar_url as "avatar_url?",
+                   u.user_type as "user_type: UserType",
+                   COALESCE(m.description, '') as "description!",
+                   COALESCE(
+                       ARRAY_REMOVE(ARRAY_AGG(mi.url ORDER BY mi.sort_order ASC, mi.created_at ASC), NULL),
+                       ARRAY[]::text[]
+                   ) as "images!",
+                   m.mentions,
+                   m.created_at as "created_at!",
+                   m.like_count as "likes_count!",
+                   m.comments_count as "comments_count!",
+                   m.location_name,
+                   ST_X(m.location::geometry) as longitude,
+                   ST_Y(m.location::geometry) as latitude,
+                   ST_Distance(m.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) as distance,
+                   degrees(ST_Azimuth(ST_SetSRID(ST_MakePoint($1, $2), 4326), m.location::geometry)) as bearing_degrees
+            FROM moments m
+            JOIN users u ON m.user_id = u.user_id
+            LEFT JOIN moment_images mi ON m.moment_id = mi.moment_id
+            WHERE m.deleted_at IS NULL
+              AND m.privacy_level = 'public'
+              AND m.location IS NOT NULL
+              AND ST_DWithin(m.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, $3)
+              AND (
+                  ST_Distance(m.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) > $4
+                  OR (ST_Distance(m.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) = $4 AND m.moment_id > $5)
+              )
+            GROUP BY m.moment_id, m.user_id, u.nickname, u.avatar_url, u.user_type,
+                     m.description, m.mentions, m.created_at, m.like_count, m.comments_count,
+                     m.location_name, m.location
+            ORDER BY distance ASC, m.moment_id ASC
+            LIMIT $6
+            "#,
+            viewer_lng,
+            viewer_lat,
+            radius,
+            last_dist,
+            last_id,
+            limit as i64 + 1
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let has_more = rows.len() > limit as usize;
+        let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
+
+        let next_cursor = if has_more {
+            items
+                .last()
+                .map(|r| encode_cursor(&DistanceMomentCursor(r.distance.unwrap_or(0.0), r.moment_id)))
+                .transpose()?
+        } else {
+            None
+        };
+
+        Ok((items, next_cursor))
+    }
+
+    /// 最新流（公共）
+    pub async fn list_latest_feed(
+        &self,
+        viewer_lat: f64,
+        viewer_lng: f64,
+        limit: i32,
+        cursor: Option<String>,
+    ) -> Result<(Vec<FeedMomentRow>, Option<String>)> {
+        let (last_ts, last_id) = if let Some(c) = cursor {
+            decode_cursor::<TimeIdCursor>(&c)?
+        } else {
+            (DateTime::<Utc>::MAX_UTC, Uuid::max())
+        };
+
+        let rows = sqlx::query_as_unchecked!(
+            FeedMomentRow,
+            r#"
+            SELECT m.moment_id,
+                   m.user_id,
+                   COALESCE(u.nickname, '') as "nickname!",
+                   u.avatar_url as "avatar_url?",
+                   u.user_type as "user_type: UserType",
+                   COALESCE(m.description, '') as "description!",
+                   COALESCE(
+                       ARRAY_REMOVE(ARRAY_AGG(mi.url ORDER BY mi.sort_order ASC, mi.created_at ASC), NULL),
+                       ARRAY[]::text[]
+                   ) as "images!",
+                   m.mentions,
+                   m.created_at as "created_at!",
+                   m.like_count as "likes_count!",
+                   m.comments_count as "comments_count!",
+                   m.location_name,
+                   ST_X(m.location::geometry) as longitude,
+                   ST_Y(m.location::geometry) as latitude,
+                   CASE WHEN m.location IS NOT NULL
+                        THEN ST_Distance(m.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography)
+                        ELSE NULL END as distance,
+                   CASE WHEN m.location IS NOT NULL
+                        THEN degrees(ST_Azimuth(ST_SetSRID(ST_MakePoint($1, $2), 4326), m.location::geometry))
+                        ELSE NULL END as bearing_degrees
+            FROM moments m
+            JOIN users u ON m.user_id = u.user_id
+            LEFT JOIN moment_images mi ON m.moment_id = mi.moment_id
+            WHERE m.deleted_at IS NULL
+              AND m.privacy_level = 'public'
+              AND (m.created_at, m.moment_id) < ($3, $4)
+            GROUP BY m.moment_id, m.user_id, u.nickname, u.avatar_url, u.user_type,
+                     m.description, m.mentions, m.created_at, m.like_count, m.comments_count,
+                     m.location_name, m.location
+            ORDER BY m.created_at DESC, m.moment_id DESC
+            LIMIT $5
+            "#,
+            viewer_lng,
+            viewer_lat,
+            last_ts,
+            last_id,
+            limit as i64 + 1
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let has_more = rows.len() > limit as usize;
+        let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
+
+        let next_cursor = if has_more {
+            items
+                .last()
+                .map(|r| encode_cursor(&(r.created_at, r.moment_id)))
+                .transpose()?
+        } else {
+            None
+        };
+
+        Ok((items, next_cursor))
+    }
+
+    /// 热门瞬间（按点赞数）
+    pub async fn get_hot_moments(
+        &self,
+        limit: i64,
+        since: DateTime<Utc>,
+        cursor: Option<String>,
+    ) -> Result<(Vec<FeedMomentRow>, Option<String>)> {
+        #[derive(Debug, Serialize, Deserialize)]
+        struct HotMomentCursor(i32, DateTime<Utc>, Uuid);
+
+        let (last_like, last_ts, last_id) = if let Some(c) = cursor {
+            let HotMomentCursor(like_count, ts, id) = decode_cursor::<HotMomentCursor>(&c)?;
+            (like_count, ts, id)
+        } else {
+            (i32::MAX, DateTime::<Utc>::MAX_UTC, Uuid::max())
+        };
+
+        let rows = sqlx::query_as_unchecked!(
+            FeedMomentRow,
+            r#"
+            SELECT m.moment_id,
+                   m.user_id,
+                   COALESCE(u.nickname, '') as "nickname!",
+                   u.avatar_url as "avatar_url?",
+                   u.user_type as "user_type: UserType",
+                   COALESCE(m.description, '') as "description!",
+                   COALESCE(
+                       ARRAY_REMOVE(ARRAY_AGG(mi.url ORDER BY mi.sort_order ASC, mi.created_at ASC), NULL),
+                       ARRAY[]::text[]
+                   ) as "images!",
+                   m.mentions,
+                   m.created_at as "created_at!",
+                   m.like_count as "likes_count!",
+                   m.comments_count as "comments_count!",
+                   m.location_name,
+                   ST_X(m.location::geometry) as longitude,
+                   ST_Y(m.location::geometry) as latitude,
+                   NULL::float8 as distance,
+                   NULL::float8 as bearing_degrees
+            FROM moments m
+            JOIN users u ON m.user_id = u.user_id
+            LEFT JOIN moment_images mi ON m.moment_id = mi.moment_id
+            WHERE m.deleted_at IS NULL
+              AND m.privacy_level = 'public'
+              AND m.created_at >= $1
+              AND (
+                  m.like_count < $2
+                  OR (m.like_count = $2 AND m.created_at < $3)
+                  OR (m.like_count = $2 AND m.created_at = $3 AND m.moment_id < $4)
+              )
+            GROUP BY m.moment_id, m.user_id, u.nickname, u.avatar_url, u.user_type,
+                     m.description, m.mentions, m.created_at, m.like_count, m.comments_count,
+                     m.location_name, m.location
+            ORDER BY m.like_count DESC, m.created_at DESC, m.moment_id DESC
+            LIMIT $5
+            "#,
+            since,
+            last_like,
+            last_ts,
+            last_id,
+            limit + 1
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let has_more = rows.len() > limit as usize;
+        let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
+
+        let next_cursor = if has_more {
+            items
+                .last()
+                .map(|r| encode_cursor(&HotMomentCursor(r.likes_count, r.created_at, r.moment_id)))
+                .transpose()?
+        } else {
+            None
+        };
+
+        Ok((items, next_cursor))
+    }
+
+    /// 搜索建议：按内容关键字匹配
     pub async fn suggest_by_keyword(
         &self,
         keyword: &str,
@@ -470,173 +604,332 @@ impl MomentRepository {
         limit: i32,
         location: Option<(f64, f64)>,
     ) -> Result<Vec<MomentSuggestRow>> {
-        let search_pattern = format!("%{}%", keyword);
+        let pattern = format!("%{}%", keyword);
+        let (lat, lon) = location
+            .map(|(lat, lon)| (Some(lat), Some(lon)))
+            .unwrap_or((None, None));
 
-        if let Some((lat, lng)) = location {
-            let rows = sqlx::query!(
-                r#"
-                SELECT 
-                    m.moment_id, m.user_id, m.description,
-                    COALESCE(m.images, ARRAY[]::TEXT[]) as "images!",
-                    m.created_at,
-                    u.nickname, u.avatar_url, u.user_type as "user_type!: crate::types::enums::UserType",
-                    ST_Distance(
-                        m.location::geography,
-                        ST_SetSRID(ST_MakePoint($4, $5), 4326)::geography
-                    ) as "distance"
-                FROM moments m
-                JOIN users u ON m.user_id = u.user_id
-                WHERE m.is_deleted = FALSE 
-                  AND u.is_banned = FALSE
-                  AND m.description ILIKE $1
-                  AND (
-                        ($2::BIGINT IS NULL AND m.privacy_level::text = 'public')
-                     OR ($2::BIGINT IS NOT NULL AND (
-                            m.user_id = $2
-                         OR m.privacy_level::text = 'public'
-                         OR (
-                                m.privacy_level::text = 'friends'
-                            AND EXISTS (
-                                SELECT 1
-                                FROM user_follows f1
-                                INNER JOIN user_follows f2
-                                    ON f1.following_id = f2.follower_id
-                                   AND f1.follower_id = f2.following_id
-                                WHERE f1.follower_id = $2
-                                  AND f1.following_id = m.user_id
+        let rows = sqlx::query_as_unchecked!(
+            MomentSuggestRow,
+            r#"
+            SELECT
+                m.moment_id,
+                COALESCE(m.description, '') as "description!",
+                COALESCE(u.nickname, '') as "nickname!",
+                u.avatar_url as "avatar_url?",
+                CASE
+                    WHEN $3::float8 IS NULL OR $4::float8 IS NULL OR m.location IS NULL
+                        THEN NULL
+                    ELSE ST_Distance(m.location, ST_SetSRID(ST_MakePoint($4, $3), 4326)::geography)
+                END as distance
+            FROM moments m
+            JOIN users u ON m.user_id = u.user_id
+            WHERE m.deleted_at IS NULL
+              AND COALESCE(m.description, '') ILIKE $1
+              AND (
+                    ($2::bigint IS NULL AND m.privacy_level = 'public')
+                 OR ($2::bigint IS NOT NULL AND (
+                        m.user_id = $2
+                        OR m.privacy_level = 'public'
+                        OR (
+                            m.privacy_level = 'friends'
+                            AND EXISTS(
+                                SELECT 1 FROM follows f
+                                WHERE f.follower_id = m.user_id AND f.following_id = $2
                             )
-                         )
-                     ))
-                  )
-                  AND (
-                        $2::BIGINT IS NULL
-                     OR NOT EXISTS (
-                            SELECT 1
-                            FROM user_blocks b
-                            WHERE (b.blocker_id = m.user_id AND b.blocked_id = $2)
-                               OR (b.blocker_id = $2 AND b.blocked_id = m.user_id)
                         )
-                  )
-                ORDER BY distance ASC
-                LIMIT $3
-                "#,
-                search_pattern,
-                viewer_id,
-                limit as i64,
-                lng,
-                lat
-            )
-            .fetch_all(&self.pool)
-            .await?;
+                    ))
+                )
+            ORDER BY distance ASC NULLS LAST, m.created_at DESC, m.moment_id DESC
+            LIMIT $5
+            "#,
+            pattern,
+            viewer_id,
+            lat,
+            lon,
+            limit as i64
+        )
+        .fetch_all(&self.pool)
+        .await?;
 
-            Ok(rows
-                .into_iter()
-                .map(|r| MomentSuggestRow {
-                    moment_id: r.moment_id,
-                    user_id: r.user_id,
-                    description: r.description,
-                    images: r.images,
-                    created_at: r.created_at,
-                    nickname: r.nickname,
-                    avatar_url: r.avatar_url,
-                    user_type: r.user_type,
-                    distance: r.distance,
-                })
-                .collect())
-        } else {
-            let rows = sqlx::query!(
-                r#"
-                SELECT 
-                    m.moment_id, m.user_id, m.description,
-                    COALESCE(m.images, ARRAY[]::TEXT[]) as "images!",
-                    m.created_at,
-                    u.nickname, u.avatar_url, u.user_type as "user_type!: crate::types::enums::UserType"
-                FROM moments m
-                JOIN users u ON m.user_id = u.user_id
-                WHERE m.is_deleted = FALSE 
-                  AND u.is_banned = FALSE
-                  AND m.description ILIKE $1
-                  AND (
-                        ($2::BIGINT IS NULL AND m.privacy_level::text = 'public')
-                     OR ($2::BIGINT IS NOT NULL AND (
-                            m.user_id = $2
-                         OR m.privacy_level::text = 'public'
-                         OR (
-                                m.privacy_level::text = 'friends'
-                            AND EXISTS (
-                                SELECT 1
-                                FROM user_follows f1
-                                INNER JOIN user_follows f2
-                                    ON f1.following_id = f2.follower_id
-                                   AND f1.follower_id = f2.following_id
-                                WHERE f1.follower_id = $2
-                                  AND f1.following_id = m.user_id
-                            )
-                         )
-                     ))
-                  )
-                  AND (
-                        $2::BIGINT IS NULL
-                     OR NOT EXISTS (
-                            SELECT 1
-                            FROM user_blocks b
-                            WHERE (b.blocker_id = m.user_id AND b.blocked_id = $2)
-                               OR (b.blocker_id = $2 AND b.blocked_id = m.user_id)
-                        )
-                  )
-                ORDER BY m.created_at DESC
-                LIMIT $3
-                "#,
-                search_pattern,
-                viewer_id,
-                limit as i64
-            )
-            .fetch_all(&self.pool)
-            .await?;
-
-            Ok(rows
-                .into_iter()
-                .map(|r| MomentSuggestRow {
-                    moment_id: r.moment_id,
-                    user_id: r.user_id,
-                    description: r.description,
-                    images: r.images,
-                    created_at: r.created_at,
-                    nickname: r.nickname,
-                    avatar_url: r.avatar_url,
-                    user_type: r.user_type,
-                    distance: None,
-                })
-                .collect())
-        }
+        Ok(rows)
     }
 
-    /// 更新生活瞬间
-    /// 注意：tags 已移至 moment_tags 关联表，更新后需单独调用 TagRepository.set_moment_tags
+    /// 列出指定用户的瞬间
+    pub async fn list_by_user(
+        &self,
+        user_id: i64,
+        limit: i64,
+        cursor: Option<String>,
+    ) -> Result<(Vec<MomentListRow>, Option<String>)> {
+        let (last_ts, last_id) = if let Some(c) = cursor {
+            decode_cursor::<TimeIdCursor>(&c)?
+        } else {
+            (DateTime::<Utc>::MAX_UTC, Uuid::max())
+        };
+
+        let rows = sqlx::query_as_unchecked!(
+            MomentListRow,
+            r#"
+            SELECT m.moment_id, m.description, m.mentions, m.location_name,
+                   ST_X(m.location::geometry) as longitude,
+                   ST_Y(m.location::geometry) as latitude,
+                   m.like_count, m.comments_count, m.created_at
+            FROM moments m
+            WHERE m.user_id = $1 AND m.deleted_at IS NULL
+              AND (m.created_at, m.moment_id) < ($2, $3)
+            ORDER BY m.created_at DESC, m.moment_id DESC
+            LIMIT $4
+            "#,
+            user_id,
+            last_ts,
+            last_id,
+            limit + 1
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let has_more = rows.len() > limit as usize;
+        let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
+
+        let next_cursor = if has_more {
+            items
+                .last()
+                .map(|r| encode_cursor(&(r.created_at, r.moment_id)))
+                .transpose()?
+        } else {
+            None
+        };
+
+        Ok((items, next_cursor))
+    }
+
+
+    /// 按关键字搜索瞬间
+    pub async fn search_by_keyword(
+        &self,
+        kw: &str,
+        lon: f64,
+        lat: f64,
+        limit: i64,
+        cursor: Option<String>,
+    ) -> Result<(Vec<MomentDetailRow>, Option<String>)> {
+        let (last_ts, last_id) = if let Some(c) = cursor {
+            decode_cursor::<TimeIdCursor>(&c)?
+        } else {
+            (DateTime::<Utc>::MAX_UTC, Uuid::max())
+        };
+
+        let pattern = format!("%{}%", kw);
+        let rows = sqlx::query_as_unchecked!(
+            MomentDetailRow,
+            r#"
+            SELECT m.moment_id, m.user_id, m.description, m.mentions, m.location_name, m.privacy_level,
+                   m.view_count, m.like_count, m.comments_count, m.share_count,
+                   m.created_at, m.updated_at,
+                   u.nickname as user_nickname, u.avatar_url as user_avatar_url,
+                   ST_X(m.location::geometry) as longitude,
+                   ST_Y(m.location::geometry) as latitude,
+                   CASE WHEN m.location IS NOT NULL
+                        THEN ST_Distance(m.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography)
+                        ELSE NULL END as distance
+            FROM moments m
+            JOIN users u ON m.user_id = u.user_id
+            WHERE m.deleted_at IS NULL
+              AND m.description ILIKE $1
+              AND (m.created_at, m.moment_id) < ($4, $5)
+            ORDER BY m.created_at DESC, m.moment_id DESC
+            LIMIT $6
+            "#,
+            pattern,
+            lon,
+            lat,
+            last_ts,
+            last_id,
+            limit + 1
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let has_more = rows.len() > limit as usize;
+        let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
+
+        let next_cursor = if has_more {
+            items
+                .last()
+                .map(|r| encode_cursor(&(r.created_at, r.moment_id)))
+                .transpose()?
+        } else {
+            None
+        };
+
+        Ok((items, next_cursor))
+    }
+
+    /// 按标签搜索瞬间
+    pub async fn search_by_tag(
+        &self,
+        tag: &str,
+        lon: f64,
+        lat: f64,
+        limit: i64,
+        cursor: Option<String>,
+    ) -> Result<(Vec<MomentDetailRow>, Option<String>)> {
+        let (last_ts, last_id) = if let Some(c) = cursor {
+            decode_cursor::<TimeIdCursor>(&c)?
+        } else {
+            (DateTime::<Utc>::MAX_UTC, Uuid::max())
+        };
+
+        let rows = sqlx::query_as_unchecked!(
+            MomentDetailRow,
+            r#"
+            SELECT m.moment_id, m.user_id, m.description, m.mentions, m.location_name, m.privacy_level,
+                   m.view_count, m.like_count, m.comments_count, m.share_count,
+                   m.created_at, m.updated_at,
+                   u.nickname as user_nickname, u.avatar_url as user_avatar_url,
+                   ST_X(m.location::geometry) as longitude,
+                   ST_Y(m.location::geometry) as latitude,
+                   CASE WHEN m.location IS NOT NULL
+                        THEN ST_Distance(m.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography)
+                        ELSE NULL END as distance
+            FROM moments m
+            JOIN users u ON m.user_id = u.user_id
+            JOIN moment_tags mt ON m.moment_id = mt.moment_id
+            JOIN tags t ON t.tag_id = mt.tag_id
+            WHERE m.deleted_at IS NULL
+              AND t.name = $1
+              AND (m.created_at, m.moment_id) < ($4, $5)
+            ORDER BY m.created_at DESC, m.moment_id DESC
+            LIMIT $6
+            "#,
+            tag,
+            lon,
+            lat,
+            last_ts,
+            last_id,
+            limit + 1
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let has_more = rows.len() > limit as usize;
+        let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
+
+        let next_cursor = if has_more {
+            items
+                .last()
+                .map(|r| encode_cursor(&(r.created_at, r.moment_id)))
+                .transpose()?
+        } else {
+            None
+        };
+
+        Ok((items, next_cursor))
+    }
+
+    /// 按位置搜索瞬间
+    pub async fn search_by_location(
+        &self,
+        kw: Option<&str>,
+        lon: f64,
+        lat: f64,
+        radius: f64,
+        limit: i64,
+        cursor: Option<String>,
+    ) -> Result<(Vec<MomentDetailRow>, Option<String>)> {
+        #[derive(Debug, Serialize, Deserialize)]
+        struct DistanceMomentCursor(f64, Uuid);
+
+        let (last_dist, last_id) = if let Some(c) = cursor {
+            let DistanceMomentCursor(dist, id) = decode_cursor::<DistanceMomentCursor>(&c)?;
+            (dist, id)
+        } else {
+            (0.0, Uuid::nil())
+        };
+
+        let pattern = kw.map(|v| format!("%{}%", v));
+
+        let rows = sqlx::query_as_unchecked!(
+            MomentDetailRow,
+            r#"
+            SELECT m.moment_id, m.user_id, m.description, m.mentions, m.location_name, m.privacy_level,
+                   m.view_count, m.like_count, m.comments_count, m.share_count,
+                   m.created_at, m.updated_at,
+                   u.nickname as user_nickname, u.avatar_url as user_avatar_url,
+                   ST_X(m.location::geometry) as longitude,
+                   ST_Y(m.location::geometry) as latitude,
+                   ST_Distance(m.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) as distance
+            FROM moments m
+            JOIN users u ON m.user_id = u.user_id
+            WHERE m.deleted_at IS NULL
+              AND m.location IS NOT NULL
+              AND ST_DWithin(m.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, $4)
+              AND ($1::text IS NULL OR m.description ILIKE $1)
+              AND (
+                  ST_Distance(m.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) > $5
+                  OR (ST_Distance(m.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) = $5 AND m.moment_id > $6)
+              )
+            ORDER BY distance ASC, m.moment_id ASC
+            LIMIT $7
+            "#,
+            pattern,
+            lon,
+            lat,
+            radius,
+            last_dist,
+            last_id,
+            limit + 1
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let has_more = rows.len() > limit as usize;
+        let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
+
+        let next_cursor = if has_more {
+            items
+                .last()
+                .map(|r| encode_cursor(&DistanceMomentCursor(r.distance.unwrap_or(0.0), r.moment_id)))
+                .transpose()?
+        } else {
+            None
+        };
+
+        Ok((items, next_cursor))
+    }
+
+    /// 更新瞬间
     pub async fn update(
         &self,
         moment_id: Uuid,
         description: Option<String>,
-        images: Option<Vec<String>>,
         mentions: Option<Vec<i64>>,
-        privacy_level: Option<crate::types::enums::PrivacyLevel>,
+        lon: Option<f64>,
+        lat: Option<f64>,
+        location_name: Option<String>,
+        privacy_level: Option<String>,
     ) -> Result<()> {
-        let privacy_level_str = privacy_level.as_ref().map(|p| p.to_string());
         sqlx::query!(
             r#"
-            UPDATE moments
+            UPDATE moments_partitioned
             SET description = COALESCE($2, description),
-                images = COALESCE($3, images),
-                mentions = COALESCE($4, mentions),
-                privacy_level = COALESCE($5::text::privacy_level, privacy_level),
+                mentions = COALESCE($3, mentions),
+                location = CASE WHEN $4::float8 IS NOT NULL AND $5::float8 IS NOT NULL
+                                THEN ST_SetSRID(ST_MakePoint($4, $5), 4326)::geography
+                                ELSE location END,
+                location_name = COALESCE($6, location_name),
+                privacy_level = COALESCE($7, privacy_level),
                 updated_at = NOW()
             WHERE moment_id = $1
             "#,
             moment_id,
             description,
-            images.as_deref(),
             mentions.as_deref(),
-            privacy_level_str
+            lon,
+            lat,
+            location_name,
+            privacy_level
         )
         .execute(&self.pool)
         .await?;
@@ -644,286 +937,252 @@ impl MomentRepository {
         Ok(())
     }
 
-    /// 更新生活瞬间的位置
-    pub async fn update_location(
-        &self,
-        moment_id: Uuid,
-        latitude: f64,
-        longitude: f64,
-        location_name: String,
-    ) -> Result<()> {
-        sqlx::query!(
+    /// 获取瞬间图片
+    pub async fn list_images(&self, moment_id: Uuid) -> Result<Vec<MomentImageRow>> {
+        let rows = sqlx::query_as!(
+            MomentImageRow,
             r#"
-            UPDATE moments
-            SET latitude = $2,
-                longitude = $3,
-                location_name = $4,
-                updated_at = NOW()
+            SELECT moment_id as "moment_id!", url as "url!", width, height, sort_order
+            FROM moment_images
             WHERE moment_id = $1
-            "#,
-            moment_id,
-            latitude,
-            longitude,
-            location_name
-        )
-        .execute(&self.pool)
-        .await?;
-
-        Ok(())
-    }
-
-    /// 软删除生活瞬间
-    pub async fn soft_delete(&self, moment_id: Uuid) -> Result<()> {
-        sqlx::query!(
-            r#"
-            UPDATE moments
-            SET is_deleted = TRUE, deleted_at = NOW()
-            WHERE moment_id = $1
+            ORDER BY sort_order ASC, created_at ASC
             "#,
             moment_id
         )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows)
+    }
+
+    /// 批量获取瞬间图片
+    pub async fn list_images_batch(
+        &self,
+        moment_ids: &[Uuid],
+    ) -> Result<HashMap<Uuid, Vec<MomentImageRow>>> {
+        if moment_ids.is_empty() {
+            return Ok(HashMap::new());
+        }
+
+        let rows = sqlx::query_as!(
+            MomentImageRow,
+            r#"
+            SELECT moment_id as "moment_id!", url as "url!", width, height, sort_order
+            FROM moment_images
+            WHERE moment_id = ANY($1)
+            ORDER BY moment_id ASC, sort_order ASC, created_at ASC
+            "#,
+            moment_ids
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut map: HashMap<Uuid, Vec<MomentImageRow>> = HashMap::new();
+        for row in rows {
+            map.entry(row.moment_id).or_default().push(row);
+        }
+
+        Ok(map)
+    }
+
+    /// 替换瞬间图片
+    pub async fn replace_images(
+        &self,
+        moment_id: Uuid,
+        images: &[(Uuid, String, Option<i32>, Option<i32>, i32)],
+    ) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+
+        sqlx::query!("DELETE FROM moment_images WHERE moment_id = $1", moment_id)
+            .execute(&mut *tx)
+            .await?;
+
+        for (idx, (file_id, url, width, height, sort_order)) in images.iter().enumerate() {
+            let order = if *sort_order >= 0 { *sort_order } else { idx as i32 };
+            sqlx::query!(
+                r#"
+                INSERT INTO moment_images (moment_id, file_id, url, width, height, sort_order)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                "#,
+                moment_id,
+                file_id,
+                url,
+                *width,
+                *height,
+                order
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        tx.commit().await?;
+        Ok(())
+    }
+
+    /// 点赞列表
+    pub async fn list_likes(
+        &self,
+        moment_id: Uuid,
+        limit: i64,
+        cursor: Option<String>,
+    ) -> Result<(Vec<MomentLikeRow>, Option<String>)> {
+        let last_ts = cursor
+            .and_then(|c| decode_cursor::<DateTime<Utc>>(&c).ok())
+            .unwrap_or(DateTime::<Utc>::MAX_UTC);
+
+        let rows = sqlx::query_as!(
+            MomentLikeRow,
+            r#"
+            SELECT mr.user_id as "user_id!",
+                   u.nickname as "user_nickname?",
+                   u.avatar_url as "user_avatar_url?",
+                   mr.created_at as "created_at!"
+            FROM moment_reactions mr
+            JOIN users u ON mr.user_id = u.user_id
+            WHERE mr.moment_id = $1
+              AND mr.type = 'like'
+              AND mr.created_at < $2
+            ORDER BY mr.created_at DESC
+            LIMIT $3
+            "#,
+            moment_id,
+            last_ts,
+            limit + 1
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let has_more = rows.len() > limit as usize;
+        let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
+
+        let next_cursor = if has_more {
+            items.last().map(|r| encode_cursor(&r.created_at)).transpose()?
+        } else {
+            None
+        };
+
+        Ok((items, next_cursor))
+    }
+
+    pub async fn insert_like(&self, moment_id: Uuid, user_id: i64) -> Result<bool> {
+        let result = sqlx::query!(
+            "INSERT INTO moment_reactions (moment_id, user_id, type) VALUES ($1, $2, 'like') ON CONFLICT DO NOTHING",
+            moment_id,
+            user_id
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(result.rows_affected() > 0)
+    }
+
+    pub async fn delete_like(&self, moment_id: Uuid, user_id: i64) -> Result<()> {
+        sqlx::query!(
+            "DELETE FROM moment_reactions WHERE moment_id = $1 AND user_id = $2 AND type = 'like'",
+            moment_id,
+            user_id
+        )
         .execute(&self.pool)
         .await?;
 
         Ok(())
     }
 
-    /// 点赞瞬间
-    pub async fn like_moment(&self, moment_id: Uuid, user_id: i64) -> Result<bool> {
-        let result = sqlx::query!(
+    pub async fn is_liked(&self, moment_id: Uuid, user_id: i64) -> Result<bool> {
+        let row = sqlx::query_scalar!(
             r#"
-            INSERT INTO moment_likes (moment_id, user_id)
-            VALUES ($1, $2)
-            ON CONFLICT (moment_id, user_id) DO NOTHING
+            SELECT EXISTS(
+                SELECT 1 FROM moment_reactions
+                WHERE moment_id = $1 AND user_id = $2 AND type = 'like'
+            ) as "exists!"
             "#,
             moment_id,
             user_id
         )
-        .execute(&self.pool)
+        .fetch_one(&self.pool)
         .await?;
-        Ok(result.rows_affected() > 0)
+
+        Ok(row)
     }
 
-    /// 取消点赞瞬间
-    pub async fn unlike_moment(&self, moment_id: Uuid, user_id: i64) -> Result<bool> {
-        let result = sqlx::query!(
-            r#"
-            DELETE FROM moment_likes
-            WHERE moment_id = $1 AND user_id = $2
-            "#,
-            moment_id,
-            user_id
-        )
-        .execute(&self.pool)
-        .await?;
-        Ok(result.rows_affected() > 0)
-    }
-
-    /// 收藏瞬间
-    pub async fn add_favorite(&self, moment_id: Uuid, user_id: i64) -> Result<bool> {
-        let result = sqlx::query!(
-            r#"
-            INSERT INTO moment_favorites (moment_id, user_id)
-            VALUES ($1, $2)
-            ON CONFLICT (moment_id, user_id) DO NOTHING
-            "#,
-            moment_id,
-            user_id
-        )
-        .execute(&self.pool)
-        .await?;
-        Ok(result.rows_affected() > 0)
-    }
-
-    /// 取消收藏瞬间
-    pub async fn remove_favorite(&self, moment_id: Uuid, user_id: i64) -> Result<bool> {
-        let result = sqlx::query!(
-            r#"
-            DELETE FROM moment_favorites
-            WHERE moment_id = $1 AND user_id = $2
-            "#,
-            moment_id,
-            user_id
-        )
-        .execute(&self.pool)
-        .await?;
-        Ok(result.rows_affected() > 0)
-    }
-
-    /// 按用户ID查询瞬间列表
-    pub async fn list_by_user(
+    pub async fn batch_check_liked(
         &self,
-        user_id: i64,
-        limit: i32,
-        cursor: Option<String>,
-    ) -> Result<(Vec<MomentSearchRow>, Option<String>)> {
-        let last_id = if let Some(c) = cursor {
-            decode_cursor::<IdCursor>(&c)?
-        } else {
-            i64::MAX
-        };
-
-        // 查询 limit + 1 条以判断是否有更多数据
-        let moments = sqlx::query!(
-            r#"
-            SELECT 
-                m.id, m.moment_id, m.user_id, m.description, 
-                COALESCE(m.images, ARRAY[]::TEXT[]) as "images!",
-                m.mentions,
-                m.privacy_level::text as "privacy_level!",
-                m.latitude, m.longitude, m.location_name, m.created_at,
-                u.nickname, u.avatar_url, u.user_type as "user_type!: crate::types::enums::UserType",
-                (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) as "likes_count!",
-                (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) as "comments_count!"
-            FROM moments m
-            JOIN users u ON m.user_id = u.user_id
-            WHERE m.user_id = $1 AND m.id < $2 AND m.is_deleted = FALSE AND u.is_banned = FALSE
-            ORDER BY m.id DESC
-            LIMIT $3
-            "#,
-            user_id,
-            last_id,
-            (limit + 1) as i64
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        // 判断是否有更多数据
-        let has_more = moments.len() > limit as usize;
-        let moments_to_return: Vec<_> = moments.into_iter().take(limit as usize).collect();
-
-        let next_cursor = if has_more {
-            moments_to_return
-                .last()
-                .map(|m| encode_cursor(&m.id))
-                .transpose()?
-        } else {
-            None
-        };
-
-        Ok((
-            moments_to_return
-                .into_iter()
-                .map(|m| MomentSearchRow {
-                    moment_id: m.moment_id,
-                    user_id: m.user_id,
-                    description: m.description,
-                    images: m.images,
-                    mentions: m.mentions,
-                    privacy_level: m.privacy_level,
-                    latitude: m.latitude,
-                    longitude: m.longitude,
-                    location_name: m.location_name,
-                    created_at: m.created_at,
-                    nickname: m.nickname,
-                    avatar_url: m.avatar_url,
-                    user_type: m.user_type,
-                    likes_count: m.likes_count,
-                    comments_count: m.comments_count,
-                    distance: Some(0.0),
-                    bearing_degrees: Some(0.0),
-                })
-                .collect(),
-            next_cursor,
-        ))
-    }
-
-    /// 按用户ID查询公开瞬间列表（仅 public）
-    pub async fn list_public_by_user(
-        &self,
-        user_id: i64,
-        limit: i32,
-        cursor: Option<String>,
-    ) -> Result<(Vec<MomentSearchRow>, Option<String>)> {
-        let last_id = if let Some(c) = cursor {
-            decode_cursor::<IdCursor>(&c)?
-        } else {
-            i64::MAX
-        };
-
-        // 查询 limit + 1 条以判断是否有更多数据
-        let moments = sqlx::query!(
-            r#"
-            SELECT 
-                m.id, m.moment_id, m.user_id, m.description, 
-                COALESCE(m.images, ARRAY[]::TEXT[]) as "images!",
-                m.mentions,
-                m.privacy_level::text as "privacy_level!",
-                m.latitude, m.longitude, m.location_name, m.created_at,
-                u.nickname, u.avatar_url, u.user_type as "user_type!: crate::types::enums::UserType",
-                (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) as "likes_count!",
-                (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) as "comments_count!"
-            FROM moments m
-            JOIN users u ON m.user_id = u.user_id
-            WHERE m.user_id = $1
-              AND m.privacy_level::text = 'public'
-              AND m.id < $2
-              AND m.is_deleted = FALSE
-              AND u.is_banned = FALSE
-            ORDER BY m.id DESC
-            LIMIT $3
-            "#,
-            user_id,
-            last_id,
-            (limit + 1) as i64
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        // 判断是否有更多数据
-        let has_more = moments.len() > limit as usize;
-        let moments_to_return: Vec<_> = moments.into_iter().take(limit as usize).collect();
-
-        let next_cursor = if has_more {
-            moments_to_return
-                .last()
-                .map(|m| encode_cursor(&m.id))
-                .transpose()?
-        } else {
-            None
-        };
-
-        Ok((
-            moments_to_return
-                .into_iter()
-                .map(|m| MomentSearchRow {
-                    moment_id: m.moment_id,
-                    user_id: m.user_id,
-                    description: m.description,
-                    images: m.images,
-                    mentions: m.mentions,
-                    privacy_level: m.privacy_level,
-                    latitude: m.latitude,
-                    longitude: m.longitude,
-                    location_name: m.location_name,
-                    created_at: m.created_at,
-                    nickname: m.nickname,
-                    avatar_url: m.avatar_url,
-                    user_type: m.user_type,
-                    likes_count: m.likes_count,
-                    comments_count: m.comments_count,
-                    distance: Some(0.0),
-                    bearing_degrees: Some(0.0),
-                })
-                .collect(),
-            next_cursor,
-        ))
-    }
-
-    /// 批量检查用户已点赞的瞬间
-    pub async fn list_liked_ids_by_user(
-        &self,
-        user_id: i64,
         moment_ids: &[Uuid],
-    ) -> Result<Vec<Uuid>> {
+        user_id: i64,
+    ) -> Result<std::collections::HashSet<Uuid>> {
         if moment_ids.is_empty() {
-            return Ok(vec![]);
+            return Ok(std::collections::HashSet::new());
         }
 
         let rows = sqlx::query!(
             r#"
-            SELECT moment_id
-            FROM moment_likes
+            SELECT moment_id as "moment_id!"
+            FROM moment_reactions
+            WHERE user_id = $1 AND moment_id = ANY($2) AND type = 'like'
+            "#,
+            user_id,
+            moment_ids
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.into_iter().map(|r| r.moment_id).collect())
+    }
+
+    pub async fn is_favorited(&self, moment_id: Uuid, user_id: i64) -> Result<bool> {
+        let row = sqlx::query_scalar!(
+            r#"
+            SELECT EXISTS(
+                SELECT 1 FROM moment_favorites
+                WHERE moment_id = $1 AND user_id = $2
+            ) as "exists!"
+            "#,
+            moment_id,
+            user_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(row)
+    }
+
+    pub async fn insert_favorite(&self, moment_id: Uuid, user_id: i64) -> Result<bool> {
+        let result = sqlx::query!(
+            "INSERT INTO moment_favorites (moment_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+            moment_id,
+            user_id
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(result.rows_affected() > 0)
+    }
+
+    pub async fn delete_favorite(&self, moment_id: Uuid, user_id: i64) -> Result<()> {
+        sqlx::query!(
+            "DELETE FROM moment_favorites WHERE moment_id = $1 AND user_id = $2",
+            moment_id,
+            user_id
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn batch_check_favorited(
+        &self,
+        moment_ids: &[Uuid],
+        user_id: i64,
+    ) -> Result<std::collections::HashSet<Uuid>> {
+        if moment_ids.is_empty() {
+            return Ok(std::collections::HashSet::new());
+        }
+
+        let rows = sqlx::query!(
+            r#"
+            SELECT moment_id as "moment_id!"
+            FROM moment_favorites
             WHERE user_id = $1 AND moment_id = ANY($2)
             "#,
             user_id,
@@ -935,864 +1194,164 @@ impl MomentRepository {
         Ok(rows.into_iter().map(|r| r.moment_id).collect())
     }
 
-    /// 按位置搜索瞬间（带 PostGIS 距离计算）
-    pub async fn search_by_location(
-        &self,
-        keyword: Option<&str>,
-        latitude: f64,
-        longitude: f64,
-        viewer_id: Option<i64>,
-        radius_meters: f64,
-        limit: i32,
-        cursor: Option<String>,
-    ) -> Result<(Vec<MomentSearchRow>, Option<String>)> {
-        // Keyset Pagination: (distance, id)
-        let (last_dist, last_id) = if let Some(c) = cursor {
-            decode_cursor::<DistanceCursor>(&c)?
-        } else {
-            (0.0, 0)
-        };
-
-        let search_pattern = keyword.map(|k| format!("%{}%", k));
-
-        let rows = sqlx::query!(
-            r#"
-            SELECT 
-                m.id, m.moment_id, m.user_id, m.description,
-                m.latitude, m.longitude, m.location_name,
-                COALESCE(m.images, ARRAY[]::TEXT[]) as "images!",
-                m.mentions,
-                m.privacy_level::text as "privacy_level!",
-                m.created_at,
-                u.nickname, u.avatar_url, u.user_type as "user_type!: crate::types::enums::UserType",
-                (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) as "likes_count!",
-                (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) as "comments_count!",
-                calc.dist as "distance",
-                COALESCE(
-                    degrees(ST_Azimuth(
-                        ST_SetSRID(ST_MakePoint($2, $1), 4326),
-                        m.location
-                    )),
-                    0.0
-                ) as "bearing_degrees"
-            FROM moments m
-            CROSS JOIN LATERAL (
-                SELECT ST_Distance(
-                    m.location::geography, 
-                    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography
-                ) as dist
-            ) calc
-            JOIN users u ON m.user_id = u.user_id
-            WHERE m.is_deleted = FALSE 
-              AND u.is_banned = FALSE
-              AND ($7::TEXT IS NULL OR m.description ILIKE $7)
-              AND (
-                    ($8::BIGINT IS NULL AND m.privacy_level::text = 'public')
-                 OR ($8::BIGINT IS NOT NULL AND (
-                        m.user_id = $8
-                     OR m.privacy_level::text = 'public'
-                     OR (
-                            m.privacy_level::text = 'friends'
-                        AND EXISTS (
-                            SELECT 1
-                            FROM user_follows f1
-                            INNER JOIN user_follows f2
-                                ON f1.following_id = f2.follower_id
-                               AND f1.follower_id = f2.following_id
-                            WHERE f1.follower_id = $8
-                              AND f1.following_id = m.user_id
-                        )
-                     )
-                 ))
-              )
-              AND (
-                    $8::BIGINT IS NULL
-                 OR NOT EXISTS (
-                        SELECT 1
-                        FROM user_blocks b
-                        WHERE (b.blocker_id = m.user_id AND b.blocked_id = $8)
-                           OR (b.blocker_id = $8 AND b.blocked_id = m.user_id)
-                    )
-              )
-              AND ST_DWithin(
-                  m.location::geography,
-                  ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography,
-                  $3
-              )
-              -- Keyset Pagination: (distance, id) > (last_dist, last_id)
-              AND (
-                  calc.dist > $4
-                  OR (
-                      calc.dist = $4
-                      AND m.id > $5
-                  )
-              )
-            ORDER BY calc.dist ASC, m.id ASC
-            LIMIT $6
-            "#,
-            latitude,
-            longitude,
-            radius_meters,
-            last_dist,
-            last_id,
-            (limit + 1) as i64,  // 使用 limit + 1 来判断是否有更多数据
-            search_pattern,
-            viewer_id
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        // 判断是否有更多数据
-        let has_more = rows.len() > limit as usize;
-        let rows_to_return: Vec<_> = rows.into_iter().take(limit as usize).collect();
-
-        // 只有在 has_more 为 true 时才生成 cursor
-        let next_cursor = if has_more {
-            rows_to_return
-                .last()
-                .map(|r| encode_cursor(&(r.distance, r.id)))
-                .transpose()?
-        } else {
-            None
-        };
-
-        Ok((
-            rows_to_return
-                .into_iter()
-                .map(|r| MomentSearchRow {
-                    moment_id: r.moment_id,
-                    user_id: r.user_id,
-                    description: r.description,
-                    images: r.images,
-                    mentions: r.mentions,
-                    privacy_level: r.privacy_level,
-                    latitude: r.latitude,
-                    longitude: r.longitude,
-                    location_name: r.location_name,
-                    created_at: r.created_at,
-                    nickname: r.nickname,
-                    avatar_url: r.avatar_url,
-                    user_type: r.user_type,
-                    likes_count: r.likes_count,
-                    comments_count: r.comments_count,
-                    distance: r.distance,
-                    bearing_degrees: r.bearing_degrees,
-                })
-                .collect(),
-            next_cursor,
-        ))
-    }
-
-    /// 按标签搜索瞬间
-    /// 通过 moment_tags 和 tags 关联表进行搜索
-    pub async fn search_by_tag(
-        &self,
-        tag_name: &str,
-        latitude: f64,
-        longitude: f64,
-        viewer_id: Option<i64>,
-        limit: i32,
-        cursor: Option<String>,
-    ) -> Result<(Vec<MomentSearchRow>, Option<String>)> {
-        let last_id = if let Some(c) = cursor {
-            decode_cursor::<IdCursor>(&c)?
-        } else {
-            i64::MAX
-        };
-
-        let moments = sqlx::query!(
-            r#"
-            SELECT 
-                m.id, m.moment_id, m.user_id, m.description, 
-                COALESCE(m.images, ARRAY[]::TEXT[]) as "images!",
-                m.mentions,
-                m.privacy_level::text as "privacy_level!",
-                m.latitude, m.longitude, m.location_name, m.created_at,
-                u.nickname, u.avatar_url, u.user_type as "user_type!: crate::types::enums::UserType",
-                (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) as "likes_count!",
-                (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) as "comments_count!",
-                ST_Distance(
-                    m.location::geography,
-                    ST_SetSRID(ST_MakePoint($4, $5), 4326)::geography
-                ) as "distance",
-                COALESCE(degrees(ST_Azimuth(
-                    ST_SetSRID(ST_MakePoint($4, $5), 4326),
-                    m.location
-                )), 0) as "bearing_degrees"
-            FROM moments m
-            INNER JOIN moment_tags mt ON m.moment_id = mt.moment_id
-            INNER JOIN tags t ON mt.tag_id = t.id
-            JOIN users u ON m.user_id = u.user_id
-            WHERE t.name = $1 AND m.id < $2 AND m.is_deleted = FALSE AND u.is_banned = FALSE
-              AND (
-                    ($6::BIGINT IS NULL AND m.privacy_level::text = 'public')
-                 OR ($6::BIGINT IS NOT NULL AND (
-                        m.user_id = $6
-                     OR m.privacy_level::text = 'public'
-                     OR (
-                            m.privacy_level::text = 'friends'
-                        AND EXISTS (
-                            SELECT 1
-                            FROM user_follows f1
-                            INNER JOIN user_follows f2
-                                ON f1.following_id = f2.follower_id
-                               AND f1.follower_id = f2.following_id
-                            WHERE f1.follower_id = $6
-                              AND f1.following_id = m.user_id
-                        )
-                     )
-                 ))
-              )
-              AND (
-                    $6::BIGINT IS NULL
-                 OR NOT EXISTS (
-                        SELECT 1
-                        FROM user_blocks b
-                        WHERE (b.blocker_id = m.user_id AND b.blocked_id = $6)
-                           OR (b.blocker_id = $6 AND b.blocked_id = m.user_id)
-                    )
-              )
-            ORDER BY m.id DESC
-            LIMIT $3
-            "#,
-            tag_name,
-            last_id,
-            (limit + 1) as i64,  // 使用 limit + 1 来判断是否有更多数据
-            longitude,
-            latitude,
-            viewer_id
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        // 判断是否有更多数据
-        let has_more = moments.len() > limit as usize;
-        let moments_to_return: Vec<_> = moments.into_iter().take(limit as usize).collect();
-
-        let next_cursor = if has_more {
-            moments_to_return
-                .last()
-                .map(|m| encode_cursor(&m.id))
-                .transpose()?
-        } else {
-            None
-        };
-
-        Ok((
-            moments_to_return
-                .into_iter()
-                .map(|m| MomentSearchRow {
-                    moment_id: m.moment_id,
-                    user_id: m.user_id,
-                    description: m.description,
-                    images: m.images,
-                    mentions: m.mentions,
-                    privacy_level: m.privacy_level,
-                    latitude: m.latitude,
-                    longitude: m.longitude,
-                    location_name: m.location_name,
-                    created_at: m.created_at,
-                    nickname: m.nickname,
-                    avatar_url: m.avatar_url,
-                    user_type: m.user_type,
-                    likes_count: m.likes_count,
-                    comments_count: m.comments_count,
-                    distance: m.distance,
-                    bearing_degrees: m.bearing_degrees,
-                })
-                .collect(),
-            next_cursor,
-        ))
-    }
-
-    /// 获取用户收藏列表
-    pub async fn list_favorites(
+    pub async fn list_favorited_moments(
         &self,
         user_id: i64,
-        latitude: f64,
-        longitude: f64,
-        limit: i32,
+        limit: i64,
         cursor: Option<String>,
-    ) -> Result<(Vec<(MomentSearchRow, DateTime<Utc>)>, Option<String>)> {
+    ) -> Result<(Vec<MomentDetailRow>, Option<String>)> {
         let (last_ts, last_id) = if let Some(c) = cursor {
-            decode_cursor::<(DateTime<Utc>, i64)>(&c)?
+            decode_cursor::<TimeIdCursor>(&c)?
         } else {
-            (DateTime::<Utc>::MAX_UTC, i64::MAX)
+            (DateTime::<Utc>::MAX_UTC, Uuid::max())
         };
 
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as_unchecked!(
+            MomentDetailRow,
             r#"
-            SELECT 
-                m.id, m.moment_id, m.user_id, m.description, 
-                COALESCE(m.images, ARRAY[]::TEXT[]) as "images!",
-                m.mentions,
-                m.privacy_level::text as "privacy_level!",
-                m.latitude, m.longitude, m.location_name, m.created_at,
-                u.nickname, u.avatar_url, u.user_type as "user_type!: crate::types::enums::UserType",
-                (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) as "likes_count!",
-                (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) as "comments_count!",
-                mf.created_at as favorited_at,
-                ST_Distance(
-                    m.location::geography,
-                    ST_SetSRID(ST_MakePoint($5, $6), 4326)::geography
-                ) as "distance",
-                COALESCE(degrees(ST_Azimuth(
-                    ST_SetSRID(ST_MakePoint($5, $6), 4326),
-                    m.location
-                )), 0) as "bearing_degrees"
-            FROM moments m
-            JOIN moment_favorites mf ON m.moment_id = mf.moment_id
+            SELECT m.moment_id, m.user_id, m.description, m.mentions, m.location_name, m.privacy_level,
+                   m.view_count, m.like_count, m.comments_count, m.share_count,
+                   m.created_at, m.updated_at,
+                   u.nickname as user_nickname, u.avatar_url as user_avatar_url,
+                   ST_X(m.location::geometry) as longitude,
+                   ST_Y(m.location::geometry) as latitude,
+                   NULL::float8 as distance
+            FROM moment_favorites mf
+            JOIN moments m ON m.moment_id = mf.moment_id
             JOIN users u ON m.user_id = u.user_id
-            WHERE mf.user_id = $1 
-              AND (mf.created_at < $2 OR (mf.created_at = $2 AND m.id < $3))
-              AND m.is_deleted = FALSE AND u.is_banned = FALSE
-            ORDER BY mf.created_at DESC, m.id DESC
+            WHERE mf.user_id = $1
+              AND (mf.created_at, m.moment_id) < ($2, $3)
+              AND m.deleted_at IS NULL
+            ORDER BY mf.created_at DESC, m.moment_id DESC
             LIMIT $4
             "#,
             user_id,
             last_ts,
-            last_id,
-            (limit + 1) as i64,
-            longitude,
-            latitude
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        // 判断是否有更多数据
-        let has_more = rows.len() > limit as usize;
-        let rows_to_return: Vec<_> = rows.into_iter().take(limit as usize).collect();
-
-        let next_cursor = if has_more {
-            rows_to_return
-                .last()
-                .map(|r| encode_cursor(&(r.favorited_at, r.id)))
-                .transpose()?
-        } else {
-            None
-        };
-
-        let results = rows_to_return
-            .into_iter()
-            .map(|r| {
-                (
-                    MomentSearchRow {
-                        moment_id: r.moment_id,
-                        user_id: r.user_id,
-                        description: r.description,
-                        images: r.images,
-                        mentions: r.mentions,
-                        privacy_level: r.privacy_level,
-                        latitude: r.latitude,
-                        longitude: r.longitude,
-                        location_name: r.location_name,
-                        created_at: r.created_at,
-                        nickname: r.nickname,
-                        avatar_url: r.avatar_url,
-                        user_type: r.user_type,
-                        likes_count: r.likes_count,
-                        comments_count: r.comments_count,
-                        distance: r.distance,
-                        bearing_degrees: r.bearing_degrees,
-                    },
-                    r.favorited_at,
-                )
-            })
-            .collect();
-
-        Ok((results, next_cursor))
-    }
-
-    /// 检查用户是否点赞了瞬间
-    pub async fn is_liked_by(&self, moment_id: Uuid, user_id: i64) -> Result<bool> {
-        let exists = sqlx::query_scalar!(
-            r#"
-            SELECT EXISTS(
-                SELECT 1
-                FROM moment_likes
-                WHERE moment_id = $1 AND user_id = $2
-            ) as "exists!"
-            "#,
-            moment_id,
-            user_id
-        )
-        .fetch_one(&self.pool)
-        .await?;
-        Ok(exists)
-    }
-
-    /// 检查用户是否收藏了瞬间
-    pub async fn is_favorited_by(&self, moment_id: Uuid, user_id: i64) -> Result<bool> {
-        let exists = sqlx::query_scalar!(
-            r#"
-            SELECT EXISTS(
-                SELECT 1
-                FROM moment_favorites
-                WHERE moment_id = $1 AND user_id = $2
-            ) as "exists!"
-            "#,
-            moment_id,
-            user_id
-        )
-        .fetch_one(&self.pool)
-        .await?;
-        Ok(exists)
-    }
-
-    /// 批量检查用户对多个瞬间的点赞状态
-    /// 返回用户已点赞的瞬间 ID 集合
-    pub async fn batch_check_liked(
-        &self,
-        moment_ids: &[Uuid],
-        user_id: i64,
-    ) -> Result<std::collections::HashSet<Uuid>> {
-        if moment_ids.is_empty() {
-            return Ok(std::collections::HashSet::new());
-        }
-
-        let liked_ids = sqlx::query_scalar!(
-            r#"
-            SELECT moment_id FROM moment_likes
-            WHERE moment_id = ANY($1) AND user_id = $2
-            "#,
-            moment_ids,
-            user_id
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(liked_ids.into_iter().collect())
-    }
-
-    /// 批量检查用户对多个瞬间的收藏状态
-    /// 返回用户已收藏的瞬间 ID 集合
-    pub async fn batch_check_favorited(
-        &self,
-        moment_ids: &[Uuid],
-        user_id: i64,
-    ) -> Result<std::collections::HashSet<Uuid>> {
-        if moment_ids.is_empty() {
-            return Ok(std::collections::HashSet::new());
-        }
-
-        let favorited_ids = sqlx::query_scalar!(
-            r#"
-            SELECT moment_id FROM moment_favorites
-            WHERE moment_id = ANY($1) AND user_id = $2
-            "#,
-            moment_ids,
-            user_id
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(favorited_ids.into_iter().collect())
-    }
-
-    /// 获取瞬间点赞列表
-    pub async fn list_likes(
-        &self,
-        moment_id: Uuid,
-        limit: i64,
-        cursor: Option<String>,
-    ) -> Result<(Vec<MomentLikeRow>, Option<String>)> {
-        let last_id = if let Some(c) = cursor {
-            decode_cursor::<IdCursor>(&c)?
-        } else {
-            i64::MAX
-        };
-
-        // 查询 limit + 1 条以判断是否有更多数据
-        let rows = sqlx::query_as!(
-            MomentLikeRow,
-            r#"
-            SELECT id, moment_id, user_id, created_at
-            FROM moment_likes
-            WHERE moment_id = $1 AND id < $2
-            ORDER BY id DESC
-            LIMIT $3
-            "#,
-            moment_id,
             last_id,
             limit + 1
         )
         .fetch_all(&self.pool)
         .await?;
 
-        crate::utils::pagination::paginate_with_limit_plus_one(rows, limit as i32, |l| {
-            encode_cursor(&l.id)
-        })
-    }
-
-    /// 批量获取瞬间的点赞和评论数量
-    pub async fn get_stats_batch(
-        &self,
-        moment_ids: &[Uuid],
-    ) -> Result<std::collections::HashMap<Uuid, (i64, i64)>> {
-        if moment_ids.is_empty() {
-            return Ok(std::collections::HashMap::new());
-        }
-
-        let rows = sqlx::query_as_unchecked!(
-            MomentStatsRow,
-            r#"
-            SELECT 
-                m.moment_id,
-                COALESCE(l.likes_count, 0) as likes_count,
-                COALESCE(c.comments_count, 0) as comments_count
-            FROM unnest($1::uuid[]) as m(moment_id)
-            LEFT JOIN (
-                SELECT moment_id, COUNT(*) as likes_count
-                FROM moment_likes
-                WHERE moment_id = ANY($1)
-                GROUP BY moment_id
-            ) l ON m.moment_id = l.moment_id
-            LEFT JOIN (
-                SELECT moment_id, COUNT(*) as comments_count
-                FROM comments
-                WHERE is_deleted = FALSE AND moment_id = ANY($1)
-                GROUP BY moment_id
-            ) c ON m.moment_id = c.moment_id
-            "#,
-            moment_ids
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(rows
-            .into_iter()
-            .map(|r| (r.moment_id, (r.likes_count, r.comments_count)))
-            .collect())
-    }
-
-    /// 获取最新瞬间列表（带用户信息、统计数据和距离，用于 Feed）
-    pub async fn list_latest_feed(
-        &self,
-        user_lat: f64,
-        user_lng: f64,
-        limit: i32,
-        cursor: Option<String>,
-    ) -> Result<(Vec<MomentSearchRow>, Option<String>)> {
-        let (last_ts, last_id) = if let Some(c) = cursor {
-            decode_cursor::<(DateTime<Utc>, i64)>(&c)?
-        } else {
-            (DateTime::<Utc>::MAX_UTC, i64::MAX)
-        };
-
-        let rows = sqlx::query!(
-            r#"
-            SELECT 
-                m.id, m.moment_id, m.user_id, m.description,
-                m.latitude, m.longitude, m.location_name,
-                COALESCE(m.images, ARRAY[]::TEXT[]) as "images!",
-                m.mentions,
-                m.privacy_level::text as "privacy_level!",
-                m.created_at,
-                u.nickname, u.avatar_url, u.user_type as "user_type!: crate::types::enums::UserType",
-                (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) as "likes_count!",
-                (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) as "comments_count!",
-                ST_Distance(
-                    m.location::geography,
-                    ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
-                ) as "distance",
-                COALESCE(degrees(ST_Azimuth(
-                    ST_SetSRID(ST_MakePoint($1, $2), 4326),
-                    m.location
-                )), 0) as "bearing_degrees"
-            FROM moments m
-            JOIN users u ON m.user_id = u.user_id
-            WHERE m.is_deleted = FALSE AND u.is_banned = FALSE
-              AND (m.created_at < $3 OR (m.created_at = $3 AND m.id < $4))
-            ORDER BY m.created_at DESC, m.id DESC
-            LIMIT $5
-            "#,
-            user_lng,
-            user_lat,
-            last_ts,
-            last_id,
-            (limit + 1) as i64  // 使用 limit + 1 来判断是否有更多数据
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        // 判断是否有更多数据
         let has_more = rows.len() > limit as usize;
         let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
 
         let next_cursor = if has_more {
             items
                 .last()
-                .map(|r| encode_cursor(&(r.created_at, r.id)))
+                .map(|r| encode_cursor(&(r.created_at, r.moment_id)))
                 .transpose()?
         } else {
             None
         };
 
-        Ok((
-            items
-                .into_iter()
-                .map(|r| MomentSearchRow {
-                    moment_id: r.moment_id,
-                    user_id: r.user_id,
-                    description: r.description,
-                    images: r.images,
-                    mentions: r.mentions,
-                    privacy_level: r.privacy_level,
-                    latitude: r.latitude,
-                    longitude: r.longitude,
-                    location_name: r.location_name,
-                    created_at: r.created_at,
-                    nickname: r.nickname,
-                    avatar_url: r.avatar_url,
-                    user_type: r.user_type,
-                    likes_count: r.likes_count,
-                    comments_count: r.comments_count,
-                    distance: r.distance,
-                    bearing_degrees: r.bearing_degrees,
-                })
-                .collect(),
-            next_cursor,
-        ))
+        Ok((items, next_cursor))
     }
 
-    /// 获取关注用户发布的瞬间（用于 Feed，带距离计算）
-    pub async fn get_following_feed(
-        &self,
-        user_id: i64,
-        user_lat: f64,
-        user_lng: f64,
-        limit: i32,
-        cursor: Option<String>,
-    ) -> Result<(Vec<MomentSearchRow>, Option<String>)> {
-        let (last_ts, last_id) = if let Some(c) = cursor {
-            decode_cursor::<(DateTime<Utc>, i64)>(&c)?
-        } else {
-            (DateTime::<Utc>::MAX_UTC, i64::MAX)
-        };
-
-        let rows = sqlx::query!(
-            r#"
-            SELECT 
-                m.id, m.moment_id, m.user_id, m.description,
-                m.latitude, m.longitude, m.location_name,
-                COALESCE(m.images, ARRAY[]::TEXT[]) as "images!",
-                m.mentions,
-                m.privacy_level::text as "privacy_level!",
-                m.created_at,
-                u.nickname, u.avatar_url, u.user_type as "user_type!: crate::types::enums::UserType",
-                (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) as "likes_count!",
-                (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) as "comments_count!",
-                ST_Distance(
-                    m.location::geography,
-                    ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography
-                ) as "distance",
-                COALESCE(degrees(ST_Azimuth(
-                    ST_SetSRID(ST_MakePoint($2, $3), 4326),
-                    m.location
-                )), 0) as "bearing_degrees"
-            FROM moments m
-            JOIN users u ON m.user_id = u.user_id
-            JOIN user_follows f ON m.user_id = f.following_id AND f.follower_id = $1
-            WHERE m.is_deleted = FALSE AND u.is_banned = FALSE
-              AND (m.created_at < $4 OR (m.created_at = $4 AND m.id < $5))
-            ORDER BY m.created_at DESC, m.id DESC
-            LIMIT $6
-            "#,
-            user_id,
-            user_lng,
-            user_lat,
-            last_ts,
-            last_id,
-            limit as i64
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        let next_cursor = rows
-            .last()
-            .map(|r| encode_cursor(&(r.created_at, r.id)))
-            .transpose()?;
-
-        Ok((
-            rows.into_iter()
-                .map(|r| MomentSearchRow {
-                    moment_id: r.moment_id,
-                    user_id: r.user_id,
-                    description: r.description,
-                    images: r.images,
-                    mentions: r.mentions,
-                    privacy_level: r.privacy_level,
-                    latitude: r.latitude,
-                    longitude: r.longitude,
-                    location_name: r.location_name,
-                    created_at: r.created_at,
-                    nickname: r.nickname,
-                    avatar_url: r.avatar_url,
-                    user_type: r.user_type,
-                    likes_count: r.likes_count,
-                    comments_count: r.comments_count,
-                    distance: r.distance,
-                    bearing_degrees: r.bearing_degrees,
-                })
-                .collect(),
-            next_cursor,
-        ))
-    }
-
-    /// 获取附近的瞬间（用于 Feed，带距离计算）
-    pub async fn get_nearby_feed(
-        &self,
-        user_lat: f64,
-        user_lng: f64,
-        radius: f64,
-        limit: i32,
-        cursor: Option<String>,
-    ) -> Result<(Vec<MomentSearchRow>, Option<String>)> {
-        // Reuse search_by_location logic without keyword
-        self.search_by_location(None, user_lat, user_lng, None, radius, limit, cursor)
-            .await
-    }
-
-    /// 获取热门瞬间（用于 Feed trending，距离设为 0）
-    pub async fn get_hot_moments(
-        &self,
-        limit: i32,
-        since: DateTime<Utc>,
-        cursor: Option<String>,
-    ) -> Result<(Vec<MomentSearchRow>, Option<String>)> {
-        // Keyset Pagination: (score, id) where score = likes + comments * 2
-        // We order by score DESC, id DESC
-        let (last_score, last_id) = if let Some(c) = cursor {
-            decode_cursor::<(i64, i64)>(&c)?
-        } else {
-            (i64::MAX, i64::MAX)
-        };
-
-        let rows = sqlx::query!(
-            r#"
-            SELECT 
-                m.id, m.moment_id, m.user_id, m.description,
-                m.latitude, m.longitude, m.location_name,
-                COALESCE(m.images, ARRAY[]::TEXT[]) as "images!",
-                m.mentions,
-                m.privacy_level::text as "privacy_level!",
-                m.created_at,
-                u.nickname, u.avatar_url, u.user_type as "user_type!: crate::types::enums::UserType",
-                (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) as "likes_count!",
-                (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) as "comments_count!",
-                (
-                    (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) + 
-                    (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) * 2
-                ) as "score!"
-            FROM moments m
-            JOIN users u ON m.user_id = u.user_id
-            WHERE m.is_deleted = FALSE 
-              AND u.is_banned = FALSE
-              AND m.created_at >= $2
-              AND (
-                  (
-                    (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) + 
-                    (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) * 2
-                  ) < $3
-                  OR (
-                      (
-                        (SELECT COUNT(*) FROM moment_likes ml WHERE ml.moment_id = m.moment_id) + 
-                        (SELECT COUNT(*) FROM comments mc WHERE mc.moment_id = m.moment_id AND mc.is_deleted = FALSE) * 2
-                      ) = $3
-                      AND m.id < $4
-                  )
-              )
-            ORDER BY "score!" DESC, m.id DESC
-            LIMIT $1
-            "#,
-            (limit + 1) as i64,
-            since,
-            last_score,
-            last_id
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        // 判断是否有更多数据
-        let has_more = rows.len() > limit as usize;
-        let rows_to_return: Vec<_> = rows.into_iter().take(limit as usize).collect();
-
-        let next_cursor = if has_more {
-            rows_to_return
-                .last()
-                .map(|r| encode_cursor(&(r.score, r.id)))
-                .transpose()?
-        } else {
-            None
-        };
-
-        Ok((
-            rows_to_return
-                .into_iter()
-                .map(|r| MomentSearchRow {
-                    moment_id: r.moment_id,
-                    user_id: r.user_id,
-                    description: r.description,
-                    images: r.images,
-                    mentions: r.mentions,
-                    privacy_level: r.privacy_level,
-                    latitude: r.latitude,
-                    longitude: r.longitude,
-                    location_name: r.location_name,
-                    created_at: r.created_at,
-                    nickname: r.nickname,
-                    avatar_url: r.avatar_url,
-                    user_type: r.user_type,
-                    likes_count: r.likes_count,
-                    comments_count: r.comments_count,
-                    distance: Some(0.0),
-                    bearing_degrees: Some(0.0),
-                })
-                .collect(),
-            next_cursor,
-        ))
-    }
-
-    /// 获取用户点赞的瞬间ID列表 (返回Row以便分页)
-    pub async fn get_user_liked_moments(
+    pub async fn list_user_liked_moments(
         &self,
         user_id: i64,
         limit: i64,
         cursor: Option<String>,
-    ) -> Result<(Vec<MomentLikeRow>, Option<String>)> {
-        let last_id = if let Some(c) = cursor {
-            decode_cursor::<IdCursor>(&c)?
+    ) -> Result<(Vec<MomentDetailRow>, Option<String>)> {
+        let (last_ts, last_id) = if let Some(c) = cursor {
+            decode_cursor::<TimeIdCursor>(&c)?
         } else {
-            i64::MAX
+            (DateTime::<Utc>::MAX_UTC, Uuid::max())
         };
 
-        // 查询 limit + 1 条以判断是否有更多数据
-        let rows = sqlx::query_as!(
-            MomentLikeRow,
+        let rows = sqlx::query_as_unchecked!(
+            MomentDetailRow,
             r#"
-            SELECT id, moment_id, user_id, created_at
-            FROM moment_likes
-            WHERE user_id = $1 AND id < $2
-            ORDER BY id DESC
-            LIMIT $3
+            SELECT m.moment_id, m.user_id, m.description, m.mentions, m.location_name, m.privacy_level,
+                   m.view_count, m.like_count, m.comments_count, m.share_count,
+                   m.created_at, m.updated_at,
+                   u.nickname as user_nickname, u.avatar_url as user_avatar_url,
+                   ST_X(m.location::geometry) as longitude,
+                   ST_Y(m.location::geometry) as latitude,
+                   NULL::float8 as distance
+            FROM moment_reactions mr
+            JOIN moments m ON m.moment_id = mr.moment_id
+            JOIN users u ON m.user_id = u.user_id
+            WHERE mr.user_id = $1
+              AND mr.type = 'like'
+              AND (mr.created_at, m.moment_id) < ($2, $3)
+              AND m.deleted_at IS NULL
+            ORDER BY mr.created_at DESC, m.moment_id DESC
+            LIMIT $4
             "#,
             user_id,
+            last_ts,
             last_id,
             limit + 1
         )
         .fetch_all(&self.pool)
         .await?;
 
-        crate::utils::pagination::paginate_with_limit_plus_one(rows, limit as i32, |r| {
-            encode_cursor(&r.id)
-        })
-    }
-}
+        let has_more = rows.len() > limit as usize;
+        let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
 
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
-pub struct MomentLikeRow {
-    pub id: i64,
-    pub moment_id: Uuid,
-    pub user_id: i64,
-    pub created_at: DateTime<Utc>,
+        let next_cursor = if has_more {
+            items
+                .last()
+                .map(|r| encode_cursor(&(r.created_at, r.moment_id)))
+                .transpose()?
+        } else {
+            None
+        };
+
+        Ok((items, next_cursor))
+    }
+
+    /// 软删除动态
+    pub async fn delete(&self, moment_id: Uuid) -> Result<()> {
+        sqlx::query!(
+            "UPDATE moments_partitioned SET deleted_at = NOW() WHERE moment_id = $1",
+            moment_id
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn exists(&self, moment_id: Uuid) -> Result<bool> {
+        let exists = sqlx::query_scalar!(
+            "SELECT EXISTS(SELECT 1 FROM moments WHERE moment_id = $1 AND deleted_at IS NULL) as \"exists!\"",
+            moment_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(exists)
+    }
+
+    pub async fn list_moment_ids_after(
+        &self,
+        last_row_id: i64,
+        limit: i64,
+    ) -> Result<Vec<(i64, Uuid)>> {
+        #[derive(Debug, FromRow)]
+        struct MomentIdMapRow {
+            row_id: i64,
+            moment_id: Uuid,
+        }
+
+        let rows = sqlx::query_as!(
+            MomentIdMapRow,
+            r#"
+            SELECT (EXTRACT(EPOCH FROM created_at) * 1000)::bigint as "row_id!",
+                   moment_id as "moment_id!"
+            FROM moment_id_map
+            WHERE (EXTRACT(EPOCH FROM created_at) * 1000)::bigint > $1
+            ORDER BY created_at ASC
+            LIMIT $2
+            "#,
+            last_row_id,
+            limit
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.into_iter().map(|r| (r.row_id, r.moment_id)).collect())
+    }
 }

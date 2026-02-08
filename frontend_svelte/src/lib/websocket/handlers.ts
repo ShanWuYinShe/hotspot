@@ -397,7 +397,7 @@ class WebSocketEventHandlers {
 				window.dispatchEvent(
 					new CustomEvent('group-member-left', {
 						detail: {
-							group_chat_id: payload.group_chat_id,
+							group_id: payload.group_id,
 							user_id: payload.user.user_id,
 							member_count: payload.member_count
 						}
@@ -425,7 +425,7 @@ class WebSocketEventHandlers {
 				window.dispatchEvent(
 					new CustomEvent('group-member-removed', {
 						detail: {
-							group_chat_id: payload.group_chat_id,
+							group_id: payload.group_id,
 							user_id: payload.user.user_id,
 							removed_by: payload.removed_by,
 							reason: payload.reason,
@@ -439,8 +439,8 @@ class WebSocketEventHandlers {
 				if (isCurrentUser) {
 					const currentPath = window.location.pathname;
 					// 如果在群组相关页面，跳转到群组列表
-					if (currentPath.includes(`/groups/${payload.group_chat_id}`) || 
-					    currentPath.includes(`/chat/groups/${payload.group_chat_id}`)) {
+					if (currentPath.includes(`/groups/${payload.group_id}`) || 
+					    currentPath.includes(`/chat/groups/${payload.group_id}`)) {
 						goto('/groups');
 					}
 				}
@@ -473,7 +473,7 @@ class WebSocketEventHandlers {
 				window.dispatchEvent(
 					new CustomEvent('group-member-role-changed', {
 						detail: {
-							group_chat_id: payload.group_chat_id,
+							group_id: payload.group_id,
 							user_id: payload.user.user_id,
 							old_role: payload.old_role,
 							new_role: payload.new_role,
@@ -506,7 +506,7 @@ class WebSocketEventHandlers {
 				window.dispatchEvent(
 					new CustomEvent('group-member-muted', {
 						detail: {
-							group_chat_id: payload.group_chat_id,
+							group_id: payload.group_id,
 							user_id: payload.user.user_id,
 							muted_by: payload.muted_by,
 							muted_until: payload.muted_until,
@@ -536,7 +536,7 @@ class WebSocketEventHandlers {
 				window.dispatchEvent(
 					new CustomEvent('group-member-unmuted', {
 						detail: {
-							group_chat_id: payload.group_chat_id,
+							group_id: payload.group_id,
 							user_id: payload.user.user_id,
 							unmuted_by: payload.unmuted_by,
 							is_current_user: isCurrentUser
@@ -558,7 +558,7 @@ class WebSocketEventHandlers {
 				window.dispatchEvent(
 					new CustomEvent('group-announcement-updated', {
 						detail: {
-							group_chat_id: payload.group_chat_id,
+							group_id: payload.group_id,
 							announcement_id: payload.announcement_id,
 							content: payload.content,
 							updated_by: payload.updated_by
@@ -589,7 +589,7 @@ class WebSocketEventHandlers {
 				window.dispatchEvent(
 					new CustomEvent('group-updated', {
 						detail: {
-							group_chat_id: payload.group_chat_id,
+							group_id: payload.group_id,
 							updated_fields: payload.updated_fields,
 							updated_by: payload.updated_by
 						}
@@ -610,7 +610,7 @@ class WebSocketEventHandlers {
 				window.dispatchEvent(
 					new CustomEvent('group-deleted', {
 						detail: {
-							group_chat_id: payload.group_chat_id,
+							group_id: payload.group_id,
 							deleted_by: payload.deleted_by,
 							reason: payload.reason
 						}
@@ -619,8 +619,8 @@ class WebSocketEventHandlers {
 				
 				// 检查当前路由，如果在群组相关页面，跳转到群组列表
 				const currentPath = window.location.pathname;
-				if (currentPath.includes(`/groups/${payload.group_chat_id}`) || 
-				    currentPath.includes(`/chat/groups/${payload.group_chat_id}`)) {
+				if (currentPath.includes(`/groups/${payload.group_id}`) || 
+				    currentPath.includes(`/chat/groups/${payload.group_id}`)) {
 					goto('/groups');
 				}
 			}

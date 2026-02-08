@@ -11,11 +11,11 @@
 // - Endpoint values MUST match `@api_spec.mdc` ("API 端点与类型定义").
 // - Do NOT add endpoints here unless they exist in the spec.
 
-const API_VERSION = 'v1' as const;
-const API_PREFIX = `/api/${API_VERSION}` as const;
+const API_VERSION: string = 'v1';
+const API_PREFIX: string = `/api/${API_VERSION}`;
 
-const PublicPrefix = `${API_PREFIX}/public` as const;
-const ProtectedPrefix = `${API_PREFIX}/protected` as const;
+const PublicPrefix: string = `${API_PREFIX}/public`;
+const ProtectedPrefix: string = `${API_PREFIX}/protected`;
 
 export const ApiEndpoints = {
   public: {
@@ -67,13 +67,13 @@ export const ApiEndpoints = {
       likes: `${PublicPrefix}/comments/likes`
     },
 
-    groupChats: {
-      searchByKeyword: `${PublicPrefix}/group_chats/search_by_keyword`,
-      searchByTag: `${PublicPrefix}/group_chats/search_by_tag`,
-      searchByLocation: `${PublicPrefix}/group_chats/search_by_location`,
-      openTheDoor: `${PublicPrefix}/group_chats/open_the_door`,
-      settings: `${PublicPrefix}/group_chats/settings`,
-      members: `${PublicPrefix}/group_chats/members`
+    groups: {
+      searchByKeyword: `${PublicPrefix}/groups/search_by_keyword`,
+      searchByTag: `${PublicPrefix}/groups/search_by_tag`,
+      searchByLocation: `${PublicPrefix}/groups/search_by_location`,
+      openTheDoor: `${PublicPrefix}/groups/open_the_door`,
+      settings: `${PublicPrefix}/groups/settings`,
+      members: `${PublicPrefix}/groups/members`
     },
 
     tags: {
@@ -141,35 +141,35 @@ export const ApiEndpoints = {
       unlike: `${ProtectedPrefix}/comments/unlike`
     },
 
-    groupChats: {
-      create: `${ProtectedPrefix}/group_chats/create`,
-      update: `${ProtectedPrefix}/group_chats/update`,
-      delete: `${ProtectedPrefix}/group_chats/delete`,
+    groups: {
+      create: `${ProtectedPrefix}/groups/create`,
+      update: `${ProtectedPrefix}/groups/update`,
+      delete: `${ProtectedPrefix}/groups/delete`,
       members: {
-        invite: `${ProtectedPrefix}/group_chats/members/invite`,
-        join: `${ProtectedPrefix}/group_chats/members/join`,
-        apply: `${ProtectedPrefix}/group_chats/members/apply`,
-        setRole: `${ProtectedPrefix}/group_chats/members/set_role`,
-        mute: `${ProtectedPrefix}/group_chats/members/mute`,
-        unmute: `${ProtectedPrefix}/group_chats/members/unmute`,
-        ban: `${ProtectedPrefix}/group_chats/members/ban`,
-        unban: `${ProtectedPrefix}/group_chats/members/unban`,
-        banned: `${ProtectedPrefix}/group_chats/members/banned`,
-        removeMember: `${ProtectedPrefix}/group_chats/members/remove_member`
+        invite: `${ProtectedPrefix}/groups/members/invite`,
+        join: `${ProtectedPrefix}/groups/members/join`,
+        apply: `${ProtectedPrefix}/groups/members/apply`,
+        setRole: `${ProtectedPrefix}/groups/members/set_role`,
+        mute: `${ProtectedPrefix}/groups/members/mute`,
+        unmute: `${ProtectedPrefix}/groups/members/unmute`,
+        ban: `${ProtectedPrefix}/groups/members/ban`,
+        unban: `${ProtectedPrefix}/groups/members/unban`,
+        banned: `${ProtectedPrefix}/groups/members/banned`,
+        removeMember: `${ProtectedPrefix}/groups/members/remove_member`
       },
       applications: {
-        list: `${ProtectedPrefix}/group_chats/applications`,
-        approve: `${ProtectedPrefix}/group_chats/applications/approve`,
-        reject: `${ProtectedPrefix}/group_chats/applications/reject`,
-        cancel: `${ProtectedPrefix}/group_chats/me/applications/cancel`
+        list: `${ProtectedPrefix}/groups/applications`,
+        approve: `${ProtectedPrefix}/groups/applications/approve`,
+        reject: `${ProtectedPrefix}/groups/applications/reject`,
+        cancel: `${ProtectedPrefix}/groups/me/applications/cancel`
       },
-      transferOwnership: `${ProtectedPrefix}/group_chats/transfer_ownership`,
+      transferOwnership: `${ProtectedPrefix}/groups/transfer_ownership`,
       me: {
-        list: `${ProtectedPrefix}/group_chats/me`,
-        invites: `${ProtectedPrefix}/group_chats/me/invites`,
-        acceptInvite: `${ProtectedPrefix}/group_chats/me/invites/accept`,
-        rejectInvite: `${ProtectedPrefix}/group_chats/me/invites/reject`,
-        leave: `${ProtectedPrefix}/group_chats/me/leave`
+        list: `${ProtectedPrefix}/groups/me`,
+        invites: `${ProtectedPrefix}/groups/me/invites`,
+        acceptInvite: `${ProtectedPrefix}/groups/me/invites/accept`,
+        rejectInvite: `${ProtectedPrefix}/groups/me/invites/reject`,
+        leave: `${ProtectedPrefix}/groups/me/leave`
       }
     },
 
@@ -250,40 +250,8 @@ export const ApiEndpoints = {
     globalSettings: {
       fetch: `${PublicPrefix}/global_settings/fetch`
     }
-  }
-} as const;
-
-// Optional helper types for stronger typing at call-sites.
-export type ApiEndpointsType = typeof ApiEndpoints;
-export type ApiEndpointPath =
-  | ApiEndpointsType['public']['auth'][keyof ApiEndpointsType['public']['auth']]
-  | ApiEndpointsType['public']['user'][keyof ApiEndpointsType['public']['user']]
-  | ApiEndpointsType['public']['moments'][keyof ApiEndpointsType['public']['moments']]
-  | ApiEndpointsType['public']['comments'][keyof ApiEndpointsType['public']['comments']]
-  | ApiEndpointsType['public']['groupChats'][keyof ApiEndpointsType['public']['groupChats']]
-  | ApiEndpointsType['public']['tags'][keyof ApiEndpointsType['public']['tags']]
-  | ApiEndpointsType['public']['system'][keyof ApiEndpointsType['public']['system']]
-  | ApiEndpointsType['protected']['auth'][keyof ApiEndpointsType['protected']['auth']]
-  | ApiEndpointsType['protected']['auth']['me'][keyof ApiEndpointsType['protected']['auth']['me']]
-  | ApiEndpointsType['protected']['user'][keyof ApiEndpointsType['protected']['user']]
-  | ApiEndpointsType['protected']['user']['me'][keyof ApiEndpointsType['protected']['user']['me']]
-  | ApiEndpointsType['protected']['moments'][keyof ApiEndpointsType['protected']['moments']]
-  | ApiEndpointsType['protected']['comments'][keyof ApiEndpointsType['protected']['comments']]
-  | ApiEndpointsType['protected']['groupChats'][keyof ApiEndpointsType['protected']['groupChats']]
-  | ApiEndpointsType['protected']['groupChats']['members'][keyof ApiEndpointsType['protected']['groupChats']['members']]
-  | ApiEndpointsType['protected']['groupChats']['applications'][keyof ApiEndpointsType['protected']['groupChats']['applications']]
-  | ApiEndpointsType['protected']['groupChats']['me'][keyof ApiEndpointsType['protected']['groupChats']['me']]
-  | ApiEndpointsType['protected']['privateChats'][keyof ApiEndpointsType['protected']['privateChats']]
-  | ApiEndpointsType['protected']['privateMessages'][keyof ApiEndpointsType['protected']['privateMessages']]
-  | ApiEndpointsType['protected']['groupMessages'][keyof ApiEndpointsType['protected']['groupMessages']]
-  | ApiEndpointsType['protected']['messages'][keyof ApiEndpointsType['protected']['messages']]
-  | ApiEndpointsType['protected']['reports'][keyof ApiEndpointsType['protected']['reports']]
-  | ApiEndpointsType['protected']['subscriptions'][keyof ApiEndpointsType['protected']['subscriptions']]
-  | ApiEndpointsType['protected']['deviceTokens']['me'][keyof ApiEndpointsType['protected']['deviceTokens']['me']]
-  | ApiEndpointsType['protected']['feed'][keyof ApiEndpointsType['protected']['feed']]
-  | ApiEndpointsType['protected']['media'][keyof ApiEndpointsType['protected']['media']]
-  | ApiEndpointsType['public']['map'][keyof ApiEndpointsType['public']['map']]
-  | ApiEndpointsType['public']['globalSettings'][keyof ApiEndpointsType['public']['globalSettings']];
+    }
+};
 
 // Runtime assertion helper (optional): useful during development to ensure paths are absolute API paths.
 export function assertApiEndpointPath(path: string): void {

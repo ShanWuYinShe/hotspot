@@ -193,7 +193,7 @@ export struct MapPage {
 
       if (response.code === 0 && response.data) {
         const groupMarkers: ExtendedMapMarker[] = response.data.items.map((group: GroupSearchItem): ExtendedMapMarker => ({
-          id: `group_${group.group_chat_id}`,
+          id: `group_${group.group_id}`,
           type: 'group',
           latitude: group.location!.latitude,
           longitude: group.location!.longitude,
@@ -286,7 +286,7 @@ export struct MapPage {
         try {
           this.getUIContext().getRouter().pushUrl({
             url: `features/group/pages/${PageNames.GROUP_DETAIL}`,
-            params: { groupId: (marker.data as GroupSearchItem).group_chat_id }
+            params: { groupId: (marker.data as GroupSearchItem).group_id }
           });
         } catch (error) {
           hilog.error(DOMAIN_NUMBER, TAG, `跳转群组详情失败: ${error}`);

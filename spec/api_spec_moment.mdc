@@ -18,16 +18,13 @@ alwaysApply: true
 
 - 公共基础类型：`@api_spec_common.mdc`
 - 错误码：`@spec/api_spec_errors.mdc`
-- 搜索建议类型：`@api_spec_search.mdc`
+- 搜索建议：`@api_spec_search.mdc`（per-module suggest 已移除，使用全局 `search/suggest`）
 
 ## 接口概览（按子域）
 
 | 子域 | 端点 | 说明 | Request | Response |
 |-----|------|------|---------|----------|
-| 搜索与发现 | `POST /api/v1/moments/search_by_keyword` | 搜索瞬间（关键字） | `SearchMomentsByKeywordRequest` | `ApiResponse<PaginatedData<MomentItem>>` |
-| 搜索与发现 | `POST /api/v1/moments/search_by_tag` | 搜索瞬间（标签） | `SearchMomentsByTagRequest` | `ApiResponse<PaginatedData<MomentItem>>` |
-| 搜索与发现 | `POST /api/v1/moments/search_by_location` | 搜索瞬间（位置） | `SearchMomentsByLocationRequest` | `ApiResponse<PaginatedData<MomentItem>>` |
-| 搜索与发现 | `POST /api/v1/moments/suggest` | 瞬间搜索建议 | `SuggestMomentsRequest` | `ApiResponse<PaginatedData<MomentSuggestItem>>` |
+| 搜索与发现 | `POST /api/v1/moments/search` | 搜索瞬间（支持关键字/标签/位置组合） | `SearchMomentsRequest` | `ApiResponse<PaginatedData<MomentItem>>` |
 | 瞬间详情 | `POST /api/v1/moments/open_the_door` | 瞬间详情 | `MomentOpenTheDoorRequest` | `ApiResponse<MomentItem>` |
 | 瞬间操作 | `POST /api/v1/moments/create` | 创建瞬间 | `CreateMomentRequest` | `ApiResponse<MomentItem>` |
 | 瞬间操作 | `POST /api/v1/moments/update` | 编辑瞬间 | `EditMomentRequest` | `ApiResponse` |
@@ -36,8 +33,11 @@ alwaysApply: true
 | 瞬间操作 | `POST /api/v1/moments/unlike` | 取消点赞 | `UnlikeMomentRequest` | `ApiResponse` |
 | 瞬间操作 | `POST /api/v1/moments/favorite` | 收藏 | `FavoriteMomentRequest` | `ApiResponse` |
 | 瞬间操作 | `POST /api/v1/moments/unfavorite` | 取消收藏 | `UnfavoriteMomentRequest` | `ApiResponse` |
-| 我的瞬间 | `POST /api/v1/moments/me` | 我发布的瞬间 | `MyMomentsRequest` | `ApiResponse<PaginatedData<MomentItem>>` |
+| 我的瞬间 | `POST /api/v1/moments/me/list` | 我发布的瞬间 | `MyMomentsRequest` | `ApiResponse<PaginatedData<MomentItem>>` |
 | 我的瞬间 | `POST /api/v1/moments/me/favorites` | 我的收藏 | `MyFavoritesRequest` | `ApiResponse<PaginatedData<MomentItem>>` |
+| 表情反应 | `POST /api/v1/moments/add_reaction` | 添加表情反应 | `AddMomentReactionRequest` | `ApiResponse` |
+| 表情反应 | `POST /api/v1/moments/remove_reaction` | 移除表情反应 | `RemoveMomentReactionRequest` | `ApiResponse` |
+| 表情反应 | `POST /api/v1/moments/reactions` | 反应列表 | `MomentReactionsRequest` | `ApiResponse<PaginatedData<ReactionItem>>` |
 | 点赞列表 | `POST /api/v1/moments/likes` | 瞬间点赞列表 | `MomentLikesRequest` | `ApiResponse<PaginatedData<MomentLikeItem>>` |
 | 评论 | `POST /api/v1/comments/create` | 创建评论/回复 | `CreateCommentRequest` | `ApiResponse<CommentItem>` |
 | 评论 | `POST /api/v1/comments/delete` | 删除评论 | `DeleteCommentRequest` | `ApiResponse` |
@@ -102,69 +102,28 @@ interface CommentItem {
 - 所有生活瞬间均为公开内容，未登录也可访问
 - 登录态会返回 `@auth-only` 字段（如 `my_state`）
 
-#### POST /api/v1/moments/search_by_keyword
+#### POST /api/v1/moments/search
 
-按关键字搜索生活瞬间（全局）。
-
-**排序语义（契约级）**：
-- 默认按**相关性优先**排序，同分时以 `created_at` 倒序作为稳定 tie-breaker
-
-**Request**:
-```typescript
-interface SearchMomentsByKeywordRequest {
-  search: SearchBaseParams;
-  kw: string;
-}
-```
-**Response**: `ApiResponse<PaginatedData<MomentItem>>`
-
-#### POST /api/v1/moments/search_by_tag
-
-按标签搜索生活瞬间（全局）。
-
-**Request**:
-```typescript
-interface SearchMomentsByTagRequest {
-  search: SearchBaseParams;
-  tag: string;
-}
-```
-**Response**: `ApiResponse<PaginatedData<MomentItem>>`
-
-#### POST /api/v1/moments/search_by_location
-
-按位置搜索生活瞬间（范围过滤）。
+统一搜索生活瞬间。支持关键字、标签、位置范围三种条件的自由组合。
 
 **排序语义（契约级）**：
-- 默认按**距离优先**排序（由近到远）
+- 默认 `sort_by='relevance'`：按相关性优先排序，同分时以 `created_at` 倒序作为稳定 tie-breaker
+- `sort_by='distance'`：按距离由近到远排序（需要 `radius`）
+- `sort_by='newest'`：按发布时间倒序
+- `sort_by='popular'`：按点赞/评论热度排序
 
 **Request**:
 ```typescript
-interface SearchMomentsByLocationRequest {
+interface SearchMomentsRequest {
   search: SearchBaseParams;
-  kw?: string;
-  radius: number;
+  keyword?: string;    // 关键字搜索（匹配描述等）
+  tag?: string;        // 标签筛选
+  radius?: number;     // 位置范围（米），配合 search.reference_point 使用
+  sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';  // 默认: relevance
 }
+// 至少提供 keyword、tag、radius 中的一个
 ```
 **Response**: `ApiResponse<PaginatedData<MomentItem>>`
-
-#### POST /api/v1/moments/suggest
-
-瞬间搜索建议（用于搜索框输入提示）。
-
-**说明**：必须提供 `reference_point`（用户拒绝定位时使用 fallback）。
-
-**Request**:
-```typescript
-// MomentSuggestItem 定义于 @api_spec_search.mdc
-
-interface SuggestMomentsRequest {
-  search: SearchBaseParams;
-  prefix: string;
-}
-// Note: limit 默认 5，最大 20（建议类接口使用较小默认值）
-```
-**Response**: `ApiResponse<PaginatedData<MomentSuggestItem>>`
 
 ### 瞬间详情
 
@@ -194,10 +153,12 @@ interface MomentOpenTheDoorRequest {
 interface CreateMomentRequest {
   description: string;
   location: Location;
+  privacy_level?: PrivacyLevel;  // 默认: 'public'
   tags?: string[];
   image_file_ids?: string[];
   mentions?: string[];
 }
+// PrivacyLevel 定义于 @api_spec_common.mdc
 ```
 **Response**: `ApiResponse<MomentItem>`
 
@@ -213,6 +174,7 @@ interface EditMomentRequest {
   moment_id: string;
   description?: string;
   location?: Location;
+  privacy_level?: PrivacyLevel;
   tags?: string[];
   image_file_ids?: string[];
   mentions?: string[];
@@ -302,7 +264,7 @@ interface UnfavoriteMomentRequest {
 
 ### 当前用户瞬间 API（/me/ 路径）
 
-#### POST /api/v1/moments/me
+#### POST /api/v1/moments/me/list
 
 我发布的瞬间列表。
 
@@ -340,6 +302,64 @@ interface MomentLikesRequest {
 **Response**: `ApiResponse<PaginatedData<MomentLikeItem>>`
 
 **可能错误码**：`10330`
+
+### 表情反应
+
+与 like（点赞）互补的 emoji 表情反应机制，复用聊天消息中的 `ReactionType`。
+
+- `like`/`unlike` 是独立的点赞计数，触发通知聚合
+- `add_reaction`/`remove_reaction` 是 emoji 表情反应，不触发通知（轻量互动）
+- 同一用户可对同一瞬间添加多种不同 emoji reaction
+
+#### POST /api/v1/moments/add_reaction
+
+添加表情反应。
+
+**幂等性**：重复添加同一 reaction_type 返回成功（不报错），客户端无需担心重复操作。
+
+**Request**:
+```typescript
+interface AddMomentReactionRequest {
+  moment_id: string;
+  type: ReactionType;
+}
+```
+**Response**: `ApiResponse`
+
+**可能错误码**：`10001`、`10330`
+
+#### POST /api/v1/moments/remove_reaction
+
+移除表情反应。
+
+**幂等性**：重复移除同一 reaction_type 返回成功（不报错），客户端无需担心重复操作。
+
+**Request**:
+```typescript
+interface RemoveMomentReactionRequest {
+  moment_id: string;
+  type: ReactionType;
+}
+```
+**Response**: `ApiResponse`
+
+**可能错误码**：`10001`、`10330`
+
+#### POST /api/v1/moments/reactions
+
+获取瞬间表情反应列表。
+
+**Request**:
+```typescript
+interface MomentReactionsRequest {
+  pagination?: PaginationParams;
+  moment_id: string;
+  type?: ReactionType;  // 可选：按类型过滤
+}
+```
+**Response**: `ApiResponse<PaginatedData<ReactionItem>>`
+
+**可能错误码**：`10001`、`10003`、`10330`
 
 ---
 

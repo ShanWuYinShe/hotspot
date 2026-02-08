@@ -11,11 +11,6 @@ pub struct IdGenerator;
 
 impl IdGenerator {
     /// 生成用户ID（用于临时用户和注册用户）
-    ///
-    /// 从统一的 user_id_seq 序列获取下一个值
-    ///
-    /// # Arguments
-    /// * `pool` - 数据库连接池
     pub async fn generate_user_id(pool: &PgPool) -> Result<i64, sqlx::Error> {
         let result = sqlx::query_scalar!(r#"SELECT nextval('user_id_seq')"#)
             .fetch_one(pool)
@@ -25,13 +20,7 @@ impl IdGenerator {
     }
 }
 
-/// 生成字母数字字符串（大小写字母 + 数字）
-///
-/// # Arguments
-/// * `length` - 字符串长度
-///
-/// # Returns
-/// 随机生成的字母数字字符串
+/// 生成字母数字字符串
 pub fn generate_alphanumeric(length: usize) -> String {
     const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
                              abcdefghijklmnopqrstuvwxyz\
@@ -46,13 +35,7 @@ pub fn generate_alphanumeric(length: usize) -> String {
         .collect()
 }
 
-/// 生成6位分享码（仅大写字母 + 数字，排除易混淆字符）
-///
-/// 字符集：A-Z（排除O、I）+ 2-9（排除0、1）
-/// 共 32 个字符（24个字母 + 8个数字）
-///
-/// # Returns
-/// 6位分享码（例如：ABC2D3）
+/// 生成6位分享码
 pub fn generate_share_code() -> String {
     const CHARSET: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let mut rng = rand::rng();

@@ -1,83 +1,25 @@
+//! 通知仓库层实现
+//!
+//! 适配新 Schema: notification_id (UUID), user_id (BIGINT), 分区表 notifications_partitioned
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
+use std::str::FromStr;
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::utils::pagination::{decode_cursor, encode_cursor, TimeCursor};
+pub use crate::types::enums::NotificationType;
+use crate::utils::pagination::{decode_cursor, encode_cursor, TimeIdCursor};
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "notification_type", rename_all = "snake_case")]
-pub enum NotificationType {
-    MomentLike,
-    MomentComment,
-    CommentReply,
-    NewFollower,
-    MutualFollow,
-    FollowRequest,
-    FollowRequestHandled,
-    GroupInvite,
-    GroupInviteResponse,
-    GroupApplication,
-    GroupApplicationResponse,
-    GroupAnnouncement,
-    SystemAnnouncement,
-    MessageMention,
-}
-
-impl std::str::FromStr for NotificationType {
-    type Err = String;
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        match s {
-            "moment_like" => Ok(NotificationType::MomentLike),
-            "moment_comment" => Ok(NotificationType::MomentComment),
-            "comment_reply" => Ok(NotificationType::CommentReply),
-            "new_follower" => Ok(NotificationType::NewFollower),
-            "mutual_follow" => Ok(NotificationType::MutualFollow),
-            "follow_request" => Ok(NotificationType::FollowRequest),
-            "follow_request_handled" => Ok(NotificationType::FollowRequestHandled),
-            "group_invite" => Ok(NotificationType::GroupInvite),
-            "group_invite_response" => Ok(NotificationType::GroupInviteResponse),
-            "group_application" => Ok(NotificationType::GroupApplication),
-            "group_application_response" => Ok(NotificationType::GroupApplicationResponse),
-            "group_announcement" => Ok(NotificationType::GroupAnnouncement),
-            "system_announcement" => Ok(NotificationType::SystemAnnouncement),
-            "message_mention" => Ok(NotificationType::MessageMention),
-            _ => Err(format!("Invalid notification type: {}", s)),
-        }
-    }
-}
-
-impl std::fmt::Display for NotificationType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s = match self {
-            NotificationType::MomentLike => "moment_like",
-            NotificationType::MomentComment => "moment_comment",
-            NotificationType::CommentReply => "comment_reply",
-            NotificationType::NewFollower => "new_follower",
-            NotificationType::MutualFollow => "mutual_follow",
-            NotificationType::FollowRequest => "follow_request",
-            NotificationType::FollowRequestHandled => "follow_request_handled",
-            NotificationType::GroupInvite => "group_invite",
-            NotificationType::GroupInviteResponse => "group_invite_response",
-            NotificationType::GroupApplication => "group_application",
-            NotificationType::GroupApplicationResponse => "group_application_response",
-            NotificationType::GroupAnnouncement => "group_announcement",
-            NotificationType::SystemAnnouncement => "system_announcement",
-            NotificationType::MessageMention => "message_mention",
-        };
-        write!(f, "{}", s)
-    }
-}
-
+/// 通知行数据
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct NotificationRow {
-    pub id: i64,
     pub notification_id: Uuid,
     pub user_id: i64,
     pub r#type: NotificationType,
-    pub title: String,
-    pub content: String,
+    pub title: Option<String>,
+    pub content: Option<String>,
     pub sender_id: Option<i64>,
     pub sender_nickname: Option<String>,
     pub sender_avatar_url: Option<String>,
@@ -87,6 +29,12 @@ pub struct NotificationRow {
     pub target_preview: Option<String>,
     pub is_read: bool,
     pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, FromRow)]
+struct UnreadBreakdownRow {
+    pub total: i64,
+    pub breakdown: serde_json::Value,
 }
 
 #[derive(Debug, Clone)]
@@ -100,7 +48,6 @@ impl NotificationRepository {
     }
 
     /// 创建通知
-    #[allow(clippy::too_many_arguments)]
     pub async fn create(
         &self,
         user_id: i64,
@@ -115,34 +62,46 @@ impl NotificationRepository {
         reference_id: Option<String>,
         target_preview: Option<String>,
     ) -> Result<NotificationRow> {
-        let row = sqlx::query_as!(
+        let payload = serde_json::json!({
+            "title": title,
+            "content": content,
+            "sender_id": sender_id,
+            "sender_nickname": sender_nickname,
+            "sender_avatar_url": sender_avatar_url,
+            "target_type": target_type,
+            "target_id": target_id,
+            "reference_id": reference_id,
+            "target_preview": target_preview
+        });
+
+        let row = sqlx::query_as_unchecked!(
             NotificationRow,
             r#"
-            INSERT INTO notifications (
-                user_id, type, title, content, 
-                sender_id, sender_nickname, sender_avatar_url,
-                target_type, target_id, reference_id, target_preview
+            WITH inserted AS (
+                INSERT INTO notifications_partitioned (user_id, notification_type, payload)
+                VALUES ($1, $2, $3)
+                RETURNING notification_id, user_id, notification_type, payload, created_at
             )
-            VALUES ($1, $2::notification_type, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-            RETURNING 
-                id, notification_id, user_id, 
-                type as "type: NotificationType", 
-                title, content, 
-                sender_id, sender_nickname, sender_avatar_url,
-                target_type, target_id, reference_id, target_preview,
-                is_read, created_at
+            SELECT
+                notification_id,
+                user_id,
+                notification_type as "type: NotificationType",
+                payload->>'title' as "title?",
+                payload->>'content' as "content?",
+                (payload->>'sender_id')::bigint as "sender_id?",
+                payload->>'sender_nickname' as "sender_nickname?",
+                payload->>'sender_avatar_url' as "sender_avatar_url?",
+                payload->>'target_type' as "target_type?",
+                payload->>'target_id' as "target_id?",
+                payload->>'reference_id' as "reference_id?",
+                payload->>'target_preview' as "target_preview?",
+                notification_is_read($1, notification_id, notification_type, created_at) as "is_read!",
+                created_at
+            FROM inserted
             "#,
             user_id,
-            r#type as NotificationType,
-            title,
-            content,
-            sender_id,
-            sender_nickname,
-            sender_avatar_url,
-            target_type,
-            target_id,
-            reference_id,
-            target_preview
+            r#type.to_string(),
+            payload
         )
         .fetch_one(&self.pool)
         .await?;
@@ -150,7 +109,7 @@ impl NotificationRepository {
         Ok(row)
     }
 
-    /// 获取通知列表（分页）
+    /// 列出用户的通知
     pub async fn list_by_user(
         &self,
         user_id: i64,
@@ -158,54 +117,101 @@ impl NotificationRepository {
         cursor: Option<String>,
         type_filters: Option<Vec<String>>,
     ) -> Result<(Vec<NotificationRow>, Option<String>)> {
-        let (last_created_at, last_id) = if let Some(c) = cursor {
-            decode_cursor::<TimeCursor>(&c)?
+        let (last_ts, last_id) = if let Some(c) = cursor {
+            decode_cursor::<TimeIdCursor>(&c)?
         } else {
-            (DateTime::<Utc>::MAX_UTC, i64::MAX)
+            (DateTime::<Utc>::MAX_UTC, Uuid::max())
         };
 
-        let rows = sqlx::query_as!(
+        let rows = sqlx::query_as_unchecked!(
             NotificationRow,
             r#"
-            SELECT 
-                id, notification_id, user_id, 
-                type as "type: NotificationType", 
-                title, content, 
-                sender_id, sender_nickname, sender_avatar_url,
-                target_type, target_id, reference_id, target_preview,
-                is_read, created_at
-            FROM notifications
-            WHERE user_id = $1 
-              AND (created_at, id) < ($2, $3)
-              AND ($4::text[] IS NULL OR type::text = ANY($4))
-            ORDER BY created_at DESC, id DESC
+            SELECT
+                notification_id,
+                user_id,
+                notification_type as "type: NotificationType",
+                payload->>'title' as "title?",
+                payload->>'content' as "content?",
+                (payload->>'sender_id')::bigint as "sender_id?",
+                payload->>'sender_nickname' as "sender_nickname?",
+                payload->>'sender_avatar_url' as "sender_avatar_url?",
+                payload->>'target_type' as "target_type?",
+                payload->>'target_id' as "target_id?",
+                payload->>'reference_id' as "reference_id?",
+                payload->>'target_preview' as "target_preview?",
+                notification_is_read($1, notification_id, notification_type, created_at) as "is_read!",
+                created_at
+            FROM notifications_partitioned
+            WHERE user_id = $1
+              AND (created_at, notification_id) < ($2, $3)
+              AND ($4::text[] IS NULL OR notification_type = ANY($4))
+            ORDER BY created_at DESC, notification_id DESC
             LIMIT $5
             "#,
             user_id,
-            last_created_at,
+            last_ts,
             last_id,
-            type_filters.as_deref(),
-            limit
+            type_filters,
+            limit + 1
         )
         .fetch_all(&self.pool)
         .await?;
 
-        let next_cursor = rows
-            .last()
-            .map(|r| encode_cursor(&(r.created_at, r.id)))
-            .transpose()?;
+        let has_more = rows.len() > limit as usize;
+        let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
 
-        Ok((rows, next_cursor))
+        let next_cursor = if has_more {
+            items
+                .last()
+                .map(|r| encode_cursor(&(r.created_at, r.notification_id)))
+                .transpose()?
+        } else {
+            None
+        };
+
+        Ok((items, next_cursor))
     }
 
-    /// 标记通知已读（单个/批量）
+    pub async fn count_unread(&self, user_id: i64) -> Result<i64> {
+        let row = sqlx::query_as!(
+            UnreadBreakdownRow,
+            "SELECT total::bigint as \"total!\", breakdown FROM get_unread_notifications_breakdown($1)",
+            user_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(row.total)
+    }
+
+    pub async fn count_unread_breakdown(
+        &self,
+        user_id: i64,
+    ) -> Result<Vec<(NotificationType, i64)>> {
+        let row = sqlx::query_as!(
+            UnreadBreakdownRow,
+            "SELECT total::bigint as \"total!\", breakdown FROM get_unread_notifications_breakdown($1)",
+            user_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        let mut result = Vec::new();
+        if let Some(obj) = row.breakdown.as_object() {
+            for (key, value) in obj {
+                if let Ok(r#type) = NotificationType::from_str(key) {
+                    let count = value.as_i64().unwrap_or(0);
+                    result.push((r#type, count));
+                }
+            }
+        }
+
+        Ok(result)
+    }
+
     pub async fn mark_read(&self, user_id: i64, notification_ids: &[Uuid]) -> Result<()> {
         sqlx::query!(
-            r#"
-            UPDATE notifications
-            SET is_read = TRUE
-            WHERE user_id = $1 AND notification_id = ANY($2)
-            "#,
+            "SELECT mark_notifications_read($1, NULL, $2, NOW())",
             user_id,
             notification_ids
         )
@@ -214,70 +220,24 @@ impl NotificationRepository {
         Ok(())
     }
 
-    /// 标记指定类型的所有通知为已读
     pub async fn mark_type_read(&self, user_id: i64, r#type: NotificationType) -> Result<()> {
         sqlx::query!(
-            r#"
-            UPDATE notifications
-            SET is_read = TRUE
-            WHERE user_id = $1 AND type = $2::notification_type AND is_read = FALSE
-            "#,
+            "SELECT mark_notifications_read($1, $2, NULL, NOW())",
             user_id,
-            r#type as NotificationType
+            r#type.to_string()
         )
         .execute(&self.pool)
         .await?;
         Ok(())
     }
 
-    /// 标记所有通知已读
     pub async fn mark_all_read(&self, user_id: i64) -> Result<()> {
         sqlx::query!(
-            r#"
-            UPDATE notifications
-            SET is_read = TRUE
-            WHERE user_id = $1 AND is_read = FALSE
-            "#,
+            "SELECT mark_notifications_read($1, NULL, NULL, NOW())",
             user_id
         )
         .execute(&self.pool)
         .await?;
         Ok(())
-    }
-
-    /// 获取未读计数
-    pub async fn count_unread(&self, user_id: i64) -> Result<i64> {
-        let count = sqlx::query!(
-            r#"
-            SELECT COUNT(*) as "count!"
-            FROM notifications
-            WHERE user_id = $1 AND is_read = FALSE
-            "#,
-            user_id
-        )
-        .fetch_one(&self.pool)
-        .await?
-        .count;
-        Ok(count)
-    }
-
-    /// 获取未读计数细分
-    pub async fn count_unread_breakdown(
-        &self,
-        user_id: i64,
-    ) -> Result<Vec<(NotificationType, i64)>> {
-        let rows = sqlx::query!(
-            r#"
-            SELECT type as "type: NotificationType", COUNT(*) as "count!"
-            FROM notifications
-            WHERE user_id = $1 AND is_read = FALSE
-            GROUP BY type
-            "#,
-            user_id
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(rows.into_iter().map(|r| (r.r#type, r.count)).collect())
     }
 }

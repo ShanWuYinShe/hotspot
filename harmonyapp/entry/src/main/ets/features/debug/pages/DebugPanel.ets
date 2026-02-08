@@ -9,15 +9,18 @@ import { WebSocketService } from '../../../core/network/WebSocketService';
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { SystemToast } from '../../../components/SystemToast';
 import { MyProfileData } from '../../../core/types/api';
+import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 
 @Entry
 @Component
 struct DebugPanel {
   @State logs: string[] = [];
+  @State currentUserId: number | null = null;
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfileData | null = null;
   private webSocketService = WebSocketService.getInstance();
 
   async aboutToAppear() {
+    this.currentUserId = await AuthAccountManager.getCurrentUserId();
     this.addLog('DebugPanel initialized');
     this.addLog(`User: ${this.currentUser?.nickname || 'Not logged in'}`);
     this.addLog(`WS Status: ${this.webSocketService.isConnected() ? 'Connected' : 'Disconnected'}`);
@@ -76,7 +79,7 @@ struct DebugPanel {
                   .fontWeight(FontWeight.Bold)
                 
                 Text(`WebSocket: ${this.webSocketService.isConnected() ? '✅ 已连接' : '❌ 未连接'}`)
-                Text(`User ID: ${this.currentUser?.user_id || 'N/A'}`)
+                Text(`User ID: ${this.currentUserId || 'N/A'}`)
                 Text(`Token: ${this.currentUser ? 'Has Token' : 'No Token'}`)
               }
               .alignItems(HorizontalAlign.Start)

@@ -26,16 +26,21 @@ impl ShareService {
         let share_code = Self::generate_unique_share_code(pool).await?;
 
         // 创建分享
-        let share_id =
-            ShareRepository::create(pool, &share_code, req.share_type, user_id, &req.payload)
-                .await?;
+        let share_id = ShareRepository::create(
+            pool,
+            &share_code,
+            req.share_type.as_str(),
+            user_id,
+            &req.payload,
+        )
+        .await?;
 
         // 获取创建者信息
         let creator = sqlx::query!(
             r#"
             SELECT user_id, nickname, avatar_url, user_type as "user_type: UserType"
             FROM users
-            WHERE user_id = $1 AND is_banned = false
+            WHERE user_id = $1 AND status = 'active'::user_status
             "#,
             user_id
         )
@@ -45,9 +50,9 @@ impl ShareService {
         .ok_or(AppError::NotFound("用户不存在".to_string()))
         .map(|row| UserInfo {
             user_id: row.user_id,
-            nickname: row.nickname,
+            nickname: row.nickname.unwrap_or_else(|| "未知用户".to_string()),
             avatar_url: row.avatar_url,
-            user_type: row.user_type,
+            user_type: row.user_type.unwrap_or(UserType::Normal),
         })?;
 
         Ok(Share {
@@ -72,7 +77,7 @@ impl ShareService {
             r#"
             SELECT user_id, nickname, avatar_url, user_type as "user_type: UserType"
             FROM users
-            WHERE user_id = $1 AND is_banned = false
+            WHERE user_id = $1 AND status = 'active'::user_status
             "#,
             db_share.creator_id
         )
@@ -82,9 +87,9 @@ impl ShareService {
         .ok_or(AppError::NotFound("用户不存在".to_string()))
         .map(|row| UserInfo {
             user_id: row.user_id,
-            nickname: row.nickname,
+            nickname: row.nickname.unwrap_or_else(|| "未知用户".to_string()),
             avatar_url: row.avatar_url,
-            user_type: row.user_type,
+            user_type: row.user_type.unwrap_or(UserType::Normal),
         })?;
 
         // 解析 share_type
@@ -122,7 +127,7 @@ impl ShareService {
 
         // 根据类型执行不同操作
         match share_type {
-            ShareType::Location => {
+            ShareType::ReferencePoint => {
                 Self::apply_location_share(pool, user_id, &db_share.payload).await?;
             }
             ShareType::Moment => {
@@ -158,6 +163,11 @@ impl ShareService {
             .and_then(|v| v.as_f64())
             .ok_or(AppError::OutOfRange("无效的经度".to_string()))?;
 
+        let location_name = payload
+            .get("location_name")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+
         // 验证经纬度范围
         if !(-90.0..=90.0).contains(&latitude) {
             return Err(AppError::OutOfRange(
@@ -174,11 +184,15 @@ impl ShareService {
         sqlx::query!(
             r#"
             UPDATE users
-            SET current_latitude = $1, current_longitude = $2, updated_at = CURRENT_TIMESTAMP
-            WHERE user_id = $3
+            SET location = ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography,
+                location_name = $3,
+                location_updated_at = NOW(),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = $4
             "#,
             latitude,
             longitude,
+            location_name,
             user_id
         )
         .execute(pool)
@@ -197,7 +211,7 @@ impl ShareService {
         payload: &serde_json::Value,
     ) -> Result<(), AppError> {
         match share_type {
-            ShareType::Location => {
+            ShareType::ReferencePoint => {
                 // 验证位置分享的 payload
                 let latitude = payload
                     .get("latitude")
@@ -224,7 +238,7 @@ impl ShareService {
                         "经度必须在 -180 到 180 之间".to_string(),
                     ));
                 }
-                if location_name.is_empty() || location_name.len() > 255 {
+                if location_name.is_empty() || location_name.len() > 100 {
                     return Err(AppError::OutOfRange(
                         "位置名称长度必须在 1-255 之间".to_string(),
                     ));

@@ -23,24 +23,7 @@ use crate::{
 
 /// 将 Repository 层的 NotificationType 转换为 DTO 层的 NotificationType
 fn map_repo_notification_type(repo_type: &RepoNotificationType) -> NotificationType {
-    match repo_type {
-        RepoNotificationType::MomentLike => NotificationType::MomentLike,
-        RepoNotificationType::MomentComment => NotificationType::MomentComment,
-        RepoNotificationType::CommentReply => NotificationType::CommentReply,
-        RepoNotificationType::NewFollower => NotificationType::NewFollower,
-        RepoNotificationType::MutualFollow => NotificationType::MutualFollow,
-        RepoNotificationType::FollowRequest => NotificationType::FollowRequest,
-        RepoNotificationType::FollowRequestHandled => NotificationType::FollowRequestHandled,
-        RepoNotificationType::GroupInvite => NotificationType::GroupInvite,
-        RepoNotificationType::GroupInviteResponse => NotificationType::GroupInviteResponse,
-        RepoNotificationType::GroupApplication => NotificationType::GroupApplication,
-        RepoNotificationType::GroupApplicationResponse => {
-            NotificationType::GroupApplicationResponse
-        }
-        RepoNotificationType::GroupAnnouncement => NotificationType::GroupAnnouncement,
-        RepoNotificationType::SystemAnnouncement => NotificationType::SystemAnnouncement,
-        RepoNotificationType::MessageMention => NotificationType::MessageMention,
-    }
+    *repo_type
 }
 
 #[derive(Clone)]
@@ -147,8 +130,8 @@ impl NotificationService {
                 Ok(NotificationItem {
                     notification_id: row.notification_id.to_string(),
                     notification_type: map_repo_notification_type(&row.r#type),
-                    title: Some(row.title),
-                    content: Some(row.content),
+                    title: row.title,
+                    content: row.content,
                     created_at: row.created_at.to_rfc3339(),
                     is_read: row.is_read,
                     sender,
@@ -323,7 +306,7 @@ impl NotificationService {
         // 获取发送者快照
         let (nickname, avatar_url) = if let Some(sid) = sender_id {
             if let Ok(Some(user)) = self.user_repo.find_by_id(sid).await {
-                (Some(user.nickname), user.avatar_url)
+                (user.nickname, user.avatar_url)
             } else {
                 (None, None)
             }

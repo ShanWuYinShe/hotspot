@@ -1,18 +1,14 @@
 ---
 alwaysApply: true
 ---
-# HotSpot API 规范 - 通知相关 API 模块 v0.0.1 (RPC)
+# HotSpot API 规范 - 通知中心 API 模块 v0.0.1 (RPC)
 
-> 本文档定义 HotSpot 通知中心 (`notifications`) 和设备令牌管理 (`device_tokens`) 相关的 RPC 接口。
+> 本文档定义 HotSpot 通知中心 (`notifications`) 相关的 RPC 接口，包括通知列表、通知偏好设置和推送设备管理。
 
 ## 服务定义
 
-- **Service Namespaces**:
-  - `notifications`
-  - `device_tokens`
-- **Base Paths**:
-  - `/api/v1/notifications/`
-  - `/api/v1/device_tokens/`
+- **Service Namespace**: `notifications`
+- **Base Path**: `/api/v1/notifications/`
 
 ## 契约引用
 
@@ -24,70 +20,117 @@ alwaysApply: true
 
 | 子域 | 端点 | 说明 | Request | Response |
 |-----|------|------|---------|----------|
-| 通知中心 | `POST /api/v1/notifications/list` | 通知列表 | `GetNotificationsRequest` | `ApiResponse<PaginatedData<NotificationItem>>` |
-| 通知中心 | `POST /api/v1/notifications/unread_count` | 未读计数 | `{}` | `ApiResponse<UnreadCount>` |
+| 通知中心 | `POST /api/v1/notifications/list` | 通知列表（含聚合） | `GetNotificationsRequest` | `ApiResponse<PaginatedData<NotificationItem>>` |
+| 通知中心 | `POST /api/v1/notifications/unread_count` | 未读计数（含分类） | `{}` | `ApiResponse<UnreadCount>` |
 | 通知中心 | `POST /api/v1/notifications/mark_read` | 标记已读 | `MarkNotificationsReadRequest` | `ApiResponse` |
-| 设备令牌 | `POST /api/v1/device_tokens/me/register` | 注册设备 Token | `RegisterDeviceTokenRequest` | `ApiResponse` |
-| 设备令牌 | `POST /api/v1/device_tokens/me/unregister` | 注销设备 Token | `UnregisterDeviceTokenRequest` | `ApiResponse` |
-| 设备令牌 | `POST /api/v1/device_tokens/me` | 我的设备 Token 列表 | `MyDeviceTokensRequest` | `ApiResponse<PaginatedData<DeviceTokenItem>>` |
+| 通知中心 | `POST /api/v1/notifications/clear` | 清除通知 | `ClearNotificationsRequest` | `ApiResponse` |
+| 偏好设置 | `POST /api/v1/notifications/preferences/get` | 获取通知偏好 | `{}` | `ApiResponse<NotificationPreferences>` |
+| 偏好设置 | `POST /api/v1/notifications/preferences/update` | 更新通知偏好 | `UpdateNotificationPreferencesRequest` | `ApiResponse<NotificationPreferences>` |
+| 推送设备 | `POST /api/v1/notifications/devices/register` | 注册推送设备 | `RegisterDeviceRequest` | `ApiResponse` |
+| 推送设备 | `POST /api/v1/notifications/devices/unregister` | 注销推送设备 | `UnregisterDeviceRequest` | `ApiResponse` |
+| 推送设备 | `POST /api/v1/notifications/devices/list` | 设备列表 | `MyDevicesRequest` | `ApiResponse<PaginatedData<DeviceItem>>` |
 
 ## 核心类型定义
 
 ```typescript
-type NotificationFilterType = 'like' | 'comment' | 'follow' | 'system' | 'mention';
+// === 通知分类（用于过滤和偏好设置） ===
+type NotificationCategory = 'social' | 'group' | 'system';
 
-type NotificationType = 
-  | 'moment_like' | 'moment_comment' | 'comment_reply'
-  | 'new_follower' | 'mutual_follow'
+// === 通知类型（每个 category 下的细分类型） ===
+type NotificationType =
+  // social（社交互动）
+  | 'moment_like' | 'moment_comment' | 'comment_reply' | 'comment_like'
+  | 'new_follower' | 'mutual_follow' | 'mention'
+  // group（群组事件）
   | 'group_invite' | 'group_invite_response'
   | 'group_application' | 'group_application_response'
   | 'group_announcement'
-  | 'system_announcement' | 'message_mention';
+  // system（系统通知）
+  | 'system_announcement' | 'account_alert';
 
-type NotificationTargetType = 'moment' | 'comment' | 'user' | 'group' | 'web';
+// === 通知导航目标 ===
+interface NotificationTarget {
+  type: 'moment' | 'comment' | 'user' | 'group' | 'url';
+  id?: string;     // type 为 moment/comment/user/group 时的资源 ID
+  url?: string;    // type 为 url 时的跳转链接
+}
 
+// === 设备平台 ===
 type DevicePlatform = 'ios' | 'android' | 'harmony' | 'web';
 
+// === 通知列表项（含聚合支持） ===
 interface NotificationItem {
   notification_id: string;
   type: NotificationType;
+  category: NotificationCategory;
   is_read: boolean;
   created_at: string;
-  
+
   // 操作者信息
-  sender?: UserInfo;              // 最新操作者（聚合时为最近一个操作者）
-  
+  actor?: UserInfo;               // 最新操作者（聚合时为最近一个）
+
   // 聚合支持（服务端按 type + target_id 分组）
   // 展示效果："张三和其他5人赞了你的瞬间"
-  aggregated_count?: number;      // 总操作人数（>1 表示已聚合）
+  aggregated_count?: number;      // 总操作人数（>1 表示已聚合，不存在或 1 表示未聚合）
   actors_preview?: UserInfo[];    // 操作者预览（最多3个，聚合时返回）
-  
-  // 通知内容
-  title?: string;
-  content?: string;
-  target_type?: NotificationTargetType;
-  target_id?: string;           // 统一为 string（user_id 转为字符串格式）
-  reference_id?: string;
-  target_text_preview?: string;
-  target_media_url?: string;
-}
 
-interface UnreadCount {
-  total: number;
-  breakdown?: {
-    like: number;
-    comment: number;
-    follow: number;
-    system: number;
-    mention: number;
+  // 通知内容
+  title: string;                  // 服务端渲染的通知标题
+  body?: string;                  // 可选正文
+
+  // 导航目标
+  target?: NotificationTarget;
+
+  // 目标内容预览
+  target_preview?: {
+    text?: string;                // 文本摘要
+    image_url?: string;           // 图片缩略图
   };
 }
 
-interface DeviceTokenItem {
-  device_token_id: string;
+// === 未读计数 ===
+interface UnreadCount {
+  total: number;
+  by_category: {
+    social: number;
+    group: number;
+    system: number;
+  };
+}
+
+// === 通知偏好设置 ===
+interface NotificationPreferences {
+  // 按分类总开关
+  categories: {
+    social: boolean;
+    group: boolean;
+    system: boolean;   // system 分类不可关闭，始终为 true
+  };
+
+  // 免打扰时段
+  quiet_hours?: {
+    enabled: boolean;
+    start_time: string;   // HH:mm 格式（用户本地时间）
+    end_time: string;     // HH:mm 格式（用户本地时间）
+    timezone: string;     // IANA 时区（如 "Asia/Shanghai"）
+  };
+
+  // 推送设置
+  push: {
+    enabled: boolean;
+    sound: boolean;
+    vibration: boolean;
+  };
+}
+
+// === 设备列表项 ===
+interface DeviceItem {
+  device_id: string;
   platform: DevicePlatform;
-  device_token_masked: string; // 脱敏后的 token 展示（不可用于请求）
-  created_at: string;
+  device_name?: string;             // 设备名称（如 "iPhone 15 Pro"，由客户端上报）
+  device_token_masked: string;      // 脱敏后的 token（不可用于请求）
+  registered_at: string;
+  last_push_at?: string;            // 最后推送时间
 }
 ```
 
@@ -99,8 +142,8 @@ interface DeviceTokenItem {
 
 | 错误码 | 说明 | 相关接口 |
 |-------|------|---------|
-| `10001` | 缺少必填参数 | `device_tokens/register`、`device_tokens/unregister` |
-| `10003` | 参数值超出范围 | `notifications`（limit）、`notifications/mark_read`（ids 数量） |
+| `10001` | 缺少必填参数 | `devices/register`、`devices/unregister` |
+| `10003` | 参数值超出范围 | `notifications/list`（limit）、`mark_read`（ids 数量） |
 
 ---
 
@@ -112,20 +155,19 @@ interface DeviceTokenItem {
 
 获取通知列表。
 
-> 聚合所有互动类通知（点赞、评论、关注等）。群组邀请/申请等强业务操作类通知，建议优先使用各业务模块的专用列表接口。
-**映射关系说明**（所有 target_id 统一为 string 类型）：
-- moment_like: target_id=moment_id, reference_id=null
-- moment_comment: target_id=comment_id, reference_id=moment_id
-- comment_reply: target_id=reply_id, reference_id=moment_id
-- message_mention: target_id=moment_id 或 comment_id，若为 comment 则 reference_id=moment_id
-- new_follower: target_id=user_id（字符串格式）, reference_id=null
-- mutual_follow: target_id=user_id（字符串格式）, reference_id=null
-- group_invite: target_id=invite_id, reference_id=group_id
-- group_invite_response: target_id=invite_id, reference_id=group_id
-- group_application: target_id=application_id, reference_id=group_id
-- group_application_response: target_id=application_id, reference_id=group_id
-- group_announcement: target_id=announcement_id, reference_id=group_id
-- system_announcement: target_id=announcement_id, reference_id=null
+> 服务端按 `(type, target_id)` 分组聚合同类通知。例如，同一瞬间的多次点赞会聚合为一条通知，`aggregated_count` 表示总人数，`actors_preview` 展示最近的操作者。
+
+**映射关系说明**（所有 target.id 统一为 string 类型）：
+- moment_like: target.id=moment_id
+- moment_comment: target.id=moment_id
+- comment_reply: target.id=moment_id（引导用户到评论所在的瞬间）
+- comment_like: target.id=comment_id
+- mention: target.id=moment_id 或 comment_id
+- new_follower/mutual_follow: target.id=user_id
+- group_invite/group_invite_response: target.id=group_id
+- group_application/group_application_response: target.id=group_id
+- group_announcement: target.id=group_id
+- system_announcement: target.type='url', target.url=action_url
 
 WebSocket 仅推送正向互动与系统公告，拒绝/取消等结果在通知列表获取。
 
@@ -133,7 +175,7 @@ WebSocket 仅推送正向互动与系统公告，拒绝/取消等结果在通知
 ```typescript
 interface GetNotificationsRequest {
   pagination?: PaginationParams;
-  type?: NotificationFilterType;
+  category?: NotificationCategory;   // 可选：按分类过滤
 }
 ```
 **Response**: `ApiResponse<PaginatedData<NotificationItem>>`
@@ -153,33 +195,95 @@ interface GetNotificationsRequest {
 
 **处理规则**：
 - 提供 `notification_ids`：仅标记指定条目
-- 提供 `type`：标记该类型的全部未读
+- 提供 `category`：标记该分类的全部未读
 - 二者都为空：标记全部未读
 
 **Request**:
 ```typescript
 interface MarkNotificationsReadRequest {
   notification_ids?: string[];
-  type?: NotificationFilterType;
+  category?: NotificationCategory;
 }
 ```
 **Response**: `ApiResponse`
 
 **可能错误码**：`10003`
 
-## 推送设备管理 API
+### POST /api/v1/notifications/clear
 
-通知是实时推送机制：在线时通过 WebSocket 推送，离线时通过设备令牌推送。
+清除通知。
+
+**处理规则**：
+- 提供 `category`：清除该分类的全部已读通知
+- `category` 为空：清除全部已读通知
+- 未读通知不会被清除
+
+**Request**:
+```typescript
+interface ClearNotificationsRequest {
+  category?: NotificationCategory;
+}
+```
+**Response**: `ApiResponse`
+
+---
+
+## 通知偏好 API
 
 **可见性**：仅当前用户可见（`@owner-only`）。
 
-### POST /api/v1/device_tokens/me/register
+### POST /api/v1/notifications/preferences/get
 
-注册设备推送 Token。
+获取通知偏好设置。
+
+**Request**: `{}`
+**Response**: `ApiResponse<NotificationPreferences>`
+
+### POST /api/v1/notifications/preferences/update
+
+更新通知偏好设置。
 
 **Request**:
 ```typescript
-interface RegisterDeviceTokenRequest {
+interface UpdateNotificationPreferencesRequest {
+  preferences: Partial<NotificationPreferences>;
+}
+```
+**Response**: `ApiResponse<NotificationPreferences>`
+
+**可能错误码**：`10003`
+
+---
+
+## 推送设备管理 API
+
+推送机制：在线时通过 WebSocket 推送，离线时通过注册的设备令牌推送。
+
+**可见性**：仅当前用户可见（`@owner-only`）。
+
+### POST /api/v1/notifications/devices/register
+
+注册推送设备。
+
+**Request**:
+```typescript
+interface RegisterDeviceRequest {
+  platform: DevicePlatform;
+  device_token: string;
+  device_name?: string;   // 可选：设备名称（如 "iPhone 15 Pro"）
+}
+```
+**Response**: `ApiResponse`
+
+**可能错误码**：`10001`
+
+### POST /api/v1/notifications/devices/unregister
+
+注销推送设备。
+
+**Request**:
+```typescript
+interface UnregisterDeviceRequest {
   platform: DevicePlatform;
   device_token: string;
 }
@@ -188,31 +292,16 @@ interface RegisterDeviceTokenRequest {
 
 **可能错误码**：`10001`
 
-### POST /api/v1/device_tokens/me/unregister
+### POST /api/v1/notifications/devices/list
 
-注销设备推送 Token。
-
-**Request**:
-```typescript
-interface UnregisterDeviceTokenRequest {
-  platform: DevicePlatform;
-  device_token: string;
-}
-```
-**Response**: `ApiResponse`
-
-**可能错误码**：`10001`
-
-### POST /api/v1/device_tokens/me
-
-获取设备推送 Token 列表。
+获取已注册的推送设备列表。
 
 **Request**:
 ```typescript
-interface MyDeviceTokensRequest {
+interface MyDevicesRequest {
   pagination?: PaginationParams;
 }
 ```
-**Response**: `ApiResponse<PaginatedData<DeviceTokenItem>>`
+**Response**: `ApiResponse<PaginatedData<DeviceItem>>`
 
 **可能错误码**：`10003`

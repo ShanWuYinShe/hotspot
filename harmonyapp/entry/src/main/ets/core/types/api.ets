@@ -18,6 +18,22 @@ export interface PaginatedData<T> {
   pagination: PaginationMeta;
 }
 
+export interface PaginationParams {
+  limit?: number;
+  cursor?: string;
+}
+
+export interface SearchBaseParams {
+  reference_point: GeoPoint;
+  limit?: number;
+  cursor?: string;
+}
+
+export interface TimeRangeParams {
+  start_time?: string;
+  end_time?: string;
+}
+
 // ==================== 通用类型定义 (Domain Primitives) ====================
 
 export type UserType = 'temp' | 'normal' | 'admin' | 'system';
@@ -26,6 +42,8 @@ export type MessageType = SendMessageType | 'system';
 export type ReactionType = 'like' | 'love' | 'laugh' | 'angry' | 'sad' | 'wow';
 export type PrivacyLevel = 'public' | 'friends' | 'private';
 export type GroupRole = 'owner' | 'admin' | 'member';
+export type UserAccountStatus = 'active' | 'banned' | 'suspended';
+export type GroupJoinMethod = 'open' | 'approval' | 'invite_only';
 
 // 基础坐标点
 export interface GeoPoint {
@@ -96,7 +114,6 @@ export interface UserInfo {
 }
 
 export interface UserRelation {
-  is_mutual_follow: boolean;
   is_following: boolean;
   is_followed_by: boolean;
   is_blocked: boolean;
@@ -152,7 +169,7 @@ export interface MyCard {
 // 2. 群组 (Group)
 
 export interface GroupInfo {
-  group_chat_id: string;
+  group_id: string;
   name: string;
   avatar_url?: string;
   members_count: number;
@@ -171,45 +188,22 @@ export interface GroupItem extends GroupInfo {
   description?: string;
   tags?: string[];
   has_password: boolean;
-  location?: RelativeLocation;
+  location: RelativeLocation;
+  created_at?: string;
+  owner_id?: string;
   my_state?: GroupMyState;
 }
 
-export interface JoinedGroupItem extends GroupItem {
-  my_state: GroupMyState;
-  
-  // 兼容旧版扁平化字段 (不推荐，建议迁移到 my_state)
-  my_role: GroupRole;
-  unread_count: number;
-  last_activity_at: string;
-  is_muted: boolean;
-  is_pinned: boolean;
-}
+export type JoinedGroupItem = GroupItem;
 
 export interface GroupSettings {
-  join_method?: 'open' | 'approval' | 'invite_only';
-  is_searchable?: boolean;
-  max_members?: number;
-  // 输入字段
-  password?: string;
-  // 位置设置 (Input)
-  longitude?: number;
-  latitude?: number;
-  location_name?: string;
+  join_method: GroupJoinMethod;
+  is_searchable: boolean;
+  max_members: number;
+  location: RelativeLocation;
 }
 
-export interface GroupDetailData extends GroupItem {
-  created_at: string;
-  owner_id: number;
-  settings?: GroupSettings;
-  
-  // 仅在登录且已加入时返回 (Zero-Lookup)
-  my_role?: GroupRole;
-  is_joined?: boolean;
-  unread_count?: number;
-  is_muted?: boolean;
-  is_pinned?: boolean;
-}
+export type GroupDetailData = GroupItem;
 
 // 3. 生活瞬间 (Moment)
 
@@ -246,12 +240,11 @@ export interface PrivateMessageItem {
   type: MessageType;
   content?: string;
   media?: MessageMedia;
-  sender: UserInfo;
+  sender_id: number;
   reply_to_message_id?: string;
   reply_to?: MessageReplyTo;
   sent_at: string;
   edited_at?: string;
-  is_recalled: boolean;
   recalled_at?: string;
 }
 
@@ -266,7 +259,6 @@ export interface GroupMessageItem {
   mentions?: number[];
   sent_at: string;
   edited_at?: string;
-  is_recalled: boolean;
   recalled_by?: number;
   recalled_at?: string;
   read_count?: number;
@@ -333,8 +325,6 @@ export interface RefreshTokenRequest {
 }
 
 export interface CheckStatusData {
-  user_id: number;
-  nickname: string;
   is_valid: boolean;
   expires_at: string;
 }
@@ -494,7 +484,6 @@ export interface UserLikedMomentsRequest extends SearchBaseParams {
 export interface MyProfileRequest {}
 
 export interface MyProfileData {
-  user_id: number;
   nickname: string;
   avatar_url?: string;
   bio?: string;
@@ -913,52 +902,59 @@ export interface SearchGroupsByLocationRequest extends SearchBaseParams {
 }
 
 export interface GroupOpenTheDoorRequest {
-  group_chat_id: string;
-  reference_point: GeoPoint;
+  group_id: string;
 }
 
 export interface GroupSettingsRequest {
-  group_chat_id: string;
+  group_id: string;
 }
 
 export interface GroupSettingsData {
-  group_chat_id: string;
+  group_id: string;
   settings: GroupSettings;
   has_password: boolean;
   created_at: string;
 }
 
-export interface CreateGroupChatRequest {
+export interface CreateGroupRequest {
   name: string;
   description?: string;
   avatar_file_id?: string;
   tags?: string[];
-  settings?: GroupSettings;
+  password?: string;
+  join_method?: GroupJoinMethod;
+  is_searchable?: boolean;
+  max_members?: number;
+  location?: Location;
 }
 
-export interface UpdateGroupChatRequest {
-  group_chat_id: string;
+export interface UpdateGroupRequest {
+  group_id: string;
   name?: string;
   description?: string;
   avatar_file_id?: string;
   tags?: string[];
-  settings?: GroupSettings;
+  password?: string;
+  join_method?: GroupJoinMethod;
+  is_searchable?: boolean;
+  max_members?: number;
+  location?: Location;
 }
 
 export interface UpdateGroupMySettingsRequest {
-  group_chat_id: string;
+  group_id: string;
   is_muted?: boolean;
   is_pinned?: boolean;
 }
 
-export interface DeleteGroupChatRequest {
-  group_chat_id: string;
+export interface DeleteGroupRequest {
+  group_id: string;
 }
 
 // ==================== 群组成员管理API类型 ====================
 
 export interface GroupMembersRequest {
-  group_chat_id: string;
+  group_id: string;
   role?: 'owner' | 'admin' | 'member';
   limit?: number;
   cursor?: string;
@@ -973,7 +969,7 @@ export interface GroupMemberItem {
 }
 
 export interface InviteMemberRequest {
-  group_chat_id: string;
+  group_id: string;
   user_id: number;
   message?: string;
 }
@@ -984,12 +980,12 @@ export interface InviteMemberData {
 }
 
 export interface JoinGroupRequest {
-  group_chat_id: string;
+  group_id: string;
   password?: string;
 }
 
 export interface ApplyToGroupRequest {
-  group_chat_id: string;
+  group_id: string;
   message?: string;
 }
 
@@ -998,35 +994,35 @@ export interface ApplyToGroupData {
 }
 
 export interface SetMemberRoleRequest {
-  group_chat_id: string;
+  group_id: string;
   user_id: number;
   role: 'admin' | 'member';
 }
 
 export interface MuteMemberRequest {
-  group_chat_id: string;
+  group_id: string;
   user_id: number;
   duration_minutes: number;
 }
 
 export interface UnmuteMemberRequest {
-  group_chat_id: string;
+  group_id: string;
   user_id: number;
 }
 
 export interface BanMemberRequest {
-  group_chat_id: string;
+  group_id: string;
   user_id: number;
   reason?: string;
 }
 
 export interface UnbanMemberRequest {
-  group_chat_id: string;
+  group_id: string;
   user_id: number;
 }
 
 export interface BannedMembersRequest {
-  group_chat_id: string;
+  group_id: string;
   limit?: number;
   cursor?: string;
 }
@@ -1039,12 +1035,12 @@ export interface BannedMemberItem {
 }
 
 export interface RemoveMemberRequest {
-  group_chat_id: string;
+  group_id: string;
   user_id: number;
 }
 
 export interface GroupApplicationsRequest {
-  group_chat_id: string;
+  group_id: string;
   status?: 'pending' | 'accepted' | 'rejected' | 'all';
   limit?: number;
   cursor?: string;
@@ -1070,11 +1066,11 @@ export interface RejectGroupApplicationRequest {
 }
 
 export interface TransferOwnershipRequest {
-  group_chat_id: string;
+  group_id: string;
   new_owner_id: number;
 }
 
-export interface MyGroupChatsRequest {
+export interface MyGroupsRequest {
   limit?: number;
   cursor?: string;
 }
@@ -1108,7 +1104,7 @@ export interface RejectInviteRequest {
 }
 
 export interface LeaveGroupRequest {
-  group_chat_id: string;
+  group_id: string;
 }
 
 // ==================== 私聊消息API类型 ====================
@@ -1172,11 +1168,6 @@ export interface Conversation {
   last_activity_at: string;
   created_at: string;
   can_message: boolean;
-  recent_messages: {
-    items: PrivateMessageItem[];
-    has_more: boolean;
-    next_cursor?: string;
-  };
 }
 
 export interface MessageLimit {
@@ -1214,7 +1205,7 @@ export interface PrivateChatDetailData {
 // ==================== 群聊消息API类型 ====================
 
 export interface SendGroupMessageRequest {
-  group_chat_id: string;
+  group_id: string;
   type: SendMessageType;
   content?: string;
   file_id?: string;
@@ -1223,7 +1214,7 @@ export interface SendGroupMessageRequest {
 }
 
 export interface GroupMessagesHistoryRequest {
-  group_chat_id: string;
+  group_id: string;
   limit?: number;
   cursor?: string;
   include_system?: boolean;
@@ -1244,7 +1235,7 @@ export interface DeleteGroupMessageRequest {
 }
 
 export interface MarkGroupMessagesReadRequest {
-  group_chat_id: string;
+  group_id: string;
   up_to_message_id?: string;
 }
 
@@ -1347,11 +1338,112 @@ export interface ReportItem {
   status: 'pending' | 'reviewing' | 'resolved' | 'dismissed';
   created_at: string;
   handled_at?: string;
-  target_snapshot?: {
-    content?: string;
-    media_urls?: string[];
-    owner_id?: string;
-  };
+}
+
+// ==================== 通知中心 API类型 ====================
+
+export interface GetNotificationsRequest {
+  limit?: number;
+  cursor?: string;
+  type?: 'like' | 'comment' | 'follow' | 'system' | 'mention';
+}
+
+export interface NotificationItem {
+  notification_id: string;
+  type: 'like' | 'comment' | 'follow' | 'system' | 'mention';
+  title: string;
+  message: string;
+  created_at: string;
+  read: boolean;
+}
+
+// ==================== 私聊API类型 ====================
+
+export interface MyPrivateChatsRequest extends PaginationParams {}
+
+export interface PrivateChatListItem {
+  private_chat_id: string;
+  user: UserInfo;
+  last_message?: PrivateMessageItem;
+  last_activity_at: string;
+  unread_count: number;
+}
+
+export interface PrivateChatOpenTheDoorRequest {}
+
+export interface PrivateChatLastMessage {
+  private_chat_id: string;
+  last_message: PrivateMessageItem;
+}
+
+export interface UpdatePrivateChatSettingsRequest {
+  quiet?: boolean;
+  enable_notifications?: boolean;
+}
+
+export interface DeletePrivateChatRequest {
+  private_chat_id: string;
+}
+
+export interface CreateGroupRequest {
+  user_ids: number[];
+  name?: string;
+  description?: string;
+  avatar_file_id?: string;
+}
+
+export interface UpdateGroupRequest {
+  group_id: string;
+  name?: string;
+  description?: string;
+  avatar_file_id?: string;
+}
+
+export interface DeleteGroupRequest {
+  group_id: string;
+}
+
+export interface MyGroupsRequest extends PaginationParams {}
+
+export interface GroupInviteItem {
+  invite_id: string;
+  group: GroupInfo;
+  inviter: UserInfo;
+  message?: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  created_at: string;
+  expires_at?: string;
+}
+
+export interface GroupInviteItem extends PaginationParams {}
+
+export interface PrivateMessagesHistoryRequest {
+  private_chat_id: string;
+  limit?: number;
+  cursor?: string;
+}
+
+export interface MarkPrivateMessagesReadRequest {
+  private_chat_id: string;
+  message_ids?: string[];
+}
+
+export interface PrivateMessageReactionsRequest {
+  private_chat_id: string;
+  message_id: string;
+  limit?: number;
+  cursor?: string;
+}
+
+export interface GroupMessagesHistoryRequest {
+  group_id: string;
+  limit?: number;
+  cursor?: string;
+}
+
+export interface MarkGroupMessagesReadRequest {
+  group_id: string;
+  message_ids?: string[];
 }
 
 export interface MyReportsRequest {
@@ -1765,7 +1857,7 @@ export interface TrendingTagsRequest {
 }
 
 export interface TrendingTagsData {
-  items: TagData[];
+  items: TagItem[];
 }
 
 export interface SuggestTagsRequest {
@@ -1862,7 +1954,7 @@ export interface SystemAnnouncementItem {
 
 // Group Chat Additional Types
 export interface GroupSettingsResponse {
-  group_chat_id: string;
+  group_id: string;
   settings: GroupSettings;
   has_password: boolean;
   created_at: string;
@@ -2174,17 +2266,17 @@ export interface AdminUnbanUserRequest {
 }
 
 export interface AdminGroupSearchRequest extends PaginationParams {
-  group_chat_id?: string;
+  group_id?: string;
   name?: string;
   owner_id?: number;
 }
 
 export interface AdminGroupDetailRequest {
-  group_chat_id: string;
+  group_id: string;
 }
 
 export interface AdminDismissGroupRequest {
-  group_chat_id: string;
+  group_id: string;
   reason?: string;
 }
 

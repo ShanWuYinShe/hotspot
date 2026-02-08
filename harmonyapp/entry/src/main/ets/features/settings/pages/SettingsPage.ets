@@ -87,12 +87,13 @@ struct SettingsPage {
           .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
 
           ListItem() {
-            this.SettingItem('个人资料', '修改头像、昵称', () => {
+            this.SettingItem('个人资料', '修改头像、昵称', async () => {
               if (this.currentUser) {
+                const userId = await AuthAccountManager.getCurrentUserId();
                 const routerInstance = this.getUIContext().getRouter();
                 routerInstance.pushUrl({
                   url: `features/profile/pages/${PageNames.PROFILE}`,
-                  params: { userId: this.currentUser.user_id }
+                  params: { userId: userId }
                 });
               } else {
                 SystemToast.showWarning('请先登录', this.getUIContext());

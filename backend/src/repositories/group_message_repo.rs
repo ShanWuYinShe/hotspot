@@ -1,45 +1,34 @@
+//! 群聊消息仓库层实现
+//! 
+//! 适配新 Schema: message_id (UUID), group_id (BIGINT), 分区表 group_messages_partitioned
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
-use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::enums::MessageType;
+use crate::utils::pagination::{decode_cursor, encode_cursor, TimeIdCursor};
 
-use crate::utils::pagination::{decode_cursor, encode_cursor, IdCursor};
-
-/// 群聊消息Row - 数据库查询返回类型
+/// 群聊消息行数据
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct GroupMessageRow {
-    pub id: i64,
     pub message_id: Uuid,
-    // cursor field removed
-    pub group_chat_id: Uuid,
+    pub group_id: i64,
     pub sender_id: i64,
     pub r#type: MessageType,
-    pub content: String,
-    pub reply_to_message_id: Option<Uuid>,
-    pub mentions: Option<Vec<i64>>,
-    pub file_name: Option<String>,
-    pub file_size: Option<i64>,
-    pub thumbnail_url: Option<String>,
-    pub duration: Option<i32>,
+    pub content: Option<String>,
+    pub metadata: serde_json::Value,
+    pub reply_to_id: Option<Uuid>,
+    pub is_recalled: bool,
+    pub reaction_counts: serde_json::Value,
+    pub mentions: serde_json::Value,
+    pub read_count: i32,
     pub sent_at: DateTime<Utc>,
     pub edited_at: Option<DateTime<Utc>>,
-    pub is_recalled: bool,
-    pub recalled_by: Option<i64>,
     pub recalled_at: Option<DateTime<Utc>>,
-    pub is_deleted: bool,
-    pub deleted_at: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Clone)]
-pub struct GroupMessageMeta {
-    pub group_chat_id: Uuid,
-    pub sender_id: i64,
-    pub is_recalled: bool,
-    pub sent_at: DateTime<Utc>,
+    pub recalled_by: Option<i64>,
 }
 
 #[derive(Debug, Clone)]
@@ -52,14 +41,52 @@ impl GroupMessageRepository {
         Self { pool }
     }
 
-    /// 获取消息元数据（用于权限检查）
-    pub async fn get_meta(&self, message_id: Uuid) -> Result<Option<GroupMessageMeta>> {
-        let row = sqlx::query_as!(
-            GroupMessageMeta,
+    /// 发送群聊消息
+    pub async fn create(
+        &self,
+        group_id: i64,
+        sender_id: i64,
+        msg_type: MessageType,
+        content: Option<String>,
+        metadata: Option<serde_json::Value>,
+        reply_to_id: Option<Uuid>,
+        at_users: Option<Vec<i64>>,
+    ) -> Result<GroupMessageRow> {
+        let row = sqlx::query_as_unchecked!(
+            GroupMessageRow,
             r#"
-            SELECT group_chat_id, sender_id, is_recalled, sent_at
+            INSERT INTO group_messages_partitioned (
+                group_id, sender_id, message_type, content, metadata, reply_to_id, at_users
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING message_id, group_id, sender_id, message_type as "type: MessageType", content, metadata, 
+                      reply_to_id, is_recalled, reaction_counts, at_users as "mentions!", read_count, 
+                      sent_at, edited_at, recalled_at, recalled_by
+            "#,
+            group_id,
+            sender_id,
+            msg_type.to_string(),
+            content,
+            metadata.unwrap_or(serde_json::json!({})),
+            reply_to_id,
+            serde_json::to_value(at_users.unwrap_or_default()).unwrap_or(serde_json::json!([]))
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(row)
+    }
+
+    /// 根据 ID 查找
+    pub async fn find_by_id(&self, message_id: Uuid) -> Result<Option<GroupMessageRow>> {
+        let row = sqlx::query_as_unchecked!(
+            GroupMessageRow,
+            r#"
+            SELECT message_id, group_id, sender_id, message_type as "type: MessageType", content, metadata,
+                   reply_to_id, is_recalled, reaction_counts, at_users as "mentions!", read_count,
+                   sent_at, edited_at, recalled_at, recalled_by
             FROM group_messages
-            WHERE message_id = $1 AND is_deleted = FALSE
+            WHERE message_id = $1
             "#,
             message_id
         )
@@ -69,20 +96,100 @@ impl GroupMessageRepository {
         Ok(row)
     }
 
-    /// 按消息ID批量获取消息
+    pub async fn list_message_ids_after(
+        &self,
+        last_row_id: i64,
+        limit: i64,
+    ) -> Result<Vec<(i64, Uuid)>> {
+        let rows = sqlx::query!(
+            r#"
+            SELECT row_id as "row_id!", message_id as "message_id!"
+            FROM (
+                SELECT row_number() OVER (ORDER BY sent_at ASC, message_id ASC)::bigint as row_id,
+                       message_id
+                FROM group_messages
+            ) ranked
+            WHERE row_id > $1
+            ORDER BY row_id ASC
+            LIMIT $2
+            "#,
+            last_row_id,
+            limit
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.into_iter().map(|r| (r.row_id, r.message_id)).collect())
+    }
+
+    /// 列出群聊消息历史
+    pub async fn list_by_group(
+        &self,
+        group_id: i64,
+        user_id: i64,
+        limit: i64,
+        cursor: Option<String>,
+        include_system: bool,
+    ) -> Result<(Vec<GroupMessageRow>, Option<String>)> {
+        let (last_ts, last_id) = if let Some(c) = cursor {
+            decode_cursor::<TimeIdCursor>(&c)?
+        } else {
+            (DateTime::<Utc>::MAX_UTC, Uuid::max())
+        };
+
+        let rows = sqlx::query_as_unchecked!(
+            GroupMessageRow,
+            r#"
+            SELECT message_id, group_id, sender_id, message_type as "type: MessageType", content, metadata,
+                   reply_to_id, is_recalled, reaction_counts, at_users as "mentions!", read_count,
+                   sent_at, edited_at, recalled_at, recalled_by
+            FROM group_messages
+            WHERE group_id = $1
+              AND (sent_at, message_id) < ($3, $4)
+              AND ($2::boolean OR message_type <> 'system')
+              AND NOT EXISTS (
+                  SELECT 1 FROM group_message_deletions d
+                  WHERE d.message_id = group_messages.message_id
+                    AND d.user_id = $5
+              )
+            ORDER BY sent_at DESC, message_id DESC
+            LIMIT $6
+            "#,
+            group_id,
+            include_system,
+            last_ts,
+            last_id,
+            user_id,
+            limit + 1
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let has_more = rows.len() > limit as usize;
+        let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
+        
+        let next_cursor = if has_more {
+            items.last().map(|r| encode_cursor(&(r.sent_at, r.message_id))).transpose()?
+        } else {
+            None
+        };
+
+        Ok((items, next_cursor))
+    }
+
     pub async fn find_by_ids(&self, message_ids: &[Uuid]) -> Result<Vec<GroupMessageRow>> {
         if message_ids.is_empty() {
             return Ok(vec![]);
         }
-        let rows = sqlx::query_as!(
+
+        let rows = sqlx::query_as_unchecked!(
             GroupMessageRow,
             r#"
-            SELECT id, message_id, group_chat_id, sender_id,
-                   type as "type: MessageType", content, reply_to_message_id, mentions,
-                   file_name, file_size, thumbnail_url, duration,
-                   sent_at, edited_at, is_recalled, recalled_by, recalled_at, is_deleted, deleted_at
+            SELECT message_id, group_id, sender_id, message_type as "type: MessageType", content, metadata,
+                   reply_to_id, is_recalled, reaction_counts, at_users as "mentions!", read_count,
+                   sent_at, edited_at, recalled_at, recalled_by
             FROM group_messages
-            WHERE message_id = ANY($1) AND is_deleted = FALSE
+            WHERE message_id = ANY($1)
             "#,
             message_ids
         )
@@ -92,282 +199,78 @@ impl GroupMessageRepository {
         Ok(rows)
     }
 
-    /// 按消息ID查找消息
-    pub async fn find_by_id(&self, message_id: Uuid) -> Result<Option<GroupMessageRow>> {
-        let row = sqlx::query_as!(
-            GroupMessageRow,
-            r#"
-            SELECT id, message_id, group_chat_id, sender_id,
-                   type as "type: MessageType", content, reply_to_message_id, mentions,
-                   file_name, file_size, thumbnail_url, duration,
-                   sent_at, edited_at, is_recalled, recalled_by, recalled_at, is_deleted, deleted_at
-            FROM group_messages
-            WHERE message_id = $1 AND is_deleted = FALSE
-            "#,
-            message_id
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(row)
-    }
-
-    /// 发送群聊消息
-    #[allow(clippy::too_many_arguments)]
-    pub async fn create(
-        &self,
-        group_chat_id: Uuid,
-        sender_id: i64,
-        r#type: MessageType,
-        content: String,
-        reply_to_message_id: Option<Uuid>,
-        mentions: Option<Vec<i64>>,
-        file_name: Option<&str>,
-        file_size: Option<i64>,
-        thumbnail_url: Option<&str>,
-        duration: Option<i32>,
-    ) -> Result<GroupMessageRow> {
-        let row = sqlx::query_as!(
-            GroupMessageRow,
-            r#"
-            INSERT INTO group_messages (group_chat_id, sender_id, type, content, reply_to_message_id, mentions, file_name, file_size, thumbnail_url, duration)
-            VALUES ($1, $2, $3::message_type, $4, $5, $6, $7, $8, $9, $10)
-            RETURNING id, message_id, group_chat_id, sender_id,
-                      type as "type: MessageType", content, reply_to_message_id, mentions,
-                      file_name, file_size, thumbnail_url, duration,
-                      sent_at, edited_at, is_recalled, recalled_by, recalled_at, is_deleted, deleted_at
-            "#,
-            group_chat_id,
-            sender_id,
-            r#type as MessageType,
-            content,
-            reply_to_message_id,
-            mentions.as_deref(),
-            file_name,
-            file_size,
-            thumbnail_url,
-            duration
-        )
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(row)
-    }
-
-    /// cursor: 游标（cursor 的 UUID），用于分页
-    pub async fn list_by_group(
-        &self,
-        group_chat_id: Uuid,
-        limit: i64,
-        cursor: Option<String>,
-        include_system: bool,
-    ) -> Result<(Vec<GroupMessageRow>, Option<String>)> {
-        let last_id = if let Some(c) = cursor {
-            decode_cursor::<IdCursor>(&c)?
-        } else {
-            i64::MAX
-        };
-
-        // 查询 limit + 1 条以判断是否有更多数据
-        let rows = sqlx::query_as!(
-            GroupMessageRow,
-            r#"
-            SELECT id, message_id, group_chat_id, sender_id,
-                   type as "type: MessageType", content, reply_to_message_id, mentions,
-                   file_name, file_size, thumbnail_url, duration,
-                   sent_at, edited_at, is_recalled, recalled_by, recalled_at, is_deleted, deleted_at
-            FROM group_messages
-            WHERE group_chat_id = $1 AND id < $2 AND is_deleted = FALSE
-              AND ($4::bool = TRUE OR type != 'system'::message_type)
-            ORDER BY id DESC
-            LIMIT $3
-            "#,
-            group_chat_id,
-            last_id,
-            limit + 1,
-            include_system
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        crate::utils::pagination::paginate_with_limit_plus_one(rows, limit as i32, |r| {
-            encode_cursor(&r.id)
-        })
-    }
-
-    /// 更新消息内容
-    pub async fn update_content(&self, message_id: Uuid, content: String) -> Result<()> {
-        sqlx::query!(
-            r#"
-            UPDATE group_messages
-            SET content = $2, edited_at = NOW()
-            WHERE message_id = $1
-            "#,
-            message_id,
-            content
-        )
-        .execute(&self.pool)
-        .await?;
-
-        Ok(())
-    }
-
-    /// 撤回消息
-    pub async fn recall(&self, message_id: Uuid, recalled_by: i64) -> Result<()> {
-        sqlx::query!(
-            r#"
-            UPDATE group_messages
-            SET is_recalled = TRUE, recalled_by = $2, recalled_at = NOW(), content = '[消息已撤回]'
-            WHERE message_id = $1
-            "#,
-            message_id,
-            recalled_by
-        )
-        .execute(&self.pool)
-        .await?;
-
-        Ok(())
-    }
-
-    /// 软删除消息
-    pub async fn soft_delete(&self, message_id: Uuid) -> Result<()> {
-        sqlx::query!(
-            r#"
-            UPDATE group_messages
-            SET is_deleted = TRUE, deleted_at = NOW()
-            WHERE message_id = $1
-            "#,
-            message_id
-        )
-        .execute(&self.pool)
-        .await?;
-
-        Ok(())
-    }
-
-    /// 统计群组消息总数
-    pub async fn count_by_group(&self, group_chat_id: Uuid) -> Result<i64> {
-        let result = sqlx::query!(
-            r#"
-            SELECT COUNT(*) as "count!"
-            FROM group_messages
-            WHERE group_chat_id = $1 AND is_deleted = FALSE
-            "#,
-            group_chat_id
-        )
-        .fetch_one(&self.pool)
-        .await?;
-        Ok(result.count)
-    }
-
-    /// 统计今日活跃成员数量（按发言用户去重）
-    pub async fn count_active_members_today(&self, group_chat_id: Uuid) -> Result<i64> {
-        let result = sqlx::query!(
-            r#"
-            SELECT COUNT(DISTINCT sender_id) as "count!"
-            FROM group_messages
-            WHERE group_chat_id = $1
-              AND is_deleted = FALSE
-              AND sent_at >= CURRENT_DATE
-            "#,
-            group_chat_id
-        )
-        .fetch_one(&self.pool)
-        .await?;
-        Ok(result.count)
-    }
-
-    /// 批量获取消息已读数量
-    pub async fn get_read_counts(&self, message_ids: &[Uuid]) -> Result<HashMap<Uuid, i64>> {
+    pub async fn get_read_counts(&self, message_ids: &[Uuid]) -> Result<std::collections::HashMap<Uuid, i64>> {
         if message_ids.is_empty() {
-            return Ok(HashMap::new());
+            return Ok(std::collections::HashMap::new());
         }
+
         let rows = sqlx::query!(
             r#"
-            SELECT message_id, COUNT(*) as "count!"
-            FROM group_message_read_status
+            SELECT message_id, read_count
+            FROM group_messages_partitioned
             WHERE message_id = ANY($1)
-            GROUP BY message_id
             "#,
             message_ids
         )
         .fetch_all(&self.pool)
         .await?;
 
-        let mut map = HashMap::new();
-        for row in rows {
-            map.insert(row.message_id, row.count);
-        }
-        Ok(map)
+        Ok(rows
+            .into_iter()
+            .map(|r| (r.message_id, r.read_count.unwrap_or(0) as i64))
+            .collect())
     }
 
-    /// 获取消息已读用户列表（分页）
-    pub async fn get_read_status(
-        &self,
-        message_id: Uuid,
-        limit: i64,
-        cursor: Option<String>,
-    ) -> Result<(Vec<(i64, DateTime<Utc>)>, Option<String>)> {
-        // cursor: (read_at, user_id)
-        use crate::utils::pagination::TimeCursor;
-        let (last_read_at, last_user_id) = if let Some(c) = cursor {
-            decode_cursor::<TimeCursor>(&c)?
-        } else {
-            (DateTime::<Utc>::MAX_UTC, i64::MAX)
-        };
+    pub async fn get_meta(&self, message_id: Uuid) -> Result<Option<GroupMessageRow>> {
+        self.find_by_id(message_id).await
+    }
 
-        let rows = sqlx::query!(
+    pub async fn update_content(&self, message_id: Uuid, content: String) -> Result<()> {
+        sqlx::query!(
+            "UPDATE group_messages_partitioned SET content = $1, edited_at = NOW() WHERE message_id = $2",
+            content,
+            message_id
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    /// 撤回群消息
+    pub async fn recall(&self, message_id: Uuid, user_id: i64) -> Result<()> {
+        sqlx::query!(
+            "UPDATE group_messages_partitioned SET is_recalled = TRUE, recalled_at = NOW(), recalled_by = $2, content = NULL, metadata = '{}'::jsonb WHERE message_id = $1",
+            message_id,
+            user_id
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn delete_for_user(&self, message_id: Uuid, user_id: i64) -> Result<()> {
+        sqlx::query!(
             r#"
-            SELECT user_id, read_at
-            FROM group_message_read_status
-            WHERE message_id = $1 AND (read_at, user_id) < ($2, $3)
-            ORDER BY read_at DESC, user_id DESC
-            LIMIT $4
+            INSERT INTO group_message_deletions (message_id, user_id)
+            VALUES ($1, $2)
+            ON CONFLICT (message_id, user_id) DO NOTHING
             "#,
             message_id,
-            last_read_at,
-            last_user_id,
-            limit + 1 // 使用 limit + 1 来判断是否有更多数据
+            user_id
         )
-        .fetch_all(&self.pool)
+        .execute(&self.pool)
         .await?;
-
-        // 判断是否有更多数据
-        let has_more = rows.len() > limit as usize;
-        let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
-
-        let next_cursor = if has_more {
-            items
-                .last()
-                .map(|r| encode_cursor(&(r.read_at, r.user_id)))
-                .transpose()?
-        } else {
-            None
-        };
-
-        let result = items.into_iter().map(|r| (r.user_id, r.read_at)).collect();
-        Ok((result, next_cursor))
+        Ok(())
     }
 
-    /// 列出布隆过滤器用的 message_id（按 id 分页）
-    pub async fn list_message_ids_after(
-        &self,
-        last_id: i64,
-        limit: i64,
-    ) -> Result<Vec<(i64, Uuid)>> {
-        let rows = sqlx::query!(
-            r#"
-            SELECT id, message_id
-            FROM group_messages
-            WHERE id > $1 AND is_deleted = FALSE
-            ORDER BY id
-            LIMIT $2
-            "#,
-            last_id,
-            limit
+    pub async fn delete_for_everyone(&self, message_id: Uuid, user_id: i64) -> Result<()> {
+        sqlx::query!(
+            "UPDATE group_messages_partitioned SET is_recalled = TRUE, recalled_at = NOW(), recalled_by = $2, content = NULL, metadata = '{}'::jsonb WHERE message_id = $1",
+            message_id,
+            user_id
         )
-        .fetch_all(&self.pool)
+        .execute(&self.pool)
         .await?;
-        Ok(rows.into_iter().map(|r| (r.id, r.message_id)).collect())
+        Ok(())
     }
 }

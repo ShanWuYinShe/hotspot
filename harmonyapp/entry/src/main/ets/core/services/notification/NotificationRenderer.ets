@@ -220,7 +220,19 @@ export class NotificationRenderer extends BaseSingleton {
    * 获取配置
    */
   getConfig(): RendererConfig {
-    return ConfigMerger.merge({} as RendererConfig, this.config);
+    const result: RendererConfig = {
+      position: this.config.position,
+      animation: this.config.animation,
+      duration: this.config.duration,
+      maxVisible: this.config.maxVisible,
+      enableSound: this.config.enableSound,
+      enableVibration: this.config.enableVibration,
+      enableAutoHide: this.config.enableAutoHide,
+      stackNotifications: this.config.stackNotifications,
+      showProgress: this.config.showProgress,
+      theme: this.config.theme
+    };
+    return result;
   }
   
   /**
@@ -387,7 +399,15 @@ export class NotificationRenderer extends BaseSingleton {
    * 获取渲染统计
    */
   getStats(): RendererStats {
-    return { ...this.stats };
+    const result: RendererStats = {
+      totalRendered: this.stats.totalRendered,
+      currentlyVisible: this.displayedNotifications.size,
+      averageDisplayTime: this.stats.averageDisplayTime,
+      userInteractions: this.stats.userInteractions,
+      autoHiddenCount: this.stats.autoHiddenCount,
+      manuallyClosedCount: this.stats.manuallyClosedCount
+    };
+    return result;
   }
   
   /**

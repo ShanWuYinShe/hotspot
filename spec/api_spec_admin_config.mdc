@@ -12,9 +12,8 @@ alwaysApply: true
 
 ## 契约引用
 
-- 公共基础类型：`@api_spec_common.mdc`
+- 公共基础类型：`@api_spec_common.mdc`（`GroupSettings` 定义于此）
 - 错误码：`@spec/api_spec_errors.mdc`
-- 系统配置类型：`@api_spec_common.mdc`（复用 `UploadConfig`、`ContentDefaults` 等类型定义）
 
 ## 幂等性（管理员写操作）
 
@@ -35,16 +34,74 @@ alwaysApply: true
 ## 核心类型定义
 
 ```typescript
-// 注：以下配置子类型定义于 @api_spec_common.mdc
-// - UploadConfig: 上传策略配置
-// - ContentDefaults: 内容默认值配置
-// - FeatureSwitches: 功能开关配置
-// - ContactInfo: 联系与帮助配置
-// - AppLimits: 系统限制配置
-// - RateLimitConfig: 频率限制配置
-// - GlobalSettings: 聚合配置对象
+interface UploadConfig {
+  image_max_size: number;
+  video_max_size: number;
+  audio_max_size: number;
+  file_max_size: number;
+  allowed_image_types: string[];
+  allowed_video_types: string[];
+}
 
-// GlobalSettings 定义于 @api_spec_common.mdc（含 @admin-only 字段）
+interface ContentDefaults {
+  default_location_name: string;
+  default_group_avatar: string;
+  default_user_avatar: string;
+  default_group_settings: GroupSettings;  // GroupSettings 定义于 @api_spec_common.mdc
+}
+
+interface FeatureSwitches {
+  enable_public_registration: boolean;
+  enable_guest_login: boolean;
+  enable_moments: boolean;
+  enable_nearby_people: boolean;
+}
+
+interface ContactInfo {
+  support_email: string;
+  privacy_policy_url: string;
+  terms_of_service_url: string;
+  official_website: string;
+}
+
+interface AppLimits {
+  max_group_members: number;
+  max_moment_tags: number;
+  max_moment_images: number;
+  moment_description_max_length: number;
+  comment_max_length: number;
+  search_radius_max: number;
+}
+
+interface RateLimitConfig {
+  global_per_hour: number;
+  user_per_hour: number;
+  auth_send_code_per_minute: number;
+  auth_verify_code_per_10minutes: number;
+  auth_register_per_10minutes: number;
+  auth_login_per_10minutes: number;
+  auth_guest_per_10minutes: number;
+  auth_refresh_per_10minutes: number;
+  auth_reset_request_per_minute: number;
+  auth_reset_verify_per_10minutes: number;
+  auth_reset_per_10minutes: number;
+  moments_create_per_minute: number;
+  comments_create_per_minute: number;
+  reports_create_per_hour: number;
+}
+
+// GlobalSettings: 全局配置聚合对象
+// 整个类型仅管理员可访问（通过 admin/global_settings/* 端点），无需字段级 @admin-only 标注
+interface GlobalSettings {
+  upload: UploadConfig;
+  defaults: ContentDefaults;
+  features: FeatureSwitches;
+  contact: ContactInfo;
+  limits: AppLimits;
+  rate_limits: RateLimitConfig;
+  updated_at?: string;
+  updated_by_user_id?: string;
+}
 ```
 
 ## 错误码说明

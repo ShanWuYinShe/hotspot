@@ -15,13 +15,11 @@ class UIStore {
 	
 	// ==================== 登录模态框 ====================
 	
-	get showLoginModal() {
-		return this.#showLoginModal;
-	}
+	/** 是否显示登录模态框 */
+	showLoginModal = $derived(this.#showLoginModal);
 	
-	get loginModalCallback() {
-		return this.#loginModalCallback;
-	}
+	/** 登录成功后的回调函数 */
+	loginModalCallback = $derived(this.#loginModalCallback);
 	
 	/**
 	 * 打开登录模态框

@@ -8,8 +8,7 @@ use crate::{
         user_repo::UserRepository,
         user_settings_repo::UserSettingsRepository,
     },
-    types::enums::UserType,
-    utils::{id_gen::IdGenerator, password::PasswordUtil},
+    utils::password::PasswordUtil,
 };
 
 #[derive(Clone)]
@@ -58,7 +57,7 @@ impl AdminRbacService {
             .unwrap_or("superadmin".to_string());
 
         // 如果 login_id 已存在用户，直接将其升级为超级管理员
-        if let Some(user) = self.user_repo.find_by_login_id(&login_id).await? {
+        if let Some(user) = self.user_repo.find_by_identifier(&login_id).await? {
             self.repo.upsert_admin_user(user.user_id, true).await?;
             self.repo.ensure_user_type_admin(user.user_id).await?;
             tracing::warn!(
@@ -70,18 +69,14 @@ impl AdminRbacService {
         }
 
         // 创建新的超级管理员账号
-        let user_id = IdGenerator::generate_user_id(self.repo.pool()).await?;
         let password_hash = PasswordUtil::hash_password(&password)?;
 
         let user = self
             .user_repo
             .create(
-                user_id,
-                UserType::Admin,
-                Some(login_id.clone()),
-                "Super Admin".to_string(),
-                Some(password_hash),
-                None,
+                login_id.clone(),
+                password_hash,
+                Some("Super Admin".to_string()),
                 None,
                 None,
             )

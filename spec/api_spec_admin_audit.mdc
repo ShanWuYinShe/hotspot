@@ -15,18 +15,12 @@ alwaysApply: true
 - 公共基础类型：`@api_spec_common.mdc`
 - 错误码：`@spec/api_spec_errors.mdc`
 
-## 幂等性（管理员写操作）
-
-- 导出相关写操作（`export`）必须携带 `Idempotency-Key`。
-
 ## 接口概览（按子域）
 
 | 子域 | 端点 | 说明 | Request | Response |
 |-----|------|------|---------|----------|
 | 审计日志 | `POST /api/v1/admin/audit/list` | 审计日志列表 | `AuditLogListRequest` | `ApiResponse<PaginatedData<AuditLogItem>>` |
 | 审计日志 | `POST /api/v1/admin/audit/detail` | 审计日志详情 | `AuditLogDetailRequest` | `ApiResponse<AuditLogItem>` |
-| 审计日志 | `POST /api/v1/admin/audit/export` | 导出审计日志（异步） | `AuditLogExportRequest` | `ApiResponse<AuditLogExportResult>` |
-| 审计日志 | `POST /api/v1/admin/audit/export/status` | 导出任务状态 | `AuditLogExportStatusRequest` | `ApiResponse<AuditLogExportResult>` |
 
 ## 核心类型定义
 
@@ -72,13 +66,6 @@ type AuditDetails =
   | { type: 'permission.revoke'; permission: string }
   | { type: 'config.update'; config_key: string };
 
-// 状态快照类型（用于 before_state / after_state）
-type StateSnapshot = 
-  | { type: 'user'; nickname?: string; status?: string; roles?: string[] }
-  | { type: 'group'; name?: string; members_count?: number }
-  | { type: 'role'; name?: string; permissions?: string[] }
-  | { type: 'config'; value?: string };
-
 **AuditLogItem**: 审计日志统一数据类型（用于列表、搜索、详情等所有场景，返回完全相同的字段）
 
 interface AuditLogItem {
@@ -93,8 +80,6 @@ interface AuditLogItem {
   ip_address?: string;            // @super-admin-only: 完整 IP 地址，仅超级管理员可见
   device_summary?: string;        // 设备摘要（如 "Chrome on Windows"），脱敏后的 UA 信息
   created_at: string;
-  before_state?: StateSnapshot;   // 操作前状态（已过滤敏感字段）
-  after_state?: StateSnapshot;    // 操作后状态（已过滤敏感字段）
 }
 ```
 
@@ -104,14 +89,6 @@ interface AuditLogItem {
 - `ip_location`：所有具有 `admin.audit.read` 权限的管理员可见
 - `ip_address`：仅超级管理员可见（`@super-admin-only`），普通管理员响应中不包含此字段
 - `device_summary`：从 User-Agent 脱敏提取的设备摘要，不暴露完整 UA 字符串
-
-**状态快照过滤**：
-- `before_state` 和 `after_state` 会自动过滤敏感字段，包括但不限于：
-  - `password`、`password_hash`、`secret`、`token`、`api_key`
-  - `credit_card`、`ssn`、`id_card`
-  - 其他包含 `_secret`、`_key`、`_token` 后缀的字段
-- 敏感字段值会被替换为 `"[REDACTED]"`
-- 导出的审计日志同样遵循此过滤规则
 
 ## 错误码说明
 
@@ -123,8 +100,6 @@ interface AuditLogItem {
 | `10204` | 非管理员 | 所有 admin 接口 |
 | `10205` | 管理员权限不足 | `detail`（需 `admin.audit.read`） |
 | `10300` | 日志不存在 | `detail` |
-| `22000` | 幂等键冲突 | `export` |
-| `22002` | 幂等操作正在处理中 | `export` |
 
 ---
 
@@ -163,55 +138,5 @@ interface AuditLogDetailRequest {
 }
 ```
 **Response**: `ApiResponse<AuditLogItem>`
-
-**可能错误码**：`10001`、`10204`、`10205`、`10300`
-
-### POST /api/v1/admin/audit/export
-
-导出审计日志（异步）。
-
-**权限要求**：`admin.audit.export`
-
-**Request**:
-```typescript
-interface AuditLogExportRequest {
-  action?: AuditAction;
-  operator_id?: string;
-  target_type?: AuditTargetType;
-  start_time?: string;
-  end_time?: string;
-  format?: 'csv' | 'json';  // 默认 csv
-}
-
-interface AuditLogExportResult {
-  export_id: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
-  download_url?: string;  // 完成后提供（签名 URL，有过期时间）
-  expires_at?: string;    // 下载链接过期时间（建议 1 小时内）
-}
-```
-**Response**: `ApiResponse<AuditLogExportResult>`
-
-**可能错误码**：`10204`、`10205`
-
-**安全说明**：
-- `download_url` 使用签名 URL（如 S3 presigned URL），有时间限制
-- 建议 `expires_at` 设置为 1 小时内过期
-- 下载前会重新验证用户权限
-- 导出文件中的敏感字段同样会被过滤
-
-### POST /api/v1/admin/audit/export/status
-
-查询导出任务状态。
-
-**权限要求**：`admin.audit.export`
-
-**Request**:
-```typescript
-interface AuditLogExportStatusRequest {
-  export_id: string;
-}
-```
-**Response**: `ApiResponse<AuditLogExportResult>`
 
 **可能错误码**：`10001`、`10204`、`10205`、`10300`

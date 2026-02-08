@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { tick } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
 	import { locationStore } from '$lib/stores/location.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
@@ -177,7 +177,8 @@ async function handleDoubleClick(event: MapClickEvent) {
 		}
 	});
 
-	$effect(() => {
+	// 组件卸载时清理资源
+	onMount(() => {
 		return () => {
 			map?.destroy();
 			map = null;

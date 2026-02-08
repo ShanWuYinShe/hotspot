@@ -7,6 +7,10 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { FeedUserItem, TrendingTagsData, TagData } from '../../../core/types/api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { SystemToast } from '../../../components/SystemToast';
+import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { SystemAvatar } from '../../../components/SystemAvatar';
+import { DesignConstants } from '../../../constants/DesignConstants';
+
 
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG: string = 'RecommendationPage';
@@ -98,9 +102,6 @@ struct RecommendationPage {
           .padding(16)
           .borderRadius(DesignConstants.RADIUS.LG)
 
-import { SystemAvatar } from '../../../components/SystemAvatar';
-
-// ...
 
           // 推荐用户
           if (this.recommendedUsers.length > 0) {

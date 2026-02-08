@@ -5,15 +5,18 @@ use uuid::Uuid;
 use crate::error::Result;
 
 #[derive(Debug, Clone)]
-pub struct PasswordResetRepository {
-    pool: PgPool,
+pub struct PasswordResetRow {
+    pub reset_id: Uuid,
+    pub user_id: i64,
+    pub token: String,
+    pub expires_at: DateTime<Utc>,
+    pub used: Option<bool>,
+    pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone)]
-pub struct PasswordResetTokenRow {
-    pub id: i64,
-    pub user_id: i64,
-    pub code_hash: String,
+#[derive(Clone)]
+pub struct PasswordResetRepository {
+    pool: PgPool,
 }
 
 impl PasswordResetRepository {
@@ -21,48 +24,54 @@ impl PasswordResetRepository {
         Self { pool }
     }
 
+    /// 创建重置记录
     pub async fn create(
         &self,
         user_id: i64,
-        code: String,
-        code_hash: String,
+        token: String,
         expires_at: DateTime<Utc>,
     ) -> Result<Uuid> {
-        let reset_id = Uuid::new_v4();
-
-        sqlx::query!(
+        let row = sqlx::query!(
             r#"
-            INSERT INTO password_reset_tokens (reset_id, user_id, code, code_hash, expires_at)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO password_resets (user_id, token, expires_at)
+            VALUES ($1, $2, $3)
+            RETURNING reset_id
             "#,
-            reset_id,
             user_id,
-            code,
-            code_hash,
+            token,
             expires_at
         )
-        .execute(&self.pool)
+        .fetch_one(&self.pool)
         .await?;
 
-        Ok(reset_id)
+        Ok(row.reset_id)
     }
 
-    pub async fn find_valid_by_reset_id(
-        &self,
-        reset_id: Uuid,
-    ) -> Result<Option<PasswordResetTokenRow>> {
+    /// 查找有效记录
+    pub async fn find_valid(&self, token: &str) -> Result<Option<PasswordResetRow>> {
         let row = sqlx::query_as!(
-            PasswordResetTokenRow,
+            PasswordResetRow,
             r#"
-            SELECT
-              id,
-              user_id,
-              code_hash
-            FROM password_reset_tokens
+            SELECT reset_id, user_id, token, expires_at, used, created_at
+            FROM password_resets
+            WHERE token = $1 AND used = FALSE AND expires_at > NOW()
+            "#,
+            token
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(row)
+    }
+
+    /// 按 reset_id 查找记录
+    pub async fn find_by_id(&self, reset_id: Uuid) -> Result<Option<PasswordResetRow>> {
+        let row = sqlx::query_as!(
+            PasswordResetRow,
+            r#"
+            SELECT reset_id, user_id, token, expires_at, used, created_at
+            FROM password_resets
             WHERE reset_id = $1
-              AND is_used = FALSE
-              AND is_expired = FALSE
-              AND expires_at > NOW()
             "#,
             reset_id
         )
@@ -72,25 +81,16 @@ impl PasswordResetRepository {
         Ok(row)
     }
 
-    pub async fn set_verified(
-        &self,
-        id: i64,
-        reset_token_hash: String,
-        verified_at: DateTime<Utc>,
-        expires_at: DateTime<Utc>,
-    ) -> Result<()> {
+    /// 更新重置 token
+    pub async fn update_token(&self, reset_id: Uuid, token: String) -> Result<()> {
         sqlx::query!(
             r#"
-            UPDATE password_reset_tokens
-            SET reset_token_hash = $2,
-                verified_at = $3,
-                expires_at = $4
-            WHERE id = $1
+            UPDATE password_resets
+            SET token = $2
+            WHERE reset_id = $1 AND used = FALSE
             "#,
-            id,
-            reset_token_hash,
-            verified_at,
-            expires_at
+            reset_id,
+            token
         )
         .execute(&self.pool)
         .await?;
@@ -98,46 +98,14 @@ impl PasswordResetRepository {
         Ok(())
     }
 
-    pub async fn find_valid_by_reset_token_hash(
-        &self,
-        reset_token_hash: &str,
-    ) -> Result<Option<PasswordResetTokenRow>> {
-        let row = sqlx::query_as!(
-            PasswordResetTokenRow,
-            r#"
-            SELECT
-              id,
-              user_id,
-              code_hash
-            FROM password_reset_tokens
-            WHERE reset_token_hash = $1
-              AND is_used = FALSE
-              AND is_expired = FALSE
-              AND expires_at > NOW()
-              AND verified_at IS NOT NULL
-            "#,
-            reset_token_hash
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(row)
-    }
-
-    pub async fn mark_used(&self, id: i64, used_at: DateTime<Utc>) -> Result<()> {
+    /// 标记已使用
+    pub async fn mark_used(&self, reset_id: Uuid) -> Result<()> {
         sqlx::query!(
-            r#"
-            UPDATE password_reset_tokens
-            SET is_used = TRUE,
-                used_at = $2
-            WHERE id = $1
-            "#,
-            id,
-            used_at
+            "UPDATE password_resets SET used = TRUE WHERE reset_id = $1",
+            reset_id
         )
         .execute(&self.pool)
         .await?;
-
         Ok(())
     }
 }

@@ -132,8 +132,8 @@ impl AdminAuditService {
             log_id: row.log_id.to_string(),
             action: row.action,
             operator,
-            target_type: row.target_type,
-            target_id: row.target_id,
+            target_type: row.target_type.unwrap_or_default(),
+            target_id: row.target_id.unwrap_or_default(),
             target_name: row.target_name,
             details: redact_optional(row.details),
             ip_address: row.ip_address,
@@ -359,8 +359,8 @@ impl AdminAuditService {
                     .get(&r.operator_id)
                     .cloned()
                     .unwrap_or_else(|| fallback_user(r.operator_id)),
-                target_type: r.target_type,
-                target_id: r.target_id,
+                target_type: r.target_type.unwrap_or_default(),
+                target_id: r.target_id.unwrap_or_default(),
                 target_name: r.target_name,
                 details: redact_optional(r.details),
                 ip_address: r.ip_address,
@@ -386,7 +386,7 @@ impl AdminAuditService {
                 profile.user_id,
                 UserInfo {
                     user_id: profile.user_id,
-                    nickname: profile.nickname,
+                    nickname: profile.nickname.unwrap_or_default(),
                     avatar_url,
                     user_type: profile.user_type,
                 },

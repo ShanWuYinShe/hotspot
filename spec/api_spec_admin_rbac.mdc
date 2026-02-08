@@ -50,7 +50,6 @@ alwaysApply: true
 | `admin.groups.read` | 查看群组列表/详情 |
 | `admin.groups.write` | 解散/封禁群组 |
 | `admin.audit.read` | 查看审计日志 |
-| `admin.audit.export` | 导出审计日志 |
 
 ## 接口概览（按子域）
 

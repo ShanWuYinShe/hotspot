@@ -152,7 +152,14 @@
 	}
 </script>
 
-<Dialog.Root open={uiStore.showLoginModal} onOpenChange={(open) => !open && handleClose()}>
+<Dialog.Root 
+	open={uiStore.showLoginModal} 
+	onOpenChange={(open) => {
+		if (!open) {
+			handleClose();
+		}
+	}}
+>
 	<Dialog.Content class="sm:max-w-md">
 		<Dialog.Header>
 			<Dialog.Title class="flex items-center gap-2">
