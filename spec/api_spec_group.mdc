@@ -85,7 +85,7 @@ type SetableGroupRole = 'admin' | 'member';
 // 群组详情响应
 interface GroupOpenResult {
   group: GroupItem;
-  recent_messages?: PaginatedData<GroupMessageItem>;  // GroupMessageItem 定义于 @api_spec_chat.mdc
+  recent_messages: PaginatedData<GroupMessageItem>;  // GroupMessageItem 定义于 @api_spec_chat.mdc；始终返回，条数由 ServerConfig.response_defaults.chat_recent_messages_count 控制
 }
 
 // 群组成员列表项
@@ -144,227 +144,10 @@ interface GroupInviteItem {
   expires_at?: string;
 }
 
-// 搜索群组请求
-interface SearchGroupsRequest {
-  search: SearchBaseParams;
-  keyword?: string;    // 关键字搜索（匹配名称、描述等）
-  tag?: string;        // 标签筛选
-  radius?: number;     // 位置范围（米），配合 search.reference_point 使用
-  sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';  // 默认: relevance
-}
-// 至少提供 keyword、tag、radius 中的一个
-
-// 群组详情请求
-interface GroupOpenTheDoorRequest {
-  group_id: string;
-  recent_messages?: PaginationParams;  // 可选；默认 limit=20，最大 50
-}
-
-// 创建群组请求
-interface CreateGroupRequest {
-  name: string;
-  description?: string;
-  avatar_file_id?: string;
-  tags?: string[];
-  password?: string;
-  join_method?: GroupJoinMethod;
-  is_searchable?: boolean;
-  max_members?: number;
-  location: Location;
-}
-
-// 更新群组请求
-interface UpdateGroupRequest {
-  group_id: string;
-  name?: string;
-  description?: string;
-  avatar_file_id?: string;
-  tags?: string[];
-  password?: string;
-  join_method?: GroupJoinMethod;
-  is_searchable?: boolean;
-  max_members?: number;
-  location?: Location;
-}
-
-// 解散群组请求
-interface DismissGroupRequest {
-  group_id: string;
-}
-
-// 成员列表请求
-interface GroupMembersRequest {
-  pagination?: PaginationParams;
-  group_id: string;
-  role?: GroupRole;
-}
-
-// 搜索成员请求
-interface SearchGroupMembersRequest {
-  pagination?: PaginationParams;
-  group_id: string;
-  keyword: string;    // 按昵称搜索
-  role?: GroupRole;   // 可选：按角色过滤
-}
-
-// 邀请成员请求
-interface InviteMemberRequest {
-  group_id: string;
-  user_id: string;
-  message?: string;
-}
-
-// 设置角色请求
-interface SetMemberRoleRequest {
-  group_id: string;
-  user_id: string;
-  role: SetableGroupRole;
-}
-
-// 禁言成员请求
-interface MuteMemberRequest {
-  group_id: string;
-  user_id: string;
-  duration_minutes: number;
-}
-
-// 取消禁言请求
-interface UnmuteMemberRequest {
-  group_id: string;
-  user_id: string;
-}
-
-// 封禁成员请求
-interface BanMemberRequest {
-  group_id: string;
-  user_id: string;
-  reason?: string;
-}
-
-// 解除封禁请求
-interface UnbanMemberRequest {
-  group_id: string;
-  user_id: string;
-}
-
-// 封禁列表请求
-interface BannedMembersRequest {
-  pagination?: PaginationParams;
-  group_id: string;
-}
-
-// 移除成员请求
-interface RemoveMemberRequest {
-  group_id: string;
-  user_id: string;
-}
-
-// 申请列表请求
-interface GroupApplicationsRequest {
-  pagination?: PaginationParams;
-  group_id: string;
-  status?: ApplicationStatus | 'all';
-}
-
-// 同意申请请求
-interface ApproveGroupApplicationRequest {
-  application_id: string;
-}
-
-// 拒绝申请请求
-interface RejectGroupApplicationRequest {
-  application_id: string;
-  reason?: string;
-}
-
-// 更新我的群组偏好请求
-interface UpdateGroupMySettingsRequest {
-  group_id: string;
-  is_muted?: boolean;
-  is_pinned?: boolean;
-}
-
-// 加入群组请求
-interface JoinGroupRequest {
-  group_id: string;
-  password?: string;   // open+password 群组需要
-  message?: string;    // approval 群组可选附言
-}
-
 // 加入群组响应
 interface JoinGroupResult {
   status: 'joined' | 'pending_approval';
   application?: Application;  // 仅 pending_approval 时返回
-}
-
-// 转让群主请求
-interface TransferOwnershipRequest {
-  group_id: string;
-  new_owner_id: string;
-}
-
-// 发布公告请求
-interface CreateGroupAnnouncementRequest {
-  group_id: string;
-  title: string;
-  content: string;
-  is_pinned?: boolean;
-}
-
-// 公告列表请求
-interface GroupAnnouncementsRequest {
-  group_id: string;
-  limit?: number;  // default: 10, max: 50
-}
-
-// 更新公告请求
-interface UpdateGroupAnnouncementRequest {
-  announcement_id: string;
-  title?: string;
-  content?: string;
-  is_pinned?: boolean;
-}
-
-// 删除公告请求
-interface DeleteGroupAnnouncementRequest {
-  announcement_id: string;
-}
-
-// 我的群组列表请求
-interface MyGroupsRequest {
-  pagination?: PaginationParams;
-}
-
-// 我的申请列表请求
-interface MyApplicationsRequest {
-  pagination?: PaginationParams;
-  status?: ApplicationStatus | 'all';  // 默认: 'all'
-}
-
-// 取消申请请求
-interface CancelApplicationRequest {
-  application_id: string;
-}
-
-// 我的邀请列表请求
-interface MyInvitesRequest {
-  pagination?: PaginationParams;
-  status?: ApplicationStatus | 'all';
-}
-
-// 接受邀请请求
-interface AcceptInviteRequest {
-  invite_id: string;
-}
-
-// 拒绝邀请请求
-interface RejectInviteRequest {
-  invite_id: string;
-}
-
-// 退出群组请求
-interface LeaveGroupRequest {
-  group_id: string;
 }
 ```
 
@@ -409,7 +192,7 @@ interface SearchGroupsRequest {
 获取群组详情。
 
 Token 可选；登录态返回 `GroupItem.my_state`。
-可选返回最近消息（`recent_messages`）。
+始终返回最近消息（`recent_messages`），条数由 `ServerConfig.response_defaults.chat_recent_messages_count` 控制。
 
 - **认证**: 可选
 - **幂等**: 无
@@ -418,7 +201,6 @@ Token 可选；登录态返回 `GroupItem.my_state`。
 ```typescript
 interface GroupOpenTheDoorRequest {
   group_id: string;
-  recent_messages?: PaginationParams;  // 可选；默认 limit=20，最大 50
 }
 ```
 
@@ -838,8 +620,8 @@ interface CreateGroupAnnouncementRequest {
 ```typescript
 interface GroupAnnouncementsRequest {
   group_id: string;
-  limit?: number;  // default: 10, max: 50
 }
+// 返回条数由 ServerConfig.response_defaults.group_announcements_count 控制
 ```
 
 **Response**: `ApiResponse<{ items: GroupAnnouncementItem[] }>`
@@ -940,12 +722,6 @@ interface JoinGroupRequest {
 ```
 
 **Response**: `ApiResponse<JoinGroupResult>`
-```typescript
-interface JoinGroupResult {
-  status: 'joined' | 'pending_approval';
-  application?: Application;  // 仅 pending_approval 时返回
-}
-```
 
 **错误码**: `10000` `10200` `10300` `10400` `22000` `22002`
 

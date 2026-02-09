@@ -460,6 +460,8 @@ interface UserLikedMomentsRequest {
 
 **Response**: `ApiResponse<MyProfile>`
 
+**错误码**: `10000`
+
 ---
 
 ### POST /api/v1/users/me/profile/update
@@ -537,6 +539,8 @@ interface UpgradeAccountRequest {
 **Request**: `{}`
 
 **Response**: `ApiResponse<UserSettings>`
+
+**错误码**: `10000`
 
 ---
 

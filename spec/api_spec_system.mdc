@@ -25,6 +25,9 @@ alwaysApply: true
 
 ## 类型定义
 
+以下类型定义于 `@api_spec_types.mdc`：
+- `SystemAnnouncementItem`
+
 ```typescript
 // API 版本元信息
 interface ApiVersionMeta {
@@ -89,9 +92,6 @@ interface ContactInfo {
 
 ```
 
-说明：
-- `SystemAnnouncementItem` 定义于 `@api_spec_types.mdc`
-
 ## 端点详情
 
 ### POST /api/v1/system/get_meta
@@ -118,6 +118,10 @@ interface ContactInfo {
 **缓存策略**：
 - 服务端返回 `Cache-Control: public, max-age=3600` 和 `ETag` 响应头
 - API 版本信息变更频率极低，客户端可长时间缓存
+
+**错误码**: `10000`
+
+---
 
 ### POST /api/v1/system/health
 
@@ -162,6 +166,8 @@ interface AnnouncementListRequest {
 
 **错误码**: `10000`
 
+---
+
 ### POST /api/v1/system/get_client_config
 
 获取客户端公开配置。
@@ -182,3 +188,5 @@ interface AnnouncementListRequest {
 - 服务端返回 `Cache-Control: public, max-age=300` 和 `ETag` 响应头
 - 客户端应缓存此响应，后续请求携带 `If-None-Match` 以利用 304 Not Modified
 - 详见 `@api_spec_base.mdc` 中"缓存控制响应头"
+
+**错误码**: `10000`

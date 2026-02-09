@@ -26,7 +26,6 @@ alwaysApply: true
 ## 类型定义
 
 以下类型定义于 `@api_spec_types.mdc`：
-- `PaginationParams`
 - `GeoPoint`
 - `RelativeLocation`
 
@@ -96,19 +95,6 @@ interface SearchSuggestResponse {
   items: SearchSuggestItem[];
 }
 
-interface SearchSuggestRequest {
-  pagination?: PaginationParams;
-  prefix: string;
-  reference_point: GeoPoint; // 必填，用于 LBS 优先排序（用户拒绝定位时使用 fallback）
-  types?: SearchSuggestType[];  // 可选：限定返回的类型（如 ['user', 'group']）。为空则返回所有类型。
-}
-// limit default=5, max=20
-
-interface TrendingTagsRequest {
-  pagination?: PaginationParams;
-  timeframe?: TagTimeframe;
-}
-// limit default=10, max=50
 ```
 
 ## 端点详情
@@ -133,12 +119,10 @@ interface TrendingTagsRequest {
 **Request**: `SearchSuggestRequest`
 ```typescript
 interface SearchSuggestRequest {
-  pagination?: PaginationParams;
   prefix: string;
   reference_point: GeoPoint; // 必填，用于 LBS 优先排序（用户拒绝定位时使用 fallback）
   types?: SearchSuggestType[];  // 可选：限定返回的类型（如 ['user', 'group']）。为空则返回所有类型。
 }
-// limit default=5, max=20
 ```
 
 **Response**: `ApiResponse<SearchSuggestResponse>`
@@ -159,12 +143,10 @@ interface SearchSuggestRequest {
 **Request**: `TrendingTagsRequest`
 ```typescript
 interface TrendingTagsRequest {
-  pagination?: PaginationParams;
   timeframe?: TagTimeframe;
 }
-// limit default=10, max=50
 ```
 
-**Response**: `ApiResponse<PaginatedData<TagItem>>`
+**Response**: `ApiResponse<TagItem[]>`
 
 **错误码**: `10000`

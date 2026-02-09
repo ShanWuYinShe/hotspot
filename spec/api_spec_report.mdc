@@ -39,6 +39,12 @@ alwaysApply: true
 
 ## 类型定义
 
+以下类型定义于 `@api_spec_types.mdc`：
+- `ReportTargetType`
+- `ReportStatus`
+- `PaginationParams`
+- `PaginatedData`
+
 ```typescript
 interface ReportCreated {
   report_id: string;

@@ -78,6 +78,7 @@ alwaysApply: true
 | `POST /api/v1/admin/server_config/update_upload` | 更新上传策略 | 必须 + `admin.server_config.write` | 幂等语义 |
 | `POST /api/v1/admin/server_config/update_defaults` | 更新内容默认值 | 必须 + `admin.server_config.write` | 幂等语义 |
 | `POST /api/v1/admin/server_config/update_rate_limits` | 更新频率限制 | 必须 + `admin.server_config.write` | 幂等语义 |
+| `POST /api/v1/admin/server_config/update_response_defaults` | 更新响应默认值 | 必须 + `admin.server_config.write` | 幂等语义 |
 | `POST /api/v1/admin/client_config/get` | 获取客户端配置 | 必须 + `admin.client_config.read` | 无 |
 | `POST /api/v1/admin/client_config/update_features` | 更新功能开关 | 必须 + `admin.client_config.write` | 幂等语义 |
 | `POST /api/v1/admin/client_config/update_limits` | 更新应用限制 | 必须 + `admin.client_config.write` | 幂等语义 |
@@ -121,43 +122,6 @@ interface AdminOperatorItem {
   user: UserInfo;
   permissions: string[];  // '*' 表示拥有全部权限
   roles: AdminRoleBasic[];
-}
-
-interface AdminRbacRolesListRequest {} // 直接返回全部角色，无需分页
-
-interface AdminRbacRoleCreateRequest {
-  name: string;
-  description?: string;
-}
-
-interface AdminRbacRoleUpdateRequest {
-  role_id: string;
-  name?: string;
-  description?: string;
-  clear_description?: boolean;
-}
-
-interface AdminRbacRoleDeleteRequest {
-  role_id: string;
-}
-
-interface AdminRbacRoleSetPermissionsRequest {
-  role_id: string;
-  permission_keys: string[];
-}
-
-interface AdminRbacAdminsListRequest {
-  pagination?: PaginationParams;
-}
-
-interface AdminRbacGrantAdminRequest {
-  user_id: string;
-  grant_all_permissions?: boolean;
-  role_ids: string[];
-}
-
-interface AdminRbacRevokeAdminRequest {
-  user_id: string;
 }
 
 // === 审计日志类型 ===
@@ -214,20 +178,6 @@ interface AuditLogItem {
   created_at: string;
 }
 
-interface AuditLogListRequest {
-  pagination?: PaginationParams;
-  action?: AuditAction;
-  operator_id?: string;
-  target_type?: AuditTargetType;
-  target_id?: string;
-  start_time?: string;  // UTC ISO 8601
-  end_time?: string;    // UTC ISO 8601
-}
-
-interface AuditLogOpenTheDoorRequest {
-  log_id: string;
-}
-
 // === 全局配置类型 ===
 
 interface UploadConfig {
@@ -263,10 +213,19 @@ interface RateLimitConfig {
   reports_create_per_hour: number;
 }
 
+interface ResponseDefaults {
+  search_suggest_count: number;       // 搜索建议返回条数，默认 5
+  trending_tags_count: number;        // 热门标签返回条数（tags/list_trending 及 feed/list_trending），默认 10
+  hot_moments_count: number;          // feed/list_trending 热门瞬间返回条数，默认 20
+  chat_recent_messages_count: number; // open_the_door 返回的最近消息条数，默认 20
+  group_announcements_count: number;  // 群公告列表返回条数，默认 10
+}
+
 interface ServerConfig {
   upload: UploadConfig;
   defaults: ContentDefaults;
   rate_limits: RateLimitConfig;
+  response_defaults: ResponseDefaults;
   updated_at?: string;
   updated_by_user_id?: string;
 }
@@ -274,39 +233,6 @@ interface ServerConfig {
 interface AdminClientConfig extends ClientConfig {
   updated_at: string;
   updated_by_user_id: string;
-}
-
-interface UpdateUploadConfigRequest {
-  upload: Partial<UploadConfig>;
-}
-
-interface UpdateDefaultsRequest {
-  default_location_name?: string;
-  default_group_avatar?: string;
-  default_user_avatar?: string;
-  default_group_settings?: Partial<GroupSettings>;
-}
-
-interface UpdateRateLimitsRequest {
-  rate_limits: Partial<RateLimitConfig>;
-}
-
-interface UpdateFeaturesRequest {
-  enable_public_registration?: boolean;
-  enable_guest_login?: boolean;
-  enable_moments?: boolean;
-  enable_nearby_people?: boolean;
-}
-
-interface UpdateLimitsRequest {
-  limits: Partial<AppLimits>;
-}
-
-interface UpdateContactRequest {
-  support_email?: string;
-  privacy_policy_url?: string;
-  terms_of_service_url?: string;
-  official_website?: string;
 }
 ```
 
@@ -356,6 +282,9 @@ interface UpdateContactRequest {
 - **幂等**: 无
 
 **Request**: `AdminRbacRolesListRequest`
+```typescript
+interface AdminRbacRolesListRequest {} // 直接返回全部角色，无需分页
+```
 
 **Response**: `ApiResponse<{ items: AdminRoleItem[] }>`
 
@@ -375,6 +304,12 @@ interface UpdateContactRequest {
 - **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
 
 **Request**: `AdminRbacRoleCreateRequest`
+```typescript
+interface AdminRbacRoleCreateRequest {
+  name: string;
+  description?: string;
+}
+```
 
 **Response**: `ApiResponse<AdminRoleItem>`
 
@@ -390,6 +325,14 @@ interface UpdateContactRequest {
 - **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `AdminRbacRoleUpdateRequest`
+```typescript
+interface AdminRbacRoleUpdateRequest {
+  role_id: string;
+  name?: string;
+  description?: string;
+  clear_description?: boolean;
+}
+```
 
 **Response**: `ApiResponse`
 
@@ -405,6 +348,11 @@ interface UpdateContactRequest {
 - **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `AdminRbacRoleDeleteRequest`
+```typescript
+interface AdminRbacRoleDeleteRequest {
+  role_id: string;
+}
+```
 
 **Response**: `ApiResponse`
 
@@ -420,6 +368,12 @@ interface UpdateContactRequest {
 - **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `AdminRbacRoleSetPermissionsRequest`
+```typescript
+interface AdminRbacRoleSetPermissionsRequest {
+  role_id: string;
+  permission_keys: string[];
+}
+```
 
 **说明**：`permission_keys` 必须来自权限字典（`admin/rbac/permissions`）。
 
@@ -437,6 +391,11 @@ interface UpdateContactRequest {
 - **幂等**: 无
 
 **Request**: `AdminRbacAdminsListRequest`
+```typescript
+interface AdminRbacAdminsListRequest {
+  pagination?: PaginationParams;
+}
+```
 
 **Response**: `ApiResponse<PaginatedData<AdminOperatorItem>>`
 
@@ -454,6 +413,13 @@ interface UpdateContactRequest {
 **额外约束**：仅超级管理员可将 `grant_all_permissions=true`
 
 **Request**: `AdminRbacGrantAdminRequest`
+```typescript
+interface AdminRbacGrantAdminRequest {
+  user_id: string;
+  grant_all_permissions?: boolean;
+  role_ids: string[];
+}
+```
 
 **Response**: `ApiResponse`
 
@@ -471,6 +437,11 @@ interface UpdateContactRequest {
 **额外约束**：撤销超级管理员仅超级管理员可执行
 
 **Request**: `AdminRbacRevokeAdminRequest`
+```typescript
+interface AdminRbacRevokeAdminRequest {
+  user_id: string;
+}
+```
 
 **Response**: `ApiResponse`
 
@@ -493,6 +464,17 @@ interface UpdateContactRequest {
 - **幂等**: 无
 
 **Request**: `AuditLogListRequest`
+```typescript
+interface AuditLogListRequest {
+  pagination?: PaginationParams;
+  action?: AuditAction;
+  operator_id?: string;
+  target_type?: AuditTargetType;
+  target_id?: string;
+  start_time?: string;  // UTC ISO 8601
+  end_time?: string;    // UTC ISO 8601
+}
+```
 
 **Response**: `ApiResponse<PaginatedData<AuditLogItem>>`
 
@@ -508,6 +490,11 @@ interface UpdateContactRequest {
 - **幂等**: 无
 
 **Request**: `AuditLogOpenTheDoorRequest`
+```typescript
+interface AuditLogOpenTheDoorRequest {
+  log_id: string;
+}
+```
 
 **Response**: `ApiResponse<AuditLogItem>`
 
@@ -542,6 +529,11 @@ interface UpdateContactRequest {
 - **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `UpdateUploadConfigRequest`
+```typescript
+interface UpdateUploadConfigRequest {
+  upload: Partial<UploadConfig>;
+}
+```
 
 **Response**: `ApiResponse`
 
@@ -557,6 +549,14 @@ interface UpdateContactRequest {
 - **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `UpdateDefaultsRequest`
+```typescript
+interface UpdateDefaultsRequest {
+  default_location_name?: string;
+  default_group_avatar?: string;
+  default_user_avatar?: string;
+  default_group_settings?: Partial<GroupSettings>;
+}
+```
 
 **Response**: `ApiResponse`
 
@@ -574,6 +574,11 @@ interface UpdateContactRequest {
 **说明**：动态调整 Rate Limit 策略，无需重启服务即可生效。
 
 **Request**: `UpdateRateLimitsRequest`
+```typescript
+interface UpdateRateLimitsRequest {
+  rate_limits: Partial<RateLimitConfig>;
+}
+```
 
 **Response**: `ApiResponse`
 
@@ -587,6 +592,36 @@ interface UpdateContactRequest {
 **注意事项**：
 - 配置立即生效，影响所有后续请求
 - 降低限制值时，可能导致正常用户受影响，建议谨慎操作
+
+**错误码**: `10000` `10200`
+
+---
+
+### POST /api/v1/admin/server_config/update_response_defaults
+
+更新响应默认值配置。
+
+控制非分页接口的服务端返回数量（如搜索建议条数、热门标签条数、聊天开门时的最近消息条数）。
+
+- **认证**: 必须 + `admin.server_config.write`
+- **幂等**: 幂等语义（重复请求返回一致结果）
+
+**Request**: `UpdateResponseDefaultsRequest`
+```typescript
+interface UpdateResponseDefaultsRequest {
+  response_defaults: Partial<ResponseDefaults>;
+}
+```
+
+**Response**: `ApiResponse`
+
+**验证规则**：
+- 所有值必须为正整数
+- `search_suggest_count`：建议范围 `1-20`
+- `trending_tags_count`：建议范围 `5-100`
+- `hot_moments_count`：建议范围 `5-100`
+- `chat_recent_messages_count`：建议范围 `10-50`
+- `group_announcements_count`：建议范围 `5-50`
 
 **错误码**: `10000` `10200`
 
@@ -622,6 +657,14 @@ interface UpdateContactRequest {
 - **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `UpdateFeaturesRequest`
+```typescript
+interface UpdateFeaturesRequest {
+  enable_public_registration?: boolean;
+  enable_guest_login?: boolean;
+  enable_moments?: boolean;
+  enable_nearby_people?: boolean;
+}
+```
 
 **Response**: `ApiResponse`
 
@@ -637,6 +680,11 @@ interface UpdateContactRequest {
 - **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `UpdateLimitsRequest`
+```typescript
+interface UpdateLimitsRequest {
+  limits: Partial<AppLimits>;
+}
+```
 
 **Response**: `ApiResponse`
 
@@ -652,6 +700,14 @@ interface UpdateContactRequest {
 - **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `UpdateContactRequest`
+```typescript
+interface UpdateContactRequest {
+  support_email?: string;
+  privacy_policy_url?: string;
+  terms_of_service_url?: string;
+  official_website?: string;
+}
+```
 
 **Response**: `ApiResponse`
 

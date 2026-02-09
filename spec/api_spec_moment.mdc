@@ -45,9 +45,16 @@ alwaysApply: true
 
 ## 类型定义
 
-```typescript
-// 注：MomentItem、PrivacyLevel、Location、RelativeLocation、SearchBaseParams、PaginationParams、UserInfo 等类型定义于 @api_spec_types.mdc
+以下类型定义于 `@api_spec_types.mdc`：
+- `MomentItem`
+- `PrivacyLevel`
+- `Location`
+- `RelativeLocation`
+- `SearchBaseParams`
+- `PaginationParams`
+- `UserInfo`
 
+```typescript
 interface LikeItem {
   user: UserInfo;
   liked_at: string;

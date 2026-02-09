@@ -40,11 +40,24 @@ alwaysApply: true
 
 ## 类型定义
 
-说明：
-- 以下 Admin 扩展类型通过 `extends` 继承普通类型，包含管理员视角的完整字段
-- `UserItem`、`GroupItem`、`SystemAnnouncementItem` 定义于 `@api_spec_types.mdc`
-- `ReportItem` 定义于 `@api_spec_report.mdc`
-- `PaginationParams`、`PaginatedData`、`UserAccountStatus`、`UserType`、`ReportStatus`、`ReportTargetType`、`ReportHandleAction`、`AnnouncementSeverity`、`UserInfo` 等类型定义于 `@api_spec_types.mdc`
+以下类型定义于 `@api_spec_types.mdc`：
+- `UserItem`
+- `GroupItem`
+- `SystemAnnouncementItem`
+- `PaginationParams`
+- `PaginatedData`
+- `UserAccountStatus`
+- `UserType`
+- `ReportStatus`
+- `ReportTargetType`
+- `ReportHandleAction`
+- `AnnouncementSeverity`
+- `UserInfo`
+
+以下类型定义于 `@api_spec_report.mdc`：
+- `ReportItem`
+
+说明：以下 Admin 扩展类型通过 `extends` 继承普通类型，包含管理员视角的完整字段。
 
 ```typescript
 // === Admin 扩展类型（管理员视角的完整数据）===
@@ -93,7 +106,7 @@ interface AdminAnnouncementItem extends SystemAnnouncementItem {
   view_count: number;
 }
 
-// === 本模块请求/响应类型 ===
+// === 本模块响应类型 ===
 
 interface AnnouncementCreated {
   announcement_id: string;
@@ -106,98 +119,11 @@ interface AdminTagItem {
   last_used_at?: string;             // 最近一次使用时间
 }
 
-interface AdminUserSearchRequest {
-  pagination?: PaginationParams;
-  user_id?: string;
-  nickname?: string;
-  login_id?: string;
-  status?: UserAccountStatus;
-  user_type?: UserType;
-}
-
-interface AdminUserOpenTheDoorRequest {
-  user_id: string;
-}
-
-interface AdminBanUserRequest {
-  user_id: string;
-  reason?: string;
-  duration_days?: number;  // 0 or null = permanent
-}
-
-interface AdminUnbanUserRequest {
-  user_id: string;
-  reason?: string;
-}
-
-interface AdminGroupSearchRequest {
-  pagination?: PaginationParams;
-  group_id?: string;
-  name?: string;
-  owner_id?: string;
-}
-
-interface AdminGroupOpenTheDoorRequest {
-  group_id: string;
-}
-
-interface AdminDismissGroupRequest {
-  group_id: string;
-  reason?: string;
-}
-
-interface AdminReportsRequest {
-  pagination?: PaginationParams;
-  status?: ReportStatus;
-  target_type?: ReportTargetType;
-}
-
-interface HandleReportRequest {
-  report_id: string;
-  action: ReportHandleAction;
-  note?: string;
-}
-
-interface AdminTagSearchRequest {
-  pagination?: PaginationParams;
-  keyword?: string;                   // 标签名模糊搜索
-  sort_by?: AdminTagSortBy;          // 排序方式，默认 usage_count_desc
-}
-
 type AdminTagSortBy =
   | 'usage_count_desc'               // 使用量降序（默认）
   | 'usage_count_asc'                // 使用量升序
   | 'created_at_desc'               // 创建时间降序
   | 'last_used_at_desc';            // 最近使用时间降序
-
-interface AdminDeleteTagRequest {
-  tag_name: string;
-}
-
-interface CreateAnnouncementRequest {
-  title: string;
-  content: string;
-  severity: AnnouncementSeverity;
-  action_url?: string;
-  send_push?: boolean;
-}
-
-interface UpdateAnnouncementRequest {
-  announcement_id: string;
-  title?: string;
-  content?: string;
-  severity?: AnnouncementSeverity;
-  action_url?: string;
-}
-
-interface AdminAnnouncementSearchRequest {
-  pagination?: PaginationParams;
-  severity?: AnnouncementSeverity;
-}
-
-interface DeleteAnnouncementRequest {
-  announcement_id: string;
-}
 ```
 
 ## 端点详情
@@ -210,10 +136,22 @@ interface DeleteAnnouncementRequest {
 - **幂等**: 无
 
 **Request**: `AdminUserSearchRequest`
+```typescript
+interface AdminUserSearchRequest {
+  pagination?: PaginationParams;
+  user_id?: string;
+  nickname?: string;
+  login_id?: string;
+  status?: UserAccountStatus;
+  user_type?: UserType;
+}
+```
 
 **Response**: `ApiResponse<PaginatedData<AdminUserItem>>`
 
 **错误码**: `10000` `10200`
+
+---
 
 ### POST /api/v1/admin/users/open_the_door
 
@@ -223,10 +161,17 @@ interface DeleteAnnouncementRequest {
 - **幂等**: 无
 
 **Request**: `AdminUserOpenTheDoorRequest`
+```typescript
+interface AdminUserOpenTheDoorRequest {
+  user_id: string;
+}
+```
 
 **Response**: `ApiResponse<AdminUserItem>`
 
 **错误码**: `10000` `10200` `10300`
+
+---
 
 ### POST /api/v1/admin/users/ban
 
@@ -242,10 +187,19 @@ interface DeleteAnnouncementRequest {
 - 封禁操作会记录审计日志
 
 **Request**: `AdminBanUserRequest`
+```typescript
+interface AdminBanUserRequest {
+  user_id: string;
+  reason?: string;
+  duration_days?: number;  // 0 or null = permanent
+}
+```
 
 **Response**: `ApiResponse`
 
 **错误码**: `10000` `10200` `10300` `10400` `22000` `22002`
+
+---
 
 ### POST /api/v1/admin/users/unban
 
@@ -255,10 +209,18 @@ interface DeleteAnnouncementRequest {
 - **幂等**: 幂等语义操作，重复请求返回一致结果
 
 **Request**: `AdminUnbanUserRequest`
+```typescript
+interface AdminUnbanUserRequest {
+  user_id: string;
+  reason?: string;
+}
+```
 
 **Response**: `ApiResponse`
 
 **错误码**: `10000` `10200` `10300`
+
+---
 
 ### POST /api/v1/admin/groups/search
 
@@ -268,10 +230,20 @@ interface DeleteAnnouncementRequest {
 - **幂等**: 无
 
 **Request**: `AdminGroupSearchRequest`
+```typescript
+interface AdminGroupSearchRequest {
+  pagination?: PaginationParams;
+  group_id?: string;
+  name?: string;
+  owner_id?: string;
+}
+```
 
 **Response**: `ApiResponse<PaginatedData<AdminGroupItem>>`
 
 **错误码**: `10000` `10200`
+
+---
 
 ### POST /api/v1/admin/groups/open_the_door
 
@@ -281,10 +253,17 @@ interface DeleteAnnouncementRequest {
 - **幂等**: 无
 
 **Request**: `AdminGroupOpenTheDoorRequest`
+```typescript
+interface AdminGroupOpenTheDoorRequest {
+  group_id: string;
+}
+```
 
 **Response**: `ApiResponse<AdminGroupItem>`
 
 **错误码**: `10000` `10200` `10300`
+
+---
 
 ### POST /api/v1/admin/groups/dismiss
 
@@ -294,10 +273,18 @@ interface DeleteAnnouncementRequest {
 - **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
 
 **Request**: `AdminDismissGroupRequest`
+```typescript
+interface AdminDismissGroupRequest {
+  group_id: string;
+  reason?: string;
+}
+```
 
 **Response**: `ApiResponse`
 
 **错误码**: `10000` `10200` `10300` `22000` `22002`
+
+---
 
 ### POST /api/v1/admin/reports/search
 
@@ -307,10 +294,19 @@ interface DeleteAnnouncementRequest {
 - **幂等**: 无
 
 **Request**: `AdminReportsRequest`
+```typescript
+interface AdminReportsRequest {
+  pagination?: PaginationParams;
+  status?: ReportStatus;
+  target_type?: ReportTargetType;
+}
+```
 
 **Response**: `ApiResponse<PaginatedData<AdminReportItem>>`
 
 **错误码**: `10000` `10200`
+
+---
 
 ### POST /api/v1/admin/reports/handle
 
@@ -320,10 +316,19 @@ interface DeleteAnnouncementRequest {
 - **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
 
 **Request**: `HandleReportRequest`
+```typescript
+interface HandleReportRequest {
+  report_id: string;
+  action: ReportHandleAction;
+  note?: string;
+}
+```
 
 **Response**: `ApiResponse`
 
 **错误码**: `10000` `10200` `10300` `22000` `22002`
+
+---
 
 ### POST /api/v1/admin/tags/search
 
@@ -334,10 +339,19 @@ interface DeleteAnnouncementRequest {
 - **排序**: 默认 `usage_count_desc`，可通过 `sort_by` 参数指定
 
 **Request**: `AdminTagSearchRequest`
+```typescript
+interface AdminTagSearchRequest {
+  pagination?: PaginationParams;
+  keyword?: string;                   // 标签名模糊搜索
+  sort_by?: AdminTagSortBy;          // 排序方式，默认 usage_count_desc
+}
+```
 
 **Response**: `ApiResponse<PaginatedData<AdminTagItem>>`
 
 **错误码**: `10000` `10200`
+
+---
 
 ### POST /api/v1/admin/tags/delete
 
@@ -347,10 +361,17 @@ interface DeleteAnnouncementRequest {
 - **幂等**: 幂等语义操作，重复请求返回一致结果
 
 **Request**: `AdminDeleteTagRequest`
+```typescript
+interface AdminDeleteTagRequest {
+  tag_name: string;
+}
+```
 
 **Response**: `ApiResponse`
 
 **错误码**: `10000` `10200` `10300`
+
+---
 
 ### POST /api/v1/admin/announcements/search
 
@@ -364,10 +385,18 @@ interface DeleteAnnouncementRequest {
 - 此端点返回 `AdminAnnouncementItem`（含 `created_by`、`view_count` 等管理员字段）
 
 **Request**: `AdminAnnouncementSearchRequest`
+```typescript
+interface AdminAnnouncementSearchRequest {
+  pagination?: PaginationParams;
+  severity?: AnnouncementSeverity;
+}
+```
 
 **Response**: `ApiResponse<PaginatedData<AdminAnnouncementItem>>`
 
 **错误码**: `10000` `10200`
+
+---
 
 ### POST /api/v1/admin/announcements/create
 
@@ -377,10 +406,21 @@ interface DeleteAnnouncementRequest {
 - **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
 
 **Request**: `CreateAnnouncementRequest`
+```typescript
+interface CreateAnnouncementRequest {
+  title: string;
+  content: string;
+  severity: AnnouncementSeverity;
+  action_url?: string;
+  send_push?: boolean;
+}
+```
 
 **Response**: `ApiResponse<AnnouncementCreated>`
 
 **错误码**: `10000` `10200` `22000` `22002`
+
+---
 
 ### POST /api/v1/admin/announcements/update
 
@@ -390,10 +430,21 @@ interface DeleteAnnouncementRequest {
 - **幂等**: 幂等语义操作，重复请求返回一致结果
 
 **Request**: `UpdateAnnouncementRequest`
+```typescript
+interface UpdateAnnouncementRequest {
+  announcement_id: string;
+  title?: string;
+  content?: string;
+  severity?: AnnouncementSeverity;
+  action_url?: string;
+}
+```
 
 **Response**: `ApiResponse`
 
 **错误码**: `10000` `10200` `10300`
+
+---
 
 ### POST /api/v1/admin/announcements/delete
 
@@ -403,6 +454,11 @@ interface DeleteAnnouncementRequest {
 - **幂等**: 幂等语义操作，重复请求返回一致结果
 
 **Request**: `DeleteAnnouncementRequest`
+```typescript
+interface DeleteAnnouncementRequest {
+  announcement_id: string;
+}
+```
 
 **Response**: `ApiResponse`
 

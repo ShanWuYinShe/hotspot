@@ -33,6 +33,9 @@ alwaysApply: true
 
 ## 类型定义
 
+以下类型定义于 `@api_spec_types.mdc`：
+- `GeoPoint`
+
 ```typescript
 type MapDataType = 'user' | 'group' | 'moment' | 'all';
 

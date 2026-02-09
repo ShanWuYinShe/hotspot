@@ -82,25 +82,6 @@ interface UploadedMedia {
   height?: number;
 }
 
-interface PresignUploadRequest {
-  file_name: string;
-  file_size: number;
-  mime_type: string;
-  category: MediaCategory;
-  md5?: string;
-}
-
-interface BatchPresignUploadRequest {
-  files: PresignUploadRequest[];  // 最多 9 个文件（与瞬间图片上限一致）
-}
-
-interface BatchPresignedUpload {
-  uploads: PresignedUpload[];     // 与请求 files 一一对应
-}
-
-interface CompleteUploadRequest {
-  upload_id: string;
-}
 ```
 
 ## 端点详情

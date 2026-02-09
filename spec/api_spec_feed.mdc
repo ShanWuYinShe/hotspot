@@ -44,30 +44,6 @@ type FeedContentType = 'moment' | 'group' | 'user';
 // 信息流反馈动作
 type FeedFeedbackAction = 'hide' | 'not_interested';
 
-interface GetFeedMomentsRequest {
-  pagination?: PaginationParams;
-  source?: FeedSource;
-  reference_point: GeoPoint;
-  radius?: number;  // 位置范围（米），100-50000，可由 AppLimits.search_radius_max 覆盖
-}
-
-interface GetFeedGroupsRequest {
-  pagination?: PaginationParams;
-  reference_point: GeoPoint;
-  radius?: number;  // 位置范围（米），100-50000，可由 AppLimits.search_radius_max 覆盖
-}
-
-interface GetFeedUsersRequest {
-  pagination?: PaginationParams;
-  reference_point: GeoPoint;
-  radius?: number;  // 位置范围（米），100-50000，可由 AppLimits.search_radius_max 覆盖
-}
-
-interface GetFeedTrendingRequest {
-  tags_limit?: number;    // 默认 10，最大 50
-  moments_limit?: number; // 默认 20，最大 100
-}
-
 interface TrendingBundle {
   trending_tags: TrendingTagItem[];
   hot_moments: MomentItem[];
@@ -78,13 +54,6 @@ interface TrendingBundle {
 interface TrendingTagItem extends Omit<TagItem, 'trend'> {
   trend: TagTrend;  // 必填（TagItem 中为可选，此处覆盖为必填）
   hot_moment_preview?: MomentItem;
-}
-
-interface FeedFeedbackRequest {
-  content_type: FeedContentType;
-  content_id: string;
-  action: FeedFeedbackAction;
-  reason?: string;
 }
 ```
 
@@ -181,10 +150,8 @@ interface GetFeedUsersRequest {
 
 **Request**: `GetFeedTrendingRequest`
 ```typescript
-interface GetFeedTrendingRequest {
-  tags_limit?: number;    // 默认 10，最大 50
-  moments_limit?: number; // 默认 20，最大 100
-}
+interface GetFeedTrendingRequest {}
+// 返回条数由 ServerConfig.response_defaults 控制（trending_tags_count、hot_moments_count）
 ```
 
 **Response**: `ApiResponse<TrendingBundle>`

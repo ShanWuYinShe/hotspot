@@ -386,18 +386,15 @@ interface ApiResponse<T = void> {
 
 - 所有列表接口使用游标分页，禁止 offset 分页
 - `cursor` 为**完全不透明字符串**（客户端禁止解析/构造/修改，格式可能随版本变化）。服务端必须对 cursor 进行签名或加密处理，防止客户端篡改或解码以推测内部排序逻辑和 ID 范围
-- 统一使用 `PaginationParams` 与 `PaginatedData<T>`（类型定义见 `@api_spec_types.mdc`"分页与元数据"小节）
+- 无界列表接口统一使用 `PaginationParams` 与 `PaginatedData<T>` 进行游标分页（类型定义见 `@api_spec_types.mdc`"分页与元数据"小节）
+- 有界/确定数量的数据（如搜索建议、热门标签、聊天最近消息）由服务端决定返回数量，具体值通过 `ServerConfig.response_defaults` 配置（见 `@api_spec_admin_core.mdc`），客户端不传分页或 limit 参数
 - 任意使用 `PaginationParams` 的接口必须返回 `PaginatedData<T>`；不返回分页结构的接口不得使用 `PaginationParams`
 
 #### 分页默认值与模块级覆盖
 
 全局默认值：`limit` default=20, max=100（定义于 `PaginationParams`）。
 
-各模块可按业务特性覆盖 `limit` 的 default 和 max 值，但必须在接口文档的 `Request` 说明中显式标注。覆盖规则：
-- 搜索建议类接口（`search/suggest`）：default=5, max=20
-- 热门标签（`tags/list_trending`）：default=10, max=50
-- 消息预加载（`open_the_door.recent_messages`）：default=20, max=50
-- 未显式标注的接口使用全局默认值
+各模块可按业务特性覆盖 `limit` 的 default 和 max 值，但必须在接口文档的 `Request` 说明中显式标注。未显式标注的接口使用全局默认值。
 
 #### 排序语义（契约级）
 

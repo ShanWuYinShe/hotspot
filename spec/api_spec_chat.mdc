@@ -55,7 +55,16 @@ alwaysApply: true
 
 ## 类型定义
 
-以下类型定义中，`UserInfo`、`MessageType`、`SendMessageType`、`MessageMedia`、`MessageReplyTo`、`MessageSent`、`UserPresenceStatus`、`PaginationParams`、`PaginatedData` 等类型定义于 `@api_spec_types.mdc`。
+以下类型定义于 `@api_spec_types.mdc`：
+- `UserInfo`
+- `MessageType`
+- `SendMessageType`
+- `MessageMedia`
+- `MessageReplyTo`
+- `MessageSent`
+- `UserPresenceStatus`
+- `PaginationParams`
+- `PaginatedData`
 
 ```typescript
 // === 私聊类型 ===
@@ -96,7 +105,7 @@ type CantMessageReason =
 
 interface PrivateChatOpenResult {
   chat: PrivateChatItem;
-  recent_messages?: PaginatedData<PrivateMessageItem>;
+  recent_messages: PaginatedData<PrivateMessageItem>;  // 始终返回，条数由 ServerConfig.response_defaults.chat_recent_messages_count 控制
 }
 
 interface PrivateMessageItem {
@@ -171,6 +180,8 @@ interface MyPrivateChatsRequest {
 
 **错误码**: `10000`
 
+---
+
 ### POST /api/v1/private_chats/open_the_door
 
 获取私聊详情。
@@ -185,7 +196,7 @@ interface MyPrivateChatsRequest {
 2. 自动返回会话详情（无论是否是首次聊天）
 3. 直接调用 `send` 发送消息
 
-**可选返回**：当请求包含 `recent_messages` 时，响应包含最近消息列表（`PaginatedData<PrivateMessageItem>`）。
+响应始终包含最近消息列表（`PaginatedData<PrivateMessageItem>`），条数由 `ServerConfig.response_defaults.chat_recent_messages_count` 控制。
 
 - **认证**: 必须
 - **幂等**: 幂等语义（同一 `target_user_id` 的重复调用应返回同一会话）
@@ -194,7 +205,6 @@ interface MyPrivateChatsRequest {
 ```typescript
 interface PrivateChatOpenTheDoorRequest {
   target_user_id: string;
-  recent_messages?: PaginationParams;  // 可选；默认 limit=20，最大 50
 }
 ```
 
