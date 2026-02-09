@@ -72,22 +72,21 @@ struct DebugPanel {
         Column({ space: 16 }) {
           // 状态卡片
           SystemCard({
-            content: () => {
-              Column({ space: 8 }) {
-                Text('系统状态')
-                  .fontSize(16)
-                  .fontWeight(FontWeight.Bold)
-                
-                Text(`WebSocket: ${this.webSocketService.isConnected() ? '✅ 已连接' : '❌ 未连接'}`)
-                Text(`User ID: ${this.currentUserId || 'N/A'}`)
-                Text(`Token: ${this.currentUser ? 'Has Token' : 'No Token'}`)
-              }
-              .alignItems(HorizontalAlign.Start)
-              .width('100%')
-            },
-            paddingSize: 16,
-            backgroundColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT
-          })
+            cardPadding: 16,
+            cardBackgroundColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT
+          }) {
+            Column({ space: 8 }) {
+              Text('系统状态')
+                .fontSize(16)
+                .fontWeight(FontWeight.Bold)
+              
+              Text(`WebSocket: ${this.webSocketService.isConnected() ? '✅ 已连接' : '❌ 未连接'}`)
+              Text(`User ID: ${this.currentUserId || 'N/A'}`)
+              Text(`Token: ${this.currentUser ? 'Has Token' : 'No Token'}`)
+            }
+            .alignItems(HorizontalAlign.Start)
+            .width('100%')
+          }
 
           // 操作按钮
           Grid() {

@@ -10,7 +10,7 @@ import { GlobalStateManager, KEY_CURRENT_LOCATION } from '../../../core/state/Gl
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { PageNames } from '../../../constants/AppConstants';
-import { LikeMomentRequest, MomentSearchItem } from '../../../core/types/api';
+import { LikeMomentRequest, MomentSearchItem, SearchMomentsByLocationRequest } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { IntelligentLocationCard } from '../../../components/IntelligentLocationCard';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -73,12 +73,15 @@ export struct MomentPage {
     this.errorMessage = '';
 
     try {
-      const response = await ApiClient.searchMomentsByLocation({
-        latitude: this.currentLocation.latitude,
-        longitude: this.currentLocation.longitude,
+      const request: SearchMomentsByLocationRequest = {
+        reference_point: {
+          latitude: this.currentLocation.latitude,
+          longitude: this.currentLocation.longitude
+        },
         radius: 2000,
         limit: 50
-      });
+      };
+      const response = await ApiClient.searchMomentsByLocation(request);
       
       if (response.code === 0 && response.data) {
         this.momentsDataSource.setData(response.data.items);
@@ -300,25 +303,10 @@ export struct MomentPage {
       content: () => {
         this.MomentCardContent(moment, index);
       },
-      backgroundColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT
+      cardBackgroundColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT
     })
   }
 
-  /**
-   * 检查瞬间点赞状态
-   */
-  private async checkLikedStatus(momentId: string): Promise<boolean> {
-    try {
-      const response = await ApiClient.checkMomentLiked({ id: momentId });
-      if (response.code === 0 && response.data) {
-        return response.data.is_liked;
-      }
-      return false;
-    } catch (error) {
-      hilog.warn(DOMAIN_NUMBER, TAG, `Check liked status failed: ${JSON.stringify(error)}`);
-      return false;
-    }
-  }
 
   @Builder
   private MomentCardContent(moment: MomentSearchItem, index: number) {
@@ -329,8 +317,8 @@ export struct MomentPage {
       Row({ space: 12 }) {
         SystemAvatar({ 
           avatarUrl: moment.user.avatar_url || '',
-          nickname: moment.user.nickname,
-          size: 40
+          name: moment.user.nickname,
+          avatarSize: 40
         })
 
         Column({ space: 2 }) {
@@ -455,15 +443,6 @@ struct LikeButton {
 
   async aboutToAppear() {
     this.likesCount = this.initialLikesCount;
-    // 异步检查点赞状态
-    try {
-      const response = await ApiClient.checkMomentLiked({ id: this.momentId });
-      if (response.code === 0 && response.data) {
-        this.isLiked = response.data.is_liked;
-      }
-    } catch (error) {
-      // 忽略错误
-    }
   }
 
   build() {

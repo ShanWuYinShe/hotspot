@@ -16,7 +16,7 @@ const logger = createLogger('NotificationScheduler');
 /**
  * 静默时间配置
  */
-interface QuietHours {
+export interface QuietHours {
   enabled: boolean;
   startTime: string; // HH:MM
   endTime: string;   // HH:MM
@@ -180,7 +180,7 @@ export class NotificationScheduler extends BaseSingleton {
       logger.info('通知调度器初始化完成');
     } catch (error) {
       ErrorHandler.handle(error, 'NotificationScheduler.onInitialize', ErrorType.SYSTEM, ErrorLevel.HIGH);
-      throw new Error(String(error));
+      throw (error instanceof Error) ? error : new Error(String(error));
     }
   }
   

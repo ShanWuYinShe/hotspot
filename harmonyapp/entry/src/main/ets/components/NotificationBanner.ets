@@ -7,7 +7,7 @@ export struct NotificationBanner {
   @ObjectLink notification: SmartNotification; // 使用ObjectLink以响应变化，或者Prop如果数据简单
   onClose?: () => void;
   onAction?: (action: NotificationAction) => void;
-  onClick?: () => void;
+  onBannerClick?: () => void;
 
   build() {
     Column() {
@@ -83,8 +83,8 @@ export struct NotificationBanner {
     .borderRadius(DesignConstants.RADIUS.LG)
     .shadow(DesignConstants.SHADOW.MEDIUM)
     .onClick(() => {
-      if (this.onClick) {
-        this.onClick();
+      if (this.onBannerClick) {
+        this.onBannerClick();
       }
     })
   }

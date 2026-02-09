@@ -45,7 +45,7 @@ const HEARTBEAT_INTERVAL = 45;
 export class WebSocketService {
   private static instance: WebSocketService | null = null;
   private webSocketUtil: WebSocketUtil;
-  private state: WebSocketState = 'disconnected';
+  private state: WebSocketState = WebSocketState.DISCONNECTED;
   private reconnectAttempts: number = 0;
   private reconnectConfig: ReconnectConfig = DEFAULT_RECONNECT_CONFIG;
   private heartbeatTimer: number | null = null;
@@ -69,13 +69,13 @@ export class WebSocketService {
    * 连接WebSocket服务器
    */
   async connect(token: string): Promise<void> {
-    if (this.state === 'connected' || this.state === 'connecting') {
+    if (this.state === WebSocketState.CONNECTED || this.state === WebSocketState.CONNECTING) {
       hilog.warn(DOMAIN_NUMBER, TAG, 'WebSocket已连接或正在连接中');
       return;
     }
 
     this.currentToken = token;
-    this.state = 'connecting';
+    this.state = WebSocketState.CONNECTING;
 
     try {
       const wsUrl = await this.getWsUrl();
@@ -86,7 +86,7 @@ export class WebSocketService {
       hilog.info(DOMAIN_NUMBER, TAG, 'WebSocket握手成功，已发送Auth，等待ConnectionEstablished');
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `WebSocket连接失败: ${JSON.stringify(error)}`);
-      this.state = 'error';
+      this.state = WebSocketState.ERROR;
       this.scheduleReconnect();
       throw new Error('WebSocket连接失败');
     }
@@ -111,7 +111,7 @@ export class WebSocketService {
     try {
       this.stopHeartbeat();
       this.webSocketUtil.disconnect();
-      this.state = 'disconnected';
+      this.state = WebSocketState.DISCONNECTED;
       this.reconnectAttempts = 0;
       this.subscriptions = [];
       this.currentToken = '';
@@ -132,7 +132,7 @@ export class WebSocketService {
    * 是否已连接
    */
   isConnected(): boolean {
-    return this.state === 'connected';
+    return this.state === WebSocketState.CONNECTED;
   }
 
   // ============================================================================
@@ -147,7 +147,7 @@ export class WebSocketService {
       hilog.warn(DOMAIN_NUMBER, TAG, 'WebSocket未连接，无法订阅');
       return;
     }
-    this.send(createSubscribeEvent(item));
+    this.send(createSubscribeEvent(item) as ClientEvent);
   }
 
   /**
@@ -158,7 +158,7 @@ export class WebSocketService {
       hilog.warn(DOMAIN_NUMBER, TAG, 'WebSocket未连接，无法取消订阅');
       return;
     }
-    this.send(createUnsubscribeEvent(item));
+    this.send(createUnsubscribeEvent(item) as ClientEvent);
   }
 
   /**
@@ -318,7 +318,7 @@ export class WebSocketService {
     // 监听连接关闭
     this.webSocketUtil.onClose(() => {
       hilog.info(DOMAIN_NUMBER, TAG, 'WebSocket连接关闭');
-      this.state = 'disconnected';
+      this.state = WebSocketState.DISCONNECTED;
       this.stopHeartbeat();
       this.scheduleReconnect();
     });
@@ -326,7 +326,7 @@ export class WebSocketService {
     // 监听连接错误
     this.webSocketUtil.onError((error: Error) => {
       hilog.error(DOMAIN_NUMBER, TAG, `WebSocket错误: ${error.message}`);
-      this.state = 'error';
+      this.state = WebSocketState.ERROR;
     });
   }
 
@@ -360,7 +360,7 @@ export class WebSocketService {
         hilog.debug(DOMAIN_NUMBER, TAG, `配置: ping_interval=${connPayload.config.ping_interval}s, ping_timeout=${connPayload.config.ping_timeout}s`);
         hilog.debug(DOMAIN_NUMBER, TAG, `未读数: messages=${connPayload.unread_counts.messages}, group_messages=${connPayload.unread_counts.group_messages}, notifications=${connPayload.unread_counts.notifications}`);
         
-        this.state = 'connected';
+        this.state = WebSocketState.CONNECTED;
         this.reconnectAttempts = 0;
         
         // 使用服务端配置的心跳间隔（如果可用）

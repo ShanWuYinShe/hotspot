@@ -9,7 +9,7 @@ import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { LocationUtil } from '../../../core/location/LocationUtil';
 import { PageNames } from '../../../constants/AppConstants';
-import { GroupSearchItem } from '../../../core/types/api';
+import { GroupSearchItem, SearchGroupsByLocationRequest } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { IntelligentLocationCard } from '../../../components/IntelligentLocationCard';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -17,6 +17,7 @@ import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { SystemCard } from '../../../components/SystemCard';
 
+@Component
 export struct GroupPage {
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   
@@ -46,12 +47,15 @@ export struct GroupPage {
     this.errorMessage = '';
 
     try {
-      const response = await ApiClient.searchGroupsByLocation({
-        latitude: this.currentLocation.latitude,
-        longitude: this.currentLocation.longitude,
+      const request: SearchGroupsByLocationRequest = {
+        reference_point: {
+          latitude: this.currentLocation.latitude,
+          longitude: this.currentLocation.longitude
+        },
         radius: 5000, // 5km 范围
         limit: 50     // 最多50个群组
-      });
+      };
+      const response = await ApiClient.searchGroupsByLocation(request);
 
       if (response.code === 0 && response.data) {
         this.groups = response.data.items;
@@ -101,7 +105,7 @@ export struct GroupPage {
     }
 
     try {
-      await ApiClient.joinGroup({ id: group.group_id });
+      await ApiClient.joinGroup({ group_id: group.group_id });
       SystemToast.show('加入群组成功', this.getUIContext());
       // 自动刷新列表以更新状态（如果需要）或者跳转到群组聊天页面
       await this.loadNearbyGroups(); 
@@ -269,7 +273,7 @@ export struct GroupPage {
       content: () => {
         this.GroupCardContent(group);
       },
-      backgroundColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT
+      cardBackgroundColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT
     })
     .onClick(async () => {
       try {
@@ -291,8 +295,8 @@ export struct GroupPage {
       Row({ space: 12 }) {
         SystemAvatar({
           avatarUrl: group.avatar_url || '',
-          nickname: group.name,
-          size: 48
+          name: group.name,
+          avatarSize: 48
         })
 
         Column({ space: 4 }) {

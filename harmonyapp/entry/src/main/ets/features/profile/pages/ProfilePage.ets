@@ -13,7 +13,7 @@ import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
-import { MyProfileData, UserType } from '../../../core/types/api';
+import { MyProfileData, UserType, UpdateLocationRequest } from '../../../core/types/api';
 import { isTempUser } from '../../../core/types/CommonTypes';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -53,17 +53,13 @@ export struct ProfilePage {
   }
 
   private async loadUserStats(): Promise<void> {
-    if (!this.isLoggedIn) {
+    if (!this.isLoggedIn || !this.currentUser) {
       return;
     }
-    try {
-      const response = await ApiClient.getMyStats();
-      if (response.code === 0 && response.data) {
-        this.myMomentsCount = response.data.moments_count;
-        this.myGroupsCount = response.data.groups_count;
-      }
-    } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, `加载用户统计失败: ${JSON.stringify(error)}`);
+    // Stats come from getMyProfile() response, which is already in currentUser
+    if (this.currentUser.stats) {
+      this.myMomentsCount = this.currentUser.stats.moments_count || 0;
+      this.myGroupsCount = this.currentUser.stats.groups_count || 0;
     }
   }
 
@@ -119,11 +115,14 @@ export struct ProfilePage {
     }
 
     try {
-      await ApiClient.updateLocation({
-        latitude: this.currentLocation.latitude,
-        longitude: this.currentLocation.longitude,
-        location_name: this.currentLocation.locationName || '南天门'
-      });
+      const request: UpdateLocationRequest = {
+        location: {
+          latitude: this.currentLocation.latitude,
+          longitude: this.currentLocation.longitude,
+          location_name: this.currentLocation.locationName || '南天门'
+        }
+      };
+      await ApiClient.updateLocation(request);
       SystemToast.showSuccess('位置更新成功', this.getUIContext());
     } catch (error) {
       SystemToast.showError('位置更新失败', this.getUIContext());
@@ -215,7 +214,7 @@ export struct ProfilePage {
             .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
             
             ListItem() {
-              this.MenuItemContent('我的瞬间', AppIcon.MOMENT, () => {})
+              this.MenuItemContent('我的瞬间', AppIcon.CAMERA, () => {})
             }
             .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
 
@@ -262,8 +261,8 @@ export struct ProfilePage {
     Column({ space: 16 }) {
       SystemAvatar({
         avatarUrl: this.currentUser?.avatar_url || '',
-        nickname: this.currentUser?.nickname || '',
-        size: 80,
+        name: this.currentUser?.nickname || '',
+        avatarSize: 80,
         isOnline: this.currentUser?.is_online || false
       })
 
@@ -306,8 +305,8 @@ export struct ProfilePage {
     Column({ space: 16 }) {
       SystemAvatar({
         avatarUrl: this.currentUser?.avatar_url || '',
-        nickname: this.editNickname,
-        size: 80
+        name: this.editNickname,
+        avatarSize: 80
       })
 
       TextInput({ placeholder: '请输入昵称', text: this.editNickname })

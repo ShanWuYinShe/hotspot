@@ -48,6 +48,22 @@ export interface RendererConfig {
 }
 
 /**
+ * 渲染配置更新类
+ */
+export class RendererConfigUpdate {
+  position?: NotificationPosition;
+  animation?: NotificationAnimation;
+  duration?: number;
+  maxVisible?: number;
+  enableSound?: boolean;
+  enableVibration?: boolean;
+  enableAutoHide?: boolean;
+  stackNotifications?: boolean;
+  showProgress?: boolean;
+  theme?: string;
+}
+
+/**
  * 通知样式
  */
 interface NotificationStyle {
@@ -207,8 +223,8 @@ export class NotificationRenderer extends BaseSingleton {
   /**
    * 更新配置
    */
-  updateConfig(config: Partial<RendererConfig>): void {
-    this.config = ConfigMerger.merge(this.config, config);
+  updateConfig(config: RendererConfigUpdate): void {
+    this.config = ConfigMerger.merge(this.config, config as Object as Record<string, Object>);
     
     // 重新初始化样式缓存
     this.initializeStyleCache();
@@ -797,5 +813,47 @@ export class NotificationRenderer extends BaseSingleton {
     // 这里应该检查系统主题设置
     // 暂时返回false
     return false;
+  }
+  
+  /**
+   * 处理通知点击
+   */
+  handleClick(notification: SmartNotification): void {
+    try {
+      this.stats.userInteractions++;
+      const listener = this.clickListeners.get(notification.id);
+      if (listener) {
+        listener(notification);
+      }
+      logger.debug(`通知被点击: ${notification.id}`);
+    } catch (error) {
+      ErrorHandler.handle(error, 'NotificationRenderer.handleClick', ErrorType.BUSINESS, ErrorLevel.MEDIUM);
+      logger.error(`处理通知点击失败: ${notification.id}`, error);
+    }
+  }
+  
+  /**
+   * 处理通知操作
+   */
+  handleAction(action: NotificationAction, notification: SmartNotification): void {
+    try {
+      this.stats.userInteractions++;
+      const listener = this.actionListeners.get(notification.id);
+      if (listener) {
+        listener(action, notification);
+      }
+      
+      // 执行操作处理器
+      if (action.handler) {
+        action.handler().catch((error: Object) => {
+          logger.error(`通知操作执行失败: ${action.id}`, error);
+        });
+      }
+      
+      logger.debug(`通知操作执行: ${action.id} for notification ${notification.id}`);
+    } catch (error) {
+      ErrorHandler.handle(error, 'NotificationRenderer.handleAction', ErrorType.BUSINESS, ErrorLevel.MEDIUM);
+      logger.error(`处理通知操作失败: ${action.id}`, error);
+    }
   }
 }

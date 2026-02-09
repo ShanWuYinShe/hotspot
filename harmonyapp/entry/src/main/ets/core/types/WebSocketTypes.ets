@@ -3,7 +3,7 @@
  * 严格遵循 api_spec.mdc WebSocket 实时事件定义
  */
 
-import { UserInfo, ReactionType, GroupSettings } from './api';
+import { UserInfo, ReactionType, GroupSettings, GroupJoinMethod, RelativeLocation } from './api';
 
 // ============================================================================
 // 通用类型
@@ -12,7 +12,14 @@ import { UserInfo, ReactionType, GroupSettings } from './api';
 /**
  * 消息类型（接收时使用，包含系统消息）
  */
-export type ReceiveMessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'system'
+export enum ReceiveMessageType {
+  TEXT = 'text',
+  IMAGE = 'image',
+  VIDEO = 'video',
+  AUDIO = 'audio',
+  FILE = 'file',
+  SYSTEM = 'system'
+}
 
 /**
  * 群组更新字段
@@ -21,7 +28,14 @@ export interface GroupUpdatedFields {
   name?: string
   description?: string
   avatar_url?: string
-  settings?: Partial<GroupSettings>
+  settings?: GroupSettingsUpdateFields
+}
+
+export interface GroupSettingsUpdateFields {
+  join_method?: GroupJoinMethod
+  is_searchable?: boolean
+  max_members?: number
+  location?: RelativeLocation
 }
 
 // ============================================================================
@@ -54,67 +68,69 @@ export interface FailedSubscriptionId {
 /**
  * 客户端发送事件类型
  */
-export type ClientEventType =
-  | 'Auth'
-  | 'Ping'
-  | 'Subscribe'
-  | 'Unsubscribe'
-  | 'SetSubscriptions'
-  | 'GetSubscriptions'
-  | 'PrivateTyping'
-  | 'GroupTyping'
+export enum ClientEventType {
+  AUTH = 'Auth',
+  PING = 'Ping',
+  SUBSCRIBE = 'Subscribe',
+  UNSUBSCRIBE = 'Unsubscribe',
+  SET_SUBSCRIPTIONS = 'SetSubscriptions',
+  GET_SUBSCRIPTIONS = 'GetSubscriptions',
+  PRIVATE_TYPING = 'PrivateTyping',
+  GROUP_TYPING = 'GroupTyping'
+}
 
 /**
  * 服务端推送事件类型
  */
-export type ServerEventType =
-  | 'ConnectionEstablished'
-  | 'Pong'
-  | 'BatchEvents'
-  | 'UserOnline'
-  | 'UserOffline'
-  | 'UserPresenceUpdate'
-  | 'UserLocationUpdate'
-  | 'NewFollower'
-  | 'MutualFollow'
-  | 'FollowRequestReceived'
-  | 'FollowRequestHandled'
-  | 'MomentLiked'
-  | 'MomentCommented'
-  | 'CommentReply'
-  | 'MessageMentioned'
-  | 'SystemAnnouncement'
-  | 'PrivateMessageNew'
-  | 'PrivateMessageEdited'
-  | 'PrivateMessageRecalled'
-  | 'PrivateMessageDeleted'
-  | 'PrivateMessageReaction'
-  | 'PrivateMessageRead'
-  | 'PrivateUserTyping'
-  | 'GroupMessageNew'
-  | 'GroupMessageEdited'
-  | 'GroupMessageRecalled'
-  | 'GroupMessageDeleted'
-  | 'GroupMessageReaction'
-  | 'GroupMessageRead'
-  | 'GroupUserTyping'
-  | 'GroupMemberJoined'
-  | 'GroupMemberLeft'
-  | 'GroupMemberRemoved'
-  | 'GroupMemberRoleChanged'
-  | 'GroupMemberMuted'
-  | 'GroupMemberUnmuted'
-  | 'GroupInviteReceived'
-  | 'GroupInviteResponse'
-  | 'GroupApplicationReceived'
-  | 'GroupApplicationResponse'
-  | 'GroupAnnouncementCreated'
-  | 'GroupAnnouncementUpdated'
-  | 'GroupUpdated'
-  | 'GroupDeleted'
-  | 'SubscribeAck'
-  | 'SubscriptionsSnapshot'
-  | 'Error'
+export enum ServerEventType {
+  CONNECTION_ESTABLISHED = 'ConnectionEstablished',
+  PONG = 'Pong',
+  BATCH_EVENTS = 'BatchEvents',
+  USER_ONLINE = 'UserOnline',
+  USER_OFFLINE = 'UserOffline',
+  USER_PRESENCE_UPDATE = 'UserPresenceUpdate',
+  USER_LOCATION_UPDATE = 'UserLocationUpdate',
+  NEW_FOLLOWER = 'NewFollower',
+  MUTUAL_FOLLOW = 'MutualFollow',
+  FOLLOW_REQUEST_RECEIVED = 'FollowRequestReceived',
+  FOLLOW_REQUEST_HANDLED = 'FollowRequestHandled',
+  MOMENT_LIKED = 'MomentLiked',
+  MOMENT_COMMENTED = 'MomentCommented',
+  COMMENT_REPLY = 'CommentReply',
+  MESSAGE_MENTIONED = 'MessageMentioned',
+  SYSTEM_ANNOUNCEMENT = 'SystemAnnouncement',
+  PRIVATE_MESSAGE_NEW = 'PrivateMessageNew',
+  PRIVATE_MESSAGE_EDITED = 'PrivateMessageEdited',
+  PRIVATE_MESSAGE_RECALLED = 'PrivateMessageRecalled',
+  PRIVATE_MESSAGE_DELETED = 'PrivateMessageDeleted',
+  PRIVATE_MESSAGE_REACTION = 'PrivateMessageReaction',
+  PRIVATE_MESSAGE_READ = 'PrivateMessageRead',
+  PRIVATE_USER_TYPING = 'PrivateUserTyping',
+  GROUP_MESSAGE_NEW = 'GroupMessageNew',
+  GROUP_MESSAGE_EDITED = 'GroupMessageEdited',
+  GROUP_MESSAGE_RECALLED = 'GroupMessageRecalled',
+  GROUP_MESSAGE_DELETED = 'GroupMessageDeleted',
+  GROUP_MESSAGE_REACTION = 'GroupMessageReaction',
+  GROUP_MESSAGE_READ = 'GroupMessageRead',
+  GROUP_USER_TYPING = 'GroupUserTyping',
+  GROUP_MEMBER_JOINED = 'GroupMemberJoined',
+  GROUP_MEMBER_LEFT = 'GroupMemberLeft',
+  GROUP_MEMBER_REMOVED = 'GroupMemberRemoved',
+  GROUP_MEMBER_ROLE_CHANGED = 'GroupMemberRoleChanged',
+  GROUP_MEMBER_MUTED = 'GroupMemberMuted',
+  GROUP_MEMBER_UNMUTED = 'GroupMemberUnmuted',
+  GROUP_INVITE_RECEIVED = 'GroupInviteReceived',
+  GROUP_INVITE_RESPONSE = 'GroupInviteResponse',
+  GROUP_APPLICATION_RECEIVED = 'GroupApplicationReceived',
+  GROUP_APPLICATION_RESPONSE = 'GroupApplicationResponse',
+  GROUP_ANNOUNCEMENT_CREATED = 'GroupAnnouncementCreated',
+  GROUP_ANNOUNCEMENT_UPDATED = 'GroupAnnouncementUpdated',
+  GROUP_UPDATED = 'GroupUpdated',
+  GROUP_DELETED = 'GroupDeleted',
+  SUBSCRIBE_ACK = 'SubscribeAck',
+  SUBSCRIPTIONS_SNAPSHOT = 'SubscriptionsSnapshot',
+  ERROR = 'Error'
+}
 
 // ============================================================================
 // 客户端发送事件定义
@@ -149,7 +165,7 @@ export interface PingEvent {
  */
 export interface SubscribePayload {
   client_msg_id: string
-  type: SubscriptionItem['type']
+  type: 'group' | 'user'
   ids: string[]
 }
 
@@ -160,7 +176,7 @@ export interface SubscribeEvent {
 
 export interface UnsubscribePayload {
   client_msg_id: string
-  type: SubscriptionItem['type']
+  type: 'group' | 'user'
   ids: string[]
 }
 
@@ -171,7 +187,7 @@ export interface UnsubscribeEvent {
 
 export interface SetSubscriptionsPayload {
   client_msg_id: string
-  type: SubscriptionItem['type']
+  type: 'group' | 'user'
   ids: string[]
 }
 
@@ -219,9 +235,9 @@ export interface GroupTypingEvent {
 /**
  * 服务端推送事件基础接口（包含 event_id 用于去重）
  */
-export interface ServerWebSocketEvent<TType extends ServerEventType = ServerEventType, TPayload = unknown> {
-  type: TType
-  payload: TPayload
+export interface ServerWebSocketEvent {
+  type: ServerEventType
+  payload: Object
   event_id: string  // 事件唯一ID（UUID），用于客户端去重（幂等性保障）
 }
 
@@ -287,12 +303,13 @@ export interface BatchEventsEvent {
 /**
  * 用户状态类型
  */
-export type UserPresenceStatus =
-  | 'online'      // 正在活跃（有 WebSocket 连接且 5 分钟内有活动）
-  | 'idle'        // 空闲/离开（有连接但 5 分钟没活动）
-  | 'dnd'         // 请勿打扰（用户主动设置）
-  | 'invisible'   // 隐身（对他人显示为 offline）
-  | 'offline'     // 离线（无连接）
+export enum UserPresenceStatus {
+  ONLINE = 'online',      // 正在活跃（有 WebSocket 连接且 5 分钟内有活动）
+  IDLE = 'idle',        // 空闲/离开（有连接但 5 分钟没活动）
+  DND = 'dnd',         // 请勿打扰（用户主动设置）
+  INVISIBLE = 'invisible',   // 隐身（对他人显示为 offline）
+  OFFLINE = 'offline'     // 离线（无连接）
+}
 
 export interface UserOnlinePayload {
   user_id: number
@@ -897,7 +914,7 @@ export interface GroupApplicationResponseEvent {
 export interface SubscribeAckPayload {
   client_msg_id: string
   operation: 'subscribe' | 'unsubscribe' | 'set'
-  type: SubscriptionItem['type']
+  type: 'group' | 'user'
   ids: string[]
   code: number
   message?: string
@@ -1004,7 +1021,12 @@ export type ServerEvent =
 /**
  * WebSocket 连接状态
  */
-export type WebSocketState = 'connecting' | 'connected' | 'disconnected' | 'error'
+export enum WebSocketState {
+  CONNECTING = 'connecting',
+  CONNECTED = 'connected',
+  DISCONNECTED = 'disconnected',
+  ERROR = 'error'
+}
 
 /**
  * 重连策略配置

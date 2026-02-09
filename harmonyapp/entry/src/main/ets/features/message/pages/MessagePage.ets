@@ -9,7 +9,7 @@
 import { GlobalStateManager, KEY_CURRENT_USER, KEY_LAST_MESSAGE_SYNC_TIME } from '../../../core/state/GlobalStateManager';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { PageNames } from '../../../constants/AppConstants';
-import { PrivateChatListItem, JoinedGroupItem, MyProfileData } from '../../../core/types/api';
+import { PrivateChatListItem, JoinedGroupItem, MyProfileData, MyGroupsRequest } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
@@ -182,7 +182,8 @@ export struct MessagePage {
 
   private async loadGroupChats(): Promise<ChatItem[]> {
     try {
-      const response = await ApiClient.getJoinedGroupChats({ limit: 50 });
+      const request: MyGroupsRequest = { limit: 50 };
+      const response = await ApiClient.getJoinedGroupChats(request);
       if (response.code === 0 && response.data) {
         return response.data.items.map((item: JoinedGroupItem): ChatItem => ({
           id: item.id,
@@ -202,13 +203,18 @@ export struct MessagePage {
     }
   }
 
-  private formatLastMessage(message: any): string {
+  private formatLastMessage(message: Object | null | undefined): string {
     if (!message) return '';
-    if (message.type === 'text') return message.content || '';
-    if (message.type === 'image') return '[图片]';
-    if (message.type === 'video') return '[视频]';
-    if (message.type === 'audio') return '[语音]';
-    if (message.type === 'file') return '[文件]';
+    const msgRecord = message as Record<string, Object>;
+    const msgType = String(msgRecord.type || '');
+    if (msgType === 'text') {
+      const content = msgRecord.content;
+      return content ? String(content) : '';
+    }
+    if (msgType === 'image') return '[图片]';
+    if (msgType === 'video') return '[视频]';
+    if (msgType === 'audio') return '[语音]';
+    if (msgType === 'file') return '[文件]';
     return '[消息]';
   }
 
@@ -338,8 +344,9 @@ export struct MessagePage {
                   // 检查是否支持扫码能力
                   if (canIUse('SystemCapability.Multimedia.Scan.ScanBarcode')) {
                     const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+                    const scanTypes: scanCore.ScanType[] = [scanCore.ScanType.ALL];
                     const options: scanBarcode.ScanOptions = {
-                      scanTypes: [scanCore.ScanType.ALL],
+                      scanTypes: scanTypes,
                       enableMultiMode: true,
                       enableAlbum: true
                     };
@@ -483,8 +490,8 @@ import pasteboard from '@ohos.pasteboard';
       Stack({ alignContent: Alignment.TopEnd }) {
         SystemAvatar({
           avatarUrl: item.avatarUrl,
-          nickname: item.name,
-          size: 50,
+          name: item.name,
+          avatarSize: 50,
           shape: item.type === 'group' ? 'square' : 'circle'
         })
 

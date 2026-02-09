@@ -46,6 +46,14 @@ export interface MediaResult {
   duration?: number; // 仅音频/视频
 }
 
+/**
+ * 图片尺寸接口
+ */
+interface ImageDimensions {
+  width: number;
+  height: number;
+}
+
 export class MediaServiceManager {
   /**
    * 请求媒体相关权限
@@ -87,7 +95,7 @@ export class MediaServiceManager {
       return result.photoUris;
     } catch (error) {
       hilog.error(DOMAIN, TAG, `选择图片失败: ${JSON.stringify(error)}`);
-      throw error;
+      throw (error instanceof Error) ? error : new Error(String(error));
     }
   }
 
@@ -98,7 +106,7 @@ export class MediaServiceManager {
   public static async takePhoto(context: common.Context): Promise<MediaResult | null> {
     try {
       const pickerProfile: cameraPicker.PickerProfile = {
-        cameraPosition: cameraPicker.CameraPosition.CAMERA_POSITION_BACK
+        cameraPosition: 0
       };
       
       const pickerResult = await cameraPicker.pick(context, 
@@ -153,7 +161,7 @@ export class MediaServiceManager {
         }
         return null;
       } catch (e) {
-        throw error;
+        throw (error instanceof Error) ? error : new Error(String(error));
       }
     }
   }
@@ -196,7 +204,7 @@ export class MediaServiceManager {
       return avRecorder;
     } catch (error) {
       hilog.error(DOMAIN, TAG, `启动录音失败: ${JSON.stringify(error)}`);
-      throw error;
+      throw (error instanceof Error) ? error : new Error(String(error));
     }
   }
 
@@ -230,7 +238,7 @@ export class MediaServiceManager {
       };
     } catch (error) {
       hilog.error(DOMAIN, TAG, `停止录音失败: ${JSON.stringify(error)}`);
-      throw error;
+      throw (error instanceof Error) ? error : new Error(String(error));
     }
   }
 
@@ -348,52 +356,15 @@ export class MediaServiceManager {
       return `internal://cache/${internalFileName}`;
     } catch (error) {
       hilog.error(DOMAIN, TAG, `准备上传文件失败: ${JSON.stringify(error)}`);
-      throw error;
+      throw (error instanceof Error) ? error : new Error(String(error));
     }
   }
 
-  /**
-   6   * 准备文件用于上传
-   7   * 将文件复制到 cache 目录，并返回 internal:// 协议的 URI
-   8   * 供 request.uploadFile 使用
-   9   */
-  10  public static async prepareFileForUpload(context: common.Context, uri: string): Promise<string> {
-  11    try {
-  12      const cacheDir = context.cacheDir;
-  13      const fileName = `upload_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-  14      let extension = 'tmp';
-  15      
-  16      // 简单推断扩展名
-  17      if (uri.endsWith('.jpg') || uri.endsWith('.jpeg')) extension = 'jpg';
-  18      else if (uri.endsWith('.png')) extension = 'png';
-  19      else if (uri.endsWith('.mp4')) extension = 'mp4';
-  20      else if (uri.endsWith('.m4a')) extension = 'm4a';
-  21      
-  22      const internalFileName = `${fileName}.${extension}`;
-  23      const internalFilePath = `${cacheDir}/${internalFileName}`;
-  24      
-  25      const srcFile = fileIo.openSync(uri, fileIo.OpenMode.READ_ONLY);
-  26      const destFile = fileIo.openSync(internalFilePath, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC);
-  27      
-  28      fileIo.copyFileSync(srcFile.fd, destFile.fd);
-  29      
-  30      fileIo.closeSync(srcFile);
-  31      fileIo.closeSync(destFile);
-  32      
-  33      hilog.info(DOMAIN, TAG, `文件已准备好上传: ${internalFilePath}`);
-  34      
-  35      // 返回 internal:// 协议路径
-  36      return `internal://cache/${internalFileName}`;
-  37    } catch (error) {
-  38      hilog.error(DOMAIN, TAG, `准备上传文件失败: ${JSON.stringify(error)}`);
-  39      throw error;
-  40    }
-  41  }
 
   /**
    * 获取图片信息 (宽、高)
    */
-  private static async getImageInfo(uri: string): Promise<{ width: number, height: number }> {
+  private static async getImageInfo(uri: string): Promise<ImageDimensions> {
     try {
       let fd: number;
       // 检查是否是 file:// 路径还是直接路径

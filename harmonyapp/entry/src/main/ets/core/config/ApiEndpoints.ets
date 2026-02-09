@@ -11,247 +11,216 @@
 // - Endpoint values MUST match `@api_spec.mdc` ("API 端点与类型定义").
 // - Do NOT add endpoints here unless they exist in the spec.
 
-const API_VERSION: string = 'v1';
-const API_PREFIX: string = `/api/${API_VERSION}`;
+export class ApiEndpoints {
+  static readonly AUTH = new class {
+    readonly LOGIN = '/api/v1/auth/login';
+    readonly REGISTER = '/api/v1/auth/register';
+    readonly LOGOUT = '/api/v1/auth/logout';
+    readonly GUEST = '/api/v1/auth/guest';
+    readonly REFRESH_TOKEN = '/api/v1/auth/refresh_token';
+    readonly CHECK_STATUS = '/api/v1/auth/check_status';
+    readonly ME = new class {
+      readonly CHANGE_PASSWORD = '/api/v1/auth/me/change_password';
+      readonly SESSIONS = new class {
+        readonly LIST = '/api/v1/auth/me/sessions/list';
+        readonly REVOKE = '/api/v1/auth/me/sessions/revoke';
+        readonly REVOKE_ALL = '/api/v1/auth/me/sessions/revoke_all';
+      }();
+    }();
+  }();
 
-const PublicPrefix: string = `${API_PREFIX}/public`;
-const ProtectedPrefix: string = `${API_PREFIX}/protected`;
+  static readonly USER = new class {
+    readonly SEARCH = '/api/v1/users/search';
+    readonly OPEN_THE_DOOR = '/api/v1/users/open_the_door';
+    readonly LIST_FRIENDS = '/api/v1/users/list_friends';
+    readonly LIST_FOLLOWING = '/api/v1/users/list_following';
+    readonly LIST_FOLLOWERS = '/api/v1/users/list_followers';
+    readonly LIST_GROUPS = '/api/v1/users/list_groups';
+    readonly LIST_MOMENTS = '/api/v1/users/list_moments';
+    readonly LIST_LIKED_MOMENTS = '/api/v1/users/list_liked_moments';
+    readonly ME = new class {
+      readonly PROFILE = new class {
+        readonly GET = '/api/v1/users/me/profile/get';
+        readonly UPDATE = '/api/v1/users/me/profile/update';
+      }();
+      readonly LOCATION = new class {
+        readonly UPDATE = '/api/v1/users/me/location/update';
+      }();
+      readonly UPGRADE = '/api/v1/users/me/upgrade';
+      readonly SETTINGS = new class {
+        readonly GET = '/api/v1/users/me/settings/get';
+        readonly UPDATE = '/api/v1/users/me/settings/update';
+      }();
+      readonly DELETE = '/api/v1/users/me/delete';
+      readonly FOLLOW = '/api/v1/users/me/follow';
+      readonly UNFOLLOW = '/api/v1/users/me/unfollow';
+      readonly BLOCK = '/api/v1/users/me/block';
+      readonly UNBLOCK = '/api/v1/users/me/unblock';
+      readonly LIST_FRIENDS = '/api/v1/users/me/list_friends';
+      readonly LIST_FOLLOWING = '/api/v1/users/me/list_following';
+      readonly LIST_FOLLOWERS = '/api/v1/users/me/list_followers';
+      readonly LIST_BLOCKED = '/api/v1/users/me/list_blocked';
+      readonly SET_REMARK = '/api/v1/users/me/set_remark';
+    }();
+  }();
 
-export const ApiEndpoints = {
-  public: {
-    auth: {
-      register: `${PublicPrefix}/auth/register`,
-      login: `${PublicPrefix}/auth/login`,
-      guest: `${PublicPrefix}/auth/guest`,
-      refreshToken: `${PublicPrefix}/auth/refresh_token`,
-      requestPasswordReset: `${PublicPrefix}/auth/request_password_reset`,
-      verifyResetCode: `${PublicPrefix}/auth/verify_reset_code`,
-      resetPassword: `${PublicPrefix}/auth/reset_password`
-    },
+  static readonly GROUP = new class {
+    readonly SEARCH = '/api/v1/groups/search';
+    readonly OPEN_THE_DOOR = '/api/v1/groups/open_the_door';
+    readonly CREATE = '/api/v1/groups/create';
+    readonly UPDATE = '/api/v1/groups/update';
+    readonly DISMISS = '/api/v1/groups/dismiss';
+    readonly MEMBERS = new class {
+      readonly LIST = '/api/v1/groups/members/list';
+      readonly SEARCH = '/api/v1/groups/members/search';
+      readonly INVITE = '/api/v1/groups/members/invite';
+      readonly SET_ROLE = '/api/v1/groups/members/set_role';
+      readonly MUTE = '/api/v1/groups/members/mute';
+      readonly UNMUTE = '/api/v1/groups/members/unmute';
+      readonly BAN = '/api/v1/groups/members/ban';
+      readonly UNBAN = '/api/v1/groups/members/unban';
+      readonly LIST_BANNED = '/api/v1/groups/members/list_banned';
+      readonly REMOVE_MEMBER = '/api/v1/groups/members/remove_member';
+    }();
+    readonly APPLICATIONS = new class {
+      readonly LIST = '/api/v1/groups/applications/list';
+      readonly APPROVE = '/api/v1/groups/applications/approve';
+      readonly REJECT = '/api/v1/groups/applications/reject';
+    }();
+    readonly ANNOUNCEMENTS = new class {
+      readonly CREATE = '/api/v1/groups/announcements/create';
+      readonly LIST = '/api/v1/groups/announcements/list';
+      readonly UPDATE = '/api/v1/groups/announcements/update';
+      readonly DELETE = '/api/v1/groups/announcements/delete';
+    }();
+    readonly ME = new class {
+      readonly JOIN = '/api/v1/groups/me/join';
+      readonly LEAVE = '/api/v1/groups/me/leave';
+      readonly LIST = '/api/v1/groups/me/list';
+      readonly UPDATE_SETTINGS = '/api/v1/groups/me/update_settings';
+      readonly TRANSFER_OWNERSHIP = '/api/v1/groups/me/transfer_ownership';
+      readonly APPLICATIONS = new class {
+        readonly LIST = '/api/v1/groups/me/applications/list';
+        readonly CANCEL = '/api/v1/groups/me/applications/cancel';
+      }();
+      readonly INVITES = new class {
+        readonly LIST = '/api/v1/groups/me/invites/list';
+        readonly ACCEPT = '/api/v1/groups/me/invites/accept';
+        readonly REJECT = '/api/v1/groups/me/invites/reject';
+      }();
+    }();
+  }();
 
-    user: {
-      // Search / public info
-      searchByKeyword: `${PublicPrefix}/user/search_by_keyword`,
-      searchByTag: `${PublicPrefix}/user/search_by_tag`,
-      searchByLocation: `${PublicPrefix}/user/search_by_location`,
-      openTheDoor: `${PublicPrefix}/user/open_the_door`,
+  static readonly MOMENT = new class {
+    readonly SEARCH = '/api/v1/moments/search';
+    readonly OPEN_THE_DOOR = '/api/v1/moments/open_the_door';
+    readonly CREATE = '/api/v1/moments/create';
+    readonly UPDATE = '/api/v1/moments/update';
+    readonly DELETE = '/api/v1/moments/delete';
+    readonly LIST_LIKES = '/api/v1/moments/list_likes';
+    readonly ME = new class {
+      readonly LIST = '/api/v1/moments/me/list';
+      readonly LIST_FAVORITES = '/api/v1/moments/me/list_favorites';
+      readonly LIKE = '/api/v1/moments/me/like';
+      readonly UNLIKE = '/api/v1/moments/me/unlike';
+      readonly FAVORITE = '/api/v1/moments/me/favorite';
+      readonly UNFAVORITE = '/api/v1/moments/me/unfavorite';
+    }();
+  }();
 
-      // Supplemental
-      stats: `${PublicPrefix}/user/stats`,
+  static readonly CHAT = new class {
+    readonly PRIVATE_CHATS = new class {
+      readonly OPEN_THE_DOOR = '/api/v1/private_chats/open_the_door';
+      readonly ME = new class {
+        readonly LIST = '/api/v1/private_chats/me/list';
+        readonly UPDATE_SETTINGS = '/api/v1/private_chats/me/update_settings';
+        readonly DELETE = '/api/v1/private_chats/me/delete';
+      }();
+    }();
+    readonly PRIVATE_MESSAGES = new class {
+      readonly SEND = '/api/v1/private_messages/send';
+      readonly GET_HISTORY = '/api/v1/private_messages/get_history';
+      readonly UPDATE = '/api/v1/private_messages/update';
+      readonly RECALL = '/api/v1/private_messages/recall';
+      readonly ME = new class {
+        readonly MARK_AS_READ = '/api/v1/private_messages/me/mark_as_read';
+      }();
+    }();
+    readonly GROUP_MESSAGES = new class {
+      readonly SEND = '/api/v1/group_messages/send';
+      readonly GET_HISTORY = '/api/v1/group_messages/get_history';
+      readonly UPDATE = '/api/v1/group_messages/update';
+      readonly RECALL = '/api/v1/group_messages/recall';
+      readonly ME = new class {
+        readonly MARK_AS_READ = '/api/v1/group_messages/me/mark_as_read';
+      }();
+    }();
+  }();
 
-      // Relationship visibility controlled endpoints
-      friends: `${PublicPrefix}/user/friends`,
-      following: `${PublicPrefix}/user/following`,
-      followers: `${PublicPrefix}/user/followers`,
+  static readonly SEARCH = new class {
+    readonly SUGGEST = '/api/v1/search/suggest';
+  }();
 
-      // Other public lists
-      groups: `${PublicPrefix}/user/groups`,
-      likedMoments: `${PublicPrefix}/user/liked_moments`,
+  static readonly FEED = new class {
+    readonly LIST_MOMENTS = '/api/v1/feed/list_moments';
+    readonly LIST_GROUPS = '/api/v1/feed/list_groups';
+    readonly LIST_USERS = '/api/v1/feed/list_users';
+    readonly LIST_TRENDING = '/api/v1/feed/list_trending';
+    readonly ME = new class {
+      readonly FEEDBACK = '/api/v1/feed/me/feedback';
+    }();
+  }();
 
-      // Moments list for a specific user (public)
-      moments: `${PublicPrefix}/user/moments`
-    },
+  static readonly UPLOAD = new class {
+    readonly PRESIGN_UPLOAD = '/api/v1/media/presign_upload';
+    readonly BATCH_PRESIGN_UPLOAD = '/api/v1/media/batch_presign_upload';
+    readonly COMPLETE_UPLOAD = '/api/v1/media/complete_upload';
+  }();
 
-    moments: {
-      searchByKeyword: `${PublicPrefix}/moments/search_by_keyword`,
-      searchByTag: `${PublicPrefix}/moments/search_by_tag`,
-      searchByLocation: `${PublicPrefix}/moments/search_by_location`,
-      openTheDoor: `${PublicPrefix}/moments/open_the_door`,
-      comments: `${PublicPrefix}/moments/comments`,
-      likes: `${PublicPrefix}/moments/likes`
-    },
+  static readonly SYSTEM = new class {
+    readonly GET_META = '/api/v1/system/get_meta';
+    readonly HEALTH = '/api/v1/system/health';
+    readonly LIST_ANNOUNCEMENTS = '/api/v1/system/list_announcements';
+    readonly GET_CLIENT_CONFIG = '/api/v1/system/get_client_config';
+  }();
 
-    comments: {
-      list: `${PublicPrefix}/comments`,
-      replies: `${PublicPrefix}/comments/replies`,
-      likes: `${PublicPrefix}/comments/likes`
-    },
+  static readonly COMMENT = new class {
+    readonly CREATE = '/api/v1/comments/create';
+    readonly DELETE = '/api/v1/comments/delete';
+    readonly LIST = '/api/v1/comments/list';
+    readonly LIST_REPLIES = '/api/v1/comments/list_replies';
+    readonly LIST_LIKES = '/api/v1/comments/list_likes';
+    readonly ME = new class {
+      readonly LIKE = '/api/v1/comments/me/like';
+      readonly UNLIKE = '/api/v1/comments/me/unlike';
+    }();
+  }();
 
-    groups: {
-      searchByKeyword: `${PublicPrefix}/groups/search_by_keyword`,
-      searchByTag: `${PublicPrefix}/groups/search_by_tag`,
-      searchByLocation: `${PublicPrefix}/groups/search_by_location`,
-      openTheDoor: `${PublicPrefix}/groups/open_the_door`,
-      settings: `${PublicPrefix}/groups/settings`,
-      members: `${PublicPrefix}/groups/members`
-    },
+  static readonly MAP = new class {
+    readonly RENDER = '/api/v1/map/render';
+  }();
 
-    tags: {
-      trending: `${PublicPrefix}/tags/trending`,
-      suggest: `${PublicPrefix}/tags/suggest`
-    },
+  static readonly TAG = new class {
+    readonly LIST_TRENDING = '/api/v1/tags/list_trending';
+  }();
 
-    system: {
-      health: `${PublicPrefix}/system/health`
-    }
-  },
+  static readonly REPORT = new class {
+    readonly CREATE = '/api/v1/reports/create';
+    readonly ME = new class {
+      readonly LIST = '/api/v1/reports/me/list';
+    }();
+  }();
 
-  protected: {
-    auth: {
-      logout: `${ProtectedPrefix}/auth/logout`,
-      checkStatus: `${ProtectedPrefix}/auth/check_status`,
-      me: {
-        changePassword: `${ProtectedPrefix}/auth/me/change_password`,
-        sessions: `${ProtectedPrefix}/auth/me/sessions`,
-        revokeSession: `${ProtectedPrefix}/auth/me/sessions/revoke`
-      }
-    },
-
-    user: {
-      relationship: `${ProtectedPrefix}/user/relationship`,
-      me: {
-        profile: `${ProtectedPrefix}/user/me/profile`,
-        updateProfile: `${ProtectedPrefix}/user/me/profile/update`,
-        location: `${ProtectedPrefix}/user/me/location`,
-        upgrade: `${ProtectedPrefix}/user/me/upgrade`,
-        stats: `${ProtectedPrefix}/user/me/stats`,
-        settings: `${ProtectedPrefix}/user/me/settings`,
-        updateSettings: `${ProtectedPrefix}/user/me/settings/update`,
-        deleteAccount: `${ProtectedPrefix}/user/me/delete`,
-        follow: `${ProtectedPrefix}/user/me/follow`,
-        unfollow: `${ProtectedPrefix}/user/me/unfollow`,
-        block: `${ProtectedPrefix}/user/me/block`,
-        unblock: `${ProtectedPrefix}/user/me/unblock`,
-        friends: `${ProtectedPrefix}/user/me/friends`,
-        following: `${ProtectedPrefix}/user/me/following`,
-        followers: `${ProtectedPrefix}/user/me/followers`,
-        blocked: `${ProtectedPrefix}/user/me/blocked`,
-        remark: `${ProtectedPrefix}/user/me/remark`
-      }
-    },
-
-    moments: {
-      create: `${ProtectedPrefix}/moments/create`,
-      update: `${ProtectedPrefix}/moments/update`,
-      delete: `${ProtectedPrefix}/moments/delete`,
-      like: `${ProtectedPrefix}/moments/like`,
-      unlike: `${ProtectedPrefix}/moments/unlike`,
-      favorite: `${ProtectedPrefix}/moments/favorite`,
-      unfavorite: `${ProtectedPrefix}/moments/unfavorite`,
-      me: `${ProtectedPrefix}/moments/me`,
-      myFavorites: `${ProtectedPrefix}/moments/me/favorites`,
-      checkLiked: `${ProtectedPrefix}/moments/me/liked`,
-      checkFavorited: `${ProtectedPrefix}/moments/me/favorited`
-    },
-
-    comments: {
-      create: `${ProtectedPrefix}/comments/create`,
-      delete: `${ProtectedPrefix}/comments/delete`,
-      like: `${ProtectedPrefix}/comments/like`,
-      unlike: `${ProtectedPrefix}/comments/unlike`
-    },
-
-    groups: {
-      create: `${ProtectedPrefix}/groups/create`,
-      update: `${ProtectedPrefix}/groups/update`,
-      delete: `${ProtectedPrefix}/groups/delete`,
-      members: {
-        invite: `${ProtectedPrefix}/groups/members/invite`,
-        join: `${ProtectedPrefix}/groups/members/join`,
-        apply: `${ProtectedPrefix}/groups/members/apply`,
-        setRole: `${ProtectedPrefix}/groups/members/set_role`,
-        mute: `${ProtectedPrefix}/groups/members/mute`,
-        unmute: `${ProtectedPrefix}/groups/members/unmute`,
-        ban: `${ProtectedPrefix}/groups/members/ban`,
-        unban: `${ProtectedPrefix}/groups/members/unban`,
-        banned: `${ProtectedPrefix}/groups/members/banned`,
-        removeMember: `${ProtectedPrefix}/groups/members/remove_member`
-      },
-      applications: {
-        list: `${ProtectedPrefix}/groups/applications`,
-        approve: `${ProtectedPrefix}/groups/applications/approve`,
-        reject: `${ProtectedPrefix}/groups/applications/reject`,
-        cancel: `${ProtectedPrefix}/groups/me/applications/cancel`
-      },
-      transferOwnership: `${ProtectedPrefix}/groups/transfer_ownership`,
-      me: {
-        list: `${ProtectedPrefix}/groups/me`,
-        invites: `${ProtectedPrefix}/groups/me/invites`,
-        acceptInvite: `${ProtectedPrefix}/groups/me/invites/accept`,
-        rejectInvite: `${ProtectedPrefix}/groups/me/invites/reject`,
-        leave: `${ProtectedPrefix}/groups/me/leave`
-      }
-    },
-
-    privateChats: {
-      me: `${ProtectedPrefix}/private_chats/me`,
-      openTheDoor: `${ProtectedPrefix}/private_chats/open_the_door`,
-      updateSettings: `${ProtectedPrefix}/private_chats/update_settings`,
-      delete: `${ProtectedPrefix}/private_chats/delete`
-    },
-
-    privateMessages: {
-      send: `${ProtectedPrefix}/private_messages/send`,
-      history: `${ProtectedPrefix}/private_messages/history`,
-      update: `${ProtectedPrefix}/private_messages/update`,
-      recall: `${ProtectedPrefix}/private_messages/recall`,
-      delete: `${ProtectedPrefix}/private_messages/delete`,
-      markAsRead: `${ProtectedPrefix}/private_messages/mark_as_read`,
-      addReaction: `${ProtectedPrefix}/private_messages/add_reaction`,
-      removeReaction: `${ProtectedPrefix}/private_messages/remove_reaction`,
-      reactions: `${ProtectedPrefix}/private_messages/reactions`
-    },
-
-    groupMessages: {
-      send: `${ProtectedPrefix}/group_messages/send`,
-      history: `${ProtectedPrefix}/group_messages/history`,
-      update: `${ProtectedPrefix}/group_messages/update`,
-      recall: `${ProtectedPrefix}/group_messages/recall`,
-      delete: `${ProtectedPrefix}/group_messages/delete`,
-      markAsRead: `${ProtectedPrefix}/group_messages/mark_as_read`,
-      readStatus: `${ProtectedPrefix}/group_messages/read_status`,
-      addReaction: `${ProtectedPrefix}/group_messages/add_reaction`,
-      removeReaction: `${ProtectedPrefix}/group_messages/remove_reaction`,
-      reactions: `${ProtectedPrefix}/group_messages/reactions`
-    },
-
-    messages: {
-      markAllAsRead: `${ProtectedPrefix}/messages/mark_all_as_read`
-    },
-
-    reports: {
-      create: `${ProtectedPrefix}/reports/create`,
-      me: `${ProtectedPrefix}/reports/me`
-    },
-
-    subscriptions: {
-      me: `${ProtectedPrefix}/subscriptions/me`,
-      update: `${ProtectedPrefix}/subscriptions/me/update`
-    },
-
-    deviceTokens: {
-      me: {
-        register: `${ProtectedPrefix}/device_tokens/me/register`,
-        unregister: `${ProtectedPrefix}/device_tokens/me/unregister`,
-        list: `${ProtectedPrefix}/device_tokens/me`
-      }
-    },
-
-    feed: {
-      moments: `${ProtectedPrefix}/feed/moments`,
-      groups: `${ProtectedPrefix}/feed/groups`,
-      users: `${ProtectedPrefix}/feed/users`,
-      trending: `${ProtectedPrefix}/feed/trending`,
-      feedback: `${ProtectedPrefix}/feed/feedback`
-    },
-
-    media: {
-      presignUpload: `${ProtectedPrefix}/media/presign_upload`,
-      completeUpload: `${ProtectedPrefix}/media/complete_upload`,
-      chunkedInit: `${ProtectedPrefix}/media/chunked/init`,
-      chunkedFinish: `${ProtectedPrefix}/media/chunked/finish`,
-      chunkedCheck: `${ProtectedPrefix}/media/chunked/check`
-    },
-
-    map: {
-      render: `${PublicPrefix}/map/render`
-    },
-
-    globalSettings: {
-      fetch: `${PublicPrefix}/global_settings/fetch`
-    }
-    }
-};
+  static readonly SHARE = new class {
+    readonly CREATE = '/api/v1/share/create';
+    readonly GET = '/api/v1/share/get';
+    readonly APPLY = '/api/v1/share/apply';
+    readonly REVOKE = '/api/v1/share/revoke';
+    readonly ME = new class {
+      readonly LIST = '/api/v1/share/me/list';
+    }();
+  }();
+}
 
 // Runtime assertion helper (optional): useful during development to ensure paths are absolute API paths.
 export function assertApiEndpointPath(path: string): void {

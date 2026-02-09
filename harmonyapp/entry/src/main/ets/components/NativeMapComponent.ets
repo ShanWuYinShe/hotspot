@@ -30,15 +30,20 @@ export interface MapRegion {
   longitudeDelta: number;
 }
 
+export interface MapCoordinate {
+  latitude: number;
+  longitude: number;
+}
+
 @Component
 export struct NativeMapComponent {
-  @Prop mapRegion: MapRegion = {
+  @Watch('onRegionChangeProp') @Prop mapRegion: MapRegion = {
     latitude: 39.9042,
     longitude: 116.4074,
     latitudeDelta: 0.01,
     longitudeDelta: 0.01
   };
-  @Prop markers: MapMarker[] = [];
+  @Watch('onMarkersChange') @Prop markers: MapMarker[] = [];
   @Prop showUserLocation: boolean = true;
   @Prop showCompass: boolean = true;
   @Prop showScale: boolean = true;
@@ -47,7 +52,7 @@ export struct NativeMapComponent {
   // 回调函数
   onMapReady?: () => void;
   onMarkerClick?: (marker: MapMarker) => void;
-  onMapClick?: (coordinate: { latitude: number; longitude: number }) => void;
+  onMapClick?: (coordinate: MapCoordinate) => void;
   
   // 地图控制器
   private mapController: map.MapComponentController | null = null;
@@ -81,7 +86,6 @@ export struct NativeMapComponent {
   /**
    * 监听标记变化并更新
    */
-  @Watch('onMarkersChange')
   onMarkersChange() {
     if (this.isMapReady && this.mapController) {
       this.updateMarkers();
@@ -91,7 +95,6 @@ export struct NativeMapComponent {
   /**
    * 监听区域变化
    */
-  @Watch('onRegionChange')
   onRegionChangeProp() {
     if (this.isMapReady && this.mapController) {
        // 可以在这里平滑移动到新区域，但为了避免冲突，通常由外部控制是否移动
@@ -104,9 +107,6 @@ export struct NativeMapComponent {
     // 设置定位启用
     this.mapController.setMyLocationEnabled(this.showUserLocation);
     this.mapController.setMyLocationControlsEnabled(true);
-    
-    // 设置指南针
-    this.mapController.setCompassEnabled(this.showCompass);
     
     // 设置比例尺
     this.mapController.setScaleControlsEnabled(this.showScale);

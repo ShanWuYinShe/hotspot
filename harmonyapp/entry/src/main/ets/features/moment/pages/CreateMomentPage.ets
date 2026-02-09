@@ -263,10 +263,14 @@ struct CreateMomentPage {
   }
 
   private async openLocationPicker(): Promise<void> {
-    const routerInstance = this.getUIContext().getRouter();
-    await routerInstance.pushUrl({
-      url: `features/map/pages/${PageNames.LOCATION_PICKER}`
-    });
+    try {
+      const routerInstance = this.getUIContext().getRouter();
+      await routerInstance.pushUrl({
+        url: `features/map/pages/${PageNames.LOCATION_PICKER}`
+      });
+    } catch (error) {
+      SystemToast.showError('跳转失败', this.getUIContext());
+    }
   }
 
   build() {
@@ -308,7 +312,7 @@ struct CreateMomentPage {
 
       List() {
         ListItem() {
-          SystemCard({ padding: DesignConstants.SPACING.LG }) {
+          SystemCard({ cardPadding: DesignConstants.SPACING.LG }) {
             Column() {
               TextArea({ placeholder: '写下你想分享的内容...', text: this.description })
                 .onChange((value: string) => {
@@ -324,7 +328,7 @@ struct CreateMomentPage {
         .padding({ top: DesignConstants.SPACING.MD, left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
 
         ListItem() {
-          SystemCard({ padding: DesignConstants.SPACING.LG }) {
+          SystemCard({ cardPadding: DesignConstants.SPACING.LG }) {
             Column() {
               Row() {
                 Text('添加图片')
@@ -406,7 +410,7 @@ struct CreateMomentPage {
         .padding({ top: DesignConstants.SPACING.MD, left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
 
         ListItem() {
-          SystemCard({ padding: DesignConstants.SPACING.LG }) {
+          SystemCard({ cardPadding: DesignConstants.SPACING.LG }) {
             Column() {
               Text('添加标签')
                 .fontSize(DesignConstants.FONT.SIZE.LG)
@@ -451,7 +455,7 @@ struct CreateMomentPage {
         .padding({ top: DesignConstants.SPACING.MD, left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
 
         ListItem() {
-          SystemCard({ padding: DesignConstants.SPACING.LG }) {
+          SystemCard({ cardPadding: DesignConstants.SPACING.LG }) {
             Column() {
               Row() {
                 Text('位置信息')

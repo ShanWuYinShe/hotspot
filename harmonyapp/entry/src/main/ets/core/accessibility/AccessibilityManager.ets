@@ -6,7 +6,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { UnifiedStorageUtil } from '../utils/UnifiedStorageUtil';
 import accessibility from '@ohos.accessibility';
-import config from '@ohos.accessibility.config';
+// import config from '@ohos.accessibility.config'; // Module not available
 import { bundleManager } from '@kit.AbilityKit';
 
 export interface AccessibilityConfig {
@@ -159,28 +159,29 @@ export class AccessibilityManager {
   private async getSystemAccessibilitySettings(): Promise<Partial<AccessibilityConfig>> {
     const settings: Partial<AccessibilityConfig> = {};
     try {
-      // 获取高对比度文本状态
-      settings.highContrastEnabled = await config.highContrastText.get();
-      
-      // 获取颜色反转状态
-      settings.colorInversionEnabled = await config.invertColor.get();
-      
-      // 获取动画开启状态 (animationOff 为 true 表示减少动画)
-      settings.reduceMotionEnabled = await config.animationOff.get();
-      
-      // 检测屏幕阅读器是否开启
-      // isOpenTouchGuide deprecated, use config.touchGuideState
-      settings.screenReaderEnabled = await config.touchGuideState.get();
-      
-      // 这里的 largeTextEnabled 没有直接的 API，通常由 system.configuration 获取 fontScale
-      try {
-        const configuration = await config.get();
-        if (configuration && configuration.fontScale) {
-           settings.largeTextEnabled = configuration.fontScale > 1.0;
-        }
-      } catch (e) {
-        // 忽略获取配置失败
-      }
+      // @ohos.accessibility.config module not available - commented out
+      // // 获取高对比度文本状态
+      // settings.highContrastEnabled = await config.highContrastText.get();
+      // 
+      // // 获取颜色反转状态
+      // settings.colorInversionEnabled = await config.invertColor.get();
+      // 
+      // // 获取动画开启状态 (animationOff 为 true 表示减少动画)
+      // settings.reduceMotionEnabled = await config.animationOff.get();
+      // 
+      // // 检测屏幕阅读器是否开启
+      // // isOpenTouchGuide deprecated, use config.touchGuideState
+      // settings.screenReaderEnabled = await config.touchGuideState.get();
+      // 
+      // // 这里的 largeTextEnabled 没有直接的 API，通常由 system.configuration 获取 fontScale
+      // try {
+      //   const configuration = await config.get();
+      //   if (configuration && configuration.fontScale) {
+      //      settings.largeTextEnabled = configuration.fontScale > 1.0;
+      //   }
+      // } catch (e) {
+      //   // 忽略获取配置失败
+      // }
       
     } catch (error) {
       hilog.error(0x0000, 'AccessibilityManager', `获取系统无障碍设置失败: ${JSON.stringify(error)}`);

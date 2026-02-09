@@ -4,42 +4,43 @@ export interface ApiErrorSnapshot {
   message?: string;
 }
 
-const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
+const isRecord = (v: Object): v is Record<string, Object> => v !== null && typeof v === 'object';
 
-export function extractApiErrorSnapshot(result: unknown, responseCode?: number): ApiErrorSnapshot {
+export function extractApiErrorSnapshot(result: Object, responseCode?: number): ApiErrorSnapshot {
   let code: number | undefined;
   let message: string | undefined;
 
   if (isRecord(result)) {
-    if (typeof result.code === 'number') code = result.code;
-    if (typeof result.message === 'string') message = result.message;
-    if (!message && typeof result.msg === 'string') message = result.msg;
+    const resultRecord = result as Record<string, Object>;
+    if (typeof resultRecord.code === 'number') code = resultRecord.code as number;
+    if (typeof resultRecord.message === 'string') message = resultRecord.message as string;
+    if (!message && typeof resultRecord.msg === 'string') message = resultRecord.msg as string;
   }
 
   return { code, status: typeof responseCode === 'number' ? responseCode : undefined, message };
 }
 
-export function isAuthErrorCode(code: unknown): boolean {
-  return typeof code === 'number' && code >= 40100 && code <= 40199;
+export function isAuthErrorCode(code: Object): boolean {
+  return typeof code === 'number' && (code as number) >= 40100 && (code as number) <= 40199;
 }
 
-export function isTokenInvalidOrExpiredCode(code: unknown): boolean {
+export function isTokenInvalidOrExpiredCode(code: Object): boolean {
   return code === 40101;
 }
 
-export function isTokenMissingCode(code: unknown): boolean {
+export function isTokenMissingCode(code: Object): boolean {
   return code === 40102;
 }
 
-export function isReauthRequiredCode(code: unknown): boolean {
+export function isReauthRequiredCode(code: Object): boolean {
   return code === 40106;
 }
 
-export function isSoftTokenRotation(message: unknown): boolean {
-  return typeof message === 'string' && message.includes('已被轮换');
+export function isSoftTokenRotation(message: Object): boolean {
+  return typeof message === 'string' && (message as string).includes('已被轮换');
 }
 
-export function shouldForceLogoutOnAuthError(code: unknown, message?: unknown): boolean {
+export function shouldForceLogoutOnAuthError(code: Object, message?: Object): boolean {
   if (!isAuthErrorCode(code)) return false;
   if (isReauthRequiredCode(code)) return true;
   if (isTokenMissingCode(code)) return true;
@@ -47,35 +48,35 @@ export function shouldForceLogoutOnAuthError(code: unknown, message?: unknown): 
   return true;
 }
 
-export function isBadRequestCode(code: unknown): boolean {
-  return typeof code === 'number' && code >= 40000 && code <= 40099;
+export function isBadRequestCode(code: Object): boolean {
+  return typeof code === 'number' && (code as number) >= 40000 && (code as number) <= 40099;
 }
 
-export function isForbiddenCode(code: unknown): boolean {
-  return typeof code === 'number' && code >= 40300 && code <= 40399;
+export function isForbiddenCode(code: Object): boolean {
+  return typeof code === 'number' && (code as number) >= 40300 && (code as number) <= 40399;
 }
 
-export function isNotFoundCode(code: unknown): boolean {
-  return typeof code === 'number' && code >= 40400 && code <= 40499;
+export function isNotFoundCode(code: Object): boolean {
+  return typeof code === 'number' && (code as number) >= 40400 && (code as number) <= 40499;
 }
 
-export function isConflictCode(code: unknown): boolean {
-  return typeof code === 'number' && code >= 40900 && code <= 40999;
+export function isConflictCode(code: Object): boolean {
+  return typeof code === 'number' && (code as number) >= 40900 && (code as number) <= 40999;
 }
 
-export function isCursorInvalidOrExpiredCode(code: unknown): boolean {
+export function isCursorInvalidOrExpiredCode(code: Object): boolean {
   return code === 41000;
 }
 
-export function isRateLimitCode(code: unknown): boolean {
-  return typeof code === 'number' && code >= 42900 && code <= 42999;
+export function isRateLimitCode(code: Object): boolean {
+  return typeof code === 'number' && (code as number) >= 42900 && (code as number) <= 42999;
 }
 
-export function isServerErrorCode(code: unknown): boolean {
-  return typeof code === 'number' && code >= 50000 && code <= 59999;
+export function isServerErrorCode(code: Object): boolean {
+  return typeof code === 'number' && (code as number) >= 50000 && (code as number) <= 59999;
 }
 
-function isSafeUserMessage(message: unknown): message is string {
+function isSafeUserMessage(message: Object): message is string {
   if (typeof message !== 'string') return false;
   const msg = message.trim();
   if (!msg) return false;
@@ -89,7 +90,9 @@ export function guessUserMessageFromSnapshot(
   snapshot: ApiErrorSnapshot,
   defaultMessage: string = '操作失败'
 ): string {
-  const { code, status, message } = snapshot;
+  const code = snapshot.code;
+  const status = snapshot.status;
+  const message = snapshot.message;
 
   if (isTokenInvalidOrExpiredCode(code) || (typeof message === 'string' && message.includes('ExpiredSignature'))) {
     return '登录已过期，请重新登录';

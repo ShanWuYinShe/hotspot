@@ -12,7 +12,7 @@ import { PageNames } from '../../../constants/AppConstants';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { PasswordSecurityUtil } from '../../../core/security/PasswordSecurityUtil';
-import { AppAuthData, CreateTempRequest, MyProfileData, LoginRequest } from '../../../core/types/api';
+import { AuthData, GuestRequest, MyProfileData, LoginRequest } from '../../../core/types/api';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -217,8 +217,9 @@ struct LoginPage {
 
       this.loadingStage = '正在创建用户...';
       this.loadingProgress = 50;
-      const request: CreateTempRequest = {
-        nickname: this.nickname.trim()
+      const request: GuestRequest = {
+        nickname: this.nickname.trim(),
+        client_type: 'app'
       };
       const response = await ApiClient.createTempUser(request);
       
@@ -267,7 +268,7 @@ struct LoginPage {
         await this.handleAuthSuccess(response.data);
         this.loadingProgress = 100;
       } else {
-        SystemToast.showError(response.message || $r('app.string.auth_login_failed'), this.getUIContext());
+        SystemToast.showError(response.message || '登录失败', this.getUIContext());
       }
     } catch (error) {
       SystemToast.showError(error instanceof Error ? error.message : '登录失败', this.getUIContext());
@@ -278,7 +279,7 @@ struct LoginPage {
     }
   }
 
-  private async handleAuthSuccess(authData: AppAuthData) {
+  private async handleAuthSuccess(authData: AuthData) {
     // 多账号：保存并激活为当前账号（同时写回 access_token/user_info 以兼容旧逻辑）
     await AuthAccountManager.upsertAndActivate(authData);
 

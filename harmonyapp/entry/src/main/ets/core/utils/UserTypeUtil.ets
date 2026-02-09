@@ -176,9 +176,18 @@ export class UserTypeUtil {
 }
 
 /**
+ * 系统用户ID常量接口
+ */
+export interface SystemUserIds {
+  NOTIFICATION: string;
+  SECURITY_CENTER: string;
+  OPERATIONS_TEAM: string;
+}
+
+/**
  * 系统用户ID常量
  */
-export const SYSTEM_USER_IDS = {
+export const SYSTEM_USER_IDS: SystemUserIds = {
   NOTIFICATION: '1',       // 系统通知
   SECURITY_CENTER: '2',    // 安全中心
   OPERATIONS_TEAM: '3',    // 运营团队

@@ -11,11 +11,22 @@ export struct SystemAvatar {
   @Prop src: string | Resource | undefined;
   @Prop avatarUrl: string | undefined;
   @Prop name: string = '';
-  @Prop size: number = 40; // Default size in vp
+  @Prop avatarSize: number = 40; // Default size in vp
   @Prop isOnline: boolean = false;
   @Prop showBorder: boolean = false;
   @Prop shape: 'circle' | 'squircle' | 'square' = 'circle';
   @Prop userInfo: UserInfo | undefined;
+
+  private getBorderOptions(): BorderOptions | undefined {
+    if (!this.showBorder) {
+      return undefined;
+    }
+    const borderOptions: BorderOptions = {
+      width: 2,
+      color: DesignConstants.COLOR.SECONDARY_BG_LIGHT
+    };
+    return borderOptions;
+  }
 
   build() {
     const actualSrc: string | Resource | undefined = this.avatarUrl ?? this.src;
@@ -25,56 +36,39 @@ export struct SystemAvatar {
       // Main Avatar Image
       if (actualSrc) {
         Image(actualSrc)
-          .width(this.size)
-          .height(this.size)
+          .width(this.avatarSize)
+          .height(this.avatarSize)
           .objectFit(ImageFit.Cover)
           .borderRadius(this.getBorderRadius())
-          .border(this.showBorder ? { width: 2, color: DesignConstants.COLOR.SECONDARY_BG_LIGHT } : undefined)
+          .border(this.getBorderOptions())
           .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
       } else {
         // Initials Fallback
         Flex({ justifyContent: FlexAlign.Center, alignItems: ItemAlign.Center }) {
           Text(this.getInitials(actualName))
-            .fontSize(this.size * 0.4)
+            .fontSize(this.avatarSize * 0.4)
             .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
             .fontColor(Color.White)
-            .width(this.size)
-            .height(this.size)
+            .width(this.avatarSize)
+            .height(this.avatarSize)
             .backgroundColor(this.generateAvatarColor(actualName))
             .borderRadius(this.getBorderRadius())
-            .border(this.showBorder ? { width: 2, color: DesignConstants.COLOR.SECONDARY_BG_LIGHT } : undefined)
+            .border(this.getBorderOptions())
         }
       }
 
       // Online Status Indicator
       if (this.isOnline) {
         Row()
-          .width(this.size * 0.28)
-          .height(this.size * 0.28)
-          .position({ x: '85%', y: '75%' })
-          .backgroundColor(DesignConstants.COLOR.ONLINE_STATUS)
-          .borderRadius(this.size * 0.5)
-      }
-    }
-        .width(this.size)
-        .height(this.size)
-        .backgroundColor(this.generateAvatarColor(this.name))
-        .borderRadius(this.getBorderRadius())
-        .border(this.showBorder ? { width: 2, color: DesignConstants.COLOR.SECONDARY_BG_LIGHT } : undefined)
-      }
-
-      // Online Status Indicator
-      if (this.isOnline) {
-        Row()
-          .width(this.size * 0.28)
-          .height(this.size * 0.28)
+          .width(this.avatarSize * 0.28)
+          .height(this.avatarSize * 0.28)
           .backgroundColor(DesignConstants.COLOR.ONLINE_STATUS)
           .borderRadius(DesignConstants.RADIUS.FULL)
-          .border({ width: 2, color: DesignConstants.COLOR.SECONDARY_BG_LIGHT })
+          .border(this.getBorderOptions())
           .margin({ bottom: -1, right: -1 })
       } else if (this.userInfo && UserTypeUtil.isTempUser(this.userInfo.user_type)) {
         Text('临时')
-          .fontSize(this.size * 0.25) // Slightly larger than dot
+          .fontSize(this.avatarSize * 0.25) // Slightly larger than dot
           .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
           .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
           .borderRadius(4)
@@ -82,7 +76,7 @@ export struct SystemAvatar {
           .margin({ bottom: -2, right: -2 })
       } else if (this.userInfo && UserTypeUtil.isSystemUser(this.userInfo.user_type)) {
         Text('官方')
-          .fontSize(this.size * 0.25)
+          .fontSize(this.avatarSize * 0.25)
           .fontColor(Color.White)
           .backgroundColor(DesignConstants.COLOR.BRAND_PRIMARY)
           .borderRadius(4)
@@ -90,13 +84,13 @@ export struct SystemAvatar {
           .margin({ bottom: -2, right: -2 })
       }
     }
-    .width(this.size)
-    .height(this.size)
+    .width(this.avatarSize)
+    .height(this.avatarSize)
   }
 
   private getBorderRadius(): Length {
     if (this.shape === 'circle') return DesignConstants.RADIUS.FULL;
-    if (this.shape === 'squircle') return (this.size * 0.22) + 'vp'; // Apple-like squircle approx
+    if (this.shape === 'squircle') return (this.avatarSize * 0.22) + 'vp'; // Apple-like squircle approx
     return DesignConstants.RADIUS.SM;
   }
 

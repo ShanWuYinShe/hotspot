@@ -7,7 +7,7 @@
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { WebSocketService } from '../../../core/network/WebSocketService';
-import { MyProfileData, MessageType, PrivateMessageItem, GroupMessageItem, SendMessageType, UserInfo } from '../../../core/types/api';
+import { MyProfileData, MessageType, PrivateMessageItem, GroupMessageItem, SendMessageType, UserInfo, SendPrivateMessageRequest, SendGroupMessageRequest } from '../../../core/types/api';
 import type { ServerEvent, PrivateMessageNewEvent, GroupMessageNewEvent } from '../../../core/types/WebSocketTypes';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
@@ -84,7 +84,7 @@ struct ChatPage {
       senderId: payload.sender.user_id,
       senderName: payload.sender.nickname,
       senderAvatar: payload.sender.avatar_url,
-      type: payload.type,
+      type: payload.type as MessageType,
       sentAt: payload.sent_at,
       isSelf: payload.sender.user_id === currentUserId,
       isSystem: payload.type === 'system',
@@ -106,7 +106,7 @@ struct ChatPage {
       senderId: payload.sender.user_id,
       senderName: payload.sender.nickname,
       senderAvatar: payload.sender.avatar_url,
-      type: payload.type,
+      type: payload.type as MessageType,
       sentAt: payload.sent_at,
       isSelf: payload.sender.user_id === currentUserId,
       isSystem: payload.type === 'system',
@@ -240,9 +240,11 @@ struct ChatPage {
     let senderAvatar: string | undefined;
     let isSelf: boolean;
     
-    if ('sender_id' in item) {
+    const itemRecord = item as Record<string, Object>;
+    if (itemRecord.sender_id !== undefined) {
       // PrivateMessageItem
-      senderId = item.sender_id;
+      const privateItem = item as PrivateMessageItem;
+      senderId = privateItem.sender_id;
       isSelf = senderId === currentUserId;
       // 对于私聊消息，sender_id 需要从其他地方获取用户信息
       // 这里暂时使用占位符，实际应该从缓存或API获取
@@ -250,7 +252,8 @@ struct ChatPage {
       senderAvatar = undefined;
     } else {
       // GroupMessageItem
-      senderId = item.sender.user_id;
+      const groupItem = item as GroupMessageItem;
+      senderId = groupItem.sender.user_id;
       senderName = item.sender.nickname;
       senderAvatar = item.sender.avatar_url;
       isSelf = senderId === currentUserId;
@@ -262,7 +265,7 @@ struct ChatPage {
       senderId: senderId,
       senderName: senderName,
       senderAvatar: senderAvatar,
-      type: item.type,
+      type: item.type as MessageType,
       sentAt: item.sent_at,
       isSelf: isSelf,
       isSystem: item.type === 'system',
@@ -307,17 +310,24 @@ struct ChatPage {
     this.isSending = true;
     try {
       if (this.chatType === 'private_chat') {
-        await ApiClient.sendPrivateMessage({
-          id: this.chatId,
+        const targetUserId = this.targetId;
+        if (!targetUserId) {
+          SystemToast.showError('无法获取目标用户ID', this.getUIContext());
+          return;
+        }
+        const request: SendPrivateMessageRequest = {
+          target_user_id: targetUserId,
           type: 'text',
           content: content
-        });
+        };
+        await ApiClient.sendPrivateMessage(request);
       } else {
-        await ApiClient.sendGroupMessage({
-          id: this.chatId,
+        const request: SendGroupMessageRequest = {
+          group_id: this.chatId,
           type: 'text',
           content: content
-        });
+        };
+        await ApiClient.sendGroupMessage(request);
       }
       
       this.inputText = '';
@@ -338,10 +348,7 @@ struct ChatPage {
   private markAsRead(upToMessageId: string) {
     if (!upToMessageId) return;
 
-    // 1) WebSocket 读状态（实时）
-    this.webSocketService.markAsRead(this.chatType, this.chatId, upToMessageId);
-
-    // 2) HTTP 标记已读（权威，影响 unread_count）
+    // HTTP 标记已读（权威，影响 unread_count）
     (async () => {
       try {
         if (this.chatType === 'private_chat') {

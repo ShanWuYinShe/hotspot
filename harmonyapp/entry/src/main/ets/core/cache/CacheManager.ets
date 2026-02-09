@@ -7,7 +7,7 @@ import { BaseSingleton } from '../base/Singleton';
 import { createLogger } from '../utils/LogManager';
 import { TimerManager } from '../utils/TimerManager';
 import { ErrorHandler, ErrorType, ErrorLevel } from '../utils/ErrorHandler';
-import { PERFORMANCE_CONSTANTS } from '../constants/SystemConstants';
+import { PERFORMANCE_CONSTANTS } from '../../constants/SystemConstants';
 
 const logger = createLogger('CacheManager');
 

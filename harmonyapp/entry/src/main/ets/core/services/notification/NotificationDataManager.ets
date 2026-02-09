@@ -9,6 +9,7 @@ import { ErrorHandler, ErrorType, ErrorLevel } from '../../utils/ErrorHandler';
 import { UnifiedStorageUtil } from '../../utils/UnifiedStorageUtil';
 import { ConfigMerger } from '../../utils/ConfigMerger';
 import { NOTIFICATION_CONSTANTS } from '../../constants/SystemConstants';
+import { NotificationMetadata } from '../SmartNotificationService';
 
 const logger = createLogger('NotificationDataManager');
 
@@ -34,15 +35,6 @@ export interface NotificationAction {
   label: string;
   type: 'primary' | 'secondary' | 'danger';
   handler: () => Promise<void>;
-}
-
-interface NotificationMetadata {
-  alert?: Object;
-  user?: Object;
-  config?: Object;
-  type?: string;
-  fromUser?: string;
-  targetId?: string;
 }
 
 export interface SmartNotificationInput {

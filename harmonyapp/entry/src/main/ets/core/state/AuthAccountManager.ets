@@ -12,12 +12,12 @@
 
 import { StorageKeys } from '../../constants/AppConstants';
 import { PreferencesUtil } from '../storage/PreferencesUtil';
-import type { AppAuthData } from '../types/api';
+import type { AuthData } from '../types/api';
 
 interface AuthAccountsState {
   version: 1;
   current_user_id?: number;
-  accounts: Record<string, AppAuthData>;
+  accounts: Record<string, AuthData>;
 }
 
 const DEFAULT_STATE: AuthAccountsState = {
@@ -28,7 +28,13 @@ const DEFAULT_STATE: AuthAccountsState = {
 export class AuthAccountManager {
   private static async getState(): Promise<AuthAccountsState> {
     const raw = await PreferencesUtil.getObject<AuthAccountsState>(StorageKeys.AUTH_ACCOUNTS);
-    if (!raw || raw.version !== 1 || !raw.accounts) return { ...DEFAULT_STATE };
+    if (!raw || raw.version !== 1 || !raw.accounts) {
+      const defaultState: AuthAccountsState = {
+        version: DEFAULT_STATE.version,
+        accounts: {}
+      };
+      return defaultState;
+    }
     return raw;
   }
 
@@ -36,18 +42,18 @@ export class AuthAccountManager {
     await PreferencesUtil.setObject(StorageKeys.AUTH_ACCOUNTS, state);
   }
 
-  static async listAccounts(): Promise<AppAuthData[]> {
-    const state = await this.getState();
+  static async listAccounts(): Promise<AuthData[]> {
+    const state = await AuthAccountManager.getState();
     return Object.values(state.accounts);
   }
 
   static async getCurrentUserId(): Promise<number | null> {
-    const state = await this.getState();
+    const state = await AuthAccountManager.getState();
     return typeof state.current_user_id === 'number' ? state.current_user_id : null;
   }
 
-  static async getCurrentAuth(): Promise<AppAuthData | null> {
-    const state = await this.getState();
+  static async getCurrentAuth(): Promise<AuthData | null> {
+    const state = await AuthAccountManager.getState();
     const currentId = typeof state.current_user_id === 'number' ? state.current_user_id : undefined;
     if (currentId == null) return null;
     return state.accounts[String(currentId)] ?? null;
@@ -56,11 +62,21 @@ export class AuthAccountManager {
   /**
    * 保存/更新一个账号，并将其设为当前活跃账号（同时写回兼容键：access_token/user_info）
    */
-  static async upsertAndActivate(auth: AppAuthData): Promise<void> {
-    const state = await this.getState();
-    state.accounts[String(auth.user_id)] = auth;
-    state.current_user_id = auth.user_id;
-    await this.setState(state);
+  static async upsertAndActivate(auth: AuthData): Promise<void> {
+    const state = await AuthAccountManager.getState();
+    const newAccounts: Record<string, AuthData> = {};
+    const accountKeys = Object.keys(state.accounts);
+    for (let i = 0; i < accountKeys.length; i++) {
+      const key = accountKeys[i];
+      newAccounts[key] = state.accounts[key];
+    }
+    newAccounts[String(auth.user_id)] = auth;
+    const newState: AuthAccountsState = {
+      version: state.version,
+      current_user_id: auth.user_id,
+      accounts: newAccounts
+    };
+    await AuthAccountManager.setState(newState);
 
     // 兼容旧逻辑：仍维持一份“当前账号”的 user_info/access_token
     await PreferencesUtil.setObject(StorageKeys.USER_INFO, auth);
@@ -71,13 +87,17 @@ export class AuthAccountManager {
    * 切换到已保存账号（会更新 access_token/user_info）
    * 返回切换后的 auth（不存在则返回 null）
    */
-  static async switchTo(userId: number): Promise<AppAuthData | null> {
-    const state = await this.getState();
+  static async switchTo(userId: number): Promise<AuthData | null> {
+    const state = await AuthAccountManager.getState();
     const next = state.accounts[String(userId)];
     if (!next) return null;
 
-    state.current_user_id = userId;
-    await this.setState(state);
+    const newState: AuthAccountsState = {
+      version: state.version,
+      current_user_id: userId,
+      accounts: state.accounts
+    };
+    await AuthAccountManager.setState(newState);
 
     await PreferencesUtil.setObject(StorageKeys.USER_INFO, next);
     await PreferencesUtil.set(StorageKeys.ACCESS_TOKEN, next.access_token);
@@ -88,9 +108,12 @@ export class AuthAccountManager {
    * 本地锁定当前账号：清除当前 access_token/user_info（不删除 accounts 列表）
    */
   static async lockCurrent(): Promise<void> {
-    const state = await this.getState();
-    delete state.current_user_id;
-    await this.setState(state);
+    const state = await AuthAccountManager.getState();
+    const newState: AuthAccountsState = {
+      version: state.version,
+      accounts: state.accounts
+    };
+    await AuthAccountManager.setState(newState);
 
     await PreferencesUtil.remove(StorageKeys.USER_INFO);
     await PreferencesUtil.remove(StorageKeys.ACCESS_TOKEN);
@@ -100,14 +123,25 @@ export class AuthAccountManager {
    * 删除一个账号（如果删除的是当前账号，会自动 lock）
    */
   static async removeAccount(userId: number): Promise<void> {
-    const state = await this.getState();
-    delete state.accounts[String(userId)];
+    const state = await AuthAccountManager.getState();
+    const newAccounts: Record<string, AuthData> = {};
+    const accountKeys = Object.keys(state.accounts);
+    for (let i = 0; i < accountKeys.length; i++) {
+      const key = accountKeys[i];
+      if (key !== String(userId)) {
+        newAccounts[key] = state.accounts[key];
+      }
+    }
+    const newState: AuthAccountsState = {
+      version: state.version,
+      current_user_id: state.current_user_id === userId ? undefined : state.current_user_id,
+      accounts: newAccounts
+    };
     if (state.current_user_id === userId) {
-      delete state.current_user_id;
       await PreferencesUtil.remove(StorageKeys.USER_INFO);
       await PreferencesUtil.remove(StorageKeys.ACCESS_TOKEN);
     }
-    await this.setState(state);
+    await AuthAccountManager.setState(newState);
   }
 
   /**

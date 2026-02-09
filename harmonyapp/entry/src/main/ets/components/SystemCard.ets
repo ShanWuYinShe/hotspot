@@ -3,7 +3,7 @@ import { DesignConstants } from '../constants/DesignConstants';
 @Component
 export struct SystemCard {
   @BuilderParam content: () => void;
-  @Prop padding: number = DesignConstants.SPACING.LG;
+  @Prop cardPadding: number = DesignConstants.SPACING.LG;
   @Prop borderRadius: number = DesignConstants.RADIUS.XL;
   @Prop showShadow: boolean = true;
   @Prop clickable: boolean = false;
@@ -11,7 +11,7 @@ export struct SystemCard {
   
   // Backwards compatibility props mapping
   @Prop paddingSize: number | string = DesignConstants.SPACING.LG; 
-  @Prop backgroundColor: ResourceColor | string = DesignConstants.COLOR.SECONDARY_BG_LIGHT;
+  @Prop cardBackgroundColor: ResourceColor | string = DesignConstants.COLOR.SECONDARY_BG_LIGHT;
   @Prop useBlur: boolean = false;
 
   @State isPressed: boolean = false;
@@ -22,10 +22,10 @@ export struct SystemCard {
       this.content();
     }
     .width('100%')
-    .backgroundColor(this.useBlur ? Color.Transparent : this.backgroundColor)
+    .backgroundColor(this.useBlur ? Color.Transparent : this.cardBackgroundColor)
     .backgroundBlurStyle(this.useBlur ? BlurStyle.Thin : BlurStyle.NONE)
     .borderRadius(this.borderRadius)
-    .padding(this.padding)
+    .padding(this.cardPadding)
     .shadow(this.showShadow ? DesignConstants.SHADOW.SMALL : undefined)
     .scale(this.clickable && this.isPressed ? { x: 0.98, y: 0.98 } : { x: 1, y: 1 }) // Press down effect
     .animation({ duration: DesignConstants.ANIMATION.DURATION_SHORT, curve: DesignConstants.ANIMATION.CURVE_EASE_IN_OUT })

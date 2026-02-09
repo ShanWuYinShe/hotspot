@@ -4,7 +4,7 @@
  */
 
 import { ApiClient } from '../../../core/api/ApiClient';
-import { FeedUserItem, TrendingTagsData, TagData } from '../../../core/types/api';
+import { FeedUserItem, TrendingTagsData, TagItem } from '../../../core/types/api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -19,7 +19,7 @@ const TAG: string = 'RecommendationPage';
 @Component
 struct RecommendationPage {
   @State isLoading: boolean = true;
-  @State trendingTags: TagData[] = [];
+  @State trendingTags: TagItem[] = [];
   @State recommendedUsers: FeedUserItem[] = [];
 
   async aboutToAppear() {
@@ -80,13 +80,13 @@ struct RecommendationPage {
               
               Flex({ wrap: FlexWrap.Wrap }) {
                 if (this.trendingTags.length > 0) {
-                  ForEach(this.trendingTags, (tag: TagData) => {
+                  ForEach(this.trendingTags, (tag: TagItem) => {
                     Text(`#${tag.name}`)
                       .padding(8)
                       .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
                       .borderRadius(16)
                       .margin({ right: 8, bottom: 8 })
-                  })
+                  }, (tag: TagItem) => tag.name)
                 } else {
                   Text('暂无热门话题')
                     .fontSize(14)
@@ -111,8 +111,8 @@ struct RecommendationPage {
                   Row() {
                     SystemAvatar({
                       avatarUrl: user.avatar_url,
-                      nickname: user.nickname,
-                      size: 40
+                      name: user.nickname,
+                      avatarSize: 40
                     })
                     .margin({ right: 12 })
                     
@@ -120,7 +120,7 @@ struct RecommendationPage {
                       Text(user.nickname)
                         .fontSize(16)
                         .fontWeight(FontWeight.Medium)
-                      Text(user.reason || '可能会感兴趣')
+                      Text('可能会感兴趣')
                         .fontSize(12)
                         .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
                     }
@@ -134,7 +134,7 @@ struct RecommendationPage {
                       .backgroundColor(DesignConstants.COLOR.BRAND_PRIMARY)
                       .onClick(async () => {
                         try {
-                          await ApiClient.followUser({ id: user.user_id });
+                          await ApiClient.followUser({ user_id: user.user_id });
                           SystemToast.showSuccess('已关注', this.getUIContext());
                         } catch (error) {
                           SystemToast.showError('关注失败', this.getUIContext());
@@ -145,7 +145,7 @@ struct RecommendationPage {
                   .padding(16)
                   .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
                 }
-              })
+              }, (user: FeedUserItem) => String(user.user_id))
             }
             .borderRadius(DesignConstants.RADIUS.LG)
             .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)

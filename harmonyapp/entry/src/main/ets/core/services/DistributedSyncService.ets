@@ -347,9 +347,11 @@ export class DistributedSyncService {
     try {
       // 调用 API 获取用户动态
       const response = await ApiClient.getUserMoments({ 
-        id: Number(userId),
-        latitude: 0, 
-        longitude: 0 
+        user_id: Number(userId),
+        reference_point: {
+          latitude: 0,
+          longitude: 0
+        }
       });
       
       if (response.code === 0 && response.data) {

@@ -80,7 +80,9 @@ struct SubscriptionsPage {
 
   private setValue(key: keyof SubscriptionsData, value: boolean): void {
     if (!this.data) return;
-    this.data = { ...this.data, [key]: value } as SubscriptionsData;
+    const dataRecord = this.data as Record<string, boolean>;
+    dataRecord[key as string] = value;
+    this.data = dataRecord as SubscriptionsData;
   }
 
   private async update(key: keyof SubscriptionsData, value: boolean): Promise<void> {
@@ -92,7 +94,19 @@ struct SubscriptionsPage {
     this.setValue(key, value);
 
     try {
-      const payload: UpdateSubscriptionsRequest = {};
+      const payload: UpdateSubscriptionsRequest = {
+        new_follower_enabled: undefined,
+        mutual_follow_enabled: undefined,
+        group_invite_enabled: undefined,
+        group_invite_response_enabled: undefined,
+        group_application_enabled: undefined,
+        group_application_response_enabled: undefined,
+        message_mention_enabled: undefined,
+        moment_like_enabled: undefined,
+        moment_comment_enabled: undefined,
+        comment_reply_enabled: undefined,
+        system_announcement_enabled: undefined
+      };
       switch (key) {
         case 'new_follower_enabled':
           payload.new_follower_enabled = value;

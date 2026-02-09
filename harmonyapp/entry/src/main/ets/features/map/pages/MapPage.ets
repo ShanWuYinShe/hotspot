@@ -11,7 +11,10 @@ import {
   UserSearchItem, 
   RelativeLocation,
   GroupSearchItem, 
-  MomentSearchItem 
+  MomentSearchItem,
+  SearchUsersByLocationRequest,
+  SearchGroupsByLocationRequest,
+  SearchMomentsByLocationRequest
 } from '../../../core/types/api';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
@@ -148,12 +151,15 @@ export struct MapPage {
     try {
       const me = GlobalStateManager.getInstance().getCurrentUser();
       const myId = me?.user_id;
-      const response = await ApiClient.searchUsersByLocation({
-        latitude: this.mapCenter.latitude,
-        longitude: this.mapCenter.longitude,
+      const request: SearchUsersByLocationRequest = {
+        reference_point: {
+          latitude: this.mapCenter.latitude,
+          longitude: this.mapCenter.longitude
+        },
         radius: 2000,
         limit: 50
-      });
+      };
+      const response = await ApiClient.searchUsersByLocation(request);
 
       if (response.code === 0 && response.data) {
         const users = response.data.items
@@ -184,12 +190,15 @@ export struct MapPage {
     if (!this.mapCenter) return;
 
     try {
-      const response = await ApiClient.searchGroupsByLocation({
-        latitude: this.mapCenter.latitude,
-        longitude: this.mapCenter.longitude,
+      const request: SearchGroupsByLocationRequest = {
+        reference_point: {
+          latitude: this.mapCenter.latitude,
+          longitude: this.mapCenter.longitude
+        },
         radius: 5000,
         limit: 50
-      });
+      };
+      const response = await ApiClient.searchGroupsByLocation(request);
 
       if (response.code === 0 && response.data) {
         const groupMarkers: ExtendedMapMarker[] = response.data.items.map((group: GroupSearchItem): ExtendedMapMarker => ({
@@ -215,12 +224,15 @@ export struct MapPage {
     if (!this.mapCenter) return;
 
     try {
-      const response = await ApiClient.searchMomentsByLocation({
-        latitude: this.mapCenter.latitude,
-        longitude: this.mapCenter.longitude,
+      const request: SearchMomentsByLocationRequest = {
+        reference_point: {
+          latitude: this.mapCenter.latitude,
+          longitude: this.mapCenter.longitude
+        },
         radius: 3000,
         limit: 50
-      });
+      };
+      const response = await ApiClient.searchMomentsByLocation(request);
 
       if (response.code === 0 && response.data) {
         const momentMarkers: ExtendedMapMarker[] = response.data.items.map((moment: MomentSearchItem): ExtendedMapMarker => ({

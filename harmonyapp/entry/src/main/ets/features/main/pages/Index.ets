@@ -12,13 +12,13 @@ import { PersistentStateManager } from '../../../core/state/PersistentStateManag
 import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
 import { LocationUtil } from '../../../core/location/LocationUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
-import { MyProfileData } from '../../../core/types/api';
+import { MyProfileData, UpdateLocationRequest } from '../../../core/types/api';
 import type { ServerEvent } from '../../../core/types/WebSocketTypes';
 import { PermissionManager } from '../../../core/permission/PermissionManager';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { AppIcon, AppIconMap } from '../../../components/SystemIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { SmartNotificationService, NotificationEvent } from '../../../core/services/SmartNotificationService';
+import { SmartNotificationService, NotificationEvent, CreateNotificationInput } from '../../../core/services/SmartNotificationService';
 import { CacheManager } from '../../../core/cache/CacheManager';
 import { NotificationCenter } from '../../../components/NotificationCenter';
 import { PerformanceIndicator } from '../../../components/PerformanceIndicator';
@@ -135,11 +135,14 @@ struct Index {
             // 登录态：同步到服务端（与 Web 端保持一致，不依赖“手动点更新位置”）
             if (this.isLoggedIn) {
               try {
-                await ApiClient.updateLocation({
-                  latitude: locationInfo.latitude,
-                  longitude: locationInfo.longitude,
-                  location_name: locationInfo.locationName || '位置不可用'
-                });
+                const locationReq: UpdateLocationRequest = {
+                  location: {
+                    latitude: locationInfo.latitude,
+                    longitude: locationInfo.longitude,
+                    location_name: locationInfo.locationName || '位置不可用'
+                  }
+                };
+                await ApiClient.updateLocation(locationReq);
               } catch (e) {
                 hilog.warn(DOMAIN_NUMBER, TAG, `位置上传失败: ${JSON.stringify(e)}`);
               }
@@ -176,11 +179,14 @@ struct Index {
             };
             this.stateManager.updateLocation(locationInfo);
 
-            const resp = await ApiClient.updateLocation({
-              latitude: locationInfo.latitude,
-              longitude: locationInfo.longitude,
-              location_name: locationInfo.locationName || '位置不可用'
-            });
+            const locationReq: UpdateLocationRequest = {
+              location: {
+                latitude: locationInfo.latitude,
+                longitude: locationInfo.longitude,
+                location_name: locationInfo.locationName || '位置不可用'
+              }
+            };
+            const resp = await ApiClient.updateLocation(locationReq);
             if (resp.code !== 0) {
               hilog.warn(DOMAIN_NUMBER, TAG, `定时位置上传失败: ${resp.message || resp.code}`);
             }
@@ -245,147 +251,224 @@ struct Index {
       try {
         switch (event.type) {
           case 'NewFollower': {
-            const p: any = event.payload;
-            await this.smartNotificationService.createNotification({
+            const p: Object = event.payload as Object;
+            const payloadRecord = p as Record<string, Object>;
+            const metadata: Record<string, Object> = {
+              type: 'new_follower',
+              user: payloadRecord.user
+            };
+            const notifInput: CreateNotificationInput = {
               type: 'social',
               priority: 'medium',
-              title: p.is_mutual ? '新好友' : '新关注者',
-              message: p.is_mutual ? `${p.user.nickname} 与你互相关注了` : `${p.user.nickname} 关注了你`,
+              title: payloadRecord.is_mutual ? '新好友' : '新关注者',
+              message: payloadRecord.is_mutual ? `${(payloadRecord.user as Record<string, Object>).nickname} 与你互相关注了` : `${(payloadRecord.user as Record<string, Object>).nickname} 关注了你`,
               read: false,
-              actionable: false,
-              metadata: { type: 'new_follower', user: p.user }
-            }, { immediate: true });
+              actionable: true,
+              metadata: metadata
+            };
+            const options: Record<string, Object> = { sound: true, vibration: true };
+            await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
           case 'MutualFollow': {
-            const p: any = event.payload;
-            await this.smartNotificationService.createNotification({
+            const p: Object = event.payload as Object;
+            const payloadRecord = p as Record<string, Object>;
+            const metadata: Record<string, Object> = {
+              type: 'mutual_follow',
+              user: payloadRecord.user
+            };
+            const notifInput: CreateNotificationInput = {
               type: 'social',
               priority: 'medium',
               title: '成为好友',
-              message: `你和 ${p.user.nickname} 互相关注了`,
+              message: `你和 ${(payloadRecord.user as Record<string, Object>).nickname} 互相关注了`,
               read: false,
-              actionable: false,
-              metadata: { type: 'mutual_follow', user: p.user }
-            }, { immediate: true });
+              actionable: true,
+              metadata: metadata
+            };
+            const options: Record<string, Object> = { sound: true, vibration: true };
+            await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
           case 'Unfollowed': {
-            const p: any = event.payload;
-            await this.smartNotificationService.createNotification({
+            const p: Object = event.payload as Object;
+            const payloadRecord = p as Record<string, Object>;
+            const metadata: Record<string, Object> = {
+              type: 'unfollowed',
+              targetId: String(payloadRecord.user_id)
+            };
+            const notifInput: CreateNotificationInput = {
               type: 'social',
-              priority: p.was_mutual ? 'high' : 'low',
-              title: p.was_mutual ? '好友关系解除' : '取消关注',
-              message: p.was_mutual ? '对方已取消关注，你们不再是好友' : '有人取消关注了你',
+              priority: payloadRecord.was_mutual ? 'high' : 'low',
+              title: payloadRecord.was_mutual ? '好友关系解除' : '取消关注',
+              message: payloadRecord.was_mutual ? '对方已取消关注，你们不再是好友' : '有人取消关注了你',
               read: false,
-              actionable: false,
-              metadata: { type: 'unfollowed', targetId: String(p.user_id) }
-            }, { immediate: true });
+              actionable: true,
+              metadata: metadata
+            };
+            const options: Record<string, Object> = { sound: true, vibration: true };
+            await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
           case 'MomentLiked': {
-            const p: any = event.payload;
-            await this.smartNotificationService.createNotification({
+            const p: Object = event.payload as Object;
+            const payloadRecord = p as Record<string, Object>;
+            const metadata: Record<string, Object> = {
+              type: 'moment_like',
+              targetId: String(payloadRecord.moment_id)
+            };
+            const notifInput: CreateNotificationInput = {
               type: 'social',
               priority: 'low',
               title: '收到点赞',
-              message: `${p.user.nickname} 赞了你的瞬间`,
+              message: `${(payloadRecord.user as Record<string, Object>).nickname} 赞了你的瞬间`,
               read: false,
-              actionable: false,
-              metadata: { type: 'moment_like', targetId: String(p.moment_id) }
-            }, { immediate: true });
+              actionable: true,
+              metadata: metadata
+            };
+            const options: Record<string, Object> = { sound: true, vibration: true };
+            await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
           case 'MomentCommented': {
-            const p: any = event.payload;
-            await this.smartNotificationService.createNotification({
+            const p: Object = event.payload as Object;
+            const payloadRecord = p as Record<string, Object>;
+            const metadata: Record<string, Object> = {
+              type: 'moment_comment',
+              targetId: String(payloadRecord.moment_id)
+            };
+            const notifInput: CreateNotificationInput = {
               type: 'social',
               priority: 'medium',
               title: '新评论',
-              message: `${p.user.nickname}: ${p.content}`,
+              message: `${(payloadRecord.user as Record<string, Object>).nickname}: ${String(payloadRecord.content)}`,
               read: false,
-              actionable: false,
-              metadata: { type: 'moment_comment', targetId: String(p.moment_id) }
-            }, { immediate: true });
+              actionable: true,
+              metadata: metadata
+            };
+            const options: Record<string, Object> = { sound: true, vibration: true };
+            await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
           case 'CommentReply': {
-            const p: any = event.payload;
-            await this.smartNotificationService.createNotification({
+            const p: Object = event.payload as Object;
+            const payloadRecord = p as Record<string, Object>;
+            const metadata: Record<string, Object> = {
+              type: 'comment_reply',
+              targetId: String(payloadRecord.moment_id)
+            };
+            const notifInput: CreateNotificationInput = {
               type: 'social',
               priority: 'medium',
               title: '评论被回复',
-              message: `${p.user.nickname}: ${p.content}`,
+              message: `${(payloadRecord.user as Record<string, Object>).nickname}: ${String(payloadRecord.content)}`,
               read: false,
-              actionable: false,
-              metadata: { type: 'comment_reply', targetId: String(p.moment_id) }
-            }, { immediate: true });
+              actionable: true,
+              metadata: metadata
+            };
+            const options: Record<string, Object> = { sound: true, vibration: true };
+            await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
           case 'GroupInviteReceived': {
-            const p: any = event.payload;
-            await this.smartNotificationService.createNotification({
+            const p: Object = event.payload as Object;
+            const payloadRecord = p as Record<string, Object>;
+            const metadata: Record<string, Object> = {
+              type: 'group_invite',
+              targetId: String(payloadRecord.group_id)
+            };
+            const notifInput: CreateNotificationInput = {
               type: 'social',
               priority: 'high',
               title: '群组邀请',
-              message: `${p.inviter.nickname} 邀请你加入「${p.group_name}」`,
+              message: `${(payloadRecord.inviter as Record<string, Object>).nickname} 邀请你加入「${String(payloadRecord.group_name)}」`,
               read: false,
-              actionable: false,
-              metadata: { type: 'group_invite', targetId: String(p.group_id) }
-            }, { immediate: true });
+              actionable: true,
+              metadata: metadata
+            };
+            const options: Record<string, Object> = { sound: true, vibration: true };
+            await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
           case 'GroupInviteResponse': {
-            const p: any = event.payload;
-            await this.smartNotificationService.createNotification({
+            const p: Object = event.payload as Object;
+            const payloadRecord = p as Record<string, Object>;
+            const metadata: Record<string, Object> = {
+              type: 'group_invite_response',
+              targetId: String(payloadRecord.group_id)
+            };
+            const notifInput: CreateNotificationInput = {
               type: 'social',
-              priority: p.status === 'accepted' ? 'medium' : 'low',
-              title: p.status === 'accepted' ? '邀请已接受' : '邀请被拒绝',
-              message: p.status === 'accepted' ? '对方已接受你的群组邀请' : '对方拒绝了你的群组邀请',
+              priority: payloadRecord.status === 'accepted' ? 'medium' : 'low',
+              title: payloadRecord.status === 'accepted' ? '邀请已接受' : '邀请被拒绝',
+              message: payloadRecord.status === 'accepted' ? '对方已接受你的群组邀请' : '对方拒绝了你的群组邀请',
               read: false,
-              actionable: false,
-              metadata: { type: 'group_invite_response', targetId: String(p.group_id) }
-            }, { immediate: true });
+              actionable: true,
+              metadata: metadata
+            };
+            const options: Record<string, Object> = { sound: true, vibration: true };
+            await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
           case 'GroupApplicationReceived': {
-            const p: any = event.payload;
-            await this.smartNotificationService.createNotification({
+            const p: Object = event.payload as Object;
+            const payloadRecord = p as Record<string, Object>;
+            const metadata: Record<string, Object> = {
+              type: 'group_application',
+              targetId: String(payloadRecord.group_id)
+            };
+            const notifInput: CreateNotificationInput = {
               type: 'social',
               priority: 'high',
               title: '入群申请',
-              message: `${p.applicant.nickname} 申请加入群组`,
+              message: `${(payloadRecord.applicant as Record<string, Object>).nickname} 申请加入群组`,
               read: false,
-              actionable: false,
-              metadata: { type: 'group_application', targetId: String(p.group_id) }
-            }, { immediate: true });
+              actionable: true,
+              metadata: metadata
+            };
+            const options: Record<string, Object> = { sound: true, vibration: true };
+            await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
           case 'GroupApplicationResponse': {
-            const p: any = event.payload;
-            await this.smartNotificationService.createNotification({
+            const p: Object = event.payload as Object;
+            const payloadRecord = p as Record<string, Object>;
+            const metadata: Record<string, Object> = {
+              type: 'group_application_response',
+              targetId: String(payloadRecord.group_id)
+            };
+            const notifInput: CreateNotificationInput = {
               type: 'social',
-              priority: p.status === 'accepted' ? 'medium' : 'low',
-              title: p.status === 'accepted' ? '申请已通过' : '申请被拒绝',
-              message: p.status === 'accepted' ? `你已加入「${p.group_name}」` : `你的入群申请被拒绝`,
+              priority: payloadRecord.status === 'accepted' ? 'medium' : 'low',
+              title: payloadRecord.status === 'accepted' ? '申请已通过' : '申请被拒绝',
+              message: payloadRecord.status === 'accepted' ? `你已加入「${String(payloadRecord.group_name)}」` : `你的入群申请被拒绝`,
               read: false,
-              actionable: false,
-              metadata: { type: 'group_application_response', targetId: String(p.group_id) }
-            }, { immediate: true });
+              actionable: true,
+              metadata: metadata
+            };
+            const options: Record<string, Object> = { sound: true, vibration: true };
+            await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
           case 'SystemAnnouncement': {
-            const p: any = event.payload;
-            const priority = p.severity === 'error' ? 'critical' : (p.severity === 'warning' ? 'high' : 'medium');
-            await this.smartNotificationService.createNotification({
+            const p: Object = event.payload as Object;
+            const payloadRecord = p as Record<string, Object>;
+            const priority = payloadRecord.severity === 'error' ? 'critical' : (payloadRecord.severity === 'warning' ? 'high' : 'medium');
+            const metadata: Record<string, Object> = {
+              type: 'system_announcement',
+              targetId: String(payloadRecord.id)
+            };
+            const notifInput: CreateNotificationInput = {
               type: 'system',
-              priority,
-              title: p.title,
-              message: p.content,
+              priority: priority as 'low' | 'medium' | 'high' | 'critical',
+              title: String(payloadRecord.title),
+              message: String(payloadRecord.content),
               read: false,
-              actionable: false,
-              metadata: { type: 'system_announcement', targetId: String(p.id) }
-            }, { immediate: true });
+              actionable: true,
+              metadata: metadata
+            };
+            const options: Record<string, Object> = { sound: true, vibration: true };
+            await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
         }

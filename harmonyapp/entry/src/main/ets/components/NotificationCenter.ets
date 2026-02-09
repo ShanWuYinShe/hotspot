@@ -132,11 +132,18 @@ export struct NotificationCenter {
    */
   private async markAllAsRead(): Promise<void> {
     try {
-      const filterType = this.selectedFilter === 'all' || this.selectedFilter === 'unread' 
-        ? undefined 
-        : this.selectedFilter as ('system' | 'performance' | 'social' | 'security');
+      let filter: NotificationFilter | undefined = undefined;
+      if (this.selectedFilter !== 'all' && this.selectedFilter !== 'unread') {
+        filter = {
+          type: this.selectedFilter as ('system' | 'performance' | 'social' | 'security')
+        };
+      } else if (this.selectedFilter === 'unread') {
+        filter = {
+          read: false
+        };
+      }
       
-      await this.notificationService.markAllAsRead(filterType);
+      await this.notificationService.markAllAsRead(filter);
       this.loadNotifications();
       SystemToast.showSuccess('已全部标记为已读', this.getUIContext());
       

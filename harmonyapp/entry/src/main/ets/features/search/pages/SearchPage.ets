@@ -58,7 +58,10 @@ struct SearchPage {
       const p2 = ApiClient.searchGroupsByKeyword({ kw: this.keyword, latitude: lat, longitude: lng });
       const p3 = ApiClient.searchMomentsByKeyword({ kw: this.keyword, latitude: lat, longitude: lng });
 
-      const [res1, res2, res3] = await Promise.all([p1, p2, p3]);
+      const results = await Promise.all([p1, p2, p3]);
+      const res1 = results[0];
+      const res2 = results[1];
+      const res3 = results[2];
 
       // 过滤掉“自己”（避免搜索结果里出现当前用户）
       const me = GlobalStateManager.getInstance().getCurrentUser();
@@ -115,7 +118,7 @@ struct SearchPage {
       if (this.isLoading) {
         SystemLoadingView({ message: '搜索中...' }).layoutWeight(1)
       } else {
-        Tabs({ barPosition: BarPosition.Top, controller: this.controller, index: this.currentIndex }) {
+        Tabs({ barPosition: BarPosition.Start, controller: this.controller, index: this.currentIndex }) {
           TabContent() {
             this.ResultList(this.userResults, 'user')
           }.tabBar(this.TabBuilder(0, '用户'))
@@ -190,8 +193,8 @@ struct SearchPage {
     Row() {
       SystemAvatar({
         avatarUrl: item.avatar_url,
-        nickname: item.nickname,
-        size: 50
+        name: item.nickname,
+        avatarSize: 50
       })
       .margin({ right: 12 })
 
@@ -224,8 +227,8 @@ struct SearchPage {
     Row() {
       SystemAvatar({
         avatarUrl: item.avatar_url,
-        nickname: item.name,
-        size: 50,
+        name: item.name,
+        avatarSize: 50,
         shape: 'square'
       })
       .margin({ right: 12 })
@@ -271,8 +274,8 @@ struct SearchPage {
       Row() {
         SystemAvatar({
           avatarUrl: item.user.avatar_url,
-          nickname: item.user.nickname,
-          size: 32
+          name: item.user.nickname,
+          avatarSize: 32
         })
         .margin({ right: 8 })
 

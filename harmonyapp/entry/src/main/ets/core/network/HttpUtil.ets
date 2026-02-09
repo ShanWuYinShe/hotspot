@@ -9,7 +9,7 @@ import request from '@ohos.request';
 import common from '@ohos.app.ability.common';
 import { API_BASE_URL, StorageKeys } from '../../constants/AppConstants';
 import { ApiEndpoints } from '../config/ApiEndpoints';
-import { ApiResponse, AppAuthData, HealthCheckData, UploadCategory, UploadMediaData } from '../types/api';
+import { ApiResponse, AuthData, HealthCheckData, UploadCategory, UploadMediaData } from '../types/api';
 import { PreferencesUtil } from '../storage/PreferencesUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import {
@@ -83,9 +83,9 @@ export class HttpUtil {
     }
   }
 
-  private static async getAuthData(): Promise<AppAuthData | null> {
+  private static async getAuthData(): Promise<AuthData | null> {
     try {
-      return await PreferencesUtil.getObject<AppAuthData>(StorageKeys.USER_INFO);
+      return await PreferencesUtil.getObject<AuthData>(StorageKeys.USER_INFO);
     } catch {
       return null;
     }
@@ -113,7 +113,7 @@ export class HttpUtil {
         if (!refreshToken) return false;
 
         const baseUrl = await HttpUtil.getBaseUrl();
-        const fullUrl = `${baseUrl}${ApiEndpoints.public.auth.refreshToken}`;
+        const fullUrl = `${baseUrl}${ApiEndpoints.AUTH.REFRESH_TOKEN}`;
         const httpRequest = http.createHttp();
 
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -126,25 +126,26 @@ export class HttpUtil {
         };
 
         const response = await httpRequest.request(fullUrl, requestOptions);
-        let payload: any;
+        let payload: Object;
         try {
-          payload = JSON.parse(response.result as string);
+          payload = JSON.parse(response.result as string) as Object;
         } catch {
           return false;
         } finally {
           httpRequest.destroy();
         }
 
-        if (!payload || typeof payload.code !== 'number') return false;
+        const payloadRecord = payload as Record<string, Object>;
+        if (!payloadRecord || typeof payloadRecord.code !== 'number') return false;
 
-        if (payload.code === 0 && payload.data) {
-          const newAuth = payload.data as AppAuthData;
+        if (payloadRecord.code === 0 && payloadRecord.data) {
+          const newAuth = payloadRecord.data as AuthData;
           await PreferencesUtil.set(StorageKeys.ACCESS_TOKEN, newAuth.access_token);
           await PreferencesUtil.setObject(StorageKeys.USER_INFO, newAuth);
           return true;
         }
 
-        if (shouldForceLogoutOnAuthError(payload.code, payload.message)) {
+        if (shouldForceLogoutOnAuthError(payloadRecord.code, payloadRecord.message)) {
           await HttpUtil.clearAuthData();
         }
 
@@ -219,13 +220,16 @@ export class HttpUtil {
       hilog.info(DOMAIN_NUMBER, TAG, `📡 HTTP响应: ${response.responseCode} (${responseTime}ms)`);
 
       // 解析响应数据
-      const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
-      const isApiResponse = (v: unknown): v is ApiResponse<unknown> => {
+      const isRecord = (v: Object): v is Record<string, Object> => {
+        return v !== null && typeof v === 'object';
+      };
+      const isApiResponse = (v: Object): v is ApiResponse<Object> => {
         if (!isRecord(v)) return false;
-        return typeof v.code === 'number' && typeof v.request_id === 'string';
+        const record = v as Record<string, Object>;
+        return typeof record.code === 'number' && typeof record.request_id === 'string';
       };
 
-      let result: unknown;
+      let result: Object;
       try {
         result = JSON.parse(response.result as string);
         hilog.debug(DOMAIN_NUMBER, TAG, `📥 响应数据: ${JSON.stringify(result)}`);
@@ -258,7 +262,8 @@ export class HttpUtil {
       }
 
       // 检查业务状态码（业务成功与否以 code 判定）
-      if (result.code !== 0) {
+      const resultRecord = result as Record<string, Object>;
+      if (resultRecord.code !== 0) {
         const snapshot = extractApiErrorSnapshot(result, response.responseCode);
         const userMessage = guessUserMessageFromSnapshot(snapshot, '操作失败');
         hilog.error(DOMAIN_NUMBER, TAG, `❌ 业务错误 [${snapshot.code}]: ${userMessage}`);
@@ -343,8 +348,8 @@ export class HttpUtil {
    * 测试服务器连接 - 使用系统健康检查API
    */
   static async testConnection(): Promise<ApiResponse<HealthCheckData>> {
-    return HttpUtil.request<ApiResponse<HealthCheckData>, object>(
-      ApiEndpoints.public.system.health,
+    return HttpUtil.request<ApiResponse<HealthCheckData>, Object>(
+      ApiEndpoints.SYSTEM.HEALTH,
       http.RequestMethod.POST,
       {}
     );

@@ -116,11 +116,15 @@ struct CreateGroupPage {
 
       if (response.code === 0 && response.data) {
         SystemToast.showSuccess('群组创建成功', this.getUIContext());
-        const routerInstance = this.getUIContext().getRouter();
-        await routerInstance.replaceUrl({
-          url: `features/group/pages/${PageNames.GROUP_DETAIL}`,
-          params: { groupId: response.data.group_id }
-        });
+        try {
+          const routerInstance = this.getUIContext().getRouter();
+          await routerInstance.replaceUrl({
+            url: `features/group/pages/${PageNames.GROUP_DETAIL}`,
+            params: { groupId: response.data.group_id }
+          });
+        } catch (error) {
+          SystemToast.showError('跳转失败', this.getUIContext());
+        }
       } else {
         SystemToast.showError(response.message || '创建群组失败', this.getUIContext());
       }
@@ -148,10 +152,14 @@ struct CreateGroupPage {
   }
 
   private async openLocationPicker(): Promise<void> {
-    const routerInstance = this.getUIContext().getRouter();
-    await routerInstance.pushUrl({
-      url: `features/map/pages/${PageNames.LOCATION_PICKER}`
-    });
+    try {
+      const routerInstance = this.getUIContext().getRouter();
+      await routerInstance.pushUrl({
+        url: `features/map/pages/${PageNames.LOCATION_PICKER}`
+      });
+    } catch (error) {
+      SystemToast.showError('跳转失败', this.getUIContext());
+    }
   }
 
   build() {

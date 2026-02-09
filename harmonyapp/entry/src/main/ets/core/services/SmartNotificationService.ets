@@ -22,11 +22,14 @@ import {
 import { 
   NotificationScheduler, 
   SchedulerConfig,
-  SchedulerStats
+  SchedulerConfigUpdate,
+  SchedulerStats,
+  QuietHours
 } from './notification/NotificationScheduler';
 import { 
   NotificationRenderer, 
   RendererConfig, 
+  RendererConfigUpdate,
   NotificationPosition, 
   NotificationAnimation,
   RendererStats
@@ -41,15 +44,6 @@ export {
 } from './notification/NotificationDataManager';
 
 const logger = createLogger('SmartNotificationService');
-
-/**
- * 静默时间配置
- */
-interface QuietHours {
-  enabled: boolean;
-  startTime: string; // HH:MM
-  endTime: string;   // HH:MM
-}
 
 /**
  * 统一配置接口
@@ -108,6 +102,44 @@ export enum NotificationEvent {
 }
 
 /**
+ * 通知元数据类
+ */
+export class NotificationMetadata {
+  type?: string;
+  user?: Object;
+  group?: Object;
+  moment_id?: string;
+  group_id?: string;
+  comment_id?: string;
+  is_mutual?: boolean;
+  alert?: Object;
+  config?: Object;
+  fromUser?: string;
+  targetId?: string;
+}
+
+/**
+ * 事件额外数据类
+ */
+class EventExtra {
+  id?: string;
+  notification?: SmartNotification;
+  [key: string]: Object | undefined;
+}
+
+/**
+ * 性能指标接口
+ */
+interface PerformanceMetrics {
+  totalProcessed: number;
+  successCount: number;
+  errorCount: number;
+  totalProcessingTime: number;
+  peakConcurrency: number;
+  currentConcurrency: number;
+}
+
+/**
  * 创建通知输入参数（不包含 id 和 timestamp）
  */
 export interface CreateNotificationInput {
@@ -128,7 +160,7 @@ export interface CreateNotificationInput {
 export type NotificationEventListener = (
   event: NotificationEvent,
   notification: SmartNotification,
-  extra?: any
+  extra?: Object
 ) => void;
 
 /**
@@ -157,7 +189,7 @@ export class SmartNotificationService extends BaseSingleton {
   /**
    * 性能监控
    */
-  private performanceMetrics = {
+  private performanceMetrics: PerformanceMetrics = {
     totalProcessed: 0,
     successCount: 0,
     errorCount: 0,
@@ -247,7 +279,7 @@ export class SmartNotificationService extends BaseSingleton {
     } catch (error) {
       logger.error('智能通知服务初始化失败', error);
       ErrorHandler.handle(error, 'SmartNotificationService.onInitialize', ErrorType.SYSTEM, ErrorLevel.CRITICAL);
-      throw error;
+      throw (error instanceof Error) ? error : new Error(String(error));
     }
   }
   
@@ -295,7 +327,7 @@ export class SmartNotificationService extends BaseSingleton {
    */
   updateConfig(config: Partial<NotificationConfig>): void {
     try {
-      this.config = ConfigMerger.merge(this.config, config);
+      this.config = ConfigMerger.merge(this.config, config as Object as Record<string, Object>);
       
       // 更新子服务配置
       this.configureSubServices();
@@ -419,7 +451,10 @@ export class SmartNotificationService extends BaseSingleton {
       
       if (notificationId) {
         // 触发创建事件
-        this.emitEvent(NotificationEvent.CREATED, { id: notificationId, notification: fullNotification });
+        const eventExtra = new EventExtra();
+        eventExtra.id = notificationId;
+        eventExtra.notification = fullNotification;
+        this.emitEvent(NotificationEvent.CREATED, fullNotification, eventExtra);
         
         // 更新性能指标
         this.performanceMetrics.successCount++;
@@ -434,7 +469,7 @@ export class SmartNotificationService extends BaseSingleton {
       this.performanceMetrics.errorCount++;
       logger.error('创建通知失败', error);
       ErrorHandler.handle(error, 'SmartNotificationService.createNotification', ErrorType.BUSINESS, ErrorLevel.MEDIUM);
-      throw error;
+      throw (error instanceof Error) ? error : new Error(String(error));
     } finally {
       this.performanceMetrics.currentConcurrency--;
       const duration = Date.now() - startTime;
@@ -677,12 +712,21 @@ export class SmartNotificationService extends BaseSingleton {
       return null;
     }
     
-    const priority = alert.level === 'critical' ? 'critical' : 
+    const priority: 'low' | 'medium' | 'high' | 'critical' = alert.level === 'critical' ? 'critical' : 
                     alert.level === 'warning' ? 'high' : 'medium';
+    
+    const metadata = new NotificationMetadata();
+    const alertData: Object = {
+      type: alert.type,
+      level: alert.level,
+      value: alert.value,
+      threshold: alert.threshold
+    };
+    metadata.alert = alertData;
     
     return this.createNotification({
       type: 'performance',
-      priority: priority as any,
+      priority: priority,
       title: `性能告警: ${alert.type}`,
       message: alert.message,
       read: false,
@@ -697,14 +741,7 @@ export class SmartNotificationService extends BaseSingleton {
           }
         }
       ],
-      metadata: {
-        alert: {
-          type: alert.type,
-          level: alert.level,
-          value: alert.value,
-          threshold: alert.threshold
-        }
-      }
+      metadata: metadata
     }, { immediate: true });
   }
   
@@ -738,13 +775,16 @@ export class SmartNotificationService extends BaseSingleton {
           }
         }
       ],
-      metadata: {
-        alert: {
+      metadata: (() => {
+        const meta = new NotificationMetadata();
+        const alertData: Object = {
           type: security.type,
           severity: security.severity,
           location: security.location
-        }
-      }
+        };
+        meta.alert = alertData;
+        return meta;
+      })()
     }, { immediate: true });
   }
 
@@ -773,23 +813,21 @@ export class SmartNotificationService extends BaseSingleton {
     }
     
     // 配置调度器
-    const schedulerConfig: Partial<SchedulerConfig> = {
-      quietHours: this.config.quietHours,
-      batchDelay: this.config.batchDelay,
-      enableThrottling: this.config.enableThrottling
-    };
+    const schedulerConfig = new SchedulerConfigUpdate();
+    schedulerConfig.quietHours = this.config.quietHours;
+    schedulerConfig.batchDelay = this.config.batchDelay;
+    schedulerConfig.enableThrottling = this.config.enableThrottling;
     this.scheduler.updateConfig(schedulerConfig);
     
     // 配置渲染器
-    const rendererConfig: Partial<RendererConfig> = {
-      position: this.config.position,
-      animation: this.config.animation,
-      duration: this.config.duration,
-      maxVisible: this.config.maxVisible,
-      enableSound: this.config.enableSound,
-      enableVibration: this.config.enableVibration,
-      theme: this.config.theme
-    };
+    const rendererConfig = new RendererConfigUpdate();
+    rendererConfig.position = this.config.position;
+    rendererConfig.animation = this.config.animation;
+    rendererConfig.duration = this.config.duration;
+    rendererConfig.maxVisible = this.config.maxVisible;
+    rendererConfig.enableSound = this.config.enableSound;
+    rendererConfig.enableVibration = this.config.enableVibration;
+    rendererConfig.theme = this.config.theme;
     this.renderer.updateConfig(rendererConfig);
     
     logger.debug('子服务配置完成');
@@ -854,7 +892,7 @@ export class SmartNotificationService extends BaseSingleton {
   /**
    * 触发事件
    */
-  private emitEvent(event: NotificationEvent, notification: SmartNotification, extra?: any): void {
+  private emitEvent(event: NotificationEvent, notification: SmartNotification, extra?: Object): void {
     const listeners = this.eventListeners.get(event);
     if (listeners) {
       for (const listener of listeners) {

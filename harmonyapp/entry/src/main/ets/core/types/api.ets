@@ -194,7 +194,7 @@ export interface GroupItem extends GroupInfo {
   my_state?: GroupMyState;
 }
 
-export type JoinedGroupItem = GroupItem;
+export interface JoinedGroupItem extends GroupItem {}
 
 export interface GroupSettings {
   join_method: GroupJoinMethod;
@@ -203,7 +203,7 @@ export interface GroupSettings {
   location: RelativeLocation;
 }
 
-export type GroupDetailData = GroupItem;
+export interface GroupDetailData extends GroupItem {}
 
 // 3. 生活瞬间 (Moment)
 
@@ -299,7 +299,7 @@ export interface AuthTokenPairApp {
   refresh_token_expires_at: string;
 }
 
-export type AuthData = AuthTokenPairApp; // HarmonyOS use App type
+export interface AuthData extends AuthTokenPairApp {} // HarmonyOS use App type
 
 export interface RegisterRequest {
   login_id: string;
@@ -396,27 +396,11 @@ export interface SessionsRequest {
   cursor?: string;
 }
 
-export interface SessionItem {
-  session_id: string;
-  device_type?: string;
-  device_name?: string;
-  ip_address?: string;
-  created_at: string;
-  last_active_at: string;
-  is_current: boolean;
-}
-
 export interface RevokeSessionRequest {
   session_id: string;
 }
 
 // ==================== 用户API类型 ====================
-
-export interface SearchBaseParams {
-  reference_point: GeoPoint;
-  limit?: number;
-  cursor?: string;
-}
 
 export interface SearchUsersByKeywordRequest extends SearchBaseParams {
   kw: string;
@@ -630,34 +614,14 @@ export interface MyFollowingRequest {
   cursor?: string;
 }
 
-export interface FollowingItem {
-  user: UserInfo;
-  followed_at: string;
-  is_mutual: boolean;
-  is_online: boolean;
-}
-
 export interface MyFollowersRequest {
   limit?: number;
   cursor?: string;
 }
 
-export interface FollowerItem {
-  user: UserInfo;
-  followed_at: string;
-  is_following_back: boolean;
-  is_online: boolean;
-}
-
 export interface MyBlockedRequest {
   limit?: number;
   cursor?: string;
-}
-
-export interface BlockedUserItem {
-  user: UserInfo;
-  blocked_at: string;
-  reason?: string;
 }
 
 export interface SetRemarkRequest {
@@ -1170,36 +1134,10 @@ export interface Conversation {
   can_message: boolean;
 }
 
-export interface MessageLimit {
-  remaining: number;
-  total: number;
-  is_unlocked: boolean;
-}
-
 export interface MessageReactionItem {
   user: UserInfo;
   type: ReactionType;
   created_at: string;
-}
-
-export interface PrivateChatLastMessage {
-  message_id: string;
-  content?: string;
-  type: MessageType;
-  sender_id: number;
-  sent_at: string;
-}
-
-export interface PrivateChatDetailData {
-  other_user: UserInfo;
-  message_limit?: MessageLimit;
-  unread_count: number;
-  is_muted: boolean;
-  is_pinned: boolean;
-  last_message?: PrivateChatLastMessage;
-  last_activity_at: string;
-  created_at: string;
-  can_message: boolean;
 }
 
 // ==================== 群聊消息API类型 ====================
@@ -2143,18 +2081,77 @@ export type AuditAction =
 
 export type AuditTargetType = 'user' | 'group' | 'announcement' | 'role' | 'config';
 
+export interface AuditDetailsUserBan {
+  type: 'user.ban';
+  reason?: string;
+  duration_days?: number;
+}
+
+export interface AuditDetailsUserUnban {
+  type: 'user.unban';
+  reason?: string;
+}
+
+export interface AuditDetailsGroupDismiss {
+  type: 'group.dismiss';
+  reason?: string;
+}
+
+export interface AuditDetailsAnnouncementCreate {
+  type: 'announcement.create';
+  title: string;
+}
+
+export interface AuditDetailsAnnouncementDelete {
+  type: 'announcement.delete';
+  title: string;
+}
+
+export interface AuditDetailsRoleCreate {
+  type: 'role.create';
+  role_name: string;
+  permissions: string[];
+}
+
+export interface AuditDetailsRoleUpdate {
+  type: 'role.update';
+  role_name: string;
+  added_permissions?: string[];
+  removed_permissions?: string[];
+}
+
+export interface AuditDetailsRoleDelete {
+  type: 'role.delete';
+  role_name: string;
+}
+
+export interface AuditDetailsPermissionGrant {
+  type: 'permission.grant';
+  permission: string;
+}
+
+export interface AuditDetailsPermissionRevoke {
+  type: 'permission.revoke';
+  permission: string;
+}
+
+export interface AuditDetailsConfigUpdate {
+  type: 'config.update';
+  config_key: string;
+}
+
 export type AuditDetails =
-  | { type: 'user.ban'; reason?: string; duration_days?: number }
-  | { type: 'user.unban'; reason?: string }
-  | { type: 'group.dismiss'; reason?: string }
-  | { type: 'announcement.create'; title: string }
-  | { type: 'announcement.delete'; title: string }
-  | { type: 'role.create'; role_name: string; permissions: string[] }
-  | { type: 'role.update'; role_name: string; added_permissions?: string[]; removed_permissions?: string[] }
-  | { type: 'role.delete'; role_name: string }
-  | { type: 'permission.grant'; permission: string }
-  | { type: 'permission.revoke'; permission: string }
-  | { type: 'config.update'; config_key: string };
+  | AuditDetailsUserBan
+  | AuditDetailsUserUnban
+  | AuditDetailsGroupDismiss
+  | AuditDetailsAnnouncementCreate
+  | AuditDetailsAnnouncementDelete
+  | AuditDetailsRoleCreate
+  | AuditDetailsRoleUpdate
+  | AuditDetailsRoleDelete
+  | AuditDetailsPermissionGrant
+  | AuditDetailsPermissionRevoke
+  | AuditDetailsConfigUpdate;
 
 export interface AuditLogItem {
   log_id: string;
@@ -2175,11 +2172,35 @@ export interface AuditLogDetail extends AuditLogItem {
   after_state?: StateSnapshot;
 }
 
+export interface StateSnapshotUser {
+  type: 'user';
+  nickname?: string;
+  status?: string;
+  roles?: string[];
+}
+
+export interface StateSnapshotGroup {
+  type: 'group';
+  name?: string;
+  members_count?: number;
+}
+
+export interface StateSnapshotRole {
+  type: 'role';
+  name?: string;
+  permissions?: string[];
+}
+
+export interface StateSnapshotConfig {
+  type: 'config';
+  value?: string;
+}
+
 export type StateSnapshot =
-  | { type: 'user'; nickname?: string; status?: string; roles?: string[] }
-  | { type: 'group'; name?: string; members_count?: number }
-  | { type: 'role'; name?: string; permissions?: string[] }
-  | { type: 'config'; value?: string };
+  | StateSnapshotUser
+  | StateSnapshotGroup
+  | StateSnapshotRole
+  | StateSnapshotConfig;
 
 export interface AuditLogListRequest extends PaginationParams {
   action?: AuditAction;
@@ -2296,11 +2317,31 @@ export interface AuditLogDetailRequest {
 
 // ==================== 搜索API类型 ====================
 
+export interface SearchSuggestItemTag {
+  type: 'tag';
+  payload: TagSuggestItem;
+}
+
+export interface SearchSuggestItemUser {
+  type: 'user';
+  payload: UserSuggestItem;
+}
+
+export interface SearchSuggestItemGroup {
+  type: 'group';
+  payload: GroupSuggestItem;
+}
+
+export interface SearchSuggestItemMoment {
+  type: 'moment';
+  payload: MomentSuggestItem;
+}
+
 export type SearchSuggestItem =
-  | { type: 'tag'; payload: TagSuggestItem }
-  | { type: 'user'; payload: UserSuggestItem }
-  | { type: 'group'; payload: GroupSuggestItem }
-  | { type: 'moment'; payload: MomentSuggestItem };
+  | SearchSuggestItemTag
+  | SearchSuggestItemUser
+  | SearchSuggestItemGroup
+  | SearchSuggestItemMoment;
 
 export interface UserSuggestItem extends UserInfo {
   bio?: string;
@@ -2338,6 +2379,6 @@ export interface SearchSuggestRequest {
 // 这些类型别名用于客户端代码，实际 API 返回的是 MomentItem、GroupItem、UserItem
 // 为了保持代码一致性，使用这些别名
 
-export type MomentSearchItem = MomentItem;
-export type GroupSearchItem = GroupItem;
-export type UserSearchItem = UserItem;
+export interface MomentSearchItem extends MomentItem {}
+export interface GroupSearchItem extends GroupItem {}
+export interface UserSearchItem extends UserItem {}

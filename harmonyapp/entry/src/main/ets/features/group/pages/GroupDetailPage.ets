@@ -100,7 +100,7 @@ struct GroupDetailPage {
       const lng = this.currentLocation?.longitude || 0;
 
       const response = await ApiClient.getGroupDetail({
-        id: this.groupId,
+        group_id: this.groupId,
         latitude: lat,
         longitude: lng
       });
@@ -125,7 +125,7 @@ struct GroupDetailPage {
     this.isLoadingMembers = true;
     try {
       const response = await ApiClient.getGroupMembers({
-        id: this.groupId,
+        group_id: this.groupId,
         limit: 100
       });
 
@@ -154,7 +154,7 @@ struct GroupDetailPage {
     this.isJoining = true;
     try {
       const response = await ApiClient.joinGroup({
-        id: this.groupId,
+        group_id: this.groupId,
         password: this.groupInfo.has_password ? this.joinPassword.trim() : undefined
       });
 
@@ -183,7 +183,7 @@ struct GroupDetailPage {
     this.isLeaving = true;
     try {
       const response = await ApiClient.leaveGroup({
-        id: this.groupId
+        group_id: this.groupId
       });
 
       if (response.code === 0) {
@@ -323,7 +323,7 @@ struct GroupDetailPage {
                 SystemAvatar({
                   src: this.groupInfo?.avatar_url,
                   name: this.groupInfo?.name,
-                  size: 80
+                  avatarSize: 80
                 })
                 Text(this.groupInfo?.name || '')
                   .fontSize(DesignConstants.FONT.SIZE.XL)
@@ -568,7 +568,7 @@ struct GroupDetailPage {
       SystemAvatar({
         src: member.user.avatar_url,
         name: member.user.nickname,
-        size: 40,
+        avatarSize: 40,
         userInfo: member.user
       })
 

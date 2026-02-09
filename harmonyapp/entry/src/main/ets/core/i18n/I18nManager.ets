@@ -504,8 +504,12 @@ export class I18nManager extends BaseSingleton {
   }
 
   private mergeRecursive(map: TranslationMap, obj: object): void {
-      for (const [key, value] of Object.entries(obj)) {
-          if (typeof value === 'object' && value !== null) {
+      const objRecord = obj as Record<string, Object>;
+      const keys = Object.keys(objRecord);
+      for (let i = 0; i < keys.length; i++) {
+          const key = keys[i];
+          const value = objRecord[key];
+          if (value !== null && typeof value === 'object') {
               let childMap = map.get(key);
               if (!(childMap instanceof TranslationMap)) {
                   childMap = new TranslationMap();
