@@ -220,14 +220,14 @@ export class HttpUtil {
       hilog.info(DOMAIN_NUMBER, TAG, `📡 HTTP响应: ${response.responseCode} (${responseTime}ms)`);
 
       // 解析响应数据
-      const isRecord = (v: Object): v is Record<string, Object> => {
+      function isRecord(v: Object): boolean {
         return v !== null && typeof v === 'object';
-      };
-      const isApiResponse = (v: Object): v is ApiResponse<Object> => {
+      }
+      function isApiResponse(v: Object): boolean {
         if (!isRecord(v)) return false;
         const record = v as Record<string, Object>;
         return typeof record.code === 'number' && typeof record.request_id === 'string';
-      };
+      }
 
       let result: Object;
       try {
@@ -268,9 +268,9 @@ export class HttpUtil {
         const userMessage = guessUserMessageFromSnapshot(snapshot, '操作失败');
         hilog.error(DOMAIN_NUMBER, TAG, `❌ 业务错误 [${snapshot.code}]: ${userMessage}`);
 
-        const err = new Error(userMessage) as Error & { code?: number; status?: number };
-        err.code = snapshot.code;
-        err.status = snapshot.status;
+        const err = new Error(userMessage);
+        (err as Object as Record<string, Object>).code = snapshot.code;
+        (err as Object as Record<string, Object>).status = snapshot.status;
         throw err;
       }
 

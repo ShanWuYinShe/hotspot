@@ -46,29 +46,17 @@ export class ConfigMerger {
    * @param source 源配置对象
    * @returns 合并后的新配置对象
    */
-  static merge<T>(
-    target: T, 
-    source: Partial<T>
-  ): T {
-    const result: T = {} as T;
-    
-    // 复制目标对象的所有属性
-    const targetKeys = Object.keys(target);
-    for (let i = 0; i < targetKeys.length; i++) {
-      const key = targetKeys[i];
-      (result as Record<string, Object>)[key] = target[key];
+  static merge(base: Object, override: Object): Object {
+    const baseStr = JSON.stringify(base);
+    const overrideStr = JSON.stringify(override);
+    const baseObj: Record<string, Object> = JSON.parse(baseStr) as Record<string, Object>;
+    const overrideObj: Record<string, Object> = JSON.parse(overrideStr) as Record<string, Object>;
+    const keys = Object.keys(overrideObj);
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      baseObj[key] = overrideObj[key];
     }
-    
-    // 合并源对象的属性
-    const sourceKeys = Object.keys(source);
-    for (let i = 0; i < sourceKeys.length; i++) {
-      const key = sourceKeys[i];
-      if (source[key] !== undefined) {
-        (result as Record<string, Object>)[key] = source[key];
-      }
-    }
-    
-    return result;
+    return baseObj as Object;
   }
   
   /**
@@ -77,11 +65,11 @@ export class ConfigMerger {
    * @param sources 多个源配置对象
    * @returns 合并后的新配置对象
    */
-  static mergeMultiple<T>(
-    target: T,
-    sources: Partial<T>[]
-  ): T {
-    let result = target;
+  static mergeMultiple(
+    target: Object,
+    sources: Object[]
+  ): Object {
+    let result: Object = target;
     
     for (let i = 0; i < sources.length; i++) {
       result = ConfigMerger.merge(result, sources[i]);
@@ -97,11 +85,11 @@ export class ConfigMerger {
    * @param condition 合并条件
    * @returns 合并后的新配置对象
    */
-  static mergeIf<T>(
-    target: T,
-    source: Partial<T>,
+  static mergeIf(
+    target: Object,
+    source: Object,
     condition: boolean
-  ): T {
+  ): Object {
     if (condition) {
       return ConfigMerger.merge(target, source);
     }
@@ -114,34 +102,31 @@ export class ConfigMerger {
    * @param source 源配置对象
    * @returns 合并后的新配置对象
    */
-  static safeMerge<T>(
-    target: T,
-    source: Partial<T>
-  ): T {
-    const result: T = {} as T;
-    
-    // 复制目标对象
-    const targetKeys = Object.keys(target);
-    for (let i = 0; i < targetKeys.length; i++) {
-      const key = targetKeys[i];
-      (result as Record<string, Object>)[key] = target[key];
-    }
+  static safeMerge(
+    target: Object,
+    source: Object
+  ): Object {
+    const baseStr = JSON.stringify(target);
+    const overrideStr = JSON.stringify(source);
+    const baseObj: Record<string, Object> = JSON.parse(baseStr) as Record<string, Object>;
+    const overrideObj: Record<string, Object> = JSON.parse(overrideStr) as Record<string, Object>;
+    const targetKeys = Object.keys(baseObj);
+    const sourceKeys = Object.keys(overrideObj);
     
     // 安全合并源对象
-    const sourceKeys = Object.keys(source);
     for (let i = 0; i < sourceKeys.length; i++) {
       const key = sourceKeys[i];
-      const value = source[key];
+      const value = overrideObj[key];
       
       if (value !== undefined && value !== null) {
         // 检查目标对象是否有这个键
         if (targetKeys.includes(key)) {
-          (result as Record<string, Object>)[key] = value;
+          baseObj[key] = value;
         }
       }
     }
     
-    return result;
+    return baseObj as Object;
   }
   
   /**
@@ -149,7 +134,7 @@ export class ConfigMerger {
    * @param config 配置对象
    * @returns 配置对象的副本
    */
-  static clone<T extends Record<string, Object>>(config: T): T {
+  static clone(config: Record<string, Object>): Record<string, Object> {
     const result: Record<string, Object> = {};
     
     const keys = Object.keys(config);
@@ -158,7 +143,7 @@ export class ConfigMerger {
       result[key] = config[key];
     }
     
-    return result as T;
+    return result;
   }
 }
 
@@ -173,17 +158,17 @@ export class ConfigDiffer {
    * @param newConfig 新配置
    * @returns 差异对象
    */
-  static diff<T extends Record<string, Object>>(
-    oldConfig: T,
-    newConfig: T
+  static diff(
+    oldConfig: Record<string, Object>,
+    newConfig: Record<string, Object>
   ): Record<string, Object> {
     const differences: Record<string, Object> = {};
     
     // 检查新配置中的变化
     const newKeys = Object.keys(newConfig);
+    const oldKeys = Object.keys(oldConfig);
     for (let i = 0; i < newKeys.length; i++) {
       const key = newKeys[i];
-      const oldKeys = Object.keys(oldConfig);
       
       if (!oldKeys.includes(key) || oldConfig[key] !== newConfig[key]) {
         differences[key] = newConfig[key];
@@ -199,9 +184,9 @@ export class ConfigDiffer {
    * @param newConfig 新配置
    * @returns 是否有变化
    */
-  static hasChanges<T extends Record<string, Object>>(
-    oldConfig: T,
-    newConfig: T
+  static hasChanges(
+    oldConfig: Record<string, Object>,
+    newConfig: Record<string, Object>
   ): boolean {
     const diff = ConfigDiffer.diff(oldConfig, newConfig);
     return Object.keys(diff).length > 0;
@@ -213,9 +198,9 @@ export class ConfigDiffer {
    * @param newConfig 新配置
    * @returns 变化的键数组
    */
-  static getChangedKeys<T extends Record<string, Object>>(
-    oldConfig: T,
-    newConfig: T
+  static getChangedKeys(
+    oldConfig: Record<string, Object>,
+    newConfig: Record<string, Object>
   ): string[] {
     const diff = ConfigDiffer.diff(oldConfig, newConfig);
     return Object.keys(diff);
@@ -233,8 +218,8 @@ export class ConfigValidator {
    * @param requiredKeys 必需的键
    * @returns 验证结果
    */
-  static validateRequired<T extends Record<string, Object>>(
-    config: T,
+  static validateRequired(
+    config: Record<string, Object>,
     requiredKeys: string[]
   ): ValidationResult {
     const missing: string[] = [];
@@ -242,7 +227,8 @@ export class ConfigValidator {
     
     for (let i = 0; i < requiredKeys.length; i++) {
       const key = requiredKeys[i];
-      if (!configKeys.includes(key) || config[key] === undefined || config[key] === null) {
+      const configRecord = config as Record<string, Object>;
+      if (!configKeys.includes(key) || configRecord[key] === undefined || configRecord[key] === null) {
         missing.push(key);
       }
     }
@@ -260,19 +246,20 @@ export class ConfigValidator {
    * @param typeMap 类型映射
    * @returns 验证结果
    */
-  static validateTypes<T extends Record<string, Object>>(
-    config: T,
+  static validateTypes(
+    config: Record<string, Object>,
     typeMap: Record<string, string>
   ): TypeValidationResult {
     const errors: string[] = [];
     const configKeys = Object.keys(config);
     const typeKeys = Object.keys(typeMap);
+    const configRecord = config as Record<string, Object>;
     
     for (let i = 0; i < typeKeys.length; i++) {
       const key = typeKeys[i];
       if (configKeys.includes(key)) {
         const expectedType = typeMap[key];
-        const actualType = typeof config[key];
+        const actualType = typeof configRecord[key];
         
         if (actualType !== expectedType) {
           errors.push(`键 "${key}" 期望类型 ${expectedType}，实际类型 ${actualType}`);
@@ -293,18 +280,19 @@ export class ConfigValidator {
    * @param ranges 范围映射
    * @returns 验证结果
    */
-  static validateRanges<T extends Record<string, Object>>(
-    config: T,
+  static validateRanges(
+    config: Record<string, Object>,
     ranges: Record<string, RangeConfig>
   ): RangeValidationResult {
     const errors: string[] = [];
     const configKeys = Object.keys(config);
     const rangeKeys = Object.keys(ranges);
+    const configRecord = config as Record<string, Object>;
     
     for (let i = 0; i < rangeKeys.length; i++) {
       const key = rangeKeys[i];
       if (configKeys.includes(key)) {
-        const value = config[key];
+        const value = configRecord[key];
         const range = ranges[key];
         
         if (typeof value === 'number') {

@@ -240,7 +240,8 @@ struct ChatPage {
     let senderAvatar: string | undefined;
     let isSelf: boolean;
     
-    const itemRecord = item as Record<string, Object>;
+    const itemObj = item as Object;
+    const itemRecord = itemObj as Record<string, Object>;
     if (itemRecord.sender_id !== undefined) {
       // PrivateMessageItem
       const privateItem = item as PrivateMessageItem;
@@ -254,18 +255,19 @@ struct ChatPage {
       // GroupMessageItem
       const groupItem = item as GroupMessageItem;
       senderId = groupItem.sender.user_id;
-      senderName = item.sender.nickname;
-      senderAvatar = item.sender.avatar_url;
+      senderName = groupItem.sender.nickname;
+      senderAvatar = groupItem.sender.avatar_url;
       isSelf = senderId === currentUserId;
     }
     
+    const messageType: MessageType = item.type as MessageType;
     return {
       id: item.message_id,
       content: item.media?.url || item.content || (item.type === 'image' ? '[图片]' : '[非文本消息]'),
       senderId: senderId,
       senderName: senderName,
       senderAvatar: senderAvatar,
-      type: item.type as MessageType,
+      type: messageType,
       sentAt: item.sent_at,
       isSelf: isSelf,
       isSystem: item.type === 'system',
@@ -478,8 +480,8 @@ struct ChatPage {
         if (!msg.isSelf) {
           SystemAvatar({
             avatarUrl: msg.senderAvatar,
-            nickname: msg.senderName,
-            size: 40
+            name: msg.senderName,
+            avatarSize: 40
           })
           .margin({ right: 8 })
         }
@@ -516,8 +518,8 @@ struct ChatPage {
         if (msg.isSelf) {
           SystemAvatar({
             avatarUrl: msg.senderAvatar,
-            nickname: msg.senderName,
-            size: 40
+            name: msg.senderName,
+            avatarSize: 40
           })
           .margin({ left: 8 })
         }

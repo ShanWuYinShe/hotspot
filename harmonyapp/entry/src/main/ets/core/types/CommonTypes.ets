@@ -71,7 +71,8 @@ export function getUserTypeDisplayName(userType: string): string {
  * @param permission 权限名称
  */
 export function hasUserPermission(userType: string, permission: string): boolean {
-  const { UserTypeUtil } = require('../utils/UserTypeUtil');
+  const UserTypeUtilModule = require('../utils/UserTypeUtil');
+  const UserTypeUtil = UserTypeUtilModule.UserTypeUtil;
   return UserTypeUtil.hasPermission(userType, permission);
 }
 

@@ -4,7 +4,9 @@ export interface ApiErrorSnapshot {
   message?: string;
 }
 
-const isRecord = (v: Object): v is Record<string, Object> => v !== null && typeof v === 'object';
+function isRecord(v: Object): boolean {
+  return v !== null && typeof v === 'object';
+}
 
 export function extractApiErrorSnapshot(result: Object, responseCode?: number): ApiErrorSnapshot {
   let code: number | undefined;
@@ -76,9 +78,9 @@ export function isServerErrorCode(code: Object): boolean {
   return typeof code === 'number' && (code as number) >= 50000 && (code as number) <= 59999;
 }
 
-function isSafeUserMessage(message: Object): message is string {
+function isSafeUserMessage(message: Object): boolean {
   if (typeof message !== 'string') return false;
-  const msg = message.trim();
+  const msg = (message as string).trim();
   if (!msg) return false;
   if (msg.includes('/api/') || msg.includes('baseURL')) return false;
   if (/^\[[A-Z]+\]\s+\".*\"\:\s+\d{3}\s+/.test(msg)) return false;

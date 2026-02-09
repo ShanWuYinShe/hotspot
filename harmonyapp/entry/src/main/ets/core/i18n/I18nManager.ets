@@ -474,7 +474,7 @@ export class I18nManager extends BaseSingleton {
           if (file.endsWith('.json')) {
             const content = await resourceManager.getRawFileContent(`${rawFileDir}/${file}`);
             const jsonStr = buffer.from(content).toString('utf-8');
-            const translations = JSON.parse(jsonStr);
+            const translations = JSON.parse(jsonStr) as Object;
             
             // 解析文件名获取语言代码，例如 zh-CN.json
             const langCode = file.replace('.json', '');
@@ -665,7 +665,7 @@ export class I18nManager extends BaseSingleton {
   ): string {
     try {
       const locale = language || this.currentLanguage;
-      const formatter = new Intl.DateTimeFormat(locale, options as any);
+      const formatter = new Intl.DateTimeFormat(locale, options as Object);
       return formatter.format(date);
 
     } catch (error) {
@@ -684,7 +684,7 @@ export class I18nManager extends BaseSingleton {
   ): string {
     try {
       const locale = language || this.currentLanguage;
-      const formatter = new Intl.NumberFormat(locale, options as any);
+      const formatter = new Intl.NumberFormat(locale, options as Object);
       return formatter.format(number);
 
     } catch (error) {

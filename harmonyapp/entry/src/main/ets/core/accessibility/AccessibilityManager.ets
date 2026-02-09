@@ -8,6 +8,8 @@ import { UnifiedStorageUtil } from '../utils/UnifiedStorageUtil';
 import accessibility from '@ohos.accessibility';
 // import config from '@ohos.accessibility.config'; // Module not available
 import { bundleManager } from '@kit.AbilityKit';
+import { AppStorage } from '@kit.ArkData';
+import { focusControl } from '@kit.ArkUI';
 
 export interface AccessibilityConfig {
   screenReaderEnabled: boolean;

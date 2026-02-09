@@ -224,7 +224,7 @@ struct CreateMomentPage {
         location: {
           latitude: this.localLocation.latitude,
           longitude: this.localLocation.longitude,
-          name: this.localLocation.locationName || "南天门"
+          location_name: this.localLocation.locationName || "南天门"
         },
         tags: this.tags.length > 0 ? this.tags : undefined,
         image_file_ids: imageFileIds.length > 0 ? imageFileIds : undefined

@@ -78,12 +78,39 @@ interface NotificationStyle {
 }
 
 /**
+ * 通知元素接口
+ */
+interface NotificationElement {
+  id: string;
+  type: string;
+  style: NotificationStyle;
+  content: NotificationElementContent;
+  show: () => Promise<void>;
+  hide: () => Promise<void>;
+  update: (content: Object) => Promise<void>;
+  remove: () => Promise<void>;
+  onClick?: () => void;
+  onAction?: (actionId: string) => void;
+  onClose?: () => void;
+}
+
+/**
+ * 通知元素内容接口
+ */
+interface NotificationElementContent {
+  title: string;
+  message: string;
+  actions: NotificationAction[];
+  timestamp: number;
+}
+
+/**
  * 显示中的通知信息
  */
 interface DisplayedNotification {
   id: string;
   notification: SmartNotification;
-  element: any; // UI元素引用
+  element: NotificationElement;
   startTime: number;
   hideTimer?: number;
 }
@@ -196,7 +223,7 @@ export class NotificationRenderer extends BaseSingleton {
       logger.info('通知渲染器初始化完成');
     } catch (error) {
       ErrorHandler.handle(error, 'NotificationRenderer.onInitialize', ErrorType.SYSTEM, ErrorLevel.HIGH);
-      throw error;
+      throw (error instanceof Error) ? error : new Error(String(error));
     }
   }
   
@@ -309,7 +336,7 @@ export class NotificationRenderer extends BaseSingleton {
     } catch (error) {
       ErrorHandler.handle(error, 'NotificationRenderer.showNotification', ErrorType.BUSINESS, ErrorLevel.MEDIUM);
       logger.error(`显示通知失败: ${notification.id}`, error);
-      throw error;
+      throw (error instanceof Error) ? error : new Error(String(error));
     }
   }
   
@@ -523,27 +550,29 @@ export class NotificationRenderer extends BaseSingleton {
   /**
    * 创建通知UI元素
    */
-  private async createNotificationElement(notification: SmartNotification): Promise<any> {
+  private async createNotificationElement(notification: SmartNotification): Promise<NotificationElement> {
     // 这里应该创建实际的HarmonyOS UI组件
     // 由于这是架构设计，返回一个模拟的元素对象
     
     const styleKey = `${notification.type}_${notification.priority}`;
     const style = this.styleCache.get(styleKey) || this.generateNotificationStyle(notification.type, notification.priority);
     
-    const element = {
+    const content: NotificationElementContent = {
+      title: notification.title,
+      message: notification.message,
+      actions: notification.actions || [],
+      timestamp: notification.timestamp
+    };
+    
+    const element: NotificationElement = {
       id: notification.id,
       type: 'notification',
-      style,
-      content: {
-        title: notification.title,
-        message: notification.message,
-        actions: notification.actions || [],
-        timestamp: notification.timestamp
-      },
+      style: style,
+      content: content,
       // 模拟的UI方法
       show: () => Promise.resolve(),
       hide: () => Promise.resolve(),
-      update: (content: any) => Promise.resolve(),
+      update: (content: Object) => Promise.resolve(),
       remove: () => Promise.resolve()
     };
     
@@ -556,7 +585,7 @@ export class NotificationRenderer extends BaseSingleton {
   /**
    * 设置元素事件
    */
-  private setupElementEvents(element: any, notification: SmartNotification): void {
+  private setupElementEvents(element: NotificationElement, notification: SmartNotification): void {
     // 点击事件
     element.onClick = () => {
       this.stats.userInteractions++;
@@ -580,7 +609,7 @@ export class NotificationRenderer extends BaseSingleton {
         
         // 执行操作处理器
         if (action.handler) {
-          action.handler().catch(error => {
+          action.handler().catch((error: Object) => {
             logger.error(`通知操作执行失败: ${actionId}`, error);
           });
         }
@@ -634,7 +663,7 @@ export class NotificationRenderer extends BaseSingleton {
   /**
    * 入场动画
    */
-  private async animateIn(element: any): Promise<void> {
+  private async animateIn(element: NotificationElement): Promise<void> {
     switch (this.config.animation) {
       case NotificationAnimation.SLIDE:
         await this.slideInAnimation(element);
@@ -701,7 +730,7 @@ export class NotificationRenderer extends BaseSingleton {
   /**
    * 淡出动画
    */
-  private async fadeOutAnimation(element: any): Promise<void> {
+  private async fadeOutAnimation(element: NotificationElement): Promise<void> {
     // 实现淡出动画
     logger.debug('执行淡出动画');
     await element.hide();
@@ -710,7 +739,7 @@ export class NotificationRenderer extends BaseSingleton {
   /**
    * 弹跳入场动画
    */
-  private async bounceInAnimation(element: any): Promise<void> {
+  private async bounceInAnimation(element: NotificationElement): Promise<void> {
     // 实现弹跳入场动画
     logger.debug('执行弹跳入场动画');
     await element.show();
@@ -719,7 +748,7 @@ export class NotificationRenderer extends BaseSingleton {
   /**
    * 弹跳出场动画
    */
-  private async bounceOutAnimation(element: any): Promise<void> {
+  private async bounceOutAnimation(element: NotificationElement): Promise<void> {
     // 实现弹跳出场动画
     logger.debug('执行弹跳出场动画');
     await element.hide();
@@ -728,8 +757,8 @@ export class NotificationRenderer extends BaseSingleton {
   /**
    * 更新通知元素
    */
-  private async updateNotificationElement(element: any, notification: SmartNotification): Promise<void> {
-    const content = {
+  private async updateNotificationElement(element: NotificationElement, notification: SmartNotification): Promise<void> {
+    const content: NotificationElementContent = {
       title: notification.title,
       message: notification.message,
       actions: notification.actions || [],
@@ -742,7 +771,7 @@ export class NotificationRenderer extends BaseSingleton {
   /**
    * 移除通知元素
    */
-  private async removeNotificationElement(element: any): Promise<void> {
+  private async removeNotificationElement(element: NotificationElement): Promise<void> {
     await element.remove();
   }
   
@@ -753,7 +782,9 @@ export class NotificationRenderer extends BaseSingleton {
     let oldestId: string | null = null;
     let oldestTime = Infinity;
     
-    for (const [id, displayInfo] of this.displayedNotifications.entries()) {
+    for (const entry of this.displayedNotifications.entries()) {
+      const id = entry[0];
+      const displayInfo = entry[1];
       if (displayInfo.startTime < oldestTime) {
         oldestTime = displayInfo.startTime;
         oldestId = id;

@@ -18,7 +18,7 @@ import { PermissionManager } from '../../../core/permission/PermissionManager';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { AppIcon, AppIconMap } from '../../../components/SystemIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { SmartNotificationService, NotificationEvent, CreateNotificationInput } from '../../../core/services/SmartNotificationService';
+import { SmartNotificationService, NotificationEvent, CreateNotificationInput, NotificationMetadata } from '../../../core/services/SmartNotificationService';
 import { CacheManager } from '../../../core/cache/CacheManager';
 import { NotificationCenter } from '../../../components/NotificationCenter';
 import { PerformanceIndicator } from '../../../components/PerformanceIndicator';
@@ -253,10 +253,9 @@ struct Index {
           case 'NewFollower': {
             const p: Object = event.payload as Object;
             const payloadRecord = p as Record<string, Object>;
-            const metadata: Record<string, Object> = {
-              type: 'new_follower',
-              user: payloadRecord.user
-            };
+            const metadata = new NotificationMetadata();
+            metadata.type = 'new_follower';
+            metadata.user = payloadRecord.user;
             const notifInput: CreateNotificationInput = {
               type: 'social',
               priority: 'medium',
@@ -266,17 +265,16 @@ struct Index {
               actionable: true,
               metadata: metadata
             };
-            const options: Record<string, Object> = { sound: true, vibration: true };
+            const options: { immediate?: boolean; delay?: number; callback?: (success: boolean, notificationId?: string) => void } = { immediate: true };
             await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
           case 'MutualFollow': {
             const p: Object = event.payload as Object;
             const payloadRecord = p as Record<string, Object>;
-            const metadata: Record<string, Object> = {
-              type: 'mutual_follow',
-              user: payloadRecord.user
-            };
+            const metadata = new NotificationMetadata();
+            metadata.type = 'mutual_follow';
+            metadata.user = payloadRecord.user;
             const notifInput: CreateNotificationInput = {
               type: 'social',
               priority: 'medium',
@@ -286,17 +284,16 @@ struct Index {
               actionable: true,
               metadata: metadata
             };
-            const options: Record<string, Object> = { sound: true, vibration: true };
+            const options: { immediate?: boolean; delay?: number; callback?: (success: boolean, notificationId?: string) => void } = { immediate: true };
             await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
           case 'Unfollowed': {
             const p: Object = event.payload as Object;
             const payloadRecord = p as Record<string, Object>;
-            const metadata: Record<string, Object> = {
-              type: 'unfollowed',
-              targetId: String(payloadRecord.user_id)
-            };
+            const metadata = new NotificationMetadata();
+            metadata.type = 'unfollowed';
+            metadata.targetId = String(payloadRecord.user_id);
             const notifInput: CreateNotificationInput = {
               type: 'social',
               priority: payloadRecord.was_mutual ? 'high' : 'low',
@@ -306,17 +303,16 @@ struct Index {
               actionable: true,
               metadata: metadata
             };
-            const options: Record<string, Object> = { sound: true, vibration: true };
+            const options: { immediate?: boolean; delay?: number; callback?: (success: boolean, notificationId?: string) => void } = { immediate: true };
             await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
           case 'MomentLiked': {
             const p: Object = event.payload as Object;
             const payloadRecord = p as Record<string, Object>;
-            const metadata: Record<string, Object> = {
-              type: 'moment_like',
-              targetId: String(payloadRecord.moment_id)
-            };
+            const metadata = new NotificationMetadata();
+            metadata.type = 'moment_like';
+            metadata.targetId = String(payloadRecord.moment_id);
             const notifInput: CreateNotificationInput = {
               type: 'social',
               priority: 'low',
@@ -326,17 +322,16 @@ struct Index {
               actionable: true,
               metadata: metadata
             };
-            const options: Record<string, Object> = { sound: true, vibration: true };
+            const options: { immediate?: boolean; delay?: number; callback?: (success: boolean, notificationId?: string) => void } = { immediate: true };
             await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
           case 'MomentCommented': {
             const p: Object = event.payload as Object;
             const payloadRecord = p as Record<string, Object>;
-            const metadata: Record<string, Object> = {
-              type: 'moment_comment',
-              targetId: String(payloadRecord.moment_id)
-            };
+            const metadata = new NotificationMetadata();
+            metadata.type = 'moment_comment';
+            metadata.targetId = String(payloadRecord.moment_id);
             const notifInput: CreateNotificationInput = {
               type: 'social',
               priority: 'medium',
@@ -346,17 +341,16 @@ struct Index {
               actionable: true,
               metadata: metadata
             };
-            const options: Record<string, Object> = { sound: true, vibration: true };
+            const options: { immediate?: boolean; delay?: number; callback?: (success: boolean, notificationId?: string) => void } = { immediate: true };
             await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
           case 'CommentReply': {
             const p: Object = event.payload as Object;
             const payloadRecord = p as Record<string, Object>;
-            const metadata: Record<string, Object> = {
-              type: 'comment_reply',
-              targetId: String(payloadRecord.moment_id)
-            };
+            const metadata = new NotificationMetadata();
+            metadata.type = 'comment_reply';
+            metadata.targetId = String(payloadRecord.moment_id);
             const notifInput: CreateNotificationInput = {
               type: 'social',
               priority: 'medium',
@@ -366,17 +360,16 @@ struct Index {
               actionable: true,
               metadata: metadata
             };
-            const options: Record<string, Object> = { sound: true, vibration: true };
+            const options: { immediate?: boolean; delay?: number; callback?: (success: boolean, notificationId?: string) => void } = { immediate: true };
             await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
           case 'GroupInviteReceived': {
             const p: Object = event.payload as Object;
             const payloadRecord = p as Record<string, Object>;
-            const metadata: Record<string, Object> = {
-              type: 'group_invite',
-              targetId: String(payloadRecord.group_id)
-            };
+            const metadata = new NotificationMetadata();
+            metadata.type = 'group_invite';
+            metadata.targetId = String(payloadRecord.group_id);
             const notifInput: CreateNotificationInput = {
               type: 'social',
               priority: 'high',
@@ -386,17 +379,16 @@ struct Index {
               actionable: true,
               metadata: metadata
             };
-            const options: Record<string, Object> = { sound: true, vibration: true };
+            const options: { immediate?: boolean; delay?: number; callback?: (success: boolean, notificationId?: string) => void } = { immediate: true };
             await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
           case 'GroupInviteResponse': {
             const p: Object = event.payload as Object;
             const payloadRecord = p as Record<string, Object>;
-            const metadata: Record<string, Object> = {
-              type: 'group_invite_response',
-              targetId: String(payloadRecord.group_id)
-            };
+            const metadata = new NotificationMetadata();
+            metadata.type = 'group_invite_response';
+            metadata.targetId = String(payloadRecord.group_id);
             const notifInput: CreateNotificationInput = {
               type: 'social',
               priority: payloadRecord.status === 'accepted' ? 'medium' : 'low',
@@ -406,17 +398,16 @@ struct Index {
               actionable: true,
               metadata: metadata
             };
-            const options: Record<string, Object> = { sound: true, vibration: true };
+            const options: { immediate?: boolean; delay?: number; callback?: (success: boolean, notificationId?: string) => void } = { immediate: true };
             await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
           case 'GroupApplicationReceived': {
             const p: Object = event.payload as Object;
             const payloadRecord = p as Record<string, Object>;
-            const metadata: Record<string, Object> = {
-              type: 'group_application',
-              targetId: String(payloadRecord.group_id)
-            };
+            const metadata = new NotificationMetadata();
+            metadata.type = 'group_application';
+            metadata.targetId = String(payloadRecord.group_id);
             const notifInput: CreateNotificationInput = {
               type: 'social',
               priority: 'high',
@@ -426,17 +417,16 @@ struct Index {
               actionable: true,
               metadata: metadata
             };
-            const options: Record<string, Object> = { sound: true, vibration: true };
+            const options: { immediate?: boolean; delay?: number; callback?: (success: boolean, notificationId?: string) => void } = { immediate: true };
             await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
           case 'GroupApplicationResponse': {
             const p: Object = event.payload as Object;
             const payloadRecord = p as Record<string, Object>;
-            const metadata: Record<string, Object> = {
-              type: 'group_application_response',
-              targetId: String(payloadRecord.group_id)
-            };
+            const metadata = new NotificationMetadata();
+            metadata.type = 'group_application_response';
+            metadata.targetId = String(payloadRecord.group_id);
             const notifInput: CreateNotificationInput = {
               type: 'social',
               priority: payloadRecord.status === 'accepted' ? 'medium' : 'low',
@@ -446,7 +436,7 @@ struct Index {
               actionable: true,
               metadata: metadata
             };
-            const options: Record<string, Object> = { sound: true, vibration: true };
+            const options: { immediate?: boolean; delay?: number; callback?: (success: boolean, notificationId?: string) => void } = { immediate: true };
             await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
@@ -454,10 +444,9 @@ struct Index {
             const p: Object = event.payload as Object;
             const payloadRecord = p as Record<string, Object>;
             const priority = payloadRecord.severity === 'error' ? 'critical' : (payloadRecord.severity === 'warning' ? 'high' : 'medium');
-            const metadata: Record<string, Object> = {
-              type: 'system_announcement',
-              targetId: String(payloadRecord.id)
-            };
+            const metadata = new NotificationMetadata();
+            metadata.type = 'system_announcement';
+            metadata.targetId = String(payloadRecord.id);
             const notifInput: CreateNotificationInput = {
               type: 'system',
               priority: priority as 'low' | 'medium' | 'high' | 'critical',
@@ -467,7 +456,7 @@ struct Index {
               actionable: true,
               metadata: metadata
             };
-            const options: Record<string, Object> = { sound: true, vibration: true };
+            const options: { immediate?: boolean; delay?: number; callback?: (success: boolean, notificationId?: string) => void } = { immediate: true };
             await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
@@ -614,7 +603,7 @@ struct Index {
               onClose: () => {
                 NotificationRenderer.getInstance().hideNotification(notification.id, 'manual');
               },
-              onClick: () => {
+              onBannerClick: () => {
                 NotificationRenderer.getInstance().handleClick(notification);
               },
               onAction: (action: NotificationAction) => {

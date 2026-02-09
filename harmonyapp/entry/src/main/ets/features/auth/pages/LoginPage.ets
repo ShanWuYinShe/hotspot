@@ -29,7 +29,7 @@ struct LoginPage {
   @State loginId: string = '';
   @State password: string = '';
   @State isLoading: boolean = false;
-  @State loadingStage: ResourceStr = '';
+  @State loadingStage: string = '';
   @State loadingProgress: number = 0;
   @State loginMode: 'temp' | 'register' | 'login' = 'temp';
   @State redirectUrl: string = '';
@@ -58,7 +58,7 @@ struct LoginPage {
     Column() {
       if (this.isLoading) {
         SystemLoadingView({ 
-          message: this.loadingStage || $r('app.string.auth_login'), 
+          message: this.loadingStage || $r('app.string.auth_login').toString(), 
           progressType: 'determinate',
           showProgress: true,
           externalProgress: this.loadingProgress
@@ -211,7 +211,7 @@ struct LoginPage {
     this.loadingProgress = 0;
 
     try {
-      this.loadingStage = $r('app.string.common_loading');
+      this.loadingStage = $r('app.string.common_loading').toString();
       this.loadingProgress = 20;
       await this.delay(300);
 
@@ -224,7 +224,7 @@ struct LoginPage {
       const response = await ApiClient.createTempUser(request);
       
       if (response.code === 0 && response.data) {
-        this.loadingStage = $r('app.string.auth_login_success');
+        this.loadingStage = $r('app.string.auth_login_success').toString();
         this.loadingProgress = 80;
         await this.handleAuthSuccess(response.data);
         this.loadingProgress = 100;

@@ -264,16 +264,18 @@ export interface GroupMessageItem {
   read_count?: number;
 }
 
+export interface PrivateChatLastMessage {
+  message_id: string;
+  content?: string;
+  type: MessageType;
+  sender_id: number;
+  sent_at: string;
+}
+
 export interface PrivateChatListItem {
   other_user: UserInfo;
   unread_count: number;
-  last_message?: {
-    message_id: string;
-    content?: string;
-    type: MessageType;
-    sender_id: number;
-    sent_at: string;
-  };
+  last_message?: PrivateChatLastMessage;
   last_activity_at: string;
   is_muted: boolean;
   is_pinned: boolean;
@@ -810,14 +812,6 @@ export interface MessageLimit {
   is_unlocked: boolean;
 }
 
-export interface PrivateChatLastMessage {
-  message_id: string;
-  content?: string;
-  type: MessageType;
-  sender_id: number;
-  sent_at: string;
-}
-
 export interface PrivateChatDetailData {
   other_user: UserInfo;
   message_limit?: MessageLimit;
@@ -1201,36 +1195,42 @@ export interface MarkAllMessagesReadRequest {}
 
 // ==================== 地图渲染 API ====================
 
+export interface MapRenderCluster {
+  count: number;
+  label?: string;
+  preview_urls?: string[];
+}
+
+export interface MapRenderEntity {
+  title: string;
+  subtitle?: string;
+  cover_url?: string;
+  payload_id: string;
+  category?: string;
+}
+
 export interface MapRenderItem {
   id: string;
   type: 'cluster' | 'user' | 'group' | 'moment';
   location: GeoPoint;
-  
-  cluster?: {
-    count: number;
-    label?: string;
-    preview_urls?: string[];
-  };
+  cluster?: MapRenderCluster;
+  entity?: MapRenderEntity;
+}
 
-  entity?: {
-    title: string;
-    subtitle?: string;
-    cover_url?: string;
-    payload_id: string;
-    category?: string;
-  };
+export interface MapRenderTimeRange {
+  start_time?: string;
+  end_time?: string;
+}
+
+export interface MapRenderFilter {
+  data_type?: 'user' | 'group' | 'moment' | 'all';
+  only_friends?: boolean;
+  time_range?: MapRenderTimeRange;
 }
 
 export interface MapRenderRequest {
   viewport: MapViewport;
-  filter?: {
-    data_type?: 'user' | 'group' | 'moment' | 'all';
-    only_friends?: boolean;
-    time_range?: {
-      start_time?: string;
-      end_time?: string;
-    };
-  };
+  filter?: MapRenderFilter;
 }
 
 export interface MapRenderData {
@@ -1287,15 +1287,17 @@ export interface NotificationItem {
 
 export interface GetUnreadNotificationCountRequest {}
 
+export interface UnreadNotificationBreakdown {
+  like: number;
+  comment: number;
+  follow: number;
+  system: number;
+  mention: number;
+}
+
 export interface UnreadNotificationCountData {
   total: number;
-  breakdown?: {
-    like: number;
-    comment: number;
-    follow: number;
-    system: number;
-    mention: number;
-  };
+  breakdown?: UnreadNotificationBreakdown;
 }
 
 // ==================== 通知订阅设置API类型 ====================
@@ -1541,13 +1543,15 @@ export interface GlobalSettings {
   version: string;
 }
 
+export interface FetchGlobalSettingsContext {
+  os: 'ios' | 'android' | 'web' | 'harmony';
+  app_version: string;
+  device_id?: string;
+  language?: string;
+}
+
 export interface FetchGlobalSettingsRequest {
-  context: {
-    os: 'ios' | 'android' | 'web' | 'harmony';
-    app_version: string;
-    device_id?: string;
-    language?: string;
-  };
+  context: FetchGlobalSettingsContext;
   current_version?: string;
 }
 
@@ -1630,6 +1634,17 @@ export interface AdminGroupItem extends GroupInfo {
   created_at: string;
 }
 
+export interface AdminGroupDetailSettings {
+  join_method: GroupJoinMethod;
+  is_searchable: boolean;
+  has_password: boolean;
+}
+
+export interface AdminGroupDetailStats {
+  messages_count: number;
+  active_members_today: number;
+}
+
 export interface AdminGroupDetail extends GroupInfo {
   description?: string;
   tags?: string[];
@@ -1637,16 +1652,9 @@ export interface AdminGroupDetail extends GroupInfo {
   owner: UserInfo;
   created_at: string;
   location?: Location;
-  settings: {
-    join_method: GroupJoinMethod;
-    is_searchable: boolean;
-    has_password: boolean;
-  };
+  settings: AdminGroupDetailSettings;
   admins?: UserInfo[];
-  stats: {
-    messages_count: number;
-    active_members_today: number;
-  };
+  stats: AdminGroupDetailStats;
   dismissal_history?: AdminDismissalRecord[];
 }
 

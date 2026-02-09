@@ -102,14 +102,14 @@ struct CreateGroupPage {
       const request: CreateGroupRequest = {
         name: this.groupName.trim(),
         description: this.groupDescription.trim() || undefined,
-        settings: {
+        location: {
           latitude: this.localLocation.latitude,
           longitude: this.localLocation.longitude,
-          location_name: this.localLocation.locationName || "南天门",
-          password: this.isPasswordRequired ? this.groupPassword.trim() : undefined,
-          max_members: this.maxMembers,
-          join_method: 'open' 
-        }
+          location_name: this.localLocation.locationName || "南天门"
+        },
+        password: this.isPasswordRequired ? this.groupPassword.trim() : undefined,
+        max_members: this.maxMembers,
+        join_method: 'open'
       };
 
       const response = await ApiClient.createGroupChat(request);

@@ -1215,7 +1215,15 @@ export function parseServerEvent(data: string): ServerEvent | BatchEventsEvent |
     }
     
     // 转换为 ServerEvent（移除 event_id，因为类型定义中不包含）
-    const { event_id, ...event } = raw
+    const rawRecord = raw as Record<string, Object>;
+    const event: Record<string, Object> = {};
+    const rawKeys = Object.keys(rawRecord);
+    for (let i = 0; i < rawKeys.length; i++) {
+      const key = rawKeys[i];
+      if (key !== 'event_id') {
+        event[key] = rawRecord[key];
+      }
+    }
     return event as ServerEvent
   } catch (e) {
     console.error('Failed to parse WebSocket message:', e)

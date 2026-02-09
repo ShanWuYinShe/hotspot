@@ -15,6 +15,7 @@ import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon, SystemIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 import { SystemCard } from '../../../components/SystemCard';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 
 const DOMAIN_NUMBER: number = 0xFF10;
 const TAG: string = 'SearchPage';
@@ -54,9 +55,18 @@ struct SearchPage {
       // 为了简单体验，这里一次性搜索所有类型，或者也可以只搜索当前tab
       // 考虑到Tabs可以滑动，预加载比较好。
       
-      const p1 = ApiClient.searchUsersByKeyword({ kw: this.keyword, latitude: lat, longitude: lng });
-      const p2 = ApiClient.searchGroupsByKeyword({ kw: this.keyword, latitude: lat, longitude: lng });
-      const p3 = ApiClient.searchMomentsByKeyword({ kw: this.keyword, latitude: lat, longitude: lng });
+      const p1 = ApiClient.searchUsersByKeyword({ 
+        kw: this.keyword, 
+        reference_point: { latitude: lat, longitude: lng }
+      });
+      const p2 = ApiClient.searchGroupsByKeyword({ 
+        kw: this.keyword, 
+        reference_point: { latitude: lat, longitude: lng }
+      });
+      const p3 = ApiClient.searchMomentsByKeyword({ 
+        kw: this.keyword, 
+        reference_point: { latitude: lat, longitude: lng }
+      });
 
       const results = await Promise.all([p1, p2, p3]);
       const res1 = results[0];
@@ -64,10 +74,9 @@ struct SearchPage {
       const res3 = results[2];
 
       // 过滤掉“自己”（避免搜索结果里出现当前用户）
-      const me = GlobalStateManager.getInstance().getCurrentUser();
-      const myId = me?.user_id;
+      const myId = await AuthAccountManager.getCurrentUserId();
       if (res1.code === 0 && res1.data) {
-        this.userResults = typeof myId === 'number'
+        this.userResults = (myId !== null && typeof myId === 'number')
           ? res1.data.items.filter((u: UserSearchItem) => u.user_id !== myId)
           : res1.data.items;
       }

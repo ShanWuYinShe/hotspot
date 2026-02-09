@@ -198,7 +198,7 @@ import {
   GetFeedTrendingRequest,
   FeedGroupItem,
   FeedUserItem,
-  FeedTrendingData,
+  TrendingBundle,
   FeedFeedbackRequest,
   
   // 标签
@@ -1251,8 +1251,8 @@ export class ApiClient {
   /**
    * 获取热门内容
    */
-  static async getFeedTrending(params: GetFeedTrendingRequest): Promise<ApiResponse<FeedTrendingData>> {
-    return HttpUtil.post<ApiResponse<FeedTrendingData>, GetFeedTrendingRequest>(ApiEndpoints.FEED.LIST_TRENDING, params);
+  static async getFeedTrending(params: GetFeedTrendingRequest): Promise<ApiResponse<TrendingBundle>> {
+    return HttpUtil.post<ApiResponse<TrendingBundle>, GetFeedTrendingRequest>(ApiEndpoints.FEED.LIST_TRENDING, params);
   }
 
   /**

@@ -80,9 +80,9 @@ struct SubscriptionsPage {
 
   private setValue(key: keyof SubscriptionsData, value: boolean): void {
     if (!this.data) return;
-    const dataRecord = this.data as Record<string, boolean>;
+    const dataRecord = (this.data as Object) as Record<string, boolean>;
     dataRecord[key as string] = value;
-    this.data = dataRecord as SubscriptionsData;
+    this.data = (dataRecord as Object) as SubscriptionsData;
   }
 
   private async update(key: keyof SubscriptionsData, value: boolean): Promise<void> {

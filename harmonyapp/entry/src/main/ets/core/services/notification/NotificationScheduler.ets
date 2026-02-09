@@ -9,7 +9,7 @@ import { TimerManager } from '../../utils/TimerManager';
 import { ErrorHandler, ErrorType, ErrorLevel } from '../../utils/ErrorHandler';
 import { ConfigMerger } from '../../utils/ConfigMerger';
 import { NOTIFICATION_CONSTANTS } from '../../constants/SystemConstants';
-import { SmartNotification, NotificationDataManager } from './NotificationDataManager';
+import { SmartNotification, SmartNotificationInput, NotificationDataManager } from './NotificationDataManager';
 
 const logger = createLogger('NotificationScheduler');
 
@@ -57,6 +57,15 @@ interface ScheduledTask {
   scheduledTime: number;
   attempts: number;
   maxAttempts: number;
+  callback?: (success: boolean, notificationId?: string) => void;
+}
+
+/**
+ * 批量调度通知项
+ */
+export interface BatchScheduleItem {
+  notification: SmartNotification;
+  delay: number;
   callback?: (success: boolean, notificationId?: string) => void;
 }
 
@@ -271,7 +280,8 @@ export class NotificationScheduler extends BaseSingleton {
       }
       
       // 发送通知
-      const notificationId = await this.dataManager!.addNotification(notification);
+      const notificationInput = notification as Object as SmartNotificationInput;
+      const notificationId = await this.dataManager!.addNotification(notificationInput);
       
       // 记录限流历史
       this.recordThrottleHistory();
@@ -295,7 +305,7 @@ export class NotificationScheduler extends BaseSingleton {
         callback(false);
       }
       
-      throw error;
+      throw (error instanceof Error) ? error : new Error(String(error));
     } finally {
       // 简单性能日志
       const duration = Date.now() - startTime;
@@ -334,7 +344,7 @@ export class NotificationScheduler extends BaseSingleton {
       return taskId;
     } catch (error) {
       ErrorHandler.handle(error, 'NotificationScheduler.schedule', ErrorType.BUSINESS, ErrorLevel.MEDIUM);
-      throw error;
+      throw (error instanceof Error) ? error : new Error(String(error));
     }
   }
   
@@ -342,11 +352,7 @@ export class NotificationScheduler extends BaseSingleton {
    * 批量调度通知
    */
   scheduleBatch(
-    notifications: Array<{
-      notification: SmartNotification;
-      delay: number;
-      callback?: (success: boolean, notificationId?: string) => void;
-    }>
+    notifications: BatchScheduleItem[]
   ): string[] {
     try {
       const taskIds: string[] = [];
@@ -360,7 +366,7 @@ export class NotificationScheduler extends BaseSingleton {
       return taskIds;
     } catch (error) {
       ErrorHandler.handle(error, 'NotificationScheduler.scheduleBatch', ErrorType.BUSINESS, ErrorLevel.MEDIUM);
-      throw error;
+      throw (error instanceof Error) ? error : new Error(String(error));
     }
   }
   
@@ -384,10 +390,16 @@ export class NotificationScheduler extends BaseSingleton {
    * 获取调度统计
    */
   getStats(): SchedulerStats {
-    return {
-      ...this.stats,
-      pendingTasks: this.scheduledTasks.size
+    const result: SchedulerStats = {
+      totalScheduled: this.stats.totalScheduled,
+      totalSent: this.stats.totalSent,
+      totalFailed: this.stats.totalFailed,
+      pendingTasks: this.scheduledTasks.size,
+      averageDelay: this.stats.averageDelay,
+      throttledCount: this.stats.throttledCount,
+      quietHoursBlocked: this.stats.quietHoursBlocked
     };
+    return result;
   }
   
   /**
@@ -484,7 +496,9 @@ export class NotificationScheduler extends BaseSingleton {
       const readyTasks: ScheduledTask[] = [];
       
       // 找出准备执行的任务
-      for (const [taskId, task] of this.scheduledTasks.entries()) {
+      for (const entry of this.scheduledTasks.entries()) {
+        const taskId = entry[0];
+        const task = entry[1];
         if (task.scheduledTime <= now) {
           readyTasks.push(task);
           this.scheduledTasks.delete(taskId);
@@ -586,7 +600,9 @@ export class NotificationScheduler extends BaseSingleton {
     const maxAge = 24 * 60 * 60 * 1000; // 24小时
     const expiredTaskIds: string[] = [];
     
-    for (const [taskId, task] of this.scheduledTasks.entries()) {
+    for (const entry of this.scheduledTasks.entries()) {
+      const taskId = entry[0];
+      const task = entry[1];
       if (now - task.scheduledTime > maxAge) {
         expiredTaskIds.push(taskId);
       }

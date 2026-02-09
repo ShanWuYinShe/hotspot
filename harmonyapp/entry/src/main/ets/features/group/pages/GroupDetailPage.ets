@@ -96,13 +96,8 @@ struct GroupDetailPage {
     this.errorMessage = '';
 
     try {
-      const lat = this.currentLocation?.latitude || 0;
-      const lng = this.currentLocation?.longitude || 0;
-
       const response = await ApiClient.getGroupDetail({
-        group_id: this.groupId,
-        latitude: lat,
-        longitude: lng
+        group_id: this.groupId
       });
 
       if (response.code === 0 && response.data) {
