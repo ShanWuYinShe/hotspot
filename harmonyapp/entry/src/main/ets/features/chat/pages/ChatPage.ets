@@ -33,7 +33,7 @@ interface ChatMessage {
   sentAt: string;
   isSelf: boolean;
   isSystem: boolean;
-  rawData?: PrivateMessageItem | GroupMessageItem; // 原始数据，用于缓存
+  rawData?: Object; // 原始数据，用于缓存
 }
 
 interface ChatParams {

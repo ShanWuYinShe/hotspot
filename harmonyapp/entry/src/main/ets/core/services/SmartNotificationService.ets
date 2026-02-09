@@ -841,10 +841,11 @@ export class SmartNotificationService extends BaseSingleton {
     }
     
     // 配置调度器
-    const schedulerConfig = new SchedulerConfigUpdate();
-    schedulerConfig.quietHours = this.config.quietHours;
-    schedulerConfig.batchDelay = this.config.batchDelay;
-    schedulerConfig.enableThrottling = this.config.enableThrottling;
+    const schedulerConfig: SchedulerConfigUpdate = {
+      quietHours: this.config.quietHours,
+      batchDelay: this.config.batchDelay,
+      enableThrottling: this.config.enableThrottling
+    };
     this.scheduler.updateConfig(schedulerConfig);
     
     // 配置渲染器
@@ -893,7 +894,7 @@ export class SmartNotificationService extends BaseSingleton {
   private startCleanupTimer(): void {
     // 每小时执行一次清理
     this.cleanupTimerId = TimerManager.setInterval(() => {
-      this.cleanup().catch(error => {
+      this.cleanup().catch((error: Error) => {
         logger.error('定时清理失败', error);
       });
     }, 60 * 60 * 1000, 'notification_cleanup');

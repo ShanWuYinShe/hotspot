@@ -828,12 +828,6 @@ export interface GroupAnnouncementUpdatedEvent {
 /**
  * 群组信息更新
  */
-export interface GroupUpdatedFields {
-  name?: string
-  avatar_url?: string
-  description?: string
-}
-
 export interface GroupUpdatedPayload {
   group_id: string
   updated_fields: GroupUpdatedFields  // 只包含变更的字段
@@ -1186,14 +1180,14 @@ function markEventProcessed(eventId: string): void {
  */
 export function parseServerEvent(data: string): ServerEvent | BatchEventsEvent | null {
   try {
-    const raw = JSON.parse(data) as Object
+    const raw = JSON.parse(data) as Record<string, Object>
     
     // 检查是否是批量事件
-    if (raw.type === 'BatchEvents' && raw.payload && raw.payload.events) {
+    if (raw['type'] === 'BatchEvents' && raw['payload']) {
       // 批量事件本身不需要 event_id，但内部事件需要逐个处理
       // 对批量事件中的每个事件进行去重检查
-      const batchEvent = raw as BatchEventsEvent
-      batchEvent.payload.events = batchEvent.payload.events.filter((subEvent) => {
+      const batchEvent = (raw as Object) as BatchEventsEvent
+      batchEvent.payload.events = batchEvent.payload.events.filter((subEvent: ServerWebSocketEvent): boolean => {
         if (subEvent.event_id) {
           if (isEventProcessed(subEvent.event_id)) {
             console.warn(`批量事件中重复事件已忽略: ${subEvent.event_id}`)
@@ -1207,8 +1201,8 @@ export function parseServerEvent(data: string): ServerEvent | BatchEventsEvent |
     }
     
     // 检查是否有 event_id（ServerWebSocketEvent 格式）
-    if (raw.event_id) {
-      const eventId = raw.event_id as string
+    if (raw['event_id']) {
+      const eventId = raw['event_id'] as string
       
       // 去重检查
       if (isEventProcessed(eventId)) {
@@ -1221,13 +1215,12 @@ export function parseServerEvent(data: string): ServerEvent | BatchEventsEvent |
     }
     
     // 转换为 ServerEvent（移除 event_id，因为类型定义中不包含）
-    const rawRecord = raw as Record<string, Object>;
     const event: Record<string, Object> = {};
-    const rawKeys = Object.keys(rawRecord);
+    const rawKeys = Object.keys(raw);
     for (let i = 0; i < rawKeys.length; i++) {
       const key = rawKeys[i];
       if (key !== 'event_id') {
-        event[key] = rawRecord[key];
+        event[key] = raw[key];
       }
     }
     return (event as Object) as ServerEvent
