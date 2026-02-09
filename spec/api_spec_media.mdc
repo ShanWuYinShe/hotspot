@@ -1,27 +1,26 @@
 ---
 alwaysApply: true
 ---
-# HotSpot API 规范 - 文件与媒体上传 API 模块 v0.0.1 (RPC)
+# HotSpot API - 文件与媒体上传
 
 > 本文档定义 HotSpot 文件与媒体上传 (`media`) 相关的 RPC 接口。
 
-## 服务定义
+## 模块信息
 
-- **Service Namespace**: `media`
-- **Base Path**: `/api/v1/media/`
+- **命名空间**: `media`
+- **基础路径**: `/api/v1/media/`
+- **引用**: 
+  - 基础规范：`@api_spec_base.mdc`
+  - 通用类型：`@api_spec_types.mdc`
+  - 错误码：`@api_spec_errors.mdc`
 
-## 契约引用
+## 端点总览
 
-- 公共基础类型：`@api_spec_common.mdc`
-- 错误码：`@spec/api_spec_errors.mdc`
-
-## 接口概览（按子域）
-
-| 子域 | 端点 | 说明 | Request | Response |
-|-----|------|------|---------|----------|
-| 上传（Presigned） | `POST /api/v1/media/presign_upload` | 申请上传预签名 | `PresignUploadRequest` | `ApiResponse<PresignedUpload>` |
-| 上传（Presigned） | `POST /api/v1/media/batch_presign_upload` | 批量申请上传预签名 | `BatchPresignUploadRequest` | `ApiResponse<BatchPresignedUpload>` |
-| 上传（Presigned） | `POST /api/v1/media/complete_upload` | 完成上传 | `CompleteUploadRequest` | `ApiResponse<UploadedMedia>` |
+| 端点 | 说明 | 认证 | 幂等 |
+|-----|------|------|------|
+| `POST /api/v1/media/presign_upload` | 申请上传预签名 | 必须 | 无 |
+| `POST /api/v1/media/batch_presign_upload` | 批量申请上传预签名 | 必须 | 无 |
+| `POST /api/v1/media/complete_upload` | 完成上传 | 必须 | MUST |
 
 ## 设计理念
 
@@ -37,7 +36,31 @@ alwaysApply: true
 - 后端验证：`file_id` 存在性、用户权限、分类匹配
 - URL 由后端内部解析，客户端无法伪造
 
-## 核心类型定义
+**上传流程**：
+
+采用 "Presigned URL" 模式：
+- **高性能**：客户端直传对象存储，不占用应用服务器带宽
+- **兼容性**：支持 S3 兼容对象存储
+- **安全性**：上传凭证短期有效，且绑定文件特征
+
+**核心流程**：
+1. `presign_upload`：申请上传，获取 `upload_url`
+2. 客户端对 `upload_url` 执行对象存储直传（仅发生在存储服务域名上，不属于 HotSpot API）
+3. `complete_upload`：通知服务端上传完成，生成业务 `file_id`
+
+## 分类限制
+
+| 分类 | 允许的MIME类型 | 最大大小 | 说明 |
+|-----|--------------|--------|------|
+| `avatar` | image/jpeg, image/png, image/webp | 5MB | 用户头像 |
+| `group_avatar` | image/jpeg, image/png, image/webp | 5MB | 群组头像 |
+| `moment_image` | image/jpeg, image/png, image/webp, image/gif | 10MB | 生活瞬间图片 |
+| `chat_image` | image/jpeg, image/png, image/webp, image/gif | 10MB | 聊天图片 |
+| `chat_video` | video/mp4, video/quicktime | 100MB | 聊天视频 |
+| `chat_audio` | audio/mpeg, audio/aac, audio/ogg | 20MB | 聊天语音 |
+| `chat_file` | 任意类型 | 100MB | 聊天文件 |
+
+## 类型定义
 
 ```typescript
 type MediaCategory = 'avatar' | 'group_avatar' | 'moment_image' | 'chat_image' | 'chat_video' | 'chat_audio' | 'chat_file';
@@ -58,50 +81,38 @@ interface UploadedMedia {
   width?: number;
   height?: number;
 }
+
+interface PresignUploadRequest {
+  file_name: string;
+  file_size: number;
+  mime_type: string;
+  category: MediaCategory;
+  md5?: string;
+}
+
+interface BatchPresignUploadRequest {
+  files: PresignUploadRequest[];  // 最多 9 个文件（与瞬间图片上限一致）
+}
+
+interface BatchPresignedUpload {
+  uploads: PresignedUpload[];     // 与请求 files 一一对应
+}
+
+interface CompleteUploadRequest {
+  upload_id: string;
+}
 ```
 
-## 分类限制
+## 端点详情
 
-| 分类 | 允许的MIME类型 | 最大大小 | 说明 |
-|-----|--------------|--------|------|
-| `avatar` | image/jpeg, image/png, image/webp | 5MB | 用户头像 |
-| `group_avatar` | image/jpeg, image/png, image/webp | 5MB | 群组头像 |
-| `moment_image` | image/jpeg, image/png, image/webp, image/gif | 10MB | 生活瞬间图片 |
-| `chat_image` | image/jpeg, image/png, image/webp, image/gif | 10MB | 聊天图片 |
-| `chat_video` | video/mp4, video/quicktime | 100MB | 聊天视频 |
-| `chat_audio` | audio/mpeg, audio/aac, audio/ogg | 20MB | 聊天语音 |
-| `chat_file` | 任意类型 | 100MB | 聊天文件 |
-
-## 错误码说明
-
-本模块使用的错误码定义于 `@spec/api_spec_errors.mdc`，主要涉及：
-
-| 错误码 | 说明 | 相关接口 |
-|-------|------|---------|
-| `10002` | 参数格式错误 | `presign_upload`（MIME 类型不匹配） |
-| `10005` | 请求体过大 | `presign_upload`（超出系统配置限制） |
-| `10360` | 文件/媒体不存在 | `complete_upload`（上传会话无效或已过期） |
-| `10402` | 资源状态冲突 | `complete_upload`（文件未上传或校验失败） |
-
-## API 详情
-
-### 文件与媒体上传 API (Presigned 模式)
-
-采用 "Presigned URL" 模式：
-- **高性能**：客户端直传对象存储，不占用应用服务器带宽
-- **兼容性**：支持 S3 兼容对象存储
-- **安全性**：上传凭证短期有效，且绑定文件特征
-
-**核心流程**：
-1. `presign_upload`：申请上传，获取 `upload_url`
-2. 客户端对 `upload_url` 执行对象存储直传（仅发生在存储服务域名上，不属于 HotSpot API）
-3. `complete_upload`：通知服务端上传完成，生成业务 `file_id`
-
-#### POST /api/v1/media/presign_upload
+### POST /api/v1/media/presign_upload
 
 申请上传预签名。
 
-**Request**:
+- **认证**: 必须
+- **幂等**: 无
+
+**Request**: `PresignUploadRequest`
 ```typescript
 interface PresignUploadRequest {
   file_name: string;
@@ -111,22 +122,31 @@ interface PresignUploadRequest {
   md5?: string;
 }
 ```
+
 **Response**: `ApiResponse<PresignedUpload>`
 
-**可能错误码**：`10002`、`10005`
+**错误码**: `10000`
 
-#### [客户端操作] 执行上传
+### [客户端操作] 执行上传
 
 - Method: `PUT`（对象存储直传，仅发生在存储服务域名上）
 - URL: `upload_url`
 - Headers: `headers` from response
 - Body: File Binary Data
 
-#### POST /api/v1/media/batch_presign_upload
+### POST /api/v1/media/batch_presign_upload
 
 批量申请上传预签名。适用于瞬间发布（多图）、聊天批量发文件等场景。
 
-**Request**:
+- **认证**: 必须
+- **幂等**: 无
+
+**说明**：
+- 批量预签名是原子操作：任一文件校验失败则整批失败
+- 每个文件独立获得 `upload_url`，客户端可并发上传
+- 上传完成后逐个调用 `complete_upload` 确认
+
+**Request**: `BatchPresignUploadRequest`
 ```typescript
 interface BatchPresignUploadRequest {
   files: PresignUploadRequest[];  // 最多 9 个文件（与瞬间图片上限一致）
@@ -136,27 +156,25 @@ interface BatchPresignedUpload {
   uploads: PresignedUpload[];     // 与请求 files 一一对应
 }
 ```
+
 **Response**: `ApiResponse<BatchPresignedUpload>`
 
-**可能错误码**：`10002`、`10003`（文件数量超出限制）、`10005`
+**错误码**: `10000`
 
-**说明**：
-- 批量预签名是原子操作：任一文件校验失败则整批失败
-- 每个文件独立获得 `upload_url`，客户端可并发上传
-- 上传完成后逐个调用 `complete_upload` 确认
-
-#### POST /api/v1/media/complete_upload
+### POST /api/v1/media/complete_upload
 
 完成上传。
 
-**幂等性**：同一 `upload_id` 的重复提交必须返回相同的 `UploadedMedia`。
+- **认证**: 必须
+- **幂等**: MUST（同一 `upload_id` 的重复提交必须返回相同的 `UploadedMedia`）
 
-**Request**:
+**Request**: `CompleteUploadRequest`
 ```typescript
 interface CompleteUploadRequest {
   upload_id: string;
 }
 ```
+
 **Response**: `ApiResponse<UploadedMedia>`
 
-**可能错误码**：`10360`、`10402`
+**错误码**: `10000` `10300` `10400`

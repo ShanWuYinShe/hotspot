@@ -12,8 +12,9 @@ alwaysApply: false
 - 分层架构、错误处理、数据访问、鉴权与幂等
 
 权威引用：
-- **API 契约**：`@spec/api_spec.mdc`
-- **通用契约**：`@api_spec_common.mdc`
+- **API 契约**：`@spec/api_spec_index.mdc`
+- **基础规范**：`@api_spec_base.mdc`
+- **通用类型**：`@api_spec_types.mdc`
 - **错误码**：`@spec/api_spec_errors.mdc`
 - **功能边界**：`@backend_doc.mdc`
 

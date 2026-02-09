@@ -1,0 +1,658 @@
+---
+alwaysApply: true
+---
+# HotSpot API - 管理后台核心
+
+> 本文档定义 HotSpot 管理后台核心功能的 RPC 接口，包括权限管理（RBAC）、审计日志和全局配置。
+> 内容审核相关接口（用户/群组/举报/标签/公告管理）定义在 `@api_spec_admin_moderation.mdc`。
+
+## 模块信息
+
+- **命名空间**: 
+  - `admin.rbac`
+  - `admin.audit`
+  - `admin.server_config`
+  - `admin.client_config`
+- **基础路径**: 
+  - `/api/v1/admin/rbac/`
+  - `/api/v1/admin/audit/`
+  - `/api/v1/admin/server_config/`
+  - `/api/v1/admin/client_config/`
+- **引用**: 
+  - 基础规范：`@api_spec_base.mdc`
+  - 通用类型：`@api_spec_types.mdc`
+  - 错误码：`@api_spec_errors.mdc`
+  - 客户端配置类型：`@api_spec_system.mdc`（`ClientConfig`、`FeatureSwitches`、`AppLimits`、`ContactInfo`）
+
+## 统一访问控制
+
+仅对 `/api/v1/admin/` 路径下接口生效：
+- 未登录/登录失效：返回 `10100`（认证失败）
+- 已登录但不是管理员：返回 `10200`（权限不足，message: "非系统管理员"）
+- 是管理员但缺少接口要求的权限：返回 `10200`（权限不足，message: "系统管理员权限不足: xxx"）
+
+## 幂等性（管理员写操作）
+
+所有具有创建/更新/删除/授权语义的管理员接口必须携带 `Idempotency-Key`。
+
+## 权限 key 约定
+
+所有管理员权限键必须严格遵循以下约定：
+
+| 权限 key | 说明 |
+|----------|------|
+| `admin.rbac.manage` | 管理员权限管理（授权/角色/权限） |
+| `admin.reports.read` | 查看举报列表 |
+| `admin.reports.write` | 处理举报 |
+| `admin.server_config.read` | 查看服务端配置 |
+| `admin.server_config.write` | 修改服务端配置 |
+| `admin.client_config.read` | 查看客户端配置 |
+| `admin.client_config.write` | 修改客户端配置 |
+| `admin.tags.read` | 查看标签列表 |
+| `admin.tags.write` | 删除/屏蔽标签 |
+| `admin.announcements.read` | 查看公告列表 |
+| `admin.announcements.write` | 发布/删除公告 |
+| `admin.users.read` | 查看用户列表/详情 |
+| `admin.users.write` | 封禁/解封用户 |
+| `admin.groups.read` | 查看群组列表/详情 |
+| `admin.groups.write` | 解散/封禁群组 |
+| `admin.audit.read` | 查看审计日志 |
+
+## 端点总览
+
+| 端点 | 说明 | 认证 | 幂等 |
+|------|------|------|------|
+| `POST /api/v1/admin/rbac/get_me` | 我的管理员权限 | 必须 | 无 |
+| `POST /api/v1/admin/rbac/list_permissions` | 权限字典 | 必须 + `admin.rbac.manage` | 无 |
+| `POST /api/v1/admin/rbac/roles/list` | 角色列表 | 必须 + `admin.rbac.manage` | 无 |
+| `POST /api/v1/admin/rbac/roles/create` | 创建角色 | 必须 + `admin.rbac.manage` | MUST |
+| `POST /api/v1/admin/rbac/roles/update` | 更新角色 | 必须 + `admin.rbac.manage` | 幂等语义 |
+| `POST /api/v1/admin/rbac/roles/delete` | 删除角色 | 必须 + `admin.rbac.manage` | 幂等语义 |
+| `POST /api/v1/admin/rbac/roles/set_permissions` | 设置角色权限 | 必须 + `admin.rbac.manage` | 幂等语义 |
+| `POST /api/v1/admin/rbac/admins/list` | 管理员列表 | 必须 + `admin.rbac.manage` | 无 |
+| `POST /api/v1/admin/rbac/admins/grant` | 授权/更新管理员 | 必须 + `admin.rbac.manage` | MUST |
+| `POST /api/v1/admin/rbac/admins/revoke` | 撤销管理员 | 必须 + `admin.rbac.manage` | 幂等语义 |
+| `POST /api/v1/admin/audit/list` | 审计日志列表 | 必须 + `admin.audit.read` | 无 |
+| `POST /api/v1/admin/audit/open_the_door` | 审计日志详情 | 必须 + `admin.audit.read` | 无 |
+| `POST /api/v1/admin/server_config/get` | 获取服务端配置 | 必须 + `admin.server_config.read` | 无 |
+| `POST /api/v1/admin/server_config/update_upload` | 更新上传策略 | 必须 + `admin.server_config.write` | 幂等语义 |
+| `POST /api/v1/admin/server_config/update_defaults` | 更新内容默认值 | 必须 + `admin.server_config.write` | 幂等语义 |
+| `POST /api/v1/admin/server_config/update_rate_limits` | 更新频率限制 | 必须 + `admin.server_config.write` | 幂等语义 |
+| `POST /api/v1/admin/client_config/get` | 获取客户端配置 | 必须 + `admin.client_config.read` | 无 |
+| `POST /api/v1/admin/client_config/update_features` | 更新功能开关 | 必须 + `admin.client_config.write` | 幂等语义 |
+| `POST /api/v1/admin/client_config/update_limits` | 更新应用限制 | 必须 + `admin.client_config.write` | 幂等语义 |
+| `POST /api/v1/admin/client_config/update_contact` | 更新联系信息 | 必须 + `admin.client_config.write` | 幂等语义 |
+
+## 类型定义
+
+以下类型定义于 `@api_spec_types.mdc`：
+- `UserInfo`
+- `GroupSettings`
+- `PaginationParams`
+- `PaginatedData<T>`
+- `ApiResponse<T>`
+
+```typescript
+// === RBAC 类型 ===
+
+interface AdminPermissions {
+  permissions: string[];  // '*' 表示拥有全部权限
+  roles: AdminRoleBasic[];
+}
+
+interface AdminRoleBasic {
+  role_id: string;
+  name: string;
+}
+
+interface AdminPermissionItem {
+  key: string;
+  description: string;
+}
+
+interface AdminRoleItem {
+  role_id: string;
+  name: string;
+  description?: string;
+  permissions: string[];
+}
+
+interface AdminOperatorItem {
+  user: UserInfo;
+  permissions: string[];  // '*' 表示拥有全部权限
+  roles: AdminRoleBasic[];
+}
+
+interface AdminRbacRolesListRequest {} // 直接返回全部角色，无需分页
+
+interface AdminRbacRoleCreateRequest {
+  name: string;
+  description?: string;
+}
+
+interface AdminRbacRoleUpdateRequest {
+  role_id: string;
+  name?: string;
+  description?: string;
+  clear_description?: boolean;
+}
+
+interface AdminRbacRoleDeleteRequest {
+  role_id: string;
+}
+
+interface AdminRbacRoleSetPermissionsRequest {
+  role_id: string;
+  permission_keys: string[];
+}
+
+interface AdminRbacAdminsListRequest {
+  pagination?: PaginationParams;
+}
+
+interface AdminRbacGrantAdminRequest {
+  user_id: string;
+  grant_all_permissions?: boolean;
+  role_ids: string[];
+}
+
+interface AdminRbacRevokeAdminRequest {
+  user_id: string;
+}
+
+// === 审计日志类型 ===
+
+type AuditAction = 
+  | 'user.ban'           // 封禁用户
+  | 'user.unban'         // 解封用户
+  | 'group.dismiss'      // 解散群组
+  | 'announcement.create'// 创建公告
+  | 'announcement.delete'// 删除公告
+  | 'role.create'        // 创建角色
+  | 'role.update'        // 更新角色
+  | 'role.delete'        // 删除角色
+  | 'role.set_permissions' // 设置角色权限
+  | 'admin.grant'        // 授权管理员
+  | 'admin.revoke'       // 撤销管理员
+  | 'report.handle'      // 处理举报
+  | 'tag.delete'         // 删除/屏蔽标签
+  | 'permission.grant'   // 授予权限
+  | 'permission.revoke'  // 撤销权限
+  | 'config.update';     // 更新系统配置
+
+type AuditTargetType = 'user' | 'group' | 'announcement' | 'role' | 'admin' | 'report' | 'tag' | 'config';
+
+type AuditDetails = 
+  | { type: 'user.ban'; reason?: string; duration_days?: number }
+  | { type: 'user.unban'; reason?: string }
+  | { type: 'group.dismiss'; reason?: string }
+  | { type: 'announcement.create'; title: string }
+  | { type: 'announcement.delete'; title: string }
+  | { type: 'role.create'; role_name: string; permissions: string[] }
+  | { type: 'role.update'; role_name: string; added_permissions?: string[]; removed_permissions?: string[] }
+  | { type: 'role.delete'; role_name: string }
+  | { type: 'role.set_permissions'; role_name: string; permissions: string[] }
+  | { type: 'admin.grant'; target_user_id: string; role_ids: string[]; grant_all_permissions?: boolean }
+  | { type: 'admin.revoke'; target_user_id: string }
+  | { type: 'report.handle'; report_id: string; action: string; note?: string }
+  | { type: 'tag.delete'; tag_name: string }
+  | { type: 'permission.grant'; permission: string }
+  | { type: 'permission.revoke'; permission: string }
+  | { type: 'config.update'; config_key: string };
+
+interface AuditLogItem {
+  log_id: string;
+  action: AuditAction;
+  operator: UserInfo;
+  target_type: AuditTargetType;
+  target_id: string;
+  target_name?: string;
+  details?: AuditDetails;
+  ip_location?: string;           // IP 地理位置，所有管理员可见
+  ip_address?: string;            // 需要 admin.audit.read_ip 权限
+  device_summary?: string;        // 设备摘要（脱敏后的 UA 信息）
+  created_at: string;
+}
+
+interface AuditLogListRequest {
+  pagination?: PaginationParams;
+  action?: AuditAction;
+  operator_id?: string;
+  target_type?: AuditTargetType;
+  target_id?: string;
+  start_time?: string;  // UTC ISO 8601
+  end_time?: string;    // UTC ISO 8601
+}
+
+interface AuditLogOpenTheDoorRequest {
+  log_id: string;
+}
+
+// === 全局配置类型 ===
+
+interface UploadConfig {
+  image_max_size: number;
+  video_max_size: number;
+  audio_max_size: number;
+  file_max_size: number;
+  allowed_image_types: string[];
+  allowed_video_types: string[];
+}
+
+interface ContentDefaults {
+  default_location_name: string;
+  default_group_avatar: string;
+  default_user_avatar: string;
+  default_group_settings: GroupSettings;  // GroupSettings 定义于 @api_spec_types.mdc
+}
+
+interface RateLimitConfig {
+  global_per_hour: number;
+  user_per_hour: number;
+  auth_send_code_per_minute: number;
+  auth_verify_code_per_10minutes: number;
+  auth_register_per_10minutes: number;
+  auth_login_per_10minutes: number;
+  auth_guest_per_10minutes: number;
+  auth_refresh_per_10minutes: number;
+  auth_reset_request_per_minute: number;
+  auth_reset_verify_per_10minutes: number;
+  auth_reset_per_10minutes: number;
+  moments_create_per_minute: number;
+  comments_create_per_minute: number;
+  reports_create_per_hour: number;
+}
+
+interface ServerConfig {
+  upload: UploadConfig;
+  defaults: ContentDefaults;
+  rate_limits: RateLimitConfig;
+  updated_at?: string;
+  updated_by_user_id?: string;
+}
+
+interface AdminClientConfig extends ClientConfig {
+  updated_at: string;
+  updated_by_user_id: string;
+}
+
+interface UpdateUploadConfigRequest {
+  upload: Partial<UploadConfig>;
+}
+
+interface UpdateDefaultsRequest {
+  default_location_name?: string;
+  default_group_avatar?: string;
+  default_user_avatar?: string;
+  default_group_settings?: Partial<GroupSettings>;
+}
+
+interface UpdateRateLimitsRequest {
+  rate_limits: Partial<RateLimitConfig>;
+}
+
+interface UpdateFeaturesRequest {
+  enable_public_registration?: boolean;
+  enable_guest_login?: boolean;
+  enable_moments?: boolean;
+  enable_nearby_people?: boolean;
+}
+
+interface UpdateLimitsRequest {
+  limits: Partial<AppLimits>;
+}
+
+interface UpdateContactRequest {
+  support_email?: string;
+  privacy_policy_url?: string;
+  terms_of_service_url?: string;
+  official_website?: string;
+}
+```
+
+## 端点详情
+
+### RBAC 管理 API
+
+**设计目标**：
+- **超级管理员**：`permissions` 包含 `'*'`，表示拥有全部管理员权限（包括所有细粒度权限）
+- **普通管理员**：通过角色/权限表获得细粒度权限，字段可见性由具体权限决定
+
+### POST /api/v1/admin/rbac/get_me
+
+获取我的管理员权限信息。
+
+- **认证**: 必须（仅要求"是管理员"，不要求 `admin.rbac.manage`）
+- **幂等**: 无
+
+**Request**: `{}`
+
+**Response**: `ApiResponse<AdminPermissions>`
+
+**错误码**: `10200`
+
+---
+
+### POST /api/v1/admin/rbac/list_permissions
+
+获取权限字典。
+
+- **认证**: 必须 + `admin.rbac.manage`
+- **幂等**: 无
+
+**Request**: `{}`
+
+**Response**: `ApiResponse<{ items: AdminPermissionItem[] }>`
+
+**错误码**: `10200`
+
+---
+
+### POST /api/v1/admin/rbac/roles/list
+
+获取角色列表。
+
+- **认证**: 必须 + `admin.rbac.manage`
+- **幂等**: 无
+
+**Request**: `AdminRbacRolesListRequest`
+
+**Response**: `ApiResponse<{ items: AdminRoleItem[] }>`
+
+**说明**：
+- RBAC 角色为系统配置数据，数量有限，无需分页
+- 与 `list_permissions` 返回格式保持一致
+
+**错误码**: `10000` `10200`
+
+---
+
+### POST /api/v1/admin/rbac/roles/create
+
+创建角色。
+
+- **认证**: 必须 + `admin.rbac.manage`
+- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+
+**Request**: `AdminRbacRoleCreateRequest`
+
+**Response**: `ApiResponse<AdminRoleItem>`
+
+**错误码**: `10000` `10200` `10400` `22000` `22002`
+
+---
+
+### POST /api/v1/admin/rbac/roles/update
+
+更新角色。
+
+- **认证**: 必须 + `admin.rbac.manage`
+- **幂等**: 幂等语义（重复请求返回一致结果）
+
+**Request**: `AdminRbacRoleUpdateRequest`
+
+**Response**: `ApiResponse`
+
+**错误码**: `10200` `10300` `10400`
+
+---
+
+### POST /api/v1/admin/rbac/roles/delete
+
+删除角色。
+
+- **认证**: 必须 + `admin.rbac.manage`
+- **幂等**: 幂等语义（重复请求返回一致结果）
+
+**Request**: `AdminRbacRoleDeleteRequest`
+
+**Response**: `ApiResponse`
+
+**错误码**: `10200` `10300` `10400`
+
+---
+
+### POST /api/v1/admin/rbac/roles/set_permissions
+
+设置角色权限。
+
+- **认证**: 必须 + `admin.rbac.manage`
+- **幂等**: 幂等语义（重复请求返回一致结果）
+
+**Request**: `AdminRbacRoleSetPermissionsRequest`
+
+**说明**：`permission_keys` 必须来自权限字典（`admin/rbac/permissions`）。
+
+**Response**: `ApiResponse`
+
+**错误码**: `10000` `10200` `10300`
+
+---
+
+### POST /api/v1/admin/rbac/admins/list
+
+获取管理员列表。
+
+- **认证**: 必须 + `admin.rbac.manage`
+- **幂等**: 无
+
+**Request**: `AdminRbacAdminsListRequest`
+
+**Response**: `ApiResponse<PaginatedData<AdminOperatorItem>>`
+
+**错误码**: `10000` `10200`
+
+---
+
+### POST /api/v1/admin/rbac/admins/grant
+
+授予/更新管理员。
+
+- **认证**: 必须 + `admin.rbac.manage`
+- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+
+**额外约束**：仅超级管理员可将 `grant_all_permissions=true`
+
+**Request**: `AdminRbacGrantAdminRequest`
+
+**Response**: `ApiResponse`
+
+**错误码**: `10200` `10300` `22000` `22002`
+
+---
+
+### POST /api/v1/admin/rbac/admins/revoke
+
+撤销管理员。
+
+- **认证**: 必须 + `admin.rbac.manage`
+- **幂等**: 幂等语义（重复请求返回一致结果）
+
+**额外约束**：撤销超级管理员仅超级管理员可执行
+
+**Request**: `AdminRbacRevokeAdminRequest`
+
+**Response**: `ApiResponse`
+
+**错误码**: `10200` `10300`
+
+---
+
+## 审计日志 API
+
+**安全说明（字段可见性）**：
+- `ip_location`：具有 `admin.audit.read` 权限的管理员可见
+- `ip_address`：具有 `admin.audit.read_ip` 权限的管理员可见（IP 地址属于敏感 PII，通过独立权限控制）
+- `device_summary`：从 User-Agent 脱敏提取的设备摘要，不暴露完整 UA 字符串
+
+### POST /api/v1/admin/audit/list
+
+查询审计日志列表。
+
+- **认证**: 必须 + `admin.audit.read`
+- **幂等**: 无
+
+**Request**: `AuditLogListRequest`
+
+**Response**: `ApiResponse<PaginatedData<AuditLogItem>>`
+
+**错误码**: `10000` `10200`
+
+---
+
+### POST /api/v1/admin/audit/open_the_door
+
+获取审计日志详情。
+
+- **认证**: 必须 + `admin.audit.read`
+- **幂等**: 无
+
+**Request**: `AuditLogOpenTheDoorRequest`
+
+**Response**: `ApiResponse<AuditLogItem>`
+
+**错误码**: `10000` `10200` `10300`
+
+---
+
+## 服务端配置 API（ServerConfig）
+
+**设计说明**：服务端配置包含仅后端使用的运行参数（上传策略、默认值、频率限制），不直接暴露给客户端。客户端配置由 `admin/client_config/*` 管理，见下方。
+
+### POST /api/v1/admin/server_config/get
+
+获取服务端配置。
+
+- **认证**: 必须 + `admin.server_config.read`
+- **幂等**: 无
+
+**Request**: `{}`
+
+**Response**: `ApiResponse<ServerConfig>`
+
+**错误码**: `10200`
+
+---
+
+### POST /api/v1/admin/server_config/update_upload
+
+更新上传策略。
+
+- **认证**: 必须 + `admin.server_config.write`
+- **幂等**: 幂等语义（重复请求返回一致结果）
+
+**Request**: `UpdateUploadConfigRequest`
+
+**Response**: `ApiResponse`
+
+**错误码**: `10000` `10200`
+
+---
+
+### POST /api/v1/admin/server_config/update_defaults
+
+更新内容默认值。
+
+- **认证**: 必须 + `admin.server_config.write`
+- **幂等**: 幂等语义（重复请求返回一致结果）
+
+**Request**: `UpdateDefaultsRequest`
+
+**Response**: `ApiResponse`
+
+**错误码**: `10000` `10200`
+
+---
+
+### POST /api/v1/admin/server_config/update_rate_limits
+
+更新频率限制配置。
+
+- **认证**: 必须 + `admin.server_config.write`
+- **幂等**: 幂等语义（重复请求返回一致结果）
+
+**说明**：动态调整 Rate Limit 策略，无需重启服务即可生效。
+
+**Request**: `UpdateRateLimitsRequest`
+
+**Response**: `ApiResponse`
+
+**验证规则**：
+- 所有值必须为正整数
+- 全局限速建议范围：`100-10000` 次/小时
+- 用户限速建议范围：`500-50_000` 次/小时
+- 认证相关限速建议最小值：验证码发送 `>= 3` 次/分钟，登录 `>= 10` 次/10分钟，注册 `>= 5` 次/10分钟
+- 业务限速建议最小值：创建瞬间 `>= 5` 次/分钟，创建评论 `>= 20` 次/分钟，举报 `>= 5` 次/小时
+
+**注意事项**：
+- 配置立即生效，影响所有后续请求
+- 降低限制值时，可能导致正常用户受影响，建议谨慎操作
+
+**错误码**: `10000` `10200`
+
+---
+
+## 客户端配置 API（ClientConfig）
+
+**设计说明**：客户端配置包含影响客户端 UI/行为的参数（功能开关、应用限制、联系方式）。与服务端配置分离管理，便于独立权限控制和缓存策略。
+
+> 权限要求：读取 `admin.client_config.read`，更新 `admin.client_config.write`
+> 客户端可通过公开端点 `system/get_client_config`（见 `@api_spec_system.mdc`）获取配置，无需认证。
+
+### POST /api/v1/admin/client_config/get
+
+获取客户端配置（管理员视角，包含元数据）。
+
+- **认证**: 必须 + `admin.client_config.read`
+- **幂等**: 无
+
+**Request**: `{}`
+
+**Response**: `ApiResponse<AdminClientConfig>`
+
+**错误码**: `10200`
+
+---
+
+### POST /api/v1/admin/client_config/update_features
+
+更新功能开关。
+
+- **认证**: 必须 + `admin.client_config.write`
+- **幂等**: 幂等语义（重复请求返回一致结果）
+
+**Request**: `UpdateFeaturesRequest`
+
+**Response**: `ApiResponse`
+
+**错误码**: `10000` `10200`
+
+---
+
+### POST /api/v1/admin/client_config/update_limits
+
+更新应用限制。
+
+- **认证**: 必须 + `admin.client_config.write`
+- **幂等**: 幂等语义（重复请求返回一致结果）
+
+**Request**: `UpdateLimitsRequest`
+
+**Response**: `ApiResponse`
+
+**错误码**: `10000` `10200`
+
+---
+
+### POST /api/v1/admin/client_config/update_contact
+
+更新联系信息。
+
+- **认证**: 必须 + `admin.client_config.write`
+- **幂等**: 幂等语义（重复请求返回一致结果）
+
+**Request**: `UpdateContactRequest`
+
+**Response**: `ApiResponse`
+
+**错误码**: `10000` `10200`

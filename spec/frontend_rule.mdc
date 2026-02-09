@@ -10,8 +10,9 @@ alwaysApply: false
 本文件只描述工程实现规范与目录结构，不复述 API 契约。
 
 权威引用：
-- **API 契约**：`@spec/api_spec.mdc`
-- **通用契约**：`@api_spec_common.mdc`
+- **API 契约**：`@spec/api_spec_index.mdc`
+- **基础规范**：`@api_spec_base.mdc`
+- **通用类型**：`@api_spec_types.mdc`
 - **错误码**：`@spec/api_spec_errors.mdc`
 - **功能边界**：`@frontend_doc.mdc`
 

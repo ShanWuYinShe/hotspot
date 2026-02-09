@@ -1,30 +1,29 @@
 ---
 alwaysApply: true
 ---
-# HotSpot API 规范 - 系统与全局配置 API 模块 v0.0.1 (RPC)
+# HotSpot API - 系统与全局配置
 
-> 本文档定义 HotSpot 系统相关的公开 RPC 接口，包括健康检查、版本元信息、全局配置和系统公告。所有端点统一在 `/api/v1/system/` 路径下。
+> 本文档定义 HotSpot 系统级公开接口，包括健康检查、版本元信息、客户端配置和系统公告。所有端点为公开资源，无需认证，统一在 `/api/v1/system/` 路径下。
 
-## 服务定义
+## 模块信息
 
-- **Service Namespace**: `system`
-- **Base Path**: `/api/v1/system/`
+- **命名空间**: `system`
+- **基础路径**: `/api/v1/system/`
+- **引用**: 
+  - 基础规范：`@api_spec_base.mdc`
+  - 通用类型：`@api_spec_types.mdc`
+  - 错误码：`@api_spec_errors.mdc`
 
-## 契约引用
+## 端点总览
 
-- 公共基础类型：`@api_spec_common.mdc`
-- 错误码：`@spec/api_spec_errors.mdc`
+| 端点 | 说明 | 认证 | 幂等 |
+|-----|------|------|------|
+| `POST /api/v1/system/get_meta` | API 版本元信息 | 可选 | 无 |
+| `POST /api/v1/system/health` | 健康检查 | 可选 | 无 |
+| `POST /api/v1/system/list_announcements` | 系统公告列表 | 可选 | 无 |
+| `POST /api/v1/system/get_client_config` | 客户端公开配置 | 可选 | 无 |
 
-## 接口概览（按子域）
-
-| 子域 | 端点 | 说明 | Request | Response |
-|-----|------|------|---------|----------|
-| 版本 | `POST /api/v1/system/meta` | API 版本元信息 | `{}` | `ApiResponse<ApiVersionMeta>` |
-| 健康 | `POST /api/v1/system/health` | 健康检查 | `{}` | `ApiResponse<HealthStatus>` |
-| 公告 | `POST /api/v1/system/announcements` | 系统公告列表 | `AnnouncementListRequest` | `ApiResponse<PaginatedData<SystemAnnouncementItem>>` |
-| 冷启动 | `POST /api/v1/system/bootstrap` | 已认证用户冷启动聚合 | `{}` | `ApiResponse<BootstrapResponse>` |
-
-## 核心类型定义
+## 类型定义
 
 ```typescript
 // API 版本元信息
@@ -48,106 +47,138 @@ type SystemHealthStatus = 'healthy' | 'degraded' | 'unhealthy';
 
 interface HealthStatus {
   status: SystemHealthStatus;
-  version: string;
   timestamp: string;
 }
 
-// SystemAnnouncementItem 定义于 @api_spec_common.mdc
+interface AnnouncementListRequest {
+  limit?: number;  // default: 10, max: 50
+}
+
+// 客户端公开配置
+// 客户端启动时通过 system/get_client_config 获取并缓存
+interface ClientConfig {
+  features: FeatureSwitches;
+  limits: AppLimits;
+  contact: ContactInfo;
+}
+
+interface FeatureSwitches {
+  enable_public_registration: boolean;
+  enable_guest_login: boolean;
+  enable_moments: boolean;
+  enable_nearby_people: boolean;
+  require_phone_verification: boolean;  // 是否要求手机验证（早期开发可关闭）
+  require_captcha: boolean;             // 是否要求人机验证（早期开发可关闭）
+}
+
+interface AppLimits {
+  max_group_members: number;
+  max_moment_tags: number;
+  max_moment_images: number;
+  moment_description_max_length: number;
+  comment_max_length: number;
+  search_radius_max: number;
+}
+
+interface ContactInfo {
+  support_email: string;
+  privacy_policy_url: string;
+  terms_of_service_url: string;
+  official_website: string;
+}
+
 ```
 
-## 错误码说明
+说明：
+- `SystemAnnouncementItem` 定义于 `@api_spec_types.mdc`
 
-本模块使用的错误码定义于 `@spec/api_spec_errors.mdc`，主要涉及：
+## 端点详情
 
-| 错误码 | 说明 | 相关接口 |
-|-------|------|---------|
-| `10003` | 参数值超出范围 | `system/announcements`（limit 超出范围） |
-
----
-
-## API 版本元信息
-
-### POST /api/v1/system/meta
+### POST /api/v1/system/get_meta
 
 获取当前 API 版本的元信息，包括废弃状态和下线计划。
+
+- **认证**: 可选
+- **幂等**: 无
 
 **说明**：
 - 此接口为公开资源，无需认证
 - 每个 API 版本都应在其路径下提供此端点
 - 客户端应在启动时调用此接口，检查当前使用的 API 版本状态
 
-**Request**: `{}`
-
-**Response**: `ApiResponse<ApiVersionMeta>`
-
 **客户端处理建议**：
 - `active`: 正常使用，无需处理
 - `deprecated`: 提示用户升级；可展示 `message` 并引导更新
 - `sunset`: 强制升级或提示服务不可用
 
----
+**Request**: `{}`
 
-## 系统健康检查 API
+**Response**: `ApiResponse<ApiVersionMeta>`
+
+**缓存策略**：
+- 服务端返回 `Cache-Control: public, max-age=3600` 和 `ETag` 响应头
+- API 版本信息变更频率极低，客户端可长时间缓存
 
 ### POST /api/v1/system/health
 
 系统健康检查。
 
+- **认证**: 可选
+- **幂等**: 无
+
 **说明**：系统健康检查为公开资源，无需认证。
 
 **Request**: `{}`
+
 **Response**: `ApiResponse<HealthStatus>`
 
----
-
-## 系统公告 API
-
-### POST /api/v1/system/announcements
+### POST /api/v1/system/list_announcements
 
 获取系统公告列表。
 
+- **认证**: 可选
+- **幂等**: 无
+
 **说明**：
 - 系统公告属于"默认公开资源"，无需认证
-- 返回的 `SystemAnnouncementItem` 中 `@admin-only` 字段（如 `created_by`、`view_count` 等）仅对系统管理员可见
 
-**Request**:
+**Request**: `AnnouncementListRequest`
 ```typescript
 interface AnnouncementListRequest {
-  pagination?: PaginationParams;
+  limit?: number;  // default: 10, max: 50
 }
 ```
-**Response**: `ApiResponse<PaginatedData<SystemAnnouncementItem>>`
 
-**可能错误码**：`10003`
-
----
-
-## 冷启动聚合 API
-
-### POST /api/v1/system/bootstrap
-
-已认证用户冷启动聚合接口。一次请求获取冷启动所需的全部个人化数据，减少客户端并发请求数。
+**Response**: `ApiResponse<{ items: SystemAnnouncementItem[] }>`
 
 **说明**：
-- 此接口**需要认证**（Token 必须）
-- 仅返回需要鉴权才能获取的个人化数据
-- 公开数据（系统公告）应通过 `system/announcements` 独立获取并缓存
-- 全局配置（`GlobalSettings`）为管理员数据，通过 `admin/global_settings/get` 获取
-- 客户端应在 App 冷启动、从后台恢复等场景调用
+- 普通用户只需获取最新的 N 条公告，无需分页翻阅历史
+- 管理员查看/搜索全部公告（含历史）请使用 `admin/announcements/search`（定义于 `@api_spec_admin_moderation.mdc`）
+- 按 `created_at` 倒序排列
+
+**缓存策略**：
+- 服务端返回 `Cache-Control: public, max-age=60` 和 `ETag` 响应头
+- 公告更新频率高于配置，缓存时间较短
+
+**错误码**: `10000`
+
+### POST /api/v1/system/get_client_config
+
+获取客户端公开配置。
+
+- **认证**: 可选
+- **幂等**: 无
+
+**说明**：
+- 此接口为公开资源，**无需认证**
+- 返回影响客户端 UI/行为的配置：功能开关、输入限制、联系方式
+- 客户端应在启动时调用并缓存，配置变更频率低
 
 **Request**: `{}`
 
-**Response**: `ApiResponse<BootstrapResponse>`
+**Response**: `ApiResponse<ClientConfig>`
 
-```typescript
-interface BootstrapResponse {
-  profile: MyProfile;           // 当前用户资料（用于导航栏头像/昵称展示）
-  unread: {
-    notifications: UnreadCount; // 通知未读计数（含分类）
-    private_chats: number;      // 有未读消息的私聊会话数
-    group_chats: number;        // 有未读消息的群聊数
-  };
-}
-// MyProfile 定义于 @api_spec_user.mdc
-// UnreadCount 定义于 @api_spec_notification.mdc
-```
+**缓存策略**：
+- 服务端返回 `Cache-Control: public, max-age=300` 和 `ETag` 响应头
+- 客户端应缓存此响应，后续请求携带 `If-None-Match` 以利用 304 Not Modified
+- 详见 `@api_spec_base.mdc` 中"缓存控制响应头"

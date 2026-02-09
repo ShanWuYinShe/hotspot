@@ -1,20 +1,26 @@
 ---
 alwaysApply: true
 ---
-# HotSpot API 规范 - 举报审核 API 模块 v0.0.1 (RPC)
+# HotSpot API - 举报
 
-> 本文档定义 HotSpot 举报审核 (`reports`) 相关的 RPC 接口。管理员审核接口定义于 `@api_spec_admin_report.mdc`。
+> 本文档定义 HotSpot 举报审核 (`reports`) 相关的 RPC 接口。管理员审核接口定义于 `@api_spec_admin_moderation.mdc`。
 
-## 服务定义
+## 模块信息
 
-- **Service Namespace**: `reports`
-- **Base Path**: `/api/v1/reports/`
+- **命名空间**: `reports`
+- **基础路径**: `/api/v1/reports/`
+- **引用**: 
+  - 基础规范：`@api_spec_base.mdc`
+  - 通用类型：`@api_spec_types.mdc`（`ReportTargetType`、`ReportStatus`、`PaginationParams`、`PaginatedData` 等枚举/工具类型）
+  - 错误码：`@api_spec_errors.mdc`
+  - 管理员举报审核：`@api_spec_admin_moderation.mdc`
 
-## 契约引用
+## 端点总览
 
-- 公共基础类型：`@api_spec_common.mdc`
-- 错误码：`@spec/api_spec_errors.mdc`
-- 管理员举报审核：`@api_spec_admin_report.mdc`
+| 端点 | 说明 | 认证 | 幂等 |
+|-----|------|------|------|
+| `POST /api/v1/reports/create` | 创建举报 | 必须 | MUST |
+| `POST /api/v1/reports/me/list` | 我的举报记录 | 必须 | 无 |
 
 ## 举报审核流程说明
 
@@ -29,68 +35,55 @@ alwaysApply: true
 | `resolved` | 已处理（确认违规） | 已采取措施（封禁/删除内容） |
 | `dismissed` | 已驳回（无违规） | 审核结束，无需处理 |
 
-**处理动作**：
+管理员审核流程（处理动作、内容快照机制等）详见 `@api_spec_admin_moderation.mdc`。
 
-| 动作 | 含义 | 适用场景 |
-|-----|------|---------|
-| `resolve` | 确认违规并处理 | 内容违反社区规范，需封禁用户/删除内容 |
-| `dismiss` | 驳回举报 | 举报无效/误报/内容合规 |
-| `escalate` | 升级处理 | 需要更高权限管理员/人工复核 |
-
-**内容快照机制**：
-
-举报创建时会保存 `target_snapshot`（目标内容快照），包含：
-- `content`：文本内容/简介
-- `media_urls`：图片/视频封面
-- `owner_id`：内容发布者ID
-
-**目的**：即使原内容被删除，管理员仍可基于快照进行审核。
-
-**权限要求**：
-- 创建举报：任意登录用户
-- 查看举报列表：需要 `admin.reports.read` 权限
-- 处理举报：需要 `admin.reports.write` 权限
-
-## 接口概览（按子域）
-
-| 子域 | 端点 | 说明 | Request | Response |
-|-----|------|------|---------|----------|
-| 举报 | `POST /api/v1/reports/create` | 创建举报 | `CreateReportRequest` | `ApiResponse<ReportCreated>` |
-| 举报 | `POST /api/v1/reports/me` | 我的举报记录 | `MyReportsRequest` | `ApiResponse<PaginatedData<ReportItem>>` |
-
-## 核心类型定义
+## 类型定义
 
 ```typescript
 interface ReportCreated {
   report_id: string;
 }
 
-// ReportItem 定义于 @api_spec_common.mdc（含 @admin-only 字段）
+interface CreateReportRequest {
+  target_type: ReportTargetType;
+  target_id: string;            // 统一为 string（user_id 需转为字符串格式）
+  reason: string;
+  description?: string;
+}
+
+interface MyReportsRequest {
+  pagination?: PaginationParams;
+}
+
+// 举报统一数据类型
+interface ReportItem {
+  report_id: string;
+  target_type: ReportTargetType;
+  target_id: string;
+  reason: string;
+  description?: string;
+  status: ReportStatus;
+  created_at: string;
+  handled_at?: string;
+}
 ```
 
-## 错误码说明
+说明：此为普通用户 API，`ReportItem` 仅包含举报人自身可见的字段。
 
-本模块使用的错误码定义于 `@spec/api_spec_errors.mdc`，主要涉及：
-
-| 错误码 | 说明 | 相关接口 |
-|-------|------|---------|
-| `10001` | 缺少必填参数 | `create` |
-| `10003` | 参数值超出范围 | `create`（reason 长度）、`me`（limit） |
-| `10300` | 资源不存在 | `create`（target_id 不存在） |
-| `22000` | 幂等键冲突 | `create` |
-| `22002` | 幂等操作正在处理中 | `create` |
-
----
-
-## 用户举报 API
+## 端点详情
 
 ### POST /api/v1/reports/create
 
 创建举报。
 
-**幂等性（MUST）**：客户端必须携带 `Idempotency-Key`。
+- **认证**: 必须
+- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
 
-**Request**:
+**字段说明**：
+- `reason`：举报原因，1-200 字符
+- `target_id`：统一为 string 类型；举报用户时将 `user_id` 转为字符串格式
+
+**Request**: `CreateReportRequest`
 ```typescript
 interface CreateReportRequest {
   target_type: ReportTargetType;
@@ -100,26 +93,24 @@ interface CreateReportRequest {
 }
 ```
 
-**字段说明**：
-- `reason`：举报原因，1-200 字符
-- `target_id`：统一为 string 类型；举报用户时将 `user_id` 转为字符串格式
-
 **Response**: `ApiResponse<ReportCreated>`
 
-**可能错误码**：`10001`、`10003`、`10300`、`22000`、`22002`
+**错误码**: `10000` `10300` `22000` `22002`
 
-### POST /api/v1/reports/me
+### POST /api/v1/reports/me/list
 
 我的举报记录。
 
-**可见性**：仅当前用户可见（`@owner-only`）。
+- **认证**: 必须
+- **幂等**: 无
 
-**Request**:
+**Request**: `MyReportsRequest`
 ```typescript
 interface MyReportsRequest {
   pagination?: PaginationParams;
 }
 ```
+
 **Response**: `ApiResponse<PaginatedData<ReportItem>>`
 
-**可能错误码**：`10003`
+**错误码**: `10000`

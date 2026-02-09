@@ -1,27 +1,18 @@
 ---
 alwaysApply: true
 ---
-# HotSpot API 规范 - 分享系统 API 模块 v0.0.1 (RPC)
+# HotSpot API - 分享系统
 
 > 本文档定义 HotSpot 分享系统 (`share`) 相关的 RPC 接口。
 
-## 服务定义
+## 模块信息
 
-- **Service Namespace**: `share`
-- **Base Path**: `/api/v1/share/`
-
-## 契约引用
-
-- 公共基础类型：`@api_spec_common.mdc`
-- 错误码：`@spec/api_spec_errors.mdc`
-
-## 接口概览（按子域）
-
-| 子域 | 端点 | 说明 | Request | Response |
-|-----|------|------|---------|----------|
-| 分享 | `POST /api/v1/share/create` | 创建分享 | `CreateShareRequest` | `ApiResponse<ShareCreated>` |
-| 分享 | `POST /api/v1/share/get` | 获取分享详情 | `GetShareRequest` | `ApiResponse<ShareDetail>` |
-| 分享 | `POST /api/v1/share/apply` | 应用分享 | `ApplyShareRequest` | `ApiResponse<ShareApplyResult>` |
+- **命名空间**: `share`
+- **基础路径**: `/api/v1/share/`
+- **引用**: 
+  - 基础规范：`@api_spec_base.mdc`
+  - 通用类型：`@api_spec_types.mdc`
+  - 错误码：`@api_spec_errors.mdc`
 
 ## 设计理念
 
@@ -29,7 +20,22 @@ alwaysApply: true
 - **一次创建，多端复用**：分享码可用于 Web/App 统一解析
 - **最小信息暴露**：分享码仅暴露必要目标信息，敏感字段不出现在分享记录中
 
-## 核心类型定义
+## 端点总览
+
+| 端点 | 说明 | 认证 | 幂等 |
+|-----|------|------|------|
+| `POST /api/v1/share/create` | 创建分享 | 必须 | MUST |
+| `POST /api/v1/share/get` | 获取分享详情 | 可选 | 无 |
+| `POST /api/v1/share/apply` | 应用分享 | 必须 | 无 |
+| `POST /api/v1/share/me/list` | 我的分享列表 | 必须 | 无 |
+| `POST /api/v1/share/revoke` | 撤销分享 | 必须 | 幂等语义 |
+
+## 类型定义
+
+以下类型定义于 `@api_spec_types.mdc`：
+- `UserInfo`
+- `Location`
+- `PaginationParams`
 
 ```typescript
 type ShareType = 'user' | 'group' | 'moment' | 'reference_point';
@@ -93,9 +99,43 @@ interface ShareApplyResult {
   share_type: ShareType;
   action: ShareApplyAction;
 }
+
+// 分享列表项（我的分享管理）
+interface ShareListItem {
+  share_id: string;
+  share_code: string;
+  share_type: ShareType;
+  created_at: string;
+  expires_at?: string;
+  is_revoked: boolean;
+  preview?: SharePreview;           // 分享目标的摘要预览
+}
+
+interface CreateShareRequest {
+  share_type: ShareType;
+  payload: SharePayload;
+  expires_in_seconds?: number; // 可选，默认由系统配置
+}
+
+interface GetShareRequest {
+  share_code: string;         // 不区分大小写，服务端统一转换为大写
+}
+
+interface ApplyShareRequest {
+  share_code: string;         // 不区分大小写，服务端统一转换为大写
+}
+
+interface ShareListRequest {
+  pagination?: PaginationParams;
+  share_type?: ShareType;           // 按类型筛选
+}
+
+interface RevokeShareRequest {
+  share_id: string;
+}
 ```
 
-说明：`preview` 为展示用摘要，服务端可根据权限与可见性策略选择是否返回。
+**说明**：`preview` 为展示用摘要，服务端可根据权限与可见性策略选择是否返回。
 
 ## 分享码规则
 
@@ -115,31 +155,16 @@ interface ShareApplyResult {
 - 分享可设置有效期（`expires_at`）
 - 过期分享在 `get`/`apply` 中返回 `10300`
 
-## 错误码说明
-
-本模块使用的错误码定义于 `@spec/api_spec_errors.mdc`，主要涉及：
-
-| 错误码 | 说明 | 相关接口 |
-|-------|------|---------|
-| `10001` | 缺少必填参数 | `create`、`get`、`apply` |
-| `10002` | 参数格式错误 | `create`（share_type 不支持、payload 格式错误） |
-| `10003` | 参数值超出范围 | `create`（expires_in_seconds 超出限制） |
-| `10102` | Access Token 缺失 | `create`、`apply` |
-| `10300` | 资源不存在 | `get`、`apply`（分享不存在或目标不存在） |
-| `22000` | 幂等键冲突 | `create` |
-| `22002` | 幂等操作正在处理中 | `create` |
-
-## 分享 API
+## 端点详情
 
 ### POST /api/v1/share/create
 
 创建分享。
 
-**权限要求**：需要登录
+- **认证**: 必须
+- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
 
-**幂等性（MUST）**：客户端必须携带 `Idempotency-Key`。
-
-**Request**:
+**Request**: `CreateShareRequest`
 ```typescript
 interface CreateShareRequest {
   share_type: ShareType;
@@ -156,7 +181,7 @@ interface CreateShareRequest {
 - `reference_point`：校验经纬度范围与 `location_name` 长度（1-100 字符）
 - `expires_in_seconds` 若提供，必须为正整数且不超过系统允许上限
 
-**可能错误码**：`10001`、`10002`、`10003`、`10102`、`10300`、`22000`、`22002`
+**错误码**: `10000` `10300` `22000` `22002`
 
 ---
 
@@ -164,9 +189,10 @@ interface CreateShareRequest {
 
 获取分享详情。
 
-**权限要求**：无需登录（公开访问）
+- **认证**: 可选（公开访问）
+- **幂等**: 无
 
-**Request**:
+**Request**: `GetShareRequest`
 ```typescript
 interface GetShareRequest {
   share_code: string;         // 不区分大小写，服务端统一转换为大写
@@ -175,7 +201,7 @@ interface GetShareRequest {
 
 **Response**: `ApiResponse<ShareDetail>`
 
-**可能错误码**：`10001`、`10300`
+**错误码**: `10000` `10300`
 
 ---
 
@@ -183,9 +209,14 @@ interface GetShareRequest {
 
 应用分享。
 
-**权限要求**：需要登录
+- **认证**: 必须
+- **幂等**: 无
 
-**Request**:
+**行为说明**：
+- `navigate_user` / `navigate_group` / `navigate_moment`：客户端跳转到对应详情页
+- `update_reference_point`：服务端更新用户浏览锚点位置，并返回最新锚点
+
+**Request**: `ApplyShareRequest`
 ```typescript
 interface ApplyShareRequest {
   share_code: string;         // 不区分大小写，服务端统一转换为大写
@@ -194,8 +225,46 @@ interface ApplyShareRequest {
 
 **Response**: `ApiResponse<ShareApplyResult>`
 
-**行为说明**：
-- `navigate_user` / `navigate_group` / `navigate_moment`：客户端跳转到对应详情页
-- `update_reference_point`：服务端更新用户浏览锚点位置，并返回最新锚点
+**错误码**: `10000` `10300`
 
-**可能错误码**：`10001`、`10102`、`10300`
+---
+
+### POST /api/v1/share/me/list
+
+获取当前用户创建的分享列表。
+
+- **认证**: 必须
+- **幂等**: 无
+- **排序**: `created_at DESC`
+
+**Request**: `ShareListRequest`
+```typescript
+interface ShareListRequest {
+  pagination?: PaginationParams;
+  share_type?: ShareType;           // 按类型筛选
+}
+```
+
+**Response**: `ApiResponse<PaginatedData<ShareListItem>>`
+
+**错误码**: `10000`
+
+---
+
+### POST /api/v1/share/revoke
+
+撤销分享。撤销后分享码不可再用于 `get` 和 `apply`。
+
+- **认证**: 必须（仅分享创建者可撤销）
+- **幂等**: 幂等语义（重复撤销返回一致结果）
+
+**Request**: `RevokeShareRequest`
+```typescript
+interface RevokeShareRequest {
+  share_id: string;
+}
+```
+
+**Response**: `ApiResponse`
+
+**错误码**: `10000` `10200` `10300`

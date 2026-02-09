@@ -1,133 +1,118 @@
 ---
 alwaysApply: true
 ---
-# HotSpot API 规范 - 群组 API 模块 v0.0.1 (RPC)
+# HotSpot API - 群组管理
 
-> 本文档定义 HotSpot 群组管理 (`groups`)、群组成员管理和群聊消息 (`group_messages`) 相关的 RPC 接口。
+> 本文档定义 HotSpot 群组管理 (`groups`) 相关的 RPC 接口，包括群组 CRUD、成员管理、申请/邀请管理和群公告。
+> 群聊消息 (`group_messages`) 接口定义在 `@api_spec_chat.mdc`。
 
-## 服务定义
+## 模块信息
 
-- **Service Namespaces**:
-  - `groups`
-  - `group_messages`
-- **Base Paths**:
-  - `/api/v1/groups/`
-  - `/api/v1/group_messages/`
+- **命名空间**: `groups`
+- **基础路径**: `/api/v1/groups/`
+- **引用**: 
+  - 基础规范：`@api_spec_base.mdc`
+  - 通用类型：`@api_spec_types.mdc`
+  - 错误码：`@api_spec_errors.mdc`
+  - WebSocket：`@api_spec_websocket.mdc`
+  - 聊天模块：`@api_spec_chat.mdc`（GroupMessageItem 类型定义）
 
-## 契约引用
+## 端点总览
 
-- 公共基础类型：`@api_spec_common.mdc`
-- 错误码：`@spec/api_spec_errors.mdc`
-- WebSocket：`@api_spec_websocket.mdc`
-- 搜索建议：`@api_spec_search.mdc`（per-module suggest 已移除，使用全局 `search/suggest`）
+| 端点 | 说明 | 认证 | 幂等 |
+|-----|------|------|------|
+| `POST /api/v1/groups/search` | 搜索群组（支持关键字/标签/位置组合） | 可选 | 无 |
+| `POST /api/v1/groups/open_the_door` | 群组详情 | 可选 | 无 |
+| `POST /api/v1/groups/create` | 创建群组 | 必须 | MUST |
+| `POST /api/v1/groups/update` | 更新群组 | 必须 | 幂等语义 |
+| `POST /api/v1/groups/dismiss` | 解散群组 | 必须 | SHOULD |
+| `POST /api/v1/groups/members/list` | 成员列表 | 必须 | 无 |
+| `POST /api/v1/groups/members/search` | 搜索成员 | 必须 | 无 |
+| `POST /api/v1/groups/members/invite` | 邀请成员 | 必须 | 无 |
+| `POST /api/v1/groups/members/set_role` | 设置角色 | 必须 | 幂等语义 |
+| `POST /api/v1/groups/members/mute` | 禁言成员 | 必须 | 幂等语义 |
+| `POST /api/v1/groups/members/unmute` | 取消禁言 | 必须 | 幂等语义 |
+| `POST /api/v1/groups/members/ban` | 封禁成员 | 必须 | MUST |
+| `POST /api/v1/groups/members/unban` | 解除封禁 | 必须 | 幂等语义 |
+| `POST /api/v1/groups/members/list_banned` | 封禁列表 | 必须 | 无 |
+| `POST /api/v1/groups/members/remove_member` | 移除成员 | 必须 | 幂等语义 |
+| `POST /api/v1/groups/applications/list` | 申请列表 | 必须 | 无 |
+| `POST /api/v1/groups/applications/approve` | 同意申请 | 必须 | MUST |
+| `POST /api/v1/groups/applications/reject` | 拒绝申请 | 必须 | MUST |
+| `POST /api/v1/groups/me/update_settings` | 更新我的群组偏好 | 必须 | 幂等语义 |
+| `POST /api/v1/groups/me/join` | 加入群组（根据 join_method 自动处理） | 必须 | MUST |
+| `POST /api/v1/groups/me/transfer_ownership` | 转让群主 | 必须 | SHOULD |
+| `POST /api/v1/groups/announcements/create` | 发布公告 | 必须 | MUST |
+| `POST /api/v1/groups/announcements/list` | 公告列表 | 必须 | 无 |
+| `POST /api/v1/groups/announcements/update` | 更新公告 | 必须 | 幂等语义 |
+| `POST /api/v1/groups/announcements/delete` | 删除公告 | 必须 | 幂等语义 |
+| `POST /api/v1/groups/me/list` | 我的群组列表 | 必须 | 无 |
+| `POST /api/v1/groups/me/applications/list` | 我的申请列表 | 必须 | 无 |
+| `POST /api/v1/groups/me/applications/cancel` | 取消申请 | 必须 | 幂等语义 |
+| `POST /api/v1/groups/me/invites/list` | 我的邀请列表 | 必须 | 无 |
+| `POST /api/v1/groups/me/invites/accept` | 接受邀请 | 必须 | MUST |
+| `POST /api/v1/groups/me/invites/reject` | 拒绝邀请 | 必须 | MUST |
+| `POST /api/v1/groups/me/leave` | 退出群组 | 必须 | SHOULD |
 
-## 接口概览（按子域）
+## 类型定义
 
-| 子域 | 端点 | 说明 | Request | Response |
-|-----|------|------|---------|----------|
-| 搜索与发现 | `POST /api/v1/groups/search` | 搜索群组（支持关键字/标签/位置组合） | `SearchGroupsRequest` | `ApiResponse<PaginatedData<GroupItem>>` |
-| 群组详情 | `POST /api/v1/groups/open_the_door` | 群组详情 | `GroupOpenTheDoorRequest` | `ApiResponse<GroupOpenResult>` |
-| 群组操作 | `POST /api/v1/groups/create` | 创建群组 | `CreateGroupRequest` | `ApiResponse<GroupCreated>` |
-| 群组操作 | `POST /api/v1/groups/update` | 更新群组 | `UpdateGroupRequest` | `ApiResponse` |
-| 群组操作 | `POST /api/v1/groups/update_my_settings` | 更新我的群组偏好 | `UpdateGroupMySettingsRequest` | `ApiResponse` |
-| 群组操作 | `POST /api/v1/groups/delete` | 解散群组 | `DeleteGroupRequest` | `ApiResponse` |
-| 成员管理 | `POST /api/v1/groups/members/list` | 成员列表 | `GroupMembersRequest` | `ApiResponse<PaginatedData<GroupMemberItem>>` |
-| 成员管理 | `POST /api/v1/groups/members/invite` | 邀请成员 | `InviteMemberRequest` | `ApiResponse<Invitation>` |
-| 成员管理 | `POST /api/v1/groups/members/join` | 加入群组（根据 join_method 自动处理） | `JoinGroupRequest` | `ApiResponse<JoinGroupResult>` |
-| 成员管理 | `POST /api/v1/groups/members/set_role` | 设置角色 | `SetMemberRoleRequest` | `ApiResponse<GroupMemberItem>` |
-| 成员管理 | `POST /api/v1/groups/members/mute` | 禁言成员 | `MuteMemberRequest` | `ApiResponse<GroupMemberItem>` |
-| 成员管理 | `POST /api/v1/groups/members/unmute` | 取消禁言 | `UnmuteMemberRequest` | `ApiResponse<GroupMemberItem>` |
-| 成员管理 | `POST /api/v1/groups/members/ban` | 封禁成员 | `BanMemberRequest` | `ApiResponse<BannedMemberItem>` |
-| 成员管理 | `POST /api/v1/groups/members/unban` | 解除封禁 | `UnbanMemberRequest` | `ApiResponse` |
-| 成员管理 | `POST /api/v1/groups/members/banned` | 封禁列表 | `BannedMembersRequest` | `ApiResponse<PaginatedData<BannedMemberItem>>` |
-| 成员管理 | `POST /api/v1/groups/members/remove_member` | 移除成员 | `RemoveMemberRequest` | `ApiResponse` |
-| 申请管理 | `POST /api/v1/groups/applications/list` | 申请列表 | `GroupApplicationsRequest` | `ApiResponse<PaginatedData<GroupApplicationItem>>` |
-| 申请管理 | `POST /api/v1/groups/applications/approve` | 同意申请 | `ApproveGroupApplicationRequest` | `ApiResponse<GroupApplicationItem>` |
-| 申请管理 | `POST /api/v1/groups/applications/reject` | 拒绝申请 | `RejectGroupApplicationRequest` | `ApiResponse<GroupApplicationItem>` |
-| 群组操作 | `POST /api/v1/groups/transfer_ownership` | 转让群主 | `TransferOwnershipRequest` | `ApiResponse` |
-| 群公告 | `POST /api/v1/groups/announcements/create` | 发布公告 | `CreateGroupAnnouncementRequest` | `ApiResponse<GroupAnnouncementItem>` |
-| 群公告 | `POST /api/v1/groups/announcements/list` | 公告列表 | `GroupAnnouncementsRequest` | `ApiResponse<PaginatedData<GroupAnnouncementItem>>` |
-| 群公告 | `POST /api/v1/groups/announcements/update` | 更新公告 | `UpdateGroupAnnouncementRequest` | `ApiResponse<GroupAnnouncementItem>` |
-| 群公告 | `POST /api/v1/groups/announcements/delete` | 删除公告 | `DeleteGroupAnnouncementRequest` | `ApiResponse` |
-| 我的群组 | `POST /api/v1/groups/me/list` | 我的群组列表 | `MyGroupsRequest` | `ApiResponse<PaginatedData<GroupItem>>` |
-| 我的群组 | `POST /api/v1/groups/me/applications/list` | 我的申请列表 | `MyApplicationsRequest` | `ApiResponse<PaginatedData<GroupApplicationItem>>` |
-| 我的群组 | `POST /api/v1/groups/me/applications/cancel` | 取消申请 | `CancelApplicationRequest` | `ApiResponse` |
-| 我的群组 | `POST /api/v1/groups/me/invites/list` | 我的邀请列表 | `MyInvitesRequest` | `ApiResponse<PaginatedData<GroupInviteItem>>` |
-| 我的群组 | `POST /api/v1/groups/me/invites/accept` | 接受邀请 | `AcceptInviteRequest` | `ApiResponse` |
-| 我的群组 | `POST /api/v1/groups/me/invites/reject` | 拒绝邀请 | `RejectInviteRequest` | `ApiResponse` |
-| 我的群组 | `POST /api/v1/groups/me/leave` | 退出群组 | `LeaveGroupRequest` | `ApiResponse` |
-| 群聊消息 | `POST /api/v1/group_messages/send` | 发送消息 | `SendGroupMessageRequest` | `ApiResponse<MessageSent>` |
-| 群聊消息 | `POST /api/v1/group_messages/history` | 消息历史 | `GroupMessagesHistoryRequest` | `ApiResponse<PaginatedData<GroupMessageItem>>` |
-| 群聊消息 | `POST /api/v1/group_messages/update` | 编辑消息 | `UpdateGroupMessageRequest` | `ApiResponse` |
-| 群聊消息 | `POST /api/v1/group_messages/recall` | 撤回消息 | `RecallGroupMessageRequest` | `ApiResponse` |
-| 群聊消息 | `POST /api/v1/group_messages/delete` | 删除消息 | `DeleteGroupMessageRequest` | `ApiResponse` |
-| 群聊消息 | `POST /api/v1/group_messages/mark_as_read` | 标记已读 | `MarkGroupMessagesReadRequest` | `ApiResponse` |
-| 群聊消息 | `POST /api/v1/group_messages/add_reaction` | 添加反应 | `AddGroupMessageReactionRequest` | `ApiResponse` |
-| 群聊消息 | `POST /api/v1/group_messages/remove_reaction` | 移除反应 | `RemoveGroupMessageReactionRequest` | `ApiResponse` |
-| 群聊消息 | `POST /api/v1/group_messages/reactions` | 反应列表 | `GroupMessageReactionsRequest` | `ApiResponse<PaginatedData<ReactionItem>>` |
-| 群聊消息 | `POST /api/v1/group_messages/mark_all_as_read` | 标记全部群聊已读 | `{}` | `ApiResponse` |
+以下类型定义于 `@api_spec_types.mdc`：
+- `GroupInfo`
+- `GroupItem`
+- `GroupSettings`
+- `MyGroupState`
+- `GroupAnnouncementItem`
+- `GroupRole`
+- `GroupJoinMethod`
+- `Location`
+- `PaginationParams`
+- `SearchBaseParams`
+- `PaginatedData`
+- `ApiResponse`
+- `UserInfo`
+- `UserPresenceStatus`
 
-## 核心类型定义
+以下类型定义于 `@api_spec_chat.mdc`：
+- `GroupMessageItem`
 
 ```typescript
-// 注：GroupInfo、GroupSettings、GroupMemberItem、MyGroupState 等类型定义于 @api_spec_common.mdc
-
+// 申请状态
 type ApplicationStatus = 'pending' | 'accepted' | 'rejected';
 
-type SetableGroupRole = 'admin' | 'member';  // 可设置的角色（不含 owner）
+// 可设置的角色（不含 owner）
+type SetableGroupRole = 'admin' | 'member';
 
-interface GroupMessageItem {
-  message_id: string;
-  type: MessageType;
-  
-  content?: string;
-  media?: MessageMedia;
-  share_code?: string;
-  
-  sender: UserInfo;  // 群聊场景：需要完整用户信息
-  
-  reply_to?: MessageReplyTo;
-  mentions?: string[];  // @UserIDs
-  recalled_by?: string;
-  
-  sent_at: string;
-  edited_at?: string;
-  recalled_at?: string;  // 存在即表示已撤回
-  
-  read_count?: number;
-}
-
+// 群组详情响应
 interface GroupOpenResult {
   group: GroupItem;
-  recent_messages?: PaginatedData<GroupMessageItem>;
+  recent_messages?: PaginatedData<GroupMessageItem>;  // GroupMessageItem 定义于 @api_spec_chat.mdc
 }
 
+// 群组成员列表项
 interface GroupMemberItem {
   user: UserInfo;
   role: GroupRole;
   joined_at: string;
-  muted_until?: string;
+  muted_until?: string;           // @group-admin-only（或被禁言者自身可见）
   presence_status?: UserPresenceStatus;  // 隐私受控：成员隐私设置时不返回
   last_online?: string;
 }
 
+// 邀请响应
 interface Invitation {
   invite_id: string;
   expires_at: string;
 }
 
+// 申请响应
 interface Application {
   application_id: string;
 }
 
-// GroupCreated: 群组创建响应（支持客户端乐观更新）
-interface GroupCreated {
-  group_id: string;
-}
+// 群组创建响应：直接返回完整 GroupItem（与 moments/create 返回 MomentItem 保持一致）
+// 不再使用独立的 GroupCreated 类型，客户端无需额外请求即可获得完整群组数据
 
-// 封禁成员列表项（视角差异）
-// - 普通成员视角：仅返回 user、banned_at
-// - 群组管理员视角（@group-admin-only）：返回完整字段
+// 封禁成员列表项
 interface BannedMemberItem {
   user: UserInfo;
   banned_at: string;
@@ -136,9 +121,7 @@ interface BannedMemberItem {
   banned_by?: UserInfo;
 }
 
-// 群组申请列表项（视角差异）
-// - 申请人视角（查看当前用户的申请）：不返回 handled_by（申请人不应知道是谁处理的）
-// - 群组管理员视角（@group-admin-only，审核申请列表）：返回完整字段
+// 群组申请列表项
 interface GroupApplicationItem {
   application_id: string;
   applicant: UserInfo;
@@ -146,9 +129,11 @@ interface GroupApplicationItem {
   status: ApplicationStatus;
   created_at: string;
   handled_at?: string;
+  // === @group-admin-only ===
   handled_by?: UserInfo;
 }
 
+// 群组邀请列表项
 interface GroupInviteItem {
   invite_id: string;
   group: GroupInfo;
@@ -158,55 +143,250 @@ interface GroupInviteItem {
   created_at: string;
   expires_at?: string;
 }
+
+// 搜索群组请求
+interface SearchGroupsRequest {
+  search: SearchBaseParams;
+  keyword?: string;    // 关键字搜索（匹配名称、描述等）
+  tag?: string;        // 标签筛选
+  radius?: number;     // 位置范围（米），配合 search.reference_point 使用
+  sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';  // 默认: relevance
+}
+// 至少提供 keyword、tag、radius 中的一个
+
+// 群组详情请求
+interface GroupOpenTheDoorRequest {
+  group_id: string;
+  recent_messages?: PaginationParams;  // 可选；默认 limit=20，最大 50
+}
+
+// 创建群组请求
+interface CreateGroupRequest {
+  name: string;
+  description?: string;
+  avatar_file_id?: string;
+  tags?: string[];
+  password?: string;
+  join_method?: GroupJoinMethod;
+  is_searchable?: boolean;
+  max_members?: number;
+  location: Location;
+}
+
+// 更新群组请求
+interface UpdateGroupRequest {
+  group_id: string;
+  name?: string;
+  description?: string;
+  avatar_file_id?: string;
+  tags?: string[];
+  password?: string;
+  join_method?: GroupJoinMethod;
+  is_searchable?: boolean;
+  max_members?: number;
+  location?: Location;
+}
+
+// 解散群组请求
+interface DismissGroupRequest {
+  group_id: string;
+}
+
+// 成员列表请求
+interface GroupMembersRequest {
+  pagination?: PaginationParams;
+  group_id: string;
+  role?: GroupRole;
+}
+
+// 搜索成员请求
+interface SearchGroupMembersRequest {
+  pagination?: PaginationParams;
+  group_id: string;
+  keyword: string;    // 按昵称搜索
+  role?: GroupRole;   // 可选：按角色过滤
+}
+
+// 邀请成员请求
+interface InviteMemberRequest {
+  group_id: string;
+  user_id: string;
+  message?: string;
+}
+
+// 设置角色请求
+interface SetMemberRoleRequest {
+  group_id: string;
+  user_id: string;
+  role: SetableGroupRole;
+}
+
+// 禁言成员请求
+interface MuteMemberRequest {
+  group_id: string;
+  user_id: string;
+  duration_minutes: number;
+}
+
+// 取消禁言请求
+interface UnmuteMemberRequest {
+  group_id: string;
+  user_id: string;
+}
+
+// 封禁成员请求
+interface BanMemberRequest {
+  group_id: string;
+  user_id: string;
+  reason?: string;
+}
+
+// 解除封禁请求
+interface UnbanMemberRequest {
+  group_id: string;
+  user_id: string;
+}
+
+// 封禁列表请求
+interface BannedMembersRequest {
+  pagination?: PaginationParams;
+  group_id: string;
+}
+
+// 移除成员请求
+interface RemoveMemberRequest {
+  group_id: string;
+  user_id: string;
+}
+
+// 申请列表请求
+interface GroupApplicationsRequest {
+  pagination?: PaginationParams;
+  group_id: string;
+  status?: ApplicationStatus | 'all';
+}
+
+// 同意申请请求
+interface ApproveGroupApplicationRequest {
+  application_id: string;
+}
+
+// 拒绝申请请求
+interface RejectGroupApplicationRequest {
+  application_id: string;
+  reason?: string;
+}
+
+// 更新我的群组偏好请求
+interface UpdateGroupMySettingsRequest {
+  group_id: string;
+  is_muted?: boolean;
+  is_pinned?: boolean;
+}
+
+// 加入群组请求
+interface JoinGroupRequest {
+  group_id: string;
+  password?: string;   // open+password 群组需要
+  message?: string;    // approval 群组可选附言
+}
+
+// 加入群组响应
+interface JoinGroupResult {
+  status: 'joined' | 'pending_approval';
+  application?: Application;  // 仅 pending_approval 时返回
+}
+
+// 转让群主请求
+interface TransferOwnershipRequest {
+  group_id: string;
+  new_owner_id: string;
+}
+
+// 发布公告请求
+interface CreateGroupAnnouncementRequest {
+  group_id: string;
+  title: string;
+  content: string;
+  is_pinned?: boolean;
+}
+
+// 公告列表请求
+interface GroupAnnouncementsRequest {
+  group_id: string;
+  limit?: number;  // default: 10, max: 50
+}
+
+// 更新公告请求
+interface UpdateGroupAnnouncementRequest {
+  announcement_id: string;
+  title?: string;
+  content?: string;
+  is_pinned?: boolean;
+}
+
+// 删除公告请求
+interface DeleteGroupAnnouncementRequest {
+  announcement_id: string;
+}
+
+// 我的群组列表请求
+interface MyGroupsRequest {
+  pagination?: PaginationParams;
+}
+
+// 我的申请列表请求
+interface MyApplicationsRequest {
+  pagination?: PaginationParams;
+  status?: ApplicationStatus | 'all';  // 默认: 'all'
+}
+
+// 取消申请请求
+interface CancelApplicationRequest {
+  application_id: string;
+}
+
+// 我的邀请列表请求
+interface MyInvitesRequest {
+  pagination?: PaginationParams;
+  status?: ApplicationStatus | 'all';
+}
+
+// 接受邀请请求
+interface AcceptInviteRequest {
+  invite_id: string;
+}
+
+// 拒绝邀请请求
+interface RejectInviteRequest {
+  invite_id: string;
+}
+
+// 退出群组请求
+interface LeaveGroupRequest {
+  group_id: string;
+}
 ```
 
-## 错误码说明
+## 端点详情
 
-本模块使用的错误码定义于 `@spec/api_spec_errors.mdc`，主要涉及：
+### POST /api/v1/groups/search
 
-| 错误码 | 说明 | 相关接口 |
-|-------|------|---------|
-| `10001` | 缺少必填参数 | 所有带参数的接口 |
-| `10003` | 参数值超出范围 | `create`、`update`、公告等 |
-| `10200` | 权限不足 | 管理操作（设置角色、禁言、踢人等） |
-| `10211` | 已被对方拉黑 | `members/invite` |
-| `10212` | 群组密码错误 | `members/join` |
-| `10300` | 资源不存在 | 申请/邀请/公告相关 |
-| `10320` | 群组不存在 | 所有群组相关接口 |
-| `10350` | 消息不存在 | 消息相关接口 |
-| `10360` | 文件/媒体不存在 | `create`、`update`、`send` |
-| `10402` | 资源状态冲突 | 申请/邀请处理 |
-| `10410` | 业务规则冲突 | `members/join`（需申请）、`me/leave`（群主） |
-| `10419` | 用户被禁言 | `send` |
-| `10414` | 群组已满员 | `members/join`、`members/invite` |
-| `10415` | 已在群组中 | `members/join`、`members/invite` |
-| `10416` | 不是群组成员 | 大部分群组操作 |
-| `10417` | 消息已被撤回 | `update`、`recall` |
-| `10418` | 操作时间窗口已过期 | `update`、`recall` |
-| `22000` | 幂等键冲突 | `create`、`announcements/create`、`members/join`、申请/邀请处理、`send` |
-| `22002` | 幂等操作正在处理中 | `create`、`announcements/create`、`members/join`、`send` |
-
----
-
-## 群组管理 API
-
-### 搜索与发现
+统一搜索群组。支持关键字、标签、位置范围三种条件的自由组合。
 
 说明（Token 可选的搜索语义）：
 - 未登录（不带 token）：仅返回 `is_searchable=true` 的群组；不返回 `@auth-only` 字段
 - 已登录（带 token）：在满足关系与可见性规则前提下，允许返回更多可见群组；返回完整的 `GroupItem`（包括 `@auth-only` 字段）
 
-#### POST /api/v1/groups/search
+- **认证**: 可选
+- **幂等**: 无
+- **排序**: 
+  - 默认 `sort_by='relevance'`：按相关性优先排序
+  - `sort_by='distance'`：按距离由近到远排序（需要 `radius`）
+  - `sort_by='newest'`：按创建时间倒序
+  - `sort_by='popular'`：按成员数/活跃度排序
 
-统一搜索群组。支持关键字、标签、位置范围三种条件的自由组合。
-
-**排序语义（契约级）**：
-- 默认 `sort_by='relevance'`：按相关性优先排序
-- `sort_by='distance'`：按距离由近到远排序（需要 `radius`）
-- `sort_by='newest'`：按创建时间倒序
-- `sort_by='popular'`：按成员数/活跃度排序
-
-**Request**:
+**Request**: `SearchGroupsRequest`
 ```typescript
 interface SearchGroupsRequest {
   search: SearchBaseParams;
@@ -217,34 +397,45 @@ interface SearchGroupsRequest {
 }
 // 至少提供 keyword、tag、radius 中的一个
 ```
+
 **Response**: `ApiResponse<PaginatedData<GroupItem>>`
 
-### 群组详情
+**错误码**: `10000`
 
-#### POST /api/v1/groups/open_the_door
+---
+
+### POST /api/v1/groups/open_the_door
 
 获取群组详情。
+
 Token 可选；登录态返回 `GroupItem.my_state`。
 可选返回最近消息（`recent_messages`）。
 
-**Request**:
+- **认证**: 可选
+- **幂等**: 无
+
+**Request**: `GroupOpenTheDoorRequest`
 ```typescript
 interface GroupOpenTheDoorRequest {
   group_id: string;
   recent_messages?: PaginationParams;  // 可选；默认 limit=20，最大 50
 }
 ```
+
 **Response**: `ApiResponse<GroupOpenResult>`
 
-### 群组操作
+**错误码**: `10000` `10300`
 
-#### POST /api/v1/groups/create
+---
+
+### POST /api/v1/groups/create
 
 创建群组。
 
-**幂等性（MUST）**：客户端必须携带 `Idempotency-Key`。
+- **认证**: 必须
+- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
 
-**Request**:
+**Request**: `CreateGroupRequest`
 ```typescript
 interface CreateGroupRequest {
   name: string;
@@ -258,15 +449,21 @@ interface CreateGroupRequest {
   location: Location;
 }
 ```
-**Response**: `ApiResponse<GroupCreated>`（完整群组数据通过 WebSocket `GroupMemberJoined` 推送）
 
-**可能错误码**：`10001`、`10003`、`10360`、`22000`、`22002`
+**Response**: `ApiResponse<GroupItem>`
 
-#### POST /api/v1/groups/update
+**错误码**: `10000` `10300` `22000` `22002`
+
+---
+
+### POST /api/v1/groups/update
 
 更新群组信息。
 
-**Request**:
+- **认证**: 必须
+- **幂等**: 幂等语义（重复请求返回一致结果）
+
+**Request**: `UpdateGroupRequest`
 ```typescript
 interface UpdateGroupRequest {
   group_id: string;
@@ -281,57 +478,42 @@ interface UpdateGroupRequest {
   location?: Location;
 }
 ```
+
 **Response**: `ApiResponse`
 
-**可能错误码**：`10001`、`10320`、`10360`、`10200`
-
-#### POST /api/v1/groups/update_my_settings
-
-更新我的群组偏好。
-
-**Request**:
-```typescript
-interface UpdateGroupMySettingsRequest {
-  group_id: string;
-  is_muted?: boolean;
-  is_pinned?: boolean;
-}
-```
-**Response**: `ApiResponse`
-
-**可能错误码**：`10001`、`10320`、`10416`
-
-#### POST /api/v1/groups/delete
-
-解散群组。
-
-**幂等性（SHOULD）**：建议客户端携带 `Idempotency-Key`。
-
-**Request**:
-```typescript
-interface DeleteGroupRequest {
-  group_id: string;
-}
-```
-**Response**: `ApiResponse`
-
-**可能错误码**：`10001`、`10320`、`10200`
+**错误码**: `10000` `10200` `10300`
 
 ---
 
-## 群组成员管理 API
+### POST /api/v1/groups/dismiss
 
-**可见性**：仅群成员可见（`@member-only`）。
-**权限说明**：成员管理操作（设置角色、禁言、封禁、移除等）需要群组管理员权限（`@group-admin-only`），系统管理员按 RBAC 权限可见。
-**字段说明**：`muted_until` 仅群组管理员（`@group-admin-only`）或被禁言者自身可见。
+解散群组。
 
-#### POST /api/v1/groups/members/list
+- **认证**: 必须
+- **幂等**: SHOULD（建议客户端携带 `Idempotency-Key`）
+
+**Request**: `DismissGroupRequest`
+```typescript
+interface DismissGroupRequest {
+  group_id: string;
+}
+```
+
+**Response**: `ApiResponse`
+
+**错误码**: `10000` `10200` `10300`
+
+---
+
+### POST /api/v1/groups/members/list
 
 获取成员列表。
 
-**排序语义**：按 `joined_at` 时间正序（最早加入在前）。
+- **认证**: 必须
+- **幂等**: 无
+- **排序**: 按 `joined_at` 时间正序（最早加入在前）
 
-**Request**:
+**Request**: `GroupMembersRequest`
 ```typescript
 interface GroupMembersRequest {
   pagination?: PaginationParams;
@@ -339,15 +521,45 @@ interface GroupMembersRequest {
   role?: GroupRole;
 }
 ```
+
 **Response**: `ApiResponse<PaginatedData<GroupMemberItem>>`
 
-**可能错误码**：`10001`、`10003`、`10320`
+**错误码**: `10000` `10300`
 
-#### POST /api/v1/groups/members/invite
+---
+
+### POST /api/v1/groups/members/search
+
+搜索群组成员。用于大群场景中快速定位特定成员。
+
+- **认证**: 必须
+- **幂等**: 无
+- **排序**: 按匹配度优先，同匹配度按 `joined_at` 正序
+
+**Request**: `SearchGroupMembersRequest`
+```typescript
+interface SearchGroupMembersRequest {
+  pagination?: PaginationParams;
+  group_id: string;
+  keyword: string;    // 按昵称搜索
+  role?: GroupRole;   // 可选：按角色过滤
+}
+```
+
+**Response**: `ApiResponse<PaginatedData<GroupMemberItem>>`
+
+**错误码**: `10000` `10300` `10400`
+
+---
+
+### POST /api/v1/groups/members/invite
 
 邀请成员。
 
-**Request**:
+- **认证**: 必须
+- **幂等**: 无
+
+**Request**: `InviteMemberRequest`
 ```typescript
 interface InviteMemberRequest {
   group_id: string;
@@ -355,44 +567,23 @@ interface InviteMemberRequest {
   message?: string;
 }
 ```
+
 **Response**: `ApiResponse<Invitation>`
 
-**可能错误码**：`10001`、`10320`、`10200`、`10415`、`10414`、`10211`
+**错误码**: `10000` `10200` `10300` `10400`
 
-#### POST /api/v1/groups/members/join
+---
 
-加入群组（智能路由）。根据群组 `join_method` 自动处理：
-- `open`：直接加入，返回 `status: 'joined'`
-- `open` + 有密码：需提供 `password`，验证通过后直接加入
-- `approval`：创建加入申请，返回 `status: 'pending_approval'`
-- `invite_only`：返回错误 `10410`（该群组仅限邀请加入）
-
-**幂等性（MUST）**：客户端必须携带 `Idempotency-Key`。
-
-**Request**:
-```typescript
-interface JoinGroupRequest {
-  group_id: string;
-  password?: string;   // open+password 群组需要
-  message?: string;    // approval 群组可选附言
-}
-```
-**Response**: `ApiResponse<JoinGroupResult>`
-
-```typescript
-interface JoinGroupResult {
-  status: 'joined' | 'pending_approval';
-  application?: Application;  // 仅 pending_approval 时返回
-}
-```
-
-**可能错误码**：`10001`、`10320`、`10212`、`10414`、`10415`、`10410`、`22000`、`22002`
-
-#### POST /api/v1/groups/members/set_role
+### POST /api/v1/groups/members/set_role
 
 设置成员角色。
 
-**Request**:
+**权限说明**：成员管理操作需要群组管理员权限，系统管理员按 RBAC 权限可操作。
+
+- **认证**: 必须
+- **幂等**: 幂等语义（重复请求返回一致结果）
+
+**Request**: `SetMemberRoleRequest`
 ```typescript
 interface SetMemberRoleRequest {
   group_id: string;
@@ -400,15 +591,23 @@ interface SetMemberRoleRequest {
   role: SetableGroupRole;
 }
 ```
-**Response**: `ApiResponse<GroupMemberItem>`
 
-**可能错误码**：`10001`、`10320`、`10416`、`10200`
+**Response**: `ApiResponse`
 
-#### POST /api/v1/groups/members/mute
+**错误码**: `10000` `10200` `10300` `10400`
+
+---
+
+### POST /api/v1/groups/members/mute
 
 禁言成员。
 
-**Request**:
+**权限说明**：成员管理操作需要群组管理员权限，系统管理员按 RBAC 权限可操作。
+
+- **认证**: 必须
+- **幂等**: 幂等语义（重复请求返回一致结果）
+
+**Request**: `MuteMemberRequest`
 ```typescript
 interface MuteMemberRequest {
   group_id: string;
@@ -416,30 +615,46 @@ interface MuteMemberRequest {
   duration_minutes: number;
 }
 ```
-**Response**: `ApiResponse<GroupMemberItem>`
 
-**可能错误码**：`10001`、`10320`、`10416`、`10200`
+**Response**: `ApiResponse`
 
-#### POST /api/v1/groups/members/unmute
+**错误码**: `10000` `10200` `10300` `10400`
+
+---
+
+### POST /api/v1/groups/members/unmute
 
 取消禁言成员。
 
-**Request**:
+**权限说明**：成员管理操作需要群组管理员权限，系统管理员按 RBAC 权限可操作。
+
+- **认证**: 必须
+- **幂等**: 幂等语义（重复请求返回一致结果）
+
+**Request**: `UnmuteMemberRequest`
 ```typescript
 interface UnmuteMemberRequest {
   group_id: string;
   user_id: string;
 }
 ```
-**Response**: `ApiResponse<GroupMemberItem>`
 
-**可能错误码**：`10001`、`10320`、`10416`、`10200`
+**Response**: `ApiResponse`
 
-#### POST /api/v1/groups/members/ban
+**错误码**: `10000` `10200` `10300` `10400`
+
+---
+
+### POST /api/v1/groups/members/ban
 
 封禁成员。封禁后成员将被移出群组且无法再次加入。
 
-**Request**:
+**权限说明**：成员管理操作需要群组管理员权限，系统管理员按 RBAC 权限可操作。
+
+- **认证**: 必须
+- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+
+**Request**: `BanMemberRequest`
 ```typescript
 interface BanMemberRequest {
   group_id: string;
@@ -447,71 +662,92 @@ interface BanMemberRequest {
   reason?: string;
 }
 ```
-**Response**: `ApiResponse<BannedMemberItem>`
 
-**可能错误码**：`10001`、`10320`、`10416`、`10200`
+**Response**: `ApiResponse`
 
-#### POST /api/v1/groups/members/unban
+**错误码**: `10000` `10200` `10300` `10400`
+
+---
+
+### POST /api/v1/groups/members/unban
 
 解除封禁成员。
 
-**Request**:
+**权限说明**：成员管理操作需要群组管理员权限，系统管理员按 RBAC 权限可操作。
+
+- **认证**: 必须
+- **幂等**: 幂等语义（重复请求返回一致结果）
+
+**Request**: `UnbanMemberRequest`
 ```typescript
 interface UnbanMemberRequest {
   group_id: string;
   user_id: string;
 }
 ```
+
 **Response**: `ApiResponse`
 
-**可能错误码**：`10001`、`10320`、`10200`
+**错误码**: `10000` `10200` `10300`
 
-#### POST /api/v1/groups/members/banned
+---
+
+### POST /api/v1/groups/members/list_banned
 
 获取封禁列表。
 
-**字段说明**：`reason`、`banned_by` 仅群组管理员可见（`@group-admin-only`）。
+**权限说明**：成员管理操作需要群组管理员权限，系统管理员按 RBAC 权限可操作。
 
-**排序语义**：按 `banned_at` 时间倒序（最近封禁在前）。
+- **认证**: 必须
+- **幂等**: 无
+- **排序**: 按 `banned_at` 时间倒序（最近封禁在前）
 
-**Request**:
+**Request**: `BannedMembersRequest`
 ```typescript
 interface BannedMembersRequest {
   pagination?: PaginationParams;
   group_id: string;
 }
 ```
+
 **Response**: `ApiResponse<PaginatedData<BannedMemberItem>>`
 
-**可能错误码**：`10001`、`10003`、`10320`、`10200`
+**错误码**: `10000` `10200` `10300`
 
-#### POST /api/v1/groups/members/remove_member
+---
+
+### POST /api/v1/groups/members/remove_member
 
 移除成员。
 
-**Request**:
+**权限说明**：成员管理操作需要群组管理员权限，系统管理员按 RBAC 权限可操作。
+
+- **认证**: 必须
+- **幂等**: 幂等语义（重复请求返回一致结果）
+
+**Request**: `RemoveMemberRequest`
 ```typescript
 interface RemoveMemberRequest {
   group_id: string;
   user_id: string;
 }
 ```
+
 **Response**: `ApiResponse`
 
-**可能错误码**：`10001`、`10320`、`10416`、`10200`
+**错误码**: `10000` `10200` `10300` `10400`
 
-### 群组申请管理
+---
 
-**可见性**：仅群主/群组管理员可见（`@group-admin-only`）。
-**字段说明**：`handled_by` 在申请人视角不返回。
-
-#### POST /api/v1/groups/applications/list
+### POST /api/v1/groups/applications/list
 
 获取群组申请列表。
 
-**排序语义**：按 `created_at` 时间倒序（最新申请在前）。
+- **认证**: 必须
+- **幂等**: 无
+- **排序**: 按 `created_at` 时间倒序（最新申请在前）
 
-**Request**:
+**Request**: `GroupApplicationsRequest`
 ```typescript
 interface GroupApplicationsRequest {
   pagination?: PaginationParams;
@@ -519,69 +755,62 @@ interface GroupApplicationsRequest {
   status?: ApplicationStatus | 'all';
 }
 ```
+
 **Response**: `ApiResponse<PaginatedData<GroupApplicationItem>>`
 
-**可能错误码**：`10001`、`10003`、`10320`、`10200`
+**错误码**: `10000` `10200` `10300`
 
-#### POST /api/v1/groups/applications/approve
+---
+
+### POST /api/v1/groups/applications/approve
 
 审批群组申请。
 
-**幂等性（MUST）**：客户端必须携带 `Idempotency-Key`。
+- **认证**: 必须
+- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
 
-**Request**:
+**Request**: `ApproveGroupApplicationRequest`
 ```typescript
 interface ApproveGroupApplicationRequest {
   application_id: string;
 }
 ```
-**Response**: `ApiResponse<GroupApplicationItem>`
 
-**可能错误码**：`10001`、`10300`、`10200`、`10402`、`22000`
+**Response**: `ApiResponse`
 
-#### POST /api/v1/groups/applications/reject
+**错误码**: `10000` `10200` `10300` `10400` `22000`
+
+---
+
+### POST /api/v1/groups/applications/reject
 
 拒绝群组申请。
 
-**幂等性（MUST）**：客户端必须携带 `Idempotency-Key`。
+- **认证**: 必须
+- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
 
-**Request**:
+**Request**: `RejectGroupApplicationRequest`
 ```typescript
 interface RejectGroupApplicationRequest {
   application_id: string;
   reason?: string;
 }
 ```
-**Response**: `ApiResponse<GroupApplicationItem>`
 
-**可能错误码**：`10001`、`10300`、`10200`、`10402`、`22000`
-
-#### POST /api/v1/groups/transfer_ownership
-
-转让群主。
-
-**幂等性（SHOULD）**：建议客户端携带 `Idempotency-Key`。
-
-**Request**:
-```typescript
-interface TransferOwnershipRequest {
-  group_id: string;
-  new_owner_id: string;
-}
-```
 **Response**: `ApiResponse`
 
-**可能错误码**：`10001`、`10320`、`10416`、`10200`
+**错误码**: `10000` `10200` `10300` `10400` `22000`
 
-### 群公告管理
+---
 
-#### POST /api/v1/groups/announcements/create
+### POST /api/v1/groups/announcements/create
 
 发布群公告。
 
-**幂等性（MUST）**：客户端必须携带 `Idempotency-Key`。
+- **认证**: 必须
+- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
 
-**Request**:
+**Request**: `CreateGroupAnnouncementRequest`
 ```typescript
 interface CreateGroupAnnouncementRequest {
   group_id: string;
@@ -590,32 +819,47 @@ interface CreateGroupAnnouncementRequest {
   is_pinned?: boolean;
 }
 ```
+
 **Response**: `ApiResponse<GroupAnnouncementItem>`
 
-**可能错误码**：`10001`、`10003`、`10320`、`10416`、`10200`、`22000`、`22002`
+**错误码**: `10000` `10200` `10300` `10400` `22000` `22002`
 
-#### POST /api/v1/groups/announcements/list
+---
+
+### POST /api/v1/groups/announcements/list
 
 获取群公告列表。
 
-**排序语义**：按 `is_pinned DESC, created_at DESC` 排序。
+- **认证**: 必须
+- **幂等**: 无
+- **排序**: 按 `is_pinned DESC, created_at DESC` 排序
 
-**Request**:
+**Request**: `GroupAnnouncementsRequest`
 ```typescript
 interface GroupAnnouncementsRequest {
-  pagination?: PaginationParams;
   group_id: string;
+  limit?: number;  // default: 10, max: 50
 }
 ```
-**Response**: `ApiResponse<PaginatedData<GroupAnnouncementItem>>`
 
-**可能错误码**：`10001`、`10003`、`10320`
+**Response**: `ApiResponse<{ items: GroupAnnouncementItem[] }>`
 
-#### POST /api/v1/groups/announcements/update
+**说明**：
+- 普通用户只需获取最新的 N 条群公告，无需分页翻阅历史
+- 按 `is_pinned DESC, created_at DESC` 排序（置顶优先）
+
+**错误码**: `10000` `10300`
+
+---
+
+### POST /api/v1/groups/announcements/update
 
 更新群公告。
 
-**Request**:
+- **认证**: 必须
+- **幂等**: 幂等语义（重复请求返回一致结果）
+
+**Request**: `UpdateGroupAnnouncementRequest`
 ```typescript
 interface UpdateGroupAnnouncementRequest {
   announcement_id: string;
@@ -624,313 +868,258 @@ interface UpdateGroupAnnouncementRequest {
   is_pinned?: boolean;
 }
 ```
-**Response**: `ApiResponse<GroupAnnouncementItem>`
 
-**可能错误码**：`10001`、`10003`、`10300`、`10200`
+**Response**: `ApiResponse`
 
-#### POST /api/v1/groups/announcements/delete
+**错误码**: `10000` `10200` `10300`
+
+---
+
+### POST /api/v1/groups/announcements/delete
 
 删除群公告。
 
-**Request**:
+- **认证**: 必须
+- **幂等**: 幂等语义（重复请求返回一致结果）
+
+**Request**: `DeleteGroupAnnouncementRequest`
 ```typescript
 interface DeleteGroupAnnouncementRequest {
   announcement_id: string;
 }
 ```
+
 **Response**: `ApiResponse`
 
-**可能错误码**：`10001`、`10300`、`10200`
+**错误码**: `10000` `10200` `10300`
 
-### 当前用户群组 API（/me/ 路径）
+---
 
-**可见性**：仅当前用户可见（`@owner-only`）。
+### POST /api/v1/groups/me/update_settings
 
-#### POST /api/v1/groups/me/list
+更新我的群组偏好。
+
+
+- **认证**: 必须
+- **幂等**: 幂等语义（重复请求返回一致结果）
+
+**Request**: `UpdateGroupMySettingsRequest`
+```typescript
+interface UpdateGroupMySettingsRequest {
+  group_id: string;
+  is_muted?: boolean;
+  is_pinned?: boolean;
+}
+```
+
+**Response**: `ApiResponse`
+
+**错误码**: `10000` `10300` `10400`
+
+---
+
+### POST /api/v1/groups/me/join
+
+加入群组（智能路由）。根据群组 `join_method` 自动处理：
+- `open`：直接加入，返回 `status: 'joined'`
+- `open` + 有密码：需提供 `password`，验证通过后直接加入
+- `approval`：创建加入申请，返回 `status: 'pending_approval'`
+- `invite_only`：返回错误 `10400`（该群组仅限邀请加入）
+
+
+- **认证**: 必须
+- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+
+**Request**: `JoinGroupRequest`
+```typescript
+interface JoinGroupRequest {
+  group_id: string;
+  password?: string;   // open+password 群组需要
+  message?: string;    // approval 群组可选附言
+}
+```
+
+**Response**: `ApiResponse<JoinGroupResult>`
+```typescript
+interface JoinGroupResult {
+  status: 'joined' | 'pending_approval';
+  application?: Application;  // 仅 pending_approval 时返回
+}
+```
+
+**错误码**: `10000` `10200` `10300` `10400` `22000` `22002`
+
+---
+
+### POST /api/v1/groups/me/transfer_ownership
+
+转让群主。
+
+
+- **认证**: 必须
+- **幂等**: SHOULD（建议客户端携带 `Idempotency-Key`）
+
+**Request**: `TransferOwnershipRequest`
+```typescript
+interface TransferOwnershipRequest {
+  group_id: string;
+  new_owner_id: string;
+}
+```
+
+**Response**: `ApiResponse`
+
+**错误码**: `10000` `10200` `10300` `10400`
+
+---
+
+### POST /api/v1/groups/me/list
 
 获取我的群组。
 
-**Request**:
+
+**说明**：登录态必定返回 `my_state` 字段，包含 `role`、`is_joined`、`unread_count`、`is_muted`、`is_pinned`、`joined_at` 等群组内状态。
+
+- **认证**: 必须
+- **幂等**: 无
+- **排序**: 默认按 `is_pinned DESC, last_activity_at DESC` 排序（置顶优先，最近活跃在前）
+
+**Request**: `MyGroupsRequest`
 ```typescript
 interface MyGroupsRequest {
   pagination?: PaginationParams;
 }
 ```
+
 **Response**: `ApiResponse<PaginatedData<GroupItem>>`
 
-**说明**：登录态必定返回 `my_state` 字段，包含 `role`、`is_joined`、`unread_count`、`is_muted`、`is_pinned`、`joined_at` 等群组内状态。
+**错误码**: `10000`
 
-**可能错误码**：`10003`
+---
 
-#### POST /api/v1/groups/me/applications/list
+### POST /api/v1/groups/me/applications/list
 
 获取我的群组申请列表。查看当前用户提交的所有群组申请及其审核状态。
 
-**排序语义**：按 `created_at` 时间倒序（最新申请在前）。
+- **认证**: 必须
+- **幂等**: 无
+- **排序**: 按 `created_at` 时间倒序（最新申请在前）
 
-**Request**:
+**Request**: `MyApplicationsRequest`
 ```typescript
 interface MyApplicationsRequest {
   pagination?: PaginationParams;
   status?: ApplicationStatus | 'all';  // 默认: 'all'
 }
 ```
+
 **Response**: `ApiResponse<PaginatedData<GroupApplicationItem>>`
 
-**字段说明**：申请人视角下 `handled_by` 不返回（申请人不应知道是谁处理的）。
+**错误码**: `10000`
 
-**可能错误码**：`10003`
+---
 
-#### POST /api/v1/groups/me/applications/cancel
+### POST /api/v1/groups/me/applications/cancel
 
 取消群组申请。
 
-**Request**:
+
+- **认证**: 必须
+- **幂等**: 幂等语义（重复请求返回一致结果）
+
+**Request**: `CancelApplicationRequest`
 ```typescript
 interface CancelApplicationRequest {
   application_id: string;
 }
 ```
+
 **Response**: `ApiResponse`
 
-**可能错误码**：`10001`、`10300`、`10200`、`10402`
+**错误码**: `10000` `10200` `10300` `10400`
 
-#### POST /api/v1/groups/me/invites/list
+---
+
+### POST /api/v1/groups/me/invites/list
 
 获取我的群组邀请列表。
 
-**排序语义**：按 `created_at` 时间倒序（最新邀请在前）。
 
-**Request**:
+- **认证**: 必须
+- **幂等**: 无
+- **排序**: 按 `created_at` 时间倒序（最新邀请在前）
+
+**Request**: `MyInvitesRequest`
 ```typescript
 interface MyInvitesRequest {
   pagination?: PaginationParams;
   status?: ApplicationStatus | 'all';
 }
 ```
+
 **Response**: `ApiResponse<PaginatedData<GroupInviteItem>>`
 
-**可能错误码**：`10003`
+**错误码**: `10000`
 
-#### POST /api/v1/groups/me/invites/accept
+---
+
+### POST /api/v1/groups/me/invites/accept
 
 接受群组邀请。
 
-**幂等性（MUST）**：客户端必须携带 `Idempotency-Key`。
 
-**Request**:
+- **认证**: 必须
+- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+
+**Request**: `AcceptInviteRequest`
 ```typescript
 interface AcceptInviteRequest {
   invite_id: string;
 }
 ```
+
 **Response**: `ApiResponse`（完整数据通过 WebSocket `GroupMemberJoined` 推送）
 
-**可能错误码**：`10001`、`10300`、`10402`、`10414`、`10415`、`22000`
+**错误码**: `10000` `10300` `10400` `22000`
 
-#### POST /api/v1/groups/me/invites/reject
+---
+
+### POST /api/v1/groups/me/invites/reject
 
 拒绝群组邀请。
 
-**幂等性（MUST）**：客户端必须携带 `Idempotency-Key`。
 
-**Request**:
+- **认证**: 必须
+- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+
+**Request**: `RejectInviteRequest`
 ```typescript
 interface RejectInviteRequest {
   invite_id: string;
 }
 ```
+
 **Response**: `ApiResponse`
 
-**可能错误码**：`10001`、`10300`、`10402`、`22000`
+**错误码**: `10000` `10300` `10400` `22000`
 
-#### POST /api/v1/groups/me/leave
+---
+
+### POST /api/v1/groups/me/leave
 
 退出群组。
 
-**幂等性（SHOULD）**：建议客户端携带 `Idempotency-Key`。
 
-**Request**:
+- **认证**: 必须
+- **幂等**: SHOULD（建议客户端携带 `Idempotency-Key`）
+
+**Request**: `LeaveGroupRequest`
 ```typescript
 interface LeaveGroupRequest {
   group_id: string;
 }
 ```
+
 **Response**: `ApiResponse`
 
-**可能错误码**：`10001`、`10320`、`10416`、`10410`
-
----
-
-## 群聊消息 API
-
-**发送语义**：API 调用仅提交发送意图和获取 `message_id`，消息最终态通过 WebSocket 推送获取。
-
-消息类型：
-- `text` 需要 `content`
-- `image`/`video`/`audio`/`file` 需要 `file_id`
-- `share` 需要 `share_code`
-
-**可见性**：仅群成员可见（`@member-only`）。
-
-#### POST /api/v1/group_messages/send
-
-发送群聊消息。
-
-**幂等性（MUST）**：客户端必须携带 `Idempotency-Key`。
-
-**Request**:
-```typescript
-interface SendGroupMessageRequest {
-  group_id: string;
-  type: SendMessageType;
-  content?: string;
-  file_id?: string;
-  share_code?: string;
-  reply_to_message_id?: string;
-  mentions?: string[];
-}
-```
-**Response**: `ApiResponse<MessageSent>`（完整消息通过 WebSocket 推送，`MessageSent` 定义于 `@api_spec_common.mdc`）
-
-**可能错误码**：`10001`、`10320`、`10360`、`10416`、`10419`、`22000`、`22002`
-
-#### POST /api/v1/group_messages/history
-
-获取群聊消息历史。
-
-**排序语义**：按 `sent_at` 时间倒序（最新在前）。
-
-**Request**:
-```typescript
-interface GroupMessagesHistoryRequest {
-  pagination?: PaginationParams;
-  group_id: string;
-  include_system?: boolean;
-}
-```
-**Response**: `ApiResponse<PaginatedData<GroupMessageItem>>`
-
-**可能错误码**：`10001`、`10003`、`10320`、`10416`
-
-#### POST /api/v1/group_messages/update
-
-编辑群聊消息。
-
-**Request**:
-```typescript
-interface UpdateGroupMessageRequest {
-  message_id: string;
-  content: string;
-}
-```
-**Response**: `ApiResponse`
-
-**可能错误码**：`10001`、`10350`、`10200`、`10417`、`10418`
-
-#### POST /api/v1/group_messages/recall
-
-撤回群聊消息。发送者可撤回 2 分钟内消息，管理员/群主可撤回任何消息。
-
-**Request**:
-```typescript
-interface RecallGroupMessageRequest {
-  message_id: string;
-}
-```
-**Response**: `ApiResponse`
-
-**可能错误码**：`10001`、`10350`、`10200`、`10417`、`10418`
-
-#### POST /api/v1/group_messages/delete
-
-删除群聊消息。
-
-**删除语义**：
-- `for_everyone=true`：对所有人撤回/移除展示（需权限）
-- `for_everyone` 省略或 false：仅影响当前用户视角
-
-**Request**:
-```typescript
-interface DeleteGroupMessageRequest {
-  message_id: string;
-  for_everyone?: boolean;
-}
-```
-**Response**: `ApiResponse`
-
-**可能错误码**：`10001`、`10350`、`10200`
-
-#### POST /api/v1/group_messages/mark_as_read
-
-标记群聊消息已读。
-
-**Request**:
-```typescript
-interface MarkGroupMessagesReadRequest {
-  group_id: string;
-  up_to_message_id?: string;
-}
-```
-**Response**: `ApiResponse`
-
-**可能错误码**：`10001`、`10320`、`10416`
-
-#### POST /api/v1/group_messages/add_reaction
-
-添加群聊消息反应。
-
-**幂等性**：重复添加同一 reaction_type 返回成功（不报错），客户端无需担心重复操作。
-
-**Request**:
-```typescript
-interface AddGroupMessageReactionRequest {
-  message_id: string;
-  type: ReactionType;
-}
-```
-**Response**: `ApiResponse`
-
-**可能错误码**：`10001`、`10350`、`10416`
-
-#### POST /api/v1/group_messages/remove_reaction
-
-移除群聊消息反应。
-
-**幂等性**：重复移除同一 reaction_type 返回成功（不报错），客户端无需担心重复操作。
-
-**Request**:
-```typescript
-interface RemoveGroupMessageReactionRequest {
-  message_id: string;
-  type: ReactionType;
-}
-```
-**Response**: `ApiResponse`
-
-**可能错误码**：`10001`、`10350`、`10416`
-
-#### POST /api/v1/group_messages/reactions
-
-获取消息反应列表。
-
-**Request**:
-```typescript
-interface GroupMessageReactionsRequest {
-  pagination?: PaginationParams;
-  message_id: string;
-  type?: ReactionType;
-}
-```
-**Response**: `ApiResponse<PaginatedData<ReactionItem>>`
-
-**可能错误码**：`10001`、`10003`、`10350`、`10416`
-
----
-
-### POST /api/v1/group_messages/mark_all_as_read
-
-标记所有群聊消息已读。
-
-**Request**: `{}`
-**Response**: `ApiResponse`
+**错误码**: `10000` `10300` `10400`

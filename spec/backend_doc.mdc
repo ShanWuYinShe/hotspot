@@ -17,8 +17,9 @@ alwaysApply: false
 - API 端点/字段/错误码/WS 事件定义
 
 权威引用：
-- **API 契约**：`@spec/api_spec.mdc`
-- **通用契约**：`@api_spec_common.mdc`
+- **API 契约**：`@spec/api_spec_index.mdc`
+- **基础规范**：`@api_spec_base.mdc`
+- **通用类型**：`@api_spec_types.mdc`
 - **错误码**：`@spec/api_spec_errors.mdc`
 - **实现规范**：`@backend_rule.mdc`
 
@@ -58,10 +59,6 @@ alwaysApply: false
 ### 地图（map）
 - 视口驱动的地图渲染与聚合
 
-### 通知与设备令牌（notification/device_tokens）
-- 通知列表、未读计数、已读标记
-- 设备推送令牌管理
-
 ### 举报（report）
 - 创建举报与我的举报记录
 
@@ -72,7 +69,7 @@ alwaysApply: false
 - 预签名上传流程
 - 对象存储为 S3 兼容；开发环境可使用 MinIO
 
-### 系统与公告（system/global_settings/announcements）
+### 系统与配置（system/server_config/client_config/announcements）
 - 健康检查与版本元信息
 - 全局配置读取与系统公告
 

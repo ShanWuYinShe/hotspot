@@ -10,8 +10,9 @@ alwaysApply: false
 本文件只描述前端功能与页面/流程边界，不包含工程实现细节。
 
 权威引用：
-- **API 契约**：`@spec/api_spec.mdc`
-- **通用契约**：`@api_spec_common.mdc`
+- **API 契约**：`@spec/api_spec_index.mdc`
+- **基础规范**：`@api_spec_base.mdc`
+- **通用类型**：`@api_spec_types.mdc`
 - **错误码**：`@spec/api_spec_errors.mdc`
 - **前端实现规范**：`@frontend_rule.mdc`
 

@@ -1,7 +1,7 @@
 ---
 alwaysApply: true
 ---
-# HotSpot API 规范 - WebSocket 实时事件定义 v0.0.1（契约唯一权威）
+# HotSpot API - WebSocket 实时事件定义
 
 > 本文档定义 HotSpot WebSocket 实时事件、连接与鉴权规范、订阅机制等。
 
@@ -30,20 +30,21 @@ alwaysApply: true
 | **私聊消息** | `PrivateMessageNew` | 新消息 |
 | | `PrivateMessageEdited` | 消息被编辑 |
 | | `PrivateMessageRecalled` | 消息被撤回 |
-| | `PrivateMessageDeleted` | 消息被删除 |
-| | `PrivateMessageReaction` | 消息反应（表情） |
 | | `PrivateMessageRead` | 消息已读状态 |
 | **社交通知** | `NewFollower` | 新关注者 |
 | | `MutualFollow` | 互相关注（成为好友） |
 | **瞬间互动** | `MomentLiked` | 瞬间被点赞 |
 | | `MomentCommented` | 瞬间被评论 |
+| | `CommentLiked` | 评论被点赞 |
 | | `CommentReply` | 评论被回复 |
 | | `MessageMentioned` | 在内容中被提及 |
 | **群组邀请** | `GroupInviteReceived` | 收到群组邀请 |
 | | `GroupInviteResponse` | 群组邀请通过 |
 | | `GroupApplicationReceived` | 收到入群申请 |
 | | `GroupApplicationResponse` | 入群申请通过 |
+| **用户** | `UserProfileUpdated` | 用户资料变更（推送给私聊对端和当前所在群聊订阅者） |
 | **系统** | `SystemAnnouncement` | 系统公告 |
+| | `AccountBanned` | 当前用户账号被封禁 |
 
 #### 订阅用户状态后推送
 
@@ -60,15 +61,17 @@ alwaysApply: true
 | **消息** | `GroupMessageNew` | 新消息 |
 | | `GroupMessageEdited` | 消息被编辑 |
 | | `GroupMessageRecalled` | 消息被撤回 |
-| | `GroupMessageDeleted` | 消息被删除 |
-| | `GroupMessageReaction` | 消息反应（表情） |
 | | `GroupUserTyping` | 成员正在输入 |
 | **成员变动** | `GroupMemberJoined` | 新成员加入 |
 | | `GroupMemberLeft` | 成员主动离开 |
 | | `GroupMemberRemoved` | 成员被移除（踢出/封禁） |
+| | `GroupMemberMuted` | 成员被禁言 |
+| | `GroupMemberUnmuted` | 成员被解除禁言 |
 | **群管理** | `GroupAnnouncementCreated` | 新群公告发布 |
-| | `GroupUpdated` | 群组信息更新（名称/头像/描述） |
-| | `GroupDeleted` | 群组解散 |
+| | `GroupUpdated` | 群组信息更新（名称/头像/描述等所有可修改字段） |
+| | `GroupDismissed` | 群组解散 |
+| **在线状态** | `GroupUserEntered` | 用户进入群聊页面（由 GroupEnter 触发） |
+| | `GroupUserExited` | 用户离开群聊页面（由 GroupLeave/断线触发） |
 
 ### 客户端能发送什么？
 
@@ -80,6 +83,8 @@ alwaysApply: true
 | `GetSubscriptions` | 查询当前订阅状态 |
 | `PrivateTyping` | 发送私聊输入状态 |
 | `GroupTyping` | 发送群聊输入状态 |
+| `GroupEnter` | 进入群聊页面（与订阅独立，表示用户当前正在查看该群聊） |
+| `GroupLeave` | 离开群聊页面 |
 
 ---
 
@@ -92,8 +97,8 @@ alwaysApply: true
 
 ### 依赖说明
 
-- 公共基础类型定义于 `@api_spec_common.mdc`
-- 错误码定义于 `@spec/api_spec_errors.mdc`
+- 公共基础类型定义于 `@api_spec_types.mdc`
+- 错误码定义于 `@api_spec_errors.mdc`
 - 所有事件类型和负载结构必须严格遵循本规范定义
 
 ### 鉴权机制
@@ -101,7 +106,7 @@ alwaysApply: true
 - Web 端：使用 HttpOnly Cookie 中的 `access_token` 完成鉴权，`Auth` 事件不携带 token。
 - App 端：`Auth` 事件必须携带 `access_token`。
 - 连接建立后，客户端必须在 **5 秒内**发送 `Auth`；鉴权通过后服务端推送 `ConnectionEstablished`，并允许后续订阅/业务事件。
-- 鉴权失败或超时：服务端发送 `Error` 并断开连接（`code=20001`）。
+- 鉴权失败或超时：服务端发送 `Error` 并断开连接（`code=20000`）。
 - Token 过期：服务端断开；客户端刷新 token 后重连并重新鉴权。
 
 ### 重连成功后的处理（契约级要求）
@@ -165,6 +170,14 @@ type PongPayload = Record<string, never>;  // 空对象
 - 网络状态变化（online 事件）
 - 前台切换（从后台回到前台）
 
+### 服务端主动断开场景
+
+以下场景服务端会主动断开 WebSocket 连接，客户端**不应自动重连**：
+
+- **Token 失效**（被登出或撤销会话）：服务端发送 Error（severity=fatal），然后断开
+- **账号被封禁**：服务端推送 AccountBanned 事件，然后断开
+- **密码被修改**：非当前会话的 WebSocket 连接被断开（Error severity=fatal）
+
 ---
 
 ## 事件类型定义
@@ -201,7 +214,6 @@ type ClientWebSocketEvent = WebSocketEvent<ClientEventType, unknown>;
 - 私聊/群聊消息：`message_id`（去重依据）
 - 朋友圈互动：`like_id` / `comment_id`（去重依据）
 - 关注/邀请：使用事件负载中的稳定标识或组合键去重（如 `invite_id`、`application_id`、`user.user_id + followed_at`）
-- 通知事件：各事件的业务 ID 字段（去重依据）
 
 客户端通过业务 ID 去重，天然支持 HTTP API + WebSocket 跨协议去重。建议维护最近 1 小时内已处理的业务 ID（滑动时间窗口）。
 
@@ -225,7 +237,7 @@ type ClientWebSocketEvent = WebSocketEvent<ClientEventType, unknown>;
 2. **重连成功后**：
    - 比对 `server_time`（来自 `ConnectionEstablished`）与 `disconnected_at`，计算断开时长
 3. **补拉决策**：
-   - 断开时长 > 10 秒（建议阈值）：通过 HTTP API 补拉离线数据（使用 `since` 参数传递 `disconnected_at`）
+   - 断开时长 > 10 秒（建议阈值）：通过 HTTP API 的消息历史接口（`get_history`）使用游标分页逐页补拉，客户端比对本地最新消息时间与返回消息的 `sent_at`，直到追上断开期间的增量
    - 断开时长 ≤ 10 秒：无需补拉（WebSocket 会自动推送新事件）
 4. **恢复订阅**：使用 `SetSubscriptions` 全量恢复（客户端本地维护订阅状态）
 
@@ -245,22 +257,26 @@ type ServerEventType =
   // 关注关系
   | "NewFollower" | "MutualFollow"
   // 生活瞬间互动
-  | "MomentLiked" | "MomentCommented" | "CommentReply" | "MessageMentioned" | "SystemAnnouncement"
+  | "MomentLiked" | "MomentCommented" | "CommentLiked" | "CommentReply" | "MessageMentioned"
   // 聊天消息 - 私聊
   | "PrivateMessageNew" | "PrivateMessageEdited" | "PrivateMessageRecalled"
-  | "PrivateMessageDeleted" | "PrivateMessageReaction" | "PrivateMessageRead"
+  | "PrivateMessageRead"
   | "PrivateUserTyping"
   // 聊天消息 - 群聊
   | "GroupMessageNew" | "GroupMessageEdited" | "GroupMessageRecalled"
-  | "GroupMessageDeleted" | "GroupMessageReaction"
   | "GroupUserTyping"
   // 群组管理
   | "GroupMemberJoined" | "GroupMemberLeft" | "GroupMemberRemoved"
+  | "GroupMemberMuted" | "GroupMemberUnmuted"
   | "GroupInviteReceived" | "GroupInviteResponse"
   | "GroupApplicationReceived" | "GroupApplicationResponse"
   | "GroupAnnouncementCreated"
-  | "GroupUpdated" | "GroupDeleted"
+  | "GroupUpdated" | "GroupDismissed"
+  | "GroupUserEntered" | "GroupUserExited"
+  // 用户
+  | "UserProfileUpdated"
   // 系统
+  | "SystemAnnouncement" | "AccountBanned"
   | "Error" | "SubscribeAck" | "SubscriptionsSnapshot";
 
 // 客户端发送事件类型枚举（强制：WebSocketEvent.type 必须来自该枚举）
@@ -268,7 +284,8 @@ type ClientEventType =
   | "Auth"
   | "Ping"
   | "SetSubscriptions" | "GetSubscriptions"
-  | "PrivateTyping" | "GroupTyping";
+  | "PrivateTyping" | "GroupTyping"
+  | "GroupEnter" | "GroupLeave";
 
 ```
 
@@ -288,6 +305,13 @@ interface ConnectionEstablishedPayload {
       group: number;               // 群组订阅上限
     };
   };
+
+  // 未读摘要（冷启动/重连时获取 badge 数据）
+  unread_summary: {
+    private_chats: number;         // 有未读消息的私聊会话数
+    groups: number;                // 有未读消息的群聊数
+    total_messages: number;        // 总未读消息数
+  };
 }
 type ConnectionEstablishedEvent = { type: "ConnectionEstablished"; payload: ConnectionEstablishedPayload; };
 
@@ -297,18 +321,17 @@ type PongEvent = { type: "Pong"; payload: PongPayload; };
 
 **在线状态事件**：
 ```typescript
+// 说明：客户端已通过 UserInfo 缓存了用户的 nickname/avatar_url 等信息，
+// 在线/离线事件仅需 user_id 标识用户 + 时间戳，客户端据此更新状态指示器。
 interface UserOnlinePayload {
   user_id: string;
-  nickname: string;
-  avatar_url?: string;
   online_at: string;
 }
 type UserOnlineEvent = { type: "UserOnline"; payload: UserOnlinePayload; };
 
 interface UserOfflinePayload {
   user_id: string;
-  last_seen?: string;          // 最后在线时间（可选）
-  offline_at: string;
+  offline_at: string;           // 离线时间（即最后在线时间）
 }
 type UserOfflineEvent = { type: "UserOffline"; payload: UserOfflinePayload; };
 ```
@@ -347,14 +370,14 @@ type UserOfflineEvent = { type: "UserOffline"; payload: UserOfflinePayload; };
     - 群聊输入状态合并推送：同一群组多人同时输入时，合并为批量通知
     - 群聊最多显示 3 个正在输入的用户（UI 限制）
 
-   - **PrivateMessageRead**
-   - 触发：已读状态发生变化时触发
-   - 推送：推送给私聊对端
-   - 该事件用于即时交互反馈，不作为离线补偿依据
+- **PrivateMessageRead**
+  - 触发：已读状态发生变化时触发
+  - 推送：推送给私聊对端
+  - 该事件用于即时交互反馈，不作为离线补偿依据
 
 **关注关系事件**：
 ```typescript
-// FollowSource 定义于 @api_spec_common.mdc
+// FollowSource 定义于 @api_spec_types.mdc
 
 interface NewFollowerPayload {
   user: UserInfo;
@@ -401,6 +424,16 @@ interface MomentCommentedPayload {
 }
 type MomentCommentedEvent = { type: "MomentCommented"; payload: MomentCommentedPayload; };
 
+interface CommentLikedPayload {
+  comment_id: string;
+  moment_id: string;
+  moment_summary?: MomentSummary;
+  comment_preview: string;  // 被点赞的评论内容摘要
+  user: UserInfo;
+  liked_at: string;
+}
+type CommentLikedEvent = { type: "CommentLiked"; payload: CommentLikedPayload; };
+
 interface CommentReplyPayload {
   moment_id: string;
   comment_id: string;        // 原评论ID（被回复的评论）
@@ -425,16 +458,23 @@ type MessageMentionedEvent = { type: "MessageMentioned"; payload: MessageMention
 
 type SystemAnnouncementPayload = Omit<SystemAnnouncementItem, "created_by">;
 type SystemAnnouncementEvent = { type: "SystemAnnouncement"; payload: SystemAnnouncementPayload; };
+
+// 用户资料变更（推送给：正在与其私聊的用户 + 其当前所在群聊的其他订阅者）
+// 属于自动推送（无需订阅），推送范围天然受限于活跃会话，维护成本低
+interface UserProfileUpdatedPayload {
+  user: UserInfo;               // 更新后的用户基础信息
+  updated_at: string;
+}
+type UserProfileUpdatedEvent = { type: "UserProfileUpdated"; payload: UserProfileUpdatedPayload; };
 ```
 
 **私聊消息事件**:
 
-**可见性**：仅会话参与者可见（`@participant-only`）。
 ```typescript
 interface PrivateMessageNewPayload {
   message_id: string;
   target_user_id: string; // 接收者ID (对于发送者多端同步=接收方ID)
-  sender: UserInfo;
+  sender_id: string;      // 私聊双方已知，只需 ID
   type: MessageType;
   content?: string;       // 文本内容
   share_code?: string;    // share 类型消息
@@ -461,24 +501,6 @@ interface PrivateMessageRecalledPayload {
 }
 type PrivateMessageRecalledEvent = { type: "PrivateMessageRecalled"; payload: PrivateMessageRecalledPayload; };
 
-interface PrivateMessageDeletedPayload {
-  message_id: string;
-  target_user_id: string;
-  deleted_by: string;     // user_id
-  deleted_at: string;
-}
-type PrivateMessageDeletedEvent = { type: "PrivateMessageDeleted"; payload: PrivateMessageDeletedPayload; };
-
-interface PrivateMessageReactionPayload {
-  message_id: string;
-  target_user_id: string;
-  user: UserInfo;                     // 操作者
-  reaction_type: ReactionType;
-  has_reaction: boolean;              // true=添加, false=移除
-  created_at: string;
-}
-type PrivateMessageReactionEvent = { type: "PrivateMessageReaction"; payload: PrivateMessageReactionPayload; };
-
 interface PrivateMessageReadPayload {
   target_user_id: string;
   up_to: string;        // message_id
@@ -497,7 +519,6 @@ type PrivateUserTypingEvent = { type: "PrivateUserTyping"; payload: PrivateUserT
 
 **群聊消息事件**:
 
-**可见性**：仅群成员可见（`@member-only`）。
 ```typescript
 interface GroupMessageNewPayload {
   message_id: string;
@@ -530,24 +551,6 @@ interface GroupMessageRecalledPayload {
 }
 type GroupMessageRecalledEvent = { type: "GroupMessageRecalled"; payload: GroupMessageRecalledPayload; };
 
-interface GroupMessageDeletedPayload {
-  message_id: string;
-  group_id: string;
-  deleted_by: string;     // user_id
-  deleted_at: string;
-}
-type GroupMessageDeletedEvent = { type: "GroupMessageDeleted"; payload: GroupMessageDeletedPayload; };
-
-interface GroupMessageReactionPayload {
-  message_id: string;
-  group_id: string;
-  user: UserInfo;
-  reaction_type: ReactionType;
-  has_reaction: boolean;
-  created_at: string;
-}
-type GroupMessageReactionEvent = { type: "GroupMessageReaction"; payload: GroupMessageReactionPayload; };
-
 interface GroupUserTypingPayload {
   group_id: string;
   user_id: string; // 打字的人
@@ -558,12 +561,11 @@ type GroupUserTypingEvent = { type: "GroupUserTyping"; payload: GroupUserTypingP
 
 **群组事件**：
 
-**可见性**：仅群成员可见（`@member-only`）。
 ```typescript
 interface GroupMemberJoinedPayload {
   group_id: string;
   user: UserInfo;
-  role: GroupRole;  // 引用 @api_spec_common.mdc
+  role: GroupRole;  // 引用 @api_spec_types.mdc
   member_count: number; // 当前成员总数
   joined_at: string;
 }
@@ -637,20 +639,67 @@ interface GroupUpdatedPayload {
     name?: string;
     avatar_url?: string;
     description?: string;
+    tags?: string[];
+    join_method?: GroupJoinMethod;
+    is_searchable?: boolean;
+    max_members?: number;
+    has_password?: boolean;    // 只推送是否有密码，不暴露密码值
+    location?: Location;
   };
   updated_by: string;          // user_id（操作者）
   updated_at: string;
 }
 type GroupUpdatedEvent = { type: "GroupUpdated"; payload: GroupUpdatedPayload; };
 
-// 群组解散
-interface GroupDeletedPayload {
+// 群组解散（群主主动解散或系统管理员操作）
+// 注意：系统管理员解散群组时，服务端必须向所有群成员推送此事件（无论是否订阅）
+// 设计说明：不暴露操作者身份（deleted_by），通过 reason 区分解散来源即可，
+// 避免系统管理员身份泄露。详细操作记录保留在审计日志中（仅管理员可见）。
+interface GroupDismissedPayload {
   group_id: string;
-  deleted_by: string;          // user_id（操作者）
-  deleted_at: string;
-  reason?: string;
+  dismissed_at: string;
+  reason?: 'owner_dismissed' | 'admin_dismissed';  // 解散原因
 }
-type GroupDeletedEvent = { type: "GroupDeleted"; payload: GroupDeletedPayload; };
+type GroupDismissedEvent = { type: "GroupDismissed"; payload: GroupDismissedPayload; };
+
+// 群组成员禁言（推送给被操作用户 + 群组订阅者）
+interface GroupMemberMutedPayload {
+  group_id: string;
+  user: UserInfo;               // 被禁言的用户
+  muted_by: string;             // user_id（操作者）
+  muted_until: string;          // 禁言截止时间
+  duration_minutes: number;
+  muted_at: string;
+}
+type GroupMemberMutedEvent = { type: "GroupMemberMuted"; payload: GroupMemberMutedPayload; };
+
+// 群组成员解除禁言（推送给被操作用户 + 群组订阅者）
+interface GroupMemberUnmutedPayload {
+  group_id: string;
+  user: UserInfo;               // 被解除禁言的用户
+  unmuted_by: string;           // user_id（操作者）
+  unmuted_at: string;
+}
+type GroupMemberUnmutedEvent = { type: "GroupMemberUnmuted"; payload: GroupMemberUnmutedPayload; };
+
+// 用户进入群聊（由客户端 GroupEnter 事件触发，推送给该群聊的其他订阅者）
+// 触发时机：客户端发送 GroupEnter 事件时，服务端向该群聊的其他订阅者推送
+// 节流策略：同一用户 30 秒内反复进出同一群聊，服务端只推送一次 entered 事件
+// WebSocket 断开时，服务端自动为所有已 entered 的群聊生成 exited 事件
+interface GroupUserEnteredPayload {
+  group_id: string;
+  user: UserInfo;
+  entered_at: string;
+}
+type GroupUserEnteredEvent = { type: "GroupUserEntered"; payload: GroupUserEnteredPayload; };
+
+// 用户离开群聊（由客户端 GroupLeave 事件或 WebSocket 断开触发）
+interface GroupUserExitedPayload {
+  group_id: string;
+  user: UserInfo;
+  exited_at: string;
+}
+type GroupUserExitedEvent = { type: "GroupUserExited"; payload: GroupUserExitedPayload; };
 ```
 
 **系统事件**：
@@ -688,20 +737,28 @@ interface SubscriptionsSnapshotPayload {
   total_count: number;         // 总订阅数（user_ids.length + group_ids.length）
 }
 type SubscriptionsSnapshotEvent = { type: "SubscriptionsSnapshot"; payload: SubscriptionsSnapshotPayload; };
+
+// 账号被封禁（自动推送给被封禁用户，客户端收到后应立即登出）
+interface AccountBannedPayload {
+  reason: string;              // 封禁原因
+  duration_days: number;       // 封禁时长（天），0=永久
+  banned_at: string;
+}
+type AccountBannedEvent = { type: "AccountBanned"; payload: AccountBannedPayload; };
 ```
 
-**错误码范围规划**：
+**错误码定义**：
 
-错误码定义以 `@spec/api_spec_errors.mdc` 为准。
+错误码定义以 `@api_spec_errors.mdc` 为准（精简后每个类型仅一个错误码，具体场景通过 `message` 描述）。
 
-| 错误码范围 | 类型 | 严重性 | 示例 |
-|----------|------|--------|------|
-| 20000-20099 | 连接/鉴权错误 | Fatal | 20001: 鉴权失败<br>20002: 心跳超时<br>20003: 消息格式错误 |
-| 20100-20199 | 订阅错误 | Recoverable/Warning | 20101: 订阅频道不存在<br>20102: 订阅权限不足<br>20103: 订阅超限 |
-| 20200-20299 | 消息错误 | Warning | 20201: 消息太长<br>20202: 消息格式错误<br>20203: 消息发送频率过高 |
-| 20300-20399 | 限流错误 | Recoverable | 20301: 触发限流<br>20302: 请求过于频繁 |
-| 20400-20499 | 权限错误 | Warning | 20401: 无权限<br>20402: 已被拉黑<br>20403: 群组已解散 |
-| 20500-20599 | 服务端错误 | Recoverable | 20501: 内部错误<br>20502: 服务暂时不可用 |
+| 错误码 | 类型 | 严重性 | message 示例 |
+|-------|------|--------|-------------|
+| `20000` | 连接/协议错误 | Fatal | "鉴权失败"、"心跳超时"、"消息格式错误"、"协议不兼容" |
+| `20100` | 订阅错误 | Recoverable/Warning | "订阅频道不存在"、"订阅权限不足"、"订阅数量超出限制" |
+| `20200` | 消息错误 | Warning | "消息内容过长"、"消息格式错误"、"消息发送频率过高" |
+| `20300` | 限流 | Recoverable | "触发限流"、"请求过于频繁" |
+| `20400` | 权限错误 | Warning | "无权限"、"已被拉黑"、"群组已解散" |
+| `20500` | 服务端错误 | Recoverable | "内部错误"、"服务暂时不可用" |
 
 **错误处理策略**：
 
@@ -735,6 +792,20 @@ interface GroupTypingPayload {
   is_typing: boolean;
 }
 type GroupTypingEvent = { type: "GroupTyping"; payload: GroupTypingPayload; };
+
+// 进入群聊页面（与订阅独立，表示用户当前正在查看该群聊）
+// 订阅 = 接收该群消息推送（可同时订阅多个群），进入 = 用户当前正在查看的群聊页面
+// 用途：类似直播间"xxx 进入了直播间"，让群聊中的其他人知道谁正在看
+interface GroupEnterPayload {
+  group_id: string;
+}
+type GroupEnterEvent = { type: "GroupEnter"; payload: GroupEnterPayload; };
+
+// 离开群聊页面
+interface GroupLeavePayload {
+  group_id: string;
+}
+type GroupLeaveEvent = { type: "GroupLeave"; payload: GroupLeavePayload; };
 
 // 查询当前订阅状态（开发者工具/调试）
 interface GetSubscriptionsPayload {
@@ -828,11 +899,11 @@ WebSocket 推送分为**自动推送**和**订阅推送**两种模式（详见�
 
 | 订阅类型 | 数量限制 | 超出处理 |
 |---------|---------|----------|
-| 用户状态（`user`） | 最多 500 个 | 返回错误码 `20103` |
-| 群聊（`group`） | 最多 100 个 | 返回错误码 `20103` |
+| 用户状态（`user`） | 最多 500 个 | 返回错误码 `20100` |
+| 群聊（`group`） | 最多 100 个 | 返回错误码 `20100` |
 
 **限制说明**：
-- 超出限制时：服务端在 `SubscribeAck` 事件中返回 `code !== 0`，错误码为 `20103`（订阅数量超出限制）
+- 超出限制时：服务端在 `SubscribeAck` 事件中返回 `code !== 0`，错误码为 `20100`（订阅错误），message 描述具体原因
 - `failed_ids` 字段会包含超出限制的订阅 id 及其原因（`reason: 'invalid'`）
 - 客户端应提示用户取消部分订阅后再试
 - 限制数量由服务端配置决定，客户端不得硬编码假设具体数值

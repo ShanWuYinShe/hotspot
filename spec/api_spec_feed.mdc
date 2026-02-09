@@ -1,43 +1,40 @@
 ---
 alwaysApply: true
 ---
-# HotSpot API 规范 - 信息流与标签 API 模块 v0.0.1 (RPC)
+# HotSpot API - 信息流
 
-> 本文档定义 HotSpot 信息流 (`feed`) 相关的 RPC 接口。标签相关 API 已移至 `@api_spec_search.mdc`。
+> 本文档定义 HotSpot 信息流 (`feed`) 相关的 RPC 接口。标签相关 API 定义于 `@api_spec_search.mdc`。
 
-## 服务定义
+## 模块信息
 
-- **Service Namespace**: `feed`
-- **Base Path**: `/api/v1/feed/`
+- **命名空间**: `feed`
+- **基础路径**: `/api/v1/feed/`
+- **引用**: 
+  - 基础规范：`@api_spec_base.mdc`
+  - 通用类型：`@api_spec_types.mdc`
+  - 错误码：`@api_spec_errors.mdc`
 
-## 契约引用
+## 端点总览
 
-- 公共基础类型：`@api_spec_common.mdc`
-- 错误码：`@spec/api_spec_errors.mdc`
+| 端点 | 说明 | 认证 | 幂等 |
+|-----|------|------|------|
+| `POST /api/v1/feed/list_moments` | 获取瞬间信息流 | 必须 | 无 |
+| `POST /api/v1/feed/list_groups` | 获取群组推荐 | 必须 | 无 |
+| `POST /api/v1/feed/list_users` | 获取用户推荐 | 必须 | 无 |
+| `POST /api/v1/feed/list_trending` | 获取热门内容 | 可选 | 无 |
+| `POST /api/v1/feed/me/feedback` | 信息流反馈 | 必须 | 无 |
 
----
+## 类型定义
 
-## 接口概览（按子域）
-
-| 子域 | 端点 | 说明 | Request | Response |
-|-----|------|------|---------|----------|
-| 信息流 | `POST /api/v1/feed/moments` | 获取瞬间信息流 | `GetFeedMomentsRequest` | `ApiResponse<PaginatedData<MomentItem>>` |
-| 信息流 | `POST /api/v1/feed/groups` | 获取群组推荐 | `GetFeedGroupsRequest` | `ApiResponse<PaginatedData<GroupItem>>` |
-| 信息流 | `POST /api/v1/feed/users` | 获取用户推荐 | `GetFeedUsersRequest` | `ApiResponse<PaginatedData<UserItem>>` |
-| 信息流 | `POST /api/v1/feed/trending` | 获取热门内容 | `GetFeedTrendingRequest` | `ApiResponse<TrendingBundle>` |
-| 信息流 | `POST /api/v1/feed/feedback` | 信息流反馈 | `FeedFeedbackRequest` | `ApiResponse` |
-
----
-
-## 核心类型定义
+以下类型定义于 `@api_spec_types.mdc`：
+- `MomentItem`（Feed 场景下 `my_state` 和 `recommendation` 字段会被填充）
+- `GroupItem`（Feed 场景下 `my_state` 和 `friends_in_group` 字段会被填充）
+- `UserItem`（Feed 场景下 `relation` 和 `social_context` 字段会被填充）
+- `PaginationParams`
+- `GeoPoint`
+- `TagItem`、`TagTrend`（定义于 `@api_spec_search.mdc`）
 
 ```typescript
-// 注：MomentItem、GroupItem、UserItem、RecommendationContext 等类型定义于 @api_spec_common.mdc
-// Feed 端点直接复用这些统一类型：
-// - MomentItem：Feed 场景下 my_state 和 recommendation 字段会被填充
-// - GroupItem：Feed 场景下 my_state 和 friends_in_group 字段会被填充
-// - UserItem：Feed 场景下 relation 和 social_context 字段会被填充
-
 // 信息流来源
 type FeedSource = 'following' | 'nearby' | 'all';
 
@@ -47,57 +44,73 @@ type FeedContentType = 'moment' | 'group' | 'user';
 // 信息流反馈动作
 type FeedFeedbackAction = 'hide' | 'not_interested';
 
-// 标签相关类型（TagTrend、TagItem 等）定义于 @api_spec_search.mdc
+interface GetFeedMomentsRequest {
+  pagination?: PaginationParams;
+  source?: FeedSource;
+  reference_point: GeoPoint;
+  radius?: number;  // 位置范围（米），100-50000，可由 AppLimits.search_radius_max 覆盖
+}
+
+interface GetFeedGroupsRequest {
+  pagination?: PaginationParams;
+  reference_point: GeoPoint;
+  radius?: number;  // 位置范围（米），100-50000，可由 AppLimits.search_radius_max 覆盖
+}
+
+interface GetFeedUsersRequest {
+  pagination?: PaginationParams;
+  reference_point: GeoPoint;
+  radius?: number;  // 位置范围（米），100-50000，可由 AppLimits.search_radius_max 覆盖
+}
+
+interface GetFeedTrendingRequest {
+  tags_limit?: number;    // 默认 10，最大 50
+  moments_limit?: number; // 默认 20，最大 100
+}
 
 interface TrendingBundle {
   trending_tags: TrendingTagItem[];
   hot_moments: MomentItem[];
 }
 
-interface TrendingTagItem {
-  name: string;
-  usage_count: number;
-  trend: TagTrend;  // TagTrend 定义于 @api_spec_search.mdc
+// TrendingTagItem 复用 TagItem 并扩展热门瞬间预览
+// TagItem 定义于 @api_spec_search.mdc（含 name、usage_count、trend?）
+interface TrendingTagItem extends Omit<TagItem, 'trend'> {
+  trend: TagTrend;  // 必填（TagItem 中为可选，此处覆盖为必填）
   hot_moment_preview?: MomentItem;
+}
+
+interface FeedFeedbackRequest {
+  content_type: FeedContentType;
+  content_id: string;
+  action: FeedFeedbackAction;
+  reason?: string;
 }
 ```
 
-## 错误码说明
+## 端点详情
 
-本模块使用的错误码定义于 `@spec/api_spec_errors.mdc`，主要涉及：
-
-| 错误码 | 说明 | 相关接口 |
-|-------|------|---------|
-| `10001` | 缺少必填参数 | `feed/moments`、`feed/groups`、`feed/users`、`tags/suggest` |
-| `10003` | 参数值超出范围 | 所有带分页参数的接口 |
-
----
-
-## 信息流 API
-
-**契约约束**：
-- 信息流接口依赖登录态，未携带有效 token 返回 `10102`
-- 响应字段以各端点类型定义为准
-- 位置参数是否需要传递，以该端点的 Request 类型为准
-
-### POST /api/v1/feed/moments
+### POST /api/v1/feed/list_moments
 
 获取瞬间信息流，支持多种来源筛选。
 
-**排序语义（契约级）**：
-- `source='following'`：按时间倒序（最新在前）
-- `source='nearby'`：以地理位置相关信号为主
-- `source='all'`：综合推荐流（允许排序波动）
+- **认证**: 必须
+- **幂等**: 无
+- **排序**: 
+  - `source='following'`：按时间倒序（最新在前）
+  - `source='nearby'`：以地理位置相关信号为主
+  - `source='all'`：综合推荐流（允许排序波动）
 
-**Request**:
+**Request**: `GetFeedMomentsRequest`
 ```typescript
 interface GetFeedMomentsRequest {
   pagination?: PaginationParams;
   source?: FeedSource;
   reference_point: GeoPoint;
-  radius?: number;
+  radius?: number;  // 位置范围（米），100-50000，可由 AppLimits.search_radius_max 覆盖
 }
 ```
+
 **Response**: `ApiResponse<PaginatedData<MomentItem>>`
 
 **来源说明**：
@@ -105,68 +118,89 @@ interface GetFeedMomentsRequest {
 - `nearby`：附近范围内的瞬间，按距离和热度排序（需要 reference_point）
 - `all`：综合推荐（默认），混合关注动态、附近热门、个性化推荐（需要 reference_point）
 
-**可能错误码**：`10001`、`10003`
+**错误码**: `10000`
 
-### POST /api/v1/feed/groups
+---
+
+### POST /api/v1/feed/list_groups
 
 获取附近可加入的群组推荐。
 
-**排序语义（契约级）**：
-- 主序：以地理位置相关信号为主（距离/热度/活跃度的组合）
-- 次序：允许在距离接近时体现"社交信号"（共同好友/同标签）
+- **认证**: 必须
+- **幂等**: 无
+- **排序**: 
+  - 主序：以地理位置相关信号为主（距离/热度/活跃度的组合）
+  - 次序：允许在距离接近时体现"社交信号"（共同好友/同标签）
 
-**Request**:
+**Request**: `GetFeedGroupsRequest`
 ```typescript
 interface GetFeedGroupsRequest {
   pagination?: PaginationParams;
   reference_point: GeoPoint;
-  radius?: number;
+  radius?: number;  // 位置范围（米），100-50000，可由 AppLimits.search_radius_max 覆盖
 }
 ```
+
 **Response**: `ApiResponse<PaginatedData<GroupItem>>`
 
-**可能错误码**：`10001`、`10003`
+**错误码**: `10000`
 
-### POST /api/v1/feed/users
+---
+
+### POST /api/v1/feed/list_users
 
 获取附近的用户推荐。
 
-**排序语义（契约级）**：
-- 主序：以地理位置相关信号为主（距离/活跃度的组合）
-- 次序：允许综合"社交信号"（共同好友数、共同标签）提升前排质量
+- **认证**: 必须
+- **幂等**: 无
+- **排序**: 
+  - 主序：以地理位置相关信号为主（距离/活跃度的组合）
+  - 次序：允许综合"社交信号"（共同好友数、共同标签）提升前排质量
 
-**Request**:
+**Request**: `GetFeedUsersRequest`
 ```typescript
 interface GetFeedUsersRequest {
   pagination?: PaginationParams;
   reference_point: GeoPoint;
-  radius?: number;
+  radius?: number;  // 位置范围（米），100-50000，可由 AppLimits.search_radius_max 覆盖
 }
 ```
+
 **Response**: `ApiResponse<PaginatedData<UserItem>>`
 
-**可能错误码**：`10001`、`10003`
+**错误码**: `10000`
 
-### POST /api/v1/feed/trending
+---
+
+### POST /api/v1/feed/list_trending
 
 获取热门内容。
 
-**Request**:
+- **认证**: 可选
+- **幂等**: 无
+
+**Request**: `GetFeedTrendingRequest`
 ```typescript
 interface GetFeedTrendingRequest {
   tags_limit?: number;    // 默认 10，最大 50
   moments_limit?: number; // 默认 20，最大 100
 }
 ```
+
 **Response**: `ApiResponse<TrendingBundle>`
 
-**可能错误码**：`10003`
+**错误码**: `10000`
 
-### POST /api/v1/feed/feedback
+---
+
+### POST /api/v1/feed/me/feedback
 
 反馈信息流内容（用于改进推荐算法）。
 
-**Request**:
+- **认证**: 必须
+- **幂等**: 无
+
+**Request**: `FeedFeedbackRequest`
 ```typescript
 interface FeedFeedbackRequest {
   content_type: FeedContentType;
@@ -175,10 +209,11 @@ interface FeedFeedbackRequest {
   reason?: string;
 }
 ```
+
 **Response**: `ApiResponse`
 
-**可能错误码**：`10001`
+**错误码**: `10000` `10300`
 
+---
 
-
-> **注**：标签相关 API（`tags/trending`、`tags/suggest`）已移至 `@api_spec_search.mdc` 搜索与发现模块。
+> **注**：标签相关 API（`tags/list_trending`）定义于 `@api_spec_search.mdc` 搜索与发现模块。

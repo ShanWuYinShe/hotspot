@@ -1,47 +1,65 @@
 ---
 alwaysApply: true
 ---
-# HotSpot API 规范 - 私聊 API 模块 v0.0.1 (RPC)
+# HotSpot API - 聊天
 
-> 本文档定义 HotSpot 私聊管理 (`private_chats`) 和私聊消息 (`private_messages`) 相关的 RPC 接口。
+> 本文档定义 HotSpot 私聊管理 (`private_chats`)、私聊消息 (`private_messages`) 和群聊消息 (`group_messages`) 相关的 RPC 接口。
 
-## 服务定义
+## 模块信息
 
-- **Service Namespaces**:
+- **命名空间**:
   - `private_chats`
   - `private_messages`
-- **Base Paths**:
+  - `group_messages`
+- **基础路径**:
   - `/api/v1/private_chats/`
   - `/api/v1/private_messages/`
+  - `/api/v1/group_messages/`
+- **引用**:
+  - 基础规范：`@api_spec_base.mdc`
+  - 通用类型：`@api_spec_types.mdc`
+  - 错误码：`@api_spec_errors.mdc`
+  - WebSocket：`@api_spec_websocket.mdc`
+  - 群组管理：`@api_spec_group.mdc`（GroupOpenResult 引用本模块 GroupMessageItem）
 
-## 契约引用
+## 端点总览
 
-- 公共基础类型：`@api_spec_common.mdc`
-- 错误码：`@spec/api_spec_errors.mdc`
-- WebSocket：`@api_spec_websocket.mdc`
+| 端点 | 说明 | 认证 | 幂等 |
+|-----|------|------|------|
+| `POST /api/v1/private_chats/me/list` | 私聊列表 | 必须 | 无 |
+| `POST /api/v1/private_chats/open_the_door` | 私聊详情 | 必须 | 幂等语义 |
+| `POST /api/v1/private_chats/me/update_settings` | 更新会话设置 | 必须 | 幂等语义 |
+| `POST /api/v1/private_chats/me/delete` | 删除私聊会话（仅当前用户视角） | 必须 | 幂等语义 |
+| `POST /api/v1/private_messages/send` | 发送私聊消息 | 必须 | MUST |
+| `POST /api/v1/private_messages/get_history` | 私聊消息历史 | 必须 | 无 |
+| `POST /api/v1/private_messages/update` | 编辑私聊消息 | 必须 | 幂等语义 |
+| `POST /api/v1/private_messages/recall` | 撤回私聊消息 | 必须 | 幂等语义 |
+| `POST /api/v1/private_messages/me/mark_as_read` | 标记已读（不传 up_to_message_id 时标记全部） | 必须 | 幂等语义 |
+| `POST /api/v1/group_messages/send` | 发送群聊消息 | 必须 | MUST |
+| `POST /api/v1/group_messages/get_history` | 群聊消息历史 | 必须 | 无 |
+| `POST /api/v1/group_messages/update` | 编辑群聊消息 | 必须 | 幂等语义 |
+| `POST /api/v1/group_messages/recall` | 撤回群聊消息 | 必须 | 幂等语义 |
+| `POST /api/v1/group_messages/me/mark_as_read` | 标记已读（不传 up_to_message_id 时标记全部） | 必须 | 幂等语义 |
 
-## 接口概览（按子域）
+## 已读状态设计
 
-| 子域 | 端点 | 说明 | Request | Response |
-|-----|------|------|---------|----------|
-| 私聊管理 | `POST /api/v1/private_chats/me` | 私聊列表 | `MyPrivateChatsRequest` | `ApiResponse<PaginatedData<PrivateChatItem>>` |
-| 私聊管理 | `POST /api/v1/private_chats/open_the_door` | 私聊详情 | `PrivateChatOpenTheDoorRequest` | `ApiResponse<PrivateChatOpenResult>` |
-| 私聊管理 | `POST /api/v1/private_chats/update_settings` | 更新会话设置 | `UpdatePrivateChatSettingsRequest` | `ApiResponse<PrivateChatItem>` |
-| 私聊管理 | `POST /api/v1/private_chats/delete` | 删除私聊会话（仅当前用户视角） | `DeletePrivateChatRequest` | `ApiResponse` |
-| 私聊消息 | `POST /api/v1/private_messages/send` | 发送私聊消息 | `SendPrivateMessageRequest` | `ApiResponse<MessageSent>` |
-| 私聊消息 | `POST /api/v1/private_messages/history` | 私聊消息历史 | `PrivateMessagesHistoryRequest` | `ApiResponse<PaginatedData<PrivateMessageItem>>` |
-| 私聊消息 | `POST /api/v1/private_messages/update` | 编辑私聊消息 | `UpdatePrivateMessageRequest` | `ApiResponse` |
-| 私聊消息 | `POST /api/v1/private_messages/recall` | 撤回私聊消息 | `RecallPrivateMessageRequest` | `ApiResponse` |
-| 私聊消息 | `POST /api/v1/private_messages/delete` | 删除私聊消息（仅当前用户视角） | `DeletePrivateMessageRequest` | `ApiResponse` |
-| 私聊消息 | `POST /api/v1/private_messages/mark_as_read` | 标记已读 | `MarkPrivateMessagesReadRequest` | `ApiResponse` |
-| 私聊消息 | `POST /api/v1/private_messages/add_reaction` | 添加反应 | `AddPrivateMessageReactionRequest` | `ApiResponse` |
-| 私聊消息 | `POST /api/v1/private_messages/remove_reaction` | 移除反应 | `RemovePrivateMessageReactionRequest` | `ApiResponse` |
-| 私聊消息 | `POST /api/v1/private_messages/reactions` | 反应列表 | `PrivateMessageReactionsRequest` | `ApiResponse<PaginatedData<ReactionItem>>` |
-| 私聊消息 | `POST /api/v1/private_messages/mark_all_as_read` | 标记全部私聊已读 | `{}` | `ApiResponse` |
+**私聊（1v1）**：使用 `is_read: boolean` 标识单条消息是否已被对方读取。
+- 发送方视角：看到 `is_read=true` 表示对方已读
+- WebSocket `PrivateMessageRead` 事件用于实时更新已读状态
+- `mark_as_read` 接口采用"up_to"语义：标记截至某条消息的所有消息为已读
 
-## 核心类型定义
+**群聊（多人）**：使用 `read_count: number` 标识已读人数。
+- 群消息不推送每人的已读事件（避免大群广播风暴）
+- `read_count` 通过消息历史接口获取，不做实时推送
+- `mark_as_read` 接口采用"up_to"语义：标记截至某条消息的所有消息为已读
+
+## 类型定义
+
+以下类型定义中，`UserInfo`、`MessageType`、`SendMessageType`、`MessageMedia`、`MessageReplyTo`、`MessageSent`、`UserPresenceStatus`、`PaginationParams`、`PaginatedData` 等类型定义于 `@api_spec_types.mdc`。
 
 ```typescript
+// === 私聊类型 ===
+
 // PrivateChatItem: 私聊统一数据类型（用于列表、详情等所有场景）
 interface PrivateChatItem {
   other_user: UserInfo;
@@ -98,48 +116,62 @@ interface PrivateMessageItem {
   recalled_at?: string;  // 存在即表示已撤回
   is_read?: boolean;     // 消息是否已被对方读取
 }
+
+// === 群聊类型 ===
+
+// 设计说明：群聊消息使用 `sender: UserInfo` 而非 `sender_id: string`，
+// 因为群聊场景下客户端需要显示发送者头像/昵称等信息，且群成员数量多变、
+// 不一定在本地缓存中。私聊消息使用 `sender_id` 是因为双方信息已通过
+// PrivateChatItem.other_user 获取，无需重复传输。
+
+interface GroupMessageItem {
+  message_id: string;
+  type: MessageType;
+  
+  content?: string;
+  media?: MessageMedia;
+  share_code?: string;
+  
+  sender: UserInfo;  // 群聊场景：需要完整用户信息
+  
+  reply_to?: MessageReplyTo;
+  mentions?: string[];  // @UserIDs
+  recalled_by?: string;
+  
+  sent_at: string;
+  edited_at?: string;
+  recalled_at?: string;  // 存在即表示已撤回
+  
+  read_count?: number;
+}
 ```
 
-## 错误码说明
-
-本模块使用的错误码定义于 `@spec/api_spec_errors.mdc`，主要涉及：
-
-| 错误码 | 说明 | 相关接口 |
-|-------|------|---------|
-| `10001` | 缺少必填参数 | 所有带参数的接口 |
-| `10003` | 参数值超出范围 | 消息内容长度超限 |
-| `10200` | 权限不足 | `update`、`recall`、`delete` |
-| `10211` | 已被对方拉黑 | `send` |
-| `10350` | 消息/会话不存在 | 所有消息相关接口 |
-| `10360` | 文件/媒体不存在 | `send` |
-| `10417` | 消息已被撤回 | `update`、`recall` |
-| `10418` | 操作时间窗口已过期 | `update`、`recall` |
-| `10510` | 消息数量已达上限 | `send`（陌生人限制） |
-| `22000` | 幂等键冲突 | `send` |
-| `22002` | 幂等操作正在处理中 | `send` |
+---
 
 ## 私聊管理 API
 
-私聊权限和陌生人消息限制规则详见 `@api_spec_common.mdc` 中的"隐私控制机制"章节。
+私聊权限和陌生人消息限制规则详见 `@api_spec_base.mdc` 中的"隐私与访问控制"章节。
 
-**可见性**：仅当前用户可见（`@owner-only`）。
-
-#### POST /api/v1/private_chats/me
+### POST /api/v1/private_chats/me/list
 
 获取私聊列表。
 
-**排序语义（契约级）**：
-- 私聊列表默认按**最近活跃时间**倒序（最新会话在前）
+- **认证**: 必须
+- **幂等**: 无
+- **排序**: 按最近活跃时间倒序（最新会话在前）
 
-**Request**:
+**Request**: `MyPrivateChatsRequest`
 ```typescript
 interface MyPrivateChatsRequest {
   pagination?: PaginationParams;
 }
 ```
+
 **Response**: `ApiResponse<PaginatedData<PrivateChatItem>>`
 
-#### POST /api/v1/private_chats/open_the_door
+**错误码**: `10000`
+
+### POST /api/v1/private_chats/open_the_door
 
 获取私聊详情。
 
@@ -148,9 +180,6 @@ interface MyPrivateChatsRequest {
 - **自动创建**：若会话不存在，自动创建空会话并返回（首次聊天更流畅）
 - **可选消息预加载**：支持一次请求获取会话详情和最近消息
 
-**幂等语义**：
-- 同一 `target_user_id` 的重复调用应返回同一会话（create-if-missing + 幂等）
-
 **首次聊天流程**：
 1. 调用 `open_the_door` 检查或创建会话
 2. 自动返回会话详情（无论是否是首次聊天）
@@ -158,22 +187,29 @@ interface MyPrivateChatsRequest {
 
 **可选返回**：当请求包含 `recent_messages` 时，响应包含最近消息列表（`PaginatedData<PrivateMessageItem>`）。
 
-**Request**:
+- **认证**: 必须
+- **幂等**: 幂等语义（同一 `target_user_id` 的重复调用应返回同一会话）
+
+**Request**: `PrivateChatOpenTheDoorRequest`
 ```typescript
 interface PrivateChatOpenTheDoorRequest {
   target_user_id: string;
   recent_messages?: PaginationParams;  // 可选；默认 limit=20，最大 50
 }
 ```
+
 **Response**: `ApiResponse<PrivateChatOpenResult>`
 
-**可能错误码**：`10001`、`10310`、`10211`
+**错误码**: `10000` `10200` `10300`
 
-#### POST /api/v1/private_chats/update_settings
+### POST /api/v1/private_chats/me/update_settings
 
 更新私聊设置。
 
-**Request**:
+- **认证**: 必须
+- **幂等**: 幂等语义
+
+**Request**: `UpdatePrivateChatSettingsRequest`
 ```typescript
 interface UpdatePrivateChatSettingsRequest {
   target_user_id: string;
@@ -181,9 +217,12 @@ interface UpdatePrivateChatSettingsRequest {
   is_pinned?: boolean;
 }
 ```
-**Response**: `ApiResponse<PrivateChatItem>`
 
-#### POST /api/v1/private_chats/delete
+**Response**: `ApiResponse`
+
+**错误码**: `10000` `10300`
+
+### POST /api/v1/private_chats/me/delete
 
 删除私聊。
 
@@ -193,13 +232,19 @@ interface UpdatePrivateChatSettingsRequest {
 - 不影响对方视角与对方历史数据
 - 若再次发起私聊，将创建一个新的空白会话
 
-**Request**:
+- **认证**: 必须
+- **幂等**: 幂等语义操作，重复请求返回一致结果
+
+**Request**: `DeletePrivateChatRequest`
 ```typescript
 interface DeletePrivateChatRequest {
   target_user_id: string;
 }
 ```
+
 **Response**: `ApiResponse`
+
+**错误码**: `10000` `10300`
 
 ---
 
@@ -210,11 +255,9 @@ interface DeletePrivateChatRequest {
 - `image`/`video`/`audio`/`file` 需要 `file_id`
 - `share` 需要 `share_code`
 
-**可见性**：仅会话参与者可见（`@participant-only`）。
-
 **发送语义**：API 调用仅提交发送意图和获取 `message_id`，消息最终态通过 WebSocket 推送获取。
 
-#### POST /api/v1/private_messages/send
+### POST /api/v1/private_messages/send
 
 发送私聊消息。
 
@@ -225,9 +268,10 @@ interface DeletePrivateChatRequest {
 - 必须校验黑名单关系
 - 陌生人消息限制
 
-**幂等性（MUST）**：客户端必须携带 `Idempotency-Key`。
+- **认证**: 必须
+- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
 
-**Request**:
+**Request**: `SendPrivateMessageRequest`
 ```typescript
 interface SendPrivateMessageRequest {
   target_user_id: string;
@@ -238,136 +282,201 @@ interface SendPrivateMessageRequest {
   reply_to_message_id?: string;
 }
 ```
-**Response**: `ApiResponse<MessageSent>`（`MessageSent` 定义于 `@api_spec_common.mdc`）
 
-**可能错误码**：`10001`、`10350`、`10360`、`10211`、`10510`、`22000`、`22002`
+**Response**: `ApiResponse<MessageSent>`
 
-#### POST /api/v1/private_messages/history
+**错误码**: `10000` `10200` `10300` `22000` `22002`
+
+### POST /api/v1/private_messages/get_history
 
 获取私聊消息历史。
 
-**排序语义（契约级）**：
-- 默认按 `sent_at` **时间倒序**（最新在前）
+- **认证**: 必须
+- **幂等**: 无
+- **排序**: 按 `sent_at` 时间倒序（最新在前）
 
-**Request**:
+**Request**: `GetPrivateMessagesHistoryRequest`
 ```typescript
-interface PrivateMessagesHistoryRequest {
+interface GetPrivateMessagesHistoryRequest {
   pagination?: PaginationParams;
   target_user_id: string;
 }
 ```
+
 **Response**: `ApiResponse<PaginatedData<PrivateMessageItem>>`
 
-**可能错误码**：`10001`、`10003`、`10350`
+**错误码**: `10000` `10300`
 
-#### POST /api/v1/private_messages/update
+### POST /api/v1/private_messages/update
 
 编辑私聊消息。
 
 **编辑语义**：仅允许编辑当前用户发送的消息，最终展示以 WebSocket 推送的更新事件为准。
 
-**Request**:
+- **认证**: 必须
+- **幂等**: 幂等语义
+
+**Request**: `UpdatePrivateMessageRequest`
 ```typescript
 interface UpdatePrivateMessageRequest {
   message_id: string;
   content: string;
 }
 ```
+
 **Response**: `ApiResponse`
 
-**可能错误码**：`10001`、`10350`、`10200`、`10417`、`10418`
+**错误码**: `10000` `10200` `10300` `10400`
 
-#### POST /api/v1/private_messages/recall
+### POST /api/v1/private_messages/recall
 
 撤回私聊消息。发送者只能撤回 2 分钟内的消息。
 
-**Request**:
+- **认证**: 必须
+- **幂等**: 幂等语义
+
+**Request**: `RecallPrivateMessageRequest`
 ```typescript
 interface RecallPrivateMessageRequest {
   message_id: string;
 }
 ```
+
 **Response**: `ApiResponse`
 
-**可能错误码**：`10001`、`10350`、`10200`、`10417`、`10418`
+**错误码**: `10000` `10200` `10300` `10400`
 
-#### POST /api/v1/private_messages/delete
-
-删除私聊消息。
-
-**删除语义**：仅影响当前用户视角（本地隐藏/移除入口），不影响对方视角。
-
-**Request**:
-```typescript
-interface DeletePrivateMessageRequest {
-  message_id: string;
-}
-```
-**Response**: `ApiResponse`
-
-**可能错误码**：`10001`、`10350`、`10200`
-
-#### POST /api/v1/private_messages/mark_as_read
+### POST /api/v1/private_messages/me/mark_as_read
 
 标记私聊消息已读。
 
-**Request**:
+**语义**：当不传 `up_to_message_id` 时，标记全部私聊消息为已读。
+
+- **认证**: 必须
+- **幂等**: 幂等语义
+
+**Request**: `MarkPrivateMessagesReadRequest`
 ```typescript
 interface MarkPrivateMessagesReadRequest {
-  target_user_id: string;
-  up_to_message_id?: string;
+  target_user_id?: string;       // 指定会话；不传时标记全部私聊
+  up_to_message_id?: string;     // 标记截至此消息；不传时标记该会话全部
 }
 ```
+
 **Response**: `ApiResponse`
 
-**可能错误码**：`10001`、`10350`
+**错误码**: `10000` `10300`
 
-#### POST /api/v1/private_messages/add_reaction
+---
 
-添加私聊消息反应。
+## 群聊消息 API
 
-**幂等性**：重复添加同一 reaction_type 返回成功（不报错），客户端无需担心重复操作。
+**发送语义**：API 调用仅提交发送意图和获取 `message_id`，消息最终态通过 WebSocket 推送获取。
 
-**Request**:
+消息类型：
+- `text` 需要 `content`
+- `image`/`video`/`audio`/`file` 需要 `file_id`
+- `share` 需要 `share_code`
+
+### POST /api/v1/group_messages/send
+
+发送群聊消息。
+
+- **认证**: 必须
+- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+
+**Request**: `SendGroupMessageRequest`
 ```typescript
-interface AddPrivateMessageReactionRequest {
-  message_id: string;
-  type: ReactionType;
+interface SendGroupMessageRequest {
+  group_id: string;
+  type: SendMessageType;
+  content?: string;
+  file_id?: string;
+  share_code?: string;
+  reply_to_message_id?: string;
+  mentions?: string[];
 }
 ```
-**Response**: `ApiResponse`
 
-**可能错误码**：`10001`、`10350`
+**Response**: `ApiResponse<MessageSent>`
 
-#### POST /api/v1/private_messages/remove_reaction
+**错误码**: `10000` `10300` `10400` `22000` `22002`
 
-移除私聊消息反应。
+### POST /api/v1/group_messages/get_history
 
-**幂等性**：重复移除同一 reaction_type 返回成功（不报错），客户端无需担心重复操作。
+获取群聊消息历史。
 
-**Request**:
+- **认证**: 必须
+- **幂等**: 无
+- **排序**: 按 `sent_at` 时间倒序（最新在前）
+
+**Request**: `GetGroupMessagesHistoryRequest`
 ```typescript
-interface RemovePrivateMessageReactionRequest {
-  message_id: string;
-  type: ReactionType;
-}
-```
-**Response**: `ApiResponse`
-
-**可能错误码**：`10001`、`10350`
-
-#### POST /api/v1/private_messages/reactions
-
-获取私聊消息反应列表。
-
-**Request**:
-```typescript
-interface PrivateMessageReactionsRequest {
+interface GetGroupMessagesHistoryRequest {
   pagination?: PaginationParams;
-  message_id: string;
-  type?: ReactionType;
+  group_id: string;
+  include_system?: boolean;
 }
 ```
-**Response**: `ApiResponse<PaginatedData<ReactionItem>>`
 
-**可能错误码**：`10001`、`10003`、`10350`
+**Response**: `ApiResponse<PaginatedData<GroupMessageItem>>`
+
+**错误码**: `10000` `10300` `10400`
+
+### POST /api/v1/group_messages/update
+
+编辑群聊消息。
+
+- **认证**: 必须
+- **幂等**: 幂等语义
+
+**Request**: `UpdateGroupMessageRequest`
+```typescript
+interface UpdateGroupMessageRequest {
+  message_id: string;
+  content: string;
+}
+```
+
+**Response**: `ApiResponse`
+
+**错误码**: `10000` `10200` `10300` `10400`
+
+### POST /api/v1/group_messages/recall
+
+撤回群聊消息。发送者可撤回 2 分钟内消息，群组管理员/群主可撤回任何消息。
+
+- **认证**: 必须
+- **幂等**: 幂等语义
+
+**Request**: `RecallGroupMessageRequest`
+```typescript
+interface RecallGroupMessageRequest {
+  message_id: string;
+}
+```
+
+**Response**: `ApiResponse`
+
+**错误码**: `10000` `10200` `10300` `10400`
+
+### POST /api/v1/group_messages/me/mark_as_read
+
+标记群聊消息已读。
+
+**语义**：当不传 `up_to_message_id` 时，标记全部群聊消息为已读。
+
+- **认证**: 必须
+- **幂等**: 幂等语义
+
+**Request**: `MarkGroupMessagesReadRequest`
+```typescript
+interface MarkGroupMessagesReadRequest {
+  group_id?: string;             // 指定群组；不传时标记全部群聊
+  up_to_message_id?: string;     // 标记截至此消息；不传时标记该群全部
+}
+```
+
+**Response**: `ApiResponse`
+
+**错误码**: `10000` `10300` `10400`

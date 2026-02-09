@@ -1,19 +1,18 @@
 ---
 alwaysApply: true
 ---
-# HotSpot API 规范 - 地图渲染 API 模块 v0.0.1 (RPC)
+# HotSpot API - 地图渲染
 
 > 本文档定义 HotSpot 地图渲染 (`map`) 相关的 RPC 接口。
 
-## 服务定义
+## 模块信息
 
-- **Service Namespace**: `map`
-- **Base Path**: `/api/v1/map/`
-
-## 契约引用
-
-- 公共基础类型：`@api_spec_common.mdc`
-- 错误码：`@spec/api_spec_errors.mdc`
+- **命名空间**: `map`
+- **基础路径**: `/api/v1/map/`
+- **引用**: 
+  - 基础规范：`@api_spec_base.mdc`
+  - 通用类型：`@api_spec_types.mdc`
+  - 错误码：`@api_spec_errors.mdc`
 
 ## 设计理念
 
@@ -26,13 +25,13 @@ alwaysApply: true
 - Mid Zoom (中)：分裂为更小的聚合或展示头部热点 (`type: 'cluster'`, `preview_urls: [...]`)
 - High Zoom (近)：直接展示具体的 Poi (`type: 'user'/'moment'`, `entity: {...}`)
 
-## 接口概览（按子域）
+## 端点总览
 
-| 子域 | 端点 | 说明 | Request | Response |
-|-----|------|------|---------|----------|
-| 地图渲染 | `POST /api/v1/map/render` | 获取地图渲染数据 | `MapRenderRequest` | `ApiResponse<MapCanvas>` |
+| 端点 | 说明 | 认证 | 幂等 |
+|-----|------|------|------|
+| `POST /api/v1/map/render` | 获取地图渲染数据 | 可选 | 无 |
 
-## 核心类型定义
+## 类型定义
 
 ```typescript
 type MapDataType = 'user' | 'group' | 'moment' | 'all';
@@ -82,33 +81,35 @@ interface MapRenderItem {
 }
 
 interface MapCanvas {
-  items: MapRenderItem[];
+  items: MapRenderItem[];  // 最大返回 500 个渲染项，超出时服务端自动聚合
   toast_message?: string;
+}
+
+interface MapRenderRequest {
+  viewport: MapViewport;
+  filter?: {
+    data_type?: MapDataType;
+    time_range?: TimeRangeParams;
+    only_friends?: boolean;  // 仅登录态生效；仅显示好友
+  };
 }
 ```
 
-## 错误码说明
-
-本模块使用的错误码定义于 `@spec/api_spec_errors.mdc`，主要涉及：
-
-| 错误码 | 说明 | 相关接口 |
-|-------|------|---------|
-| `10001` | 缺少必填参数 | `render`（viewport） |
-| `10003` | 参数值超出范围 | `render`（zoom） |
-
----
-## API 详情
+## 端点详情
 
 ### POST /api/v1/map/render
 
 获取地图渲染数据。
+
+- **认证**: 可选
+- **幂等**: 无
 
 **Token 可选**：
 - 未登录：仅返回地图视野内"可匿名公开展示"的实体
 - 已登录：在满足隐私与关系规则前提下，允许返回更多可见实体
 - 位置保护：服务端可对匿名不可见实体进行聚合或降精度处理
 
-**Request**:
+**Request**: `MapRenderRequest`
 ```typescript
 interface MapRenderRequest {
   viewport: MapViewport;
@@ -119,6 +120,7 @@ interface MapRenderRequest {
   };
 }
 ```
+
 **Response**: `ApiResponse<MapCanvas>`
 
-**可能错误码**：`10001`、`10003`
+**错误码**: `10000`
