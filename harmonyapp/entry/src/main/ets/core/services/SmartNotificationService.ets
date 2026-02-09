@@ -74,23 +74,18 @@ export interface NotificationConfig {
 }
 
 /**
- * 综合统计信息中的整体统计
- */
-export interface OverallStats {
-  totalProcessed: number;
-  successRate: number;
-  averageProcessingTime: number;
-  peakConcurrency: number;
-}
-
-/**
  * 综合统计信息
  */
 export interface ComprehensiveStats {
   data: NotificationStats;
   scheduler: SchedulerStats;
   renderer: RendererStats;
-  overall: OverallStats;
+  overall: {
+    totalProcessed: number;
+    successRate: number;
+    averageProcessingTime: number;
+    peakConcurrency: number;
+  };
 }
 
 /**
@@ -129,6 +124,7 @@ export class NotificationMetadata {
 class EventExtra {
   id?: string;
   notification?: SmartNotification;
+  [key: string]: Object | undefined;
 }
 
 /**
@@ -156,15 +152,6 @@ export interface CreateNotificationInput {
   actions?: NotificationAction[];
   metadata?: NotificationMetadata;
   expiresAt?: number;
-}
-
-/**
- * 创建通知选项
- */
-export interface CreateNotificationOptions {
-  immediate?: boolean;
-  delay?: number;
-  callback?: (success: boolean, notificationId?: string) => void;
 }
 
 /**
@@ -380,7 +367,11 @@ export class SmartNotificationService extends BaseSingleton {
    */
   async createNotification(
     notification: CreateNotificationInput,
-    options?: CreateNotificationOptions
+    options?: {
+      immediate?: boolean;
+      delay?: number;
+      callback?: (success: boolean, notificationId?: string) => void;
+    }
   ): Promise<string | null> {
     const startTime = Date.now();
     this.performanceMetrics.currentConcurrency++;
@@ -421,9 +412,8 @@ export class SmartNotificationService extends BaseSingleton {
           metadata: notification.metadata,
           expiresAt: notification.expiresAt
         };
-        const callback = options?.callback;
-        notificationId = await this.scheduler!.sendImmediately(fullNotification, callback);
-      } else if (options?.delay !== undefined) {
+        notificationId = await this.scheduler!.sendImmediately(fullNotification, options.callback);
+      } else if (options?.delay) {
         // 延迟发送
         const fullNotification: SmartNotification = {
           id: this.generateId(),
@@ -438,9 +428,7 @@ export class SmartNotificationService extends BaseSingleton {
           metadata: notification.metadata,
           expiresAt: notification.expiresAt
         };
-        const delay = options.delay;
-        const callback = options?.callback;
-        const taskId = this.scheduler!.schedule(fullNotification, delay, callback);
+        const taskId = this.scheduler!.schedule(fullNotification, options.delay, options.callback);
         // 对于调度任务，我们返回任务ID作为通知ID
         notificationId = taskId;
       } else {
@@ -458,8 +446,7 @@ export class SmartNotificationService extends BaseSingleton {
           metadata: notification.metadata,
           expiresAt: notification.expiresAt
         };
-        const callback = options?.callback;
-        notificationId = await this.scheduler!.sendImmediately(fullNotification, callback);
+        notificationId = await this.scheduler!.sendImmediately(fullNotification, options.callback);
       }
       
       if (notificationId) {
@@ -653,21 +640,17 @@ export class SmartNotificationService extends BaseSingleton {
       ? this.performanceMetrics.totalProcessingTime / this.performanceMetrics.totalProcessed
       : 0;
     
-    const overall: OverallStats = {
-      totalProcessed: this.performanceMetrics.totalProcessed,
-      successRate,
-      averageProcessingTime,
-      peakConcurrency: this.performanceMetrics.peakConcurrency
-    };
-    
-    const result: ComprehensiveStats = {
+    return {
       data: dataStats,
       scheduler: schedulerStats,
       renderer: rendererStats,
-      overall: overall
+      overall: {
+        totalProcessed: this.performanceMetrics.totalProcessed,
+        successRate,
+        averageProcessingTime,
+        peakConcurrency: this.performanceMetrics.peakConcurrency
+      }
     };
-    
-    return result;
   }
   
   /**
@@ -715,21 +698,16 @@ export class SmartNotificationService extends BaseSingleton {
     }
   }
 
-/**
- * 性能告警输入参数
- */
-export interface PerformanceAlertInput {
-  type: string;
-  level: 'info' | 'warning' | 'critical';
-  message: string;
-  value: number;
-  threshold: number;
-}
-
   /**
    * 创建性能告警通知
    */
-  async createPerformanceAlert(alert: PerformanceAlertInput): Promise<string | null> {
+  async createPerformanceAlert(alert: {
+    type: string;
+    level: 'info' | 'warning' | 'critical';
+    message: string;
+    value: number;
+    threshold: number;
+  }): Promise<string | null> {
     if (!this.config.enablePerformanceAlerts) {
       return null;
     }
@@ -746,29 +724,25 @@ export interface PerformanceAlertInput {
     };
     metadata.alert = alertData;
     
-    const action: NotificationAction = {
-      id: 'view_details',
-      label: '查看详情',
-      type: 'primary',
-      handler: async () => {
-        logger.info(`查看性能告警详情: ${alert.type}`);
-      }
-    };
-    
-    const createInput: CreateNotificationInput = {
+    return this.createNotification({
       type: 'performance',
       priority: priority,
       title: `性能告警: ${alert.type}`,
       message: alert.message,
       read: false,
       actionable: true,
-      actions: [action],
+      actions: [
+        {
+          id: 'view_details',
+          label: '查看详情',
+          type: 'primary',
+          handler: async () => {
+            logger.info(`查看性能告警详情: ${alert.type}`);
+          }
+        }
+      ],
       metadata: metadata
-    };
-    
-    const options: CreateNotificationOptions = { immediate: true };
-    
-    return this.createNotification(createInput, options);
+    }, { immediate: true });
   }
   
   /**

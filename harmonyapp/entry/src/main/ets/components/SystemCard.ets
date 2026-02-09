@@ -27,8 +27,8 @@ export struct SystemCard {
     .borderRadius(this.borderRadius)
     .padding(this.cardPadding)
     .shadow(this.showShadow ? DesignConstants.SHADOW.SMALL : undefined)
-    .scale(this.clickable && this.isPressed ? { x: 0.98, y: 0.98 } as Object as { x: number, y: number } : { x: 1, y: 1 } as Object as { x: number, y: number }) // Press down effect
-    .animation({ duration: DesignConstants.ANIMATION.DURATION_SHORT, curve: DesignConstants.ANIMATION.CURVE_EASE_IN_OUT } as Object as { duration: number, curve: Curve })
+    .scale(this.clickable && this.isPressed ? { x: 0.98, y: 0.98 } : { x: 1, y: 1 }) // Press down effect
+    .animation({ duration: DesignConstants.ANIMATION.DURATION_SHORT, curve: DesignConstants.ANIMATION.CURVE_EASE_IN_OUT })
     .onTouch((event: TouchEvent) => {
       if (this.clickable) {
         if (event.type === TouchType.Down) {

@@ -343,15 +343,7 @@ export class WebSocketService {
       batchEvent.payload.events.forEach((subEvent) => {
         // 每个事件仍需检查 event_id 去重（在 parseServerEvent 中已处理）
         // 这里直接处理事件内容
-        const subEventRecord = subEvent as Record<string, Object>;
-        const eventWithoutId: Record<string, Object> = {};
-        const subEventKeys = Object.keys(subEventRecord);
-        for (let i = 0; i < subEventKeys.length; i++) {
-          const key = subEventKeys[i];
-          if (key !== 'event_id') {
-            eventWithoutId[key] = subEventRecord[key];
-          }
-        }
+        const { event_id, ...eventWithoutId } = subEvent;
         this.handleServerEvent(eventWithoutId as ServerEvent);
       });
       return;

@@ -241,15 +241,14 @@ export struct MessagePage {
   private async enterChat(item: ChatItem) {
     try {
       const routerInstance = this.getUIContext().getRouter();
-      const chatParams: { chatId: string; chatType: string; title: string; targetId?: number } = {
-        chatId: item.type === 'private' ? (item.data as PrivateChatListItem).other_user.user_id.toString() : item.id, 
-        chatType: item.type === 'private' ? 'private_chat' : 'group_chat',
-        title: item.name,
-        targetId: item.type === 'private' ? (item.data as PrivateChatListItem).other_user.user_id : undefined
-      };
       await routerInstance.pushUrl({
         url: `features/chat/pages/${PageNames.CHAT}`,
-        params: chatParams
+        params: {
+          chatId: item.type === 'private' ? (item.data as PrivateChatListItem).other_user.user_id.toString() : item.id, 
+          chatType: item.type === 'private' ? 'private_chat' : 'group_chat',
+          title: item.name,
+          targetId: item.type === 'private' ? (item.data as PrivateChatListItem).other_user.user_id : undefined
+        }
       });
     } catch (error) {
       SystemToast.showError('跳转失败', this.getUIContext());
@@ -350,7 +349,7 @@ export struct MessagePage {
                       scanTypes: scanTypes,
                       enableMultiMode: true,
                       enableAlbum: true
-                    } as scanBarcode.ScanOptions;
+                    };
                     
 import pasteboard from '@ohos.pasteboard';
 
