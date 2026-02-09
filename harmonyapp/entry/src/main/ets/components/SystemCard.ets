@@ -37,6 +37,5 @@ export struct SystemCard {
         }
       }
     })
-    .hoverEffect(this.enableHoverEffect ? HoverEffect.Scale : HoverEffect.None)
   }
 }

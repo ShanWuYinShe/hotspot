@@ -28,15 +28,16 @@ export struct SystemAvatar {
     return borderOptions;
   }
 
-  build() {
-    const actualSrc: string | Resource | undefined = this.avatarUrl ?? this.src;
-    const actualName: string = this.name;
+  private getActualSrc(): string | Resource | undefined {
+    return this.avatarUrl ?? this.src;
+  }
 
+  build() {
     Column() {
       Stack({ alignContent: Alignment.BottomEnd }) {
         // Main Avatar Image
-        if (actualSrc) {
-          Image(actualSrc)
+        if (this.getActualSrc()) {
+          Image(this.getActualSrc()!)
             .width(this.avatarSize)
             .height(this.avatarSize)
             .objectFit(ImageFit.Cover)
@@ -46,13 +47,13 @@ export struct SystemAvatar {
         } else {
           // Initials Fallback
           Flex({ justifyContent: FlexAlign.Center, alignItems: ItemAlign.Center }) {
-            Text(this.getInitials(actualName))
+            Text(this.getInitials(this.name))
               .fontSize(this.avatarSize * 0.4)
               .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
               .fontColor(Color.White)
               .width(this.avatarSize)
               .height(this.avatarSize)
-              .backgroundColor(this.generateAvatarColor(actualName))
+              .backgroundColor(this.generateAvatarColor(this.name))
               .borderRadius(this.getBorderRadius())
               .border(this.getBorderOptions())
           }

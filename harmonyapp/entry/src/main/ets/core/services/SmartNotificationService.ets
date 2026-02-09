@@ -74,23 +74,50 @@ export interface NotificationConfig {
 }
 
 /**
- * 综合统计信息中的整体统计
- */
-interface OverallStats {
-  totalProcessed: number;
-  successRate: number;
-  averageProcessingTime: number;
-  peakConcurrency: number;
-}
-
-/**
  * 综合统计信息
  */
 export interface ComprehensiveStats {
   data: NotificationStats;
   scheduler: SchedulerStats;
   renderer: RendererStats;
-  overall: OverallStats;
+  overall: OverallStatsData;
+}
+
+interface OverallStatsData {
+  totalProcessed: number;
+  successRate: number;
+  averageProcessingTime: number;
+  peakConcurrency: number;
+}
+
+export interface CreateNotificationOptions {
+  immediate?: boolean;
+  delay?: number;
+  callback?: (success: boolean, notificationId?: string) => void;
+}
+
+interface PerformanceAlertInput {
+  type: string;
+  level: 'info' | 'warning' | 'critical';
+  message: string;
+  value: number;
+  threshold: number;
+}
+
+interface SecurityAlertInput {
+  type: 'login_attempt' | 'permission_change' | 'data_access';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  description: string;
+  location?: string;
+}
+
+class AlertData {
+  type: string = '';
+  level?: string;
+  severity?: string;
+  value?: number;
+  threshold?: number;
+  location?: string;
 }
 
 /**
@@ -168,15 +195,6 @@ export type NotificationEventListener = (
 ) => void;
 
 /**
- * 创建通知选项
- */
-interface CreateNotificationOptions {
-  immediate?: boolean;
-  delay?: number;
-  callback?: (success: boolean, notificationId?: string) => void;
-}
-
-/**
  * 智能通知服务
  */
 export class SmartNotificationService extends BaseSingleton {
@@ -215,13 +233,6 @@ export class SmartNotificationService extends BaseSingleton {
    * 清理定时器
    */
   private cleanupTimerId: number = -1;
-  
-  /**
-   * 生成唯一ID
-   */
-  private generateId(): string {
-    return Date.now().toString(36) + Math.random().toString(36).substring(2);
-  }
   
   private constructor() {
     super();
@@ -345,10 +356,9 @@ export class SmartNotificationService extends BaseSingleton {
   /**
    * 更新配置
    */
-  updateConfig(config: Partial<NotificationConfig>): void {
+  updateConfig(config: Object): void {
     try {
-      const merged = ConfigMerger.merge(this.config, config as Object as Record<string, Object>);
-      this.config = merged as Object as NotificationConfig;
+      this.config = ConfigMerger.merge(this.config as Object as Record<string, Object>, config as Record<string, Object>) as Object as NotificationConfig;
       
       // 更新子服务配置
       this.configureSubServices();
@@ -405,6 +415,7 @@ export class SmartNotificationService extends BaseSingleton {
       }
       
       let notificationId: string | null = null;
+      let fullNotification: SmartNotification | null = null;
       
       // 确保调度器已初始化
       if (!this.scheduler) {
@@ -414,36 +425,59 @@ export class SmartNotificationService extends BaseSingleton {
         }
       }
 
-      // 创建完整通知对象
-      const fullNotification: SmartNotification = {
-        id: this.generateId(),
-        timestamp: Date.now(),
-        type: notification.type,
-        priority: notification.priority,
-        title: notification.title,
-        message: notification.message,
-        read: notification.read,
-        actionable: notification.actionable,
-        actions: notification.actions,
-        metadata: notification.metadata,
-        expiresAt: notification.expiresAt
-      };
-
       if (options?.immediate) {
         // 立即发送
+        fullNotification = {
+          id: this.generateId(),
+          timestamp: Date.now(),
+          type: notification.type,
+          priority: notification.priority,
+          title: notification.title,
+          message: notification.message,
+          read: notification.read,
+          actionable: notification.actionable,
+          actions: notification.actions,
+          metadata: notification.metadata,
+          expiresAt: notification.expiresAt
+        };
         notificationId = await this.scheduler!.sendImmediately(fullNotification, options.callback);
-      } else if (options && options.delay !== undefined) {
+      } else if (options?.delay) {
         // 延迟发送
+        fullNotification = {
+          id: this.generateId(),
+          timestamp: Date.now(),
+          type: notification.type,
+          priority: notification.priority,
+          title: notification.title,
+          message: notification.message,
+          read: notification.read,
+          actionable: notification.actionable,
+          actions: notification.actions,
+          metadata: notification.metadata,
+          expiresAt: notification.expiresAt
+        };
         const taskId = this.scheduler!.schedule(fullNotification, options.delay, options.callback);
         // 对于调度任务，我们返回任务ID作为通知ID
         notificationId = taskId;
       } else {
         // 默认立即发送
-        const callback = options?.callback;
-        notificationId = await this.scheduler!.sendImmediately(fullNotification, callback);
+        fullNotification = {
+          id: this.generateId(),
+          timestamp: Date.now(),
+          type: notification.type,
+          priority: notification.priority,
+          title: notification.title,
+          message: notification.message,
+          read: notification.read,
+          actionable: notification.actionable,
+          actions: notification.actions,
+          metadata: notification.metadata,
+          expiresAt: notification.expiresAt
+        };
+        notificationId = await this.scheduler!.sendImmediately(fullNotification, options?.callback);
       }
       
-      if (notificationId) {
+      if (notificationId && fullNotification) {
         // 触发创建事件
         const eventExtra = new EventExtra();
         eventExtra.id = notificationId;
@@ -634,19 +668,19 @@ export class SmartNotificationService extends BaseSingleton {
       ? this.performanceMetrics.totalProcessingTime / this.performanceMetrics.totalProcessed
       : 0;
     
-    const overallStats: OverallStats = {
+    const overallData: OverallStatsData = {
       totalProcessed: this.performanceMetrics.totalProcessed,
-      successRate,
-      averageProcessingTime,
+      successRate: successRate,
+      averageProcessingTime: averageProcessingTime,
       peakConcurrency: this.performanceMetrics.peakConcurrency
     };
-    
-    return {
+    const stats: ComprehensiveStats = {
       data: dataStats,
       scheduler: schedulerStats,
       renderer: rendererStats,
-      overall: overallStats
+      overall: overallData
     };
+    return stats;
   }
   
   /**
@@ -695,20 +729,9 @@ export class SmartNotificationService extends BaseSingleton {
   }
 
   /**
-   * 性能告警数据
-   */
-  interface PerformanceAlertData {
-    type: string;
-    level: 'info' | 'warning' | 'critical';
-    message: string;
-    value: number;
-    threshold: number;
-  }
-
-  /**
    * 创建性能告警通知
    */
-  async createPerformanceAlert(alert: PerformanceAlertData): Promise<string | null> {
+  async createPerformanceAlert(alert: PerformanceAlertInput): Promise<string | null> {
     if (!this.config.enablePerformanceAlerts) {
       return null;
     }
@@ -717,20 +740,14 @@ export class SmartNotificationService extends BaseSingleton {
                     alert.level === 'warning' ? 'high' : 'medium';
     
     const metadata = new NotificationMetadata();
-    interface AlertData {
-      type: string;
-      level: 'info' | 'warning' | 'critical';
-      value: number;
-      threshold: number;
-    }
-    const alertData: AlertData = {
-      type: alert.type,
-      level: alert.level,
-      value: alert.value,
-      threshold: alert.threshold
-    };
+    const alertData = new AlertData();
+    alertData.type = alert.type;
+    alertData.level = alert.level;
+    alertData.value = alert.value;
+    alertData.threshold = alert.threshold;
     metadata.alert = alertData as Object;
     
+    const opts: CreateNotificationOptions = { immediate: true };
     return this.createNotification({
       type: 'performance',
       priority: priority,
@@ -749,27 +766,18 @@ export class SmartNotificationService extends BaseSingleton {
         }
       ],
       metadata: metadata
-    }, { immediate: true });
+    }, opts);
   }
   
   /**
-   * 安全告警数据
-   */
-  interface SecurityAlertData {
-    type: 'login_attempt' | 'permission_change' | 'data_access';
-    severity: 'low' | 'medium' | 'high' | 'critical';
-    description: string;
-    location?: string;
-  }
-
-  /**
    * 创建安全告警通知
    */
-  async createSecurityAlert(security: SecurityAlertData): Promise<string | null> {
+  async createSecurityAlert(security: SecurityAlertInput): Promise<string | null> {
     if (!this.config.enableSecurityAlerts) {
       return null;
     }
     
+    const opts: CreateNotificationOptions = { immediate: true };
     return this.createNotification({
       type: 'security',
       priority: security.severity,
@@ -789,20 +797,14 @@ export class SmartNotificationService extends BaseSingleton {
       ],
       metadata: (() => {
         const meta = new NotificationMetadata();
-        interface SecurityAlertMetadata {
-          type: 'login_attempt' | 'permission_change' | 'data_access';
-          severity: 'low' | 'medium' | 'high' | 'critical';
-          location?: string;
-        }
-        const alertData: SecurityAlertMetadata = {
-          type: security.type,
-          severity: security.severity,
-          location: security.location
-        };
-        meta.alert = alertData as Object;
+        const ad = new AlertData();
+        ad.type = security.type;
+        ad.severity = security.severity;
+        ad.location = security.location;
+        meta.alert = ad as Object;
         return meta;
       })()
-    }, { immediate: true });
+    }, opts);
   }
 
   /**
@@ -822,6 +824,15 @@ export class SmartNotificationService extends BaseSingleton {
   }
   
   /**
+   * 生成唯一通知ID
+   */
+  private generateId(): string {
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substring(2, 8);
+    return `notif_${timestamp}_${random}`;
+  }
+
+  /**
    * 配置子服务
    */
   private configureSubServices(): void {
@@ -830,11 +841,10 @@ export class SmartNotificationService extends BaseSingleton {
     }
     
     // 配置调度器
-    const schedulerConfig: SchedulerConfigUpdate = {
-      quietHours: this.config.quietHours,
-      batchDelay: this.config.batchDelay,
-      enableThrottling: this.config.enableThrottling
-    };
+    const schedulerConfig = new SchedulerConfigUpdate();
+    schedulerConfig.quietHours = this.config.quietHours;
+    schedulerConfig.batchDelay = this.config.batchDelay;
+    schedulerConfig.enableThrottling = this.config.enableThrottling;
     this.scheduler.updateConfig(schedulerConfig);
     
     // 配置渲染器
@@ -883,7 +893,7 @@ export class SmartNotificationService extends BaseSingleton {
   private startCleanupTimer(): void {
     // 每小时执行一次清理
     this.cleanupTimerId = TimerManager.setInterval(() => {
-      this.cleanup().catch((error: Object) => {
+      this.cleanup().catch(error => {
         logger.error('定时清理失败', error);
       });
     }, 60 * 60 * 1000, 'notification_cleanup');
