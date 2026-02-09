@@ -5,7 +5,7 @@
 import { RdbManager } from './RdbManager';
 import { relationalStore, ValuesBucket } from '@kit.ArkData';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { MomentSearchItem } from '../../types/api';
+import { MomentSearchItem } from '../types/api';
 
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG = 'MomentCacheService';

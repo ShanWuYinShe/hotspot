@@ -244,15 +244,20 @@ export interface ServerWebSocketEvent {
 // ----- 连接管理事件 -----
 
 /**
+ * ConnectionEstablished 订阅上限配置
+ */
+export interface MaxSubscriptions {
+  user: number   // 用户订阅上限
+  group: number  // 群组订阅上限
+}
+
+/**
  * ConnectionEstablished 配置信息
  */
 export interface ConnectionConfig {
   ping_interval: number  // 心跳间隔（秒）
   ping_timeout: number   // Pong 超时（秒）
-  max_subscriptions: {
-    user: number   // 用户订阅上限
-    group: number  // 群组订阅上限
-  }
+  max_subscriptions: MaxSubscriptions
 }
 
 /**
@@ -460,17 +465,22 @@ export interface CommentReplyEvent {
 }
 
 /**
+ * 瞬间摘要信息
+ */
+export interface MomentSummary {
+  moment_id: string
+  cover_url?: string  // 封面图 (第一张图片)
+  text_preview: string  // 文本内容摘要 (前50字)
+}
+
+/**
  * 在内容中被提及
  */
 export interface MessageMentionedPayload {
   target_type: 'moment' | 'comment'
   moment_id: string
   comment_id?: string
-  moment_summary?: {
-    moment_id: string
-    cover_url?: string  // 封面图 (第一张图片)
-    text_preview: string  // 文本内容摘要 (前50字)
-  }
+  moment_summary?: MomentSummary
   comment_preview?: string
   user: UserInfo  // 提及我的人
   mentioned_at: string
@@ -822,15 +832,20 @@ export interface GroupAnnouncementUpdatedEvent {
 }
 
 /**
+ * 群组更新字段
+ */
+export interface GroupUpdatedFields {
+  name?: string
+  avatar_url?: string
+  description?: string
+}
+
+/**
  * 群组信息更新
  */
 export interface GroupUpdatedPayload {
   group_id: string
-  updated_fields: {  // 只包含变更的字段
-    name?: string
-    avatar_url?: string
-    description?: string
-  }
+  updated_fields: GroupUpdatedFields  // 只包含变更的字段
   updated_by: number  // user_id（操作者）
   updated_at: string
 }
@@ -1180,7 +1195,7 @@ function markEventProcessed(eventId: string): void {
  */
 export function parseServerEvent(data: string): ServerEvent | BatchEventsEvent | null {
   try {
-    const raw = JSON.parse(data)
+    const raw = JSON.parse(data) as Object
     
     // 检查是否是批量事件
     if (raw.type === 'BatchEvents' && raw.payload && raw.payload.events) {
@@ -1224,7 +1239,7 @@ export function parseServerEvent(data: string): ServerEvent | BatchEventsEvent |
         event[key] = rawRecord[key];
       }
     }
-    return event as ServerEvent
+    return event as unknown as ServerEvent
   } catch (e) {
     console.error('Failed to parse WebSocket message:', e)
     return null

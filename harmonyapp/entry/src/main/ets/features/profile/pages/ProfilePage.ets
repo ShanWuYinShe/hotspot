@@ -13,8 +13,7 @@ import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
-import { MyProfileData, UserType, UpdateLocationRequest } from '../../../core/types/api';
-import { isTempUser } from '../../../core/types/CommonTypes';
+import { MyProfileData, UpdateLocationRequest } from '../../../core/types/api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon, SystemIcon, IconSize, IconButton } from '../../../components/SystemIcon';
@@ -47,10 +46,6 @@ export struct ProfilePage {
     await this.loadUserStats();
   }
 
-  private isTemporaryUser(userType?: UserType): boolean {
-    if (!userType) return false;
-    return isTempUser(userType);
-  }
 
   private async loadUserStats(): Promise<void> {
     if (!this.isLoggedIn || !this.currentUser) {
@@ -279,23 +274,8 @@ export struct ProfilePage {
           .maxLines(3)
       }
 
-      if (this.isTemporaryUser(this.currentUser?.user_type as UserType)) {
-        Text('临时用户')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(DesignConstants.COLOR.WARNING)
-          .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
-          .padding({
-            left: 8,
-            right: 8,
-            top: 4,
-            bottom: 4
-          })
-          .borderRadius(12)
-          .border({
-            width: 1,
-            color: DesignConstants.COLOR.WARNING
-          })
-      }
+      // Note: MyProfileData doesn't have user_type field, so we skip the temporary user check
+      // If user_type is needed, it should be added to MyProfileData interface
     }
     .width('100%')
   }

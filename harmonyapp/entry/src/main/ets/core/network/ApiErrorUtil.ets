@@ -4,7 +4,9 @@ export interface ApiErrorSnapshot {
   message?: string;
 }
 
-const isRecord = (v: Object): v is Record<string, Object> => v !== null && typeof v === 'object';
+function isRecord(v: Object): boolean {
+  return v !== null && typeof v === 'object';
+}
 
 export function extractApiErrorSnapshot(result: Object, responseCode?: number): ApiErrorSnapshot {
   let code: number | undefined;
@@ -44,7 +46,7 @@ export function shouldForceLogoutOnAuthError(code: Object, message?: Object): bo
   if (!isAuthErrorCode(code)) return false;
   if (isReauthRequiredCode(code)) return true;
   if (isTokenMissingCode(code)) return true;
-  if (isTokenInvalidOrExpiredCode(code)) return !isSoftTokenRotation(message);
+  if (isTokenInvalidOrExpiredCode(code)) return !isSoftTokenRotation(message !== undefined ? message : null);
   return true;
 }
 
@@ -76,9 +78,9 @@ export function isServerErrorCode(code: Object): boolean {
   return typeof code === 'number' && (code as number) >= 50000 && (code as number) <= 59999;
 }
 
-function isSafeUserMessage(message: Object): message is string {
+function isSafeUserMessage(message: Object): boolean {
   if (typeof message !== 'string') return false;
-  const msg = message.trim();
+  const msg = (message as string).trim();
   if (!msg) return false;
   if (msg.includes('/api/') || msg.includes('baseURL')) return false;
   if (/^\[[A-Z]+\]\s+\".*\"\:\s+\d{3}\s+/.test(msg)) return false;
@@ -94,22 +96,22 @@ export function guessUserMessageFromSnapshot(
   const status = snapshot.status;
   const message = snapshot.message;
 
-  if (isTokenInvalidOrExpiredCode(code) || (typeof message === 'string' && message.includes('ExpiredSignature'))) {
+  if ((code !== undefined && isTokenInvalidOrExpiredCode(code)) || (typeof message === 'string' && message.includes('ExpiredSignature'))) {
     return '登录已过期，请重新登录';
   }
 
-  if (isTokenMissingCode(code) || isAuthErrorCode(code) || status === 401) {
+  if ((code !== undefined && isTokenMissingCode(code)) || (code !== undefined && isAuthErrorCode(code)) || status === 401) {
     return '请先登录';
   }
 
-  if (isBadRequestCode(code)) return isSafeUserMessage(message) ? message : '请求参数错误';
-  if (isForbiddenCode(code)) return '无权限执行此操作';
-  if (isNotFoundCode(code)) return '资源不存在或已被删除';
-  if (isConflictCode(code)) return isSafeUserMessage(message) ? message : '操作冲突，请稍后重试';
-  if (isCursorInvalidOrExpiredCode(code)) return '列表已过期，请刷新后重试';
-  if (isRateLimitCode(code) || status === 429) return '请求过于频繁，请稍后再试';
+  if (code !== undefined && isBadRequestCode(code)) return (message !== undefined && isSafeUserMessage(message)) ? message : '请求参数错误';
+  if (code !== undefined && isForbiddenCode(code)) return '无权限执行此操作';
+  if (code !== undefined && isNotFoundCode(code)) return '资源不存在或已被删除';
+  if (code !== undefined && isConflictCode(code)) return (message !== undefined && isSafeUserMessage(message)) ? message : '操作冲突，请稍后重试';
+  if (code !== undefined && isCursorInvalidOrExpiredCode(code)) return '列表已过期，请刷新后重试';
+  if ((code !== undefined && isRateLimitCode(code)) || status === 429) return '请求过于频繁，请稍后再试';
 
-  if (isSafeUserMessage(message)) return message;
-  if (isServerErrorCode(code) || (typeof status === 'number' && status >= 500)) return defaultMessage;
+  if (message !== undefined && isSafeUserMessage(message)) return message;
+  if ((code !== undefined && isServerErrorCode(code)) || (typeof status === 'number' && status >= 500)) return defaultMessage;
   return defaultMessage;
 }

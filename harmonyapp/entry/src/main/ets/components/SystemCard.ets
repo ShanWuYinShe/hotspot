@@ -4,7 +4,6 @@ import { DesignConstants } from '../constants/DesignConstants';
 export struct SystemCard {
   @BuilderParam content: () => void;
   @Prop cardPadding: number = DesignConstants.SPACING.LG;
-  @Prop borderRadius: number = DesignConstants.RADIUS.XL;
   @Prop showShadow: boolean = true;
   @Prop clickable: boolean = false;
   @Prop hoverEffect: boolean = false; // New prop for hover effect
@@ -24,7 +23,7 @@ export struct SystemCard {
     .width('100%')
     .backgroundColor(this.useBlur ? Color.Transparent : this.cardBackgroundColor)
     .backgroundBlurStyle(this.useBlur ? BlurStyle.Thin : BlurStyle.NONE)
-    .borderRadius(this.borderRadius)
+    .borderRadius(DesignConstants.RADIUS.XL)
     .padding(this.cardPadding)
     .shadow(this.showShadow ? DesignConstants.SHADOW.SMALL : undefined)
     .scale(this.clickable && this.isPressed ? { x: 0.98, y: 0.98 } : { x: 1, y: 1 }) // Press down effect

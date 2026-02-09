@@ -312,7 +312,7 @@ export class DistributedSyncService {
       hilog.info(0x0000, 'DistributedSync', `开始同步动态: ${syncData.userId}`);
       
       // 实现动态同步逻辑
-      const momentsData = await this.fetchUserMoments(syncData.userId);
+      const momentsData = await this.fetchUserMoments(String(syncData.userId));
       await this.uploadMomentsToKVStore(momentsData);
       
       hilog.info(0x0000, 'DistributedSync', `动态同步完成: ${syncData.userId}`);
@@ -330,7 +330,7 @@ export class DistributedSyncService {
       hilog.info(0x0000, 'DistributedSync', `开始同步群组: ${syncData.userId}`);
       
       // 实现群组同步逻辑
-      const groupsData = await this.fetchUserGroups(syncData.userId);
+      const groupsData = await this.fetchUserGroups(String(syncData.userId));
       await this.uploadGroupsToKVStore(groupsData);
       
       hilog.info(0x0000, 'DistributedSync', `群组同步完成: ${syncData.userId}`);

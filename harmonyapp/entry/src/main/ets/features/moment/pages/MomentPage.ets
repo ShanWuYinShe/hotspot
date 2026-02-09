@@ -10,7 +10,7 @@ import { GlobalStateManager, KEY_CURRENT_LOCATION } from '../../../core/state/Gl
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { PageNames } from '../../../constants/AppConstants';
-import { LikeMomentRequest, MomentSearchItem, SearchMomentsByLocationRequest } from '../../../core/types/api';
+import { LikeMomentRequest, MomentSearchItem, SearchMomentsByLocationRequest, MomentImage } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { IntelligentLocationCard } from '../../../components/IntelligentLocationCard';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -345,9 +345,9 @@ export struct MomentPage {
       // 图片展示 (如果有)
       if (moment.images && moment.images.length > 0) {
          Grid() {
-           ForEach(moment.images.slice(0, 9), (imgUrl: string, imgIndex: number) => {
+           ForEach(moment.images.slice(0, 9), (img: MomentImage, imgIndex: number) => {
              GridItem() {
-               Image(imgUrl)
+               Image(img.url)
                  .width('100%')
                  .height('100%')
                  .objectFit(ImageFit.Cover)
@@ -359,7 +359,7 @@ export struct MomentPage {
                  })
              }
              .aspectRatio(1)
-           })
+           }, (img: MomentImage, index: number) => img.url + '_' + index)
          }
          .columnsTemplate('1fr 1fr 1fr')
          .columnsGap(8)
@@ -402,7 +402,7 @@ export struct MomentPage {
           LikeButton({ 
             momentId: moment.moment_id, 
             initialLikesCount: moment.likes_count,
-            onLike: () => this.likeMoment(moment, index)
+            onLike: (): void => { this.likeMoment(moment, index); }
           })
         }
 
@@ -468,34 +468,4 @@ struct LikeButton {
     }
   }
 
-  private calcImageGridHeight(count: number): number {
-    const rows = Math.ceil(Math.min(count, 9) / 3);
-    // 假设每个 GridItem 宽度大约 (Screen - padding) / 3
-    // 这里简单给个估计值，或者使用 aspectRatio 固定比例
-    // 实际上 Grid 使用 aspectRatio(1) 后高度会自动撑开，但 Grid 容器可能需要显式高度
-    // 如果 Grid 不设置高度，在 Column 中可能显示异常? 
-    // 实测 Grid 设置 columnsTemplate 后高度默认自适应内容，但在 Scroll/List 中表现各异
-    // 这里给个估算高度: 假设宽度约 100vp
-    return rows * 110; 
-  }
-
-  /**
-   * 格式化时间
-   */
-  private formatTime(timeStr: string): string {
-    const time = new Date(timeStr);
-    const now = new Date();
-    const diff = now.getTime() - time.getTime();
-    
-    const minutes = Math.floor(diff / (1000 * 60));
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-    if (minutes < 1) return '刚刚';
-    if (minutes < 60) return `${minutes}分钟前`;
-    if (hours < 24) return `${hours}小时前`;
-    if (days < 7) return `${days}天前`;
-    
-    return time.toLocaleDateString();
-  }
 }

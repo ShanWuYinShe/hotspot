@@ -19,6 +19,13 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { AppIcon, AppIconMap } from '../../../components/SystemIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { SmartNotificationService, NotificationEvent, CreateNotificationInput, NotificationMetadata } from '../../../core/services/SmartNotificationService';
+
+// Define CreateNotificationOptions type locally
+interface CreateNotificationOptions {
+  immediate?: boolean;
+  delay?: number;
+  callback?: (success: boolean, notificationId?: string) => void;
+}
 import { CacheManager } from '../../../core/cache/CacheManager';
 import { NotificationCenter } from '../../../components/NotificationCenter';
 import { PerformanceIndicator } from '../../../components/PerformanceIndicator';
@@ -29,13 +36,16 @@ import { MessagePage } from '../../../features/message/pages/MessagePage';
 import { MomentPage } from '../../../features/moment/pages/MomentPage';
 import { MapPage } from '../../../features/map/pages/MapPage';
 import { ProfilePage } from '../../../features/profile/pages/ProfilePage';
-import { NotificationRenderer, STORAGE_KEY_VISIBLE_NOTIFICATIONS } from '../../../core/services/notification/NotificationRenderer';
+import { NotificationRenderer } from '../../../core/services/notification/NotificationRenderer';
 import { SmartNotification, NotificationAction } from '../../../core/services/notification/NotificationDataManager';
 import { NotificationBanner } from '../../../components/NotificationBanner';
 import { TimerManager } from '../../../core/utils/TimerManager';
 
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG: string = 'IndexPage';
+
+// Define storage key locally since it's not exported from NotificationRenderer
+const STORAGE_KEY_VISIBLE_NOTIFICATIONS = 'visibleNotifications';
 
 @Entry
 @Component
@@ -265,7 +275,7 @@ struct Index {
               actionable: true,
               metadata: metadata
             };
-            const options: { immediate?: boolean; delay?: number; callback?: (success: boolean, notificationId?: string) => void } = { immediate: true };
+            const options: CreateNotificationOptions = { immediate: true };
             await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
@@ -284,29 +294,11 @@ struct Index {
               actionable: true,
               metadata: metadata
             };
-            const options: { immediate?: boolean; delay?: number; callback?: (success: boolean, notificationId?: string) => void } = { immediate: true };
+            const options: CreateNotificationOptions = { immediate: true };
             await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
-          case 'Unfollowed': {
-            const p: Object = event.payload as Object;
-            const payloadRecord = p as Record<string, Object>;
-            const metadata = new NotificationMetadata();
-            metadata.type = 'unfollowed';
-            metadata.targetId = String(payloadRecord.user_id);
-            const notifInput: CreateNotificationInput = {
-              type: 'social',
-              priority: payloadRecord.was_mutual ? 'high' : 'low',
-              title: payloadRecord.was_mutual ? '好友关系解除' : '取消关注',
-              message: payloadRecord.was_mutual ? '对方已取消关注，你们不再是好友' : '有人取消关注了你',
-              read: false,
-              actionable: true,
-              metadata: metadata
-            };
-            const options: { immediate?: boolean; delay?: number; callback?: (success: boolean, notificationId?: string) => void } = { immediate: true };
-            await this.smartNotificationService.createNotification(notifInput, options);
-            break;
-          }
+          // Note: 'Unfollowed' event type is not in ServerEventType enum, removed
           case 'MomentLiked': {
             const p: Object = event.payload as Object;
             const payloadRecord = p as Record<string, Object>;
@@ -322,7 +314,7 @@ struct Index {
               actionable: true,
               metadata: metadata
             };
-            const options: { immediate?: boolean; delay?: number; callback?: (success: boolean, notificationId?: string) => void } = { immediate: true };
+            const options: CreateNotificationOptions = { immediate: true };
             await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
@@ -341,7 +333,7 @@ struct Index {
               actionable: true,
               metadata: metadata
             };
-            const options: { immediate?: boolean; delay?: number; callback?: (success: boolean, notificationId?: string) => void } = { immediate: true };
+            const options: CreateNotificationOptions = { immediate: true };
             await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
@@ -360,7 +352,7 @@ struct Index {
               actionable: true,
               metadata: metadata
             };
-            const options: { immediate?: boolean; delay?: number; callback?: (success: boolean, notificationId?: string) => void } = { immediate: true };
+            const options: CreateNotificationOptions = { immediate: true };
             await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
@@ -379,7 +371,7 @@ struct Index {
               actionable: true,
               metadata: metadata
             };
-            const options: { immediate?: boolean; delay?: number; callback?: (success: boolean, notificationId?: string) => void } = { immediate: true };
+            const options: CreateNotificationOptions = { immediate: true };
             await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
@@ -398,7 +390,7 @@ struct Index {
               actionable: true,
               metadata: metadata
             };
-            const options: { immediate?: boolean; delay?: number; callback?: (success: boolean, notificationId?: string) => void } = { immediate: true };
+            const options: CreateNotificationOptions = { immediate: true };
             await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
@@ -417,7 +409,7 @@ struct Index {
               actionable: true,
               metadata: metadata
             };
-            const options: { immediate?: boolean; delay?: number; callback?: (success: boolean, notificationId?: string) => void } = { immediate: true };
+            const options: CreateNotificationOptions = { immediate: true };
             await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
@@ -436,7 +428,7 @@ struct Index {
               actionable: true,
               metadata: metadata
             };
-            const options: { immediate?: boolean; delay?: number; callback?: (success: boolean, notificationId?: string) => void } = { immediate: true };
+            const options: CreateNotificationOptions = { immediate: true };
             await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
@@ -456,7 +448,7 @@ struct Index {
               actionable: true,
               metadata: metadata
             };
-            const options: { immediate?: boolean; delay?: number; callback?: (success: boolean, notificationId?: string) => void } = { immediate: true };
+            const options: CreateNotificationOptions = { immediate: true };
             await this.smartNotificationService.createNotification(notifInput, options);
             break;
           }
@@ -470,7 +462,6 @@ struct Index {
     [
       'NewFollower',
       'MutualFollow',
-      'Unfollowed',
       'MomentLiked',
       'MomentCommented',
       'CommentReply',

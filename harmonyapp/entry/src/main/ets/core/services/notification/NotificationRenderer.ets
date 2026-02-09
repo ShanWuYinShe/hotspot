@@ -7,7 +7,7 @@ import { BaseSingleton } from '../../base/Singleton';
 import { createLogger } from '../../utils/LogManager';
 import { ErrorHandler, ErrorType, ErrorLevel } from '../../utils/ErrorHandler';
 import { ConfigMerger } from '../../utils/ConfigMerger';
-import { UI_CONSTANTS } from '../../constants/SystemConstants';
+import { UI_CONSTANTS } from '../../../constants/SystemConstants';
 import { SmartNotification, NotificationAction } from './NotificationDataManager';
 
 const logger = createLogger('NotificationRenderer');
@@ -251,7 +251,9 @@ export class NotificationRenderer extends BaseSingleton {
    * 更新配置
    */
   updateConfig(config: RendererConfigUpdate): void {
-    this.config = ConfigMerger.merge(this.config, config as Object as Record<string, Object>);
+    const configObj = config as Object;
+    const merged = ConfigMerger.merge(this.config as Object, configObj) as RendererConfig;
+    this.config = merged;
     
     // 重新初始化样式缓存
     this.initializeStyleCache();
@@ -409,11 +411,12 @@ export class NotificationRenderer extends BaseSingleton {
     
     try {
       // 更新通知数据
-      const updatedNotification = ConfigMerger.merge(displayInfo.notification, updates);
-      displayInfo.notification = updatedNotification;
+      const updatesObj = updates as Object;
+      const merged = ConfigMerger.merge(displayInfo.notification as Object, updatesObj) as SmartNotification;
+      displayInfo.notification = merged;
       
       // 更新UI元素
-      await this.updateNotificationElement(displayInfo.element, updatedNotification);
+      await this.updateNotificationElement(displayInfo.element, merged);
       
       logger.debug(`通知已更新: ${notificationId}`);
       return true;
@@ -683,7 +686,7 @@ export class NotificationRenderer extends BaseSingleton {
   /**
    * 出场动画
    */
-  private async animateOut(element: any): Promise<void> {
+  private async animateOut(element: NotificationElement): Promise<void> {
     switch (this.config.animation) {
       case NotificationAnimation.SLIDE:
         await this.slideOutAnimation(element);
@@ -703,7 +706,7 @@ export class NotificationRenderer extends BaseSingleton {
   /**
    * 滑入动画
    */
-  private async slideInAnimation(element: any): Promise<void> {
+  private async slideInAnimation(element: NotificationElement): Promise<void> {
     // 实现滑入动画
     logger.debug('执行滑入动画');
     await element.show();
@@ -712,7 +715,7 @@ export class NotificationRenderer extends BaseSingleton {
   /**
    * 滑出动画
    */
-  private async slideOutAnimation(element: any): Promise<void> {
+  private async slideOutAnimation(element: NotificationElement): Promise<void> {
     // 实现滑出动画
     logger.debug('执行滑出动画');
     await element.hide();
@@ -721,7 +724,7 @@ export class NotificationRenderer extends BaseSingleton {
   /**
    * 淡入动画
    */
-  private async fadeInAnimation(element: any): Promise<void> {
+  private async fadeInAnimation(element: NotificationElement): Promise<void> {
     // 实现淡入动画
     logger.debug('执行淡入动画');
     await element.show();

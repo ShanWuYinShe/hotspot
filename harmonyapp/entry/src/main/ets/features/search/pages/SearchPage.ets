@@ -175,7 +175,7 @@ struct SearchPage {
   }
 
   @Builder
-  ResultList(data: any[], type: 'user' | 'group' | 'moment') {
+  ResultList(data: UserSearchItem[] | GroupSearchItem[] | MomentSearchItem[], type: 'user' | 'group' | 'moment') {
     if (this.hasSearched && data.length === 0) {
       Column({ space: 16 }) {
         Text('🔍').fontSize(48)
@@ -184,7 +184,7 @@ struct SearchPage {
       .width('100%').height('100%').justifyContent(FlexAlign.Center)
     } else {
       List() {
-        ForEach(data, (item: any) => {
+        ForEach(data, (item: UserSearchItem | GroupSearchItem | MomentSearchItem) => {
           ListItem() {
             if (type === 'user') this.buildUserItem(item as UserSearchItem);
             else if (type === 'group') this.buildGroupItem(item as GroupSearchItem);

@@ -23,6 +23,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon, SystemIcon } from '../../../components/SystemIcon';
 import { NativeMapComponent, MapMarker, MapRegion } from '../../../components/NativeMapComponent';
+import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 
 const DOMAIN_NUMBER: number = 0xFF12;
 const TAG: string = 'MapPage';

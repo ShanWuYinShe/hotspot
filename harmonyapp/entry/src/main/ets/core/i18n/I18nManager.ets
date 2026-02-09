@@ -665,7 +665,8 @@ export class I18nManager extends BaseSingleton {
   ): string {
     try {
       const locale = language || this.currentLanguage;
-      const formatter = new Intl.DateTimeFormat(locale, options as Object);
+      const optionsRecord = options as Record<string, Object>;
+      const formatter = new Intl.DateTimeFormat(locale, optionsRecord);
       return formatter.format(date);
 
     } catch (error) {
@@ -684,7 +685,8 @@ export class I18nManager extends BaseSingleton {
   ): string {
     try {
       const locale = language || this.currentLanguage;
-      const formatter = new Intl.NumberFormat(locale, options as Object);
+      const optionsRecord = options as Record<string, Object>;
+      const formatter = new Intl.NumberFormat(locale, optionsRecord);
       return formatter.format(number);
 
     } catch (error) {

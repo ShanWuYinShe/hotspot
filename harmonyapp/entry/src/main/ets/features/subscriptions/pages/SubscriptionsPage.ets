@@ -75,7 +75,8 @@ struct SubscriptionsPage {
 
   private getValue(key: keyof SubscriptionsData): boolean {
     if (!this.data) return false;
-    return this.data[key];
+    const dataRecord = (this.data as Object) as Record<string, boolean>;
+    return dataRecord[key as string] || false;
   }
 
   private setValue(key: keyof SubscriptionsData, value: boolean): void {

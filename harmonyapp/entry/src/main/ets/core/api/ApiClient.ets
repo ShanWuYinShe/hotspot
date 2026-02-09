@@ -181,6 +181,7 @@ import {
   // 举报
   CreateReportData,
   ReportItem,
+  MyReportsRequest,
   
   // 订阅设置
   SubscriptionsData,
@@ -190,6 +191,7 @@ import {
   RegisterDeviceTokenRequest,
   UnregisterDeviceTokenRequest,
   DeviceTokenItem,
+  MyDeviceTokensRequest,
   
   // 信息流
   GetFeedMomentsRequest,
@@ -202,7 +204,9 @@ import {
   FeedFeedbackRequest,
   
   // 标签
-  GetTrendingTagsRequest,
+  TrendingTagsRequest,
+  TrendingTagsData,
+  SuggestTagsRequest,
   TagSuggestions,
   
   // 地图

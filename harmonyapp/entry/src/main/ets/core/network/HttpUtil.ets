@@ -28,6 +28,16 @@ interface DebugInfo {
   tokenPreview?: string;
 }
 
+function isRecord(v: Object): boolean {
+  return v !== null && typeof v === 'object';
+}
+
+function isApiResponse(v: Object): boolean {
+  if (!isRecord(v)) return false;
+  const record = v as Record<string, Object>;
+  return typeof record.code === 'number' && typeof record.request_id === 'string';
+}
+
 
 // Removed UploadResult interface as it is replaced by UploadMediaData from types/api.ets
 
@@ -220,15 +230,6 @@ export class HttpUtil {
       hilog.info(DOMAIN_NUMBER, TAG, `📡 HTTP响应: ${response.responseCode} (${responseTime}ms)`);
 
       // 解析响应数据
-      function isRecord(v: Object): boolean {
-        return v !== null && typeof v === 'object';
-      }
-      function isApiResponse(v: Object): boolean {
-        if (!isRecord(v)) return false;
-        const record = v as Record<string, Object>;
-        return typeof record.code === 'number' && typeof record.request_id === 'string';
-      }
-
       let result: Object;
       try {
         result = JSON.parse(response.result as string);
@@ -253,7 +254,11 @@ export class HttpUtil {
       const shouldTryRefresh =
         !retried &&
         hasAuthHeader &&
-        (response.responseCode === 401 || isAuthErrorCode(result.code));
+        (response.responseCode === 401 || (() => {
+          const resultRecord = result as Record<string, Object>;
+          const resultCode = resultRecord.code;
+          return resultCode !== undefined && isAuthErrorCode(resultCode);
+        })());
       if (shouldTryRefresh) {
         const refreshed = await HttpUtil.ensureRefreshToken();
         if (refreshed) {
@@ -269,8 +274,13 @@ export class HttpUtil {
         hilog.error(DOMAIN_NUMBER, TAG, `❌ 业务错误 [${snapshot.code}]: ${userMessage}`);
 
         const err = new Error(userMessage);
-        (err as Object as Record<string, Object>).code = snapshot.code;
-        (err as Object as Record<string, Object>).status = snapshot.status;
+        const errRecord = err as Object as Record<string, Object>;
+        if (snapshot.code !== undefined) {
+          errRecord.code = snapshot.code;
+        }
+        if (snapshot.status !== undefined) {
+          errRecord.status = snapshot.status;
+        }
         throw err;
       }
 
@@ -348,10 +358,11 @@ export class HttpUtil {
    * 测试服务器连接 - 使用系统健康检查API
    */
   static async testConnection(): Promise<ApiResponse<HealthCheckData>> {
-    return HttpUtil.request<ApiResponse<HealthCheckData>, Object>(
+    const emptyRequest: Record<string, Object> = {};
+    return HttpUtil.request<ApiResponse<HealthCheckData>, Record<string, Object>>(
       ApiEndpoints.SYSTEM.HEALTH,
       http.RequestMethod.POST,
-      {}
+      emptyRequest
     );
   }
 }

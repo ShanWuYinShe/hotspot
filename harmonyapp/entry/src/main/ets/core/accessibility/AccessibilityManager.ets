@@ -369,7 +369,7 @@ export class AccessibilityManager {
 
       // 发送无障碍事件进行语音播报
       const eventInfo: accessibility.EventInfo = {
-        type: 'announce',
+        type: 'announce' as accessibility.EventType,
         bundleName: this.bundleName,
         triggerAction: 'common',
         textAnnouncedForAccessibility: text,

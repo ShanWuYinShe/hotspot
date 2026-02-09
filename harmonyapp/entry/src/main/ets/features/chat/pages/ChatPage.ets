@@ -33,7 +33,7 @@ interface ChatMessage {
   sentAt: string;
   isSelf: boolean;
   isSystem: boolean;
-  rawData?: unknown; // 原始数据，用于缓存
+  rawData?: PrivateMessageItem | GroupMessageItem; // 原始数据，用于缓存
 }
 
 interface ChatParams {
@@ -173,12 +173,18 @@ struct ChatPage {
       let items: (PrivateMessageItem | GroupMessageItem)[] = [];
       
       if (this.chatType === 'private_chat') {
-        const response = await ApiClient.getPrivateMessages({ id: this.chatId, limit: 20 });
+        const targetUserId = this.targetId;
+        if (!targetUserId) {
+          throw new Error('target_user_id is required for private chat');
+        }
+        const request = { target_user_id: targetUserId, limit: 20 };
+        const response = await ApiClient.getPrivateMessages(request);
         if (response.code === 0 && response.data) {
           items = response.data.items;
         }
       } else {
-        const response = await ApiClient.getGroupMessages({ id: this.chatId, limit: 20 });
+        const request = { group_id: this.chatId, limit: 20 };
+        const response = await ApiClient.getGroupMessages(request);
         if (response.code === 0 && response.data) {
           items = response.data.items;
         }
@@ -217,17 +223,20 @@ struct ChatPage {
     }
   }
 
-  private async updateCache(messages: ChatMessage[]) {
+  private async updateCache(messages: ChatMessage[]): Promise<void> {
     // 转换UI模型回缓存模型
-    const cacheItems: MessageCacheItem[] = messages.map(msg => ({
-      id: msg.id,
-      chatId: this.chatId,
-      type: msg.type,
-      senderId: msg.senderId,
-      content: msg.content,
-      sentAt: msg.sentAt,
-      data: JSON.stringify(msg.rawData ?? null)
-    }));
+    const cacheItems: MessageCacheItem[] = messages.map(msg => {
+      const cacheItem: MessageCacheItem = {
+        id: msg.id,
+        chatId: this.chatId,
+        type: msg.type,
+        senderId: msg.senderId,
+        content: msg.content,
+        sentAt: msg.sentAt,
+        data: JSON.stringify(msg.rawData ?? null)
+      };
+      return cacheItem;
+    });
     await this.messageCacheService.cacheMessages(this.chatId, cacheItems);
   }
 
@@ -347,16 +356,20 @@ struct ChatPage {
   /**
    * 标记当前会话已读（API + WS），并通知消息列表刷新
    */
-  private markAsRead(upToMessageId: string) {
+  private markAsRead(upToMessageId: string): void {
     if (!upToMessageId) return;
 
     // HTTP 标记已读（权威，影响 unread_count）
     (async () => {
       try {
         if (this.chatType === 'private_chat') {
-          await ApiClient.markPrivateMessagesRead({ id: this.chatId, up_to: upToMessageId });
+          const targetUserId = this.targetId;
+          if (!targetUserId) return;
+          const request = { target_user_id: targetUserId, up_to_message_id: upToMessageId };
+          await ApiClient.markPrivateMessagesRead(request);
         } else {
-          await ApiClient.markGroupMessagesRead({ id: this.chatId, up_to: upToMessageId });
+          const request = { group_id: this.chatId, up_to_message_id: upToMessageId };
+          await ApiClient.markGroupMessagesRead(request);
         }
         GlobalStateManager.getInstance().notifyMessageSync();
       } catch (e) {

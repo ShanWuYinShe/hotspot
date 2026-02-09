@@ -520,7 +520,8 @@ export class PerformanceOptimizer extends BaseSingleton {
       // 由于无法直接获取总内存，这里返回 PSS 的 MB 值作为参考指标，或者基于经验阈值的百分比
       // 为了保持与接口定义的兼容性(返回百分比)，这里做一个简单的归一化: 假设应用软限制为 512MB
       const appMemoryLimit = 512 * 1024; // KB
-      return Math.min((pss / appMemoryLimit) * 100, 100);
+      const pssNumber = Number(pss);
+      return Math.min((pssNumber / appMemoryLimit) * 100, 100);
     } catch (error) {
       // API调用失败时记录日志但不再频繁报错
       return 0;

@@ -21,6 +21,7 @@ import { MessageCacheService, ChatCacheItem } from '../../../core/database/Messa
 import { VibrationUtil } from '../../../core/utils/VibrationUtil';
 import { scanBarcode, scanCore } from '@kit.ScanKit';
 import { common } from '@kit.AbilityKit';
+import pasteboard from '@ohos.pasteboard';
 
 const DOMAIN_NUMBER: number = 0xFF08;
 const TAG: string = 'MessagePage';
@@ -75,10 +76,11 @@ export struct MessagePage {
 
     try {
       // 并行加载私聊和群聊
-      const [privateChatsResult, groupChatsResult] = await Promise.allSettled([
-        this.loadPrivateChats(),
-        this.loadGroupChats()
-      ]);
+      const privateChatsPromise = this.loadPrivateChats();
+      const groupChatsPromise = this.loadGroupChats();
+      const results = await Promise.allSettled([privateChatsPromise, groupChatsPromise]);
+      const privateChatsResult = results[0];
+      const groupChatsResult = results[1];
 
       let allChats: ChatItem[] = [];
 
@@ -144,8 +146,9 @@ export struct MessagePage {
       }
   }
 
-  private async updateCache(chats: ChatItem[]) {
-      const cacheItems: ChatCacheItem[] = chats.map(item => ({
+  private async updateCache(chats: ChatItem[]): Promise<void> {
+      const cacheItems: ChatCacheItem[] = chats.map(item => {
+        const cacheItem: ChatCacheItem = {
           id: item.id,
           type: item.type,
           name: item.name,
@@ -154,7 +157,9 @@ export struct MessagePage {
           lastTime: item.lastTime,
           unreadCount: item.unreadCount,
           data: JSON.stringify(item.data)
-      }));
+        };
+        return cacheItem;
+      });
       await this.messageCacheService.cacheChatList(cacheItems);
   }
 
@@ -162,16 +167,19 @@ export struct MessagePage {
     try {
       const response = await ApiClient.getPrivateChats({ limit: 50 });
       if (response.code === 0 && response.data) {
-        return response.data.items.map((item: PrivateChatListItem): ChatItem => ({
-          id: item.id,
-          type: 'private',
-          name: item.other_user.nickname,
-          avatarUrl: item.other_user.avatar_url,
-          lastMessage: this.formatLastMessage(item.last_message),
-          lastTime: item.last_activity_at,
-          unreadCount: item.unread_count,
-          data: item
-        }));
+        return response.data.items.map((item: PrivateChatListItem): ChatItem => {
+          const chatItem: ChatItem = {
+            id: item.other_user.user_id.toString(),
+            type: 'private',
+            name: item.other_user.nickname,
+            avatarUrl: item.other_user.avatar_url,
+            lastMessage: this.formatLastMessage(item.last_message),
+            lastTime: item.last_activity_at,
+            unreadCount: item.unread_count,
+            data: item
+          };
+          return chatItem;
+        });
       }
       return [];
     } catch (error) {
@@ -183,18 +191,21 @@ export struct MessagePage {
   private async loadGroupChats(): Promise<ChatItem[]> {
     try {
       const request: MyGroupsRequest = { limit: 50 };
-      const response = await ApiClient.getJoinedGroupChats(request);
+      const response = await ApiClient.getJoinedGroups(request);
       if (response.code === 0 && response.data) {
-        return response.data.items.map((item: JoinedGroupItem): ChatItem => ({
-          id: item.id,
-          type: 'group',
-          name: item.name,
-          avatarUrl: item.avatar_url,
-          lastMessage: '点击进入群聊', 
-          lastTime: item.last_activity_at,
-          unreadCount: item.unread_count,
-          data: item
-        }));
+        return response.data.items.map((item: JoinedGroupItem): ChatItem => {
+          const chatItem: ChatItem = {
+            id: item.group_id,
+            type: 'group',
+            name: item.name,
+            avatarUrl: item.avatar_url,
+            lastMessage: '点击进入群聊',
+            lastTime: item.created_at || '',
+            unreadCount: item.my_state?.unread_count || 0,
+            data: item
+          };
+          return chatItem;
+        });
       }
       return [];
     } catch (error) {
@@ -255,13 +266,17 @@ export struct MessagePage {
     }
   }
 
-  private async deleteChat(item: ChatItem) {
+  private async deleteChat(item: ChatItem): Promise<void> {
     try {
       VibrationUtil.startShort();
       if (item.type === 'private') {
-        await ApiClient.deletePrivateChat({ id: item.id });
+        const privateData = item.data as PrivateChatListItem;
+        const request = { target_user_id: privateData.other_user.user_id };
+        await ApiClient.deletePrivateChat(request);
       } else {
-        await ApiClient.leaveGroup({ id: item.id });
+        const groupData = item.data as JoinedGroupItem;
+        const request = { group_id: groupData.group_id };
+        await ApiClient.leaveGroup(request);
       }
       
       // 更新列表
@@ -351,13 +366,10 @@ export struct MessagePage {
                       enableAlbum: true
                     };
                     
-import pasteboard from '@ohos.pasteboard';
-
-// ... (in action callback)
                     const result = await scanBarcode.startScanForResult(context, options);
                     
                     if (result.originalValue) {
-                      const scanContent = result.originalValue;
+                      const scanContent: string = result.originalValue;
                       // 简单处理：复制到剪贴板并提示
                       const systemPasteboard = pasteboard.getSystemPasteboard();
                       const pasteData = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, scanContent);
@@ -371,7 +383,9 @@ import pasteboard from '@ohos.pasteboard';
                 } catch (error) {
                   hilog.error(DOMAIN_NUMBER, TAG, `扫描启动失败: ${JSON.stringify(error)}`);
                   // 错误码处理
-                  if (error.code === 1001) {
+                  const errorObj = error as Record<string, Object>;
+                  const errorCode = errorObj.code as number | undefined;
+                  if (errorCode === 1001) {
                      // 用户取消
                   } else {
                      SystemToast.showError('扫描启动失败', this.getUIContext());

@@ -30,10 +30,12 @@ struct RecommendationPage {
     this.isLoading = true;
     try {
       // 并行加载推荐数据
-      const [tagsResponse, usersResponse] = await Promise.all([
+      const results = await Promise.all([
         ApiClient.getTrendingTags({ limit: 10, timeframe: 'weekly' }),
         ApiClient.getFeedUsers({ limit: 5 })
       ]);
+      const tagsResponse = results[0];
+      const usersResponse = results[1];
 
       if (tagsResponse.code === 0 && tagsResponse.data) {
         this.trendingTags = tagsResponse.data.items;

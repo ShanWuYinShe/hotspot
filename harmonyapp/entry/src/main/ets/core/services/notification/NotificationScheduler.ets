@@ -8,7 +8,7 @@ import { createLogger } from '../../utils/LogManager';
 import { TimerManager } from '../../utils/TimerManager';
 import { ErrorHandler, ErrorType, ErrorLevel } from '../../utils/ErrorHandler';
 import { ConfigMerger } from '../../utils/ConfigMerger';
-import { NOTIFICATION_CONSTANTS } from '../../constants/SystemConstants';
+import { NOTIFICATION_CONSTANTS } from '../../../constants/SystemConstants';
 import { SmartNotification, SmartNotificationInput, NotificationDataManager } from './NotificationDataManager';
 
 const logger = createLogger('NotificationScheduler');
@@ -227,7 +227,9 @@ export class NotificationScheduler extends BaseSingleton {
    * 更新配置
    */
   updateConfig(config: SchedulerConfigUpdate): void {
-    this.config = ConfigMerger.merge(this.config, config);
+    const configObj = config as Object;
+    const merged = ConfigMerger.merge(this.config as Object, configObj) as SchedulerConfig;
+    this.config = merged;
     logger.debug('调度器配置已更新');
   }
   

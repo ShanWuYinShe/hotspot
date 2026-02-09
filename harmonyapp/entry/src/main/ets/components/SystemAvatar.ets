@@ -1,5 +1,5 @@
 import { DesignConstants } from '../constants/DesignConstants';
-import { UserInfo } from '../core/types/WebSocketTypes';
+import { UserInfo } from '../core/types/api';
 import { UserTypeUtil } from '../core/utils/UserTypeUtil';
 
 /**
@@ -32,60 +32,62 @@ export struct SystemAvatar {
     const actualSrc: string | Resource | undefined = this.avatarUrl ?? this.src;
     const actualName: string = this.name;
 
-    Stack({ alignContent: Alignment.BottomEnd }) {
-      // Main Avatar Image
-      if (actualSrc) {
-        Image(actualSrc)
-          .width(this.avatarSize)
-          .height(this.avatarSize)
-          .objectFit(ImageFit.Cover)
-          .borderRadius(this.getBorderRadius())
-          .border(this.getBorderOptions())
-          .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
-      } else {
-        // Initials Fallback
-        Flex({ justifyContent: FlexAlign.Center, alignItems: ItemAlign.Center }) {
-          Text(this.getInitials(actualName))
-            .fontSize(this.avatarSize * 0.4)
-            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-            .fontColor(Color.White)
+    Column() {
+      Stack({ alignContent: Alignment.BottomEnd }) {
+        // Main Avatar Image
+        if (actualSrc) {
+          Image(actualSrc)
             .width(this.avatarSize)
             .height(this.avatarSize)
-            .backgroundColor(this.generateAvatarColor(actualName))
+            .objectFit(ImageFit.Cover)
             .borderRadius(this.getBorderRadius())
             .border(this.getBorderOptions())
+            .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
+        } else {
+          // Initials Fallback
+          Flex({ justifyContent: FlexAlign.Center, alignItems: ItemAlign.Center }) {
+            Text(this.getInitials(actualName))
+              .fontSize(this.avatarSize * 0.4)
+              .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+              .fontColor(Color.White)
+              .width(this.avatarSize)
+              .height(this.avatarSize)
+              .backgroundColor(this.generateAvatarColor(actualName))
+              .borderRadius(this.getBorderRadius())
+              .border(this.getBorderOptions())
+          }
+        }
+
+        // Online Status Indicator
+        if (this.isOnline) {
+          Row()
+            .width(this.avatarSize * 0.28)
+            .height(this.avatarSize * 0.28)
+            .backgroundColor(DesignConstants.COLOR.ONLINE_STATUS)
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .border(this.getBorderOptions())
+            .margin({ bottom: -1, right: -1 })
+        } else if (this.userInfo && UserTypeUtil.isTempUser(this.userInfo.user_type)) {
+          Text('临时')
+            .fontSize(this.avatarSize * 0.25) // Slightly larger than dot
+            .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+            .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
+            .borderRadius(4)
+            .padding({ left: 2, right: 2 })
+            .margin({ bottom: -2, right: -2 })
+        } else if (this.userInfo && UserTypeUtil.isSystemUser(this.userInfo.user_type)) {
+          Text('官方')
+            .fontSize(this.avatarSize * 0.25)
+            .fontColor(Color.White)
+            .backgroundColor(DesignConstants.COLOR.BRAND_PRIMARY)
+            .borderRadius(4)
+            .padding({ left: 2, right: 2 })
+            .margin({ bottom: -2, right: -2 })
         }
       }
-
-      // Online Status Indicator
-      if (this.isOnline) {
-        Row()
-          .width(this.avatarSize * 0.28)
-          .height(this.avatarSize * 0.28)
-          .backgroundColor(DesignConstants.COLOR.ONLINE_STATUS)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .border(this.getBorderOptions())
-          .margin({ bottom: -1, right: -1 })
-      } else if (this.userInfo && UserTypeUtil.isTempUser(this.userInfo.user_type)) {
-        Text('临时')
-          .fontSize(this.avatarSize * 0.25) // Slightly larger than dot
-          .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
-          .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
-          .borderRadius(4)
-          .padding({ left: 2, right: 2 })
-          .margin({ bottom: -2, right: -2 })
-      } else if (this.userInfo && UserTypeUtil.isSystemUser(this.userInfo.user_type)) {
-        Text('官方')
-          .fontSize(this.avatarSize * 0.25)
-          .fontColor(Color.White)
-          .backgroundColor(DesignConstants.COLOR.BRAND_PRIMARY)
-          .borderRadius(4)
-          .padding({ left: 2, right: 2 })
-          .margin({ bottom: -2, right: -2 })
-      }
+      .width(this.avatarSize)
+      .height(this.avatarSize)
     }
-    .width(this.avatarSize)
-    .height(this.avatarSize)
   }
 
   private getBorderRadius(): Length {

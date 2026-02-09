@@ -8,7 +8,7 @@ import { createLogger } from '../../utils/LogManager';
 import { ErrorHandler, ErrorType, ErrorLevel } from '../../utils/ErrorHandler';
 import { UnifiedStorageUtil } from '../../utils/UnifiedStorageUtil';
 import { ConfigMerger } from '../../utils/ConfigMerger';
-import { NOTIFICATION_CONSTANTS } from '../../constants/SystemConstants';
+import { NOTIFICATION_CONSTANTS } from '../../../constants/SystemConstants';
 import { NotificationMetadata } from '../SmartNotificationService';
 
 const logger = createLogger('NotificationDataManager');
@@ -233,7 +233,8 @@ export class NotificationDataManager extends BaseSingleton {
       }
       
       // 合并更新
-      const updatedNotification = ConfigMerger.merge(notification, updates as Partial<SmartNotification>);
+      const merged = ConfigMerger.merge(notification, updates as Partial<SmartNotification>);
+      const updatedNotification = merged as unknown as SmartNotification;
       
       // 验证更新后的通知
       this.validateNotification(updatedNotification);
@@ -529,8 +530,8 @@ export class NotificationDataManager extends BaseSingleton {
     if (this.notifications.size >= maxNotifications) {
       // 删除最旧的已读通知
       const notifications = Array.from(this.notifications.values())
-        .filter((n: SmartNotification) => n.read)
-        .sort((a: SmartNotification, b: SmartNotification) => a.timestamp - b.timestamp);
+        .filter((n) => n.read)
+        .sort((a, b) => a.timestamp - b.timestamp);
       
       const toDelete = notifications.slice(0, notifications.length - maxNotifications + 10);
       const idsToDelete = toDelete.map((n: SmartNotification) => n.id);
