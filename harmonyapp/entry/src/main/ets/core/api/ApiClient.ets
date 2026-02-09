@@ -64,6 +64,10 @@ import {
   UserFriendsRequest,
   UserFollowingRequest,
   UserFollowersRequest,
+  MyFriendsRequest,
+  MyFollowingRequest,
+  MyFollowersRequest,
+  MyBlockedRequest,
   
   // 生活瞬间
   MomentSearchItem,
@@ -85,6 +89,8 @@ import {
   CheckFavoritedData,
   MomentLikesRequest,
   MomentLikeItem,
+  MyMomentsRequest,
+  MyFavoritesRequest,
   
   // 评论
   CreateCommentRequest,
@@ -92,40 +98,125 @@ import {
   CommentsRequest,
   CommentListItem,
   CommentRepliesRequest,
-  CommentLikeRequest,
+  LikeCommentRequest,
   UnlikeCommentRequest,
   CommentLikesRequest,
   CommentLikeItem,
   
   // 私聊管理
   MyPrivateChatsRequest,
-  GetGroupInvitesRequest,
-  GetPrivateMessagesRequest,
-  GetPrivateMessageReactionsRequest,
-  GetGroupMessagesRequest,
-  GetMessageReadStatusRequest,
-  GetGroupMessageReactionsRequest,
-  MyReportsRequest,
-  MyDeviceTokensRequest,
-  TrendingTagsRequest,
-  TrendingTagsData,
-  SuggestTagsRequest,
+  PrivateChatListItem,
+  PrivateChatOpenTheDoorRequest,
+  PrivateChatDetailData,
+  UpdatePrivateChatSettingsRequest,
+  DeletePrivateChatRequest,
+  
+  // 私聊消息
+  SendPrivateMessageRequest,
+  PrivateMessageItem,
+  PrivateMessagesHistoryRequest,
+  UpdatePrivateMessageRequest,
+  RecallPrivateMessageRequest,
+  DeletePrivateMessageRequest,
+  MarkPrivateMessagesReadRequest,
+  AddPrivateMessageReactionRequest,
+  RemovePrivateMessageReactionRequest,
+  PrivateMessageReactionsRequest,
+  MessageReactionItem,
+  
+  // 群组管理
+  SearchGroupsByKeywordRequest,
+  SearchGroupsByTagRequest,
+  SearchGroupsByLocationRequest,
+  GroupSearchItem,
+  GroupOpenTheDoorRequest,
+  GroupSettingsRequest,
+  GroupSettingsData,
+  GroupMembersRequest,
+  GroupMemberItem,
+  CreateGroupRequest,
+  UpdateGroupRequest,
+  DeleteGroupRequest,
+  InviteMemberRequest,
+  InviteMemberData,
+  JoinGroupRequest,
+  ApplyToGroupRequest,
+  ApplyToGroupData,
+  SetMemberRoleRequest,
+  MuteMemberRequest,
+  UnmuteMemberRequest,
+  BanMemberRequest,
+  UnbanMemberRequest,
+  BannedMembersRequest,
+  BannedMemberItem,
+  RemoveMemberRequest,
+  GroupApplicationsRequest,
+  GroupApplicationItem,
+  ApproveGroupApplicationRequest,
+  RejectGroupApplicationRequest,
+  TransferOwnershipRequest,
+  MyGroupsRequest,
+  JoinedGroupItem,
+  CancelApplicationRequest,
+  MyInvitesRequest,
+  GroupInviteItem,
+  AcceptInviteRequest,
+  RejectInviteRequest,
+  LeaveGroupRequest,
+  
+  // 群聊消息
+  SendGroupMessageRequest,
+  GroupMessageItem,
+  GroupMessagesHistoryRequest,
+  UpdateGroupMessageRequest,
+  RecallGroupMessageRequest,
+  DeleteGroupMessageRequest,
+  MarkGroupMessagesReadRequest,
+  MessageReadStatusRequest,
+  MessageReadItem,
+  AddGroupMessageReactionRequest,
+  RemoveGroupMessageReactionRequest,
+  GroupMessageReactionsRequest,
+  
+  // 举报
+  CreateReportData,
+  ReportItem,
+  
+  // 订阅设置
+  SubscriptionsData,
+  UpdateSubscriptionsRequest,
+  
+  // 设备推送
+  RegisterDeviceTokenRequest,
+  UnregisterDeviceTokenRequest,
+  DeviceTokenItem,
+  
+  // 信息流
+  GetFeedMomentsRequest,
+  GetFeedGroupsRequest,
+  GetFeedUsersRequest,
+  GetFeedTrendingRequest,
+  FeedGroupItem,
+  FeedUserItem,
+  FeedTrendingData,
+  FeedFeedbackRequest,
+  
+  // 标签
+  GetTrendingTagsRequest,
   TagSuggestions,
-  UserInfo,
-
+  
   // 地图
   MapRenderRequest,
   MapRenderData,
-
+  
   // 配置
   FetchGlobalSettingsRequest,
   FetchSettingsData,
   
-  // 信息流
-  FeedTrendingData,
-  
   // 系统
   HealthCheckData,
+  
+  UserInfo,
 } from '../types/api';
 
 // 空请求体类
@@ -483,29 +574,29 @@ export class ApiClient {
   /**
    * 获取好友列表
    */
-  static async getFriendsList(params: { limit?: number; cursor?: string }): Promise<ApiResponse<PaginatedData<FriendListItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<FriendListItem>>, Record<string, Object>>(ApiEndpoints.USER.ME.LIST_FRIENDS, params as Record<string, Object>);
+  static async getFriendsList(params: MyFriendsRequest): Promise<ApiResponse<PaginatedData<FriendListItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<FriendListItem>>, MyFriendsRequest>(ApiEndpoints.USER.ME.LIST_FRIENDS, params);
   }
 
   /**
    * 获取关注列表
    */
-  static async getFollowingList(params: { limit?: number; cursor?: string }): Promise<ApiResponse<PaginatedData<FollowingItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<FollowingItem>>, Record<string, Object>>(ApiEndpoints.USER.ME.LIST_FOLLOWING, params as Record<string, Object>);
+  static async getFollowingList(params: MyFollowingRequest): Promise<ApiResponse<PaginatedData<FollowingItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<FollowingItem>>, MyFollowingRequest>(ApiEndpoints.USER.ME.LIST_FOLLOWING, params);
   }
 
   /**
    * 获取粉丝列表
    */
-  static async getFollowersList(params: { limit?: number; cursor?: string }): Promise<ApiResponse<PaginatedData<FollowerItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<FollowerItem>>, Record<string, Object>>(ApiEndpoints.USER.ME.LIST_FOLLOWERS, params as Record<string, Object>);
+  static async getFollowersList(params: MyFollowersRequest): Promise<ApiResponse<PaginatedData<FollowerItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<FollowerItem>>, MyFollowersRequest>(ApiEndpoints.USER.ME.LIST_FOLLOWERS, params);
   }
 
   /**
    * 获取拉黑列表
    */
-  static async getBlockedList(params: { limit?: number; cursor?: string }): Promise<ApiResponse<PaginatedData<BlockedUserItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<BlockedUserItem>>, Record<string, Object>>(ApiEndpoints.USER.ME.LIST_BLOCKED, params as Record<string, Object>);
+  static async getBlockedList(params: MyBlockedRequest): Promise<ApiResponse<PaginatedData<BlockedUserItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<BlockedUserItem>>, MyBlockedRequest>(ApiEndpoints.USER.ME.LIST_BLOCKED, params);
   }
 
   /**
@@ -620,15 +711,15 @@ export class ApiClient {
   /**
    * 获取我发布的瞬间
    */
-  static async getMyMoments(params: { latitude: number; longitude: number; limit?: number; cursor?: string }): Promise<ApiResponse<PaginatedData<MomentSearchItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<MomentSearchItem>>, Record<string, Object>>(ApiEndpoints.MOMENT.ME.LIST, params as Record<string, Object>);
+  static async getMyMoments(params: MyMomentsRequest): Promise<ApiResponse<PaginatedData<MomentSearchItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<MomentSearchItem>>, MyMomentsRequest>(ApiEndpoints.MOMENT.ME.LIST, params);
   }
 
   /**
    * 获取我的收藏
    */
-  static async getMyFavorites(params: { latitude: number; longitude: number; limit?: number; cursor?: string }): Promise<ApiResponse<PaginatedData<MomentSearchItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<MomentSearchItem>>, Record<string, Object>>(ApiEndpoints.MOMENT.ME.LIST_FAVORITES, params as Record<string, Object>);
+  static async getMyFavorites(params: MyFavoritesRequest): Promise<ApiResponse<PaginatedData<MomentSearchItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<MomentSearchItem>>, MyFavoritesRequest>(ApiEndpoints.MOMENT.ME.LIST_FAVORITES, params);
   }
 
   /**
@@ -685,8 +776,8 @@ export class ApiClient {
   /**
    * 点赞评论
    */
-  static async likeComment(params: CommentLikeRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, CommentLikeRequest>(ApiEndpoints.COMMENT.ME.LIKE, params);
+  static async likeComment(params: LikeCommentRequest): Promise<ApiResponse<void>> {
+    return HttpUtil.post<ApiResponse<void>, LikeCommentRequest>(ApiEndpoints.COMMENT.ME.LIKE, params);
   }
 
   /**
@@ -759,15 +850,15 @@ export class ApiClient {
   /**
    * 获取群组设置
    */
-  static async getGroupSettings(params: GetGroupSettingsRequest): Promise<ApiResponse<GroupSettingsData>> {
-    return HttpUtil.post<ApiResponse<GroupSettingsData>, GetGroupSettingsRequest>(ApiEndpoints.GROUP.SEARCH, params);
+  static async getGroupSettings(params: GroupSettingsRequest): Promise<ApiResponse<GroupSettingsData>> {
+    return HttpUtil.post<ApiResponse<GroupSettingsData>, GroupSettingsRequest>(ApiEndpoints.GROUP.OPEN_THE_DOOR, params);
   }
 
   /**
    * 获取群组成员列表
    */
-  static async getGroupMembers(params: GetMembersRequest): Promise<ApiResponse<PaginatedData<GroupMemberItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<GroupMemberItem>>, GetMembersRequest>(ApiEndpoints.GROUP.MEMBERS.LIST, params);
+  static async getGroupMembers(params: GroupMembersRequest): Promise<ApiResponse<PaginatedData<GroupMemberItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<GroupMemberItem>>, GroupMembersRequest>(ApiEndpoints.GROUP.MEMBERS.LIST, params);
   }
 
   /**
@@ -809,7 +900,7 @@ export class ApiClient {
    * 申请加入群组
    */
   static async applyToGroup(params: ApplyToGroupRequest): Promise<ApiResponse<ApplyToGroupData>> {
-    return HttpUtil.post<ApiResponse<ApplyToGroupData>, ApplyToGroupRequest>(ApiEndpoints.GROUP.SEARCH, params);
+    return HttpUtil.post<ApiResponse<ApplyToGroupData>, ApplyToGroupRequest>(ApiEndpoints.GROUP.ME.JOIN, params);
   }
 
   /**
@@ -850,8 +941,8 @@ export class ApiClient {
   /**
    * 获取封禁列表
    */
-  static async getBannedMembers(params: GetBannedMembersRequest): Promise<ApiResponse<PaginatedData<BannedMemberItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<BannedMemberItem>>, GetBannedMembersRequest>(ApiEndpoints.GROUP.MEMBERS.LIST_BANNED, params);
+  static async getBannedMembers(params: BannedMembersRequest): Promise<ApiResponse<PaginatedData<BannedMemberItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<BannedMemberItem>>, BannedMembersRequest>(ApiEndpoints.GROUP.MEMBERS.LIST_BANNED, params);
   }
 
   /**
@@ -864,8 +955,8 @@ export class ApiClient {
   /**
    * 获取群组申请列表
    */
-  static async getGroupApplications(params: GetGroupApplicationsRequest): Promise<ApiResponse<PaginatedData<GroupApplicationItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<GroupApplicationItem>>, GetGroupApplicationsRequest>(ApiEndpoints.GROUP.APPLICATIONS.LIST, params);
+  static async getGroupApplications(params: GroupApplicationsRequest): Promise<ApiResponse<PaginatedData<GroupApplicationItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<GroupApplicationItem>>, GroupApplicationsRequest>(ApiEndpoints.GROUP.APPLICATIONS.LIST, params);
   }
 
   /**
@@ -894,48 +985,36 @@ export class ApiClient {
   /**
    * 获取我加入的群组
    */
-  static async getJoinedGroups(params: MyJoinedGroupsRequest): Promise<ApiResponse<PaginatedData<JoinedGroupItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<JoinedGroupItem>>, MyJoinedGroupsRequest>(ApiEndpoints.GROUP.ME.LIST, params);
-  }
-
-  static async getGroupInvites(params: MyGroupInvitesRequest): Promise<ApiResponse<PaginatedData<GroupInviteItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<GroupInviteItem>>, MyGroupInvitesRequest>(ApiEndpoints.GROUP.ME.INVITES.LIST, params);
-  }
-
-  static async getPrivateMessages(params: GetPrivateMessagesRequest): Promise<ApiResponse<PaginatedData<PrivateMessageItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<PrivateMessageItem>>, GetPrivateMessagesRequest>(ApiEndpoints.CHAT.PRIVATE_MESSAGES.GET_HISTORY, params);
-  }
-
-  static async getPrivateMessageReactions(params: GetPrivateMessageReactionsRequest): Promise<ApiResponse<PaginatedData<MessageReactionItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<MessageReactionItem>>, GetPrivateMessageReactionsRequest>(ApiEndpoints.CHAT.PRIVATE_MESSAGES.GET_HISTORY, params);
+  static async getJoinedGroups(params: MyGroupsRequest): Promise<ApiResponse<PaginatedData<JoinedGroupItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<JoinedGroupItem>>, MyGroupsRequest>(ApiEndpoints.GROUP.ME.LIST, params);
   }
 
   /**
    * 取消群组申请
    */
-  static async cancelGroupApplication(params: CancelGroupApplicationRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, CancelGroupApplicationRequest>(ApiEndpoints.GROUP.ME.APPLICATIONS.CANCEL, params);
+  static async cancelGroupApplication(params: CancelApplicationRequest): Promise<ApiResponse<void>> {
+    return HttpUtil.post<ApiResponse<void>, CancelApplicationRequest>(ApiEndpoints.GROUP.ME.APPLICATIONS.CANCEL, params);
   }
 
   /**
    * 获取我的群组邀请
    */
-  static async getGroupInvites(params: GetGroupInvitesRequest): Promise<ApiResponse<PaginatedData<GroupInviteItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<GroupInviteItem>>, GetGroupInvitesRequest>(ApiEndpoints.GROUP.ME.INVITES.LIST, params);
+  static async getGroupInvites(params: MyInvitesRequest): Promise<ApiResponse<PaginatedData<GroupInviteItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<GroupInviteItem>>, MyInvitesRequest>(ApiEndpoints.GROUP.ME.INVITES.LIST, params);
   }
 
   /**
    * 接受群组邀请
    */
-  static async acceptGroupInvite(params: AcceptGroupInviteRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, AcceptGroupInviteRequest>(ApiEndpoints.GROUP.ME.INVITES.ACCEPT, params);
+  static async acceptGroupInvite(params: AcceptInviteRequest): Promise<ApiResponse<void>> {
+    return HttpUtil.post<ApiResponse<void>, AcceptInviteRequest>(ApiEndpoints.GROUP.ME.INVITES.ACCEPT, params);
   }
 
   /**
    * 拒绝群组邀请
    */
-  static async rejectGroupInvite(params: RejectGroupInviteRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, RejectGroupInviteRequest>(ApiEndpoints.GROUP.ME.INVITES.REJECT, params);
+  static async rejectGroupInvite(params: RejectInviteRequest): Promise<ApiResponse<void>> {
+    return HttpUtil.post<ApiResponse<void>, RejectInviteRequest>(ApiEndpoints.GROUP.ME.INVITES.REJECT, params);
   }
 
   /**
@@ -957,8 +1036,8 @@ export class ApiClient {
   /**
    * 获取私聊消息历史
    */
-  static async getPrivateMessages(params: GetPrivateMessagesRequest): Promise<ApiResponse<PaginatedData<PrivateMessageItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<PrivateMessageItem>>, GetPrivateMessagesRequest>(ApiEndpoints.CHAT.PRIVATE_MESSAGES.GET_HISTORY, params);
+  static async getPrivateMessages(params: PrivateMessagesHistoryRequest): Promise<ApiResponse<PaginatedData<PrivateMessageItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<PrivateMessageItem>>, PrivateMessagesHistoryRequest>(ApiEndpoints.CHAT.PRIVATE_MESSAGES.GET_HISTORY, params);
   }
 
   /**
@@ -979,7 +1058,7 @@ export class ApiClient {
    * 删除私聊消息
    */
   static async deletePrivateMessage(params: DeletePrivateMessageRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, DeletePrivateMessageRequest>(ApiEndpoints.CHAT.PRIVATE_MESSAGES.GET_HISTORY, params);
+    return HttpUtil.post<ApiResponse<void>, DeletePrivateMessageRequest>(ApiEndpoints.CHAT.PRIVATE_MESSAGES.RECALL, params);
   }
 
   /**
@@ -993,21 +1072,21 @@ export class ApiClient {
    * 添加私聊消息反应
    */
   static async addPrivateMessageReaction(params: AddPrivateMessageReactionRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, AddPrivateMessageReactionRequest>(ApiEndpoints.CHAT.PRIVATE_MESSAGES.GET_HISTORY, params);
+    return HttpUtil.post<ApiResponse<void>, AddPrivateMessageReactionRequest>(ApiEndpoints.CHAT.PRIVATE_MESSAGES.SEND, params);
   }
 
   /**
    * 移除私聊消息反应
    */
   static async removePrivateMessageReaction(params: RemovePrivateMessageReactionRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, RemovePrivateMessageReactionRequest>(ApiEndpoints.CHAT.PRIVATE_MESSAGES.GET_HISTORY, params);
+    return HttpUtil.post<ApiResponse<void>, RemovePrivateMessageReactionRequest>(ApiEndpoints.CHAT.PRIVATE_MESSAGES.UPDATE, params);
   }
 
   /**
    * 获取私聊消息反应列表
    */
-  static async getPrivateMessageReactions(params: GetPrivateMessageReactionsRequest): Promise<ApiResponse<PaginatedData<MessageReactionItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<MessageReactionItem>>, GetPrivateMessageReactionsRequest>(ApiEndpoints.CHAT.PRIVATE_MESSAGES.GET_HISTORY, params);
+  static async getPrivateMessageReactions(params: PrivateMessageReactionsRequest): Promise<ApiResponse<PaginatedData<MessageReactionItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<MessageReactionItem>>, PrivateMessageReactionsRequest>(ApiEndpoints.CHAT.PRIVATE_MESSAGES.GET_HISTORY, params);
   }
 
   // ==================== 群聊消息 API ====================
@@ -1022,8 +1101,8 @@ export class ApiClient {
   /**
    * 获取群聊消息历史
    */
-  static async getGroupMessages(params: GetGroupMessagesRequest): Promise<ApiResponse<PaginatedData<GroupMessageItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<GroupMessageItem>>, GetGroupMessagesRequest>(ApiEndpoints.CHAT.GROUP_MESSAGES.GET_HISTORY, params);
+  static async getGroupMessages(params: GroupMessagesHistoryRequest): Promise<ApiResponse<PaginatedData<GroupMessageItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<GroupMessageItem>>, GroupMessagesHistoryRequest>(ApiEndpoints.CHAT.GROUP_MESSAGES.GET_HISTORY, params);
   }
 
   /**
@@ -1044,7 +1123,7 @@ export class ApiClient {
    * 删除群聊消息
    */
   static async deleteGroupMessage(params: DeleteGroupMessageRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, DeleteGroupMessageRequest>(ApiEndpoints.CHAT.GROUP_MESSAGES.GET_HISTORY, params);
+    return HttpUtil.post<ApiResponse<void>, DeleteGroupMessageRequest>(ApiEndpoints.CHAT.GROUP_MESSAGES.RECALL, params);
   }
 
   /**
@@ -1057,29 +1136,29 @@ export class ApiClient {
   /**
    * 获取消息已读状态
    */
-  static async getMessageReadStatus(params: GetMessageReadStatusRequest): Promise<ApiResponse<PaginatedData<MessageReadItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<MessageReadItem>>, GetMessageReadStatusRequest>(ApiEndpoints.CHAT.GROUP_MESSAGES.GET_HISTORY, params);
+  static async getMessageReadStatus(params: MessageReadStatusRequest): Promise<ApiResponse<PaginatedData<MessageReadItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<MessageReadItem>>, MessageReadStatusRequest>(ApiEndpoints.CHAT.GROUP_MESSAGES.GET_HISTORY, params);
   }
 
   /**
    * 添加群聊消息反应
    */
   static async addGroupMessageReaction(params: AddGroupMessageReactionRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, AddGroupMessageReactionRequest>(ApiEndpoints.CHAT.GROUP_MESSAGES.GET_HISTORY, params);
+    return HttpUtil.post<ApiResponse<void>, AddGroupMessageReactionRequest>(ApiEndpoints.CHAT.GROUP_MESSAGES.SEND, params);
   }
 
   /**
    * 移除群聊消息反应
    */
   static async removeGroupMessageReaction(params: RemoveGroupMessageReactionRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, RemoveGroupMessageReactionRequest>(ApiEndpoints.CHAT.GROUP_MESSAGES.GET_HISTORY, params);
+    return HttpUtil.post<ApiResponse<void>, RemoveGroupMessageReactionRequest>(ApiEndpoints.CHAT.GROUP_MESSAGES.UPDATE, params);
   }
 
   /**
    * 获取群聊消息反应列表
    */
-  static async getGroupMessageReactions(params: GetGroupMessageReactionsRequest): Promise<ApiResponse<PaginatedData<MessageReactionItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<MessageReactionItem>>, GetGroupMessageReactionsRequest>(ApiEndpoints.CHAT.GROUP_MESSAGES.GET_HISTORY, params);
+  static async getGroupMessageReactions(params: GroupMessageReactionsRequest): Promise<ApiResponse<PaginatedData<MessageReactionItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<MessageReactionItem>>, GroupMessageReactionsRequest>(ApiEndpoints.CHAT.GROUP_MESSAGES.GET_HISTORY, params);
   }
 
   // ==================== 消息通用 API ====================
@@ -1088,7 +1167,7 @@ export class ApiClient {
    * 标记所有消息已读
    */
   static async markAllMessagesRead(): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, Object>(ApiEndpoints.CHAT.PRIVATE_MESSAGES.ME.MARK_AS_READ, {});
+    return HttpUtil.post<ApiResponse<void>, EmptyRequest>(ApiEndpoints.CHAT.PRIVATE_MESSAGES.ME.MARK_AS_READ, new EmptyRequest());
   }
 
   // ==================== 举报 API ====================
@@ -1103,8 +1182,8 @@ export class ApiClient {
   /**
    * 获取我的举报记录
    */
-  static async getMyReports(params: GetMyReportsRequest): Promise<ApiResponse<PaginatedData<ReportItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<ReportItem>>, GetMyReportsRequest>(ApiEndpoints.REPORT.ME.LIST, params);
+  static async getMyReports(params: MyReportsRequest): Promise<ApiResponse<PaginatedData<ReportItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<ReportItem>>, MyReportsRequest>(ApiEndpoints.REPORT.ME.LIST, params);
   }
 
   // ==================== 订阅设置 API ====================
@@ -1113,7 +1192,7 @@ export class ApiClient {
    * 获取订阅配置
    */
   static async getSubscriptions(): Promise<ApiResponse<SubscriptionsData>> {
-    return HttpUtil.post<ApiResponse<SubscriptionsData>, Object>(ApiEndpoints.SYSTEM.GET_CLIENT_CONFIG, {});
+    return HttpUtil.post<ApiResponse<SubscriptionsData>, EmptyRequest>(ApiEndpoints.SYSTEM.GET_CLIENT_CONFIG, new EmptyRequest());
   }
 
   /**
@@ -1142,8 +1221,8 @@ export class ApiClient {
   /**
    * 获取设备推送Token列表
    */
-  static async getDeviceTokens(params: GetDeviceTokensRequest): Promise<ApiResponse<PaginatedData<DeviceTokenItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<DeviceTokenItem>>, GetDeviceTokensRequest>(ApiEndpoints.SYSTEM.GET_CLIENT_CONFIG, params);
+  static async getDeviceTokens(params: MyDeviceTokensRequest): Promise<ApiResponse<PaginatedData<DeviceTokenItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<DeviceTokenItem>>, MyDeviceTokensRequest>(ApiEndpoints.SYSTEM.GET_CLIENT_CONFIG, params);
   }
 
   // ==================== 信息流 API ====================
@@ -1172,8 +1251,8 @@ export class ApiClient {
   /**
    * 获取热门内容
    */
-  static async getFeedTrending(params: Record<string, Object>): Promise<ApiResponse<FeedTrendingData>> {
-    return HttpUtil.post<ApiResponse<FeedTrendingData>, Record<string, Object>>(ApiEndpoints.FEED.LIST_TRENDING, params);
+  static async getFeedTrending(params: GetFeedTrendingRequest): Promise<ApiResponse<FeedTrendingData>> {
+    return HttpUtil.post<ApiResponse<FeedTrendingData>, GetFeedTrendingRequest>(ApiEndpoints.FEED.LIST_TRENDING, params);
   }
 
   /**
@@ -1188,8 +1267,8 @@ export class ApiClient {
   /**
    * 获取热门标签
    */
-  static async getTrendingTags(params: GetTrendingTagsRequest): Promise<ApiResponse<TrendingTagsData>> {
-    return HttpUtil.post<ApiResponse<TrendingTagsData>, GetTrendingTagsRequest>(ApiEndpoints.TAG.LIST_TRENDING, params);
+  static async getTrendingTags(params: TrendingTagsRequest): Promise<ApiResponse<TrendingTagsData>> {
+    return HttpUtil.post<ApiResponse<TrendingTagsData>, TrendingTagsRequest>(ApiEndpoints.TAG.LIST_TRENDING, params);
   }
 
   /**

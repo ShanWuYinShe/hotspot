@@ -781,16 +781,6 @@ export interface FavoritedStatus {
   is_favorited: boolean;
 }
 
-// Moment Request Types
-export interface MomentOpenTheDoorRequest {
-  moment_id: string;
-  reference_point: GeoPoint;
-}
-
-export interface UserMomentsRequest extends SearchBaseParams {
-  user_id: number;
-}
-
 export interface EditMomentRequest {
   moment_id: string;
   description?: string;
@@ -1295,134 +1285,6 @@ export interface NotificationItem {
   read: boolean;
 }
 
-// ==================== 私聊API类型 ====================
-
-export interface MyPrivateChatsRequest extends PaginationParams {}
-
-export interface PrivateChatListItem {
-  private_chat_id: string;
-  user: UserInfo;
-  last_message?: PrivateMessageItem;
-  last_activity_at: string;
-  unread_count: number;
-}
-
-export interface PrivateChatOpenTheDoorRequest {}
-
-export interface PrivateChatLastMessage {
-  private_chat_id: string;
-  last_message: PrivateMessageItem;
-}
-
-export interface UpdatePrivateChatSettingsRequest {
-  quiet?: boolean;
-  enable_notifications?: boolean;
-}
-
-export interface DeletePrivateChatRequest {
-  private_chat_id: string;
-}
-
-export interface CreateGroupRequest {
-  user_ids: number[];
-  name?: string;
-  description?: string;
-  avatar_file_id?: string;
-}
-
-export interface UpdateGroupRequest {
-  group_id: string;
-  name?: string;
-  description?: string;
-  avatar_file_id?: string;
-}
-
-export interface DeleteGroupRequest {
-  group_id: string;
-}
-
-export interface MyGroupsRequest extends PaginationParams {}
-
-export interface GroupInviteItem {
-  invite_id: string;
-  group: GroupInfo;
-  inviter: UserInfo;
-  message?: string;
-  status: 'pending' | 'accepted' | 'rejected';
-  created_at: string;
-  expires_at?: string;
-}
-
-export interface GroupInviteItem extends PaginationParams {}
-
-export interface PrivateMessagesHistoryRequest {
-  private_chat_id: string;
-  limit?: number;
-  cursor?: string;
-}
-
-export interface MarkPrivateMessagesReadRequest {
-  private_chat_id: string;
-  message_ids?: string[];
-}
-
-export interface PrivateMessageReactionsRequest {
-  private_chat_id: string;
-  message_id: string;
-  limit?: number;
-  cursor?: string;
-}
-
-export interface GroupMessagesHistoryRequest {
-  group_id: string;
-  limit?: number;
-  cursor?: string;
-}
-
-export interface MarkGroupMessagesReadRequest {
-  group_id: string;
-  message_ids?: string[];
-}
-
-export interface MyReportsRequest {
-  limit?: number;
-  cursor?: string;
-}
-
-export interface ReportItem {
-  report_id: string;
-  target_type: 'user' | 'moment' | 'comment' | 'message' | 'group';
-  target_id: string;
-  reason: string;
-  description?: string;
-  status: 'pending' | 'reviewing' | 'resolved' | 'dismissed';
-  created_at: string;
-  handled_at?: string;
-}
-
-// ==================== 通知中心 API ====================
-
-export interface GetNotificationsRequest {
-  limit?: number;
-  cursor?: string;
-  type?: 'like' | 'comment' | 'follow' | 'system' | 'mention';
-}
-
-export interface NotificationItem {
-  notification_id: string;
-  type: 'moment_like' | 'moment_comment' | 'comment_reply' | 'new_follower' | 'mutual_follow' | 'system_announcement' | 'message_mention';
-  is_read: boolean;
-  created_at: string;
-  sender?: UserInfo;
-  title?: string;
-  content?: string;
-  target_type?: 'moment' | 'comment' | 'user' | 'group' | 'web';
-  target_id?: string;
-  reference_id?: string;
-  target_text_preview?: string;
-  target_media_url?: string;
-}
-
 export interface GetUnreadNotificationCountRequest {}
 
 export interface UnreadNotificationCountData {
@@ -1434,11 +1296,6 @@ export interface UnreadNotificationCountData {
     system: number;
     mention: number;
   };
-}
-
-export interface MarkNotificationsReadRequest {
-  notification_ids?: string[];
-  type?: 'like' | 'comment' | 'follow' | 'system' | 'mention';
 }
 
 // ==================== 通知订阅设置API类型 ====================
@@ -1633,184 +1490,6 @@ export interface TagSuggestions {
   items: TagSuggestItem[];
 }
 
-export interface GetFeedGroupsRequest {
-  radius?: number;
-  limit?: number;
-  cursor?: string;
-}
-
-export interface FeedGroupItem extends GroupItem {
-  friends_in_group?: number;
-  my_role?: GroupRole;
-  is_joined?: boolean;
-}
-
-export interface GetFeedUsersRequest {
-  radius?: number;
-  limit?: number;
-  cursor?: string;
-}
-
-export interface FeedUserItem extends UserItem {
-  mutual_friends_count?: number;
-  common_tags?: string[];
-}
-
-export interface GetFeedTrendingRequest {
-  limit?: number;
-}
-
-export interface TrendingTagItem {
-  name: string;
-  usage_count: number;
-  trend: 'rising' | 'stable' | 'falling';
-  hot_moment_preview?: MomentItem;
-}
-
-export interface FeedTrendingData {
-  trending_tags: TrendingTagItem[];
-  hot_moments: MomentItem[];
-}
-
-export interface FeedFeedbackRequest {
-  content_type: 'moment' | 'group' | 'user';
-  content_id: string;
-  action: 'hide' | 'not_interested';
-  reason?: string;
-}
-
-// ==================== 标签管理API类型 ====================
-
-export interface TagItem {
-  name: string;
-  usage_count: number;
-  trend?: 'rising' | 'stable' | 'falling';
-}
-
-export interface TrendingTagsRequest {
-  limit?: number;
-  timeframe?: 'daily' | 'weekly' | 'monthly';
-}
-
-export interface TrendingTagsData {
-  items: TagItem[];
-}
-
-export interface SuggestTagsRequest {
-  prefix: string;
-  limit?: number;
-}
-
-export interface TagSuggestItem {
-  name: string;
-  usage_count: number;
-}
-
-export interface TagSuggestions {
-  items: TagSuggestItem[];
-}
-
-// ==================== 地图渲染API类型 ====================
-
-export interface MapRenderRequest {
-  viewport: MapViewport;
-  filter?: {
-    data_type?: 'user' | 'group' | 'moment' | 'all';
-    time_range?: TimeRangeParams;
-    only_friends?: boolean;
-  };
-}
-
-export interface MapCanvas {
-  items: MapRenderItem[];
-  toast_message?: string;
-}
-
-// ==================== 通知中心 API类型 ====================
-
-export interface UnreadCount {
-  total: number;
-  breakdown?: {
-    like: number;
-    comment: number;
-    follow: number;
-    system: number;
-    mention: number;
-  };
-}
-
-export interface GetNotificationsRequest extends PaginationParams {
-  type?: 'like' | 'comment' | 'follow' | 'system' | 'mention';
-}
-
-export interface MarkNotificationsReadRequest {
-  notification_ids?: string[];
-  type?: 'like' | 'comment' | 'follow' | 'system' | 'mention';
-}
-
-export interface Subscriptions {
-  new_follower_enabled: boolean;
-  mutual_follow_enabled: boolean;
-  follow_request_enabled: boolean;
-  follow_request_handled_enabled: boolean;
-  group_invite_enabled: boolean;
-  group_invite_response_enabled: boolean;
-  group_application_enabled: boolean;
-  group_application_response_enabled: boolean;
-  group_announcement_enabled: boolean;
-  message_mention_enabled: boolean;
-  moment_like_enabled: boolean;
-  moment_comment_enabled: boolean;
-  comment_reply_enabled: boolean;
-  system_announcement_enabled: boolean;
-}
-
-export interface MySubscriptionsRequest {}
-
-export interface UpdateSubscriptionsRequest extends Partial<Subscriptions> {}
-
-// Device Token Types
-export interface DeviceTokenItem {
-  device_token_id: string;
-  platform: 'ios' | 'android' | 'harmony' | 'web';
-  device_token: string;
-  created_at: string;
-}
-
-export interface RegisterDeviceTokenRequest {
-  platform: 'ios' | 'android' | 'harmony' | 'web';
-  device_token: string;
-}
-
-export interface UnregisterDeviceTokenRequest {
-  platform: 'ios' | 'android' | 'harmony' | 'web';
-  device_token: string;
-}
-
-export interface MyDeviceTokensRequest extends PaginationParams {}
-
-export interface TrendingTagsRequest {
-  limit?: number;
-  timeframe?: 'daily' | 'weekly' | 'monthly';
-}
-
-export interface TrendingTagsData {
-  items: TagItem[];
-}
-
-export interface SuggestTagsRequest {
-  prefix: string;
-  limit?: number;
-}
-
-export interface TagSuggestItem {
-  name: string;
-  usage_count: number;
-}
-
-export interface TagSuggestData {
-  items: TagSuggestItem[];
-}
 
 // ==================== 系统配置API类型 ====================
 
@@ -1905,38 +1584,6 @@ export interface Invitation {
 
 export interface Application {
   application_id: string;
-}
-
-export interface BannedMemberItem {
-  user: UserInfo;
-  reason?: string;
-  banned_at: string;
-  banned_by?: UserInfo;
-}
-
-export interface GroupApplicationItem {
-  application_id: string;
-  applicant: UserInfo;
-  message?: string;
-  status: 'pending' | 'accepted' | 'rejected';
-  created_at: string;
-  handled_at?: string;
-  handled_by?: UserInfo;
-}
-
-export interface GroupInviteItem {
-  invite_id: string;
-  group: GroupInfo;
-  inviter: UserInfo;
-  message?: string;
-  status: 'pending' | 'accepted' | 'rejected';
-  created_at: string;
-  expires_at?: string;
-}
-
-export interface MessageReadItem {
-  user: UserInfo;
-  read_at: string;
 }
 
 export interface PublicAnnouncementListRequest {
@@ -2299,20 +1946,6 @@ export interface AdminGroupDetailRequest {
 export interface AdminDismissGroupRequest {
   group_id: string;
   reason?: string;
-}
-
-// Admin Audit Types
-export interface AuditLogListRequest extends PaginationParams {
-  action?: AuditAction;
-  operator_id?: number;
-  target_type?: AuditTargetType;
-  target_id?: string;
-  start_time?: string;
-  end_time?: string;
-}
-
-export interface AuditLogDetailRequest {
-  log_id: string;
 }
 
 // ==================== 搜索API类型 ====================
