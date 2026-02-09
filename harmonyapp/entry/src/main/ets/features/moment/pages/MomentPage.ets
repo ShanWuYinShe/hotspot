@@ -119,6 +119,40 @@ export struct MomentPage {
   }
 
   /**
+   * 格式化时间
+   */
+  private formatTime(timeStr: string): string {
+    const time = new Date(timeStr);
+    const now = new Date();
+    // 今天
+    if (time.toDateString() === now.toDateString()) {
+      return `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`;
+    }
+    // 昨天
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (time.toDateString() === yesterday.toDateString()) {
+      return '昨天';
+    }
+    // 今年
+    if (time.getFullYear() === now.getFullYear()) {
+      return `${(time.getMonth() + 1).toString().padStart(2, '0')}-${time.getDate().toString().padStart(2, '0')}`;
+    }
+    return time.toLocaleDateString();
+  }
+
+  /**
+   * 计算图片网格高度
+   */
+  private calcImageGridHeight(imageCount: number): number {
+    if (imageCount === 0) return 0;
+    const rows = Math.ceil(Math.min(imageCount, 9) / 3);
+    const gap = 8;
+    const itemHeight = 100; // Approximate item height in vp
+    return rows * itemHeight + (rows - 1) * gap;
+  }
+
+  /**
    * 点赞瞬间
    */
   private async likeMoment(moment: MomentSearchItem, index: number) {
@@ -355,7 +389,8 @@ export struct MomentPage {
                  .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
                  .geometryTransition('moment_img_' + moment.moment_id + '_' + imgIndex)
                  .onClick(() => {
-                    this.previewImage(moment.moment_id, moment.images || [], imgIndex);
+                    const imageUrls: string[] = (moment.images || []).map(img => img.url);
+                    this.previewImage(moment.moment_id, imageUrls, imgIndex);
                  })
              }
              .aspectRatio(1)

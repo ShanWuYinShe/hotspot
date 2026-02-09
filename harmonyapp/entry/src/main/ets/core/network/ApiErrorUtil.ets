@@ -46,7 +46,7 @@ export function shouldForceLogoutOnAuthError(code: Object, message?: Object): bo
   if (!isAuthErrorCode(code)) return false;
   if (isReauthRequiredCode(code)) return true;
   if (isTokenMissingCode(code)) return true;
-  if (isTokenInvalidOrExpiredCode(code)) return !isSoftTokenRotation(message !== undefined ? message : null);
+  if (isTokenInvalidOrExpiredCode(code)) return !isSoftTokenRotation(message !== null && message !== undefined ? message : null);
   return true;
 }
 

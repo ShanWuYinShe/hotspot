@@ -19,13 +19,6 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { AppIcon, AppIconMap } from '../../../components/SystemIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { SmartNotificationService, NotificationEvent, CreateNotificationInput, NotificationMetadata } from '../../../core/services/SmartNotificationService';
-
-// Define CreateNotificationOptions type locally
-interface CreateNotificationOptions {
-  immediate?: boolean;
-  delay?: number;
-  callback?: (success: boolean, notificationId?: string) => void;
-}
 import { CacheManager } from '../../../core/cache/CacheManager';
 import { NotificationCenter } from '../../../components/NotificationCenter';
 import { PerformanceIndicator } from '../../../components/PerformanceIndicator';
@@ -40,6 +33,13 @@ import { NotificationRenderer } from '../../../core/services/notification/Notifi
 import { SmartNotification, NotificationAction } from '../../../core/services/notification/NotificationDataManager';
 import { NotificationBanner } from '../../../components/NotificationBanner';
 import { TimerManager } from '../../../core/utils/TimerManager';
+
+// Define CreateNotificationOptions type locally
+interface CreateNotificationOptions {
+  immediate?: boolean;
+  delay?: number;
+  callback?: (success: boolean, notificationId?: string) => void;
+}
 
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG: string = 'IndexPage';

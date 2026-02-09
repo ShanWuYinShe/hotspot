@@ -244,16 +244,13 @@ export interface ServerWebSocketEvent {
 // ----- 连接管理事件 -----
 
 /**
- * ConnectionEstablished 订阅上限配置
+ * ConnectionEstablished 配置信息
  */
 export interface MaxSubscriptions {
   user: number   // 用户订阅上限
   group: number  // 群组订阅上限
 }
 
-/**
- * ConnectionEstablished 配置信息
- */
 export interface ConnectionConfig {
   ping_interval: number  // 心跳间隔（秒）
   ping_timeout: number   // Pong 超时（秒）
@@ -465,7 +462,7 @@ export interface CommentReplyEvent {
 }
 
 /**
- * 瞬间摘要信息
+ * 在内容中被提及
  */
 export interface MomentSummary {
   moment_id: string
@@ -473,9 +470,6 @@ export interface MomentSummary {
   text_preview: string  // 文本内容摘要 (前50字)
 }
 
-/**
- * 在内容中被提及
- */
 export interface MessageMentionedPayload {
   target_type: 'moment' | 'comment'
   moment_id: string
@@ -832,7 +826,7 @@ export interface GroupAnnouncementUpdatedEvent {
 }
 
 /**
- * 群组更新字段
+ * 群组信息更新
  */
 export interface GroupUpdatedFields {
   name?: string
@@ -840,9 +834,6 @@ export interface GroupUpdatedFields {
   description?: string
 }
 
-/**
- * 群组信息更新
- */
 export interface GroupUpdatedPayload {
   group_id: string
   updated_fields: GroupUpdatedFields  // 只包含变更的字段
@@ -1183,8 +1174,8 @@ function isEventProcessed(eventId: string): boolean {
 function markEventProcessed(eventId: string): void {
   // 如果超过最大数量，删除最旧的（FIFO）
   if (processedEventIds.size >= MAX_PROCESSED_EVENT_IDS) {
-    const firstId = processedEventIds.values().next().value
-    processedEventIds.delete(firstId)
+    const firstId = processedEventIds.values().next().value as Object
+    processedEventIds.delete(firstId as string)
   }
   processedEventIds.add(eventId)
 }
@@ -1239,7 +1230,7 @@ export function parseServerEvent(data: string): ServerEvent | BatchEventsEvent |
         event[key] = rawRecord[key];
       }
     }
-    return event as unknown as ServerEvent
+    return (event as Object) as ServerEvent
   } catch (e) {
     console.error('Failed to parse WebSocket message:', e)
     return null

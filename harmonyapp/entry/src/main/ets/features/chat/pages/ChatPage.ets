@@ -7,7 +7,7 @@
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { WebSocketService } from '../../../core/network/WebSocketService';
-import { MyProfileData, MessageType, PrivateMessageItem, GroupMessageItem, SendMessageType, UserInfo, SendPrivateMessageRequest, SendGroupMessageRequest } from '../../../core/types/api';
+import { MyProfileData, MessageType, PrivateMessageItem, GroupMessageItem, SendMessageType, UserInfo, SendPrivateMessageRequest, SendGroupMessageRequest, PrivateMessagesHistoryRequest, GroupMessagesHistoryRequest, MarkPrivateMessagesReadRequest, MarkGroupMessagesReadRequest } from '../../../core/types/api';
 import type { ServerEvent, PrivateMessageNewEvent, GroupMessageNewEvent } from '../../../core/types/WebSocketTypes';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
@@ -78,7 +78,7 @@ struct ChatPage {
     
     if (!isRelevant) return;
 
-    this.handleNewMessage({
+    const newMessage: ChatMessage = {
       id: payload.message_id,
       content: payload.media?.url || payload.content || (payload.type === 'image' ? '[图片]' : '[非文本消息]'),
       senderId: payload.sender.user_id,
@@ -89,7 +89,8 @@ struct ChatPage {
       isSelf: payload.sender.user_id === currentUserId,
       isSystem: payload.type === 'system',
       rawData: payload
-    });
+    };
+    this.handleNewMessage(newMessage);
   }
 
   private onGroupMessageNew = async (event: ServerEvent): Promise<void> => {
@@ -100,7 +101,7 @@ struct ChatPage {
     if (payload.group_id !== this.chatId) return;
 
     const currentUserId = await AuthAccountManager.getCurrentUserId();
-    this.handleNewMessage({
+    const newMessage: ChatMessage = {
       id: payload.message_id,
       content: payload.media?.url || payload.content || (payload.type === 'image' ? '[图片]' : '[非文本消息]'),
       senderId: payload.sender.user_id,
@@ -111,7 +112,8 @@ struct ChatPage {
       isSelf: payload.sender.user_id === currentUserId,
       isSystem: payload.type === 'system',
       rawData: payload
-    });
+    };
+    this.handleNewMessage(newMessage);
   }
 
   private handleNewMessage(newMessage: ChatMessage) {
@@ -177,13 +179,13 @@ struct ChatPage {
         if (!targetUserId) {
           throw new Error('target_user_id is required for private chat');
         }
-        const request = { target_user_id: targetUserId, limit: 20 };
+        const request: PrivateMessagesHistoryRequest = { target_user_id: targetUserId, limit: 20 };
         const response = await ApiClient.getPrivateMessages(request);
         if (response.code === 0 && response.data) {
           items = response.data.items;
         }
       } else {
-        const request = { group_id: this.chatId, limit: 20 };
+        const request: GroupMessagesHistoryRequest = { group_id: this.chatId, limit: 20 };
         const response = await ApiClient.getGroupMessages(request);
         if (response.code === 0 && response.data) {
           items = response.data.items;
@@ -214,8 +216,8 @@ struct ChatPage {
     if (cachedMessages.length > 0) {
       // 缓存是倒序取出的（最新的在前），需要反转回正序（旧的在前）
       const messages = await Promise.all(cachedMessages.reverse().map(async item => {
-        const rawData = JSON.parse(item.data);
-        return await this.convertMessage(rawData);
+        const rawData = JSON.parse(item.data) as Object;
+        return await this.convertMessage(rawData as PrivateMessageItem | GroupMessageItem);
       }));
       this.messages = messages;
       this.scrollToBottom();
@@ -365,10 +367,10 @@ struct ChatPage {
         if (this.chatType === 'private_chat') {
           const targetUserId = this.targetId;
           if (!targetUserId) return;
-          const request = { target_user_id: targetUserId, up_to_message_id: upToMessageId };
+          const request: MarkPrivateMessagesReadRequest = { target_user_id: targetUserId, up_to_message_id: upToMessageId };
           await ApiClient.markPrivateMessagesRead(request);
         } else {
-          const request = { group_id: this.chatId, up_to_message_id: upToMessageId };
+          const request: MarkGroupMessagesReadRequest = { group_id: this.chatId, up_to_message_id: upToMessageId };
           await ApiClient.markGroupMessagesRead(request);
         }
         GlobalStateManager.getInstance().notifyMessageSync();

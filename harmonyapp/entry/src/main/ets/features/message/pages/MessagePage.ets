@@ -9,7 +9,7 @@
 import { GlobalStateManager, KEY_CURRENT_USER, KEY_LAST_MESSAGE_SYNC_TIME } from '../../../core/state/GlobalStateManager';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { PageNames } from '../../../constants/AppConstants';
-import { PrivateChatListItem, JoinedGroupItem, MyProfileData, MyGroupsRequest } from '../../../core/types/api';
+import { PrivateChatListItem, JoinedGroupItem, MyProfileData, MyGroupsRequest, DeletePrivateChatRequest, LeaveGroupRequest } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
@@ -271,11 +271,11 @@ export struct MessagePage {
       VibrationUtil.startShort();
       if (item.type === 'private') {
         const privateData = item.data as PrivateChatListItem;
-        const request = { target_user_id: privateData.other_user.user_id };
+        const request: DeletePrivateChatRequest = { target_user_id: privateData.other_user.user_id };
         await ApiClient.deletePrivateChat(request);
       } else {
         const groupData = item.data as JoinedGroupItem;
-        const request = { group_id: groupData.group_id };
+        const request: LeaveGroupRequest = { group_id: groupData.group_id };
         await ApiClient.leaveGroup(request);
       }
       

@@ -344,7 +344,7 @@ export class WebSocketService {
         // 每个事件仍需检查 event_id 去重（在 parseServerEvent 中已处理）
         // 这里直接处理事件内容
         const eventId = subEvent.event_id;
-        const eventRecord = subEvent as Record<string, Object>;
+        const eventRecord = (subEvent as Object) as Record<string, Object>;
         const eventWithoutId: Record<string, Object> = {};
         const keys = Object.keys(eventRecord);
         for (let i = 0; i < keys.length; i++) {
@@ -353,7 +353,7 @@ export class WebSocketService {
             eventWithoutId[key] = eventRecord[key];
           }
         }
-        this.handleServerEvent(eventWithoutId as unknown as ServerEvent);
+        this.handleServerEvent((eventWithoutId as Object) as ServerEvent);
       });
       return;
     }

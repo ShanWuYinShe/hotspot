@@ -6,7 +6,7 @@ export struct SystemCard {
   @Prop cardPadding: number = DesignConstants.SPACING.LG;
   @Prop showShadow: boolean = true;
   @Prop clickable: boolean = false;
-  @Prop hoverEffect: boolean = false; // New prop for hover effect
+  @Prop enableHoverEffect: boolean = false; // New prop for hover effect
   
   // Backwards compatibility props mapping
   @Prop paddingSize: number | string = DesignConstants.SPACING.LG; 
@@ -37,6 +37,6 @@ export struct SystemCard {
         }
       }
     })
-    .hoverEffect(this.hoverEffect ? HoverEffect.Scale : HoverEffect.None)
+    .hoverEffect(this.enableHoverEffect ? HoverEffect.Scale : HoverEffect.None)
   }
 }

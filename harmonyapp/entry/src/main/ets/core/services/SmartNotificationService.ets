@@ -159,15 +159,6 @@ export interface CreateNotificationInput {
 }
 
 /**
- * 创建通知选项
- */
-interface CreateNotificationOptions {
-  immediate?: boolean;
-  delay?: number;
-  callback?: (success: boolean, notificationId?: string) => void;
-}
-
-/**
  * 事件监听器类型
  */
 export type NotificationEventListener = (
@@ -175,6 +166,15 @@ export type NotificationEventListener = (
   notification: SmartNotification,
   extra?: Object
 ) => void;
+
+/**
+ * 创建通知选项
+ */
+interface CreateNotificationOptions {
+  immediate?: boolean;
+  delay?: number;
+  callback?: (success: boolean, notificationId?: string) => void;
+}
 
 /**
  * 智能通知服务
@@ -215,6 +215,13 @@ export class SmartNotificationService extends BaseSingleton {
    * 清理定时器
    */
   private cleanupTimerId: number = -1;
+  
+  /**
+   * 生成唯一ID
+   */
+  private generateId(): string {
+    return Date.now().toString(36) + Math.random().toString(36).substring(2);
+  }
   
   private constructor() {
     super();
@@ -340,9 +347,8 @@ export class SmartNotificationService extends BaseSingleton {
    */
   updateConfig(config: Partial<NotificationConfig>): void {
     try {
-      const configObj = config as Object;
-      const merged = ConfigMerger.merge(this.config as Object, configObj) as NotificationConfig;
-      this.config = merged;
+      const merged = ConfigMerger.merge(this.config, config as Object as Record<string, Object>);
+      this.config = merged as Object as NotificationConfig;
       
       // 更新子服务配置
       this.configureSubServices();
@@ -408,7 +414,7 @@ export class SmartNotificationService extends BaseSingleton {
         }
       }
 
-      // 创建完整的通知对象
+      // 创建完整通知对象
       const fullNotification: SmartNotification = {
         id: this.generateId(),
         timestamp: Date.now(),
@@ -426,7 +432,7 @@ export class SmartNotificationService extends BaseSingleton {
       if (options?.immediate) {
         // 立即发送
         notificationId = await this.scheduler!.sendImmediately(fullNotification, options.callback);
-      } else if (options?.delay !== undefined) {
+      } else if (options && options.delay !== undefined) {
         // 延迟发送
         const taskId = this.scheduler!.schedule(fullNotification, options.delay, options.callback);
         // 对于调度任务，我们返回任务ID作为通知ID
@@ -628,20 +634,19 @@ export class SmartNotificationService extends BaseSingleton {
       ? this.performanceMetrics.totalProcessingTime / this.performanceMetrics.totalProcessed
       : 0;
     
-    const overall: OverallStats = {
+    const overallStats: OverallStats = {
       totalProcessed: this.performanceMetrics.totalProcessed,
       successRate,
       averageProcessingTime,
       peakConcurrency: this.performanceMetrics.peakConcurrency
     };
     
-    const result: ComprehensiveStats = {
+    return {
       data: dataStats,
       scheduler: schedulerStats,
       renderer: rendererStats,
-      overall: overall
+      overall: overallStats
     };
-    return result;
   }
   
   /**
@@ -689,21 +694,21 @@ export class SmartNotificationService extends BaseSingleton {
     }
   }
 
-/**
- * 性能告警输入参数
- */
-interface PerformanceAlertInput {
-  type: string;
-  level: 'info' | 'warning' | 'critical';
-  message: string;
-  value: number;
-  threshold: number;
-}
+  /**
+   * 性能告警数据
+   */
+  interface PerformanceAlertData {
+    type: string;
+    level: 'info' | 'warning' | 'critical';
+    message: string;
+    value: number;
+    threshold: number;
+  }
 
   /**
    * 创建性能告警通知
    */
-  async createPerformanceAlert(alert: PerformanceAlertInput): Promise<string | null> {
+  async createPerformanceAlert(alert: PerformanceAlertData): Promise<string | null> {
     if (!this.config.enablePerformanceAlerts) {
       return null;
     }
@@ -712,13 +717,19 @@ interface PerformanceAlertInput {
                     alert.level === 'warning' ? 'high' : 'medium';
     
     const metadata = new NotificationMetadata();
-    const alertData: Object = {
+    interface AlertData {
+      type: string;
+      level: 'info' | 'warning' | 'critical';
+      value: number;
+      threshold: number;
+    }
+    const alertData: AlertData = {
       type: alert.type,
       level: alert.level,
       value: alert.value,
       threshold: alert.threshold
     };
-    metadata.alert = alertData;
+    metadata.alert = alertData as Object;
     
     return this.createNotification({
       type: 'performance',
@@ -741,20 +752,20 @@ interface PerformanceAlertInput {
     }, { immediate: true });
   }
   
-/**
- * 安全告警输入参数
- */
-interface SecurityAlertInput {
-  type: 'login_attempt' | 'permission_change' | 'data_access';
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  description: string;
-  location?: string;
-}
+  /**
+   * 安全告警数据
+   */
+  interface SecurityAlertData {
+    type: 'login_attempt' | 'permission_change' | 'data_access';
+    severity: 'low' | 'medium' | 'high' | 'critical';
+    description: string;
+    location?: string;
+  }
 
   /**
    * 创建安全告警通知
    */
-  async createSecurityAlert(security: SecurityAlertInput): Promise<string | null> {
+  async createSecurityAlert(security: SecurityAlertData): Promise<string | null> {
     if (!this.config.enableSecurityAlerts) {
       return null;
     }
@@ -778,12 +789,17 @@ interface SecurityAlertInput {
       ],
       metadata: (() => {
         const meta = new NotificationMetadata();
-        const alertData: Object = {
+        interface SecurityAlertMetadata {
+          type: 'login_attempt' | 'permission_change' | 'data_access';
+          severity: 'low' | 'medium' | 'high' | 'critical';
+          location?: string;
+        }
+        const alertData: SecurityAlertMetadata = {
           type: security.type,
           severity: security.severity,
           location: security.location
         };
-        meta.alert = alertData;
+        meta.alert = alertData as Object;
         return meta;
       })()
     }, { immediate: true });
@@ -891,13 +907,6 @@ interface SecurityAlertInput {
     }
   }
   
-  /**
-   * 生成通知ID
-   */
-  private generateId(): string {
-    return `notification_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
-
   /**
    * 触发事件
    */

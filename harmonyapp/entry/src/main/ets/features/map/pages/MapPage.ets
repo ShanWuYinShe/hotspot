@@ -150,8 +150,7 @@ export struct MapPage {
     if (!this.mapCenter) return;
 
     try {
-      const me = GlobalStateManager.getInstance().getCurrentUser();
-      const myId = me?.user_id;
+      const myId = await AuthAccountManager.getCurrentUserId();
       const request: SearchUsersByLocationRequest = {
         reference_point: {
           latitude: this.mapCenter.latitude,
